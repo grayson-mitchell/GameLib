@@ -123,7 +123,10 @@ jest.mock('../bottleLaunchSignals', () => ({
 
 // Recording fake handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
-const spawnDeps = { spawnAsync: mockedSpawnAsync }
+const spawnDeps = {
+  spawnAsync: mockedSpawnAsync,
+  stores: { runsForMe: {} } as never
+}
 const mockedRecordPlaySession = recordPlaySession as jest.Mock
 const mockedRaise = raiseWineGameWindow as jest.Mock
 const mockedLogInfo = logInfo as jest.Mock
@@ -1069,6 +1072,7 @@ describe('bottleProcessMonitor.ts', () => {
       // Quick 261029-mkz: recorded exactly once, with now - matchedAt (ms).
       expect(mockedRecordPlaySession).toHaveBeenCalledTimes(1)
       expect(mockedRecordPlaySession).toHaveBeenCalledWith(
+        expect.anything(),
         '38410',
         'steam',
         1500

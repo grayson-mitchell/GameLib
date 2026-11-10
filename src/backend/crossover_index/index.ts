@@ -3,9 +3,9 @@ import { storeCapabilities } from 'common/storeCapabilities'
 import { CodeweaversInfo, GameInfo } from 'common/types'
 import { slugify } from 'backend/wiki_game_info/codeweavers/utils'
 
-import { loadIndex, IndexDescriptor } from './fetcher'
+import { loadIndex, type CrossoverIndexDeps, IndexDescriptor } from './fetcher'
 import { crossoverIndexSchema, CrossoverIndex } from './schema'
-import { crossoverIndexStore, CachedIndex } from './stores'
+import type { CachedIndex } from './stores'
 import { normalize, NAME_MATCHING_SHIPS } from './normalize'
 
 /**
@@ -106,10 +106,11 @@ function resolveRating(
  * `CodeweaversInfo` is unchanged).
  */
 export async function getCodeweaversFromIndex(
+  deps: CrossoverIndexDeps,
   gameInfo: IndexLookupInput
 ): Promise<CodeweaversInfo | null> {
   try {
-    const index = await loadIndex(crossoverIndexDescriptor)
+    const index = await loadIndex(deps, crossoverIndexDescriptor)
     if (!index) {
       return null
     }
@@ -158,11 +159,11 @@ export async function getCodeweaversFromIndex(
  * cannot tell a failed load from a miss — deliberate, and the same
  * degradation D-09 already specifies.
  */
-export async function buildIndexResolver(): Promise<
-  (gameInfo: IndexLookupInput) => number | null
-> {
+export async function buildIndexResolver(
+  deps: CrossoverIndexDeps
+): Promise<(gameInfo: IndexLookupInput) => number | null> {
   try {
-    const index = await loadIndex(crossoverIndexDescriptor)
+    const index = await loadIndex(deps, crossoverIndexDescriptor)
     if (!index) {
       return () => null
     }
@@ -184,10 +185,13 @@ export async function buildIndexResolver(): Promise<
  * `getCodeweaversFromIndex`. Used by `wiki_game_info.ts` to decide whether a
  * cached Phase-16 "checked, none found" miss is now covered by the index.
  */
-export function crossoverIndexHas(gameInfo: IndexLookupInput): boolean {
-  const cached = crossoverIndexStore.get(crossoverIndexDescriptor.name) as
-    | CachedIndex<CrossoverIndex>
-    | undefined
+export function crossoverIndexHas(
+  deps: CrossoverIndexDeps,
+  gameInfo: IndexLookupInput
+): boolean {
+  const cached = deps.stores.crossoverIndex.crossoverIndexStore.get(
+    crossoverIndexDescriptor.name
+  ) as CachedIndex<CrossoverIndex> | undefined
   if (!cached) {
     return false
   }

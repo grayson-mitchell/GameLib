@@ -1,8 +1,11 @@
 import { axiosClient } from 'backend/utils'
 import { GameInfo } from 'common/types'
 
-import { crossoverIndexStore } from '../stores'
+import * as crossoverIndex from '../stores'
 import { CrossoverIndex } from '../schema'
+
+const { crossoverIndexStore } = crossoverIndex
+const deps = { stores: { crossoverIndex } }
 
 jest.mock('backend/logger')
 jest.mock('backend/store_backend')
@@ -78,6 +81,7 @@ describe('getCodeweaversFromIndex', () => {
     loadIndexMock.mockResolvedValue(makeIndex())
 
     const result = await getCodeweaversFromIndex(
+      deps,
       makeGameInfo({ runner: 'steam', app_name: '220', title: 'Half-Life 2' })
     )
 
@@ -93,6 +97,7 @@ describe('getCodeweaversFromIndex', () => {
     loadIndexMock.mockResolvedValue(makeIndex())
 
     const result = await getCodeweaversFromIndex(
+      deps,
       makeGameInfo({ runner: 'steam', app_name: '220', title: 'Half-Life 2' })
     )
 
@@ -108,6 +113,7 @@ describe('getCodeweaversFromIndex', () => {
     loadIndexMock.mockResolvedValue(makeIndex())
 
     const result = await getCodeweaversFromIndex(
+      deps,
       makeGameInfo({
         runner: 'gog',
         app_name: 'some_gog_id',
@@ -127,6 +133,7 @@ describe('getCodeweaversFromIndex', () => {
     loadIndexMock.mockResolvedValue(makeIndex())
 
     const result = await getCodeweaversFromIndex(
+      deps,
       makeGameInfo({
         runner: 'gog',
         app_name: 'some_gog_id',
@@ -145,6 +152,7 @@ describe('getCodeweaversFromIndex', () => {
     loadIndexMock.mockResolvedValue(makeIndex())
 
     const result = await getCodeweaversFromIndex(
+      deps,
       makeGameInfo({
         runner: 'gog',
         app_name: 'other',
@@ -162,7 +170,7 @@ describe('getCodeweaversFromIndex', () => {
   test('index unavailable (loadIndex resolves null) returns null, never throws', async () => {
     loadIndexMock.mockResolvedValue(null)
 
-    const result = await getCodeweaversFromIndex(makeGameInfo())
+    const result = await getCodeweaversFromIndex(deps, makeGameInfo())
 
     expect(result).toBeNull()
   })
@@ -171,7 +179,7 @@ describe('getCodeweaversFromIndex', () => {
     const axiosSpy = jest.spyOn(axiosClient, 'get')
     loadIndexMock.mockResolvedValue(makeIndex())
 
-    await getCodeweaversFromIndex(makeGameInfo())
+    await getCodeweaversFromIndex(deps, makeGameInfo())
 
     expect(axiosSpy).not.toHaveBeenCalled()
   })
@@ -179,7 +187,7 @@ describe('getCodeweaversFromIndex', () => {
   test('hit object has no medal key — exactly macRating/linuxRating/slug', async () => {
     loadIndexMock.mockResolvedValue(makeIndex())
 
-    const result = await getCodeweaversFromIndex(makeGameInfo())
+    const result = await getCodeweaversFromIndex(deps, makeGameInfo())
 
     expect(result && Object.keys(result).sort()).toStrictEqual([
       'linuxRating',
@@ -191,7 +199,7 @@ describe('getCodeweaversFromIndex', () => {
   test('a thrown error during lookup logs and returns null (never propagates)', async () => {
     loadIndexMock.mockRejectedValue(new Error('boom'))
 
-    const result = await getCodeweaversFromIndex(makeGameInfo())
+    const result = await getCodeweaversFromIndex(deps, makeGameInfo())
 
     expect(result).toBeNull()
   })
@@ -204,7 +212,7 @@ describe('crossoverIndexHas', () => {
   })
 
   test('returns false when the store is empty', () => {
-    expect(crossoverIndexHas(makeGameInfo())).toBe(false)
+    expect(crossoverIndexHas(deps, makeGameInfo())).toBe(false)
   })
 
   test('returns true for a Steam-AppID hit regardless of NAME_MATCHING_SHIPS', () => {
@@ -216,6 +224,7 @@ describe('crossoverIndexHas', () => {
 
     expect(
       crossoverIndexHas(
+        deps,
         makeGameInfo({ runner: 'steam', app_name: '220', title: 'Half-Life 2' })
       )
     ).toBe(true)
@@ -230,6 +239,7 @@ describe('crossoverIndexHas', () => {
 
     expect(
       crossoverIndexHas(
+        deps,
         makeGameInfo({
           runner: 'gog',
           app_name: 'x',
@@ -248,6 +258,7 @@ describe('crossoverIndexHas', () => {
 
     expect(
       crossoverIndexHas(
+        deps,
         makeGameInfo({
           runner: 'gog',
           app_name: 'x',

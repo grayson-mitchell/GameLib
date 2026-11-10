@@ -23,12 +23,22 @@ import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import { GlobalConfig } from '../../config'
 import { join } from 'path'
 import { backendEvents } from 'backend/backend_events'
-import { wineDownloaderInfoStore } from './stores'
+import type { Stores } from 'backend/services/types'
 
-export { wineDownloaderInfoStore }
+/** The store slice the wine manager reads (66.1, R1). */
+export interface WineManagerDeps {
+  stores: {
+    wineManager: Pick<Stores['wineManager'], 'wineDownloaderInfoStore'>
+  }
+}
 
-function getLatestLocalVersions(): Record<string, string | undefined> {
-  const localWines = wineDownloaderInfoStore.get('wine-releases', [])
+function getLatestLocalVersions(
+  deps: WineManagerDeps
+): Record<string, string | undefined> {
+  const localWines = deps.stores.wineManager.wineDownloaderInfoStore.get(
+    'wine-releases',
+    []
+  )
 
   if (isLinux) {
     return {
@@ -76,10 +86,13 @@ function localVersionIsOlder(
 //
 // Note that this updates the list of releases of a given repo if and only if
 // we already have a list for that given repo
-export function updateWineListsIfOutdated(releasesData: ReleasesInfo) {
+export function updateWineListsIfOutdated(
+  deps: WineManagerDeps,
+  releasesData: ReleasesInfo
+) {
   if (isWindows) return
 
-  const latestLocalVersions = getLatestLocalVersions()
+  const latestLocalVersions = getLatestLocalVersions(deps)
   const repositoriesToFetch = []
 
   // compare dates to know which repositories to fetch
@@ -128,11 +141,12 @@ export function updateWineListsIfOutdated(releasesData: ReleasesInfo) {
   }
 
   if (repositoriesToFetch.length > 0) {
-    void updateWineVersionInfos(true, repositoriesToFetch)
+    void updateWineVersionInfos(deps, true, repositoriesToFetch)
   }
 }
 
 async function updateWineVersionInfos(
+  deps: WineManagerDeps,
   fetch = false,
   repositorys: Repositorys[] | null = null,
   count = 50
@@ -160,8 +174,11 @@ async function updateWineVersionInfos(
 
     let releasesToStore: WineVersionInfo[] = []
 
-    if (wineDownloaderInfoStore.has('wine-releases')) {
-      const old_releases = wineDownloaderInfoStore.get('wine-releases', [])
+    if (deps.stores.wineManager.wineDownloaderInfoStore.has('wine-releases')) {
+      const old_releases = deps.stores.wineManager.wineDownloaderInfoStore.get(
+        'wine-releases',
+        []
+      )
 
       old_releases.forEach((old) => {
         releasesToStore.push(old)
@@ -214,14 +231,19 @@ async function updateWineVersionInfos(
       releasesToStore = releases
     }
 
-    wineDownloaderInfoStore.set(
+    deps.stores.wineManager.wineDownloaderInfoStore.set(
       'wine-releases',
       releasesToStore.sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
     )
   } else {
     logInfo('Read local information ...', LogPrefix.WineDownloader)
-    if (wineDownloaderInfoStore.has('wine-releases')) {
-      releases.push(...wineDownloaderInfoStore.get('wine-releases', []))
+    if (deps.stores.wineManager.wineDownloaderInfoStore.has('wine-releases')) {
+      releases.push(
+        ...deps.stores.wineManager.wineDownloaderInfoStore.get(
+          'wine-releases',
+          []
+        )
+      )
     }
   }
 
@@ -260,6 +282,7 @@ function getInstallDir(release: WineVersionInfo): string {
 }
 
 async function installWineVersion(
+  deps: WineManagerDeps,
   release: WineVersionInfo,
   onProgress: (status: WineManagerStatus) => void
 ) {
@@ -315,8 +338,11 @@ async function installWineVersion(
   }
 
   // Update stored information
-  if (wineDownloaderInfoStore.has('wine-releases')) {
-    const releases = wineDownloaderInfoStore.get('wine-releases', [])
+  if (deps.stores.wineManager.wineDownloaderInfoStore.has('wine-releases')) {
+    const releases = deps.stores.wineManager.wineDownloaderInfoStore.get(
+      'wine-releases',
+      []
+    )
 
     const index = releases.findIndex((storedRelease) => {
       return release?.version === storedRelease?.version
@@ -332,7 +358,10 @@ async function installWineVersion(
 
     releases[index] = updatedInfo
 
-    wineDownloaderInfoStore.set('wine-releases', releases)
+    deps.stores.wineManager.wineDownloaderInfoStore.set(
+      'wine-releases',
+      releases
+    )
   } else {
     logError(
       `Couldn't find a tools entry in electron-store -> wine-downloader-info.json. Tool ${release.version} couldn't be installed!`,
@@ -350,8 +379,11 @@ async function installWineVersion(
   return 'success'
 }
 
-async function removeWineVersion(release: WineVersionInfo): Promise<boolean> {
-  if (!wineDownloaderInfoStore.has('wine-releases')) {
+async function removeWineVersion(
+  deps: WineManagerDeps,
+  release: WineVersionInfo
+): Promise<boolean> {
+  if (!deps.stores.wineManager.wineDownloaderInfoStore.has('wine-releases')) {
     logError(
       `Couldn't find a wine-releases entry in electron-store -> wine-downloader-info.json. Release ${release.version} couldn't be removed!`,
       LogPrefix.WineDownloader
@@ -359,7 +391,10 @@ async function removeWineVersion(release: WineVersionInfo): Promise<boolean> {
     return false
   }
 
-  const releases = wineDownloaderInfoStore.get('wine-releases', [])
+  const releases = deps.stores.wineManager.wineDownloaderInfoStore.get(
+    'wine-releases',
+    []
+  )
   const index = releases.findIndex((storedRelease) => {
     return release.version === storedRelease.version
   })
@@ -398,7 +433,7 @@ async function removeWineVersion(release: WineVersionInfo): Promise<boolean> {
   stored.disksize = 0
   stored.hasUpdate = false
 
-  wineDownloaderInfoStore.set('wine-releases', releases)
+  deps.stores.wineManager.wineDownloaderInfoStore.set('wine-releases', releases)
 
   logInfo(
     `Removed wine version ${release.version} succesfully.`,

@@ -1,7 +1,7 @@
 /**
  * Sidecar migration-runner wiring test (todo 2026-08-16, quick task 260822-s8y).
  *
- * `MigrationSystem.get().applyMigrations()` had exactly ONE call site in the repo --
+ * `new MigrationSystem(deps).applyMigrations()` had exactly ONE call site in the repo --
  * `main.ts:412`, inside Electron's `app.whenReady()`, which the headless Tauri sidecar never
  * runs. So `LegendaryGlobalConfigFolderMigration` had never executed on the shipping runtime,
  * and any future `Migration` would have shipped as a silent no-op. Same family as the
@@ -148,7 +148,9 @@ function bootMigrations() {
     freshStore: require('../../migration/stores')
       .migrationsStore as typeof migrationsStore,
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    freshSystem: require('../../migration').default as typeof MigrationSystem
+    freshSystem: require('../../migration').default as typeof MigrationSystem,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    freshStores: { migration: require('../../migration/stores') }
   }
 }
 
@@ -212,7 +214,7 @@ describe('LegendaryGlobalConfigFolderMigration failure-lock (todo 2026-08-16 ste
       })
     })
 
-    await world.freshSystem.get().applyMigrations()
+    await new world.freshSystem({ stores: world.freshStores }).applyMigrations()
 
     // THE REGRESSION. Pre-fix, `legendaryConfigPath` existed after this point, so the next
     // launch's `hasHeroicSpecificConfig` check returned `true` on the first line of `run()` and
@@ -234,7 +236,7 @@ describe('LegendaryGlobalConfigFolderMigration failure-lock (todo 2026-08-16 ste
       (actualFsPromises.cp as (...a: unknown[]) => Promise<void>)(...args)
     )
 
-    await world.freshSystem.get().applyMigrations()
+    await new world.freshSystem({ stores: world.freshStores }).applyMigrations()
 
     expect(existsSync(migratedMarker())).toBe(true)
     // `await` is load-bearing: a bare `expect(promise).resolves.toBe(...)` returns a

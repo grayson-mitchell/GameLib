@@ -1,25 +1,23 @@
 import { logError, logInfo } from '../logger'
 
 import { LegendaryGlobalConfigFolderMigration } from './migrations/legendary'
-import { migrationsStore } from './stores'
 
 import type { TypeCheckedStore } from 'common/types/typed_store'
+import type { Stores } from 'backend/services/types'
 
 export interface Migration {
   identifier: string
   run(): Promise<boolean>
 }
 
+/** The store slice migrations read (66.1, R1). */
+export interface MigrationDeps {
+  stores: Pick<Stores, 'migration'>
+}
+
 export default class MigrationSystem {
-  static #instance: MigrationSystem
-
-  constructor() {
-    this.migrationsStore = migrationsStore
-  }
-
-  public static get(): MigrationSystem {
-    this.#instance ??= new MigrationSystem()
-    return this.#instance
+  constructor(deps: MigrationDeps) {
+    this.migrationsStore = deps.stores.migration.migrationsStore
   }
 
   async applyMigrations() {

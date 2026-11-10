@@ -53,7 +53,7 @@ import type { GameOverride, SelectiveDownload } from 'common/types/legendary'
 import { isStore, storeCapabilities } from 'common/storeCapabilities'
 
 import type { Stores, StoreManagers } from '../services/types'
-import { attachOverrides } from '../game_overrides'
+import { attachOverrides, type GameOverridesDeps } from '../game_overrides'
 import { isDelegatedInstallPolling } from '../storeManagers/steam/library/installPolling'
 import { callAbortController } from '../utils/aborthandler/aborthandler'
 import { isOnline } from '../online_monitor'
@@ -65,7 +65,9 @@ import { logError, logInfo, logWarning, LogPrefix } from '../logger'
 /** What the game-details dispatchers read: the manager map and the kvs config store (66.1, R3). */
 export interface GameDetailsDeps {
   managers: Pick<StoreManagers, 'library'>
-  stores: { kvs: Pick<Stores['kvs'], 'configStore'> }
+  stores: {
+    kvs: Pick<Stores['kvs'], 'configStore'>
+  } & GameOverridesDeps['stores']
 }
 
 export async function isGameAvailable(
@@ -100,7 +102,7 @@ export async function getGameInfo(
   // The frontend can however handle being passed an explicit `null` value, so
   // we return that here instead if the game info is empty
   if (!Object.keys(tempGameInfo).length) return null
-  return attachOverrides(tempGameInfo)
+  return attachOverrides(deps, tempGameInfo)
 }
 
 export async function getExtraInfo(

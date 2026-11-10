@@ -6,7 +6,7 @@ import { getLogFilePath, logError, logInfo, LogPrefix } from '../logger'
 import { sendFrontendMessage } from '../ipc'
 
 import type { UploadedLogData } from 'common/types'
-import { uploadedLogFileStore } from './stores'
+import type { Stores } from 'backend/services/types'
 
 async function sendRequestToApi(
   formData: FormData | string,
@@ -48,11 +48,18 @@ async function readPartOfFile(file: string, size: number) {
 
 /**
  * Uploads the log file of a game / runner / Heroic to https://dpaste.com/api/v2/
+ * @param deps The logger store slice
  * @param name See {@link UploadedLogData.name}
  * @param getLogFileArgs Used to get the log file path. See {@link getLogFilePath}
  * @returns `false` if an error occurred, otherwise the URL to the uploaded file and {@link UploadedLogData}
  */
+/** The store slice the log uploader reads (66.1, R1). */
+export interface LogUploaderDeps {
+  stores: Pick<Stores, 'logger'>
+}
+
 async function uploadLogFile(
+  deps: LogUploaderDeps,
   name: string,
   getLogFileArgs: Parameters<typeof getLogFilePath>[0]
 ): Promise<false | [string, UploadedLogData]> {
@@ -94,7 +101,7 @@ async function uploadLogFile(
     token,
     uploadedAt: Date.now()
   }
-  uploadedLogFileStore.set(url, uploadData)
+  deps.stores.logger.uploadedLogFileStore.set(url, uploadData)
   sendFrontendMessage('logFileUploaded', url, uploadData)
   logInfo(`Uploaded log file ${name} to ${url}`, LogPrefix.LogUploader)
   return [url, uploadData]
@@ -105,8 +112,11 @@ async function uploadLogFile(
  * @param url The URL to the uploaded log file
  * @returns Whether the file was deleted
  */
-async function deleteUploadedLogFile(url: string): Promise<boolean> {
-  const logData = uploadedLogFileStore.get_nodefault(url)
+async function deleteUploadedLogFile(
+  deps: LogUploaderDeps,
+  url: string
+): Promise<boolean> {
+  const logData = deps.stores.logger.uploadedLogFileStore.get_nodefault(url)
   if (!logData) return false
 
   const formData = new FormData()
@@ -127,7 +137,7 @@ async function deleteUploadedLogFile(url: string): Promise<boolean> {
     return false
   }
 
-  uploadedLogFileStore.delete(url)
+  deps.stores.logger.uploadedLogFileStore.delete(url)
   sendFrontendMessage('logFileUploadDeleted', url)
   logInfo([`Deleted log file ${logData.name} (${url})`], LogPrefix.LogUploader)
 
@@ -138,15 +148,17 @@ async function deleteUploadedLogFile(url: string): Promise<boolean> {
  * Returns all log files which are still valid. Also deletes expired
  * ones from {@link uploadedLogFileStore}
  */
-async function getUploadedLogFiles(): Promise<Record<string, UploadedLogData>> {
-  const allStoredLogs = uploadedLogFileStore.raw_store
+async function getUploadedLogFiles(
+  deps: LogUploaderDeps
+): Promise<Record<string, UploadedLogData>> {
+  const allStoredLogs = deps.stores.logger.uploadedLogFileStore.raw_store
   const validUploadedLogs: Record<string, UploadedLogData> = {}
   // Filter and delete expired logs
   for (const [key, value] of Object.entries(allStoredLogs)) {
     const timeDifferenceMs = Date.now() - value.uploadedAt
     const timeDifferenceDays = timeDifferenceMs / 1000 / 60 / 60 / 24
     if (timeDifferenceDays >= EXPIRY_DAYS) {
-      uploadedLogFileStore.delete(key)
+      deps.stores.logger.uploadedLogFileStore.delete(key)
     } else {
       validUploadedLogs[key] = value
     }

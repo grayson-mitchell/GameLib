@@ -30,9 +30,7 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { ToolInstaller: 'ToolInstaller' }
 }))
 
-jest.mock('backend/wine/manager/utils', () => ({
-  wineDownloaderInfoStore: { get: jest.fn() }
-}))
+const mockWineDownloaderInfoStore = { get: jest.fn() }
 
 jest.mock('graceful-fs', () => ({
   existsSync: jest.fn(),
@@ -56,7 +54,6 @@ jest.mock('../machoExports', () => ({
 import { backendEvents } from 'backend/backend_events'
 import { isOnline } from 'backend/online_monitor'
 import { logWarning } from 'backend/logger'
-import { wineDownloaderInfoStore } from 'backend/wine/manager/utils'
 import {
   copyFileSync,
   cpSync,
@@ -65,6 +62,7 @@ import {
   rmSync
 } from 'graceful-fs'
 import { installOrUpdateTool } from '../index'
+import { bindDxmtStores } from '../dxmt'
 import { checkWinemacMetalViewExports } from '../machoExports'
 import type { ReleasesInfo, WineVersionInfo } from 'common/types'
 import { defined } from 'backend/testUtils/indexed'
@@ -74,7 +72,12 @@ import '../dxmt'
 const installMock = installOrUpdateTool as jest.Mock
 const isOnlineMock = isOnline as jest.Mock
 // eslint-disable-next-line @typescript-eslint/unbound-method
-const storeGetMock = wineDownloaderInfoStore.get as unknown as jest.Mock
+bindDxmtStores({
+  stores: {
+    wineManager: { wineDownloaderInfoStore: mockWineDownloaderInfoStore }
+  } as never
+})
+const storeGetMock = mockWineDownloaderInfoStore.get as unknown as jest.Mock
 const existsSyncMock = existsSync as unknown as jest.Mock
 const readFileSyncMock = readFileSync as unknown as jest.Mock
 const copyFileSyncMock = copyFileSync as unknown as jest.Mock

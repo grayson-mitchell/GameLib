@@ -182,7 +182,7 @@ import type { StoreManagers, Stores } from 'backend/services/types'
 /** Narrow slice (66.1 D-01): library managers for game lookup. */
 export interface EnrichmentFlowDeps {
   managers: Pick<StoreManagers, 'library'>
-  stores: Pick<Stores, 'kvs'>
+  stores: Pick<Stores, 'kvs' | 'runsForMe' | 'wikiGameInfo' | 'crossoverIndex'>
 }
 import type { CatalogLocaleSettings } from 'common/types/discounts'
 
@@ -212,7 +212,7 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
       const forceRefresh = (args[3] as boolean | null | undefined) ?? undefined
       const game = deps.managers.library[runner].getGame(appName)
       return getWikiGameInfo(
-        { libraryManagers: deps.managers.library },
+        { libraryManagers: deps.managers.library, stores: deps.stores },
         game,
         forceRefresh
       )
@@ -243,7 +243,7 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
 
   // Quick 261029-mkz: per-game "Runs for me" override. Untrusted payload:
   // validated before any write (T-mkz-01).
-  ipcMain.handle('getRunsForMeMap', async () => getRunsForMeMap())
+  ipcMain.handle('getRunsForMeMap', async () => getRunsForMeMap(deps))
 
   ipcMain.handle(
     'setRunsForMe',
@@ -265,9 +265,10 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
           'setRunsForMe: rejected malformed payload (appName/runner/on)',
           LogPrefix.Backend
         )
-        return getRunsForMeMap()
+        return getRunsForMeMap(deps)
       }
       return setRunsForMeByUser(
+        deps,
         payload.appName,
         payload.runner as Runner,
         payload.on
@@ -279,7 +280,10 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
   // LONG_RUNNING_CHANNELS (Task 2) — fans out over every game in every
   // manager AND calls loadIndex/buildMaps per game. See module docstring.
   ipcMain.handle('getCrossoverIndex', async () =>
-    buildCrossoverRatingMap({ libraryManagers: deps.managers.library })
+    buildCrossoverRatingMap({
+      libraryManagers: deps.managers.library,
+      stores: deps.stores
+    })
   )
 
   // storeSearch trio — delegates to the shared bodies in

@@ -1044,7 +1044,11 @@ export default class LegendaryGame implements Game {
       }
 
       if (await isUmuSupported(gameSettings)) {
-        const umuId = await getUmuId(gameInfo.app_name, gameInfo.runner)
+        const umuId = await getUmuId(
+          this.deps,
+          gameInfo.app_name,
+          gameInfo.runner
+        )
         if (umuId) {
           commandEnv['GAMEID'] = umuId
         }

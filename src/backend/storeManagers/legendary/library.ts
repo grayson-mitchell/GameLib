@@ -688,7 +688,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
       title,
       canRunOffline,
       thirdPartyManagedApp,
-      mac_arch: recordedMacArch('legendary', app_name),
+      mac_arch: recordedMacArch(this.deps, 'legendary', app_name),
       isEAManaged:
         !!thirdPartyManagedApp &&
         ['origin', 'the ea app'].includes(thirdPartyManagedApp.toLowerCase()),

@@ -226,7 +226,7 @@ export function registerHandlers(deps: {
   // ALL listeners for a channel). No ordering constraint relative to the other
   // calls above (own channel name, no cross-module runtime dependency at
   // registration time), placed alongside them, before `ensureStoresRegistered()`.
-  registerLoggerFlows()
+  registerLoggerFlows({ stores: deps.services.stores })
   // Phase 34.4 Plans 04+05 (REQ-34.4-07): the library/sync + key-state Humble
   // channels — no ordering constraint relative to the other calls above (own channel
   // names, no cross-module runtime dependency at registration time), placed

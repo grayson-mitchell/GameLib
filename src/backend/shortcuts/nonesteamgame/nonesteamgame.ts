@@ -200,7 +200,9 @@ function checkIfAlreadyAdded(object: Partial<ShortcutObject>, title: string) {
 }
 
 /** The icon lookup's managers plus the kvs store the shortcut's last-played read uses. */
-export type NonSteamGameDeps = ShortcutsDeps & { stores: Pick<Stores, 'kvs'> }
+export type NonSteamGameDeps = ShortcutsDeps & {
+  stores: Pick<Stores, 'kvs' | 'wikiGameInfo' | 'crossoverIndex'>
+}
 
 /**
  * Adds a non-steam game to steam via editing shortcuts.vdf

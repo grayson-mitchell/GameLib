@@ -19,23 +19,24 @@ jest.mock('../downloader/main', () => ({
   getAvailableVersions: jest.fn(),
   installVersion: jest.fn()
 }))
-jest.mock('../stores', () => {
+const storeModule = (() => {
   // Plain functions, not `jest.fn()`: the backend project sets `resetMocks: true`, which would
   // strip a `jest.fn()` implementation before each test.
-  let releases: unknown[] = []
+  let releases: WineVersionInfo[] = []
   return {
     wineDownloaderInfoStore: {
       has: () => true,
-      get: () => releases,
-      set: (_key: string, value: unknown[]) => {
+      get: (_key?: string, _def?: unknown) => releases,
+      set: (_key: string, value: WineVersionInfo[]) => {
         releases = value
       }
     }
   }
-})
+})()
+const deps = { stores: { wineManager: storeModule } } as never
 
 import { removeWineVersion } from '../utils'
-import { wineDownloaderInfoStore } from '../stores'
+const { wineDownloaderInfoStore } = storeModule
 
 function release(over: Partial<WineVersionInfo>): WineVersionInfo {
   return {
@@ -74,7 +75,7 @@ describe('removeWineVersion — deletes only the stored installDir, never a rend
   })
 
   it('ignores a tampered installDir and removes the stored one', async () => {
-    await removeWineVersion(release({ installDir: victimDir }))
+    await removeWineVersion(deps, release({ installDir: victimDir }))
 
     expect(existsSync(victimDir)).toBe(true)
     expect(existsSync(storedDir)).toBe(false)
@@ -82,6 +83,7 @@ describe('removeWineVersion — deletes only the stored installDir, never a rend
 
   it('removes nothing when the version is not in the store', async () => {
     const result = await removeWineVersion(
+      deps,
       release({ version: 'not-installed', installDir: victimDir })
     )
 
@@ -91,7 +93,10 @@ describe('removeWineVersion — deletes only the stored installDir, never a rend
   })
 
   it('still removes and unmarks a legitimately installed version', async () => {
-    const result = await removeWineVersion(release({ installDir: storedDir }))
+    const result = await removeWineVersion(
+      deps,
+      release({ installDir: storedDir })
+    )
 
     expect(result).toBe(true)
     expect(existsSync(storedDir)).toBe(false)

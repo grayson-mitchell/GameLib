@@ -83,6 +83,7 @@ import { installSidecarHumbleSecretStore } from './humbleSecretStore'
 import { installSidecarSteamGridDbSecretStore } from './steamgridSecretStore'
 import { bindSteamGridDbSecretDeps } from '../steamgrid/secretStore'
 import { bindHumbleStores } from '../humble/humbleStores'
+import { bindDxmtStores } from '../tools/dxmt'
 // 34.5 gap cycle 4 plan 36 (developer-scoped Routing addition): the dev-only plaintext vault
 // that this branch installs INSTEAD OF the two keyring stores below, when opted into. Import
 // only — no module-scope call. See installDevSecretVault()'s own header for the full guardrail
@@ -1010,7 +1011,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'migrations',
-      run: () => {
+      run: (_ctx, _io, state) => {
         // ---- Data migrations (todo 2026-08-16, quick task 260822-s8y) -----------
         // Mirrors `main.ts:412`'s `await MigrationSystem.get().applyMigrations()`, which the headless
         // sidecar never runs -- the same class of gap as `initOnlineMonitor()` below.
@@ -1037,7 +1038,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // that ever needs a hard happens-before guarantee against a handler will need `init()` to
         // become async; do not assume this placement covers that case.
         try {
-          MigrationSystem.get()
+          // 'stores' runs before this step (pinned by bootSourceShape): same migrationsStore instance.
+          const { stores } = state.services
+          if (!stores) throw new Error('stores step has not run')
+          new MigrationSystem({ stores })
             .applyMigrations()
             .catch((error: unknown) => {
               logWarning(
@@ -1445,6 +1449,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         bindSteamGridDbSecretDeps({ stores })
         bindBottleStores({ stores })
         bindHumbleStores({ stores })
+        bindDxmtStores({ stores })
         // Placement is load-bearing (Phase 28, T-28-10): must run AFTER startRpcServer() so
         // requestRustInvoke can write frames, and BEFORE any invoke handler body can run (those
         // only fire from the RPC loop below, never at module-import time) so no handler ever

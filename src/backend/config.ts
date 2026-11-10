@@ -143,7 +143,7 @@ abstract class GlobalConfig {
     scanCustom = true
   ): Promise<WineInstallation[]> {
     if (deps.wineDownloaderInfoStore.get('wine-releases', []).length === 0) {
-      await updateWineVersionInfos(true)
+      await updateWineVersionInfos({ stores: { wineManager: deps } }, true)
     }
 
     if (isMac) {

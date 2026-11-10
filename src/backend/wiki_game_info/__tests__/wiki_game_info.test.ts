@@ -10,9 +10,6 @@ jest.mock('backend/store_backend')
 const envMock = { isWindows: true, isMac: false, isLinux: false }
 jest.mock('backend/constants/environment', () => envMock)
 
-const gamesDbDeps = {
-  libraryManagers: {}
-} as unknown as Parameters<typeof getWikiGameInfo>[0]
 jest.mock('backend/wiki_game_info/gamesdb/utils', () => ({
   getInfoFromGamesDB: jest.fn().mockResolvedValue(null)
 }))
@@ -50,8 +47,14 @@ jest.mock('backend/crossover_index', () => ({
 
 // Imported AFTER the jest.mock calls above.
 import { getWikiGameInfo } from '../wiki_game_info'
-import { wikiGameInfoStore } from '../stores'
+import * as wikiGameInfoStores from '../stores'
 import { getInfoFromPCGamingWiki } from '../pcgamingwiki/utils'
+
+const { wikiGameInfoStore } = wikiGameInfoStores
+const gamesDbDeps = {
+  libraryManagers: {},
+  stores: { wikiGameInfo: wikiGameInfoStores, crossoverIndex: {} }
+} as unknown as Parameters<typeof getWikiGameInfo>[0]
 
 const getInfoFromPCGamingWikiMock = getInfoFromPCGamingWiki as jest.Mock
 

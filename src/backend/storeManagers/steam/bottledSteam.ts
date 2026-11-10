@@ -6,6 +6,7 @@
 import { app } from 'backend/platform'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { CommandRunner } from 'backend/services/types'
+import type { RunsForMeDeps } from 'backend/runsForMe'
 import type { SpawnDeps } from './provisionBottle'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
 import { library } from './state'
@@ -252,6 +253,7 @@ async function raiseBottledGameWindow(
 
 /** The slices the bottled-Steam dispatch reaches (66.1 R3, R5). */
 export type BottledSteamDeps = SpawnDeps & {
+  stores: RunsForMeDeps['stores']
   commandRunner: Pick<CommandRunner, 'runWineCommand'>
 }
 

@@ -16,7 +16,7 @@
  */
 
 import { isMac } from 'backend/constants/environment'
-import type { ManagerDeps } from 'backend/services/types'
+import type { ManagerDeps, Stores } from 'backend/services/types'
 
 import {
   isCrossoverIndexEligible,
@@ -43,6 +43,7 @@ import {
 /** Every library manager the rating pass lists games from (66.1, R3). */
 export interface CrossoverRatingMapDeps {
   libraryManagers: ManagerDeps['libraryManagers']
+  stores: Pick<Stores, 'crossoverIndex'>
 }
 
 export async function buildCrossoverRatingMap(
@@ -74,7 +75,7 @@ export async function buildCrossoverRatingMap(
         continue
       }
 
-      resolveRatingFor ??= await buildIndexResolver()
+      resolveRatingFor ??= await buildIndexResolver(deps)
       map[gameInfo.app_name] = resolveRatingFor(gameInfo)
     }
   }

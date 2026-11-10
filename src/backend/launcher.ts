@@ -78,6 +78,7 @@ import { app, powerSaveBlocker } from 'backend/platform'
 import { addRecentGame } from './recent_games/recent_games'
 import * as kvsStores from './constants/key_value_stores'
 import * as wineManagerStores from './wine/manager/stores'
+import * as runsForMeStores from './runsForMe/stores'
 import { tsStore } from './constants/key_value_stores'
 import { readKnownFixes } from './knownFixes'
 import { applyKnownFixProfileRegistry } from './knownFixesRegistry'
@@ -339,7 +340,12 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
   // skipped: its launch promise tracks a steam:// hand-off or a bridge spawn,
   // not the game; bottleProcessMonitor records Steam sessions.
   if (!hasCapability(runner, 'playtimeTrackedExternally') && launchResult) {
-    recordPlaySession(appName, runner, Date.now() - launchedAt)
+    recordPlaySession(
+      legacyWineStores(),
+      appName,
+      runner,
+      Date.now() - launchedAt
+    )
   }
 
   await storeLaunchHooks[runner].clearPresence?.()
@@ -1419,7 +1425,13 @@ function setupWrappers(
  * store slices `checkWineBeforeLaunch` reads, until the launcher is built with injected stores.
  */
 function legacyWineStores() {
-  return { stores: { kvs: kvsStores, wineManager: wineManagerStores } }
+  return {
+    stores: {
+      kvs: kvsStores,
+      wineManager: wineManagerStores,
+      runsForMe: runsForMeStores
+    }
+  }
 }
 
 function tools() {

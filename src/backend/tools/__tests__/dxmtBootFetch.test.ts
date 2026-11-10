@@ -55,9 +55,7 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { ToolInstaller: 'ToolInstaller' }
 }))
 
-jest.mock('backend/wine/manager/utils', () => ({
-  wineDownloaderInfoStore: { get: jest.fn() }
-}))
+const mockWineDownloaderInfoStore = { get: jest.fn() }
 
 jest.mock('graceful-fs', () => ({
   existsSync: jest.fn(),
@@ -74,9 +72,9 @@ jest.mock('../machoExports', () => ({
 
 import { backendEvents } from 'backend/backend_events'
 import { isOnline } from 'backend/online_monitor'
-import { wineDownloaderInfoStore } from 'backend/wine/manager/utils'
 import { existsSync } from 'graceful-fs'
 import { installOrUpdateTool } from '../index'
+import { bindDxmtStores } from '../dxmt'
 import { checkWinemacMetalViewExports } from '../machoExports'
 import type { ReleasesInfo, WineVersionInfo } from 'common/types'
 
@@ -92,7 +90,12 @@ const isOnlineMock = isOnline as jest.Mock
 // call -- `this` is never involved. Hoisting it into a `mock`-prefixed factory variable
 // instead would hit the TDZ, because `jest.mock` is hoisted above this declaration.
 // eslint-disable-next-line @typescript-eslint/unbound-method
-const storeGetMock = wineDownloaderInfoStore.get as unknown as jest.Mock
+bindDxmtStores({
+  stores: {
+    wineManager: { wineDownloaderInfoStore: mockWineDownloaderInfoStore }
+  } as never
+})
+const storeGetMock = mockWineDownloaderInfoStore.get as unknown as jest.Mock
 const existsSyncMock = existsSync as unknown as jest.Mock
 
 /** Lets the async listener run past its synchronous prefix. */

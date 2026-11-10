@@ -106,7 +106,7 @@ import type { QuitHandler, StoreManagers, Stores } from 'backend/services/types'
 export interface ShortcutsFlowDeps {
   managers: Pick<StoreManagers, 'library'>
   quit: Pick<QuitHandler, 'handleExit'>
-  stores: Pick<Stores, 'kvs'>
+  stores: Pick<Stores, 'kvs' | 'wikiGameInfo' | 'crossoverIndex'>
 }
 
 function logChannelFailure(channel: string, error: unknown): void {

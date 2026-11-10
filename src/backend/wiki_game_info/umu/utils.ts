@@ -1,7 +1,12 @@
 import axios from 'axios'
 import { storeCapabilities } from 'common/storeCapabilities'
 import { Runner } from 'common/types'
-import { umuStore } from '../stores'
+import type { Stores } from 'backend/services/types'
+
+/** The store slice the umu id cache reads (66.1, R1). */
+export interface UmuDeps {
+  stores: { wikiGameInfo: Pick<Stores['wikiGameInfo'], 'umuStore'> }
+}
 
 interface GameObject {
   title: string
@@ -16,6 +21,7 @@ const storeMapping: Record<Runner, string> = {
 }
 
 export async function getUmuId(
+  deps: UmuDeps,
   appName: string,
   runner: Runner
 ): Promise<string | null> {
@@ -26,6 +32,7 @@ export async function getUmuId(
 
   const store = storeMapping[runner]
   const key = `${runner}_${appName}`
+  const { umuStore } = deps.stores.wikiGameInfo
   const cachedValue = umuStore.get(key)
   if (cachedValue) {
     return cachedValue

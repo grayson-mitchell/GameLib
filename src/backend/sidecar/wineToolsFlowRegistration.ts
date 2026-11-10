@@ -197,7 +197,11 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
         eta: '00:00:00'
       })
 
-      const result = await installWineVersionForRelease(release, onProgress)
+      const result = await installWineVersionForRelease(
+        deps,
+        release,
+        onProgress
+      )
 
       let notifyBody: string | null = null
       switch (result) {
@@ -224,7 +228,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
     async (_event: unknown, ...args: unknown[]) => {
       const fetch = args[0] as boolean | undefined
       try {
-        await updateWineVersionInfos(fetch)
+        await updateWineVersionInfos(deps, fetch)
         return
       } catch (error) {
         logError(error, LogPrefix.WineDownloader)
@@ -237,7 +241,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
     'removeWineVersion',
     async (_event: unknown, ...args: unknown[]) => {
       const release = args[0] as WineVersionInfo
-      const result = await removeWineVersionForRelease(release)
+      const result = await removeWineVersionForRelease(deps, release)
       if (result)
         notify({ title: release.version, body: t('notify.uninstalled') })
     }
@@ -251,7 +255,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
   // idempotence assertion.
   backendEvents.on('releasesInfoReady', (releasesInfo) => {
     logDebug('Releases info ready, checking wine releases', LogPrefix.Backend)
-    void updateWineListsIfOutdated(releasesInfo)
+    void updateWineListsIfOutdated(deps, releasesInfo)
   })
 
   // ── DXVK/VKD3D toggle trio (main.ts:999,1007,1015) — the cluster's final 3 channels ─────────

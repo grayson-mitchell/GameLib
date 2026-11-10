@@ -191,7 +191,8 @@ import { showItemInFolder } from '../utils'
 import {
   uploadLogFile,
   deleteUploadedLogFile,
-  getUploadedLogFiles
+  getUploadedLogFiles,
+  type LogUploaderDeps
 } from '../logger/uploader'
 
 /**
@@ -204,7 +205,7 @@ import {
  * this module owns no side effects at import time beyond the imports above;
  * the caller decides when registration onto the handler registry happens.
  */
-export function registerLoggerFlows(): void {
+export function registerLoggerFlows(deps: LogUploaderDeps): void {
   // Behavior identical to the Electron-only logger IPC handler's own
   // `addListener('logError', (e, message) => logError(message, LogPrefix.Frontend))`,
   // except the call is now guarded at this call site (WR-02/CR-01) rather
@@ -349,6 +350,7 @@ export function registerLoggerFlows(): void {
   // to reject on failure (the Phase 20 D-14 convention).
   ipcMain.handle('uploadLogFile', async (_event: unknown, ...args: unknown[]) =>
     uploadLogFile(
+      deps,
       args[0] as string,
       args[1] as Parameters<typeof getLogFilePath>[0]
     )
@@ -363,7 +365,7 @@ export function registerLoggerFlows(): void {
   ipcMain.handle(
     'deleteUploadedLogFile',
     async (_event: unknown, ...args: unknown[]) =>
-      deleteUploadedLogFile(args[0] as string)
+      deleteUploadedLogFile(deps, args[0] as string)
   )
 
   // Electron parity source: src/backend/logger/ipc_handler.ts:30
@@ -371,5 +373,5 @@ export function registerLoggerFlows(): void {
   // getUploadedLogFiles's expiry-pruning side effect (a read channel that
   // mutates the store) is preserved -- Electron parity, and it is what
   // frontend/state/UploadedLogFiles.ts reads at module scope.
-  ipcMain.handle('getUploadedLogFiles', async () => getUploadedLogFiles())
+  ipcMain.handle('getUploadedLogFiles', async () => getUploadedLogFiles(deps))
 }

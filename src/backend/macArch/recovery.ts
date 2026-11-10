@@ -29,7 +29,6 @@ import {
   promptMac32WindowsReinstall,
   verdictFromArchs
 } from 'backend/utils/macArch'
-import { macArchStore } from './stores'
 import type { Runner } from 'common/types'
 import type { ManagerDeps } from 'backend/services/types'
 
@@ -37,6 +36,12 @@ import type { ManagerDeps } from 'backend/services/types'
 export interface MacArchRecoveryDeps {
   libraryManagers: ManagerDeps['libraryManagers']
   getDownloadQueue: ManagerDeps['getDownloadQueue']
+  stores: MacArchStoresDeps['stores']
+}
+
+/** The verdict store slice (66.1, R1). */
+export interface MacArchStoresDeps {
+  stores: Pick<ManagerDeps['stores'], 'macArch'>
 }
 
 export const MAX_SWEEP_PROBES = 20
@@ -49,18 +54,25 @@ const prefixOf = (runner: Runner): LogPrefix =>
   RunnerToLogPrefixMap[runner] ?? LogPrefix.Backend
 
 export function recordedMacArch(
+  deps: MacArchStoresDeps,
   runner: Runner,
   appName: string
 ): Verdict | undefined {
   try {
-    const verdicts = macArchStore.get('verdicts', {})
+    const verdicts = deps.stores.macArch.macArchStore.get('verdicts', {})
     return verdicts[keyOf(runner, appName)]?.mac_arch
   } catch {
     return undefined
   }
 }
 
-function record(runner: Runner, appName: string, mac_arch: Verdict) {
+function record(
+  deps: MacArchStoresDeps,
+  runner: Runner,
+  appName: string,
+  mac_arch: Verdict
+) {
+  const { macArchStore } = deps.stores.macArch
   const verdicts = { ...macArchStore.get('verdicts', {}) }
   verdicts[keyOf(runner, appName)] = { mac_arch, checkedAt: Date.now() }
   macArchStore.set('verdicts', verdicts)
@@ -106,7 +118,7 @@ export async function checkInstalledMacArch(
     const verdict = verdictFromArchs(archs)
     if (!verdict) return
     // Always overwrite: a fresh native install may be a newer build.
-    record(runner, appName, verdict)
+    record(deps, runner, appName, verdict)
     apply(appName, verdict)
     logInfo(`macArch: ${appName} native build is ${verdict}-bit`, lp)
     if (verdict === '32' && prompt) {
@@ -226,7 +238,7 @@ export function scheduleMacArchSweep(
     let queue: SweepCandidate[]
     try {
       queue = getCandidates()
-        .filter((c) => !recordedMacArch(runner, c.appName))
+        .filter((c) => !recordedMacArch(deps, runner, c.appName))
         .slice(0, MAX_SWEEP_PROBES)
     } catch {
       return

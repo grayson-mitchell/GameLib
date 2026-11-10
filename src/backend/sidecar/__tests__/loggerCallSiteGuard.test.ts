@@ -156,7 +156,7 @@ function hasExpressionBodyErrorWrapper(source: string): boolean {
 describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / REQ-34.2-12 / REQ-34.2-14)', () => {
   beforeAll(() => {
     initHeadless()
-    registerLoggerFlows()
+    registerLoggerFlows({ stores: {} as never })
     // A second registration would duplicate every frontend log line —
     // platformApi's dispatchSend iterates every listener in the array for
     // a channel.
@@ -252,7 +252,7 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
       // No initHeadless()/init call anywhere in this fresh, isolated
       // module registry — heroicLogWriter is never assigned, reproducing
       // the recorded "heroicLogWriter unset until bootstrap init" gotcha.
-      freshRegistration.registerLoggerFlows()
+      freshRegistration.registerLoggerFlows({ stores: {} as never })
       const freshListener =
         freshElectronStub.listenerRegistry.get('logError')?.[0]
       expect(freshListener).toBeDefined()
@@ -407,7 +407,7 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
       // No initHeadless()/init call anywhere in this fresh, isolated
       // module registry -- heroicLogWriter is never assigned, reproducing
       // the recorded "heroicLogWriter unset until bootstrap init" gotcha.
-      freshRegistration.registerLoggerFlows()
+      freshRegistration.registerLoggerFlows({ stores: {} as never })
       const freshListener =
         freshElectronStub.listenerRegistry.get('logInfo')?.[0]
       expect(freshListener).toBeDefined()

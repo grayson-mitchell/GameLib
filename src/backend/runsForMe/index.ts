@@ -7,7 +7,12 @@ import {
   type RunsForMeState
 } from 'common/runsForMe'
 import type { Runner } from 'common/types'
-import { runsForMeStore } from './stores'
+import type { Stores } from 'backend/services/types'
+
+/** The store slice the runs-for-me map reads (66.1, R1). */
+export interface RunsForMeDeps {
+  stores: Pick<Stores, 'runsForMe'>
+}
 
 const VALID_STATES: ReadonlySet<string> = new Set([
   'auto',
@@ -19,8 +24,13 @@ const VALID_STATES: ReadonlySet<string> = new Set([
  * The persisted map. Values outside the three-state set are dropped so a
  * hand-edited store cannot leak garbage to the UI (T-mkz-02).
  */
-export function getRunsForMeMap(): Record<string, RunsForMeState> {
-  const raw = runsForMeStore.get('games', {}) as Record<string, unknown>
+export function getRunsForMeMap(
+  deps: RunsForMeDeps
+): Record<string, RunsForMeState> {
+  const raw = deps.stores.runsForMe.runsForMeStore.get('games', {}) as Record<
+    string,
+    unknown
+  >
   const out: Record<string, RunsForMeState> = {}
   if (!raw || typeof raw !== 'object') return out
   for (const [key, value] of Object.entries(raw)) {
@@ -32,23 +42,26 @@ export function getRunsForMeMap(): Record<string, RunsForMeState> {
 }
 
 function writeAndPush(
+  deps: RunsForMeDeps,
   key: string,
   state: RunsForMeState
 ): Record<string, RunsForMeState> {
   // Whole-record read/write: never `get('games.' + key)` (dots in appNames).
-  const next = { ...getRunsForMeMap(), [key]: state }
-  runsForMeStore.set('games', next)
+  const next = { ...getRunsForMeMap(deps), [key]: state }
+  deps.stores.runsForMe.runsForMeStore.set('games', next)
   sendFrontendMessage('runsForMeChanged', next)
   return next
 }
 
 /** U-1: explicit user toggle. Wins over auto until toggled again. */
 export function setRunsForMeByUser(
+  deps: RunsForMeDeps,
   appName: string,
   runner: Runner,
   on: boolean
 ): Record<string, RunsForMeState> {
   return writeAndPush(
+    deps,
     runsForMeKey(appName, runner),
     nextRunsForMeAfterUserToggle(on)
   )
@@ -60,6 +73,7 @@ export function setRunsForMeByUser(
  * failure must not break a game-stop path (T-mkz-03).
  */
 export function recordPlaySession(
+  deps: RunsForMeDeps,
   appName: string,
   runner: Runner,
   elapsedMs: number,
@@ -68,10 +82,10 @@ export function recordPlaySession(
   if (platform !== 'darwin') return
   try {
     const key = runsForMeKey(appName, runner)
-    const current = getRunsForMeMap()[key]
+    const current = getRunsForMeMap(deps)[key]
     const next = nextRunsForMeAfterSession(current, elapsedMs)
     if (next === current || next === undefined) return
-    writeAndPush(key, next)
+    writeAndPush(deps, key, next)
     logInfo(
       `Runs for me: auto-set for ${appName} (${runner}) after ${Math.round(
         elapsedMs / 1000

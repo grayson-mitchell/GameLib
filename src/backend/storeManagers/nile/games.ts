@@ -62,7 +62,10 @@ export default class NileGameManager implements Game {
         ManagerDeps,
         'libraryManagers' | 'launcher' | 'commandRunner' | 'spawnAsync'
       > & {
-        stores: Pick<ManagerDeps['stores'], 'kvs' | 'wineManager'>
+        stores: Pick<
+          ManagerDeps['stores'],
+          'kvs' | 'wineManager' | 'wikiGameInfo' | 'crossoverIndex'
+        >
       }
   ) {
     this.id = id
@@ -425,7 +428,11 @@ export default class NileGameManager implements Game {
       }
 
       if (await isUmuSupported(gameSettings)) {
-        const umuId = await getUmuId(gameInfo.app_name, gameInfo.runner)
+        const umuId = await getUmuId(
+          this.deps,
+          gameInfo.app_name,
+          gameInfo.runner
+        )
         if (umuId) {
           commandEnv['GAMEID'] = umuId
         }

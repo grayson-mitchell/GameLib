@@ -844,7 +844,7 @@ describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
         writeInvoke(input, 'dul-1', 'deleteUploadedLogFile', [url])
         await waitForResponse(frames, 'dul-1')
 
-        expect(spy).toHaveBeenCalledWith(url)
+        expect(spy).toHaveBeenCalledWith(expect.anything(), url)
       } finally {
         spy.mockRestore()
       }

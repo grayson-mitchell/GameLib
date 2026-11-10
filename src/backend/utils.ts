@@ -1048,7 +1048,7 @@ export async function downloadDefaultWine(deps: {
 }) {
   if (isWindows) return null
   // refresh wine list
-  await updateWineVersionInfos(true)
+  await updateWineVersionInfos(deps, true)
   // get list of wines on wineDownloaderInfoStore
   const availableWine = deps.stores.wineManager.wineDownloaderInfoStore.get(
     'wine-releases',
@@ -1077,7 +1077,7 @@ export async function downloadDefaultWine(deps: {
   const onProgress = (state: WineManagerStatus) => {
     sendFrontendMessage('progressOfWineManager', release.version, state)
   }
-  const result = await installWineVersion(release, onProgress)
+  const result = await installWineVersion(deps, release, onProgress)
 
   if (result === 'success') {
     let downloadedWine = null

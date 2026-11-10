@@ -14,14 +14,14 @@ import * as macArch from 'backend/utils/macArch'
 
 const mem: { verdicts: Record<string, unknown> } = { verdicts: {} }
 
-jest.mock('../stores', () => ({
+const macArchStores = {
   macArchStore: {
     get: (_k: string, d: unknown) => (mem.verdicts ? mem.verdicts : d),
     set: (_k: string, v: Record<string, unknown>) => {
       mem.verdicts = v
     }
   }
-}))
+}
 jest.mock('backend/constants/environment', () => ({ isMac: true }))
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -39,6 +39,7 @@ jest.mock('backend/utils/macArch', () => ({
 const getInstallInfo = jest.fn()
 const getGameInfo = jest.fn()
 const deps = {
+  stores: { macArch: macArchStores },
   getDownloadQueue: () => ({
     addToQueue: (...a: unknown[]) => addToQueue(...a)
   }),
@@ -87,7 +88,7 @@ describe('checkInstalledMacArch', () => {
     const a = baseArgs()
     await checkInstalledMacArch(a)
     expect(a.apply).not.toHaveBeenCalled()
-    expect(recordedMacArch('gog', 'g1')).toBeUndefined()
+    expect(recordedMacArch(deps as never, 'gog', 'g1')).toBeUndefined()
   })
   test('null verdict writes nothing and never prompts', async () => {
     m.verdictFromArchs.mockReturnValue(null)
@@ -95,14 +96,14 @@ describe('checkInstalledMacArch', () => {
     await checkInstalledMacArch(a)
     expect(a.apply).not.toHaveBeenCalled()
     expect(m.promptMac32WindowsReinstall).not.toHaveBeenCalled()
-    expect(recordedMacArch('gog', 'g1')).toBeUndefined()
+    expect(recordedMacArch(deps as never, 'gog', 'g1')).toBeUndefined()
   })
   test('64 records, applies, no prompt', async () => {
     m.verdictFromArchs.mockReturnValue('64')
     const a = baseArgs()
     await checkInstalledMacArch(a)
     await flush()
-    expect(recordedMacArch('gog', 'g1')).toBe('64')
+    expect(recordedMacArch(deps as never, 'gog', 'g1')).toBe('64')
     expect(a.apply).toHaveBeenCalledWith('g1', '64')
     expect(m.promptMac32WindowsReinstall).not.toHaveBeenCalled()
   })
@@ -110,7 +111,7 @@ describe('checkInstalledMacArch', () => {
     const a = baseArgs()
     await checkInstalledMacArch(a)
     await flush()
-    expect(recordedMacArch('gog', 'g1')).toBe('32')
+    expect(recordedMacArch(deps as never, 'gog', 'g1')).toBe('32')
     expect(a.apply).toHaveBeenCalledWith('g1', '32')
     expect(m.promptMac32WindowsReinstall).toHaveBeenCalledTimes(1)
   })

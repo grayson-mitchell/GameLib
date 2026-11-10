@@ -262,12 +262,12 @@ export function registerGameDetailsFlows(deps: GameDetailsDeps): void {
   ipcMain.handle(
     'getGameMetadataOverride',
     async (_event: unknown, ...args: unknown[]) =>
-      getGameOverrides(args[0] as string)
+      getGameOverrides(deps, args[0] as string)
   )
 
   // Already-clean pass-through to game_overrides/index.ts, never extracted
   // into gamedetails/dispatch.ts (main.ts:1453-1455).
-  ipcMain.handle('getAllGameOverrides', async () => getAllGameOverrides())
+  ipcMain.handle('getAllGameOverrides', async () => getAllGameOverrides(deps))
 
   // ── send (3) ──────────────────────────────────────────────────────────
 
@@ -276,6 +276,7 @@ export function registerGameDetailsFlows(deps: GameDetailsDeps): void {
     (_event: unknown, ...args: unknown[]) => {
       try {
         setGameMetadataOverride(
+          deps,
           args[0] as {
             appName: string
             title?: string

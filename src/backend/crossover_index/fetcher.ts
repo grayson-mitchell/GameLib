@@ -7,7 +7,8 @@ import { publicDir } from 'backend/constants/paths'
 import { axiosClient } from 'backend/utils'
 import { logError, logInfo, LogPrefix } from 'backend/logger'
 
-import { crossoverIndexStore, type CachedIndex } from './stores'
+import type { CachedIndex } from './stores'
+import type { Stores } from 'backend/services/types'
 
 /**
  * D-19: the single seam this plan introduces — parameterized by index
@@ -17,6 +18,11 @@ import { crossoverIndexStore, type CachedIndex } from './stores'
  * this shape and calls the same `loadIndex` — no further abstraction is
  * warranted.
  */
+/** The store slice the CrossOver index cache reads (66.1, R1). */
+export interface CrossoverIndexDeps {
+  stores: Pick<Stores, 'crossoverIndex'>
+}
+
 export interface IndexDescriptor<T> {
   /** CacheStore key + log identity. */
   name: string
@@ -84,10 +90,13 @@ function loadBundledSnapshot<T>(desc: IndexDescriptor<T>): T | null {
  * more than daily cadence" philosophy, and it still self-heals to the real
  * network payload the next time the TTL expires and a fetch succeeds.
  */
-function persistBundledFallback<T>(desc: IndexDescriptor<T>): T | null {
+function persistBundledFallback<T>(
+  deps: CrossoverIndexDeps,
+  desc: IndexDescriptor<T>
+): T | null {
   const bundled = loadBundledSnapshot(desc)
   if (bundled) {
-    crossoverIndexStore.set(desc.name, {
+    deps.stores.crossoverIndex.crossoverIndexStore.set(desc.name, {
       data: bundled,
       fetchedAt: Date.now()
     })
@@ -178,13 +187,14 @@ function withinFailureBackoff(desc: IndexDescriptor<unknown>): boolean {
  * T-19-05).
  */
 export async function loadIndex<T>(
+  deps: CrossoverIndexDeps,
   desc: IndexDescriptor<T>
 ): Promise<T | null> {
   assertHttps(desc)
 
-  const cached = crossoverIndexStore.get(desc.name) as
-    | CachedIndex<T>
-    | undefined
+  const cached = deps.stores.crossoverIndex.crossoverIndexStore.get(
+    desc.name
+  ) as CachedIndex<T> | undefined
 
   if (cached) {
     const minutesSinceFetch = (Date.now() - cached.fetchedAt) / 1000 / 60
@@ -197,7 +207,7 @@ export async function loadIndex<T>(
   // the degraded value without re-attempting. Identical return shape to both
   // failure branches below, so the caller sees no behavioural difference.
   if (withinFailureBackoff(desc)) {
-    return cached?.data ?? persistBundledFallback(desc)
+    return cached?.data ?? persistBundledFallback(deps, desc)
   }
 
   try {
@@ -215,11 +225,11 @@ export async function loadIndex<T>(
         LogPrefix.Backend
       )
       recordFailure(desc)
-      return cached?.data ?? persistBundledFallback(desc)
+      return cached?.data ?? persistBundledFallback(deps, desc)
     }
 
     lastFailureAt.delete(desc.name)
-    crossoverIndexStore.set(desc.name, {
+    deps.stores.crossoverIndex.crossoverIndexStore.set(desc.name, {
       data: parsed.data,
       fetchedAt: Date.now()
     })
@@ -230,6 +240,6 @@ export async function loadIndex<T>(
       LogPrefix.Backend
     )
     recordFailure(desc)
-    return cached?.data ?? persistBundledFallback(desc)
+    return cached?.data ?? persistBundledFallback(deps, desc)
   }
 }

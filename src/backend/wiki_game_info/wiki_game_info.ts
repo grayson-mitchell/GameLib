@@ -3,7 +3,6 @@ import type { GamesDbDeps } from 'backend/wiki_game_info/gamesdb/utils'
 import { isStore, storeCapabilities } from 'common/storeCapabilities'
 import { getInfoFromProtonDB } from 'backend/wiki_game_info/protondb/utils'
 import { getSteamDeckComp } from 'backend/wiki_game_info/steamdeck/utils'
-import { wikiGameInfoStore } from './stores'
 import { removeSpecialcharacters } from '../utils'
 import {
   HowLongToBeatOutcome,
@@ -18,13 +17,19 @@ import { getInfoFromPCGamingWiki } from './pcgamingwiki/utils'
 import { getUmuId } from './umu/utils'
 import { isLinux, isMac } from 'backend/constants/environment'
 import type { Game } from 'common/types/game_manager'
+import type { Stores } from 'backend/services/types'
 import {
   getCodeweaversFromIndex,
   crossoverIndexHas
 } from 'backend/crossover_index'
 
+/** What the wiki info lookup reads: the GOG manager, plus its own and the CrossOver index stores. */
+export interface WikiGameInfoDeps extends GamesDbDeps {
+  stores: Pick<Stores, 'wikiGameInfo' | 'crossoverIndex'>
+}
+
 export async function getWikiGameInfo(
-  deps: GamesDbDeps,
+  deps: WikiGameInfoDeps,
   game: Game,
   forceRefresh = false
 ): Promise<WikiInfo | null> {
@@ -36,7 +41,7 @@ export async function getWikiGameInfo(
     const title = removeSpecialcharacters(gameInfo.title)
 
     // check if we have a cached response
-    const cachedResponse = wikiGameInfoStore.get(title)
+    const cachedResponse = deps.stores.wikiGameInfo.wikiGameInfoStore.get(title)
     // Self-heal stale caches: entries populated before AppleGamingWiki data was
     // captured (or on a non-Mac session) hold applegamingwiki=null. On macOS the
     // DETAIL-02 compat pill needs that data, so treat a null-applegamingwiki hit
@@ -58,7 +63,7 @@ export async function getWikiGameInfo(
       (!cachedResponse?.codeweavers ||
         cachedResponse.codeweavers.macRating === undefined ||
         (cachedResponse.codeweavers.macRating === null &&
-          crossoverIndexHas(gameInfo)))
+          crossoverIndexHas(deps, gameInfo)))
     // Self-heal stale caches: a FAILED pcgamingwiki lookup (and the HLTB lookup it
     // starves of an ID) used to sit in this 30-day cache until it expired, so the
     // PCGamingWiki 403 fixed in `utils.ts` (the missing descriptive User-Agent) kept
@@ -117,8 +122,8 @@ export async function getWikiGameInfo(
         ),
         getInfoFromGamesDB(deps, title, appName, runner),
         isMac ? getInfoFromAppleGamingWiki(title) : null,
-        isLinux ? getUmuId(appName, runner) : null,
-        isMac ? getCodeweaversFromIndex(gameInfo) : null
+        isLinux ? getUmuId(deps, appName, runner) : null,
+        isMac ? getCodeweaversFromIndex(deps, gameInfo) : null
       ])
 
     // Defensive read. `getInfoFromPCGamingWiki` always returns an object, but a bare
@@ -191,7 +196,7 @@ export async function getWikiGameInfo(
       }
     }
 
-    wikiGameInfoStore.set(title, wikiGameInfo)
+    deps.stores.wikiGameInfo.wikiGameInfoStore.set(title, wikiGameInfo)
 
     return wikiGameInfo
   } catch (error) {

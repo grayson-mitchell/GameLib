@@ -34,7 +34,11 @@
  * including `backend/ipc`.
  */
 
-import { getAllGameOverrides, setGameOverrides } from '../game_overrides'
+import {
+  getAllGameOverrides,
+  setGameOverrides,
+  type GameOverridesDeps
+} from '../game_overrides'
 import type { GameMetadataOverride } from '../game_overrides/stores'
 import { logWarning, LogPrefix } from '../logger'
 
@@ -66,13 +70,16 @@ export function setMetadataChangedNotifier(fn: MetadataChangedNotifier): void {
   metadataChangedNotifier = fn
 }
 
-export function setGameMetadataOverride(args: {
-  appName: string
-  title?: string
-  art_cover?: string
-  art_square?: string
-}): void {
+export function setGameMetadataOverride(
+  deps: GameOverridesDeps,
+  args: {
+    appName: string
+    title?: string
+    art_cover?: string
+    art_square?: string
+  }
+): void {
   const { appName, title, art_cover, art_square } = args
-  setGameOverrides(appName, { title, art_cover, art_square })
-  metadataChangedNotifier(getAllGameOverrides())
+  setGameOverrides(deps, appName, { title, art_cover, art_square })
+  metadataChangedNotifier(getAllGameOverrides(deps))
 }

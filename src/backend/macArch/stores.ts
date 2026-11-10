@@ -8,6 +8,8 @@ import { userDataPath } from 'backend/constants/paths'
  * a unit because electron-store treats dots as path separators and appNames
  * can contain dots. Backend-only: the frontend receives `mac_arch` through the
  * GOG/Epic library stores, so this is not registered in storeRegistration.
+ *
+ * @public consumed only through the `Stores['macArch']` slice (macArch/recovery.ts), which knip cannot trace.
  */
 export const macArchStore = new TypeCheckedStoreBackend(
   'macArchStore',

@@ -83,7 +83,8 @@ const attachOverridesMock = jest.fn()
 const setGameOverridesMock = jest.fn()
 const getAllGameOverridesMock = jest.fn()
 jest.mock('backend/game_overrides', () => ({
-  attachOverrides: (...args: [unknown]) => attachOverridesMock(...args),
+  attachOverrides: (...args: [unknown, unknown]) =>
+    attachOverridesMock(...args),
   setGameOverrides: (...args: [unknown, unknown]) =>
     setGameOverridesMock(...args),
   getAllGameOverrides: (...args: []) => getAllGameOverridesMock(...args)
@@ -277,7 +278,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
 
     const result = await getGameInfo(dispatchDeps, '440', 'steam')
 
-    expect(attachOverridesMock).toHaveBeenCalledWith(rawInfo)
+    expect(attachOverridesMock).toHaveBeenCalledWith(expect.anything(), rawInfo)
     expect(result).toBe(overriddenInfo)
   })
 
@@ -641,9 +642,12 @@ describe('backend/gamedetails/overrides.ts (REQ-34.2-08)', () => {
     getAllGameOverridesMock.mockReturnValue({})
 
     expect(() =>
-      setGameMetadataOverride({ appName: '440', title: 'Custom Title' })
+      setGameMetadataOverride({} as never, {
+        appName: '440',
+        title: 'Custom Title'
+      })
     ).not.toThrow()
-    expect(setGameOverridesMock).toHaveBeenCalledWith('440', {
+    expect(setGameOverridesMock).toHaveBeenCalledWith({}, '440', {
       title: 'Custom Title',
       art_cover: undefined,
       art_square: undefined
@@ -656,14 +660,14 @@ describe('backend/gamedetails/overrides.ts (REQ-34.2-08)', () => {
     const notifierMock = jest.fn()
     setMetadataChangedNotifier(notifierMock)
 
-    setGameMetadataOverride({
+    setGameMetadataOverride({} as never, {
       appName: '440',
       title: 'Custom Title',
       art_cover: 'cover.png',
       art_square: 'square.png'
     })
 
-    expect(setGameOverridesMock).toHaveBeenCalledWith('440', {
+    expect(setGameOverridesMock).toHaveBeenCalledWith({}, '440', {
       title: 'Custom Title',
       art_cover: 'cover.png',
       art_square: 'square.png'

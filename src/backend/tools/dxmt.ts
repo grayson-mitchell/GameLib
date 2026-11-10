@@ -14,9 +14,26 @@ import {
   writeFileSync
 } from 'graceful-fs'
 import { toolsPath } from 'backend/constants/paths'
-import { wineDownloaderInfoStore } from 'backend/wine/manager/utils'
 import { checkWinemacMetalViewExports } from './machoExports'
 import type { WinemacMetalCheck } from './machoExports'
+import type { Stores } from 'backend/services/types'
+
+/** The store slice the boot-time DXMT update census reads (66.1, R1). */
+export interface DxmtStoresDeps {
+  stores: {
+    wineManager: Pick<Stores['wineManager'], 'wineDownloaderInfoStore'>
+  }
+}
+
+/** Static holder (the shape of `SteamUser.bindStores`): the listeners below register at import. */
+class DxmtStores {
+  static bound: DxmtStoresDeps | null = null
+}
+
+/** Binds the slice at boot ('secret-stores' step). */
+export function bindDxmtStores(deps: DxmtStoresDeps): void {
+  DxmtStores.bound = deps
+}
 
 // Quick 261031-rjv: DXMT v0.80's winemetal.so resolves macdrv metal-view symbols that
 // Wine-Staging-macOS's winemac.so does not define, so D3D11 games cannot present on a
@@ -212,7 +229,15 @@ backendEvents.on('releasesInfoReady', async (releasesInfo) => {
   // which holds no referenced handle, so it adds no unbounded in-flight boot work (exit
   // contract half 2). It runs only for existing `-DXMT` copies, sequentially; do not move it
   // earlier in boot.
-  const availableWines = wineDownloaderInfoStore.get('wine-releases', [])
+  // The listener is registered at import time and has no boot services in hand, so it reads the
+  // wine-manager store slice bound at boot (bindDxmtStores). Unbound means no boot ran: nothing to
+  // update.
+  const wineStores = DxmtStores.bound?.stores.wineManager
+  if (!wineStores) return
+  const availableWines = wineStores.wineDownloaderInfoStore.get(
+    'wine-releases',
+    []
+  )
   const installedWineStagingVersions = availableWines.filter(
     (wine) => wine.type === 'Wine-Staging-macOS' && wine.isInstalled
   )

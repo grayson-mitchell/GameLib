@@ -1264,7 +1264,7 @@ export default class GOGLibraryManager implements LibraryManager {
         info.supported_operating_systems.find((os) => os.slug === 'linux')
       ),
       thirdPartyManagedApp: undefined,
-      mac_arch: recordedMacArch('gog', String(info.external_id))
+      mac_arch: recordedMacArch(this.deps, 'gog', String(info.external_id))
     }
 
     return object

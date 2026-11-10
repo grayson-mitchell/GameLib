@@ -50,6 +50,10 @@ import {
   windowsExeNameFromCommand
 } from 'backend/utils/wineWindowRaise'
 import type { SpawnDeps } from './provisionBottle'
+import type { RunsForMeDeps } from 'backend/runsForMe'
+
+/** The monitor's spawn slice plus the runs-for-me store its session record writes (66.1). */
+export type BottleMonitorDeps = SpawnDeps & RunsForMeDeps
 import { sendFrontendMessage } from '../../ipc'
 import { recordPlaySession } from 'backend/runsForMe'
 import type { SteamBottleLaunchWaitingCause } from 'common/types/steam'
@@ -318,7 +322,7 @@ function recordFirstMatch(
 }
 
 async function runPollLoop(
-  deps: SpawnDeps,
+  deps: BottleMonitorDeps,
   appId: string,
   entry: MonitorEntry,
   lowerPrefixes: string[],
@@ -407,7 +411,7 @@ async function runPollLoop(
       // (T-mkz-03). Recorded only on this branch: the give-up path and a
       // stopBottleProcessMonitor() cancel never reach it.
       try {
-        recordPlaySession(appId, 'steam', elapsedMs)
+        recordPlaySession(deps, appId, 'steam', elapsedMs)
       } catch (error) {
         logWarning(
           [`bottleProcessMonitor [${appId}]: recordPlaySession failed`, error],
@@ -489,7 +493,7 @@ export interface BottleProcessMonitorHandle {
  * when `installPath` does not resolve under `<bottleDir>/drive_c/`.
  */
 export function startBottleProcessMonitor(
-  deps: SpawnDeps,
+  deps: BottleMonitorDeps,
   args: StartBottleProcessMonitorArgs
 ): BottleProcessMonitorHandle | null {
   const {
