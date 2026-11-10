@@ -1029,9 +1029,22 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       // is what the name-keyed store RPC handlers resolve through. Store construction opens no
       // timer, watcher or handle.
       run: (_ctx, _io, state) => {
-        const registry = createStoreRegistry()
-        state.services.stores = prebuilt.stores ?? createStores({ registry })
-        state.services.storeRegistry = prebuilt.storeRegistry ?? registry
+        // Stores and registry are a pair: the registry the RPC handlers resolve through must be
+        // the one the stores registered into. Take both from `prebuilt` or build both, so one
+        // can never drift from the other (C-IN-4).
+        if (!prebuilt.stores !== !prebuilt.storeRegistry) {
+          throw new Error(
+            'boot: prebuilt.stores and prebuilt.storeRegistry must be given together'
+          )
+        }
+        if (prebuilt.stores && prebuilt.storeRegistry) {
+          state.services.stores = prebuilt.stores
+          state.services.storeRegistry = prebuilt.storeRegistry
+        } else {
+          const registry = createStoreRegistry()
+          state.services.stores = createStores({ registry })
+          state.services.storeRegistry = registry
+        }
         // SteamUser is a static class with ~20 callers, so its store reads go through a bound
         // slice; bound here, before any step or handler can reach it (66.1-16/18).
         SteamUser.bindStores({ stores: state.services.stores })
