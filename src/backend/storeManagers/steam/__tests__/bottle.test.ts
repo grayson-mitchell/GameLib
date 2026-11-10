@@ -21,6 +21,7 @@ import { GlobalConfig } from 'backend/config'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import { steamBottleConfigStore } from '../stores'
 import {
+  bindBottleStores,
   getBottleSteamappsDir,
   getBottleSteamExePath,
   isSteamBottleProvisioned,
@@ -126,6 +127,11 @@ const mockedReadFileSync = readFileSync as jest.Mock
 const mockedRmSync = rmSync as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
 const mockedSet = steamBottleConfigStore.set as jest.Mock
+
+// 66.1-22g: bottle readers use the slice bound at boot; bind the suite's mocked store.
+bindBottleStores({
+  stores: createTestStores({ steam: { steamBottleConfigStore } as never })
+})
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
 // Recording fakes handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()

@@ -27,7 +27,8 @@ import { GlobalConfig } from 'backend/config'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import { runWineCommand } from 'backend/launcher'
 import { steamBottleConfigStore } from '../stores'
-import { DEFAULT_BRIDGE_BOTTLE_NAME } from '../bottle'
+import { createTestStores } from 'backend/testUtils/testServices'
+import { bindBottleStores, DEFAULT_BRIDGE_BOTTLE_NAME } from '../bottle'
 import {
   stopPerGameBridgeBottle,
   endPerGameBridgeBottleSession,
@@ -145,6 +146,11 @@ const mockedReadFileSync = readFileSync as jest.Mock
 const mockedRmSync = rmSync as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
 const mockedSet = steamBottleConfigStore.set as jest.Mock
+
+// 66.1-22g: bottle readers use the slice bound at boot; bind the suite's mocked store.
+bindBottleStores({
+  stores: createTestStores({ steam: { steamBottleConfigStore } as never })
+})
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
 // Recording fake handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()

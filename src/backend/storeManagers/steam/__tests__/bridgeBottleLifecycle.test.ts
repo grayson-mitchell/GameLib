@@ -29,7 +29,9 @@ import * as engineServicesModule from 'backend/services/engineServices'
 import type { EngineServicesSource } from 'backend/services/engineServices'
 import { writeCxbottleConf } from 'backend/engine/adoptBottle'
 import { steamBottleConfigStore } from '../stores'
+import { createTestStores } from 'backend/testUtils/testServices'
 import {
+  bindBottleStores,
   bottleWineArch,
   DEFAULT_BRIDGE_BOTTLE_NAME,
   CROSSOVER_CREATE_FAILED,
@@ -150,6 +152,11 @@ const mockedReadFileSync = readFileSync as jest.Mock
 const mockedRmSync = rmSync as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
 const mockedSet = steamBottleConfigStore.set as jest.Mock
+
+// 66.1-22g: bottle readers use the slice bound at boot; bind the suite's mocked store.
+bindBottleStores({
+  stores: createTestStores({ steam: { steamBottleConfigStore } as never })
+})
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
 // Recording fakes handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()

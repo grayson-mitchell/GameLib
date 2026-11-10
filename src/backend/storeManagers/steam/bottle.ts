@@ -46,14 +46,13 @@ import {
 /**
  * Binds the stores slice the bottle readers use (66.1 R3). Bound once at boot; the bottle
  * helpers are sync and have ~40 callers across the steam tree, so they read the bound slice
- * instead of taking a parameter. TRANSITIONAL: until bound, the call-time `require('./stores')`
- * fallback serves (unit tests, early import order) -- plan 23 deletes the fallback.
+ * instead of taking a parameter. Bound at the 'stores' boot step; an unbound read throws.
  */
 export function bindBottleStores(deps: SteamStoresDeps): void {
   BottleStores.bound = deps
 }
 
-/** Static holder, the same shape as `SteamUser.bindStores` (66.1-16); plan 23 revisits both. */
+/** Static holder, the same shape as `SteamUser.bindStores` (66.1-16); 66.3 owns static holders. */
 class BottleStores {
   static bound: SteamStoresDeps | null = null
 }
@@ -62,10 +61,9 @@ class BottleStores {
 export function bottleConfigStore(): SteamStoresDeps['stores']['steam']['steamBottleConfigStore'] {
   if (BottleStores.bound)
     return BottleStores.bound.stores.steam.steamBottleConfigStore
-  /* eslint-disable @typescript-eslint/no-require-imports */
-  return (require('./stores') as typeof import('./stores'))
-    .steamBottleConfigStore
-  /* eslint-enable @typescript-eslint/no-require-imports */
+  throw new Error(
+    'steam bottle stores read before bindBottleStores (boot step "stores")'
+  )
 }
 
 export const DEFAULT_BRIDGE_BOTTLE_NAME = 'GameLibSteamBridge'
