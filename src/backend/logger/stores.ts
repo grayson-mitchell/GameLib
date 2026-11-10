@@ -6,13 +6,20 @@
 // `app`, the IPC layer's `sendFrontendMessage`, and the logger — light, but
 // not zero, and not worth an execution-time judgement call.
 import { TypeCheckedStoreBackend } from '../typed_store'
+import type { StoreRegistry } from 'backend/stores/storeRegistry'
 
-export const uploadedLogFileStore = new TypeCheckedStoreBackend(
-  'uploadedLogs',
-  {
-    cwd: 'store',
-    name: 'uploadedLogs',
-    accessPropertiesByDotNotation: false
-  },
-  { kind: 'cache' }
-)
+export function createLoggerStores(deps: { registry: StoreRegistry }) {
+  const { registry } = deps
+  const uploadedLogFileStore = new TypeCheckedStoreBackend(
+    'uploadedLogs',
+    {
+      cwd: 'store',
+      name: 'uploadedLogs',
+      accessPropertiesByDotNotation: false
+    },
+    { kind: 'cache' },
+    registry
+  )
+
+  return { uploadedLogFileStore }
+}

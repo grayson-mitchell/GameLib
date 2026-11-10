@@ -1,3 +1,16 @@
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
+import { createHumbleStores } from '../stores'
+
+const {
+  configStore,
+  humbleLibraryStore,
+  humbleSyncStore,
+  humbleOwnershipOverrideStore,
+  humbleGiftedAtStore,
+  humbleAuditStore,
+  humbleLocalRedeemedStore,
+  humbleNotifiedExpirationStore
+} = createHumbleStores({ registry: createStoreRegistry() })
 /**
  * Regression test for D-42/D-43: `humbleOwnershipOverrideStore` (a user's
  * "Not the same game" correction, keyed by `machine_name`) must survive a
@@ -12,17 +25,6 @@
  */
 
 jest.mock('backend/store_backend')
-
-import {
-  configStore,
-  humbleLibraryStore,
-  humbleSyncStore,
-  humbleOwnershipOverrideStore,
-  humbleGiftedAtStore,
-  humbleAuditStore,
-  humbleLocalRedeemedStore,
-  humbleNotifiedExpirationStore
-} from '../stores'
 
 describe('humbleOwnershipOverrideStore', () => {
   beforeEach(() => {

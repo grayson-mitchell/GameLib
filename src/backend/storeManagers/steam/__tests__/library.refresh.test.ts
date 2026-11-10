@@ -27,11 +27,6 @@ import {
 } from '../authTrigger'
 import { getAnonymousPicsClient } from '../anonymousClient'
 import {
-  steamLibraryStore,
-  steamMetadataStore,
-  steamSyncStore
-} from '../stores'
-import {
   getBottleSteamappsDir,
   getSteamBottleSettings,
   isSteamBottleProvisioned
@@ -50,8 +45,11 @@ import { listSteamClientPids } from '../steamClientProcess'
 import { pollInstallOnce } from '../library/installPollOnce'
 import { startInstallPolling } from '../library/installPolling'
 import { at } from './fixtures/indexed'
+import type { Stores } from 'backend/services/types'
 
-import * as steamStoresModule from '../stores'
+const { steamLibraryStore, steamMetadataStore, steamSyncStore } =
+  jest.requireMock<Stores['steam']>('../stores')
+const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })

@@ -19,7 +19,6 @@ import { tmpdir } from 'os'
 import { dirname, sep } from 'path'
 import { GlobalConfig } from 'backend/config'
 import { configPath } from 'backend/constants/paths'
-import { configStore } from 'backend/constants/key_value_stores'
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
 import { SIGN_IN_STORES } from 'common/signInState'
 import { __resetSignInEpochsForTests } from '../sessionEpoch'
@@ -27,6 +26,10 @@ import { __resetSignInProbeOutcomesForTests } from '../outcomes'
 import { runSignInProbePass } from '../pass'
 import type { SignInProbePassDeps, SignInProbeRegistration } from '../pass'
 import { makeFakeSignInStores } from './fakeFlagStore'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
+import { createKvsStores } from 'backend/constants/key_value_stores'
+
+const { configStore } = createKvsStores({ registry: createStoreRegistry() })
 
 jest.mock('backend/logger', () => ({
   ...jest.requireActual('backend/logger'),

@@ -116,7 +116,7 @@
  * the last duplicated surface (Phase 34.2 Plan 13, WR-09).
  *
  * `wiki_game_info/stores` is already registered by
- * `storeRegistration.ts:104` (Phase 29) — this module needs no new store
+ * `createStores` (Phase 29) — this module needs no new store
  * plumbing for the `getWikiGameInfo` cache self-heal path.
  *
  * Deliberately does NOT wrap the non-storeSearch invoke bodies in

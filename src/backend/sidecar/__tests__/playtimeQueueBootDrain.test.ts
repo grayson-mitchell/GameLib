@@ -83,6 +83,7 @@ jest.mock('../../online_monitor', () => ({
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { LogPrefix } from '../../logger'
 import { bootFresh } from './helpers/sidecarHarness'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
 const SKIP_LOG_MESSAGE =
   'Skipping playtime sync queue upload - playtime sync disabled'
@@ -104,7 +105,9 @@ function bootedWorld(opts?: {
 }) {
   let runOnce!: jest.Mock
   let syncQueuedPlaytimeSpy!: jest.SpyInstance
-  let playtimeSyncQueue!: typeof import('../../storeManagers/gog/stores').playtimeSyncQueue
+  let playtimeSyncQueue!: ReturnType<
+    typeof import('../../storeManagers/gog/stores').createGogStores
+  >['playtimeSyncQueue']
   // The boot builds the managers (66.1-23), so the suite builds its own, spies the drain on the
   // gog one, and hands them in prebuilt: the boot's drain call then reaches the spy.
   let gogManager!: import('../../storeManagers/gog/library').default
@@ -118,7 +121,9 @@ function bootedWorld(opts?: {
       runOnce = require('../../online_monitor').runOnceWhenOnline as jest.Mock
       runOnce.mockImplementation((cb: () => unknown) => cb())
       playtimeSyncQueue =
-        require('../../storeManagers/gog/stores').playtimeSyncQueue
+        require('../../storeManagers/gog/stores').createGogStores({
+          registry: createStoreRegistry()
+        }).playtimeSyncQueue
       opts?.seed?.(playtimeSyncQueue)
       const { createStoreManagers } =
         require('../../storeManagers') as typeof import('../../storeManagers')

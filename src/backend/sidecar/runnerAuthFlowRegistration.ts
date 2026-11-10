@@ -103,7 +103,7 @@ function logSendFailure(channel: string, error: unknown): void {
  * case): `ipcMain.on` (`platform/index.ts`) appends to an array on every call, so a second
  * unguarded call to this function would double-register `logoutGOG`'s listener — unlike the 6
  * `ipcMain.handle` calls above/below, which are naturally idempotent (`Map.set` replaces the
- * existing entry). Mirrors `storeRegistration.ts`'s own `let registered = false` guard.
+ * existing entry). Mirrors `createStores`'s own `let registered = false` guard.
  */
 let registered = false
 export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
@@ -222,7 +222,7 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
 
   // Source: main.ts:872 -> `NileUser.getUserData()`.
   ipcMain.handle('getAmazonUserInfo', async () => {
-    return NileUser.getUserData()
+    return NileUser.getUserData(userDeps())
   })
 
   // Source: main.ts:884 -> `NileUser.logout()`. Unchanged body — `NileUser.logout()`

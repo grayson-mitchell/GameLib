@@ -220,13 +220,14 @@ import { getSteamLibraries } from 'backend/utils'
 import { shell } from 'backend/platform'
 import { readKnownFixes } from 'backend/knownFixes'
 import { library } from '../state'
-import { steamMetadataStore } from '../stores'
 import { downloadSteamDepots } from '../depot'
 import SteamGame from '../games'
 import { checkBottleEligibility } from '../gameEligibility'
 import { SteamUser } from '../user'
+import type { Stores } from 'backend/services/types'
 
-import * as steamStoresModule from '../stores'
+const { steamMetadataStore } = jest.requireMock<Stores['steam']>('../stores')
+const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })

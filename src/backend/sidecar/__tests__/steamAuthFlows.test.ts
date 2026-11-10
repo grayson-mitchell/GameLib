@@ -132,6 +132,7 @@ import {
   UNPORTED_CHANNEL_MARKER,
   RUST_KEYRING_SET
 } from 'common/types/sidecarTransport'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
 // D-08: every case boots the sidecar once, in a fresh module registry. Module
 // handles the cases configure or inspect are rebound from that registry in
@@ -145,8 +146,12 @@ let startQRLogin: typeof import('../../storeManagers/steam/userSignIn').startQRL
 let submitSteamGuardCode: typeof import('../../storeManagers/steam/userSignIn').submitSteamGuardCode
 let redeemKey: typeof import('../../storeManagers/steam/userRedeem').redeemKey
 let getSteamLibraries: typeof import('backend/utils').getSteamLibraries
-let steamConfigStore: typeof import('../../storeManagers/steam/stores').configStore
-let steamBottleConfigStore: typeof import('../../storeManagers/steam/stores').steamBottleConfigStore
+let steamConfigStore: ReturnType<
+  typeof import('../../storeManagers/steam/stores').createSteamStores
+>['configStore']
+let steamBottleConfigStore: ReturnType<
+  typeof import('../../storeManagers/steam/stores').createSteamStores
+>['steamBottleConfigStore']
 let getTokenStore: typeof import('../../storeManagers/steam/tokenStore').getTokenStore
 let KEYRING_SLOT_STEAM_REFRESH_TOKEN: typeof import('../keyringTokenStore').KEYRING_SLOT_STEAM_REFRESH_TOKEN
 let isSteamBottleProvisioned: typeof import('../../storeManagers/steam/bottle').isSteamBottleProvisioned
@@ -171,10 +176,10 @@ function freshRegistry(): void {
   } = require('../../storeManagers/steam/userSignIn'))
   ;({ redeemKey } = require('../../storeManagers/steam/userRedeem'))
   ;({ getSteamLibraries } = require('backend/utils'))
-  ;({
-    configStore: steamConfigStore,
-    steamBottleConfigStore
-  } = require('../../storeManagers/steam/stores'))
+  ;({ configStore: steamConfigStore, steamBottleConfigStore } =
+    require('../../storeManagers/steam/stores').createSteamStores({
+      registry: createStoreRegistry()
+    }))
   ;({ getTokenStore } = require('../../storeManagers/steam/tokenStore'))
   ;({ KEYRING_SLOT_STEAM_REFRESH_TOKEN } = require('../keyringTokenStore'))
   ;({ isSteamBottleProvisioned } = require('../../storeManagers/steam/bottle'))

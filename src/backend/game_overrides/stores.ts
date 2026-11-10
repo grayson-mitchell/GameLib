@@ -1,6 +1,7 @@
 import { TypeCheckedStoreBackend } from '../typed_store'
 import { join } from 'node:path'
 import { userDataPath } from 'backend/constants/paths'
+import type { StoreRegistry } from 'backend/stores/storeRegistry'
 
 /**
  * Store for custom game metadata overrides (title, images)
@@ -12,12 +13,18 @@ export interface GameMetadataOverride {
   art_square?: string
 }
 
-export const gameOverridesStore = new TypeCheckedStoreBackend(
-  'gameOverridesStore',
-  {
-    cwd: join(userDataPath, 'store'),
-    name: 'game-overrides',
-    clearInvalidConfig: true
-  },
-  { kind: 'user-state' }
-)
+export function createGameOverridesStores(deps: { registry: StoreRegistry }) {
+  const { registry } = deps
+  const gameOverridesStore = new TypeCheckedStoreBackend(
+    'gameOverridesStore',
+    {
+      cwd: join(userDataPath, 'store'),
+      name: 'game-overrides',
+      clearInvalidConfig: true
+    },
+    { kind: 'user-state' },
+    registry
+  )
+
+  return { gameOverridesStore }
+}

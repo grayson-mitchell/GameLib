@@ -27,7 +27,7 @@ import { ipcMain } from '../platform'
 // the ONLY line in the file naming that function — see the header comment and the D-06
 // single-choke-point note above `applyStoreWrite`.
 import * as sidecarRpc from './sidecarRpc'
-import { getRegisteredStore } from '../typed_store'
+import type { StoreRegistry } from '../stores/storeRegistry'
 import {
   setStoreChangeNotifier,
   withStoreChangeSuppressed
@@ -66,6 +66,7 @@ interface WritableStoreBackend {
  * frame; the cache-store branch below is the ONLY construction shape it will ever use.
  */
 function resolveWritableStore(
+  registry: StoreRegistry,
   storeName: string
 ): WritableStoreBackend | undefined {
   // WR-09: the deny list is load-bearing on the write path too — a denied cache store
@@ -74,7 +75,7 @@ function resolveWritableStore(
     return undefined
   }
 
-  const registered = getRegisteredStore(storeName)
+  const registered = registry.get(storeName)
   if (registered) {
     // TypeCheckedStoreBackend's generic `set<KeyType>`/`delete<KeyType>` signatures are
     // only meaningfully typed against a literal `Name`/`KeyType` pair — this dispatch is
@@ -106,6 +107,7 @@ function resolveWritableStore(
  * convention) — and returns without writing or emitting a change event.
  */
 export function applyStoreWrite(
+  registry: StoreRegistry,
   op: 'set' | 'delete',
   storeName: string,
   key: string,
@@ -181,7 +183,7 @@ export function applyStoreWrite(
 
   // Guard (d): resolve the target ONLY through the registry or the fixed cache-store
   // construction shape — never a path reconstructed from the name.
-  const target = resolveWritableStore(storeName)
+  const target = resolveWritableStore(registry, storeName)
   if (!target) {
     process.stderr.write(
       `[storeWriteHandlers] rejected write — no resolvable store instance for '${storeName}' key '${key}'\n`
@@ -283,10 +285,13 @@ function pushStoreChanged(payload: StoreChangedPayload): void {
 let handlersRegistered = false
 
 /**
- * Registers the three write listeners. Idempotent (mirrors `ensureStoresRegistered()`'s
+ * Registers the three write listeners. Idempotent (mirrors `registerHandlers`'s
  * own re-entrancy guard) — safe to call more than once across tests/bootstraps.
  */
-export function registerStoreWriteHandlers(): void {
+export function registerStoreWriteHandlers(deps: {
+  registry: StoreRegistry
+}): void {
+  const { registry } = deps
   if (handlersRegistered) {
     return
   }
@@ -313,7 +318,7 @@ export function registerStoreWriteHandlers(): void {
         )
         return
       }
-      applyStoreWrite('set', storeName, key, value)
+      applyStoreWrite(registry, 'set', storeName, key, value)
     }
   )
 
@@ -326,7 +331,7 @@ export function registerStoreWriteHandlers(): void {
         )
         return
       }
-      applyStoreWrite('delete', storeName, key)
+      applyStoreWrite(registry, 'delete', storeName, key)
     }
   )
 
@@ -345,8 +350,8 @@ export function registerStoreWriteHandlers(): void {
         return
       }
 
-      if (getRegisteredStore(storeName)) {
-        // The typed stores are constructed by `storeRegistration.ts`, not by the
+      if (registry.get(storeName)) {
+        // The typed stores are constructed by `createStores`, not by the
         // renderer — a `storeNew` for one of them is a legitimate no-op.
         return
       }

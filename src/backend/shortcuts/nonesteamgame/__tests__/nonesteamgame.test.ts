@@ -2,11 +2,14 @@ import { readFileSync, copyFileSync, mkdirSync } from 'graceful-fs'
 import { join } from 'path'
 import { DirResult, dirSync } from 'tmp'
 import { addNonSteamGame, removeNonSteamGame } from '../nonesteamgame'
-import { tsStore } from 'backend/constants/key_value_stores'
 import { showDialogBoxModalAuto } from 'backend/dialog/dialog'
 import { GlobalConfig } from 'backend/config'
 import { logInfo, logError, logWarning } from 'backend/logger'
 import type { Game } from 'common/types/game_manager'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
+import { createKvsStores } from 'backend/constants/key_value_stores'
+
+const { tsStore } = createKvsStores({ registry: createStoreRegistry() })
 
 // Phase 35 Plan 15: `backend/platform`'s manual mock must be requested BY NAME. The
 // `electron` one it replaces was applied automatically because electron is a

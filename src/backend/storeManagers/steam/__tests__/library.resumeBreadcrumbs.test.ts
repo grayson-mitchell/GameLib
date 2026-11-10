@@ -16,11 +16,12 @@ import {
 import { sendFrontendMessage } from '../../../ipc'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
-import { steamLibraryStore } from '../stores'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { library } from '../state'
+import type { Stores } from 'backend/services/types'
 
-import * as steamStoresModule from '../stores'
+const { steamLibraryStore } = jest.requireMock<Stores['steam']>('../stores')
+const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })

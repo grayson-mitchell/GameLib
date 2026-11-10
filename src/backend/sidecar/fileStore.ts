@@ -423,7 +423,7 @@ function load(filePath: string): Record<string, unknown> {
     // `true` and arrays, so the `catch` below never fired for those and `cell.data`
     // became a NON-OBJECT. `data === null` plus `options.defaults` then threw
     // "Cannot set properties of null" INSIDE the constructor — at module scope of
-    // `storeRegistration.ts`'s imports, i.e. the sidecar failed to boot; and a
+    // `createStores`'s imports, i.e. the sidecar failed to boot; and a
     // primitive silently discarded every write. Only *unparseable* JSON was covered
     // before, so the documented "a corrupt file is never fatal" guarantee did not
     // actually hold.

@@ -47,8 +47,10 @@ jest.mock('backend/crossover_index', () => ({
 
 // Imported AFTER the jest.mock calls above.
 import { getWikiGameInfo } from '../wiki_game_info'
-import * as wikiGameInfoStores from '../stores'
 import { getInfoFromPCGamingWiki } from '../pcgamingwiki/utils'
+import { createWikiGameInfoStores } from '../stores'
+
+const wikiGameInfoStores = createWikiGameInfoStores()
 
 const { wikiGameInfoStore } = wikiGameInfoStores
 const gamesDbDeps = {

@@ -11,7 +11,6 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { sendFrontendMessage } from 'backend/ipc'
-import { legendaryConfigStore } from 'backend/storeManagers/legendary/stores'
 import {
   __resetSignInEpochsForTests,
   captureSignInEpoch
@@ -25,6 +24,11 @@ import { applySignInVerdict } from 'backend/signInProbe/verdict'
 import { probeLegendarySession } from 'backend/signInProbe/runnerProbes'
 import type { FakeFlagStore } from 'backend/signInProbe/__tests__/fakeFlagStore'
 import { LegendaryUser, type LegendaryUserDeps } from '../user'
+import type { Stores } from 'backend/services/types'
+
+const { legendaryConfigStore } = jest.requireMock<Stores['legendary']>(
+  'backend/storeManagers/legendary/stores'
+)
 
 jest.mock('../constants', () => ({
   legendaryUserInfo: '/tmp/gamelib-legendary-expiry-test/user.json'

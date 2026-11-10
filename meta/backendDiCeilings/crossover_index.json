@@ -7,7 +7,6 @@
   },
   "moduleState": {
     "src/backend/crossover_index/fetcher.ts": 1,
-    "src/backend/crossover_index/index.ts": 1,
-    "src/backend/crossover_index/stores.ts": 1
+    "src/backend/crossover_index/index.ts": 1
   }
 }

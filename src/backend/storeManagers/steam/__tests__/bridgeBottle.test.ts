@@ -25,7 +25,6 @@ import { dirname as dirnameOf, join as joinPath } from 'node:path'
 import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
-import { steamBottleConfigStore } from '../stores'
 import { createTestStores } from 'backend/testUtils/testServices'
 import { bindBottleStores, DEFAULT_BRIDGE_BOTTLE_NAME } from '../bottle'
 import {
@@ -54,6 +53,10 @@ import type { DrmBridgeRunner } from '../bridgeBottle'
 import { __stopBottledRaiseLoops } from '../bottledSteam'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
+import type { Stores } from 'backend/services/types'
+
+const { steamBottleConfigStore } =
+  jest.requireMock<Stores['steam']>('../stores')
 
 jest.mock('backend/platform', () => ({
   app: {

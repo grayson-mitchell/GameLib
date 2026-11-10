@@ -419,7 +419,7 @@
   {
     "registeredAs": "gameOverridesStore",
     "options": {
-      "cwd": "/var/folders/f7/stgr185j04g2hm431z971xl40000gn/T/gamelib-jest-run-Zv3BlC/gamelib-jest-home-kjUHOa/Library/Application Support/GameLib/store",
+      "cwd": "<userData>/store",
       "name": "game-overrides",
       "clearInvalidConfig": true,
       "schemaKeys": null
@@ -497,7 +497,7 @@
   {
     "registeredAs": "macArchStore",
     "options": {
-      "cwd": "/var/folders/f7/stgr185j04g2hm431z971xl40000gn/T/gamelib-jest-run-Zv3BlC/gamelib-jest-home-kjUHOa/Library/Application Support/GameLib/store",
+      "cwd": "<userData>/store",
       "name": "mac-arch",
       "clearInvalidConfig": true,
       "schemaKeys": null
@@ -530,7 +530,7 @@
   {
     "registeredAs": "runsForMeStore",
     "options": {
-      "cwd": "/var/folders/f7/stgr185j04g2hm431z971xl40000gn/T/gamelib-jest-run-Zv3BlC/gamelib-jest-home-kjUHOa/Library/Application Support/GameLib/store",
+      "cwd": "<userData>/store",
       "name": "runs-for-me",
       "clearInvalidConfig": true,
       "schemaKeys": null

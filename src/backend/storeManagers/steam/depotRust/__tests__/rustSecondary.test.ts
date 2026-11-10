@@ -22,8 +22,10 @@ import { startInstallPolling } from '../../library/installPolling'
 import { RUST_DEPOT_MANIFEST_SUMMARY } from 'common/types/sidecarTransport'
 import { classifyDepotError } from '../../depotErrors'
 import { createStubRustDepot } from './fixtures/stubRustDepot'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
+import { createSteamStores } from '../../stores'
 
-import * as steamStoresModule from '../../stores'
+const steamStoresModule = createSteamStores({ registry: createStoreRegistry() })
 
 const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })

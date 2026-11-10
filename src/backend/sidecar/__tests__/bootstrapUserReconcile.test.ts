@@ -57,6 +57,7 @@ jest.mock('../../online_monitor', () => ({
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { LogPrefix } from '../../logger'
 import { bootFresh } from './helpers/sidecarHarness'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
 const EXPECTED_LOG_MESSAGE = 'User Not Found, removing it from Store'
 const EXPECTED_LOG_OPTIONS = {
@@ -67,7 +68,9 @@ const EXPECTED_LOG_OPTIONS = {
 interface World {
   LegendaryUser: typeof import('../../storeManagers/legendary/user').LegendaryUser
   GOGUser: typeof import('../../storeManagers/gog/user').GOGUser
-  configStore: typeof import('../../constants/key_value_stores').configStore
+  configStore: ReturnType<
+    typeof import('../../constants/key_value_stores').createKvsStores
+  >['configStore']
   loggerModule: typeof import('../../logger')
   reconcileStoreUsersWhenOnline: () => void
 }
@@ -84,12 +87,16 @@ let lastWorld: World | undefined
 function bootedWorld(opts?: {
   epicLoggedIn?: boolean
   seed?: (w: {
-    configStore: typeof import('../../constants/key_value_stores').configStore
+    configStore: ReturnType<
+      typeof import('../../constants/key_value_stores').createKvsStores
+    >['configStore']
   }) => void
 }): World {
   let LegendaryUser!: typeof import('../../storeManagers/legendary/user').LegendaryUser
   let GOGUser!: typeof import('../../storeManagers/gog/user').GOGUser
-  let configStore!: typeof import('../../constants/key_value_stores').configStore
+  let configStore!: ReturnType<
+    typeof import('../../constants/key_value_stores').createKvsStores
+  >['configStore']
   let loggerModule!: typeof import('../../logger')
   bootFresh({
     before: () => {
@@ -102,7 +109,9 @@ function bootedWorld(opts?: {
       LegendaryUser =
         require('../../storeManagers/legendary/user').LegendaryUser
       GOGUser = require('../../storeManagers/gog/user').GOGUser
-      configStore = require('../../constants/key_value_stores').configStore
+      configStore = require('../../constants/key_value_stores').createKvsStores(
+        { registry: createStoreRegistry() }
+      ).configStore
       loggerModule = require('../../logger')
       jest
         .spyOn(LegendaryUser, 'isLoggedIn')

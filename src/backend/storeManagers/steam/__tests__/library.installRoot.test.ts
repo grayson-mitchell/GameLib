@@ -2,7 +2,6 @@ import {
   createTestManagerDeps,
   createTestStores
 } from 'backend/testUtils/testServices'
-import * as steamStoresModule from '../stores'
 /**
  * Unit tests for steam/library/installRoot.ts (resolveInstallRoot, hostInstallPlatform).
  * Moved out of library.test.ts by Phase 65 plan 02 (D-03); mock preamble copied.
@@ -16,11 +15,15 @@ import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
-import { steamLibraryStore, steamMetadataStore } from '../stores'
 import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { join } from 'path'
 import { library } from '../state'
+import type { Stores } from 'backend/services/types'
+
+const { steamLibraryStore, steamMetadataStore } =
+  jest.requireMock<Stores['steam']>('../stores')
+const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })

@@ -1,4 +1,7 @@
-import { createTestManagerDeps } from 'backend/testUtils/testServices'
+import {
+  createTestManagerDeps,
+  createTestStores
+} from 'backend/testUtils/testServices'
 /**
  * Quick 261016-n7s Task 1 (end-to-end): a successful `nile library sync`
  * clears a latched Amazon `expired` flag through `refreshNile()`'s new
@@ -11,7 +14,6 @@ import { createTestManagerDeps } from 'backend/testUtils/testServices'
  * two-profile rule holds by construction.
  */
 import { sendFrontendMessage } from 'backend/ipc'
-import { configStore as nileConfigStore } from 'backend/storeManagers/nile/stores'
 import {
   __resetSignInEpochsForTests,
   bumpSignInEpoch
@@ -28,6 +30,11 @@ import type { FakeFlagStore } from 'backend/signInProbe/__tests__/fakeFlagStore'
 import type { ExecResult } from 'common/types'
 import type { CallRunnerOptions } from 'common/types'
 import NileLibraryManager from '../library'
+import type { Stores } from 'backend/services/types'
+
+const { configStore: nileConfigStore } = jest.requireMock<Stores['nile']>(
+  'backend/storeManagers/nile/stores'
+)
 
 jest.mock('backend/logger', () => ({
   logDebug: jest.fn(),
@@ -126,6 +133,25 @@ async function callRefreshNile(mgr: NileLibraryManager): Promise<ExecResult> {
 // hand-trimmed literal.
 const SUCCESS_CHUNK = `INFO [LIBRARY]:\t ${NILE_LIBRARY_SYNC_SUCCESS_MARKER}`
 
+/** Manager deps whose store families are the mocked modules above (plain fakes, no real stores). */
+function testDeps() {
+  return createTestManagerDeps({
+    stores: createTestStores({
+      nile: jest.requireMock<Stores['nile']>(
+        'backend/storeManagers/nile/stores'
+      ),
+      legendary: jest.requireMock<Stores['legendary']>(
+        'backend/storeManagers/legendary/stores'
+      ),
+      gog: jest.requireMock<Stores['gog']>('backend/storeManagers/gog/stores'),
+      steam: jest.requireMock<Stores['steam']>(
+        'backend/storeManagers/steam/stores'
+      ),
+      humble: jest.requireMock<Stores['humble']>('backend/humble/stores')
+    })
+  })
+}
+
 beforeEach(() => {
   flag.reset()
   __resetSignInEpochsForTests()
@@ -135,7 +161,7 @@ beforeEach(() => {
 describe('Amazon: a successful library sync clears a latched flag (quick 261016-n7s)', () => {
   it('a clean sync carrying the success phrase deletes expired, marks healthy and publishes once', async () => {
     flag.data.set('expired', true)
-    const mgr = new NileLibraryManager(createTestManagerDeps())
+    const mgr = new NileLibraryManager(testDeps())
     armRunner(mgr, [SUCCESS_CHUNK])
 
     await callRefreshNile(mgr)
@@ -151,7 +177,7 @@ describe('Amazon: a successful library sync clears a latched flag (quick 261016-
 
   it('a failed refresh (400, non-zero exit) leaves a latched flag set and never clears it', async () => {
     flag.data.set('expired', true)
-    const mgr = new NileLibraryManager(createTestManagerDeps())
+    const mgr = new NileLibraryManager(testDeps())
     armRunner(mgr, [`${NILE_REFRESH_FAILURE_MARKER} <Response [400]>`], {
       error: 'Process exited with code 1'
     })
@@ -169,7 +195,7 @@ describe('Amazon: a successful library sync clears a latched flag (quick 261016-
 
   it('an epoch bump mid-flight (a fresh sign-in landing during the spawn) makes the verdict stale: the flag is left untouched and nothing is published (T-49-10)', async () => {
     flag.data.set('expired', true)
-    const mgr = new NileLibraryManager(createTestManagerDeps())
+    const mgr = new NileLibraryManager(testDeps())
     jest
       .spyOn(mgr, 'runRunnerCommand')
       .mockImplementation((_argv: string[], options?: CallRunnerOptions) => {
@@ -194,7 +220,7 @@ describe('Amazon: a successful library sync clears a latched flag (quick 261016-
   })
 
   it('a synchronous throw inside the observer resolves cleanly, with no unhandled rejection and nothing published (F6)', async () => {
-    const mgr = new NileLibraryManager(createTestManagerDeps())
+    const mgr = new NileLibraryManager(testDeps())
     jest.spyOn(mgr, 'runRunnerCommand').mockImplementation(() => {
       throw new Error('forced for quick 261016-n7s F6 throw-safety')
     })

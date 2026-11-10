@@ -278,6 +278,7 @@ import {
 import { fixesPath, appFolder, userDataPath } from '../../constants/paths'
 import { getLogFilePath } from 'backend/logger/paths'
 import { LogPrefix } from '../../logger/constants'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
 // ── Containment guard (WR-10 correction, Phase 34.2 gap cycle 4, plan
 // 34.2-26). This `beforeAll` is a POST-HOC DETECTOR, not a preventer, and
@@ -413,7 +414,9 @@ describe('WR-02: the containment root is minted, not derived from a predictable 
 let handlerRegistry: typeof import('../../platform').handlerRegistry
 let listenerRegistry: typeof import('../../platform').listenerRegistry
 let logger: typeof import('../../logger')
-let uploadedLogFileStore: typeof import('../../logger/stores').uploadedLogFileStore
+let uploadedLogFileStore: ReturnType<
+  typeof import('../../logger/stores').createLoggerStores
+>['uploadedLogFileStore']
 let uploaderModule: typeof import('../../logger/uploader')
 let mockedGlobalConfigGet: jest.Mock
 let mockRequestRustInvoke: jest.Mock
@@ -426,7 +429,10 @@ function freshRegistry(): void {
   ;({ handlerRegistry, listenerRegistry } = require('../../platform'))
   logger = require('../../logger')
   const { requestRustInvoke } = require('../sidecarRpc')
-  ;({ uploadedLogFileStore } = require('../../logger/stores'))
+  ;({ uploadedLogFileStore } =
+    require('../../logger/stores').createLoggerStores({
+      registry: createStoreRegistry()
+    }))
   uploaderModule = require('../../logger/uploader')
   /* eslint-enable @typescript-eslint/no-require-imports */
   mockedGlobalConfigGet = GlobalConfig.get as jest.Mock

@@ -9,6 +9,7 @@
  * `{ managers: Pick<StoreManagers, 'library'> }` style interface. Only composition roots
  * see the whole `BootServices`.
  */
+import type { StoreRegistry } from 'backend/stores/storeRegistry'
 import type { SpawnAsync } from 'backend/spawnAsync'
 import type { QuitHandler } from 'backend/quitHandler'
 import type { Runner } from 'common/types'
@@ -23,24 +24,52 @@ import type LegendaryLibraryManager from 'backend/storeManagers/legendary/librar
 import type NileLibraryManager from 'backend/storeManagers/nile/library'
 import type SideloadLibraryManager from 'backend/storeManagers/sideload/library'
 
-/** One entry per store family; each is the module's value exports. */
+/** One entry per store family; each is what the family's `createXStores` factory returns. */
 export interface Stores {
-  kvs: typeof import('backend/constants/key_value_stores')
-  crossoverIndex: typeof import('backend/crossover_index/stores')
-  downloadManager: typeof import('backend/downloadmanager/stores')
-  gameOverrides: typeof import('backend/game_overrides/stores')
-  humble: typeof import('backend/humble/stores')
-  logger: typeof import('backend/logger/stores')
-  macArch: typeof import('backend/macArch/stores')
-  migration: typeof import('backend/migration/stores')
-  runsForMe: typeof import('backend/runsForMe/stores')
-  gog: typeof import('backend/storeManagers/gog/stores')
-  legendary: typeof import('backend/storeManagers/legendary/stores')
-  nile: typeof import('backend/storeManagers/nile/stores')
-  sideload: typeof import('backend/storeManagers/sideload/stores')
-  steam: typeof import('backend/storeManagers/steam/stores')
-  wikiGameInfo: typeof import('backend/wiki_game_info/stores')
-  wineManager: typeof import('backend/wine/manager/stores')
+  kvs: ReturnType<
+    typeof import('backend/constants/key_value_stores').createKvsStores
+  >
+  crossoverIndex: ReturnType<
+    typeof import('backend/crossover_index/stores').createCrossoverIndexStores
+  >
+  downloadManager: ReturnType<
+    typeof import('backend/downloadmanager/stores').createDownloadManagerStores
+  >
+  gameOverrides: ReturnType<
+    typeof import('backend/game_overrides/stores').createGameOverridesStores
+  >
+  humble: ReturnType<typeof import('backend/humble/stores').createHumbleStores>
+  logger: ReturnType<typeof import('backend/logger/stores').createLoggerStores>
+  macArch: ReturnType<
+    typeof import('backend/macArch/stores').createMacArchStores
+  >
+  migration: ReturnType<
+    typeof import('backend/migration/stores').createMigrationStores
+  >
+  runsForMe: ReturnType<
+    typeof import('backend/runsForMe/stores').createRunsForMeStores
+  >
+  gog: ReturnType<
+    typeof import('backend/storeManagers/gog/stores').createGogStores
+  >
+  legendary: ReturnType<
+    typeof import('backend/storeManagers/legendary/stores').createLegendaryStores
+  >
+  nile: ReturnType<
+    typeof import('backend/storeManagers/nile/stores').createNileStores
+  >
+  sideload: ReturnType<
+    typeof import('backend/storeManagers/sideload/stores').createSideloadStores
+  >
+  steam: ReturnType<
+    typeof import('backend/storeManagers/steam/stores').createSteamStores
+  >
+  wikiGameInfo: ReturnType<
+    typeof import('backend/wiki_game_info/stores').createWikiGameInfoStores
+  >
+  wineManager: ReturnType<
+    typeof import('backend/wine/manager/stores').createWineManagerStores
+  >
 }
 
 export interface StoreManagers {
@@ -88,6 +117,8 @@ export interface ManagerDeps {
 
 export interface BootServices {
   stores: Stores
+  /** The registry `stores` were built against; the name-keyed store RPC handlers resolve through it. */
+  storeRegistry: StoreRegistry
   managers: StoreManagers
   launcher: Launcher
   commandRunner: CommandRunner

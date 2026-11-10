@@ -141,6 +141,7 @@ import { defined } from 'backend/testUtils/indexed'
 import { existsSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { bootFresh, writeInvoke, writeSend } from './helpers/sidecarHarness'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
 // D-08: every case boots the sidecar once, in a fresh module registry. Module
 // handles the cases configure or inspect are rebound from that registry in
@@ -151,8 +152,12 @@ let SteamUser: typeof import('../../storeManagers/steam/user').SteamUser
 let mockLeaseOk: typeof import('../../storeManagers/steam/__tests__/depotLeaseMocks').mockLeaseOk
 let getAnonymousPicsClient: typeof import('../../storeManagers/steam/anonymousClient').getAnonymousPicsClient
 let getSteamLibraries: typeof import('backend/utils').getSteamLibraries
-let steamConfigStore: typeof import('../../storeManagers/steam/stores').configStore
-let configStore: typeof import('backend/constants/key_value_stores').configStore
+let steamConfigStore: ReturnType<
+  typeof import('../../storeManagers/steam/stores').createSteamStores
+>['configStore']
+let configStore: ReturnType<
+  typeof import('backend/constants/key_value_stores').createKvsStores
+>['configStore']
 
 function freshRegistry(): void {
   jest.resetModules()
@@ -167,10 +172,14 @@ function freshRegistry(): void {
     getAnonymousPicsClient
   } = require('../../storeManagers/steam/anonymousClient'))
   ;({ getSteamLibraries } = require('backend/utils'))
-  ;({
-    configStore: steamConfigStore
-  } = require('../../storeManagers/steam/stores'))
-  ;({ configStore } = require('backend/constants/key_value_stores'))
+  ;({ configStore: steamConfigStore } =
+    require('../../storeManagers/steam/stores').createSteamStores({
+      registry: createStoreRegistry()
+    }))
+  ;({ configStore } =
+    require('backend/constants/key_value_stores').createKvsStores({
+      registry: createStoreRegistry()
+    }))
   /* eslint-enable @typescript-eslint/no-require-imports */
 }
 

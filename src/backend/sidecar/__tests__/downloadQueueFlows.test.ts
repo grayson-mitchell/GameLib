@@ -174,13 +174,16 @@ import {
   createTestServices
 } from '../../testUtils/testServices'
 import type { DMQueueElement } from 'common/types'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
 // D-08: every case boots the sidecar once, in a fresh module registry. Module
 // handles the cases configure or inspect are rebound from that registry in
 // freshRegistry() (run before each case, ahead of any mock configuration), and
 // boot() then boots without a second reset. The download-queue handlers register
 // when bootstrap imports `./handlers`, so each fresh registry re-registers them.
-let downloadManager: typeof import('../../downloadmanager/stores').downloadManager
+let downloadManager: ReturnType<
+  typeof import('../../downloadmanager/stores').createDownloadManagerStores
+>['downloadManager']
 let sendFrontendMessage: typeof import('../../ipc').sendFrontendMessage
 let mockedSteamGetGame: jest.Mock
 let mockedSteamGetGameInfo: jest.Mock
@@ -195,7 +198,10 @@ function freshRegistry(): void {
     installQueueElement,
     updateQueueElement
   } = require('../../downloadmanager/utils')
-  ;({ downloadManager } = require('../../downloadmanager/stores'))
+  ;({ downloadManager } =
+    require('../../downloadmanager/stores').createDownloadManagerStores({
+      registry: createStoreRegistry()
+    }))
   ;({ sendFrontendMessage } = require('../../ipc'))
   /* eslint-enable @typescript-eslint/no-require-imports */
   mockedSteamGetGame = jest.fn()

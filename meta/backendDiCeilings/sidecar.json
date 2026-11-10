@@ -49,7 +49,6 @@
     "src/backend/sidecar/shortcutsFlowRegistration.ts": 1,
     "src/backend/sidecar/sidecarRpc.ts": 3,
     "src/backend/sidecar/steamgridSecretStore.ts": 1,
-    "src/backend/sidecar/storeRegistration.ts": 1,
     "src/backend/sidecar/storeWriteHandlers.ts": 1,
     "src/backend/sidecar/wineToolsFlowRegistration.ts": 1
   },

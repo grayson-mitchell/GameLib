@@ -17,7 +17,6 @@ import {
   NileInstallMetadataInfo
 } from 'common/types/nile'
 import { existsSync, readFileSync, writeFileSync } from 'graceful-fs'
-import { installStore, libraryStore } from './stores'
 import { getFileSize, getNileBin, removeSpecialcharacters } from 'backend/utils'
 import { dirname, join } from 'path'
 import { app } from 'backend/platform'
@@ -43,7 +42,7 @@ export default class NileLibraryManager implements LibraryManager {
     const globalNileConfig = join(app.getPath('appData'), 'nile')
     if (!existsSync(nileConfigPath) && existsSync(globalNileConfig)) {
       copySync(globalNileConfig, nileConfigPath)
-      await NileUser.getUserData()
+      await NileUser.getUserData(this.deps)
     }
 
     this.refresh()
@@ -177,7 +176,7 @@ export default class NileLibraryManager implements LibraryManager {
    * @returns App names of updateable games.
    */
   async listUpdateableGames(): Promise<string[]> {
-    if (!NileUser.isLoggedIn()) {
+    if (!NileUser.isLoggedIn(this.deps)) {
       return []
     }
     logInfo('Looking for updates...', LogPrefix.Nile)
@@ -331,7 +330,7 @@ export default class NileLibraryManager implements LibraryManager {
    * @returns Array of objects.
    */
   async refresh(): Promise<ExecResult | null> {
-    if (!NileUser.isLoggedIn()) {
+    if (!NileUser.isLoggedIn(this.deps)) {
       return this.defaultExecResult
     }
     logInfo('Refreshing library...', LogPrefix.Nile)
@@ -345,7 +344,7 @@ export default class NileLibraryManager implements LibraryManager {
     this.loadGamesInAccount()
 
     const arr = Array.from(this.library.values())
-    libraryStore.set('library', arr)
+    this.deps.stores.nile.libraryStore.set('library', arr)
     logInfo(
       ['Game list updated, got', `${arr.length}`, 'games'],
       LogPrefix.Nile
@@ -385,14 +384,14 @@ export default class NileLibraryManager implements LibraryManager {
   }
 
   getListOfGames(): GameInfo[] {
-    return libraryStore.get('library', [])
+    return this.deps.stores.nile.libraryStore.get('library', [])
   }
 
   /**
    * Get game info for a particular game.
    */
   async getInstallInfo(appName: string): Promise<NileInstallInfo> {
-    const cache = installStore.get(appName)
+    const cache = this.deps.stores.nile.installStore.get(appName)
     if (cache) {
       logDebug('Using cached install info', LogPrefix.Nile)
       return cache
@@ -433,7 +432,7 @@ export default class NileLibraryManager implements LibraryManager {
           disk_size: download_size
         }
       }
-      installStore.set(appName, installInfo)
+      this.deps.stores.nile.installStore.set(appName, installInfo)
       return installInfo
     }
 
@@ -521,7 +520,7 @@ export default class NileLibraryManager implements LibraryManager {
   installState(appName: string, state: boolean) {
     if (!state) {
       this.installedGames.delete(appName)
-      installStore.delete(appName)
+      this.deps.stores.nile.installStore.delete(appName)
       return
     }
 

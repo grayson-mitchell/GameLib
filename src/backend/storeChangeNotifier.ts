@@ -26,7 +26,7 @@
  * WHY IT IS AN INJECTED FUNCTION RATHER THAN A DIRECT CALL
  *
  * `src/backend/cache.ts` and `src/backend/typed_store.ts` are imported by every store
- * module in the backend and MUST NOT reach the IPC layer. `sidecar/storeRegistration.ts`
+ * module in the backend and MUST NOT reach the IPC layer. `stores/createStores.ts`
  * warns that importing `sendFrontendMessage` drags in Electron's `app` and the logger,
  * and `electronReachLedger.test.ts` pins the electron-importing module count. So the
  * store classes call `notifyStoreChanged()` here — a module with no runtime imports at

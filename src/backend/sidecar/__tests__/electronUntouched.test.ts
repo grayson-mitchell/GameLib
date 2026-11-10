@@ -100,7 +100,6 @@ jest.mock('backend/logger', () => ({
 // ── Imports (after mocks) — configStore is the REAL, unmocked module ───────
 import { requestRustInvoke } from '../sidecarRpc'
 import { SidecarKeyringTokenStore } from '../keyringTokenStore'
-import { configStore as steamConfigStore } from '../../storeManagers/steam/stores'
 import {
   setTokenStore,
   getTokenStore
@@ -109,6 +108,12 @@ import {
 // paths through in production, used here ONLY to compute the real store file's
 // path for a read-only byte comparison. Never used to write.
 import { getPath } from '../pathShim'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
+import { createSteamStores } from '../../storeManagers/steam/stores'
+
+const { configStore: steamConfigStore } = createSteamStores({
+  registry: createStoreRegistry()
+})
 
 type ProgrammedOutcome =
   | { type: 'resolve'; value: unknown }

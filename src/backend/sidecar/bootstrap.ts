@@ -41,11 +41,12 @@ import { i18nextLanguageOptions, localeFileSegments } from 'common/languages'
 // Importing `./handlers` registers nothing (D-08); the 'register-handlers' boot step calls it.
 
 import { registerHandlers } from './handlers'
-import { buildStoresFacade } from '../services/legacyFacades'
+import { createStores } from '../stores/createStores'
+import { createStoreRegistry } from '../stores/storeRegistry'
 import { createStoreManagers } from '../storeManagers'
 import type { BootServices, StoreManagers, Stores } from '../services/types'
 // Block D (finding A1, quick-260907-odi). Adds NO new module to the sidecar bundle:
-// `sidecar/storeRegistration.ts:61` already imports `playtimeSyncQueue` from this exact
+// `sidecar/createStores` already imports `playtimeSyncQueue` from this exact
 // module, so this is a second binding onto an already-resident singleton, not a new edge.
 // Block G (todo 2026-09-06, quick-260908-wk0). Adds NO new module to the sidecar bundle:
 // `bootstrap.ts` already imports `./installedJsonWatcher` at its own line 39, and
@@ -206,7 +207,7 @@ import {
 } from '../utils/aborthandler/aborthandler'
 // Todo 2026-08-16 (quick task 260822-s8y): `applyMigrations()` had exactly ONE call site in
 // the whole repo -- `main.ts:412`, inside Electron's `app.whenReady()` -- so under Tauri the
-// entire migration system was dead code that PRESENTED as live (`storeRegistration.ts`
+// entire migration system was dead code that PRESENTED as live (`createStores`
 // registers `migrationsStore`, so grepping for "migration" made it look wired). Two
 // consequences: `LegendaryGlobalConfigFolderMigration` had never run on the shipping runtime,
 // and any future `Migration` added to `getAllMigrations()` would have shipped as a silent
@@ -329,6 +330,7 @@ function gogPresenceDeps(state: BootState): GOGUserDeps {
 function requireServices(state: BootState): BootServices {
   const {
     stores,
+    storeRegistry,
     managers,
     launcher,
     commandRunner,
@@ -339,6 +341,7 @@ function requireServices(state: BootState): BootServices {
   } = state.services
   if (
     !stores ||
+    !storeRegistry ||
     !managers ||
     !launcher ||
     !commandRunner ||
@@ -350,6 +353,7 @@ function requireServices(state: BootState): BootServices {
     const missing = (
       [
         'stores',
+        'storeRegistry',
         'managers',
         'launcher',
         'commandRunner',
@@ -363,6 +367,7 @@ function requireServices(state: BootState): BootServices {
   }
   return {
     stores,
+    storeRegistry,
     managers,
     launcher,
     commandRunner,
@@ -1022,10 +1027,13 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'stores',
-      // Groups references only (66.1, A3): the stores are still module singletons behind the
-      // facade, so this constructs nothing and creates no handle.
+      // Builds every store family against ONE per-boot registry (66.1 plan 25, A3); that registry
+      // is what the name-keyed store RPC handlers resolve through. Store construction opens no
+      // timer, watcher or handle.
       run: (_ctx, _io, state) => {
-        state.services.stores = prebuilt.stores ?? buildStoresFacade()
+        const registry = createStoreRegistry()
+        state.services.stores = prebuilt.stores ?? createStores({ registry })
+        state.services.storeRegistry = prebuilt.storeRegistry ?? registry
         // SteamUser is a static class with ~20 callers, so its store reads go through a bound
         // slice; bound here, before any step or handler can reach it (66.1-16/18).
         SteamUser.bindStores({ stores: state.services.stores })

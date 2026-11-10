@@ -2,7 +2,6 @@ import type { ManagerDeps } from 'backend/services/types'
 import { ExecResult, GameInfo } from 'common/types'
 import { readdirSync } from 'graceful-fs'
 import { dirname, join } from 'path'
-import { libraryStore } from './stores'
 import { logWarning } from 'backend/logger'
 import { addShortcuts } from 'backend/shortcuts/shortcuts/shortcuts'
 import { sendFrontendMessage } from 'backend/ipc'
@@ -68,7 +67,7 @@ export default class SideloadLibraryManager implements LibraryManager {
       }
     }
 
-    const current = libraryStore.get('games', [])
+    const current = this.deps.stores.sideload.libraryStore.get('games', [])
 
     const gameIndex = current.findIndex((value) => value.app_name === app_name)
 
@@ -82,7 +81,7 @@ export default class SideloadLibraryManager implements LibraryManager {
       )
     }
 
-    libraryStore.set('games', current)
+    this.deps.stores.sideload.libraryStore.set('games', current)
 
     sendFrontendMessage('refreshLibrary', 'sideload')
 
@@ -113,7 +112,7 @@ export default class SideloadLibraryManager implements LibraryManager {
   }
 
   getListOfGames(): GameInfo[] {
-    return libraryStore.get('games', [])
+    return this.deps.stores.sideload.libraryStore.get('games', [])
   }
 
   async listUpdateableGames(): Promise<string[]> {

@@ -304,8 +304,9 @@ import {
 } from '../authTrigger'
 import type { GameInfo, InstallArgs } from 'common/types'
 import { at } from './fixtures/indexed'
+import type { Stores } from 'backend/services/types'
 
-import * as steamStoresModule from '../stores'
+const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })
@@ -362,7 +363,7 @@ beforeEach(() => {
   // Defaults so init()/migrateStaleArtUrls have empty caches to scan
   // (mirrors library.test.ts's own shared beforeEach).
   const { steamLibraryStore, steamMetadataStore } =
-    jest.requireMock('../stores')
+    jest.requireMock<Stores['steam']>('../stores')
   ;(steamLibraryStore.get as jest.Mock).mockReturnValue([])
   ;(steamMetadataStore.entries as jest.Mock).mockReturnValue([])
 })
@@ -392,7 +393,7 @@ describe('SteamLibraryManager keyring deferral (quick-260817-d61)', () => {
       { app_name: '111', runner: 'steam' } as GameInfo,
       { app_name: '222', runner: 'steam' } as GameInfo
     ]
-    const { steamLibraryStore } = jest.requireMock('../stores')
+    const { steamLibraryStore } = jest.requireMock<Stores['steam']>('../stores')
     ;(steamLibraryStore.get as jest.Mock).mockReturnValue(cachedGames)
 
     const manager = new SteamLibraryManager(steamTestDeps)

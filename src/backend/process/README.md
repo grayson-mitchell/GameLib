@@ -117,7 +117,7 @@ managers, the launcher, the command runner, `spawnAsync` and the quit handler ar
 handed to `registerHandlers({ log, services })`, the composition root.
 
 Transition (A3, expand/contract): every service is currently filled by an identity facade in
-`src/backend/services/legacyFacades.ts` that only groups today's singletons and functions. Each
+`src/backend/services/legacyFacades.ts` (since deleted) that only grouped today's singletons and functions. Each
 facade is deleted by the plan that lands the real factory: command runner (05), `spawnAsync` and
 quit (06), managers and launcher (23), stores (25). The file goes with the last one.
 

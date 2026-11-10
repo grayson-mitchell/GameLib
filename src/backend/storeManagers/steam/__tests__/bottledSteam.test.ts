@@ -25,7 +25,6 @@ import { app } from 'backend/platform'
 import { GlobalConfig } from 'backend/config'
 import { logWarning } from 'backend/logger'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
-import { steamBottleConfigStore } from '../stores'
 import { createTestStores } from 'backend/testUtils/testServices'
 import { library } from '../state'
 import {
@@ -42,7 +41,11 @@ import {
 } from '../bottledSteam'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
+import type { Stores } from 'backend/services/types'
 import { at } from './fixtures/indexed'
+
+const { steamBottleConfigStore } =
+  jest.requireMock<Stores['steam']>('../stores')
 
 jest.mock('backend/platform', () => ({
   app: {

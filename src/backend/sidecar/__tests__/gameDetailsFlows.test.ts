@@ -351,6 +351,7 @@ import { tmpdir } from 'os'
 import { fixesPath, appFolder, userDataPath } from '../../constants/paths'
 import { getLogFilePath } from 'backend/logger/paths'
 import { defined } from 'backend/testUtils/indexed'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
 // ── CR-03 / WR-01 containment guard — MUST run before either describe
 // block's first beforeEach (both end in a destructive
@@ -389,7 +390,9 @@ beforeAll(() => {
 // freshRegistry() (run before each case, ahead of any mock configuration), and
 // boot() then boots without a second reset.
 let sidecarRpc: typeof import('../sidecarRpc')
-let gameOverridesStore: typeof import('../../game_overrides/stores').gameOverridesStore
+let gameOverridesStore: ReturnType<
+  typeof import('../../game_overrides/stores').createGameOverridesStores
+>['gameOverridesStore']
 let handlerRegistry: typeof import('../../platform').handlerRegistry
 let listenerRegistry: typeof import('../../platform').listenerRegistry
 let mockedGlobalConfigGet: jest.Mock
@@ -436,7 +439,10 @@ function freshRegistry(): void {
   } = require('../../utils/aborthandler/aborthandler')
   ;({ handlerRegistry, listenerRegistry } = require('../../platform'))
   sidecarRpc = require('../sidecarRpc')
-  ;({ gameOverridesStore } = require('../../game_overrides/stores'))
+  ;({ gameOverridesStore } =
+    require('../../game_overrides/stores').createGameOverridesStores({
+      registry: createStoreRegistry()
+    }))
   /* eslint-enable @typescript-eslint/no-require-imports */
   mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
   mockedIsOnline = isOnline as jest.Mock

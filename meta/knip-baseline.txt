@@ -48,8 +48,6 @@ exports	src/backend/storeManagers/steam/gameUninstall.ts	removeNativeInstallDire
 exports	src/backend/storeManagers/steam/gameUninstall.ts	uninstallBottleGameDirectly
 exports	src/backend/storeManagers/steam/gameUninstall.ts	uninstallNativeInGameLib
 exports	src/backend/storeManagers/steam/gameUninstall.ts	uninstallUnadoptedMacNativeDirectly
-exports	src/backend/typed_store.ts	getRegisteredStoreNames
-exports	src/backend/typed_store.ts	getRegisteredStoreOptions
 exports	src/frontend/App.tsx	routes
 exports	src/frontend/helpers/library.ts	amazonCategories
 exports	src/frontend/helpers/library.ts	epicCategories

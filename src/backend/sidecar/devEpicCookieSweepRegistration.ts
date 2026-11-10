@@ -59,7 +59,7 @@ const DEV_SWEEP_EPIC_COOKIE_DOMAIN = 'devSweepEpicCookieDomain' as const
  * Registers the dev-only single-host Epic cookie sweep. No-ops in a packaged sidecar.
  *
  * Guarded by the same `let registered = false` latch convention as
- * `registerRunnerAuthFlows()`/`storeRegistration.ts`, so calling it twice neither throws nor
+ * `registerRunnerAuthFlows()`/`createStores`, so calling it twice neither throws nor
  * stacks a duplicate handler.
  *
  * NO SIDE EFFECTS AT REGISTRATION TIME, deliberately. `handlers.ts` calls this at module

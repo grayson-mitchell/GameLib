@@ -26,10 +26,15 @@ import {
   setStoreChangeNotifier,
   withStoreChangeSuppressed
 } from '../storeChangeNotifier'
-import { installedGamesStore } from '../storeManagers/gog/stores'
 import { isAllowedStoreField } from 'common/types/storePolicy'
 import type { StoreChangedPayload } from 'common/types/sidecarTransport'
 import { defined } from './helpers/defined'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
+import { createGogStores } from '../storeManagers/gog/stores'
+
+const { installedGamesStore } = createGogStores({
+  registry: createStoreRegistry()
+})
 
 jest.mock('backend/store_backend')
 

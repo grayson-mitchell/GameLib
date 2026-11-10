@@ -4,11 +4,14 @@ import testData from './test-data.json'
 import { getInfoFromGamesDB } from '../utils'
 import { logError } from 'backend/logger'
 import GOGLibraryManager from 'backend/storeManagers/gog/library'
-import * as gogStores from 'backend/storeManagers/gog/stores'
 import {
   createTestManagerDeps,
   createTestStores
 } from 'backend/testUtils/testServices'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
+import { createGogStores } from 'backend/storeManagers/gog/stores'
+
+const gogStores = createGogStores({ registry: createStoreRegistry() })
 
 jest.mock('backend/logger')
 jest.mock('backend/store_backend')

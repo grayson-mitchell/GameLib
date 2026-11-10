@@ -3,10 +3,14 @@
  * non-jest callers can use them. Mirrors scriptedRunner: an unscripted call fails loudly,
  * because a default result would hide a missing script.
  *
- * `createTestStores` resolves every family it was not given lazily to the real facade family on
- * first access (a getter), so a test that never touches a family never loads it. Plan 25
- * switches that default to a fresh `createStores` on the test context's userData.
+ * `createTestStores` resolves every family it was not given lazily, on first access (a getter),
+ * from a fresh `createStores` against its own registry (the jest fake HOME), so a test that
+ * never touches a family never builds it.
  */
+import {
+  createStoreRegistry,
+  type StoreRegistry
+} from '../stores/storeRegistry'
 import type { EngineServices } from '../engine/engineServices'
 import type { Runner } from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
@@ -108,22 +112,83 @@ const STORE_KEYS = [
   'wineManager'
 ] as const satisfies readonly (keyof Stores)[]
 
+/** Builds one family against the shared registry; each `require` is lazy (see createTestStores). */
+type FamilyBuilders = {
+  [K in keyof Stores]: (registry: StoreRegistry) => Stores[K]
+}
+
+/**
+ * Loads a stores module on first use. The path is a parameter on purpose: a family a suite never
+ * reads must not load its module, and a literal `require` of a stores module is exactly what the
+ * "no call-time stores require" gate looks for.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function load(path: string): any {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require(path)
+}
+
+function familyBuilders(): FamilyBuilders {
+  return {
+    kvs: (registry) =>
+      load('../constants/key_value_stores').createKvsStores({ registry }),
+    crossoverIndex: () =>
+      load('../crossover_index/stores').createCrossoverIndexStores(),
+    downloadManager: (registry) =>
+      load('../downloadmanager/stores').createDownloadManagerStores({
+        registry
+      }),
+    gameOverrides: (registry) =>
+      load('../game_overrides/stores').createGameOverridesStores({
+        registry
+      }),
+    humble: (registry) =>
+      load('../humble/stores').createHumbleStores({ registry }),
+    logger: (registry) =>
+      load('../logger/stores').createLoggerStores({ registry }),
+    macArch: (registry) =>
+      load('../macArch/stores').createMacArchStores({ registry }),
+    migration: (registry) =>
+      load('../migration/stores').createMigrationStores({ registry }),
+    runsForMe: (registry) =>
+      load('../runsForMe/stores').createRunsForMeStores({ registry }),
+    gog: (registry) =>
+      load('../storeManagers/gog/stores').createGogStores({ registry }),
+    legendary: (registry) =>
+      load('../storeManagers/legendary/stores').createLegendaryStores({
+        registry
+      }),
+    nile: (registry) =>
+      load('../storeManagers/nile/stores').createNileStores({ registry }),
+    sideload: (registry) =>
+      load('../storeManagers/sideload/stores').createSideloadStores({
+        registry
+      }),
+    steam: (registry) =>
+      load('../storeManagers/steam/stores').createSteamStores({ registry }),
+    wikiGameInfo: () =>
+      load('../wiki_game_info/stores').createWikiGameInfoStores(),
+    wineManager: (registry) =>
+      load('../wine/manager/stores').createWineManagerStores({ registry })
+  }
+}
+
 export function createTestStores(overrides: Partial<Stores> = {}): Stores {
   const stores = {} as Stores
-  let facade: Stores | undefined
+  const registry = createStoreRegistry()
+  const builders = familyBuilders()
   for (const key of STORE_KEYS) {
     const given = overrides[key]
+    let built: Stores[typeof key] | undefined
     Object.defineProperty(stores, key, {
       enumerable: true,
       get: () => {
         if (given) return given
-        // Lazy on purpose: the facade module pulls in the launcher and every store module.
-        /* eslint-disable @typescript-eslint/no-require-imports */
-        const facades =
-          require('../services/legacyFacades') as typeof import('../services/legacyFacades')
-        /* eslint-enable @typescript-eslint/no-require-imports */
-        facade ??= facades.buildStoresFacade()
-        return facade[key]
+        // Lazy and per family on purpose: building a family touches the real store backend,
+        // which a suite that overrides only the slices it reads must never reach, and a
+        // suite that mocks one family's module must not break the others.
+        built ??= builders[key](registry) as never
+        return built
       }
     })
   }
@@ -143,6 +208,7 @@ export function createTestServices(
   }
   return {
     stores: overrides.stores ?? createTestStores(),
+    storeRegistry: overrides.storeRegistry ?? createStoreRegistry(),
     managers: overrides.managers ?? createTestManagers(),
     launcher: overrides.launcher ?? unscriptedMembers<Launcher>('launcher', {}),
     commandRunner:

@@ -1,78 +1,7 @@
 import { TypeCheckedStoreBackend } from '../../typed_store'
 import CacheStore from '../../cache'
 import { GameInfo, ExtraInfo } from 'common/types'
-
-const configStore = new TypeCheckedStoreBackend(
-  'steamConfigStore',
-  {
-    cwd: 'steam_store'
-  },
-  { kind: 'user-state', tokenBearing: true }
-)
-
-// ── Phase 17 (17-02): dedicated Steam CrossOver bottle settings store ───────
-// A DEDICATED store (not a phantom GameConfig entry — see RESEARCH.md
-// "Alternatives Considered") persisting the bottle's own Wine engine +
-// provisioned/login state, independent of configStore (auth-only).
-const steamBottleConfigStore = new TypeCheckedStoreBackend(
-  'steamBottleConfigStore',
-  { cwd: 'steam_store' },
-  { kind: 'user-state', tokenBearing: true }
-)
-
-// ── LIB-01/02/03: Persistent library cache (indefinite lifespan per D-05) ──
-const steamLibraryStore = new CacheStore<GameInfo[], 'games'>(
-  'steam_library',
-  null,
-  { kind: 'user-state' }
-)
-
-// ── LIB-04: Per-game metadata cache (indefinite lifespan per D-05) ──────────
-// Keyed by appId string; stores artwork URLs and extra info after lazy fetch
-const steamMetadataStore = new CacheStore<SteamMetadataCacheEntry>(
-  'steam_metadata',
-  null,
-  { kind: 'cache' }
-)
-
-// ── Stale-indicator: last successful sync epoch millis (plan 05) ─────────────
-const steamSyncStore = new CacheStore<number, 'syncedAt'>('steam_sync', null, {
-  kind: 'cache'
-})
-
-// ── quick 261029-ji2: pending Mac Steam adoption records ────────────────────
-// One record per appId GameLib downloaded itself while Mac Steam was running.
-// A DEDICATED store (not a field on steamMetadataStore, whose whole-entry
-// replace would drop it). Indefinite lifespan: it must survive a GameLib
-// restart, and it is cleared on uninstall / adoption.
-// Read through the injected `Stores['steam']` slice (`pendingAdoptionStoreFrom`
-// in macSteamAdoption.ts).
-/** @public read through the injected `Stores['steam']` slice (`pendingAdoptionStoreFrom` in macSteamAdoption.ts), which knip cannot trace. */
-export const steamPendingAdoptionStore = new CacheStore<unknown>(
-  'steam_pending_adoption',
-  null,
-  { kind: 'user-state' }
-)
-
-// ── quick 261029-pkp: persisted "Restart Steam to finish" hold records ──────
-// One record per appId whose native install is held waiting for a Steam
-// restart, so the hold survives a GameLib restart. Read through the injected
-// `Stores['steam']` slice (`restartHoldStoreFrom` in steamRestartHold.ts).
-export const steamRestartHoldStore = new CacheStore<unknown>(
-  'steam_restart_hold',
-  null,
-  { kind: 'user-state' }
-)
-
-// ── Phase 57: persisted "known-fix report sent" records (D-16/D-17) ─────────
-// Read through the injected `Stores['steam']` slice (`knownFixReportDeps` in
-// backend/knownFixReport.ts).
-/** @public read through the injected `Stores['steam']` slice (`knownFixReportDeps` in backend/knownFixReport.ts), which knip cannot trace. */
-export const steamKnownFixReportStore = new CacheStore<unknown>(
-  'steam_known_fix_reports',
-  null,
-  { kind: 'user-state' }
-)
+import type { StoreRegistry } from 'backend/stores/storeRegistry'
 
 export interface SteamMetadataCacheEntry {
   art_cover: string
@@ -362,10 +291,85 @@ export interface SteamBridgeVerdict {
 // declaration), never from this re-export, and this file itself never
 // referenced the type beyond that re-export.
 
-export {
-  configStore,
-  steamLibraryStore,
-  steamMetadataStore,
-  steamSyncStore,
-  steamBottleConfigStore
+export function createSteamStores(deps: { registry: StoreRegistry }) {
+  const { registry } = deps
+  const configStore = new TypeCheckedStoreBackend(
+    'steamConfigStore',
+    {
+      cwd: 'steam_store'
+    },
+    { kind: 'user-state', tokenBearing: true },
+    registry
+  )
+  // ── Phase 17 (17-02): dedicated Steam CrossOver bottle settings store ───────
+  // A DEDICATED store (not a phantom GameConfig entry — see RESEARCH.md
+  // "Alternatives Considered") persisting the bottle's own Wine engine +
+  // provisioned/login state, independent of configStore (auth-only).
+  const steamBottleConfigStore = new TypeCheckedStoreBackend(
+    'steamBottleConfigStore',
+    { cwd: 'steam_store' },
+    { kind: 'user-state', tokenBearing: true },
+    registry
+  )
+  // ── LIB-01/02/03: Persistent library cache (indefinite lifespan per D-05) ──
+  const steamLibraryStore = new CacheStore<GameInfo[], 'games'>(
+    'steam_library',
+    null,
+    { kind: 'user-state' }
+  )
+  // ── LIB-04: Per-game metadata cache (indefinite lifespan per D-05) ──────────
+  // Keyed by appId string; stores artwork URLs and extra info after lazy fetch
+  const steamMetadataStore = new CacheStore<SteamMetadataCacheEntry>(
+    'steam_metadata',
+    null,
+    { kind: 'cache' }
+  )
+  // ── Stale-indicator: last successful sync epoch millis (plan 05) ─────────────
+  const steamSyncStore = new CacheStore<number, 'syncedAt'>(
+    'steam_sync',
+    null,
+    {
+      kind: 'cache'
+    }
+  )
+  // ── quick 261029-ji2: pending Mac Steam adoption records ────────────────────
+  // One record per appId GameLib downloaded itself while Mac Steam was running.
+  // A DEDICATED store (not a field on steamMetadataStore, whose whole-entry
+  // replace would drop it). Indefinite lifespan: it must survive a GameLib
+  // restart, and it is cleared on uninstall / adoption.
+  // Read through the injected `Stores['steam']` slice (`pendingAdoptionStoreFrom`
+  // in macSteamAdoption.ts).
+  const steamPendingAdoptionStore = new CacheStore<unknown>(
+    'steam_pending_adoption',
+    null,
+    { kind: 'user-state' }
+  )
+  // ── quick 261029-pkp: persisted "Restart Steam to finish" hold records ──────
+  // One record per appId whose native install is held waiting for a Steam
+  // restart, so the hold survives a GameLib restart. Read through the injected
+  // `Stores['steam']` slice (`restartHoldStoreFrom` in steamRestartHold.ts).
+  const steamRestartHoldStore = new CacheStore<unknown>(
+    'steam_restart_hold',
+    null,
+    { kind: 'user-state' }
+  )
+  // ── Phase 57: persisted "known-fix report sent" records (D-16/D-17) ─────────
+  // Read through the injected `Stores['steam']` slice (`knownFixReportDeps` in
+  // backend/knownFixReport.ts).
+  const steamKnownFixReportStore = new CacheStore<unknown>(
+    'steam_known_fix_reports',
+    null,
+    { kind: 'user-state' }
+  )
+
+  return {
+    configStore,
+    steamBottleConfigStore,
+    steamLibraryStore,
+    steamMetadataStore,
+    steamSyncStore,
+    steamPendingAdoptionStore,
+    steamRestartHoldStore,
+    steamKnownFixReportStore
+  }
 }

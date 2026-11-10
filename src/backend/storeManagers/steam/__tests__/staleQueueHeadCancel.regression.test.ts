@@ -37,8 +37,9 @@ import { deleteCancelledSteamInstall } from '../cancelDelete'
 import { steamQueueHeadAlreadyInstalled } from '../queueHeadRevalidation'
 import type { GameInfo } from 'common/types'
 import type SteamGame from '../games'
+import type { Stores } from 'backend/services/types'
 
-import * as steamStoresModule from '../stores'
+const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })

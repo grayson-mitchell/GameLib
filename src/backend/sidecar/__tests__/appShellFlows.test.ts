@@ -194,11 +194,10 @@ jest.mock('i18next', () => ({
 // ── legendary stores mock — gameInfoStore is a real CacheStore
 // backed by electron-store; mocked to avoid any real disk I/O (this repo's
 // own "tests clobbering real store" precedent, mirrors appshellModules.test.ts) ─
-jest.mock('../../storeManagers/legendary/stores', () => ({
-  gameInfoStore: {
-    clear: jest.fn()
-  }
-}))
+jest.mock('../../storeManagers/legendary/stores', () => {
+  const stores = { gameInfoStore: { clear: jest.fn() } }
+  return { createLegendaryStores: () => stores }
+})
 
 // ── abort handler mock — a narrow jest.fn() boundary so `abort`'s wiring can
 // be asserted directly, mirroring downloadQueueFlows.test.ts's own boundary
@@ -278,7 +277,7 @@ jest.mock('../../utils', () => ({
 import { bootFresh, writeInvoke, writeSend } from './helpers/sidecarHarness'
 import type { GlobalConfig as GlobalConfigType } from 'backend/config'
 import type i18nextType from 'i18next'
-import type { gameInfoStore as gameInfoStoreType } from '../../storeManagers/legendary/stores'
+import type { Stores } from 'backend/services/types'
 import type { backendEvents as backendEventsType } from '../../backend_events'
 import type * as aborthandlerModule from '../../utils/aborthandler/aborthandler'
 import type { requestRustInvoke as requestRustInvokeType } from '../sidecarRpc'
@@ -296,6 +295,7 @@ import {
   RUST_WAKE_LOCK_STOP
 } from 'common/types/sidecarTransport'
 import pkgJson from '../../../../package.json'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
 // D-08: one boot per test case in a fresh module registry. A top-level import of a
 // mocked or registry module would go stale after jest.resetModules(), so every such
@@ -304,7 +304,7 @@ import pkgJson from '../../../../package.json'
 // repeated after the mocks are configured.
 let GlobalConfig: typeof GlobalConfigType
 let i18next: typeof i18nextType
-let gameInfoStore: typeof gameInfoStoreType
+let gameInfoStore: Stores['legendary']['gameInfoStore']
 let backendEvents: typeof backendEventsType
 let callAbortController: typeof aborthandlerModule.callAbortController
 let callAllAbortControllers: typeof aborthandlerModule.callAllAbortControllers
@@ -332,7 +332,10 @@ function freshRegistry(): void {
   require('../bootstrap')
   GlobalConfig = require('backend/config').GlobalConfig
   i18next = require('i18next').default
-  gameInfoStore = require('../../storeManagers/legendary/stores').gameInfoStore
+  gameInfoStore =
+    require('../../storeManagers/legendary/stores').createLegendaryStores({
+      registry: createStoreRegistry()
+    }).gameInfoStore
   backendEvents = require('../../backend_events').backendEvents
   const aborthandler = require('../../utils/aborthandler/aborthandler')
   callAbortController = aborthandler.callAbortController
@@ -1354,8 +1357,14 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           // whatever this fresh, tmp-dir-backed store instance already has on disk from an
           // earlier test -- the property under test is the repeat COUNT, not the store's
           // own persistence semantics.
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const kvStoresModule = require('../../constants/key_value_stores')
+          /* eslint-disable @typescript-eslint/no-require-imports */
+          const {
+            createKvsStores
+          } = require('../../constants/key_value_stores')
+          /* eslint-enable @typescript-eslint/no-require-imports */
+          const kvStoresModule = createKvsStores({
+            registry: createStoreRegistry()
+          })
           const isolatedConfigStore = kvStoresModule.configStore
           jest
             .spyOn(isolatedConfigStore, 'get')

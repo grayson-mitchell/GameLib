@@ -1,11 +1,7 @@
 import { axiosClient } from 'backend/utils'
 import { GameInfo } from 'common/types'
 
-import * as crossoverIndex from '../stores'
 import { CrossoverIndex } from '../schema'
-
-const { crossoverIndexStore } = crossoverIndex
-const deps = { stores: { crossoverIndex } }
 
 jest.mock('backend/logger')
 jest.mock('backend/store_backend')
@@ -47,6 +43,11 @@ import {
   crossoverIndexHas,
   isCrossoverIndexEligible
 } from '../index'
+import { createCrossoverIndexStores } from '../stores'
+
+const crossoverIndex = createCrossoverIndexStores()
+const { crossoverIndexStore } = crossoverIndex
+const deps = { stores: { crossoverIndex } }
 
 function makeIndex(overrides: Partial<CrossoverIndex> = {}): CrossoverIndex {
   return {

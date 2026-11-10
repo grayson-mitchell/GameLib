@@ -363,6 +363,7 @@ import { fixesPath, appFolder, userDataPath } from '../../constants/paths'
 import { getLogFilePath } from 'backend/logger/paths'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import type { GameInfo } from 'common/types'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
 // ── CR-03 / WR-01 containment guard — MUST run before the first
 // beforeEach's destructive rmSync/configStore.set calls (jest runs
@@ -402,8 +403,12 @@ type ManagerMock = Record<'getGame' | 'getListOfGames', jest.Mock>
 // boot reads is a file-level double (`mockGetSteamGridDbSecretStore`), so it
 // is configured in the beforeEach, which runs before the boot.
 let handlerRegistry: typeof import('../../platform').handlerRegistry
-let wikiGameInfoStore: typeof import('../../wiki_game_info/stores').wikiGameInfoStore
-let configStore: typeof import('../../constants/key_value_stores').configStore
+let wikiGameInfoStore: ReturnType<
+  typeof import('../../wiki_game_info/stores').createWikiGameInfoStores
+>['wikiGameInfoStore']
+let configStore: ReturnType<
+  typeof import('../../constants/key_value_stores').createKvsStores
+>['configStore']
 let loggerModule: typeof import('../../logger')
 let mockedGlobalConfigGet: jest.Mock
 let mockedIsOnline: jest.Mock
@@ -422,8 +427,12 @@ function freshRegistry(): void {
   const { libraryManagerMap } = require('backend/storeManagers')
   const { isOnline, runOnceWhenOnline } = require('../../online_monitor')
   ;({ handlerRegistry } = require('../../platform'))
-  ;({ wikiGameInfoStore } = require('../../wiki_game_info/stores'))
-  ;({ configStore } = require('../../constants/key_value_stores'))
+  ;({ wikiGameInfoStore } =
+    require('../../wiki_game_info/stores').createWikiGameInfoStores())
+  ;({ configStore } =
+    require('../../constants/key_value_stores').createKvsStores({
+      registry: createStoreRegistry()
+    }))
   loggerModule = require('../../logger')
   /* eslint-enable @typescript-eslint/no-require-imports */
   mockedGlobalConfigGet = GlobalConfig.get as jest.Mock

@@ -47,7 +47,7 @@
  * filtered identically).
  *
  * Registration runs inside `registerHandlers()` (the 'register-handlers' boot step, D-08),
- * not at import time. `ensureStoresRegistered()` runs there, after the flow
+ * not at import time. `registerStoreWriteHandlers()` runs there, after the flow
  * registrations, so every store instance either handler below can
  * be asked about already exists (REQ-29-01, 29-RESEARCH Pitfall 6) before
  * any RPC frame can reach a handler body.
@@ -106,9 +106,8 @@ import { registerRunnerMiscFlows } from './runnerMiscFlowRegistration'
 import { registerEosOverlayFlows } from './eosOverlayFlowRegistration'
 import { registerStoreEmbedFlows } from './storeEmbedFlowRegistration'
 import { registerDepotHostFlows } from './depotHostRegistration'
-import { ensureStoresRegistered } from './storeRegistration'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
-import { getRegisteredStore } from '../typed_store'
+import type { StoreRegistry } from '../stores/storeRegistry'
 import {
   BOOT_SET_STORES,
   // WR-10: T-29-13's dynamic-store-name pattern is single-sourced in storePolicy.ts.
@@ -166,7 +165,7 @@ export function registerHandlers(deps: {
   // relative to the other four calls above (each module owns its own channel
   // names, no cross-module runtime
   // dependency at registration time); placed alongside them, before
-  // `ensureStoresRegistered()` (32-PATTERNS.md).
+  // `registerStoreWriteHandlers()` (32-PATTERNS.md).
   registerDownloadQueueFlows({
     log: deps.log,
     downloadQueue: deps.services.downloadQueue
@@ -174,7 +173,7 @@ export function registerHandlers(deps: {
   // Phase 34.1 Plan 04: the app-shell channels — no ordering constraint
   // relative to the other calls above (own channel names, no cross-module
   // runtime dependency at registration time), placed alongside them, before
-  // `ensureStoresRegistered()`.
+  // `registerStoreWriteHandlers()`.
   //
   // Guarded (sidecar-init-rustinvoke-leak): only this top-level, import-time-triggered call
   // suppresses the one-shot boot-time tray_set_icon correction under Jest -- a DIRECT call to
@@ -194,7 +193,7 @@ export function registerHandlers(deps: {
   // Phase 34.2 Plans 04+05: the game-details/settings/override channels — no
   // ordering constraint relative to the other calls above (own
   // channel names, no cross-module runtime dependency at registration time),
-  // placed alongside them, before `ensureStoresRegistered()`.
+  // placed alongside them, before `registerStoreWriteHandlers()`.
   registerGameDetailsFlows({
     managers: deps.services.managers,
     stores: deps.services.stores
@@ -202,8 +201,8 @@ export function registerHandlers(deps: {
   // Phase 34.2 Plan 06: the enrichment channels — no ordering
   // constraint relative to the other calls above (own channel names, no
   // cross-module runtime dependency at registration time), placed alongside
-  // them, before `ensureStoresRegistered()`. `wiki_game_info/stores`
-  // is already registered by `storeRegistration.ts:104` (Phase 29), so this
+  // them, before `registerStoreWriteHandlers()`. `wiki_game_info/stores`
+  // is already registered by `createStores` (Phase 29), so this
   // module needs no new store plumbing.
   registerEnrichmentFlows({
     managers: deps.services.managers,
@@ -213,7 +212,7 @@ export function registerHandlers(deps: {
   // filesystem/diagnostics channels — no ordering constraint
   // relative to the other calls above (own channel names, no cross-module
   // runtime dependency at registration time), placed alongside them, before
-  // `ensureStoresRegistered()`.
+  // `registerStoreWriteHandlers()`.
   registerShellFilesFlows({
     managers: deps.services.managers,
     stores: deps.services.stores
@@ -223,7 +222,7 @@ export function registerHandlers(deps: {
   // (clipboard_write_text/clipboard_read_text, Plan 03). No ordering constraint
   // relative to the other calls above (own channel names, no cross-module runtime
   // dependency at registration time), placed alongside them, before
-  // `ensureStoresRegistered()`.
+  // `registerStoreWriteHandlers()`.
   registerClipboardFlows({ managers: deps.services.managers })
   // Phase 34.2 gap cycle 2, plan 34.2-16 (REQ-34.2-12), extended by Phase 34.3
   // plan 04: the logger channels. `logError` was ported early from its Phase
@@ -236,20 +235,20 @@ export function registerHandlers(deps: {
   // listener would duplicate every frontend log line (`dispatchSend` iterates
   // ALL listeners for a channel). No ordering constraint relative to the other
   // calls above (own channel name, no cross-module runtime dependency at
-  // registration time), placed alongside them, before `ensureStoresRegistered()`.
+  // registration time), placed alongside them, before `registerStoreWriteHandlers()`.
   registerLoggerFlows({ stores: deps.services.stores })
   // Phase 34.4 Plans 04+05 (REQ-34.4-07): the library/sync + key-state Humble
   // channels — no ordering constraint relative to the other calls above (own channel
   // names, no cross-module runtime dependency at registration time), placed
-  // alongside them, before `ensureStoresRegistered()`. Every store this module
-  // needs (all 9 Humble stores) is already registered by storeRegistration.ts
+  // alongside them, before `registerStoreWriteHandlers()`. Every store this module
+  // needs (all 9 Humble stores) is already registered by createStores
   // — zero new store plumbing.
   registerHumbleFlows()
   // Phase 34.4.1 Plan 02 (REQ-34.4.1-02/-03/-04/-05/-13): the browser-auth channels,
   // plus installing the rustInvoke-backed login-window seam (setLoginWindowSeam)
   // — no ordering constraint relative to the
   // other calls above (own channel names, no cross-module runtime dependency at
-  // registration time), placed alongside them, before `ensureStoresRegistered()`.
+  // registration time), placed alongside them, before `registerStoreWriteHandlers()`.
   registerHumbleLoginFlows()
   // Phase 34.4.1 Plan 09 (REQ-34.4.1-08): the `oauthCaptureLogin` handle channel, which
   // drives the four OAuth runners' (legendary/gog/nile) redirect capture through the SAME
@@ -257,14 +256,14 @@ export function registerHandlers(deps: {
   // Humble's own browser-auth channels (this captures a redirect code, it does not
   // authenticate). No ordering constraint relative to the other calls above (own channel name,
   // no cross-module runtime dependency at registration time), placed alongside them, before
-  // `ensureStoresRegistered()`.
+  // `registerStoreWriteHandlers()`.
   registerOAuthLoginFlows()
   // Phase 34.5 Plan 04 (REQ-34.5-13): the four slice-34.5 clusters — runner auth/sign-out,
   // Wine tools, shortcuts, runner misc. Declared here as EMPTY seams by plan 34.5-04 and
   // filled in one module at a time by the cluster plans (34.5-05 through 34.5-12); all four
   // are populated now. No ordering constraint relative to the other calls above (own channel
   // names, no cross-module runtime dependency at registration time), placed alongside them,
-  // before `ensureStoresRegistered()`.
+  // before `registerStoreWriteHandlers()`.
   registerRunnerAuthFlows({
     managers: deps.services.managers,
     stores: deps.services.stores
@@ -294,20 +293,19 @@ export function registerHandlers(deps: {
   // Phase 40 Plan 05 (REQ-40-02/REQ-40-05): the in-app store-embed channels, plus installing the
   // rustInvoke-backed store-embed seam (setStoreEmbedSeam) — no ordering constraint relative to
   // the other calls above (own channel names, no cross-module runtime dependency at registration
-  // time), placed alongside them, before `ensureStoresRegistered()`.
+  // time), placed alongside them, before `registerStoreWriteHandlers()`.
   registerStoreEmbedFlows()
   // Phase 73 Plan 11 (D-03, D-06): the shell-originated channels the Rust depot job uses for CDN
   // tokens, manifest request codes and progress events — no ordering constraint relative to the
   // other calls above (own channel names, backed by a Map in jobRegistry.ts), placed before
-  // `ensureStoresRegistered()`.
+  // `registerStoreWriteHandlers()`.
   registerDepotHostFlows()
-  ensureStoresRegistered()
   // D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
   // every store instance exists, or a legitimate write would be rejected as an unknown
-  // store — hence AFTER ensureStoresRegistered(). These are `send`-kind (fire-and-forget)
+  // store — hence AFTER registerStoreWriteHandlers(). These are `send`-kind (fire-and-forget)
   // registrations, so unlike an `invoke` channel there is no response frame and no promise
   // to reject, which is exactly why the missing registration was invisible before this phase.
-  registerStoreWriteHandlers()
+  registerStoreWriteHandlers({ registry: deps.services.storeRegistry })
 
   // D-03: the eager payload is EXACTLY the declared boot set — not the
   // unbounded lazy tier (T-29-16, index.tsx's hydration timeout). D-08: this
@@ -318,7 +316,10 @@ export function registerHandlers(deps: {
   ipcMain.handle(STORE_SNAPSHOT_CHANNEL, async () => {
     const snapshot: Record<string, unknown> = {}
     for (const name of BOOT_SET_STORES) {
-      snapshot[name] = filterStoreSnapshot(name, resolveRawStore(name))
+      snapshot[name] = filterStoreSnapshot(
+        name,
+        resolveRawStore(deps.services.storeRegistry, name)
+      )
     }
     return snapshot
   })
@@ -353,7 +354,10 @@ export function registerHandlers(deps: {
         return {}
       }
 
-      return filterStoreSnapshot(storeName, resolveRawStore(storeName))
+      return filterStoreSnapshot(
+        storeName,
+        resolveRawStore(deps.services.storeRegistry, storeName)
+      )
     }
   )
 }
@@ -407,7 +411,10 @@ const CACHE_BACKED_STORE_NAMES: readonly string[] = [
  *     plus a stderr diagnostic naming the store — NEVER a throw (SEAM
  *     Invariant B), and the diagnostic NEVER carries a value (T-29-18).
  */
-function resolveRawStore(name: string): Record<string, unknown> {
+function resolveRawStore(
+  registry: StoreRegistry,
+  name: string
+): Record<string, unknown> {
   // WR-09 (Phase 29 code review): the deny list is consulted HERE, not only inside
   // `filterStoreSnapshot`. `humble_library` is absent from both
   // `CACHE_BACKED_STORE_NAMES` and `STORE_UNIVERSE`, so this function already returned
@@ -421,7 +428,7 @@ function resolveRawStore(name: string): Record<string, unknown> {
     return {}
   }
 
-  const registered = getRegisteredStore(name)
+  const registered = registry.get(name)
   if (registered) {
     return registered.raw_store as Record<string, unknown>
   }

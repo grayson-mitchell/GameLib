@@ -35,35 +35,9 @@ import {
 // `TypeCheckedStoreBackend`'s constructor drops its `name` parameter
 // entirely once `new Store(options)` is called. Any generic, name-keyed
 // dispatch (the sidecar's storeSet/storeGet handlers, plan 29-05) MUST
-// resolve the live instance through this registry and must NEVER
+// resolve the live instance through the boot's registry and must NEVER
 // reconstruct a path/instance from the name string itself.
-// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
-// flagged the previously-exported form as a used-in-module finding -- there
-// is no external consumer, so the export served no purpose).
-interface RegisteredStore {
-  instance: TypeCheckedStoreBackend<ValidStoreName>
-  options: StoreOptions<StoreStructure[ValidStoreName]>
-}
-
 const RESERVED_KEY = '__internal__'
-
-const storeRegistry = new Map<string, RegisteredStore>()
-
-export function getRegisteredStore(
-  name: string
-): TypeCheckedStoreBackend<ValidStoreName> | undefined {
-  return storeRegistry.get(name)?.instance
-}
-
-export function getRegisteredStoreOptions(
-  name: string
-): StoreOptions<StoreStructure[ValidStoreName]> | undefined {
-  return storeRegistry.get(name)?.options
-}
-
-export function getRegisteredStoreNames(): string[] {
-  return [...storeRegistry.keys()]
-}
 
 export class TypeCheckedStoreBackend<
   Name extends ValidStoreName
@@ -74,7 +48,7 @@ export class TypeCheckedStoreBackend<
    *
    * This does NOT contradict the REQ-29-01 note above: that note says the name is not the
    * on-disk FILENAME and must never be used to reconstruct a path. It is still the store's
-   * IDENTITY — `storeRegistry` above is already keyed by it, and it is exactly the
+   * IDENTITY — the per-boot `StoreRegistry` is keyed by it, and it is exactly the
    * identifier `StoreChangedPayload.store` carries. Used for identity only, never for
    * path resolution.
    */
@@ -91,29 +65,14 @@ export class TypeCheckedStoreBackend<
     // `StoreStructure[Name]` shape and the store's own `Record<string, unknown>`
     // default. Carried over verbatim from the electron-store-backed version.
     this.store = new Store({ ...options, declaration })
-    // WR-08 (Phase 29 code review): FIRST registration wins. This used to be an
-    // unconditional `set`, so a second construction under the same `ValidStoreName`
-    // silently re-pointed every name-keyed dispatch (`getRegisteredStore`, and
-    // therefore the whole renderer-driven write path) at a different instance with no
-    // warning at all. Now that the registry is load-bearing for writes,
-    // last-writer-wins is not an acceptable default; a duplicate is a real defect and
-    // must at least be greppable.
+    // The registry (66.1 plan 25) is per boot and owns first-registration-wins plus the
+    // duplicate diagnostic (WR-08). A store built with no registry is not RPC-visible.
     registry?.register(
       name,
       this as unknown as TypeCheckedStoreBackend<ValidStoreName>,
       options as StoreOptions<StoreStructure[ValidStoreName]>,
       declaration
     )
-    if (storeRegistry.has(name)) {
-      process.stderr.write(
-        `[typed_store] duplicate registration for '${name}' — keeping the first instance\n`
-      )
-    } else {
-      storeRegistry.set(name, {
-        instance: this as unknown as TypeCheckedStoreBackend<ValidStoreName>,
-        options: options as StoreOptions<StoreStructure[ValidStoreName]>
-      })
-    }
   }
 
   public has(key: string) {

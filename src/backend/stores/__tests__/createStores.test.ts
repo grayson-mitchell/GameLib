@@ -1,5 +1,10 @@
+import { basename, dirname, join } from 'node:path'
+import CacheStore from '../../cache'
+import { getPath } from '../../sidecar/pathShim'
 import { TypeCheckedStoreBackend } from '../../typed_store'
+import { createStores } from '../createStores'
 import { createStoreRegistry } from '../storeRegistry'
+import fixture from './fixtures/registeredStores.json'
 
 /**
  * The registry is per boot: a typed store joins only the registry it is handed, and two
@@ -64,5 +69,80 @@ describe('createStoreRegistry', () => {
       stderr.mockRestore()
     }
     expect(registry.get('configStore')).toBe(first)
+  })
+})
+
+/**
+ * Parity with the pre-change singletons: `fixtures/registeredStores.json` was captured from the
+ * module-level stores before any `stores.ts` became a factory (every store construction, with
+ * its options and declaration, and the registry name where it had one).
+ */
+describe('createStores', () => {
+  const registered = fixture.filter((entry) => entry.registeredAs !== null)
+  const cacheNames = new Set(
+    fixture
+      .filter((entry) => entry.registeredAs === null)
+      .map((entry) => entry.options.name)
+  )
+
+  it('registers exactly the stores the singletons registered, with identical options and declarations', () => {
+    const registry = createStoreRegistry()
+    createStores({ registry })
+    expect(registry.names().sort()).toEqual(
+      registered.map((entry) => entry.registeredAs).sort()
+    )
+    for (const entry of registered) {
+      const name = entry.registeredAs
+      const { schemaKeys, ...options } = entry.options
+      const actual = registry.getOptions(name) as unknown as Record<
+        string,
+        unknown
+      >
+      const { schema, ...actualOptions } = actual
+      // An absolute cwd (game_overrides, runsForMe, macArch) is pinned relative to userData.
+      const cwd = String(actualOptions.cwd).replace(
+        getPath('userData'),
+        '<userData>'
+      )
+      expect({ ...actualOptions, cwd }).toEqual(options)
+      expect(schema ? Object.keys(schema).sort() : null).toEqual(schemaKeys)
+      expect(registry.getDeclaration(name)).toEqual(entry.declaration)
+    }
+  })
+
+  it('keeps every cache store on its original file under store_cache', () => {
+    const stores = createStores({ registry: createStoreRegistry() })
+    const files: string[] = []
+    for (const family of Object.values(stores)) {
+      for (const store of Object.values(family)) {
+        if (store instanceof CacheStore) {
+          const path = (store as unknown as { store: { path: string } }).store
+            .path
+          expect(dirname(path)).toBe(join(getPath('userData'), 'store_cache'))
+          files.push(basename(path, '.json'))
+        }
+      }
+    }
+    expect(files.length).toBeGreaterThanOrEqual(25)
+    for (const file of files) {
+      expect(cacheNames).toContain(file)
+    }
+  })
+
+  it('two boots get independent registries and instances, and no duplicate line', () => {
+    const stderr = jest.spyOn(process.stderr, 'write').mockReturnValue(true)
+    try {
+      const a = createStoreRegistry()
+      const b = createStoreRegistry()
+      const storesA = createStores({ registry: a })
+      const storesB = createStores({ registry: b })
+      expect(stderr).not.toHaveBeenCalled()
+      expect(a.names().sort()).toEqual(b.names().sort())
+      expect(a.get('configStore')).toBe(storesA.kvs.configStore)
+      expect(b.get('configStore')).toBe(storesB.kvs.configStore)
+      expect(a.get('configStore')).not.toBe(b.get('configStore'))
+    } finally {
+      stderr.mockRestore()
+    }
   })
 })

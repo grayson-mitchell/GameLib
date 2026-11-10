@@ -18,7 +18,6 @@
     "src/backend/protocol.ts": 1,
     "src/backend/storeChangeNotifier.ts": 2,
     "src/backend/trackedChildren.ts": 1,
-    "src/backend/typed_store.ts": 1,
     "src/backend/utils.ts": 4
   }
 }

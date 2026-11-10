@@ -31,7 +31,6 @@ import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
 import { SteamUser } from '../user'
 import { noteRefreshTrigger, resetSteamAuthTrigger } from '../authTrigger'
 import { getAnonymousPicsClient } from '../anonymousClient'
-import { steamLibraryStore, steamMetadataStore } from '../stores'
 import { getBottleSteamappsDir } from '../bottle'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { finalizeToSteam, downloadSteamDepots } from '../depot'
@@ -42,8 +41,11 @@ import * as gamesModule from '../gameSessionState'
 import { bridgeAllowlist } from '../bridge/allowlist'
 import { captureOwnedAppPlatforms } from '../platformCapture'
 import { resumeInterruptedSteamInstall } from '../library/resume'
+import type { Stores } from 'backend/services/types'
 
-import * as steamStoresModule from '../stores'
+const { steamLibraryStore, steamMetadataStore } =
+  jest.requireMock<Stores['steam']>('../stores')
+const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })

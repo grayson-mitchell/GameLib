@@ -58,22 +58,51 @@ describe('bootstrap.ts source shape (D-08)', () => {
   })
 })
 
-describe('legacy service facades source shape (66.1-04, T-66.1-12)', () => {
-  const stripped = stripSourceComments(
-    readFileSync(
-      join(__dirname, '..', '..', 'services', 'legacyFacades.ts'),
-      'utf-8'
-    )
+describe('stores modules construct nothing at import (66.1-25, MH-1)', () => {
+  const STORE_MODULES = [
+    'constants/key_value_stores.ts',
+    'crossover_index/stores.ts',
+    'downloadmanager/stores.ts',
+    'game_overrides/stores.ts',
+    'humble/stores.ts',
+    'logger/stores.ts',
+    'macArch/stores.ts',
+    'migration/stores.ts',
+    'runsForMe/stores.ts',
+    'storeManagers/gog/stores.ts',
+    'storeManagers/legendary/stores.ts',
+    'storeManagers/nile/stores.ts',
+    'storeManagers/sideload/stores.ts',
+    'storeManagers/steam/stores.ts',
+    'wiki_game_info/stores.ts',
+    'wine/manager/stores.ts'
+  ]
+
+  it.each(STORE_MODULES)(
+    '%s has no top-level store binding and exports one factory',
+    (file) => {
+      const stripped = stripSourceComments(
+        readFileSync(join(__dirname, '..', '..', file), 'utf-8')
+      )
+      const lines = stripped.split('\n')
+      expect(lines.filter((l) => /^(export\s+)?(let|const)\s/.test(l))).toEqual(
+        []
+      )
+      expect(
+        lines.filter((l) => /^export function create\w+Stores\(/.test(l))
+      ).toHaveLength(1)
+    }
   )
 
-  it('has no top-level let/const binding', () => {
-    expect(
-      stripped.split('\n').filter((l) => /^(let|const)\s/.test(l))
-    ).toEqual([])
-  })
-
-  it('constructs nothing', () => {
-    expect(stripped).not.toMatch(/\bnew\s/)
+  it('the registry and the factory index construct nothing at import', () => {
+    for (const file of ['storeRegistry.ts', 'createStores.ts']) {
+      const stripped = stripSourceComments(
+        readFileSync(join(__dirname, '..', '..', 'stores', file), 'utf-8')
+      )
+      expect(
+        stripped.split('\n').filter((l) => /^(let|const)\s/.test(l))
+      ).toEqual([])
+    }
   })
 })
 
@@ -84,9 +113,7 @@ describe('register-handlers and legacy-zoom-cleanup source shape (D-08, C-03)', 
     )
     const bad = stripped
       .split('\n')
-      .filter((l) =>
-        /^(ipcMain\.handle|register[A-Z]\w*\(|ensureStoresRegistered\()/.test(l)
-      )
+      .filter((l) => /^(ipcMain\.handle|register[A-Z]\w*\()/.test(l))
     expect(bad).toEqual([])
   })
 
@@ -147,14 +174,11 @@ describe('66.1 MH-3: registrations take slices', () => {
     'callRunner',
     'runWineCommand'
   ]
-  // `storeRegistration.ts` keeps its side-effect store imports until plan 25 deletes it; it is
-  // the only exemption.
-  const EXEMPT = new Set(['storeRegistration.ts'])
   const allFiles = readdirSync(SIDECAR_DIR).filter(
     (name) =>
       name.endsWith('Registration.ts') || name === 'installedJsonWatcher.ts'
   )
-  const files = allFiles.filter((name) => !EXEMPT.has(name))
+  const files = allFiles
   const sources = files.map((name) => ({
     name,
     source: stripSourceComments(readFileSync(join(SIDECAR_DIR, name), 'utf-8'))

@@ -63,7 +63,12 @@ import { bindHumbleStores } from '../humbleStores'
 import { defined } from './defined'
 import { HumbleLibrary } from '../library'
 import { SteamUser } from 'backend/storeManagers/steam/user'
-import * as humbleStoreModule from '../stores'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
+import { createHumbleStores } from '../stores'
+
+const humbleStoreModule = createHumbleStores({
+  registry: createStoreRegistry()
+})
 
 const { humbleLibraryStore, humbleSyncStore } = humbleStoreModule
 bindHumbleStores({

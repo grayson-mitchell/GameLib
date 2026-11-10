@@ -28,8 +28,9 @@ import {
   isDelegatedInstallPolling
 } from '../library/installPolling'
 import { at } from './fixtures/indexed'
+import type { Stores } from 'backend/services/types'
 
-import * as steamStoresModule from '../stores'
+const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })

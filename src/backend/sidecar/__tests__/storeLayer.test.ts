@@ -18,7 +18,7 @@
  *     entry needed. The per-game branch is documented (not exercised here,
  *     `settingsFlows.test.ts` already covers it against a mock) as bypassing
  *     the store layer entirely — a raw `graceful-fs` write, never a
- *     `getRegisteredStore()` target.
+ *     `registry.get()` target.
  *
  * TOKEN-WIPE SAFETY (non-negotiable): this suite drives REAL store
  * construction through the real `fileStore.ts`, so it MUST open with the
@@ -75,8 +75,9 @@ jest.mock('backend/constants/environment', () => ({
 jest.mock('../../storeManagers/steam/user')
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { getRegisteredStore, TypeCheckedStoreBackend } from '../../typed_store'
-import { ensureStoresRegistered } from '../storeRegistration'
+import { TypeCheckedStoreBackend } from '../../typed_store'
+import { createStores } from '../../stores/createStores'
+import { createStoreRegistry } from '../../stores/storeRegistry'
 import { handlerRegistry } from '../../platform'
 import CacheStore from '../../cache'
 import { BOOT_SET_STORES, STORE_ALLOWLIST } from 'common/types/storePolicy'
@@ -86,21 +87,23 @@ import {
 } from 'common/types/sidecarTransport'
 
 // `registerHandlers()` registers every invoke handler (including the
-// store-layer ones under test) onto platformApi's `handlerRegistry`, and
-// its own `registerSteamFlows()` / `ensureStoresRegistered()` calls construct
-// every store this suite exercises — the same real, unmodified code path
-// production runs (the 'register-handlers' boot step).
+// store-layer ones under test) onto platformApi's `handlerRegistry`; the
+// stores built above are the ones its handlers resolve through — the same
+// real, unmodified code path production runs (the 'register-handlers' boot step).
 import { registerHandlers } from '../handlers'
 import { createTestServices } from '../../testUtils/testServices'
 import { createCaptureLog } from '../../testUtils/captureLog'
 
+// One boot's worth of real stores against one registry, exactly what the 'stores' boot step builds.
+const registry = createStoreRegistry()
+const stores = createStores({ registry })
+const steamConfigStore = stores.steam.configStore
+const humbleConfigStore = stores.humble.configStore
+
 registerHandlers({
   log: createCaptureLog(),
-  services: createTestServices()
+  services: createTestServices({ stores, storeRegistry: registry })
 })
-
-import { configStore as steamConfigStore } from '../../storeManagers/steam/stores'
-import { configStore as humbleConfigStore } from '../../humble/stores'
 
 /**
  * Narrow escape hatch for probing an arbitrary key on a `TypeCheckedStoreBackend`
@@ -146,13 +149,6 @@ async function invokeStoreFetch(
   return (await handler(undefined, storeName)) as Record<string, unknown>
 }
 
-beforeAll(() => {
-  // Idempotent — ../handlers already triggered this at import time; calling
-  // it again here documents the dependency explicitly for this suite and
-  // costs nothing (the module-level `registered` guard short-circuits).
-  ensureStoresRegistered()
-})
-
 describe('round-trip', () => {
   // Hardcoded literal array of ALL 22 `ValidStoreName` strings MINUS the two
   // documented dead entries below — adding a store to `StoreStructure`
@@ -181,7 +177,7 @@ describe('round-trip', () => {
     // 'wikigameinfo' is NOT excluded — see the cache-backed round-trip
     // block below. It IS a `ValidStoreName`, but `wiki_game_info/
     // stores.ts` constructs it as a `CacheStore`, not a
-    // `TypeCheckedStoreBackend`, so `getRegisteredStore()` can never
+    // `TypeCheckedStoreBackend`, so `registry.get()` can never
     // resolve it — it round-trips through the same mechanism as the D-13
     // cache stores instead, immediately below.
     //
@@ -195,9 +191,9 @@ describe('round-trip', () => {
   ] as const
 
   it.each(ALL_VALID_STORE_NAMES)(
-    '%s resolves via getRegisteredStore() and round-trips a probe value',
+    '%s resolves via registry.get() and round-trips a probe value',
     (name) => {
-      const instance = asProbeable(getRegisteredStore(name))
+      const instance = asProbeable(registry.get(name))
       expect(instance).toBeDefined()
 
       const probeValue = `__gsdProbe-value-${name}`
@@ -253,7 +249,7 @@ describe('round-trip', () => {
   // global branch (utils.ts:1636-1639) call `configStore.set('settings',
   // {...})` on the SAME registered `configStore` instance this suite's own
   // generic `configStore` probe (above) already resolves via
-  // `getRegisteredStore()` — this case additionally proves the SPECIFIC
+  // `registry.get()` — this case additionally proves the SPECIFIC
   // `'settings'` field name round-trips through the fetch/snapshot read
   // paths (the same paths `requestAppSettings`'s underlying store-backed
   // reads would use), using the real, pre-existing `STORE_ALLOWLIST` entry.
@@ -264,7 +260,7 @@ describe('round-trip', () => {
     // the write path's global branch.
     expect(STORE_ALLOWLIST.configStore).toContain('settings')
 
-    const configStoreInstance = asProbeable(getRegisteredStore('configStore'))
+    const configStoreInstance = asProbeable(registry.get('configStore'))
     const probeSettings = { maxWorkers: 7, language: 'fr' }
 
     // The exact write shape GlobalConfig.setSetting()/writeConfig()'s global
@@ -288,12 +284,12 @@ describe('round-trip', () => {
   // raw `graceful-fs writeFileSync(join(gamesConfigPath, appName + '.json'))`
   // (31-RESEARCH.md "Write-Path Mechanics"). Confirmed here by construction:
   // an arbitrary appName is never a `ValidStoreName`, so it can never resolve
-  // through this suite's own `getRegisteredStore()` — the same registry the
+  // through this suite's own `registry.get()` — the same registry the
   // global branch's `configStore` write above DOES resolve through. This is
   // the in-repo record of checklist step 4 being a confirmed no-op for the
   // per-game branch too, rather than a silently-skipped step.
-  it('the per-game write path never routes through getRegisteredStore() — it was never part of the store-layer abstraction', () => {
-    expect(getRegisteredStore('some-arbitrary-appName-999001')).toBeUndefined()
+  it('the per-game write path never routes through registry.get() — it was never part of the store-layer abstraction', () => {
+    expect(registry.get('some-arbitrary-appName-999001')).toBeUndefined()
   })
 })
 
@@ -390,7 +386,7 @@ describe('allow-list', () => {
 
     try {
       // Idempotent; installs the real `pushStoreChanged` as the store-change notifier.
-      registerStoreWriteHandlers()
+      registerStoreWriteHandlers({ registry })
 
       probeSteamConfig.set('refreshToken', 'leak-canary-refresh-token')
       probeHumbleConfig.set('csrfToken', 'leak-canary-csrf')
@@ -457,7 +453,7 @@ describe('boot set', () => {
  */
 describe('WR-08: duplicate store registration', () => {
   it('keeps the FIRST registered instance and reports the duplicate on stderr', () => {
-    const first = getRegisteredStore('configStore')
+    const first = registry.get('configStore')
     expect(first).toBeDefined()
 
     const stderrSpy = jest
@@ -470,11 +466,12 @@ describe('WR-08: duplicate store registration', () => {
         {
           cwd: 'store'
         },
-        { kind: 'user-state' }
+        { kind: 'user-state' },
+        registry
       )
       lines = stderrSpy.mock.calls.map((call) => String(call[0]))
-      expect(getRegisteredStore('configStore')).toBe(first)
-      expect(getRegisteredStore('configStore')).not.toBe(second)
+      expect(registry.get('configStore')).toBe(first)
+      expect(registry.get('configStore')).not.toBe(second)
     } finally {
       stderrSpy.mockRestore()
     }

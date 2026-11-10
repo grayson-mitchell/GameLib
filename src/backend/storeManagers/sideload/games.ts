@@ -5,7 +5,6 @@ import {
   GameSettings,
   LaunchOption
 } from 'common/types'
-import { libraryStore } from './stores'
 import { GameConfig } from '../../game_config'
 import { sendGameStatusUpdate, shutdownWine } from '../../utils'
 import { logInfo, LogPrefix, logWarning } from 'backend/logger'
@@ -48,7 +47,7 @@ export default class SideloadGame implements Game {
   }
 
   getGameInfo(): GameInfo {
-    const store = libraryStore.get('games', [])
+    const store = this.deps.stores.sideload.libraryStore.get('games', [])
     const info = store.find((app) => app.app_name === this.id)
     if (!info) {
       // @ts-expect-error TODO: As with LegendaryGame and GOGGame, handle this properly
@@ -124,7 +123,7 @@ export default class SideloadGame implements Game {
       status: 'uninstalling'
     })
 
-    const old = libraryStore.get('games', [])
+    const old = this.deps.stores.sideload.libraryStore.get('games', [])
     const current = old.filter((a: GameInfo) => a.app_name !== this.id)
 
     const gameInfo = this.getGameInfo()
@@ -136,7 +135,7 @@ export default class SideloadGame implements Game {
     if (shouldRemovePrefix) {
       removePrefix(this.deps, this.id, 'sideload')
     }
-    libraryStore.set('games', current)
+    this.deps.stores.sideload.libraryStore.set('games', current)
 
     if (deleteFiles && executable !== undefined) {
       rmSync(dirname(executable), { recursive: true })

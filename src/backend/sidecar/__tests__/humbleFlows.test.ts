@@ -84,6 +84,7 @@ import { join } from 'path'
 import { bootFresh, writeInvoke, writeSend } from './helpers/sidecarHarness'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
 // D-08: every case boots the sidecar once, in a fresh module registry. Module
 // handles the cases configure or inspect are rebound from that registry in
@@ -1131,7 +1132,9 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
           ) => void
         }
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const realStores = require('../../humble/stores') as {
+      const realStores = require('../../humble/stores').createHumbleStores({
+        registry: createStoreRegistry()
+      }) as {
         configStore: {
           set: (key: string, value: unknown) => void
           get_nodefault: (key: string) => unknown

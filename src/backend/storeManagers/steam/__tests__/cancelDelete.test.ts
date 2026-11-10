@@ -21,8 +21,10 @@ import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
 import { deleteCancelledSteamInstall } from '../cancelDelete'
 import type { GameInfo } from 'common/types'
 import { at } from './fixtures/indexed'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
+import { createSteamStores } from '../stores'
 
-import * as steamStoresModule from '../stores'
+const steamStoresModule = createSteamStores({ registry: createStoreRegistry() })
 
 const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })

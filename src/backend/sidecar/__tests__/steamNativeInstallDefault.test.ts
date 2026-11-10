@@ -19,6 +19,7 @@ import {
 } from 'fs'
 import { tmpdir } from 'os'
 import { dirname, sep } from 'path'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
 jest.mock('backend/storeManagers', () => ({
   libraryManagerMap: {
@@ -72,7 +73,10 @@ function launch(): Launch {
     const {
       registerSettingsFlows
     } = require('backend/sidecar/settingsFlowRegistration')
-    const { configStore } = require('backend/constants/key_value_stores')
+    const { configStore } =
+      require('backend/constants/key_value_stores').createKvsStores({
+        registry: createStoreRegistry()
+      })
     const { configPath } = require('backend/constants/paths')
     const { GlobalConfig } = require('backend/config')
     /* eslint-enable @typescript-eslint/no-require-imports */

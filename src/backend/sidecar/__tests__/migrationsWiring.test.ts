@@ -63,10 +63,15 @@ import { app } from 'backend/platform'
 import { cp } from 'fs/promises'
 import { bootFresh } from './helpers/sidecarHarness'
 import type MigrationSystem from '../../migration'
-import { migrationsStore } from '../../migration/stores'
 import { isLinux } from '../../constants/environment'
 import { userHome } from '../../constants/paths'
 import { legendaryConfigPath } from '../../storeManagers/legendary/constants'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
+import { createMigrationStores } from '../../migration/stores'
+
+const { migrationsStore } = createMigrationStores({
+  registry: createStoreRegistry()
+})
 
 const actualFsPromises =
   jest.requireActual<typeof import('fs/promises')>('fs/promises')
@@ -142,15 +147,20 @@ function bootMigrations() {
       /* eslint-enable @typescript-eslint/no-require-imports */
     }
   })
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  const { createMigrationStores } = require('../../migration/stores')
+  /* eslint-enable @typescript-eslint/no-require-imports */
+  const freshMigrationStores = createMigrationStores({
+    registry: createStoreRegistry()
+  })
   return {
     freshCp,
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    freshStore: require('../../migration/stores')
-      .migrationsStore as typeof migrationsStore,
+    freshStore: freshMigrationStores.migrationsStore as typeof migrationsStore,
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     freshSystem: require('../../migration').default as typeof MigrationSystem,
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    freshStores: { migration: require('../../migration/stores') }
+    freshStores: {
+      migration: freshMigrationStores
+    }
   }
 }
 

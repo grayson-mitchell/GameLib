@@ -175,7 +175,7 @@ function shortcutsExistOnDisk(
  * naturally idempotent (`Map.set` replaces the existing entry) and therefore does not itself need
  * this guard, though it still lives behind it since the guard covers the whole function. Mirrors
  * `runnerAuthFlowRegistration.ts`'s own `let registered = false` guard, itself mirroring
- * `storeRegistration.ts`'s original.
+ * `createStores`'s original.
  */
 let registered = false
 export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {

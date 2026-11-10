@@ -9,9 +9,11 @@ import {
   FAILURE_BACKOFF_MINUTES,
   resetIndexFailureBackoff
 } from '../fetcher'
-import * as crossoverIndex from '../stores'
 import { crossoverIndexSchema, CrossoverIndex } from '../schema'
 import { crossoverIndexHas, crossoverIndexDescriptor } from '../index'
+import { createCrossoverIndexStores } from '../stores'
+
+const crossoverIndex = createCrossoverIndexStores()
 
 const { crossoverIndexStore } = crossoverIndex
 const deps = { stores: { crossoverIndex } }

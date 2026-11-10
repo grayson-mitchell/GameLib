@@ -4,12 +4,19 @@
 // download/install pipeline's import-time side effects (spike 009's
 // import-time wall).
 import { TypeCheckedStoreBackend } from 'backend/typed_store'
+import type { StoreRegistry } from 'backend/stores/storeRegistry'
 
-export const wineDownloaderInfoStore = new TypeCheckedStoreBackend(
-  'wineDownloaderInfoStore',
-  {
-    cwd: 'store',
-    name: 'wine-downloader-info'
-  },
-  { kind: 'cache' }
-)
+export function createWineManagerStores(deps: { registry: StoreRegistry }) {
+  const { registry } = deps
+  const wineDownloaderInfoStore = new TypeCheckedStoreBackend(
+    'wineDownloaderInfoStore',
+    {
+      cwd: 'store',
+      name: 'wine-downloader-info'
+    },
+    { kind: 'cache' },
+    registry
+  )
+
+  return { wineDownloaderInfoStore }
+}

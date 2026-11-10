@@ -10,9 +10,8 @@ import {
   NileRegisterData,
   NileUserData
 } from 'common/types/nile'
-import type { ManagerDeps } from 'backend/services/types'
+import type { ManagerDeps, Stores } from 'backend/services/types'
 import { existsSync, readFileSync } from 'graceful-fs'
-import { configStore } from './stores'
 import { clearCache } from 'backend/utils'
 import type { ClearCacheDeps } from 'backend/utils'
 import { nileUserData } from './constants'
@@ -24,6 +23,11 @@ import {
 } from 'backend/signInProbe/outcomes'
 
 /** What the CLI-driven NileUser methods need: the nile manager and the stores clearCache wipes. */
+/** The persisted-config slice the user reads and writes. */
+export interface NileStoreDeps {
+  stores: Pick<Stores, 'nile'>
+}
+
 export type NileUserDeps = ClearCacheDeps & {
   libraryManagers: Pick<ManagerDeps['libraryManagers'], 'nile'>
 }
@@ -242,7 +246,7 @@ export class NileUser {
     }
 
     logInfo('Authentication successful', LogPrefix.Nile)
-    const user = await this.getUserData()
+    const user = await this.getUserData(deps)
     if (!user) {
       return {
         status: 'failed',
@@ -252,7 +256,7 @@ export class NileUser {
 
     // Phase 49 (R2): a completed sign-in proves the session, so the expiry flag
     // clears and the fence moves.
-    configStore.delete('expired')
+    deps.stores.nile.configStore.delete('expired')
     noteSignInSucceeded('nile')
 
     return {
@@ -284,11 +288,11 @@ export class NileUser {
     // try/catch below precisely so its failure can never retroactively skip
     // this, and can never make `logout()` itself reject. This reword widens
     // an already-accurate claim -- it does not correct a false one.
-    configStore.delete('userData')
+    deps.stores.nile.configStore.delete('userData')
     clearCache(deps, 'nile')
     // Phase 49 (R2): sign-out clears the expiry flag and fences any probe that
     // began before it, so a late verdict cannot re-latch a signed-out store.
-    configStore.delete('expired')
+    deps.stores.nile.configStore.delete('expired')
     noteSignedOut('nile')
 
     try {
@@ -298,10 +302,12 @@ export class NileUser {
     }
   }
 
-  static async getUserData(): Promise<NileUserData | undefined> {
+  static async getUserData(
+    deps: NileStoreDeps
+  ): Promise<NileUserData | undefined> {
     if (!existsSync(nileUserData)) {
       logError('current_user.json does not exist', LogPrefix.Nile)
-      configStore.delete('userData')
+      deps.stores.nile.configStore.delete('userData')
       return
     }
 
@@ -313,17 +319,17 @@ export class NileUser {
     const user: NileUserData = JSON.parse(readFileSync(nileUserData, 'utf-8'))
     if (!Object.keys(user).length) {
       logInfo('current_user.json is empty', LogPrefix.Nile)
-      configStore.delete('userData')
+      deps.stores.nile.configStore.delete('userData')
       return
     }
 
-    configStore.set('userData', user)
+    deps.stores.nile.configStore.set('userData', user)
     logInfo('Saved user data to config file', LogPrefix.Nile)
 
     return user
   }
 
-  public static isLoggedIn() {
-    return configStore.get_nodefault('userData') || false
+  public static isLoggedIn(deps: NileStoreDeps) {
+    return deps.stores.nile.configStore.get_nodefault('userData') || false
   }
 }

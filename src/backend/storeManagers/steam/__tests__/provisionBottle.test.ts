@@ -22,7 +22,6 @@ import {
 // `graceful-fs` `readFileSync` import above (manifest.test.ts precedent).
 import { GlobalConfig } from 'backend/config'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
-import { steamBottleConfigStore } from '../stores'
 import { bindBottleStores } from '../bottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { __stopBottledRaiseLoops } from '../bottledSteam'
@@ -30,7 +29,11 @@ import { provisionBottle } from '../provisionBottle'
 import { createTestStores } from 'backend/testUtils/testServices'
 import { STEAM_SETUP_EXE_URL } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
+import type { Stores } from 'backend/services/types'
 import { at } from './fixtures/indexed'
+
+const { steamBottleConfigStore } =
+  jest.requireMock<Stores['steam']>('../stores')
 
 jest.mock('backend/platform', () => ({
   app: {

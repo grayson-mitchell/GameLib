@@ -10,8 +10,10 @@ import { library } from '../state'
 import { clearSteamResumeBreadcrumb } from '../library/resumeBreadcrumbs'
 import { steamQueueHeadAlreadyInstalled } from '../queueHeadRevalidation'
 import type { GameInfo } from 'common/types'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
+import { createSteamStores } from '../stores'
 
-import * as steamStoresModule from '../stores'
+const steamStoresModule = createSteamStores({ registry: createStoreRegistry() })
 
 const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })

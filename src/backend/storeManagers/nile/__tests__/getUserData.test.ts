@@ -31,17 +31,21 @@ jest.mock('backend/logger', () => ({
 const mockConfigSet = jest.fn()
 const mockConfigDelete = jest.fn()
 
-jest.mock('backend/storeManagers/nile/stores', () => ({
-  configStore: {
-    set: (...args: unknown[]) => mockConfigSet(...args),
-    delete: (...args: unknown[]) => mockConfigDelete(...args),
-    get_nodefault: jest.fn()
+const deps = {
+  stores: {
+    nile: {
+      configStore: {
+        set: (...args: unknown[]) => mockConfigSet(...args),
+        delete: (...args: unknown[]) => mockConfigDelete(...args),
+        get_nodefault: jest.fn()
+      }
+    }
   }
-}))
+} as unknown as NileStoreDeps
 
 jest.mock('backend/utils', () => ({ clearCache: jest.fn() }))
 
-import { NileUser } from '../user'
+import { NileUser, type NileStoreDeps } from '../user'
 import { nileUserData } from '../constants'
 
 // The 1.2.0 on-disk shape: flat, and carrying ONLY the fields nile still emits.
@@ -69,7 +73,7 @@ describe('NileUser.getUserData -- nile 1.2.0 file move', () => {
     mockExistsSync.mockReturnValue(true)
     mockReadFileSync.mockReturnValue(JSON.stringify(FLAT_PAYLOAD))
 
-    await NileUser.getUserData()
+    await NileUser.getUserData(deps)
 
     expect(nileUserData).toMatch(/current_user\.json$/)
     expect(nileUserData).not.toMatch(/[/\\]user\.json$/)
@@ -82,7 +86,7 @@ describe('NileUser.getUserData -- nile 1.2.0 flattened payload', () => {
     mockExistsSync.mockReturnValue(true)
     mockReadFileSync.mockReturnValue(JSON.stringify(FLAT_PAYLOAD))
 
-    const result = await NileUser.getUserData()
+    const result = await NileUser.getUserData(deps)
 
     expect(result).toEqual(FLAT_PAYLOAD)
     expect(mockConfigSet).toHaveBeenCalledWith('userData', FLAT_PAYLOAD)
@@ -96,7 +100,7 @@ describe('NileUser.getUserData -- nile 1.2.0 flattened payload', () => {
     mockExistsSync.mockReturnValue(true)
     mockReadFileSync.mockReturnValue(JSON.stringify(NESTED_PAYLOAD))
 
-    const result = await NileUser.getUserData()
+    const result = await NileUser.getUserData(deps)
 
     expect(result).not.toHaveProperty('user_id')
     expect(result).not.toHaveProperty('name')
@@ -105,7 +109,7 @@ describe('NileUser.getUserData -- nile 1.2.0 flattened payload', () => {
   it('clears stored userData when current_user.json is absent', async () => {
     mockExistsSync.mockReturnValue(false)
 
-    expect(await NileUser.getUserData()).toBeUndefined()
+    expect(await NileUser.getUserData(deps)).toBeUndefined()
     expect(mockConfigDelete).toHaveBeenCalledWith('userData')
     expect(mockReadFileSync).not.toHaveBeenCalled()
   })
@@ -114,7 +118,7 @@ describe('NileUser.getUserData -- nile 1.2.0 flattened payload', () => {
     mockExistsSync.mockReturnValue(true)
     mockReadFileSync.mockReturnValue('{}')
 
-    expect(await NileUser.getUserData()).toBeUndefined()
+    expect(await NileUser.getUserData(deps)).toBeUndefined()
     expect(mockConfigDelete).toHaveBeenCalledWith('userData')
     expect(mockConfigSet).not.toHaveBeenCalled()
   })

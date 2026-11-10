@@ -4,7 +4,5 @@
     "src/backend/downloadmanager/__tests__/installStallWatchdog.test.ts": 1,
     "src/backend/downloadmanager/__tests__/utils.test.ts": 10
   },
-  "moduleState": {
-    "src/backend/downloadmanager/stores.ts": 1
-  }
+  "moduleState": {}
 }

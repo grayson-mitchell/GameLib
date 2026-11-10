@@ -36,7 +36,6 @@ const gameModuleFiles = (): string[] => {
 }
 import { sendFrontendMessage } from '../../../ipc'
 import * as shortcutsModule from '../../../shortcuts/shortcuts/shortcuts'
-import { steamMetadataStore, steamLibraryStore } from '../stores'
 import { TITLE_AUTHORITATIVE_KEYS } from '../titleSettings'
 import SteamGame from '../games'
 import * as gameMetadata from '../gameMetadata'
@@ -263,8 +262,11 @@ import {
   getAbortSignal
 } from 'backend/utils/aborthandler/aborthandler'
 import { at } from './fixtures/indexed'
+import type { Stores } from 'backend/services/types'
 
-import * as steamStoresModule from '../stores'
+const { steamMetadataStore, steamLibraryStore } =
+  jest.requireMock<Stores['steam']>('../stores')
+const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 // The bridge launch reaches runWineCommand through the commandRunner slice.
 const runWineCommand = jest.fn()

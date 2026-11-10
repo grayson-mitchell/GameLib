@@ -342,8 +342,11 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // Phase 72 plan 05 (D-12): ElectronTokenStore deleted; the seam test now restores the
   // previously active store instead of constructing one. Prior digest:
   // f97f2b6ef9300c575bf0738ec33a76cf0e95a430bd299c81d6198c7effdc87aa
+  // 66.1 plan 25: steam/stores.ts became a factory, so the seam test builds its own
+  // `configStore` with createSteamStores (the byte-identity assertions are unchanged). Prior
+  // digest: 2b2ff1eb32a9ecfda83532fc1435bf1b4c91ed24accc2858b13fc78676265b24
   const ELECTRON_UNTOUCHED_SHA256 =
-    '2b2ff1eb32a9ecfda83532fc1435bf1b4c91ed24accc2858b13fc78676265b24'
+    '6e5b93958cc11a371e379da76bb261502509faa62481fa401c69c272e856773c'
 
   it('REQ-34.2-14 Gate 8: electronUntouched.test.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, 'electronUntouched.test.ts')

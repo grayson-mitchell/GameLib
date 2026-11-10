@@ -23,7 +23,6 @@ import { reportDetectedFix } from 'backend/knownFixReport'
 import { sendFrontendMessage } from '../../../ipc'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
-import { steamLibraryStore, steamMetadataStore } from '../stores'
 import {
   getBottleSteamappsDir,
   getSteamBottleSettings,
@@ -32,8 +31,11 @@ import {
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { join } from 'path'
 import { library } from '../state'
+import type { Stores } from 'backend/services/types'
 
-import * as steamStoresModule from '../stores'
+const { steamLibraryStore, steamMetadataStore } =
+  jest.requireMock<Stores['steam']>('../stores')
+const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })

@@ -100,6 +100,7 @@ import type { GameInfo } from 'common/types'
 // fresh registry (freshRegistry), but this keeps the static import edge knip sees.
 import type * as RecentGamesModule from 'backend/recent_games/recent_games'
 import { RUST_MAIN_WINDOW_HIDE } from 'common/types/sidecarTransport'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
 // D-08: every case boots the sidecar once, in a fresh module registry. Module
 // handles the cases configure or inspect are rebound from that registry in
@@ -108,7 +109,9 @@ import { RUST_MAIN_WINDOW_HIDE } from 'common/types/sidecarTransport'
 let getSteamLibraries: typeof import('backend/utils').getSteamLibraries
 let getRecentGames: typeof RecentGamesModule.getRecentGames
 let testingExportsRecentGames: typeof RecentGamesModule.testingExportsRecentGames
-let steamLibraryStore: typeof import('backend/storeManagers/steam/stores').steamLibraryStore
+let steamLibraryStore: ReturnType<
+  typeof import('backend/storeManagers/steam/stores').createSteamStores
+>['steamLibraryStore']
 let GlobalConfig: typeof import('backend/config').GlobalConfig
 let recentGamesDeps: RecentGamesModule.RecentGamesDeps
 
@@ -121,10 +124,17 @@ function freshRegistry(): void {
     getRecentGames,
     testingExportsRecentGames
   } = require('backend/recent_games/recent_games'))
-  ;({ steamLibraryStore } = require('backend/storeManagers/steam/stores'))
+  ;({ steamLibraryStore } =
+    require('backend/storeManagers/steam/stores').createSteamStores({
+      registry: createStoreRegistry()
+    }))
   ;({ GlobalConfig } = require('backend/config'))
   recentGamesDeps = {
-    stores: { kvs: require('backend/constants/key_value_stores') }
+    stores: {
+      kvs: require('backend/constants/key_value_stores').createKvsStores({
+        registry: createStoreRegistry()
+      })
+    }
   }
   /* eslint-enable @typescript-eslint/no-require-imports */
 }

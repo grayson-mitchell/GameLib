@@ -57,9 +57,11 @@ import { NileUser } from '../user'
 import type { NileUserDeps } from '../user'
 import type { ClearCacheDeps } from 'backend/utils'
 
-// `clearCache` is mocked in this file, so the cache stores are never read.
+// `clearCache` is mocked in this file, so only the nile config store is read.
 const clearDeps = {
-  stores: {},
+  stores: {
+    nile: jest.requireMock<Stores['nile']>('backend/storeManagers/nile/stores')
+  },
   libraryManagers: {
     nile: {
       runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args)
@@ -70,6 +72,7 @@ import {
   setLoginWindowSeam,
   type LoginWindowSeam
 } from '../../../humble/loginWindowSeam'
+import type { Stores } from 'backend/services/types'
 
 function makeMockSeam(
   overrides: Partial<LoginWindowSeam> = {}

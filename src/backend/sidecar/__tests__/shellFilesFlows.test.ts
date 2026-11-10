@@ -157,17 +157,14 @@ jest.mock('backend/config', () => ({
 // `.clear()` on all three; without a mock, the missing two throw
 // synchronously (caught by clearCache's own try/catch, but BEFORE
 // `pushFrontendMessage('refreshLibrary')` ever runs) ────────────────────────
-jest.mock('../../storeManagers/legendary/stores', () => ({
-  gameInfoStore: {
-    clear: jest.fn()
-  },
-  installStore: {
-    clear: jest.fn()
-  },
-  libraryStore: {
-    clear: jest.fn()
+jest.mock('../../storeManagers/legendary/stores', () => {
+  const stores = {
+    gameInfoStore: { clear: jest.fn() },
+    installStore: { clear: jest.fn() },
+    libraryStore: { clear: jest.fn() }
   }
-}))
+  return { createLegendaryStores: () => stores }
+})
 
 // ── abort handler mock — mirrors appShellFlows.test.ts's boundary choice;
 // not exercised by this plan's own channels ──────────────────────────────────
@@ -238,6 +235,7 @@ import {
   wikiLink,
   sidInfoUrl
 } from '../../constants/urls'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
 // D-08: every case boots the sidecar once, in a fresh module registry. Module
 // handles the cases configure or inspect are rebound from that registry in
@@ -246,7 +244,9 @@ import {
 let listenerRegistry: typeof import('../../platform').listenerRegistry
 let handlerRegistry: typeof import('../../platform').handlerRegistry
 let showDialogBoxModalAuto: typeof import('../../dialog/dialog').showDialogBoxModalAuto
-let achievementStore: typeof import('../../storeManagers/gog/stores').achievementStore
+let achievementStore: ReturnType<
+  typeof import('../../storeManagers/gog/stores').createGogStores
+>['achievementStore']
 let mockedGlobalConfigGet: jest.Mock
 let mockRequestRustInvoke: jest.Mock
 
@@ -258,7 +258,10 @@ function freshRegistry(): void {
   const { requestRustInvoke } = require('../sidecarRpc')
   ;({ listenerRegistry, handlerRegistry } = require('../../platform'))
   ;({ showDialogBoxModalAuto } = require('../../dialog/dialog'))
-  ;({ achievementStore } = require('../../storeManagers/gog/stores'))
+  ;({ achievementStore } =
+    require('../../storeManagers/gog/stores').createGogStores({
+      registry: createStoreRegistry()
+    }))
   /* eslint-enable @typescript-eslint/no-require-imports */
   mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
   mockRequestRustInvoke = requestRustInvoke as jest.Mock

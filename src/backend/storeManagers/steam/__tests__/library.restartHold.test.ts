@@ -29,8 +29,9 @@ import {
 import { join } from 'path'
 import { library } from '../state'
 import { logInfo } from 'backend/logger'
+import type { Stores } from 'backend/services/types'
 
-import * as steamStoresModule from '../stores'
+const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })

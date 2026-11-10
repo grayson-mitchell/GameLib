@@ -8,7 +8,6 @@
   },
   "moduleState": {
     "src/backend/storeManagers/legendary/e2eMock.ts": 1,
-    "src/backend/storeManagers/legendary/library.ts": 3,
-    "src/backend/storeManagers/legendary/stores.ts": 5
+    "src/backend/storeManagers/legendary/library.ts": 3
   }
 }

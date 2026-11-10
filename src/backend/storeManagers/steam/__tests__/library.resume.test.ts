@@ -19,11 +19,6 @@ import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
-import {
-  steamLibraryStore,
-  steamMetadataStore,
-  steamRestartHoldStore
-} from '../stores'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { library } from '../state'
 import * as gamesModule from '../gameSessionState'
@@ -34,8 +29,11 @@ import {
 import { logInfo } from 'backend/logger'
 import { pollInstallOnce } from '../library/installPollOnce'
 import { startInstallPolling } from '../library/installPolling'
+import type { Stores } from 'backend/services/types'
 
-import * as steamStoresModule from '../stores'
+const { steamLibraryStore, steamMetadataStore, steamRestartHoldStore } =
+  jest.requireMock<Stores['steam']>('../stores')
+const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })

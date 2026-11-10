@@ -133,7 +133,7 @@ export function createSignInProbePassDeps(
         abortId: SIGN_IN_PROBE_ABORT_IDS.gog
       },
       nile: {
-        isLoggedIn: () => Boolean(NileUser.isLoggedIn()),
+        isLoggedIn: () => Boolean(NileUser.isLoggedIn(deps)),
         probe: () => probeNileSession(deps),
         abortId: SIGN_IN_PROBE_ABORT_IDS.nile
       },

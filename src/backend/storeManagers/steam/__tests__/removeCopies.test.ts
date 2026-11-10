@@ -35,12 +35,13 @@ import * as uninstallPollingModule from '../library/uninstallPolling'
 import * as acfState from '../library/acfState'
 import type { AcfSource } from '../library/installRoot'
 import { library } from '../state'
-import { steamMetadataStore } from '../stores'
 import SteamGame from '../games'
 import { SteamUser } from '../user'
 import { removeAllSteamInstallCopies } from '../removeAllCopies'
+import type { Stores } from 'backend/services/types'
 
-import * as steamStoresModule from '../stores'
+const { steamMetadataStore } = jest.requireMock<Stores['steam']>('../stores')
+const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })

@@ -11,7 +11,6 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { sendFrontendMessage } from 'backend/ipc'
-import { configStore as nileConfigStore } from 'backend/storeManagers/nile/stores'
 import {
   __resetSignInEpochsForTests,
   captureSignInEpoch
@@ -26,10 +25,15 @@ import { probeNileSession } from 'backend/signInProbe/runnerProbes'
 import type { FakeFlagStore } from 'backend/signInProbe/__tests__/fakeFlagStore'
 import { NileUser } from '../user'
 import type { NileUserDeps } from '../user'
+import type { Stores } from 'backend/services/types'
 
-// `clearCache` is mocked in this file, so the cache stores are never read.
+const { configStore: nileConfigStore } = jest.requireMock<Stores['nile']>(
+  'backend/storeManagers/nile/stores'
+)
+
+// `clearCache` is mocked in this file, so only the nile config store is read.
 const clearDeps = {
-  stores: {},
+  stores: { nile: { configStore: nileConfigStore } },
   libraryManagers: {
     nile: {
       runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args)

@@ -49,9 +49,11 @@ jest.mock('axios', () => ({
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { bootFresh } from './helpers/sidecarHarness'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
-type FreshQueue =
-  typeof import('../../storeManagers/gog/stores').playtimeSyncQueue
+type FreshQueue = ReturnType<
+  typeof import('../../storeManagers/gog/stores').createGogStores
+>['playtimeSyncQueue']
 
 /**
  * Boots once into a fresh registry (which initialises the logger and clears any lock), then
@@ -60,8 +62,10 @@ type FreshQueue =
 function bootedWorld() {
   bootFresh()
   /* eslint-disable @typescript-eslint/no-require-imports */
-  const playtimeSyncQueue = require('../../storeManagers/gog/stores')
-    .playtimeSyncQueue as FreshQueue
+  const playtimeSyncQueue =
+    require('../../storeManagers/gog/stores').createGogStores({
+      registry: createStoreRegistry()
+    }).playtimeSyncQueue as FreshQueue
   const loggerModule = require('../../logger') as typeof import('../../logger')
   const { clearStrandedPlaytimeSyncLock: clearWithDeps } =
     require('../bootstrap') as {
@@ -92,7 +96,9 @@ describe('finding A1 LEG 2 -- sidecar boot clears a stranded GOG playtime sync l
     bootFresh({
       before: () => {
         /* eslint-disable @typescript-eslint/no-require-imports */
-        freshQueue = require('../../storeManagers/gog/stores').playtimeSyncQueue
+        freshQueue = require('../../storeManagers/gog/stores').createGogStores({
+          registry: createStoreRegistry()
+        }).playtimeSyncQueue
         logWarningSpy = jest.spyOn(require('../../logger'), 'logWarning')
         /* eslint-enable @typescript-eslint/no-require-imports */
         freshQueue.set('lock', [])

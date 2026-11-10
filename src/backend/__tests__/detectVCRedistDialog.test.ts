@@ -41,9 +41,12 @@ import { dialog } from 'backend/platform'
 import { showDialogBoxModalAuto } from '../dialog/dialog'
 import { detectVCRedist, VC_REDIST_PROBE_TIMEOUT_MS } from '../utils'
 import { logWarning, logError, logInfo } from '../logger'
-import { configStore } from '../constants/key_value_stores'
 import type { ButtonOptions } from 'common/types'
 import { createTestStores } from 'backend/testUtils/testServices'
+import { createStoreRegistry } from 'backend/stores/storeRegistry'
+import { createKvsStores } from '../constants/key_value_stores'
+
+const { configStore } = createKvsStores({ registry: createStoreRegistry() })
 
 const vcDeps = {
   stores: createTestStores({ kvs: { configStore } as never })

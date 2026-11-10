@@ -83,6 +83,7 @@ import {
   createTestServices
 } from '../../testUtils/testServices'
 import { PassThrough } from 'node:stream'
+import { createStoreRegistry } from '../../stores/storeRegistry'
 import { bootFresh } from './helpers/sidecarHarness'
 import { getLogFilePath } from '../../logger/paths'
 import {
@@ -199,7 +200,7 @@ describe('sidecar bootstrap (headless boot)', () => {
   })
 
   describe('boot services (66.1-04)', () => {
-    it('a default boot returns BootServices with all eight fields', () => {
+    it('a default boot returns BootServices with all nine fields', () => {
       const { services } = bootWithLines()
       expect(Object.keys(services).sort()).toEqual([
         'commandRunner',
@@ -209,6 +210,7 @@ describe('sidecar bootstrap (headless boot)', () => {
         'quit',
         'runner',
         'spawnAsync',
+        'storeRegistry',
         'stores'
       ])
       for (const value of Object.values(services)) expect(value).toBeDefined()
@@ -540,8 +542,9 @@ describe('sidecar bootstrap (headless boot)', () => {
   // `skeletonFlows.test.ts`'s established precedent for touching this exact
   // store directly in a sidecar test.
   describe('boot-time orphaned Steam token cleanup (debug/steam-token-survives-keychain)', () => {
-    type SteamStore =
-      typeof import('../../storeManagers/steam/stores').configStore
+    type SteamStore = ReturnType<
+      typeof import('../../storeManagers/steam/stores').createSteamStores
+    >['configStore']
     let lastStore: SteamStore | undefined
 
     const LEGACY_VALUE = 'steam:v1:some-ciphertext-or-legacy-plaintext'
@@ -556,7 +559,7 @@ describe('sidecar bootstrap (headless boot)', () => {
         before: () => {
           store = fresh<typeof import('../../storeManagers/steam/stores')>(
             '../../storeManagers/steam/stores'
-          ).configStore
+          ).createSteamStores({ registry: createStoreRegistry() }).configStore
           lastStore = store
           if (seed) store.set('refreshToken', LEGACY_VALUE)
           logInfoSpy = jest.spyOn(
@@ -609,7 +612,7 @@ describe('sidecar bootstrap (headless boot)', () => {
         before: () => {
           store = fresh<typeof import('../../storeManagers/steam/stores')>(
             '../../storeManagers/steam/stores'
-          ).configStore
+          ).createSteamStores({ registry: createStoreRegistry() }).configStore
           lastStore = store
           store.set('refreshToken', LEGACY_VALUE)
           applyStoreWriteSpy = jest.spyOn(

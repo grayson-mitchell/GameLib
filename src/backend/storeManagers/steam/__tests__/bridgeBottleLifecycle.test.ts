@@ -28,7 +28,6 @@ import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import * as engineServicesModule from 'backend/services/engineServices'
 import type { EngineServicesSource } from 'backend/services/engineServices'
 import { writeCxbottleConf } from 'backend/engine/adoptBottle'
-import { steamBottleConfigStore } from '../stores'
 import { createTestStores } from 'backend/testUtils/testServices'
 import {
   bindBottleStores,
@@ -65,6 +64,10 @@ import {
 import type { NonCrossoverSelection } from 'backend/engine/engineTypes'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
+import type { Stores } from 'backend/services/types'
+
+const { steamBottleConfigStore } =
+  jest.requireMock<Stores['steam']>('../stores')
 
 jest.mock('backend/platform', () => ({
   app: {

@@ -14,7 +14,6 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { logError, logInfo, logWarning } from 'backend/logger'
-import { configStore as gogConfigStore } from 'backend/storeManagers/gog/stores'
 import {
   __resetSignInEpochsForTests,
   captureSignInEpoch
@@ -29,6 +28,11 @@ import { probeGogSession } from 'backend/signInProbe/runnerProbes'
 import type { FakeFlagStore } from 'backend/signInProbe/__tests__/fakeFlagStore'
 import { GOGUser, type GOGUserDeps } from '../user'
 import type { ClearCacheDeps } from 'backend/utils'
+import type { Stores } from 'backend/services/types'
+
+const { configStore: gogConfigStore } = jest.requireMock<Stores['gog']>(
+  'backend/storeManagers/gog/stores'
+)
 
 const deps = {
   stores: { gog: { configStore: gogConfigStore } },
