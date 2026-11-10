@@ -145,7 +145,7 @@ export function selectAllDepots(
 
 /**
  * Include a depot iff:
- *   - it is a real (numeric) depot with a manifest on the target branch
+ *   - it is a real (numeric) depot with a manifest on the target branch (a beta branch falls back to the depot's public manifest)
  *   - the USER OWNS IT (it appears in an owned package's depotids)
  *   - it is not a shared redistributable (`sharedinstall` -> SharedDepots). A
  *     `depotfromapp` depot is NOT shared by that alone: with its own manifests
@@ -214,8 +214,23 @@ export function selectDepots(
       continue
     }
 
-    const m = d?.manifests?.[branch]
-    const gid = typeof m === 'string' ? m : m?.gid
+    const gidOf = (e: string | DepotManifestEntry | undefined) =>
+      typeof e === 'string' ? e : e?.gid
+    let m = d?.manifests?.[branch]
+    let gid = gidOf(m)
+    // quick 261110-up7: a depot that is not part of the beta build has no
+    // manifest on it. Dropping it would leave content missing; the public
+    // manifest is what Steam itself serves for such a depot.
+    if (!gid && branch !== 'public') {
+      m = d?.manifests?.public
+      gid = gidOf(m)
+      if (gid) {
+        logInfo(
+          `Steam depot selection: depot ${id} has no manifest on branch ${branch}, using its public manifest`,
+          LogPrefix.Steam
+        )
+      }
+    }
     if (!gid) continue
 
     const cfg = d.config ?? {}
