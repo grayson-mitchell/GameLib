@@ -28,8 +28,11 @@
  *   other side (or a store-literal case / element), so they only fire against
  *   one of the six store names. UI overlay ids (`mountedOverlay`) are not matched.
  * - Arms: equality against a store literal; `switch (name)` with at least one
- *   store-literal `case` (so `switch (value) { case 'a': }` is not flagged);
- *   `[..literals..].includes(name)` / `.indexOf(name)`; and an inline
+ *   store-literal `case` OF THAT SWITCH (a `case` of a nested inner switch does
+ *   not count, so `switch (value) { case 'a': switch (x) { case 'steam': } }` is
+ *   not flagged); `[..literals..].includes(name)` / `.indexOf(name)`,
+ *   where the literal must be an element of the receiver array (an argument such
+ *   as `includes(runner, 'steam'.length)` does not count); and an inline
  *   `new Set([..literals..]).has(name)`.
  * - Not matched: object-literal maps keyed by runner, `runner: 'steam'`
  *   property values, type annotations, comments, template literals.
@@ -50,7 +53,8 @@
  * (1), and gamesdb `entry.platform_id === 'steam'` (1). Those concern key
  * platforms, UI overlays, URL schemes and third-party ids, not runner identity.
  *
- * Provenance: 62-02 created; 62-23 (WR-02): widened.
+ * Provenance: 62-02 created; 62-23 (WR-02): widened; 62-23 review WR-01: switch/array
+ * gates scoped to direct children.
  *
  * Plain CommonJS (matches meta/lintScoped.cjs); eslint.config.mjs ignores *.cjs.
  */
@@ -82,6 +86,11 @@ const LITERAL_RE = `/^(${STORE_LITERALS.join('|')})$/`
 const NAME_RE = `/${RUNNER_NAME.source}/`
 const DENY_RE = NAME_DENYLIST.length ? `/^(${NAME_DENYLIST.join('|')})$/` : null
 
+// `> Literal` children only. esquery 1.6 mis-handles a multi-step relative
+// `:has(> A > B)` (matches nothing), so the child chains below nest single-step
+// `:has(> X)` instead.
+const LITERAL_CHILD = `:has(> Literal[value=${LITERAL_RE}])`
+
 // Selector fragment: field `f` is a runner/store-named operand. Arms: Identifier,
 // member property, optional member (ChainExpression), computed property
 // (`x['runner']`, `x?.['runner']`), and TSAsExpression / TSNonNullExpression.
@@ -107,19 +116,23 @@ const SELECTORS = Object.freeze([
     message: MESSAGE
   },
   {
-    selector: `SwitchStatement${nameSide('discriminant')}:has(SwitchCase[test.value=${LITERAL_RE}])`,
+    // `> SwitchCase`: direct cases only, so a nested switch's case is not counted.
+    selector: `SwitchStatement${nameSide('discriminant')}:has(> SwitchCase[test.value=${LITERAL_RE}])`,
     message: MESSAGE
   },
   {
+    // The literal must be an element of the receiver array, not anywhere in the call.
     selector:
       "CallExpression[callee.property.name=/^(includes|indexOf)$/][callee.object.type='ArrayExpression']" +
-      `${nameSide('arguments.0')}:has(Literal[value=${LITERAL_RE}])`,
+      `${nameSide('arguments.0')}` +
+      `:has(> MemberExpression.callee:has(> ArrayExpression.object${LITERAL_CHILD}))`,
     message: MESSAGE
   },
   {
     selector:
       "CallExpression[callee.property.name='has'][callee.object.type='NewExpression'][callee.object.callee.name='Set']" +
-      `${nameSide('arguments.0')}:has(Literal[value=${LITERAL_RE}])`,
+      `${nameSide('arguments.0')}` +
+      `:has(> MemberExpression.callee:has(> NewExpression.object:has(> ArrayExpression${LITERAL_CHILD})))`,
     message: MESSAGE
   }
 ])

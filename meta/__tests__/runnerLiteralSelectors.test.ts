@@ -57,7 +57,9 @@ describe('runner literal selectors: HIT', () => {
     ["const a = runnerStr === 'gog'"],
     ["const a = storeName === 'nile'"],
     ["const a = storeKey !== 'humble'"],
-    ["switch (library) { case 'gog': break }"]
+    ["switch (library) { case 'gog': break }"],
+    // Inner switch of a nested pair: its own case is a store literal.
+    ["switch (kind) { case 'a': switch (runner) { case 'steam': break } }"]
   ])('%s', async (code) => {
     expect(await hits(code)).toBeGreaterThanOrEqual(1)
   })
@@ -80,6 +82,12 @@ describe('runner literal selectors: NON-HIT', () => {
     ["const a = ['a', 'b'].includes(runner)"],
     ["const a = ['steam'].includes(platform)"],
     ["switch (value) { case 'a': break }"],
+    // The gate counts only this switch's own cases: a store-literal case of a
+    // nested inner switch must not flag the outer switch (62-23 review WR-01).
+    ["switch (value) { case 'a': switch (x) { case 'steam': break } }"],
+    // The literal must be an element of the receiver array, not an argument.
+    ["const a = ['a', 'b'].includes(runner, 'steam'.length)"],
+    ["const a = new Set(['a']).has(runner, 'steam')"],
     ["const a = value === 'x'"],
     ['const a = library === otherLibrary'],
     ["const a = platform === 'steam'"],
