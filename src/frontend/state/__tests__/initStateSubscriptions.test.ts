@@ -581,6 +581,14 @@ describe('initStateSubscriptions', () => {
     // the production http-backend boot.
     it('settingsState.language follows i18next once it initialises', async () => {
       const ready: string[] = []
+      let frontendReady = 0
+      ;(window as unknown as { api: unknown }).api = new Proxy(
+        fakeApi as Record<string, unknown>,
+        {
+          get: (t, name: string) =>
+            name === 'frontendReady' ? () => frontendReady++ : t[name]
+        }
+      )
       const initDone = i18next.init({
         lng: 'pt-BR',
         fallbackLng: 'en',
@@ -593,12 +601,20 @@ describe('initStateSubscriptions', () => {
 
       init.initStateSubscriptions()
       init.runWhenI18nextInitialized(() => ready.push('ran'))
+      init.bootSequenceEffectWhenI18nReady()
       expect(useSettingsState.getState().language).toBe('en')
       expect(ready).toEqual([])
+      // WR-01: the post-mount boot (frontendReady) waits for i18next
+      // (runPostMountBoot's first step records a seed call synchronously)
+      expect(calls).not.toContain('seed:isFullscreen')
+      expect(frontendReady).toBe(0)
 
       await initDone
       expect(ready).toEqual(['ran'])
       expect(useSettingsState.getState().language).toBe('pt_BR')
+      expect(calls).toContain('seed:isFullscreen')
+      await new Promise((r) => setTimeout(r, 20))
+      expect(frontendReady).toBe(1)
     })
 
     it('runWhenI18nextInitialized runs immediately once initialised', () => {

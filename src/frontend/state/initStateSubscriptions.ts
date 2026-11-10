@@ -562,6 +562,14 @@ export function bootSequenceEffect(): void {
   void runPostMountBoot()
 }
 
+/**
+ * What BootSequence calls: the old componentDidMount only ran once i18next had
+ * loaded, so hold the boot (and frontendReady) until it has initialised.
+ */
+export function bootSequenceEffectWhenI18nReady(): void {
+  runWhenI18nextInitialized(bootSequenceEffect)
+}
+
 /** @public Test-only: lets a test prove the once-guard. */
 export function __resetInitStateSubscriptionsGuardForTests(): void {
   initialised = false
