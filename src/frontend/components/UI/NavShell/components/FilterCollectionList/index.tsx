@@ -1,6 +1,6 @@
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
-import ContextProvider from 'frontend/state/ContextProvider'
+import { useCustomCategories } from 'frontend/state/accountHooks'
 import LibraryContext from 'frontend/screens/Library/LibraryContext'
 // CR-04: the sentinel is a shared constant, not a literal repeated per
 // call site -- chipLabels.ts previously did not recognise it and printed it
@@ -47,7 +47,7 @@ import './index.scss'
  * neither row mutates a category itself.
  */
 export default function FilterCollectionList() {
-  const { customCategories } = useContext(ContextProvider)
+  const customCategories = useCustomCategories()
   const { currentCollection, setCurrentCollection, setShowCategories } =
     useContext(LibraryContext)
   const { t: tGamelib } = useTranslation('gamelib')

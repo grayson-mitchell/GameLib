@@ -1,5 +1,5 @@
 import './index.scss'
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,9 @@ import { useTranslation } from 'react-i18next'
 import { Runner } from 'common/types'
 import ToggleSwitch from '../ToggleSwitch'
 import { useNavigate, useLocation } from 'react-router-dom'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useLibraryState, {
+  selectInstallingEpicGame
+} from 'frontend/state/libraryState'
 import { hasCapability, isStore } from 'common/storeCapabilities'
 
 interface UninstallModalProps {
@@ -35,7 +37,8 @@ const UninstallModal: React.FC<UninstallModalProps> = function ({
   const [showUninstallModal, setShowUninstallModal] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
-  const { installingEpicGame, libraryStatus } = useContext(ContextProvider)
+  const installingEpicGame = useLibraryState(selectInstallingEpicGame)
+  const libraryStatus = useLibraryState((s) => s.libraryStatus)
   const [gameTitle, setGameTitle] = useState('')
   // quick 261106-s3n: GameLib deletes this Steam game itself (setting ON)
   const [gamelibDelete, setGamelibDelete] = useState(false)

@@ -46,6 +46,7 @@
  * The CSS gate itself follows the brace-counted `cssBlock` helper from
  * `Login/__tests__/index.test.tsx`.
  */
+import 'frontend/testUtils/tauriWindow'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import type { ReactElement, ReactNode } from 'react'
@@ -69,15 +70,6 @@ type LibraryContextStub = {
   onToggleAlphabetFilter: jest.Mock
 }
 
-type ContextProviderStub = {
-  refreshLibrary: jest.Mock
-  refreshing: boolean
-  refreshingInTheBackground: boolean
-  refreshingByRunner: Record<string, boolean>
-  steamMetadataSyncing: boolean
-  connectivity: { status: string }
-}
-
 function makeLibraryContextValue(
   overrides: Partial<LibraryContextStub> = {}
 ): LibraryContextStub {
@@ -97,67 +89,40 @@ function makeLibraryContextValue(
   }
 }
 
-function makeContextProviderValue(
-  overrides: Partial<ContextProviderStub> = {}
-): ContextProviderStub {
-  return {
-    refreshLibrary: jest.fn(),
-    refreshing: false,
-    refreshingInTheBackground: false,
-    refreshingByRunner: {},
-    steamMetadataSyncing: false,
-    connectivity: { status: 'online' },
-    ...overrides
-  }
-}
-
 // Declared BEFORE the `jest.mock('react', ...)` call below and read by that
 // factory -- this project's ts-jest setup does not hoist `jest.mock` above
 // variable declarations the way babel-jest does (see the docstring above and
 // `SettingsPanel.test.tsx`), so this ordering is load-bearing, not
 // stylistic.
 let libraryContextValue: LibraryContextStub = makeLibraryContextValue()
-let contextProviderValue: ContextProviderStub = makeContextProviderValue()
 
 jest.mock('react', () => {
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
   const actualReact = jest.requireActual<typeof import('react')>('react')
   const actualLibraryContext = jest.requireActual<
     typeof import('frontend/screens/Library/LibraryContext')
   >('frontend/screens/Library/LibraryContext').default
-  const actualContextProvider = jest.requireActual<
-    typeof import('frontend/state/ContextProvider')
-  >('frontend/state/ContextProvider').default
 
-  return {
-    ...actualReact,
-    useContext: (ctx: unknown) => {
+  return withStoreHooks(actualReact, {
+    useContext: ((ctx: unknown) => {
       if (ctx === actualLibraryContext) return libraryContextValue
-      if (ctx === actualContextProvider) return contextProviderValue
       // Falls through to the real implementation for any context this file
-      // does not stub -- safer than silently returning one of the two
-      // canned values for an unrelated context object.
+      // does not stub -- safer than silently returning the canned value for
+      // an unrelated context object.
       return actualReact.useContext(
         ctx as Parameters<typeof actualReact.useContext>[0]
       )
-    },
-    useState: (initial: unknown) => [
+    }) as typeof actualReact.useContext,
+    useState: ((initial: unknown) => [
       typeof initial === 'function' ? (initial as () => unknown)() : initial,
       jest.fn()
-    ],
-    useEffect: jest.fn(),
-    useMemo: (fn: () => unknown) => fn(),
-    // 261003 tier2-right-edge-shifts-with-scrollbar added a real `useRef` +
-    // `useLayoutEffect` pair to `Header` (the scrollbar-gutter correction).
-    // Same reason as every other stub in this factory: calling `Header`
-    // directly, outside of any renderer, means there is no hook dispatcher,
-    // and the real implementations would throw "Invalid hook call". Neither
-    // stub needs to DO anything here -- there is no real DOM/jsdom in this
-    // project's jest environment for the effect body to measure against,
-    // and the correction logic itself is verified live instead (see the
-    // resolved debug session).
-    useRef: (initial: unknown) => ({ current: initial }),
-    useLayoutEffect: jest.fn()
-  }
+    ]) as unknown as typeof actualReact.useState
+    // useRef / useMemo / useEffect / useLayoutEffect come from
+    // withStoreHooks (no hook dispatcher exists when Header is called
+    // directly; the scrollbar-gutter correction is verified live).
+  })
 })
 
 jest.mock('../index.css', () => ({}))
@@ -319,6 +284,9 @@ import AddGameButton from 'frontend/screens/Library/components/AddGameButton'
 import TourButton from 'frontend/components/Tour/TourButton'
 import Header from '../index'
 import { at } from '../../../__tests__/fixtures/indexed'
+import useLibraryState from 'frontend/state/libraryState'
+import useUiState from 'frontend/state/uiState'
+import { resetAllStores } from 'frontend/state/storeKit'
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
 type AnyElement = ReactElement<AnyProps> & { props: AnyProps }
@@ -396,7 +364,18 @@ function renderHeader(): ReactElement {
 describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
   beforeEach(() => {
     libraryContextValue = makeLibraryContextValue()
-    contextProviderValue = makeContextProviderValue()
+    useLibraryState.setState({
+      refreshLibrary: jest.fn(),
+      refreshing: false,
+      refreshingInTheBackground: false,
+      refreshingByRunner: {},
+      steamMetadataSyncing: false
+    })
+    useUiState.setState({ connectivity: { status: 'online', retryIn: 0 } })
+  })
+
+  afterEach(() => {
+    resetAllStores()
   })
 
   it('exactly one element carries data-tour="library-views-collections", wrapping FilterViewList and FilterCollectionList by identity', () => {

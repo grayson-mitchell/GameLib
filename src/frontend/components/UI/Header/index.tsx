@@ -23,7 +23,8 @@ import {
 import classNames from 'classnames'
 import { GameInfo } from 'common/types'
 import LibraryContext from 'frontend/screens/Library/LibraryContext'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useLibraryState from 'frontend/state/libraryState'
+import useUiState from 'frontend/state/uiState'
 import { countGamesExcludingDlc } from 'frontend/screens/Library/gameCount'
 import { LIBRARY_TOUR_ID } from 'frontend/screens/Library/components/LibraryTour'
 import TourButton from 'frontend/components/Tour/TourButton'
@@ -154,9 +155,15 @@ export default function Header({ list, totalGames }: Props) {
     refreshing,
     refreshingInTheBackground,
     refreshingByRunner,
-    steamMetadataSyncing,
-    connectivity
-  } = useContext(ContextProvider)
+    steamMetadataSyncing
+  } = useLibraryState.keys(
+    'refreshLibrary',
+    'refreshing',
+    'refreshingInTheBackground',
+    'refreshingByRunner',
+    'steamMetadataSyncing'
+  )
+  const connectivity = useUiState((s) => s.connectivity)
 
   const [syncedAt, setSyncedAt] = useState<number | null>(null)
 

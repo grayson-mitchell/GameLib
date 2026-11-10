@@ -16,6 +16,7 @@
  * the visual result itself is a manual gate item (plan 34.10-11); this file
  * can only prove the source text says what it must.
  */
+import 'frontend/testUtils/tauriWindow'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import type { ReactElement, ReactNode } from 'react'
@@ -44,10 +45,8 @@ type MockContextValue = {
   refreshLibrary: jest.Mock
 }
 
-function makeContextValue(
-  overrides: Partial<MockContextValue> = {}
-): MockContextValue {
-  return {
+function seedContext(overrides: Partial<MockContextValue> = {}): void {
+  const value: MockContextValue = {
     epic: { username: undefined, library: [] },
     gog: { username: undefined, library: [] },
     amazon: { user_id: undefined, library: [] },
@@ -55,17 +54,31 @@ function makeContextValue(
     refreshLibrary: jest.fn(),
     ...overrides
   }
+  useAuthState.setState({
+    epicUsername: value.epic.username,
+    gogUsername: value.gog.username,
+    amazonUserId: value.amazon.user_id,
+    steamUsername: value.steam.username
+  })
+  useLibraryState.setState({
+    epicLibrary: value.epic.library as never,
+    gogLibrary: value.gog.library as never,
+    amazonLibrary: value.amazon.library as never,
+    steamLibrary: value.steam.library as never,
+    refreshLibrary: value.refreshLibrary
+  })
 }
 
-let contextValue: MockContextValue = makeContextValue()
 let pathname = '/'
 
 jest.mock('../components/NavTabs/index.scss', () => ({}))
 
-jest.mock('react', () => ({
-  ...jest.requireActual<typeof import('react')>('react'),
-  useContext: () => contextValue
-}))
+jest.mock('react', () => {
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+  return withStoreHooks(jest.requireActual<typeof import('react')>('react'))
+})
 
 jest.mock('react-router-dom', () => ({
   NavLink: (props: Record<string, unknown>) => ({
@@ -114,6 +127,9 @@ jest.mock('@fortawesome/react-fontawesome', () => ({
 import { NavLink } from 'react-router-dom'
 import { Tab, Tabs } from '@mui/material'
 import NavTabs from '../components/NavTabs'
+import useAuthState from 'frontend/state/authState'
+import useLibraryState from 'frontend/state/libraryState'
+import { resetAllStores } from 'frontend/state/storeKit'
 import DownloadsTabIcon from '../components/DownloadsTabIcon'
 import {
   rememberTabLocation,
@@ -155,9 +171,11 @@ function tabsOf(root: AnyElement): AnyElement[] {
 }
 
 beforeEach(() => {
-  contextValue = makeContextValue()
+  seedContext()
   pathname = '/'
 })
+
+afterEach(() => resetAllStores())
 
 describe('NavTabs', () => {
   it('renders exactly five tabs whose values are accounts, games, stores, downloads, settings in order', () => {
@@ -187,7 +205,7 @@ describe('NavTabs', () => {
   })
 
   it('targets /login, /, /store/{default store}, /download-manager, /accessibility respectively', () => {
-    contextValue = makeContextValue({
+    seedContext({
       gog: { username: 'TestUser', library: [] }
     })
     const tabs = tabsOf(callNavTabs())
@@ -260,7 +278,7 @@ describe('NavTabs', () => {
 
   it('invokes refreshLibrary with { runInBackground: true, origin: "nav-tabs-games-tab" } via the Games tab onClick when a logged-in store has an empty library', async () => {
     const refreshLibrary = jest.fn()
-    contextValue = makeContextValue({
+    seedContext({
       gog: { username: 'TestUser', library: [] },
       refreshLibrary
     })
@@ -277,7 +295,7 @@ describe('NavTabs', () => {
 
   it('does not invoke refreshLibrary via the Games tab onClick when libraries are populated', async () => {
     const refreshLibrary = jest.fn()
-    contextValue = makeContextValue({
+    seedContext({
       gog: { username: 'TestUser', library: [{ app_name: 'a' }] },
       refreshLibrary
     })
@@ -291,7 +309,7 @@ describe('NavTabs', () => {
 
   it('does not invoke refreshLibrary via the Games tab onClick when no store is logged in', async () => {
     const refreshLibrary = jest.fn()
-    contextValue = makeContextValue({ refreshLibrary })
+    seedContext({ refreshLibrary })
 
     const tabs = tabsOf(callNavTabs())
     const gamesTab = at(tabs, 1)

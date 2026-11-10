@@ -6,7 +6,8 @@ import type {
   RunnabilityTier,
   StoreFacetValue
 } from 'frontend/types'
-import ContextProvider from 'frontend/state/ContextProvider'
+import { useCustomCategories } from 'frontend/state/accountHooks'
+import useSettingsState from 'frontend/state/settingsState'
 import LibraryContext from 'frontend/screens/Library/LibraryContext'
 import { PRESET_UNCATEGORIZED } from 'frontend/screens/Library/filterEngine'
 import { RunnerToStore } from 'frontend/screens/Library/facetLabels'
@@ -30,7 +31,7 @@ import { isStore } from 'common/storeCapabilities'
  * belongs to the collection MANAGEMENT surface, not to a picker.
  *
  * Reads `focusRow` / `handleFocusRow` and the collection list from
- * `ContextProvider`, NOT `LibraryContext` -- the focus row is a persisted,
+ * the settings and library stores, NOT `LibraryContext` -- the focus row is a persisted,
  * cross-view pick, independent of the live `libraryView` /
  * `currentCollection` filter state `LibraryContext` carries (SPEC R4). The
  * store and runnability lists ARE read from `LibraryContext`, as
@@ -69,8 +70,11 @@ import { isStore } from 'common/storeCapabilities'
  * handler shape.
  */
 export default function FilterFocusRow() {
-  const { focusRow, handleFocusRow, customCategories } =
-    useContext(ContextProvider)
+  const { focusRow, handleFocusRow } = useSettingsState.keys(
+    'focusRow',
+    'handleFocusRow'
+  )
+  const customCategories = useCustomCategories()
   const { connectedStores, runnabilityRows } = useContext(LibraryContext)
   const { t: tGamelib } = useTranslation('gamelib')
   const { t } = useTranslation()

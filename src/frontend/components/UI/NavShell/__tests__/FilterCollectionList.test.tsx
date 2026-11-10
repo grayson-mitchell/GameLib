@@ -13,11 +13,11 @@
  * is a CSS-importing child this panel renders, not the unit under test.
  *
  * `useContext` is mocked to ignore which context object it is called
- * with and return one merged fake value -- both `ContextProvider`
- * (`customCategories`) and `LibraryContext` (`currentCollection`,
+ * with and return one merged fake value -- `LibraryContext` (`currentCollection`,
  * `setCurrentCollection`, `setShowCategories`) resolve to the same object,
  * which is safe because each call site destructures only the keys it needs.
  */
+import 'frontend/testUtils/tauriWindow'
 import type { ReactElement, ReactNode } from 'react'
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -69,12 +69,29 @@ function makeContextValue(
   }
 }
 
+// `customCategories` now comes from the library store (via useCustomCategories),
+// so the fake list is seeded there; the rest stays on the LibraryContext stub.
+function seededContext(
+  overrides: Partial<MockContextValue> = {}
+): MockContextValue {
+  const value = makeContextValue(overrides)
+  useLibraryState.setState({
+    getCustomCategories: value.customCategories.listCategories
+  })
+  return value
+}
+
 let contextValue: MockContextValue = makeContextValue()
 
-jest.mock('react', () => ({
-  ...jest.requireActual<typeof import('react')>('react'),
-  useContext: () => contextValue
-}))
+jest.mock('react', () => {
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+  return withStoreHooks(jest.requireActual<typeof import('react')>('react'), {
+    useContext: (() =>
+      contextValue) as unknown as typeof import('react').useContext
+  })
+})
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -100,6 +117,8 @@ jest.mock('../components/NavItem', () => ({
 import NavItem from '../components/NavItem'
 import FilterFacetGroup from '../components/FilterFacetGroup'
 import FilterCollectionList from '../components/FilterCollectionList'
+import useLibraryState from 'frontend/state/libraryState'
+import { resetAllStores } from 'frontend/state/storeKit'
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
 type AnyElement = ReactElement<AnyProps> & { props: AnyProps }
@@ -135,7 +154,7 @@ function navItemsOf(tree: ReactNode): AnyElement[] {
 }
 
 beforeEach(() => {
-  contextValue = makeContextValue()
+  contextValue = seededContext()
 })
 
 describe('FilterCollectionList', () => {
@@ -147,7 +166,7 @@ describe('FilterCollectionList', () => {
   // Store / Runnability / More-filters groups use) is what ties this section
   // to their expand/collapse behaviour rather than to a lookalike of it.
   it('renders as a collapsible FilterFacetGroup titled Collections, not a flat section', () => {
-    contextValue = makeContextValue({
+    contextValue = seededContext({
       customCategories: { listCategories: jest.fn(() => ['RPG']) }
     })
 
@@ -159,7 +178,7 @@ describe('FilterCollectionList', () => {
   })
 
   it('renders listCategories() rows verbatim, in order, with no name rewritten (D-17)', () => {
-    contextValue = makeContextValue({
+    contextValue = seededContext({
       customCategories: { listCategories: jest.fn(() => ['RPG', 'Backlog']) }
     })
 
@@ -176,7 +195,7 @@ describe('FilterCollectionList', () => {
   })
 
   it('the Uncategorized row always renders after the category rows and carries the preset_uncategorized value', () => {
-    contextValue = makeContextValue({
+    contextValue = seededContext({
       customCategories: { listCategories: jest.fn(() => ['RPG', 'Backlog']) }
     })
 
@@ -194,7 +213,7 @@ describe('FilterCollectionList', () => {
   })
 
   it('given currentCollection === "RPG", only the RPG row is active', () => {
-    contextValue = makeContextValue({
+    contextValue = seededContext({
       customCategories: { listCategories: jest.fn(() => ['RPG', 'Backlog']) },
       currentCollection: 'RPG'
     })
@@ -207,7 +226,7 @@ describe('FilterCollectionList', () => {
   })
 
   it('given currentCollection === null, no collection row is active', () => {
-    contextValue = makeContextValue({
+    contextValue = seededContext({
       customCategories: { listCategories: jest.fn(() => ['RPG', 'Backlog']) },
       currentCollection: null
     })
@@ -219,7 +238,7 @@ describe('FilterCollectionList', () => {
   })
 
   it('clicking a collection row calls setCurrentCollection with that single name, never an array (D-21)', () => {
-    contextValue = makeContextValue({
+    contextValue = seededContext({
       customCategories: { listCategories: jest.fn(() => ['RPG', 'Backlog']) }
     })
 
@@ -237,7 +256,7 @@ describe('FilterCollectionList', () => {
   })
 
   it('clicking the already-active collection row calls setCurrentCollection(null)', () => {
-    contextValue = makeContextValue({
+    contextValue = seededContext({
       customCategories: { listCategories: jest.fn(() => ['RPG', 'Backlog']) },
       currentCollection: 'RPG'
     })
@@ -255,7 +274,7 @@ describe('FilterCollectionList', () => {
   // the assertions below only ever reached the empty message and the row
   // labels -- the header is covered by the FilterFacetGroup gate above.
   it('given listCategories() returns [], the section still renders the no_categories message and both action rows', () => {
-    contextValue = makeContextValue({
+    contextValue = seededContext({
       customCategories: { listCategories: jest.fn(() => []) }
     })
 

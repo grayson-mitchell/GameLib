@@ -6,12 +6,13 @@
  * -- `FilterFocusRow` is invoked directly as a plain function and the React
  * element graph it returns is walked without a DOM, following the idiom
  * `Header/__tests__/headerTourAnchors.test.tsx` established. `useContext` is
- * stubbed per context by IDENTITY (two contexts are read here: `ContextProvider`
- * for the persisted pick and the collection accessor, `LibraryContext` for
- * the store and runnability lists), `react-i18next` echoes each call's
+ * stubbed for `LibraryContext` by IDENTITY (the store and runnability
+ * lists); the persisted pick and the collection accessor are read from the
+ * settings and library stores, `react-i18next` echoes each call's
  * default text, and `FilterFacetGroup` / `NavItem` are replaced with inert
  * stubs so rows can be asserted as element props rather than rendered.
  */
+import 'frontend/testUtils/tauriWindow'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { Fragment, type ReactElement, type ReactNode } from 'react'
@@ -51,6 +52,15 @@ function setContexts(
       listCategories: jest.fn(() => options.categories ?? [])
     }
   }
+  // focusRow / handleFocusRow / the collection accessor now come from the
+  // settings and library stores; the stub above keeps the spy handles.
+  useSettingsState.setState({
+    focusRow: contextProviderValue.focusRow as never,
+    handleFocusRow: contextProviderValue.handleFocusRow
+  })
+  useLibraryState.setState({
+    getCustomCategories: contextProviderValue.customCategories.listCategories
+  })
   libraryContextValue = {
     connectedStores: options.stores ?? [],
     runnabilityRows: options.runnability ?? []
@@ -58,24 +68,22 @@ function setContexts(
 }
 
 jest.mock('react', () => {
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
   const actualReact = jest.requireActual<typeof import('react')>('react')
   const actualLibraryContext = jest.requireActual<
     typeof import('frontend/screens/Library/LibraryContext')
   >('frontend/screens/Library/LibraryContext').default
-  const actualContextProvider = jest.requireActual<
-    typeof import('frontend/state/ContextProvider')
-  >('frontend/state/ContextProvider').default
 
-  return {
-    ...actualReact,
-    useContext: (ctx: unknown) => {
+  return withStoreHooks(actualReact, {
+    useContext: ((ctx: unknown) => {
       if (ctx === actualLibraryContext) return libraryContextValue
-      if (ctx === actualContextProvider) return contextProviderValue
       return actualReact.useContext(
         ctx as Parameters<typeof actualReact.useContext>[0]
       )
-    }
-  }
+    }) as typeof actualReact.useContext
+  })
 })
 
 jest.mock('../index.scss', () => ({}))
@@ -108,6 +116,9 @@ jest.mock('../../NavItem', () => ({
 import FilterFacetGroup, { FilterFacetRow } from '../../FilterFacetGroup'
 import NavItem from '../../NavItem'
 import FilterFocusRow from '../index'
+import useLibraryState from 'frontend/state/libraryState'
+import useSettingsState from 'frontend/state/settingsState'
+import { resetAllStores } from 'frontend/state/storeKit'
 import { at } from '../../../../../__tests__/fixtures/indexed'
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
@@ -164,6 +175,8 @@ const click = (el: AnyElement) => (el.props.onClick as () => void)()
 const VIEW_LABELS = ['All games', 'Installed', 'Recently played', 'Favourites']
 
 describe('FilterFocusRow sub-groups (48-03 Task 1, SPEC R2)', () => {
+  afterEach(() => resetAllStores())
+
   beforeEach(() => {
     setContexts()
   })

@@ -1,15 +1,16 @@
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { faHeartCrack, faSyncAlt } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 import { CleaningServicesOutlined, DeleteOutline } from '@mui/icons-material'
 import './index.css'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useLibraryState from 'frontend/state/libraryState'
+import useUiState from 'frontend/state/uiState'
 
 export default function ErrorComponent({ message }: { message: string }) {
   const { t } = useTranslation()
-  const { refreshLibrary, showResetDialog } = useContext(ContextProvider)
+  const refreshLibrary = useLibraryState((s) => s.refreshLibrary)
+  const showResetDialog = useUiState((s) => s.showResetDialog)
 
   return (
     <div className="errorComponent">

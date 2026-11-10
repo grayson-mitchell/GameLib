@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { DLCInfo } from 'common/types/legendary'
 import './index.scss'
 import { useTranslation } from 'react-i18next'
@@ -7,7 +7,8 @@ import { GameInfo, Runner } from 'common/types'
 import UninstallModal from 'frontend/components/UI/UninstallModal'
 import { faSpinner } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useLibraryState from 'frontend/state/libraryState'
+import useUiState from 'frontend/state/uiState'
 import { hasProgress } from 'frontend/hooks/hasProgress'
 import DownIcon from 'frontend/assets/down-icon.svg?react'
 import StopIcon from 'frontend/assets/stop-icon.svg?react'
@@ -23,7 +24,8 @@ type Props = {
 
 const DLC = ({ dlc, runner, mainAppInfo, onClose }: Props) => {
   const { title, app_name } = dlc
-  const { libraryStatus, showDialogModal } = useContext(ContextProvider)
+  const libraryStatus = useLibraryState((s) => s.libraryStatus)
+  const showDialogModal = useUiState((s) => s.showDialogModal)
   const { t } = useTranslation('gamepage')
   const [showUninstallModal, setShowUninstallModal] = useState(false)
   const [dlcInfo, setDlcInfo] = useState<GameInfo | null>(null)

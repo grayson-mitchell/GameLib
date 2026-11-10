@@ -1,4 +1,3 @@
-import { useContext } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Tab, Tabs } from '@mui/material'
@@ -10,7 +9,13 @@ import {
   faUserAlt
 } from '@fortawesome/free-solid-svg-icons'
 
-import ContextProvider from 'frontend/state/ContextProvider'
+import {
+  useAmazonAccount,
+  useEpicAccount,
+  useGogAccount,
+  useSteamAccount
+} from 'frontend/state/accountHooks'
+import useLibraryState from 'frontend/state/libraryState'
 import DownloadsTabIcon from '../DownloadsTabIcon'
 import {
   NAV_TAB_INDEX,
@@ -56,8 +61,11 @@ import './index.scss'
 export default function NavTabs() {
   const { t } = useTranslation()
   const location = useLocation() as { pathname: string }
-  const { epic, gog, amazon, steam, refreshLibrary } =
-    useContext(ContextProvider)
+  const epic = useEpicAccount()
+  const gog = useGogAccount()
+  const amazon = useAmazonAccount()
+  const steam = useSteamAccount()
+  const refreshLibrary = useLibraryState((s) => s.refreshLibrary)
 
   const activeTab = resolveActiveTab(location.pathname)
   const defaultStore = resolveDefaultStore({

@@ -1,12 +1,13 @@
 import './index.css'
 
-import { useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
 import { Dialog, DialogContent, DialogFooter, DialogHeader } from '../Dialog'
 import TextInputField from '../TextInputField'
-import ContextProvider from '../../../state/ContextProvider'
+import useLibraryState from '../../../state/libraryState'
+import useUiState from '../../../state/uiState'
 import {
   normalizeKey,
   isObviouslyMalformed
@@ -26,8 +27,12 @@ export default function RedeemSteamKeyDialog() {
   // sites now route through `tGamelib`.
   const { t: tGamelib } = useTranslation('gamelib')
   const navigate = useNavigate()
-  const { showRedeemKeyDialog, handleRedeemKeyDialog, steam, refreshLibrary } =
-    useContext(ContextProvider)
+  const { showRedeemKeyDialog, handleRedeemKeyDialog } = useUiState.keys(
+    'showRedeemKeyDialog',
+    'handleRedeemKeyDialog'
+  )
+  const steamLibrary = useLibraryState((s) => s.steamLibrary)
+  const refreshLibrary = useLibraryState((s) => s.refreshLibrary)
 
   const [key, setKey] = useState('')
   const [busy, setBusy] = useState(false)
@@ -41,7 +46,7 @@ export default function RedeemSteamKeyDialog() {
   // and the Steam library has been refreshed (Pitfall 3: packageList gives a
   // packageID -> name map, NOT AppIDs, so we title-match against the
   // freshly-refreshed steam.library instead). This effect deliberately
-  // depends on `steam.library` so it re-runs once refreshLibrary's state
+  // depends on `steamLibrary` so it re-runs once refreshLibrary's state
   // update actually lands, rather than racing a stale closure.
   useEffect(() => {
     if (outcome !== 'success' || !packageName) {
@@ -49,13 +54,13 @@ export default function RedeemSteamKeyDialog() {
       return
     }
     const normalizedTarget = normalizeTitle(packageName)
-    const match = (steam.library ?? []).find(
+    const match = (steamLibrary ?? []).find(
       (game) =>
         normalizeTitle(game.title) === normalizedTarget ||
         fuzzyMatch(packageName, game.title)
     )
     setMatchedGame(match)
-  }, [outcome, packageName, steam.library])
+  }, [outcome, packageName, steamLibrary])
 
   function resetAndClose() {
     setKey('')
