@@ -581,6 +581,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261110-9w2 | Sidecar orphan after tauri dev Force Quit/Ctrl-C: new outboundHttpRegistry tracks every in-flight http(s) ClientRequest via diagnostics_channel (any agent; WS upgrades excluded) and stdin-EOF release destroys them and refuses new ones; unref'd 15 s still-alive diagnostic logs getActiveResourcesInfo. No process.exit. Todo stays pending (live gate) | 2026-11-10 | 371298720, 85e025d58 | Jest 40 + 16 tests pass (new tests failed pre-fix), tsc/prettier clean, smoke:sidecar PASS; live Force Quit + Ctrl-C gate owed | [261110-9w2-sidecar-js-orphaned-after-tauri-dev-ctrl](./quick/261110-9w2-sidecar-js-orphaned-after-tauri-dev-ctrl/) |
 | fast | Classified `outboundHttpRegistry.test.ts` (from quick-261110-9w2) as structurally contained in the testContainment T-34.2-83 tripwire. | 2026-11-11 | 243246645 | testContainment 55/55 | — |
 | fast | Added `secret-stores` and `orphaned-token-cleanup` to the bootSourceShape boot-order anchors (T-66-27 follow-up). | 2026-11-11 | 36ff8f493 | bootSourceShape 29/29; swap probe caught | — |
+| fast | Undertale x86 withhold log now names runner-missing SteamAPI_* exports as such instead of "unservable interface versions". | 2026-11-11 | 5ebc29a00 | shimGenerate+shimCoverage 233/233 | — |
 
 ## Deferred Items
 
