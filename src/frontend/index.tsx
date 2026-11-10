@@ -2,14 +2,14 @@
 // global error/unhandledrejection handlers are live before any other module in the bundle
 // evaluates and can render import-time throws to #root instead of a silent blank page (the
 // Tauri dev webview has no devtools/inspect). Placed above tauriAttach: it pulls in nothing,
-// so it does not disturb tauriAttach's own "runs before GlobalState" ordering requirement.
+// so it does not disturb tauriAttach's own "runs before the boot module" ordering requirement.
 import './bootErrorSurface'
 
 // BLOCKER-1 (27-01) / T-27-07: must be the FIRST *meaningful* import in this file. ES modules
 // resolve every static import in a file, in declaration order, before any of that file's own
 // top-level statements run -- and `preload/tauriAttach`'s attach-window.api side effect
 // must complete before `./helpers/stores` (transitively imported by
-// `./state/GlobalState`, imported below) evaluates: that module constructs several
+// `./state/BootSequence`, imported below) evaluates: that module constructs several
 // `TypeCheckedStoreFrontend`s at ITS OWN module scope, each of which calls
 // `window.api.storeNew(...)` synchronously the moment it is first imported. Being this
 // file's first-declared meaningful import guarantees its (Electron/Node-free) dependency
@@ -31,7 +31,7 @@ import { initGamepad } from './helpers/gamepad'
 
 import './index.scss'
 import './themes.scss'
-import GlobalState from './state/GlobalState'
+import BootSequence from './state/BootSequence'
 import { initStateSubscriptions } from './state/initStateSubscriptions'
 import { initShortcuts } from './helpers/shortcuts'
 import { installExternalLinkClickHandler } from './helpers/externalLinkClicks'
@@ -52,7 +52,7 @@ import {
 } from 'common/languages'
 
 // Quick 261101-llf: a `?window=bridge-invite&..` load is the dedicated invite-picker window. It
-// mounts only the friend picker: no GlobalState, no App, no frameless decorations, drag regions,
+// mounts only the friend picker: no BootSequence, no App, no frameless decorations, drag regions,
 // shortcuts or gamepads, so it looks the same whether frameless is OFF or ON.
 const pickerParams = parseBridgeInvitePickerParams(window.location.search)
 
@@ -119,7 +119,7 @@ document.addEventListener('securitypolicyviolation', (ev) => {
 })
 
 // Must resolve before the first synchronous store read below (`configStore.get_nodefault`)
-// -- the Steam login-gate in GlobalState's constructor (later in this file, via
+// -- the Steam login-gate in initStateSubscriptions' readInitial step (later in this file, via
 // `root.render`) also depends on this being hydrated by the time React renders.
 // Top-level await is safe here: this is the entry module, nothing imports it. Resolved
 // immediately when the sidecar is absent (the old Electron build never populated it).
@@ -128,8 +128,8 @@ document.addEventListener('securitypolicyviolation', (ev) => {
 // mounting. `root.render()` is later in this module body, AFTER this await -- an
 // unguarded rejection here would abort module evaluation and leave the Tauri window
 // showing a permanent BLANK screen with no diagnostics (the original 27-05 blank-screen
-// symptom). On failure we log loudly and render with an empty snapshot: GlobalState's
-// synchronous store reads then fall back to defaults (degraded but visible), and the real
+// symptom). On failure we log loudly and render with an empty snapshot: the stores'
+// synchronous reads then fall back to defaults (degraded but visible), and the real
 // error is inspectable in the webview devtools console instead of hidden behind a blank page.
 // Phase 35 plan 17: this used to be gated behind a Tauri-context check with no else
 // branch (Electron never ran this body -- it had no sidecar to hydrate a snapshot
@@ -174,7 +174,7 @@ try {
 //
 // For a `framelessWindow: true` user that shipped a visibly broken window on every
 // launch: the native titlebar was restored here, while `App.tsx` reads `isFrameless`
-// LATER (GlobalState.tsx, post-hydration) and correctly got `true` -- so GameLib
+// LATER (settingsState's readInitial, post-hydration) and correctly got `true` -- so GameLib
 // rendered its OWN overlay window controls on top and the user got BOTH chromes at
 // once. Nothing re-applied afterwards; the only other call site is the `setSetting`
 // toggle.
@@ -261,7 +261,7 @@ i18next
 // i18next.init and BEFORE root.render (Pitfall 1: readInitial() must see the
 // hydrated snapshot, and listeners must exist before any component mounts).
 // Outside the hydrate try/catch so a hydration failure still reaches here and
-// render. The picker window has no GlobalState, so it is skipped.
+// render. The picker window has no boot sequence, so it is skipped.
 if (!pickerParams) initStateSubscriptions()
 
 const container = document.getElementById('root')
@@ -290,13 +290,13 @@ if (pickerParams) {
 } else
   root.render(
     // <React.StrictMode>
-    <GlobalState>
+    <BootSequence>
       <I18nextProvider i18n={i18next}>
         <Suspense fallback={<Loading />}>
           <App />
         </Suspense>
       </I18nextProvider>
-    </GlobalState>
+    </BootSequence>
     // </React.StrictMode>
   )
 

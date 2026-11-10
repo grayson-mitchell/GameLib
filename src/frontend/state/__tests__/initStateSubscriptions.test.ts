@@ -60,6 +60,9 @@ const fakeApi = new Proxy(
           return Promise.resolve()
         }
       }
+      if (name === 'getSignInProbeOutcomes') {
+        return () => Promise.resolve([])
+      }
       if (name === 'getConnectivityStatus') {
         return () => new Promise(() => undefined)
       }
@@ -109,6 +112,7 @@ const fakeApi = new Proxy(
   platform: 'linux',
   api: fakeApi,
   localStorage: { getItem: () => null, setItem: () => undefined },
+  addEventListener: () => undefined,
   __TAURI_INTERNALS__: {
     invoke: () => Promise.resolve(undefined),
     transformCallback: () => 0,
@@ -149,7 +153,7 @@ const MOVED_LISTENERS = [
 
 // Node-env: settingsState reads/writes these when the boot module runs.
 ;(globalThis as unknown as Record<string, unknown>).document = {
-  documentElement: {},
+  documentElement: { style: { setProperty: () => undefined } },
   body: { classList: { toggle: () => undefined } }
 }
 ;(globalThis as unknown as Record<string, unknown>).getComputedStyle = () => ({
@@ -530,6 +534,44 @@ describe('initStateSubscriptions', () => {
     )
     expect(useAuthState.getState().signInProbeOutcomes).toEqual({
       gog: 'healthy'
+    })
+  })
+
+  describe('runPostMountBoot', () => {
+    it('runs once and ends with frontendReady after the other steps', async () => {
+      const order: string[] = []
+      const api = new Proxy(fakeApi as Record<string, unknown>, {
+        get: (t, name: string) =>
+          name === 'frontendReady'
+            ? () => order.push('frontendReady')
+            : name === 'isFullscreen'
+              ? () => {
+                  order.push('seed:isFullscreen')
+                  return Promise.resolve(false)
+                }
+              : t[name]
+      })
+      ;(window as unknown as { api: unknown }).api = api
+      init.initStateSubscriptions()
+      await init.runPostMountBoot()
+      await init.runPostMountBoot()
+      expect(order.filter((o) => o === 'frontendReady')).toHaveLength(1)
+      expect(order[0]).toBe('seed:isFullscreen')
+      expect(order[order.length - 1]).toBe('frontendReady')
+    })
+
+    it('bootSequenceEffect triggers the boot exactly once even if called twice', async () => {
+      let ready = 0
+      const api = new Proxy(fakeApi as Record<string, unknown>, {
+        get: (t, name: string) =>
+          name === 'frontendReady' ? () => ready++ : t[name]
+      })
+      ;(window as unknown as { api: unknown }).api = api
+      init.initStateSubscriptions()
+      init.bootSequenceEffect()
+      init.bootSequenceEffect()
+      await new Promise((r) => setTimeout(r, 20))
+      expect(ready).toBe(1)
     })
   })
 })

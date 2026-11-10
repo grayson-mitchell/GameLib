@@ -11,7 +11,7 @@
  * The real push is proven behaviourally by `src/preload/__tests__/framelessRuntime.test.ts`
  * F1-F7. Part A (Phase 69-06, R8) is now behavioural: it runs the real
  * `seedAndFollowWindowChrome` against a fake `window.api` and the real uiState store, and proves
- * the provider exposure through `bridgedContextSlice`. Part B pins App.tsx's gate; App.tsx cannot
+ * the store value. Part B pins App.tsx's gate; App.tsx cannot
  * be imported under this node-environment jest (`Root` is not exported and needs a router), so it
  * stays a source-text matcher until App converts (69-11). The live Windows check is recorded on
  * the todo.
@@ -203,12 +203,10 @@ function gateShows(
 describe('seedAndFollowWindowChrome -- isFrameless follows the frameless push (261102-dma)', () => {
   let useUiState: StoreHooks<UiState>
   let seedAndFollowWindowChrome: ChromeImpl
-  let bridgedContextSlice: () => { isFrameless: boolean }
 
   beforeAll(async () => {
     useUiState = (await import('../uiState')).default
     ;({ seedAndFollowWindowChrome } = await import('../initStateSubscriptions'))
-    ;({ bridgedContextSlice } = await import('../bridgeContextValue'))
   })
 
   afterEach(() => resetAllStores())
@@ -219,12 +217,12 @@ describe('seedAndFollowWindowChrome -- isFrameless follows the frameless push (2
     ).toEqual([])
   })
 
-  it('A4: the provider exposes the store value through the bridge', async () => {
+  it('A4: the store holds the seeded value and follows later writes', async () => {
     installFakeChromeApi({ isFullscreen: false, isFrameless: true })
     await seedAndFollowWindowChrome()
-    expect(bridgedContextSlice().isFrameless).toBe(true)
+    expect(useUiState.getState().isFrameless).toBe(true)
     useUiState.setState({ isFrameless: false })
-    expect(bridgedContextSlice().isFrameless).toBe(false)
+    expect(useUiState.getState().isFrameless).toBe(false)
   })
 })
 

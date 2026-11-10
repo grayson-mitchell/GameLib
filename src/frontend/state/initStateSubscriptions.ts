@@ -7,11 +7,10 @@
  * Must be called after `hydrateStoreSnapshot()` and `i18next.init`, before
  * `root.render` (index.tsx), so readInitial() sees the hydrated snapshot.
  *
- * The componentDidMount tail (awaited seeding, mount-time refreshLibrary,
- * frontendReady) is NOT moved here until plan 69-24 adds `runPostMountBoot()`.
- * frontendReady must keep its post-first-commit timing because the backend
- * treats it as "renderer listeners mounted". Statements at or after the first
- * `await` stay in componentDidMount as calls to the named exports below (R10).
+ * The former componentDidMount tail (awaited seeding, mount-time
+ * refreshLibrary, frontendReady) is `runPostMountBoot()`, triggered by
+ * BootSequence's layout effect so it keeps its post-first-commit timing: the
+ * backend treats frontendReady as "renderer listeners mounted".
  *
  * Never read `window.localStorage` at module scope: node-env tests must be
  * able to import this file.
@@ -29,6 +28,7 @@ import { isStore } from 'common/storeCapabilities'
 import type { GameStatus } from 'common/types'
 import useUiState, { readInitialUi } from './uiState'
 import useSettingsState, {
+  applySavedFonts,
   focusRowMirrorSeed,
   readInitialSettings,
   registerSettingsSideEffects,
@@ -460,7 +460,70 @@ export function followConnectivity(): void {
   void connectivitySync.pull()
 }
 
+let postMountStarted = false
+let bootEffectRan = false
+
+/**
+ * The former GlobalState.componentDidMount tail, in its original order. Runs
+ * once; frontendReady stays the last step.
+ */
+export async function runPostMountBoot(): Promise<void> {
+  if (postMountStarted) return
+  postMountStarted = true
+
+  // R10: seed isFullscreen/isFrameless, then follow the pushes.
+  await seedAndFollowWindowChrome()
+
+  const { gogUser, amazonUser, steamUser } = readMountStoreUsers()
+
+  // F-49-R1-1 (Phase 49 live gate Run 1): this used to be gated on
+  // `legendaryUser` (the mirror already holding `userInfo`). legendary
+  // 0.21.0 deletes `user.json` when a refresh token is rejected, the backend
+  // then purges `userInfo` (`legendary/user.ts:713`), and once it was gone
+  // nothing ever asked for it back, even after the file returned. The
+  // backend's `getUserInfo()` is self-healing in both directions (rebuilds
+  // from the file when present, purges when absent), so call it on every
+  // mount and seed the username from its answer when the mirror had none.
+  // The cold-boot expired path does not depend on this: the latched flag
+  // wins in `resolveSignInState` branch 1 (measured live 2026-10-09).
+  const legendaryUser = await seedEpicUserInfo()
+
+  await refreshAmazonUserInfo(amazonUser)
+
+  restoreStoredGameUpdates()
+
+  runMountLibraryRefresh({ legendaryUser, gogUser, amazonUser, steamUser })
+
+  registerControllerListener()
+
+  followConnectivity()
+
+  // 49-07 (D-08, Pitfall 11): pull once on mount, because the outcomes push
+  // can precede the listener above. Read-only getter -- nothing here starts
+  // a probe (P3).
+  pullSignInProbeOutcomes()
+
+  // F-49-R1-3: hydrate the dismissed set from the backend's settings, as a
+  // read (see hydrateDismissedSignInNotices).
+  void hydrateDismissedSignInNotices()
+
+  useAuthState.getState().rearmFromCurrentState()
+
+  applySavedFonts()
+
+  window.api.frontendReady()
+}
+
+/** What BootSequence's layout effect calls; once-guarded. */
+export function bootSequenceEffect(): void {
+  if (bootEffectRan) return
+  bootEffectRan = true
+  void runPostMountBoot()
+}
+
 /** @public Test-only: lets a test prove the once-guard. */
 export function __resetInitStateSubscriptionsGuardForTests(): void {
   initialised = false
+  postMountStarted = false
+  bootEffectRan = false
 }
