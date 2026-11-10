@@ -19,7 +19,7 @@ const RTL_LANGUAGES = ['fa', 'ar']
 // R5: read at import time exactly as GlobalState.tsx did (import-time timing
 // preserved, see
 // .planning/todos/pending/2026-11-10-import-time-mirror-reads-before-hydration.md).
-const globalSettingsAtImport = configStore.get_nodefault('settings')
+export const globalSettingsAtImport = configStore.get_nodefault('settings')
 // CR-01: the mirror alone cannot see the `focusRow` the backend now persists into
 // `config.json` via the `settings/global` migration (the mirror never receives
 // it), so first-launch hydration (boot module) fills the gap once.
