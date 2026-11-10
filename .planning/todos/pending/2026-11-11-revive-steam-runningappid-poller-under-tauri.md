@@ -8,7 +8,7 @@ files:
   - src/backend/sidecar/bootstrap.ts (~1071 notes initStoreManagers is dead under Tauri)
   - src/backend/storeManagers/steam/steamLaunchWatch.ts (pollerReports dep, quick 261111-9mj)
 severity: major
-platform: windows
+platform: macos
 ready: live-gate
 ---
 
@@ -81,3 +81,39 @@ poller/watch interplay.
 
 This todo stays open, `ready: live-gate`, until the live gate above passes. The Windows Stop gap is
 tracked in `2026-11-11-windows-steam-launch-stop-is-a-no-op.md`.
+
+## Status (quick 261111-a9g)
+
+The Windows half of the live gate PASSED 2026-11-11. It ran on the operator's Windows 11 box
+against the 7wo build, with WazHack 264160 from
+`C:\Program Files (x86)\Steam\steamapps\common\WazHack`.
+
+Timings from that run:
+
+- The exe started at 07:21:38.142, and Steam set `RunningAppID=264160` at 07:21:38.413.
+- The exe exited at 07:21:49.442, and Steam cleared `RunningAppID` at 07:21:51.582 (a 2.1 s lag).
+- The poller logged `stopped` at about 07:21:54 (5 s interval). That roughly 4.6 s exit-to-Play
+  delay is what a9g removes.
+
+From a9g on, a GameLib-launched game on win32 is owned by the install-folder watch. The poller
+holds silent for it and logs `(status owned by launch watch)`. The poller still reports games
+started from Steam itself.
+
+The Mac half (WazHack 264160: exactly one Playing and one Done, no flicker) is still pending,
+hence `platform: macos`. This todo closes when it passes.
+
+The a9g operator check, run on Windows in one session. It is a quit-timing check plus a Stop
+regression re-check, and it is not a gate on this todo's closure:
+
+1. Restart `pnpm tauri:dev`, so the sidecar bundle postdates the a9g commits.
+2. Launch WazHack from GameLib. Playing appears about 1.5-3.5 s after the game window. Expect
+   `SteamGame.watch: watching Steam-launched appId 264160` and
+   `SteamGame.watch: appId 264160 running: pids [...] under C:\Program Files (x86)\Steam\steamapps\common\WazHack`
+   in gamelib.log.
+3. Quit timing: quit in-game. The card returns to Play within about 1-2 s, with
+   `SteamGame.watch: appId 264160 no longer running`. The poller's later
+   `game 264160 stopped (status owned by launch watch)` causes no flicker.
+4. Stop regression re-check: launch again and press Stop. As in 9p6's passed gate, the game
+   closes (force-ended after 5 s if it ignores the close), the card returns to Play, and Steam and
+   `steamwebhelper.exe` keep running. The a9g addition is that no flicker follows. Expect
+   `SteamGame.stop: stopping Steam-launched appId 264160: asked pids [...] to close under ...`.
