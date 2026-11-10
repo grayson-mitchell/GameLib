@@ -22,3 +22,20 @@ workaround is to quit from inside the game.
 
 A Windows PID lookup by executable path under the install folder, through the injected runner.
 Never kill by name (Phase 72 D-13). Leave the design open.
+
+## Status
+
+Code landed in quick 261111-9p6; awaiting the Windows live gate (frontmatter stays `ready: live-gate`).
+
+Design as built:
+
+- PIDs come from a constant PowerShell 5.1 `Get-CimInstance Win32_Process` listing (absolute System32
+  path, `-NoProfile`, UTF-8 output, 15 s bound) through the injected runner; matching is in JS on
+  ExecutablePath under `<library>\steamapps\common\<installdir>\` (path.win32, case-insensitive).
+- Close request is `taskkill /PID <pid>` (no /F, no /T; exit 128 = gone), then the bounded grace,
+  then `process.kill` (TerminateProcess) on survivors that a fresh rescan still finds.
+- Delete route and launch watch are unchanged on win32.
+
+Live gate: launch an installed Steam title, wait for Playing, press Stop. The game window closes
+(force-ended after the grace if it ignores the close), the card returns to Play, Steam and
+`steamwebhelper.exe` keep running.
