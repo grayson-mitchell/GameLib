@@ -24,6 +24,7 @@
  * above) is the isolation seam for exactly this — called from `beforeEach` below.
  */
 
+import { bindHumbleStores } from '../../humble/humbleStores'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
@@ -64,9 +65,9 @@ const mockConfigStore = {
     delete backingStore[key]
   })
 }
-jest.mock('../../humble/stores', () => ({
-  configStore: mockConfigStore
-}))
+bindHumbleStores({
+  stores: { humble: { configStore: mockConfigStore } } as never
+})
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { requestRustInvoke } from '../sidecarRpc'

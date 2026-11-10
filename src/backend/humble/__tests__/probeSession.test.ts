@@ -9,6 +9,7 @@
  * a thrown request and every other status are `unknown` (P1, 260822-vov, A9).
  */
 
+import { bindHumbleStores } from '../humbleStores'
 import type { HumbleSecretKey } from '../secretStore'
 
 type ReadOutcome =
@@ -25,13 +26,16 @@ const mockConfigStore = {
   clear: jest.fn(),
   delete: jest.fn()
 }
-jest.mock('../stores', () => ({
-  configStore: mockConfigStore,
-  humbleLibraryStore: { clear: jest.fn() },
-  humbleSyncStore: { clear: jest.fn() },
-  humbleRevealedStore: { clear: jest.fn() }
-}))
-
+bindHumbleStores({
+  stores: {
+    humble: {
+      configStore: mockConfigStore,
+      humbleLibraryStore: { clear: jest.fn() },
+      humbleSyncStore: { clear: jest.fn() },
+      humbleRevealedStore: { clear: jest.fn() }
+    }
+  } as never
+})
 const mockLogWarning = jest.fn()
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),

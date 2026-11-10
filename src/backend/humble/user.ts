@@ -1,7 +1,7 @@
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
 
-import { configStore, humbleLibraryStore, humbleSyncStore } from './stores'
+import { humbleStores } from './humbleStores'
 import { HUMBLE_BASE_URL, HUMBLE_LOGIN_URL } from './constants'
 import { getGamekeys } from './adapter'
 import {
@@ -114,7 +114,7 @@ async function storeHumbleSecret(
 ): Promise<void> {
   const store = getHumbleSecretStore()
   await store.setSecret(key, value)
-  configStore.set(
+  humbleStores().configStore.set(
     'encryptionDegraded',
     !(await store.isAvailable('store-humble-secret'))
   )
@@ -137,11 +137,11 @@ export class HumbleUser {
   // ── HACCT-01/02: login state ─────────────────────────────────────────────
 
   static isLoggedIn(): boolean {
-    return Boolean(configStore.get_nodefault('isLoggedIn'))
+    return Boolean(humbleStores().configStore.get_nodefault('isLoggedIn'))
   }
 
   static getUserDetails(): HumbleUserData | undefined {
-    return configStore.get_nodefault('userData')
+    return humbleStores().configStore.get_nodefault('userData')
   }
 
   // Async since Phase 34.4.1 Plan 12: routed through getHumbleSecretStore(),
@@ -691,8 +691,8 @@ export class HumbleUser {
     if (isSettled()) return 'transient'
 
     await storeHumbleSecret('sessionCookie', cookieValue)
-    configStore.set('isLoggedIn', true)
-    configStore.set('expired', false)
+    humbleStores().configStore.set('isLoggedIn', true)
+    humbleStores().configStore.set('expired', false)
     // Phase 49: a completed sign-in outranks any probe that began earlier.
     noteSignInSucceeded('humble')
 
@@ -824,8 +824,8 @@ export class HumbleUser {
     // which keeps an offline start from surfacing as an unhandled rejection.
     const outcome = await HumbleUser.probeSession('humble-health-check')
     if (outcome === 'expired') {
-      configStore.set('expired', true)
-      const userData = configStore.get_nodefault('userData')
+      humbleStores().configStore.set('expired', true)
+      const userData = humbleStores().configStore.get_nodefault('userData')
       sendFrontendMessage('humbleAuthState', {
         isLoggedIn: true,
         username: userData?.username,
@@ -912,7 +912,7 @@ export class HumbleUser {
     // failed partition-clear step can never leave the (possibly
     // plaintext-degraded) sessionCookie on disk after a user-confirmed
     // disconnect (WR-02 / T-10-07).
-    configStore.clear()
+    humbleStores().configStore.clear()
     // Phase 49: fence any boot probe that began before this disconnect.
     noteSignedOut('humble')
 
@@ -941,8 +941,8 @@ export class HumbleUser {
     // Phase 11 (HSYNC-02/D-04): the library cache + sync-state are fully
     // reconstructible from a re-sync, so they are wiped alongside the
     // credential — a stale key inventory must never survive a disconnect.
-    humbleLibraryStore.clear()
-    humbleSyncStore.clear()
+    humbleStores().humbleLibraryStore.clear()
+    humbleStores().humbleSyncStore.clear()
 
     // Best-effort wipe: each step guarded individually so one rejected
     // step does not abort the rest. Partial failures are logged (never

@@ -1,13 +1,13 @@
 {
   "jestMock": {
     "src/backend/humble/__tests__/adapter.test.ts": 3,
-    "src/backend/humble/__tests__/expirationAlerts.test.ts": 8,
+    "src/backend/humble/__tests__/expirationAlerts.test.ts": 7,
     "src/backend/humble/__tests__/library.realstore.test.ts": 6,
-    "src/backend/humble/__tests__/library.test.ts": 8,
-    "src/backend/humble/__tests__/probeSession.test.ts": 9,
-    "src/backend/humble/__tests__/secretStore.test.ts": 3,
+    "src/backend/humble/__tests__/library.test.ts": 6,
+    "src/backend/humble/__tests__/probeSession.test.ts": 8,
+    "src/backend/humble/__tests__/secretStore.test.ts": 2,
     "src/backend/humble/__tests__/stores.test.ts": 1,
-    "src/backend/humble/__tests__/user.test.ts": 7
+    "src/backend/humble/__tests__/user.test.ts": 6
   },
   "moduleState": {
     "src/backend/humble/classify.ts": 1,

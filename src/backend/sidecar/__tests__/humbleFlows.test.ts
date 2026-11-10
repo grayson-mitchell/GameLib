@@ -1147,6 +1147,12 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         }
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { bindHumbleStores } = require('../../humble/humbleStores') as {
+        bindHumbleStores: (deps: never) => void
+      }
+      bindHumbleStores({ stores: { humble: realStores, steam: {} } } as never)
+
       realStores.configStore.set('sessionCookie', 'FAKE-D05-COOKIE-VALUE')
       realStores.humbleLibraryStore.set('fake-order', { keys: [] })
       realStores.humbleSyncStore.set('state', { syncedAt: 111 })

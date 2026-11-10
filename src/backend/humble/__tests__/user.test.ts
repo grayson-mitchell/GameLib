@@ -19,6 +19,8 @@
  *  - ../adapter      → getGamekeys
  */
 
+import { bindHumbleStores } from '../humbleStores'
+
 // ── Electron mock (must be first, jest.mock is hoisted) ──────────────────────
 const mockEncryptString = jest.fn((s: string) => Buffer.from(s))
 const mockDecryptString = jest.fn((b: Buffer) => b.toString())
@@ -99,12 +101,16 @@ const mockConfigStore = {
 const mockHumbleLibraryStore = { clear: jest.fn() }
 const mockHumbleSyncStore = { clear: jest.fn() }
 const mockHumbleRevealedStore = { clear: jest.fn() }
-jest.mock('../stores', () => ({
-  configStore: mockConfigStore,
-  humbleLibraryStore: mockHumbleLibraryStore,
-  humbleSyncStore: mockHumbleSyncStore,
-  humbleRevealedStore: mockHumbleRevealedStore
-}))
+bindHumbleStores({
+  stores: {
+    humble: {
+      configStore: mockConfigStore,
+      humbleLibraryStore: mockHumbleLibraryStore,
+      humbleSyncStore: mockHumbleSyncStore,
+      humbleRevealedStore: mockHumbleRevealedStore
+    }
+  } as never
+})
 
 // ── adapter mock ───────────────────────────────────────────────────────────
 const mockGetGamekeys = jest.fn()

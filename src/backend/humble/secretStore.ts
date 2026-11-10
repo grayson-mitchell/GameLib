@@ -52,7 +52,7 @@ import { safeStorage } from 'backend/platform'
 
 import { logWarning, LogPrefix } from 'backend/logger'
 
-import { configStore } from './stores'
+import { humbleStores } from './humbleStores'
 import { HUMBLE_TOKEN_PREFIX, HUMBLE_TOKEN_STORE_KEY } from './constants'
 import type { TokenReadOutcome } from 'backend/storeManagers/steam/tokenStore'
 
@@ -155,18 +155,18 @@ export class ElectronHumbleSecretStore implements HumbleSecretStore {
   }
 
   async getSecret(key: HumbleSecretKey): Promise<string> {
-    const stored = configStore.get_nodefault(STORE_KEYS[key])
+    const stored = humbleStores().configStore.get_nodefault(STORE_KEYS[key])
     if (!stored || typeof stored !== 'string') return ''
     return this.decryptValue(stored)
   }
 
   async setSecret(key: HumbleSecretKey, value: string): Promise<void> {
-    configStore.set(STORE_KEYS[key], this.encryptValue(value))
+    humbleStores().configStore.set(STORE_KEYS[key], this.encryptValue(value))
   }
 
   async clearSecrets(): Promise<void> {
-    configStore.delete(STORE_KEYS.sessionCookie)
-    configStore.delete(STORE_KEYS.csrfToken)
+    humbleStores().configStore.delete(STORE_KEYS.sessionCookie)
+    humbleStores().configStore.delete(STORE_KEYS.csrfToken)
   }
 }
 

@@ -22,6 +22,7 @@
  * the Phase 12 ownership-recompute tests exercise the real two-tier matcher.
  */
 
+import { bindHumbleStores } from '../humbleStores'
 import type {
   HumbleKey,
   HumbleKeyState,
@@ -211,24 +212,27 @@ function resetStoreMocks() {
   )
 }
 
-jest.mock('../stores', () => ({
-  humbleLibraryStore: mockLibraryStore,
-  humbleSyncStore: mockSyncStore,
-  humbleRevealedStore: mockRevealedStore,
-  humbleOwnershipOverrideStore: mockOverrideStore,
-  humbleLocalRedeemedStore: mockLocalRedeemedStore,
-  humbleAuditStore: mockAuditStore,
-  humbleSettleDeclinedStore: mockSettleDeclinedStore
-}))
-
 // ── Steam store manager mocks (D-48 connectivity double-gate) ──────────────
 
 const mockSteamLibraryStoreGet = jest.fn()
-jest.mock('backend/storeManagers/steam/stores', () => ({
-  steamLibraryStore: {
-    get: (...args: unknown[]) => mockSteamLibraryStoreGet(...args)
-  }
-}))
+bindHumbleStores({
+  stores: {
+    humble: {
+      humbleLibraryStore: mockLibraryStore,
+      humbleSyncStore: mockSyncStore,
+      humbleRevealedStore: mockRevealedStore,
+      humbleOwnershipOverrideStore: mockOverrideStore,
+      humbleLocalRedeemedStore: mockLocalRedeemedStore,
+      humbleAuditStore: mockAuditStore,
+      humbleSettleDeclinedStore: mockSettleDeclinedStore
+    },
+    steam: {
+      steamLibraryStore: {
+        get: (...args: unknown[]) => mockSteamLibraryStoreGet(...args)
+      }
+    }
+  } as never
+})
 
 const mockSteamIsLoggedIn = jest.fn()
 jest.mock('backend/storeManagers/steam/user', () => ({

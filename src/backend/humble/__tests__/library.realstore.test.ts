@@ -59,9 +59,15 @@ jest.mock('../expirationAlerts', () => ({
 
 // ── Imports (after mocks) — REAL stores/CacheStore ──────────────
 
+import { bindHumbleStores } from '../humbleStores'
 import { defined } from './defined'
 import { HumbleLibrary } from '../library'
-import { humbleLibraryStore, humbleSyncStore } from '../stores'
+import * as humbleStoreModule from '../stores'
+
+const { humbleLibraryStore, humbleSyncStore } = humbleStoreModule
+bindHumbleStores({
+  stores: { humble: humbleStoreModule, steam: {} } as never
+})
 
 function makeRawOrder(gamekey: string) {
   return {

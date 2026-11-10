@@ -23,6 +23,7 @@
  *  - ../stores → configStore (in-memory map, not electron-store)
  */
 
+import { bindHumbleStores } from '../humbleStores'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { defined } from './defined'
@@ -61,9 +62,9 @@ const mockConfigStore = {
     delete backingStore[key]
   })
 }
-jest.mock('../stores', () => ({
-  configStore: mockConfigStore
-}))
+bindHumbleStores({
+  stores: { humble: { configStore: mockConfigStore } } as never
+})
 
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
 import {

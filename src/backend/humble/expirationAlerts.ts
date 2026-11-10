@@ -4,7 +4,7 @@ import { GlobalConfig } from 'backend/config'
 import { isSteamDeckGameMode } from 'backend/constants/environment'
 import { getMainWindow } from '../main_window'
 import { sendFrontendMessage } from '../ipc'
-import { humbleNotifiedExpirationStore } from './stores'
+import { humbleStores } from './humbleStores'
 import { HumbleKey } from 'common/types/humble'
 
 /**
@@ -33,24 +33,25 @@ export function detectAndNotifyExpirationTransitions(
     // not fire a spurious notification storm. Legacy entries are left in
     // place (harmless, keeps the backfill idempotent).
     if (
-      !humbleNotifiedExpirationStore.has(composite) &&
-      humbleNotifiedExpirationStore.has(key.machineName)
+      !humbleStores().humbleNotifiedExpirationStore.has(composite) &&
+      humbleStores().humbleNotifiedExpirationStore.has(key.machineName)
     ) {
-      humbleNotifiedExpirationStore.set(
+      humbleStores().humbleNotifiedExpirationStore.set(
         composite,
-        humbleNotifiedExpirationStore.get(key.machineName)!
+        humbleStores().humbleNotifiedExpirationStore.get(key.machineName)!
       )
     }
 
     const current = key.expiration
     const last =
-      humbleNotifiedExpirationStore.get(composite)?.expiration ?? null
+      humbleStores().humbleNotifiedExpirationStore.get(composite)?.expiration ??
+      null
 
     if (current !== null && current !== last) {
       newlyExpiring.push(key)
       // Always advance the persisted state — even under suppression — so
       // dedup works correctly on every subsequent sync (locked decision 3).
-      humbleNotifiedExpirationStore.set(composite, {
+      humbleStores().humbleNotifiedExpirationStore.set(composite, {
         expiration: current
       })
     }

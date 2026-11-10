@@ -56,7 +56,7 @@ import {
   type HumbleSecretKey
 } from '../humble/secretStore'
 import type { TokenReadOutcome } from '../storeManagers/steam/tokenStore'
-import { configStore } from '../humble/stores'
+import { humbleStores } from '../humble/humbleStores'
 import { HUMBLE_TOKEN_STORE_KEY } from '../humble/constants'
 
 /** One `SidecarKeyringSlotStore` per secret, bound once at module load. Each instance is
@@ -188,7 +188,7 @@ function errorMessage(error: unknown): string {
 export async function migrateOneSecret(key: HumbleSecretKey): Promise<void> {
   const { configKey, slot } = MIGRATION_TARGETS[key]
 
-  const plaintext = configStore.get_nodefault(configKey)
+  const plaintext = humbleStores().configStore.get_nodefault(configKey)
   if (!plaintext || typeof plaintext !== 'string') {
     // Absent — healthy "nothing to migrate" case (already migrated on a prior run, or this
     // secret was never stored). No keyring write, no log.
@@ -236,8 +236,8 @@ export async function migrateOneSecret(key: HumbleSecretKey): Promise<void> {
     return
   }
 
-  configStore.delete(configKey)
-  configStore.set('encryptionDegraded', false)
+  humbleStores().configStore.delete(configKey)
+  humbleStores().configStore.set('encryptionDegraded', false)
 }
 
 /**

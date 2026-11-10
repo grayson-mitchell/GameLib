@@ -28,6 +28,7 @@
  *  - backend/constants/environment -> isSteamDeckGameMode (mutable double)
  */
 
+import { bindHumbleStores } from '../humbleStores'
 import type { HumbleKey } from 'common/types/humble'
 import type { HumbleKeyInternal } from '../stores'
 
@@ -84,9 +85,11 @@ const mockNotifiedExpirationStore = {
   has: jest.fn((key: string) => notifiedExpirationData.has(key)),
   clear: jest.fn(() => notifiedExpirationData.clear())
 }
-jest.mock('../stores', () => ({
-  humbleNotifiedExpirationStore: mockNotifiedExpirationStore
-}))
+bindHumbleStores({
+  stores: {
+    humble: { humbleNotifiedExpirationStore: mockNotifiedExpirationStore }
+  } as never
+})
 
 // ── backend/config mock (GlobalConfig.get().getSettings()) ─────────────────
 let mockNotifyHumbleExpirations = true

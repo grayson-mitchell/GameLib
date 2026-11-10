@@ -24,18 +24,8 @@ import {
 } from './classify'
 import { recomputeOwnership as dedupRecomputeOwnership } from './dedup'
 import { detectAndNotifyExpirationTransitions } from './expirationAlerts'
-import {
-  AuditRecord,
-  HumbleKeyInternal,
-  humbleAuditStore,
-  humbleGiftedAtStore,
-  humbleLibraryStore,
-  humbleLocalRedeemedStore,
-  humbleOwnershipOverrideStore,
-  humbleRevealedStore,
-  humbleSettleDeclinedStore,
-  humbleSyncStore
-} from './stores'
+import type { AuditRecord, HumbleKeyInternal } from './stores'
+import { humbleStores, steamStores } from './humbleStores'
 import {
   HUMBLE_SYNC_CONCURRENCY,
   HUMBLE_COOLDOWN_MS,
@@ -43,7 +33,6 @@ import {
 } from './constants'
 import { currentSyncGeneration } from './syncFence'
 import { HumbleUser } from './user'
-import { steamLibraryStore } from 'backend/storeManagers/steam/stores'
 import { SteamUser } from 'backend/storeManagers/steam/user'
 import { GameInfo } from 'common/types'
 
@@ -95,11 +84,11 @@ function partitionGamekeys(gamekeys: string[]): PartitionResult {
   const frozenGamekeys: string[] = []
 
   for (const gamekey of gamekeys) {
-    if (!humbleLibraryStore.has(gamekey)) {
+    if (!humbleStores().humbleLibraryStore.has(gamekey)) {
       newGamekeys.push(gamekey)
       continue
     }
-    const entry = humbleLibraryStore.get(gamekey)
+    const entry = humbleStores().humbleLibraryStore.get(gamekey)
     // 14-08 gap closure (Fix 2): freezeEligible (server-terminality,
     // including REVEALED-without-pending-expiry) is the frozen decision when
     // present; a pre-v6 entry that hasn't been backfilled yet falls back to
@@ -149,7 +138,7 @@ function getSteamGate(): { open: boolean; steamGames: GameInfo[] } {
   if (!SteamUser.isLoggedIn()) {
     return { open: false, steamGames: [] }
   }
-  const steamGames = steamLibraryStore.get('games', [])
+  const steamGames = steamStores().steamLibraryStore.get('games', [])
   return { open: steamGames.length > 0, steamGames }
 }
 
@@ -204,10 +193,12 @@ async function fetchAndCommitOrder(
     // machineName-only — WR-01 non-collision) via humbleLocalRedeemedStore.
     const classified = classifyOrder(
       result.data,
-      (machineName) => humbleRevealedStore.has(machineName),
+      (machineName) => humbleStores().humbleRevealedStore.has(machineName),
       now,
       (gk, machineName) =>
-        humbleLocalRedeemedStore.has(compositeKey(gk, machineName))
+        humbleStores().humbleLocalRedeemedStore.has(
+          compositeKey(gk, machineName)
+        )
     )
     // Phase 14 (D-74): merge the freshly-classified order's keyindex
     // side-channel onto each cached key as the internal-only `keyindex`
@@ -217,7 +208,7 @@ async function fetchAndCommitOrder(
     // cached record's `revealedKeyValue` forward when the fresh record
     // lacks one (a re-sync must never un-reveal a key the user already
     // revealed in this session).
-    const priorEntry = humbleLibraryStore.get(gamekey)
+    const priorEntry = humbleStores().humbleLibraryStore.get(gamekey)
     const priorKeysByMachineName = new Map(
       (priorEntry?.keys ?? []).map((key) => [key.machineName, key])
     )
@@ -243,7 +234,8 @@ async function fetchAndCommitOrder(
         dedupRecomputeOwnership(
           classified.keys,
           steamGate.steamGames,
-          (machineName) => humbleOwnershipOverrideStore.has(machineName)
+          (machineName) =>
+            humbleStores().humbleOwnershipOverrideStore.has(machineName)
         )
       : // Branch B (gate FAILS — Steam logged out, or logged in with an
         // empty cached library): carry forward each prior cached key's
@@ -319,7 +311,7 @@ async function fetchAndCommitOrder(
       freezeEligible
     }
     // Committed immediately per resolve, never batched (D-34).
-    humbleLibraryStore.set(gamekey, entry)
+    humbleStores().humbleLibraryStore.set(gamekey, entry)
 
     if (entry.keys.length === 0) {
       // Live-UAT round 3 diagnosability (debug session:
@@ -444,12 +436,15 @@ async function runBounded(
 }
 
 function getSyncState(): HumbleSyncState {
-  return humbleSyncStore.get('state', { syncedAt: null, syncError: 'none' })
+  return humbleStores().humbleSyncStore.get('state', {
+    syncedAt: null,
+    syncError: 'none'
+  })
 }
 
 function setSyncState(patch: Partial<HumbleSyncState>): void {
   const current = getSyncState()
-  humbleSyncStore.set('state', { ...current, ...patch })
+  humbleStores().humbleSyncStore.set('state', { ...current, ...patch })
 }
 
 // D-74/C4/T-14-02: the internal-only fields (keyindex, revealedKeyValue) ride
@@ -465,7 +460,7 @@ function toDisplayKey(key: HumbleKeyInternal): HumbleKey {
 
 function getKeys(): HumbleKey[] {
   const keys: HumbleKey[] = []
-  for (const [, entry] of humbleLibraryStore.entries()) {
+  for (const [, entry] of humbleStores().humbleLibraryStore.entries()) {
     keys.push(...entry.keys.map(toDisplayKey))
   }
   return keys
@@ -498,7 +493,7 @@ function recomputeOwnership(): void {
     return
   }
 
-  for (const [gamekey, entry] of humbleLibraryStore.entries()) {
+  for (const [gamekey, entry] of humbleStores().humbleLibraryStore.entries()) {
     // Cast: dedup.ts's return type is the display-safe HumbleKey[] (it's
     // shared with the pure/unit-tested contract), but at runtime every
     // element is spread from an entry.keys HumbleKeyInternal, so the
@@ -507,7 +502,8 @@ function recomputeOwnership(): void {
     const mutatedKeys = dedupRecomputeOwnership(
       entry.keys,
       steamGames,
-      (machineName) => humbleOwnershipOverrideStore.has(machineName)
+      (machineName) =>
+        humbleStores().humbleOwnershipOverrideStore.has(machineName)
     ) as HumbleKeyInternal[]
 
     // Plan 42-03 (D-42-01/D-42-02): auto-settle exact-match owned+REVEALED
@@ -551,7 +547,7 @@ function recomputeOwnership(): void {
       const composite = compositeKey(gamekey, key.machineName)
       // Guard 4 — never overwrite or re-stamp an existing local-redeemed
       // record, including a pre-existing `source: 'user'` mark (D-42-01).
-      if (humbleLocalRedeemedStore.has(composite)) {
+      if (humbleStores().humbleLocalRedeemedStore.has(composite)) {
         return key
       }
       // Guard 5 (Task 3, D-42-01 durability): a key the user already
@@ -563,11 +559,11 @@ function recomputeOwnership(): void {
       // ownership match itself hasn't changed. Undoing a source: 'user'
       // mark does NOT write a decline record (there was never an
       // auto-settle to decline), so it never trips this guard.
-      if (humbleSettleDeclinedStore.has(composite)) {
+      if (humbleStores().humbleSettleDeclinedStore.has(composite)) {
         return key
       }
 
-      humbleLocalRedeemedStore.set(composite, {
+      humbleStores().humbleLocalRedeemedStore.set(composite, {
         redeemedAt: Date.now(),
         source: 'ownership-exact'
       })
@@ -583,7 +579,10 @@ function recomputeOwnership(): void {
     if (!settledAny) {
       // No settle fired for this order — keep today's behaviour byte-for-
       // byte, including the entry's existing allTerminal/freezeEligible.
-      humbleLibraryStore.set(gamekey, { ...entry, keys: mutatedKeys })
+      humbleStores().humbleLibraryStore.set(gamekey, {
+        ...entry,
+        keys: mutatedKeys
+      })
       continue
     }
 
@@ -606,7 +605,7 @@ function recomputeOwnership(): void {
           revealedKeyValuePresent: key.revealedKeyValue !== undefined
         })
       )
-    humbleLibraryStore.set(gamekey, {
+    humbleStores().humbleLibraryStore.set(gamekey, {
       ...entry,
       keys: settledKeys,
       allTerminal,
@@ -631,7 +630,9 @@ function recomputeOwnership(): void {
  * dedup.ts, not here).
  */
 function setOwnershipOverride(machineName: string): void {
-  humbleOwnershipOverrideStore.set(machineName, { overriddenAt: Date.now() })
+  humbleStores().humbleOwnershipOverrideStore.set(machineName, {
+    overriddenAt: Date.now()
+  })
   recomputeOwnership()
 }
 
@@ -640,7 +641,7 @@ function setOwnershipOverride(machineName: string): void {
  * still-valid fuzzy match is restored.
  */
 function clearOwnershipOverride(machineName: string): void {
-  humbleOwnershipOverrideStore.delete(machineName)
+  humbleStores().humbleOwnershipOverrideStore.delete(machineName)
   recomputeOwnership()
 }
 
@@ -655,7 +656,10 @@ function clearOwnershipOverride(machineName: string): void {
  */
 function getAllOwnershipOverrides(): Record<string, number> {
   const result: Record<string, number> = {}
-  for (const [machineName, entry] of humbleOwnershipOverrideStore.entries()) {
+  for (const [
+    machineName,
+    entry
+  ] of humbleStores().humbleOwnershipOverrideStore.entries()) {
     result[machineName] = entry.overriddenAt
   }
   return result
@@ -670,7 +674,7 @@ function getAllOwnershipOverrides(): Record<string, number> {
  * reads via getAllGiftedAt().
  */
 function recordGiftLinkOpened(machineName: string): void {
-  humbleGiftedAtStore.set(machineName, { giftedAt: Date.now() })
+  humbleStores().humbleGiftedAtStore.set(machineName, { giftedAt: Date.now() })
 }
 
 /**
@@ -680,7 +684,10 @@ function recordGiftLinkOpened(machineName: string): void {
  */
 function getAllGiftedAt(): Record<string, number> {
   const result: Record<string, number> = {}
-  for (const [machineName, entry] of humbleGiftedAtStore.entries()) {
+  for (const [
+    machineName,
+    entry
+  ] of humbleStores().humbleGiftedAtStore.entries()) {
     result[machineName] = entry.giftedAt
   }
   return result
@@ -720,7 +727,7 @@ function patchCachedState(
   newState: HumbleKeyState,
   extra?: { revealedKeyValue?: string }
 ): void {
-  const entry = humbleLibraryStore.get(gamekey)
+  const entry = humbleStores().humbleLibraryStore.get(gamekey)
   if (!entry) return
   const index = entry.keys.findIndex((key) => key.machineName === machineName)
   if (index === -1) return
@@ -755,7 +762,7 @@ function patchCachedState(
         revealedKeyValuePresent: key.revealedKeyValue !== undefined
       })
     )
-  humbleLibraryStore.set(gamekey, {
+  humbleStores().humbleLibraryStore.set(gamekey, {
     ...entry,
     keys: newKeys,
     allTerminal,
@@ -774,7 +781,7 @@ function lookupKeyindex(
   gamekey: string,
   machineName: string
 ): string | number | undefined {
-  const entry = humbleLibraryStore.get(gamekey)
+  const entry = humbleStores().humbleLibraryStore.get(gamekey)
   return entry?.keys.find((key) => key.machineName === machineName)?.keyindex
 }
 
@@ -791,7 +798,7 @@ function getRevealedKeyValue(
   gamekey: string,
   machineName: string
 ): string | null {
-  const entry = humbleLibraryStore.get(gamekey)
+  const entry = humbleStores().humbleLibraryStore.get(gamekey)
   const key = entry?.keys.find((k) => k.machineName === machineName)
   return key?.revealedKeyValue ?? null
 }
@@ -811,7 +818,7 @@ function appendAudit(
   fields: { title: string; platform: string; outcome?: string }
 ): void {
   const key = compositeKey(gamekey, machineName)
-  const existing = humbleAuditStore.get(key, [])
+  const existing = humbleStores().humbleAuditStore.get(key, [])
   const record: AuditRecord = {
     event,
     at: Date.now(),
@@ -819,7 +826,7 @@ function appendAudit(
     platform: fields.platform,
     outcome: fields.outcome
   }
-  humbleAuditStore.set(key, [...existing, record])
+  humbleStores().humbleAuditStore.set(key, [...existing, record])
 }
 
 // DD-3 (quick 260911-ftc): the reveal-OUTCOME events in humbleAuditStore's
@@ -852,7 +859,7 @@ function deriveRevealRefusedAt(
   machineName: string
 ): number | undefined {
   const composite = compositeKey(gamekey, machineName)
-  const trail = humbleAuditStore.get(composite, [])
+  const trail = humbleStores().humbleAuditStore.get(composite, [])
   for (let i = trail.length - 1; i >= 0; i--) {
     const record = trail[i]
     if (!record) continue
@@ -883,12 +890,14 @@ function deriveRevealRefusedAt(
  */
 function getClaimAnnotations(): Record<string, ClaimAnnotation> {
   const result: Record<string, ClaimAnnotation> = {}
-  for (const [gamekey, entry] of humbleLibraryStore.entries()) {
+  for (const [gamekey, entry] of humbleStores().humbleLibraryStore.entries()) {
     for (const key of entry.keys) {
       const composite = compositeKey(gamekey, key.machineName)
-      const localRedeemed = humbleLocalRedeemedStore.get(composite)
+      const localRedeemed =
+        humbleStores().humbleLocalRedeemedStore.get(composite)
       result[composite] = {
-        revealedAt: humbleRevealedStore.get(key.machineName)?.revealedAt,
+        revealedAt: humbleStores().humbleRevealedStore.get(key.machineName)
+          ?.revealedAt,
         revealRefusedAt: deriveRevealRefusedAt(gamekey, key.machineName),
         redeemedAt: localRedeemed?.redeemedAt,
         // D-42-01: missing `source` on an existing record reads as 'user'
@@ -1357,7 +1366,9 @@ async function doRevealKey(
     title: target.title,
     platform: target.platform
   })
-  humbleRevealedStore.set(machineName, { revealedAt: Date.now() })
+  humbleStores().humbleRevealedStore.set(machineName, {
+    revealedAt: Date.now()
+  })
 
   // Debug session humble-reveal-key-fails: presence-only (never the token
   // value) — the open question of whether a given reveal attempt actually
@@ -1426,7 +1437,7 @@ async function doRevealKey(
       // REVEALED on that server truth alone, with no local flag involved.
       // Never auto-resubmit (T-14-05) — only an explicit user retry (now
       // possible again) may call revealKey.
-      humbleRevealedStore.delete(machineName)
+      humbleStores().humbleRevealedStore.delete(machineName)
       appendAudit(gamekey, machineName, 'reveal_rejected', {
         title: target.title,
         platform: target.platform,
@@ -1445,7 +1456,7 @@ async function doRevealKey(
 
     // Definitive failure (D-78): roll back the write-ahead REVEALED flag —
     // this key was never actually revealed server-side.
-    humbleRevealedStore.delete(machineName)
+    humbleStores().humbleRevealedStore.delete(machineName)
     appendAudit(gamekey, machineName, 'reveal_failed', {
       title: target.title,
       platform: target.platform,
@@ -1519,10 +1530,13 @@ async function markRedeemed(
 
   // D-42-01: the explicit-action writer stamps source: 'user', distinguishing
   // this from plan 42-03's inferred 'ownership-exact' settle.
-  humbleLocalRedeemedStore.set(compositeKey(gamekey, machineName), {
-    redeemedAt: Date.now(),
-    source: 'user'
-  })
+  humbleStores().humbleLocalRedeemedStore.set(
+    compositeKey(gamekey, machineName),
+    {
+      redeemedAt: Date.now(),
+      source: 'user'
+    }
+  )
   appendAudit(gamekey, machineName, 'mark_redeemed', {
     title: target.title,
     platform: target.platform
@@ -1563,10 +1577,12 @@ async function undoRedeemed(
   }
 
   const composite = compositeKey(gamekey, machineName)
-  const priorRecord = humbleLocalRedeemedStore.get(composite)
-  humbleLocalRedeemedStore.delete(composite)
+  const priorRecord = humbleStores().humbleLocalRedeemedStore.get(composite)
+  humbleStores().humbleLocalRedeemedStore.delete(composite)
   if (priorRecord?.source === 'ownership-exact') {
-    humbleSettleDeclinedStore.set(composite, { declinedAt: Date.now() })
+    humbleStores().humbleSettleDeclinedStore.set(composite, {
+      declinedAt: Date.now()
+    })
   }
   appendAudit(gamekey, machineName, 'undo_redeemed', {
     title: target.title,

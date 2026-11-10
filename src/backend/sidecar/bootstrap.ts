@@ -82,6 +82,7 @@ import { SidecarKeyringTokenStore } from './keyringTokenStore'
 import { installSidecarHumbleSecretStore } from './humbleSecretStore'
 import { installSidecarSteamGridDbSecretStore } from './steamgridSecretStore'
 import { bindSteamGridDbSecretDeps } from '../steamgrid/secretStore'
+import { bindHumbleStores } from '../humble/humbleStores'
 // 34.5 gap cycle 4 plan 36 (developer-scoped Routing addition): the dev-only plaintext vault
 // that this branch installs INSTEAD OF the two keyring stores below, when opted into. Import
 // only — no module-scope call. See installDevSecretVault()'s own header for the full guardrail
@@ -1443,6 +1444,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         const { stores } = requireServices(state)
         bindSteamGridDbSecretDeps({ stores })
         bindBottleStores({ stores })
+        bindHumbleStores({ stores })
         // Placement is load-bearing (Phase 28, T-28-10): must run AFTER startRpcServer() so
         // requestRustInvoke can write frames, and BEFORE any invoke handler body can run (those
         // only fire from the RPC loop below, never at module-import time) so no handler ever
