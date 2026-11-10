@@ -18,6 +18,13 @@
                 "signInToSteam": "Sign in to Steam",
                 "stalled_one": "No download progress for {{count}} minute — the install was stopped",
                 "stalled_other": "No download progress for {{count}} minutes — the install was stopped"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Your Epic Games sign-in has expired, so {{title}} didn't start. Log out of Epic Games, log in again, then press Play.",
+                    "loginFailed": "GameLib couldn't sign in to Epic Games, so {{title}} didn't start. Check your internet connection, or log out of Epic Games and log in again. If this game can run offline, turn on Run Game Offline in its settings.",
+                    "network": "GameLib couldn't reach Epic Games to sign in, so {{title}} didn't start. Check your internet connection and try again. If this game can run offline, turn on Run Game Offline in its settings."
+                }
             }
         },
         "filePicker": {

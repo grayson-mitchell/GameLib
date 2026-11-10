@@ -155,7 +155,7 @@ describe('games.ts launch() wiring gate', () => {
     expect(body).toContain(
       'createBoundedOutputCapture(LEGENDARY_LAUNCH_OUTPUT_CAP)'
     )
-    expect(body).toMatch(/onOutput:\s*launchOutput\.onOutput/)
+    expect(body).toMatch(/onOutput:[^,]*launchOutput\.onOutput\(/)
     expect(body).toContain('classifyLegendaryLaunchFailure(')
   })
 

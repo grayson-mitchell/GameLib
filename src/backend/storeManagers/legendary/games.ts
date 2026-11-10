@@ -41,6 +41,12 @@ import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
 import { t } from 'i18next'
 import { isOnline } from '../../online_monitor'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
+import { createBoundedOutputCapture } from 'backend/signInProbe/classify'
+import {
+  LEGENDARY_LAUNCH_OUTPUT_CAP,
+  classifyLegendaryLaunchFailure,
+  legendaryLaunchFailureDialog
+} from './launchFailure'
 import { Catalog, Product } from 'common/types/epic-graphql'
 import { sendFrontendMessage } from '../../ipc'
 import { Game } from 'common/types/game_manager'
@@ -1103,16 +1109,37 @@ export default class LegendaryGame implements Game {
       status: 'playing'
     })
 
-    const { error } =
+    // Quick 261111-8b5: onOutput makes this run non-joinable in callRunner
+    // (WR-01), which is safe because launcher.ts single-flights launches
+    // (WR-03). The capture is bounded and its text is never logged.
+    const launchOutput = createBoundedOutputCapture(LEGENDARY_LAUNCH_OUTPUT_CAP)
+    const { error, abort } =
       await this.deps.libraryManagers.legendary.runRunnerCommand(command, {
         abortId: this.appName,
         env: commandEnv,
         wrappers: wrappers,
         logMessagePrefix: `Launching ${gameInfo.title}`,
-        logWriters: gameSettings.verboseLogs ? [logWriter] : []
+        logWriters: gameSettings.verboseLogs ? [logWriter] : [],
+        onOutput: (chunk) => launchOutput.onOutput(chunk)
       })
 
     this.deps.launcher.launchCleanup(rpcClient)
+
+    const loginFailure = classifyLegendaryLaunchFailure({
+      output: launchOutput.text(),
+      errored: Boolean(error),
+      aborted: Boolean(abort)
+    })
+    if (loginFailure) {
+      logWriter.logError([
+        'Launch failed: Epic sign-in failed (',
+        loginFailure,
+        ')'
+      ])
+      showDialogBoxModalAuto(
+        legendaryLaunchFailureDialog(loginFailure, gameInfo.title)
+      )
+    }
 
     return !error
   }
