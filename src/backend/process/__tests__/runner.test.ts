@@ -261,7 +261,7 @@ describe('openDetached', () => {
 
 describe('C-02 WR-01 drain grace and caller capabilities', () => {
   const GRANDCHILD =
-    "require('child_process').spawn(process.execPath,['-e','setTimeout(()=>{},5000)'],{stdio:'inherit'})"
+    "require('child_process').spawn(process.execPath,['-e','setTimeout(()=>{},5000)'],{stdio:'inherit'}).unref()"
 
   it('WR-01 settles after a timeout kill even if a grandchild holds the pipes', async () => {
     const t0 = Date.now()

@@ -28,6 +28,9 @@ export interface LogSink {
 
 export interface ChildHandle {
   readonly pid: number | undefined
+  /** Live exit state of the child; null until it exits. */
+  readonly exitCode: number | null
+  readonly signalCode: NodeJS.Signals | null
   kill(signal?: NodeJS.Signals): boolean
 }
 export interface TrackFilter {
@@ -42,6 +45,11 @@ export interface RunOptions {
   replaceEnv?: boolean
   /** Default DEFAULT_RUN_TIMEOUT_MS; must be positive finite. */
   timeoutMs?: number
+  /**
+   * The only way to run without a timeout (D-10, A1). The reason is mandatory and
+   * non-empty; mutually exclusive with timeoutMs.
+   */
+  timeout?: { none: true; reason: string }
   signal?: AbortSignal
   stdin?: string
   onSpawn?: (child: ChildHandle) => void
@@ -67,11 +75,16 @@ export interface RunResult {
   aborted: boolean
   truncated: boolean
   pid: number | undefined
+  /**
+   * True when the child exited but its pipes were still open after the drain
+   * grace (a grandchild holds them); late output was dropped.
+   */
+  drainTimedOut?: boolean
 }
 
 export interface LongLivedOptions extends Omit<
   RunOptions,
-  'timeoutMs' | 'resolveOn' | 'maxBufferBytes' | 'stdin'
+  'timeoutMs' | 'timeout' | 'resolveOn' | 'maxBufferBytes' | 'stdin'
 > {
   id: string
   stdio?: 'pipe' | 'ignore'

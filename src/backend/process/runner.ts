@@ -27,11 +27,14 @@ import type {
   RunResult,
   RunSyncOptions,
   SyncResult,
+  TimerHandle,
   TrackFilter
 } from './types'
 
 export const DEFAULT_RUN_TIMEOUT_MS = 30_000
 const DEFAULT_MAX_BUFFER_BYTES = 8 * 1024 * 1024
+/** Grace after 'exit' before a pipe-holding grandchild stops blocking run(). */
+export const DRAIN_GRACE_MS = 250
 
 type Unrefable = { unref?: () => void }
 
@@ -106,6 +109,12 @@ export function createProcessRunner(deps: ProcessRunnerDeps): ProcessRunner {
   function handleOf(child: ChildProcess): ChildHandle {
     return {
       pid: child.pid,
+      get exitCode() {
+        return child.exitCode
+      },
+      get signalCode() {
+        return child.signalCode
+      },
       kill: (signal) => child.kill(signal)
     }
   }
@@ -115,9 +124,28 @@ export function createProcessRunner(deps: ProcessRunnerDeps): ProcessRunner {
     argv: readonly string[],
     opts: RunOptions = {}
   ): Promise<RunResult> {
-    const timeoutMs = opts.timeoutMs ?? DEFAULT_RUN_TIMEOUT_MS
-    if (!positiveFinite(timeoutMs)) {
-      throw new TypeError('run requires a positive finite timeoutMs (D-10)')
+    let timeoutMs: number | null
+    if (opts.timeout !== undefined) {
+      if (opts.timeoutMs !== undefined) {
+        throw new TypeError(
+          'run: timeoutMs and timeout are mutually exclusive (D-10)'
+        )
+      }
+      if (
+        opts.timeout.none !== true ||
+        typeof opts.timeout.reason !== 'string' ||
+        opts.timeout.reason.trim().length === 0
+      ) {
+        throw new TypeError(
+          'run: timeout opt-out requires { none: true, reason } with a non-empty reason (D-10)'
+        )
+      }
+      timeoutMs = null
+    } else {
+      timeoutMs = opts.timeoutMs ?? DEFAULT_RUN_TIMEOUT_MS
+      if (!positiveFinite(timeoutMs)) {
+        throw new TypeError('run requires a positive finite timeoutMs (D-10)')
+      }
     }
     const maxBytes = opts.maxBufferBytes ?? DEFAULT_MAX_BUFFER_BYTES
     const resolveOn = opts.resolveOn ?? 'close'
@@ -132,7 +160,10 @@ export function createProcessRunner(deps: ProcessRunnerDeps): ProcessRunner {
       })
       unrefChild(child)
       const handle = handleOf(child)
-      tracked.track(child, opts.track ?? { runner: 'runner', key: cmd })
+      const untrack = tracked.track(
+        child,
+        opts.track ?? { runner: 'runner', key: cmd }
+      )
 
       let stdout = ''
       let stderr = ''
@@ -143,10 +174,15 @@ export function createProcessRunner(deps: ProcessRunnerDeps): ProcessRunner {
       let aborted = false
       let settled = false
 
-      const timer = deps.clock.setTimeout(() => {
-        timedOut = true
-        child.kill('SIGKILL')
-      }, timeoutMs)
+      let drainTimedOut = false
+      let drainTimer: TimerHandle | undefined
+      const timer =
+        timeoutMs === null
+          ? undefined
+          : deps.clock.setTimeout(() => {
+              timedOut = true
+              child.kill('SIGKILL')
+            }, timeoutMs)
 
       const capture = (text: string, stream: 'out' | 'err'): void => {
         const bytes = Buffer.byteLength(text)
@@ -180,7 +216,8 @@ export function createProcessRunner(deps: ProcessRunnerDeps): ProcessRunner {
       ): void => {
         if (settled) return
         settled = true
-        deps.clock.clear(timer)
+        if (timer) deps.clock.clear(timer)
+        if (drainTimer) deps.clock.clear(drainTimer)
         resolve({
           code,
           signal,
@@ -189,7 +226,8 @@ export function createProcessRunner(deps: ProcessRunnerDeps): ProcessRunner {
           timedOut,
           aborted,
           truncated,
-          pid: child.pid
+          pid: child.pid,
+          ...(drainTimedOut ? { drainTimedOut: true } : {})
         })
       }
 
@@ -200,10 +238,24 @@ export function createProcessRunner(deps: ProcessRunnerDeps): ProcessRunner {
         }
         if (settled) return
         settled = true
-        deps.clock.clear(timer)
+        if (timer) deps.clock.clear(timer)
+        if (drainTimer) deps.clock.clear(drainTimer)
         reject(err)
       })
-      if (resolveOn === 'exit') child.on('exit', finish)
+      child.on('exit', (code, signal) => {
+        if (settled) return
+        if (resolveOn === 'exit' || timedOut || aborted) {
+          // A grandchild may hold the stdio pipes so 'close' never arrives;
+          // give the pipes a bounded grace, then cut them (WR-01).
+          drainTimer = deps.clock.setTimeout(() => {
+            drainTimedOut = true
+            untrack()
+            child.stdout?.destroy()
+            child.stderr?.destroy()
+            finish(code, signal)
+          }, DRAIN_GRACE_MS)
+        }
+      })
       child.on('close', finish)
 
       if (child.stdin) {

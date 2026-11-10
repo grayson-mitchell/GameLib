@@ -6,6 +6,7 @@
  * unless `repeat: true`. All state lives in the factory closure.
  */
 import type {
+  ChildHandle,
   LongLivedHandle,
   LongLivedOptions,
   ProcessRunner,
@@ -38,7 +39,12 @@ export interface ScriptedRunner extends ProcessRunner {
   expectAllConsumed(): void
 }
 
-const noChild = { pid: undefined, kill: () => false }
+const noChild: ChildHandle = {
+  pid: undefined,
+  exitCode: null,
+  signalCode: null,
+  kill: () => false
+}
 
 export function createScriptedRunner(
   script: readonly ScriptStep[]
