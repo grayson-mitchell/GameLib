@@ -34,7 +34,7 @@ import { spawn } from 'child_process'
 import { runWineCommand, runScriptForGame } from 'backend/launcher'
 import * as trackedChildren from 'backend/trackedChildren'
 import type { GameInfo, GameSettings } from 'common/types'
-import type { LogWriter } from 'backend/logger'
+import type LogWriter from 'backend/logger/log_writer'
 
 class FakeStream extends EventEmitter {
   destroy = jest.fn()

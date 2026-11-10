@@ -89,6 +89,8 @@ class FakeChildProcess extends EventEmitter {
   stderr = new FakeStream()
 }
 
+import type LogWriter from 'backend/logger/log_writer'
+
 let fakeChild: FakeChildProcess
 
 function makeFakeLogWriter() {
@@ -660,7 +662,7 @@ describe('Layer-1 characterization (66.1 MH-4): callRunner', () => {
 
   it('writes the command header to every log writer before the first output chunk', async () => {
     const p = callRunner(['list', 'l1-header'], runner, {
-      logWriters: [writer]
+      logWriters: [writer as unknown as LogWriter]
     })
     await flush()
     fakeChild.stdout.emit('data', 'first-chunk')
@@ -676,7 +678,7 @@ describe('Layer-1 characterization (66.1 MH-4): callRunner', () => {
   it('applies logSanitizer to the writers but hands onOutput the raw chunk', async () => {
     const seen: string[] = []
     const p = callRunner(['list', 'l1-sanitizer'], runner, {
-      logWriters: [writer],
+      logWriters: [writer as unknown as LogWriter],
       logSanitizer: (s: string) => s.replace('SECRET', '***'),
       onOutput: (chunk) => seen.push(chunk)
     })
