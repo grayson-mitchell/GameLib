@@ -613,11 +613,90 @@ Plans:
 **Goal:** D-15 step 2 of Phase 66 (decisions in `66-CONTEXT.md`). Nothing is constructed at import time. A stores factory replaces the 16 `*/stores.ts` modules and `key_value_stores.ts`. `createStoreManagers` builds the library and game manager classes (gog, legendary, nile, steam, sideload) with constructor deps at boot (D-02), and the 46 non-test consumers of `libraryManagerMap`/`gameManagerMap`/`storeLaunchHooks` receive them. The 25 `sidecar/*FlowRegistration.ts` files take narrow slices (D-01). In `launcher.ts`, `callRunner`, `runWineCommand`, the gamescope probe and script spawns become runner callers, pinned by characterization tests first. `utils.ts` `spawnAsync` becomes a thin runner caller and `handleExit` calls the runner's teardown. `trackedChildren.ts` and `longLivedChildren.ts` are deleted, with comet and the bridge `helperSpawn` moving to `spawnLongLived` (D-10, D-11). Ceilings drop in the same commits (D-16). About 16–18 plans.
 **Requirements**: TBD
 **Depends on:** Phase 66
-**Plans:** 0 plans
+**Plans:** 28 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 66.1 to break down)
+**Wave 1**
+
+- [ ] 66.1-01-PLAN.md — runner C-02 fixes (WR-01 drain grace, WR-02 pin, WR-03 killPid/maxBuffer), timeout opt-out, ChildHandle exit state, scripted-runner capabilities
+- [ ] 66.1-02-PLAN.md — launcher Layer-1 characterization + pure buildGameScopeCommand
+- [ ] 66.1-03-PLAN.md — 'register-handlers' boot step, C-03 (ctx.paths.userData), C-04 (late-log leak)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 66.1-04-PLAN.md — BootServices expand: identity facades, 'stores'/'command-runner'/'store-managers' steps, test services, conversion rules R1-R8
+
+**Wave 3**
+
+- [ ] 66.1-05-PLAN.md — createCommandRunner on the runner (callRunner/runWineCommand/getWinePath/runScriptForGame) + mock-free Layer-2 suite
+
+**Wave 4**
+
+- [ ] 66.1-06-PLAN.md — createSpawnAsync + createQuitHandler on the runner
+
+**Wave 5**
+
+- [ ] 66.1-07-PLAN.md — registrations group A onto slices (wineTools, shortcuts, enrichment, engine, eosOverlay, humble, downloadQueue, runnerAuth)
+- [ ] 66.1-08-PLAN.md — manager constructor deps (all five) + GOG tree
+
+**Wave 6**
+
+- [ ] 66.1-09-PLAN.md — Legendary tree
+- [ ] 66.1-10-PLAN.md — Steam core (library manager, game, library/* readers, launch/auth/install entry modules)
+- [ ] 66.1-12-PLAN.md — tools, utils helpers, shortcuts
+- [ ] 66.1-13-PLAN.md — sign-in probe, dev secret vault, gamesdb, crossoverRatingMap, macArch recovery
+- [ ] 66.1-14-PLAN.md — engine helpers + known-fix modules
+
+**Wave 7**
+
+- [ ] 66.1-11-PLAN.md — download queue as a boot service + dispatch/protocol/save_sync/launchSingleFlight
+- [ ] 66.1-16-PLAN.md — Steam stores consumers
+- [ ] 66.1-19-PLAN.md — kvs/wine/cache store reads in config.ts, utils.ts and small modules
+
+**Wave 8**
+
+- [ ] 66.1-15-PLAN.md — nile, sideload, storeManagerCommon
+- [ ] 66.1-17-PLAN.md — Steam bottle family
+- [ ] 66.1-20-PLAN.md — domain store consumers (humble, logger, migration, runsForMe, wine, overrides, crossover, wiki)
+
+**Wave 9**
+
+- [ ] 66.1-18-PLAN.md — Steam bridge launch path + bridge store readers
+- [ ] 66.1-21-PLAN.md — registrations group B (appShell, runnerMisc, settings, installedJsonWatcher)
+
+**Wave 10**
+
+- [ ] 66.1-22-PLAN.md — Steam registrations + MH-3 registration gate
+
+**Wave 11**
+
+- [ ] 66.1-23-PLAN.md — construction flip: createStoreManagers + createLauncher at boot; libraryManagerMap/storeLaunchHooks deleted
+
+**Wave 12**
+
+- [ ] 66.1-24-PLAN.md — launcher legacy spawns deleted, gamescope probe on the runner, shared callback types retyped
+
+**Wave 13**
+
+- [ ] 66.1-25-PLAN.md — stores contract: 16 store factories, per-boot registry, moduleState -49
+
+**Wave 14**
+
+- [ ] 66.1-26-PLAN.md — comet + bridge helper on spawnLongLived, killTracked on the runner
+
+**Wave 15**
+
+- [ ] 66.1-27-PLAN.md — delete trackedChildren/longLivedChildren + legacy utils wrappers; end-state gates; README hand-off
+
+**Wave 16**
+
+- [ ] 66.1-28-PLAN.md — operator live check on macOS (non-autonomous)
+
+**Cross-cutting constraints:**
+
+- Plans execute sequentially on main in wave-then-number order; consumer files convert once onto slices, owners flip behind facades (A3)
+- Every removed mock or site lowers its ceiling shard in the same commit (D-16); no new test file calls jest.mock, never jest.doMock
 
 ### Phase 66.2: Every backend spawn through the process runner, then the `child_process` ban (INSERTED)
 
@@ -777,7 +856,7 @@ Plans:
 **Goal:** The frontend has one state system. The 2,259-line `GlobalState.tsx` class component (`extends PureComponent`, 78 `setState` calls), served through `ContextProvider`, is retired in favour of the zustand store in `src/frontend/state/GlobalStateV2.ts` (164 lines today), so a change in one domain no longer re-renders every context consumer. Measured 2026-11-06, excluding tests: 130 frontend files use `ContextProvider` and 20 use `GlobalStateV2`. Three parts: (1) **Slices.** Move state into V2 one domain at a time (library and game list, downloads and install queue, Steam / Epic / GOG / Amazon / Humble auth, settings and theme, UI and dialog state), each with selector hooks (`useShallow`) so components subscribe to what they read. (2) **Ratchet.** Track the remaining `ContextProvider` consumers with a shrink-only count like Phase 62's, ending at zero, then delete `GlobalState.tsx` and the context. (3) **Live checks.** State moves surface as stale-UI and re-render bugs that type checks and unit tests miss, so each wave ends with a smoke check in `pnpm tauri:dev` (Library, Game page, Downloads, sign-in and sign-out per store, ConsoleMode). Measure Library re-render cost on a large library before and after. No behaviour change: anything else found becomes a todo. Open questions for discuss-phase: whether V2 as it stands is the target or needs restructuring first (it already imports `frontend/helpers/electronStores`); where persisted frontend state lives relative to Phase 68's versioned stores; and the order relative to Phase 64, which adds custom-theme state. Depends on Phase 62 because plans 62-17 to 62-19 convert runner checks in the same Library, Game, ConsoleMode and DownloadManager files. Came from the post-Phase-62 architecture review on 2026-11-06.
 **Requirements**: TBD
 **Depends on:** Phase 62
-**Plans:** 9/26 plans executed
+**Plans:** 11/26 plans executed
 
 Plans:
 
@@ -804,11 +883,11 @@ Plans:
 - [x] 69-07-PLAN.md — Convert 35 Settings components to uiState
 - [x] 69-08-PLAN.md — Convert UI-only screen consumers (sections, WineManager, Game, Console, Login Runner)
 - [x] 69-09-PLAN.md — Convert shared UI components, DialogHandler and hooks to uiState
-- [ ] 69-10-PLAN.md — Settings/theme slice into settingsState (D-08 subscriptions, zoom/focusRow boot)
+- [x] 69-10-PLAN.md — Settings/theme slice into settingsState (D-08 subscriptions, zoom/focusRow boot)
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 69-11-PLAN.md — Convert settings-slice consumers incl. App.tsx
+- [x] 69-11-PLAN.md — Convert settings-slice consumers incl. App.tsx
 - [ ] 69-12-PLAN.md — Downloads store + D-15 downloads-history fix (diagnose, then fix)
 
 **Wave 7** *(blocked on Wave 6 completion)*
