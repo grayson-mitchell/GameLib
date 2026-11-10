@@ -135,15 +135,12 @@ describe('Inert Wine toggles hidden for macOS Steam titles (quick 261104-uxr)', 
     }
   })
 
-  test('C: Tools stays outside the gate, under !isCrossover', () => {
+  test('C: Tools sits after the !isCrossover block, under !hideWineTools (quick 261110-v08)', () => {
     const wine = slice("index={'wine'}>")
-    const gateAt = wine.indexOf(gate)
-    const tools = wine.indexOf('<Tools />')
-    expect(gateAt).toBeGreaterThan(-1)
     expect(count(wine, '<Tools />')).toBe(1)
-    expect(tools).toBeGreaterThan(gateAt)
-    expect(tools).toBeGreaterThan(wine.indexOf('{!isCrossover && ('))
-    expect(wine.slice(gateAt, tools).trim().endsWith(')}')).toBe(true)
+    const tools = wine.indexOf('{!hideWineTools && <Tools />}')
+    expect(tools).toBeGreaterThan(-1)
+    expect(tools).toBeGreaterThan(wine.lastIndexOf('{!isMacSteamTitle && ('))
   })
 
   test('D: the Legacy tab keeps its FPS limit toggle', () => {

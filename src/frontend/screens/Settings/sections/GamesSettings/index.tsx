@@ -54,7 +54,10 @@ import { GameInfo } from 'common/types'
 import DisableUMU from '../../components/DisableUMU'
 import VerboseLogs from '../../components/VerboseLogs'
 import WinetricksSettings from '../WinetricksSettings'
-import { shouldShowWinetricksTab } from '../WinetricksSettings/visibility'
+import {
+  shouldShowWinetricksTab,
+  wineToolsHidden
+} from '../WinetricksSettings/visibility'
 import { hasCapability, isStore } from 'common/storeCapabilities'
 import { engineStateKey, useEngineState } from 'frontend/state/EngineState'
 
@@ -112,6 +115,12 @@ export default function GamesSettings() {
         effectiveEngineId === 'automatic' ||
         effectiveEngineId === 'crossover'
       : wineVersion?.type === 'crossover'
+  // quick 261110-v08: see wineToolsHidden in visibility.ts.
+  const hideWineTools = wineToolsHidden({
+    isCrossover,
+    isMacEngineGame,
+    isMacSteamTitle
+  })
   const isBottleBacked = engineState?.prefixKind === 'bottle'
   // Native Linux games and native macOS Steam games (steam://rungameid cannot take env vars) are excluded; nile is listed but inert because isNative is Windows-only for it. Browser games are not launched via setupEnvVars.
   const showStatsOverlay =
@@ -125,13 +134,13 @@ export default function GamesSettings() {
         )))
 
   // Phase 45 Plan 01 (D-03): mirrors `Tools/index.tsx`'s own gate, plus the Wine
-  // tab's `!isCrossover` guard -- see visibility.ts for why both are required.
+  // tab's Wine tools guard -- see visibility.ts for why both are required.
   const showWinetricksTab = shouldShowWinetricksTab({
     isDefault,
     isWindows: isWin,
     hasRunner: !!runner,
     showWineTab,
-    isCrossover
+    wineToolsHidden: hideWineTools
   })
 
   // Get the latest used tab index for the current game
@@ -257,7 +266,7 @@ export default function GamesSettings() {
             per-game file, which the bridged launch never reads for them:
             getBridgeBottleSettings spreads GlobalConfig, and
             TITLE_AUTHORITATIVE_KEYS (titleSettings.ts) excludes them. Tools
-            stays because it acts on the shared Steam bottle. */}
+            sits under hideWineTools, not !isCrossover (quick 261110-v08). */}
         {!isCrossover && (
           <>
             {!isMacSteamTitle && (
@@ -279,9 +288,9 @@ export default function GamesSettings() {
                 {isMac && <EnableDXVKFpsLimit />}
               </>
             )}
-            <Tools />
           </>
         )}
+        {!hideWineTools && <Tools />}
       </TabPanel>
 
       {showWinetricksTab && (
