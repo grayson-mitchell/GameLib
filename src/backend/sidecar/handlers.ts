@@ -146,7 +146,10 @@ export function registerHandlers(deps: {
     downloadQueue: deps.services.downloadQueue,
     stores: deps.services.stores
   })
-  registerSettingsFlows({ stores: deps.services.stores })
+  registerSettingsFlows({
+    managers: deps.services.managers,
+    stores: deps.services.stores
+  })
   // D-35-19-15's live gate: a DEV-ONLY single-host Epic cookie sweep, so the
   // `EPIC_COOKIE_HOSTS` sweep can be exercised against ONE sibling apex without
   // `LegendaryUser.logout()` destroying the operator's real Epic session. Self-gated —

@@ -117,16 +117,12 @@ jest.mock('backend/game_config', () => ({
 // private-branch handlers never construct a real GOGLibraryManager/GOGGame
 // either — and so a not-called assertion on `steam.getGame` can prove the
 // GOG-not-Steam classification (REQ-34.4-06) ─────────────────────────────────
-jest.mock('backend/storeManagers', () => ({
-  libraryManagerMap: {
-    steam: {
-      getGame: jest.fn()
-    },
-    gog: {
-      getGame: jest.fn()
-    }
+const managerStubs = {
+  library: {
+    steam: { getGame: jest.fn() },
+    gog: { getGame: jest.fn() }
   }
-}))
+}
 
 // ── backend/storeManagers/steam/state mock — a plain Map this suite controls
 // directly, so `steamLibrary.has(appName)` is a deterministic per-test
@@ -189,15 +185,18 @@ function freshRegistry(): void {
   ;({ hasExecutable: mockedHasExecutable } = require('backend/utils/os/path'))
   const { GlobalConfig } = require('backend/config')
   const { GameConfig } = require('backend/game_config')
-  const { libraryManagerMap } = require('backend/storeManagers')
   /* eslint-enable @typescript-eslint/no-require-imports */
   mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
   mockedGameConfigGet = GameConfig.get as jest.Mock
-  mockedSteamGetGame = libraryManagerMap.steam.getGame as jest.Mock
-  mockedGogGetGame = libraryManagerMap.gog.getGame as jest.Mock
+  mockedSteamGetGame = managerStubs.library.steam.getGame
+  mockedGogGetGame = managerStubs.library.gog.getGame
 }
 
-const boot = () => bootFresh({ reuseRegistry: true })
+const boot = () =>
+  bootFresh({
+    reuseRegistry: true,
+    services: { managers: managerStubs as never }
+  })
 
 // Root-level hook: runs before every describe's own beforeEach, so the mock
 // configuration below always targets the case's fresh registry.

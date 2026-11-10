@@ -14,7 +14,7 @@
  *     GameConfig-fallback logic from `main.ts:1012-1015`: if the in-memory
  *     Steam library Map (`storeManagers/steam/state.ts`, exported as
  *     `library`, aliased here as `steamLibrary`) has `appName`, route through
- *     `libraryManagerMap['steam'].getGame(appName).getSettings()`; otherwise
+ *     `deps.managers.library.steam.getGame(appName).getSettings()`; otherwise
  *     fall back to `GameConfig.get(appName).getSettings()`.
  *
  * These were originally filed under 30-PORTED-CHANNELS.md's "Deliberately NOT
@@ -48,8 +48,8 @@
  * filing them under "Steam ... Private branches" (that inventory groups by
  * file, not by actual runner; 34.4-RESEARCH.md's correction). They are landed
  * here, never in `steamAuthFlowRegistration.ts`, because this file already
- * imports `libraryManagerMap` (see `requestGameSettings`/`isNative` above) —
- * no new import, no new module, no new store plumbing. Both go through
+ * takes the manager slice (see `requestGameSettings`/`isNative` above) —
+ * no new module, no new store plumbing. Both go through
  * `GOGGame.getBranchPassword()`/`setBranchPassword()`
  * (`storeManagers/gog/games.ts:1398,1402`), the SAME GOG branch-password key
  * store `main.ts` reads/writes through — this module never addresses that
@@ -61,26 +61,10 @@ import { cpus } from 'os'
 import { isAbsolute, relative, resolve } from 'path'
 
 import { ipcMain } from '../platform'
-// Load-bearing FIRST import (mirrors installFlowRegistration.ts's /
-// steamAuthFlowRegistration.ts's Phase 27 Plan 05 circular-dep fix): force
-// `storeManagers/index.ts` to be the INITIALIZATION ENTRY before the direct
-// `steam/state` import below resolves. `storeManagers/index.ts` imports
-// `steam/library` at its OWN top (which transitively pulls in the rest of
-// steam/*) and only THEN constructs its eager `libraryManagerMap`
-// (`new SteamLibraryManager()` ...), so entering through it lets every
-// steam/* module finish defining its class export first. Entering through
-// `steam/state` DIRECTLY (as this file's own import below does) risks the
-// same re-entrant `index.ts` mid-evaluation crash `steamFlowRegistration.ts`'s
-// docstring documents (`SteamLibraryManager is not a constructor`,
-// esbuild-bundle-only, ts-jest's init order differs) — this fix is per-file,
-// not "once is enough", because each curated registration module is its own
-// independent entry point into the bundle's module graph.
-import '../storeManagers'
 import { GlobalConfig } from '../config'
 import { GameConfig } from '../game_config'
 import { applyGameSetting } from './gameSettingWrite'
 import { isWritableEngineOverride } from '../engine/engineConfig'
-import { libraryManagerMap } from '../storeManagers'
 // NOTE: the export is `library`, not `steamLibrary` — there is no export
 // named `steamLibrary` from this module. Aliased on import exactly as
 // `main.ts:43` does.
@@ -96,7 +80,7 @@ import { hasExecutable } from '../utils/os/path'
 import { isFlatpak } from '../constants/environment'
 import { gamesConfigPath } from '../constants/paths'
 import type { AppSettings } from 'common/types'
-import type { Stores } from '../services/types'
+import type { Stores, StoreManagers } from '../services/types'
 
 /**
  * WR-01 (Phase 31 Plan 04) path-containment guard for the per-game write
@@ -124,6 +108,7 @@ function isContainedGameConfig(appName: string): boolean {
  * registry happens.
  */
 export function registerSettingsFlows(deps: {
+  managers: Pick<StoreManagers, 'library'>
   stores: Pick<Stores, 'kvs'>
 }): void {
   ipcMain.handle('requestAppSettings', async () =>
@@ -135,7 +120,7 @@ export function registerSettingsFlows(deps: {
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[0] as string
       if (steamLibrary.has(appName)) {
-        return libraryManagerMap['steam'].getGame(appName).getSettings()
+        return deps.managers.library.steam.getGame(appName).getSettings()
       }
       return GameConfig.get(appName).getSettings()
     }
@@ -283,13 +268,13 @@ export function registerSettingsFlows(deps: {
   )
 
   // main.ts:1567-1569 — NEW FINDING (31-RESEARCH.md Q1), runner-generic,
-  // libraryManagerMap already imported above for requestGameSettings.
+  // the manager slice is the same one requestGameSettings uses.
   ipcMain.handle('isNative', async (_event: unknown, payload: unknown) => {
     const { appName, runner } = (payload ?? {}) as {
       appName?: string
-      runner?: keyof typeof libraryManagerMap
+      runner?: keyof StoreManagers['library']
     }
-    return libraryManagerMap[runner as keyof typeof libraryManagerMap]
+    return deps.managers.library[runner as keyof StoreManagers['library']]
       .getGame(appName as string)
       .isNative()
   })
@@ -303,12 +288,12 @@ export function registerSettingsFlows(deps: {
   ipcMain.handle(
     'getPrivateBranchPassword',
     async (_event: unknown, ...args: unknown[]) =>
-      libraryManagerMap['gog'].getGame(args[0] as string).getBranchPassword()
+      deps.managers.library.gog.getGame(args[0] as string).getBranchPassword()
   )
   ipcMain.handle(
     'setPrivateBranchPassword',
     async (_event: unknown, ...args: unknown[]) =>
-      libraryManagerMap['gog']
+      deps.managers.library.gog
         .getGame(args[0] as string)
         .setBranchPassword(args[1] as string)
   )

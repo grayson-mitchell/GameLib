@@ -256,6 +256,16 @@ function syncTrayIcon(): void {
   }
 }
 
+/** Narrow dependency slice for `registerAppShellFlows` (66.1, D-01). */
+export interface AppShellFlowDeps {
+  managers: Pick<StoreManagers, 'library'>
+  downloadQueue: Pick<DownloadQueue, 'initQueue'>
+  quit: Pick<QuitHandler, 'handleExit'>
+  stores: Pick<Stores, 'kvs' | 'legendary'>
+  /** Default `false`; handlers.ts sets it under Jest (see the docstring above). */
+  skipInitialTraySync?: boolean
+}
+
 /**
  * Registers the 21 app-shell channels (7 invoke + 14 send). Called once from
  * `handlers.ts` — this
@@ -267,15 +277,6 @@ function syncTrayIcon(): void {
  * `tray_set_icon` correction under Jest, without changing this function's behavior for any
  * caller that invokes it directly (see the call site below for the full rationale).
  */
-export interface AppShellFlowDeps {
-  managers: Pick<StoreManagers, 'library'>
-  downloadQueue: Pick<DownloadQueue, 'initQueue'>
-  quit: Pick<QuitHandler, 'handleExit'>
-  stores: Pick<Stores, 'kvs' | 'legendary'>
-  /** Default `false`; handlers.ts sets it under Jest (see the docstring above). */
-  skipInitialTraySync?: boolean
-}
-
 export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   // ── invoke (7) ─────────────────────────────────────────────────────────
   // Was 8 under the original Phase 34.1 D-01 set; `getLoginBackground` is a

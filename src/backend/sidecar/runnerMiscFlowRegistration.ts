@@ -87,11 +87,11 @@ import {
 import { download, isInstalled } from '../wine/runtimes/runtimes'
 import type { RuntimeName, Runner } from 'common/types'
 import type { GOGCloudSavesLocation } from 'common/types/gog'
+import type { Game } from 'common/types/game_manager'
 import path from 'path'
-import { libraryManagerMap } from '../storeManagers'
 import { createTools } from '../tools'
 import type { ToolsDeps } from '../tools'
-import { isEpicServiceOffline, sendGameStatusUpdate, getGame } from '../utils'
+import { isEpicServiceOffline, sendGameStatusUpdate } from '../utils'
 import { isOnline } from '../online_monitor'
 import { logInfo, logWarning, LogPrefix } from '../logger'
 import { sendFrontendMessage } from '../ipc'
@@ -150,7 +150,7 @@ export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
       runner: Runner
     }
 
-    const gameSettings = await libraryManagerMap[runner]
+    const gameSettings = await deps.managers.library[runner]
       .getGame(appName)
       .getSettings()
 
@@ -177,8 +177,10 @@ export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
 
     if (isStore(runner, 'gog')) {
       // Check if game was modified by offline installer / wine uninstaller
-      await libraryManagerMap['gog'].checkForOfflineInstallerChanges(appName)
-      const maybeNewGameInfo = libraryManagerMap['gog'].getGameInfo(appName)
+      await deps.managers.library['gog'].checkForOfflineInstallerChanges(
+        appName
+      )
+      const maybeNewGameInfo = deps.managers.library['gog'].getGameInfo(appName)
       if (maybeNewGameInfo) {
         sendFrontendMessage('pushGameToLibrary', maybeNewGameInfo)
       }
@@ -188,13 +190,15 @@ export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
   })
 
   ipcMain.handle('egsSync', async (_event: unknown, ...args: unknown[]) => {
-    return libraryManagerMap['legendary'].toggleGamesSync(args[0] as string)
+    return deps.managers.library['legendary'].toggleGamesSync(args[0] as string)
   })
 
   ipcMain.handle(
     'getGOGLinuxInstallersLangs',
     async (_event: unknown, ...args: unknown[]) =>
-      libraryManagerMap['gog'].getLinuxInstallersLanguages(args[0] as string)
+      deps.managers.library['gog'].getLinuxInstallersLanguages(
+        args[0] as string
+      )
   )
 
   // ── Saves-sync channels (main.ts:1255,1263) ────────────────────────────────
@@ -217,7 +221,7 @@ export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
       // channel is still the correct domain owner for the `documents` case (CONTEXT.md D-09
       // wrongly filed it under shortcuts) — the correction is narrowly about which channel's
       // runtime call path reaches the line, not about which domain owns the dependency.
-      return libraryManagerMap['gog']
+      return deps.managers.library['gog']
         .getGame(appName)
         .syncSaves(arg, '', gogSaves)
     }
@@ -257,7 +261,7 @@ export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
       return 'App is offline, cannot sync saves!'
     }
 
-    const output = await libraryManagerMap[runner]
+    const output = await deps.managers.library[runner]
       .getGame(appName)
       .syncSaves(arg, savesPath)
     logInfo(output, LogPrefix.Backend)
@@ -273,7 +277,8 @@ export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
       const appName = args[0] as string
       const runner = args[1] as Runner
       const lang = (args[2] as string | undefined) ?? 'en-US'
-      return getGame(appName, runner).getAchievements?.(lang) ?? []
+      const game: Game = deps.managers.library[runner].getGame(appName)
+      return game.getAchievements?.(lang) ?? []
     }
   )
 
@@ -308,7 +313,7 @@ export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
         return
       }
       if (isStore(runner, 'gog')) {
-        return libraryManagerMap['gog'].getGame(appName).getGOGPlaytime()
+        return deps.managers.library['gog'].getGame(appName).getGOGPlaytime()
       }
 
       return

@@ -89,17 +89,11 @@ jest.mock('os', () => {
 // `callTool` (plan 34.5-12). Neither `getCometBin` nor `axiosClient` is invoked by this suite
 // (only registration kind + this plan's own dispatch logic is proven, no runner CLI is
 // invoked), so an empty-bodied stand-in is sufficient for those two. ──────────────────────────
-// Phase 34.6 Plan 10 additionally supplies `getGame` — the curated import target for
-// `getAchievements` (main.ts:822-827). A bare `jest.fn()` (reconfigured per-test via
-// `.mockReturnValue()`), never an inline object literal, so each test controls whether the
-// returned "game" exposes a `getAchievements` method at all.
-const mockGetGame = jest.fn()
 jest.mock('backend/utils', () => ({
   getCometBin: jest.fn(),
   axiosClient: { get: jest.fn() },
   isEpicServiceOffline: jest.fn(() => Promise.resolve(false)),
-  sendGameStatusUpdate: jest.fn(),
-  getGame: (...args: unknown[]) => mockGetGame(...args)
+  sendGameStatusUpdate: jest.fn()
 }))
 
 // ── ../../save_sync — `getDefaultSavePath` is the curated import target for the sidecar's own
@@ -181,8 +175,11 @@ const mockLegendarySyncSaves = jest.fn()
 const mockLegendaryGetGame = jest.fn()
 const mockToggleGamesSync = jest.fn()
 
-jest.mock('../../storeManagers', () => ({
-  libraryManagerMap: {
+// The manager slice handed to registerRunnerMiscFlows (no module mock: the registration takes
+// its managers as a dependency).
+const mockSideloadGetGame = jest.fn()
+const managerSlice = {
+  library: {
     gog: {
       getGame: (...args: unknown[]) => mockGogGetGame(...args),
       checkForOfflineInstallerChanges: (...args: unknown[]) =>
@@ -194,9 +191,12 @@ jest.mock('../../storeManagers', () => ({
     legendary: {
       getGame: (...args: unknown[]) => mockLegendaryGetGame(...args),
       toggleGamesSync: (...args: unknown[]) => mockToggleGamesSync(...args)
+    },
+    sideload: {
+      getGame: (...args: unknown[]) => mockSideloadGetGame(...args)
     }
   }
-}))
+}
 
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -212,7 +212,7 @@ import { getPath } from '../pathShim'
 // duplicate registration, mirroring every prior cluster suite's own file-scope-once convention. ──
 // The tools module is mocked above, so the deps are never read.
 registerRunnerMiscFlows({
-  managers: { library: {} }
+  managers: managerSlice
 } as unknown as Parameters<typeof registerRunnerMiscFlows>[0])
 
 // ── Describe 1: Registration kind ──────────────────────────────────────────────────────────────
@@ -501,7 +501,9 @@ describe('late-discovered channel dispatch — getAchievements, getDefaultSavePa
   describe('getAchievements', () => {
     it('REQ-34.6-04/08/09 defaults lang to "en-US" when the third argument is absent', async () => {
       const mockGetAchievements = jest.fn().mockResolvedValue([{ id: 'a1' }])
-      mockGetGame.mockReturnValue({ getAchievements: mockGetAchievements })
+      mockLegendaryGetGame.mockReturnValue({
+        getAchievements: mockGetAchievements
+      })
 
       const result = await getAchievementsHandler()(
         undefined,
@@ -509,14 +511,14 @@ describe('late-discovered channel dispatch — getAchievements, getDefaultSavePa
         'legendary'
       )
 
-      expect(mockGetGame).toHaveBeenCalledWith('fake-app', 'legendary')
+      expect(mockLegendaryGetGame).toHaveBeenCalledWith('fake-app')
       expect(mockGetAchievements).toHaveBeenCalledWith('en-US')
       expect(result).toEqual([{ id: 'a1' }])
     })
 
     it('REQ-34.6-04/08/09 forwards an explicit lang argument unchanged', async () => {
       const mockGetAchievements = jest.fn().mockResolvedValue([])
-      mockGetGame.mockReturnValue({ getAchievements: mockGetAchievements })
+      mockGogGetGame.mockReturnValue({ getAchievements: mockGetAchievements })
 
       await getAchievementsHandler()(undefined, 'fake-app', 'gog', 'fr-FR')
 
@@ -524,7 +526,7 @@ describe('late-discovered channel dispatch — getAchievements, getDefaultSavePa
     })
 
     it('REQ-34.6-04/08/09 resolves [] when the game has no getAchievements method', async () => {
-      mockGetGame.mockReturnValue({})
+      mockSideloadGetGame.mockReturnValue({})
 
       const result = await getAchievementsHandler()(
         undefined,

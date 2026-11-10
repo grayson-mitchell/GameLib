@@ -180,8 +180,12 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // 66.1-19: re-pin -- registerSettingsFlows takes the kvs store slice by parameter and passes it
   // to GlobalConfig.setSetting/writeConfig (R3). No channel, guard or `steamLibrary.has` gate
   // moved. Prior digest: eeb736f040ead01b46da0e346748f6472ffd569c4773966a5e64c8c8a12dfa5b
+  // 66.1-21: re-pin -- registerSettingsFlows takes the managers slice (library) instead of
+  // importing libraryManagerMap, and drops the load-bearing side-effect `import '../storeManagers'`
+  // (module-init order is owned by the boot graph now). No channel, guard or `steamLibrary.has`
+  // gate moved. Prior digest: 9366f91f823f454cc865ff2b60c57d7032fbf7be604be2524648bd81d5b140b6
   const SETTINGS_FLOW_REGISTRATION_SHA256 =
-    '9366f91f823f454cc865ff2b60c57d7032fbf7be604be2524648bd81d5b140b6'
+    '7ade63370cf4a5ebf0424b700da05d690e5a2823f16deffede7e631db69455d4'
 
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
