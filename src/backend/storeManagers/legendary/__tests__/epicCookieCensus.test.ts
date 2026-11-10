@@ -98,7 +98,8 @@ jest.mock('backend/logger', () => ({
 }))
 
 jest.mock('../../../utils', () => ({
-  clearCache: jest.fn()
+  clearCache: jest.fn(),
+  startLegendaryCleanup: jest.fn()
 }))
 
 const mockConfigStore = {
