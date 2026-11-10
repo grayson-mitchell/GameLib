@@ -12,7 +12,7 @@ import type { LogSink, TrackFilter } from './types'
 /** Structural stand-in for ChildProcess so this file never imports child_process. */
 export interface ChildProcessLike {
   pid?: number
-  once(event: 'close' | 'error', fn: () => void): unknown
+  once(event: 'close' | 'error' | 'exit', fn: () => void): unknown
 }
 
 interface TrackedMeta {
@@ -65,6 +65,9 @@ export function createTrackedRegistry(deps: {
       const untrack = () => {
         registry.delete(child)
       }
+      // 'exit' too: an exited child whose pipes a grandchild still holds has no 'close' yet,
+      // and must not stay killable (its PID may be recycled; Phase 72 D-13, A-WR-2).
+      child.once('exit', untrack)
       child.once('close', untrack)
       child.once('error', untrack)
       return untrack
@@ -78,25 +81,41 @@ export function createTrackedRegistry(deps: {
 }
 
 export function createTeardownRegistry(deps: { log: LogSink }) {
-  const registry = new Map<string, () => void>()
+  // A Set per id, not a single slot: a second long-lived child registered under the same id
+  // while the first is still alive must not silently drop the first's teardown (the first child
+  // would then outlive quit with its cleanup never run; A-WR-6, 66.1 review). Each register()
+  // returns an unregister bound to its own entry, so an exited child removes only itself.
+  const registry = new Map<string, Set<() => void>>()
   return {
     register(id: string, teardown: () => void): () => void {
-      registry.set(id, teardown)
+      let set = registry.get(id)
+      if (!set) {
+        set = new Set()
+        registry.set(id, set)
+      }
+      // Wrap so registering the same function twice yields two distinct entries.
+      const entry = () => teardown()
+      set.add(entry)
       return () => {
-        if (registry.get(id) === teardown) registry.delete(id)
+        const current = registry.get(id)
+        if (!current) return
+        current.delete(entry)
+        if (current.size === 0) registry.delete(id)
       }
     },
     teardownAll(): void {
       const entries = [...registry.entries()]
       registry.clear()
-      for (const [id, teardown] of entries) {
-        try {
-          teardown()
-        } catch (error) {
-          deps.log.warn(`Teardown of ${id} failed: ${String(error)}`)
+      for (const [id, teardowns] of entries) {
+        for (const teardown of teardowns) {
+          try {
+            teardown()
+          } catch (error) {
+            deps.log.warn(`Teardown of ${id} failed: ${String(error)}`)
+          }
         }
       }
     },
-    size: () => registry.size
+    size: () => [...registry.values()].reduce((n, set) => n + set.size, 0)
   }
 }

@@ -16,6 +16,17 @@ describe('tracked registry', () => {
     expect(reg.size()).toBe(0)
   })
 
+  it('A-WR-2: untracks on exit, before close', () => {
+    const killPid = jest.fn(() => true)
+    const reg = createTrackedRegistry({ killPid, log: makeLog() })
+    const c = makeChild(1)
+    reg.track(c, { runner: 'a', key: 'k' })
+    c.emit('exit')
+    expect(reg.size()).toBe(0)
+    expect(reg.killAll()).toBe(0)
+    expect(killPid).not.toHaveBeenCalled()
+  })
+
   it('does not record a child without a pid', () => {
     const reg = createTrackedRegistry({ killPid: () => true, log: makeLog() })
     reg.track(new EventEmitter() as unknown as ChildProcessLike, {
@@ -54,17 +65,23 @@ describe('tracked registry', () => {
 })
 
 describe('teardown registry', () => {
-  it('replaces by id and guards unregister by identity', () => {
+  it('A-WR-6: keeps every teardown for a duplicate id; unregister removes only its own', () => {
     const reg = createTeardownRegistry({ log: makeLog() })
     const t1 = jest.fn()
     const t2 = jest.fn()
+    const t3 = jest.fn()
     const unreg1 = reg.register('a', t1)
     reg.register('a', t2)
+    reg.register('a', t3)
+    expect(reg.size()).toBe(3)
     unreg1()
-    expect(reg.size()).toBe(1)
+    unreg1()
+    expect(reg.size()).toBe(2)
     reg.teardownAll()
     expect(t1).not.toHaveBeenCalled()
     expect(t2).toHaveBeenCalledTimes(1)
+    expect(t3).toHaveBeenCalledTimes(1)
+    expect(reg.size()).toBe(0)
   })
 
   it('isolates a throwing teardown, logs it, and empties the registry', () => {

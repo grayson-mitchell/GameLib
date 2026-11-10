@@ -180,12 +180,37 @@ export function createProcessRunner(deps: ProcessRunnerDeps): ProcessRunner {
 
       let drainTimedOut = false
       let drainTimer: TimerHandle | undefined
+      // Set at 'exit'. A grandchild may hold the stdio pipes so 'close' never arrives;
+      // armDrain gives the pipes a bounded grace after the child is gone, then cuts them
+      // (WR-01). Idempotent. Every path that decides "stop waiting for close" calls it:
+      // 'exit' (resolveOn exit, timedOut, aborted, killed by us) and the timeout timer when
+      // the child had already exited (A-WR-1, 66.1 review).
+      let exitInfo: {
+        code: number | null
+        signal: NodeJS.Signals | null
+      } | null = null
+      const armDrain = (): void => {
+        if (settled || drainTimer || exitInfo === null) return
+        const { code, signal } = exitInfo
+        drainTimer = deps.clock.setTimeout(() => {
+          drainTimedOut = true
+          untrack()
+          child.stdout?.destroy()
+          child.stderr?.destroy()
+          finish(code, signal)
+        }, DRAIN_GRACE_MS)
+      }
       const timer =
         timeoutMs === null
           ? undefined
           : deps.clock.setTimeout(() => {
-              timedOut = true
-              child.kill('SIGKILL')
+              if (exitInfo === null) {
+                timedOut = true
+                child.kill('SIGKILL')
+              } else {
+                // Already exited, still waiting on pipes a grandchild holds.
+                armDrain()
+              }
             }, timeoutMs)
 
       const capture = (text: string, stream: 'out' | 'err'): void => {
@@ -250,16 +275,14 @@ export function createProcessRunner(deps: ProcessRunnerDeps): ProcessRunner {
       })
       child.on('exit', (code, signal) => {
         if (settled) return
-        if (resolveOn === 'exit' || timedOut || aborted) {
-          // A grandchild may hold the stdio pipes so 'close' never arrives;
-          // give the pipes a bounded grace, then cut them (WR-01).
-          drainTimer = deps.clock.setTimeout(() => {
-            drainTimedOut = true
-            untrack()
-            child.stdout?.destroy()
-            child.stderr?.destroy()
-            finish(code, signal)
-          }, DRAIN_GRACE_MS)
+        exitInfo = { code, signal }
+        if (
+          resolveOn === 'exit' ||
+          timedOut ||
+          aborted ||
+          tracked.wasKilled(child)
+        ) {
+          armDrain()
         }
       })
       child.on('close', finish)
@@ -301,12 +324,20 @@ export function createProcessRunner(deps: ProcessRunnerDeps): ProcessRunner {
       })
     })
 
+    // Resolves on 'close' (stdio fully drained) or 'error', whichever comes first. Relays that
+    // flush a trailing unterminated line must wait for this, not `exited` (B-WR-1).
+    const closed = new Promise<void>((resolve) => {
+      child.once('close', () => resolve())
+      child.once('error', () => resolve())
+    })
+
     const base = handleOf(child)
     let unregister: () => void = () => undefined
     const handle: LongLivedHandle = {
       id: opts.id,
       pid: child.pid,
       exited,
+      closed,
       kill: (signal) => base.kill(signal),
       unregister: () => unregister()
     }

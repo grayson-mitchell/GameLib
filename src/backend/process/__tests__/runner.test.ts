@@ -202,16 +202,46 @@ describe('run', () => {
 })
 
 describe('spawnLongLived', () => {
-  it('replaces by id, runs only the latest teardown', () => {
+  it('A-WR-6: a duplicate id keeps the earlier live child teardown too', () => {
     const t1 = jest.fn()
     const t2 = jest.fn()
     const a = runner.spawnLongLived(NODE, SLEEP10, { id: 'x', teardown: t1 })
     const b = runner.spawnLongLived(NODE, SLEEP10, { id: 'x', teardown: t2 })
     runner.teardownAll()
+    expect(t1).toHaveBeenCalledWith(a)
+    expect(t2).toHaveBeenCalledWith(b)
+    a.kill('SIGKILL')
+    b.kill('SIGKILL')
+  })
+
+  it('an unregistered duplicate-id child does not remove its sibling teardown', () => {
+    const t1 = jest.fn()
+    const t2 = jest.fn()
+    const a = runner.spawnLongLived(NODE, SLEEP10, { id: 'x', teardown: t1 })
+    const b = runner.spawnLongLived(NODE, SLEEP10, { id: 'x', teardown: t2 })
+    a.unregister()
+    runner.teardownAll()
     expect(t1).not.toHaveBeenCalled()
     expect(t2).toHaveBeenCalledWith(b)
     a.kill('SIGKILL')
     b.kill('SIGKILL')
+  })
+
+  it('B-WR-1: closed resolves only after the final stderr bytes were delivered', async () => {
+    let err = ''
+    const h = runner.spawnLongLived(
+      NODE,
+      ['-e', 'process.stderr.write("last line without newline")'],
+      {
+        id: 'closed',
+        onStderr: (chunk) => {
+          err += chunk
+        }
+      }
+    )
+    await h.exited
+    await h.closed
+    expect(err).toBe('last line without newline')
   })
 
   it('resolves exited and auto-unregisters', async () => {
@@ -333,6 +363,61 @@ describe('C-02 WR-01 drain grace and caller capabilities', () => {
   it('WR-01 untracks the child when the drain is cut short', async () => {
     await runner.run(NODE, ['-e', GRANDCHILD], { resolveOn: 'exit' })
     expect(runner.killTracked({ runner: 'runner' })).toBe(0)
+  })
+
+  // A-WR-1: the shell exits at once but a backgrounded grandchild keeps the pipes open.
+  const HOLDER = [
+    '-e',
+    "const c=require('child_process').spawn(process.execPath,['-e','setTimeout(()=>{},4000)'],{stdio:'inherit'});console.log(c.pid);c.unref()"
+  ]
+  const reap = (pid: string) => {
+    try {
+      process.kill(Number(pid), 'SIGKILL')
+    } catch {
+      // already gone
+    }
+  }
+
+  it('A-WR-1 (a) a child that exits normally, a grandchild holding the pipes, then the timeout: run() settles', async () => {
+    let pid = ''
+    const t0 = Date.now()
+    const r = await runner.run(NODE, HOLDER, {
+      timeoutMs: 500,
+      onStdout: (c) => {
+        pid = c.trim()
+      }
+    })
+    reap(pid)
+    expect(Date.now() - t0).toBeLessThan(3000)
+    expect(r.code).toBe(0)
+    expect(r.timedOut).toBe(false)
+    expect(r.drainTimedOut).toBe(true)
+  })
+
+  it('A-WR-1 (b) killTracked on a live child whose grandchild holds the pipes settles promptly with killedByUs', async () => {
+    let pid = ''
+    const t0 = Date.now()
+    const pending = runner.run(
+      NODE,
+      [
+        '-e',
+        "const c=require('child_process').spawn(process.execPath,['-e','setTimeout(()=>{},4000)'],{stdio:'inherit'});console.log(c.pid);c.unref();setTimeout(()=>{},10000)"
+      ],
+      {
+        timeoutMs: 20_000,
+        track: { runner: 'wine', key: 'a-wr-1' },
+        onStdout: (c) => {
+          pid = c.trim()
+        }
+      }
+    )
+    while (pid === '') await wait(20)
+    expect(runner.killTracked({ runner: 'wine', key: 'a-wr-1' })).toBe(1)
+    const r = await pending
+    reap(pid)
+    expect(Date.now() - t0).toBeLessThan(3000)
+    expect(r.killedByUs).toBe(true)
+    expect(r.drainTimedOut).toBe(true)
   })
 
   it('opt-out runs without a timeout when a reason is given', async () => {

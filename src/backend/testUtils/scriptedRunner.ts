@@ -230,6 +230,8 @@ export function createScriptedRunner(
         id: opts.id,
         pid: undefined,
         exited,
+        // A scripted child has no pipes: closed settles with exited.
+        closed: exited.then(() => undefined),
         kill(signal) {
           live.delete(opts.id)
           resolveExit({ code: null, signal: signal ?? 'SIGTERM' })

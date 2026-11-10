@@ -68,10 +68,16 @@ export function createChildBackedRunner(
         )
         child.once('error', () => resolve({ code: null, signal: null }))
       })
+      // Same contract as the real runner: resolves on stdio 'close' or 'error'.
+      const closed = new Promise<void>((resolve) => {
+        child.once('close', () => resolve())
+        child.once('error', () => resolve())
+      })
       const handle: LongLivedHandle = {
         id: opts.id,
         pid: child.pid,
         exited,
+        closed,
         kill: (signal) => {
           child.kill(signal)
           return true

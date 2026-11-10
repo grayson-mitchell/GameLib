@@ -252,16 +252,17 @@ export function ensureHelperSpawned(
 
   // 261027-aue: same appid rule and own-stream rule as LISTEN/READY (T-aue-01).
   // The err text is not logged again -- the per-line relay already logs it.
+  let ownEntry: BridgeHelperEntry | undefined
   const handleInitFailedLine = (line: string) => {
     const match = INIT_FAILED_LINE.exec(line)
     if (!match) return
     const [, errText, matchedAppId] = match
     if (matchedAppId !== expectedListenAppId) return
     if (errText === undefined) return
-    const entry = helpers.get(appId)
-    if (entry && entry.child === handle) {
-      entry.initError = errText
-    }
+    // Written onto THIS child's own entry object, not looked up through the map: the trailing
+    // line is flushed when stdio closes, which can be after `exited` already dropped the map
+    // entry (B-WR-1). `ownEntry` is only ever this spawn's entry, so the own-stream rule holds.
+    if (ownEntry) ownEntry.initError = errText
   }
 
   // T-k6o-01: same appid rule as the LISTEN line (T-51-05), and only from this
@@ -309,7 +310,7 @@ export function ensureHelperSpawned(
   // census (which reads gamelib.log) would see unattributed CALL lines. Log per
   // line. 53-18 WR-05: lines are reassembled across chunks -- each stream keeps
   // the trailing partial line as a plain-string carry, only complete lines are
-  // logged/parsed, and the carry is flushed when the process exits. No timers
+  // logged/parsed, and the carry is flushed when stdio closes. No timers
   // or handles, so the sidecar's exit-by-drain contract is unchanged.
   const createLineRelay = (onLine: (line: string) => void) => {
     let carry = ''
@@ -352,9 +353,15 @@ export function ensureHelperSpawned(
     onStderr: (chunk) => stderrRelay.push(chunk)
   })
   const spawned = handle
-  void spawned.exited.then(({ code, signal }) => {
+  // Trailing unterminated lines are flushed when stdio CLOSES, not when the process exits: the
+  // last stderr chunk (e.g. a final `INIT InitFlat failed` line with no newline) can arrive
+  // after 'exit' (B-WR-1). The settle and map cleanup below stay on `exited` so a grandchild
+  // holding the pipes can never keep them pending.
+  void spawned.closed.then(() => {
     stdoutRelay.flush()
     stderrRelay.flush()
+  })
+  void spawned.exited.then(({ code, signal }) => {
     logWarning(
       `bridge helper [${appId}] exited (code=${code} signal=${signal}) -- a future ensureBridgeHelperReady() call will respawn it`,
       LogPrefix.Steam
@@ -379,6 +386,7 @@ export function ensureHelperSpawned(
     secret,
     lastInviteRequestMs: 0
   }
+  ownEntry = entry
   helpers.set(appId, entry)
   return entry
 }

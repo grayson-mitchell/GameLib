@@ -103,6 +103,12 @@ export interface LongLivedHandle {
     code: number | null
     signal: NodeJS.Signals | null
   }>
+  /**
+   * Resolves when the child's stdio has closed ('close') or it failed to spawn ('error').
+   * Later than `exited` when a grandchild holds the pipes. Flush line relays here so a final
+   * unterminated line written just before exit is not lost.
+   */
+  readonly closed: Promise<void>
   kill(signal?: NodeJS.Signals): boolean
   unregister(): void
 }

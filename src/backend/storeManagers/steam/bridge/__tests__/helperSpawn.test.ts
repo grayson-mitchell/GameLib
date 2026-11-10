@@ -391,7 +391,7 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
       expect(result.ready).toBe(true)
     })
 
-    test('a trailing partial line is flushed exactly once when the process exits', async () => {
+    test('a trailing partial line is flushed exactly once when stdio closes', async () => {
       const child = new FakeChildProcess()
       mockedSpawn.mockReturnValue(child)
       ;(logWarning as jest.Mock).mockClear()
@@ -399,11 +399,33 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
       child.stderr.emit('data', Buffer.from('[ts] tail'))
       expect(bridgeMessages(logWarning)).toEqual([])
       child.emit('exit', 0, null)
+      child.emit('close', 0, null)
       await Promise.resolve()
       await Promise.resolve()
       expect(
         bridgeMessages(logWarning).filter((m) => m.endsWith('[ts] tail'))
       ).toEqual(['bridge helper [42]: [ts] tail'])
+    })
+
+    test('B-WR-1: a final unterminated line arriving after exit but before close is not lost', async () => {
+      const child = new FakeChildProcess()
+      mockedSpawn.mockReturnValue(child)
+      ;(logWarning as jest.Mock).mockClear()
+      void ensureBridgeHelperReady(helperDeps, '42')
+      child.emit('exit', 1, null)
+      await Promise.resolve()
+      await Promise.resolve()
+      // Not flushed on exit: the pipes are still open and may deliver more.
+      child.stderr.emit('data', Buffer.from('[ts] late tail'))
+      expect(
+        bridgeMessages(logWarning).filter((m) => m.endsWith('late tail'))
+      ).toEqual([])
+      child.emit('close', 1, null)
+      await Promise.resolve()
+      await Promise.resolve()
+      expect(
+        bridgeMessages(logWarning).filter((m) => m.endsWith('late tail'))
+      ).toEqual(['bridge helper [42]: [ts] late tail'])
     })
 
     test('stdout gets the same carry-over via logInfo', () => {
