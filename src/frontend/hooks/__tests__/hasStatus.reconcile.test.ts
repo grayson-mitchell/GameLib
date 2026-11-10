@@ -21,6 +21,7 @@ jest.mock('../constants', () => ({
   handleNonAvailableGames: async () => true
 }))
 
+import 'frontend/testUtils/tauriWindow'
 import { deriveInstallStatusKind } from '../hasStatus'
 import { makeFaithfulT } from '../../screens/Game/GamePage/components/__tests__/faithfulTranslate'
 

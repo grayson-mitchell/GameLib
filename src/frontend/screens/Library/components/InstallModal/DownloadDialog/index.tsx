@@ -41,15 +41,9 @@ import {
   resolveCrossoverInstallRisk
 } from '../crossoverInstallRisk'
 import useLibraryState from 'frontend/state/libraryState'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import { InstallProgress } from 'frontend/types'
-import React, {
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState
-} from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { AvailablePlatforms } from '../index'
 import { configStore } from 'frontend/helpers/stores'
@@ -123,8 +117,9 @@ export default function DownloadDialog({
   const previousProgress = JSON.parse(
     storage.getItem(appName) || '{}'
   ) as InstallProgress
-  const { libraryStatus, platform, showDialogModal } =
-    useContext(ContextProvider)
+  const libraryStatus = useLibraryState((s) => s.libraryStatus)
+  const platform = useUiState((s) => s.platform)
+  const showDialogModal = useUiState((s) => s.showDialogModal)
   const { crossoverRatings, runsForMe } = useLibraryState.keys(
     'crossoverRatings',
     'runsForMe'

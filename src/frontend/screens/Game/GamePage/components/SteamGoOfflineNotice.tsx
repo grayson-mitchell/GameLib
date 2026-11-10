@@ -1,7 +1,7 @@
-import { useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getGameInfo } from 'frontend/helpers'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useLibraryState from 'frontend/state/libraryState'
 import { useSteamGoOfflineNotice } from 'frontend/state/SteamGoOfflineNotice'
 import { installSteamGame } from 'frontend/state/InstallGameModal'
 import {
@@ -21,7 +21,7 @@ import {
 // Continue had already armed the guided step (54-REVIEW WR-05).
 const SteamGoOfflineNotice = () => {
   const { t } = useTranslation('gamelib')
-  const { refreshLibrary } = useContext(ContextProvider)
+  const refreshLibrary = useLibraryState((s) => s.refreshLibrary)
   const {
     isOpen,
     action,

@@ -20,12 +20,13 @@ import {
   removeSpecialcharacters,
   writeConfig
 } from 'frontend/helpers'
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { AvailablePlatforms } from '..'
 import { engineInstallConfig } from '../WineSelector/engineInstallChoice'
 import fallbackImage from 'frontend/assets/gamelib_card.svg?url'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useLibraryState from 'frontend/state/libraryState'
+import useUiState from 'frontend/state/uiState'
 import useOpenDialog from 'frontend/hooks/useOpenDialog'
 import classNames from 'classnames'
 import axios from 'axios'
@@ -88,7 +89,8 @@ export default function SideloadDialog({
   const [sgdbUnavailable, setSgdbUnavailable] = useState(false)
   const editMode = Boolean(appName)
 
-  const { refreshLibrary, platform } = useContext(ContextProvider)
+  const refreshLibrary = useLibraryState((s) => s.refreshLibrary)
+  const platform = useUiState((s) => s.platform)
   const openDialog = useOpenDialog()
   const navigate = useNavigate()
   const goToAdvancedSettings = () => {

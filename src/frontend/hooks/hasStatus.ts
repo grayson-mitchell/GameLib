@@ -1,5 +1,5 @@
 import React from 'react'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useLibraryState from 'frontend/state/libraryState'
 import { GameInfo, GameStatus, Status } from 'common/types'
 import { hasProgress } from './hasProgress'
 import { useTranslation } from 'react-i18next'
@@ -62,7 +62,9 @@ export function deriveInstallStatusKind(params: {
 
 export function hasStatus(gameInfo: GameInfo, gameSize?: string) {
   const appName = gameInfo.app_name
-  const { libraryStatus, epic, gog } = React.useContext(ContextProvider)
+  const libraryStatus = useLibraryState((s) => s.libraryStatus)
+  const epicLibrary = useLibraryState((s) => s.epicLibrary)
+  const gogLibrary = useLibraryState((s) => s.gogLibrary)
   const [progress] = hasProgress(gameInfo.app_name, gameInfo.runner)
   const [newGameInfo, setNewGameInfo] = React.useState<GameInfo | undefined>(
     gameInfo
@@ -202,8 +204,8 @@ export function hasStatus(gameInfo: GameInfo, gameSize?: string) {
   }, [
     libraryStatus,
     appName,
-    epic.library,
-    gog.library,
+    epicLibrary,
+    gogLibrary,
     is_installed,
     progress.percent
   ])

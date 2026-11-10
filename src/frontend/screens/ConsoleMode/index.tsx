@@ -1,19 +1,20 @@
 import { isStore } from 'common/storeCapabilities'
 import './index.scss'
 
-import {
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState
-} from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import classNames from 'classnames'
 
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
+import useLibraryState from 'frontend/state/libraryState'
+import {
+  useEpicAccount,
+  useGogAccount,
+  useAmazonAccount,
+  useSteamAccount,
+  useHiddenGames
+} from 'frontend/state/accountHooks'
 import { sendKill, updateGame } from 'frontend/helpers'
 import GameLibIcon from 'frontend/assets/gamelib-icon.png'
 
@@ -61,19 +62,25 @@ export default function ConsoleMode() {
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
   const navigate = useNavigate()
+  const epic = useEpicAccount()
+  const gog = useGogAccount()
+  const amazon = useAmazonAccount()
+  const steam = useSteamAccount()
+  const hiddenGames = useHiddenGames()
   const {
-    epic,
-    gog,
-    amazon,
-    steam,
     libraryStatus,
     sideloadedLibrary,
     refreshLibrary,
     refreshing,
-    gameUpdates,
-    hiddenGames,
-    platform
-  } = useContext(ContextProvider)
+    gameUpdates
+  } = useLibraryState.keys(
+    'libraryStatus',
+    'sideloadedLibrary',
+    'refreshLibrary',
+    'refreshing',
+    'gameUpdates'
+  )
+  const platform = useUiState((s) => s.platform)
 
   const [activeStore, setActiveStore] = useState<StoreKey>('all')
   const [ascending, setAscending] = useState(true)

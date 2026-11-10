@@ -1,9 +1,8 @@
 import './index.css'
 
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { GameStatus } from 'common/types'
-import ContextProvider from 'frontend/state/ContextProvider'
+import { useSteamAccount } from 'frontend/state/accountHooks'
 import { hasProgress } from 'frontend/hooks/hasProgress'
 import { steamManagedPercent } from './steamManagedModel'
 import { SteamManagedItemView } from './SteamManagedItemView'
@@ -14,7 +13,7 @@ import { SteamManagedItemView } from './SteamManagedItemView'
 // Cancel (quick 261105-vfq) stops GameLib's poll via kill -> SteamGame.stop()
 // -> cancelDelegatedInstall; it never touches Steam.
 export default function SteamManagedItem({ row }: { row: GameStatus }) {
-  const { steam } = useContext(ContextProvider)
+  const steam = useSteamAccount()
   const { t: tGamelib } = useTranslation('gamelib')
   const [progress] = hasProgress(row.appName, 'steam')
 

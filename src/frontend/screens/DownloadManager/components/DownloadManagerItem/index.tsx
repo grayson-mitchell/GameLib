@@ -1,6 +1,6 @@
 import './index.css'
 
-import { useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { DMQueueElement, DownloadManagerState } from 'common/types'
 import StopIcon from 'frontend/assets/stop-icon.svg?react'
@@ -9,7 +9,13 @@ import { handleStopInstallation } from 'frontend/helpers/library'
 import { getGameInfo, getStoreName } from 'frontend/helpers'
 import { useTranslation } from 'react-i18next'
 import { hasProgress } from 'frontend/hooks/hasProgress'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
+import {
+  useAmazonAccount,
+  useEpicAccount,
+  useGogAccount,
+  useSteamAccount
+} from 'frontend/state/accountHooks'
 import { useNavigate } from 'react-router-dom'
 import PlayIcon from 'frontend/assets/play-icon.svg?react'
 import PauseIcon from 'frontend/assets/pause-icon.svg?react'
@@ -44,8 +50,11 @@ const DownloadManagerItem = ({
   state,
   handleClearItem
 }: Props) => {
-  const { amazon, epic, gog, steam, showDialogModal } =
-    useContext(ContextProvider)
+  const amazon = useAmazonAccount()
+  const epic = useEpicAccount()
+  const gog = useGogAccount()
+  const steam = useSteamAccount()
+  const showDialogModal = useUiState((s) => s.showDialogModal)
   const { t } = useTranslation('gamepage')
   const { t: t2 } = useTranslation('translation')
   const { t: tGamelib } = useTranslation('gamelib')

@@ -7,7 +7,7 @@ import { GameInfo, GameStatus, Runner } from 'common/types'
 
 import { createNewWindow, repair } from 'frontend/helpers'
 import { useTranslation } from 'react-i18next'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useLibraryState from 'frontend/state/libraryState'
 import { NavLink } from 'react-router-dom'
 
 import { CircularProgress, SvgIcon } from '@mui/material'
@@ -79,8 +79,10 @@ export default function GamesSubmenu({
   onShowModifyInstall,
   gameInfo
 }: Props) {
-  const { refresh, platform, libraryStatus, showDialogModal } =
-    useContext(ContextProvider)
+  const refresh = useLibraryState((s) => s.refresh)
+  const libraryStatus = useLibraryState((s) => s.libraryStatus)
+  const platform = useUiState((s) => s.platform)
+  const showDialogModal = useUiState((s) => s.showDialogModal)
   const openDialog = useOpenDialog()
   const { openGameCategoriesModal } = useUiState.keys('openGameCategoriesModal')
   const { is, gameSettings } = useContext(GameContext)

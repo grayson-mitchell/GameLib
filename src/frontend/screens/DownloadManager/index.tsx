@@ -1,6 +1,6 @@
 import './index.css'
 
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DMQueueElement, DownloadManagerState } from 'common/types'
 import type { IpcRendererEvent } from 'backend/platform'
@@ -11,7 +11,7 @@ import DownloadManagerItem from './components/DownloadManagerItem'
 import SetupDownloadItem from './components/SetupDownloadItem'
 import SteamManagedItem from './components/SteamManagedItem'
 import { steamManagedRows } from './components/SteamManagedItem/steamManagedModel'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useLibraryState from 'frontend/state/libraryState'
 import useDownloadsState from 'frontend/state/downloadsState'
 import { useSteamSetupDownloads } from 'frontend/state/SteamSetupDownloads'
 
@@ -19,7 +19,7 @@ export default React.memo(function DownloadManager(): JSX.Element | null {
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
   const setupRows = useSteamSetupDownloads()
-  const { libraryStatus } = useContext(ContextProvider)
+  const libraryStatus = useLibraryState((s) => s.libraryStatus)
   const managedRows = steamManagedRows(libraryStatus)
   const [refreshing, setRefreshing] = useState(false)
   const [state, setState] = useState<DownloadManagerState>('idle')

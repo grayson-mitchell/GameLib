@@ -52,7 +52,7 @@ import {
 } from 'frontend/components/UI/Dialog'
 import { SelectField, ToggleSwitch } from 'frontend/components/UI'
 import { MenuItem } from '@mui/material'
-import React, { useCallback, useContext, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { buildLoginOpenPath } from 'frontend/screens/Login/loginOpenParam'
@@ -86,7 +86,9 @@ import {
   crossoverRiskDialogOptions,
   resolveCrossoverInstallRisk
 } from '../crossoverInstallRisk'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
+import useAuthState from 'frontend/state/authState'
+import { useSteamAccount } from 'frontend/state/accountHooks'
 import { isRunsForMeOn, runsForMeKey } from 'common/runsForMe'
 import useLibraryState from 'frontend/state/libraryState'
 
@@ -215,8 +217,10 @@ export default function SteamDialog({
 }: Props) {
   const { t } = useTranslation('gamepage')
   const { t: tGamelib } = useTranslation('gamelib')
-  const { platform, showDialogModal, steam, signInProbeOutcomes } =
-    useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
+  const showDialogModal = useUiState((s) => s.showDialogModal)
+  const steam = useSteamAccount()
+  const signInProbeOutcomes = useAuthState((s) => s.signInProbeOutcomes)
   const navigate = useNavigate()
   // Quick 261029-s5l (todo 2026-10-29): GameLib-native installs need GameLib's
   // own Steam token. Delegated installs (native OFF) never do, so never gate.

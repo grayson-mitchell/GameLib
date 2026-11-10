@@ -13,8 +13,8 @@ import {
   DialogFooter,
   DialogContent
 } from 'frontend/components/UI/Dialog'
-import ContextProvider from 'frontend/state/ContextProvider'
-import React, { useContext } from 'react'
+import useLibraryState from 'frontend/state/libraryState'
+import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { AvailablePlatforms } from '../index'
 import { configStore } from 'frontend/helpers/stores'
@@ -56,7 +56,7 @@ export default function ImportDialog({
   children,
   gameInfo
 }: Props) {
-  const { libraryStatus } = useContext(ContextProvider)
+  const libraryStatus = useLibraryState((s) => s.libraryStatus)
   const { t } = useTranslation('gamepage')
   const { t: tGamelib } = useTranslation('gamelib')
 

@@ -1,13 +1,7 @@
 import './index.css'
 import { hasCapability, isStore } from 'common/storeCapabilities'
 
-import React, {
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState
-} from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
   ArrowBackIosNew,
@@ -28,7 +22,12 @@ import {
 } from 'frontend/helpers'
 import { Link, NavLink, useLocation, useParams } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
-import ContextProvider from 'frontend/state/ContextProvider'
+import {
+  useEpicAccount,
+  useGogAccount,
+  useSteamAccount
+} from 'frontend/state/accountHooks'
+import useLibraryState from 'frontend/state/libraryState'
 import { releasesPlayClicked } from './playClickedLatch'
 import { CachedImage, UpdateComponent, TabPanel } from 'frontend/components/UI'
 import UninstallModal from 'frontend/components/UI/UninstallModal'
@@ -112,15 +111,13 @@ export default React.memo(function GamePage(): JSX.Element | null {
   const [showUninstallModal, setShowUninstallModal] = useState(false)
   const [wikiInfo, setWikiInfo] = useState<WikiInfo | null>(null)
 
-  const {
-    epic,
-    gog,
-    steam,
-    gameUpdates,
-    platform,
-    showDialogModal,
-    connectivity
-  } = useContext(ContextProvider)
+  const epic = useEpicAccount()
+  const gog = useGogAccount()
+  const steam = useSteamAccount()
+  const gameUpdates = useLibraryState((s) => s.gameUpdates)
+  const platform = useUiState((s) => s.platform)
+  const showDialogModal = useUiState((s) => s.showDialogModal)
+  const connectivity = useUiState((s) => s.connectivity)
 
   const { settingsModalProps } = useUiState.keys('settingsModalProps')
 

@@ -1,6 +1,6 @@
 import './index.css'
 
-import { useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { DMQueueElement, DownloadManagerState } from 'common/types'
@@ -12,7 +12,14 @@ import { handleStopInstallation } from 'frontend/helpers/library'
 import { getGameInfo, getStoreName } from 'frontend/helpers'
 import { engineDownloadLabel } from 'frontend/hooks/engineDownloadLabel'
 import { hasProgress } from 'frontend/hooks/hasProgress'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
+import useLibraryState from 'frontend/state/libraryState'
+import {
+  useAmazonAccount,
+  useEpicAccount,
+  useGogAccount,
+  useSteamAccount
+} from 'frontend/state/accountHooks'
 import ProgressHeader from '../ProgressHeader'
 import {
   heroArtSources,
@@ -44,8 +51,12 @@ type Props = {
  * interpolated into a style string (T-261012-dhs-01).
  */
 export default function DownloadHero({ element, state }: Props) {
-  const { amazon, epic, gog, steam, showDialogModal, libraryStatus } =
-    useContext(ContextProvider)
+  const amazon = useAmazonAccount()
+  const epic = useEpicAccount()
+  const gog = useGogAccount()
+  const steam = useSteamAccount()
+  const showDialogModal = useUiState((s) => s.showDialogModal)
+  const libraryStatus = useLibraryState((s) => s.libraryStatus)
   const { t } = useTranslation('gamepage')
   const { t: t2 } = useTranslation('translation')
   const { t: tGamelib } = useTranslation('gamelib')
