@@ -78,12 +78,13 @@ jest.mock('../../storeManagers/steam/user')
 import { TypeCheckedStoreBackend } from '../../typed_store'
 import { createStores } from '../../stores/createStores'
 import { createStoreRegistry } from '../../stores/storeRegistry'
-import { handlerRegistry } from '../../platform'
+import { handlerRegistry, listenerRegistry } from '../../platform'
 import CacheStore from '../../cache'
 import { BOOT_SET_STORES, STORE_ALLOWLIST } from 'common/types/storePolicy'
 import {
   STORE_SNAPSHOT_CHANNEL,
-  STORE_FETCH_CHANNEL
+  STORE_FETCH_CHANNEL,
+  STORE_SET_CHANNEL
 } from 'common/types/sidecarTransport'
 
 // `registerHandlers()` registers every invoke handler (including the
@@ -481,5 +482,45 @@ describe('WR-08: duplicate store registration', () => {
         line.includes("duplicate registration for 'configStore'")
       )
     ).toBe(true)
+  })
+})
+
+/**
+ * C-WR-1 REGRESSION: a module-level first-call-wins guard pinned the FIRST boot's registry in
+ * the write listeners, so a later boot in the same module registry had its snapshot handler
+ * read one registry while renderer writes landed in another.
+ */
+describe('C-WR-1: two boots in one module registry', () => {
+  it('writes and snapshots both use the second boot registry', async () => {
+    const registry2 = createStoreRegistry()
+    const stores2 = createStores({ registry: registry2 })
+    registerHandlers({
+      log: createCaptureLog(),
+      services: createTestServices({
+        stores: stores2,
+        storeRegistry: registry2
+      })
+    })
+
+    const listeners = listenerRegistry.get(STORE_SET_CHANNEL) ?? []
+    // The write listeners install once; a second boot must not stack another set.
+    expect(listeners).toHaveLength(1)
+    const overrides = { 'c-wr-1': { title: 'second boot' } }
+    // Both boots' stores share one on-disk file, so observe WHICH instance took the write.
+    const firstSet = jest.spyOn(
+      registry.get('gameOverridesStore') as unknown as ProbeableStore,
+      'set'
+    )
+    const secondSet = jest.spyOn(
+      registry2.get('gameOverridesStore') as unknown as ProbeableStore,
+      'set'
+    )
+    listeners[0](undefined, 'gameOverridesStore', 'overrides', overrides)
+
+    expect(secondSet).toHaveBeenCalledWith('overrides', overrides)
+    expect(firstSet).not.toHaveBeenCalled()
+
+    const snapshot = await invokeStoreSnapshot()
+    expect(snapshot.gameOverridesStore).toMatchObject({ overrides })
   })
 })

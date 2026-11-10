@@ -282,20 +282,38 @@ function pushStoreChanged(payload: StoreChangedPayload): void {
   )
 }
 
-let handlersRegistered = false
+/**
+ * The registry the (single, process-lifetime) write listeners resolve through. Every call
+ * re-points it at the calling boot's registry (C-WR-1): a first-call-wins guard pinned the
+ * first boot's registry, so a later boot in the same module registry wrote to a different
+ * registry than its snapshot handlers read. The listeners are installed once because
+ * `ipcMain.on` appends; installing them per boot would run every write against every
+ * boot's registry.
+ */
+let currentRegistry: StoreRegistry | undefined
+
+function requireCurrentRegistry(): StoreRegistry {
+  if (!currentRegistry) {
+    throw new Error('[storeWriteHandlers] no store registry bound')
+  }
+  return currentRegistry
+}
 
 /**
- * Registers the three write listeners. Idempotent (mirrors `registerHandlers`'s
- * own re-entrancy guard) — safe to call more than once across tests/bootstraps.
+ * Registers the three write listeners and binds them to `deps.registry`. Safe to call more
+ * than once across tests/bootstraps: the listeners install once, and the LATEST call's
+ * registry is the one writes resolve through.
  */
 export function registerStoreWriteHandlers(deps: {
   registry: StoreRegistry
 }): void {
-  const { registry } = deps
-  if (handlersRegistered) {
+  // "Already installed" is "a registry was already bound" — one module-level binding, not
+  // a flag plus a binding (the moduleState ceiling counts each).
+  const alreadyInstalled = currentRegistry !== undefined
+  currentRegistry = deps.registry
+  if (alreadyInstalled) {
     return
   }
-  handlersRegistered = true
 
   // Point the sidecar-side store classes' notification seam at this file's single push
   // site, so writes the SIDECAR itself performs reach the renderer's D-06 listener the
@@ -318,7 +336,7 @@ export function registerStoreWriteHandlers(deps: {
         )
         return
       }
-      applyStoreWrite(registry, 'set', storeName, key, value)
+      applyStoreWrite(requireCurrentRegistry(), 'set', storeName, key, value)
     }
   )
 
@@ -331,7 +349,7 @@ export function registerStoreWriteHandlers(deps: {
         )
         return
       }
-      applyStoreWrite(registry, 'delete', storeName, key)
+      applyStoreWrite(requireCurrentRegistry(), 'delete', storeName, key)
     }
   )
 
@@ -349,6 +367,8 @@ export function registerStoreWriteHandlers(deps: {
         )
         return
       }
+
+      const registry = requireCurrentRegistry()
 
       if (registry.get(storeName)) {
         // The typed stores are constructed by `createStores`, not by the
