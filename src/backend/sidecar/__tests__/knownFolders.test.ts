@@ -1,12 +1,15 @@
 /**
  * Pure-parser tests for `knownFolders.ts`: `user-dirs.dirs` (Linux) and `reg query` output plus
- * `%VAR%` expansion (Windows). Nothing here reads the real profile or runs `reg.exe`.
+ * `%VAR%` expansion (Windows), and `readWindowsShellFolder` over a scripted runner. Nothing here
+ * reads the real profile or runs `reg.exe`.
  */
 import {
   expandWindowsEnv,
   parseRegQueryValue,
-  parseUserDirs
+  parseUserDirs,
+  readWindowsShellFolder
 } from '../knownFolders'
+import { createScriptedRunner } from '../../testUtils/scriptedRunner'
 
 describe('parseUserDirs', () => {
   const HOME = '/home/jörg'
@@ -91,5 +94,77 @@ describe('expandWindowsEnv', () => {
 
   it('returns undefined rather than leaving an unresolved %VAR% in a path', () => {
     expect(expandWindowsEnv('%ONEDRIVE%\\Desktop', {})).toBeUndefined()
+  })
+})
+
+describe('readWindowsShellFolder', () => {
+  const KEY =
+    'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders'
+  const regOut = (name: string, type: string, value: string) =>
+    `\r\nHKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\r\n    ${name}    ${type}    ${value}\r\n\r\n`
+  const env = { USERPROFILE: 'C:\\Users\\Jörg' }
+
+  it('parses the value and calls reg.exe by argv with a 5000 ms timeout', async () => {
+    const runner = createScriptedRunner([
+      {
+        cmd: 'reg.exe',
+        result: {
+          code: 0,
+          stdout: regOut('Desktop', 'REG_SZ', 'D:\\Desktop')
+        }
+      }
+    ])
+    await expect(
+      readWindowsShellFolder({ runner }, 'Desktop', env)
+    ).resolves.toBe('D:\\Desktop')
+    const call = runner.calls[0]
+    expect(call?.cmd).toBe('reg.exe')
+    expect(call?.argv).toEqual(['query', KEY, '/v', 'Desktop'])
+    expect((call?.opts as { timeoutMs: number }).timeoutMs).toBe(5000)
+  })
+
+  it('expands REG_EXPAND_SZ values from the environment', async () => {
+    const runner = createScriptedRunner([
+      {
+        cmd: 'reg.exe',
+        result: {
+          stdout: regOut(
+            'Personal',
+            'REG_EXPAND_SZ',
+            '%USERPROFILE%\\OneDrive\\Documents'
+          )
+        }
+      }
+    ])
+    await expect(
+      readWindowsShellFolder({ runner }, 'Personal', env)
+    ).resolves.toBe('C:\\Users\\Jörg\\OneDrive\\Documents')
+  })
+
+  it('is undefined when reg.exe cannot be spawned (ENOENT)', async () => {
+    const runner = createScriptedRunner([
+      { cmd: 'reg.exe', error: { code: 'ENOENT' } }
+    ])
+    await expect(
+      readWindowsShellFolder({ runner }, 'Desktop', env)
+    ).resolves.toBeUndefined()
+  })
+
+  it('is undefined on a timeout', async () => {
+    const runner = createScriptedRunner([
+      { cmd: 'reg.exe', result: { code: null, timedOut: true } }
+    ])
+    await expect(
+      readWindowsShellFolder({ runner }, 'Desktop', env)
+    ).resolves.toBeUndefined()
+  })
+
+  it('is undefined on a non-zero exit', async () => {
+    const runner = createScriptedRunner([
+      { cmd: 'reg.exe', result: { code: 1, stderr: 'ERROR' } }
+    ])
+    await expect(
+      readWindowsShellFolder({ runner }, 'Desktop', env)
+    ).resolves.toBeUndefined()
   })
 })

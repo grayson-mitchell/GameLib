@@ -63,6 +63,8 @@ function checkImageExistsAlready(image: string): boolean {
 /** R1 slice: the shortcut helpers only reach the GOG library manager. */
 export interface ShortcutsDeps {
   libraryManagers: Pick<ManagerDeps['libraryManagers'], 'gog'>
+  /** Runs powershell.exe (the .lnk writer) and reg.exe (the redirected Desktop folder) on win32. */
+  runner: Pick<ManagerDeps['runner'], 'run'>
 }
 
 async function getIcon(

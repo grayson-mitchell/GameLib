@@ -24,7 +24,7 @@
 import { homedir, tmpdir } from 'os'
 import { join } from 'path'
 import { env, platform } from 'process'
-import { readWindowsShellFolder, readXdgUserDir } from './knownFolders'
+import { readXdgUserDir } from './knownFolders'
 
 /**
  * The app-name folder segment Electron's real `app.getPath('userData')`
@@ -90,13 +90,15 @@ export function getPath(name: string): string {
       // process.platform gets a deterministic path. The darwin arm below equals it and exists
       // for correctness (Electron's real app.getPath('desktop') resolves it there too).
       // Live call sites: shortcuts.ts shortcutFiles (linux and win32).
-      // win32 and linux honour the user's real folder (OneDrive redirection,
-      // `user-dirs.dirs`) via `knownFolders.ts`, falling back to ~/Desktop.
+      // linux honours the user's real folder (`user-dirs.dirs`) via `knownFolders.ts`; win32 returns
+      // ~/Desktop here and its callers resolve the registry folder themselves (async).
       switch (platform) {
         case 'darwin':
           return join(homedir(), 'Desktop')
         case 'win32':
-          return readWindowsShellFolder('Desktop') || join(homedir(), 'Desktop')
+          // Sync getPath cannot await the registry: win32 callers that need the redirected
+          // folder await readWindowsShellFolder(deps, 'Desktop') first (shortcuts.ts).
+          return join(homedir(), 'Desktop')
         default:
           return (
             env.XDG_DESKTOP_DIR ||
@@ -112,9 +114,8 @@ export function getPath(name: string): string {
         case 'darwin':
           return join(homedir(), 'Documents')
         case 'win32':
-          return (
-            readWindowsShellFolder('Personal') || join(homedir(), 'Documents')
-          )
+          // See 'desktop': win32 callers await readWindowsShellFolder(deps, 'Personal') first.
+          return join(homedir(), 'Documents')
         default:
           return (
             env.XDG_DOCUMENTS_DIR ||

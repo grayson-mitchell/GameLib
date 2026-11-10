@@ -87,6 +87,7 @@ import {
   macDesktopShortcutPresent,
   macDesktopShortcutWanted,
   shortcutFiles,
+  windowsDesktopDir,
   shortcutPathPresent
 } from '../shortcuts/shortcuts/shortcuts'
 import {
@@ -112,7 +113,7 @@ export interface ShortcutsFlowDeps {
   managers: Pick<StoreManagers, 'library'>
   quit: Pick<QuitHandler, 'handleExit'>
   stores: Pick<Stores, 'kvs' | 'wikiGameInfo' | 'crossoverIndex'>
-  /** The boot process runner (66.2); consumers converted by 66.2-04. */
+  /** The boot process runner: reg.exe (Desktop folder) and powershell.exe (.lnk) on win32. */
   runner: BootServices['runner']
 }
 
@@ -131,11 +132,11 @@ function logChannelFailure(channel: string, error: unknown): void {
  * `addShortcut`/`removeShortcut` handlers, which evaluate it AFTER their work has settled so the
  * renderer sets its state from the disk and never from an assumption (quick task 261012-ca6).
  */
-function shortcutsExistOnDisk(
+async function shortcutsExistOnDisk(
   deps: ShortcutsFlowDeps,
   appName: string,
   runner: Runner
-): boolean {
+): Promise<boolean> {
   const { title } = deps.managers.library[runner].getGame(appName).getGameInfo()
 
   // Quick task 260905-mv5 (site 4, D-03): getGameInfo() can return
@@ -154,7 +155,10 @@ function shortcutsExistOnDisk(
     return false
   }
 
-  const [desktopFile, menuFile] = shortcutFiles(title)
+  const [desktopFile, menuFile] = shortcutFiles(
+    title,
+    await windowsDesktopDir(deps)
+  )
 
   // 261026-ctm: a dangling Desktop link counts as present so Remove stays offered.
   return (
@@ -241,7 +245,7 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
       return shortcutsExistOnDisk(deps, appName, runner)
     }
 
-    const exists = shortcutsExistOnDisk(deps, appName, runner)
+    const exists = await shortcutsExistOnDisk(deps, appName, runner)
     if (exists) {
       const body = i18next.t(
         'box.shortcuts.message',
@@ -305,7 +309,7 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
         return shortcutsExistOnDisk(deps, appName, runner)
       }
 
-      const exists = shortcutsExistOnDisk(deps, appName, runner)
+      const exists = await shortcutsExistOnDisk(deps, appName, runner)
       if (!exists) {
         const body = i18next.t(
           'box.shortcuts.message-remove',
@@ -361,7 +365,11 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
     const runner = args[1] as Runner
     const game = deps.managers.library[runner].getGame(appName)
     return addNonSteamGame(
-      { libraryManagers: deps.managers.library, stores: deps.stores },
+      {
+        libraryManagers: deps.managers.library,
+        stores: deps.stores,
+        runner: deps.runner
+      },
       game
     )
   })

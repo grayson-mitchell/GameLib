@@ -11,11 +11,15 @@ import {
 } from 'graceful-fs'
 import { app } from 'backend/platform'
 import type { CommandRunner, Launcher, StoreManagers } from './services/types'
+import type { ProcessRunner } from './process/types'
+import { readWindowsShellFolder } from './sidecar/knownFolders'
 import { LegendaryAppName } from './storeManagers/legendary/commands/base'
 import { legendaryInstalled } from './storeManagers/legendary/constants'
 
 /** What the save-path resolvers read: the managers, `getWinePath` and the wine prefix helpers (66.1, R3). */
 export interface SaveSyncDeps {
+  /** reg.exe for the redirected Documents folder on win32. */
+  runner: Pick<ProcessRunner, 'run'>
   managers: Pick<StoreManagers, 'library'>
   commandRunner: Pick<CommandRunner, 'getWinePath'>
   launcher: Pick<Launcher, 'setupWineEnvVars' | 'verifyWinePrefix'>
@@ -162,7 +166,9 @@ async function getDefaultGogSavePaths(
     APPLICATION_DATA_ROAMING: '%APPDATA%',
     APPLICATION_SUPPORT: '$HOME/Library/Application Support',
     DOCUMENTS: game.isNative()
-      ? app.getPath('documents')
+      ? ((process.platform === 'win32'
+          ? await readWindowsShellFolder(deps, 'Personal')
+          : undefined) ?? app.getPath('documents'))
       : '%USERPROFILE%\\Documents'
   } satisfies Record<SaveFolderVariable, string>
   const resolvedLocations: GOGCloudSavesLocation[] = []

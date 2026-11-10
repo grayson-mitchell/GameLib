@@ -564,7 +564,7 @@ export default class LegendaryGame implements Game {
    * @public
    */
   async removeShortcuts() {
-    return removeShortcutsUtil(this)
+    return removeShortcutsUtil(this.deps, this)
   }
 
   /**
@@ -801,7 +801,7 @@ export default class LegendaryGame implements Game {
       )
     } else if (!res.abort) {
       this.deps.libraryManagers.legendary.installState(this.appName, false)
-      await removeShortcutsUtil(this)
+      await removeShortcutsUtil(this.deps, this)
       await removeNonSteamGame(this)
     }
     sendFrontendMessage('refreshLibrary', 'legendary')

@@ -317,7 +317,7 @@ export default class NileGameManager implements Game {
    * @public
    */
   async removeShortcuts() {
-    return removeShortcutsUtil(this)
+    return removeShortcutsUtil(this.deps, this)
   }
 
   async launch(
@@ -568,7 +568,7 @@ export default class NileGameManager implements Game {
         LogPrefix.Nile
       )
     } else if (!res.abort) {
-      await removeShortcutsUtil(this)
+      await removeShortcutsUtil(this.deps, this)
       await removeNonSteamGame(this)
       this.deps.libraryManagers.nile.installState(this.id, false)
     }

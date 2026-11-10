@@ -1,7 +1,5 @@
 {
-  "childProcess": {
-    "src/backend/sidecar/knownFolders.ts": 1
-  },
+  "childProcess": {},
   "jestMock": {
     "src/backend/sidecar/__tests__/depotHostChannels.test.ts": 1,
     "src/backend/sidecar/__tests__/dialogStub.test.ts": 3,
@@ -23,7 +21,6 @@
     "src/backend/sidecar/__tests__/netStub.test.ts": 4,
     "src/backend/sidecar/__tests__/oauthLoginCapture.test.ts": 1,
     "src/backend/sidecar/__tests__/openPolicy.test.ts": 1,
-    "src/backend/sidecar/__tests__/pathShim.test.ts": 1,
     "src/backend/sidecar/__tests__/sendChannelObservable.test.ts": 1,
     "src/backend/sidecar/__tests__/shortcutsFlows.test.ts": 9,
     "src/backend/sidecar/__tests__/sidecarRpcFraming.test.ts": 1,
@@ -39,7 +36,6 @@
     "src/backend/sidecar/fileStore.ts": 1,
     "src/backend/sidecar/installedJsonWatcher.ts": 2,
     "src/backend/sidecar/ipcValidation.ts": 3,
-    "src/backend/sidecar/knownFolders.ts": 1,
     "src/backend/sidecar/outboundHttpRegistry.ts": 3,
     "src/backend/sidecar/processGuards.ts": 7,
     "src/backend/sidecar/runnerAuthFlowRegistration.ts": 1,

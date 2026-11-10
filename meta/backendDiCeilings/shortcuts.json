@@ -1,13 +1,10 @@
 {
-  "childProcess": {
-    "src/backend/shortcuts/shortcuts/windowsShortcut.ts": 1
-  },
+  "childProcess": {},
   "jestMock": {
-    "src/backend/shortcuts/__tests__/addShortcutsOutcome.test.ts": 5,
+    "src/backend/shortcuts/__tests__/addShortcutsOutcome.test.ts": 4,
     "src/backend/shortcuts/__tests__/getIcon.test.ts": 3,
-    "src/backend/shortcuts/__tests__/removeShortcutsOutcome.test.ts": 5,
+    "src/backend/shortcuts/__tests__/removeShortcutsOutcome.test.ts": 4,
     "src/backend/shortcuts/__tests__/shortcutsExistsFallback.test.ts": 6,
-    "src/backend/shortcuts/__tests__/windowsShortcut.test.ts": 1,
     "src/backend/shortcuts/nonesteamgame/__tests__/nonesteamgame.test.ts": 6
   }
 }

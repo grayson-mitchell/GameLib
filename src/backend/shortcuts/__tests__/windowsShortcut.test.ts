@@ -1,16 +1,8 @@
 /**
- * Unit tests for the Windows `.lnk` writer's argv/script/env construction. `spawn` is a fake:
+ * Unit tests for the Windows `.lnk` writer's argv/script/env construction. The runner is scripted:
  * NO POWERSHELL RUNS. The property under test is that caller-supplied values only ever travel
  * as environment variables, never as script text or argv, so they need no escaping.
  */
-import { EventEmitter } from 'events'
-
-const mockSpawn = jest.fn()
-jest.mock('child_process', () => ({
-  ...jest.requireActual('child_process'),
-  spawn: (...args: unknown[]) => mockSpawn(...args)
-}))
-
 import { mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
@@ -22,6 +14,7 @@ import {
   buildShortcutEnv,
   writeWindowsShortcut
 } from '../shortcuts/windowsShortcut'
+import { createScriptedRunner } from '../../testUtils/scriptedRunner'
 
 const HOSTILE_TITLE = `Jörg's "Quest" $(calc) \`whoami\`; & 日本語 'x'`
 // The same title with only the characters Windows forbids in a file NAME removed
@@ -29,23 +22,6 @@ const HOSTILE_TITLE = `Jörg's "Quest" $(calc) \`whoami\`; & 日本語 'x'`
 // the apostrophe and the CJK run, which is what the file-creating test is about.
 const HOSTILE_FILE_TITLE = HOSTILE_TITLE.replace(/[<>:"/\\|?*]/g, '')
 const HOSTILE_LNK = `C:\\Users\\Jörg\\OneDrive\\Desktop\\${HOSTILE_TITLE}.lnk`
-
-type FakeChild = EventEmitter & {
-  stdin: EventEmitter & { write: jest.Mock; end: jest.Mock }
-  stderr: EventEmitter
-  kill: jest.Mock
-}
-
-function fakeChild(): FakeChild {
-  const child = new EventEmitter() as FakeChild
-  const stdin = new EventEmitter() as FakeChild['stdin']
-  stdin.write = jest.fn()
-  stdin.end = jest.fn()
-  child.stdin = stdin
-  child.stderr = new EventEmitter()
-  child.kill = jest.fn()
-  return child
-}
 
 const IShellLinkW_MEMBERS = [
   'GetPath',
@@ -190,29 +166,32 @@ describe('writeWindowsShortcut', () => {
   })
 
   afterEach(() => {
-    jest.useRealTimers()
     rmSync(dir, { recursive: true, force: true })
   })
 
-  it('spawns powershell.exe with a fixed argv, no shell, and feeds the constant script on stdin', async () => {
+  const writer = (runner: ReturnType<typeof createScriptedRunner>) => ({
+    runner
+  })
+
+  it('runs powershell.exe with a fixed argv, the constant script on stdin, and the env replaced', async () => {
     expect(HOSTILE_FILE_TITLE).toContain('$(calc)')
     expect(HOSTILE_FILE_TITLE).toContain('`')
     expect(HOSTILE_FILE_TITLE).toContain("'")
     expect(HOSTILE_FILE_TITLE).toContain('日本語')
     expect(HOSTILE_FILE_TITLE).not.toMatch(/[<>:"/\\|?*]/)
     const lnk = join(dir, `${HOSTILE_FILE_TITLE}.lnk`)
-    const child = fakeChild()
-    mockSpawn.mockReturnValue(child)
-
-    const pending = writeWindowsShortcut(lnk, { target: 'gamelib://x' })
     writeFileSync(lnk, '')
-    child.emit('close', 0)
+    const runner = createScriptedRunner([{ cmd: 'powershell.exe' }])
 
-    await expect(pending).resolves.toEqual({ ok: true })
-    const [command, args, options] = mockSpawn.mock.calls[0]
-    expect(command).toBe('powershell.exe')
-    expect(args).toEqual(POWERSHELL_ARGS)
-    expect(args).toEqual([
+    await expect(
+      writeWindowsShortcut(writer(runner), lnk, { target: 'gamelib://x' })
+    ).resolves.toEqual({ ok: true })
+
+    const call = runner.calls[0]
+    expect(call?.method).toBe('run')
+    expect(call?.cmd).toBe('powershell.exe')
+    expect(call?.argv).toEqual(POWERSHELL_ARGS)
+    expect(call?.argv).toEqual([
       '-NoProfile',
       '-NonInteractive',
       '-ExecutionPolicy',
@@ -220,68 +199,74 @@ describe('writeWindowsShortcut', () => {
       '-Command',
       '-'
     ])
-    expect(JSON.stringify(args)).not.toContain('Jörg')
-    expect(options.shell).toBeUndefined()
-    expect(options.windowsHide).toBe(true)
-    expect(options.env.GAMELIB_LNK_PATH).toBe(lnk)
-    expect(child.stdin.write).toHaveBeenCalledWith(WRITE_SHORTCUT_SCRIPT)
-    expect(child.stdin.end).toHaveBeenCalled()
+    expect(JSON.stringify(call?.argv)).not.toContain('Jörg')
+    const opts = call?.opts as {
+      stdin: string
+      replaceEnv: boolean
+      timeoutMs: number
+      windowsHide: boolean
+      env: NodeJS.ProcessEnv
+    }
+    expect(opts.stdin).toBe(WRITE_SHORTCUT_SCRIPT)
+    expect(opts.replaceEnv).toBe(true)
+    expect(opts.timeoutMs).toBe(30000)
+    expect(opts.timeoutMs).toBe(WRITE_SHORTCUT_TIMEOUT_MS)
+    expect(opts.windowsHide).toBe(true)
+    expect(opts.env.GAMELIB_LNK_PATH).toBe(lnk)
+    runner.expectAllConsumed()
   })
 
   it('reports a non-zero exit with its stderr', async () => {
-    const child = fakeChild()
-    mockSpawn.mockReturnValue(child)
-
-    const pending = writeWindowsShortcut(join(dir, 'a.lnk'), {
-      target: 'gamelib://x'
-    })
-    child.stderr.emit('data', Buffer.from('Access is denied.\r\n'))
-    child.emit('close', 1)
-
-    await expect(pending).resolves.toEqual({
+    const runner = createScriptedRunner([
+      {
+        cmd: 'powershell.exe',
+        result: { code: 1, stderr: 'Access is denied.\r\n' }
+      }
+    ])
+    await expect(
+      writeWindowsShortcut(writer(runner), join(dir, 'a.lnk'), {
+        target: 'gamelib://x'
+      })
+    ).resolves.toEqual({
       ok: false,
       error: 'powershell exited 1: Access is denied.'
     })
   })
 
   it('does not trust exit 0 when no .lnk was written', async () => {
-    const child = fakeChild()
-    mockSpawn.mockReturnValue(child)
-
-    const pending = writeWindowsShortcut(join(dir, 'missing.lnk'), {
-      target: 'gamelib://x'
-    })
-    child.emit('close', 0)
-
-    await expect(pending).resolves.toMatchObject({ ok: false })
+    const runner = createScriptedRunner([{ cmd: 'powershell.exe' }])
+    await expect(
+      writeWindowsShortcut(writer(runner), join(dir, 'missing.lnk'), {
+        target: 'gamelib://x'
+      })
+    ).resolves.toMatchObject({ ok: false })
   })
 
   it('reports a spawn error (e.g. powershell.exe not found)', async () => {
-    const child = fakeChild()
-    mockSpawn.mockReturnValue(child)
-
-    const pending = writeWindowsShortcut(join(dir, 'a.lnk'), {
-      target: 'gamelib://x'
-    })
-    child.emit('error', new Error('spawn powershell.exe ENOENT'))
-
-    await expect(pending).resolves.toEqual({
+    const runner = createScriptedRunner([
+      { cmd: 'powershell.exe', error: { code: 'ENOENT' } }
+    ])
+    await expect(
+      writeWindowsShortcut(writer(runner), join(dir, 'a.lnk'), {
+        target: 'gamelib://x'
+      })
+    ).resolves.toEqual({
       ok: false,
       error: 'Error: spawn powershell.exe ENOENT'
     })
   })
 
-  it('kills a child that never exits, after the bound', async () => {
-    jest.useFakeTimers()
-    const child = fakeChild()
-    mockSpawn.mockReturnValue(child)
-
-    const pending = writeWindowsShortcut(join(dir, 'a.lnk'), {
-      target: 'gamelib://x'
+  it('reports a timeout', async () => {
+    const runner = createScriptedRunner([
+      { cmd: 'powershell.exe', result: { code: null, timedOut: true } }
+    ])
+    await expect(
+      writeWindowsShortcut(writer(runner), join(dir, 'a.lnk'), {
+        target: 'gamelib://x'
+      })
+    ).resolves.toEqual({
+      ok: false,
+      error: `powershell did not exit within ${WRITE_SHORTCUT_TIMEOUT_MS}ms`
     })
-    jest.advanceTimersByTime(WRITE_SHORTCUT_TIMEOUT_MS)
-
-    await expect(pending).resolves.toMatchObject({ ok: false })
-    expect(child.kill).toHaveBeenCalled()
   })
 })

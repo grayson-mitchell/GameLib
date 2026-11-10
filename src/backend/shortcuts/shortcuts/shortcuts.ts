@@ -24,6 +24,7 @@ import { isMac } from 'backend/constants/environment'
 import { userHome } from 'backend/constants/paths'
 import type { Game } from 'common/types/game_manager'
 import { writeWindowsShortcut } from './windowsShortcut'
+import { readWindowsShellFolder } from '../../sidecar/knownFolders'
 
 /**
  * Adds a desktop shortcut to $HOME/Desktop and to /usr/share/applications
@@ -56,7 +57,10 @@ async function addShortcuts(
   }
 
   const launchWithProtocol = `gamelib://launch?appName=${app_name}&runner=${runner}`
-  const [desktopFile, menuFile] = shortcutFiles(gameInfo.title)
+  const [desktopFile, menuFile] = shortcutFiles(
+    gameInfo.title,
+    await windowsDesktopDir(deps)
+  )
   if (!desktopFile || !menuFile) {
     return
   }
@@ -134,7 +138,7 @@ ${icon ? `Icon=${icon}\n` : ''}Categories=Game;
       // Not `shell.writeShortcutLink`: the sidecar has no Win32 shell-link API and stubs it to
       // `false`, which used to drop every .lnk silently while the success toast still showed.
       const writeLnk = async (file: string) => {
-        const result = await writeWindowsShortcut(file, shortcutOptions)
+        const result = await writeWindowsShortcut(deps, file, shortcutOptions)
         if (!result.ok) throw new Error(result.error)
       }
       if (addDesktopShortcuts || fromMenu) {
@@ -188,11 +192,17 @@ ${icon ? `Icon=${icon}\n` : ''}Categories=Game;
  * @async
  * @public
  */
-async function removeShortcuts(game: Game) {
+async function removeShortcuts(
+  deps: Pick<ShortcutsDeps, 'runner'>,
+  game: Game
+) {
   const gameInfo = game.getGameInfo()
   if (gameInfo.install.is_dlc) return
 
-  const [desktopFile, menuFile] = shortcutFiles(gameInfo.title)
+  const [desktopFile, menuFile] = shortcutFiles(
+    gameInfo.title,
+    await windowsDesktopDir(deps)
+  )
 
   const removeFile = async (
     file: string,
@@ -247,7 +257,19 @@ async function removeShortcuts(game: Game) {
   }
 }
 
-function shortcutFiles(gameTitle: string) {
+/**
+ * The redirected Desktop folder on win32 (OneDrive, a user's own "Move"), read from the registry;
+ * undefined elsewhere or when it cannot be read, so `shortcutFiles` falls back to
+ * `app.getPath('desktop')`.
+ */
+async function windowsDesktopDir(
+  deps: Pick<ShortcutsDeps, 'runner'>
+): Promise<string | undefined> {
+  if (process.platform !== 'win32') return undefined
+  return readWindowsShellFolder(deps, 'Desktop')
+}
+
+function shortcutFiles(gameTitle: string, windowsDesktop?: string) {
   let desktopFile
   let menuFile
 
@@ -260,7 +282,7 @@ function shortcutFiles(gameTitle: string) {
       break
     }
     case 'win32': {
-      desktopFile = `${app.getPath('desktop')}\\${gameTitle}.lnk`
+      desktopFile = `${windowsDesktop ?? app.getPath('desktop')}\\${gameTitle}.lnk`
       menuFile = `${app.getPath(
         'appData'
       )}\\Microsoft\\Windows\\Start Menu\\Programs\\${gameTitle}.lnk`
@@ -451,6 +473,7 @@ export {
   removeShortcuts,
   addShortcuts,
   shortcutFiles,
+  windowsDesktopDir,
   shortcutPathPresent,
   macDesktopShortcutWanted,
   macDesktopShortcutPresent

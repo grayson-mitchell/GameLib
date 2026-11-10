@@ -5,14 +5,12 @@
  * `2026-10-05-desktop-and-documents-paths-ignore-real-user-folders.md`).
  *
  *   - linux: a failed `.desktop` write (e.g. a `~/Desktop` that does not exist) rejects.
- *   - win32: the `.lnk` is written by a PowerShell child fed on stdin. `child_process.spawn` is
- *     replaced by a fake here, so NO POWERSHELL RUNS. A non-zero exit rejects.
+ *   - win32: the `.lnk` is written by a PowerShell child fed on stdin. The runner is a fake
+ *     here, so NO POWERSHELL (and no reg.exe) RUNS. A non-zero exit rejects.
  *
  * Paths resolve under the jest containment home (`jest.setupContainment.ts`).
  */
-import { EventEmitter } from 'events'
-
-const mockSpawn = jest.fn()
+const mockRun = jest.fn()
 const mockAddNonSteamGame = jest.fn()
 const defaultSettings = {
   addDesktopShortcuts: true,
@@ -20,14 +18,6 @@ const defaultSettings = {
   addSteamShortcuts: false
 }
 let mockSettings: typeof defaultSettings = { ...defaultSettings }
-
-jest.mock('child_process', () => ({
-  ...jest.requireActual('child_process'),
-  spawn: (...args: unknown[]) => mockSpawn(...args),
-  // The win32 known-folder lookup in `pathShim` must not run `reg.exe` either; `undefined`
-  // makes it fall back to `homedir()/Desktop`.
-  spawnSync: () => undefined
-}))
 
 jest.mock('backend/config', () => ({
   GlobalConfig: {
@@ -67,9 +57,10 @@ import { dirname, join } from 'path'
 import { addShortcuts, shortcutFiles } from '../shortcuts/shortcuts'
 import type { GameInfo } from 'common/types'
 
-const deps = { libraryManagers: { gog: {} } } as unknown as Parameters<
-  typeof addShortcuts
->[0]
+const deps = {
+  libraryManagers: { gog: {} },
+  runner: { run: (...args: unknown[]) => mockRun(...args) }
+} as unknown as Parameters<typeof addShortcuts>[0]
 import type { Game } from 'common/types/game_manager'
 import { defined } from 'backend/testUtils/indexed'
 
@@ -100,37 +91,29 @@ const gameInfo = {
 } as unknown as GameInfo
 const game = { getGameInfo: () => gameInfo } as unknown as Game
 
-type FakeChild = EventEmitter & {
-  stdin: { write: jest.Mock; end: jest.Mock; on: jest.Mock }
-  stderr: EventEmitter
-  kill: jest.Mock
-}
-
-/** A stand-in for the PowerShell child: exits with `code` on the next macrotask, after creating
- * the `.lnk` named in its env when `code` is 0 (what a real `$lnk.Save()` would do). */
+/** A stand-in for the runner: `reg.exe` finds nothing (the Desktop falls back to
+ * `homedir()/Desktop`); the PowerShell run exits with `code`, after creating the `.lnk` named in
+ * its env when `code` is 0 (what a real `$lnk.Save()` would do). */
 function fakePowerShell(code: number) {
-  mockSpawn.mockImplementation(
-    (
-      _command: string,
-      _args: string[],
-      options: { env: NodeJS.ProcessEnv }
-    ) => {
-      const child = new EventEmitter() as FakeChild
-      child.stdin = { write: jest.fn(), end: jest.fn(), on: jest.fn() }
-      child.stderr = new EventEmitter()
-      child.kill = jest.fn()
-      setImmediate(() => {
-        if (code === 0) {
-          // On this POSIX test host the win32 path's backslashes are part of the file name, so
-          // its POSIX dirname is the folder to create.
-          mkdirSync(dirname(options.env.GAMELIB_LNK_PATH!), { recursive: true })
-          writeFileSync(options.env.GAMELIB_LNK_PATH!, '')
-        }
-        child.emit('close', code)
-      })
-      return child
+  mockRun.mockImplementation(
+    (command: string, _args: string[], options: { env: NodeJS.ProcessEnv }) => {
+      const base = { signal: null, stdout: '', stderr: '', timedOut: false }
+      if (command !== 'powershell.exe')
+        return Promise.resolve({ ...base, code: 1 })
+      if (code === 0) {
+        // On this POSIX test host the win32 path's backslashes are part of the file name, so
+        // its POSIX dirname is the folder to create.
+        mkdirSync(dirname(options.env.GAMELIB_LNK_PATH!), { recursive: true })
+        writeFileSync(options.env.GAMELIB_LNK_PATH!, '')
+      }
+      return Promise.resolve({ ...base, code })
     }
   )
+}
+
+/** The powershell.exe runs only (reg.exe lookups excluded). */
+function powershellCalls(): unknown[][] {
+  return mockRun.mock.calls.filter(([command]) => command === 'powershell.exe')
 }
 
 let originalPlatform: string
@@ -173,7 +156,7 @@ describe('addShortcuts on win32', () => {
     fakePowerShell(1)
 
     await expect(addShortcuts(deps, game, true)).rejects.toThrow()
-    expect(mockSpawn).toHaveBeenCalled()
+    expect(powershellCalls().length).toBeGreaterThan(0)
   })
 
   it('writes the desktop and Start Menu .lnk through PowerShell, paths in env, never a shell', async () => {
@@ -182,8 +165,9 @@ describe('addShortcuts on win32', () => {
 
     await expect(addShortcuts(deps, game, true)).resolves.toBeUndefined()
 
-    expect(mockSpawn).toHaveBeenCalledTimes(2)
-    const written = mockSpawn.mock.calls.map(([command, args, options]) => {
+    expect(powershellCalls()).toHaveLength(2)
+    const written = powershellCalls().map(([command, args, rawOptions]) => {
+      const options = rawOptions as { env: NodeJS.ProcessEnv; shell?: unknown }
       expect(command).toBe('powershell.exe')
       expect(args).toEqual([
         '-NoProfile',
@@ -234,8 +218,10 @@ describe('Steam game (261026-c7r)', () => {
 
     await addShortcuts(deps, steamGame, true)
 
-    expect(mockSpawn).toHaveBeenCalledTimes(2)
-    const envs = mockSpawn.mock.calls.map(([, , options]) => options.env)
+    expect(powershellCalls()).toHaveLength(2)
+    const envs = powershellCalls().map(
+      ([, , options]) => (options as { env: NodeJS.ProcessEnv }).env
+    )
     expect(envs.map((env) => env.GAMELIB_LNK_PATH).sort()).toEqual(
       [desktopFile, menuFile].sort()
     )

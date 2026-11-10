@@ -580,7 +580,7 @@ export default class GOGGame implements Game {
   }
 
   async removeShortcuts() {
-    return removeShortcutsUtil(this)
+    return removeShortcutsUtil(this.deps, this)
   }
 
   async launch(
@@ -1155,7 +1155,7 @@ export default class GOGGame implements Game {
     const gameInfo = this.getGameInfo()
     gameInfo.is_installed = false
     gameInfo.install = { is_dlc: false }
-    await removeShortcutsUtil(this)
+    await removeShortcutsUtil(this.deps, this)
     this.deps.stores.gog.syncStore.delete(this.id)
     await removeNonSteamGame(this)
     sendFrontendMessage('pushGameToLibrary', gameInfo)

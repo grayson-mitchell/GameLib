@@ -7,15 +7,18 @@
  *     (`XDG_DESKTOP_DIR`) still wins when it is exported.
  *   - Windows: the `User Shell Folders` registry key, which is where OneDrive (and a user's own
  *     "Move" in the folder's Location tab) redirects Desktop and Documents. Read with `reg.exe`
- *     through argv -- no shell, no new native dependency -- once per folder per process.
+ *     through the process runner (argv, no shell, no new native dependency), awaited by the two
+ *     win32 consumers (shortcuts.ts, save_sync.ts); `pathShim` itself is sync and never reads it.
  *
  * Every lookup returns `undefined` when it cannot answer, and the caller falls back to
  * `homedir()/<Name>`, which is what the shim always returned before.
  */
-import { spawnSync } from 'child_process'
 import { readFileSync } from 'fs'
 import { homedir } from 'os'
 import { join, posix, win32 } from 'path'
+import type { ProcessRunner } from '../process/types'
+
+const REG_QUERY_TIMEOUT_MS = 5_000
 
 /**
  * Parses `user-dirs.dirs` into `{ XDG_DESKTOP_DIR: '/home/u/Schreibtisch', ... }`.
@@ -107,43 +110,37 @@ export function expandWindowsEnv(
   return unresolved ? undefined : expanded
 }
 
-const windowsFolderCache = new Map<WindowsShellFolder, string | undefined>()
-
-/** Test seam: forget cached Windows lookups. */
-export function clearKnownFolderCache(): void {
-  windowsFolderCache.clear()
-}
-
 /**
  * The redirected location of a Windows shell folder, or `undefined` when it cannot be read.
  * `reg.exe` prints in the console code page, so a path typed with characters outside it can
  * come back mangled; the registry default (`%USERPROFILE%\Desktop`) is ASCII and expanded here
  * from the real, UTF-16-safe environment, which covers the OneDrive case.
+ *
+ * One registry query per call: both consumers are user-initiated actions, so there is no cache.
  */
-export function readWindowsShellFolder(
+export async function readWindowsShellFolder(
+  deps: { runner: Pick<ProcessRunner, 'run'> },
   name: WindowsShellFolder,
   env: NodeJS.ProcessEnv = process.env
-): string | undefined {
-  if (windowsFolderCache.has(name)) return windowsFolderCache.get(name)
-
-  let resolved: string | undefined
+): Promise<string | undefined> {
   try {
-    const result = spawnSync(
+    const result = await deps.runner.run(
       'reg.exe',
       ['query', USER_SHELL_FOLDERS_KEY, '/v', name],
-      { encoding: 'utf8', timeout: 5000, windowsHide: true }
+      { timeoutMs: REG_QUERY_TIMEOUT_MS, windowsHide: true }
     )
-    if (result && result.status === 0 && typeof result.stdout === 'string') {
-      const raw = parseRegQueryValue(result.stdout, name)
-      const expanded =
-        raw === undefined ? undefined : expandWindowsEnv(raw, env)
-      if (expanded && win32.isAbsolute(expanded) && !expanded.includes('�')) {
-        resolved = win32.normalize(expanded)
-      }
+    if (result.code !== 0 || result.timedOut) return undefined
+    const raw = parseRegQueryValue(result.stdout, name)
+    const expanded = raw === undefined ? undefined : expandWindowsEnv(raw, env)
+    if (
+      expanded &&
+      win32.isAbsolute(expanded) &&
+      !expanded.includes('\uFFFD')
+    ) {
+      return win32.normalize(expanded)
     }
+    return undefined
   } catch {
-    resolved = undefined
+    return undefined
   }
-  windowsFolderCache.set(name, resolved)
-  return resolved
 }

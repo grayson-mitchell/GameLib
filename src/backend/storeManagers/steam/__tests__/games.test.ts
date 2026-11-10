@@ -12970,14 +12970,14 @@ describe('SteamGame shortcuts delegate to the shared module (261026-c7r)', () =>
     expect(spy).toHaveBeenCalledWith(game.deps, game, true)
   })
 
-  it('removeShortcuts calls the shared removeShortcuts with (this)', async () => {
+  it('removeShortcuts calls the shared removeShortcuts with (deps, this)', async () => {
     const spy = shortcutsModule.removeShortcuts as jest.Mock
     spy.mockResolvedValue(undefined)
     const game = new SteamGame(APP_ID, steamTestDeps)
 
     await game.removeShortcuts()
 
-    expect(spy).toHaveBeenCalledWith(game)
+    expect(spy).toHaveBeenCalledWith(steamTestDeps, game)
   })
 
   it('propagates a rejection from the shared addShortcuts', async () => {

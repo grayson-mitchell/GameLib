@@ -148,7 +148,12 @@ import { dirname, join } from 'path'
 import { dirSync, type DirResult } from 'tmp'
 import { realHomeAtSetup } from 'backend/jest.setupContainment'
 import { registerShortcutsFlows } from '../shortcutsFlowRegistration'
-import { handlerRegistry, listenerRegistry } from '../../platform'
+import {
+  bindTransport,
+  handlerRegistry,
+  listenerRegistry
+} from '../../platform'
+import { createRealRunner } from '../../testUtils/realRunner'
 import { getPath } from '../pathShim'
 import {
   createTestManagers,
@@ -274,6 +279,17 @@ registerShortcutsFlows({
   stores: createTestStores(),
   runner: createTestServices().runner
 })
+
+// The real nativeImage shim reaches /usr/bin/sips through platformApi's transport (runner.runSync);
+// bound once to a fake-HOME real runner, the same way bootstrap binds ctx.runner.
+const sipsRunner = createRealRunner()
+bindTransport({
+  openExternal: () => undefined,
+  pushFrontendMessage: () => undefined,
+  openDetached: () => undefined,
+  runSync: (cmd, argv, opts) => sipsRunner.runner.runSync(cmd, argv, opts)
+})
+afterAll(() => sipsRunner.dispose())
 
 const shellExeAtFileLoad = process.env.GAMELIB_SHELL_EXE
 

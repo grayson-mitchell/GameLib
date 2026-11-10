@@ -12,16 +12,11 @@
  * un-awaited, and a stale shortcut must not fail an uninstall.
  *
  * Safety: every path here resolves under the jest containment home (`jest.setupContainment.ts`).
- * `spawnSync` is mocked so the win32 known-folder lookup in `pathShim` never runs `reg.exe`, which
- * on the operator's Windows box would resolve the real OneDrive Desktop. Each test asserts that
+ * The runner is a stub whose `reg.exe` finds nothing, so the win32 known-folder lookup never runs
+ * the real `reg.exe`, which on the operator's Windows box would resolve the real OneDrive Desktop. Each test asserts that
  * both paths start with `homedir()` before it writes anything.
  */
 const mockEnv = { isMac: false }
-
-jest.mock('child_process', () => ({
-  ...jest.requireActual('child_process'),
-  spawnSync: () => undefined
-}))
 
 // `removeShortcuts` branches on this constant rather than on `process.platform`, so the darwin
 // case has to flip it as well.
@@ -82,6 +77,19 @@ function overrideProcessPlatform(os: string): string {
   return original
 }
 
+const deps = {
+  runner: {
+    run: () =>
+      Promise.resolve({
+        code: 1,
+        signal: null,
+        stdout: '',
+        stderr: '',
+        timedOut: false
+      })
+  }
+} as unknown as Parameters<typeof removeShortcuts>[0]
+
 function gameFor(title: string): Game {
   const gameInfo = {
     runner: 'legendary',
@@ -132,7 +140,7 @@ describe('removeShortcuts on linux (261012-ca6)', () => {
     writeFileSync(desktopFile, '')
     writeFileSync(menuFile, '')
 
-    await removeShortcuts(gameFor(title))
+    await removeShortcuts(deps, gameFor(title))
 
     expect(existsSync(desktopFile)).toBe(false)
     expect(existsSync(menuFile)).toBe(false)
@@ -149,7 +157,7 @@ describe('removeShortcuts on linux (261012-ca6)', () => {
     writeFileSync(join(desktopFile, 'keep'), '')
     writeFileSync(menuFile, '')
 
-    await expect(removeShortcuts(gameFor(title))).resolves.toBeUndefined()
+    await expect(removeShortcuts(deps, gameFor(title))).resolves.toBeUndefined()
 
     expect(mockLogError).toHaveBeenCalledTimes(1)
     expect(String((mockLogError.mock.calls[0][0] as unknown[])[0])).toContain(
@@ -163,7 +171,7 @@ describe('removeShortcuts on linux (261012-ca6)', () => {
     const title = '261012-ca6 Remove Missing Game'
     containedPaths(title)
 
-    await expect(removeShortcuts(gameFor(title))).resolves.toBeUndefined()
+    await expect(removeShortcuts(deps, gameFor(title))).resolves.toBeUndefined()
 
     expect(mockLogError).not.toHaveBeenCalled()
   })
@@ -181,7 +189,7 @@ describe('removeShortcuts on darwin (261012-ca6)', () => {
     mkdirSync(join(menuFile, 'Contents', 'MacOS'), { recursive: true })
     writeFileSync(join(menuFile, 'Contents', 'MacOS', 'run.sh'), '')
 
-    await removeShortcuts(gameFor(title))
+    await removeShortcuts(deps, gameFor(title))
 
     expect(existsSync(menuFile)).toBe(false)
   })
@@ -195,7 +203,7 @@ describe('removeShortcuts on darwin (261012-ca6)', () => {
       writeFileSync(join(app, 'Contents', 'MacOS', 'run.sh'), '')
     }
 
-    await removeShortcuts(gameFor(title))
+    await removeShortcuts(deps, gameFor(title))
 
     expect(existsSync(desktopFile)).toBe(false)
     expect(existsSync(menuFile)).toBe(false)
@@ -208,7 +216,7 @@ describe('removeShortcuts on darwin (261012-ca6)', () => {
     mkdirSync(join(desktopFile, 'Contents', 'MacOS'), { recursive: true })
     writeFileSync(join(desktopFile, 'Contents', 'MacOS', 'run.sh'), '')
 
-    await removeShortcuts(gameFor(title))
+    await removeShortcuts(deps, gameFor(title))
 
     expect(existsSync(desktopFile)).toBe(false)
     expect(existsSync(menuFile)).toBe(false)
@@ -223,7 +231,7 @@ describe('removeShortcuts on darwin (261012-ca6)', () => {
     mkdirSync(dirname(desktopFile), { recursive: true })
     symlinkSync(menuFile, desktopFile)
 
-    await removeShortcuts(gameFor(title))
+    await removeShortcuts(deps, gameFor(title))
 
     expect(() => lstatSync(desktopFile)).toThrow(/ENOENT/)
     expect(existsSync(menuFile)).toBe(false)
@@ -240,7 +248,7 @@ describe('removeShortcuts on darwin (261012-ca6)', () => {
     mkdirSync(dirname(desktopFile), { recursive: true })
     symlinkSync(other, desktopFile)
     try {
-      await removeShortcuts(gameFor(title))
+      await removeShortcuts(deps, gameFor(title))
 
       expect(() => lstatSync(desktopFile)).toThrow(/ENOENT/)
       expect(existsSync(otherRun)).toBe(true)
@@ -258,7 +266,7 @@ describe('removeShortcuts on darwin (261012-ca6)', () => {
       desktopFile
     )
 
-    await removeShortcuts(gameFor(title))
+    await removeShortcuts(deps, gameFor(title))
 
     expect(() => lstatSync(desktopFile)).toThrow(/ENOENT/)
     expect(mockLogError).not.toHaveBeenCalled()

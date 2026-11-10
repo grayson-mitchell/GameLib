@@ -15,10 +15,10 @@
  * code-page-1252 box (measured in quick 261012-9aa). The `LPWStr` marshalling of the
  * `IShellLinkW` helper keeps the whole path UTF-16 end to end.
  */
-import { spawn } from 'child_process'
 import { existsSync } from 'graceful-fs'
 import { win32 } from 'path'
 import type { ShortcutDetails } from 'backend/platform'
+import type { ProcessRunner } from '../../process/types'
 
 export const POWERSHELL_ARGS = [
   '-NoProfile',
@@ -135,60 +135,33 @@ export const WRITE_SHORTCUT_TIMEOUT_MS = 30_000
  * Writes `lnkPath`. Resolves `{ ok: true }` only when PowerShell exited 0 AND the file exists;
  * otherwise `{ ok: false, error }`. Never rejects.
  */
-export function writeWindowsShortcut(
+export async function writeWindowsShortcut(
+  deps: { runner: Pick<ProcessRunner, 'run'> },
   lnkPath: string,
   details: ShortcutDetails
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  return new Promise((resolve) => {
-    let settled = false
-    let stderr = ''
-    const finish = (result: { ok: true } | { ok: false; error: string }) => {
-      if (settled) return
-      settled = true
-      clearTimeout(timer)
-      resolve(result)
+  let result
+  try {
+    result = await deps.runner.run('powershell.exe', POWERSHELL_ARGS, {
+      env: buildShortcutEnv(lnkPath, details),
+      replaceEnv: true,
+      stdin: WRITE_SHORTCUT_SCRIPT,
+      timeoutMs: WRITE_SHORTCUT_TIMEOUT_MS,
+      windowsHide: true
+    })
+  } catch (error) {
+    return { ok: false, error: String(error) }
+  }
+  if (result.timedOut) {
+    return {
+      ok: false,
+      error: `powershell did not exit within ${WRITE_SHORTCUT_TIMEOUT_MS}ms`
     }
-
-    let child: ReturnType<typeof spawn>
-    try {
-      child = spawn('powershell.exe', POWERSHELL_ARGS, {
-        env: buildShortcutEnv(lnkPath, details),
-        stdio: ['pipe', 'ignore', 'pipe'],
-        windowsHide: true
-      })
-    } catch (error) {
-      resolve({ ok: false, error: String(error) })
-      return
-    }
-
-    const timer = setTimeout(() => {
-      child.kill()
-      finish({
-        ok: false,
-        error: `powershell did not exit within ${WRITE_SHORTCUT_TIMEOUT_MS}ms`
-      })
-    }, WRITE_SHORTCUT_TIMEOUT_MS)
-    timer.unref?.()
-
-    child.stderr?.on('data', (chunk: Buffer | string) => {
-      if (stderr.length < 4096) stderr += chunk.toString()
-    })
-    child.on('error', (error) => finish({ ok: false, error: String(error) }))
-    child.on('close', (code) => {
-      if (code === 0 && existsSync(lnkPath)) {
-        finish({ ok: true })
-      } else {
-        finish({
-          ok: false,
-          error: `powershell exited ${code}${stderr ? `: ${stderr.trim()}` : ''}`
-        })
-      }
-    })
-
-    child.stdin?.on('error', () => {
-      // A child that died before reading stdin surfaces through 'close'/'error' above.
-    })
-    child.stdin?.write(WRITE_SHORTCUT_SCRIPT)
-    child.stdin?.end()
-  })
+  }
+  if (result.code === 0 && existsSync(lnkPath)) return { ok: true }
+  const stderr = result.stderr.slice(0, 4096).trim()
+  return {
+    ok: false,
+    error: `powershell exited ${result.code}${stderr ? `: ${stderr}` : ''}`
+  }
 }

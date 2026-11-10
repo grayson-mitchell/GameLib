@@ -377,7 +377,7 @@ export default class SteamGame implements Game {
   }
 
   async removeShortcuts(): Promise<void> {
-    return removeShortcutsUtil(this)
+    return removeShortcutsUtil(this.deps, this)
   }
 
   /**

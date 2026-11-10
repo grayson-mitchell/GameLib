@@ -68,7 +68,7 @@ export default class SideloadGame implements Game {
   }
 
   async removeShortcuts(): Promise<void> {
-    return removeShortcutsUtil(this)
+    return removeShortcutsUtil(this.deps, this)
   }
 
   async isGameAvailable(): Promise<boolean> {
@@ -143,7 +143,7 @@ export default class SideloadGame implements Game {
 
     notify({ title, body: i18next.t('notify.uninstalled') })
 
-    removeShortcutsUtil(this)
+    removeShortcutsUtil(this.deps, this)
     removeRecentGame(this.deps, this.id)
     removeNonSteamGame(this)
 
