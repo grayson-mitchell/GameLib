@@ -2,7 +2,17 @@ import type { ContextType } from 'frontend/types'
 import useUiState from './uiState'
 import useSettingsState, { selectIsRTL } from './settingsState'
 import useAuthState from './authState'
-import useLibraryState from './libraryState'
+import useLibraryState, { selectInstallingEpicGame } from './libraryState'
+import {
+  composeAmazonAccount,
+  composeCustomCategories,
+  composeEpicAccount,
+  composeFavouriteGames,
+  composeGogAccount,
+  composeHiddenGames,
+  composeHumbleAccount,
+  composeSteamAccount
+} from './accountHooks'
 
 // Phase 69 D-09 bridge: GlobalState re-renders when a store that owns a
 // context field changes, and spreads the stores' current values into the
@@ -74,6 +84,8 @@ type BridgedKeys =
   | 'refreshLibrary'
   | 'steamMetadataSyncing'
   | 'steamSyncStatus'
+  | 'libraryStatus'
+  | 'installingEpicGame'
 
 /** Subscribes `onChange` to every bridged store. Lasts for the app's life (D-07). */
 export function subscribeBridge(onChange: () => void): void {
@@ -141,25 +153,9 @@ export function bridgedContextSlice(): Pick<ContextType, BridgedKeys> {
     completeOAuthLogin: auth.completeOAuthLogin,
     currentCustomCategories: library.currentCustomCategories,
     setCurrentCustomCategories: library.setCurrentCustomCategories,
-    hiddenGames: {
-      list: library.hiddenGames,
-      add: library.hideGame,
-      remove: library.unhideGame
-    },
-    favouriteGames: {
-      list: library.favouriteGames,
-      add: library.addGameToFavourites,
-      remove: library.removeGameFromFavourites
-    },
-    customCategories: {
-      list: library.customCategories,
-      listCategories: library.getCustomCategories,
-      addToGame: library.addGameToCustomCategory,
-      removeFromGame: library.removeGameFromCustomCategory,
-      addCategory: library.setCustomCategory,
-      removeCategory: library.removeCustomCategory,
-      renameCategory: library.renameCustomCategory
-    },
+    hiddenGames: composeHiddenGames(library),
+    favouriteGames: composeFavouriteGames(library),
+    customCategories: composeCustomCategories(library),
     sideloadedLibrary: library.sideloadedLibrary,
     gameUpdates: library.gameUpdates,
     refresh: library.refresh,
@@ -168,7 +164,9 @@ export function bridgedContextSlice(): Pick<ContextType, BridgedKeys> {
     refreshingByRunner: library.refreshingByRunner,
     refreshLibrary: library.refreshLibrary,
     steamMetadataSyncing: library.steamMetadataSyncing,
-    steamSyncStatus: library.steamSyncStatus
+    steamSyncStatus: library.steamSyncStatus,
+    libraryStatus: library.libraryStatus,
+    installingEpicGame: selectInstallingEpicGame(library)
   }
 }
 
@@ -183,46 +181,11 @@ export function bridgedAccounts(): Pick<
 > {
   const auth = useAuthState.getState()
   const library = useLibraryState.getState()
-  // Logout writes null; ContextType types these as `string | undefined`.
-  const name = (value: string | null | undefined) => value as string | undefined
   return {
-    epic: {
-      library: library.epicLibrary,
-      username: name(auth.epicUsername),
-      login: auth.epicLogin,
-      logout: auth.epicLogout
-    },
-    gog: {
-      library: library.gogLibrary,
-      username: name(auth.gogUsername),
-      login: auth.gogLogin,
-      logout: auth.gogLogout
-    },
-    amazon: {
-      library: library.amazonLibrary,
-      user_id: name(auth.amazonUserId),
-      username: name(auth.amazonUsername),
-      getLoginData: auth.getAmazonLoginData,
-      login: auth.amazonLogin,
-      logout: auth.amazonLogout
-    },
-    steam: {
-      library: library.steamLibrary,
-      username: auth.steamUsername,
-      login: auth.steamLogin,
-      logout: auth.steamLogout
-    },
-    humble: {
-      isLoggedIn: auth.humble.isLoggedIn,
-      username: auth.humble.username,
-      expired: auth.humble.expired,
-      encryptionDegraded: auth.humble.encryptionDegraded,
-      keys: auth.humble.keys,
-      syncedAt: auth.humble.syncedAt,
-      syncError: auth.humble.syncError,
-      syncing: auth.humble.syncing,
-      login: auth.humbleLogin,
-      logout: auth.humbleDisconnect
-    }
+    epic: composeEpicAccount(library, auth),
+    gog: composeGogAccount(library, auth),
+    amazon: composeAmazonAccount(library, auth),
+    steam: composeSteamAccount(library, auth),
+    humble: composeHumbleAccount(auth)
   }
 }

@@ -555,7 +555,7 @@ describe('libraryState handleGameStatus (hot path)', () => {
     await push({ appName: 'a', context: 'x' as never })
     await push({ appName: 'a', context: 'y' as never })
     expect(lib().libraryStatus).toHaveLength(1)
-    expect(lib().libraryStatus[0].context).toBe('y')
+    expect(lib().libraryStatus[0]?.context).toBe('y')
   })
 
   it('removes the entry on done and refreshes in the background with origin game-status', async () => {

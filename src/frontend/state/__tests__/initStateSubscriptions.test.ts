@@ -68,6 +68,16 @@ const fakeApi = new Proxy(
           calls.push(`zoom:${factor}`)
         }
       }
+      if (name === 'lock') {
+        return (playing: boolean) => {
+          calls.push(`lock:${playing}`)
+        }
+      }
+      if (name === 'unlock') {
+        return () => {
+          calls.push('unlock')
+        }
+      }
       if (name === 'storeGet') {
         return (_store: string, key: string, dflt?: unknown) =>
           key in config ? config[key] : dflt
@@ -111,6 +121,7 @@ const fakeApi = new Proxy(
 }
 
 const MOVED_LISTENERS = [
+  'handleGameStatus',
   'handleInstallGame',
   'handleCrossoverIndexChanged',
   'handleRunsForMeChanged',
@@ -241,6 +252,25 @@ describe('initStateSubscriptions', () => {
     const overrides = { g: { wineVersion: 'w' } }
     handlers.get('handleMetadataChanged')?.[0]?.({}, overrides)
     expect(useLibraryState.getState().gameOverrides).toBe(overrides)
+  })
+
+  it('the game-status push lands in libraryState.libraryStatus (spread copy)', () => {
+    init.initStateSubscriptions()
+    const args = { appName: 'e', status: 'installing', runner: 'legendary' }
+    handlers.get('handleGameStatus')?.[0]?.({}, args)
+    expect(useLibraryState.getState().libraryStatus).toEqual([args])
+    expect(useLibraryState.getState().libraryStatus[0]).not.toBe(args)
+  })
+
+  it('boot registers the sleep subscriber: one immediate unlock, then lock on a playing push', () => {
+    init.initStateSubscriptions()
+    expect(calls.filter((c) => c === 'unlock')).toHaveLength(1)
+    calls.length = 0
+    handlers.get('handleGameStatus')?.[0]?.(
+      {},
+      { appName: 'p', status: 'playing', runner: 'gog' }
+    )
+    expect(calls).toContain('lock:true')
   })
 
   it('gameUpdates changes persist to localStorage updates (from boot)', () => {

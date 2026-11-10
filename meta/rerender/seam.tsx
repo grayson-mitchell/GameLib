@@ -26,6 +26,7 @@ import {
   __resetInitStateSubscriptionsGuardForTests,
   initStateSubscriptions
 } from '../../src/frontend/state/initStateSubscriptions'
+import useLibraryState from '../../src/frontend/state/libraryState'
 import { emit } from './fakeApi'
 
 type Ctx = React.ContextType<typeof ContextProvider>
@@ -60,6 +61,9 @@ export async function mountApp(
   // a fresh fake api (listeners cleared), so the once-guard is reset first.
   __resetInitStateSubscriptionsGuardForTests()
   initStateSubscriptions()
+  // 69-19: libraryStatus is store state now (it was per-mount class state), so a
+  // fresh run starts empty or the repeated gameStatusPush becomes a no-op.
+  useLibraryState.setState({ libraryStatus: [] })
   const root = createRoot(container)
   await act(async () => {
     root.render(

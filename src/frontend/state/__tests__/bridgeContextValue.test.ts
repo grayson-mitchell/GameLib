@@ -87,6 +87,23 @@ describe('bridgeContextValue', () => {
     expect(spy).toHaveBeenCalledTimes(1)
   })
 
+  it('the slice carries libraryStatus and derives installingEpicGame from it', async () => {
+    const useLibraryState = (await import('../libraryState')).default
+    expect(bridge.bridgedContextSlice().libraryStatus).toEqual([])
+    expect(bridge.bridgedContextSlice().installingEpicGame).toBe(false)
+    useLibraryState.setState({
+      libraryStatus: [
+        { appName: 'e', status: 'installing', runner: 'legendary' }
+      ]
+    })
+    expect(bridge.bridgedContextSlice().libraryStatus).toHaveLength(1)
+    expect(bridge.bridgedContextSlice().installingEpicGame).toBe(true)
+    useLibraryState.setState({
+      libraryStatus: [{ appName: 'g', status: 'installing', runner: 'gog' }]
+    })
+    expect(bridge.bridgedContextSlice().installingEpicGame).toBe(false)
+  })
+
   it('bridgedAccounts composites keep their keys and follow authState identities', () => {
     useAuthState.setState({
       epicUsername: 'e',

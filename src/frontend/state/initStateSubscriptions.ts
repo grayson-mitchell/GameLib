@@ -39,6 +39,7 @@ import useLibraryState, {
   readInitialLibrary,
   registerLibrarySideEffects
 } from './libraryState'
+import { registerSleepAssertionSubscriber } from './sleepAssertion'
 import { normalizeSignInDismissals } from 'common/signInDismissal'
 import { registerDownloadsListeners } from './downloadsState'
 import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
@@ -194,6 +195,11 @@ export function initStateSubscriptions(): void {
     handleSteamBottleLaunchWaitingSignal
   )
 
+  // Phase 69-19: the per-game status push (the hot path).
+  window.api.handleGameStatus((e, args) => {
+    void useLibraryState.getState().handleGameStatus({ ...args })
+  })
+
   // Game metadata (override) changes and game pushes update the library.
   window.api.handleMetadataChanged((e, overrides) => {
     useLibraryState.getState().updateGameOverrides(overrides)
@@ -211,6 +217,7 @@ export function initStateSubscriptions(): void {
   // (3) store.subscribe side effects (D-08)
   registerSettingsSideEffects()
   registerLibrarySideEffects()
+  registerSleepAssertionSubscriber()
 }
 
 /**

@@ -126,13 +126,12 @@ function everyOriginIsAFixedStringLiteral(source: string): boolean {
   return true
 }
 
-// Files holding the internal `origin:` literals. The class file is listed
-// until 69-19 moves handleGameStatus (its two game-status call sites) out.
+// Files holding the internal `origin:` literals (69-19: handleGameStatus's two
+// game-status call sites now live in libraryState.ts).
 const INTERNAL_FILES = [
   'libraryState.ts',
   'initStateSubscriptions.ts',
-  'authState.ts',
-  'GlobalState.tsx'
+  'authState.ts'
 ]
 
 describe('refreshLibrary internal call sites thread their fixed origin literal', () => {
