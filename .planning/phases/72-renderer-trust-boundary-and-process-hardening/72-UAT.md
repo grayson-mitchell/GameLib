@@ -1,5 +1,5 @@
 ---
-status: partial
+status: complete
 phase: 72-renderer-trust-boundary-and-process-hardening
 source: [72-03-PLAN.md, 72-07-PLAN.md, 72-10-PLAN.md, 72-12-PLAN.md]
 ---
