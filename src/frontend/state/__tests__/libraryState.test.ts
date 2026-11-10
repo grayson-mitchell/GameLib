@@ -82,8 +82,8 @@ describe('libraryState collections', () => {
         writes.push([`local:${k}`, v])
       }
     }
-    // The category actions mutate the held object in place (preserved class
-    // behaviour), so each test seeds its own.
+    // Kept as explicit per-test isolation; the in-place mutation of the held
+    // object was fixed in quick 261110-v11.
     useLibraryState.setState({ customCategories: {} })
     writes = []
     for (const k of Object.keys(config)) delete config[k]

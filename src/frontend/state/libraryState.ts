@@ -646,12 +646,11 @@ const useLibraryStateRaw = create<LibraryState>()(
       getCurrentCustomCategories: () =>
         Array.from(new Set(get().currentCustomCategories)).sort(),
 
-      // The three actions below mutate the existing customCategories object
-      // before setting it, exactly as the class did (see
-      // .planning/todos/pending/2026-11-10-custom-categories-mutated-in-place.md).
       setCustomCategory: (newCategory) => {
-        const newCustomCategories = get().customCategories
-        newCustomCategories[newCategory] = []
+        const newCustomCategories = {
+          ...get().customCategories,
+          [newCategory]: []
+        }
 
         // when adding a new category, if there are categories selected, select the new
         // one too so the game doesn't disappear form the library
@@ -673,9 +672,12 @@ const useLibraryStateRaw = create<LibraryState>()(
       removeCustomCategory: (category) => {
         if (!get().customCategories[category]) return
 
-        const newCustomCategories = get().customCategories
-        delete newCustomCategories[category]
-        set({ customCategories: { ...newCustomCategories } })
+        const newCustomCategories = Object.fromEntries(
+          Object.entries(get().customCategories).filter(
+            ([key]) => key !== category
+          )
+        )
+        set({ customCategories: newCustomCategories })
 
         const updatedCategories = get()
           .getCurrentCustomCategories()
@@ -693,11 +695,16 @@ const useLibraryStateRaw = create<LibraryState>()(
         const games = get().customCategories[oldName]
         if (!games) return
 
-        const newCustomCategories = get().customCategories
-        newCustomCategories[newName] = games
-        delete newCustomCategories[oldName]
+        const newCustomCategories = {
+          ...Object.fromEntries(
+            Object.entries(get().customCategories).filter(
+              ([key]) => key !== oldName
+            )
+          ),
+          [newName]: games
+        }
 
-        set({ customCategories: { ...newCustomCategories } })
+        set({ customCategories: newCustomCategories })
         configStore.set('games.customCategories', newCustomCategories)
 
         const newCurrentCustomCategories = get().currentCustomCategories.map(
@@ -707,8 +714,10 @@ const useLibraryStateRaw = create<LibraryState>()(
       },
 
       addGameToCustomCategory: (category, appName) => {
-        const gamesInCategory = get().customCategories[category] || []
-        gamesInCategory.push(appName)
+        const gamesInCategory = [
+          ...(get().customCategories[category] || []),
+          appName
+        ]
 
         const newCustomCategories = {
           ...get().customCategories,
