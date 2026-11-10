@@ -11,6 +11,7 @@
  */
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import * as ts from 'typescript'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
 const BACKEND = join(__dirname, '..')
@@ -46,6 +47,30 @@ const source = (file: string): string => {
     stripped.set(file, text)
   }
   return text
+}
+
+/**
+ * Top-level `const|let|var` statements whose initializer constructs something at import time
+ * (a `new X(...)` outside any function body). Matched on the whole statement via the parser,
+ * so a prettier-wrapped `const x =\n  new X(` is caught as well as the one-line form.
+ */
+function topLevelNewStatements(text: string): string[] {
+  const sf = ts.createSourceFile('x.ts', text, ts.ScriptTarget.Latest, true)
+  const out: string[] = []
+  const hasNewOutsideFunctions = (node: ts.Node): boolean => {
+    if (ts.isNewExpression(node)) return true
+    if (ts.isFunctionLike(node) || ts.isClassLike(node)) return false
+    return ts.forEachChild(node, hasNewOutsideFunctions) ?? false
+  }
+  for (const st of sf.statements) {
+    if (!ts.isVariableStatement(st)) continue
+    for (const decl of st.declarationList.declarations) {
+      if (decl.initializer && hasNewOutsideFunctions(decl.initializer)) {
+        out.push(decl.getText(sf).replace(/\s+/g, ' ').slice(0, 80))
+      }
+    }
+  }
+  return out
 }
 
 const rel = (file: string): string => relative(BACKEND, file)
@@ -127,6 +152,24 @@ describe('66.1 end state: stores modules', () => {
     expect(offenders).toEqual([])
   })
 
+  it('the top-level-new scan catches one-line and prettier-wrapped statements, not factories', () => {
+    expect(topLevelNewStatements('export const a = new Map()')).toHaveLength(1)
+    expect(topLevelNewStatements('export const a =\n  new Map()')).toHaveLength(
+      1
+    )
+    expect(
+      topLevelNewStatements('const a = foo(\n  new Map()\n)')
+    ).toHaveLength(1)
+    expect(
+      topLevelNewStatements(
+        'export const make = () => {\n  return new Map()\n}'
+      )
+    ).toHaveLength(0)
+    expect(
+      topLevelNewStatements('function f() { return new Map() }')
+    ).toHaveLength(0)
+  })
+
   it('testUtils: only testServices.ts value-imports a stores module', () => {
     const files = walk(join(BACKEND, 'testUtils')).filter((f) =>
       /\.ts$/.test(f)
@@ -158,10 +201,7 @@ describe('66.1 end state: stores modules', () => {
     for (const f of files) {
       const text = source(join(BACKEND, f))
       expect(text.length).toBeGreaterThan(0)
-      for (const line of text.split('\n')) {
-        if (/^(export\s+)?(const|let|var)\s/.test(line) && /\bnew\s/.test(line))
-          offenders.push(`${f}: ${line.trim()}`)
-      }
+      offenders.push(...topLevelNewStatements(text).map((st) => `${f}: ${st}`))
     }
     expect(offenders).toEqual([])
   })

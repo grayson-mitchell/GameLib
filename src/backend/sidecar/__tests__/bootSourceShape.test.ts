@@ -211,6 +211,47 @@ describe('66.1 MH-3: registrations take slices', () => {
     expect(offenders).toEqual([])
   })
 
+  it('no registration require()s or dynamically import()s a stores module or a banned binding', () => {
+    const offenders: string[] = []
+    const callRe =
+      /(?:\bawait\s+)?\b(?:require|import)\(\s*['"]([^'"]+)['"]\s*\)/g
+    for (const { name, source } of sources) {
+      for (const m of source.matchAll(callRe)) {
+        const path = m[1] ?? ''
+        if (/(^|\/)(key_value_)?stores$/.test(path)) {
+          offenders.push(`${name}: loads ${path}`)
+        }
+        // The text before the call: `const { a, b } =` (destructure) or `x =`; after it: `.prop`.
+        const before = source.slice(Math.max(0, m.index - 200), m.index)
+        const after = source.slice(
+          m.index + m[0].length,
+          m.index + m[0].length + 80
+        )
+        const destructured =
+          /\{([^{}]*)\}\s*(?::[^=]+)?=\s*$/.exec(before)?.[1] ?? ''
+        const accessed = /^\)?\s*\.\s*(\w+)/.exec(after)?.[1] ?? ''
+        for (const binding of BANNED_BINDINGS) {
+          if (
+            new RegExp(`\\b${binding}\\b`).test(destructured) ||
+            accessed === binding
+          ) {
+            offenders.push(`${name}: loads ${binding} from ${path}`)
+          }
+        }
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
+  it('the dynamic-load scan catches a destructured banned binding (self-test)', () => {
+    const src =
+      "const { spawnAsync } = await import('../utils')\nconst x = require('../stores')"
+    const callRe =
+      /(?:\bawait\s+)?\b(?:require|import)\(\s*['"]([^'"]+)['"]\s*\)/g
+    const hits = [...src.matchAll(callRe)].map((m) => m[1])
+    expect(hits).toEqual(['../utils', '../stores'])
+  })
+
   it('no registration enters the storeManagers index for its side effects', () => {
     const offenders: string[] = []
     for (const { name, source: raw } of sources) {
@@ -224,15 +265,47 @@ describe('66.1 MH-3: registrations take slices', () => {
     expect(offenders).toEqual([])
   })
 
-  it('every exported register*Flows in a coupled registration takes a single injected `deps` parameter', () => {
+  /**
+   * Registrations that take no deps. Each one was read and is genuinely uncoupled from the
+   * boot's stores and managers, OR is listed with the reason it is coupled and who removes it.
+   * A new zero-param registration fails here until someone decides which it is.
+   */
+  const ZERO_PARAM_REGISTRATIONS: Record<string, string> = {
+    registerDialogFlows:
+      'uncoupled: calls the platform dialog only (utils/openDialog)',
+    registerOAuthLoginFlows:
+      'uncoupled: the login-window seam (humble/loginWindowSeam), no store reads',
+    registerDevEpicCookieSweepFlow:
+      'uncoupled: the login-window seam, dev-only cookie sweep, no store reads',
+    registerStoreEmbedFlows:
+      'uncoupled: owns the store-embed seam and forwards to Rust, no store reads',
+    registerDepotHostFlows:
+      'uncoupled: the depot job registry (jobRegistry), no store reads',
+    registerHumbleFlows:
+      'COUPLED through bindHumbleStores: HumbleUser/HumbleLibrary read the bound static holder. ' +
+      'Passing a slice here would not remove that read; the holder is a 66.3 target (backendDiCeilings header)',
+    registerHumbleLoginFlows:
+      'COUPLED through bindHumbleStores (HumbleUser/HumbleLibrary), same 66.3 target as registerHumbleFlows'
+  }
+
+  it('every exported register*Flows takes a single injected `deps` parameter unless it is on the explicit zero-param allowlist', () => {
     const offenders: string[] = []
+    const zeroParam: string[] = []
     let checked = 0
     for (const { name, source } of sources) {
       for (const m of source.matchAll(
-        /export (?:async )?function (register\w+Flows)\(([^)]*)\)/g
+        /export (?:async )?function (register\w+Flows?)\(([^)]*)\)/g
       )) {
         const params = (m[2] ?? '').trim()
-        if (params === '') continue // an uncoupled registration: nothing to inject
+        if (params === '') {
+          zeroParam.push(m[1] ?? '')
+          if (!((m[1] ?? '') in ZERO_PARAM_REGISTRATIONS)) {
+            offenders.push(
+              `${name}: ${m[1]}() is not on the zero-param allowlist`
+            )
+          }
+          continue
+        }
         checked += 1
         if (!/^deps\s*:/.test(params)) {
           offenders.push(`${name}: ${m[1]}(${params})`)
@@ -241,5 +314,9 @@ describe('66.1 MH-3: registrations take slices', () => {
     }
     expect(checked).toBeGreaterThan(0)
     expect(offenders).toEqual([])
+    // No stale entries: every allowlisted name still exists as a zero-param registration.
+    expect(zeroParam.sort()).toEqual(
+      Object.keys(ZERO_PARAM_REGISTRATIONS).sort()
+    )
   })
 })
