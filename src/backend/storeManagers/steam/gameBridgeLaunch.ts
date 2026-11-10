@@ -416,25 +416,29 @@ export async function launchBridgeGameBody(
   // 261027-aue: InitFlat fails fast while Steam is quit or signing in, so the
   // helper layer waits (bounded) for it -- tell the user, who would
   // otherwise see up to a minute of silence after pressing Play.
-  const helperReady = await ensureBridgeHelperReady(steamGame.appId, {
-    onWaitingForSteam: (cause) =>
-      notify({
-        title: i18next.t(
-          'gamelib:steam.bridge.waiting.title',
-          'Waiting for Steam'
-        ),
-        body:
-          cause === 'steam-not-running'
-            ? i18next.t(
-                'gamelib:steam.bridge.waiting.notRunning',
-                'Starting Steam. The game will launch once Steam has signed in.'
-              )
-            : i18next.t(
-                'gamelib:steam.bridge.waiting.signingIn',
-                'Waiting for Steam to finish signing in. The game will launch once it has.'
-              )
-      })
-  })
+  const helperReady = await ensureBridgeHelperReady(
+    steamGame.deps,
+    steamGame.appId,
+    {
+      onWaitingForSteam: (cause) =>
+        notify({
+          title: i18next.t(
+            'gamelib:steam.bridge.waiting.title',
+            'Waiting for Steam'
+          ),
+          body:
+            cause === 'steam-not-running'
+              ? i18next.t(
+                  'gamelib:steam.bridge.waiting.notRunning',
+                  'Starting Steam. The game will launch once Steam has signed in.'
+                )
+              : i18next.t(
+                  'gamelib:steam.bridge.waiting.signingIn',
+                  'Waiting for Steam to finish signing in. The game will launch once it has.'
+                )
+        })
+    }
+  )
   if (
     !helperReady.ready ||
     helperReady.port === undefined ||

@@ -71,7 +71,7 @@ import {
 } from './helperRegistry'
 import type { BridgeHelperEntry } from './helperRegistry'
 import { classifyInitFlatError, ensureHelperSpawned } from './helperSpawn'
-import type { InitFlatErrorCause } from './helperSpawn'
+import type { HelperSpawnDeps, InitFlatErrorCause } from './helperSpawn'
 
 // Same 127.0.0.1-only loopback host every native helper (bridge_helper.c)
 // binds -- T-51-01 (carries forward T-24-01), never a routable interface.
@@ -433,6 +433,7 @@ async function startSteamDefault(): Promise<void> {
  *    fail it identically.
  */
 export async function ensureBridgeHelperReady(
+  deps: HelperSpawnDeps,
   appId: string,
   options: {
     onWaitingForSteam?: (cause: InitFlatErrorCause) => void
@@ -456,7 +457,7 @@ export async function ensureBridgeHelperReady(
     stopBridgeHelper(appId)
   }
 
-  let entry = ensureHelperSpawned(appId)
+  let entry = ensureHelperSpawned(deps, appId)
   let probe = await probeHelperReadiness(entry)
 
   let waitStart: number | null = null
@@ -500,7 +501,7 @@ export async function ensureBridgeHelperReady(
             : 'Steam did not finish signing in within the wait budget'
       }
     }
-    entry = ensureHelperSpawned(appId)
+    entry = ensureHelperSpawned(deps, appId)
     probe = await probeHelperReadiness(entry)
   }
 
@@ -568,7 +569,7 @@ export async function ensureBridgeHelperReady(
     LogPrefix.Steam
   )
   stopBridgeHelper(appId)
-  const fallbackEntry = ensureHelperSpawned(appId, { identityOnly: true })
+  const fallbackEntry = ensureHelperSpawned(deps, appId, { identityOnly: true })
   const fallbackProbe = await probeHelperReadiness(fallbackEntry)
 
   if (fallbackProbe.outcome === 'ready') {

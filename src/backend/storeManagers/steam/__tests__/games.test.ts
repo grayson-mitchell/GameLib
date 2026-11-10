@@ -2648,6 +2648,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       expect.objectContaining({ bottleName: 'GameLibSteamBridge' })
     )
     expect(ensureBridgeHelperReady).toHaveBeenCalledWith(
+      expect.anything(),
       APP_ID,
       expect.any(Object)
     )
@@ -2995,6 +2996,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
       expect(result).toBe(true)
       expect(ensureBridgeHelperReady).toHaveBeenCalledWith(
+        expect.anything(),
         CEG_APP_ID,
         expect.any(Object)
       )
@@ -3079,6 +3081,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
       expect(result).toBe(true)
       expect(ensureBridgeHelperReady).toHaveBeenCalledWith(
+        expect.anything(),
         MISS_APP_ID,
         expect.any(Object)
       )
@@ -3233,7 +3236,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
       await new SteamGame(MISS_APP_ID, steamTestDeps).launch({} as any)
 
-      const options = (ensureBridgeHelperReady as jest.Mock).mock.calls[0][1]
+      const options = (ensureBridgeHelperReady as jest.Mock).mock.calls[0][2]
       expect(options.onWaitingForSteam).toEqual(expect.any(Function))
       options.onWaitingForSteam('steam-not-running')
       expect(notify).toHaveBeenCalledTimes(1)

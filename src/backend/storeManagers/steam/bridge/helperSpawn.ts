@@ -6,24 +6,22 @@
  * loop) stays in `helperProcess.ts`.
  */
 
-import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
+import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import {
   steamBridgeHelperPath,
   steamBridgeHelperStateDir
 } from 'backend/constants/paths'
 import { app } from 'backend/platform'
 import { newDialogAckId, trackDialogDisplay } from 'backend/dialog/displayAck'
-import { registerLongLivedChild } from 'backend/longLivedChildren'
+import type { LongLivedHandle, ProcessRunner } from 'backend/process/types'
 import { BRIDGE_SECRET_ENV } from './protocol'
 import {
   helpers,
   stopBridgeHelper,
-  unrefHandle,
   installExitTeardownOnce,
   getBridgeHelperPathOverride,
   getBridgeHelperSpawnEnvOverride
@@ -82,6 +80,8 @@ export function classifyInitFlatError(
   return 'other'
 }
 
+export type HelperSpawnDeps = { runner: Pick<ProcessRunner, 'spawnLongLived'> }
+
 const MIN_EPHEMERAL_PORT = 1024
 const MAX_PORT = 65535
 
@@ -111,11 +111,12 @@ const MAX_PORT = 65535
  * (`src/backend/__tests__/fakeHomeIsolation.test.ts`) still forbids.
  */
 export function ensureHelperSpawned(
+  deps: HelperSpawnDeps,
   appId: string,
   options?: { identityOnly?: boolean }
 ): BridgeHelperEntry {
   const existing = helpers.get(appId)
-  if (existing && !existing.child.killed) {
+  if (existing) {
     return existing
   }
 
@@ -154,28 +155,27 @@ export function ensureHelperSpawned(
   // WR-03: one fresh 256-bit secret per helper spawn.
   const secret = randomBytes(32).toString('hex')
 
-  const child = spawn(helperPath, args, {
-    cwd: stateDir,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    // Base env: the real ambient process.env on every production path (only a
-    // test calling __setBridgeHelperSpawnEnvForTests() with
-    // createFakeHomeProfile()'s own env ever overrides it; never a
-    // hand-rolled literal). The ONLY addition is the launch secret.
-    env: {
-      ...(getBridgeHelperSpawnEnvOverride() ?? process.env),
-      [BRIDGE_SECRET_ENV]: secret
-    }
-  })
+  // Base env: the real ambient process.env on every production path (only a
+  // test calling __setBridgeHelperSpawnEnvForTests() with
+  // createFakeHomeProfile()'s own env ever overrides it; never a hand-rolled
+  // literal). The ONLY addition is the launch secret. replaceEnv hands the
+  // runner this exact merged object (the runner would otherwise merge its own
+  // base env under it).
+  const spawnEnv = {
+    ...(getBridgeHelperSpawnEnvOverride() ?? process.env),
+    [BRIDGE_SECRET_ENV]: secret
+  }
 
-  // 51-REVIEW WR-06 (sidecar exit contract): the sidecar exits by event-loop
-  // drain at stdin EOF, so no handle may hold the loop open past it. The child
-  // handle and both piped streams are libuv handles; unref() leaves them fully
-  // working (stderr is still read, so the LISTEN line still arrives) and only
-  // drops their claim on the loop. Optional calls: test fakes may lack unref.
-  unrefHandle(child)
-  unrefHandle(child.stdout)
-  unrefHandle(child.stderr)
+  // Sidecar exit contract: the runner unref()s the child and both pipes, so
+  // the helper never holds the event loop open; the process 'exit' listener
+  // below is the drain-path teardown (the runner's teardown registry covers
+  // an orderly quit).
   installExitTeardownOnce()
+
+  // Assigned once spawnLongLived returns below; the stream/exit callbacks only
+  // run later, never during the spawn call itself.
+  // eslint-disable-next-line prefer-const -- read by closures defined before the spawn
+  let handle!: LongLivedHandle
 
   let settlePortReady: (port: number | null) => void = () => {}
   let portSettled = false
@@ -214,7 +214,7 @@ export function ensureHelperSpawned(
     if (!match) return
     if (match[1] !== expectedListenAppId) return
     const entry = helpers.get(appId)
-    if (!entry || entry.child !== child) return
+    if (!entry || entry.child !== handle) return
     const now = Date.now()
     if (
       entry.lastInviteRequestMs !== 0 &&
@@ -259,7 +259,7 @@ export function ensureHelperSpawned(
     if (matchedAppId !== expectedListenAppId) return
     if (errText === undefined) return
     const entry = helpers.get(appId)
-    if (entry && entry.child === child) {
+    if (entry && entry.child === handle) {
       entry.initError = errText
     }
   }
@@ -272,7 +272,7 @@ export function ensureHelperSpawned(
     const [, outcome, matchedAppId] = match
     if (matchedAppId !== expectedListenAppId) return
     const entry = helpers.get(appId)
-    if (entry && entry.child === child) {
+    if (entry && entry.child === handle) {
       entry.initOutcome = outcome as BridgeHelperEntry['initOutcome']
     }
     settleInitOnce(true)
@@ -298,7 +298,7 @@ export function ensureHelperSpawned(
       return
     }
     const entry = helpers.get(appId)
-    if (entry && entry.child === child) {
+    if (entry && entry.child === handle) {
       entry.port = port
     }
     settlePortOnce(port)
@@ -309,77 +309,72 @@ export function ensureHelperSpawned(
   // census (which reads gamelib.log) would see unattributed CALL lines. Log per
   // line. 53-18 WR-05: lines are reassembled across chunks -- each stream keeps
   // the trailing partial line as a plain-string carry, only complete lines are
-  // logged/parsed, and the carry is flushed once when the stream ends. No
-  // timers or handles, so the sidecar's exit-by-drain contract is unchanged.
-  const relayLines = (
-    stream: NodeJS.EventEmitter | null | undefined,
-    onLine: (line: string) => void
-  ) => {
+  // logged/parsed, and the carry is flushed when the process exits. No timers
+  // or handles, so the sidecar's exit-by-drain contract is unchanged.
+  const createLineRelay = (onLine: (line: string) => void) => {
     let carry = ''
-    let flushed = false
-    const flush = () => {
-      if (flushed) return
-      flushed = true
-      const rest = carry
-      carry = ''
-      if (rest !== '') onLine(rest)
+    return {
+      push: (chunk: string) => {
+        const parts = (carry + chunk).split('\n')
+        carry = parts.pop() ?? ''
+        for (const line of parts) onLine(line)
+      },
+      flush: () => {
+        const rest = carry
+        carry = ''
+        if (rest !== '') onLine(rest)
+      }
     }
-    stream?.on('data', (data: Buffer) => {
-      const parts = (carry + data.toString()).split('\n')
-      carry = parts.pop() ?? ''
-      for (const line of parts) onLine(line)
-    })
-    stream?.on('end', flush)
-    // Fallback for a stream object that never emits 'end'.
-    child.on('close', flush)
   }
-  relayLines(child.stdout, (line) => {
+  const stdoutRelay = createLineRelay((line) => {
     const trimmed = line.trim()
     if (trimmed) {
       logInfo(`bridge helper [${appId}]: ${trimmed}`, LogPrefix.Steam)
     }
   })
-  relayLines(child.stderr, (line) => {
+  const stderrRelay = createLineRelay((line) => {
     const trimmed = line.trim()
     if (trimmed) {
       logWarning(`bridge helper [${appId}]: ${trimmed}`, LogPrefix.Steam)
     }
     handleStderrLine(line)
   })
-  child.on('exit', (code, signal) => {
+
+  // The runner unref()s the child and its pipes (sidecar exit contract) and
+  // tracks it for PID kills; the teardown stops this appId's helper at quit.
+  handle = deps.runner.spawnLongLived(helperPath, args, {
+    id: `steam-bridge-helper-${appId}`,
+    cwd: stateDir,
+    env: spawnEnv,
+    replaceEnv: true,
+    teardown: () => stopBridgeHelper(appId),
+    onStdout: (chunk) => stdoutRelay.push(chunk),
+    onStderr: (chunk) => stderrRelay.push(chunk)
+  })
+  const spawned = handle
+  void spawned.exited.then(({ code, signal }) => {
+    stdoutRelay.flush()
+    stderrRelay.flush()
     logWarning(
       `bridge helper [${appId}] exited (code=${code} signal=${signal}) -- a future ensureBridgeHelperReady() call will respawn it`,
       LogPrefix.Steam
     )
     settlePortOnce(null)
     settleInitOnce(false)
-    if (helpers.get(appId)?.child === child) {
+    if (helpers.get(appId)?.child === spawned) {
       helpers.delete(appId)
     }
   })
-  child.on('error', (error) => {
-    logError([`bridge helper [${appId}] process error`, error], LogPrefix.Steam)
-    settlePortOnce(null)
-    settleInitOnce(false)
-    if (helpers.get(appId)?.child === child) {
-      helpers.delete(appId)
-    }
-  })
-
-  const unregister = registerLongLivedChild(
-    `steam-bridge-helper-${appId}`,
-    () => stopBridgeHelper(appId)
-  )
 
   const entry: BridgeHelperEntry = {
     appId,
-    child,
+    child: handle,
     port: null,
     portReady,
     initOutcome: null,
     initError: null,
     initReady,
-    unregister,
+    unregister: () => handle.unregister(),
     identityOnly,
     secret,
     lastInviteRequestMs: 0

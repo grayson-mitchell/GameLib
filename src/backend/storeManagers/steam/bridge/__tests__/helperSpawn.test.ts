@@ -23,15 +23,18 @@
 // Phase 65 Plan 15 (D-03): helperSpawn.ts (spawn, stderr relay, line parsing) -- split out of helperProcess.test.ts by owning module.
 
 import { EventEmitter } from 'node:events'
-import { spawn } from 'node:child_process'
+import { createChildBackedRunner } from 'backend/testUtils/childBackedRunner'
 import { Socket } from 'node:net'
 import { sendFrontendMessage } from 'backend/ipc'
 import { logInfo, logWarning } from 'backend/logger'
-import { encodeResponse, STATUS_OK } from '../protocol'
+import { BRIDGE_SECRET_ENV, encodeResponse, STATUS_OK } from '../protocol'
 import { ensureBridgeHelperReady } from '../helperProcess'
 import { classifyInitFlatError } from '../helperSpawn'
-import { __resetBridgeHelperStateForTests } from '../helperRegistry'
-import { __resetLongLivedChildrenForTests } from 'backend/longLivedChildren'
+import {
+  __resetBridgeHelperStateForTests,
+  hasLiveBridgeHelper,
+  stopBridgeHelper
+} from '../helperRegistry'
 import { app } from 'backend/platform'
 import { acknowledgeDialogDisplay } from 'backend/dialog/displayAck'
 
@@ -74,15 +77,13 @@ jest.mock('node:fs', () => {
   }
 })
 
-jest.mock('node:child_process', () => ({
-  spawn: jest.fn()
-}))
-
 jest.mock('node:net', () => ({
   Socket: jest.fn()
 }))
 
-const mockedSpawn = spawn as jest.Mock
+const mockedSpawn = jest.fn()
+const fakeRunner = createChildBackedRunner(mockedSpawn)
+const helperDeps = { runner: fakeRunner.runner }
 const MockedSocket = Socket as unknown as jest.Mock
 const mockedSendFrontendMessage = sendFrontendMessage as jest.Mock
 
@@ -169,7 +170,7 @@ const SIGNING_IN = 'ConnectToGlobalUser failed'
 describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
   beforeEach(() => {
     __resetBridgeHelperStateForTests()
-    __resetLongLivedChildrenForTests()
+    fakeRunner.reset()
     mockedSpawn.mockReset()
   })
 
@@ -192,7 +193,7 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
       const child = new FakeChildProcess()
       mockedSpawn.mockReturnValue(child)
       ;(logInfo as jest.Mock).mockClear()
-      void ensureBridgeHelperReady('3205720')
+      void ensureBridgeHelperReady(helperDeps, '3205720')
       child.stderr.emit('data', invite('3205720'))
       expect(open).toHaveBeenCalledTimes(1)
       expect(open).toHaveBeenCalledWith({
@@ -216,7 +217,7 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
       const child = new FakeChildProcess()
       mockedSpawn.mockReturnValue(child)
       ;(logWarning as jest.Mock).mockClear()
-      void ensureBridgeHelperReady('3205720')
+      void ensureBridgeHelperReady(helperDeps, '3205720')
       child.stderr.emit('data', invite('3205720'))
       await Promise.resolve()
       await Promise.resolve()
@@ -232,7 +233,7 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
         const child = new FakeChildProcess()
         mockedSpawn.mockReturnValue(child)
         ;(logInfo as jest.Mock).mockClear()
-        void ensureBridgeHelperReady('3205720')
+        void ensureBridgeHelperReady(helperDeps, '3205720')
         child.stderr.emit('data', invite('3205720'))
         jest.advanceTimersByTime(15_000)
         expect(logInfo).toHaveBeenCalledWith(
@@ -248,7 +249,7 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
       const child = new FakeChildProcess()
       mockedSpawn.mockReturnValue(child)
       ;(logInfo as jest.Mock).mockClear()
-      void ensureBridgeHelperReady('3205720')
+      void ensureBridgeHelperReady(helperDeps, '3205720')
       child.stderr.emit('data', invite('3205720'))
       const ackId = inviteCalls()[0][0].ackId
       expect(acknowledgeDialogDisplay(ackId)).toBe(true)
@@ -263,7 +264,7 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
     test('a line naming another appid does nothing', () => {
       const child = new FakeChildProcess()
       mockedSpawn.mockReturnValue(child)
-      void ensureBridgeHelperReady('3205720')
+      void ensureBridgeHelperReady(helperDeps, '3205720')
       child.stderr.emit('data', invite('999'))
       expect(inviteCalls()).toHaveLength(0)
       expect(app.raiseMainWindow).not.toHaveBeenCalled()
@@ -272,7 +273,7 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
     test('a line from a stale child does nothing', () => {
       const child = new FakeChildProcess()
       mockedSpawn.mockReturnValue(child)
-      void ensureBridgeHelperReady('3205720')
+      void ensureBridgeHelperReady(helperDeps, '3205720')
       __resetBridgeHelperStateForTests()
       child.stderr.emit('data', invite('3205720'))
       expect(inviteCalls()).toHaveLength(0)
@@ -281,7 +282,7 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
     test('58 WR-05: the text embedded inside another line does nothing', () => {
       const child = new FakeChildProcess()
       mockedSpawn.mockReturnValue(child)
-      void ensureBridgeHelperReady('3205720')
+      void ensureBridgeHelperReady(helperDeps, '3205720')
       child.stderr.emit(
         'data',
         Buffer.from(
@@ -299,7 +300,7 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
     test('two lines within 2000 ms give one picker open', () => {
       const child = new FakeChildProcess()
       mockedSpawn.mockReturnValue(child)
-      void ensureBridgeHelperReady('3205720')
+      void ensureBridgeHelperReady(helperDeps, '3205720')
       child.stderr.emit('data', invite('3205720'))
       child.stderr.emit('data', invite('3205720'))
       expect(inviteCalls()).toHaveLength(1)
@@ -314,7 +315,7 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
     mockedSpawn.mockReturnValue(child)
     ;(logWarning as jest.Mock).mockClear()
 
-    void ensureBridgeHelperReady('42')
+    void ensureBridgeHelperReady(helperDeps, '42')
     child.stderr.emit(
       'data',
       Buffer.from(
@@ -338,7 +339,7 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
     mockedSpawn.mockReturnValue(child)
     ;(logWarning as jest.Mock).mockClear()
 
-    const pending = ensureBridgeHelperReady(APP_ID_A)
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     child.stderr.emit(
       'data',
       Buffer.from(
@@ -367,7 +368,7 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
       const child = new FakeChildProcess()
       mockedSpawn.mockReturnValue(child)
       ;(logWarning as jest.Mock).mockClear()
-      void ensureBridgeHelperReady('42')
+      void ensureBridgeHelperReady(helperDeps, '42')
       child.stderr.emit('data', Buffer.from('[ts] CA'))
       child.stderr.emit('data', Buffer.from('LL   SteamUser021.GetSteamID\n'))
       expect(bridgeMessages(logWarning)).toEqual([
@@ -381,7 +382,7 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
       MockedSocket.mockImplementation(
         () => new FakeSocket(healthOkFrame, whoamiOkFrame)
       )
-      const pending = ensureBridgeHelperReady(APP_ID_A)
+      const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
       const line = `[2026-10-17T00:00:00Z] LISTEN 127.0.0.1:55001 appid=${APP_ID_A} mode=full\n`
       child.stderr.emit('data', Buffer.from(line.slice(0, 30)))
       child.stderr.emit('data', Buffer.from(line.slice(30)))
@@ -390,28 +391,75 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
       expect(result.ready).toBe(true)
     })
 
-    test('a trailing partial line is flushed exactly once on stream end', () => {
+    test('a trailing partial line is flushed exactly once when the process exits', async () => {
       const child = new FakeChildProcess()
       mockedSpawn.mockReturnValue(child)
       ;(logWarning as jest.Mock).mockClear()
-      void ensureBridgeHelperReady('42')
+      void ensureBridgeHelperReady(helperDeps, '42')
       child.stderr.emit('data', Buffer.from('[ts] tail'))
       expect(bridgeMessages(logWarning)).toEqual([])
-      child.stderr.emit('end')
-      child.emit('close')
-      expect(bridgeMessages(logWarning)).toEqual([
-        'bridge helper [42]: [ts] tail'
-      ])
+      child.emit('exit', 0, null)
+      await Promise.resolve()
+      await Promise.resolve()
+      expect(
+        bridgeMessages(logWarning).filter((m) => m.endsWith('[ts] tail'))
+      ).toEqual(['bridge helper [42]: [ts] tail'])
     })
 
     test('stdout gets the same carry-over via logInfo', () => {
       const child = new FakeChildProcess()
       mockedSpawn.mockReturnValue(child)
       ;(logInfo as jest.Mock).mockClear()
-      void ensureBridgeHelperReady('42')
+      void ensureBridgeHelperReady(helperDeps, '42')
       child.stdout.emit('data', Buffer.from('hel'))
       child.stdout.emit('data', Buffer.from('lo\n'))
       expect(bridgeMessages(logInfo)).toEqual(['bridge helper [42]: hello'])
+    })
+  })
+
+  describe('runner wiring (spawnLongLived)', () => {
+    test('spawns as steam-bridge-helper-<appId> with replaceEnv over the exact merged env carrying the launch secret', () => {
+      const child = new FakeChildProcess()
+      mockedSpawn.mockReturnValue(child)
+      void ensureBridgeHelperReady(helperDeps, '123')
+      expect(mockedSpawn).toHaveBeenCalledTimes(1)
+      const opts = mockedSpawn.mock.calls[0][2]
+      expect(opts.id).toBe('steam-bridge-helper-123')
+      expect(opts.replaceEnv).toBe(true)
+      expect(opts.env[BRIDGE_SECRET_ENV]).toMatch(/^[0-9a-f]{64}$/)
+      expect(Object.keys(opts.env)).toEqual(
+        expect.arrayContaining(Object.keys(process.env))
+      )
+    })
+
+    test('the registered teardown stops that appId helper (the runner calls it at quit)', () => {
+      const child = new FakeChildProcess()
+      mockedSpawn.mockReturnValue(child)
+      void ensureBridgeHelperReady(helperDeps, '123')
+      expect(hasLiveBridgeHelper()).toBe(true)
+      fakeRunner.teardownAll()
+      expect(child.kill).toHaveBeenCalledTimes(1)
+      expect(hasLiveBridgeHelper()).toBe(false)
+    })
+
+    test('an exit deletes the registry entry only while it still holds that same handle', async () => {
+      const first = new FakeChildProcess()
+      const second = new FakeChildProcess()
+      mockedSpawn.mockReturnValueOnce(first).mockReturnValueOnce(second)
+      void ensureBridgeHelperReady(helperDeps, '123')
+      // Replace the entry with a newer helper for the same appId, as a respawn does.
+      stopBridgeHelper('123')
+      void ensureBridgeHelperReady(helperDeps, '123')
+      expect(mockedSpawn).toHaveBeenCalledTimes(2)
+      // The first process's late exit must not evict the second helper.
+      first.emit('exit', 0, null)
+      await Promise.resolve()
+      await Promise.resolve()
+      expect(hasLiveBridgeHelper()).toBe(true)
+      second.emit('exit', 0, null)
+      await Promise.resolve()
+      await Promise.resolve()
+      expect(hasLiveBridgeHelper()).toBe(false)
     })
   })
 

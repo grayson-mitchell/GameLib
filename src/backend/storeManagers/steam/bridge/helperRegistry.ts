@@ -2,13 +2,12 @@
  * Phase 65 Plan 15 (D-08/D-10) -- the bridge-helper registry: the single owner
  * of the per-appId `helpers` map, the test-only path/env/wait-schedule
  * overrides (with their `__set...ForTests` seams and getters), the exit
- * teardown and `unrefHandle`. Split out of `helperProcess.ts` so the spawn and
+ * teardown. Split out of `helperProcess.ts` so the spawn and
  * readiness code reach this state only through exports. A leaf: no top-level
  * work, so `backend/utils` can import it headlessly.
  */
 
-import type { ChildProcess } from 'node:child_process'
-
+import type { LongLivedHandle } from 'backend/process/types'
 import { logInfo, LogPrefix } from 'backend/logger'
 
 let steamWaitScheduleOverride: { budgetMs: number; intervalMs: number } | null =
@@ -29,7 +28,8 @@ export function getSteamWaitScheduleOverride(): {
 
 export interface BridgeHelperEntry {
   appId: string
-  child: ChildProcess
+  /** The runner's long-lived handle for the helper process. */
+  child: LongLivedHandle
   /** Null until the LISTEN line is parsed off the child's own stderr. */
   port: number | null
   /** Resolves to the real port once known, or `null` if the process exited
@@ -110,10 +110,6 @@ export function __setBridgeHelperSpawnEnvForTests(
 
 export function getBridgeHelperSpawnEnvOverride(): NodeJS.ProcessEnv | null {
   return bridgeHelperSpawnEnvOverride
-}
-
-export function unrefHandle(handle: unknown): void {
-  ;(handle as { unref?: () => void } | null | undefined)?.unref?.()
 }
 
 // 51-REVIEW WR-06: once the helper handles are unref'd, a sidecar that drains

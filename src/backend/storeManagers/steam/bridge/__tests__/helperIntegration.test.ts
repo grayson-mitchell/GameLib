@@ -60,6 +60,7 @@ import {
   createFakeHomeProfile,
   type FakeHomeProfile
 } from 'backend/testUtils/fakeHomeProfile'
+import { createRealRunner } from 'backend/testUtils/realRunner'
 import { steamBridgeHelperStateDir } from 'backend/constants/paths'
 import { ensureBridgeHelperReady } from '../helperProcess'
 import {
@@ -257,6 +258,10 @@ describeDarwinOnly(
   'helperIntegration (real compiled bridge_helper.c -- darwin only, skipped elsewhere: Mach-O clang compile + macOS-only dylib resolution)',
   () => {
     let profile: FakeHomeProfile
+    // The real process runner: the helper spawn is production code, so it runs
+    // through the same runner (isolated to its own fake profile).
+    const realRunner = createRealRunner()
+    const helperDeps = () => ({ runner: realRunner.runner })
     let compiledHelperPath: string
 
     beforeAll(() => {
@@ -312,11 +317,12 @@ describeDarwinOnly(
     afterAll(() => {
       __setBridgeHelperPathForTests(null)
       __setBridgeHelperSpawnEnvForTests(null)
+      realRunner.dispose()
       profile?.dispose()
     })
 
     test('two per-appId helpers: real AppID file, distinct ephemeral ports, HELLO round-trip, clean teardown (D-51-01/D-51-03)', async () => {
-      const first = await ensureBridgeHelperReady(AVERNUM_APP_ID)
+      const first = await ensureBridgeHelperReady(helperDeps(), AVERNUM_APP_ID)
       expect(first.status).toBe('not-inited')
       expect(first.ready).toBe(false)
       expect(typeof first.port).toBe('number')
@@ -331,7 +337,7 @@ describeDarwinOnly(
 
       // D-51-03: a second helper for a different appId, concurrently alive
       // alongside the first -- no lock, no refusal.
-      const second = await ensureBridgeHelperReady(HOARD_APP_ID)
+      const second = await ensureBridgeHelperReady(helperDeps(), HOARD_APP_ID)
       expect(second.status).toBe('not-inited')
       expect(typeof second.port).toBe('number')
       expect(second.port).not.toBe(first.port)
@@ -417,7 +423,7 @@ describeDarwinOnly(
     // close-on-error).
     test('an unknown ordinal frame answers STATUS_ERR and keeps the connection open for the next frame', async () => {
       const THIRD_APP_ID = '400'
-      const ready = await ensureBridgeHelperReady(THIRD_APP_ID)
+      const ready = await ensureBridgeHelperReady(helperDeps(), THIRD_APP_ID)
       expect(typeof ready.port).toBe('number')
       const port = ready.port as number
 

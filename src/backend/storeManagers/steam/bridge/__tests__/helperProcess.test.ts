@@ -21,7 +21,7 @@
  */
 import { at } from '../../__tests__/fixtures/indexed'
 import { EventEmitter } from 'node:events'
-import { spawn } from 'node:child_process'
+import { createChildBackedRunner } from 'backend/testUtils/childBackedRunner'
 import { Socket } from 'node:net'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -47,7 +47,6 @@ import {
   __setBridgeHelperSpawnEnvForTests,
   __resetBridgeHelperStateForTests
 } from '../helperRegistry'
-import { __resetLongLivedChildrenForTests } from 'backend/longLivedChildren'
 import { shell } from 'backend/platform'
 import { stripSourceComments } from '../../../../testUtils/stripSourceComments'
 
@@ -90,15 +89,13 @@ jest.mock('node:fs', () => {
   }
 })
 
-jest.mock('node:child_process', () => ({
-  spawn: jest.fn()
-}))
-
 jest.mock('node:net', () => ({
   Socket: jest.fn()
 }))
 
-const mockedSpawn = spawn as jest.Mock
+const mockedSpawn = jest.fn()
+const fakeRunner = createChildBackedRunner(mockedSpawn)
+const helperDeps = { runner: fakeRunner.runner }
 const MockedSocket = Socket as unknown as jest.Mock
 const mockedSendFrontendMessage = sendFrontendMessage as jest.Mock
 
@@ -234,12 +231,12 @@ const whoamiErrFrame = encodeResponse(PROBE_REQUEST_ID, STATUS_ERR)
 describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
   beforeEach(() => {
     __resetBridgeHelperStateForTests()
-    __resetLongLivedChildrenForTests()
+    fakeRunner.reset()
     mockedSpawn.mockReset()
   })
 
   test('non-numeric appId is rejected up front -- ready:false, no spawn', async () => {
-    const result = await ensureBridgeHelperReady('not-numeric')
+    const result = await ensureBridgeHelperReady(helperDeps, 'not-numeric')
 
     expect(result).toEqual({
       status: 'unreachable',
@@ -257,9 +254,9 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
       () => new FakeSocket(healthOkFrame, whoamiOkFrame)
     )
 
-    const pendingA = ensureBridgeHelperReady(APP_ID_A)
+    const pendingA = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(childA, 55001, APP_ID_A)
-    const pendingB = ensureBridgeHelperReady(APP_ID_B)
+    const pendingB = ensureBridgeHelperReady(helperDeps, APP_ID_B)
     emitListenLine(childB, 55002, APP_ID_B)
 
     const [resultA, resultB] = await Promise.all([pendingA, pendingB])
@@ -309,11 +306,11 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
       () => new FakeSocket(healthOkFrame, whoamiOkFrame)
     )
 
-    const first = ensureBridgeHelperReady(APP_ID_A)
+    const first = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(child, 55001, APP_ID_A)
     await first
 
-    const second = await ensureBridgeHelperReady(APP_ID_A)
+    const second = await ensureBridgeHelperReady(helperDeps, APP_ID_A)
 
     expect(mockedSpawn).toHaveBeenCalledTimes(1)
     expect(second).toEqual({
@@ -328,7 +325,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     const child = new FakeChildProcess()
     mockedSpawn.mockReturnValue(child)
 
-    const pending = ensureBridgeHelperReady(APP_ID_A)
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     // A foreign/mismatched appid in the LISTEN line -- never accepted.
     emitListenLine(child, 55001, '999999')
 
@@ -343,7 +340,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     const child = new FakeChildProcess()
     mockedSpawn.mockReturnValue(child)
 
-    const pending = ensureBridgeHelperReady(APP_ID_A)
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(child, 80, APP_ID_A)
 
     const result = await pending
@@ -360,7 +357,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
       () => new FakeSocket(healthOkFrame, whoamiOkFrame)
     )
 
-    const pending = ensureBridgeHelperReady(APP_ID_A)
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(child, 55001, APP_ID_A)
     const result = await pending
 
@@ -381,7 +378,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     )
     __setBridgeHelperSpawnEnvForTests({ HOME: '/fake/home' })
     try {
-      const pending = ensureBridgeHelperReady(APP_ID_A)
+      const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
       emitListenLine(child, 55001, APP_ID_A)
       await pending
     } finally {
@@ -402,7 +399,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
       return sock
     })
 
-    const pending = ensureBridgeHelperReady(APP_ID_A)
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(child, 55001, APP_ID_A)
     const result = await pending
 
@@ -425,7 +422,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
       () => new FakeSocket(healthOkFrame, whoamiOkFrame, helloErrFrame)
     )
 
-    const pending = ensureBridgeHelperReady(APP_ID_A)
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(child, 55001, APP_ID_A)
     const result = await pending
 
@@ -450,7 +447,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
       () => new FakeSocket(healthOkFrame, whoamiOkFrame)
     )
 
-    const pending = ensureBridgeHelperReady(APP_ID_A)
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(child, 55001, APP_ID_A, null)
 
     await new Promise((resolve) => setTimeout(resolve, 3500))
@@ -473,7 +470,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     MockedSocket.mockReset()
 
     const start = Date.now()
-    const pending = ensureBridgeHelperReady(APP_ID_A)
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(child, 55001, APP_ID_A, null)
     child.emit('exit', 1, null)
     const result = await pending
@@ -490,7 +487,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     MockedSocket.mockReset()
 
     const start = Date.now()
-    const pending = ensureBridgeHelperReady(APP_ID_A)
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(child, 55001, APP_ID_A, null)
     child.emit('error', new Error('x'))
     const result = await pending
@@ -507,12 +504,12 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
       () => new FakeSocket(healthOkFrame, whoamiOkFrame)
     )
 
-    const first = ensureBridgeHelperReady(APP_ID_A)
+    const first = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(child, 55001, APP_ID_A)
     expect((await first).status).toBe('ready')
 
     const start = Date.now()
-    const second = await ensureBridgeHelperReady(APP_ID_A)
+    const second = await ensureBridgeHelperReady(helperDeps, APP_ID_A)
 
     expect(second).toEqual({
       status: 'ready',
@@ -532,7 +529,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
       () => new FakeSocket(healthOkFrame, whoamiOkFrame)
     )
 
-    const pending = ensureBridgeHelperReady(APP_ID_A)
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(child, 55001, APP_ID_A, null)
     emitReadyLine(child, '999999')
 
@@ -565,7 +562,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
         () => new FakeSocket(healthOkFrame, whoamiOkFrame)
       )
 
-    const pending = ensureBridgeHelperReady(APP_ID_A)
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(fullChild, 55001, APP_ID_A)
     // The identity-only child's own LISTEN line always echoes --appid 480,
     // never the real appId -- but its stderr listener only exists once
@@ -628,7 +625,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
       () => new FakeSocket(healthOkFrame, whoamiErrFrame)
     )
 
-    const pending = ensureBridgeHelperReady(APP_ID_A)
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(fullChild, 55001, APP_ID_A)
     await waitForSpawnCallCount(2)
     emitListenLine(identityChild, 55002, '480')
@@ -655,7 +652,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     mockedSpawn.mockReturnValue(child)
     MockedSocket.mockImplementation(() => new FakeSocket(healthErrFrame))
 
-    const pending = ensureBridgeHelperReady(APP_ID_A)
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(child, 55001, APP_ID_A)
 
     const result = await pending
@@ -682,7 +679,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
       // reused, already-live identity-only entry.
       .mockImplementation(() => new FakeSocket(healthOkFrame, whoamiOkFrame))
 
-    const first = ensureBridgeHelperReady(APP_ID_A)
+    const first = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(fullChild, 55001, APP_ID_A)
     await waitForSpawnCallCount(2)
     emitListenLine(identityChild, 55002, '480')
@@ -697,7 +694,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     // reused, not respawned, and still probes WHOAMI ok (no new FakeSocket
     // implementation queued, so the mock keeps returning the last one --
     // healthOk/whoamiOk).
-    const second = await ensureBridgeHelperReady(APP_ID_A)
+    const second = await ensureBridgeHelperReady(helperDeps, APP_ID_A)
 
     expect(mockedSpawn).toHaveBeenCalledTimes(2)
     expect(second).toEqual({
@@ -713,7 +710,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     mockedSpawn.mockReturnValue(child)
     MockedSocket.mockImplementation(() => new FakeSocket(healthErrFrame))
 
-    const pending = ensureBridgeHelperReady(APP_ID_A)
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(child, 55001, APP_ID_A)
     const result = await pending
 
@@ -732,7 +729,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
   test('a helper that never reports a LISTEN line at all -> unreachable, ready:false, no port', async () => {
     mockedSpawn.mockReturnValue(new FakeChildProcess())
 
-    const result = await ensureBridgeHelperReady(APP_ID_A)
+    const result = await ensureBridgeHelperReady(helperDeps, APP_ID_A)
 
     expect(result.status).toBe('unreachable')
     expect(result.ready).toBe(false)
@@ -808,7 +805,7 @@ describe('261027-aue: wait for Steam to start / sign in', () => {
 
   beforeEach(() => {
     __resetBridgeHelperStateForTests()
-    __resetLongLivedChildrenForTests()
+    fakeRunner.reset()
     mockedSpawn.mockReset()
     mockedSendFrontendMessage.mockClear()
     ;(shell.openExternal as jest.Mock).mockClear()
@@ -820,7 +817,7 @@ describe('261027-aue: wait for Steam to start / sign in', () => {
     const startSteam = jest.fn().mockResolvedValue(undefined)
     const onWaitingForSteam = jest.fn()
 
-    const result = await ensureBridgeHelperReady(APP_ID_A, {
+    const result = await ensureBridgeHelperReady(helperDeps, APP_ID_A, {
       startSteam,
       onWaitingForSteam
     })
@@ -848,7 +845,7 @@ describe('261027-aue: wait for Steam to start / sign in', () => {
     const startSteam = jest.fn().mockResolvedValue(undefined)
     const onWaitingForSteam = jest.fn()
 
-    const result = await ensureBridgeHelperReady(APP_ID_A, {
+    const result = await ensureBridgeHelperReady(helperDeps, APP_ID_A, {
       startSteam,
       onWaitingForSteam
     })
@@ -868,7 +865,9 @@ describe('261027-aue: wait for Steam to start / sign in', () => {
       scriptSpawns([err])
       const startSteam = jest.fn().mockResolvedValue(undefined)
 
-      const result = await ensureBridgeHelperReady(APP_ID_A, { startSteam })
+      const result = await ensureBridgeHelperReady(helperDeps, APP_ID_A, {
+        startSteam
+      })
 
       expect(result).toEqual({
         status,
@@ -890,7 +889,7 @@ describe('261027-aue: wait for Steam to start / sign in', () => {
       // Registry empty: the next call spawns fresh rather than reusing.
       mockedSpawn.mockClear()
       scriptSpawns(['ok'])
-      await ensureBridgeHelperReady(APP_ID_A)
+      await ensureBridgeHelperReady(helperDeps, APP_ID_A)
       expect(mockedSpawn).toHaveBeenCalledTimes(1)
     }
   )
@@ -899,7 +898,7 @@ describe('261027-aue: wait for Steam to start / sign in', () => {
     scriptSpawns([NOT_RUNNING, 'ok'])
     ;(shell.openExternal as jest.Mock).mockRejectedValueOnce(new Error('boom'))
 
-    const result = await ensureBridgeHelperReady(APP_ID_A)
+    const result = await ensureBridgeHelperReady(helperDeps, APP_ID_A)
 
     expect(result.status).toBe('ready')
   })
@@ -907,7 +906,7 @@ describe('261027-aue: wait for Steam to start / sign in', () => {
   test('default starter opens steam://open/main through the shell opener', async () => {
     scriptSpawns([NOT_RUNNING, 'ok'])
 
-    await ensureBridgeHelperReady(APP_ID_A)
+    await ensureBridgeHelperReady(helperDeps, APP_ID_A)
 
     expect(shell.openExternal).toHaveBeenCalledTimes(1)
     expect(shell.openExternal).toHaveBeenCalledWith('steam://open/main', {
@@ -926,7 +925,9 @@ describe('261027-aue: wait for Steam to start / sign in', () => {
     )
     const startSteam = jest.fn()
 
-    const pending = ensureBridgeHelperReady(APP_ID_A, { startSteam })
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A, {
+      startSteam
+    })
     emitListenLine(fullChild, 55001, APP_ID_A, null)
     emitInitFailedLine(fullChild, APP_ID_A, 'Steam is out of cheese')
     emitReadyLine(fullChild, APP_ID_A, 'failed')
@@ -954,7 +955,7 @@ describe('261027-aue: wait for Steam to start / sign in', () => {
       () => new FakeSocket(healthOkFrame, whoamiErrFrame)
     )
 
-    const pending = ensureBridgeHelperReady(APP_ID_A)
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(fullChild, 55001, APP_ID_A, null)
     emitInitFailedLine(fullChild, APP_ID_B, NOT_RUNNING)
     emitReadyLine(fullChild, APP_ID_A, 'failed')
@@ -974,7 +975,7 @@ describe('261027-aue: wait for Steam to start / sign in', () => {
     // A first call that leaves a failed-init entry behind: drive it by
     // reading the registry through a second call instead -- start a helper
     // and fail its init without letting the first call finish.
-    const first = ensureBridgeHelperReady(APP_ID_A)
+    const first = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(failedChild, 55001, APP_ID_A, null)
     emitReadyLine(failedChild, APP_ID_A, 'failed')
     // Second call while the first is still mid-probe sees initOutcome failed.
@@ -988,7 +989,7 @@ describe('261027-aue: wait for Steam to start / sign in', () => {
     MockedSocket.mockImplementation(
       () => new FakeSocket(healthOkFrame, whoamiOkFrame)
     )
-    const second = await ensureBridgeHelperReady(APP_ID_A)
+    const second = await ensureBridgeHelperReady(helperDeps, APP_ID_A)
 
     expect(failedChild.kill).toHaveBeenCalled()
     expect(second.status).toBe('ready')

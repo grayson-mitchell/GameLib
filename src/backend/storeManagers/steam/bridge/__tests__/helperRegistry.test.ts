@@ -23,7 +23,7 @@
 // Phase 65 Plan 15 (D-03): helperRegistry.ts (D-10 registry state, seams and teardown) -- split out of helperProcess.test.ts by owning module.
 
 import { EventEmitter } from 'node:events'
-import { spawn } from 'node:child_process'
+import { createChildBackedRunner } from 'backend/testUtils/childBackedRunner'
 import { Socket } from 'node:net'
 import { encodeResponse, STATUS_OK } from '../protocol'
 import { ensureBridgeHelperReady } from '../helperProcess'
@@ -34,10 +34,6 @@ import {
   __setBridgeHelperPathForTests,
   __resetBridgeHelperStateForTests
 } from '../helperRegistry'
-import {
-  shutdownLongLivedChildren,
-  __resetLongLivedChildrenForTests
-} from 'backend/longLivedChildren'
 
 jest.mock('backend/logger', () => ({
   logError: jest.fn(),
@@ -78,15 +74,13 @@ jest.mock('node:fs', () => {
   }
 })
 
-jest.mock('node:child_process', () => ({
-  spawn: jest.fn()
-}))
-
 jest.mock('node:net', () => ({
   Socket: jest.fn()
 }))
 
-const mockedSpawn = spawn as jest.Mock
+const mockedSpawn = jest.fn()
+const fakeRunner = createChildBackedRunner(mockedSpawn)
+const helperDeps = { runner: fakeRunner.runner }
 const MockedSocket = Socket as unknown as jest.Mock
 
 // PROBE_REQUEST_ID is 1 inside helperProcess.ts -- mirrored here so the
@@ -179,7 +173,7 @@ const whoamiOkFrame = encodeResponse(
 describe('helperRegistry.ts (D-10 registry state, seams and teardown)', () => {
   beforeEach(() => {
     __resetBridgeHelperStateForTests()
-    __resetLongLivedChildrenForTests()
+    fakeRunner.reset()
     mockedSpawn.mockReset()
   })
 
@@ -196,9 +190,9 @@ describe('helperRegistry.ts (D-10 registry state, seams and teardown)', () => {
       () => new FakeSocket(healthOkFrame, whoamiOkFrame)
     )
 
-    const pendingA = ensureBridgeHelperReady(APP_ID_A)
+    const pendingA = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(childA, 55001, APP_ID_A)
-    const pendingB = ensureBridgeHelperReady(APP_ID_B)
+    const pendingB = ensureBridgeHelperReady(helperDeps, APP_ID_B)
     emitListenLine(childB, 55002, APP_ID_B)
     await Promise.all([pendingA, pendingB])
 
@@ -220,7 +214,7 @@ describe('helperRegistry.ts (D-10 registry state, seams and teardown)', () => {
     MockedSocket.mockImplementation(
       () => new FakeSocket(healthOkFrame, whoamiOkFrame)
     )
-    const pending = ensureBridgeHelperReady(APP_ID_A)
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(child, 55001, APP_ID_A)
     await pending
 
@@ -229,33 +223,24 @@ describe('helperRegistry.ts (D-10 registry state, seams and teardown)', () => {
     expect(hasLiveBridgeHelper()).toBe(false)
   })
 
-  // 51-REVIEW WR-06 (sidecar exit contract): the child handle and both piped
-  // streams must be unref'd so a leaked helper cannot hold the sidecar's event
-  // loop open past stdin EOF, and a process 'exit' listener must tear down any
-  // helper still running when the sidecar drains.
-  test('WR-06: the spawned child and its stdout/stderr pipes are unref()d, and a process exit listener kills a still-running helper', async () => {
+  // 51-REVIEW WR-06 (sidecar exit contract): the runner unref()s the child and
+  // its pipes, so a process 'exit' listener must tear down any helper still
+  // running when the sidecar drains.
+  test('WR-06: a process exit listener kills a still-running helper', async () => {
     const onSpy = jest.spyOn(process, 'on')
     const child = new FakeChildProcess()
-    const childUnref = jest.fn()
-    const stdoutUnref = jest.fn()
-    const stderrUnref = jest.fn()
-    Object.assign(child, { unref: childUnref })
-    Object.assign(child.stdout, { unref: stdoutUnref })
-    Object.assign(child.stderr, { unref: stderrUnref })
     mockedSpawn.mockReturnValue(child)
     MockedSocket.mockImplementation(
       () => new FakeSocket(healthOkFrame, whoamiOkFrame)
     )
 
-    const pending = ensureBridgeHelperReady(APP_ID_A)
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(child, 55003, APP_ID_A)
     const result = await pending
 
-    // unref() drops only the loop claim: the LISTEN line was still read.
+    // The runner unref()s the child and its pipes (covered in the runner's own
+    // tests); the LISTEN line is still read through its callbacks.
     expect(result).toEqual(expect.objectContaining({ ready: true }))
-    expect(childUnref).toHaveBeenCalledTimes(1)
-    expect(stdoutUnref).toHaveBeenCalledTimes(1)
-    expect(stderrUnref).toHaveBeenCalledTimes(1)
 
     const exitListeners = onSpy.mock.calls
       .filter(([event]) => event === 'exit')
@@ -283,9 +268,9 @@ describe('helperRegistry.ts (D-10 registry state, seams and teardown)', () => {
       () => new FakeSocket(healthOkFrame, whoamiOkFrame)
     )
 
-    const pendingA = ensureBridgeHelperReady(APP_ID_A)
+    const pendingA = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(childA, 55001, APP_ID_A)
-    const pendingB = ensureBridgeHelperReady(APP_ID_B)
+    const pendingB = ensureBridgeHelperReady(helperDeps, APP_ID_B)
     emitListenLine(childB, 55002, APP_ID_B)
     await Promise.all([pendingA, pendingB])
 
@@ -297,11 +282,11 @@ describe('helperRegistry.ts (D-10 registry state, seams and teardown)', () => {
 
   // ── Quick task 260907-juv (Gate B) lineage, now per-appId: the registry,
   // not a direct export, is the production teardown path -- calling the
-  // shared `shutdownLongLivedChildren()` registry (the only thing
+  // shared `fakeRunner.teardownAll()` registry (the only thing
   // `handleExit()` calls) must reach EACH registered appId's own helper
   // independently, exactly once, even across repeated registry-wide
   // teardown calls.
-  test('shutdownLongLivedChildren() reaches every registered appId helper via the registry, named steam-bridge-helper-<appId>', async () => {
+  test('fakeRunner.teardownAll() reaches every registered appId helper via the registry, named steam-bridge-helper-<appId>', async () => {
     const childA = new FakeChildProcess()
     const childB = new FakeChildProcess()
     mockedSpawn.mockReturnValueOnce(childA).mockReturnValueOnce(childB)
@@ -309,19 +294,19 @@ describe('helperRegistry.ts (D-10 registry state, seams and teardown)', () => {
       () => new FakeSocket(healthOkFrame, whoamiOkFrame)
     )
 
-    const pendingA = ensureBridgeHelperReady(APP_ID_A)
+    const pendingA = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(childA, 55001, APP_ID_A)
-    const pendingB = ensureBridgeHelperReady(APP_ID_B)
+    const pendingB = ensureBridgeHelperReady(helperDeps, APP_ID_B)
     emitListenLine(childB, 55002, APP_ID_B)
     await Promise.all([pendingA, pendingB])
 
-    shutdownLongLivedChildren()
+    fakeRunner.teardownAll()
 
     expect(childA.kill).toHaveBeenCalledTimes(1)
     expect(childB.kill).toHaveBeenCalledTimes(1)
 
     // Idempotent: a second registry-wide teardown never re-kills.
-    shutdownLongLivedChildren()
+    fakeRunner.teardownAll()
     expect(childA.kill).toHaveBeenCalledTimes(1)
     expect(childB.kill).toHaveBeenCalledTimes(1)
   })
@@ -334,7 +319,7 @@ describe('helperRegistry.ts (D-10 registry state, seams and teardown)', () => {
     )
 
     __setBridgeHelperPathForTests('/custom/test/steam-bridge-helper')
-    const pending = ensureBridgeHelperReady(APP_ID_A)
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
     emitListenLine(child, 55001, APP_ID_A)
     await pending
 
