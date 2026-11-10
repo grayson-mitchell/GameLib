@@ -47,6 +47,8 @@ import {
 import {
   evaluateShimCoverage,
   classifyUnservableInterfaceVersions,
+  extractSteamApiNames,
+  findRunnerUnservedExports,
   SHIM_EXPORT_SET_VERSION
 } from './shimCoverage'
 import { NUMERIC_APP_ID } from '../gameConstants'
@@ -159,6 +161,41 @@ function scanDeps(appId: string): BridgeScanDeps {
   }
 }
 
+/**
+ * Debug undertale-shim-placed-no-hello: the SteamAPI_* names a 32-bit runner
+ * carries that the x86 shim cannot export, narrowed to what the game's own
+ * steam_api.dll exports (read from the original, or its .gamelib-orig backup
+ * when the shim is already placed). Never throws; unreadable -> [].
+ */
+function findRuntimeRunnerGaps(
+  exePath: string,
+  x86Entries: Array<{ path: string; isGameLibShim: boolean }>,
+  bottleDir: string
+): string[] {
+  try {
+    const runnerNames = extractSteamApiNames(readFileSync(exePath))
+    if (runnerNames.size === 0) return []
+    let originalExports: Set<string> | null = null
+    for (const entry of x86Entries) {
+      const originalPath = entry.isGameLibShim
+        ? probeOriginalBackup(bottleDir, resolve(entry.path)) === 'restorable'
+          ? entry.path + ORIGINAL_BACKUP_SUFFIX
+          : null
+        : entry.path
+      if (originalPath === null) continue
+      originalExports = extractSteamApiNames(readFileSync(originalPath))
+      break
+    }
+    return findRunnerUnservedExports({
+      arch: 'x86',
+      runnerNames,
+      originalExports
+    })
+  } catch {
+    return []
+  }
+}
+
 export async function placeShimForGameInner(
   appId: string,
   gameExePath: string,
@@ -245,6 +282,47 @@ export async function placeShimForGameInner(
         name === 'steam_api64.dll'
           ? (opts?.shim64SourcePath ?? builtBridgeShim64Path)
           : (opts?.shimSourcePath ?? builtBridgeShimPath)
+
+      // Debug undertale-shim-placed-no-hello: a 32-bit runner that resolves
+      // SteamAPI_* by name (GetProcAddress) from a runtime-loaded steam_api.dll
+      // gets NULL for every name the hand-pinned x86 shim does not export, so
+      // init never reaches the shim and the helper never hears HELLO (D-53-09
+      // x86 gap, backlog 999.2). Withhold like Cat Quest: restore any placed
+      // shim from .gamelib-orig and launch direct. Runs before the idempotent
+      // no-op so an already-placed shim is restored, not left in place. x64
+      // is unchanged.
+      const x86Entries = runtimeDlls.filter((d) => d.name === 'steam_api.dll')
+      if (
+        x86Entries.length > 0 &&
+        readFileEffectiveArch(resolvedExePath) === 'x86'
+      ) {
+        const runnerGaps = findRuntimeRunnerGaps(
+          resolvedExePath,
+          x86Entries,
+          bottleDir
+        )
+        if (runnerGaps.length > 0) {
+          const withheld = withholdIfRestorable({
+            appId,
+            bottleDir,
+            shimTargets: x86Entries
+              .filter((d) => d.isGameLibShim)
+              .map((d) => d.path),
+            arch: 'x86',
+            required: {},
+            stubbedInterfaces: [],
+            allMissing: runnerGaps,
+            delayMissing: [],
+            unservable: runnerGaps,
+            scannedAt,
+            originalFingerprints: collectOriginalFingerprints(
+              bottleDir,
+              runtimeDlls.map((d) => resolve(d.path))
+            )
+          })
+          if (withheld) return withheld
+        }
+      }
 
       // A non-shim entry needs a built source to be replaced; refuse before
       // copying anything if one is missing.

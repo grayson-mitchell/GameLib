@@ -592,6 +592,118 @@ describe('shimGenerate', () => {
     expect(existsSync(shimDestPath())).toBe(false)
   })
 
+  describe('undertale-shim-placed-no-hello: x86 runtime-loaded runner needing exports the x86 shim lacks', () => {
+    const MARK_X86 = 'GameLibSteamBridgeShim x86 build'
+    const BACKUP = '.gamelib-orig'
+    const UNDERTALE_NAMES =
+      'SteamAPI_RestartAppIfNecessary\0SteamAPI_InitSafe\0SteamAPI_GetHSteamPipe\0SteamAPI_GetHSteamUser\0SteamAPI_RunCallbacks\0'
+    const noImports = () =>
+      mockedScanSteamApiImports.mockResolvedValue({
+        status: 'ok',
+        arch: 'none',
+        symbols: []
+      })
+    const runnerExe = (names: string) => {
+      writeFileSync(
+        gameExePath,
+        Buffer.concat([buildMinimalPe([]), Buffer.from(names, 'latin1')])
+      )
+    }
+    const originalDll = `MZ\0${UNDERTALE_NAMES}SteamAPI_WriteMiniDump\0`
+    const opts = () => ({
+      shimSourcePath: realShimSourcePath,
+      shim64SourcePath: realShim64SourcePath,
+      gameInstallRoot: gameDir
+    })
+
+    it('withholds on a fresh install: original dll untouched, no backup, miss verdict names the gap', async () => {
+      noImports()
+      writeFileSync(realShimSourcePath, MARK_X86)
+      runnerExe(UNDERTALE_NAMES)
+      const dll = join(gameDir, 'steam_api.dll')
+      writeFileSync(dll, originalDll)
+
+      const result = await placeShimForGame('391540', gameExePath, opts())
+
+      expect(result.status).toBe('withheld')
+      if (result.status === 'withheld') {
+        expect(result.restored).toEqual([])
+        expect(result.verdict.arch).toBe('x86')
+        expect(result.verdict.missingSymbols).toEqual(
+          expect.arrayContaining([
+            'SteamAPI_InitSafe',
+            'SteamAPI_GetHSteamPipe',
+            'SteamAPI_GetHSteamUser'
+          ])
+        )
+        expect(result.verdict.missingSymbols).not.toContain(
+          'SteamAPI_RunCallbacks'
+        )
+      }
+      expect(readFileSync(dll, 'latin1')).toBe(originalDll)
+      expect(existsSync(dll + BACKUP)).toBe(false)
+    })
+
+    it('restores a previously placed shim from .gamelib-orig instead of the idempotent no-op', async () => {
+      noImports()
+      writeFileSync(realShimSourcePath, MARK_X86)
+      runnerExe(UNDERTALE_NAMES)
+      const dll = join(gameDir, 'steam_api.dll')
+      writeFileSync(dll, MARK_X86)
+      writeFileSync(dll + BACKUP, originalDll)
+
+      const result = await placeShimForGame('391540', gameExePath, opts())
+
+      expect(result.status).toBe('withheld')
+      if (result.status === 'withheld') {
+        expect(result.restored).toEqual([resolve(dll)])
+      }
+      expect(readFileSync(dll, 'latin1')).toBe(originalDll)
+    })
+
+    it('still places when the runner needs only names the x86 shim exports', async () => {
+      noImports()
+      writeFileSync(realShimSourcePath, MARK_X86)
+      runnerExe('SteamAPI_RestartAppIfNecessary\0SteamAPI_RunCallbacks\0')
+      const dll = join(gameDir, 'steam_api.dll')
+      writeFileSync(dll, originalDll)
+
+      const result = await placeShimForGame('391540', gameExePath, opts())
+
+      expect(result.status).toBe('placed-miss')
+      expect(readFileSync(dll, 'utf-8')).toBe(MARK_X86)
+    })
+
+    it('ignores runner names the game original does not export', async () => {
+      noImports()
+      writeFileSync(realShimSourcePath, MARK_X86)
+      runnerExe('SteamAPI_NotARealExport\0SteamAPI_RunCallbacks\0')
+      const dll = join(gameDir, 'steam_api.dll')
+      writeFileSync(dll, originalDll)
+
+      const result = await placeShimForGame('391540', gameExePath, opts())
+
+      expect(result.status).toBe('placed-miss')
+    })
+
+    it('x64 runtime-loaded dll is unchanged (placed-miss)', async () => {
+      noImports()
+      writeFileSync(realShim64SourcePath, 'GameLibSteamBridgeShim x64 build')
+      const pe = buildMinimalPe([])
+      pe.writeUInt16LE(0x8664, 0x80 + 4)
+      writeFileSync(
+        gameExePath,
+        Buffer.concat([pe, Buffer.from(UNDERTALE_NAMES, 'latin1')])
+      )
+      const dll = join(gameDir, 'steam_api64.dll')
+      writeFileSync(dll, originalDll)
+
+      const result = await placeShimForGame('391540', gameExePath, opts())
+
+      expect(result.status).toBe('placed-miss')
+    })
+  })
+
   describe('CR-04: runtime-loaded steam_api in the install tree', () => {
     const noImports = () =>
       mockedScanSteamApiImports.mockResolvedValue({

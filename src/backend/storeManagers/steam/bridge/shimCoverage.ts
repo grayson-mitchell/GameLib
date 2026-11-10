@@ -727,6 +727,41 @@ export function classifyUnservableInterfaceVersions(input: {
   return { blocking, nonCore }
 }
 
+const STEAM_API_NAME_RE = /SteamAPI_[A-Za-z0-9_]{2,}/g
+
+/**
+ * Debug undertale-shim-placed-no-hello: every `SteamAPI_*` identifier that
+ * appears as an ASCII string in a PE image (an exe's GetProcAddress names, or
+ * a dll's export-name table). Pure; the caller reads the bytes.
+ */
+export function extractSteamApiNames(image: Buffer): Set<string> {
+  return new Set(image.toString('latin1').match(STEAM_API_NAME_RE) ?? [])
+}
+
+/**
+ * A runtime-loaded steam_api (the launch exe never imports it) resolves its
+ * entry points with GetProcAddress, so the runner's strings are the only
+ * evidence of what it needs. Returns the `SteamAPI_*` names the runner
+ * carries that the arch's shim does not export. When `originalExports` (the
+ * game's own steam_api, strings pass) is supplied, the result is narrowed to
+ * names the original actually exports, which discards unrelated strings.
+ * A GameMaker 1.4 runner (Undertale) resolves SteamAPI_InitSafe /
+ * GetHSteamPipe / GetHSteamUser, none of which the hand-pinned x86 export set
+ * has, so init never reaches the shim (D-53-09 x86 gap, backlog 999.2).
+ */
+export function findRunnerUnservedExports(input: {
+  arch: 'x86' | 'x64'
+  runnerNames: ReadonlySet<string>
+  originalExports?: ReadonlySet<string> | null
+}): string[] {
+  const served =
+    input.arch === 'x86' ? SHIM_EXPORTED_SYMBOLS : SHIM64_EXPORTED_SYMBOLS
+  const original = input.originalExports
+  return [...input.runnerNames]
+    .filter((n) => !served.has(n) && (!original || original.has(n)))
+    .sort()
+}
+
 /**
  * D-51-07: re-runs the "is this now covered" membership test on a PERSISTED
  * scan verdict's stored `missingSymbols` list ONLY (never a full re-scan).

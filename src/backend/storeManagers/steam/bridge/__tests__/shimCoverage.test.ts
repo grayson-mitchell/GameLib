@@ -36,6 +36,8 @@ import {
   findUnservableInterfaceVersions,
   classifyUnservableInterfaceVersions,
   CORE_STARTUP_FAMILIES,
+  extractSteamApiNames,
+  findRunnerUnservedExports,
   isScanVerdictNowCovered
 } from '../shimCoverage'
 import {
@@ -1577,5 +1579,41 @@ describe('58-21 SteamMatchMakingServers served entries', () => {
     expect(
       SHIM_SERVED_INTERFACE_VERSIONS.has('SteamMatchMakingServers003')
     ).toBe(false)
+  })
+})
+
+describe('undertale-shim-placed-no-hello: runner export gap helpers', () => {
+  it('extractSteamApiNames pulls SteamAPI_ identifiers from raw bytes', () => {
+    const names = extractSteamApiNames(
+      Buffer.from(
+        'xx\0SteamAPI_InitSafe\0yy SteamAPI_Shutdown\0SteamAPI_%s',
+        'latin1'
+      )
+    )
+    expect([...names].sort()).toEqual([
+      'SteamAPI_InitSafe',
+      'SteamAPI_Shutdown'
+    ])
+  })
+
+  it('findRunnerUnservedExports names x86 gaps, narrowed to the original exports', () => {
+    const runnerNames = new Set([
+      'SteamAPI_InitSafe',
+      'SteamAPI_GetHSteamPipe',
+      'SteamAPI_RunCallbacks',
+      'SteamAPI_Unrelated'
+    ])
+    expect(findRunnerUnservedExports({ arch: 'x86', runnerNames })).toEqual([
+      'SteamAPI_GetHSteamPipe',
+      'SteamAPI_InitSafe',
+      'SteamAPI_Unrelated'
+    ])
+    expect(
+      findRunnerUnservedExports({
+        arch: 'x86',
+        runnerNames,
+        originalExports: new Set(['SteamAPI_InitSafe'])
+      })
+    ).toEqual(['SteamAPI_InitSafe'])
   })
 })
