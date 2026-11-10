@@ -1,7 +1,7 @@
 import '../../testUtils/tauriWindow'
 import { resetAllStores } from '../storeKit'
 import useAuthState, { readInitialAuth } from '../authState'
-import useLibraryState, { installLibraryBridgeSlots } from '../libraryState'
+import useLibraryState from '../libraryState'
 import useUiState from '../uiState'
 import { sanitizeSignInProbeOutcomeMap } from 'common/signInState'
 import type { HumbleSyncState } from 'common/types/humble'
@@ -331,12 +331,10 @@ describe('authState login/logout actions', () => {
       'steamConfigStore|userData': { username: 'sName' }
     }
     logoutLegendaryImpl = async () => undefined
-    installLibraryBridgeSlots({
+    useLibraryState.setState({
       refreshLibrary: async (o) => {
         libraryCalls.push(['refresh', o])
-      }
-    })
-    useLibraryState.setState({
+      },
       resetRunnerLibrary: (r) => {
         libraryCalls.push(['reset', r])
       },

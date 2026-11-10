@@ -18,7 +18,7 @@
 import '../../testUtils/tauriWindow'
 import { resetAllStores } from '../storeKit'
 import useAuthState from '../authState'
-import useLibraryState, { installLibraryBridgeSlots } from '../libraryState'
+import useLibraryState from '../libraryState'
 import useUiState from '../uiState'
 
 interface Recording {
@@ -44,7 +44,7 @@ function install(): void {
     getSteamUserInfo: async () =>
       signedOutOnPoll ? undefined : { username: 'sName' }
   }
-  installLibraryBridgeSlots({ refreshLibrary: async () => undefined })
+  useLibraryState.setState({ refreshLibrary: async () => undefined })
   useLibraryState.setState({
     resetRunnerLibrary: (runner) => {
       rec.resets.push(runner)

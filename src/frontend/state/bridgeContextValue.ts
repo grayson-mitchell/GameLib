@@ -71,6 +71,9 @@ type BridgedKeys =
   | 'refreshing'
   | 'refreshingInTheBackground'
   | 'refreshingByRunner'
+  | 'refreshLibrary'
+  | 'steamMetadataSyncing'
+  | 'steamSyncStatus'
 
 /** Subscribes `onChange` to every bridged store. Lasts for the app's life (D-07). */
 export function subscribeBridge(onChange: () => void): void {
@@ -162,7 +165,10 @@ export function bridgedContextSlice(): Pick<ContextType, BridgedKeys> {
     refresh: library.refresh,
     refreshing: library.refreshing,
     refreshingInTheBackground: library.refreshingInTheBackground,
-    refreshingByRunner: library.refreshingByRunner
+    refreshingByRunner: library.refreshingByRunner,
+    refreshLibrary: library.refreshLibrary,
+    steamMetadataSyncing: library.steamMetadataSyncing,
+    steamSyncStatus: library.steamSyncStatus
   }
 }
 

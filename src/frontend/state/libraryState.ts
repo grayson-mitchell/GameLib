@@ -9,6 +9,7 @@ import type {
   Runner
 } from 'common/types'
 import type { RunsForMeState } from 'common/runsForMe'
+import type { SteamSyncStatus } from 'common/types/ipc'
 import {
   configStore,
   gameOverridesStore,
@@ -25,23 +26,28 @@ import { isStore } from 'common/storeCapabilities'
 import useAuthState from './authState'
 import { bindStoreHooks, registerStoreForReset } from './storeKit'
 
-// Phase 69 D-09 reverse bridge: library domain store. authState (D-10 puts auth
-// before library) reaches the library through these action slots. The
-// resetRunnerLibrary and setRefreshing slots are real actions; refreshLibrary is
-// still installed by the GlobalState class (via installLibraryBridgeSlots) until
-// 69-18 moves it here.
+// Phase 69 D-09: library domain store. authState (D-10 puts auth before
+// library) reaches refreshLibrary, resetRunnerLibrary and setRefreshing through
+// this store's real actions.
 
 // GAP CYCLE 4 (34.5-33): `origin` identifies which call site triggered a
 // refresh. Kept local rather than added to the shared RefreshOptions.
 export type RefreshLibraryOptions = RefreshOptions & { origin?: string }
 
-interface LibraryBridgeSlots {
-  refreshLibrary: (options: RefreshLibraryOptions) => Promise<void>
-}
-
 type GameOverride = NonNullable<GameInfo['overrides']>
 
-export interface LibraryState extends LibraryBridgeSlots {
+export interface LibraryState {
+  refreshLibrary: (options: RefreshLibraryOptions) => Promise<void>
+  steamMetadataSyncing: boolean
+  // Phase 34.15 (34.15-02), D-06: tri-state driver of the Steam sync
+  // indicator; deliberately independent of refreshingInTheBackground (the
+  // old boolean defaults true and resets true after every unscoped refresh,
+  // so it never meant "a refresh is running"). refreshingByRunner.steam was
+  // rejected as the carrier: a boolean cannot tell "failed" from
+  // "succeeded-and-empty", and the mount-time refresh is unscoped.
+  steamSyncStatus: SteamSyncStatus
+  setSteamMetadataSyncing: (syncing: boolean) => void
+  setSteamSyncStatus: (status: SteamSyncStatus) => void
   resetRunnerLibrary: (runner: Runner) => void
   setRefreshing: (value: boolean) => void
 
@@ -200,16 +206,98 @@ export function readInitialLibrary(): Pick<
   }
 }
 
-const notInstalled = (name: string) => {
-  window.api.logError(
-    `library slot ${name} called before GlobalState installed it`
-  )
-}
-
 const useLibraryStateRaw = create<LibraryState>()(
   subscribeWithSelector(
     (set, get): LibraryState => ({
-      refreshLibrary: async () => notInstalled('refreshLibrary'),
+      refreshLibrary: async ({
+        checkForUpdates,
+        runInBackground = true,
+        library = undefined,
+        origin = 'unknown'
+      }: RefreshLibraryOptions): Promise<void> => {
+        const libraryAtStart = get()
+        if (libraryAtStart.refreshing) return
+
+        // GAP CYCLE 4 (34.5-33, item 2): this line used to be
+        // `Refreshing ${library} Library`, which printed the literal word
+        // `undefined` whenever `library` was omitted — indistinguishable from a
+        // genuine runner name in a live log. `library ?? 'all'` matches the
+        // semantics `window.api.refreshLibrary(undefined)` already carries at
+        // main.ts:1051 and (gap cycle 4, plan 34.5-33) now carries in the
+        // sidecar handler too — the runner-less case IS "all", never a mystery
+        // value. `origin` names the call site so a live log can attribute a
+        // refresh to its trigger.
+        const runnerScope = library ?? 'all'
+        window.api.logInfo(
+          `[refreshLibrary] runner=${runnerScope} origin=${origin}`
+        )
+
+        // debug/login-logout-wipes-library: a SCOPED call (a specific runner,
+        // never `undefined`/`'all'`) tracks its own `refreshingByRunner` entry
+        // instead of the two GLOBAL flags below — see `.refresh()`'s matching
+        // final `setState` and `StateProps.refreshingByRunner`'s doc comment for
+        // why. The guard mirrors the top-of-function `if (this.state.refreshing)
+        // return` above, but scoped to this ONE runner, so two overlapping
+        // scoped refreshes of the SAME runner (e.g. a double-click) can't step
+        // on each other; it does NOT block a DIFFERENT runner's scoped refresh
+        // from starting concurrently — that's the whole point of this fix.
+        const scopedRunner = library && library !== 'all' ? library : undefined
+        if (scopedRunner && libraryAtStart.refreshingByRunner[scopedRunner])
+          return
+
+        if (scopedRunner) {
+          set((prevState) => ({
+            refreshingByRunner: {
+              ...prevState.refreshingByRunner,
+              [scopedRunner]: true
+            }
+          }))
+        } else {
+          set({
+            refreshing: true,
+            refreshingInTheBackground: runInBackground
+          })
+        }
+
+        try {
+          await window.api.refreshLibrary(library, origin)
+          await get().refresh(library, checkForUpdates)
+          // Quick 261029-quw item 2: every login triggers a refresh, so a login
+          // that finished in the backend heals here at the latest.
+          useAuthState.getState().resyncSignInIdentityFromStores()
+          return
+        } catch (error) {
+          window.api.logError(`Library refresh failed: ${String(error)}`)
+          // debug/steam-relogin-no-autorefresh: this method's own guard above
+          // (`if (this.state.refreshing) return`) means a failure here — from
+          // ANY store, not just the one that just errored — permanently wedges
+          // every future refreshLibrary() call (including the automatic
+          // post-login refresh AND the manual Refresh button in the Games
+          // tier-2 panel's Header, which calls this exact method) until
+          // something outside this
+          // function happens to reset `refreshing`. Reset it here so a failed
+          // refresh never blocks the next attempt.
+          set({ refreshing: false })
+          // debug/login-logout-wipes-library: mirror that same never-wedge
+          // guarantee for the scoped path — a failed scoped refresh must clear
+          // its OWN `refreshingByRunner` entry, or that one runner's future
+          // scoped refreshes wedge forever behind the guard just above.
+          if (scopedRunner) {
+            set((prevState) => ({
+              refreshingByRunner: {
+                ...prevState.refreshingByRunner,
+                [scopedRunner]: false
+              }
+            }))
+          }
+        }
+      },
+
+      steamMetadataSyncing: false,
+      steamSyncStatus: 'idle',
+      setSteamMetadataSyncing: (syncing) =>
+        set({ steamMetadataSyncing: syncing }),
+      setSteamSyncStatus: (status) => set({ steamSyncStatus: status }),
 
       resetRunnerLibrary: (runner) => {
         const key = (
@@ -527,11 +615,6 @@ const useLibraryStateRaw = create<LibraryState>()(
 )
 
 registerStoreForReset(useLibraryStateRaw)
-
-/** Installs the class-owned implementation; called once from GlobalState. */
-export function installLibraryBridgeSlots(impl: LibraryBridgeSlots): void {
-  useLibraryStateRaw.setState({ refreshLibrary: impl.refreshLibrary })
-}
 
 /**
  * D-08: persists `gameUpdates` to localStorage 'updates' on every change. It

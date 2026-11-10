@@ -507,7 +507,7 @@ describe('useTauriOAuthLogin — completion callback drives the real GlobalState
     // the hook harness keeps its own `window.api`.
     await import('../../../testUtils/tauriWindow')
     const { default: useAuthState } = await import('../../../state/authState')
-    const { default: useLibraryState, installLibraryBridgeSlots } =
+    const { default: useLibraryState } =
       await import('../../../state/libraryState')
     ;(globalThis as unknown as { window: object }).window = priorWindow
     const setItem = jest.fn()
@@ -515,8 +515,8 @@ describe('useTauriOAuthLogin — completion callback drives the real GlobalState
 
     const refreshLibrary = jest.fn(() => Promise.resolve())
     const resetRunnerLibrary = jest.fn()
-    installLibraryBridgeSlots({ refreshLibrary })
     useLibraryState.setState({
+      refreshLibrary,
       resetRunnerLibrary,
       setRefreshing: jest.fn()
     })

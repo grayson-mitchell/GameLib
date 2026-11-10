@@ -6,17 +6,8 @@ import { i18n, TFunction } from 'i18next'
 
 import ContextProvider from './ContextProvider'
 
-import {
-  gogConfigStore,
-  nileConfigStore,
-  steamConfigStore
-} from '../helpers/stores'
-import type { SteamSyncStatus } from 'common/types/ipc'
 import useAuthState from './authState'
-import useLibraryState, {
-  installLibraryBridgeSlots,
-  type RefreshLibraryOptions
-} from './libraryState'
+import useLibraryState from './libraryState'
 import { applySavedFonts } from './settingsState'
 import {
   bridgedAccounts,
@@ -27,12 +18,13 @@ import {
   followConnectivity,
   hydrateDismissedSignInNotices,
   pullSignInProbeOutcomes,
+  readMountStoreUsers,
   refreshAmazonUserInfo,
+  runMountLibraryRefresh,
   registerControllerListener,
   restoreStoredGameUpdates,
   seedAndFollowWindowChrome,
-  seedEpicUserInfo,
-  shouldRunInBackgroundAtMount
+  seedEpicUserInfo
 } from './initStateSubscriptions'
 import { useBottleLaunchWaiting } from './BottleLaunchWaiting'
 import { isStore } from 'common/storeCapabilities'
@@ -51,20 +43,6 @@ interface StateProps {
   // Phase 69: identities, the libraries, the update list and the refresh flags
   // live in authState/libraryState; the class keeps only the per-game status.
   libraryStatus: GameStatus[]
-  steamMetadataSyncing: boolean
-  // Phase 34.15 (34.15-02), D-06: REPLACES the old background-refresh
-  // boolean (see the constructor default and its post-refresh reset,
-  // `:308`/`:1080` below) as the driver of the Steam sync indicator. That
-  // boolean defaults `true` and is reset to `true` after EVERY unscoped
-  // refresh, so it never actually means "a refresh is running" -- the old
-  // guard reduced to "Steam is logged in AND the Steam library is empty",
-  // permanently, on failure and on a genuinely empty library alike. A
-  // tri-state makes the terminal state STRUCTURAL rather than a boolean
-  // that happens to clear. `refreshingByRunner.steam` was rejected as the
-  // carrier because it is a boolean (cannot distinguish "failed" from
-  // "succeeded-and-empty"), and the mount-time refresh is UNSCOPED, so it
-  // would never be set on the path where the bug reproduces.
-  steamSyncStatus: SteamSyncStatus
 }
 
 /**
@@ -236,13 +214,6 @@ export function reconcileSleepAssertionCalls(
 }
 
 class GlobalState extends PureComponent<Props> {
-  constructor(props: Props) {
-    super(props)
-    // Phase 69 D-09 reverse bridge: authState reaches refreshLibrary through
-    // this slot until 69-18 moves the implementation into libraryState.
-    installLibraryBridgeSlots({ refreshLibrary: this.refreshLibrary })
-  }
-
   /**
    * Which sleep-assertion KINDS were active as of the previous `componentDidUpdate` call --
    * the `previous` argument `reconcileSleepAssertionCalls` needs to detect a kind turning off.
@@ -253,92 +224,7 @@ class GlobalState extends PureComponent<Props> {
   }
 
   state: StateProps = {
-    libraryStatus: [],
-    steamMetadataSyncing: false,
-    steamSyncStatus: 'idle'
-  }
-
-  refreshLibrary = async ({
-    checkForUpdates,
-    runInBackground = true,
-    library = undefined,
-    origin = 'unknown'
-  }: RefreshLibraryOptions): Promise<void> => {
-    const libraryAtStart = useLibraryState.getState()
-    if (libraryAtStart.refreshing) return
-
-    // GAP CYCLE 4 (34.5-33, item 2): this line used to be
-    // `Refreshing ${library} Library`, which printed the literal word
-    // `undefined` whenever `library` was omitted — indistinguishable from a
-    // genuine runner name in a live log. `library ?? 'all'` matches the
-    // semantics `window.api.refreshLibrary(undefined)` already carries at
-    // main.ts:1051 and (gap cycle 4, plan 34.5-33) now carries in the
-    // sidecar handler too — the runner-less case IS "all", never a mystery
-    // value. `origin` names the call site so a live log can attribute a
-    // refresh to its trigger.
-    const runnerScope = library ?? 'all'
-    window.api.logInfo(
-      `[refreshLibrary] runner=${runnerScope} origin=${origin}`
-    )
-
-    // debug/login-logout-wipes-library: a SCOPED call (a specific runner,
-    // never `undefined`/`'all'`) tracks its own `refreshingByRunner` entry
-    // instead of the two GLOBAL flags below — see `.refresh()`'s matching
-    // final `setState` and `StateProps.refreshingByRunner`'s doc comment for
-    // why. The guard mirrors the top-of-function `if (this.state.refreshing)
-    // return` above, but scoped to this ONE runner, so two overlapping
-    // scoped refreshes of the SAME runner (e.g. a double-click) can't step
-    // on each other; it does NOT block a DIFFERENT runner's scoped refresh
-    // from starting concurrently — that's the whole point of this fix.
-    const scopedRunner = library && library !== 'all' ? library : undefined
-    if (scopedRunner && libraryAtStart.refreshingByRunner[scopedRunner]) return
-
-    if (scopedRunner) {
-      useLibraryState.setState((prevState) => ({
-        refreshingByRunner: {
-          ...prevState.refreshingByRunner,
-          [scopedRunner]: true
-        }
-      }))
-    } else {
-      useLibraryState.setState({
-        refreshing: true,
-        refreshingInTheBackground: runInBackground
-      })
-    }
-
-    try {
-      await window.api.refreshLibrary(library, origin)
-      await useLibraryState.getState().refresh(library, checkForUpdates)
-      // Quick 261029-quw item 2: every login triggers a refresh, so a login
-      // that finished in the backend heals here at the latest.
-      useAuthState.getState().resyncSignInIdentityFromStores()
-      return
-    } catch (error) {
-      window.api.logError(`Library refresh failed: ${String(error)}`)
-      // debug/steam-relogin-no-autorefresh: this method's own guard above
-      // (`if (this.state.refreshing) return`) means a failure here — from
-      // ANY store, not just the one that just errored — permanently wedges
-      // every future refreshLibrary() call (including the automatic
-      // post-login refresh AND the manual Refresh button in the Games
-      // tier-2 panel's Header, which calls this exact method) until
-      // something outside this
-      // function happens to reset `refreshing`. Reset it here so a failed
-      // refresh never blocks the next attempt.
-      useLibraryState.setState({ refreshing: false })
-      // debug/login-logout-wipes-library: mirror that same never-wedge
-      // guarantee for the scoped path — a failed scoped refresh must clear
-      // its OWN `refreshingByRunner` entry, or that one runner's future
-      // scoped refreshes wedge forever behind the guard just above.
-      if (scopedRunner) {
-        useLibraryState.setState((prevState) => ({
-          refreshingByRunner: {
-            ...prevState.refreshingByRunner,
-            [scopedRunner]: false
-          }
-        }))
-      }
-    }
+    libraryStatus: []
   }
 
   handleGameStatus = async ({
@@ -432,7 +318,7 @@ class GlobalState extends PureComponent<Props> {
           (game) => game !== appName
         )
         // This avoids calling legendary again before the previous process is killed when canceling
-        this.refreshLibrary({
+        void useLibraryState.getState().refreshLibrary({
           checkForUpdates: true,
           runInBackground: true,
           library: runner,
@@ -444,7 +330,7 @@ class GlobalState extends PureComponent<Props> {
         return this.setState({ libraryStatus: newLibraryStatus })
       }
 
-      this.refreshLibrary({
+      void useLibraryState.getState().refreshLibrary({
         runInBackground: true,
         library: runner,
         origin: 'game-status'
@@ -464,42 +350,10 @@ class GlobalState extends PureComponent<Props> {
       this.handleGameStatus({ ...args })
     })
 
-    window.api.handleSteamMetadataSyncing((e, { syncing }) => {
-      this.setState({ steamMetadataSyncing: syncing })
-    })
-
-    // Phase 34.15 (34.15-02), D-06/D-07: mirrors handleSteamMetadataSyncing
-    // above. Deliberately does NOT read or touch the old background-refresh
-    // flag it replaces (see StateProps.steamSyncStatus doc comment). The
-    // payload's `reason` is not stored here; the resolver's mode is what
-    // drives rendering (Plan 06) and the notice copy is reason-agnostic in
-    // its first form.
-    window.api.handleSteamSyncStatus((e, { status }) => {
-      this.setState({ steamSyncStatus: status })
-    })
-
-    window.api.handleRefreshLibrary((e, runner) => {
-      this.refreshLibrary({
-        checkForUpdates: false,
-        runInBackground: true,
-        library: runner,
-        origin: 'push'
-      })
-    })
-
     // R10: seed isFullscreen/isFrameless, then follow the pushes (initStateSubscriptions).
     await seedAndFollowWindowChrome()
 
-    const gogUser = gogConfigStore.has('userData')
-    const amazonUser = nileConfigStore.has('userData')
-    // debug/steam-refresh-hung-on-startup: a Steam-only login (no Epic/GOG/
-    // Amazon account) was previously excluded from the mount-time
-    // "refresh everything" gate below entirely, so SteamLibraryManager.refresh()
-    // never ran on startup and the "Syncing your Steam library…" spinner
-    // (true by default: steam.username seeded synchronously above,
-    // refreshingInTheBackground defaults true, steam.library starts empty)
-    // spun forever with no errors, since nothing was ever running to clear it.
-    const steamUser = steamConfigStore.has('userData')
+    const { gogUser, amazonUser, steamUser } = readMountStoreUsers()
 
     // F-49-R1-1 (Phase 49 live gate Run 1): this used to be gated on
     // `legendaryUser` (the mirror already holding `userInfo`). legendary
@@ -517,13 +371,7 @@ class GlobalState extends PureComponent<Props> {
 
     restoreStoredGameUpdates()
 
-    if (legendaryUser || gogUser || amazonUser || steamUser) {
-      this.refreshLibrary({
-        checkForUpdates: true,
-        runInBackground: shouldRunInBackgroundAtMount(),
-        origin: 'mount'
-      })
-    }
+    runMountLibraryRefresh({ legendaryUser, gogUser, amazonUser, steamUser })
 
     registerControllerListener()
 
@@ -592,8 +440,7 @@ class GlobalState extends PureComponent<Props> {
           ...this.state,
           ...bridgedContextSlice(),
           ...bridgedAccounts(),
-          installingEpicGame,
-          refreshLibrary: this.refreshLibrary
+          installingEpicGame
         }}
       >
         {this.props.children}

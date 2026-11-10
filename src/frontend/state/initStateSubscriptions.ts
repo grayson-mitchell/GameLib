@@ -19,6 +19,11 @@
 import { hydrateFocusRowSelection } from 'common/focusRowMigration'
 import { applySavedZoomAtBoot } from './savedZoomBoot'
 import { getGameInfo } from '../helpers'
+import {
+  gogConfigStore,
+  nileConfigStore,
+  steamConfigStore
+} from '../helpers/stores'
 import { createConnectivitySync } from '../helpers/connectivitySync'
 import { isStore } from 'common/storeCapabilities'
 import type { GameStatus } from 'common/types'
@@ -98,6 +103,24 @@ export function initStateSubscriptions(): void {
   // backend (`refreshCrossoverRatingMap()` in main.ts) now re-fires this
   // event after every `refreshLibrary` completion too, so a game added
   // mid-session gets a badge/filter signal without a restart.
+  // Steam sync indicators and the backend's refresh push (moved from the
+  // class's componentDidMount, Phase 69-18). The status handler writes only
+  // steamSyncStatus; it never touches refreshingInTheBackground (D-06).
+  window.api.handleSteamMetadataSyncing((e, { syncing }) => {
+    useLibraryState.getState().setSteamMetadataSyncing(syncing)
+  })
+  window.api.handleSteamSyncStatus((e, { status }) => {
+    useLibraryState.getState().setSteamSyncStatus(status)
+  })
+  window.api.handleRefreshLibrary((e, runner) => {
+    void useLibraryState.getState().refreshLibrary({
+      checkForUpdates: false,
+      runInBackground: true,
+      library: runner,
+      origin: 'push'
+    })
+  })
+
   window.api.handleCrossoverIndexChanged((e, index) => {
     useLibraryState.getState().setCrossoverRatings(index)
   })
@@ -200,6 +223,49 @@ export function restoreStoredGameUpdates(): void {
       window.localStorage.getItem('updates') || '[]'
     ) as string[]
     useLibraryState.setState({ gameUpdates: storedGameUpdates })
+  }
+}
+
+/**
+ * componentDidMount: the store-user reads that gate the mount-time refresh.
+ * Called at the original position (before the awaited seeding) so the reads
+ * keep their timing relative to the awaits.
+ */
+export function readMountStoreUsers(): {
+  gogUser: boolean
+  amazonUser: boolean
+  steamUser: boolean
+} {
+  return {
+    gogUser: gogConfigStore.has('userData'),
+    amazonUser: nileConfigStore.has('userData'),
+    // debug/steam-refresh-hung-on-startup: a Steam-only login must also gate
+    // the mount refresh, or the sync spinner never clears.
+    steamUser: steamConfigStore.has('userData')
+  }
+}
+
+/**
+ * componentDidMount (post-await): the mount-time "refresh everything", run only
+ * when an Epic, GOG, Amazon or Steam user exists.
+ */
+export function runMountLibraryRefresh(users: {
+  legendaryUser: boolean
+  gogUser: boolean
+  amazonUser: boolean
+  steamUser: boolean
+}): void {
+  if (
+    users.legendaryUser ||
+    users.gogUser ||
+    users.amazonUser ||
+    users.steamUser
+  ) {
+    void useLibraryState.getState().refreshLibrary({
+      checkForUpdates: true,
+      runInBackground: shouldRunInBackgroundAtMount(),
+      origin: 'mount'
+    })
   }
 }
 

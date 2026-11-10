@@ -22,6 +22,10 @@ import { I18nextProvider, initReactI18next } from 'react-i18next'
 import GlobalState from '../../src/frontend/state/GlobalState'
 import ContextProvider from '../../src/frontend/state/ContextProvider'
 import Library from '../../src/frontend/screens/Library'
+import {
+  __resetInitStateSubscriptionsGuardForTests,
+  initStateSubscriptions
+} from '../../src/frontend/state/initStateSubscriptions'
 import { emit } from './fakeApi'
 
 type Ctx = React.ContextType<typeof ContextProvider>
@@ -51,6 +55,11 @@ export async function mountApp(
   wrap: Wrap
 ): Promise<Root> {
   await ensureI18n()
+  // 69-18: handleRefreshLibrary is now a boot listener (once-guarded), so the
+  // seam registers it the way index.tsx does before render. Every run installs
+  // a fresh fake api (listeners cleared), so the once-guard is reset first.
+  __resetInitStateSubscriptionsGuardForTests()
+  initStateSubscriptions()
   const root = createRoot(container)
   await act(async () => {
     root.render(

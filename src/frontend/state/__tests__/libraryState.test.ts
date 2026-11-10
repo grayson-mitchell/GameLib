@@ -2,7 +2,6 @@ import '../../testUtils/tauriWindow'
 import { resetAllStores } from '../storeKit'
 import type { GameInfo } from 'common/types'
 import useLibraryState, {
-  installLibraryBridgeSlots,
   readInitialLibrary,
   registerLibrarySideEffects
 } from '../libraryState'
@@ -13,7 +12,7 @@ let writes: [string, unknown][] = []
 const config: Record<string, unknown> = {}
 const local: Record<string, string> = {}
 
-describe('libraryState bridge slots', () => {
+describe('libraryState reverse-bridge actions', () => {
   beforeEach(() => {
     ;(window as unknown as { api: unknown }).api = {
       logError: (message: string) => {
@@ -40,26 +39,6 @@ describe('libraryState bridge slots', () => {
 
   afterEach(() => {
     resetAllStores()
-  })
-
-  it('logs and does nothing before install, refreshLibrary resolving', async () => {
-    const s = useLibraryState.getState()
-    await expect(s.refreshLibrary({})).resolves.toBeUndefined()
-    expect(logged).toEqual([
-      'library slot refreshLibrary called before GlobalState installed it'
-    ])
-  })
-
-  it('routes refreshLibrary to the installed implementation', async () => {
-    const calls: unknown[][] = []
-    installLibraryBridgeSlots({
-      refreshLibrary: async (o) => {
-        calls.push(['refresh', o])
-      }
-    })
-    await useLibraryState.getState().refreshLibrary({ library: 'gog' })
-    expect(calls).toEqual([['refresh', { library: 'gog' }]])
-    expect(logged).toEqual([])
   })
 
   it('resetRunnerLibrary empties only that runner and setRefreshing sets the flag', () => {
@@ -405,6 +384,70 @@ describe('libraryState library data', () => {
     mirror['legendary_library:library'] = [game('e', 'legendary')]
     await lib().refresh()
     expect(infos).toContain('Force Update')
+  })
+
+  it('refreshLibrary logs runner=all when no runner is given, sets the global flags, then refreshes', async () => {
+    const refreshed: unknown[][] = []
+    useLibraryState.setState({
+      refresh: async (...args: unknown[]) => {
+        refreshed.push(args)
+      }
+    })
+    await lib().refreshLibrary({
+      checkForUpdates: true,
+      runInBackground: false,
+      origin: 'mount'
+    })
+    expect(infos).toEqual(['[refreshLibrary] runner=all origin=mount'])
+    expect(fetched).toEqual([undefined])
+    expect(refreshed).toEqual([[undefined, true]])
+    expect(lib().refreshingInTheBackground).toBe(false)
+  })
+
+  it('refreshLibrary defaults origin to unknown and never prints undefined', async () => {
+    useLibraryState.setState({ refresh: async () => undefined })
+    await lib().refreshLibrary({ checkForUpdates: false, library: 'gog' })
+    expect(infos).toEqual(['[refreshLibrary] runner=gog origin=unknown'])
+    expect(infos.join()).not.toContain('undefined')
+  })
+
+  it('refreshLibrary returns early while a global refresh is running', async () => {
+    useLibraryState.setState({ refreshing: true })
+    await lib().refreshLibrary({ checkForUpdates: false })
+    expect(infos).toEqual([])
+    expect(fetched).toEqual([])
+  })
+
+  it('refreshLibrary returns early for a runner already refreshing but not for another', async () => {
+    useLibraryState.setState({
+      refreshingByRunner: { gog: true },
+      refresh: async () => undefined
+    })
+    await lib().refreshLibrary({ checkForUpdates: false, library: 'gog' })
+    // the log line precedes the scoped guard, as in the class
+    expect(fetched).toEqual([])
+    await lib().refreshLibrary({ checkForUpdates: false, library: 'nile' })
+    expect(fetched).toEqual(['nile'])
+  })
+
+  it('refreshLibrary logs and resets both flags when the backend rejects', async () => {
+    ;(window.api as unknown as Record<string, unknown>).refreshLibrary =
+      async () => {
+        throw new Error('boom')
+      }
+    await lib().refreshLibrary({ checkForUpdates: false, library: 'gog' })
+    expect(errors).toEqual(['Library refresh failed: Error: boom'])
+    expect(lib().refreshing).toBe(false)
+    expect(lib().refreshingByRunner.gog).toBe(false)
+  })
+
+  it('the Steam sync setters write only their own field', () => {
+    useLibraryState.setState({ refreshingInTheBackground: false })
+    lib().setSteamSyncStatus('failed' as never)
+    lib().setSteamMetadataSyncing(true)
+    expect(lib().steamSyncStatus).toBe('failed')
+    expect(lib().steamMetadataSyncing).toBe(true)
+    expect(lib().refreshingInTheBackground).toBe(false)
   })
 
   it('registerLibrarySideEffects writes updates now and on every change', () => {

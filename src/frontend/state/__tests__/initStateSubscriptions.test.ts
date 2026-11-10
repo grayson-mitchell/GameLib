@@ -114,6 +114,9 @@ const MOVED_LISTENERS = [
   'handleInstallGame',
   'handleCrossoverIndexChanged',
   'handleRunsForMeChanged',
+  'handleSteamMetadataSyncing',
+  'handleSteamSyncStatus',
+  'handleRefreshLibrary',
   'handleMetadataChanged',
   'handleGamePush',
   'handleSteamBottleSetupRequired',
@@ -292,6 +295,56 @@ describe('initStateSubscriptions', () => {
     // sideloaded alone does not count
     useLibraryState.setState({ sideloadedLibrary: g })
     expect(init.shouldRunInBackgroundAtMount()).toBe(false)
+  })
+
+  it('the Steam sync pushes land in libraryState without touching refreshingInTheBackground', () => {
+    useLibraryState.setState({ refreshingInTheBackground: false })
+    init.initStateSubscriptions()
+    handlers.get('handleSteamMetadataSyncing')?.[0]?.({}, { syncing: true })
+    handlers.get('handleSteamSyncStatus')?.[0]?.({}, { status: 'syncing' })
+    const lib = useLibraryState.getState()
+    expect(lib.steamMetadataSyncing).toBe(true)
+    expect(lib.steamSyncStatus).toBe('syncing')
+    expect(lib.refreshingInTheBackground).toBe(false)
+  })
+
+  it('the refresh push calls refreshLibrary with origin push', () => {
+    const seen: unknown[] = []
+    useLibraryState.setState({
+      refreshLibrary: async (o) => {
+        seen.push(o)
+      }
+    })
+    init.initStateSubscriptions()
+    handlers.get('handleRefreshLibrary')?.[0]?.({}, 'gog')
+    expect(seen).toEqual([
+      {
+        checkForUpdates: false,
+        runInBackground: true,
+        library: 'gog',
+        origin: 'push'
+      }
+    ])
+  })
+
+  it('runMountLibraryRefresh refreshes with origin mount only when some user exists', () => {
+    const seen: Record<string, unknown>[] = []
+    useLibraryState.setState({
+      refreshLibrary: async (o) => {
+        seen.push(o as Record<string, unknown>)
+      }
+    })
+    const none = {
+      legendaryUser: false,
+      gogUser: false,
+      amazonUser: false,
+      steamUser: false
+    }
+    init.runMountLibraryRefresh(none)
+    expect(seen).toEqual([])
+    init.runMountLibraryRefresh({ ...none, steamUser: true })
+    expect(seen).toHaveLength(1)
+    expect(seen[0]).toMatchObject({ checkForUpdates: true, origin: 'mount' })
   })
 
   it('a failed pull logs the same messages', async () => {
