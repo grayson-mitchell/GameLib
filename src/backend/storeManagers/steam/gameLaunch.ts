@@ -164,11 +164,12 @@ export async function launch(
     // Phase 59: bottled Steam stays CrossOver-only (no built-in engine).
     // A clear message beats a hang behind CrossOver's own dialog.
     const { preflightCrossover } = await import('backend/engine/engineDecision')
-    const { steamDecisionDeps } = await import('./engine/steamEngineDeps')
+    const { steamDecisionDeps, steamDecisionServices } =
+      await import('./engine/steamEngineDeps')
     const pre = await preflightCrossover(
       getSteamBottleSettings()?.wineCrossoverBottle ??
         DEFAULT_STEAM_BOTTLE_NAME,
-      steamDecisionDeps({ spawnAsync: steamGame.deps.spawnAsync })
+      steamDecisionDeps(steamDecisionServices(steamGame.deps))
     )
     if (pre.kind !== 'healthy') {
       notifyCrossoverRequired(steamGame, 'bottled', pre)
@@ -523,8 +524,12 @@ export async function selectLaunchEngine(
   // selected and nothing is routed or launched, so D-07/D-09 hold, and every launch that can
   // start still probes below.
   const { isCrossoverMissing } = await import('backend/engine/engineDecision')
-  const { steamDecisionDeps, steamSwitchDeps, readSteamEngineOverride } =
-    await import('./engine/steamEngineDeps')
+  const {
+    steamDecisionDeps,
+    steamDecisionServices,
+    steamSwitchDeps,
+    readSteamEngineOverride
+  } = await import('./engine/steamEngineDeps')
   const { engineServicesFrom } = await import('backend/services/engineServices')
   const { parseEngineOverride } = await import('backend/engine/engineIds')
   const earlyOverride = parseEngineOverride(
@@ -545,7 +550,7 @@ export async function selectLaunchEngine(
       offline: connectivity.offline,
       override: earlyOverride,
       crossoverMissing: await isCrossoverMissing(
-        steamDecisionDeps({ spawnAsync: steamGame.deps.spawnAsync })
+        steamDecisionDeps(steamDecisionServices(steamGame.deps))
       ),
       markerKind: readBottleEngineMarkerKind(bottleName),
       currentPinInstalled: isPinnedEngineInstalled(ENGINE_PINS.current),
@@ -576,7 +581,7 @@ export async function selectLaunchEngine(
 
   const decision = await decideLaunchEngine(
     { key: steamGame.appId, bottleName },
-    steamDecisionDeps({ spawnAsync: steamGame.deps.spawnAsync })
+    steamDecisionDeps(steamDecisionServices(steamGame.deps))
   )
   if (decision.kind === 'unavailable') {
     logWarning(

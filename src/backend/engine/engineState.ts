@@ -18,7 +18,8 @@ import type {
   CrossoverPreflight,
   EngineDecisionDeps,
   KillDeps,
-  LaunchDecision
+  LaunchDecision,
+  ReleasesDeps
 } from './engineDecision'
 import { engineKeyFor } from './gameKey'
 import type { EngineKey } from './gameKey'
@@ -83,8 +84,14 @@ export function __resetEngineStateForTests(): void {
 
 export interface EngineStateDeps
   extends
-    Partial<Omit<EngineDecisionDeps, 'killCrossoverWineserver'>>,
-    KillDeps {
+    Partial<
+      Omit<
+        EngineDecisionDeps,
+        'killCrossoverWineserver' | 'wineManagerReleases'
+      >
+    >,
+    KillDeps,
+    ReleasesDeps {
   /** Defaults to the platform flag. */
   isMac?: boolean
   /** Notice dismissals; defaults to the shared `engineNoticeStore`. */
@@ -127,7 +134,14 @@ function effectiveFor(
   identity: EngineIdentity,
   deps: EngineStateDepsNoKill
 ): EffectiveEngine {
-  return deps.effective ? deps.effective(identity) : readEngineForGame(identity)
+  if (deps.effective) return deps.effective(identity)
+  // Paths that record a decision always supply `effective`; only the release reader is optional there.
+  if (!deps.wineManagerReleases) {
+    throw new Error('engine state needs effective or wineManagerReleases')
+  }
+  return readEngineForGame(identity, {
+    wineManagerReleases: deps.wineManagerReleases
+  })
 }
 
 function cachedPreflight(
@@ -242,9 +256,9 @@ function overrideOf(effective: EffectiveEngine): EngineOverrideId {
 /** The state deps for paths that never run a pre-flight (so never need the kill). */
 export type EngineStateDepsNoKill = Omit<
   EngineStateDeps,
-  'killCrossoverWineserver'
+  'killCrossoverWineserver' | 'wineManagerReleases'
 > &
-  Partial<KillDeps>
+  Partial<KillDeps & ReleasesDeps>
 
 export async function getEngineState(
   identity: unknown,

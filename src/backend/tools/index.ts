@@ -1,5 +1,6 @@
 import type { SpawnAsync } from 'backend/spawnAsync'
 import type { EngineServices } from 'backend/engine/engineServices'
+import { wineManagerReleasesFrom } from 'backend/engine/wineManagerReleases'
 import {
   ExecResult,
   GameSettings,
@@ -44,7 +45,12 @@ import i18next from 'i18next'
 import { dirname, join } from 'path'
 import { isOnline } from '../online_monitor'
 import { showDialogBoxModalAuto } from '../dialog/dialog'
-import type { CommandRunner, Launcher, StoreManagers } from '../services/types'
+import type {
+  CommandRunner,
+  Launcher,
+  StoreManagers,
+  Stores
+} from '../services/types'
 import {
   resolveToolSettings,
   resolveToolSettingsForId
@@ -204,13 +210,15 @@ export interface ToolsDeps {
   commandRunner: Pick<CommandRunner, 'runWineCommand'>
   launcher: Pick<Launcher, 'setupEnvVars' | 'setupWineEnvVars' | 'validWine'>
   spawnAsync: SpawnAsync
+  stores: Pick<Stores, 'wineManager'>
 }
 
 /** The engine's bottle-creation capabilities, built from this tools instance (66.1-22d). */
 function engineServicesFor(deps: ToolsDeps): EngineServices {
   return {
     spawnAsync: deps.spawnAsync,
-    installRemove: (...a) => createDxvk(deps).installRemove(...a)
+    installRemove: (...a) => createDxvk(deps).installRemove(...a),
+    wineManagerReleases: wineManagerReleasesFrom(deps)
   }
 }
 

@@ -25,12 +25,11 @@ import type { NonCrossoverEngine } from '../engineTypes'
 import { perGameBottleName } from '../perGameBottle'
 import { getBottleDir } from '../bottlePrimitives'
 import type { EngineServices } from '../engineServices'
-import { createTestServices } from 'backend/testUtils/testServices'
+import { createTestEngineServices } from 'backend/testUtils/testServices'
 
-const services: EngineServices = {
-  spawnAsync: createTestServices().spawnAsync,
+const services: EngineServices = createTestEngineServices({
   installRemove: jest.fn()
-}
+})
 
 const PIN: NonCrossoverEngine = {
   wineBin: '/pin/wine',

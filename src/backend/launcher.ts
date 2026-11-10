@@ -1,3 +1,4 @@
+import { wineManagerReleasesFrom } from 'backend/engine/wineManagerReleases'
 import { trackChild } from './trackedChildren'
 import {
   CallRunnerOptions,
@@ -1446,7 +1447,8 @@ function tools() {
         runWineCommand as unknown as CommandRunner['runWineCommand']
     },
     launcher: { setupEnvVars, setupWineEnvVars, validWine },
-    spawnAsync
+    spawnAsync,
+    stores: { wineManager: wineManagerStores }
   })
 }
 
@@ -1457,7 +1459,8 @@ function tools() {
 function legacyEngineServices(): EngineServices {
   return {
     spawnAsync,
-    installRemove: (...a) => tools().DXVK.installRemove(...a)
+    installRemove: (...a) => tools().DXVK.installRemove(...a),
+    wineManagerReleases: wineManagerReleasesFrom(legacyWineStores())
   }
 }
 

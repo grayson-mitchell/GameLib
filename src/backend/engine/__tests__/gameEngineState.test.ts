@@ -15,7 +15,10 @@ import type { EngineConfigDeps } from '../engineConfig'
 import { defined } from './defined'
 import { createTestServices } from 'backend/testUtils/testServices'
 
-const services = { spawnAsync: createTestServices().spawnAsync }
+const services = {
+  spawnAsync: createTestServices().spawnAsync,
+  wineManagerReleases: () => []
+}
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -263,6 +266,7 @@ describe('listGameEngineOptions', () => {
   it('returns the plain list for a non-legacy game', async () => {
     writeGame('legendary', 'abc', { wineVersion: CROSSOVER })
     const opts = await listGameEngineOptions(
+      services,
       { runner: 'legendary', appName: 'abc' },
       { config: config(), decision }
     )
@@ -276,6 +280,7 @@ describe('listGameEngineOptions', () => {
   it('appends a read-only Legacy entry last for a legacy game', async () => {
     writeGame('nile', 'amzn1.x', { wineVersion: GPTK })
     const opts = await listGameEngineOptions(
+      services,
       { runner: 'nile', appName: 'amzn1.x' },
       { config: config(), decision }
     )
@@ -292,6 +297,7 @@ describe('listGameEngineOptions', () => {
   it('never offers toolkit, gptk, DXMT or path ids', async () => {
     writeGame('legendary', 'abc', { wineVersion: CROSSOVER })
     const opts = await listGameEngineOptions(
+      services,
       { runner: 'legendary', appName: 'abc' },
       { config: config(), decision }
     )
@@ -303,6 +309,7 @@ describe('listGameEngineOptions', () => {
   it('uses the global engine for the default page', async () => {
     global = { wineVersion: GPTK }
     const opts = await listGameEngineOptions(
+      services,
       { appName: 'default' },
       { config: config(), decision }
     )
@@ -310,7 +317,7 @@ describe('listGameEngineOptions', () => {
   })
 
   it('falls back to the plain list for unknown args', async () => {
-    const opts = await listGameEngineOptions(42, {
+    const opts = await listGameEngineOptions(services, 42, {
       config: config(),
       decision
     })
@@ -320,7 +327,7 @@ describe('listGameEngineOptions', () => {
 
 describe('getDefaultEngine', () => {
   it('derives automatic from a CrossOver global wine', () => {
-    expect(getDefaultEngine(config())).toEqual({
+    expect(getDefaultEngine(services, config())).toEqual({
       effectiveEngineId: 'automatic',
       engineSource: 'derived',
       legacyLabel: null
@@ -329,7 +336,7 @@ describe('getDefaultEngine', () => {
 
   it('reports Legacy for a GPTK global wine', () => {
     global = { wineVersion: GPTK }
-    expect(getDefaultEngine(config())).toEqual({
+    expect(getDefaultEngine(services, config())).toEqual({
       effectiveEngineId: 'legacy:Game-Porting-Toolkit-2',
       engineSource: 'derived',
       legacyLabel: 'Game-Porting-Toolkit-2'
@@ -339,7 +346,7 @@ describe('getDefaultEngine', () => {
   it('reports a stored pinned global override', () => {
     const id = `pinned:${ENGINE_PINS.current.id}`
     global = { wineVersion: GPTK, engineOverride: id }
-    expect(getDefaultEngine(config())).toEqual({
+    expect(getDefaultEngine(services, config())).toEqual({
       effectiveEngineId: id,
       engineSource: 'stored',
       legacyLabel: null

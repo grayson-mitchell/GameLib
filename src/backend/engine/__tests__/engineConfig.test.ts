@@ -63,7 +63,8 @@ const release = (over: Record<string, unknown> = {}) => ({
 const deps = (
   releases = [release()],
   global: Record<string, unknown> = {}
-): Partial<EngineConfigDeps> => ({
+): Partial<EngineConfigDeps> &
+  Pick<EngineConfigDeps, 'wineManagerReleases'> => ({
   wineManagerReleases: () => releases,
   gamesConfigPath: dir,
   globalSettings: () => global
@@ -146,10 +147,20 @@ describe('resolveEffectiveEngine', () => {
       resolveEffectiveEngine({ engineOverride: id }, undefined, o, deps())
     ).toEqual({ kind: 'override', id, source: 'stored' })
     expect(
-      resolveEffectiveEngine({ engineOverride: 'legacy:Foo' }, undefined, o)
+      resolveEffectiveEngine(
+        { engineOverride: 'legacy:Foo' },
+        undefined,
+        o,
+        deps()
+      )
     ).toMatchObject({ kind: 'override', id: 'automatic' })
     expect(
-      resolveEffectiveEngine({ engineOverride: '/usr/bin/wine' }, undefined, o)
+      resolveEffectiveEngine(
+        { engineOverride: '/usr/bin/wine' },
+        undefined,
+        o,
+        deps()
+      )
     ).toMatchObject({ kind: 'override', id: 'automatic' })
   })
 })
@@ -245,7 +256,9 @@ describe('readEngineForGame', () => {
 
 describe('resolveGlobalEngine / isWritableEngineOverride / engineIdOf', () => {
   it('uses the key, else derives (D-09)', () => {
-    expect(resolveGlobalEngine({ engineOverride: 'crossover' })).toMatchObject({
+    expect(
+      resolveGlobalEngine({ engineOverride: 'crossover' }, deps())
+    ).toMatchObject({
       id: 'crossover'
     })
     expect(

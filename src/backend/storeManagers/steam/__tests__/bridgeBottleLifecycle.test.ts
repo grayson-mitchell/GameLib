@@ -1179,7 +1179,8 @@ describe('Phase 59 engine registry', () => {
         .spyOn(engineServicesModule, 'engineServicesFrom')
         .mockImplementation((d) => ({
           spawnAsync: d.spawnAsync,
-          installRemove: mockedInstallRemove
+          installRemove: mockedInstallRemove,
+          wineManagerReleases: () => []
         }))
       mockedExistsSync.mockReset()
       mockedExistsSync.mockImplementation((p: string) =>

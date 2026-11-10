@@ -200,10 +200,11 @@ export async function provisionBridgeBottleForInstall(
     LogPrefix.Steam
   )
   const { decideCreationEngine } = await import('backend/engine/engineDecision')
-  const { steamDecisionDeps } = await import('./engine/steamEngineDeps')
+  const { steamDecisionDeps, steamDecisionServices } =
+    await import('./engine/steamEngineDeps')
   const creation = await decideCreationEngine(
     { key: steamGame.appId },
-    steamDecisionDeps({ spawnAsync: steamGame.deps.spawnAsync })
+    steamDecisionDeps(steamDecisionServices(steamGame.deps))
   )
   logInfo(
     `SteamGame: bridge bottle creation engine for appId ${steamGame.appId}: ${creation.kind}${creation.kind === 'pinned' ? ` (${creation.reason})` : ''}`,
@@ -334,12 +335,12 @@ export async function resolveInstallEngineSettings(
   const { decideLaunchEngine } = await import('backend/engine/engineDecision')
   const { prepareBottleForEngine } = await import('backend/engine/engineSwitch')
   const { isNonCrossover } = await import('backend/engine/engineTypes')
-  const { steamDecisionDeps, steamSwitchDeps } =
+  const { steamDecisionDeps, steamDecisionServices, steamSwitchDeps } =
     await import('./engine/steamEngineDeps')
   const { engineServicesFrom } = await import('backend/services/engineServices')
   const decision = await decideLaunchEngine(
     { key: steamGame.appId, bottleName: bridgeBottleName },
-    steamDecisionDeps({ spawnAsync: steamGame.deps.spawnAsync })
+    steamDecisionDeps(steamDecisionServices(steamGame.deps))
   )
   if (decision.kind === 'unavailable') {
     return { skipped: `engine unavailable: ${decision.detail}` }

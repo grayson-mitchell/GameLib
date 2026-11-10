@@ -767,6 +767,7 @@ jest.mock('../engine/steamEngineDeps', () => ({
   STEAM_ENGINE_RUNNER: 'steam',
   steamEngineStateDeps: jest.fn(() => ({})),
   steamDecisionDeps: jest.fn(() => ({})),
+  steamDecisionServices: jest.fn(() => ({})),
   steamSwitchDeps: jest.fn(() => ({ crossoverSettings: jest.fn() }))
 }))
 // Phase 59 (59-10): per-launch bottle preparation and state publishing.

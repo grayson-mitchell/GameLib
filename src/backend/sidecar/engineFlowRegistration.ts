@@ -35,12 +35,24 @@ import {
   listGameEngineOptions
 } from 'backend/engine/gameEngineState'
 import { engineKeyFor } from 'backend/engine/gameKey'
+import { wineManagerReleasesFrom } from 'backend/engine/wineManagerReleases'
+import type { EngineServices } from 'backend/engine/engineServices'
 
 /** Narrow slice (66.1 D-01): only the library managers are read. */
 export interface EngineFlowDeps {
   managers: Pick<StoreManagers, 'library'>
-  stores: Pick<Stores, 'steam'>
+  stores: Pick<Stores, 'steam' | 'wineManager'>
   spawnAsync: BootServices['spawnAsync']
+}
+
+function engineServicesOf(
+  deps: EngineFlowDeps
+): Pick<BootServices, 'spawnAsync'> &
+  Pick<EngineServices, 'wineManagerReleases'> {
+  return {
+    spawnAsync: deps.spawnAsync,
+    wineManagerReleases: wineManagerReleasesFrom(deps)
+  }
 }
 
 async function getEngineStateFor(
@@ -70,7 +82,7 @@ async function getEngineStateFor(
   } catch {
     return null
   }
-  return getGameEngineState({ spawnAsync: deps.spawnAsync }, arg)
+  return getGameEngineState(engineServicesOf(deps), arg)
 }
 
 /**
@@ -88,10 +100,12 @@ export function registerEngineFlows(deps: EngineFlowDeps): void {
   ipcMain.handle(
     'listEngineOptions',
     async (_event: unknown, ...args: unknown[]) =>
-      listGameEngineOptions(args[0])
+      listGameEngineOptions(engineServicesOf(deps), args[0])
   )
 
-  ipcMain.handle('getDefaultEngine', () => Promise.resolve(getDefaultEngine()))
+  ipcMain.handle('getDefaultEngine', () =>
+    Promise.resolve(getDefaultEngine(engineServicesOf(deps)))
+  )
 
   ipcMain.handle(
     'getPerGameBottleName',

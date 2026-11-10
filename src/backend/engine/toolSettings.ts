@@ -79,25 +79,40 @@ function pinEngine(pin: (typeof ENGINE_PINS)['current']): NonCrossoverEngine {
   }
 }
 
-const defaultDeps: Omit<ToolSettingsDeps, 'ensureGameBottle'> = {
+const defaultDeps: Omit<
+  ToolSettingsDeps,
+  'ensureGameBottle' | 'readEffective' | 'nonCrossoverEngine'
+> = {
   isMac: () => isMac,
-  readEffective: (id) => readEngineForGame(id),
   hasLiveSelection: (key) => getEngineSelection(key) !== undefined,
   resolvePrefix: resolveGamePrefix,
   overlay: getLaunchSettings,
   isProvisioned: isBottleProvisioned,
   markerKind: readBottleEngineMarkerKind,
-  crossoverBinDir: () => resolveCrossoverBinDirAsync({}),
-  nonCrossoverEngine(engineId) {
-    if (engineId.startsWith('wine-manager:')) {
-      return resolveWineManagerStaging(engineId.slice('wine-manager:'.length))
+  crossoverBinDir: () => resolveCrossoverBinDirAsync({})
+}
+
+/** The deps that read the Wine Manager release list through the injected services (66.1-22i). */
+function releaseBoundDeps(
+  services: EngineServices
+): Pick<ToolSettingsDeps, 'readEffective' | 'nonCrossoverEngine'> {
+  const releases = { wineManagerReleases: services.wineManagerReleases }
+  return {
+    readEffective: (id) => readEngineForGame(id, releases),
+    nonCrossoverEngine(engineId) {
+      if (engineId.startsWith('wine-manager:')) {
+        return resolveWineManagerStaging(
+          engineId.slice('wine-manager:'.length),
+          releases
+        )
+      }
+      const pins = [ENGINE_PINS.current, ENGINE_PINS.previous]
+      const wanted = engineId.startsWith('pinned:')
+        ? engineId.slice('pinned:'.length)
+        : ENGINE_PINS.current.id
+      const pin = pins.find((p) => p?.id === wanted)
+      return pin && isPinnedEngineInstalled(pin) ? pinEngine(pin) : null
     }
-    const pins = [ENGINE_PINS.current, ENGINE_PINS.previous]
-    const wanted = engineId.startsWith('pinned:')
-      ? engineId.slice('pinned:'.length)
-      : ENGINE_PINS.current.id
-    const pin = pins.find((p) => p?.id === wanted)
-    return pin && isPinnedEngineInstalled(pin) ? pinEngine(pin) : null
   }
 }
 
@@ -108,7 +123,7 @@ export async function resolveToolSettings(
   opts: { ensureBottle: boolean },
   overrides: Partial<ToolSettingsDeps> = {}
 ): Promise<ToolSettingsResult> {
-  const d = { ...defaultDeps, ...overrides }
+  const d = { ...defaultDeps, ...releaseBoundDeps(services), ...overrides }
   if (engineKeyIfEligible(game, d.isMac()) === null) {
     return { kind: 'stored', settings: stored }
   }
@@ -141,6 +156,7 @@ export async function resolveToolSettingsForId(
 ): Promise<ToolSettingsResult> {
   const d: ToolSettingsDeps = {
     ...defaultDeps,
+    ...releaseBoundDeps(services),
     ensureGameBottle: (a) => ensureGameBottle(services, a),
     ...overrides
   }

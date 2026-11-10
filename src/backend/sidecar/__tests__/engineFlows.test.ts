@@ -111,7 +111,10 @@ describe('engine flows', () => {
     expect(await handlers.get('getEngineState')!({}, arg)).toEqual({
       kind: 'n'
     })
-    expect(gameState).toHaveBeenCalledWith({ spawnAsync }, arg)
+    expect(gameState).toHaveBeenCalledWith(
+      { spawnAsync, wineManagerReleases: expect.any(Function) },
+      arg
+    )
   })
 
   it('returns null for an invalid identity without any game lookup', async () => {
@@ -151,7 +154,10 @@ describe('engine flows', () => {
     gameOptions.mockResolvedValue([{ id: 'a', label: 'A' }])
     const arg = { appName: 'default' }
     const out = await handlers.get('listEngineOptions')!({}, arg)
-    expect(gameOptions).toHaveBeenCalledWith(arg)
+    expect(gameOptions).toHaveBeenCalledWith(
+      { spawnAsync, wineManagerReleases: expect.any(Function) },
+      arg
+    )
     expect(JSON.stringify(out)).not.toContain('/')
   })
 

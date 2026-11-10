@@ -140,7 +140,8 @@ afterEach(() => {
 
 const services: EngineServices = {
   spawnAsync: jest.fn(),
-  installRemove: jest.fn()
+  installRemove: jest.fn(),
+  wineManagerReleases: () => []
 }
 
 function setUp(sel: EngineSelection, kind: 'bottle' | 'plain' = 'bottle') {

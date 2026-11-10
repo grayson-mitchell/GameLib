@@ -7,6 +7,7 @@
  * first access (a getter), so a test that never touches a family never loads it. Plan 25
  * switches that default to a fresh `createStores` on the test context's userData.
  */
+import type { EngineServices } from '../engine/engineServices'
 import type { Runner } from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
 import type {
@@ -176,5 +177,19 @@ export function createTestManagerDeps(
       (() => {
         throw new Error('unscripted call: getDownloadQueue')
       })
+  }
+}
+
+/** The engine's injected capabilities (66.1-22i): an unscripted installRemove fails loudly; no releases. */
+export function createTestEngineServices(
+  overrides: Partial<EngineServices> = {}
+): EngineServices {
+  return {
+    spawnAsync: createTestServices().spawnAsync,
+    installRemove: () => {
+      throw new Error('unscripted installRemove call')
+    },
+    wineManagerReleases: () => [],
+    ...overrides
   }
 }

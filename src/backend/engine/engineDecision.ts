@@ -26,6 +26,7 @@ import { parseEngineOverride } from './engineIds'
 import type { EngineOverrideId } from './engineIds'
 import { engineLogLabel } from './engineTypes'
 import type { EngineServices } from './engineServices'
+import type { WineManagerRelease } from './wineManagerReleases'
 import type {
   EngineSelection,
   FallbackReason,
@@ -93,12 +94,8 @@ export type CreationDecision =
     }
   | { kind: 'pinned'; reason: FallbackReason; pin: EnginePin }
 
-export interface WineManagerRelease {
-  version: string
-  type: string
-  isInstalled: boolean
-  installDir: string
-}
+export type { WineManagerRelease } from './wineManagerReleases'
+export { wineManagerReleasesFrom } from './wineManagerReleases'
 
 export interface EngineDecisionDeps {
   resolveCrossoverBinDir(): Promise<string | undefined>
@@ -142,7 +139,7 @@ export interface EngineDecisionDeps {
 /** @public consumed through the lazy `require('./engineDecision')` in engineConfig.ts defaults, which knip cannot trace */
 export function defaultEngineDecisionDeps(): Omit<
   EngineDecisionDeps,
-  'killCrossoverWineserver'
+  'killCrossoverWineserver' | 'wineManagerReleases'
 > {
   return {
     async resolveCrossoverBinDir() {
@@ -164,15 +161,6 @@ export function defaultEngineDecisionDeps(): Omit<
     monitorPhase: () => null,
     bottleBusy: (bottleName, key) =>
       otherGamesRunning(bottleName, key).length > 0,
-    wineManagerReleases() {
-      const { wineDownloaderInfoStore } =
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('backend/wine/manager/stores') as typeof import('backend/wine/manager/stores')
-      return wineDownloaderInfoStore.get(
-        'wine-releases',
-        []
-      ) as unknown as WineManagerRelease[]
-    },
     markerSummary(bottleName) {
       const { readBottleEngineMarkerSummary } =
         // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -185,6 +173,9 @@ export function defaultEngineDecisionDeps(): Omit<
     wineManagerRoot: join(toolsPath, 'wine')
   }
 }
+
+/** The release reader the decision paths cannot default: it needs the injected store. */
+export type ReleasesDeps = Pick<EngineDecisionDeps, 'wineManagerReleases'>
 
 /** The member the pre-flight paths cannot default: they need an injected spawn. */
 export type KillDeps = Pick<EngineDecisionDeps, 'killCrossoverWineserver'>
@@ -208,18 +199,35 @@ export function killCrossoverWineserverWith(
   }
 }
 
-type DecisionDepsNoKill = Omit<EngineDecisionDeps, 'killCrossoverWineserver'> &
-  Partial<KillDeps>
+type DecisionDepsBase = Omit<
+  EngineDecisionDeps,
+  'killCrossoverWineserver' | 'wineManagerReleases'
+> &
+  Partial<KillDeps & ReleasesDeps>
 
-/** For entry points that never reach the kill. */
-function withDefaults(deps?: Partial<EngineDecisionDeps>): DecisionDepsNoKill {
+/** For entry points that reach neither the kill nor the release list. */
+function withDefaults(deps?: Partial<EngineDecisionDeps>): DecisionDepsBase {
+  return { ...defaultEngineDecisionDeps(), ...deps }
+}
+
+/** For entry points that read the release list: it is required by type. */
+function withReleases(
+  deps: Partial<EngineDecisionDeps> & ReleasesDeps
+): Omit<EngineDecisionDeps, 'killCrossoverWineserver'> & Partial<KillDeps> {
+  return { ...defaultEngineDecisionDeps(), ...deps }
+}
+
+/** For decideLaunchEngine: the kill and the release list are both required by type. */
+function withKillAndReleases(
+  deps: Partial<EngineDecisionDeps> & KillDeps & ReleasesDeps
+): EngineDecisionDeps {
   return { ...defaultEngineDecisionDeps(), ...deps }
 }
 
 /** For the pre-flight paths: the caller's kill is required by type. */
 function withKill(
   deps: Partial<EngineDecisionDeps> & KillDeps
-): EngineDecisionDeps {
+): Omit<EngineDecisionDeps, 'wineManagerReleases'> & Partial<ReleasesDeps> {
   return { ...defaultEngineDecisionDeps(), ...deps }
 }
 
@@ -409,9 +417,9 @@ function wineManagerDxvk(
 
 export function resolveWineManagerStaging(
   version: string,
-  deps?: Partial<EngineDecisionDeps>
+  deps: Partial<EngineDecisionDeps> & ReleasesDeps
 ): NonCrossoverEngine | null {
-  const d = withDefaults(deps)
+  const d = withReleases(deps)
   if (version.endsWith('-DXMT')) return null
   const rel = d
     .wineManagerReleases()
@@ -457,9 +465,9 @@ function pinnedSelection(
 
 export async function decideLaunchEngine(
   args: { key: string; bottleName: string },
-  deps: Partial<EngineDecisionDeps> & KillDeps
+  deps: Partial<EngineDecisionDeps> & KillDeps & ReleasesDeps
 ): Promise<LaunchDecision> {
-  const d = withKill(deps)
+  const d = withKillAndReleases(deps)
   const override = parseEngineOverride(d.readOverride(args.key))
   const logLines: string[] = []
   const finish = (
@@ -708,9 +716,9 @@ export async function decideCreationEngine(
 }
 
 export async function listEngineOverrideOptions(
-  deps?: Partial<EngineDecisionDeps>
+  deps: Partial<EngineDecisionDeps> & ReleasesDeps
 ): Promise<EngineOption[]> {
-  const d = withDefaults(deps)
+  const d = withReleases(deps)
   const out: EngineOption[] = [
     {
       id: 'automatic',

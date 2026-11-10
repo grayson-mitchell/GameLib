@@ -40,6 +40,7 @@ function toDeps(appId: string, o: SteamStyle): EngineStateDeps {
   )
   return {
     killCrossoverWineserver: () => Promise.resolve(),
+    wineManagerReleases: () => [],
     ...o,
     bottleFor: () =>
       (o.bridgeInstallBottleFor ?? ((id) => `GameLibSteamBridge-${id}`))(appId),
@@ -799,6 +800,7 @@ describe('generic identities (phase 61 D-12, D-15)', () => {
     isMac: true,
     store: memStore(),
     killCrossoverWineserver: () => Promise.resolve(),
+    wineManagerReleases: () => [],
     bottleFor: () => 'GameLibBottle-Fortnite',
     overrideEligible: () => true,
     overlayEligible: false,

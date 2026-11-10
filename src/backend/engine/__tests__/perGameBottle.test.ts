@@ -22,7 +22,7 @@ jest.mock('backend/logger', () => ({
 jest.mock('backend/utils', () => ({ sendGameStatusUpdate: jest.fn() }))
 
 import type { EngineServices } from '../engineServices'
-import { createTestServices } from 'backend/testUtils/testServices'
+import { createTestEngineServices } from 'backend/testUtils/testServices'
 import {
   createCrossoverBottle,
   ensureGameBottle,
@@ -32,10 +32,9 @@ import {
 import { getBottleDir, sanitizeBottleName } from '../bottlePrimitives'
 import type { PerGameBottleDeps } from '../perGameBottle'
 
-const services: EngineServices = {
-  spawnAsync: createTestServices().spawnAsync,
+const services: EngineServices = createTestEngineServices({
   installRemove: jest.fn()
-}
+})
 
 // Real child process under the fake HOME; a timeout resolves code null like the real helper.
 const spawnAsync = (

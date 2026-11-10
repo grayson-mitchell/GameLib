@@ -9,9 +9,14 @@ import {
   killCrossoverWineserverWith,
   listEngineOverrideOptions,
   preflightCrossover,
-  resolveWineManagerStaging
+  resolveWineManagerStaging,
+  wineManagerReleasesFrom
 } from '../engineDecision'
-import type { EngineDecisionDeps, KillDeps } from '../engineDecision'
+import type {
+  EngineDecisionDeps,
+  KillDeps,
+  ReleasesDeps
+} from '../engineDecision'
 import { ENGINE_PINS } from '../enginePins'
 import { parseEngineOverride } from '../engineIds'
 import type { DemoStatus, DemoStatusProbe } from '../demoStatus'
@@ -52,7 +57,7 @@ const rel = (v: string, installed = true) => ({
 
 function mkDeps(
   over: Partial<EngineDecisionDeps> = {}
-): Partial<EngineDecisionDeps> & KillDeps {
+): Partial<EngineDecisionDeps> & KillDeps & ReleasesDeps {
   return {
     resolveCrossoverBinDir: () => Promise.resolve(CX_BIN),
     isExecutable: () => true,
@@ -1018,5 +1023,22 @@ describe('killCrossoverWineserverWith (66.1-22e)', () => {
     expect(args).toEqual(['-k'])
     expect(opts.env.CX_ROOT).toBe(join(CX_BIN, '..'))
     expect(opts.timeout).toBe(15_000)
+  })
+})
+
+describe('wineManagerReleasesFrom (66.1-22i)', () => {
+  it('reads wine-releases from the injected wineManager store', () => {
+    const rel = {
+      version: 'Wine-Staging-11.0',
+      type: 'Wine-Staging-macOS',
+      isInstalled: true,
+      installDir: WM_ROOT
+    }
+    const get = jest.fn((..._args: unknown[]) => [rel])
+    const stores = {
+      wineManager: { wineDownloaderInfoStore: { get } }
+    } as unknown as Parameters<typeof wineManagerReleasesFrom>[0]['stores']
+    expect(wineManagerReleasesFrom({ stores })()).toEqual([rel])
+    expect(get).toHaveBeenCalledWith('wine-releases', [])
   })
 })

@@ -73,10 +73,14 @@ import {
 } from '../winetricksEnvironment'
 import { createTools } from '../index'
 import type { ToolsDeps } from '../index'
-import { createTestServices } from 'backend/testUtils/testServices'
+import {
+  createTestServices,
+  createTestStores
+} from 'backend/testUtils/testServices'
 
 const toolsDeps: ToolsDeps = {
   spawnAsync: createTestServices().spawnAsync,
+  stores: createTestStores(),
   managers: {
     library: {
       gog: {

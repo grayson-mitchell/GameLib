@@ -45,6 +45,7 @@ import {
 import type {
   EngineDecisionDeps,
   KillDeps,
+  ReleasesDeps,
   LaunchDecision
 } from './engineDecision'
 import { readEngineForGame } from './engineConfig'
@@ -102,7 +103,7 @@ export interface LaunchEngineDeps {
   ensureGameBottle: (
     args: Parameters<typeof ensureGameBottle>[1]
   ) => ReturnType<typeof ensureGameBottle>
-  decisionDeps(): Partial<EngineDecisionDeps> & KillDeps
+  decisionDeps(): Partial<EngineDecisionDeps> & KillDeps & ReleasesDeps
   isCrossoverMissing(): Promise<boolean>
   currentPinInstalled(): boolean
   ensurePinned: typeof ensurePinnedEngineReportingStatus
@@ -128,10 +129,9 @@ export interface LaunchEngineDeps {
 
 const defaultDeps: Omit<
   LaunchEngineDeps,
-  'ensureGameBottle' | 'decisionDeps' | 'switchDeps'
+  'ensureGameBottle' | 'decisionDeps' | 'switchDeps' | 'readEffective'
 > = {
   isMac: () => isMac,
-  readEffective: (id) => readEngineForGame(id),
   isProvisioned: isBottleProvisioned,
   isCrossoverMissing: () => isCrossoverMissing(),
   currentPinInstalled: () => isPinnedEngineInstalled(ENGINE_PINS.current),
@@ -183,8 +183,13 @@ export async function selectEngineForLaunch(
     ...defaultDeps,
     ensureGameBottle: (a) => ensureGameBottle(services, a),
     switchDeps: () => switchServicesFrom(services),
+    readEffective: (id) =>
+      readEngineForGame(id, {
+        wineManagerReleases: services.wineManagerReleases
+      }),
     decisionDeps: () => ({
-      killCrossoverWineserver: killCrossoverWineserverWith(services)
+      killCrossoverWineserver: killCrossoverWineserverWith(services),
+      wineManagerReleases: services.wineManagerReleases
     }),
     ...overrides
   }

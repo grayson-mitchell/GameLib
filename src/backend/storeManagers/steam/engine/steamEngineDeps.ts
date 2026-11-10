@@ -8,6 +8,8 @@
  */
 import { resolveCrossoverBinDirAsync } from 'backend/engine/crossoverLocation'
 import { killCrossoverWineserverWith } from 'backend/engine/engineDecision'
+import { wineManagerReleasesFrom } from 'backend/engine/wineManagerReleases'
+import type { Stores } from 'backend/services/types'
 import type { EngineDecisionDeps } from 'backend/engine/engineDecision'
 import type { EngineServices } from 'backend/engine/engineServices'
 import { switchServicesFrom } from 'backend/engine/engineSwitch'
@@ -45,12 +47,24 @@ export function readSteamEngineOverride(appId: string): unknown {
 const hintedBinDir = () =>
   resolveCrossoverBinDirAsync({ hintWineBins: persistedWineBins() })
 
+/** The spawn and release-reader slice the steam decision paths need, from a store's deps (66.1-22i). */
+export function steamDecisionServices(deps: {
+  spawnAsync: EngineServices['spawnAsync']
+  stores: Pick<Stores, 'wineManager'>
+}): Pick<EngineServices, 'spawnAsync' | 'wineManagerReleases'> {
+  return {
+    spawnAsync: deps.spawnAsync,
+    wineManagerReleases: wineManagerReleasesFrom(deps)
+  }
+}
+
 export function steamDecisionDeps(
-  services: Pick<EngineServices, 'spawnAsync'>
+  services: Pick<EngineServices, 'spawnAsync' | 'wineManagerReleases'>
 ): Partial<EngineDecisionDeps> &
-  Pick<EngineDecisionDeps, 'killCrossoverWineserver'> {
+  Pick<EngineDecisionDeps, 'killCrossoverWineserver' | 'wineManagerReleases'> {
   return {
     killCrossoverWineserver: killCrossoverWineserverWith(services),
+    wineManagerReleases: services.wineManagerReleases,
     resolveCrossoverBinDir: hintedBinDir,
     readOverride: readSteamEngineOverride,
     monitorPhase: getBottleProcessMonitorPhase
@@ -99,13 +113,13 @@ export function isDrmModeFromVerdict(
  * applies to every bridge title (Phase 60 D-02).
  */
 export function steamEngineStateDeps(
-  deps: SteamStoresDeps & Pick<EngineServices, 'spawnAsync'>,
+  deps: SteamStoresDeps & Parameters<typeof steamDecisionServices>[0],
   appId: string,
   over: Partial<EngineStateDeps> = {}
 ): EngineStateDeps {
   const own = bridgeBottleNameFor(appId)
   return {
-    ...steamDecisionDeps({ spawnAsync: deps.spawnAsync }),
+    ...steamDecisionDeps(steamDecisionServices(deps)),
     bottleFor: () => findBridgeInstallBottle(appId),
     overrideEligible: (_id, bottle) =>
       bottle === own && !isDrmModeFromVerdict(readBridgeVerdict(deps, appId)),
@@ -126,7 +140,7 @@ export function steamEngineStateDeps(
 }
 
 export async function getSteamEngineState(
-  deps: SteamStoresDeps & Pick<EngineServices, 'spawnAsync'>,
+  deps: SteamStoresDeps & Parameters<typeof steamDecisionServices>[0],
   appId: unknown,
   over?: Partial<EngineStateDeps>
 ): Promise<EngineState | null> {

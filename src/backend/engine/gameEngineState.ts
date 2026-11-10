@@ -91,7 +91,7 @@ function settingsViewFor(
 }
 
 export async function getGameEngineState(
-  services: Pick<EngineServices, 'spawnAsync'>,
+  services: Pick<EngineServices, 'spawnAsync' | 'wineManagerReleases'>,
   identity: unknown,
   deps: GameEngineStateDeps = {}
 ): Promise<EngineState | null> {
@@ -99,7 +99,8 @@ export async function getGameEngineState(
   const id = asNonSteamIdentity(identity)
   if (id === null) return null
   const { config, ...stateDeps } = deps
-  const effective = readEngineForGame(id, config)
+  const releases = { wineManagerReleases: services.wineManagerReleases }
+  const effective = readEngineForGame(id, { ...releases, ...config })
   const prefix = resolveGamePrefix({
     runner: id.runner,
     appName: id.appName,
@@ -108,6 +109,7 @@ export async function getGameEngineState(
   })
   return getEngineState(id, {
     killCrossoverWineserver: killCrossoverWineserverWith(services),
+    ...releases,
     ...stateDeps,
     isMac: true,
     bottleFor: () => (prefix.kind === 'bottle' ? prefix.bottleName : null),
@@ -139,24 +141,30 @@ function legacyEntry(effective: EffectiveEngine): EngineOption | null {
  * GPTK / toolkit / DXMT builds and custom paths are never offered (D-11).
  */
 export async function listGameEngineOptions(
+  services: Pick<EngineServices, 'wineManagerReleases'>,
   args: unknown,
   deps: {
     config?: Partial<EngineConfigDeps>
     decision?: Partial<EngineDecisionDeps>
   } = {}
 ): Promise<EngineOption[]> {
-  const options = await listEngineOverrideOptions(deps.decision)
+  const releases = { wineManagerReleases: services.wineManagerReleases }
+  const config = { ...releases, ...deps.config }
+  const options = await listEngineOverrideOptions({
+    ...releases,
+    ...deps.decision
+  })
   let effective: EffectiveEngine | null = null
   if (typeof args === 'object' && args !== null) {
     const { runner, appName } = args as Record<string, unknown>
     if (runner === undefined && appName === 'default') {
       effective = resolveGlobalEngine(
-        (deps.config?.globalSettings ?? lazyGlobalSettings)(),
-        deps.config
+        (config.globalSettings ?? lazyGlobalSettings)(),
+        config
       )
     } else {
       const id = asNonSteamIdentity(args)
-      if (id !== null) effective = readEngineForGame(id, deps.config)
+      if (id !== null) effective = readEngineForGame(id, config)
     }
   }
   const legacy = effective === null ? null : legacyEntry(effective)
@@ -164,13 +172,20 @@ export async function listGameEngineOptions(
 }
 
 /** D-09: the global default engine, derived or stored, Legacy included. */
-export function getDefaultEngine(deps?: Partial<EngineConfigDeps>): {
+export function getDefaultEngine(
+  services: Pick<EngineServices, 'wineManagerReleases'>,
+  overrides?: Partial<EngineConfigDeps>
+): {
   effectiveEngineId: string
   engineSource: 'stored' | 'derived'
   legacyLabel: string | null
 } {
+  const deps = {
+    wineManagerReleases: services.wineManagerReleases,
+    ...overrides
+  }
   const effective = resolveGlobalEngine(
-    (deps?.globalSettings ?? lazyGlobalSettings)(),
+    (deps.globalSettings ?? lazyGlobalSettings)(),
     deps
   )
   return {

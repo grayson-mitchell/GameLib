@@ -32,15 +32,8 @@ export interface EngineConfigDeps {
   globalSettings(): Record<string, unknown>
 }
 
-function defaultDeps(): EngineConfigDeps {
+function defaultDeps(): Omit<EngineConfigDeps, 'wineManagerReleases'> {
   return {
-    // Lazy: engineDecision and fallbackEngine pull in the whole backend utils
-    // graph, which game_config.ts (a leaf this module is imported from) must not.
-    wineManagerReleases: () =>
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      (require('./engineDecision') as typeof import('./engineDecision'))
-        .defaultEngineDecisionDeps()
-        .wineManagerReleases(),
     pins: ENGINE_PINS,
     pinWineBin(pin) {
       const { pinnedEnginePaths } =
@@ -61,7 +54,11 @@ function defaultDeps(): EngineConfigDeps {
   }
 }
 
-const withDeps = (deps?: Partial<EngineConfigDeps>): EngineConfigDeps => ({
+/** 66.1-22i: the release reader has no default; the caller supplies it. */
+type ConfigDepsWithReleases = Partial<EngineConfigDeps> &
+  Pick<EngineConfigDeps, 'wineManagerReleases'>
+
+const withDeps = (deps: ConfigDepsWithReleases): EngineConfigDeps => ({
   ...defaultDeps(),
   ...deps
 })
@@ -117,7 +114,7 @@ const AUTOMATIC: EffectiveEngine = {
 /** D-05..D-07, D-15: the override a stored Wine corresponds to, or Legacy. */
 export function deriveEngineFromWine(
   wine: WineInstallation | undefined | null,
-  deps?: Partial<EngineConfigDeps>
+  deps: ConfigDepsWithReleases
 ): EffectiveEngine {
   if (!wine || typeof wine !== 'object') return AUTOMATIC
   if (wine.type === 'crossover') return AUTOMATIC
@@ -156,7 +153,7 @@ export function resolveEffectiveEngine(
   entry: Record<string, unknown> | undefined,
   inheritedWine: WineInstallation | undefined,
   opts: { legacyKey?: string; derive: boolean },
-  deps?: Partial<EngineConfigDeps>
+  deps: ConfigDepsWithReleases
 ): EffectiveEngine {
   const stored = entry?.engineOverride
   if (typeof stored === 'string') {
@@ -192,7 +189,7 @@ export function resolveEffectiveEngine(
  */
 export function readEngineForGame(
   args: { runner: string; appName: string },
-  deps?: Partial<EngineConfigDeps>
+  deps: ConfigDepsWithReleases
 ): EffectiveEngine {
   const d = withDeps(deps)
   const entry = readStoredGameConfig(args.appName, d)
@@ -215,7 +212,7 @@ export function readEngineForGame(
 /** D-09: the global default derives the same way as a game. */
 export function resolveGlobalEngine(
   globalSettings: Record<string, unknown>,
-  deps?: Partial<EngineConfigDeps>
+  deps: ConfigDepsWithReleases
 ): EffectiveEngine {
   if (typeof globalSettings.engineOverride === 'string') {
     return {

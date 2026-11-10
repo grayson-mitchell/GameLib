@@ -169,10 +169,11 @@ export async function launchBridgeGameBody(
     // DRM mode stays CrossOver-only (phase 59 out of scope): a clear message
     // instead of a hang, never the built-in engine, never decideLaunchEngine.
     const { preflightCrossover } = await import('backend/engine/engineDecision')
-    const { steamDecisionDeps } = await import('./engine/steamEngineDeps')
+    const { steamDecisionDeps, steamDecisionServices } =
+      await import('./engine/steamEngineDeps')
     const pre = await preflightCrossover(
       bridgeBottleSettings.wineCrossoverBottle,
-      steamDecisionDeps({ spawnAsync: steamGame.deps.spawnAsync })
+      steamDecisionDeps(steamDecisionServices(steamGame.deps))
     )
     if (pre.kind !== 'healthy') {
       notifyCrossoverRequired(steamGame, 'drm', pre)
