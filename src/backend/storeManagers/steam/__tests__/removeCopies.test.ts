@@ -1,5 +1,6 @@
 import {
   createTestManagerDeps,
+  createInertSteamProcesses,
   createTestStores
 } from 'backend/testUtils/testServices'
 /**
@@ -44,6 +45,7 @@ const { steamMetadataStore } = jest.requireMock<Stores['steam']>('../stores')
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
+  steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
 })
 
@@ -113,12 +115,6 @@ jest.mock('../user', () => ({
 jest.mock('backend/online_monitor', () => ({
   runOnceWhenOnline: jest.fn(),
   isOnline: jest.fn().mockReturnValue(false)
-}))
-
-// ── child_process mock ────────────────────────────────────────────────────────
-jest.mock('child_process', () => ({
-  spawnSync: jest.fn(),
-  execFileSync: jest.fn()
 }))
 
 // ── electron mock ──────────────────────────────────────────────────────────────

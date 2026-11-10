@@ -28,7 +28,6 @@ import {
   breadcrumbAppIsFullyInstalledOnDisk
 } from './resumeBreadcrumbs'
 import { rearmPersistedSteamRestartHolds } from './resume'
-import { startRunningPoll } from './runningPoll'
 import { refresh, refreshInstallState } from './refresh'
 import type { SteamLaunchWatchRegistry } from '../steamLaunchWatch'
 
@@ -201,7 +200,7 @@ export default class SteamLibraryManager implements LibraryManager {
     // is safe. Stopped on app quit from main.ts. Because the Electron main
     // process only runs while the app is open, this satisfies "poll only while
     // the app window is open" without per-window tracking.
-    startRunningPoll()
+    this.deps.steamProcesses.runningPoll.start()
   }
 
   getGame(id: string): SteamGame {

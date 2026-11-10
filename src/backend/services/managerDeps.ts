@@ -13,6 +13,7 @@ export type ManagerDepsSource = Pick<
   | 'commandRunner'
   | 'runner'
   | 'clock'
+  | 'steamProcesses'
   | 'spawnAsync'
   | 'downloadQueue'
 >
@@ -28,6 +29,7 @@ export function managerDepsFromServices(
     spawnAsync: source.spawnAsync,
     runner: source.runner,
     clock: source.clock,
+    steamProcesses: source.steamProcesses,
     getDownloadQueue: () => source.downloadQueue
   }
 }

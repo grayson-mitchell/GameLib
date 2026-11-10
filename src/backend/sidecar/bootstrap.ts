@@ -44,6 +44,10 @@ import { registerHandlers } from './handlers'
 import { createStores } from '../stores/createStores'
 import { createStoreRegistry } from '../stores/storeRegistry'
 import { createStoreManagers } from '../storeManagers'
+import {
+  createSteamProcesses,
+  type SteamProcesses
+} from '../storeManagers/steam/steamProcesses'
 import type { BootServices, StoreManagers, Stores } from '../services/types'
 // Block D (finding A1, quick-260907-odi). Adds NO new module to the sidecar bundle:
 // `sidecar/createStores` already imports `playtimeSyncQueue` from this exact
@@ -325,6 +329,14 @@ function gogPresenceDeps(state: BootState): GOGUserDeps {
   }
 }
 
+function requireSteamProcesses(state: BootState): SteamProcesses {
+  const { steamProcesses } = state.services
+  if (!steamProcesses) {
+    throw new Error('store-managers step ran before the command-runner step')
+  }
+  return steamProcesses
+}
+
 function requireServices(state: BootState): BootServices {
   const {
     stores,
@@ -334,6 +346,7 @@ function requireServices(state: BootState): BootServices {
     commandRunner,
     runner,
     clock,
+    steamProcesses,
     spawnAsync,
     quit,
     downloadQueue
@@ -346,6 +359,7 @@ function requireServices(state: BootState): BootServices {
     !commandRunner ||
     !runner ||
     !clock ||
+    !steamProcesses ||
     !spawnAsync ||
     !quit ||
     !downloadQueue
@@ -359,6 +373,7 @@ function requireServices(state: BootState): BootServices {
         'commandRunner',
         'runner',
         'clock',
+        'steamProcesses',
         'spawnAsync',
         'quit',
         'downloadQueue'
@@ -374,6 +389,7 @@ function requireServices(state: BootState): BootServices {
     commandRunner,
     runner,
     clock,
+    steamProcesses,
     spawnAsync,
     quit,
     downloadQueue
@@ -1113,6 +1129,15 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         }
         state.services.runner = prebuilt.runner ?? ctx.runner
         state.services.clock = ctx.clock
+        // Built once per boot; starts nothing (the poller's interval starts in the Steam
+        // manager's init, the monitors spawn per polled install), so the exit contract holds.
+        state.services.steamProcesses =
+          prebuilt.steamProcesses ??
+          createSteamProcesses({
+            runner: ctx.runner,
+            clock: ctx.clock,
+            platform: ctx.platform
+          })
         state.services.commandRunner =
           prebuilt.commandRunner ??
           createCommandRunner({
@@ -1208,6 +1233,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           spawnAsync,
           runner,
           clock: ctx.clock,
+          steamProcesses: requireSteamProcesses(state),
           getDownloadQueue: () => requireServices(state).downloadQueue
         })
         state.services.managers = prebuilt.managers ?? built
@@ -1492,8 +1518,11 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         startRpcServer(input, output)
         // Phase 67 D-09: boundary rejections reach gamelib.log (ipcValidation avoids importing the logger).
         setIpcRejectionLogSink((line) => logWarning(line, LogPrefix.Backend))
+        const services = requireServices(state)
         releaseOnStdinEof(input, {
-          downloadQueue: requireServices(state).downloadQueue
+          downloadQueue: services.downloadQueue,
+          stopAllSteamDownloadMonitors: () =>
+            services.steamProcesses.downloadMonitor.stopAll()
         })
       }
     },

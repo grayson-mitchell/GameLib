@@ -8,7 +8,6 @@ import i18next from 'i18next'
 import type { ManagerDeps } from 'backend/services/types'
 import { library } from '../state'
 import { formatEta, rollingRateMiBs } from '../depotRust/progress'
-import { readSteamDownloadMonitor } from '../steamDownloadMonitor'
 import { liveProgress } from '../steamDownloadProgress'
 import { type AcfSource, installPlatformForSource } from './installRoot'
 import {
@@ -136,7 +135,7 @@ export async function pollInstallOnce(
         `Steam: bottle install for appId ${appId} finalized at StateFlags ${GAMELIB_HANDOFF_STATE_FLAGS} — GameLib could not verify the full install, so it is marked incomplete and resumable (no bottled-Steam handoff)`,
         LogPrefix.Steam
       )
-      stopInstallPolling(appId)
+      stopInstallPolling(deps, appId)
       markSteamInstallIncomplete(deps, appId)
       sendFrontendMessage('gameStatusUpdate', {
         appName: appId,
@@ -162,7 +161,7 @@ export async function pollInstallOnce(
     // effective bytes (dlBytes/dlTotal) instead; undefined means ACF as before.
     const live =
       poll && isMac && poll.source === 'native' && !poll.isNativeHandoff
-        ? readSteamDownloadMonitor(appId)
+        ? deps.steamProcesses.downloadMonitor.read(appId)
         : undefined
     const liveP = live
       ? liveProgress({
@@ -313,7 +312,7 @@ export async function pollInstallOnce(
     // path uses (status 'installing' + context, no is_installed push, no
     // completion toast, poll kept alive) until the recorded Steam process is
     // gone; the code below is then the unchanged installed flow.
-    if (poll && (await shouldHoldForSteamRestart(appId, poll, source))) {
+    if (poll && (await shouldHoldForSteamRestart(deps, appId, poll, source))) {
       sendFrontendMessage('gameStatusUpdate', {
         appName: appId,
         runner: 'steam',
@@ -436,7 +435,7 @@ export async function pollInstallOnce(
       notifyRestartSteamToFinish(existing?.title ?? '')
     }
 
-    stopInstallPolling(appId)
+    stopInstallPolling(deps, appId)
     logInfo(
       `Steam: install polling complete for appId ${appId} — badge flipped to installed`,
       LogPrefix.Steam
@@ -471,7 +470,7 @@ export async function pollInstallOnce(
         runner: 'steam',
         status: 'done'
       })
-      stopInstallPolling(appId)
+      stopInstallPolling(deps, appId)
     }
   }
 }

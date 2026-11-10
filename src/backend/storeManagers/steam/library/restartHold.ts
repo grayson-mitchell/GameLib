@@ -3,7 +3,8 @@ import { notify } from '../../../dialog/dialog'
 import i18next from 'i18next'
 import {
   listSteamClientPids,
-  readSteamProcessStartTokens
+  readSteamProcessStartTokens,
+  type SteamProbeDeps
 } from '../steamClientProcess'
 import {
   clearSteamRestartHold,
@@ -116,6 +117,7 @@ export function withoutSteamRestartHolds<T>(
  * only ever be entered on positive evidence of a live Steam client.
  */
 export async function shouldHoldForSteamRestart(
+  deps: SteamProbeDeps,
   appId: string,
   poll: NonNullable<ReturnType<typeof activePolls.get>>,
   source: AcfSource
@@ -124,7 +126,7 @@ export async function shouldHoldForSteamRestart(
   if (poll.steamHold === 'released') return false
 
   if (poll.steamHold === 'unprobed') {
-    const pids = await listSteamClientPids()
+    const pids = await listSteamClientPids(deps)
     // The poll may have been stopped while the probe child ran; keep the
     // pre-existing behaviour for that tick rather than resurrecting state.
     if (activePolls.get(appId) !== poll) return false
@@ -148,7 +150,7 @@ export async function shouldHoldForSteamRestart(
     // quick 261029-pkp: persist the hold so it survives a GameLib restart.
     // Can never change the hold decision.
     try {
-      const tokens = await readSteamProcessStartTokens(pids)
+      const tokens = await readSteamProcessStartTokens(deps, pids)
       if (activePolls.get(appId) === poll && poll.steamHold === 'holding') {
         const recorded = pids.flatMap((pid) => {
           const startToken = tokens?.get(pid)
@@ -186,7 +188,7 @@ export async function shouldHoldForSteamRestart(
   const now = Date.now()
   if (now - poll.lastSteamProbeMs >= STEAM_HOLD_PROBE_MIN_INTERVAL_MS) {
     poll.lastSteamProbeMs = now
-    const pids = await listSteamClientPids()
+    const pids = await listSteamClientPids(deps)
     if (activePolls.get(appId) !== poll) return false
     // `undefined` (probe inconclusive) keeps holding: only positive evidence
     // that every recorded process is gone may release.

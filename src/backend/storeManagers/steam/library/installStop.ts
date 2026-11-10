@@ -1,5 +1,5 @@
 import { logInfo, LogPrefix } from 'backend/logger'
-import { stopSteamDownloadMonitor } from '../steamDownloadMonitor'
+import type { ManagerDeps } from 'backend/services/types'
 import { clearSteamRestartHold } from '../steamRestartHold'
 import { activePolls } from './pollState'
 
@@ -9,7 +9,10 @@ import { activePolls } from './pollState'
  *
  * Exported for unit testing.
  */
-export function stopInstallPolling(appId: string): void {
+export function stopInstallPolling(
+  deps: Pick<ManagerDeps, 'steamProcesses'>,
+  appId: string
+): void {
   const poll = activePolls.get(appId)
   if (!poll) return
   // quick 261029-pkp: a stopped holding poll (cancel, uninstall, manifest
@@ -18,6 +21,6 @@ export function stopInstallPolling(appId: string): void {
     clearSteamRestartHold(appId, poll.restartHoldStore)
   clearInterval(poll.timer)
   activePolls.delete(appId)
-  stopSteamDownloadMonitor(appId)
+  deps.steamProcesses.downloadMonitor.stop(appId)
   logInfo(`Steam: stopped install polling for appId ${appId}`, LogPrefix.Steam)
 }

@@ -7,16 +7,12 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
 }))
-jest.mock('../library/runningPoll', () => ({ readRunningAppId: jest.fn() }))
-jest.mock('../steamInstallApp', () => ({
-  requestSteamUninstallApp: jest.fn()
-}))
 
 const FOLDER = '/lib/steamapps/common/WazHack'
 
 const decide = (
   outcome: SteamUninstallAppOutcome,
-  running: () => number = () => 0,
+  running: () => Promise<number> = async () => 0,
   inFolder: () => Promise<boolean> = async () => false
 ) => {
   const request = jest.fn().mockResolvedValue(outcome)
@@ -33,22 +29,26 @@ const decide = (
 
 describe('decideSteamNativeDelete (quick 261106-s3n)', () => {
   it('refuses a running game and never calls the helper', async () => {
-    const { request, result } = decide({ kind: 'ok' }, () => 264160)
+    const { request, result } = decide({ kind: 'ok' }, async () => 264160)
     await expect(result).resolves.toEqual({ route: 'refused-running' })
     expect(request).not.toHaveBeenCalled()
   })
 
   it('treats running id 0 (none) and another game as not running', async () => {
-    await expect(decide({ kind: 'ok' }, () => 0).result).resolves.toEqual({
-      route: 'steam-uninstalled'
-    })
-    await expect(decide({ kind: 'ok' }, () => 440).result).resolves.toEqual({
+    await expect(decide({ kind: 'ok' }, async () => 0).result).resolves.toEqual(
+      {
+        route: 'steam-uninstalled'
+      }
+    )
+    await expect(
+      decide({ kind: 'ok' }, async () => 440).result
+    ).resolves.toEqual({
       route: 'steam-uninstalled'
     })
   })
 
   it('fails closed when the running check throws', async () => {
-    const { request, result } = decide({ kind: 'ok' }, () => {
+    const { request, result } = decide({ kind: 'ok' }, async () => {
       throw new Error('boom')
     })
     await expect(result).resolves.toEqual({
@@ -88,7 +88,7 @@ describe('decideSteamNativeDelete (quick 261106-s3n)', () => {
   it('refuses when registry reads 0 but a process runs from the folder (gate D)', async () => {
     const { request, result } = decide(
       { kind: 'ok' },
-      () => 0,
+      async () => 0,
       async () => true
     )
     await expect(result).resolves.toEqual({ route: 'refused-running' })
@@ -98,7 +98,7 @@ describe('decideSteamNativeDelete (quick 261106-s3n)', () => {
   it('fails closed when the folder check rejects', async () => {
     const { request, result } = decide(
       { kind: 'ok' },
-      () => 0,
+      async () => 0,
       async () => {
         throw new Error('ps failed')
       }
@@ -114,7 +114,8 @@ describe('decideSteamNativeDelete (quick 261106-s3n)', () => {
     const request = jest.fn().mockResolvedValue({ kind: 'ok' })
     await expect(
       decideSteamNativeDelete('264160', undefined, {
-        readRunningAppId: () => 0,
+        readRunningAppId: async () => 0,
+        isProcessRunningFromFolder: async () => false,
         requestSteamUninstallApp: request,
         platform: 'darwin'
       })

@@ -1,5 +1,6 @@
 import {
   createTestManagerDeps,
+  createInertSteamProcesses,
   createTestStores
 } from 'backend/testUtils/testServices'
 /**
@@ -30,17 +31,25 @@ import {
 } from '../bridgeBottle'
 import { join } from 'path'
 import { library } from '../state'
-import {
-  readSteamDownloadMonitor,
-  startSteamDownloadMonitor,
-  stopSteamDownloadMonitor
-} from '../steamDownloadMonitor'
 import { pollInstallOnce } from '../library/installPollOnce'
 import type { Stores } from 'backend/services/types'
 
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
+// The monitor members are jest.fns so the macOS live-progress describe below can drive and
+// assert on them; the poller stays inert.
+const monitor = {
+  start: jest.fn(),
+  read: jest.fn(),
+  stop: jest.fn(),
+  stopAll: jest.fn()
+}
+const startSteamDownloadMonitor = monitor.start
+const readSteamDownloadMonitor = monitor.read
+const stopSteamDownloadMonitor = monitor.stop
+
 const steamTestDeps = createTestManagerDeps({
+  steamProcesses: createInertSteamProcesses({ downloadMonitor: monitor }),
   stores: createTestStores({ steam: steamStoresModule })
 })
 
@@ -111,13 +120,6 @@ jest.mock('../user')
 jest.mock('backend/online_monitor', () => ({
   runOnceWhenOnline: jest.fn(),
   isOnline: jest.fn().mockReturnValue(false)
-}))
-
-// ── child_process mock — spawnSync (Windows reg.exe) + execFileSync (Linux ps,
-// MAC32-03 lipo/file) ─────────────────────────────────────────────────────────
-jest.mock('child_process', () => ({
-  spawnSync: jest.fn(),
-  execFileSync: jest.fn()
 }))
 
 // ── electron mock — dialog.showMessageBox (MAC32-03 i386 recovery confirm) +
@@ -233,11 +235,6 @@ jest.mock('../metacriticCapture', () => ({
 // = fail open (no hold), so every pre-existing test keeps its old behaviour;
 // the D-UAT-13 describe below drives it explicitly. Never a real child spawn.
 // quick 261029-sex: bare jest.fn = undefined = no live signal = ACF behaviour.
-jest.mock('../steamDownloadMonitor', () => ({
-  startSteamDownloadMonitor: jest.fn(),
-  readSteamDownloadMonitor: jest.fn(),
-  stopSteamDownloadMonitor: jest.fn()
-}))
 jest.mock('../steamClientProcess', () => ({
   listSteamClientPids: jest.fn(),
   // quick 261029-pkp: start-time identity probe (bare jest.fn = undefined =
@@ -329,7 +326,7 @@ describe('pollInstallOnce()', () => {
   })
 
   afterEach(() => {
-    stopInstallPolling('730')
+    stopInstallPolling(steamTestDeps, '730')
     jest.useRealTimers()
   })
 
@@ -789,13 +786,13 @@ describe('pollInstallOnce()', () => {
     it('starts the monitor for native non-handoff polls on macOS and stops it on stop', () => {
       startInstallPolling(steamTestDeps, '730', 60000)
       expect(startSteamDownloadMonitor).toHaveBeenCalledWith('730')
-      stopInstallPolling('730')
+      stopInstallPolling(steamTestDeps, '730')
       expect(stopSteamDownloadMonitor).toHaveBeenCalledWith('730')
     })
 
     it('upgrading an existing poll to delegated starts the monitor (idempotent)', () => {
       startInstallPolling(steamTestDeps, '730', 60000)
-      ;(startSteamDownloadMonitor as jest.Mock).mockClear()
+      startSteamDownloadMonitor.mockClear()
       startInstallPolling(steamTestDeps, '730', {
         intervalMs: 60000,
         delegatedToSteamClient: true
@@ -818,9 +815,7 @@ describe('pollInstallOnce()', () => {
     })
 
     it('emits live percent, speed and eta while the ACF is frozen at 0', async () => {
-      ;(readSteamDownloadMonitor as jest.Mock).mockReturnValue(
-        live(4_368_075_856)
-      )
+      readSteamDownloadMonitor.mockReturnValue(live(4_368_075_856))
       startInstallPolling(steamTestDeps, '730', 60000)
       await pollInstallOnce(steamTestDeps, '730')
       jest.advanceTimersByTime(3000)
@@ -832,9 +827,7 @@ describe('pollInstallOnce()', () => {
     })
 
     it('caps a live overshoot at 99', async () => {
-      ;(readSteamDownloadMonitor as jest.Mock).mockReturnValue(
-        live(8_770_693_182)
-      )
+      readSteamDownloadMonitor.mockReturnValue(live(8_770_693_182))
       startInstallPolling(steamTestDeps, '730', 60000)
       await pollInstallOnce(steamTestDeps, '730')
       expect(progressCalls()[0][1].progress.percent).toBe(99)
@@ -843,9 +836,7 @@ describe('pollInstallOnce()', () => {
     it('never reports steam-paused while the live counter advances', async () => {
       startInstallPolling(steamTestDeps, '730', 60000)
       for (let i = 1; i <= 5; i++) {
-        ;(readSteamDownloadMonitor as jest.Mock).mockReturnValue(
-          live(i * 100_000_000)
-        )
+        readSteamDownloadMonitor.mockReturnValue(live(i * 100_000_000))
         await pollInstallOnce(steamTestDeps, '730')
         jest.advanceTimersByTime(3000)
       }
@@ -855,9 +846,7 @@ describe('pollInstallOnce()', () => {
     })
 
     it('still reports steam-paused when the live counter freezes', async () => {
-      ;(readSteamDownloadMonitor as jest.Mock).mockReturnValue(
-        live(100_000_000)
-      )
+      readSteamDownloadMonitor.mockReturnValue(live(100_000_000))
       startInstallPolling(steamTestDeps, '730', 60000)
       for (let i = 0; i < 5; i++) {
         await pollInstallOnce(steamTestDeps, '730')
@@ -868,7 +857,7 @@ describe('pollInstallOnce()', () => {
     })
 
     it('falls back to the ACF when the monitor returns undefined', async () => {
-      ;(readSteamDownloadMonitor as jest.Mock).mockReturnValue(undefined)
+      readSteamDownloadMonitor.mockReturnValue(undefined)
       startInstallPolling(steamTestDeps, '730', 60000)
       await pollInstallOnce(steamTestDeps, '730')
       const [call] = progressCalls()
@@ -881,7 +870,7 @@ describe('pollInstallOnce()', () => {
         .mocked(getSteamBottleSettings)
         .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
       jest.mocked(getBottleSteamappsDir).mockReturnValue('/bottle/steamapps')
-      ;(readSteamDownloadMonitor as jest.Mock).mockReturnValue(live(5e9))
+      readSteamDownloadMonitor.mockReturnValue(live(5e9))
       startInstallPolling(steamTestDeps, '730', {
         intervalMs: 60000,
         source: 'bottle'

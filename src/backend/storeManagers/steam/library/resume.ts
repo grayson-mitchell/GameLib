@@ -266,7 +266,7 @@ export async function rearmPersistedSteamRestartHolds(
   // Synchronously, before any await: fail closed until verified.
   for (const [appId] of records) pendingSteamHoldRearm.add(appId)
   try {
-    const livePids = await listSteamClientPids()
+    const livePids = await listSteamClientPids(deps)
     let startTokens: Map<number, string> | undefined = new Map()
     if (livePids) {
       const union = new Set<number>()
@@ -276,7 +276,7 @@ export async function rearmPersistedSteamRestartHolds(
         }
       }
       if (union.size > 0) {
-        startTokens = await readSteamProcessStartTokens([...union])
+        startTokens = await readSteamProcessStartTokens(deps, [...union])
       }
     }
     const now = Date.now()

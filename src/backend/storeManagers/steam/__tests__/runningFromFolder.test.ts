@@ -6,6 +6,7 @@ import { join } from 'path'
 
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 
+import { createRealRunner } from 'backend/testUtils/realRunner'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
 import {
@@ -105,45 +106,60 @@ describe('findPidsRunningFromFolder (scripted runner)', () => {
   )
 })
 
-describe('isProcessRunningFromFolder (injected runner)', () => {
+describe('isProcessRunningFromFolder (scripted runner)', () => {
   const folder = '/x/common/WazHack'
-  it('true on match, false without', async () => {
+  const ps = (result: object) => ({
+    cmd: '/bin/ps',
+    argv: ['-A', '-ww', '-o', 'args='],
+    result
+  })
+  it('true on match, false without; ps argv, stdin, fake-HOME env and 2000 ms bound', async () => {
+    const runner = createScriptedRunner([
+      ps({ code: 0, stdout: '/x/common/WazHack/run\n' }),
+      ps({ code: 0, stdout: '/other/run\n' })
+    ])
     await expect(
-      isProcessRunningFromFolder(folder, {
-        platform: 'darwin',
-        runPs: async () => '/x/common/WazHack/run\n'
-      })
+      isProcessRunningFromFolder({ runner, platform: 'darwin' }, folder)
     ).resolves.toBe(true)
     await expect(
-      isProcessRunningFromFolder(folder, {
-        platform: 'darwin',
-        runPs: async () => '/other/run\n'
-      })
+      isProcessRunningFromFolder({ runner, platform: 'darwin' }, folder)
     ).resolves.toBe(false)
+    const call = runner.calls[0]
+    expect(call?.opts).toMatchObject({
+      timeoutMs: 2000,
+      stdin: '',
+      replaceEnv: true
+    })
+    // Fake-HOME env, never the operator's real profile.
+    expect(call?.env?.HOME).toBeDefined()
+    expect(call?.env?.HOME).not.toBe(process.env.HOME)
   })
-  it('rejects when the runner fails', async () => {
+  it('rejects when ps times out or exits non-zero', async () => {
+    const timedOut = createScriptedRunner([ps({ code: null, timedOut: true })])
     await expect(
-      isProcessRunningFromFolder(folder, {
-        platform: 'linux',
-        runPs: async () => {
-          throw new Error('ps exited 1')
-        }
-      })
+      isProcessRunningFromFolder(
+        { runner: timedOut, platform: 'linux' },
+        folder
+      )
+    ).rejects.toThrow('timed out')
+    const failed = createScriptedRunner([ps({ code: 1 })])
+    await expect(
+      isProcessRunningFromFolder({ runner: failed, platform: 'linux' }, folder)
     ).rejects.toThrow('ps exited 1')
   })
   it('rejects a bad folder before spawning', async () => {
-    const runPs = jest.fn().mockResolvedValue('')
+    const runner = createScriptedRunner([])
     await expect(
-      isProcessRunningFromFolder('', { platform: 'darwin', runPs })
+      isProcessRunningFromFolder({ runner, platform: 'darwin' }, '')
     ).rejects.toThrow()
-    expect(runPs).not.toHaveBeenCalled()
+    expect(runner.calls).toHaveLength(0)
   })
   it('win32 returns false without spawning', async () => {
-    const runPs = jest.fn()
+    const runner = createScriptedRunner([])
     await expect(
-      isProcessRunningFromFolder(folder, { platform: 'win32', runPs })
+      isProcessRunningFromFolder({ runner, platform: 'win32' }, folder)
     ).resolves.toBe(false)
-    expect(runPs).not.toHaveBeenCalled()
+    expect(runner.calls).toHaveLength(0)
   })
 })
 
@@ -152,6 +168,7 @@ realDescribe('isProcessRunningFromFolder (real ps)', () => {
   let tmp: string
   let child: ChildProcess
   let profile: ReturnType<typeof createFakeHomeProfile>
+  let real: ReturnType<typeof createRealRunner>
 
   beforeAll(() => {
     tmp = mkdtempSync(join(tmpdir(), 'gamelib-runfolder-'))
@@ -162,15 +179,20 @@ realDescribe('isProcessRunningFromFolder (real ps)', () => {
       stdio: 'ignore'
     })
     child.unref()
+    real = createRealRunner()
   })
   afterAll(() => {
     child.kill('SIGKILL')
+    real.dispose()
     profile.dispose()
     rmSync(tmp, { recursive: true, force: true })
   })
 
   it('finds the process by its folder, not a sibling', async () => {
-    await expect(isProcessRunningFromFolder(tmp)).resolves.toBe(true)
-    await expect(isProcessRunningFromFolder(tmp + '2')).resolves.toBe(false)
+    const deps = { runner: real.runner }
+    await expect(isProcessRunningFromFolder(deps, tmp)).resolves.toBe(true)
+    await expect(isProcessRunningFromFolder(deps, tmp + '2')).resolves.toBe(
+      false
+    )
   })
 })

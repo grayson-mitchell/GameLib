@@ -1,518 +1,254 @@
 /**
- * Unit tests for the running-app poller (readRunningAppId, pollRunningOnce, start/stopRunningPoll).
- * Moved out of library.test.ts by Phase 65 plan 04 (D-03); mock preamble
- * copied.
+ * Unit tests for the running-app probe (readRunningAppId, readMacRunningAppId) and the
+ * boot-built poller (createRunningPoll). Moved out of library.test.ts by Phase 65 plan 04
+ * (D-03); rebuilt on a scripted runner and a fake clock by 66.2-06 (the poller and its last-id
+ * state are closure state of an instance now, no child_process mock).
  */
-
-// ── Imports ───────────────────────────────────────────────────────────────────
 import { existsSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
-import { spawnSync, execFileSync } from 'child_process'
-import { sendFrontendMessage } from '../../../ipc'
-import { t as i18nextT } from 'i18next'
-import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
-import { listReadyBridgeBottleNames } from '../bridgeBottle'
+
+import { createFakeClock } from 'backend/testUtils/fakeClock'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
+
 import {
-  readRunningAppId,
-  pollRunningOnce,
-  startRunningPoll,
-  stopRunningPoll
+  createRunningPoll,
+  readMacRunningAppId,
+  readRunningAppId
 } from '../library/runningPoll'
-
-// ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
-// steam/games.ts imports the shared shortcuts module, whose import graph does not load under
-// this file's mocks (quick 261026-c7r).
-jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
-  addShortcuts: jest.fn(),
-  removeShortcuts: jest.fn(),
-  shortcutFiles: jest.fn()
-}))
-
-jest.mock('backend/knownFixReport', () => ({ reportDetectedFix: jest.fn() }))
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
-  LogPrefix: {
-    Steam: 'Steam',
-    Backend: 'Backend'
-  }
+  LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
-
-// ── backend/utils mock — provides getSteamLibraries() and getFileSize() ─────
-// Note: resetMocks:true wipes any factory-provided implementation before each
-// test, so getFileSize's return value must be re-established per-describe
-// (see beforeEach blocks below) — same pattern as games.test.ts.
-jest.mock('backend/utils', () => ({
-  getSteamLibraries: jest.fn(),
-  getFileSize: jest.fn()
-}))
-
-// ── graceful-fs mock — readdirSync, readFileSync, existsSync ─────────────────
+jest.mock('backend/constants/paths', () => ({ userHome: '/home/test' }))
 jest.mock('graceful-fs')
-
-// ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
 jest.mock('@node-steam/vdf')
 
-// ── IPC mock — sendFrontendMessage ───────────────────────────────────────────
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
-
-// ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
-jest.mock('../../../dialog/dialog', () => ({
-  notify: jest.fn()
-}))
-
-// ── i18next mock — returns the fallback string for body assertions ────────────
-// 23.2-04: t is a jest.fn (not a plain function) so its call args are
-// inspectable — the fallback-string return value is unchanged, so every
-// pre-existing body-text assertion in this file keeps passing byte-for-byte.
-// This is what makes the interpolation options object provable: the fallback
-// alone can only ever show the raw {{depots}} placeholder, never the actual
-// depot id.
-// The named `t` is the same jest.fn as `default.t`, so a test can reference it
-// without a default-import member access (import-x/no-named-as-default-member).
-jest.mock('i18next', () => {
-  const t = jest.fn((_key: string, fallback = '') => fallback)
-  return { __esModule: true, t, default: { t } }
-})
-
-// ── SteamUser mock — controls getClient() / isLoggedIn() return values ───────
-jest.mock('../user')
-
-// ── online_monitor mock — prevents electron/net import at module load time ───
-jest.mock('backend/online_monitor', () => ({
-  runOnceWhenOnline: jest.fn(),
-  isOnline: jest.fn().mockReturnValue(false)
-}))
-
-// ── child_process mock — spawnSync (Windows reg.exe) + execFileSync (Linux ps,
-// MAC32-03 lipo/file) ─────────────────────────────────────────────────────────
-jest.mock('child_process', () => ({
-  spawnSync: jest.fn(),
-  execFileSync: jest.fn()
-}))
-
-// ── electron mock — dialog.showMessageBox (MAC32-03 i386 recovery confirm) +
-// app.getPath (backend/constants/paths reads this at module load time) ───────
-// library.ts's only electron usage is `dialog`; games.ts's `shell` import
-// (pulled in transitively via `import SteamGame from './games'`) resolves to
-// undefined here, which is fine — SteamGame.install()/forceUninstall() are
-// only reached via a CONFIRMED promptI386Recovery, and this file's tests
-// keep the dialog mocked to a cancel response unless a test explicitly opts
-// into the confirm path.
-jest.mock('backend/platform', () => ({
-  dialog: { showMessageBox: jest.fn() },
-  app: {
-    getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
-    // Plain method (survives resetMocks) -- publicDir resolves it at module load.
-    getAppPath: () => '/tmp/mock-path'
-  },
-  shell: { openExternal: jest.fn() }
-}))
-
-// ── backend/constants/environment mock — platform-switching for reader tests ──
-jest.mock('backend/constants/environment', () => ({
-  isWindows: false,
-  isMac: false,
-  isLinux: true
-}))
-
-// ── stores mock — steamLibraryStore, steamMetadataStore, etc. ────────
-jest.mock('../stores', () => ({
-  configStore: {
-    get: jest.fn(),
-    get_nodefault: jest.fn(),
-    set: jest.fn(),
-    clear: jest.fn()
-  },
-  steamLibraryStore: {
-    get: jest.fn(),
-    set: jest.fn()
-  },
-  steamMetadataStore: {
-    get: jest.fn(),
-    set: jest.fn(),
-    entries: jest.fn()
-  },
-  steamSyncStore: {
-    get: jest.fn(),
-    set: jest.fn()
-  },
-  // quick 261029-pkp: persisted restart-hold records. Map-backed in the
-  // pkp describe; bare jest.fns elsewhere (entries() -> undefined is caught
-  // by listSteamRestartHolds and reads as an empty store).
-  steamRestartHoldStore: {
-    get: jest.fn(),
-    set: jest.fn(),
-    delete: jest.fn(),
-    entries: jest.fn()
-  }
-}))
-
-// ── bottle mock — getBottleSteamappsDir/getSteamBottleSettings/isBottleProvisioned ─
-jest.mock('../bottle', () => ({
-  getBottleSteamappsDir: jest.fn(),
-  getSteamBottleSettings: jest.fn(),
-  isSteamBottleProvisioned: jest.fn()
-}))
-jest.mock('../bridgeBottle', () => ({
-  getBridgeBottleSettings: jest.fn(),
-  listReadyBridgeBottleNames: jest.fn(),
-  resolveBridgeBottleName: jest.fn()
-}))
-
-// ── depot mock — finalizeToSteam (D-05 startup finalize) / downloadSteamDepots
-// (must NEVER be invoked from startup resume — Pitfall 4, no silent re-download) ─
-jest.mock('../depot', () => ({
-  finalizeToSteam: jest.fn().mockResolvedValue(undefined),
-  downloadSteamDepots: jest.fn()
-}))
-
-// ── backend/launcher mock — runWineCommand (D-05 no-auto-drive regression) ────
-jest.mock('backend/launcher', () => ({
-  runWineCommand: jest.fn()
-}))
-
-// ── bridge/allowlist mock — bridgeAllowlist.has (D-UAT-24-02, 24-17) ────────
-// Defaulted to false in the shared beforeEach below so EVERY pre-existing
-// test is unaffected — non-eligible by default means the existing
-// native ?? bottle ?? bridge precedence holds unless a test explicitly
-// opts a game into bridge eligibility.
-jest.mock('../bridge/allowlist', () => ({
-  bridgeAllowlist: { has: jest.fn(), knownBadReason: jest.fn() }
-}))
-
-// ── platformCapture mock — captureOwnedAppPlatforms (34.15 D-03/D-04) ──────
-// This module is unit-tested in isolation (Plan 01's own suite). Mocking it
-// here isolates refresh()'s own wiring/instrumentation from the real bulk
-// PICS scoping and merge logic — the shared beforeEach below defaults it to
-// a no-op success so every pre-existing refresh() test is unaffected; the
-// 'D-03 fail-soft' describe block below overrides this default per-test.
-jest.mock('../anonymousClient', () => ({
-  getAnonymousPicsClient: jest.fn()
-}))
-jest.mock('../bridge/launchTarget', () => ({
-  backfillBridgeLaunchTargets: jest.fn()
-}))
-jest.mock('../platformCapture', () => ({
-  captureOwnedAppPlatforms: jest.fn()
-}))
-jest.mock('../metacriticCapture', () => ({
-  captureOwnedAppMetacritic: jest.fn()
-}))
-// D-UAT-13: the install poller asks which Steam client PIDs are alive when a
-// native handoff finalizes. A bare jest.fn() resolves undefined = "inconclusive"
-// = fail open (no hold), so every pre-existing test keeps its old behaviour;
-// the D-UAT-13 describe below drives it explicitly. Never a real child spawn.
-// quick 261029-sex: bare jest.fn = undefined = no live signal = ACF behaviour.
-jest.mock('../steamDownloadMonitor', () => ({
-  startSteamDownloadMonitor: jest.fn(),
-  readSteamDownloadMonitor: jest.fn(),
-  stopSteamDownloadMonitor: jest.fn()
-}))
-jest.mock('../steamClientProcess', () => ({
-  listSteamClientPids: jest.fn(),
-  // quick 261029-pkp: start-time identity probe (bare jest.fn = undefined =
-  // "unknown": no record is persisted, so pre-existing tests are unaffected).
-  readSteamProcessStartTokens: jest.fn()
-}))
-
-// ── Shared fixtures ───────────────────────────────────────────────────────────
-
-// 23.2-04: this project's jest config sets `resetMocks: true`, which strips
-// jest.fn() implementations (not just call history) before EVERY test — so
-// the i18nextT mock's fallback-returning implementation (set once at
-// jest.mock() factory time, above) must be re-established file-wide, or any
-// test anywhere in this file that asserts on a notify() body derived from
-// i18nextT would see `undefined` instead of the fallback string. A plain
-// (non-jest.fn) function is immune to resetMocks, which is why this was not
-// needed before this key was added to observe the call args.
-beforeEach(() => {
-  ;(i18nextT as jest.Mock).mockImplementation(
-    (_key: string, fallback = '') => fallback
-  )
-  // quick/261016-u1w (D-C): default to "no ready bridge bottle" so every
-  // describe block that doesn't care about the bridge path (and therefore
-  // never arms this mock) gets the same falsy short-circuit the old
-  // isBridgeBottleReady()-returns-undefined default gave it, rather than a
-  // TypeError from calling .length on an un-mocked return value.
-  jest.mocked(listReadyBridgeBottleNames).mockReturnValue([])
-  jest.mocked(backfillBridgeLaunchTargets).mockResolvedValue(0)
-})
-
-// ── Describe block ────────────────────────────────────────────────────────────
-
-// ── GAME-05: readRunningAppId() — per-platform dispatch ───────────────────────
-
-describe('readRunningAppId() — per-platform dispatch', () => {
-  let envMock: any
-
-  beforeEach(() => {
-    envMock = jest.requireMock('backend/constants/environment')
-    // Default: Linux
-    envMock.isWindows = false
-    envMock.isMac = false
-    envMock.isLinux = true
-  })
-
-  describe('Windows platform', () => {
-    beforeEach(() => {
-      envMock.isWindows = true
-      envMock.isMac = false
-    })
-
-    it('windowsRunningAppId: parses REG_DWORD 0x1b58 → 7000', () => {
-      ;(spawnSync as jest.Mock).mockReturnValue({
-        status: 0,
-        stdout: 'RunningAppID    REG_DWORD    0x1b58'
-      })
-      expect(readRunningAppId()).toBe(7000)
-    })
-
-    it('windowsRunningAppId: returns 0 when reg.exe exits with non-zero status', () => {
-      ;(spawnSync as jest.Mock).mockReturnValue({ status: 1, stdout: '' })
-      expect(readRunningAppId()).toBe(0)
-    })
-
-    it('windowsRunningAppId: returns 0 when spawnSync throws', () => {
-      ;(spawnSync as jest.Mock).mockImplementation(() => {
-        throw new Error('reg.exe not available')
-      })
-      expect(readRunningAppId()).toBe(0)
-    })
-
-    it('windowsRunningAppId: returns 0 when RunningAppID not present in output', () => {
-      ;(spawnSync as jest.Mock).mockReturnValue({
-        status: 0,
-        stdout:
-          'ERROR: The system was unable to find the specified registry key'
-      })
-      expect(readRunningAppId()).toBe(0)
-    })
-  })
-
-  describe('macOS platform', () => {
-    beforeEach(() => {
-      envMock.isWindows = false
-      envMock.isMac = true
-      envMock.isLinux = false
-    })
-
-    it('macOsRunningAppId: parses registry.vdf and returns numeric RunningAppID', () => {
-      ;(existsSync as jest.Mock).mockReturnValue(true)
-      ;(readFileSync as jest.Mock).mockReturnValue('vdf-content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({
-        Registry: {
-          HKCU: { Software: { Valve: { Steam: { RunningAppID: '440' } } } }
-        }
-      })
-      expect(readRunningAppId()).toBe(440)
-    })
-
-    it('macOsRunningAppId: returns 0 when registry.vdf does not exist', () => {
-      ;(existsSync as jest.Mock).mockReturnValue(false)
-      expect(readRunningAppId()).toBe(0)
-    })
-
-    it('macOsRunningAppId: returns 0 when vdf.parse throws', () => {
-      ;(existsSync as jest.Mock).mockReturnValue(true)
-      ;(readFileSync as jest.Mock).mockReturnValue('content')
-      ;(vdf.parse as jest.Mock).mockImplementation(() => {
-        throw new Error('parse error')
-      })
-      expect(readRunningAppId()).toBe(0)
-    })
-
-    it('macOsRunningAppId: returns 0 when RunningAppID key is missing in VDF', () => {
-      ;(existsSync as jest.Mock).mockReturnValue(true)
-      ;(readFileSync as jest.Mock).mockReturnValue('content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({ Registry: {} })
-      expect(readRunningAppId()).toBe(0)
-    })
-  })
-
-  describe('Linux platform', () => {
-    it('linuxRegistryVdfRunningAppId: returns VDF RunningAppID when non-zero', () => {
-      ;(existsSync as jest.Mock).mockReturnValue(true)
-      ;(readFileSync as jest.Mock).mockReturnValue('content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({
-        Registry: {
-          HKCU: { Software: { Valve: { Steam: { RunningAppID: '570' } } } }
-        }
-      })
-      expect(readRunningAppId()).toBe(570)
-    })
-
-    it('linuxFallbackRunningAppId: falls back to reaper process scan when VDF RunningAppID is 0', () => {
-      ;(existsSync as jest.Mock).mockReturnValue(true)
-      ;(readFileSync as jest.Mock).mockReturnValue('content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({
-        Registry: {
-          HKCU: { Software: { Valve: { Steam: { RunningAppID: '0' } } } }
-        }
-      })
-      ;(execFileSync as jest.Mock).mockReturnValue(
-        'reaper SteamLaunch --AppId 440 -- /path/to/game'
-      )
-      expect(readRunningAppId()).toBe(440)
-    })
-
-    it('linuxFallbackRunningAppId: returns 0 when VDF is 0 and reaper scan finds nothing', () => {
-      ;(existsSync as jest.Mock).mockReturnValue(true)
-      ;(readFileSync as jest.Mock).mockReturnValue('content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({
-        Registry: {
-          HKCU: { Software: { Valve: { Steam: { RunningAppID: '0' } } } }
-        }
-      })
-      ;(execFileSync as jest.Mock).mockReturnValue('no reaper here')
-      expect(readRunningAppId()).toBe(0)
-    })
-
-    it('linuxFallbackRunningAppId: returns 0 when execFileSync throws', () => {
-      ;(existsSync as jest.Mock).mockReturnValue(true)
-      ;(readFileSync as jest.Mock).mockReturnValue('content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({
-        Registry: {
-          HKCU: { Software: { Valve: { Steam: { RunningAppID: '0' } } } }
-        }
-      })
-      ;(execFileSync as jest.Mock).mockImplementation(() => {
-        throw new Error('ps not available')
-      })
-      expect(readRunningAppId()).toBe(0)
-    })
-  })
-})
-
-// ── GAME-05: pollRunningOnce() ────────────────────────────────────────────────
-
-describe('pollRunningOnce()', () => {
-  let envMock: any
-
-  // Helper: configure vdf.parse to return a specific RunningAppID value
-  const mockRunningAppId = (appId: number): void => {
-    ;(existsSync as jest.Mock).mockReturnValue(true)
-    ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
-      Registry: {
-        HKCU: {
-          Software: { Valve: { Steam: { RunningAppID: String(appId) } } }
+const vdfWith = (appId: string | undefined) => {
+  jest.mocked(existsSync).mockReturnValue(true)
+  jest.mocked(readFileSync).mockReturnValue('content')
+  jest.mocked(vdf.parse).mockReturnValue({
+    Registry: {
+      HKCU: {
+        Software: {
+          Valve: { Steam: appId === undefined ? {} : { RunningAppID: appId } }
         }
       }
-    })
-  }
+    }
+  })
+}
 
-  beforeEach(() => {
-    envMock = jest.requireMock('backend/constants/environment')
-    // Use macOS path for simple VDF-based control
-    envMock.isWindows = false
-    envMock.isMac = true
-    envMock.isLinux = false
-    // Reset lastKnownRunningAppId to 0 between tests
-    stopRunningPoll()
+const REG_ARGV = ['query', 'HKCU\\Software\\Valve\\Steam', '/v', 'RunningAppID']
+
+describe('readRunningAppId() -- per-platform dispatch', () => {
+  describe('win32', () => {
+    it('parses REG_DWORD 0x1b58 -> 7000 through reg.exe with the 2000 ms bound', async () => {
+      const runner = createScriptedRunner([
+        {
+          cmd: 'reg',
+          argv: REG_ARGV,
+          result: {
+            code: 0,
+            stdout: 'RunningAppID    REG_DWORD    0x1b58'
+          }
+        }
+      ])
+      await expect(readRunningAppId({ runner }, 'win32')).resolves.toBe(7000)
+      expect(runner.calls[0]?.opts).toMatchObject({
+        timeoutMs: 2000,
+        windowsHide: true
+      })
+    })
+
+    it.each([
+      ['a non-zero exit', { code: 1, stdout: '' }],
+      ['a timeout', { code: null, timedOut: true }],
+      [
+        'no RunningAppID in the output',
+        { code: 0, stdout: 'ERROR: unable to find the specified registry key' }
+      ]
+    ])('returns 0 on %s', async (_n, result) => {
+      const runner = createScriptedRunner([
+        { cmd: 'reg', argv: REG_ARGV, result }
+      ])
+      await expect(readRunningAppId({ runner }, 'win32')).resolves.toBe(0)
+    })
+
+    it('returns 0 when reg.exe cannot be spawned', async () => {
+      const runner = createScriptedRunner([
+        { cmd: 'reg', argv: REG_ARGV, error: { code: 'ENOENT' } }
+      ])
+      await expect(readRunningAppId({ runner }, 'win32')).resolves.toBe(0)
+    })
   })
 
-  it('sends gameStatusUpdate { status: "playing" } when RunningAppID goes 0→X', () => {
-    mockRunningAppId(440)
-    pollRunningOnce()
-    expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
-      appName: '440',
-      runner: 'steam',
-      status: 'playing'
+  describe('darwin', () => {
+    it('parses registry.vdf and makes no runner call', async () => {
+      vdfWith('440')
+      const runner = createScriptedRunner([])
+      await expect(readRunningAppId({ runner }, 'darwin')).resolves.toBe(440)
+      expect(runner.calls).toHaveLength(0)
+    })
+
+    it('readMacRunningAppId: 0 when registry.vdf is absent, unparsable or lacks the key', () => {
+      jest.mocked(existsSync).mockReturnValue(false)
+      expect(readMacRunningAppId()).toBe(0)
+      jest.mocked(existsSync).mockReturnValue(true)
+      jest.mocked(readFileSync).mockReturnValue('content')
+      jest.mocked(vdf.parse).mockImplementation(() => {
+        throw new Error('parse error')
+      })
+      expect(readMacRunningAppId()).toBe(0)
+      jest.mocked(vdf.parse).mockReturnValue({ Registry: {} })
+      expect(readMacRunningAppId()).toBe(0)
     })
   })
 
-  it('does NOT send a "done" message on 0→X transition (no prior game)', () => {
-    mockRunningAppId(440)
-    pollRunningOnce()
-    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
-      'gameStatusUpdate',
-      expect.objectContaining({ status: 'done' })
+  describe('linux', () => {
+    const psStep = (result: object) => ({
+      cmd: 'ps',
+      argv: ['-eo', 'args'],
+      result
+    })
+
+    it('returns the VDF RunningAppID when non-zero, without spawning', async () => {
+      vdfWith('570')
+      const runner = createScriptedRunner([])
+      await expect(readRunningAppId({ runner }, 'linux')).resolves.toBe(570)
+      expect(runner.calls).toHaveLength(0)
+    })
+
+    it('falls back to the reaper scan (ps, 1000 ms) only when the VDF value is 0', async () => {
+      vdfWith('0')
+      const runner = createScriptedRunner([
+        psStep({
+          code: 0,
+          stdout: 'reaper SteamLaunch --AppId 440 -- /path/to/game'
+        })
+      ])
+      await expect(readRunningAppId({ runner }, 'linux')).resolves.toBe(440)
+      expect(runner.calls[0]?.opts).toMatchObject({ timeoutMs: 1000 })
+    })
+
+    it.each([
+      ['no reaper line', psStep({ code: 0, stdout: 'no reaper here' })],
+      ['a ps failure', psStep({ code: 1, stdout: '' })],
+      ['a ps timeout', psStep({ code: null, timedOut: true })],
+      [
+        'ps unavailable',
+        { cmd: 'ps', argv: ['-eo', 'args'], error: { code: 'ENOENT' } }
+      ]
+    ])(
+      'returns 0 when the VDF is 0 and the scan finds nothing: %s',
+      async (_n, step) => {
+        vdfWith('0')
+        const runner = createScriptedRunner([step])
+        await expect(readRunningAppId({ runner }, 'linux')).resolves.toBe(0)
+      }
     )
-  })
-
-  it('sends gameStatusUpdate { status: "done" } when RunningAppID goes X→0', () => {
-    // Establish X=440 as the known running game
-    mockRunningAppId(440)
-    pollRunningOnce()
-    ;(sendFrontendMessage as jest.Mock).mockClear()
-
-    mockRunningAppId(0)
-    pollRunningOnce()
-
-    expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
-      appName: '440',
-      runner: 'steam',
-      status: 'done'
-    })
-    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
-      'gameStatusUpdate',
-      expect.objectContaining({ status: 'playing' })
-    )
-  })
-
-  it('sends no message when RunningAppID is unchanged', () => {
-    mockRunningAppId(440)
-    pollRunningOnce() // 0→440
-    ;(sendFrontendMessage as jest.Mock).mockClear()
-
-    // Same value — no delta
-    pollRunningOnce()
-    expect(sendFrontendMessage).not.toHaveBeenCalled()
-  })
-
-  it('sends done for old ID and playing for new ID on X→Y transition', () => {
-    mockRunningAppId(440)
-    pollRunningOnce() // 0→440
-    ;(sendFrontendMessage as jest.Mock).mockClear()
-
-    mockRunningAppId(570)
-    pollRunningOnce() // 440→570
-
-    expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
-      appName: '440',
-      runner: 'steam',
-      status: 'done'
-    })
-    expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
-      appName: '570',
-      runner: 'steam',
-      status: 'playing'
-    })
   })
 })
 
-// ── GAME-05: startRunningPoll() / stopRunningPoll() lifecycle ─────────────────
+describe('createRunningPoll()', () => {
+  const build = (ids: number[] | (() => Promise<number>)) => {
+    const clock = createFakeClock()
+    const notify = jest.fn()
+    const read =
+      typeof ids === 'function'
+        ? ids
+        : jest.fn(async () => (ids.length > 1 ? ids.shift()! : ids[0]!))
+    const poll = createRunningPoll({
+      clock,
+      readRunningAppId: read,
+      notify
+    })
+    return { clock, notify, poll, read }
+  }
 
-describe('startRunningPoll() and stopRunningPoll()', () => {
-  beforeEach(() => {
-    jest.useFakeTimers()
-    stopRunningPoll() // reset state (clears timer + lastKnownRunningAppId)
+  it('sends playing when RunningAppID goes 0 -> X, and no done (no prior game)', async () => {
+    const { poll, notify } = build([440])
+    await poll.pollOnce()
+    expect(notify).toHaveBeenCalledTimes(1)
+    expect(notify).toHaveBeenCalledWith(440, 'playing')
+    expect(poll.lastAppId()).toBe(440)
   })
 
-  afterEach(() => {
-    stopRunningPoll()
-    jest.useRealTimers()
+  it('sends done when RunningAppID goes X -> 0', async () => {
+    const { poll, notify } = build([440, 0])
+    await poll.pollOnce()
+    notify.mockClear()
+    await poll.pollOnce()
+    expect(notify).toHaveBeenCalledTimes(1)
+    expect(notify).toHaveBeenCalledWith(440, 'done')
+    expect(poll.lastAppId()).toBe(0)
   })
 
-  it('startRunningPoll is idempotent — second call does not create a second timer', () => {
-    const spy = jest.spyOn(global, 'setInterval')
-    startRunningPoll(5000)
-    startRunningPoll(5000) // second call is a no-op
-    expect(spy).toHaveBeenCalledTimes(1)
-    spy.mockRestore()
+  it('sends nothing when RunningAppID is unchanged', async () => {
+    const { poll, notify } = build([440])
+    await poll.pollOnce()
+    notify.mockClear()
+    await poll.pollOnce()
+    expect(notify).not.toHaveBeenCalled()
   })
 
-  it('stopRunningPoll clears the timer so a subsequent startRunningPoll creates a new one', () => {
-    const spy = jest.spyOn(global, 'setInterval')
-    startRunningPoll(5000)
-    stopRunningPoll()
-    startRunningPoll(5000) // new registration after stop
-    expect(spy).toHaveBeenCalledTimes(2)
-    spy.mockRestore()
+  it('sends done for the old id then playing for the new id on X -> Y', async () => {
+    const { poll, notify } = build([440, 570])
+    await poll.pollOnce()
+    notify.mockClear()
+    await poll.pollOnce()
+    expect(notify.mock.calls).toEqual([
+      [440, 'done'],
+      [570, 'playing']
+    ])
+  })
+
+  it('start schedules one clock interval, is idempotent, and stop clears it and resets the last id', async () => {
+    const { poll, clock, notify } = build([440])
+    poll.start(5000)
+    poll.start(5000)
+    expect(clock.pendingCount()).toBe(1)
+    clock.advance(5000)
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(notify).toHaveBeenCalledWith(440, 'playing')
+    expect(poll.lastAppId()).toBe(440)
+    poll.stop()
+    expect(clock.pendingCount()).toBe(0)
+    expect(poll.lastAppId()).toBe(0)
+    poll.start(5000)
+    expect(clock.pendingCount()).toBe(1)
+    poll.stop()
+  })
+
+  it('the interval is a default (unref) clock timer: no keepAlive reason', () => {
+    const { poll, clock } = build([0])
+    poll.start()
+    clock.assertNoKeepAlive()
+    poll.stop()
+  })
+
+  it('never overlaps itself: a tick while the probe is still pending is skipped (Pitfall 7)', async () => {
+    let release!: (n: number) => void
+    const read = jest.fn(
+      () =>
+        new Promise<number>((resolve) => {
+          release = resolve
+        })
+    )
+    const { poll, clock, notify } = build(read)
+    poll.start(5000)
+    clock.advance(5000) // tick 1 starts and holds the probe
+    clock.advance(5000) // tick 2 fires while tick 1 is in flight
+    expect(read).toHaveBeenCalledTimes(1)
+    release(440)
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(notify).toHaveBeenCalledWith(440, 'playing')
+    clock.advance(5000) // the flag is released: the next tick probes again
+    expect(read).toHaveBeenCalledTimes(2)
+    release(440)
+    poll.stop()
   })
 })

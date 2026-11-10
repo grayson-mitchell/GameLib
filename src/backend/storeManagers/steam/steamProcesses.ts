@@ -1,0 +1,48 @@
+/**
+ * The process-wide Steam instances built once at boot (66.2 D-05/D-15) and handed out through
+ * `ManagerDeps.steamProcesses`: the running-game poller and the nettop download monitor.
+ * Their former module state (a timer, a last-seen appId, the monitors Map) is closure state of
+ * the instances built here, so a test builds its own and nothing leaks between boots.
+ *
+ * Sidecar exit contract: building the instances starts nothing (no timer, child or watcher);
+ * the poller's clock interval starts in the Steam library manager's init and is unref'd by
+ * default, and the monitors spawn only per polled install and are stopped at stdin EOF.
+ */
+import { sendFrontendMessage } from '../../ipc'
+import type { Clock, ProcessRunner } from '../../process/types'
+import { createRunningPoll, readRunningAppId } from './library/runningPoll'
+import { listSteamClientPids } from './steamClientProcess'
+import {
+  createSteamDownloadMonitor,
+  readContentLogTail
+} from './steamDownloadMonitor'
+
+export function createSteamProcesses(deps: {
+  runner: Pick<ProcessRunner, 'run' | 'spawnLongLived'>
+  clock: Clock
+  platform: NodeJS.Platform
+}) {
+  const { runner, clock, platform } = deps
+  return {
+    runningPoll: createRunningPoll({
+      clock,
+      readRunningAppId: () => readRunningAppId({ runner }, platform),
+      notify: (appId, status) =>
+        sendFrontendMessage('gameStatusUpdate', {
+          appName: String(appId),
+          runner: 'steam',
+          status
+        })
+    }),
+    downloadMonitor: createSteamDownloadMonitor({
+      runner,
+      platform,
+      listPids: () => listSteamClientPids({ runner }, 'darwin'),
+      readTail: readContentLogTail,
+      now: () => clock.now(),
+      parentPid: process.pid
+    })
+  }
+}
+
+export type SteamProcesses = ReturnType<typeof createSteamProcesses>

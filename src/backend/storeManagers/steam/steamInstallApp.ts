@@ -9,11 +9,11 @@
  * default runner passes no `env` (inherits). It is user-triggered and bounded
  * by a timeout, so it leaves no unbounded in-flight work.
  */
-import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
 
 import { steamBridgeHelperPath } from 'backend/constants/paths'
 import { LogPrefix, logWarning } from 'backend/logger'
+import type { ProcessRunner } from 'backend/process/types'
 
 type SteamInstallAppOutcome =
   | { kind: 'ok'; folderIndex: number }
@@ -35,7 +35,7 @@ interface SteamInstallAppDeps {
   helperPath?: string
   /** Only consulted by the uninstall caller (default process.platform). */
   platform?: NodeJS.Platform
-  run?: (
+  run: (
     file: string,
     args: string[],
     timeoutMs: number
@@ -44,27 +44,35 @@ interface SteamInstallAppDeps {
 
 const HELPER_TIMEOUT_MS = 30000
 
-const defaultRun = (
+/**
+ * The helper-run seam over the process runner. Helper truncation, timeout and
+ * spawn failure all map to `code: null` (callers read that as helper-failed).
+ */
+export function createSteamInstallAppRun(deps: {
+  runner: Pick<ProcessRunner, 'run'>
+}): (
   file: string,
   args: string[],
   timeoutMs: number
-): Promise<SteamInstallAppRunResult> =>
-  new Promise((resolve) => {
-    execFile(
-      file,
-      args,
-      { timeout: timeoutMs, maxBuffer: 64 * 1024 },
-      (error, stdout, stderr) => {
-        const rawCode = (error as (Error & { code?: unknown }) | null)?.code
-        const code = error ? (typeof rawCode === 'number' ? rawCode : null) : 0
-        resolve({
-          stdout: String(stdout ?? ''),
-          stderr: String(stderr ?? ''),
-          code
-        })
+) => Promise<SteamInstallAppRunResult> {
+  return async (file, args, timeoutMs) => {
+    try {
+      const r = await deps.runner.run(file, args, {
+        timeoutMs,
+        maxBufferBytes: 64 * 1024,
+        windowsHide: true,
+        stdin: ''
+      })
+      return {
+        stdout: r.stdout,
+        stderr: r.stderr,
+        code: r.truncated || r.timedOut ? null : r.code
       }
-    )
-  })
+    } catch {
+      return { stdout: '', stderr: '', code: null }
+    }
+  }
+}
 
 function warn(appId: string, detail: string, stderr = ''): void {
   const tail = stderr.trim().slice(-300)
@@ -87,7 +95,7 @@ async function callHelper(
 ): Promise<HelperCall> {
   let res: SteamInstallAppRunResult
   try {
-    res = await (deps.run ?? defaultRun)(helperPath, args, HELPER_TIMEOUT_MS)
+    res = await deps.run(helperPath, args, HELPER_TIMEOUT_MS)
   } catch (error) {
     warn(appId, `helper-failed (${String(error)})`)
     return { ok: false, reason: 'helper-failed', stderr: '' }
@@ -117,8 +125,8 @@ async function callHelper(
 
 export async function requestSteamInstallApp(
   appId: string,
-  opts: { libraryPath?: string } = {},
-  deps: SteamInstallAppDeps = {}
+  opts: { libraryPath?: string },
+  deps: SteamInstallAppDeps
 ): Promise<SteamInstallAppOutcome> {
   if (!/^\d{1,10}$/.test(appId)) {
     return { kind: 'unavailable', reason: 'bad-appid' }
@@ -160,7 +168,7 @@ export async function requestSteamInstallApp(
  */
 export async function requestSteamUninstallApp(
   appId: string,
-  deps: SteamInstallAppDeps = {}
+  deps: SteamInstallAppDeps
 ): Promise<SteamUninstallAppOutcome> {
   if (!/^\d{1,10}$/.test(appId)) {
     return { kind: 'unavailable', reason: 'bad-appid' }

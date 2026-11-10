@@ -8,9 +8,6 @@
  */
 import { LogPrefix, logInfo, logWarning } from 'backend/logger'
 
-import { readRunningAppId } from './library/runningPoll'
-import { isProcessRunningFromFolder } from './runningFromFolder'
-import { requestSteamUninstallApp } from './steamInstallApp'
 import type { SteamUninstallAppOutcome } from './steamInstallApp'
 
 type SteamNativeDeleteDecision =
@@ -20,13 +17,11 @@ type SteamNativeDeleteDecision =
   | { route: 'steam-error'; code: number }
   | { route: 'refused'; reason: string }
 
-interface SteamNativeDeleteDeps {
-  readRunningAppId?: () => number
-  isProcessRunningFromFolder?: (folder: string) => Promise<boolean>
+export interface SteamNativeDeleteDeps {
+  readRunningAppId: () => Promise<number>
+  isProcessRunningFromFolder: (folder: string) => Promise<boolean>
   platform?: NodeJS.Platform
-  requestSteamUninstallApp?: (
-    appId: string
-  ) => Promise<SteamUninstallAppOutcome>
+  requestSteamUninstallApp: (appId: string) => Promise<SteamUninstallAppOutcome>
 }
 
 /** EAppUpdateError "not installed" -- also what signed-out Steam answers. */
@@ -41,16 +36,15 @@ const EAPPUPDATE_APP_RUNNING = 16
 export async function decideSteamNativeDelete(
   appId: string,
   installFolder: string | undefined,
-  deps: SteamNativeDeleteDeps = {}
+  deps: SteamNativeDeleteDeps
 ): Promise<SteamNativeDeleteDecision> {
-  const running = deps.readRunningAppId ?? readRunningAppId
-  const inFolder = deps.isProcessRunningFromFolder ?? isProcessRunningFromFolder
+  const running = deps.readRunningAppId
+  const inFolder = deps.isProcessRunningFromFolder
   const platform = deps.platform ?? process.platform
-  const uninstall =
-    deps.requestSteamUninstallApp ?? ((id) => requestSteamUninstallApp(id))
+  const uninstall = deps.requestSteamUninstallApp
 
   try {
-    if (running() === Number(appId)) {
+    if ((await running()) === Number(appId)) {
       logInfo(
         `SteamGame: delete of appId ${appId} refused: game is running`,
         LogPrefix.Steam

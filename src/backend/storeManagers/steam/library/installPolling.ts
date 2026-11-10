@@ -3,10 +3,6 @@ import { isMac } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../../ipc'
 import { library } from '../state'
 import { isNativeInstallInFlight } from '../gameSessionState'
-import {
-  startSteamDownloadMonitor,
-  stopSteamDownloadMonitor
-} from '../steamDownloadMonitor'
 import { type AcfSource, type PollOptions } from './installRoot'
 import type { ManagerDeps } from 'backend/services/types'
 import {
@@ -149,9 +145,9 @@ export function startInstallPolling(
     // quick 261029-sex: an upgrade to handoff or a retarget ends eligibility;
     // a delegated native poll gains it. Start is idempotent per appId.
     if (isLiveMonitorEligible(existingEntry)) {
-      void startSteamDownloadMonitor(appId)
+      void deps.steamProcesses.downloadMonitor.start(appId)
     } else {
-      stopSteamDownloadMonitor(appId)
+      deps.steamProcesses.downloadMonitor.stop(appId)
     }
     return // idempotent — no second interval either way
   }
@@ -257,7 +253,7 @@ export function startInstallPolling(
         `Steam: install polling for appId ${appId} hit safety cap (${MAX_TICKS} ticks); relying on D-01 focus backstop`,
         LogPrefix.Steam
       )
-      stopInstallPolling(appId)
+      stopInstallPolling(deps, appId)
       return
     }
 
@@ -332,7 +328,7 @@ export function startInstallPolling(
           kind: 'install-not-started',
           seq: nextSteamRequestNoticeSeq()
         })
-        stopInstallPolling(appId)
+        stopInstallPolling(deps, appId)
         return
       } else if (
         entry.seenDownloading &&
@@ -351,7 +347,7 @@ export function startInstallPolling(
           runner: 'steam',
           status: 'done'
         })
-        stopInstallPolling(appId)
+        stopInstallPolling(deps, appId)
       }
     } else if (
       !entry.seenDownloading &&
@@ -367,7 +363,7 @@ export function startInstallPolling(
         runner: 'steam',
         status: 'done'
       })
-      stopInstallPolling(appId)
+      stopInstallPolling(deps, appId)
     } else if (
       !entry.seenDownloading &&
       entry.ticks === GRACE_TICKS &&
@@ -393,7 +389,8 @@ export function startInstallPolling(
   entry.timer = timer
   activePolls.set(appId, entry)
   if (delegatedToSteamClient) markManagedBySteam(appId)
-  if (isLiveMonitorEligible(entry)) void startSteamDownloadMonitor(appId)
+  if (isLiveMonitorEligible(entry))
+    void deps.steamProcesses.downloadMonitor.start(appId)
 }
 
 /**
@@ -439,14 +436,17 @@ export function isDelegatedInstallPolling(appId: string): boolean {
  * library/ACF reconcile picks it up. Returns true when a delegated poll was
  * stopped; false when there is no poll or it is not delegated.
  */
-export function cancelDelegatedInstall(appId: string): boolean {
+export function cancelDelegatedInstall(
+  deps: Pick<ManagerDeps, 'steamProcesses'>,
+  appId: string
+): boolean {
   const entry = activePolls.get(appId)
   if (!entry || !entry.delegatedToSteamClient) return false
   logInfo(
     `Steam: Cancel stops GameLib's wait for the Steam-owned install of appId ${appId}; nothing is cancelled inside Steam (quick 261105-vfq)`,
     LogPrefix.Steam
   )
-  stopInstallPolling(appId)
+  stopInstallPolling(deps, appId)
   sendFrontendMessage('gameStatusUpdate', {
     appName: appId,
     runner: 'steam',

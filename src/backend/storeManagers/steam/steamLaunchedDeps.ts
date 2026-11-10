@@ -6,7 +6,6 @@ import { getSteamLibraries, sendGameStatusUpdate } from 'backend/utils'
 
 import { readAcfInstalldir } from './acfInstalldir'
 import { sanitizeInstalldir } from './installLocation'
-import { getPollerRunningAppId } from './library/runningPoll'
 import { startSteamLaunchWatch } from './steamLaunchWatch'
 import type { SteamLaunchWatchDeps } from './steamLaunchWatch'
 import type { StopSteamLaunchedGameDeps } from './stopSteamLaunchedGame'
@@ -44,7 +43,7 @@ export function steamLaunchedStopDeps(
   }
 }
 
-export function steamLaunchWatchDeps(deps: ManagerDeps): SteamLaunchWatchDeps {
+function steamLaunchWatchDeps(deps: ManagerDeps): SteamLaunchWatchDeps {
   const { signal: _signal, ...stop } = steamLaunchedStopDeps(deps)
   return {
     ...stop,
@@ -55,7 +54,8 @@ export function steamLaunchWatchDeps(deps: ManagerDeps): SteamLaunchWatchDeps {
     registry: deps.libraryManagers.steam.launchWatches,
     sendStatus: (appId, status) =>
       sendGameStatusUpdate({ appName: appId, runner: 'steam', status }),
-    pollerReports: (appId) => String(getPollerRunningAppId()) === appId
+    pollerReports: (appId) =>
+      String(deps.steamProcesses.runningPoll.lastAppId()) === appId
   }
 }
 

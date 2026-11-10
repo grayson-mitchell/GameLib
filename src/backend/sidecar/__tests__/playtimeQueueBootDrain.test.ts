@@ -136,6 +136,7 @@ function bootedWorld(opts?: {
         spawnAsync: fakes.spawnAsync,
         runner: fakes.runner,
         clock: fakes.clock,
+        steamProcesses: fakes.steamProcesses,
         getDownloadQueue: () => fakes.downloadQueue
       })
       prebuilt.managers = built

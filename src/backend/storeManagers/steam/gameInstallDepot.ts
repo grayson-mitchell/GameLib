@@ -27,7 +27,10 @@ import {
   UnsafeInstalldirError
 } from './installLocation'
 import { isSteamExperimentalInstallAppEnabled } from './experimentalInstallAppSetting'
-import { requestSteamInstallApp } from './steamInstallApp'
+import {
+  createSteamInstallAppRun,
+  requestSteamInstallApp
+} from './steamInstallApp'
 import { classifyDepotError } from './depotErrors'
 import { withTimeout, STEAM_PICS_TIMEOUT_MS } from './withTimeout'
 import { nativeInstallsInFlight } from './gameSessionState'
@@ -261,9 +264,11 @@ export async function runNativeDepotDownload(
       const pid = await adoption.probeMacSteamPid().catch(() => null)
       let adoptedByInstallApp = false
       if (pid !== null && isSteamExperimentalInstallAppEnabled()) {
-        const outcome = await requestSteamInstallApp(steamGame.appId, {
-          libraryPath: dirname(dirname(handoff.manifestPath))
-        })
+        const outcome = await requestSteamInstallApp(
+          steamGame.appId,
+          { libraryPath: dirname(dirname(handoff.manifestPath)) },
+          { run: createSteamInstallAppRun({ runner: steamGame.deps.runner }) }
+        )
         if (outcome.kind === 'ok') {
           adoptedByInstallApp = true
           adoption.clearPendingAdoption(

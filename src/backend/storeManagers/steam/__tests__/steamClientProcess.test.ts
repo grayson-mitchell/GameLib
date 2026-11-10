@@ -3,13 +3,17 @@
  * probe the install poller uses to tell whether the client that was running
  * when GameLib wrote a manifest has since exited.
  *
- * `child_process.execFile` is mocked: no real `tasklist`/`pgrep` is spawned
- * (the two-profile rule is moot here -- the probe reads no user profile and
- * passes no env, and nothing in this suite can spawn). The real Windows probe
- * was exercised once, by hand, against the live Steam client (see the debug
- * session's Evidence).
+ * A scripted process runner stands in for the real one: no real
+ * `tasklist`/`pgrep` is spawned (the two-profile rule is moot here -- the
+ * probe reads no user profile and passes no env, and nothing in this suite
+ * can spawn). The real Windows probe was exercised once, by hand, against
+ * the live Steam client (see the debug session's Evidence).
  */
-import { execFile } from 'child_process'
+import { join } from 'path'
+import {
+  createScriptedRunner,
+  type ScriptStep
+} from 'backend/testUtils/scriptedRunner'
 import {
   listSteamClientPids,
   parsePgrepPids,
@@ -23,31 +27,22 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
 }))
-jest.mock('child_process', () => ({
-  execFile: jest.fn()
-}))
-
-type ExecCb = (
-  err: (Error & { code?: number | string }) | null,
-  stdout: string,
-  stderr: string
-) => void
-
-/** Makes the next execFile call finish with `code`/`stdout` (code 0 = success). */
-function mockExec(code: number | string, stdout = '') {
-  jest.mocked(execFile).mockImplementation(((
-    _file: string,
-    _args: string[],
-    _opts: unknown,
-    cb: ExecCb
-  ) => {
-    if (code === 0) cb(null, stdout, '')
-    else cb(Object.assign(new Error(`exit ${code}`), { code }), stdout, '')
-    return {} as never
-  }) as never)
+/** One scripted step; a string code is a spawn error (ENOENT), a number an exit code. */
+function step(
+  cmd: string,
+  code: number | string,
+  stdout = '',
+  extra: Partial<ScriptStep> = {}
+): ScriptStep {
+  return typeof code === 'string'
+    ? { cmd, error: { code }, ...extra }
+    : { cmd, result: { code, stdout }, ...extra }
 }
 
-const calls = () => jest.mocked(execFile).mock.calls
+function probe(...steps: ScriptStep[]) {
+  const runner = createScriptedRunner(steps)
+  return { runner, deps: { runner } }
+}
 
 describe('parseTasklistSteamPids()', () => {
   it('reads the PID of a steam.exe CSV row', () => {
@@ -100,21 +95,22 @@ describe('parsePgrepPids()', () => {
   })
 })
 
+const sysRoot = () => process.env.SystemRoot ?? 'C:\\Windows'
+const tasklist = () => join(sysRoot(), 'System32', 'tasklist.exe')
+
 describe('listSteamClientPids()', () => {
   describe('win32', () => {
     it('runs tasklist filtered to steam.exe (image + PID, so PID reuse by another program is harmless) and returns its PIDs', async () => {
-      mockExec(0, '"steam.exe","13712","Console","1","183,580 K"\r\n')
+      const { runner, deps } = probe(
+        step(tasklist(), 0, '"steam.exe","13712","Console","1","183,580 K"\r\n')
+      )
 
-      await expect(listSteamClientPids('win32')).resolves.toEqual([13712])
+      await expect(listSteamClientPids(deps, 'win32')).resolves.toEqual([13712])
 
-      expect(calls()).toHaveLength(1)
-      const [file, args, opts] = calls()[0] as unknown as [
-        string,
-        string[],
-        { timeout: number; windowsHide: boolean }
-      ]
-      expect(file.toLowerCase()).toMatch(/tasklist\.exe$/)
-      expect(args).toEqual([
+      expect(runner.calls).toHaveLength(1)
+      const call = runner.calls[0]
+      expect(call?.cmd.toLowerCase()).toMatch(/tasklist\.exe$/)
+      expect(call?.argv).toEqual([
         '/FI',
         'IMAGENAME eq steam.exe',
         '/FO',
@@ -122,78 +118,98 @@ describe('listSteamClientPids()', () => {
         '/NH'
       ])
       // Bounded and windowless; no env literal (nothing profile-dependent).
-      expect(opts.timeout).toBeGreaterThan(0)
-      expect(opts.windowsHide).toBe(true)
-      expect(opts).not.toHaveProperty('env')
+      expect(call?.opts).toMatchObject({
+        timeoutMs: 5000,
+        windowsHide: true,
+        stdin: ''
+      })
+      expect(call?.env).toBeUndefined()
     })
 
     it('returns [] (a definite "not running") when tasklist matches nothing', async () => {
-      mockExec(
-        0,
-        'INFO: No tasks are running which match the specified criteria.\r\n'
+      const { deps } = probe(
+        step(
+          tasklist(),
+          0,
+          'INFO: No tasks are running which match the specified criteria.\r\n'
+        )
       )
-      await expect(listSteamClientPids('win32')).resolves.toEqual([])
+      await expect(listSteamClientPids(deps, 'win32')).resolves.toEqual([])
     })
 
-    it('returns undefined ("unknown", callers fail open) when tasklist fails or cannot be spawned', async () => {
-      mockExec('ENOENT')
-      await expect(listSteamClientPids('win32')).resolves.toBeUndefined()
-      mockExec(1)
-      await expect(listSteamClientPids('win32')).resolves.toBeUndefined()
+    it('returns undefined ("unknown", callers fail open) when tasklist fails, times out or cannot be spawned', async () => {
+      for (const s of [
+        step(tasklist(), 'ENOENT'),
+        step(tasklist(), 1),
+        {
+          cmd: tasklist(),
+          result: { code: null, timedOut: true }
+        } satisfies ScriptStep
+      ]) {
+        const { deps } = probe(s)
+        await expect(
+          listSteamClientPids(deps, 'win32')
+        ).resolves.toBeUndefined()
+      }
     })
   })
 
   describe('darwin', () => {
-    it('runs pgrep -x steam_osx and returns its PIDs', async () => {
-      mockExec(0, '5150\n')
+    it('runs pgrep -x steam_osx and returns its PIDs in the order pgrep printed them', async () => {
+      const { runner, deps } = probe(step('/usr/bin/pgrep', 0, '12\n7\n'))
 
-      await expect(listSteamClientPids('darwin')).resolves.toEqual([5150])
+      await expect(listSteamClientPids(deps, 'darwin')).resolves.toEqual([
+        12, 7
+      ])
 
-      const [file, args] = calls()[0] as unknown as [string, string[]]
-      expect(file).toBe('/usr/bin/pgrep')
-      expect(args).toEqual(['-x', 'steam_osx'])
+      expect(runner.calls[0]?.cmd).toBe('/usr/bin/pgrep')
+      expect(runner.calls[0]?.argv).toEqual(['-x', 'steam_osx'])
+      expect(runner.calls[0]?.opts).toMatchObject({ timeoutMs: 5000 })
     })
 
     it('pgrep exit 1 is a definite "not running" ([]), any other failure is unknown (undefined)', async () => {
-      mockExec(1)
-      await expect(listSteamClientPids('darwin')).resolves.toEqual([])
-      mockExec(2)
-      await expect(listSteamClientPids('darwin')).resolves.toBeUndefined()
-      mockExec('ENOENT')
-      await expect(listSteamClientPids('darwin')).resolves.toBeUndefined()
+      await expect(
+        listSteamClientPids(probe(step('/usr/bin/pgrep', 1)).deps, 'darwin')
+      ).resolves.toEqual([])
+      await expect(
+        listSteamClientPids(probe(step('/usr/bin/pgrep', 2)).deps, 'darwin')
+      ).resolves.toBeUndefined()
+      await expect(
+        listSteamClientPids(
+          probe(step('/usr/bin/pgrep', 'ENOENT')).deps,
+          'darwin'
+        )
+      ).resolves.toBeUndefined()
     })
   })
 
   describe('linux', () => {
     it('runs pgrep -x steam and returns its PIDs', async () => {
-      mockExec(0, '900\n901\n')
+      const { runner, deps } = probe(step('pgrep', 0, '900\n901\n'))
 
-      await expect(listSteamClientPids('linux')).resolves.toEqual([900, 901])
+      await expect(listSteamClientPids(deps, 'linux')).resolves.toEqual([
+        900, 901
+      ])
 
-      const [, args] = calls()[0] as unknown as [string, string[]]
-      expect(args).toEqual(['-x', 'steam'])
+      expect(runner.calls[0]?.argv).toEqual(['-x', 'steam'])
     })
 
     it('pgrep exit 1 is [] and a missing pgrep is unknown', async () => {
-      mockExec(1)
-      await expect(listSteamClientPids('linux')).resolves.toEqual([])
-      mockExec('ENOENT')
-      await expect(listSteamClientPids('linux')).resolves.toBeUndefined()
+      await expect(
+        listSteamClientPids(probe(step('pgrep', 1)).deps, 'linux')
+      ).resolves.toEqual([])
+      await expect(
+        listSteamClientPids(probe(step('pgrep', 'ENOENT')).deps, 'linux')
+      ).resolves.toBeUndefined()
     })
   })
 
   it('returns undefined on a platform it has no probe for, without spawning anything', async () => {
+    const { runner, deps } = probe()
     await expect(
-      listSteamClientPids('freebsd' as unknown as NodeJS.Platform)
+      listSteamClientPids(deps, 'freebsd' as unknown as NodeJS.Platform)
     ).resolves.toBeUndefined()
-    expect(calls()).toHaveLength(0)
-  })
-
-  it('never rejects, even if execFile throws synchronously', async () => {
-    jest.mocked(execFile).mockImplementation((() => {
-      throw new Error('boom')
-    }) as never)
-    await expect(listSteamClientPids('win32')).resolves.toBeUndefined()
+    expect(runner.calls).toHaveLength(0)
   })
 })
 
@@ -211,44 +227,59 @@ describe('parsePidTokenLines()', () => {
 
 describe('readSteamProcessStartTokens()', () => {
   it('spawns nothing for an empty or invalid pid list', async () => {
-    await expect(readSteamProcessStartTokens([], 'linux')).resolves.toEqual(
-      new Map()
-    )
+    const { runner, deps } = probe()
     await expect(
-      readSteamProcessStartTokens([-1, 1.5, NaN], 'win32')
+      readSteamProcessStartTokens(deps, [], 'linux')
     ).resolves.toEqual(new Map())
-    expect(calls()).toHaveLength(0)
+    await expect(
+      readSteamProcessStartTokens(deps, [-1, 1.5, NaN], 'win32')
+    ).resolves.toEqual(new Map())
+    expect(runner.calls).toHaveLength(0)
   })
 
-  it('darwin uses /bin/ps with lstart', async () => {
-    mockExec(0, '4410 Thu Oct 29 12:12:31 2026\n')
-    const r = await readSteamProcessStartTokens([4410, 4411], 'darwin')
+  it('darwin uses /bin/ps with lstart and the 15 s bound', async () => {
+    const { runner, deps } = probe(
+      step('/bin/ps', 0, '4410 Thu Oct 29 12:12:31 2026\n')
+    )
+    const r = await readSteamProcessStartTokens(deps, [4410, 4411], 'darwin')
     expect(r).toEqual(new Map([[4410, 'Thu Oct 29 12:12:31 2026']]))
-    const [file, args] = calls()[0] as unknown as [string, string[]]
-    expect(file).toBe('/bin/ps')
-    expect(args).toEqual(['-o', 'pid=,lstart=', '-p', '4410,4411'])
+    expect(runner.calls[0]?.cmd).toBe('/bin/ps')
+    expect(runner.calls[0]?.argv).toEqual([
+      '-o',
+      'pid=,lstart=',
+      '-p',
+      '4410,4411'
+    ])
+    expect(runner.calls[0]?.opts).toMatchObject({ timeoutMs: 15000 })
   })
 
   it('linux uses bare ps; code 1 is empty, other codes unknown', async () => {
-    mockExec(0, '900 Thu Oct 29 12:12:31 2026\n')
-    await readSteamProcessStartTokens([900], 'linux')
-    expect((calls()[0] as unknown as [string])[0]).toBe('ps')
-    mockExec(1)
-    await expect(readSteamProcessStartTokens([900], 'linux')).resolves.toEqual(
-      new Map()
-    )
-    mockExec(2)
+    const first = probe(step('ps', 0, '900 Thu Oct 29 12:12:31 2026\n'))
+    await readSteamProcessStartTokens(first.deps, [900], 'linux')
+    expect(first.runner.calls[0]?.cmd).toBe('ps')
     await expect(
-      readSteamProcessStartTokens([900], 'linux')
+      readSteamProcessStartTokens(probe(step('ps', 1)).deps, [900], 'linux')
+    ).resolves.toEqual(new Map())
+    await expect(
+      readSteamProcessStartTokens(probe(step('ps', 2)).deps, [900], 'linux')
     ).resolves.toBeUndefined()
   })
 
   it('win32 uses PowerShell Get-Process ticks', async () => {
-    mockExec(0, '13712 638659123450000000\r\n99 5\r\n')
-    const r = await readSteamProcessStartTokens([13712, 4410], 'win32')
+    const ps = join(
+      sysRoot(),
+      'System32',
+      'WindowsPowerShell',
+      'v1.0',
+      'powershell.exe'
+    )
+    const { runner, deps } = probe(
+      step(ps, 0, '13712 638659123450000000\r\n99 5\r\n')
+    )
+    const r = await readSteamProcessStartTokens(deps, [13712, 4410], 'win32')
     expect(r).toEqual(new Map([[13712, '638659123450000000']]))
-    const [file, args] = calls()[0] as unknown as [string, string[]]
-    expect(file).toMatch(/powershell\.exe$/)
+    const args = runner.calls[0]?.argv ?? []
+    expect(runner.calls[0]?.cmd).toMatch(/powershell\.exe$/)
     expect(args.slice(0, 3)).toEqual([
       '-NoProfile',
       '-NonInteractive',
@@ -258,15 +289,18 @@ describe('readSteamProcessStartTokens()', () => {
     expect(args[3]).toContain('-ErrorAction SilentlyContinue')
     expect(args[3]).toContain('StartTime.ToUniversalTime().Ticks')
     expect(at(args, 3).endsWith('exit 0')).toBe(true)
-    mockExec(1)
     await expect(
-      readSteamProcessStartTokens([13712], 'win32')
+      readSteamProcessStartTokens(probe(step(ps, 1)).deps, [13712], 'win32')
     ).resolves.toBeUndefined()
   })
 
   it('is undefined on an unsupported platform', async () => {
     await expect(
-      readSteamProcessStartTokens([1], 'freebsd' as unknown as NodeJS.Platform)
+      readSteamProcessStartTokens(
+        probe().deps,
+        [1],
+        'freebsd' as unknown as NodeJS.Platform
+      )
     ).resolves.toBeUndefined()
   })
 })

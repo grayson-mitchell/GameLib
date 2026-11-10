@@ -254,10 +254,10 @@ function defaultRestartDeps(): RestartDeps {
   return {
     readRunningAppId: () => {
       /* eslint-disable @typescript-eslint/no-require-imports */
-      const { readRunningAppId } =
+      const { readMacRunningAppId } =
         require('./library/runningPoll') as typeof import('./library/runningPoll')
       /* eslint-enable @typescript-eslint/no-require-imports */
-      return readRunningAppId()
+      return readMacRunningAppId()
     },
     // Restarting Steam mid go-offline wrap would bring it online and kick
     // GameLib's CM session, so refuse while the wrap is owed.

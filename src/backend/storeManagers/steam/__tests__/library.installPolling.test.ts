@@ -1,5 +1,6 @@
 import {
   createTestManagerDeps,
+  createInertSteamProcesses,
   createTestStores
 } from 'backend/testUtils/testServices'
 /**
@@ -33,6 +34,7 @@ import type { Stores } from 'backend/services/types'
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
+  steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
 })
 
@@ -103,13 +105,6 @@ jest.mock('../user')
 jest.mock('backend/online_monitor', () => ({
   runOnceWhenOnline: jest.fn(),
   isOnline: jest.fn().mockReturnValue(false)
-}))
-
-// ── child_process mock — spawnSync (Windows reg.exe) + execFileSync (Linux ps,
-// MAC32-03 lipo/file) ─────────────────────────────────────────────────────────
-jest.mock('child_process', () => ({
-  spawnSync: jest.fn(),
-  execFileSync: jest.fn()
 }))
 
 // ── electron mock — dialog.showMessageBox (MAC32-03 i386 recovery confirm) +
@@ -225,11 +220,6 @@ jest.mock('../metacriticCapture', () => ({
 // = fail open (no hold), so every pre-existing test keeps its old behaviour;
 // the D-UAT-13 describe below drives it explicitly. Never a real child spawn.
 // quick 261029-sex: bare jest.fn = undefined = no live signal = ACF behaviour.
-jest.mock('../steamDownloadMonitor', () => ({
-  startSteamDownloadMonitor: jest.fn(),
-  readSteamDownloadMonitor: jest.fn(),
-  stopSteamDownloadMonitor: jest.fn()
-}))
 jest.mock('../steamClientProcess', () => ({
   listSteamClientPids: jest.fn(),
   // quick 261029-pkp: start-time identity probe (bare jest.fn = undefined =
@@ -296,8 +286,8 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
   })
 
   afterEach(() => {
-    stopInstallPolling('730')
-    stopInstallPolling('731')
+    stopInstallPolling(steamTestDeps, '730')
+    stopInstallPolling(steamTestDeps, '731')
     isNativeInstallInFlightSpy?.mockRestore()
     isNativeInstallInFlightSpy = undefined
     jest.useRealTimers()
@@ -314,7 +304,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
   it('stopInstallPolling clears the entry so startInstallPolling can register a new interval', () => {
     const setIntervalSpy = jest.spyOn(global, 'setInterval')
     startInstallPolling(steamTestDeps, '730', 3000)
-    stopInstallPolling('730')
+    stopInstallPolling(steamTestDeps, '730')
     startInstallPolling(steamTestDeps, '730', 3000) // new registration — entry was cleared by stop
     expect(setIntervalSpy).toHaveBeenCalledTimes(2)
     setIntervalSpy.mockRestore()
@@ -869,28 +859,28 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     jest.mocked(sendFrontendMessage).mockClear()
     ;(notify as jest.Mock).mockClear()
 
-    expect(cancelDelegatedInstall('730')).toBe(false) // no poll
+    expect(cancelDelegatedInstall(steamTestDeps, '730')).toBe(false) // no poll
 
     const interval = 10
     startInstallPolling(steamTestDeps, '730', { intervalMs: interval }) // bare poll
-    expect(cancelDelegatedInstall('730')).toBe(false)
+    expect(cancelDelegatedInstall(steamTestDeps, '730')).toBe(false)
     await jest.advanceTimersByTimeAsync(interval * 2)
     const ticking = (existsSync as jest.Mock).mock.calls.length
     await jest.advanceTimersByTimeAsync(interval * 2)
     expect((existsSync as jest.Mock).mock.calls.length).toBeGreaterThan(ticking)
-    stopInstallPolling('730')
+    stopInstallPolling(steamTestDeps, '730')
 
     startInstallPolling(steamTestDeps, '730', {
       intervalMs: interval,
       delegatedToSteamClient: true
     })
-    expect(cancelDelegatedInstall('730')).toBe(true)
+    expect(cancelDelegatedInstall(steamTestDeps, '730')).toBe(true)
     expect(doneCalls()).toHaveLength(1)
     expect(notify).not.toHaveBeenCalled()
     const callsAfter = (existsSync as jest.Mock).mock.calls.length
     await jest.advanceTimersByTimeAsync(interval * 5)
     expect((existsSync as jest.Mock).mock.calls.length).toBe(callsAfter)
-    expect(cancelDelegatedInstall('730')).toBe(false)
+    expect(cancelDelegatedInstall(steamTestDeps, '730')).toBe(false)
   })
 
   it('PVK-3: two install give-ups in one session carry strictly increasing seq', async () => {
@@ -924,13 +914,13 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     expect(isDelegatedInstallPolling('730')).toBe(false) // no poll
     startInstallPolling(steamTestDeps, '730', { intervalMs: 10 }) // bare poll
     expect(isDelegatedInstallPolling('730')).toBe(false)
-    stopInstallPolling('730')
+    stopInstallPolling(steamTestDeps, '730')
     startInstallPolling(steamTestDeps, '730', {
       intervalMs: 10,
       delegatedToSteamClient: true
     })
     expect(isDelegatedInstallPolling('730')).toBe(true)
-    cancelDelegatedInstall('730')
+    cancelDelegatedInstall(steamTestDeps, '730')
     expect(isDelegatedInstallPolling('730')).toBe(false)
   })
 

@@ -1,32 +1,30 @@
 import { logInfo, LogPrefix } from 'backend/logger'
 import { join } from 'path'
-import { spawnSync, execFileSync } from 'child_process'
 import { existsSync, readFileSync } from 'graceful-fs'
 import { parse } from '@node-steam/vdf'
-import { isWindows, isMac } from 'backend/constants/environment'
 import { userHome } from 'backend/constants/paths'
-import { sendFrontendMessage } from '../../../ipc'
+import type { Clock, ProcessRunner, TimerHandle } from 'backend/process/types'
 
-/** Module-level timer for the running-game poller (single global poll). */
-let runningPollTimer: NodeJS.Timeout | null = null
-
-/** Last RunningAppID seen by the poller — used to detect deltas. */
-let lastKnownRunningAppId = 0
+export interface RunningPollProbeDeps {
+  runner: Pick<ProcessRunner, 'run'>
+}
 
 /**
  * Reads Windows HKCU\Software\Valve\Steam\RunningAppID via reg.exe.
  * Uses argv-form spawnSync (no shell) — registry path is hardcoded (T-06-04).
  * Returns 0 on missing value, non-zero exit status, or thrown error.
  */
-function windowsRunningAppId(): number {
+async function windowsRunningAppId(
+  deps: RunningPollProbeDeps
+): Promise<number> {
   try {
-    const result = spawnSync(
+    const result = await deps.runner.run(
       'reg',
       ['query', 'HKCU\\Software\\Valve\\Steam', '/v', 'RunningAppID'],
-      { encoding: 'utf8', windowsHide: true, timeout: 2000 }
+      { windowsHide: true, timeoutMs: 2000, stdin: '' }
     )
-    if (result.status !== 0) return 0
-    const match = result.stdout?.match(
+    if (result.timedOut || result.code !== 0) return 0
+    const match = result.stdout.match(
       /RunningAppID\s+REG_DWORD\s+0x([0-9a-f]+)/i
     )
     const hex = match?.[1]
@@ -41,7 +39,8 @@ function windowsRunningAppId(): number {
  * Parses via @node-steam/vdf with exact casing (Pitfall 4 — T-06-06).
  * Returns 0 when file absent, parse fails, or key missing.
  */
-function macOsRunningAppId(): number {
+/** The macOS reader: pure file read, no spawn. */
+export function readMacRunningAppId(): number {
   const regPath = join(
     userHome,
     'Library',
@@ -83,13 +82,16 @@ function linuxRegistryVdfRunningAppId(): number {
  * the running AppId. Uses argv-form execFileSync with a narrow regex (T-06-05).
  * Returns 0 when no reaper found or execFileSync fails.
  */
-function linuxFallbackRunningAppId(): number {
+async function linuxFallbackRunningAppId(
+  deps: RunningPollProbeDeps
+): Promise<number> {
   try {
-    const output = execFileSync('ps', ['-eo', 'args'], {
-      encoding: 'utf8',
-      timeout: 1000
+    const result = await deps.runner.run('ps', ['-eo', 'args'], {
+      timeoutMs: 1000,
+      stdin: ''
     })
-    const match = output.match(/reaper SteamLaunch --AppId (\d+)/)
+    if (result.timedOut || result.truncated || result.code !== 0) return 0
+    const match = result.stdout.match(/reaper SteamLaunch --AppId (\d+)/)
     const digits = match?.[1]
     return digits === undefined ? 0 : parseInt(digits, 10)
   } catch {
@@ -109,89 +111,90 @@ function linuxFallbackRunningAppId(): number {
  * Returns 0 when no game is running or on any error. Never throws.
  * Exported for unit testing.
  */
-export function readRunningAppId(): number {
-  if (isWindows) return windowsRunningAppId()
-  if (isMac) return macOsRunningAppId()
+export async function readRunningAppId(
+  deps: RunningPollProbeDeps,
+  platform: NodeJS.Platform = process.platform
+): Promise<number> {
+  if (platform === 'win32') return windowsRunningAppId(deps)
+  if (platform === 'darwin') return readMacRunningAppId()
   // Linux: VDF first, reaper fallback when VDF returns 0 (D-05)
   const fromRegistry = linuxRegistryVdfRunningAppId()
-  return fromRegistry !== 0 ? fromRegistry : linuxFallbackRunningAppId()
+  return fromRegistry !== 0 ? fromRegistry : linuxFallbackRunningAppId(deps)
+}
+
+export interface RunningPoll {
+  start(intervalMs?: number): void
+  stop(): void
+  pollOnce(): Promise<void>
+  /** The appId the poller last saw running (0 when none, or never started). */
+  lastAppId(): number
 }
 
 /**
- * Executes one running-game poll tick:
- * - 0→X: sends `playing` for X
- * - X→0: sends `done` for X
- * - X→Y: sends `done` for X then `playing` for Y
+ * The running-game poller as a boot-built instance (D-15). Timer, last id and the in-flight
+ * flag are closure state; the interval is a clock timer (unref'd by default), and a tick
+ * never overlaps a previous one that is still awaiting the probe (Pitfall 7).
+ *
+ * Each tick:
+ * - 0->X: sends `playing` for X
+ * - X->0: sends `done` for X
+ * - X->Y: sends `done` for X then `playing` for Y
  * - unchanged: no-op
  *
- * AppID is scoped to a numeric-only string (T-06-07 — no raw external string).
- * Exported for unit testing.
+ * AppID is scoped to a numeric-only string (T-06-07 -- no raw external string).
  */
-export function pollRunningOnce(): void {
-  const currentAppId = readRunningAppId()
-  if (currentAppId === lastKnownRunningAppId) return
+export function createRunningPoll(deps: {
+  clock: Clock
+  readRunningAppId: () => Promise<number>
+  notify: (appId: number, status: 'playing' | 'done') => void
+}): RunningPoll {
+  let timer: TimerHandle | null = null
+  let lastKnownRunningAppId = 0
+  let inFlight = false
 
-  if (lastKnownRunningAppId !== 0) {
-    sendFrontendMessage('gameStatusUpdate', {
-      appName: String(lastKnownRunningAppId),
-      runner: 'steam',
-      status: 'done'
-    })
-    logInfo(
-      `Steam: running-game poller: game ${lastKnownRunningAppId} stopped`,
-      LogPrefix.Steam
-    )
+  async function pollOnce(): Promise<void> {
+    if (inFlight) return
+    inFlight = true
+    try {
+      const currentAppId = await deps.readRunningAppId()
+      if (currentAppId === lastKnownRunningAppId) return
+      if (lastKnownRunningAppId !== 0) {
+        deps.notify(lastKnownRunningAppId, 'done')
+        logInfo(
+          `Steam: running-game poller: game ${lastKnownRunningAppId} stopped`,
+          LogPrefix.Steam
+        )
+      }
+      if (currentAppId !== 0) {
+        deps.notify(currentAppId, 'playing')
+        logInfo(
+          `Steam: running-game poller: game ${currentAppId} started`,
+          LogPrefix.Steam
+        )
+      }
+      lastKnownRunningAppId = currentAppId
+    } catch {
+      // readRunningAppId never throws; a notify failure must not kill the poll
+    } finally {
+      inFlight = false
+    }
   }
-  if (currentAppId !== 0) {
-    sendFrontendMessage('gameStatusUpdate', {
-      appName: String(currentAppId),
-      runner: 'steam',
-      status: 'playing'
-    })
-    logInfo(
-      `Steam: running-game poller: game ${currentAppId} started`,
-      LogPrefix.Steam
-    )
+
+  return {
+    start(intervalMs = 5000) {
+      if (timer) return // idempotent
+      timer = deps.clock.setInterval(() => void pollOnce(), intervalMs)
+      logInfo('Steam: started running-game poller', LogPrefix.Steam)
+    },
+    stop() {
+      if (timer) {
+        deps.clock.clear(timer)
+        timer = null
+      }
+      lastKnownRunningAppId = 0
+      logInfo('Steam: stopped running-game poller', LogPrefix.Steam)
+    },
+    pollOnce,
+    lastAppId: () => lastKnownRunningAppId
   }
-
-  lastKnownRunningAppId = currentAppId
-}
-
-/**
- * Starts the running-game poller. Idempotent — calling twice has no effect.
- * Polls every intervalMs milliseconds (default 5000 / D-06).
- *
- * Exported for unit testing.
- */
-export function startRunningPoll(intervalMs = 5000): void {
-  if (runningPollTimer) return // idempotent
-  runningPollTimer = setInterval(pollRunningOnce, intervalMs)
-  // Teardown-safety (mirrors the install/uninstall pollers above): unref so a
-  // leaked real poller never keeps a Jest worker alive on its own.
-  // Production-neutral in the Electron main process. pollRunningOnce is
-  // synchronous and its own readRunningAppId() never throws (see docstring),
-  // so no try/catch guard is needed here.
-  runningPollTimer.unref?.()
-  logInfo('Steam: started running-game poller', LogPrefix.Steam)
-}
-
-/**
- * Stops the running-game poller and resets lastKnownRunningAppId to 0 so the
- * next startRunningPoll starts with a clean slate. Safe to call when no poll is
- * active (no-op on timer, always resets state).
- *
- * Exported for unit testing.
- */
-export function stopRunningPoll(): void {
-  if (runningPollTimer) {
-    clearInterval(runningPollTimer)
-    runningPollTimer = null
-  }
-  lastKnownRunningAppId = 0
-  logInfo('Steam: stopped running-game poller', LogPrefix.Steam)
-}
-
-/** The appId the poller last saw running (0 when none, or never started). */
-export function getPollerRunningAppId(): number {
-  return lastKnownRunningAppId
 }

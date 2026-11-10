@@ -24,6 +24,7 @@ import type LegendaryLibraryManager from 'backend/storeManagers/legendary/librar
 import type NileLibraryManager from 'backend/storeManagers/nile/library'
 import type SideloadLibraryManager from 'backend/storeManagers/sideload/library'
 import type SteamLibraryManager from 'backend/storeManagers/steam/library'
+import type { SteamProcesses } from 'backend/storeManagers/steam/steamProcesses'
 
 /** One entry per store family; each is what the family's `createXStores` factory returns. */
 export interface Stores {
@@ -113,6 +114,8 @@ export interface ManagerDeps {
   runner: Pick<ProcessRunner, 'killTracked' | 'spawnLongLived' | 'run'>
   /** The boot clock; timers are unref'd by default (D-04). */
   clock: Clock
+  /** The process-wide Steam instances (running poller, download monitor), built once at boot. */
+  steamProcesses: SteamProcesses
   /**
    * A call-time accessor, never a queue value: the download queue is built by the
    * 'download-queue' boot step, after the managers exist.
@@ -131,6 +134,8 @@ export interface BootServices {
   runner: ManagerDeps['runner']
   /** ctx.clock: the boot clock, read by ManagerDeps.clock (66.2). */
   clock: ManagerDeps['clock']
+  /** The boot's Steam process instances, shared by every ManagerDeps built from these services. */
+  steamProcesses: ManagerDeps['steamProcesses']
   spawnAsync: SpawnAsync
   quit: QuitHandler
   downloadQueue: DownloadQueue

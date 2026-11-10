@@ -1,5 +1,6 @@
 import {
   createTestManagerDeps,
+  createInertSteamProcesses,
   createTestStores
 } from 'backend/testUtils/testServices'
 /**
@@ -312,6 +313,7 @@ import type { Stores } from 'backend/services/types'
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
+  steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
 })
 SteamUser.bindStores(steamTestDeps)

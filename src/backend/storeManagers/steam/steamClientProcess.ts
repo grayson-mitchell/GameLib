@@ -40,7 +40,7 @@
  * `macSteamOffline.ts`; there is no real-profile arm.
  *
  * Sidecar exit contract: nothing runs at import; each probe is one
- * short-lived child bounded by `PROBE_TIMEOUT_MS` (execFile kills it on
+ * short-lived child bounded by `PROBE_TIMEOUT_MS` (the runner kills it on
  * expiry), so no unbounded in-flight work and no long-lived handle. It is
  * only ever called from the install poller, never at boot.
  *
@@ -51,8 +51,8 @@
  * parsed, so it does not depend on locale. It is only called at boot when a
  * hold record exists (zero records means zero spawns), or when a hold arms.
  */
-import { execFile } from 'child_process'
 import { join } from 'path'
+import type { ProcessRunner } from 'backend/process/types'
 import { logWarning, LogPrefix } from 'backend/logger'
 
 /** Hard bound on a single probe child (tasklist measured ~200 ms cold). */
@@ -93,17 +93,29 @@ export function parsePgrepPids(stdout: string): number[] {
 
 type ExecResult = { code: number | string | null | undefined; stdout: string }
 
-function run(
+/** The one runner member these probes use. */
+export interface SteamProbeDeps {
+  runner: Pick<ProcessRunner, 'run'>
+}
+
+/** Maps a runner result onto the old { code, stdout } probe contract. */
+async function run(
+  deps: SteamProbeDeps,
   file: string,
   args: string[],
-  timeout: number = PROBE_TIMEOUT_MS
+  timeoutMs: number = PROBE_TIMEOUT_MS
 ): Promise<ExecResult> {
-  return new Promise<ExecResult>((resolve) => {
-    execFile(file, args, { timeout, windowsHide: true }, (err, stdout) => {
-      const code = err ? ((err as { code?: number | string }).code ?? 'ERR') : 0
-      resolve({ code, stdout: typeof stdout === 'string' ? stdout : '' })
+  try {
+    const r = await deps.runner.run(file, args, {
+      timeoutMs,
+      windowsHide: true,
+      stdin: ''
     })
-  })
+    if (r.timedOut || r.truncated) return { code: 'ERR', stdout: '' }
+    return { code: r.code ?? 'ERR', stdout: r.stdout }
+  } catch {
+    return { code: 'ERR', stdout: '' }
+  }
 }
 
 /**
@@ -113,6 +125,7 @@ function run(
  * `platform` is injectable for tests only; production callers omit it.
  */
 export async function listSteamClientPids(
+  deps: SteamProbeDeps,
   platform: NodeJS.Platform = process.platform
 ): Promise<number[] | undefined> {
   try {
@@ -122,7 +135,7 @@ export async function listSteamClientPids(
         'System32',
         'tasklist.exe'
       )
-      const { code, stdout } = await run(tasklist, [
+      const { code, stdout } = await run(deps, tasklist, [
         '/FI',
         'IMAGENAME eq steam.exe',
         '/FO',
@@ -137,7 +150,7 @@ export async function listSteamClientPids(
     if (platform === 'darwin' || platform === 'linux') {
       const name = platform === 'darwin' ? 'steam_osx' : 'steam'
       const file = platform === 'darwin' ? '/usr/bin/pgrep' : 'pgrep'
-      const { code, stdout } = await run(file, ['-x', name])
+      const { code, stdout } = await run(deps, file, ['-x', name])
       // pgrep: 0 = matched, 1 = nothing matched, anything else = error.
       if (code === 1) return []
       if (code !== 0) return undefined
@@ -176,6 +189,7 @@ export function parsePidTokenLines(stdout: string): Map<number, string> {
  * Only PIDs that were asked for appear in the result.
  */
 export async function readSteamProcessStartTokens(
+  deps: SteamProbeDeps,
   pids: number[],
   platform: NodeJS.Platform = process.platform
 ): Promise<Map<number, string> | undefined> {
@@ -188,6 +202,7 @@ export async function readSteamProcessStartTokens(
     if (platform === 'darwin' || platform === 'linux') {
       const file = platform === 'darwin' ? '/bin/ps' : 'ps'
       result = await run(
+        deps,
         file,
         ['-o', 'pid=,lstart=', '-p', csv],
         START_TOKEN_TIMEOUT_MS
@@ -205,6 +220,7 @@ export async function readSteamProcessStartTokens(
         `Get-Process -Id ${csv} -ErrorAction SilentlyContinue | ` +
         'ForEach-Object { "$($_.Id) $($_.StartTime.ToUniversalTime().Ticks)" }; exit 0'
       result = await run(
+        deps,
         powershell,
         ['-NoProfile', '-NonInteractive', '-Command', script],
         START_TOKEN_TIMEOUT_MS

@@ -490,7 +490,7 @@ export async function installBridgeGameLeased(
       // delete it again. The row is gated on win64ShimPresent, so a later
       // build that bundles steam_api64.dll is not held back by this.
       setBridgeSteamApiPrescreen(steamGame.deps, steamGame.appId, 'x64')
-      stopInstallPolling(steamGame.appId)
+      stopInstallPolling(steamGame.deps, steamGame.appId)
       const removeResult = await bbLifecycle.removePerGameBridgeBottle(
         steamGame.deps,
         steamGame.appId
@@ -550,7 +550,7 @@ export async function installBridgeGameLeased(
       `SteamGame: installBridgeGame found Steam CEG DRM in the exe for appId ${steamGame.appId} (${cegMarkers.join(', ')}) -- CEG needs the Windows Steam client, which a bridge bottle does not have; stopping the bridge install`,
       LogPrefix.Steam
     )
-    stopInstallPolling(steamGame.appId)
+    stopInstallPolling(steamGame.deps, steamGame.appId)
     const removeResult = await bbLifecycle.removePerGameBridgeBottle(
       steamGame.deps,
       steamGame.appId

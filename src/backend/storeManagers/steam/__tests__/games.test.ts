@@ -1,5 +1,6 @@
 import {
   createTestManagerDeps,
+  createInertSteamProcesses,
   createTestManagers,
   createTestStores
 } from 'backend/testUtils/testServices'
@@ -83,7 +84,6 @@ import {
   __resetLoggedEmptyGameInfoMissesForTests
 } from '../gameSessionState'
 import SteamLibraryManager from '../library'
-import * as runningPollModule from '../library/runningPoll'
 import * as uninstallPollingModule from '../library/uninstallPolling'
 import * as installPollingModule from '../library/installPolling'
 import * as resumeModule from '../library/resume'
@@ -278,6 +278,7 @@ const runWineCommand = jest.fn()
 // quick 261111-9mj: the steam manager carries the per-boot launch-watch registry.
 const launchWatches: SteamLaunchWatchRegistry = new Map()
 const steamTestDeps = createTestManagerDeps({
+  steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule }),
   commandRunner: { runWineCommand } as never,
   libraryManagers: createTestManagers({
@@ -816,7 +817,9 @@ jest.mock('../experimentalInstallAppSetting', () => ({
   isSteamExperimentalInstallAppEnabled: jest.fn()
 }))
 jest.mock('../steamInstallApp', () => ({
-  requestSteamInstallApp: jest.fn()
+  requestSteamInstallApp: jest.fn(),
+  // The runner-backed helper seam (66.2-06): an opaque function here; only its presence is asserted.
+  createSteamInstallAppRun: () => 'install-app-run'
 }))
 
 // ── depot.ts mock — downloadSteamDepots + prescreenBridgeDepots (D-51-06,
@@ -4148,7 +4151,7 @@ describe('SteamGame.stop() — delegated install cancel (261105-vfq)', () => {
       .spyOn(installPollingModule, 'cancelDelegatedInstall')
       .mockReturnValue(true)
     await new SteamGame(APP_ID, steamTestDeps).stop()
-    expect(spy).toHaveBeenCalledWith(APP_ID)
+    expect(spy).toHaveBeenCalledWith(steamTestDeps, APP_ID)
     expect(warnedNoOp()).toBe(false)
   })
 
@@ -4158,7 +4161,7 @@ describe('SteamGame.stop() — delegated install cancel (261105-vfq)', () => {
       .spyOn(installPollingModule, 'cancelDelegatedInstall')
       .mockReturnValue(false)
     await new SteamGame(APP_ID, steamTestDeps).stop()
-    expect(spy).toHaveBeenCalledWith(APP_ID)
+    expect(spy).toHaveBeenCalledWith(steamTestDeps, APP_ID)
     expect(warnedNoOp()).toBe(true)
   })
 })
@@ -4954,7 +4957,6 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
 
   afterEach(() => {
     startInstallPollingSpy.mockRestore()
-    runningPollModule.stopRunningPoll()
   })
 
   it('a hard-killed native install (finalize never called) persists a breadcrumb, and a fresh init() surfaces it as resumable with an EMPTY ACF scan', async () => {
@@ -6039,7 +6041,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       steamTestDeps,
       APP_ID
     )
-    expect(stopInstallPollingSpy).toHaveBeenCalledWith(APP_ID)
+    expect(stopInstallPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID)
     expect(setBridgeUserRouteSpy).toHaveBeenCalledWith(
       steamTestDeps,
       APP_ID,
@@ -6176,7 +6178,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       )
       expect(scanPersistCall).toBeDefined()
       expect(drmPersistCall()).toBeDefined()
-      expect(stopInstallPollingSpy).toHaveBeenCalledWith(APP_ID)
+      expect(stopInstallPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID)
       expect(removePerGameBridgeBottle).toHaveBeenCalledWith(
         steamTestDeps,
         APP_ID
@@ -10364,7 +10366,12 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
 
     expect(decideSteamNativeDelete).toHaveBeenCalledWith(
       APP_ID,
-      NATIVE_INSTALL_PATH
+      NATIVE_INSTALL_PATH,
+      {
+        readRunningAppId: expect.any(Function),
+        isProcessRunningFromFolder: expect.any(Function),
+        requestSteamUninstallApp: expect.any(Function)
+      }
     )
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(startPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID)
@@ -16111,9 +16118,11 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
 
       expect(result).toEqual({ status: 'done' })
       expect(resolveSteamLibraryRoot).toHaveBeenCalledWith('/mock/steam')
-      expect(installApp()).toHaveBeenCalledWith(APP_ID, {
-        libraryPath: '/mock/steam'
-      })
+      expect(installApp()).toHaveBeenCalledWith(
+        APP_ID,
+        { libraryPath: '/mock/steam' },
+        { run: 'install-app-run' }
+      )
       expect(shellOpenExternal).not.toHaveBeenCalled()
       expect(startInstallPollingSpy).toHaveBeenCalledWith(
         steamTestDeps,
@@ -16207,9 +16216,11 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
       )
 
       expect(result).toEqual({ status: 'done' })
-      expect(installApp()).toHaveBeenCalledWith(APP_ID, {
-        libraryPath: '/mock/steam'
-      })
+      expect(installApp()).toHaveBeenCalledWith(
+        APP_ID,
+        { libraryPath: '/mock/steam' },
+        { run: 'install-app-run' }
+      )
       expect(adoption().recordPendingAdoption).not.toHaveBeenCalled()
       expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(
         APP_ID,

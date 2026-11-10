@@ -46,6 +46,12 @@ import {
 } from './bridgeBottle'
 import { isSteamNativeDeleteEnabled } from './nativeInstallSetting'
 import { decideSteamNativeDelete } from './nativeDelete'
+import { readRunningAppId } from './library/runningPoll'
+import { isProcessRunningFromFolder } from './runningFromFolder'
+import {
+  createSteamInstallAppRun,
+  requestSteamUninstallApp
+} from './steamInstallApp'
 import { resolveBridgeLaunchExe } from './bridge/launchTarget'
 import { NUMERIC_APP_ID } from './gameConstants'
 import { buildSteamProtocolUrl } from './gameProtocolUrl'
@@ -309,7 +315,16 @@ export async function uninstallNativeInGameLib(
   steamGame: SteamGame
 ): Promise<ExecResult> {
   const installPath = library.get(steamGame.appId)?.install?.install_path
-  const decision = await decideSteamNativeDelete(steamGame.appId, installPath)
+  const { runner } = steamGame.deps
+  const decision = await decideSteamNativeDelete(steamGame.appId, installPath, {
+    readRunningAppId: () => readRunningAppId({ runner }),
+    isProcessRunningFromFolder: (folder) =>
+      isProcessRunningFromFolder({ runner }, folder),
+    requestSteamUninstallApp: (id) =>
+      requestSteamUninstallApp(id, {
+        run: createSteamInstallAppRun({ runner })
+      })
+  })
   const game = steamGame.getGameInfo().title
   const pushNotice = (
     kind:

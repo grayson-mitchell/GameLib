@@ -143,6 +143,7 @@ export interface CreateStoreManagersDeps {
   /** The runner commandRunner is built on: stop paths kill through the registry spawns use. */
   runner: ManagerDeps['runner']
   clock: ManagerDeps['clock']
+  steamProcesses: ManagerDeps['steamProcesses']
   /** Called only when an update is enqueued (the queue is built after the managers). */
   getDownloadQueue: () => DownloadQueue
 }
@@ -167,6 +168,7 @@ export function createStoreManagers(
     spawnAsync: deps.spawnAsync,
     runner: deps.runner,
     clock: deps.clock,
+    steamProcesses: deps.steamProcesses,
     getDownloadQueue: deps.getDownloadQueue
   }
   const launchHooks = buildLaunchHooks(managerDeps)

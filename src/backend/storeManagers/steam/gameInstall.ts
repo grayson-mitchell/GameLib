@@ -31,7 +31,10 @@ import { prescreenBridgeDepots } from './depot'
 import { ensureSteamClientReady } from './clientSetup'
 import { resolveSteamLibraryRoot } from './installLocation'
 import { isSteamExperimentalInstallAppEnabled } from './experimentalInstallAppSetting'
-import { requestSteamInstallApp } from './steamInstallApp'
+import {
+  createSteamInstallAppRun,
+  requestSteamInstallApp
+} from './steamInstallApp'
 import { NOTICE_REASONS } from './bridge/bridgeRoute'
 import {
   readBridgeVerdict,
@@ -415,9 +418,11 @@ export async function install(
     const libraryPath = await resolveSteamLibraryRoot(args?.path).catch(
       () => undefined
     )
-    const outcome = await requestSteamInstallApp(steamGame.appId, {
-      libraryPath
-    })
+    const outcome = await requestSteamInstallApp(
+      steamGame.appId,
+      { libraryPath },
+      { run: createSteamInstallAppRun({ runner: steamGame.deps.runner }) }
+    )
     if (outcome.kind === 'ok') {
       logInfo(
         `SteamGame: Steam is installing appId ${steamGame.appId} via InstallApp (library folder index ${outcome.folderIndex})`,

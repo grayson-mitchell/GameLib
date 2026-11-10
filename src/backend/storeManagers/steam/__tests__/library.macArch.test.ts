@@ -1,5 +1,6 @@
 import {
   createTestManagerDeps,
+  createInertSteamProcesses,
   createTestStores
 } from 'backend/testUtils/testServices'
 /**
@@ -68,6 +69,7 @@ const archRunner = {
 } as unknown as ManagerDeps['runner']
 
 const steamTestDeps = createTestManagerDeps({
+  steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule }),
   runner: archRunner
 })
@@ -257,11 +259,6 @@ jest.mock('../metacriticCapture', () => ({
 // = fail open (no hold), so every pre-existing test keeps its old behaviour;
 // the D-UAT-13 describe below drives it explicitly. Never a real child spawn.
 // quick 261029-sex: bare jest.fn = undefined = no live signal = ACF behaviour.
-jest.mock('../steamDownloadMonitor', () => ({
-  startSteamDownloadMonitor: jest.fn(),
-  readSteamDownloadMonitor: jest.fn(),
-  stopSteamDownloadMonitor: jest.fn()
-}))
 jest.mock('../steamClientProcess', () => ({
   listSteamClientPids: jest.fn(),
   // quick 261029-pkp: start-time identity probe (bare jest.fn = undefined =
@@ -1059,7 +1056,7 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
   })
 
   afterEach(() => {
-    stopInstallPolling(APP_ID)
+    stopInstallPolling(steamTestDeps, APP_ID)
     envMock.isMac = false
     envMock.isLinux = true
     library.clear()
@@ -1123,7 +1120,7 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
     expect(probe).not.toHaveBeenCalled()
     expect(dialog.showMessageBox).not.toHaveBeenCalled()
 
-    stopInstallPolling(APP_ID)
+    stopInstallPolling(steamTestDeps, APP_ID)
     envMock.isMac = true
     manifestPresent = false
     seedGame()

@@ -17,9 +17,11 @@ const downloadQueue = {
   pauseCurrentDownload: () => pause()
 }
 const stopMonitors = jest.fn()
-jest.mock('../../storeManagers/steam/steamDownloadMonitor', () => ({
+// The Steam monitor instance is injected (66.2-06): the release path only needs its stopAll.
+const deps = {
+  downloadQueue,
   stopAllSteamDownloadMonitors: () => stopMonitors()
-}))
+}
 const release = jest.fn()
 jest.mock('../../storeManagers/steam/user', () => ({
   SteamUser: { releaseForShutdown: () => release() }
@@ -45,7 +47,7 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
 
   it('does nothing while stdin is open', () => {
     const input = new PassThrough()
-    releaseOnStdinEof(input, { downloadQueue })
+    releaseOnStdinEof(input, deps)
     input.write('x\n')
     expect(callAll).not.toHaveBeenCalled()
     expect(release).not.toHaveBeenCalled()
@@ -53,7 +55,7 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
 
   it('aborts downloads and releases the CM session exactly once at EOF', () => {
     const input = new PassThrough()
-    releaseOnStdinEof(input, { downloadQueue })
+    releaseOnStdinEof(input, deps)
     input.resume()
     input.end()
     return new Promise<void>((resolve) => setImmediate(resolve)).then(() => {
@@ -68,7 +70,7 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
     pause.mockImplementationOnce(() => order.push('pause'))
     callAll.mockImplementationOnce(() => order.push('abort'))
     const input = new PassThrough()
-    releaseOnStdinEof(input, { downloadQueue })
+    releaseOnStdinEof(input, deps)
     input.resume()
     input.end()
     return new Promise<void>((resolve) => setImmediate(resolve)).then(() => {
@@ -79,7 +81,7 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
 
   it('does not pause an idle queue', () => {
     const input = new PassThrough()
-    releaseOnStdinEof(input, { downloadQueue })
+    releaseOnStdinEof(input, deps)
     input.resume()
     input.end()
     return new Promise<void>((resolve) => setImmediate(resolve)).then(() => {
@@ -93,7 +95,7 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
       throw new Error('boom')
     })
     const input = new PassThrough()
-    releaseOnStdinEof(input, { downloadQueue })
+    releaseOnStdinEof(input, deps)
     input.resume()
     input.end()
     return new Promise<void>((resolve) => setImmediate(resolve)).then(() => {
@@ -106,7 +108,7 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
       throw new Error('boom')
     })
     const input = new PassThrough()
-    releaseOnStdinEof(input, { downloadQueue })
+    releaseOnStdinEof(input, deps)
     input.resume()
     input.end()
     return new Promise<void>((resolve) => setImmediate(resolve)).then(() => {
@@ -126,7 +128,7 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
       return { destroyed: 2, hosts: ['a.example', 'b.example'] }
     })
     const input = new PassThrough()
-    releaseOnStdinEof(input, { downloadQueue })
+    releaseOnStdinEof(input, deps)
     input.resume()
     input.end()
     await new Promise<void>((resolve) => setImmediate(resolve))
@@ -145,7 +147,7 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
       throw new Error('boom')
     })
     const input = new PassThrough()
-    releaseOnStdinEof(input, { downloadQueue })
+    releaseOnStdinEof(input, deps)
     input.resume()
     input.end()
     await new Promise<void>((resolve) => setImmediate(resolve))
@@ -169,7 +171,7 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
     }) as unknown as typeof setTimeout)
     try {
       const input = new PassThrough()
-      releaseOnStdinEof(input, { downloadQueue })
+      releaseOnStdinEof(input, deps)
       input.emit('end')
       expect(unref).toHaveBeenCalled()
       jest.advanceTimersByTime(RESIDUAL_HOLDER_DIAG_MS)

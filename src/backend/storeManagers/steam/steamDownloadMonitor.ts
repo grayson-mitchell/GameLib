@@ -12,21 +12,20 @@
  * passes no `env`, matching steamClientProcess.ts. There is no real-profile arm.
  *
  * Sidecar exit contract: the node child is a /bin/sh watchdog (childWatchdog.ts) that runs
- * script/nettop; the child and its stdout socket are unref'd (a piped stdout socket holds the
- * loop even after child.unref()), nothing runs at import, node adds no timer or watcher, and
- * start does no network work. The watchdog polls the sidecar pid, so a hard kill (SIGKILL, Force
+ * script/nettop, spawned through the process runner as a long-lived child (D-10/D-11: no
+ * timeout, registered for teardown at quit; the runner owns unref), nothing runs at import,
+ * node adds no timer or watcher, and start does no network work. The watchdog polls the sidecar pid, so a hard kill (SIGKILL, Force
  * Quit) takes the tree down within about 1s, and it exits when the pinned Steam pid exits. Clean
- * stops go through stopSteamDownloadMonitor (poll stop) and stopAllSteamDownloadMonitors (stdin
- * EOF, see stdinEofRelease.ts). The Rust shutdown_child process-group SIGTERM remains the
+ * stops go through the instance's stop (poll stop) and stopAll (stdin EOF, see
+ * stdinEofRelease.ts). The Rust shutdown_child process-group SIGTERM remains the
  * backstop for normal exit: the watchdog traps it and kills script and nettop. nettop runs in
  * script's own pty session, so the group signal never reached it directly.
  */
-import { spawn } from 'child_process'
 import { closeSync, fstatSync, openSync, readSync } from 'fs'
 import { join } from 'path'
 import { logWarning, LogPrefix } from 'backend/logger'
+import type { LongLivedHandle, ProcessRunner } from 'backend/process/types'
 import { buildWatchdogSpawn } from './childWatchdog'
-import { listSteamClientPids } from './steamClientProcess'
 import {
   activeCount,
   applyContentLogEvent,
@@ -43,28 +42,10 @@ import {
 const MAX_TAIL_BYTES = 256 * 1024
 const SAMPLE_RING_MS = 5000
 
-type Unrefable = { unref?: () => void }
-
-/** The slice of ChildProcess the monitor uses; kept narrow so tests can fake it. */
-export type MonitorChild = {
-  stdout:
-    | ({
-        on: (e: 'data', cb: (d: Buffer | string) => void) => unknown
-      } & Unrefable)
-    | null
-  on: (e: string, cb: (...args: unknown[]) => void) => unknown
-  kill: (signal?: NodeJS.Signals) => unknown
-  unref: () => void
-}
-
 export type MonitorDeps = {
+  runner: Pick<ProcessRunner, 'spawnLongLived'>
   platform: NodeJS.Platform
   listPids: () => Promise<number[] | undefined>
-  spawn: (
-    file: string,
-    args: string[],
-    options: { stdio: ['ignore', 'pipe', 'ignore'] }
-  ) => MonitorChild
   /** Returns newly appended log text and the new offset. `offset` undefined = first read. */
   readTail: (offset: number | undefined) => { text: string; offset: number }
   now: () => number
@@ -73,7 +54,7 @@ export type MonitorDeps = {
 }
 
 type Monitor = {
-  child?: MonitorChild
+  child?: LongLivedHandle
   acc: FlowAccumulator
   tracker: UpdateTracker
   samples: { ms: number; cum: number }[]
@@ -85,9 +66,8 @@ type Monitor = {
   readTail: MonitorDeps['readTail']
 }
 
-const monitors = new Map<string, Monitor>()
-
-function defaultReadTail(offset: number | undefined): {
+/** Reads the appended tail of Steam's content_log.txt (the production `readTail`). */
+export function readContentLogTail(offset: number | undefined): {
   text: string
   offset: number
 } {
@@ -127,19 +107,6 @@ function defaultReadTail(offset: number | undefined): {
   }
 }
 
-function defaultDeps(): MonitorDeps {
-  return {
-    platform: process.platform,
-    listPids: () => listSteamClientPids('darwin'),
-    spawn: (file, args, options) =>
-      // No `env`: nettop reads no user profile (two-profile rule, see module docstring).
-      spawn(file, args, options) as unknown as MonitorChild,
-    readTail: defaultReadTail,
-    now: () => Date.now(),
-    parentPid: process.pid
-  }
-}
-
 function scanLog(m: Monitor): void {
   try {
     const { text, offset } = m.readTail(m.logOffset)
@@ -160,129 +127,19 @@ function fail(m: Monitor): void {
   m.failed = true
 }
 
-/**
- * Starts the monitor for `appId` (idempotent). Resolves once the child is spawned or the
- * attempt was skipped; never rejects.
- */
-export async function startSteamDownloadMonitor(
-  appId: string,
-  deps: MonitorDeps = defaultDeps()
-): Promise<void> {
-  if (monitors.has(appId)) return
-  if (deps.platform !== 'darwin') return
-  const m: Monitor = {
-    acc: createFlowAccumulator(),
-    tracker: createUpdateTracker(),
-    samples: [],
-    logCarry: '',
-    failed: false,
-    stopped: false,
-    now: deps.now,
-    readTail: deps.readTail
-  }
-  // Registered before the first await so concurrent starts stay idempotent.
-  monitors.set(appId, m)
-  try {
-    const pids = await deps.listPids()
-    if (m.stopped || monitors.get(appId) !== m) return
-    if (!pids || pids.length === 0) {
-      monitors.delete(appId)
-      return
-    }
-    const pid = Math.min(...pids)
-    scanLog(m)
-    const inner = [
-      '/usr/bin/script',
-      '-q',
-      '/dev/null',
-      '/usr/bin/nettop',
-      '-x',
-      '-n',
-      '-L',
-      '0',
-      '-s',
-      '1',
-      '-J',
-      'bytes_in',
-      '-p',
-      String(pid)
-    ]
-    const { file, args } = buildWatchdogSpawn(deps.parentPid, pid, inner)
-    const child = deps.spawn(file, args, {
-      stdio: ['ignore', 'pipe', 'ignore']
-    })
-    m.child = child
-    let buf = ''
-    child.stdout?.on('data', (d) => {
-      try {
-        buf += d.toString()
-        const rows = buf.split('\n')
-        buf = rows.pop() ?? ''
-        for (const r of rows) {
-          const row = parseNettopRow(r)
-          if (!row) continue
-          if (row.kind === 'header') {
-            if (m.acc.blocks >= 1) {
-              // The previous block is complete: sample it and re-read the log.
-              const ms = m.now()
-              m.samples.push({ ms, cum: m.acc.cum })
-              for (
-                let oldest = m.samples[0];
-                oldest !== undefined && ms - oldest.ms > SAMPLE_RING_MS;
-                oldest = m.samples[0]
-              ) {
-                m.samples.shift()
-              }
-              scanLog(m)
-            }
-          }
-          applyNettopRow(m.acc, row)
-        }
-      } catch (error) {
-        fail(m)
-        logWarning(['Steam: nettop parse failed:', error], LogPrefix.Steam)
-      }
-    })
-    child.on('error', () => fail(m))
-    child.on('exit', () => fail(m))
-    child.unref()
-    child.stdout?.unref?.()
-  } catch (error) {
-    fail(m)
-    logWarning(
-      ['Steam: download monitor start failed:', error],
-      LogPrefix.Steam
-    )
-  }
+export interface SteamDownloadMonitor {
+  /** Starts the monitor for `appId` (idempotent). Never rejects. */
+  start(appId: string): Promise<void>
+  /** Live reading for `appId`, or undefined when the poller must use the ACF as before. */
+  read(appId: string): SteamDownloadReading | undefined
+  stop(appId: string): void
+  stopAll(): void
 }
 
 type SteamDownloadReading = {
   bytesDone: number
   bytesTotal: number
   speedBytesPerSec?: number
-}
-
-/** Live reading for `appId`, or undefined when the poller must use the ACF as before. */
-export function readSteamDownloadMonitor(
-  appId: string
-): SteamDownloadReading | undefined {
-  try {
-    const m = monitors.get(appId)
-    if (!m || m.failed || m.stopped || !m.child) return undefined
-    if (m.acc.blocks < 2) return undefined
-    if (activeCount(m.tracker) !== 1) return undefined
-    const upd = m.tracker.active.get(appId)
-    if (!upd) return undefined
-    const bytesDone = upd.downloadDone + Math.max(0, m.acc.cum - upd.cumAtStart)
-    const speed = windowRate(m.samples, m.now())
-    return {
-      bytesDone,
-      bytesTotal: upd.downloadTotal,
-      ...(speed !== undefined ? { speedBytesPerSec: speed } : {})
-    }
-  } catch {
-    return undefined
-  }
 }
 
 function kill(m: Monitor): void {
@@ -294,14 +151,135 @@ function kill(m: Monitor): void {
   }
 }
 
-export function stopSteamDownloadMonitor(appId: string): void {
-  const m = monitors.get(appId)
-  if (!m) return
-  kill(m)
-  monitors.delete(appId)
-}
+/**
+ * The monitors Map is closure state of one boot-built instance (D-05/D-15). Resolves once the
+ * child is spawned or the attempt was skipped; start never rejects.
+ */
+export function createSteamDownloadMonitor(
+  deps: MonitorDeps
+): SteamDownloadMonitor {
+  const monitors = new Map<string, Monitor>()
 
-export function stopAllSteamDownloadMonitors(): void {
-  for (const m of monitors.values()) kill(m)
-  monitors.clear()
+  async function start(appId: string): Promise<void> {
+    if (monitors.has(appId)) return
+    if (deps.platform !== 'darwin') return
+    const m: Monitor = {
+      acc: createFlowAccumulator(),
+      tracker: createUpdateTracker(),
+      samples: [],
+      logCarry: '',
+      failed: false,
+      stopped: false,
+      now: deps.now,
+      readTail: deps.readTail
+    }
+    // Registered before the first await so concurrent starts stay idempotent.
+    monitors.set(appId, m)
+    try {
+      const pids = await deps.listPids()
+      if (m.stopped || monitors.get(appId) !== m) return
+      if (!pids || pids.length === 0) {
+        monitors.delete(appId)
+        return
+      }
+      const pid = Math.min(...pids)
+      scanLog(m)
+      const inner = [
+        '/usr/bin/script',
+        '-q',
+        '/dev/null',
+        '/usr/bin/nettop',
+        '-x',
+        '-n',
+        '-L',
+        '0',
+        '-s',
+        '1',
+        '-J',
+        'bytes_in',
+        '-p',
+        String(pid)
+      ]
+      const { file, args } = buildWatchdogSpawn(deps.parentPid, pid, inner)
+      let buf = ''
+      // No `env`: nettop reads no user profile (two-profile rule, see module docstring).
+      const handle = deps.runner.spawnLongLived(file, args, {
+        id: 'steam-download-monitor:' + appId,
+        stdio: 'pipe',
+        onStdout: (d) => {
+          try {
+            buf += d
+            const rows = buf.split('\n')
+            buf = rows.pop() ?? ''
+            for (const r of rows) {
+              const row = parseNettopRow(r)
+              if (!row) continue
+              if (row.kind === 'header') {
+                if (m.acc.blocks >= 1) {
+                  // The previous block is complete: sample it and re-read the log.
+                  const ms = m.now()
+                  m.samples.push({ ms, cum: m.acc.cum })
+                  for (
+                    let oldest = m.samples[0];
+                    oldest !== undefined && ms - oldest.ms > SAMPLE_RING_MS;
+                    oldest = m.samples[0]
+                  ) {
+                    m.samples.shift()
+                  }
+                  scanLog(m)
+                }
+              }
+              applyNettopRow(m.acc, row)
+            }
+          } catch (error) {
+            fail(m)
+            logWarning(['Steam: nettop parse failed:', error], LogPrefix.Steam)
+          }
+        }
+      })
+      m.child = handle
+      void handle.exited.then(() => fail(m))
+    } catch (error) {
+      fail(m)
+      logWarning(
+        ['Steam: download monitor start failed:', error],
+        LogPrefix.Steam
+      )
+    }
+  }
+
+  function read(appId: string): SteamDownloadReading | undefined {
+    try {
+      const m = monitors.get(appId)
+      if (!m || m.failed || m.stopped || !m.child) return undefined
+      if (m.acc.blocks < 2) return undefined
+      if (activeCount(m.tracker) !== 1) return undefined
+      const upd = m.tracker.active.get(appId)
+      if (!upd) return undefined
+      const bytesDone =
+        upd.downloadDone + Math.max(0, m.acc.cum - upd.cumAtStart)
+      const speed = windowRate(m.samples, m.now())
+      return {
+        bytesDone,
+        bytesTotal: upd.downloadTotal,
+        ...(speed !== undefined ? { speedBytesPerSec: speed } : {})
+      }
+    } catch {
+      return undefined
+    }
+  }
+
+  function stop(appId: string): void {
+    const m = monitors.get(appId)
+    if (!m) return
+    kill(m)
+    monitors.delete(appId)
+  }
+
+  function stopAll(): void {
+    for (const m of monitors.values()) kill(m)
+    monitors.clear()
+  }
+
+  return { start, read, stop, stopAll }
 }

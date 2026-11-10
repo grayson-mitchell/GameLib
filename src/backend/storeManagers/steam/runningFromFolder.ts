@@ -11,7 +11,6 @@
  * macOS/Linux, and a path-based Windows check is not cheap without
  * wmic/PowerShell, so win32 returns false here.
  */
-import { spawn } from 'child_process'
 import { isAbsolute, parse, resolve, sep } from 'path'
 
 import type { ProcessRunner } from 'backend/process/types'
@@ -98,59 +97,44 @@ export async function findPidsRunningFromFolder(
   return psOutputPidsInFolder(res.stdout, folder, opts.excludePids)
 }
 
-interface RunningFromFolderDeps {
+export interface RunningFromFolderDeps {
+  runner: Pick<ProcessRunner, 'run'>
   platform?: NodeJS.Platform
-  runPs?: () => Promise<string>
-  timeoutMs?: number
 }
 
 /**
  * `ps` reads only the process table, so the isolated fake-HOME profile is
  * correct here and no real-profile arm is needed.
  */
-function defaultRunPs(timeoutMs: number): Promise<string> {
+async function runPs(
+  deps: RunningFromFolderDeps,
+  timeoutMs: number
+): Promise<string> {
   const profile = createFakeHomeProfile({
     prefix: 'gamelib-steam-running-probe-'
   })
-  let timer: ReturnType<typeof setTimeout> | undefined
-  return new Promise<string>((resolvePs, reject) => {
-    const child = spawn('/bin/ps', ['-A', '-ww', '-o', 'args='], {
+  try {
+    const res = await deps.runner.run('/bin/ps', ['-A', '-ww', '-o', 'args='], {
       env: profile.childEnv(),
-      stdio: ['ignore', 'pipe', 'ignore'],
-      windowsHide: true
+      replaceEnv: true,
+      stdin: '',
+      timeoutMs
     })
-    child.unref()
-    let out = ''
-    child.stdout?.on('data', (chunk: Buffer) => {
-      out += chunk.toString()
-    })
-    timer = setTimeout(() => {
-      try {
-        child.kill('SIGKILL')
-      } catch {
-        // already gone
-      }
-      reject(new Error(`ps timed out after ${timeoutMs} ms`))
-    }, timeoutMs)
-    timer.unref()
-    child.on('error', reject)
-    child.on('close', (code) => {
-      if (code === 0) resolvePs(out)
-      else reject(new Error(`ps exited ${code}`))
-    })
-  }).finally(() => {
-    if (timer) clearTimeout(timer)
+    if (res.timedOut) throw new Error(`ps timed out after ${timeoutMs} ms`)
+    if (res.code !== 0) throw new Error(`ps exited ${res.code}`)
+    return res.stdout
+  } finally {
     profile.dispose()
-  })
+  }
 }
 
 export async function isProcessRunningFromFolder(
+  deps: RunningFromFolderDeps,
   folder: string,
-  deps: RunningFromFolderDeps = {}
+  timeoutMs = 2000
 ): Promise<boolean> {
   const platform = deps.platform ?? process.platform
   if (platform === 'win32') return false
   normalizeFolder(folder) // reject a bad folder before anything spawns
-  const runPs = deps.runPs ?? (() => defaultRunPs(deps.timeoutMs ?? 2000))
-  return psOutputHasFolder(await runPs(), folder)
+  return psOutputHasFolder(await runPs(deps, timeoutMs), folder)
 }

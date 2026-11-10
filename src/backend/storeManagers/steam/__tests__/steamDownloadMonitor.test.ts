@@ -1,18 +1,16 @@
-import { EventEmitter } from 'node:events'
-
 jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam' },
   logWarning: jest.fn()
 }))
-jest.mock('../steamClientProcess', () => ({ listSteamClientPids: jest.fn() }))
 
+import type {
+  LongLivedHandle,
+  LongLivedOptions,
+  ProcessRunner
+} from 'backend/process/types'
 import { buildWatchdogSpawn } from '../childWatchdog'
 import {
-  readSteamDownloadMonitor,
-  startSteamDownloadMonitor,
-  stopAllSteamDownloadMonitors,
-  stopSteamDownloadMonitor,
-  type MonitorChild,
+  createSteamDownloadMonitor,
   type MonitorDeps
 } from '../steamDownloadMonitor'
 
@@ -21,27 +19,68 @@ const STARTED =
 const STARTED_OTHER =
   '[x] AppID 238320 update started : download 0/2813215248, store 0/0 \r\n'
 
-class FakeChild extends EventEmitter {
-  stdout = Object.assign(new EventEmitter(), { unref: jest.fn() })
-  kill = jest.fn()
-  unref = jest.fn()
+interface FakeSpawn {
+  cmd: string
+  argv: readonly string[]
+  opts: LongLivedOptions
+  kill: jest.Mock
+  exit(): void
 }
 
+/** A runner whose spawnLongLived records each child and lets the test feed stdout / end it. */
 function setup(over: Partial<MonitorDeps> & { tail?: string[] } = {}) {
-  const child = new FakeChild()
+  const spawns: FakeSpawn[] = []
   let t = 0
   const tails = [...(over.tail ?? [STARTED])]
-  const spawnFn = jest.fn(() => child as unknown as MonitorChild)
+  const runner: Pick<ProcessRunner, 'spawnLongLived'> = {
+    spawnLongLived: (cmd, argv, opts) => {
+      let resolveExit!: (v: {
+        code: number | null
+        signal: NodeJS.Signals | null
+      }) => void
+      const exited = new Promise<{
+        code: number | null
+        signal: NodeJS.Signals | null
+      }>((r) => {
+        resolveExit = r
+      })
+      const kill = jest.fn(() => true)
+      spawns.push({
+        cmd,
+        argv,
+        opts,
+        kill,
+        exit: () => resolveExit({ code: 0, signal: null })
+      })
+      const handle: LongLivedHandle = {
+        id: opts.id,
+        pid: undefined,
+        exited,
+        closed: exited.then(() => undefined),
+        kill,
+        unregister: () => undefined
+      }
+      return handle
+    }
+  }
   const deps: MonitorDeps = {
+    runner,
     platform: 'darwin',
     listPids: async () => [900, 500],
-    spawn: spawnFn,
     readTail: () => ({ text: tails.shift() ?? '', offset: 1 }),
     now: () => (t += 1000),
     parentPid: 4242,
     ...over
   }
-  return { child, deps, spawnFn }
+  const monitor = createSteamDownloadMonitor(deps)
+  const feed = (n: number, chunk: string) =>
+    spawns[n]?.opts.onStdout?.(chunk, {
+      pid: undefined,
+      exitCode: null,
+      signalCode: null,
+      kill: () => false
+    })
+  return { monitor, spawns, feed }
 }
 
 const block = (rows: Record<string, number>) =>
@@ -50,12 +89,10 @@ const block = (rows: Record<string, number>) =>
     .map(([f, v]) => `tcp4 ${f},${v},\r\n`)
     .join('')
 
-afterEach(() => stopAllSteamDownloadMonitors())
-
 describe('steamDownloadMonitor', () => {
-  it('spawns the watchdog around script/nettop for the lowest pid with no env, and unrefs', async () => {
-    const { deps, spawnFn, child } = setup()
-    await startSteamDownloadMonitor('43160', deps)
+  it('spawns the watchdog around script/nettop for the lowest pid as a long-lived child with no env', async () => {
+    const { monitor, spawns } = setup()
+    await monitor.start('43160')
     const inner = [
       '/usr/bin/script',
       '-q',
@@ -72,24 +109,22 @@ describe('steamDownloadMonitor', () => {
       '-p',
       '500'
     ]
-    expect(spawnFn).toHaveBeenCalledWith(
-      '/bin/sh',
-      buildWatchdogSpawn(4242, 500, inner).args,
-      { stdio: ['ignore', 'pipe', 'ignore'] }
-    )
-    const opts = (spawnFn.mock.calls[0] as unknown[])[2] as object
-    expect(opts).not.toHaveProperty('env')
-    expect(child.unref).toHaveBeenCalled()
-    expect(child.stdout.unref).toHaveBeenCalled()
+    expect(spawns).toHaveLength(1)
+    expect(spawns[0]?.cmd).toBe('/bin/sh')
+    expect(spawns[0]?.argv).toEqual(buildWatchdogSpawn(4242, 500, inner).args)
+    expect(spawns[0]?.opts).toMatchObject({
+      id: 'steam-download-monitor:43160',
+      stdio: 'pipe'
+    })
+    expect(spawns[0]?.opts).not.toHaveProperty('env')
+    // D-10: an app-lifetime child has no timeout and the monitor never unrefs it itself.
+    expect(spawns[0]?.opts).not.toHaveProperty('timeoutMs')
   })
 
   it('is idempotent per appId', async () => {
-    const { deps, spawnFn } = setup()
-    await Promise.all([
-      startSteamDownloadMonitor('43160', deps),
-      startSteamDownloadMonitor('43160', deps)
-    ])
-    expect(spawnFn).toHaveBeenCalledTimes(1)
+    const { monitor, spawns } = setup()
+    await Promise.all([monitor.start('43160'), monitor.start('43160')])
+    expect(spawns).toHaveLength(1)
   })
 
   it.each([
@@ -97,20 +132,20 @@ describe('steamDownloadMonitor', () => {
     ['no pids', { listPids: async () => [] }],
     ['unknown pids', { listPids: async () => undefined }]
   ])('does not spawn: %s', async (_n, over) => {
-    const { deps, spawnFn } = setup(over)
-    await startSteamDownloadMonitor('43160', deps)
-    expect(spawnFn).not.toHaveBeenCalled()
-    expect(readSteamDownloadMonitor('43160')).toBeUndefined()
+    const { monitor, spawns } = setup(over)
+    await monitor.start('43160')
+    expect(spawns).toHaveLength(0)
+    expect(monitor.read('43160')).toBeUndefined()
   })
 
   it('reads bytes and speed from two blocks plus the log anchor', async () => {
-    const { deps, child } = setup()
-    await startSteamDownloadMonitor('43160', deps)
-    child.stdout.emit('data', block({ 'a<->b': 1000 }))
-    expect(readSteamDownloadMonitor('43160')).toBeUndefined() // one block
-    child.stdout.emit('data', block({ 'a<->b': 3000, 'c<->d': 500 }))
-    child.stdout.emit('data', block({ 'a<->b': 4000, 'c<->d': 500 }))
-    const r = readSteamDownloadMonitor('43160')!
+    const { monitor, feed } = setup()
+    await monitor.start('43160')
+    feed(0, block({ 'a<->b': 1000 }))
+    expect(monitor.read('43160')).toBeUndefined() // one block
+    feed(0, block({ 'a<->b': 3000, 'c<->d': 500 }))
+    feed(0, block({ 'a<->b': 4000, 'c<->d': 500 }))
+    const r = monitor.read('43160')!
     expect(r.bytesTotal).toBe(8736151712)
     expect(r.bytesDone).toBe(2000 + 500 + 1000)
     expect(r.speedBytesPerSec).toBeGreaterThan(0)
@@ -118,15 +153,14 @@ describe('steamDownloadMonitor', () => {
 
   it('returns undefined with no active update or with two active updates', async () => {
     const none = setup({ tail: [''] })
-    await startSteamDownloadMonitor('43160', none.deps)
-    none.child.stdout.emit('data', block({ x: 1 }) + block({ x: 2 }))
-    expect(readSteamDownloadMonitor('43160')).toBeUndefined()
-    stopAllSteamDownloadMonitors()
+    await none.monitor.start('43160')
+    none.feed(0, block({ x: 1 }) + block({ x: 2 }))
+    expect(none.monitor.read('43160')).toBeUndefined()
 
     const two = setup({ tail: [STARTED + STARTED_OTHER] })
-    await startSteamDownloadMonitor('43160', two.deps)
-    two.child.stdout.emit('data', block({ x: 1 }) + block({ x: 2 }))
-    expect(readSteamDownloadMonitor('43160')).toBeUndefined()
+    await two.monitor.start('43160')
+    two.feed(0, block({ x: 1 }) + block({ x: 2 }))
+    expect(two.monitor.read('43160')).toBeUndefined()
   })
 
   it('ignores a ghost update from before the last Steam client start (284100 shape)', async () => {
@@ -135,67 +169,64 @@ describe('steamDownloadMonitor', () => {
     const boot = '[2026-11-03 19:49:43] Client version: 1792618285\r\n'
     const live =
       '[2026-11-05 17:29:38] AppID 333300 update started : download 0/5000, store 0/0 \r\n'
-    const { deps, child } = setup({ tail: [ghost + boot + live] })
-    await startSteamDownloadMonitor('333300', deps)
-    child.stdout.emit('data', block({ x: 1 }) + block({ x: 2 }))
-    child.stdout.emit('data', block({ x: 502 }))
-    const r = readSteamDownloadMonitor('333300')!
+    const { monitor, feed } = setup({ tail: [ghost + boot + live] })
+    await monitor.start('333300')
+    feed(0, block({ x: 1 }) + block({ x: 2 }))
+    feed(0, block({ x: 502 }))
+    const r = monitor.read('333300')!
     expect(r.bytesTotal).toBe(5000)
     expect(r.bytesDone).toBe(501)
   })
 
   it('keeps this app anchor that predates the monitor (boot re-armed poll)', async () => {
     const boot = '[x] Client version: 1\r\n'
-    const { deps, child } = setup({
+    const { monitor, feed } = setup({
       tail: [boot + STARTED],
       now: () => 1
     })
-    await startSteamDownloadMonitor('43160', deps)
-    child.stdout.emit('data', block({ x: 1 }) + block({ x: 2 }))
-    expect(readSteamDownloadMonitor('43160')?.bytesTotal).toBe(8736151712)
+    await monitor.start('43160')
+    feed(0, block({ x: 1 }) + block({ x: 2 }))
+    expect(monitor.read('43160')?.bytesTotal).toBe(8736151712)
   })
 
   it('still falls back for a genuine concurrent pair in the same client session', async () => {
     const boot = '[x] Client version: 1\r\n'
-    const { deps, child } = setup({ tail: [boot + STARTED_OTHER + STARTED] })
-    await startSteamDownloadMonitor('43160', deps)
-    child.stdout.emit('data', block({ x: 1 }) + block({ x: 2 }))
-    expect(readSteamDownloadMonitor('43160')).toBeUndefined()
+    const { monitor, feed } = setup({ tail: [boot + STARTED_OTHER + STARTED] })
+    await monitor.start('43160')
+    feed(0, block({ x: 1 }) + block({ x: 2 }))
+    expect(monitor.read('43160')).toBeUndefined()
   })
 
-  it('falls back after child error or exit', async () => {
-    for (const ev of ['error', 'exit']) {
-      const { deps, child } = setup()
-      await startSteamDownloadMonitor('43160', deps)
-      child.stdout.emit('data', block({ x: 1 }) + block({ x: 2 }))
-      expect(readSteamDownloadMonitor('43160')).toBeDefined()
-      child.emit(ev)
-      expect(readSteamDownloadMonitor('43160')).toBeUndefined()
-      stopAllSteamDownloadMonitors()
-    }
+  it('falls back after the child exits', async () => {
+    const { monitor, spawns, feed } = setup()
+    await monitor.start('43160')
+    feed(0, block({ x: 1 }) + block({ x: 2 }))
+    expect(monitor.read('43160')).toBeDefined()
+    spawns[0]?.exit()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(monitor.read('43160')).toBeUndefined()
   })
 
-  it('stop and stopAll kill the child', async () => {
-    const a = setup()
-    await startSteamDownloadMonitor('43160', a.deps)
-    stopSteamDownloadMonitor('43160')
-    expect(a.child.kill).toHaveBeenCalledWith('SIGTERM')
-    expect(readSteamDownloadMonitor('43160')).toBeUndefined()
+  it('stop sends SIGTERM (the watchdog traps it) and stopAll stops every live monitor', async () => {
+    const { monitor, spawns } = setup({ tail: [STARTED, STARTED] })
+    await monitor.start('43160')
+    monitor.stop('43160')
+    expect(spawns[0]?.kill).toHaveBeenCalledWith('SIGTERM')
+    expect(monitor.read('43160')).toBeUndefined()
 
-    const b = setup()
-    const c = setup()
-    await startSteamDownloadMonitor('1', b.deps)
-    await startSteamDownloadMonitor('2', c.deps)
-    stopAllSteamDownloadMonitors()
-    expect(b.child.kill).toHaveBeenCalled()
-    expect(c.child.kill).toHaveBeenCalled()
+    await monitor.start('1')
+    await monitor.start('2')
+    monitor.stopAll()
+    expect(spawns[1]?.kill).toHaveBeenCalled()
+    expect(spawns[2]?.kill).toHaveBeenCalled()
   })
 
   it('stop during pid lookup prevents the spawn', async () => {
-    const { deps, spawnFn } = setup()
-    const p = startSteamDownloadMonitor('43160', deps)
-    stopSteamDownloadMonitor('43160')
+    const { monitor, spawns } = setup()
+    const p = monitor.start('43160')
+    monitor.stop('43160')
     await p
-    expect(spawnFn).not.toHaveBeenCalled()
+    expect(spawns).toHaveLength(0)
   })
 })

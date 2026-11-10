@@ -2,7 +2,6 @@ import type { Readable } from 'node:stream'
 import { callAllAbortControllers } from '../utils/aborthandler/aborthandler'
 import type { DownloadQueue } from '../downloadmanager/downloadqueue'
 import { SteamUser } from '../storeManagers/steam/user'
-import { stopAllSteamDownloadMonitors } from '../storeManagers/steam/steamDownloadMonitor'
 import { LogPrefix, logInfo, logWarning } from '../logger'
 import { destroyOutboundHttp } from './outboundHttpRegistry'
 
@@ -42,6 +41,8 @@ export function releaseOnStdinEof(
   input: Readable,
   deps: {
     downloadQueue: Pick<DownloadQueue, 'isRunning' | 'pauseCurrentDownload'>
+    /** Kills every nettop watchdog child (SteamProcesses.downloadMonitor.stopAll). */
+    stopAllSteamDownloadMonitors: () => void
   }
 ): void {
   let released = false
@@ -66,7 +67,7 @@ export function releaseOnStdinEof(
     }
     try {
       // quick 261029-sex: kill the nettop children (killable, not unref-able away).
-      stopAllSteamDownloadMonitors()
+      deps.stopAllSteamDownloadMonitors()
     } catch {
       // best-effort: still release the CM socket below
     }

@@ -202,7 +202,7 @@ describe('sidecar bootstrap (headless boot)', () => {
   })
 
   describe('boot services (66.1-04)', () => {
-    it('a default boot returns BootServices with all ten fields', () => {
+    it('a default boot returns BootServices with all eleven fields', () => {
       const { services } = bootWithLines()
       expect(Object.keys(services).sort()).toEqual([
         'clock',
@@ -213,6 +213,7 @@ describe('sidecar bootstrap (headless boot)', () => {
         'quit',
         'runner',
         'spawnAsync',
+        'steamProcesses',
         'storeRegistry',
         'stores'
       ])

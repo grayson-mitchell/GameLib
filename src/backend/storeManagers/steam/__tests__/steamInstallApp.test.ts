@@ -1,4 +1,7 @@
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
+
 import {
+  createSteamInstallAppRun,
   requestSteamInstallApp,
   requestSteamUninstallApp
 } from '../steamInstallApp'
@@ -211,5 +214,49 @@ describe('requestSteamUninstallApp (quick 261106-s3n)', () => {
       requestSteamUninstallApp('440', { ...deps(run), platform: 'linux' })
     ).resolves.toEqual({ kind: 'unavailable', reason: 'unsupported-platform' })
     expect(run).not.toHaveBeenCalled()
+  })
+})
+
+describe('createSteamInstallAppRun (scripted runner)', () => {
+  const helper = (result: object) =>
+    createScriptedRunner([{ cmd: '/h', result }])
+
+  it('passes the caller timeout, a 64 KiB cap and no env through to the runner', async () => {
+    const runner = helper({ code: 0, stdout: 'out', stderr: 'err' })
+    await expect(
+      createSteamInstallAppRun({ runner })('/h', ['--x'], 30000)
+    ).resolves.toEqual({ stdout: 'out', stderr: 'err', code: 0 })
+    expect(runner.calls[0]?.opts).toMatchObject({
+      timeoutMs: 30000,
+      maxBufferBytes: 64 * 1024,
+      stdin: ''
+    })
+    expect(runner.calls[0]?.env).toBeUndefined()
+  })
+
+  it('keeps a non-zero exit code', async () => {
+    const runner = helper({ code: 2, stdout: '{"result":"unavailable"}' })
+    await expect(
+      createSteamInstallAppRun({ runner })('/h', [], 1000)
+    ).resolves.toMatchObject({ code: 2 })
+  })
+
+  it.each([
+    ['timed out', { code: null, timedOut: true }],
+    ['truncated', { code: 0, truncated: true }]
+  ])('maps a %s helper to code null', async (_n, result) => {
+    const runner = helper(result)
+    await expect(
+      createSteamInstallAppRun({ runner })('/h', [], 1000)
+    ).resolves.toMatchObject({ code: null })
+  })
+
+  it('maps a spawn error to code null without rejecting', async () => {
+    const runner = createScriptedRunner([
+      { cmd: '/h', error: { code: 'ENOENT' } }
+    ])
+    await expect(
+      createSteamInstallAppRun({ runner })('/h', [], 1000)
+    ).resolves.toEqual({ stdout: '', stderr: '', code: null })
   })
 })

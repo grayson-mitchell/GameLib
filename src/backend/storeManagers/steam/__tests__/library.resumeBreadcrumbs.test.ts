@@ -1,5 +1,6 @@
 import {
   createTestManagerDeps,
+  createInertSteamProcesses,
   createTestStores
 } from 'backend/testUtils/testServices'
 /**
@@ -24,6 +25,7 @@ const { steamLibraryStore } = jest.requireMock<Stores['steam']>('../stores')
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
+  steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
 })
 
@@ -94,13 +96,6 @@ jest.mock('../user')
 jest.mock('backend/online_monitor', () => ({
   runOnceWhenOnline: jest.fn(),
   isOnline: jest.fn().mockReturnValue(false)
-}))
-
-// ── child_process mock — spawnSync (Windows reg.exe) + execFileSync (Linux ps,
-// MAC32-03 lipo/file) ─────────────────────────────────────────────────────────
-jest.mock('child_process', () => ({
-  spawnSync: jest.fn(),
-  execFileSync: jest.fn()
 }))
 
 // ── electron mock — dialog.showMessageBox (MAC32-03 i386 recovery confirm) +
@@ -216,11 +211,6 @@ jest.mock('../metacriticCapture', () => ({
 // = fail open (no hold), so every pre-existing test keeps its old behaviour;
 // the D-UAT-13 describe below drives it explicitly. Never a real child spawn.
 // quick 261029-sex: bare jest.fn = undefined = no live signal = ACF behaviour.
-jest.mock('../steamDownloadMonitor', () => ({
-  startSteamDownloadMonitor: jest.fn(),
-  readSteamDownloadMonitor: jest.fn(),
-  stopSteamDownloadMonitor: jest.fn()
-}))
 jest.mock('../steamClientProcess', () => ({
   listSteamClientPids: jest.fn(),
   // quick 261029-pkp: start-time identity probe (bare jest.fn = undefined =

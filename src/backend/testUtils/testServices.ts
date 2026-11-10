@@ -206,11 +206,50 @@ export function createTestServices(
       overrides.runner ??
       unscriptedMembers<BootServices['runner']>('process runner', {}),
     clock: overrides.clock ?? createFakeClock(),
+    steamProcesses: overrides.steamProcesses ?? createTestSteamProcesses(),
     spawnAsync: overrides.spawnAsync ?? spawnAsync,
     quit: overrides.quit ?? quit,
     downloadQueue:
       overrides.downloadQueue ??
       unscriptedMembers<BootServices['downloadQueue']>('download queue', {})
+  }
+}
+
+/** Steam process instances whose members throw until a test scripts them. */
+function createTestSteamProcesses(
+  overrides: Partial<ManagerDeps['steamProcesses']> = {}
+): ManagerDeps['steamProcesses'] {
+  return {
+    runningPoll: unscriptedMembers<
+      ManagerDeps['steamProcesses']['runningPoll']
+    >('steam running poll', overrides.runningPoll ?? {}),
+    downloadMonitor: unscriptedMembers<
+      ManagerDeps['steamProcesses']['downloadMonitor']
+    >('steam download monitor', overrides.downloadMonitor ?? {})
+  }
+}
+
+/**
+ * Steam process instances that do nothing: the poller never ticks, no monitor ever spawns or
+ * reports a live reading. For suites that run Steam library code but do not assert on either
+ * (a test that does passes its own members, e.g. jest.fn()s).
+ */
+export function createInertSteamProcesses(
+  overrides: Partial<ManagerDeps['steamProcesses']> = {}
+): ManagerDeps['steamProcesses'] {
+  return {
+    runningPoll: overrides.runningPoll ?? {
+      start: () => undefined,
+      stop: () => undefined,
+      pollOnce: () => Promise.resolve(),
+      lastAppId: () => 0
+    },
+    downloadMonitor: overrides.downloadMonitor ?? {
+      start: () => Promise.resolve(),
+      read: () => undefined,
+      stop: () => undefined,
+      stopAll: () => undefined
+    }
   }
 }
 
@@ -234,6 +273,7 @@ export function createTestManagerDeps(
       overrides.runner ??
       unscriptedMembers<ManagerDeps['runner']>('process runner', {}),
     clock: overrides.clock ?? createFakeClock(),
+    steamProcesses: overrides.steamProcesses ?? createTestSteamProcesses(),
     getDownloadQueue:
       overrides.getDownloadQueue ??
       (() => {
