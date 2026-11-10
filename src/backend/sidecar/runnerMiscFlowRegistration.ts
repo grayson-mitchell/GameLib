@@ -89,7 +89,8 @@ import type { RuntimeName, Runner } from 'common/types'
 import type { GOGCloudSavesLocation } from 'common/types/gog'
 import path from 'path'
 import { libraryManagerMap } from '../storeManagers'
-import { runWineCommandOnGame } from '../tools'
+import { createTools } from '../tools'
+import type { ToolsDeps } from '../tools'
 import { isEpicServiceOffline, sendGameStatusUpdate, getGame } from '../utils'
 import { isOnline } from '../online_monitor'
 import { logInfo, logWarning, LogPrefix } from '../logger'
@@ -107,7 +108,8 @@ import { GlobalConfig } from '../config'
  * (plan 34.5-12), plus the three late-discovered channels `getAchievements`,
  * `getDefaultSavePath` and `getPlaytimeFromRunner` (Phase 34.6 Plan 10, D-14).
  */
-export function registerRunnerMiscFlows(): void {
+export function registerRunnerMiscFlows(deps: ToolsDeps): void {
+  const { runWineCommandOnGame } = createTools(deps)
   // ── Runner CLI version probes (main.ts / utils/ipc_handler.ts:18-21) ──────
   // Pure pass-through reads, exactly as the Electron source registers them — no caching, no
   // timeouts, no error wrapping the Electron path does not already have.

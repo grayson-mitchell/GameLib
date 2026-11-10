@@ -288,7 +288,9 @@ export async function createFallbackBottle(
       return await fail(`wineserver -w timed out for bottle "${bottleName}"`)
     }
     if (engine.dxvk) {
-      const { DXVK } = await import('backend/tools')
+      const { DXVK } = (
+        await import('backend/services/legacyFacades')
+      ).legacyTools()
       const ok = await DXVK.installRemove(
         buildFallbackGameSettings(bottleName, engine),
         'dxvk',

@@ -42,12 +42,7 @@ import i18next from 'i18next'
 import { dirname, join } from 'path'
 import { isOnline } from '../online_monitor'
 import { showDialogBoxModalAuto } from '../dialog/dialog'
-import {
-  runWineCommand,
-  setupEnvVars,
-  setupWineEnvVars,
-  validWine
-} from '../launcher'
+import type { CommandRunner, Launcher, StoreManagers } from '../services/types'
 import {
   resolveToolSettings,
   resolveToolSettingsForId
@@ -197,407 +192,428 @@ export async function installOrUpdateTool(tool: Tool) {
   }
 }
 
-export const DXVK = {
-  getLatest: async () => {
-    if (isWindows) {
-      return
-    }
-    if (!isOnline()) {
-      logWarning(
-        'App offline, skipping possible DXVK update.',
-        LogPrefix.ToolInstaller
-      )
-      return
-    }
+/**
+ * 66.1 (R1): what the tools need from the boot services. The module state
+ * (installingComponent, catalogCache, scriptMetadataCache) stays module-level, so the
+ * wrappers below are cheap and several instances share one single-flight slot.
+ */
+export interface ToolsDeps {
+  managers: { library: StoreManagers['library'] }
+  commandRunner: Pick<CommandRunner, 'runWineCommand'>
+  launcher: Pick<Launcher, 'setupEnvVars' | 'setupWineEnvVars' | 'validWine'>
+}
 
-    const tools: Tool[] = [
-      {
-        name: 'vkd3d',
-        url: getVkd3dUrl(),
-        os: 'linux'
-      },
-      {
-        name: 'dxvk',
-        url: getDxvkUrl(),
-        os: 'linux'
-      },
-      {
-        name: 'dxvk-nvapi',
-        url: 'https://api.github.com/repos/jp7677/dxvk-nvapi/releases/latest',
-        os: 'linux',
-        strip: 0
-      },
-      {
-        name: 'dxvk-macOS',
-        // url: 'https://api.github.com/repos/Gcenx/DXVK-macOS/releases/latest',
-        // TODO: go back to using latest once we implement the WINEDLLPATH_PREPEND
-        // env variable for dxvk-macos and dxmt
-        url: 'https://api.github.com/repos/Gcenx/DXVK-macOS/releases/tags/v1.10.3-20230507-repack',
-        os: 'darwin'
+function createDxvk(deps: ToolsDeps) {
+  const DXVK = {
+    getLatest: async () => {
+      if (isWindows) {
+        return
       }
-    ]
-
-    await Promise.all(tools.map(installOrUpdateTool))
-  },
-
-  installRemove: async (
-    gameSettings: GameSettings,
-    tool: 'dxvk' | 'dxvk-nvapi' | 'vkd3d' | 'dxvk-macOS',
-    action: 'backup' | 'restore',
-    // Phase 59: a GameLib-pinned DXVK for the Steam fallback engine. When given, the tools-dir
-    // `latest_<tool>` lookup (and DXVK.getLatest) is skipped and the copy is synchronous.
-    source?: { dir: string; version: string }
-  ): Promise<boolean> => {
-    if (gameSettings.wineVersion.bin.includes('toolkit')) {
-      // we don't want to install dxvk on the toolkit prefix since it breaks Apple's implementation
-      logWarning(
-        'Skipping DXVK install on Game Porting Toolkit prefix!',
-        LogPrefix.ToolInstaller
-      )
-      return true
-    }
-
-    if (isMac && gameSettings.wineVersion.name.endsWith('-DXMT')) {
-      // we don't want to install dxvk if we use DXMT
-      logWarning(
-        'Skipping DXVK install on Wine Staging with DXMT!',
-        LogPrefix.ToolInstaller
-      )
-      return true
-    }
-
-    if (isMac && tool !== 'dxvk') {
-      return true
-    }
-
-    const prefix = gameSettings.winePrefix
-    const winePrefix = prefix.replace('~', userHome)
-    // A source-pinned install targets a prefix GameLib just created, which has no
-    // `.update-timestamp` yet; system.reg is the prefix-exists check there.
-    const isValidPrefix = existsSync(
-      `${winePrefix}/${source ? 'system.reg' : '.update-timestamp'}`
-    )
-
-    if (!isValidPrefix) {
-      logWarning(
-        'DXVK cannot be installed on a Proton or a invalid prefix!',
-        LogPrefix.ToolInstaller
-      )
-      // will return true anyway because otherwise the toggle will be stuck and the prefix might just not be crated yet.
-      return true
-    }
-
-    tool = isMac ? 'dxvk-macOS' : tool
-
-    const is64bitPrefix = existsSync(`${winePrefix}/drive_c/windows/syswow64`)
-
-    if (!is64bitPrefix) {
-      logWarning('32-bit prefix detected!', LogPrefix.ToolInstaller)
-    }
-
-    if (!source && !existsSync(`${toolsPath}/${tool}/latest_${tool}`)) {
-      logWarning('dxvk not found!', LogPrefix.ToolInstaller)
-      await DXVK.getLatest()
-    }
-
-    const globalVersion = source
-      ? source.version
-      : (readFileSync(`${toolsPath}/${tool}/latest_${tool}`)
-          .toString()
-          // split() always yields at least one element
-          .split('\n')[0] ?? '')
-
-    const toolPathx32 = source
-      ? join(source.dir, 'x32')
-      : `${toolsPath}/${tool}/${globalVersion}/${
-          tool === 'vkd3d' ? 'x86' : 'x32'
-        }`
-
-    const dlls32 = readdirSync(toolPathx32)
-
-    const toolPathx64 = source
-      ? join(source.dir, 'x64')
-      : `${toolsPath}/${tool}/${globalVersion}/x64`
-    const dlls64 = readdirSync(toolPathx64)
-
-    const currentVersionCheck = `${winePrefix}/current_${tool}`
-    let currentVersion = ''
-
-    if (existsSync(currentVersionCheck)) {
-      currentVersion =
-        readFileSync(currentVersionCheck)
-          .toString()
-          // split() always yields at least one element
-          .split('\n')[0] ?? ''
-    }
-
-    if (action === 'restore') {
-      // 59-REVIEW WR-01 / 59-UAT G7+G10: the source-pinned path (the Steam engine switch)
-      // reports failure strictly and keeps the version file until every step has succeeded,
-      // so a half-done restore is visible and retried. Heroic's toggle path is unchanged.
-      if (source) {
-        return restoreDxvkStrict({
-          gameSettings,
-          winePrefix,
-          tool,
-          is64bitPrefix,
-          dlls32,
-          dlls64,
-          currentVersionCheck
-        })
+      if (!isOnline()) {
+        logWarning(
+          'App offline, skipping possible DXVK update.',
+          LogPrefix.ToolInstaller
+        )
+        return
       }
-      logInfo(`Removing ${tool} version information`, LogPrefix.ToolInstaller)
+
+      const tools: Tool[] = [
+        {
+          name: 'vkd3d',
+          url: getVkd3dUrl(),
+          os: 'linux'
+        },
+        {
+          name: 'dxvk',
+          url: getDxvkUrl(),
+          os: 'linux'
+        },
+        {
+          name: 'dxvk-nvapi',
+          url: 'https://api.github.com/repos/jp7677/dxvk-nvapi/releases/latest',
+          os: 'linux',
+          strip: 0
+        },
+        {
+          name: 'dxvk-macOS',
+          // url: 'https://api.github.com/repos/Gcenx/DXVK-macOS/releases/latest',
+          // TODO: go back to using latest once we implement the WINEDLLPATH_PREPEND
+          // env variable for dxvk-macos and dxmt
+          url: 'https://api.github.com/repos/Gcenx/DXVK-macOS/releases/tags/v1.10.3-20230507-repack',
+          os: 'darwin'
+        }
+      ]
+
+      await Promise.all(tools.map(installOrUpdateTool))
+    },
+
+    installRemove: async (
+      gameSettings: GameSettings,
+      tool: 'dxvk' | 'dxvk-nvapi' | 'vkd3d' | 'dxvk-macOS',
+      action: 'backup' | 'restore',
+      // Phase 59: a GameLib-pinned DXVK for the Steam fallback engine. When given, the tools-dir
+      // `latest_<tool>` lookup (and DXVK.getLatest) is skipped and the copy is synchronous.
+      source?: { dir: string; version: string }
+    ): Promise<boolean> => {
+      if (gameSettings.wineVersion.bin.includes('toolkit')) {
+        // we don't want to install dxvk on the toolkit prefix since it breaks Apple's implementation
+        logWarning(
+          'Skipping DXVK install on Game Porting Toolkit prefix!',
+          LogPrefix.ToolInstaller
+        )
+        return true
+      }
+
+      if (isMac && gameSettings.wineVersion.name.endsWith('-DXMT')) {
+        // we don't want to install dxvk if we use DXMT
+        logWarning(
+          'Skipping DXVK install on Wine Staging with DXMT!',
+          LogPrefix.ToolInstaller
+        )
+        return true
+      }
+
+      if (isMac && tool !== 'dxvk') {
+        return true
+      }
+
+      const prefix = gameSettings.winePrefix
+      const winePrefix = prefix.replace('~', userHome)
+      // A source-pinned install targets a prefix GameLib just created, which has no
+      // `.update-timestamp` yet; system.reg is the prefix-exists check there.
+      const isValidPrefix = existsSync(
+        `${winePrefix}/${source ? 'system.reg' : '.update-timestamp'}`
+      )
+
+      if (!isValidPrefix) {
+        logWarning(
+          'DXVK cannot be installed on a Proton or a invalid prefix!',
+          LogPrefix.ToolInstaller
+        )
+        // will return true anyway because otherwise the toggle will be stuck and the prefix might just not be crated yet.
+        return true
+      }
+
+      tool = isMac ? 'dxvk-macOS' : tool
+
+      const is64bitPrefix = existsSync(`${winePrefix}/drive_c/windows/syswow64`)
+
+      if (!is64bitPrefix) {
+        logWarning('32-bit prefix detected!', LogPrefix.ToolInstaller)
+      }
+
+      if (!source && !existsSync(`${toolsPath}/${tool}/latest_${tool}`)) {
+        logWarning('dxvk not found!', LogPrefix.ToolInstaller)
+        await DXVK.getLatest()
+      }
+
+      const globalVersion = source
+        ? source.version
+        : (readFileSync(`${toolsPath}/${tool}/latest_${tool}`)
+            .toString()
+            // split() always yields at least one element
+            .split('\n')[0] ?? '')
+
+      const toolPathx32 = source
+        ? join(source.dir, 'x32')
+        : `${toolsPath}/${tool}/${globalVersion}/${
+            tool === 'vkd3d' ? 'x86' : 'x32'
+          }`
+
+      const dlls32 = readdirSync(toolPathx32)
+
+      const toolPathx64 = source
+        ? join(source.dir, 'x64')
+        : `${toolsPath}/${tool}/${globalVersion}/x64`
+      const dlls64 = readdirSync(toolPathx64)
+
+      const currentVersionCheck = `${winePrefix}/current_${tool}`
+      let currentVersion = ''
+
       if (existsSync(currentVersionCheck)) {
-        rm(currentVersionCheck, { force: true }, (err) => {
-          if (err) {
+        currentVersion =
+          readFileSync(currentVersionCheck)
+            .toString()
+            // split() always yields at least one element
+            .split('\n')[0] ?? ''
+      }
+
+      if (action === 'restore') {
+        // 59-REVIEW WR-01 / 59-UAT G7+G10: the source-pinned path (the Steam engine switch)
+        // reports failure strictly and keeps the version file until every step has succeeded,
+        // so a half-done restore is visible and retried. Heroic's toggle path is unchanged.
+        if (source) {
+          return restoreDxvkStrict(deps, {
+            gameSettings,
+            winePrefix,
+            tool,
+            is64bitPrefix,
+            dlls32,
+            dlls64,
+            currentVersionCheck
+          })
+        }
+        logInfo(`Removing ${tool} version information`, LogPrefix.ToolInstaller)
+        if (existsSync(currentVersionCheck)) {
+          rm(currentVersionCheck, { force: true }, (err) => {
+            if (err) {
+              logError(
+                [`Error removing ${tool} version information`, err],
+                LogPrefix.ToolInstaller
+              )
+            }
+          })
+        }
+
+        logInfo('Removing DLL overrides', LogPrefix.ToolInstaller)
+
+        // unregister the dlls on the wine prefix
+        // Awaited one at a time: `wineboot -u` below must not race these deletes, and the toggle
+        // must not resolve before the overrides are actually gone.
+        // De-duplicated: dlls64 and dlls32 carry the same file names, and each entry is a whole
+        // wine process, so the plain concat doubled the work under toggleDXVK's 60s bound.
+        const unregisterDlls = is64bitPrefix
+          ? [...new Set([...dlls64, ...dlls32])]
+          : dlls32
+        for (const dllFile of unregisterDlls) {
+          const dll = dllFile.replace('.dll', '')
+          const unregisterDll = [
+            'reg',
+            'delete',
+            'HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides',
+            '/v',
+            dll,
+            '/f'
+          ]
+          await deps.commandRunner.runWineCommand({
+            gameSettings,
+            commandParts: unregisterDll,
+            wait: true,
+            protonVerb: 'run'
+          })
+        }
+
+        logInfo('Removing DXVK DLLs', LogPrefix.ToolInstaller)
+
+        // removing DXVK dlls
+        let dllsToRemove
+        if (is64bitPrefix) {
+          dllsToRemove = dlls64.map(
+            (dll) => `${winePrefix}/drive_c/windows/system32/${dll}`
+          )
+          dllsToRemove = dllsToRemove.concat(
+            dlls32.map((dll) => `${winePrefix}/drive_c/windows/syswow64/${dll}`)
+          )
+        } else {
+          dllsToRemove = dlls32.map(
+            (dll) => `${winePrefix}/drive_c/windows/system32/${dll}`
+          )
+        }
+        dllsToRemove.forEach((dllFile) => {
+          try {
+            rmSync(dllFile)
+          } catch (err) {
             logError(
-              [`Error removing ${tool} version information`, err],
+              [`Error removing ${dllFile}`, err],
               LogPrefix.ToolInstaller
             )
           }
         })
+
+        // Restore stock Wine libraries
+        logInfo('Restoring Wine stock DLLs', LogPrefix.ToolInstaller)
+
+        await deps.commandRunner.runWineCommand({
+          gameSettings,
+          commandParts: ['wineboot', '-u'],
+          wait: true,
+          protonVerb: 'run'
+        })
+        return true
       }
 
-      logInfo('Removing DLL overrides', LogPrefix.ToolInstaller)
+      logInfo([`installing ${tool} on...`, prefix], LogPrefix.ToolInstaller)
 
-      // unregister the dlls on the wine prefix
-      // Awaited one at a time: `wineboot -u` below must not race these deletes, and the toggle
-      // must not resolve before the overrides are actually gone.
-      // De-duplicated: dlls64 and dlls32 carry the same file names, and each entry is a whole
-      // wine process, so the plain concat doubled the work under toggleDXVK's 60s bound.
-      const unregisterDlls = is64bitPrefix
+      // CR-03: a source-pinned install (Steam engine switch) always recopies, so a retry after a
+      // partial restore really puts the DLLs back; only the source-less Heroic toggle short-circuits.
+      if (!source && currentVersion === globalVersion) {
+        logInfo(`${tool} already installed!`, LogPrefix.ToolInstaller)
+        return true
+      }
+
+      // copy the new dlls to the prefix
+      if (source) {
+        // Synchronous so the caller can rely on completion (Phase 59 fallback bottle creation).
+        const dest32 = is64bitPrefix ? 'syswow64' : 'system32'
+        try {
+          for (const dll of dlls32)
+            copyFileSync(
+              `${toolPathx32}/${dll}`,
+              `${winePrefix}/drive_c/windows/${dest32}/${dll}`
+            )
+          if (is64bitPrefix)
+            for (const dll of dlls64)
+              copyFileSync(
+                `${toolPathx64}/${dll}`,
+                `${winePrefix}/drive_c/windows/system32/${dll}`
+              )
+        } catch (err) {
+          logError(
+            [`Error when copying ${tool} DLLs`, err],
+            LogPrefix.ToolInstaller
+          )
+          return false
+        }
+      } else if (is64bitPrefix) {
+        dlls32.forEach((dll) => {
+          copyFile(
+            `${toolPathx32}/${dll}`,
+            `${winePrefix}/drive_c/windows/syswow64/${dll}`,
+            (err) => {
+              if (err) {
+                logError(
+                  [`Error when copying ${dll}`, err],
+                  LogPrefix.ToolInstaller
+                )
+              }
+            }
+          )
+        })
+        dlls64.forEach((dll) => {
+          copyFile(
+            `${toolPathx64}/${dll}`,
+            `${winePrefix}/drive_c/windows/system32/${dll}`,
+            (err) => {
+              if (err) {
+                logError(
+                  [`Error when copying ${dll}`, err],
+                  LogPrefix.ToolInstaller
+                )
+              }
+            }
+          )
+        })
+      } else {
+        dlls32.forEach((dll) => {
+          copyFile(
+            `${toolPathx32}/${dll}`,
+            `${winePrefix}/drive_c/windows/system32/${dll}`,
+            (err) => {
+              if (err) {
+                logError(
+                  [`Error when copying ${dll}`, err],
+                  LogPrefix.ToolInstaller
+                )
+              }
+            }
+          )
+        })
+      }
+
+      // register dlls on the wine prefix
+      // Awaited one at a time, so the toggle resolves only once the overrides are written.
+      // De-duplicated for the same reason as the unregister loop above.
+      const registerDlls = is64bitPrefix
         ? [...new Set([...dlls64, ...dlls32])]
         : dlls32
-      for (const dllFile of unregisterDlls) {
+      for (const dllFile of registerDlls) {
+        // remove the .dll extension otherwise will fail
         const dll = dllFile.replace('.dll', '')
-        const unregisterDll = [
+        const registerDll = [
           'reg',
-          'delete',
+          'add',
           'HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides',
           '/v',
           dll,
+          '/d',
+          'native,builtin',
           '/f'
         ]
-        await runWineCommand({
+        await deps.commandRunner.runWineCommand({
           gameSettings,
-          commandParts: unregisterDll,
+          commandParts: registerDll,
           wait: true,
           protonVerb: 'run'
         })
       }
 
-      logInfo('Removing DXVK DLLs', LogPrefix.ToolInstaller)
-
-      // removing DXVK dlls
-      let dllsToRemove
-      if (is64bitPrefix) {
-        dllsToRemove = dlls64.map(
-          (dll) => `${winePrefix}/drive_c/windows/system32/${dll}`
-        )
-        dllsToRemove = dllsToRemove.concat(
-          dlls32.map((dll) => `${winePrefix}/drive_c/windows/syswow64/${dll}`)
-        )
-      } else {
-        dllsToRemove = dlls32.map(
-          (dll) => `${winePrefix}/drive_c/windows/system32/${dll}`
-        )
-      }
-      dllsToRemove.forEach((dllFile) => {
+      //locate and copy nvngx.dll to support DLSS on Nvidia GPUs
+      if (tool === 'dxvk-nvapi' && action === 'backup') {
         try {
-          rmSync(dllFile)
-        } catch (err) {
-          logError([`Error removing ${dllFile}`, err], LogPrefix.ToolInstaller)
-        }
-      })
-
-      // Restore stock Wine libraries
-      logInfo('Restoring Wine stock DLLs', LogPrefix.ToolInstaller)
-
-      await runWineCommand({
-        gameSettings,
-        commandParts: ['wineboot', '-u'],
-        wait: true,
-        protonVerb: 'run'
-      })
-      return true
-    }
-
-    logInfo([`installing ${tool} on...`, prefix], LogPrefix.ToolInstaller)
-
-    // CR-03: a source-pinned install (Steam engine switch) always recopies, so a retry after a
-    // partial restore really puts the DLLs back; only the source-less Heroic toggle short-circuits.
-    if (!source && currentVersion === globalVersion) {
-      logInfo(`${tool} already installed!`, LogPrefix.ToolInstaller)
-      return true
-    }
-
-    // copy the new dlls to the prefix
-    if (source) {
-      // Synchronous so the caller can rely on completion (Phase 59 fallback bottle creation).
-      const dest32 = is64bitPrefix ? 'syswow64' : 'system32'
-      try {
-        for (const dll of dlls32)
-          copyFileSync(
-            `${toolPathx32}/${dll}`,
-            `${winePrefix}/drive_c/windows/${dest32}/${dll}`
-          )
-        if (is64bitPrefix)
-          for (const dll of dlls64)
-            copyFileSync(
-              `${toolPathx64}/${dll}`,
-              `${winePrefix}/drive_c/windows/system32/${dll}`
-            )
-      } catch (err) {
-        logError(
-          [`Error when copying ${tool} DLLs`, err],
-          LogPrefix.ToolInstaller
-        )
-        return false
-      }
-    } else if (is64bitPrefix) {
-      dlls32.forEach((dll) => {
-        copyFile(
-          `${toolPathx32}/${dll}`,
-          `${winePrefix}/drive_c/windows/syswow64/${dll}`,
-          (err) => {
-            if (err) {
-              logError(
-                [`Error when copying ${dll}`, err],
-                LogPrefix.ToolInstaller
-              )
-            }
-          }
-        )
-      })
-      dlls64.forEach((dll) => {
-        copyFile(
-          `${toolPathx64}/${dll}`,
-          `${winePrefix}/drive_c/windows/system32/${dll}`,
-          (err) => {
-            if (err) {
-              logError(
-                [`Error when copying ${dll}`, err],
-                LogPrefix.ToolInstaller
-              )
-            }
-          }
-        )
-      })
-    } else {
-      dlls32.forEach((dll) => {
-        copyFile(
-          `${toolPathx32}/${dll}`,
-          `${winePrefix}/drive_c/windows/system32/${dll}`,
-          (err) => {
-            if (err) {
-              logError(
-                [`Error when copying ${dll}`, err],
-                LogPrefix.ToolInstaller
-              )
-            }
-          }
-        )
-      })
-    }
-
-    // register dlls on the wine prefix
-    // Awaited one at a time, so the toggle resolves only once the overrides are written.
-    // De-duplicated for the same reason as the unregister loop above.
-    const registerDlls = is64bitPrefix
-      ? [...new Set([...dlls64, ...dlls32])]
-      : dlls32
-    for (const dllFile of registerDlls) {
-      // remove the .dll extension otherwise will fail
-      const dll = dllFile.replace('.dll', '')
-      const registerDll = [
-        'reg',
-        'add',
-        'HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides',
-        '/v',
-        dll,
-        '/d',
-        'native,builtin',
-        '/f'
-      ]
-      await runWineCommand({
-        gameSettings,
-        commandParts: registerDll,
-        wait: true,
-        protonVerb: 'run'
-      })
-    }
-
-    //locate and copy nvngx.dll to support DLSS on Nvidia GPUs
-    if (tool === 'dxvk-nvapi' && action === 'backup') {
-      try {
-        let nvngx_path = get_nvngx_path()
-        if (nvngx_path.length !== 0) {
-          nvngx_path += '/nvidia/wine'
-          const copyDlls = ['nvngx.dll', '_nvngx.dll']
-          copyDlls.forEach((dll) => {
-            copyFile(
-              `${nvngx_path}/${dll}`,
-              `${winePrefix}/drive_c/windows/system32/${dll}`,
-              (err) => {
-                if (err) {
-                  logError(
-                    [`Error when copying ${dll}`, err],
-                    LogPrefix.ToolInstaller
-                  )
+          let nvngx_path = get_nvngx_path()
+          if (nvngx_path.length !== 0) {
+            nvngx_path += '/nvidia/wine'
+            const copyDlls = ['nvngx.dll', '_nvngx.dll']
+            copyDlls.forEach((dll) => {
+              copyFile(
+                `${nvngx_path}/${dll}`,
+                `${winePrefix}/drive_c/windows/system32/${dll}`,
+                (err) => {
+                  if (err) {
+                    logError(
+                      [`Error when copying ${dll}`, err],
+                      LogPrefix.ToolInstaller
+                    )
+                  }
                 }
-              }
+              )
+            })
+            const regModNvngx = [
+              'reg',
+              'add',
+              'HKEY_LOCAL_MACHINE\\SOFTWARE\\NVIDIA Corporation\\Global\\NGXCore',
+              '/v',
+              'FullPath',
+              '/d',
+              'C:\\windows\\system32',
+              '/f'
+            ]
+            await deps.commandRunner.runWineCommand({
+              gameSettings,
+              commandParts: regModNvngx,
+              wait: true,
+              protonVerb: 'run'
+            })
+          } else {
+            logWarning(
+              'Could not find nvngx.dll for DLSS!',
+              LogPrefix.ToolInstaller
             )
-          })
-          const regModNvngx = [
-            'reg',
-            'add',
-            'HKEY_LOCAL_MACHINE\\SOFTWARE\\NVIDIA Corporation\\Global\\NGXCore',
-            '/v',
-            'FullPath',
-            '/d',
-            'C:\\windows\\system32',
-            '/f'
-          ]
-          await runWineCommand({
-            gameSettings,
-            commandParts: regModNvngx,
-            wait: true,
-            protonVerb: 'run'
-          })
-        } else {
-          logWarning(
-            'Could not find nvngx.dll for DLSS!',
+          }
+        } catch (err) {
+          logError(
+            [`Error when finding nvngx.dll`, err],
             LogPrefix.ToolInstaller
           )
         }
-      } catch (err) {
-        logError([`Error when finding nvngx.dll`, err], LogPrefix.ToolInstaller)
       }
-    }
 
-    if (source) {
-      try {
-        writeFileSync(currentVersionCheck, globalVersion)
-      } catch (err) {
-        logError(
-          [`Error when writing ${tool} version`, err],
-          LogPrefix.ToolInstaller
-        )
-        return false
+      if (source) {
+        try {
+          writeFileSync(currentVersionCheck, globalVersion)
+        } catch (err) {
+          logError(
+            [`Error when writing ${tool} version`, err],
+            LogPrefix.ToolInstaller
+          )
+          return false
+        }
+        return true
       }
+
+      writeFile(currentVersionCheck, globalVersion, (err) => {
+        if (err) {
+          logError(
+            [`Error when writing ${tool} version`, err],
+            LogPrefix.ToolInstaller
+          )
+        }
+      })
       return true
     }
-
-    writeFile(currentVersionCheck, globalVersion, (err) => {
-      if (err) {
-        logError(
-          [`Error when writing ${tool} version`, err],
-          LogPrefix.ToolInstaller
-        )
-      }
-    })
-    return true
   }
+
+  return DXVK
 }
 
 let installingComponent = ''
@@ -646,21 +662,24 @@ const DLL_OVERRIDES_KEY = 'HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides'
  * waits out the wineserver the call started (3-4 s linger). prepareBottleForEngine stops the
  * lingering CrossOver wineserver once afterwards, which is also when the registry is saved.
  */
-async function restoreDxvkStrict(args: {
-  gameSettings: GameSettings
-  winePrefix: string
-  tool: string
-  is64bitPrefix: boolean
-  dlls32: string[]
-  dlls64: string[]
-  currentVersionCheck: string
-}): Promise<boolean> {
+async function restoreDxvkStrict(
+  deps: Pick<ToolsDeps, 'commandRunner'>,
+  args: {
+    gameSettings: GameSettings
+    winePrefix: string
+    tool: string
+    is64bitPrefix: boolean
+    dlls32: string[]
+    dlls64: string[]
+    currentVersionCheck: string
+  }
+): Promise<boolean> {
   const { gameSettings, winePrefix, tool, is64bitPrefix, currentVersionCheck } =
     args
   const { dlls32, dlls64 } = args
   const failed: string[] = []
   const run = (commandParts: string[]) =>
-    runWineCommand({
+    deps.commandRunner.runWineCommand({
       gameSettings,
       commandParts,
       wait: false,
@@ -818,626 +837,630 @@ function catalogCacheKey(runner: Runner, appName: string): string {
   return `${runner}:${appName}`
 }
 
-export const Winetricks = {
-  download: async () => {
-    if (isWindows) {
-      return
-    }
+function createWinetricks(deps: ToolsDeps) {
+  const Winetricks = {
+    download: async () => {
+      if (isWindows) {
+        return
+      }
 
-    const url =
-      'https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks'
-    const path = `${toolsPath}/winetricks`
+      const url =
+        'https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks'
+      const path = `${toolsPath}/winetricks`
 
-    if (!isOnline()) {
-      return
-    }
+      if (!isOnline()) {
+        return
+      }
 
-    try {
-      logInfo('Downloading Winetricks', LogPrefix.WineTricks)
-      await downloadFileInet(url, {
-        writeToFile: path,
-        maxCache: 7 * DAYS,
-        axiosConfig: { responseType: 'text' }
-      })
-      await chmod(path, 0o755)
-      return
-    } catch (error) {
-      return logWarning(
-        ['Error Downloading Winetricks', error],
-        LogPrefix.WineTricks
-      )
-    }
-  },
-  runWithArgs: async (
-    runner: Runner,
-    appName: string,
-    args: string[],
-    returnOutput = false,
-    envOverrides?: Record<string, string>,
-    // The verb this run installs, or '' for every other run (list-all).
-    // Passed explicitly rather than read from the module-global
-    // `installingComponent`: that global names whichever install is running
-    // RIGHT NOW, so a list run started mid-install used to tag its own
-    // progress/Done events with the installing verb -- a false Done that
-    // ended the install's in-flight state in the UI, and its stderr " err"
-    // lines attributed to a verb they had nothing to do with.
-    component = '',
-    // Phase 45 Plan 01 (D-11): fires exactly once, with whether the run
-    // failed, so `Winetricks.install` (and the queue built on top of it) can
-    // report a real per-verb outcome instead of a resolved-with-no-value
-    // promise. Every other `runWithArgs` call site (list-all) passes
-    // nothing -- the parameter is optional and a no-op when omitted.
-    onDone?: (failed: boolean) => void,
-    onLine?: (line: WinetricksLogLine) => void,
-    // quick 261024-tny: explicit settings that bypass the per-runner library
-    // lookup. The Steam bridge applier passes the per-app bridge bottle's
-    // settings because SteamGame.getSettings() is not the bottle the game
-    // runs in.
-    gameSettingsOverride?: GameSettings
-  ) => {
-    let gameSettings: GameSettings
-    if (gameSettingsOverride) {
-      gameSettings = gameSettingsOverride
-    } else {
-      // Imported lazily to break a circular dependency (tools/index.ts <->
-      // storeManagers/index.ts) — see the load-bearing comment in
-      // storeManagers/gog/user.ts.
-      const { libraryManagerMap } = await import('../storeManagers')
-      const game = libraryManagerMap[runner].getGame(appName)
-      // Phase 61: act on the game's real bottle and engine (a verb is a need that creates it).
-      const resolved = await resolveToolSettings(
-        game,
-        await game.getSettings(),
-        { ensureBottle: true }
-      )
-      if (resolved.kind === 'unavailable') {
-        logError(
-          `Winetricks not run for ${appName}: no usable Wine environment (${resolved.reason})`,
+      try {
+        logInfo('Downloading Winetricks', LogPrefix.WineTricks)
+        await downloadFileInet(url, {
+          writeToFile: path,
+          maxCache: 7 * DAYS,
+          axiosConfig: { responseType: 'text' }
+        })
+        await chmod(path, 0o755)
+        return
+      } catch (error) {
+        return logWarning(
+          ['Error Downloading Winetricks', error],
           LogPrefix.WineTricks
         )
+      }
+    },
+    runWithArgs: async (
+      runner: Runner,
+      appName: string,
+      args: string[],
+      returnOutput = false,
+      envOverrides?: Record<string, string>,
+      // The verb this run installs, or '' for every other run (list-all).
+      // Passed explicitly rather than read from the module-global
+      // `installingComponent`: that global names whichever install is running
+      // RIGHT NOW, so a list run started mid-install used to tag its own
+      // progress/Done events with the installing verb -- a false Done that
+      // ended the install's in-flight state in the UI, and its stderr " err"
+      // lines attributed to a verb they had nothing to do with.
+      component = '',
+      // Phase 45 Plan 01 (D-11): fires exactly once, with whether the run
+      // failed, so `Winetricks.install` (and the queue built on top of it) can
+      // report a real per-verb outcome instead of a resolved-with-no-value
+      // promise. Every other `runWithArgs` call site (list-all) passes
+      // nothing -- the parameter is optional and a no-op when omitted.
+      onDone?: (failed: boolean) => void,
+      onLine?: (line: WinetricksLogLine) => void,
+      // quick 261024-tny: explicit settings that bypass the per-runner library
+      // lookup. The Steam bridge applier passes the per-app bridge bottle's
+      // settings because SteamGame.getSettings() is not the bottle the game
+      // runs in.
+      gameSettingsOverride?: GameSettings
+    ) => {
+      let gameSettings: GameSettings
+      if (gameSettingsOverride) {
+        gameSettings = gameSettingsOverride
+      } else {
+        const game = deps.managers.library[runner].getGame(appName)
+        // Phase 61: act on the game's real bottle and engine (a verb is a need that creates it).
+        const resolved = await resolveToolSettings(
+          game,
+          await game.getSettings(),
+          { ensureBottle: true }
+        )
+        if (resolved.kind === 'unavailable') {
+          logError(
+            `Winetricks not run for ${appName}: no usable Wine environment (${resolved.reason})`,
+            LogPrefix.WineTricks
+          )
+          onDone?.(true)
+          return
+        }
+        gameSettings = resolved.settings
+      }
+
+      const { wineVersion } = gameSettings
+
+      if (!(await deps.launcher.validWine(wineVersion))) {
         onDone?.(true)
         return
       }
-      gameSettings = resolved.settings
-    }
 
-    const { wineVersion } = gameSettings
+      let winetricks = `${toolsPath}/winetricks`
 
-    if (!(await validWine(wineVersion))) {
-      onDone?.(true)
-      return
-    }
-
-    let winetricks = `${toolsPath}/winetricks`
-
-    if (!existsSync(winetricks)) {
-      await Winetricks.download()
-    }
-
-    if (await isUmuSupported(gameSettings)) {
-      winetricks = await getUmuPath()
-
-      if (args.includes('-q')) {
-        args.splice(args.indexOf('-q'), 1)
+      if (!existsSync(winetricks)) {
+        await Winetricks.download()
       }
 
-      args.unshift('winetricks')
-    }
+      if (await isUmuSupported(gameSettings)) {
+        winetricks = await getUmuPath()
 
-    const { winePrefix, wineVersion: alwaysWine_wineVersion } =
-      await getWineFromProton(gameSettings)
-    return new Promise<string[] | null>((resolve) => {
-      const wineBin = alwaysWine_wineVersion.bin
-      // We have to run Winetricks with an actual `wine` binary, meaning we
-      // might need to set some environment variables differently than normal
-      // (e.g. `WINEESYNC=1` vs `PROTON_NO_ESYNC=0`).
-      // These settings will be a copy of the normal game settings, but with
-      // their wineVersion set to one always of the type `wine`
-      const settingsWithWineVersion = {
-        ...gameSettings,
-        wineVersion: alwaysWine_wineVersion
-      }
-
-      const winepath = dirname(wineBin)
-
-      const linuxEnvs = {
-        ...process.env,
-        ...setupEnvVars(settingsWithWineVersion),
-        ...setupWineEnvVars(settingsWithWineVersion, appName),
-        WINEPREFIX: winePrefix,
-        PATH: `${winepath}:${process.env.PATH}`,
-        GAMEID: 'umu-0',
-        UMU_RUNTIME_UPDATE: '0'
-      }
-
-      const wineServer = join(winepath, 'wineserver')
-
-      const macEnvs = {
-        ...process.env,
-        // FIXME: Do we want to use `settingsWithWineVersion` here?
-        ...setupEnvVars(gameSettings),
-        ...setupWineEnvVars(gameSettings, appName),
-        WINEPREFIX: winePrefix,
-        WINESERVER: wineServer,
-        WINE: wineBin,
-        WINE64: wineBin,
-        PATH: `/opt/local/bin:/opt/homebrew/bin:${process.env.PATH}`
-      }
-
-      // envOverrides merges LAST so it wins over both platform branches.
-      // Defaults to undefined, which makes the spread a no-op -- the
-      // install/list-all call sites are byte-identical in behaviour to
-      // before this option existed. See listAvailable's LANG=C comment for
-      // why this exists at all.
-      const envs = { ...(isMac ? macEnvs : linuxEnvs), ...envOverrides }
-
-      // Phase 45 D-14/D-15: every line is classified HERE, where the raw text
-      // exists, into one of progress/noise/info/environment/error. Only
-      // `error` is logged at ERROR; curl's meter becomes a percentage and a
-      // single replaceable progress line; wine's debug channels go to debug.
-      const executeMessages: string[] = []
-      // Lines classified since the previous flush (bounded, progress lines
-      // replace each other) and the latest curl percentage for this run.
-      const pendingLines: WinetricksLogLine[] = []
-      let lastPercent: number | undefined
-      let progressUpdated = false
-      const appendMessage = (message: string) => {
-        // Don't store more than 100 messages, to not
-        // fill the storage and make render still fast
-        if (executeMessages.length > 100) {
-          executeMessages.shift()
+        if (args.includes('-q')) {
+          args.splice(args.indexOf('-q'), 1)
         }
-        executeMessages.push(message)
-        progressUpdated = true
+
+        args.unshift('winetricks')
       }
-      const recordLine = (line: WinetricksLogLine) => {
-        if (line.kind === 'progress') {
-          if (line.percent !== undefined) {
-            lastPercent = line.percent
+
+      const { winePrefix, wineVersion: alwaysWine_wineVersion } =
+        await getWineFromProton(gameSettings)
+      return new Promise<string[] | null>((resolve) => {
+        const wineBin = alwaysWine_wineVersion.bin
+        // We have to run Winetricks with an actual `wine` binary, meaning we
+        // might need to set some environment variables differently than normal
+        // (e.g. `WINEESYNC=1` vs `PROTON_NO_ESYNC=0`).
+        // These settings will be a copy of the normal game settings, but with
+        // their wineVersion set to one always of the type `wine`
+        const settingsWithWineVersion = {
+          ...gameSettings,
+          wineVersion: alwaysWine_wineVersion
+        }
+
+        const winepath = dirname(wineBin)
+
+        const linuxEnvs = {
+          ...process.env,
+          ...deps.launcher.setupEnvVars(settingsWithWineVersion),
+          ...deps.launcher.setupWineEnvVars(settingsWithWineVersion, appName),
+          WINEPREFIX: winePrefix,
+          PATH: `${winepath}:${process.env.PATH}`,
+          GAMEID: 'umu-0',
+          UMU_RUNTIME_UPDATE: '0'
+        }
+
+        const wineServer = join(winepath, 'wineserver')
+
+        const macEnvs = {
+          ...process.env,
+          // FIXME: Do we want to use `settingsWithWineVersion` here?
+          ...deps.launcher.setupEnvVars(gameSettings),
+          ...deps.launcher.setupWineEnvVars(gameSettings, appName),
+          WINEPREFIX: winePrefix,
+          WINESERVER: wineServer,
+          WINE: wineBin,
+          WINE64: wineBin,
+          PATH: `/opt/local/bin:/opt/homebrew/bin:${process.env.PATH}`
+        }
+
+        // envOverrides merges LAST so it wins over both platform branches.
+        // Defaults to undefined, which makes the spread a no-op -- the
+        // install/list-all call sites are byte-identical in behaviour to
+        // before this option existed. See listAvailable's LANG=C comment for
+        // why this exists at all.
+        const envs = { ...(isMac ? macEnvs : linuxEnvs), ...envOverrides }
+
+        // Phase 45 D-14/D-15: every line is classified HERE, where the raw text
+        // exists, into one of progress/noise/info/environment/error. Only
+        // `error` is logged at ERROR; curl's meter becomes a percentage and a
+        // single replaceable progress line; wine's debug channels go to debug.
+        const executeMessages: string[] = []
+        // Lines classified since the previous flush (bounded, progress lines
+        // replace each other) and the latest curl percentage for this run.
+        const pendingLines: WinetricksLogLine[] = []
+        let lastPercent: number | undefined
+        let progressUpdated = false
+        const appendMessage = (message: string) => {
+          // Don't store more than 100 messages, to not
+          // fill the storage and make render still fast
+          if (executeMessages.length > 100) {
+            executeMessages.shift()
           }
-          // The raw meter is never forwarded as a message.
-        } else {
-          appendMessage(line.text)
+          executeMessages.push(message)
+          progressUpdated = true
         }
-        appendLogLine(pendingLines, line)
-        progressUpdated = true
-        onLine?.(line)
-      }
-      const handleLine = (rawLine: string) => {
-        const line = classifyWinetricksLine(rawLine)
-        if (!line) {
-          return
-        }
-        switch (line.kind) {
-          case 'progress':
-            break
-          case 'noise':
-            logDebug(line.text, LogPrefix.WineTricks)
-            break
-          case 'info':
-            logInfo(line.text, LogPrefix.WineTricks)
-            break
-          case 'environment': {
-            logWarning(line.text, LogPrefix.WineTricks)
-            const unsupported = parseUnsupportedWineVersion(line.text)
-            if (unsupported !== null) {
-              recordUnsupportedWine(runner, appName, unsupported)
+        const recordLine = (line: WinetricksLogLine) => {
+          if (line.kind === 'progress') {
+            if (line.percent !== undefined) {
+              lastPercent = line.percent
             }
-            break
+            // The raw meter is never forwarded as a message.
+          } else {
+            appendMessage(line.text)
           }
-          case 'error':
-            logError(line.text, LogPrefix.WineTricks)
-            break
+          appendLogLine(pendingLines, line)
+          progressUpdated = true
+          onLine?.(line)
         }
-        recordLine(line)
-      }
-      const flushProgress = () => {
-        if (progressUpdated) {
-          sendFrontendMessage('progressOfWinetricks', {
-            messages: executeMessages,
-            installingComponent: component,
-            lines: pendingLines.splice(0, pendingLines.length),
-            ...(lastPercent !== undefined && { percent: lastPercent })
-          })
-          progressUpdated = false
+        const handleLine = (rawLine: string) => {
+          const line = classifyWinetricksLine(rawLine)
+          if (!line) {
+            return
+          }
+          switch (line.kind) {
+            case 'progress':
+              break
+            case 'noise':
+              logDebug(line.text, LogPrefix.WineTricks)
+              break
+            case 'info':
+              logInfo(line.text, LogPrefix.WineTricks)
+              break
+            case 'environment': {
+              logWarning(line.text, LogPrefix.WineTricks)
+              const unsupported = parseUnsupportedWineVersion(line.text)
+              if (unsupported !== null) {
+                recordUnsupportedWine(runner, appName, unsupported)
+              }
+              break
+            }
+            case 'error':
+              logError(line.text, LogPrefix.WineTricks)
+              break
+          }
+          recordLine(line)
         }
-      }
-      const sendProgress = setInterval(flushProgress, 1000)
+        const flushProgress = () => {
+          if (progressUpdated) {
+            sendFrontendMessage('progressOfWinetricks', {
+              messages: executeMessages,
+              installingComponent: component,
+              lines: pendingLines.splice(0, pendingLines.length),
+              ...(lastPercent !== undefined && { percent: lastPercent })
+            })
+            progressUpdated = false
+          }
+        }
+        const sendProgress = setInterval(flushProgress, 1000)
 
-      // The messages checkDependencies raises are environment notices; they
-      // reach the renderer as `environment` lines (and were already logged by
-      // checkDependencies itself, so they are not logged a second time here).
-      Winetricks.checkDependencies(runner, appName, envs, (message) =>
-        recordLine({ kind: 'environment', text: message })
-      ).catch((error) => {
+        // The messages checkDependencies raises are environment notices; they
+        // reach the renderer as `environment` lines (and were already logged by
+        // checkDependencies itself, so they are not logged a second time here).
+        Winetricks.checkDependencies(runner, appName, envs, (message) =>
+          recordLine({ kind: 'environment', text: message })
+        ).catch((error) => {
+          logWarning(
+            ['Winetricks dependency check failed:', error],
+            LogPrefix.WineTricks
+          )
+        })
+
+        // 261011-iel (D-16): (1) list-all is the one run where winetricks skips
+        // its own unsupported-wine check -- `_W_wine_not_needed=1` at script
+        // L5471 makes `winetricks_wine_setup` return before its version check
+        // at L5119. (2) Install runs DO print winetricks' own warning, already
+        // recorded by the `environment` branch of `handleLine` above, so they
+        // are not probed here -- probing them too would just re-derive the
+        // same string a second way. (3) Fire-and-forget, like
+        // `checkDependencies` above: the record reaches the tab through
+        // `onEnvironmentChanged` (which pushes `winetricksQueueChanged`), or
+        // through the tab's own `winetricksQueueState` read after
+        // `listAvailable` resolves. (4) Only `listAvailable` passes
+        // `returnOutput = true`, so this never runs on an install (`-q`) call.
+        if (returnOutput) {
+          Winetricks.checkWineVersion(runner, appName, wineBin, envs).catch(
+            (error) => {
+              logWarning(
+                ['Winetricks wine version check failed:', error],
+                LogPrefix.WineTricks
+              )
+            }
+          )
+        }
+
+        logInfo(`Running ${winetricks} ${args.join(' ')}`, LogPrefix.WineTricks)
+
+        const child = spawn(winetricks, args, { env: envs })
+
+        const output: string[] = []
+        // One partial-line remainder per stream: a chunk boundary can fall in
+        // the middle of a line (curl redraws with a bare \r).
+        let stdoutRemainder = ''
+        let stderrRemainder = ''
+
+        child.stdout.setEncoding('utf8')
+        child.stdout.on('data', (data: string) => {
+          if (returnOutput) {
+            // The list-all parser reads this verbatim; it is never classified.
+            output.push(data)
+          } else {
+            const split = splitOutputChunk(stdoutRemainder, data)
+            stdoutRemainder = split.remainder
+            split.lines.forEach(handleLine)
+          }
+        })
+
+        child.stderr.setEncoding('utf8')
+        child.stderr.on('data', (data: string) => {
+          const split = splitOutputChunk(stderrRemainder, data)
+          stderrRemainder = split.remainder
+          split.lines.forEach(handleLine)
+        })
+
+        child.on('error', (error) => {
+          logError(['Winetricks threw Error:', error], LogPrefix.WineTricks)
+          showDialogBoxModalAuto({
+            title: i18next.t('box.error.winetricks.title', 'Winetricks error'),
+            message: i18next.t('box.error.winetricks.message', {
+              defaultValue:
+                'Winetricks returned the following error during execution:{{newLine}}{{error}}',
+              newLine: '\n',
+              error: `${error}`
+            }),
+            type: 'ERROR'
+          })
+          clearInterval(sendProgress)
+          onDone?.(true)
+          resolve(returnOutput ? output : null)
+        })
+
+        // Done is sent once, on 'close': that is when stdout/stderr have drained, so the
+        // lines buffered since the last 1s tick -- usually winetricks' own abort message --
+        // are flushed into the log BEFORE Done. 'exit' can fire while output is still in
+        // flight. `failed` carries the exit code itself (a signal exit reports
+        // `code === null`, also a failure), so attribution no longer rests on the " err"
+        // substring test alone. A lingering wineserver can hold the pipes open past exit,
+        // so 'exit' arms a short unref'd fallback that sends Done if 'close' never comes.
+        let doneSent = false
+        let exitCode: number | null = null
+        const sendDone = (code: number | null) => {
+          if (doneSent) return
+          doneSent = true
+          clearInterval(sendProgress)
+          // A final line with no trailing newline is still a line.
+          if (!returnOutput) {
+            handleLine(stdoutRemainder)
+          }
+          handleLine(stderrRemainder)
+          stdoutRemainder = ''
+          stderrRemainder = ''
+          flushProgress()
+          // The exit code decides failure (`w_die` is only a `warning:`), so a
+          // failed run always ends with a line that names it.
+          const exitLines: WinetricksLogLine[] = []
+          if (code !== 0) {
+            const exitLine: WinetricksLogLine = {
+              kind: 'error',
+              text: `winetricks exited with code ${code}`
+            }
+            logWarning(exitLine.text, LogPrefix.WineTricks)
+            onLine?.(exitLine)
+            exitLines.push(exitLine)
+          }
+          sendFrontendMessage('progressOfWinetricks', {
+            messages: ['Done'],
+            installingComponent: component,
+            failed: code !== 0,
+            ...(exitLines.length > 0 && { lines: exitLines })
+          })
+          onDone?.(code !== 0)
+          resolve(returnOutput ? output : null)
+        }
+
+        child.on('exit', (code) => {
+          exitCode = code
+          setTimeout(() => sendDone(code), 2000).unref?.()
+        })
+
+        child.on('close', (code) => {
+          sendDone(exitCode ?? code)
+        })
+      })
+    },
+    listAvailable: async (runner: Runner, appName: string) => {
+      try {
+        // `list-all` (quick-260915-ajd) replaces the old `dlls list` +
+        // `fonts list` pair: one wine invocation instead of two, it supplies
+        // `category` for free, and it stops silently dropping the apps,
+        // benchmarks and settings verbs winetricks can already install. The
+        // `===== prefix =====` block winetricks emits under `list-all` is
+        // intentionally discarded by parseWinetricksListAll (F-6) -- do not
+        // "restore" it later as a bug fix, it is category names, not verbs.
+        //
+        // LANG is the load-bearing variable here, not LC_ALL: winetricks_list_all
+        // switches on `case ${LANG} in` and localises the [downloadable]/
+        // [cached] flag words for several locales (F-4). LC_ALL=C is set too,
+        // belt-and-braces for any child tool, but would be inert alone. This
+        // override is scoped to ONLY this call -- the install path keeps the
+        // user's locale.
+        const output = await Winetricks.runWithArgs(
+          runner,
+          appName,
+          ['list-all'],
+          true,
+          { LANG: 'C', LC_ALL: 'C' }
+        )
+        const components = parseWinetricksListAll(output ?? [])
+
+        // D-19/D-17: annotate each verb from the script already on disk -- no
+        // second wine or winetricks invocation. When the script cannot be read
+        // the components stay unannotated (and, with no `needsGui`, only the
+        // category half of D-09 applies) rather than failing the whole list.
+        const metadata = await Winetricks.scriptMetadata()
+        const merged = metadata
+          ? components.map((component): WinetricksComponent => {
+              const upstream = metadata.byVerb.get(component.verb)
+              return {
+                ...component,
+                // The untruncated upstream title; list-all's is cut to one line.
+                title: upstream?.title ?? component.title,
+                ...(upstream?.publisher !== undefined && {
+                  publisher: upstream.publisher
+                }),
+                ...(upstream?.year !== undefined && { year: upstream.year }),
+                ...(upstream?.media !== undefined && { media: upstream.media }),
+                ...(upstream?.conflicts !== undefined && {
+                  conflicts: upstream.conflicts
+                }),
+                ...(upstream?.homepage !== undefined && {
+                  homepage: upstream.homepage
+                }),
+                needsGui: metadata.needsGui.has(component.verb)
+              }
+            })
+          : components
+
+        // D-09: the renderer only ever sees verbs it may install. The cache the
+        // apply guard validates against holds the same filtered list.
+        const visible = filterVisibleCatalog(merged)
+        if (visible.length > 0) {
+          catalogCache.set(catalogCacheKey(runner, appName), visible)
+        }
+        return visible
+      } catch {
+        return []
+      }
+    },
+    // D-19: parses the already-downloaded `${toolsPath}/winetricks` -- a fixed
+    // path, never a renderer-supplied one -- and caches the result keyed
+    // `${mtimeMs}:${size}`, so a script re-downloaded by the 7-day cache is
+    // picked up and an unchanged one is read once. Returns null (after one
+    // warning) when the file cannot be stat-ed or read.
+    //
+    // On the umu path the winetricks that actually runs is umu's own, which may
+    // differ in version from this download; metadata still comes from the
+    // downloaded script (acceptable, recorded).
+    scriptMetadata: async (): Promise<ScriptMetadata | null> => {
+      const path = `${toolsPath}/winetricks`
+      try {
+        const { mtimeMs, size } = await stat(path)
+        const key = `${mtimeMs}:${size}`
+        if (scriptMetadataCache?.key === key) {
+          return scriptMetadataCache.value
+        }
+        const scriptText = await readFile(path, 'utf8')
+        const value: ScriptMetadata = {
+          byVerb: parseWinetricksMetadata(scriptText),
+          needsGui: deriveNeedsGuiVerbs(scriptText)
+        }
+        scriptMetadataCache = { key, value }
+        return value
+      } catch (error) {
         logWarning(
-          ['Winetricks dependency check failed:', error],
+          ['Could not read the winetricks script for its metadata:', error],
           LogPrefix.WineTricks
         )
-      })
-
-      // 261011-iel (D-16): (1) list-all is the one run where winetricks skips
-      // its own unsupported-wine check -- `_W_wine_not_needed=1` at script
-      // L5471 makes `winetricks_wine_setup` return before its version check
-      // at L5119. (2) Install runs DO print winetricks' own warning, already
-      // recorded by the `environment` branch of `handleLine` above, so they
-      // are not probed here -- probing them too would just re-derive the
-      // same string a second way. (3) Fire-and-forget, like
-      // `checkDependencies` above: the record reaches the tab through
-      // `onEnvironmentChanged` (which pushes `winetricksQueueChanged`), or
-      // through the tab's own `winetricksQueueState` read after
-      // `listAvailable` resolves. (4) Only `listAvailable` passes
-      // `returnOutput = true`, so this never runs on an install (`-q`) call.
-      if (returnOutput) {
-        Winetricks.checkWineVersion(runner, appName, wineBin, envs).catch(
-          (error) => {
-            logWarning(
-              ['Winetricks wine version check failed:', error],
-              LogPrefix.WineTricks
-            )
-          }
-        )
+        return null
       }
-
-      logInfo(`Running ${winetricks} ${args.join(' ')}`, LogPrefix.WineTricks)
-
-      const child = spawn(winetricks, args, { env: envs })
-
-      const output: string[] = []
-      // One partial-line remainder per stream: a chunk boundary can fall in
-      // the middle of a line (curl redraws with a bare \r).
-      let stdoutRemainder = ''
-      let stderrRemainder = ''
-
-      child.stdout.setEncoding('utf8')
-      child.stdout.on('data', (data: string) => {
-        if (returnOutput) {
-          // The list-all parser reads this verbatim; it is never classified.
-          output.push(data)
-        } else {
-          const split = splitOutputChunk(stdoutRemainder, data)
-          stdoutRemainder = split.remainder
-          split.lines.forEach(handleLine)
+    },
+    // Phase 45 Plan 01 (D-01/T-45-01): used by `winetricksApplyGuard.ts` via
+    // `winetricksQueue.ts` to validate renderer-supplied verbs against the real
+    // catalog. Returns the cached list when present; otherwise awaits
+    // `listAvailable` itself (which populates the cache as a side effect).
+    catalogFor: async (
+      runner: Runner,
+      appName: string
+    ): Promise<WinetricksComponent[]> => {
+      const cached = catalogCache.get(catalogCacheKey(runner, appName))
+      if (cached) {
+        return cached
+      }
+      return Winetricks.listAvailable(runner, appName)
+    },
+    listInstalled: async (game: Game) => {
+      // Phase 61: read the log from the bottle the game really runs in; a read never creates one.
+      const resolved = await resolveToolSettings(
+        game,
+        await game.getSettings(),
+        {
+          ensureBottle: false
         }
-      })
-
-      child.stderr.setEncoding('utf8')
-      child.stderr.on('data', (data: string) => {
-        const split = splitOutputChunk(stderrRemainder, data)
-        stderrRemainder = split.remainder
-        split.lines.forEach(handleLine)
-      })
-
-      child.on('error', (error) => {
-        logError(['Winetricks threw Error:', error], LogPrefix.WineTricks)
-        showDialogBoxModalAuto({
-          title: i18next.t('box.error.winetricks.title', 'Winetricks error'),
-          message: i18next.t('box.error.winetricks.message', {
-            defaultValue:
-              'Winetricks returned the following error during execution:{{newLine}}{{error}}',
-            newLine: '\n',
-            error: `${error}`
-          }),
-          type: 'ERROR'
-        })
-        clearInterval(sendProgress)
-        onDone?.(true)
-        resolve(returnOutput ? output : null)
-      })
-
-      // Done is sent once, on 'close': that is when stdout/stderr have drained, so the
-      // lines buffered since the last 1s tick -- usually winetricks' own abort message --
-      // are flushed into the log BEFORE Done. 'exit' can fire while output is still in
-      // flight. `failed` carries the exit code itself (a signal exit reports
-      // `code === null`, also a failure), so attribution no longer rests on the " err"
-      // substring test alone. A lingering wineserver can hold the pipes open past exit,
-      // so 'exit' arms a short unref'd fallback that sends Done if 'close' never comes.
-      let doneSent = false
-      let exitCode: number | null = null
-      const sendDone = (code: number | null) => {
-        if (doneSent) return
-        doneSent = true
-        clearInterval(sendProgress)
-        // A final line with no trailing newline is still a line.
-        if (!returnOutput) {
-          handleLine(stdoutRemainder)
-        }
-        handleLine(stderrRemainder)
-        stdoutRemainder = ''
-        stderrRemainder = ''
-        flushProgress()
-        // The exit code decides failure (`w_die` is only a `warning:`), so a
-        // failed run always ends with a line that names it.
-        const exitLines: WinetricksLogLine[] = []
-        if (code !== 0) {
-          const exitLine: WinetricksLogLine = {
-            kind: 'error',
-            text: `winetricks exited with code ${code}`
-          }
-          logWarning(exitLine.text, LogPrefix.WineTricks)
-          onLine?.(exitLine)
-          exitLines.push(exitLine)
-        }
-        sendFrontendMessage('progressOfWinetricks', {
-          messages: ['Done'],
-          installingComponent: component,
-          failed: code !== 0,
-          ...(exitLines.length > 0 && { lines: exitLines })
-        })
-        onDone?.(code !== 0)
-        resolve(returnOutput ? output : null)
-      }
-
-      child.on('exit', (code) => {
-        exitCode = code
-        setTimeout(() => sendDone(code), 2000).unref?.()
-      })
-
-      child.on('close', (code) => {
-        sendDone(exitCode ?? code)
-      })
-    })
-  },
-  listAvailable: async (runner: Runner, appName: string) => {
-    try {
-      // `list-all` (quick-260915-ajd) replaces the old `dlls list` +
-      // `fonts list` pair: one wine invocation instead of two, it supplies
-      // `category` for free, and it stops silently dropping the apps,
-      // benchmarks and settings verbs winetricks can already install. The
-      // `===== prefix =====` block winetricks emits under `list-all` is
-      // intentionally discarded by parseWinetricksListAll (F-6) -- do not
-      // "restore" it later as a bug fix, it is category names, not verbs.
-      //
-      // LANG is the load-bearing variable here, not LC_ALL: winetricks_list_all
-      // switches on `case ${LANG} in` and localises the [downloadable]/
-      // [cached] flag words for several locales (F-4). LC_ALL=C is set too,
-      // belt-and-braces for any child tool, but would be inert alone. This
-      // override is scoped to ONLY this call -- the install path keeps the
-      // user's locale.
-      const output = await Winetricks.runWithArgs(
-        runner,
-        appName,
-        ['list-all'],
-        true,
-        { LANG: 'C', LC_ALL: 'C' }
       )
-      const components = parseWinetricksListAll(output ?? [])
-
-      // D-19/D-17: annotate each verb from the script already on disk -- no
-      // second wine or winetricks invocation. When the script cannot be read
-      // the components stay unannotated (and, with no `needsGui`, only the
-      // category half of D-09 applies) rather than failing the whole list.
-      const metadata = await Winetricks.scriptMetadata()
-      const merged = metadata
-        ? components.map((component): WinetricksComponent => {
-            const upstream = metadata.byVerb.get(component.verb)
-            return {
-              ...component,
-              // The untruncated upstream title; list-all's is cut to one line.
-              title: upstream?.title ?? component.title,
-              ...(upstream?.publisher !== undefined && {
-                publisher: upstream.publisher
-              }),
-              ...(upstream?.year !== undefined && { year: upstream.year }),
-              ...(upstream?.media !== undefined && { media: upstream.media }),
-              ...(upstream?.conflicts !== undefined && {
-                conflicts: upstream.conflicts
-              }),
-              ...(upstream?.homepage !== undefined && {
-                homepage: upstream.homepage
-              }),
-              needsGui: metadata.needsGui.has(component.verb)
-            }
-          })
-        : components
-
-      // D-09: the renderer only ever sees verbs it may install. The cache the
-      // apply guard validates against holds the same filtered list.
-      const visible = filterVisibleCatalog(merged)
-      if (visible.length > 0) {
-        catalogCache.set(catalogCacheKey(runner, appName), visible)
-      }
-      return visible
-    } catch {
-      return []
-    }
-  },
-  // D-19: parses the already-downloaded `${toolsPath}/winetricks` -- a fixed
-  // path, never a renderer-supplied one -- and caches the result keyed
-  // `${mtimeMs}:${size}`, so a script re-downloaded by the 7-day cache is
-  // picked up and an unchanged one is read once. Returns null (after one
-  // warning) when the file cannot be stat-ed or read.
-  //
-  // On the umu path the winetricks that actually runs is umu's own, which may
-  // differ in version from this download; metadata still comes from the
-  // downloaded script (acceptable, recorded).
-  scriptMetadata: async (): Promise<ScriptMetadata | null> => {
-    const path = `${toolsPath}/winetricks`
-    try {
-      const { mtimeMs, size } = await stat(path)
-      const key = `${mtimeMs}:${size}`
-      if (scriptMetadataCache?.key === key) {
-        return scriptMetadataCache.value
-      }
-      const scriptText = await readFile(path, 'utf8')
-      const value: ScriptMetadata = {
-        byVerb: parseWinetricksMetadata(scriptText),
-        needsGui: deriveNeedsGuiVerbs(scriptText)
-      }
-      scriptMetadataCache = { key, value }
-      return value
-    } catch (error) {
-      logWarning(
-        ['Could not read the winetricks script for its metadata:', error],
-        LogPrefix.WineTricks
-      )
-      return null
-    }
-  },
-  // Phase 45 Plan 01 (D-01/T-45-01): used by `winetricksApplyGuard.ts` via
-  // `winetricksQueue.ts` to validate renderer-supplied verbs against the real
-  // catalog. Returns the cached list when present; otherwise awaits
-  // `listAvailable` itself (which populates the cache as a side effect).
-  catalogFor: async (
-    runner: Runner,
-    appName: string
-  ): Promise<WinetricksComponent[]> => {
-    const cached = catalogCache.get(catalogCacheKey(runner, appName))
-    if (cached) {
-      return cached
-    }
-    return Winetricks.listAvailable(runner, appName)
-  },
-  listInstalled: async (game: Game) => {
-    // Phase 61: read the log from the bottle the game really runs in; a read never creates one.
-    const resolved = await resolveToolSettings(game, await game.getSettings(), {
-      ensureBottle: false
-    })
-    if (resolved.kind === 'unavailable') return []
-    const { winePrefix } = await getWineFromProton(resolved.settings)
-    const winetricksLogPath = join(winePrefix, 'winetricks.log')
-    try {
-      const winetricksLog = await readFile(winetricksLogPath, 'utf8')
-      return winetricksLog.split('\n').filter(Boolean)
-    } catch {
-      return []
-    }
-  },
-  install: async (
-    runner: Runner,
-    appName: string,
-    component: string,
-    onLine?: (line: WinetricksLogLine) => void,
-    // quick 261024-tny: see runWithArgs' gameSettingsOverride.
-    gameSettings?: GameSettings
-  ): Promise<WinetricksInstallOutcome> => {
-    // Single-flight: two `winetricks -q` processes racing on one Wine prefix
-    // is never wanted, and the first to finish would clear
-    // `installingComponent` to '' while the other still runs. A refused call
-    // sends nothing -- the running install's own '' event still arrives and
-    // clears any optimistic in-flight state the dialog set for this one.
-    if (installingComponent !== '') {
-      logWarning(
-        `Not installing ${component}: ${installingComponent} is already installing`,
-        LogPrefix.WineTricks
-      )
-      return 'refused'
-    }
-    installingComponent = component
-    sendFrontendMessage('installing-winetricks-component', component)
-    // Phase 45 Plan 01 (D-11): `onDone` is the only source of truth for this
-    // call's own outcome. Defaults to 'failed' -- if `runWithArgs` resolves
-    // without ever invoking `onDone` (a shape this plan has not observed but
-    // does not rule out either), the queue built on top of this must not
-    // silently read that as success.
-    let outcome: WinetricksInstallOutcome = 'failed'
-    try {
-      await Winetricks.runWithArgs(
-        runner,
-        appName,
-        ['-q', component],
-        false,
-        undefined,
-        component,
-        (failed) => {
-          outcome = failed ? 'failed' : 'installed'
-        },
-        onLine,
-        gameSettings
-      )
-    } finally {
-      installingComponent = ''
-      sendFrontendMessage('installing-winetricks-component', '')
-    }
-    return outcome
-  },
-  checkDependencies: async (
-    runner: Runner,
-    appName: string,
-    envs: Record<string, string>,
-    appendMessage: (message: string) => void
-  ) => {
-    // check if winetricks dependencies are installed
-    const dependencies = ['7z', 'cabextract', 'zenity', 'unzip', 'curl']
-    const missingDeps: string[] = []
-    for (const dependency of dependencies) {
+      if (resolved.kind === 'unavailable') return []
+      const { winePrefix } = await getWineFromProton(resolved.settings)
+      const winetricksLogPath = join(winePrefix, 'winetricks.log')
       try {
-        await execAsync(`which ${dependency}`, { ...execOptions, env: envs })
+        const winetricksLog = await readFile(winetricksLogPath, 'utf8')
+        return winetricksLog.split('\n').filter(Boolean)
       } catch {
-        // A probe that rejects OR throws synchronously counts as missing and
-        // never escapes this function.
-        missingDeps.push(dependency)
-        const message = `${dependency} not installed! Winetricks might fail to install some packages or even open`
+        return []
+      }
+    },
+    install: async (
+      runner: Runner,
+      appName: string,
+      component: string,
+      onLine?: (line: WinetricksLogLine) => void,
+      // quick 261024-tny: see runWithArgs' gameSettingsOverride.
+      gameSettings?: GameSettings
+    ): Promise<WinetricksInstallOutcome> => {
+      // Single-flight: two `winetricks -q` processes racing on one Wine prefix
+      // is never wanted, and the first to finish would clear
+      // `installingComponent` to '' while the other still runs. A refused call
+      // sends nothing -- the running install's own '' event still arrives and
+      // clears any optimistic in-flight state the dialog set for this one.
+      if (installingComponent !== '') {
+        logWarning(
+          `Not installing ${component}: ${installingComponent} is already installing`,
+          LogPrefix.WineTricks
+        )
+        return 'refused'
+      }
+      installingComponent = component
+      sendFrontendMessage('installing-winetricks-component', component)
+      // Phase 45 Plan 01 (D-11): `onDone` is the only source of truth for this
+      // call's own outcome. Defaults to 'failed' -- if `runWithArgs` resolves
+      // without ever invoking `onDone` (a shape this plan has not observed but
+      // does not rule out either), the queue built on top of this must not
+      // silently read that as success.
+      let outcome: WinetricksInstallOutcome = 'failed'
+      try {
+        await Winetricks.runWithArgs(
+          runner,
+          appName,
+          ['-q', component],
+          false,
+          undefined,
+          component,
+          (failed) => {
+            outcome = failed ? 'failed' : 'installed'
+          },
+          onLine,
+          gameSettings
+        )
+      } finally {
+        installingComponent = ''
+        sendFrontendMessage('installing-winetricks-component', '')
+      }
+      return outcome
+    },
+    checkDependencies: async (
+      runner: Runner,
+      appName: string,
+      envs: Record<string, string>,
+      appendMessage: (message: string) => void
+    ) => {
+      // check if winetricks dependencies are installed
+      const dependencies = ['7z', 'cabextract', 'zenity', 'unzip', 'curl']
+      const missingDeps: string[] = []
+      for (const dependency of dependencies) {
+        try {
+          await execAsync(`which ${dependency}`, { ...execOptions, env: envs })
+        } catch {
+          // A probe that rejects OR throws synchronously counts as missing and
+          // never escapes this function.
+          missingDeps.push(dependency)
+          const message = `${dependency} not installed! Winetricks might fail to install some packages or even open`
+          appendMessage(message)
+          logWarning([message], LogPrefix.WineTricks)
+        }
+      }
+
+      if (missingDeps.length > 0 && isMac) {
+        const message = `Check https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/Using-Heroic-on-a-Mac-computer#winetricks-setup to install the missing dependencies.`
         appendMessage(message)
         logWarning([message], LogPrefix.WineTricks)
       }
-    }
 
-    if (missingDeps.length > 0 && isMac) {
-      const message = `Check https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/Using-Heroic-on-a-Mac-computer#winetricks-setup to install the missing dependencies.`
-      appendMessage(message)
-      logWarning([message], LogPrefix.WineTricks)
-    }
-
-    // D-16: the exact missing subset (an empty one clears an earlier record)
-    // feeds the environment banner, once per check.
-    recordMissingDependencies(runner, appName, [...missingDeps].sort())
-  },
-  // 261011-iel (D-16): winetricks sets `_W_wine_not_needed=1` for every
-  // `list*` verb except `list-installed` (script L5471), so its own
-  // unsupported-wine check (L5119) never runs -- and never prints the
-  // `warning: Your version of wine ...` line the `environment` branch of
-  // `handleLine` relies on -- for the tab-open list-all run. This probes the
-  // bottle's own wine binary directly, so the banner is reachable before any
-  // install.
-  checkWineVersion: async (
-    runner: Runner,
-    appName: string,
-    wineBin: string,
-    envs: Record<string, string>
-  ) => {
-    const result = await readWineVersionOutput(wineBin, envs)
-    if ('error' in result) {
-      logWarning(
-        [
-          'Could not read the wine version for the winetricks environment banner:',
-          result.error
-        ],
-        LogPrefix.WineTricks
+      // D-16: the exact missing subset (an empty one clears an earlier record)
+      // feeds the environment banner, once per check.
+      recordMissingDependencies(runner, appName, [...missingDeps].sort())
+    },
+    // 261011-iel (D-16): winetricks sets `_W_wine_not_needed=1` for every
+    // `list*` verb except `list-installed` (script L5471), so its own
+    // unsupported-wine check (L5119) never runs -- and never prints the
+    // `warning: Your version of wine ...` line the `environment` branch of
+    // `handleLine` relies on -- for the tab-open list-all run. This probes the
+    // bottle's own wine binary directly, so the banner is reachable before any
+    // install.
+    checkWineVersion: async (
+      runner: Runner,
+      appName: string,
+      wineBin: string,
+      envs: Record<string, string>
+    ) => {
+      const result = await readWineVersionOutput(wineBin, envs)
+      if ('error' in result) {
+        logWarning(
+          [
+            'Could not read the wine version for the winetricks environment banner:',
+            result.error
+          ],
+          LogPrefix.WineTricks
+        )
+        return
+      }
+      const version = parseWineVersionOutput(result.stdout)
+      if (version === null) {
+        // log-secret-gate-exempt: stdout of `wine --version` (a version string), not an auth command
+        logWarning(
+          [
+            'Could not parse the wine version for the winetricks environment banner:',
+            result.stdout.slice(0, 200)
+          ],
+          LogPrefix.WineTricks
+        )
+        return
+      }
+      // A supported wine CLEARS a stale record (null), rather than leaving one
+      // written by a previous, older bottle in place:
+      // - the probe runs against the bottle's CURRENT wine at every tab open;
+      // - it uses winetricks' own derivation and threshold (see
+      //   winetricksOutputClassifier.ts), so for one binary it cannot disagree
+      //   with the install-time `environment`-branch record;
+      // - without clearing, switching a bottle from GPTK 7.7 to a supported
+      //   wine would leave a false banner for the whole sidecar life;
+      // - `recordMissingDependencies` already clears on an empty subset, so
+      //   this mirrors an existing precedent rather than inventing one.
+      // A failed, timed-out, oversized or unparseable probe (the branches
+      // above, which `return` before reaching here) never clears: absence of
+      // evidence is not evidence. Log nothing on success.
+      recordUnsupportedWine(
+        runner,
+        appName,
+        isUnsupportedWineVersion(version) ? version : null
       )
-      return
     }
-    const version = parseWineVersionOutput(result.stdout)
-    if (version === null) {
-      // log-secret-gate-exempt: stdout of `wine --version` (a version string), not an auth command
-      logWarning(
-        [
-          'Could not parse the wine version for the winetricks environment banner:',
-          result.stdout.slice(0, 200)
-        ],
-        LogPrefix.WineTricks
-      )
-      return
-    }
-    // A supported wine CLEARS a stale record (null), rather than leaving one
-    // written by a previous, older bottle in place:
-    // - the probe runs against the bottle's CURRENT wine at every tab open;
-    // - it uses winetricks' own derivation and threshold (see
-    //   winetricksOutputClassifier.ts), so for one binary it cannot disagree
-    //   with the install-time `environment`-branch record;
-    // - without clearing, switching a bottle from GPTK 7.7 to a supported
-    //   wine would leave a false banner for the whole sidecar life;
-    // - `recordMissingDependencies` already clears on an empty subset, so
-    //   this mirrors an existing precedent rather than inventing one.
-    // A failed, timed-out, oversized or unparseable probe (the branches
-    // above, which `return` before reaching here) never clears: absence of
-    // evidence is not evidence. Log nothing on success.
-    recordUnsupportedWine(
-      runner,
-      appName,
-      isUnsupportedWineVersion(version) ? version : null
-    )
   }
+
+  return Winetricks
 }
 
 // Phase 45 Plan 01 (D-11): reads the same module-level single-flight slot
@@ -1519,7 +1542,8 @@ function getVkd3dUrl(): string {
   return 'https://api.github.com/repos/Heroic-Games-Launcher/vkd3d-proton/releases/latest'
 }
 
-export async function runWineCommandOnGame(
+async function runWineCommandOnGame(
+  deps: ToolsDeps,
   runner: Runner,
   appName: string,
   { commandParts, wait = false, protonVerb, startFolder }: WineCommandArgs
@@ -1540,10 +1564,7 @@ export async function runWineCommandOnGame(
     return { stdout: '', stderr: '' }
   }
 
-  // Lazy import — see the load-bearing comment on the sibling call in
-  // Winetricks.runWithArgs above.
-  const { libraryManagerMap } = await import('../storeManagers')
-  const game = libraryManagerMap[runner].getGame(appName)
+  const game = deps.managers.library[runner].getGame(appName)
   if (game.isNative()) {
     logError('runWineCommand called on native game!', LogPrefix.Gog)
     return { stdout: '', stderr: '' }
@@ -1575,7 +1596,7 @@ export async function runWineCommandOnGame(
   }
   const gameSettings = resolved.settings
 
-  return runWineCommand({
+  return deps.commandRunner.runWineCommand({
     gameSettings,
     installFolderName: folder_name,
     gameInstallPath: install.install_path,
@@ -1593,12 +1614,15 @@ export async function runWineCommandOnGame(
  * bottle first, and runs the command there on the resolved engine. Sideload only; the bottle name
  * is computed server-side (T-61-24-01, T-61-24-02).
  */
-export async function runWineCommandForPendingInstall(args: {
-  runner: Runner
-  appName: string
-  commandParts: string[]
-  wait: boolean
-}): Promise<ExecResult> {
+async function runWineCommandForPendingInstall(
+  deps: ToolsDeps,
+  args: {
+    runner: Runner
+    appName: string
+    commandParts: string[]
+    wait: boolean
+  }
+): Promise<ExecResult> {
   if (!isStore(args.runner, 'sideload')) {
     logError(
       `runWineCommandForPendingInstall refused runner ${args.runner}: sideload only`,
@@ -1619,10 +1643,35 @@ export async function runWineCommandForPendingInstall(args: {
     )
     return { stdout: '', stderr: '' }
   }
-  return runWineCommand({
+  return deps.commandRunner.runWineCommand({
     gameSettings: resolved.settings,
     commandParts: args.commandParts,
     wait: args.wait,
     protonVerb: 'runinprefix'
   })
+}
+
+export interface Tools {
+  DXVK: ReturnType<typeof createDxvk>
+  Winetricks: ReturnType<typeof createWinetricks>
+  runWineCommandOnGame: (
+    runner: Runner,
+    appName: string,
+    args: WineCommandArgs
+  ) => Promise<ExecResult>
+  runWineCommandForPendingInstall: (
+    args: Parameters<typeof runWineCommandForPendingInstall>[1]
+  ) => Promise<ExecResult>
+}
+
+/** R3: the tool wrappers bound to one set of deps. Cheap; the state they share is module-level. */
+export function createTools(deps: ToolsDeps): Tools {
+  return {
+    DXVK: createDxvk(deps),
+    Winetricks: createWinetricks(deps),
+    runWineCommandOnGame: (runner, appName, args) =>
+      runWineCommandOnGame(deps, runner, appName, args),
+    runWineCommandForPendingInstall: (args) =>
+      runWineCommandForPendingInstall(deps, args)
+  }
 }

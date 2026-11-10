@@ -34,6 +34,8 @@ import {
 } from 'backend/storeManagers'
 import * as launcherModule from 'backend/launcher'
 import * as utilsModule from 'backend/utils'
+import { createTools } from 'backend/tools'
+import type { Tools } from 'backend/tools'
 import type { Launcher, ManagerDeps, StoreManagers, Stores } from './types'
 
 export function buildStoresFacade(): Stores {
@@ -132,4 +134,20 @@ export function legacyManagerDeps(): ManagerDeps {
     },
     spawnAsync: (...a) => utilsModule.spawnAsync(...a)
   }
+}
+
+/**
+ * TEMPORARY (plan 12, deleted by plan 23): the tool wrappers for callers that do not hold deps
+ * yet (engineSwitch default, bottle primitives, the Steam known-fix applier). Built per call
+ * from the legacy deps; the tools' state is module-level, so a fresh wrapper shares it.
+ */
+export function legacyTools(): Tools {
+  const deps = legacyManagerDeps()
+  return createTools({
+    get managers() {
+      return { library: deps.libraryManagers }
+    },
+    commandRunner: deps.commandRunner,
+    launcher: deps.launcher
+  })
 }

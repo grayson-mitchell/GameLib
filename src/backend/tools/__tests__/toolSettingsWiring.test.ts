@@ -8,19 +8,6 @@ const mockRunWineCommand = jest.fn()
 const mockResolve = jest.fn()
 const mockValidWine = jest.fn()
 
-jest.mock('../../storeManagers', () => ({
-  libraryManagerMap: {
-    gog: { getGame: (...args: unknown[]) => mockGetGame(...args) }
-  }
-}))
-
-jest.mock('../../launcher', () => ({
-  runWineCommand: (...args: unknown[]) => mockRunWineCommand(...args),
-  setupEnvVars: jest.fn(),
-  setupWineEnvVars: jest.fn(),
-  validWine: (...args: unknown[]) => mockValidWine(...args)
-}))
-
 jest.mock('../../engine/toolSettings', () => ({
   resolveToolSettings: (...args: unknown[]) => mockResolve(...args)
 }))
@@ -36,7 +23,25 @@ jest.mock('backend/logger', () => {
   }
 })
 
-import { runWineCommandOnGame, Winetricks } from '../index'
+import { createTools } from '../index'
+import type { ToolsDeps } from '../index'
+
+const toolsDeps: ToolsDeps = {
+  managers: {
+    library: {
+      gog: { getGame: (...args: unknown[]) => mockGetGame(...args) }
+    } as unknown as ToolsDeps['managers']['library']
+  },
+  commandRunner: {
+    runWineCommand: (...args: unknown[]) => mockRunWineCommand(...args)
+  } as unknown as ToolsDeps['commandRunner'],
+  launcher: {
+    setupEnvVars: jest.fn(),
+    setupWineEnvVars: jest.fn(),
+    validWine: (...args: unknown[]) => mockValidWine(...args)
+  } as unknown as ToolsDeps['launcher']
+}
+const { runWineCommandOnGame, Winetricks } = createTools(toolsDeps)
 import type { Game } from 'common/types/game_manager'
 
 const STORED = { winePrefix: '/stored', wineVersion: { name: 'stored' } }

@@ -246,7 +246,11 @@ export function registerHandlers(deps: {
     managers: deps.services.managers,
     quit: deps.services.quit
   })
-  registerRunnerMiscFlows()
+  registerRunnerMiscFlows({
+    managers: deps.services.managers,
+    commandRunner: deps.services.commandRunner,
+    launcher: deps.services.launcher
+  })
   // Phase 34.6 Plan 08 (REQ-34.6-01): the EOS overlay channel cluster — no ordering constraint
   // relative to the other calls above.
   registerEosOverlayFlows()

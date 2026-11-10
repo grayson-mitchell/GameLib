@@ -72,12 +72,7 @@ import {
   updateWineVersionInfos,
   updateWineListsIfOutdated
 } from '../wine/manager/utils'
-import {
-  DXVK,
-  Winetricks,
-  runWineCommandOnGame,
-  runWineCommandForPendingInstall
-} from '../tools'
+import { createTools } from '../tools'
 import { WinetricksQueue } from '../tools/winetricksQueue'
 import { isWindows } from '../constants/environment'
 import { assertCommandParts } from './rendererPathGuard'
@@ -104,7 +99,7 @@ import type {
 export interface WineToolsFlowDeps {
   managers: Pick<StoreManagers, 'library'>
   commandRunner: Pick<CommandRunner, 'runWineCommand'>
-  launcher: Pick<Launcher, 'validWine'>
+  launcher: Pick<Launcher, 'validWine' | 'setupEnvVars' | 'setupWineEnvVars'>
   spawnAsync: SpawnAsync
 }
 
@@ -129,6 +124,13 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
     return
   }
   registered = true
+
+  const {
+    DXVK,
+    Winetricks,
+    runWineCommandOnGame,
+    runWineCommandForPendingInstall
+  } = createTools(deps)
 
   // ── D-14 seam 3: `runWineCommand` (main.ts:766) ─────────────────────────────────────────────
   //
@@ -351,7 +353,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
       const runner = args[0] as Runner
       const appName = args[1] as string
       const verbs = args[2] as string[]
-      return WinetricksQueue.apply(runner, appName, verbs)
+      return WinetricksQueue.apply(Winetricks, runner, appName, verbs)
     }
   )
 

@@ -9,19 +9,6 @@ const mockLogError = jest.fn()
 const mockResolveForId = jest.fn()
 const mockGetSettings = jest.fn()
 
-jest.mock('../../storeManagers', () => ({
-  libraryManagerMap: {
-    sideload: { getGame: (...args: unknown[]) => mockGetGame(...args) }
-  }
-}))
-
-jest.mock('../../launcher', () => ({
-  runWineCommand: (...args: unknown[]) => mockRunWineCommand(...args),
-  setupEnvVars: jest.fn(),
-  setupWineEnvVars: jest.fn(),
-  validWine: jest.fn()
-}))
-
 jest.mock('../../game_config', () => ({
   GameConfig: {
     get: () => ({ getSettings: (...a: unknown[]) => mockGetSettings(...a) })
@@ -44,7 +31,25 @@ jest.mock('backend/logger', () => {
   }
 })
 
-import { runWineCommandForPendingInstall } from '../index'
+import { createTools } from '../index'
+import type { ToolsDeps } from '../index'
+
+const toolsDeps: ToolsDeps = {
+  managers: {
+    library: {
+      sideload: { getGame: (...args: unknown[]) => mockGetGame(...args) }
+    } as unknown as ToolsDeps['managers']['library']
+  },
+  commandRunner: {
+    runWineCommand: (...args: unknown[]) => mockRunWineCommand(...args)
+  } as unknown as ToolsDeps['commandRunner'],
+  launcher: {
+    setupEnvVars: jest.fn(),
+    setupWineEnvVars: jest.fn(),
+    validWine: jest.fn()
+  } as unknown as ToolsDeps['launcher']
+}
+const { runWineCommandForPendingInstall } = createTools(toolsDeps)
 
 const stored = { winePrefix: '/old' }
 const resolvedSettings = { winePrefix: '/bottle', marker: 'resolved' }

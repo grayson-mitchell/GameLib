@@ -136,7 +136,7 @@ listenerRegistry.clear()
 registerRunnerAuthFlows()
 registerWineToolsFlows(services)
 registerShortcutsFlows(services)
-registerRunnerMiscFlows()
+registerRunnerMiscFlows(services)
 // Phase 34.6 Plan 08 (REQ-34.6-01/13, D-09): the EOS overlay cluster joins the module-scope
 // snapshot below. Its absence here (before this plan) is exactly what made the EOS 8 register
 // as EMPTY in this file — the mandatory part of D-09's flip-to-presence is this call, not
@@ -312,7 +312,7 @@ const MODULES: ReadonlyArray<{
   },
   {
     name: 'registerRunnerMiscFlows',
-    register: registerRunnerMiscFlows,
+    register: () => registerRunnerMiscFlows(services),
     file: 'runnerMiscFlowRegistration.ts',
     declaredChannels: RUNNER_MISC_CHANNELS
   },

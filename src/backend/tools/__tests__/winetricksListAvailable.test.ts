@@ -32,32 +32,14 @@ jest.mock('fs/promises', () => ({
   readFile: (...args: unknown[]) => mockReadFile(...args)
 }))
 
-jest.mock('../../storeManagers', () => ({
-  libraryManagerMap: {
-    gog: {
-      getGame: () => ({
-        // 61-14: resolveToolSettings skips the engine layer for a native game, so these
-        // tests keep exercising the stored settings.
-        isNative: () => true,
-        getSettings: () => Promise.resolve({ wineVersion: {} })
-      })
-    }
-  }
-}))
-
-jest.mock('../../launcher', () => ({
-  runWineCommand: jest.fn(),
-  setupEnvVars: () => ({}),
-  setupWineEnvVars: () => ({}),
-  validWine: () => Promise.resolve(true)
-}))
-
 jest.mock('../../ipc', () => ({
   sendFrontendMessage: (...args: unknown[]) => mockSendFrontendMessage(...args)
 }))
 
 jest.mock('../../utils', () => ({
-  ...jest.requireActual('../../utils'),
+  axiosClient: {},
+  downloadFile: jest.fn(),
+  extractFiles: jest.fn(),
   getWineFromProton: (...args: unknown[]) => mockGetWineFromProton(...args),
   execAsync: (...args: unknown[]) => mockExecAsync(...args)
 }))
@@ -89,7 +71,30 @@ import {
   getEnvironmentReport,
   onEnvironmentChanged
 } from '../winetricksEnvironment'
-import { Winetricks } from '../index'
+import { createTools } from '../index'
+import type { ToolsDeps } from '../index'
+
+const toolsDeps: ToolsDeps = {
+  managers: {
+    library: {
+      gog: {
+        getGame: () => ({
+          isNative: () => true,
+          getSettings: () => Promise.resolve({ wineVersion: {} })
+        })
+      }
+    } as unknown as ToolsDeps['managers']['library']
+  },
+  commandRunner: {
+    runWineCommand: jest.fn()
+  } as unknown as ToolsDeps['commandRunner'],
+  launcher: {
+    setupEnvVars: () => ({}),
+    setupWineEnvVars: () => ({}),
+    validWine: () => Promise.resolve(true)
+  } as unknown as ToolsDeps['launcher']
+}
+const { Winetricks } = createTools(toolsDeps)
 import { defined } from 'backend/testUtils/indexed'
 
 const FIXTURE_SCRIPT = readFileSync(

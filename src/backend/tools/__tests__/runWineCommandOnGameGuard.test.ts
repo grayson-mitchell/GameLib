@@ -41,21 +41,6 @@ const mockLogError = jest.fn()
 
 // `tools/index.ts` reaches libraryManagerMap through a LAZY `await import('../storeManagers')`
 // at L889 -- jest.mock intercepts it regardless.
-jest.mock('../../storeManagers', () => ({
-  libraryManagerMap: {
-    gog: {
-      getGame: (...args: unknown[]) => mockGetGame(...args)
-    }
-  }
-}))
-
-jest.mock('../../launcher', () => ({
-  runWineCommand: (...args: unknown[]) => mockRunWineCommand(...args),
-  setupEnvVars: jest.fn(),
-  setupWineEnvVars: jest.fn(),
-  validWine: jest.fn()
-}))
-
 jest.mock('backend/logger', () => {
   // Real LogPrefix -- logger/constants.ts is a plain enum-like object with no side effects,
   // so the guard's `LogPrefix.Gog` is asserted against its true value, not a stand-in.
@@ -69,7 +54,25 @@ jest.mock('backend/logger', () => {
   }
 })
 
-import { runWineCommandOnGame } from '../index'
+import { createTools } from '../index'
+import type { ToolsDeps } from '../index'
+
+const toolsDeps: ToolsDeps = {
+  managers: {
+    library: {
+      gog: { getGame: (...args: unknown[]) => mockGetGame(...args) }
+    } as unknown as ToolsDeps['managers']['library']
+  },
+  commandRunner: {
+    runWineCommand: (...args: unknown[]) => mockRunWineCommand(...args)
+  } as unknown as ToolsDeps['commandRunner'],
+  launcher: {
+    setupEnvVars: jest.fn(),
+    setupWineEnvVars: jest.fn(),
+    validWine: jest.fn()
+  } as unknown as ToolsDeps['launcher']
+}
+const { runWineCommandOnGame } = createTools(toolsDeps)
 import { LogPrefix } from 'backend/logger/constants'
 
 const wineArgs = { commandParts: ['winecfg'] }

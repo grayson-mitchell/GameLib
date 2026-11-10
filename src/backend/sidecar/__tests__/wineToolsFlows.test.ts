@@ -69,19 +69,23 @@ jest.mock('../../game_config', () => ({
 // are also provided here (Phase 34.6 Plan 11) so Describe 7's `runWineCommandForGame` hardening
 // tests can invoke the already-registered (top-level, non-Windows-branch) handler without it
 // crashing on an undefined import.
-jest.mock('../../tools', () => ({
-  DXVK: {
-    getLatest: jest.fn(),
-    installRemove: jest.fn()
-  },
-  Winetricks: {
-    listAvailable: jest.fn(),
-    listInstalled: jest.fn(),
-    install: jest.fn()
-  },
-  runWineCommandOnGame: jest.fn(),
-  runWineCommandForPendingInstall: jest.fn()
-}))
+jest.mock('../../tools', () => {
+  // One tools object for the whole file: `createTools(deps)` hands the same mocks out every time.
+  const tools = {
+    DXVK: {
+      getLatest: jest.fn(),
+      installRemove: jest.fn()
+    },
+    Winetricks: {
+      listAvailable: jest.fn(),
+      listInstalled: jest.fn(),
+      install: jest.fn()
+    },
+    runWineCommandOnGame: jest.fn(),
+    runWineCommandForPendingInstall: jest.fn()
+  }
+  return { createTools: () => tools }
+})
 
 // Phase 45 Plan 01 (D-11): the three winetricks-queue channels delegate to
 // `WinetricksQueue.apply/getState/cancelRemaining`, not to `../../tools` directly -- mocked here
@@ -103,11 +107,7 @@ import { registerWineToolsFlows } from '../wineToolsFlowRegistration'
 import { handlerRegistry, listenerRegistry } from '../../platform'
 import { createTestManagers } from 'backend/testUtils/testServices'
 import { GameConfig } from '../../game_config'
-import {
-  DXVK,
-  runWineCommandOnGame,
-  runWineCommandForPendingInstall
-} from '../../tools'
+import { createTools } from '../../tools'
 import { WinetricksQueue } from '../../tools/winetricksQueue'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import type { IpcHandler } from '../../platform'
@@ -124,6 +124,8 @@ const listenerCountsBefore = new Map(
     listeners.length
   ])
 )
+const { DXVK, runWineCommandOnGame, runWineCommandForPendingInstall } =
+  createTools({} as unknown as Parameters<typeof createTools>[0])
 const runWineCommand = jest.fn()
 registerWineToolsFlows({
   managers: createTestManagers(),
@@ -131,7 +133,11 @@ registerWineToolsFlows({
     runWineCommand: (...a: Parameters<typeof runWineCommand>) =>
       runWineCommand(...a)
   },
-  launcher: { validWine: jest.fn() },
+  launcher: {
+    validWine: jest.fn(),
+    setupEnvVars: jest.fn(),
+    setupWineEnvVars: jest.fn()
+  },
   spawnAsync: jest.fn()
 })
 const registeredSendChannels = [...listenerRegistry]
@@ -671,7 +677,11 @@ describe('runWineCommandForGame Windows-branch shell removal (T-34.5-C6-49-03, P
       isolatedRegister({
         managers: {},
         commandRunner: { runWineCommand: jest.fn() },
-        launcher: { validWine: jest.fn() },
+        launcher: {
+          validWine: jest.fn(),
+          setupEnvVars: jest.fn(),
+          setupWineEnvVars: jest.fn()
+        },
         spawnAsync: spawnAsyncMock
       })
       isolatedHandler = isolatedHandlerRegistry.get('runWineCommandForGame')
@@ -754,7 +764,8 @@ describe('winetricks-queue channels — present, invoke-kind, forward args by id
     const result = await handler({} as never, 'gog', 'test-app', verbs)
 
     expect(mockApply).toHaveBeenCalledTimes(1)
-    const [forwardedRunner, forwardedAppName, forwardedVerbs] = defined(
+    // The first argument is the Winetricks wrapper the registration built from its deps.
+    const [, forwardedRunner, forwardedAppName, forwardedVerbs] = defined(
       mockApply.mock.calls[0],
       'first call'
     )

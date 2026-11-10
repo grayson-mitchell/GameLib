@@ -32,32 +32,14 @@ jest.mock('child_process', () => ({
   spawn: (...args: unknown[]) => mockSpawn(...args)
 }))
 
-jest.mock('../../storeManagers', () => ({
-  libraryManagerMap: {
-    gog: {
-      getGame: () => ({
-        // 61-14: resolveToolSettings skips the engine layer for a native game, so these
-        // tests keep exercising the stored settings.
-        isNative: () => true,
-        getSettings: () => Promise.resolve({ wineVersion: {} })
-      })
-    }
-  }
-}))
-
-jest.mock('../../launcher', () => ({
-  runWineCommand: jest.fn(),
-  setupEnvVars: () => ({}),
-  setupWineEnvVars: () => ({}),
-  validWine: () => Promise.resolve(true)
-}))
-
 jest.mock('../../ipc', () => ({
   sendFrontendMessage: (...args: unknown[]) => mockSendFrontendMessage(...args)
 }))
 
 jest.mock('../../utils', () => ({
-  ...jest.requireActual('../../utils'),
+  axiosClient: {},
+  downloadFile: jest.fn(),
+  extractFiles: jest.fn(),
   getWineFromProton: (...args: unknown[]) => mockGetWineFromProton(...args),
   execAsync: (...args: unknown[]) => mockExecAsync(...args),
   sendGameStatusUpdate: (...args: unknown[]) =>
@@ -86,7 +68,30 @@ jest.mock('backend/logger', () => {
   }
 })
 
-import { Winetricks } from '../index'
+import { createTools } from '../index'
+import type { ToolsDeps } from '../index'
+
+const toolsDeps: ToolsDeps = {
+  managers: {
+    library: {
+      gog: {
+        getGame: () => ({
+          isNative: () => true,
+          getSettings: () => Promise.resolve({ wineVersion: {} })
+        })
+      }
+    } as unknown as ToolsDeps['managers']['library']
+  },
+  commandRunner: {
+    runWineCommand: jest.fn()
+  } as unknown as ToolsDeps['commandRunner'],
+  launcher: {
+    setupEnvVars: () => ({}),
+    setupWineEnvVars: () => ({}),
+    validWine: () => Promise.resolve(true)
+  } as unknown as ToolsDeps['launcher']
+}
+const { Winetricks } = createTools(toolsDeps)
 import { defined } from 'backend/testUtils/indexed'
 import { WinetricksQueue } from '../winetricksQueue'
 import {
@@ -214,7 +219,9 @@ async function finishChild(index: number, exitCode: number): Promise<void> {
 
 describe('WinetricksQueue.apply N=1 tracer (D-01/D-11)', () => {
   it('spawns exactly one winetricks process with argv tail ["-q", "vcrun2019"] and installs it to done', async () => {
-    const result = await WinetricksQueue.apply('gog', 'game', ['vcrun2019'])
+    const result = await WinetricksQueue.apply(Winetricks, 'gog', 'game', [
+      'vcrun2019'
+    ])
     expect(result.accepted).toBe(true)
 
     await spawned(1)
@@ -248,13 +255,21 @@ describe('WinetricksQueue.apply N=1 tracer (D-01/D-11)', () => {
   })
 
   it('refuses a second apply while the first run is in flight, spawning nothing further', async () => {
-    const first = await WinetricksQueue.apply('gog', 'busy-run-game', [
-      'vcrun2019'
-    ])
+    const first = await WinetricksQueue.apply(
+      Winetricks,
+      'gog',
+      'busy-run-game',
+      ['vcrun2019']
+    )
     expect(first.accepted).toBe(true)
     await spawned(1)
 
-    const second = await WinetricksQueue.apply('gog', 'busy-run-game', ['xact'])
+    const second = await WinetricksQueue.apply(
+      Winetricks,
+      'gog',
+      'busy-run-game',
+      ['xact']
+    )
     expect(second).toEqual({
       accepted: false,
       reason: 'busy',
@@ -269,11 +284,12 @@ describe('WinetricksQueue.apply N=1 tracer (D-01/D-11)', () => {
 
 describe('WinetricksQueue.apply order (D-11)', () => {
   it('spawns three children in exactly the given order, one at a time', async () => {
-    const result = await WinetricksQueue.apply('gog', 'order-game', [
-      'xact',
-      'corefonts',
-      'd3dx9'
-    ])
+    const result = await WinetricksQueue.apply(
+      Winetricks,
+      'gog',
+      'order-game',
+      ['xact', 'corefonts', 'd3dx9']
+    )
     expect(result.accepted).toBe(true)
 
     await spawned(1)
@@ -301,11 +317,12 @@ describe('WinetricksQueue.apply order (D-11)', () => {
 
 describe('WinetricksQueue.apply failure continues (D-12)', () => {
   it('a failing middle verb does not stop the remaining verbs', async () => {
-    const result = await WinetricksQueue.apply('gog', 'failure-game', [
-      'xact',
-      'corefonts',
-      'd3dx9'
-    ])
+    const result = await WinetricksQueue.apply(
+      Winetricks,
+      'gog',
+      'failure-game',
+      ['xact', 'corefonts', 'd3dx9']
+    )
     expect(result.accepted).toBe(true)
 
     await spawned(1)
@@ -328,11 +345,12 @@ describe('WinetricksQueue.apply failure continues (D-12)', () => {
 
 describe('WinetricksQueue.cancelRemaining (D-13)', () => {
   it('cancels only the not-yet-started verbs; the in-progress verb finishes', async () => {
-    const result = await WinetricksQueue.apply('gog', 'cancel-game', [
-      'xact',
-      'corefonts',
-      'd3dx9'
-    ])
+    const result = await WinetricksQueue.apply(
+      Winetricks,
+      'gog',
+      'cancel-game',
+      ['xact', 'corefonts', 'd3dx9']
+    )
     expect(result.accepted).toBe(true)
     await spawned(1)
 
@@ -364,9 +382,12 @@ describe('WinetricksQueue busy refusal (D-13)', () => {
     )
     await spawned(1)
 
-    const refused = await WinetricksQueue.apply('gog', 'direct-install-game', [
-      'corefonts'
-    ])
+    const refused = await WinetricksQueue.apply(
+      Winetricks,
+      'gog',
+      'direct-install-game',
+      ['corefonts']
+    )
     expect(refused).toEqual({
       accepted: false,
       reason: 'busy',
@@ -382,10 +403,15 @@ describe('WinetricksQueue busy refusal (D-13)', () => {
 
 describe('WinetricksQueue.apply same-tick concurrency', () => {
   it('two apply calls issued before the catalog await resolves yield exactly one accepted run', async () => {
-    const first = WinetricksQueue.apply('gog', 'concurrency-game', [
+    const first = WinetricksQueue.apply(Winetricks, 'gog', 'concurrency-game', [
       'vcrun2019'
     ])
-    const second = WinetricksQueue.apply('gog', 'concurrency-game', ['xact'])
+    const second = WinetricksQueue.apply(
+      Winetricks,
+      'gog',
+      'concurrency-game',
+      ['xact']
+    )
 
     const [firstResult, secondResult] = await Promise.all([first, second])
     const accepted = [firstResult, secondResult].filter(
@@ -404,9 +430,12 @@ describe('WinetricksQueue.apply same-tick concurrency', () => {
 
 describe('WinetricksQueue.getState remount (D-18)', () => {
   it('a finished run is still readable after a remount, and an unrelated game sees no run', async () => {
-    const result = await WinetricksQueue.apply('gog', 'remount-game', [
-      'vcrun2019'
-    ])
+    const result = await WinetricksQueue.apply(
+      Winetricks,
+      'gog',
+      'remount-game',
+      ['vcrun2019']
+    )
     expect(result.accepted).toBe(true)
     await spawned(1)
     await finishChild(0, 0)
@@ -464,7 +493,10 @@ describe('WinetricksQueue run log (D-18 / E9)', () => {
     '100 12.3M  100 12.3M    0     0  1530k      0  0:00:08  0:00:08 --:--:-- 1660k'
 
   it("appends a verb's classified lines to run.log in order, progress lines replacing each other", async () => {
-    await WinetricksQueue.apply('gog', 'log-game', ['xact', 'corefonts'])
+    await WinetricksQueue.apply(Winetricks, 'gog', 'log-game', [
+      'xact',
+      'corefonts'
+    ])
     await spawned(1)
 
     child(0).stderr.emit('data', 'Executing w_do_call xact\n')
@@ -490,7 +522,7 @@ describe('WinetricksQueue run log (D-18 / E9)', () => {
   })
 
   it('never holds more than 200 lines, dropping the oldest', async () => {
-    await WinetricksQueue.apply('gog', 'cap-game', ['xact'])
+    await WinetricksQueue.apply(Winetricks, 'gog', 'cap-game', ['xact'])
     await spawned(1)
 
     const chunk = Array.from({ length: 250 }, (_, i) => `line ${i}\n`).join('')
@@ -505,7 +537,7 @@ describe('WinetricksQueue run log (D-18 / E9)', () => {
   })
 
   it('ends the log of a failed verb with the synthetic exit-code error line', async () => {
-    await WinetricksQueue.apply('gog', 'fail-log-game', ['xact'])
+    await WinetricksQueue.apply(Winetricks, 'gog', 'fail-log-game', ['xact'])
     await spawned(1)
     await finishChild(0, 1)
 
@@ -517,7 +549,7 @@ describe('WinetricksQueue run log (D-18 / E9)', () => {
   })
 
   it('does not push a queue state for every line', async () => {
-    await WinetricksQueue.apply('gog', 'push-game', ['xact'])
+    await WinetricksQueue.apply(Winetricks, 'gog', 'push-game', ['xact'])
     await spawned(1)
     const before = queueChangedPushes('push-game').length
 
@@ -540,10 +572,12 @@ describe('WinetricksQueue run log (D-18 / E9)', () => {
 // advances it too, so only RELATIVE revisions are asserted.
 describe('WinetricksQueue state revisions (261011-nqe)', () => {
   it("the apply reply's revision is never older than a push the run already sent (fix a)", async () => {
-    const result = await WinetricksQueue.apply('gog', 'revision-apply-game', [
-      'xact',
-      'corefonts'
-    ])
+    const result = await WinetricksQueue.apply(
+      Winetricks,
+      'gog',
+      'revision-apply-game',
+      ['xact', 'corefonts']
+    )
     if (!result.accepted) {
       throw new Error('expected apply to be accepted -- test proves nothing')
     }
@@ -590,10 +624,12 @@ describe('WinetricksQueue state revisions (261011-nqe)', () => {
   })
 
   it('the cancel reply is newer than the push it causes (pin)', async () => {
-    const result = await WinetricksQueue.apply('gog', 'revision-cancel-game', [
-      'xact',
-      'corefonts'
-    ])
+    const result = await WinetricksQueue.apply(
+      Winetricks,
+      'gog',
+      'revision-cancel-game',
+      ['xact', 'corefonts']
+    )
     expect(result.accepted).toBe(true)
     await spawned(1)
 

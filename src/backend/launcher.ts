@@ -56,7 +56,8 @@ import {
   logWarning
 } from './logger'
 import { GlobalConfig } from './config'
-import { DXVK, runWineCommandOnGame, Winetricks } from './tools'
+import { createTools } from './tools'
+import type { CommandRunner } from './services/types'
 import { spawn, spawnSync } from 'child_process'
 import shlex from 'shlex'
 import { buildGameScopeCommand } from './gamescopeCommand'
@@ -848,10 +849,12 @@ async function prepareWineLaunch(
   }
 
   logWriter.logInfo(
-    Winetricks.listInstalled(game).then((installedPackages) => {
-      const packagesString = installedPackages.join(', ')
-      return `Winetricks packages: ${packagesString}\n\n`
-    })
+    tools()
+      .Winetricks.listInstalled(game)
+      .then((installedPackages) => {
+        const packagesString = installedPackages.join(', ')
+        return `Winetricks packages: ${packagesString}\n\n`
+      })
   )
 
   // We only want to log this for legendary on Linux
@@ -993,13 +996,13 @@ async function prepareWineLaunch(
   // If DXVK/VKD3D installation is enabled, install it
   if (gameSettings.wineVersion.type === 'wine') {
     if (gameSettings.autoInstallDxvk) {
-      await DXVK.installRemove(gameSettings, 'dxvk', 'backup')
+      await tools().DXVK.installRemove(gameSettings, 'dxvk', 'backup')
     }
     if (isLinux && gameSettings.autoInstallDxvkNvapi) {
-      await DXVK.installRemove(gameSettings, 'dxvk-nvapi', 'backup')
+      await tools().DXVK.installRemove(gameSettings, 'dxvk-nvapi', 'backup')
     }
     if (isLinux && gameSettings.autoInstallVkd3d) {
-      await DXVK.installRemove(gameSettings, 'vkd3d', 'backup')
+      await tools().DXVK.installRemove(gameSettings, 'vkd3d', 'backup')
     }
   }
 
@@ -1048,7 +1051,7 @@ async function installFixes(appName: string, runner: Runner) {
     })
 
     for (const winetricksPackage of knownFixes.winetricks) {
-      await Winetricks.install(runner, appName, winetricksPackage)
+      await tools().Winetricks.install(runner, appName, winetricksPackage)
     }
   }
 
@@ -1064,7 +1067,7 @@ async function installFixes(appName: string, runner: Runner) {
 
     for (const filePath of knownFixes.runInPrefix) {
       const fullPath = join(gameInfo.install.install_path!, filePath)
-      await runWineCommandOnGame(runner, appName, {
+      await tools().runWineCommandOnGame(runner, appName, {
         commandParts: [fullPath],
         wait: true,
         protonVerb: 'run'
@@ -1397,6 +1400,23 @@ function setupWrappers(
  * @param wineVersion an object of type WineInstallation with binary path and name to check
  * @returns true if the wine version exists, false if it doesn't
  */
+/**
+ * TEMPORARY (plan 12, deleted by plan 23 with the launcher conversion): the tool wrappers bound
+ * to this module's own functions. Resolved at call time (R4): `libraryManagerMap` and the
+ * functions below are live bindings of a module that is still loading when it is first reached.
+ */
+function tools() {
+  return createTools({
+    managers: { library: libraryManagerMap },
+    // The handle-typed runner signature is a subset of the ChildProcess one (see legacyFacades).
+    commandRunner: {
+      runWineCommand:
+        runWineCommand as unknown as CommandRunner['runWineCommand']
+    },
+    launcher: { setupEnvVars, setupWineEnvVars, validWine }
+  })
+}
+
 export async function validWine(
   wineVersion: WineInstallation
 ): Promise<boolean> {

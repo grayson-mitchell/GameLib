@@ -198,7 +198,9 @@ export async function applySteamBridgeKnownFixes(
 
   try {
     // Lazy, mirroring games.ts's lazy launcher import: avoids the cycle.
-    const { Winetricks } = await import('backend/tools')
+    const { Winetricks } = (
+      await import('backend/services/legacyFacades')
+    ).legacyTools()
     const { runWineCommand } = await import('backend/launcher')
 
     const registryCtx = { label: `Steam ${appId}`, logPrefix: LogPrefix.Steam }

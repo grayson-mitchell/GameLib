@@ -26,7 +26,7 @@ import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
 import { checkWineBeforeLaunch, downloadFile, spawnAsync } from 'backend/utils'
 import { runWineCommand } from 'backend/launcher'
-import { DXVK } from 'backend/tools'
+import { legacyTools } from 'backend/services/legacyFacades'
 import { writeCxbottleConf } from 'backend/engine/adoptBottle'
 import { steamBottleConfigStore } from '../stores'
 import {
@@ -108,9 +108,10 @@ jest.mock('backend/launcher', () => ({
 }))
 
 // Phase 59: bottle creation with the fallback engine installs DXVK and writes the conf.
-jest.mock('backend/tools', () => ({
-  DXVK: { installRemove: jest.fn() }
-}))
+jest.mock('backend/services/legacyFacades', () => {
+  const tools = { DXVK: { installRemove: jest.fn() } }
+  return { legacyTools: () => tools }
+})
 jest.mock('backend/engine/adoptBottle', () => ({
   writeCxbottleConf: jest.fn()
 }))
@@ -1112,7 +1113,7 @@ describe('Phase 59 engine registry', () => {
     }
     const name = 'GameLibSteamBridge-620'
     const order: string[] = []
-    const mockedInstallRemove = DXVK.installRemove as jest.Mock
+    const mockedInstallRemove = legacyTools().DXVK.installRemove as jest.Mock
     const mockedWriteConf = writeCxbottleConf as jest.Mock
     let dxvkMarker: boolean
 

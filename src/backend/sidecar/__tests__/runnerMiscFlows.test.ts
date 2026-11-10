@@ -155,8 +155,10 @@ jest.mock('../../ipc', () => ({
 // `Winetricks` at all ───────────────────────────────────────────────────────────────────────────
 const mockRunWineCommandOnGame = jest.fn()
 jest.mock('../../tools', () => ({
-  runWineCommandOnGame: (...args: unknown[]) =>
-    mockRunWineCommandOnGame(...args)
+  createTools: () => ({
+    runWineCommandOnGame: (...args: unknown[]) =>
+      mockRunWineCommandOnGame(...args)
+  })
 }))
 
 // ── ../../storeManagers — `libraryManagerMap` is the curated import target for `callTool`/
@@ -208,7 +210,8 @@ import { getPath } from '../pathShim'
 // ── Registered ONCE for this whole file (not per-test) -- `listenerRegistry`/`handlerRegistry`
 // are module-scope maps; calling `registerRunnerMiscFlows()` more than once would stack a
 // duplicate registration, mirroring every prior cluster suite's own file-scope-once convention. ──
-registerRunnerMiscFlows()
+// The tools module is mocked above, so the deps are never read.
+registerRunnerMiscFlows({} as Parameters<typeof registerRunnerMiscFlows>[0])
 
 // ── Describe 1: Registration kind ──────────────────────────────────────────────────────────────
 describe('registration kind — all 11 channels are registered with the correct kind, both directions', () => {

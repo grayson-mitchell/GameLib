@@ -94,7 +94,7 @@ describe('tools/index.ts overlay census (T-61-63)', () => {
   const bodies: Array<[string, string]> = [
     ['Winetricks.runWithArgs', 'runWithArgs: async ('],
     ['Winetricks.listInstalled', 'listInstalled: async (game: Game)'],
-    ['runWineCommandOnGame', 'export async function runWineCommandOnGame(']
+    ['runWineCommandOnGame', 'async function runWineCommandOnGame(']
   ]
 
   it.each(bodies)(
@@ -105,7 +105,9 @@ describe('tools/index.ts overlay census (T-61-63)', () => {
       // up to the next member / function: the bodies are long, so bound by the next marker at
       // the same indentation (member) or column 0 (function)
       const rest = tools.slice(start + marker.length)
-      const indent = marker.startsWith('export') ? '\n}\n' : '\n  },\n'
+      const indent = marker.startsWith('async function')
+        ? '\n}\n'
+        : '\n    },\n'
       const body = tools
         .slice(start, start + marker.length + rest.indexOf(indent))
         .replace(/^\s*\/\/.*$/gm, '')

@@ -43,10 +43,12 @@ const mockLogWarning = jest.fn()
 const mockLogInfo = jest.fn()
 let mockBottleRoot = '/mock/Bottles'
 
-jest.mock('backend/tools', () => ({
-  Winetricks: {
-    install: (...args: unknown[]) => mockWinetricksInstall(...args)
-  }
+jest.mock('backend/services/legacyFacades', () => ({
+  legacyTools: () => ({
+    Winetricks: {
+      install: (...args: unknown[]) => mockWinetricksInstall(...args)
+    }
+  })
 }))
 jest.mock('backend/launcher', () => ({
   runWineCommand: (...args: unknown[]) => mockRunWineCommand(...args)

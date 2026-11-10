@@ -19,7 +19,6 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam' }
 }))
 jest.mock('backend/constants/paths', () => ({ toolsPath: '/tools' }))
-jest.mock('backend/tools', () => ({ DXVK: { installRemove: jest.fn() } }))
 jest.mock('backend/engine/bottlePrimitives', () => ({
   getBottleDir: (name: string) => `${mockState.root}/${name}`,
   sanitizeBottleName: (name: string) =>

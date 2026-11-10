@@ -25,15 +25,6 @@ import { defined } from 'backend/testUtils/indexed'
 
 const mockRunWineCommand = jest.fn()
 
-jest.mock('../../storeManagers', () => ({ libraryManagerMap: {} }))
-
-jest.mock('../../launcher', () => ({
-  runWineCommand: (...args: unknown[]) => mockRunWineCommand(...args),
-  setupEnvVars: () => ({}),
-  setupWineEnvVars: () => ({}),
-  validWine: () => Promise.resolve(true)
-}))
-
 // One contained root per file, fixed at mock time: `toolsPath`/`userHome` are plain constants in
 // the real module, and the importer binds them when `tools/index.ts` loads. Each test reseeds
 // the tree beneath it from scratch.
@@ -66,7 +57,8 @@ jest.mock('backend/logger', () => {
   }
 })
 
-import { DXVK } from '../index'
+import { createTools } from '../index'
+import type { ToolsDeps } from '../index'
 import { toolsPath, userHome } from 'backend/constants/paths'
 
 const DLLS = ['d3d9.dll', 'd3d11.dll']
@@ -101,6 +93,19 @@ function seed(): void {
   }
   writeFileSync(join(prefix, '.update-timestamp'), '')
 }
+
+const toolsDeps: ToolsDeps = {
+  managers: { library: {} as ToolsDeps['managers']['library'] },
+  commandRunner: {
+    runWineCommand: (...args: unknown[]) => mockRunWineCommand(...args)
+  } as unknown as ToolsDeps['commandRunner'],
+  launcher: {
+    setupEnvVars: () => ({}),
+    setupWineEnvVars: () => ({}),
+    validWine: () => Promise.resolve(true)
+  } as unknown as ToolsDeps['launcher']
+}
+const { DXVK } = createTools(toolsDeps)
 
 const settings = () =>
   ({

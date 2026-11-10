@@ -8,7 +8,11 @@ import {
 import { sendFrontendMessage } from '../ipc'
 import { sendGameStatusUpdate } from '../utils'
 import { logError, LogPrefix } from 'backend/logger'
-import { Winetricks, getInstallingComponent } from './index'
+import { getInstallingComponent } from './index'
+import type { Tools } from './index'
+
+/** R3: the queue drives installs through the Winetricks wrapper its caller built from its deps. */
+type Winetricks = Tools['Winetricks']
 import {
   WinetricksApplyRejected,
   assertWinetricksApplyPayload
@@ -94,7 +98,10 @@ function getState(runner: Runner, appName: string): WinetricksQueueState {
   }
 }
 
-async function runLoop(run: WinetricksQueueRun): Promise<void> {
+async function runLoop(
+  Winetricks: Winetricks,
+  run: WinetricksQueueRun
+): Promise<void> {
   try {
     for (const verb of run.verbs) {
       if (run.cancelRequested) {
@@ -133,6 +140,7 @@ async function runLoop(run: WinetricksQueueRun): Promise<void> {
 }
 
 async function apply(
+  Winetricks: Winetricks,
   runner: Runner,
   appName: string,
   verbs: unknown
@@ -188,7 +196,7 @@ async function apply(
     // mitigation) and the install loop continues detached. A bare `void` on a
     // rejecting promise handles NOTHING (project lesson) -- `.catch` is
     // required.
-    void runLoop(run).catch((error) => {
+    void runLoop(Winetricks, run).catch((error) => {
       logError(
         ['winetricksQueue run loop failed:', error],
         LogPrefix.WineTricks

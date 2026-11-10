@@ -14,7 +14,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
 import { toolsPath } from 'backend/constants/paths'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { GameSettings } from 'common/types'
-import { DXVK } from 'backend/tools'
+import type { Tools } from 'backend/tools'
 import {
   buildFallbackGameSettings,
   getBottleDir,
@@ -60,7 +60,7 @@ export interface EngineSwitchDeps {
   getMonitorPhase: (key: string) => 'starting' | 'running' | null
   killWith: typeof killBottleWineServerWith
   resolveCrossoverBinDir: () => Promise<string | undefined>
-  installRemove: typeof DXVK.installRemove
+  installRemove: Tools['DXVK']['installRemove']
   /** Must be called while the CrossOver selection is the one registered for the game. */
   crossoverSettings: (key: string) => GameSettings
   fallbackSettings: (
@@ -124,7 +124,11 @@ const defaultDeps: Omit<EngineSwitchDeps, 'crossoverSettings'> = {
   getMonitorPhase: () => null,
   killWith: killBottleWineServerWith,
   resolveCrossoverBinDir: () => resolveCrossoverBinDirAsync({}),
-  installRemove: (...args) => DXVK.installRemove(...args),
+  // Lazy: legacyFacades pulls in launcher and the store managers (import cycle).
+  installRemove: async (...args) =>
+    (await import('backend/services/legacyFacades'))
+      .legacyTools()
+      .DXVK.installRemove(...args),
   fallbackSettings: buildFallbackGameSettings,
   currentPinEngine: defaultCurrentPinEngine,
   ensurePinEngine: defaultEnsurePinEngine
