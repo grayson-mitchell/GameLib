@@ -13,15 +13,15 @@ findings:
     title: "The header says casts and non-null assertions are \"seen through\", but composed forms are missed and missing from \"Known blind spots\""
   - id: IN-01
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`value` and `.value` are now matched everywhere, so any future `<select>`/option comparison against a store-named literal will error"
   - id: IN-02
     severity: info
-    disposition: open
+    disposition: fixed
     title: "New `isStore` imports are appended after side-effect stylesheet imports"
-open: 2
+open: 0
 total: 4
-recorded: 2026-11-10T16:45:16.864Z
+recorded: 2026-11-10T16:49:13.768Z
 ---
 
 # Phase 62: Code Review Disposition
@@ -30,8 +30,8 @@ recorded: 2026-11-10T16:45:16.864Z
 |---------|----------|-------------|--------|
 | WR-01 | warning | fixed | 62-REVIEW-FIX.md |
 | WR-02 | warning | fixed | 62-REVIEW-FIX.md |
-| IN-01 | info | open | - |
-| IN-02 | info | open | - |
+| IN-01 | info | fixed | 62-REVIEW-FIX.md |
+| IN-02 | info | fixed | 62-REVIEW-FIX.md |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
