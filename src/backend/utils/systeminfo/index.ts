@@ -104,12 +104,17 @@ async function fetchSystemInfo(): Promise<SystemInformation> {
   const gpus = await getGpuInfo()
   const detailedOsInfo = await getOsInfo()
   const deckInfo = getSteamDeckInfo(cpus, gpus)
+  // TEMPORARY (plan 12, replaced when the systeminfo owner takes deps): resolved at call time,
+  // after boot, because backend/storeManagers cannot be imported while this module loads.
+  const versionDeps = {
+    libraryManagers: (await import('backend/storeManagers')).libraryManagerMap
+  }
   const [legendaryVersion, gogdlVersion, cometVersion, nileVersion] =
     await Promise.all([
-      getLegendaryVersion(),
-      getGogdlVersion(),
+      getLegendaryVersion(versionDeps),
+      getGogdlVersion(versionDeps),
       getCometVersion(),
-      getNileVersion()
+      getNileVersion(versionDeps)
     ])
 
   const firstCpu = cpus[0]

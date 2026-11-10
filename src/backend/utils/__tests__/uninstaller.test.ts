@@ -19,7 +19,6 @@ jest.mock('backend/constants/paths', () => {
 })
 jest.mock('backend/config', () => ({ GlobalConfig: { get: jest.fn() } }))
 jest.mock('backend/dialog/dialog', () => ({ notify: jest.fn() }))
-jest.mock('backend/storeManagers', () => ({ libraryManagerMap: {} }))
 jest.mock('backend/utils', () => ({ sendGameStatusUpdate: jest.fn() }))
 jest.mock('backend/utils/gameTitle', () => ({ resolveGameTitle: jest.fn() }))
 jest.mock('backend/platform', () => ({ Event: {} }))
@@ -33,7 +32,11 @@ jest.mock('i18next', () => ({ t: jest.fn((_k: string, d: string) => d) }))
 
 import { removeFixFile, uninstallGameCallback } from '../uninstaller'
 import { notify } from 'backend/dialog/dialog'
-import { libraryManagerMap } from 'backend/storeManagers'
+// The managers arrive by deps now: a plain map the tests fill in per case.
+const libraryManagerMap = {} as Record<string, unknown>
+const deps = {
+  libraryManagers: libraryManagerMap
+} as unknown as Parameters<typeof uninstallGameCallback>[0]
 import { sendGameStatusUpdate } from 'backend/utils'
 import {
   fixesPath,
@@ -99,7 +102,7 @@ describe('uninstallGameCallback refusal (quick 261107-td5)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    ;(libraryManagerMap as any).steam = {
+    libraryManagerMap.steam = {
       getGame: () => ({ uninstall, getSettings })
     }
   })
@@ -108,7 +111,7 @@ describe('uninstallGameCallback refusal (quick 261107-td5)', () => {
     const { settings, fix } = setup()
     uninstall.mockResolvedValue({ stdout: '', stderr: 'x', refused: true })
 
-    await uninstallGameCallback({} as any, APP, 'steam', true, true)
+    await uninstallGameCallback(deps, {} as any, APP, 'steam', true, true)
 
     expect(existsSync(settings)).toBe(true)
     expect(existsSync(fix)).toBe(true)
@@ -122,7 +125,7 @@ describe('uninstallGameCallback refusal (quick 261107-td5)', () => {
     uninstall.mockResolvedValue({ stdout: '', stderr: '' })
     getSettings.mockResolvedValue({ winePrefix: join(gamesConfigPath, 'nope') })
 
-    await uninstallGameCallback({} as any, APP, 'steam', false, true)
+    await uninstallGameCallback(deps, {} as any, APP, 'steam', false, true)
 
     expect(existsSync(settings)).toBe(false)
     expect(existsSync(fix)).toBe(false)
@@ -133,7 +136,7 @@ describe('uninstallGameCallback refusal (quick 261107-td5)', () => {
     const { settings } = setup()
     uninstall.mockRejectedValue(new Error('boom'))
 
-    await uninstallGameCallback({} as any, APP, 'steam', false, true)
+    await uninstallGameCallback(deps, {} as any, APP, 'steam', false, true)
 
     expect(notify).toHaveBeenCalledTimes(1)
     expect(existsSync(settings)).toBe(true)
@@ -149,10 +152,10 @@ describe('uninstallGameCallback failure (quick 261108-anw)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    ;(libraryManagerMap as any).steam = {
+    libraryManagerMap.steam = {
       getGame: () => ({ uninstall, getSettings })
     }
-    ;(libraryManagerMap as any).legendary = {
+    libraryManagerMap.legendary = {
       getGame: () => ({ uninstall, getSettings })
     }
   })
@@ -174,7 +177,7 @@ describe('uninstallGameCallback failure (quick 261108-anw)', () => {
         failed: true
       })
 
-      await uninstallGameCallback({} as any, APP, runner, true, true)
+      await uninstallGameCallback(deps, {} as any, APP, runner, true, true)
 
       expect(existsSync(settings)).toBe(true)
       expect(existsSync(fix)).toBe(true)

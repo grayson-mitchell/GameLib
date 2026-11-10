@@ -24,6 +24,7 @@ import { removePrefix } from 'backend/utils/uninstaller'
 import { removeRecentGame } from 'backend/recent_games/recent_games'
 import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import { removeNonSteamGame } from 'backend/shortcuts/nonesteamgame/nonesteamgame'
+import type { ManagerDeps } from 'backend/services/types'
 
 import type LogWriter from 'backend/logger/log_writer'
 import { getLaunchSettings } from 'backend/engine/launchSettings'
@@ -32,7 +33,10 @@ import { engineKeyFor } from 'backend/engine/gameKey'
 export default class SideloadGame implements Game {
   private readonly id: string
 
-  constructor(id: string) {
+  constructor(
+    id: string,
+    private readonly deps: Pick<ManagerDeps, 'libraryManagers'>
+  ) {
     this.id = id
   }
 
@@ -54,7 +58,7 @@ export default class SideloadGame implements Game {
   }
 
   async addShortcuts(fromMenu?: boolean): Promise<void> {
-    return addShortcutsUtil(this, fromMenu)
+    return addShortcutsUtil(this.deps, this, fromMenu)
   }
 
   async removeShortcuts(): Promise<void> {
@@ -123,7 +127,7 @@ export default class SideloadGame implements Game {
     } = gameInfo
 
     if (shouldRemovePrefix) {
-      removePrefix(this.id, 'sideload')
+      removePrefix(this.deps, this.id, 'sideload')
     }
     libraryStore.set('games', current)
 

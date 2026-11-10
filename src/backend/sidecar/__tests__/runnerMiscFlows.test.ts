@@ -211,7 +211,9 @@ import { getPath } from '../pathShim'
 // are module-scope maps; calling `registerRunnerMiscFlows()` more than once would stack a
 // duplicate registration, mirroring every prior cluster suite's own file-scope-once convention. ──
 // The tools module is mocked above, so the deps are never read.
-registerRunnerMiscFlows({} as Parameters<typeof registerRunnerMiscFlows>[0])
+registerRunnerMiscFlows({
+  managers: { library: {} }
+} as unknown as Parameters<typeof registerRunnerMiscFlows>[0])
 
 // ── Describe 1: Registration kind ──────────────────────────────────────────────────────────────
 describe('registration kind — all 11 channels are registered with the correct kind, both directions', () => {

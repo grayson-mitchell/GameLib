@@ -556,7 +556,7 @@ export default class LegendaryGame implements Game {
    * @public
    */
   async addShortcuts(fromMenu?: boolean) {
-    return addShortcutsUtil(this, fromMenu)
+    return addShortcutsUtil(this.deps, this, fromMenu)
   }
 
   /**

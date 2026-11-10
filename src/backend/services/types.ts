@@ -17,6 +17,7 @@ import type { StoreLaunchHooks } from 'backend/storeManagers'
 import type { CommandRunner as CommandRunnerImpl } from 'backend/commandRunner'
 import type GOGLibraryManager from 'backend/storeManagers/gog/library'
 import type LegendaryLibraryManager from 'backend/storeManagers/legendary/library'
+import type NileLibraryManager from 'backend/storeManagers/nile/library'
 
 /** One entry per store family; each is the module's value exports. */
 export interface Stores {
@@ -40,9 +41,13 @@ export interface Stores {
 
 export interface StoreManagers {
   /** `gog` keeps its concrete type: boot drains the queued playtime through it. */
-  library: Omit<Record<Runner, LibraryManager>, 'gog' | 'legendary'> & {
+  library: Omit<
+    Record<Runner, LibraryManager>,
+    'gog' | 'legendary' | 'nile'
+  > & {
     gog: GOGLibraryManager
     legendary: LegendaryLibraryManager
+    nile: NileLibraryManager
   }
   launchHooks: Record<Runner, StoreLaunchHooks>
   autoUpdate(runner: Runner, gamesToUpdate: string[]): string[]

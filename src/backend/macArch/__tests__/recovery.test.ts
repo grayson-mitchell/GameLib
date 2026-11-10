@@ -159,6 +159,7 @@ describe('offerWindowsReinstall', () => {
       .mockReturnValueOnce({ title: 'G', is_installed: false })
     await offerWindowsReinstall('gog', 'g1')
     expect(uninstallGameCallback).toHaveBeenCalledWith(
+      expect.objectContaining({ libraryManagers: expect.anything() }),
       undefined,
       'g1',
       'gog',

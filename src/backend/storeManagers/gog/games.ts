@@ -566,7 +566,7 @@ export default class GOGGame implements Game {
   }
 
   async addShortcuts(fromMenu?: boolean) {
-    return addShortcutsUtil(this, fromMenu)
+    return addShortcutsUtil(this.deps, this, fromMenu)
   }
 
   async removeShortcuts() {

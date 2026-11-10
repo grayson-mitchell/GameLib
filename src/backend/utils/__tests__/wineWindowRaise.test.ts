@@ -1,4 +1,3 @@
-import { spawnAsync } from 'backend/utils'
 import { logInfo, logWarning } from 'backend/logger'
 import {
   raiseWineGameWindow,
@@ -6,7 +5,6 @@ import {
   __stopWineWindowRaises
 } from '../wineWindowRaise'
 
-jest.mock('backend/utils', () => ({ spawnAsync: jest.fn() }))
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logWarning: jest.fn(),
@@ -14,7 +12,10 @@ jest.mock('backend/logger', () => ({
 }))
 jest.mock('backend/constants/environment', () => ({ isMac: true }))
 
-const mockedSpawn = spawnAsync as jest.Mock
+const mockedSpawn = jest.fn()
+const deps = {
+  spawnAsync: (...args: unknown[]) => mockedSpawn(...args)
+} as unknown as Parameters<typeof raiseWineGameWindow>[0]
 const mockedInfo = logInfo as jest.Mock
 const mockedWarn = logWarning as jest.Mock
 const ok = (stdout: string) => ({ stdout, stderr: '', code: 0 })
@@ -33,7 +34,7 @@ describe('wineWindowRaise', () => {
     const env = jest.requireMock('backend/constants/environment')
     env.isMac = false
     try {
-      await raiseWineGameWindow({ context: 'c', pids: ['1'] })
+      await raiseWineGameWindow(deps, { context: 'c', pids: ['1'] })
       expect(mockedSpawn).not.toHaveBeenCalled()
     } finally {
       env.isMac = true
@@ -42,7 +43,7 @@ describe('wineWindowRaise', () => {
 
   test('hit: pid passed as separate argv, one settle re-raise', async () => {
     mockedSpawn.mockResolvedValue(ok('Avernum 6.exe pid=123'))
-    const p = raiseWineGameWindow({
+    const p = raiseWineGameWindow(deps, {
       context: 'bridge:1',
       pids: ['123'],
       processNames: ['Avernum 6.exe']
@@ -63,7 +64,7 @@ describe('wineWindowRaise', () => {
     mockedSpawn
       .mockResolvedValueOnce(ok('none'))
       .mockResolvedValue(ok('X.exe pid=5'))
-    const p = raiseWineGameWindow({ context: 'c', pids: ['5'] })
+    const p = raiseWineGameWindow(deps, { context: 'c', pids: ['5'] })
     await jest.advanceTimersByTimeAsync(1500)
     expect(mockedSpawn).toHaveBeenCalledTimes(2)
     await jest.advanceTimersByTimeAsync(2500)
@@ -73,7 +74,7 @@ describe('wineWindowRaise', () => {
 
   test('persistent miss stops at 12 attempts with one warning', async () => {
     mockedSpawn.mockResolvedValue(ok('none'))
-    const p = raiseWineGameWindow({ context: 'c', pids: ['5'] })
+    const p = raiseWineGameWindow(deps, { context: 'c', pids: ['5'] })
     await jest.advanceTimersByTimeAsync(1500 * 20)
     await p
     expect(mockedSpawn).toHaveBeenCalledTimes(12)
@@ -84,7 +85,7 @@ describe('wineWindowRaise', () => {
     mockedSpawn
       .mockRejectedValueOnce(new Error('boom'))
       .mockResolvedValue(ok('X.exe pid=5'))
-    const p = raiseWineGameWindow({ context: 'c', pids: ['5'] })
+    const p = raiseWineGameWindow(deps, { context: 'c', pids: ['5'] })
     await jest.advanceTimersByTimeAsync(1500)
     expect(mockedWarn).toHaveBeenCalledTimes(1)
     expect(mockedSpawn).toHaveBeenCalledTimes(2)
@@ -94,7 +95,7 @@ describe('wineWindowRaise', () => {
 
   test('non-numeric pids dropped; names only as argv', async () => {
     mockedSpawn.mockResolvedValue(ok('none'))
-    const p = raiseWineGameWindow({
+    const p = raiseWineGameWindow(deps, {
       context: 'c',
       pids: ['12; do shell script'],
       processNames: ['a"b.exe']
@@ -108,7 +109,7 @@ describe('wineWindowRaise', () => {
   })
 
   test('only invalid pids and no names: no spawn', async () => {
-    await raiseWineGameWindow({ context: 'c', pids: ['x'] })
+    await raiseWineGameWindow(deps, { context: 'c', pids: ['x'] })
     expect(mockedSpawn).not.toHaveBeenCalled()
   })
 
@@ -121,7 +122,7 @@ describe('wineWindowRaise', () => {
 
   test('stop mid-loop halts further spawns', async () => {
     mockedSpawn.mockResolvedValue(ok('none'))
-    const p = raiseWineGameWindow({ context: 'c', pids: ['5'] })
+    const p = raiseWineGameWindow(deps, { context: 'c', pids: ['5'] })
     await jest.advanceTimersByTimeAsync(0)
     expect(mockedSpawn).toHaveBeenCalledTimes(1)
     __stopWineWindowRaises()

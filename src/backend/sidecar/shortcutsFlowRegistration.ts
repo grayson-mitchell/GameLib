@@ -352,7 +352,7 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
     const appName = args[0] as string
     const runner = args[1] as Runner
     const game = deps.managers.library[runner].getGame(appName)
-    return addNonSteamGame(game)
+    return addNonSteamGame({ libraryManagers: deps.managers.library }, game)
   })
 
   ipcMain.handle(

@@ -45,8 +45,6 @@ jest.mock('backend/shortcuts/utils', () => ({
   getIcon: () => Promise.resolve(undefined)
 }))
 
-jest.mock('backend/storeManagers', () => ({ libraryManagerMap: {} }))
-
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logWarning: jest.fn(),
@@ -68,6 +66,10 @@ import { homedir } from 'os'
 import { dirname, join } from 'path'
 import { addShortcuts, shortcutFiles } from '../shortcuts/shortcuts'
 import type { GameInfo } from 'common/types'
+
+const deps = { libraryManagers: { gog: {} } } as unknown as Parameters<
+  typeof addShortcuts
+>[0]
 import type { Game } from 'common/types/game_manager'
 import { defined } from 'backend/testUtils/indexed'
 
@@ -148,7 +150,7 @@ describe('addShortcuts on linux', () => {
     rmSync(dirname(desktopFile), { recursive: true, force: true })
     mkdirSync(dirname(menuFile), { recursive: true })
 
-    await expect(addShortcuts(game, true)).rejects.toThrow(desktopFile)
+    await expect(addShortcuts(deps, game, true)).rejects.toThrow(desktopFile)
   })
 
   it('resolves and writes both entries when both folders exist', async () => {
@@ -156,7 +158,7 @@ describe('addShortcuts on linux', () => {
     mkdirSync(dirname(desktopFile), { recursive: true })
     mkdirSync(dirname(menuFile), { recursive: true })
 
-    await expect(addShortcuts(game, true)).resolves.toBeUndefined()
+    await expect(addShortcuts(deps, game, true)).resolves.toBeUndefined()
     expect(existsSync(desktopFile)).toBe(true)
     expect(existsSync(menuFile)).toBe(true)
   })
@@ -170,7 +172,7 @@ describe('addShortcuts on win32', () => {
   it('rejects when PowerShell fails to write the .lnk', async () => {
     fakePowerShell(1)
 
-    await expect(addShortcuts(game, true)).rejects.toThrow()
+    await expect(addShortcuts(deps, game, true)).rejects.toThrow()
     expect(mockSpawn).toHaveBeenCalled()
   })
 
@@ -178,7 +180,7 @@ describe('addShortcuts on win32', () => {
     fakePowerShell(0)
     const [desktopFile, menuFile] = bothFiles(gameInfo.title)
 
-    await expect(addShortcuts(game, true)).resolves.toBeUndefined()
+    await expect(addShortcuts(deps, game, true)).resolves.toBeUndefined()
 
     expect(mockSpawn).toHaveBeenCalledTimes(2)
     const written = mockSpawn.mock.calls.map(([command, args, options]) => {
@@ -218,7 +220,7 @@ describe('Steam game (261026-c7r)', () => {
     mkdirSync(dirname(desktopFile), { recursive: true })
     mkdirSync(dirname(menuFile), { recursive: true })
 
-    await addShortcuts(steamGame, true)
+    await addShortcuts(deps, steamGame, true)
 
     for (const file of [desktopFile, menuFile]) {
       expect(readFileSync(file, 'utf8')).toContain(`Exec=xdg-open ${steamUrl}`)
@@ -230,7 +232,7 @@ describe('Steam game (261026-c7r)', () => {
     fakePowerShell(0)
     const [desktopFile, menuFile] = bothFiles(steamGameInfo.title)
 
-    await addShortcuts(steamGame, true)
+    await addShortcuts(deps, steamGame, true)
 
     expect(mockSpawn).toHaveBeenCalledTimes(2)
     const envs = mockSpawn.mock.calls.map(([, , options]) => options.env)
@@ -260,7 +262,7 @@ describe('Steam game (261026-c7r)', () => {
     it('writes run.sh with the quoted steam URL and an iconless plist', async () => {
       const app = bothFiles(steamGameInfo.title)[1]
 
-      await addShortcuts(steamGame, true)
+      await addShortcuts(deps, steamGame, true)
 
       const runSh = readFileSync(`${app}/Contents/MacOS/run.sh`, 'utf8')
       expect(runSh).toContain(`--no-gui '${steamUrl}'`)
@@ -282,7 +284,7 @@ describe('Steam game (261026-c7r)', () => {
       mkdirSync(dirname(desktopFile), { recursive: true })
       mkdirSync(dirname(menuFile), { recursive: true })
 
-      await addShortcuts(steamGame, true)
+      await addShortcuts(deps, steamGame, true)
 
       expect(mockAddNonSteamGame).not.toHaveBeenCalled()
     })
@@ -292,9 +294,9 @@ describe('Steam game (261026-c7r)', () => {
       mkdirSync(dirname(desktopFile), { recursive: true })
       mkdirSync(dirname(menuFile), { recursive: true })
 
-      await addShortcuts(game, true)
+      await addShortcuts(deps, game, true)
 
-      expect(mockAddNonSteamGame).toHaveBeenCalledWith(game)
+      expect(mockAddNonSteamGame).toHaveBeenCalledWith(deps, game)
     })
   })
 })
@@ -332,7 +334,7 @@ describe('addShortcuts on darwin (261026-clh, 261026-ctm)', () => {
     }
     const [desktopApp, menuApp] = bothFiles(gameInfo.title)
 
-    await addShortcuts(game, true)
+    await addShortcuts(deps, game, true)
 
     expect(existsSync(runSh(menuApp))).toBe(true)
     expect(existsSync(desktopApp)).toBe(false)
@@ -348,7 +350,7 @@ describe('addShortcuts on darwin (261026-clh, 261026-ctm)', () => {
     mockSettings = desktopOn
     const [desktopApp, menuApp] = bothFiles(gameInfo.title)
 
-    await addShortcuts(game, true)
+    await addShortcuts(deps, game, true)
 
     expect(lstatSync(desktopApp).isSymbolicLink()).toBe(true)
     expect(readlinkSync(desktopApp)).toBe(menuApp)
@@ -360,7 +362,7 @@ describe('addShortcuts on darwin (261026-clh, 261026-ctm)', () => {
     mockSettings = desktopOn
     const [desktopApp, menuApp] = bothFiles(gameInfo.title)
 
-    await addShortcuts(game)
+    await addShortcuts(deps, game)
 
     expect(existsSync(runSh(menuApp))).toBe(true)
     expect(lstatSync(desktopApp).isSymbolicLink()).toBe(true)
@@ -373,7 +375,7 @@ describe('addShortcuts on darwin (261026-clh, 261026-ctm)', () => {
     mkdirSync(join(desktopApp, 'Contents', 'MacOS'), { recursive: true })
     writeFileSync(runSh(desktopApp), '')
 
-    await addShortcuts(game, true)
+    await addShortcuts(deps, game, true)
 
     expect(lstatSync(desktopApp).isSymbolicLink()).toBe(true)
     expect(readlinkSync(desktopApp)).toBe(menuApp)
@@ -388,7 +390,7 @@ describe('addShortcuts on darwin (261026-clh, 261026-ctm)', () => {
       desktopApp
     )
 
-    await addShortcuts(game, true)
+    await addShortcuts(deps, game, true)
 
     expect(lstatSync(desktopApp).isSymbolicLink()).toBe(true)
     expect(readlinkSync(desktopApp)).toBe(menuApp)
@@ -402,7 +404,7 @@ describe('addShortcuts on darwin (261026-clh, 261026-ctm)', () => {
     }
     const [desktopApp, menuApp] = bothFiles(gameInfo.title)
 
-    await expect(addShortcuts(game)).resolves.toBeUndefined()
+    await expect(addShortcuts(deps, game)).resolves.toBeUndefined()
 
     expect(existsSync(desktopApp)).toBe(false)
     expect(existsSync(menuApp)).toBe(false)
@@ -420,7 +422,7 @@ describe('addShortcuts on darwin (261026-clh, 261026-ctm)', () => {
     rmSync(desktopDir, { recursive: true, force: true })
     writeFileSync(desktopDir, '')
     try {
-      await expect(addShortcuts(game, true)).rejects.toThrow(desktopApp)
+      await expect(addShortcuts(deps, game, true)).rejects.toThrow(desktopApp)
       expect(existsSync(runSh(menuApp))).toBe(true)
     } finally {
       rmSync(desktopDir, { force: true })
@@ -434,7 +436,7 @@ describe('addShortcuts on darwin (261026-clh, 261026-ctm)', () => {
     rmSync(appsDir, { recursive: true, force: true })
     writeFileSync(appsDir, '')
     try {
-      const rejection = addShortcuts(game, true)
+      const rejection = addShortcuts(deps, game, true)
       await expect(rejection).rejects.toThrow(menuApp)
       await expect(rejection).rejects.toThrow(desktopApp)
       expect(() => lstatSync(desktopApp)).toThrow(/ENOENT/)

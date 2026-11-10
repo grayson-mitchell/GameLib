@@ -9,6 +9,7 @@ import { readFileSync } from 'fs-extra'
 import { join } from 'path'
 import { ShortcutsResult } from '../types'
 import { getIcon } from '../utils'
+import type { ShortcutsDeps } from '../utils'
 import {
   prepareImagesForSteam,
   generateShortcutId,
@@ -200,10 +201,14 @@ function checkIfAlreadyAdded(object: Partial<ShortcutObject>, title: string) {
 
 /**
  * Adds a non-steam game to steam via editing shortcuts.vdf
+ * @param deps the managers the icon lookup reads
  * @param game the {@link Game} to add
  * @returns boolean
  */
-async function addNonSteamGame(game: Game): Promise<boolean> {
+async function addNonSteamGame(
+  deps: ShortcutsDeps,
+  game: Game
+): Promise<boolean> {
   const gameInfo = game.getGameInfo()
   const steamUserdataDir = await getSteamUserdataDir()
   const wikiInfo = await getWikiGameInfo(game)
@@ -269,7 +274,7 @@ async function addNonSteamGame(game: Game): Promise<boolean> {
 
     newEntry.appid = generateShortcutId(newEntry.Exe, newEntry.AppName)
 
-    await getIcon(gameInfo.app_name, gameInfo)
+    await getIcon(deps, gameInfo.app_name, gameInfo)
       .then((path) => {
         if (path) {
           newEntry.icon = path

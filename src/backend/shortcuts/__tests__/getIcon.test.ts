@@ -22,13 +22,6 @@
 jest.mock('backend/utils', () => ({
   downloadFile: jest.fn()
 }))
-jest.mock('backend/storeManagers', () => ({
-  libraryManagerMap: {
-    gog: {
-      getProductApi: jest.fn()
-    }
-  }
-}))
 jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Backend: 'Backend' }
@@ -48,7 +41,6 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { getIcon } from '../utils'
 import { downloadFile } from 'backend/utils'
-import { libraryManagerMap } from 'backend/storeManagers'
 import { logWarning } from 'backend/logger'
 import { createAbortController } from 'backend/utils/aborthandler/aborthandler'
 import { appFolder } from 'backend/constants/paths'
@@ -62,7 +54,10 @@ beforeAll(() => {
 })
 
 const mockedDownloadFile = downloadFile as jest.Mock
-const mockedGetProductApi = libraryManagerMap.gog.getProductApi as jest.Mock
+const mockedGetProductApi = jest.fn()
+const deps = {
+  libraryManagers: { gog: { getProductApi: mockedGetProductApi } }
+} as unknown as Parameters<typeof getIcon>[0]
 const mockedLogWarning = logWarning as jest.Mock
 const mockedCreateAbortController = createAbortController as jest.Mock
 
@@ -109,7 +104,7 @@ describe('backend/shortcuts/utils.ts getIcon (quick task 260908-e64)', () => {
       install: { is_dlc: false }
     })
 
-    await expect(getIcon('defect1-app', info)).resolves.not.toThrow()
+    await expect(getIcon(deps, 'defect1-app', info)).resolves.not.toThrow()
     expect(mockedGetProductApi).toHaveBeenCalledWith('defect1-app')
   })
 
@@ -134,7 +129,7 @@ describe('backend/shortcuts/utils.ts getIcon (quick task 260908-e64)', () => {
       app_name: 'defect2-app'
     })
 
-    const result = await getIcon('defect2-app', info)
+    const result = await getIcon(deps, 'defect2-app', info)
 
     expect(typeof result).toBe('string')
     expect(existsSync(result as string)).toBe(true)
@@ -165,7 +160,7 @@ describe('backend/shortcuts/utils.ts getIcon (quick task 260908-e64)', () => {
         app_name: 'defect3-app'
       })
 
-      const result = await getIcon('defect3-app', info)
+      const result = await getIcon(deps, 'defect3-app', info)
 
       expect(result).toBeUndefined()
       expect(mockedLogWarning).toHaveBeenCalled()
@@ -195,7 +190,7 @@ describe('backend/shortcuts/utils.ts getIcon (quick task 260908-e64)', () => {
         install: { is_dlc: false, install_path: installDir }
       })
 
-      const result = await getIcon(appName, info)
+      const result = await getIcon(deps, appName, info)
 
       expect(result).toBe(icoPath)
       expect(mockedGetProductApi).not.toHaveBeenCalled()

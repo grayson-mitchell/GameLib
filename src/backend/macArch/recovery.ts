@@ -149,6 +149,7 @@ export async function offerWindowsReinstall(
 
     const { uninstallGameCallback } = await import('backend/utils/uninstaller')
     await uninstallGameCallback(
+      { libraryManagers: libraryManagerMap },
       undefined as never,
       appName,
       runner,

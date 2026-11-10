@@ -6,28 +6,34 @@
  * `installFlowRegistration.ts` import ONE shared implementation, rather than
  * forking update-check behavior between the two builds.
  *
- * D-05b: `libraryManagerMap`'s import cost is already sunk in the sidecar —
+ * D-05b: the map's import cost is already sunk in the sidecar —
  * `steamFlowRegistration.ts`'s load-bearing first `import '../storeManagers'`
  * (the 27-05 circular-init fix) already force-constructs all six
- * `libraryManagerMap` entries before any curated registration module (this
+ * the library manager map entries before any curated registration module (this
  * one included) is ever imported. A Steam-only reshape of this handler would
  * therefore buy zero import-graph savings and would only fork the Tauri
  * build's update-check behavior from Electron's for no benefit.
  *
  * D-12: consistent with D-05b, this stays runner-generic (iterates every
- * entry in `libraryManagerMap`) in both builds, not Steam-only.
+ * entry in the library manager map) in both builds, not Steam-only.
  */
 
 import { GlobalConfig } from 'backend/config'
 import { logWarning, LogPrefix } from 'backend/logger'
-import { autoUpdate, libraryManagerMap } from 'backend/storeManagers'
+import type { StoreManagers } from 'backend/services/types'
 
-export async function checkGameUpdates(): Promise<string[]> {
+/** R1 slice: the per-runner managers and the auto-update queueing. */
+export interface CheckGameUpdatesDeps {
+  managers: Pick<StoreManagers, 'library' | 'autoUpdate'>
+}
+
+export async function checkGameUpdates(
+  deps: CheckGameUpdatesDeps
+): Promise<string[]> {
+  const { library, autoUpdate } = deps.managers
   let oldGames: string[] = []
   const { autoUpdateGames } = GlobalConfig.get().getSettings()
-  for (const runner of Object.keys(
-    libraryManagerMap
-  ) as (keyof typeof libraryManagerMap)[]) {
+  for (const runner of Object.keys(library) as (keyof typeof library)[]) {
     // WR-05: per-runner isolation. This loop was extracted verbatim from main.ts,
     // where it was unguarded: ONE runner whose CLI or credentials are missing
     // rejected the whole call and discarded the results already collected from the
@@ -36,7 +42,7 @@ export async function checkGameUpdates(): Promise<string[]> {
     // legendary/gogdl/nile credentials at all), so the results of the runners that
     // DID answer must survive.
     try {
-      let gamesToUpdate = await libraryManagerMap[runner].listUpdateableGames()
+      let gamesToUpdate = await library[runner].listUpdateableGames()
       if (autoUpdateGames) {
         gamesToUpdate = autoUpdate(runner, gamesToUpdate)
       }

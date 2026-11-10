@@ -113,12 +113,13 @@ export function registerRunnerMiscFlows(deps: ToolsDeps): void {
   // ── Runner CLI version probes (main.ts / utils/ipc_handler.ts:18-21) ──────
   // Pure pass-through reads, exactly as the Electron source registers them — no caching, no
   // timeouts, no error wrapping the Electron path does not already have.
-  ipcMain.handle('getLegendaryVersion', getLegendaryVersion)
-  ipcMain.handle('getGogdlVersion', getGogdlVersion)
+  const versionDeps = { libraryManagers: deps.managers.library }
+  ipcMain.handle('getLegendaryVersion', () => getLegendaryVersion(versionDeps))
+  ipcMain.handle('getGogdlVersion', () => getGogdlVersion(versionDeps))
   // D-04: `comet` is GOG's Galaxy Communication replacement, gated on
   // `gameInfo.runner === 'gog'` at `launcher.ts:973`.
   ipcMain.handle('getCometVersion', getCometVersion)
-  ipcMain.handle('getNileVersion', getNileVersion)
+  ipcMain.handle('getNileVersion', () => getNileVersion(versionDeps))
 
   // ── Wine runtime channels (wine/runtimes/ipc_handler.ts:4,6) ──────────────
   // No wave-1 precondition: `runtimePath` (`backend/constants/paths.ts`) resolves from

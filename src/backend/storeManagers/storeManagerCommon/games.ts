@@ -28,6 +28,7 @@ import { isLinux, isMac } from 'backend/constants/environment'
 import { windowIcon } from 'backend/constants/paths'
 import { withKnownFixEnv } from 'backend/knownFixOverlays'
 import { raiseWineGameWindow } from 'backend/utils/wineWindowRaise'
+import { spawnAsync } from 'backend/utils'
 
 import type LogWriter from 'backend/logger/log_writer'
 import { Game } from '../../../common/types/game_manager'
@@ -293,10 +294,14 @@ export async function launchGame(
 
     // quick/261024-g3m: fire before the await — wait:true resolves only at game exit.
     if (isMac) {
-      void raiseWineGameWindow({
-        context: `sideload:${appName}`,
-        processNames: [basename(executable)]
-      })
+      // TEMPORARY (plan 12, replaced when this module takes injected deps).
+      void raiseWineGameWindow(
+        { spawnAsync },
+        {
+          context: `sideload:${appName}`,
+          processNames: [basename(executable)]
+        }
+      )
     }
 
     await runWineCommand({

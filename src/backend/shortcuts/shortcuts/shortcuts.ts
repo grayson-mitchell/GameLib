@@ -16,9 +16,9 @@ import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { GlobalConfig } from '../../config'
 import { GameInfo } from 'common/types'
 import { getIcon } from '../utils'
+import type { ShortcutsDeps } from '../utils'
 import { addNonSteamGame } from '../nonesteamgame/nonesteamgame'
 import sanitize from 'sanitize-filename'
-import { libraryManagerMap } from 'backend/storeManagers'
 import { isMac } from 'backend/constants/environment'
 import { userHome } from 'backend/constants/paths'
 import type { Game } from 'common/types/game_manager'
@@ -35,7 +35,11 @@ import { writeWindowsShortcut } from './windowsShortcut'
  * @async
  * @public
  */
-async function addShortcuts(game: Game, fromMenu?: boolean) {
+async function addShortcuts(
+  deps: ShortcutsDeps,
+  game: Game,
+  fromMenu?: boolean
+) {
   const gameInfo = game.getGameInfo()
   if (gameInfo.install.is_dlc) return
 
@@ -47,7 +51,7 @@ async function addShortcuts(game: Game, fromMenu?: boolean) {
 
   // A Steam game is already in Steam (the "Add to Steam" menu item is hidden for it too).
   if (addSteamShortcuts && storeCapabilities[runner].canAddSteamShortcut) {
-    addNonSteamGame(game)
+    addNonSteamGame(deps, game)
   }
 
   const launchWithProtocol = `gamelib://launch?appName=${app_name}&runner=${runner}`
@@ -78,7 +82,7 @@ async function addShortcuts(game: Game, fromMenu?: boolean) {
 
   switch (process.platform) {
     case 'linux': {
-      const icon = await getIcon(gameInfo.app_name, gameInfo)
+      const icon = await getIcon(deps, gameInfo.app_name, gameInfo)
       if (!icon) {
         logWarning(
           `No icon available for ${gameInfo.title}, creating an iconless shortcut`,
@@ -110,7 +114,7 @@ ${icon ? `Icon=${icon}\n` : ''}Categories=Game;
       }
       let executable = gameInfo.install.executable
       if (isStore(gameInfo, 'gog')) {
-        executable = libraryManagerMap['gog'].getExecutable(gameInfo.app_name)
+        executable = deps.libraryManagers.gog.getExecutable(gameInfo.app_name)
       }
       if (executable) {
         let icon: string
@@ -149,7 +153,7 @@ ${icon ? `Icon=${icon}\n` : ''}Categories=Game;
       let bundleWritten = false
       if (addStartMenuShortcuts || fromMenu || addDesktopShortcuts) {
         bundleWritten = await recordWrite(menuFile, () =>
-          generateMacOsApp(gameInfo, menuFile)
+          generateMacOsApp(deps, gameInfo, menuFile)
         )
       }
       if (addDesktopShortcuts) {
@@ -310,7 +314,11 @@ function macDesktopShortcutPresent(title: string | undefined): boolean {
 }
 
 // Generated once, into ~/Applications only; the Desktop item links to it.
-async function generateMacOsApp(gameInfo: GameInfo, appShortcut: string) {
+async function generateMacOsApp(
+  deps: ShortcutsDeps,
+  gameInfo: GameInfo,
+  appShortcut: string
+) {
   const { app_name, runner } = gameInfo
 
   logInfo('Generating macOS shortcut', LogPrefix.Backend)
@@ -329,7 +337,12 @@ async function generateMacOsApp(gameInfo: GameInfo, appShortcut: string) {
   }
 
   // convert the icon to icns
-  const isIconIcns = await convertPngToICNS(app_name, gameInfo, resourcesFolder)
+  const isIconIcns = await convertPngToICNS(
+    deps,
+    app_name,
+    gameInfo,
+    resourcesFolder
+  )
 
   if (!isIconIcns) {
     logWarning(
@@ -396,12 +409,13 @@ async function generateMacOsApp(gameInfo: GameInfo, appShortcut: string) {
 }
 
 async function convertPngToICNS(
+  deps: ShortcutsDeps,
   app_name: string,
   gameInfo: GameInfo,
   dest: string
 ) {
   try {
-    const iconPath = await getIcon(app_name, gameInfo)
+    const iconPath = await getIcon(deps, app_name, gameInfo)
     if (!iconPath) {
       logWarning(
         `No icon available for ${gameInfo.title}, skipping icon conversion`,

@@ -35,9 +35,6 @@ jest.mock('backend/utils', () => ({
 jest.mock('backend/ipc', () => ({
   sendFrontendMessage: jest.fn()
 }))
-jest.mock('backend/storeManagers', () => ({
-  libraryManagerMap: {}
-}))
 jest.mock('backend/dialog/dialog', () => ({
   notify: jest.fn()
 }))
@@ -74,6 +71,9 @@ import { logWarning } from 'backend/logger'
 import type { GameInfo } from 'common/types'
 import type { Game } from 'common/types/game_manager'
 
+const deps = { libraryManagers: { gog: {} } } as unknown as Parameters<
+  typeof addShortcuts
+>[0]
 const mockedGetGame = getGame as jest.Mock
 const mockedLogWarning = logWarning as jest.Mock
 const mockedExistsSync = existsSync as jest.Mock
@@ -205,7 +205,7 @@ describe('260905-mv5 Task 1: premise re-verification (plan evidence item 5)', ()
     // addShortcuts is async — the is_dlc property-access throw inside its
     // body surfaces as a promise rejection, not a synchronous throw.
     const game = makeStubGame({} as GameInfo)
-    await expect(addShortcuts(game)).rejects.toThrow()
+    await expect(addShortcuts(deps, game)).rejects.toThrow()
   })
 })
 

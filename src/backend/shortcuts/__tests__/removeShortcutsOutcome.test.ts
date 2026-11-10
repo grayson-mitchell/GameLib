@@ -51,8 +51,6 @@ jest.mock('backend/shortcuts/utils', () => ({
   getIcon: () => Promise.resolve(undefined)
 }))
 
-jest.mock('backend/storeManagers', () => ({ libraryManagerMap: {} }))
-
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logWarning: jest.fn(),

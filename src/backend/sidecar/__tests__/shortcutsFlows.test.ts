@@ -198,7 +198,14 @@ function makeFakeGame(gameInfo: GameInfo) {
   const fakeGame = { getGameInfo: () => gameInfo } as unknown as Game
   return {
     getGameInfo: () => gameInfo,
-    addShortcuts: (fromMenu?: boolean) => realAddShortcuts(fakeGame, fromMenu),
+    addShortcuts: (fromMenu?: boolean) =>
+      realAddShortcuts(
+        { libraryManagers: { gog: {} } } as unknown as Parameters<
+          typeof realAddShortcuts
+        >[0],
+        fakeGame,
+        fromMenu
+      ),
     removeShortcuts: jest.fn()
   }
 }

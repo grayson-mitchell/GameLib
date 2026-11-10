@@ -49,6 +49,7 @@ import {
   removeShortcuts as removeShortcutsUtil
 } from '../../shortcuts/shortcuts/shortcuts'
 import { removeNonSteamGame } from 'backend/shortcuts/nonesteamgame/nonesteamgame'
+import type { ShortcutsDeps } from 'backend/shortcuts/utils'
 import { sendFrontendMessage } from '../../ipc'
 import setup from './setup'
 import { getUmuId } from 'backend/wiki_game_info/umu/utils'
@@ -63,7 +64,10 @@ import { engineKeyFor } from 'backend/engine/gameKey'
 export default class NileGameManager implements Game {
   private readonly id: string
 
-  constructor(id: string) {
+  constructor(
+    id: string,
+    private readonly deps: ShortcutsDeps
+  ) {
     this.id = id
   }
 
@@ -298,7 +302,7 @@ export default class NileGameManager implements Game {
    * @public
    */
   async addShortcuts(fromMenu?: boolean) {
-    return addShortcutsUtil(this, fromMenu)
+    return addShortcutsUtil(this.deps, this, fromMenu)
   }
 
   /**

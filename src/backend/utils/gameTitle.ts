@@ -20,12 +20,10 @@
 
 import type { GameInfo, Runner } from 'common/types'
 import type { Game } from 'common/types/game_manager'
+import type { StoreManagers } from 'backend/services/types'
 
-// Type-only reference, erased at compile time -- mirrors the identical
-// pattern already established in downloadmanager/utils.ts to avoid a
-// runtime import of backend/storeManagers here.
-type LibraryManagerMap =
-  typeof import('backend/storeManagers').libraryManagerMap
+// Type-only reference, erased at compile time: no runtime import of the store managers here.
+type LibraryManagers = StoreManagers['library']
 
 /**
  * The one fallback chain every title consumer in this file delegates to.
@@ -50,12 +48,12 @@ function pickTitle(
  * keep working without modification.
  */
 export function resolveGameTitle(
-  libraryManagerMap: LibraryManagerMap,
+  libraryManagers: LibraryManagers,
   runner: Runner,
   appName: string,
   fallback?: GameInfo
 ): string {
-  const { title } = libraryManagerMap[runner].getGame(appName).getGameInfo()
+  const { title } = libraryManagers[runner].getGame(appName).getGameInfo()
   return pickTitle(title, appName, fallback?.title)
 }
 

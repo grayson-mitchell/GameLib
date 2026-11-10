@@ -27,6 +27,10 @@ function makeGameMock(title: string = 'MyGame', id: string = 'Game'): Game {
   } as Game
 }
 
+const deps = { libraryManagers: {} } as unknown as Parameters<
+  typeof addNonSteamGame
+>[0]
+
 function copyTestFile(file: string, alternativeUserPath = '') {
   const testFileDir = join(__dirname, 'test_data')
   const userDir = alternativeUserPath
@@ -59,7 +63,7 @@ describe('NonSteamGame', () => {
     const contentBefore = readFileSync(shortcutFilePath).toString()
     const game = makeGameMock('Discord', 'Discord')
 
-    await addNonSteamGame(game)
+    await addNonSteamGame(deps, game)
 
     const contentAfter = readFileSync(shortcutFilePath).toString()
     expect(contentBefore).toStrictEqual(contentAfter)
@@ -75,7 +79,7 @@ describe('NonSteamGame', () => {
     const game = makeGameMock()
     const contentBefore = readFileSync(shortcutFilePath).toString()
 
-    await addNonSteamGame(game)
+    await addNonSteamGame(deps, game)
 
     const contentBetween = readFileSync(shortcutFilePath).toString()
 
@@ -109,7 +113,7 @@ describe('NonSteamGame', () => {
     const game = makeGameMock()
 
     // add and remove to see if empty shortcuts.vdf is correctly created
-    await addNonSteamGame(game)
+    await addNonSteamGame(deps, game)
 
     await removeNonSteamGame(game)
 
@@ -162,7 +166,7 @@ describe('NonSteamGame', () => {
       const contentBefore = readFileSync(shortcutFilePath).toString()
       const contentBefore2 = readFileSync(shortcutFilePath2).toString()
 
-      await addNonSteamGame(game)
+      await addNonSteamGame(deps, game)
 
       const contentBetween = readFileSync(shortcutFilePath).toString()
       const contentBetween2 = readFileSync(shortcutFilePath2).toString()
@@ -225,7 +229,7 @@ describe('NonSteamGame', () => {
 
       const game = makeGameMock()
 
-      await addNonSteamGame(game)
+      await addNonSteamGame(deps, game)
 
       const contentAfter = readFileSync(shortcutFilePath).toString()
       expect(contentAfter).toContain('MyGame')

@@ -49,6 +49,7 @@ import {
   raiseWineGameWindow,
   windowsExeNameFromCommand
 } from 'backend/utils/wineWindowRaise'
+import { spawnAsync } from 'backend/utils'
 import { sendFrontendMessage } from '../../ipc'
 import { recordPlaySession } from 'backend/runsForMe'
 import type { SteamBottleLaunchWaitingCause } from 'common/types/steam'
@@ -301,11 +302,15 @@ function recordFirstMatch(
           .filter((n): n is string => n !== null)
       )
     ]
-    void raiseWineGameWindow({
-      context: `${entry.kind}:${appId}`,
-      pids: matches.map((m) => m.pid),
-      processNames
-    })
+    // TEMPORARY (plan 12, replaced when this module takes injected deps).
+    void raiseWineGameWindow(
+      { spawnAsync },
+      {
+        context: `${entry.kind}:${appId}`,
+        pids: matches.map((m) => m.pid),
+        processNames
+      }
+    )
   } catch (error) {
     logWarning(
       [`bottleProcessMonitor [${appId}]: window raise failed to start`, error],

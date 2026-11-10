@@ -334,7 +334,7 @@ export default class SteamGame implements Game {
    * that routing.
    */
   async addShortcuts(fromMenu?: boolean): Promise<void> {
-    return addShortcutsUtil(this, fromMenu)
+    return addShortcutsUtil(this.deps, this, fromMenu)
   }
 
   async removeShortcuts(): Promise<void> {

@@ -237,6 +237,7 @@ export function registerInstallFlows(): void {
   ipcMain.handle('uninstall', (event: unknown, ...args: unknown[]) =>
     (
       uninstallGameCallback as (
+        deps: { libraryManagers: typeof libraryManagerMap },
         event: unknown,
         appName: string,
         runner: Runner,
@@ -244,6 +245,7 @@ export function registerInstallFlows(): void {
         shouldRemoveSetting: boolean
       ) => Promise<void>
     )(
+      { libraryManagers: libraryManagerMap },
       event,
       args[0] as string,
       args[1] as Runner,
@@ -281,7 +283,14 @@ export function registerInstallFlows(): void {
     }
   )
 
-  ipcMain.handle('checkGameUpdates', checkGameUpdates)
+  // TEMPORARY (plan 12, replaced when plan 21 converts this registration to injected deps).
+  ipcMain.handle('checkGameUpdates', async () =>
+    checkGameUpdates({
+      managers: (
+        await import('../services/legacyFacades')
+      ).buildManagersFacade()
+    })
+  )
 
   // quick 261030-o77: the enableSteamNativeInstall toggle only governs
   // mac-native titles (depot installer vs steam://install). A bottle-routed

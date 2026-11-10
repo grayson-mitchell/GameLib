@@ -12807,7 +12807,7 @@ describe('SteamGame shortcuts delegate to the shared module (261026-c7r)', () =>
 
     await game.addShortcuts(true)
 
-    expect(spy).toHaveBeenCalledWith(game, true)
+    expect(spy).toHaveBeenCalledWith(game.deps, game, true)
   })
 
   it('removeShortcuts calls the shared removeShortcuts with (this)', async () => {

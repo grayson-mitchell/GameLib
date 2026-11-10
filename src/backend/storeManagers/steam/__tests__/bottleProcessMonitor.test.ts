@@ -1405,7 +1405,7 @@ describe('bottleProcessMonitor.ts', () => {
       await jest.advanceTimersByTimeAsync(1500 * 4)
       await flushMicrotasks()
       expect(mockedRaise).toHaveBeenCalledTimes(1)
-      expect(mockedRaise).toHaveBeenCalledWith({
+      expect(mockedRaise).toHaveBeenCalledWith(expect.anything(), {
         context: 'bridge:38410',
         pids: ['4242'],
         processNames: ['fallout2.exe']
@@ -1424,7 +1424,7 @@ describe('bottleProcessMonitor.ts', () => {
       await jest.advanceTimersByTimeAsync(1500)
       await flushMicrotasks()
       expect(mockedRaise).toHaveBeenCalledTimes(1)
-      expect(mockedRaise.mock.calls[0][0].context).toBe('bottled-steam:38410')
+      expect(mockedRaise.mock.calls[0][1].context).toBe('bottled-steam:38410')
       jest.useRealTimers()
     })
 

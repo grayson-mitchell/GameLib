@@ -53,7 +53,7 @@ export default class NileLibraryManager implements LibraryManager {
     const cached = this.gameCache.get(id)
     if (cached) return cached
 
-    const game = new NileGame(id)
+    const game = new NileGame(id, this.deps)
     this.gameCache.set(id, game)
     return game
   }

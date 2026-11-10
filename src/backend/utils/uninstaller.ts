@@ -6,7 +6,7 @@ import {
 } from 'backend/constants/paths'
 import { notify } from 'backend/dialog/dialog'
 import { logError, logInfo, LogPrefix } from 'backend/logger'
-import { libraryManagerMap } from 'backend/storeManagers'
+import type { ManagerDeps } from 'backend/services/types'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { resolveGameTitle } from 'backend/utils/gameTitle'
 import { Runner } from 'common/types'
@@ -17,8 +17,15 @@ import { existsSync, readdirSync, rmSync } from 'graceful-fs'
 import i18next from 'i18next'
 import { join } from 'path'
 
-export const removePrefix = async (appName: string, runner: Runner) => {
-  const { winePrefix } = await libraryManagerMap[runner]
+/** R1 slice: the per-runner managers. */
+export type UninstallerDeps = Pick<ManagerDeps, 'libraryManagers'>
+
+export const removePrefix = async (
+  deps: UninstallerDeps,
+  appName: string,
+  runner: Runner
+) => {
+  const { winePrefix } = await deps.libraryManagers[runner]
     .getGame(appName)
     .getSettings()
   logInfo(`Removing prefix ${winePrefix}`, LogPrefix.Backend)
@@ -100,6 +107,7 @@ const removeSettingsAndLogs = (appName: string) => {
 }
 
 export const uninstallGameCallback = async (
+  deps: UninstallerDeps,
   event: Event,
   appName: string,
   runner: Runner,
@@ -112,12 +120,12 @@ export const uninstallGameCallback = async (
     status: 'uninstalling'
   })
 
-  const game = libraryManagerMap[runner].getGame(appName)
+  const game = deps.libraryManagers[runner].getGame(appName)
   // Quick task 260905-mv5 (site 2, D-03): getGameInfo() can return
   // `{} as GameInfo` on a double cache miss (D-01) -- resolveGameTitle
   // falls back to appName so neither the uninstall-error nor the
   // uninstall-success notification below is ever nameless.
-  const title = resolveGameTitle(libraryManagerMap, runner, appName)
+  const title = resolveGameTitle(deps.libraryManagers, runner, appName)
 
   let uninstalled = false
 
@@ -156,7 +164,7 @@ export const uninstallGameCallback = async (
 
   if (uninstalled) {
     if (shouldRemovePrefix) {
-      removePrefix(appName, runner)
+      removePrefix(deps, appName, runner)
     }
     if (shouldRemoveSetting) {
       removeSettingsAndLogs(appName)

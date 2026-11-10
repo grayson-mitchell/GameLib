@@ -16,7 +16,7 @@
  * The AppleScript text is CONSTANT; pids and names travel only as argv
  * (count-of-pids, pids..., names...), so a hostile exe name cannot alter it.
  */
-import { spawnAsync } from 'backend/utils'
+import type { SpawnAsync } from 'backend/services/types'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 
@@ -75,11 +75,19 @@ export function windowsExeNameFromCommand(command: string): string | null {
   return name || null
 }
 
-export async function raiseWineGameWindow(opts: {
-  context: string
-  pids?: string[]
-  processNames?: string[]
-}): Promise<void> {
+/** R1 slice: the process spawner. */
+export interface WindowRaiseDeps {
+  spawnAsync: SpawnAsync
+}
+
+export async function raiseWineGameWindow(
+  deps: WindowRaiseDeps,
+  opts: {
+    context: string
+    pids?: string[]
+    processNames?: string[]
+  }
+): Promise<void> {
   const { context } = opts
   try {
     if (!isMac) return
@@ -102,7 +110,7 @@ export async function raiseWineGameWindow(opts: {
       })
     const tryRaise = async (): Promise<string | null> => {
       try {
-        const { stdout } = await spawnAsync('osascript', args)
+        const { stdout } = await deps.spawnAsync('osascript', args)
         const out = stdout.trim()
         return out && out !== 'none' ? out : null
       } catch (error) {

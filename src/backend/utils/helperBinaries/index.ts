@@ -1,13 +1,13 @@
 import { spawnSync } from 'node:child_process'
 import { getCometBin } from 'backend/utils'
 import { join } from 'path'
+import type { ManagerDeps } from 'backend/services/types'
 
-async function getLegendaryVersion(): Promise<string> {
-  // Imported lazily to break a circular dependency (helperBinaries/index.ts
-  // <-> storeManagers/index.ts) — see the load-bearing comment in
-  // storeManagers/gog/user.ts.
-  const { libraryManagerMap } = await import('../../storeManagers')
-  const { stdout, error, abort } = await libraryManagerMap[
+/** R1 slice: the runner managers the version probes ask. */
+type VersionProbeDeps = Pick<ManagerDeps, 'libraryManagers'>
+
+async function getLegendaryVersion(deps: VersionProbeDeps): Promise<string> {
+  const { stdout, error, abort } = await deps.libraryManagers[
     'legendary'
   ].runRunnerCommand(
     {
@@ -31,10 +31,8 @@ async function getLegendaryVersion(): Promise<string> {
   return `${version} ${codename}`
 }
 
-async function getGogdlVersion(): Promise<string> {
-  // Lazy import — see the load-bearing comment on getLegendaryVersion() above.
-  const { libraryManagerMap } = await import('../../storeManagers')
-  const { stdout, error } = await libraryManagerMap['gog'].runRunnerCommand(
+async function getGogdlVersion(deps: VersionProbeDeps): Promise<string> {
+  const { stdout, error } = await deps.libraryManagers['gog'].runRunnerCommand(
     ['--version'],
     {
       abortId: 'gogdl-version'
@@ -55,10 +53,8 @@ async function getCometVersion(): Promise<string> {
   return stdout.toString().trimEnd()
 }
 
-async function getNileVersion(): Promise<string> {
-  // Lazy import — see the load-bearing comment on getLegendaryVersion() above.
-  const { libraryManagerMap } = await import('../../storeManagers')
-  const { stdout, error } = await libraryManagerMap['nile'].runRunnerCommand(
+async function getNileVersion(deps: VersionProbeDeps): Promise<string> {
+  const { stdout, error } = await deps.libraryManagers['nile'].runRunnerCommand(
     ['--version'],
     {
       abortId: 'nile-version'

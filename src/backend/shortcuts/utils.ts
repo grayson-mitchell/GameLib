@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'graceful-fs'
 import { isStore } from 'common/storeCapabilities'
 import { GameInfo } from 'common/types'
 import { basename, dirname, extname, join } from 'path'
-import { libraryManagerMap } from '../storeManagers'
+import type { ManagerDeps } from 'backend/services/types'
 import { downloadFile } from 'backend/utils'
 import { createAbortController } from 'backend/utils/aborthandler/aborthandler'
 import { heroicIconFolder as iconsFolder } from 'backend/constants/paths'
@@ -60,7 +60,13 @@ function checkImageExistsAlready(image: string): boolean {
   return found !== undefined ? true : false
 }
 
+/** R1 slice: the shortcut helpers only reach the GOG library manager. */
+export interface ShortcutsDeps {
+  libraryManagers: Pick<ManagerDeps['libraryManagers'], 'gog'>
+}
+
 async function getIcon(
+  deps: ShortcutsDeps,
   appName: string,
   gameInfo: GameInfo
 ): Promise<string | undefined> {
@@ -85,7 +91,7 @@ async function getIcon(
         return linuxNativePath
       }
     }
-    const productApiData = await libraryManagerMap['gog'].getProductApi(appName)
+    const productApiData = await deps.libraryManagers.gog.getProductApi(appName)
     if (productApiData && productApiData.data.images?.icon) {
       image = 'https:' + productApiData.data.images?.icon
       icon = `${iconsFolder}/${appName}.png` // Allow transparency

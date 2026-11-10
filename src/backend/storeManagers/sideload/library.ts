@@ -19,7 +19,7 @@ export default class SideloadLibraryManager implements LibraryManager {
   init = () => Promise.resolve()
 
   getGame(id: string): SideloadGame {
-    return new SideloadGame(id)
+    return new SideloadGame(id, this.deps)
   }
 
   addNewApp({
@@ -77,8 +77,8 @@ export default class SideloadLibraryManager implements LibraryManager {
       current[gameIndex] = { ...current[gameIndex], ...game }
     } else {
       current.push(game)
-      void addShortcuts(new SideloadGame(app_name)).catch((error) =>
-        logWarning(['Could not add shortcuts for', app_name, error])
+      void addShortcuts(this.deps, new SideloadGame(app_name, this.deps)).catch(
+        (error) => logWarning(['Could not add shortcuts for', app_name, error])
       )
     }
 
