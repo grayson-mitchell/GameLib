@@ -2,6 +2,7 @@ import { basename, dirname, join } from 'node:path'
 import CacheStore from '../../cache'
 import { getPath } from '../../sidecar/pathShim'
 import { TypeCheckedStoreBackend } from '../../typed_store'
+import { defined } from '../../testUtils/indexed'
 import { createStores } from '../createStores'
 import { createStoreRegistry } from '../storeRegistry'
 import { __kindOfForTest } from '../../storeVersioning/engine'
@@ -143,9 +144,9 @@ describe('createStores', () => {
       [...new Set(fixtureCaches.map((entry) => entry.options.name))].sort()
     )
     for (const entry of fixtureCaches) {
-      const path = built.get(entry.options.name)?.store.path
-      expect(path).toBeDefined()
-      expect(__kindOfForTest(path as string)).toBe(entry.declaration.kind)
+      const name = defined(entry.options.name, 'fixture cache name')
+      const path = defined(built.get(name), name).store.path
+      expect(__kindOfForTest(path)).toBe(entry.declaration.kind)
     }
   })
 

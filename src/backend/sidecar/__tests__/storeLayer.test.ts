@@ -92,6 +92,7 @@ import {
 // stores built above are the ones its handlers resolve through — the same
 // real, unmodified code path production runs (the 'register-handlers' boot step).
 import { registerHandlers } from '../handlers'
+import { defined } from '../../testUtils/indexed'
 import { createTestServices } from '../../testUtils/testServices'
 import { createCaptureLog } from '../../testUtils/captureLog'
 
@@ -515,7 +516,12 @@ describe('C-WR-1: two boots in one module registry', () => {
       registry2.get('gameOverridesStore') as unknown as ProbeableStore,
       'set'
     )
-    listeners[0](undefined, 'gameOverridesStore', 'overrides', overrides)
+    defined(listeners[0], 'storeSet listener')(
+      undefined,
+      'gameOverridesStore',
+      'overrides',
+      overrides
+    )
 
     expect(secondSet).toHaveBeenCalledWith('overrides', overrides)
     expect(firstSet).not.toHaveBeenCalled()
