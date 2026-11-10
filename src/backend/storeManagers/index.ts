@@ -15,7 +15,7 @@ import { createLauncher } from 'backend/launcher'
 import type { Launcher } from 'backend/launcher'
 import type { ManagerDeps, StoreManagers } from 'backend/services/types'
 
-import { logInfo, RunnerToLogPrefixMap } from 'backend/logger'
+import { logInfo, logWarning, RunnerToLogPrefixMap } from 'backend/logger'
 import type { DownloadQueue } from 'backend/downloadmanager/downloadqueue'
 
 import type {
@@ -194,7 +194,15 @@ export function createStoreManagers(
       if (!ignoreGameUpdates && gameIsAvailable) {
         logInfo(`Auto-Updating ${gameInfo.title}`, logPrefix)
         const dmQueueElement: DMQueueElement = getDMElement(gameInfo, appName)
-        void deps.getDownloadQueue().addToQueue(dmQueueElement)
+        deps
+          .getDownloadQueue()
+          .addToQueue(dmQueueElement)
+          .catch((error: unknown) => {
+            logWarning(
+              `Auto-update could not queue ${gameInfo.title}: ${String(error)}`,
+              logPrefix
+            )
+          })
         // remove from the array to avoid downloading the same game twice
         gamesToUpdate = gamesToUpdate.filter((game) => game !== appName)
       } else {
