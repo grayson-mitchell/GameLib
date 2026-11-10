@@ -613,7 +613,7 @@ Plans:
 **Goal:** D-15 step 2 of Phase 66 (decisions in `66-CONTEXT.md`). Nothing is constructed at import time. A stores factory replaces the 16 `*/stores.ts` modules and `key_value_stores.ts`. `createStoreManagers` builds the library and game manager classes (gog, legendary, nile, steam, sideload) with constructor deps at boot (D-02), and the 46 non-test consumers of `libraryManagerMap`/`gameManagerMap`/`storeLaunchHooks` receive them. The 25 `sidecar/*FlowRegistration.ts` files take narrow slices (D-01). In `launcher.ts`, `callRunner`, `runWineCommand`, the gamescope probe and script spawns become runner callers, pinned by characterization tests first. `utils.ts` `spawnAsync` becomes a thin runner caller and `handleExit` calls the runner's teardown. `trackedChildren.ts` and `longLivedChildren.ts` are deleted, with comet and the bridge `helperSpawn` moving to `spawnLongLived` (D-10, D-11). Ceilings drop in the same commits (D-16). About 16–18 plans.
 **Requirements**: TBD
 **Depends on:** Phase 66
-**Plans:** 28/37 plans executed
+**Plans:** 29/37 plans executed
 
 Plans:
 
@@ -677,7 +677,7 @@ Plans:
 - [x] 66.1-22d2-PLAN.md — cleanup: steam bottle suites on injected installRemove; removable legacyFacades mocks and storeManagers.steam ceiling lowered
 - [x] 66.1-22e-PLAN.md — cleanup: CrossOver wineserver kill + game-process watch on injected spawnAsync
 - [x] 66.1-22f-PLAN.md — cleanup: engine switch + bridge known fixes on injected services; legacySpawnAsync.ts and legacyTools deleted
-- [ ] 66.1-22g-PLAN.md — cleanup: systeminfo version probes take managers; bindBottleStores bound at 'stores', fallback deleted; test:ci baseline
+- [x] 66.1-22g-PLAN.md — cleanup: systeminfo version probes take managers; bindBottleStores bound at 'stores', fallback deleted; test:ci baseline
 - [ ] 66.1-22h-PLAN.md — cleanup: knownFixReport, macSteamAdoption and steamRestartHold take injected steam stores; their call-time stores requires deleted
 - [ ] 66.1-22i-PLAN.md — cleanup: engineDecision wineManagerReleases reads an injected wineManager store, threaded through EngineServices/ToolsDeps; last call-time stores require deleted
 - [ ] 66.1-23-PLAN.md — construction flip: createStoreManagers + createLauncher at boot; libraryManagerMap/storeLaunchHooks deleted
