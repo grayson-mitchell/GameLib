@@ -76,6 +76,7 @@ import type { EngineSelection } from '../engineTypes'
 import { killBottleWineServerWith } from '../bottlePrimitives'
 import { showEngineDialog, showEngineNotice } from '../engineDialogs'
 import { app } from 'backend/platform'
+import { createTestEngineServices } from 'backend/testUtils/testServices'
 import type { EngineServices } from '../engineServices'
 import { notify, showDialogBoxModalAuto } from 'backend/dialog/dialog'
 import {
@@ -141,7 +142,8 @@ afterEach(() => {
 const services: EngineServices = {
   spawnAsync: jest.fn(),
   installRemove: jest.fn(),
-  wineManagerReleases: () => []
+  wineManagerReleases: () => [],
+  runner: createTestEngineServices().runner
 }
 
 function setUp(sel: EngineSelection, kind: 'bottle' | 'plain' = 'bottle') {

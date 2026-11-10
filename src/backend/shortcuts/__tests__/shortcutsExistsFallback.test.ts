@@ -60,6 +60,7 @@ import { dirname, join } from 'path'
 import { homedir } from 'os'
 import {
   createTestManagers,
+  createTestServices,
   createTestStores
 } from 'backend/testUtils/testServices'
 import { shortcutFiles } from '../shortcuts/shortcuts'
@@ -92,7 +93,8 @@ registerShortcutsFlows({
     }
   }),
   quit: { handleExit: () => Promise.resolve() },
-  stores: createTestStores()
+  stores: createTestStores(),
+  runner: createTestServices().runner
 })
 
 type ShortcutsExistsHandler = (

@@ -12,6 +12,8 @@ export type EngineServicesSource = Pick<
   ManagerDeps,
   'libraryManagers' | 'commandRunner' | 'spawnAsync'
 > & {
+  /** The probes the engine spawns (66.2-03): only `run`, so the launcher's slice qualifies. */
+  runner: Pick<ManagerDeps['runner'], 'run'>
   /** The members createTools reads; a launcher still being built can supply just these. */
   launcher: Pick<Launcher, 'setupEnvVars' | 'setupWineEnvVars' | 'validWine'>
   stores: Pick<ManagerDeps['stores'], 'wineManager'>
@@ -23,6 +25,7 @@ export function toolsFrom(deps: EngineServicesSource): Tools {
     commandRunner: deps.commandRunner,
     launcher: deps.launcher,
     spawnAsync: deps.spawnAsync,
+    runner: deps.runner,
     stores: deps.stores
   })
 }
@@ -30,6 +33,7 @@ export function toolsFrom(deps: EngineServicesSource): Tools {
 export function engineServicesFrom(deps: EngineServicesSource): EngineServices {
   return {
     spawnAsync: deps.spawnAsync,
+    runner: deps.runner,
     installRemove: (...a) => toolsFrom(deps).DXVK.installRemove(...a),
     wineManagerReleases: wineManagerReleasesFrom(deps)
   }

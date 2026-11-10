@@ -26,6 +26,7 @@ import {
 } from 'graceful-fs'
 
 import { execFile, spawn } from 'child_process'
+import type { ProcessRunner } from 'backend/process/types'
 import {
   axiosClient,
   downloadFile,
@@ -215,6 +216,8 @@ export interface ToolsDeps {
   commandRunner: Pick<CommandRunner, 'runWineCommand'>
   launcher: Pick<Launcher, 'setupEnvVars' | 'setupWineEnvVars' | 'validWine'>
   spawnAsync: SpawnAsync
+  /** Converted onto the runner by 66.2-08. */
+  runner: Pick<ProcessRunner, 'run'>
   stores: Pick<Stores, 'wineManager'>
 }
 
@@ -222,6 +225,7 @@ export interface ToolsDeps {
 function engineServicesFor(deps: ToolsDeps): EngineServices {
   return {
     spawnAsync: deps.spawnAsync,
+    runner: deps.runner,
     installRemove: (...a) => createDxvk(deps).installRemove(...a),
     wineManagerReleases: wineManagerReleasesFrom(deps)
   }

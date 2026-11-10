@@ -55,7 +55,7 @@ import { ipcMain, clipboard } from '../platform'
 import { requestRustInvoke } from './sidecarRpc'
 import { RUST_CLIPBOARD_READ_TEXT } from '../../common/types/sidecarTransport'
 import { getSystemInfo, formatSystemInfo } from '../utils/systeminfo'
-import type { StoreManagers } from '../services/types'
+import type { BootServices, StoreManagers } from '../services/types'
 
 function logSendFailure(channel: string, error: unknown): void {
   console.warn(
@@ -67,6 +67,8 @@ function logSendFailure(channel: string, error: unknown): void {
 /** Slice the clipboard flows need: the runner managers the system-info probes ask. */
 export interface ClipboardFlowDeps {
   managers: Pick<StoreManagers, 'library'>
+  /** The boot process runner (66.2); consumers converted by 66.2-05. */
+  runner: BootServices['runner']
 }
 
 /**

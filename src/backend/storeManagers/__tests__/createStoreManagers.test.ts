@@ -41,6 +41,7 @@ function build(over: Partial<Parameters<typeof createStoreManagers>[0]> = {}) {
     commandRunner: fakes.commandRunner,
     spawnAsync: fakes.spawnAsync,
     runner: fakes.runner,
+    clock: fakes.clock,
     getDownloadQueue: () => fakes.downloadQueue,
     ...over
   })

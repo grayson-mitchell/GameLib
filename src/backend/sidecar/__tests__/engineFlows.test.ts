@@ -70,9 +70,10 @@ function fakeGame(over: { native?: boolean; platform?: string } = {}) {
 }
 
 const spawnAsync = createTestServices().spawnAsync
+const runner = createTestServices().runner
 
 describe('engine flows', () => {
-  beforeAll(() => registerEngineFlows({ managers, stores, spawnAsync }))
+  beforeAll(() => registerEngineFlows({ managers, stores, spawnAsync, runner }))
   beforeEach(() => {
     jest.clearAllMocks()
     envState.isMac = true
@@ -97,7 +98,7 @@ describe('engine flows', () => {
       )
     ).toEqual({ kind: 's' })
     expect(steamState).toHaveBeenCalledWith(
-      { managers, stores, spawnAsync },
+      { managers, stores, spawnAsync, runner },
       '220'
     )
     expect(getGame).not.toHaveBeenCalled()
@@ -188,7 +189,7 @@ describe('engine flows', () => {
   })
 
   it('wires the publisher to engineStateChanged', () => {
-    registerEngineFlows({ managers, stores, spawnAsync })
+    registerEngineFlows({ managers, stores, spawnAsync, runner })
     const publisher = setPublisher.mock.calls[0][0] as (s: unknown) => void
     const state = { appId: '1' }
     publisher(state)

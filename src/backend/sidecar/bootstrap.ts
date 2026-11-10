@@ -333,6 +333,7 @@ function requireServices(state: BootState): BootServices {
     launcher,
     commandRunner,
     runner,
+    clock,
     spawnAsync,
     quit,
     downloadQueue
@@ -344,6 +345,7 @@ function requireServices(state: BootState): BootServices {
     !launcher ||
     !commandRunner ||
     !runner ||
+    !clock ||
     !spawnAsync ||
     !quit ||
     !downloadQueue
@@ -356,6 +358,7 @@ function requireServices(state: BootState): BootServices {
         'launcher',
         'commandRunner',
         'runner',
+        'clock',
         'spawnAsync',
         'quit',
         'downloadQueue'
@@ -370,6 +373,7 @@ function requireServices(state: BootState): BootServices {
     launcher,
     commandRunner,
     runner,
+    clock,
     spawnAsync,
     quit,
     downloadQueue
@@ -1108,6 +1112,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           }
         }
         state.services.runner = prebuilt.runner ?? ctx.runner
+        state.services.clock = ctx.clock
         state.services.commandRunner =
           prebuilt.commandRunner ??
           createCommandRunner({
@@ -1202,6 +1207,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           commandRunner,
           spawnAsync,
           runner,
+          clock: ctx.clock,
           getDownloadQueue: () => requireServices(state).downloadQueue
         })
         state.services.managers = prebuilt.managers ?? built

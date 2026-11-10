@@ -129,7 +129,8 @@ const foreignChannelsBefore = snapshotForeignChannels()
 // are module-scope maps; calling this more than once would stack a duplicate listener onto
 // the SAME channel array.
 registerClipboardFlows({
-  managers: { library: {} } as never
+  managers: { library: {} } as never,
+  runner: {} as never
 })
 
 beforeEach(() => {

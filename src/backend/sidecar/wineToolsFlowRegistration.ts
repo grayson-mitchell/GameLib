@@ -82,6 +82,7 @@ import { logDebug, logError, LogPrefix } from '../logger'
 import { backendEvents } from '../backend_events'
 import { t } from 'i18next'
 import type {
+  BootServices,
   CommandRunner,
   Launcher,
   SpawnAsync,
@@ -103,6 +104,8 @@ export interface WineToolsFlowDeps {
   launcher: Pick<Launcher, 'validWine' | 'setupEnvVars' | 'setupWineEnvVars'>
   spawnAsync: SpawnAsync
   stores: Pick<Stores, 'wineManager'>
+  /** The boot process runner (66.2); consumers converted by 66.2-07/08. */
+  runner: BootServices['runner']
 }
 
 /**

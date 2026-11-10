@@ -152,6 +152,7 @@ import { handlerRegistry, listenerRegistry } from '../../platform'
 import { getPath } from '../pathShim'
 import {
   createTestManagers,
+  createTestServices,
   createTestStores
 } from 'backend/testUtils/testServices'
 import { sendFrontendMessage } from 'backend/ipc'
@@ -270,7 +271,8 @@ registerShortcutsFlows({
     }
   }),
   quit: { handleExit: () => mockHandleExit() },
-  stores: createTestStores()
+  stores: createTestStores(),
+  runner: createTestServices().runner
 })
 
 const shellExeAtFileLoad = process.env.GAMELIB_SHELL_EXE

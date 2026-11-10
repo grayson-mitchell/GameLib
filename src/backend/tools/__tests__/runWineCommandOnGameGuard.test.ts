@@ -66,6 +66,7 @@ import {
 
 const toolsDeps: ToolsDeps = {
   spawnAsync: createTestServices().spawnAsync,
+  runner: createTestServices().runner,
   stores: createTestStores(),
   managers: {
     library: {

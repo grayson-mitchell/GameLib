@@ -12,6 +12,7 @@ export type ManagerDepsSource = Pick<
   | 'launcher'
   | 'commandRunner'
   | 'runner'
+  | 'clock'
   | 'spawnAsync'
   | 'downloadQueue'
 >
@@ -26,6 +27,7 @@ export function managerDepsFromServices(
     launcher: source.launcher,
     spawnAsync: source.spawnAsync,
     runner: source.runner,
+    clock: source.clock,
     getDownloadQueue: () => source.downloadQueue
   }
 }

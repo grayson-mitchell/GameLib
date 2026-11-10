@@ -43,6 +43,8 @@ export interface EngineFlowDeps {
   managers: Pick<StoreManagers, 'library'>
   stores: Pick<Stores, 'steam' | 'wineManager'>
   spawnAsync: BootServices['spawnAsync']
+  /** The boot process runner (66.2); consumers converted by 66.2-03. */
+  runner: BootServices['runner']
 }
 
 function engineServicesOf(

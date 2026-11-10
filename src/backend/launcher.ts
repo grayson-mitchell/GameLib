@@ -123,6 +123,7 @@ function engineSource(deps: LauncherDeps): EngineServicesSource {
     libraryManagers: deps.libraryManagers,
     commandRunner: deps.commandRunner,
     spawnAsync: deps.spawnAsync,
+    runner: deps.runner,
     stores: deps.stores,
     // The pure env/validation helpers are module functions, so the tools need no handle on the
     // launcher being built (checker warning 6).

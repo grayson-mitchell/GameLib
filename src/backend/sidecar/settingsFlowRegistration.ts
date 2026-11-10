@@ -80,7 +80,7 @@ import { hasExecutable } from '../utils/os/path'
 import { isFlatpak } from '../constants/environment'
 import { gamesConfigPath } from '../constants/paths'
 import type { AppSettings } from 'common/types'
-import type { Stores, StoreManagers } from '../services/types'
+import type { BootServices, Stores, StoreManagers } from '../services/types'
 
 /**
  * WR-01 (Phase 31 Plan 04) path-containment guard for the per-game write
@@ -110,6 +110,8 @@ function isContainedGameConfig(appName: string): boolean {
 export function registerSettingsFlows(deps: {
   managers: Pick<StoreManagers, 'library'>
   stores: Pick<Stores, 'kvs'>
+  /** The boot process runner (66.2); consumers converted by 66.2-05. */
+  runner: BootServices['runner']
 }): void {
   ipcMain.handle('requestAppSettings', async () =>
     GlobalConfig.get().getSettings()

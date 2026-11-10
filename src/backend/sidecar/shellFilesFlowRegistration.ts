@@ -125,7 +125,7 @@ import { logInfo, LogPrefix } from '../logger'
 import i18next from 'i18next'
 import type { DiskSpaceData } from 'common/types'
 import type { ClearCacheDeps } from '../utils'
-import type { StoreManagers } from '../services/types'
+import type { BootServices, StoreManagers } from '../services/types'
 
 function logSendFailure(channel: string, error: unknown): void {
   console.warn(
@@ -144,6 +144,8 @@ function logSendFailure(channel: string, error: unknown): void {
 export function registerShellFilesFlows(deps: {
   managers: Pick<StoreManagers, 'library'>
   stores: ClearCacheDeps['stores']
+  /** The boot process runner (66.2); consumers converted by 66.2-05. */
+  runner: BootServices['runner']
 }): void {
   // ── send (11): the URL openers (constant URLs go straight to shell.openExternal) ────
 

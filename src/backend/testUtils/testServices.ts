@@ -28,6 +28,7 @@ import { createSteamStores } from '../storeManagers/steam/stores'
 import { createWikiGameInfoStores } from '../wiki_game_info/stores'
 import { createWineManagerStores } from '../wine/manager/stores'
 import type { EngineServices } from '../engine/engineServices'
+import { createFakeClock } from './fakeClock'
 import type { Runner } from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
 import type {
@@ -204,6 +205,7 @@ export function createTestServices(
     runner:
       overrides.runner ??
       unscriptedMembers<BootServices['runner']>('process runner', {}),
+    clock: overrides.clock ?? createFakeClock(),
     spawnAsync: overrides.spawnAsync ?? spawnAsync,
     quit: overrides.quit ?? quit,
     downloadQueue:
@@ -231,6 +233,7 @@ export function createTestManagerDeps(
     runner:
       overrides.runner ??
       unscriptedMembers<ManagerDeps['runner']>('process runner', {}),
+    clock: overrides.clock ?? createFakeClock(),
     getDownloadQueue:
       overrides.getDownloadQueue ??
       (() => {
@@ -249,6 +252,7 @@ export function createTestEngineServices(
       throw new Error('unscripted installRemove call')
     },
     wineManagerReleases: () => [],
+    runner: unscriptedMembers<EngineServices['runner']>('process runner', {}),
     ...overrides
   }
 }

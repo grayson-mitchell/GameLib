@@ -17,7 +17,7 @@ import type { LibraryManager } from 'common/types/game_manager'
 import type { StoreLaunchHooks } from 'backend/storeManagers'
 import type { DownloadQueue } from 'backend/downloadmanager/downloadqueue'
 import type { Launcher } from 'backend/launcher'
-import type { ProcessRunner } from 'backend/process/types'
+import type { Clock, ProcessRunner } from 'backend/process/types'
 import type { CommandRunner as CommandRunnerImpl } from 'backend/commandRunner'
 import type GOGLibraryManager from 'backend/storeManagers/gog/library'
 import type LegendaryLibraryManager from 'backend/storeManagers/legendary/library'
@@ -108,6 +108,8 @@ export interface ManagerDeps {
    * kills through the same registry its spawns are tracked in.
    */
   runner: Pick<ProcessRunner, 'killTracked' | 'spawnLongLived' | 'run'>
+  /** The boot clock; timers are unref'd by default (D-04). */
+  clock: Clock
   /**
    * A call-time accessor, never a queue value: the download queue is built by the
    * 'download-queue' boot step, after the managers exist.
@@ -124,6 +126,8 @@ export interface BootServices {
   commandRunner: CommandRunner
   /** ctx.runner: the process runner commandRunner is built on (one registry). */
   runner: ManagerDeps['runner']
+  /** ctx.clock: the boot clock, read by ManagerDeps.clock (66.2). */
+  clock: ManagerDeps['clock']
   spawnAsync: SpawnAsync
   quit: QuitHandler
   downloadQueue: DownloadQueue

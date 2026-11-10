@@ -188,7 +188,12 @@ import { pushReadOnlyStoresNotice } from './readOnlyStoresNotice'
 // `main.ts:613` before that file is deleted at plan 35-14. See the
 // `frontendReady` handler below for the full contingency analysis.
 import type { DownloadQueue } from '../downloadmanager/downloadqueue'
-import type { Stores, StoreManagers, QuitHandler } from '../services/types'
+import type {
+  BootServices,
+  Stores,
+  StoreManagers,
+  QuitHandler
+} from '../services/types'
 import { requestRustInvoke } from './sidecarRpc'
 import { RUST_TRAY_SET_ICON } from '../../common/types/sidecarTransport'
 import {
@@ -262,6 +267,8 @@ export interface AppShellFlowDeps {
   downloadQueue: Pick<DownloadQueue, 'initQueue'>
   quit: Pick<QuitHandler, 'handleExit'>
   stores: Pick<Stores, 'kvs' | 'legendary'>
+  /** The boot process runner (66.2); consumers converted by 66.2-11. */
+  runner: BootServices['runner']
   /** Default `false`; handlers.ts sets it under Jest (see the docstring above). */
   skipInitialTraySync?: boolean
 }

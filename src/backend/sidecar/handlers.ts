@@ -141,12 +141,14 @@ export function registerHandlers(deps: {
   registerEngineFlows({
     managers: deps.services.managers,
     stores: deps.services.stores,
-    spawnAsync: deps.services.spawnAsync
+    spawnAsync: deps.services.spawnAsync,
+    runner: deps.services.runner
   })
   registerInstallFlows(deps.services)
   registerSettingsFlows({
     managers: deps.services.managers,
-    stores: deps.services.stores
+    stores: deps.services.stores,
+    runner: deps.services.runner
   })
   // D-35-19-15's live gate: a DEV-ONLY single-host Epic cookie sweep, so the
   // `EPIC_COOKIE_HOSTS` sweep can be exercised against ONE sibling apex without
@@ -185,6 +187,7 @@ export function registerHandlers(deps: {
     downloadQueue: deps.services.downloadQueue,
     quit: deps.services.quit,
     stores: deps.services.stores,
+    runner: deps.services.runner,
     skipInitialTraySync: process.env.JEST_WORKER_ID !== undefined
   })
   // Phase 34.2 Plans 04+05: the game-details/settings/override channels — no
@@ -212,7 +215,8 @@ export function registerHandlers(deps: {
   // `registerStoreWriteHandlers()`.
   registerShellFilesFlows({
     managers: deps.services.managers,
-    stores: deps.services.stores
+    stores: deps.services.stores,
+    runner: deps.services.runner
   })
   // Phase 34.3 Plan 06 (REQ-34.3-03/-04/-13): the clipboard channels — the ONLY
   // consumers of this slice's two new dispatch_rust_channel arms
@@ -220,7 +224,10 @@ export function registerHandlers(deps: {
   // relative to the other calls above (own channel names, no cross-module runtime
   // dependency at registration time), placed alongside them, before
   // `registerStoreWriteHandlers()`.
-  registerClipboardFlows({ managers: deps.services.managers })
+  registerClipboardFlows({
+    managers: deps.services.managers,
+    runner: deps.services.runner
+  })
   // Phase 34.2 gap cycle 2, plan 34.2-16 (REQ-34.2-12), extended by Phase 34.3
   // plan 04: the logger channels. `logError` was ported early from its Phase
   // 34.3/slice-6 slot because gap cycle 1's renderer repair-failure handler
@@ -270,19 +277,22 @@ export function registerHandlers(deps: {
     commandRunner: deps.services.commandRunner,
     launcher: deps.services.launcher,
     spawnAsync: deps.services.spawnAsync,
-    stores: deps.services.stores
+    stores: deps.services.stores,
+    runner: deps.services.runner
   })
   registerShortcutsFlows({
     managers: deps.services.managers,
     quit: deps.services.quit,
-    stores: deps.services.stores
+    stores: deps.services.stores,
+    runner: deps.services.runner
   })
   registerRunnerMiscFlows({
     managers: deps.services.managers,
     commandRunner: deps.services.commandRunner,
     launcher: deps.services.launcher,
     spawnAsync: deps.services.spawnAsync,
-    stores: deps.services.stores
+    stores: deps.services.stores,
+    runner: deps.services.runner
   })
   // Phase 34.6 Plan 08 (REQ-34.6-01): the EOS overlay channel cluster — no ordering constraint
   // relative to the other calls above.

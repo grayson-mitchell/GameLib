@@ -100,13 +100,20 @@ import { sendFrontendMessage } from '../ipc'
 import { getMainWindow } from '../main_window'
 import { logWarning, LogPrefix } from '../logger'
 import type { Runner } from 'common/types'
-import type { QuitHandler, StoreManagers, Stores } from 'backend/services/types'
+import type {
+  BootServices,
+  QuitHandler,
+  StoreManagers,
+  Stores
+} from 'backend/services/types'
 
 /** Narrow slice (66.1 D-01): library managers for game lookup, the quit handler for ctrl+q. */
 export interface ShortcutsFlowDeps {
   managers: Pick<StoreManagers, 'library'>
   quit: Pick<QuitHandler, 'handleExit'>
   stores: Pick<Stores, 'kvs' | 'wikiGameInfo' | 'crossoverIndex'>
+  /** The boot process runner (66.2); consumers converted by 66.2-04. */
+  runner: BootServices['runner']
 }
 
 function logChannelFailure(channel: string, error: unknown): void {

@@ -107,6 +107,7 @@ import { registerWineToolsFlows } from '../wineToolsFlowRegistration'
 import { handlerRegistry, listenerRegistry } from '../../platform'
 import {
   createTestManagers,
+  createTestServices,
   createTestStores
 } from 'backend/testUtils/testServices'
 import { GameConfig } from '../../game_config'
@@ -142,7 +143,8 @@ registerWineToolsFlows({
     setupWineEnvVars: jest.fn()
   },
   spawnAsync: jest.fn(),
-  stores: createTestStores()
+  stores: createTestStores(),
+  runner: createTestServices().runner
 })
 const registeredSendChannels = [...listenerRegistry]
   .filter(
