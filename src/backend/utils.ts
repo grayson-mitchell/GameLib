@@ -32,6 +32,7 @@ import {
   assertPlausibleAbsolutePath
 } from './sidecar/rendererPathGuard'
 import { resolveTitleForGame } from './utils/gameTitle'
+import { checkEpicServiceOffline } from './utils/epicServiceStatus'
 import * as fileSize from 'filesize'
 import { Client as discordClient } from '@xhayper/discord-rpc'
 import { showDialogBoxModalAuto } from './dialog/dialog'
@@ -185,31 +186,27 @@ async function isEpicServiceOffline(
     silent: false
   })
 
-  try {
-    const { data } = await axiosClient.get(epicStatusApi)
-
-    for (const component of data.components) {
-      const { name: name, status: indicator } = component
-
-      // found component and checking status
-      if (name === type) {
-        const isOffline = indicator === 'major'
-        if (isOffline) {
-          notification.show()
-        }
-        return isOffline
-      }
-    }
-
-    notification.show()
-    return false
-  } catch (error) {
-    logError(
-      ['Failed to get epic service status with', error],
-      LogPrefix.Backend
-    )
-    return false
-  }
+  return checkEpicServiceOffline(
+    {
+      fetchComponents: async () => (await axiosClient.get(epicStatusApi)).data,
+      notify: () => notification.show(),
+      onError: (error) =>
+        logError(
+          ['Failed to get epic service status with', error],
+          LogPrefix.Backend
+        ),
+      onUnreachable: (error) =>
+        logWarning(
+          [
+            'Could not reach the Epic status page (',
+            (error as { code?: unknown } | undefined)?.code ?? error,
+            '), treating Epic as offline for this launch/install check'
+          ],
+          LogPrefix.Backend
+        )
+    },
+    type
+  )
 }
 
 export async function askForceUninstall(game: Game, appName: string) {
