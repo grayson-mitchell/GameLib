@@ -15,6 +15,7 @@
 // `__tests__/cache.test.ts`'s "store path parity" block for the gate.
 import Store from './store_backend'
 import type { StoreDeclaration } from './storeVersioning/types'
+import type { StoreRegistry } from './stores/storeRegistry'
 
 import {
   StoreOptions,
@@ -82,7 +83,8 @@ export class TypeCheckedStoreBackend<
   constructor(
     name: Name,
     options: StoreOptions<StoreStructure[Name]>,
-    declaration: StoreDeclaration
+    declaration: StoreDeclaration,
+    registry?: StoreRegistry
   ) {
     this.storeName = name
     // @ts-expect-error Pre-existing generic variance between the per-store
@@ -96,6 +98,12 @@ export class TypeCheckedStoreBackend<
     // warning at all. Now that the registry is load-bearing for writes,
     // last-writer-wins is not an acceptable default; a duplicate is a real defect and
     // must at least be greppable.
+    registry?.register(
+      name,
+      this as unknown as TypeCheckedStoreBackend<ValidStoreName>,
+      options as StoreOptions<StoreStructure[ValidStoreName]>,
+      declaration
+    )
     if (storeRegistry.has(name)) {
       process.stderr.write(
         `[typed_store] duplicate registration for '${name}' — keeping the first instance\n`

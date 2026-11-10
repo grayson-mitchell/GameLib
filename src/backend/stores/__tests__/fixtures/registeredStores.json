@@ -1,0 +1,610 @@
+[
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "crossover_index",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "gog_achievements",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "gog_api_info",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "gog_install_info",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "gog_library",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "gog_playtime_sync_queue",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "humble_audit",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "humble_gifted_at",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "humble_library",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "humble_local_redeemed",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "humble_notified_expiration",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "humble_ownership_override",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "humble_revealed",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "humble_settle_declined",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "humble_sync",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "legendary_gameinfo",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "legendary_games_override",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "legendary_install_info",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "legendary_library",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "nile_install_info",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "nile_library",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "pci_ids_device",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "pci_ids_device",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "pci_ids_vendor",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "pci_ids_vendor",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "steam_known_fix_reports",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "steam_library",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "steam_metadata",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "steam_pending_adoption",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "steam_restart_hold",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "steam_sync",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "umu",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "wikigameinfo",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": "configStore",
+    "options": {
+      "cwd": "store",
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": "downloadManager",
+    "options": {
+      "cwd": "store",
+      "name": "download-manager",
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": "gameOverridesStore",
+    "options": {
+      "cwd": "/var/folders/f7/stgr185j04g2hm431z971xl40000gn/T/gamelib-jest-run-Zv3BlC/gamelib-jest-home-kjUHOa/Library/Application Support/GameLib/store",
+      "name": "game-overrides",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": "gogConfigStore",
+    "options": {
+      "cwd": "gog_store",
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": "gogInstalledGamesStore",
+    "options": {
+      "cwd": "gog_store",
+      "name": "installed",
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": "gogPrivateBranches",
+    "options": {
+      "cwd": "gog_store",
+      "name": "privateBranches",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": "gogSyncStore",
+    "options": {
+      "cwd": "gog_store",
+      "name": "saveTimestamps",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": "humbleConfigStore",
+    "options": {
+      "cwd": "humble_store",
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state",
+      "tokenBearing": true
+    }
+  },
+  {
+    "registeredAs": "legendaryConfigStore",
+    "options": {
+      "cwd": "legendary_store",
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": "macArchStore",
+    "options": {
+      "cwd": "/var/folders/f7/stgr185j04g2hm431z971xl40000gn/T/gamelib-jest-run-Zv3BlC/gamelib-jest-home-kjUHOa/Library/Application Support/GameLib/store",
+      "name": "mac-arch",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": "migrationsStore",
+    "options": {
+      "cwd": "store",
+      "name": "migrations",
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": "nileConfigStore",
+    "options": {
+      "cwd": "nile_store",
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": "runsForMeStore",
+    "options": {
+      "cwd": "/var/folders/f7/stgr185j04g2hm431z971xl40000gn/T/gamelib-jest-run-Zv3BlC/gamelib-jest-home-kjUHOa/Library/Application Support/GameLib/store",
+      "name": "runs-for-me",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": "sideloadedStore",
+    "options": {
+      "cwd": "sideload_apps",
+      "name": "library",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": "steamBottleConfigStore",
+    "options": {
+      "cwd": "steam_store",
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state",
+      "tokenBearing": true
+    }
+  },
+  {
+    "registeredAs": "steamConfigStore",
+    "options": {
+      "cwd": "steam_store",
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state",
+      "tokenBearing": true
+    }
+  },
+  {
+    "registeredAs": "timestampStore",
+    "options": {
+      "cwd": "store",
+      "name": "timestamp",
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "user-state"
+    }
+  },
+  {
+    "registeredAs": "uploadedLogs",
+    "options": {
+      "cwd": "store",
+      "name": "uploadedLogs",
+      "accessPropertiesByDotNotation": false,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": "wineDownloaderInfoStore",
+    "options": {
+      "cwd": "store",
+      "name": "wine-downloader-info",
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  }
+]
