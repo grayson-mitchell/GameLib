@@ -16,7 +16,9 @@
  * fails. This plan is where that constraint is satisfied — it lands before the phase's gate-run
  * plan. `save_sync.ts:146`'s `getDefaultGogSavePaths`'s `app.getPath('documents')` call (reached
  * only when `game.isNative()`, inside the GOG branch) is already covered by `pathShim.ts`'s
- * `documents` case (plan 34.5-01, REQ-34.5-01), so no new shim work is required here.
+ * `documents` case on darwin and linux (plan 34.5-01, REQ-34.5-01), so no new shim work is
+ * required here. On win32 `save_sync.ts` reads Documents from the registry instead and
+ * `pathShim`'s win32 `documents` arm throws (quick 261111-aq4).
  *
  * D-04 note, recorded here because this is where a future reader will actually find it:
  * `getCometVersion` is GOG's channel. `comet` is the GOG Galaxy Communication replacement,
@@ -289,7 +291,9 @@ export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
   // `getDefaultSavePath` function is imported directly (never `main.ts`) per this module's own
   // curated-import rule. `save_sync.ts:146`'s `getDefaultGogSavePaths`'s `app.getPath('documents')`
   // call (reached only inside the GOG branch, when `game.isNative()`) is already covered by
-  // `pathShim.ts`'s `documents` case (plan 34.5-01, REQ-34.5-01) — no new shim work required.
+  // `pathShim.ts`'s `documents` case on darwin and linux (plan 34.5-01, REQ-34.5-01) — no new
+  // shim work required. On win32 `save_sync.ts` reads Documents from the registry and pathShim's
+  // win32 arm throws (quick 261111-aq4).
   ipcMain.handle(
     'getDefaultSavePath',
     async (_event: unknown, ...args: unknown[]) => {

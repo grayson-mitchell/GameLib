@@ -109,15 +109,19 @@ export function getPath(name: string): string {
           )
       }
     case 'documents':
-      // Single consumer: save_sync.ts:146 (getDefaultGogSavePaths), reached
-      // only via syncGOGSaves on a native game — this name belongs to the
-      // saves-sync cluster (plan 34.5-12), not the shortcuts cluster.
+      // Single consumer: save_sync.ts (getDefaultGogSavePaths), reached only via syncGOGSaves on a
+      // native game on darwin and linux — this name belongs to the saves-sync cluster
+      // (plan 34.5-12), not the shortcuts cluster. win32 never reaches it: save_sync.ts reads
+      // Documents from the registry there.
       switch (platform) {
         case 'darwin':
           return join(homedir(), 'Documents')
         case 'win32':
-          // See 'desktop': win32 callers await readWindowsShellFolder(deps, 'Personal') first.
-          return join(homedir(), 'Documents')
+          // See 'desktop': no guessed `<home>\Documents` (a different folder on a OneDrive-redirected
+          // profile, quick 261111-aq4).
+          throw new Error(
+            `[sidecar/pathShim] getPath('documents') is not available synchronously on win32 — Documents is a registry known folder (User Shell Folders "Personal", often redirected to OneDrive); await readWindowsShellFolder(deps, 'Personal') instead`
+          )
         default:
           return (
             env.XDG_DOCUMENTS_DIR ||

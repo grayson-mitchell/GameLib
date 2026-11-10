@@ -118,6 +118,12 @@ import { createTestManagerDeps } from 'backend/testUtils/testServices'
  *
  * Only `getGame` and `runRunnerCommand` are stubbed on the manager. `getGameInfo` and
  * `refreshInstalled` are left UNSTUBBED -- they are the mechanism under measurement.
+ *
+ * SECOND SUBJECT (quick 261111-aq4): the final `describe` covers `getDefaultGogSavePaths`
+ * (win32 native Documents). It lives here because this file already mocks the save_sync.ts boundary
+ * (`backend/logger`, `../utils` getShellPath, `backend/platform` app.getPath) and the backend DI
+ * ceiling forbids a new test file that carries `jest.mock`. Do not rename the file: the ceiling
+ * key is its path.
  */
 
 // ── ../storeManagers/legendary/constants mock: mint a disposable, hermetic fixture root ─────
@@ -153,7 +159,8 @@ jest.mock('backend/logger', () => ({
   logDebug: jest.fn(),
   LogPrefix: {
     Legendary: 'Legendary',
-    Backend: 'Backend'
+    Backend: 'Backend',
+    Gog: 'Gog'
   }
 }))
 
@@ -251,7 +258,11 @@ jest.mock('backend/storeManagers', () => {
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────────────────────
 import { mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { homedir } from 'os'
 import { join } from 'path'
+import { app } from 'backend/platform'
+import { logWarning } from 'backend/logger'
+import { getShellPath } from '../utils'
 import { getDefaultSavePath } from '../save_sync'
 import type LegendaryLibraryManager from 'backend/storeManagers/legendary/library'
 import {
@@ -516,3 +527,127 @@ describe(
     )
   }
 )
+
+// ── GOG arm: win32 Documents without a guess (quick 261111-aq4; see the header for why it is here)
+describe('getDefaultSavePath gog arm: win32 Documents without a guess (261111-aq4)', () => {
+  const regOut = (name: string, type: string, value: string) =>
+    `\r\nHKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\r\n    ${name}    ${type}    ${value}\r\n\r\n`
+  const REGISTRY_DOCUMENTS = 'D:\\GameLibTest\\Documents'
+  const installPath = join(homedir(), 'GOG Games', 'X')
+
+  let originalPlatform: string
+  beforeEach(() => {
+    originalPlatform = process.platform
+    Object.defineProperty(process, 'platform', {
+      value: 'win32',
+      configurable: true
+    })
+    // `resetMocks: true` wiped the factory implementation.
+    ;(getShellPath as jest.Mock).mockImplementation((path: string) =>
+      Promise.resolve(path)
+    )
+    ;(logWarning as jest.Mock).mockClear()
+    ;(app.getPath as jest.Mock).mockClear()
+  })
+  afterEach(() => {
+    Object.defineProperty(process, 'platform', {
+      value: originalPlatform,
+      configurable: true
+    })
+  })
+
+  /** Deps built by hand: `getDefaultGogSavePaths` reads `deps.managers.library.gog` only. */
+  function gogDeps(registryDocuments: string | undefined) {
+    const base = { signal: null, stdout: '', stderr: '', timedOut: false }
+    const fakeGame = {
+      getSettings: () => Promise.resolve({}),
+      getGameInfo: () => ({
+        install: { platform: 'windows', install_path: installPath }
+      }),
+      isNative: () => true
+    }
+    return {
+      runner: {
+        run: (command: string) =>
+          Promise.resolve(
+            command === 'reg.exe' && registryDocuments !== undefined
+              ? {
+                  ...base,
+                  code: 0,
+                  stdout: regOut('Personal', 'REG_SZ', registryDocuments)
+                }
+              : { ...base, code: 1 }
+          )
+      },
+      managers: {
+        library: {
+          gog: {
+            getGame: () => fakeGame,
+            // A fresh array on each call: the code pushes into it.
+            getSaveSyncLocation: () =>
+              Promise.resolve([
+                { name: 'docs', location: '<?DOCUMENTS?>/My Games/X' },
+                { name: 'inst', location: '<?INSTALL?>/saves' }
+              ]),
+            readInfoFile: () => ({ clientId: 'c1' })
+          }
+        }
+      },
+      commandRunner: { getWinePath: jest.fn() },
+      launcher: { setupWineEnvVars: jest.fn(), verifyWinePrefix: jest.fn() }
+    } as never
+  }
+
+  it('a failed Personal lookup leaves out the DOCUMENTS location, warns, and never asks app.getPath for documents', async () => {
+    const result = await getDefaultSavePath(
+      gogDeps(undefined),
+      'gog-app',
+      'gog',
+      []
+    )
+
+    expect(result).toEqual([{ name: 'inst', location: `${installPath}/saves` }])
+    expect(logWarning).toHaveBeenCalledTimes(1)
+    const warning = String(
+      ([] as unknown[]).concat(
+        (logWarning as jest.Mock).mock.calls[0]![0] as unknown
+      )
+    )
+    expect(warning).toContain('docs')
+    expect(warning).toMatch(/Documents/)
+    expect(app.getPath).not.toHaveBeenCalledWith('documents')
+  })
+
+  it('control: when the registry answers, DOCUMENTS resolves to the registry folder and both locations are returned', async () => {
+    const result = await getDefaultSavePath(
+      gogDeps(REGISTRY_DOCUMENTS),
+      'gog-app',
+      'gog',
+      []
+    )
+
+    expect(result).toHaveLength(2)
+    const docs = (result as { name: string; location: string }[]).find(
+      ({ name }) => name === 'docs'
+    )
+    expect(docs?.location.startsWith(REGISTRY_DOCUMENTS)).toBe(true)
+    expect(logWarning).not.toHaveBeenCalled()
+    expect(app.getPath).not.toHaveBeenCalledWith('documents')
+  })
+
+  it('a location the user already set keeps the user path even when the lookup failed', async () => {
+    const userPath = join(homedir(), 'my-own-saves')
+    const result = await getDefaultSavePath(
+      gogDeps(undefined),
+      'gog-app',
+      'gog',
+      [{ name: 'docs', location: userPath }]
+    )
+
+    expect(result).toEqual(
+      expect.arrayContaining([{ name: 'docs', location: userPath }])
+    )
+    expect(result).toHaveLength(2)
+    expect(logWarning).not.toHaveBeenCalled()
+  })
+})

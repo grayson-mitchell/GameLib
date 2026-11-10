@@ -158,19 +158,22 @@ async function getDefaultGogSavePaths(
     })
   }
 
-  const gogVariableMap: Record<string, string> = {
+  // A value of `undefined` means "a known variable with no resolved folder": the win32 native
+  // Documents lookup failed. It is never guessed (`<home>\Documents` is the wrong folder on a
+  // OneDrive-redirected profile, quick 261111-aq4); the locations that need it are left out below.
+  const gogVariableMap: Record<string, string | undefined> = {
     INSTALL: install_path,
     SAVED_GAMES: '%USERPROFILE%/Saved Games',
     APPLICATION_DATA_LOCAL: '%LOCALAPPDATA%',
     APPLICATION_DATA_LOCAL_LOW: '%APPDATA%\\..\\LocalLow',
     APPLICATION_DATA_ROAMING: '%APPDATA%',
     APPLICATION_SUPPORT: '$HOME/Library/Application Support',
-    DOCUMENTS: game.isNative()
-      ? ((process.platform === 'win32'
-          ? await readWindowsShellFolder(deps, 'Personal')
-          : undefined) ?? app.getPath('documents'))
-      : '%USERPROFILE%\\Documents'
-  } satisfies Record<SaveFolderVariable, string>
+    DOCUMENTS: !game.isNative()
+      ? '%USERPROFILE%\\Documents'
+      : process.platform === 'win32'
+        ? await readWindowsShellFolder(deps, 'Personal')
+        : app.getPath('documents')
+  } satisfies Record<SaveFolderVariable, string | undefined>
   const resolvedLocations: GOGCloudSavesLocation[] = []
   for (const location of gog_save_location) {
     // If a location with the same name already has a path set,
@@ -185,7 +188,32 @@ async function getDefaultGogSavePaths(
     }
 
     // Get all GOG-defined variables out of the path & resolve them
-    const matches = location.location.matchAll(/<\?(\w+)\?>/g)
+    const matches = [...location.location.matchAll(/<\?(\w+)\?>/g)]
+
+    // A known variable whose folder could not be resolved (win32 Documents, registry lookup
+    // failed): leave the location OUT. It is not blanked or guessed because this list can reach
+    // gogdl `save-sync` verbatim (CloudSavesSync.tsx -> gog/games.ts syncSaves), which would sync
+    // whatever folder it is given. The Settings Sync Saves Retry button re-queries.
+    const unresolvedVariable = matches
+      .map((match) => match[1])
+      .find(
+        (name) =>
+          name !== undefined &&
+          Object.prototype.hasOwnProperty.call(gogVariableMap, name) &&
+          gogVariableMap[name] === undefined
+      )
+    if (unresolvedVariable !== undefined) {
+      logWarning(
+        [
+          `Leaving out save location "${location.name}":`,
+          `the Windows Documents folder (<?${unresolvedVariable}?>) could not be read`,
+          'from the registry (User Shell Folders "Personal"), so it was not guessed'
+        ],
+        LogPrefix.Gog
+      )
+      continue
+    }
+
     let locationWithVariablesRemoved = location.location
     for (const match of matches) {
       const matchedText = match[0]
