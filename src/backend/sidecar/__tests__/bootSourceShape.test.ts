@@ -135,3 +135,79 @@ describe('no sidecar test boots outside the harness (D-08)', () => {
     expect(BOOT_CALL.test(withoutLiterals('x.init(a)'))).toBe(false)
   })
 })
+
+describe('66.1 MH-3: registrations take slices', () => {
+  const SIDECAR_DIR = join(__dirname, '..')
+  const BANNED_BINDINGS = [
+    'libraryManagerMap',
+    'storeLaunchHooks',
+    'getGame',
+    'spawnAsync',
+    'handleExit',
+    'callRunner',
+    'runWineCommand'
+  ]
+  // `storeRegistration.ts` keeps its side-effect store imports until plan 25 deletes it.
+  // `runnerAuthFlowRegistration.ts` still builds its gog/legendary/nile user deps from the
+  // legacy singletons at call time (66.1-08 transitional); it leaves this set when that
+  // conversion lands.
+  const EXEMPT = new Set([
+    'storeRegistration.ts',
+    'runnerAuthFlowRegistration.ts'
+  ])
+  const allFiles = readdirSync(SIDECAR_DIR).filter(
+    (name) =>
+      name.endsWith('Registration.ts') || name === 'installedJsonWatcher.ts'
+  )
+  const files = allFiles.filter((name) => !EXEMPT.has(name))
+  const sources = files.map((name) => ({
+    name,
+    source: stripSourceComments(readFileSync(join(SIDECAR_DIR, name), 'utf-8'))
+  }))
+
+  /** Every `import ... from '<path>'` that is not a type-only import: its clause and path. */
+  function valueImports(source: string): { clause: string; path: string }[] {
+    return [
+      ...source.matchAll(/^import\s+(?!type\b)([\s\S]*?)\s+from\s+'([^']+)'/gm)
+    ].map((m) => ({ clause: m[1] ?? '', path: m[2] ?? '' }))
+  }
+
+  it('no registration value-imports a singleton, a stores module or a legacy accessor', () => {
+    expect(allFiles.length).toBeGreaterThanOrEqual(25)
+    const offenders: string[] = []
+    for (const { name, source } of sources) {
+      for (const { clause, path } of valueImports(source)) {
+        if (/(^|\/)(key_value_)?stores$/.test(path)) {
+          offenders.push(`${name}: imports ${path}`)
+        }
+        for (const binding of BANNED_BINDINGS) {
+          // Inline `type X` specifiers are fine; only a value binding counts.
+          const withoutTypes = clause.replace(/\btype\s+\w+(\s+as\s+\w+)?/g, '')
+          if (new RegExp(`\\b${binding}\\b`).test(withoutTypes)) {
+            offenders.push(`${name}: imports ${binding}`)
+          }
+        }
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
+  it('every exported register*Flows in a coupled registration takes a single injected `deps` parameter', () => {
+    const offenders: string[] = []
+    let checked = 0
+    for (const { name, source } of sources) {
+      for (const m of source.matchAll(
+        /export (?:async )?function (register\w+Flows)\(([^)]*)\)/g
+      )) {
+        const params = (m[2] ?? '').trim()
+        if (params === '') continue // an uncoupled registration: nothing to inject
+        checked += 1
+        if (!/^deps\s*:/.test(params)) {
+          offenders.push(`${name}: ${m[1]}(${params})`)
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(0)
+    expect(offenders).toEqual([])
+  })
+})
