@@ -9,14 +9,27 @@ import type {
   Runner
 } from 'common/types'
 import type { RunsForMeState } from 'common/runsForMe'
-import { configStore, gameOverridesStore } from 'frontend/helpers/stores'
+import {
+  configStore,
+  gameOverridesStore,
+  gogInstalledGamesStore,
+  gogLibraryStore,
+  libraryStore,
+  nileLibraryStore,
+  sideloadLibrary,
+  steamLibraryStore
+} from 'frontend/helpers/stores'
+import { getLegendaryConfig } from 'frontend/helpers'
+import { attachGameOverrides } from 'frontend/helpers/gameOverrides'
+import { isStore } from 'common/storeCapabilities'
+import useAuthState from './authState'
 import { bindStoreHooks, registerStoreForReset } from './storeKit'
 
-// Phase 69 D-09 reverse bridge: library domain store skeleton. authState (D-10
-// puts auth before library) reaches the library through these action slots.
-// Until the library wave the GlobalState class installs the implementations via
-// installLibraryBridgeSlots; 69-16..69-19 add the library fields, replace each
-// slot with the real implementation and delete the class install.
+// Phase 69 D-09 reverse bridge: library domain store. authState (D-10 puts auth
+// before library) reaches the library through these action slots. The
+// resetRunnerLibrary and setRefreshing slots are real actions; refreshLibrary is
+// still installed by the GlobalState class (via installLibraryBridgeSlots) until
+// 69-18 moves it here.
 
 // GAP CYCLE 4 (34.5-33): `origin` identifies which call site triggered a
 // refresh. Kept local rather than added to the shared RefreshOptions.
@@ -24,13 +37,39 @@ export type RefreshLibraryOptions = RefreshOptions & { origin?: string }
 
 interface LibraryBridgeSlots {
   refreshLibrary: (options: RefreshLibraryOptions) => Promise<void>
-  resetRunnerLibrary: (runner: Runner) => void
-  setRefreshing: (value: boolean) => void
 }
 
 type GameOverride = NonNullable<GameInfo['overrides']>
 
 export interface LibraryState extends LibraryBridgeSlots {
+  resetRunnerLibrary: (runner: Runner) => void
+  setRefreshing: (value: boolean) => void
+
+  epicLibrary: GameInfo[]
+  gogLibrary: GameInfo[]
+  amazonLibrary: GameInfo[]
+  steamLibrary: GameInfo[]
+  sideloadedLibrary: GameInfo[]
+  gameUpdates: string[]
+  refreshing: boolean
+  refreshingInTheBackground: boolean
+  // debug/login-logout-wipes-library: per-runner scoped refresh tracking, kept
+  // SEPARATE from the two global flags. A single-runner refresh (login/logout of
+  // ONE platform) writes here instead of `refreshing`/`refreshingInTheBackground`
+  // -- those two remain reserved for a genuine all-runners refresh (mount-time
+  // load, manual "Refresh Library"), so Library/index.tsx's merged-grid gate
+  // never blanks every platform's games just because one platform logged in or
+  // out.
+  refreshingByRunner: Partial<Record<Runner, boolean>>
+
+  updateGameOverrides: (overrides: Record<string, GameOverride>) => void
+  applyGamePush: (info: GameInfo) => void
+  refresh: (
+    library?: Runner | 'all',
+    checkUpdates?: boolean,
+    overridesArg?: Record<string, GameOverride>
+  ) => Promise<void>
+
   hiddenGames: HiddenGame[]
   favouriteGames: FavouriteGame[]
   customCategories: Record<string, string[]>
@@ -81,19 +120,83 @@ const loadCurrentCategories = (): string[] => {
   }
 }
 
-/** Re-reads the persisted collections at boot (R5). */
+const currentOverrides = () => useLibraryStateRaw.getState().gameOverrides
+
+const applyGameOverrides = (
+  lib: GameInfo[],
+  overrides: Record<string, GameOverride> = currentOverrides()
+) => attachGameOverrides(lib, overrides)
+
+const loadLegendaryLibrary = (
+  overrides: Record<string, GameOverride> = currentOverrides()
+): GameInfo[] => applyGameOverrides(libraryStore.get('library', []), overrides)
+
+const loadGOGLibrary = (
+  overrides: Record<string, GameOverride> = currentOverrides()
+): GameInfo[] => {
+  const games = gogLibraryStore.get('games', [])
+
+  const installedGames = gogInstalledGamesStore.get('installed', [])
+  for (const game of games) {
+    for (const installedGame of installedGames) {
+      if (installedGame.appName === game.app_name) {
+        game.install = installedGame
+        game.is_installed = true
+      }
+    }
+  }
+
+  return applyGameOverrides(games, overrides)
+}
+
+const loadAmazonLibrary = (
+  overrides: Record<string, GameOverride> = currentOverrides()
+): GameInfo[] =>
+  applyGameOverrides(nileLibraryStore.get('library', []), overrides)
+
+const loadSteamLibrary = (
+  overrides: Record<string, GameOverride> = currentOverrides()
+): GameInfo[] =>
+  applyGameOverrides(steamLibraryStore.get('games', []), overrides)
+
+const loadSideloadedLibrary = (
+  overrides: Record<string, GameOverride> = currentOverrides()
+): GameInfo[] => applyGameOverrides(sideloadLibrary.get('games', []), overrides)
+
+const upsertByAppName = (library: GameInfo[], info: GameInfo): GameInfo[] => {
+  const next = [...library]
+  const index = next.findIndex((game) => game.app_name === info.app_name)
+  if (index !== -1) {
+    next[index] = info
+  } else {
+    next.push(info)
+  }
+  return next
+}
+
+/** Re-reads the persisted library state at boot (R5). */
 export function readInitialLibrary(): Pick<
   LibraryState,
   | 'hiddenGames'
   | 'favouriteGames'
   | 'customCategories'
   | 'currentCustomCategories'
+  | 'epicLibrary'
+  | 'gogLibrary'
+  | 'amazonLibrary'
+  | 'steamLibrary'
+  | 'sideloadedLibrary'
 > {
   return {
     hiddenGames: configStore.get('games.hidden', []),
     favouriteGames: configStore.get('games.favourites', []),
     customCategories: configStore.get('games.customCategories', {}),
-    currentCustomCategories: loadCurrentCategories()
+    currentCustomCategories: loadCurrentCategories(),
+    epicLibrary: loadLegendaryLibrary(),
+    gogLibrary: loadGOGLibrary(),
+    amazonLibrary: loadAmazonLibrary(),
+    steamLibrary: loadSteamLibrary(),
+    sideloadedLibrary: loadSideloadedLibrary()
   }
 }
 
@@ -107,8 +210,167 @@ const useLibraryStateRaw = create<LibraryState>()(
   subscribeWithSelector(
     (set, get): LibraryState => ({
       refreshLibrary: async () => notInstalled('refreshLibrary'),
-      resetRunnerLibrary: () => notInstalled('resetRunnerLibrary'),
-      setRefreshing: () => notInstalled('setRefreshing'),
+
+      resetRunnerLibrary: (runner) => {
+        const key = (
+          {
+            legendary: 'epicLibrary',
+            gog: 'gogLibrary',
+            nile: 'amazonLibrary',
+            steam: 'steamLibrary'
+          } as Partial<
+            Record<
+              Runner,
+              'epicLibrary' | 'gogLibrary' | 'amazonLibrary' | 'steamLibrary'
+            >
+          >
+        )[runner]
+        if (key) set({ [key]: [] })
+      },
+      setRefreshing: (value) => set({ refreshing: value }),
+
+      epicLibrary: [],
+      gogLibrary: [],
+      amazonLibrary: [],
+      steamLibrary: [],
+      sideloadedLibrary: [],
+      gameUpdates: [],
+      refreshing: false,
+      refreshingInTheBackground: true,
+      refreshingByRunner: {},
+
+      updateGameOverrides: (overrides) => {
+        set({
+          gameOverrides: overrides,
+          epicLibrary: loadLegendaryLibrary(overrides),
+          gogLibrary: loadGOGLibrary(overrides),
+          amazonLibrary: loadAmazonLibrary(overrides),
+          sideloadedLibrary: loadSideloadedLibrary(overrides)
+        })
+      },
+
+      applyGamePush: (info) => {
+        if (!info.app_name) return
+        if (isStore(info, 'gog')) {
+          set({ gogLibrary: upsertByAppName(get().gogLibrary, info) })
+        } else if (isStore(info, 'legendary')) {
+          set({ epicLibrary: upsertByAppName(get().epicLibrary, info) })
+        } else if (isStore(info, 'steam')) {
+          set({ steamLibrary: upsertByAppName(get().steamLibrary, info) })
+        }
+      },
+
+      refresh: async (library, checkUpdates = false, overridesArg) => {
+        console.log('refreshing')
+
+        const {
+          epicLibrary: startEpic,
+          gogLibrary: startGog,
+          amazonLibrary: startAmazon,
+          gameUpdates
+        } = get()
+        const auth = useAuthState.getState()
+
+        const overrides = overridesArg || currentOverrides()
+
+        // `library` names the ONE runner this refresh is scoped to. `undefined`
+        // (or 'all') means "no scope": touch everything.
+        const scopedRunner = library && library !== 'all' ? library : undefined
+        const includesEpic = !scopedRunner || isStore(scopedRunner, 'legendary')
+        const includesGog = !scopedRunner || isStore(scopedRunner, 'gog')
+        const includesAmazon = !scopedRunner || isStore(scopedRunner, 'nile')
+
+        let updates = gameUpdates
+        if (checkUpdates) {
+          try {
+            updates = await window.api.checkGameUpdates()
+          } catch (error) {
+            window.api.logError(`Game update check failed: ${String(error)}`)
+          }
+        }
+
+        const currentLibraryLength = startEpic?.length
+
+        // Each block asks only "is the CACHE empty, so we must fetch?". Testing
+        // the length of the in-memory array too made a fresh login (which empties
+        // it before refreshing) refetch data the cache already held (measured:
+        // debug/resolved/gog-login-ui-never-updates.md, ~10s for nothing). A
+        // genuinely empty cache still refetches. Each block is also gated on its
+        // `includesX` flag: a runner-scoped call never re-reads the other
+        // runners' caches, and a variable that was not recomputed defaults to
+        // the UNCHANGED current value, never an empty placeholder.
+        let epicLibrary = startEpic
+        if (includesEpic) {
+          epicLibrary = libraryStore.get('library', [])
+          if (auth.epicUsername && !epicLibrary.length) {
+            window.api.logInfo('No cache found, getting data from legendary...')
+            const { library: legendaryLibrary } = await getLegendaryConfig()
+            epicLibrary = legendaryLibrary
+          }
+        }
+
+        let gogLibrary = startGog
+        if (includesGog) {
+          gogLibrary = loadGOGLibrary(overrides)
+          if (auth.gogUsername && !gogLibrary.length) {
+            window.api.logInfo('No cache found, getting data from gog...')
+            await window.api.refreshLibrary('gog')
+            gogLibrary = loadGOGLibrary(overrides)
+          }
+        }
+
+        let amazonLibrary = startAmazon
+        if (includesAmazon) {
+          amazonLibrary = nileLibraryStore.get('library', [])
+          if (auth.amazonUserId && !amazonLibrary.length) {
+            window.api.logInfo('No cache found, getting data from nile...')
+            await window.api.refreshLibrary('nile')
+            amazonLibrary = loadAmazonLibrary(overrides)
+          }
+        }
+
+        const updatedSideload = sideloadLibrary.get('games', [])
+
+        // Functional form: two scoped refreshes can overlap, so the flag map is
+        // read at commit time, not from a snapshot taken when this started.
+        set((prev) => {
+          const next: Partial<LibraryState> = {
+            gameUpdates: updates,
+            sideloadedLibrary: applyGameOverrides(updatedSideload, overrides)
+          }
+
+          if (includesEpic) {
+            next.epicLibrary = applyGameOverrides(epicLibrary, overrides)
+          }
+          if (includesGog) {
+            next.gogLibrary = gogLibrary
+          }
+          if (includesAmazon) {
+            next.amazonLibrary = amazonLibrary
+          }
+
+          // A no-scope call clears the two GLOBAL flags; a single-runner call
+          // clears ONLY that runner's own entry, so the merged-grid gate that
+          // reads the global flags is unaffected by one platform finishing.
+          if (!scopedRunner) {
+            next.refreshing = false
+            next.refreshingInTheBackground = true
+          } else {
+            next.refreshingByRunner = {
+              ...prev.refreshingByRunner,
+              [scopedRunner]: false
+            }
+          }
+
+          return next
+        })
+
+        if (currentLibraryLength !== epicLibrary.length) {
+          // The class forced a re-render here; the store's set() already
+          // notified every subscriber and the bridge.
+          window.api.logInfo('Force Update')
+        }
+      },
 
       hiddenGames: [],
       favouriteGames: [],
@@ -266,13 +528,24 @@ const useLibraryStateRaw = create<LibraryState>()(
 
 registerStoreForReset(useLibraryStateRaw)
 
-/** Installs the class-owned implementations; called once from GlobalState. */
+/** Installs the class-owned implementation; called once from GlobalState. */
 export function installLibraryBridgeSlots(impl: LibraryBridgeSlots): void {
-  useLibraryStateRaw.setState({
-    refreshLibrary: impl.refreshLibrary,
-    resetRunnerLibrary: impl.resetRunnerLibrary,
-    setRefreshing: impl.setRefreshing
-  })
+  useLibraryStateRaw.setState({ refreshLibrary: impl.refreshLibrary })
+}
+
+/**
+ * D-08: persists `gameUpdates` to localStorage 'updates' on every change. It
+ * fires immediately to reproduce the class's componentDidUpdate write on its
+ * first post-mount pass.
+ */
+export function registerLibrarySideEffects(): void {
+  useLibraryStateRaw.subscribe(
+    (state) => state.gameUpdates,
+    (gameUpdates) => {
+      window.localStorage.setItem('updates', JSON.stringify(gameUpdates))
+    },
+    { fireImmediately: true }
+  )
 }
 
 const useLibraryState = bindStoreHooks(useLibraryStateRaw)

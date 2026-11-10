@@ -1,9 +1,12 @@
 import '../../testUtils/tauriWindow'
 import { resetAllStores } from '../storeKit'
+import type { GameInfo } from 'common/types'
 import useLibraryState, {
   installLibraryBridgeSlots,
-  readInitialLibrary
+  readInitialLibrary,
+  registerLibrarySideEffects
 } from '../libraryState'
+import useAuthState from '../authState'
 
 let logged: string[] = []
 let writes: [string, unknown][] = []
@@ -42,38 +45,39 @@ describe('libraryState bridge slots', () => {
   it('logs and does nothing before install, refreshLibrary resolving', async () => {
     const s = useLibraryState.getState()
     await expect(s.refreshLibrary({})).resolves.toBeUndefined()
-    s.resetRunnerLibrary('gog')
-    s.setRefreshing(true)
     expect(logged).toEqual([
-      'library slot refreshLibrary called before GlobalState installed it',
-      'library slot resetRunnerLibrary called before GlobalState installed it',
-      'library slot setRefreshing called before GlobalState installed it'
+      'library slot refreshLibrary called before GlobalState installed it'
     ])
   })
 
-  it('routes to the installed implementation', async () => {
+  it('routes refreshLibrary to the installed implementation', async () => {
     const calls: unknown[][] = []
     installLibraryBridgeSlots({
       refreshLibrary: async (o) => {
         calls.push(['refresh', o])
-      },
-      resetRunnerLibrary: (r) => {
-        calls.push(['reset', r])
-      },
-      setRefreshing: (v) => {
-        calls.push(['refreshing', v])
       }
     })
-    const s = useLibraryState.getState()
-    await s.refreshLibrary({ library: 'gog' })
-    s.resetRunnerLibrary('nile')
-    s.setRefreshing(false)
-    expect(calls).toEqual([
-      ['refresh', { library: 'gog' }],
-      ['reset', 'nile'],
-      ['refreshing', false]
-    ])
+    await useLibraryState.getState().refreshLibrary({ library: 'gog' })
+    expect(calls).toEqual([['refresh', { library: 'gog' }]])
     expect(logged).toEqual([])
+  })
+
+  it('resetRunnerLibrary empties only that runner and setRefreshing sets the flag', () => {
+    const g = (n: string) => ({ app_name: n }) as GameInfo
+    useLibraryState.setState({
+      epicLibrary: [g('e')],
+      gogLibrary: [g('g')],
+      amazonLibrary: [g('a')],
+      steamLibrary: [g('s')]
+    })
+    const s = useLibraryState.getState()
+    s.resetRunnerLibrary('nile')
+    expect(useLibraryState.getState().amazonLibrary).toEqual([])
+    expect(useLibraryState.getState().gogLibrary).toHaveLength(1)
+    s.resetRunnerLibrary('sideload')
+    expect(useLibraryState.getState().epicLibrary).toHaveLength(1)
+    s.setRefreshing(true)
+    expect(useLibraryState.getState().refreshing).toBe(true)
   })
 })
 
@@ -82,6 +86,7 @@ describe('libraryState collections', () => {
   beforeEach(() => {
     ;(window as unknown as { api: unknown }).api = {
       logError: () => undefined,
+      storeHas: () => false,
       storeGet: (_s: string, key: string, dflt?: unknown) =>
         key in config ? config[key] : dflt,
       storeSet: (_s: string, key: string, value: unknown) => {
@@ -210,7 +215,7 @@ describe('libraryState collections', () => {
     config['games.favourites'] = [{ appName: 'f', title: 'F' }]
     config['games.customCategories'] = { c: ['g'] }
     local.current_custom_categories = '["c"]'
-    expect(readInitialLibrary()).toEqual({
+    expect(readInitialLibrary()).toMatchObject({
       hiddenGames: [{ appName: 'h', title: 'H' }],
       favouriteGames: [{ appName: 'f', title: 'F' }],
       customCategories: { c: ['g'] },
@@ -237,5 +242,181 @@ describe('libraryState collections', () => {
     expect(lib().crossoverRatings).toEqual({ a: 3, b: null })
     expect(Object.keys(lib().runsForMe)).toEqual(['a_steam'])
     expect(lib().gameOverrides).toEqual({ a: { title: 'T' } })
+  })
+})
+
+// ---- library data, overrides, pushes and refresh() (69-17) ----
+
+const game = (
+  name: string,
+  runner: GameInfo['runner'] = 'gog',
+  extra: Partial<GameInfo> = {}
+) => ({ app_name: name, runner, title: name, ...extra }) as GameInfo
+
+describe('libraryState library data', () => {
+  const lib = () => useLibraryState.getState()
+  const mirror: Record<string, unknown> = {}
+  let infos: string[] = []
+  let errors: string[] = []
+  let fetched: unknown[] = []
+  let updatesResult: () => Promise<string[]>
+
+  beforeEach(() => {
+    for (const k of Object.keys(mirror)) delete mirror[k]
+    infos = []
+    errors = []
+    fetched = []
+    updatesResult = async () => ['upd']
+    ;(window as unknown as { api: unknown }).api = {
+      logError: (m: string) => errors.push(m),
+      logInfo: (m: string) => infos.push(m),
+      storeNew: () => undefined,
+      storeHas: (store: string, key: string) => `${store}:${key}` in mirror,
+      storeGet: (store: string, key: string, dflt?: unknown) => {
+        // CacheStore reads a `__timestamp.<key>` companion before the value
+        if (key.startsWith('__timestamp.')) return '2026-01-01T00:00:00Z'
+        return `${store}:${key}` in mirror ? mirror[`${store}:${key}`] : dflt
+      },
+      storeSet: () => undefined,
+      refreshLibrary: async (runner: string) => {
+        fetched.push(runner)
+        // the backend repopulates the cache
+        if (runner === 'gog') mirror['gog_library:games'] = [game('fresh')]
+      },
+      checkGameUpdates: () => updatesResult()
+    }
+    useLibraryState.setState({ gameOverrides: {} })
+    useAuthState.setState({
+      epicUsername: null,
+      gogUsername: null,
+      amazonUserId: null
+    })
+  })
+  afterEach(() => {
+    resetAllStores()
+  })
+
+  it('readInitialLibrary reads every mirror with overrides applied and merges installed GOG games', () => {
+    mirror['legendary_library:library'] = [game('e', 'legendary')]
+    mirror['gog_library:games'] = [game('g1'), game('g2')]
+    mirror['gogInstalledGamesStore:installed'] = [{ appName: 'g1' }]
+    mirror['nile_library:library'] = [game('a', 'nile')]
+    mirror['steam_library:games'] = [game('s', 'steam')]
+    mirror['sideloadedStore:games'] = [game('sl', 'sideload')]
+    useLibraryState.setState({
+      gameOverrides: { s: { wineVersion: 'x' } as never }
+    })
+    const init = readInitialLibrary()
+    expect(init.epicLibrary.map((g) => g.app_name)).toEqual(['e'])
+    expect(init.gogLibrary[0].is_installed).toBe(true)
+    expect(init.gogLibrary[0].install).toEqual({ appName: 'g1' })
+    expect(init.gogLibrary[1].is_installed).toBeUndefined()
+    expect(init.amazonLibrary).toHaveLength(1)
+    expect(init.steamLibrary[0].overrides).toEqual({ wineVersion: 'x' })
+    expect(init.sideloadedLibrary).toHaveLength(1)
+  })
+
+  it('updateGameOverrides sets overrides and reloads all but steam', () => {
+    mirror['legendary_library:library'] = [game('e', 'legendary')]
+    mirror['steam_library:games'] = [game('s', 'steam')]
+    mirror['sideloadedStore:games'] = [game('sl', 'sideload')]
+    const o = { e: { wineVersion: 'y' } as never, s: {} as never }
+    useLibraryState.setState({ steamLibrary: [game('s', 'steam')] })
+    lib().updateGameOverrides(o)
+    expect(lib().gameOverrides).toBe(o)
+    expect(lib().epicLibrary[0].overrides).toEqual({ wineVersion: 'y' })
+    expect(lib().sideloadedLibrary).toHaveLength(1)
+    expect(lib().steamLibrary[0].overrides).toBeUndefined()
+  })
+
+  it('applyGamePush ignores no app_name, upserts per store, ignores other runners', () => {
+    lib().applyGamePush({ runner: 'gog' } as GameInfo)
+    lib().applyGamePush(game('g'))
+    lib().applyGamePush(game('g', 'gog', { title: 'new' }))
+    lib().applyGamePush(game('e', 'legendary'))
+    lib().applyGamePush(game('s', 'steam'))
+    lib().applyGamePush(game('a', 'nile'))
+    expect(lib().gogLibrary).toHaveLength(1)
+    expect(lib().gogLibrary[0].title).toBe('new')
+    expect(lib().epicLibrary).toHaveLength(1)
+    expect(lib().steamLibrary).toHaveLength(1)
+    expect(lib().amazonLibrary).toEqual([])
+  })
+
+  it('unscoped refresh sets arrays and flags, fetching only for empty caches', async () => {
+    mirror['legendary_library:library'] = [game('e', 'legendary')]
+    useAuthState.setState({ epicUsername: 'u', gogUsername: 'u' })
+    useLibraryState.setState({
+      refreshing: true,
+      refreshingInTheBackground: false
+    })
+    await lib().refresh()
+    // epic cache full: no fetch; gog cache empty: fetched
+    expect(fetched).toEqual(['gog'])
+    expect(infos).toContain('No cache found, getting data from gog...')
+    expect(infos).not.toContain(
+      'No cache found, getting data from legendary...'
+    )
+    expect(lib().epicLibrary.map((g) => g.app_name)).toEqual(['e'])
+    expect(lib().gogLibrary.map((g) => g.app_name)).toEqual(['fresh'])
+    expect(lib().refreshing).toBe(false)
+    expect(lib().refreshingInTheBackground).toBe(true)
+  })
+
+  it('does not fetch a runner whose cache is non-empty', async () => {
+    mirror['gog_library:games'] = [game('g')]
+    mirror['nile_library:library'] = [game('a', 'nile')]
+    useAuthState.setState({ gogUsername: 'u', amazonUserId: 'a' })
+    await lib().refresh('all')
+    expect(fetched).toEqual([])
+  })
+
+  it('a scoped refresh touches only its runner array and refreshingByRunner', async () => {
+    mirror['gog_library:games'] = [game('g')]
+    mirror['legendary_library:library'] = [game('e', 'legendary')]
+    const keepEpic = [game('keep', 'legendary')]
+    useLibraryState.setState({
+      epicLibrary: keepEpic,
+      refreshing: true,
+      refreshingInTheBackground: false,
+      refreshingByRunner: { gog: true, nile: true }
+    })
+    await lib().refresh('gog')
+    expect(lib().gogLibrary.map((g) => g.app_name)).toEqual(['g'])
+    expect(lib().epicLibrary).toBe(keepEpic)
+    expect(lib().refreshing).toBe(true)
+    expect(lib().refreshingInTheBackground).toBe(false)
+    expect(lib().refreshingByRunner).toEqual({ gog: false, nile: true })
+  })
+
+  it('checkUpdates stores the result and keeps old updates on failure', async () => {
+    useLibraryState.setState({ gameUpdates: ['old'] })
+    await lib().refresh(undefined, true)
+    expect(lib().gameUpdates).toEqual(['upd'])
+    updatesResult = async () => {
+      throw new Error('boom')
+    }
+    await lib().refresh(undefined, true)
+    expect(lib().gameUpdates).toEqual(['upd'])
+    expect(errors).toEqual(['Game update check failed: Error: boom'])
+  })
+
+  it('logs Force Update when the epic length changed', async () => {
+    mirror['legendary_library:library'] = [game('e', 'legendary')]
+    await lib().refresh()
+    expect(infos).toContain('Force Update')
+  })
+
+  it('registerLibrarySideEffects writes updates now and on every change', () => {
+    const written: string[] = []
+    ;(window as unknown as { localStorage: unknown }).localStorage = {
+      getItem: () => null,
+      setItem: (k: string, v: string) => {
+        if (k === 'updates') written.push(v)
+      }
+    }
+    registerLibrarySideEffects()
+    useLibraryState.setState({ gameUpdates: ['x'] })
+    expect(written).toEqual(['[]', '["x"]'])
   })
 })
