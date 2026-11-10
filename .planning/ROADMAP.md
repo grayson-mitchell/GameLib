@@ -722,12 +722,12 @@ Plans:
 The last plan merges `no-restricted-imports` for `child_process` into the existing ESLint `paths` array at `error` and deletes that ceiling (D-13, D-16). About 9–10 plans.
 **Requirements**: TBD
 **Depends on:** Phase 66.1
-**Plans:** 1/12 plans executed
+**Plans:** 2/12 plans executed
 
 Plans:
 
 - [x] 66.2-01-PLAN.md — gate hardening (C-05: WR-04 table, WR-05/06, IN-02/03), jestMock rebaseline, shard split by owner, Wave-0 probes A3/A6/A7 (wave 1)
-- [ ] 66.2-02-PLAN.md — runner/clock plumbing into the deps slices and flow registrations, no behaviour change (wave 1)
+- [x] 66.2-02-PLAN.md — runner/clock plumbing into the deps slices and flow registrations, no behaviour change (wave 1)
 - [ ] 66.2-03-PLAN.md — engine runTool + demoStatus on run; caps as run timeouts; RunTool from callers (wave 2)
 - [ ] 66.2-04-PLAN.md — shims: nativeImage runSync + openExternal via bindTransport, knownFolders async, windowsShortcut (wave 2)
 - [ ] 66.2-05-PLAN.md — leaf utils: os/path PATH scan, os/processes + comet (C-04), macArch async (wave 2)

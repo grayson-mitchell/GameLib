@@ -4,13 +4,13 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 69 context gathered
-last_updated: "2026-11-10T17:25:13.531Z"
+last_updated: "2026-11-10T17:31:28.972Z"
 last_activity: 2026-11-10
 progress:
   total_phases: 18
   completed_phases: 12
   total_plans: 252
-  completed_plans: 241
+  completed_plans: 242
   percent: 67
 ---
 
@@ -73,7 +73,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 66.2 (every-backend-spawn-through-the-process-runner) — EXECUTING
-Plan: 2 of 12
+Plan: 3 of 12
 Status: Ready to execute
 Last activity: 2026-11-10
 
@@ -253,6 +253,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 66.1 P23 | 2h | 2 tasks | 49 files |
 | Phase 66.1 P26 | 1h | 2 tasks | 14 files |
 | Phase 66.1 P27 | 40min | 2 tasks | 13 files |
+| Phase 66.2 P02 | 20m | 2 tasks | 38 files |
 
 ## Accumulated Context
 
@@ -401,6 +402,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 73]: 73-04: Mach-O probe ported from machO.ts (gamelib-scan not reused); containment lexical; case probe stat-based per TS
 - [Phase 66]: 66-02: logger/index.ts sanctioned as logger-sink (moduleState 2); rust-overlap table empty
 - [Phase 66.1]: [66.1-23] Intended kills are marked by the tracked registry (RunResult.killedByUs) and read as abort by commandRunner; BootServices gains runner
+- [Phase ?]: 66.2-02: BootServices.clock added so managerDepsFromServices can supply ManagerDeps.clock
 
 ### Pending Todos
 
@@ -699,7 +701,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-10T17:25:13.523Z
+Last session: 2026-11-10T17:31:24.698Z
 Stopped at: Phase 69 context gathered
 Resume file: None
 
