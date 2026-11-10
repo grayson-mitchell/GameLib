@@ -186,7 +186,7 @@ describe('FilterFocusRow sub-groups (48-03 Task 1, SPEC R2)', () => {
     expect(tree.type).toBe(FilterFacetGroup)
   })
 
-  it('lists the divider labels in fixed order: Views, Collections, Store, Runnability', () => {
+  it('lists the divider labels in fixed order: Views, Categories, Store, Runnability', () => {
     setContexts({
       categories: ['RPGs'],
       stores: ['gog'],
@@ -194,7 +194,7 @@ describe('FilterFocusRow sub-groups (48-03 Task 1, SPEC R2)', () => {
     })
     expect(dividerLabels(render())).toEqual([
       'Views',
-      'Collections',
+      'Categories',
       'Store',
       'Runnability'
     ])
@@ -217,10 +217,10 @@ describe('FilterFocusRow sub-groups (48-03 Task 1, SPEC R2)', () => {
     expect(dividerLabels(tree)).toContain('Views')
   })
 
-  it('omits Collections wholesale when there are no collections, divider and rows both', () => {
+  it('omits Categories wholesale when there are no collections, divider and rows both', () => {
     setContexts({ categories: [], stores: ['gog'], runnability: ['native'] })
     const tree = render()
-    expect(dividerLabels(tree)).not.toContain('Collections')
+    expect(dividerLabels(tree)).not.toContain('Categories')
     expect(rowLabels(tree)).not.toContain('Uncategorized')
   })
 
@@ -240,7 +240,7 @@ describe('FilterFocusRow sub-groups (48-03 Task 1, SPEC R2)', () => {
   it('renders only the surviving sub-groups, with no placeholder, when partially populated', () => {
     setContexts({ categories: ['RPGs'], stores: [], runnability: ['native'] })
     const tree = render()
-    expect(dividerLabels(tree)).toEqual(['Views', 'Collections', 'Runnability'])
+    expect(dividerLabels(tree)).toEqual(['Views', 'Categories', 'Runnability'])
     const nodes = collectElements(tree.props.children)
     // A fragment is structure, not a placeholder: it renders no DOM node.
     expect(
@@ -248,7 +248,7 @@ describe('FilterFocusRow sub-groups (48-03 Task 1, SPEC R2)', () => {
     ).toBe(true)
   })
 
-  it('renders Uncategorized last in the Collections sub-group, after the user collections', () => {
+  it('renders Uncategorized last in the Categories sub-group, after the user collections', () => {
     setContexts({ categories: ['RPGs', 'Co-op'], stores: ['gog'] })
     const labels = rowLabels(render())
     expect(labels.slice(4, 7)).toEqual(['RPGs', 'Co-op', 'Uncategorized'])

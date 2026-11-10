@@ -94,7 +94,7 @@ const LibraryTour: React.FC = () => {
         element: '[data-tour="library-views-collections"]',
         intro: tGamelib(
           'gamelib:tour.library.quickFiltersCollections',
-          'Show only installed games or only native builds, or browse your custom Collections.'
+          'Show only installed games or only native builds, or browse your custom Categories.'
         ),
         position: 'bottom'
       },

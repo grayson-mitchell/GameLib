@@ -109,7 +109,7 @@ describe('LibraryTour re-anchored steps (34.12-02, D-09)', () => {
       (s) => s.element === '[data-tour="library-views-collections"]'
     )
     expect(step?.intro).toBe(
-      'Show only installed games or only native builds, or browse your custom Collections.'
+      'Show only installed games or only native builds, or browse your custom Categories.'
     )
   })
 

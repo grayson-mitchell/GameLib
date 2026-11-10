@@ -164,7 +164,7 @@ describe('FilterCollectionList', () => {
   // change. Asserting the ROOT is `FilterFacetGroup` (the shared wrapper the
   // Store / Runnability / More-filters groups use) is what ties this section
   // to their expand/collapse behaviour rather than to a lookalike of it.
-  it('renders as a collapsible FilterFacetGroup titled Collections, not a flat section', () => {
+  it('renders as a collapsible FilterFacetGroup titled Categories, not a flat section', () => {
     contextValue = seededContext({
       customCategories: { listCategories: jest.fn(() => ['RPG']) }
     })
@@ -172,7 +172,7 @@ describe('FilterCollectionList', () => {
     const tree = FilterCollectionList() as unknown as AnyElement
 
     expect(tree.type).toBe(FilterFacetGroup)
-    expect(tree.props.title).toBe('Collections')
+    expect(tree.props.title).toBe('Categories')
     expect(tree.props.className).toBe('FilterCollectionList')
   })
 
@@ -188,8 +188,8 @@ describe('FilterCollectionList', () => {
       'RPG',
       'Backlog',
       'Uncategorized',
-      '+ New collection',
-      'Manage collections'
+      '+ New category',
+      'Manage categories'
     ])
   })
 
@@ -293,15 +293,15 @@ describe('FilterCollectionList', () => {
     const labels = navItemsOf(tree).map((el) => el.props.label)
     expect(labels).toEqual([
       'Uncategorized',
-      '+ New collection',
-      'Manage collections'
+      '+ New category',
+      'Manage categories'
     ])
   })
 
-  it('clicking + New collection calls setShowCategories(true, "create") and does not touch setCurrentCollection', () => {
+  it('clicking + New category calls setShowCategories(true, "create") and does not touch setCurrentCollection', () => {
     const tree = FilterCollectionList() as unknown as ReactElement
     const newCollectionRow = navItemsOf(tree).find(
-      (el) => el.props.label === '+ New collection'
+      (el) => el.props.label === '+ New category'
     )
 
     expect(newCollectionRow).toBeDefined()
@@ -311,10 +311,10 @@ describe('FilterCollectionList', () => {
     expect(contextValue.setCurrentCollection).not.toHaveBeenCalled()
   })
 
-  it('clicking Manage collections calls setShowCategories(true, "manage") and does not touch setCurrentCollection', () => {
+  it('clicking Manage categories calls setShowCategories(true, "manage") and does not touch setCurrentCollection', () => {
     const tree = FilterCollectionList() as unknown as ReactElement
     const manageRow = navItemsOf(tree).find(
-      (el) => el.props.label === 'Manage collections'
+      (el) => el.props.label === 'Manage categories'
     )
 
     expect(manageRow).toBeDefined()
@@ -332,10 +332,10 @@ describe('FilterCollectionList', () => {
   it('WR-08: the two action rows do not record identical calls', () => {
     const tree = FilterCollectionList() as unknown as ReactElement
     const newCollectionRow = navItemsOf(tree).find(
-      (el) => el.props.label === '+ New collection'
+      (el) => el.props.label === '+ New category'
     )
     const manageRow = navItemsOf(tree).find(
-      (el) => el.props.label === 'Manage collections'
+      (el) => el.props.label === 'Manage categories'
     )
 
     expect(newCollectionRow).toBeDefined()

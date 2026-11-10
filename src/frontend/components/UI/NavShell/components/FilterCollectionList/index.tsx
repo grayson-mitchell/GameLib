@@ -61,7 +61,7 @@ export default function FilterCollectionList() {
 
   return (
     <FilterFacetGroup
-      title={tGamelib('gamelib:library.filterPanel.collections', 'Collections')}
+      title={tGamelib('gamelib:library.filterPanel.collections', 'Categories')}
       className="FilterCollectionList"
     >
       {categories.length === 0 && (
@@ -99,7 +99,7 @@ export default function FilterCollectionList() {
         className="FilterCollectionList__row"
         label={tGamelib(
           'gamelib:library.filterPanel.newCollection',
-          '+ New collection'
+          '+ New category'
         )}
         onClick={() => setShowCategories(true, 'create')}
       />
@@ -108,7 +108,7 @@ export default function FilterCollectionList() {
         className="FilterCollectionList__row"
         label={tGamelib(
           'gamelib:library.filterPanel.manageCollections',
-          'Manage collections'
+          'Manage categories'
         )}
         onClick={() => setShowCategories(true, 'manage')}
       />

@@ -122,7 +122,7 @@ export default function FilterFocusRow() {
   )
   const collectionsGroupLabel = tGamelib(
     'gamelib:library.filterPanel.collections',
-    'Collections'
+    'Categories'
   )
   const storeGroupLabel = tGamelib(
     'gamelib:library.filterPanel.storeGroup',
