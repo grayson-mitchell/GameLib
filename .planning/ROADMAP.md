@@ -154,7 +154,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 65: Steam store manager decomposition, continued** — 20/20 plans complete; Phase 61 closed 2026-11-07 — unblocked, D-11 (completed 2026-11-08)
 - [x] **Phase 66: Backend dependency injection replacing module-level singletons** — 9 plans; planned; split 2026-11-10 into 66 (foundation) + 66.1–66.3 (completed 2026-11-09)
 - [x] **Phase 66.1: Backend DI — stores, store managers, flow registrations and launcher** — 37 plans; complete (7/8 live UAT, item 5 blocked pre-existing) (completed 2026-11-10)
-- [ ] **Phase 66.2: Every backend spawn through the process runner, then the `child_process` ban** — 0 plans; not started
+- [ ] **Phase 66.2: Every backend spawn through the process runner, then the `child_process` ban** — 12 plans; planned
 - [ ] **Phase 66.3: Backend module state to zero, then the live macOS smoke** — 0 plans; not started
 - [x] **Phase 67: Schema validation at the sidecar IPC boundary** — 20 plans in 14 waves; planned 2026-11-07 (completed 2026-11-07)
 - [x] **Phase 68: Versioned persisted stores and migrations** — 11 plans; planned (completed 2026-11-08)
@@ -722,11 +722,22 @@ Plans:
 The last plan merges `no-restricted-imports` for `child_process` into the existing ESLint `paths` array at `error` and deletes that ceiling (D-13, D-16). About 9–10 plans.
 **Requirements**: TBD
 **Depends on:** Phase 66.1
-**Plans:** 0 plans
+**Plans:** 12 plans (6 waves)
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 66.2 to break down)
+- [ ] 66.2-01-PLAN.md — gate hardening (C-05: WR-04 table, WR-05/06, IN-02/03), jestMock rebaseline, shard split by owner, Wave-0 probes A3/A6/A7 (wave 1)
+- [ ] 66.2-02-PLAN.md — runner/clock plumbing into the deps slices and flow registrations, no behaviour change (wave 1)
+- [ ] 66.2-03-PLAN.md — engine runTool + demoStatus on run; caps as run timeouts; RunTool from callers (wave 2)
+- [ ] 66.2-04-PLAN.md — shims: nativeImage runSync + openExternal via bindTransport, knownFolders async, windowsShortcut (wave 2)
+- [ ] 66.2-05-PLAN.md — leaf utils: os/path PATH scan, os/processes + comet (C-04), macArch async (wave 2)
+- [ ] 66.2-06-PLAN.md — Steam probes + download monitor (spawnLongLived) + running poll, boot-built steamProcesses (wave 3)
+- [ ] 66.2-07-PLAN.md — wine discovery: compatibility_layers argv, config.ts spawn-free defaults (D-66.2-01), du (wave 3)
+- [ ] 66.2-08-PLAN.md — tools/index (winetricks, which, wine --version) + vulkan (wave 3)
+- [ ] 66.2-09-PLAN.md — Mac Steam client: createMacSteamOffline instance, adoption probes, both openDetached absorbed (wave 4)
+- [ ] 66.2-10-PLAN.md — DRM spawners + boundedListing, single-flight instance (wave 5)
+- [ ] 66.2-11-PLAN.md — utils.ts: execAsync and legacy spawnAsync deleted, moveOn*/tar/wineserver/VC redist/Rosetta (wave 5)
+- [ ] 66.2-12-PLAN.md — the ban: ESLint paths at error + depcruise rule + census gate, childProcess ceiling deleted (wave 6)
 
 ### Phase 66.3: Backend module state to zero, then the live macOS smoke (INSERTED)
 
