@@ -169,13 +169,17 @@ describe('Layer B -- Rust process-group spawn + group reap (quick 260907-juv)', 
   })
 })
 
-describe('Layer A -- comet registration on the shared long-lived-child registry (quick 260907-juv)', () => {
-  test('C7: the comet spawn site (games.ts) registers with registerLongLivedChild', () => {
+describe('Layer A -- comet registration on the process runner teardown registry (quick 260907-juv)', () => {
+  test('C7: the comet spawn site (games.ts) is a runner long-lived child, so quit teardown reaches it', () => {
+    // 66.1-26: comet moved from registerLongLivedChild onto the process runner's
+    // spawnLongLived, whose teardown registry is what quit drains.
     const code = loadGamesTsCode()
     const idx = code.indexOf("'--from-heroic'")
     expect(idx).toBeGreaterThan(-1)
-    const window = code.slice(idx, idx + 4000)
-    expect(window).toContain('registerLongLivedChild(')
+    const window = code.slice(idx - 400, idx + 400)
+    expect(window).toContain('spawnLongLived(')
+    expect(window).toContain("id: 'gog-comet'")
+    expect(code).not.toContain('registerLongLivedChild(')
   })
 })
 
