@@ -2,14 +2,14 @@ import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ToggleSwitch, TextInputField } from 'frontend/components/UI'
 import useSetting from 'frontend/hooks/useSetting'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import SettingsContext from '../SettingsContext'
 import { defaultWineVersion } from '..'
 import InfoIcon from 'frontend/components/UI/InfoIcon'
 
 const EnableDXVKFpsLimit = () => {
   const { t } = useTranslation()
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const { isLinuxNative, isMacNative } = useContext(SettingsContext)
   const isWin = platform === 'win32'
   const [enableDXVKFpsLimit, setDXVKFpsLimit] = useSetting(

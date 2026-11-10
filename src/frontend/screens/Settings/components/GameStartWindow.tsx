@@ -1,7 +1,6 @@
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MenuItem, SelectChangeEvent } from '@mui/material'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import { SelectField } from 'frontend/components/UI'
 import InfoIcon from 'frontend/components/UI/InfoIcon'
 import useSetting from 'frontend/hooks/useSetting'
@@ -16,7 +15,7 @@ import {
 
 const GameStartWindow = () => {
   const { t } = useTranslation()
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
 
   // Fallbacks match the backend factory defaults (config.ts): shortcut launches hide GameLib.
   const [hideWindowOnProtocolLaunch, setHideWindowOnProtocolLaunch] =

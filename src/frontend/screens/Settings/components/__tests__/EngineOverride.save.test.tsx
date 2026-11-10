@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import 'frontend/testUtils/tauriWindow'
 import type { EngineOption } from 'common/types/engine'
 import { at } from '../../../__tests__/fixtures/indexed'
 
@@ -7,14 +8,19 @@ import { at } from '../../../__tests__/fixtures/indexed'
 // event handling is NOT exercised -- only the setter chain is.
 let mockStore: Record<string, unknown> = {}
 let mockContext: Record<string, unknown> = {}
-jest.mock('react', () => ({
-  ...jest.requireActual('react'),
-  useContext: () => mockContext,
-  useState: (init: unknown) => [init, jest.fn()],
-  useEffect: (fn: () => void) => {
-    fn()
-  }
-}))
+jest.mock('react', () =>
+  jest
+    .requireActual<
+      typeof import('frontend/testUtils/storeHookReact')
+    >('frontend/testUtils/storeHookReact')
+    .withStoreHooks(jest.requireActual('react'), {
+      useContext: () => mockContext,
+      useState: (init: unknown) => [init, jest.fn()],
+      useEffect: (fn: () => void) => {
+        fn()
+      }
+    } as unknown as Partial<typeof import('react')>)
+)
 jest.mock('frontend/state/EngineState', () => ({
   engineStateKey: (r: string, a: string) => `${r}:${a}`,
   useEngineState: Object.assign(
@@ -36,15 +42,8 @@ jest.mock('frontend/components/UI/InfoIcon', () => ({
   __esModule: true,
   default: () => null
 }))
-jest.mock('frontend/state/uiState', () => ({
-  __esModule: true,
-  default: { keys: () => ({ settingsModalProps: { isOpen: false } }) }
-}))
-jest.mock('frontend/state/ContextProvider', () => ({
-  __esModule: true,
-  default: {}
-}))
 
+import { resetAllStores } from 'frontend/state/storeKit'
 import EngineOverride from '../EngineOverride'
 import { createSettingSetter } from '../../../../hooks/useSettingsContext'
 import { gamelibT } from '../../../Game/GamePage/components/__tests__/gamelibT'
@@ -100,6 +99,7 @@ function mount(stored: string) {
 }
 
 describe('EngineOverride save chain (G17)', () => {
+  afterEach(() => resetAllStores())
   beforeEach(() => {
     jest.clearAllMocks()
     ;(global as unknown as { window: unknown }).window = {

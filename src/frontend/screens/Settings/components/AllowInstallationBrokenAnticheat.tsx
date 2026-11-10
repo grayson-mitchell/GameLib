@@ -1,12 +1,11 @@
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import useSetting from 'frontend/hooks/useSetting'
 import { ToggleSwitch } from 'frontend/components/UI'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 
 const AllowInstallationBrokenAnticheat = () => {
   const { t } = useTranslation()
-  const { showDialogModal } = useContext(ContextProvider)
+  const showDialogModal = useUiState((s) => s.showDialogModal)
   const [allowInstallation, setAllowInstallation] = useSetting(
     'allowInstallationBrokenAnticheat',
     false

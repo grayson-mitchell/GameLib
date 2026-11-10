@@ -1,4 +1,4 @@
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import SettingsContext from '../SettingsContext'
@@ -9,7 +9,7 @@ import { defaultWineVersion } from '..'
 
 const EnableMsync = () => {
   const { t } = useTranslation()
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const { isMacNative } = useContext(SettingsContext)
   const isMac = platform === 'darwin'
   const [enableMsync, setEnableMsync] = useSetting('enableMsync', false)

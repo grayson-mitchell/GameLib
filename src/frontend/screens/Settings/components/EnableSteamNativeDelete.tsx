@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ToggleSwitch } from 'frontend/components/UI'
 import InfoIcon from 'frontend/components/UI/InfoIcon'
 import useSetting from 'frontend/hooks/useSetting'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import SettingsContext from '../SettingsContext'
 
 interface ViewProps {
@@ -51,7 +51,7 @@ export function EnableSteamNativeDeleteView({
 const EnableSteamNativeDelete = () => {
   const { t } = useTranslation()
   const { isDefault } = useContext(SettingsContext)
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   // D-02: until the user chooses, this follows the downloader toggle.
   const [downloadDirectly] = useSetting('enableSteamNativeInstall', true)
   const [enabled, setEnabled] = useSetting(

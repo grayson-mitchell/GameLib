@@ -2,14 +2,14 @@ import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ToggleSwitch } from 'frontend/components/UI'
 import InfoIcon from 'frontend/components/UI/InfoIcon'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import useSetting from 'frontend/hooks/useSetting'
 import SettingsContext from '../SettingsContext'
 
 const Shortcuts = () => {
   const { t } = useTranslation()
   const { isDefault } = useContext(SettingsContext)
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const isWin = platform === 'win32'
   const isLinux = platform === 'linux'
 

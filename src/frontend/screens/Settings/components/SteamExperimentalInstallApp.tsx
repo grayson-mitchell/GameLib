@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ToggleSwitch } from 'frontend/components/UI'
 import InfoIcon from 'frontend/components/UI/InfoIcon'
 import useSetting from 'frontend/hooks/useSetting'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import SettingsContext from '../SettingsContext'
 
 interface ViewProps {
@@ -47,7 +47,7 @@ export function SteamExperimentalInstallAppView({
 const SteamExperimentalInstallApp = () => {
   const { t } = useTranslation()
   const { isDefault } = useContext(SettingsContext)
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const [enabled, setEnabled] = useSetting('steamExperimentalInstallApp', false)
 
   if (!isDefault) {

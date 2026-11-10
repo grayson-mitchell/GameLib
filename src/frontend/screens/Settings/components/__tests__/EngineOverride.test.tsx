@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import 'frontend/testUtils/tauriWindow'
 import type { EngineOption } from 'common/types/engine'
 import { at } from '../../../__tests__/fixtures/indexed'
 
@@ -19,17 +20,24 @@ interface MockDialog {
 const mockShowDialog = jest.fn<void, [MockDialog]>()
 const mockSetSetting = jest.fn()
 const mockSet = jest.fn()
-jest.mock('react', () => ({
-  ...jest.requireActual('react'),
-  useContext: () => mockContext,
-  useState: (init: unknown) => [
-    stateIdx < mockStates.length ? mockStates[stateIdx++] : (stateIdx++, init),
-    jest.fn()
-  ],
-  useEffect: (fn: () => void) => {
-    fn()
-  }
-}))
+jest.mock('react', () =>
+  jest
+    .requireActual<
+      typeof import('frontend/testUtils/storeHookReact')
+    >('frontend/testUtils/storeHookReact')
+    .withStoreHooks(jest.requireActual('react'), {
+      useContext: () => mockContext,
+      useState: (init: unknown) => [
+        stateIdx < mockStates.length
+          ? mockStates[stateIdx++]
+          : (stateIdx++, init),
+        jest.fn()
+      ],
+      useEffect: (fn: () => void) => {
+        fn()
+      }
+    } as unknown as Partial<typeof import('react')>)
+)
 jest.mock('frontend/state/EngineState', () => ({
   engineStateKey: (r: string, a: string) => `${r}:${a}`,
   useEngineState: Object.assign(
@@ -52,10 +60,6 @@ jest.mock('frontend/hooks/useSetting', () => ({
     }
   ]
 }))
-jest.mock('frontend/state/ContextProvider', () => ({
-  __esModule: true,
-  default: {}
-}))
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: mockGamelibT
@@ -72,6 +76,8 @@ jest.mock('frontend/components/UI/InfoIcon', () => ({
   default: () => null
 }))
 
+import useUiState from 'frontend/state/uiState'
+import { resetAllStores } from 'frontend/state/storeKit'
 import EngineOverride, {
   EngineOverrideView,
   optionLabel
@@ -288,7 +294,11 @@ function mountControl(opts2: {
   state?: Record<string, unknown>
   states?: unknown[]
 }) {
-  mockContext = opts2.context
+  const { showDialogModal, ...settingsContext } = opts2.context
+  mockContext = settingsContext
+  useUiState.setState({
+    showDialogModal: (showDialogModal as () => void | undefined) ?? jest.fn()
+  })
   mockStored = opts2.stored ?? {}
   mockStore = opts2.state ?? {}
   mockStates = opts2.states ?? []
@@ -316,6 +326,7 @@ describe('EngineOverride derived value, Legacy, D-04 and the global variant', ()
     })
   })
   afterEach(() => {
+    resetAllStores()
     mockStates = []
     mockStored = {}
     mockContext = { appName: 'default', runner: 'steam' }

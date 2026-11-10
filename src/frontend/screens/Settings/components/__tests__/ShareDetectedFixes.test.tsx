@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import 'frontend/testUtils/tauriWindow'
 
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: () => '' }) }))
 // CSS-importing UI components cannot load under this jest config; the test

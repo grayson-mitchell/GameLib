@@ -13,6 +13,7 @@
  * invoked as a plain function, and the returned element tree is inspected.
  */
 import type { ReactElement } from 'react'
+import 'frontend/testUtils/tauriWindow'
 
 const mockShowDialogModal = jest.fn()
 const mockSetEacRuntime = jest.fn()
@@ -21,8 +22,10 @@ jest.mock('react', () => {
   const actualReact = jest.requireActual<typeof import('react')>('react')
   let stateSlots: unknown[] = []
   let stateCursor = 0
-  return {
-    ...actualReact,
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+  return withStoreHooks(actualReact, {
     useState: (initial: unknown) => {
       const idx = stateCursor++
       if (idx >= stateSlots.length) stateSlots[idx] = initial
@@ -31,10 +34,6 @@ jest.mock('react', () => {
       }
       return [stateSlots[idx], setState]
     },
-    useContext: () => ({
-      showDialogModal: mockShowDialogModal,
-      platform: 'linux'
-    }),
     __beginRender: () => {
       stateCursor = 0
     },
@@ -42,7 +41,7 @@ jest.mock('react', () => {
       stateSlots = []
       stateCursor = 0
     }
-  }
+  } as unknown as Partial<typeof import('react')>)
 })
 
 jest.mock('react-i18next', () => ({
@@ -69,6 +68,8 @@ jest.mock('frontend/hooks/useSetting', () => ({
 
 import * as React from 'react'
 import EacRuntime from '../EacRuntime'
+import useUiState from 'frontend/state/uiState'
+import { resetAllStores } from 'frontend/state/storeKit'
 
 const harness = React as unknown as {
   __beginRender: () => void
@@ -89,7 +90,13 @@ const mockApi = {
   downloadRuntime: jest.fn()
 }
 
+afterEach(() => resetAllStores())
+
 beforeEach(() => {
+  useUiState.setState({
+    showDialogModal: mockShowDialogModal,
+    platform: 'linux'
+  })
   harness.__resetMount()
   ;(globalThis as unknown as { window: unknown }).window = {
     api: mockApi,

@@ -1,15 +1,15 @@
-import { useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { InfoBox, ToggleSwitch } from 'frontend/components/UI'
 import useSetting from 'frontend/hooks/useSetting'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 
 const WIKI_URL =
   'https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/Hybrid-GPUs:-NVIDIA-Optimus-and-AMD-Dynamic-Switchable-Graphics'
 
 const NvidiaPrime = () => {
   const { t } = useTranslation()
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const isLinux = platform === 'linux'
 
   const [nvidiaPrime, setNvidiaPrime] = useSetting('nvidiaPrime', false)

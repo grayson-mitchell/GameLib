@@ -4,7 +4,7 @@ import { defaultWineVersion } from '..'
 import useSetting from 'frontend/hooks/useSetting'
 import { ToggleSwitch } from 'frontend/components/UI'
 import SettingsContext from '../SettingsContext'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import InfoIcon from 'frontend/components/UI/InfoIcon'
 
 const AutoDXVK = () => {
@@ -13,7 +13,7 @@ const AutoDXVK = () => {
     'autoInstallDxvk',
     false
   )
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const isLinux = platform === 'linux'
   const [autoInstallVkd3d] = useSetting('autoInstallVkd3d', false)
   const [autoInstallDxvkNvapi] = useSetting('autoInstallDxvkNvapi', false)

@@ -1,5 +1,5 @@
 import { useContext } from 'react'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import { useTranslation } from 'react-i18next'
 import { ToggleSwitch } from 'frontend/components/UI'
 import useSetting from 'frontend/hooks/useSetting'
@@ -9,7 +9,7 @@ import InfoIcon from 'frontend/components/UI/InfoIcon'
 const EnableSteamNativeInstall = () => {
   const { t } = useTranslation()
   const { isDefault } = useContext(SettingsContext)
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const [enableSteamNativeInstall, setEnableSteamNativeInstall] = useSetting(
     'enableSteamNativeInstall',
     true

@@ -1,7 +1,6 @@
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MenuItem, SelectChangeEvent } from '@mui/material'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import { SelectField } from 'frontend/components/UI'
 import useSetting from 'frontend/hooks/useSetting'
 import {
@@ -13,7 +12,7 @@ import {
 
 const UseDarkTrayIcon = () => {
   const { t } = useTranslation()
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
 
   const [trayIconVariant, setTrayIconVariant] = useSetting(
     'trayIconVariant',

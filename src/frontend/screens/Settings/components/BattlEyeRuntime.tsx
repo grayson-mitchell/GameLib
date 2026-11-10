@@ -1,10 +1,10 @@
-import { useContext, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ToggleSwitch } from 'frontend/components/UI'
 import useSetting from 'frontend/hooks/useSetting'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSyncAlt } from '@fortawesome/free-solid-svg-icons'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 
 const BattlEyeRuntime = () => {
   const { t } = useTranslation()
@@ -13,7 +13,7 @@ const BattlEyeRuntime = () => {
     'battlEyeRuntime',
     false
   )
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
 
   if (platform !== 'linux') {
     return null

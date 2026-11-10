@@ -7,7 +7,7 @@ import classNames from 'classnames'
 import { getGameInfo } from 'frontend/helpers'
 
 import SettingsContext from '../../SettingsContext'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import useOpenDialog from 'frontend/hooks/useOpenDialog'
 import { isStore } from 'common/storeCapabilities'
 
@@ -16,7 +16,7 @@ export default function Tools() {
   const [winecfgRunning, setWinecfgRunning] = useState(false)
   const [runExeRunning, setRunExeRunning] = useState(false)
   const { appName, runner, isDefault } = useContext(SettingsContext)
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const openDialog = useOpenDialog()
   const isWindows = platform === 'win32'
 

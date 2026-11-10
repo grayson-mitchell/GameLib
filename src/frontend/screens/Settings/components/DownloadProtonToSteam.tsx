@@ -1,7 +1,7 @@
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ToggleSwitch } from 'frontend/components/UI'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import useSetting from 'frontend/hooks/useSetting'
 import SettingsContext from '../SettingsContext'
 import InfoIcon from 'frontend/components/UI/InfoIcon'
@@ -9,7 +9,7 @@ import InfoIcon from 'frontend/components/UI/InfoIcon'
 const DownloadProtonToSteam = () => {
   const { t } = useTranslation()
   const { isDefault } = useContext(SettingsContext)
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const isLinux = platform === 'linux'
   const [downloadProtonToSteam, setDownloadProtonToSteam] = useSetting(
     'downloadProtonToSteam',

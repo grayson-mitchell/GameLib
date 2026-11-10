@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SelectField, SvgButton } from 'frontend/components/UI'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import useOpenDialog from 'frontend/hooks/useOpenDialog'
 import useSetting from 'frontend/hooks/useSetting'
 import SettingsContext from '../SettingsContext'
@@ -12,7 +12,7 @@ import RemoveCircleIcon from '@mui/icons-material/RemoveCircle'
 export default function CustomWineProton() {
   const { t } = useTranslation()
   const { isDefault } = useContext(SettingsContext)
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const openDialog = useOpenDialog()
   const isWin = platform === 'win32'
 

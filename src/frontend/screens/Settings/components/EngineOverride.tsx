@@ -5,7 +5,7 @@ import SelectField from 'frontend/components/UI/SelectField'
 import InfoIcon from 'frontend/components/UI/InfoIcon'
 import useSetting from 'frontend/hooks/useSetting'
 import SettingsContext from 'frontend/screens/Settings/SettingsContext'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import { engineStateKey, useEngineState } from 'frontend/state/EngineState'
 import type { EngineOption } from 'common/types/engine'
 import {
@@ -197,7 +197,7 @@ const EngineOverride = () => {
     isDefault,
     gameInfo
   } = useContext(SettingsContext)
-  const { showDialogModal } = useContext(ContextProvider)
+  const showDialogModal = useUiState((s) => s.showDialogModal)
   // The global-settings context carries no runner; the global variant never
   // reads it.
   const runner = contextRunner ?? 'steam'

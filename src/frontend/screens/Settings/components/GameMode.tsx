@@ -1,13 +1,15 @@
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ToggleSwitch } from 'frontend/components/UI'
 import useSetting from 'frontend/hooks/useSetting'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import InfoIcon from 'frontend/components/UI/InfoIcon'
 
 const GameMode = () => {
   const { t } = useTranslation()
-  const { platform, showDialogModal } = useContext(ContextProvider)
+  const { platform, showDialogModal } = useUiState.keys(
+    'platform',
+    'showDialogModal'
+  )
   const isLinux = platform === 'linux'
   const [useGameMode, setUseGameMode] = useSetting('useGameMode', false)
   const [eacRuntime, setEacRuntime] = useSetting('eacRuntime', false)

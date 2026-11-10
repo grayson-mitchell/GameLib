@@ -1,7 +1,7 @@
-import React, { useContext, useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { InfoBox, SelectField } from 'frontend/components/UI'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import { WineInstallation } from 'common/types'
 import useSetting from 'frontend/hooks/useSetting'
 import { defaultWineVersion } from '..'
@@ -74,7 +74,7 @@ export const WineVersionListItem = React.memo(function WineVersionListItem({
 export default function WineVersionSelector() {
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const isLinux = platform === 'linux'
 
   const [wineVersion, setWineVersion] = useSetting(

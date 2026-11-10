@@ -1,8 +1,8 @@
 {
   "jestMock": {
     "src/frontend/screens/Settings/components/__tests__/EnableSteamNativeDelete.test.tsx": 3,
-    "src/frontend/screens/Settings/components/__tests__/EngineOverride.save.test.tsx": 8,
-    "src/frontend/screens/Settings/components/__tests__/EngineOverride.test.tsx": 8,
+    "src/frontend/screens/Settings/components/__tests__/EngineOverride.save.test.tsx": 6,
+    "src/frontend/screens/Settings/components/__tests__/EngineOverride.test.tsx": 7,
     "src/frontend/screens/Settings/components/__tests__/ShareDetectedFixes.test.tsx": 3,
     "src/frontend/screens/Settings/components/__tests__/SteamExperimentalInstallApp.test.tsx": 3,
     "src/frontend/screens/Settings/components/__tests__/SteamOverlayOverride.test.tsx": 7,

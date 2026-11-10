@@ -1,9 +1,8 @@
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ToggleSwitch } from 'frontend/components/UI'
 import InfoIcon from 'frontend/components/UI/InfoIcon'
 import useSetting from 'frontend/hooks/useSetting'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 
 interface ViewProps {
   isMac: boolean
@@ -42,7 +41,7 @@ export function ShareDetectedFixesView({
 
 const ShareDetectedFixes = () => {
   const { t } = useTranslation()
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const [shareDetectedFixes, setShareDetectedFixes] = useSetting(
     'shareDetectedFixes',
     false

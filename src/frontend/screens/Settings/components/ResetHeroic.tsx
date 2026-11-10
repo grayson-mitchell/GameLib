@@ -1,11 +1,10 @@
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { InfoBox } from 'frontend/components/UI'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import { DeleteOutline } from '@mui/icons-material'
 
 const ResetHeroic = () => {
-  const { showResetDialog } = useContext(ContextProvider)
+  const showResetDialog = useUiState((s) => s.showResetDialog)
   const { t } = useTranslation()
 
   return (

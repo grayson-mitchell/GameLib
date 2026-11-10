@@ -2,13 +2,13 @@ import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ToggleSwitch } from 'frontend/components/UI'
 import useSetting from 'frontend/hooks/useSetting'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import SettingsContext from '../SettingsContext'
 import InfoIcon from 'frontend/components/UI/InfoIcon'
 
 const EnableWoW64 = () => {
   const { t } = useTranslation()
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const { isLinuxNative } = useContext(SettingsContext)
   const isLinux = platform === 'linux'
   const [enableWoW64, setEnableWoW64] = useSetting('enableWoW64', false)

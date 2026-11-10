@@ -3,13 +3,13 @@ import { useTranslation } from 'react-i18next'
 import { ToggleSwitch } from 'frontend/components/UI'
 import useSetting from 'frontend/hooks/useSetting'
 import SettingsContext from '../SettingsContext'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import { defaultWineVersion } from '..'
 
 const DisableUMU = () => {
   const { t } = useTranslation()
   const { isDefault } = useContext(SettingsContext)
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
 
   const [disableUMU, setDisableUMU] = useSetting('disableUMU', false)
   const [wineVersion] = useSetting('wineVersion', defaultWineVersion)

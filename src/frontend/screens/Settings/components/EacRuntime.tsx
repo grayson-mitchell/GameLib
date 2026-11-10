@@ -1,10 +1,10 @@
-import { useContext, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ToggleSwitch } from 'frontend/components/UI'
 import useSetting from 'frontend/hooks/useSetting'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSyncAlt } from '@fortawesome/free-solid-svg-icons'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 
 const EacRuntime = () => {
   const { t } = useTranslation()
@@ -12,7 +12,10 @@ const EacRuntime = () => {
   const [installing, setInstalling] = useState(false)
   const [eacRuntime, setEacRuntime] = useSetting('eacRuntime', false)
   const [useGameMode, setUseGameMode] = useSetting('useGameMode', false)
-  const { showDialogModal, platform } = useContext(ContextProvider)
+  const { showDialogModal, platform } = useUiState.keys(
+    'showDialogModal',
+    'platform'
+  )
 
   if (platform !== 'linux') {
     return null

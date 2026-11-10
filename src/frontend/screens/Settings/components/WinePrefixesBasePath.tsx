@@ -1,13 +1,13 @@
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import useSetting from 'frontend/hooks/useSetting'
 import { PathSelectionBox } from 'frontend/components/UI'
 import SettingsContext from 'frontend/screens/Settings/SettingsContext'
 
 const WinePrefixesBasePath = () => {
   const { t } = useTranslation()
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const { isDefault } = useContext(SettingsContext)
   const isWindows = platform === 'win32'
 
