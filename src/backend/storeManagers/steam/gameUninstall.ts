@@ -30,6 +30,7 @@ import {
   readAcfSnapshot,
   readPendingAdoption,
   clearPendingAdoption,
+  pendingAdoptionStoreFrom,
   decidePlayAdoption
 } from './macSteamAdoption'
 import {
@@ -155,7 +156,10 @@ export async function uninstall(
     // install polling. State is never optimistically flipped here (D-02).
     startUninstallPolling(steamGame.deps, steamGame.appId)
     // quick 261029-ji2: a removed install has nothing left to adopt.
-    clearPendingAdoption(steamGame.appId)
+    clearPendingAdoption(
+      steamGame.appId,
+      pendingAdoptionStoreFrom(steamGame.deps)
+    )
 
     return { stdout: '', stderr: '' }
   }
@@ -333,7 +337,10 @@ export async function uninstallNativeInGameLib(
   switch (decision.route) {
     case 'steam-uninstalled':
       startUninstallPolling(steamGame.deps, steamGame.appId)
-      clearPendingAdoption(steamGame.appId)
+      clearPendingAdoption(
+        steamGame.appId,
+        pendingAdoptionStoreFrom(steamGame.deps)
+      )
       return { stdout: '', stderr: '' }
     case 'fallback':
       logInfo(
@@ -380,7 +387,10 @@ export async function uninstallUnadoptedMacNativeDirectly(
   steamGame: SteamGame
 ): Promise<ExecResult | null> {
   if (!isMac) return null
-  const record = readPendingAdoption(steamGame.appId)
+  const record = readPendingAdoption(
+    steamGame.appId,
+    pendingAdoptionStoreFrom(steamGame.deps)
+  )
   if (!record) return null
 
   const currentPid = await probeMacSteamPid().catch(() => null)
@@ -431,7 +441,10 @@ export async function removeNativeInstallDirectly(
       'native'
     )
     if (result.status !== 'refused') {
-      clearPendingAdoption(steamGame.appId)
+      clearPendingAdoption(
+        steamGame.appId,
+        pendingAdoptionStoreFrom(steamGame.deps)
+      )
       await pollUninstallOnce(steamGame.deps, steamGame.appId, 'native')
       return { stdout: '', stderr: '' }
     }

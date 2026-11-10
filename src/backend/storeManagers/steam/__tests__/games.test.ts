@@ -274,7 +274,10 @@ const steamTestDeps = createTestManagerDeps({
   commandRunner: { runWineCommand } as never
 })
 
-jest.mock('backend/knownFixReport', () => ({ reportDetectedFix: jest.fn() }))
+jest.mock('backend/knownFixReport', () => ({
+  reportDetectedFix: jest.fn(),
+  knownFixReportDeps: () => ({ post: () => undefined })
+}))
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 jest.mock('backend/logger', () => ({
@@ -542,12 +545,15 @@ jest.mock('../bridge/allowlist', () => ({
 // assembleBridgeRouteInput maps to null, so every pre-existing test is
 // unaffected.
 // quick 261029-ji2: pending-adoption record + Play-time Steam restart.
+// Plain object: the injected pending-adoption store handle the callers pass through.
+const mockAdoptionStore = {}
 jest.mock('../macSteamAdoption', () => ({
   probeMacSteamPid: jest.fn(),
   readAcfSnapshot: jest.fn(),
   recordPendingAdoption: jest.fn(),
   readPendingAdoption: jest.fn(),
   clearPendingAdoption: jest.fn(),
+  pendingAdoptionStoreFrom: () => mockAdoptionStore,
   decidePlayAdoption: jest.fn(),
   restartMacSteamForAdoption: jest.fn()
 }))
@@ -2945,12 +2951,15 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         ([id, value]) => id === CEG_APP_ID && value?.bridge?.drm === 'ceg'
       )
       expect(drmPersistCall).toBeDefined()
-      expect(reportDetectedFix).toHaveBeenCalledWith({
-        appId: CEG_APP_ID,
-        key: 'drm',
-        op: 'add',
-        detector: 'ceg'
-      })
+      expect(reportDetectedFix).toHaveBeenCalledWith(
+        {
+          appId: CEG_APP_ID,
+          key: 'drm',
+          op: 'add',
+          detector: 'ceg'
+        },
+        expect.objectContaining({ post: expect.any(Function) })
+      )
 
       // Breaker armed: the next launch skips the bridge.
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
@@ -2992,12 +3001,15 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         expect.anything()
       )
       // Phase 57: a forced-bridge title still reports (Pitfall 6).
-      expect(reportDetectedFix).toHaveBeenCalledWith({
-        appId: CEG_APP_ID,
-        key: 'drm',
-        op: 'add',
-        detector: 'ceg'
-      })
+      expect(reportDetectedFix).toHaveBeenCalledWith(
+        {
+          appId: CEG_APP_ID,
+          key: 'drm',
+          op: 'add',
+          detector: 'ceg'
+        },
+        expect.objectContaining({ post: expect.any(Function) })
+      )
     })
 
     it('does not report when drm is null (parsed, not CEG)', async () => {
@@ -6112,12 +6124,15 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         }
       )
       expect(library.get(APP_ID)?.is_installed).not.toBe(true)
-      expect(reportDetectedFix).toHaveBeenCalledWith({
-        appId: APP_ID,
-        key: 'drm',
-        op: 'add',
-        detector: 'ceg'
-      })
+      expect(reportDetectedFix).toHaveBeenCalledWith(
+        {
+          appId: APP_ID,
+          key: 'drm',
+          op: 'add',
+          detector: 'ceg'
+        },
+        expect.objectContaining({ post: expect.any(Function) })
+      )
 
       // The breaker is armed: a later install() of the same appId is routed
       // away from the bridge (failed-this-session -> bottled Steam).
@@ -6150,12 +6165,15 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       )
       expect(removePerGameBridgeBottle).not.toHaveBeenCalled()
       expect(library.get(APP_ID)?.is_installed).toBe(true)
-      expect(reportDetectedFix).toHaveBeenCalledWith({
-        appId: APP_ID,
-        key: 'drm',
-        op: 'add',
-        detector: 'ceg'
-      })
+      expect(reportDetectedFix).toHaveBeenCalledWith(
+        {
+          appId: APP_ID,
+          key: 'drm',
+          op: 'add',
+          detector: 'ceg'
+        },
+        expect.objectContaining({ post: expect.any(Function) })
+      )
     })
 
     it("drm null clears a persisted drm 'ceg' and completes normally", async () => {
@@ -10072,7 +10090,10 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(startPollingSpy).not.toHaveBeenCalled()
     expect(removeCopySpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, 'native')
-    expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
+    expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(
+      APP_ID,
+      mockAdoptionStore
+    )
     expect(pollOnceSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, 'native')
     expect(at(removeCopySpy.mock.invocationCallOrder, 0)).toBeLessThan(
       at(pollOnceSpy.mock.invocationCallOrder, 0)
@@ -10086,7 +10107,10 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
     await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
-    expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
+    expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(
+      APP_ID,
+      mockAdoptionStore
+    )
     expect(pollOnceSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, 'native')
   })
 
@@ -10273,7 +10297,10 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
     )
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(startPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID)
-    expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
+    expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(
+      APP_ID,
+      mockAdoptionStore
+    )
     expect(removeCopySpy).not.toHaveBeenCalled()
     expect(result).toEqual({ stdout: '', stderr: '' })
   })
@@ -15798,7 +15825,8 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
           steamPid: 123,
           baseline: RECORD.baseline,
           manifestPath: `/mock/steam/steamapps/appmanifest_${APP_ID}.acf`
-        })
+        }),
+        mockAdoptionStore
       )
       expect(startInstallPollingSpy).toHaveBeenCalledWith(
         steamTestDeps,
@@ -15818,7 +15846,10 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
       await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
       expect(adoption().recordPendingAdoption).not.toHaveBeenCalled()
-      expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
+      expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(
+        APP_ID,
+        mockAdoptionStore
+      )
       expect(startInstallPollingSpy).toHaveBeenCalledWith(
         steamTestDeps,
         APP_ID,
@@ -15871,7 +15902,10 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
         APP_ID,
         expect.objectContaining({ launchRunGameId: expect.any(Function) })
       )
-      expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
+      expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(
+        APP_ID,
+        mockAdoptionStore
+      )
     })
 
     it.each<
@@ -15915,7 +15949,10 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
       )
 
       expect(result).toBe(true)
-      expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
+      expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(
+        APP_ID,
+        mockAdoptionStore
+      )
       expect(adoption().restartMacSteamForAdoption).not.toHaveBeenCalled()
       expect(shellOpenExternal).toHaveBeenCalledWith(
         `steam://rungameid/${APP_ID}`,
@@ -16103,7 +16140,10 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
         libraryPath: '/mock/steam'
       })
       expect(adoption().recordPendingAdoption).not.toHaveBeenCalled()
-      expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
+      expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(
+        APP_ID,
+        mockAdoptionStore
+      )
       expect(startInstallPollingSpy).toHaveBeenCalledWith(
         steamTestDeps,
         APP_ID,
@@ -16134,7 +16174,8 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
         expect(adoption().recordPendingAdoption).toHaveBeenCalledTimes(1)
         expect(adoption().recordPendingAdoption).toHaveBeenCalledWith(
           APP_ID,
-          expect.objectContaining({ steamPid: 123 })
+          expect.objectContaining({ steamPid: 123 }),
+          mockAdoptionStore
         )
         expect(startInstallPollingSpy).toHaveBeenCalledWith(
           steamTestDeps,
@@ -16155,7 +16196,10 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
       await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
       expect(installApp()).not.toHaveBeenCalled()
-      expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
+      expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(
+        APP_ID,
+        mockAdoptionStore
+      )
       expect(adoption().recordPendingAdoption).not.toHaveBeenCalled()
       expect(startInstallPollingSpy).toHaveBeenCalledWith(
         steamTestDeps,

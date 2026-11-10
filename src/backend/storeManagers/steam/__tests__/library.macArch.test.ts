@@ -48,7 +48,10 @@ jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
   shortcutFiles: jest.fn()
 }))
 
-jest.mock('backend/knownFixReport', () => ({ reportDetectedFix: jest.fn() }))
+jest.mock('backend/knownFixReport', () => ({
+  reportDetectedFix: jest.fn(),
+  knownFixReportDeps: () => ({ post: () => undefined })
+}))
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -649,12 +652,15 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
         'native'
       )
       expect(reportDetectedFix).toHaveBeenCalledTimes(1)
-      expect(reportDetectedFix).toHaveBeenCalledWith({
-        appId: APP_ID,
-        key: 'macArch',
-        op: 'add',
-        detector: 'macho'
-      })
+      expect(reportDetectedFix).toHaveBeenCalledWith(
+        {
+          appId: APP_ID,
+          key: 'macArch',
+          op: 'add',
+          detector: 'macho'
+        },
+        expect.objectContaining({ post: expect.any(Function) })
+      )
     })
 
     it("reports a curated '32' contradicted by '64' as macArch remove", async () => {
@@ -666,12 +672,15 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
         'native'
       )
       expect(reportDetectedFix).toHaveBeenCalledTimes(1)
-      expect(reportDetectedFix).toHaveBeenCalledWith({
-        appId: APP_ID,
-        key: 'macArch',
-        op: 'remove',
-        detector: 'macho'
-      })
+      expect(reportDetectedFix).toHaveBeenCalledWith(
+        {
+          appId: APP_ID,
+          key: 'macArch',
+          op: 'remove',
+          detector: 'macho'
+        },
+        expect.objectContaining({ post: expect.any(Function) })
+      )
     })
 
     it("reports nothing for a plain '64' verdict", async () => {

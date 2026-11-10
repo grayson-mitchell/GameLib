@@ -12,6 +12,7 @@
  * importing each other.
  */
 import type { AcfSource } from './installRoot'
+import type { SteamRestartHoldStore } from '../steamRestartHold'
 
 /**
  * The exact StateFlags value GameLib writes on handoff (D-UAT-04 / 21-16):
@@ -129,6 +130,9 @@ export const activePolls = new Map<
      *                 was running / the probe was inconclusive) — the normal
      *                 installed flow runs. Terminal. */
     steamHold: 'unprobed' | 'holding' | 'released'
+    /** The restart-hold store, captured from the deps that armed this poll so
+     *  the deps-less poll-driven sites (stop, release) reach the same store. */
+    restartHoldStore: SteamRestartHoldStore
     /** PIDs of the Steam client captured when `steamHold` became 'holding'. */
     steamPidsAtHandoff: number[]
     /** Wall-clock ms of the last Steam-process probe, to throttle re-probes

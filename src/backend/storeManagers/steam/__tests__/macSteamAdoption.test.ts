@@ -14,13 +14,6 @@ jest.mock('../macSteamOffline', () => ({
   spawnOpenDetached: jest.fn(),
   MAC_STEAM_OFFLINE_OWED_FILE: 'mac-steam-offline-owed.json'
 }))
-jest.mock('../stores', () => ({
-  steamPendingAdoptionStore: {
-    get: jest.fn(),
-    set: jest.fn(),
-    delete: jest.fn()
-  }
-}))
 
 import {
   isSteamAdoptedAcf,

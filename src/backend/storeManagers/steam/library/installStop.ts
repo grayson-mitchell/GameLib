@@ -14,7 +14,8 @@ export function stopInstallPolling(appId: string): void {
   if (!poll) return
   // quick 261029-pkp: a stopped holding poll (cancel, uninstall, manifest
   // vanished) must not leave a record that re-arms at the next boot.
-  if (poll.steamHold === 'holding') clearSteamRestartHold(appId)
+  if (poll.steamHold === 'holding')
+    clearSteamRestartHold(appId, poll.restartHoldStore)
   clearInterval(poll.timer)
   activePolls.delete(appId)
   stopSteamDownloadMonitor(appId)

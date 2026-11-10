@@ -13,6 +13,7 @@ import axios from 'axios'
 import {
   GAMELIB_FIX_RELAY_URL,
   RELAY_URL_PENDING_SENTINEL,
+  knownFixReportDeps,
   reportDetectedFix,
   relayUrl,
   runKnownFixReport,
@@ -119,6 +120,12 @@ describe('gate', () => {
   })
 })
 
+// The real deps builder over a throwaway in-memory steam store slice.
+const realDeps = () =>
+  knownFixReportDeps({
+    stores: { steam: { steamKnownFixReportStore: new Map() } }
+  } as never)
+
 describe('gate with the real default deps (D-09)', () => {
   afterEach(() => {
     mockSettings = {}
@@ -128,8 +135,8 @@ describe('gate with the real default deps (D-09)', () => {
   it('an absent shareDetectedFixes setting posts nothing', async () => {
     const post = jest.spyOn(axios, 'post')
     mockSettings = {}
-    expect(await runKnownFixReport(addArch)).toBe('disabled')
-    reportDetectedFix(addCeg)
+    expect(await runKnownFixReport(addArch, realDeps())).toBe('disabled')
+    reportDetectedFix(addCeg, realDeps())
     await new Promise((r) => setImmediate(r))
     expect(post).not.toHaveBeenCalled()
   })
@@ -137,7 +144,7 @@ describe('gate with the real default deps (D-09)', () => {
   it('an explicit false posts nothing', async () => {
     const post = jest.spyOn(axios, 'post')
     mockSettings = { shareDetectedFixes: false }
-    expect(await runKnownFixReport(addArch)).toBe('disabled')
+    expect(await runKnownFixReport(addArch, realDeps())).toBe('disabled')
     expect(post).not.toHaveBeenCalled()
   })
 })

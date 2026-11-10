@@ -23,6 +23,7 @@ import { join } from 'path'
 import { parse } from '@node-steam/vdf'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendGameStatusUpdate } from 'backend/utils'
+import type { SteamStoresDeps } from './library/installRoot'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 import {
   spawnOpenDetached,
@@ -54,26 +55,25 @@ export interface PendingAdoptionStore {
   delete: (key: string) => void
 }
 
-function defaultStore(): PendingAdoptionStore {
-  // Lazy: keeps electron-store out of module load (nothing runs at import).
-  /* eslint-disable @typescript-eslint/no-require-imports */
-  const { steamPendingAdoptionStore } =
-    require('./stores') as typeof import('./stores')
-  /* eslint-enable @typescript-eslint/no-require-imports */
-  return steamPendingAdoptionStore as unknown as PendingAdoptionStore
+/** The pending-adoption store from the injected steam stores slice. */
+export function pendingAdoptionStoreFrom(
+  deps: SteamStoresDeps
+): PendingAdoptionStore {
+  return deps.stores.steam
+    .steamPendingAdoptionStore as unknown as PendingAdoptionStore
 }
 
 export function recordPendingAdoption(
   appId: string,
   record: PendingAdoptionRecord,
-  store: PendingAdoptionStore = defaultStore()
+  store: PendingAdoptionStore
 ): void {
   store.set(appId, record)
 }
 
 export function readPendingAdoption(
   appId: string,
-  store: PendingAdoptionStore = defaultStore()
+  store: PendingAdoptionStore
 ): PendingAdoptionRecord | undefined {
   try {
     const v = store.get(appId) as Partial<PendingAdoptionRecord> | undefined
@@ -104,7 +104,7 @@ export function readPendingAdoption(
 
 export function clearPendingAdoption(
   appId: string,
-  store: PendingAdoptionStore = defaultStore()
+  store: PendingAdoptionStore
 ): void {
   try {
     store.delete(appId)

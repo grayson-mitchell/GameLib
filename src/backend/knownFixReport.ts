@@ -21,6 +21,7 @@ import {
   type KnownFixReportKey,
   type KnownFixReportOp
 } from 'common/knownFixReport'
+import type { Stores } from 'backend/services/types'
 import { readKnownFixesWithLayer } from './knownFixes'
 import { LogPrefix, logInfo, logWarning } from './logger'
 import { isMac } from './constants/environment'
@@ -87,14 +88,13 @@ type ReportOutcome =
   | 'retryable'
   | 'error'
 
-function defaultDeps(): ReportDeps {
+export function knownFixReportDeps(deps: {
+  stores: Pick<Stores, 'steam'>
+}): ReportDeps {
   /* eslint-disable @typescript-eslint/no-require-imports */
   const lazyVersion = () =>
     (require('./platform') as typeof import('./platform')).app.getVersion()
-  const lazyStore = () =>
-    (
-      require('./storeManagers/steam/stores') as typeof import('./storeManagers/steam/stores')
-    ).steamKnownFixReportStore
+  const store = () => deps.stores.steam.steamKnownFixReportStore
   return {
     post: (url, body, signal) =>
       axios.post(url, body, {
@@ -123,8 +123,8 @@ function defaultDeps(): ReportDeps {
     },
     // Lazy per call: electron-store loads only after every gate has passed.
     sentStore: {
-      get: (k) => lazyStore().get(k),
-      set: (k, v) => lazyStore().set(k, v)
+      get: (k) => store().get(k),
+      set: (k, v) => store().set(k, v)
     },
     version: lazyVersion,
     now: Date.now,
@@ -141,7 +141,7 @@ function wasSent(value: unknown): boolean {
 
 export async function runKnownFixReport(
   fix: DetectedFix,
-  deps: ReportDeps = defaultDeps()
+  deps: ReportDeps
 ): Promise<ReportOutcome> {
   let abortId: string | undefined
   try {
@@ -252,7 +252,7 @@ export async function runKnownFixReport(
 }
 
 /** Fire-and-forget entry point for the detector hooks. Never throws. */
-export function reportDetectedFix(fix: DetectedFix, deps?: ReportDeps): void {
+export function reportDetectedFix(fix: DetectedFix, deps: ReportDeps): void {
   try {
     void runKnownFixReport(fix, deps).catch(() => undefined)
   } catch {

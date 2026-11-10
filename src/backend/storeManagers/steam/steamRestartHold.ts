@@ -14,6 +14,8 @@
  * untrusted and safe-parsed.
  */
 
+import type { SteamStoresDeps } from './library/installRoot'
+
 export interface SteamRestartHoldRecord {
   pids: Array<{ pid: number; startToken: string }>
   recordedAt: number
@@ -29,13 +31,12 @@ export interface SteamRestartHoldStore {
   entries: () => Array<[string, unknown]>
 }
 
-function defaultStore(): SteamRestartHoldStore {
-  // Lazy: keeps electron-store out of module load (nothing runs at import).
-  /* eslint-disable @typescript-eslint/no-require-imports */
-  const { steamRestartHoldStore } =
-    require('./stores') as typeof import('./stores')
-  /* eslint-enable @typescript-eslint/no-require-imports */
-  return steamRestartHoldStore as unknown as SteamRestartHoldStore
+/** The restart-hold store from the injected steam stores slice. */
+export function restartHoldStoreFrom(
+  deps: SteamStoresDeps
+): SteamRestartHoldStore {
+  return deps.stores.steam
+    .steamRestartHoldStore as unknown as SteamRestartHoldStore
 }
 
 function parseRecord(value: unknown): SteamRestartHoldRecord | undefined {
@@ -78,7 +79,7 @@ function parseRecord(value: unknown): SteamRestartHoldRecord | undefined {
 export function recordSteamRestartHold(
   appId: string,
   record: SteamRestartHoldRecord,
-  store: SteamRestartHoldStore = defaultStore()
+  store: SteamRestartHoldStore
 ): void {
   try {
     store.set(appId, record)
@@ -89,7 +90,7 @@ export function recordSteamRestartHold(
 
 export function readSteamRestartHold(
   appId: string,
-  store: SteamRestartHoldStore = defaultStore()
+  store: SteamRestartHoldStore
 ): SteamRestartHoldRecord | undefined {
   try {
     return parseRecord(store.get(appId))
@@ -100,7 +101,7 @@ export function readSteamRestartHold(
 
 export function clearSteamRestartHold(
   appId: string,
-  store: SteamRestartHoldStore = defaultStore()
+  store: SteamRestartHoldStore
 ): void {
   try {
     store.delete(appId)
@@ -110,7 +111,7 @@ export function clearSteamRestartHold(
 }
 
 export function listSteamRestartHolds(
-  store: SteamRestartHoldStore = defaultStore()
+  store: SteamRestartHoldStore
 ): Array<[string, SteamRestartHoldRecord]> {
   const out: Array<[string, SteamRestartHoldRecord]> = []
   try {

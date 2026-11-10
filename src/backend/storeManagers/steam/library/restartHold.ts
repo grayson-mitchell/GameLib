@@ -7,7 +7,8 @@ import {
 } from '../steamClientProcess'
 import {
   clearSteamRestartHold,
-  recordSteamRestartHold
+  recordSteamRestartHold,
+  type SteamRestartHoldStore
 } from '../steamRestartHold'
 import type { AcfSource } from './installRoot'
 import { activePolls, STEAM_HOLD_PROBE_MIN_INTERVAL_MS } from './pollState'
@@ -64,10 +65,13 @@ export function setReconcileRanDuringRearm(value: boolean): void {
  */
 export function releaseSteamHold(
   appId: string,
-  poll: { steamHold: 'unprobed' | 'holding' | 'released' }
+  poll: {
+    steamHold: 'unprobed' | 'holding' | 'released'
+    restartHoldStore: SteamRestartHoldStore
+  }
 ): void {
   poll.steamHold = 'released'
-  clearSteamRestartHold(appId)
+  clearSteamRestartHold(appId, poll.restartHoldStore)
 }
 
 /**
@@ -151,12 +155,16 @@ export async function shouldHoldForSteamRestart(
           return startToken ? [{ pid, startToken }] : []
         })
         if (recorded.length > 0) {
-          recordSteamRestartHold(appId, {
-            pids: recorded,
-            recordedAt: Date.now(),
-            macNativeRoute: poll.macNativeRoute,
-            skippedDepots: poll.skippedDepots
-          })
+          recordSteamRestartHold(
+            appId,
+            {
+              pids: recorded,
+              recordedAt: Date.now(),
+              macNativeRoute: poll.macNativeRoute,
+              skippedDepots: poll.skippedDepots
+            },
+            poll.restartHoldStore
+          )
         } else {
           logWarning(
             `Steam: could not read Steam process start time for appId ${appId}; the steam-waiting-for-restart hold will not survive a GameLib restart`,

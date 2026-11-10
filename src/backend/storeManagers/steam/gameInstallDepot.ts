@@ -266,7 +266,10 @@ export async function runNativeDepotDownload(
         })
         if (outcome.kind === 'ok') {
           adoptedByInstallApp = true
-          adoption.clearPendingAdoption(steamGame.appId)
+          adoption.clearPendingAdoption(
+            steamGame.appId,
+            adoption.pendingAdoptionStoreFrom(steamGame.deps)
+          )
           logInfo(
             `SteamGame: Steam adopted appId ${steamGame.appId} via InstallApp without a restart`,
             LogPrefix.Steam
@@ -287,12 +290,16 @@ export async function runNativeDepotDownload(
       } else if (pid !== null) {
         const baseline = adoption.readAcfSnapshot(handoff.manifestPath)
         if (baseline) {
-          adoption.recordPendingAdoption(steamGame.appId, {
-            steamPid: pid,
-            manifestPath: handoff.manifestPath,
-            baseline,
-            recordedAt: Date.now()
-          })
+          adoption.recordPendingAdoption(
+            steamGame.appId,
+            {
+              steamPid: pid,
+              manifestPath: handoff.manifestPath,
+              baseline,
+              recordedAt: Date.now()
+            },
+            adoption.pendingAdoptionStoreFrom(steamGame.deps)
+          )
           logInfo(
             `SteamGame: recorded pending Steam adoption for ${steamGame.appId} (steam_osx pid ${pid})`,
             LogPrefix.Steam
@@ -304,7 +311,10 @@ export async function runNativeDepotDownload(
           )
         }
       } else {
-        adoption.clearPendingAdoption(steamGame.appId)
+        adoption.clearPendingAdoption(
+          steamGame.appId,
+          adoption.pendingAdoptionStoreFrom(steamGame.deps)
+        )
       }
       startInstallPolling(steamGame.deps, steamGame.appId, {
         isNativeHandoff: true,

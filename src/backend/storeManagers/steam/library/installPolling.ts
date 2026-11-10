@@ -17,6 +17,7 @@ import {
   MANIFEST_GONE_TICKS,
   nextSteamRequestNoticeSeq
 } from './pollState'
+import { restartHoldStoreFrom } from '../steamRestartHold'
 import { releaseSteamHold } from './restartHold'
 import { stopInstallPolling } from './installStop'
 import { pollInstallOnce } from './installPollOnce'
@@ -226,6 +227,7 @@ export function startInstallPolling(
     delegatedSinceTick: 0,
     absentTicksSinceSeen: 0,
     steamHold: initialSteamHold,
+    restartHoldStore: restartHoldStoreFrom(deps),
     steamPidsAtHandoff: restoredSteamHold?.pids ?? ([] as number[]),
     lastSteamProbeMs: restoredSteamHold ? Date.now() : 0
   }

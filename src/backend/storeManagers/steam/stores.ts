@@ -45,10 +45,9 @@ const steamSyncStore = new CacheStore<number, 'syncedAt'>('steam_sync', null, {
 // A DEDICATED store (not a field on steamMetadataStore, whose whole-entry
 // replace would drop it). Indefinite lifespan: it must survive a GameLib
 // restart, and it is cleared on uninstall / adoption.
-// Consumed only through the lazy `require('./stores')` in macSteamAdoption.ts
-// `defaultStore()` -- kept lazy so electron-store stays out of module load -- which ts-prune
-// cannot trace; macSteamAdoption.test.ts also mocks it by name. The export is deliberate.
-/** @public consumed only through the lazy `require('./stores')` in macSteamAdoption.ts `defaultStore()`, which knip cannot trace; macSteamAdoption.test.ts also mocks it by name. */
+// Read through the injected `Stores['steam']` slice (`pendingAdoptionStoreFrom`
+// in macSteamAdoption.ts).
+/** @public read through the injected `Stores['steam']` slice (`pendingAdoptionStoreFrom` in macSteamAdoption.ts), which knip cannot trace. */
 export const steamPendingAdoptionStore = new CacheStore<unknown>(
   'steam_pending_adoption',
   null,
@@ -57,9 +56,8 @@ export const steamPendingAdoptionStore = new CacheStore<unknown>(
 
 // ── quick 261029-pkp: persisted "Restart Steam to finish" hold records ──────
 // One record per appId whose native install is held waiting for a Steam
-// restart, so the hold survives a GameLib restart. Consumed only through the
-// lazy `require('./stores')` in steamRestartHold.ts, which ts-prune
-// cannot trace. The export is deliberate.
+// restart, so the hold survives a GameLib restart. Read through the injected
+// `Stores['steam']` slice (`restartHoldStoreFrom` in steamRestartHold.ts).
 export const steamRestartHoldStore = new CacheStore<unknown>(
   'steam_restart_hold',
   null,
@@ -67,9 +65,9 @@ export const steamRestartHoldStore = new CacheStore<unknown>(
 )
 
 // ── Phase 57: persisted "known-fix report sent" records (D-16/D-17) ─────────
-// Consumed only through the lazy `require` in backend/knownFixReport.ts, which
-// ts-prune cannot trace. The export is deliberate.
-/** @public consumed only through the lazy `require` in backend/knownFixReport.ts, which knip cannot trace. */
+// Read through the injected `Stores['steam']` slice (`knownFixReportDeps` in
+// backend/knownFixReport.ts).
+/** @public read through the injected `Stores['steam']` slice (`knownFixReportDeps` in backend/knownFixReport.ts), which knip cannot trace. */
 export const steamKnownFixReportStore = new CacheStore<unknown>(
   'steam_known_fix_reports',
   null,

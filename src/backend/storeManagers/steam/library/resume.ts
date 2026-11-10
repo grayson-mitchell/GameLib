@@ -22,7 +22,8 @@ import {
 import {
   clearSteamRestartHold,
   decideSteamRestartHoldRearm,
-  listSteamRestartHolds
+  listSteamRestartHolds,
+  restartHoldStoreFrom
 } from '../steamRestartHold'
 import { activePolls, MAX_TICKS } from './pollState'
 import { readAcfState } from './acfState'
@@ -259,7 +260,7 @@ export async function rearmPersistedSteamRestartHolds(
   dropped: number
 }> {
   let dropped = 0
-  const records = listSteamRestartHolds()
+  const records = listSteamRestartHolds(restartHoldStoreFrom(deps))
   if (records.length === 0) return { dropped }
   setReconcileRanDuringRearm(false)
   // Synchronously, before any await: fail closed until verified.
@@ -282,7 +283,7 @@ export async function rearmPersistedSteamRestartHolds(
     for (const [appId, record] of records) {
       try {
         if (isNativeInstallInFlight(appId) || activePolls.has(appId)) {
-          clearSteamRestartHold(appId)
+          clearSteamRestartHold(appId, restartHoldStoreFrom(deps))
           dropped++
           continue
         }
@@ -303,7 +304,7 @@ export async function rearmPersistedSteamRestartHolds(
           continue
         }
         if (decision.kind === 'drop') {
-          clearSteamRestartHold(appId)
+          clearSteamRestartHold(appId, restartHoldStoreFrom(deps))
           dropped++
           logInfo(
             `Steam: dropped persisted Steam restart hold for appId ${appId} (${decision.reason})`,
@@ -313,7 +314,7 @@ export async function rearmPersistedSteamRestartHolds(
         }
         const acf = await readAcfState(appId, 'native')
         if (acf.state !== 'installed') {
-          clearSteamRestartHold(appId)
+          clearSteamRestartHold(appId, restartHoldStoreFrom(deps))
           dropped++
           logInfo(
             `Steam: dropped persisted Steam restart hold for appId ${appId} (manifest is ${acf.state})`,
