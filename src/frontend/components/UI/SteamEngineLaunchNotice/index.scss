@@ -1,6 +1,9 @@
 // D-06 / 59-UAT G6: non-blocking, dismissible; no backdrop or focus trap.
 // Theme variables only (multi-theme survival). The region, slot and toast
 // surface (sketch 006 variant A) live in ../NoticeStack/index.scss.
+// Mapping (quick 261110-nwy): icon --accent, title --primary-font-family +
+// --text-title, body --secondary-font-family, dismiss --action-icon tokens.
+// The stripe and the countdown bar stay --status-warning on purpose.
 
 // Kept as a hook for tests and styling; carries no positioning (the region
 // owns the stack).
@@ -13,7 +16,7 @@
   width: 16px;
   height: 16px;
   padding-top: 1px;
-  color: var(--status-warning);
+  color: var(--accent);
 }
 
 .steamEngineLaunchNoticeText {
@@ -24,12 +27,15 @@
 
 .steamEngineLaunchNoticeTitle {
   display: block;
+  font-family: var(--primary-font-family);
+  color: var(--text-title, var(--text-default));
   font-weight: var(--bold);
 }
 
 .steamEngineLaunchNoticeBody {
   display: block;
   margin-top: 2px;
+  font-family: var(--secondary-font-family);
   color: var(--text-secondary);
 }
 
@@ -43,15 +49,15 @@
   border: none;
   border-radius: 50%;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--action-icon, var(--text-secondary));
   cursor: pointer;
   transition:
     background 120ms,
     color 120ms;
 
   &:hover {
-    color: var(--text-default);
-    background: color-mix(in srgb, var(--text-default) 12%, transparent);
+    color: var(--action-icon-hover, var(--text-default));
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
   }
 
   &:focus-visible {
