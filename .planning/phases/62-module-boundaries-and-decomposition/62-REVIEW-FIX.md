@@ -3,8 +3,8 @@ phase: 62-module-boundaries-and-decomposition
 fixed_at: 2026-11-11T00:00:00Z
 review_path: .planning/phases/62-module-boundaries-and-decomposition/62-REVIEW.md
 iteration: 1
-findings_in_scope: 2
-fixed: 2
+findings_in_scope: 4
+fixed: 4
 skipped: 0
 status: all_fixed
 ---
@@ -16,10 +16,11 @@ status: all_fixed
 **Iteration:** 1
 
 **Summary:**
-- Findings in scope: 2 (fix_scope: critical_warning)
-- Fixed: 2
+- Findings in scope: 4 (fix_scope: all)
+- Fixed: 4 (3 by commit, 1 resolved with no change required)
 - Skipped: 0
-- Out of scope (Info, not attempted): 2 (IN-01, IN-02)
+
+WR-01 and WR-02 were fixed by an earlier critical_warning pass (commits `3d463c1c1`, `dfbf682e7`); both commits were confirmed still present in `git log` on `main` and their entries are carried forward here unchanged. IN-01 and IN-02 were handled in this pass.
 
 Edits were made in the main checkout (`workflow.use_worktrees` is `false`), so no worktree, temp branch or recovery sentinel was created.
 
@@ -49,20 +50,33 @@ Edits were made in the main checkout (`workflow.use_worktrees` is `false`), so n
 - HIT cases added for every shape the review listed: `(game?.runner as string)`, `(game?.runner)!`, `(runner as Runner)!`, `(['gog'] as const).includes(runner)` and `['steam'].lastIndexOf(runner)`. Also added: `(game?.runner as string)!`, `satisfies` on both operand and array, an `as const` `indexOf` with a wrapped argument, and `includes(runner!)`. Two NON-HIT guards cover the cast receiver and `lastIndexOf` without a store literal.
 - Header updated so its claims match the selectors. "Known blind spots" now lists: a wrapper nested deeper than `WRAP_DEPTH`, a `Set` built from a cast array (`new Set([..] as const)`), and an optional call (`[..].includes?.(runner)`).
 
-## Out of Scope (not attempted)
+### IN-01: `value` and `.value` are now matched everywhere, so any future `<select>`/option comparison against a store-named literal will error
 
-- IN-01: `value` / `.value` matched everywhere. Info severity, outside `fix_scope: critical_warning`. The review itself says no action is needed until a legitimate case appears.
-- IN-02: `isStore` imports appended after stylesheet imports. Info severity, outside `fix_scope: critical_warning`.
+**Files modified:** none
+**Commit:** none (resolved, no change required)
+**Applied fix:** None. The review's own prescribed fix is "Nothing is needed now": the finding is a forward-looking cost, not a live false positive. Both preconditions were confirmed in this pass:
+- `NAME_DENYLIST` exists in `meta/runnerLiteralSelectors.cjs` (declared at line 85, consumed via `DENY_RE` at line 93, exported at line 177), currently an empty frozen array, so the escape hatch for the first legitimate case is in place.
+- `pnpm lint:src` reports 0 errors (cold, after deleting `.eslintcache-src`), so there is no live runner-literal hit and nothing to denylist. The rule is error-level, so any hit would have shown as an error.
+
+When a legitimate case appears (for example a key-platform `<select>` whose option value is `'steam'`), add it to `NAME_DENYLIST` with a one-line reason rather than an `eslint-disable`.
+
+### IN-02: New `isStore` imports are appended after side-effect stylesheet imports
+
+**Files modified:** `src/frontend/components/UI/NavShell/components/FilterFocusRow/index.tsx`, `src/frontend/screens/Library/components/FocusRowStrip/index.tsx`
+**Commit:** 178b5e96b
+**Applied fix:** Moved `import { isStore } from 'common/storeCapabilities'` above the stylesheet import in both files, directly after the existing `common/types` import so it sits with the other module imports. Import-order-only change; no logic touched.
 
 ## Verification
 
 Ran in the main checkout (not a worktree), so the numbers are reproducible from the tree.
 
-- `pnpm exec jest meta/__tests__/runnerLiteralSelectors.test.ts`: 57/57 after WR-01 (the original table plus the WR-01 cases), 69/69 after WR-02.
-- `pnpm lint:src` (consumer: `eslint.config.mjs` imports `SELECTORS`): 0 errors, `production: PASS`.
-- Cold cross-check, `eslint --no-cache` over `src/frontend` and `src/backend`: 0 errors and 0 runner-literal (`storeCapabilities` message) hits, so no new hits appeared. The cold run guards against the stale-cache hazard.
-- `npx prettier --check` over exactly `meta/runnerLiteralSelectors.cjs` and `meta/__tests__/runnerLiteralSelectors.test.ts`: clean.
-- Both commits went through the husky pre-commit hook without `--no-verify`.
+- `npx prettier --check` over exactly the two IN-02 tsx files: clean.
+- `npx eslint --no-cache` over the two IN-02 files: 0 errors (one pre-existing `import-x/no-named-as-default-member` warning at `FocusRowStrip/index.tsx:292`, unrelated to this change).
+- `pnpm exec jest meta/__tests__/runnerLiteralSelectors.test.ts`: 69/69 pass.
+- `pnpm lint:src` (cold, `.eslintcache-src` removed first): 0 errors, 1068 pre-existing warnings, `production: PASS`.
+- `npx tsc --noEmit -p .`: no errors (about 15 s).
+- Earlier WR-01/WR-02 verification (prettier over the two meta files, cold `eslint --no-cache` over `src/frontend` and `src/backend` with 0 runner-literal hits) stands; those files were not touched in this pass.
+- All commits went through the husky pre-commit hook without `--no-verify`.
 
 ---
 
