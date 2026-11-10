@@ -192,6 +192,68 @@ describe('libraryState collections', () => {
     expect(writes).toHaveLength(before)
   })
 
+  describe('category actions never mutate the prior object', () => {
+    const seed = (value: Record<string, string[]>) => {
+      const prior = Object.freeze(
+        Object.fromEntries(
+          Object.entries(value).map(([k, v]) => [k, Object.freeze([...v])])
+        )
+      ) as Record<string, string[]>
+      useLibraryState.setState({ customCategories: prior })
+      return { prior, snapshot: structuredClone(value) }
+    }
+
+    it('setCustomCategory builds a new object', () => {
+      const { prior, snapshot } = seed({ a: ['g'] })
+      expect(() => lib().setCustomCategory('b')).not.toThrow()
+      expect(lib().customCategories).not.toBe(prior)
+      expect(lib().customCategories).toEqual({ a: ['g'], b: [] })
+      expect(prior).toEqual(snapshot)
+    })
+
+    it('removeCustomCategory builds a new object and persists it', () => {
+      const { prior, snapshot } = seed({ a: ['g'], b: [] })
+      expect(() => lib().removeCustomCategory('a')).not.toThrow()
+      expect(lib().customCategories).not.toBe(prior)
+      expect(lib().customCategories).toEqual({ b: [] })
+      expect(prior).toEqual(snapshot)
+      expect(writes.at(-1)).toEqual(['games.customCategories', { b: [] }])
+    })
+
+    it('renameCustomCategory builds a new object, newName last', () => {
+      const { prior, snapshot } = seed({ a: ['g'], b: [] })
+      expect(() => lib().renameCustomCategory('a', 'z')).not.toThrow()
+      expect(lib().customCategories).not.toBe(prior)
+      expect(Object.keys(lib().customCategories)).toEqual(['b', 'z'])
+      expect(lib().customCategories.z).toEqual(['g'])
+      expect(prior).toEqual(snapshot)
+      expect(writes).toContainEqual([
+        'games.customCategories',
+        { b: [], z: ['g'] }
+      ])
+    })
+
+    it('addGameToCustomCategory builds new object and array', () => {
+      const { prior, snapshot } = seed({ c: ['g1'] })
+      expect(() => lib().addGameToCustomCategory('c', 'g2')).not.toThrow()
+      expect(lib().customCategories).not.toBe(prior)
+      expect(lib().customCategories.c).not.toBe(prior.c)
+      expect(lib().customCategories.c).toEqual(['g1', 'g2'])
+      expect(prior).toEqual(snapshot)
+      lib().addGameToCustomCategory('new', 'g')
+      expect(lib().customCategories).toEqual({ c: ['g1', 'g2'], new: ['g'] })
+    })
+
+    it('never mutates the store initial {}', () => {
+      resetAllStores()
+      lib().setCustomCategory('x')
+      lib().renameCustomCategory('x', 'y')
+      lib().addGameToCustomCategory('y', 'g')
+      resetAllStores()
+      expect(lib().customCategories).toEqual({})
+    })
+  })
+
   it('readInitialLibrary reads configStore and the new localStorage key', () => {
     config['games.hidden'] = [{ appName: 'h', title: 'H' }]
     config['games.favourites'] = [{ appName: 'f', title: 'F' }]
