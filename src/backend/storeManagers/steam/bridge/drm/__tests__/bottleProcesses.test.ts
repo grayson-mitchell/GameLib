@@ -10,7 +10,44 @@ jest.mock('../../../bridgeBottleLifecycle', () => ({
   endPerGameBridgeBottleSession: jest.fn()
 }))
 
-import { pidsOfBottleSession, pidsWithCwdInBottle } from '../bottleProcesses'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
+import type { ManagerDeps } from 'backend/services/types'
+import {
+  defaultListBottleProcesses,
+  pidsOfBottleSession,
+  pidsWithCwdInBottle
+} from '../bottleProcesses'
+
+describe('defaultListBottleProcesses', () => {
+  it('lists through the runner with the 3 s bound', async () => {
+    const runner = createScriptedRunner([
+      {
+        cmd: '/bin/ps',
+        result: {
+          stdout: ' 7 1.5 /x/wine64 C:\\a.exe /b/B-1/z\n 8 0.0 /bin/zsh\n'
+        }
+      }
+    ])
+    const out = await defaultListBottleProcesses(
+      { runner } as unknown as Pick<ManagerDeps, 'runner'>,
+      '/b/B-1'
+    )
+    expect(out).toEqual(['7:1.5:a.exe'])
+    expect(runner.calls[0]?.opts).toMatchObject({ timeoutMs: 3000, stdin: '' })
+  })
+
+  it('returns nothing when the listing fails', async () => {
+    const runner = createScriptedRunner([
+      { cmd: '/bin/ps', result: { code: 1 } }
+    ])
+    await expect(
+      defaultListBottleProcesses(
+        { runner } as unknown as Pick<ManagerDeps, 'runner'>,
+        '/b'
+      )
+    ).resolves.toEqual([])
+  })
+})
 
 describe('pidsOfBottleSession', () => {
   const dir = '/Users/u/Library/Application Support/CrossOver/Bottles/B-1'

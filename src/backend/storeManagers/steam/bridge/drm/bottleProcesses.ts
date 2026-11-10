@@ -1,13 +1,13 @@
 /**
  * The wine-process half of the `bottle-stage` DrmStep: listing a bottle's live
  * processes for the reg add timeout log, and ending the stage's own wine
- * session. Every spawn goes through runBoundedListing, which owns the unref'd
- * timer (sidecar exit contract).
+ * session. Every spawn goes through the bounded listing on the process runner,
+ * which owns the unref'd timer (sidecar exit contract).
  */
 import { logInfo, LogPrefix } from 'backend/logger'
 import { endPerGameBridgeBottleSession } from '../../bridgeBottleLifecycle'
 import type { ManagerDeps } from 'backend/services/types'
-import { runBoundedListing } from './boundedListing'
+import { createRunBoundedListing } from './boundedListing'
 
 /**
  * `<pid>:<pcpu>:<basename>` for processes whose command line mentions the
@@ -15,11 +15,12 @@ import { runBoundedListing } from './boundedListing'
  * binary name, never by splitting on spaces (paths hold "Application Support").
  */
 export async function defaultListBottleProcesses(
+  deps: Pick<ManagerDeps, 'runner'>,
   bottleDir: string
 ): Promise<string[]> {
-  // Sidecar exit contract (56-REVIEW WR-02): runBoundedListing owns the 3 s
-  // bound with an unref'd timer and unrefs the child and its pipes.
-  const listing = await runBoundedListing(
+  // Sidecar exit contract (56-REVIEW WR-02): the runner owns the 3 s bound
+  // with an unref'd timer and unrefs the child and its pipes.
+  const listing = await createRunBoundedListing(deps)(
     '/bin/ps',
     ['-axww', '-o', 'pid=,pcpu=,command='],
     { timeoutMs: 3000, maxBuffer: 4 * 1024 * 1024 }
@@ -115,9 +116,13 @@ export function pidsWithCwdInBottle(
 }
 
 /** stdout of a bounded listing command; lsof exits 1 on any unreadable pid. */
-async function listingOutput(file: string, argv: string[]): Promise<string> {
-  // Sidecar exit contract (56-REVIEW WR-02): see runBoundedListing.
-  const listing = await runBoundedListing(file, argv, {
+async function listingOutput(
+  deps: Pick<ManagerDeps, 'runner'>,
+  file: string,
+  argv: string[]
+): Promise<string> {
+  // Sidecar exit contract (56-REVIEW WR-02): see createRunBoundedListing.
+  const listing = await createRunBoundedListing(deps)(file, argv, {
     timeoutMs: 3000,
     maxBuffer: 16 * 1024 * 1024
   })
@@ -147,9 +152,9 @@ export async function defaultEndStageSession(
   }
   try {
     const [psEnvOut, psOut, lsofOut] = await Promise.all([
-      listingOutput('/bin/ps', ['-axwwE', '-o', 'pid=,command=']),
-      listingOutput('/bin/ps', ['-axww', '-o', 'pid=,command=']),
-      listingOutput('/usr/sbin/lsof', ['-nP', '-d', 'cwd', '-F', 'pn'])
+      listingOutput(deps, '/bin/ps', ['-axwwE', '-o', 'pid=,command=']),
+      listingOutput(deps, '/bin/ps', ['-axww', '-o', 'pid=,command=']),
+      listingOutput(deps, '/usr/sbin/lsof', ['-nP', '-d', 'cwd', '-F', 'pn'])
     ])
     const pids = [
       ...new Set([

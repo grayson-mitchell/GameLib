@@ -319,7 +319,8 @@ export async function stageDrmBottle(
         const logTimeoutListing = async () => {
           try {
             const procs = await (
-              deps.listBottleProcesses ?? defaultListBottleProcesses
+              deps.listBottleProcesses ??
+              ((dir) => defaultListBottleProcesses(deps, dir))
             )(bottleDir)
             const line = `stageDrmBottle: appId ${input.appId} bottle processes at timeout: ${procs.slice(0, 20).join(',')}`
             logWarning(line, LogPrefix.Steam)

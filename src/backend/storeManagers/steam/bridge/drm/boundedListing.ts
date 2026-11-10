@@ -1,25 +1,17 @@
 /**
- * A bounded, loop-releasing run of a short listing command (`ps`, `lsof`).
+ * A bounded run of a short listing command (`ps`, `lsof`) on the process runner.
  *
  * Sidecar exit contract, half 1 (56-REVIEW WR-02): no handle may hold the event
- * loop past stdin EOF. `ChildProcess.unref()` alone does not do that for an
- * `execFile` child. Measured with Node v22:
+ * loop past stdin EOF. The runner owns that (it unrefs the child, its pipes and
+ * the kill timer), so this is a thin mapper. The promise never rejects: a
+ * non-zero exit, a timeout, an overrun buffer or a spawn failure all map to
+ * `error: true`. If the loop drains first it simply never settles, which is what
+ * a caller racing stdin EOF wants.
  *
- *   - `execFile(..., { timeout })` plus `child.unref()` still holds the loop
- *     for the child's whole lifetime: the stdout/stderr pipes stay ref'd.
- *   - unref'ing the pipes too still holds it until the child exits, because
- *     execFile's own `timeout` kill timer is ref'd and cannot be reached.
- *   - no `timeout` option, our own unref'd kill timer, and unref on the child
- *     and both pipes: the loop drains at once.
- *
- * So the bound is owned here, not by execFile. The kill timer is unref'd and
- * cleared once the child exits. The promise never rejects; if the loop drains
- * first it simply never settles, which is what a caller racing stdin EOF wants.
- *
- * Kept free of other GameLib imports so a test can compile it alone and run it
- * in a plain node child to measure the drain.
+ * Kept free of other GameLib imports (types only) so a test can compile it
+ * together with the runner and run it in a plain node child to measure the drain.
  */
-import { execFile } from 'node:child_process'
+import type { ProcessRunner } from '../../../../process/types'
 
 interface BoundedListingResult {
   /** True when the child failed, was killed by the bound, or overran maxBuffer. */
@@ -27,32 +19,24 @@ interface BoundedListingResult {
   stdout: string
 }
 
-export function runBoundedListing(
-  file: string,
-  argv: string[],
-  options: { timeoutMs: number; maxBuffer: number }
-): Promise<BoundedListingResult> {
-  return new Promise<BoundedListingResult>((resolveOut) => {
-    let kill: ReturnType<typeof setTimeout> | undefined = undefined
-    const child = execFile(
-      file,
-      argv,
-      { maxBuffer: options.maxBuffer },
-      (error, stdout) => {
-        if (kill !== undefined) clearTimeout(kill)
-        resolveOut({ error: error !== null, stdout: String(stdout ?? '') })
-      }
-    )
-    kill = setTimeout(() => {
-      try {
-        child.kill('SIGKILL')
-      } catch {
-        // already gone
-      }
-    }, options.timeoutMs)
-    kill.unref?.()
-    child.unref?.()
-    ;(child.stdout as { unref?: () => void } | null)?.unref?.()
-    ;(child.stderr as { unref?: () => void } | null)?.unref?.()
-  })
+export function createRunBoundedListing(deps: {
+  runner: Pick<ProcessRunner, 'run'>
+}) {
+  return async function runBoundedListing(
+    file: string,
+    argv: string[],
+    options: { timeoutMs: number; maxBuffer: number }
+  ): Promise<BoundedListingResult> {
+    try {
+      const result = await deps.runner.run(file, argv, {
+        timeoutMs: options.timeoutMs,
+        maxBufferBytes: options.maxBuffer,
+        stdin: ''
+      })
+      const failed = result.code !== 0 || result.timedOut || result.truncated
+      return { error: failed, stdout: result.stdout }
+    } catch {
+      return { error: true, stdout: '' }
+    }
+  }
 }
