@@ -4,13 +4,13 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 69 context gathered
-last_updated: "2026-11-10T17:43:30.924Z"
+last_updated: "2026-11-10T17:52:41.356Z"
 last_activity: 2026-11-10
 progress:
   total_phases: 18
   completed_phases: 12
   total_plans: 252
-  completed_plans: 243
+  completed_plans: 244
   percent: 67
 ---
 
@@ -73,11 +73,11 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 66.2 (every-backend-spawn-through-the-process-runner) — EXECUTING
-Plan: 4 of 12
+Plan: 5 of 12
 Status: Ready to execute
-Last activity: 2026-11-11 - Completed quick task 261111-9b7: Stop button ends Steam-launched games by PID
+Last activity: 2026-11-10
 
-Progress: [██████████] 96%
+Progress: [██████████] 97%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -705,7 +705,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-10T17:43:30.915Z
+Last session: 2026-11-10T17:52:41.347Z
 Stopped at: Phase 69 context gathered
 Resume file: None
 
