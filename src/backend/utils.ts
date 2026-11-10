@@ -977,7 +977,7 @@ export async function downloadDefaultWine(deps: {
     'wine-releases',
     []
   )
-  const isMacOSUpToDate = await isMacSonomaOrHigher()
+  const isMacOSUpToDate = isMacSonomaOrHigher()
   const release = availableWine.find((version) => {
     if (isLinux) {
       return version.type === 'Proton-CachyOS'
@@ -1459,7 +1459,7 @@ export async function checkRosettaInstall() {
   }
 }
 
-export async function isMacSonomaOrHigher() {
+export function isMacSonomaOrHigher(): boolean {
   if (!isMac) return false
   logInfo('Checking if macOS is Sonoma or higher', LogPrefix.Backend)
 

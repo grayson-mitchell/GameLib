@@ -1,4 +1,4 @@
-import shlex from 'shlex'
+import { split } from 'shlex'
 
 import type { GameSettings } from 'common/types'
 import type { ProcessRunner } from './process/types'
@@ -65,7 +65,7 @@ export function buildGameScopeCommand({
 
   if (showMangohud) cmd.push('--mangoapp')
 
-  cmd.push(...shlex.split(settings.additionalOptions ?? ''))
+  cmd.push(...split(settings.additionalOptions ?? ''))
 
   // Note: needs to be the last option
   cmd.push('--')

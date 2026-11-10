@@ -122,54 +122,70 @@ type FamilyBuilders = {
  * reads must not load its module, and a literal `require` of a stores module is exactly what the
  * "no call-time stores require" gate looks for.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function load(path: string): any {
+type StoresFactory = (arg?: { registry: StoreRegistry }) => never
+
+function load(path: string, factory: string): StoresFactory {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return require(path)
+  const mod = require(path) as Record<string, StoresFactory | undefined>
+  const fn = mod[factory]
+  if (!fn) throw new Error(`${path} does not export ${factory}`)
+  return fn
 }
 
 function familyBuilders(): FamilyBuilders {
   return {
     kvs: (registry) =>
-      load('../constants/key_value_stores').createKvsStores({ registry }),
+      load('../constants/key_value_stores', 'createKvsStores')({ registry }),
     crossoverIndex: () =>
-      load('../crossover_index/stores').createCrossoverIndexStores(),
+      load('../crossover_index/stores', 'createCrossoverIndexStores')(),
     downloadManager: (registry) =>
-      load('../downloadmanager/stores').createDownloadManagerStores({
+      load(
+        '../downloadmanager/stores',
+        'createDownloadManagerStores'
+      )({
         registry
       }),
     gameOverrides: (registry) =>
-      load('../game_overrides/stores').createGameOverridesStores({
+      load(
+        '../game_overrides/stores',
+        'createGameOverridesStores'
+      )({
         registry
       }),
     humble: (registry) =>
-      load('../humble/stores').createHumbleStores({ registry }),
+      load('../humble/stores', 'createHumbleStores')({ registry }),
     logger: (registry) =>
-      load('../logger/stores').createLoggerStores({ registry }),
+      load('../logger/stores', 'createLoggerStores')({ registry }),
     macArch: (registry) =>
-      load('../macArch/stores').createMacArchStores({ registry }),
+      load('../macArch/stores', 'createMacArchStores')({ registry }),
     migration: (registry) =>
-      load('../migration/stores').createMigrationStores({ registry }),
+      load('../migration/stores', 'createMigrationStores')({ registry }),
     runsForMe: (registry) =>
-      load('../runsForMe/stores').createRunsForMeStores({ registry }),
+      load('../runsForMe/stores', 'createRunsForMeStores')({ registry }),
     gog: (registry) =>
-      load('../storeManagers/gog/stores').createGogStores({ registry }),
+      load('../storeManagers/gog/stores', 'createGogStores')({ registry }),
     legendary: (registry) =>
-      load('../storeManagers/legendary/stores').createLegendaryStores({
+      load(
+        '../storeManagers/legendary/stores',
+        'createLegendaryStores'
+      )({
         registry
       }),
     nile: (registry) =>
-      load('../storeManagers/nile/stores').createNileStores({ registry }),
+      load('../storeManagers/nile/stores', 'createNileStores')({ registry }),
     sideload: (registry) =>
-      load('../storeManagers/sideload/stores').createSideloadStores({
+      load(
+        '../storeManagers/sideload/stores',
+        'createSideloadStores'
+      )({
         registry
       }),
     steam: (registry) =>
-      load('../storeManagers/steam/stores').createSteamStores({ registry }),
+      load('../storeManagers/steam/stores', 'createSteamStores')({ registry }),
     wikiGameInfo: () =>
-      load('../wiki_game_info/stores').createWikiGameInfoStores(),
+      load('../wiki_game_info/stores', 'createWikiGameInfoStores')(),
     wineManager: (registry) =>
-      load('../wine/manager/stores').createWineManagerStores({ registry })
+      load('../wine/manager/stores', 'createWineManagerStores')({ registry })
   }
 }
 

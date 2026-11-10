@@ -81,7 +81,6 @@ import { notify } from '../dialog/dialog'
 import { logDebug, logError, LogPrefix } from '../logger'
 import { backendEvents } from '../backend_events'
 import { t } from 'i18next'
-import type { WineCommandArgs } from 'common/types'
 import type {
   CommandRunner,
   Launcher,
@@ -91,6 +90,7 @@ import type {
 } from 'backend/services/types'
 import type {
   Runner,
+  WineCommandArgs,
   WineInstallation,
   WineManagerStatus,
   WineVersionInfo
@@ -365,7 +365,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
 
   ipcMain.handle(
     'winetricksQueueState',
-    async (_event: unknown, ...args: unknown[]) => {
+    (_event: unknown, ...args: unknown[]) => {
       const runner = args[0] as Runner
       const appName = args[1] as string
       return WinetricksQueue.getState(runner, appName)
@@ -374,7 +374,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
 
   ipcMain.handle(
     'winetricksCancelRemaining',
-    async (_event: unknown, ...args: unknown[]) => {
+    (_event: unknown, ...args: unknown[]) => {
       const runner = args[0] as Runner
       const appName = args[1] as string
       return WinetricksQueue.cancelRemaining(runner, appName)

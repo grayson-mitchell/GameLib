@@ -1458,7 +1458,7 @@ export async function validWine(
   const haveAll = necessary.every((binary) => existsSync(binary as string))
 
   if (isMac && type === 'toolkit') {
-    const isMacOSUpToDate = await isMacSonomaOrHigher()
+    const isMacOSUpToDate = isMacSonomaOrHigher()
     const isGPTKCompatible: boolean = isMacOSUpToDate
     if (!isGPTKCompatible) {
       return false

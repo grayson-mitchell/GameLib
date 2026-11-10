@@ -18,7 +18,10 @@
 import { hasCapability } from 'common/storeCapabilities'
 import type { GameSettings } from 'common/types'
 import type { EngineOption, EngineState } from 'common/types/engine'
-import { listEngineOverrideOptions } from './engineDecision'
+import {
+  killCrossoverWineserverWith,
+  listEngineOverrideOptions
+} from './engineDecision'
 import type { EngineDecisionDeps } from './engineDecision'
 import {
   engineIdOf,
@@ -27,7 +30,6 @@ import {
   resolveGlobalEngine
 } from './engineConfig'
 import type { EffectiveEngine, EngineConfigDeps } from './engineConfig'
-import { killCrossoverWineserverWith } from './engineDecision'
 import type { EngineServices } from './engineServices'
 import { getEngineState } from './engineState'
 import type { EngineStateDeps } from './engineState'
