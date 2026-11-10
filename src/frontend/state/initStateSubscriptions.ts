@@ -30,7 +30,10 @@ import useSettingsState, {
   wasFocusRowPickedThisSession
 } from './settingsState'
 import useAuthState, { readInitialAuth } from './authState'
-import useLibraryState, { readInitialLibrary } from './libraryState'
+import useLibraryState, {
+  readInitialLibrary,
+  registerLibrarySideEffects
+} from './libraryState'
 import { normalizeSignInDismissals } from 'common/signInDismissal'
 import { registerDownloadsListeners } from './downloadsState'
 import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
@@ -168,6 +171,15 @@ export function initStateSubscriptions(): void {
     handleSteamBottleLaunchWaitingSignal
   )
 
+  // Game metadata (override) changes and game pushes update the library.
+  window.api.handleMetadataChanged((e, overrides) => {
+    useLibraryState.getState().updateGameOverrides(overrides)
+  })
+
+  window.api.handleGamePush((e, args) => {
+    useLibraryState.getState().applyGamePush(args)
+  })
+
   // Phase 69 D-15: completed-downloads list, boot pull + queue-change refresh.
   registerDownloadsListeners()
 
@@ -175,6 +187,34 @@ export function initStateSubscriptions(): void {
 
   // (3) store.subscribe side effects (D-08)
   registerSettingsSideEffects()
+  registerLibrarySideEffects()
+}
+
+/**
+ * componentDidMount (post-await): when no updates are held yet, restore the
+ * last persisted list from localStorage 'updates'.
+ */
+export function restoreStoredGameUpdates(): void {
+  if (!useLibraryState.getState().gameUpdates.length) {
+    const storedGameUpdates = JSON.parse(
+      window.localStorage.getItem('updates') || '[]'
+    ) as string[]
+    useLibraryState.setState({ gameUpdates: storedGameUpdates })
+  }
+}
+
+/**
+ * The mount-time refresh's runInBackground: true when any of the four store
+ * libraries already holds games.
+ */
+export function shouldRunInBackgroundAtMount(): boolean {
+  const lib = useLibraryState.getState()
+  return (
+    lib.epicLibrary.length !== 0 ||
+    lib.gogLibrary.length !== 0 ||
+    lib.amazonLibrary.length !== 0 ||
+    lib.steamLibrary.length !== 0
+  )
 }
 
 /**

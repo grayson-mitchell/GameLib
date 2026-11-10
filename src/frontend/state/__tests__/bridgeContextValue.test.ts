@@ -87,15 +87,6 @@ describe('bridgeContextValue', () => {
     expect(spy).toHaveBeenCalledTimes(1)
   })
 
-  const classPart = () => {
-    return {
-      epicLibrary: [],
-      gogLibrary: [],
-      amazonLibrary: [],
-      steamLibrary: []
-    }
-  }
-
   it('bridgedAccounts composites keep their keys and follow authState identities', () => {
     useAuthState.setState({
       epicUsername: 'e',
@@ -105,8 +96,7 @@ describe('bridgeContextValue', () => {
       steamUsername: 's',
       humble: { isLoggedIn: true, username: 'h', keys: [] }
     })
-    const parts = classPart()
-    const accounts = bridge.bridgedAccounts(parts)
+    const accounts = bridge.bridgedAccounts()
     expect(Object.keys(accounts)).toEqual([
       'epic',
       'gog',
@@ -142,7 +132,7 @@ describe('bridgeContextValue', () => {
     ])
 
     useAuthState.setState({ epicUsername: null })
-    expect(bridge.bridgedAccounts(parts).epic.username).toBeNull()
+    expect(bridge.bridgedAccounts().epic.username).toBeNull()
   })
 
   it('the slice carries the sign-in notice state and actions, and authState changes notify', () => {
@@ -189,5 +179,33 @@ describe('bridgeContextValue', () => {
     })
     useLibraryState.setState({ favouriteGames: [] })
     expect(fired).toBe(1)
+  })
+
+  it('serves the libraries and refresh state from libraryState', async () => {
+    const useLibraryState = (await import('../libraryState')).default
+    const g = (n: string) => ({ app_name: n }) as never
+    useLibraryState.setState({
+      epicLibrary: [g('e')],
+      gogLibrary: [g('g')],
+      amazonLibrary: [g('a')],
+      steamLibrary: [g('s')],
+      sideloadedLibrary: [g('sl')],
+      gameUpdates: ['u'],
+      refreshing: true,
+      refreshingInTheBackground: false,
+      refreshingByRunner: { gog: true }
+    })
+    const accounts = bridge.bridgedAccounts()
+    expect(accounts.epic.library).toHaveLength(1)
+    expect(accounts.gog.library).toHaveLength(1)
+    expect(accounts.amazon.library).toHaveLength(1)
+    expect(accounts.steam.library).toHaveLength(1)
+    const slice = bridge.bridgedContextSlice()
+    expect(slice.sideloadedLibrary).toHaveLength(1)
+    expect(slice.gameUpdates).toEqual(['u'])
+    expect(slice.refreshing).toBe(true)
+    expect(slice.refreshingInTheBackground).toBe(false)
+    expect(slice.refreshingByRunner).toEqual({ gog: true })
+    expect(slice.refresh).toBe(useLibraryState.getState().refresh)
   })
 })

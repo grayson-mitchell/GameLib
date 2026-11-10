@@ -515,8 +515,8 @@ describe('useTauriOAuthLogin — completion callback drives the real GlobalState
 
     const refreshLibrary = jest.fn(() => Promise.resolve())
     const resetRunnerLibrary = jest.fn()
-    installLibraryBridgeSlots({
-      refreshLibrary,
+    installLibraryBridgeSlots({ refreshLibrary })
+    useLibraryState.setState({
       resetRunnerLibrary,
       setRefreshing: jest.fn()
     })

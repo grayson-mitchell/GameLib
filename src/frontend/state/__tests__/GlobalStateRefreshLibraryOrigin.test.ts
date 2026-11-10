@@ -107,9 +107,11 @@ function refreshLibraryLogLineNeverPrintsUndefined(
  * history, `debug/steam-relogin-no-autorefresh`, is unrelated).
  */
 function refreshingGuardAndResetUnchanged(strippedSource: string): boolean {
-  const hasGuard = strippedSource.includes('if (this.state.refreshing) return')
+  const hasGuard = strippedSource.includes(
+    'if (libraryAtStart.refreshing) return'
+  )
   const hasReset = strippedSource.includes(
-    'this.setState({ refreshing: false })'
+    'useLibraryState.setState({ refreshing: false })'
   )
   return hasGuard && hasReset
 }
@@ -239,7 +241,7 @@ describe('GlobalState.tsx refreshLibrary — origin-tagged, never prints undefin
       '    library = undefined,',
       "    origin = 'unknown'",
       '  }: RefreshLibraryOptions): Promise<void> => {',
-      '    if (this.state.refreshing) return',
+      '    if (libraryAtStart.refreshing) return',
       '',
       "    const runnerScope = library ?? 'all'",
       '    window.api.logInfo(`[refreshLibrary] runner=${runnerScope} origin=${origin}`)',
@@ -248,7 +250,7 @@ describe('GlobalState.tsx refreshLibrary — origin-tagged, never prints undefin
       '      return await this.refresh(library, checkForUpdates)',
       '    } catch (error) {',
       '      window.api.logError(`Library refresh failed: ${String(error)}`)',
-      '      this.setState({ refreshing: false })',
+      '      useLibraryState.setState({ refreshing: false })',
       '    }',
       '  }',
       '}'
@@ -267,7 +269,7 @@ describe('GlobalState.tsx refreshLibrary — origin-tagged, never prints undefin
       '    library = undefined,',
       "    origin = 'unknown'",
       '  }: RefreshLibraryOptions): Promise<void> => {',
-      '    if (this.state.refreshing) return',
+      '    if (libraryAtStart.refreshing) return',
       '',
       '    window.api.logInfo(`Refreshing ${library} Library`)',
       '    try {',
@@ -275,7 +277,7 @@ describe('GlobalState.tsx refreshLibrary — origin-tagged, never prints undefin
       '      return await this.refresh(library, checkForUpdates)',
       '    } catch (error) {',
       '      window.api.logError(`Library refresh failed: ${String(error)}`)',
-      '      this.setState({ refreshing: false })',
+      '      useLibraryState.setState({ refreshing: false })',
       '    }',
       '  }',
       '}'
@@ -292,7 +294,7 @@ describe('GlobalState.tsx refreshLibrary — origin-tagged, never prints undefin
       '    runInBackground = true,',
       '    library = undefined',
       '  }: RefreshLibraryOptions): Promise<void> => {',
-      '    if (this.state.refreshing) return',
+      '    if (libraryAtStart.refreshing) return',
       '',
       "    const runnerScope = library ?? 'all'",
       '    window.api.logInfo(`[refreshLibrary] runner=${runnerScope}`)',
@@ -301,7 +303,7 @@ describe('GlobalState.tsx refreshLibrary — origin-tagged, never prints undefin
       '      return await this.refresh(library, checkForUpdates)',
       '    } catch (error) {',
       '      window.api.logError(`Library refresh failed: ${String(error)}`)',
-      '      this.setState({ refreshing: false })',
+      '      useLibraryState.setState({ refreshing: false })',
       '    }',
       '  }',
       '}'
@@ -313,7 +315,7 @@ describe('GlobalState.tsx refreshLibrary — origin-tagged, never prints undefin
   it('self-test: refreshingGuardAndResetUnchanged REJECTS a shape missing the catch-block reset', () => {
     const missingResetShape = [
       'refreshLibrary = async () => {',
-      '  if (this.state.refreshing) return',
+      '  if (libraryAtStart.refreshing) return',
       '  try {',
       '    await window.api.refreshLibrary(library)',
       '  } catch (error) {',

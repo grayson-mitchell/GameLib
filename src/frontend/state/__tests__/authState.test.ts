@@ -334,7 +334,9 @@ describe('authState login/logout actions', () => {
     installLibraryBridgeSlots({
       refreshLibrary: async (o) => {
         libraryCalls.push(['refresh', o])
-      },
+      }
+    })
+    useLibraryState.setState({
       resetRunnerLibrary: (r) => {
         libraryCalls.push(['reset', r])
       },

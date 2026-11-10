@@ -114,6 +114,8 @@ const MOVED_LISTENERS = [
   'handleInstallGame',
   'handleCrossoverIndexChanged',
   'handleRunsForMeChanged',
+  'handleMetadataChanged',
+  'handleGamePush',
   'handleSteamBottleSetupRequired',
   'handleSteamClientSetupRequired',
   'handleSteamBridgeSetupRequired',
@@ -220,6 +222,76 @@ describe('initStateSubscriptions', () => {
     handlers.get('handleRunsForMeChanged')?.[0]?.({}, {})
     expect(useLibraryState.getState().crossoverRatings).toEqual({ b: null })
     expect(useLibraryState.getState().runsForMe).toEqual({})
+  })
+
+  it('a game push and a metadata change update libraryState', () => {
+    init.initStateSubscriptions()
+    handlers.get('handleGamePush')?.[0]?.(
+      {},
+      {
+        app_name: 'g',
+        runner: 'gog',
+        title: 'G'
+      }
+    )
+    expect(useLibraryState.getState().gogLibrary).toHaveLength(1)
+    const overrides = { g: { wineVersion: 'w' } }
+    handlers.get('handleMetadataChanged')?.[0]?.({}, overrides)
+    expect(useLibraryState.getState().gameOverrides).toBe(overrides)
+  })
+
+  it('gameUpdates changes persist to localStorage updates (from boot)', () => {
+    const written: string[] = []
+    const w = window as unknown as { localStorage: unknown }
+    const prior = w.localStorage
+    w.localStorage = {
+      getItem: () => null,
+      setItem: (k: string, v: string) => {
+        if (k === 'updates') written.push(v)
+      }
+    }
+    try {
+      init.initStateSubscriptions()
+      useLibraryState.setState({ gameUpdates: ['a'] })
+      // listeners from earlier boots stay registered (D-07), so assert the ends
+      expect(written[0]).toBe('[]')
+      expect(written.at(-1)).toBe('["a"]')
+    } finally {
+      w.localStorage = prior
+    }
+  })
+
+  it('restoreStoredGameUpdates restores only when none are held', () => {
+    const w = window as unknown as { localStorage: unknown }
+    const prior = w.localStorage
+    w.localStorage = { getItem: () => '["x"]', setItem: () => undefined }
+    try {
+      init.restoreStoredGameUpdates()
+      expect(useLibraryState.getState().gameUpdates).toEqual(['x'])
+      useLibraryState.setState({ gameUpdates: ['held'] })
+      init.restoreStoredGameUpdates()
+      expect(useLibraryState.getState().gameUpdates).toEqual(['held'])
+    } finally {
+      w.localStorage = prior
+    }
+  })
+
+  it('shouldRunInBackgroundAtMount is true when any store library has games', () => {
+    expect(init.shouldRunInBackgroundAtMount()).toBe(false)
+    const g = [{ app_name: 'a' }] as never
+    for (const key of [
+      'epicLibrary',
+      'gogLibrary',
+      'amazonLibrary',
+      'steamLibrary'
+    ]) {
+      useLibraryState.setState({ [key]: g })
+      expect(init.shouldRunInBackgroundAtMount()).toBe(true)
+      useLibraryState.setState({ [key]: [] })
+    }
+    // sideloaded alone does not count
+    useLibraryState.setState({ sideloadedLibrary: g })
+    expect(init.shouldRunInBackgroundAtMount()).toBe(false)
   })
 
   it('a failed pull logs the same messages', async () => {

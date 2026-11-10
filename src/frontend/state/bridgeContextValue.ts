@@ -65,6 +65,12 @@ type BridgedKeys =
   | 'hiddenGames'
   | 'favouriteGames'
   | 'customCategories'
+  | 'sideloadedLibrary'
+  | 'gameUpdates'
+  | 'refresh'
+  | 'refreshing'
+  | 'refreshingInTheBackground'
+  | 'refreshingByRunner'
 
 /** Subscribes `onChange` to every bridged store. Lasts for the app's life (D-07). */
 export function subscribeBridge(onChange: () => void): void {
@@ -150,44 +156,44 @@ export function bridgedContextSlice(): Pick<ContextType, BridgedKeys> {
       addCategory: library.setCustomCategory,
       removeCategory: library.removeCustomCategory,
       renameCategory: library.renameCustomCategory
-    }
+    },
+    sideloadedLibrary: library.sideloadedLibrary,
+    gameUpdates: library.gameUpdates,
+    refresh: library.refresh,
+    refreshing: library.refreshing,
+    refreshingInTheBackground: library.refreshingInTheBackground,
+    refreshingByRunner: library.refreshingByRunner
   }
-}
-
-/** What the class still owns of the account composites: the libraries. */
-interface AccountsClassPart {
-  epicLibrary: ContextType['epic']['library']
-  gogLibrary: ContextType['gog']['library']
-  amazonLibrary: ContextType['amazon']['library']
-  steamLibrary: ContextType['steam']['library']
 }
 
 /**
  * The epic/gog/amazon/steam/humble composites, built from authState identities
- * plus the class's libraries, with the same keys
- * unconverted consumers always saw.
+ * plus libraryState's libraries, with the same keys unconverted consumers
+ * always saw.
  */
-export function bridgedAccounts(
-  classPart: AccountsClassPart
-): Pick<ContextType, 'epic' | 'gog' | 'amazon' | 'steam' | 'humble'> {
+export function bridgedAccounts(): Pick<
+  ContextType,
+  'epic' | 'gog' | 'amazon' | 'steam' | 'humble'
+> {
   const auth = useAuthState.getState()
+  const library = useLibraryState.getState()
   // Logout writes null; ContextType types these as `string | undefined`.
   const name = (value: string | null | undefined) => value as string | undefined
   return {
     epic: {
-      library: classPart.epicLibrary,
+      library: library.epicLibrary,
       username: name(auth.epicUsername),
       login: auth.epicLogin,
       logout: auth.epicLogout
     },
     gog: {
-      library: classPart.gogLibrary,
+      library: library.gogLibrary,
       username: name(auth.gogUsername),
       login: auth.gogLogin,
       logout: auth.gogLogout
     },
     amazon: {
-      library: classPart.amazonLibrary,
+      library: library.amazonLibrary,
       user_id: name(auth.amazonUserId),
       username: name(auth.amazonUsername),
       getLoginData: auth.getAmazonLoginData,
@@ -195,7 +201,7 @@ export function bridgedAccounts(
       logout: auth.amazonLogout
     },
     steam: {
-      library: classPart.steamLibrary,
+      library: library.steamLibrary,
       username: auth.steamUsername,
       login: auth.steamLogin,
       logout: auth.steamLogout
