@@ -2186,6 +2186,9 @@ describe('HumbleUser', () => {
         expect(mockLogWarning).toHaveBeenCalled()
       })
 
+      // Since humble-storage-clear-reseed the storage step runs BEFORE the cookie
+      // step, so this holds by construction; the test now pins that a cookie-step
+      // rejection cannot retroactively un-run or fail storage (and stays resolving).
       test('F-6: a rejecting clearCookies step does not prevent the storage step from running', async () => {
         mockSeamClearCookies.mockRejectedValue(
           new Error('rust cookie clear failed')
@@ -2205,6 +2208,85 @@ describe('HumbleUser', () => {
           standardBrowserUserAgent()
         )
       })
+
+      // humble-storage-clear-reseed (live, Windows 2026-11-11): the storage
+      // step loads the LIVE Humble origin (storage is origin-scoped) and that
+      // page re-seeded 2 humblebundle.com cookies (jar census total 75->77,
+      // matched 0->2) behind a cookie census that had already read matched=0.
+      // Whichever step runs LAST decides what the jar holds, so storage must
+      // run FIRST and the cookie step -- whose `after` census is the closing
+      // read -- LAST. Behavioural, on both platform arms: the seam mocks record
+      // invocation order, so swapping the two wipeSteps back turns this red
+      // (the Epic equivalent had to be a source gate only because its mocked
+      // storage step sets no cookies; ordering itself is observable here).
+      // First recorded invocation order of a mock; throws (never silently
+      // passes a comparison against undefined) when it was never called.
+      const firstCallOrder = (m: jest.Mock): number => {
+        const at = m.mock.invocationCallOrder[0]
+        if (at === undefined) throw new Error('mock was never called')
+        return at
+      }
+      describe.each([
+        ['non-macOS', false],
+        ['macOS', true]
+      ])(
+        'wipe-step ORDER (%s): storage first, cookie step last',
+        (_label, mac) => {
+          test('clearStorage is invoked before EVERY jar-touching call of the cookie step (open, census reads, clearCookies)', async () => {
+            mockIsMac = mac
+
+            await HumbleUser.disconnect()
+
+            expect(mockSeamClearStorage.mock.invocationCallOrder).toHaveLength(
+              1
+            )
+            const storageAt = firstCallOrder(mockSeamClearStorage)
+
+            const cookieStepCalls = [
+              ...mockSeamOpen.mock.invocationCallOrder,
+              ...mockSeamCookiesForDomain.mock.invocationCallOrder,
+              ...mockSeamClearCookies.mock.invocationCallOrder
+            ]
+            // Guard against a vacuous pass: the cookie step really ran
+            // (open + before census + clear + after census = 4 calls).
+            expect(cookieStepCalls).toHaveLength(4)
+            for (const at of cookieStepCalls) {
+              expect(storageAt).toBeLessThan(at)
+            }
+          })
+
+          test("the cookie step's closing census read is the LAST jar read and follows clearCookies", async () => {
+            mockIsMac = mac
+
+            await HumbleUser.disconnect()
+
+            const reads = mockSeamCookiesForDomain.mock.invocationCallOrder
+            expect(reads).toHaveLength(2) // before, after
+            const clearAt = firstCallOrder(mockSeamClearCookies)
+            const storageAt = firstCallOrder(mockSeamClearStorage)
+            const closingRead = Math.max(...reads)
+            expect(closingRead).toBeGreaterThan(clearAt)
+            expect(closingRead).toBeGreaterThan(storageAt)
+          })
+
+          test('the storage log line precedes the cookie census log line (what the operator greps in gamelib.log)', async () => {
+            mockIsMac = mac
+
+            await HumbleUser.disconnect()
+
+            const logOrderOf = (needle: string): number => {
+              const idx = mockLogInfo.mock.calls.findIndex(([msg]) =>
+                typeof msg === 'string' ? msg.includes(needle) : false
+              )
+              expect(idx).toBeGreaterThan(-1)
+              return mockLogInfo.mock.invocationCallOrder[idx] ?? -1
+            }
+            expect(logOrderOf('cleared storage')).toBeLessThan(
+              logOrderOf('cookie census')
+            )
+          })
+        }
+      )
 
       test('F-6: only counts are logged for the storage step, never a storage key or value', async () => {
         mockSeamClearStorage.mockResolvedValue({
