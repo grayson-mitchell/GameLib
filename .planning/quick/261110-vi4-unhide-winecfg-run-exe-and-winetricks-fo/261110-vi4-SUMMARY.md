@@ -60,4 +60,6 @@ Needs `pnpm build:sidecar` then a restarted `pnpm tauri:dev` (tauri dev does not
 2. Click Winecfg. Expected: winecfg opens; its window title / About tab or `ps` shows it running with that bottle (`CX_BOTTLE=GameLibSteamBridge-<appId>` or `WINEPREFIX=.../GameLibSteamBridge-<appId>`), not `GameLibSteamBridge` or the bottled-Steam bottle.
 3. A Steam title still in the legacy shared `GameLibSteamBridge` bottle (or a bottled-Steam-only title): Wine tab shows no Winecfg/Run EXE and there is no Winetricks tab.
 
+**Result:** passed — operator confirmed all three steps 2026-11-11.
+
 ## Self-Check: PASSED
