@@ -136,8 +136,7 @@ export interface EngineDecisionDeps {
   wineManagerRoot: string
 }
 
-/** @public consumed through the lazy `require('./engineDecision')` in engineConfig.ts defaults, which knip cannot trace */
-export function defaultEngineDecisionDeps(): Omit<
+function defaultEngineDecisionDeps(): Omit<
   EngineDecisionDeps,
   'killCrossoverWineserver' | 'wineManagerReleases'
 > {
