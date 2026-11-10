@@ -82,6 +82,7 @@ jest.mock('../../storeManagers/steam/macSteamOffline', () => {
 })
 
 import { defined } from 'backend/testUtils/indexed'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { tmpdir } from 'os'
 import { isAbsolute, join, relative, resolve } from 'path'
 import { existsSync, mkdirSync, mkdtempSync } from 'node:fs'
@@ -767,7 +768,8 @@ describe('one-shot boot (D-08)', () => {
         release = resolve
       })
       fresh<typeof import('../bootstrap')>('../bootstrap').checkRosettaWhenMac(
-        i18nReady
+        i18nReady,
+        { runner: createScriptedRunner([]) }
       )
       await flush()
       expect(checkRosettaInstall).not.toHaveBeenCalled()

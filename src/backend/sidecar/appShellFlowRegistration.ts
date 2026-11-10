@@ -596,7 +596,11 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
         // reorders this block still cannot let a `detectVCRedist` throw skip the
         // `initQueue` scheduling above it.
         try {
-          detectVCRedist(deps)
+          // Async since 66.2-11 (the probe runs through the runner): a rejection is logged,
+          // never unhandled. `Promise.resolve` also tolerates a mocked synchronous return.
+          void Promise.resolve(detectVCRedist(deps)).catch((error: unknown) =>
+            logSendFailure('frontendReady -> detectVCRedist', error)
+          )
         } catch (error) {
           logSendFailure('frontendReady -> detectVCRedist', error)
         }

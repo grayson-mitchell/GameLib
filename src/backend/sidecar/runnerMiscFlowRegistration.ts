@@ -131,7 +131,7 @@ export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
   ipcMain.handle(
     'downloadRuntime',
     async (_event: unknown, ...args: unknown[]) =>
-      download(args[0] as RuntimeName)
+      download(deps, args[0] as RuntimeName)
   )
   ipcMain.handle(
     'isRuntimeInstalled',

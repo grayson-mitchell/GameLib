@@ -63,6 +63,7 @@ import {
 } from 'graceful-fs'
 import { installOrUpdateTool } from '../index'
 import { bindDxmtStores } from '../dxmt'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { checkWinemacMetalViewExports } from '../machoExports'
 import type { ReleasesInfo, WineVersionInfo } from 'common/types'
 import { defined } from 'backend/testUtils/indexed'
@@ -73,6 +74,7 @@ const installMock = installOrUpdateTool as jest.Mock
 const isOnlineMock = isOnline as jest.Mock
 // eslint-disable-next-line @typescript-eslint/unbound-method
 bindDxmtStores({
+  runner: createScriptedRunner([]),
   stores: {
     wineManager: { wineDownloaderInfoStore: mockWineDownloaderInfoStore }
   } as never
@@ -147,7 +149,7 @@ describe('wineVersionInstalled gate', () => {
     await flush()
 
     expect(installMock).toHaveBeenCalledTimes(1)
-    expect(installMock.mock.calls[0][0]).toEqual(
+    expect(installMock.mock.calls[0][1]).toEqual(
       expect.objectContaining({ name: 'dxmt' })
     )
     expect(checkMock).toHaveBeenCalledTimes(1)

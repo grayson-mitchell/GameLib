@@ -110,11 +110,19 @@ export interface LaunchEngineDeps {
     RunnerDeps
   isCrossoverMissing(): Promise<boolean>
   currentPinInstalled(): boolean
-  ensurePinned: typeof ensurePinnedEngineReportingStatus
+  ensurePinned: (
+    args: Omit<
+      Parameters<typeof ensurePinnedEngineReportingStatus>[0],
+      'processRunner'
+    >
+  ) => ReturnType<typeof ensurePinnedEngineReportingStatus>
   switchDeps(): Partial<EngineSwitchDeps> &
     Pick<
       EngineSwitchDeps,
-      'killWith' | 'installRemove' | 'resolveCrossoverBinDir'
+      | 'killWith'
+      | 'installRemove'
+      | 'resolveCrossoverBinDir'
+      | 'ensurePinEngine'
     >
   prepare: typeof prepareBottleForEngine
   sendStatus(update: {
@@ -137,6 +145,7 @@ export interface LaunchEngineDeps {
 const defaultDeps: Omit<
   LaunchEngineDeps,
   | 'ensureGameBottle'
+  | 'ensurePinned'
   | 'decisionDeps'
   | 'switchDeps'
   | 'readEffective'
@@ -145,7 +154,6 @@ const defaultDeps: Omit<
   isMac: () => isMac,
   isProvisioned: isBottleProvisioned,
   currentPinInstalled: () => isPinnedEngineInstalled(ENGINE_PINS.current),
-  ensurePinned: ensurePinnedEngineReportingStatus,
   prepare: prepareBottleForEngine,
   sendStatus: (update) => sendGameStatusUpdate(update),
   recordDecision(id, decision, bottleName, prefix, effective) {
@@ -192,6 +200,11 @@ export async function selectEngineForLaunch(
   const d: LaunchEngineDeps = {
     ...defaultDeps,
     ensureGameBottle: (a) => ensureGameBottle(services, a),
+    ensurePinned: (a) =>
+      ensurePinnedEngineReportingStatus({
+        ...a,
+        processRunner: services.runner
+      }),
     switchDeps: () => switchServicesFrom(services),
     isCrossoverMissing: () => isCrossoverMissing({ runner: services.runner }),
     readEffective: (id) =>

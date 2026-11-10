@@ -75,6 +75,7 @@ import { isOnline } from 'backend/online_monitor'
 import { existsSync } from 'graceful-fs'
 import { installOrUpdateTool } from '../index'
 import { bindDxmtStores } from '../dxmt'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { checkWinemacMetalViewExports } from '../machoExports'
 import type { ReleasesInfo, WineVersionInfo } from 'common/types'
 
@@ -91,6 +92,7 @@ const isOnlineMock = isOnline as jest.Mock
 // instead would hit the TDZ, because `jest.mock` is hoisted above this declaration.
 // eslint-disable-next-line @typescript-eslint/unbound-method
 bindDxmtStores({
+  runner: createScriptedRunner([]),
   stores: {
     wineManager: { wineDownloaderInfoStore: mockWineDownloaderInfoStore }
   } as never
@@ -171,7 +173,7 @@ describe('boot-time DXMT fetch is gated on there being an installed wine to upda
     await flush()
 
     expect(installOrUpdateToolMock).toHaveBeenCalledTimes(1)
-    expect(installOrUpdateToolMock.mock.calls[0][0]).toEqual(
+    expect(installOrUpdateToolMock.mock.calls[0][1]).toEqual(
       expect.objectContaining({ name: 'dxmt', os: 'darwin' })
     )
   })

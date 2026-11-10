@@ -26,16 +26,8 @@ jest.mock('backend/constants/environment', () => ({
   isFlatpak: false
 }))
 
-// ── child_process — the probe's own transport; this suite asserts it is NEVER called ───────
-jest.mock('child_process', () => ({
-  ...jest.requireActual('child_process'),
-  exec: jest.fn()
-}))
-
-import { exec } from 'child_process'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { checkRosettaWhenMac } from '../bootstrap'
-
-const mockedExec = exec as unknown as jest.Mock
 
 /** Waits a few microtask/macrotask turns for fire-and-forget async work to progress. */
 async function flush(times = 6): Promise<void> {
@@ -45,19 +37,12 @@ async function flush(times = 6): Promise<void> {
 }
 
 describe('checkRosettaWhenMac() platform gate (todo 2026-09-06, quick-260908-k3x)', () => {
-  beforeEach(() => {
-    // resetMocks: true wipes factory-supplied implementations before EVERY test.
-    mockedExec.mockImplementation(
-      (_cmd: string, cb: (error: Error | null, result?: unknown) => void) => {
-        cb(null, { stdout: 'sysctl.proc_translated: 1', stderr: '' })
-      }
-    )
-  })
-
-  it('never shells the arch probe off macOS', async () => {
-    checkRosettaWhenMac(Promise.resolve())
+  it('never runs the arch probe off macOS', async () => {
+    // An empty script: any process call would throw "unscripted process call".
+    const runner = createScriptedRunner([])
+    checkRosettaWhenMac(Promise.resolve(), { runner })
     await flush()
 
-    expect(mockedExec).not.toHaveBeenCalled()
+    expect(runner.calls).toHaveLength(0)
   })
 })

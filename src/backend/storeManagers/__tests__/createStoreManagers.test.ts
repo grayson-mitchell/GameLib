@@ -221,7 +221,10 @@ describe('createStoreManagers: spawn and stop share one runner registry (checker
 
   it('the sideload stop path kills the sideload and wine children for its id', async () => {
     const runner = createScriptedRunner([])
-    const built = build({ runner })
+    const spawnAsync = jest.fn(() =>
+      Promise.resolve({ code: 0, stdout: '', stderr: '' })
+    )
+    const built = build({ runner, spawnAsync })
     const game = built.library.sideload.getGame('app-s')
     jest.spyOn(game, 'getGameInfo').mockReturnValue({
       runner: 'sideload',
@@ -230,13 +233,18 @@ describe('createStoreManagers: spawn and stop share one runner registry (checker
     } as unknown as GameInfo)
     jest.spyOn(game, 'isNative').mockReturnValue(false)
     jest.spyOn(game, 'getSettings').mockResolvedValue({
-      // wineserver points at nothing: shutdownWine's spawnSync fails harmlessly.
+      // shutdownWine runs wineserver -k through the injected spawnAsync (faked here).
       wineVersion: { wineserver: '/nonexistent/wineserver' },
       winePrefix: '/nonexistent/prefix'
     } as never)
 
     await game.stop()
 
+    expect(spawnAsync).toHaveBeenCalledWith(
+      '/nonexistent/wineserver',
+      ['-k'],
+      expect.objectContaining({ timeout: 15_000 })
+    )
     const kills = runner.calls
       .filter((c) => c.method === 'killTracked')
       .map((c) => c.opts)

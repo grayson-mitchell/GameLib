@@ -108,7 +108,8 @@ export default class SideloadGame implements Game {
           engineKeyFor(this.getGameInfo().runner, this.id),
           await this.getSettings()
         )
-        shutdownWine(this.deps, gameSettings)
+        // Awaited: the old blocking spawnSync finished before stop() returned (66.2-11).
+        await shutdownWine(this.deps, gameSettings)
       }
     }
   }

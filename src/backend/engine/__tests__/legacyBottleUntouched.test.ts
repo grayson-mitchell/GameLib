@@ -195,7 +195,8 @@ const deps = (): Partial<LaunchEngineDeps> => ({
     killWith,
     installRemove,
     resolveCrossoverBinDir: () => Promise.resolve('/cx/bin'),
-    currentPinEngine: () => null
+    currentPinEngine: () => null,
+    ensurePinEngine: () => Promise.resolve(null)
   })
 })
 

@@ -5,6 +5,7 @@
  * then `setting-up`) as a Steam one.
  */
 import type { Runner } from 'common/types'
+import type { ProcessRunner } from 'backend/process/types'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendGameStatusUpdate } from 'backend/utils'
 import type { EnginePin } from './enginePins'
@@ -26,9 +27,11 @@ export async function ensurePinnedEngineReportingStatus(args: {
   pin: EnginePin
   appName: string
   runner: Runner
+  /** The process runner the archive extraction runs through (66.2-11). */
+  processRunner: Pick<ProcessRunner, 'run'>
   signal?: AbortSignal
 }): Promise<PinnedEngineResult> {
-  const { pin, appName, runner, signal } = args
+  const { pin, appName, runner, processRunner, signal } = args
   // G1 (59-22): one overall percent across both archives, so the label never
   // resets when the Wine archive starts after the small DXVK one; verify and
   // unpack are their own phases instead of a "0%" download.
@@ -50,6 +53,7 @@ export async function ensurePinnedEngineReportingStatus(args: {
     })
   }
   const result = await ensurePinnedEngine(pin, {
+    runner: processRunner,
     signal,
     onProgress: (p) => {
       if (p.phase === 'downloading') {

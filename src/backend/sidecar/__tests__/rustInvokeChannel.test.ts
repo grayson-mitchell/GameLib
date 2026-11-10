@@ -29,6 +29,21 @@ jest.mock('../../online_monitor', () => ({
 import { defined } from 'backend/testUtils/indexed'
 import { PassThrough } from 'node:stream'
 import { bootFresh } from './helpers/sidecarHarness'
+
+// On a macOS host the boot's Rosetta probe runs through the scripted context runner (66.2-11);
+// answer it as installed so the boot emits no Rosetta dialog frame into the frames under test.
+const BOOT_OPTS = {
+  context: {
+    script: [
+      {
+        cmd: 'arch',
+        argv: ['-x86_64', '/usr/sbin/sysctl', 'sysctl.proc_translated'],
+        result: { stdout: 'sysctl.proc_translated: 1' },
+        repeat: true
+      }
+    ]
+  }
+}
 import {
   RUST_KEYRING_GET,
   RUST_CLIPBOARD_READ_TEXT,
@@ -51,7 +66,7 @@ function collectLines(stream: PassThrough): string[] {
   return lines
 }
 
-/** sidecarRpc from the registry bootFresh() just built (the top-level import would be stale). */
+/** sidecarRpc from the registry bootFresh(BOOT_OPTS) just built (the top-level import would be stale). */
 function freshRpc(): typeof import('../sidecarRpc') {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   return require('../sidecarRpc')
@@ -70,7 +85,7 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
 
   // Behavior 1: requestRustInvoke() writes exactly one well-formed rustInvoke frame.
   it('writes a single well-formed rustInvoke frame for an allowlisted channel', async () => {
-    const { input, output } = bootFresh()
+    const { input, output } = bootFresh(BOOT_OPTS)
     const lines = collectLines(output)
     const { requestRustInvoke } = freshRpc()
 
@@ -97,7 +112,7 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
 
   // Behavior 2: a synthetic {ok:true} response resolves the returned Promise.
   it('resolves the returned Promise when a matching {ok:true} response arrives', async () => {
-    const { input, output } = bootFresh()
+    const { input, output } = bootFresh(BOOT_OPTS)
     const lines = collectLines(output)
     const { requestRustInvoke } = freshRpc()
 
@@ -116,7 +131,7 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
 
   // Behavior 3: a synthetic {ok:false} response rejects the returned Promise.
   it('rejects the returned Promise when a matching {ok:false} response arrives', async () => {
-    const { input, output } = bootFresh()
+    const { input, output } = bootFresh(BOOT_OPTS)
     const lines = collectLines(output)
     const { requestRustInvoke } = freshRpc()
 
@@ -138,7 +153,7 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
   // Behavior 4: a response frame whose id matches nothing outstanding is dropped silently,
   // and is NOT routed to an invoke/send handler.
   it('drops an unmatched response id without throwing and without dispatching it', async () => {
-    const { input, output } = bootFresh()
+    const { input, output } = bootFresh(BOOT_OPTS)
     const lines = collectLines(output)
 
     expect(() => {
@@ -157,7 +172,7 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
 
   // Behavior 5: normal inbound 'invoke' direction still round-trips after the rustInvoke changes.
   it('still round-trips an ordinary inbound invoke frame (no regression)', async () => {
-    const { input, output } = bootFresh()
+    const { input, output } = bootFresh(BOOT_OPTS)
     const lines = collectLines(output)
 
     input.write(
@@ -179,7 +194,7 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
   // Behavior 6 (T-28-03b direction guard): an inbound frame with kind: 'rustInvoke' sent FROM
   // the shell INTO the sidecar must be rejected, not dispatched to any handler.
   it('rejects an inbound rustInvoke frame from the shell (direction guard)', async () => {
-    const { input, output } = bootFresh()
+    const { input, output } = bootFresh(BOOT_OPTS)
     const lines = collectLines(output)
 
     input.write(
@@ -199,7 +214,7 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
   // Behavior 7 (T-28-03 allowlist): a channel not in RUST_INVOKE_CHANNELS rejects immediately
   // and writes NO frame to the output stream.
   it('rejects a non-allowlisted channel immediately without emitting a frame', async () => {
-    const { output } = bootFresh()
+    const { output } = bootFresh(BOOT_OPTS)
     const lines = collectLines(output)
     const { requestRustInvoke } = freshRpc()
 
@@ -218,7 +233,7 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
   // Behavior 8: an unanswered requestRustInvoke rejects after the 60s timeout.
   it('rejects with a timeout message after 60s when unanswered', async () => {
     jest.useFakeTimers()
-    bootFresh()
+    bootFresh(BOOT_OPTS)
     const { requestRustInvoke } = freshRpc()
 
     const promise = requestRustInvoke(RUST_KEYRING_GET, [])
@@ -236,7 +251,7 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
   // text, or drops the interpolation entirely, is caught either way.
   it('names the timed-out channel in the rejection message, distinguishing keyring_get from another channel', async () => {
     jest.useFakeTimers()
-    bootFresh()
+    bootFresh(BOOT_OPTS)
     const { requestRustInvoke } = freshRpc()
 
     const keyringPromise = requestRustInvoke(RUST_KEYRING_GET, [])

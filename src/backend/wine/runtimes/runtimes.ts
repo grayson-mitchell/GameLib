@@ -12,6 +12,7 @@ import { Runtime, RuntimeName } from 'common/types'
 import { downloadFile, extractTarFile } from './util'
 import { axiosClient } from 'backend/utils'
 import { runtimePath } from 'backend/constants/paths'
+import type { ProcessRunner } from 'backend/process/types'
 
 async function _get(): Promise<Runtime[]> {
   mkdirSync(runtimePath, { recursive: true })
@@ -22,7 +23,10 @@ async function _get(): Promise<Runtime[]> {
   return allRuntimes.data || []
 }
 
-async function download(name: RuntimeName): Promise<boolean> {
+async function download(
+  deps: { runner: Pick<ProcessRunner, 'run'> },
+  name: RuntimeName
+): Promise<boolean> {
   try {
     const runtimes = await _get()
     const runtime = runtimes.find((inst) => {
@@ -46,7 +50,7 @@ async function download(name: RuntimeName): Promise<boolean> {
       rmSync(extractedFolderPath, { recursive: true })
     }
 
-    await extractTarFile(tarFilePath, {
+    await extractTarFile(deps, tarFilePath, {
       extractedPath: extractedFolderPath,
       strip: 1
     })

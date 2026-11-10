@@ -167,7 +167,7 @@ import {
 import { GlobalConfig } from '../config'
 import { createAppContext } from '../process/context'
 import type { AppContext, AppPaths } from '../process/context'
-import type { LogSink } from '../process/types'
+import type { LogSink, ProcessRunner } from '../process/types'
 import { setIpcRejectionLogSink } from './ipcValidation'
 import { gamesConfigPath, publicDir } from '../constants/paths'
 import { backendEvents } from '../backend_events'
@@ -754,8 +754,9 @@ export function syncQueuedPlaytimeWhenOnline(deps: {
  * commit `5643c7583` ("feat(35-14)!: delete the Electron entry points") (todo 2026-09-06,
  * quick-260908-k3x). The old caller was `main.ts:241` -- that file no longer exists, so this
  * is a port into the sidecar's own boot path, not a re-wire of an existing call site.
- * `checkRosettaInstall()` itself (`utils.ts:1402`) is untouched: it has no platform guard of
- * its own, so the caller must gate it, which is this function's whole job.
+ * `checkRosettaInstall({ runner })` itself (`utils.ts`) takes the boot runner for its bounded
+ * (10 000 ms) probe and has no platform guard of its own, so the caller must gate it, which is
+ * this function's whole job.
  *
  * FIVE decisions this function's shape encodes:
  *
@@ -780,11 +781,14 @@ export function syncQueuedPlaytimeWhenOnline(deps: {
  *    forward, which passes only `message`/`title`/`kind`/`buttons` -- named here so a reader
  *    does not go looking for a missing icon.
  */
-export function checkRosettaWhenMac(i18nReady: Promise<void>): void {
+export function checkRosettaWhenMac(
+  i18nReady: Promise<void>,
+  deps: { runner: Pick<ProcessRunner, 'run'> }
+): void {
   if (!isMac) return
   try {
     i18nReady
-      .then(() => checkRosettaInstall())
+      .then(() => checkRosettaInstall({ runner: deps.runner }))
       .catch((error: unknown) => {
         logWarning(
           `[bootstrap] checkRosettaInstall() failed: ${String(error)}`,
@@ -1565,11 +1569,11 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'secret-stores',
-      run: (_ctx, _io, state) => {
+      run: (ctx, _io, state) => {
         const { stores } = requireServices(state)
         bindSteamGridDbSecretDeps({ stores })
         bindHumbleStores({ stores })
-        bindDxmtStores({ stores })
+        bindDxmtStores({ stores, runner: ctx.runner })
         // Placement is load-bearing (Phase 28, T-28-10): must run AFTER startRpcServer() so
         // requestRustInvoke can write frames, and BEFORE any invoke handler body can run (those
         // only fire from the RPC loop below, never at module-import time) so no handler ever
@@ -1819,7 +1823,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'rosetta',
-      run: (_ctx, _io, state) => {
+      run: (ctx, _io, state) => {
         // Block F — boot-time Rosetta-availability probe (todo 2026-09-06, quick-260908-k3x).
         // Placement is constrained from both sides:
         //   - Must be AFTER the i18next block above so `i18nReady` holds the real init promise
@@ -1832,7 +1836,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // blocked on a warning dialog (see `checkRosettaWhenMac(state.i18nReady)`'s own header for why it can
         // never fail boot). The guard flag lives at this call site, matching Blocks A/B/E, not
         // inside `checkRosettaWhenMac(state.i18nReady)` -- see `rosettaCheckInitialized`'s declaration comment.
-        checkRosettaWhenMac(state.i18nReady)
+        checkRosettaWhenMac(state.i18nReady, { runner: ctx.runner })
       }
     },
     {

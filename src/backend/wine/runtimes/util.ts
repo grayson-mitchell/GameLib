@@ -1,4 +1,5 @@
 import { axiosClient, extractFiles } from 'backend/utils'
+import type { ProcessRunner } from 'backend/process/types'
 import { existsSync, mkdirSync, writeFile } from 'graceful-fs'
 
 interface GithubAssetMetadata {
@@ -73,6 +74,7 @@ async function downloadFile(url: string, filePath: string) {
 }
 
 async function extractTarFile(
+  deps: { runner: Pick<ProcessRunner, 'run'> },
   filePath: string,
   options?: { extractedPath?: string; strip?: number }
 ) {
@@ -89,7 +91,7 @@ async function extractTarFile(
   mkdirSync(extractedPath, { recursive: true })
   const strip = options?.strip
 
-  return extractFiles({
+  return extractFiles(deps, {
     path: filePath,
     destination: extractedPath,
     strip: strip || 0

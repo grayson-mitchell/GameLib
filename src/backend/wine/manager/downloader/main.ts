@@ -330,7 +330,8 @@ async function installVersion({
     unzipDir: installSubDir,
     overwrite: overwrite,
     onProgress: onProgress,
-    abortSignal: abortSignal
+    abortSignal: abortSignal,
+    runner
   }).catch((error: string) => {
     if (error.includes('AbortError')) {
       abortHandler()

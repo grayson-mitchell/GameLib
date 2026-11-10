@@ -353,7 +353,7 @@ export default class LegendaryGame implements Game {
     logInfo(`Moving ${gameInfo.title} to ${newInstallPath}`, LogPrefix.Gog)
 
     const moveImpl = isWindows ? moveOnWindows : moveOnUnix
-    const moveResult = await moveImpl(newInstallPath, gameInfo)
+    const moveResult = await moveImpl(this.deps, newInstallPath, gameInfo)
 
     if (moveResult.status === 'error') {
       const { error } = moveResult

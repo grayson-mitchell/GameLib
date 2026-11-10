@@ -495,7 +495,7 @@ export default class NileGameManager implements Game {
     logInfo(`Moving ${gameInfo.title} to ${newInstallPath}`, LogPrefix.Nile)
 
     const moveImpl = isWindows ? moveOnWindows : moveOnUnix
-    const moveResult = await moveImpl(newInstallPath, gameInfo)
+    const moveResult = await moveImpl(this.deps, newInstallPath, gameInfo)
 
     if (moveResult.status === 'error') {
       const { error } = moveResult

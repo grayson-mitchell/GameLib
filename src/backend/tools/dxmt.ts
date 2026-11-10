@@ -17,9 +17,11 @@ import { toolsPath } from 'backend/constants/paths'
 import { checkWinemacMetalViewExports } from './machoExports'
 import type { WinemacMetalCheck } from './machoExports'
 import type { Stores } from 'backend/services/types'
+import type { ProcessRunner } from 'backend/process/types'
 
 /** The store slice the boot-time DXMT update census reads (66.1, R1). */
 export interface DxmtStoresDeps {
+  runner: Pick<ProcessRunner, 'run'>
   stores: {
     wineManager: Pick<Stores['wineManager'], 'wineDownloaderInfoStore'>
   }
@@ -50,7 +52,7 @@ function logDXMTSkip(
 }
 
 const DXMT = {
-  getLatest: () => {
+  getLatest: (deps: { runner: Pick<ProcessRunner, 'run'> }) => {
     if (!isOnline()) {
       logWarning(
         'App offline, skipping possible DXMT update.',
@@ -65,7 +67,7 @@ const DXMT = {
       os: 'darwin'
     }
 
-    return installOrUpdateTool(tool)
+    return installOrUpdateTool(deps, tool)
   },
   copyWineAndConfigure: async (
     versionInfo: WineVersionInfo,
@@ -175,7 +177,16 @@ backendEvents.on('wineVersionInstalled', async (versionInfo, installDir) => {
       logDXMTSkip('creating', versionInfo.version, check)
       return
     }
-    await DXMT.getLatest()
+    // The listener is registered at import time; the runner arrives with bindDxmtStores at boot.
+    const bound = DxmtStores.bound
+    if (!bound) {
+      logWarning(
+        'DXMT: runner not bound (no boot ran); skipping the DXMT fetch',
+        LogPrefix.ToolInstaller
+      )
+      return
+    }
+    await DXMT.getLatest(bound)
     await DXMT.copyWineAndConfigure(versionInfo, installDir)
   }
 })
@@ -232,8 +243,9 @@ backendEvents.on('releasesInfoReady', async (releasesInfo) => {
   // The listener is registered at import time and has no boot services in hand, so it reads the
   // wine-manager store slice bound at boot (bindDxmtStores). Unbound means no boot ran: nothing to
   // update.
-  const wineStores = DxmtStores.bound?.stores.wineManager
-  if (!wineStores) {
+  const bound = DxmtStores.bound
+  const wineStores = bound?.stores.wineManager
+  if (!bound || !wineStores) {
     logWarning(
       'DXMT: wine-manager stores not bound (no boot ran); skipping the copy update',
       LogPrefix.ToolInstaller
@@ -265,7 +277,7 @@ backendEvents.on('releasesInfoReady', async (releasesInfo) => {
 
   if (copiesToUpdate.length === 0) return
 
-  await DXMT.getLatest()
+  await DXMT.getLatest(bound)
 
   copiesToUpdate.forEach((path) => DXMT.copyLatestDXMTFiles(path))
 })

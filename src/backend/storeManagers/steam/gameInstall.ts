@@ -589,6 +589,7 @@ export async function ensureBuiltInEngineForInstall(
     pin,
     appName: steamGame.appId,
     runner: 'steam',
+    processRunner: steamGame.deps.runner,
     signal
   })
   if (result.ok) return result.engine

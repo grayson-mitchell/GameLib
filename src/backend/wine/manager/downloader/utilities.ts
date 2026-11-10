@@ -206,6 +206,7 @@ interface unzipProps {
   overwrite?: boolean
   onProgress: (state: WineManagerStatus) => void
   abortSignal?: AbortSignal
+  runner: Pick<ProcessRunner, 'run'>
 }
 
 /**
@@ -220,7 +221,8 @@ interface unzipProps {
 async function unzipFile({
   filePath,
   unzipDir,
-  onProgress
+  onProgress,
+  runner
 }: unzipProps): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
@@ -235,7 +237,10 @@ async function unzipFile({
       reject(new Error('Failed to unzip file', { cause: error }))
     }
 
-    extractFiles({ path: filePath, destination: unzipDir, strip: 1 })
+    extractFiles(
+      { runner },
+      { path: filePath, destination: unzipDir, strip: 1 }
+    )
       .then(() => {
         onProgress({ status: 'idle' })
         resolve(`Succesfully unzip ${filePath} to ${unzipDir}.`)

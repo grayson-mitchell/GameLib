@@ -14,9 +14,7 @@ import https from 'node:https'
 // SEA sidecar binary, so it cannot be the source of the User-Agent version below.
 import pkg_json from 'backend/../../package.json'
 import { app, dialog, shell, Notification } from 'backend/platform'
-import { exec, spawn, SpawnOptions, spawnSync } from 'child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'graceful-fs'
-import { promisify } from 'util'
 import i18next, { t } from 'i18next'
 import { tOrFallback } from './i18nFallback'
 
@@ -73,8 +71,7 @@ import { isOnline } from './online_monitor'
 import type { Game } from 'common/types/game_manager'
 import type { ProcessRunner } from 'backend/process/types'
 import { isStore } from 'common/storeCapabilities'
-
-const execAsync = promisify(exec)
+import type { SpawnAsync } from './spawnAsync'
 
 /**
  * Compares 2 SemVer strings following "major.minor.patch".
@@ -675,7 +672,7 @@ function removeQuoteIfNecessary(stringToUnquote: string) {
 // (CLAUDE.md "The sidecar's exit contract", half 2, in-flight work).
 // `unref()` is the wrong tool here (it would have to cover the child AND all
 // three stdio pipes, and would silently drop the result on a quick quit), so
-// the probe is bounded instead: `spawn(..., { timeout, windowsHide })` kills
+// the probe is bounded instead: `runner.run(..., { timeoutMs, windowsHide })` kills
 // the child at this bound, the pipes close, and the loop drains normally.
 // Value: must be >= 3x the worst measured probe wall time on the operator's
 // Windows 11 box (cold + warm) and <= 30_000 (D4) -- see quick 260922-v2e's
@@ -698,7 +695,10 @@ const VC_REDIST_PROBE_TIMEOUT_MS = 15_000
  * (see `VC_REDIST_PROBE_TIMEOUT_MS` above) so a hung/slow child cannot keep
  * the sidecar process alive past the exit contract's in-flight-work bound.
  */
-function detectVCRedist(deps: { stores: Pick<Stores, 'kvs'> }) {
+async function detectVCRedist(deps: {
+  stores: Pick<Stores, 'kvs'>
+  runner: Pick<ProcessRunner, 'run'>
+}): Promise<void> {
   if (!isWindows) {
     return
   }
@@ -713,8 +713,6 @@ function detectVCRedist(deps: { stores: Pick<Stores, 'kvs'> }) {
   // According to this article avoid using wmic and Win32_Product
   // https://xkln.net/blog/please-stop-using-win32product-to-find-installed-software-alternatives-inside/
   // wmic is also deprecated
-  const detectedVCRInstallations: string[] = []
-  let stderr = ''
   const probeStartedAt = Date.now()
 
   // get applications
@@ -723,103 +721,95 @@ function detectVCRedist(deps: { stores: Pick<Stores, 'kvs'> }) {
   // powershell profile script cannot add seconds to every probe or hang a
   // prompt until the timeout below fires. The Get-ItemProperty /
   // Select-Object / Format-Table tail stays byte-identical.
-  const child = spawn(
-    'powershell.exe',
-    [
-      '-NoProfile',
-      '-NonInteractive',
-      'Get-ItemProperty',
-      'HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*,',
-      'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*',
-      '|',
-      'Select-Object',
-      'DisplayName',
-      '|',
-      'Format-Table',
-      '-AutoSize'
-    ],
-    // D3: bounded so a hung/slow probe cannot keep the sidecar's event loop
-    // open past this timeout; windowsHide keeps no console flash on launch.
-    { timeout: VC_REDIST_PROBE_TIMEOUT_MS, windowsHide: true }
-  )
-
-  child.stdout.setEncoding('utf-8')
-  child.stdout.on('data', (data: string) => {
-    const splitData = data.split('\n')
-    for (const installation of splitData) {
-      if (installation && installation.includes('Microsoft Visual C++ 2022')) {
-        detectedVCRInstallations.push(installation)
-      }
-    }
-  })
-
-  child.stderr.setEncoding('utf-8')
-  child.stderr.on('data', (data: string) => {
-    stderr += data
-  })
-
-  child.on('error', (error: Error) => {
+  let result
+  try {
+    result = await deps.runner.run(
+      'powershell.exe',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        'Get-ItemProperty',
+        'HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*,',
+        'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*',
+        '|',
+        'Select-Object',
+        'DisplayName',
+        '|',
+        'Format-Table',
+        '-AutoSize'
+      ],
+      // D3: bounded so a hung/slow probe cannot keep the sidecar's event loop
+      // open past this timeout; windowsHide keeps no console flash on launch.
+      { timeoutMs: VC_REDIST_PROBE_TIMEOUT_MS, windowsHide: true }
+    )
+  } catch (error) {
     logError(['Check of VCRuntime crashed with:', error], LogPrefix.Backend)
     return
-  })
+  }
 
-  // D5 (260922-v2e): signal-safe. A timeout kill closes with `code === null`
-  // and a signal set; `null` is falsy, so the old `if (code)` guard would
-  // fall through to "fewer than 4 lines -> show the dialog" -- a false nag
-  // caused purely by the bound above. The signal branch returns first and
-  // never shows a dialog; any other non-zero code keeps the pre-existing
+  const { code, stderr, stdout, timedOut } = result
+  const detectedVCRInstallations = stdout
+    .split('\n')
+    .filter(
+      (installation) =>
+        installation && installation.includes('Microsoft Visual C++ 2022')
+    )
+
+  // D5 (260922-v2e): timeout-safe. A timeout kill reports `timedOut` with
+  // `code === null`; `null` is falsy, so a bare `if (code)` guard would fall
+  // through to "fewer than 4 lines -> show the dialog" -- a false nag caused
+  // purely by the bound above. The timedOut branch returns first and never
+  // shows a dialog; any other non-zero code keeps the pre-existing
   // logError behaviour, also without a dialog.
-  child.on('close', (code: number | null, signal: NodeJS.Signals | null) => {
-    if (signal) {
-      logWarning(
-        `VCRuntime check killed after exceeding VC_REDIST_PROBE_TIMEOUT_MS (${VC_REDIST_PROBE_TIMEOUT_MS}ms), signal ${signal}`,
-        LogPrefix.Backend
-      )
-      return
-    }
-    if (code) {
-      // log-secret-gate-exempt: stderr of the powershell Get-ItemProperty VCRuntime probe
-      logError(
-        `Failed to check for VCRuntime installations\n${stderr}`,
-        LogPrefix.Backend
-      )
-      return
-    }
-    // VCR installers install both the "Minimal" and "Additional" runtime, and we have 2 installers (x86 and x64) -> 4 installations in total
-    if (detectedVCRInstallations.length < 4) {
-      // 260919-sch: moved off the native 3-button dialog.showMessageBox onto
-      // showDialogBoxModalAuto because the Rust dialog command's `buttons`
-      // array only maps to a native dialog when its length is exactly 2 --
-      // it cannot express a third "don't show again" button. Do not restore
-      // this natively; see dialog.ts's policy docstring.
-      showDialogBoxModalAuto({
-        type: 'MESSAGE',
-        title: t('box.vcruntime.notfound.title', 'VCRuntime not installed'),
-        message: t(
-          'box.vcruntime.notfound.message',
-          'The Microsoft Visual C++ Runtimes are not installed, which are required by some games'
-        ),
-        buttons: [
-          {
-            text: t('box.downloadNow', 'Download now'),
-            action: 'vcRuntimeDownload'
-          },
-          { text: t('box.ok', 'OK') },
-          {
-            text: t('box.dontShowAgain', "Don't show again"),
-            action: 'vcRuntimeSkip'
-          }
-        ]
-      })
-    } else {
-      // D7 (260922-v2e): count + elapsed only -- no DisplayNames, no stderr.
-      const elapsedMs = Date.now() - probeStartedAt
-      logInfo(
-        `VCRuntime is installed (${detectedVCRInstallations.length} matching entries, probe ${elapsedMs} ms)`,
-        LogPrefix.Backend
-      )
-    }
-  })
+  if (timedOut) {
+    logWarning(
+      `VCRuntime check killed after exceeding VC_REDIST_PROBE_TIMEOUT_MS (${VC_REDIST_PROBE_TIMEOUT_MS}ms)`,
+      LogPrefix.Backend
+    )
+    return
+  }
+  if (code) {
+    // log-secret-gate-exempt: stderr of the powershell Get-ItemProperty VCRuntime probe
+    logError(
+      `Failed to check for VCRuntime installations\n${stderr}`,
+      LogPrefix.Backend
+    )
+    return
+  }
+  // VCR installers install both the "Minimal" and "Additional" runtime, and we have 2 installers (x86 and x64) -> 4 installations in total
+  if (detectedVCRInstallations.length < 4) {
+    // 260919-sch: moved off the native 3-button dialog.showMessageBox onto
+    // showDialogBoxModalAuto because the Rust dialog command's `buttons`
+    // array only maps to a native dialog when its length is exactly 2 --
+    // it cannot express a third "don't show again" button. Do not restore
+    // this natively; see dialog.ts's policy docstring.
+    showDialogBoxModalAuto({
+      type: 'MESSAGE',
+      title: t('box.vcruntime.notfound.title', 'VCRuntime not installed'),
+      message: t(
+        'box.vcruntime.notfound.message',
+        'The Microsoft Visual C++ Runtimes are not installed, which are required by some games'
+      ),
+      buttons: [
+        {
+          text: t('box.downloadNow', 'Download now'),
+          action: 'vcRuntimeDownload'
+        },
+        { text: t('box.ok', 'OK') },
+        {
+          text: t('box.dontShowAgain', "Don't show again"),
+          action: 'vcRuntimeSkip'
+        }
+      ]
+    })
+  } else {
+    // D7 (260922-v2e): count + elapsed only -- no DisplayNames, no stderr.
+    const elapsedMs = Date.now() - probeStartedAt
+    logInfo(
+      `VCRuntime is installed (${detectedVCRInstallations.length} matching entries, probe ${elapsedMs} ms)`,
+      LogPrefix.Backend
+    )
+  }
 }
 
 const getLatestReleases = async (): Promise<Release[]> => {
@@ -846,14 +836,31 @@ const getCurrentChangelog = async (): Promise<Release | null> => {
   }
 }
 
+// Bounded like killCrossoverWineserverWith: a wedged wineserver must not hold a game stop.
+const WINESERVER_KILL_TIMEOUT_MS = 15_000
+
 async function shutdownWine(
-  deps: { commandRunner: Pick<CommandRunner, 'runWineCommand'> },
+  deps: {
+    commandRunner: Pick<CommandRunner, 'runWineCommand'>
+    spawnAsync: SpawnAsync
+  },
   gameSettings: GameSettings
 ) {
   if (gameSettings.wineVersion.wineserver) {
-    spawnSync(gameSettings.wineVersion.wineserver, ['-k'], {
-      env: { WINEPREFIX: gameSettings.winePrefix }
-    })
+    const result = await deps.spawnAsync(
+      gameSettings.wineVersion.wineserver,
+      ['-k'],
+      {
+        env: { WINEPREFIX: gameSettings.winePrefix },
+        timeout: WINESERVER_KILL_TIMEOUT_MS
+      }
+    )
+    if (result.timedOut) {
+      logWarning(
+        `wineserver -k did not finish within ${WINESERVER_KILL_TIMEOUT_MS}ms`,
+        LogPrefix.Backend
+      )
+    }
   } else {
     await deps.commandRunner.runWineCommand({
       gameSettings,
@@ -905,48 +912,6 @@ const getShellPath = (path: string): Promise<string> =>
       expandPathVariables(path, isWindows, process.env, homedir()).trim()
     )
   )
-
-// Module-private: only moveOnWindows/moveOnUnix/extractTarFile still use it; 66.2 moves those
-// callers onto the command runner and deletes it with the last child_process import.
-const spawnAsync = async (
-  command: string,
-  args: string[],
-  options: SpawnOptions = {},
-  onOutput?: (data: string) => void
-): Promise<{ code: number | null; stdout: string; stderr: string }> => {
-  const child = spawn(command, args, options)
-  const stdout = memoryLog()
-  const stderr = memoryLog()
-
-  if (child.stdout) {
-    child.stdout.on('data', (data) => {
-      if (onOutput) {
-        onOutput(data.toString())
-      }
-      stdout.push(data.toString())
-    })
-  }
-
-  if (child.stderr) {
-    child.stderr.on('data', (data) => {
-      if (onOutput) {
-        onOutput(data.toString())
-      }
-      stderr.push(data.toString())
-    })
-  }
-
-  return new Promise((resolve, reject) => {
-    child.on('error', reject)
-    child.on('close', (code) => {
-      resolve({
-        code,
-        stdout: stdout.join(''),
-        stderr: stderr.join('')
-      })
-    })
-  })
-}
 
 async function ContinueWithFoundWine(
   selectedWine: string,
@@ -1138,7 +1103,11 @@ export async function checkWineBeforeLaunch(
   return false
 }
 
+const RSYNC_PROBE_TIMEOUT_MS = 5_000
+const ROSETTA_PROBE_TIMEOUT_MS = 10_000
+
 export async function moveOnWindows(
+  deps: { spawnAsync: SpawnAsync; runner: Pick<ProcessRunner, 'run'> },
   newInstallPath: string,
   gameInfo: GameInfo
 ): Promise<
@@ -1158,10 +1127,10 @@ export async function moveOnWindows(
   let currentFile = ''
 
   // move using robocopy and show progress of the current file being copied
-  const { code, stderr } = await spawnAsync(
+  const { code, stderr } = await deps.spawnAsync(
     'robocopy',
     [install_path, newInstallPath, '/MOVE', '/MIR', '/NJH', '/NJS', '/NDL'],
-    { stdio: 'pipe' },
+    {},
     (data) => {
       let percent = 0
       const percentMatch = data.match(/(\d+)(?:\.\d+)?%/)?.[1]
@@ -1195,6 +1164,7 @@ export async function moveOnWindows(
 }
 
 export async function moveOnUnix(
+  deps: { spawnAsync: SpawnAsync; runner: Pick<ProcessRunner, 'run'> },
   newInstallPath: string,
   gameInfo: GameInfo
 ): Promise<
@@ -1219,8 +1189,17 @@ export async function moveOnUnix(
   // IMPLEMENTATION, so probe `rsync --version` (which also proves existence).
   let rsyncFlavour: 'gnu' | 'openrsync' | null = null
   try {
-    const { stdout } = await execAsync('rsync --version')
-    rsyncFlavour = /openrsync/i.test(stdout) ? 'openrsync' : 'gnu'
+    const probe = await deps.runner.run('rsync', ['--version'], {
+      timeoutMs: RSYNC_PROBE_TIMEOUT_MS
+    })
+    if (probe.timedOut || probe.code !== 0) {
+      throw new Error(
+        `rsync --version ${
+          probe.timedOut ? 'timed out' : `exited with code ${probe.code}`
+        }`
+      )
+    }
+    rsyncFlavour = /openrsync/i.test(probe.stdout) ? 'openrsync' : 'gnu'
   } catch (error) {
     logError(error, LogPrefix.Gog)
   }
@@ -1251,10 +1230,10 @@ export async function moveOnUnix(
       )} ${origin} ${destination} `,
       LogPrefix.Backend
     )
-    const { code, stderr } = await spawnAsync(
+    const { code, stderr } = await deps.spawnAsync(
       'rsync',
       [...rsyncArgs, origin, destination],
-      { stdio: 'pipe' },
+      {},
       (data) => {
         let percent = 0
         let eta = ''
@@ -1317,14 +1296,14 @@ export async function moveOnUnix(
     if (code === 0) {
       logInfo(`Finished Moving ${title}`, LogPrefix.Backend)
       // remove the old install path
-      await spawnAsync('rm', ['-rf', install_path])
+      await deps.spawnAsync('rm', ['-rf', install_path])
     } else {
       // log-secret-gate-exempt: stderr of rsync (install move), not an auth command
       logError(`Error: ${stderr}`, LogPrefix.Backend)
       return { status: 'error', error: stderr }
     }
   } else {
-    const { code, stderr } = await spawnAsync('mv', [
+    const { code, stderr } = await deps.spawnAsync('mv', [
       '-f',
       install_path,
       destination
@@ -1340,26 +1319,6 @@ export async function moveOnUnix(
     }
   }
   return { status: 'done', installPath: destination }
-}
-
-// helper object for an array with a length limit
-// this is used when calling system processes to not store the complete output in memory
-//
-// the `limit` is the number of messages, it doesn't mean it will be exactly `limit` lines since a message can be multi-line
-const memoryLog = (limit = 50) => {
-  const lines: string[] = []
-
-  return {
-    push: (newLine: string) => {
-      lines.unshift(newLine)
-      if (lines.length > limit) {
-        lines.length = limit
-      }
-    },
-    join: (separator = '') => {
-      return lines.toReversed().join(separator)
-    }
-  }
 }
 
 /**
@@ -1436,12 +1395,15 @@ async function getPathDiskSize(path: string): Promise<number> {
   return statData.size
 }
 
-export async function checkRosettaInstall() {
+export async function checkRosettaInstall(deps: {
+  runner: Pick<ProcessRunner, 'run'>
+}) {
   // the spawn itself fails when Rosetta is not installed
-  const result = await execAsync(
-    'arch -x86_64 /usr/sbin/sysctl sysctl.proc_translated'
-  )
-    .then(() => true)
+  const result = await deps.runner
+    .run('arch', ['-x86_64', '/usr/sbin/sysctl', 'sysctl.proc_translated'], {
+      timeoutMs: ROSETTA_PROBE_TIMEOUT_MS
+    })
+    .then((r) => !r.timedOut && r.code === 0)
     .catch(() => false)
 
   logInfo(
@@ -1711,25 +1673,32 @@ interface ExtractOptions {
   strip: number
 }
 
-async function extractFiles({ path, destination, strip = 0 }: ExtractOptions) {
-  if (path.includes('.tar')) return extractTarFile({ path, destination, strip })
+async function extractFiles(
+  deps: { runner: Pick<ProcessRunner, 'run'> },
+  { path, destination, strip = 0 }: ExtractOptions
+) {
+  if (path.includes('.tar'))
+    return extractTarFile(deps, { path, destination, strip })
 
   logError(['extractFiles: Unsupported file', path], LogPrefix.Backend)
   return { status: 'error', error: 'Unsupported file type' }
 }
 
-async function extractTarFile({
-  path,
-  destination,
-  strip = 0
-}: ExtractOptions) {
-  const { code, stderr } = await spawnAsync('tar', [
-    '-xf',
-    path,
-    '-C',
-    destination,
-    `--strip-components=${strip}`
-  ])
+async function extractTarFile(
+  deps: { runner: Pick<ProcessRunner, 'run'> },
+  { path, destination, strip = 0 }: ExtractOptions
+) {
+  const { code, stderr } = await deps.runner.run(
+    'tar',
+    ['-xf', path, '-C', destination, `--strip-components=${strip}`],
+    {
+      timeout: {
+        none: true,
+        reason:
+          'tar extraction of multi-GB tool and runtime archives runs as long as the disk takes; callers own cancellation'
+      }
+    }
+  )
   if (code !== 0) {
     // log-secret-gate-exempt: stderr of tar -xf (archive extraction), not an auth command
     logError(`Extracting Error: ${stderr}`, LogPrefix.Backend)
@@ -1815,7 +1784,6 @@ export const writeConfig = (
 
 export {
   errorHandler,
-  execAsync,
   getCurrentChangelog,
   isEpicServiceOffline,
   showItemInFolder,

@@ -106,17 +106,18 @@ jest.mock('backend/config', () => ({
   }
 }))
 
-// ── child_process — the probe's own transport, scriptable per test ─────────────────────────
-jest.mock('child_process', () => ({
-  ...jest.requireActual('child_process'),
-  exec: jest.fn()
-}))
-
 // ── i18next — DEFEAT Jest's project-wide automatic manual mock (see header) ────────────────
 jest.unmock('i18next')
 
 import { defined } from 'backend/testUtils/indexed'
 import { bootFresh } from './helpers/sidecarHarness'
+import type { ScriptStep } from 'backend/testUtils/scriptedRunner'
+
+const ARCH_PROBE_FAILS: ScriptStep = {
+  cmd: 'arch',
+  argv: ['-x86_64', '/usr/sbin/sysctl', 'sysctl.proc_translated'],
+  error: { code: 'EBADARCH' }
+}
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 /**
@@ -128,9 +129,8 @@ import { bootFresh } from './helpers/sidecarHarness'
  * spied on that registry's platform so the real RUST_DIALOG_MESSAGE forward never arms a timer.
  */
 function bootProbe(showMessageBox: (...args: unknown[]) => Promise<unknown>) {
-  let freshExec!: jest.Mock
   let showMessageBoxSpy!: jest.SpyInstance
-  bootFresh({
+  const sidecar = bootFresh({
     before: () => {
       // Load bootstrap (and with it every axios.create() instance) first, then wipe the
       // instances' scripted implementations: `resetMocks: true` did that to the one shared
@@ -148,16 +148,6 @@ function bootProbe(showMessageBox: (...args: unknown[]) => Promise<unknown>) {
           r.value?.head?.mockReset()
         }
       )
-      freshExec = require('child_process').exec as jest.Mock
-      freshExec.mockImplementation(
-        (_cmd: string, cb: (error: Error | null, result?: unknown) => void) => {
-          cb(
-            new Error(
-              'arch: posix_spawnp: /usr/sbin/sysctl: Bad CPU type in executable'
-            )
-          )
-        }
-      )
       require('backend/config').GlobalConfig.get.mockReturnValue({
         getSettings: () => ({ language: 'en' }),
         setSetting: jest.fn(),
@@ -167,16 +157,20 @@ function bootProbe(showMessageBox: (...args: unknown[]) => Promise<unknown>) {
       showMessageBoxSpy = jest
         .spyOn(require('../../platform').dialog, 'showMessageBox')
         .mockImplementation(showMessageBox as never)
-    }
+    },
+    // The failing arch probe: the spawn itself fails when Rosetta is absent.
+    context: { script: [ARCH_PROBE_FAILS] }
   })
-  return { freshExec, showMessageBoxSpy }
+  return { runner: sidecar.testContext.runner, showMessageBoxSpy }
 }
 /* eslint-enable @typescript-eslint/no-require-imports */
 
-const probeCalls = (exec: jest.Mock) =>
-  exec.mock.calls.filter(
+const probeCalls = (runner: {
+  calls: readonly { cmd: string; argv: readonly string[] }[]
+}) =>
+  runner.calls.filter(
     (call) =>
-      typeof call[0] === 'string' && call[0].includes('sysctl.proc_translated')
+      call.cmd === 'arch' && call.argv.includes('sysctl.proc_translated')
   ).length
 
 /** Polls a predicate with real timers -- the probe and dialog are floated off `init()`. */
@@ -195,7 +189,7 @@ async function waitFor(
 describe('sidecar bootstrap runs the Rosetta probe (todo 2026-09-06, quick-260908-k3x)', () => {
   it('THE POINT OF THIS FIX: a failed probe reaches dialog.showMessageBox with the loaded catalog title, from the boot alone', async () => {
     let capturedTitleAtCallTime: string | undefined
-    const { freshExec, showMessageBoxSpy } = bootProbe(async () => {
+    const { runner, showMessageBoxSpy } = bootProbe(async () => {
       // The ordering discriminator (same technique as gamelibNamespaceLoad.test.ts): a
       // default-carrying t() call cannot distinguish "i18next chained correctly" from
       // "statement order happened to work", because the en catalog string and
@@ -213,11 +207,11 @@ describe('sidecar bootstrap runs the Rosetta probe (todo 2026-09-06, quick-26090
     // waited: init() had no call chain reaching checkRosettaInstall() at all.
     expect(
       await waitFor(() =>
-        freshExec.mock.calls.some(
+        runner.calls.some(
           (call) =>
-            typeof call[0] === 'string' &&
-            call[0].includes('arch -x86_64') &&
-            call[0].includes('sysctl.proc_translated')
+            call.cmd === 'arch' &&
+            call.argv.includes('-x86_64') &&
+            call.argv.includes('sysctl.proc_translated')
         )
       )
     ).toBe(true)
@@ -247,7 +241,7 @@ describe('sidecar bootstrap runs the Rosetta probe (todo 2026-09-06, quick-26090
   // assertion itself gets to run and fail cleanly.
 
   it('one boot probes exactly once', async () => {
-    const { freshExec, showMessageBoxSpy } = bootProbe(() =>
+    const { runner, showMessageBoxSpy } = bootProbe(() =>
       Promise.resolve({ response: 0, checkboxChecked: false })
     )
     expect(await waitFor(() => showMessageBoxSpy.mock.calls.length === 1)).toBe(
@@ -255,6 +249,6 @@ describe('sidecar bootstrap runs the Rosetta probe (todo 2026-09-06, quick-26090
     )
     await new Promise((resolve) => setTimeout(resolve, 100))
 
-    expect(probeCalls(freshExec)).toBe(1)
+    expect(probeCalls(runner)).toBe(1)
   })
 })

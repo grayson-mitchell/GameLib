@@ -776,7 +776,7 @@ async function prepareLaunch(
     !(await isInstalled('umu')) &&
     (await getUmuPath()) === defaultUmuPath
   ) {
-    await download('umu')
+    await download(deps, 'umu')
   }
 
   return {
@@ -1042,7 +1042,7 @@ async function prepareWineLaunch(
     isOnline() &&
     !(await isInstalled('eac_runtime'))
   ) {
-    await download('eac_runtime')
+    await download(deps, 'eac_runtime')
   }
 
   if (
@@ -1050,7 +1050,7 @@ async function prepareWineLaunch(
     isOnline() &&
     !(await isInstalled('battleye_runtime'))
   ) {
-    await download('battleye_runtime')
+    await download(deps, 'battleye_runtime')
   }
 
   const envVars = setupWineEnvVars(gameSettings, gameInfo.folder_name)

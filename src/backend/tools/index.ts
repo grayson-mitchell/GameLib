@@ -100,7 +100,10 @@ type ReleasesResponse = {
   }[]
 }
 
-export async function installOrUpdateTool(tool: Tool) {
+export async function installOrUpdateTool(
+  deps: { runner: Pick<ProcessRunner, 'run'> },
+  tool: Tool
+) {
   if (tool.os !== process.platform) return
 
   const {
@@ -186,7 +189,7 @@ export async function installOrUpdateTool(tool: Tool) {
 
   const extractDestination = join(toolsPath, tool.name, latestVersion)
   mkdirSync(extractDestination, { recursive: true })
-  const extractResult = await extractFiles({
+  const extractResult = await extractFiles(deps, {
     path: latestVersionArchivePath,
     destination: extractDestination,
     strip: tool.strip ?? 1
@@ -265,7 +268,7 @@ function createDxvk(deps: ToolsDeps) {
         }
       ]
 
-      await Promise.all(tools.map(installOrUpdateTool))
+      await Promise.all(tools.map((tool) => installOrUpdateTool(deps, tool)))
     },
 
     installRemove: async (

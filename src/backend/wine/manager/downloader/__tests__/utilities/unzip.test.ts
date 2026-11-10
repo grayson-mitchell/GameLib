@@ -1,7 +1,12 @@
 import { existsSync, mkdirSync, rmSync } from 'graceful-fs'
 import { unzipFile } from '../../utilities'
+import { createRealRunner } from 'backend/testUtils/realRunner'
 
 jest.mock('backend/logger')
+
+// The real-tar cases spawn through a real runner on a fake HOME (D-12(b)).
+const { runner, dispose } = createRealRunner()
+afterAll(() => dispose())
 
 describe('Utilities - Unzip', () => {
   test('unzip file fails because of invalid archive path', async () => {
@@ -10,7 +15,8 @@ describe('Utilities - Unzip', () => {
       unzipFile({
         filePath: 'invalid.tar.xz',
         unzipDir: __dirname,
-        onProgress: progress
+        onProgress: progress,
+        runner
       })
     ).rejects.toStrictEqual(
       new Error('Zip file invalid.tar.xz does not exist!')
@@ -23,7 +29,8 @@ describe('Utilities - Unzip', () => {
       unzipFile({
         filePath: __dirname,
         unzipDir: __dirname,
-        onProgress: progress
+        onProgress: progress,
+        runner
       })
     ).rejects.toStrictEqual(
       new Error(`Archive path ${__dirname} is not a file!`)
@@ -36,7 +43,8 @@ describe('Utilities - Unzip', () => {
       unzipFile({
         filePath: `${__dirname}/../test_data/test.tar.xz`,
         unzipDir: 'invalid',
-        onProgress: progress
+        onProgress: progress,
+        runner
       })
     ).rejects.toStrictEqual(new Error('Install path invalid does not exist!'))
   })
@@ -53,7 +61,8 @@ describe('Utilities - Unzip', () => {
       unzipFile({
         filePath: `${__dirname}/../test_data/test.tar.xz`,
         unzipDir: installDir,
-        onProgress: progress
+        onProgress: progress,
+        runner
       })
     ).resolves.toStrictEqual(
       `Succesfully unzip ${__dirname}/../test_data/test.tar.xz to ${installDir}.`
@@ -76,7 +85,8 @@ describe('Utilities - Unzip', () => {
       unzipFile({
         filePath: `${__dirname}/../test_data/test.tar.gz`,
         unzipDir: installDir,
-        onProgress: progress
+        onProgress: progress,
+        runner
       })
     ).resolves.toStrictEqual(
       `Succesfully unzip ${__dirname}/../test_data/test.tar.gz to ${installDir}.`
@@ -99,7 +109,8 @@ describe('Utilities - Unzip', () => {
       unzipFile({
         filePath: `${__dirname}/../test_data/test.tar.gz`,
         unzipDir: installDir,
-        onProgress: progress
+        onProgress: progress,
+        runner
       })
     ).resolves.toStrictEqual(
       `Succesfully unzip ${__dirname}/../test_data/test.tar.gz to ${installDir}.`
@@ -110,7 +121,8 @@ describe('Utilities - Unzip', () => {
         filePath: `${__dirname}/../test_data/test.tar.gz`,
         unzipDir: installDir,
         overwrite: true,
-        onProgress: progress
+        onProgress: progress,
+        runner
       })
     ).resolves.toStrictEqual(
       `Succesfully unzip ${__dirname}/../test_data/test.tar.gz to ${installDir}.`

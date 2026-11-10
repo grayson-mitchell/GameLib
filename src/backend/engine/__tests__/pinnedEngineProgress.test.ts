@@ -10,6 +10,7 @@ jest.mock('../fallbackEngine', () => ({ ensurePinnedEngine: jest.fn() }))
 import { sendGameStatusUpdate } from 'backend/utils'
 import { ensurePinnedEngine } from '../fallbackEngine'
 import { ensurePinnedEngineReportingStatus } from '../pinnedEngineProgress'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
 const pin = {
   label: 'Pinned',
@@ -54,7 +55,8 @@ describe('ensurePinnedEngineReportingStatus', () => {
     const r = await ensurePinnedEngineReportingStatus({
       pin,
       appName: 'amzn1.x',
-      runner: 'nile'
+      runner: 'nile',
+      processRunner: createScriptedRunner([])
     })
     expect(r.ok).toBe(true)
     const contexts = sent.mock.calls.map(([p]) => p.context as string)
@@ -82,7 +84,8 @@ describe('ensurePinnedEngineReportingStatus', () => {
     const r = await ensurePinnedEngineReportingStatus({
       pin,
       appName: '1',
-      runner: 'gog'
+      runner: 'gog',
+      processRunner: createScriptedRunner([])
     })
     expect(r).toMatchObject({ ok: false, aborted: true })
     expect(sent).toHaveBeenCalledWith({
@@ -101,7 +104,8 @@ describe('ensurePinnedEngineReportingStatus', () => {
     const r = await ensurePinnedEngineReportingStatus({
       pin,
       appName: '1',
-      runner: 'gog'
+      runner: 'gog',
+      processRunner: createScriptedRunner([])
     })
     expect(r).toMatchObject({ ok: false, aborted: false, reason: 'offline' })
   })

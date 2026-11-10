@@ -221,21 +221,24 @@ export interface PerGameBottleDeps {
       ? R
       : never
   ) => ReturnType<typeof createFallbackBottle>
-  ensurePin: (args: {
-    pin: EnginePin
-    appName: string
-    runner: Runner
-    signal?: AbortSignal
-  }) => Promise<PinnedEngineResult>
+  ensurePin: (
+    args: Omit<
+      Parameters<typeof ensurePinnedEngineReportingStatus>[0],
+      'processRunner'
+    >
+  ) => Promise<PinnedEngineResult>
   currentPin: () => EnginePin
   isProvisioned: (bottleName: string) => boolean
 }
 
 const defaultDeps: Omit<
   PerGameBottleDeps,
-  'createCrossover' | 'createFallback' | 'decide' | 'resolveBinDir'
+  | 'createCrossover'
+  | 'createFallback'
+  | 'decide'
+  | 'resolveBinDir'
+  | 'ensurePin'
 > = {
-  ensurePin: ensurePinnedEngineReportingStatus,
   currentPin: () => ENGINE_PINS.current,
   isProvisioned: isBottleProvisioned
 }
@@ -342,6 +345,11 @@ export function ensureGameBottle(
   deps: Partial<PerGameBottleDeps> = {}
 ): Promise<EnsureGameBottleResult> {
   const d: PerGameBottleDeps = {
+    ensurePin: (a) =>
+      ensurePinnedEngineReportingStatus({
+        ...a,
+        processRunner: services.runner
+      }),
     createCrossover: (...a) => createCrossoverBottle(services, ...a),
     createFallback: (...a) => createFallbackBottle(services, ...a),
     decide: (a) => decideCreationEngine(a, { runner: services.runner }),

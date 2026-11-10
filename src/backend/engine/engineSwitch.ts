@@ -15,6 +15,7 @@ import { toolsPath } from 'backend/constants/paths'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { EngineServices } from './engineServices'
 import type { GameSettings } from 'common/types'
+import type { ProcessRunner } from 'backend/process/types'
 import type { Tools } from 'backend/tools'
 import {
   buildFallbackGameSettings,
@@ -113,10 +114,11 @@ function defaultCurrentPinEngine(): NonCrossoverEngine | null {
   }
 }
 
-async function defaultEnsurePinEngine(
+async function ensurePinEngineVia(
+  runner: Pick<ProcessRunner, 'run'>,
   pin: EnginePin
 ): Promise<NonCrossoverEngine | null> {
-  const res = await ensurePinnedEngine(pin)
+  const res = await ensurePinnedEngine(pin, { runner })
   if (!res.ok) return null
   return {
     wineBin: res.paths.wineBin,
@@ -132,26 +134,30 @@ export function switchServicesFrom(
   services: EngineServices
 ): Pick<
   EngineSwitchDeps,
-  'killWith' | 'installRemove' | 'resolveCrossoverBinDir'
+  'killWith' | 'installRemove' | 'resolveCrossoverBinDir' | 'ensurePinEngine'
 > {
   return {
     resolveCrossoverBinDir: () =>
       resolveCrossoverBinDirAsync({ runner: services.runner }),
     killWith: (...a) =>
       killBottleWineServerWith({ spawnAsync: services.spawnAsync }, ...a),
-    installRemove: services.installRemove
+    installRemove: services.installRemove,
+    ensurePinEngine: (pin) => ensurePinEngineVia(services.runner, pin)
   }
 }
 
 /** Everything except what the caller supplies: `crossoverSettings` (store-specific) and the services-built `killWith`/`installRemove`. */
 const defaultDeps: Omit<
   EngineSwitchDeps,
-  'crossoverSettings' | 'killWith' | 'installRemove' | 'resolveCrossoverBinDir'
+  | 'crossoverSettings'
+  | 'killWith'
+  | 'installRemove'
+  | 'resolveCrossoverBinDir'
+  | 'ensurePinEngine'
 > = {
   getMonitorPhase: () => null,
   fallbackSettings: buildFallbackGameSettings,
-  currentPinEngine: defaultCurrentPinEngine,
-  ensurePinEngine: defaultEnsurePinEngine
+  currentPinEngine: defaultCurrentPinEngine
 }
 
 function isInside(root: string, path: string): boolean {
@@ -489,6 +495,7 @@ type PrepareArgs = {
       | 'killWith'
       | 'installRemove'
       | 'resolveCrossoverBinDir'
+      | 'ensurePinEngine'
     >
 }
 

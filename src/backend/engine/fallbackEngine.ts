@@ -6,6 +6,7 @@
  * boot and filled only inside ensurePinnedEngine; no timers are created here
  * (downloadFile owns its own sockets and only runs on first need).
  */
+import type { ProcessRunner } from 'backend/process/types'
 import { createHash } from 'crypto'
 import {
   createReadStream,
@@ -177,6 +178,7 @@ async function installArtifact(
   artifact: PinnedArtifact,
   finalDir: string,
   opts: {
+    runner: Pick<ProcessRunner, 'run'>
     onProgress?: (p: FallbackDownloadProgress) => void
     signal?: AbortSignal
   }
@@ -235,7 +237,7 @@ async function installArtifact(
 
     logInfo(`Engine: extracting ${kind}`, LogPrefix.Backend)
     emit({ phase: 'extracting' })
-    const res = await extractFiles({
+    const res = await extractFiles(opts, {
       path: archive,
       destination: out,
       strip: 1
@@ -282,6 +284,7 @@ const inFlight = new Map<string, InFlight>()
 async function doEnsure(
   pin: EnginePin,
   opts: {
+    runner: Pick<ProcessRunner, 'run'>
     onProgress?: (p: FallbackDownloadProgress) => void
     signal?: AbortSignal
   }
@@ -315,9 +318,11 @@ async function doEnsure(
 export function ensurePinnedEngine(
   pin: EnginePin,
   opts: {
+    /** The process runner the archive extraction runs through (66.2-11). */
+    runner: Pick<ProcessRunner, 'run'>
     onProgress?: (p: FallbackDownloadProgress) => void
     signal?: AbortSignal
-  } = {}
+  }
 ): Promise<EnsureResult> {
   let entry = inFlight.get(pin.id)
   const isFirst = !entry
@@ -376,6 +381,7 @@ export function ensurePinnedEngine(
     shared.promise = Promise.resolve()
       .then(() =>
         doEnsure(pin, {
+          runner: opts.runner,
           onProgress: (p) => shared.listeners.forEach((l) => l(p)),
           signal: shared.controller.signal
         })

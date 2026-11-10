@@ -26,17 +26,13 @@
 jest.mock('backend/platform')
 jest.mock('../dialog/dialog')
 jest.mock('../logger')
-jest.mock('child_process', () => ({
-  ...jest.requireActual('child_process'),
-  spawn: jest.fn()
-}))
 jest.mock('../constants/environment', () => ({
   ...jest.requireActual('../constants/environment'),
   isWindows: true
 }))
 
-import { EventEmitter } from 'events'
-import { spawn } from 'child_process'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
+import type { ScriptStep } from 'backend/testUtils/scriptedRunner'
 import { dialog } from 'backend/platform'
 import { showDialogBoxModalAuto } from '../dialog/dialog'
 import { detectVCRedist, VC_REDIST_PROBE_TIMEOUT_MS } from '../utils'
@@ -48,32 +44,22 @@ import { createKvsStores } from '../constants/key_value_stores'
 
 const { configStore } = createKvsStores({ registry: createStoreRegistry() })
 
-const vcDeps = {
-  stores: createTestStores({ kvs: { configStore } as never })
-}
+const stores = createTestStores({ kvs: { configStore } as never })
 
-const mockedSpawn = spawn as unknown as jest.Mock
 const mockedShowDialogBoxModalAuto = showDialogBoxModalAuto as jest.Mock
 const mockedShowMessageBox = dialog.showMessageBox as jest.Mock
 const mockedLogWarning = logWarning as jest.Mock
 const mockedLogError = logError as jest.Mock
 const mockedLogInfo = logInfo as jest.Mock
 
-type StubStream = EventEmitter & { setEncoding: jest.Mock }
-
-function makeStubStream(): StubStream {
-  const stream = new EventEmitter() as StubStream
-  stream.setEncoding = jest.fn()
-  return stream
+/** One scripted powershell.exe probe; the argv is asserted separately from the calls log. */
+function probe(result: ScriptStep['result']): ScriptStep {
+  return { cmd: 'powershell.exe', match: () => true, result }
 }
 
-type StubChild = EventEmitter & { stdout: StubStream; stderr: StubStream }
-
-function makeStubChild(): StubChild {
-  const child = new EventEmitter() as StubChild
-  child.stdout = makeStubStream()
-  child.stderr = makeStubStream()
-  return child
+function depsFor(...steps: ScriptStep[]) {
+  const runner = createScriptedRunner(steps)
+  return { runner, deps: { stores, runner } }
 }
 
 describe('backend/utils.ts: detectVCRedist (260919-sch)', () => {
@@ -82,16 +68,13 @@ describe('backend/utils.ts: detectVCRedist (260919-sch)', () => {
     mockedShowMessageBox.mockReset()
   })
 
-  it('raises exactly one in-app dialog carrying three buttons, one vcRuntimeDownload and one vcRuntimeSkip, and never calls the native dialog', () => {
-    const child = makeStubChild()
-    mockedSpawn.mockReturnValue(child)
+  it('raises exactly one in-app dialog carrying three buttons, one vcRuntimeDownload and one vcRuntimeSkip, and never calls the native dialog', async () => {
+    // Fewer than 4 "Microsoft Visual C++ 2022" lines: the runtime is treated as not (fully) installed.
+    const { deps } = depsFor(
+      probe({ stdout: 'Some unrelated application\n', code: 0 })
+    )
 
-    detectVCRedist(vcDeps)
-
-    // Feed fewer than 4 "Microsoft Visual C++ 2022" lines so the function
-    // treats the runtime as not (fully) installed.
-    child.stdout.emit('data', 'Some unrelated application\n')
-    child.emit('close', 0)
+    await detectVCRedist(deps)
 
     expect(mockedShowDialogBoxModalAuto).toHaveBeenCalledTimes(1)
 
@@ -110,23 +93,22 @@ describe('backend/utils.ts: detectVCRedist (260919-sch)', () => {
     expect(mockedShowMessageBox).not.toHaveBeenCalled()
   })
 
-  it('does not raise a dialog when 4 or more installations are detected', () => {
-    const child = makeStubChild()
-    mockedSpawn.mockReturnValue(child)
+  it('does not raise a dialog when 4 or more installations are detected', async () => {
+    const { deps } = depsFor(
+      probe({
+        stdout: 'Microsoft Visual C++ 2022 X86 Additional\n'.repeat(4),
+        code: 0
+      })
+    )
 
-    detectVCRedist(vcDeps)
-
-    for (let i = 0; i < 4; i++) {
-      child.stdout.emit('data', 'Microsoft Visual C++ 2022 X86 Additional\n')
-    }
-    child.emit('close', 0)
+    await detectVCRedist(deps)
 
     expect(mockedShowDialogBoxModalAuto).not.toHaveBeenCalled()
     expect(mockedShowMessageBox).not.toHaveBeenCalled()
   })
 })
 
-// ── Quick task 260922-v2e: bounded probe + signal-safe close (D3/D4/D5/D6/D7) ──
+// ── Quick task 260922-v2e: bounded probe + timeout-safe result (D3/D4/D5/D6/D7) ──
 describe('backend/utils.ts: detectVCRedist bounded probe (260922-v2e)', () => {
   beforeEach(() => {
     mockedShowDialogBoxModalAuto.mockReset()
@@ -134,7 +116,6 @@ describe('backend/utils.ts: detectVCRedist bounded probe (260922-v2e)', () => {
     mockedLogWarning.mockReset()
     mockedLogError.mockReset()
     mockedLogInfo.mockReset()
-    mockedSpawn.mockReset()
     jest.spyOn(configStore, 'get').mockReturnValue(false)
   })
 
@@ -142,38 +123,35 @@ describe('backend/utils.ts: detectVCRedist bounded probe (260922-v2e)', () => {
     jest.restoreAllMocks()
   })
 
-  it('spawns powershell.exe with -NoProfile/-NonInteractive ahead of the Get-ItemProperty tail, bounded by VC_REDIST_PROBE_TIMEOUT_MS and windowsHide', () => {
-    const child = makeStubChild()
-    mockedSpawn.mockReturnValue(child)
+  it('runs powershell.exe with -NoProfile/-NonInteractive ahead of the Get-ItemProperty tail, bounded by VC_REDIST_PROBE_TIMEOUT_MS and windowsHide', async () => {
+    const { runner, deps } = depsFor(probe({ stdout: '', code: 0 }))
 
-    detectVCRedist(vcDeps)
+    await detectVCRedist(deps)
 
-    expect(mockedSpawn).toHaveBeenCalledTimes(1)
-    const [command, argv, options] = mockedSpawn.mock.calls[0]
-    expect(command).toBe('powershell.exe')
-    expect(argv.slice(0, 2)).toEqual(['-NoProfile', '-NonInteractive'])
-    expect(argv).toEqual(
+    expect(runner.calls).toHaveLength(1)
+    const call = runner.calls[0]!
+    expect(call.cmd).toBe('powershell.exe')
+    expect(call.argv.slice(0, 2)).toEqual(['-NoProfile', '-NonInteractive'])
+    expect(call.argv).toEqual(
       expect.arrayContaining(['Get-ItemProperty', 'Format-Table'])
     )
-    expect(VC_REDIST_PROBE_TIMEOUT_MS).toBeGreaterThanOrEqual(1)
-    expect(VC_REDIST_PROBE_TIMEOUT_MS).toBeLessThanOrEqual(30000)
-    expect(options).toMatchObject({
-      timeout: VC_REDIST_PROBE_TIMEOUT_MS,
+    expect(VC_REDIST_PROBE_TIMEOUT_MS).toBe(15_000)
+    expect(call.opts).toMatchObject({
+      timeoutMs: VC_REDIST_PROBE_TIMEOUT_MS,
       windowsHide: true
     })
   })
 
-  it('a timeout kill (close with code null + a signal) raises NO dialog and logs one warning naming the signal', () => {
-    const child = makeStubChild()
-    mockedSpawn.mockReturnValue(child)
-
-    detectVCRedist(vcDeps)
-
-    // Zero matching lines fed before the kill -- if the signal branch were
+  it('a timed-out probe raises NO dialog and logs one warning naming the bound', async () => {
+    // Zero matching lines before the kill -- if the timedOut branch were
     // missing, `code === null` is falsy and the function would fall through
     // to "fewer than 4 lines -> show the dialog", a false nag caused purely
     // by the bound (D5).
-    child.emit('close', null, 'SIGTERM')
+    const { deps } = depsFor(
+      probe({ timedOut: true, code: null, signal: 'SIGKILL' })
+    )
+
+    await detectVCRedist(deps)
 
     expect(mockedShowDialogBoxModalAuto).not.toHaveBeenCalled()
     expect(mockedLogWarning).toHaveBeenCalledTimes(1)
@@ -181,32 +159,40 @@ describe('backend/utils.ts: detectVCRedist bounded probe (260922-v2e)', () => {
     const warningText = Array.isArray(warningArg)
       ? warningArg.join(' ')
       : String(warningArg)
-    expect(warningText).toContain('SIGTERM')
+    expect(warningText).toContain('VC_REDIST_PROBE_TIMEOUT_MS')
   })
 
-  it('a non-zero exit (no signal) raises no dialog and logs an error (existing behaviour, now pinned)', () => {
-    const child = makeStubChild()
-    mockedSpawn.mockReturnValue(child)
+  it('a non-zero exit raises no dialog and logs an error (existing behaviour, now pinned)', async () => {
+    const { deps } = depsFor(probe({ stderr: 'access denied\n', code: 1 }))
 
-    detectVCRedist(vcDeps)
-
-    child.stderr.emit('data', 'access denied\n')
-    child.emit('close', 1, null)
+    await detectVCRedist(deps)
 
     expect(mockedShowDialogBoxModalAuto).not.toHaveBeenCalled()
     expect(mockedLogError).toHaveBeenCalledTimes(1)
   })
 
-  it('4+ matching lines log the installed count and elapsed ms, no dialog', () => {
-    const child = makeStubChild()
-    mockedSpawn.mockReturnValue(child)
+  it('a spawn failure raises no dialog and logs the crash', async () => {
+    const { deps } = depsFor({
+      cmd: 'powershell.exe',
+      match: () => true,
+      error: { code: 'ENOENT' }
+    })
 
-    detectVCRedist(vcDeps)
+    await detectVCRedist(deps)
 
-    for (let i = 0; i < 4; i++) {
-      child.stdout.emit('data', 'Microsoft Visual C++ 2022 X86 Additional\n')
-    }
-    child.emit('close', 0, null)
+    expect(mockedShowDialogBoxModalAuto).not.toHaveBeenCalled()
+    expect(mockedLogError).toHaveBeenCalledTimes(1)
+  })
+
+  it('4+ matching lines log the installed count and elapsed ms, no dialog', async () => {
+    const { deps } = depsFor(
+      probe({
+        stdout: 'Microsoft Visual C++ 2022 X86 Additional\n'.repeat(4),
+        code: 0
+      })
+    )
+
+    await detectVCRedist(deps)
 
     expect(mockedShowDialogBoxModalAuto).not.toHaveBeenCalled()
     expect(mockedLogInfo).toHaveBeenCalledTimes(1)
@@ -217,12 +203,13 @@ describe('backend/utils.ts: detectVCRedist bounded probe (260922-v2e)', () => {
     expect(infoText).toContain('4 matching entries')
   })
 
-  it('skips the probe entirely when skipVcRuntime is set, and logs why', () => {
+  it('skips the probe entirely when skipVcRuntime is set, and logs why', async () => {
     ;(configStore.get as jest.Mock).mockReturnValue(true)
+    const { runner, deps } = depsFor()
 
-    detectVCRedist(vcDeps)
+    await detectVCRedist(deps)
 
-    expect(mockedSpawn).not.toHaveBeenCalled()
+    expect(runner.calls).toHaveLength(0)
     expect(mockedLogInfo).toHaveBeenCalledTimes(1)
     const [infoArg] = mockedLogInfo.mock.calls[0]
     const infoText = Array.isArray(infoArg)
