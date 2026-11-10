@@ -117,21 +117,13 @@
 
 import { isStore } from 'common/storeCapabilities'
 import { ipcMain } from '../platform'
-// Load-bearing FIRST import (mirrors steamFlowRegistration.ts's Phase 27 Plan
-// 05 circular-dep fix): force `storeManagers/index.ts` to be the
-// INITIALIZATION ENTRY before the direct `steam/user` import below resolves.
-// `storeManagers/index.ts` imports `steam/library` at its OWN top (which in
-// turn imports `steam/user`) and only THEN constructs its eager
-// `libraryManagerMap` (`new SteamLibraryManager()` ...), so entering through
-// it lets every steam/* module finish defining its class export first.
-// Entering through `steam/user` DIRECTLY (as this file's own import below
-// does) risks the same re-entrant `index.ts` mid-evaluation crash
-// `steamFlowRegistration.ts`'s docstring documents (`SteamLibraryManager is
-// not a constructor`, esbuild-bundle-only, ts-jest's init order differs) —
-// this fix is per-file, not "once is enough", because each curated
-// registration module is its own independent entry point into the bundle's
-// module graph.
-import '../storeManagers'
+// 66.1-22: the former load-bearing `import '../storeManagers'` entry is gone. The managers
+// arrive as `deps.managers` from the boot `store-managers` step, so this module no longer
+// triggers the storeManagers/steam init cycle itself.
+import {
+  managerDepsFromServices,
+  type ManagerDepsSource
+} from '../services/managerDeps'
 import { SteamUser } from '../storeManagers/steam/user'
 import {
   pollCredentialLogin,
@@ -141,10 +133,6 @@ import {
   submitSteamGuardCode
 } from '../storeManagers/steam/userSignIn'
 import { redeemKey } from '../storeManagers/steam/userRedeem'
-import {
-  steamSyncStore,
-  steamBottleConfigStore
-} from '../storeManagers/steam/stores'
 import { isSteamBottleProvisioned } from '../storeManagers/steam/bottle'
 import { provisionBottle } from '../storeManagers/steam/provisionBottle'
 import {
@@ -175,19 +163,17 @@ import {
  * module owns no side effects at import time beyond the imports above; the
  * caller decides when registration onto the handler registry happens.
  */
-// Transitional (66.1-16): the call-time legacy stores slice for the sign-in
-// functions; plan 21/23 replaces it with the injected services.
-async function legacySteamStores() {
-  return (await import('../services/legacyFacades')).legacyManagerDeps()
-}
+export type SteamAuthFlowDeps = ManagerDepsSource
 
-export function registerSteamAuthFlows(): void {
+export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
+  const { steamSyncStore, steamBottleConfigStore } = deps.stores.steam
+  const managerDeps = () => managerDepsFromServices(deps)
   ipcMain.handle('checkSteamInstalled', async () => {
     return SteamUser.isSteamClientInstalled()
   })
 
   ipcMain.handle('steamStartQR', async () => {
-    return startQRLogin(await legacySteamStores())
+    return startQRLogin(managerDeps())
   })
 
   ipcMain.handle('steamPollQR', async () => {
@@ -206,7 +192,7 @@ export function registerSteamAuthFlows(): void {
         username: string
         password: string
       }
-      return startCredentialLogin(await legacySteamStores(), username, password)
+      return startCredentialLogin(managerDeps(), username, password)
     }
   )
 
@@ -278,7 +264,7 @@ export function registerSteamAuthFlows(): void {
     'steamBottleProvision',
     async (_event: unknown, ...args: unknown[]) => {
       return provisionBottle(
-        (await import('../services/legacyFacades')).legacyManagerDeps(),
+        managerDeps(),
         args[0] as Parameters<typeof provisionBottle>[1]
       )
     }
@@ -349,20 +335,14 @@ export function registerSteamAuthFlows(): void {
   ipcMain.handle(
     'isSteamBottleEligible',
     async (_event: unknown, ...args: unknown[]) => {
-      return getSteamBottleEligibilityVerdict(
-        (await import('../services/legacyFacades')).legacyManagerDeps(),
-        args[0]
-      )
+      return getSteamBottleEligibilityVerdict(managerDeps(), args[0])
     }
   )
 
   ipcMain.handle(
     'persistBottleWineVersion',
     async (_event: unknown, ...args: unknown[]) => {
-      return persistInstallFormWineVersion(
-        (await import('../services/legacyFacades')).legacyManagerDeps(),
-        args[0]
-      )
+      return persistInstallFormWineVersion(managerDeps(), args[0])
     }
   )
 
@@ -378,18 +358,14 @@ export function registerSteamAuthFlows(): void {
   ipcMain.handle(
     'getSteamBridgeRoute',
     async (_event: unknown, ...args: unknown[]) => {
-      return getBridgeRouteVerdict(
-        (await import('../services/legacyFacades')).legacyManagerDeps(),
-        args[0],
-        args[1]
-      )
+      return getBridgeRouteVerdict(managerDeps(), args[0], args[1])
     }
   )
 
   ipcMain.handle(
     'setSteamBridgeUserRoute',
     async (_event: unknown, ...args: unknown[]) => {
-      return handleSetSteamBridgeUserRoute(await legacySteamStores(), args[0])
+      return handleSetSteamBridgeUserRoute(managerDeps(), args[0])
     }
   )
 
@@ -398,10 +374,7 @@ export function registerSteamAuthFlows(): void {
   ipcMain.handle(
     'steamRemoveAllCopies',
     async (_event: unknown, ...args: unknown[]) => {
-      return removeAllSteamInstallCopies(
-        (await import('../services/legacyFacades')).legacyManagerDeps(),
-        args[0]
-      )
+      return removeAllSteamInstallCopies(managerDeps(), args[0])
     }
   )
 
@@ -448,7 +421,7 @@ export function registerSteamAuthFlows(): void {
 
   // ── Guided Steam-client install pair (REQ-34.4-04, main.ts:958-961) ───────
   ipcMain.handle('steamClientSetupStart', async () => {
-    return startGuidedClientInstall(await legacySteamStores())
+    return startGuidedClientInstall(managerDeps())
   })
 
   ipcMain.handle(

@@ -136,16 +136,17 @@ export function registerHandlers(deps: {
 }): void {
   ipcMain.handle('health', async () => 'ok')
 
-  registerSteamFlows()
-  registerSteamAuthFlows()
+  registerSteamFlows({
+    managers: deps.services.managers,
+    stores: deps.services.stores,
+    launcher: deps.services.launcher
+  })
+  registerSteamAuthFlows(deps.services)
   registerEngineFlows({
     managers: deps.services.managers,
     stores: deps.services.stores
   })
-  registerInstallFlows({
-    downloadQueue: deps.services.downloadQueue,
-    stores: deps.services.stores
-  })
+  registerInstallFlows(deps.services)
   registerSettingsFlows({
     managers: deps.services.managers,
     stores: deps.services.stores

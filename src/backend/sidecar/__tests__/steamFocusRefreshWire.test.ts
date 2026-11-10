@@ -159,6 +159,20 @@ import { libraryManagerMap } from '../../storeManagers'
 import { registerSteamFlows } from '../steamFlowRegistration'
 import { startRpcServer } from '../sidecarRpc'
 import { listenerRegistry } from '../../platform'
+import {
+  createTestManagers,
+  createTestStores
+} from '../../testUtils/testServices'
+
+/** The slices `registerSteamFlows` takes; the steam manager is the real singleton. */
+const steamFlowDeps = () => ({
+  managers: createTestManagers({ library: { steam: libraryManagerMap.steam } }),
+  stores: createTestStores(),
+  launcher: {
+    launchEventCallback: (...args: unknown[]) =>
+      launchEventCallbackMock(...args)
+  } as never
+})
 
 // `backend/logger`'s real `logWarning`/`logInfo` dereference a module-private
 // `heroicLogWriter` that only a full `init`/`initHeadless()` call assigns -- neither of which
@@ -235,7 +249,7 @@ describe('T-C / T-D: shellWindowFocused consumer over the real transport', () =>
       .spyOn(libraryManagerMap.steam, 'refreshInstallState')
       .mockResolvedValue(undefined)
 
-    registerSteamFlows()
+    registerSteamFlows(steamFlowDeps())
     const { input } = startTransport()
 
     // A real newline-terminated frame, channel read from the SHARED constant -- never call
@@ -254,7 +268,7 @@ describe('T-C / T-D: shellWindowFocused consumer over the real transport', () =>
       .mockRejectedValueOnce(new Error('acf read failed'))
       .mockResolvedValueOnce(undefined)
 
-    registerSteamFlows()
+    registerSteamFlows(steamFlowDeps())
     const { input } = startTransport()
 
     let unhandled: unknown

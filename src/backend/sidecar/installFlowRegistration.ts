@@ -87,7 +87,7 @@
  *
  * `uninstallGameCallback`/`checkGameUpdates`/`addToQueue` all "genuinely span
  * multiple store managers" (checklist step 2's own curated-import carve-out)
- * via `libraryManagerMap`, which each imports for itself — that import is
+ * via the managers library, which each imports for itself — that import is
  * correct, not a discipline violation (RESEARCH Q2 confirmed the cost is
  * already sunk in the sidecar via `steamFlowRegistration.ts`'s load-bearing
  * first import below; RESEARCH D-01 confirms `downloadqueue.ts`'s own
@@ -122,7 +122,7 @@ import { ipcMain } from '../platform'
 // direct `steam/installLocation` import below resolves.
 // `storeManagers/index.ts` imports `steam/library` at its OWN top (which
 // transitively pulls in `steam/games`) and only THEN constructs its eager
-// `libraryManagerMap` (`new SteamLibraryManager()` ...), so entering through
+// the managers library (`new SteamLibraryManager()` ...), so entering through
 // it lets every steam/* module finish defining its class export first.
 // Entering through `steam/installLocation` DIRECTLY (as this file's own
 // import below does) risks the same re-entrant `index.ts` mid-evaluation
@@ -131,7 +131,6 @@ import { ipcMain } from '../platform'
 // init order differs) — this fix is per-file, not "once is enough", because
 // each curated registration module is its own independent entry point into
 // the bundle's module graph.
-import { libraryManagerMap } from '../storeManagers'
 import { uninstallGameCallback } from '../utils/uninstaller'
 import { checkGameUpdates } from '../utils/checkGameUpdates'
 import { listSteamLibraryTargets } from '../storeManagers/steam/installLocation'
@@ -144,14 +143,16 @@ import { resolveInstallRoot } from '../storeManagers/steam/library/installRoot'
 import { library as steamLibraryMap } from '../storeManagers/steam/state'
 import { getSteamBottleEligibilityVerdict } from '../storeManagers/steam/installFormIpc'
 import { isSteamExperimentalInstallAppEnabled } from '../storeManagers/steam/experimentalInstallAppSetting'
-import type { DownloadQueue } from '../downloadmanager/downloadqueue'
-import type { Stores } from '../services/types'
+import {
+  managerDepsFromServices,
+  type ManagerDepsSource
+} from '../services/managerDeps'
+import type { StoreManagers } from '../services/types'
 import { resolveGameTitle } from '../downloadmanager/utils'
 // Plan 34.6-06 (REQ-34.6-04): byte-equivalent port of moveInstall/importGame
 // (main.ts:1112-1245, D-02). getGame/isEpicServiceOffline/sendGameStatusUpdate/writeConfig are
 // the same `backend/utils.ts` exports main.ts itself imports for these two handlers.
 import {
-  getGame,
   isEpicServiceOffline,
   sendGameStatusUpdate,
   writeConfig
@@ -194,16 +195,15 @@ function rejectedPathDialogTitle(): string {
   )
 }
 
+export type InstallFlowDeps = ManagerDepsSource
+
 /**
  * Registers the nine install-slice invoke handlers. Called once from
  * `handlers.ts` — this module owns no side effects at import time beyond the
  * imports above; the caller decides when registration onto the handler
  * registry happens.
  */
-export function registerInstallFlows(deps: {
-  downloadQueue: Pick<DownloadQueue, 'addToQueue'>
-  stores: Pick<Stores, 'kvs'>
-}): void {
+export function registerInstallFlows(deps: InstallFlowDeps): void {
   ipcMain.handle(
     'install',
     async (_event: unknown, ...args: unknown[]): Promise<void> => {
@@ -241,7 +241,7 @@ export function registerInstallFlows(deps: {
   ipcMain.handle('uninstall', (event: unknown, ...args: unknown[]) =>
     (
       uninstallGameCallback as (
-        deps: { libraryManagers: typeof libraryManagerMap },
+        deps: { libraryManagers: StoreManagers['library'] },
         event: unknown,
         appName: string,
         runner: Runner,
@@ -249,7 +249,7 @@ export function registerInstallFlows(deps: {
         shouldRemoveSetting: boolean
       ) => Promise<void>
     )(
-      { libraryManagers: libraryManagerMap },
+      { libraryManagers: deps.managers.library },
       event,
       args[0] as string,
       args[1] as Runner,
@@ -287,13 +287,8 @@ export function registerInstallFlows(deps: {
     }
   )
 
-  // TEMPORARY (plan 12, replaced when plan 21 converts this registration to injected deps).
   ipcMain.handle('checkGameUpdates', async () =>
-    checkGameUpdates({
-      managers: (
-        await import('../services/legacyFacades')
-      ).buildManagersFacade()
-    })
+    checkGameUpdates({ managers: deps.managers })
   )
 
   // quick 261030-o77: the enableSteamNativeInstall toggle only governs
@@ -310,7 +305,7 @@ export function registerInstallFlows(deps: {
       if (typeof appName !== 'string' || !/^\d+$/.test(appName)) return []
       try {
         const verdict = await getSteamBottleEligibilityVerdict(
-          (await import('../services/legacyFacades')).legacyManagerDeps(),
+          managerDepsFromServices(deps),
           appName
         )
         return verdict.eligible ? listSteamLibraryTargets() : []
@@ -346,7 +341,7 @@ export function registerInstallFlows(deps: {
       }
       try {
         const verdict = await getSteamBottleEligibilityVerdict(
-          (await import('../services/legacyFacades')).legacyManagerDeps(),
+          managerDepsFromServices(deps),
           appName
         )
         if (verdict.eligible) return closedInstallAppReply()
@@ -465,10 +460,10 @@ export function registerInstallFlows(deps: {
       // `undefined` here, notifying with a nameless subject. No queue
       // element is in scope at this call site (unlike downloadqueue.ts's
       // processNotification), so the chain is `live.title || appName`.
-      const title = resolveGameTitle(libraryManagerMap, runner, appName)
+      const title = resolveGameTitle(deps.managers.library, runner, appName)
       notify({ title, body: i18next.t('notify.moving', 'Moving Game') })
 
-      const moveRes = await libraryManagerMap[runner]
+      const moveRes = await deps.managers.library[runner]
         .getGame(appName)
         .moveInstall(path)
       if (moveRes.status === 'error') {
@@ -615,7 +610,7 @@ export function registerInstallFlows(deps: {
 
       // Quick task 260905-luf: same unguarded-destructure fix as moveInstall
       // above -- see that call site's comment.
-      const title = resolveGameTitle(libraryManagerMap, runner, appName)
+      const title = resolveGameTitle(deps.managers.library, runner, appName)
       sendGameStatusUpdate({
         appName,
         runner,
@@ -635,7 +630,7 @@ export function registerInstallFlows(deps: {
       }
 
       try {
-        const { abort, error } = await libraryManagerMap[runner]
+        const { abort, error } = await deps.managers.library[runner]
           .getGame(appName)
           .importGame(path, platform)
         if (abort || error) {
@@ -654,10 +649,14 @@ export function registerInstallFlows(deps: {
         ? importEngineSettings({ runner, appName, engineOverride })
         : null
       if (engineSettings) {
-        const gameSettings = await getGame(appName, runner).getSettings()
+        const gameSettings = await deps.managers.library[runner]
+          .getGame(appName)
+          .getSettings()
         writeConfig(deps, appName, { ...gameSettings, ...engineSettings })
       } else if (winePrefix && wineVersion) {
-        const gameSettings = await getGame(appName, runner).getSettings()
+        const gameSettings = await deps.managers.library[runner]
+          .getGame(appName)
+          .getSettings()
         writeConfig(deps, appName, {
           ...gameSettings,
           winePrefix,
