@@ -153,7 +153,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 64: UI to edit themes** — 0 plans; not started
 - [x] **Phase 65: Steam store manager decomposition, continued** — 20/20 plans complete; Phase 61 closed 2026-11-07 — unblocked, D-11 (completed 2026-11-08)
 - [x] **Phase 66: Backend dependency injection replacing module-level singletons** — 9 plans; planned; split 2026-11-10 into 66 (foundation) + 66.1–66.3 (completed 2026-11-09)
-- [ ] **Phase 66.1: Backend DI — stores, store managers, flow registrations and launcher** — 0 plans; not started
+- [x] **Phase 66.1: Backend DI — stores, store managers, flow registrations and launcher** — 0 plans; not started (completed 2026-11-10)
 - [ ] **Phase 66.2: Every backend spawn through the process runner, then the `child_process` ban** — 0 plans; not started
 - [ ] **Phase 66.3: Backend module state to zero, then the live macOS smoke** — 0 plans; not started
 - [x] **Phase 67: Schema validation at the sidecar IPC boundary** — 20 plans in 14 waves; planned 2026-11-07 (completed 2026-11-07)
@@ -613,7 +613,7 @@ Plans:
 **Goal:** D-15 step 2 of Phase 66 (decisions in `66-CONTEXT.md`). Nothing is constructed at import time. A stores factory replaces the 16 `*/stores.ts` modules and `key_value_stores.ts`. `createStoreManagers` builds the library and game manager classes (gog, legendary, nile, steam, sideload) with constructor deps at boot (D-02), and the 46 non-test consumers of `libraryManagerMap`/`gameManagerMap`/`storeLaunchHooks` receive them. The 25 `sidecar/*FlowRegistration.ts` files take narrow slices (D-01). In `launcher.ts`, `callRunner`, `runWineCommand`, the gamescope probe and script spawns become runner callers, pinned by characterization tests first. `utils.ts` `spawnAsync` becomes a thin runner caller and `handleExit` calls the runner's teardown. `trackedChildren.ts` and `longLivedChildren.ts` are deleted, with comet and the bridge `helperSpawn` moving to `spawnLongLived` (D-10, D-11). Ceilings drop in the same commits (D-16). About 16–18 plans.
 **Requirements**: TBD
 **Depends on:** Phase 66
-**Plans:** 36/37 plans executed
+**Plans:** 37/37 plans complete
 
 Plans:
 
@@ -700,7 +700,7 @@ Plans:
 
 **Wave 16**
 
-- [ ] 66.1-28-PLAN.md — operator live check on macOS (non-autonomous)
+- [x] 66.1-28-PLAN.md — operator live check on macOS (non-autonomous)
 
 **Cross-cutting constraints:**
 
