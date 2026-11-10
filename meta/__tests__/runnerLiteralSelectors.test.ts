@@ -59,7 +59,18 @@ describe('runner literal selectors: HIT', () => {
     ["const a = storeKey !== 'humble'"],
     ["switch (library) { case 'gog': break }"],
     // Inner switch of a nested pair: its own case is a store literal.
-    ["switch (kind) { case 'a': switch (runner) { case 'steam': break } }"]
+    ["switch (kind) { case 'a': switch (runner) { case 'steam': break } }"],
+    // Composed wrappers (62-23 review WR-02).
+    ["const a = (game?.runner as string) === 'steam'"],
+    ["const a = (game?.runner)! === 'steam'"],
+    ["const a = (runner as Runner)! === 'steam'"],
+    ["const a = (game?.runner as string)! === 'steam'"],
+    ["const a = 'steam' === (props.runner satisfies string)"],
+    ["const a = (['gog'] as const).includes(runner)"],
+    ["const a = (['gog', 'nile'] as const).indexOf(game?.runner as string)"],
+    ["const a = (['gog'] satisfies string[]).includes(runner)"],
+    ["const a = ['steam'].lastIndexOf(runner)"],
+    ["const a = ['gog'].includes(runner!)"]
   ])('%s', async (code) => {
     expect(await hits(code)).toBeGreaterThanOrEqual(1)
   })
@@ -87,6 +98,8 @@ describe('runner literal selectors: NON-HIT', () => {
     ["switch (value) { case 'a': switch (x) { case 'steam': break } }"],
     // The literal must be an element of the receiver array, not an argument.
     ["const a = ['a', 'b'].includes(runner, 'steam'.length)"],
+    ["const a = (['a', 'b'] as const).includes(runner, 'steam'.length)"],
+    ["const a = ['a'].lastIndexOf(runner)"],
     ["const a = new Set(['a']).has(runner, 'steam')"],
     ["const a = value === 'x'"],
     ['const a = library === otherLibrary'],
