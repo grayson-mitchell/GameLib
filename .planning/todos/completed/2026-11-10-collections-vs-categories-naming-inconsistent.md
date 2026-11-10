@@ -28,3 +28,10 @@ manager dialog ("Manage Categories") and settings say "Categories".
 Pick one term and use it everywhere (user-facing strings and the en locale in
 `public/locales/en/translation.json`; keep internal identifiers as they are).
 Not fixed here; filed from the UAT only.
+
+## Resolution
+
+Term chosen: Categories (operator decision; already translated in the inherited locales). Keys and identifiers unchanged. Resolved by quick task 261110-vnl.
+
+- en values changed: `filterPanel.collections`, `filterPanel.manageCollections`, `filterPanel.newCollection`, `tour.library.quickFiltersCollections` (gamelib.json) and `tour.library.viewsCollections` (translation.json).
+- Non-en locales mapped from `header.categories` / `categories-manager.title` / "+ " + `category-settings.new-category`. Locales with no such wording keep their existing translation, per key: collections skipped for br, bs, eu, fa, he, ro, sl, uz; manageCollections skipped for az, br, bs, eu, fa, he, hr, ka, sl, sr, th, uz; newCollection skipped for az, br, bs, eu, fa, he, hr, ka, sl, sr, th, uz.
