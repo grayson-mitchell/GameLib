@@ -692,6 +692,78 @@ describe('register-handlers boot step (D-08, C-03)', () => {
   })
 })
 
+describe('steam running-game poller boot wiring (quick 261111-7wo)', () => {
+  const REG_ARGV = [
+    'query',
+    'HKCU\\Software\\Valve\\Steam',
+    '/v',
+    'RunningAppID'
+  ]
+
+  // Mirrors steamLaunchWatch.test.ts's tick(): drain the awaiting probe, advance the injected
+  // clock, drain again so the tick's async body and its frame write have both run.
+  async function tick(
+    clock: { advance(ms: number): void },
+    ms: number
+  ): Promise<void> {
+    for (let i = 0; i < 10; i++) await Promise.resolve()
+    clock.advance(ms)
+    for (let i = 0; i < 10; i++) await Promise.resolve()
+  }
+
+  const statusFrames = (frames: { [key: string]: unknown }[]) =>
+    frames
+      .filter(
+        (f) => f.kind === 'frontendMessage' && f.channel === 'gameStatusUpdate'
+      )
+      .map((f) => (f.args as unknown[])[0])
+
+  it('a booted win32 sidecar turns a RunningAppID 0 -> X -> 0 change into one playing and one done frame', async () => {
+    const { frames, testContext } = bootFresh({
+      context: {
+        platform: 'win32',
+        script: [
+          {
+            cmd: 'reg',
+            argv: REG_ARGV,
+            result: {
+              code: 0,
+              stdout: 'RunningAppID    REG_DWORD    0x407e0'
+            }
+          },
+          {
+            cmd: 'reg',
+            argv: REG_ARGV,
+            result: { code: 0, stdout: 'RunningAppID    REG_DWORD    0x0' },
+            repeat: true
+          }
+        ]
+      }
+    })
+
+    // Nothing ticks at boot itself (exit contract: no work before the first interval).
+    const regCalls = () =>
+      testContext.runner.calls.filter((c) => c.cmd === 'reg')
+    expect(regCalls()).toHaveLength(0)
+    expect(statusFrames(frames)).toHaveLength(0)
+
+    await tick(testContext.clock, 5000)
+    expect(regCalls()).toHaveLength(1)
+    expect(statusFrames(frames)).toEqual([
+      { appName: '264160', runner: 'steam', status: 'playing' }
+    ])
+
+    await tick(testContext.clock, 5000)
+    expect(statusFrames(frames)).toEqual([
+      { appName: '264160', runner: 'steam', status: 'playing' },
+      { appName: '264160', runner: 'steam', status: 'done' }
+    ])
+    // Let the poller's own fire-and-forget log appends land before the next boot rotates the
+    // shared gamelib.log (an in-flight append makes that rename EPERM on Windows).
+    await flush()
+  })
+})
+
 describe('one-shot boot (D-08)', () => {
   it('a second bootSidecar() or init() in the same process throws naming D-08', () => {
     const { testContext } = bootFresh()
