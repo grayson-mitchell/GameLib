@@ -1,6 +1,8 @@
 import '../../testUtils/tauriWindow'
 import { resetAllStores } from '../storeKit'
 import useAuthState, { readInitialAuth } from '../authState'
+import useLibraryState, { installLibraryBridgeSlots } from '../libraryState'
+import useUiState from '../uiState'
 import { sanitizeSignInProbeOutcomeMap } from 'common/signInState'
 import type { HumbleSyncState } from 'common/types/humble'
 
@@ -254,5 +256,284 @@ describe('authState', () => {
     })
     useAuthState.getState().applyHumbleSyncState(syncState)
     expect(useAuthState.getState().humble.syncing).toBe(false)
+  })
+})
+
+describe('authState login/logout actions', () => {
+  const order: string[] = []
+  let libraryCalls: unknown[][] = []
+  let dialogs: Array<{
+    title: string
+    message: string
+    buttons: Array<{ text: string; onClick?: () => void }>
+  }> = []
+  let userInfo: unknown
+  // Config-store answers: handleSuccessfulLogin re-reads identities from them.
+  let cfg: Record<string, unknown> = {}
+  let logoutLegendaryImpl: () => Promise<void>
+
+  const api = {
+    storeNew: () => undefined,
+    storeHas: () => false,
+    storeGet: (name: string, key: string, fallback?: unknown) =>
+      cfg[`${name}|${key}`] ?? fallback,
+    setSetting: () => undefined,
+    logError: () => undefined,
+    login: async (sid: string) => {
+      order.push(`login:${sid}`)
+      return { status: 'done', data: { displayName: 'epicName' } }
+    },
+    logoutLegendary: () => {
+      order.push('logoutLegendary')
+      return logoutLegendaryImpl()
+    },
+    authGOG: async (token: string) => {
+      order.push(`authGOG:${token}`)
+      return { status: 'done', data: { username: 'gogName' } }
+    },
+    logoutGOG: () => {
+      order.push('logoutGOG')
+    },
+    authAmazon: async () => {
+      order.push('authAmazon')
+      return { status: 'done', user: { user_id: 'amzId', name: 'amzName' } }
+    },
+    logoutAmazon: async () => {
+      order.push('logoutAmazon')
+    },
+    getAmazonLoginData: async () => ({ url: 'u' }),
+    logoutSteam: () => {
+      order.push('logoutSteam')
+    },
+    getSteamUserInfo: async () => userInfo,
+    humbleSync: async () => {
+      order.push('humbleSync')
+    },
+    humbleDisconnect: () => {
+      order.push('humbleDisconnect')
+    }
+  }
+
+  beforeEach(() => {
+    ;(window as unknown as { api: unknown }).api = api
+    ;(window as unknown as { localStorage: unknown }).localStorage = {
+      setItem: (k: string, v: string) => order.push(`storage:${k}=${v}`)
+    }
+    order.length = 0
+    libraryCalls = []
+    dialogs = []
+    userInfo = undefined
+    cfg = {
+      'configStore|userInfo.displayName': 'epicName',
+      'gogConfigStore|userData.username': 'gogName',
+      'nileConfigStore|userData.user_id': 'amzId',
+      'nileConfigStore|userData.name': 'amzName',
+      'steamConfigStore|userData': { username: 'sName' }
+    }
+    logoutLegendaryImpl = async () => undefined
+    installLibraryBridgeSlots({
+      refreshLibrary: async (o) => {
+        libraryCalls.push(['refresh', o])
+      },
+      resetRunnerLibrary: (r) => {
+        libraryCalls.push(['reset', r])
+      },
+      setRefreshing: (v) => {
+        libraryCalls.push(['refreshing', v])
+      }
+    })
+    useUiState.setState({
+      showDialogModal: ((o: (typeof dialogs)[number]) => {
+        dialogs.push(o)
+      }) as never
+    })
+  })
+
+  afterEach(() => {
+    resetAllStores()
+    jest.useRealTimers()
+  })
+
+  it('epicLogin sets the identity, resets the library and refreshes via handleSuccessfulLogin', async () => {
+    await expect(useAuthState.getState().epicLogin('sid')).resolves.toBe('done')
+    expect(useAuthState.getState().epicUsername).toBe('epicName')
+    expect(order).toEqual(['login:sid', 'storage:category=all'])
+    expect(libraryCalls).toEqual([
+      ['reset', 'legendary'],
+      [
+        'refresh',
+        {
+          runInBackground: false,
+          library: 'legendary',
+          origin: 'login-success'
+        }
+      ]
+    ])
+  })
+
+  it('epicLogin leaves everything alone on a non-done status', async () => {
+    const original = api.login
+    api.login = async () => ({ status: 'error', data: undefined }) as never
+    try {
+      await expect(useAuthState.getState().epicLogin('x')).resolves.toBe(
+        'error'
+      )
+    } finally {
+      api.login = original
+    }
+    expect(useAuthState.getState().epicUsername).toBeUndefined()
+    expect(libraryCalls).toEqual([])
+  })
+
+  it('epicLogout toggles refreshing around the call and clears identity', async () => {
+    useAuthState.setState({ epicUsername: 'epicName' })
+    await useAuthState.getState().epicLogout()
+    expect(useAuthState.getState().epicUsername).toBeNull()
+    expect(libraryCalls).toEqual([
+      ['refreshing', true],
+      ['reset', 'legendary'],
+      ['refreshing', false]
+    ])
+  })
+
+  it('epicLogout still clears identity and refreshing when logout rejects', async () => {
+    useAuthState.setState({ epicUsername: 'epicName' })
+    logoutLegendaryImpl = () => Promise.reject(new Error('cookie clear failed'))
+    await expect(useAuthState.getState().epicLogout()).rejects.toThrow(
+      'cookie clear failed'
+    )
+    expect(useAuthState.getState().epicUsername).toBeNull()
+    expect(libraryCalls).toEqual([
+      ['refreshing', true],
+      ['reset', 'legendary'],
+      ['refreshing', false]
+    ])
+  })
+
+  it('gogLogin and gogLogout', async () => {
+    await expect(useAuthState.getState().gogLogin('tok')).resolves.toBe('done')
+    expect(useAuthState.getState().gogUsername).toBe('gogName')
+    await useAuthState.getState().gogLogout()
+    expect(useAuthState.getState().gogUsername).toBeNull()
+    expect(order).toEqual(['authGOG:tok', 'storage:category=all', 'logoutGOG'])
+    expect(libraryCalls.slice(-1)).toEqual([['reset', 'gog']])
+  })
+
+  it('amazonLogin, getAmazonLoginData and amazonLogout (clears both fields)', async () => {
+    await expect(
+      useAuthState.getState().amazonLogin({} as never)
+    ).resolves.toBe('done')
+    expect(useAuthState.getState().amazonUserId).toBe('amzId')
+    expect(useAuthState.getState().amazonUsername).toBe('amzName')
+    await expect(useAuthState.getState().getAmazonLoginData()).resolves.toEqual(
+      { url: 'u' }
+    )
+    await useAuthState.getState().amazonLogout()
+    expect(useAuthState.getState().amazonUserId).toBeNull()
+    expect(useAuthState.getState().amazonUsername).toBeNull()
+    expect(libraryCalls[0]).toEqual(['reset', 'nile'])
+    expect(libraryCalls.slice(-1)).toEqual([['reset', 'nile']])
+  })
+
+  it('steamLogin sets identity and refreshes in the background', async () => {
+    await expect(
+      useAuthState.getState().steamLogin({ status: 'done', username: 'sName' })
+    ).resolves.toBe('done')
+    expect(useAuthState.getState().steamUsername).toBe('sName')
+    expect(libraryCalls).toEqual([
+      ['reset', 'steam'],
+      [
+        'refresh',
+        { runInBackground: true, library: 'steam', origin: 'steam-login' }
+      ]
+    ])
+  })
+
+  it('steamLogout clears identity and the library once sign-out is confirmed', async () => {
+    useAuthState.setState({ steamUsername: 'sName' })
+    await useAuthState.getState().steamLogout()
+    expect(order).toEqual(['logoutSteam'])
+    expect(useAuthState.getState().steamUsername).toBeNull()
+    expect(libraryCalls).toEqual([['reset', 'steam']])
+    expect(dialogs).toEqual([])
+  })
+
+  // RED specimen: a variant that cleared state on failure would fail the
+  // `toBe('sName')` assertion below, so the check is not vacuous.
+  it('steamLogout leaves state untouched and shows the failure dialog when never confirmed', async () => {
+    jest.useFakeTimers()
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined)
+    userInfo = { username: 'sName' }
+    useAuthState.setState({ steamUsername: 'sName' })
+    const pending = useAuthState.getState().steamLogout()
+    await jest.advanceTimersByTimeAsync(20 * 150)
+    await pending
+    warn.mockRestore()
+    expect(useAuthState.getState().steamUsername).toBe('sName')
+    expect(libraryCalls).toEqual([])
+    expect(dialogs).toHaveLength(1)
+    // i18next is uninitialised here, so `t` yields no text; the dialog shape
+    // (one OK button) is what is observable.
+    expect(dialogs[0]!.buttons).toHaveLength(1)
+  })
+
+  it('humbleLogin marks connected, resyncs and starts a sync; non-done changes nothing', async () => {
+    useAuthState.setState({ humble: { expired: true, keys: [] } })
+    await useAuthState.getState().humbleLogin({ status: 'error' })
+    expect(useAuthState.getState().humble.isLoggedIn).toBeUndefined()
+    cfg['humbleConfigStore|isLoggedIn'] = true
+    cfg['humbleConfigStore|userData'] = { username: 'h' }
+    await useAuthState.getState().humbleLogin({ status: 'done', username: 'h' })
+    expect(useAuthState.getState().humble).toMatchObject({
+      isLoggedIn: true,
+      username: 'h',
+      expired: false,
+      keys: []
+    })
+    expect(order).toEqual(['humbleSync'])
+  })
+
+  it('humbleDisconnect is confirmation-gated; Yes wipes with the exact reset object, No does nothing', async () => {
+    useAuthState.setState({
+      humble: { isLoggedIn: true, username: 'h', keys: [{ id: 'k' } as never] }
+    })
+    await useAuthState.getState().humbleDisconnect()
+    expect(dialogs).toHaveLength(1)
+    expect(order).toEqual([])
+    expect(useAuthState.getState().humble.isLoggedIn).toBe(true)
+    dialogs[0]!.buttons[1]!.onClick?.()
+    expect(useAuthState.getState().humble.isLoggedIn).toBe(true)
+    dialogs[0]!.buttons[0]!.onClick?.()
+    expect(order).toEqual(['humbleDisconnect'])
+    expect(useAuthState.getState().humble).toEqual({
+      isLoggedIn: false,
+      username: null,
+      expired: false,
+      keys: [],
+      syncedAt: null,
+      syncError: 'none',
+      syncing: false
+    })
+  })
+
+  it('completeOAuthLogin sets the Amazon identity, resets the nile library, then handles login', () => {
+    useAuthState.getState().completeOAuthLogin({
+      runner: 'nile',
+      username: 'amzName',
+      user_id: 'amzId'
+    })
+    expect(useAuthState.getState().amazonUserId).toBe('amzId')
+    expect(useAuthState.getState().amazonUsername).toBe('amzName')
+    expect(libraryCalls).toEqual([
+      ['reset', 'nile'],
+      [
+        'refresh',
+        { runInBackground: false, library: 'nile', origin: 'login-success' }
+      ]
+    ])
+  })
+
+  it('library slot is reached through the store, not captured at import', () => {
+    expect(useLibraryState.getState().refreshLibrary).toBeDefined()
   })
 })

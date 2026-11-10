@@ -1,6 +1,9 @@
 import { create } from 'zustand'
+import { t } from 'i18next'
 import { subscribeWithSelector } from 'zustand/middleware'
 
+import type { Runner } from 'common/types'
+import type { NileRegisterData } from 'common/types/nile'
 import type {
   HumbleAuthState,
   HumbleKey,
@@ -28,12 +31,19 @@ import {
 import { collectSignInInputs } from '../helpers/signInInputs'
 import { resyncSignInIdentity } from '../helpers/signInIdentityResync'
 import { globalSettingsAtImport } from './settingsState'
+import {
+  createOAuthLoginCompletion,
+  type OAuthLoginCompletionPayload
+} from '../screens/WebView/useTauriOAuthLogin'
+import useLibraryState from './libraryState'
+import { performSteamLogout } from './SteamSignOut'
 import { bindStoreHooks, registerStoreForReset } from './storeKit'
+import useUiState from './uiState'
 
 // Phase 69 D-01: auth domain store. Holds every sign-in identity (display
 // names and the Amazon user id), the Humble session flags and key inventory,
 // this launch's sign-in probe outcomes and the persisted per-store dismissed
-// set. Login/logout actions stay in GlobalState until 69-14. No persist
+// set, plus the login/logout actions (69-14). No persist
 // middleware (D-02): only the dismiss and re-arm writers persist, via
 // setSetting, exactly as the class did (R6).
 
@@ -78,6 +88,23 @@ export interface AuthState {
     syncState: HumbleSyncState,
     clearSyncing?: boolean
   ) => void
+
+  handleSuccessfulLogin: (runner: Runner) => void
+  completeOAuthLogin: (payload: OAuthLoginCompletionPayload) => void
+  epicLogin: (sid: string) => Promise<string>
+  epicLogout: () => Promise<void>
+  gogLogin: (token: string) => Promise<string>
+  gogLogout: () => Promise<void>
+  amazonLogin: (data: NileRegisterData) => Promise<string>
+  amazonLogout: () => Promise<void>
+  getAmazonLoginData: () => ReturnType<typeof window.api.getAmazonLoginData>
+  steamLogin: (result: { status: string; username?: string }) => Promise<string>
+  steamLogout: () => Promise<void>
+  humbleLogin: (result: {
+    status: string
+    username?: string
+  }) => Promise<string>
+  humbleDisconnect: () => Promise<void>
 }
 
 /** Element-wise equality of two canonical-order store lists. */
@@ -283,12 +310,242 @@ const useAuthStateRaw = create<AuthState>()(
             ...(clearSyncing && { syncing: false })
           }
         }))
+      },
+
+      handleSuccessfulLogin: (runner) => {
+        window.localStorage.setItem('category', 'all')
+        get().resyncSignInIdentityFromStores()
+        void useLibraryState.getState().refreshLibrary({
+          runInBackground: false,
+          library: runner,
+          origin: 'login-success'
+        })
+      },
+
+      // `useTauriOAuthLogin.ts` calls the RAW auth channels itself, so this is
+      // exactly the post-login half of epicLogin/gogLogin/amazonLogin, routed
+      // through the existing handleSuccessfulLogin (never a second refresh path).
+      completeOAuthLogin: completeOAuthLogin,
+
+      epicLogin: async (sid) => {
+        console.log('logging epic')
+        const response = await window.api.login(sid)
+
+        if (response.status === 'done') {
+          useLibraryState.getState().resetRunnerLibrary('legendary')
+          set({ epicUsername: response.data?.displayName })
+
+          get().handleSuccessfulLogin('legendary')
+        }
+
+        return response.status
+      },
+
+      epicLogout: async () => {
+        useLibraryState.getState().setRefreshing(true)
+        // Phase 35 plan 09: `logoutLegendary` can REJECT. The `finally` keeps a
+        // rejection from latching the global loading state; the rejection is
+        // deliberately NOT swallowed (Runner's logout guard surfaces it).
+        try {
+          await window.api.logoutLegendary().finally(() => {
+            useLibraryState.getState().resetRunnerLibrary('legendary')
+            set({ epicUsername: null })
+          })
+          console.log('Logging out from epic')
+        } finally {
+          useLibraryState.getState().setRefreshing(false)
+        }
+      },
+
+      gogLogin: async (token) => {
+        console.log('logging gog')
+        const response = await window.api.authGOG(token)
+
+        if (response.status === 'done') {
+          useLibraryState.getState().resetRunnerLibrary('gog')
+          set({ gogUsername: response.data?.username })
+
+          get().handleSuccessfulLogin('gog')
+        }
+
+        return response.status
+      },
+
+      gogLogout: async () => {
+        window.api.logoutGOG()
+        useLibraryState.getState().resetRunnerLibrary('gog')
+        set({ gogUsername: null })
+        console.log('Logging out from gog')
+      },
+
+      amazonLogin: async (data) => {
+        console.log('logging amazon')
+        const response = await window.api.authAmazon(data)
+
+        if (response.status === 'done') {
+          useLibraryState.getState().resetRunnerLibrary('nile')
+          set({
+            amazonUserId: response.user?.user_id,
+            amazonUsername: response.user?.name
+          })
+
+          get().handleSuccessfulLogin('nile')
+        }
+
+        return response.status
+      },
+
+      amazonLogout: async () => {
+        await window.api.logoutAmazon()
+        useLibraryState.getState().resetRunnerLibrary('nile')
+        set({ amazonUserId: null, amazonUsername: null })
+        console.log('Logging out from amazon')
+      },
+
+      getAmazonLoginData: async () => window.api.getAmazonLoginData(),
+
+      steamLogin: async (result) => {
+        if (result.status === 'done') {
+          useLibraryState.getState().resetRunnerLibrary('steam')
+          set({ steamUsername: result.username })
+          get().resyncSignInIdentityFromStores()
+          void useLibraryState.getState().refreshLibrary({
+            runInBackground: true,
+            library: 'steam',
+            origin: 'steam-login'
+          })
+        }
+        return result.status
+      },
+
+      // Phase 34.4: logoutSteam is a fire-and-forget send, so wiping local state
+      // immediately races the sidecar. performSteamLogout polls getSteamUserInfo
+      // for confirmation before either branch below runs (see SteamSignOut.ts).
+      steamLogout: async () => {
+        await performSteamLogout({
+          logoutSteam: window.api.logoutSteam,
+          getSteamUserInfo: window.api.getSteamUserInfo,
+          onSignedOut: () => {
+            useLibraryState.getState().resetRunnerLibrary('steam')
+            set({ steamUsername: null })
+            console.log('Logging out from steam')
+          },
+          onSignOutFailed: () => {
+            console.warn(
+              '[GameLib] logoutSteam did not confirm a signed-out state ' +
+                'within the poll window; leaving local state untouched rather ' +
+                'than reloading into a possibly-still-signed-in session.'
+            )
+            useUiState.getState().showDialogModal({
+              title: t(
+                'gamelib:login.steam_logout_failed_title',
+                'Sign-out failed'
+              ),
+              message: t(
+                'gamelib:login.steam_logout_failed_message',
+                "Steam sign-out didn't finish in time. Please try again."
+              ),
+              buttons: [{ text: t('box.ok', 'OK') }]
+            })
+          }
+        })
+      },
+
+      // Humble is not a Runner: no library, no refreshLibrary(). Covers both a
+      // fresh login and a reconnect-after-expiry.
+      humbleLogin: async (result) => {
+        if (result.status === 'done') {
+          set({
+            humble: {
+              ...get().humble,
+              // D-02/D-16: 'done' means the gamekeys endpoint validated the
+              // session -- that is the connected flag; `username` is display-only.
+              isLoggedIn: true,
+              username: result.username,
+              expired: false
+            }
+          })
+          get().resyncSignInIdentityFromStores()
+          // D-23: a successful login/reconnect triggers a sync.
+          void window.api.humbleSync()
+        }
+        return result.status
+      },
+
+      // D-03: disconnect is confirmation-gated; the wipe only runs on Yes.
+      humbleDisconnect: async () => {
+        useUiState.getState().showDialogModal({
+          title: t(
+            'login.humble_disconnect_title',
+            'Disconnect Humble Bundle?'
+          ),
+          message: t(
+            'login.humble_disconnect_message',
+            'This removes your Humble Bundle session from GameLib. You can reconnect at any time.'
+          ),
+          buttons: [
+            {
+              text: t('box.yes'),
+              onClick: () => {
+                window.api.humbleDisconnect()
+                set({
+                  // HumbleUser.disconnect() wipes the library/sync stores --
+                  // mirror that so no stale key inventory shows.
+                  humble: {
+                    isLoggedIn: false,
+                    username: null,
+                    expired: false,
+                    keys: [],
+                    syncedAt: null,
+                    syncError: 'none',
+                    syncing: false
+                  }
+                })
+              }
+            },
+            { text: t('box.no') }
+          ]
+        })
       }
     }
   })
 )
 
+function completeOAuthLogin(payload: OAuthLoginCompletionPayload): void {
+  oauthCompletion(payload)
+}
+
 registerStoreForReset(useAuthStateRaw)
+
+// The factory's `{ epic: { library: [], username } }` update splits here:
+// identity -> authState, library -> the library reset slot.
+const oauthCompletion = createOAuthLoginCompletion({
+  setState: (update) => {
+    const { epic, gog, amazon } = update as {
+      epic?: { username?: string }
+      gog?: { username?: string }
+      amazon?: { user_id?: string; username?: string }
+    }
+    const resetLibrary = useLibraryState.getState().resetRunnerLibrary
+    if (epic) {
+      resetLibrary('legendary')
+      useAuthStateRaw.setState({ epicUsername: epic.username })
+    }
+    if (gog) {
+      resetLibrary('gog')
+      useAuthStateRaw.setState({ gogUsername: gog.username })
+    }
+    if (amazon) {
+      resetLibrary('nile')
+      useAuthStateRaw.setState({
+        amazonUserId: amazon.user_id,
+        amazonUsername: amazon.username
+      })
+    }
+  },
+  handleSuccessfulLogin: (runner) =>
+    useAuthStateRaw.getState().handleSuccessfulLogin(runner)
+})
 
 const useAuthState = bindStoreHooks(useAuthStateRaw)
 export default useAuthState
