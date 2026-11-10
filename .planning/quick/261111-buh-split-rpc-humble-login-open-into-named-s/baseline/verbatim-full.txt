@@ -1,0 +1,81 @@
+OK head (HEAD L90-116) -> rpc_humble_login_open L90-107
+OK latch (HEAD L117-188) -> arm_visible_login_latch_macos L253-290
+OK route (HEAD L189-196) -> rpc_humble_login_open L123-127
+OK build (HEAD L197-496) -> build_login_window L310-605
+OK barcomment (comment only)
+OK bar (HEAD L515-557) -> install_native_bar_for_sheet_macos L622-664
+OK presenta (HEAD L558-597) -> present_visible_login_window_macos L678-717
+OK nonmac (HEAD L598-599) -> rpc_humble_login_open L167-168
+OK owner (HEAD L600-603) -> build_login_window L606-609
+OK presentb (HEAD L604-641) -> present_visible_login_window_macos L723-755
+OK record (HEAD L642-651) -> rpc_humble_login_open L169-178
+OK close (HEAD L652-715) -> install_login_window_close_hook L802-828
+OK tail (HEAD L716-748) -> rpc_humble_login_open L184-213
+OK order head < route (handler)
+OK order route < nonmac (handler)
+OK order nonmac < record (handler)
+OK order record < tail (handler)
+OK order build < owner (build_login_window: owner block follows the build run)
+OK order presenta < presentb (present_visible_login_window_macos)
+GLUE L118 [rpc_humble_login_open]:     #[cfg(target_os = "macos")]
+GLUE L119 [rpc_humble_login_open]:     arm_visible_login_latch_macos(label.clone(), visible)?;
+GLUE L129 [rpc_humble_login_open]:     let window = build_login_window(
+GLUE L130 [rpc_humble_login_open]:         app,
+GLUE L131 [rpc_humble_login_open]:         label.clone(),
+GLUE L132 [rpc_humble_login_open]:         url,
+GLUE L133 [rpc_humble_login_open]:         origin.clone(),
+GLUE L134 [rpc_humble_login_open]:         visible,
+GLUE L135 [rpc_humble_login_open]:         user_agent,
+GLUE L136 [rpc_humble_login_open]:         event_label,
+GLUE L137 [rpc_humble_login_open]:     )?;
+GLUE L156 [rpc_humble_login_open]:     #[cfg(target_os = "macos")]
+GLUE L157 [rpc_humble_login_open]:     let native_bar_installed =
+GLUE L158 [rpc_humble_login_open]:         install_native_bar_for_sheet_macos(app, &window, label.clone(), origin.clone(), visible);
+GLUE L159 [rpc_humble_login_open]:     #[cfg(target_os = "macos")]
+GLUE L160 [rpc_humble_login_open]:     let sheet_presented = present_visible_login_window_macos(
+GLUE L161 [rpc_humble_login_open]:         app,
+GLUE L162 [rpc_humble_login_open]:         &window,
+GLUE L163 [rpc_humble_login_open]:         label.clone(),
+GLUE L164 [rpc_humble_login_open]:         visible,
+GLUE L165 [rpc_humble_login_open]:         native_bar_installed,
+GLUE L166 [rpc_humble_login_open]:     );
+GLUE L180 [rpc_humble_login_open]:     install_login_window_close_hook(app, &window, label.clone());
+GLUE L217 [arm_visible_login_latch_macos]: fn arm_visible_login_latch_macos(label: String, visible: bool) -> Result<(), String> {
+GLUE L291 [arm_visible_login_latch_macos]:     Ok(())
+GLUE L292 [arm_visible_login_latch_macos]: }
+GLUE L296 [build_login_window]: fn build_login_window(
+GLUE L297 [build_login_window]:     app: &AppHandle,
+GLUE L298 [build_login_window]:     label: String,
+GLUE L299 [build_login_window]:     url: tauri::Url,
+GLUE L300 [build_login_window]:     origin: String,
+GLUE L301 [build_login_window]:     visible: bool,
+GLUE L302 [build_login_window]:     user_agent: &str,
+GLUE L303 [build_login_window]:     event_label: String,
+GLUE L304 [build_login_window]: ) -> Result<tauri::WebviewWindow, String> {
+GLUE L610 [build_login_window]:     Ok(window)
+GLUE L611 [build_login_window]: }
+GLUE L615 [install_native_bar_for_sheet_macos]: fn install_native_bar_for_sheet_macos(
+GLUE L616 [install_native_bar_for_sheet_macos]:     app: &AppHandle,
+GLUE L617 [install_native_bar_for_sheet_macos]:     window: &tauri::WebviewWindow,
+GLUE L618 [install_native_bar_for_sheet_macos]:     label: String,
+GLUE L619 [install_native_bar_for_sheet_macos]:     origin: String,
+GLUE L620 [install_native_bar_for_sheet_macos]:     visible: bool,
+GLUE L621 [install_native_bar_for_sheet_macos]: ) -> bool {
+GLUE L665 [install_native_bar_for_sheet_macos]:     native_bar_installed
+GLUE L666 [install_native_bar_for_sheet_macos]: }
+GLUE L671 [present_visible_login_window_macos]: fn present_visible_login_window_macos(
+GLUE L672 [present_visible_login_window_macos]:     app: &AppHandle,
+GLUE L673 [present_visible_login_window_macos]:     window: &tauri::WebviewWindow,
+GLUE L674 [present_visible_login_window_macos]:     label: String,
+GLUE L675 [present_visible_login_window_macos]:     visible: bool,
+GLUE L676 [present_visible_login_window_macos]:     native_bar_installed: bool,
+GLUE L677 [present_visible_login_window_macos]: ) -> bool {
+GLUE L756 [present_visible_login_window_macos]:     sheet_presented
+GLUE L757 [present_visible_login_window_macos]: }
+GLUE L760 [install_login_window_close_hook]: fn install_login_window_close_hook(
+GLUE L761 [install_login_window_close_hook]:     #[cfg_attr(not(target_os = "macos"), allow(unused_variables))] app: &AppHandle,
+GLUE L762 [install_login_window_close_hook]:     window: &tauri::WebviewWindow,
+GLUE L763 [install_login_window_close_hook]:     label: String,
+GLUE L764 [install_login_window_close_hook]: ) {
+GLUE L829 [install_login_window_close_hook]: }
+RESULT: PASS

@@ -281,6 +281,10 @@ export function readHandlerBody(
  * not widen it to make a pin pass.
  */
 export const HUMBLE_LOGIN_OPEN_STEPS: readonly string[] = [
+  'arm_visible_login_latch_macos',
+  'build_login_window',
+  'install_native_bar_for_sheet_macos',
+  'present_visible_login_window_macos',
   'install_login_window_close_hook'
 ]
 
