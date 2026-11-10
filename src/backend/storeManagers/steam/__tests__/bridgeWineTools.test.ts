@@ -1,23 +1,7 @@
 /**
  * Quick 261110-vi4: Steam per-game Wine tools eligibility and settings resolver, driven entirely
- * through injected deps. The module imports bridgeBottle, which loads the backend config at
- * import, so the modules that pull it in are mocked for load only (nothing here relies on them).
+ * through injected deps, with no jest.mock (the backend-di-ceilings ratchet forbids new ones).
  */
-jest.mock('backend/logger', () => ({
-  logInfo: jest.fn(),
-  logWarning: jest.fn(),
-  logError: jest.fn(),
-  LogPrefix: { Steam: 'Steam' }
-}))
-jest.mock('../bridgeBottle', () => ({
-  bridgeBottleNameFor: jest.fn(),
-  findBridgeInstallBottle: jest.fn(),
-  getBridgeBottleSettings: jest.fn(),
-  getDrmBridgeRunner: jest.fn()
-}))
-jest.mock('backend/engine/engineSwitch', () => ({
-  readBottleEngineMarkerKind: jest.fn()
-}))
 
 import type { GameSettings } from 'common/types'
 import type { EngineServices } from 'backend/engine/engineServices'
@@ -50,6 +34,7 @@ function deps(over: Partial<SteamWineToolsDeps> = {}): SteamWineToolsDeps {
     engineId: () => 'automatic',
     nonCrossoverEngine: () => engine,
     fallbackSettings: (bottle) => settingsFor(bottle, 'wine'),
+    logError: jest.fn(),
     ...over
   }
 }

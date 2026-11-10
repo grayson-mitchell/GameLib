@@ -10,11 +10,12 @@
  * `TypeError: Cannot read properties of undefined (reading 'install_path')` -- rather than
  * taking the handled no-op shape its own two neighbouring guards already use.
  *
- * WHY `runner: 'gog'` AND NOT `'steam'`
+ * WHY `runner: 'gog'` FOR THE FIRST DESCRIBE
  *
- * `runWineCommandOnGame` returns early for `runner === 'steam'` (Pitfall 5, tools/index.ts:879)
- * BEFORE it reaches either the `isNative()` check or the deref, so a Steam runner would make
- * every test here vacuous -- green against guarded and unguarded source alike. The
+ * `runWineCommandOnGame` returns early for `runner === 'steam'` (Pitfall 5) unless the title is
+ * per-game eligible (quick 261110-vi4), BEFORE it reaches either the `isNative()` check or the
+ * deref, so a Steam runner would make the install-path tests vacuous. The Steam arms (refused
+ * and eligible) are covered by their own describe at the bottom. The
  * bottled-macOS-Steam `isNative() === false` case the filed todo describes is the REACHABILITY
  * argument for a `{}` arriving at this line; `'gog'` is the vehicle that actually executes it.
  *
@@ -38,6 +39,7 @@
 const mockGetGame = jest.fn()
 const mockRunWineCommand = jest.fn()
 const mockLogError = jest.fn()
+const mockGetSteamGame = jest.fn()
 
 // `tools/index.ts` reaches libraryManagerMap through a LAZY `await import('../storeManagers')`
 // at L889 -- jest.mock intercepts it regardless.
@@ -54,6 +56,7 @@ jest.mock('backend/logger', () => {
   }
 })
 
+import * as bridgeWineTools from 'backend/storeManagers/steam/bridgeWineTools'
 import { createTools } from '../index'
 import type { ToolsDeps } from '../index'
 import {
@@ -66,7 +69,8 @@ const toolsDeps: ToolsDeps = {
   stores: createTestStores(),
   managers: {
     library: {
-      gog: { getGame: (...args: unknown[]) => mockGetGame(...args) }
+      gog: { getGame: (...args: unknown[]) => mockGetGame(...args) },
+      steam: { getGame: (...args: unknown[]) => mockGetSteamGame(...args) }
     } as unknown as ToolsDeps['managers']['library']
   },
   commandRunner: {
@@ -156,6 +160,96 @@ describe('runWineCommandOnGame guards install.install_path (260907-f2g)', () => 
       stderr: ''
     })
 
+    expect(mockRunWineCommand).not.toHaveBeenCalled()
+  })
+})
+
+describe('Steam per-game bridge bottle (quick 261110-vi4)', () => {
+  const steamGame = {
+    isNative: () => false,
+    getGameInfo: () => ({
+      runner: 'steam',
+      app_name: '620',
+      folder_name: 'Portal 2',
+      install: { install_path: '/games/620' }
+    }),
+    getSettings: () => ({})
+  }
+  // jest.spyOn, not jest.mock: the backend-di-ceilings ratchet forbids new jest.mock calls.
+  // tools/index.ts reads these off the module object at call time, so the spies intercept.
+  let mockIsEligible: jest.SpyInstance
+  let mockResolveSteam: jest.SpyInstance
+  beforeEach(() => {
+    mockIsEligible = jest.spyOn(bridgeWineTools, 'isSteamWineToolsEligible')
+    mockResolveSteam = jest.spyOn(
+      bridgeWineTools,
+      'resolveSteamWineToolSettings'
+    )
+    mockGetSteamGame.mockReturnValue(steamGame)
+    mockRunWineCommand.mockResolvedValue({ stdout: 'ok', stderr: '' })
+  })
+
+  test('an ineligible Steam title is refused with the Pitfall 5 log and never spawns', async () => {
+    mockIsEligible.mockReturnValue(false)
+    await expect(
+      runWineCommandOnGame('steam', '620', wineArgs)
+    ).resolves.toEqual({ stdout: '', stderr: '' })
+    expect(mockRunWineCommand).not.toHaveBeenCalled()
+    expect(mockLogError).toHaveBeenCalledTimes(1)
+    expect((mockLogError.mock.calls[0] as [string])[0]).toContain('Pitfall 5')
+  })
+
+  test('an eligible title runs in exactly the settings the resolver returns', async () => {
+    mockIsEligible.mockReturnValue(true)
+    const settings = { wineCrossoverBottle: 'GameLibSteamBridge-620' }
+    mockResolveSteam.mockResolvedValue({ kind: 'engine', key: '620', settings })
+    await runWineCommandOnGame('steam', '620', wineArgs)
+    expect(mockRunWineCommand).toHaveBeenCalledTimes(1)
+    expect(mockRunWineCommand).toHaveBeenCalledWith(
+      expect.objectContaining({ gameSettings: settings })
+    )
+  })
+
+  test('an eligible title whose resolver is unavailable does not spawn', async () => {
+    mockIsEligible.mockReturnValue(true)
+    mockResolveSteam.mockResolvedValue({
+      kind: 'unavailable',
+      reason: 'no-engine'
+    })
+    await expect(
+      runWineCommandOnGame('steam', '620', wineArgs)
+    ).resolves.toEqual({ stdout: '', stderr: '' })
+    expect(mockRunWineCommand).not.toHaveBeenCalled()
+  })
+
+  test('Winetricks.listInstalled for an ineligible Steam title returns []', async () => {
+    mockResolveSteam.mockResolvedValue({
+      kind: 'unavailable',
+      reason: 'not-own-bottle'
+    })
+    const { Winetricks } = createTools(toolsDeps)
+    await expect(Winetricks.listInstalled(steamGame as never)).resolves.toEqual(
+      []
+    )
+  })
+
+  test('Winetricks.runWithArgs for an ineligible Steam title finishes without a spawn', async () => {
+    mockResolveSteam.mockResolvedValue({
+      kind: 'unavailable',
+      reason: 'not-own-bottle'
+    })
+    const { Winetricks } = createTools(toolsDeps)
+    const onDone = jest.fn()
+    await Winetricks.runWithArgs(
+      'steam',
+      '620',
+      ['-q', 'corefonts'],
+      false,
+      undefined,
+      '',
+      onDone
+    )
+    expect(onDone).toHaveBeenCalledWith(true)
     expect(mockRunWineCommand).not.toHaveBeenCalled()
   })
 })

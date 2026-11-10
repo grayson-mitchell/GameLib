@@ -55,6 +55,7 @@ import {
   resolveToolSettings,
   resolveToolSettingsForId
 } from '../engine/toolSettings'
+import type { ToolSettingsResult } from '../engine/toolSettings'
 import { GameConfig } from '../game_config'
 import { chmod, readFile, stat } from 'fs/promises'
 import {
@@ -74,7 +75,11 @@ import { toolsPath, userHome } from 'backend/constants/paths'
 import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import './dxmt'
 import { Game } from '../../common/types/game_manager'
-import { isStore, storeCapabilities } from 'common/storeCapabilities'
+import {
+  hasCapability,
+  isStore,
+  storeCapabilities
+} from 'common/storeCapabilities'
 import { parseWinetricksListAll } from './winetricksListParse'
 import {
   deriveNeedsGuiVerbs,
@@ -920,8 +925,9 @@ function createWinetricks(deps: ToolsDeps) {
       } else {
         const game = deps.managers.library[runner].getGame(appName)
         // Phase 61: act on the game's real bottle and engine (a verb is a need that creates it).
-        const resolved = await resolveToolSettings(
-          engineServicesFor(deps),
+        const resolved = await resolveGameToolSettings(
+          deps,
+          { runner, appName },
           game,
           await game.getSettings(),
           { ensureBottle: true }
@@ -1326,8 +1332,12 @@ function createWinetricks(deps: ToolsDeps) {
     },
     listInstalled: async (game: Game) => {
       // Phase 61: read the log from the bottle the game really runs in; a read never creates one.
-      const resolved = await resolveToolSettings(
-        engineServicesFor(deps),
+      const resolved = await resolveGameToolSettings(
+        deps,
+        {
+          runner: game.getGameInfo().runner,
+          appName: game.getGameInfo().app_name
+        },
         game,
         await game.getSettings(),
         {
@@ -1563,26 +1573,48 @@ function getVkd3dUrl(): string {
   return 'https://api.github.com/repos/Heroic-Games-Launcher/vkd3d-proton/releases/latest'
 }
 
+/**
+ * Quick 261110-vi4: the settings a Wine tool acts on. A bottle-runtime store (Steam) shares
+ * bottles in two layouts, so only a bridge title in its own per-game bottle resolves, through the
+ * Steam resolver; every other game takes the store-agnostic resolver unchanged.
+ */
+async function resolveGameToolSettings(
+  deps: ToolsDeps,
+  id: { runner: Runner; appName: string },
+  game: Game,
+  stored: GameSettings,
+  opts: { ensureBottle: boolean }
+): Promise<ToolSettingsResult> {
+  if (hasCapability(id.runner, 'usesBottleRuntime')) {
+    const { resolveSteamWineToolSettings } =
+      await import('backend/storeManagers/steam/bridgeWineTools')
+    return resolveSteamWineToolSettings(engineServicesFor(deps), id.appName)
+  }
+  return resolveToolSettings(engineServicesFor(deps), game, stored, opts)
+}
+
 async function runWineCommandOnGame(
   deps: ToolsDeps,
   runner: Runner,
   appName: string,
   { commandParts, wait = false, protonVerb, startFolder }: WineCommandArgs
 ): Promise<ExecResult> {
-  // Pitfall 5 (Phase 17): Steam games have no per-game Wine prefix — the
-  // CrossOver bottle is shared across every bottled Steam title. Now that
-  // isNative() can return false for a confirmed-not-native macOS Steam game
-  // (D-11), a per-game Winetricks/Verify-style Wine action must still never
-  // be dispatched against a Steam game. This guard runs BEFORE the
-  // game.isNative() check below so it applies regardless of platform/OS.
-  // Defense-in-depth: the frontend GameSubMenu already hides these entry
-  // points for Steam (!isSteam gates).
+  // Pitfall 5 (Phase 17): Steam titles still share bottles in two layouts (bottled Windows
+  // Steam, the legacy shared bridge bottle), so a Wine action must never be dispatched against
+  // them. A bridge title in its own ready GameLibSteamBridge-<appId> bottle is the one exception
+  // (quick 261110-vi4), and resolveGameToolSettings then targets exactly that bottle. This guard
+  // runs BEFORE the game.isNative() check below so it applies regardless of platform/OS.
+  // Defense-in-depth: the frontend hides the tools unless EngineState.wineToolsEligible.
   if (!storeCapabilities[runner].winePrefixToolsAvailable) {
-    logError(
-      'runWineCommand called on a Steam game — Steam has no per-game Wine prefix (Pitfall 5)',
-      LogPrefix.Gog
-    )
-    return { stdout: '', stderr: '' }
+    const { isSteamWineToolsEligible } =
+      await import('backend/storeManagers/steam/bridgeWineTools')
+    if (!isSteamWineToolsEligible(appName)) {
+      logError(
+        'runWineCommand called on a Steam game with no per-game bottle (Pitfall 5)',
+        LogPrefix.Gog
+      )
+      return { stdout: '', stderr: '' }
+    }
   }
 
   const game = deps.managers.library[runner].getGame(appName)
@@ -1605,8 +1637,9 @@ async function runWineCommandOnGame(
     return { stdout: '', stderr: '' }
   }
   // Phase 61: run in the game's real bottle on its current engine (running creates the bottle).
-  const resolved = await resolveToolSettings(
-    engineServicesFor(deps),
+  const resolved = await resolveGameToolSettings(
+    deps,
+    { runner, appName },
     game,
     await game.getSettings(),
     {

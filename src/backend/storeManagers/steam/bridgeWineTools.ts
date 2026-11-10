@@ -43,6 +43,7 @@ export interface SteamWineToolsDeps {
   engineId(appId: string): string
   nonCrossoverEngine(engineId: string): NonCrossoverEngine | null
   fallbackSettings(bottle: string, engine: NonCrossoverEngine): GameSettings
+  logError(message: string): void
 }
 
 export function defaultSteamWineToolsDeps(
@@ -59,6 +60,7 @@ export function defaultSteamWineToolsDeps(
     markerKind: readBottleEngineMarkerKind,
     // A cycle with steamEngineDeps (which imports this module); only used at call time.
     engineId: (appId) => parseEngineOverride(readSteamEngineOverride(appId)),
+    logError: (message) => logError(message, LogPrefix.Steam),
     nonCrossoverEngine: (id) => nonCrossoverEngineFor(services, id),
     fallbackSettings: (bottle, engine) =>
       buildFallbackGameSettings(bottle, engine)
@@ -121,9 +123,8 @@ export async function resolveSteamWineToolSettings(
   }
 
   if (settings.wineCrossoverBottle !== bottle) {
-    logError(
-      `Steam ${appId}: Wine tool settings point at a bottle other than the title's own`,
-      LogPrefix.Steam
+    d.logError(
+      `Steam ${appId}: Wine tool settings point at a bottle other than the title's own`
     )
     return { kind: 'unavailable', reason: 'not-own-bottle' }
   }
