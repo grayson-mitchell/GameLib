@@ -1,13 +1,7 @@
-import {
-  chmodSync,
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  readFileSync
-} from 'fs'
 import { join } from 'path'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
-import { parseDemoStatus, probeDemoStatus } from '../demoStatus'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
+import { createProbeDemoStatus, parseDemoStatus } from '../demoStatus'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -40,129 +34,139 @@ describe('parseDemoStatus', () => {
   })
 })
 
-describe('probeDemoStatus', () => {
-  let profile: ReturnType<typeof createFakeHomeProfile>
-  let binDir: string
-  beforeEach(() => {
-    profile = createFakeHomeProfile({ prefix: 'gamelib-demostatus-' })
-    binDir = join(profile.root, 'bin')
-    mkdirSync(binDir, { recursive: true })
-    const dest = join(binDir, 'wine')
-    copyFileSync(join(__dirname, 'fixtures', 'stub-wine.sh'), dest)
-    chmodSync(dest, 0o755)
-  })
-  afterEach(() => profile.dispose())
-
-  const env = (mode: string) =>
-    profile.childEnv({
-      ...process.env,
-      STUB_MODE: mode,
-      STUB_RECORD: join(profile.root, 'record')
-    })
+describe('createProbeDemoStatus', () => {
+  const binDir = '/opt/cx/bin'
+  const wine = join(binDir, 'wine')
+  const probeWith = (
+    step: Parameters<typeof createScriptedRunner>[0][number]
+  ) => {
+    const runner = createScriptedRunner([step])
+    return { runner, probe: createProbeDemoStatus({ runner }) }
+  }
 
   it.each([
-    ['licensed', { kind: 'licensed' }],
-    ['trial', { kind: 'trial', daysRemaining: 12 }],
-    ['expired', { kind: 'expired', daysAgo: 3 }],
+    ['Standard version\n', { kind: 'licensed' }],
+    ['Demo version (12 days remaining)', { kind: 'trial', daysRemaining: 12 }],
+    ['Demo version (expired 3 days ago)', { kind: 'expired', daysAgo: 3 }],
     ['garbage', { kind: 'unrecognised' }],
-    ['empty', { kind: 'unrecognised' }]
-  ])('reports %s output', async (mode, status) => {
-    const r = await probeDemoStatus({
-      binDir,
-      bottleName: 'Steam',
-      baseEnv: env(mode)
+    ['', { kind: 'unrecognised' }]
+  ])('reports %j output', async (stdout, status) => {
+    const { probe } = probeWith({
+      cmd: wine,
+      argv: ['--demo-status'],
+      result: { stdout }
     })
-    expect(r).toMatchObject({ kind: 'ok', status })
+    expect(await probe({ binDir, bottleName: 'Steam' })).toMatchObject({
+      kind: 'ok',
+      status
+    })
   })
 
-  it('passes CX_BOTTLE to the engine', async () => {
-    await probeDemoStatus({
-      binDir,
-      bottleName: 'My.Bottle-1',
-      baseEnv: env('licensed')
-    })
-    expect(readFileSync(join(profile.root, 'record'), 'utf8')).toBe(
-      'My.Bottle-1'
-    )
+  it('runs with the 15 s cap, closed stdin and CX_BOTTLE in env', async () => {
+    const { runner, probe } = probeWith({ cmd: wine, argv: ['--demo-status'] })
+    await probe({ binDir, bottleName: 'My.Bottle-1' })
+    const call = runner.calls[0]
+    const opts = call.opts as {
+      timeoutMs: number
+      stdin: string
+      replaceEnv: boolean
+    }
+    expect(opts.timeoutMs).toBe(15_000)
+    expect(opts.stdin).toBe('')
+    expect(opts.replaceEnv).toBe(false)
+    expect(call.env).toMatchObject({ CX_BOTTLE: 'My.Bottle-1' })
   })
 
-  it('reports a hang as timeout within the cap', async () => {
-    const t = Date.now()
-    const r = await probeDemoStatus({
-      binDir,
-      bottleName: 'Steam',
-      timeoutMs: 500,
-      baseEnv: env('hang')
+  it('honours args.timeoutMs and uses a fake-HOME baseEnv verbatim', async () => {
+    const profile = createFakeHomeProfile({ prefix: 'gamelib-demostatus-' })
+    try {
+      const { runner, probe } = probeWith({ cmd: wine })
+      await probe({
+        binDir,
+        bottleName: 'Steam',
+        timeoutMs: 500,
+        baseEnv: profile.childEnv()
+      })
+      const opts = runner.calls[0].opts as {
+        timeoutMs: number
+        replaceEnv: boolean
+      }
+      expect(opts.timeoutMs).toBe(500)
+      expect(opts.replaceEnv).toBe(true)
+      expect(runner.calls[0].env?.HOME).toBe(profile.childEnv().HOME)
+    } finally {
+      profile.dispose()
+    }
+  })
+
+  it('reports a timeout', async () => {
+    const { probe } = probeWith({
+      cmd: wine,
+      result: { timedOut: true, code: null }
     })
-    expect(r).toMatchObject({ kind: 'failed', reason: 'timeout' })
-    expect(Date.now() - t).toBeLessThan(2000)
+    expect(await probe({ binDir, bottleName: 'Steam' })).toMatchObject({
+      kind: 'failed',
+      reason: 'timeout'
+    })
   })
 
   it('reports a non-zero exit', async () => {
-    const r = await probeDemoStatus({
-      binDir,
-      bottleName: 'Steam',
-      baseEnv: env('fail')
+    const { probe } = probeWith({ cmd: wine, result: { code: 3 } })
+    expect(await probe({ binDir, bottleName: 'Steam' })).toMatchObject({
+      kind: 'failed',
+      reason: 'nonzero-exit'
     })
-    expect(r).toMatchObject({ kind: 'failed', reason: 'nonzero-exit' })
   })
 
-  it('G29: keeps the stand-in fatal_error stdout on one line', async () => {
-    const r = await probeDemoStatus({
-      binDir,
-      bottleName: 'Steam',
-      baseEnv: env('cxfatal')
+  it('G29: keeps the stdout on one line and caps it', async () => {
+    const { probe } = probeWith({
+      cmd: wine,
+      result: {
+        code: 1,
+        stderr: 'e\ne',
+        stdout: `line\n${'x'.repeat(1000)}`
+      }
     })
-    expect(r).toMatchObject({ kind: 'failed', reason: 'nonzero-exit' })
-    if (r.kind !== 'failed') return
-    expect(r.detail).toContain('code=1')
-    expect(r.detail).toContain('stderr=')
-    expect(r.detail).toContain('is not readable')
-    expect(r.detail).not.toMatch(/[\r\n]/)
-  })
-
-  it('G29: caps the stdout in the detail', async () => {
-    const r = await probeDemoStatus({
-      binDir,
-      bottleName: 'Steam',
-      baseEnv: env('bigout')
-    })
+    const r = await probe({ binDir, bottleName: 'Steam' })
     if (r.kind !== 'failed') throw new Error('expected failed')
+    expect(r.detail).toContain('code=1')
+    expect(r.detail).not.toMatch(/[\r\n]/)
     expect(r.detail.split('stdout=')[1]).toHaveLength(400)
   })
 
   it('reports a missing wine binary as spawn-error', async () => {
-    const r = await probeDemoStatus({
-      binDir: join(profile.root, 'nowhere'),
-      bottleName: 'Steam',
-      baseEnv: env('licensed')
+    const { probe } = probeWith({ cmd: wine, error: { code: 'ENOENT' } })
+    expect(await probe({ binDir, bottleName: 'Steam' })).toMatchObject({
+      kind: 'failed',
+      reason: 'spawn-error'
     })
-    expect(r).toMatchObject({ kind: 'failed', reason: 'spawn-error' })
   })
 
   it.each(['a/b', '', '..', 'x\\y', ' padded ', 'a'.repeat(256)])(
     'rejects bottle name %j without spawning',
     async (b) => {
-      const r = await probeDemoStatus({
+      const runner = createScriptedRunner([])
+      const r = await createProbeDemoStatus({ runner })({
         binDir,
-        bottleName: b,
-        baseEnv: env('licensed')
+        bottleName: b
       })
       expect(r).toMatchObject({ kind: 'failed', reason: 'invalid-bottle' })
-      expect(existsSync(join(profile.root, 'record'))).toBe(false)
+      expect(runner.calls).toHaveLength(0)
     }
   )
 
   it.each(['Windows 10 Games', 'My Bottle (2)', 'x '.repeat(60).trim()])(
     'probes the bottle named %j (CX_BOTTLE travels in env)',
     async (b) => {
-      const r = await probeDemoStatus({
-        binDir,
-        bottleName: b,
-        baseEnv: env('licensed')
+      const { runner, probe } = probeWith({
+        cmd: wine,
+        result: { stdout: 'Standard version' }
       })
-      expect(r).toMatchObject({ kind: 'ok', status: { kind: 'licensed' } })
-      expect(readFileSync(join(profile.root, 'record'), 'utf8')).toBe(b)
+      expect(await probe({ binDir, bottleName: b })).toMatchObject({
+        kind: 'ok',
+        status: { kind: 'licensed' }
+      })
+      expect(runner.calls[0].env?.CX_BOTTLE).toBe(b)
     }
   )
 })

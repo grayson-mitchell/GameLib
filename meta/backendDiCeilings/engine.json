@@ -1,8 +1,4 @@
 {
-  "childProcess": {
-    "src/backend/engine/demoStatus.ts": 1,
-    "src/backend/engine/runTool.ts": 1
-  },
   "jestMock": {
     "src/backend/engine/__tests__/adoptBottle.test.ts": 1,
     "src/backend/engine/__tests__/bottleLedger.test.ts": 1,

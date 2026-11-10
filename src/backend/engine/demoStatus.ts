@@ -6,12 +6,12 @@
  * inherit `process.env`; tests pass a fake profile's `childEnv()` via
  * `baseEnv`.
  *
- * Sidecar exit contract: nothing runs at import; the cap timer, the child and
- * its pipes are unref'd, and every settle path clears the timer.
+ * Sidecar exit contract: nothing runs at import; the child runs through the
+ * injected process runner, which owns the cap timer and the unref discipline.
  */
-import { spawn } from 'child_process'
 import { join } from 'path'
 import { logInfo, LogPrefix } from 'backend/logger'
+import type { ProcessRunner } from 'backend/process/types'
 import { sanitizeBottleName } from './bottlePrimitives'
 
 // Spike 060 measured 4.2 s cold, 0.9 s warm: about 3.5x headroom.
@@ -58,16 +58,28 @@ function oneLine(s: string, cap: number): string {
   return s.replace(/\s+/g, ' ').trim().slice(0, cap)
 }
 
-function unrefHandle(handle: unknown): void {
-  ;(handle as { unref?: () => void } | null | undefined)?.unref?.()
-}
-
-export async function probeDemoStatus(args: {
+export type ProbeDemoStatus = (args: {
   binDir: string
   bottleName: string
   timeoutMs?: number
   baseEnv?: NodeJS.ProcessEnv
-}): Promise<DemoStatusProbe> {
+}) => Promise<DemoStatusProbe>
+
+export function createProbeDemoStatus(deps: {
+  runner: Pick<ProcessRunner, 'run'>
+}): ProbeDemoStatus {
+  return (args) => probeWith(deps.runner, args)
+}
+
+async function probeWith(
+  runner: Pick<ProcessRunner, 'run'>,
+  args: {
+    binDir: string
+    bottleName: string
+    timeoutMs?: number
+    baseEnv?: NodeJS.ProcessEnv
+  }
+): Promise<DemoStatusProbe> {
   const { binDir, bottleName } = args
   const started = Date.now()
   const log = (outcome: string, extra = '') =>
@@ -97,66 +109,29 @@ export async function probeDemoStatus(args: {
     return fail('invalid-bottle', 'bottle name rejected')
   }
 
-  return new Promise<DemoStatusProbe>((resolve) => {
-    let settled = false
-    // eslint-disable-next-line prefer-const -- assigned after the settle closure that clears it
-    let timer: NodeJS.Timeout | undefined
-    const settle = (r: DemoStatusProbe) => {
-      if (settled) return
-      settled = true
-      if (timer) clearTimeout(timer)
-      resolve(r)
-    }
-    let stdout = ''
-    let stderr = ''
-    let child: ReturnType<typeof spawn>
-    try {
-      child = spawn(join(binDir, 'wine'), ['--demo-status'], {
-        env: { ...(args.baseEnv ?? process.env), CX_BOTTLE: bottleName },
-        stdio: ['ignore', 'pipe', 'pipe'],
-        windowsHide: true
-      })
-    } catch (e) {
-      settle(fail('spawn-error', e instanceof Error ? e.message : String(e)))
-      return
-    }
-    unrefHandle(child)
-    unrefHandle(child.stdout)
-    unrefHandle(child.stderr)
-    child.stdout?.on('data', (d: Buffer) => {
-      if (stdout.length < OUTPUT_CAP) stdout += d.toString('utf8')
+  const timeoutMs = args.timeoutMs ?? DEMO_STATUS_CAP_MS
+  let res
+  try {
+    // Real-profile arm: without baseEnv the runner merges the process env
+    // under CX_BOTTLE, as the old spawn did; a test baseEnv is used verbatim.
+    res = await runner.run(join(binDir, 'wine'), ['--demo-status'], {
+      env: { ...args.baseEnv, CX_BOTTLE: bottleName },
+      replaceEnv: args.baseEnv !== undefined,
+      stdin: '',
+      timeoutMs,
+      maxBufferBytes: OUTPUT_CAP
     })
-    child.stderr?.on('data', (d: Buffer) => {
-      if (stderr.length < OUTPUT_CAP) stderr += d.toString('utf8')
-    })
-    timer = setTimeout(() => {
-      try {
-        child.kill('SIGKILL')
-      } catch {
-        // already gone
-      }
-      settle(
-        fail(
-          'timeout',
-          `no result within ${args.timeoutMs ?? DEMO_STATUS_CAP_MS} ms`
-        )
-      )
-    }, args.timeoutMs ?? DEMO_STATUS_CAP_MS)
-    unrefHandle(timer)
-    child.on('error', (e) => settle(fail('spawn-error', e.message)))
-    child.on('close', (code) => {
-      if (code !== 0) {
-        settle(
-          fail(
-            'nonzero-exit',
-            `code=${code} stderr=${oneLine(stderr, 200)} stdout=${oneLine(stdout, 400)}`
-          )
-        )
-        return
-      }
-      const status = parseDemoStatus(stdout)
-      log('ok', `status=${status.kind}`)
-      settle({ kind: 'ok', status, elapsedMs: Date.now() - started })
-    })
-  })
+  } catch (e) {
+    return fail('spawn-error', e instanceof Error ? e.message : String(e))
+  }
+  if (res.timedOut) return fail('timeout', `no result within ${timeoutMs} ms`)
+  if (res.code !== 0) {
+    return fail(
+      'nonzero-exit',
+      `code=${res.code} stderr=${oneLine(res.stderr, 200)} stdout=${oneLine(res.stdout, 400)}`
+    )
+  }
+  const status = parseDemoStatus(res.stdout)
+  log('ok', `status=${status.kind}`)
+  return { kind: 'ok', status, elapsedMs: Date.now() - started }
 }
