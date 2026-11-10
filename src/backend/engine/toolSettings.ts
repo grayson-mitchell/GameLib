@@ -49,7 +49,15 @@ export type ToolSettingsResult =
   | { kind: 'engine'; key: EngineKey; settings: GameSettings }
   | {
       kind: 'unavailable'
-      reason: 'bottle-not-created' | 'no-engine' | 'invalid-prefix'
+      /**
+       * 'not-own-bottle': a bottle-runtime store title whose tools would act on a bottle shared
+       * with other titles (quick 261110-vi4).
+       */
+      reason:
+        | 'bottle-not-created'
+        | 'no-engine'
+        | 'invalid-prefix'
+        | 'not-own-bottle'
     }
 
 export interface ToolSettingsDeps {
@@ -114,6 +122,14 @@ function releaseBoundDeps(
       return pin && isPinnedEngineInstalled(pin) ? pinEngine(pin) : null
     }
   }
+}
+
+/** The built-in or Wine Manager engine an engine id runs on; null when it is not installed. */
+export function nonCrossoverEngineFor(
+  services: EngineServices,
+  engineId: string
+): NonCrossoverEngine | null {
+  return releaseBoundDeps(services).nonCrossoverEngine(engineId)
 }
 
 export async function resolveToolSettings(
