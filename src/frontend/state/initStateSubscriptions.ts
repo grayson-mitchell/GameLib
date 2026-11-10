@@ -30,8 +30,8 @@ import {
 } from '../helpers/stores'
 import { createConnectivitySync } from '../helpers/connectivitySync'
 import { isStore } from 'common/storeCapabilities'
-import type { GameStatus } from 'common/types'
 import useUiState, { readInitialUi } from './uiState'
+import { openInstallGameModal } from './InstallGameModal'
 import useSettingsState, {
   applySavedFonts,
   focusRowMirrorSeed,
@@ -56,12 +56,6 @@ import { handleEngineStateChangedSignal } from './EngineState'
 import { handleSteamRequestNoticeSignal } from './SteamRequestNotice'
 import { handleReadOnlyStoresNoticeSignal } from './ReadOnlyStoresNotice'
 import { handleSteamBottleLaunchWaitingSignal } from './BottleLaunchWaiting'
-
-// The class captured `libraryStatus` at componentDidMount, which is always the
-// initial `[]`, so the "already installing" guard below never fires. Preserved
-// as-is (Phase 69 no-behaviour-change); see
-// .planning/todos/pending/2026-11-10-install-game-push-stale-status-and-unread-modal-state.md
-const LIBRARY_STATUS_AT_REGISTRATION: GameStatus[] = []
 
 /**
  * Runs `fn` once i18next has finished initialising (immediately if it has).
@@ -189,18 +183,25 @@ export function initStateSubscriptions(): void {
     )
 
   window.api.handleInstallGame(async (e, appName, runner) => {
-    const currentApp = LIBRARY_STATUS_AT_REGISTRATION.filter(
-      (game) => game.appName === appName
-    )[0]
-    if (!currentApp || (currentApp && currentApp.status !== 'installing')) {
-      const gameInfo = await getGameInfo(appName, runner)
-      if (!gameInfo || isStore(gameInfo, 'sideload')) {
-        return
-      }
-      useUiState.setState({
-        showInstallModal: { show: true, appName, runner, gameInfo }
-      })
+    // The backend only pushes this for a game that is not installed (the
+    // protocol.ts "Is Not Installed" dialog), so the only in-flight states it
+    // can be in are 'installing' (incl. the Steam hand-off) and 'queued'
+    // (awaiting install in the download queue). Re-opening the install flow
+    // in either would double-enqueue. Read at event time, not registration.
+    const currentApp = useLibraryState
+      .getState()
+      .libraryStatus.find((game) => game.appName === appName)
+    if (
+      currentApp?.status === 'installing' ||
+      currentApp?.status === 'queued'
+    ) {
+      return
     }
+    const gameInfo = await getGameInfo(appName, runner)
+    if (!gameInfo || isStore(gameInfo, 'sideload')) {
+      return
+    }
+    openInstallGameModal({ appName, runner, gameInfo })
   })
 
   // Phase 17 (17-06), D-07: opens the guided bottle-setup flow whenever the

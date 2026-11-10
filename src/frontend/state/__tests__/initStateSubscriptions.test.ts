@@ -164,6 +164,7 @@ const MOVED_LISTENERS = [
 describe('initStateSubscriptions', () => {
   let init: typeof InitModule
   let useUiState: StoreHooks<UiState>
+  let useInstallGameModal: typeof import('../InstallGameModal').useInstallGameModal
   let useSettingsState: StoreHooks<SettingsState>
   let useAuthState: StoreHooks<AuthState>
   let useLibraryState: StoreHooks<LibraryState>
@@ -175,6 +176,8 @@ describe('initStateSubscriptions', () => {
     useSettingsState = (await import('../settingsState')).default
     useAuthState = (await import('../authState')).default
     useLibraryState = (await import('../libraryState')).default
+    useInstallGameModal = (await import('../InstallGameModal'))
+      .useInstallGameModal
   })
 
   beforeEach(() => {
@@ -393,22 +396,58 @@ describe('initStateSubscriptions', () => {
     ])
   })
 
-  it('the install-game handler writes showInstallModal', async () => {
-    const helpers = await import('../../helpers')
-    const gameInfo = { app_name: 'g', runner: 'gog', title: 'G' }
-    const spy = jest
-      .spyOn(helpers, 'getGameInfo')
-      .mockResolvedValue(gameInfo as never)
-    init.initStateSubscriptions()
-    const handler = handlers.get('handleInstallGame')?.[0]
-    await handler?.({}, 'g', 'gog')
-    expect(useUiState.getState().showInstallModal).toEqual({
-      show: true,
-      appName: 'g',
-      runner: 'gog',
-      gameInfo
+  describe('install-game handler', () => {
+    const gogInfo = { app_name: 'g', runner: 'gog', title: 'G' }
+    let spy: jest.SpyInstance
+    const closed = () => useInstallGameModal.setState({ isOpen: false })
+
+    beforeEach(async () => {
+      closed()
+      const helpers = await import('../../helpers')
+      spy = jest.spyOn(helpers, 'getGameInfo')
     })
-    spy.mockRestore()
+    afterEach(() => {
+      spy.mockRestore()
+      closed()
+    })
+
+    it('opens the install modal via openInstallGameModal', async () => {
+      spy.mockResolvedValue(gogInfo as never)
+      init.initStateSubscriptions()
+      await handlers.get('handleInstallGame')?.[0]?.({}, 'g', 'gog')
+      expect(useInstallGameModal.getState()).toMatchObject({
+        isOpen: true,
+        appName: 'g',
+        runner: 'gog',
+        gameInfo: gogInfo,
+        action: 'install'
+      })
+    })
+
+    it.each(['installing', 'queued'] as const)(
+      'skips a game whose status was set after registration: %s',
+      async (status) => {
+        spy.mockResolvedValue(gogInfo as never)
+        init.initStateSubscriptions()
+        useLibraryState.setState({
+          libraryStatus: [{ appName: 'g', status }]
+        })
+        await handlers.get('handleInstallGame')?.[0]?.({}, 'g', 'gog')
+        expect(spy).not.toHaveBeenCalled()
+        expect(useInstallGameModal.getState().isOpen).toBe(false)
+      }
+    )
+
+    it('does not open the modal for a sideload game', async () => {
+      spy.mockResolvedValue({
+        app_name: 's',
+        runner: 'sideload',
+        title: 'S'
+      } as never)
+      init.initStateSubscriptions()
+      await handlers.get('handleInstallGame')?.[0]?.({}, 's', 'sideload')
+      expect(useInstallGameModal.getState().isOpen).toBe(false)
+    })
   })
 
   it('seedAndFollowWindowChrome seeds before it registers, and a push lands', async () => {
