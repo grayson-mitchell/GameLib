@@ -98,3 +98,94 @@ describe('createScriptedRunner', () => {
     expect(() => r.expectAllConsumed()).toThrow(/b/)
   })
 })
+
+describe('createScriptedRunner process capabilities (66.1-01)', () => {
+  it('calls onSpawn once with an inert handle before any chunk', async () => {
+    const order: string[] = []
+    const r = createScriptedRunner([
+      { cmd: 'a', chunks: [{ stream: 'stdout', text: 'x' }] }
+    ])
+    const onSpawn = jest.fn((h: { pid: unknown }) => {
+      order.push('spawn')
+      expect(h).toMatchObject({
+        pid: undefined,
+        exitCode: null,
+        signalCode: null
+      })
+    })
+    await r.run('a', [], { onSpawn, onStdout: () => order.push('chunk') })
+    expect(onSpawn).toHaveBeenCalledTimes(1)
+    expect(order).toEqual(['spawn', 'chunk'])
+  })
+
+  it('resolves aborted without consuming chunks when already aborted', async () => {
+    const r = createScriptedRunner([
+      { cmd: 'a', chunks: [{ stream: 'stdout', text: 'x' }] }
+    ])
+    const onStdout = jest.fn()
+    const res = await r.run('a', [], {
+      signal: AbortSignal.abort(),
+      onStdout
+    })
+    expect(res).toMatchObject({ aborted: true, code: null })
+    expect(onStdout).not.toHaveBeenCalled()
+  })
+
+  it('holds a step until release', async () => {
+    const r = createScriptedRunner([
+      { cmd: 'a', hold: true, result: { stdout: 'done' } }
+    ])
+    let settled = false
+    const p = r.run('a', []).then((x) => {
+      settled = true
+      return x
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(settled).toBe(false)
+    r.release('a')
+    expect((await p).stdout).toBe('done')
+  })
+
+  it('resolves a held step aborted when the signal aborts', async () => {
+    const r = createScriptedRunner([{ cmd: 'a', hold: true }])
+    const ac = new AbortController()
+    const p = r.run('a', [], { signal: ac.signal })
+    ac.abort()
+    expect(await p).toMatchObject({ aborted: true, code: null })
+  })
+
+  it('release of an unknown or non-held cmd throws', async () => {
+    const r = createScriptedRunner([{ cmd: 'a' }])
+    expect(() => r.release('zzz')).toThrow()
+    await r.run('a', [])
+    expect(() => r.release('a')).toThrow()
+  })
+
+  it('mirrors the timeout opt-out validation', async () => {
+    const r = createScriptedRunner([{ cmd: 'a', repeat: true }])
+    await expect(
+      r.run('a', [], { timeout: { none: true, reason: '' } })
+    ).rejects.toThrow(/D-10/)
+    await expect(
+      r.run('a', [], { timeoutMs: 5, timeout: { none: true, reason: 'x' } })
+    ).rejects.toThrow(TypeError)
+    await expect(
+      r.run('a', [], { timeout: { none: true, reason: 'installer' } })
+    ).resolves.toMatchObject({ code: 0 })
+  })
+
+  it('records killTracked filters and returns scripted counts', () => {
+    const r = createScriptedRunner([], { killCounts: [2, 1] })
+    expect(r.killTracked({ runner: 'x' })).toBe(2)
+    expect(r.killTracked({ key: 'k' })).toBe(1)
+    expect(r.killTracked({})).toBe(0)
+    expect(r.calls[0]).toMatchObject({
+      method: 'killTracked',
+      cmd: '',
+      argv: [],
+      opts: { runner: 'x' }
+    })
+    expect(r.calls).toHaveLength(3)
+  })
+})
