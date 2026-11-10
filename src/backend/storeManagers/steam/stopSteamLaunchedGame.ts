@@ -41,7 +41,10 @@ export type StopSteamLaunchedOutcome =
   | { kind: 'failed'; error: string }
 
 export async function resolveSteamLaunchedInstallFolder(
-  deps: StopSteamLaunchedGameDeps,
+  deps: Pick<
+    StopSteamLaunchedGameDeps,
+    'getSteamLibraries' | 'readAcfInstalldir' | 'sanitizeInstalldir'
+  >,
   appId: string
 ): Promise<string | undefined> {
   if (!/^\d+$/.test(appId)) return undefined
@@ -69,6 +72,41 @@ function errCode(e: unknown): string | undefined {
   return (e as { code?: string } | null)?.code
 }
 
+/**
+ * ps scan for the pids whose executable lives in `folder`, with the linux
+ * /proc exe filter. Shared by stop (261111-9b7) and the launch watch
+ * (261111-9mj). Throws when ps does.
+ */
+export async function scanSteamLaunchedPids(
+  deps: Pick<
+    StopSteamLaunchedGameDeps,
+    'runner' | 'platform' | 'readExe' | 'realpath' | 'selfPids'
+  >,
+  folder: string,
+  opts: { psTimeoutMs?: number } = {}
+): Promise<number[]> {
+  let pids = await findPidsRunningFromFolder(deps, folder, {
+    timeoutMs: opts.psTimeoutMs,
+    excludePids: deps.selfPids
+  })
+  if (deps.platform === 'linux') {
+    let real = folder
+    try {
+      real = deps.realpath(folder)
+    } catch {
+      // fall back to folder
+    }
+    pids = pids.filter((pid) => {
+      const exe = deps.readExe(pid)?.replace(/ \(deleted\)$/, '')
+      return (
+        exe !== undefined &&
+        (exe.startsWith(folder + sep) || exe.startsWith(real + sep))
+      )
+    })
+  }
+  return pids
+}
+
 export async function stopSteamLaunchedGame(
   deps: StopSteamLaunchedGameDeps,
   appId: string,
@@ -82,27 +120,9 @@ export async function stopSteamLaunchedGame(
     if (!folder) return { kind: 'no-folder' }
 
     const scan = () =>
-      findPidsRunningFromFolder(deps, folder, {
-        timeoutMs: opts.psTimeoutMs,
-        excludePids: deps.selfPids
-      })
+      scanSteamLaunchedPids(deps, folder, { psTimeoutMs: opts.psTimeoutMs })
 
-    let pids = await scan()
-    if (deps.platform === 'linux') {
-      let real = folder
-      try {
-        real = deps.realpath(folder)
-      } catch {
-        // fall back to folder
-      }
-      pids = pids.filter((pid) => {
-        const exe = deps.readExe(pid)?.replace(/ \(deleted\)$/, '')
-        return (
-          exe !== undefined &&
-          (exe.startsWith(folder + sep) || exe.startsWith(real + sep))
-        )
-      })
-    }
+    const pids = await scan()
     if (pids.length === 0) return { kind: 'no-process', folder }
 
     const termed: number[] = []
