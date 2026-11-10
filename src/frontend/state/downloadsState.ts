@@ -20,21 +20,32 @@ interface DownloadsState {
   clearFinishedItem: (appName: string) => void
 }
 
+// Request token: only the newest pull may write `finished`, and Clear
+// invalidates any pull still in flight so it cannot re-fill the cleared list.
+let pullSeq = 0
+
 const useDownloadsStateRaw = create<DownloadsState>()(
   subscribeWithSelector((set, get) => ({
     finished: undefined,
 
     refreshFinished: async () => {
-      const info = await window.api.getDMQueueInformation()
-      set({ finished: info?.finished })
+      const mine = ++pullSeq
+      try {
+        const info = await window.api.getDMQueueInformation()
+        if (mine === pullSeq) set({ finished: info?.finished })
+      } catch (error) {
+        window.api.logError(`finished-downloads pull failed: ${String(error)}`)
+      }
     },
 
     clearFinished: () => {
+      pullSeq++
       set({ finished: [] })
       downloadManagerStore.set('finished', [])
     },
 
     clearFinishedItem: (appName) => {
+      pullSeq++
       const filtered = get().finished?.filter(
         (e) => e.params.appName !== appName
       )
@@ -51,6 +62,16 @@ export default useDownloadsState
 
 export function refreshFinished(): Promise<void> {
   return useDownloadsState.getState().refreshFinished()
+}
+
+/**
+ * For DownloadManager's mount: pull only if the list was never loaded (a failed
+ * boot pull), so the Downloads tab self-heals without the D-15 refill-on-mount.
+ */
+export function ensureFinishedLoaded(): void {
+  if (useDownloadsState.getState().finished === undefined) {
+    void refreshFinished()
+  }
 }
 
 /**

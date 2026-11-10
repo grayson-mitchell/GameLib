@@ -12,7 +12,9 @@ import SetupDownloadItem from './components/SetupDownloadItem'
 import SteamManagedItem from './components/SteamManagedItem'
 import { steamManagedRows } from './components/SteamManagedItem/steamManagedModel'
 import useLibraryState from 'frontend/state/libraryState'
-import useDownloadsState from 'frontend/state/downloadsState'
+import useDownloadsState, {
+  ensureFinishedLoaded
+} from 'frontend/state/downloadsState'
 import { useSteamSetupDownloads } from 'frontend/state/SteamSetupDownloads'
 
 export default React.memo(function DownloadManager(): JSX.Element | null {
@@ -32,6 +34,10 @@ export default React.memo(function DownloadManager(): JSX.Element | null {
   )
 
   useEffect(() => {
+    // Self-heal a failed boot pull without bringing back the refill-on-every-
+    // mount (D-15): only pull when the list was never loaded.
+    ensureFinishedLoaded()
+
     setRefreshing(true)
     window.api.getDMQueueInformation().then(({ elements, state }: DMQueue) => {
       setCurrentElement(elements[0])
