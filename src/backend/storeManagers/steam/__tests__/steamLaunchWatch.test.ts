@@ -308,6 +308,121 @@ describe('steamLaunchWatch', () => {
     expect(t.sent).toEqual([])
   })
 
+  it('A1 (am0) win32 already running: no launching, the poller playing is not overwritten', async () => {
+    const t = setupWin([winList([42]), winList([])])
+    t.state.running = 264160
+    t.state.alive.add(42)
+    const { deps, clock, sent } = t
+    deps.pollerReports = () => true
+    const { settled } = startSteamLaunchWatch(deps, '264160')
+    expect(sent).toEqual([])
+    await tick500(clock, 2000)
+    expect(sent).toEqual(['playing'])
+    t.state.alive.delete(42)
+    await tick500(clock, 1000)
+    await settled
+    expect(sent).toEqual(['playing', 'done'])
+  })
+
+  it('A2 (am0) win32 Stop during Launching: shown is true and the watch sends nothing more', async () => {
+    const { deps, clock, registry, sent, released } = setupWin([])
+    startSteamLaunchWatch(deps, '264160')
+    expect(sent).toEqual(['launching'])
+    expect(cancelSteamLaunchWatch(registry, '264160')).toEqual({
+      cancelled: true,
+      shown: true
+    })
+    await tick500(clock, 92000)
+    expect(sent).toEqual(['launching'])
+    expect(released).toEqual([true])
+    expect(registry.size).toBe(0)
+    expect(clock.pendingCount()).toBe(0)
+  })
+
+  it('A3 (am0) win32 relaunch during Launching: one watch, no second launching, no stacked timer, window restarts', async () => {
+    const { deps, clock, sent } = setupWin([])
+    const first = startSteamLaunchWatch(deps, '264160', { startWindowMs: 6000 })
+    await tick500(clock, 3000)
+    const again = startSteamLaunchWatch(deps, '264160', { startWindowMs: 6000 })
+    expect(first.status).toBe('started')
+    expect(again.status).toBe('already-watching')
+    expect(sent).toEqual(['launching'])
+    expect(clock.pendingCount()).toBe(1)
+    await tick500(clock, 3000) // t = 6000: the original window would have ended
+    expect(sent).toEqual(['launching'])
+    await tick500(clock, 4500) // t = 10500: the 2 s search tick at 10000 ends the restarted window
+    await first.settled
+    expect(sent).toEqual(['launching', 'done'])
+  })
+
+  it('A3b (am0) win32 relaunch during Launching then found: exactly one playing', async () => {
+    const { deps, clock, sent, state } = setupWin([winList([42]), winList([])])
+    const { settled } = startSteamLaunchWatch(deps, '264160')
+    await tick500(clock, 1000)
+    startSteamLaunchWatch(deps, '264160')
+    state.running = 264160
+    state.alive.add(42)
+    await tick500(clock, 4000)
+    expect(sent).toEqual(['launching', 'playing'])
+    state.alive.delete(42)
+    await tick500(clock, 1000)
+    await settled
+    expect(sent).toEqual(['launching', 'playing', 'done'])
+  })
+
+  it('A4 (am0) win32: the poller claim is released before the fallback done', async () => {
+    const order: string[] = []
+    const t = setupWin([])
+    t.deps.sendStatus = (_id, status) => void order.push(status)
+    t.deps.pollerHold = () => (terminalSent) =>
+      void order.push(`release:${String(terminalSent)}`)
+    const { settled } = startSteamLaunchWatch(t.deps, '264160', {
+      startWindowMs: 6000
+    })
+    await tick500(t.clock, 8000)
+    await settled
+    expect(order).toEqual(['launching', 'release:false', 'done'])
+  })
+
+  it('A5 (am0) win32 hand-back: the poller reporting the appId by the bail suppresses done', async () => {
+    const t = setupWin([{ ...winList([]), repeat: true }])
+    t.state.running = 264160
+    let reports = false
+    t.deps.pollerReports = () => reports
+    const { settled } = startSteamLaunchWatch(t.deps, '264160')
+    await tick500(t.clock, 8000) // four empty scans
+    reports = true
+    await tick500(t.clock, 4000)
+    await settled
+    expect(t.sent).toEqual(['launching'])
+    expect(t.released).toEqual([false])
+  })
+
+  it('A6 (am0) win32 no install folder: launching then done, claim released false', async () => {
+    const t = setup([], { platform: 'win32', libs: undefined })
+    await startSteamLaunchWatch(t.deps, '264160').settled
+    expect(t.sent).toEqual(['launching', 'done'])
+    expect(t.released).toEqual([false])
+  })
+
+  it('A7 (am0) win32 unexpected error: one warn, launching then done', async () => {
+    const t = setup([], { platform: 'win32', libs: [WIN_LIB] })
+    t.deps.readRunningAppId = () => Promise.reject(new Error('reg boom'))
+    const { settled } = startSteamLaunchWatch(t.deps, '264160')
+    await tick500(t.clock, 2000)
+    await settled
+    expect(t.sent).toEqual(['launching', 'done'])
+    expect(t.released).toEqual([false])
+    expect(t.log.lines.filter((l) => l.level === 'warn')).toHaveLength(1)
+  })
+
+  it('A8 (am0) win32 holds no keepAlive while Launching', async () => {
+    const { deps, clock } = setupWin([])
+    startSteamLaunchWatch(deps, '264160')
+    await tick500(clock, 4000)
+    clock.assertNoKeepAlive()
+  })
+
   it('T7 relaunch dedupes and re-asserts playing', async () => {
     const { deps, clock, runner, sent } = setup([{ ...PRESENT, repeat: true }])
     startSteamLaunchWatch(deps, '264160')
