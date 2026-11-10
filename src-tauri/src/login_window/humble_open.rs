@@ -213,11 +213,15 @@ pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<V
     // `present_login_window_as_sheet`'s `beginSheet:` call below, with an explicit
     // visible-fallback (see the `sheet_presented` block further down this arm) so a
     // failed attach never leaves the user looking at nothing. Windows/Linux have no
-    // sheet concept and keep exactly today's behavior (REQ-34.4.2-08).
+    // sheet concept; they own the window by `main` and hold main modal instead
+    // (`owned_modal.rs`, quick-261111-d7o), falling back to today's free-floating
+    // window when no usable main exists.
     #[cfg(target_os = "macos")]
     let initial_visible = false;
     #[cfg(not(target_os = "macos"))]
     let initial_visible = visible;
+    #[cfg(not(target_os = "macos"))]
+    let mut login_owner: Option<tauri::WebviewWindow> = None;
     let mut builder =
         tauri::WebviewWindowBuilder::new(app, &label, tauri::WebviewUrl::External(url))
             .user_agent(user_agent)
@@ -285,11 +289,18 @@ pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<V
         // when attachment succeeds, but WOULD be exactly the race described above
         // when it does not run first. The visible-fallback path (below) calls
         // `.center()`/`.set_focus()` itself if attachment is not confirmed, so macOS
-        // loses nothing on the failure path either. Windows/Linux keep the original,
-        // unconditional immediate center+focus.
+        // loses nothing on the failure path either. Windows/Linux first try to make
+        // `main` the window's owner (`attach_login_owner`, built hidden and shown owned,
+        // centered over main, after `.build()`); with no usable main they keep the
+        // original, unconditional immediate center+focus.
         #[cfg(not(target_os = "macos"))]
         {
-            builder = builder.center().focused(true);
+            let (owned_builder, owner) = attach_login_owner(app, builder);
+            builder = owned_builder;
+            match owner {
+                Some(main_window) => login_owner = Some(main_window),
+                None => builder = builder.center().focused(true),
+            }
         }
         builder = builder
             .theme(Some(tauri::Theme::Light))
@@ -492,8 +503,9 @@ pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<V
     // are never presented. The pristine Epic and GOG login windows are presented by
     // `open_pristine_login_sheet`, which returns before this point (quick-261029-utr
     // lifted the REQ-34.4.2-10 Epic descope). On Windows/Linux
-    // the login window keeps exactly today's free-floating behavior -- declared
-    // UNVERIFIED here, matching the skill's Constraints section.
+    // the login window is owned by main and holds it modal instead
+    // (`present_owned_login_window`, `owned_modal.rs`, quick-261111-d7o); with no usable
+    // main it stays the free-floating window it always was.
     // quick-261029-osq: install the native bar (and inset the webview below it) BEFORE the
     // sheet is presented, and confirm it over mpsc. A sheet whose bar is unconfirmed would
     // have no visible exit (T-34.4.2-15 / T-osq-02), so it is never presented -- the
@@ -585,6 +597,10 @@ pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<V
     };
     #[cfg(not(target_os = "macos"))]
     let sheet_presented = false;
+    #[cfg(not(target_os = "macos"))]
+    if let Some(owner) = login_owner.as_ref() {
+        present_owned_login_window(app, &window, owner, &label);
+    }
     // T-34.4.2-39 resolution path 1 of 3 (Phase 34.4.2 Plan 14): sheet presentation
     // CONFIRMED -- clear the pending-login latch now that this request has resolved to
     // an on-screen sheet, membership in `PRESENTED_LOGIN_SHEETS` (set inside
