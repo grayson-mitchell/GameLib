@@ -43,3 +43,10 @@ sidecar's store at that moment. Fix depends on which candidate holds.
 
 Live gate: completed entries persist across tab switches and across an app
 restart, and Clear still empties the list.
+
+## Resolution
+
+Resolved 2026-11-10. Plan 69-12 moved the finished list into the
+`downloadsState` store (refresh and clear actions, registered at boot), so it
+no longer depends on the Downloads tab remounting. Confirmed live in the Phase
+69 D-16 gate (69-UAT.md items 7, 8 and 9 all pass, including across restart).
