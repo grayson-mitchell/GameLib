@@ -1,8 +1,0 @@
-{
-  "contextImports": {
-    "src/frontend/screens/DownloadManager/components/DownloadHero/index.tsx": 1,
-    "src/frontend/screens/DownloadManager/components/DownloadManagerItem/index.tsx": 1,
-    "src/frontend/screens/DownloadManager/components/SteamManagedItem/index.tsx": 1,
-    "src/frontend/screens/DownloadManager/index.tsx": 1
-  }
-}

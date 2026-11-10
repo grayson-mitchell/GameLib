@@ -1,8 +1,0 @@
-{
-  "contextImports": {
-    "src/frontend/screens/Library/components/InstallModal/DownloadDialog/index.tsx": 1,
-    "src/frontend/screens/Library/components/InstallModal/ImportDialog/index.tsx": 1,
-    "src/frontend/screens/Library/components/InstallModal/SideloadDialog/index.tsx": 1,
-    "src/frontend/screens/Library/components/InstallModal/SteamDialog/index.tsx": 1
-  }
-}

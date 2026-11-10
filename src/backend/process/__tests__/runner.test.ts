@@ -129,10 +129,20 @@ describe('run', () => {
     const r1 = make({ baseEnv: profile.childEnv({ A: '1' }) })
     const script =
       'process.stdout.write(JSON.stringify([process.env.A,process.env.B,process.env.HOME]))'
-    const merged = await r1.run(NODE, ['-e', script], {
-      env: { B: '2', HOME: '/elsewhere' }
-    })
-    expect(JSON.parse(merged.stdout)).toEqual(['1', '2', profile.root])
+    // The caller-supplied HOME comes from a SECOND helper-built profile, not a
+    // hand-written env literal (fakeHomeIsolation.test.ts forbids those in any
+    // file that spawns). A distinct profile root is still a real conflicting
+    // HOME, so this proves the runner's pinned profile HOME overrides it.
+    const other = createFakeHomeProfile()
+    try {
+      expect(other.root).not.toBe(profile.root)
+      const merged = await r1.run(NODE, ['-e', script], {
+        env: other.childEnv({ B: '2' })
+      })
+      expect(JSON.parse(merged.stdout)).toEqual(['1', '2', profile.root])
+    } finally {
+      other.dispose()
+    }
     const replaced = await r1.run(NODE, ['-e', script], {
       env: { B: '2' },
       replaceEnv: true
