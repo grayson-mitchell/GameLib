@@ -4,8 +4,15 @@
  * Same signature and result shape as the legacy `utils.spawnAsync`: it resolves
  * `{ code, stdout, stderr }` where stdout/stderr are the last 50 chunks joined, rejects on a
  * spawn error, and has NO timeout of its own because callers run installers, archive moves and
- * cxbottle for hours. A caller that wants a cap passes `timeout` (milliseconds, the child_process
- * contract: the child is killed and `code` is null); `signal` aborts the same way.
+ * cxbottle for hours. A caller that wants a cap passes `timeout` (milliseconds); `signal` aborts.
+ *
+ * Contract (A-WR-4, 66.1 review) -- how a stopped child is reported:
+ * - timeout: the runner kills the child with SIGKILL (not SIGTERM, which the legacy
+ *   child_process `timeout` option sent), resolves with `code: null` and `timedOut: true`.
+ * - abort: resolves (never rejects with AbortError, which the legacy implementation did) with
+ *   `code: null` and `aborted: true`. Callers that must treat abort as cancellation check
+ *   `aborted` or `signal.aborted`.
+ * - output truncation is not reported here: stdout/stderr are the last 50 chunks.
  *
  * Value imports are limited to `node:*` so this module never joins the utils import cycle.
  */
@@ -26,7 +33,15 @@ export type SpawnAsync = (
   args: string[],
   options?: SpawnAsyncOptions,
   onOutput?: (data: string) => void
-) => Promise<{ code: number | null; stdout: string; stderr: string }>
+) => Promise<{
+  code: number | null
+  stdout: string
+  stderr: string
+  /** Always set by the real implementation; optional so fakes need not supply it. The `timeout` elapsed and the runner killed the child with SIGKILL. */
+  timedOut?: boolean
+  /** The `signal` aborted the run. */
+  aborted?: boolean
+}>
 
 const ALLOWED_KEYS: readonly string[] = [
   'cwd',
@@ -88,6 +103,12 @@ export function createSpawnAsync(deps: { runner: ProcessRunner }): SpawnAsync {
         stderr.push(chunk)
       }
     })
-    return { code: result.code, stdout: stdout.join(), stderr: stderr.join() }
+    return {
+      code: result.code,
+      stdout: stdout.join(),
+      stderr: stderr.join(),
+      timedOut: result.timedOut,
+      aborted: result.aborted
+    }
   }
 }

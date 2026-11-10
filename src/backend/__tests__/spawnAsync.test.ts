@@ -18,7 +18,13 @@ describe('createSpawnAsync', () => {
     const out = await createSpawnAsync({ runner })('tar', ['-xf', 'a'], {
       cwd: '/x'
     })
-    expect(out).toEqual({ code: 0, stdout: 'o1o2', stderr: 'e1' })
+    expect(out).toEqual({
+      code: 0,
+      stdout: 'o1o2',
+      stderr: 'e1',
+      timedOut: false,
+      aborted: false
+    })
     expect(runner.calls).toHaveLength(1)
     const opts = runner.calls[0]!.opts as Record<string, any>
     expect(runner.calls[0]!.cwd).toBe('/x')
@@ -111,6 +117,33 @@ describe('createSpawnAsync', () => {
         'process.stdout.write("ok"); process.exit(3)'
       ])
       expect(out).toMatchObject({ code: 3, stdout: 'ok' })
+    } finally {
+      real.dispose()
+    }
+  })
+
+  test('A-WR-4: a timeout reports timedOut (SIGKILL, code null); an abort reports aborted', async () => {
+    const real = createRealRunner()
+    try {
+      const spawn = createSpawnAsync({ runner: real.runner })
+      const sleeper = ['-e', 'setTimeout(()=>{},10000)']
+      const timed = await spawn(process.execPath, sleeper, { timeout: 200 })
+      expect(timed).toMatchObject({
+        code: null,
+        timedOut: true,
+        aborted: false
+      })
+      const controller = new AbortController()
+      const pending = spawn(process.execPath, sleeper, {
+        signal: controller.signal
+      })
+      setTimeout(() => controller.abort(), 200)
+      const aborted = await pending
+      expect(aborted).toMatchObject({
+        code: null,
+        timedOut: false,
+        aborted: true
+      })
     } finally {
       real.dispose()
     }
