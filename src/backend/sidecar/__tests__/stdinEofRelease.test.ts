@@ -17,10 +17,13 @@ const downloadQueue = {
   pauseCurrentDownload: () => pause()
 }
 const stopMonitors = jest.fn()
+const stopPoll = jest.fn()
 // The Steam monitor instance is injected (66.2-06): the release path only needs its stopAll.
 const deps = {
   downloadQueue,
-  stopAllSteamDownloadMonitors: () => stopMonitors()
+  stopAllSteamDownloadMonitors: () => stopMonitors(),
+  // The running-game poller instance (quick 261111-7wo): stopped at EOF, never a loop-holder.
+  stopRunningGamePoll: () => stopPoll()
 }
 const release = jest.fn()
 jest.mock('../../storeManagers/steam/user', () => ({
@@ -51,6 +54,7 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
     input.write('x\n')
     expect(callAll).not.toHaveBeenCalled()
     expect(release).not.toHaveBeenCalled()
+    expect(stopPoll).not.toHaveBeenCalled()
   })
 
   it('aborts downloads and releases the CM session exactly once at EOF', () => {
@@ -61,6 +65,8 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
     return new Promise<void>((resolve) => setImmediate(resolve)).then(() => {
       expect(callAll).toHaveBeenCalledTimes(1)
       expect(release).toHaveBeenCalledTimes(1)
+      // Both 'end' and 'close' fire on a PassThrough; the poller is stopped once.
+      expect(stopPoll).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -115,6 +121,32 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
       expect(stopMonitors).toHaveBeenCalledTimes(1)
       expect(release).toHaveBeenCalledTimes(1)
     })
+  })
+
+  it('still releases the CM session and destroys outbound HTTP if stopping the poller throws', async () => {
+    stopPoll.mockImplementationOnce(() => {
+      throw new Error('boom')
+    })
+    const input = new PassThrough()
+    releaseOnStdinEof(input, deps)
+    input.resume()
+    input.end()
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    expect(stopPoll).toHaveBeenCalledTimes(1)
+    expect(release).toHaveBeenCalledTimes(1)
+    expect(destroyHttp).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the stdin-closed log line text unchanged', async () => {
+    const input = new PassThrough()
+    releaseOnStdinEof(input, deps)
+    input.resume()
+    input.end()
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    const lines = (logInfo as jest.Mock).mock.calls.map((c) => String(c[0]))
+    expect(lines).toContain(
+      '[sidecar] stdin closed: releasing Steam CM session, paying any owed Mac Steam goonline, stopping nettop monitors and aborting in-flight downloads'
+    )
   })
 
   it('destroys outbound HTTP once, after the CM release, and logs count and hosts', async () => {

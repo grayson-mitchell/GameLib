@@ -1535,7 +1535,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         releaseOnStdinEof(input, {
           downloadQueue: services.downloadQueue,
           stopAllSteamDownloadMonitors: () =>
-            services.steamProcesses.downloadMonitor.stopAll()
+            services.steamProcesses.downloadMonitor.stopAll(),
+          stopRunningGamePoll: () => services.steamProcesses.runningPoll.stop()
         })
       }
     },

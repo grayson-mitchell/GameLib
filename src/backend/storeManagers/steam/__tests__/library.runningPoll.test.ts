@@ -6,15 +6,23 @@
  */
 import { existsSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
+import { join, resolve, sep } from 'path'
 
+import { createCaptureLog } from 'backend/testUtils/captureLog'
 import { createFakeClock } from 'backend/testUtils/fakeClock'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
+import type { ScriptStep } from 'backend/testUtils/scriptedRunner'
 
 import {
   createRunningPoll,
   readMacRunningAppId,
   readRunningAppId
 } from '../library/runningPoll'
+import {
+  startSteamLaunchWatch,
+  type SteamLaunchWatchDeps,
+  type SteamLaunchWatchRegistry
+} from '../steamLaunchWatch'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -249,6 +257,165 @@ describe('createRunningPoll()', () => {
     clock.advance(5000) // the flag is released: the next tick probes again
     expect(read).toHaveBeenCalledTimes(2)
     release(440)
+    poll.stop()
+  })
+})
+
+describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
+  // Host-agnostic fixture paths: built from this machine's path module so the suite passes on
+  // the Windows dev box and on ubuntu CI alike (steamLaunchWatch.test.ts uses POSIX literals).
+  const LIB = resolve(sep + 'lib')
+  const FOLDER = join(LIB, 'steamapps', 'common', 'WazHack')
+  const GAME = join(FOLDER, 'WazHack.app', 'Contents', 'MacOS', 'WazHack')
+  const PRESENT: ScriptStep = {
+    cmd: '/bin/ps',
+    result: {
+      code: 0,
+      stdout: `23175 ${GAME}
+`
+    },
+    repeat: true
+  }
+  const APP_ID = '264160'
+
+  type Frame = { src: 'watch' | 'poller'; status: 'playing' | 'done' }
+
+  // Drain pending microtasks, move the shared fake clock, drain again. Moves in 1000 ms
+  // increments so the watch's chained timers (each scheduled after an async scan) re-arm from
+  // the right time rather than from the far end of one big jump.
+  async function step(clock: ReturnType<typeof createFakeClock>, ms: number) {
+    for (let moved = 0; moved < ms; moved += 1000) {
+      for (let i = 0; i < 10; i++) await Promise.resolve()
+      clock.advance(Math.min(1000, ms - moved))
+      for (let i = 0; i < 10; i++) await Promise.resolve()
+    }
+  }
+
+  function setup(script: ScriptStep[], platform: NodeJS.Platform = 'darwin') {
+    const clock = createFakeClock()
+    const runner = createScriptedRunner(script)
+    const log = createCaptureLog()
+    const registry: SteamLaunchWatchRegistry = new Map()
+    const frames: Frame[] = []
+    const state = { running: 0 }
+    const poll = createRunningPoll({
+      clock,
+      readRunningAppId: () => Promise.resolve(state.running),
+      notify: (_id, status) => void frames.push({ src: 'poller', status })
+    })
+    const watchDeps: SteamLaunchWatchDeps = {
+      runner,
+      clock,
+      platform,
+      log,
+      getSteamLibraries: () => Promise.resolve([LIB]),
+      readAcfInstalldir: () => 'WazHack',
+      sanitizeInstalldir: (c) => c,
+      readExe: jest.fn(),
+      realpath: (p) => p,
+      selfPids: [900],
+      registry,
+      sendStatus: (_id, status) => void frames.push({ src: 'watch', status }),
+      // Mirrors steamLaunchedDeps.ts: the watch hands status to the poller once it reports the id.
+      pollerReports: (appId) => String(poll.lastAppId()) === appId
+    }
+    return { clock, runner, registry, frames, state, poll, watchDeps }
+  }
+
+  // What libraryState.handleGameStatus renders: a repeat of the same status is dropped.
+  const collapse = (frames: Frame[]) =>
+    frames
+      .map((f) => f.status)
+      .filter((status, i, all) => i === 0 || status !== all[i - 1])
+
+  it('C1 poller first: the poller sends [playing, done] and the watch sends nothing', async () => {
+    const { clock, runner, registry, frames, state, poll, watchDeps } = setup([
+      PRESENT
+    ])
+    state.running = Number(APP_ID)
+    await poll.pollOnce() // the poller reports before the watch's first scan
+
+    const { settled } = startSteamLaunchWatch(watchDeps, APP_ID)
+    await step(clock, 2000)
+    await settled
+    expect(registry.size).toBe(0)
+    expect(runner.calls.filter((c) => c.cmd === '/bin/ps')).toHaveLength(0)
+
+    state.running = 0
+    await poll.pollOnce()
+    expect(frames).toEqual([
+      { src: 'poller', status: 'playing' },
+      { src: 'poller', status: 'done' }
+    ])
+  })
+
+  it('C2 watch first: [watch playing, poller playing, poller done], one done and it is last', async () => {
+    const { clock, registry, frames, state, poll, watchDeps } = setup([PRESENT])
+    poll.start() // default 5000 ms
+    const { settled } = startSteamLaunchWatch(watchDeps, APP_ID) // default 2000 ms
+    state.running = Number(APP_ID)
+
+    // t = 2000: the watch's first scan finds the game and shows playing.
+    await step(clock, 2000)
+    expect(frames).toEqual([{ src: 'watch', status: 'playing' }])
+    // t = 5000: the poller's first tick reports the same game a second time.
+    await step(clock, 3000)
+    expect(frames).toEqual([
+      { src: 'watch', status: 'playing' },
+      { src: 'poller', status: 'playing' }
+    ])
+    // t = 6000: the watch sees pollerReports and ends quietly, with no done of its own.
+    await step(clock, 1000)
+    await settled
+    expect(registry.size).toBe(0)
+    expect(frames).toHaveLength(2)
+
+    // The game quits: the poller's next tick sends the single done.
+    state.running = 0
+    await step(clock, 4000) // t = 10000
+    expect(frames).toEqual([
+      { src: 'watch', status: 'playing' },
+      { src: 'poller', status: 'playing' },
+      { src: 'poller', status: 'done' }
+    ])
+    expect(frames.filter((f) => f.status === 'done')).toHaveLength(1)
+    expect(frames[frames.length - 1]?.status).toBe('done')
+    expect(collapse(frames)).toEqual(['playing', 'done'])
+    poll.stop()
+  })
+
+  it('C3 win32: the watch is unsupported and the poller alone sends [playing, done]', async () => {
+    const reg = (stdout: string, repeat?: true): ScriptStep => ({
+      cmd: 'reg',
+      argv: REG_ARGV,
+      result: { code: 0, stdout },
+      ...(repeat ? { repeat } : {})
+    })
+    const { clock, runner, registry, frames, watchDeps } = setup(
+      [
+        reg('RunningAppID    REG_DWORD    0x407e0'),
+        reg('RunningAppID    REG_DWORD    0x0', true)
+      ],
+      'win32'
+    )
+    const poll = createRunningPoll({
+      clock,
+      readRunningAppId: () => readRunningAppId({ runner }, 'win32'),
+      notify: (_id, status) => void frames.push({ src: 'poller', status })
+    })
+
+    expect(startSteamLaunchWatch(watchDeps, APP_ID).status).toBe(
+      'unsupported-platform'
+    )
+    expect(registry.size).toBe(0)
+
+    poll.start()
+    await step(clock, 5000)
+    await step(clock, 5000)
+    expect(frames).toEqual([
+      { src: 'poller', status: 'playing' },
+      { src: 'poller', status: 'done' }
+    ])
     poll.stop()
   })
 })
