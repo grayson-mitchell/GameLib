@@ -1,13 +1,6 @@
 import React, { PureComponent } from 'react'
 
-import {
-  FavouriteGame,
-  GameInfo,
-  GameStatus,
-  HiddenGame,
-  Runner,
-  Status
-} from 'common/types'
+import { GameInfo, GameStatus, Runner, Status } from 'common/types'
 import { withTranslation } from 'react-i18next'
 import { getLegendaryConfig } from '../helpers'
 import { i18n, TFunction } from 'i18next'
@@ -15,7 +8,6 @@ import { i18n, TFunction } from 'i18next'
 import ContextProvider from './ContextProvider'
 
 import {
-  configStore,
   gogConfigStore,
   gogInstalledGamesStore,
   gogLibraryStore,
@@ -28,9 +20,8 @@ import {
 } from '../helpers/stores'
 import type { IpcRendererEvent } from 'backend/platform'
 import type { SteamSyncStatus } from 'common/types/ipc'
-import useUiState from './uiState'
 import useAuthState from './authState'
-import {
+import useLibraryState, {
   installLibraryBridgeSlots,
   type RefreshLibraryOptions
 } from './libraryState'
@@ -103,33 +94,14 @@ interface StateProps {
   // "succeeded-and-empty"), and the mount-time refresh is UNSCOPED, so it
   // would never be set on the path where the bug reproduces.
   steamSyncStatus: SteamSyncStatus
-  hiddenGames: HiddenGame[]
-  favouriteGames: FavouriteGame[]
-  customCategories: Record<string, string[]>
-  currentCustomCategories: string[]
   sideloadedLibrary: GameInfo[]
-}
-
-// function to load the new key or fallback to the old one
-const loadCurrentCategories = () => {
-  const currentCategories = storage.getItem('current_custom_categories') || null
-  if (!currentCategories) {
-    const currentCategory = storage.getItem('current_custom_category') || null
-    if (!currentCategory) {
-      return []
-    } else {
-      return [currentCategory]
-    }
-  } else {
-    return JSON.parse(currentCategories) as string[]
-  }
 }
 
 import { attachGameOverrides } from '../helpers/gameOverrides'
 
 type GameOverride = NonNullable<GameInfo['overrides']>
 
-const currentOverrides = () => useUiState.getState().gameOverrides
+const currentOverrides = () => useLibraryState.getState().gameOverrides
 
 const applyGameOverrides = (
   lib: GameInfo[],
@@ -395,162 +367,11 @@ class GlobalState extends PureComponent<Props> {
     refreshingByRunner: {},
     steamMetadataSyncing: false,
     steamSyncStatus: 'idle',
-    hiddenGames: configStore.get('games.hidden', []),
-    currentCustomCategories: loadCurrentCategories(),
-    favouriteGames: configStore.get('games.favourites', []),
-    customCategories: configStore.get('games.customCategories', {}),
     sideloadedLibrary: applyGameOverrides(sideloadLibrary.get('games', []))
   }
 
-  setCurrentCustomCategories = (newCustomCategories: string[]) => {
-    storage.setItem(
-      'current_custom_categories',
-      JSON.stringify(newCustomCategories)
-    )
-    this.setState({ currentCustomCategories: newCustomCategories })
-  }
-
-  hideGame = (appNameToHide: string, appTitle: string) => {
-    const newHiddenGames = [
-      ...this.state.hiddenGames,
-      { appName: appNameToHide, title: appTitle }
-    ]
-
-    this.setState({
-      hiddenGames: newHiddenGames
-    })
-    configStore.set('games.hidden', newHiddenGames)
-  }
-
-  unhideGame = (appNameToUnhide: string) => {
-    const newHiddenGames = this.state.hiddenGames.filter(
-      ({ appName }) => appName !== appNameToUnhide
-    )
-
-    this.setState({
-      hiddenGames: newHiddenGames
-    })
-    configStore.set('games.hidden', newHiddenGames)
-  }
-
-  addGameToFavourites = (appNameToAdd: string, appTitle: string) => {
-    const newFavouriteGames = [
-      ...this.state.favouriteGames.filter(
-        (fav) => fav.appName !== appNameToAdd
-      ),
-      { appName: appNameToAdd, title: appTitle }
-    ]
-
-    this.setState({
-      favouriteGames: newFavouriteGames
-    })
-    configStore.set('games.favourites', newFavouriteGames)
-  }
-
-  removeGameFromFavourites = (appNameToRemove: string) => {
-    const newFavouriteGames = this.state.favouriteGames.filter(
-      ({ appName }) => appName !== appNameToRemove
-    )
-
-    this.setState({
-      favouriteGames: newFavouriteGames
-    })
-    configStore.set('games.favourites', newFavouriteGames)
-  }
-
-  getCustomCategories = () =>
-    Array.from(new Set(Object.keys(this.state.customCategories))).sort()
-
-  getCurrentCustomCategories = () =>
-    Array.from(new Set(this.state.currentCustomCategories)).sort()
-
-  setCustomCategory = (newCategory: string) => {
-    const newCustomCategories = this.state.customCategories
-    newCustomCategories[newCategory] = []
-
-    // when adding a new category, if there are categories selected, select the new
-    // one too so the game doesn't disappear form the library
-    let newCurrentCustomCategories = this.state.currentCustomCategories
-    if (this.state.currentCustomCategories.length > 0) {
-      newCurrentCustomCategories = [...newCurrentCustomCategories, newCategory]
-    }
-
-    this.setState({
-      customCategories: newCustomCategories,
-      currentCustomCategories: newCurrentCustomCategories
-    })
-    configStore.set('games.customCategories', newCustomCategories)
-  }
-
-  removeCustomCategory = (category: string) => {
-    if (!this.state.customCategories[category]) return
-
-    const newCustomCategories = this.state.customCategories
-    delete newCustomCategories[category]
-    this.setState({ customCategories: { ...newCustomCategories } })
-
-    const updatedCategories = this.getCurrentCustomCategories().filter(
-      (cat) => cat !== category
-    )
-    this.setCurrentCustomCategories(updatedCategories)
-    const numberOfCategories = updatedCategories.length
-
-    if (numberOfCategories < 1) {
-      this.setCurrentCustomCategories(['preset_uncategorized'])
-    }
-    configStore.set('games.customCategories', newCustomCategories)
-  }
-
-  renameCustomCategory = (oldName: string, newName: string) => {
-    const games = this.state.customCategories[oldName]
-    if (!games) return
-
-    const newCustomCategories = this.state.customCategories
-    newCustomCategories[newName] = games
-    delete newCustomCategories[oldName]
-
-    this.setState({ customCategories: { ...newCustomCategories } })
-    configStore.set('games.customCategories', newCustomCategories)
-
-    const newCurrentCustomCategories = this.state.currentCustomCategories.map(
-      (cat) => (cat === oldName ? newName : cat)
-    )
-    this.setCurrentCustomCategories(newCurrentCustomCategories)
-  }
-
-  addGameToCustomCategory = (category: string, appName: string) => {
-    const gamesInCategory = this.state.customCategories[category] || []
-    gamesInCategory.push(appName)
-
-    const newCustomCategories = {
-      ...this.state.customCategories,
-      [category]: gamesInCategory
-    }
-
-    this.setState({
-      customCategories: newCustomCategories
-    })
-    configStore.set('games.customCategories', newCustomCategories)
-  }
-
-  removeGameFromCustomCategory = (category: string, appName: string) => {
-    if (!this.state.customCategories[category]) return
-
-    const newCustomCategories: Record<string, string[]> = {}
-    for (const [key, games] of Object.entries(this.state.customCategories)) {
-      if (key === category)
-        newCustomCategories[key] = games.filter((game) => game !== appName)
-      else newCustomCategories[key] = games
-    }
-
-    this.setState({
-      customCategories: newCustomCategories
-    })
-    configStore.set('games.customCategories', newCustomCategories)
-  }
-
   updateGameOverrides = (overrides: Record<string, GameOverride>) => {
-    useUiState.getState().setGameOverrides(overrides)
+    useLibraryState.getState().setGameOverrides(overrides)
     this.setState({
       epic: {
         ...this.state.epic,
@@ -961,40 +782,6 @@ class GlobalState extends PureComponent<Props> {
       this.updateGameOverrides(overrides)
     })
 
-    // Phase 19 (Plan 06), D-11/D-16: pushed after a validated background
-    // CrossOver-index refresh so the grid's `crossoverRatings` slice updates
-    // without a manual pull. This is the only IPC round-trip involved —
-    // painting a card never fires its own request (D-11/D-13). WR-05: the
-    // backend (`refreshCrossoverRatingMap()` in main.ts) now re-fires this
-    // event after every `refreshLibrary` completion too — not just at
-    // startup — so a game added mid-session (a background Steam sync, a
-    // manual "Refresh Library") gets a badge/filter signal without a
-    // restart. This listener needed no change to pick that up.
-    window.api.handleCrossoverIndexChanged((e, index) => {
-      useUiState.getState().setCrossoverRatings(index)
-    })
-
-    // One-time pull on mount so the grid paints on first load without
-    // waiting for the next background refresh's push.
-    window.api
-      .getCrossoverIndex()
-      .then((index) => useUiState.getState().setCrossoverRatings(index))
-      .catch((error) =>
-        window.api.logError(`CrossOver index pull failed: ${String(error)}`)
-      )
-
-    // Quick 261029-mkz: "Runs for me" override map -- push on every change,
-    // plus a one-time pull so the first paint has it.
-    window.api.handleRunsForMeChanged((e, map) => {
-      useUiState.getState().setRunsForMe(map)
-    })
-    window.api
-      .getRunsForMeMap()
-      .then((map) => useUiState.getState().setRunsForMe(map))
-      .catch((error) =>
-        window.api.logError(`Runs-for-me pull failed: ${String(error)}`)
-      )
-
     window.api.handleGamePush((e: IpcRendererEvent, args: GameInfo) => {
       if (!args.app_name) return
       if (isStore(args, 'gog')) {
@@ -1151,16 +938,7 @@ class GlobalState extends PureComponent<Props> {
   }
 
   render() {
-    const {
-      epic,
-      gog,
-      amazon,
-      steam,
-      favouriteGames,
-      customCategories,
-      hiddenGames,
-      libraryStatus
-    } = this.state
+    const { epic, gog, amazon, steam, libraryStatus } = this.state
 
     const installingEpicGame = libraryStatus.some(
       (game) => game.status === 'installing' && isStore(game, 'legendary')
@@ -1179,27 +957,7 @@ class GlobalState extends PureComponent<Props> {
           }),
           installingEpicGame,
           refresh: this.refresh,
-          refreshLibrary: this.refreshLibrary,
-          hiddenGames: {
-            list: hiddenGames,
-            add: this.hideGame,
-            remove: this.unhideGame
-          },
-          favouriteGames: {
-            list: favouriteGames,
-            add: this.addGameToFavourites,
-            remove: this.removeGameFromFavourites
-          },
-          customCategories: {
-            list: customCategories,
-            listCategories: this.getCustomCategories,
-            addToGame: this.addGameToCustomCategory,
-            removeFromGame: this.removeGameFromCustomCategory,
-            addCategory: this.setCustomCategory,
-            removeCategory: this.removeCustomCategory,
-            renameCategory: this.renameCustomCategory
-          },
-          setCurrentCustomCategories: this.setCurrentCustomCategories
+          refreshLibrary: this.refreshLibrary
         }}
       >
         {this.props.children}

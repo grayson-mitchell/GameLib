@@ -69,6 +69,9 @@ const fakeApi = new Proxy(
             record()
             return Promise.resolve(undefined)
           }
+        case 'getCrossoverIndex':
+        case 'getRunsForMeMap':
+          return () => new Promise(() => undefined)
         case 'humbleGetKeys':
           return () => Promise.resolve([])
         case 'humbleGetSyncState':

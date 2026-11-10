@@ -40,7 +40,7 @@ import {
   crossoverRiskDialogOptions,
   resolveCrossoverInstallRisk
 } from '../crossoverInstallRisk'
-import useUiState from 'frontend/state/uiState'
+import useLibraryState from 'frontend/state/libraryState'
 import ContextProvider from 'frontend/state/ContextProvider'
 import { InstallProgress } from 'frontend/types'
 import React, {
@@ -125,7 +125,7 @@ export default function DownloadDialog({
   ) as InstallProgress
   const { libraryStatus, platform, showDialogModal } =
     useContext(ContextProvider)
-  const { crossoverRatings, runsForMe } = useUiState.keys(
+  const { crossoverRatings, runsForMe } = useLibraryState.keys(
     'crossoverRatings',
     'runsForMe'
   )

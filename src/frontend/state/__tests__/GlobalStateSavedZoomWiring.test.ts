@@ -34,6 +34,9 @@ const fakeApi = new Proxy(
       if (name === 'requestAppSettings') {
         return () => new Promise(() => undefined)
       }
+      if (name === 'getCrossoverIndex' || name === 'getRunsForMeMap') {
+        return () => new Promise(() => undefined)
+      }
       if (name === 'humbleGetKeys') {
         return () => Promise.resolve([])
       }

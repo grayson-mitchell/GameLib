@@ -38,6 +38,9 @@ const fakeApi = new Proxy(
       if (name === 'storeGet') {
         return (_s: string, _k: string, dflt?: unknown) => dflt
       }
+      if (name === 'getCrossoverIndex' || name === 'getRunsForMeMap') {
+        return () => new Promise(() => undefined)
+      }
       if (name === 'humbleGetKeys') {
         return () => Promise.resolve([])
       }

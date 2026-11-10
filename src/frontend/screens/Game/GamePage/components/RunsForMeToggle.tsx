@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import useUiState from 'frontend/state/uiState'
+import useLibraryState from 'frontend/state/libraryState'
 import ToggleSwitch from 'frontend/components/UI/ToggleSwitch'
 import { runsForMeKey, isRunsForMeOn } from 'common/runsForMe'
 import type { GameInfo } from 'common/types'
@@ -17,7 +18,7 @@ interface Props {
 const RunsForMeToggle = ({ gameInfo }: Props) => {
   const { t: tGamelib } = useTranslation('gamelib')
   const platform = useUiState((s) => s.platform)
-  const { runsForMe } = useUiState.keys('runsForMe')
+  const { runsForMe } = useLibraryState.keys('runsForMe')
 
   if (platform !== 'darwin' || gameInfo.is_mac_native === true) {
     return null
@@ -42,7 +43,7 @@ const RunsForMeToggle = ({ gameInfo }: Props) => {
               runner: gameInfo.runner,
               on: event.target.checked
             })
-            .then((map) => useUiState.getState().setRunsForMe(map))
+            .then((map) => useLibraryState.getState().setRunsForMe(map))
             .catch((error) =>
               window.api.logError(`setRunsForMe failed: ${String(error)}`)
             )

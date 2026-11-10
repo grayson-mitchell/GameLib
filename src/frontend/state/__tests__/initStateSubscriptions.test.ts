@@ -2,6 +2,7 @@ import { resetAllStores, type StoreHooks } from '../storeKit'
 import type { UiState } from '../uiState'
 import type { SettingsState } from '../settingsState'
 import type { AuthState } from '../authState'
+import type { LibraryState } from '../libraryState'
 import type * as InitModule from '../initStateSubscriptions'
 
 type Handler = (...args: unknown[]) => unknown
@@ -11,6 +12,7 @@ type Handler = (...args: unknown[]) => unknown
  * call order; the awaited getters resolve from `values`.
  */
 const calls: string[] = []
+const errors: string[] = []
 const handlers = new Map<string, Handler[]>()
 const values: Record<string, unknown> = {}
 const config: Record<string, unknown> = {}
@@ -27,6 +29,21 @@ const fakeApi = new Proxy(
       if (name === 'getDMQueueInformation') {
         return () =>
           Promise.resolve({ elements: [], finished: [], state: 'idle' })
+      }
+      if (name === 'getCrossoverIndex' || name === 'getRunsForMeMap') {
+        const key =
+          name === 'getCrossoverIndex' ? 'crossoverIndex' : 'runsForMe'
+        return () => {
+          if (values[`${key}Reject`]) return Promise.reject(new Error('boom'))
+          return key in values
+            ? Promise.resolve(values[key])
+            : new Promise(() => undefined)
+        }
+      }
+      if (name === 'logError') {
+        return (message: string) => {
+          errors.push(message)
+        }
       }
       if (name === 'humbleGetKeys') {
         return () => Promise.resolve(values.humbleKeys ?? [])
@@ -95,6 +112,8 @@ const fakeApi = new Proxy(
 
 const MOVED_LISTENERS = [
   'handleInstallGame',
+  'handleCrossoverIndexChanged',
+  'handleRunsForMeChanged',
   'handleSteamBottleSetupRequired',
   'handleSteamClientSetupRequired',
   'handleSteamBridgeSetupRequired',
@@ -126,6 +145,7 @@ describe('initStateSubscriptions', () => {
   let useUiState: StoreHooks<UiState>
   let useSettingsState: StoreHooks<SettingsState>
   let useAuthState: StoreHooks<AuthState>
+  let useLibraryState: StoreHooks<LibraryState>
 
   beforeAll(async () => {
     // window.api is replaced after helpers attach their own at import time.
@@ -133,11 +153,13 @@ describe('initStateSubscriptions', () => {
     useUiState = (await import('../uiState')).default
     useSettingsState = (await import('../settingsState')).default
     useAuthState = (await import('../authState')).default
+    useLibraryState = (await import('../libraryState')).default
   })
 
   beforeEach(() => {
     ;(window as unknown as { api: unknown }).api = fakeApi
     calls.length = 0
+    errors.length = 0
     handlers.clear()
     for (const k of Object.keys(values)) delete values[k]
     for (const k of Object.keys(config)) delete config[k]
@@ -174,6 +196,41 @@ describe('initStateSubscriptions', () => {
     ;(window as unknown as { platform: string }).platform = 'linux'
     init.initStateSubscriptions()
     expect(useUiState.getState().platform).toBe('linux')
+  })
+
+  it('section (1) re-reads the persisted collections', () => {
+    config['games.hidden'] = [{ appName: 'h', title: 'H' }]
+    init.initStateSubscriptions()
+    expect(useLibraryState.getState().hiddenGames).toEqual([
+      { appName: 'h', title: 'H' }
+    ])
+  })
+
+  it('the CrossOver and runs-for-me pushes and pulls land in libraryState', async () => {
+    values.crossoverIndex = { a: 2 }
+    values.runsForMe = { a_steam: { value: true } }
+    init.initStateSubscriptions()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(useLibraryState.getState().crossoverRatings).toEqual({ a: 2 })
+    expect(Object.keys(useLibraryState.getState().runsForMe)).toEqual([
+      'a_steam'
+    ])
+    handlers.get('handleCrossoverIndexChanged')?.[0]?.({}, { b: null })
+    handlers.get('handleRunsForMeChanged')?.[0]?.({}, {})
+    expect(useLibraryState.getState().crossoverRatings).toEqual({ b: null })
+    expect(useLibraryState.getState().runsForMe).toEqual({})
+  })
+
+  it('a failed pull logs the same messages', async () => {
+    values.crossoverIndexReject = true
+    values.runsForMeReject = true
+    init.initStateSubscriptions()
+    await new Promise((resolve) => setImmediate(resolve))
+    expect(errors).toEqual([
+      'CrossOver index pull failed: Error: boom',
+      'Runs-for-me pull failed: Error: boom'
+    ])
   })
 
   it('the install-game handler writes showInstallModal', async () => {

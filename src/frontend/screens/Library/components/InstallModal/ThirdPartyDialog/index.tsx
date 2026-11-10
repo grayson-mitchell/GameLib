@@ -15,6 +15,7 @@ import {
 import { install, writeConfig } from 'frontend/helpers'
 import { hasAnticheatInfo } from 'frontend/hooks/hasAnticheatInfo'
 import useUiState from 'frontend/state/uiState'
+import useLibraryState from 'frontend/state/libraryState'
 import {
   crossoverRiskDialogOptions,
   resolveCrossoverInstallRisk
@@ -65,7 +66,7 @@ export default function ThirdPartyDialog({
     'platform',
     'showDialogModal'
   )
-  const { crossoverRatings, runsForMe } = useUiState.keys(
+  const { crossoverRatings, runsForMe } = useLibraryState.keys(
     'crossoverRatings',
     'runsForMe'
   )

@@ -157,4 +157,37 @@ describe('bridgeContextValue', () => {
     useAuthState.setState({ steamUsername: 'x' })
     expect(spy).toHaveBeenCalledTimes(1)
   })
+
+  it('serves the collection composites from libraryState and follows it', async () => {
+    const useLibraryState = (await import('../libraryState')).default
+    let slice = bridge.bridgedContextSlice()
+    expect(slice.hiddenGames.list).toEqual([])
+    expect(Object.keys(slice.customCategories).sort()).toEqual([
+      'addCategory',
+      'addToGame',
+      'list',
+      'listCategories',
+      'removeCategory',
+      'removeFromGame',
+      'renameCategory'
+    ])
+    expect(Object.keys(slice.favouriteGames).sort()).toEqual([
+      'add',
+      'list',
+      'remove'
+    ])
+    useLibraryState.setState({ hiddenGames: [{ appName: 'a', title: 'A' }] })
+    slice = bridge.bridgedContextSlice()
+    expect(slice.hiddenGames.list).toEqual([{ appName: 'a', title: 'A' }])
+    expect(slice.hiddenGames.add).toBe(useLibraryState.getState().hideGame)
+    expect(slice.setCurrentCustomCategories).toBe(
+      useLibraryState.getState().setCurrentCustomCategories
+    )
+    let fired = 0
+    bridge.subscribeBridge(() => {
+      fired += 1
+    })
+    useLibraryState.setState({ favouriteGames: [] })
+    expect(fired).toBe(1)
+  })
 })

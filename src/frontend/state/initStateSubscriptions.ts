@@ -30,6 +30,7 @@ import useSettingsState, {
   wasFocusRowPickedThisSession
 } from './settingsState'
 import useAuthState, { readInitialAuth } from './authState'
+import useLibraryState, { readInitialLibrary } from './libraryState'
 import { normalizeSignInDismissals } from 'common/signInDismissal'
 import { registerDownloadsListeners } from './downloadsState'
 import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
@@ -58,6 +59,7 @@ export function initStateSubscriptions(): void {
   useUiState.setState(readInitialUi())
   useSettingsState.setState(readInitialSettings())
   useAuthState.setState(readInitialAuth())
+  useLibraryState.setState(readInitialLibrary())
 
   // componentDidMount head (R10: pre-first-await statements): re-apply the
   // saved Accessibility zoom FIRST, before any listener registration, so the
@@ -85,6 +87,38 @@ export function initStateSubscriptions(): void {
   }
 
   // (2) window.api.handle* listeners
+
+  // Phase 19 (Plan 06), D-11/D-16: pushed after a validated background
+  // CrossOver-index refresh so the grid's `crossoverRatings` slice updates
+  // without a manual pull. This is the only IPC round-trip involved --
+  // painting a card never fires its own request (D-11/D-13). WR-05: the
+  // backend (`refreshCrossoverRatingMap()` in main.ts) now re-fires this
+  // event after every `refreshLibrary` completion too, so a game added
+  // mid-session gets a badge/filter signal without a restart.
+  window.api.handleCrossoverIndexChanged((e, index) => {
+    useLibraryState.getState().setCrossoverRatings(index)
+  })
+
+  // One-time pull at boot so the grid paints on first load without
+  // waiting for the next background refresh's push.
+  window.api
+    .getCrossoverIndex()
+    .then((index) => useLibraryState.getState().setCrossoverRatings(index))
+    .catch((error) =>
+      window.api.logError(`CrossOver index pull failed: ${String(error)}`)
+    )
+
+  // Quick 261029-mkz: "Runs for me" override map -- push on every change,
+  // plus a one-time pull so the first paint has it.
+  window.api.handleRunsForMeChanged((e, map) => {
+    useLibraryState.getState().setRunsForMe(map)
+  })
+  window.api
+    .getRunsForMeMap()
+    .then((map) => useLibraryState.getState().setRunsForMe(map))
+    .catch((error) =>
+      window.api.logError(`Runs-for-me pull failed: ${String(error)}`)
+    )
 
   window.api.handleInstallGame(async (e, appName, runner) => {
     const currentApp = LIBRARY_STATUS_AT_REGISTRATION.filter(

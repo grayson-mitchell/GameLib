@@ -40,6 +40,7 @@ import fallBackImage from 'frontend/assets/gamelib_card.svg?url'
 import fallBackImageMissing from 'frontend/assets/gamelib_card_missing.svg?url'
 import LibraryContext from '../../LibraryContext'
 import useUiState from 'frontend/state/uiState'
+import useLibraryState from 'frontend/state/libraryState'
 import {
   Cancel,
   DeleteForever,
@@ -127,16 +128,13 @@ const GameCard = ({
     connectivity,
     platform
   } = useContext(ContextProvider)
-  const {
-    openGameSettingsModal,
-    openGameLogsModal,
-    openGameCategoriesModal,
-    crossoverRatings,
-    runsForMe
-  } = useUiState.keys(
-    'openGameSettingsModal',
-    'openGameLogsModal',
-    'openGameCategoriesModal',
+  const { openGameSettingsModal, openGameLogsModal, openGameCategoriesModal } =
+    useUiState.keys(
+      'openGameSettingsModal',
+      'openGameLogsModal',
+      'openGameCategoriesModal'
+    )
+  const { crossoverRatings, runsForMe } = useLibraryState.keys(
     'crossoverRatings',
     'runsForMe'
   )

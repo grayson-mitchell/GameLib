@@ -16,6 +16,7 @@ import { MenuItem } from '@mui/material'
 import { useAwaited } from 'frontend/hooks/useAwaited'
 import { isRunsForMeOn, runsForMeKey } from 'common/runsForMe'
 import useUiState from 'frontend/state/uiState'
+import useLibraryState from 'frontend/state/libraryState'
 import {
   resolveCrossoverOnly,
   filterWineEngines,
@@ -91,7 +92,7 @@ export default function WineSelector({
   const [useSharedPrefix, setUseSharedPrefix] = useState(false)
 
   const platform = useUiState((s) => s.platform)
-  const { crossoverRatings, runsForMe } = useUiState.keys(
+  const { crossoverRatings, runsForMe } = useLibraryState.keys(
     'crossoverRatings',
     'runsForMe'
   )

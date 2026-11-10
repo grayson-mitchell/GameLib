@@ -38,7 +38,7 @@ import {
   RunnabilityTier,
   StoreFacetValue
 } from 'frontend/types'
-import useUiState from 'frontend/state/uiState'
+import useLibraryState from 'frontend/state/libraryState'
 import { reconcileNonAvailableGames } from 'frontend/hooks/constants'
 import EmptyLibraryMessage from './components/EmptyLibrary'
 import CategoriesManager from './components/CategoriesManager'
@@ -381,8 +381,8 @@ export default React.memo(function Library(): JSX.Element {
   )
 
   // 19-06 slice: app_name -> rating|null; absent = never looked up (D-16).
-  const { crossoverRatings } = useUiState.keys('crossoverRatings')
-  const { runsForMe } = useUiState.keys('runsForMe')
+  const { crossoverRatings } = useLibraryState.keys('crossoverRatings')
+  const { runsForMe } = useLibraryState.keys('runsForMe')
 
   const [filterText, setFilterText] = useState(
     () => readLibrarySessionSearch().filterText

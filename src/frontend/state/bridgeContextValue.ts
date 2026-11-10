@@ -2,6 +2,7 @@ import type { ContextType } from 'frontend/types'
 import useUiState from './uiState'
 import useSettingsState, { selectIsRTL } from './settingsState'
 import useAuthState from './authState'
+import useLibraryState from './libraryState'
 
 // Phase 69 D-09 bridge: GlobalState re-renders when a store that owns a
 // context field changes, and spreads the stores' current values into the
@@ -59,12 +60,18 @@ type BridgedKeys =
   | 'handleDismissSignInNotice'
   | 'handleRearmSignInDismissals'
   | 'completeOAuthLogin'
+  | 'currentCustomCategories'
+  | 'setCurrentCustomCategories'
+  | 'hiddenGames'
+  | 'favouriteGames'
+  | 'customCategories'
 
 /** Subscribes `onChange` to every bridged store. Lasts for the app's life (D-07). */
 export function subscribeBridge(onChange: () => void): void {
   useUiState.subscribe(onChange)
   useSettingsState.subscribe(onChange)
   useAuthState.subscribe(onChange)
+  useLibraryState.subscribe(onChange)
 }
 
 /** The store-owned context fields, read at call time. */
@@ -72,6 +79,7 @@ export function bridgedContextSlice(): Pick<ContextType, BridgedKeys> {
   const ui = useUiState.getState()
   const settings = useSettingsState.getState()
   const auth = useAuthState.getState()
+  const library = useLibraryState.getState()
   return {
     platform: ui.platform,
     error: ui.error,
@@ -121,7 +129,28 @@ export function bridgedContextSlice(): Pick<ContextType, BridgedKeys> {
     dismissedSignInNotices: auth.dismissedSignInNotices,
     handleDismissSignInNotice: auth.handleDismissSignInNotice,
     handleRearmSignInDismissals: auth.handleRearmSignInDismissals,
-    completeOAuthLogin: auth.completeOAuthLogin
+    completeOAuthLogin: auth.completeOAuthLogin,
+    currentCustomCategories: library.currentCustomCategories,
+    setCurrentCustomCategories: library.setCurrentCustomCategories,
+    hiddenGames: {
+      list: library.hiddenGames,
+      add: library.hideGame,
+      remove: library.unhideGame
+    },
+    favouriteGames: {
+      list: library.favouriteGames,
+      add: library.addGameToFavourites,
+      remove: library.removeGameFromFavourites
+    },
+    customCategories: {
+      list: library.customCategories,
+      listCategories: library.getCustomCategories,
+      addToGame: library.addGameToCustomCategory,
+      removeFromGame: library.removeGameFromCustomCategory,
+      addCategory: library.setCustomCategory,
+      removeCategory: library.removeCustomCategory,
+      renameCategory: library.renameCustomCategory
+    }
   }
 }
 
