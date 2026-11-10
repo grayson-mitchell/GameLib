@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
-status: ready_to_plan
-stopped_at: Phase 66.1 complete (37/37) — ready to discuss Phase 66.2
-last_updated: 2026-11-10T09:18:48.376Z
-last_activity: 2026-11-10
+status: executing
+stopped_at: Phase 69 context gathered
+last_updated: "2026-11-10T10:34:36.755Z"
+last_activity: 2026-11-10 -- Phase 66.2 planning complete
 progress:
   total_phases: 18
-  completed_phases: 11
-  total_plans: 240
+  completed_phases: 12
+  total_plans: 252
   completed_plans: 240
-  percent: 61
+  percent: 67
 ---
 
 # Project State
@@ -74,8 +74,8 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 Phase: 66.2
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-11-10 - Completed quick task 261110-vi4: Unhide Winecfg, Run EXE and Winetricks for macOS Steam bridge titles on their own per-game bottle
+Status: Ready to execute
+Last activity: 2026-11-10 -- Phase 66.2 planning complete
 
 Progress: [██████████] 100%
 
@@ -694,7 +694,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261110-v08 | Winecfg, Run EXE and the Winetricks tab restored for macOS non-Steam CrossOver-engine games (frontend gate `wineToolsHidden`; inert toggles and Mac Steam titles unchanged). | 2026-11-10 | 6c752131e | Jest 21/21, eslint/prettier/tsc/backend-di-ceilings clean; operator live check passed 2026-11-10 (non-Steam CrossOver game: Winecfg, Run EXE, Winetricks tab) | [261110-v08-restore-wine-tools-on-crossover-bottles-](./quick/261110-v08-restore-wine-tools-on-crossover-bottles-/) |
 | 261110-v11 | Custom-category actions (`setCustomCategory`/`removeCustomCategory`/`renameCustomCategory`/`addGameToCustomCategory`) build fresh objects/arrays instead of mutating `customCategories` in place; the same new object goes to `set` and `configStore.set`. Rename-to-same-name now keeps the category. Todo closed. | 2026-11-10 | da3a5cdd2, 6821dd63a | libraryState jest 42/42 (5 frozen-object regression tests); codecheck clean; scoped prettier clean; planning-gates red only on pre-existing STATE `Plan: Not started` | [261110-v11-custom-category-actions-build-new-custom](./quick/261110-v11-custom-category-actions-build-new-custom/) |
 | 261110-vdk | GOG comet spawned in token mode (`--access-token`/`--refresh-token`/`--user-id` from `GOGUser.getCredentials`) instead of `--from-heroic`, which hard-codes `heroic/gog_store/auth.json` and panicked; skipped with a warning when credentials are unavailable; tokens redacted from the comet log. Todo closed. | 2026-11-10 | 59c8c14b4, 427f0475c | Jest 78/78 (gogImportGame, quitTeardownWiring, logSecretGate); tsc/eslint/scoped prettier clean; planning-gates red only on pre-existing STATE `Plan: Not started`; operator live check pending (`pgrep -fl comet` during a GOG game) | [261110-vdk-fix-comet-from-heroic-reading-heroic-gog](./quick/261110-vdk-fix-comet-from-heroic-reading-heroic-gog/) |
-| 261110-vnl | Library filter panel and tour copy say "Categories" (header, Manage categories, + New category, tour lines) to match menus and the manager; 41 non-en locales reuse their own `header.categories`/`categories-manager.title`/`category-settings.new-category` wording, locales without it unchanged; keys unchanged. Todo closed. | 2026-11-10 | de6d08500, 0709741ee | Jest 5 suites 144/144; scoped prettier + eslint clean; planning-gates red only on pre-existing STATE duplicate `**Status:**` | [261110-vnl-use-categories-instead-of-collections-in](./quick/261110-vnl-use-categories-instead-of-collections-in/) |
+| 261110-vnl | Library filter panel and tour copy say "Categories" (header, Manage categories, + New category, tour lines) to match menus and the manager; 41 non-en locales reuse their own `header.categories`/`categories-manager.title`/`category-settings.new-category` wording, locales without it unchanged; keys unchanged. Todo closed. | 2026-11-10 | de6d08500, 0709741ee | Jest 5 suites 144/144; scoped prettier + eslint clean; planning-gates red only on pre-existing STATE duplicate `**Status:**Ready to execute
 | 261110-vi4 | Winecfg, Run EXE and Winetricks unhidden for macOS Steam bridge titles in their own `GameLibSteamBridge-<appId>` bottle (`findBridgeInstallBottle` eligibility, backend guard + Winetricks run/list routed per-game, `EngineState.wineToolsEligible` drives the Settings gate); shared-bottle and bottled-Steam titles stay blocked (Pitfall 5). | 2026-11-10 | 5223a8cd6, 5398f5936, e02fa0bc8 | Jest 31 suites 492/492 on touched areas; tsc/prettier/eslint/backend-di-ceilings clean; pre-existing unrelated reds: macArchKnownFixRouting (fails at baseline), testContainment (outboundHttpRegistry unclassified); operator live check pending | [261110-vi4-unhide-winecfg-run-exe-and-winetricks-fo](./quick/261110-vi4-unhide-winecfg-run-exe-and-winetricks-fo/) |
 
 ## Session Continuity
