@@ -129,6 +129,7 @@ describe.each(runners)('%s setup on macOS', (_name, run) => {
     mockSelect.mockResolvedValue({ kind: 'use', key: 'k' })
     await run('app')
     expect(mockSelect).toHaveBeenCalledWith(
+      expect.objectContaining({ spawnAsync: expect.any(Function) }),
       expect.anything(),
       expect.objectContaining({ purpose: 'setup', offline: false })
     )

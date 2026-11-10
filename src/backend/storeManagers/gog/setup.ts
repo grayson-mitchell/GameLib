@@ -12,6 +12,7 @@ import {
 } from 'backend/logger'
 import type { CommandWineArgs } from 'backend/commandRunner'
 import type { GOGManagerDeps } from './library'
+import { engineServicesFrom } from 'backend/services/engineServices'
 import { readFile } from 'node:fs/promises'
 import shlex from 'shlex'
 import {
@@ -107,7 +108,7 @@ async function setup(
   // game's own bottle. An engine-controlled setup skips checkWineBeforeLaunch: its self-heal would
   // persist a derived or fallback engine into wineVersion.
   const game = deps.libraryManagers.gog.getGame(appName)
-  const step = await selectEngineForLaunch(game, {
+  const step = await selectEngineForLaunch(engineServicesFrom(deps), game, {
     offline: !isOnline(),
     purpose: 'setup'
   })

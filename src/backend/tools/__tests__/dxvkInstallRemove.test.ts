@@ -60,6 +60,7 @@ jest.mock('backend/logger', () => {
 import { createTools } from '../index'
 import type { ToolsDeps } from '../index'
 import { toolsPath, userHome } from 'backend/constants/paths'
+import { createTestServices } from 'backend/testUtils/testServices'
 
 const DLLS = ['d3d9.dll', 'd3d11.dll']
 const VERSION = 'dxvk-2.3'
@@ -95,6 +96,7 @@ function seed(): void {
 }
 
 const toolsDeps: ToolsDeps = {
+  spawnAsync: createTestServices().spawnAsync,
   managers: { library: {} as ToolsDeps['managers']['library'] },
   commandRunner: {
     runWineCommand: (...args: unknown[]) => mockRunWineCommand(...args)

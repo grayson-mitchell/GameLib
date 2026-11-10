@@ -25,8 +25,10 @@ jest.mock('backend/logger', () => {
 
 import { createTools } from '../index'
 import type { ToolsDeps } from '../index'
+import { createTestServices } from 'backend/testUtils/testServices'
 
 const toolsDeps: ToolsDeps = {
+  spawnAsync: createTestServices().spawnAsync,
   managers: {
     library: {
       gog: { getGame: (...args: unknown[]) => mockGetGame(...args) }
@@ -70,9 +72,14 @@ describe('runWineCommandOnGame', () => {
       settings: RESOLVED
     })
     await runWineCommandOnGame('gog', 'g', { commandParts: ['winecfg'] })
-    expect(mockResolve).toHaveBeenCalledWith(expect.anything(), STORED, {
-      ensureBottle: true
-    })
+    expect(mockResolve).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      STORED,
+      {
+        ensureBottle: true
+      }
+    )
     expect(mockRunWineCommand).toHaveBeenCalledWith(
       expect.objectContaining({ gameSettings: RESOLVED })
     )
@@ -99,9 +106,14 @@ describe('Winetricks.listInstalled', () => {
     await expect(
       Winetricks.listInstalled(fakeGame() as unknown as Game)
     ).resolves.toEqual([])
-    expect(mockResolve).toHaveBeenCalledWith(expect.anything(), STORED, {
-      ensureBottle: false
-    })
+    expect(mockResolve).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      STORED,
+      {
+        ensureBottle: false
+      }
+    )
   })
 })
 
@@ -124,9 +136,14 @@ describe('Winetricks.runWithArgs', () => {
     expect(onDone).toHaveBeenCalledTimes(1)
     expect(onDone).toHaveBeenCalledWith(true)
     expect(mockValidWine).not.toHaveBeenCalled()
-    expect(mockResolve).toHaveBeenCalledWith(expect.anything(), STORED, {
-      ensureBottle: true
-    })
+    expect(mockResolve).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      STORED,
+      {
+        ensureBottle: true
+      }
+    )
   })
 
   it('uses a settings override (Steam bridge) untouched, without resolving', async () => {

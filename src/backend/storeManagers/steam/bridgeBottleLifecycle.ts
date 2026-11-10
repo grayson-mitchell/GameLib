@@ -9,6 +9,7 @@ import { existsSync, rmSync } from 'graceful-fs'
 import type { WineInstallation } from 'common/types'
 import { GlobalConfig } from 'backend/config'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
+import type { EngineServicesSource } from 'backend/services/engineServices'
 import {
   killBottleWineServer,
   type ProvisionBottleResult,
@@ -461,7 +462,7 @@ export function discardNewBridgeBottle(bottleName: string): void {
 }
 
 export async function provisionBridgeBottle(
-  deps: SpawnDeps,
+  deps: SpawnDeps & EngineServicesSource,
   opts: {
     bottleName: string
     wineVersion?: WineInstallation
@@ -515,8 +516,11 @@ export async function provisionBridgeBottle(
 
   // Phase 59: an explicit fallback engine creates the bottle itself.
   if (opts.fallbackEngine) {
+    // Lazy: services/engineServices value-imports backend/tools (storeManagers <-> steam cycle).
+    const { engineServicesFrom } =
+      await import('backend/services/engineServices')
     return createFallbackBottle(
-      deps,
+      engineServicesFrom(deps),
       bottleName,
       opts.fallbackEngine,
       opts.signal

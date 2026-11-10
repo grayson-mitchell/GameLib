@@ -25,7 +25,8 @@ import { dirname as dirnameOf, join as joinPath } from 'node:path'
 import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
-import { legacyTools } from 'backend/services/legacyFacades'
+import * as engineServicesModule from 'backend/services/engineServices'
+import type { EngineServicesSource } from 'backend/services/engineServices'
 import { writeCxbottleConf } from 'backend/engine/adoptBottle'
 import { steamBottleConfigStore } from '../stores'
 import {
@@ -157,7 +158,11 @@ const mockedSet = steamBottleConfigStore.set as jest.Mock
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
 // Recording fakes handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
-const spawnDeps = { spawnAsync: mockedSpawnAsync }
+// provisionBridgeBottle also takes the manager slices engineServicesFrom reads; only the fallback
+// cases reach them, and those spy engineServicesFrom (below), so the spawn fake is all that is real.
+const spawnDeps = {
+  spawnAsync: mockedSpawnAsync
+} as unknown as { spawnAsync: typeof mockedSpawnAsync } & EngineServicesSource
 const mockedDownloadFile = downloadFile as jest.Mock
 const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
 const mockedRunWineCommand = jest.fn()
@@ -1147,6 +1152,9 @@ describe('Phase 59 engine registry', () => {
     })
   })
   describe('provisionBridgeBottle with a fallback engine (D-01/D-02/D-03/D-12)', () => {
+    afterEach(() => {
+      servicesSpy.mockRestore()
+    })
     const engine = {
       wineBin: '/pins/bin/wine',
       wineserverBin: '/pins/bin/wineserver',
@@ -1156,13 +1164,21 @@ describe('Phase 59 engine registry', () => {
     }
     const name = 'GameLibSteamBridge-620'
     const order: string[] = []
-    const mockedInstallRemove = legacyTools().DXVK.installRemove as jest.Mock
+    const mockedInstallRemove = jest.fn()
+    let servicesSpy: jest.SpyInstance
     const mockedWriteConf = writeCxbottleConf as jest.Mock
     let dxvkMarker: boolean
 
     beforeEach(() => {
       order.length = 0
       dxvkMarker = false
+      mockedInstallRemove.mockReset()
+      servicesSpy = jest
+        .spyOn(engineServicesModule, 'engineServicesFrom')
+        .mockImplementation((d) => ({
+          spawnAsync: d.spawnAsync,
+          installRemove: mockedInstallRemove
+        }))
       mockedExistsSync.mockReset()
       mockedExistsSync.mockImplementation((p: string) =>
         String(p).endsWith('current_dxvk-macOS') ? dxvkMarker : false

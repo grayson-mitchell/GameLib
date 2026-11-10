@@ -80,8 +80,10 @@ import type { WinetricksLogLine } from 'common/types'
 import { logDebug, logError } from 'backend/logger'
 import { createTools } from '../index'
 import type { ToolsDeps } from '../index'
+import { createTestServices } from 'backend/testUtils/testServices'
 
 const toolsDeps: ToolsDeps = {
+  spawnAsync: createTestServices().spawnAsync,
   managers: {
     library: {
       gog: {

@@ -33,8 +33,10 @@ jest.mock('backend/logger', () => {
 
 import { createTools } from '../index'
 import type { ToolsDeps } from '../index'
+import { createTestServices } from 'backend/testUtils/testServices'
 
 const toolsDeps: ToolsDeps = {
+  spawnAsync: createTestServices().spawnAsync,
   managers: {
     library: {
       sideload: { getGame: (...args: unknown[]) => mockGetGame(...args) }
@@ -74,6 +76,7 @@ describe('runWineCommandForPendingInstall (CR-04)', () => {
     })
     expect(out).toEqual({ stdout: 'ok', stderr: '' })
     expect(mockResolveForId).toHaveBeenCalledWith(
+      expect.objectContaining({ spawnAsync: expect.any(Function) }),
       { runner: 'sideload', appName: 'abc', platform: 'Windows' },
       stored,
       { ensureBottle: true }

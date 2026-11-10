@@ -70,8 +70,10 @@ jest.mock('backend/logger', () => {
 
 import { createTools } from '../index'
 import type { ToolsDeps } from '../index'
+import { createTestServices } from 'backend/testUtils/testServices'
 
 const toolsDeps: ToolsDeps = {
+  spawnAsync: createTestServices().spawnAsync,
   managers: {
     library: {
       gog: {

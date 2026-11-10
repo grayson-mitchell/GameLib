@@ -31,7 +31,8 @@ import {
   checkWineBeforeLaunch,
   isMacSonomaOrHigher,
   askForceUninstall,
-  getGame
+  getGame,
+  spawnAsync
 } from './utils'
 // Static top-level import (not a lazy `require()`) of the alias
 // 'backend/storeManagers'. Only dereferenced INSIDE function bodies below
@@ -109,6 +110,7 @@ import {
   endEngineLaunch,
   selectEngineForLaunch
 } from './engine/launchEngine'
+import type { EngineServices } from './engine/engineServices'
 import { getLaunchSettings } from './engine/launchSettings'
 import { engineKeyFor } from './engine/gameKey'
 
@@ -219,7 +221,7 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
 
   // Phase 61 (D-05, D-13): on macOS every non-Steam Windows launch runs the engine step before
   // any Wine check. It returns the engine this launch uses; nothing is persisted (D-08).
-  const engineStep = await selectEngineForLaunch(game, {
+  const engineStep = await selectEngineForLaunch(legacyEngineServices(), game, {
     offline: !isOnline(),
     logWriter
   })
@@ -1442,8 +1444,20 @@ function tools() {
       runWineCommand:
         runWineCommand as unknown as CommandRunner['runWineCommand']
     },
-    launcher: { setupEnvVars, setupWineEnvVars, validWine }
+    launcher: { setupEnvVars, setupWineEnvVars, validWine },
+    spawnAsync
   })
+}
+
+/**
+ * TEMPORARY (plan 22d, deleted by plan 23 with tools() and legacyWineStores()): the engine's
+ * bottle-creation capabilities for a launcher that holds no deps yet.
+ */
+function legacyEngineServices(): EngineServices {
+  return {
+    spawnAsync,
+    installRemove: (...a) => tools().DXVK.installRemove(...a)
+  }
 }
 
 export async function validWine(

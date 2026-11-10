@@ -9,6 +9,7 @@ import {
 import { GameConfig } from 'backend/game_config'
 import { checkWineBeforeLaunch, sendGameStatusUpdate } from 'backend/utils'
 import { isWindows } from 'backend/constants/environment'
+import { engineServicesFrom } from 'backend/services/engineServices'
 import type { GameSettings } from 'common/types'
 import type { ManagerDeps } from 'backend/services/types'
 import type { FuelSchema } from 'common/types/nile'
@@ -83,7 +84,7 @@ export default async function setup(
   // game's own bottle. An engine-controlled setup skips checkWineBeforeLaunch: its self-heal would
   // persist a derived or fallback engine into wineVersion.
   const game = deps.libraryManagers.nile.getGame(appName)
-  const step = await selectEngineForLaunch(game, {
+  const step = await selectEngineForLaunch(engineServicesFrom(deps), game, {
     offline: !isOnline(),
     purpose: 'setup'
   })

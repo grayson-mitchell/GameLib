@@ -159,6 +159,7 @@ export function legacyTools(): Tools {
       return { library: deps.libraryManagers }
     },
     commandRunner: deps.commandRunner,
-    launcher: deps.launcher
+    launcher: deps.launcher,
+    spawnAsync: deps.spawnAsync
   })
 }

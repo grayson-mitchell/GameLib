@@ -134,7 +134,10 @@ describe('launcher engine step (61-14)', () => {
   it('runs the step once, after the log writer and before the Wine check', async () => {
     await run()
     expect(selectMock).toHaveBeenCalledTimes(1)
-    const [game, opts] = selectMock.mock.calls[0]
+    const [services, game, opts] = selectMock.mock.calls[0]
+    expect(services).toEqual(
+      expect.objectContaining({ spawnAsync: expect.any(Function) })
+    )
     expect(game.getGameInfo().app_name).toBe('Quail')
     expect(opts.logWriter).toBe(logWriter)
     expect(typeof opts.offline).toBe('boolean')
