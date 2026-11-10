@@ -6,9 +6,13 @@ import { join } from 'path'
 
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
+
 import {
+  findPidsRunningFromFolder,
   isProcessRunningFromFolder,
-  psOutputHasFolder
+  psOutputHasFolder,
+  psOutputPidsInFolder
 } from '../runningFromFolder'
 
 describe('psOutputHasFolder', () => {
@@ -33,6 +37,72 @@ describe('psOutputHasFolder', () => {
   it.each(['', 'relative/dir', '/'])('throws on folder %p', (folder) => {
     expect(() => psOutputHasFolder('anything', folder)).toThrow()
   })
+})
+
+describe('psOutputPidsInFolder', () => {
+  const folder = '/x/common/WazHack'
+  it('returns pids whose executable is inside the folder', () => {
+    const out = [
+      '  500 /x/common/WazHack/WazHack.app/Contents/MacOS/WazHack -a b',
+      '  200 /x/common/WazHack/helper',
+      '  600 /x/common/WazHack2/run',
+      '  601 /usr/bin/tail -f /x/common/WazHack/log.txt',
+      '  602 /x/common/WazHack/steam_osx',
+      '  603 /x/common/WazHack/steamwebhelper --x',
+      '  604 /x/common/WazHack/Steam.AppBundle/Steam/x',
+      '    1 /x/common/WazHack/init',
+      '  700 /x/common/WazHack/self',
+      'garbage line',
+      ''
+    ].join('\n')
+    expect(psOutputPidsInFolder(out, folder, [700])).toEqual([200, 500])
+  })
+  it('matches folders with spaces', () => {
+    expect(
+      psOutputPidsInFolder(
+        '  9 /x/common/Schedule I/Schedule I.app/Contents/MacOS/x',
+        '/x/common/Schedule I'
+      )
+    ).toEqual([9])
+  })
+  it.each(['', 'relative/dir', '/'])('throws on folder %p', (f) => {
+    expect(() => psOutputPidsInFolder('1 x', f)).toThrow()
+  })
+})
+
+describe('findPidsRunningFromFolder (scripted runner)', () => {
+  const folder = '/x/common/WazHack'
+  const psStep = {
+    cmd: '/bin/ps',
+    argv: ['-A', '-ww', '-o', 'pid=,args='],
+    result: { code: 0, stdout: '  42 /x/common/WazHack/run\n' }
+  }
+  it('runs ps with a timeout and parses', async () => {
+    const runner = createScriptedRunner([psStep])
+    await expect(
+      findPidsRunningFromFolder({ runner, platform: 'darwin' }, folder)
+    ).resolves.toEqual([42])
+    expect(runner.calls[0].opts).toMatchObject({ timeoutMs: 2000 })
+  })
+  it('win32 and bad folder make no calls', async () => {
+    const runner = createScriptedRunner([])
+    await expect(
+      findPidsRunningFromFolder({ runner, platform: 'win32' }, folder)
+    ).resolves.toEqual([])
+    await expect(
+      findPidsRunningFromFolder({ runner, platform: 'darwin' }, '')
+    ).rejects.toThrow()
+    expect(runner.calls).toHaveLength(0)
+  })
+  it.each([{ code: 1 }, { code: null, timedOut: true }])(
+    'throws on ps failure %p',
+    async (result) => {
+      const runner = createScriptedRunner([{ ...psStep, result }])
+      await expect(
+        findPidsRunningFromFolder({ runner, platform: 'linux' }, folder)
+      ).rejects.toThrow()
+    }
+  )
 })
 
 describe('isProcessRunningFromFolder (injected runner)', () => {

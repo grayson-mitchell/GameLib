@@ -14,6 +14,7 @@
 import { spawn } from 'child_process'
 import { isAbsolute, parse, resolve, sep } from 'path'
 
+import type { ProcessRunner } from 'backend/process/types'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 
 function normalizeFolder(folder: string): string {
@@ -38,6 +39,63 @@ function normalizeFolder(folder: string): string {
 export function psOutputHasFolder(output: string, folder: string): boolean {
   const needle = normalizeFolder(folder) + sep
   return output.split('\n').some((line) => line.includes(needle))
+}
+
+/** Steam client helpers that must never be signalled (quick 261111-9b7). */
+const STEAM_HELPER =
+  /steam_osx|steamwebhelper|steamerrorreporter|ipcserver|gameoverlayui|Steam Helper|Steam\.AppBundle\//i
+
+/**
+ * Pids from `ps -o pid=,args=` output whose executable (argv[0]) lives inside
+ * `folder`. startsWith, not includes: only the process whose executable is in
+ * the install folder may be signalled, so a sibling folder, a process that
+ * merely names the folder as an argument, and Steam helpers are excluded. The
+ * boolean delete-route check above is intentionally broader.
+ */
+export function psOutputPidsInFolder(
+  output: string,
+  folder: string,
+  excludePids: readonly number[] = []
+): number[] {
+  const prefix = normalizeFolder(folder) + sep
+  const pids = new Set<number>()
+  for (const line of output.split('\n')) {
+    const m = /^\s*(\d+)\s+(.+)$/.exec(line)
+    if (!m) continue
+    const pid = Number(m[1])
+    const args = m[2]
+    if (!Number.isSafeInteger(pid) || pid <= 1) continue
+    if (excludePids.includes(pid)) continue
+    if (!args.startsWith(prefix)) continue
+    if (STEAM_HELPER.test(args)) continue
+    pids.add(pid)
+  }
+  return [...pids].sort((a, b) => a - b)
+}
+
+export interface PidScanDeps {
+  runner: { run: ProcessRunner['run'] }
+  platform: NodeJS.Platform
+}
+
+export async function findPidsRunningFromFolder(
+  deps: PidScanDeps,
+  folder: string,
+  opts: { timeoutMs?: number; excludePids?: readonly number[] } = {}
+): Promise<number[]> {
+  if (deps.platform === 'win32') return []
+  normalizeFolder(folder) // reject a bad folder before anything runs
+  const res = await deps.runner.run(
+    '/bin/ps',
+    ['-A', '-ww', '-o', 'pid=,args='],
+    { timeoutMs: opts.timeoutMs ?? 2000 }
+  )
+  if (res.timedOut || res.aborted || res.code !== 0) {
+    throw new Error(
+      `ps failed (code ${res.code}${res.timedOut ? ', timed out' : ''})`
+    )
+  }
+  return psOutputPidsInFolder(res.stdout, folder, opts.excludePids)
 }
 
 interface RunningFromFolderDeps {
