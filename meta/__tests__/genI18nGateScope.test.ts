@@ -435,6 +435,16 @@ const FIXTURE_DIFF_LINES = [
  * and `HideWindowOnProtocolLaunch.tsx` (both deleted) with `GameStartWindow.tsx`
  * (scanned; every literal is a `gamelib:` namespaced key). Edited by hand in
  * sorted position; `generatedAt` unchanged. DECLARED_UNSCANNED_DEBT unchanged.
+ *
+ * 2026-11-10 (Phase 69, plan 69-24 follow-up): fork-touched 324 -> 330, scope
+ * 271 -> 277. 69-24 deleted `state/GlobalState.tsx` and
+ * `state/ContextProvider.tsx` (both dropped from both lists); their strings
+ * moved to `state/uiState.ts`, already scanned. The eight new store/boot
+ * modules (`settingsState`, `downloadsState`, `authState`, `libraryState`,
+ * `storeKit`, `initStateSubscriptions`, `BootSequence`, `accountHooks`)
+ * audited ZERO violations with `scanScope({ extraFiles })` and were
+ * hand-inserted in sorted position into both lists; `generatedAt`
+ * unchanged. DECLARED_UNSCANNED_DEBT unchanged.
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/__mocks__/svgReactStub.tsx',
@@ -1206,9 +1216,9 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 271-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 324-file fork-touched set verbatim', () => {
-    expect(scopeSnapshot.files.length).toBe(271)
-    expect(forkTouchedSnapshot.files.length).toBe(324)
+  it('A0 fixture sanity: the seeded scope is the REAL 277-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 330-file fork-touched set verbatim', () => {
+    expect(scopeSnapshot.files.length).toBe(277)
+    expect(forkTouchedSnapshot.files.length).toBe(330)
     // `freshSnapshot()` is a FIXTURE built from the committed artifact
     // (`files: [...forkTouchedSnapshot.files]`) -- NOT a live git derivation,
     // despite what this assertion used to claim. The live derivation is
@@ -1249,7 +1259,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 271 -> 324 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 277 -> 330 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -1272,7 +1282,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 324', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 330', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -1285,12 +1295,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(324)
+    expect(rewritten.files.length).toBe(330)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 324 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 330 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -1303,7 +1313,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(324)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(330)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
