@@ -3,28 +3,18 @@
  * output with script metadata read from the already-downloaded `${toolsPath}/winetricks`, derives
  * the needs-GUI flag from that same text, and returns only verbs the D-09 predicate keeps.
  *
- * NO REAL WINE OR WINETRICKS IS SPAWNED. Same mocked-spawn harness as
+ * NO REAL WINE OR WINETRICKS IS SPAWNED. Same drivable-runner harness as
  * `winetricksInstallLifecycle.test.ts`; additionally `fs/promises`' `stat` and `readFile` are
  * intercepted for the one script path (every other path falls through to the real module) and the
  * script text is the committed fixture excerpt of the pinned winetricks script.
  */
-import { EventEmitter } from 'events'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-const mockSpawn = jest.fn()
 const mockSendFrontendMessage = jest.fn()
 const mockGetWineFromProton = jest.fn()
-const mockExecAsync = jest.fn()
 const mockStat = jest.fn()
 const mockReadFile = jest.fn()
-const mockExecFile = jest.fn()
-
-jest.mock('child_process', () => ({
-  ...jest.requireActual('child_process'),
-  spawn: (...args: unknown[]) => mockSpawn(...args),
-  execFile: (...args: unknown[]) => mockExecFile(...args)
-}))
 
 jest.mock('fs/promises', () => ({
   ...jest.requireActual('fs/promises'),
@@ -40,8 +30,7 @@ jest.mock('../../utils', () => ({
   axiosClient: {},
   downloadFile: jest.fn(),
   extractFiles: jest.fn(),
-  getWineFromProton: (...args: unknown[]) => mockGetWineFromProton(...args),
-  execAsync: (...args: unknown[]) => mockExecAsync(...args)
+  getWineFromProton: (...args: unknown[]) => mockGetWineFromProton(...args)
 }))
 
 jest.mock('backend/utils/compatibility_layers', () => ({
@@ -77,10 +66,22 @@ import {
   createTestServices,
   createTestStores
 } from 'backend/testUtils/testServices'
+import {
+  createDrivableRunner,
+  type DrivableRunner,
+  type DrivenChild,
+  type DrivenRunResult
+} from 'backend/testUtils/drivableRunner'
+
+// The tools instance is built once at module scope, so it reaches the per-test runner through
+// this indirection.
+let runner: DrivableRunner
+/** Answers the `wine --version` probe (a supported wine unless a test says otherwise). */
+let versionProbe: () => DrivenRunResult
 
 const toolsDeps: ToolsDeps = {
   spawnAsync: createTestServices().spawnAsync,
-  runner: createTestServices().runner,
+  runner: { run: (...args) => runner.run(...args) },
   stores: createTestStores(),
   managers: {
     library: {
@@ -130,21 +131,7 @@ const LIST_ALL =
   '===== settings =====\n' +
   'fontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\n'
 
-type FakeChild = EventEmitter & {
-  stdout: EventEmitter & { setEncoding: () => void }
-  stderr: EventEmitter & { setEncoding: () => void }
-}
-
-function makeFakeChild(): FakeChild {
-  const stream = () =>
-    Object.assign(new EventEmitter(), { setEncoding: () => undefined })
-  return Object.assign(new EventEmitter(), {
-    stdout: stream(),
-    stderr: stream()
-  })
-}
-
-let children: FakeChild[]
+let children: DrivenChild[]
 // Distinct per test so the module-level mtime/size cache never carries a hit across tests.
 let scriptMtime = 0
 
@@ -153,17 +140,19 @@ const isScriptPath = (path: unknown): path is string =>
 
 beforeEach(() => {
   scriptMtime += 1000
-  children = []
-  mockSpawn.mockImplementation(() => {
-    const child = makeFakeChild()
-    children.push(child)
-    return child
+  // Default: a supported wine. Every test that does not care about the probe therefore
+  // records nothing and logs nothing new.
+  versionProbe = () => ({ stdout: 'wine-9.0\n' })
+  runner = createDrivableRunner((cmd, argv) => {
+    if (cmd === 'which') return { code: 0 }
+    if (argv[0] === '--version') return versionProbe()
+    return undefined
   })
+  children = runner.children
   mockGetWineFromProton.mockResolvedValue({
     winePrefix: '/fake/prefix',
     wineVersion: { bin: '/fake/wine/bin/wine', type: 'wine' }
   })
-  mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' })
   const actual = jest.requireActual('fs/promises')
   mockStat.mockImplementation((path: unknown, ...rest: unknown[]) =>
     isScriptPath(path)
@@ -175,19 +164,6 @@ beforeEach(() => {
       ? Promise.resolve(FIXTURE_SCRIPT)
       : actual.readFile(path, ...rest)
   )
-  // Default: a supported wine, synchronous callback. Every pre-existing test
-  // (none of which know about the probe) therefore records nothing and logs
-  // nothing new -- resetMocks strips this before every test, so it is set
-  // fresh here rather than at module scope.
-  mockExecFile.mockImplementation((...args: unknown[]) => {
-    const callback = args[args.length - 1] as (
-      error: unknown,
-      stdout: string,
-      stderr: string
-    ) => void
-    callback(null, 'wine-9.0\n', '')
-    return undefined
-  })
 })
 
 async function flushMicrotasks(times = 20): Promise<void> {
@@ -205,6 +181,10 @@ async function listAvailableWith(stdout: string, appName = 'game') {
   child.emit('exit', 0)
   child.emit('close', 0)
   return list
+}
+
+function versionProbes() {
+  return runner.calls.filter((c) => c.argv[0] === '--version')
 }
 
 function scriptReads(): number {
@@ -270,17 +250,13 @@ describe('Winetricks.listAvailable metadata merge and visibility filter (D-09/D-
     await listAvailableWith(LIST_ALL)
     await flushMicrotasks()
 
-    expect(mockSpawn).toHaveBeenCalledTimes(1)
-    const [, spawnArgs] = mockSpawn.mock.calls[0] as [string, string[]]
-    expect(spawnArgs).toEqual(['list-all'])
+    expect(children).toHaveLength(1)
+    expect(defined(children[0], 'list child').argv).toEqual(['list-all'])
 
-    expect(mockExecFile).toHaveBeenCalledTimes(1)
-    const [probeBin, probeArgs] = mockExecFile.mock.calls[0] as [
-      string,
-      string[]
-    ]
-    expect(probeBin).toBe('/fake/wine/bin/wine')
-    expect(probeArgs).toEqual(['--version'])
+    expect(versionProbes()).toHaveLength(1)
+    const probe = defined(versionProbes()[0], 'version probe')
+    expect(probe.cmd).toBe('/fake/wine/bin/wine')
+    expect(probe.argv).toEqual(['--version'])
   })
 
   it('returns components unannotated but still category-filtered, with one warning, when the script is unreadable', async () => {
@@ -315,9 +291,9 @@ describe('Winetricks.listAvailable metadata merge and visibility filter (D-09/D-
     await flushMicrotasks()
 
     expect(scriptReads()).toBe(1)
-    expect(mockSpawn).toHaveBeenCalledTimes(2)
+    expect(children).toHaveLength(2)
     // The probe is NOT cached: a bottle's wine can change between tab opens.
-    expect(mockExecFile).toHaveBeenCalledTimes(2)
+    expect(versionProbes()).toHaveLength(2)
   })
 
   it('re-reads the script once its mtime changes', async () => {
@@ -331,15 +307,7 @@ describe('Winetricks.listAvailable metadata merge and visibility filter (D-09/D-
 
 describe('unsupported-wine probe at list-all time (261011-iel, D-16)', () => {
   it('records the wine version from a wine --version probe before any install runs', async () => {
-    mockExecFile.mockImplementation((...args: unknown[]) => {
-      const callback = args[args.length - 1] as (
-        error: unknown,
-        stdout: string,
-        stderr: string
-      ) => void
-      callback(null, 'wine-7.7 (Game Porting Toolkit 1.1)\n', '')
-      return undefined
-    })
+    versionProbe = () => ({ stdout: 'wine-7.7 (Game Porting Toolkit 1.1)\n' })
 
     const result = await listAvailableWith(LIST_ALL, 'gptk-bottle')
     await flushMicrotasks()
@@ -358,29 +326,20 @@ describe('unsupported-wine probe at list-all time (261011-iel, D-16)', () => {
     await listAvailableWith(LIST_ALL, 'env-probe')
     await flushMicrotasks()
 
-    expect(mockExecFile).toHaveBeenCalledTimes(1)
-    const [bin, probeArgs, options] = mockExecFile.mock.calls[0] as [
-      string,
-      string[],
-      { env: Record<string, string> }
-    ]
-    expect(bin).toBe('/fake/wine/bin/wine')
-    expect(probeArgs).toEqual(['--version'])
-    expect(options.env.WINEDEBUG).toBe('-all')
-    expect(options.env.LANG).toBe('C')
-    expect(options.env.WINEPREFIX).toBe('/fake/prefix')
+    expect(versionProbes()).toHaveLength(1)
+    const probe = defined(versionProbes()[0], 'version probe')
+    expect(probe.cmd).toBe('/fake/wine/bin/wine')
+    expect(probe.argv).toEqual(['--version'])
+    expect(probe.opts?.env?.WINEDEBUG).toBe('-all')
+    expect(probe.opts?.env?.LANG).toBe('C')
+    expect(probe.opts?.env?.WINEPREFIX).toBe('/fake/prefix')
+    expect(probe.opts?.replaceEnv).toBe(true)
   })
 
   it('still resolves the list, with the report left null, when the probe fails with ENOENT', async () => {
-    mockExecFile.mockImplementation((...args: unknown[]) => {
-      const callback = args[args.length - 1] as (
-        error: unknown,
-        stdout: string,
-        stderr: string
-      ) => void
-      callback(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }), '', '')
-      return undefined
-    })
+    versionProbe = () => {
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
+    }
 
     const result = await listAvailableWith(LIST_ALL, 'enoent-bottle')
     await flushMicrotasks()
@@ -401,15 +360,7 @@ describe('unsupported-wine probe at list-all time (261011-iel, D-16)', () => {
     onEnvironmentChanged(listener)
 
     const answerWith = (probeStdout: string) => {
-      mockExecFile.mockImplementation((...args: unknown[]) => {
-        const callback = args[args.length - 1] as (
-          error: unknown,
-          stdout: string,
-          stderr: string
-        ) => void
-        callback(null, probeStdout, '')
-        return undefined
-      })
+      versionProbe = () => ({ stdout: probeStdout })
     }
 
     answerWith('wine-9.0\n')
@@ -444,30 +395,14 @@ describe('unsupported-wine probe at list-all time (261011-iel, D-16)', () => {
   })
 
   it('never clears an existing record when the probe result is unknown (empty stdout)', async () => {
-    mockExecFile.mockImplementation((...args: unknown[]) => {
-      const callback = args[args.length - 1] as (
-        error: unknown,
-        stdout: string,
-        stderr: string
-      ) => void
-      callback(null, 'wine-7.7 (Game Porting Toolkit 1.1)\n', '')
-      return undefined
-    })
+    versionProbe = () => ({ stdout: 'wine-7.7 (Game Porting Toolkit 1.1)\n' })
     await listAvailableWith(LIST_ALL, 'unknown-bottle')
     await flushMicrotasks()
     expect(
       getEnvironmentReport('gog', 'unknown-bottle').unsupportedWineVersion
     ).toBe('7.7')
 
-    mockExecFile.mockImplementation((...args: unknown[]) => {
-      const callback = args[args.length - 1] as (
-        error: unknown,
-        stdout: string,
-        stderr: string
-      ) => void
-      callback(null, '', '')
-      return undefined
-    })
+    versionProbe = () => ({ stdout: '' })
     await listAvailableWith(LIST_ALL, 'unknown-bottle')
     await flushMicrotasks()
 
@@ -477,10 +412,10 @@ describe('unsupported-wine probe at list-all time (261011-iel, D-16)', () => {
     expect(logWarning).toHaveBeenCalledTimes(1)
   })
 
-  it('resolves the list and leaves the report unchanged when the probe throws synchronously', async () => {
-    mockExecFile.mockImplementation(() => {
-      throw new Error('synchronous boom')
-    })
+  it('resolves the list and leaves the report unchanged when the probe fails to spawn', async () => {
+    versionProbe = () => {
+      throw new Error('boom')
+    }
 
     const result = await listAvailableWith(LIST_ALL, 'throw-bottle')
     await flushMicrotasks()
@@ -496,23 +431,33 @@ describe('unsupported-wine probe at list-all time (261011-iel, D-16)', () => {
     expect(logWarning).toHaveBeenCalledTimes(1)
   })
 
-  it('bounds the probe with a 5s timeout, SIGKILL, a 16 KiB maxBuffer and utf8 encoding', async () => {
+  it.each([
+    ['a non-zero exit', { code: 1, stdout: 'wine-7.7\n' }],
+    ['a timeout', { code: null, timedOut: true, stdout: 'wine-7.7\n' }],
+    ['a truncated read', { truncated: true, stdout: 'wine-7.7\n' }]
+  ] as [string, DrivenRunResult][])(
+    'records nothing after %s of the probe, even with a parseable stdout',
+    async (label, result) => {
+      versionProbe = () => result
+      const appName = `bad-probe-${label.replace(/\W/g, '')}`
+
+      const list = await listAvailableWith(LIST_ALL, appName)
+      await flushMicrotasks()
+
+      expect(list).toHaveLength(3)
+      expect(
+        getEnvironmentReport('gog', appName).unsupportedWineVersion
+      ).toBeNull()
+      expect(logWarning).toHaveBeenCalledTimes(1)
+    }
+  )
+
+  it('bounds the probe with a 5s timeout and a 16 KiB maxBuffer', async () => {
     await listAvailableWith(LIST_ALL, 'bounds-bottle')
     await flushMicrotasks()
 
-    const [, , options] = mockExecFile.mock.calls[0] as [
-      string,
-      string[],
-      {
-        timeout: number
-        killSignal: string
-        maxBuffer: number
-        encoding: string
-      }
-    ]
-    expect(options.timeout).toBe(5000)
-    expect(options.killSignal).toBe('SIGKILL')
-    expect(options.maxBuffer).toBe(16384)
-    expect(options.encoding).toBe('utf8')
+    const options = defined(versionProbes()[0], 'version probe').opts
+    expect(options?.timeoutMs).toBe(5000)
+    expect(options?.maxBufferBytes).toBe(16384)
   })
 })

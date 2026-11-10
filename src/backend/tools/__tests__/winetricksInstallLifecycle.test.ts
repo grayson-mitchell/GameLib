@@ -3,43 +3,27 @@
  * (the three 2026-10-05 winetricks todos: double-install, GUI/list misattribution, and the
  * failed-install-never-reaches-Failed defect).
  *
- * NO REAL WINE OR WINETRICKS IS SPAWNED. `child_process.spawn` is replaced by a factory that
- * hands back an `EventEmitter` stand-in with `stdout`/`stderr` emitters, and each test drives
- * that stand-in's `data`/`exit` events by hand. The 1000ms progress interval runs under jest's
+ * NO REAL WINE OR WINETRICKS IS SPAWNED. `deps.runner` is a drivable runner double
+ * (`testUtils/drivableRunner.ts`): each winetricks run stays pending and the test drives its
+ * stdout/stderr chunks and its exit by hand. The 1000ms progress interval runs under jest's
  * modern fake timers, so nothing here waits on a real clock.
  *
  * Importability follows `runWineCommandOnGameGuard.test.ts`'s measured precedent: mocking
  * `'../../storeManagers'` and `'../../launcher'` is enough for `tools/index.ts` to load.
  */
-import { EventEmitter } from 'events'
-
 // Declared before the imports: jest.mock factory bodies run at require time. `resetMocks: true`
 // (src/backend/jest.config.js) strips implementations before every test, so every return value
 // is assigned in `beforeEach`, never at module scope.
-const mockSpawn = jest.fn()
 const mockSendFrontendMessage = jest.fn()
 const mockGetWineFromProton = jest.fn()
-const mockExecAsync = jest.fn()
 const mockRecordMissingDependencies = jest.fn()
 const mockRecordUnsupportedWine = jest.fn()
-const mockExecFile = jest.fn()
 
 jest.mock('../winetricksEnvironment', () => ({
   recordMissingDependencies: (...args: unknown[]) =>
     mockRecordMissingDependencies(...args),
   recordUnsupportedWine: (...args: unknown[]) =>
     mockRecordUnsupportedWine(...args)
-}))
-
-// mockExecFile is given NO default implementation below: it never calls its callback, so the
-// wine-version probe (261011-iel, D-16) never settles and records or logs nothing. This file
-// pins winetricks' event lifecycle and its logDebug/logError counts on a list run, not the
-// probe -- and the header's "NO REAL WINE OR WINETRICKS IS SPAWNED" claim stays true now that a
-// list run also probes wine.
-jest.mock('child_process', () => ({
-  ...jest.requireActual('child_process'),
-  spawn: (...args: unknown[]) => mockSpawn(...args),
-  execFile: (...args: unknown[]) => mockExecFile(...args)
 }))
 
 jest.mock('../../ipc', () => ({
@@ -50,8 +34,7 @@ jest.mock('../../utils', () => ({
   axiosClient: {},
   downloadFile: jest.fn(),
   extractFiles: jest.fn(),
-  getWineFromProton: (...args: unknown[]) => mockGetWineFromProton(...args),
-  execAsync: (...args: unknown[]) => mockExecAsync(...args)
+  getWineFromProton: (...args: unknown[]) => mockGetWineFromProton(...args)
 }))
 
 jest.mock('backend/utils/compatibility_layers', () => ({
@@ -84,10 +67,22 @@ import {
   createTestServices,
   createTestStores
 } from 'backend/testUtils/testServices'
+import {
+  createDrivableRunner,
+  type DrivableRunner,
+  type DrivenChild,
+  type DrivenRunResult
+} from 'backend/testUtils/drivableRunner'
+
+// The tools instance is built once at module scope, so it reaches the per-test runner through
+// this indirection.
+let runner: DrivableRunner
+/** Answers the `which` probes; the default finds every dependency. */
+let whichResult: (dependency: string) => DrivenRunResult
 
 const toolsDeps: ToolsDeps = {
   spawnAsync: createTestServices().spawnAsync,
-  runner: createTestServices().runner,
+  runner: { run: (...args) => runner.run(...args) },
   stores: createTestStores(),
   managers: {
     library: {
@@ -111,40 +106,29 @@ const toolsDeps: ToolsDeps = {
 const { Winetricks } = createTools(toolsDeps)
 import { defined } from 'backend/testUtils/indexed'
 
-type FakeChild = EventEmitter & {
-  stdout: EventEmitter & { setEncoding: () => void }
-  stderr: EventEmitter & { setEncoding: () => void }
-}
+let children: DrivenChild[]
 
-function makeFakeChild(): FakeChild {
-  const stream = () =>
-    Object.assign(new EventEmitter(), { setEncoding: () => undefined })
-  return Object.assign(new EventEmitter(), {
-    stdout: stream(),
-    stderr: stream()
-  })
-}
-
-let children: FakeChild[]
-
-/** A spawned fake child; throws if that spawn never happened. */
-const child = (index: number): FakeChild =>
+/** A spawned winetricks run; throws if that spawn never happened. */
+const child = (index: number): DrivenChild =>
   defined(children[index], `spawned child ${index}`)
 
 beforeEach(() => {
   jest.useFakeTimers()
-  children = []
-  mockSpawn.mockImplementation(() => {
-    const child = makeFakeChild()
-    children.push(child)
-    return child
+  // checkDependencies' `which` probes all succeed -- no "not installed!" lines in the log.
+  whichResult = () => ({ code: 0 })
+  runner = createDrivableRunner((cmd, argv) => {
+    if (cmd === 'which') return whichResult(defined(argv[0], 'which target'))
+    // The wine --version probe (261011-iel, D-16) never settles, so it records or logs
+    // nothing: this file pins winetricks' event lifecycle and its logDebug/logError counts
+    // on a list run, not the probe.
+    if (argv[0] === '--version') return new Promise<DrivenRunResult>(() => {})
+    return undefined
   })
+  children = runner.children
   mockGetWineFromProton.mockResolvedValue({
     winePrefix: '/fake/prefix',
     wineVersion: { bin: '/fake/wine/bin/wine', type: 'wine' }
   })
-  // checkDependencies' `which` probes all succeed -- no "not installed!" lines in the log.
-  mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' })
 })
 
 afterEach(() => {
@@ -315,14 +299,13 @@ describe('exit flushes buffered lines and reports failure (failed-install todo)'
     )
   })
 
-  it('sends Done from the exit fallback when close never arrives', async () => {
+  it('sends Done on exit without waiting for pipes a lingering wineserver holds open', async () => {
     const install = Winetricks.install('gog', 'game', 'vcrun2019')
     await spawned(1)
 
-    // A lingering wineserver can hold the pipes open, so 'close' never fires.
-    child(0).emit('exit', 0)
+    // resolveOn 'exit': the runner settles after its short drain grace, not on 'close'.
     expect(progressEvents().some((p) => p.messages[0] === 'Done')).toBe(false)
-    jest.advanceTimersByTime(2000)
+    child(0).emit('exit', 0)
     await install
 
     const done = progressEvents().filter((p) => p.messages[0] === 'Done')
@@ -498,8 +481,9 @@ describe('environment recording (D-16)', () => {
     expect(mockRecordUnsupportedWine).toHaveBeenCalledWith('gog', 'game', '7.7')
     // 261011-iel: a list-all run ALSO fires the wine --version probe, beside
     // (not instead of) the classifier recording above.
-    expect(mockExecFile).toHaveBeenCalledTimes(1)
-    expect((mockExecFile.mock.calls[0] as unknown[])[1]).toEqual(['--version'])
+    const versionProbes = runner.calls.filter((c) => c.argv[0] === '--version')
+    expect(versionProbes).toHaveLength(1)
+    expect(versionProbes[0]?.cmd).toBe('/fake/wine/bin/wine')
 
     child(0).emit('exit', 0)
     child(0).emit('close', 0)
@@ -513,15 +497,13 @@ describe('environment recording (D-16)', () => {
     child(0).emit('close', 0)
     await install
 
-    expect(mockExecFile).not.toHaveBeenCalled()
+    expect(runner.calls.some((c) => c.argv[0] === '--version')).toBe(false)
   })
 
   it('records the sorted missing subset of the five host dependencies', async () => {
-    mockExecAsync.mockImplementation((command: string) =>
-      /which (zenity|7z)$/.test(command)
-        ? Promise.reject(new Error('not found'))
-        : Promise.resolve({ stdout: '', stderr: '' })
-    )
+    whichResult = (dependency) => ({
+      code: dependency === 'zenity' || dependency === '7z' ? 1 : 0
+    })
     const install = Winetricks.install('gog', 'game', 'vcrun2019')
     await spawned(1)
     await flushMicrotasks(60)
@@ -556,10 +538,10 @@ describe('environment recording (D-16)', () => {
     await finishInstall(install)
   })
 
-  it('a probe that throws synchronously counts as missing and never rejects the run', async () => {
-    mockExecAsync.mockImplementation(() => {
+  it('a probe that fails to spawn counts as missing and never rejects the run', async () => {
+    whichResult = () => {
       throw new Error('spawn blew up')
-    })
+    }
     const install = Winetricks.install('gog', 'game', 'vcrun2019')
     await spawned(1)
     await flushMicrotasks(60)

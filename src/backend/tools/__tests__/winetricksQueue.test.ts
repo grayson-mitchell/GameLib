@@ -7,30 +7,22 @@
  * and the `winetricksEnvironment.ts` store exist and `apply` validates against
  * a real (mocked) catalog.
  *
- * NO REAL WINE OR WINETRICKS IS SPAWNED -- same mocked-spawn harness as
+ * NO REAL WINE OR WINETRICKS IS SPAWNED -- same drivable-runner harness as
  * `winetricksInstallLifecycle.test.ts` (this suite calls through the real
  * `Winetricks.install`, so it needs the same mocks that file established to
  * import `tools/index.ts` successfully), plus a mock of `sendGameStatusUpdate`
  * from `../../utils` so this file can assert the `winetricks` -> `done`
  * status sequence the queue is responsible for.
  */
-import { EventEmitter } from 'events'
 import type { WinetricksComponent } from 'common/types'
 
 // Declared before the imports: jest.mock factory bodies run at require time.
 // `resetMocks: true` (src/backend/jest.config.js) strips implementations
 // before every test, so every return value is assigned in `beforeEach`,
 // never at module scope.
-const mockSpawn = jest.fn()
 const mockSendFrontendMessage = jest.fn()
 const mockSendGameStatusUpdate = jest.fn()
 const mockGetWineFromProton = jest.fn()
-const mockExecAsync = jest.fn()
-
-jest.mock('child_process', () => ({
-  ...jest.requireActual('child_process'),
-  spawn: (...args: unknown[]) => mockSpawn(...args)
-}))
 
 jest.mock('../../ipc', () => ({
   sendFrontendMessage: (...args: unknown[]) => mockSendFrontendMessage(...args)
@@ -41,7 +33,6 @@ jest.mock('../../utils', () => ({
   downloadFile: jest.fn(),
   extractFiles: jest.fn(),
   getWineFromProton: (...args: unknown[]) => mockGetWineFromProton(...args),
-  execAsync: (...args: unknown[]) => mockExecAsync(...args),
   sendGameStatusUpdate: (...args: unknown[]) =>
     mockSendGameStatusUpdate(...args)
 }))
@@ -74,10 +65,19 @@ import {
   createTestServices,
   createTestStores
 } from 'backend/testUtils/testServices'
+import {
+  createDrivableRunner,
+  type DrivableRunner,
+  type DrivenChild
+} from 'backend/testUtils/drivableRunner'
+
+// The tools instance is built once at module scope, so it reaches the per-test runner through
+// this indirection.
+let runner: DrivableRunner
 
 const toolsDeps: ToolsDeps = {
   spawnAsync: createTestServices().spawnAsync,
-  runner: createTestServices().runner,
+  runner: { run: (...args) => runner.run(...args) },
   stores: createTestStores(),
   managers: {
     library: {
@@ -107,24 +107,10 @@ import {
   recordUnsupportedWine
 } from '../winetricksEnvironment'
 
-type FakeChild = EventEmitter & {
-  stdout: EventEmitter & { setEncoding: () => void }
-  stderr: EventEmitter & { setEncoding: () => void }
-}
-
-function makeFakeChild(): FakeChild {
-  const stream = () =>
-    Object.assign(new EventEmitter(), { setEncoding: () => undefined })
-  return Object.assign(new EventEmitter(), {
-    stdout: stream(),
-    stderr: stream()
-  })
-}
-
-let children: FakeChild[]
+let children: DrivenChild[]
 
 /** A spawned fake child; throws if that spawn never happened. */
-const child = (index: number): FakeChild =>
+const child = (index: number): DrivenChild =>
   defined(children[index], `spawned child ${index}`)
 
 // One catalog fixture covering every verb used anywhere in this file --
@@ -145,20 +131,17 @@ const CATALOG: WinetricksComponent[] = [
 
 beforeEach(() => {
   jest.useFakeTimers()
-  children = []
-  mockSpawn.mockImplementation(() => {
-    const child = makeFakeChild()
-    children.push(child)
-    return child
-  })
+  // checkDependencies' `which` probes all succeed -- no "not installed!" lines in the log.
+  runner = createDrivableRunner((cmd) =>
+    cmd === 'which' ? { code: 0 } : undefined
+  )
+  children = runner.children
   mockGetWineFromProton.mockResolvedValue({
     winePrefix: '/fake/prefix',
     wineVersion: { bin: '/fake/wine/bin/wine', type: 'wine' }
   })
-  // checkDependencies' `which` probes all succeed -- no "not installed!" lines in the log.
-  mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' })
   // `resetMocks: true` strips spy implementations between tests too --
-  // re-established fresh every time, same idiom as `mockSpawn` above.
+  // re-established fresh every time, same idiom as the runner above.
   jest.spyOn(Winetricks, 'catalogFor').mockResolvedValue(CATALOG)
 })
 
@@ -232,9 +215,8 @@ describe('WinetricksQueue.apply N=1 tracer (D-01/D-11)', () => {
     expect(result.accepted).toBe(true)
 
     await spawned(1)
-    expect(mockSpawn).toHaveBeenCalledTimes(1)
-    const [, spawnArgs] = mockSpawn.mock.calls[0] as [string, string[]]
-    expect(spawnArgs.slice(-2)).toEqual(['-q', 'vcrun2019'])
+    expect(children).toHaveLength(1)
+    expect(child(0).argv.slice(-2)).toEqual(['-q', 'vcrun2019'])
 
     await finishChild(0, 0)
 
@@ -300,15 +282,15 @@ describe('WinetricksQueue.apply order (D-11)', () => {
     expect(result.accepted).toBe(true)
 
     await spawned(1)
-    expect(mockSpawn.mock.calls[0][1].slice(-2)).toEqual(['-q', 'xact'])
+    expect(child(0).argv.slice(-2)).toEqual(['-q', 'xact'])
 
     await finishChild(0, 0)
     await spawned(2)
-    expect(mockSpawn.mock.calls[1][1].slice(-2)).toEqual(['-q', 'corefonts'])
+    expect(child(1).argv.slice(-2)).toEqual(['-q', 'corefonts'])
 
     await finishChild(1, 0)
     await spawned(3)
-    expect(mockSpawn.mock.calls[2][1].slice(-2)).toEqual(['-q', 'd3dx9'])
+    expect(child(2).argv.slice(-2)).toEqual(['-q', 'd3dx9'])
 
     await finishChild(2, 0)
 
@@ -339,7 +321,7 @@ describe('WinetricksQueue.apply failure continues (D-12)', () => {
     await spawned(3)
     await finishChild(2, 0)
 
-    expect(mockSpawn).toHaveBeenCalledTimes(3)
+    expect(children).toHaveLength(3)
     const state = WinetricksQueue.getState('gog', 'failure-game')
     expect(state.run?.status).toBe('done')
     expect(state.run?.outcomes).toEqual({
@@ -369,7 +351,7 @@ describe('WinetricksQueue.cancelRemaining (D-13)', () => {
     await finishChild(0, 0)
     await flushMicrotasks()
 
-    expect(mockSpawn).toHaveBeenCalledTimes(1)
+    expect(children).toHaveLength(1)
     const state = WinetricksQueue.getState('gog', 'cancel-game')
     expect(state.run?.status).toBe('done')
     expect(state.run?.outcomes).toEqual({
