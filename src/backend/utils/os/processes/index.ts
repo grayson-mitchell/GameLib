@@ -33,7 +33,10 @@ async function genericSpawnWrapper(
     if (options.onStderr) options.onStderr(data, child)
   })
 
-  return new Promise<SpawnWrapperReturn>((resolve) => {
+  return new Promise<SpawnWrapperReturn>((resolve, reject) => {
+    // A missing binary (ENOENT) emits 'error' with no 'close'; unhandled, it is an uncaught
+    // exception that would take the sidecar down. Reject so the caller's catch handles it.
+    child.on('error', reject)
     child.on('close', (code, signal) =>
       resolve({
         stdout,

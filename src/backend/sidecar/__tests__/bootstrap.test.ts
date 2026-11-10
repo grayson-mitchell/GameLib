@@ -223,6 +223,24 @@ describe('sidecar bootstrap (headless boot)', () => {
       const prebuilt = createTestServices()
       expect(() => bootFresh({ services: prebuilt })).not.toThrow()
     })
+
+    it('the moved System Information log neither fails the boot nor leaks an unhandled rejection when the managers are unavailable (66.1-22g)', async () => {
+      const rejections: unknown[] = []
+      const onRejection = (reason: unknown) => rejections.push(reason)
+      process.on('unhandledRejection', onRejection)
+      try {
+        // createTestServices' default managers throw on use, so the probe fetch rejects later;
+        // logSystemInformation's default catch turns that into 'unavailable'.
+        expect(() =>
+          bootFresh({ services: createTestServices() })
+        ).not.toThrow()
+        await new Promise((resolve) => setImmediate(resolve))
+        await new Promise((resolve) => setImmediate(resolve))
+        expect(rejections).toEqual([])
+      } finally {
+        process.off('unhandledRejection', onRejection)
+      }
+    })
   })
 
   it('reaches READY under bare node without an uncaught exception', () => {

@@ -55,6 +55,7 @@ import { ipcMain, clipboard } from '../platform'
 import { requestRustInvoke } from './sidecarRpc'
 import { RUST_CLIPBOARD_READ_TEXT } from '../../common/types/sidecarTransport'
 import { getSystemInfo, formatSystemInfo } from '../utils/systeminfo'
+import type { StoreManagers } from '../services/types'
 
 function logSendFailure(channel: string, error: unknown): void {
   console.warn(
@@ -63,12 +64,17 @@ function logSendFailure(channel: string, error: unknown): void {
   )
 }
 
+/** Slice the clipboard flows need: the runner managers the system-info probes ask. */
+export interface ClipboardFlowDeps {
+  managers: Pick<StoreManagers, 'library'>
+}
+
 /**
  * Registers this module's 3 clipboard channels. Called once from `handlers.ts` — this module
  * owns no side effects at import time beyond the imports above; the caller decides when
  * registration onto the handler registry happens.
  */
-export function registerClipboardFlows(): void {
+export function registerClipboardFlows(deps: ClipboardFlowDeps): void {
   // ── send (1): clipboardWriteText — main.ts:1427's addListener('clipboardWriteText', (e,
   // text) => clipboard.writeText(text)). clipboard.writeText() is ITSELF the real
   // fire-and-forget Rust forward (Plan 05) — this try/catch guards only a synchronous throw
@@ -109,7 +115,9 @@ export function registerClipboardFlows(): void {
   ipcMain.on('copySystemInfoToClipboard', () => {
     void (async () => {
       try {
-        const info = await getSystemInfo()
+        const info = await getSystemInfo({
+          libraryManagers: deps.managers.library
+        })
         const formatted = await formatSystemInfo(info)
         clipboard.writeText(formatted)
       } catch (error) {

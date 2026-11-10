@@ -224,7 +224,7 @@ export function registerHandlers(deps: {
   // relative to the other calls above (own channel names, no cross-module runtime
   // dependency at registration time), placed alongside them, before
   // `ensureStoresRegistered()`.
-  registerClipboardFlows()
+  registerClipboardFlows({ managers: deps.services.managers })
   // Phase 34.2 gap cycle 2, plan 34.2-16 (REQ-34.2-12), extended by Phase 34.3
   // plan 04: the logger channels. `logError` was ported early from its Phase
   // 34.3/slice-6 slot because gap cycle 1's renderer repair-failure handler

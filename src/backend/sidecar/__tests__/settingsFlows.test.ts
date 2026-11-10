@@ -567,7 +567,10 @@ describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
     expect(response?.ok).toBe(true)
     expect(response?.error).toBeUndefined()
     expect(response?.result).toMatchObject({ isFlatpak: false })
-    expect(mockedGetSystemInfo).toHaveBeenCalledWith(false)
+    expect(mockedGetSystemInfo).toHaveBeenCalledWith(
+      expect.objectContaining({ libraryManagers: expect.anything() }),
+      false
+    )
   })
 
   it('hasExecutable resolves a real boolean, not the unported marker', async () => {

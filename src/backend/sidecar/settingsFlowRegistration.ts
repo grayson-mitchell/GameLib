@@ -257,7 +257,10 @@ export function registerSettingsFlows(deps: {
 
   // utils/ipc_handler.ts:22
   ipcMain.handle('getSystemInfo', async (_event: unknown, cache?: unknown) =>
-    getSystemInfo(cache as boolean | undefined)
+    getSystemInfo(
+      { libraryManagers: deps.managers.library },
+      cache as boolean | undefined
+    )
   )
 
   // utils/ipc_handler.ts:28-30

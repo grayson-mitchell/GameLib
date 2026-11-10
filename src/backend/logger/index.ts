@@ -1,6 +1,10 @@
 import { GameConfig } from 'backend/game_config'
 import { GlobalConfig } from 'backend/config'
-import { formatSystemInfo, getSystemInfo } from 'backend/utils/systeminfo'
+import {
+  formatSystemInfo,
+  getSystemInfo,
+  type SystemInfoDeps
+} from 'backend/utils/systeminfo'
 import { backendEvents } from 'backend/backend_events'
 
 import { LogPrefix, RunnerToLogPrefixMap } from './constants'
@@ -133,6 +137,31 @@ function initHeadless(): void {
   heroicLogWriter = new LogWriter(getLogFilePath({}), false, false)
 }
 
+/**
+ * Logs the System Information line. Called at the end of the boot's 'download-queue' step (the
+ * first point where the runner managers exist; the 'logger' step runs before them).
+ *
+ * - No added work: getSystemInfo memoizes one fetch per process (in-flight + value cache), so
+ *   this starts the same single fetch the old init() call started, later.
+ * - The three runner `--version` probes are not time-bounded (commandRunner runs them with no
+ *   timeout) but the process runner unrefs every child and its stdio and the probes are tracked
+ *   for the quit handler's kill, so a hung probe cannot hold the event loop open.
+ * - Fire-and-forget: a failed fetch resolves to 'unavailable', never an unhandled rejection.
+ */
+export function logSystemInformation(deps: SystemInfoDeps): void {
+  heroicLogWriter.logInfo(
+    [
+      'System Information:',
+      // Promise.resolve().then: a synchronous throw from the fetch also lands in the catch.
+      Promise.resolve()
+        .then(() => getSystemInfo(deps))
+        .then(formatSystemInfo)
+        .catch(() => 'unavailable')
+    ],
+    LogPrefix.Backend
+  )
+}
+
 function init() {
   // Add a basic error handler to our stdout/stderr. If we don't do this, a
   // write error on either stream surfaces as a process-level uncaught
@@ -173,11 +202,6 @@ function init() {
       'IMPORTANT: Logs are disabled. Enable logs before reporting any issue',
       { forceLog: true }
     )
-
-  heroicLogWriter.logInfo(
-    ['System Information:', getSystemInfo().then(formatSystemInfo)],
-    LogPrefix.Backend
-  )
 
   backendEvents.on('settingChanged', ({ key, oldValue, newValue }) =>
     heroicLogWriter.logInfo([

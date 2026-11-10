@@ -4,7 +4,7 @@ import { join } from 'path'
 import type { ManagerDeps } from 'backend/services/types'
 
 /** R1 slice: the runner managers the version probes ask. */
-type VersionProbeDeps = Pick<ManagerDeps, 'libraryManagers'>
+export type VersionProbeDeps = Pick<ManagerDeps, 'libraryManagers'>
 
 async function getLegendaryVersion(deps: VersionProbeDeps): Promise<string> {
   const { stdout, error, abort } = await deps.libraryManagers[

@@ -128,7 +128,9 @@ const foreignChannelsBefore = snapshotForeignChannels()
 // Registered ONCE for this whole file (not per-test) — `listenerRegistry`/`handlerRegistry`
 // are module-scope maps; calling this more than once would stack a duplicate listener onto
 // the SAME channel array.
-registerClipboardFlows()
+registerClipboardFlows({
+  managers: { library: {} } as never
+})
 
 beforeEach(() => {
   program = null

@@ -17,6 +17,7 @@ import {
   getLegendaryVersion,
   getNileVersion
 } from '../helperBinaries'
+import type { VersionProbeDeps } from '../helperBinaries'
 import { APP_DISPLAY_NAME } from 'backend/constants/others'
 
 type GPUInfo = {
@@ -67,6 +68,9 @@ interface SystemInformation {
 }
 
 let cachedSystemInfo: SystemInformation | null = null
+/** R1 slice: the runner managers the version probes ask. */
+export type SystemInfoDeps = VersionProbeDeps
+
 // In-flight-promise memoization -- debug/gog-spawn-reduction.md fix 3. The value-cache
 // above only helps SEQUENTIAL calls; concurrent callers at boot (backend boot log,
 // frontend boot IPC call, isMacSonomaOrHigher, etc.) each raced past it before the first
@@ -79,11 +83,14 @@ let inFlightSystemInfoFetch: Promise<SystemInformation> | null = null
  * Gathers information about various system components
  * @param cache Whether cached information should be returned if possible
  */
-async function getSystemInfo(cache = true): Promise<SystemInformation> {
+async function getSystemInfo(
+  deps: SystemInfoDeps,
+  cache = true
+): Promise<SystemInformation> {
   if (cache && cachedSystemInfo) return cachedSystemInfo
   if (cache && inFlightSystemInfoFetch) return inFlightSystemInfoFetch
 
-  const fetchPromise = fetchSystemInfo()
+  const fetchPromise = fetchSystemInfo(deps)
   if (cache) {
     inFlightSystemInfoFetch = fetchPromise
   }
@@ -98,17 +105,15 @@ async function getSystemInfo(cache = true): Promise<SystemInformation> {
   }
 }
 
-async function fetchSystemInfo(): Promise<SystemInformation> {
+async function fetchSystemInfo(
+  deps: SystemInfoDeps
+): Promise<SystemInformation> {
   const cpus = os.cpus()
   const memory = await getMemoryInfo()
   const gpus = await getGpuInfo()
   const detailedOsInfo = await getOsInfo()
   const deckInfo = getSteamDeckInfo(cpus, gpus)
-  // TEMPORARY (plan 12, replaced when the systeminfo owner takes deps): resolved at call time,
-  // after boot, because backend/storeManagers cannot be imported while this module loads.
-  const versionDeps = {
-    libraryManagers: (await import('backend/storeManagers')).libraryManagerMap
-  }
+  const versionDeps = deps
   const [legendaryVersion, gogdlVersion, cometVersion, nileVersion] =
     await Promise.all([
       getLegendaryVersion(versionDeps),

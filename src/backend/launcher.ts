@@ -663,7 +663,7 @@ async function prepareLaunch(
 
   await logWriter.logInfo([
     'System Info:',
-    getSystemInfo()
+    getSystemInfo({ libraryManagers: libraryManagerMap })
       .then(formatSystemInfo)
       .then((s) => `\n${s}\n\n`)
   ])

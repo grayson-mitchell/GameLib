@@ -184,8 +184,11 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // importing libraryManagerMap, and drops the load-bearing side-effect `import '../storeManagers'`
   // (module-init order is owned by the boot graph now). No channel, guard or `steamLibrary.has`
   // gate moved. Prior digest: 9366f91f823f454cc865ff2b60c57d7032fbf7be604be2524648bd81d5b140b6
+  // 66.1-22g: re-pin -- the getSystemInfo handler passes the managers' library slice to the
+  // systeminfo version probes (no lazy storeManagers import). No channel, guard or
+  // `steamLibrary.has` gate moved. Prior digest: 7ade63370cf4a5ebf0424b700da05d690e5a2823f16deffede7e631db69455d4
   const SETTINGS_FLOW_REGISTRATION_SHA256 =
-    '7ade63370cf4a5ebf0424b700da05d690e5a2823f16deffede7e631db69455d4'
+    '3f62bbb93755b547eff3f0f6666c1a2c0a842e05925d4f1d86b407540422a1a7'
 
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')

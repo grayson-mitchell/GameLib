@@ -159,6 +159,7 @@ import {
   logWarning,
   logError,
   logErrorSettled,
+  logSystemInformation,
   getRunnerLogWriter,
   LogPrefix
 } from '../logger'
@@ -1026,6 +1027,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // SteamUser is a static class with ~20 callers, so its store reads go through a bound
         // slice; bound here, before any step or handler can reach it (66.1-16/18).
         SteamUser.bindStores({ stores: state.services.stores })
+        bindBottleStores({ stores: state.services.stores })
       }
     },
     {
@@ -1175,6 +1177,14 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         }
         state.services.downloadQueue = queue
         bindLegacyBootQueue(queue)
+        // The managers do not exist at the 'logger' step, so the System Information line is
+        // logged here, the first point where they do. Fire-and-forget; managers resolved
+        // through a getter inside the fetch, never at step time.
+        logSystemInformation({
+          get libraryManagers() {
+            return requireServices(state).managers.library
+          }
+        })
       }
     },
     {
@@ -1467,7 +1477,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       run: (_ctx, _io, state) => {
         const { stores } = requireServices(state)
         bindSteamGridDbSecretDeps({ stores })
-        bindBottleStores({ stores })
         bindHumbleStores({ stores })
         bindDxmtStores({ stores })
         // Placement is load-bearing (Phase 28, T-28-10): must run AFTER startRpcServer() so

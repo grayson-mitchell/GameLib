@@ -1,7 +1,7 @@
 /**
  * Regression coverage for debug/gog-spawn-reduction.md fix 3.
  *
- * `getSystemInfo()` already had a session-lifetime value cache (`cachedSystemInfo`), but
+ * `getSystemInfo(deps)` already had a session-lifetime value cache (`cachedSystemInfo`), but
  * concurrent callers at boot (backend boot log, frontend boot IPC call,
  * `isMacSonomaOrHigher`, etc.) each raced past it before the first resolved --
  * live-log-confirmed as 9 `--version` spawns in a 4s boot window instead of the expected
@@ -9,7 +9,7 @@
  * SAME in-flight promise, so the underlying version-probe calls happen exactly once no
  * matter how many callers race in before the first resolves.
  *
- * Mock strategy: every dependency `getSystemInfo()` awaits is replaced with a
+ * Mock strategy: every dependency `getSystemInfo(deps)` awaits is replaced with a
  * controllable jest.fn() so concurrency can be simulated deterministically (resolve them
  * all on the same microtask tick, then assert call counts before and after).
  */
@@ -52,6 +52,11 @@ jest.mock('../../helperBinaries', () => ({
 }))
 
 import { getSystemInfo, __resetSystemInfoCacheForTests } from '../index'
+import type { SystemInfoDeps } from '../index'
+
+// The version probes are mocked above, so the managers are never asked; the slice only has
+// to exist (and be threaded through).
+const deps = { libraryManagers: {} } as unknown as SystemInfoDeps
 
 // `process.getSystemVersion` is an Electron-injected extension, not part of plain
 // Node's `process` -- stub it so `fetchSystemInfo()`'s `OS.version` read doesn't throw
@@ -64,7 +69,7 @@ function flushMicrotasks() {
   return new Promise((resolve) => setImmediate(resolve))
 }
 
-describe('debug/gog-spawn-reduction fix 3 -- getSystemInfo() in-flight-promise memoization', () => {
+describe('debug/gog-spawn-reduction fix 3 -- getSystemInfo(deps) in-flight-promise memoization', () => {
   beforeEach(() => {
     __resetSystemInfoCacheForTests()
     mockGetGpuInfo.mockResolvedValue([])
@@ -83,9 +88,9 @@ describe('debug/gog-spawn-reduction fix 3 -- getSystemInfo() in-flight-promise m
     // matching the live-log-confirmed 9-spawns-in-a-4s-window symptom (3 callers x 3
     // runners = 9, versus the expected 3).
     const [first, second, third] = await Promise.all([
-      getSystemInfo(),
-      getSystemInfo(),
-      getSystemInfo()
+      getSystemInfo(deps),
+      getSystemInfo(deps),
+      getSystemInfo(deps)
     ])
 
     expect(first).toBe(second)
@@ -97,17 +102,17 @@ describe('debug/gog-spawn-reduction fix 3 -- getSystemInfo() in-flight-promise m
   })
 
   it('a caller that arrives AFTER the first fetch resolved gets the cached value -- no new probes', async () => {
-    const first = await getSystemInfo()
-    const second = await getSystemInfo()
+    const first = await getSystemInfo(deps)
+    const second = await getSystemInfo(deps)
 
     expect(second).toBe(first)
     expect(mockGetGogdlVersion).toHaveBeenCalledTimes(1)
   })
 
   it('cache=false always triggers a fresh fetch, independent of any in-flight cache=true call', async () => {
-    const cachedCall = getSystemInfo() // cache=true, starts the in-flight fetch
+    const cachedCall = getSystemInfo(deps) // cache=true, starts the in-flight fetch
     await flushMicrotasks()
-    const forcedCall = getSystemInfo(false)
+    const forcedCall = getSystemInfo(deps, false)
 
     await Promise.all([cachedCall, forcedCall])
 
