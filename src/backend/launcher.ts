@@ -24,7 +24,6 @@ import { join, dirname, isAbsolute } from 'path'
 import {
   constructAndUpdateRPC,
   isEpicServiceOffline,
-  quoteIfNecessary,
   errorHandler,
   removeQuoteIfNecessary,
   memoryLog,
@@ -46,7 +45,6 @@ import {
 // `storeLaunchHooks` rides the same safe cycle: it is only dereferenced inside
 // function bodies, never at this module's top level.
 import { libraryManagerMap, storeLaunchHooks } from 'backend/storeManagers'
-import type { LegendaryCommand } from 'backend/storeManagers'
 import { hasCapability, isStore } from 'common/storeCapabilities'
 import {
   createGameLogWriter,
@@ -62,6 +60,7 @@ import { DXVK, runWineCommandOnGame, Winetricks } from './tools'
 import { spawn, spawnSync } from 'child_process'
 import shlex from 'shlex'
 import { buildGameScopeCommand } from './gamescopeCommand'
+import { getRunnerCallWithoutCredentials } from './commandRunner'
 import { isOnline } from './online_monitor'
 import { showDialogBoxModalAuto } from './dialog/dialog'
 import { readFileSync, writeFileSync } from 'fs'
@@ -1769,7 +1768,8 @@ async function callRunner(
   const safeCommand = getRunnerCallWithoutCredentials(
     [...commandParts],
     options?.env,
-    fullRunnerPath
+    fullRunnerPath,
+    (command) => libraryManagerMap['legendary'].commandToArgsArray(command)
   )
 
   const prefix = `${options.logMessagePrefix ?? 'Running command'}:`
@@ -1957,91 +1957,6 @@ async function callRunner(
   }
 
   return promise
-}
-
-/**
- * Generates a formatted, safe command that can be logged
- * @param command The runner command that's executed, e.g. install, list, etc.
- * Note that this will be modified, so pass a copy of your actual command parts
- * @param env Enviroment variables to use
- * @param wrappers Wrappers to use (gamemode, steam runtime, etc.)
- * @param runnerPath The full path to the runner executable
- * @returns
- */
-function getRunnerCallWithoutCredentials(
-  command: string[] | LegendaryCommand,
-  env: Record<string, string> | NodeJS.ProcessEnv = {},
-  runnerPath: string
-): string {
-  if (!Array.isArray(command)) {
-    command = libraryManagerMap['legendary'].commandToArgsArray(command)
-  }
-
-  const modifiedCommand = [...command]
-  // Redact sensitive arguments reaching this shared logging path from ANY runner.
-  // Census-derived (34.5-61, F-34.5-G6-22/F-34.5-G6-24) via:
-  //   grep -rnE "'--(code|token|code-verifier|client-id|serial|password|secret|refresh-token|api-key)'" \
-  //     --include='*.ts' src/backend | grep -v __tests__
-  // --code (legendary auth, gog user, nile register) / --token (legendary): pre-existing.
-  // --code-verifier (nile PKCE verifier, F-34.5-G6-22) / --password (GOG private-branch
-  // password, F-34.5-G6-24, user-chosen secret reused across install/update/library calls) /
-  // --serial (nile device serial) / --client-id (nile OAuth client id): added here.
-  // Exact array-element match is kept deliberately (not prefix match) so `--code` can never
-  // swallow `--code-verifier` or vice versa -- each is redacted independently by its own
-  // exact-match loop iteration.
-  for (const sensitiveArg of [
-    '--code',
-    '--token',
-    '--code-verifier',
-    '--password',
-    '--serial',
-    '--client-id'
-  ]) {
-    // PowerShell's argument formatting is quite different, instead of having
-    // arguments as members of `command`, they're all in one specific member
-    // (the one after "-ArgumentList")
-    if (runnerPath === 'powershell') {
-      const argumentListIndex = modifiedCommand.indexOf('-ArgumentList') + 1
-      if (!argumentListIndex) continue
-      // Rule 1 fix (34.5-61): each `-ArgumentList` member is built by
-      // `` `"\`"${part}\`""` `` (callRunner, above) -- i.e. every argument is
-      // wrapped as `"`"value`""`, not the bare `"value"` this regex used to
-      // assume. The pre-fix pattern (`"${sensitiveArg}","(.*?)"`) could never
-      // match that wrapped shape, so NEITHER this new flag set NOR the
-      // original `--code`/`--token` were ever actually redacted on the
-      // PowerShell branch -- proven RED against the real wrapped shape via
-      // the production `callRunner` path (34.5-61-SUMMARY.md capture (c)).
-      const argumentList = modifiedCommand[argumentListIndex]
-      if (argumentList === undefined) continue
-      modifiedCommand[argumentListIndex] = argumentList.replace(
-        new RegExp(`\`"${sensitiveArg}\`"","\`"(.*?)\`""`),
-        `\`"${sensitiveArg}\`"","\`"<redacted>\`""`
-      )
-    } else {
-      const sensitiveArgIndex = modifiedCommand.indexOf(sensitiveArg)
-      if (sensitiveArgIndex === -1) {
-        continue
-      }
-      modifiedCommand[sensitiveArgIndex + 1] = '<redacted>'
-    }
-  }
-
-  const formattedEnvVars: string[] = []
-  for (const [key, value] of Object.entries(env)) {
-    // Only add variables if they aren't already defined in our own env
-    if (key in process.env) {
-      if (value === process.env[key]) {
-        continue
-      }
-    }
-    formattedEnvVars.push(`${key}=${quoteIfNecessary(value ?? '')}`)
-  }
-
-  return [
-    ...formattedEnvVars,
-    quoteIfNecessary(runnerPath),
-    ...modifiedCommand.map(quoteIfNecessary)
-  ].join(' ')
 }
 
 /**

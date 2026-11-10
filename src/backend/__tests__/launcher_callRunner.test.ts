@@ -415,7 +415,8 @@ describe('credential redaction: PowerShell -ArgumentList branch (34.5-61, F-34.5
 })
 
 describe('credential redaction census gate (34.5-61, F-34.5-G6-22/F-34.5-G6-24)', () => {
-  const launcherSourcePath = join(__dirname, '..', 'launcher.ts')
+  // the redaction list moved with getRunnerCallWithoutCredentials (66.1-05)
+  const launcherSourcePath = join(__dirname, '..', 'commandRunner.ts')
   const launcherSource = readFileSync(launcherSourcePath, 'utf-8')
 
   function extractRedactionList(source: string): string[] {

@@ -120,6 +120,20 @@ module.exports = {
           'npm-unknown'
         ]
       }
+    },
+    {
+      // Phase 66.1 D-11: the command runner takes everything it needs as deps, so its
+      // unit suite needs no jest.mock. Type-only imports are fine.
+      name: 'command-runner-is-narrow',
+      severity: 'error',
+      comment:
+        'src/backend/commandRunner.ts value-imports nothing from backend/ except src/backend/process/.',
+      from: { path: '^src/backend/commandRunner\\.ts$' },
+      to: {
+        path: '^src/backend/',
+        pathNot: '^src/backend/process/',
+        dependencyTypesNot: ['type-only']
+      }
     }
   ],
   options: {

@@ -184,15 +184,18 @@ describe('Layer-2: callRunner close-handler exit-code classification (D-2 root c
   })
 
   it('Layer-2: a non-zero exit AFTER the abort controller was aborted is .abort, not .error', async () => {
+    const ref: { registry?: Map<string, AbortController> } = {}
     const t = setup([], {
-      runner: fixedRunner(() => ({ code: 1 }))
+      runner: fixedRunner(() => {
+        // the cancel lands while the child is exiting with a failure code
+        ref.registry?.get('aborted')?.abort()
+        return { code: 1 }
+      })
     })
+    ref.registry = t.aborts
     const p = t.cr.callRunner(['download', 'aborted'], gogRunner, {
       abortId: 'aborted'
     })
-    // the registry entry exists from the moment the call starts; abort it before the run settles
-    await Promise.resolve()
-    t.aborts.get('aborted')?.abort()
     const res = await p
     expect(res.abort).toBe(true)
     expect(res.error).toBeUndefined()
