@@ -37,8 +37,16 @@ import {
   getEngineSelection,
   setEngineSelection
 } from './engineRegistry'
-import { decideLaunchEngine, isCrossoverMissing } from './engineDecision'
-import type { EngineDecisionDeps, LaunchDecision } from './engineDecision'
+import {
+  decideLaunchEngine,
+  isCrossoverMissing,
+  killCrossoverWineserverWith
+} from './engineDecision'
+import type {
+  EngineDecisionDeps,
+  KillDeps,
+  LaunchDecision
+} from './engineDecision'
 import { readEngineForGame } from './engineConfig'
 import type { EffectiveEngine } from './engineConfig'
 import {
@@ -93,7 +101,7 @@ export interface LaunchEngineDeps {
   ensureGameBottle: (
     args: Parameters<typeof ensureGameBottle>[1]
   ) => ReturnType<typeof ensureGameBottle>
-  decisionDeps(): Partial<EngineDecisionDeps>
+  decisionDeps(): Partial<EngineDecisionDeps> & KillDeps
   isCrossoverMissing(): Promise<boolean>
   currentPinInstalled(): boolean
   ensurePinned: typeof ensurePinnedEngineReportingStatus
@@ -116,31 +124,31 @@ export interface LaunchEngineDeps {
   notifyFallback: typeof notifyEngineFallback
 }
 
-const defaultDeps: Omit<LaunchEngineDeps, 'ensureGameBottle'> = {
-  isMac: () => isMac,
-  readEffective: (id) => readEngineForGame(id),
-  isProvisioned: isBottleProvisioned,
-  decisionDeps: () => ({}),
-  isCrossoverMissing: () => isCrossoverMissing(),
-  currentPinInstalled: () => isPinnedEngineInstalled(ENGINE_PINS.current),
-  ensurePinned: ensurePinnedEngineReportingStatus,
-  switchDeps: () => ({}),
-  prepare: prepareBottleForEngine,
-  sendStatus: (update) => sendGameStatusUpdate(update),
-  recordDecision(id, decision, bottleName, prefix, effective) {
-    recordLaunchDecision(id, decision, bottleName, {
-      bottleFor: () => (bottleName === '' ? null : bottleName),
-      stateWithoutBottle: true,
-      overrideEligible: () => true,
-      overlayEligible: false,
-      effective: () => effective,
-      prefixKind: prefix.kind === 'bottle' ? 'bottle' : 'plain',
-      perGameBottleName: perGameBottleName(id.runner, id.appName)
-    })
-  },
-  showDialog: showEngineDialog,
-  notifyFallback: notifyEngineFallback
-}
+const defaultDeps: Omit<LaunchEngineDeps, 'ensureGameBottle' | 'decisionDeps'> =
+  {
+    isMac: () => isMac,
+    readEffective: (id) => readEngineForGame(id),
+    isProvisioned: isBottleProvisioned,
+    isCrossoverMissing: () => isCrossoverMissing(),
+    currentPinInstalled: () => isPinnedEngineInstalled(ENGINE_PINS.current),
+    ensurePinned: ensurePinnedEngineReportingStatus,
+    switchDeps: () => ({}),
+    prepare: prepareBottleForEngine,
+    sendStatus: (update) => sendGameStatusUpdate(update),
+    recordDecision(id, decision, bottleName, prefix, effective) {
+      recordLaunchDecision(id, decision, bottleName, {
+        bottleFor: () => (bottleName === '' ? null : bottleName),
+        stateWithoutBottle: true,
+        overrideEligible: () => true,
+        overlayEligible: false,
+        effective: () => effective,
+        prefixKind: prefix.kind === 'bottle' ? 'bottle' : 'plain',
+        perGameBottleName: perGameBottleName(id.runner, id.appName)
+      })
+    },
+    showDialog: showEngineDialog,
+    notifyFallback: notifyEngineFallback
+  }
 
 /** The bottle each key was marked running in, so endEngineLaunch can release it. */
 const ledgerBottles = new Map<EngineKey, string>()
@@ -171,6 +179,9 @@ export async function selectEngineForLaunch(
   const d: LaunchEngineDeps = {
     ...defaultDeps,
     ensureGameBottle: (a) => ensureGameBottle(services, a),
+    decisionDeps: () => ({
+      killCrossoverWineserver: killCrossoverWineserverWith(services)
+    }),
     ...overrides
   }
   const key = engineKeyIfEligible(game, d.isMac())
@@ -529,6 +540,7 @@ function onEngineLaunchDeadline(
  * a no-kill notice (CR-02/CR-03).
  */
 export function armEngineLaunchDeadline(
+  services: EngineServices,
   game: Game,
   key: EngineKey | null,
   overrides: Partial<DeadlineDeps> = {}
@@ -548,6 +560,7 @@ export function armEngineLaunchDeadline(
   })
   stopDeadlineWatcher(key)
   const watcher = d.watch({
+    services,
     installPath,
     bottleDir: getBottleDir(bottleName),
     onFirstMatch: () => {

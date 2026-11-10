@@ -14,6 +14,9 @@ import {
   watchForGameProcess
 } from '../gameProcessWatch'
 import { defined } from './defined'
+import { createTestServices } from 'backend/testUtils/testServices'
+
+const services = { spawnAsync: createTestServices().spawnAsync }
 
 const HOME = '/Users/u'
 const INSTALL = '/Users/u/Games/Avernum 4'
@@ -94,6 +97,7 @@ describe('watchForGameProcess', () => {
     const onFirstMatch = jest.fn()
     const onGiveUp = jest.fn()
     const watch = watchForGameProcess({
+      services,
       installPath: INSTALL,
       onFirstMatch,
       onGiveUp,
@@ -194,7 +198,11 @@ describe('watchForGameProcess', () => {
 
   it('returns null when no prefix can be derived', () => {
     expect(
-      watchForGameProcess({ installPath: 'rel', onFirstMatch: jest.fn() })
+      watchForGameProcess({
+        services,
+        installPath: 'rel',
+        onFirstMatch: jest.fn()
+      })
     ).toBeNull()
   })
 })

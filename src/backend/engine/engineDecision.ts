@@ -25,6 +25,7 @@ import type { EnginePin } from './enginePins'
 import { parseEngineOverride } from './engineIds'
 import type { EngineOverrideId } from './engineIds'
 import { engineLogLabel } from './engineTypes'
+import type { EngineServices } from './engineServices'
 import type {
   EngineSelection,
   FallbackReason,
@@ -139,7 +140,10 @@ export interface EngineDecisionDeps {
 }
 
 /** @public consumed through the lazy `require('./engineDecision')` in engineConfig.ts defaults, which knip cannot trace */
-export function defaultEngineDecisionDeps(): EngineDecisionDeps {
+export function defaultEngineDecisionDeps(): Omit<
+  EngineDecisionDeps,
+  'killCrossoverWineserver'
+> {
   return {
     async resolveCrossoverBinDir() {
       const { resolveCrossoverBinDirAsync } =
@@ -156,18 +160,6 @@ export function defaultEngineDecisionDeps(): EngineDecisionDeps {
     },
     probe: probeDemoStatus,
     readBuild: (binDir) => readCrossoverBuild(binDir),
-    async killCrossoverWineserver(bottleName, binDir) {
-      const { killBottleWineServerWith } = await import('./bottlePrimitives')
-      const { legacySpawnAsync } =
-        await import('backend/services/legacySpawnAsync')
-      await killBottleWineServerWith(
-        { spawnAsync: legacySpawnAsync },
-        bottleName,
-        join(binDir, 'wineserver'),
-        { CX_ROOT: dirname(binDir) },
-        15_000
-      )
-    },
     readOverride: (key) => readStoredGameConfig(appNameOf(key))?.engineOverride,
     monitorPhase: () => null,
     bottleBusy: (bottleName, key) =>
@@ -194,7 +186,40 @@ export function defaultEngineDecisionDeps(): EngineDecisionDeps {
   }
 }
 
-function withDefaults(deps?: Partial<EngineDecisionDeps>): EngineDecisionDeps {
+/** The member the pre-flight paths cannot default: they need an injected spawn. */
+export type KillDeps = Pick<EngineDecisionDeps, 'killCrossoverWineserver'>
+
+/**
+ * 66.1-22e: stop the CrossOver wineserver for a bottle (after a failed probe), spawning
+ * through the injected `spawnAsync`. Same wineserver path, CX_ROOT env and 15 s timeout.
+ */
+export function killCrossoverWineserverWith(
+  services: Pick<EngineServices, 'spawnAsync'>
+): EngineDecisionDeps['killCrossoverWineserver'] {
+  return async (bottleName, binDir) => {
+    const { killBottleWineServerWith } = await import('./bottlePrimitives')
+    await killBottleWineServerWith(
+      { spawnAsync: services.spawnAsync },
+      bottleName,
+      join(binDir, 'wineserver'),
+      { CX_ROOT: dirname(binDir) },
+      15_000
+    )
+  }
+}
+
+type DecisionDepsNoKill = Omit<EngineDecisionDeps, 'killCrossoverWineserver'> &
+  Partial<KillDeps>
+
+/** For entry points that never reach the kill. */
+function withDefaults(deps?: Partial<EngineDecisionDeps>): DecisionDepsNoKill {
+  return { ...defaultEngineDecisionDeps(), ...deps }
+}
+
+/** For the pre-flight paths: the caller's kill is required by type. */
+function withKill(
+  deps: Partial<EngineDecisionDeps> & KillDeps
+): EngineDecisionDeps {
   return { ...defaultEngineDecisionDeps(), ...deps }
 }
 
@@ -226,10 +251,10 @@ export async function isCrossoverMissing(
 
 export async function preflightCrossover(
   bottleName: string,
-  deps?: Partial<EngineDecisionDeps>,
+  deps: Partial<EngineDecisionDeps> & KillDeps,
   opts?: { killOnTimeout?: boolean; key?: string }
 ): Promise<CrossoverPreflight> {
-  const d = withDefaults(deps)
+  const d = withKill(deps)
   const binDir = await d.resolveCrossoverBinDir()
   if (binDir === undefined) {
     return { kind: 'missing', detail: 'CrossOver is not installed' }
@@ -432,9 +457,9 @@ function pinnedSelection(
 
 export async function decideLaunchEngine(
   args: { key: string; bottleName: string },
-  deps?: Partial<EngineDecisionDeps>
+  deps: Partial<EngineDecisionDeps> & KillDeps
 ): Promise<LaunchDecision> {
-  const d = withDefaults(deps)
+  const d = withKill(deps)
   const override = parseEngineOverride(d.readOverride(args.key))
   const logLines: string[] = []
   const finish = (

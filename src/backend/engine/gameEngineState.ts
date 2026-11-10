@@ -27,6 +27,8 @@ import {
   resolveGlobalEngine
 } from './engineConfig'
 import type { EffectiveEngine, EngineConfigDeps } from './engineConfig'
+import { killCrossoverWineserverWith } from './engineDecision'
+import type { EngineServices } from './engineServices'
 import { getEngineState } from './engineState'
 import type { EngineStateDeps } from './engineState'
 import { engineKeyFor } from './gameKey'
@@ -89,6 +91,7 @@ function settingsViewFor(
 }
 
 export async function getGameEngineState(
+  services: Pick<EngineServices, 'spawnAsync'>,
   identity: unknown,
   deps: GameEngineStateDeps = {}
 ): Promise<EngineState | null> {
@@ -104,6 +107,7 @@ export async function getGameEngineState(
     effective
   })
   return getEngineState(id, {
+    killCrossoverWineserver: killCrossoverWineserverWith(services),
     ...stateDeps,
     isMac: true,
     bottleFor: () => (prefix.kind === 'bottle' ? prefix.bottleName : null),

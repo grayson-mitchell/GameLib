@@ -76,6 +76,7 @@ import type { EngineSelection } from '../engineTypes'
 import { killBottleWineServerWith } from '../bottlePrimitives'
 import { showEngineDialog, showEngineNotice } from '../engineDialogs'
 import { app } from 'backend/platform'
+import type { EngineServices } from '../engineServices'
 import { notify, showDialogBoxModalAuto } from 'backend/dialog/dialog'
 import {
   __resetBottleLedgerForTests,
@@ -137,6 +138,11 @@ afterEach(() => {
   jest.useRealTimers()
 })
 
+const services: EngineServices = {
+  spawnAsync: jest.fn(),
+  installRemove: jest.fn()
+}
+
 function setUp(sel: EngineSelection, kind: 'bottle' | 'plain' = 'bottle') {
   expect(setEngineSelection(KEY, sel)).toBe(true)
   setLaunchOverlayContext(
@@ -151,7 +157,7 @@ describe('armEngineLaunchDeadline', () => {
   it('arms one deadline and one watcher; first match cancels it', () => {
     setUp(CX)
     const d = deps()
-    armEngineLaunchDeadline(makeGame(), KEY, d)
+    armEngineLaunchDeadline(services, makeGame(), KEY, d)
     expect(__activeLaunchDeadlineCount()).toBe(1)
     expect(d.watch).toHaveBeenCalledTimes(1)
     expect(d.watch.mock.calls[0]).toBeDefined()
@@ -170,14 +176,14 @@ describe('armEngineLaunchDeadline', () => {
   it('does nothing for a plain prefix', () => {
     setUp(PINNED, 'plain')
     const d = deps()
-    armEngineLaunchDeadline(makeGame(), KEY, d)
+    armEngineLaunchDeadline(services, makeGame(), KEY, d)
     expect(__activeLaunchDeadlineCount()).toBe(0)
     expect(d.watch).not.toHaveBeenCalled()
   })
 
   it('does nothing without an overlay context (legacy, skip)', () => {
     const d = deps()
-    armEngineLaunchDeadline(makeGame(), KEY, d)
+    armEngineLaunchDeadline(services, makeGame(), KEY, d)
     expect(__activeLaunchDeadlineCount()).toBe(0)
     expect(d.watch).not.toHaveBeenCalled()
   })
@@ -185,7 +191,7 @@ describe('armEngineLaunchDeadline', () => {
   it('stands the deadline down when no signal is derivable', () => {
     setUp(CX)
     const d = deps(null)
-    armEngineLaunchDeadline(makeGame(), KEY, d)
+    armEngineLaunchDeadline(services, makeGame(), KEY, d)
     expect(__activeLaunchDeadlineCount()).toBe(0)
     expect(
       (logInfo as jest.Mock).mock.calls.some((c) =>
@@ -201,7 +207,7 @@ describe('armEngineLaunchDeadline', () => {
     const watcher = { stop: jest.fn() }
     const d = deps(watcher)
     const game = makeGame()
-    armEngineLaunchDeadline(game, KEY, d)
+    armEngineLaunchDeadline(services, game, KEY, d)
     markGameRunning('GameLib-legendary-Quail', KEY)
     await jest.advanceTimersByTimeAsync(180_000)
     expect(watcher.stop).toHaveBeenCalled()
@@ -236,7 +242,7 @@ describe('armEngineLaunchDeadline', () => {
     markGameRunning('GameLib', KEY)
     const game = makeGame()
     const d = deps()
-    armEngineLaunchDeadline(game, KEY, d)
+    armEngineLaunchDeadline(services, game, KEY, d)
     await jest.advanceTimersByTimeAsync(180_000)
     // The deadline actually fired, so the "untouched" assertions below are not vacuous.
     expect(d.publishNotice).toHaveBeenCalledTimes(1)
@@ -252,7 +258,7 @@ describe('armEngineLaunchDeadline', () => {
   it('WR-01: a watcher that gives up stands the deadline down', async () => {
     setUp(CX)
     const d = deps()
-    armEngineLaunchDeadline(makeGame(), KEY, d)
+    armEngineLaunchDeadline(services, makeGame(), KEY, d)
     const args = (
       d.watch.mock.calls[0] as unknown as [
         { onGiveUp: (reason: string) => void; bottleDir: string }
@@ -270,7 +276,7 @@ describe('armEngineLaunchDeadline', () => {
     setUp(CX)
     const watcher = { stop: jest.fn() }
     const d = deps(watcher)
-    armEngineLaunchDeadline(makeGame(), KEY, d)
+    armEngineLaunchDeadline(services, makeGame(), KEY, d)
     endEngineLaunch(KEY)
     expect(watcher.stop).toHaveBeenCalled()
     expect(__activeLaunchDeadlineCount()).toBe(0)

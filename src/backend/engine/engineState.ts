@@ -17,6 +17,7 @@ import {
 import type {
   CrossoverPreflight,
   EngineDecisionDeps,
+  KillDeps,
   LaunchDecision
 } from './engineDecision'
 import { engineKeyFor } from './gameKey'
@@ -80,7 +81,10 @@ export function __resetEngineStateForTests(): void {
   publisher = () => {}
 }
 
-export interface EngineStateDeps extends Partial<EngineDecisionDeps> {
+export interface EngineStateDeps
+  extends
+    Partial<Omit<EngineDecisionDeps, 'killCrossoverWineserver'>>,
+    KillDeps {
   /** Defaults to the platform flag. */
   isMac?: boolean
   /** Notice dismissals; defaults to the shared `engineNoticeStore`. */
@@ -121,7 +125,7 @@ function lazyNoticeStore(): EngineNoticeStore {
 
 function effectiveFor(
   identity: EngineIdentity,
-  deps: EngineStateDeps
+  deps: EngineStateDepsNoKill
 ): EffectiveEngine {
   return deps.effective ? deps.effective(identity) : readEngineForGame(identity)
 }
@@ -235,6 +239,13 @@ function overrideOf(effective: EffectiveEngine): EngineOverrideId {
   return effective.kind === 'override' ? effective.id : 'automatic'
 }
 
+/** The state deps for paths that never run a pre-flight (so never need the kill). */
+export type EngineStateDepsNoKill = Omit<
+  EngineStateDeps,
+  'killCrossoverWineserver'
+> &
+  Partial<KillDeps>
+
 export async function getEngineState(
   identity: unknown,
   deps: EngineStateDeps
@@ -327,7 +338,7 @@ export function recordLaunchDecision(
   identity: EngineIdentity,
   decision: LaunchDecision,
   bottleName: string,
-  deps: EngineStateDeps
+  deps: EngineStateDepsNoKill
 ): void {
   if (decision.kind !== 'use') return
   const key = engineKeyFor(identity.runner, identity.appName)

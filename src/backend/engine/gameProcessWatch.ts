@@ -23,7 +23,7 @@
  */
 import { homedir } from 'os'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { legacySpawnAsync } from 'backend/services/legacySpawnAsync'
+import type { EngineServices } from './engineServices'
 import { LAUNCH_DEADLINE_MS } from './launchDeadline'
 import { parsePsLine, processListing } from './processListing'
 
@@ -106,10 +106,12 @@ export function watchForGameProcess(args: {
   onGiveUp?: (reason: 'max-duration' | 'listing-failures') => void
   pollMs?: number
   maxDurationMs?: number
+  services: Pick<EngineServices, 'spawnAsync'>
   deps?: Partial<GameProcessWatchDeps>
 }): { stop(): void } | null {
   const deps: GameProcessWatchDeps = {
-    processListing: () => processListing({ spawnAsync: legacySpawnAsync }),
+    processListing: () =>
+      processListing({ spawnAsync: args.services.spawnAsync }),
     setTimer: (fn, ms) => setTimeout(fn, ms) as TimerHandle,
     clearTimer: (handle) => clearTimeout(handle as NodeJS.Timeout),
     homeDir: () => homedir(),

@@ -13,6 +13,9 @@ import { ENGINE_PINS } from '../enginePins'
 import type { CrossoverPreflight } from '../engineDecision'
 import type { EngineConfigDeps } from '../engineConfig'
 import { defined } from './defined'
+import { createTestServices } from 'backend/testUtils/testServices'
+
+const services = { spawnAsync: createTestServices().spawnAsync }
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -82,6 +85,7 @@ describe('getGameEngineState', () => {
       wineCrossoverBottle: 'GameLib'
     })
     const s = await getGameEngineState(
+      services,
       { runner: 'legendary', appName: 'abc' },
       deps()
     )
@@ -108,6 +112,7 @@ describe('getGameEngineState', () => {
       wineCrossoverBottle: 'GameLib'
     })
     const s = await getGameEngineState(
+      services,
       { runner: 'legendary', appName: 'abc' },
       deps()
     )
@@ -122,6 +127,7 @@ describe('getGameEngineState', () => {
       engineOverride: `pinned:${ENGINE_PINS.current.id}`
     })
     const s = await getGameEngineState(
+      services,
       { runner: 'gog', appName: '1207658924' },
       deps()
     )
@@ -136,6 +142,7 @@ describe('getGameEngineState', () => {
   it('shows a GPTK game as Legacy with no preflight (D-15)', async () => {
     writeGame('nile', 'amzn1.x', { wineVersion: GPTK, winePrefix: '/p' })
     const s = await getGameEngineState(
+      services,
       { runner: 'nile', appName: 'amzn1.x' },
       deps()
     )
@@ -152,6 +159,7 @@ describe('getGameEngineState', () => {
   it('answers for a sideload game on a plain wine prefix', async () => {
     global = { wineVersion: PLAIN_WINE, winePrefix: '/pfx' }
     const s = await getGameEngineState(
+      services,
       { runner: 'sideload', appName: 'mine' },
       deps()
     )
@@ -167,6 +175,7 @@ describe('getGameEngineState', () => {
       engineOverride: 'crossover'
     })
     const s = await getGameEngineState(
+      services,
       { runner: 'gog', appName: '1207658924' },
       deps({ isBottleReady: () => false })
     )
@@ -183,6 +192,7 @@ describe('getGameEngineState', () => {
       engineOverride: `pinned:${ENGINE_PINS.current.id}`
     })
     const s = await getGameEngineState(
+      services,
       { runner: 'gog', appName: '1207658924' },
       deps()
     )
@@ -191,23 +201,41 @@ describe('getGameEngineState', () => {
 
   it('returns null off macOS, for a bad identity and for Steam', async () => {
     const id = { runner: 'legendary', appName: 'abc' }
-    expect(await getGameEngineState(id, deps({ isMac: false }))).toBeNull()
-    expect(await getGameEngineState(null, deps())).toBeNull()
     expect(
-      await getGameEngineState({ runner: 'legendary', appName: '../x' }, deps())
+      await getGameEngineState(services, id, deps({ isMac: false }))
+    ).toBeNull()
+    expect(await getGameEngineState(services, null, deps())).toBeNull()
+    expect(
+      await getGameEngineState(
+        services,
+        { runner: 'legendary', appName: '../x' },
+        deps()
+      )
     ).toBeNull()
     expect(
-      await getGameEngineState({ runner: 'nope', appName: 'a' }, deps())
+      await getGameEngineState(
+        services,
+        { runner: 'nope', appName: 'a' },
+        deps()
+      )
     ).toBeNull()
     expect(
-      await getGameEngineState({ runner: 'steam', appName: '220' }, deps())
+      await getGameEngineState(
+        services,
+        { runner: 'steam', appName: '220' },
+        deps()
+      )
     ).toBeNull()
   })
 
   it('never creates a GamesConfig file', async () => {
     mkdirSync(join(dir, 'sub'))
     const before = readdirSync(dir).sort()
-    await getGameEngineState({ runner: 'legendary', appName: 'fresh' }, deps())
+    await getGameEngineState(
+      services,
+      { runner: 'legendary', appName: 'fresh' },
+      deps()
+    )
     expect(readdirSync(dir).sort()).toEqual(before)
   })
 })

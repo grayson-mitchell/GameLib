@@ -39,6 +39,7 @@ function toDeps(appId: string, o: SteamStyle): EngineStateDeps {
     appId
   )
   return {
+    killCrossoverWineserver: () => Promise.resolve(),
     ...o,
     bottleFor: () =>
       (o.bridgeInstallBottleFor ?? ((id) => `GameLibSteamBridge-${id}`))(appId),
@@ -797,6 +798,7 @@ describe('generic identities (phase 61 D-12, D-15)', () => {
   const generic = (over: Partial<EngineStateDeps> = {}): EngineStateDeps => ({
     isMac: true,
     store: memStore(),
+    killCrossoverWineserver: () => Promise.resolve(),
     bottleFor: () => 'GameLibBottle-Fortnite',
     overrideEligible: () => true,
     overlayEligible: false,

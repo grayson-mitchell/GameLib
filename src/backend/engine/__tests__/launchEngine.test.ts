@@ -32,7 +32,8 @@ jest.mock('graceful-fs', () => ({
 }))
 jest.mock('../engineDecision', () => ({
   decideLaunchEngine: jest.fn(),
-  isCrossoverMissing: jest.fn()
+  isCrossoverMissing: jest.fn(),
+  killCrossoverWineserverWith: jest.fn(() => jest.fn())
 }))
 jest.mock('../engineDialogs', () => ({
   showEngineDialog: jest.fn(),

@@ -6,11 +6,12 @@ import {
   decideCreationEngine,
   decideLaunchEngine,
   isCrossoverMissing,
+  killCrossoverWineserverWith,
   listEngineOverrideOptions,
   preflightCrossover,
   resolveWineManagerStaging
 } from '../engineDecision'
-import type { EngineDecisionDeps } from '../engineDecision'
+import type { EngineDecisionDeps, KillDeps } from '../engineDecision'
 import { ENGINE_PINS } from '../enginePins'
 import { parseEngineOverride } from '../engineIds'
 import type { DemoStatus, DemoStatusProbe } from '../demoStatus'
@@ -51,7 +52,7 @@ const rel = (v: string, installed = true) => ({
 
 function mkDeps(
   over: Partial<EngineDecisionDeps> = {}
-): Partial<EngineDecisionDeps> {
+): Partial<EngineDecisionDeps> & KillDeps {
   return {
     resolveCrossoverBinDir: () => Promise.resolve(CX_BIN),
     isExecutable: () => true,
@@ -994,5 +995,28 @@ describe('inconclusive pre-flight never falls back (CR-01, D-05)', () => {
       kind: 'use',
       selection: { kind: 'pinned', reason: 'cx-missing' }
     })
+  })
+})
+
+describe('killCrossoverWineserverWith (66.1-22e)', () => {
+  it('stops the bottle wineserver through the injected spawnAsync with CX_ROOT and the 15 s cap', async () => {
+    const spawnAsync = jest.fn(() =>
+      Promise.resolve({ code: 0, stdout: '', stderr: '' })
+    )
+    await killCrossoverWineserverWith({
+      spawnAsync: spawnAsync as unknown as Parameters<
+        typeof killCrossoverWineserverWith
+      >[0]['spawnAsync']
+    })('GameLibBottle', CX_BIN)
+    expect(spawnAsync).toHaveBeenCalledTimes(1)
+    const [bin, args, opts] = spawnAsync.mock.calls[0] as unknown as [
+      string,
+      string[],
+      { env: Record<string, string>; timeout: number }
+    ]
+    expect(bin).toBe(join(CX_BIN, 'wineserver'))
+    expect(args).toEqual(['-k'])
+    expect(opts.env.CX_ROOT).toBe(join(CX_BIN, '..'))
+    expect(opts.timeout).toBe(15_000)
   })
 })
