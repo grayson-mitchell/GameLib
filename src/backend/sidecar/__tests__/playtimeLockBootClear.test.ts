@@ -63,9 +63,15 @@ function bootedWorld() {
   const playtimeSyncQueue = require('../../storeManagers/gog/stores')
     .playtimeSyncQueue as FreshQueue
   const loggerModule = require('../../logger') as typeof import('../../logger')
-  const { clearStrandedPlaytimeSyncLock } = require('../bootstrap') as {
-    clearStrandedPlaytimeSyncLock: () => void
-  }
+  const { clearStrandedPlaytimeSyncLock: clearWithDeps } =
+    require('../bootstrap') as {
+      clearStrandedPlaytimeSyncLock: (deps: {
+        playtimeSyncQueue: FreshQueue
+      }) => void
+    }
+  // The helper takes its queue as a dep (66.1-04); pass the same singleton the suite asserts on.
+  const clearStrandedPlaytimeSyncLock = () =>
+    clearWithDeps({ playtimeSyncQueue })
   /* eslint-enable @typescript-eslint/no-require-imports */
   return { playtimeSyncQueue, loggerModule, clearStrandedPlaytimeSyncLock }
 }

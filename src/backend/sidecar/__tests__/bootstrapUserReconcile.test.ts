@@ -116,9 +116,15 @@ function bootedWorld(opts?: {
     GOGUser,
     configStore,
     loggerModule,
-    reconcileStoreUsersWhenOnline: (
-      require('../bootstrap') as { reconcileStoreUsersWhenOnline: () => void }
-    ).reconcileStoreUsersWhenOnline
+    // The helper takes its stores as a dep (66.1-04); pass the same configStore the suite seeds.
+    reconcileStoreUsersWhenOnline: () =>
+      (
+        require('../bootstrap') as {
+          reconcileStoreUsersWhenOnline: (deps: {
+            kvs: { configStore: unknown }
+          }) => void
+        }
+      ).reconcileStoreUsersWhenOnline({ kvs: { configStore } })
   }
   return lastWorld
 }

@@ -41,10 +41,18 @@ import { i18nextLanguageOptions, localeFileSegments } from 'common/languages'
 // Importing `./handlers` registers nothing (D-08); the 'register-handlers' boot step calls it.
 
 import { registerHandlers } from './handlers'
+import {
+  buildCommandRunnerFacade,
+  buildLauncherFacade,
+  buildManagersFacade,
+  buildQuitFacade,
+  buildSpawnAsyncFacade,
+  buildStoresFacade
+} from '../services/legacyFacades'
+import type { BootServices, StoreManagers, Stores } from '../services/types'
 // Block D (finding A1, quick-260907-odi). Adds NO new module to the sidecar bundle:
 // `sidecar/storeRegistration.ts:61` already imports `playtimeSyncQueue` from this exact
 // module, so this is a second binding onto an already-resident singleton, not a new edge.
-import { playtimeSyncQueue } from '../storeManagers/gog/stores'
 // Block G (todo 2026-09-06, quick-260908-wk0). Adds NO new module to the sidecar bundle:
 // `grep -rn "libraryManagerMap" src/backend/sidecar/*.ts` (re-run at execution time) confirms
 // `bootstrap.ts` already imports `./installedJsonWatcher` at its own line 39, and
@@ -53,7 +61,6 @@ import { playtimeSyncQueue } from '../storeManagers/gog/stores'
 // `./handlers`-transitive route (`runnerMiscFlowRegistration.ts:92`,
 // `installFlowRegistration.ts:125`, `appShellFlowRegistration.ts:164` all also import it), not a
 // new edge.
-import { libraryManagerMap } from '../storeManagers'
 // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09, REQ-34.5-01/05/12): `protocol.ts` reads
 // `dialog`/`app` from `backend/platform`, so this import is safe ONLY because `../platform`
 // (Step 1, above) has already been evaluated by the time this
@@ -98,7 +105,6 @@ import { initOnlineMonitor, runOnceWhenOnline } from '../online_monitor'
 // bundle — each is a second binding onto an already-resident module, not a new edge.
 import { LegendaryUser } from '../storeManagers/legendary/user'
 import { GOGUser } from '../storeManagers/gog/user'
-import { configStore } from '../constants/key_value_stores'
 // Block H (todo 2026-09-06, quick-260909-k5x). `grep -rn "gog/presence" src/backend
 // --include='*.ts'` (re-run at execution time) confirms `presence.ts` is ALREADY resident in
 // the sidecar bundle: `utils.ts:43` does `import gogPresence from './storeManagers/gog/
@@ -202,6 +208,10 @@ import {
  * before its channel exists); READY precedes the sign-in probe and the
  * startup protocol URL.
  *
+ * 'stores' follows 'logger' and precedes 'migrations' (which reads `migrationsStore`);
+ * 'command-runner' and 'store-managers' follow 'migrations'. They fill the per-boot
+ * `BootServices` from `prebuilt` or the identity facades (66.1).
+ *
  * Exit contract: no step may create an unref()-less handle or leave unbounded in-flight work.
  *
  * @public Consumed by sidecar tests through require() in a fresh module registry (D-08),
@@ -210,7 +220,10 @@ import {
 export const BOOT_STEP_NAMES = [
   'outbound-http-tracking',
   'logger',
+  'stores',
   'migrations',
+  'command-runner',
+  'store-managers',
   'shell-exe-receipt',
   'asset-root-check',
   'i18n',
@@ -256,6 +269,34 @@ interface BootState {
    * the correct degrade.
    */
   i18nReady: Promise<void>
+  /** The per-boot services, filled by the 'stores', 'command-runner' and 'store-managers' steps. */
+  services: Partial<BootServices>
+}
+
+function requireServices(state: BootState): BootServices {
+  const { stores, managers, launcher, commandRunner, spawnAsync, quit } =
+    state.services
+  if (
+    !stores ||
+    !managers ||
+    !launcher ||
+    !commandRunner ||
+    !spawnAsync ||
+    !quit
+  ) {
+    const missing = (
+      [
+        'stores',
+        'managers',
+        'launcher',
+        'commandRunner',
+        'spawnAsync',
+        'quit'
+      ] as const
+    ).filter((name) => !state.services[name])
+    throw new Error(`boot services missing: ${missing.join(', ')}`)
+  }
+  return { stores, managers, launcher, commandRunner, spawnAsync, quit }
 }
 
 interface BootStep {
@@ -387,7 +428,10 @@ function registerProtocolUrlHandler(): void {
  * @public Consumed by sidecar tests through require() in a fresh module registry (D-08),
  * which knip cannot see.
  */
-export function clearStrandedPlaytimeSyncLock(): void {
+export function clearStrandedPlaytimeSyncLock(deps: {
+  playtimeSyncQueue: Stores['gog']['playtimeSyncQueue']
+}): void {
+  const { playtimeSyncQueue } = deps
   try {
     if (!playtimeSyncQueue.has('lock')) {
       return
@@ -456,7 +500,10 @@ export function clearStrandedPlaytimeSyncLock(): void {
  * @public Consumed by sidecar tests through require() in a fresh module registry (D-08),
  * which knip cannot see.
  */
-export function reconcileStoreUsersWhenOnline(): void {
+export function reconcileStoreUsersWhenOnline(deps: {
+  kvs: Pick<Stores['kvs'], 'configStore'>
+}): void {
+  const { configStore } = deps.kvs
   try {
     runOnceWhenOnline(() => {
       try {
@@ -568,7 +615,10 @@ export function reconcileStoreUsersWhenOnline(): void {
  * @public Consumed by sidecar tests through require() in a fresh module registry (D-08),
  * which knip cannot see.
  */
-export function syncQueuedPlaytimeWhenOnline(): void {
+export function syncQueuedPlaytimeWhenOnline(deps: {
+  managers: Pick<StoreManagers, 'library'>
+}): void {
+  const libraryManagerMap = deps.managers.library
   try {
     const settings = GlobalConfig.get().getSettings()
     if (settings.disablePlaytimeSync) {
@@ -776,8 +826,13 @@ export function setGogPresenceWhenOnline(): void {
   }
 }
 
-function runBootSteps(ctx: AppContext, io: BootIo, state: BootState): void {
-  const steps = buildBootSteps()
+function runBootSteps(
+  ctx: AppContext,
+  io: BootIo,
+  state: BootState,
+  prebuilt: Partial<BootServices>
+): void {
+  const steps = buildBootSteps(prebuilt)
   const built = steps.map((step) => step.name).join(',')
   if (built !== BOOT_STEP_NAMES.join(',')) {
     throw new Error(`boot step list drifted from BOOT_STEP_NAMES: ${built}`)
@@ -799,15 +854,18 @@ let booted = false
 export function bootSidecar(
   ctx: AppContext,
   input: Readable,
-  output: Writable
-): void {
+  output: Writable,
+  prebuilt: Partial<BootServices> = {}
+): BootServices {
   if (booted) {
     throw new Error(
       'sidecar boot already ran in this process (D-08): tests boot once per fresh module registry via bootFresh()'
     )
   }
   booted = true
-  runBootSteps(ctx, { input, output }, { i18nReady: Promise.resolve() })
+  const state: BootState = { i18nReady: Promise.resolve(), services: {} }
+  runBootSteps(ctx, { input, output }, state, prebuilt)
+  return requireServices(state)
 }
 
 /**
@@ -850,7 +908,7 @@ function createBackendLogSink(): LogSink {
 
 // Kept LAST in the file: `bootstrapWirings.test.ts` slices from `export function init(` to EOF
 // to source-gate the call order of the steps below.
-function buildBootSteps(): BootStep[] {
+function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
   return [
     {
       name: 'outbound-http-tracking',
@@ -886,6 +944,14 @@ function buildBootSteps(): BootStep[] {
         setUncaughtExceptionLogSink((message) =>
           logErrorSettled(message, LogPrefix.Backend)
         )
+      }
+    },
+    {
+      name: 'stores',
+      // Groups references only (66.1, A3): the stores are still module singletons behind the
+      // facade, so this constructs nothing and creates no handle.
+      run: (_ctx, _io, state) => {
+        state.services.stores = prebuilt.stores ?? buildStoresFacade()
       }
     },
     {
@@ -931,6 +997,23 @@ function buildBootSteps(): BootStep[] {
             LogPrefix.Backend
           )
         }
+      }
+    },
+    {
+      name: 'command-runner',
+      run: (_ctx, _io, state) => {
+        state.services.commandRunner =
+          prebuilt.commandRunner ?? buildCommandRunnerFacade()
+        state.services.spawnAsync =
+          prebuilt.spawnAsync ?? buildSpawnAsyncFacade()
+        state.services.quit = prebuilt.quit ?? buildQuitFacade()
+      }
+    },
+    {
+      name: 'store-managers',
+      run: (_ctx, _io, state) => {
+        state.services.managers = prebuilt.managers ?? buildManagersFacade()
+        state.services.launcher = prebuilt.launcher ?? buildLauncherFacade()
       }
     },
     {
@@ -1178,7 +1261,8 @@ function buildBootSteps(): BootStep[] {
     {
       name: 'register-handlers',
       // Closures only: installs channel handlers, creates no timer, watcher, socket or child.
-      run: (ctx) => registerHandlers({ log: ctx.log })
+      run: (ctx, _io, state) =>
+        registerHandlers({ log: ctx.log, services: requireServices(state) })
     },
     {
       name: 'rpc-server',
@@ -1402,7 +1486,7 @@ function buildBootSteps(): BootStep[] {
     },
     {
       name: 'playtime-lock-clear',
-      run: () => {
+      run: (_ctx, _io, state) => {
         // Block D — boot-time stranded GOG playtime-sync lock clear (finding A1 LEG 2,
         // quick-260907-odi). Placed after `initLogger()` (the helper logs, and `heroicLogWriter` is
         // unset before that — see the standing `sidecar-console-and-logger-are-invisible` finding)
@@ -1411,7 +1495,9 @@ function buildBootSteps(): BootStep[] {
         // than lazily. `clearStrandedPlaytimeSyncLock()` itself never fails boot (see its own header),
         // so no additional try/catch is needed at this call site — matches Blocks A/B's shape, which
         // wrap their own bodies rather than duplicating that at the call site too.
-        clearStrandedPlaytimeSyncLock()
+        clearStrandedPlaytimeSyncLock({
+          playtimeSyncQueue: requireServices(state).stores.gog.playtimeSyncQueue
+        })
       }
     },
     {
@@ -1438,7 +1524,7 @@ function buildBootSteps(): BootStep[] {
     },
     {
       name: 'store-user-reconcile',
-      run: () => {
+      run: (_ctx, _io, state) => {
         // Block E — boot-time Epic/GOG user reconciliation (todo 2026-09-06, quick-260908-fre).
         // Placement (D2): must be after `initLogger()` above (the helper logs, and `heroicLogWriter`
         // is unset before that — the standing `sidecar-console-and-logger-are-invisible` finding);
@@ -1450,7 +1536,9 @@ function buildBootSteps(): BootStep[] {
         // fails boot (see its own header), so no additional try/catch is needed at this call site —
         // matches Block D's call site shape, which wraps its own body rather than duplicating that
         // here too.
-        reconcileStoreUsersWhenOnline()
+        reconcileStoreUsersWhenOnline({
+          kvs: requireServices(state).stores.kvs
+        })
       }
     },
     {
@@ -1473,7 +1561,7 @@ function buildBootSteps(): BootStep[] {
     },
     {
       name: 'playtime-queue-drain',
-      run: () => {
+      run: (_ctx, _io, state) => {
         // Block G — boot-time GOG queued-playtime drain (todo 2026-09-06, quick-260908-wk0).
         // LOAD-BEARING PLACEMENT, stated first and in full: syncQueuedPlaytime()'s first statement is
         // `if (playtimeSyncQueue.has('lock')) return`, so running this before Block D would let a lock
@@ -1487,7 +1575,9 @@ function buildBootSteps(): BootStep[] {
         // frontend can drive any RPC, without delaying READY itself. `syncQueuedPlaytimeWhenOnline()`
         // itself never fails boot (see its own header), so no additional try/catch is needed at this
         // call site -- matches Blocks D/E/F's call site shape.
-        syncQueuedPlaytimeWhenOnline()
+        syncQueuedPlaytimeWhenOnline({
+          managers: requireServices(state).managers
+        })
       }
     },
     {

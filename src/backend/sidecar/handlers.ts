@@ -76,6 +76,7 @@
 
 import Store from '../store_backend'
 import type { LogSink } from '../process/types'
+import type { BootServices } from '../services/types'
 
 import { ipcMain } from '../platform'
 import { registerSteamFlows } from './steamFlowRegistration'
@@ -126,7 +127,10 @@ import {
  * boot step (D-08), after the logger and before the RPC server binds; importing
  * this module registers nothing.
  */
-export function registerHandlers(deps: { log: LogSink }): void {
+export function registerHandlers(deps: {
+  log: LogSink
+  services: BootServices
+}): void {
   ipcMain.handle('health', async () => 'ok')
 
   registerSteamFlows()

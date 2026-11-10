@@ -133,9 +133,21 @@ function bootedWorld(opts?: {
     loggerModule: require('../../logger') as typeof import('../../logger'),
     GlobalConfig: (require('../../config') as typeof import('../../config'))
       .GlobalConfig,
-    syncQueuedPlaytimeWhenOnline: (
-      require('../bootstrap') as { syncQueuedPlaytimeWhenOnline: () => void }
-    ).syncQueuedPlaytimeWhenOnline
+    // The helper takes its managers as a dep (66.1-04); pass the same map the suite spies on.
+    syncQueuedPlaytimeWhenOnline: () =>
+      (
+        require('../bootstrap') as {
+          syncQueuedPlaytimeWhenOnline: (deps: {
+            managers: { library: unknown }
+          }) => void
+        }
+      ).syncQueuedPlaytimeWhenOnline({
+        managers: {
+          library: (
+            require('../../storeManagers') as typeof import('../../storeManagers')
+          ).libraryManagerMap
+        }
+      })
   }
 }
 /* eslint-enable @typescript-eslint/no-require-imports */
