@@ -388,7 +388,7 @@ describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
 
   type Frame = {
     src: 'watch' | 'poller' | 'stop'
-    status: 'playing' | 'done'
+    status: 'launching' | 'playing' | 'done'
   }
 
   // Drain pending microtasks, move the shared fake clock, drain again. Moves in 1000 ms
@@ -533,7 +533,7 @@ describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
     poll.stop()
   })
 
-  it('C3 win32 (a9g): the watch shows playing and sends done within 1 s of the pid dying; the poller stays silent', async () => {
+  it('C3 win32 (a9g/am0): the watch shows launching, playing and sends done within 1 s of the pid dying; the poller stays silent', async () => {
     const { clock, registry, frames, state, poll, watchDeps } = setup(
       [winList([42]), winList([])],
       'win32'
@@ -543,8 +543,12 @@ describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
     poll.start() // default 5000 ms
     const { settled } = startSteamLaunchWatch(watchDeps, APP_ID)
 
+    expect(frames).toEqual([{ src: 'watch', status: 'launching' }])
     await step500(clock, 2000) // t = 2000: the gated scan finds pid 42
-    expect(frames).toEqual([{ src: 'watch', status: 'playing' }])
+    expect(frames).toEqual([
+      { src: 'watch', status: 'launching' },
+      { src: 'watch', status: 'playing' }
+    ])
     await step500(clock, 8000) // t = 10000: the poller ticked at 5000 and 10000, silently
     state.alive.delete(42)
     await step500(clock, 1000) // t = 11000: one confirm scan, then done
@@ -553,14 +557,15 @@ describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
     state.running = 0 // Steam clears RunningAppID 2100 ms after the exit
     await step500(clock, 9000) // two more poller ticks add nothing
     expect(frames).toEqual([
+      { src: 'watch', status: 'launching' },
       { src: 'watch', status: 'playing' },
       { src: 'watch', status: 'done' }
     ])
-    expect(collapse(frames)).toEqual(['playing', 'done'])
+    expect(collapse(frames)).toEqual(['launching', 'playing', 'done'])
     poll.stop()
   })
 
-  it('C4 win32 (a9g) Stop: [watch playing, stop done]; the poller stays silent through the cancel', async () => {
+  it('C4 win32 (a9g/am0) Stop: [watch launching, watch playing, stop done]; the poller stays silent through the cancel', async () => {
     const { clock, registry, frames, state, poll, watchDeps } = setup(
       [winList([42])],
       'win32'
@@ -578,6 +583,7 @@ describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
     state.running = 0
     await step500(clock, 10000)
     expect(frames).toEqual([
+      { src: 'watch', status: 'launching' },
       { src: 'watch', status: 'playing' },
       { src: 'stop', status: 'done' }
     ])
@@ -595,10 +601,14 @@ describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
     await step500(clock, 10500) // t = 10000: the fifth empty scan
     await settled
     expect(registry.size).toBe(0)
-    expect(frames).toEqual([{ src: 'poller', status: 'playing' }])
+    expect(frames).toEqual([
+      { src: 'watch', status: 'launching' },
+      { src: 'poller', status: 'playing' }
+    ])
     state.running = 0
     await step500(clock, 5000)
     expect(frames).toEqual([
+      { src: 'watch', status: 'launching' },
       { src: 'poller', status: 'playing' },
       { src: 'poller', status: 'done' }
     ])
@@ -619,11 +629,13 @@ describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
     await step500(clock, 1000)
     await settled
     expect(frames).toEqual([
+      { src: 'watch', status: 'launching' },
       { src: 'watch', status: 'playing' },
       { src: 'watch', status: 'done' }
     ])
     await step500(clock, 25000) // t = 36000: the poller tick at 35000 is past the drain
     expect(frames).toEqual([
+      { src: 'watch', status: 'launching' },
       { src: 'watch', status: 'playing' },
       { src: 'watch', status: 'done' },
       { src: 'poller', status: 'playing' }
@@ -631,11 +643,56 @@ describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
     state.running = 0
     await step500(clock, 5000)
     expect(frames).toEqual([
+      { src: 'watch', status: 'launching' },
       { src: 'watch', status: 'playing' },
       { src: 'watch', status: 'done' },
       { src: 'poller', status: 'playing' },
       { src: 'poller', status: 'done' }
     ])
     poll.stop()
+  })
+
+  it('C8 win32 (am0): a game never detected ends Launching with one done after the window', async () => {
+    const { clock, registry, frames, poll, watchDeps } = setup([], 'win32')
+    poll.start()
+    const { settled } = startSteamLaunchWatch(watchDeps, APP_ID, {
+      startWindowMs: 6000
+    })
+    expect(frames).toEqual([{ src: 'watch', status: 'launching' }])
+    await step500(clock, 8000)
+    await settled
+    expect(registry.size).toBe(0)
+    expect(frames).toEqual([
+      { src: 'watch', status: 'launching' },
+      { src: 'watch', status: 'done' }
+    ])
+    await step500(clock, 10000) // two more poller ticks add nothing
+    expect(frames).toEqual([
+      { src: 'watch', status: 'launching' },
+      { src: 'watch', status: 'done' }
+    ])
+    poll.stop()
+  })
+
+  it('C9 win32 (am0): already running at Play sends no launching and the poller playing is never overwritten', async () => {
+    const { clock, frames, state, poll, watchDeps } = setup(
+      [winList([42]), winList([])],
+      'win32'
+    )
+    state.running = Number(APP_ID)
+    state.alive.add(42)
+    await poll.pollOnce() // the poller shows playing before this Play
+    const { settled } = startSteamLaunchWatch(watchDeps, APP_ID)
+    expect(frames).toEqual([{ src: 'poller', status: 'playing' }])
+    await step500(clock, 2000)
+    state.alive.delete(42)
+    await step500(clock, 1000)
+    await settled
+    expect(frames).toEqual([
+      { src: 'poller', status: 'playing' },
+      { src: 'watch', status: 'playing' },
+      { src: 'watch', status: 'done' }
+    ])
+    expect(collapse(frames)).toEqual(['playing', 'done'])
   })
 })

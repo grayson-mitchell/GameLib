@@ -172,11 +172,11 @@ describe('steamLaunchWatch', () => {
     expect(status).toBe('started')
     await tick500(clock, 2000) // RunningAppID reads 0: nothing is spawned
     expect(psCalls()).toBe(0)
-    expect(sent).toEqual([])
+    expect(sent).toEqual(['launching'])
     state.running = 264160
     state.alive.add(42)
     await tick500(clock, 2000)
-    expect(sent).toEqual(['playing'])
+    expect(sent).toEqual(['launching', 'playing'])
     expect(psCalls()).toBe(1)
     await tick500(clock, 10000) // alive: no further PowerShell
     expect(psCalls()).toBe(1)
@@ -184,7 +184,7 @@ describe('steamLaunchWatch', () => {
     state.alive.delete(42)
     await tick500(clock, 1000)
     await settled
-    expect(sent).toEqual(['playing', 'done'])
+    expect(sent).toEqual(['launching', 'playing', 'done'])
     expect(psCalls()).toBe(2)
     expect(registry.size).toBe(0)
     expect(clock.pendingCount()).toBe(0)
@@ -200,15 +200,15 @@ describe('steamLaunchWatch', () => {
     state.running = 264160
     state.alive.add(42).add(77)
     await tick500(clock, 2000)
-    expect(sent).toEqual(['playing'])
+    expect(sent).toEqual(['launching', 'playing'])
     state.alive.delete(42)
     await tick500(clock, 3000)
     expect(psCalls()).toBe(2)
-    expect(sent).toEqual(['playing'])
+    expect(sent).toEqual(['launching', 'playing'])
     state.alive.delete(77)
     await tick500(clock, 1000)
     await settled
-    expect(sent).toEqual(['playing', 'done'])
+    expect(sent).toEqual(['launching', 'playing', 'done'])
     expect(psCalls()).toBe(3)
   })
 
@@ -218,11 +218,11 @@ describe('steamLaunchWatch', () => {
     await tick500(clock, 92000)
     await settled
     expect(psCalls()).toBe(0)
-    expect(sent).toEqual([])
+    expect(sent).toEqual(['launching', 'done'])
     expect(registry.size).toBe(0)
   })
 
-  it('W4 (a9g) win32: Steam reports the appId but 5 scans are empty: hand back with no status', async () => {
+  it('W4 (a9g) win32: Steam reports the appId but 5 scans are empty and the poller has not read it: launching then done', async () => {
     const { deps, clock, registry, sent, state, psCalls } = setupWin([
       { ...winList([]), repeat: true }
     ])
@@ -231,7 +231,7 @@ describe('steamLaunchWatch', () => {
     await tick500(clock, 12000)
     await settled
     expect(psCalls()).toBe(5)
-    expect(sent).toEqual([])
+    expect(sent).toEqual(['launching', 'done'])
     expect(registry.size).toBe(0)
   })
 
@@ -244,11 +244,11 @@ describe('steamLaunchWatch', () => {
     state.alive.add(42)
     const { settled } = startSteamLaunchWatch(deps, '264160')
     await tick500(clock, 2000)
-    expect(sent).toEqual(['playing'])
+    expect(sent).toEqual(['launching', 'playing'])
     state.alive.delete(42)
     await tick500(clock, 8000)
     await settled
-    expect(sent).toEqual(['playing', 'done'])
+    expect(sent).toEqual(['launching', 'playing', 'done'])
   })
 
   it('W6 (a9g) win32: pollerHold is taken synchronously at start, and released with true after the watch own done', async () => {
@@ -305,6 +305,7 @@ describe('steamLaunchWatch', () => {
     await startSteamLaunchWatch(t.deps, '264160').settled
     expect(t.holds).toEqual([])
     expect(t.released).toEqual([])
+    expect(t.sent).toEqual([])
   })
 
   it('T7 relaunch dedupes and re-asserts playing', async () => {

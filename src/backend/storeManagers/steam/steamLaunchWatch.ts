@@ -19,13 +19,25 @@
  *   - Searching: every pollMs read RunningAppID (cheap) and run one PowerShell
  *     scan only once Steam reports the appId. Five empty scans while Steam
  *     reports it end the watch with no status (the game lives outside the
- *     install folder), leaving the status to the RunningAppID poller.
+ *     install folder), leaving the status to the RunningAppID poller (see the
+ *     win32 wire below for what the end of the watch sends).
  *   - Tracking: every alivePollMs probe the tracked pids in-process. No
  *     PowerShell runs while the game runs. When every pid is dead, one confirm
  *     scan either finds a successor (launcher -> game chain, self-restart) or
  *     sends `done`.
  *
- * Bounds: a start window (nothing is sent if no PID ever appears), a scan
+ * win32 wire (quick 261111-am0): the watch also holds Launching. It sends `launching` in
+ * the same synchronous turn as its poller claim, so the button does not drop back to Play when the
+ * `launch` IPC resolves and the frontend click latch is released. Steam launches bypass
+ * launcher.ts, so nothing else sends a status between the click and these frames.
+ *   - Normal: [watch launching, watch playing, watch done]; the poller is silent under the claim.
+ *   - Stop during Launching: [launching, stop done].
+ *   - Never detected within the window (also the 5-empty-scan bail with the poller not reading
+ *     the appId, no install folder, an unexpected error): [launching, done].
+ *   - Already running at Play (the poller reports the appId): no `launching` at all.
+ *   - Hand-back when the poller already reads the appId: [launching, poller playing].
+ *
+ * Bounds: a start window (on posix nothing is sent if no PID ever appears), a scan
  * timeout, a consecutive-failure cap, and only unref'd timers from the
  * injected clock. One watch per appId.
  *
@@ -63,7 +75,7 @@ export interface SteamLaunchWatchDeps extends Pick<
   | 'selfPids'
 > {
   registry: SteamLaunchWatchRegistry
-  sendStatus(appId: string, status: 'playing' | 'done'): void
+  sendStatus(appId: string, status: 'launching' | 'playing' | 'done'): void
   pollerReports(appId: string): boolean
   /** Steam's RunningAppID, 0 when none; never throws. Only the win32 loop calls it. */
   readRunningAppId(): Promise<number>
@@ -142,6 +154,21 @@ export function startSteamLaunchWatch(
   deps.registry.set(appId, entry)
   const releasePoller = win ? deps.pollerHold(appId) : undefined
   let doneSent = false
+  let launchingSent = false
+  let playingSent = false
+  // win32 (quick 261111-am0): hold Launching from the hand-off until the search finds the game.
+  // The claim above already silences the poller for this appId, so this runs in the same
+  // synchronous turn. When the poller has already reported the appId the game was running before
+  // this Play, and its `playing` must not be overwritten.
+  if (win && !deps.pollerReports(appId)) {
+    launchingSent = true
+    entry.shown = true
+    try {
+      deps.sendStatus(appId, 'launching')
+    } catch (e) {
+      deps.log.warn(`appId ${appId}: launching status failed: ${String(e)}`)
+    }
+  }
   const sendDone = () => {
     doneSent = true
     deps.sendStatus(appId, 'done')
@@ -233,6 +260,8 @@ export function startSteamLaunchWatch(
           if (pids.length > 0) {
             tracked = pids
             entry.shown = true
+            playingSent = true
+            reassert = false
             deps.log.info(
               `appId ${appId} running: pids [${pids.join(', ')}] under ${folder}`
             )
@@ -314,6 +343,19 @@ export function startSteamLaunchWatch(
     .finally(() => {
       if (deps.registry.get(appId) === entry) deps.registry.delete(appId)
       releasePoller?.(doneSent || cancelled)
+      // release(false) ran first: if the poller already reads the appId it has just sent
+      // `playing`, and the pollerReports check below suppresses this fallback `done`.
+      if (
+        win &&
+        launchingSent &&
+        !playingSent &&
+        !doneSent &&
+        !cancelled &&
+        !deps.pollerReports(appId)
+      ) {
+        deps.log.info(`appId ${appId}: not detected running; ending Launching`)
+        deps.sendStatus(appId, 'done')
+      }
       finish()
     })
 
