@@ -309,7 +309,7 @@ async function installOnce(
   componentRoot: string,
   target: string,
   deps: SteamclientLayerInstallDeps,
-  defaultRunCodesign: CodesignRunner
+  runCodesignOnRunner: CodesignRunner
 ): Promise<Ready> {
   const { id } = entry
   let tempDir: string | undefined
@@ -384,7 +384,7 @@ async function installOnce(
       )
     }
 
-    const signed = await (deps.runCodesign ?? defaultRunCodesign)(
+    const signed = await (deps.runCodesign ?? runCodesignOnRunner)(
       ['--remove-signature', join(tempDir, 'lsteamclient.so')],
       { timeoutMs: deps.codesignTimeoutMs ?? CODESIGN_TIMEOUT_MS }
     )
@@ -446,7 +446,7 @@ export function createSteamclientLayerInstall(deps: {
   runner: Pick<ProcessRunner, 'run'>
 }) {
   const inFlight = new Map<string, Promise<Ready>>()
-  const defaultRunCodesign = createRunCodesign(deps)
+  const runCodesignOnRunner = createRunCodesign(deps)
 
   /** Installs or verifies the pinned component. Never rejects. */
   async function ensureSteamclientLayerComponent(
@@ -501,7 +501,7 @@ export function createSteamclientLayerInstall(deps: {
         paths.componentRoot,
         target,
         stepDeps,
-        defaultRunCodesign
+        runCodesignOnRunner
       ).finally(() => inFlight.delete(target))
       inFlight.set(target, run)
       return await run

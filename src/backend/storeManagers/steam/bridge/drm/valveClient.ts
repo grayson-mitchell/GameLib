@@ -493,12 +493,12 @@ function errText(err: unknown): string {
 async function installOnce(
   paths: NonNullable<ReturnType<typeof buildDrmPaths>>,
   deps: ValveClientDeps,
-  defaultRunUnzip: ValveUnzipRunner
+  runUnzipOnRunner: ValveUnzipRunner
 ): Promise<DrmStepResult<ValveClientReady>> {
   const root = paths.valveClientRoot
   const fetchText = deps.fetchText ?? defaultFetchText
   const fetchToFile = deps.fetchToFile ?? defaultFetchToFile
-  const runUnzip = deps.runUnzip ?? defaultRunUnzip
+  const runUnzip = deps.runUnzip ?? runUnzipOnRunner
   let tempDir: string | undefined
   try {
     await fsp.mkdir(root, { recursive: true, mode: 0o700 })
@@ -725,7 +725,7 @@ export function createValveClient(deps: {
   runner: Pick<ProcessRunner, 'run'>
 }) {
   const inFlight = new Map<string, Promise<DrmStepResult<ValveClientReady>>>()
-  const defaultRunUnzip = createRunUnzip(deps)
+  const runUnzipOnRunner = createRunUnzip(deps)
 
   /**
    * Returns the verified Valve client DLLs, from the per-manifest-version cache
@@ -740,7 +740,7 @@ export function createValveClient(deps: {
       if (!paths) return drmStepError('valve-fetch', 'invalid app folder')
       const pending = inFlight.get(paths.valveClientRoot)
       if (pending) return await pending
-      const run = installOnce(paths, stepDeps, defaultRunUnzip)
+      const run = installOnce(paths, stepDeps, runUnzipOnRunner)
         .then((result) => {
           if (result.status === 'error') {
             logWarning(
