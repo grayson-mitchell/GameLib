@@ -10,6 +10,9 @@ jest.mock('backend/store_backend')
 const envMock = { isWindows: true, isMac: false, isLinux: false }
 jest.mock('backend/constants/environment', () => envMock)
 
+const gamesDbDeps = {
+  libraryManagers: {}
+} as unknown as Parameters<typeof getWikiGameInfo>[0]
 jest.mock('backend/wiki_game_info/gamesdb/utils', () => ({
   getInfoFromGamesDB: jest.fn().mockResolvedValue(null)
 }))
@@ -87,7 +90,7 @@ describe('getWikiGameInfo — D-10/D-11/D-13 index-first CrossOver wiring', () =
       slug: 'half-life-2'
     })
 
-    const result = await getWikiGameInfo(makeGame())
+    const result = await getWikiGameInfo(gamesDbDeps, makeGame())
 
     expect(result?.codeweavers).toStrictEqual({
       macRating: 5,
@@ -101,7 +104,7 @@ describe('getWikiGameInfo — D-10/D-11/D-13 index-first CrossOver wiring', () =
     const marker = { macRating: null, linuxRating: null, slug: '' }
     getCodeweaversFromIndexMock.mockResolvedValue(marker)
 
-    const result = await getWikiGameInfo(makeGame())
+    const result = await getWikiGameInfo(gamesDbDeps, makeGame())
 
     expect(getCodeweaversFromIndexMock).toHaveBeenCalled()
     expect(result?.codeweavers).toStrictEqual(marker)
@@ -114,8 +117,8 @@ describe('getWikiGameInfo — D-10/D-11/D-13 index-first CrossOver wiring', () =
     envMock.isMac = true
     getCodeweaversFromIndexMock.mockResolvedValue(null)
 
-    const first = await getWikiGameInfo(makeGame())
-    await getWikiGameInfo(makeGame())
+    const first = await getWikiGameInfo(gamesDbDeps, makeGame())
+    await getWikiGameInfo(gamesDbDeps, makeGame())
 
     expect(first?.codeweavers).toBeNull()
     expect(getCodeweaversFromIndexMock).toHaveBeenCalledTimes(2)
@@ -124,7 +127,7 @@ describe('getWikiGameInfo — D-10/D-11/D-13 index-first CrossOver wiring', () =
   test('Linux: no index lookup, codeweavers null, cached entry is not re-fetched', async () => {
     envMock.isLinux = true
 
-    const first = await getWikiGameInfo(makeGame())
+    const first = await getWikiGameInfo(gamesDbDeps, makeGame())
     expect(getCodeweaversFromIndexMock).not.toHaveBeenCalled()
     expect(first?.codeweavers).toBeNull()
 
@@ -141,14 +144,14 @@ describe('getWikiGameInfo — D-10/D-11/D-13 index-first CrossOver wiring', () =
     wikiGameInfoStore.set('Half-Life 2', seeded)
     getInfoFromPCGamingWikiMock.mockClear()
 
-    const second = await getWikiGameInfo(makeGame())
+    const second = await getWikiGameInfo(gamesDbDeps, makeGame())
 
     expect(getInfoFromPCGamingWikiMock).not.toHaveBeenCalled()
     expect(second).toStrictEqual(seeded)
   })
 
   test('Windows (neither mac nor linux): codeweavers slot stays null, neither path runs', async () => {
-    const result = await getWikiGameInfo(makeGame())
+    const result = await getWikiGameInfo(gamesDbDeps, makeGame())
 
     expect(getCodeweaversFromIndexMock).not.toHaveBeenCalled()
     expect(result?.codeweavers).toBeNull()
@@ -181,7 +184,7 @@ describe('getWikiGameInfo — D-10/D-11/D-13 index-first CrossOver wiring', () =
       slug: 'half-life-2'
     })
 
-    const result = await getWikiGameInfo(makeGame())
+    const result = await getWikiGameInfo(gamesDbDeps, makeGame())
 
     expect(crossoverIndexHasMock).toHaveBeenCalled()
     expect(getCodeweaversFromIndexMock).toHaveBeenCalled()
@@ -215,7 +218,7 @@ describe('getWikiGameInfo — D-10/D-11/D-13 index-first CrossOver wiring', () =
     wikiGameInfoStore.set('Half-Life 2', cached)
     crossoverIndexHasMock.mockReturnValue(false)
 
-    const result = await getWikiGameInfo(makeGame())
+    const result = await getWikiGameInfo(gamesDbDeps, makeGame())
 
     expect(getCodeweaversFromIndexMock).not.toHaveBeenCalled()
     expect(result).toStrictEqual(cached)
@@ -281,7 +284,7 @@ describe('getWikiGameInfo — cached wiki miss self-heals (todo 2026-08-22, task
   it('re-fetches when the cached entry recorded a FAILED pcgamingwiki lookup (the 403)', async () => {
     seedCache({ pcgamingwiki: 'error', howlongtobeat: 'skipped' })
 
-    await getWikiGameInfo(makeGame())
+    await getWikiGameInfo(gamesDbDeps, makeGame())
 
     expect(getInfoFromPCGamingWikiMock).toHaveBeenCalled()
   })
@@ -294,7 +297,7 @@ describe('getWikiGameInfo — cached wiki miss self-heals (todo 2026-08-22, task
   it("re-fetches a legacy 'skipped' HLTB entry even when pcgamingwiki succeeded", async () => {
     seedCache({ pcgamingwiki: 'ok', howlongtobeat: 'skipped' })
 
-    await getWikiGameInfo(makeGame())
+    await getWikiGameInfo(gamesDbDeps, makeGame())
 
     expect(getInfoFromPCGamingWikiMock).toHaveBeenCalled()
   })
@@ -302,7 +305,7 @@ describe('getWikiGameInfo — cached wiki miss self-heals (todo 2026-08-22, task
   it('re-fetches when the cached entry predates fetchStatus entirely (old-shape 403-era entry)', async () => {
     seedCache(undefined)
 
-    await getWikiGameInfo(makeGame())
+    await getWikiGameInfo(gamesDbDeps, makeGame())
 
     expect(getInfoFromPCGamingWikiMock).toHaveBeenCalled()
   })
@@ -313,7 +316,7 @@ describe('getWikiGameInfo — cached wiki miss self-heals (todo 2026-08-22, task
     // every details-page visit, forever -- against the site whose UA policy just blocked us.
     seedCache({ pcgamingwiki: 'notfound', howlongtobeat: 'notfound' })
 
-    await getWikiGameInfo(makeGame())
+    await getWikiGameInfo(gamesDbDeps, makeGame())
 
     expect(getInfoFromPCGamingWikiMock).not.toHaveBeenCalled()
   })
@@ -321,7 +324,7 @@ describe('getWikiGameInfo — cached wiki miss self-heals (todo 2026-08-22, task
   it('serves a fully-successful cached entry from cache', async () => {
     seedCache({ pcgamingwiki: 'ok', howlongtobeat: 'ok' })
 
-    await getWikiGameInfo(makeGame())
+    await getWikiGameInfo(gamesDbDeps, makeGame())
 
     expect(getInfoFromPCGamingWikiMock).not.toHaveBeenCalled()
   })

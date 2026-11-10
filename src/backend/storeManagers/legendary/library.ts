@@ -94,6 +94,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
     this.refreshInstalled()
 
     scheduleMacArchSweep(
+      this.deps,
       'legendary',
       () =>
         [...installedGames.entries()]

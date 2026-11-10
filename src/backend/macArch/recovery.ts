@@ -11,8 +11,9 @@
 //    so the loop drains once the single in-flight probe ends. Nothing is issued
 //    synchronously at boot: the sweep starts after an unref'd 20 s timer.
 //
-// uninstaller, downloadqueue and storeManagers are imported lazily (await
-// import()) to avoid a gog/legendary -> recovery -> storeManagers cycle.
+// uninstaller and downloadqueue are imported lazily (await import()) to avoid
+// a gog/legendary -> recovery -> storeManagers cycle. The managers arrive by
+// injection (66.1).
 
 import { dirname } from 'path'
 import { isMac } from 'backend/constants/environment'
@@ -30,6 +31,12 @@ import {
 } from 'backend/utils/macArch'
 import { macArchStore } from './stores'
 import type { Runner } from 'common/types'
+import type { ManagerDeps } from 'backend/services/types'
+
+/** The library managers the Windows-reinstall flow drives (66.1, R3). */
+export interface MacArchRecoveryDeps {
+  libraryManagers: ManagerDeps['libraryManagers']
+}
 
 export const MAX_SWEEP_PROBES = 20
 const SWEEP_START_DELAY_MS = 20_000
@@ -65,6 +72,7 @@ function enqueuePrompt(task: () => Promise<void>) {
 }
 
 interface CheckInstalledMacArchArgs {
+  deps: MacArchRecoveryDeps
   runner: Runner
   appName: string
   installPath: string
@@ -77,8 +85,16 @@ interface CheckInstalledMacArchArgs {
 export async function checkInstalledMacArch(
   args: CheckInstalledMacArchArgs
 ): Promise<void> {
-  const { runner, appName, installPath, executable, title, apply, prompt } =
-    args
+  const {
+    deps,
+    runner,
+    appName,
+    installPath,
+    executable,
+    title,
+    apply,
+    prompt
+  } = args
   if (!isMac) return
   const lp = prefixOf(runner)
   try {
@@ -93,7 +109,7 @@ export async function checkInstalledMacArch(
     apply(appName, verdict)
     logInfo(`macArch: ${appName} native build is ${verdict}-bit`, lp)
     if (verdict === '32' && prompt) {
-      enqueuePrompt(() => offerWindowsReinstall(runner, appName, title))
+      enqueuePrompt(() => offerWindowsReinstall(deps, runner, appName, title))
     }
   } catch (e) {
     logError(`macArch: check failed for ${appName}: ${String(e)}`, lp)
@@ -101,13 +117,13 @@ export async function checkInstalledMacArch(
 }
 
 export async function offerWindowsReinstall(
+  deps: MacArchRecoveryDeps,
   runner: Runner,
   appName: string,
   title?: string
 ): Promise<void> {
   const lp = prefixOf(runner)
-  const { libraryManagerMap } = await import('backend/storeManagers')
-  const manager = libraryManagerMap[runner]
+  const manager = deps.libraryManagers[runner]
   // GOG lowercases the platform itself, so one spelling serves every runner.
   const windowsPlatform = 'Windows'
 
@@ -149,7 +165,7 @@ export async function offerWindowsReinstall(
 
     const { uninstallGameCallback } = await import('backend/utils/uninstaller')
     await uninstallGameCallback(
-      { libraryManagers: libraryManagerMap },
+      { libraryManagers: deps.libraryManagers },
       undefined as never,
       appName,
       runner,
@@ -199,6 +215,7 @@ interface SweepCandidate {
 }
 
 export function scheduleMacArchSweep(
+  deps: MacArchRecoveryDeps,
   runner: Runner,
   getCandidates: () => SweepCandidate[],
   apply: (appName: string, verdict: Verdict) => void
@@ -218,6 +235,7 @@ export function scheduleMacArchSweep(
       const c = queue.shift()
       if (!c) return
       await checkInstalledMacArch({
+        deps,
         runner,
         appName: c.appName,
         installPath: c.installPath,

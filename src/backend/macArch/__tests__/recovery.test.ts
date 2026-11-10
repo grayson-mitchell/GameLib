@@ -9,6 +9,7 @@ import {
   scheduleMacArchSweep,
   MAX_SWEEP_PROBES
 } from '../recovery'
+import type { MacArchRecoveryDeps } from '../recovery'
 import * as macArch from 'backend/utils/macArch'
 
 const mem: { verdicts: Record<string, unknown> } = { verdicts: {} }
@@ -37,14 +38,14 @@ jest.mock('backend/utils/macArch', () => ({
 
 const getInstallInfo = jest.fn()
 const getGameInfo = jest.fn()
-jest.mock('backend/storeManagers', () => ({
-  libraryManagerMap: {
+const deps = {
+  libraryManagers: {
     gog: {
       getInstallInfo: (...a: unknown[]) => getInstallInfo(...a),
       getGameInfo: (...a: unknown[]) => getGameInfo(...a)
     }
   }
-}))
+} as unknown as MacArchRecoveryDeps
 const uninstallGameCallback = jest.fn()
 jest.mock('backend/utils/uninstaller', () => ({
   uninstallGameCallback: (...a: unknown[]) => uninstallGameCallback(...a)
@@ -57,6 +58,7 @@ jest.mock('backend/downloadmanager/downloadqueue', () => ({
 const m = macArch as jest.Mocked<typeof macArch>
 
 const baseArgs = (over = {}) => ({
+  deps,
   runner: 'gog' as const,
   appName: 'g1',
   installPath: '/games/G.app',
@@ -133,14 +135,14 @@ describe('checkInstalledMacArch', () => {
 describe('offerWindowsReinstall', () => {
   test('no Windows build: no dialog', async () => {
     getInstallInfo.mockResolvedValue(undefined)
-    await offerWindowsReinstall('gog', 'g1')
+    await offerWindowsReinstall(deps, 'gog', 'g1')
     expect(m.promptMac32WindowsReinstall).not.toHaveBeenCalled()
     getInstallInfo.mockRejectedValue(new Error('x'))
-    await offerWindowsReinstall('gog', 'g1')
+    await offerWindowsReinstall(deps, 'gog', 'g1')
     expect(m.promptMac32WindowsReinstall).not.toHaveBeenCalled()
   })
   test('decline: nothing uninstalled or queued', async () => {
-    await offerWindowsReinstall('gog', 'g1')
+    await offerWindowsReinstall(deps, 'gog', 'g1')
     expect(uninstallGameCallback).not.toHaveBeenCalled()
     expect(addToQueue).not.toHaveBeenCalled()
   })
@@ -157,7 +159,7 @@ describe('offerWindowsReinstall', () => {
         }
       })
       .mockReturnValueOnce({ title: 'G', is_installed: false })
-    await offerWindowsReinstall('gog', 'g1')
+    await offerWindowsReinstall(deps, 'gog', 'g1')
     expect(uninstallGameCallback).toHaveBeenCalledWith(
       expect.objectContaining({ libraryManagers: expect.anything() }),
       undefined,
@@ -185,7 +187,7 @@ describe('offerWindowsReinstall', () => {
       is_installed: true,
       install: { install_path: '/games/G.app' }
     })
-    await offerWindowsReinstall('gog', 'g1')
+    await offerWindowsReinstall(deps, 'gog', 'g1')
     expect(uninstallGameCallback).toHaveBeenCalled()
     expect(addToQueue).not.toHaveBeenCalled()
   })
@@ -214,7 +216,7 @@ describe('scheduleMacArchSweep', () => {
       installPath: `/g/c${i}.app`
     }))
     const apply = jest.fn()
-    scheduleMacArchSweep('gog', () => cands, apply)
+    scheduleMacArchSweep(deps, 'gog', () => cands, apply)
     expect(spy).toHaveBeenCalledTimes(1)
     expect(m.machOArchsOfAsync).not.toHaveBeenCalled()
 

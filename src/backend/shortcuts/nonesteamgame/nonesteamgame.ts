@@ -211,7 +211,7 @@ async function addNonSteamGame(
 ): Promise<boolean> {
   const gameInfo = game.getGameInfo()
   const steamUserdataDir = await getSteamUserdataDir()
-  const wikiInfo = await getWikiGameInfo(game)
+  const wikiInfo = await getWikiGameInfo(deps, game)
   const steamID = wikiInfo?.pcgamingwiki?.steamID ?? wikiInfo?.gamesdb?.steamID
 
   const { folders, error } = checkSteamUserDataDir(steamUserdataDir)

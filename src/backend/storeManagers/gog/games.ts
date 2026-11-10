@@ -535,6 +535,7 @@ export default class GOGGame implements Game {
       // library.ts is imported lazily: it imports this module.
       void import('./library').then(({ applyGogMacArch }) =>
         checkInstalledMacArch({
+          deps: this.deps,
           runner: 'gog',
           appName: this.id,
           installPath: install_path,

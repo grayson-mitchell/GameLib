@@ -15,8 +15,8 @@ import { stripSourceComments as stripComments } from 'backend/testUtils/stripSou
 const envMock = { isWindows: false, isMac: true, isLinux: false }
 jest.mock('backend/constants/environment', () => envMock)
 
-// ── backend/storeManagers mock — replaces libraryManagerMap with fully
-// mocked managers so buildCrossoverRatingMap's enumeration is fully
+// ── injected managers — replace the real library managers with fully
+// mocked ones so buildCrossoverRatingMap's enumeration is fully
 // test-controlled, without loading any real store manager (and their own
 // electron-store/network dependencies).
 const getListOfGamesMocks = {
@@ -26,15 +26,15 @@ const getListOfGamesMocks = {
   nile: jest.fn<GameInfo[], []>(),
   steam: jest.fn<GameInfo[], []>()
 }
-jest.mock('backend/storeManagers', () => ({
-  libraryManagerMap: {
+const ratingMapDeps = {
+  libraryManagers: {
     sideload: { getListOfGames: getListOfGamesMocks.sideload },
     gog: { getListOfGames: getListOfGamesMocks.gog },
     legendary: { getListOfGames: getListOfGamesMocks.legendary },
     nile: { getListOfGames: getListOfGamesMocks.nile },
     steam: { getListOfGames: getListOfGamesMocks.steam }
   }
-}))
+} as unknown as Parameters<typeof buildCrossoverRatingMap>[0]
 
 // ── ./index mock — the D-16 eligibility predicate + index-first lookup are
 // each independently test-controlled here; this file only asserts the
@@ -91,7 +91,7 @@ describe('buildCrossoverRatingMap', () => {
     ])
     isCrossoverIndexEligibleMock.mockReturnValue(false)
 
-    const map = await buildCrossoverRatingMap()
+    const map = await buildCrossoverRatingMap(ratingMapDeps)
 
     // toEqual alone would not catch a resolver that emits `null` where it
     // must omit the key entirely — assert absence explicitly (D-16).
@@ -109,7 +109,7 @@ describe('buildCrossoverRatingMap', () => {
     isCrossoverIndexEligibleMock.mockReturnValue(true)
     resolveRatingForMock.mockReturnValue(null)
 
-    const map = await buildCrossoverRatingMap()
+    const map = await buildCrossoverRatingMap(ratingMapDeps)
 
     expect(Object.prototype.hasOwnProperty.call(map, '440')).toBe(true)
     expect(map['440']).toBeNull()
@@ -122,7 +122,7 @@ describe('buildCrossoverRatingMap', () => {
     isCrossoverIndexEligibleMock.mockReturnValue(true)
     resolveRatingForMock.mockReturnValue(5)
 
-    const map = await buildCrossoverRatingMap()
+    const map = await buildCrossoverRatingMap(ratingMapDeps)
 
     expect(map['620']).toBe(5)
   })
@@ -146,7 +146,7 @@ describe('buildCrossoverRatingMap', () => {
       .mockReturnValueOnce(null)
       .mockReturnValueOnce(1)
 
-    const map = await buildCrossoverRatingMap()
+    const map = await buildCrossoverRatingMap(ratingMapDeps)
 
     expect(map).toEqual({ a: 5, b: null, c: 1 })
     expect(resolveRatingForMock).toHaveBeenCalledTimes(3)
@@ -162,7 +162,7 @@ describe('buildCrossoverRatingMap', () => {
     isCrossoverIndexEligibleMock.mockReturnValue(true)
     resolveRatingForMock.mockReturnValue(5)
 
-    const map = await buildCrossoverRatingMap()
+    const map = await buildCrossoverRatingMap(ratingMapDeps)
 
     expect(map).toEqual({})
     expect(isCrossoverIndexEligibleMock).not.toHaveBeenCalled()
@@ -184,7 +184,7 @@ describe('buildCrossoverRatingMap', () => {
     isCrossoverIndexEligibleMock.mockReturnValue(true)
     resolveRatingForMock.mockReturnValue(null)
 
-    const map = await buildCrossoverRatingMap()
+    const map = await buildCrossoverRatingMap(ratingMapDeps)
 
     expect(Object.keys(map).sort()).toEqual(
       ['gog-eligible', 'steam-eligible'].sort()

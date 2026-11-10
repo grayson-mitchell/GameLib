@@ -28,13 +28,12 @@ jest.mock('../fetcher', () => ({
 }))
 
 const getListOfGamesMock = jest.fn<GameInfo[], []>()
-jest.mock('backend/storeManagers', () => ({
-  libraryManagerMap: {
-    steam: { getListOfGames: getListOfGamesMock }
-  }
-}))
 
 import { buildCrossoverRatingMap } from '../crossoverRatingMap'
+
+const ratingMapDeps = {
+  libraryManagers: { steam: { getListOfGames: getListOfGamesMock } }
+} as unknown as Parameters<typeof buildCrossoverRatingMap>[0]
 
 const GAME_COUNT = 50
 
@@ -74,7 +73,7 @@ describe('buildCrossoverRatingMap index loading (WR-07)', () => {
     loadIndexMock.mockResolvedValue(makeIndex())
     getListOfGamesMock.mockReturnValue(makeGames(GAME_COUNT))
 
-    await buildCrossoverRatingMap()
+    await buildCrossoverRatingMap(ratingMapDeps)
 
     expect(loadIndexMock).toHaveBeenCalledTimes(1)
   })
@@ -83,7 +82,7 @@ describe('buildCrossoverRatingMap index loading (WR-07)', () => {
     loadIndexMock.mockResolvedValue(makeIndex())
     getListOfGamesMock.mockReturnValue(makeGames(3))
 
-    const map = await buildCrossoverRatingMap()
+    const map = await buildCrossoverRatingMap(ratingMapDeps)
 
     // Anti-vacuity: a load-once fix that resolved NOTHING would also pass the
     // count assertion above. app_name '0' joins entry steamid '0'.
@@ -96,7 +95,7 @@ describe('buildCrossoverRatingMap index loading (WR-07)', () => {
     loadIndexMock.mockResolvedValue(null)
     getListOfGamesMock.mockReturnValue(makeGames(2))
 
-    const map = await buildCrossoverRatingMap()
+    const map = await buildCrossoverRatingMap(ratingMapDeps)
 
     expect(loadIndexMock).toHaveBeenCalledTimes(1)
     expect(map).toEqual({ '0': null, '1': null })
@@ -106,7 +105,7 @@ describe('buildCrossoverRatingMap index loading (WR-07)', () => {
     envMock.isMac = false
     getListOfGamesMock.mockReturnValue(makeGames(10))
 
-    const map = await buildCrossoverRatingMap()
+    const map = await buildCrossoverRatingMap(ratingMapDeps)
 
     expect(map).toEqual({})
     expect(loadIndexMock).not.toHaveBeenCalled()

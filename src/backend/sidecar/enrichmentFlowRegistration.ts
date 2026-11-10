@@ -210,7 +210,11 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
       const runner = args[2] as Runner
       const forceRefresh = (args[3] as boolean | null | undefined) ?? undefined
       const game = deps.managers.library[runner].getGame(appName)
-      return getWikiGameInfo(game, forceRefresh)
+      return getWikiGameInfo(
+        { libraryManagers: deps.managers.library },
+        game,
+        forceRefresh
+      )
     }
   )
 
@@ -273,7 +277,9 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
   // D-10: exempted from the 60s invoke bound in main.rs's
   // LONG_RUNNING_CHANNELS (Task 2) — fans out over every game in every
   // manager AND calls loadIndex/buildMaps per game. See module docstring.
-  ipcMain.handle('getCrossoverIndex', async () => buildCrossoverRatingMap())
+  ipcMain.handle('getCrossoverIndex', async () =>
+    buildCrossoverRatingMap({ libraryManagers: deps.managers.library })
+  )
 
   // storeSearch trio — delegates to the shared bodies in
   // storeSearch/handlers.ts (Phase 34.2 Plan 13, closes WR-09), which carry

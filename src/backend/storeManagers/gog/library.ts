@@ -119,6 +119,7 @@ export default class GOGLibraryManager implements LibraryManager {
     runOnceWhenOnline(() => checkForRedistUpdates(this.deps))
 
     scheduleMacArchSweep(
+      this.deps,
       'gog',
       () =>
         [...installedGames.values()]

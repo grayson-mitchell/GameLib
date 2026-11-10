@@ -16,7 +16,7 @@
  */
 
 import { isMac } from 'backend/constants/environment'
-import { libraryManagerMap } from 'backend/storeManagers'
+import type { ManagerDeps } from 'backend/services/types'
 
 import {
   isCrossoverIndexEligible,
@@ -40,9 +40,14 @@ import {
  * applies when running games via a macOS translation layer (D-10), so
  * nothing should paint on Linux/Windows regardless of eligibility.
  */
-export async function buildCrossoverRatingMap(): Promise<
-  Record<string, number | null>
-> {
+/** Every library manager the rating pass lists games from (66.1, R3). */
+export interface CrossoverRatingMapDeps {
+  libraryManagers: ManagerDeps['libraryManagers']
+}
+
+export async function buildCrossoverRatingMap(
+  deps: CrossoverRatingMapDeps
+): Promise<Record<string, number | null>> {
   const map: Record<string, number | null> = {}
 
   if (!isMac) {
@@ -62,7 +67,7 @@ export async function buildCrossoverRatingMap(): Promise<
   let resolveRatingFor: ((gameInfo: IndexLookupInput) => number | null) | null =
     null
 
-  for (const manager of Object.values(libraryManagerMap)) {
+  for (const manager of Object.values(deps.libraryManagers)) {
     for (const gameInfo of manager.getListOfGames()) {
       if (!isCrossoverIndexEligible(gameInfo)) {
         // Never looked up — key stays absent (D-16).

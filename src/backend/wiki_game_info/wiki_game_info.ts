@@ -1,4 +1,5 @@
 import { getInfoFromGamesDB } from 'backend/wiki_game_info/gamesdb/utils'
+import type { GamesDbDeps } from 'backend/wiki_game_info/gamesdb/utils'
 import { isStore, storeCapabilities } from 'common/storeCapabilities'
 import { getInfoFromProtonDB } from 'backend/wiki_game_info/protondb/utils'
 import { getSteamDeckComp } from 'backend/wiki_game_info/steamdeck/utils'
@@ -23,6 +24,7 @@ import {
 } from 'backend/crossover_index'
 
 export async function getWikiGameInfo(
+  deps: GamesDbDeps,
   game: Game,
   forceRefresh = false
 ): Promise<WikiInfo | null> {
@@ -113,7 +115,7 @@ export async function getWikiGameInfo(
           title,
           isStore(runner, 'gog') ? appName : undefined
         ),
-        getInfoFromGamesDB(title, appName, runner),
+        getInfoFromGamesDB(deps, title, appName, runner),
         isMac ? getInfoFromAppleGamingWiki(title) : null,
         isLinux ? getUmuId(appName, runner) : null,
         isMac ? getCodeweaversFromIndex(gameInfo) : null

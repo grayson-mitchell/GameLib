@@ -678,6 +678,7 @@ export default class LegendaryGame implements Game {
         // library.ts is imported lazily: it imports this module.
         void import('./library').then(({ applyLegendaryMacArch }) =>
           checkInstalledMacArch({
+            deps: this.deps,
             runner: 'legendary',
             appName: this.appName,
             installPath,
