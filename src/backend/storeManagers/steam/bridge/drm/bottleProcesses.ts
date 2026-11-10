@@ -6,7 +6,7 @@
  */
 import { logInfo, LogPrefix } from 'backend/logger'
 import { endPerGameBridgeBottleSession } from '../../bridgeBottleLifecycle'
-import { legacySpawnAsync } from 'backend/services/legacySpawnAsync'
+import type { ManagerDeps } from 'backend/services/types'
 import { runBoundedListing } from './boundedListing'
 
 /**
@@ -132,18 +132,16 @@ async function listingOutput(file: string, argv: string[]): Promise<string> {
  * a cwd inside the bottle (`lsof`), so other bottles' sessions are never
  * touched. Best effort; never throws.
  */
-export async function defaultEndStageSession(args: {
-  appId: string
-  bottleName: string
-  bottleDir: string
-}): Promise<void> {
+export async function defaultEndStageSession(
+  deps: Pick<ManagerDeps, 'spawnAsync'>,
+  args: {
+    appId: string
+    bottleName: string
+    bottleDir: string
+  }
+): Promise<void> {
   try {
-    await endPerGameBridgeBottleSession(
-      { spawnAsync: legacySpawnAsync },
-      args.appId,
-      args.bottleName,
-      5000
-    )
+    await endPerGameBridgeBottleSession(deps, args.appId, args.bottleName, 5000)
   } catch {
     // best effort
   }

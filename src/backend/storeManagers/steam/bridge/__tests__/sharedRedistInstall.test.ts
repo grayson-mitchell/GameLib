@@ -19,18 +19,15 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 
 import type { GameSettings } from 'common/types'
-import type { ChildProcess } from 'child_process'
 import {
   installSteamBridgeSharedRedists,
   REDIST_FAILURE_BACKOFF_AFTER,
   REDIST_FAILURE_BACKOFF_MS,
   REDIST_PROCESS_TIMEOUT_MS,
-  REDIST_TIMEOUT_BACKOFF_AFTER,
-  unrefWineChild
+  REDIST_TIMEOUT_BACKOFF_AFTER
 } from '../sharedRedistInstall'
 import { parseInstallScript, classifySharedRedist } from '../sharedRedists'
 import type { SharedRedistDepot, SharedRedistDownloadResult } from '../../depot'
-import { runWineCommand } from 'backend/launcher'
 import { downloadSharedRedistDepots } from '../../depot'
 import { readKnownFixProfile } from 'backend/knownFixes'
 import { sendGameStatusUpdate } from 'backend/utils'
@@ -54,7 +51,6 @@ jest.mock('backend/logger', () => ({
   logError: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
 }))
-jest.mock('backend/launcher', () => ({ runWineCommand: jest.fn() }))
 jest.mock('../../depot', () => ({ downloadSharedRedistDepots: jest.fn() }))
 jest.mock('backend/utils', () => ({ sendGameStatusUpdate: jest.fn() }))
 jest.mock('backend/knownFixes', () => ({ readKnownFixProfile: jest.fn() }))
@@ -75,7 +71,11 @@ jest.mock('../../constants', () => ({
   }
 }))
 
-const mockedRun = runWineCommand as jest.Mock
+const mockedRun = jest.fn()
+const DEPS = {
+  commandRunner: { runWineCommand: mockedRun },
+  spawnAsync: jest.fn()
+} as unknown as Parameters<typeof installSteamBridgeSharedRedists>[0]
 const mockedDownload = downloadSharedRedistDepots as jest.Mock
 const mockedFixes = readKnownFixProfile as jest.Mock
 const mockedStatus = sendGameStatusUpdate as jest.Mock
@@ -202,7 +202,7 @@ afterEach(() => {
 describe('installSteamBridgeSharedRedists', () => {
   it('installs DirectX: status, argv, reg add mark, ledger and settled', async () => {
     mockedDownload.mockResolvedValue(ok([dx()]))
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
 
     expect(mockedStatus).toHaveBeenCalledWith({
       appName: APP,
@@ -291,7 +291,7 @@ describe('installSteamBridgeSharedRedists', () => {
         wineserver: '/pins/bin/wineserver'
       }
     } as unknown as GameSettings
-    await installSteamBridgeSharedRedists(APP, fallback)
+    await installSteamBridgeSharedRedists(DEPS, APP, fallback)
     expect(mockedEnd).toHaveBeenCalledTimes(2)
     for (const call of mockedEnd.mock.calls) {
       expect(call[4]).toEqual({ wineserverBin: '/pins/bin/wineserver' })
@@ -309,7 +309,7 @@ describe('installSteamBridgeSharedRedists', () => {
         wineserver: '/cx/bin/wineserver'
       }
     } as unknown as GameSettings
-    await installSteamBridgeSharedRedists(APP, cx)
+    await installSteamBridgeSharedRedists(DEPS, APP, cx)
     expect(mockedEnd).toHaveBeenCalledTimes(2)
     for (const call of mockedEnd.mock.calls) expect(call[4]).toBeUndefined()
   })
@@ -359,7 +359,7 @@ describe('installSteamBridgeSharedRedists', () => {
           'WINE REGISTRY Version 2\n'
         )
         mockedDownload.mockResolvedValue(ok([dx()]))
-        await installSteamBridgeSharedRedists(APP, engineSettings(root))
+        await installSteamBridgeSharedRedists(DEPS, APP, engineSettings(root))
         expect(msiCalls()).toEqual([
           ['msiexec', '/i', `Z:${msi.replace(/\//g, '\\')}`]
         ])
@@ -380,7 +380,7 @@ describe('installSteamBridgeSharedRedists', () => {
           '"InstallRoot"="C:\\\\windows\\\\mono\\\\wine-mono-11.3.0"\n'
         )
         mockedDownload.mockResolvedValue(ok([dx()]))
-        await installSteamBridgeSharedRedists(APP, engineSettings(root))
+        await installSteamBridgeSharedRedists(DEPS, APP, engineSettings(root))
         expect(msiCalls()).toEqual([])
         expect(order()).toContain('dx')
       } finally {
@@ -392,7 +392,7 @@ describe('installSteamBridgeSharedRedists', () => {
       const root = mkdtempSync(join(tmpdir(), 'h1-engine-'))
       try {
         mockedDownload.mockResolvedValue(ok([dx()]))
-        await installSteamBridgeSharedRedists(APP, engineSettings(root))
+        await installSteamBridgeSharedRedists(DEPS, APP, engineSettings(root))
         expect(msiCalls()).toEqual([])
         expect(order()).toContain('dx')
         expect(
@@ -413,7 +413,7 @@ describe('installSteamBridgeSharedRedists', () => {
           p[0] === 'msiexec' ? { code: 1, stdout: '', stderr: '' } : undefined
         )
         mockedDownload.mockResolvedValue(ok([dx()]))
-        await installSteamBridgeSharedRedists(APP, engineSettings(root))
+        await installSteamBridgeSharedRedists(DEPS, APP, engineSettings(root))
         expect(order()).toContain('dx')
       } finally {
         rmSync(root, { recursive: true, force: true })
@@ -434,7 +434,7 @@ describe('installSteamBridgeSharedRedists', () => {
             wineserver: join(root, 'bin', 'wineserver')
           }
         } as unknown as GameSettings
-        await installSteamBridgeSharedRedists(APP, cx)
+        await installSteamBridgeSharedRedists(DEPS, APP, cx)
         expect(msiCalls()).toEqual([])
         expect(order()).toContain('dx')
       } finally {
@@ -447,7 +447,7 @@ describe('installSteamBridgeSharedRedists', () => {
       try {
         bundleMono(root)
         mockedDownload.mockResolvedValue(ok([vc2010()]))
-        await installSteamBridgeSharedRedists(APP, engineSettings(root))
+        await installSteamBridgeSharedRedists(DEPS, APP, engineSettings(root))
         expect(msiCalls()).toEqual([])
       } finally {
         rmSync(root, { recursive: true, force: true })
@@ -462,7 +462,7 @@ describe('installSteamBridgeSharedRedists', () => {
         ? { code: 0, stdout: '    dxsetup    REG_DWORD    0x1\r\n', stderr: '' }
         : undefined
     )
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(installerCalls()).toEqual([])
     expect(mockedStatus).not.toHaveBeenCalled()
     expect(Object.keys(ledger().done)).toHaveLength(1)
@@ -471,30 +471,30 @@ describe('installSteamBridgeSharedRedists', () => {
 
   it('writes the ledger atomically, leaving no temp file behind (IN-04)', async () => {
     mockedDownload.mockResolvedValue(ok([dx(), vc2010()]))
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(ledger().settled).toBeDefined()
     expect(readdirSync(bottleDir)).toEqual(['gamelib-shared-redists.json'])
   })
 
   it('settled ledger with equal opt-in makes no download and no wine call', async () => {
     mockedDownload.mockResolvedValue(ok([dx()]))
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     jest.clearAllMocks()
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(mockedDownload).not.toHaveBeenCalled()
     expect(mockedRun).not.toHaveBeenCalled()
   })
 
   it('re-evaluates a skipped depot once the profile opts into it', async () => {
     mockedDownload.mockResolvedValue(ok([dx()], { skipped: ['229004'] }))
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(ledger().settled.skipped).toEqual(['229004'])
 
     jest.clearAllMocks()
     defaultWine()
     mockedFixes.mockReturnValue({ steamSharedRedists: ['229004'] })
     mockedDownload.mockResolvedValue(ok([dx(), net452()]))
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(mockedDownload).toHaveBeenCalledWith(
       APP,
       expect.objectContaining({ optInDepotIds: ['229004'] })
@@ -517,31 +517,31 @@ describe('installSteamBridgeSharedRedists', () => {
       failed: [],
       skipped: []
     })
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(mockedRun).not.toHaveBeenCalled()
     expect(existsSync(ledgerPath())).toBe(false)
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(mockedDownload).toHaveBeenCalledTimes(2)
   })
 
   it('does not settle when a declared depot failed (key fetch), and retries', async () => {
     mockedDownload.mockResolvedValue(ok([], { failed: ['228990'] }))
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(settledOf()).toBeUndefined()
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(mockedDownload).toHaveBeenCalledTimes(2)
   })
 
   it('records the depots that installed but does not settle when another failed', async () => {
     mockedDownload.mockResolvedValue(ok([dx()], { failed: ['228983'] }))
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(Object.keys(ledger().done)).toHaveLength(1)
     expect(ledger().settled).toBeUndefined()
   })
 
   it('settles with a policy skip recorded', async () => {
     mockedDownload.mockResolvedValue(ok([dx()], { skipped: ['229004'] }))
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(ledger().settled).toMatchObject({ skipped: ['229004'], optIn: [] })
   })
 
@@ -552,17 +552,17 @@ describe('installSteamBridgeSharedRedists', () => {
       failed: [],
       skipped: []
     })
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(ledger().settled).toBeDefined()
     jest.clearAllMocks()
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(mockedDownload).not.toHaveBeenCalled()
   })
 
   it('resolves void with a warning when the download rejects', async () => {
     mockedDownload.mockRejectedValue(new Error('CM down'))
     await expect(
-      installSteamBridgeSharedRedists(APP, SETTINGS)
+      installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     ).resolves.toBeUndefined()
     expect(mockedWarn).toHaveBeenCalled()
     expect(existsSync(ledgerPath())).toBe(false)
@@ -572,7 +572,7 @@ describe('installSteamBridgeSharedRedists', () => {
     writeFileSync(ledgerPath(), '{nope')
     mockedDownload.mockResolvedValue(ok([dx()]))
     await expect(
-      installSteamBridgeSharedRedists(APP, SETTINGS)
+      installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     ).resolves.toBeUndefined()
     expect(mockedWarn).toHaveBeenCalled()
     expect(installerCalls()).toHaveLength(1)
@@ -586,7 +586,7 @@ describe('installSteamBridgeSharedRedists', () => {
     mockedDownload.mockResolvedValue(ok([dx()]))
     mockedRun.mockRejectedValue(new Error('wine exploded'))
     await expect(
-      installSteamBridgeSharedRedists(APP, SETTINGS)
+      installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     ).resolves.toBeUndefined()
     expect(mockedWarn).toHaveBeenCalled()
     expect(settledOf()).toBeUndefined()
@@ -599,7 +599,7 @@ describe('installSteamBridgeSharedRedists', () => {
         ? { code: 3010, stdout: '', stderr: '' }
         : undefined
     )
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(installerCalls().map((p) => at(p, 0).split('\\').pop())).toEqual([
       'vcredist_x86.exe',
       'vcredist_x64.exe'
@@ -614,7 +614,7 @@ describe('installSteamBridgeSharedRedists', () => {
         ? { code: 1, stdout: '', stderr: '' }
         : undefined
     )
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(installerCalls()).toHaveLength(2)
     expect(Object.keys(ledger().done)).toEqual([
       'hkey_local_machine\\software\\valve\\steam\\apps\\commonredist\\vcredist\\2010|x64'
@@ -631,7 +631,7 @@ describe('installSteamBridgeSharedRedists', () => {
 
   it('skips entries whose Requirement_OS does not apply', async () => {
     mockedDownload.mockResolvedValue(ok([net452()]))
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(installerCalls()).toHaveLength(1)
     expect(at(at(installerCalls(), 0), 2)).toContain(
       'Microsoft .NET Framework 4.5.2.cmd'
@@ -662,7 +662,7 @@ describe('installSteamBridgeSharedRedists', () => {
       mockedDownload.mockResolvedValue(ok([dx()]))
       failDx()
       for (let i = 1; i <= REDIST_FAILURE_BACKOFF_AFTER; i++) {
-        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
         expect(ledger().failures[DX_KEY]).toMatchObject({
           gid: 'gid-228990',
           count: i
@@ -674,7 +674,7 @@ describe('installSteamBridgeSharedRedists', () => {
       mockedRun.mockClear()
       mockedWarn.mockClear()
       now.mockReturnValue(t0 + REDIST_FAILURE_BACKOFF_MS - 1)
-      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
       expect(mockedRun).not.toHaveBeenCalled()
       expect(mockedWarn).toHaveBeenCalledWith(
         expect.stringContaining('times in a row'),
@@ -686,7 +686,7 @@ describe('installSteamBridgeSharedRedists', () => {
       // Window over: one more attempt, which succeeds and clears the markers.
       now.mockReturnValue(t0 + REDIST_FAILURE_BACKOFF_MS + 1)
       defaultWine()
-      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
       expect(dxInstallerCalls()).toHaveLength(1)
       expect(ledger().failures).toEqual({})
       expect(ledger().done[DX_KEY]).toBe('gid-228990')
@@ -711,7 +711,7 @@ describe('installSteamBridgeSharedRedists', () => {
         })
       )
       mockedDownload.mockResolvedValue(ok([dx()]))
-      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
       expect(dxInstallerCalls()).toHaveLength(0)
       expect(ledger().settled).toBeUndefined()
     })
@@ -733,7 +733,7 @@ describe('installSteamBridgeSharedRedists', () => {
         )
         mockedRun.mockClear()
         mockedDownload.mockResolvedValue(ok([dx()]))
-        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
         expect(dxInstallerCalls()).toHaveLength(1)
       }
     })
@@ -741,7 +741,7 @@ describe('installSteamBridgeSharedRedists', () => {
     it('counts a throw as a failure', async () => {
       mockedDownload.mockResolvedValue(ok([dx()]))
       mockedRun.mockRejectedValue(new Error('wine exploded'))
-      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
       expect(ledger().failures[DX_KEY].count).toBe(1)
       expect(ledger().done).toEqual({})
     })
@@ -773,7 +773,7 @@ describe('installSteamBridgeSharedRedists', () => {
         ]
       }
       mockedDownload.mockResolvedValue(ok([unsafe]))
-      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
       expect(installerCalls()).toEqual([])
       const key =
         'hkey_local_machine\\software\\valve\\steam\\apps\\commonredist\\evil\\1.0|evil'
@@ -784,7 +784,7 @@ describe('installSteamBridgeSharedRedists', () => {
       // Same GID on a re-evaluation (opt-in changed): skipped without a warning.
       mockedFixes.mockReturnValue({ steamSharedRedists: ['229999'] })
       mockedWarn.mockClear()
-      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
       expect(installerCalls()).toEqual([])
       expect(mockedWarn).not.toHaveBeenCalledWith(
         expect.stringContaining('unsafe'),
@@ -816,7 +816,7 @@ describe('installSteamBridgeSharedRedists', () => {
     mockedDownload.mockResolvedValue(
       ok([noKey('229100', 'A'), noKey('229101', 'B')])
     )
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(installerCalls()).toHaveLength(2)
     expect(Object.keys(ledger().done).sort()).toEqual([
       '|229100|install',
@@ -845,7 +845,7 @@ describe('installSteamBridgeSharedRedists', () => {
       async (_what, failAdd) => {
         mockedDownload.mockResolvedValue(ok([dx()]))
         defaultWine((p) => (p[1] === 'add' ? failAdd() : undefined))
-        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
         expect(ledger().done[DX_KEY]).toBe('gid-228990')
         expect(ledger().markPending).toEqual({ [DX_KEY]: 'gid-228990' })
         expect(ledger().settled).toBeUndefined()
@@ -853,7 +853,7 @@ describe('installSteamBridgeSharedRedists', () => {
         // Next launch: no installer, the mark is retried and now succeeds, then it settles.
         mockedRun.mockClear()
         defaultWine()
-        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
         expect(installerCalls()).toEqual([])
         expect(regAdds()).toHaveLength(1)
         expect(ledger().markPending).toEqual({})
@@ -866,7 +866,7 @@ describe('installSteamBridgeSharedRedists', () => {
     it('passes the signal to the download', async () => {
       const ctl = new AbortController()
       mockedDownload.mockResolvedValue(ok([]))
-      await installSteamBridgeSharedRedists(APP, SETTINGS, ctl.signal)
+      await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS, ctl.signal)
       expect(mockedDownload).toHaveBeenCalledWith(
         APP,
         expect.objectContaining({ signal: ctl.signal })
@@ -880,69 +880,12 @@ describe('installSteamBridgeSharedRedists', () => {
         if (at(p, 0).endsWith('vcredist_x86.exe')) ctl.abort()
         return undefined
       })
-      await installSteamBridgeSharedRedists(APP, SETTINGS, ctl.signal)
+      await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS, ctl.signal)
       expect(installerCalls().map((p) => at(p, 0).split('\\').pop())).toEqual([
         'vcredist_x86.exe'
       ])
       expect(Object.keys(ledger().done)).toHaveLength(1)
       expect(ledger().settled).toBeUndefined()
-    })
-  })
-
-  describe('sidecar exit contract (WR-01)', () => {
-    const fakeChild = () => {
-      const pipe = () => ({ unref: jest.fn() })
-      return {
-        unref: jest.fn(),
-        stdin: pipe(),
-        stdout: pipe(),
-        stderr: pipe()
-      }
-    }
-
-    it('unrefWineChild unrefs the process handle and all three pipes', () => {
-      const c = fakeChild()
-      unrefWineChild(c as unknown as ChildProcess)
-      for (const h of [c, c.stdin, c.stdout, c.stderr])
-        expect(h.unref).toHaveBeenCalledTimes(1)
-    })
-
-    it('tolerates null pipes and handles without unref', () => {
-      expect(() =>
-        unrefWineChild({
-          stdin: null,
-          stdout: {},
-          stderr: null
-        } as unknown as ChildProcess)
-      ).not.toThrow()
-    })
-
-    it('passes onSpawn to every wine call and unrefs each spawned child', async () => {
-      mockedDownload.mockResolvedValue(ok([dx()]))
-      const children: ReturnType<typeof fakeChild>[] = []
-      mockedRun.mockImplementation(
-        async ({
-          commandParts,
-          onSpawn
-        }: {
-          commandParts: string[]
-          onSpawn?: (c: ChildProcess) => void
-        }) => {
-          const c = fakeChild()
-          children.push(c)
-          onSpawn?.(c as unknown as ChildProcess)
-          if (commandParts[1] === 'query')
-            return { code: 1, stdout: '', stderr: '' }
-          return { code: 0, stdout: '', stderr: '' }
-        }
-      )
-      await installSteamBridgeSharedRedists(APP, SETTINGS)
-      // HasRunKey query, Graphics query, Graphics add, DXSETUP, HasRunKey add,
-      // Graphics delete, Graphics verification query
-      expect(children).toHaveLength(7)
-      for (const c of children)
-        for (const h of [c, c.stdin, c.stdout, c.stderr])
-          expect(h.unref).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -958,7 +901,7 @@ describe('installSteamBridgeSharedRedists', () => {
         }
       )
 
-      const p = installSteamBridgeSharedRedists(APP, SETTINGS)
+      const p = installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
       for (let i = 0; i < 500 && installerCalls().length === 0; i++)
         await new Promise((r) => setImmediate(r))
       expect(installerCalls()).toHaveLength(1)
@@ -994,7 +937,7 @@ describe('installSteamBridgeSharedRedists', () => {
         })
       )
       mockedDownload.mockResolvedValue(ok([dx()]))
-      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
       const l = ledger()
       expect(l.timedOut).toEqual({})
       expect(l.done[key]).toBe('gid-228990')
@@ -1039,7 +982,7 @@ describe('installSteamBridgeSharedRedists', () => {
     it('orders session ends around the installer', async () => {
       mockedDownload.mockResolvedValue(ok([dx()]))
       gfxWine(null)
-      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
       const calls = mockedRun.mock.calls.map(
         ([a]) => a.commandParts as string[]
       )
@@ -1059,7 +1002,7 @@ describe('installSteamBridgeSharedRedists', () => {
     it('switches once for two entries', async () => {
       mockedDownload.mockResolvedValue(ok([vc2010()]))
       gfxWine(null)
-      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
       expect(installerCalls()).toHaveLength(2)
       expect(mutations().map((p) => p[1])).toEqual(['add', 'delete'])
     })
@@ -1067,7 +1010,7 @@ describe('installSteamBridgeSharedRedists', () => {
     it('restores a pre-existing value with reg add', async () => {
       mockedDownload.mockResolvedValue(ok([dx()]))
       const get = gfxWine('mac')
-      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
       expect(mutations().map((p) => [p[1], p[8]])).toEqual([
         ['add', 'null'],
         ['add', 'mac']
@@ -1095,7 +1038,7 @@ describe('installSteamBridgeSharedRedists', () => {
       mockedDownload.mockResolvedValue(ok([dx()]))
       const get = gfxWine('mac', hook)
       await expect(
-        installSteamBridgeSharedRedists(APP, SETTINGS)
+        installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
       ).resolves.toBeUndefined()
       expect(get()).toBe('mac')
       expect(mutations().pop()).toEqual(expect.arrayContaining(['add', 'mac']))
@@ -1110,7 +1053,7 @@ describe('installSteamBridgeSharedRedists', () => {
         if (at(p, 0).endsWith('vcredist_x86.exe')) ctl.abort()
         return undefined
       })
-      await installSteamBridgeSharedRedists(APP, SETTINGS, ctl.signal)
+      await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS, ctl.signal)
       expect(get()).toBeNull()
       expect(mutations().map((p) => p[1])).toEqual(['add', 'delete'])
       expect(mockedEnd).toHaveBeenCalledTimes(2)
@@ -1122,7 +1065,7 @@ describe('installSteamBridgeSharedRedists', () => {
       const get = gfxWine(null, (p) =>
         p[0] !== 'reg' ? new Promise(() => undefined) : undefined
       )
-      const pr = installSteamBridgeSharedRedists(APP, SETTINGS)
+      const pr = installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
       for (let i = 0; i < 500 && installerCalls().length === 0; i++)
         await new Promise((r) => setImmediate(r))
       await jest.advanceTimersByTimeAsync(REDIST_PROCESS_TIMEOUT_MS)
@@ -1140,9 +1083,9 @@ describe('installSteamBridgeSharedRedists', () => {
       }
       it('settled fast path', async () => {
         mockedDownload.mockResolvedValue(ok([]))
-        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
         jest.clearAllMocks()
-        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
         none()
       })
       it('offline', async () => {
@@ -1152,7 +1095,7 @@ describe('installSteamBridgeSharedRedists', () => {
           failed: [],
           skipped: []
         })
-        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
         none()
       })
       it('every entry already marked', async () => {
@@ -1166,7 +1109,7 @@ describe('installSteamBridgeSharedRedists', () => {
               }
             : undefined
         )
-        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
         none()
       })
       it('rejected-only run', async () => {
@@ -1184,7 +1127,7 @@ describe('installSteamBridgeSharedRedists', () => {
             }
           })
         )
-        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
         none()
       })
       it('backed-off-only run', async () => {
@@ -1207,12 +1150,12 @@ describe('installSteamBridgeSharedRedists', () => {
             }
           })
         )
-        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
         none()
       })
       it('shared bottle', async () => {
         mockedDownload.mockResolvedValue(ok([dx()]))
-        await installSteamBridgeSharedRedists(APP, {
+        await installSteamBridgeSharedRedists(DEPS, APP, {
           wineCrossoverBottle: 'GameLibSteamBridge'
         } as GameSettings)
         expect(installerCalls()).toHaveLength(1)
@@ -1225,7 +1168,7 @@ describe('installSteamBridgeSharedRedists', () => {
             ? { code: 0, stdout: 'garbage', stderr: '' }
             : undefined
         )
-        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
         expect(mutations()).toEqual([])
         expect(mockedEnd).not.toHaveBeenCalled()
         expect(installerCalls()).toHaveLength(1)
@@ -1238,7 +1181,7 @@ describe('installSteamBridgeSharedRedists', () => {
             ? new Promise(() => undefined)
             : undefined
         )
-        const pr = installSteamBridgeSharedRedists(APP, SETTINGS)
+        const pr = installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
         for (let i = 0; i < 500 && graphicsCalls().length === 0; i++)
           await new Promise((r) => setImmediate(r))
         await jest.advanceTimersByTimeAsync(15_000)
@@ -1256,7 +1199,7 @@ describe('installSteamBridgeSharedRedists', () => {
           ? { code: 1, stdout: '', stderr: '' }
           : undefined
       )
-      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
       expect(installerCalls()).toHaveLength(1)
       expect(get()).toBeNull()
       expect(Object.keys(ledger().done)).toHaveLength(1)
@@ -1271,7 +1214,7 @@ describe('installSteamBridgeSharedRedists', () => {
       mockedDownload.mockResolvedValue(ok([dx()]))
       mockedEnd.mockResolvedValueOnce(false)
       gfxWine(null)
-      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
       expect(mutations().map((p) => p[1])).toEqual(['add', 'delete'])
       expect(installerCalls()).toHaveLength(1)
       expect(mockedEnd).toHaveBeenCalledTimes(2)
@@ -1301,7 +1244,7 @@ describe('installSteamBridgeSharedRedists', () => {
         }
         return base(a)
       })
-      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
       expect(mutations().filter((p) => p[1] === 'delete')).toHaveLength(2)
       expect(mockedWarn).toHaveBeenCalledWith(
         expect.stringMatching(/may start with no display/),
@@ -1313,7 +1256,7 @@ describe('installSteamBridgeSharedRedists', () => {
       jest.clearAllMocks()
       mockedEnd.mockResolvedValue(true)
       gfxWine(null)
-      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
       expect(mockedDownload).not.toHaveBeenCalled()
       expect(mutations().map((p) => p[1])).toEqual(['delete'])
       expect(mockedEnd).toHaveBeenCalledTimes(1)
@@ -1365,7 +1308,7 @@ describe('ledger versioning (quick 261109-uv4)', () => {
     writeFileSync(ledgerPath(), pendingRestore(1))
     mockedDownload.mockResolvedValue(ok([dx()]))
     nullGfxWine()
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(restoredToMac()).toBe(true)
     expect(installerCalls()).toHaveLength(0)
     expect(ledger().version).toBe(1)
@@ -1376,10 +1319,10 @@ describe('ledger versioning (quick 261109-uv4)', () => {
 
   it('round trips: a fresh install is stamped and the second call is settled', async () => {
     mockedDownload.mockResolvedValue(ok([dx()]))
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(ledger().version).toBe(sharedRedistLedgerVersion())
     jest.clearAllMocks()
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(mockedDownload).not.toHaveBeenCalled()
     expect(mockedRun).not.toHaveBeenCalled()
   })
@@ -1391,7 +1334,7 @@ describe('ledger versioning (quick 261109-uv4)', () => {
     writeFileSync(ledgerPath(), pendingRestore(1))
     mockedDownload.mockResolvedValue(ok([dx()]))
     nullGfxWine()
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(listBackups(ledgerPath())).toHaveLength(1)
     expect(restoredToMac()).toBe(true)
     expect(ledger().version).toBe(2)
@@ -1403,7 +1346,7 @@ describe('ledger versioning (quick 261109-uv4)', () => {
     const before = readFileSync(ledgerPath())
     mockedDownload.mockResolvedValue(ok([dx()]))
     await expect(
-      installSteamBridgeSharedRedists(APP, SETTINGS)
+      installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     ).resolves.toBeUndefined()
     expect(mockedWarn).toHaveBeenCalled()
     expect(mockedDownload).not.toHaveBeenCalled()
@@ -1415,7 +1358,7 @@ describe('ledger versioning (quick 261109-uv4)', () => {
   it('backs up a wrong-shape ledger with its version before starting empty', async () => {
     writeFileSync(ledgerPath(), JSON.stringify({ version: 1, done: 'x' }))
     mockedDownload.mockResolvedValue(ok([dx()]))
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     const backups = listBackups(ledgerPath())
     expect(backups).toHaveLength(1)
     expect(at(backups, 0)).toMatch(/\.v1\..*\.bak\.json$/)
@@ -1431,7 +1374,7 @@ describe('ledger versioning (quick 261109-uv4)', () => {
         throw new Error('disk full')
       })
     await expect(
-      installSteamBridgeSharedRedists(APP, SETTINGS)
+      installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     ).resolves.toBeUndefined()
     expect(mockedWarn).toHaveBeenCalledWith(
       expect.stringContaining('could not back up'),
@@ -1451,11 +1394,11 @@ describe('Phase 54: allowLogon threading', () => {
       failed: [],
       skipped: []
     })
-    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(mockedDownload.mock.calls[0][1].allowLogon).toBeUndefined()
 
     mockedDownload.mockClear()
-    await installSteamBridgeSharedRedists(APP, SETTINGS, undefined, {
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS, undefined, {
       allowLogon: true
     })
     expect(mockedDownload.mock.calls[0][1].allowLogon).toBe(true)
@@ -1463,10 +1406,10 @@ describe('Phase 54: allowLogon threading', () => {
 
   it('a Play-time call joining an install-time in-flight run returns the same promise', () => {
     mockedDownload.mockReturnValue(new Promise(() => undefined))
-    const a = installSteamBridgeSharedRedists(APP, SETTINGS, undefined, {
+    const a = installSteamBridgeSharedRedists(DEPS, APP, SETTINGS, undefined, {
       allowLogon: true
     })
-    const b = installSteamBridgeSharedRedists(APP, SETTINGS)
+    const b = installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(b).toBe(a)
   })
 })

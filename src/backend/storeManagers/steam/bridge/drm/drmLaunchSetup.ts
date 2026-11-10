@@ -48,8 +48,11 @@ import {
 } from './steamclientLayerInstall'
 import { ensureValveClient, type ValveClientReady } from './valveClient'
 import { stageDrmBottle } from './stageDrmBottle'
-import { legacySpawnAsync } from 'backend/services/legacySpawnAsync'
-import type { StageDrmBottleOk, StageDrmBottleInput } from './stageDrmTypes'
+import type {
+  StageDrmBottleOk,
+  StageDrmBottleInput,
+  StageDrmBottleSlices
+} from './stageDrmTypes'
 import { DRM_LAUNCH_FORM, type DrmLaunchForm } from '../../bridgeBottle'
 import { buildDrmPaths } from './drmPaths'
 
@@ -117,7 +120,8 @@ export type DrmLaunchSetupResult =
   | DrmStepResult<DrmLaunchReady>
   | { status: 'not-applicable'; mode: 'tcp' }
 
-export type DrmLaunchSetupDeps = {
+/** Overridable steps; every member defaults to the real implementation. */
+export type DrmSetupOverrides = {
   isMacSteamRunning?: () => Promise<boolean>
   detectCrossover?: typeof detectAllowedCrossover
   ensureComponent?: typeof ensureSteamclientLayerComponent
@@ -144,6 +148,9 @@ export type DrmLaunchSetupDeps = {
   sendStatus?: (payload: GameStatus) => void
   macSteamProbeTimeoutMs?: number
 }
+
+/** The overrides plus the slices the stage and session end need (66.1 R3). */
+export type DrmLaunchSetupDeps = DrmSetupOverrides & StageDrmBottleSlices
 
 const NUMERIC_APP_ID = /^[0-9]{1,10}$/
 
@@ -218,7 +225,7 @@ type DrmDownloadsError = {
  */
 async function ensureDrmDownloads(
   appFolder: string,
-  deps: DrmLaunchSetupDeps,
+  deps: DrmSetupOverrides,
   progress: (context: string) => void
 ): Promise<DrmDownloads | DrmDownloadsError> {
   const run = async <T extends { status: string }>(
@@ -293,7 +300,7 @@ async function runSetup(
     deps.endBottleSession ??
     ((appId: string, bottleName: string, timeoutMs: number) =>
       bottleLifecycle.endPerGameBridgeBottleSession(
-        { spawnAsync: legacySpawnAsync },
+        deps,
         appId,
         bottleName,
         timeoutMs
@@ -444,7 +451,12 @@ async function runSetup(
       ...(stageLogDir ? { stageLogDir } : {}),
       signal: input.signal
     }
-    const staged = await run('bottle-stage', () => stage(stageInput))
+    const staged = await run('bottle-stage', () =>
+      stage(stageInput, {
+        commandRunner: deps.commandRunner,
+        spawnAsync: deps.spawnAsync
+      })
+    )
     if (staged.status === 'error') return fail('bottle-stage', staged)
     const { status: _status, ...stagedBottle } = staged
 
@@ -480,7 +492,7 @@ async function runSetup(
 /** Never rejects. */
 export async function drmLaunchSetup(
   input: DrmLaunchSetupInput,
-  deps: DrmLaunchSetupDeps = {}
+  deps: DrmLaunchSetupDeps
 ): Promise<DrmLaunchSetupResult> {
   try {
     // D-12 mode gate
@@ -546,7 +558,7 @@ export type DrmPrefetchResult =
  */
 export async function prefetchDrmDownloads(
   input: DrmPrefetchInput,
-  deps: DrmLaunchSetupDeps = {}
+  deps: DrmSetupOverrides = {}
 ): Promise<DrmPrefetchResult> {
   try {
     if (

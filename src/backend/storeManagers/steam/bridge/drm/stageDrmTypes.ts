@@ -4,6 +4,7 @@
  * without importing stageDrmBottle.ts back.
  */
 import type { GameSettings } from 'common/types'
+import type { ManagerDeps } from 'backend/services/types'
 import type { getBottleDir } from 'backend/engine/bottlePrimitives'
 import type {
   findRuntimeLoadedSteamApiDlls,
@@ -28,6 +29,12 @@ export type StageDrmBottleInput = {
   signal?: AbortSignal
 }
 
+/** The command and spawn slices the stage reaches its wine and process work through (66.1 R3). */
+export type StageDrmBottleSlices = Pick<
+  ManagerDeps,
+  'commandRunner' | 'spawnAsync'
+>
+
 export type StageDrmBottleDeps = {
   getBottleDir?: typeof getBottleDir
   findDlls?: typeof findRuntimeLoadedSteamApiDlls
@@ -35,7 +42,7 @@ export type StageDrmBottleDeps = {
   restoreOriginals?: typeof restoreBridgeSteamApiOriginals
   runReg?: (
     commandParts: string[]
-  ) => Promise<{ code?: number; stderr?: string }>
+  ) => Promise<{ code?: number | null; stderr?: string }>
   regTimeoutMs?: number
   /** Live wine processes of the bottle, logged on a reg add timeout. */
   listBottleProcesses?: (bottleDir: string) => Promise<string[]>

@@ -643,6 +643,7 @@ export async function installBridgeGameLeased(
       )
     } else {
       await installSteamBridgeSharedRedists(
+        steamGame.deps,
         steamGame.appId,
         redistEngine.settings,
         undefined,

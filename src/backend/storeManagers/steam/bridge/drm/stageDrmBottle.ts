@@ -39,7 +39,6 @@ import {
 import { createHash } from 'node:crypto'
 import { join, resolve } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { runWineCommand } from 'backend/launcher'
 import {
   getBottleDir,
   sanitizeBottleName
@@ -77,6 +76,7 @@ import {
 } from './drmRestore'
 import type {
   StageDrmBottleDeps,
+  StageDrmBottleSlices,
   StageDrmBottleInput,
   StageDrmBottleOk
 } from './stageDrmTypes'
@@ -110,7 +110,7 @@ function sourceOk(path: string): boolean {
  */
 export async function stageDrmBottle(
   input: StageDrmBottleInput,
-  deps: StageDrmBottleDeps = {}
+  deps: StageDrmBottleDeps & StageDrmBottleSlices
 ): Promise<DrmStepResult<StageDrmBottleOk>> {
   const fail = (cause: unknown) => drmStepError('bottle-stage', cause)
   try {
@@ -289,7 +289,7 @@ export async function stageDrmBottle(
         const run =
           deps.runReg ??
           ((commandParts: string[]) =>
-            runWineCommand({
+            deps.commandRunner.runWineCommand({
               gameSettings: input.bottleSettings,
               commandParts,
               // reg.exe's own exit code proves the write; `wineserver --wait`
@@ -343,7 +343,10 @@ export async function stageDrmBottle(
             LogPrefix.Steam
           )
           await logTimeoutListing()
-          await (deps.endStageSession ?? defaultEndStageSession)({
+          await (
+            deps.endStageSession ??
+            ((args) => defaultEndStageSession(deps, args))
+          )({
             appId: input.appId,
             bottleName: name,
             bottleDir

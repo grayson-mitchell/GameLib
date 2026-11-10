@@ -119,7 +119,10 @@ import {
   tellBottledSteamToLaunch,
   tellBottledSteamToUninstall
 } from '../bottledSteam'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import {
+  getBottleDir,
+  buildFallbackGameSettings
+} from 'backend/engine/bottlePrimitives'
 import type { DrmLaunchForm } from '../bridgeBottle'
 import type {
   DrmDllPathChannel,
@@ -161,7 +164,6 @@ import {
   getBottleProcessMonitorPhase,
   stopBottleProcessMonitor
 } from '../bottleProcessMonitor'
-import { runWineCommand } from 'backend/launcher'
 import {
   applySteamBridgeKnownFixes,
   steamBridgeLaunchCommandParts
@@ -200,7 +202,6 @@ import {
 } from 'backend/engine/fallbackEngine'
 import { checkConnectivityNow } from 'backend/connectivityNow'
 import { ENGINE_PINS } from 'backend/engine/enginePins'
-import { buildFallbackGameSettings } from 'backend/engine/bottlePrimitives'
 import { existsSync } from 'graceful-fs'
 import { getSteamLibraries, sendGameStatusUpdate } from 'backend/utils'
 // 260821-rb5: only needed by this task's case-C self-heal test (2) —
@@ -265,8 +266,12 @@ import { at } from './fixtures/indexed'
 
 import * as steamStoresModule from '../stores'
 
+// The bridge launch reaches runWineCommand through the commandRunner slice.
+const runWineCommand = jest.fn()
+
 const steamTestDeps = createTestManagerDeps({
-  stores: createTestStores({ steam: steamStoresModule })
+  stores: createTestStores({ steam: steamStoresModule }),
+  commandRunner: { runWineCommand } as never
 })
 
 jest.mock('backend/knownFixReport', () => ({ reportDetectedFix: jest.fn() }))
@@ -772,12 +777,6 @@ jest.mock('backend/engine/engineState', () => ({
 jest.mock('backend/engine/fallbackEngine', () => ({
   ensurePinnedEngine: jest.fn(),
   isPinnedEngineInstalled: jest.fn()
-}))
-
-// ── backend/launcher.ts mock — runWineCommand, dynamically imported by
-// launchBridgeGame() (Task 3), mirrors bottle.test.ts's own mock shape.
-jest.mock('backend/launcher', () => ({
-  runWineCommand: jest.fn()
 }))
 
 // ── nativeInstallSetting.ts mock (Plan 03's D-13 opt-in read seam) — plain
@@ -2290,7 +2289,8 @@ beforeEach(() => {
     release: leaseRelease
   })
   ;(applySteamBridgeKnownFixes as jest.Mock).mockImplementation(
-    (_id: string, settings: unknown) => Promise.resolve(settings)
+    (_deps: unknown, _id: string, settings: unknown) =>
+      Promise.resolve(settings)
   )
   ;(steamBridgeLaunchCommandParts as jest.Mock).mockImplementation(
     (_id: string, exePath: string) => [exePath]
@@ -2354,7 +2354,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     ;(getBridgeBottleSettings as jest.Mock).mockReturnValue({
       wineCrossoverBottle: 'GameLibSteamBridge'
     })
-    ;(runWineCommand as jest.Mock).mockReset().mockResolvedValue({
+    runWineCommand.mockReset().mockResolvedValue({
       stdout: '',
       stderr: ''
     })
@@ -2429,7 +2429,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       ;(stopPerGameBridgeBottle as jest.Mock).mockResolvedValue({
         status: 'stopped'
       })
-      ;(runWineCommand as jest.Mock).mockReturnValue(new Promise(() => {}))
+      runWineCommand.mockReturnValue(new Promise(() => {}))
       const game = new SteamGame(APP_ID, steamTestDeps)
       expect(await game.launch({} as any)).toBe(true)
       return game
@@ -2688,6 +2688,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
     // quick 261028-k7l added exePath as the 4th arg.
     expect(applySteamBridgeKnownFixes).toHaveBeenCalledWith(
+      steamTestDeps,
       APP_ID,
       { wineCrossoverBottle: 'GameLibSteamBridge' },
       `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4`,
@@ -2701,7 +2702,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       at((startBottleProcessMonitor as jest.Mock).mock.invocationCallOrder, 0)
     )
     expect(applierOrder).toBeLessThan(
-      at((runWineCommand as jest.Mock).mock.invocationCallOrder, 0)
+      at(runWineCommand.mock.invocationCallOrder, 0)
     )
   })
 
@@ -2739,9 +2740,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     const game = new SteamGame(APP_ID, steamTestDeps)
     await game.launch({} as any)
 
-    expect((runWineCommand as jest.Mock).mock.calls[0][0].gameSettings).toBe(
-      withEnv
-    )
+    expect(runWineCommand.mock.calls[0][0].gameSettings).toBe(withEnv)
     expect(
       (startBottleProcessMonitor as jest.Mock).mock.calls[0][1].bottleDir
     ).toBe('/mock/bridge/bottle')
@@ -2781,9 +2780,11 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     const game = new SteamGame(APP_ID, steamTestDeps)
     await game.launch({} as any)
 
-    expect(installSteamBridgeSharedRedists).toHaveBeenCalledWith(APP_ID, {
-      wineCrossoverBottle: 'GameLibSteamBridge'
-    })
+    expect(installSteamBridgeSharedRedists).toHaveBeenCalledWith(
+      steamTestDeps,
+      APP_ID,
+      { wineCrossoverBottle: 'GameLibSteamBridge' }
+    )
     const order = at(
       (installSteamBridgeSharedRedists as jest.Mock).mock.invocationCallOrder,
       0
@@ -2794,9 +2795,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     expect(order).toBeLessThan(
       at((startBottleProcessMonitor as jest.Mock).mock.invocationCallOrder, 0)
     )
-    expect(order).toBeLessThan(
-      at((runWineCommand as jest.Mock).mock.invocationCallOrder, 0)
-    )
+    expect(order).toBeLessThan(at(runWineCommand.mock.invocationCallOrder, 0))
   })
 
   it('Phase 54: a bridge Play never acquires or ensures a CM session and passes no allowLogon to the shared redist step', async () => {
@@ -2809,7 +2808,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     expect(SteamUser.acquireOpenAuthenticated).not.toHaveBeenCalled()
     expect(SteamUser.ensureConnected).not.toHaveBeenCalled()
     const call = (installSteamBridgeSharedRedists as jest.Mock).mock.calls[0]
-    expect(call[3]?.allowLogon).not.toBe(true)
+    expect(call[4]?.allowLogon).not.toBe(true)
   })
 
   it('quick 261025-rkj: the installer runs once per bridge launch', async () => {
@@ -3332,7 +3331,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         callOrder.push('cfg')
         return { status: 'written', path: '/mock/cfg' }
       })
-      ;(runWineCommand as jest.Mock).mockImplementation(() => {
+      runWineCommand.mockImplementation(() => {
         callOrder.push('wine')
         return Promise.resolve({ stdout: '', stderr: '' })
       })
@@ -3882,7 +3881,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     it('resolves true with a never-settling wine child; monitor already started, before runWineCommand', async () => {
       const handle = { launcherExited: jest.fn() }
       ;(startBottleProcessMonitor as jest.Mock).mockReturnValue(handle)
-      ;(runWineCommand as jest.Mock).mockReturnValue(new Promise(() => {}))
+      runWineCommand.mockReturnValue(new Promise(() => {}))
 
       const result = await new SteamGame(APP_ID, steamTestDeps).launch(
         {} as any
@@ -3897,9 +3896,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       expect(stopBridgeHelper).toHaveBeenCalledWith(APP_ID)
       expect(
         at((startBottleProcessMonitor as jest.Mock).mock.invocationCallOrder, 0)
-      ).toBeLessThan(
-        at((runWineCommand as jest.Mock).mock.invocationCallOrder, 0)
-      )
+      ).toBeLessThan(at(runWineCommand.mock.invocationCallOrder, 0))
       expect(handle.launcherExited).not.toHaveBeenCalled()
     })
 
@@ -3907,7 +3904,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       const handle = { launcherExited: jest.fn() }
       ;(startBottleProcessMonitor as jest.Mock).mockReturnValue(handle)
       let resolveWine: (v: unknown) => void = () => {}
-      ;(runWineCommand as jest.Mock).mockReturnValue(
+      runWineCommand.mockReturnValue(
         new Promise((r) => {
           resolveWine = r
         })
@@ -3924,7 +3921,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       const handle = { launcherExited: jest.fn() }
       ;(startBottleProcessMonitor as jest.Mock).mockReturnValue(handle)
       let rejectWine: (e: unknown) => void = () => {}
-      ;(runWineCommand as jest.Mock).mockReturnValue(
+      runWineCommand.mockReturnValue(
         new Promise((_r, rej) => {
           rejectWine = rej
         })
@@ -3950,7 +3947,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
         '/somewhere/else/steamapps'
       )
-      ;(runWineCommand as jest.Mock).mockRejectedValue(new Error('boom'))
+      runWineCommand.mockRejectedValue(new Error('boom'))
 
       const result = await new SteamGame(APP_ID, steamTestDeps).launch(
         {} as any
@@ -5713,6 +5710,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     // the native depot run. Both are released.
     expect(leaseRelease).toHaveBeenCalledTimes(2)
     expect(installSteamBridgeSharedRedists).toHaveBeenCalledWith(
+      steamTestDeps,
       APP_ID,
       expect.anything(),
       undefined,
@@ -7353,7 +7351,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     describe('59-21: sign-in first, create-failed fallback, abort, redist engine', () => {
       const redistSettings = () =>
-        (installSteamBridgeSharedRedists as jest.Mock).mock.calls[0]?.[1]
+        (installSteamBridgeSharedRedists as jest.Mock).mock.calls[0]?.[2]
 
       it('G2: a refused session returns before any engine decision, download or bottle creation', async () => {
         ;(SteamUser.acquireAuthenticated as jest.Mock).mockResolvedValue({
@@ -12678,7 +12676,7 @@ describe('maybeNotifyBridgeLimited() — the one-time limited-features notice pl
       status: 'written',
       path: '/mock/.../gamelib_bridge.cfg'
     })
-    ;(runWineCommand as jest.Mock).mockResolvedValue({ stdout: '', stderr: '' })
+    runWineCommand.mockResolvedValue({ stdout: '', stderr: '' })
     ;(stopBridgeHelper as jest.Mock).mockReset()
     ;(startBottleProcessMonitor as jest.Mock).mockReset()
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
@@ -13421,7 +13419,8 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         )
       )
       ;(applySteamBridgeKnownFixes as jest.Mock).mockImplementation(
-        (_id: string, settings: unknown) => Promise.resolve(settings)
+        (_deps: unknown, _id: string, settings: unknown) =>
+          Promise.resolve(settings)
       )
       ;(installSteamBridgeSharedRedists as jest.Mock).mockResolvedValue(
         undefined
@@ -13456,7 +13455,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         status: 'written',
         path: '/x'
       })
-      ;(runWineCommand as jest.Mock).mockImplementation(() => {
+      runWineCommand.mockImplementation(() => {
         callOrder.push('wine')
         return Promise.resolve({ stdout: '', stderr: '', code: 0 })
       })
@@ -13535,25 +13534,28 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           cause: 'c'
         })
         await new SteamGame(id, steamTestDeps).launch({} as never)
-        expect(__drmLaunchSetupMock).toHaveBeenCalledWith({
-          appId: id,
-          appFolder: mockedAppFolder,
-          bottleName: bottleFor(id),
-          exePath,
-          installRoot: realJoin(
-            bottleDir,
-            'drive_c',
-            'Program Files (x86)',
-            'Steam',
-            'steamapps',
-            'common',
-            'Grim Dawn'
-          ),
-          installdir: 'Grim Dawn',
-          drmWrapper: 'steamstub',
-          cegMarkers: [],
-          drmExe: exePath
-        })
+        expect(__drmLaunchSetupMock).toHaveBeenCalledWith(
+          {
+            appId: id,
+            appFolder: mockedAppFolder,
+            bottleName: bottleFor(id),
+            exePath,
+            installRoot: realJoin(
+              bottleDir,
+              'drive_c',
+              'Program Files (x86)',
+              'Steam',
+              'steamapps',
+              'common',
+              'Grim Dawn'
+            ),
+            installdir: 'Grim Dawn',
+            drmWrapper: 'steamstub',
+            cegMarkers: [],
+            drmExe: exePath
+          },
+          steamTestDeps
+        )
       })
 
       describe('UE Shipping exe carries .bind (Gap 11)', () => {
@@ -13662,9 +13664,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           })
           expect(detectSteamDrmInPe).not.toHaveBeenCalled()
           expect(placeShimForGame).toHaveBeenCalledTimes(1)
-          expect(
-            (runWineCommand as jest.Mock).mock.calls[0][0].commandParts
-          ).toEqual([exePath])
+          expect(runWineCommand.mock.calls[0][0].commandParts).toEqual([
+            exePath
+          ])
           expect(infoLines().some((l) => l.startsWith('[bridge-drm] '))).toBe(
             false
           )
@@ -13689,7 +13691,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           }
         })
         await new SteamGame(id, steamTestDeps).launch({} as never)
-        const used = (runWineCommand as jest.Mock).mock.calls[0][0].gameSettings
+        const used = runWineCommand.mock.calls[0][0].gameSettings
         // Call 1 is the readiness gate, call 2 the 59-10 engine re-read, call 3
         // the re-read after the cleared clone runner.
         expect(used.wineVersion.bin).toBe('/v3/wine')
@@ -13897,7 +13899,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
     })
 
     describe('ok launch', () => {
-      const runCall = () => (runWineCommand as jest.Mock).mock.calls[0][0]
+      const runCall = () => runWineCommand.mock.calls[0][0]
       const traceFileOf = (call: {
         gameSettings: { enviromentOptions: { key: string; value: string }[] }
       }) =>
@@ -13965,7 +13967,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         const id = freshId()
         useDrmOk(id)
         ;(applySteamBridgeKnownFixes as jest.Mock).mockImplementation(
-          (_i: string, settings: Record<string, unknown>) =>
+          (_deps: unknown, _i: string, settings: Record<string, unknown>) =>
             Promise.resolve({
               ...settings,
               wineVersion: { bin: '/other/wine', name: 'o', type: 'crossover' }
@@ -13973,10 +13975,10 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         )
         await new SteamGame(id, steamTestDeps).launch({} as never)
         expect(
-          (applySteamBridgeKnownFixes as jest.Mock).mock.calls[0][1]
+          (applySteamBridgeKnownFixes as jest.Mock).mock.calls[0][2]
         ).toEqual(readyFor(id).bottleSettings)
         expect(
-          (installSteamBridgeSharedRedists as jest.Mock).mock.calls[0][1]
+          (installSteamBridgeSharedRedists as jest.Mock).mock.calls[0][2]
         ).toEqual(readyFor(id).bottleSettings)
         expect(runCall().gameSettings.wineVersion).toEqual(wineVersionClone)
       })
@@ -13984,7 +13986,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       it('logs exactly one [bridge-drm] anchor, before wine, for the launch trace file', async () => {
         const id = freshId()
         useDrmOk(id)
-        ;(runWineCommand as jest.Mock).mockImplementation(() => {
+        runWineCommand.mockImplementation(() => {
           callOrder.push('wine')
           return Promise.resolve({ code: 0 })
         })
@@ -14035,7 +14037,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         useDrmOk(id)
         ;(startBottleProcessMonitor as jest.Mock).mockReturnValue(null)
         let release!: () => void
-        ;(runWineCommand as jest.Mock).mockImplementation(
+        runWineCommand.mockImplementation(
           () =>
             new Promise((r) => {
               release = () => r({ code: 0 })
@@ -14219,7 +14221,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       it('a wine launch rejection is a bottle-stage notice without a session mark', async () => {
         const id = freshId()
         useDrmOk(id)
-        ;(runWineCommand as jest.Mock).mockRejectedValue(new Error('boom'))
+        runWineCommand.mockRejectedValue(new Error('boom'))
         const game = new SteamGame(id, steamTestDeps)
         expect(await game.launch({} as never)).toBe(true)
         await flushAsync()
@@ -14240,7 +14242,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       it('a failing registry write gives a bottle-stage notice and no launch', async () => {
         const id = freshId()
         useDrmOk(id)
-        ;(runWineCommand as jest.Mock).mockResolvedValue({
+        runWineCommand.mockResolvedValue({
           code: 1,
           stderr: 'denied'
         })
@@ -14266,8 +14268,8 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           }
         )
         expect(ok).toBe(false)
-        expect((runWineCommand as jest.Mock).mock.calls).toHaveLength(1)
-        expect((runWineCommand as jest.Mock).mock.calls[0][0].wait).toBe(true)
+        expect(runWineCommand.mock.calls).toHaveLength(1)
+        expect(runWineCommand.mock.calls[0][0].wait).toBe(true)
         expect(
           infoLines().some((l) =>
             l.includes(`appId=${id} reason=drm-bottle-stage`)
@@ -14302,8 +14304,10 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       }
       const cxEnv = () =>
         (
-          (runWineCommand as jest.Mock).mock.calls[0][0].gameSettings
-            .enviromentOptions as { key: string; value: string }[]
+          runWineCommand.mock.calls[0][0].gameSettings.enviromentOptions as {
+            key: string
+            value: string
+          }[]
         ).find((e) => e.key === 'CX_ENV')?.value
       beforeEach(() => {
         __resolveOverlayEnabledMock.mockReturnValue({
@@ -14453,7 +14457,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
             status: 'ok',
             tokens: tokensFor(id2)
           })
-          ;(runWineCommand as jest.Mock).mockClear()
+          runWineCommand.mockClear()
           await new SteamGame(id2, steamTestDeps).launch({} as never)
           expect(
             __prepareOverlayTokensMock.mock.calls[0][0]
@@ -14607,8 +14611,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           })
         )
       })
-      const usedSettings = () =>
-        (runWineCommand as jest.Mock).mock.calls[0][0].gameSettings
+      const usedSettings = () => runWineCommand.mock.calls[0][0].gameSettings
       const cxEnvOf = () =>
         (
           usedSettings().enviromentOptions as { key: string; value: string }[]
@@ -15176,7 +15179,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           })
         )
         ;(applySteamBridgeKnownFixes as jest.Mock).mockImplementation(
-          (_id: string, settings: object) =>
+          (_deps: unknown, _id: string, settings: object) =>
             Promise.resolve({
               ...settings,
               wineVersion: { bin: '/swapped/wine', name: 's', type: 'wine' }
@@ -15258,7 +15261,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         const id = freshId()
         __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
         ;(applySteamBridgeKnownFixes as jest.Mock).mockImplementation(
-          (_id: string, settings: object) =>
+          (_deps: unknown, _id: string, settings: object) =>
             Promise.resolve({
               ...settings,
               wineVersion: { bin: '/other/wine', name: 'o', type: 'wine' }
@@ -15376,7 +15379,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
             return { launcherExited: jest.fn() }
           }
         )
-        ;(runWineCommand as jest.Mock).mockImplementation(
+        runWineCommand.mockImplementation(
           () =>
             new Promise((resolve, reject) => {
               settleWine = resolve
@@ -15392,7 +15395,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       })
 
       const onOutput = () =>
-        (runWineCommand as jest.Mock).mock.calls[0][0].options?.onOutput as
+        runWineCommand.mock.calls[0][0].options?.onOutput as
           | ((c: string) => void)
           | undefined
       const launchOn = async (id: string) => {
@@ -16203,7 +16206,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(EXE)
     setupSettings()
-    ;(runWineCommand as jest.Mock).mockReturnValue(new Promise(() => {}))
+    runWineCommand.mockReturnValue(new Promise(() => {}))
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(placeShimForGame as jest.Mock).mockResolvedValue({
@@ -17045,7 +17048,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         expect(decideLaunchEngine).not.toHaveBeenCalled()
         expect(ensurePinnedEngine).not.toHaveBeenCalled()
         // not marked failed this session: the next Play still takes the bridge
-        ;(runWineCommand as jest.Mock).mockClear()
+        runWineCommand.mockClear()
         await new SteamGame(ID, steamTestDeps).launch({} as any)
         expect(runWineCommand).toHaveBeenCalledTimes(1)
       })
@@ -17070,7 +17073,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
     it('launcher exiting before any match cancels the deadline', async () => {
       jest.useFakeTimers()
       let resolveWine!: () => void
-      ;(runWineCommand as jest.Mock).mockReturnValue(
+      runWineCommand.mockReturnValue(
         new Promise<void>((r) => (resolveWine = r))
       )
       const handle = { launcherExited: jest.fn() }
@@ -17089,7 +17092,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
 
     it('a launch error cancels the deadline and clears the selection', async () => {
       jest.useFakeTimers()
-      ;(runWineCommand as jest.Mock).mockRejectedValue(new Error('boom'))
+      runWineCommand.mockRejectedValue(new Error('boom'))
       ;(startBottleProcessMonitor as jest.Mock).mockReturnValue({
         launcherExited: jest.fn()
       })

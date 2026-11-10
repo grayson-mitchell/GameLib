@@ -1,15 +1,12 @@
 /**
  * 53-19: applyBridgeBottleDllOverrides -- per-appId DLL override in the bridge
  * bottle (Overlooting 3410180 nvapi64, measured in 53-19-NVAPI.md Arm B).
- * runWineCommand and the logger are mocked; no child process is spawned.
+ * The command runner slice is a plain fake and the logger is mocked; no child process is spawned.
  */
 
 const mockRunWineCommand = jest.fn()
 const mockLogWarning = jest.fn()
 
-jest.mock('backend/launcher', () => ({
-  runWineCommand: (...args: unknown[]) => mockRunWineCommand(...args)
-}))
 jest.mock('backend/logger', () => ({
   logWarning: (...args: unknown[]) => mockLogWarning(...args),
   LogPrefix: { Steam: 'Steam' }
@@ -21,6 +18,12 @@ import {
   applyBridgeBottleDllOverrides,
   buildOverrideCommandParts
 } from '../bottleDllOverrides'
+
+const DEPS = {
+  commandRunner: {
+    runWineCommand: (...args: unknown[]) => mockRunWineCommand(...args)
+  }
+} as unknown as Parameters<typeof applyBridgeBottleDllOverrides>[0]
 
 const SETTINGS = {
   wineCrossoverBottle: 'GameLibSteamBridge-3410180',
@@ -35,7 +38,11 @@ beforeEach(() => {
 
 describe('applyBridgeBottleDllOverrides', () => {
   it('writes the measured per-exe nvapi64 override for 3410180', async () => {
-    const result = await applyBridgeBottleDllOverrides('3410180', SETTINGS)
+    const result = await applyBridgeBottleDllOverrides(
+      DEPS,
+      '3410180',
+      SETTINGS
+    )
 
     expect(result).toBe(SETTINGS)
     expect(mockRunWineCommand).toHaveBeenCalledTimes(1)
@@ -69,16 +76,20 @@ describe('applyBridgeBottleDllOverrides', () => {
   })
 
   it('touches nothing for an appId not in the table', async () => {
-    const result = await applyBridgeBottleDllOverrides('1691190', SETTINGS)
+    const result = await applyBridgeBottleDllOverrides(
+      DEPS,
+      '1691190',
+      SETTINGS
+    )
 
     expect(result).toBe(SETTINGS)
     expect(mockRunWineCommand).not.toHaveBeenCalled()
   })
 
   it('ignores a non-numeric appId without throwing', async () => {
-    await expect(applyBridgeBottleDllOverrides('../x', SETTINGS)).resolves.toBe(
-      SETTINGS
-    )
+    await expect(
+      applyBridgeBottleDllOverrides(DEPS, '../x', SETTINGS)
+    ).resolves.toBe(SETTINGS)
     expect(mockRunWineCommand).not.toHaveBeenCalled()
   })
 
@@ -86,7 +97,7 @@ describe('applyBridgeBottleDllOverrides', () => {
     mockRunWineCommand.mockRejectedValue(new Error('boom'))
 
     await expect(
-      applyBridgeBottleDllOverrides('3410180', SETTINGS)
+      applyBridgeBottleDllOverrides(DEPS, '3410180', SETTINGS)
     ).resolves.toBe(SETTINGS)
     expect(mockLogWarning).toHaveBeenCalledTimes(1)
     expect(String(mockLogWarning.mock.calls[0][0])).toContain('3410180')
@@ -97,7 +108,7 @@ describe('applyBridgeBottleDllOverrides', () => {
     mockRunWineCommand.mockResolvedValue({ stdout: '', stderr: '', code: 1 })
 
     await expect(
-      applyBridgeBottleDllOverrides('3410180', SETTINGS)
+      applyBridgeBottleDllOverrides(DEPS, '3410180', SETTINGS)
     ).resolves.toBe(SETTINGS)
     expect(mockLogWarning).toHaveBeenCalledTimes(1)
     expect(String(mockLogWarning.mock.calls[0][0])).toContain('3410180')
@@ -108,7 +119,7 @@ describe('applyBridgeBottleDllOverrides', () => {
     mockRunWineCommand.mockResolvedValue({ stdout: '', stderr: 'Invalid wine' })
 
     await expect(
-      applyBridgeBottleDllOverrides('3410180', SETTINGS)
+      applyBridgeBottleDllOverrides(DEPS, '3410180', SETTINGS)
     ).resolves.toBe(SETTINGS)
     expect(mockLogWarning).toHaveBeenCalledTimes(1)
     const msg = String(mockLogWarning.mock.calls[0][0])
@@ -125,7 +136,7 @@ describe('applyBridgeBottleDllOverrides', () => {
       code: null
     })
 
-    await applyBridgeBottleDllOverrides('3410180', SETTINGS)
+    await applyBridgeBottleDllOverrides(DEPS, '3410180', SETTINGS)
     expect(mockLogWarning).toHaveBeenCalledTimes(1)
     const msg = String(mockLogWarning.mock.calls[0][0])
     expect(msg).toContain('code=null')
@@ -139,7 +150,7 @@ describe('applyBridgeBottleDllOverrides', () => {
       code: 1
     })
 
-    await applyBridgeBottleDllOverrides('3410180', SETTINGS)
+    await applyBridgeBottleDllOverrides(DEPS, '3410180', SETTINGS)
     expect(mockLogWarning).toHaveBeenCalledTimes(1)
     const msg = String(mockLogWarning.mock.calls[0][0])
     expect(msg).toContain('code=1')
@@ -147,7 +158,7 @@ describe('applyBridgeBottleDllOverrides', () => {
   })
 
   it('logs no warning for code 0', async () => {
-    await applyBridgeBottleDllOverrides('3410180', SETTINGS)
+    await applyBridgeBottleDllOverrides(DEPS, '3410180', SETTINGS)
     expect(mockLogWarning).not.toHaveBeenCalled()
   })
 
@@ -155,7 +166,7 @@ describe('applyBridgeBottleDllOverrides', () => {
     mockRunWineCommand.mockResolvedValue(undefined)
 
     await expect(
-      applyBridgeBottleDllOverrides('3410180', SETTINGS)
+      applyBridgeBottleDllOverrides(DEPS, '3410180', SETTINGS)
     ).resolves.toBe(SETTINGS)
     expect(mockLogWarning).toHaveBeenCalledTimes(1)
   })
@@ -167,7 +178,7 @@ describe('applyBridgeBottleDllOverrides', () => {
       code: 1
     })
 
-    await applyBridgeBottleDllOverrides('3410180', SETTINGS)
+    await applyBridgeBottleDllOverrides(DEPS, '3410180', SETTINGS)
     const msg = String(mockLogWarning.mock.calls[0][0])
     expect(msg).toContain('x'.repeat(200))
     expect(msg).not.toContain('x'.repeat(201))

@@ -55,7 +55,7 @@
  * Never rejects: a timeout, non-success exit, offline client, CM error or any throw logs a
  * warning, marks nothing done and lets the game launch. Sidecar exit contract: every timer is
  * unref'd and cleared; every wine child is unref'd together with its stdin/stdout/stderr pipes
- * the moment it spawns (runWineCommand's opt-in `onSpawn`), so neither an installer still
+ * by the command runner the moment it spawns (D-11), so neither an installer still
  * running nor one abandoned after its timeout holds the event loop past stdin EOF; and the work
  * only runs inside a user-initiated launch, never at boot.
  */
@@ -68,14 +68,13 @@ import {
   rm,
   readdir
 } from 'node:fs/promises'
-import type { ChildProcess } from 'node:child_process'
 import { join, dirname } from 'node:path'
 import type { GameSettings } from 'common/types'
 import { readKnownFixProfile } from 'backend/knownFixes'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { endPerGameBridgeBottleSession } from '../bridgeBottleLifecycle'
-import { legacySpawnAsync } from 'backend/services/legacySpawnAsync'
+import type { ManagerDeps } from 'backend/services/types'
 import { bridgeBottleNameFor } from '../bridgeBottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { steamSupportPath } from '../constants'
@@ -320,26 +319,17 @@ async function writeLedger(
   }
 }
 
-/**
- * Drop the event-loop references a wine child holds: the process handle and its three stdio
- * pipes (WR-01). `unref()` stops none of them working (output is still read and `close` still
- * fires while stdin keeps the sidecar alive); it only stops them keeping the process alive.
- * Optional calls: a pipe is null when stdio is not 'pipe', and test fakes need not implement it.
- */
-export function unrefWineChild(child: ChildProcess): void {
-  child.unref?.()
-  for (const pipe of [child.stdin, child.stdout, child.stderr]) {
-    ;(pipe as { unref?: () => void } | null | undefined)?.unref?.()
-  }
-}
+/** What the shared redist install reaches through slices (66.1 R3). */
+export type RedistDeps = Pick<ManagerDeps, 'commandRunner' | 'spawnAsync'>
+type RunWineCommand = RedistDeps['commandRunner']['runWineCommand']
 
 /**
  * Run `commandParts` in the bottle with wait:false, raced against an unref'd timer. A timed-out
  * child cannot be killed through runWineCommand, so the caller only logs it. wait:true is never
- * used: `wineserver --wait` can block forever. The child and its pipes are unref'd at spawn.
+ * used: `wineserver --wait` can block forever. The command runner unrefs the child and its pipes (D-11).
  */
 async function runBounded(
-  runWineCommand: typeof import('backend/launcher').runWineCommand,
+  runWineCommand: RunWineCommand,
   commandParts: string[],
   gameSettings: GameSettings,
   timeoutMs: number
@@ -356,7 +346,6 @@ async function runBounded(
       wait: false,
       protonVerb: 'run',
       skipPrefixCheckIKnowWhatImDoing: true,
-      onSpawn: unrefWineChild,
       resolveOnExit: true
     })
     // A child that outlives its timeout may reject later; nothing is awaiting it by then.
@@ -365,7 +354,7 @@ async function runBounded(
     if (outcome === 'timeout') return { timedOut: true }
     return {
       timedOut: false,
-      code: outcome?.code,
+      code: outcome?.code ?? undefined,
       stdout: outcome?.stdout ?? ''
     }
   } finally {
@@ -398,7 +387,7 @@ async function ensureEngineMono(
   appId: string,
   bottleSettings: GameSettings,
   bottleDir: string,
-  runWineCommand: typeof import('backend/launcher').runWineCommand
+  runWineCommand: RunWineCommand
 ): Promise<void> {
   const wv = bottleSettings.wineVersion
   if (!wv || wv.type === 'crossover' || !wv.bin) return
@@ -456,6 +445,7 @@ async function ensureEngineMono(
 }
 
 export function installSteamBridgeSharedRedists(
+  deps: RedistDeps,
   appId: string,
   bottleSettings: GameSettings,
   signal?: AbortSignal,
@@ -463,7 +453,7 @@ export function installSteamBridgeSharedRedists(
 ): Promise<void> {
   const existing = inFlight.get(appId)
   if (existing) return existing
-  const p = run(appId, bottleSettings, signal, opts)
+  const p = run(deps, appId, bottleSettings, signal, opts)
     .catch((error: unknown) => {
       logWarning(
         `Steam ${appId}: shared redist step failed, launching anyway: ${String(error)}`,
@@ -512,6 +502,7 @@ function recordFailure(
 }
 
 async function run(
+  deps: RedistDeps,
   appId: string,
   bottleSettings: GameSettings,
   signal: AbortSignal | undefined,
@@ -525,7 +516,7 @@ async function run(
     readKnownFixProfile(appId, 'steam')?.steamSharedRedists
   ).sort()
 
-  const { runWineCommand } = await import('backend/launcher')
+  const { runWineCommand } = deps.commandRunner
 
   /**
    * Put the Graphics value back (2 verified attempts), then always end the bottle's session so the
@@ -561,7 +552,7 @@ async function run(
     let sessionEnded = false
     try {
       sessionEnded = await endPerGameBridgeBottleSession(
-        { spawnAsync: legacySpawnAsync },
+        deps,
         appId,
         bottleSettings.wineCrossoverBottle,
         SESSION_END_TIMEOUT_MS,
@@ -697,7 +688,7 @@ async function run(
         !add.timedOut &&
         add.code === 0 &&
         (await endPerGameBridgeBottleSession(
-          { spawnAsync: legacySpawnAsync },
+          deps,
           appId,
           bottleSettings.wineCrossoverBottle,
           SESSION_END_TIMEOUT_MS,

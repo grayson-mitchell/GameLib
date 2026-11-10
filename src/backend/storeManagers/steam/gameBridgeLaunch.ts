@@ -187,17 +187,20 @@ export async function launchBridgeGameBody(
     bridgeBottleSettings = engine.settings
   }
   // No signal is passed: the bridge launch has no abort controller.
-  const drm = await drmLaunchSetup({
-    appId: steamGame.appId,
-    appFolder,
-    bottleName: bridgeBottleSettings.wineCrossoverBottle,
-    exePath,
-    installRoot: drmInstallRoot ?? '',
-    installdir: drmInstallRoot ? basename(drmInstallRoot) : '',
-    drmWrapper: launchDrmWrapper,
-    cegMarkers: launchCegMarkers,
-    drmExe
-  })
+  const drm = await drmLaunchSetup(
+    {
+      appId: steamGame.appId,
+      appFolder,
+      bottleName: bridgeBottleSettings.wineCrossoverBottle,
+      exePath,
+      installRoot: drmInstallRoot ?? '',
+      installdir: drmInstallRoot ? basename(drmInstallRoot) : '',
+      drmWrapper: launchDrmWrapper,
+      cegMarkers: launchCegMarkers,
+      drmExe
+    },
+    steamGame.deps
+  )
   if (drm.status === 'not-applicable') {
     // drmLaunchSetup cleared the clone runner, so the TCP launch must not
     // keep the clone wineVersion (D-11).

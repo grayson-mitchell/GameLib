@@ -54,9 +54,8 @@ jest.mock('../../../depot', () => ({
   sha1File: jest.fn()
 }))
 
-jest.mock('backend/launcher', () => ({ runWineCommand: jest.fn() }))
+const runWineCommand = jest.fn()
 
-import { runWineCommand } from 'backend/launcher'
 import { logInfo, logWarning } from 'backend/logger'
 import { stageDrmBottle } from '../stageDrmBottle'
 import {
@@ -137,6 +136,8 @@ describe('stageDrmBottle', () => {
     ...over
   })
   const deps = (over: Record<string, unknown> = {}) => ({
+    commandRunner: { runWineCommand },
+    spawnAsync: jest.fn(),
     getBottleDir: () => bottle,
     findUnreal: async () => null,
     restoreOriginals: jest.fn(() =>
@@ -160,7 +161,7 @@ describe('stageDrmBottle', () => {
       write(join(compDir, n), 'MZ-comp-' + n)
     }
     runReg = jest.fn(() => Promise.resolve({ code: 0 }))
-    ;(runWineCommand as jest.Mock).mockReset()
+    runWineCommand.mockReset()
   })
 
   const expectErr = async (
@@ -547,7 +548,7 @@ describe('stageDrmBottle', () => {
   })
 
   it('uses runWineCommand by default with the bottle settings', async () => {
-    ;(runWineCommand as jest.Mock).mockResolvedValue({ code: 0, stderr: '' })
+    runWineCommand.mockResolvedValue({ code: 0, stderr: '' })
     const d = deps()
     delete (d as { runReg?: unknown }).runReg
     const r = await stageDrmBottle(input(), d as never)
@@ -563,11 +564,11 @@ describe('stageDrmBottle', () => {
   })
 
   it('settles the default reg call on reg.exe exit, not pipe close', async () => {
-    ;(runWineCommand as jest.Mock).mockResolvedValue({ code: 0, stderr: '' })
+    runWineCommand.mockResolvedValue({ code: 0, stderr: '' })
     const d = deps()
     delete (d as { runReg?: unknown }).runReg
     await stageDrmBottle(input(), d as never)
-    for (const [args] of (runWineCommand as jest.Mock).mock.calls) {
+    for (const [args] of runWineCommand.mock.calls) {
       expect(args).toEqual(expect.objectContaining({ resolveOnExit: true }))
     }
   })

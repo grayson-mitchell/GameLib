@@ -116,7 +116,7 @@ export async function fireBridgeWineLaunch(
   let overlayInjected = false
 
   try {
-    const { runWineCommand } = await import('backend/launcher')
+    const { runWineCommand } = steamGame.deps.commandRunner
     const { startBottleProcessMonitor, getBottleProcessMonitorPhase } =
       await import('./bottleProcessMonitor')
     const { armLaunchDeadline, bindDeadlineToMonitor } =
@@ -177,6 +177,7 @@ export async function fireBridgeWineLaunch(
     // a fix problem can never reach the outer catch, whose
     // reportLaunchFailure would mark the bridge failed for the session.
     const fixedSettings = await applySteamBridgeKnownFixes(
+      steamGame.deps,
       steamGame.appId,
       bridgeBottleSettings,
       installRoot,
@@ -206,6 +207,7 @@ export async function fireBridgeWineLaunch(
     // but never opens an authenticated logon. Unsettled redists are fetched by
     // the bridge install step (plan 08 Task 2) or the next session-holding action.
     await installSteamBridgeSharedRedists(
+      steamGame.deps,
       steamGame.appId,
       bridgeBottleSettings
     ).catch((error: unknown) => {
@@ -220,6 +222,7 @@ export async function fireBridgeWineLaunch(
     // bridge bottle (Overlooting nvapi64). Never rejects; .catch is
     // belt-and-braces for the same reason as above.
     let launchSettings = await applyBridgeBottleDllOverrides(
+      steamGame.deps,
       steamGame.appId,
       fixedSettings
     ).catch((error: unknown) => {

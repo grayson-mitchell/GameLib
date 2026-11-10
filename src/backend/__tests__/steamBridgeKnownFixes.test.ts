@@ -50,9 +50,6 @@ jest.mock('backend/services/legacyFacades', () => ({
     }
   })
 }))
-jest.mock('backend/launcher', () => ({
-  runWineCommand: (...args: unknown[]) => mockRunWineCommand(...args)
-}))
 jest.mock('backend/utils', () => ({
   sendGameStatusUpdate: (...args: unknown[]) =>
     mockSendGameStatusUpdate(...args)
@@ -92,6 +89,12 @@ import { defined } from './helpers/defined'
 const APP_ID = '480'
 const ROOT =
   '/mock/Bottles/GameLibSteamBridge-480/drive_c/steamapps/common/Game'
+
+const DEPS = {
+  commandRunner: {
+    runWineCommand: (...args: unknown[]) => mockRunWineCommand(...args)
+  }
+} as unknown as Parameters<typeof applySteamBridgeKnownFixes>[0]
 
 const BRIDGE = {
   wineCrossoverBottle: 'GameLibSteamBridge-480',
@@ -151,7 +154,7 @@ describe('applySteamBridgeKnownFixes overlays', () => {
     writeLocal({ overlays: [OVERLAY] })
     mockResolveOverlayEnv.mockResolvedValue({ GST_PLUGIN_PATH: '/t1:/ov' })
 
-    const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    const result = await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
 
     expect(mockResolveOverlayEnv).toHaveBeenCalledTimes(1)
     const [raw, opts] = mockResolveOverlayEnv.mock.calls[0]
@@ -171,7 +174,7 @@ describe('applySteamBridgeKnownFixes overlays', () => {
 
   it('leaves settings untouched when a profile has no overlays', async () => {
     writeLocal({ title: 't' })
-    const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    const result = await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
     expect(mockResolveOverlayEnv).toHaveBeenCalledWith(
       undefined,
       expect.anything()
@@ -182,7 +185,7 @@ describe('applySteamBridgeKnownFixes overlays', () => {
 
 describe('applySteamBridgeKnownFixes', () => {
   it('does nothing and returns the same object when there is no fixes file', async () => {
-    const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    const result = await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
 
     expect(result).toBe(BRIDGE)
     expect(mockWinetricksInstall).not.toHaveBeenCalled()
@@ -193,7 +196,7 @@ describe('applySteamBridgeKnownFixes', () => {
   it('runs winetricks verbs against the bridge bottle, sending status first', async () => {
     writeFixes({ title: 't', winetricks: ['vcrun2019', 'd3dx9', '-q'] })
 
-    await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
 
     expect(mockSendGameStatusUpdate).toHaveBeenCalledTimes(1)
     expect(mockSendGameStatusUpdate).toHaveBeenCalledWith({
@@ -223,7 +226,7 @@ describe('applySteamBridgeKnownFixes', () => {
   it('runs runInPrefix entries through runWineCommand under the install root', async () => {
     writeFixes({ title: 't', runInPrefix: ['redist/vc_redist.x64.exe'] })
 
-    await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
 
     expect(mockSendGameStatusUpdate).toHaveBeenCalledWith({
       appName: APP_ID,
@@ -243,7 +246,7 @@ describe('applySteamBridgeKnownFixes', () => {
   it('skips a runInPrefix entry that escapes the install root', async () => {
     writeFixes({ title: 't', runInPrefix: ['../../../evil.exe'] })
 
-    await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
 
     expect(mockRunWineCommand).not.toHaveBeenCalled()
     expect(mockLogWarning).toHaveBeenCalledWith(
@@ -255,7 +258,7 @@ describe('applySteamBridgeKnownFixes', () => {
   it('skips runInPrefix when the install root is unknown', async () => {
     writeFixes({ title: 't', runInPrefix: ['setup.exe'] })
 
-    await applySteamBridgeKnownFixes(APP_ID, BRIDGE, undefined)
+    await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, undefined)
 
     expect(mockRunWineCommand).not.toHaveBeenCalled()
     expect(mockLogWarning).toHaveBeenCalled()
@@ -264,7 +267,7 @@ describe('applySteamBridgeKnownFixes', () => {
   it('returns a NEW settings object carrying the fix env after the user env', async () => {
     writeFixes({ title: 't', envVariables: { DXVK_ASYNC: '1' } })
 
-    const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    const result = await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
 
     expect(result).not.toBe(BRIDGE)
     expect(result.enviromentOptions).toEqual([
@@ -300,7 +303,12 @@ describe('applySteamBridgeKnownFixes', () => {
       })
       arm()
 
-      const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+      const result = await applySteamBridgeKnownFixes(
+        DEPS,
+        APP_ID,
+        BRIDGE,
+        ROOT
+      )
 
       expect(mockLogWarning).toHaveBeenCalledWith(
         expect.stringContaining('vcrun2019'),
@@ -320,7 +328,12 @@ describe('applySteamBridgeKnownFixes', () => {
       })
       mockRunWineCommand.mockRejectedValue(new Error('boom'))
 
-      const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+      const result = await applySteamBridgeKnownFixes(
+        DEPS,
+        APP_ID,
+        BRIDGE,
+        ROOT
+      )
 
       expect(mockLogWarning).toHaveBeenCalledWith(
         expect.stringContaining('setup.exe'),
@@ -374,7 +387,7 @@ describe('buildRegistryFixCommandParts', () => {
 describe('registry fixes application', () => {
   it('bundled profile without views applies 32 then 64', async () => {
     writeBundled({ title: 't', registry: [WMP] })
-    await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
     expect(mockRunWineCommand).toHaveBeenCalledTimes(2)
     for (const [i, view] of ['/reg:32', '/reg:64'].entries()) {
       const arg = mockRunWineCommand.mock.calls[i][0]
@@ -405,7 +418,7 @@ describe('registry fixes application', () => {
       )
       mockBottleRoot = root
       writeBundled({ title: 't', registry: [WMP] })
-      await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+      await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
       expect(
         mockRunWineCommand.mock.calls.filter((c) =>
           c[0].commandParts.includes('reg')
@@ -423,7 +436,7 @@ describe('registry fixes application', () => {
     writeBundled({
       dllOverrides: [{ exe: 'Game.exe', dlls: { nvapi64: 'disabled' } }]
     })
-    await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
     expect(mockRunWineCommand).toHaveBeenCalledTimes(1)
     const arg = mockRunWineCommand.mock.calls[0][0]
     expect(arg.commandParts).toEqual([
@@ -458,7 +471,7 @@ describe('registry fixes application', () => {
       writeBundled({
         dllOverrides: [{ exe: 'Game.exe', dlls: { nvapi64: 'disabled' } }]
       })
-      await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+      await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
       expect(
         mockRunWineCommand.mock.calls.filter((c) =>
           c[0].commandParts.includes('reg')
@@ -474,7 +487,7 @@ describe('registry fixes application', () => {
 
   it('views [64] applies once', async () => {
     writeBundled({ title: 't', registry: [{ ...WMP, views: [64] }] })
-    await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
     expect(mockRunWineCommand).toHaveBeenCalledTimes(1)
     expect(mockRunWineCommand.mock.calls[0][0].commandParts).toContain(
       '/reg:64'
@@ -483,7 +496,7 @@ describe('registry fixes application', () => {
 
   it('ignores a .profile.json that sits only in the remote directory', async () => {
     writeIn(fixesPath, { title: 't', registry: [WMP] }, '.profile.json')
-    await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
     expect(mockRunWineCommand).not.toHaveBeenCalled()
   })
 
@@ -495,7 +508,7 @@ describe('registry fixes application', () => {
     'ignores registry placed in a tier-1 .json (%s) and warns',
     async (_n, dir) => {
       writeIn(dir(), { title: 't', registry: [WMP] })
-      await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+      await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
       expect(mockRunWineCommand).not.toHaveBeenCalled()
       expect(mockLogWarning).toHaveBeenCalledWith(
         expect.stringContaining('registry')
@@ -506,7 +519,7 @@ describe('registry fixes application', () => {
   it('applies remote tier-1 envVariables and the bundled tier-2 registry in the same launch', async () => {
     writeFixes({ title: 't', envVariables: { A: '1' } })
     writeBundled({ title: 'p', registry: [WMP] })
-    const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    const result = await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
     expect(mockRunWineCommand).toHaveBeenCalledTimes(2)
     expect(result.enviromentOptions).toEqual([
       { key: 'USER', value: 'x' },
@@ -517,7 +530,7 @@ describe('registry fixes application', () => {
   it('local overrides bundled', async () => {
     writeBundled({ title: 't', registry: [WMP] })
     writeLocal({ title: 't', registry: [{ ...WMP, value: 0 }] })
-    await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
     const parts = mockRunWineCommand.mock.calls[0][0].commandParts
     expect(parts[parts.indexOf('/d') + 1]).toBe('0')
   })
@@ -543,7 +556,12 @@ describe('registry fixes application', () => {
       writeBundled({ title: 't', registry: [WMP] })
       writeFixes({ title: 't', envVariables: { A: 'b' } })
       arm()
-      const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+      const result = await applySteamBridgeKnownFixes(
+        DEPS,
+        APP_ID,
+        BRIDGE,
+        ROOT
+      )
       expect(mockLogWarning).toHaveBeenCalledWith(
         expect.stringContaining('IsInstalled'),
         'Steam'
@@ -559,7 +577,7 @@ describe('registry fixes application', () => {
     try {
       writeBundled({ title: 't', registry: [{ ...WMP, views: [32] }] })
       mockRunWineCommand.mockReturnValue(new Promise(() => undefined))
-      const p = applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+      const p = applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
       for (let i = 0; i < 20; i++) {
         await new Promise((r) => setImmediate(r))
       }
@@ -776,7 +794,13 @@ describe('GameMaker D3D11 runner default (quick 261028-k7l)', () => {
 
   it('applies dxvk with no fixes file and no profile, logging one info line', async () => {
     mockDetectGameMaker.mockResolvedValue(MATCH)
-    const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT, EXE)
+    const result = await applySteamBridgeKnownFixes(
+      DEPS,
+      APP_ID,
+      BRIDGE,
+      ROOT,
+      EXE
+    )
     expect(mockDetectGameMaker).toHaveBeenCalledWith(EXE)
     expect(result).not.toBe(BRIDGE)
     expect(result.enviromentOptions).toEqual([
@@ -802,7 +826,13 @@ describe('GameMaker D3D11 runner default (quick 261028-k7l)', () => {
       ...BRIDGE,
       enviromentOptions: [{ key: 'CX_GRAPHICS_BACKEND', value: 'd3dmetal' }]
     } as unknown as GameSettings
-    const result = await applySteamBridgeKnownFixes(APP_ID, user, ROOT, EXE)
+    const result = await applySteamBridgeKnownFixes(
+      DEPS,
+      APP_ID,
+      user,
+      ROOT,
+      EXE
+    )
     expect(result).toBe(user)
     expect(mockDetectGameMaker).not.toHaveBeenCalled()
   })
@@ -810,7 +840,13 @@ describe('GameMaker D3D11 runner default (quick 261028-k7l)', () => {
   it('lets a tier-1 CX_GRAPHICS_BACKEND win and does not scan', async () => {
     mockDetectGameMaker.mockResolvedValue(MATCH)
     writeFixes({ envVariables: { CX_GRAPHICS_BACKEND: 'dxmt' } })
-    const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT, EXE)
+    const result = await applySteamBridgeKnownFixes(
+      DEPS,
+      APP_ID,
+      BRIDGE,
+      ROOT,
+      EXE
+    )
     const backend = (result.enviromentOptions ?? []).filter(
       (e) => e.key === 'CX_GRAPHICS_BACKEND'
     )
@@ -822,7 +858,13 @@ describe('GameMaker D3D11 runner default (quick 261028-k7l)', () => {
   it('appends dxvk after an unrelated tier-1 var in one info line', async () => {
     mockDetectGameMaker.mockResolvedValue(MATCH)
     writeFixes({ envVariables: { OTHER: 'o' } })
-    const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT, EXE)
+    const result = await applySteamBridgeKnownFixes(
+      DEPS,
+      APP_ID,
+      BRIDGE,
+      ROOT,
+      EXE
+    )
     expect(result.enviromentOptions).toEqual([
       ...BRIDGE.enviromentOptions,
       { key: 'OTHER', value: 'o' },
@@ -835,13 +877,19 @@ describe('GameMaker D3D11 runner default (quick 261028-k7l)', () => {
   })
 
   it('leaves settings unchanged when the detector does not match', async () => {
-    const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT, EXE)
+    const result = await applySteamBridgeKnownFixes(
+      DEPS,
+      APP_ID,
+      BRIDGE,
+      ROOT,
+      EXE
+    )
     expect(result).toBe(BRIDGE)
     expect(mockLogInfo).not.toHaveBeenCalled()
   })
 
   it('never calls the detector without an exePath', async () => {
-    const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    const result = await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
     expect(result).toBe(BRIDGE)
     expect(mockDetectGameMaker).not.toHaveBeenCalled()
   })
@@ -851,14 +899,26 @@ describe('GameMaker D3D11 runner default (quick 261028-k7l)', () => {
       ...BRIDGE,
       wineVersion: { type: 'wine' }
     } as unknown as GameSettings
-    const result = await applySteamBridgeKnownFixes(APP_ID, other, ROOT, EXE)
+    const result = await applySteamBridgeKnownFixes(
+      DEPS,
+      APP_ID,
+      other,
+      ROOT,
+      EXE
+    )
     expect(result).toBe(other)
     expect(mockDetectGameMaker).not.toHaveBeenCalled()
   })
 
   it('warns and continues when the detector rejects', async () => {
     mockDetectGameMaker.mockRejectedValue(new Error('boom'))
-    const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT, EXE)
+    const result = await applySteamBridgeKnownFixes(
+      DEPS,
+      APP_ID,
+      BRIDGE,
+      ROOT,
+      EXE
+    )
     expect(result).toBe(BRIDGE)
     expect(mockLogWarning).toHaveBeenCalledWith(
       expect.stringContaining('boom'),

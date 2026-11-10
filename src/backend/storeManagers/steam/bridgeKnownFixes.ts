@@ -49,6 +49,7 @@
 
 import { isAbsolute, relative, resolve } from 'node:path'
 import type { EnviromentVariable, GameSettings } from 'common/types'
+import type { CommandRunner } from 'backend/commandRunner'
 import { readKnownFixes, readKnownFixProfile } from 'backend/knownFixes'
 import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
 import { sendGameStatusUpdate } from 'backend/utils'
@@ -170,7 +171,13 @@ async function gameMakerGraphicsDefault(
   }
 }
 
+/** What the bridge known-fix applier reaches through a slice (66.1 R3). */
+export interface BridgeKnownFixDeps {
+  commandRunner: Pick<CommandRunner, 'runWineCommand'>
+}
+
 export async function applySteamBridgeKnownFixes(
+  deps: BridgeKnownFixDeps,
   appId: string,
   bridgeBottleSettings: GameSettings,
   installRoot: string | undefined,
@@ -201,7 +208,7 @@ export async function applySteamBridgeKnownFixes(
     const { Winetricks } = (
       await import('backend/services/legacyFacades')
     ).legacyTools()
-    const { runWineCommand } = await import('backend/launcher')
+    const { runWineCommand } = deps.commandRunner
 
     const registryCtx = { label: `Steam ${appId}`, logPrefix: LogPrefix.Steam }
     const registryRaw = profile
@@ -223,8 +230,7 @@ export async function applySteamBridgeKnownFixes(
             wait: false,
             protonVerb: 'run',
             skipPrefixCheckIKnowWhatImDoing: true,
-            // Handle-typed callback on the legacy ChildProcess runner (plan 18 moves this onto the slice).
-            onSpawn: onSpawn as Parameters<typeof runWineCommand>[0]['onSpawn']
+            onSpawn
           }),
         bridgeBottleSettings.wineCrossoverBottle
           ? getBottleDir(bridgeBottleSettings.wineCrossoverBottle)

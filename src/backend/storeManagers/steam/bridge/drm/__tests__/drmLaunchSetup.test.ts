@@ -80,6 +80,8 @@ function makeInput(
 
 function makeDeps(callOrder: string[], over: Partial<DrmLaunchSetupDeps> = {}) {
   const deps = {
+    commandRunner: { runWineCommand: jest.fn() },
+    spawnAsync: jest.fn(),
     isMacSteamRunning: jest.fn(() => {
       callOrder.push('steam')
       return Promise.resolve(true)

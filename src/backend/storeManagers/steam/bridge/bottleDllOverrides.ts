@@ -20,6 +20,7 @@
  */
 
 import type { GameSettings } from 'common/types'
+import type { CommandRunner } from 'backend/commandRunner'
 import { logWarning, LogPrefix } from 'backend/logger'
 import { NUMERIC_APP_ID } from '../gameConstants'
 
@@ -48,6 +49,7 @@ export function buildOverrideCommandParts(
 }
 
 export async function applyBridgeBottleDllOverrides(
+  deps: { commandRunner: Pick<CommandRunner, 'runWineCommand'> },
   appId: string,
   bridgeBottleSettings: GameSettings
 ): Promise<GameSettings> {
@@ -56,8 +58,7 @@ export async function applyBridgeBottleDllOverrides(
   if (!entry) return bridgeBottleSettings
 
   try {
-    // Lazy, as bridgeKnownFixes does: avoids the launcher import cycle.
-    const { runWineCommand } = await import('backend/launcher')
+    const { runWineCommand } = deps.commandRunner
     for (const dll of entry.dlls) {
       try {
         const result = await runWineCommand({
