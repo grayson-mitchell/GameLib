@@ -21,7 +21,9 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { nativeImage } from '../nativeImageShim'
+import { createNativeImage } from '../nativeImageShim'
+import { createRealRunner } from '../../testUtils/realRunner'
+import { createScriptedRunner } from '../../testUtils/scriptedRunner'
 
 // `/usr/bin/sips` is macOS-only. Its absence on Linux failed this whole suite at IMPORT time (zero
 // tests ran, from the REAL_PNG IIFE below) -- see the 2026-09-15 CI log,
@@ -30,6 +32,12 @@ import { nativeImage } from '../nativeImageShim'
 // below mutates `process.platform` during several tests, so a lazily-read gate (inside a
 // `beforeEach`, or inside a helper called from a test) could observe a test's FAKED platform
 // instead of the real host.
+// The sips-driven blocks spawn the real /usr/bin/sips through the real runner (fake HOME).
+const realRunner = createRealRunner()
+afterAll(() => realRunner.dispose())
+const nativeImage = createNativeImage({
+  runSync: (cmd, argv, opts) => realRunner.runner.runSync(cmd, argv, opts)
+})
 const HOST_IS_DARWIN = process.platform === 'darwin'
 const describeOnDarwin = HOST_IS_DARWIN ? describe : describe.skip
 
@@ -160,7 +168,7 @@ describeOnDarwin(
     })
 
     it('resize/crop are LAZY -- exactly ONE converter invocation happens per toPNG() call, regardless of how many ops were chained', () => {
-      const spy = jest.spyOn(childProcess, 'execFileSync')
+      const spy = jest.spyOn(realRunner.runner, 'runSync')
       const image = nativeImage
         .createFromBuffer(REAL_PNG)
         .resize({ width: 512 })
@@ -250,5 +258,58 @@ describe('nativeImageShim — no converter required (runs on every host, sips or
     expect(() =>
       nativeImage.createFromDataURL(dataUrl).toJPEG(90)
     ).not.toThrow()
+  })
+})
+
+describe('nativeImageShim -- scripted runSync', () => {
+  const PNG = Buffer.from('89504e470d0a1a0a00', 'hex')
+  let originalPlatform: string
+  beforeEach(() => {
+    originalPlatform = process.platform
+    overrideProcessPlatform('darwin')
+  })
+  afterEach(() => overrideProcessPlatform(originalPlatform))
+
+  it('calls /usr/bin/sips with timeoutMs 15000 and a stated reason', () => {
+    const runner = createScriptedRunner([{ cmd: '/usr/bin/sips' }])
+    const image = createNativeImage({ runSync: runner.runSync.bind(runner) })
+    // sips is scripted, so the out file does not exist: the read throws after a clean run.
+    expect(() => image.createFromBuffer(PNG).toJPEG(90)).toThrow()
+    const call = runner.calls[0]
+    expect(call?.method).toBe('runSync')
+    expect(call?.cmd).toBe('/usr/bin/sips')
+    expect(call?.argv).toEqual(expect.arrayContaining(['-s', 'format', 'jpeg']))
+    const opts = call?.opts as { timeoutMs: number; reason: string }
+    expect(opts.timeoutMs).toBe(15000)
+    expect(opts.reason.length).toBeGreaterThan(0)
+  })
+
+  it('a non-zero exit throws a named shim error', () => {
+    const runner = createScriptedRunner([
+      { cmd: '/usr/bin/sips', result: { code: 1, stderr: 'bad' } }
+    ])
+    const image = createNativeImage({ runSync: runner.runSync.bind(runner) })
+    expect(() => image.createFromBuffer(PNG).toJPEG(90)).toThrow(
+      /\[platformApi\] nativeImage: sips failed/
+    )
+  })
+
+  it('a runner rejection (spawn error) propagates', () => {
+    const runner = createScriptedRunner([
+      { cmd: '/usr/bin/sips', error: { code: 'ENOENT' } }
+    ])
+    const image = createNativeImage({ runSync: runner.runSync.bind(runner) })
+    expect(() => image.createFromBuffer(PNG).toJPEG(90)).toThrow(/ENOENT/)
+  })
+
+  it('getSize is 0x0 on a non-zero exit', () => {
+    const runner = createScriptedRunner([
+      { cmd: '/usr/bin/sips', result: { code: 1 } }
+    ])
+    const image = createNativeImage({ runSync: runner.runSync.bind(runner) })
+    expect(image.createFromBuffer(PNG).getSize()).toEqual({
+      width: 0,
+      height: 0
+    })
   })
 })

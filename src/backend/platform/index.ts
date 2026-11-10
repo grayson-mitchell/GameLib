@@ -80,7 +80,9 @@ import { getPath } from '../sidecar/pathShim'
 import { isPackagedSidecar } from '../sidecar/isPackagedSidecar'
 import { requestRustInvoke } from '../sidecar/sidecarRpc'
 import type { RustInvokeArgsOf } from 'common/types/ipc/rustInvoke'
-import { shouldOpenInBackground, spawnOpenDetached } from './openDetached'
+import { shouldOpenInBackground } from './openDetached'
+import type { ProcessRunner } from '../process/types'
+import { createNativeImage } from '../sidecar/nativeImageShim'
 import {
   RUST_APP_EXIT,
   RUST_APP_HIDE,
@@ -147,6 +149,10 @@ export interface ElectronStubTransport {
   openExternal: (url: string) => void
   /** Forwards `mainWindow.webContents.send(channel, ...args)` as a SidecarNotification. */
   pushFrontendMessage: (channel: string, ...args: unknown[]) => void
+  /** Detached `open -g <url>` through the process runner. */
+  openDetached: (url: string, onError?: (code: string) => void) => void
+  /** Synchronous spawn through the process runner (nativeImage's `sips`). */
+  runSync: ProcessRunner['runSync']
 }
 
 let transport: ElectronStubTransport | null = null
@@ -776,7 +782,7 @@ export const shell = {
   openExternal: async (url: string, options?: unknown): Promise<void> => {
     if (!transport) return
     if (shouldOpenInBackground(process.platform, url, options)) {
-      spawnOpenDetached(url, (code) =>
+      transport.openDetached(url, (code) =>
         console.warn(
           `[platformApi] shell.openExternal(): background open failed (${code})`
         )
@@ -999,7 +1005,12 @@ export const session = {
 // Now a real, `sips`-backed implementation -- see `nativeImageShim.ts` for the full contract
 // (lazy resize/crop, real toPNG/toJPEG, a loud non-darwin decline instead of a silent empty
 // Buffer).
-export { nativeImage } from '../sidecar/nativeImageShim'
+export const nativeImage = createNativeImage({
+  runSync: (cmd, argv, opts) => {
+    if (!transport) throw new Error('platformApi transport not bound')
+    return transport.runSync(cmd, argv, opts)
+  }
+})
 
 export const screen = {
   getPrimaryDisplay: () => ({

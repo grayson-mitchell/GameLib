@@ -15,12 +15,12 @@
  * converter invocation, regardless of how many ops were chained before it.
  *
  * Execution uses `/usr/bin/sips` — an ABSOLUTE path, never a bare `sips` resolved through `PATH`
- * — invoked via `execFileSync` with an argv ARRAY, never a shell string (T-34.5-C6-19). Source
+ * — invoked via the runner's `runSync` with an argv ARRAY, never a shell string (T-34.5-C6-19). Source
  * bytes are written to a fresh per-call `mkdtempSync` directory, mode `0o600`, removed in a
  * `finally` (T-34.5-C6-18/21) — nothing here ever derives a temp path segment from a game title,
  * an appName or an icon URL, so there is no symlink/TOCTOU target to pre-place. An input buffer
  * over 32 MiB is rejected before it is ever written to disk, and the child process itself is
- * bounded by a 15s timeout and a 32 MiB output cap (T-34.5-C6-20) — 15s sits well inside
+ * bounded by a 15s timeout (T-34.5-C6-20) — 15s sits well inside
  * `main.rs`'s 60s `INVOKE_TIMEOUT`, so a stuck conversion surfaces as a named shim error rather
  * than an opaque transport timeout.
  *
@@ -43,17 +43,28 @@
  * future caller passing a non-zero origin needs to find this comment before relying on it.
  */
 
-import { execFileSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import type { ProcessRunner } from '../process/types'
 
 /** T-34.5-C6-18/20: reject an oversized input before it is ever written to disk. */
 const MAX_INPUT_BYTES = 32 * 1024 * 1024
 
 /** T-34.5-C6-20: bounds the `sips` child process well inside `main.rs`'s 60s `INVOKE_TIMEOUT`. */
 const SIPS_TIMEOUT_MS = 15_000
-const SIPS_MAX_BUFFER = 32 * 1024 * 1024
+
+/**
+ * Why this stays synchronous (runner.runSync) rather than async: it mirrors Electron's
+ * synchronous NativeImage API, and both production call sites chain it synchronously
+ * (shortcuts.ts convertPngToICNS, steamhelper.ts createFromDataURL().toJPEG).
+ */
+const SYNC_REASON =
+  "mirrors Electron's synchronous NativeImage API; both production call sites chain it synchronously (shortcuts.ts convertPngToICNS, steamhelper.ts createFromDataURL().toJPEG)"
+
+export interface NativeImageDeps {
+  runSync: ProcessRunner['runSync']
+}
 
 const PNG_MAGIC_HEX = '89504e47'
 const JPEG_MAGIC_HEX = 'ffd8ff'
@@ -132,6 +143,7 @@ function opsToSipsArgs(ops: readonly PendingOp[]): string[] {
  * conversion — exactly one `execFileSync` call per invocation.
  */
 function runSips(
+  deps: NativeImageDeps,
   sourceBuffer: Buffer,
   ops: readonly PendingOp[],
   outputFormat: 'png' | 'jpeg',
@@ -172,11 +184,18 @@ function runSips(
       outputPath
     ]
 
-    execFileSync('/usr/bin/sips', argv, {
-      timeout: SIPS_TIMEOUT_MS,
-      maxBuffer: SIPS_MAX_BUFFER,
-      stdio: ['ignore', 'ignore', 'pipe']
+    const result = deps.runSync('/usr/bin/sips', argv, {
+      timeoutMs: SIPS_TIMEOUT_MS,
+      reason: SYNC_REASON
     })
+    if (result.code !== 0 || result.timedOut || result.error !== undefined) {
+      throw new Error(
+        `[platformApi] nativeImage: sips failed (${
+          result.error ??
+          (result.timedOut ? 'timed out' : `exit ${String(result.code)}`)
+        }) ${result.stderr.slice(0, 512)}`
+      )
+    }
 
     return readFileSync(outputPath)
   } finally {
@@ -190,7 +209,10 @@ function runSips(
  * non-existent path can construct without throwing — the failure only surfaces (as `isEmpty()
  * === true`, never a throw) once the bytes are actually needed.
  */
-function makeImage(getBytes: () => Buffer): ShimNativeImage {
+function makeImage(
+  deps: NativeImageDeps,
+  getBytes: () => Buffer
+): ShimNativeImage {
   const ops: PendingOp[] = []
   let cachedBytes: Buffer | null = null
 
@@ -219,7 +241,7 @@ function makeImage(getBytes: () => Buffer): ShimNativeImage {
       return src
     }
 
-    return runSips(src, ops, format, quality)
+    return runSips(deps, src, ops, format, quality)
   }
 
   const image: ShimNativeImage = {
@@ -249,11 +271,15 @@ function makeImage(getBytes: () => Buffer): ShimNativeImage {
       try {
         const inputPath = join(dir, 'in')
         writeFileSync(inputPath, src, { mode: 0o600 })
-        const out = execFileSync(
+        const probe = deps.runSync(
           '/usr/bin/sips',
           ['-g', 'pixelWidth', '-g', 'pixelHeight', inputPath],
-          { timeout: SIPS_TIMEOUT_MS, maxBuffer: SIPS_MAX_BUFFER }
-        ).toString()
+          { timeoutMs: SIPS_TIMEOUT_MS, reason: SYNC_REASON }
+        )
+        if (probe.code !== 0 || probe.timedOut || probe.error !== undefined) {
+          return { width: 0, height: 0 }
+        }
+        const out = probe.stdout
         const width = Number(out.match(/pixelWidth:\s*(\d+)/)?.[1] ?? 0)
         const height = Number(out.match(/pixelHeight:\s*(\d+)/)?.[1] ?? 0)
         return { width, height }
@@ -267,40 +293,42 @@ function makeImage(getBytes: () => Buffer): ShimNativeImage {
   return image
 }
 
-function createFromBuffer(buffer: Buffer): ShimNativeImage {
-  return makeImage(() => buffer)
-}
+export function createNativeImage(deps: NativeImageDeps) {
+  function createFromBuffer(buffer: Buffer): ShimNativeImage {
+    return makeImage(deps, () => buffer)
+  }
 
-function createFromPath(path: string): ShimNativeImage {
-  return makeImage(() => {
-    try {
-      return readFileSync(path)
-    } catch {
-      return Buffer.alloc(0)
-    }
-  })
-}
+  function createFromPath(path: string): ShimNativeImage {
+    return makeImage(deps, () => {
+      try {
+        return readFileSync(path)
+      } catch {
+        return Buffer.alloc(0)
+      }
+    })
+  }
 
-function createFromDataURL(dataUrl: string): ShimNativeImage {
-  return makeImage(() => {
-    const match = dataUrl.match(/^data:[^;]+;base64,([\s\S]*)$/)
-    const payload = match?.[1]
-    if (payload === undefined) return Buffer.alloc(0)
-    try {
-      return Buffer.from(payload, 'base64')
-    } catch {
-      return Buffer.alloc(0)
-    }
-  })
-}
+  function createFromDataURL(dataUrl: string): ShimNativeImage {
+    return makeImage(deps, () => {
+      const match = dataUrl.match(/^data:[^;]+;base64,([\s\S]*)$/)
+      const payload = match?.[1]
+      if (payload === undefined) return Buffer.alloc(0)
+      try {
+        return Buffer.from(payload, 'base64')
+      } catch {
+        return Buffer.alloc(0)
+      }
+    })
+  }
 
-function createEmpty(): ShimNativeImage {
-  return makeImage(() => Buffer.alloc(0))
-}
+  function createEmpty(): ShimNativeImage {
+    return makeImage(deps, () => Buffer.alloc(0))
+  }
 
-export const nativeImage = {
-  createFromBuffer,
-  createFromPath,
-  createFromDataURL,
-  createEmpty
+  return {
+    createFromBuffer,
+    createFromPath,
+    createFromDataURL,
+    createEmpty
+  }
 }

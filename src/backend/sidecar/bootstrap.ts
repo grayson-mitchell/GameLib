@@ -1508,10 +1508,12 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'transport',
-      run: () => {
+      run: (ctx) => {
         platformApi.bindTransport({
           openExternal: requestOpenExternal,
-          pushFrontendMessage
+          pushFrontendMessage,
+          openDetached: (url, onError) => ctx.runner.openDetached(url, onError),
+          runSync: (cmd, argv, opts) => ctx.runner.runSync(cmd, argv, opts)
         })
       }
     },
