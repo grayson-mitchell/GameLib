@@ -93,7 +93,10 @@ function settingsViewFor(
 }
 
 export async function getGameEngineState(
-  services: Pick<EngineServices, 'spawnAsync' | 'wineManagerReleases'>,
+  services: Pick<
+    EngineServices,
+    'spawnAsync' | 'runner' | 'wineManagerReleases'
+  >,
   identity: unknown,
   deps: GameEngineStateDeps = {}
 ): Promise<EngineState | null> {
@@ -111,6 +114,7 @@ export async function getGameEngineState(
   })
   return getEngineState(id, {
     killCrossoverWineserver: killCrossoverWineserverWith(services),
+    runner: services.runner,
     ...releases,
     ...stateDeps,
     isMac: true,

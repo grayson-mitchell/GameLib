@@ -18,6 +18,7 @@ import type {
   CrossoverPreflight,
   EngineDecisionDeps,
   KillDeps,
+  RunnerDeps,
   LaunchDecision,
   ReleasesDeps
 } from './engineDecision'
@@ -91,7 +92,8 @@ export interface EngineStateDeps
       >
     >,
     KillDeps,
-    ReleasesDeps {
+    ReleasesDeps,
+    RunnerDeps {
   /** Defaults to the platform flag. */
   isMac?: boolean
   /** Notice dismissals; defaults to the shared `engineNoticeStore`. */
@@ -263,9 +265,9 @@ function overrideOf(effective: EffectiveEngine): EngineOverrideId {
 /** The state deps for paths that never run a pre-flight (so never need the kill). */
 export type EngineStateDepsNoKill = Omit<
   EngineStateDeps,
-  'killCrossoverWineserver' | 'wineManagerReleases'
+  'killCrossoverWineserver' | 'wineManagerReleases' | 'runner'
 > &
-  Partial<KillDeps & ReleasesDeps>
+  Partial<KillDeps & ReleasesDeps & RunnerDeps>
 
 export async function getEngineState(
   identity: unknown,

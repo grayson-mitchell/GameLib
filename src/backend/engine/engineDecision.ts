@@ -14,11 +14,12 @@ import { accessSync, constants as fsConstants, existsSync } from 'fs'
 import { dirname, isAbsolute, join, relative } from 'path'
 import { toolsPath } from 'backend/constants/paths'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import type { ProcessRunner } from 'backend/process/types'
 import type { EngineOption } from 'common/types/engine'
 import { readStoredGameConfig } from './engineConfig'
 import { appNameOf } from './gameKey'
 import { otherGamesRunning } from './bottleLedger'
-import { probeDemoStatus } from './demoStatus'
+import { createProbeDemoStatus } from './demoStatus'
 import type { DemoStatusProbe } from './demoStatus'
 import { ENGINE_PINS } from './enginePins'
 import type { EnginePin } from './enginePins'
@@ -37,6 +38,7 @@ import {
   readCrossoverBuild,
   untestedCrossoverLogLine
 } from './testedCrossoverVersions'
+import { createRunTool } from './runTool'
 
 /** Bounds the D-12 create-under-expiry case; a normal cxbottle create is well under a minute. */
 export const CX_CREATE_CAP_MS = 120_000
@@ -136,10 +138,15 @@ export interface EngineDecisionDeps {
   wineManagerRoot: string
 }
 
-function defaultEngineDecisionDeps(): Omit<
+/** The member the spawning decision paths need: the caller's process runner (D-03). */
+export type RunnerDeps = { runner: Pick<ProcessRunner, 'run'> }
+
+type NonSpawnDefaults = Omit<
   EngineDecisionDeps,
-  'killCrossoverWineserver' | 'wineManagerReleases'
-> {
+  'killCrossoverWineserver' | 'wineManagerReleases' | 'probe' | 'readBuild'
+>
+
+function baseEngineDecisionDeps(): NonSpawnDefaults {
   return {
     async resolveCrossoverBinDir() {
       const { resolveCrossoverBinDirAsync } =
@@ -154,8 +161,6 @@ function defaultEngineDecisionDeps(): Omit<
         return false
       }
     },
-    probe: probeDemoStatus,
-    readBuild: (binDir) => readCrossoverBuild(binDir),
     readOverride: (key) => readStoredGameConfig(appNameOf(key))?.engineOverride,
     monitorPhase: () => null,
     bottleBusy: (bottleName, key) =>
@@ -170,6 +175,16 @@ function defaultEngineDecisionDeps(): Omit<
     pins: ENGINE_PINS,
     fileExists: existsSync,
     wineManagerRoot: join(toolsPath, 'wine')
+  }
+}
+
+function defaultEngineDecisionDeps(
+  runner: Pick<ProcessRunner, 'run'>
+): Omit<EngineDecisionDeps, 'killCrossoverWineserver' | 'wineManagerReleases'> {
+  return {
+    ...baseEngineDecisionDeps(),
+    probe: createProbeDemoStatus({ runner }),
+    readBuild: (binDir) => readCrossoverBuild(binDir, createRunTool({ runner }))
   }
 }
 
@@ -198,36 +213,30 @@ export function killCrossoverWineserverWith(
   }
 }
 
-type DecisionDepsBase = Omit<
-  EngineDecisionDeps,
-  'killCrossoverWineserver' | 'wineManagerReleases'
-> &
-  Partial<KillDeps & ReleasesDeps>
-
-/** For entry points that reach neither the kill nor the release list. */
-function withDefaults(deps?: Partial<EngineDecisionDeps>): DecisionDepsBase {
-  return { ...defaultEngineDecisionDeps(), ...deps }
+/** For entry points that reach no spawn, neither the kill nor the release list. */
+function withDefaults(deps?: Partial<EngineDecisionDeps>): NonSpawnDefaults {
+  return { ...baseEngineDecisionDeps(), ...deps }
 }
 
 /** For entry points that read the release list: it is required by type. */
 function withReleases(
   deps: Partial<EngineDecisionDeps> & ReleasesDeps
-): Omit<EngineDecisionDeps, 'killCrossoverWineserver'> & Partial<KillDeps> {
-  return { ...defaultEngineDecisionDeps(), ...deps }
+): NonSpawnDefaults & ReleasesDeps {
+  return { ...baseEngineDecisionDeps(), ...deps }
 }
 
-/** For decideLaunchEngine: the kill and the release list are both required by type. */
+/** For decideLaunchEngine: the runner, the kill and the release list are all required by type. */
 function withKillAndReleases(
-  deps: Partial<EngineDecisionDeps> & KillDeps & ReleasesDeps
+  deps: Partial<EngineDecisionDeps> & KillDeps & ReleasesDeps & RunnerDeps
 ): EngineDecisionDeps {
-  return { ...defaultEngineDecisionDeps(), ...deps }
+  return { ...defaultEngineDecisionDeps(deps.runner), ...deps }
 }
 
-/** For the pre-flight paths: the caller's kill is required by type. */
+/** For the pre-flight paths: the caller's runner and kill are required by type. */
 function withKill(
-  deps: Partial<EngineDecisionDeps> & KillDeps
+  deps: Partial<EngineDecisionDeps> & KillDeps & RunnerDeps
 ): Omit<EngineDecisionDeps, 'wineManagerReleases'> & Partial<ReleasesDeps> {
-  return { ...defaultEngineDecisionDeps(), ...deps }
+  return { ...defaultEngineDecisionDeps(deps.runner), ...deps }
 }
 
 /** The CrossOver bin dir the engine layer resolves (a store may inject a wine-bin hint). */
@@ -258,7 +267,7 @@ export async function isCrossoverMissing(
 
 export async function preflightCrossover(
   bottleName: string,
-  deps: Partial<EngineDecisionDeps> & KillDeps,
+  deps: Partial<EngineDecisionDeps> & KillDeps & RunnerDeps,
   opts?: { killOnTimeout?: boolean; key?: string }
 ): Promise<CrossoverPreflight> {
   const d = withKill(deps)
@@ -464,7 +473,7 @@ function pinnedSelection(
 
 export async function decideLaunchEngine(
   args: { key: string; bottleName: string },
-  deps: Partial<EngineDecisionDeps> & KillDeps & ReleasesDeps
+  deps: Partial<EngineDecisionDeps> & KillDeps & ReleasesDeps & RunnerDeps
 ): Promise<LaunchDecision> {
   const d = withKillAndReleases(deps)
   const override = parseEngineOverride(d.readOverride(args.key))
@@ -536,10 +545,11 @@ export async function decideLaunchEngine(
     )
   }
 
-  const preflight = await preflightCrossover(args.bottleName, d, {
-    killOnTimeout: true,
-    key: args.key
-  })
+  const preflight = await preflightCrossover(
+    args.bottleName,
+    { ...d, runner: deps.runner },
+    { killOnTimeout: true, key: args.key }
+  )
 
   // An inconclusive pre-flight is no evidence of breakage (59 D-09/G29, WR-01):
   // the bottle stays on the engine its marker records (known pin, Wine Manager
@@ -684,9 +694,9 @@ export async function decideLaunchEngine(
 
 export async function decideCreationEngine(
   args: { key: string },
-  deps?: Partial<EngineDecisionDeps>
+  deps: Partial<EngineDecisionDeps> & RunnerDeps
 ): Promise<CreationDecision> {
-  const d = withDefaults(deps)
+  const d = { ...defaultEngineDecisionDeps(deps.runner), ...deps }
   const pin = d.pins.current
   // 59-REVIEW WR-03: presence check only. --demo-status against another
   // title's bottle read that bottle's trial clock, not this one's.

@@ -13634,7 +13634,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
             cegMarkers: [],
             drmExe: exePath
           },
-          steamTestDeps
+          { ...steamTestDeps, runTool: expect.any(Function) }
         )
       })
 

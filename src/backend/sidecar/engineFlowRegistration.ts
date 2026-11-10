@@ -50,9 +50,10 @@ export interface EngineFlowDeps {
 function engineServicesOf(
   deps: EngineFlowDeps
 ): Pick<BootServices, 'spawnAsync'> &
-  Pick<EngineServices, 'wineManagerReleases'> {
+  Pick<EngineServices, 'runner' | 'wineManagerReleases'> {
   return {
     spawnAsync: deps.spawnAsync,
+    runner: deps.runner,
     wineManagerReleases: wineManagerReleasesFrom(deps)
   }
 }

@@ -1,6 +1,8 @@
-import { chmodSync, copyFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
-import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
+import {
+  createScriptedRunner,
+  type ScriptStep
+} from 'backend/testUtils/scriptedRunner'
 import {
   CX_CREATE_CAP_MS,
   decideCreationEngine,
@@ -15,7 +17,8 @@ import {
 import type {
   EngineDecisionDeps,
   KillDeps,
-  ReleasesDeps
+  ReleasesDeps,
+  RunnerDeps
 } from '../engineDecision'
 import { ENGINE_PINS } from '../enginePins'
 import { parseEngineOverride } from '../engineIds'
@@ -57,8 +60,9 @@ const rel = (v: string, installed = true) => ({
 
 function mkDeps(
   over: Partial<EngineDecisionDeps> = {}
-): Partial<EngineDecisionDeps> & KillDeps & ReleasesDeps {
+): Partial<EngineDecisionDeps> & KillDeps & ReleasesDeps & RunnerDeps {
   return {
+    runner: createScriptedRunner([]),
     resolveCrossoverBinDir: () => Promise.resolve(CX_BIN),
     isExecutable: () => true,
     fileExists: () => true,
@@ -270,34 +274,49 @@ describe('preflightCrossover (stub deps)', () => {
   })
 })
 
-describe('preflightCrossover (real probe, stub wine)', () => {
-  let profile: ReturnType<typeof createFakeHomeProfile>
-  let binDir: string
-  beforeEach(() => {
-    profile = createFakeHomeProfile({ prefix: 'gamelib-engdecision-' })
-    binDir = join(profile.root, 'bin')
-    mkdirSync(binDir, { recursive: true })
-    const dest = join(binDir, 'wine')
-    copyFileSync(join(__dirname, 'fixtures', 'stub-wine.sh'), dest)
-    chmodSync(dest, 0o755)
-  })
-  afterEach(() => profile.dispose())
+describe('preflightCrossover (scripted runner probe)', () => {
+  const binDir = '/opt/cx/bin'
+  const wine = join(binDir, 'wine')
+  const scriptFor = (mode: string): ScriptStep[] => {
+    const timeout = { code: null, timedOut: true }
+    switch (mode) {
+      case 'licensed':
+        return [{ cmd: wine, result: { stdout: 'Standard version' } }]
+      case 'trial':
+        return [
+          { cmd: wine, result: { stdout: 'Demo version (12 days remaining)' } }
+        ]
+      case 'expired':
+        return [
+          {
+            cmd: wine,
+            result: { stdout: 'Demo version (expired 3 days ago)' }
+          }
+        ]
+      case 'garbage':
+        return [{ cmd: wine, result: { stdout: 'Something else' } }]
+      case 'hang':
+        return [{ cmd: wine, result: timeout, repeat: true }]
+      case 'hang-once':
+        return [
+          { cmd: wine, result: timeout },
+          { cmd: wine, result: { stdout: 'Standard version' } }
+        ]
+      default:
+        return [{ cmd: wine, result: { code: 3 }, repeat: true }]
+    }
+  }
 
-  const real = (mode: string): Partial<EngineDecisionDeps> => {
-    const stubState = join(profile.root, 'hang-once.state')
+  const real = (mode: string): Partial<EngineDecisionDeps> & RunnerDeps => {
     const base = mkDeps()
     delete base.probe
     delete base.isExecutable
     delete base.fileExists
     return {
       ...base,
+      runner: createScriptedRunner(scriptFor(mode)),
       resolveCrossoverBinDir: () => Promise.resolve(binDir),
       readBuild: () => Promise.resolve(null),
-      probeEnv: profile.childEnv({
-        ...process.env,
-        STUB_MODE: mode,
-        STUB_STATE: stubState
-      }),
       probeTimeoutMs: 500
     }
   }
@@ -310,10 +329,12 @@ describe('preflightCrossover (real probe, stub wine)', () => {
     ['hang', { kind: 'broken' }, 2],
     ['hang-once', { kind: 'healthy', trialDaysRemaining: null }, 1],
     ['fail', { kind: 'broken' }, 1]
-  ])('maps stub mode %s', async (mode, expected, kills) => {
+  ])('maps probe mode %s', async (mode, expected, kills) => {
     const kill = jest.fn(() => Promise.resolve(undefined))
     const r = await preflightCrossover('Steam', {
       ...real(mode),
+      isExecutable: () => true,
+      fileExists: () => true,
       killCrossoverWineserver: kill
     })
     expect(r).toMatchObject(expected)

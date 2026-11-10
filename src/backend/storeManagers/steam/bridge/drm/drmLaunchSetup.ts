@@ -24,6 +24,7 @@
  *   deadline are unref'd; each long step is bounded by its own module's
  *   deadline and abort id.
  */
+import type { RunTool } from 'backend/engine/runTool'
 import { spawn } from 'child_process'
 import { dirname, isAbsolute, resolve } from 'path'
 import type { GameSettings, GameStatus } from 'common/types'
@@ -122,6 +123,8 @@ export type DrmLaunchSetupResult =
 
 /** Overridable steps; every member defaults to the real implementation. */
 export type DrmSetupOverrides = {
+  /** The caller's tool runner (66.2-03); the clone and allowlist steps spawn through it. */
+  runTool: RunTool
   isMacSteamRunning?: () => Promise<boolean>
   detectCrossover?: typeof detectAllowedCrossover
   ensureComponent?: typeof ensureSteamclientLayerComponent
@@ -242,7 +245,7 @@ async function ensureDrmDownloads(
   // 2. CrossOver allowlist
   const detect = deps.detectCrossover ?? detectAllowedCrossover
   const crossover = await run('unsupported-crossover', () =>
-    detect({ appFolder })
+    detect({ appFolder }, { runTool: deps.runTool })
   )
   if (crossover.status === 'error')
     return { status: 'error', stage: 'crossover-allowlist', error: crossover }
@@ -264,7 +267,10 @@ async function ensureDrmDownloads(
   const runner = await run('runner-clone', () =>
     ensureRunner(
       { appFolder, crossover, component },
-      { onCloneStart: () => progress(DRM_PROGRESS_CONTEXT.runner) }
+      {
+        runTool: deps.runTool,
+        onCloneStart: () => progress(DRM_PROGRESS_CONTEXT.runner)
+      }
     )
   )
   if (runner.status === 'error')
@@ -558,7 +564,7 @@ export type DrmPrefetchResult =
  */
 export async function prefetchDrmDownloads(
   input: DrmPrefetchInput,
-  deps: DrmSetupOverrides = {}
+  deps: DrmSetupOverrides
 ): Promise<DrmPrefetchResult> {
   try {
     if (

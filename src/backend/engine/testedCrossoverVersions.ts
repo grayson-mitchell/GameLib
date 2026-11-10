@@ -5,7 +5,6 @@
  *
  * Nothing runs at import.
  */
-import { defaultRunTool } from './runTool'
 import type { RunTool } from './runTool'
 
 type TestedCrossoverRow = { build: string; testedIn: string }
@@ -69,7 +68,7 @@ export function dismissUntestedNotice(
 
 export async function readCrossoverBuild(
   binDir: string,
-  runTool: RunTool = defaultRunTool
+  runTool: RunTool
 ): Promise<string | null> {
   if (!binDir.endsWith(CX_BIN_SUFFIX)) return null
   const appPath = binDir.slice(0, -CX_BIN_SUFFIX.length)

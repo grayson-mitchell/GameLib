@@ -203,7 +203,7 @@ export type EnsureGameBottleResult =
   | { status: 'error'; errorCode?: string; error: string }
 
 export interface PerGameBottleDeps {
-  decide: typeof decideCreationEngine
+  decide: (args: { key: string }) => ReturnType<typeof decideCreationEngine>
   resolveBinDir: () => Promise<string | undefined>
   createCrossover: (
     ...args: Parameters<typeof createCrossoverBottle> extends [
@@ -233,9 +233,8 @@ export interface PerGameBottleDeps {
 
 const defaultDeps: Omit<
   PerGameBottleDeps,
-  'createCrossover' | 'createFallback'
+  'createCrossover' | 'createFallback' | 'decide'
 > = {
-  decide: decideCreationEngine,
   resolveBinDir: () => resolveCrossoverBinDirForEngine(),
   ensurePin: ensurePinnedEngineReportingStatus,
   currentPin: () => ENGINE_PINS.current,
@@ -346,6 +345,7 @@ export function ensureGameBottle(
   const d: PerGameBottleDeps = {
     createCrossover: (...a) => createCrossoverBottle(services, ...a),
     createFallback: (...a) => createFallbackBottle(services, ...a),
+    decide: (a) => decideCreationEngine(a, { runner: services.runner }),
     ...defaultDeps,
     ...deps
   }

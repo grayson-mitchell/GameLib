@@ -3,11 +3,9 @@
  *
  * These tests build synthetic CrossOver trees in mkdtemp dirs whose names
  * contain a space (`gl app`), as the real appFolder does. The tool runner is
- * faked for every step except the defaultRunTool cases, which spawn real
- * system binaries under a fake HOME. The opt-in real arm at the bottom clones
- * the real CrossOver and is not part of CI.
+ * an injected RunTool for every step. The opt-in real arm at the bottom clones
+ * the real CrossOver through the real process runner and is not part of CI.
  */
-import * as childProcess from 'child_process'
 import { createHash } from 'crypto'
 import {
   existsSync,
@@ -25,20 +23,8 @@ import {
 } from 'fs'
 import { tmpdir } from 'os'
 import { join, resolve } from 'path'
-import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
 
-const mockSpawnCalls: unknown[][] = []
-jest.mock('child_process', () => {
-  const actual = jest.requireActual('child_process')
-  return {
-    ...actual,
-    spawn: (...a: unknown[]) => {
-      mockSpawnCalls.push(a)
-      return actual.spawn(...a)
-    }
-  }
-})
 jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   logInfo: jest.fn(),
@@ -63,10 +49,11 @@ import {
   STOCK_LOADER_ENTITLEMENTS
 } from '../runnerEntitlements'
 import {
-  defaultRunTool,
+  createRunTool,
   type RunTool,
   type RunToolResult
 } from 'backend/engine/runTool'
+import { createRealRunner } from 'backend/testUtils/realRunner'
 import { buildDrmPaths } from '../drmPaths'
 import type { NtdllPatchRow } from '../ntdllPatchTable'
 import { at } from '../../../__tests__/fixtures/indexed'
@@ -287,51 +274,13 @@ function treeState(dir: string): string {
 // Task 1
 // ---------------------------------------------------------------------------
 
-describe('defaultRunTool', () => {
-  const posix = process.platform === 'win32' ? it.skip : it
-
-  posix('runs ps and captures stdout', async () => {
-    const r = await defaultRunTool(
-      '/bin/ps',
-      ['-o', 'pid=', '-p', String(process.pid)],
-      { timeoutMs: 10000 }
-    )
-    expect(r.code).toBe(0)
-    expect(r.timedOut).toBe(false)
-    expect(r.stdout).toContain(String(process.pid))
-  })
-
-  posix('spawns under a fake HOME that is gone afterwards', async () => {
-    mockSpawnCalls.length = 0
-    await defaultRunTool('/bin/ps', ['-o', 'pid=', '-p', '1'], {
-      timeoutMs: 10000
-    })
-    expect(mockSpawnCalls).toHaveLength(1)
-    const env = (at(mockSpawnCalls, 0)[2] as { env: NodeJS.ProcessEnv }).env
-    expect(env.HOME).toBeTruthy()
-    expect(env.HOME).not.toBe(process.env.HOME)
-    expect(existsSync(env.HOME as string)).toBe(false)
-  })
-
-  it('rejects a tool that is not allowed without spawning', async () => {
-    mockSpawnCalls.length = 0
-    const r = await defaultRunTool('/bin/sh' as never, ['-c', 'true'], {
-      timeoutMs: 1000
-    })
-    expect(r.code).toBeNull()
-    expect(r.timedOut).toBe(false)
-    expect(r.stderr).toContain('tool not allowed')
-    expect(mockSpawnCalls).toHaveLength(0)
-  })
-})
-
 describe('detectAllowedCrossover', () => {
   async function detect(
     over: {
       plutil?: string | RunToolResult
       mutate?: (cx: ReturnType<typeof makeSyntheticCrossover>) => void
       binDir?: (cx: { binDir: string }) => string | undefined
-      deps?: Parameters<typeof detectAllowedCrossover>[1]
+      deps?: Partial<Parameters<typeof detectAllowedCrossover>[1]>
       appFolder?: string
     } = {}
   ) {
@@ -473,7 +422,10 @@ describe('detectAllowedCrossover', () => {
     const cx = makeSyntheticCrossover(join(paths.runnersRoot, 'x'))
     const res = await detectAllowedCrossover(
       { crossoverBinDir: cx.binDir, appFolder },
-      { platform: 'darwin' }
+      {
+        platform: 'darwin',
+        runTool: () => Promise.reject(new Error('must not run'))
+      }
     )
     expect(failRes(res).step).toBe('unsupported-crossover')
   })
@@ -1243,7 +1195,9 @@ const realOn =
     writeFileSync(marker, 'm')
     await new Promise((r) => setTimeout(r, 1100))
     const installedBefore = sha(readFileSync(realInputs[0]))
-    const found = await detectAllowedCrossover()
+    const real = createRealRunner()
+    const runTool = createRunTool({ runner: real.runner })
+    const found = await detectAllowedCrossover({}, { runTool })
     expect(found.status).toBe('ok')
     if (found.status !== 'ok') return
     const component: RunnerComponentInput = {
@@ -1257,7 +1211,7 @@ const realOn =
     const t0 = Date.now()
     const res = await ensureRunnerClone(
       { appFolder: root, crossover: found, component },
-      {}
+      { runTool }
     )
     console.log(
       'real runner arm',
@@ -1274,34 +1228,40 @@ const realOn =
     expect(sha(readFileSync(join(res.windowsDllDir, 'ntdll.dll')))).toBe(
       'c0e21a9a5250f0a97c08d3c3e1798566255387213e2553b1e555264fb9ded97e'
     )
-    const profile = createFakeHomeProfile()
     try {
-      const env = profile.childEnv()
-      const ent = childProcess.spawnSync(
-        '/usr/bin/codesign',
-        ['-d', '--entitlements', '-', '--xml', join(res.unixDllDir, 'wine')],
-        { env, encoding: 'utf8' }
-      )
+      const sync = (cmd: string, argv: string[]) =>
+        real.runner.runSync(cmd, argv, {
+          timeoutMs: 60_000,
+          reason: 'inspect the real runner clone (opt-in arm)'
+        })
+      const ent = sync('/usr/bin/codesign', [
+        '-d',
+        '--entitlements',
+        '-',
+        '--xml',
+        join(res.unixDllDir, 'wine')
+      ])
       expect(ent.stdout).toContain(DYLD_ENTITLEMENT)
-      const dv = childProcess.spawnSync(
-        '/usr/bin/codesign',
-        ['-dv', join(res.unixDllDir, 'lsteamclient.so')],
-        { env, encoding: 'utf8' }
-      )
+      const dv = sync('/usr/bin/codesign', [
+        '-dv',
+        join(res.unixDllDir, 'lsteamclient.so')
+      ])
       expect(dv.stderr).toContain('not signed')
-      const newer = childProcess.spawnSync(
-        '/usr/bin/find',
-        ['/Applications/CrossOver.app', '-newer', marker, '-print', '-quit'],
-        { env, encoding: 'utf8' }
-      )
+      const newer = sync('/usr/bin/find', [
+        '/Applications/CrossOver.app',
+        '-newer',
+        marker,
+        '-print',
+        '-quit'
+      ])
       expect(newer.stdout.trim()).toBe('')
     } finally {
-      profile.dispose()
+      real.dispose()
     }
     expect(sha(readFileSync(realInputs[0]))).toBe(installedBefore)
     const again = await ensureRunnerClone(
       { appFolder: root, crossover: found, component },
-      {}
+      { runTool }
     )
     expect(again).toMatchObject({ status: 'ok', source: 'cache' })
   })

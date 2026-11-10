@@ -1,4 +1,7 @@
-import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
+import {
+  createScriptedRunner,
+  type ScriptedRunner
+} from 'backend/testUtils/scriptedRunner'
 import { createRunTool } from '../runTool'
 
 type Opts = {
@@ -6,6 +9,12 @@ type Opts = {
   stdin: string
   replaceEnv: boolean
   maxBufferBytes: number
+}
+
+function firstCall(runner: ScriptedRunner) {
+  const call = runner.calls[0]
+  if (!call) throw new Error('no run call recorded')
+  return call
 }
 
 describe('createRunTool', () => {
@@ -25,7 +34,7 @@ describe('createRunTool', () => {
       timedOut: false,
       aborted: false
     })
-    const call = runner.calls[0]
+    const call = firstCall(runner)
     const opts = call.opts as Opts
     expect(call.cmd).toBe('/usr/bin/plutil')
     expect(call.argv).toEqual(argv)

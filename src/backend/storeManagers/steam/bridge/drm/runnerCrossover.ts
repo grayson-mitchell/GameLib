@@ -11,7 +11,7 @@ import { createReadStream, promises as fsp } from 'fs'
 import type { Stats } from 'fs'
 import { basename, dirname, isAbsolute, join, relative, sep } from 'path'
 
-import { defaultRunTool, type RunTool } from 'backend/engine/runTool'
+import type { RunTool } from 'backend/engine/runTool'
 import { buildDrmPaths } from './drmPaths'
 import {
   findNtdllPatchRow,
@@ -95,7 +95,7 @@ export type CrossoverAllowed = {
 
 export type DetectCrossoverDeps = {
   resolveCrossoverBinDir?: () => Promise<string | undefined>
-  runTool?: RunTool
+  runTool: RunTool
   findRow?: (build: string, cleanSha256: string) => NtdllPatchRow | null
   supportedBuilds?: () => string[]
   platform?: NodeJS.Platform
@@ -152,7 +152,7 @@ export async function readCrossoverBundleVersion(
  */
 export async function detectAllowedCrossover(
   opts: { crossoverBinDir?: string; appFolder?: string } = {},
-  deps: DetectCrossoverDeps = {}
+  deps: DetectCrossoverDeps
 ): Promise<DrmStepResult<CrossoverAllowed>> {
   const fail = (cause: string) => drmStepError('unsupported-crossover', cause)
   try {
@@ -183,7 +183,7 @@ export async function detectAllowedCrossover(
       }
     }
 
-    const run = deps.runTool ?? defaultRunTool
+    const run = deps.runTool
     const version = await readCrossoverBundleVersion(
       run,
       appPath,

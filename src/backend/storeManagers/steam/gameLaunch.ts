@@ -7,6 +7,7 @@
  * gameLaunch -> gameBridgeLaunch). A call a test spies on stays a
  * `steamGame.X()` call (quick-261107-an2).
  */
+import { createRunTool } from 'backend/engine/runTool'
 import i18next from 'i18next'
 import { app, shell } from 'backend/platform'
 import { existsSync } from 'graceful-fs'
@@ -852,12 +853,15 @@ export async function prefetchBridgeDrmDownloads(
       : 'tcp'
   )
   if (drmWrapper !== 'steamstub') return
-  await prefetchDrmDownloads({
-    appId: steamGame.appId,
-    appFolder,
-    drmWrapper,
-    cegMarkers
-  })
+  await prefetchDrmDownloads(
+    {
+      appId: steamGame.appId,
+      appFolder,
+      drmWrapper,
+      cegMarkers
+    },
+    { runTool: createRunTool({ runner: steamGame.deps.runner }) }
+  )
 }
 
 /**

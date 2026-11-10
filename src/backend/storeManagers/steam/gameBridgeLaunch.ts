@@ -5,6 +5,7 @@
  * body is reachable as a module export (quick-261108-ca6). Cross-module calls
  * are free functions, so a test spies on the module export.
  */
+import { createRunTool } from 'backend/engine/runTool'
 import i18next from 'i18next'
 import { existsSync } from 'graceful-fs'
 import { basename } from 'node:path'
@@ -205,7 +206,10 @@ export async function launchBridgeGameBody(
       cegMarkers: launchCegMarkers,
       drmExe
     },
-    steamGame.deps
+    {
+      ...steamGame.deps,
+      runTool: createRunTool({ runner: steamGame.deps.runner })
+    }
   )
   if (drm.status === 'not-applicable') {
     // drmLaunchSetup cleared the clone runner, so the TCP launch must not

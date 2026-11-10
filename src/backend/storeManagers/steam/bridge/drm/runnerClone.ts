@@ -37,7 +37,7 @@ import { constants as fsConstants, promises as fsp } from 'fs'
 import { basename, dirname, join } from 'path'
 
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { defaultRunTool, type RunTool } from 'backend/engine/runTool'
+import type { RunTool } from 'backend/engine/runTool'
 import {
   createAbortController,
   deleteAbortController
@@ -94,7 +94,7 @@ export const CLONE_ARGV_PRIMARY: readonly string[] = ['-c', '-R']
 export const CLONE_ARGV_FALLBACK: readonly string[] = ['-R', '-p']
 
 export type RunnerCloneDeps = {
-  runTool?: RunTool
+  runTool: RunTool
   applyPatch?: (
     clean: Buffer,
     payload: Buffer,
@@ -132,7 +132,7 @@ export async function ensureRunnerClone(
     crossover: CrossoverAllowed
     component: RunnerComponentInput
   },
-  deps: RunnerCloneDeps = {}
+  deps: RunnerCloneDeps
 ): Promise<DrmStepResult<RunnerReady>> {
   try {
     const paths = buildDrmPaths(opts.appFolder)
@@ -169,7 +169,7 @@ async function runFront(
   runnersRoot: string,
   runnerDir: string
 ): Promise<DrmStepResult<RunnerReady>> {
-  const run = deps.runTool ?? defaultRunTool
+  const run = deps.runTool
   const timeouts = { ...RUNNER_TIMEOUTS, ...deps.timeouts }
   const { crossover, component } = opts
   const build = crossover.crossoverBuild
@@ -352,7 +352,7 @@ async function buildRunner(
   runnersRoot: string,
   runnerDir: string
 ): Promise<Partial<RunnerReady>> {
-  const run = deps.runTool ?? defaultRunTool
+  const run = deps.runTool
   const timeouts = { ...RUNNER_TIMEOUTS, ...deps.timeouts }
   const { crossover, component } = opts
   const { row } = crossover

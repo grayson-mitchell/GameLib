@@ -113,7 +113,7 @@ describe('engine flows', () => {
       kind: 'n'
     })
     expect(gameState).toHaveBeenCalledWith(
-      { spawnAsync, wineManagerReleases: expect.any(Function) },
+      { spawnAsync, runner, wineManagerReleases: expect.any(Function) },
       arg
     )
   })
@@ -156,7 +156,7 @@ describe('engine flows', () => {
     const arg = { appName: 'default' }
     const out = await handlers.get('listEngineOptions')!({}, arg)
     expect(gameOptions).toHaveBeenCalledWith(
-      { spawnAsync, wineManagerReleases: expect.any(Function) },
+      { spawnAsync, runner, wineManagerReleases: expect.any(Function) },
       arg
     )
     expect(JSON.stringify(out)).not.toContain('/')

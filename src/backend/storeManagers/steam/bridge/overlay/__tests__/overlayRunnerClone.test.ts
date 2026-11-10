@@ -217,7 +217,10 @@ describe('detectCrossoverForOverlay', () => {
     )
     const r = await detectCrossoverForOverlay(
       { appFolder, crossoverBinDir: inner },
-      { platform: 'darwin' }
+      {
+        platform: 'darwin',
+        runTool: () => Promise.reject(new Error('must not run'))
+      }
     )
     expect(r).toMatchObject({ status: 'error', step: 'crossover-detect' })
   })

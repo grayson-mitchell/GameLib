@@ -304,8 +304,8 @@ export async function prepareOverlayLaunch(
     checkInputs?: typeof checkOverlayInputs
     detect?: typeof detectCrossoverForOverlay
     ensure?: typeof ensureOverlayRunnerClone
-    runTool?: RunTool
-  } = {}
+    runTool: RunTool
+  }
 ): Promise<
   OverlayStepResult<{ runner: OverlayRunnerReady; tokens: string[] }>
 > {
@@ -314,12 +314,12 @@ export async function prepareOverlayLaunch(
     if (inputs.status === 'error') return inputs
     const detected = await (deps.detect ?? detectCrossoverForOverlay)(
       { appFolder: a.appFolder },
-      deps.runTool ? { runTool: deps.runTool } : {}
+      { runTool: deps.runTool }
     )
     if (detected.status === 'error') return detected
     const ensured = await (deps.ensure ?? ensureOverlayRunnerClone)(
       { appFolder: a.appFolder, crossover: detected.crossover },
-      deps.runTool ? { runTool: deps.runTool } : {}
+      { runTool: deps.runTool }
     )
     if (ensured.status === 'error') return ensured
     const built = buildOverlayCxTokens(a)

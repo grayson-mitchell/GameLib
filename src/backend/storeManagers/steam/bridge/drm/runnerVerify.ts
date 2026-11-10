@@ -7,7 +7,7 @@
 import { promises as fsp } from 'fs'
 import { basename, join } from 'path'
 
-import { defaultRunTool, type RunTool } from 'backend/engine/runTool'
+import type { RunTool } from 'backend/engine/runTool'
 import {
   DLL_REL,
   LOADER_REL,
@@ -122,7 +122,7 @@ export const sec = (ms: number) => Math.floor(ms / 1000)
 export async function verifyRunnerClone(
   runnerDir: string,
   expect: RunnerVerifyExpect,
-  runTool: RunTool = defaultRunTool
+  runTool: RunTool
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
   const bad = (reason: string) => ({ ok: false as const, reason })
   try {

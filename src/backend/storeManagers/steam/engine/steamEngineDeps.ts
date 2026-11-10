@@ -10,7 +10,10 @@ import { resolveCrossoverBinDirAsync } from 'backend/engine/crossoverLocation'
 import { killCrossoverWineserverWith } from 'backend/engine/engineDecision'
 import { wineManagerReleasesFrom } from 'backend/engine/wineManagerReleases'
 import type { Stores } from 'backend/services/types'
-import type { EngineDecisionDeps } from 'backend/engine/engineDecision'
+import type {
+  EngineDecisionDeps,
+  RunnerDeps
+} from 'backend/engine/engineDecision'
 import type { EngineServices } from 'backend/engine/engineServices'
 import { switchServicesFrom } from 'backend/engine/engineSwitch'
 import type { EngineSwitchDeps } from 'backend/engine/engineSwitch'
@@ -51,19 +54,26 @@ const hintedBinDir = () =>
 /** The spawn and release-reader slice the steam decision paths need, from a store's deps (66.1-22i). */
 export function steamDecisionServices(deps: {
   spawnAsync: EngineServices['spawnAsync']
+  runner: EngineServices['runner']
   stores: Pick<Stores, 'wineManager'>
-}): Pick<EngineServices, 'spawnAsync' | 'wineManagerReleases'> {
+}): Pick<EngineServices, 'spawnAsync' | 'runner' | 'wineManagerReleases'> {
   return {
     spawnAsync: deps.spawnAsync,
+    runner: deps.runner,
     wineManagerReleases: wineManagerReleasesFrom(deps)
   }
 }
 
 export function steamDecisionDeps(
-  services: Pick<EngineServices, 'spawnAsync' | 'wineManagerReleases'>
+  services: Pick<
+    EngineServices,
+    'spawnAsync' | 'runner' | 'wineManagerReleases'
+  >
 ): Partial<EngineDecisionDeps> &
-  Pick<EngineDecisionDeps, 'killCrossoverWineserver' | 'wineManagerReleases'> {
+  Pick<EngineDecisionDeps, 'killCrossoverWineserver' | 'wineManagerReleases'> &
+  RunnerDeps {
   return {
+    runner: services.runner,
     killCrossoverWineserver: killCrossoverWineserverWith(services),
     wineManagerReleases: services.wineManagerReleases,
     resolveCrossoverBinDir: hintedBinDir,

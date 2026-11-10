@@ -19,7 +19,7 @@
  * D-04's wording). The overlay root is a sibling of the DRM root; neither
  * prunes the other.
  *
- * Every spawn goes through RunTool / defaultRunTool, which uses
+ * Every spawn goes through RunTool, which uses
  * createFakeHomeProfile. Nothing runs at import. Nothing here rejects: every
  * failure is an OverlayStepError ('crossover-detect' | 'clone' | 'resign', D-08).
  */
@@ -51,7 +51,7 @@ import {
   resignLoader,
   scrubCloneXattrs
 } from '../drm/runnerEntitlements'
-import { defaultRunTool, type RunTool } from 'backend/engine/runTool'
+import type { RunTool } from 'backend/engine/runTool'
 import {
   overlayStepError,
   type OverlayStepError,
@@ -96,7 +96,7 @@ export type OverlayRunnerReady = {
 }
 
 type OverlayDeps = {
-  runTool?: RunTool
+  runTool: RunTool
   timeouts?: Partial<typeof RUNNER_TIMEOUTS>
   onCloneStart?: () => void
 }
@@ -127,9 +127,9 @@ export async function detectCrossoverForOverlay(
   opts: { appFolder: string; crossoverBinDir?: string },
   deps: {
     resolveCrossoverBinDir?: () => Promise<string | undefined>
-    runTool?: RunTool
+    runTool: RunTool
     platform?: NodeJS.Platform
-  } = {}
+  }
 ): Promise<OverlayStepResult<{ crossover: OverlayCrossover }>> {
   const fail = (cause: string) => overlayStepError('crossover-detect', cause)
   try {
@@ -154,7 +154,7 @@ export async function detectCrossoverForOverlay(
       return fail('CrossOver path is inside the overlay runners directory')
     }
     const version = await readCrossoverBundleVersion(
-      deps.runTool ?? defaultRunTool,
+      deps.runTool,
       appPath,
       RUNNER_TIMEOUTS.plutil
     )
@@ -267,7 +267,7 @@ const inFlight = new Map<
  */
 export async function ensureOverlayRunnerClone(
   opts: { appFolder: string; crossover: OverlayCrossover },
-  deps: OverlayDeps = {}
+  deps: OverlayDeps
 ): Promise<OverlayStepResult<{ runner: OverlayRunnerReady }>> {
   try {
     const paths = buildOverlayPaths(opts.appFolder)
@@ -306,7 +306,7 @@ async function runFront(
   runnersRoot: string,
   runnerDir: string
 ): Promise<OverlayStepResult<{ runner: OverlayRunnerReady }>> {
-  const run = deps.runTool ?? defaultRunTool
+  const run = deps.runTool
   const timeouts = { ...RUNNER_TIMEOUTS, ...deps.timeouts }
   const build = crossover.crossoverBuild
 
@@ -424,7 +424,7 @@ async function buildRunner(
   runnersRoot: string,
   runnerDir: string
 ): Promise<Pick<OverlayRunnerReady, 'cloneMethod' | 'provenanceRemaining'>> {
-  const run = deps.runTool ?? defaultRunTool
+  const run = deps.runTool
   const timeouts = { ...RUNNER_TIMEOUTS, ...deps.timeouts }
   const build = crossover.crossoverBuild
   if (!CROSSOVER_BUILD_RE.test(build)) {

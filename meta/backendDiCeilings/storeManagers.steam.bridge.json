@@ -26,7 +26,7 @@
     "src/backend/storeManagers/steam/bridge/drm/__tests__/drmRegistry.test.ts": 1,
     "src/backend/storeManagers/steam/bridge/drm/__tests__/drmRestore.test.ts": 7,
     "src/backend/storeManagers/steam/bridge/drm/__tests__/drmScanExe.test.ts": 7,
-    "src/backend/storeManagers/steam/bridge/drm/__tests__/runnerClone.test.ts": 2,
+    "src/backend/storeManagers/steam/bridge/drm/__tests__/runnerClone.test.ts": 1,
     "src/backend/storeManagers/steam/bridge/drm/__tests__/stageDrmBottle.test.ts": 8,
     "src/backend/storeManagers/steam/bridge/drm/__tests__/stageWineLog.test.ts": 1,
     "src/backend/storeManagers/steam/bridge/drm/__tests__/steamclientLayerInstall.test.ts": 1,

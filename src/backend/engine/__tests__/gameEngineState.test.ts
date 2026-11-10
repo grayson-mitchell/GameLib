@@ -14,9 +14,11 @@ import type { CrossoverPreflight } from '../engineDecision'
 import type { EngineConfigDeps } from '../engineConfig'
 import { defined } from './defined'
 import { createTestServices } from 'backend/testUtils/testServices'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
 const services = {
   spawnAsync: createTestServices().spawnAsync,
+  runner: createScriptedRunner([]),
   wineManagerReleases: () => []
 }
 

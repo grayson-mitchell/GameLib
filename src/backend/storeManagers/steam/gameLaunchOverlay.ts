@@ -7,6 +7,7 @@
  * gameLaunch -> gameBridgeLaunch). A call a test spies on stays a
  * `steamGame.X()` call (quick-261107-an2).
  */
+import { createRunTool } from 'backend/engine/runTool'
 import i18next from 'i18next'
 import { lstatSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
@@ -334,14 +335,17 @@ export async function prepareTcpOverlay(
       }
     } else if (resolveLaunchOverlay(steamGame).enabled) {
       inputArg = overlayInputArg(steamGame, 'tcp-clone')
-      const result = await prepareOverlayLaunch({
-        appId: steamGame.appId,
-        appFolder,
-        shimPath: builtOverlayShimPath,
-        steamBinDir: join(userHome, ...MAC_STEAM_CLIENT_SUBPATH),
-        ...inputArg,
-        ...overlayProbeArg(steamGame)
-      })
+      const result = await prepareOverlayLaunch(
+        {
+          appId: steamGame.appId,
+          appFolder,
+          shimPath: builtOverlayShimPath,
+          steamBinDir: join(userHome, ...MAC_STEAM_CLIENT_SUBPATH),
+          ...inputArg,
+          ...overlayProbeArg(steamGame)
+        },
+        { runTool: createRunTool({ runner: steamGame.deps.runner }) }
+      )
       if (result.status === 'error') {
         notifyOverlaySetupFailed(steamGame, result.step, result.cause)
       } else {

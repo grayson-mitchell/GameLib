@@ -1,6 +1,9 @@
 import { join } from 'path'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
-import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
+import {
+  createScriptedRunner,
+  type ScriptedRunner
+} from 'backend/testUtils/scriptedRunner'
 import { createProbeDemoStatus, parseDemoStatus } from '../demoStatus'
 
 jest.mock('backend/logger', () => ({
@@ -8,6 +11,12 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
 }))
+
+function firstCall(runner: ScriptedRunner) {
+  const call = runner.calls[0]
+  if (!call) throw new Error('no run call recorded')
+  return call
+}
 
 describe('parseDemoStatus', () => {
   it('maps Standard version to licensed', () => {
@@ -65,7 +74,7 @@ describe('createProbeDemoStatus', () => {
   it('runs with the 15 s cap, closed stdin and CX_BOTTLE in env', async () => {
     const { runner, probe } = probeWith({ cmd: wine, argv: ['--demo-status'] })
     await probe({ binDir, bottleName: 'My.Bottle-1' })
-    const call = runner.calls[0]
+    const call = firstCall(runner)
     const opts = call.opts as {
       timeoutMs: number
       stdin: string
@@ -87,13 +96,13 @@ describe('createProbeDemoStatus', () => {
         timeoutMs: 500,
         baseEnv: profile.childEnv()
       })
-      const opts = runner.calls[0].opts as {
+      const opts = firstCall(runner).opts as {
         timeoutMs: number
         replaceEnv: boolean
       }
       expect(opts.timeoutMs).toBe(500)
       expect(opts.replaceEnv).toBe(true)
-      expect(runner.calls[0].env?.HOME).toBe(profile.childEnv().HOME)
+      expect(firstCall(runner).env?.HOME).toBe(profile.childEnv().HOME)
     } finally {
       profile.dispose()
     }
@@ -166,7 +175,7 @@ describe('createProbeDemoStatus', () => {
         kind: 'ok',
         status: { kind: 'licensed' }
       })
-      expect(runner.calls[0].env?.CX_BOTTLE).toBe(b)
+      expect(firstCall(runner).env?.CX_BOTTLE).toBe(b)
     }
   )
 })

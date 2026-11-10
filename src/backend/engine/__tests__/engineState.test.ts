@@ -10,6 +10,7 @@ import {
   recordLaunchDecision as recordDecision,
   setEngineStatePublisher
 } from '../engineState'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import type { EngineStateDeps } from '../engineState'
 import type { CrossoverPreflight, LaunchDecision } from '../engineDecision'
 import type { EngineState } from 'common/types/engine'
@@ -41,6 +42,7 @@ function toDeps(appId: string, o: SteamStyle): EngineStateDeps {
   return {
     killCrossoverWineserver: () => Promise.resolve(),
     wineManagerReleases: () => [],
+    runner: createScriptedRunner([]),
     ...o,
     bottleFor: () =>
       (o.bridgeInstallBottleFor ?? ((id) => `GameLibSteamBridge-${id}`))(appId),
@@ -812,6 +814,7 @@ describe('generic identities (phase 61 D-12, D-15)', () => {
     store: memStore(),
     killCrossoverWineserver: () => Promise.resolve(),
     wineManagerReleases: () => [],
+    runner: createScriptedRunner([]),
     bottleFor: () => 'GameLibBottle-Fortnite',
     overrideEligible: () => true,
     overlayEligible: false,

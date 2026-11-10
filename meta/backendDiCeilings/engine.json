@@ -20,7 +20,6 @@
     "src/backend/engine/__tests__/legacyBottleUntouched.test.ts": 8,
     "src/backend/engine/__tests__/perGameBottle.test.ts": 4,
     "src/backend/engine/__tests__/pinnedEngineProgress.test.ts": 3,
-    "src/backend/engine/__tests__/testedCrossoverVersions.test.ts": 1,
     "src/backend/engine/__tests__/toolSettings.test.ts": 4
   },
   "moduleState": {

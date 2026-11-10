@@ -6,10 +6,6 @@ import {
   untestedCrossoverLogLine
 } from '../testedCrossoverVersions'
 
-jest.mock('backend/engine/runTool', () => ({
-  defaultRunTool: jest.fn()
-}))
-
 const CX_BIN =
   '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin'
 

@@ -168,6 +168,7 @@ describe('prepareOverlayLaunch', () => {
     shimPath: '/A/o.dylib',
     steamBinDir: SBIN
   }
+  const noRunTool = () => Promise.reject(new Error('runTool must not run'))
   const okInputs = () => Promise.resolve({ status: 'ok' as const })
   const crossover = {
     appPath: '/Applications/CrossOver.app',
@@ -179,6 +180,7 @@ describe('prepareOverlayLaunch', () => {
 
   test('success returns runner and tokens', async () => {
     const r = await prepareOverlayLaunch(a, {
+      runTool: noRunTool,
       checkInputs: okInputs,
       detect: () => Promise.resolve({ status: 'ok', crossover }),
       ensure: () => Promise.resolve({ status: 'ok', runner })
@@ -191,6 +193,7 @@ describe('prepareOverlayLaunch', () => {
   })
   test('detect error is returned', async () => {
     const r = await prepareOverlayLaunch(a, {
+      runTool: noRunTool,
       checkInputs: okInputs,
       detect: () =>
         Promise.resolve({
@@ -203,6 +206,7 @@ describe('prepareOverlayLaunch', () => {
   })
   test('ensure error is returned', async () => {
     const r = await prepareOverlayLaunch(a, {
+      runTool: noRunTool,
       checkInputs: okInputs,
       detect: () => Promise.resolve({ status: 'ok', crossover }),
       ensure: () =>
@@ -214,6 +218,7 @@ describe('prepareOverlayLaunch', () => {
     const detect = jest.fn()
     const ensure = jest.fn()
     const r = await prepareOverlayLaunch(a, {
+      runTool: noRunTool,
       checkInputs: () =>
         Promise.resolve({
           status: 'error',
@@ -229,6 +234,7 @@ describe('prepareOverlayLaunch', () => {
   })
   test('a throwing dep gives a step error, not a rejection', async () => {
     const r = await prepareOverlayLaunch(a, {
+      runTool: noRunTool,
       checkInputs: okInputs,
       detect: async () => {
         throw new Error('boom')
