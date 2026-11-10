@@ -97,7 +97,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 34.4.2: macOS login-window UX — modal child-window attachment + in-field autofill affordance** — 25/25 plans; live gate PASS 5/5 2026-08-19; verification stale at close
 - [x] **Phase 34.5: Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts** — 61/61 plans; completed 2026-08-20; no VERIFICATION.md
 - [x] **Phase 34.6: Tauri IPC re-plumb slice 9 — EOS overlay, SteamGridDB artwork, winetricks** — 21/21 plans; executed; verification stale at close
-- [ ] **Phase 34.7: Epic device-auth single sign-in path** — 0/0 plans; ⏸ ON HOLD — never planned (0 plans)
+- [ ] **Phase 34.7: Epic device-auth single sign-in path** — 0/0 plans; ⛔ SUPERSEDED 2026-11-11 by quick `260822-r3g` (embedded login primary again; never planned — see `## Parked / Superseded Phases`)
 - [x] **Phase 34.8: Frontend i18n compliance for fork-added code** — 14/14 plans; executed; no VERIFICATION.md
 - [x] **Phase 34.9: macOS runner onedir repackaging — eliminate the PyInstaller cold-start spawn tax** — 33/33 plans; verified
 - [x] **Phase 34.10: Navigation shell — horizontal card tabs replace the sidebar** — 27/27 plans; verified
@@ -205,6 +205,13 @@ for the next milestone are added below this line by `/gsd-phase`.
 **Why:** The phase was a formal Nyquist validation pass over the v0.1 (AUTH-01..05, LIB-01..04, GAME-01..04, BRAND-01) and v0.2 phases. Those phases shipped on Electron; the Rust/Tauri rearchitecture and the Electron cutover (Phases 34–35), and the decomposition and Rust-migration phases since, rewrote most of the code it would have validated, so a pass over the original phases would check code that no longer exists.
 **Superseded by:** Phase 35's blocking live gate (21/21 PASS, verified 17/17 against a genuine release artifact); Phase 38's Windows/Linux hardware and controller UAT gates; and the per-phase `*-VERIFICATION.md` / `*-UAT.md` record of every phase since. The v0.2 milestone audit's QA-01 gap (`v0.2-MILESTONE-AUDIT.md`) is closed by this decision.
 **Not revivable — salvage means a NEW phase:** if a regression sweep of the original requirement IDs against the current app is wanted, scope it as a new phase against the Tauri app.
+
+### Phase 34.7: Epic device-auth single sign-in path
+
+**Status:** ⛔ SUPERSEDED 2026-11-11 (was ⏸ ON HOLD since 2026-08-22). Never planned: 0 plans; the archived directory `milestones/v0.8-phases/34.7-epic-device-auth-single-sign-in-path/` is empty. Full history is in `milestones/v0.8-ROADMAP.md` under this phase.
+**Why:** The phase would have made Epic device-auth (SIDLogin) the only sign-in path and deleted the embedded login, on the 2026-08-05 finding that Epic's Talon anti-bot 403 made the embedded WebKit login permanently unusable under Tauri. The pristine (zero-injection) WKWebView login window later defeated that 403, and quick `260822-r3g` (commit `1431b4c03`) restored the embedded login as the primary tile with SIDLogin as the alternative. The premise no longer holds.
+**Nothing owed:** both residuals were re-homed to Phase 34.6 on 2026-08-22 — the Epic / `egsSync` / legendary save-sync live checks (34.5 UAT tests 11–13) and the Epic leg of Phase 35's dependency; the device-auth consolidation leg was withdrawn.
+**Revival trigger:** if Epic's 403 returns on the embedded login, scope a NEW phase for a device-auth single path against the then-current app; do not resume this entry.
 
 ## Backlog
 
