@@ -68,7 +68,7 @@ const launchHooks = {
   sideload: {},
   gog: {
     prepareLaunch: async (appName) => {
-      await gogSetup(appName)
+      await gogSetup(legacyManagerDeps(), appName)
       sendFrontendMessage('gameStatusUpdate', {
         appName,
         runner: 'gog',

@@ -30,16 +30,6 @@ jest.mock('backend/macArch/recovery', () => ({
   checkInstalledMacArch: jest.fn()
 }))
 
-jest.mock('../../index', () => ({
-  libraryManagerMap: {
-    gog: {
-      runRunnerCommand: (...a: unknown[]) => mockRunRunnerCommand(...a),
-      importGame: (...a: unknown[]) => mockLibraryManagerImportGame(...a),
-      getGameInfo: (...a: unknown[]) => mockLibraryManagerGetGameInfo(...a)
-    }
-  }
-}))
-
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
@@ -77,20 +67,6 @@ jest.mock('graceful-fs', () => ({
   rmSync: jest.fn()
 }))
 
-jest.mock('../stores', () => ({
-  achievementStore: { get: jest.fn(), set: jest.fn() },
-  configStore: { get: jest.fn(), get_nodefault: jest.fn(), set: jest.fn() },
-  installedGamesStore: { get: jest.fn(() => []), set: jest.fn() },
-  playtimeSyncQueue: {
-    has: jest.fn(),
-    get: jest.fn(),
-    set: jest.fn(),
-    delete: jest.fn()
-  },
-  privateBranchesStore: { get: jest.fn(() => '') },
-  syncStore: { get: jest.fn(), set: jest.fn() }
-}))
-
 jest.mock('../user', () => ({
   GOGUser: {
     isLoggedIn: jest.fn(() => false),
@@ -98,18 +74,6 @@ jest.mock('../user', () => ({
     logout: jest.fn(),
     getUserDetails: jest.fn()
   }
-}))
-
-jest.mock('../../../launcher', () => ({
-  getKnownFixesEnvVariables: jest.fn(),
-  getWinePath: jest.fn(),
-  launchCleanup: jest.fn(),
-  prepareLaunch: jest.fn(),
-  prepareWineLaunch: jest.fn(),
-  runWineCommand: jest.fn(),
-  setupEnvVars: jest.fn(),
-  setupWrapperEnvVars: jest.fn(),
-  setupWrappers: jest.fn()
 }))
 
 const mockAddShortcutsUtil = jest.fn()
@@ -195,7 +159,42 @@ jest.mock('backend/longLivedChildren', () => ({
 }))
 
 import GOGGame from '../games'
+import type { GOGManagerDeps } from '../library'
+import { createTestManagerDeps } from 'backend/testUtils/testServices'
 import type { GOGImportData } from 'common/types'
+
+function makeDeps(): GOGManagerDeps {
+  const base = createTestManagerDeps()
+  return {
+    ...base,
+    libraryManagers: {
+      gog: {
+        runRunnerCommand: (...a: unknown[]) => mockRunRunnerCommand(...a),
+        importGame: (...a: unknown[]) => mockLibraryManagerImportGame(...a),
+        getGameInfo: (...a: unknown[]) => mockLibraryManagerGetGameInfo(...a)
+      }
+    } as unknown as GOGManagerDeps['libraryManagers'],
+    stores: {
+      gog: {
+        achievementStore: { get: jest.fn(), set: jest.fn() },
+        configStore: {
+          get: jest.fn(),
+          get_nodefault: jest.fn(),
+          set: jest.fn()
+        },
+        installedGamesStore: { get: jest.fn(() => []), set: jest.fn() },
+        playtimeSyncQueue: {
+          has: jest.fn(),
+          get: jest.fn(),
+          set: jest.fn(),
+          delete: jest.fn()
+        },
+        privateBranchesStore: { get: jest.fn(() => '') },
+        syncStore: { get: jest.fn(), set: jest.fn() }
+      }
+    } as unknown as GOGManagerDeps['stores']
+  }
+}
 
 const GAME_ID = '1769415595' // Balrum -- the SELECTED game
 const FOLDER_APP_ID = '1829678475' // Endless Sky -- the folder's actual game
@@ -237,7 +236,7 @@ describe('GOGGame.importGame -- identity guard (260907-ppy)', () => {
       abort: false
     })
 
-    const game = new GOGGame(GAME_ID)
+    const game = new GOGGame(GAME_ID, makeDeps())
     const result = await game.importGame(FOLDER_PATH)
 
     expect(mockLibraryManagerImportGame).toHaveBeenCalledTimes(1)
@@ -256,7 +255,7 @@ describe('GOGGame.importGame -- identity guard (260907-ppy)', () => {
       abort: false
     })
 
-    const game = new GOGGame(GAME_ID)
+    const game = new GOGGame(GAME_ID, makeDeps())
     const result = await game.importGame(FOLDER_PATH)
 
     expect(result.error).toEqual(expect.any(String))
@@ -274,7 +273,7 @@ describe('GOGGame.importGame -- identity guard (260907-ppy)', () => {
       abort: false
     })
 
-    const game = new GOGGame(GAME_ID)
+    const game = new GOGGame(GAME_ID, makeDeps())
     const result = await game.importGame(FOLDER_PATH)
 
     expect(result.error).toEqual(expect.any(String))
@@ -294,7 +293,7 @@ describe('GOGGame.importGame -- identity guard (260907-ppy)', () => {
     })
     mockLibraryManagerImportGame.mockRejectedValue(new Error('disk full'))
 
-    const game = new GOGGame(GAME_ID)
+    const game = new GOGGame(GAME_ID, makeDeps())
     const throwingWriteResult = await game.importGame(FOLDER_PATH)
 
     expect(throwingWriteResult.error).toEqual(expect.any(String))

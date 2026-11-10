@@ -304,7 +304,11 @@ async function addToQueue(element: DMQueueElement) {
           const newDependencies = installInfo.manifest.dependencies || []
           if (newDependencies?.length || !existsSync(gogRedistPath)) {
             // create redist element
-            const redistElement = createRedistDMQueueElement()
+            // Transitional (66.1-08): deps arrive from the composition root in a later plan.
+            const { legacyManagerDeps } =
+              await import('backend/services/legacyFacades')
+            const redistElement =
+              createRedistDMQueueElement(legacyManagerDeps())
             redistElement.params.dependencies = newDependencies
             elements.push(redistElement)
           }

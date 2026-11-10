@@ -83,7 +83,7 @@ describe('storeLaunchHooks', () => {
 
   test('gog prepareLaunch runs gogSetup(appName) then announces launching', async () => {
     await storeLaunchHooks.gog.prepareLaunch!('a1', logWriter)
-    expect(gogSetupMock).toHaveBeenCalledWith('a1')
+    expect(gogSetupMock).toHaveBeenCalledWith(expect.anything(), 'a1')
     expect(sendFrontendMessageMock).toHaveBeenCalledWith('gameStatusUpdate', {
       appName: 'a1',
       runner: 'gog',

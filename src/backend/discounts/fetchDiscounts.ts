@@ -154,7 +154,10 @@ export async function getGogDiscounts(
     let token: string | undefined = undefined
 
     if (hideOwned || wishlistOnly) {
-      const credentials = await GOGUser.getCredentials()
+      // Transitional (66.1-08): the deps arrive from the composition root in a later plan.
+      const { legacyManagerDeps } =
+        await import('backend/services/legacyFacades')
+      const credentials = await GOGUser.getCredentials(legacyManagerDeps())
       if (credentials) {
         token = credentials.access_token
       } else {

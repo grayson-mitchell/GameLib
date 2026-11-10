@@ -115,7 +115,15 @@ export async function probeNileSession(): Promise<SignInProbeOutcome> {
 export async function probeGogSession(): Promise<SignInProbeOutcome> {
   try {
     const { GOGUser } = await import('../storeManagers/gog/user')
-    return (await GOGUser.getCredentialsWithVerdict()).verdict
+    // Transitional (66.1-08): the probe takes injected slices in a later plan.
+    const { libraryManagerMap } = await import('../storeManagers')
+    const gogStores = await import('../storeManagers/gog/stores')
+    return (
+      await GOGUser.getCredentialsWithVerdict({
+        stores: { gog: gogStores },
+        libraryManagers: { gog: libraryManagerMap.gog }
+      })
+    ).verdict
   } catch {
     return 'unknown'
   }

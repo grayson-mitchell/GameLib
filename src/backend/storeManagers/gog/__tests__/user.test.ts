@@ -1,7 +1,7 @@
 /**
  * Regression coverage for debug/manage-accounts-slow-update.md.
  *
- * `GOGUser.login()` used to call `getUserDetails()` with no arguments, which
+ * `GOGUser.login(deps)` used to call `getUserDetails()` with no arguments, which
  * unconditionally called `getCredentials()` -- spawning a SECOND `gogdl auth`
  * subprocess (via `runRunnerCommand`) purely to re-derive an access_token the
  * `login()` call's own `gogdl auth --code` invocation already had in its parsed
@@ -43,12 +43,6 @@ jest.mock('backend/online_monitor', () => ({
   isOnline: () => true
 }))
 
-jest.mock('backend/storeManagers/index', () => ({
-  libraryManagerMap: {
-    gog: { runRunnerCommand: mockRunRunnerCommand }
-  }
-}))
-
 const mockConfigStoreSet = jest.fn()
 const mockConfigStoreClear = jest.fn()
 // A plain `jest.fn(() => true)` default here does NOT survive: this suite's
@@ -65,7 +59,7 @@ const mockConfigStoreClear = jest.fn()
 const mockConfigStoreGetNodefault = jest.fn((key: string): unknown =>
   key === 'isLoggedIn' ? true : undefined
 )
-jest.mock('backend/storeManagers/gog/stores', () => ({
+const fakeGogStores = {
   configStore: {
     set: mockConfigStoreSet,
     // Phase 49: login() clears the persisted expiry flag.
@@ -73,7 +67,7 @@ jest.mock('backend/storeManagers/gog/stores', () => ({
     get_nodefault: mockConfigStoreGetNodefault,
     clear: mockConfigStoreClear
   }
-}))
+}
 
 jest.mock('backend/storeManagers/gog/constants', () => ({
   gogdlAuthConfig: '/fake/gog_store/auth.json'
@@ -85,7 +79,14 @@ jest.mock('backend/utils', () => ({
 
 import axios from 'axios'
 import { logError, logWarning } from 'backend/logger'
-import { GOGUser } from '../user'
+import { GOGUser, type GOGUserDeps } from '../user'
+
+const deps = {
+  stores: { gog: fakeGogStores },
+  libraryManagers: {
+    gog: { runRunnerCommand: (...a: unknown[]) => mockRunRunnerCommand(...a) }
+  }
+} as unknown as GOGUserDeps
 
 const mockedAxiosGet = axios.get as jest.Mock
 const mockedLogWarning = logWarning as jest.Mock
@@ -124,7 +125,7 @@ describe('debug/manage-accounts-slow-update -- GOGUser.login redundant gogdl cal
       data: { username: 'testuser', email: 'x@example.com' }
     })
 
-    const result = await GOGUser.login('the-oauth-code')
+    const result = await GOGUser.login(deps, 'the-oauth-code')
 
     expect(result.status).toBe('done')
     expect(result.data?.username).toBe('testuser')
@@ -168,7 +169,7 @@ describe('debug/manage-accounts-slow-update -- GOGUser.login redundant gogdl cal
       data: { username: 'bootuser', email: 'y@example.com' }
     })
 
-    const data = await GOGUser.getUserDetails()
+    const data = await GOGUser.getUserDetails(deps)
 
     expect(data?.username).toBe('bootuser')
 
@@ -229,13 +230,13 @@ describe('debug/gog-spawn-reduction fix 5 -- login() seeds the getCredentials() 
       data: { username: 'testuser', email: 'x@example.com' }
     })
 
-    const loginResult = await GOGUser.login('the-oauth-code')
+    const loginResult = await GOGUser.login(deps, 'the-oauth-code')
     expect(loginResult.status).toBe('done')
 
     // login()'s own `gogdl auth --code` call is the only subprocess spawn so far.
     expect(mockRunRunnerCommand).toHaveBeenCalledTimes(1)
 
-    const credentials = await GOGUser.getCredentials()
+    const credentials = await GOGUser.getCredentials(deps)
 
     expect(credentials?.access_token).toBe('login-seeded-token')
     expect(credentials?.user_id).toBe('u1')
@@ -261,7 +262,7 @@ describe('debug/gog-spawn-reduction fix 5 -- login() seeds the getCredentials() 
       data: { username: 'testuser', email: 'x@example.com' }
     })
 
-    await GOGUser.login('the-oauth-code')
+    await GOGUser.login(deps, 'the-oauth-code')
     expect(mockRunRunnerCommand).toHaveBeenCalledTimes(1)
 
     // Advance past expires_in (60s) + the 60s safety margin.
@@ -279,7 +280,7 @@ describe('debug/gog-spawn-reduction fix 5 -- login() seeds the getCredentials() 
         loginType: 1
       })
     )
-    const credentials = await GOGUser.getCredentials()
+    const credentials = await GOGUser.getCredentials(deps)
 
     expect(credentials?.access_token).toBe('refreshed-token')
     expect(mockRunRunnerCommand).toHaveBeenCalledTimes(2)
@@ -289,13 +290,13 @@ describe('debug/gog-spawn-reduction fix 5 -- login() seeds the getCredentials() 
 /**
  * Regression coverage for debug/gog-spawn-reduction.md fix 1.
  *
- * `GOGUser.getCredentials()` had zero caching across its 15 call sites (login/boot/
+ * `GOGUser.getCredentials(deps)` had zero caching across its 15 call sites (login/boot/
  * library-refresh/presence/playtime/etc.), so every call spawned its own `gogdl auth`
  * subprocess -- each carrying the ~5-13s OS-level tax documented in
  * resolved/gogdl-spawn-tax.md. These tests pin the fix: a TTL cache keyed on the token's
  * own `expires_in`, cleared by logout() and by natural expiry.
  */
-describe('debug/gog-spawn-reduction fix 1 -- GOGUser.getCredentials() TTL cache', () => {
+describe('debug/gog-spawn-reduction fix 1 -- GOGUser.getCredentials(deps) TTL cache', () => {
   beforeEach(() => {
     // Key-aware: 'isLoggedIn' -> true (both call paths in these tests are past
     // the "just authenticated" point); everything else (including the D-3 drift
@@ -324,8 +325,8 @@ describe('debug/gog-spawn-reduction fix 1 -- GOGUser.getCredentials() TTL cache'
       })
     )
 
-    const first = await GOGUser.getCredentials()
-    const second = await GOGUser.getCredentials()
+    const first = await GOGUser.getCredentials(deps)
+    const second = await GOGUser.getCredentials(deps)
 
     expect(first?.access_token).toBe('cached-token')
     expect(second?.access_token).toBe('cached-token')
@@ -348,7 +349,7 @@ describe('debug/gog-spawn-reduction fix 1 -- GOGUser.getCredentials() TTL cache'
         loginType: 1
       })
     )
-    const first = await GOGUser.getCredentials()
+    const first = await GOGUser.getCredentials(deps)
     expect(first?.access_token).toBe('first-token')
 
     // Advance past expires_in (60s) + the 60s safety margin.
@@ -366,7 +367,7 @@ describe('debug/gog-spawn-reduction fix 1 -- GOGUser.getCredentials() TTL cache'
         loginType: 1
       })
     )
-    const second = await GOGUser.getCredentials()
+    const second = await GOGUser.getCredentials(deps)
 
     expect(second?.access_token).toBe('second-token')
     expect(mockRunRunnerCommand).toHaveBeenCalledTimes(2)
@@ -385,9 +386,9 @@ describe('debug/gog-spawn-reduction fix 1 -- GOGUser.getCredentials() TTL cache'
         loginType: 1
       })
     )
-    await GOGUser.getCredentials()
+    await GOGUser.getCredentials(deps)
 
-    GOGUser.logout()
+    GOGUser.logout(deps)
 
     mockRunRunnerCommand.mockResolvedValueOnce(
       stdoutFor({
@@ -401,7 +402,7 @@ describe('debug/gog-spawn-reduction fix 1 -- GOGUser.getCredentials() TTL cache'
         loginType: 1
       })
     )
-    const afterLogout = await GOGUser.getCredentials()
+    const afterLogout = await GOGUser.getCredentials(deps)
 
     expect(afterLogout?.access_token).toBe('post-logout-token')
     expect(mockRunRunnerCommand).toHaveBeenCalledTimes(2)
@@ -411,7 +412,7 @@ describe('debug/gog-spawn-reduction fix 1 -- GOGUser.getCredentials() TTL cache'
 /**
  * Regression coverage for quick-260821-o34.
  *
- * `GOGUser.getUserDetails()` used to fetch a GOG "embed" endpoint that embeds
+ * `GOGUser.getUserDetails(deps)` used to fetch a GOG "embed" endpoint that embeds
  * the account's entire wishlist/friends/checksum payload. For accounts with a
  * large wishlist, GOG returns an error instead of a truncated document, so
  * `getUserDetails()` returned `undefined`, `configStore.userData`
@@ -451,7 +452,7 @@ describe('quick-260821-o34 -- getUserDetails() repointed at users.gog.com/users/
       }
     })
 
-    const result = await GOGUser.login('the-oauth-code')
+    const result = await GOGUser.login(deps, 'the-oauth-code')
 
     expect(result.status).toBe('done')
     expect(result.data?.username).toBe('bigwishlist')
@@ -471,7 +472,7 @@ describe('quick-260821-o34 -- getUserDetails() repointed at users.gog.com/users/
   })
 
   it('persists nothing when user_id is missing from credentials', async () => {
-    const data = await GOGUser.getUserDetails({
+    const data = await GOGUser.getUserDetails(deps, {
       access_token: 'tok'
     } as never)
 
@@ -488,7 +489,7 @@ describe('quick-260821-o34 -- getUserDetails() repointed at users.gog.com/users/
       data: { id: 'galaxy-1' }
     })
 
-    const data = await GOGUser.getUserDetails({
+    const data = await GOGUser.getUserDetails(deps, {
       access_token: 'tok',
       user_id: 'galaxy-1'
     })
@@ -510,7 +511,7 @@ describe('quick-260821-o34 -- getUserDetails() repointed at users.gog.com/users/
       data: { id: 'galaxy-1', username: 'testuser' }
     })
 
-    const data = await GOGUser.getUserDetails({
+    const data = await GOGUser.getUserDetails(deps, {
       access_token: 'tok',
       user_id: 'galaxy-1'
     })
@@ -559,7 +560,7 @@ describe('debug/gog-login-not-registered -- getUserDetails() must call users.gog
   })
 
   it('fetches the live GOG account endpoint from users.gog.com, never api.gog.com', async () => {
-    await GOGUser.getUserDetails({
+    await GOGUser.getUserDetails(deps, {
       access_token: 'tok',
       user_id: 'galaxy-1'
     })
@@ -574,7 +575,7 @@ describe('debug/gog-login-not-registered -- getUserDetails() must call users.gog
 /**
  * Regression coverage for debug/log-upload-has-no-redaction.md, finding F-01.
  *
- * `GOGUser.login()`'s `JSON.parse` catch branch used to interpolate the raw stdout of
+ * `GOGUser.login(deps)`'s `JSON.parse` catch branch used to interpolate the raw stdout of
  * `gogdl auth --code <code>` into a `logError` call. That stdout IS the GOG token exchange
  * response -- the very payload `authLogSanitizer` (user.ts) rewrites access_token /
  * refresh_token / session_id / user_id out of before it reaches the *runner* log. The
@@ -614,7 +615,7 @@ describe('debug/log-upload-has-no-redaction F-01 -- gogdl auth stdout must never
       stdout: TOKEN_BEARING_UNPARSEABLE_STDOUT
     })
 
-    const result = await GOGUser.login('the-oauth-code')
+    const result = await GOGUser.login(deps, 'the-oauth-code')
     expect(result.status).toBe('error')
 
     // Pinned by VALUE, not by the shape of the log line: whatever wording the message carries,
@@ -640,7 +641,7 @@ describe('debug/log-upload-has-no-redaction F-01 -- gogdl auth stdout must never
       stdout: TOKEN_BEARING_UNPARSEABLE_STDOUT
     })
 
-    await GOGUser.login('the-oauth-code')
+    await GOGUser.login(deps, 'the-oauth-code')
 
     // The branch must remain debuggable: it names the length so a truncated-write vs
     // wrong-format failure is still distinguishable from the log alone.

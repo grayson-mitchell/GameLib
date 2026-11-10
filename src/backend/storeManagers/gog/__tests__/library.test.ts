@@ -1,4 +1,5 @@
 import { createTestManagerDeps } from 'backend/testUtils/testServices'
+import type { GOGManagerDeps } from '../library'
 /**
  * Regression coverage for debug/gog-spawn-reduction.md fixes 2 and 4.
  *
@@ -61,9 +62,6 @@ jest.mock('../../../online_monitor', () => ({
 }))
 
 const mockCallRunner = jest.fn()
-jest.mock('../../../launcher', () => ({
-  callRunner: (...args: unknown[]) => mockCallRunner(...args)
-}))
 
 // See the note above `mockPrivateBranchesStoreGet` -- `resetMocks: true` wipes this
 // factory-time default too. Default is (re)installed in beforeEach below instead.
@@ -96,7 +94,7 @@ const mockPlaytimeGet = jest.fn()
 const mockPlaytimeSet = jest.fn()
 const mockPlaytimeDelete = jest.fn()
 const mockConfigStoreGetNodefault = jest.fn()
-jest.mock('../stores', () => ({
+const fakeGogStores = {
   libraryStore: {
     get: (...a: unknown[]) => mockLibraryStoreGet(...a),
     set: jest.fn()
@@ -130,7 +128,7 @@ jest.mock('../stores', () => ({
     set: (...a: unknown[]) => mockPlaytimeSet(...a),
     delete: (...a: unknown[]) => mockPlaytimeDelete(...a)
   }
-}))
+}
 
 jest.mock('../redist', () => ({ checkForRedistUpdates: jest.fn() }))
 jest.mock('../e2eMock', () => ({ runGogdlCommandStub: jest.fn() }))
@@ -140,7 +138,6 @@ jest.mock('../constants', () => ({
 }))
 jest.mock('backend/constants/paths', () => ({ userDataPath: '/fake/userData' }))
 jest.mock('../games', () => ({ __esModule: true, default: class GOGGame {} }))
-jest.mock('../../index', () => ({ libraryManagerMap: {} }))
 jest.mock('i18next', () => ({ languages: ['en'], language: 'en' }))
 
 const mockedAxiosGet = jest.fn()
@@ -174,11 +171,21 @@ function libraryPage(
   }
 }
 
+function makeDeps(): GOGManagerDeps {
+  return {
+    ...createTestManagerDeps(),
+    stores: { gog: fakeGogStores } as unknown as GOGManagerDeps['stores'],
+    commandRunner: {
+      callRunner: (...args: unknown[]) => mockCallRunner(...args)
+    } as unknown as GOGManagerDeps['commandRunner']
+  }
+}
+
 describe('debug/gog-spawn-reduction fix 2 -- credentials threaded through getGalaxyLibrary', () => {
   let manager: GOGLibraryManager
 
   beforeEach(() => {
-    manager = new GOGLibraryManager(createTestManagerDeps())
+    manager = new GOGLibraryManager(makeDeps())
     mockIsOnline.mockReturnValue(true)
     mockLibraryStoreGet.mockReturnValue([])
     mockInstalledGamesStoreGet.mockReturnValue([])
@@ -283,7 +290,7 @@ describe('debug/gog-spawn-reduction fix 4 -- getInstallInfo() login gate is isLo
   let manager: GOGLibraryManager
 
   beforeEach(() => {
-    manager = new GOGLibraryManager(createTestManagerDeps())
+    manager = new GOGLibraryManager(makeDeps())
     mockIsOnline.mockReturnValue(true)
     mockInstallInfoStoreHas.mockReturnValue(false)
     mockInstalledGamesStoreGet.mockReturnValue([])
@@ -354,7 +361,7 @@ describe('D-35-19-16 -- changeGameInstallPath does not double the macOS bundle n
 
   /** Seed both stores and load the in-memory library the way the app does. */
   async function seedInstalledGame(install_path: string, platform: string) {
-    manager = new GOGLibraryManager(createTestManagerDeps())
+    manager = new GOGLibraryManager(makeDeps())
     // Offline so loadLocalLibrary skips checkForOfflineInstallerChanges.
     mockIsOnline.mockReturnValue(false)
 
@@ -490,7 +497,7 @@ describe('importGame preserves un-owned InstalledInfo fields on re-import (26090
   }
 
   beforeEach(async () => {
-    manager = new GOGLibraryManager(createTestManagerDeps())
+    manager = new GOGLibraryManager(makeDeps())
 
     mockInstallInfoStoreHas.mockReturnValue(true)
     mockInstallInfoStoreGet.mockReturnValue({ manifest: { disk_size: 100 } })
@@ -592,7 +599,7 @@ describe('finding A1 LEG 1 -- syncQueuedPlaytime releases the lock when postPlay
   const galaxyUserId = 'gid-1'
 
   beforeEach(() => {
-    manager = new GOGLibraryManager(createTestManagerDeps())
+    manager = new GOGLibraryManager(makeDeps())
     // Back the four playtime mocks with a real Map so `has()` reflects true state instead of
     // a canned boolean -- `syncQueuedPlaytime()`'s own `has('lock')` guard and its `set('lock',
     // ...)`/`delete('lock')` calls must all observe the same underlying state for these tests to

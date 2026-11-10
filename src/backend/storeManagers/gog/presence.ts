@@ -1,7 +1,7 @@
 import { app } from 'backend/platform'
 import { logError, logInfo, LogPrefix } from 'backend/logger'
 import { axiosClient } from 'backend/utils'
-import { GOGUser } from './user'
+import { GOGUser, type GOGUserDeps } from './user'
 import { isOnline } from 'backend/online_monitor'
 import { GlobalConfig } from 'backend/config'
 import { backendEvents } from 'backend/backend_events'
@@ -17,22 +17,44 @@ interface PresencePayload {
 let CURRENT_GAME = ''
 let interval: NodeJS.Timeout | undefined
 
+/**
+ * Transitional (66.1-08): the gog stores and manager are resolved by getter at call time, so
+ * loading this module (it is imported from utils.ts) pulls in neither. A later plan injects them.
+ */
+function presenceUserDeps(): GOGUserDeps {
+  return {
+    stores: {
+      get gog() {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        return require('./stores') as typeof import('./stores')
+      }
+    },
+    libraryManagers: {
+      get gog() {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        return (require('..') as typeof import('..')).libraryManagerMap.gog
+      }
+    }
+  }
+}
+
 function setCurrentGame(game: string) {
   CURRENT_GAME = game
 }
 
 async function setPresence() {
   try {
+    const deps = presenceUserDeps()
     const { disablePlaytimeSync, disableGOGPresence } =
       GlobalConfig.get().getSettings()
     if (
       disableGOGPresence ||
       disablePlaytimeSync ||
-      !GOGUser.isLoggedIn() ||
+      !GOGUser.isLoggedIn(deps) ||
       !isOnline()
     )
       return
-    const credentials = await GOGUser.getCredentials()
+    const credentials = await GOGUser.getCredentials(deps)
     if (!credentials) return
 
     if (!interval) {
@@ -144,16 +166,17 @@ async function deletePresence(force = false) {
   clearInterval(interval)
   interval = undefined
   try {
+    const deps = presenceUserDeps()
     const { disablePlaytimeSync, disableGOGPresence } =
       GlobalConfig.get().getSettings()
     if (
       disablePlaytimeSync ||
       (!force && disableGOGPresence) ||
-      !GOGUser.isLoggedIn() ||
+      !GOGUser.isLoggedIn(deps) ||
       !isOnline()
     )
       return
-    const credentials = await GOGUser.getCredentials()
+    const credentials = await GOGUser.getCredentials(deps)
     if (!credentials) {
       return
     }

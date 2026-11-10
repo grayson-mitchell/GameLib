@@ -27,7 +27,16 @@ import {
 import { applySignInVerdict } from 'backend/signInProbe/verdict'
 import { probeGogSession } from 'backend/signInProbe/runnerProbes'
 import type { FakeFlagStore } from 'backend/signInProbe/__tests__/fakeFlagStore'
-import { GOGUser } from '../user'
+import { GOGUser, type GOGUserDeps } from '../user'
+
+const deps = {
+  stores: { gog: { configStore: gogConfigStore } },
+  libraryManagers: {
+    gog: {
+      runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args)
+    }
+  }
+} as unknown as GOGUserDeps
 
 let mockOnline = true
 let mockAuthConfigExists = true
@@ -75,7 +84,7 @@ jest.mock('backend/storeManagers/gog/stores', () => {
       typeof import('backend/signInProbe/__tests__/fakeFlagStore')
     >('backend/signInProbe/__tests__/fakeFlagStore')
     .makeFakeFlagStore()
-  // GOGUser.logout() calls configStore.clear().
+  // GOGUser.logout(deps) calls configStore.clear().
   return {
     configStore: Object.assign(fake, { clear: () => fake.data.clear() })
   }
@@ -164,7 +173,7 @@ describe('GOG: getCredentialsWithVerdict follows D-17', () => {
   it('spawns gogdl auth once, with its abort id, a sanitizer, no modal and an onOutput capture', async () => {
     armRunner(JSON.stringify(CREDENTIALS))
 
-    await GOGUser.getCredentialsWithVerdict()
+    await GOGUser.getCredentialsWithVerdict(deps)
 
     expect(mockRunRunnerCommand).toHaveBeenCalledTimes(1)
     const [argv, options] = mockRunRunnerCommand.mock.calls[0]
@@ -180,7 +189,7 @@ describe('GOG: getCredentialsWithVerdict follows D-17', () => {
   })
 
   it('a bare null stdout, online, with the auth config present is expired and latches through applySignInVerdict', async () => {
-    const verdict = await GOGUser.getCredentialsWithVerdict()
+    const verdict = await GOGUser.getCredentialsWithVerdict(deps)
     expect(verdict.verdict).toBe('expired')
     expect(verdict.credentials).toBeFalsy()
 
@@ -220,7 +229,7 @@ describe('GOG: getCredentialsWithVerdict follows D-17', () => {
   it('offline is unknown, returns no credentials, and spawns nothing', async () => {
     mockOnline = false
 
-    const result = await GOGUser.getCredentialsWithVerdict()
+    const result = await GOGUser.getCredentialsWithVerdict(deps)
 
     expect(result).toEqual({ credentials: undefined, verdict: 'unknown' })
     expect(mockRunRunnerCommand).not.toHaveBeenCalled()
@@ -229,8 +238,8 @@ describe('GOG: getCredentialsWithVerdict follows D-17', () => {
   it('valid credentials are healthy, cached, and a second call inside the TTL does not spawn', async () => {
     armRunner(JSON.stringify(CREDENTIALS))
 
-    const first = await GOGUser.getCredentialsWithVerdict()
-    const second = await GOGUser.getCredentialsWithVerdict()
+    const first = await GOGUser.getCredentialsWithVerdict(deps)
+    const second = await GOGUser.getCredentialsWithVerdict(deps)
 
     expect(first.verdict).toBe('healthy')
     expect(first.credentials?.access_token).toBe('tok-access')
@@ -275,8 +284,8 @@ describe('GOG: one in-flight spawn is shared (RESEARCH Pitfall 2)', () => {
       }
     )
 
-    const a = GOGUser.getCredentialsWithVerdict()
-    const b = GOGUser.getCredentialsWithVerdict()
+    const a = GOGUser.getCredentialsWithVerdict(deps)
+    const b = GOGUser.getCredentialsWithVerdict(deps)
     release()
     const [first, second] = await Promise.all([a, b])
 
@@ -298,8 +307,8 @@ describe('GOG: one in-flight spawn is shared (RESEARCH Pitfall 2)', () => {
       }
     )
 
-    const blockE = GOGUser.getCredentials()
-    const pass = GOGUser.getCredentialsWithVerdict()
+    const blockE = GOGUser.getCredentials(deps)
+    const pass = GOGUser.getCredentialsWithVerdict(deps)
     release()
     const [credentials, withVerdict] = await Promise.all([blockE, pass])
 
@@ -309,20 +318,20 @@ describe('GOG: one in-flight spawn is shared (RESEARCH Pitfall 2)', () => {
   })
 
   it('clears the in-flight promise afterwards, so the next call spawns again', async () => {
-    await GOGUser.getCredentialsWithVerdict()
-    await GOGUser.getCredentialsWithVerdict()
+    await GOGUser.getCredentialsWithVerdict(deps)
+    await GOGUser.getCredentialsWithVerdict(deps)
 
     expect(mockRunRunnerCommand).toHaveBeenCalledTimes(2)
   })
 
   it('clears the in-flight promise when the spawn rejects', async () => {
     mockRunRunnerCommand.mockRejectedValueOnce(new Error('spawn failed'))
-    await expect(GOGUser.getCredentialsWithVerdict()).rejects.toThrow(
+    await expect(GOGUser.getCredentialsWithVerdict(deps)).rejects.toThrow(
       'spawn failed'
     )
 
     armRunner('null')
-    await expect(GOGUser.getCredentialsWithVerdict()).resolves.toEqual(
+    await expect(GOGUser.getCredentialsWithVerdict(deps)).resolves.toEqual(
       expect.objectContaining({ verdict: 'expired' })
     )
   })
@@ -331,12 +340,12 @@ describe('GOG: one in-flight spawn is shared (RESEARCH Pitfall 2)', () => {
 describe('GOG: getCredentials() is unchanged for existing callers', () => {
   it('returns only the credentials', async () => {
     armRunner(JSON.stringify(CREDENTIALS))
-    await expect(GOGUser.getCredentials()).resolves.toEqual(CREDENTIALS)
+    await expect(GOGUser.getCredentials(deps)).resolves.toEqual(CREDENTIALS)
   })
 
   it('returns undefined offline, as before', async () => {
     mockOnline = false
-    await expect(GOGUser.getCredentials()).resolves.toBeUndefined()
+    await expect(GOGUser.getCredentials(deps)).resolves.toBeUndefined()
     expect(logWarning).toHaveBeenCalled()
   })
 })
@@ -384,7 +393,7 @@ describe('GOG: sign-in success and logout clear the flag', () => {
       data: { username: 'tester' }
     })
 
-    const res = await GOGUser.login('oauth-code')
+    const res = await GOGUser.login(deps, 'oauth-code')
 
     expect(res.status).toBe('done')
     expect(flag.deletes).toContain('expired')
@@ -396,7 +405,7 @@ describe('GOG: sign-in success and logout clear the flag', () => {
     flag.data.set('expired', true)
     armRunner(JSON.stringify({ error: 'invalid_grant' }))
 
-    const res = await GOGUser.login('oauth-code')
+    const res = await GOGUser.login(deps, 'oauth-code')
 
     expect(res.status).toBe('error')
     expect(flag.data.get('expired')).toBe(true)
@@ -408,7 +417,7 @@ describe('GOG: sign-in success and logout clear the flag', () => {
     noteSignInSucceeded('gog')
     const epochBefore = captureSignInEpoch('gog')
 
-    await GOGUser.logout()
+    await GOGUser.logout(deps)
 
     expect(flag.data.has('expired')).toBe(false)
     expect(getSignInProbeOutcomes().gog).toBeUndefined()

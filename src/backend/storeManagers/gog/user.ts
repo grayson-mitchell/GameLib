@@ -2,7 +2,7 @@ import axios from 'axios'
 import { existsSync, unlinkSync } from 'graceful-fs'
 import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
 import { GOGLoginData } from 'common/types'
-import { configStore } from './stores'
+import type { GOGManagerDeps } from './library'
 import { isOnline } from '../../online_monitor'
 import { GOGCredentials, UserData } from 'common/types/gog'
 import { clearCache } from 'backend/utils'
@@ -161,8 +161,15 @@ function loginDataToCredentials(data: GOGLoginData): GOGCredentials {
   }
 }
 
+/** What the static GOGUser methods read: the gog stores and the gog manager's gogdl runner. */
+export interface GOGUserDeps {
+  stores: Pick<GOGManagerDeps['stores'], 'gog'>
+  libraryManagers: Pick<GOGManagerDeps['libraryManagers'], 'gog'>
+}
+
 export class GOGUser {
   static async login(
+    deps: GOGUserDeps,
     code: string
     // TODO: Write types for this
   ): Promise<{
@@ -172,15 +179,7 @@ export class GOGUser {
     logInfo('Logging using GOG credentials', LogPrefix.Gog)
 
     // Gets token from GOG basaed on authorization code
-    // Imported lazily to break a circular dependency (gog/user.ts <->
-    // storeManagers/index.ts): 'index' eagerly constructs every store
-    // manager at module scope, including `new SteamLibraryManager()`, which
-    // faults with "is not a constructor" whenever anything importing this
-    // file is itself required BEFORE storeManagers/index.ts has finished
-    // resolving (e.g. a headless sidecar requiring
-    // backend/storeManagers/steam/library.ts directly — Phase 27 Plan 02).
-    const { libraryManagerMap } = await import('../index')
-    const { stdout } = await libraryManagerMap['gog'].runRunnerCommand(
+    const { stdout } = await deps.libraryManagers.gog.runRunnerCommand(
       ['auth', '--code', code],
       {
         abortId: 'gogdl-auth',
@@ -214,10 +213,10 @@ export class GOGUser {
       return { status: 'error' }
     }
     logInfo('Login Successful', LogPrefix.Gog)
-    configStore.set('isLoggedIn', true)
+    deps.stores.gog.configStore.set('isLoggedIn', true)
     // Phase 49 (R2): a completed sign-in proves the session, so the expiry flag
     // clears and the fence moves.
-    configStore.delete('expired')
+    deps.stores.gog.configStore.delete('expired')
     noteSignInSucceeded('gog')
     // Seed the fix-1 TTL cache directly from this `gogdl auth --code` exchange's own
     // stdout -- debug/gog-spawn-reduction.md fix 5. Without this, the cache is empty
@@ -235,7 +234,7 @@ export class GOGUser {
     // the frontend's in-progress screen clearing. `data.user_id` is threaded through too,
     // since the users.gog.com endpoint below is keyed by it -- nothing new is spawned to
     // obtain it, it's already in this exchange's own parsed stdout.
-    const userDetails = await this.getUserDetails({
+    const userDetails = await this.getUserDetails(deps, {
       access_token: data.access_token,
       user_id: data.user_id
     })
@@ -250,6 +249,7 @@ export class GOGUser {
   // below is keyed by it -- passing both here means the caller's already-known user_id is
   // reused rather than re-derived, so nothing new is spawned to obtain it.
   public static async getUserDetails(
+    deps: GOGUserDeps,
     credentials?: Pick<GOGCredentials, 'access_token' | 'user_id'>
   ) {
     if (!isOnline()) {
@@ -257,11 +257,11 @@ export class GOGUser {
       return
     }
     logInfo('Checking if login is valid', LogPrefix.Gog)
-    if (!this.isLoggedIn()) {
+    if (!this.isLoggedIn(deps)) {
       logWarning('User is not logged in', LogPrefix.Gog)
       return
     }
-    const resolved = credentials ?? (await this.getCredentials())
+    const resolved = credentials ?? (await this.getCredentials(deps))
     const token = resolved?.access_token
     if (!token) {
       logError("No credentials, can't get login information", LogPrefix.Gog)
@@ -302,7 +302,7 @@ export class GOGUser {
     // T-Q34-01 -- galaxyUserId/userId are sourced from our own resolved credentials,
     // NEVER from the response body, so a manipulated response cannot redirect the
     // playtime session URL to another user's id.
-    const previous = configStore.get_nodefault('userData')
+    const previous = deps.stores.gog.configStore.get_nodefault('userData')
     if (previous?.galaxyUserId && previous.galaxyUserId !== userId) {
       logWarning(
         [
@@ -315,7 +315,7 @@ export class GOGUser {
 
     const data: UserData = { userId, username, galaxyUserId: userId }
 
-    configStore.set('userData', data)
+    deps.stores.gog.configStore.set('userData', data)
     logInfo('Saved username to config file', LogPrefix.Gog)
 
     return data
@@ -325,8 +325,10 @@ export class GOGUser {
    * if needed refreshes token and returns new credentials
    * @returns user credentials
    */
-  public static async getCredentials(): Promise<GOGCredentials | undefined> {
-    return (await this.getCredentialsWithVerdict()).credentials
+  public static async getCredentials(
+    deps: GOGUserDeps
+  ): Promise<GOGCredentials | undefined> {
+    return (await this.getCredentialsWithVerdict(deps)).credentials
   }
 
   /**
@@ -340,7 +342,9 @@ export class GOGUser {
    * is `healthy` (the cached token came from a successful spawn this session);
    * offline is `unknown` and spawns nothing.
    */
-  public static async getCredentialsWithVerdict(): Promise<CredentialsWithVerdict> {
+  public static async getCredentialsWithVerdict(
+    deps: GOGUserDeps
+  ): Promise<CredentialsWithVerdict> {
     if (!isOnline()) {
       logWarning('Unable to get credentials - app is offline', {
         prefix: LogPrefix.Gog
@@ -360,7 +364,7 @@ export class GOGUser {
     if (inFlightCredentials) {
       return inFlightCredentials
     }
-    const spawned = this.spawnCredentialsWithVerdict()
+    const spawned = this.spawnCredentialsWithVerdict(deps)
     inFlightCredentials = spawned
     try {
       return await spawned
@@ -371,10 +375,9 @@ export class GOGUser {
     }
   }
 
-  private static async spawnCredentialsWithVerdict(): Promise<CredentialsWithVerdict> {
-    // Lazy import — see the load-bearing comment on the sibling call in
-    // login() above (breaks the gog/user.ts <-> storeManagers/index.ts cycle).
-    const { libraryManagerMap } = await import('../index')
+  private static async spawnCredentialsWithVerdict(
+    deps: GOGUserDeps
+  ): Promise<CredentialsWithVerdict> {
     // Captured output, never `ExecResult.stderr` (RESEARCH Pitfall 1), and never
     // logged: gogdl's stdout is a token-exchange object. `authLogSanitizer`
     // stays on the spawn for the runner log. `skipErrorHandler` changes nothing
@@ -382,7 +385,7 @@ export class GOGUser {
     // tracebacks and "No saved credentials", neither of which gogdl prints) and
     // guarantees the boot probe can never raise a modal (P2).
     const capture = createBoundedOutputCapture()
-    const res = await libraryManagerMap['gog'].runRunnerCommand(['auth'], {
+    const res = await deps.libraryManagers.gog.runRunnerCommand(['auth'], {
       abortId: 'gogdl-get-credentials',
       logSanitizer: authLogSanitizer,
       skipErrorHandler: true,
@@ -428,9 +431,9 @@ export class GOGUser {
   // impossible by ORDER already, but the wrap also stops it becoming a
   // rejected `logout()` promise (an unhandled rejection at the `ipcMain.on`
   // call site, which cannot `.catch()` a fire-and-forget invocation).
-  public static async logout() {
+  public static async logout(deps: GOGUserDeps) {
     clearCache('gog')
-    configStore.clear()
+    deps.stores.gog.configStore.clear()
     if (existsSync(gogdlAuthConfig)) {
       unlinkSync(gogdlAuthConfig)
     }
@@ -462,7 +465,7 @@ export class GOGUser {
     inFlightCredentials = null
   }
 
-  public static isLoggedIn() {
-    return configStore.get_nodefault('isLoggedIn') || false
+  public static isLoggedIn(deps: Pick<GOGUserDeps, 'stores'>) {
+    return deps.stores.gog.configStore.get_nodefault('isLoggedIn') || false
   }
 }

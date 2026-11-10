@@ -1,16 +1,7 @@
 import { existsSync } from 'graceful-fs'
 import path from 'node:path'
-import {
-  GameInfo,
-  GameSettings,
-  InstalledInfo,
-  WineCommandArgs
-} from 'common/types'
-import {
-  checkWineBeforeLaunch,
-  sendGameStatusUpdate,
-  spawnAsync
-} from '../../utils'
+import { GameInfo, GameSettings, InstalledInfo } from 'common/types'
+import { checkWineBeforeLaunch, sendGameStatusUpdate } from '../../utils'
 import { GameConfig } from '../../game_config'
 import {
   getRunnerLogWriter,
@@ -19,7 +10,8 @@ import {
   LogPrefix,
   logWarning
 } from 'backend/logger'
-import { getWinePath, runWineCommand, verifyWinePrefix } from '../../launcher'
+import type { CommandWineArgs } from 'backend/commandRunner'
+import type { GOGManagerDeps } from './library'
 import { readFile } from 'node:fs/promises'
 import shlex from 'shlex'
 import {
@@ -36,18 +28,24 @@ import {
 } from 'backend/engine/launchEngine'
 import { getLaunchSettings } from 'backend/engine/launchSettings'
 
+/** What GOG setup reads: the manager map, the wine launcher helpers and the runners. */
+export type SetupDeps = Pick<
+  GOGManagerDeps,
+  'libraryManagers' | 'launcher' | 'commandRunner' | 'spawnAsync'
+>
+
 /*
  * Automatially executes command properly according to operating system
  *  on Windows pre-appends powershell command to spawn UAC prompt
  */
-async function runSetupCommand(wineArgs: WineCommandArgs) {
+async function runSetupCommand(deps: SetupDeps, wineArgs: CommandWineArgs) {
   if (isWindows) {
     // Run shell
     const [exe, ...args] = wineArgs.commandParts
     if (exe === undefined) {
       throw Error('Setup command is empty')
     }
-    return spawnAsync(
+    return deps.spawnAsync(
       'powershell',
       [
         '-NoProfile',
@@ -74,7 +72,7 @@ async function runSetupCommand(wineArgs: WineCommandArgs) {
       { cwd: wineArgs.startFolder }
     )
   } else {
-    return runWineCommand(wineArgs)
+    return deps.commandRunner.runWineCommand(wineArgs)
   }
 }
 
@@ -87,15 +85,12 @@ async function runSetupCommand(wineArgs: WineCommandArgs) {
  * @param installInfo Allows passing install instructions directly
  */
 async function setup(
+  deps: SetupDeps,
   appName: string,
   installInfo?: InstalledInfo,
   installRedist = true
 ): Promise<void> {
-  // Imported lazily to break a circular dependency (gog/setup.ts <->
-  // storeManagers/index.ts) — see the load-bearing comment in
-  // storeManagers/gog/user.ts.
-  const { libraryManagerMap } = await import('..')
-  const gameInfo = libraryManagerMap['gog'].getGameInfo(appName)
+  const gameInfo = deps.libraryManagers.gog.getGameInfo(appName)
   if (installInfo && gameInfo) {
     gameInfo.install = installInfo
   }
@@ -105,13 +100,13 @@ async function setup(
 
   const stored = GameConfig.get(appName).config
   if (isWindows) {
-    return runGogSetup(appName, gameInfo, stored, installRedist)
+    return runGogSetup(deps, appName, gameInfo, stored, installRedist)
   }
 
   // Phase 61 (D-01, D-03, D-08): on macOS the setup runs on the engine the step selects, in the
   // game's own bottle. An engine-controlled setup skips checkWineBeforeLaunch: its self-heal would
   // persist a derived or fallback engine into wineVersion.
-  const game = libraryManagerMap['gog'].getGame(appName)
+  const game = deps.libraryManagers.gog.getGame(appName)
   const step = await selectEngineForLaunch(game, {
     offline: !isOnline(),
     purpose: 'setup'
@@ -126,6 +121,7 @@ async function setup(
   if (step.kind === 'use') {
     try {
       return await runGogSetup(
+        deps,
         appName,
         gameInfo,
         getLaunchSettings(step.key, stored),
@@ -149,17 +145,18 @@ async function setup(
     )
     return
   }
-  return runGogSetup(appName, gameInfo, stored, installRedist)
+  return runGogSetup(deps, appName, gameInfo, stored, installRedist)
 }
 
 async function runGogSetup(
+  deps: SetupDeps,
   appName: string,
   gameInfo: GameInfo,
   gameSettings: GameSettings,
   installRedist: boolean
 ): Promise<void> {
   // Make sure prefix is initalized correctly
-  if (!isWindows) await verifyWinePrefix(gameSettings)
+  if (!isWindows) await deps.launcher.verifyWinePrefix(gameSettings)
 
   // Read game manifest
   const manifestPath = path.join(gogdlConfigPath, 'manifests', appName)
@@ -216,12 +213,12 @@ async function runGogSetup(
   // When there is no scummvm in dependencies, proceed with windows paths
   if (!isWindows) {
     if (!dependencies.find((dep) => dep.toLowerCase() === 'scummvm')) {
-      gameSupportDir = await getWinePath({
+      gameSupportDir = await deps.commandRunner.getWinePath({
         path: gameSupportDir,
         gameSettings,
         variant: 'win'
       })
-      gameDirectoryPath = await getWinePath({
+      gameDirectoryPath = await deps.commandRunner.getWinePath({
         path: gameDirectoryPath,
         gameSettings,
         variant: 'win'
@@ -265,7 +262,7 @@ async function runGogSetup(
             '/nodesktopshorctut', // YES THEY MADE A TYPO
             '/nodesktopshortcut'
           ]
-          await runSetupCommand({
+          await runSetupCommand(deps, {
             commandParts: [absPath, ...exeArgs],
             gameSettings,
             wait: false,
@@ -324,7 +321,7 @@ async function runGogSetup(
             '/nodesktopshortcut'
           ]
 
-          await runSetupCommand({
+          await runSetupCommand(deps, {
             commandParts: [isiPath, ...exeArgs],
             gameSettings,
             wait: false,
@@ -370,7 +367,7 @@ async function runGogSetup(
           '/nodesktopshorctut',
           '/nodesktopshortcut'
         ]
-        await runSetupCommand({
+        await runSetupCommand(deps, {
           commandParts: [absPath, ...exeArgs],
           gameSettings,
           wait: false,
@@ -443,7 +440,7 @@ async function runGogSetup(
         context: foundDep.readableName
       })
 
-      await runSetupCommand({
+      await runSetupCommand(deps, {
         commandParts,
         gameSettings,
         startFolder: gogRedistPath,

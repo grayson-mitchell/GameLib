@@ -1,4 +1,3 @@
-import { libraryManagerMap } from '..'
 import {
   clearResumeBaseline,
   parseGogdlProgress,
@@ -10,7 +9,6 @@ import { GlobalConfig } from '../../config'
 import {
   errorHandler,
   getFileSize,
-  spawnAsync,
   moveOnUnix,
   moveOnWindows,
   shutdownWine,
@@ -34,14 +32,6 @@ import {
 } from 'common/types'
 import { existsSync, rmSync } from 'graceful-fs'
 import {
-  achievementStore,
-  configStore,
-  installedGamesStore,
-  playtimeSyncQueue,
-  privateBranchesStore,
-  syncStore
-} from './stores'
-import {
   logError,
   logInfo,
   LogPrefix,
@@ -50,18 +40,7 @@ import {
   getRunnerLogWriter
 } from 'backend/logger'
 import { GOGUser } from './user'
-import {
-  getKnownFixesEnvVariables,
-  getWinePath,
-  launchCleanup,
-  prepareLaunch,
-  prepareWineLaunch,
-  runWineCommand,
-  runWineCommand as runWineCommandUtil,
-  setupEnvVars,
-  setupWrapperEnvVars,
-  setupWrappers
-} from '../../launcher'
+import type { GOGManagerDeps } from './library'
 import {
   addShortcuts as addShortcutsUtil,
   removeShortcuts as removeShortcutsUtil
@@ -102,7 +81,10 @@ import { engineKeyFor } from 'backend/engine/gameKey'
 export default class GOGGame implements Game {
   private readonly id: string
 
-  constructor(id: string) {
+  constructor(
+    id: string,
+    private readonly deps: GOGManagerDeps
+  ) {
     this.id = id
   }
 
@@ -118,15 +100,16 @@ export default class GOGGame implements Game {
       targetPlatform = 'windows'
     }
 
-    const reqs = await libraryManagerMap['gog'].createReqsArray(
+    const reqs = await this.deps.libraryManagers.gog.createReqsArray(
       this.id,
       targetPlatform
     )
-    const productInfo = await libraryManagerMap['gog'].getProductApi(this.id, [
-      'changelog'
-    ])
+    const productInfo = await this.deps.libraryManagers.gog.getProductApi(
+      this.id,
+      ['changelog']
+    )
 
-    const gamesData = await libraryManagerMap['gog'].getGamesData(this.id)
+    const gamesData = await this.deps.libraryManagers.gog.getGamesData(this.id)
 
     let gogStoreUrl = gamesData?._links?.store.href
     const releaseDate =
@@ -150,11 +133,11 @@ export default class GOGGame implements Game {
   }
 
   async getAchievements(lang = 'en-US'): Promise<GOGAchievement[]> {
-    const cached = achievementStore.get(this.id)
+    const cached = this.deps.stores.gog.achievementStore.get(this.id)
     if (cached) return cached
 
-    if (!GOGUser.isLoggedIn()) return []
-    const credentials = await GOGUser.getCredentials()
+    if (!GOGUser.isLoggedIn(this.deps)) return []
+    const credentials = await GOGUser.getCredentials(this.deps)
     if (!credentials) return []
     const url = `https://gameplay.gog.com/clients/${this.id}/users/${credentials?.user_id}/achievements`
 
@@ -174,13 +157,13 @@ export default class GOGGame implements Game {
     }
 
     const achievements: GOGAchievement[] = response.data.items
-    achievementStore.set(this.id, achievements)
+    this.deps.stores.gog.achievementStore.set(this.id, achievements)
 
     return achievements
   }
 
   getGameInfo(): GameInfo {
-    const info = libraryManagerMap['gog'].getGameInfo(this.id)
+    const info = this.deps.libraryManagers.gog.getGameInfo(this.id)
     if (!info) {
       logError(
         [
@@ -212,7 +195,7 @@ export default class GOGGame implements Game {
   }
 
   async importGame(folderPath: string): Promise<ExecResult> {
-    const res = await libraryManagerMap['gog'].runRunnerCommand(
+    const res = await this.deps.libraryManagers.gog.runRunnerCommand(
       ['import', folderPath],
       {
         abortId: this.id,
@@ -250,7 +233,7 @@ export default class GOGGame implements Game {
     }
 
     try {
-      await libraryManagerMap['gog'].importGame(data, folderPath)
+      await this.deps.libraryManagers.gog.importGame(data, folderPath)
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
       const message = `Failed to import ${this.id}: ${reason}`
@@ -379,7 +362,10 @@ export default class GOGGame implements Game {
   }> {
     const { maxWorkers } = GlobalConfig.get().getSettings()
     const workers = maxWorkers ? ['--max-workers', `${maxWorkers}`] : []
-    const privateBranchPassword = privateBranchesStore.get(this.id, '')
+    const privateBranchPassword = this.deps.stores.gog.privateBranchesStore.get(
+      this.id,
+      ''
+    )
     const withDlcs = installDlcs?.length
       ? ['--with-dlcs', '--dlcs', installDlcs.join(',')]
       : ['--skip-dlcs']
@@ -387,7 +373,7 @@ export default class GOGGame implements Game {
     const buildArgs = build ? ['--build', build] : []
     const branchArgs = branch ? ['--branch', branch] : []
 
-    const credentials = await GOGUser.getCredentials()
+    const credentials = await GOGUser.getCredentials(this.deps)
 
     if (!credentials) {
       logError(
@@ -432,12 +418,15 @@ export default class GOGGame implements Game {
       'gog',
       'install'
     )
-    const res = await libraryManagerMap['gog'].runRunnerCommand(commandParts, {
-      abortId: this.id,
-      logWriters: [installLogWriter],
-      onOutput,
-      logMessagePrefix: `Installing ${this.id}`
-    })
+    const res = await this.deps.libraryManagers.gog.runRunnerCommand(
+      commandParts,
+      {
+        abortId: this.id,
+        logWriters: [installLogWriter],
+        onOutput,
+        logMessagePrefix: `Installing ${this.id}`
+      }
+    )
 
     if (res.abort) {
       return { status: 'abort' }
@@ -456,7 +445,7 @@ export default class GOGGame implements Game {
 
     // Installation succeded
     // Save new game info to installed games store
-    const installInfo = await libraryManagerMap['gog'].getInstallInfo(
+    const installInfo = await this.deps.libraryManagers.gog.getInstallInfo(
       this.id,
       installPlatform,
       {
@@ -471,7 +460,7 @@ export default class GOGGame implements Game {
     const gameInfo = this.getGameInfo()
     const isLinuxNative = installPlatform === 'linux'
     const additionalInfo = isLinuxNative
-      ? await libraryManagerMap['gog'].getLinuxInstallerInfo(this.id)
+      ? await this.deps.libraryManagers.gog.getLinuxInstallerInfo(this.id)
       : null
 
     if (
@@ -501,19 +490,19 @@ export default class GOGGame implements Game {
       buildId: isLinuxNative ? '' : installInfo.game.buildId,
       pinnedVersion: !!build
     }
-    const array = installedGamesStore.get('installed', [])
+    const array = this.deps.stores.gog.installedGamesStore.get('installed', [])
     array.push(installedData)
-    installedGamesStore.set('installed', array)
+    this.deps.stores.gog.installedGamesStore.set('installed', array)
     gameInfo.is_installed = true
     gameInfo.install = installedData
-    libraryManagerMap['gog'].refreshInstalled()
+    this.deps.libraryManagers.gog.refreshInstalled()
     if (isWindows) {
       logInfo(
         'Windows os, running setup instructions on install',
         LogPrefix.Gog
       )
       try {
-        await setup(this.id, installedData)
+        await setup(this.deps, this.id, installedData)
       } catch (e) {
         logWarning(
           [
@@ -528,12 +517,14 @@ export default class GOGGame implements Game {
       const installer = join(install_path, 'support/postinst.sh')
       if (existsSync(installer)) {
         logInfo(`Running ${installer}`, LogPrefix.Gog)
-        await spawnAsync(installer, []).catch((err) =>
-          logError(
-            `Failed to run linux installer: ${installer} - ${err}`,
-            LogPrefix.Gog
+        await this.deps
+          .spawnAsync(installer, [])
+          .catch((err) =>
+            logError(
+              `Failed to run linux installer: ${installer} - ${err}`,
+              LogPrefix.Gog
+            )
           )
-        )
       }
     }
     void this.addShortcuts().catch((error) =>
@@ -548,7 +539,8 @@ export default class GOGGame implements Game {
           appName: this.id,
           installPath: install_path,
           title: gameInfo.title,
-          apply: applyGogMacArch,
+          apply: (appName, verdict) =>
+            applyGogMacArch(this.deps, appName, verdict),
           prompt: true
         })
       )
@@ -612,10 +604,14 @@ export default class GOGGame implements Game {
       mangoHudCommand,
       gameScopeCommand,
       gameModeBin
-    } = await prepareLaunch(gameSettings, logWriter, gameInfo)
+    } = await this.deps.launcher.prepareLaunch(
+      gameSettings,
+      logWriter,
+      gameInfo
+    )
     if (!launchPrepSuccess) {
       logWriter.logError(['Launch aborted:', launchPrepFailReason])
-      launchCleanup()
+      this.deps.launcher.launchCleanup()
       showDialogBoxModalAuto({
         title: t('box.error.launchAborted', 'Launch aborted'),
         message: launchPrepFailReason!,
@@ -664,14 +660,20 @@ export default class GOGGame implements Game {
 
     let commandEnv = {
       ...process.env,
-      ...setupWrapperEnvVars({ appName: this.id, appRunner: 'gog' }),
+      ...this.deps.launcher.setupWrapperEnvVars({
+        appName: this.id,
+        appRunner: 'gog'
+      }),
       ...(isWindows
         ? {}
-        : setupEnvVars(gameSettings, gameInfo.install.install_path)),
-      ...getKnownFixesEnvVariables(this.id, 'gog')
+        : this.deps.launcher.setupEnvVars(
+            gameSettings,
+            gameInfo.install.install_path
+          )),
+      ...this.deps.launcher.getKnownFixesEnvVariables(this.id, 'gog')
     }
 
-    const wrappers = setupWrappers(
+    const wrappers = this.deps.launcher.setupWrappers(
       gameSettings,
       mangoHudCommand,
       gameModeBin,
@@ -687,7 +689,7 @@ export default class GOGGame implements Game {
         success: wineLaunchPrepSuccess,
         failureReason: wineLaunchPrepFailReason,
         envVars: wineEnvVars
-      } = await prepareWineLaunch(this, logWriter)
+      } = await this.deps.launcher.prepareWineLaunch(this, logWriter)
       if (!wineLaunchPrepSuccess) {
         logWriter.logError(['Launch aborted:', wineLaunchPrepFailReason])
         if (wineLaunchPrepFailReason) {
@@ -749,13 +751,14 @@ export default class GOGGame implements Game {
       if (existsSync(startFolder)) {
         const installDirectory = isWindows
           ? gameInfo.install.install_path
-          : await getWinePath({
+          : await this.deps.commandRunner.getWinePath({
               path: gameInfo.install.install_path,
               variant: 'win',
               gameSettings
             })
 
-        const availableMods = await libraryManagerMap['gog'].getCyberpunkMods()
+        const availableMods =
+          await this.deps.libraryManagers.gog.getCyberpunkMods()
         const modsEnabledToLoad = gameInfo.install.cyberpunk.modsToLoad
         const modsAbleToLoad: string[] = []
 
@@ -790,9 +793,9 @@ export default class GOGGame implements Game {
           if (bin === undefined) {
             throw Error('redMod command is empty')
           }
-          result = await spawnAsync(bin, args, { cwd: startFolder })
+          result = await this.deps.spawnAsync(bin, args, { cwd: startFolder })
         } else {
-          result = await runWineCommandUtil({
+          result = await this.deps.commandRunner.runWineCommand({
             commandParts: redModCommand,
             wait: true,
             gameSettings,
@@ -819,7 +822,8 @@ export default class GOGGame implements Game {
       }
     }
 
-    const userData: UserData | undefined = configStore.get_nodefault('userData')
+    const userData: UserData | undefined =
+      this.deps.stores.gog.configStore.get_nodefault('userData')
 
     sendGameStatusUpdate({ appName: this.id, runner: 'gog', status: 'playing' })
 
@@ -861,23 +865,21 @@ export default class GOGGame implements Game {
       ? registerLongLivedChild('gog-comet', () => child?.kill())
       : null
 
-    const { error, abort } = await libraryManagerMap['gog'].runRunnerCommand(
-      commandParts,
-      {
+    const { error, abort } =
+      await this.deps.libraryManagers.gog.runRunnerCommand(commandParts, {
         abortId: this.id,
         env: commandEnv,
         wrappers,
         logMessagePrefix: `Launching ${gameInfo.title}`,
         logWriters: [logWriter]
-      }
-    )
+      })
 
     if (child) {
       logInfo(`Killing Comet!`, LogPrefix.Gog)
       unregisterComet?.()
       child.kill()
     }
-    launchCleanup(rpcClient)
+    this.deps.launcher.launchCleanup(rpcClient)
 
     if (abort) {
       return true
@@ -911,7 +913,7 @@ export default class GOGGame implements Game {
       return { status: 'error', error }
     }
 
-    await libraryManagerMap['gog'].changeGameInstallPath(
+    await this.deps.libraryManagers.gog.changeGameInstallPath(
       this.id,
       moveResult.installPath
     )
@@ -919,7 +921,7 @@ export default class GOGGame implements Game {
       gameInfo.install.platform === 'windows' &&
       (isWindows || existsSync(gameConfig.winePrefix))
     ) {
-      await setup(this.id, undefined, false)
+      await setup(this.deps, this.id, undefined, false)
     }
     return { status: 'done' }
   }
@@ -935,7 +937,10 @@ export default class GOGGame implements Game {
     if (!credentials) {
       return { stderr: 'Unable to repair game, no credentials', stdout: '' }
     }
-    const privateBranchPassword = privateBranchesStore.get(this.id, '')
+    const privateBranchPassword = this.deps.stores.gog.privateBranchesStore.get(
+      this.id,
+      ''
+    )
 
     // Most of the data provided here is discarded and read from manifest instead
     const commandParts = [
@@ -959,11 +964,14 @@ export default class GOGGame implements Game {
     }
 
     const repairLogWriter = await createGameLogWriter(this.id, 'gog', 'repair')
-    const res = await libraryManagerMap['gog'].runRunnerCommand(commandParts, {
-      abortId: this.id,
-      logWriters: [repairLogWriter],
-      logMessagePrefix: `Repairing ${this.id}`
-    })
+    const res = await this.deps.libraryManagers.gog.runRunnerCommand(
+      commandParts,
+      {
+        abortId: this.id,
+        logWriters: [repairLogWriter],
+        logMessagePrefix: `Repairing ${this.id}`
+      }
+    )
 
     if (res.error) {
       logError(['Failed to repair', `${this.id}:`, res.error], LogPrefix.Gog)
@@ -981,7 +989,7 @@ export default class GOGGame implements Game {
       return 'Unable to sync saves, gogSaves is undefined'
     }
 
-    const credentials = await GOGUser.getCredentials()
+    const credentials = await GOGUser.getCredentials(this.deps)
     if (!credentials) {
       return 'Unable to sync saves, no credentials'
     }
@@ -1001,7 +1009,7 @@ export default class GOGGame implements Game {
         '--os',
         gameInfo.install.platform,
         '--ts',
-        syncStore.get(`${this.id}.${location.name}`, '0'),
+        this.deps.stores.gog.syncStore.get(`${this.id}.${location.name}`, '0'),
         '--name',
         location.name,
         arg
@@ -1009,7 +1017,7 @@ export default class GOGGame implements Game {
 
       logInfo([`Syncing saves for ${gameInfo.title}`], LogPrefix.Gog)
 
-      const res = await libraryManagerMap['gog'].runRunnerCommand(
+      const res = await this.deps.libraryManagers.gog.runRunnerCommand(
         commandParts,
         {
           abortId: this.id,
@@ -1025,7 +1033,10 @@ export default class GOGGame implements Game {
         )
       }
       if (res.stdout) {
-        syncStore.set(`${this.id}.${location.name}`, res.stdout.trim())
+        this.deps.stores.gog.syncStore.set(
+          `${this.id}.${location.name}`,
+          res.stdout.trim()
+        )
       }
     }
 
@@ -1033,7 +1044,7 @@ export default class GOGGame implements Game {
   }
 
   async uninstall({ shouldRemovePrefix }: RemoveArgs): Promise<ExecResult> {
-    const array = installedGamesStore.get('installed', [])
+    const array = this.deps.stores.gog.installedGamesStore.get('installed', [])
     const index = array.findIndex((game) => game.appName === this.id)
     if (index === -1) {
       throw Error("Game isn't installed")
@@ -1054,7 +1065,7 @@ export default class GOGGame implements Game {
 
       const installDirectory = isWindows
         ? object.install_path
-        : await getWinePath({
+        : await this.deps.commandRunner.getWinePath({
             path: object.install_path,
             gameSettings
           })
@@ -1071,7 +1082,7 @@ export default class GOGGame implements Game {
 
       if (!isWindows) {
         if (existsSync(gameSettings.winePrefix) && !shouldRemovePrefix) {
-          await runWineCommandUtil({
+          await this.deps.commandRunner.runWineCommand({
             gameSettings,
             commandParts: command,
             wait: true
@@ -1089,7 +1100,7 @@ export default class GOGGame implements Game {
           '-ArgumentList'
         ]
 
-        await spawnAsync('powershell', [
+        await this.deps.spawnAsync('powershell', [
           ...adminCommand,
           `"/verysilent","\`"/dir=${installDirectory}\`""`,
           ``
@@ -1107,13 +1118,13 @@ export default class GOGGame implements Game {
     if (existsSync(supportPath)) {
       rmSync(supportPath, { recursive: true }) // Remove unnecessary support dir
     }
-    installedGamesStore.set('installed', array)
-    libraryManagerMap['gog'].refreshInstalled()
+    this.deps.stores.gog.installedGamesStore.set('installed', array)
+    this.deps.libraryManagers.gog.refreshInstalled()
     const gameInfo = this.getGameInfo()
     gameInfo.is_installed = false
     gameInfo.install = { is_dlc: false }
     await removeShortcutsUtil(this)
-    syncStore.delete(this.id)
+    this.deps.stores.gog.syncStore.delete(this.id)
     await removeNonSteamGame(this)
     sendFrontendMessage('pushGameToLibrary', gameInfo)
     return res
@@ -1136,7 +1147,7 @@ export default class GOGGame implements Game {
           }
         }
       }
-      return updateRedist(redist)
+      return updateRedist(this.deps, redist)
     }
     const {
       installPlatform,
@@ -1193,7 +1204,7 @@ export default class GOGGame implements Game {
                 '-Wait',
                 '-ArgumentList'
               ]
-              await spawnAsync(
+              await this.deps.spawnAsync(
                 'powershell',
                 [
                   ...adminCommand,
@@ -1202,7 +1213,7 @@ export default class GOGGame implements Game {
                 { cwd: gameData.install.install_path }
               )
             } else {
-              await runWineCommand({
+              await this.deps.commandRunner.runWineCommand({
                 gameSettings: gameConfig,
                 protonVerb: 'run',
                 commandParts: [
@@ -1220,7 +1231,10 @@ export default class GOGGame implements Game {
       }
     }
 
-    const privateBranchPassword = privateBranchesStore.get(this.id, '')
+    const privateBranchPassword = this.deps.stores.gog.privateBranchesStore.get(
+      this.id,
+      ''
+    )
 
     const overwrittenBuild: string[] = updateOverwrites?.build
       ? ['--build', updateOverwrites.build]
@@ -1269,12 +1283,15 @@ export default class GOGGame implements Game {
     }
 
     const updateLogWriter = await createGameLogWriter(this.id, 'gog', 'update')
-    const res = await libraryManagerMap['gog'].runRunnerCommand(commandParts, {
-      abortId: this.id,
-      logWriters: [updateLogWriter],
-      onOutput,
-      logMessagePrefix: `Updating ${this.id}`
-    })
+    const res = await this.deps.libraryManagers.gog.runRunnerCommand(
+      commandParts,
+      {
+        abortId: this.id,
+        logWriters: [updateLogWriter],
+        onOutput,
+        logMessagePrefix: `Updating ${this.id}`
+      }
+    )
 
     if (res.abort) {
       return { status: 'done' }
@@ -1290,7 +1307,10 @@ export default class GOGGame implements Game {
       return { status: 'error' }
     }
 
-    const installedArray = installedGamesStore.get('installed', [])
+    const installedArray = this.deps.stores.gog.installedGamesStore.get(
+      'installed',
+      []
+    )
     const gameIndex = installedArray.findIndex(
       (value) => this.id === value.appName
     )
@@ -1309,7 +1329,7 @@ export default class GOGGame implements Game {
     }
 
     if (gameData.install.platform !== 'linux') {
-      const installInfo = await libraryManagerMap['gog'].getInstallInfo(
+      const installInfo = await this.deps.libraryManagers.gog.getInstallInfo(
         this.id,
         gameData.install.platform ?? 'windows',
         {
@@ -1318,7 +1338,7 @@ export default class GOGGame implements Game {
         }
       )
       // TODO: use installInfo.game.builds
-      const { etag } = await libraryManagerMap['gog'].getMetaResponse(
+      const { etag } = await this.deps.libraryManagers.gog.getMetaResponse(
         this.id,
         gameData.install.platform ?? 'windows',
         installInfo?.manifest.versionEtag
@@ -1330,9 +1350,8 @@ export default class GOGGame implements Game {
       gameObject.language = overwrittenLanguage
       gameObject.versionEtag = etag
     } else {
-      const installerInfo = await libraryManagerMap[
-        'gog'
-      ].getLinuxInstallerInfo(this.id)
+      const installerInfo =
+        await this.deps.libraryManagers.gog.getLinuxInstallerInfo(this.id)
       if (!installerInfo) {
         return { status: 'error' }
       }
@@ -1343,8 +1362,8 @@ export default class GOGGame implements Game {
     }
     const sizeOnDisk = await getPathDiskSize(join(gameObject.install_path))
     gameObject.install_size = getFileSize(sizeOnDisk)
-    installedGamesStore.set('installed', installedArray)
-    libraryManagerMap['gog'].refreshInstalled()
+    this.deps.stores.gog.installedGamesStore.set('installed', installedArray)
+    this.deps.libraryManagers.gog.refreshInstalled()
     // overlay census: install/metadata read (prefix exists check), stored settings
     const gameSettings = await this.getSettings()
     // Simple check if wine prefix exists and setup can be performed because of an
@@ -1353,17 +1372,19 @@ export default class GOGGame implements Game {
       gameObject.platform === 'windows' &&
       (isWindows || existsSync(gameSettings.winePrefix))
     ) {
-      await setup(this.id, gameObject, false)
+      await setup(this.deps, this.id, gameObject, false)
     } else if (gameObject.platform === 'linux') {
       const installer = join(gameObject.install_path, 'support/postinst.sh')
       if (existsSync(installer)) {
         logInfo(`Running ${installer}`, LogPrefix.Gog)
-        await spawnAsync(installer, []).catch((err) =>
-          logError(
-            `Failed to run linux installer: ${installer} - ${err}`,
-            LogPrefix.Gog
+        await this.deps
+          .spawnAsync(installer, [])
+          .catch((err) =>
+            logError(
+              `Failed to run linux installer: ${installer} - ${err}`,
+              LogPrefix.Gog
+            )
           )
-        )
       }
     }
     sendGameStatusUpdate({
@@ -1384,7 +1405,7 @@ export default class GOGGame implements Game {
     const { maxWorkers } = GlobalConfig.get().getSettings()
     const workers = maxWorkers ? ['--max-workers', `${maxWorkers}`] : []
     const gameData = this.getGameInfo()
-    const credentials = await GOGUser.getCredentials()
+    const credentials = await GOGUser.getCredentials(this.deps)
 
     const numberOfDLCs = gameData.install?.installedDLCs?.length || 0
 
@@ -1416,10 +1437,13 @@ export default class GOGGame implements Game {
   }
 
   async forceUninstall(): Promise<void> {
-    const installed = installedGamesStore.get('installed', [])
+    const installed = this.deps.stores.gog.installedGamesStore.get(
+      'installed',
+      []
+    )
     const newInstalled = installed.filter((g) => g.appName !== this.id)
-    installedGamesStore.set('installed', newInstalled)
-    libraryManagerMap['gog'].refreshInstalled()
+    this.deps.stores.gog.installedGamesStore.set('installed', newInstalled)
+    this.deps.libraryManagers.gog.refreshInstalled()
     sendFrontendMessage('pushGameToLibrary', this.getGameInfo())
   }
 
@@ -1467,7 +1491,8 @@ export default class GOGGame implements Game {
       session_date: sessionDate,
       time
     }
-    const userData: UserData | undefined = configStore.get_nodefault('userData')
+    const userData: UserData | undefined =
+      this.deps.stores.gog.configStore.get_nodefault('userData')
 
     if (!userData) {
       logWarning(['Unable to post session, userData not present'], {
@@ -1480,14 +1505,22 @@ export default class GOGGame implements Game {
       logWarning(['App offline, unable to post new session at this time'], {
         prefix: LogPrefix.Gog
       })
-      const alreadySetData = playtimeSyncQueue.get(userData.galaxyUserId, [])
+      const alreadySetData = this.deps.stores.gog.playtimeSyncQueue.get(
+        userData.galaxyUserId,
+        []
+      )
       alreadySetData.push({ ...data, appName: this.id })
-      playtimeSyncQueue.set(userData.galaxyUserId, alreadySetData)
-      runOnceWhenOnline(() => libraryManagerMap['gog'].syncQueuedPlaytime())
+      this.deps.stores.gog.playtimeSyncQueue.set(
+        userData.galaxyUserId,
+        alreadySetData
+      )
+      runOnceWhenOnline(() =>
+        this.deps.libraryManagers.gog.syncQueuedPlaytime()
+      )
       return
     }
 
-    const response = await libraryManagerMap['gog']
+    const response = await this.deps.libraryManagers.gog
       .postPlaytimeSession({
         ...data,
         appName: this.id
@@ -1496,9 +1529,15 @@ export default class GOGGame implements Game {
 
     if (!response || response.status !== 201) {
       logError('Failed to post session', { prefix: LogPrefix.Gog })
-      const alreadySetData = playtimeSyncQueue.get(userData.galaxyUserId, [])
+      const alreadySetData = this.deps.stores.gog.playtimeSyncQueue.get(
+        userData.galaxyUserId,
+        []
+      )
       alreadySetData.push({ ...data, appName: this.id })
-      playtimeSyncQueue.set(userData.galaxyUserId, alreadySetData)
+      this.deps.stores.gog.playtimeSyncQueue.set(
+        userData.galaxyUserId,
+        alreadySetData
+      )
       return
     }
 
@@ -1509,8 +1548,9 @@ export default class GOGGame implements Game {
     if (!isOnline()) {
       return
     }
-    const credentials = await GOGUser.getCredentials()
-    const userData: UserData | undefined = configStore.get_nodefault('userData')
+    const credentials = await GOGUser.getCredentials(this.deps)
+    const userData: UserData | undefined =
+      this.deps.stores.gog.configStore.get_nodefault('userData')
 
     if (!credentials || !userData) {
       return
@@ -1535,10 +1575,10 @@ export default class GOGGame implements Game {
   }
 
   getBranchPassword(): string {
-    return privateBranchesStore.get(this.id, '')
+    return this.deps.stores.gog.privateBranchesStore.get(this.id, '')
   }
 
   setBranchPassword(password: string): void {
-    privateBranchesStore.set(this.id, password)
+    this.deps.stores.gog.privateBranchesStore.set(this.id, password)
   }
 }

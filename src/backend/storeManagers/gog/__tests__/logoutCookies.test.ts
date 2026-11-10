@@ -50,20 +50,14 @@ jest.mock('backend/online_monitor', () => ({
   isOnline: () => true
 }))
 
-jest.mock('backend/storeManagers/index', () => ({
-  libraryManagerMap: {
-    gog: { runRunnerCommand: jest.fn() }
-  }
-}))
-
 const mockConfigStoreClear = jest.fn<unknown, unknown[]>()
-jest.mock('backend/storeManagers/gog/stores', () => ({
+const fakeGogStores = {
   configStore: {
     set: jest.fn(),
     get_nodefault: jest.fn(),
     clear: (...args: unknown[]) => mockConfigStoreClear(...args)
   }
-}))
+}
 
 jest.mock('backend/storeManagers/gog/constants', () => ({
   gogdlAuthConfig: '/tmp/gamelib-gog-logout-cookies-test/does-not-exist.json'
@@ -88,7 +82,12 @@ jest.mock('backend/constants/environment', () => {
 })
 
 import { logWarning, logInfo } from 'backend/logger'
-import { GOGUser } from '../user'
+import { GOGUser, type GOGUserDeps } from '../user'
+
+const deps = {
+  stores: { gog: fakeGogStores },
+  libraryManagers: { gog: { runRunnerCommand: jest.fn() } }
+} as unknown as GOGUserDeps
 import {
   setLoginWindowSeam,
   type LoginWindowSeam
@@ -136,11 +135,11 @@ afterEach(() => {
   setLoginWindowSeam(null)
 })
 
-describe('GOGUser.logout() credential cleanup runs first and unconditionally (D-15)', () => {
+describe('GOGUser.logout(deps) credential cleanup runs first and unconditionally (D-15)', () => {
   it('clears credentials even when no login-window seam is installed at all (cookie step throws synchronously)', async () => {
     // No seam installed -- `getLoginWindowSeamOrThrow()` throws synchronously the instant the
     // cookie-side step calls it.
-    await expect(GOGUser.logout()).resolves.toBeUndefined()
+    await expect(GOGUser.logout(deps)).resolves.toBeUndefined()
 
     expect(mockConfigStoreClear).toHaveBeenCalledTimes(1)
   })
@@ -153,7 +152,7 @@ describe('GOGUser.logout() credential cleanup runs first and unconditionally (D-
     })
     setLoginWindowSeam(seam)
 
-    await expect(GOGUser.logout()).resolves.toBeUndefined()
+    await expect(GOGUser.logout(deps)).resolves.toBeUndefined()
 
     expect(mockConfigStoreClear).toHaveBeenCalledTimes(1)
   })
@@ -165,16 +164,16 @@ describe('GOGUser.logout() credential cleanup runs first and unconditionally (D-
     })
     setLoginWindowSeam(seam)
 
-    await expect(GOGUser.logout()).resolves.toBeUndefined()
+    await expect(GOGUser.logout(deps)).resolves.toBeUndefined()
   })
 })
 
-describe('GOGUser.logout() cookie clear (macOS)', () => {
+describe('GOGUser.logout(deps) cookie clear (macOS)', () => {
   it('clears the GOG apex domain against the sentinel no-window label, never a real window', async () => {
     const seam = makeMockSeam()
     setLoginWindowSeam(seam)
 
-    await GOGUser.logout()
+    await GOGUser.logout(deps)
 
     expect(seam.clearCookies).toHaveBeenCalledTimes(1)
     expect(seam.clearCookies).toHaveBeenCalledWith(
@@ -191,7 +190,7 @@ describe('GOGUser.logout() cookie clear (macOS)', () => {
     })
     setLoginWindowSeam(seam)
 
-    await GOGUser.logout()
+    await GOGUser.logout(deps)
 
     expect(allLoggedText()).toContain('gog.com')
     expect(allLoggedText()).toContain('5')
@@ -204,7 +203,7 @@ describe('GOGUser.logout() cookie clear (macOS)', () => {
     })
     setLoginWindowSeam(seam)
 
-    await GOGUser.logout()
+    await GOGUser.logout(deps)
 
     expect(logWarning).toHaveBeenCalledWith(
       expect.stringContaining('gog.com'),
@@ -219,19 +218,19 @@ describe('GOGUser.logout() cookie clear (macOS)', () => {
     })
     setLoginWindowSeam(seam)
 
-    await GOGUser.logout()
+    await GOGUser.logout(deps)
 
     expect(logWarning).not.toHaveBeenCalled()
   })
 })
 
-describe('GOGUser.logout() cookie clear (off macOS)', () => {
+describe('GOGUser.logout(deps) cookie clear (off macOS)', () => {
   it('attempts no seam call at all -- no Tauri leg ships off macOS yet', async () => {
     mockIsMac = false
     const seam = makeMockSeam()
     setLoginWindowSeam(seam)
 
-    await GOGUser.logout()
+    await GOGUser.logout(deps)
 
     expect(seam.clearCookies).not.toHaveBeenCalled()
     expect(seam.cookiesForDomain).not.toHaveBeenCalled()

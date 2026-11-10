@@ -101,7 +101,7 @@ import { initOnlineMonitor, runOnceWhenOnline } from '../online_monitor'
 // `../storeManagers/gog/user`. So these three imports add NO new module to the sidecar
 // bundle — each is a second binding onto an already-resident module, not a new edge.
 import { LegendaryUser } from '../storeManagers/legendary/user'
-import { GOGUser } from '../storeManagers/gog/user'
+import { GOGUser, type GOGUserDeps } from '../storeManagers/gog/user'
 // Block H (todo 2026-09-06, quick-260909-k5x). `grep -rn "gog/presence" src/backend
 // --include='*.ts'` (re-run at execution time) confirms `presence.ts` is ALREADY resident in
 // the sidecar bundle: `utils.ts:43` does `import gogPresence from './storeManagers/gog/
@@ -525,6 +525,7 @@ export function clearStrandedPlaytimeSyncLock(deps: {
  */
 export function reconcileStoreUsersWhenOnline(deps: {
   kvs: Pick<Stores['kvs'], 'configStore'>
+  gogUser: GOGUserDeps
 }): void {
   const { configStore } = deps.kvs
   try {
@@ -538,8 +539,8 @@ export function reconcileStoreUsersWhenOnline(deps: {
           })
           configStore.delete('userInfo')
         }
-        if (GOGUser.isLoggedIn()) {
-          GOGUser.getUserDetails().catch((error: unknown) => {
+        if (GOGUser.isLoggedIn(deps.gogUser)) {
+          GOGUser.getUserDetails(deps.gogUser).catch((error: unknown) => {
             logWarning(
               `[bootstrap] reconcileStoreUsersWhenOnline: GOGUser.getUserDetails() failed: ${String(error)}`,
               LogPrefix.Backend
@@ -1616,7 +1617,11 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // matches Block D's call site shape, which wraps its own body rather than duplicating that
         // here too.
         reconcileStoreUsersWhenOnline({
-          kvs: requireServices(state).stores.kvs
+          kvs: requireServices(state).stores.kvs,
+          gogUser: {
+            stores: requireServices(state).stores,
+            libraryManagers: requireServices(state).managers.library
+          }
         })
       }
     },

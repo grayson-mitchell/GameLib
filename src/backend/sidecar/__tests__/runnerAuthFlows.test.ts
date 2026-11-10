@@ -248,7 +248,7 @@ describe('T-34.5-21/T-34.5-22 — login and authGOG reject a non-string/empty pa
 
     await authGOGHandler()(undefined, 'valid-code')
 
-    expect(mockGOGLogin).toHaveBeenCalledWith('valid-code')
+    expect(mockGOGLogin).toHaveBeenCalledWith(expect.anything(), 'valid-code')
   })
 })
 

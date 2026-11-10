@@ -75,13 +75,14 @@ import { ipcMain } from '../platform'
 // a direct runner `user.ts` import instead risks hitting that same class mid-definition). This
 // fix is per-file, not "once is enough": each curated registration module is its own independent
 // entry point into the bundle's module graph. Verified for THIS cluster too: `legendary/user.ts`
-// imports the library-manager table from `..` (`storeManagers/index.ts`) and `gog/user.ts` reaches the
+// imports the library-manager table from `..` (`storeManagers/index.ts`) and `gog/user.ts` used to reach the
 // same map via a lazy `await import('../index')` inside `login()`/`getCredentials()` specifically
 // to break this same cycle (its own doc comment cites "Phase 27 Plan 02") — both runners are
 // reachable through the identical circular-dependency shape this import ordering exists to avoid.
-import '../storeManagers'
+import { libraryManagerMap } from '../storeManagers'
 import { LegendaryUser } from '../storeManagers/legendary/user'
 import { GOGUser } from '../storeManagers/gog/user'
+import * as gogStores from '../storeManagers/gog/stores'
 import { NileUser } from '../storeManagers/nile/user'
 import { isEpicServiceOffline } from '../utils'
 import { logWarning, LogPrefix } from '../logger'
@@ -112,6 +113,14 @@ function logSendFailure(channel: string, error: unknown): void {
  * existing entry). Mirrors `storeRegistration.ts`'s own `let registered = false` guard.
  */
 let registered = false
+// Transitional (66.1-08): resolved at call time until the registration takes injected slices.
+function gogUserDeps() {
+  return {
+    stores: { gog: gogStores },
+    libraryManagers: { gog: libraryManagerMap.gog }
+  }
+}
+
 export function registerRunnerAuthFlows(): void {
   if (registered) {
     return
@@ -168,7 +177,7 @@ export function registerRunnerAuthFlows(): void {
       )
       return { status: 'error' }
     }
-    return GOGUser.login(code)
+    return GOGUser.login(gogUserDeps(), code)
   })
 
   // Source: main.ts:882 -> `NileUser.getLoginData()`. D-12, corrected: the nile CLI's own
@@ -252,7 +261,7 @@ export function registerRunnerAuthFlows(): void {
   // forget `send` channel by design, exactly as before.
   ipcMain.on('logoutGOG', () => {
     try {
-      const result: unknown = GOGUser.logout()
+      const result: unknown = GOGUser.logout(gogUserDeps())
       if (result && typeof (result as Promise<void>).catch === 'function') {
         ;(result as Promise<void>).catch((error) => {
           logSendFailure('logoutGOG', error)

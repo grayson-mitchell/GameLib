@@ -40,7 +40,7 @@ export interface Stores {
 
 export interface StoreManagers {
   /** `gog` keeps its concrete type: boot drains the queued playtime through it. */
-  library: Record<Runner, LibraryManager> & {
+  library: Omit<Record<Runner, LibraryManager>, 'gog' | 'legendary'> & {
     gog: GOGLibraryManager
     legendary: LegendaryLibraryManager
   }
@@ -73,7 +73,7 @@ export type { SpawnAsync, QuitHandler }
 
 /** What every library manager receives through its constructor (66.1, R2). */
 export interface ManagerDeps {
-  libraryManagers: Record<Runner, LibraryManager>
+  libraryManagers: StoreManagers['library']
   stores: Stores
   commandRunner: CommandRunner
   launcher: Launcher

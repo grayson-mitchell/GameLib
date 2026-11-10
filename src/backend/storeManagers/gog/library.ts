@@ -1,4 +1,5 @@
 import type { ManagerDeps } from 'backend/services/types'
+import type { CommandCallRunnerOptions } from 'backend/commandRunner'
 import { sendFrontendMessage } from '../../ipc'
 import axios, { AxiosError, AxiosResponse } from 'axios'
 import { GOGUser } from './user'
@@ -7,7 +8,6 @@ import {
   InstalledInfo,
   GOGImportData,
   ExecResult,
-  CallRunnerOptions,
   LaunchOption
 } from 'common/types'
 import {
@@ -40,16 +40,6 @@ import {
   logWarning
 } from 'backend/logger'
 import { getGOGdlBin, getFileSize, axiosClient } from '../../utils'
-import {
-  libraryStore,
-  installedGamesStore,
-  installInfoStore,
-  apiInfoCache,
-  privateBranchesStore,
-  configStore,
-  playtimeSyncQueue
-} from './stores'
-import { callRunner } from '../../launcher'
 import { isOnline, runOnceWhenOnline } from '../../online_monitor'
 import i18next from 'i18next'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
@@ -61,7 +51,6 @@ import { gogdlConfigPath } from './constants'
 import { userDataPath } from 'backend/constants/paths'
 import GOGGame from './games'
 import type { LibraryManager } from 'common/types/game_manager'
-import { libraryManagerMap } from '../index'
 import { recordedMacArch, scheduleMacArchSweep } from 'backend/macArch/recovery'
 import { readdir } from 'fs/promises'
 import { statSync } from 'fs'
@@ -75,7 +64,12 @@ const installedGames: Map<string, InstalledInfo> = new Map()
  * frontend reads, then pushes the merged GameInfo live. Never rebuilds the
  * persisted array from the Map.
  */
-export function applyGogMacArch(appName: string, verdict: '32' | '64') {
+export function applyGogMacArch(
+  deps: Pick<GOGManagerDeps, 'stores'>,
+  appName: string,
+  verdict: '32' | '64'
+) {
+  const { libraryStore } = deps.stores.gog
   const cached = library.get(appName)
   if (cached) library.set(appName, { ...cached, mac_arch: verdict })
 
@@ -117,12 +111,12 @@ export default class GOGLibraryManager implements LibraryManager {
     }
 
     runOnceWhenOnline(async () => {
-      const credentials = await GOGUser.getCredentials()
+      const credentials = await GOGUser.getCredentials(this.deps)
       for (const appName of installedGamesList) {
         await this.createMissingGogdlManifest(appName, credentials)
       }
     })
-    runOnceWhenOnline(checkForRedistUpdates)
+    runOnceWhenOnline(() => checkForRedistUpdates(this.deps))
 
     scheduleMacArchSweep(
       'gog',
@@ -134,7 +128,7 @@ export default class GOGLibraryManager implements LibraryManager {
             installPath: i.install_path,
             title: library.get(i.appName!)?.title
           })),
-      applyGogMacArch
+      (appName, verdict) => applyGogMacArch(this.deps, appName, verdict)
     )
   }
 
@@ -142,7 +136,7 @@ export default class GOGLibraryManager implements LibraryManager {
     const cached = this.gameCache.get(id)
     if (cached) return cached
 
-    const game = new GOGGame(id)
+    const game = new GOGGame(id, this.deps)
     this.gameCache.set(id, game)
     return game
   }
@@ -230,21 +224,25 @@ export default class GOGLibraryManager implements LibraryManager {
     // in-process throw, and `bootstrap.ts`'s `clearStrandedPlaytimeSyncLock` (Block D) for the
     // companion leg that clears a lock left behind by process death, which `finally` cannot
     // observe.
-    if (playtimeSyncQueue.has('lock')) {
+    if (this.deps.stores.gog.playtimeSyncQueue.has('lock')) {
       return
     }
-    const userData: UserData | undefined = configStore.get_nodefault('userData')
+    const userData: UserData | undefined =
+      this.deps.stores.gog.configStore.get_nodefault('userData')
     if (!userData) {
       logError('Unable to syncQueued playtime, userData not present', {
         prefix: LogPrefix.Gog
       })
       return
     }
-    const queue = playtimeSyncQueue.get(userData.galaxyUserId, [])
+    const queue = this.deps.stores.gog.playtimeSyncQueue.get(
+      userData.galaxyUserId,
+      []
+    )
     if (queue.length === 0) {
       return
     }
-    playtimeSyncQueue.set('lock', [])
+    this.deps.stores.gog.playtimeSyncQueue.set('lock', [])
     const failed = []
 
     try {
@@ -259,7 +257,7 @@ export default class GOGLibraryManager implements LibraryManager {
           failed.push(session)
         }
       }
-      playtimeSyncQueue.set(userData.galaxyUserId, failed)
+      this.deps.stores.gog.playtimeSyncQueue.set(userData.galaxyUserId, failed)
     } finally {
       // LOAD-BEARING: `set(userData.galaxyUserId, failed)` stays inside the `try`, as its last
       // statement, deliberately -- NOT here. If the loop throws, that line never runs, so the
@@ -267,7 +265,7 @@ export default class GOGLibraryManager implements LibraryManager {
       // is released. Moving the `set` into this `finally` would overwrite the full queue with a
       // partial `failed` array on every throw, silently discarding whichever sessions the loop
       // had not yet reached. Do not "improve" this.
-      playtimeSyncQueue.delete('lock')
+      this.deps.stores.gog.playtimeSyncQueue.delete('lock')
     }
     logInfo(
       [
@@ -286,14 +284,17 @@ export default class GOGLibraryManager implements LibraryManager {
     time,
     appName
   }: GOGSessionSyncQueueItem) {
-    const userData: UserData | undefined = configStore.get_nodefault('userData')
+    const userData: UserData | undefined =
+      this.deps.stores.gog.configStore.get_nodefault('userData')
     if (!userData) {
       logError('No userData, unable to post new session', {
         prefix: LogPrefix.Gog
       })
       return null
     }
-    const credentials = await GOGUser.getCredentials().catch(() => null)
+    const credentials = await GOGUser.getCredentials(this.deps).catch(
+      () => null
+    )
 
     if (!credentials) {
       logError("Couldn't fetch credentials, unable to post new session", {
@@ -447,7 +448,7 @@ export default class GOGLibraryManager implements LibraryManager {
   }
 
   private async loadLocalLibrary() {
-    for (const game of libraryStore.get('games', [])) {
+    for (const game of this.deps.stores.gog.libraryStore.get('games', [])) {
       const copyObject = { ...game }
       if (installedGames.has(game.app_name)) {
         if (isOnline()) {
@@ -458,7 +459,10 @@ export default class GOGLibraryManager implements LibraryManager {
       }
       library.set(game.app_name, copyObject)
     }
-    installedGamesStore.set('installed', Array.from(installedGames.values()))
+    this.deps.stores.gog.installedGamesStore.set(
+      'installed',
+      Array.from(installedGames.values())
+    )
   }
 
   async checkForOfflineInstallerChanges(appName: string) {
@@ -525,7 +529,7 @@ export default class GOGLibraryManager implements LibraryManager {
       if (existsSync(manifestPath)) {
         rmSync(manifestPath)
       }
-      const credentials = await GOGUser.getCredentials()
+      const credentials = await GOGUser.getCredentials(this.deps)
       await this.createMissingGogdlManifest(appName, credentials)
       installedGame.buildId = data.buildId
     }
@@ -533,7 +537,7 @@ export default class GOGLibraryManager implements LibraryManager {
   }
 
   async refresh(): Promise<ExecResult> {
-    if (!GOGUser.isLoggedIn()) {
+    if (!GOGUser.isLoggedIn(this.deps)) {
       return this.defaultExecResult
     }
     this.refreshInstalled()
@@ -559,7 +563,7 @@ export default class GOGLibraryManager implements LibraryManager {
 
     // This gets games ibrary
     // Handles multiple pages
-    const credentials = await GOGUser.getCredentials()
+    const credentials = await GOGUser.getCredentials(this.deps)
     if (!credentials) {
       return this.defaultExecResult
     }
@@ -576,7 +580,7 @@ export default class GOGLibraryManager implements LibraryManager {
     )
 
     const gamesObjects: GameInfo[] = [redistGameInfo]
-    apiInfoCache.use_in_memory() // Prevent blocking operations
+    this.deps.stores.gog.apiInfoCache.use_in_memory() // Prevent blocking operations
     for (const game of filteredApiArray) {
       let retries = 5
       while (retries > 0) {
@@ -633,8 +637,8 @@ export default class GOGLibraryManager implements LibraryManager {
       }
     }
 
-    apiInfoCache.commit() // Sync cache to drive
-    libraryStore.set('games', gamesObjects)
+    this.deps.stores.gog.apiInfoCache.commit() // Sync cache to drive
+    this.deps.stores.gog.libraryStore.set('games', gamesObjects)
 
     void new Promise(() => {
       const logLines: string[] = []
@@ -664,11 +668,11 @@ export default class GOGLibraryManager implements LibraryManager {
   }
 
   getListOfGames(): GameInfo[] {
-    return libraryStore.get('games', [])
+    return this.deps.stores.gog.libraryStore.get('games', [])
   }
 
   getInstallAndGameInfo(slug: string): GameInfo | undefined {
-    const lib = libraryStore.get('games', [])
+    const lib = this.deps.stores.gog.libraryStore.get('games', [])
     const game = lib.find((value) => value.app_name === slug)
 
     if (!game) {
@@ -706,12 +710,16 @@ export default class GOGLibraryManager implements LibraryManager {
       installPlatform = 'osx'
     }
 
-    const privateBranchPassword = privateBranchesStore.get(appName, '')
+    const privateBranchPassword = this.deps.stores.gog.privateBranchesStore.get(
+      appName,
+      ''
+    )
 
     const installInfoStoreKey = `${appName}_${installPlatform}_${branch}_${build}_${privateBranchPassword}`
 
-    if (installInfoStore.has(installInfoStoreKey)) {
-      const cache = installInfoStore.get(installInfoStoreKey)
+    if (this.deps.stores.gog.installInfoStore.has(installInfoStoreKey)) {
+      const cache =
+        this.deps.stores.gog.installInfoStore.get(installInfoStoreKey)
       if (cache) {
         logInfo(
           [
@@ -733,13 +741,13 @@ export default class GOGLibraryManager implements LibraryManager {
     }
 
     // Login gate only -- debug/gog-spawn-reduction.md fix 4. This used to call
-    // GOGUser.getCredentials(), spawning a `gogdl auth` subprocess purely to check
+    // GOGUser.getCredentials(this.deps), spawning a `gogdl auth` subprocess purely to check
     // login state; the returned credentials were never used anywhere else in this
     // function (the `gogdl info` call below manages its own auth independently from
     // the same auth-config-path file). isLoggedIn() is a synchronous local config read
     // with zero subprocess spawns. See reasoning_checkpoint in the debug session file
     // for the evidence this pre-check was not load-bearing for token freshness.
-    if (!GOGUser.isLoggedIn()) {
+    if (!GOGUser.isLoggedIn(this.deps)) {
       logError('Not logged in, cannot get install info', LogPrefix.Gog)
       return
     }
@@ -821,14 +829,14 @@ export default class GOGLibraryManager implements LibraryManager {
       return
     }
 
-    let libraryArray = libraryStore.get('games', [])
+    let libraryArray = this.deps.stores.gog.libraryStore.get('games', [])
     let gameObjectIndex = libraryArray.findIndex(
       (value) => value.app_name === appName
     )
 
     if (gameObjectIndex === -1) {
       await this.refresh()
-      libraryArray = libraryStore.get('games', [])
+      libraryArray = this.deps.stores.gog.libraryStore.get('games', [])
       gameObjectIndex = libraryArray.findIndex(
         (value) => value.app_name === appName
       )
@@ -864,7 +872,7 @@ export default class GOGLibraryManager implements LibraryManager {
     libraryEntry.folder_name = gogInfo.folder_name
     libraryEntry.gog_save_location = gameData?.gog_save_location
     gameData.folder_name = gogInfo.folder_name
-    libraryStore.set('games', libraryArray)
+    this.deps.stores.gog.libraryStore.set('games', libraryArray)
     library.set(appName, gameData)
 
     let language = gogInfo.languages[0]
@@ -933,7 +941,7 @@ export default class GOGLibraryManager implements LibraryManager {
         dependencies: gogInfo.dependencies
       }
     }
-    installInfoStore.set(installInfoStoreKey, info)
+    this.deps.stores.gog.installInfoStore.set(installInfoStoreKey, info)
     return info
   }
 
@@ -941,7 +949,10 @@ export default class GOGLibraryManager implements LibraryManager {
    * Loads installed data and adds it into a Map
    */
   refreshInstalled() {
-    const installedArray = installedGamesStore.get('installed', [])
+    const installedArray = this.deps.stores.gog.installedGamesStore.get(
+      'installed',
+      []
+    )
     installedGames.clear()
     installedArray.forEach((value) => {
       if (!value.appName) {
@@ -966,7 +977,10 @@ export default class GOGLibraryManager implements LibraryManager {
       return
     }
 
-    const installedArray = installedGamesStore.get('installed', [])
+    const installedArray = this.deps.stores.gog.installedGamesStore.get(
+      'installed',
+      []
+    )
 
     const gameIndex = installedArray.findIndex(
       (value) => value.appName === appName
@@ -1008,7 +1022,7 @@ export default class GOGLibraryManager implements LibraryManager {
 
     installedEntry.install_path = newInstallPath
     cachedGameData.install.install_path = newInstallPath
-    installedGamesStore.set('installed', installedArray)
+    this.deps.stores.gog.installedGamesStore.set('installed', installedArray)
   }
 
   async importGame(data: GOGImportData, executablePath: string) {
@@ -1047,20 +1061,23 @@ export default class GOGLibraryManager implements LibraryManager {
     gameData.install = installInfo
     gameData.is_installed = true
     library.set(data.appName, gameData)
-    installedGamesStore.set('installed', Array.from(installedGames.values()))
+    this.deps.stores.gog.installedGamesStore.set(
+      'installed',
+      Array.from(installedGames.values())
+    )
     this.refreshInstalled()
     await this.createMissingGogdlManifest(data.appName)
-    await checkForRedistUpdates()
+    await checkForRedistUpdates(this.deps)
     sendFrontendMessage('pushGameToLibrary', gameData)
   }
 
   // This checks for updates of Windows and Mac titles
   // Linux installers need to be checked differently
   async listUpdateableGames(): Promise<string[]> {
-    if (!isOnline() || !GOGUser.isLoggedIn()) {
+    if (!isOnline() || !GOGUser.isLoggedIn(this.deps)) {
       return []
     }
-    const credentials = await GOGUser.getCredentials()
+    const credentials = await GOGUser.getCredentials(this.deps)
     const installed = Array.from(installedGames.values())
     const updateable: Array<string> = []
     for (const game of installed) {
@@ -1117,7 +1134,7 @@ export default class GOGLibraryManager implements LibraryManager {
     const url = new URL(
       `https://content-system.gog.com/products/${appName}/os/${platform}/builds?generation=2&_version=2`
     )
-    const password = privateBranchesStore.get(appName, '')
+    const password = this.deps.stores.gog.privateBranchesStore.get(appName, '')
 
     if (password.length) {
       url.searchParams.set('password', password)
@@ -1463,9 +1480,14 @@ export default class GOGLibraryManager implements LibraryManager {
     accessToken?: string
   ): Promise<{ isUpdated: boolean; data?: GamesDBData | undefined }> {
     const pieceId = `${store}_${game_id}`
-    const cachedData = !forceUpdate ? apiInfoCache.get(pieceId) : null
+    const cachedData = !forceUpdate
+      ? this.deps.stores.gog.apiInfoCache.get(pieceId)
+      : null
     if (cachedData && cachedData?.id && !forceUpdate) {
-      return { isUpdated: false, data: apiInfoCache.get(pieceId) }
+      return {
+        isUpdated: false,
+        data: this.deps.stores.gog.apiInfoCache.get(pieceId)
+      }
     }
     const url = `https://gamesdb.gog.com/platforms/${store}/external_releases/${game_id}`
     const headers = {
@@ -1498,7 +1520,7 @@ export default class GOGLibraryManager implements LibraryManager {
     const data = response.data
 
     data.etag = resEtag
-    apiInfoCache.set(pieceId, data)
+    this.deps.stores.gog.apiInfoCache.set(pieceId, data)
     return {
       isUpdated,
       data
@@ -1591,7 +1613,7 @@ export default class GOGLibraryManager implements LibraryManager {
    */
   async runRunnerCommand(
     commandParts: string[],
-    options?: CallRunnerOptions
+    options?: CommandCallRunnerOptions
   ): Promise<ExecResult> {
     if (process.env.CI === 'e2e') {
       return runGogdlCommandStub(commandParts)
@@ -1608,7 +1630,7 @@ export default class GOGLibraryManager implements LibraryManager {
     }
     options.env.GOGDL_CONFIG_PATH = dirname(gogdlConfigPath)
 
-    return callRunner(
+    return this.deps.commandRunner.callRunner(
       ['--auth-config-path', authConfig, ...commandParts],
       { name: 'gog', logPrefix: LogPrefix.Gog, bin, dir },
       options
@@ -1654,14 +1676,17 @@ export default class GOGLibraryManager implements LibraryManager {
     library.set(appName, game)
     installedGames.set(appName, installed)
 
-    const installedArray = installedGamesStore.get('installed', [])
+    const installedArray = this.deps.stores.gog.installedGamesStore.get(
+      'installed',
+      []
+    )
 
     const index = installedArray.findIndex((iGame) => iGame.appName === appName)
 
     if (index > -1) {
       installedArray.splice(index, 1, installed)
     }
-    installedGamesStore.set('installed', installedArray)
+    this.deps.stores.gog.installedGamesStore.set('installed', installedArray)
     sendFrontendMessage('pushGameToLibrary', game)
   }
 
@@ -1679,7 +1704,10 @@ export default class GOGLibraryManager implements LibraryManager {
     }
 
     game.install = installed
-    const installedArray = installedGamesStore.get('installed', [])
+    const installedArray = this.deps.stores.gog.installedGamesStore.get(
+      'installed',
+      []
+    )
 
     const index = installedArray.findIndex((iGame) => iGame.appName === cpId)
 
@@ -1689,12 +1717,12 @@ export default class GOGLibraryManager implements LibraryManager {
 
     library.set(cpId, game)
     installedGames.set(cpId, installed)
-    installedGamesStore.set('installed', installedArray)
+    this.deps.stores.gog.installedGamesStore.set('installed', installedArray)
     sendFrontendMessage('pushGameToLibrary', game)
   }
 
   async getCyberpunkMods(): Promise<string[]> {
-    const gameInfo = libraryManagerMap['gog'].getGameInfo('1423049311')
+    const gameInfo = this.deps.libraryManagers.gog.getGameInfo('1423049311')
     if (!gameInfo || !gameInfo?.install?.install_path) {
       return []
     }

@@ -61,6 +61,7 @@ import { isOnline, onConnectivityChange } from 'backend/online_monitor'
 import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
 import { LegendaryUser } from 'backend/storeManagers/legendary/user'
 import { GOGUser } from 'backend/storeManagers/gog/user'
+import * as gogStores from 'backend/storeManagers/gog/stores'
 import { NileUser } from 'backend/storeManagers/nile/user'
 import { HumbleUser } from 'backend/humble/user'
 import { SteamUser } from 'backend/storeManagers/steam/user'
@@ -109,7 +110,8 @@ function defaultDeps(): SignInProbePassDeps {
         abortId: SIGN_IN_PROBE_ABORT_IDS.legendary
       },
       gog: {
-        isLoggedIn: () => Boolean(GOGUser.isLoggedIn()),
+        isLoggedIn: () =>
+          Boolean(GOGUser.isLoggedIn({ stores: { gog: gogStores } })),
         probe: probeGogSession,
         abortId: SIGN_IN_PROBE_ABORT_IDS.gog
       },

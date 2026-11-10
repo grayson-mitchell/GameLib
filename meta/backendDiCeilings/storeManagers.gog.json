@@ -4,12 +4,12 @@
   },
   "jestMock": {
     "src/backend/storeManagers/gog/__tests__/expiryProbe.test.ts": 14,
-    "src/backend/storeManagers/gog/__tests__/gogImportGame.test.ts": 28,
+    "src/backend/storeManagers/gog/__tests__/gogImportGame.test.ts": 25,
     "src/backend/storeManagers/gog/__tests__/gogPresenceKeepAlive.test.ts": 6,
-    "src/backend/storeManagers/gog/__tests__/library.test.ts": 16,
-    "src/backend/storeManagers/gog/__tests__/logoutCookies.test.ts": 10,
+    "src/backend/storeManagers/gog/__tests__/library.test.ts": 13,
+    "src/backend/storeManagers/gog/__tests__/logoutCookies.test.ts": 8,
     "src/backend/storeManagers/gog/__tests__/setup.engine.test.ts": 16,
-    "src/backend/storeManagers/gog/__tests__/user.test.ts": 9
+    "src/backend/storeManagers/gog/__tests__/user.test.ts": 7
   },
   "moduleState": {
     "src/backend/storeManagers/gog/e2eMock.ts": 1,

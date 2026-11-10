@@ -15,16 +15,20 @@ import {
   addToQueue,
   getQueueInformation
 } from 'backend/downloadmanager/downloadqueue'
-import { DMQueueElement, GameInfo } from 'common/types'
+import { DMQueueElement } from 'common/types'
 import { GOGUser } from './user'
+import type { GOGManagerDeps } from './library'
 import { isOnline } from 'backend/online_monitor'
 import { axiosClient } from 'backend/utils'
 import { gogdlConfigPath, gogRedistPath } from './constants'
 import { gamesConfigPath } from 'backend/constants/paths'
 import LogWriter from '../../logger/log_writer'
 
-export async function checkForRedistUpdates() {
-  if (!GOGUser.isLoggedIn() || !isOnline()) {
+/** What the redist helpers read: the gog stores and the manager map. */
+export type RedistDeps = Pick<GOGManagerDeps, 'stores' | 'libraryManagers'>
+
+export async function checkForRedistUpdates(deps: RedistDeps) {
+  if (!GOGUser.isLoggedIn(deps) || !isOnline()) {
     return
   }
   const manifestPath = path.join(gogRedistPath, '.gogdl-redist-manifest')
@@ -92,10 +96,10 @@ export async function checkForRedistUpdates() {
   if (!shouldUpdate) {
     return
   }
-  pushRedistUpdateToQueue()
+  pushRedistUpdateToQueue(deps)
 }
 
-async function pushRedistUpdateToQueue() {
+async function pushRedistUpdateToQueue(deps: RedistDeps) {
   const currentQueue = getQueueInformation()
 
   const currentRedistElement = currentQueue.elements.find(
@@ -105,23 +109,15 @@ async function pushRedistUpdateToQueue() {
   if (currentRedistElement) {
     return
   }
-  const newElement = createRedistDMQueueElement()
+  const newElement = createRedistDMQueueElement(deps)
 
   await addToQueue(newElement)
 }
 
-export function createRedistDMQueueElement(): DMQueueElement {
-  // Required lazily (synchronous CJS require, not a top-level import) to
-  // break a circular dependency (gog/redist.ts <-> storeManagers/index.ts)
-  // — see the load-bearing comment on getGame() in backend/utils.ts. This
-  // function is synchronous, so `await import()` isn't an option here.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { libraryManagerMap } = require('..') as {
-    libraryManagerMap: {
-      gog: { getGame: (id: string) => { getGameInfo: () => GameInfo } }
-    }
-  }
-  const gameInfo = libraryManagerMap['gog'].getGame('gog-redist').getGameInfo()
+export function createRedistDMQueueElement(
+  deps: Pick<RedistDeps, 'libraryManagers'>
+): DMQueueElement {
+  const gameInfo = deps.libraryManagers.gog.getGame('gog-redist').getGameInfo()
   const newElement: DMQueueElement = {
     params: {
       appName: 'gog-redist',
@@ -189,7 +185,10 @@ export async function getRequiredRedistList(): Promise<string[]> {
   return redist
 }
 
-export async function updateRedist(redistToSync: string[]): Promise<{
+export async function updateRedist(
+  deps: Pick<RedistDeps, 'libraryManagers'>,
+  redistToSync: string[]
+): Promise<{
   status: 'done' | 'error'
 }> {
   const { maxWorkers } = GlobalConfig.get().getSettings()
@@ -210,16 +209,12 @@ export async function updateRedist(redistToSync: string[]): Promise<{
   })
 
   const redistLogWriter = new LogWriter(logPath, false, false)
-  // Imported lazily to break a circular dependency (gog/redist.ts <->
-  // storeManagers/index.ts) — see the load-bearing comment in
-  // storeManagers/gog/user.ts.
-  const { libraryManagerMap } = await import('..')
-  const res = await libraryManagerMap['gog'].runRunnerCommand(commandParts, {
+  const res = await deps.libraryManagers.gog.runRunnerCommand(commandParts, {
     abortId: 'gog-redist',
     logMessagePrefix: 'GOG REDIST:',
     logWriters: [redistLogWriter],
     onOutput: (output) =>
-      libraryManagerMap['gog']
+      deps.libraryManagers.gog
         .getGame('gog-redist')
         .onInstallOrUpdateOutput('updating', output)
   })

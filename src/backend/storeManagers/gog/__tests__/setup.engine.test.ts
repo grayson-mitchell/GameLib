@@ -85,11 +85,23 @@ jest.mock('backend/storeManagers', () => ({
   }
 }))
 
-import gogSetup from '../setup'
+import gogSetup, { type SetupDeps } from '../setup'
 import nileSetup from '../../nile/setup'
 
+const gogDeps = {
+  libraryManagers: {
+    gog: { getGameInfo: () => gogInfo, getGame: () => ({}) }
+  },
+  launcher: { verifyWinePrefix: (...a: unknown[]) => mockVerifyPrefix(...a) },
+  commandRunner: {
+    getWinePath: jest.fn(),
+    runWineCommand: (...a: unknown[]) => mockRunWine(...a)
+  },
+  spawnAsync: jest.fn()
+} as unknown as SetupDeps
+
 const runners: Array<[string, (a: string) => Promise<void>]> = [
-  ['gog', (a) => gogSetup(a)],
+  ['gog', (a) => gogSetup(gogDeps, a)],
   ['nile', (a) => nileSetup(a)]
 ]
 

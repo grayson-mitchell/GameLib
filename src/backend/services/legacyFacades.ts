@@ -88,17 +88,15 @@ export function buildLauncherFacade(): Launcher {
  * at call time (R4).
  */
 function legacyCommandRunner(): ManagerDeps['commandRunner'] {
-  const forward =
-    (
-      name: 'callRunner' | 'runWineCommand' | 'getWinePath' | 'runScriptForGame'
-    ) =>
-    (...a: unknown[]): unknown =>
-      (launcherModule[name] as (...x: unknown[]) => unknown)(...a)
   return {
-    callRunner: forward('callRunner'),
-    runWineCommand: forward('runWineCommand'),
-    getWinePath: forward('getWinePath'),
-    runScriptForGame: forward('runScriptForGame')
+    callRunner: (...a: unknown[]) =>
+      (launcherModule.callRunner as (...x: unknown[]) => unknown)(...a),
+    runWineCommand: (...a: unknown[]) =>
+      (launcherModule.runWineCommand as (...x: unknown[]) => unknown)(...a),
+    getWinePath: (...a: unknown[]) =>
+      (launcherModule.getWinePath as (...x: unknown[]) => unknown)(...a),
+    runScriptForGame: (...a: unknown[]) =>
+      (launcherModule.runScriptForGame as (...x: unknown[]) => unknown)(...a)
   } as unknown as ManagerDeps['commandRunner']
 }
 
@@ -113,7 +111,10 @@ export function legacyManagerDeps(): ManagerDeps {
     get libraryManagers() {
       return libraryManagerMap
     },
-    stores: buildStoresFacade(),
+    // A getter: this module can be mid-load when the managers are constructed (R4).
+    get stores() {
+      return buildStoresFacade()
+    },
     commandRunner: legacyCommandRunner(),
     launcher: {
       prepareLaunch: (...a) => launcherModule.prepareLaunch(...a),
