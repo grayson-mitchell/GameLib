@@ -9,12 +9,24 @@
  *     (destructuring per name, `export let` included), and each top-level
  *     const bound to `new X` (X not in IMMUTABLE_NEW) or to an object/array
  *     literal that the same file later mutates. Rewriting `let m` as
- *     `const m = new Map()` therefore does not lower the count (D-06).
+ *     `const m = new Map()` therefore does not lower the count (D-06). Each
+ *     non-readonly `static` class field counts too (C-WR-2): a static holder
+ *     is module-level state wearing a class.
  *   - childProcess: non-test src/backend files. Each import/export-from,
  *     require() call and dynamic import() of child_process / node:child_process
  *     (type-only imports do not count).
  *   - jestMock: every .ts/.tsx under src/. Each `jest.mock(...)` call;
  *     comments never count.
+ *
+ * 66.3 TARGETS (C-WR-2): when static fields joined the census the baseline ROSE by 17
+ * (234 -> 251); that is the ratchet recording existing state, not new growth. The static
+ * holders, all to be replaced by injected slices in 66.3: SteamUser (steam/user.ts, 11:
+ * boundStores, client, connectingPromise, leaseCount, idleTimer, guidedInstallTargets,
+ * shuttingDown, sessionGeneration, abandonPendingLogon, wrapTail, logonFailure) and
+ * SteamUser.bindStores; bottle.ts `bindBottleStores`; humble/humbleStores.ts
+ * `bindHumbleStores`; tools/dxmt.ts `bindDxmtStores`; humble/user.ts activeWatch;
+ * config.ts GlobalConfig.globalInstance; game_config.ts GameConfig.instances.
+ * `bindSteamGridDbSecretDeps` is a top-level let and was already counted.
  *
  * Known residual, documented not hidden: `const reg = createRegistry()` (a
  * call returning a container) is NOT counted syntactically. A fixture test
@@ -195,6 +207,36 @@ function countModuleState(sourceText, fileName = 'x.ts') {
     }
   }
   if (candidates.size > 0) n += mutatedIds(sf, candidates).size
+  return n + countStaticFields(sf)
+}
+
+/**
+ * Non-readonly `static` class fields (C-WR-2). A `class X { static bound }` holder is ambient
+ * module-level state exactly like a top-level `let`: the 66.1 store/dep holders
+ * (SteamUser.bindStores, bindBottleStores, ...) lived here and were invisible to the census,
+ * so the ceilings fell while the state moved. Methods, accessors, static blocks and
+ * `static readonly` fields do not count (a readonly field cannot be re-bound).
+ */
+function countStaticFields(sf) {
+  let n = 0
+  const visit = (node) => {
+    if (
+      ts.isPropertyDeclaration(node) &&
+      node.parent &&
+      ts.isClassLike(node.parent)
+    ) {
+      const mods = node.modifiers ?? []
+      const has = (k) => mods.some((m) => m.kind === k)
+      if (
+        has(ts.SyntaxKind.StaticKeyword) &&
+        !has(ts.SyntaxKind.ReadonlyKeyword) &&
+        !has(ts.SyntaxKind.DeclareKeyword)
+      )
+        n += 1
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(sf)
   return n
 }
 

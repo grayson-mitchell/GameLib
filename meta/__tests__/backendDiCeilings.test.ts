@@ -62,7 +62,22 @@ describe('countModuleState', () => {
       'const o = {}\nfunction f() { o.x = 1 }',
       1
     ],
-    ['read-only property use', 'const o = { a: 1 }\nconsole.log(o.a)', 0]
+    ['read-only property use', 'const o = { a: 1 }\nconsole.log(o.a)', 0],
+    ['static field', 'class A { static bound: X | null = null }', 1],
+    ['private static field', 'class A { private static n = 0 }', 1],
+    ['protected static field', 'class A { protected static g: G }', 1],
+    ['two static fields', 'class A { static a = 1; static b = 2 }', 2],
+    ['static readonly field', 'class A { static readonly K = 1 }', 0],
+    ['static method', 'class A { static f() { return 1 } }', 0],
+    ['static accessor', 'class A { static get g() { return 1 } }', 0],
+    ['instance field', 'class A { bound: X | null = null }', 0],
+    ['declare static field', 'class A { declare static d: number }', 0],
+    [
+      'static field in a class expression',
+      'const C = class { static s = 1 }',
+      1
+    ],
+    ['top-level let plus static', 'let a\nclass A { static s = 1 }', 2]
   ])('%s', (_name, src, expected) => {
     expect(countModuleState(src, 'x.ts')).toBe(expected)
   })

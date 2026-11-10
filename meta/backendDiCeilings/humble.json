@@ -11,9 +11,11 @@
   },
   "moduleState": {
     "src/backend/humble/classify.ts": 1,
+    "src/backend/humble/humbleStores.ts": 1,
     "src/backend/humble/library.ts": 3,
     "src/backend/humble/loginWindowSeam.ts": 1,
     "src/backend/humble/secretStore.ts": 1,
-    "src/backend/humble/syncFence.ts": 1
+    "src/backend/humble/syncFence.ts": 1,
+    "src/backend/humble/user.ts": 1
   }
 }
