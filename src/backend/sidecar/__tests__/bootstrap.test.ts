@@ -78,6 +78,10 @@ import { tmpdir } from 'os'
 import { isAbsolute, join, relative, resolve } from 'path'
 import { existsSync, mkdirSync, mkdtempSync } from 'node:fs'
 import { createFakeHomeProfile } from '../../testUtils/fakeHomeProfile'
+import {
+  createTestManagers,
+  createTestServices
+} from '../../testUtils/testServices'
 import { PassThrough } from 'node:stream'
 import { bootFresh } from './helpers/sidecarHarness'
 import { getLogFilePath } from '../../logger/paths'
@@ -191,6 +195,32 @@ describe('sidecar bootstrap (headless boot)', () => {
       expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledTimes(1)
       expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledWith('boot')
       expect(order).toEqual(['bindTransport', 'restore'])
+    })
+  })
+
+  describe('boot services (66.1-04)', () => {
+    it('a default boot returns BootServices with all six fields', () => {
+      const { services } = bootWithLines()
+      expect(Object.keys(services).sort()).toEqual([
+        'commandRunner',
+        'launcher',
+        'managers',
+        'quit',
+        'spawnAsync',
+        'stores'
+      ])
+      for (const value of Object.values(services)) expect(value).toBeDefined()
+    })
+
+    it('a boot with prebuilt services uses them by reference', () => {
+      const managers = createTestManagers()
+      const { services } = bootFresh({ services: { managers } })
+      expect(services.managers).toBe(managers)
+    })
+
+    it('a boot with every service prebuilt never reports missing services', () => {
+      const prebuilt = createTestServices()
+      expect(() => bootFresh({ services: prebuilt })).not.toThrow()
     })
   })
 

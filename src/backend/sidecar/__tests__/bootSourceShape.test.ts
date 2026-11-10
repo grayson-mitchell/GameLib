@@ -38,7 +38,10 @@ describe('bootstrap.ts source shape (D-08)', () => {
     )
     const anchors = [
       'logger',
+      'stores',
       'migrations',
+      'command-runner',
+      'store-managers',
       'i18n',
       'register-handlers',
       'rpc-server',
@@ -52,6 +55,25 @@ describe('bootstrap.ts source shape (D-08)', () => {
     expect(positions.every((position) => position >= 0)).toBe(true)
     expect([...positions].sort((a, b) => a - b)).toEqual(positions)
     expect(new Set(names).size).toBe(names.length)
+  })
+})
+
+describe('legacy service facades source shape (66.1-04, T-66.1-12)', () => {
+  const stripped = stripSourceComments(
+    readFileSync(
+      join(__dirname, '..', '..', 'services', 'legacyFacades.ts'),
+      'utf-8'
+    )
+  )
+
+  it('has no top-level let/const binding', () => {
+    expect(
+      stripped.split('\n').filter((l) => /^(let|const)\s/.test(l))
+    ).toEqual([])
+  })
+
+  it('constructs nothing', () => {
+    expect(stripped).not.toMatch(/\bnew\s/)
   })
 })
 

@@ -108,6 +108,50 @@ its fakes (`runner`, `clock`, `log`, `profile`) and a `dispose()`:
   only the failure path is CI-verified (A6). `runSync` passes
   `maxBuffer: DEFAULT_MAX_BUFFER_BYTES`, so large stdout is captured, not ENOBUFS.
 
+## Boot services (66.1)
+
+`AppContext` is the process-level leaf (platform, paths, clock, runner, log). Stores, store
+managers, the launcher, the command runner, `spawnAsync` and the quit handler are NOT on it:
+`backend/process/` cannot type-import them. They live in a per-boot `BootServices` object
+(`src/backend/services/types.ts`) held on the sidecar's `BootState`, built by named boot steps and
+handed to `registerHandlers({ log, services })`, the composition root.
+
+Transition (A3, expand/contract): every service is currently filled by an identity facade in
+`src/backend/services/legacyFacades.ts` that only groups today's singletons and functions. Each
+facade is deleted by the plan that lands the real factory: command runner (05), `spawnAsync` and
+quit (06), managers and launcher (23), stores (25). The file goes with the last one.
+
+Step order: `logger`, `stores`, `migrations`, `command-runner`, `store-managers`,
+`register-handlers`. `stores` precedes `migrations` because migrations read `migrationsStore`.
+
+Tests: `bootFresh({ services })` hands prebuilt services to the boot (returned `services` carries
+them by reference); `createTestServices`, `createTestManagers` and `createTestStores` in
+`testUtils/testServices.ts` build fakes that throw on an unscripted call.
+
+### Converting a consumer (66.1 rules)
+
+- **R1 slice:** export `interface XDeps` holding only the members used, typed from
+  `BootServices`/`StoreManagers`/`Stores` via `Pick`. Only composition roots (boot steps,
+  `registerHandlers`, `createStoreManagers`) see the whole `BootServices`.
+- **R2 classes** take deps in the constructor (`private readonly deps`); a library manager hands its
+  deps to the game objects it creates.
+- **R3 function modules:** an exported function that needs a dependency takes `deps` as its FIRST
+  parameter, or the module exports `createX(deps)` when it has three or more such functions or
+  closure state. Callers pass slices; the cascade ends at a registration, a boot step or a manager
+  constructor. Call-site-only edits in files owned by other plans are allowed and listed in the
+  SUMMARY.
+- **R4** never dereference deps at import or construction time; siblings resolve at call time.
+- **R5 tests** inject via `createTestServices`/`createTestManagers`/`bootFresh({ services })`. Remove
+  a `jest.mock` only if the suite stays green without it, and lower that exact shard entry in the
+  same commit. Never `jest.doMock`.
+- **R6** callbacks passed to the command runner take `ChildHandle`, and unref helpers are deleted
+  (the runner unrefs).
+- **R7** lazy `await import('backend/storeManagers')` sites go away when the map arrives as a dep;
+  other lazy imports stay.
+- **R8 grep gate:** a converted file has no value import of `libraryManagerMap`, `storeLaunchHooks`,
+  any of the 16 stores modules, utils `spawnAsync`/`getGame`/`handleExit`, or launcher
+  `callRunner`/`runWineCommand`/`getWinePath`.
+
 ## Ratchets
 
 `pnpm backend-di-ceilings` counts module-level singletons, `jest.mock` sites
