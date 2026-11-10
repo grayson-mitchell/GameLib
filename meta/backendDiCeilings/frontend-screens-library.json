@@ -1,10 +1,10 @@
 {
   "jestMock": {
-    "src/frontend/screens/Library/__tests__/libraryTourAnchors.test.tsx": 5,
+    "src/frontend/screens/Library/__tests__/libraryTourAnchors.test.tsx": 4,
     "src/frontend/screens/Library/__tests__/useNonSteamLastPlayed.test.ts": 2,
     "src/frontend/screens/Library/__tests__/useWikiMetacriticScores.test.ts": 3,
     "src/frontend/screens/Library/components/CategoriesManager/__tests__/newCollectionFocus.test.tsx": 8,
-    "src/frontend/screens/Library/components/EmptyLibrary/__tests__/index.test.tsx": 7,
+    "src/frontend/screens/Library/components/EmptyLibrary/__tests__/index.test.tsx": 6,
     "src/frontend/screens/Library/components/FilterChipRow/__tests__/index.test.tsx": 5,
     "src/frontend/screens/Library/components/GameCard/__tests__/CrossoverBadge.test.tsx": 1
   }

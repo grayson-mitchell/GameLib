@@ -118,7 +118,10 @@ function assertNoticeMounted(source: string): void {
  * prop passed to `<FocusRowStrip`, which mirrored that `<GamesList>` gate so
  * the strip knew when the grid is mounted. Phase 48 review IN-08 hoisted the
  * two copies into one `gridMounted` constant, so the third and fourth sites
- * are now one definition. A FOURTH occurrence is what would mean the old guard
+ * are now one definition. Phase 69 plan 20 moved the context destructure to
+ * `useLibraryState.keys('refreshingInTheBackground', ...)`, which adds the key
+ * string, so the pinned count is 4 (destructure, key string, overlay, the
+ * gridMounted definition). A FIFTH occurrence is what would mean the old guard
  * survived somewhere new, or that the mount condition was re-stated.
  */
 function assertOldGuardGoneAndFenceIntact(source: string): void {
@@ -130,12 +133,12 @@ function assertOldGuardGoneAndFenceIntact(source: string): void {
   }
 
   const occurrences = (source.match(/refreshingInTheBackground/g) || []).length
-  if (occurrences !== 3) {
+  if (occurrences !== 4) {
     throw new Error(
       `G3 FAILED: refreshingInTheBackground occurs ${occurrences} times, ` +
-        'expected exactly 3 (the destructure, the D-11-fenced overlay, and ' +
+        'expected exactly 4 (the destructure, its key string, the D-11-fenced overlay, and ' +
         'the single gridMounted definition that the GamesList mount and the ' +
-        'FocusRowStrip gridShown prop both use). A fourth occurrence means ' +
+        'FocusRowStrip gridShown prop both use). A fifth occurrence means ' +
         'the old guard survived somewhere new or the mount condition was ' +
         're-stated.'
     )

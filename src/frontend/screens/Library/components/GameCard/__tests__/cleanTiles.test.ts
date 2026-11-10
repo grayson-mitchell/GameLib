@@ -27,7 +27,7 @@ describe('clean tile mode', () => {
   it('GamesList passes cleanTiles from context onto the wrapper class list', () => {
     const src = read('GamesList/index.tsx')
     expect(src).toMatch(
-      /const \{[^}]*\bcleanTiles\b[^}]*\} =\s*useContext\(ContextProvider\)/
+      /const \{[^}]*\bcleanTiles\b[^}]*\} =\s*useSettingsState\.keys\(/
     )
     expect(src).toMatch(/cx\(\{[^}]*\bcleanTiles\b[^}]*\}\)/)
   })

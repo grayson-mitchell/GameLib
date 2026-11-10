@@ -22,7 +22,7 @@ import {
   sendKill
 } from 'frontend/helpers'
 import { useTranslation } from 'react-i18next'
-import ContextProvider from 'frontend/state/ContextProvider'
+import { useHiddenGames, useFavouriteGames } from 'frontend/state/accountHooks'
 import { updateGame } from 'frontend/helpers/library'
 import { CachedImage, SvgButton } from 'frontend/components/UI'
 import ContextMenu, { Item } from '../ContextMenu'
@@ -120,20 +120,25 @@ const GameCard = ({
 
   const navigate = useNavigate()
 
+  const hiddenGames = useHiddenGames()
+  const favouriteGames = useFavouriteGames()
   const {
-    hiddenGames,
-    favouriteGames,
     showDialogModal,
     activeController,
     connectivity,
-    platform
-  } = useContext(ContextProvider)
-  const { openGameSettingsModal, openGameLogsModal, openGameCategoriesModal } =
-    useUiState.keys(
-      'openGameSettingsModal',
-      'openGameLogsModal',
-      'openGameCategoriesModal'
-    )
+    platform,
+    openGameSettingsModal,
+    openGameLogsModal,
+    openGameCategoriesModal
+  } = useUiState.keys(
+    'showDialogModal',
+    'activeController',
+    'connectivity',
+    'platform',
+    'openGameSettingsModal',
+    'openGameLogsModal',
+    'openGameCategoriesModal'
+  )
   const { crossoverRatings, runsForMe } = useLibraryState.keys(
     'crossoverRatings',
     'runsForMe'

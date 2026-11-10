@@ -17,6 +17,7 @@
  * the component is invoked as a plain function and the returned React element
  * graph is inspected.
  */
+import 'frontend/testUtils/tauriWindow'
 import { createElement } from 'react'
 
 type FilterMode = 'off' | 'show' | 'only'
@@ -28,20 +29,6 @@ const libraryContextValue = {
   noStorePage: 'off' as NoStorePageMode
 }
 
-// A non-empty library, so the component reaches the 'only'-mode branches
-// instead of the "your library is empty" first-run message.
-const providerContextValue = {
-  epic: { library: [{}] },
-  gog: { library: [] },
-  amazon: { library: [] },
-  steam: { library: [] },
-  sideloadedLibrary: []
-}
-
-jest.mock('frontend/state/ContextProvider', () => ({
-  __esModule: true,
-  default: { __name: 'ContextProvider' }
-}))
 jest.mock('frontend/screens/Library/LibraryContext', () => ({
   __esModule: true,
   default: { __name: 'LibraryContext' }
@@ -69,31 +56,22 @@ jest.mock('react-i18next', () => ({
 }))
 
 jest.mock('react', () => {
-  const actual = jest.requireActual('react')
-  return {
-    ...actual,
-    useContext: (ctx: { __name?: string }) =>
-      ctx?.__name === 'LibraryContext'
-        ? libraryContextValue
-        : providerContextValue
-  }
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+  return withStoreHooks(jest.requireActual<typeof import('react')>('react'), {
+    useContext: (() =>
+      libraryContextValue) as unknown as typeof import('react').useContext
+  })
 })
 
-// Deliberately a lazy `require`, NOT a static import: it has to evaluate
-// AFTER the `jest.mock('react', ...)` factory above, and a static import
-// would be hoisted above it, so the component would close over the real
-// `useContext` and the mocked contexts would never apply.
-//
-// The rule named below is `no-require-imports`. This line previously said
-// `no-var-requires`, a rule that no longer exists -- and ESLint does not
-// error on an unknown rule name in a disable comment, so the suppression
-// looked effective while suppressing nothing.
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const EmptyLibraryMessage = require('../index').default
+import EmptyLibraryMessage from '../index'
+import useLibraryState from 'frontend/state/libraryState'
+import { resetAllStores } from 'frontend/state/storeKit'
 
 /** Flattens the rendered element graph to its visible text. */
 function renderedText(): string {
-  const el = EmptyLibraryMessage({}) as {
+  const el = (EmptyLibraryMessage as unknown as (p: object) => unknown)({}) as {
     props: { children: unknown }
   }
   const out: string[] = []
@@ -125,7 +103,15 @@ function setModes(modes: {
 }
 
 describe('EmptyLibrary zero-result messages (LIB-09 / 37 G-01)', () => {
-  afterEach(() => setModes({}))
+  // A non-empty library, so the component reaches the 'only'-mode branches
+  // instead of the "your library is empty" first-run message.
+  beforeEach(() => {
+    useLibraryState.setState({ epicLibrary: [{}] as never })
+  })
+  afterEach(() => {
+    setModes({})
+    resetAllStores()
+  })
 
   it('G-01: noStorePage="only" gets its OWN message, not the generic fallback', () => {
     setModes({ noStorePage: 'only' })

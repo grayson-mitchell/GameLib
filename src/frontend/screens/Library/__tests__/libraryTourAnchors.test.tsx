@@ -15,30 +15,18 @@
  * established by `NavShell/__tests__/NavTabsComponent.test.tsx` and
  * `SettingsPanel.test.tsx`.
  */
+import 'frontend/testUtils/tauriWindow'
 import type { ReactElement } from 'react'
 
-const emptyContext = () => ({
-  epic: { library: [] as unknown[] },
-  gog: { library: [] as unknown[] },
-  amazon: { library: [] as unknown[] },
-  steam: { library: [] as unknown[] },
-  sideloadedLibrary: [] as unknown[]
+// withStoreHooks supplies a passthrough `useMemo` (LibraryTour memoizes its
+// `steps` array; no dispatcher is installed because the component is invoked
+// as a plain function, and this test only cares about the structural content).
+jest.mock('react', () => {
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+  return withStoreHooks(jest.requireActual<typeof import('react')>('react'))
 })
-let contextValue = emptyContext()
-
-jest.mock('react', () => ({
-  ...jest.requireActual<typeof import('react')>('react'),
-  useContext: () => contextValue,
-  // LibraryTour now memoizes its `steps` array (introjs-tooltip-not-rendering
-  // fix -- intro.js-react's componentDidUpdate compares `steps` by reference,
-  // so an unmemoized array re-triggered intro.js's show-step path on every
-  // render). No dispatcher is installed here (component is invoked as a
-  // plain function, not rendered), so the real `useMemo` would throw; this
-  // test only cares about the STRUCTURAL content of the memoized value, not
-  // memoization behaviour itself, so a passthrough that always recomputes is
-  // sufficient and keeps the "invoke as a plain function" pattern working.
-  useMemo: <T,>(factory: () => T) => factory()
-}))
 
 jest.mock('react-i18next', () => {
   // Resolves against the shipped en catalogues, not the inline default: the
@@ -54,11 +42,6 @@ jest.mock('../../../state/TourContext', () => ({
   useTour: () => ({ isTourActive: () => false })
 }))
 
-jest.mock('frontend/state/ContextProvider', () => ({
-  __esModule: true,
-  default: {}
-}))
-
 jest.mock('../../../components/Tour/Tour', () => ({
   __esModule: true,
   default: (props: Record<string, unknown>) => ({
@@ -70,6 +53,8 @@ jest.mock('../../../components/Tour/Tour', () => ({
 // Imported after the mocks above (textual order -- this project's ts-jest
 // setup does not hoist jest.mock like babel-jest).
 import LibraryTour from '../components/LibraryTour'
+import useLibraryState from 'frontend/state/libraryState'
+import { resetAllStores } from 'frontend/state/storeKit'
 
 type TourStepLike = { element?: string; intro?: string; title?: string }
 type AnyElement = ReactElement<{ steps: TourStepLike[] }>
@@ -82,7 +67,7 @@ function renderedSteps(): TourStepLike[] {
 // This is the CONTRACT the untouched steps must keep, derived from
 // LibraryTour.tsx as it stands after this plan's edit -- not a snapshot to
 // blindly regenerate. `hasGames` is false in this test (empty libraries in
-// contextValue above), so the conditional `library-game-card` step is
+// the reset libraryState), so the conditional `library-game-card` step is
 // absent; a future edit that silently drops or reorders a working step is
 // caught by comparing the full ordered list against this exact array.
 //
@@ -106,8 +91,8 @@ const EXPECTED_ELEMENTS = [
   undefined // end.intro
 ]
 
-beforeEach(() => {
-  contextValue = emptyContext()
+afterEach(() => {
+  resetAllStores()
 })
 
 describe('LibraryTour re-anchored steps (34.12-02, D-09)', () => {
@@ -178,14 +163,14 @@ describe('LibraryTour game-card step and copy', () => {
   it.each(['epic', 'gog', 'amazon', 'steam'] as const)(
     'offers the library-game-card step when only the %s library has games',
     (store) => {
-      contextValue[store].library = [{}]
+      useLibraryState.setState({ [`${store}Library`]: [{}] } as never)
       const elements = renderedSteps().map((step) => step.element)
       expect(elements).toContain('[data-tour="library-game-card"]')
     }
   )
 
   it('offers the library-game-card step for a sideload-only library', () => {
-    contextValue.sideloadedLibrary = [{}]
+    useLibraryState.setState({ sideloadedLibrary: [{}] as never })
     const elements = renderedSteps().map((step) => step.element)
     expect(elements).toContain('[data-tour="library-game-card"]')
   })

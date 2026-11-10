@@ -1,10 +1,12 @@
 import { isStore } from 'common/storeCapabilities'
-import React, { useContext, useEffect, useRef } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { GameInfo, Runner } from 'common/types'
 import cx from 'classnames'
 import GameCard from '../GameCard'
 import { scrollCardIntoView } from './scrollCardIntoView'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useLibraryState from 'frontend/state/libraryState'
+import useSettingsState from 'frontend/state/settingsState'
+import useUiState from 'frontend/state/uiState'
 import { useTranslation } from 'react-i18next'
 
 interface Props {
@@ -32,16 +34,17 @@ const GamesList = ({
   isFavourite = false,
   ariaLabel
 }: Props): JSX.Element => {
-  const {
-    gameUpdates,
-    allTilesInColor,
-    titlesAlwaysVisible,
-    hideTitles,
-    cleanTiles
-  } = useContext(ContextProvider)
+  const gameUpdates = useLibraryState((s) => s.gameUpdates)
+  const { allTilesInColor, titlesAlwaysVisible, hideTitles, cleanTiles } =
+    useSettingsState.keys(
+      'allTilesInColor',
+      'titlesAlwaysVisible',
+      'hideTitles',
+      'cleanTiles'
+    )
   const { t } = useTranslation()
   const listRef = useRef<HTMLDivElement | null>(null)
-  const { activeController } = useContext(ContextProvider)
+  const activeController = useUiState((s) => s.activeController)
 
   useEffect(() => {
     if (listRef.current && activeController) {

@@ -16,6 +16,7 @@
  * because `categories.map(...)` here is always empty (`listCategories()`
  * returns `[]`), so those elements are constructed, never invoked.
  */
+import 'frontend/testUtils/tauriWindow'
 import type { ReactNode } from 'react'
 
 jest.mock('../index.css', () => ({}))
@@ -67,7 +68,6 @@ jest.mock('react-i18next', () => ({
 }))
 
 type MockContextValue = {
-  customCategories: { listCategories: jest.Mock }
   setShowCategories: jest.Mock
   categoriesManagerIntent: 'manage' | 'create'
 }
@@ -76,7 +76,6 @@ function makeContextValue(
   overrides: Partial<MockContextValue> = {}
 ): MockContextValue {
   return {
-    customCategories: { listCategories: jest.fn(() => []) },
     setShowCategories: jest.fn(),
     categoriesManagerIntent: 'manage',
     ...overrides
@@ -85,18 +84,28 @@ function makeContextValue(
 
 let contextValue: MockContextValue = makeContextValue()
 
-jest.mock('react', () => ({
-  ...jest.requireActual<typeof import('react')>('react'),
-  useContext: () => contextValue,
-  // CategoriesManager makes exactly one useState call (`newCategoryName`) --
-  // a fixed ['', jest.fn()] pair is sufficient since no test here needs to
-  // observe a state transition, only the intent-driven `autoFocus` prop.
-  useState: (initial: unknown) => [initial, jest.fn()]
-}))
+jest.mock('react', () => {
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+  return withStoreHooks(jest.requireActual<typeof import('react')>('react'), {
+    useContext: (() =>
+      contextValue) as unknown as typeof import('react').useContext,
+    // CategoriesManager makes exactly one useState call (`newCategoryName`) --
+    // a fixed ['', jest.fn()] pair is sufficient since no test here needs to
+    // observe a state transition, only the intent-driven `autoFocus` prop.
+    useState: ((initial: unknown) => [
+      initial,
+      jest.fn()
+    ]) as unknown as typeof import('react').useState
+  })
+})
 
 // Imported after the mocks above (textual order -- this project's ts-jest
 // setup does not hoist jest.mock like babel-jest).
 import CategoriesManager from '../index'
+import useLibraryState from 'frontend/state/libraryState'
+import { resetAllStores } from 'frontend/state/storeKit'
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
 type AnyElement = { type: unknown; props: AnyProps }
@@ -128,6 +137,11 @@ function newCategoryNameField(tree: unknown): AnyElement | undefined {
 
 beforeEach(() => {
   contextValue = makeContextValue()
+  useLibraryState.setState({ getCustomCategories: () => [] })
+})
+
+afterEach(() => {
+  resetAllStores()
 })
 
 describe("CategoriesManager's new-category input autoFocus (WR-08)", () => {

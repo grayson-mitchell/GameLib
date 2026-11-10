@@ -32,7 +32,6 @@
  * full-screen early-return replacement, and reusing that shape here would
  * recreate defect 2b, the exact defect this component exists to kill.
  */
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   faExclamationTriangle,
@@ -40,7 +39,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
-import ContextProvider from 'frontend/state/ContextProvider'
+import useLibraryState from 'frontend/state/libraryState'
 import './index.scss'
 
 // Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
@@ -52,7 +51,7 @@ interface SteamSyncNoticeProps {
 
 export default function SteamSyncNotice({ mode }: SteamSyncNoticeProps) {
   const { t: tGamelib } = useTranslation('gamelib')
-  const { refreshLibrary } = useContext(ContextProvider)
+  const refreshLibrary = useLibraryState((s) => s.refreshLibrary)
 
   if (mode === 'syncing') {
     return (

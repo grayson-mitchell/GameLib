@@ -1,5 +1,5 @@
 import { useContext } from 'react'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useLibraryState from 'frontend/state/libraryState'
 import LibraryContext from 'frontend/screens/Library/LibraryContext'
 import { Trans, useTranslation } from 'react-i18next'
 import './index.css'
@@ -7,8 +7,11 @@ import { NavLink } from 'react-router-dom'
 import AddGameButton from '../AddGameButton'
 
 function EmptyLibraryMessage() {
-  const { epic, gog, amazon, steam, sideloadedLibrary } =
-    useContext(ContextProvider)
+  const epicLibrary = useLibraryState((s) => s.epicLibrary)
+  const gogLibrary = useLibraryState((s) => s.gogLibrary)
+  const amazonLibrary = useLibraryState((s) => s.amazonLibrary)
+  const steamLibrary = useLibraryState((s) => s.steamLibrary)
+  const sideloadedLibrary = useLibraryState((s) => s.sideloadedLibrary)
   const { showHidden, showNonAvailable, noStorePage } =
     useContext(LibraryContext)
   const { t, i18n } = useTranslation()
@@ -30,10 +33,10 @@ function EmptyLibraryMessage() {
   )
 
   if (
-    epic.library.length +
-      gog.library.length +
-      amazon.library.length +
-      (steam?.library.length ?? 0) +
+    epicLibrary.length +
+      gogLibrary.length +
+      amazonLibrary.length +
+      steamLibrary.length +
       sideloadedLibrary.length >
     0
   ) {

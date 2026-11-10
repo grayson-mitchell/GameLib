@@ -17,7 +17,17 @@ import { Header, UpdateComponent } from 'frontend/components/UI'
 import { useTranslation } from 'react-i18next'
 import Fuse from 'fuse.js'
 
-import ContextProvider from 'frontend/state/ContextProvider'
+import {
+  useAmazonAccount,
+  useCustomCategories,
+  useEpicAccount,
+  useFavouriteGames,
+  useGogAccount,
+  useHiddenGames,
+  useSteamAccount
+} from 'frontend/state/accountHooks'
+import useSettingsState from 'frontend/state/settingsState'
+import useUiState from 'frontend/state/uiState'
 
 import GamesList from './components/GamesList'
 import { GameInfo, Runner } from 'common/types'
@@ -102,20 +112,27 @@ export default React.memo(function Library(): JSX.Element {
   const {
     refreshing,
     refreshingInTheBackground,
-    epic,
-    gog,
-    amazon,
-    steam,
     sideloadedLibrary,
-    favouriteGames,
-    platform,
-    customCategories,
-    hiddenGames,
     gameUpdates,
     steamSyncStatus,
-    focusRow,
     libraryStatus
-  } = useContext(ContextProvider)
+  } = useLibraryState.keys(
+    'refreshing',
+    'refreshingInTheBackground',
+    'sideloadedLibrary',
+    'gameUpdates',
+    'steamSyncStatus',
+    'libraryStatus'
+  )
+  const epic = useEpicAccount()
+  const gog = useGogAccount()
+  const amazon = useAmazonAccount()
+  const steam = useSteamAccount()
+  const favouriteGames = useFavouriteGames()
+  const customCategories = useCustomCategories()
+  const hiddenGames = useHiddenGames()
+  const platform = useUiState((s) => s.platform)
+  const focusRow = useSettingsState((s) => s.focusRow)
 
   const [layout, setLayout] = useState(storage.getItem('layout') || 'grid')
   const handleLayout = (layout: string) => {

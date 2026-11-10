@@ -1,8 +1,8 @@
-import React, { useContext, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import Tour, { TourStep } from '../../../components/Tour/Tour'
 import { useTour } from '../../../state/TourContext'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useLibraryState from 'frontend/state/libraryState'
 
 export const LIBRARY_TOUR_ID = 'library-tour'
 
@@ -28,15 +28,18 @@ const LibraryTour: React.FC = () => {
   const { t: tGamelib } = useTranslation('gamelib')
   const { isTourActive } = useTour()
   // Import context to check if there are any games in the library
-  const { epic, gog, amazon, steam, sideloadedLibrary } =
-    useContext(ContextProvider)
+  const epicLibrary = useLibraryState((s) => s.epicLibrary)
+  const gogLibrary = useLibraryState((s) => s.gogLibrary)
+  const amazonLibrary = useLibraryState((s) => s.amazonLibrary)
+  const steamLibrary = useLibraryState((s) => s.steamLibrary)
+  const sideloadedLibrary = useLibraryState((s) => s.sideloadedLibrary)
 
   // Check if there are any games in the library
   const hasGames = Boolean(
-    epic.library.length ||
-    gog.library.length ||
-    amazon.library.length ||
-    steam.library.length ||
+    epicLibrary.length ||
+    gogLibrary.length ||
+    amazonLibrary.length ||
+    steamLibrary.length ||
     sideloadedLibrary.length
   )
 

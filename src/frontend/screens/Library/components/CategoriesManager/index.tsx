@@ -1,7 +1,7 @@
 import { useContext, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import LibraryContext from '../../LibraryContext'
-import ContextProvider from 'frontend/state/ContextProvider'
+import { useCustomCategories } from 'frontend/state/accountHooks'
 import { Dialog, DialogHeader } from 'frontend/components/UI/Dialog'
 import { DialogContent } from '@mui/material'
 import { TextInputField } from 'frontend/components/UI'
@@ -154,7 +154,7 @@ function CategoryItem({
 
 function CategoriesManager() {
   const { t } = useTranslation()
-  const { customCategories } = useContext(ContextProvider)
+  const customCategories = useCustomCategories()
 
   const { setShowCategories, categoriesManagerIntent } =
     useContext(LibraryContext)

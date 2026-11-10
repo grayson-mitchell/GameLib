@@ -26,7 +26,7 @@ describe('hide titles mode', () => {
   it('GamesList passes hideTitles from context onto the wrapper class list', () => {
     const src = read('GamesList/index.tsx')
     expect(src).toMatch(
-      /const \{[^}]*\bhideTitles\b[^}]*\} =\s*useContext\(ContextProvider\)/
+      /const \{[^}]*\bhideTitles\b[^}]*\} =\s*useSettingsState\.keys\(/
     )
     expect(src).toMatch(/cx\(\{[^}]*\bhideTitles\b[^}]*\}\)/)
   })
