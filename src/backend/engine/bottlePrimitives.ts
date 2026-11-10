@@ -12,6 +12,7 @@ import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { SpawnAsync } from 'backend/spawnAsync'
 import { writeCxbottleConf } from './adoptBottle'
 import type { NonCrossoverEngine } from './engineTypes'
+import type { EngineServices } from './engineServices'
 
 /** Same string as PROVISION_ABORTED in steam/bottle.ts (a structural match, not a re-export). */
 const PROVISION_ABORTED_CODE = 'provision-aborted' as const
@@ -224,7 +225,7 @@ export function removeCreatedBottleDir(bottleName: string): void {
  * are assigned here.
  */
 export async function createFallbackBottle(
-  deps: BottleSpawnDeps,
+  deps: BottleSpawnDeps & Pick<EngineServices, 'installRemove'>,
   bottleName: string,
   engine: NonCrossoverEngine,
   signal?: AbortSignal
@@ -297,10 +298,7 @@ export async function createFallbackBottle(
       return await fail(`wineserver -w timed out for bottle "${bottleName}"`)
     }
     if (engine.dxvk) {
-      const { DXVK } = (
-        await import('backend/services/legacyFacades')
-      ).legacyTools()
-      const ok = await DXVK.installRemove(
+      const ok = await deps.installRemove(
         buildFallbackGameSettings(bottleName, engine),
         'dxvk',
         'backup',

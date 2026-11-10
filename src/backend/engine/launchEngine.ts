@@ -72,6 +72,7 @@ import {
 } from './launchSettings'
 import { offlineLaunchCertainlyBlocked } from './offlineRefusal'
 import { ensureGameBottle, perGameBottleName } from './perGameBottle'
+import type { EngineServices } from './engineServices'
 import { ensurePinnedEngineReportingStatus } from './pinnedEngineProgress'
 
 export type LaunchEngineStep =
@@ -89,7 +90,9 @@ export interface LaunchEngineDeps {
   isMac(): boolean
   readEffective(id: { runner: string; appName: string }): EffectiveEngine
   isProvisioned(bottleName: string): boolean
-  ensureGameBottle: typeof ensureGameBottle
+  ensureGameBottle: (
+    args: Parameters<typeof ensureGameBottle>[1]
+  ) => ReturnType<typeof ensureGameBottle>
   decisionDeps(): Partial<EngineDecisionDeps>
   isCrossoverMissing(): Promise<boolean>
   currentPinInstalled(): boolean
@@ -113,11 +116,10 @@ export interface LaunchEngineDeps {
   notifyFallback: typeof notifyEngineFallback
 }
 
-const defaultDeps: LaunchEngineDeps = {
+const defaultDeps: Omit<LaunchEngineDeps, 'ensureGameBottle'> = {
   isMac: () => isMac,
   readEffective: (id) => readEngineForGame(id),
   isProvisioned: isBottleProvisioned,
-  ensureGameBottle,
   decisionDeps: () => ({}),
   isCrossoverMissing: () => isCrossoverMissing(),
   currentPinInstalled: () => isPinnedEngineInstalled(ENGINE_PINS.current),
@@ -157,6 +159,7 @@ function writeLog(
  * (native, browser, non-macOS, or a bottle-runtime store) and the launch runs exactly as before.
  */
 export async function selectEngineForLaunch(
+  services: EngineServices,
   game: Game,
   opts: {
     offline: boolean
@@ -165,7 +168,11 @@ export async function selectEngineForLaunch(
   },
   overrides: Partial<LaunchEngineDeps> = {}
 ): Promise<LaunchEngineStep> {
-  const d: LaunchEngineDeps = { ...defaultDeps, ...overrides }
+  const d: LaunchEngineDeps = {
+    ...defaultDeps,
+    ensureGameBottle: (a) => ensureGameBottle(services, a),
+    ...overrides
+  }
   const key = engineKeyIfEligible(game, d.isMac())
   if (key === null) return { kind: 'skip' }
   const { runner, app_name: appName, title } = game.getGameInfo()

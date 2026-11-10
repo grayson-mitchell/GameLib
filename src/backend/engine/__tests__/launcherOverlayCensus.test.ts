@@ -115,7 +115,7 @@ describe('tools/index.ts overlay census (T-61-63)', () => {
       expect(reads.length).toBeGreaterThan(0)
       const guarded =
         body.match(
-          /resolveToolSettings\(\s*\w+,\s*await \w+\.getSettings\(\)/g
+          /resolveToolSettings\(\s*engineServicesFor\(deps\),\s*\w+,\s*await \w+\.getSettings\(\)/g
         ) ?? []
       expect(guarded).toHaveLength(reads.length)
     }

@@ -1,3 +1,5 @@
+import type { SpawnAsync } from 'backend/spawnAsync'
+import type { EngineServices } from 'backend/engine/engineServices'
 import {
   ExecResult,
   GameSettings,
@@ -201,6 +203,15 @@ export interface ToolsDeps {
   managers: { library: StoreManagers['library'] }
   commandRunner: Pick<CommandRunner, 'runWineCommand'>
   launcher: Pick<Launcher, 'setupEnvVars' | 'setupWineEnvVars' | 'validWine'>
+  spawnAsync: SpawnAsync
+}
+
+/** The engine's bottle-creation capabilities, built from this tools instance (66.1-22d). */
+function engineServicesFor(deps: ToolsDeps): EngineServices {
+  return {
+    spawnAsync: deps.spawnAsync,
+    installRemove: (...a) => createDxvk(deps).installRemove(...a)
+  }
 }
 
 function createDxvk(deps: ToolsDeps) {
@@ -902,6 +913,7 @@ function createWinetricks(deps: ToolsDeps) {
         const game = deps.managers.library[runner].getGame(appName)
         // Phase 61: act on the game's real bottle and engine (a verb is a need that creates it).
         const resolved = await resolveToolSettings(
+          engineServicesFor(deps),
           game,
           await game.getSettings(),
           { ensureBottle: true }
@@ -1307,6 +1319,7 @@ function createWinetricks(deps: ToolsDeps) {
     listInstalled: async (game: Game) => {
       // Phase 61: read the log from the bottle the game really runs in; a read never creates one.
       const resolved = await resolveToolSettings(
+        engineServicesFor(deps),
         game,
         await game.getSettings(),
         {
@@ -1584,9 +1597,14 @@ async function runWineCommandOnGame(
     return { stdout: '', stderr: '' }
   }
   // Phase 61: run in the game's real bottle on its current engine (running creates the bottle).
-  const resolved = await resolveToolSettings(game, await game.getSettings(), {
-    ensureBottle: true
-  })
+  const resolved = await resolveToolSettings(
+    engineServicesFor(deps),
+    game,
+    await game.getSettings(),
+    {
+      ensureBottle: true
+    }
+  )
   if (resolved.kind === 'unavailable') {
     logError(
       `runWineCommand not run for ${appName}: no usable Wine environment (${resolved.reason})`,
@@ -1632,6 +1650,7 @@ async function runWineCommandForPendingInstall(
   }
   const stored = await GameConfig.get(args.appName).getSettings()
   const resolved = await resolveToolSettingsForId(
+    engineServicesFor(deps),
     { runner: 'sideload', appName: args.appName, platform: 'Windows' },
     stored,
     { ensureBottle: true }

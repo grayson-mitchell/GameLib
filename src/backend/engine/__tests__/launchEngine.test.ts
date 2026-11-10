@@ -59,6 +59,8 @@ import {
   endEngineLaunch,
   selectEngineForLaunch
 } from '../launchEngine'
+import type { EngineServices } from '../engineServices'
+import { createTestServices } from 'backend/testUtils/testServices'
 import type { LaunchEngineDeps } from '../launchEngine'
 import { getEngineSelection, clearEngineSelection } from '../engineRegistry'
 import { getLaunchSettings } from '../launchSettings'
@@ -66,6 +68,11 @@ import { gamesRunningIn, __resetBottleLedgerForTests } from '../bottleLedger'
 import type { EffectiveEngine } from '../engineConfig'
 import type { EngineSelection } from '../engineTypes'
 import { engineLogLabel } from '../engineTypes'
+
+const services: EngineServices = {
+  spawnAsync: createTestServices().spawnAsync,
+  installRemove: jest.fn()
+}
 
 const { setGlobalMocks } = { setGlobalMocks: () => undefined }
 void setGlobalMocks
@@ -193,6 +200,7 @@ const run = (
   opts: { offline?: boolean; purpose?: 'launch' | 'setup' } = {}
 ) =>
   selectEngineForLaunch(
+    services,
     game,
     {
       offline: opts.offline ?? false,

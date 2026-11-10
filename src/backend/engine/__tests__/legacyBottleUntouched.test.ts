@@ -58,6 +58,8 @@ import {
   endEngineLaunch,
   selectEngineForLaunch
 } from '../launchEngine'
+import type { EngineServices } from '../engineServices'
+import { createTestServices } from 'backend/testUtils/testServices'
 import type { LaunchEngineDeps } from '../launchEngine'
 import { __resetBottleLedgerForTests } from '../bottleLedger'
 import { clearEngineSelection } from '../engineRegistry'
@@ -66,6 +68,11 @@ import { ENGINE_MARKER_FILE } from '../engineSwitch'
 import { perGameBottleName } from '../perGameBottle'
 import type { EffectiveEngine } from '../engineConfig'
 import type { EngineSelection } from '../engineTypes'
+
+const services: EngineServices = {
+  spawnAsync: createTestServices().spawnAsync,
+  installRemove: jest.fn()
+}
 
 const decide = jest.requireMock('../engineDecision')
   .decideLaunchEngine as jest.Mock
@@ -206,6 +213,7 @@ function makeBottle(name: string, withTimestamp: boolean): string {
 
 async function launchAndEnd(): Promise<string> {
   const step = await selectEngineForLaunch(
+    services,
     makeGame(),
     { offline: false },
     deps()

@@ -24,6 +24,13 @@ import type { EffectiveEngine } from '../engineConfig'
 import type { NonCrossoverEngine } from '../engineTypes'
 import { perGameBottleName } from '../perGameBottle'
 import { getBottleDir } from '../bottlePrimitives'
+import type { EngineServices } from '../engineServices'
+import { createTestServices } from 'backend/testUtils/testServices'
+
+const services: EngineServices = {
+  spawnAsync: createTestServices().spawnAsync,
+  installRemove: jest.fn()
+}
 
 const PIN: NonCrossoverEngine = {
   wineBin: '/pin/wine',
@@ -99,7 +106,7 @@ const resolve = (
   s: GameSettings,
   ensureBottle: boolean,
   over: Partial<ToolSettingsDeps> = {}
-) => resolveToolSettings(g, s, { ensureBottle }, deps(over))
+) => resolveToolSettings(services, g, s, { ensureBottle }, deps(over))
 
 describe('stored settings', () => {
   it.each([
@@ -332,6 +339,7 @@ describe('resolveToolSettingsForId (CR-04: no Game needed)', () => {
       })
     })
     const result = await resolveToolSettingsForId(
+      services,
       sideloadId,
       stored(),
       { ensureBottle: true },
@@ -354,6 +362,7 @@ describe('resolveToolSettingsForId (CR-04: no Game needed)', () => {
   it('non-mac returns the stored settings by reference', async () => {
     const s = stored()
     const result = await resolveToolSettingsForId(
+      services,
       sideloadId,
       s,
       { ensureBottle: true },

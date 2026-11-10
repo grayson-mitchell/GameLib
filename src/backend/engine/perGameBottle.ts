@@ -20,7 +20,7 @@ import { createHash } from 'crypto'
 import { dirname, join } from 'path'
 import { existsSync } from 'graceful-fs'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { legacySpawnAsync } from 'backend/services/legacySpawnAsync'
+import type { EngineServices } from './engineServices'
 import {
   type BottleSpawnDeps,
   createFallbackBottle,
@@ -231,13 +231,12 @@ export interface PerGameBottleDeps {
   isProvisioned: (bottleName: string) => boolean
 }
 
-const defaultDeps: PerGameBottleDeps = {
+const defaultDeps: Omit<
+  PerGameBottleDeps,
+  'createCrossover' | 'createFallback'
+> = {
   decide: decideCreationEngine,
   resolveBinDir: () => resolveCrossoverBinDirForEngine(),
-  createCrossover: (...a) =>
-    createCrossoverBottle({ spawnAsync: legacySpawnAsync }, ...a),
-  createFallback: (...a) =>
-    createFallbackBottle({ spawnAsync: legacySpawnAsync }, ...a),
   ensurePin: ensurePinnedEngineReportingStatus,
   currentPin: () => ENGINE_PINS.current,
   isProvisioned: isBottleProvisioned
@@ -334,6 +333,7 @@ async function ensureOnce(
 
 /** Create the game's bottle once (idempotent; concurrent callers share one creation). */
 export function ensureGameBottle(
+  services: EngineServices,
   args: {
     key: EngineKey
     bottleName: string
@@ -343,7 +343,12 @@ export function ensureGameBottle(
   },
   deps: Partial<PerGameBottleDeps> = {}
 ): Promise<EnsureGameBottleResult> {
-  const d = { ...defaultDeps, ...deps }
+  const d: PerGameBottleDeps = {
+    createCrossover: (...a) => createCrossoverBottle(services, ...a),
+    createFallback: (...a) => createFallbackBottle(services, ...a),
+    ...defaultDeps,
+    ...deps
+  }
   if (sanitizeBottleName(args.bottleName) !== args.bottleName) {
     return Promise.resolve({
       status: 'error',

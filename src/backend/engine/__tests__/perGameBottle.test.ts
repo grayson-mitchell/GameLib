@@ -21,6 +21,8 @@ jest.mock('backend/logger', () => ({
 }))
 jest.mock('backend/utils', () => ({ sendGameStatusUpdate: jest.fn() }))
 
+import type { EngineServices } from '../engineServices'
+import { createTestServices } from 'backend/testUtils/testServices'
 import {
   createCrossoverBottle,
   ensureGameBottle,
@@ -29,6 +31,11 @@ import {
 } from '../perGameBottle'
 import { getBottleDir, sanitizeBottleName } from '../bottlePrimitives'
 import type { PerGameBottleDeps } from '../perGameBottle'
+
+const services: EngineServices = {
+  spawnAsync: createTestServices().spawnAsync,
+  installRemove: jest.fn()
+}
 
 // Real child process under the fake HOME; a timeout resolves code null like the real helper.
 const spawnAsync = (
@@ -201,7 +208,7 @@ describe('ensureGameBottle', () => {
 
   it('is a no-op when the bottle is already provisioned', async () => {
     const d = mk({ isProvisioned: jest.fn().mockReturnValue(true) })
-    expect(await ensureGameBottle(base, d)).toEqual({
+    expect(await ensureGameBottle(services, base, d)).toEqual({
       status: 'done',
       createdHere: false,
       engine: 'existing'
@@ -212,7 +219,7 @@ describe('ensureGameBottle', () => {
 
   it('creates with CrossOver once when present', async () => {
     const d = mk()
-    const r = await ensureGameBottle(base, d)
+    const r = await ensureGameBottle(services, base, d)
     expect(r).toMatchObject({ status: 'done', engine: 'crossover' })
     expect(d.createCrossover).toHaveBeenCalledTimes(1)
     expect(d.createFallback).not.toHaveBeenCalled()
@@ -226,7 +233,7 @@ describe('ensureGameBottle', () => {
         error: 'x'
       })
     })
-    const r = await ensureGameBottle(base, d)
+    const r = await ensureGameBottle(services, base, d)
     expect(r).toMatchObject({ status: 'done', engine: 'pinned' })
     expect(d.ensurePin).toHaveBeenCalledTimes(1)
     expect(d.createFallback).toHaveBeenCalledWith(
@@ -244,7 +251,7 @@ describe('ensureGameBottle', () => {
         error: 'cancelled'
       })
     })
-    const r = await ensureGameBottle(base, d)
+    const r = await ensureGameBottle(services, base, d)
     expect(r).toMatchObject({ status: 'error', errorCode: 'provision-aborted' })
     expect(d.createFallback).not.toHaveBeenCalled()
   })
@@ -256,7 +263,7 @@ describe('ensureGameBottle', () => {
         .mockResolvedValue({ kind: 'pinned', reason: 'cx-missing', pin })
     })
     const signal = new AbortController().signal
-    const r = await ensureGameBottle({ ...base, signal }, d)
+    const r = await ensureGameBottle(services, { ...base, signal }, d)
     expect(r).toMatchObject({ status: 'done', engine: 'pinned' })
     expect(d.createCrossover).not.toHaveBeenCalled()
     expect(d.createFallback).toHaveBeenCalledWith(
@@ -278,7 +285,7 @@ describe('ensureGameBottle', () => {
         error: 'offline x'
       })
     })
-    expect(await ensureGameBottle(base, d)).toMatchObject({
+    expect(await ensureGameBottle(services, base, d)).toMatchObject({
       status: 'error',
       errorCode: 'engine-download-failed'
     })
@@ -296,8 +303,8 @@ describe('ensureGameBottle', () => {
         return { status: 'done', createdHere: true }
       })
     })
-    const a = ensureGameBottle(base, d)
-    const b = ensureGameBottle(base, d)
+    const a = ensureGameBottle(services, base, d)
+    const b = ensureGameBottle(services, base, d)
     release(undefined)
     await Promise.all([a, b])
     expect(d.createFallback).toHaveBeenCalledTimes(1)
@@ -306,7 +313,7 @@ describe('ensureGameBottle', () => {
   it('rejects an unsafe bottle name', async () => {
     const d = mk()
     expect(
-      await ensureGameBottle({ ...base, bottleName: '../x' }, d)
+      await ensureGameBottle(services, { ...base, bottleName: '../x' }, d)
     ).toMatchObject({ status: 'error' })
   })
 })

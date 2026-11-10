@@ -41,6 +41,7 @@ import {
   getLaunchSettings
 } from './launchSettings'
 import { ensureGameBottle } from './perGameBottle'
+import type { EngineServices } from './engineServices'
 import { resolveCrossoverBinDirAsync } from './crossoverLocation'
 
 export type ToolSettingsResult =
@@ -58,7 +59,9 @@ export interface ToolSettingsDeps {
   resolvePrefix: typeof resolveGamePrefix
   overlay: typeof getLaunchSettings
   isProvisioned(bottleName: string): boolean
-  ensureGameBottle: typeof ensureGameBottle
+  ensureGameBottle: (
+    args: Parameters<typeof ensureGameBottle>[1]
+  ) => ReturnType<typeof ensureGameBottle>
   markerKind(bottleName: string): 'crossover' | 'non-crossover' | null
   crossoverBinDir(): Promise<string | undefined>
   /** The built-in or Wine Manager engine an engine id runs on; null when it is not installed. */
@@ -76,14 +79,13 @@ function pinEngine(pin: (typeof ENGINE_PINS)['current']): NonCrossoverEngine {
   }
 }
 
-const defaultDeps: ToolSettingsDeps = {
+const defaultDeps: Omit<ToolSettingsDeps, 'ensureGameBottle'> = {
   isMac: () => isMac,
   readEffective: (id) => readEngineForGame(id),
   hasLiveSelection: (key) => getEngineSelection(key) !== undefined,
   resolvePrefix: resolveGamePrefix,
   overlay: getLaunchSettings,
   isProvisioned: isBottleProvisioned,
-  ensureGameBottle,
   markerKind: readBottleEngineMarkerKind,
   crossoverBinDir: () => resolveCrossoverBinDirAsync({}),
   nonCrossoverEngine(engineId) {
@@ -100,17 +102,19 @@ const defaultDeps: ToolSettingsDeps = {
 }
 
 export async function resolveToolSettings(
+  services: EngineServices,
   game: Game,
   stored: GameSettings,
   opts: { ensureBottle: boolean },
   overrides: Partial<ToolSettingsDeps> = {}
 ): Promise<ToolSettingsResult> {
-  const d: ToolSettingsDeps = { ...defaultDeps, ...overrides }
+  const d = { ...defaultDeps, ...overrides }
   if (engineKeyIfEligible(game, d.isMac()) === null) {
     return { kind: 'stored', settings: stored }
   }
   const info = game.getGameInfo()
   return resolveToolSettingsForId(
+    services,
     {
       runner: info.runner,
       appName: info.app_name,
@@ -129,12 +133,17 @@ export async function resolveToolSettings(
  * not a bottle-runtime store.
  */
 export async function resolveToolSettingsForId(
+  services: EngineServices,
   id: { runner: Runner; appName: string; platform?: InstallPlatform },
   stored: GameSettings,
   opts: { ensureBottle: boolean },
   overrides: Partial<ToolSettingsDeps> = {}
 ): Promise<ToolSettingsResult> {
-  const d: ToolSettingsDeps = { ...defaultDeps, ...overrides }
+  const d: ToolSettingsDeps = {
+    ...defaultDeps,
+    ensureGameBottle: (a) => ensureGameBottle(services, a),
+    ...overrides
+  }
   const key =
     !d.isMac() ||
     id.platform === 'Browser' ||
