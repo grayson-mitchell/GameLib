@@ -195,6 +195,7 @@ const handleGoToScreenMock = jest.fn()
 // StoresPanel.test.tsx / NavShell.test.tsx).
 import 'frontend/testUtils/tauriWindow'
 import useUiState from 'frontend/state/uiState'
+import useAuthState from 'frontend/state/authState'
 import { resetAllStores } from 'frontend/state/storeKit'
 import { Tab } from '@mui/material'
 import NavItem from '../components/NavItem'
@@ -211,8 +212,13 @@ function setContext(value: MockContextValue): void {
   contextValue = value
   useUiState.setState({
     platform: value.platform,
-    handleExternalLinkDialog: value.handleExternalLinkDialog
+    handleExternalLinkDialog: value.handleExternalLinkDialog,
+    handleRedeemKeyDialog: value.handleRedeemKeyDialog
   } as unknown as Partial<ReturnType<typeof useUiState.getState>>)
+  useAuthState.setState((s) => ({
+    humble: { ...s.humble, isLoggedIn: value.humble?.isLoggedIn ?? false },
+    steamUsername: value.steam.username ?? undefined
+  }))
 }
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }

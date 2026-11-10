@@ -15,11 +15,11 @@
  * invoked directly as a plain function against hand-rolled hook mocks,
  * following `Runner/__tests__/logoutFailureSurface.test.tsx`'s convention of
  * switching `useContext`'s mocked return on the passed-in context object's
- * identity (needed here because the component itself consumes ContextProvider
- * for `humble`, while `useSuppressStoreEmbedWhile` -- called for real, not
- * mocked -- transitively consumes the real `StoreEmbedSuppressionContext`
+ * identity (the component reads `humble` from authState;
+ * `useSuppressStoreEmbedWhile` -- called for real, not mocked -- transitively consumes the real `StoreEmbedSuppressionContext`
  * via a real `useContext` call).
  */
+import 'frontend/testUtils/tauriWindow'
 import type { ReactElement, ReactNode } from 'react'
 
 jest.mock('../index.scss', () => ({}))
@@ -46,16 +46,6 @@ jest.mock('react-i18next', () => ({
   })
 }))
 
-// Sentinel object so the mocked `useContext` below can tell ContextProvider's
-// consumption apart from StoreEmbedSuppressionContext's (the latter is NOT
-// mocked -- its real module, and therefore its real `useContext(...)` call
-// inside the real `useSuppressStoreEmbedWhile`, is exercised here).
-jest.mock('frontend/state/ContextProvider', () => ({
-  __esModule: true,
-  default: { __name: 'ContextProvider' }
-}))
-
-let humbleExpired = false
 const acquire = jest.fn()
 const release = jest.fn()
 
@@ -78,8 +68,11 @@ jest.mock('react', () => {
     return prev.some((d, i) => !Object.is(d, next[i]))
   }
 
-  return {
-    ...actualReact,
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+
+  return withStoreHooks(actualReact, {
     useState: (initial: unknown) => {
       const idx = stateCursor++
       if (idx >= stateSlots.length) {
@@ -101,10 +94,7 @@ jest.mock('react', () => {
       }
       return refSlots[idx]
     },
-    useContext: (ctx: { __name?: string }) =>
-      ctx?.__name === 'ContextProvider'
-        ? { humble: { expired: humbleExpired } }
-        : { suppressed: false, acquire, release },
+    useContext: () => ({ suppressed: false, acquire, release }),
     useEffect: (effect: () => void | (() => void), deps?: unknown[]) => {
       const idx = effectCursor++
       if (depsChanged(effectDeps[idx], deps)) {
@@ -128,15 +118,21 @@ jest.mock('react', () => {
       effectCleanups = []
       effectCursor = 0
     }
-  }
+  } as unknown as Partial<typeof import('react')>)
 })
 
 // Imported after the mocks above (textual order -- this project's ts-jest
 // setup does not hoist jest.mock like babel-jest).
 import HumbleExpiryToast from '../index'
+import useAuthState from 'frontend/state/authState'
+import { resetAllStores } from 'frontend/state/storeKit'
 import { PHASE_FALLBACK_MS } from 'frontend/components/UI/NoticeStack/noticeSlot'
 
 type HookHarness = { __beginRender: () => void; __resetMount: () => void }
+
+function setHumbleExpired(expired: boolean): void {
+  useAuthState.setState((s) => ({ humble: { ...s.humble, expired } }))
+}
 
 function harness(): HookHarness {
   return jest.requireMock('react') as unknown as HookHarness
@@ -193,7 +189,7 @@ const ev = (animationName: string) => ({
 // Flip expired true and settle: the first reinvoke fires the expired effect,
 // the second reads the new phase.
 function showToast(): ReactElement | null {
-  humbleExpired = true
+  setHumbleExpired(true)
   reinvoke()
   return reinvoke()
 }
@@ -209,7 +205,7 @@ function finishExit(tree: ReactNode): ReactElement | null {
 describe('HumbleExpiryToast acquires store-embed suppression while visible (Phase 40 Plan 06, D-18/D-20)', () => {
   beforeEach(() => {
     jest.useFakeTimers()
-    humbleExpired = false
+    setHumbleExpired(false)
     mockNavigate.mockClear()
     acquire.mockClear()
     release.mockClear()
@@ -217,6 +213,7 @@ describe('HumbleExpiryToast acquires store-embed suppression while visible (Phas
 
   afterEach(() => {
     jest.useRealTimers()
+    resetAllStores()
   })
 
   // NOTE on the two-`reinvoke()` pattern below: `phase` only changes via
@@ -256,7 +253,7 @@ describe('HumbleExpiryToast acquires store-embed suppression while visible (Phas
     showToast()
     expect(acquire).toHaveBeenCalledTimes(1)
 
-    humbleExpired = false
+    setHumbleExpired(false)
     reinvoke() // fires the humble.expired effect, sets phase -> leaving
     const leaving = reinvoke()
     expect(leaving).not.toBeNull()
@@ -290,7 +287,7 @@ describe('HumbleExpiryToast acquires store-embed suppression while visible (Phas
 describe('HumbleExpiryToast slot lifecycle (quick 261106-pr4)', () => {
   beforeEach(() => {
     jest.useFakeTimers()
-    humbleExpired = false
+    setHumbleExpired(false)
     mockNavigate.mockClear()
     acquire.mockClear()
     release.mockClear()
@@ -298,6 +295,7 @@ describe('HumbleExpiryToast slot lifecycle (quick 261106-pr4)', () => {
 
   afterEach(() => {
     jest.useRealTimers()
+    resetAllStores()
   })
 
   it('falls back to collapsing then removal when animationend never arrives', () => {
@@ -339,10 +337,10 @@ describe('HumbleExpiryToast slot lifecycle (quick 261106-pr4)', () => {
     expect(reinvoke()).toBeNull()
     expect(reinvoke()).toBeNull()
 
-    humbleExpired = false
+    setHumbleExpired(false)
     reinvoke()
     reinvoke()
-    humbleExpired = true
+    setHumbleExpired(true)
     reinvoke()
     const again = reinvoke()
     expect(again).not.toBeNull()
@@ -352,7 +350,7 @@ describe('HumbleExpiryToast slot lifecycle (quick 261106-pr4)', () => {
   it('does not vanish instantly when expired flips false while shown', () => {
     mount()
     showToast()
-    humbleExpired = false
+    setHumbleExpired(false)
     reinvoke()
     const leaving = reinvoke()
 

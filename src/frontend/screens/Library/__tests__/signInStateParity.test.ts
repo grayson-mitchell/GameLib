@@ -185,10 +185,34 @@ function wiringViolations(source: string): string[] {
   return violations
 }
 
+/**
+ * The Library notice reads the flat authState fields; the Accounts screen still
+ * reads the legacy context members until its own conversion. Both spellings of
+ * one value are mapped to a single canonical expression, so the compare stays
+ * "same value, same key" without forcing the two files to share a spelling.
+ * A DIFFERENT value (e.g. `amazonUsername`) maps to itself and is convicted.
+ */
+const EXPRESSION_ALIASES: Record<string, string> = {
+  'epic.username': 'epicUsername',
+  'gog.username': 'gogUsername',
+  'amazon.user_id': 'amazonUserId',
+  'steam?.username': 'steamUsername',
+  'humble?.isLoggedIn': 'humble.isLoggedIn',
+  'humble?.expired': 'humble.expired'
+}
+
+/** `key:expression`, with a shorthand property expanded and aliases folded. */
+function canonicalPair(pair: string): string {
+  const colon = pair.indexOf(':')
+  const key = colon === -1 ? pair : pair.slice(0, colon)
+  const expression = colon === -1 ? pair : pair.slice(colon + 1)
+  return `${key}:${EXPRESSION_ALIASES[expression] ?? expression}`
+}
+
 /** The distinct pair sets across all of a file's selector calls. */
 function pairSets(source: string): string[] {
   const sets = readSelectorCalls(source).map((call) =>
-    [...call.pairs].sort().join('|')
+    call.pairs.map(canonicalPair).sort().join('|')
   )
   return Array.from(new Set(sets))
 }
@@ -234,10 +258,7 @@ describe('Manage Accounts tiles and the Library notice share one selector (R7, T
 
   describe('the checker convicts broken sources (red-proof)', () => {
     it('a notice with steamUsername dropped fails the field-set and the parity compare', () => {
-      const specimen = notice.replace(
-        /\n\s*steamUsername: steam\?\.username/,
-        ''
-      )
+      const specimen = notice.replace(/,\n\s*steamUsername\n/, '\n')
       expect(specimen).not.toBe(notice)
       expect(wiringViolations(specimen)).not.toEqual([])
       expect(at(readSelectorCalls(specimen), 0).pairs).toHaveLength(5)
@@ -245,7 +266,10 @@ describe('Manage Accounts tiles and the Library notice share one selector (R7, T
     })
 
     it('a notice whose expression diverges from the tile (amazon.username) fails the parity compare', () => {
-      const specimen = notice.replace('amazon.user_id', 'amazon.username')
+      const specimen = notice.replace(
+        /amazonUserId,(\s*)humbleLoggedIn/,
+        'amazonUserId: amazonUsername,$1humbleLoggedIn'
+      )
       expect(specimen).not.toBe(notice)
       // Still a well-formed call, so the wiring check alone would pass it: only
       // the pair-set compare against the tile can see this divergence.

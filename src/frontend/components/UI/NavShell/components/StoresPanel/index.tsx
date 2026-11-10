@@ -1,4 +1,3 @@
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   faTags,
@@ -7,7 +6,8 @@ import {
   faTicket
 } from '@fortawesome/free-solid-svg-icons'
 
-import ContextProvider from 'frontend/state/ContextProvider'
+import useAuthState from 'frontend/state/authState'
+import useUiState from 'frontend/state/uiState'
 import StoreLogos from 'frontend/components/UI/StoreLogos'
 import NavItem from '../NavItem'
 
@@ -32,7 +32,9 @@ import NavItem from '../NavItem'
 export default function StoresPanel() {
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
-  const { humble, steam, handleRedeemKeyDialog } = useContext(ContextProvider)
+  const humble = useAuthState((s) => s.humble)
+  const steamUsername = useAuthState((s) => s.steamUsername)
+  const handleRedeemKeyDialog = useUiState((s) => s.handleRedeemKeyDialog)
 
   return (
     <div className="NavShell__tier2List">
@@ -79,7 +81,7 @@ export default function StoresPanel() {
           label={t('sidebar.humbleKeys', 'Humble Keys')}
         />
       )}
-      {steam.username && (
+      {steamUsername && (
         <NavItem
           elementType="button"
           onClick={() => handleRedeemKeyDialog(true)}

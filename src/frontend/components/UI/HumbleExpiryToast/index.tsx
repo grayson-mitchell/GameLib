@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -7,7 +7,7 @@ import {
   faXmark
 } from '@fortawesome/free-solid-svg-icons'
 
-import ContextProvider from 'frontend/state/ContextProvider'
+import useAuthState from 'frontend/state/authState'
 import { humbleLoginPath } from 'frontend/screens/Login'
 import { useSuppressStoreEmbedWhile } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
 import {
@@ -26,7 +26,7 @@ import './index.scss'
 // value directly rather than owning any state itself - GlobalState's
 // humbleAuthState listener is the single source of truth for `expired`.
 export default function HumbleExpiryToast() {
-  const { humble } = useContext(ContextProvider)
+  const humbleExpired = useAuthState((s) => s.humble.expired)
   const navigate = useNavigate()
   const { t } = useTranslation()
 
@@ -56,7 +56,7 @@ export default function HumbleExpiryToast() {
   useNoticePhaseFallback(phase, showCount.current, toCollapsing, remove)
 
   useEffect(() => {
-    const isExpired = !!humble.expired
+    const isExpired = !!humbleExpired
     if (isExpired && !shownForCurrentExpiry.current) {
       shownForCurrentExpiry.current = true
       showCount.current += 1
@@ -65,7 +65,7 @@ export default function HumbleExpiryToast() {
       shownForCurrentExpiry.current = false
       setPhase((p) => (p === 'in' ? 'leaving' : p))
     }
-  }, [humble.expired])
+  }, [humbleExpired])
 
   if (phase === null) {
     return null

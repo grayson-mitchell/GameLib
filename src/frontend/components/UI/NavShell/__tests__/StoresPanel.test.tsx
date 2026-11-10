@@ -13,26 +13,8 @@
  * itself is mocked (not just its colocated stylesheet) since it is a
  * CSS-importing child this panel renders, not the unit under test.
  */
+import 'frontend/testUtils/tauriWindow'
 import type { ReactElement, ReactNode } from 'react'
-
-type MockContextValue = {
-  humble?: { isLoggedIn: boolean }
-  steam: { username?: string | null }
-  handleRedeemKeyDialog: jest.Mock
-}
-
-function makeContextValue(
-  overrides: Partial<MockContextValue> = {}
-): MockContextValue {
-  return {
-    humble: { isLoggedIn: false },
-    steam: { username: undefined },
-    handleRedeemKeyDialog: jest.fn(),
-    ...overrides
-  }
-}
-
-let contextValue: MockContextValue = makeContextValue()
 
 // `StoresPanel` pulls in `StoreLogos` for the four storefront rows (quick
 // 261003-uu8), which imports this `.png` alongside its `.svg?react` logos.
@@ -42,10 +24,12 @@ let contextValue: MockContextValue = makeContextValue()
 // token`. Same stub, same reason, as `destinationCoverage.test.tsx`.
 jest.mock('frontend/assets/gamelib-icon.png', () => 'mock-icon.png')
 
-jest.mock('react', () => ({
-  ...jest.requireActual<typeof import('react')>('react'),
-  useContext: () => contextValue
-}))
+jest.mock('react', () => {
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+  return withStoreHooks(jest.requireActual<typeof import('react')>('react'))
+})
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -71,6 +55,19 @@ jest.mock('../components/NavItem', () => ({
 // Deviation 1 for the bug this avoids).
 import NavItem from '../components/NavItem'
 import StoresPanel from '../components/StoresPanel'
+import useAuthState from 'frontend/state/authState'
+import useUiState from 'frontend/state/uiState'
+import { resetAllStores } from 'frontend/state/storeKit'
+
+function seed(opts: {
+  humbleLoggedIn?: boolean
+  steamUsername?: string
+}): void {
+  useAuthState.setState((s) => ({
+    humble: { ...s.humble, isLoggedIn: opts.humbleLoggedIn ?? false },
+    steamUsername: opts.steamUsername
+  }))
+}
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
 type AnyElement = ReactElement<AnyProps> & { props: AnyProps }
@@ -108,11 +105,10 @@ function labelsOf(tree: ReactNode): string[] {
 }
 
 describe('StoresPanel', () => {
+  afterEach(() => resetAllStores())
+
   it('renders the eight settled rows in order when Humble and Steam are both logged in', () => {
-    contextValue = makeContextValue({
-      humble: { isLoggedIn: true },
-      steam: { username: 'TestUser' }
-    })
+    seed({ humbleLoggedIn: true, steamUsername: 'TestUser' })
 
     const tree = StoresPanel() as unknown as ReactElement
     const labels = labelsOf(tree)
@@ -129,17 +125,8 @@ describe('StoresPanel', () => {
     ])
   })
 
-  it('omits Humble Keys when humble is undefined', () => {
-    contextValue = makeContextValue({ humble: undefined })
-
-    const tree = StoresPanel() as unknown as ReactElement
-    const labels = labelsOf(tree)
-
-    expect(labels).not.toContain('Humble Keys')
-  })
-
   it('omits Humble Keys when humble.isLoggedIn is false', () => {
-    contextValue = makeContextValue({ humble: { isLoggedIn: false } })
+    seed({ humbleLoggedIn: false })
 
     const tree = StoresPanel() as unknown as ReactElement
     const labels = labelsOf(tree)
@@ -148,7 +135,7 @@ describe('StoresPanel', () => {
   })
 
   it('omits Redeem a Steam key when steam.username is unset', () => {
-    contextValue = makeContextValue({ steam: { username: undefined } })
+    seed({ steamUsername: undefined })
 
     const tree = StoresPanel() as unknown as ReactElement
     const labels = labelsOf(tree)
@@ -158,10 +145,8 @@ describe('StoresPanel', () => {
 
   it('renders Redeem a Steam key as a button whose onClick calls handleRedeemKeyDialog(true) when a Steam session exists', () => {
     const handleRedeemKeyDialog = jest.fn()
-    contextValue = makeContextValue({
-      steam: { username: 'TestUser' },
-      handleRedeemKeyDialog
-    })
+    seed({ steamUsername: 'TestUser' })
+    useUiState.setState({ handleRedeemKeyDialog })
 
     const tree = StoresPanel() as unknown as ReactElement
     const redeemItem = navItemsOf(tree).find(

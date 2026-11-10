@@ -35,7 +35,7 @@
  * Store names enter the string only through the `{{store}}` interpolation
  * variable, never by concatenation (R9).
  */
-import { useContext, useEffect } from 'react'
+import { useEffect } from 'react'
 import classNames from 'classnames'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -48,7 +48,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { SIGN_IN_STORES, resolveSignInStates } from 'common/signInState'
 import type { SignInStore } from 'common/signInState'
 import { collectSignInInputs } from 'frontend/helpers/signInInputs'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useAuthState from 'frontend/state/authState'
 import { buildLoginOpenPath } from 'frontend/screens/Login/loginOpenParam'
 import EpicLogo from 'frontend/assets/epic-logo.svg?react'
 import GOGLogo from 'frontend/assets/gog-logo.svg?react'
@@ -75,16 +75,26 @@ function StoreLogo({ store }: { store: SignInStore }) {
 export default function LibrarySignInNotice() {
   const { t: tGamelib } = useTranslation('gamelib')
   const {
-    epic,
-    gog,
-    amazon,
+    epicUsername,
+    gogUsername,
+    amazonUserId,
     humble,
-    steam,
+    steamUsername,
     signInProbeOutcomes,
     dismissedSignInNotices,
     handleDismissSignInNotice,
     handleRearmSignInDismissals
-  } = useContext(ContextProvider)
+  } = useAuthState.keys(
+    'epicUsername',
+    'gogUsername',
+    'amazonUserId',
+    'humble',
+    'steamUsername',
+    'signInProbeOutcomes',
+    'dismissedSignInNotices',
+    'handleDismissSignInNotice',
+    'handleRearmSignInDismissals'
+  )
   const navigate = useNavigate()
 
   // Row visibility is derived from context state on every render: no event
@@ -94,12 +104,12 @@ export default function LibrarySignInNotice() {
   const states = resolveSignInStates(
     collectSignInInputs(
       {
-        epicUsername: epic.username,
-        gogUsername: gog.username,
-        amazonUserId: amazon.user_id,
-        humbleLoggedIn: humble?.isLoggedIn,
-        humbleExpired: humble?.expired,
-        steamUsername: steam?.username
+        epicUsername,
+        gogUsername,
+        amazonUserId,
+        humbleLoggedIn: humble.isLoggedIn,
+        humbleExpired: humble.expired,
+        steamUsername
       },
       signInProbeOutcomes
     )
