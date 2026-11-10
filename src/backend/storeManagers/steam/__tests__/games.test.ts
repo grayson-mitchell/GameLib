@@ -17473,4 +17473,28 @@ describe('Steam launch watch wiring (261111-9mj)', () => {
       )
     ).toBe(true)
   })
+
+  it('G6 (am0) win32 failed hand-off: openExternal rejecting starts no watch', async () => {
+    jest.requireMock('backend/constants/environment').isWindows = true
+    const { shell } = jest.requireMock('backend/platform')
+    ;(shell.openExternal as jest.Mock).mockRejectedValueOnce(
+      new Error('opener failed')
+    )
+    await expect(
+      new SteamGame(APP_ID, steamTestDeps).launch({} as any)
+    ).rejects.toThrow('opener failed')
+    expect(shell.openExternal).toHaveBeenCalledTimes(1)
+    expect(startSpy).not.toHaveBeenCalled()
+  })
+
+  it('G7 (am0) win32 failed hand-off: a non-numeric appId starts no watch', async () => {
+    jest.requireMock('backend/constants/environment').isWindows = true
+    const { shell } = jest.requireMock('backend/platform')
+    library.set('abc', makeEntry({ title: 'Not Numeric' }))
+    await expect(
+      new SteamGame('abc', steamTestDeps).launch({} as any)
+    ).resolves.toBe(false)
+    expect(shell.openExternal).not.toHaveBeenCalled()
+    expect(startSpy).not.toHaveBeenCalled()
+  })
 })
