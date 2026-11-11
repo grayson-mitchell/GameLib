@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
-status: ready_to_plan
-stopped_at: Phase 66.2 complete (12/12) — ready to discuss Phase 66.3
-last_updated: 2026-11-11T03:18:41.269Z
-last_activity: 2026-11-10
+status: planning
+stopped_at: Phase 66.3 context gathered
+last_updated: "2026-11-11T03:37:11.861Z"
+last_activity: 2026-11-11
 progress:
   total_phases: 18
   completed_phases: 13
@@ -708,9 +708,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-10T19:54:10.281Z
-Stopped at: Phase 69 context gathered
-Resume file: None
+Last session: 2026-11-11T03:37:11.852Z
+Stopped at: Phase 66.3 context gathered
+Resume file: .planning/phases/66.3-backend-module-state-to-zero-and-live-macos-smoke/66.3-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
