@@ -242,9 +242,9 @@ Phase 66.4 owns:
 - **D-17:** the non-autonomous live smoke.
 
 Known loose ends recorded here rather than fixed: the quit-handler release of the anonymous Steam client
-has no unit test; `ElectronSteamGridDbSecretStore` is test-only dead code; `SteamUser.logout()` never calls
-`resetSteamAuthTrigger()` (open latent bug); `isMacSonomaOrHigher()` compares the Darwin kernel major
-(`os.release()`) with the macOS major 14, which is not the same number.
+has no unit test; `ElectronSteamGridDbSecretStore` is test-only dead code; `isMacSonomaOrHigher()` compares the Darwin kernel
+major (`os.release()`) with the macOS major 14, which is not the same number. Fixed since: `SteamUser.logout()`
+now calls `resetSteamAuthTrigger()` (quick 261112-7wv).
 
 ## Ratchets
 
