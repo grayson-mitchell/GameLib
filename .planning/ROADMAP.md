@@ -120,7 +120,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 44: In-app Winetricks browse UI replacing the search-only panel** — 7/8 plans; ⛔ SUPERSEDED BY PHASE 45 (2026-09-18)
 - [x] **Phase 45: Native in-app Winetricks UI redesigned from scratch** — 12/12 plans; executed; no VERIFICATION.md; winetricks live gate FAILED 2026-10-10 (dialog overflow, verb-1 Queued race) — re-run owed
 - [x] **Phase 46: Windows single-instance guard and gamelib:// deep-link registration** — 7/7 plans; verified
-- [ ] **Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal** — 0/0 plans; never planned (0 plans) — carried forward
+- [ ] **Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal** — 0/0 plans; never planned (0 plans) — carried forward; ITAD gate 2 answered 2026-10-01; blocked on gate 1 — ITAD app registration
 - [x] **Phase 48: Focus row — move the library top section into the panel and widen it** — 18/18 plans; completed 2026-10-09; verification stale at close
 - [x] **Phase 49: Cross-store signed-out / offline mode** — 12/12 plans; completed 2026-10-09; verification stale at close
 - [x] **Phase 50: Epic store in-app on macOS — a Rust-managed raw WKWebView subview for /store/epic** — 6/6 plans; verified retrospectively 10/16 truths; gaps_found at close (G-50-16 timeout banner owed a macOS re-run)

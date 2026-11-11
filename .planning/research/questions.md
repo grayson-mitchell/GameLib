@@ -65,9 +65,16 @@ misses, and — most importantly — **wrong hits**. The answer is empirical and
 >   essentially intact; `SEARCH_CURRENCY = 'USD'` is close to the only line that dies.
 > - **Discounts screen: do NOT build yet.** ITAD's terms forbid building "a competition to
 >   IsThereAnyDeal" — a full deals-browsing screen plausibly qualifies. This needs a written
->   reply from `api@isthereanydeal.com`, not code.
-> - **Sleeper cost:** the rate limit (SPEC: 1000 req/5min) is per-key, and one key ships in the
->   binary — shared across every GameLib install. A result cache becomes required, not optional.
+>   reply from `api@isthereanydeal.com`, not code. ITAD replied 2026-10-01 "yes, this is fine" —
+>   likely permission, but literally ambiguous; a one-line written confirmation is owed before
+>   any deals-browser work.
+> - **Sleeper cost:** the rate limit (SPEC: 1000 req/5min) is per-key, and ITAD has now stated
+>   in writing (Tomas Fedor, 2026-10-01 — vendor statement, not MEASURED) that it
+>   follows the app: API key vs OAuth makes no difference, so OAuth does not move the budget to
+>   each user and is no longer a route around it. One key ships in the binary — shared across every
+>   GameLib install. A result cache is required, not optional. Operator decision 2026-11-12:
+>   embedded key + hard caching, no proxy now; ITAD's suggested intermediate caching server is
+>   built only if usage (visible in ITAD's app dashboard) approaches the limit.
 > - **MEASURED good news:** the Steam AppID → ITAD gid batch lookup works with no API key
 >   (`POST /lookup/id/shop/61/v1`) — better than CheapShark's per-result `steamAppID`.
 > - **UNKNOWN:** the list of covered countries/currencies. The region mechanism (a per-request
