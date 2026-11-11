@@ -33,7 +33,8 @@ import {
   registerStoreEmbedFlows,
   createRustStoreEmbedSeam
 } from '../storeEmbedFlowRegistration'
-import { handlerRegistry, interimIpc, listenerRegistry } from '../../platform'
+import { createIpcRegistry } from '../ipcRegistry'
+import { ipcViews } from '../../testUtils/ipcViews'
 import { startRpcServer, requestRustInvoke } from '../sidecarRpc'
 import {
   RUST_STORE_EMBED_OPEN,
@@ -83,11 +84,14 @@ async function flush(): Promise<void> {
 /** Starts a fresh, lightweight sidecar RPC transport (mirrors `humbleLoginFlows.test.ts`'s
  * `startTransport` — `requestRustInvoke` only needs `startRpcServer`'s stream binding, not the
  * full `bootstrap.ts` boot). */
+const ipc = createIpcRegistry()
+const { handlerRegistry, listenerRegistry } = ipcViews(ipc)
+
 function startTransport(): { input: PassThrough; frames: Frame[] } {
   const input = new PassThrough()
   const output = new PassThrough()
   const frames = collectFrames(output)
-  startRpcServer(input, output, interimIpc)
+  startRpcServer(input, output, ipc)
   return { input, frames }
 }
 
@@ -96,7 +100,7 @@ const SAMPLE_BOUNDS = { x: 10, y: 20, w: 800, h: 600 }
 // ── Registered ONCE for this whole file — `handlerRegistry`/`listenerRegistry` are module-scope
 // maps; calling registerStoreEmbedFlows() more than once would stack a duplicate listener onto
 // the same channel array (humbleLoginFlows.test.ts's own docstring names this hazard). ─────────
-registerStoreEmbedFlows()
+registerStoreEmbedFlows({ ipc })
 
 // ── Test 1: kind correctness ───────────────────────────────────────────────────────────────────
 describe('kind correctness — the 9 invoke channels and 1 send channel are registered with the correct kind, both directions', () => {

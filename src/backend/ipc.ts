@@ -44,7 +44,7 @@ function addHandler<ChannelName extends keyof AsyncIPCFunctions>(
  * stream is bound, so a push before the rpc-server boot step is flushed, not dropped as the old
  * fake-window path dropped it).
  *
- * This replaced a `getMainWindow()?.webContents.send(...)` that went through the platform
+ * This replaced a removed main-window `webContents.send(...)` that went through the platform
  * shim's fake window, whose `isDestroyed()` was always false; the destroyed-window guard
  * (debug/steam-install-slow-start, Thread D-1) is moot with no window object.
  */

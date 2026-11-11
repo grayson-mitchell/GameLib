@@ -9,7 +9,7 @@
  * paths unchanged (mirrors `steamFlowRegistration.ts`'s own objective — prove the
  * real logic runs behind the new transport, not a reimplementation):
  *
- * QR login trio (Phase 30, `ipcMain.handle`):
+ * QR login trio (Phase 30, `deps.ipc.handle`):
  *   - `checkSteamInstalled` -> `SteamUser.isSteamClientInstalled()` (AUTH-05).
  *   - `steamStartQR` -> `SteamUser.startQRLogin()` (AUTH-01), which on a
  *     successful phone-approved poll writes the refresh token through
@@ -20,18 +20,18 @@
  *     polling read of the same in-memory `qrSessionState`.
  *
  * Credential/SteamGuard/TOTP login trio (Phase 34.4, REQ-34.4-01,
- * `ipcMain.handle`, `main.ts:899-905`):
+ * `deps.ipc.handle`, `main.ts:899-905`):
  *   - `steamPollCredential` -> `SteamUser.pollCredentialLogin()` (`main.ts:899`).
  *   - `steamStartCredentials` -> `SteamUser.startCredentialLogin(username, password)`
  *     (`main.ts:900-902`).
  *   - `steamSubmitGuard` -> `SteamUser.submitSteamGuardCode(code)` (`main.ts:903-905`).
  *
  * Session/identity trio (Phase 34.4, REQ-34.4-02, `main.ts:918,922,939`):
- *   - `getSteamUserInfo` -> `SteamUser.getUserDetails()` (`ipcMain.handle`,
+ *   - `getSteamUserInfo` -> `SteamUser.getUserDetails()` (`deps.ipc.handle`,
  *     `main.ts:918`).
  *   - `getSteamSyncedAt` -> `steamSyncStore.get('syncedAt') ?? null`
- *     (`ipcMain.handle`, `main.ts:922`).
- *   - `logoutSteam` -> `SteamUser.logout()` — a **send** (`ipcMain.on`,
+ *     (`deps.ipc.handle`, `main.ts:922`).
+ *   - `logoutSteam` -> `SteamUser.logout()` — a **send** (`deps.ipc.on`,
  *     `main.ts:939`, `addListener`, NEVER `addHandler`). This is the G-30-01
  *     channel: a `send` registered as a `handle` (or the reverse) fails 100%
  *     silently at runtime (`sidecar-send-channels-fail-silently`, Phase 31
@@ -40,7 +40,7 @@
  *     unguarded.
  *
  * macOS CrossOver bottle trio (Phase 34.4 Plan 02, REQ-34.4-03,
- * `ipcMain.handle`, `main.ts:946-953`):
+ * `deps.ipc.handle`, `main.ts:946-953`):
  *   - `steamBottleProvision` -> `provisionBottle(args)` (`main.ts:946`).
  *   - `isSteamBottleProvisioned` -> `isBottleProvisioned()` (`main.ts:947`).
  *   - `steamBottleStatus` -> the ONE genuinely inline body among the 15
@@ -79,12 +79,12 @@
  *     (`macSteamOffline.ts`), 54-REVIEW WR-05 — the dialog's Cancel/close.
  *
  * Guided Steam-client install pair (Phase 34.4 Plan 02, REQ-34.4-04,
- * `ipcMain.handle`, `main.ts:958-961`):
+ * `deps.ipc.handle`, `main.ts:958-961`):
  *   - `steamClientSetupStart` -> `startGuidedClientInstall()` (`main.ts:958`).
  *   - `steamClientSetupRecheck` -> `ensureSteamClientReady(appId)`
  *     (`main.ts:959-961`).
  *
- * Misc pair (Phase 34.4 Plan 02, REQ-34.4-05, `ipcMain.handle`,
+ * Misc pair (Phase 34.4 Plan 02, REQ-34.4-05, `deps.ipc.handle`,
  * `main.ts:906-917,923-925`):
  *   - `redeemSteamKey` -> the WR-03 main-process trust boundary, ported
  *     VERBATIM from `main.ts:906-917`: a payload whose `store !== 'steam'`,
@@ -116,7 +116,7 @@
  */
 
 import { isStore } from 'common/storeCapabilities'
-import { ipcMain } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
 // 66.1-22: the former load-bearing `import '../storeManagers'` entry is gone. The managers
 // arrive as `deps.managers` from the boot `store-managers` step, so this module no longer
 // triggers the storeManagers/steam init cycle itself.
@@ -159,29 +159,31 @@ import { removeAllSteamInstallCopies } from '../storeManagers/steam/removeAllCop
  * module owns no side effects at import time beyond the imports above; the
  * caller decides when registration onto the handler registry happens.
  */
-export type SteamAuthFlowDeps = ManagerDepsSource
+export type SteamAuthFlowDeps = ManagerDepsSource & {
+  ipc: Pick<IpcRegistry, 'handle' | 'on'>
+}
 
 export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   const { steamSyncStore, steamBottleConfigStore } = deps.stores.steam
   const managerDeps = () => managerDepsFromServices(deps)
-  ipcMain.handle('checkSteamInstalled', async () => {
+  deps.ipc.handle('checkSteamInstalled', async () => {
     return SteamUser.isSteamClientInstalled()
   })
 
-  ipcMain.handle('steamStartQR', async () => {
+  deps.ipc.handle('steamStartQR', async () => {
     return startQRLogin(managerDeps())
   })
 
-  ipcMain.handle('steamPollQR', async () => {
+  deps.ipc.handle('steamPollQR', async () => {
     return pollQRLogin()
   })
 
   // Source: main.ts:899 — credential/SteamGuard/TOTP login trio (REQ-34.4-01).
-  ipcMain.handle('steamPollCredential', async () => {
+  deps.ipc.handle('steamPollCredential', async () => {
     return pollCredentialLogin()
   })
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'steamStartCredentials',
     async (_event: unknown, ...args: unknown[]) => {
       const { username, password } = args[0] as {
@@ -192,7 +194,7 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
     }
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'steamSubmitGuard',
     async (_event: unknown, ...args: unknown[]) => {
       return submitSteamGuardCode(args[0] as string)
@@ -200,23 +202,23 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   )
 
   // Source: main.ts:918,922 — session/identity trio (REQ-34.4-02).
-  ipcMain.handle('getSteamUserInfo', async () => {
+  deps.ipc.handle('getSteamUserInfo', async () => {
     return SteamUser.getUserDetails()
   })
 
-  ipcMain.handle('getSteamSyncedAt', async () => {
+  deps.ipc.handle('getSteamSyncedAt', async () => {
     return steamSyncStore.get('syncedAt') ?? null
   })
 
   // Source: main.ts:939 — `addListener('logoutSteam', ...)`, the G-30-01 SEND
-  // channel. `ipcMain.on`, NEVER `ipcMain.handle`. `SteamUser.logout()` is
+  // channel. `deps.ipc.on`, NEVER `deps.ipc.handle`. `SteamUser.logout()` is
   // async (D-09 gap fix — clears the refresh token through the TokenStore
   // seam, which may RPC to Rust in the sidecar build); this listener is
   // fire-and-forget, so its promise must not be discarded silently
   // (`sidecar-dialog-reject-crashes`: an unguarded fire-and-forget rejection
   // can crash the sidecar). Mirrors `humble/ipc_handler.ts:121-125`'s
   // `humbleDisconnect` guard shape.
-  ipcMain.on('logoutSteam', () => {
+  deps.ipc.on('logoutSteam', () => {
     SteamUser.logout().catch((error) =>
       console.warn('[steamAuthFlowRegistration] logoutSteam failed:', error)
     )
@@ -228,7 +230,7 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   // malformed shape (non-'steam' store, non-string / empty key) BEFORE
   // delegating to steam-user, rather than forwarding garbage across. Never
   // logs the key value on either path.
-  ipcMain.handle(
+  deps.ipc.handle(
     'redeemSteamKey',
     async (_event: unknown, ...args: unknown[]) => {
       const payload = args[0] as { store?: unknown; key?: unknown }
@@ -248,7 +250,7 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
 
   // Source: main.ts:923-925 (REQ-34.4-05). Imported from steam/games.ts, NOT
   // steam/library.ts.
-  ipcMain.handle(
+  deps.ipc.handle(
     'getSteamInstallSize',
     async (_event: unknown, ...args: unknown[]) => {
       return getSteamInstallSize(args[0])
@@ -256,7 +258,7 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   )
 
   // ── macOS CrossOver bottle trio (REQ-34.4-03, main.ts:946-953) ────────────
-  ipcMain.handle(
+  deps.ipc.handle(
     'steamBottleProvision',
     async (_event: unknown, ...args: unknown[]) => {
       return provisionBottle(
@@ -266,7 +268,7 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
     }
   )
 
-  ipcMain.handle('isSteamBottleProvisioned', async () => {
+  deps.ipc.handle('isSteamBottleProvisioned', async () => {
     return isSteamBottleProvisioned()
   })
 
@@ -275,7 +277,7 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   // isBottleProvisioned() as a "better" source, and does NOT re-add a
   // `loggedIn` field (removed by 17-17/WR-02 — bottled-Steam auth stays
   // opaque, D-04).
-  ipcMain.handle('steamBottleStatus', async () => {
+  deps.ipc.handle('steamBottleStatus', async () => {
     return {
       provisioned: steamBottleConfigStore.get_nodefault('provisioned') ?? false,
       bottleName:
@@ -328,14 +330,14 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   // particular channel to keep casting, so closing one is a green change and
   // only DRIFT between the comment and the code is red.
   // ─────────────────────────────────────────────────────────────────────────
-  ipcMain.handle(
+  deps.ipc.handle(
     'isSteamBottleEligible',
     async (_event: unknown, ...args: unknown[]) => {
       return getSteamBottleEligibilityVerdict(managerDeps(), args[0])
     }
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'persistBottleWineVersion',
     async (_event: unknown, ...args: unknown[]) => {
       return persistInstallFormWineVersion(managerDeps(), args[0])
@@ -351,14 +353,14 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   // setSteamBridgeUserRoute
   // delegates to installFormIpc.ts's handleSetSteamBridgeUserRoute (the
   // validation core for T-51-30).
-  ipcMain.handle(
+  deps.ipc.handle(
     'getSteamBridgeRoute',
     async (_event: unknown, ...args: unknown[]) => {
       return getBridgeRouteVerdict(managerDeps(), args[0], args[1])
     }
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'setSteamBridgeUserRoute',
     async (_event: unknown, ...args: unknown[]) => {
       return handleSetSteamBridgeUserRoute(managerDeps(), args[0])
@@ -367,7 +369,7 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
 
   // quick-260821-le0 (Task 3): sweeps every recorded install root for a
   // Steam title in one action. Mirrored on the Electron runtime (main.ts).
-  ipcMain.handle(
+  deps.ipc.handle(
     'steamRemoveAllCopies',
     async (_event: unknown, ...args: unknown[]) => {
       return removeAllSteamInstallCopies(managerDeps(), args[0])
@@ -377,13 +379,13 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   // Phase 54: sidecar-only. Takes no renderer arguments, so there is nothing to
   // validate; it only reads Mac Steam's state and arms the one-shot guided
   // restore. It never logs on.
-  ipcMain.handle('steamGoOfflineRetry', async () =>
+  deps.ipc.handle('steamGoOfflineRetry', async () =>
     deps.steamProcesses.macSteamOffline.checkGuidedOfflineReady()
   )
 
   // Phase 58 Plan 31 (T-58-104): sidecar-only. Renderer input is untrusted, so
   // validate before any helper socket is opened.
-  ipcMain.handle(
+  deps.ipc.handle(
     'steamBridgeListFriends',
     async (_event: unknown, ...args: unknown[]) => {
       const appId = args[0]
@@ -393,7 +395,7 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
       return listBridgeFriends(appId)
     }
   )
-  ipcMain.handle(
+  deps.ipc.handle(
     'steamBridgeInviteFriend',
     async (_event: unknown, ...args: unknown[]) => {
       const [appId, ordinal] = args
@@ -413,16 +415,16 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   // 54-REVIEW WR-05: sidecar-only, no renderer arguments. The guided dialog's
   // Cancel/close: pays the goonline a ready-but-abandoned guided step owes.
   // A no-op unless that step is still armed. It never logs on.
-  ipcMain.handle('steamGoOfflineCancel', async () => {
+  deps.ipc.handle('steamGoOfflineCancel', async () => {
     deps.steamProcesses.macSteamOffline.payAbandonedGuidedOffline('cancel')
   })
 
   // ── Guided Steam-client install pair (REQ-34.4-04, main.ts:958-961) ───────
-  ipcMain.handle('steamClientSetupStart', async () => {
+  deps.ipc.handle('steamClientSetupStart', async () => {
     return startGuidedClientInstall(managerDeps())
   })
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'steamClientSetupRecheck',
     async (_event: unknown, ...args: unknown[]) => {
       return ensureSteamClientReady(managerDeps(), args[0] as string)

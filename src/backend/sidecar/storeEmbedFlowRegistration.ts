@@ -11,7 +11,7 @@
  * Channel kinds (cross-checked against `src/preload/api/storeEmbed.ts` — a send-versus-handle
  * mismatch fails 100% SILENTLY at runtime, no reject, no timeout, no console line):
  *
- *   invoke (ipcMain.handle, 9):
+ *   invoke (deps.ipc.handle, 9):
  *     - `storeEmbedOpen`           -> `createRustStoreEmbedSeam().open()`
  *     - `storeEmbedHide`           -> `createRustStoreEmbedSeam().hide()`
  *     - `storeEmbedShow`           -> `createRustStoreEmbedSeam().show()`
@@ -22,7 +22,7 @@
  *     - `storeEmbedReload`         -> `createRustStoreEmbedSeam().reload()` (Phase 40 Plan 07, D-22)
  *     - `storeEmbedNavigate`       -> `createRustStoreEmbedSeam().navigate()` (Phase 40 Plan 07, D-22)
  *
- *   send (ipcMain.on, 1):
+ *   send (deps.ipc.on, 1):
  *     - `storeEmbedSetBounds` -> `createRustStoreEmbedSeam().setBounds()`
  *
  * D-07-equivalent (fail-safe, never reject): every `handle`-kind body catches and RESOLVES a
@@ -63,7 +63,7 @@
  * store embed has no pre-existing Electron-era `ipc_handler.ts` of its own.
  */
 
-import { ipcMain } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
 import { requestRustInvoke } from './sidecarRpc'
 import {
   RUST_STORE_EMBED_OPEN,
@@ -216,7 +216,7 @@ function coerceNavState(channel: string, result: unknown): StoreEmbedNavEvent {
  * the F-34.4.2-19 defect class this file's header names: an empty array is this channel's
  * NORMAL, most frequent healthy answer -- the queue is empty whenever the user is not
  * navigating -- so a coerced `[]` would make a dead or mis-shaped Rust arm indistinguishable
- * from a working idle one, forever. The fail-safe boundary belongs at the `ipcMain.handle` arm
+ * from a working idle one, forever. The fail-safe boundary belongs at the `deps.ipc.handle` arm
  * (which logs first), not here.
  */
 function coerceNavEvents(
@@ -282,7 +282,7 @@ export function createRustStoreEmbedSeam(): StoreEmbedSeam {
     setBounds(bounds) {
       assertFiniteBounds(bounds)
       // Fire-and-forget from the interface's perspective (D-29) -- the returned promise is not
-      // part of the public contract, but IS awaited by this file's `ipcMain.on` arm below so a
+      // part of the public contract, but IS awaited by this file's `deps.ipc.on` arm below so a
       // malformed response is still observable rather than silently swallowed.
       return (async () => {
         const result = await requestRustInvoke(RUST_STORE_EMBED_SET_BOUNDS, [
@@ -373,8 +373,8 @@ export function createRustStoreEmbedSeam(): StoreEmbedSeam {
  * on any throw -- never rejects (fail-safe discipline, T-40-05-03).
  *
  * Uses `console.warn`, NOT the file logger, mirroring `humbleLoginFlowRegistration.ts`'s own
- * `ipcMain.handle` catch bodies (its `logSendFailure`/`logWarning` helper is reserved for
- * `ipcMain.on` send arms only, which have no return-value channel to report a failure through).
+ * `deps.ipc.handle` catch bodies (its `logSendFailure`/`logWarning` helper is reserved for
+ * `deps.ipc.on` send arms only, which have no return-value channel to report a failure through).
  * `logWarning` calls `heroicLogWriter.logWarning(...)`, and `heroicLogWriter` is not constructed
  * until `bootstrap.ts`'s `initLogger()` runs -- calling it earlier (or in a Jest suite that never
  * boots the sidecar) throws `TypeError: Cannot read properties of undefined`, which would turn a
@@ -423,13 +423,15 @@ async function safeNavState(
  * of the arms below could possibly be invoked (registration order, not request order, is what
  * matters here -- all arms are registered synchronously in this same function before it returns).
  */
-export function registerStoreEmbedFlows(): void {
+export function registerStoreEmbedFlows(deps: {
+  ipc: Pick<IpcRegistry, 'handle' | 'on'>
+}): void {
   const seam = createRustStoreEmbedSeam()
   setStoreEmbedSeam(seam)
 
   // ── invoke (9) ──────────────────────────────────────────────────────────────────────────────
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'storeEmbedOpen',
     async (_event: unknown, ...args: unknown[]) => {
       const [url, bounds, storeKey, homeUrl] = args as [
@@ -444,13 +446,13 @@ export function registerStoreEmbedFlows(): void {
     }
   )
 
-  ipcMain.handle('storeEmbedHide', async () =>
+  deps.ipc.handle('storeEmbedHide', async () =>
     safeStatus('storeEmbedHide', () => seam.hide())
   )
-  ipcMain.handle('storeEmbedShow', async () =>
+  deps.ipc.handle('storeEmbedShow', async () =>
     safeStatus('storeEmbedShow', () => seam.show())
   )
-  ipcMain.handle('storeEmbedClose', async () =>
+  deps.ipc.handle('storeEmbedClose', async () =>
     safeStatus('storeEmbedClose', () => seam.close())
   )
 
@@ -458,7 +460,7 @@ export function registerStoreEmbedFlows(): void {
   // failure has been logged, and never inside `coerceNavEvents` -- see that function's own doc
   // comment. The renderer's poller treats an empty drain as "nothing navigated", which is the
   // correct reading of a logged failure too: leave the last-known chrome state alone.
-  ipcMain.handle('storeEmbedTakeNavEvents', async () => {
+  deps.ipc.handle('storeEmbedTakeNavEvents', async () => {
     try {
       return await seam.takeNavEvents()
     } catch (error) {
@@ -470,16 +472,16 @@ export function registerStoreEmbedFlows(): void {
     }
   })
 
-  ipcMain.handle('storeEmbedBack', async () =>
+  deps.ipc.handle('storeEmbedBack', async () =>
     safeNavState('storeEmbedBack', () => seam.back())
   )
-  ipcMain.handle('storeEmbedForward', async () =>
+  deps.ipc.handle('storeEmbedForward', async () =>
     safeNavState('storeEmbedForward', () => seam.forward())
   )
-  ipcMain.handle('storeEmbedReload', async () =>
+  deps.ipc.handle('storeEmbedReload', async () =>
     safeNavState('storeEmbedReload', () => seam.reload())
   )
-  ipcMain.handle(
+  deps.ipc.handle(
     'storeEmbedNavigate',
     async (_event: unknown, ...args: unknown[]) => {
       const [url] = args as [string]
@@ -489,7 +491,7 @@ export function registerStoreEmbedFlows(): void {
 
   // ── send (1) ────────────────────────────────────────────────────────────────────────────────
 
-  ipcMain.on('storeEmbedSetBounds', (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.on('storeEmbedSetBounds', (_event: unknown, ...args: unknown[]) => {
     void (async () => {
       try {
         const [bounds] = args as [StoreEmbedBounds]

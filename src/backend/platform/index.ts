@@ -450,7 +450,7 @@ const fakeWebContents = {
   // Phase 34.5 Plan 08 (T-34.5-27): `processShortcut`'s `ctrl+shift+i` case
   // (`main.ts:1465`, `mainWindow?.webContents?.openDevTools()`) is reachable under the sidecar
   // via `shortcutsFlowRegistration.ts`'s `processShortcut` listener, which resolves
-  // `getMainWindow()` to this (truthy) fakeWebContents rather than `undefined` -- the missing
+  // the (removed) main-window accessor to this (truthy) fakeWebContents rather than `undefined` -- the missing
   // method threw `TypeError: mainWindow.webContents.openDevTools is not a function` the moment
   // that hotkey combination was ported. Missing today because devtools is a Chromium/Electron
   // renderer-chrome concept with no Tauri WebView equivalent: opening devtools for a Tauri
@@ -482,7 +482,7 @@ const fakeWindow = {
   // Phase 34.1 Plan 04 (Rule 1 bug fix): `handleExit()` (backend/utils.ts) is now
   // sidecar-reachable via the `quit` channel and unconditionally calls
   // `mainWindow?.hide()` after its pending-operations dialog branch -- since
-  // `getMainWindow()` resolves this (truthy) fakeWindow rather than `undefined`,
+  // the (removed) main-window accessor resolves this (truthy) fakeWindow rather than `undefined`,
   // the missing method threw `TypeError: mainWindow.hide is not a function` and
   // prevented `app.exit()` from ever being reached. A safe no-op is sufficient:
   // real window visibility is not a sidecar concern (there is no real window here).
@@ -490,7 +490,7 @@ const fakeWindow = {
   // Phase 34.5 Plan 08 (T-34.5-27): `processShortcut`'s `ctrl+r` case (`main.ts:1465`,
   // `mainWindow?.reload()`) is reachable under the sidecar via
   // `shortcutsFlowRegistration.ts`'s `processShortcut` listener, which resolves
-  // `getMainWindow()` to this (truthy) fakeWindow rather than `undefined` -- the missing method
+  // the (removed) main-window accessor to this (truthy) fakeWindow rather than `undefined` -- the missing method
   // threw `TypeError: mainWindow.reload is not a function` the moment that hotkey combination
   // was ported. Missing today because a renderer reload is a real-window shell concern with no
   // sidecar equivalent: routing it to an actual Tauri window reload would be new shell work, not

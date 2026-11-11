@@ -1014,7 +1014,7 @@ describe('A-05: the uncast-payload claim matches the real registrations', () => 
   function handlerBody(channel: string): string {
     const start = source.indexOf(`'${channel}'`)
     if (start === -1) throw new Error(`handler for ${channel} not found`)
-    const end = source.indexOf('ipcMain.', start + 1)
+    const end = source.indexOf('deps.ipc.', start + 1)
     return source.slice(start, end === -1 ? undefined : end)
   }
 

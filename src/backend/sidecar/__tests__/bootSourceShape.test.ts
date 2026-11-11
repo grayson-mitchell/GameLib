@@ -276,11 +276,9 @@ describe('66.1 MH-3: registrations take slices', () => {
    * A new zero-param registration fails here until someone decides which it is.
    */
   const ZERO_PARAM_REGISTRATIONS: Record<string, string> = {
-    registerStoreEmbedFlows:
-      'uncoupled: owns the store-embed seam and forwards to Rust, no store reads'
     // registerHumbleFlows left this list in 66.3-06: it now takes { config, notifications } for the
     // expiration digest (the bindHumbleStores holder it still reads is a plan 17 target).
-    // registerOAuthLoginFlows left it in 66.3-10 (now takes `{ ipc }`).
+    // registerOAuthLoginFlows and registerStoreEmbedFlows left it in 66.3-10 (each now takes `{ ipc }`).
     // registerDevEpicCookieSweepFlow, registerDepotHostFlows and registerHumbleLoginFlows left it in
     // 66.3-09: each now takes `{ ipc, ... }`. (HumbleLogin still reads the bindHumbleStores holder
     // through HumbleUser/HumbleLibrary; that coupling is a plan 17 target, not a registration param.)

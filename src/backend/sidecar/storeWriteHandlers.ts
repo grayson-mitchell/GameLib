@@ -3,7 +3,7 @@
  *
  * Before this file existed, `tauriTransport.ts`'s `snapshotSet()`/`snapshotDelete()`
  * emitted `send`-kind `storeSet`/`storeDelete` frames that `dispatchSend()`
- * (`sidecarRpc.ts`) looked up in `listenerRegistry`, found an empty array for, and
+ * (`sidecarRpc.ts`) looked up in the listener registry, found an empty array for, and
  * iterated zero times. No error, no log, no rejected promise — the write vanished with
  * ZERO observable signal (29-RESEARCH Pitfall 1), worse than every other unported
  * channel (which at least rejects with `UNPORTED_CHANNEL_MARKER`). Meanwhile the
@@ -22,7 +22,7 @@
 
 import Store from '../store_backend'
 
-import { ipcMain } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
 // Namespace import (not a named import) so this module's frontend-push call site is
 // the ONLY line in the file naming that function — see the header comment and the D-06
 // single-choke-point note above `applyStoreWrite`.
@@ -287,7 +287,7 @@ function pushStoreChanged(payload: StoreChangedPayload): void {
  * re-points it at the calling boot's registry (C-WR-1): a first-call-wins guard pinned the
  * first boot's registry, so a later boot in the same module registry wrote to a different
  * registry than its snapshot handlers read. The listeners are installed once because
- * `ipcMain.on` appends; installing them per boot would run every write against every
+ * `deps.ipc.on` appends; installing them per boot would run every write against every
  * boot's registry.
  */
 let currentRegistry: StoreRegistry | undefined
@@ -305,6 +305,7 @@ function requireCurrentRegistry(): StoreRegistry {
  * registry is the one writes resolve through.
  */
 export function registerStoreWriteHandlers(deps: {
+  ipc: Pick<IpcRegistry, 'on'>
   registry: StoreRegistry
 }): void {
   // "Already installed" is "a registry was already bound" — one module-level binding, not
@@ -327,7 +328,7 @@ export function registerStoreWriteHandlers(deps: {
   // `send`-kind (fire-and-forget) registrations: unlike an `invoke` channel there is no
   // response frame and no promise to reject on the renderer side — which is exactly why
   // the missing registration was invisible before this plan (see header comment).
-  ipcMain.on(
+  deps.ipc.on(
     STORE_SET_CHANNEL,
     (_event: unknown, storeName: unknown, key: unknown, value: unknown) => {
       if (typeof storeName !== 'string' || typeof key !== 'string') {
@@ -340,7 +341,7 @@ export function registerStoreWriteHandlers(deps: {
     }
   )
 
-  ipcMain.on(
+  deps.ipc.on(
     STORE_DELETE_CHANNEL,
     (_event: unknown, storeName: unknown, key: unknown) => {
       if (typeof storeName !== 'string' || typeof key !== 'string') {
@@ -358,7 +359,7 @@ export function registerStoreWriteHandlers(deps: {
   // the renderer-supplied `options` argument — it only no-ops for an already-registered
   // typed store, or constructs a permitted dynamic cache store using the hardcoded shape
   // below, ignoring `options` except to log a mismatch diagnostic.
-  ipcMain.on(
+  deps.ipc.on(
     STORE_NEW_CHANNEL,
     (_event: unknown, storeName: unknown, options: unknown) => {
       if (typeof storeName !== 'string') {

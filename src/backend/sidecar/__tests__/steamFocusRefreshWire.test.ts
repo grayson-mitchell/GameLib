@@ -160,7 +160,7 @@ jest.mock('../../launcher', () => ({
 import SteamLibraryManager from '../../storeManagers/steam/library'
 import { registerSteamFlows } from '../steamFlowRegistration'
 import { startRpcServer } from '../sidecarRpc'
-import { interimIpc, listenerRegistry } from '../../platform'
+import { createIpcRegistry } from '../ipcRegistry'
 import {
   createTestManagerDeps,
   createTestManagers,
@@ -172,7 +172,11 @@ const libraryManagerMap = {
 }
 
 /** The slices `registerSteamFlows` takes; the steam manager is the real singleton. */
+const ipc = createIpcRegistry()
 const steamFlowDeps = () => ({
+  ipc,
+  config: { getSettings: () => ({}) } as never,
+  appState: createTestHostServices().appState,
   managers: createTestManagers({ library: { steam: libraryManagerMap.steam } }),
   stores: createTestStores(),
   notifications: createTestHostServices().notifications,
@@ -223,7 +227,7 @@ function startTransport(): { input: PassThrough; frames: Frame[] } {
   const input = new PassThrough()
   const output = new PassThrough()
   const frames = collectFrames(output)
-  startRpcServer(input, output, interimIpc)
+  startRpcServer(input, output, ipc)
   return { input, frames }
 }
 
@@ -249,7 +253,7 @@ describe('T-C / T-D: shellWindowFocused consumer over the real transport', () =>
     // stack listeners across tests and multiply the call count this suite asserts on. Cleared
     // here rather than never re-registering, so each test still exercises the real
     // `registerSteamFlows()` registration path end to end.
-    listenerRegistry.delete(SHELL_WINDOW_FOCUSED)
+    ipc.removeAllListeners(SHELL_WINDOW_FOCUSED)
   })
 
   test('T-C: a real send frame on SHELL_WINDOW_FOCUSED calls refreshInstallState exactly once via dispatchSend/listenerRegistry', async () => {

@@ -731,8 +731,10 @@ describe('installFormIpc.ts', () => {
       )
       const stripped = stripSourceComments(sidecarSource)
 
-      expect(stripped).toMatch(/ipcMain\.handle\(\s*'getSteamBridgeRoute'/)
-      expect(stripped).toMatch(/ipcMain\.handle\(\s*'setSteamBridgeUserRoute'/)
+      expect(stripped).toMatch(/deps\.ipc\.handle\(\s*'getSteamBridgeRoute'/)
+      expect(stripped).toMatch(
+        /deps\.ipc\.handle\(\s*'setSteamBridgeUserRoute'/
+      )
     })
   })
 })

@@ -404,7 +404,7 @@ export function startRpcServer(
 /**
  * Backend->frontend push path. Wired onto platformApi's fake
  * `BrowserWindow.webContents.send` (via `createHostServices`) so the existing,
- * unmodified `backend/ipc.ts`'s `sendFrontendMessage` -> `getMainWindow()`
+ * unmodified `backend/ipc.ts`'s `sendFrontendMessage` -> the (removed) main-window accessor
  * chain produces a well-formed `SidecarNotification` frame headlessly.
  */
 export function pushFrontendMessage(channel: string, ...args: unknown[]): void {

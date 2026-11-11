@@ -48,7 +48,7 @@
  * Push channels (`progressUpdate`, `changedDMQueueInformation`) are NOT
  * registered here — they need no `ipcMain` registration at all. Both already
  * flow through the existing, unmodified `sendFrontendMessage` ->
- * `getMainWindow().webContents.send` -> platformApi's `fakeWebContents.send`
+ * the removed main-window `webContents.send` -> platformApi's `fakeWebContents.send`
  * -> `pushFrontendMessage` chain (`ipc.ts`, `platform/index.ts`,
  * `sidecarRpc.ts`) with zero `src-tauri` changes, and this module adds no
  * timer-based rate-limiting logic of its own on top of them — `depot.ts`'s

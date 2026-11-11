@@ -57,11 +57,7 @@
 // `../../game_config`'s `GameConfig.get(appName).getSettings()` would otherwise exercise real
 // config-file I/O for a fake `appName` -- factory-mocked so the tool-literal proof test (Describe
 // 5) controls exactly what `getSettings()` resolves to, without touching disk.
-jest.mock('../../game_config', () => ({
-  GameConfig: {
-    get: jest.fn()
-  }
-}))
+const mockGameConfigGet = jest.fn()
 
 // `../../tools`'s `DXVK.installRemove` is the curated import target for the three toggle
 // handlers -- factory-mocked so Describe 5 can prove each toggle forwards its own tool literal
@@ -106,17 +102,17 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 
 import { registerWineToolsFlows } from '../wineToolsFlowRegistration'
-import { handlerRegistry, listenerRegistry } from '../../platform'
+import { createIpcRegistry } from '../ipcRegistry'
+import { ipcViews } from '../../testUtils/ipcViews'
 import {
   createTestManagers,
   createTestServices,
   createTestStores
 } from 'backend/testUtils/testServices'
-import { GameConfig } from '../../game_config'
 import { createTools } from '../../tools'
 import { WinetricksQueue } from '../../tools/winetricksQueue'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
-import type { IpcHandler } from '../../platform'
+import type { IpcHandler } from '../ipcRegistry'
 
 // ── Registered ONCE for this whole file (not per-test) -- `listenerRegistry`/`handlerRegistry`
 // are module-scope maps; calling `registerWineToolsFlows()` more than once would stack a
@@ -124,8 +120,10 @@ import type { IpcHandler } from '../../platform'
 // mirroring `humbleLoginFlows.test.ts`'s own file-scope-once convention. ────────────────────────
 // The listener counts are captured either side of the call, so Describe 1 can assert exactly
 // which send channels THIS module registered rather than a hand-written list.
+const ipc = createIpcRegistry()
+const { handlerRegistry, listenerRegistry } = ipcViews(ipc)
 const listenerCountsBefore = new Map(
-  [...listenerRegistry].map(([channel, listeners]) => [
+  [...ipc.listenerMap()].map(([channel, listeners]) => [
     channel,
     listeners.length
   ])
@@ -134,6 +132,7 @@ const { DXVK, runWineCommandOnGame, runWineCommandForPendingInstall } =
   createTools({} as unknown as Parameters<typeof createTools>[0])
 const runWineCommand = jest.fn()
 registerWineToolsFlows({
+  ipc,
   managers: createTestManagers(),
   commandRunner: {
     runWineCommand: (...a: Parameters<typeof runWineCommand>) =>
@@ -147,9 +146,10 @@ registerWineToolsFlows({
   spawnAsync: jest.fn(),
   stores: createTestStores(),
   runner: createTestServices().runner,
-  ...createTestToolsSlices()
+  ...createTestToolsSlices(),
+  gameConfigs: { get: (...a: unknown[]) => mockGameConfigGet(...a) } as never
 })
-const registeredSendChannels = [...listenerRegistry]
+const registeredSendChannels = [...ipc.listenerMap()]
   .filter(
     ([channel, listeners]) =>
       listeners.length > (listenerCountsBefore.get(channel) ?? 0)
@@ -358,7 +358,7 @@ describe("tool-literal proof — toggleVKD3D forwards the literal 'vkd3d', not '
       marker: 'fake-game-settings-for-toggleVKD3D-test'
     }
     const mockGetSettings = jest.fn().mockResolvedValue(fakeGameSettings)
-    ;(GameConfig.get as jest.Mock).mockReturnValue({
+    mockGameConfigGet.mockReturnValue({
       getSettings: mockGetSettings
     })
 
@@ -373,7 +373,7 @@ describe("tool-literal proof — toggleVKD3D forwards the literal 'vkd3d', not '
 
     await handler({} as never, { appName: 'test-app', action: 'backup' })
 
-    expect(GameConfig.get).toHaveBeenCalledWith('test-app')
+    expect(mockGameConfigGet).toHaveBeenCalledWith('test-app')
     expect(mockGetSettings).toHaveBeenCalledTimes(1)
     expect(mockInstallRemove).toHaveBeenCalledTimes(1)
 
@@ -633,17 +633,6 @@ describe('runWineCommandForGame Windows-branch shell removal (T-34.5-C6-49-03, P
     const runWineCommandOnGameMock = jest.fn()
 
     jest.isolateModules(() => {
-      jest.doMock('../../config', () => ({
-        GlobalConfig: {
-          get: jest.fn(() => ({
-            getAlternativeWine: jest.fn(),
-            getSettings: jest.fn(() => ({}))
-          }))
-        }
-      }))
-      jest.doMock('../../game_config', () => ({
-        GameConfig: { get: jest.fn() }
-      }))
       jest.doMock('../../wine/manager/utils', () => ({
         installWineVersion: jest.fn(),
         removeWineVersion: jest.fn(),
@@ -689,10 +678,14 @@ describe('runWineCommandForGame Windows-branch shell removal (T-34.5-C6-49-03, P
       const {
         registerWineToolsFlows: isolatedRegister
       } = require('../wineToolsFlowRegistration')
-      const {
-        handlerRegistry: isolatedHandlerRegistry
-      } = require('../../platform')
+      const isolatedIpc = createIpcRegistry()
       isolatedRegister({
+        ipc: isolatedIpc,
+        config: {
+          getAlternativeWine: jest.fn(),
+          getSettings: jest.fn(() => ({}))
+        },
+        gameConfigs: { get: jest.fn() },
         managers: {},
         commandRunner: { runWineCommand: jest.fn() },
         launcher: {
@@ -702,7 +695,9 @@ describe('runWineCommandForGame Windows-branch shell removal (T-34.5-C6-49-03, P
         },
         spawnAsync: spawnAsyncMock
       })
-      isolatedHandler = isolatedHandlerRegistry.get('runWineCommandForGame')
+      isolatedHandler = isolatedIpc.getHandler(
+        'runWineCommandForGame'
+      ) as IpcHandler
       /* eslint-enable @typescript-eslint/no-require-imports */
     })
 

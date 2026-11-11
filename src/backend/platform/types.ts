@@ -450,7 +450,7 @@ export interface KeyboardInputEvent extends ElectronInputEventBase {
 //
 // Branded for the same reason as SECTION 1: `openDialog.ts` reads nothing off it,
 // and a structural declaration would let an unrelated object drift in. Callers that
-// hold a real window already reach it through `getMainWindow()`, which is typed by
+// hold a real window already reach it through the (removed) main-window accessor, which is typed by
 // `main_window.ts`, not by this name.
 export interface BrowserWindow {
   /** Opaque brand. Not a real electron field; see SECTION 7. */

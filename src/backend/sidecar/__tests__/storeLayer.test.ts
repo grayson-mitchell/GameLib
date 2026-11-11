@@ -78,8 +78,7 @@ jest.mock('../../storeManagers/steam/user')
 import { TypeCheckedStoreBackend } from '../../typed_store'
 import { createStores } from '../../stores/createStores'
 import { createStoreRegistry } from '../../stores/storeRegistry'
-import { listenerRegistry } from '../../platform'
-import type { IpcRegistry } from '../ipcRegistry'
+import { createIpcRegistry, type IpcRegistry } from '../ipcRegistry'
 import CacheStore from '../../cache'
 import { BOOT_SET_STORES, STORE_ALLOWLIST } from 'common/types/storePolicy'
 import {
@@ -391,7 +390,7 @@ describe('allow-list', () => {
 
     try {
       // Idempotent; installs the real `pushStoreChanged` as the store-change notifier.
-      registerStoreWriteHandlers({ registry })
+      registerStoreWriteHandlers({ ipc: createIpcRegistry(), registry })
 
       probeSteamConfig.set('refreshToken', 'leak-canary-refresh-token')
       probeHumbleConfig.set('csrfToken', 'leak-canary-csrf')
@@ -504,7 +503,9 @@ describe('C-WR-1: two boots in one module registry', () => {
     })
     registerHandlers({ log: createCaptureLog(), services: services2 })
 
-    const listeners = listenerRegistry.get(STORE_SET_CHANNEL) ?? []
+    // The listeners install once, on the FIRST boot's injected registry (the latch is module state).
+    const listeners =
+      bootServices.host.ipc.listenerMap().get(STORE_SET_CHANNEL) ?? []
     // The write listeners install once; a second boot must not stack another set.
     expect(listeners).toHaveLength(1)
     const overrides = { 'c-wr-1': { title: 'second boot' } }

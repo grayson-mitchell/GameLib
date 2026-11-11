@@ -11,7 +11,7 @@
  *     calls `sendFrontendMessage('pushGameToLibrary', gameInfo)` once per
  *     resolved game (backend/storeManagers/steam/library.ts) — that
  *     existing call is what reaches the renderer as a `SidecarNotification`
- *     once `backend/ipc.ts`'s `sendFrontendMessage` -> `getMainWindow()` ->
+ *     once `backend/ipc.ts`'s `sendFrontendMessage` -> the (removed) main-window accessor ->
  *     platformApi's fake `BrowserWindow.webContents.send` is wired to the
  *     RPC transport (27-02). Nothing here re-implements that push.
  *   - `launch` -> runner-aware dispatch through the managers library (GAP
@@ -77,8 +77,9 @@
 import { isStore, storeCapabilities } from 'common/storeCapabilities'
 import { noteRefreshTrigger } from '../storeManagers/steam/authTrigger'
 
-import { app, ipcMain } from '../platform'
-import { GlobalConfig } from '../config'
+import type { IpcRegistry } from './ipcRegistry'
+import type { GlobalConfigSlice } from '../config'
+import type { AppState } from '../host/appState'
 import { isMac } from '../constants/environment'
 // launchEventCallback: the real Wine/GameConfig/DownloadManager pipeline
 // every non-Steam runner's launch must go through (GAP CYCLE 6, 34.5-46).
@@ -353,9 +354,9 @@ async function handleLaunch(
     // "Hide GameLib for every launch" (quick 261108-kpc). Done here, not inside
     // dispatchSteamLaunch: protocol.ts also calls that and owns its own (shortcut) decision.
     // macOS restores from the Dock, so it needs no tray icon; elsewhere the tray is the way back.
-    const { minimizeOnLaunch, noTrayIcon } = GlobalConfig.get().getSettings()
+    const { minimizeOnLaunch, noTrayIcon } = deps.config.getSettings()
     if (minimizeOnLaunch && (isMac || !noTrayIcon)) {
-      app.hideMainWindow()
+      deps.appState.hideMainWindow()
     }
     const launched = await dispatchSteamLaunch(
       {
@@ -400,15 +401,18 @@ async function handleLaunch(
  * registration onto the handler registry happens.
  */
 export type SteamFlowDeps = Pick<BootServices, 'managers' | 'stores'> & {
+  ipc: Pick<IpcRegistry, 'handle' | 'on'>
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+  appState: Pick<AppState, 'hideMainWindow'>
   notifications: Pick<BootServices['host']['notifications'], 'show'>
   launcher: Pick<BootServices['launcher'], 'launchEventCallback'>
 }
 
 export function registerSteamFlows(deps: SteamFlowDeps): void {
-  ipcMain.handle('refreshLibrary', (event: unknown, ...args: unknown[]) =>
+  deps.ipc.handle('refreshLibrary', (event: unknown, ...args: unknown[]) =>
     handleRefreshLibrary(deps, event, ...args)
   )
-  ipcMain.handle('launch', (event: unknown, ...args: unknown[]) =>
+  deps.ipc.handle('launch', (event: unknown, ...args: unknown[]) =>
     handleLaunch(deps, event, ...args)
   )
 
@@ -444,7 +448,7 @@ export function registerSteamFlows(deps: SteamFlowDeps): void {
   // produces nothing at all — no error, no timeout, no log line — which is
   // why `steamFocusRefreshWire.test.ts` pins this listener's channel name
   // to the exact string literal the Rust producer writes.
-  ipcMain.on(SHELL_WINDOW_FOCUSED, () => {
+  deps.ipc.on(SHELL_WINDOW_FOCUSED, () => {
     deps.managers.library['steam']
       ?.refreshInstallState?.()
       .catch((error) =>

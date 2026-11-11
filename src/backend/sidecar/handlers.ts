@@ -145,12 +145,15 @@ export function registerHandlers(deps: {
   ipc.handle('health', async () => 'ok')
 
   registerSteamFlows({
+    ipc,
+    config: deps.services.config,
+    appState: deps.services.host.appState,
     managers: deps.services.managers,
     stores: deps.services.stores,
     launcher: deps.services.launcher,
     notifications: deps.services.host.notifications
   })
-  registerSteamAuthFlows(deps.services)
+  registerSteamAuthFlows({ ...deps.services, ipc })
   registerEngineFlows({
     ipc,
     managers: deps.services.managers,
@@ -326,6 +329,7 @@ export function registerHandlers(deps: {
     notifications: deps.services.host.notifications
   })
   registerWineToolsFlows({
+    ipc,
     managers: deps.services.managers,
     commandRunner: deps.services.commandRunner,
     launcher: deps.services.launcher,
@@ -365,7 +369,7 @@ export function registerHandlers(deps: {
   // rustInvoke-backed store-embed seam (setStoreEmbedSeam) — no ordering constraint relative to
   // the other calls above (own channel names, no cross-module runtime dependency at registration
   // time), placed alongside them, before `registerStoreWriteHandlers()`.
-  registerStoreEmbedFlows()
+  registerStoreEmbedFlows({ ipc })
   // Phase 73 Plan 11 (D-03, D-06): the shell-originated channels the Rust depot job uses for CDN
   // tokens, manifest request codes and progress events — no ordering constraint relative to the
   // other calls above (own channel names, backed by a Map in jobRegistry.ts), placed before
@@ -376,7 +380,7 @@ export function registerHandlers(deps: {
   // store — hence AFTER registerStoreWriteHandlers(). These are `send`-kind (fire-and-forget)
   // registrations, so unlike an `invoke` channel there is no response frame and no promise
   // to reject, which is exactly why the missing registration was invisible before this phase.
-  registerStoreWriteHandlers({ registry: deps.services.storeRegistry })
+  registerStoreWriteHandlers({ ipc, registry: deps.services.storeRegistry })
 
   // D-03: the eager payload is EXACTLY the declared boot set — not the
   // unbounded lazy tier (T-29-16, index.tsx's hydration timeout). D-08: this

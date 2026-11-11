@@ -24,7 +24,7 @@
  * `moveInstall` (34.6-06).
  *
  * Phase 45 Plan 02 (D-11 promote, 2026-10-10): the send-kind `winetricksInstall` channel
- * (`ipcMain.on`) is RETIRED outright — deleted, not kind-swapped. `winetricksApply` (below) is now
+ * (`deps.ipc.on`) is RETIRED outright — deleted, not kind-swapped. `winetricksApply` (below) is now
  * the only renderer-reachable install path; see `winetricksInstallPathInvariant.test.ts` for the
  * source-level proof. `logSendFailure` and the `logSendHandlerReached` import both became unused
  * by this deletion and are removed with it (`sendChannelObservable.ts` keeps exporting the latter
@@ -35,7 +35,7 @@
  * own `<interfaces>` block; Phase 45 Plan 01, 2026-10-10, adds the winetricks-queue trio; Phase 45
  * Plan 02, 2026-10-10, retires `winetricksInstall`):
  *
- *   invoke (ipcMain.handle, 15):
+ *   invoke (deps.ipc.handle, 15):
  *     - `runWineCommand`         -> main.ts:766
  *     - `getAlternativeWine`     -> main.ts:973
  *     - `wine.isValidVersion`    -> main.ts:1532
@@ -52,7 +52,7 @@
  *     - `winetricksQueueState`      -> tools/winetricksQueue.ts (Phase 45 Plan 01, D-11)
  *     - `winetricksCancelRemaining` -> tools/winetricksQueue.ts (Phase 45 Plan 01, D-11)
  *
- *   send (ipcMain.on, 0): none — `winetricksInstall` retired, Phase 45 Plan 02 (D-11 promote).
+ *   send (deps.ipc.on, 0): none — `winetricksInstall` retired, Phase 45 Plan 02 (D-11 promote).
  *
  * Curated-import rule (inherited from every prior slice's D-08 -> D-09 -> D-04 -> D-14 -> D-02
  * lineage): the cluster plan that fills this module in imports the underlying logic modules
@@ -64,9 +64,7 @@
  */
 
 import type { AppState } from '../host/appState'
-import { ipcMain } from '../platform'
-import { GlobalConfig } from '../config'
-import { GameConfig } from '../game_config'
+import type { IpcRegistry } from './ipcRegistry'
 import {
   installWineVersion as installWineVersionForRelease,
   removeWineVersion as removeWineVersionForRelease,
@@ -103,6 +101,7 @@ import type {
 
 /** Narrow slice (66.1 D-01): exactly the services the Wine-tools handlers call. */
 export interface WineToolsFlowDeps extends NotifyDeps, DialogBoxDeps {
+  ipc: Pick<IpcRegistry, 'handle'>
   appState: Pick<AppState, 'raiseMainWindow' | 'raiseMainWindowForInAppDialog'>
   config: Pick<
     GlobalConfigSlice,
@@ -129,8 +128,8 @@ export interface WineToolsFlowDeps extends NotifyDeps, DialogBoxDeps {
  *
  * Idempotence guard (Rule 1 fix, mirroring `runnerAuthFlowRegistration.ts`'s/
  * `shortcutsFlowRegistration.ts`'s own `let registered = false` guard): kept as harmless defence
- * even though the one `ipcMain.on` listener that originally motivated it (`winetricksInstall`) is
- * now gone — `ipcMain.handle` is naturally idempotent (`Map.set` replaces the existing entry), but
+ * even though the one `deps.ipc.on` listener that originally motivated it (`winetricksInstall`) is
+ * now gone — `deps.ipc.handle` is naturally idempotent (`Map.set` replaces the existing entry), but
  * removing a guard that costs nothing and protects against a future send-kind addition is not this
  * plan's job to do.
  */
@@ -168,7 +167,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
   //
   // Pass-through only: no wine-environment reconstruction, no platform branch, no retry logic.
   // `runWineCommand` itself owns all of that (D-13, below).
-  ipcMain.handle(
+  deps.ipc.handle(
     'runWineCommand',
     async (_event: unknown, ...args: unknown[]) => {
       return deps.commandRunner.runWineCommand(args[0] as WineCommandArgs)
@@ -176,14 +175,14 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
   )
 
   // ── Wine probe pair (main.ts:973, main.ts:1532) ─────────────────────────────────────────────
-  ipcMain.handle('getAlternativeWine', async () => {
-    return GlobalConfig.get().getAlternativeWine({
+  deps.ipc.handle('getAlternativeWine', async () => {
+    return deps.config.getAlternativeWine({
       wineDownloaderInfoStore: deps.stores.wineManager.wineDownloaderInfoStore,
       runner: deps.runner
     })
   })
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'wine.isValidVersion',
     async (_event: unknown, ...args: unknown[]) => {
       return deps.launcher.validWine(args[0] as WineInstallation)
@@ -197,7 +196,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
   // `refreshWineVersionInfo`'s catch. Never imports `wine/manager/ipc_handler.ts` itself (that
   // file double-registers these same channels onto Electron's real `ipcMain`); the underlying
   // logic is imported directly from `wine/manager/utils.ts`.
-  ipcMain.handle(
+  deps.ipc.handle(
     'installWineVersion',
     async (_event: unknown, ...args: unknown[]) => {
       const release = args[0] as WineVersionInfo
@@ -243,7 +242,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
 
   // Source: wine/manager/ipc_handler.ts:46 — the swallow-and-return-undefined shape on both the
   // success and catch paths is inherited behaviour, kept as-is (not this port's decision to make).
-  ipcMain.handle(
+  deps.ipc.handle(
     'refreshWineVersionInfo',
     async (_event: unknown, ...args: unknown[]) => {
       const fetch = args[0] as boolean | undefined
@@ -257,7 +256,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
     }
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'removeWineVersion',
     async (_event: unknown, ...args: unknown[]) => {
       const release = args[0] as WineVersionInfo
@@ -280,7 +279,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
 
   // ── DXVK/VKD3D toggle trio (main.ts:999,1007,1015) — the cluster's final 3 channels ─────────
   //
-  // Ported verbatim: unpack `{ appName, action }`, resolve `GameConfig.get(appName).getSettings()`,
+  // Ported verbatim: unpack `{ appName, action }`, resolve the per-game config's `getSettings()`,
   // and delegate to `DXVK.installRemove(gameSettings, <tool>, action)`. `DXVK` is imported by name
   // from `../tools` (never `tools/ipc_handler.ts`, which also registers `runWineCommandForGame` and
   // the DEFERRED winetricks trio).
@@ -293,23 +292,23 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
   // `platformApi.dialog.showErrorBox`/`showMessageBox`, both async and non-throwing by
   // construction (each has its own internal try/catch that never rethrows). No fix was built here
   // — the existing wiring already satisfies the concern this plan set out to verify.
-  ipcMain.handle('toggleDXVK', async (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.handle('toggleDXVK', async (_event: unknown, ...args: unknown[]) => {
     const { appName, action } = args[0] as {
       appName: string
       action: 'backup' | 'restore'
     }
-    const gameSettings = await GameConfig.get(appName).getSettings()
+    const gameSettings = await deps.gameConfigs.get(appName).getSettings()
     return DXVK.installRemove(gameSettings, 'dxvk', action)
   })
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'toggleDXVKNVAPI',
     async (_event: unknown, ...args: unknown[]) => {
       const { appName, action } = args[0] as {
         appName: string
         action: 'backup' | 'restore'
       }
-      const gameSettings = await GameConfig.get(appName).getSettings()
+      const gameSettings = await deps.gameConfigs.get(appName).getSettings()
       return DXVK.installRemove(gameSettings, 'dxvk-nvapi', action)
     }
   )
@@ -319,14 +318,17 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
   // registered unconditionally here too, and the platform decision stays exactly where upstream
   // Heroic made it. No `process.platform`/`isMac`/`isLinux` branch is introduced in this
   // registration module — that would duplicate and eventually diverge from the guard.
-  ipcMain.handle('toggleVKD3D', async (_event: unknown, ...args: unknown[]) => {
-    const { appName, action } = args[0] as {
-      appName: string
-      action: 'backup' | 'restore'
+  deps.ipc.handle(
+    'toggleVKD3D',
+    async (_event: unknown, ...args: unknown[]) => {
+      const { appName, action } = args[0] as {
+        appName: string
+        action: 'backup' | 'restore'
+      }
+      const gameSettings = await deps.gameConfigs.get(appName).getSettings()
+      return DXVK.installRemove(gameSettings, 'vkd3d', action)
     }
-    const gameSettings = await GameConfig.get(appName).getSettings()
-    return DXVK.installRemove(gameSettings, 'vkd3d', action)
-  })
+  )
 
   // D-13: the platform guards inherited from `tools/index.ts` — `tool.os !== process.platform`
   // (:73), the `-DXMT` flag (:219), macOS permitting only `dxvk` (VKD3D already excluded, :228),
@@ -342,7 +344,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
   // support via a dedicated `macEnvs` branch. No platform-decline branch is ported here. An empty
   // component list returned by `listAvailable`/`listInstalled` is an ACCEPTABLE RESULT (data-
   // dependent — e.g. no winetricks cache yet), never a platform decline this registration decides.
-  ipcMain.handle(
+  deps.ipc.handle(
     'winetricksAvailable',
     async (_event: unknown, ...args: unknown[]) => {
       const runner = args[0] as Runner
@@ -357,7 +359,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
     }
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'winetricksInstalled',
     async (_event: unknown, ...args: unknown[]) => {
       const runner = args[0] as Runner
@@ -373,7 +375,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
   // mitigation) and the sequential install loop continues detached inside `winetricksQueue.ts`,
   // never through this registration module. (The send-kind `winetricksInstall` channel this
   // comment used to contrast against was retired by Phase 45 Plan 02, D-11 promote.)
-  ipcMain.handle(
+  deps.ipc.handle(
     'winetricksApply',
     async (_event: unknown, ...args: unknown[]) => {
       const runner = args[0] as Runner
@@ -383,7 +385,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
     }
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'winetricksQueueState',
     (_event: unknown, ...args: unknown[]) => {
       const runner = args[0] as Runner
@@ -392,7 +394,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
     }
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'winetricksCancelRemaining',
     (_event: unknown, ...args: unknown[]) => {
       const runner = args[0] as Runner
@@ -416,7 +418,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
   // `runWineCommand` path already does. T-34.6-34 (accepted residual): this Windows branch is
   // UNVERIFIED on real Windows hardware — every gate this project runs is macOS-only.
   // CR-04: `pendingInstall` reaches a sideload-only path whose bottle name is computed server-side.
-  ipcMain.handle(
+  deps.ipc.handle(
     'runWineCommandForGame',
     async (_event: unknown, ...args: unknown[]) => {
       const { appName, commandParts, runner, wait, pendingInstall } =
