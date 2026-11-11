@@ -760,7 +760,7 @@ The D-14 Rust-overlap exemption table stays empty unless Phase 75 is re-scoped. 
 **Split 2026-11-11 (D-66.3-04):** 66.3 keeps the platform shim dissolution, config injection, the D-05 process-wide owners and the C-WR-2 static holders (item 1 above), and ends with every site it owns at zero and the `moduleState` ceilings lowered. Item 2 (the long tail), the census-to-test flip and the D-17 live smoke move to Phase 66.4.
 **Requirements**: TBD
 **Depends on:** Phase 66.2
-**Plans:** 15/18 plans executed
+**Plans:** 16/18 plans executed
 
 Plans:
 
@@ -779,7 +779,7 @@ Plans:
 - [x] 66.3-13-PLAN.md — Steam session cluster and sign-in probe owners (wave 13)
 - [x] 66.3-14-PLAN.md — anonymous CM client, bridge helper registry, frozen shim-coverage tables (wave 14)
 - [x] 66.3-15-PLAN.md — bindBottleStores and bindDxmtStores holders deleted (wave 15)
-- [ ] 66.3-16-PLAN.md — SteamUser static class to one boot instance, bindStores deleted (wave 16)
+- [x] 66.3-16-PLAN.md — SteamUser static class to one boot instance, bindStores deleted (wave 16)
 - [ ] 66.3-17-PLAN.md — Humble owners, SteamGridDB secret holder, MH-3 rows deleted (wave 17)
 - [ ] 66.3-18-PLAN.md — end state: platform/ deleted, config statics deleted, diPhaseGates 66.3 block, README hand-off to 66.4 (wave 18)
 
