@@ -1,99 +1,76 @@
-import { z } from 'zod'
-
-import { hasExecutable } from '../../os/path'
+import { logWarning, LogPrefix } from 'backend/logger'
 import { genericSpawnWrapper, type ProbeDeps } from '../../os/processes'
 
 import type { PartialGpuInfo } from './index'
 
 /**
- * Schema describing the return type of {@link app.getGPUInfo}
- * NOTE: The actual returned value contains a lot more properties that were
- * omitted for clarity here
+ * Parses the output of `lspci -mm -v -n -k` into GPU entries, in lspci's bus
+ * order. Records are separated by blank lines; non-GPU records and records
+ * with malformed ids are dropped.
  */
-const GPUInfoSchema = z.object({
-  gpuDevice: z.array(
-    z.object({
-      deviceId: z.number(),
-      vendorId: z.number()
-    })
-  )
-})
-
-/**
- * Strategy here: Use Electron's {@link app.getGPUInfo} to get the device and
- * vendor IDs of all GPUs in the system. If possible, use `lspci` to then get
- * the subvendor and subdevice IDs and the current kernel driver in use
- */
-async function getGpuInfo_linux(deps: ProbeDeps): Promise<PartialGpuInfo[]> {
+function parseLspciGpus(stdout: string): PartialGpuInfo[] {
+  // PCI display classes: VGA compatible, 3D controller, display controller (other)
+  const gpuClasses = ['0300', '0302', '0380']
+  const isHex4 = (value: string) => /^[0-9a-f]{4}$/i.test(value)
   const gpus: PartialGpuInfo[] = []
 
-  // Electron's app.getGPUInfo has no Tauri counterpart: the stand-in returned {} (so the parse
-  // below throws, as it did), and nothing else supplies GPU devices here.
-  const gpuInfo: unknown = {}
-  const verifiedInfo = GPUInfoSchema.parse(gpuInfo)
-  const hasLspci = await hasExecutable('lspci')
+  for (const record of stdout.split(/\r?\n\s*\r?\n/)) {
+    const fields = new Map<string, string>()
+    for (const line of record.split(/\r?\n/)) {
+      const idx = line.indexOf(':')
+      if (idx < 0) continue
+      fields.set(line.slice(0, idx).trim(), line.slice(idx + 1).trim())
+    }
 
-  for (const gpu of verifiedInfo.gpuDevice) {
-    gpus.push({
-      // Electron gives us these IDs as numbers, most other use cases need
-      // them as hexadecimal strings
-      deviceId: gpu.deviceId.toString(16).padStart(4, '0'),
-      vendorId: gpu.vendorId.toString(16).padStart(4, '0'),
-      ...(hasLspci ? await getLspciInfo(deps, gpu.deviceId, gpu.vendorId) : {})
-    })
+    const cls = fields.get('Class')?.toLowerCase()
+    const vendor = fields.get('Vendor')
+    const device = fields.get('Device')
+    if (!cls || !gpuClasses.includes(cls)) continue
+    if (!vendor || !device || !isHex4(vendor) || !isHex4(device)) continue
+
+    const gpu: PartialGpuInfo = {
+      vendorId: vendor.toLowerCase(),
+      deviceId: device.toLowerCase()
+    }
+    const svendor = fields.get('SVendor')
+    const sdevice = fields.get('SDevice')
+    const driver = fields.get('Driver')
+    if (svendor && isHex4(svendor)) gpu.subvendorId = svendor.toLowerCase()
+    if (sdevice && isHex4(sdevice)) gpu.subdeviceId = sdevice.toLowerCase()
+    if (driver) gpu.driverVersion = driver
+    gpus.push(gpu)
   }
 
   return gpus
 }
 
 /**
- * Uses `lspci` to find out the device's (1) subvendor id, (2) sub-device id
- * and (3) kernel driver in use
- * @param deviceId The device ID returned by {@link app.getGPUInfo}
- * @param vendorId The vendor ID returned by {@link app.getGPUInfo}
+ * Strategy: one `lspci` call lists every display-class device with its
+ * subsystem ids and kernel driver. Any failure (lspci missing, non-zero exit,
+ * timeout) yields [] with a warning; this probe never throws.
  */
-async function getLspciInfo(
-  deps: ProbeDeps,
-  deviceId: number,
-  vendorId: number
-): Promise<{
-  subvendorId?: string
-  subdeviceId?: string
-  driverVersion?: string
-}> {
-  const { stdout } = await genericSpawnWrapper(deps, 'lspci', [
-    '-d', // work on the following device:
-    `${vendorId.toString(16)}:${deviceId.toString(16)}`,
-    '-mm', // machine-readable format
-    '-k', // display kernel driver in use
-    '-v', // be verbose (actually prints the kernel driver and PCI subsystem IDs)
-    '-n' // only output numeric values (we'll get the names ourselves later)
-  ])
-
-  /*
-  Sample output:
-Slot:   04:00.0
-Class:  0300
-Vendor: 1002
-Device: 163f
-SVendor:        1002
-SDevice:        0123
-Rev:    ae
-ProgIf: 00
-Driver: amdgpu
-Module: amdgpu
-
-  */
-
-  const match = stdout.match(
-    /^SVendor:\t(.{4})\n^SDevice:\t(.{4})[\S\s]*^Driver:\t(\S*)/m
-  )
-  if (!match) return {}
-  return {
-    subvendorId: match[1],
-    subdeviceId: match[2],
-    driverVersion: match[3]
+async function getGpuInfo_linux(deps: ProbeDeps): Promise<PartialGpuInfo[]> {
+  try {
+    const { stdout, exitCode, signalName } = await genericSpawnWrapper(
+      deps,
+      'lspci',
+      ['-mm', '-v', '-n', '-k']
+    )
+    if (exitCode !== 0) {
+      logWarning(
+        ['Could not list GPUs: lspci exited with', exitCode, signalName],
+        LogPrefix.Backend
+      )
+      return []
+    }
+    return parseLspciGpus(stdout)
+  } catch (error) {
+    logWarning(
+      ['Could not list GPUs: lspci missing or failed:', String(error)],
+      LogPrefix.Backend
+    )
+    return []
   }
 }
 
-export { getGpuInfo_linux }
+export { getGpuInfo_linux, parseLspciGpus }
