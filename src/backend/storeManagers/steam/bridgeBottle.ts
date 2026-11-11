@@ -18,7 +18,7 @@ import {
 import {
   DEFAULT_BRIDGE_BOTTLE_NAME,
   getBottleSteamappsDir,
-  resolveCrossoverWine
+  type SteamBottle
 } from './bottle'
 import { NUMERIC_APP_ID } from './gameConstants'
 
@@ -185,7 +185,10 @@ export function findBridgeInstallBottle(appId: string): string | null {
  */
 /** The slice the bridge-bottle settings resolvers read (66.3-08, D-66.3-03). */
 /** Only the GameSettings view of the global settings is read, so the engine services' `globalGameSettings` satisfies it. */
-export type BridgeBottleDeps = { config: { getSettings(): GameSettings } }
+export type BridgeBottleDeps = {
+  config: { getSettings(): GameSettings }
+  steamBottle: Pick<SteamBottle, 'resolveCrossoverWine'>
+}
 
 function stockBridgeBottleSettings(
   deps: BridgeBottleDeps,
@@ -202,8 +205,9 @@ function stockBridgeBottleSettings(
     ...globalSettings,
     wineCrossoverBottle: resolved,
     wineVersion:
-      resolveCrossoverWine('CrossOver (bridge bottle runtime)') ??
-      globalSettings.wineVersion
+      deps.steamBottle.resolveCrossoverWine(
+        'CrossOver (bridge bottle runtime)'
+      ) ?? globalSettings.wineVersion
   }
 }
 

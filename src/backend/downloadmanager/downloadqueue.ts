@@ -1,3 +1,4 @@
+import type { BottleSettingsDeps } from 'backend/storeManagers/steam/bottle'
 import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
 import { getFileSize, removeFolder, sendGameStatusUpdate } from '../utils'
 import {
@@ -43,6 +44,8 @@ export interface DownloadQueueDeps extends DialogBoxDeps, NotifyDeps {
   onlineMonitor: Pick<OnlineMonitor, 'isOnline' | 'onConnectivityChange'>
   /** The boot-owned library map and per-session game maps the steam queue-head checks read (D-66.3-13). */
   steamSession: Pick<SteamSessionServices, 'libraryState' | 'gameSession'>
+  /** The boot-owned Steam bottle helpers the cancelled-install cleanup resolves the bottle root through (D-66.3-15). */
+  steamBottle: BottleSettingsDeps['steamBottle']
 }
 
 export function createDownloadQueue(deps: DownloadQueueDeps) {
@@ -71,7 +74,8 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
     stores: { steam: deps.stores.steam },
     config: deps.config,
     notifications: deps.notifications,
-    steamSession: deps.steamSession
+    steamSession: deps.steamSession,
+    steamBottle: deps.steamBottle
   }
 
   function onConnectivity(status: ConnectivityStatus) {

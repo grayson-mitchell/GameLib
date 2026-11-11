@@ -30,7 +30,7 @@ import {
   startBottleProcessMonitor,
   stopBottleProcessMonitor
 } from '../bottleProcessMonitor'
-import { bindBottleStores, getBottleSteamExePath } from '../bottle'
+import { createSteamBottle, getBottleSteamExePath } from '../bottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import {
   tellBottledSteamToLaunch,
@@ -140,11 +140,12 @@ const mockedRmSync = rmSync as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
 const mockedSet = steamBottleConfigStore.set as jest.Mock
 
-// 66.1-22g: bottle readers use the slice bound at boot; bind the suite's mocked store.
-bindBottleStores({
-  stores: createTestStores({ steam: { steamBottleConfigStore } as never })
-})
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+// 66.3-15: the bottle helpers are an instance over the suite's mocked store and config.
+const steamBottle = createSteamBottle({
+  stores: createTestStores({ steam: { steamBottleConfigStore } as never }),
+  config: { getSettings: () => mockedGlobalConfigGet().getSettings() }
+})
 // Recording fakes handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
 const mockedDownloadFile = downloadFile as jest.Mock
@@ -156,6 +157,7 @@ const steamSession = createTestSteamSession()
 const library = steamSession.libraryState.library
 const bottledDeps = {
   steamSession,
+  steamBottle,
   appState: { hide: () => mockedAppHide() },
   spawnAsync: mockedSpawnAsync,
   commandRunner: { runWineCommand: mockedRunWineCommand }

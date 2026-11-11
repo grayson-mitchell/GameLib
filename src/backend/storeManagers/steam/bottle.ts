@@ -17,7 +17,8 @@ import { dirname, join } from 'path'
 import { existsSync, readFileSync } from 'graceful-fs'
 import type { GameSettings, WineInstallation } from 'common/types'
 import type { ProcessRunner } from 'backend/process/types'
-import { GlobalConfig } from 'backend/config'
+import type { GlobalConfigSlice } from 'backend/config'
+import type { Stores } from 'backend/services/types'
 import { logWarning, LogPrefix } from 'backend/logger'
 // NOTE: `runWineCommand` is imported LAZILY (dynamic import inside the two
 // async functions that use it) rather than statically. Importing it at module
@@ -26,7 +27,6 @@ import { logWarning, LogPrefix } from 'backend/logger'
 // its pure helpers (e.g. steam/library.ts consumers like games.test.ts). Only
 // the provisioning/command functions actually need it, so defer the load.
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
-import type { SteamStoresDeps } from './library/installRoot'
 import {
   getBottleDir,
   isBottleProvisioned
@@ -44,29 +44,6 @@ import {
 // client in the bottle" acceptance bar. Distinct name so
 // getBridgeBottleSettings()/isBridgeBottleReady() can never accidentally
 // resolve the Phase 17 bottle.
-/**
- * Binds the stores slice the bottle readers use (66.1 R3). Bound once at boot; the bottle
- * helpers are sync and have ~40 callers across the steam tree, so they read the bound slice
- * instead of taking a parameter. Bound at the 'stores' boot step; an unbound read throws.
- */
-export function bindBottleStores(deps: SteamStoresDeps): void {
-  BottleStores.bound = deps
-}
-
-/** Static holder, the same shape as `SteamUser.bindStores` (66.1-16); 66.3 owns static holders. */
-class BottleStores {
-  static bound: SteamStoresDeps | null = null
-}
-
-/** The dedicated Steam bottle config store, for the sibling bottle modules. */
-export function bottleConfigStore(): SteamStoresDeps['stores']['steam']['steamBottleConfigStore'] {
-  if (BottleStores.bound)
-    return BottleStores.bound.stores.steam.steamBottleConfigStore
-  throw new Error(
-    'steam bottle stores read before bindBottleStores (boot step "stores")'
-  )
-}
-
 export const DEFAULT_BRIDGE_BOTTLE_NAME = 'GameLibSteamBridge'
 
 // CrossOver's cxbottle CLI lives in the CrossOver install's bin dir. Where
@@ -80,11 +57,6 @@ export const cxbottleIn = (binDir: string): string => join(binDir, 'cxbottle')
 export const wineserverIn = (binDir: string): string =>
   join(binDir, 'wineserver')
 export const cxRootFrom = (binDir: string): string => dirname(binDir)
-
-export function persistedWineBins(): string[] {
-  const bin = bottleConfigStore().get_nodefault('wineVersion')?.bin
-  return bin ? [bin] : []
-}
 
 export const CROSSOVER_MISSING = 'crossover-missing' as const
 /** D-12: `cxbottle --create` exceeded its cap (for example an expired trial dialog). */
@@ -103,18 +75,6 @@ export const CROSSOVER_CREATE_FAILED = 'crossover-create-failed' as const
 export const PROVISION_ABORTED = 'provision-aborted' as const
 export const CROSSOVER_REQUIRED_MESSAGE =
   'CrossOver is required. Install CrossOver from https://www.codeweavers.com/crossover, then try again.'
-
-/** True when a CrossOver install with a cxbottle can be located. */
-export async function isCrossoverInstalled(deps: {
-  runner: Pick<ProcessRunner, 'run'>
-}): Promise<boolean> {
-  return (
-    (await resolveCrossoverBinDirAsync(
-      { runner: deps.runner },
-      { hintWineBins: persistedWineBins() }
-    )) !== undefined
-  )
-}
 
 /**
  * GAP-17-PFX86-PATH: the CrossOver `win10` bottle template does not
@@ -196,16 +156,6 @@ export function getBottleSteamExePath(bottleName: string): string {
 }
 
 /**
- * isBottleProvisioned() for the Steam bottle: the stored bottle name, falling back to
- * DEFAULT_STEAM_BOTTLE_NAME (the no-argument default that used to live in isBottleProvisioned).
- */
-export function isSteamBottleProvisioned(): boolean {
-  return isBottleProvisioned(
-    bottleConfigStore().get_nodefault('bottleName') ?? DEFAULT_STEAM_BOTTLE_NAME
-  )
-}
-
-/**
  * GAP-17-CEF-RENDER: reads a bottle's `cxbottle.conf` to determine whether it
  * was created 32-bit (`WineArch = win32`) or 64-bit (`WineArch = win64`). A
  * win32 prefix breaks modern 64-bit Steam's CEF-based install-dialog UI
@@ -235,190 +185,259 @@ export function bottleWineArch(bottleName: string): 'win32' | 'win64' | null {
   }
 }
 
-/**
- * The REAL bottle-readiness signal (per the GAP 1 stuck-loop diagnosis in
- * .planning/debug/steam-bottle-provision-stuck-loop.md): true only when
- * BOTH cxbottle.conf exists AND the bottled Steam.exe exists. cxbottle.conf
- * alone means only that CrossOver created the bottle directory — the Steam
- * install inside it (SteamSetup.exe download + non-silent run) may never
- * have completed, leaving a half-provisioned bottle. Every routing gate in
- * games.ts and the dispatchToBottledSteam pre-flight below must use THIS
- * function, not isBottleProvisioned(), to decide whether it's safe to
- * dispatch commands into the bottled Steam client.
- */
-export function isBottleReady(bottleName?: string): boolean {
-  const name =
-    bottleName ??
-    bottleConfigStore().get_nodefault('bottleName') ??
-    DEFAULT_STEAM_BOTTLE_NAME
-  const ready =
-    isBottleProvisioned(name) && existsSync(getBottleSteamExePath(name))
-
-  // GAP-17-PROVISIONED-FLAG-STUCK: lazy readiness reconcile (intentional
-  // write-through side-effect). `provisioned` used to be derived from a race
-  // against the wait:false SteamSetup launch (provisionBottle step 8), so it
-  // was persisted `false` while steam.exe was legitimately still absent and
-  // then NEVER re-evaluated once the user finished the click-through. Instead,
-  // the FIRST time any routing call (games.ts install/launch/uninstall
-  // pre-flights, or provisionBottle's step-3 short-circuit) observes a genuinely
-  // ready bottle (cxbottle.conf + bottled steam.exe), self-heal the stored flag
-  // to `true`. This makes steamBottleStatus (main.ts) read a correct value with
-  // no main.ts change. Guarded by get_nodefault so a already-true flag is not
-  // needlessly re-written. NEVER writes `false` here — un-readiness is not a
-  // signal to un-provision (the win32-recreate branch owns the legitimate reset).
-  if (ready && bottleConfigStore().get_nodefault('provisioned') !== true) {
-    bottleConfigStore().set('provisioned', true)
-  }
-
-  return ready
+/** What the bottle helpers read: the bottle config store and the global settings. */
+export interface SteamBottleDeps {
+  stores: { steam: Pick<Stores['steam'], 'steamBottleConfigStore'> }
+  config: Pick<GlobalConfigSlice, 'getSettings'>
 }
 
 /**
- * Composes a GameSettings-shaped object for the dedicated Steam bottle,
- * sourced from steamBottleConfigStore and falling back to
- * DEFAULT_STEAM_BOTTLE_NAME / the global default Wine engine. Used wherever
- * a bottled Steam operation needs a GameSettings to hand to runWineCommand.
- *
- * debug/steam-bottle-uninstall-reverts (root cause, mirrors D-UAT-24-06):
- * the dedicated Steam bottle is created and populated entirely via
- * CrossOver's own `cxbottle` mechanism (D-08 CrossOver-only lifecycle) and
- * can only be correctly dispatched into by CrossOver's own `wine` binary —
- * setupWineEnvVars (launcher.ts) sets `CX_BOTTLE` ONLY for
- * `wineVersion.type === 'crossover'`; any other type (e.g. Game Porting
- * Toolkit's `'toolkit'`, which can end up persisted here via an unguarded
- * self-heal write — persistBottleWineVersion() / provisionBottle() step 6 —
- * or simply inherited from globalSettings.wineVersion) instead routes
- * through `WINEPREFIX = gameSettings.winePrefix`, which this function never
- * overrides and which may not even point at a prefix that exists on disk.
- * The result: every dispatchToBottledSteam call (install/launch/uninstall)
- * fires the bottled steam.exe against the WRONG Wine environment and the
- * process exits almost instantly, never becoming a resident Steam client.
- * Resolve CrossOver's own engine whenever the candidate wineVersion isn't
- * already type 'crossover' — falling back to the candidate only when
- * CrossOver itself is absent from disk (dev/CI/non-macOS) — identical
- * posture to getBridgeBottleSettings() below.
+ * The Steam bottle helpers that read the dedicated bottle config store, built once per boot
+ * (D-05, 66.3-15) and passed to consumers by slice. Construction reads nothing and does no I/O.
  */
-export function getSteamBottleSettings(): GameSettings {
-  const globalSettings = GlobalConfig.get().getSettings()
-  const storedWineVersion = bottleConfigStore().get_nodefault('wineVersion')
-  const storedBottleName = bottleConfigStore().get_nodefault(
-    'wineCrossoverBottle'
-  )
+export function createSteamBottle(deps: SteamBottleDeps) {
+  /** Resolved per call so construction touches no store. */
+  const configStore = () => deps.stores.steam.steamBottleConfigStore
 
-  const candidateWineVersion = storedWineVersion ?? globalSettings.wineVersion
-  // 34.13 review A-20: OPTIONAL dereference. The pre-539bc979c body was
-  // `wineVersion: storedWineVersion ?? globalSettings.wineVersion` — tolerant
-  // of both being absent. `library.ts`'s getBottleSteamappsRoot() calls this
-  // getter SOLELY for `wineCrossoverBottle`, and that sits on
-  // readAcfState(deps, 'bottle')'s hot path: every install poll tick, every
-  // uninstall poll tick, buildBottleInstalledMap, refreshInstallState. A
-  // `GlobalConfig.getSettings()` result without a `wineVersion` (the sidecar's
-  // config layer is a different code path from Electron's, and this repo has
-  // ledgered several hollow sidecar stubs) would turn pure path resolution
-  // into a TypeError propagating through the ACF readers.
-  const wineVersion =
-    candidateWineVersion?.type === 'crossover'
-      ? candidateWineVersion
-      : (resolveCrossoverWine('CrossOver (Steam bottle runtime)') ??
-        candidateWineVersion)
-
-  // 34.13 review A-21: the getter PERSISTS its own correction, so the store
-  // self-heals ONCE instead of every reader re-deriving it independently.
-  // 539bc979c's commit message names the defect as "a Game Porting Toolkit
-  // engine WAS PERSISTED for the Steam bottle" and then fixed it in the
-  // getter only — so steamBottleConfigStore kept accumulating non-CrossOver
-  // engines and every OTHER reader of that key still saw them. The concrete,
-  // provable consequence is on 34.13's own surface:
-  // getSteamBottleEligibilityVerdict reads the store DIRECTLY and
-  // deliberately (installFormIpc.ts documents why it does not use this
-  // getter), so the verdict handed to the install form still carried the
-  // un-healed engine. Guarded by an identity check so a store that is already
-  // correct is never needlessly re-written (the get_nodefault discipline used
-  // by the `provisioned` self-heal above).
-  if (
-    wineVersion &&
-    wineVersion !== storedWineVersion &&
-    wineVersion.type === 'crossover' &&
-    storedWineVersion?.type !== 'crossover'
-  ) {
-    bottleConfigStore().set('wineVersion', wineVersion)
+  function persistedWineBins(): string[] {
+    const bin = configStore().get_nodefault('wineVersion')?.bin
+    return bin ? [bin] : []
   }
 
-  return {
-    ...globalSettings,
-    wineCrossoverBottle: storedBottleName ?? DEFAULT_STEAM_BOTTLE_NAME,
-    wineVersion
-  }
-}
-
-/**
- * debug/steam-bottle-game-no-launch (Pitfall 6, real-game-launch case):
- * checkWineBeforeLaunch's self-heal persists a corrected wineVersion via
- * `GameConfig.get(gameInfo.app_name).setSetting('wineVersion', ...)` — a
- * store getSteamBottleSettings() never reads. provisionBottle() (step 6
- * above) already works around this for its OWN synthetic-appName validation
- * call by re-persisting the result into steamBottleConfigStore itself; the
- * same gap exists at the REAL per-game launch checkpoint
- * (launcher.ts's launchEventCallback), which checkWineBeforeLaunch's
- * generic appName-keyed self-heal can never reach. Exported so launcher.ts
- * can call this immediately after a successful checkWineBeforeLaunch for a
- * Steam bottle-eligible game, mirroring provisionBottle's own pattern —
- * without this, a self-healed wine correction is silently dropped and every
- * subsequent dispatchToBottledSteam() call (install/launch/uninstall) keeps
- * reading the SAME broken wineVersion via getSteamBottleSettings().
- */
-export function persistBottleWineVersion(wineVersion: WineInstallation): void {
-  // 34.13 review A-21: this seam stays PERMISSIVE by an existing, recorded
-  // decision (review B-WR-08) — `launcher.ts`'s checkWineBeforeLaunch
-  // self-heal is a legitimate producer of a non-CrossOver value here, so
-  // rejecting outright would break the very recovery path this function
-  // exists to serve. The accumulation is instead made DIAGNOSABLE here and
-  // self-healing in getSteamBottleSettings() above, which now persists its
-  // own CrossOver correction once rather than leaving every other reader of
-  // this key (notably getSteamBottleEligibilityVerdict, which reads the store
-  // directly and deliberately) to re-derive it or not at all.
-  if (wineVersion.type !== 'crossover') {
-    logWarning(
-      `Steam: persisting a non-CrossOver engine (type "${wineVersion.type}") for the Steam bottle — D-08's lifecycle is CrossOver-only, so getSteamBottleSettings() will correct and re-persist this on the next read`,
-      LogPrefix.Steam
+  /** True when a CrossOver install with a cxbottle can be located. */
+  async function isCrossoverInstalled(rdeps: {
+    runner: Pick<ProcessRunner, 'run'>
+  }): Promise<boolean> {
+    return (
+      (await resolveCrossoverBinDirAsync(
+        { runner: rdeps.runner },
+        { hintWineBins: persistedWineBins() }
+      )) !== undefined
     )
   }
-  bottleConfigStore().set('wineVersion', wineVersion)
+
+  /**
+   * isBottleProvisioned() for the Steam bottle: the stored bottle name, falling back to
+   * DEFAULT_STEAM_BOTTLE_NAME (the no-argument default that used to live in isBottleProvisioned).
+   */
+  function isSteamBottleProvisioned(): boolean {
+    return isBottleProvisioned(
+      configStore().get_nodefault('bottleName') ?? DEFAULT_STEAM_BOTTLE_NAME
+    )
+  }
+
+  /**
+   * The REAL bottle-readiness signal (per the GAP 1 stuck-loop diagnosis in
+   * .planning/debug/steam-bottle-provision-stuck-loop.md): true only when
+   * BOTH cxbottle.conf exists AND the bottled Steam.exe exists. cxbottle.conf
+   * alone means only that CrossOver created the bottle directory — the Steam
+   * install inside it (SteamSetup.exe download + non-silent run) may never
+   * have completed, leaving a half-provisioned bottle. Every routing gate in
+   * games.ts and the dispatchToBottledSteam pre-flight below must use THIS
+   * function, not isBottleProvisioned(), to decide whether it's safe to
+   * dispatch commands into the bottled Steam client.
+   */
+  function isBottleReady(bottleName?: string): boolean {
+    const name =
+      bottleName ??
+      configStore().get_nodefault('bottleName') ??
+      DEFAULT_STEAM_BOTTLE_NAME
+    const ready =
+      isBottleProvisioned(name) && existsSync(getBottleSteamExePath(name))
+
+    // GAP-17-PROVISIONED-FLAG-STUCK: lazy readiness reconcile (intentional
+    // write-through side-effect). `provisioned` used to be derived from a race
+    // against the wait:false SteamSetup launch (provisionBottle step 8), so it
+    // was persisted `false` while steam.exe was legitimately still absent and
+    // then NEVER re-evaluated once the user finished the click-through. Instead,
+    // the FIRST time any routing call (games.ts install/launch/uninstall
+    // pre-flights, or provisionBottle's step-3 short-circuit) observes a genuinely
+    // ready bottle (cxbottle.conf + bottled steam.exe), self-heal the stored flag
+    // to `true`. This makes steamBottleStatus (main.ts) read a correct value with
+    // no main.ts change. Guarded by get_nodefault so a already-true flag is not
+    // needlessly re-written. NEVER writes `false` here — un-readiness is not a
+    // signal to un-provision (the win32-recreate branch owns the legitimate reset).
+    if (ready && configStore().get_nodefault('provisioned') !== true) {
+      configStore().set('provisioned', true)
+    }
+
+    return ready
+  }
+
+  /**
+   * Composes a GameSettings-shaped object for the dedicated Steam bottle,
+   * sourced from steamBottleConfigStore and falling back to
+   * DEFAULT_STEAM_BOTTLE_NAME / the global default Wine engine. Used wherever
+   * a bottled Steam operation needs a GameSettings to hand to runWineCommand.
+   *
+   * debug/steam-bottle-uninstall-reverts (root cause, mirrors D-UAT-24-06):
+   * the dedicated Steam bottle is created and populated entirely via
+   * CrossOver's own `cxbottle` mechanism (D-08 CrossOver-only lifecycle) and
+   * can only be correctly dispatched into by CrossOver's own `wine` binary —
+   * setupWineEnvVars (launcher.ts) sets `CX_BOTTLE` ONLY for
+   * `wineVersion.type === 'crossover'`; any other type (e.g. Game Porting
+   * Toolkit's `'toolkit'`, which can end up persisted here via an unguarded
+   * self-heal write — persistBottleWineVersion() / provisionBottle() step 6 —
+   * or simply inherited from globalSettings.wineVersion) instead routes
+   * through `WINEPREFIX = gameSettings.winePrefix`, which this function never
+   * overrides and which may not even point at a prefix that exists on disk.
+   * The result: every dispatchToBottledSteam call (install/launch/uninstall)
+   * fires the bottled steam.exe against the WRONG Wine environment and the
+   * process exits almost instantly, never becoming a resident Steam client.
+   * Resolve CrossOver's own engine whenever the candidate wineVersion isn't
+   * already type 'crossover' — falling back to the candidate only when
+   * CrossOver itself is absent from disk (dev/CI/non-macOS) — identical
+   * posture to getBridgeBottleSettings() below.
+   */
+  function getSteamBottleSettings(): GameSettings {
+    const globalSettings = deps.config.getSettings()
+    const storedWineVersion = configStore().get_nodefault('wineVersion')
+    const storedBottleName = configStore().get_nodefault('wineCrossoverBottle')
+
+    const candidateWineVersion = storedWineVersion ?? globalSettings.wineVersion
+    // 34.13 review A-20: OPTIONAL dereference. The pre-539bc979c body was
+    // `wineVersion: storedWineVersion ?? globalSettings.wineVersion` — tolerant
+    // of both being absent. `library.ts`'s getBottleSteamappsRoot() calls this
+    // getter SOLELY for `wineCrossoverBottle`, and that sits on
+    // readAcfState(deps, 'bottle')'s hot path: every install poll tick, every
+    // uninstall poll tick, buildBottleInstalledMap, refreshInstallState. A
+    // `GlobalConfig.getSettings()` result without a `wineVersion` (the sidecar's
+    // config layer is a different code path from Electron's, and this repo has
+    // ledgered several hollow sidecar stubs) would turn pure path resolution
+    // into a TypeError propagating through the ACF readers.
+    const wineVersion =
+      candidateWineVersion?.type === 'crossover'
+        ? candidateWineVersion
+        : (resolveCrossoverWine('CrossOver (Steam bottle runtime)') ??
+          candidateWineVersion)
+
+    // 34.13 review A-21: the getter PERSISTS its own correction, so the store
+    // self-heals ONCE instead of every reader re-deriving it independently.
+    // 539bc979c's commit message names the defect as "a Game Porting Toolkit
+    // engine WAS PERSISTED for the Steam bottle" and then fixed it in the
+    // getter only — so steamBottleConfigStore kept accumulating non-CrossOver
+    // engines and every OTHER reader of that key still saw them. The concrete,
+    // provable consequence is on 34.13's own surface:
+    // getSteamBottleEligibilityVerdict reads the store DIRECTLY and
+    // deliberately (installFormIpc.ts documents why it does not use this
+    // getter), so the verdict handed to the install form still carried the
+    // un-healed engine. Guarded by an identity check so a store that is already
+    // correct is never needlessly re-written (the get_nodefault discipline used
+    // by the `provisioned` self-heal above).
+    if (
+      wineVersion &&
+      wineVersion !== storedWineVersion &&
+      wineVersion.type === 'crossover' &&
+      storedWineVersion?.type !== 'crossover'
+    ) {
+      configStore().set('wineVersion', wineVersion)
+    }
+
+    return {
+      ...globalSettings,
+      wineCrossoverBottle: storedBottleName ?? DEFAULT_STEAM_BOTTLE_NAME,
+      wineVersion
+    }
+  }
+
+  /**
+   * debug/steam-bottle-game-no-launch (Pitfall 6, real-game-launch case):
+   * checkWineBeforeLaunch's self-heal persists a corrected wineVersion via
+   * `GameConfig.get(gameInfo.app_name).setSetting('wineVersion', ...)` — a
+   * store getSteamBottleSettings() never reads. provisionBottle() (step 6
+   * above) already works around this for its OWN synthetic-appName validation
+   * call by re-persisting the result into steamBottleConfigStore itself; the
+   * same gap exists at the REAL per-game launch checkpoint
+   * (launcher.ts's launchEventCallback), which checkWineBeforeLaunch's
+   * generic appName-keyed self-heal can never reach. Exported so launcher.ts
+   * can call this immediately after a successful checkWineBeforeLaunch for a
+   * Steam bottle-eligible game, mirroring provisionBottle's own pattern —
+   * without this, a self-healed wine correction is silently dropped and every
+   * subsequent dispatchToBottledSteam() call (install/launch/uninstall) keeps
+   * reading the SAME broken wineVersion via getSteamBottleSettings().
+   */
+  function persistBottleWineVersion(wineVersion: WineInstallation): void {
+    // 34.13 review A-21: this seam stays PERMISSIVE by an existing, recorded
+    // decision (review B-WR-08) — `launcher.ts`'s checkWineBeforeLaunch
+    // self-heal is a legitimate producer of a non-CrossOver value here, so
+    // rejecting outright would break the very recovery path this function
+    // exists to serve. The accumulation is instead made DIAGNOSABLE here and
+    // self-healing in getSteamBottleSettings() above, which now persists its
+    // own CrossOver correction once rather than leaving every other reader of
+    // this key (notably getSteamBottleEligibilityVerdict, which reads the store
+    // directly and deliberately) to re-derive it or not at all.
+    if (wineVersion.type !== 'crossover') {
+      logWarning(
+        `Steam: persisting a non-CrossOver engine (type "${wineVersion.type}") for the Steam bottle — D-08's lifecycle is CrossOver-only, so getSteamBottleSettings() will correct and re-persist this on the next read`,
+        LogPrefix.Steam
+      )
+    }
+    configStore().set('wineVersion', wineVersion)
+  }
+
+  /**
+   * D-UAT-24-06 gap closure (24-15) — GENERALIZED (debug/steam-bottle-
+   * uninstall-reverts): resolves CrossOver's OWN wine binary — derived from
+   * the resolved CrossOver bin dir (sibling `wine` binary, exactly the
+   * path backend/utils/compatibility_layers.ts's getCrossover() computes) —
+   * rather than importing that async detector (which would force callers
+   * async and ripple to their synchronous callers, see module docstring
+   * above). Shared by BOTH the dedicated Steam bottle (getSteamBottleSettings)
+   * and the bridge bottle (getBridgeBottleSettings) below — both are
+   * CrossOver-created bottles (D-08 CrossOver-only lifecycle) and neither can
+   * be correctly dispatched into by a non-CrossOver engine (setupWineEnvVars
+   * only wires `CX_BOTTLE` for `type: 'crossover'`; anything else silently
+   * routes through `WINEPREFIX` instead, which these getters never point at
+   * the actual CrossOver bottle).
+   *
+   * Returns undefined when CrossOver's `wine` binary is not present on disk
+   * (dev/CI/non-macOS), so the caller can fall back to another wineVersion.
+   */
+  function resolveCrossoverWine(label: string): WineInstallation | undefined {
+    const binDir = resolveCrossoverBinDir({ hintWineBins: persistedWineBins() })
+    if (!binDir) {
+      return undefined
+    }
+    const crossoverWineBin = join(binDir, 'wine')
+    if (!existsSync(crossoverWineBin)) {
+      return undefined
+    }
+    return {
+      bin: crossoverWineBin,
+      name: label,
+      type: 'crossover',
+      wineserver: wineserverIn(binDir)
+    }
+  }
+
+  return {
+    configStore,
+    persistedWineBins,
+    isCrossoverInstalled,
+    isSteamBottleProvisioned,
+    isBottleReady,
+    getSteamBottleSettings,
+    persistBottleWineVersion,
+    resolveCrossoverWine
+  }
 }
 
-/**
- * D-UAT-24-06 gap closure (24-15) — GENERALIZED (debug/steam-bottle-
- * uninstall-reverts): resolves CrossOver's OWN wine binary — derived from
- * the resolved CrossOver bin dir (sibling `wine` binary, exactly the
- * path backend/utils/compatibility_layers.ts's getCrossover() computes) —
- * rather than importing that async detector (which would force callers
- * async and ripple to their synchronous callers, see module docstring
- * above). Shared by BOTH the dedicated Steam bottle (getSteamBottleSettings)
- * and the bridge bottle (getBridgeBottleSettings) below — both are
- * CrossOver-created bottles (D-08 CrossOver-only lifecycle) and neither can
- * be correctly dispatched into by a non-CrossOver engine (setupWineEnvVars
- * only wires `CX_BOTTLE` for `type: 'crossover'`; anything else silently
- * routes through `WINEPREFIX` instead, which these getters never point at
- * the actual CrossOver bottle).
- *
- * Returns undefined when CrossOver's `wine` binary is not present on disk
- * (dev/CI/non-macOS), so the caller can fall back to another wineVersion.
- */
-export function resolveCrossoverWine(
-  label: string
-): WineInstallation | undefined {
-  const binDir = resolveCrossoverBinDir({ hintWineBins: persistedWineBins() })
-  if (!binDir) {
-    return undefined
-  }
-  const crossoverWineBin = join(binDir, 'wine')
-  if (!existsSync(crossoverWineBin)) {
-    return undefined
-  }
-  return {
-    bin: crossoverWineBin,
-    name: label,
-    type: 'crossover',
-    wineserver: wineserverIn(binDir)
-  }
+export type SteamBottle = ReturnType<typeof createSteamBottle>
+
+/** What a consumer that only resolves the bottle's settings (for example its steamapps dir) needs. */
+export type BottleSettingsDeps = {
+  steamBottle: Pick<
+    SteamBottle,
+    'getSteamBottleSettings' | 'resolveCrossoverWine'
+  >
+}
+
+/** What a consumer that reads the bottle's readiness and settings needs. */
+export type BottleReadyDeps = {
+  steamBottle: Pick<SteamBottle, 'getSteamBottleSettings' | 'isBottleReady'>
+}
+
+/** The bottle slice the Steam engine deps add to the generic engine services (66.3-15). */
+export type SteamEngineBottle = {
+  steamBottle: Pick<SteamBottle, 'persistedWineBins' | 'resolveCrossoverWine'>
 }

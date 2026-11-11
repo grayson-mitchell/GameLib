@@ -27,7 +27,7 @@ import { getBridgeRouteVerdict } from './bridgeRouteVerdict'
 import type { ManagerDeps, Stores } from 'backend/services/types'
 import type { ProcessRunner } from 'backend/process/types'
 import type { SteamStoresDeps } from './library/installRoot'
-import { persistBottleWineVersion } from './bottle'
+import type { SteamBottle } from './bottle'
 import { depotSignalCaptured } from './metadataCapture'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
 import { NOTICE_REASONS } from './bridge/bridgeRoute'
@@ -227,6 +227,7 @@ export async function persistInstallFormWineVersion(
     stores: Pick<Stores, 'wineManager'>
     runner: Pick<ProcessRunner, 'run'>
     config: Pick<GlobalConfigSlice, 'getAlternativeWine'>
+    steamBottle: Pick<SteamBottle, 'persistBottleWineVersion'>
   },
   input: unknown
 ): Promise<{
@@ -325,7 +326,7 @@ export async function persistInstallFormWineVersion(
   if (lib32 !== undefined) rebuilt.lib32 = lib32
   if (wineserver !== undefined) rebuilt.wineserver = wineserver
 
-  persistBottleWineVersion(rebuilt)
+  deps.steamBottle.persistBottleWineVersion(rebuilt)
   return { status: 'done' }
 }
 

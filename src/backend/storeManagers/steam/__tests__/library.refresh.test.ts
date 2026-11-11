@@ -21,11 +21,7 @@ import { sendFrontendMessage } from '../../../ipc'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
 import { SteamUser } from '../user'
-import {
-  getBottleSteamappsDir,
-  getSteamBottleSettings,
-  isSteamBottleProvisioned
-} from '../bottle'
+import { getBottleSteamappsDir } from '../bottle'
 import {
   getBridgeBottleSettings,
   listReadyBridgeBottleNames,
@@ -52,7 +48,11 @@ const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 // The boot-owned anonymous client (D-66.3-14): a scripted `get`, no CM connection.
 const getAnonymousPicsClient = jest.fn()
+// 66.3-15: the bottle helpers are read through the deps slice, so they are plain mocks here.
+const getSteamBottleSettings = jest.fn()
+const isSteamBottleProvisioned = jest.fn()
 const steamTestDeps = createTestManagerDeps({
+  steamBottle: { getSteamBottleSettings, isSteamBottleProvisioned } as never,
   anonymousClient: createTestAnonymousClient({ get: getAnonymousPicsClient }),
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
@@ -195,9 +195,7 @@ jest.mock('../stores', () => ({
 
 // ── bottle mock — getBottleSteamappsDir/getSteamBottleSettings/isBottleProvisioned ─
 jest.mock('../bottle', () => ({
-  getBottleSteamappsDir: jest.fn(),
-  getSteamBottleSettings: jest.fn(),
-  isSteamBottleProvisioned: jest.fn()
+  getBottleSteamappsDir: jest.fn()
 }))
 jest.mock('../bridgeBottle', () => ({
   getBridgeBottleSettings: jest.fn(),

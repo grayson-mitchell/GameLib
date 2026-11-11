@@ -38,6 +38,7 @@ import { createTestEngineState } from './testEngineState'
 import { createTestSignInProbe } from './testSignInProbe'
 import { createTestSteamSession } from './testSteamSession'
 import { createTestAnonymousClient } from './testAnonymousClient'
+import { createTestSteamBottle } from './testSteamBottle'
 import { createTestBridgeHelpers } from './testBridgeHelpers'
 import type { GameSettings, Runner } from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
@@ -205,8 +206,10 @@ export function createTestServices(
     }
   }
   const host = overrides.host ?? createTestHostServices()
+  const stores = overrides.stores ?? createTestStores()
+  const config = overrides.config ?? createTestGlobalConfig()
   return {
-    stores: overrides.stores ?? createTestStores(),
+    stores,
     storeRegistry: overrides.storeRegistry ?? createStoreRegistry(),
     managers: overrides.managers ?? createTestManagers(),
     launcher: overrides.launcher ?? unscriptedMembers<Launcher>('launcher', {}),
@@ -224,7 +227,7 @@ export function createTestServices(
       overrides.downloadQueue ??
       unscriptedMembers<BootServices['downloadQueue']>('download queue', {}),
     host,
-    config: overrides.config ?? createTestGlobalConfig(),
+    config,
     gameConfigs: overrides.gameConfigs ?? createTestGameConfigs(),
     paths: overrides.paths ?? createTestPaths(),
     appInfo: overrides.appInfo ?? TEST_APP_INFO,
@@ -240,7 +243,9 @@ export function createTestServices(
       overrides.signInProbe ?? createTestSignInProbe({ ipc: host.ipc }),
     steamSession: overrides.steamSession ?? createTestSteamSession(),
     anonymousClient: overrides.anonymousClient ?? createTestAnonymousClient(),
-    bridgeHelpers: overrides.bridgeHelpers ?? createTestBridgeHelpers()
+    bridgeHelpers: overrides.bridgeHelpers ?? createTestBridgeHelpers(),
+    steamBottle:
+      overrides.steamBottle ?? createTestSteamBottle({ stores, config })
   }
 }
 
@@ -323,9 +328,11 @@ export function createTestManagerDeps(
   overrides: Partial<ManagerDeps> = {}
 ): ManagerDeps {
   const host = createTestHostServices()
+  const stores = overrides.stores ?? createTestStores()
+  const config = overrides.config ?? createTestGlobalConfig()
   return {
     libraryManagers: overrides.libraryManagers ?? createTestManagers().library,
-    stores: overrides.stores ?? createTestStores(),
+    stores,
     commandRunner:
       overrides.commandRunner ??
       unscriptedMembers<CommandRunner>('command runner', {}),
@@ -345,7 +352,7 @@ export function createTestManagerDeps(
       (() => {
         throw new Error('unscripted call: getDownloadQueue')
       }),
-    config: overrides.config ?? createTestGlobalConfig(),
+    config,
     gameConfigs: overrides.gameConfigs ?? createTestGameConfigs(),
     paths: overrides.paths ?? createTestPaths(),
     appInfo: overrides.appInfo ?? TEST_APP_INFO,
@@ -359,7 +366,9 @@ export function createTestManagerDeps(
     signIn: overrides.signIn ?? createTestSignInProbe(),
     steamSession: overrides.steamSession ?? createTestSteamSession(),
     anonymousClient: overrides.anonymousClient ?? createTestAnonymousClient(),
-    bridgeHelpers: overrides.bridgeHelpers ?? createTestBridgeHelpers()
+    bridgeHelpers: overrides.bridgeHelpers ?? createTestBridgeHelpers(),
+    steamBottle:
+      overrides.steamBottle ?? createTestSteamBottle({ stores, config })
   }
 }
 
@@ -389,14 +398,16 @@ export function createTestEngineServices(
  */
 export function createTestToolsSlices() {
   const host = createTestHostServices()
+  const config = createTestGlobalConfig()
   return {
-    config: createTestGlobalConfig(),
+    config,
     gameConfigs: createTestGameConfigs(),
     appInfo: TEST_APP_INFO,
     dialogs: host.dialogs,
     appState: host.appState,
     notifications: host.notifications,
     onlineMonitor: createTestOnlineMonitor(),
-    engineState: createTestEngineState()
+    engineState: createTestEngineState(),
+    steamBottle: createTestSteamBottle({ stores: createTestStores(), config })
   }
 }

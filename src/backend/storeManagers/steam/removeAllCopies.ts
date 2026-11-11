@@ -18,7 +18,7 @@ import {
 } from './library/acfState'
 import { NUMERIC_APP_ID } from './gameConstants'
 import type { UninstallPollDeps } from './library/uninstallPolling'
-import type { SpawnDeps } from './provisionBottle'
+import type { BottleLifecycleDeps } from './bridgeBottleLifecycle'
 
 // NUMERIC_APP_ID is the shared appId guard from gameConstants.ts (34.13
 // review A-12).
@@ -50,7 +50,7 @@ interface RemoveAllCopiesResult {
  * constraint the route-time auto-cleanup (Task 2) also follows.
  */
 export async function removeAllSteamInstallCopies(
-  deps: UninstallPollDeps & SpawnDeps,
+  deps: UninstallPollDeps & BottleLifecycleDeps,
   appName: unknown
 ): Promise<RemoveAllCopiesResult> {
   if (typeof appName !== 'string' || !NUMERIC_APP_ID.test(appName)) {

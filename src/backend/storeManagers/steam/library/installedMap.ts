@@ -2,7 +2,7 @@ import { join } from 'path'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { parse } from '@node-steam/vdf'
 import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
-import { getBottleSteamappsDir } from '../bottle'
+import { getBottleSteamappsDir, type BottleSettingsDeps } from '../bottle'
 import {
   listReadyBridgeBottleNames,
   resolveBridgeBottleName
@@ -149,14 +149,14 @@ export async function buildIncompleteInstallSet(
  *
  * Exported for unit testing.
  */
-export async function buildBottleInstalledMap(): Promise<
-  Map<number, { installPath: string; sizeOnDisk: string }>
-> {
+export async function buildBottleInstalledMap(
+  deps: BottleSettingsDeps
+): Promise<Map<number, { installPath: string; sizeOnDisk: string }>> {
   const installed = new Map<
     number,
     { installPath: string; sizeOnDisk: string }
   >()
-  const steamappsDir = getBottleSteamappsRoot()
+  const steamappsDir = getBottleSteamappsRoot(deps)
   if (!existsSync(steamappsDir)) return installed
 
   let files: string[]

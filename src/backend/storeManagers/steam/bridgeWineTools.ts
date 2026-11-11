@@ -25,6 +25,7 @@ import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
 import type { EngineServices } from 'backend/engine/engineServices'
 import { nonCrossoverEngineFor } from 'backend/engine/toolSettings'
 import type { ToolSettingsResult } from 'backend/engine/toolSettings'
+import type { SteamEngineBottle } from './bottle'
 import { readSteamEngineOverride } from './engine/steamEngineDeps'
 import {
   bridgeBottleNameFor,
@@ -47,7 +48,7 @@ export interface SteamWineToolsDeps {
 }
 
 export function defaultSteamWineToolsDeps(
-  services: EngineServices
+  services: EngineServices & SteamEngineBottle
 ): SteamWineToolsDeps {
   return {
     isMac,
@@ -58,7 +59,10 @@ export function defaultSteamWineToolsDeps(
       getDrmBridgeRunner(appId) !== undefined,
     bridgeSettings: (appId) =>
       getBridgeBottleSettings(
-        { config: { getSettings: () => services.globalGameSettings() } },
+        {
+          config: { getSettings: () => services.globalGameSettings() },
+          steamBottle: services.steamBottle
+        },
         appId
       ),
     markerKind: readBottleEngineMarkerKind,
@@ -97,7 +101,7 @@ export function isSteamWineToolsEligible(appId: string): boolean {
 
 // eslint-disable-next-line @typescript-eslint/require-await -- Promise-returning to match ToolSettingsResult callers
 export async function resolveSteamWineToolSettings(
-  services: EngineServices,
+  services: EngineServices & SteamEngineBottle,
   appId: string,
   overrides: Partial<SteamWineToolsDeps> = {}
 ): Promise<ToolSettingsResult> {

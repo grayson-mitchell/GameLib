@@ -100,11 +100,7 @@ import * as bridgeVerdictModule from '../bridge/bridgeVerdict'
 // process restart's cleared in-memory registry — mirrors the same pattern
 // library.test.ts already uses for the reverse direction (T-23-14).
 import * as gamesModule from '../gameSessionState'
-import {
-  isBottleReady,
-  getSteamBottleSettings,
-  getBottleSteamappsDir
-} from '../bottle'
+import { getBottleSteamappsDir } from '../bottle'
 import {
   provisionBridgeBottle,
   discardNewBridgeBottle,
@@ -297,7 +293,17 @@ const recordLaunchDecision = jest.fn()
 
 // The boot-owned bridge-helper registry's per-appId stop (D-66.3-14), observed by the cases below.
 const stopBridgeHelper = jest.fn()
+// 66.3-15: the bottle helpers are read through the deps slice, so they are plain mocks here.
+// quick 261024-cjq: after reset crossoverInstalled() is undefined, which reads as installed.
+const crossoverInstalled = jest.fn()
+const isBottleReady = jest.fn()
+const getSteamBottleSettings = jest.fn()
 const steamTestDeps = createTestManagerDeps({
+  steamBottle: {
+    isBottleReady,
+    getSteamBottleSettings,
+    isCrossoverInstalled: async () => crossoverInstalled() !== false
+  } as never,
   bridgeHelpers: { ...createTestBridgeHelpers(), stop: stopBridgeHelper },
   engineState: {
     ...createTestEngineState(),
@@ -529,19 +535,11 @@ jest.mock('backend/engine/bottlePrimitives', () => ({
       : null
 }))
 jest.mock('../bottle', () => {
-  // quick 261024-cjq: plain function over a jest.fn() (survives resetMocks).
-  // After reset crossoverInstalled() is undefined, which reads as installed.
-  const crossoverInstalled = jest.fn()
-
   return {
-    __crossoverInstalled: crossoverInstalled,
-    isCrossoverInstalled: async () => crossoverInstalled() !== false,
     CROSSOVER_MISSING: 'crossover-missing',
     CROSSOVER_CREATE_TIMEOUT: 'crossover-create-timeout',
     CROSSOVER_CREATE_FAILED: 'crossover-create-failed',
     PROVISION_ABORTED: 'provision-aborted',
-    isBottleReady: jest.fn(),
-    getSteamBottleSettings: jest.fn(),
     // Phase 21 Plan 11 (D-15/SNI-08): bottle depot-download write target.
     getBottleSteamappsDir: jest.fn()
   }
@@ -2180,7 +2178,7 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
     envMock.isMac = true
     envMock.isWindows = false
     envMock.isLinux = false
-    ;(isBottleReady as jest.Mock).mockReset()
+    isBottleReady.mockReset()
     ;(tellBottledSteamToLaunch as jest.Mock).mockReset()
   })
 
@@ -2189,7 +2187,7 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
       platformsCaptured: true,
       is_mac_native: false
     })
-    ;(isBottleReady as jest.Mock).mockReturnValue(false)
+    isBottleReady.mockReturnValue(false)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
@@ -2208,7 +2206,7 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
       platformsCaptured: true,
       is_mac_native: false
     })
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
     ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
       status: 'done'
     })
@@ -2228,7 +2226,7 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
         platformsCaptured: true,
         is_mac_native: false
       })
-      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      isBottleReady.mockReturnValue(true)
       ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(phase)
       const { logInfo } = jest.requireMock('backend/logger')
 
@@ -2251,7 +2249,7 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
       platformsCaptured: true,
       is_mac_native: false
     })
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
     ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(null)
     ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
       status: 'done'
@@ -2932,7 +2930,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     const SHIM_FAIL_APP_ID = '555555'
     library.set(SHIM_FAIL_APP_ID, makeEntry({ title: 'Shim Refresh Failure' }))
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
     ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
       status: 'done'
     })
@@ -3042,7 +3040,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       )
 
       // Breaker armed: the next launch skips the bridge.
-      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      isBottleReady.mockReturnValue(true)
       ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
         status: 'done'
       })
@@ -3135,7 +3133,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
     beforeEach(() => {
       library.set(MISS_APP_ID, makeEntry({ title: 'Launch-Time Miss' }))
-      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      isBottleReady.mockReturnValue(true)
       ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
         status: 'done'
       })
@@ -3338,7 +3336,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
     beforeEach(() => {
       library.set(UE0_APP_ID, makeEntry({ title: 'Unity Runtime' }))
-      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      isBottleReady.mockReturnValue(true)
       ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(
         RESOLVED_EXE_PATH
       )
@@ -3417,7 +3415,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(
         RESOLVED_EXE_PATH
       )
-      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      isBottleReady.mockReturnValue(true)
       ;(notify as jest.Mock).mockClear()
       ;(logInfo as jest.Mock).mockClear()
       ;(sendFrontendMessage as jest.Mock).mockClear()
@@ -3788,7 +3786,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     const NOSECRET_APP_ID = '777777'
     library.set(NOSECRET_APP_ID, makeEntry({ title: 'No Secret Game' }))
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
     ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
       status: 'ready',
@@ -3810,7 +3808,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     const FAILING_APP_ID = '888888'
     library.set(FAILING_APP_ID, makeEntry({ title: 'Failing Bridge Game' }))
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
     ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
       status: 'unreachable',
@@ -3853,7 +3851,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       makeEntry({ title: 'Bridge Config Write Failure' })
     )
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
     ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
       status: 'done'
     })
@@ -4067,7 +4065,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(
       'drm-wrapped'
     )
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
     // D-51-09: launch() dispatches on LOCATION (findBridgeInstallBottle), not
     // ELIGIBILITY -- a known-bad title's install() would never have routed
     // bits into the bridge bottle in the first place (resolveBridgeRoute
@@ -5429,7 +5427,7 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     envMock.isMac = true
     envMock.isWindows = false
     envMock.isLinux = false
-    ;(isBottleReady as jest.Mock).mockReset()
+    isBottleReady.mockReset()
   })
 
   afterEach(() => {
@@ -5441,7 +5439,7 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
       platformsCaptured: true,
       is_mac_native: false
     })
-    ;(isBottleReady as jest.Mock).mockReturnValue(false)
+    isBottleReady.mockReturnValue(false)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
@@ -5466,7 +5464,7 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     // half-provisioned bottle (cxbottle.conf present, steam.exe missing —
     // the GAP 1 stuck-loop scenario) reports false here, exactly like an
     // un-provisioned bottle from games.ts's perspective.
-    ;(isBottleReady as jest.Mock).mockReturnValue(false)
+    isBottleReady.mockReturnValue(false)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
@@ -5483,7 +5481,7 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
       platformsCaptured: true,
       is_mac_native: false
     })
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     const installBottleNative = trackSpy(
@@ -5501,7 +5499,7 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
       platformsCaptured: true,
       is_mac_native: false
     })
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     trackSpy(
@@ -5602,9 +5600,9 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
       platformsCaptured: true,
       is_mac_native: false
     })
-    ;(isBottleReady as jest.Mock).mockReset()
+    isBottleReady.mockReset()
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(BOTTLE_STEAMAPPS_DIR)
-    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+    getSteamBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'GameLib'
     })
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
@@ -5619,7 +5617,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
   })
 
   it('opt-in ON + bottle-eligible + ready: install() depot-downloads into the bottle steamapps dir with os:"windows", then starts the bottle-scoped poller', async () => {
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
 
@@ -5647,7 +5645,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
   })
 
   it('quick 261027-tot: opt-in ON + bottle-eligible + Steam client not ready defers the install (done+deferredToSetup), no depot download, no polling', async () => {
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({
       status: 'needs-launch',
@@ -5663,7 +5661,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
   })
 
   it('opt-in ON + bottle-eligible + ready: install() does NOT dispatch to the bottled Steam client (no Wine dispatch for the download itself)', async () => {
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
 
@@ -5674,7 +5672,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
   })
 
   it('quick 261030-o77: opt-in OFF + bottle-eligible + ready: install() still depot-downloads into the bottle (the toggle does not apply to the bottle route)', async () => {
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
 
@@ -5715,7 +5713,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
   })
 
   it('opt-in ON + bottle-eligible but NOT ready: install() requests guided setup and never attempts a depot download', async () => {
-    ;(isBottleReady as jest.Mock).mockReturnValue(false)
+    isBottleReady.mockReturnValue(false)
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
@@ -5777,7 +5775,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       platformsCaptured: true,
       is_mac_native: false
     })
-    ;(isBottleReady as jest.Mock).mockReset()
+    isBottleReady.mockReset()
     ;(bridgeAllowlist.has as jest.Mock).mockReset()
     ;(isBridgeBottleReady as jest.Mock).mockReset()
     ;(provisionBridgeBottle as jest.Mock).mockReset()
@@ -5785,7 +5783,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     // quick 261030-o77: the bottled fallback now always runs installBottleNative
     // (GameLib's own depot download into the Phase 17 bottle), which reads the
     // bottle settings.
-    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+    getSteamBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'GameLibSteam'
     })
     ;(getBridgeBottleSettings as jest.Mock).mockReturnValue({
@@ -6055,7 +6053,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
   it("quick 261023-oq7: placeShimForGame's 'placed-miss' status completes the install as a bridge install -- verdict persisted, bottle kept, breaker not armed, no setup-required, userRoute not cleared, no bottled dispatch", async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
     const missVerdict = {
       status: 'miss' as const,
       arch: 'x86' as const,
@@ -6294,7 +6292,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       // The breaker is armed: a later install() of the same appId is routed
       // away from the bridge (failed-this-session -> bottled Steam).
       ;(placeShimForGame as jest.Mock).mockClear()
-      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      isBottleReady.mockReturnValue(true)
       await new SteamGame(APP_ID, steamTestDeps).install({} as any)
       expect(placeShimForGame).not.toHaveBeenCalled()
     })
@@ -6553,7 +6551,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
   it('a FAILED bridge install (depot download error) still marks bridge-failed and does NOT clear it — a subsequent install() for the same appId still routes to the bottled fallback', async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValueOnce({
       status: 'error',
       error: 'depot download failed'
@@ -6590,7 +6588,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(
       'drm-wrapped'
     )
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
@@ -6614,7 +6612,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
     ;(knownFixSaysCeg as jest.Mock).mockReturnValue(true)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
@@ -6677,7 +6675,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         is_mac_native: false,
         bridge: { scan: missScan, ...bridge }
       })
-      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      isBottleReady.mockReturnValue(true)
       ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
       ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
     }
@@ -6795,7 +6793,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           ...(bridge ? { bridge } : {})
         })
         ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
-        ;(isBottleReady as jest.Mock).mockReturnValue(true)
+        isBottleReady.mockReturnValue(true)
         ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
           status: 'done'
         })
@@ -6882,8 +6880,8 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
       ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
       ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
-      ;(isBottleReady as jest.Mock).mockReturnValue(false)
-      ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+      isBottleReady.mockReturnValue(false)
+      getSteamBottleSettings.mockReturnValue({
         wineCrossoverBottle: 'GameLibSteam'
       })
       ;(sendFrontendMessage as jest.Mock).mockClear()
@@ -7033,7 +7031,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
       ;(existsSync as jest.Mock).mockReturnValue(false) // no Win64 shim built
       ;(prescreenBridgeDepots as jest.Mock).mockResolvedValue('x64')
-      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      isBottleReady.mockReturnValue(true)
 
       const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
@@ -7262,13 +7260,10 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
   })
 
   describe('quick 261024-cjq: missing CrossOver is a precondition, not a bridge failure', () => {
-    const crossoverInstalled = (): jest.Mock =>
-      jest.requireMock('../bottle').__crossoverInstalled
-
     it('bridge route, CrossOver absent: install proceeds to the bridge (no crossoverRequired error, bridge not marked failed)', async () => {
       ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
       ;(isBridgeBottleReady as jest.Mock).mockReturnValue(false)
-      crossoverInstalled().mockReturnValue(false)
+      crossoverInstalled.mockReturnValue(false)
       ;(decideCreationEngine as jest.Mock).mockResolvedValue({
         kind: 'pinned',
         reason: 'cx-missing',
@@ -7329,8 +7324,8 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         is_mac_native: false,
         bridge: { noticeAcknowledgedFor: 'known-bad' }
       })
-      ;(isBottleReady as jest.Mock).mockReturnValue(false)
-      crossoverInstalled().mockReturnValue(false)
+      isBottleReady.mockReturnValue(false)
+      crossoverInstalled.mockReturnValue(false)
 
       const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
@@ -8188,7 +8183,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       is_mac_native: false,
       bridge: { noticeAcknowledgedFor: 'known-bad' }
     })
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
@@ -8215,7 +8210,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     library.set(FALLBACK_TEST_APP_ID, makeEntry({ title: 'Fallback Test' }))
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
 
     markBridgeFailedThisSession(FALLBACK_TEST_APP_ID)
 
@@ -8247,7 +8242,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       is_mac_native: false,
       bridge: { userRoute: 'bottle' }
     })
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
@@ -8415,7 +8410,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     envMock.isMac = true
     envMock.isWindows = false
     envMock.isLinux = false
-    ;(isBottleReady as jest.Mock).mockReset()
+    isBottleReady.mockReset()
     // Native-install ON/OFF is a routing axis in this block — every spec
     // sets it explicitly below rather than relying on resetMocks' implicit
     // undefined/false default, so it is never an accidental coupling.
@@ -8474,7 +8469,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     })
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
@@ -8492,7 +8487,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     })
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
-    ;(isBottleReady as jest.Mock).mockReturnValue(false)
+    isBottleReady.mockReturnValue(false)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
@@ -8509,7 +8504,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     })
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
@@ -8567,7 +8562,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(knownBad)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
     ;(prescreenBridgeDepots as jest.Mock).mockReset()
     ;(prescreenBridgeDepots as jest.Mock).mockResolvedValue('unknown')
     ;(SteamUser.acquireAuthenticated as jest.Mock).mockImplementation(() =>
@@ -8592,7 +8587,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
 
   it('F2: quick 261107-lum — an un-provisioned GameLibSteam bottle does not block a bridge-routed forced install', async () => {
     arrangeForcedBridge()
-    ;(isBottleReady as jest.Mock).mockReturnValue(false)
+    isBottleReady.mockReturnValue(false)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
@@ -8699,7 +8694,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
 
   it('F14: CrossOver missing does not block a bridge-routed forced install (the gate only stops non-bridge routes)', async () => {
     arrangeForcedBridge()
-    jest.requireMock('../bottle').__crossoverInstalled.mockReturnValue(false)
+    crossoverInstalled.mockReturnValue(false)
     const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
     await game.install(argsWith({ steamForceWindowsViaBottle: true }))
@@ -8726,7 +8721,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     })
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
@@ -8747,7 +8742,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     })
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
     const { logWarning } = jest.requireMock('backend/logger')
 
     const game = new SteamGame(APP_ID, steamTestDeps)
@@ -8768,7 +8763,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     })
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
@@ -8785,7 +8780,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     })
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
 
     // Pass 1: Linux host.
     envMock.isMac = false
@@ -8815,7 +8810,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     })
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
@@ -8912,10 +8907,10 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       .mockImplementation(() => {})
     // Routing axes for this block — reset explicitly per spec rather than
     // relying on resetMocks' implicit undefined/false default.
-    ;(isBottleReady as jest.Mock).mockReset()
+    isBottleReady.mockReset()
     ;(tellBottledSteamToLaunch as jest.Mock).mockReset()
     ;(tellBottledSteamToUninstall as jest.Mock).mockReset()
-    ;(getSteamBottleSettings as jest.Mock).mockReset()
+    getSteamBottleSettings.mockReset()
     ;(bridgeAllowlist.has as jest.Mock).mockReset().mockReturnValue(false)
   })
 
@@ -8928,7 +8923,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
   it('D1: getSettings() resolves the bottle settings for a forced game, never GameConfig.get', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
     const bottleSettings = { wineCrossoverBottle: 'GameLibSteam' }
-    ;(getSteamBottleSettings as jest.Mock).mockReturnValue(bottleSettings)
+    getSteamBottleSettings.mockReturnValue(bottleSettings)
     const gameConfigGetMock = jest.requireMock('backend/game_config').GameConfig
       .get as jest.Mock
     gameConfigGetMock.mockClear()
@@ -8942,7 +8937,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
 
   it('getSettings() for a bottle-eligible game carries its own engine override (59-UAT G11)', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
-    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+    getSteamBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'GameLibSteam'
     })
     const readStored = jest.requireMock('../engine/steamEngineDeps')
@@ -8967,7 +8962,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
         .readSteamEngineOverride as jest.Mock
     beforeEach(() => {
       ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
-      ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+      getSteamBottleSettings.mockReturnValue({
         wineCrossoverBottle: 'GameLibSteam'
       })
     })
@@ -9018,7 +9013,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
         .readSteamEngineOverride as jest.Mock
     beforeEach(() => {
       ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
-      ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+      getSteamBottleSettings.mockReturnValue({
         wineCrossoverBottle: 'GameLibSteam'
       })
     })
@@ -9053,7 +9048,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     )
 
     it('a stale wine/prefix/bottle in the title file never wins', async () => {
-      ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+      getSteamBottleSettings.mockReturnValue({
         wineCrossoverBottle: 'GameLibSteam',
         wineVersion: { name: 'bottle' },
         winePrefix: '/bottle'
@@ -9074,7 +9069,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     })
 
     it('a key absent from the title file keeps the bottle/global value', async () => {
-      ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+      getSteamBottleSettings.mockReturnValue({
         wineCrossoverBottle: 'GameLibSteam',
         launcherArgs: '-global'
       })
@@ -9087,7 +9082,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     })
 
     it('the title value beats the bottle/global value', async () => {
-      ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+      getSteamBottleSettings.mockReturnValue({
         wineCrossoverBottle: 'GameLibSteam',
         launcherArgs: '-global'
       })
@@ -9119,7 +9114,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
 
   it('D3: launch() dispatches to the bottled Steam client, never steam://rungameid', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
     ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
       status: 'done'
     })
@@ -9136,8 +9131,8 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
 
   it('D4 (debug/steam-bottle-uninstall-reverts FINAL): uninstall() routes a forced-bottle game to direct deletion — never tellBottledSteamToUninstall, never steam://uninstall', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+    isBottleReady.mockReturnValue(true)
+    getSteamBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'GameLibSteam'
     })
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
@@ -9193,7 +9188,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
   it('D5a: a forced+allowlisted game never enters the Phase 24 bridge on launch() — currently a VACUOUS pass, see Task 2', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
     ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
       status: 'done'
     })
@@ -9222,7 +9217,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
   it('D5c: quick 261107-lum — a forced game whose bits live in a bridge bottle launches through the bridge, never steam://rungameid', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
     // findBridgeInstallBottle (test double) reports GameLibSteamBridge-<appId>.
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
 
@@ -9244,7 +9239,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
   it('D5b: a forced+allowlisted game never enters the Phase 24 bridge on uninstall() — currently a VACUOUS pass, see Task 2', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
     ;(tellBottledSteamToUninstall as jest.Mock).mockResolvedValue({
       status: 'done'
     })
@@ -9254,7 +9249,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     // getSteamBottleSettings() before it can even determine the manifest is
     // absent — needs a return value here or the real (unmocked)
     // readAcfState throws destructuring undefined.
-    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+    getSteamBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'GameLibSteam'
     })
 
@@ -9316,7 +9311,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       })
     )
     ;(getSteamLibraries as jest.Mock).mockResolvedValue([NATIVE_LIBRARY_ROOT])
-    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+    getSteamBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'GameLibSteam'
     })
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
@@ -9504,7 +9499,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
         bridge: { userRoute: 'bottle' }
       })
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
-      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      isBottleReady.mockReturnValue(true)
 
       const game = new SteamGame(APP_ID, steamTestDeps)
       trackSpy(
@@ -9534,7 +9529,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
         bridge: { userRoute: 'bottle' }
       })
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
-      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      isBottleReady.mockReturnValue(true)
 
       const game = new SteamGame(APP_ID, steamTestDeps)
 
@@ -9563,7 +9558,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
         bridge: { userRoute: 'bottle' }
       })
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
-      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      isBottleReady.mockReturnValue(true)
 
       const game = new SteamGame(APP_ID, steamTestDeps)
 
@@ -9592,7 +9587,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
         bridge: { userRoute: 'bottle' }
       })
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
-      ;(isBottleReady as jest.Mock).mockReturnValue(false)
+      isBottleReady.mockReturnValue(false)
 
       const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install(
@@ -9619,7 +9614,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
         bridge: { userRoute: 'bottle' }
       })
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
-      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      isBottleReady.mockReturnValue(true)
 
       const game = new SteamGame(APP_ID, steamTestDeps)
       trackSpy(
@@ -9649,7 +9644,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
         bridge: { userRoute: 'bottle' }
       })
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
-      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      isBottleReady.mockReturnValue(true)
 
       const game = new SteamGame(APP_ID, steamTestDeps)
       const installBottleNative = trackSpy(
@@ -9721,7 +9716,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
         bridge: { userRoute: 'bottle' }
       })
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
-      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      isBottleReady.mockReturnValue(true)
 
       const game = new SteamGame(APP_ID, steamTestDeps)
 
@@ -9853,7 +9848,7 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
     envMock.isMac = true
     envMock.isWindows = false
     envMock.isLinux = false
-    ;(isBottleReady as jest.Mock).mockReset()
+    isBottleReady.mockReset()
   })
 
   afterEach(() => {
@@ -9873,7 +9868,7 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
       bridge: { userRoute: 'bottle' }
     })
     ;(axios.get as jest.Mock).mockResolvedValue(windowsOnlyFixture)
-    ;(isBottleReady as jest.Mock).mockReturnValue(false)
+    isBottleReady.mockReturnValue(false)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
@@ -9921,7 +9916,7 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
       is_mac_native: false,
       bridge: { userRoute: 'bottle' }
     })
-    ;(isBottleReady as jest.Mock).mockReturnValue(false)
+    isBottleReady.mockReturnValue(false)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
@@ -10221,7 +10216,7 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
     adoption().probeMacSteamPid.mockResolvedValue(50647)
     ;(parse as jest.Mock).mockReturnValue(undefined)
     // resolveInstallRoot() consults the bottle root first on Mac.
-    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+    getSteamBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'Steam'
     })
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
@@ -10430,7 +10425,7 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
     pollOnceSpy = jest
       .spyOn(uninstallPollingModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
-    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+    getSteamBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'Steam'
     })
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
@@ -10626,7 +10621,7 @@ describe('SteamGame.uninstall() — Phase 17 bottle routing (D-10/D-11)', () => 
     envMock.isMac = true
     envMock.isWindows = false
     envMock.isLinux = false
-    ;(isBottleReady as jest.Mock).mockReset()
+    isBottleReady.mockReset()
     ;(tellBottledSteamToUninstall as jest.Mock).mockReset()
     // debug/steam-bottle-uninstall-reverts (routing fix): resolveInstallRoot()
     // always consults the bottle root first on mac (isMac=true here for every
@@ -10634,7 +10629,7 @@ describe('SteamGame.uninstall() — Phase 17 bottle routing (D-10/D-11)', () => 
     // getSteamBottleSettings() always returns a valid object (falls back to
     // DEFAULT_STEAM_BOTTLE_NAME), so mock it the same way here rather than
     // leave it unmocked-undefined.
-    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+    getSteamBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'GameLibSteam'
     })
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
@@ -10660,7 +10655,7 @@ describe('SteamGame.uninstall() — Phase 17 bottle routing (D-10/D-11)', () => 
       platformsCaptured: true,
       is_mac_native: false
     })
-    ;(isBottleReady as jest.Mock).mockReturnValue(false)
+    isBottleReady.mockReturnValue(false)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     await game.uninstall({} as any)
@@ -10777,10 +10772,10 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
     envMock.isMac = true
     envMock.isWindows = false
     envMock.isLinux = false
-    ;(isBottleReady as jest.Mock).mockReset().mockReturnValue(true)
+    isBottleReady.mockReset().mockReturnValue(true)
     ;(tellBottledSteamToUninstall as jest.Mock).mockReset()
     ;(bridgeAllowlist.has as jest.Mock).mockReset().mockReturnValue(false)
-    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+    getSteamBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'GameLibSteam'
     })
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
@@ -11289,10 +11284,10 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
     envMock.isMac = true
     envMock.isWindows = false
     envMock.isLinux = false
-    ;(isBottleReady as jest.Mock).mockReset().mockReturnValue(true)
+    isBottleReady.mockReset().mockReturnValue(true)
     ;(tellBottledSteamToUninstall as jest.Mock).mockReset()
     ;(bridgeAllowlist.has as jest.Mock).mockReset().mockReturnValue(false)
-    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+    getSteamBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'GameLibSteam'
     })
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
@@ -11832,8 +11827,8 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
     // isBridgeBottleReady:true default does not model this scenario and
     // must be overridden here.
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(false)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+    isBottleReady.mockReturnValue(true)
+    getSteamBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'GameLibSteam'
     })
     // debug/steam-bottle-uninstall-reverts (routing fix): the library
@@ -12323,7 +12318,7 @@ describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => 
     startInstallPollingSpy = jest
       .spyOn(installPollingModule, 'startInstallPolling')
       .mockImplementation(() => {})
-    ;(isBottleReady as jest.Mock).mockReset()
+    isBottleReady.mockReset()
   })
 
   afterEach(() => {
@@ -12346,7 +12341,7 @@ describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => 
       bridge: { userRoute: 'bottle' }
     })
     dialogShowMessageBox.mockResolvedValue({ response: 0 })
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
     const installBottleNative = trackSpy(
       jest.spyOn(gameInstallDepot, 'installBottleNative')
     ).mockResolvedValue({ status: 'done' } as any)
@@ -12470,7 +12465,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
       envMock.isMac = true
       envMock.isWindows = false
       envMock.isLinux = false
-      ;(getSteamBottleSettings as jest.Mock).mockReset()
+      getSteamBottleSettings.mockReset()
     })
 
     it('bottle-eligible game: getSettings() resolves getSteamBottleSettings(), NOT GameConfig.get(<appId>)', async () => {
@@ -12483,7 +12478,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
         wineVersion: { name: 'CrossOver', type: 'crossover', bin: '' },
         wineCrossoverBottle: 'GameLibSteam'
       }
-      ;(getSteamBottleSettings as jest.Mock).mockReturnValue(bottleSettings)
+      getSteamBottleSettings.mockReturnValue(bottleSettings)
       const gameConfigGetMock = jest.requireMock('backend/game_config')
         .GameConfig.get as jest.Mock
       gameConfigGetMock.mockClear()
@@ -13670,7 +13665,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(exePath)
       ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
       ;(existsSync as jest.Mock).mockReturnValue(true)
-      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      isBottleReady.mockReturnValue(true)
       ;(getBridgeBottleSettings as jest.Mock).mockImplementation(
         (_deps: unknown, id: string) => ({
           wineCrossoverBottle: bottleFor(id),
@@ -15992,7 +15987,7 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
       platformsCaptured: true,
       is_mac_native: true
     })
-    ;(isBottleReady as jest.Mock).mockReturnValue(false)
+    isBottleReady.mockReturnValue(false)
     adoption().probeMacSteamPid.mockResolvedValue(null)
     adoption().readAcfSnapshot.mockReturnValue(RECORD.baseline)
     adoption().readPendingAdoption.mockReturnValue(undefined)
@@ -16216,7 +16211,7 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
       platformsCaptured: true,
       is_mac_native: true
     })
-    ;(isBottleReady as jest.Mock).mockReturnValue(false)
+    isBottleReady.mockReturnValue(false)
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
     ;(resolveSteamLibraryRoot as jest.Mock).mockResolvedValue('/mock/steam')
     adoption().probeMacSteamPid.mockResolvedValue(null)
@@ -16529,7 +16524,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       '/mock/bridge/bottle/steamapps'
     )
     ;(getBottleDir as jest.Mock).mockReturnValue('/mock/bridge/bottle')
-    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+    getSteamBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'GameLibSteam'
     })
   })
@@ -17242,7 +17237,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
     it('bottled-Steam launch with an unhealthy pre-flight: CrossOver-required dialog, no dispatch', async () => {
       ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
       ;(isBridgeBottleReady as jest.Mock).mockReturnValue(false)
-      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      isBottleReady.mockReturnValue(true)
       ;(preflightCrossover as jest.Mock).mockResolvedValue({
         kind: 'missing',
         detail: 'x'

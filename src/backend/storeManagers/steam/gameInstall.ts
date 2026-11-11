@@ -161,7 +161,8 @@ export async function install(
     // route. The bridge route installs on the built-in engine, so the gate
     // is applied once the final route is known (below).
     const crossoverMissing =
-      isMac && !(await bottle.isCrossoverInstalled(steamGame.deps))
+      isMac &&
+      !(await steamGame.deps.steamBottle.isCrossoverInstalled(steamGame.deps))
 
     // quick-260821-le0: remove a leftover unrunnable native i386 install
     // BEFORE anything else in this branch runs — HOARD proved a demoted
@@ -320,7 +321,7 @@ export async function install(
       return bridgeResult
     }
 
-    if (!bottle.isBottleReady()) {
+    if (!steamGame.deps.steamBottle.isBottleReady()) {
       logInfo(
         `SteamGame: appId ${steamGame.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of installing`,
         LogPrefix.Steam
@@ -571,7 +572,7 @@ export function hasBottledSteamCopy(steamGame: SteamGame): boolean {
     return false
   }
   const steamappsDir = bottle.getBottleSteamappsDir(
-    bottle.getSteamBottleSettings().wineCrossoverBottle
+    steamGame.deps.steamBottle.getSteamBottleSettings().wineCrossoverBottle
   )
   return resolve(breadcrumb) === resolve(steamappsDir)
 }

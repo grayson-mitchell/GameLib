@@ -17,7 +17,7 @@ import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
-import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
+import { getBottleSteamappsDir } from '../bottle'
 import {
   getBridgeBottleSettings,
   listReadyBridgeBottleNames
@@ -34,7 +34,11 @@ import type { Stores } from 'backend/services/types'
 const { steamMetadataStore } = jest.requireMock<Stores['steam']>('../stores')
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
+// 66.3-15: the bottle settings are read through the deps slice, not a module import.
+const getSteamBottleSettings = jest.fn()
+
 const steamTestDeps = createTestManagerDeps({
+  steamBottle: { getSteamBottleSettings } as never,
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
 })
@@ -166,9 +170,7 @@ jest.mock('../stores', () => ({
 
 // ── bottle mock — getBottleSteamappsDir/getSteamBottleSettings/isBottleProvisioned ─
 jest.mock('../bottle', () => ({
-  getBottleSteamappsDir: jest.fn(),
-  getSteamBottleSettings: jest.fn(),
-  isSteamBottleProvisioned: jest.fn()
+  getBottleSteamappsDir: jest.fn()
 }))
 jest.mock('../bridgeBottle', () => ({
   getBridgeBottleSettings: jest.fn(),

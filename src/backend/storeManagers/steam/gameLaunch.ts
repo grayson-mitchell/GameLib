@@ -30,7 +30,6 @@ import {
   decidePlayAdoption,
   restartMacSteamForAdoption
 } from './macSteamAdoption'
-import { isBottleReady, getSteamBottleSettings } from './bottle'
 import { killBridgeBottleWineServer } from './bridgeBottleLifecycle'
 import {
   getBridgeBottleSettings,
@@ -144,7 +143,7 @@ export async function launch(
       return launchBridgeGame(steamGame)
     }
 
-    if (!isBottleReady()) {
+    if (!steamGame.deps.steamBottle.isBottleReady()) {
       logInfo(
         `SteamGame: appId ${steamGame.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of launching`,
         LogPrefix.Steam
@@ -165,8 +164,8 @@ export async function launch(
     const { steamDecisionDeps, steamDecisionServices } =
       await import('./engine/steamEngineDeps')
     const pre = await preflightCrossover(
-      getSteamBottleSettings()?.wineCrossoverBottle ??
-        DEFAULT_STEAM_BOTTLE_NAME,
+      steamGame.deps.steamBottle.getSteamBottleSettings()
+        ?.wineCrossoverBottle ?? DEFAULT_STEAM_BOTTLE_NAME,
       steamDecisionDeps(steamDecisionServices(steamGame.deps))
     )
     if (pre.kind !== 'healthy') {
@@ -537,7 +536,8 @@ export async function selectLaunchEngine(
     steamSwitchDeps,
     readSteamEngineOverride
   } = await import('./engine/steamEngineDeps')
-  const { engineServicesFrom } = await import('backend/services/engineServices')
+  const { steamEngineServicesFrom } =
+    await import('backend/services/engineServices')
   const { parseEngineOverride } = await import('backend/engine/engineIds')
   const earlyOverride = parseEngineOverride(
     readSteamEngineOverride(steamGame.appId)
@@ -651,7 +651,7 @@ export async function selectLaunchEngine(
     crossoverHealthy: decision.preflight?.kind === 'healthy',
     // WR-05: a restore's pin download reports the same progress as a launch download.
     deps: {
-      ...steamSwitchDeps(engineServicesFrom(steamGame.deps)),
+      ...steamSwitchDeps(steamEngineServicesFrom(steamGame.deps)),
       ensurePinEngine: steamGame.restorePinEngine
     },
     // IN-05 (59-22): a real engine switch is "setting up", not a stale

@@ -16,20 +16,29 @@ import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
-import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
+import { getBottleSteamappsDir } from '../bottle'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { join } from 'path'
 import type { Stores } from 'backend/services/types'
 
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 
-const libDeps = { config: createTestGlobalConfig() }
+// 66.3-15: the bottle settings are read through the deps slice, so they are a plain mock here.
+const getSteamBottleSettings = jest.fn()
+const libDeps = {
+  config: createTestGlobalConfig(),
+  steamBottle: { getSteamBottleSettings, resolveCrossoverWine: jest.fn() }
+}
 
 const { steamLibraryStore, steamMetadataStore } =
   jest.requireMock<Stores['steam']>('../stores')
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
+  steamBottle: {
+    getSteamBottleSettings,
+    isSteamBottleProvisioned: jest.fn()
+  } as never,
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
 })
@@ -161,9 +170,7 @@ jest.mock('../stores', () => ({
 
 // ── bottle mock — getBottleSteamappsDir/getSteamBottleSettings/isBottleProvisioned ─
 jest.mock('../bottle', () => ({
-  getBottleSteamappsDir: jest.fn(),
-  getSteamBottleSettings: jest.fn(),
-  isSteamBottleProvisioned: jest.fn()
+  getBottleSteamappsDir: jest.fn()
 }))
 jest.mock('../bridgeBottle', () => ({
   getBridgeBottleSettings: jest.fn(),

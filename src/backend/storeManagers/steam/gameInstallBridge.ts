@@ -346,7 +346,8 @@ export async function resolveInstallEngineSettings(
   const { isNonCrossover } = await import('backend/engine/engineTypes')
   const { steamDecisionDeps, steamDecisionServices, steamSwitchDeps } =
     await import('./engine/steamEngineDeps')
-  const { engineServicesFrom } = await import('backend/services/engineServices')
+  const { steamEngineServicesFrom } =
+    await import('backend/services/engineServices')
   const decision = await decideLaunchEngine(
     { key: steamGame.appId, bottleName: bridgeBottleName },
     steamDecisionDeps(steamDecisionServices(steamGame.deps))
@@ -365,7 +366,7 @@ export async function resolveInstallEngineSettings(
     next: sel,
     crossoverHealthy: decision.preflight?.kind === 'healthy',
     deps: {
-      ...steamSwitchDeps(engineServicesFrom(steamGame.deps)),
+      ...steamSwitchDeps(steamEngineServicesFrom(steamGame.deps)),
       ensurePinEngine: steamGame.restorePinEngine
     }
   })

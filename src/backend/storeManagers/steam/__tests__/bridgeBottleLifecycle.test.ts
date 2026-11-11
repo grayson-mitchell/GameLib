@@ -30,7 +30,7 @@ import type { EngineServicesSource } from 'backend/services/engineServices'
 import { writeCxbottleConf } from 'backend/engine/adoptBottle'
 import { createTestStores } from 'backend/testUtils/testServices'
 import {
-  bindBottleStores,
+  createSteamBottle,
   bottleWineArch,
   DEFAULT_BRIDGE_BOTTLE_NAME,
   CROSSOVER_CREATE_FAILED,
@@ -44,7 +44,8 @@ import {
   removePerGameBridgeBottle,
   stopPerGameBridgeBottle,
   endPerGameBridgeBottleSession,
-  killBridgeBottleWineServer
+  killBridgeBottleWineServer,
+  type BottleLifecycleDeps
 } from '../bridgeBottleLifecycle'
 import {
   getBridgeBottleSettings,
@@ -156,14 +157,16 @@ const mockedRmSync = rmSync as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
 const mockedSet = steamBottleConfigStore.set as jest.Mock
 
-// 66.1-22g: bottle readers use the slice bound at boot; bind the suite's mocked store.
-bindBottleStores({
-  stores: createTestStores({ steam: { steamBottleConfigStore } as never })
-})
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+// 66.3-15: the bottle helpers are an instance over the suite's mocked store and config.
+const steamBottle = createSteamBottle({
+  stores: createTestStores({ steam: { steamBottleConfigStore } as never }),
+  config: { getSettings: () => mockedGlobalConfigGet().getSettings() }
+})
 // The config slice the lifecycle guards and the settings resolvers read (66.3-08), through the mock.
 const bridgeDeps = {
-  config: { getSettings: () => mockedGlobalConfigGet().getSettings() }
+  config: { getSettings: () => mockedGlobalConfigGet().getSettings() },
+  steamBottle
 }
 // Recording fakes handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
@@ -171,8 +174,9 @@ const mockedSpawnAsync = jest.fn()
 // cases reach them, and those spy engineServicesFrom (below), so the spawn fake is all that is real.
 const spawnDeps = {
   spawnAsync: mockedSpawnAsync,
-  config: bridgeDeps.config
-} as unknown as { spawnAsync: typeof mockedSpawnAsync } & EngineServicesSource
+  config: bridgeDeps.config,
+  steamBottle
+} as unknown as BottleLifecycleDeps & EngineServicesSource
 const mockedDownloadFile = downloadFile as jest.Mock
 const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
 const mockedRunWineCommand = jest.fn()

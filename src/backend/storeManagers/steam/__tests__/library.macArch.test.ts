@@ -24,11 +24,7 @@ import { reportDetectedFix } from 'backend/knownFixReport'
 import { sendFrontendMessage } from '../../../ipc'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
-import {
-  getBottleSteamappsDir,
-  getSteamBottleSettings,
-  isSteamBottleProvisioned
-} from '../bottle'
+import { getBottleSteamappsDir } from '../bottle'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { join } from 'path'
 import type { ManagerDeps, Stores } from 'backend/services/types'
@@ -68,7 +64,11 @@ const archRunner = {
   }
 } as unknown as ManagerDeps['runner']
 
+// 66.3-15: the bottle helpers are read through the deps slice, so they are plain mocks here.
+const getSteamBottleSettings = jest.fn()
+const isSteamBottleProvisioned = jest.fn()
 const steamTestDeps = createTestManagerDeps({
+  steamBottle: { getSteamBottleSettings, isSteamBottleProvisioned } as never,
   // The i386-recovery confirm goes through deps.dialogs; the platform dialog mock records it.
   dialogs: {
     ...createTestHostServices().dialogs,
@@ -210,9 +210,7 @@ jest.mock('../stores', () => ({
 
 // ── bottle mock — getBottleSteamappsDir/getSteamBottleSettings/isBottleProvisioned ─
 jest.mock('../bottle', () => ({
-  getBottleSteamappsDir: jest.fn(),
-  getSteamBottleSettings: jest.fn(),
-  isSteamBottleProvisioned: jest.fn()
+  getBottleSteamappsDir: jest.fn()
 }))
 jest.mock('../bridgeBottle', () => ({
   getBridgeBottleSettings: jest.fn(),

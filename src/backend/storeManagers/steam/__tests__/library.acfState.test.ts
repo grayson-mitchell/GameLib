@@ -16,7 +16,7 @@ import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries } from 'backend/utils'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
-import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
+import { getBottleSteamappsDir } from '../bottle'
 import {
   getBridgeBottleSettings,
   listReadyBridgeBottleNames
@@ -29,7 +29,13 @@ import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 // The boot-owned Steam library state the scan reads (D-66.3-13): one instance for this file.
 const steamSession = createTestSteamSession()
 const library = steamSession.libraryState.library
-const libDeps = { config: createTestGlobalConfig(), steamSession }
+// 66.3-15: the bottle settings are read through the deps slice, so they are a plain mock here.
+const getSteamBottleSettings = jest.fn()
+const libDeps = {
+  config: createTestGlobalConfig(),
+  steamSession,
+  steamBottle: { getSteamBottleSettings, resolveCrossoverWine: jest.fn() }
+}
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under
@@ -156,7 +162,6 @@ jest.mock('../stores', () => ({
 // ── bottle mock — getBottleSteamappsDir/getSteamBottleSettings/isBottleProvisioned ─
 jest.mock('../bottle', () => ({
   getBottleSteamappsDir: jest.fn(),
-  getSteamBottleSettings: jest.fn(),
   isSteamBottleProvisioned: jest.fn()
 }))
 jest.mock('../bridgeBottle', () => ({

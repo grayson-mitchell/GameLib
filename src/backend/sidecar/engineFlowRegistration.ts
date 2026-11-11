@@ -33,6 +33,7 @@ import {
 import { engineKeyFor } from 'backend/engine/gameKey'
 import { wineManagerReleasesFrom } from 'backend/engine/wineManagerReleases'
 import type { EngineServices } from 'backend/engine/engineServices'
+import type { SteamEngineBottle } from 'backend/storeManagers/steam/bottle'
 
 /** Narrow slice (66.1 D-01): only the library managers are read. */
 export interface EngineFlowDeps {
@@ -46,6 +47,8 @@ export interface EngineFlowDeps {
   config: Pick<GlobalConfigSlice, 'getSettings'>
   /** The boot-owned engine state; its publisher is built by the 'engine-state' boot step (D-66.3-12). */
   engineState: EngineServices['engineState']
+  /** The Steam bottle slice the Steam engine state reads (66.3-15). */
+  steamBottle: SteamEngineBottle['steamBottle']
 }
 
 function engineServicesOf(

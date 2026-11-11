@@ -40,15 +40,12 @@ import {
   CROSSOVER_MISSING,
   CROSSOVER_REQUIRED_MESSAGE,
   PROVISION_ABORTED,
-  bottleConfigStore,
   bottleWineArch,
   cxRootFrom,
   cxbottleIn,
   getBottleSteamExePath,
-  getSteamBottleSettings,
-  isBottleReady,
-  persistedWineBins,
-  wineserverIn
+  wineserverIn,
+  type SteamBottle
 } from './bottle'
 import { raiseInstallerWindow } from './bottledSteam'
 
@@ -93,8 +90,13 @@ export type SpawnDeps = {
   runner: Pick<ProcessRunner, 'run'>
 }
 
+/** SpawnDeps plus the persisted wine-bin hint the CrossOver lookup reads (66.3-15). */
+export type KillBottleDeps = SpawnDeps & {
+  steamBottle: Pick<SteamBottle, 'persistedWineBins'>
+}
+
 export async function killBottleWineServer(
-  deps: SpawnDeps,
+  deps: KillBottleDeps,
   bottleName: string,
   knownBinDir?: string,
   timeoutMs?: number
@@ -103,7 +105,7 @@ export async function killBottleWineServer(
     knownBinDir ??
     (await resolveCrossoverBinDirAsync(
       { runner: deps.runner },
-      { hintWineBins: persistedWineBins() }
+      { hintWineBins: deps.steamBottle.persistedWineBins() }
     ))
   if (!binDir) {
     logWarning(
@@ -169,6 +171,13 @@ export async function provisionBottle(
     gameConfigs: Pick<GameConfigs, 'get'>
     dialogs: Pick<Dialogs, 'showMessageBox'>
     appState: Pick<AppState, 'hide'>
+    steamBottle: Pick<
+      SteamBottle,
+      | 'configStore'
+      | 'getSteamBottleSettings'
+      | 'isBottleReady'
+      | 'persistedWineBins'
+    >
   },
   opts?: {
     bottleName?: string
@@ -238,11 +247,11 @@ export async function provisionBottle(
     { runner: deps.runner },
     {
       wineVersion: opts?.wineVersion,
-      hintWineBins: persistedWineBins()
+      hintWineBins: deps.steamBottle.persistedWineBins()
     }
   )
   const needsCxbottle =
-    !isBottleReady(bottleName) ||
+    !deps.steamBottle.isBottleReady(bottleName) ||
     (isBottleProvisioned(bottleName) && bottleWineArch(bottleName) === 'win32')
   if (!binDir && needsCxbottle) {
     logWarning(
@@ -257,10 +266,10 @@ export async function provisionBottle(
   }
 
   // (2) Persist the chosen wine/bottle identity before composing settings.
-  bottleConfigStore().set('bottleName', bottleName)
-  bottleConfigStore().set('wineCrossoverBottle', bottleName)
+  deps.steamBottle.configStore().set('bottleName', bottleName)
+  deps.steamBottle.configStore().set('wineCrossoverBottle', bottleName)
   if (opts?.wineVersion) {
-    bottleConfigStore().set('wineVersion', opts.wineVersion)
+    deps.steamBottle.configStore().set('wineVersion', opts.wineVersion)
   }
 
   // (2b) GAP-17-CEF-RENDER: a win32 bottle cannot be converted in place — it
@@ -314,13 +323,13 @@ export async function provisionBottle(
       }
     }
     // Reset ONLY bottle state — never touch refreshToken/isLoggedIn/userData.
-    bottleConfigStore().set('provisioned', false)
+    deps.steamBottle.configStore().set('provisioned', false)
   }
 
   // (3) Idempotent short-circuit — bottle is FULLY ready (conf + steam.exe).
   // A half-provisioned bottle (conf only) must NOT short-circuit here — it
   // needs to resume (self-heal) via steps 4-7 below.
-  if (isBottleReady(bottleName)) {
+  if (deps.steamBottle.isBottleReady(bottleName)) {
     return { status: 'done' }
   }
 
@@ -399,7 +408,7 @@ export async function provisionBottle(
   // (6) Pitfall 6: checkWineBeforeLaunch writes recovery via
   // the per-game config's setSetting('wineVersion', ...) — use the
   // reserved synthetic appName so it never collides with a real game.
-  const bottleSettings = getSteamBottleSettings()
+  const bottleSettings = deps.steamBottle.getSteamBottleSettings()
   try {
     const syntheticGameInfo: GameInfo = {
       runner: 'steam',
@@ -421,7 +430,9 @@ export async function provisionBottle(
       logWriter
     )
     if (wineOk && bottleSettings.wineVersion) {
-      bottleConfigStore().set('wineVersion', bottleSettings.wineVersion)
+      deps.steamBottle
+        .configStore()
+        .set('wineVersion', bottleSettings.wineVersion)
     }
   } catch (error) {
     logWarning(
@@ -439,7 +450,7 @@ export async function provisionBottle(
     void raiseInstallerWindow(deps, 'provision-SteamSetup')
     await deps.commandRunner.runWineCommand({
       commandParts: [steamSetupExePath],
-      gameSettings: getSteamBottleSettings(),
+      gameSettings: deps.steamBottle.getSteamBottleSettings(),
       wait: false,
       protonVerb: 'run',
       skipPrefixCheckIKnowWhatImDoing: true,
@@ -469,7 +480,7 @@ export async function provisionBottle(
   const steamExeReady =
     isBottleProvisioned(bottleName) && existsSync(steamExePath)
   if (steamExeReady) {
-    bottleConfigStore().set('provisioned', true)
+    deps.steamBottle.configStore().set('provisioned', true)
   }
 
   logInfo(

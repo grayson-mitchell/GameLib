@@ -73,7 +73,7 @@ import {
   updateWineVersionInfos,
   updateWineListsIfOutdated
 } from '../wine/manager/utils'
-import { createTools } from '../tools'
+import { createTools, type ToolsDeps } from '../tools'
 import type { WinetricksQueue } from '../tools/winetricksQueue'
 import { isWindows } from '../constants/environment'
 import { assertCommandParts } from './rendererPathGuard'
@@ -113,6 +113,8 @@ export interface WineToolsFlowDeps extends NotifyDeps, DialogBoxDeps {
   appInfo: Pick<AppInfo, 'version'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   engineState: EngineStateService
+  /** The Steam bottle slice the Steam Wine-tool resolver reads (66.3-15). */
+  steamBottle: ToolsDeps['steamBottle']
   /** The boot-owned winetricks apply queue (D-66.3-12). */
   winetricksQueue: WinetricksQueue
   managers: Pick<StoreManagers, 'library'>

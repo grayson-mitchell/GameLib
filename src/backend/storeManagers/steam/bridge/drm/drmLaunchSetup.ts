@@ -172,7 +172,7 @@ export type DrmSetupOverrides = {
 /** The overrides plus the slices the stage and session end need (66.1 R3). */
 export type DrmLaunchSetupDeps = DrmSetupOverrides &
   StageDrmBottleSlices &
-  Pick<ManagerDeps, 'config'>
+  Pick<ManagerDeps, 'config' | 'steamBottle'>
 
 const NUMERIC_APP_ID = /^[0-9]{1,10}$/
 
@@ -476,7 +476,8 @@ async function runSetup(
         commandRunner: deps.commandRunner,
         spawnAsync: deps.spawnAsync,
         runner: deps.runner,
-        config: deps.config
+        config: deps.config,
+        steamBottle: deps.steamBottle
       })
     )
     if (staged.status === 'error') return fail('bottle-stage', staged)

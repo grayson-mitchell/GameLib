@@ -37,6 +37,7 @@ import type {
   BridgeHelperSlice
 } from 'backend/storeManagers/steam/bridge/helperRegistry'
 import type { AnonymousClient } from 'backend/storeManagers/steam/anonymousClient'
+import type { SteamBottle } from 'backend/storeManagers/steam/bottle'
 import type { SteamSignInState } from 'backend/storeManagers/steam/userSignInState'
 import type { SteamAuthTriggerState } from 'backend/storeManagers/steam/authTrigger'
 import type { SteamLibraryState } from 'backend/storeManagers/steam/state'
@@ -163,6 +164,8 @@ export interface ManagerDeps {
   steamSession: SteamSessionServices
   /** The boot-owned bridge-helper registry (D-66.3-14). */
   bridgeHelpers: BridgeHelperSlice
+  /** The boot-owned Steam bottle helpers over the bottle config store (D-66.3-15). */
+  steamBottle: SteamBottle
   /** The boot-owned anonymous CM client for public PICS reads (D-66.3-14). */
   anonymousClient: Pick<AnonymousClient, 'get' | 'close'>
   /** The boot-owned connectivity monitor, as the slice managers read (D-66.3-11). */
@@ -248,4 +251,6 @@ export interface BootServices {
   anonymousClient: AnonymousClient
   /** Built by the 'bridge-helper-registry' boot step, before 'store-managers' (D-66.3-14). */
   bridgeHelpers: BridgeHelperRegistry
+  /** Built by the 'steam-bottle' boot step, before 'store-managers' (D-66.3-15). */
+  steamBottle: SteamBottle
 }

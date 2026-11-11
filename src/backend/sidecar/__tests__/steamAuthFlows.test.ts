@@ -110,7 +110,6 @@ jest.mock('../../storeManagers/steam/userRedeem')
 // boundary (their own logic is already covered by
 // storeManagers/steam/__tests__/). This suite proves registration and
 // transport, not bottle or client-setup logic ────────────────────────────────
-jest.mock('../../storeManagers/steam/bottle')
 jest.mock('../../storeManagers/steam/provisionBottle')
 jest.mock('../../storeManagers/steam/clientSetup')
 jest.mock('../../storeManagers/steam/games')
@@ -154,7 +153,8 @@ let steamBottleConfigStore: ReturnType<
 >['steamBottleConfigStore']
 let getTokenStore: typeof import('../../storeManagers/steam/tokenStore').getTokenStore
 let KEYRING_SLOT_STEAM_REFRESH_TOKEN: typeof import('../keyringTokenStore').KEYRING_SLOT_STEAM_REFRESH_TOKEN
-let isSteamBottleProvisioned: typeof import('../../storeManagers/steam/bottle').isSteamBottleProvisioned
+// 66.3-15: the bottle helpers are a boot-owned instance, handed to the boot as a recording fake.
+const isSteamBottleProvisioned = jest.fn()
 let provisionBottle: typeof import('../../storeManagers/steam/provisionBottle').provisionBottle
 let startGuidedClientInstall: typeof import('../../storeManagers/steam/clientSetup').startGuidedClientInstall
 let ensureSteamClientReady: typeof import('../../storeManagers/steam/clientSetup').ensureSteamClientReady
@@ -182,7 +182,6 @@ function freshRegistry(): void {
     }))
   ;({ getTokenStore } = require('../../storeManagers/steam/tokenStore'))
   ;({ KEYRING_SLOT_STEAM_REFRESH_TOKEN } = require('../keyringTokenStore'))
-  ;({ isSteamBottleProvisioned } = require('../../storeManagers/steam/bottle'))
   ;({ provisionBottle } = require('../../storeManagers/steam/provisionBottle'))
   ;({
     startGuidedClientInstall,
@@ -198,7 +197,11 @@ function freshRegistry(): void {
   /* eslint-enable @typescript-eslint/no-require-imports */
 }
 
-const boot = () => bootFresh({ reuseRegistry: true })
+const boot = () =>
+  bootFresh({
+    reuseRegistry: true,
+    services: { steamBottle: { isSteamBottleProvisioned } as never }
+  })
 
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
 async function flush(): Promise<void> {

@@ -15,7 +15,7 @@ import { getSteamLibraries, sendProgressUpdate } from 'backend/utils'
 import { clearSteamResumeBreadcrumb } from '../library/resumeBreadcrumbs'
 import { findOtherManifestsWithInstalldir } from '../library/acfState'
 import { getBridgeBottleSteamappsRoot } from '../library/installRoot'
-import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
+import { getBottleSteamappsDir } from '../bottle'
 import { deleteCancelledSteamInstall } from '../cancelDelete'
 import type { GameInfo } from 'common/types'
 import { at } from './fixtures/indexed'
@@ -24,7 +24,11 @@ import { createSteamStores } from '../stores'
 
 const steamStoresModule = createSteamStores({ registry: createStoreRegistry() })
 
+// 66.3-15: the bottle settings are read through the deps slice, not a module import.
+const getSteamBottleSettings = jest.fn()
+
 const steamTestDeps = createTestManagerDeps({
+  steamBottle: { getSteamBottleSettings } as never,
   stores: createTestStores({ steam: steamStoresModule })
 })
 
@@ -54,8 +58,7 @@ jest.mock('../library/installRoot', () => ({
   getBridgeBottleSteamappsRoot: jest.fn()
 }))
 jest.mock('../bottle', () => ({
-  getBottleSteamappsDir: jest.fn(),
-  getSteamBottleSettings: jest.fn()
+  getBottleSteamappsDir: jest.fn()
 }))
 jest.mock('../user')
 jest.mock('../withTimeout', () => ({

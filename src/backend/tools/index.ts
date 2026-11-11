@@ -1,3 +1,4 @@
+import type { SteamEngineBottle } from 'backend/storeManagers/steam/bottle'
 import type { AppState } from 'backend/host/appState'
 import type { SpawnAsync } from 'backend/spawnAsync'
 import type { EngineServices } from 'backend/engine/engineServices'
@@ -221,6 +222,8 @@ export interface ToolsDeps extends DialogBoxDeps, NotifyDeps {
   spawnAsync: SpawnAsync
   runner: Pick<ProcessRunner, 'run'>
   stores: Pick<Stores, 'wineManager'>
+  /** The Steam bottle's wine-bin hint and CrossOver resolver, for the Steam Wine-tool resolver (66.3-15). */
+  steamBottle: SteamEngineBottle['steamBottle']
   gameConfigs: Pick<GameConfigs, 'get'>
   appInfo: Pick<AppInfo, 'version'>
   /** `raiseMainWindow` is for the engine's refused-launch dialog (66.3-06). */
@@ -1612,7 +1615,10 @@ async function resolveGameToolSettings(
   if (hasCapability(id.runner, 'usesBottleRuntime')) {
     const { resolveSteamWineToolSettings } =
       await import('backend/storeManagers/steam/bridgeWineTools')
-    return resolveSteamWineToolSettings(engineServicesFor(deps), id.appName)
+    return resolveSteamWineToolSettings(
+      { ...engineServicesFor(deps), steamBottle: deps.steamBottle },
+      id.appName
+    )
   }
   return resolveToolSettings(engineServicesFor(deps), game, stored, opts)
 }

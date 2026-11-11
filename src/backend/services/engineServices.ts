@@ -6,6 +6,7 @@ import type { EngineServices } from 'backend/engine/engineServices'
 import { wineManagerReleasesFrom } from 'backend/engine/wineManagerReleases'
 import { createTools } from 'backend/tools'
 import type { Tools, ToolsDeps } from 'backend/tools'
+import type { SteamEngineBottle } from 'backend/storeManagers/steam/bottle'
 import type { Launcher, ManagerDeps } from './types'
 
 export type EngineServicesSource = Pick<
@@ -21,6 +22,7 @@ export type EngineServicesSource = Pick<
     | 'appState'
     | 'notifications'
     | 'onlineMonitor'
+    | 'steamBottle'
   > & {
     /** The boot-owned engine decision/notice state (D-66.3-12). */
     engineState: EngineServices['engineState']
@@ -39,6 +41,7 @@ export function toolsFrom(deps: EngineServicesSource): Tools {
     spawnAsync: deps.spawnAsync,
     runner: deps.runner,
     stores: deps.stores,
+    steamBottle: deps.steamBottle,
     config: deps.config,
     gameConfigs: deps.gameConfigs,
     appInfo: deps.appInfo,
@@ -67,4 +70,11 @@ export function engineServicesFrom(deps: EngineServicesSource): EngineServices {
       notifications: deps.notifications
     }
   }
+}
+
+/** The engine services plus the bottle slice the Steam engine deps read (66.3-15). */
+export function steamEngineServicesFrom(
+  deps: EngineServicesSource
+): EngineServices & SteamEngineBottle {
+  return { ...engineServicesFrom(deps), steamBottle: deps.steamBottle }
 }

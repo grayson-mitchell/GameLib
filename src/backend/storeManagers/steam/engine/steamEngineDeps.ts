@@ -25,7 +25,7 @@ import type {
   EngineStateService
 } from 'backend/engine/engineState'
 import type { EngineState } from 'common/types/engine'
-import { persistedWineBins } from '../bottle'
+import type { SteamEngineBottle } from '../bottle'
 import {
   bridgeBottleNameFor,
   findBridgeInstallBottle,
@@ -50,18 +50,27 @@ export function readSteamEngineOverride(appId: string): unknown {
   return readStoredTitleConfig(appId)?.steamEngineOverride
 }
 
-const hintedBinDir = (runner: EngineServices['runner']) =>
-  resolveCrossoverBinDirAsync({ runner }, { hintWineBins: persistedWineBins() })
+const hintedBinDir = (
+  services: Pick<EngineServices, 'runner'> & SteamEngineBottle
+) =>
+  resolveCrossoverBinDirAsync(
+    { runner: services.runner },
+    { hintWineBins: services.steamBottle.persistedWineBins() }
+  )
 
 /** The spawn and release-reader slice the steam decision paths need, from a store's deps (66.1-22i). */
-export function steamDecisionServices(deps: {
-  spawnAsync: EngineServices['spawnAsync']
-  runner: EngineServices['runner']
-  stores: Pick<Stores, 'wineManager'>
-}): Pick<EngineServices, 'spawnAsync' | 'runner' | 'wineManagerReleases'> {
+export function steamDecisionServices(
+  deps: {
+    spawnAsync: EngineServices['spawnAsync']
+    runner: EngineServices['runner']
+    stores: Pick<Stores, 'wineManager'>
+  } & SteamEngineBottle
+): Pick<EngineServices, 'spawnAsync' | 'runner' | 'wineManagerReleases'> &
+  SteamEngineBottle {
   return {
     spawnAsync: deps.spawnAsync,
     runner: deps.runner,
+    steamBottle: deps.steamBottle,
     wineManagerReleases: wineManagerReleasesFrom(deps)
   }
 }
@@ -70,7 +79,8 @@ export function steamDecisionDeps(
   services: Pick<
     EngineServices,
     'spawnAsync' | 'runner' | 'wineManagerReleases'
-  >
+  > &
+    SteamEngineBottle
 ): Partial<EngineDecisionDeps> &
   Pick<EngineDecisionDeps, 'killCrossoverWineserver' | 'wineManagerReleases'> &
   RunnerDeps {
@@ -78,14 +88,14 @@ export function steamDecisionDeps(
     runner: services.runner,
     killCrossoverWineserver: killCrossoverWineserverWith(services),
     wineManagerReleases: services.wineManagerReleases,
-    resolveCrossoverBinDir: () => hintedBinDir(services.runner),
+    resolveCrossoverBinDir: () => hintedBinDir(services),
     readOverride: readSteamEngineOverride,
     monitorPhase: getBottleProcessMonitorPhase
   }
 }
 
 export function steamSwitchDeps(
-  services: EngineServices
+  services: EngineServices & SteamEngineBottle
 ): Partial<EngineSwitchDeps> &
   Pick<
     EngineSwitchDeps,
@@ -101,10 +111,13 @@ export function steamSwitchDeps(
     ownBottleName: bridgeBottleNameFor,
     crossoverSettings: (appId) =>
       getBridgeBottleSettings(
-        { config: { getSettings: () => services.globalGameSettings() } },
+        {
+          config: { getSettings: () => services.globalGameSettings() },
+          steamBottle: services.steamBottle
+        },
         appId
       ),
-    resolveCrossoverBinDir: () => hintedBinDir(services.runner)
+    resolveCrossoverBinDir: () => hintedBinDir(services)
   }
 }
 

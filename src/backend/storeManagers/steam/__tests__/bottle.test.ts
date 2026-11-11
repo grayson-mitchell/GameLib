@@ -20,13 +20,10 @@ import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import {
-  bindBottleStores,
+  createSteamBottle,
   getBottleSteamappsDir,
   getBottleSteamExePath,
-  isSteamBottleProvisioned,
-  isBottleReady,
   bottleWineArch,
-  getSteamBottleSettings,
   DEFAULT_BRIDGE_BOTTLE_NAME
 } from '../bottle'
 import {
@@ -131,11 +128,12 @@ const mockedRmSync = rmSync as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
 const mockedSet = steamBottleConfigStore.set as jest.Mock
 
-// 66.1-22g: bottle readers use the slice bound at boot; bind the suite's mocked store.
-bindBottleStores({
-  stores: createTestStores({ steam: { steamBottleConfigStore } as never })
-})
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+// 66.3-15: the bottle helpers are an instance over the suite's mocked store and config.
+const steamBottle = createSteamBottle({
+  stores: createTestStores({ steam: { steamBottleConfigStore } as never }),
+  config: { getSettings: () => mockedGlobalConfigGet().getSettings() }
+})
 // Recording fakes handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
 const mockedDownloadFile = downloadFile as jest.Mock
@@ -264,7 +262,7 @@ describe('bottle.ts', () => {
     test('defaults to the stored bottle name when none is passed', () => {
       mockedGetNodefault.mockReturnValue('StoredBottle')
       mockedExistsSync.mockReturnValue(true)
-      isSteamBottleProvisioned()
+      steamBottle.isSteamBottleProvisioned()
       expect(mockedExistsSync).toHaveBeenCalledWith(
         expect.stringContaining('StoredBottle')
       )
@@ -273,7 +271,7 @@ describe('bottle.ts', () => {
     test('defaults to DEFAULT_STEAM_BOTTLE_NAME when nothing is stored', () => {
       mockedGetNodefault.mockReturnValue(undefined)
       mockedExistsSync.mockReturnValue(false)
-      isSteamBottleProvisioned()
+      steamBottle.isSteamBottleProvisioned()
       expect(mockedExistsSync).toHaveBeenCalledWith(
         expect.stringContaining(DEFAULT_STEAM_BOTTLE_NAME)
       )
@@ -285,17 +283,17 @@ describe('bottle.ts', () => {
       mockedExistsSync.mockImplementation((path: string) =>
         path.includes('cxbottle.conf')
       )
-      expect(isBottleReady('GameLibSteam')).toBe(false)
+      expect(steamBottle.isBottleReady('GameLibSteam')).toBe(false)
     })
 
     test('is true only when both cxbottle.conf and steam.exe exist', () => {
       mockedExistsSync.mockReturnValue(true)
-      expect(isBottleReady('GameLibSteam')).toBe(true)
+      expect(steamBottle.isBottleReady('GameLibSteam')).toBe(true)
     })
 
     test('is false when neither cxbottle.conf nor steam.exe exist', () => {
       mockedExistsSync.mockReturnValue(false)
-      expect(isBottleReady('GameLibSteam')).toBe(false)
+      expect(steamBottle.isBottleReady('GameLibSteam')).toBe(false)
     })
 
     test('GAP-17-PFX86-PATH self-heal: is true when steam.exe exists ONLY under "Program Files" (win32 prefix, no x86 dir)', () => {
@@ -304,7 +302,7 @@ describe('bottle.ts', () => {
           path.includes('cxbottle.conf') ||
           path.endsWith('/Program Files/Steam/steam.exe')
       )
-      expect(isBottleReady('GameLibSteam')).toBe(true)
+      expect(steamBottle.isBottleReady('GameLibSteam')).toBe(true)
     })
 
     // ── GAP-17-PROVISIONED-FLAG-STUCK: lazy readiness reconcile ──────────────
@@ -312,7 +310,7 @@ describe('bottle.ts', () => {
       mockedExistsSync.mockReturnValue(true) // conf + steam.exe both present
       mockedGetNodefault.mockReturnValue(undefined) // provisioned not yet stored
 
-      expect(isBottleReady('GameLibSteam')).toBe(true)
+      expect(steamBottle.isBottleReady('GameLibSteam')).toBe(true)
       expect(mockedSet).toHaveBeenCalledWith('provisioned', true)
     })
 
@@ -321,7 +319,7 @@ describe('bottle.ts', () => {
         path.includes('cxbottle.conf')
       )
 
-      expect(isBottleReady('GameLibSteam')).toBe(false)
+      expect(steamBottle.isBottleReady('GameLibSteam')).toBe(false)
       expect(mockedSet).not.toHaveBeenCalledWith(
         'provisioned',
         expect.anything()
@@ -332,7 +330,7 @@ describe('bottle.ts', () => {
       mockedExistsSync.mockReturnValue(true)
       mockedGetNodefault.mockReturnValue(true) // provisioned already persisted true
 
-      expect(isBottleReady('GameLibSteam')).toBe(true)
+      expect(steamBottle.isBottleReady('GameLibSteam')).toBe(true)
       expect(mockedSet).not.toHaveBeenCalledWith('provisioned', true)
       expect(mockedSet).not.toHaveBeenCalledWith('provisioned', false)
     })
@@ -405,7 +403,7 @@ describe('bottle.ts', () => {
           }) as GameSettings
       })
 
-      const settings = getSteamBottleSettings()
+      const settings = steamBottle.getSteamBottleSettings()
       expect(settings.wineCrossoverBottle).toBe(DEFAULT_STEAM_BOTTLE_NAME)
       expect(settings.wineVersion).toEqual(defaultWine)
     })
@@ -428,7 +426,7 @@ describe('bottle.ts', () => {
           }) as GameSettings
       })
 
-      const settings = getSteamBottleSettings()
+      const settings = steamBottle.getSteamBottleSettings()
       expect(settings.wineCrossoverBottle).toBe('CustomBottle')
       expect(settings.wineVersion).toEqual(storedWine)
     })
@@ -460,7 +458,7 @@ describe('bottle.ts', () => {
         path.endsWith('/CrossOver/bin/wine')
       )
 
-      const settings = getSteamBottleSettings()
+      const settings = steamBottle.getSteamBottleSettings()
 
       expect(settings.wineVersion.type).toBe('crossover')
       expect(settings.wineVersion.bin).toMatch(/\/CrossOver\/bin\/wine$/)
@@ -481,7 +479,7 @@ describe('bottle.ts', () => {
       })
       mockedExistsSync.mockReturnValue(false)
 
-      const settings = getSteamBottleSettings()
+      const settings = steamBottle.getSteamBottleSettings()
 
       expect(settings.wineVersion).toEqual(gptkStoredWine)
     })
@@ -504,7 +502,7 @@ describe('bottle.ts', () => {
       // the stored value passes through untouched.
       mockedExistsSync.mockReturnValue(true)
 
-      const settings = getSteamBottleSettings()
+      const settings = steamBottle.getSteamBottleSettings()
 
       expect(settings.wineVersion).toEqual(storedWine)
     })
@@ -528,8 +526,8 @@ describe('bottle.ts', () => {
       })
       mockedExistsSync.mockReturnValue(false)
 
-      expect(() => getSteamBottleSettings()).not.toThrow()
-      expect(getSteamBottleSettings().wineCrossoverBottle).toBe(
+      expect(() => steamBottle.getSteamBottleSettings()).not.toThrow()
+      expect(steamBottle.getSteamBottleSettings().wineCrossoverBottle).toBe(
         DEFAULT_STEAM_BOTTLE_NAME
       )
     })
@@ -543,7 +541,9 @@ describe('bottle.ts', () => {
         path.endsWith('/CrossOver/bin/wine')
       )
 
-      expect(getSteamBottleSettings().wineVersion.type).toBe('crossover')
+      expect(steamBottle.getSteamBottleSettings().wineVersion.type).toBe(
+        'crossover'
+      )
     })
 
     // ── 34.13 review A-21 ────────────────────────────────────────────────
@@ -566,7 +566,7 @@ describe('bottle.ts', () => {
       )
       mockedSet.mockClear()
 
-      const settings = getSteamBottleSettings()
+      const settings = steamBottle.getSteamBottleSettings()
 
       expect(mockedSet).toHaveBeenCalledWith(
         'wineVersion',
@@ -596,7 +596,7 @@ describe('bottle.ts', () => {
       mockedExistsSync.mockReturnValue(true)
       mockedSet.mockClear()
 
-      getSteamBottleSettings()
+      steamBottle.getSteamBottleSettings()
 
       expect(mockedSet).not.toHaveBeenCalledWith(
         'wineVersion',
@@ -614,7 +614,7 @@ describe('bottle.ts', () => {
       mockedExistsSync.mockReturnValue(false)
       mockedSet.mockClear()
 
-      getSteamBottleSettings()
+      steamBottle.getSteamBottleSettings()
 
       expect(mockedSet).not.toHaveBeenCalledWith(
         'wineVersion',
@@ -649,6 +649,7 @@ describe('quick 261024-cjq: CrossOver precondition', () => {
     const result = await provisionBottle({
       config: { getSettings: () => mockedGlobalConfigGet().getSettings() },
       stores: createTestStores(),
+      steamBottle,
       spawnAsync: mockedSpawnAsync,
       commandRunner: { runWineCommand: mockedRunWineCommand }
     } as unknown as Parameters<typeof provisionBottle>[0])
@@ -657,5 +658,53 @@ describe('quick 261024-cjq: CrossOver precondition', () => {
     expect(result.error).toMatch(/CrossOver is required/)
     expect(mockedSet).not.toHaveBeenCalled()
     expect(mockedSpawnAsync).not.toHaveBeenCalled()
+  })
+})
+
+describe('createSteamBottle construction (66.3-15)', () => {
+  test('construction reads and writes nothing', () => {
+    const getStores = jest.fn(() => ({ steamBottleConfigStore }))
+    const getSettings = jest.fn()
+    mockedGetNodefault.mockReset()
+    mockedSet.mockReset()
+
+    createSteamBottle({
+      stores: {
+        get steam() {
+          return getStores() as never
+        }
+      } as never,
+      config: { getSettings }
+    })
+
+    expect(getStores).not.toHaveBeenCalled()
+    expect(getSettings).not.toHaveBeenCalled()
+    expect(mockedGetNodefault).not.toHaveBeenCalled()
+    expect(mockedSet).not.toHaveBeenCalled()
+  })
+
+  test('two instances over different stores never share state', () => {
+    const other = {
+      get: jest.fn(),
+      get_nodefault: jest.fn().mockReturnValue({ bin: '/other/wine' }),
+      set: jest.fn()
+    }
+    const second = createSteamBottle({
+      stores: createTestStores({
+        steam: { steamBottleConfigStore: other } as never
+      }),
+      config: { getSettings: () => ({}) as never }
+    })
+    mockedGetNodefault.mockReturnValue({ bin: '/first/wine' })
+
+    expect(steamBottle.persistedWineBins()).toEqual(['/first/wine'])
+    expect(second.persistedWineBins()).toEqual(['/other/wine'])
+  })
+
+  test('the deps are required: constructing without stores is a type error', () => {
+    // @ts-expect-error stores and config have no default; there is no static fallback holder
+    const build = () => createSteamBottle({})
+    // Reading through the missing stores fails at first use, never silently against a global.
+    expect(build().persistedWineBins).toThrow()
   })
 })

@@ -37,9 +37,6 @@ jest.mock('backend/storeManagers/gog/presence', () => ({
 jest.mock('backend/storeManagers/legendary/eos_overlay/eos_overlay', () => ({
   isEnabled: (...a: unknown[]) => isEnabledMock(...a)
 }))
-jest.mock('backend/storeManagers/steam/bottle', () => ({
-  persistBottleWineVersion: (...a: unknown[]) => persistMock(...a)
-}))
 jest.mock('backend/ipc', () => ({
   ...jest.requireActual('backend/ipc'),
   sendFrontendMessage: (...a: unknown[]) => sendFrontendMessageMock(...a)
@@ -62,6 +59,10 @@ const legendaryStores = {
 } as unknown as Stores['legendary']
 const storeLaunchHooks = buildLaunchHooks(
   createTestManagerDeps({
+    // 66.3-15: the steam hook persists through the boot-owned bottle instance on the deps.
+    steamBottle: {
+      persistBottleWineVersion: (...a: unknown[]) => persistMock(...a)
+    } as never,
     stores: createTestStores({ legendary: legendaryStores })
   })
 )
@@ -153,7 +154,7 @@ describe('storeLaunchHooks', () => {
     expect(isEnabledMock).toHaveBeenCalledWith(expect.anything(), 'l1')
   })
 
-  test('steam persistBottleWineVersion lazy-imports bottle and persists', async () => {
+  test('steam persistBottleWineVersion persists through the deps bottle instance', async () => {
     const v = { name: 'cx' } as WineInstallation
     await storeLaunchHooks.steam.persistBottleWineVersion!(v)
     expect(persistMock).toHaveBeenCalledWith(v)

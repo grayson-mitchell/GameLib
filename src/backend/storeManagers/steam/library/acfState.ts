@@ -6,9 +6,11 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
 import type { SteamLibraryStateDeps } from 'backend/services/types'
 import { NUMERIC_APP_ID } from '../gameConstants'
-import { DEFAULT_BRIDGE_BOTTLE_NAME } from '../bottle'
-import { removePerGameBridgeBottle } from '../bridgeBottleLifecycle'
-import type { SpawnDeps } from '../provisionBottle'
+import { DEFAULT_BRIDGE_BOTTLE_NAME, type BottleSettingsDeps } from '../bottle'
+import {
+  removePerGameBridgeBottle,
+  type BottleLifecycleDeps
+} from '../bridgeBottleLifecycle'
 import { resolveBridgeBottleName } from '../bridgeBottle'
 import {
   type AcfSource,
@@ -38,7 +40,7 @@ import { isFullyInstalledStateFlags } from './installedMap'
  * Exported for unit testing.
  */
 export async function readAcfState(
-  deps: SteamLibrariesDeps,
+  deps: SteamLibrariesDeps & BottleSettingsDeps,
   appId: string,
   source: AcfSource = 'native'
 ): Promise<{
@@ -58,7 +60,7 @@ export async function readAcfState(
 }> {
   const steamappsDirs =
     source === 'bottle'
-      ? [getBottleSteamappsRoot()]
+      ? [getBottleSteamappsRoot(deps)]
       : source === 'bridge'
         ? [getBridgeBottleSteamappsRoot(deps, appId)]
         : (await getSteamLibraries(deps)).map((libPath) =>
@@ -192,7 +194,7 @@ const ALL_ACF_SOURCES: AcfSource[] = ['native', 'bottle', 'bridge']
  * Exported for unit testing.
  */
 export async function enumerateSteamInstallCopies(
-  deps: SteamLibrariesDeps,
+  deps: SteamLibrariesDeps & BottleSettingsDeps,
   appId: string
 ): Promise<SteamInstallCopy[]> {
   const copies: SteamInstallCopy[] = []
@@ -268,7 +270,7 @@ export type RemoveCopyResult =
  * Exported for unit testing.
  */
 export async function removeSteamInstallCopy(
-  deps: SpawnDeps & SteamLibrariesDeps,
+  deps: BottleLifecycleDeps & SteamLibrariesDeps & BottleSettingsDeps,
   appId: string,
   source: AcfSource
 ): Promise<RemoveCopyResult> {

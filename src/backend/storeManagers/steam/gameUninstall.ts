@@ -31,11 +31,7 @@ import {
   pendingAdoptionStoreFrom,
   decidePlayAdoption
 } from './macSteamAdoption'
-import {
-  isBottleReady,
-  getSteamBottleSettings,
-  getBottleSteamappsDir
-} from './bottle'
+import { getBottleSteamappsDir } from './bottle'
 import { removePerGameBridgeBottle } from './bridgeBottleLifecycle'
 import {
   getBridgeBottleSettings,
@@ -79,7 +75,10 @@ export async function uninstall(
   // provisioned has nothing installed there for install_path to resolve
   // against — request guided setup instead of a generic refuse. Unaffected
   // by the routing fix (orthogonal to WHERE install_path resolves).
-  if (isBottleEligible(steamGame) && !isBottleReady()) {
+  if (
+    isBottleEligible(steamGame) &&
+    !steamGame.deps.steamBottle.isBottleReady()
+  ) {
     logInfo(
       `SteamGame: appId ${steamGame.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of uninstalling`,
       LogPrefix.Steam
@@ -683,7 +682,8 @@ export async function uninstallBottleGameDirectly(
     return { stdout: '', stderr: '' }
   }
 
-  const bottleName = getSteamBottleSettings().wineCrossoverBottle
+  const bottleName =
+    steamGame.deps.steamBottle.getSteamBottleSettings().wineCrossoverBottle
   const steamappsDir = getBottleSteamappsDir(bottleName)
   const commonRoot = resolve(steamappsDir, 'common')
   const resolvedInstallPath = resolve(acfState.installPath)

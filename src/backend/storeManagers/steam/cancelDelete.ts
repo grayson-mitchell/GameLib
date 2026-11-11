@@ -40,7 +40,7 @@ import {
 import { clearSteamResumeBreadcrumb } from './library/resumeBreadcrumbs'
 import { findOtherManifestsWithInstalldir } from './library/acfState'
 import { getBridgeBottleSteamappsRoot } from './library/installRoot'
-import { getBottleSteamappsDir, getSteamBottleSettings } from './bottle'
+import { getBottleSteamappsDir, type BottleSettingsDeps } from './bottle'
 import { sanitizeInstalldir } from './installLocation'
 import { NUMERIC_APP_ID } from './gameConstants'
 import type { SteamStoresDeps } from './library/installRoot'
@@ -65,7 +65,7 @@ function refuse(appId: string, reason: string): CancelDeleteResult {
 }
 
 async function collectAllowedRoots(
-  deps: SteamLibrariesDeps,
+  deps: SteamLibrariesDeps & BottleSettingsDeps,
   appId: string
 ): Promise<Set<string>> {
   const roots = new Set<string>()
@@ -79,7 +79,9 @@ async function collectAllowedRoots(
   try {
     roots.add(
       resolve(
-        getBottleSteamappsDir(getSteamBottleSettings().wineCrossoverBottle)
+        getBottleSteamappsDir(
+          deps.steamBottle.getSteamBottleSettings().wineCrossoverBottle
+        )
       )
     )
   } catch {
@@ -100,6 +102,7 @@ async function collectAllowedRoots(
 export async function deleteCancelledSteamInstall(
   deps: SteamStoresDeps &
     SteamLibrariesDeps &
+    BottleSettingsDeps &
     SteamLibraryStateDeps &
     SteamGameSessionDeps,
   appId: string,

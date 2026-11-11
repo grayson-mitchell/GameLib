@@ -37,6 +37,7 @@ jest.mock('backend/storeManagers/steam/engine/steamEngineDeps', () => ({
 import { registerEngineFlows } from '../engineFlowRegistration'
 import { createTestServices } from 'backend/testUtils/testServices'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+import { createTestSteamBottle } from 'backend/testUtils/testSteamBottle'
 import { createTestEngineState } from 'backend/testUtils/testEngineState'
 import {
   createTestManagers,
@@ -62,6 +63,7 @@ function fakeGame(over: { native?: boolean; platform?: string } = {}) {
 const spawnAsync = createTestServices().spawnAsync
 const runner = createTestServices().runner
 const config = createTestGlobalConfig()
+const steamBottle = createTestSteamBottle({ stores, config })
 const engineState = {
   ...createTestEngineState(),
   dismissEngineNotice: (...a: unknown[]) => dismiss(...a)
@@ -76,7 +78,8 @@ describe('engine flows', () => {
       spawnAsync,
       runner,
       config,
-      engineState
+      engineState,
+      steamBottle
     })
   )
   beforeEach(() => {
@@ -103,7 +106,16 @@ describe('engine flows', () => {
       )
     ).toEqual({ kind: 's' })
     expect(steamState).toHaveBeenCalledWith(
-      { ipc, managers, stores, spawnAsync, runner, config, engineState },
+      {
+        ipc,
+        managers,
+        stores,
+        spawnAsync,
+        runner,
+        config,
+        engineState,
+        steamBottle
+      },
       '220'
     )
     expect(getGame).not.toHaveBeenCalled()

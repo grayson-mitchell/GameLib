@@ -27,7 +27,7 @@ import { getSteamLibraries } from 'backend/utils'
 import { createAbortController } from 'backend/utils/aborthandler/aborthandler'
 import { downloadSteamDepots } from '../depot'
 import { resolveSteamInstallTarget } from '../installLocation'
-import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
+import { getBottleSteamappsDir } from '../bottle'
 import { getBridgeBottleSteamappsRoot } from '../library/installRoot'
 import { findOtherManifestsWithInstalldir } from '../library/acfState'
 import { runNativeDepotDownloadLeased } from '../gameInstallDepot'
@@ -39,7 +39,11 @@ import type { Stores } from 'backend/services/types'
 
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
+// 66.3-15: the bottle settings are read through the deps slice, not a module import.
+const getSteamBottleSettings = jest.fn()
+
 const steamTestDeps = createTestManagerDeps({
+  steamBottle: { getSteamBottleSettings } as never,
   stores: createTestStores({ steam: steamStoresModule })
 })
 
@@ -79,8 +83,7 @@ jest.mock('../installLocation', () => ({
   resolveSteamInstallTarget: jest.fn()
 }))
 jest.mock('../bottle', () => ({
-  getBottleSteamappsDir: jest.fn(),
-  getSteamBottleSettings: jest.fn()
+  getBottleSteamappsDir: jest.fn()
 }))
 jest.mock('../library/installRoot', () => ({
   getBridgeBottleSteamappsRoot: jest.fn()

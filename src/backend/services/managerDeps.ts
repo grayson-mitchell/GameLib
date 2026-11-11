@@ -27,6 +27,7 @@ export type ManagerDepsSource = Pick<
   | 'steamSession'
   | 'anonymousClient'
   | 'bridgeHelpers'
+  | 'steamBottle'
 >
 
 export function managerDepsFromServices(
@@ -59,6 +60,7 @@ export function managerDepsFromServices(
     },
     steamSession: source.steamSession,
     anonymousClient: source.anonymousClient,
-    bridgeHelpers: source.bridgeHelpers
+    bridgeHelpers: source.bridgeHelpers,
+    steamBottle: source.steamBottle
   }
 }

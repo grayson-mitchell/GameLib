@@ -105,9 +105,7 @@ export function buildLaunchHooks(
     },
     steam: {
       persistBottleWineVersion: async (wineVersion) => {
-        const { persistBottleWineVersion } =
-          await import('backend/storeManagers/steam/bottle')
-        persistBottleWineVersion(wineVersion)
+        deps.steamBottle.persistBottleWineVersion(wineVersion)
       }
     }
   } satisfies Record<Runner, StoreLaunchHooks>
@@ -162,6 +160,7 @@ export interface CreateStoreManagersDeps {
   steamSession: ManagerDeps['steamSession']
   anonymousClient: ManagerDeps['anonymousClient']
   bridgeHelpers: ManagerDeps['bridgeHelpers']
+  steamBottle: ManagerDeps['steamBottle']
 }
 
 /**
@@ -200,7 +199,8 @@ export function createStoreManagers(
     signIn: deps.signIn,
     steamSession: deps.steamSession,
     anonymousClient: deps.anonymousClient,
-    bridgeHelpers: deps.bridgeHelpers
+    bridgeHelpers: deps.bridgeHelpers,
+    steamBottle: deps.steamBottle
   }
   const launchHooks = buildLaunchHooks(managerDeps)
   const launcher = createLauncher({
@@ -217,7 +217,8 @@ export function createStoreManagers(
     appState: deps.appState,
     notifications: deps.notifications,
     onlineMonitor: deps.onlineMonitor,
-    engineState: deps.engineState
+    engineState: deps.engineState,
+    steamBottle: deps.steamBottle
   })
   Object.assign(library, {
     sideload: new SideloadLibraryManager(managerDeps),

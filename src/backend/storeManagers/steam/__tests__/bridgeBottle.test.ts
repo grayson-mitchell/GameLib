@@ -26,7 +26,7 @@ import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import { createTestStores } from 'backend/testUtils/testServices'
-import { bindBottleStores, DEFAULT_BRIDGE_BOTTLE_NAME } from '../bottle'
+import { createSteamBottle, DEFAULT_BRIDGE_BOTTLE_NAME } from '../bottle'
 import {
   stopPerGameBridgeBottle,
   endPerGameBridgeBottleSession,
@@ -146,19 +146,22 @@ const mockedRmSync = rmSync as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
 const mockedSet = steamBottleConfigStore.set as jest.Mock
 
-// 66.1-22g: bottle readers use the slice bound at boot; bind the suite's mocked store.
-bindBottleStores({
-  stores: createTestStores({ steam: { steamBottleConfigStore } as never })
-})
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+// 66.3-15: the bottle helpers are an instance over the suite's mocked store and config.
+const steamBottle = createSteamBottle({
+  stores: createTestStores({ steam: { steamBottleConfigStore } as never }),
+  config: { getSettings: () => mockedGlobalConfigGet().getSettings() }
+})
 // The settings resolvers take the config slice (66.3-08); it reads through the recording mock.
 const bridgeDeps = {
-  config: { getSettings: () => mockedGlobalConfigGet().getSettings() }
+  config: { getSettings: () => mockedGlobalConfigGet().getSettings() },
+  steamBottle
 }
 // Recording fake handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
 const spawnDeps = {
   config: bridgeDeps.config,
+  steamBottle,
   spawnAsync: mockedSpawnAsync,
   runner: createScriptedRunner([])
 }

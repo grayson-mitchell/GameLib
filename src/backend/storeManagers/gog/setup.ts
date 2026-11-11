@@ -33,6 +33,7 @@ export type SetupDeps = Pick<
   | 'libraryManagers'
   | 'onlineMonitor'
   | 'engineState'
+  | 'steamBottle'
   | 'launcher'
   | 'commandRunner'
   | 'spawnAsync'

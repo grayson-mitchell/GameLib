@@ -22,7 +22,7 @@ import {
 // `graceful-fs` `readFileSync` import above (manifest.test.ts precedent).
 import { GlobalConfig } from 'backend/config'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
-import { bindBottleStores } from '../bottle'
+import { createSteamBottle } from '../bottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { __stopBottledRaiseLoops } from '../bottledSteam'
 import { provisionBottle } from '../provisionBottle'
@@ -122,11 +122,12 @@ const mockedRmSync = rmSync as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
 const mockedSet = steamBottleConfigStore.set as jest.Mock
 
-// 66.1-22g: bottle readers use the slice bound at boot; bind the suite's mocked store.
-bindBottleStores({
-  stores: createTestStores({ steam: { steamBottleConfigStore } as never })
-})
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+// 66.3-15: the bottle helpers are an instance over the suite's mocked store and config.
+const steamBottle = createSteamBottle({
+  stores: createTestStores({ steam: { steamBottleConfigStore } as never }),
+  config: { getSettings: () => mockedGlobalConfigGet().getSettings() }
+})
 // Recording fakes handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
 const mockedRunWineCommand = jest.fn()
@@ -136,6 +137,7 @@ const provisionDeps = {
   // Reads through the recording config mock (66.3-08: provisionBottle takes the slice).
   config: { getSettings: () => mockedGlobalConfigGet().getSettings() },
   stores: createTestStores(),
+  steamBottle,
   spawnAsync: mockedSpawnAsync,
   commandRunner: { runWineCommand: mockedRunWineCommand }
 } as unknown as Parameters<typeof provisionBottle>[0]

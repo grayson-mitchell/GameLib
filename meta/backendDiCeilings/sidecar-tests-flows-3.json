@@ -4,7 +4,7 @@
     "src/backend/sidecar/__tests__/installFlows.test.ts": 13,
     "src/backend/sidecar/__tests__/runnerAuthFlows.test.ts": 9,
     "src/backend/sidecar/__tests__/settingsFlows.test.ts": 8,
-    "src/backend/sidecar/__tests__/steamAuthFlows.test.ts": 14,
+    "src/backend/sidecar/__tests__/steamAuthFlows.test.ts": 13,
     "src/backend/sidecar/__tests__/steamFlows.test.ts": 7
   }
 }

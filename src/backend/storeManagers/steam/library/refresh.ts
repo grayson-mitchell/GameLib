@@ -5,7 +5,6 @@ import { getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { SteamUser } from '../user'
 import type { ManagerDeps } from 'backend/services/types'
-import { isSteamBottleProvisioned } from '../bottle'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
 import { depotSignalCaptured } from '../metadataCapture'
@@ -273,8 +272,8 @@ async function syncOwnedLibrary(
     // Steam client has never read their GameLib-written manifest).
     const installedMap = withoutSteamRestartHolds(await buildInstalledMap(deps))
     const bottleInstalledMap =
-      isMac && isSteamBottleProvisioned()
-        ? await buildBottleInstalledMap()
+      isMac && deps.steamBottle.isSteamBottleProvisioned()
+        ? await buildBottleInstalledMap(deps)
         : null
     // D-UAT-24-07: consult every ready bridge bottle too (quick/261016-u1w
     // D-C), so a bridge-installed game (24-12's install poll flips
@@ -519,7 +518,7 @@ async function syncOwnedLibrary(
  *    from a click.
  *
  * 17-03 (MACSTEAM-05): when isMac && isBottleProvisioned(), ALSO diffs each
- * library entry against buildBottleInstalledMap() (the dedicated CrossOver
+ * library entry against buildBottleInstalledMap(deps) (the dedicated CrossOver
  * bottle's own ACF root) and reconciles bottle-installed games with
  * install.platform: 'Windows' (Pitfall 3) — never the host OS. D-UAT-24-07
  * (quick/261016-u1w D-C): when isMac && listReadyBridgeBottleNames() is
@@ -549,7 +548,9 @@ export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
   // installed — see withoutSteamRestartHolds().
   const installedMap = withoutSteamRestartHolds(await buildInstalledMap(deps))
   const bottleInstalledMap =
-    isMac && isSteamBottleProvisioned() ? await buildBottleInstalledMap() : null
+    isMac && deps.steamBottle.isSteamBottleProvisioned()
+      ? await buildBottleInstalledMap(deps)
+      : null
   // D-UAT-24-07 (quick/261016-u1w D-C): same bridge-map consult as
   // refresh(), so a focus/post-launch reconciliation does not clobber a
   // bridge-installed game's badge back to false either. Gated on ANY

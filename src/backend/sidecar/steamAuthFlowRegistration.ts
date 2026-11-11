@@ -133,7 +133,6 @@ import {
   submitSteamGuardCode
 } from '../storeManagers/steam/userSignIn'
 import { redeemKey } from '../storeManagers/steam/userRedeem'
-import { isSteamBottleProvisioned } from '../storeManagers/steam/bottle'
 import { provisionBottle } from '../storeManagers/steam/provisionBottle'
 import {
   startGuidedClientInstall,
@@ -269,7 +268,7 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   )
 
   deps.ipc.handle('isSteamBottleProvisioned', async () => {
-    return isSteamBottleProvisioned()
+    return deps.steamBottle.isSteamBottleProvisioned()
   })
 
   // Source: main.ts:948-953 — the ONE genuinely inline body among the 15

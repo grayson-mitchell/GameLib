@@ -63,11 +63,6 @@ jest.mock('../bridgeRouteVerdict', () => ({
   getBridgeRouteVerdict: jest.fn()
 }))
 
-jest.mock('../bottle', () => ({
-  persistBottleWineVersion: jest.fn(),
-  getSteamBottleSettings: jest.fn()
-}))
-
 // 34.13 review A-04/A-15: the seam now cross-checks the submitted `bin`
 // against the engines GameLib itself detected, so the detector is part of
 // this trust boundary and must be drivable per-test.
@@ -75,7 +70,6 @@ const mockGetAlternativeWine = jest.fn()
 
 import SteamGame from '../games'
 import { getBridgeRouteVerdict } from '../bridgeRouteVerdict'
-import { persistBottleWineVersion, getSteamBottleSettings } from '../bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 // Plan 13 (D-51-10/11): real (unmocked) readBridgeVerdict proves
 // handleSetSteamBridgeUserRoute's writes actually persisted, rather than
@@ -104,13 +98,23 @@ const steamBottleConfigStore = {
 }
 const steamMetadataStore = { get: jest.fn(), set: jest.fn() }
 
+// 66.3-15: the bottle helpers are read through the deps slice, so they are plain mocks here.
+const mockedPersistBottleWineVersion = jest.fn()
+const mockedGetSteamBottleSettings = jest.fn()
+const steamBottle = {
+  persistBottleWineVersion: mockedPersistBottleWineVersion,
+  getSteamBottleSettings: mockedGetSteamBottleSettings
+} as never
+
 const steamTestDeps = createTestManagerDeps({
+  steamBottle,
   stores: createTestStores({
     steam: { steamBottleConfigStore, steamMetadataStore } as never
   })
 })
 
 const wineDeps = {
+  steamBottle,
   runner: createScriptedRunner([]),
   config: {
     getAlternativeWine: (...a: unknown[]) => mockGetAlternativeWine(...a)
@@ -123,8 +127,6 @@ const wineDeps = {
 const mockedSteamGame = SteamGame as unknown as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault
 const mockedMetadataGet = steamMetadataStore.get
-const mockedPersistBottleWineVersion = persistBottleWineVersion as jest.Mock
-const mockedGetSteamBottleSettings = getSteamBottleSettings as jest.Mock
 const mockedGetBridgeRouteVerdict = getBridgeRouteVerdict as jest.Mock
 
 const persistedEngine: WineInstallation = {

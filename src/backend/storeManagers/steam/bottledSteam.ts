@@ -17,12 +17,7 @@ export type BottledRaiseDeps = SpawnDeps & { appState: Pick<AppState, 'hide'> }
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { NUMERIC_APP_ID } from './gameConstants'
-import {
-  bottleConfigStore,
-  getBottleSteamExePath,
-  getSteamBottleSettings,
-  isBottleReady
-} from './bottle'
+import { getBottleSteamExePath, type SteamBottle } from './bottle'
 
 // GAP 5: bottled-Steam installer process names to raise to the front. The
 // guided provisioning installer is `SteamSetup.exe`; a per-game bottled install
@@ -249,6 +244,10 @@ export type BottledSteamDeps = BottledRaiseDeps &
   SteamLibraryStateDeps & {
     stores: RunsForMeDeps['stores']
     commandRunner: Pick<CommandRunner, 'runWineCommand'>
+    steamBottle: Pick<
+      SteamBottle,
+      'configStore' | 'getSteamBottleSettings' | 'isBottleReady'
+    >
   }
 
 type BottledSteamVerb = 'install' | 'launch' | 'uninstall'
@@ -275,7 +274,7 @@ async function dispatchToBottledSteam(
     return { status: 'error', error: `Invalid appId: "${appId}"` }
   }
 
-  if (!isBottleReady()) {
+  if (!deps.steamBottle.isBottleReady()) {
     return {
       status: 'error',
       error: 'Steam bottle is not ready yet'
@@ -283,7 +282,8 @@ async function dispatchToBottledSteam(
   }
 
   const bottleName =
-    bottleConfigStore().get_nodefault('bottleName') ?? DEFAULT_STEAM_BOTTLE_NAME
+    deps.steamBottle.configStore().get_nodefault('bottleName') ??
+    DEFAULT_STEAM_BOTTLE_NAME
   const steamExePath = getBottleSteamExePath(bottleName)
 
   // -silent: if this call is what starts the bottled client, it comes up in
@@ -358,7 +358,7 @@ async function dispatchToBottledSteam(
     }
     await deps.commandRunner.runWineCommand({
       commandParts,
-      gameSettings: getSteamBottleSettings(),
+      gameSettings: deps.steamBottle.getSteamBottleSettings(),
       wait: false,
       protonVerb: 'run',
       skipPrefixCheckIKnowWhatImDoing: true

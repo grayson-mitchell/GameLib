@@ -84,7 +84,7 @@ import {
   setTokenStore as installTokenStore,
   clearOrphanedElectronToken
 } from '../storeManagers/steam/tokenStore'
-import { bindBottleStores } from '../storeManagers/steam/bottle'
+import { createSteamBottle } from '../storeManagers/steam/bottle'
 import { SidecarKeyringTokenStore } from './keyringTokenStore'
 import { installSidecarHumbleSecretStore } from './humbleSecretStore'
 import { installSidecarSteamGridDbSecretStore } from './steamgridSecretStore'
@@ -282,6 +282,7 @@ export const BOOT_STEP_NAMES = [
   'stores',
   'migrations',
   'config',
+  'steam-bottle',
   'command-runner',
   'online-monitor-owner',
   'engine-state',
@@ -419,7 +420,8 @@ function requireServices(state: BootState): BootServices {
     signInProbe,
     steamSession,
     anonymousClient,
-    bridgeHelpers
+    bridgeHelpers,
+    steamBottle
   } = state.services
   if (
     !stores ||
@@ -444,7 +446,8 @@ function requireServices(state: BootState): BootServices {
     !signInProbe ||
     !steamSession ||
     !anonymousClient ||
-    !bridgeHelpers
+    !bridgeHelpers ||
+    !steamBottle
   ) {
     const missing = (
       [
@@ -470,7 +473,8 @@ function requireServices(state: BootState): BootServices {
         'signInProbe',
         'steamSession',
         'anonymousClient',
-        'bridgeHelpers'
+        'bridgeHelpers',
+        'steamBottle'
       ] as const
     ).filter((name) => !state.services[name])
     throw new Error(`boot services missing: ${missing.join(', ')}`)
@@ -498,7 +502,8 @@ function requireServices(state: BootState): BootServices {
     signInProbe,
     steamSession,
     anonymousClient,
-    bridgeHelpers
+    bridgeHelpers,
+    steamBottle
   }
 }
 
@@ -1314,7 +1319,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           steamSession: state.services.steamSession,
           anonymousClient: state.services.anonymousClient
         })
-        bindBottleStores({ stores: state.services.stores })
       }
     },
     {
@@ -1381,6 +1385,19 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         state.services.gameConfigs = prebuilt.gameConfigs ?? createGameConfigs()
         state.services.paths = prebuilt.paths ?? ctx.paths
         state.services.appInfo = prebuilt.appInfo ?? ctx.appInfo
+      }
+    },
+    {
+      name: 'steam-bottle',
+      // Builds the one Steam bottle helper instance of this boot (D-05, D-66.3-15), replacing the
+      // static bottle-stores holder. Needs the bottle config store ('stores') and the global
+      // config ('config'); construction reads and writes nothing, so it adds no I/O to boot.
+      run: (_ctx, _io, state) => {
+        const { stores, config } = state.services
+        if (!stores) throw new Error('boot: stores step must run first')
+        if (!config) throw new Error('boot: config step must run first')
+        state.services.steamBottle =
+          prebuilt.steamBottle ?? createSteamBottle({ stores, config })
       }
     },
     {
@@ -1568,7 +1585,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           signInProbe,
           steamSession,
           anonymousClient,
-          bridgeHelpers
+          bridgeHelpers,
+          steamBottle
         } = state.services
         if (
           !stores ||
@@ -1585,7 +1603,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !signInProbe ||
           !steamSession ||
           !anonymousClient ||
-          !bridgeHelpers
+          !bridgeHelpers ||
+          !steamBottle
         ) {
           throw new Error(
             'store-managers step ran before stores/command-runner/config/host-services'
@@ -1622,7 +1641,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           signIn: signInProbe,
           steamSession,
           anonymousClient,
-          bridgeHelpers
+          bridgeHelpers,
+          steamBottle
         })
         state.services.managers = prebuilt.managers ?? built
         state.services.launcher = prebuilt.launcher ?? built.launcher
@@ -1639,8 +1659,15 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         }
         let queue = prebuilt.downloadQueue
         if (!queue) {
-          const { host, config, onlineMonitor, steamSession } = state.services
-          if (!host || !config || !onlineMonitor || !steamSession) {
+          const { host, config, onlineMonitor, steamSession, steamBottle } =
+            state.services
+          if (
+            !host ||
+            !config ||
+            !onlineMonitor ||
+            !steamSession ||
+            !steamBottle
+          ) {
             throw new Error(
               'download-queue step ran before host-services/config/online-monitor-owner/steam-session-state'
             )
@@ -1653,7 +1680,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             dialogs: host.dialogs,
             appState: host.appState,
             notifications: host.notifications,
-            steamSession
+            steamSession,
+            steamBottle
           })
           queue.start()
         }

@@ -12,8 +12,8 @@ import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { EngineServicesSource } from 'backend/services/engineServices'
 import {
   killBottleWineServer,
-  type ProvisionBottleResult,
-  type SpawnDeps
+  type KillBottleDeps,
+  type ProvisionBottleResult
 } from './provisionBottle'
 import {
   bridgeBottleNameFor,
@@ -28,9 +28,8 @@ import {
   CROSSOVER_REQUIRED_MESSAGE,
   DEFAULT_BRIDGE_BOTTLE_NAME,
   PROVISION_ABORTED,
-  bottleConfigStore,
   cxbottleIn,
-  persistedWineBins
+  type SteamBottle
 } from './bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
 import { getEngineSelection } from 'backend/engine/engineRegistry'
@@ -53,12 +52,13 @@ import { resolveCrossoverBinDirAsync } from 'backend/engine/crossoverLocation'
  * other than logging. `caller` prefixes the log lines.
  */
 /** SpawnDeps plus the config slice the shared-bottle guard reads (66.3-08). */
-export type BottleLifecycleDeps = SpawnDeps & {
+export type BottleLifecycleDeps = KillBottleDeps & {
   config: Pick<GlobalConfigSlice, 'getSettings'>
+  steamBottle: Pick<SteamBottle, 'configStore' | 'persistedWineBins'>
 }
 
 function guardPerGameBridgeBottleName(
-  deps: Pick<BottleLifecycleDeps, 'config'>,
+  deps: Pick<BottleLifecycleDeps, 'config' | 'steamBottle'>,
   appId: string,
   caller: string
 ): { ok: true; name: string } | { ok: false; error: string } {
@@ -84,7 +84,9 @@ function guardPerGameBridgeBottleName(
 
   // (3) Refuse every non-per-game bottle this function could ever be asked
   // to touch, mirroring provisionBottle's CR-01 guard (D-01).
-  const storedPhase17Name = bottleConfigStore().get_nodefault('bottleName')
+  const storedPhase17Name = deps.steamBottle
+    .configStore()
+    .get_nodefault('bottleName')
   const sharedBottle = deps.config.getSettings().wineCrossoverBottle
   const forbidden = new Set<string>([
     DEFAULT_BRIDGE_BOTTLE_NAME,
@@ -189,7 +191,7 @@ export async function removePerGameBridgeBottle(
 
   const removeBinDir = await resolveCrossoverBinDirAsync(
     { runner: deps.runner },
-    { hintWineBins: persistedWineBins() }
+    { hintWineBins: deps.steamBottle.persistedWineBins() }
   )
   if (!removeBinDir) {
     logWarning(
@@ -256,7 +258,7 @@ export async function removePerGameBridgeBottle(
  * stock CrossOver (D-10).
  */
 async function killForRegisteredEngine(
-  deps: SpawnDeps,
+  deps: KillBottleDeps,
   appId: string,
   name: string,
   timeoutMs?: number,
@@ -480,7 +482,7 @@ export function discardNewBridgeBottle(bottleName: string): void {
 }
 
 export async function provisionBridgeBottle(
-  deps: SpawnDeps & EngineServicesSource,
+  deps: KillBottleDeps & EngineServicesSource,
   opts: {
     bottleName: string
     wineVersion?: WineInstallation
@@ -551,7 +553,7 @@ export async function provisionBridgeBottle(
     { runner: deps.runner },
     {
       wineVersion: opts.wineVersion,
-      hintWineBins: persistedWineBins()
+      hintWineBins: deps.steamBottle.persistedWineBins()
     }
   )
   if (!binDir) {

@@ -42,12 +42,23 @@ import type { Stores } from 'backend/services/types'
 
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 
-const libDeps = { config: createTestGlobalConfig() }
+// 66.3-15: the bottle helpers are read through the deps slice, so they are plain mocks here.
+// quick 261024-cjq: plain function (survives resetMocks) — CrossOver present.
+const getSteamBottleSettings = jest.fn()
+const steamBottle = {
+  isCrossoverInstalled: () => Promise.resolve(true),
+  isBottleReady: jest.fn(),
+  getSteamBottleSettings,
+  isSteamBottleProvisioned: jest.fn(),
+  resolveCrossoverWine: jest.fn()
+}
+const libDeps = { config: createTestGlobalConfig(), steamBottle }
 
 const { steamMetadataStore } = jest.requireMock<Stores['steam']>('../stores')
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
+  steamBottle: steamBottle as never,
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
 })
@@ -164,13 +175,8 @@ jest.mock('../stores', () => ({
 // is a plain string (not a jest.fn()) so the real `!==` comparison inside
 // removeSteamInstallCopy behaves identically to the real module's constant.
 jest.mock('../bottle', () => ({
-  // quick 261024-cjq: plain function (survives resetMocks) — CrossOver present
-  isCrossoverInstalled: () => Promise.resolve(true),
   CROSSOVER_MISSING: 'crossover-missing',
-  isBottleReady: jest.fn(),
-  getSteamBottleSettings: jest.fn(),
   getBottleSteamappsDir: jest.fn(),
-  isSteamBottleProvisioned: jest.fn(),
   DEFAULT_BRIDGE_BOTTLE_NAME: 'GameLibSteamBridge'
 }))
 jest.mock('../bridgeBottleLifecycle', () => ({
@@ -534,13 +540,12 @@ describe('enumerateSteamInstallCopies', () => {
       SizeOnDisk: '12345'
     })
     const bottleMock = jest.requireMock<{
-      getSteamBottleSettings: jest.Mock
       getBottleSteamappsDir: jest.Mock
     }>('../bottle')
     const bridgeBottleMock = jest.requireMock<{
       getBridgeBottleSettings: jest.Mock
     }>('../bridgeBottle')
-    bottleMock.getSteamBottleSettings.mockReturnValue({
+    getSteamBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'B'
     })
     bridgeBottleMock.getBridgeBottleSettings.mockReturnValue({
@@ -590,13 +595,12 @@ describe('enumerateSteamInstallCopies', () => {
       return Promise.resolve([NATIVE_LIB])
     })
     const bottleMock = jest.requireMock<{
-      getSteamBottleSettings: jest.Mock
       getBottleSteamappsDir: jest.Mock
     }>('../bottle')
     const bridgeBottleMock = jest.requireMock<{
       getBridgeBottleSettings: jest.Mock
     }>('../bridgeBottle')
-    bottleMock.getSteamBottleSettings.mockImplementation(() => {
+    getSteamBottleSettings.mockImplementation(() => {
       order.push('bottle')
       throw new Error('unprovisioned bridge bottle')
     })
@@ -896,7 +900,6 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
   function bottleMock() {
     return {
       ...jest.requireMock<{
-        getSteamBottleSettings: jest.Mock
         getBottleSteamappsDir: jest.Mock
       }>('../bottle'),
       ...jest.requireMock<{
@@ -911,7 +914,7 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
 
   beforeEach(() => {
     const mock = bottleMock()
-    mock.getSteamBottleSettings.mockReturnValue({
+    getSteamBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'SteamBottle'
     })
     mock.getBridgeBottleSettings.mockReturnValue({
@@ -1137,9 +1140,7 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
         bridgeAllowlist: { has: jest.Mock }
       }>('../bridge/allowlist')
       .bridgeAllowlist.has.mockReturnValue(false)
-    jest
-      .requireMock<{ isBottleReady: jest.Mock }>('../bottle')
-      .isBottleReady.mockReturnValue(false)
+    steamBottle.isBottleReady.mockReturnValue(false)
   })
 
   it("mac_arch:'32' + isAppleSiliconMac + native installed -> removeSteamInstallCopy called exactly once, install proceeds", async () => {

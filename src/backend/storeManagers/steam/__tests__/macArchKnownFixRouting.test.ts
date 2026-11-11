@@ -115,13 +115,8 @@ jest.mock('../stores', () => ({
 // is a plain string (not a jest.fn()) so the real `!==` comparison inside
 // removeSteamInstallCopy behaves identically to the real module's constant.
 jest.mock('../bottle', () => ({
-  // quick 261024-cjq: plain function (survives resetMocks) — CrossOver present
-  isCrossoverInstalled: () => Promise.resolve(true),
   CROSSOVER_MISSING: 'crossover-missing',
-  isBottleReady: jest.fn(),
-  getSteamBottleSettings: jest.fn(),
   getBottleSteamappsDir: jest.fn(),
-  isSteamBottleProvisioned: jest.fn(),
   DEFAULT_BRIDGE_BOTTLE_NAME: 'GameLibSteamBridge'
 }))
 jest.mock('../bridgeBottleLifecycle', () => ({
@@ -217,7 +212,16 @@ import type { Stores } from 'backend/services/types'
 const { steamMetadataStore } = jest.requireMock<Stores['steam']>('../stores')
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
+// 66.3-15: the bottle helpers are read through the deps slice, so they are plain mocks here.
+// quick 261024-cjq: plain function (survives resetMocks) — CrossOver present.
+const isBottleReady = jest.fn()
 const steamTestDeps = createTestManagerDeps({
+  steamBottle: {
+    isCrossoverInstalled: () => Promise.resolve(true),
+    isBottleReady,
+    getSteamBottleSettings: jest.fn(),
+    isSteamBottleProvisioned: jest.fn()
+  } as never,
   stores: createTestStores({ steam: steamStoresModule }),
   // The steam:// hand-off goes through deps; the platform mock stays the recording fake.
   openExternal: {
@@ -290,9 +294,7 @@ beforeEach(() => {
   jest
     .requireMock<{ bridgeAllowlist: { has: jest.Mock } }>('../bridge/allowlist')
     .bridgeAllowlist.has.mockReturnValue(false)
-  jest
-    .requireMock<{ isBottleReady: jest.Mock }>('../bottle')
-    .isBottleReady.mockReturnValue(false)
+  isBottleReady.mockReturnValue(false)
 })
 
 describe('known-fix macArch 32 routing', () => {

@@ -4,7 +4,7 @@ import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
 import { resolve, relative, isAbsolute } from 'path'
 import i18next from 'i18next'
 import type { Stores } from 'backend/services/types'
-import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
+import { getBottleSteamappsDir, type BottleSettingsDeps } from '../bottle'
 import { getBridgeBottleSettings, type BridgeBottleDeps } from '../bridgeBottle'
 import { bridgeAllowlist } from '../bridge/allowlist'
 
@@ -73,8 +73,10 @@ export type PollOptions = {
  * getSteamBottleSettings()). Single chokepoint so every bottle-aware scan
  * roots at the same path.
  */
-export function getBottleSteamappsRoot(): string {
-  return getBottleSteamappsDir(getSteamBottleSettings().wineCrossoverBottle)
+export function getBottleSteamappsRoot(deps: BottleSettingsDeps): string {
+  return getBottleSteamappsDir(
+    deps.steamBottle.getSteamBottleSettings().wineCrossoverBottle
+  )
 }
 
 /**
@@ -174,7 +176,7 @@ export function isPathContainedIn(root: string, candidate: string): boolean {
  * for what is otherwise a computation with zero side effects.
  */
 export async function resolveInstallRoot(
-  deps: SteamLibrariesDeps,
+  deps: SteamLibrariesDeps & BottleSettingsDeps,
   installPath: string | undefined
 ): Promise<'bottle' | 'native' | null> {
   if (!installPath || !installPath.trim()) return null
@@ -182,7 +184,7 @@ export async function resolveInstallRoot(
   const resolvedInstallPath = resolve(installPath)
 
   if (isMac) {
-    const bottleCommonRoot = resolve(getBottleSteamappsRoot(), 'common')
+    const bottleCommonRoot = resolve(getBottleSteamappsRoot(deps), 'common')
     if (isPathContainedIn(bottleCommonRoot, resolvedInstallPath)) {
       return 'bottle'
     }

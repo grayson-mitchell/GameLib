@@ -20,10 +20,12 @@ import {
 } from './pollState'
 import { readAcfState } from './acfState'
 import type { SteamLibraryStateDeps } from 'backend/services/types'
+import type { BottleSettingsDeps } from '../bottle'
 
 /** The stores plus the config and notification slices the uninstall poll reads. */
 export type UninstallPollDeps = SteamStoresDeps &
   SteamLibrariesDeps &
+  BottleSettingsDeps &
   SteamLibraryStateDeps &
   NotifyDeps
 

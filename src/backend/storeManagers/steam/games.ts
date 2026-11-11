@@ -21,7 +21,6 @@ import type { ManagerDeps } from 'backend/services/types'
 import { depotSignalCaptured } from './metadataCapture'
 import { fetchMetadataIfNeeded } from './gameMetadata'
 import { cancelDelegatedInstall } from './library/installPolling'
-import { getSteamBottleSettings } from './bottle'
 import { stopPerGameBridgeBottle } from './bridgeBottleLifecycle'
 import * as bridgeBottle from './bridgeBottle'
 // Phase 60: Steam overlay in bridged games (macOS).
@@ -68,7 +67,7 @@ export default class SteamGame implements Game {
       // 59-UAT G11: the engine override is per game and written to this
       // title's GameConfig (where the launch reads it), so the shared bottle
       // settings alone made the Settings screen read it back as Automatic.
-      const settings = getSteamBottleSettings()
+      const settings = this.deps.steamBottle.getSteamBottleSettings()
       const title = pickTitleSettings(readStoredTitleConfig(this.appId))
       const { readSteamEngineOverride } =
         await import('./engine/steamEngineDeps')

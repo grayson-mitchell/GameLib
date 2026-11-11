@@ -5,6 +5,7 @@
 
 import type { GameSettings } from 'common/types'
 import type { EngineServices } from 'backend/engine/engineServices'
+import type { SteamEngineBottle } from '../bottle'
 import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
 import {
   resolveSteamWineToolSettings,
@@ -13,7 +14,7 @@ import {
 import type { SteamWineToolsDeps } from '../bridgeWineTools'
 
 const OWN = 'GameLibSteamBridge-620'
-const services = {} as EngineServices
+const services = {} as EngineServices & SteamEngineBottle
 const engine = { label: 'e' } as unknown as NonCrossoverEngine
 
 const settingsFor = (bottle: string, type = 'crossover'): GameSettings =>
