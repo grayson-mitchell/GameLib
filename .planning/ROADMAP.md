@@ -760,7 +760,7 @@ The D-14 Rust-overlap exemption table stays empty unless Phase 75 is re-scoped. 
 **Split 2026-11-11 (D-66.3-04):** 66.3 keeps the platform shim dissolution, config injection, the D-05 process-wide owners and the C-WR-2 static holders (item 1 above), and ends with every site it owns at zero and the `moduleState` ceilings lowered. Item 2 (the long tail), the census-to-test flip and the D-17 live smoke move to Phase 66.4.
 **Requirements**: TBD
 **Depends on:** Phase 66.2
-**Plans:** 7/18 plans executed
+**Plans:** 8/18 plans executed
 
 Plans:
 
@@ -771,7 +771,7 @@ Plans:
 - [x] 66.3-05-PLAN.md — cascade A: utils, root helpers and leaf modules off the shim and static config (wave 5)
 - [x] 66.3-06-PLAN.md — cascade B: config-free logger, launcher, commandRunner, engine/appshell/shortcuts helpers (wave 6)
 - [x] 66.3-07-PLAN.md — cascade C: GOG/Legendary/Nile/Sideload managers and storeManagerCommon (wave 7)
-- [ ] 66.3-08-PLAN.md — cascade D: stateless Steam manager modules, macSteamOffline openExternal (wave 8)
+- [x] 66.3-08-PLAN.md — cascade D: stateless Steam manager modules, macSteamOffline openExternal (wave 8)
 - [ ] 66.3-09-PLAN.md — cascade E1: handlers.ts and registrations a-h on the injected registry, channel parity (wave 9)
 - [ ] 66.3-10-PLAN.md — cascade E2: registrations i-w, main_window.ts deleted (wave 10)
 - [ ] 66.3-11-PLAN.md — online_monitor as a boot-owned instance on the clock (wave 11)
