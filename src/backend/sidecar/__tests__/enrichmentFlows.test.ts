@@ -285,7 +285,7 @@ jest.mock('../../utils/aborthandler/aborthandler', () => ({
 }))
 
 // ── steamgrid/secretStore — Amendment A-03 seam. Every steamgriddb.*
-// handler under test MUST call getSteamGridDbSecretStore() exclusively —
+// handler under test MUST call deps.steamGridSecrets exclusively —
 // never GlobalConfig or steamgrid/secureKey.ts directly (see
 // mockedGlobalConfigGet.not.toHaveBeenCalled() assertion below). Fully
 // controllable per test; re-armed in beforeEach because `resetMocks: true`
@@ -300,16 +300,14 @@ const mockGetSteamGridDbSecretStore = jest.fn(() => ({
   setApiKey: mockSecretStoreSetApiKey,
   clearApiKey: mockSecretStoreClearApiKey
 }))
-// `setSteamGridDbSecretStore` is a no-op jest.fn() here: the sidecar's REAL
-// (unmocked) bootstrap.ts calls installSidecarSteamGridDbSecretStore() at
-// boot() time, which calls this — but getSteamGridDbSecretStore()
-// above always returns the SAME fixed test double regardless of what this
-// no-ops "install", so bootstrap's real install path cannot affect what
-// this suite's handlers actually resolve.
+// The sidecar's REAL (unmocked) bootstrap.ts builds the boot's SteamGridDB
+// secret owner through createSteamGridDbSecrets() in the 'steamgrid-secrets'
+// step, handing it the keyring/dev-vault store it selected. Here that factory
+// always returns the SAME fixed test double regardless of the store it is
+// given, so bootstrap's real selection cannot affect what this suite's
+// handlers actually resolve.
 jest.mock('../../steamgrid/secretStore', () => ({
-  getSteamGridDbSecretStore: () => mockGetSteamGridDbSecretStore(),
-  setSteamGridDbSecretStore: jest.fn(),
-  bindSteamGridDbSecretDeps: jest.fn()
+  createSteamGridDbSecrets: () => mockGetSteamGridDbSecretStore()
 }))
 
 // ── steamgrid/utils — the real SteamGridDB API client. Mocked at this
@@ -1164,7 +1162,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
 
   // ── REQ-34.6-02/04/08/13, Amendment A-03: steamgriddb.* + getGogDiscounts
   // (invoke) — every steamgriddb.* read/write below goes through
-  // getSteamGridDbSecretStore() exclusively; NEVER GlobalConfig or
+  // deps.steamGridSecrets exclusively; NEVER GlobalConfig or
   // steamgrid/secureKey.ts directly (T-34.6-01/T-34.6-24). Never logs,
   // echoes, or otherwise persists a raw API key value in this file — every
   // assertion below checks presence/absence and call arguments only.
@@ -1172,7 +1170,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     it('REQ-34.6-02 steamgriddb.hasApiKey is false when the secret store holds no key, and never reads GlobalConfig', async () => {
       mockSecretStoreGetApiKey.mockResolvedValueOnce(undefined)
       const { input, frames } = boot()
-      // bootstrap.ts's REAL (unmocked) installSidecarSteamGridDbSecretStore()
+      // bootstrap.ts's REAL (unmocked) startSidecarSteamGridDbSecretStore()
       // fires a synchronous-start, fire-and-forget migrateSteamGridDbApiKey()
       // that reads GlobalConfig.get() on its very first line (Plan 34.6-02,
       // A-03) — unrelated to the handler under test here. Cleared AFTER

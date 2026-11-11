@@ -247,7 +247,25 @@ export function createTestServices(
     bridgeHelpers: overrides.bridgeHelpers ?? createTestBridgeHelpers(),
     steamBottle:
       overrides.steamBottle ?? createTestSteamBottle({ stores, config }),
-    steamUser: overrides.steamUser ?? createInertTestSteamUser()
+    steamUser: overrides.steamUser ?? createInertTestSteamUser(),
+    steamGridSecrets: overrides.steamGridSecrets ?? createTestSteamGridSecrets()
+  }
+}
+
+/** An in-memory SteamGridDB key owner: no keyring, no config. */
+function createTestSteamGridSecrets(
+  initial?: string
+): BootServices['steamGridSecrets'] {
+  let key = initial
+  return {
+    isAvailable: () => true,
+    getApiKey: async () => key,
+    setApiKey: async (value) => {
+      key = value.trim() || undefined
+    },
+    clearApiKey: async () => {
+      key = undefined
+    }
   }
 }
 

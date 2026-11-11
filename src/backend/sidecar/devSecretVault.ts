@@ -55,21 +55,14 @@ import { join } from 'path'
 import { logError, logWarning, LogPrefix } from 'backend/logger'
 import { getPath } from './pathShim'
 import { isPackagedSidecar } from './isPackagedSidecar'
-import {
-  setTokenStore,
-  type TokenStore
-} from 'backend/storeManagers/steam/tokenStore'
-import {
-  setHumbleSecretStore,
-  type HumbleSecretStore,
-  type HumbleSecretKey
+import type { TokenStore } from 'backend/storeManagers/steam/tokenStore'
+import type {
+  HumbleSecretStore,
+  HumbleSecretKey
 } from 'backend/humble/secretStore'
-import {
-  setSteamGridDbSecretStore,
-  type SteamGridDbSecretStore
-} from 'backend/steamgrid/secretStore'
+import type { SteamGridDbSecretStore } from 'backend/steamgrid/secretStore'
 
-/** The exact-match env var this vault gates on. Read ONLY inside `installDevSecretVault()` —
+/** The exact-match env var this vault gates on. Read ONLY inside `createDevSecretVault()` —
  * grepped at plan-verify time (`grep -rn "GAMELIB_DEV_SECRET_VAULT" src/`) to confirm this is
  * the ONE non-test read site in the codebase. */
 const DEV_SECRET_VAULT_ENV_VAR = 'GAMELIB_DEV_SECRET_VAULT'
@@ -128,7 +121,7 @@ function assertOwnerOnlyMode(path: string): void {
 
 /** Creates the vault file (empty JSON object) if it does not already exist, with owner-only
  * permissions, and re-asserts that mode either way. Throws on any failure — the caller
- * (`installDevSecretVault`) treats a throw here as "refuse to install", per this module's own
+ * (`createDevSecretVault`) treats a throw here as "refuse to build", per this module's own
  * header: "a vault that silently degrades to world-readable is the same class of defect as the
  * `safeStorage` stub." */
 function ensureVaultFileCreated(path: string): void {
@@ -247,7 +240,7 @@ class DevVaultHumbleSecretStore implements HumbleSecretStore {
  * `SidecarSteamGridDbSecretStore` this stands in for — `isAvailable()` is declared SYNCHRONOUS by
  * the seam's own interface (`steamgrid/secretStore.ts`, plan 34.6-01), so this always reports
  * `true`, mirroring that implementation's identical choice; a real unavailability has no meaning
- * for a local plaintext file. This arm is NOT optional (see `installDevSecretVault()`'s own doc
+ * for a local plaintext file. This arm is NOT optional (see `createDevSecretVault()`'s own doc
  * comment below): the branch this function's return value gates is exclusive, so a
  * `GAMELIB_DEV_SECRET_VAULT=1` boot that omitted this class would fall through to
  * `ElectronSteamGridDbSecretStore` — whose `safeStorage` resolves to the sidecar's dead stub —
@@ -274,13 +267,21 @@ class DevVaultSteamGridDbSecretStore implements SteamGridDbSecretStore {
   }
 }
 
+/** The three stores the vault stands in for, built by `createDevSecretVault()` (D-66.3-01: the
+ * boot selects and injects them; nothing is swapped into a module-level registry here). */
+export interface DevSecretVault {
+  tokenStore: TokenStore
+  humbleSecretStore: HumbleSecretStore
+  steamGridDbSecretStore: SteamGridDbSecretStore
+}
+
 /**
- * Installs the dev-only plaintext secret vault as the Steam `TokenStore`, the Humble
+ * Builds the dev-only plaintext secret vault as the Steam `TokenStore`, the Humble
  * `HumbleSecretStore`, AND the SteamGridDB `SteamGridDbSecretStore` (Phase 34.6 plan 02, A-03),
  * if and only if every guardrail passes:
  *
  *   1. `process.env.GAMELIB_DEV_SECRET_VAULT === '1'` (exact match — guardrail (a)). Anything
- *      else, including unset/`'0'`/`'false'`, returns `false` and calls neither setter.
+ *      else, including unset/`'0'`/`'false'`, returns `null` and builds nothing.
  *   2. `isPackagedSidecar()` (imported, never re-derived — guardrail (c)) must resolve `false`.
  *      A `true` result, OR the call itself throwing, refuses installation — this function's own
  *      `try`/`catch` around the call inherits the SAME fail-closed direction
@@ -289,13 +290,13 @@ class DevVaultSteamGridDbSecretStore implements SteamGridDbSecretStore {
  *   3. The vault file must be creatable (or already present) with owner-only `0o600`
  *      permissions. A failure here (guardrail, T-34.5-C4-41) also refuses installation.
  *
- * Returns `true` only when all three guardrails passed AND all three setters were called — the
- * `[bootstrap] secret stores: <keyring|dev-vault>` receipt line (`bootstrap.ts`, Task 2) is
- * keyed directly off this return value, so a caller can always tell which arm actually ran.
+ * Returns the vault only when all three guardrails passed, otherwise `null` — the
+ * `[bootstrap] secret stores: <keyring|dev-vault>` receipt line (`bootstrap.ts`) is keyed
+ * directly off whether the boot holds a vault, so a caller can always tell which arm ran.
  */
-export function installDevSecretVault(): boolean {
+export function createDevSecretVault(): DevSecretVault | null {
   if (process.env[DEV_SECRET_VAULT_ENV_VAR] !== '1') {
-    return false
+    return null
   }
 
   let packaged: boolean
@@ -310,7 +311,7 @@ export function installDevSecretVault(): boolean {
       `[dev-secret-vault] REFUSED — could not determine build kind, failing closed: ${errorMessage(error)}`,
       LogPrefix.Backend
     )
-    return false
+    return null
   }
 
   if (packaged) {
@@ -318,7 +319,7 @@ export function installDevSecretVault(): boolean {
       `[dev-secret-vault] REFUSED — packaged build; ${DEV_SECRET_VAULT_ENV_VAR} ignored`,
       LogPrefix.Backend
     )
-    return false
+    return null
   }
 
   const path = vaultFilePath()
@@ -329,17 +330,17 @@ export function installDevSecretVault(): boolean {
       `[dev-secret-vault] REFUSED — could not create the vault file with owner-only permissions at ${path}: ${errorMessage(error)}`,
       LogPrefix.Backend
     )
-    return false
+    return null
   }
-
-  setTokenStore(new DevVaultTokenStore(path))
-  setHumbleSecretStore(new DevVaultHumbleSecretStore(path))
-  setSteamGridDbSecretStore(new DevVaultSteamGridDbSecretStore(path))
 
   logWarning(
     `[dev-secret-vault] INSTALLED — secrets are stored in PLAINTEXT at ${path} — NEVER use in production`,
     LogPrefix.Backend
   )
 
-  return true
+  return {
+    tokenStore: new DevVaultTokenStore(path),
+    humbleSecretStore: new DevVaultHumbleSecretStore(path),
+    steamGridDbSecretStore: new DevVaultSteamGridDbSecretStore(path)
+  }
 }

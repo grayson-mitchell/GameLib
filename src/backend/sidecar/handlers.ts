@@ -249,7 +249,8 @@ export function registerHandlers(deps: {
     managers: deps.services.managers,
     stores: deps.services.stores,
     appInfo: deps.services.appInfo,
-    onlineMonitor: deps.services.onlineMonitor
+    onlineMonitor: deps.services.onlineMonitor,
+    steamGridSecrets: deps.services.steamGridSecrets
   })
   // Phase 34.3 Plans 01+02 (REQ-34.3-01/-02/-13): the shell/link-opener and
   // filesystem/diagnostics channels — no ordering constraint

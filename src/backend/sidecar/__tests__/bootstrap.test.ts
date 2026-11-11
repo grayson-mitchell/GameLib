@@ -211,7 +211,7 @@ describe('sidecar bootstrap (headless boot)', () => {
   })
 
   describe('boot services (66.1-04)', () => {
-    it('a default boot returns BootServices with all twenty-five fields', () => {
+    it('a default boot returns BootServices with all twenty-six fields', () => {
       const { services } = bootWithLines()
       expect(Object.keys(services).sort()).toEqual([
         'anonymousClient',
@@ -233,6 +233,7 @@ describe('sidecar bootstrap (headless boot)', () => {
         'signInProbe',
         'spawnAsync',
         'steamBottle',
+        'steamGridSecrets',
         'steamProcesses',
         'steamSession',
         'steamUser',

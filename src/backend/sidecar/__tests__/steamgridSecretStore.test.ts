@@ -79,11 +79,10 @@ import { requestRustInvoke } from '../sidecarRpc'
 import { KEYRING_SLOT_STEAMGRID_API_KEY } from '../keyringTokenStore'
 import {
   SidecarSteamGridDbSecretStore,
-  installSidecarSteamGridDbSecretStore,
-  migrateSteamGridDbApiKey,
-  resetSidecarSteamGridDbSecretStoreCachesForTests
+  createSidecarSteamGridDbSecretStore,
+  startSidecarSteamGridDbSecretStore,
+  migrateSteamGridDbApiKey
 } from '../steamgridSecretStore'
-import { getSteamGridDbSecretStore } from '../../steamgrid/secretStore'
 import { createTestStores } from 'backend/testUtils/testServices'
 
 // The mocked GlobalConfig never reads the kvs slice; the migration just hands it through.
@@ -127,11 +126,8 @@ describe('SidecarSteamGridDbSecretStore', () => {
     mockDecryptApiKey.mockImplementation((s: string) =>
       s.startsWith('sgdb:v1:') ? '' : s
     )
-    // Must run before any test body issues a read -- see keyringTokenStore.ts's own doc comment
-    // on SidecarKeyringSlotStore's process-lifetime cache and why a fresh
-    // `new SidecarSteamGridDbSecretStore()` per test does NOT give a fresh cache (the underlying
-    // SLOT_STORE is a module-level singleton).
-    resetSidecarSteamGridDbSecretStoreCachesForTests()
+    // Every test builds its own `SidecarSteamGridDbSecretStore`, which owns its own slot store
+    // and read cache, so no cache needs resetting between tests.
     mockRequestRustInvoke.mockImplementation(
       (channel: string, args: unknown[]) => {
         callLog.push({ channel, args })
@@ -259,21 +255,27 @@ describe('SidecarSteamGridDbSecretStore', () => {
     })
   })
 
-  // ── installSidecarSteamGridDbSecretStore(secretDeps) ──────────────────────────────
-  describe('installSidecarSteamGridDbSecretStore(secretDeps)', () => {
-    it('installs a SidecarSteamGridDbSecretStore instance into the registry and logs exactly one keyring receipt line', () => {
-      installSidecarSteamGridDbSecretStore(secretDeps)
+  // ── createSidecarSteamGridDbSecretStore() / startSidecarSteamGridDbSecretStore(store, deps) ──────
+  describe('createSidecarSteamGridDbSecretStore() / startSidecarSteamGridDbSecretStore(store, secretDeps)', () => {
+    it('builds a SidecarSteamGridDbSecretStore, and start logs exactly one keyring receipt line', () => {
+      const store = createSidecarSteamGridDbSecretStore()
+      expect(store).toBeInstanceOf(SidecarSteamGridDbSecretStore)
 
-      expect(getSteamGridDbSecretStore()).toBeInstanceOf(
-        SidecarSteamGridDbSecretStore
-      )
+      startSidecarSteamGridDbSecretStore(store, secretDeps)
+
       const receiptCalls = mockLogInfo.mock.calls.filter((call) =>
         String(call[0]).includes('[bootstrap] steamgrid secret store: keyring')
       )
       expect(receiptCalls).toHaveLength(1)
     })
 
-    it('dispatches the migration fire-and-forget -- install() itself returns void, never a Promise the caller might await', () => {
+    it('construction does no I/O: nothing is sent to the keyring until start() runs the migration', () => {
+      createSidecarSteamGridDbSecretStore()
+
+      expect(callLog).toEqual([])
+    })
+
+    it('dispatches the migration fire-and-forget -- start() itself returns void, never a Promise the caller might await', () => {
       backingSettings.steamGridDbApiKey = 'plaintext-key'
       programChannel('keyring_set', { type: 'resolve', value: true })
       programChannel('keyring_get', {
@@ -281,33 +283,31 @@ describe('SidecarSteamGridDbSecretStore', () => {
         value: 'plaintext-key'
       })
 
-      // installSidecarSteamGridDbSecretStore(secretDeps)'s own return type is `void`, not `Promise<void>` —
-      // bootstrap.ts calls it as a plain synchronous statement immediately followed by the
-      // `'[bootstrap] secret stores: keyring'` logInfo line, never `await`ed. If the migration
-      // were awaited internally, this call would return a Promise instead.
-      const result = installSidecarSteamGridDbSecretStore(secretDeps)
+      // start()'s own return type is `void`, not `Promise<void>` -- bootstrap.ts calls it as a
+      // plain synchronous statement immediately followed by the
+      // `'[bootstrap] secret stores: keyring'` logInfo line, never `await`ed.
+      const result = startSidecarSteamGridDbSecretStore(
+        createSidecarSteamGridDbSecretStore(),
+        secretDeps
+      )
 
       expect(result).toBeUndefined()
-      expect(getSteamGridDbSecretStore()).toBeInstanceOf(
-        SidecarSteamGridDbSecretStore
-      )
     })
 
-    it('never throws even when installation is called repeatedly (safe on every bootstrap.ts re-run)', () => {
-      expect(() =>
-        installSidecarSteamGridDbSecretStore(secretDeps)
-      ).not.toThrow()
-      expect(() =>
-        installSidecarSteamGridDbSecretStore(secretDeps)
-      ).not.toThrow()
-      expect(getSteamGridDbSecretStore()).toBeInstanceOf(
-        SidecarSteamGridDbSecretStore
-      )
+    it('two instances do not share a read cache', async () => {
+      programChannel('keyring_get', { type: 'resolve', value: 'first' })
+      const a = createSidecarSteamGridDbSecretStore()
+      const b = createSidecarSteamGridDbSecretStore()
+      expect(await a.getApiKey()).toBe('first')
+
+      programChannel('keyring_get', { type: 'resolve', value: 'second' })
+
+      expect(await b.getApiKey()).toBe('second')
     })
   })
 
-  // ── migrateSteamGridDbApiKey(secretDeps) — one-time plaintext-to-keyring migration ────────────────────
-  describe('migrateSteamGridDbApiKey(secretDeps) (one-time plaintext-to-keyring migration)', () => {
+  // ── migrateSteamGridDbApiKey(store, secretDeps) — one-time plaintext-to-keyring migration ──────
+  describe('migrateSteamGridDbApiKey(store, secretDeps) (one-time plaintext-to-keyring migration)', () => {
     it('given a working keyring, writes the plaintext to the keyring, reads it back, THEN clears the GlobalConfig setting', async () => {
       backingSettings.steamGridDbApiKey = 'plaintext-api-key'
       programChannel('keyring_set', { type: 'resolve', value: true })
@@ -316,7 +316,10 @@ describe('SidecarSteamGridDbSecretStore', () => {
         value: 'plaintext-api-key'
       })
 
-      await migrateSteamGridDbApiKey(secretDeps)
+      await migrateSteamGridDbApiKey(
+        new SidecarSteamGridDbSecretStore(),
+        secretDeps
+      )
 
       expect(callLog).toEqual([
         {
@@ -335,7 +338,10 @@ describe('SidecarSteamGridDbSecretStore', () => {
         error: new Error('keyring:unavailable:PlatformFailure')
       })
 
-      await migrateSteamGridDbApiKey(secretDeps)
+      await migrateSteamGridDbApiKey(
+        new SidecarSteamGridDbSecretStore(),
+        secretDeps
+      )
 
       expect(backingSettings.steamGridDbApiKey).toBe('plaintext-api-key')
       expect(mockLogWarning).toHaveBeenCalledTimes(1)
@@ -351,7 +357,10 @@ describe('SidecarSteamGridDbSecretStore', () => {
         error: new Error('keyring:unavailable:PlatformFailure')
       })
 
-      await migrateSteamGridDbApiKey(secretDeps)
+      await migrateSteamGridDbApiKey(
+        new SidecarSteamGridDbSecretStore(),
+        secretDeps
+      )
 
       expect(backingSettings.steamGridDbApiKey).toBe('plaintext-api-key')
       expect(mockLogWarning).toHaveBeenCalledTimes(1)
@@ -360,7 +369,10 @@ describe('SidecarSteamGridDbSecretStore', () => {
     it('with the GlobalConfig setting already absent, performs NO keyring write', async () => {
       // backingSettings starts empty (beforeEach) -- no key was ever configured, or a prior
       // migration already ran.
-      await migrateSteamGridDbApiKey(secretDeps)
+      await migrateSteamGridDbApiKey(
+        new SidecarSteamGridDbSecretStore(),
+        secretDeps
+      )
 
       expect(callLog).toEqual([])
       expect(mockLogWarning).not.toHaveBeenCalled()
@@ -375,7 +387,10 @@ describe('SidecarSteamGridDbSecretStore', () => {
         value: 'mismatched-value'
       })
 
-      await migrateSteamGridDbApiKey(secretDeps)
+      await migrateSteamGridDbApiKey(
+        new SidecarSteamGridDbSecretStore(),
+        secretDeps
+      )
 
       for (const call of mockLogWarning.mock.calls) {
         expect(JSON.stringify(call)).not.toContain(SECRET)
@@ -403,7 +418,10 @@ describe('SidecarSteamGridDbSecretStore', () => {
         value: 'a-completely-different-value'
       })
 
-      await migrateSteamGridDbApiKey(secretDeps)
+      await migrateSteamGridDbApiKey(
+        new SidecarSteamGridDbSecretStore(),
+        secretDeps
+      )
 
       expect(backingSettings.steamGridDbApiKey).toBe('plaintext-api-key')
       expect(mockSetSetting).not.toHaveBeenCalled()
@@ -418,7 +436,10 @@ describe('SidecarSteamGridDbSecretStore', () => {
         value: 'the-real-decrypted-plaintext'
       })
 
-      await migrateSteamGridDbApiKey(secretDeps)
+      await migrateSteamGridDbApiKey(
+        new SidecarSteamGridDbSecretStore(),
+        secretDeps
+      )
 
       expect(callLog).toEqual([
         {
@@ -438,7 +459,10 @@ describe('SidecarSteamGridDbSecretStore', () => {
       backingSettings.steamGridDbApiKey = 'sgdb:v1:some-base64-ciphertext'
       mockDecryptApiKey.mockReturnValueOnce('')
 
-      await migrateSteamGridDbApiKey(secretDeps)
+      await migrateSteamGridDbApiKey(
+        new SidecarSteamGridDbSecretStore(),
+        secretDeps
+      )
 
       expect(callLog).toEqual([])
       expect(backingSettings.steamGridDbApiKey).toBe(

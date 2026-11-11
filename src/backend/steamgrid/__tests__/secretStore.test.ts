@@ -10,7 +10,7 @@
  *    (`ipc_handler.ts`'s inline copy of this branch is deleted by plan 34.6-09).
  *  - The total-method contract: none of the four interface methods ever throws or rejects, even
  *    when `safeStorage` or the underlying `GlobalConfig` call throws.
- *  - The `setSteamGridDbSecretStore`/`getSteamGridDbSecretStore` registry swap point.
+ *  - `createSteamGridDbSecrets`, the boot-built instance over an injected store.
  *
  * Mock boundaries mirror `humble/__tests__/secretStore.test.ts`'s convention, substituting
  * `backend/config`'s `GlobalConfig` for Humble's `../stores` `configStore`:
@@ -57,9 +57,7 @@ jest.mock('backend/config', () => ({
 import {
   SteamGridDbSecretStore,
   ElectronSteamGridDbSecretStore,
-  setSteamGridDbSecretStore,
-  getSteamGridDbSecretStore,
-  bindSteamGridDbSecretDeps
+  createSteamGridDbSecrets
 } from '../secretStore'
 import { createTestStores } from 'backend/testUtils/testServices'
 import { defined } from 'backend/testUtils/indexed'
@@ -84,11 +82,6 @@ describe('steamgrid/secretStore', () => {
       getSettings: mockGetSettings,
       setSetting: mockSetSetting
     }))
-
-    // Reset the module-level registry to a fresh ElectronSteamGridDbSecretStore between tests so
-    // registry-swap tests don't leak into unrelated tests.
-    bindSteamGridDbSecretDeps(secretDeps)
-    setSteamGridDbSecretStore(new ElectronSteamGridDbSecretStore(secretDeps))
   })
 
   describe('mock wiring sanity', () => {
@@ -206,30 +199,43 @@ describe('steamgrid/secretStore', () => {
     })
   })
 
-  describe('registry (setSteamGridDbSecretStore/getSteamGridDbSecretStore)', () => {
-    it('getSteamGridDbSecretStore() returns an ElectronSteamGridDbSecretStore by default', () => {
-      expect(getSteamGridDbSecretStore()).toBeInstanceOf(
-        ElectronSteamGridDbSecretStore
-      )
-    })
-
-    it('setSteamGridDbSecretStore(fake) swaps the active store', async () => {
+  describe('createSteamGridDbSecrets (boot-built instance)', () => {
+    it('routes every operation through the injected store', async () => {
       const fake: SteamGridDbSecretStore = {
         isAvailable: jest.fn().mockReturnValue(true),
         getApiKey: jest.fn().mockResolvedValue('fake-key'),
         setApiKey: jest.fn().mockResolvedValue(undefined),
         clearApiKey: jest.fn().mockResolvedValue(undefined)
       }
+      const secrets = createSteamGridDbSecrets({ store: fake })
 
-      setSteamGridDbSecretStore(fake)
-      expect(getSteamGridDbSecretStore()).toBe(fake)
+      expect(secrets.isAvailable()).toBe(true)
+      expect(await secrets.getApiKey()).toBe('fake-key')
+      await secrets.setApiKey('next')
+      await secrets.clearApiKey()
 
-      const value = await getSteamGridDbSecretStore().getApiKey()
-      expect(value).toBe('fake-key')
-      expect(fake.getApiKey).toHaveBeenCalled()
-
+      expect(fake.setApiKey).toHaveBeenCalledWith('next')
+      expect(fake.clearApiKey).toHaveBeenCalledTimes(1)
       // The fake never touches GlobalConfig at all.
       expect(mockGetSettings).not.toHaveBeenCalled()
+    })
+
+    it('two instances are independent of each other', async () => {
+      const a = createSteamGridDbSecrets({
+        store: new ElectronSteamGridDbSecretStore(secretDeps)
+      })
+      const b = createSteamGridDbSecrets({
+        store: {
+          isAvailable: () => true,
+          getApiKey: async () => 'b-key',
+          setApiKey: async () => undefined,
+          clearApiKey: async () => undefined
+        }
+      })
+      backingSettings.steamGridDbApiKey = 'plain-a'
+
+      expect(await a.getApiKey()).toBe('plain-a')
+      expect(await b.getApiKey()).toBe('b-key')
     })
   })
 })

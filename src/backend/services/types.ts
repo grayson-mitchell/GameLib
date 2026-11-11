@@ -38,6 +38,7 @@ import type {
 } from 'backend/storeManagers/steam/bridge/helperRegistry'
 import type { AnonymousClient } from 'backend/storeManagers/steam/anonymousClient'
 import type { SteamUser } from 'backend/storeManagers/steam/user'
+import type { SteamGridDbSecretStore } from 'backend/steamgrid/secretStore'
 import type { SteamBottle } from 'backend/storeManagers/steam/bottle'
 import type { SteamSignInState } from 'backend/storeManagers/steam/userSignInState'
 import type { SteamAuthTriggerState } from 'backend/storeManagers/steam/authTrigger'
@@ -278,4 +279,9 @@ export interface BootServices {
   steamBottle: SteamBottle
   /** Built by the 'steam-user' boot step, after 'command-runner' and before 'store-managers' (D-66.3-16). */
   steamUser: SteamUser
+  /**
+   * Built by the 'steamgrid-secrets' boot step, before 'register-handlers' (D-66.3-17): the one
+   * SteamGridDB API-key owner, over the store this boot selected (keyring or dev vault).
+   */
+  steamGridSecrets: SteamGridDbSecretStore
 }

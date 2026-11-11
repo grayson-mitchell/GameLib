@@ -87,15 +87,20 @@ import {
 import { createSteamBottle } from '../storeManagers/steam/bottle'
 import { SidecarKeyringTokenStore } from './keyringTokenStore'
 import { installSidecarHumbleSecretStore } from './humbleSecretStore'
-import { installSidecarSteamGridDbSecretStore } from './steamgridSecretStore'
-import { bindSteamGridDbSecretDeps } from '../steamgrid/secretStore'
+import {
+  createSidecarSteamGridDbSecretStore,
+  startSidecarSteamGridDbSecretStore,
+  type SidecarSteamGridDbSecretStore
+} from './steamgridSecretStore'
+import { createSteamGridDbSecrets } from '../steamgrid/secretStore'
 import { bindHumbleStores } from '../humble/humbleStores'
+import { setHumbleSecretStore } from '../humble/secretStore'
 import { registerDxmtListeners } from '../tools/dxmt'
 // 34.5 gap cycle 4 plan 36 (developer-scoped Routing addition): the dev-only plaintext vault
 // that this branch installs INSTEAD OF the two keyring stores below, when opted into. Import
 // only — no module-scope call. See installDevSecretVault()'s own header for the full guardrail
 // set; this file only decides WHICH arm runs and records which one did.
-import { installDevSecretVault } from './devSecretVault'
+import { createDevSecretVault, type DevSecretVault } from './devSecretVault'
 // Deviation (Rule 1 — bug, found live during the 33-05 install-hang gate,
 // fix/steam-native-install-stability): `initOnlineMonitor()` was previously wired ONLY at
 // `main.ts`'s `app.whenReady()`, which the headless sidecar never runs. With no init, `isOnline()`
@@ -282,6 +287,8 @@ export const BOOT_STEP_NAMES = [
   'stores',
   'migrations',
   'config',
+  'secret-vault',
+  'steamgrid-secrets',
   'steam-bottle',
   'command-runner',
   'steam-user',
@@ -347,6 +354,14 @@ interface BootState {
   i18nReady: Promise<void>
   /** The per-boot services, filled by the 'stores', 'command-runner' and 'store-managers' steps. */
   services: Partial<BootServices>
+  /**
+   * The dev-only plaintext vault when this boot selected it ('secret-vault' step), else null. Held
+   * here, not on `BootServices`: it is a selection input for the secret-store owners and the
+   * 'secret-stores' step, never something a handler reads.
+   */
+  secretVault: DevSecretVault | null
+  /** The keyring-backed SteamGridDB store this boot built, when no dev vault was selected. */
+  steamGridKeyringStore: SidecarSteamGridDbSecretStore | null
 }
 
 /**
@@ -423,7 +438,8 @@ function requireServices(state: BootState): BootServices {
     anonymousClient,
     bridgeHelpers,
     steamBottle,
-    steamUser
+    steamUser,
+    steamGridSecrets
   } = state.services
   if (
     !stores ||
@@ -450,7 +466,8 @@ function requireServices(state: BootState): BootServices {
     !anonymousClient ||
     !bridgeHelpers ||
     !steamBottle ||
-    !steamUser
+    !steamUser ||
+    !steamGridSecrets
   ) {
     const missing = (
       [
@@ -478,7 +495,8 @@ function requireServices(state: BootState): BootServices {
         'anonymousClient',
         'bridgeHelpers',
         'steamBottle',
-        'steamUser'
+        'steamUser',
+        'steamGridSecrets'
       ] as const
     ).filter((name) => !state.services[name])
     throw new Error(`boot services missing: ${missing.join(', ')}`)
@@ -508,7 +526,8 @@ function requireServices(state: BootState): BootServices {
     anonymousClient,
     bridgeHelpers,
     steamBottle,
-    steamUser
+    steamUser,
+    steamGridSecrets
   }
 }
 
@@ -1103,7 +1122,12 @@ export function bootSidecar(
     )
   }
   booted = true
-  const state: BootState = { i18nReady: Promise.resolve(), services: {} }
+  const state: BootState = {
+    i18nReady: Promise.resolve(),
+    services: {},
+    secretVault: null,
+    steamGridKeyringStore: null
+  }
   runBootSteps(ctx, { input, output, guards }, state, prebuilt)
   return requireServices(state)
 }
@@ -1382,6 +1406,33 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         state.services.gameConfigs = prebuilt.gameConfigs ?? createGameConfigs()
         state.services.paths = prebuilt.paths ?? ctx.paths
         state.services.appInfo = prebuilt.appInfo ?? ctx.appInfo
+      }
+    },
+    {
+      name: 'secret-vault',
+      // Decides, once, whether this boot uses the dev-only plaintext vault (D-66.3-01, T-66.3-56).
+      // After 'logger' (the vault logs) and before every secret owner. Local file I/O only, no
+      // RPC, so it needs no transport; the keyring arm needs none at construction either (the
+      // keyring is touched only by the migrations in 'secret-stores', after 'rpc-server').
+      run: (_ctx, _io, state) => {
+        state.secretVault = createDevSecretVault()
+      }
+    },
+    {
+      name: 'steamgrid-secrets',
+      // Builds the one SteamGridDB API-key owner of this boot (D-05, C-WR-2) over the selected
+      // store, before 'register-handlers' so the enrichment registration receives it. Construction
+      // does no I/O; the one-time migration stays in 'secret-stores' after 'rpc-server' (T-28-10).
+      run: (_ctx, _io, state) => {
+        let store
+        if (state.secretVault) {
+          store = state.secretVault.steamGridDbSecretStore
+        } else {
+          state.steamGridKeyringStore = createSidecarSteamGridDbSecretStore()
+          store = state.steamGridKeyringStore
+        }
+        state.services.steamGridSecrets =
+          prebuilt.steamGridSecrets ?? createSteamGridDbSecrets({ store })
       }
     },
     {
@@ -2025,7 +2076,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       run: (ctx, _io, state) => {
         const { stores, host, onlineMonitor, signInProbe, steamUser } =
           requireServices(state)
-        bindSteamGridDbSecretDeps({ stores })
         bindHumbleStores({ stores, signIn: signInProbe, steamUser })
         registerDxmtListeners({
           stores,
@@ -2059,8 +2109,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // extends this same keyring arm with an additional SteamGridDB secret-store install below:
         // without it, the SteamGridDB port landing in plan 34.6-09 would persist the operator's API
         // key in `config.json` in the clear via the sidecar's dead `safeStorage` stub.
-        const devSecretVaultInstalled = installDevSecretVault()
-        if (devSecretVaultInstalled) {
+        const devSecretVault = state.secretVault
+        if (devSecretVault) {
+          installTokenStore(devSecretVault.tokenStore)
+          setHumbleSecretStore(devSecretVault.humbleSecretStore)
           logInfo('[bootstrap] secret stores: dev-vault', LogPrefix.Backend)
         } else {
           installTokenStore(new SidecarKeyringTokenStore())
@@ -2075,7 +2127,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           // Phase 34.6 plan 02 (A-03): same placement reasoning as installSidecarHumbleSecretStore()
           // just above -- its migration also calls requestRustInvoke, so it must run AFTER
           // startRpcServer() and inside this same keyring arm.
-          installSidecarSteamGridDbSecretStore({ stores })
+          const steamGridKeyringStore = state.steamGridKeyringStore
+          if (!steamGridKeyringStore)
+            throw new Error('boot: steamgrid-secrets step must run first')
+          startSidecarSteamGridDbSecretStore(steamGridKeyringStore, { stores })
           logInfo('[bootstrap] secret stores: keyring', LogPrefix.Backend)
         }
       }

@@ -41,7 +41,7 @@ import { join } from 'path'
 // `jest.spyOn(loggerModule, 'logInfo')` convention) sidesteps this: it mutates the ALREADY-real
 // module's exports object in place after normal evaluation completed, never re-entering the
 // cycle. `mockImplementation(() => {})` on top is required for TASK 1's tests specifically —
-// they call `installDevSecretVault()` directly without ever calling `../bootstrap`'s `init`,
+// they call `createDevSecretVault()` directly without ever calling `../bootstrap`'s `init`,
 // so `heroicLogWriter` is never constructed and a REAL `logWarning`/`logError` call-through
 // would throw (`sidecar-console-and-logger-are-invisible`, this project's own recorded gotcha).
 // The real import lives in the "Imports (after mocks)" block below; only the spy handles are
@@ -109,12 +109,10 @@ jest.mock('graceful-fs', () => ({
 import { statSync, readFileSync } from 'fs'
 import { chmodSync as mockedChmodSync } from 'graceful-fs'
 import * as loggerModule from 'backend/logger'
-import { installDevSecretVault } from '../devSecretVault'
+import { createDevSecretVault } from '../devSecretVault'
 import * as devSecretVaultModule from '../devSecretVault'
 import * as tokenStoreModule from 'backend/storeManagers/steam/tokenStore'
-import * as secretStoreModule from 'backend/humble/secretStore'
 import * as humbleSecretStoreModule from '../humbleSecretStore'
-import * as steamGridDbSecretStoreModule from 'backend/steamgrid/secretStore'
 import { bootFresh } from './helpers/sidecarHarness'
 
 const ENV_VAR = 'GAMELIB_DEV_SECRET_VAULT'
@@ -172,63 +170,40 @@ describe('devSecretVault', () => {
 
   // ── Guardrail (a): exact-'1' env opt-in ────────────────────────────────────────────────────
 
-  it('unset: returns false and calls neither setter (the F-1 regression guard)', () => {
-    const setTokenStoreSpy = jest.spyOn(tokenStoreModule, 'setTokenStore')
-    const setHumbleSecretStoreSpy = jest.spyOn(
-      secretStoreModule,
-      'setHumbleSecretStore'
-    )
-
-    expect(installDevSecretVault()).toBe(false)
-    expect(setTokenStoreSpy).not.toHaveBeenCalled()
-    expect(setHumbleSecretStoreSpy).not.toHaveBeenCalled()
-
-    setTokenStoreSpy.mockRestore()
-    setHumbleSecretStoreSpy.mockRestore()
+  it('unset: returns null and builds nothing (the F-1 regression guard)', () => {
+    expect(createDevSecretVault()).toBeNull()
   })
 
   it.each(['0', 'false'])(
     "'%s' does not enable the vault (proves exact-'1' match, not truthiness)",
     (value) => {
       process.env[ENV_VAR] = value
-      const setTokenStoreSpy = jest.spyOn(tokenStoreModule, 'setTokenStore')
 
-      expect(installDevSecretVault()).toBe(false)
-      expect(setTokenStoreSpy).not.toHaveBeenCalled()
-
-      setTokenStoreSpy.mockRestore()
+      expect(createDevSecretVault()).toBeNull()
     }
   )
 
   // ── Guardrail (c): production-refused, fail-closed ─────────────────────────────────────────
 
-  it('packaged build: refuses, installs nothing, and logs REFUSED', () => {
+  it('packaged build: refuses, builds nothing, and logs REFUSED', () => {
     process.env[ENV_VAR] = '1'
     mockIsPackagedSidecar.mockReturnValue(true)
-    const setTokenStoreSpy = jest.spyOn(tokenStoreModule, 'setTokenStore')
 
-    expect(installDevSecretVault()).toBe(false)
-    expect(setTokenStoreSpy).not.toHaveBeenCalled()
+    expect(createDevSecretVault()).toBeNull()
     expect(
       mockLogError.mock.calls.some(([message]) =>
         String(message).includes('[dev-secret-vault] REFUSED')
       )
     ).toBe(true)
-
-    setTokenStoreSpy.mockRestore()
   })
 
-  it('isPackagedSidecar() throwing: refuses (fail-closed), installs nothing', () => {
+  it('isPackagedSidecar() throwing: refuses (fail-closed), builds nothing', () => {
     process.env[ENV_VAR] = '1'
     mockIsPackagedSidecar.mockImplementation(() => {
       throw new Error('build-kind detector exploded')
     })
-    const setTokenStoreSpy = jest.spyOn(tokenStoreModule, 'setTokenStore')
 
-    expect(installDevSecretVault()).toBe(false)
-    expect(setTokenStoreSpy).not.toHaveBeenCalled()
-
-    setTokenStoreSpy.mockRestore()
+    expect(createDevSecretVault()).toBeNull()
   })
 
   it('vault file cannot be created with owner-only permissions: refuses and logs REFUSED', () => {
@@ -237,49 +212,40 @@ describe('devSecretVault', () => {
     ;(mockedChmodSync as jest.Mock).mockImplementation(() => {
       throw new Error('EPERM: operation not permitted, chmod')
     })
-    const setTokenStoreSpy = jest.spyOn(tokenStoreModule, 'setTokenStore')
 
-    expect(installDevSecretVault()).toBe(false)
-    expect(setTokenStoreSpy).not.toHaveBeenCalled()
+    expect(createDevSecretVault()).toBeNull()
     expect(
       mockLogError.mock.calls.some(([message]) =>
         String(message).includes('[dev-secret-vault] REFUSED')
       )
     ).toBe(true)
-
-    setTokenStoreSpy.mockRestore()
   })
 
   // ── Guardrail (b): loud, value-free logging + successful install ──────────────────────────
 
-  it("'1' in a dev build: installs both stores exactly once, logs INSTALLED + PLAINTEXT", () => {
+  it("'1' in a dev build: builds all three stores once, logs INSTALLED + PLAINTEXT", () => {
     process.env[ENV_VAR] = '1'
     mockIsPackagedSidecar.mockReturnValue(false)
-    const setTokenStoreSpy = jest.spyOn(tokenStoreModule, 'setTokenStore')
-    const setHumbleSecretStoreSpy = jest.spyOn(
-      secretStoreModule,
-      'setHumbleSecretStore'
-    )
 
-    expect(installDevSecretVault()).toBe(true)
-    expect(setTokenStoreSpy).toHaveBeenCalledTimes(1)
-    expect(setHumbleSecretStoreSpy).toHaveBeenCalledTimes(1)
+    const vault = createDevSecretVault()
+    if (!vault) throw new Error('expected the dev vault to be built')
+    expect(vault.tokenStore).toBeDefined()
+    expect(vault.humbleSecretStore).toBeDefined()
+    expect(vault.steamGridDbSecretStore).toBeDefined()
 
     const installedLine = mockLogWarning.mock.calls
       .map(([message]) => String(message))
       .find((message) => message.includes('[dev-secret-vault] INSTALLED'))
     expect(installedLine).toBeDefined()
     expect(installedLine).toContain('PLAINTEXT')
-
-    setTokenStoreSpy.mockRestore()
-    setHumbleSecretStoreSpy.mockRestore()
   })
 
   it('the vault file is created with mode 0o600', () => {
     process.env[ENV_VAR] = '1'
     mockIsPackagedSidecar.mockReturnValue(false)
 
-    expect(installDevSecretVault()).toBe(true)
+    const vault = createDevSecretVault()
+    if (!vault) throw new Error('expected the dev vault to be built')
 
     const vaultPath = join(vaultDir, 'gamelib-dev-secret-vault.json')
     const mode = statSync(vaultPath).mode & 0o777
@@ -290,19 +256,20 @@ describe('devSecretVault', () => {
     process.env[ENV_VAR] = '1'
     mockIsPackagedSidecar.mockReturnValue(false)
 
-    expect(installDevSecretVault()).toBe(true)
+    const vault = createDevSecretVault()
+    if (!vault) throw new Error('expected the dev vault to be built')
 
     // Deliberately random, no natural-language overlap with this module's own log vocabulary
     // (slot names, "INSTALLED", "PLAINTEXT", the vault's file path) — a secret that happened to
     // literally contain a substring like "refresh-token" would make the leak-scan below fail on
     // an innocent coincidence rather than a real leak.
     const secretValue = 'xQ7mK2vL9wZ3nR8pJ5tY'
-    const tokenStore = tokenStoreModule.getTokenStore()
+    const tokenStore = vault.tokenStore
     await tokenStore.setToken(secretValue)
     const readBack = await tokenStore.getToken()
     expect(readBack).toBe(secretValue)
 
-    const humbleStore = secretStoreModule.getHumbleSecretStore()
+    const humbleStore = vault.humbleSecretStore
     const csrfSecret = 'bN4hW9cT6yU2gM8sV1Lq'
     await humbleStore.setSecret('csrfToken', csrfSecret)
     const csrfReadBack = await humbleStore.getSecret('csrfToken')
@@ -332,9 +299,10 @@ describe('devSecretVault', () => {
   it('only reads slot/key identifiers into log lines, never the value, on a plain read of an empty slot', async () => {
     process.env[ENV_VAR] = '1'
     mockIsPackagedSidecar.mockReturnValue(false)
-    expect(installDevSecretVault()).toBe(true)
+    const vault = createDevSecretVault()
+    if (!vault) throw new Error('expected the dev vault to be built')
 
-    const tokenStore = tokenStoreModule.getTokenStore()
+    const tokenStore = vault.tokenStore
     await tokenStore.getToken()
 
     expect(
@@ -348,12 +316,13 @@ describe('devSecretVault', () => {
   it('a store and a wipe of the Steam slot emit distinct, strictly-pinned direction lines, and the wipe leaves the slot present-and-empty on disk at mode 0600', async () => {
     process.env[ENV_VAR] = '1'
     mockIsPackagedSidecar.mockReturnValue(false)
-    expect(installDevSecretVault()).toBe(true)
+    const vault = createDevSecretVault()
+    if (!vault) throw new Error('expected the dev vault to be built')
 
     // Deliberately random, no natural-language overlap with this module's own log vocabulary —
     // see the sibling round-trip test above for why that matters.
     const secretValue = 'hT3kN7cQ1wE9mX5jR2vY'
-    const tokenStore = tokenStoreModule.getTokenStore()
+    const tokenStore = vault.tokenStore
     await tokenStore.setToken(secretValue)
     await tokenStore.clearToken()
 
@@ -389,9 +358,10 @@ describe('devSecretVault', () => {
   it('clearing both Humble secrets emits a strictly-pinned wipe line for each slot, and leaves both present-and-empty on disk', async () => {
     process.env[ENV_VAR] = '1'
     mockIsPackagedSidecar.mockReturnValue(false)
-    expect(installDevSecretVault()).toBe(true)
+    const vault = createDevSecretVault()
+    if (!vault) throw new Error('expected the dev vault to be built')
 
-    const humbleStore = secretStoreModule.getHumbleSecretStore()
+    const humbleStore = vault.humbleSecretStore
     await humbleStore.setSecret('sessionCookie', 'kR8mT2vN5wQ9cX1jH4pL')
     await humbleStore.setSecret('csrfToken', 'gY6bW3fD8sA1nZ7uE2qJ')
     await humbleStore.clearSecrets()
@@ -420,10 +390,10 @@ describe('devSecretVault', () => {
   it('clearing the SteamGridDB API key emits a strictly-pinned wipe line', async () => {
     process.env[ENV_VAR] = '1'
     mockIsPackagedSidecar.mockReturnValue(false)
-    expect(installDevSecretVault()).toBe(true)
+    const vault = createDevSecretVault()
+    if (!vault) throw new Error('expected the dev vault to be built')
 
-    const steamGridDbStore =
-      steamGridDbSecretStoreModule.getSteamGridDbSecretStore()
+    const steamGridDbStore = vault.steamGridDbSecretStore
     await steamGridDbStore.setApiKey('pV4tK9nC6yB2mR8gS5wE')
     await steamGridDbStore.clearApiKey()
 
@@ -435,14 +405,14 @@ describe('devSecretVault', () => {
     ).toBe(true)
   })
 
-  // ── Import-time discipline: no file I/O before installDevSecretVault() is called ──────────
+  // ── Import-time discipline: no file I/O before createDevSecretVault() is called ──────────
 
-  it('performs no file I/O at module import — no vault file exists until installDevSecretVault() is called', () => {
+  it('performs no file I/O at module import — no vault file exists until createDevSecretVault() is called', () => {
     process.env[ENV_VAR] = '1'
     // No install call in this test. `../devSecretVault` was already imported at the top of
     // this file (before this test's own `beforeEach` ever pointed `mockGetPath` at this fresh
     // `vaultDir`) — if the module performed any file I/O at import time, a file would already
-    // sit at this path despite `installDevSecretVault()` never having been called here.
+    // sit at this path despite `createDevSecretVault()` never having been called here.
     const vaultPath = join(vaultDir, 'gamelib-dev-secret-vault.json')
     expect(() => readFileSync(vaultPath)).toThrow()
   })
@@ -451,8 +421,8 @@ describe('devSecretVault', () => {
   //
   // Drives the REAL `../bootstrap` `init` (nested inside this describe block so it inherits
   // the outer `beforeEach`'s fresh `vaultDir`/`mockGetPath`/mock-reset setup, even though these
-  // tests mock `installDevSecretVault` directly rather than driving it through a real env var).
-  // `installDevSecretVault` itself is spied and forced to a fixed return value per test — Task 1
+  // tests mock `createDevSecretVault` directly rather than driving it through a real env var).
+  // `createDevSecretVault` itself is spied and forced to a fixed return value per test — Task 1
   // above already proves its OWN real behavior; this block proves only which arm `init` takes
   // given that return value, and that the branch is exclusive (never both, never neither).
   describe('bootstrap wiring — exclusive secret-store branch (Task 2)', () => {
@@ -484,9 +454,9 @@ describe('devSecretVault', () => {
 
     it('vault disabled: installs the keyring stores exactly as today, and emits the keyring receipt line', () => {
       const { freshVault, freshTokenStore, freshHumbleStore } = freshRegistry()
-      const installDevSecretVaultSpy = jest
-        .spyOn(freshVault, 'installDevSecretVault')
-        .mockReturnValue(false)
+      const createDevSecretVaultSpy = jest
+        .spyOn(freshVault, 'createDevSecretVault')
+        .mockReturnValue(null)
       const setTokenStoreSpy = jest.spyOn(freshTokenStore, 'setTokenStore')
       const installSidecarHumbleSecretStoreSpy = jest.spyOn(
         freshHumbleStore,
@@ -509,17 +479,37 @@ describe('devSecretVault', () => {
           )
         ).toBe(false)
       } finally {
-        installDevSecretVaultSpy.mockRestore()
+        createDevSecretVaultSpy.mockRestore()
         setTokenStoreSpy.mockRestore()
         installSidecarHumbleSecretStoreSpy.mockRestore()
       }
     })
 
-    it('vault enabled: does not install the keyring stores or fire the Humble migration, and emits the dev-vault receipt line', () => {
+    it('vault enabled: installs the vault token store, not the keyring stores, fires no Humble migration, and emits the dev-vault receipt line', () => {
       const { freshVault, freshTokenStore, freshHumbleStore } = freshRegistry()
-      const installDevSecretVaultSpy = jest
-        .spyOn(freshVault, 'installDevSecretVault')
-        .mockReturnValue(true)
+      const fakeVault = {
+        tokenStore: {
+          isAvailable: async () => true,
+          getToken: async () => '',
+          setToken: async () => undefined,
+          clearToken: async () => undefined
+        },
+        humbleSecretStore: {
+          isAvailable: async () => true,
+          getSecret: async () => '',
+          setSecret: async () => undefined,
+          clearSecrets: async () => undefined
+        },
+        steamGridDbSecretStore: {
+          isAvailable: () => true,
+          getApiKey: async () => undefined,
+          setApiKey: async () => undefined,
+          clearApiKey: async () => undefined
+        }
+      }
+      const createDevSecretVaultSpy = jest
+        .spyOn(freshVault, 'createDevSecretVault')
+        .mockReturnValue(fakeVault)
       const setTokenStoreSpy = jest.spyOn(freshTokenStore, 'setTokenStore')
       const installSidecarHumbleSecretStoreSpy = jest.spyOn(
         freshHumbleStore,
@@ -533,7 +523,8 @@ describe('devSecretVault', () => {
       try {
         bootFresh({ reuseRegistry: true })
 
-        expect(setTokenStoreSpy).not.toHaveBeenCalled()
+        expect(setTokenStoreSpy).toHaveBeenCalledTimes(1)
+        expect(setTokenStoreSpy).toHaveBeenCalledWith(fakeVault.tokenStore)
         expect(installSidecarHumbleSecretStoreSpy).not.toHaveBeenCalled()
         // migrateHumbleSecrets() is only ever fired FROM INSIDE installSidecarHumbleSecretStore()
         // (humbleSecretStore.ts) — asserting it directly, not merely inferring it from the line
@@ -551,7 +542,7 @@ describe('devSecretVault', () => {
           )
         ).toBe(false)
       } finally {
-        installDevSecretVaultSpy.mockRestore()
+        createDevSecretVaultSpy.mockRestore()
         setTokenStoreSpy.mockRestore()
         installSidecarHumbleSecretStoreSpy.mockRestore()
         migrateHumbleSecretsSpy.mockRestore()

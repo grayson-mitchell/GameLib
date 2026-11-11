@@ -129,7 +129,7 @@
  *     `.getHeroes` -> bodies copied from `steamgrid/ipc_handler.ts`'s five
  *     `addHandler` calls with ONE deliberate change required by A-03: every
  *     API-key read and write goes through
- *     `steamgrid/secretStore.ts`'s `getSteamGridDbSecretStore()`, never
+ *     `steamgrid/secretStore.ts`'s `deps.steamGridSecrets`, never
  *     through `GlobalConfig`/`steamgrid/secureKey.ts` directly. This is a
  *     narrow, explicit exception to this file's own D-02 port-then-harden
  *     rule (applied everywhere else in this file): under the sidecar,
@@ -171,7 +171,7 @@ import {
 } from '../storeSearch/handlers'
 import { getRunsForMeMap, setRunsForMeByUser } from '../runsForMe'
 import { removeRecentGame } from '../recent_games/recent_games'
-import { getSteamGridDbSecretStore } from '../steamgrid/secretStore'
+import type { SteamGridDbSecretStore } from '../steamgrid/secretStore'
 import * as SteamGridDB from '../steamgrid/utils'
 import { getGogDiscounts } from '../discounts/fetchDiscounts'
 import { logError, logWarning, LogPrefix } from '../logger'
@@ -188,6 +188,8 @@ export interface EnrichmentFlowDeps {
     'kvs' | 'runsForMe' | 'wikiGameInfo' | 'crossoverIndex' | 'gog'
   >
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
+  /** The boot-built SteamGridDB API-key owner (D-66.3-17); the key never touches GlobalConfig here. */
+  steamGridSecrets: SteamGridDbSecretStore
 }
 import type { CatalogLocaleSettings } from 'common/types/discounts'
 import type { OnlineMonitor } from '../online_monitor'
@@ -335,11 +337,11 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
   )
 
   // ── steamgriddb.* (5) — Amendment A-03: every read/write below goes
-  // through getSteamGridDbSecretStore(), NEVER GlobalConfig or
+  // through deps.steamGridSecrets, NEVER GlobalConfig or
   // steamgrid/secureKey.ts directly. See module docstring.
 
   deps.ipc.handle('steamgriddb.hasApiKey', async () => {
-    const apiKey = await getSteamGridDbSecretStore().getApiKey()
+    const apiKey = await deps.steamGridSecrets.getApiKey()
     return !!apiKey
   })
 
@@ -360,7 +362,7 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
         )
         return
       }
-      await getSteamGridDbSecretStore().setApiKey(key)
+      await deps.steamGridSecrets.setApiKey(key)
     }
   )
 
@@ -368,7 +370,7 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
     'steamgriddb.searchGame',
     async (_event: unknown, ...args: unknown[]) => {
       const query = args[0] as string
-      const apiKey = await getSteamGridDbSecretStore().getApiKey()
+      const apiKey = await deps.steamGridSecrets.getApiKey()
       if (!apiKey) {
         return []
       }
@@ -394,7 +396,7 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
         styles?: string[]
         dimensions?: string[]
       }
-      const apiKey = await getSteamGridDbSecretStore().getApiKey()
+      const apiKey = await deps.steamGridSecrets.getApiKey()
       if (!apiKey) {
         return []
       }
@@ -425,7 +427,7 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
         styles?: string[]
         dimensions?: string[]
       }
-      const apiKey = await getSteamGridDbSecretStore().getApiKey()
+      const apiKey = await deps.steamGridSecrets.getApiKey()
       if (!apiKey) {
         return []
       }

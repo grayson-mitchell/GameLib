@@ -139,42 +139,28 @@ export class ElectronSteamGridDbSecretStore implements SteamGridDbSecretStore {
   }
 }
 
-// ── Registry — swappable per build, no env-var escape hatch ─────────────────
+// ── Boot-built instance — chosen once at boot, injected by slice ────────────
 
-let registry: {
-  store?: SteamGridDbSecretStore
-  deps?: SteamGridDbSecretDeps
-} = {}
-
-/**
- * Hands the registry the stores its default (Electron) implementation persists through. Bound once
- * at boot, before any channel can read the key; the default store is only constructed on first use.
- */
-export function bindSteamGridDbSecretDeps(deps: SteamGridDbSecretDeps): void {
-  registry = { ...registry, deps }
+/** What the boot hands the factory: the store this boot selected (keyring or dev vault). */
+export interface SteamGridDbSecretsDeps {
+  store: SteamGridDbSecretStore
 }
 
 /**
- * Installs a different SteamGridDbSecretStore implementation. Only ever called explicitly by a
- * build's own bootstrap path (e.g. the Tauri sidecar installing its keyring-backed implementation
- * in plan 34.6-02) — there is deliberately no env-var/config-driven auto-selection here (Phase 28
- * REQ-28-07/D-08's rule, applied here).
+ * The boot's one SteamGridDB secret owner (D-05, C-WR-2). It replaces the former module-level
+ * registry (`bindSteamGridDbSecretDeps` / `setSteamGridDbSecretStore` / `getSteamGridDbSecretStore`):
+ * the store is chosen once at boot and required at construction, so no code path can read a
+ * placeholder store (Pitfall 2/3). There is deliberately no env-var/config-driven auto-selection
+ * here (Phase 28 REQ-28-07/D-08's rule) -- the boot decides and injects.
  */
-export function setSteamGridDbSecretStore(next: SteamGridDbSecretStore): void {
-  registry = { ...registry, store: next }
-}
-
-export function getSteamGridDbSecretStore(): SteamGridDbSecretStore {
-  if (registry.store === undefined) {
-    if (registry.deps === undefined) {
-      throw new Error(
-        'SteamGridDB secret store read before bindSteamGridDbSecretDeps() or setSteamGridDbSecretStore()'
-      )
-    }
-    registry = {
-      ...registry,
-      store: new ElectronSteamGridDbSecretStore(registry.deps)
-    }
+export function createSteamGridDbSecrets(
+  deps: SteamGridDbSecretsDeps
+): SteamGridDbSecretStore {
+  const { store } = deps
+  return {
+    isAvailable: () => store.isAvailable(),
+    getApiKey: () => store.getApiKey(),
+    setApiKey: (value) => store.setApiKey(value),
+    clearApiKey: () => store.clearApiKey()
   }
-  return registry.store as SteamGridDbSecretStore
 }
