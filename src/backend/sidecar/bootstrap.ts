@@ -108,6 +108,8 @@ import axios from 'axios'
 import { randomUUID } from 'node:crypto'
 import { createOnlineMonitor } from '../online_monitor'
 import { createEngineState, lazyNoticeStore } from '../engine/engineState'
+import { createWinetricksQueue } from '../tools/winetricksQueue'
+import { getInstallingComponent } from '../tools'
 import type { OnlineMonitor } from '../online_monitor'
 // Block E (todo 2026-09-06, quick-260908-fre). `grep -rn
 // "storeManagers/legendary/user\|storeManagers/gog/user" src/backend/sidecar/` confirms
@@ -194,6 +196,7 @@ import { isMac } from '../constants/environment'
 import {
   checkRosettaInstall,
   errorHandler,
+  sendGameStatusUpdate,
   type ErrorHandlerDeps
 } from '../utils'
 import { createCommandRunner } from '../commandRunner'
@@ -265,6 +268,7 @@ export const BOOT_STEP_NAMES = [
   'command-runner',
   'online-monitor-owner',
   'engine-state',
+  'winetricks-queue',
   'store-managers',
   'download-queue',
   'shell-exe-receipt',
@@ -387,7 +391,8 @@ function requireServices(state: BootState): BootServices {
     paths,
     appInfo,
     onlineMonitor,
-    engineState
+    engineState,
+    winetricksQueue
   } = state.services
   if (
     !stores ||
@@ -407,7 +412,8 @@ function requireServices(state: BootState): BootServices {
     !paths ||
     !appInfo ||
     !onlineMonitor ||
-    !engineState
+    !engineState ||
+    !winetricksQueue
   ) {
     const missing = (
       [
@@ -428,7 +434,8 @@ function requireServices(state: BootState): BootServices {
         'paths',
         'appInfo',
         'onlineMonitor',
-        'engineState'
+        'engineState',
+        'winetricksQueue'
       ] as const
     ).filter((name) => !state.services[name])
     throw new Error(`boot services missing: ${missing.join(', ')}`)
@@ -451,7 +458,8 @@ function requireServices(state: BootState): BootServices {
     paths,
     appInfo,
     onlineMonitor,
-    engineState
+    engineState,
+    winetricksQueue
   }
 }
 
@@ -1403,6 +1411,24 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             now: () => ctx.clock.now(),
             isMac: () => isMac,
             noticeStore: lazyNoticeStore
+          })
+      }
+    },
+    {
+      name: 'winetricks-queue',
+      // Builds the one winetricks apply queue of this boot (D-05, D-66.3-12). Construction does no
+      // I/O and arms no timer: it only subscribes to the environment-report change signal. Before
+      // 'store-managers' (requireServices needs every field once the managers exist) and
+      // 'register-handlers', which hands it to the Wine-tools registration.
+      run: (_ctx, _io, state) => {
+        const host = requireHost(state)
+        state.services.winetricksQueue =
+          prebuilt.winetricksQueue ??
+          createWinetricksQueue({
+            push: (channel, queueState) =>
+              host.pushFrontendMessage(channel, queueState),
+            sendGameStatus: (update) => sendGameStatusUpdate(update),
+            getInstallingComponent
           })
       }
     },

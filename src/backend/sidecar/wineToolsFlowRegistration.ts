@@ -74,7 +74,7 @@ import {
   updateWineListsIfOutdated
 } from '../wine/manager/utils'
 import { createTools } from '../tools'
-import { WinetricksQueue } from '../tools/winetricksQueue'
+import type { WinetricksQueue } from '../tools/winetricksQueue'
 import { isWindows } from '../constants/environment'
 import { assertCommandParts } from './rendererPathGuard'
 import { sendFrontendMessage } from '../ipc'
@@ -113,6 +113,8 @@ export interface WineToolsFlowDeps extends NotifyDeps, DialogBoxDeps {
   appInfo: Pick<AppInfo, 'version'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   engineState: EngineStateService
+  /** The boot-owned winetricks apply queue (D-66.3-12). */
+  winetricksQueue: WinetricksQueue
   managers: Pick<StoreManagers, 'library'>
   commandRunner: Pick<CommandRunner, 'runWineCommand'>
   launcher: Pick<Launcher, 'validWine' | 'setupEnvVars' | 'setupWineEnvVars'>
@@ -385,7 +387,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
       const runner = args[0] as Runner
       const appName = args[1] as string
       const verbs = args[2] as string[]
-      return WinetricksQueue.apply(Winetricks, runner, appName, verbs)
+      return deps.winetricksQueue.apply(Winetricks, runner, appName, verbs)
     }
   )
 
@@ -394,7 +396,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
     (_event: unknown, ...args: unknown[]) => {
       const runner = args[0] as Runner
       const appName = args[1] as string
-      return WinetricksQueue.getState(runner, appName)
+      return deps.winetricksQueue.getState(runner, appName)
     }
   )
 
@@ -403,7 +405,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
     (_event: unknown, ...args: unknown[]) => {
       const runner = args[0] as Runner
       const appName = args[1] as string
-      return WinetricksQueue.cancelRemaining(runner, appName)
+      return deps.winetricksQueue.cancelRemaining(runner, appName)
     }
   )
 

@@ -342,6 +342,7 @@ export function registerHandlers(deps: {
     spawnAsync: deps.services.spawnAsync,
     stores: deps.services.stores,
     runner: deps.services.runner,
+    winetricksQueue: deps.services.winetricksQueue,
     ...toolSlices(deps.services)
   })
   registerShortcutsFlows({

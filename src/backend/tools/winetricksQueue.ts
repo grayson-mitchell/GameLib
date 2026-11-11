@@ -5,10 +5,7 @@ import {
   WinetricksQueueState,
   WinetricksVerbOutcome
 } from 'common/types'
-import { sendFrontendMessage } from '../ipc'
-import { sendGameStatusUpdate } from '../utils'
 import { logError, LogPrefix } from 'backend/logger'
-import { getInstallingComponent } from './index'
 import type { Tools } from './index'
 
 /** R3: the queue drives installs through the Winetricks wrapper its caller built from its deps. */
@@ -30,220 +27,237 @@ import { appendLogLine } from './winetricksOutputClassifier'
 // untouched; it keeps calling `Winetricks.install` directly, not through this
 // module.
 //
-// One run at a time, process-wide (`currentRun`). `applyInFlight` closes the
+// One run at a time per queue instance (`currentRun`); a boot owns exactly one (D-66.3-12). `applyInFlight` closes the
 // race Task 2 introduced: validating against `Winetricks.catalogFor` needs
 // an `await`, so two `apply()` calls issued in the same tick would otherwise
 // both pass the (now asynchronous) busy check before either sets `currentRun`.
 // It is set synchronously as `apply`'s first statement -- before that
 // `await` -- and cleared in `finally`; `isBusy()` folds it in so `busy` in
 // pushed state reflects it too.
-let currentRun: WinetricksQueueRun | null = null
-let nextRunId = 1
-let applyInFlight = false
-// 261011-nqe (planning_findings F1): bumped once per `getState()` snapshot,
-// process-wide and shared across every game. The reply (invoke path) and the
-// pushes (event path) for the same run travel independent channels with no
-// ordering guarantee between them, so the renderer cannot tell which of two
-// states it holds is newer from their content alone. This counter gives it a
-// total order to compare against. The sidecar is spawned once per app
-// lifetime (F7 -- `src-tauri/src/main.rs`'s single `spawn_sidecar` call exits
-// the app on a failed spawn), so it never resets under a living renderer.
-let snapshotRevision = 0
-
-// D-16: a single listener, registered once at module load, mirrors an
-// environment-report change into a `winetricksQueueChanged` push for that
-// game even when there is no run (`pushState` below requires one).
-onEnvironmentChanged((runner, appName) => {
-  sendFrontendMessage('winetricksQueueChanged', getState(runner, appName))
-})
-
-function pushState(run: WinetricksQueueRun): void {
-  sendFrontendMessage(
-    'winetricksQueueChanged',
-    getState(run.runner, run.appName)
-  )
+/** The collaborators one queue reads (D-66.3-12); construction does no I/O and arms no timer. */
+export interface WinetricksQueueDeps {
+  /** Pushes a queue snapshot to the renderer (`winetricksQueueChanged`). */
+  push: (channel: 'winetricksQueueChanged', state: WinetricksQueueState) => void
+  /** The game-status broadcast the run's `winetricks` -> `done` sequence goes through. */
+  sendGameStatus: (update: {
+    appName: string
+    runner: Runner
+    status: 'winetricks' | 'done'
+  }) => void
+  /** The name of the tools-installer component running now, or '' (tools module state). */
+  getInstallingComponent: () => string
 }
 
-function isBusy(): boolean {
-  return (
-    applyInFlight ||
-    currentRun?.status === 'running' ||
-    getInstallingComponent() !== ''
-  )
-}
+/**
+ * Builds the one winetricks apply queue of a boot: the run, the run-id counter, the single-flight
+ * latch and the snapshot revision are closure fields.
+ */
+export function createWinetricksQueue(deps: WinetricksQueueDeps) {
+  let currentRun: WinetricksQueueRun | null = null
+  let nextRunId = 1
+  let applyInFlight = false
+  // 261011-nqe (planning_findings F1): bumped once per `getState()` snapshot,
+  // process-wide and shared across every game. The reply (invoke path) and the
+  // pushes (event path) for the same run travel independent channels with no
+  // ordering guarantee between them, so the renderer cannot tell which of two
+  // states it holds is newer from their content alone. This counter gives it a
+  // total order to compare against. The sidecar is spawned once per app
+  // lifetime (F7 -- `src-tauri/src/main.rs`'s single `spawn_sidecar` call exits
+  // the app on a failed spawn), so it never resets under a living renderer.
+  let snapshotRevision = 0
 
-function getState(runner: Runner, appName: string): WinetricksQueueState {
-  const run =
-    currentRun && currentRun.runner === runner && currentRun.appName === appName
-      ? currentRun
-      : null
-  return {
-    runner,
-    appName,
-    // Copy, not the live object -- callers (IPC handlers, pushes) must never
-    // be able to mutate queue-owned state through the value they were handed.
-    run: run
-      ? {
-          ...run,
-          verbs: [...run.verbs],
-          outcomes: { ...run.outcomes },
-          log: [...run.log]
-        }
-      : null,
-    busy: isBusy(),
-    environment: getEnvironmentReport(runner, appName),
-    // 261011-nqe: one snapshot, one new revision, taken synchronously in this
-    // process -- so the order of these numbers IS the backend's real order.
-    revision: ++snapshotRevision
+  // D-16: a single listener, registered once when the boot-owned queue is built, mirrors an
+  // environment-report change into a `winetricksQueueChanged` push for that game even when there
+  // is no run (`pushState` below requires one). An in-memory subscription: no I/O, no timer.
+  onEnvironmentChanged((runner, appName) => {
+    deps.push('winetricksQueueChanged', getState(runner, appName))
+  })
+
+  function pushState(run: WinetricksQueueRun): void {
+    deps.push('winetricksQueueChanged', getState(run.runner, run.appName))
   }
-}
 
-async function runLoop(
-  Winetricks: Winetricks,
-  run: WinetricksQueueRun
-): Promise<void> {
-  try {
-    for (const verb of run.verbs) {
-      if (run.cancelRequested) {
-        run.outcomes[verb] = 'cancelled'
-        pushState(run)
-        continue
-      }
-      run.outcomes[verb] = 'installing'
-      run.currentVerb = verb
-      pushState(run)
-
-      // D-18 / E9: the run keeps the classified lines of the verbs it runs
-      // (progress lines replace each other, capped), so a remounted tab can
-      // rebuild its log from `getState`. No queue state is pushed per line --
-      // the renderer already receives them live via `progressOfWinetricks`.
-      const outcome = await Winetricks.install(
-        run.runner,
-        run.appName,
-        verb,
-        (line) => appendLogLine(run.log, line)
-      )
-      run.outcomes[verb] = outcome === 'installed' ? 'installed' : 'failed'
-      run.currentVerb = ''
-      pushState(run)
-    }
-  } finally {
-    run.status = 'done'
-    run.currentVerb = ''
-    pushState(run)
-    sendGameStatusUpdate({
-      appName: run.appName,
-      runner: run.runner,
-      status: 'done'
-    })
+  function isBusy(): boolean {
+    return (
+      applyInFlight ||
+      currentRun?.status === 'running' ||
+      deps.getInstallingComponent() !== ''
+    )
   }
-}
 
-async function apply(
-  Winetricks: Winetricks,
-  runner: Runner,
-  appName: string,
-  verbs: unknown
-): Promise<WinetricksApplyResult> {
-  if (isBusy()) {
+  function getState(runner: Runner, appName: string): WinetricksQueueState {
+    const run =
+      currentRun &&
+      currentRun.runner === runner &&
+      currentRun.appName === appName
+        ? currentRun
+        : null
     return {
-      accepted: false,
-      reason: 'busy',
-      detail: 'A winetricks install is already running.'
-    }
-  }
-
-  // Set synchronously, before the catalog `await` below -- this is the
-  // whole fix for the same-tick race: a second `apply()` call starting
-  // before this one resumes sees `applyInFlight` (via `isBusy()`) already
-  // true.
-  applyInFlight = true
-  try {
-    const catalog = await Winetricks.catalogFor(runner, appName)
-
-    let verbList: string[]
-    try {
-      verbList = assertWinetricksApplyPayload(verbs, catalog)
-    } catch (error) {
-      if (error instanceof WinetricksApplyRejected) {
-        return { accepted: false, reason: 'invalid', detail: error.message }
-      }
-      throw error
-    }
-
-    const outcomes: Record<string, WinetricksVerbOutcome> = {}
-    for (const verb of verbList) {
-      outcomes[verb] = 'pending'
-    }
-
-    const run: WinetricksQueueRun = {
-      runId: nextRunId++,
       runner,
       appName,
-      verbs: verbList,
-      outcomes,
-      currentVerb: '',
-      status: 'running',
-      cancelRequested: false,
-      log: []
+      // Copy, not the live object -- callers (IPC handlers, pushes) must never
+      // be able to mutate queue-owned state through the value they were handed.
+      run: run
+        ? {
+            ...run,
+            verbs: [...run.verbs],
+            outcomes: { ...run.outcomes },
+            log: [...run.log]
+          }
+        : null,
+      busy: isBusy(),
+      environment: getEnvironmentReport(runner, appName),
+      // 261011-nqe: one snapshot, one new revision, taken synchronously in this
+      // process -- so the order of these numbers IS the backend's real order.
+      revision: ++snapshotRevision
     }
-    currentRun = run
-
-    sendGameStatusUpdate({ appName, runner, status: 'winetricks' })
-    pushState(run)
-
-    // Not awaited: `apply` acks immediately (invoke-kind, D-13 repudiation
-    // mitigation) and the install loop continues detached. A bare `void` on a
-    // rejecting promise handles NOTHING (project lesson) -- `.catch` is
-    // required.
-    void runLoop(Winetricks, run).catch((error) => {
-      logError(
-        ['winetricksQueue run loop failed:', error],
-        LogPrefix.WineTricks
-      )
-    })
-
-    // 261011-nqe (fix a, planning_findings F1/F5): snapshotted here, AFTER
-    // `runLoop`'s synchronous prefix has already marked the first verb
-    // `installing` and pushed it (`runLoop` :99-107 run to completion before
-    // its first `await` at :113, since calling an async function runs its
-    // body synchronously up to that point). The reply is therefore never
-    // OLDER than a push already sent for this run -- when it wins the race,
-    // the tab shows Installing at once instead of Queued for the few ms
-    // until that push lands. Ordering against LATER pushes (the run
-    // finishing before this reply is even read, F5) is the renderer's
-    // revision guard's job, not this statement's.
-    const state = getState(runner, appName)
-
-    return { accepted: true, state }
-  } finally {
-    applyInFlight = false
   }
-}
 
-function cancelRemaining(
-  runner: Runner,
-  appName: string
-): WinetricksQueueState {
-  if (
-    currentRun &&
-    currentRun.runner === runner &&
-    currentRun.appName === appName &&
-    currentRun.status === 'running'
-  ) {
-    currentRun.cancelRequested = true
-    for (const verb of currentRun.verbs) {
-      if (currentRun.outcomes[verb] === 'pending') {
-        currentRun.outcomes[verb] = 'cancelled'
+  async function runLoop(
+    Winetricks: Winetricks,
+    run: WinetricksQueueRun
+  ): Promise<void> {
+    try {
+      for (const verb of run.verbs) {
+        if (run.cancelRequested) {
+          run.outcomes[verb] = 'cancelled'
+          pushState(run)
+          continue
+        }
+        run.outcomes[verb] = 'installing'
+        run.currentVerb = verb
+        pushState(run)
+
+        // D-18 / E9: the run keeps the classified lines of the verbs it runs
+        // (progress lines replace each other, capped), so a remounted tab can
+        // rebuild its log from `getState`. No queue state is pushed per line --
+        // the renderer already receives them live via `progressOfWinetricks`.
+        const outcome = await Winetricks.install(
+          run.runner,
+          run.appName,
+          verb,
+          (line) => appendLogLine(run.log, line)
+        )
+        run.outcomes[verb] = outcome === 'installed' ? 'installed' : 'failed'
+        run.currentVerb = ''
+        pushState(run)
+      }
+    } finally {
+      run.status = 'done'
+      run.currentVerb = ''
+      pushState(run)
+      deps.sendGameStatus({
+        appName: run.appName,
+        runner: run.runner,
+        status: 'done'
+      })
+    }
+  }
+
+  async function apply(
+    Winetricks: Winetricks,
+    runner: Runner,
+    appName: string,
+    verbs: unknown
+  ): Promise<WinetricksApplyResult> {
+    if (isBusy()) {
+      return {
+        accepted: false,
+        reason: 'busy',
+        detail: 'A winetricks install is already running.'
       }
     }
-    pushState(currentRun)
+
+    // Set synchronously, before the catalog `await` below -- this is the
+    // whole fix for the same-tick race: a second `apply()` call starting
+    // before this one resumes sees `applyInFlight` (via `isBusy()`) already
+    // true.
+    applyInFlight = true
+    try {
+      const catalog = await Winetricks.catalogFor(runner, appName)
+
+      let verbList: string[]
+      try {
+        verbList = assertWinetricksApplyPayload(verbs, catalog)
+      } catch (error) {
+        if (error instanceof WinetricksApplyRejected) {
+          return { accepted: false, reason: 'invalid', detail: error.message }
+        }
+        throw error
+      }
+
+      const outcomes: Record<string, WinetricksVerbOutcome> = {}
+      for (const verb of verbList) {
+        outcomes[verb] = 'pending'
+      }
+
+      const run: WinetricksQueueRun = {
+        runId: nextRunId++,
+        runner,
+        appName,
+        verbs: verbList,
+        outcomes,
+        currentVerb: '',
+        status: 'running',
+        cancelRequested: false,
+        log: []
+      }
+      currentRun = run
+
+      deps.sendGameStatus({ appName, runner, status: 'winetricks' })
+      pushState(run)
+
+      // Not awaited: `apply` acks immediately (invoke-kind, D-13 repudiation
+      // mitigation) and the install loop continues detached. A bare `void` on a
+      // rejecting promise handles NOTHING (project lesson) -- `.catch` is
+      // required.
+      void runLoop(Winetricks, run).catch((error) => {
+        logError(
+          ['winetricksQueue run loop failed:', error],
+          LogPrefix.WineTricks
+        )
+      })
+
+      // 261011-nqe (fix a, planning_findings F1/F5): snapshotted here, AFTER
+      // `runLoop`'s synchronous prefix has already marked the first verb
+      // `installing` and pushed it (`runLoop` :99-107 run to completion before
+      // its first `await` at :113, since calling an async function runs its
+      // body synchronously up to that point). The reply is therefore never
+      // OLDER than a push already sent for this run -- when it wins the race,
+      // the tab shows Installing at once instead of Queued for the few ms
+      // until that push lands. Ordering against LATER pushes (the run
+      // finishing before this reply is even read, F5) is the renderer's
+      // revision guard's job, not this statement's.
+      const state = getState(runner, appName)
+
+      return { accepted: true, state }
+    } finally {
+      applyInFlight = false
+    }
   }
-  return getState(runner, appName)
+
+  function cancelRemaining(
+    runner: Runner,
+    appName: string
+  ): WinetricksQueueState {
+    if (
+      currentRun &&
+      currentRun.runner === runner &&
+      currentRun.appName === appName &&
+      currentRun.status === 'running'
+    ) {
+      currentRun.cancelRequested = true
+      for (const verb of currentRun.verbs) {
+        if (currentRun.outcomes[verb] === 'pending') {
+          currentRun.outcomes[verb] = 'cancelled'
+        }
+      }
+      pushState(currentRun)
+    }
+    return getState(runner, appName)
+  }
+
+  return { apply, getState, cancelRemaining }
 }
 
-export const WinetricksQueue = {
-  apply,
-  getState,
-  cancelRemaining
-}
+export type WinetricksQueue = ReturnType<typeof createWinetricksQueue>

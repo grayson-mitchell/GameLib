@@ -14,7 +14,6 @@
   "moduleState": {
     "src/backend/tools/dxmt.ts": 1,
     "src/backend/tools/index.ts": 3,
-    "src/backend/tools/winetricksEnvironment.ts": 2,
-    "src/backend/tools/winetricksQueue.ts": 4
+    "src/backend/tools/winetricksEnvironment.ts": 2
   }
 }

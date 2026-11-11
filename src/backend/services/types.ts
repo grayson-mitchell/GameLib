@@ -28,6 +28,7 @@ import type { AppInfo, AppPaths } from 'backend/process/context'
 import type { Clock, ProcessRunner } from 'backend/process/types'
 import type { OnlineMonitor } from 'backend/online_monitor'
 import type { EngineStateService } from 'backend/engine/engineState'
+import type { WinetricksQueue } from 'backend/tools/winetricksQueue'
 import type { CommandRunner as CommandRunnerImpl } from 'backend/commandRunner'
 import type GOGLibraryManager from 'backend/storeManagers/gog/library'
 import type LegendaryLibraryManager from 'backend/storeManagers/legendary/library'
@@ -183,4 +184,6 @@ export interface BootServices {
   onlineMonitor: OnlineMonitor
   /** Built by the 'engine-state' boot step, before 'store-managers' (D-66.3-12). */
   engineState: EngineStateService
+  /** Built by the 'winetricks-queue' boot step, before 'register-handlers' (D-66.3-12). */
+  winetricksQueue: WinetricksQueue
 }

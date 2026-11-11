@@ -224,7 +224,10 @@ export function createTestServices(
     paths: overrides.paths ?? createTestPaths(),
     appInfo: overrides.appInfo ?? TEST_APP_INFO,
     onlineMonitor: overrides.onlineMonitor ?? createTestOnlineMonitor(),
-    engineState: overrides.engineState ?? createTestEngineState()
+    engineState: overrides.engineState ?? createTestEngineState(),
+    winetricksQueue:
+      overrides.winetricksQueue ??
+      unscriptedMembers<BootServices['winetricksQueue']>('winetricks queue', {})
   }
 }
 

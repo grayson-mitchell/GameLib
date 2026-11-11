@@ -3,7 +3,6 @@
  * APIs. Publishes into `published`; the notice store is an in-memory map; macOS is assumed.
  */
 import type { EngineState } from 'common/types/engine'
-import { createEngineState } from '../engine/engineState'
 import type { EngineStateService } from '../engine/engineState'
 
 export interface TestEngineState extends EngineStateService {
@@ -11,9 +10,17 @@ export interface TestEngineState extends EngineStateService {
   published: EngineState[]
 }
 
+function loadEngineState(): typeof import('../engine/engineState') {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('../engine/engineState') as typeof import('../engine/engineState')
+}
+
 export function createTestEngineState(
   opts: { isMac?: boolean; now?: () => number } = {}
 ): TestEngineState {
+  // Required lazily: testServices builds one by default for every suite, and loading the engine
+  // chain at import would pull `backend/utils` in ahead of suites that mock it (launcher.engineStep).
+  const { createEngineState } = loadEngineState()
   const published: EngineState[] = []
   const notices = new Map<string, unknown>()
   const service = createEngineState({

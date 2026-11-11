@@ -59,7 +59,7 @@ jest.mock('backend/logger', () => {
   }
 })
 
-import { createTools } from '../index'
+import { createTools, getInstallingComponent } from '../index'
 import type { ToolsDeps } from '../index'
 import {
   createTestServices,
@@ -102,12 +102,17 @@ const toolsDeps: ToolsDeps = {
 }
 const { Winetricks } = createTools(toolsDeps)
 import { defined } from 'backend/testUtils/indexed'
-import { WinetricksQueue } from '../winetricksQueue'
+import { createWinetricksQueue } from '../winetricksQueue'
+import type { WinetricksQueue as WinetricksQueueType } from '../winetricksQueue'
 import {
   getEnvironmentReport,
   recordMissingDependencies,
   recordUnsupportedWine
 } from '../winetricksEnvironment'
+
+// One queue per test (D-66.3-12): built from the recording fakes above, so no run, revision or
+// single-flight latch crosses a test.
+let WinetricksQueue: WinetricksQueueType
 
 let children: DrivenChild[]
 
@@ -133,6 +138,11 @@ const CATALOG: WinetricksComponent[] = [
 
 beforeEach(() => {
   jest.useFakeTimers()
+  WinetricksQueue = createWinetricksQueue({
+    push: (channel, state) => mockSendFrontendMessage(channel, state),
+    sendGameStatus: (update) => mockSendGameStatusUpdate(update),
+    getInstallingComponent
+  })
   // checkDependencies' `which` probes all succeed -- no "not installed!" lines in the log.
   runner = createDrivableRunner((cmd) =>
     cmd === 'which' ? { code: 0 } : undefined
@@ -641,5 +651,43 @@ describe('WinetricksQueue state revisions (261011-nqe)', () => {
     const first = WinetricksQueue.getState('gog', 'revision-order-game-a')
     const second = WinetricksQueue.getState('gog', 'revision-order-game-b')
     expect(second.revision).toBeGreaterThan(first.revision)
+  })
+})
+
+describe('createWinetricksQueue owner isolation (D-66.3-12)', () => {
+  const another = () =>
+    createWinetricksQueue({
+      push: jest.fn(),
+      sendGameStatus: jest.fn(),
+      getInstallingComponent: () => ''
+    })
+
+  it('two queues keep independent snapshot revisions and runs', async () => {
+    const other = another()
+    // The environment-change listener is a single slot, so the last-built queue owns it; the
+    // queue under test still answers for its own state.
+    const first = WinetricksQueue.getState('gog', 'iso-game')
+    const second = other.getState('gog', 'iso-game')
+    expect(second.revision).toBe(1)
+    expect(first.revision).toBe(1)
+
+    const result = await WinetricksQueue.apply(Winetricks, 'gog', 'iso-game', [
+      'xact'
+    ])
+    expect(result.accepted).toBe(true)
+    expect(other.getState('gog', 'iso-game').run).toBeNull()
+    expect(WinetricksQueue.getState('gog', 'iso-game').run).not.toBeNull()
+  })
+
+  it('a queue never reads the installing component of another: busy follows its own dep', async () => {
+    let installing = ''
+    const q = createWinetricksQueue({
+      push: jest.fn(),
+      sendGameStatus: jest.fn(),
+      getInstallingComponent: () => installing
+    })
+    installing = 'dxvk'
+    const refused = await q.apply(Winetricks, 'gog', 'busy-iso', ['xact'])
+    expect(refused).toMatchObject({ accepted: false, reason: 'busy' })
   })
 })

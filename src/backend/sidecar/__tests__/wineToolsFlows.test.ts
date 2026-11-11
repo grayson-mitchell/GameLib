@@ -87,13 +87,12 @@ jest.mock('../../tools', () => {
 // `WinetricksQueue.apply/getState/cancelRemaining`, not to `../../tools` directly -- mocked here
 // so Describe 9 can prove each handler forwards its arguments to the matching queue method by
 // identity, without running the real queue/catalog/install logic.
-jest.mock('../../tools/winetricksQueue', () => ({
-  WinetricksQueue: {
-    apply: jest.fn(),
-    getState: jest.fn(),
-    cancelRemaining: jest.fn()
-  }
-}))
+// The queue is a boot-owned slice (D-66.3-12): the recording fakes are injected through the deps.
+const WinetricksQueue = {
+  apply: jest.fn(),
+  getState: jest.fn(),
+  cancelRemaining: jest.fn()
+}
 
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { createTestToolsSlices } from 'backend/testUtils/testServices'
@@ -110,9 +109,9 @@ import {
   createTestStores
 } from 'backend/testUtils/testServices'
 import { createTools } from '../../tools'
-import { WinetricksQueue } from '../../tools/winetricksQueue'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import type { IpcHandler } from '../ipcRegistry'
+import type { WinetricksQueue as WinetricksQueueType } from '../../tools/winetricksQueue'
 
 // ── Registered ONCE for this whole file (not per-test) -- `listenerRegistry`/`handlerRegistry`
 // are module-scope maps; calling `registerWineToolsFlows()` more than once would stack a
@@ -133,6 +132,7 @@ const { DXVK, runWineCommandOnGame, runWineCommandForPendingInstall } =
 const runWineCommand = jest.fn()
 registerWineToolsFlows({
   ipc,
+  winetricksQueue: WinetricksQueue as unknown as WinetricksQueueType,
   managers: createTestManagers(),
   commandRunner: {
     runWineCommand: (...a: Parameters<typeof runWineCommand>) =>
@@ -737,16 +737,9 @@ describe('runWineCommandForGame Windows-branch shell removal (T-34.5-C6-49-03, P
 // 02 (D-11 promote) has since retired the `winetricksInstall` send-kind channel that Describe
 // 1/2 above used to assert the presence of -- those describes now assert its absence instead.
 describe('winetricks-queue channels — present, invoke-kind, forward args by identity (Phase 45 Plan 01, D-11)', () => {
-  const mockApply = WinetricksQueue.apply as jest.MockedFunction<
-    typeof WinetricksQueue.apply
-  >
-  const mockGetState = WinetricksQueue.getState as jest.MockedFunction<
-    typeof WinetricksQueue.getState
-  >
-  const mockCancelRemaining =
-    WinetricksQueue.cancelRemaining as jest.MockedFunction<
-      typeof WinetricksQueue.cancelRemaining
-    >
+  const mockApply = WinetricksQueue.apply
+  const mockGetState = WinetricksQueue.getState
+  const mockCancelRemaining = WinetricksQueue.cancelRemaining
 
   beforeEach(() => {
     mockApply.mockClear()
