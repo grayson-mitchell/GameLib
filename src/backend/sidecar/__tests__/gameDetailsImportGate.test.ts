@@ -212,8 +212,13 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // predicate on the same map, no channel or guard moved; the semantic pin below tracks the new
   // spelling. Prior digest:
   // 769205ad0e807747e633cfee75a725f01ff185db708527a45a350639086f0f5e
+  // 66.4-04: re-pin -- the getSystemInfo handler hands the boot's stores slice (`stores`, now
+  // `Pick<Stores, 'kvs' | 'systemInfo'>`) to the systeminfo probes so the pci.ids caches come from
+  // the boot's StoreRoot instead of a module-level CacheStore. Two insertions, one deletion; no
+  // channel, guard or `steamLibrary.has` gate moved. Prior digest:
+  // e94fb7155eb1572f4e28a031df8edac0251ad599fbeba20edef40126092332e0
   const SETTINGS_FLOW_REGISTRATION_SHA256 =
-    'e94fb7155eb1572f4e28a031df8edac0251ad599fbeba20edef40126092332e0'
+    '5a3b10084911e383b9c8791239bd218702451d994c0cbbe5bddc11fd1c17719e'
 
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
@@ -377,8 +382,12 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // that no longer exist, so it was removed (not weakened) together with a comment that named
   // the deleted module; the keyring and configStore byte-identity proofs are untouched. Prior
   // digest: 6e5b93958cc11a371e379da76bb261502509faa62481fa401c69c272e856773c
+  // 66.4-04: re-pin -- the steam stores family is built against a per-boot StoreRoot, so the
+  // file's one `createSteamStores({ registry })` call gains `root: createTestStoreRoot()` and one
+  // import. No assertion, fixture or proof was altered or weakened. Prior digest:
+  // f8a84193a4907c3332068e8cd12dad7458c4c0175c7cca14ee0e82b62b7d0950
   const ELECTRON_UNTOUCHED_SHA256 =
-    'f8a84193a4907c3332068e8cd12dad7458c4c0175c7cca14ee0e82b62b7d0950'
+    'b582276b5f3f42c0b4385c504f6719585c9d6e1d3ef0dd9083efca6067c0d9ca'
 
   it('REQ-34.2-14 Gate 8: electronUntouched.test.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, 'electronUntouched.test.ts')

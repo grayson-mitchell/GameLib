@@ -66,7 +66,7 @@ export interface EngineStateDeps
   globalSettings?: () => Record<string, unknown>
   /** Defaults to the platform flag. */
   isMac?: boolean
-  /** Notice dismissals; defaults to the shared `engineNoticeStore`. */
+  /** Notice dismissals; defaults to the boot's `stores.engine.noticeStore`. */
   store?: EngineNoticeStore
   /**
    * The bottle whose CrossOver preflight decides this game's badge, or null when the game has
@@ -92,15 +92,6 @@ export interface EngineStateDeps
   isBottleReady?: (bottleName: string) => boolean
   preflight?: (bottleName: string) => Promise<CrossoverPreflight>
   now?: () => number
-}
-
-/** The shared dismissal store, required lazily (it opens a CacheStore on first read); the boot step passes this. */
-export function lazyNoticeStore(): EngineNoticeStore {
-  return (
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    (require('./engineNoticeStore') as typeof import('./engineNoticeStore'))
-      .engineNoticeStore
-  )
 }
 
 function effectiveFor(
@@ -231,7 +222,7 @@ export interface EngineStateOwnerDeps {
   now: () => number
   /** Whether the host is macOS; a per-call `deps.isMac` still wins. */
   isMac: () => boolean
-  /** The notice dismissal store (long-tail state owned by engineNoticeStore); a per-call `deps.store` still wins. */
+  /** The notice dismissal store (the boot's `stores.engine.noticeStore`); a per-call `deps.store` still wins. */
   noticeStore: () => EngineNoticeStore
 }
 

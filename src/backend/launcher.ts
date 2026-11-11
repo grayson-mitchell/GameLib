@@ -111,7 +111,7 @@ export interface LauncherDeps extends DialogBoxDeps {
   /** The boot process runner: the gamescope --help probe runs through it. */
   runner: Pick<ProcessRunner, 'run'>
   spawnAsync: SpawnAsync
-  stores: Pick<Stores, 'kvs' | 'wineManager' | 'runsForMe'>
+  stores: Pick<Stores, 'kvs' | 'wineManager' | 'runsForMe' | 'systemInfo'>
   config: Pick<
     GlobalConfigSlice,
     'getSettings' | 'getAlternativeWine' | 'setSetting'
@@ -715,7 +715,8 @@ async function prepareLaunch(
       libraryManagers: deps.libraryManagers,
       runner: deps.runner,
       config: deps.config,
-      appInfo: deps.appInfo
+      appInfo: deps.appInfo,
+      stores: deps.stores
     })
       .then(formatSystemInfo)
       .then((s) => `\n${s}\n\n`)

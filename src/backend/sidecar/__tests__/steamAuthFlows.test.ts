@@ -43,6 +43,11 @@
  * thread would write back. This proves the token round-trips over the real
  * `rustInvoke` wire protocol, not merely that a function was called.
  */
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+
+// Per case (reset in freshRegistry): the boot is handed this root so the stores a case seeds
+// and the boot's own stores share one file-cell table, as the old module-level registry did.
+let testRoot = createTestStoreRoot()
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 
 // ── os — GAP FIX precedent (see module docstring above): redirect homedir()
@@ -169,6 +174,7 @@ let persistInstallFormWineVersion: typeof import('../../storeManagers/steam/inst
 
 function freshRegistry(): void {
   jest.resetModules()
+  testRoot = createTestStoreRoot()
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
   ;({
@@ -182,7 +188,8 @@ function freshRegistry(): void {
   ;({ getSteamLibraries } = require('backend/utils'))
   ;({ configStore: steamConfigStore, steamBottleConfigStore } =
     require('../../storeManagers/steam/stores').createSteamStores({
-      registry: createStoreRegistry()
+      registry: createStoreRegistry(),
+      root: testRoot
     }))
   ;({ getTokenStore } = require('../../storeManagers/steam/tokenStore'))
   ;({ KEYRING_SLOT_STEAM_REFRESH_TOKEN } = require('../keyringTokenStore'))
@@ -204,7 +211,10 @@ function freshRegistry(): void {
 const boot = () =>
   bootFresh({
     reuseRegistry: true,
-    services: { steamBottle: { isSteamBottleProvisioned } as never }
+    services: {
+      storeRoot: testRoot,
+      steamBottle: { isSteamBottleProvisioned } as never
+    }
   })
 
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */

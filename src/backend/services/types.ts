@@ -10,6 +10,7 @@
  * see the whole `BootServices`.
  */
 import type { StoreRegistry } from 'backend/stores/storeRegistry'
+import type { StoreRoot } from 'backend/stores/storeRoot'
 import type { SpawnAsync } from 'backend/spawnAsync'
 import type { QuitHandler } from 'backend/quitHandler'
 import type { Runner } from 'common/types'
@@ -99,6 +100,12 @@ export interface Stores {
   >
   wineManager: ReturnType<
     typeof import('backend/wine/manager/stores').createWineManagerStores
+  >
+  engine: ReturnType<
+    typeof import('backend/engine/engineNoticeStore').createEngineStores
+  >
+  systemInfo: ReturnType<
+    typeof import('backend/utils/systeminfo/gpu/pci_ids').createPciIdCaches
   >
 }
 
@@ -245,6 +252,8 @@ export interface BootServices {
   stores: Stores
   /** The registry `stores` were built against; the name-keyed store RPC handlers resolve through it. */
   storeRegistry: StoreRegistry
+  /** The per-boot store root `stores` were built against (66.4 plan 04). */
+  storeRoot: StoreRoot
   managers: StoreManagers
   launcher: Launcher
   commandRunner: CommandRunner

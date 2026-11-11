@@ -8,7 +8,6 @@
   },
   "moduleState": {
     "src/backend/utils/aborthandler/aborthandler.ts": 1,
-    "src/backend/utils/systeminfo/gpu/pci_ids.ts": 2,
     "src/backend/utils/systeminfo/index.ts": 2,
     "src/backend/utils/wineWindowRaise.ts": 2
   }

@@ -1,4 +1,5 @@
 import CacheStore from '../cache'
+import type { StoreRoot } from 'backend/stores/storeRoot'
 
 /**
  * A cached wrapper around a validated index payload. `fetchedAt` is the
@@ -18,7 +19,7 @@ export interface CachedIndex<T> {
   fetchedAt: number
 }
 
-export function createCrossoverIndexStores() {
+export function createCrossoverIndexStores(deps: { root: StoreRoot }) {
   /**
    * D-08 / D-09: 24-hour TTL, keep-last-good store for the CrossOver
    * compatibility index (and, per D-19, any future index sharing this seam —
@@ -36,7 +37,7 @@ export function createCrossoverIndexStores() {
   const crossoverIndexStore = new CacheStore<CachedIndex<unknown>>(
     'crossover_index',
     60 * 24,
-    { kind: 'cache', invalidateCheck: () => false }
+    { root: deps.root, kind: 'cache', invalidateCheck: () => false }
   )
 
   return { crossoverIndexStore }

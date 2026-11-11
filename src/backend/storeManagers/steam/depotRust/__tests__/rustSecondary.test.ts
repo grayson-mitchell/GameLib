@@ -1,3 +1,4 @@
+import { createTestStoreRoot } from '../../../../testUtils/testStoreRoot'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import {
   createTestManagerDeps,
@@ -27,7 +28,10 @@ import { createStubRustDepot } from './fixtures/stubRustDepot'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createSteamStores } from '../../stores'
 
-const steamStoresModule = createSteamStores({ registry: createStoreRegistry() })
+const steamStoresModule = createSteamStores({
+  registry: createStoreRegistry(),
+  root: createTestStoreRoot()
+})
 
 const steamTestDeps = createTestManagerDeps({
   steamUser,

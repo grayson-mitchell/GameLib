@@ -26,7 +26,6 @@
     "src/backend/engine/bottleLedger.ts": 1,
     "src/backend/engine/bottlePrimitives.ts": 1,
     "src/backend/engine/crossoverLocation.ts": 1,
-    "src/backend/engine/engineNoticeStore.ts": 1,
     "src/backend/engine/engineRegistry.ts": 1,
     "src/backend/engine/engineSwitch.ts": 1,
     "src/backend/engine/fallbackEngine.ts": 2,

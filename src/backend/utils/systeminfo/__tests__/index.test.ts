@@ -56,7 +56,10 @@ import type { SystemInfoDeps } from '../index'
 
 // The version probes are mocked above, so the managers are never asked; the slice only has
 // to exist (and be threaded through).
-const deps = { libraryManagers: {} } as unknown as SystemInfoDeps
+const deps = {
+  libraryManagers: {},
+  stores: { systemInfo: {} }
+} as unknown as SystemInfoDeps
 
 /** Resolves on the next microtask tick, letting queued promise chains settle. */
 function flushMicrotasks() {

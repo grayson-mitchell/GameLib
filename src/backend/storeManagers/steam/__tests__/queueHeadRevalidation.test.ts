@@ -1,3 +1,4 @@
+import { createTestStoreRoot } from '../../../testUtils/testStoreRoot'
 import {
   createTestManagerDeps,
   createTestStores
@@ -12,7 +13,10 @@ import type { GameInfo } from 'common/types'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createSteamStores } from '../stores'
 
-const steamStoresModule = createSteamStores({ registry: createStoreRegistry() })
+const steamStoresModule = createSteamStores({
+  registry: createStoreRegistry(),
+  root: createTestStoreRoot()
+})
 
 const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })

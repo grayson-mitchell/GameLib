@@ -1,15 +1,14 @@
 import { TypeCheckedStoreBackend } from '../typed_store'
-import type { StoreRegistry } from 'backend/stores/storeRegistry'
+import type { StoreFamilyDeps } from 'backend/stores/storeRoot'
 
-export function createKvsStores(deps: { registry: StoreRegistry }) {
-  const { registry } = deps
+export function createKvsStores(deps: StoreFamilyDeps) {
   const configStore = new TypeCheckedStoreBackend(
     'configStore',
     {
       cwd: 'store'
     },
     { kind: 'user-state' },
-    registry
+    deps
   )
   const tsStore = new TypeCheckedStoreBackend(
     'timestampStore',
@@ -18,7 +17,7 @@ export function createKvsStores(deps: { registry: StoreRegistry }) {
       name: 'timestamp'
     },
     { kind: 'user-state' },
-    registry
+    deps
   )
 
   return { configStore, tsStore }

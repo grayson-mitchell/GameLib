@@ -79,6 +79,11 @@
  * instead.
  */
 
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+
+// Per case (reset in freshRegistry): the boot is handed this root so the stores a case seeds
+// and the boot's own stores share one file-cell table, as the old module-level registry did.
+let testRoot = createTestStoreRoot()
 import { readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
@@ -192,6 +197,7 @@ let mockedUpdateQueueElement: jest.Mock
 
 function freshRegistry(): void {
   jest.resetModules()
+  testRoot = createTestStoreRoot()
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
   const {
@@ -200,7 +206,8 @@ function freshRegistry(): void {
   } = require('../../downloadmanager/utils')
   ;({ downloadManager } =
     require('../../downloadmanager/stores').createDownloadManagerStores({
-      registry: createStoreRegistry()
+      registry: createStoreRegistry(),
+      root: testRoot
     }))
   ;({ sendFrontendMessage } = require('../../ipc'))
   /* eslint-enable @typescript-eslint/no-require-imports */
@@ -214,6 +221,7 @@ const boot = () =>
   bootFresh({
     reuseRegistry: true,
     services: {
+      storeRoot: testRoot,
       managers: createTestManagers({
         library: {
           steam: {

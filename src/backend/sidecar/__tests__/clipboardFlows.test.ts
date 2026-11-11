@@ -3,7 +3,8 @@
  * — REQ-34.3-03/REQ-34.3-04/REQ-34.3-13).
  *
  * Calls `registerClipboardFlows()` directly (never through `../bootstrap`'s full `init`), so
- * this suite only ever loads `clipboardFlowRegistration.ts`'s own import graph
+ * this suite only ever loads `clipboardFlowRegistration.ts`'s own import { createTestStores } from '../../testUtils/testServices'
+import graph
  * (`./platformApi`, `./sidecarRpc`, `../utils/systeminfo`, `common/types/sidecarTransport`) —
  * never the rest of `handlers.ts`'s side-effecting module-scope registrations, which this
  * module never touches and which would otherwise require mocking a much larger surface (axios,
@@ -52,6 +53,7 @@ jest.mock('../../utils/systeminfo', () => ({
 
 // ── Imports (after mocks) ───────────────────────────────────────────────────────────────────
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+import { createTestStores } from 'backend/testUtils/testServices'
 import { TEST_APP_INFO } from 'backend/testUtils/testContext'
 import { defined } from 'backend/testUtils/indexed'
 import { registerClipboardFlows } from '../clipboardFlowRegistration'
@@ -141,6 +143,7 @@ registerClipboardFlows({
   ipc,
   appState: host.appState,
   managers: { library: {} } as never,
+  stores: createTestStores(),
   runner: {} as never,
   config: createTestGlobalConfig(),
   appInfo: TEST_APP_INFO

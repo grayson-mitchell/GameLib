@@ -28,10 +28,7 @@ import type { IpcRegistry } from './ipcRegistry'
 // single-choke-point note above `applyStoreWrite`.
 import * as sidecarRpc from './sidecarRpc'
 import type { StoreRegistry } from '../stores/storeRegistry'
-import {
-  setStoreChangeNotifier,
-  withStoreChangeSuppressed
-} from '../storeChangeNotifier'
+import type { StoreRoot } from '../stores/storeRoot'
 import { TOKEN_STORE_KEY } from '../storeManagers/steam/constants'
 import {
   CACHE_STORE_NAME_PATTERN,
@@ -67,6 +64,7 @@ interface WritableStoreBackend {
  */
 function resolveWritableStore(
   registry: StoreRegistry,
+  root: StoreRoot,
   storeName: string
 ): WritableStoreBackend | undefined {
   // WR-09: the deny list is load-bearing on the write path too — a denied cache store
@@ -92,6 +90,7 @@ function resolveWritableStore(
     CACHE_STORE_NAME_PATTERN.test(storeName)
   ) {
     return new Store({
+      root,
       cwd: 'store_cache',
       name: storeName,
       clearInvalidConfig: true
@@ -108,6 +107,7 @@ function resolveWritableStore(
  */
 export function applyStoreWrite(
   registry: StoreRegistry,
+  root: StoreRoot,
   op: 'set' | 'delete',
   storeName: string,
   key: string,
@@ -183,7 +183,7 @@ export function applyStoreWrite(
 
   // Guard (d): resolve the target ONLY through the registry or the fixed cache-store
   // construction shape — never a path reconstructed from the name.
-  const target = resolveWritableStore(registry, storeName)
+  const target = resolveWritableStore(registry, root, storeName)
   if (!target) {
     process.stderr.write(
       `[storeWriteHandlers] rejected write — no resolvable store instance for '${storeName}' key '${key}'\n`
@@ -212,7 +212,7 @@ export function applyStoreWrite(
     // The push below is NOT redundant with the class-level one and must not be deleted in
     // favour of it: `resolveWritableStore` can hand back a RAW `electron-store` instance
     // for the cache-store branch, which has no notification hook at all.
-    withStoreChangeSuppressed(() => {
+    root.changes.withSuppressed(() => {
       if (op === 'set') {
         target.set(key, value)
       } else {
@@ -248,7 +248,7 @@ export function applyStoreWrite(
  * all — the divergence this file's header warned about, live-confirmed in
  * `.planning/debug/gog-login-ui-never-updates.md` (GOG login persisted 7 games while the
  * renderer rendered none, silently, until restart). Those writers now reach this same
- * function through the `storeChangeNotifier` seam installed below.
+ * function through the store root's `changes` channel bound below.
  */
 function pushStoreChanged(payload: StoreChangedPayload): void {
   // SECRET-LEAK GUARD — load-bearing for the sidecar-initiated producer, redundant for
@@ -283,20 +283,20 @@ function pushStoreChanged(payload: StoreChangedPayload): void {
 }
 
 /**
- * The registry the (single, process-lifetime) write listeners resolve through. Every call
- * re-points it at the calling boot's registry (C-WR-1): a first-call-wins guard pinned the
+ * The registry and root the (single, process-lifetime) write listeners resolve through. Every
+ * call re-points it at the calling boot's pair (C-WR-1): a first-call-wins guard pinned the
  * first boot's registry, so a later boot in the same module registry wrote to a different
  * registry than its snapshot handlers read. The listeners are installed once because
  * `deps.ipc.on` appends; installing them per boot would run every write against every
  * boot's registry.
  */
-let currentRegistry: StoreRegistry | undefined
+let currentLayer: { registry: StoreRegistry; root: StoreRoot } | undefined
 
-function requireCurrentRegistry(): StoreRegistry {
-  if (!currentRegistry) {
+function requireCurrentLayer(): { registry: StoreRegistry; root: StoreRoot } {
+  if (!currentLayer) {
     throw new Error('[storeWriteHandlers] no store registry bound')
   }
-  return currentRegistry
+  return currentLayer
 }
 
 /**
@@ -307,23 +307,22 @@ function requireCurrentRegistry(): StoreRegistry {
 export function registerStoreWriteHandlers(deps: {
   ipc: Pick<IpcRegistry, 'on'>
   registry: StoreRegistry
+  root: StoreRoot
 }): void {
-  // "Already installed" is "a registry was already bound" — one module-level binding, not
+  // "Already installed" is "a layer was already bound" — one module-level binding, not
   // a flag plus a binding (the moduleState ceiling counts each).
-  const alreadyInstalled = currentRegistry !== undefined
-  currentRegistry = deps.registry
+  const alreadyInstalled = currentLayer !== undefined
+  currentLayer = { registry: deps.registry, root: deps.root }
+
+  // Point THIS boot's root at this file's single push site, so writes the SIDECAR itself
+  // performs reach the renderer's D-06 listener the same way renderer-initiated writes
+  // already do. Bound here, not in bootstrap, because this is the sidecar-only entry point
+  // that already owns this channel. Bound on every call because the channel is per root;
+  // notifications raised before this call are still dropped (the channel starts unbound).
+  deps.root.changes.bind(pushStoreChanged)
   if (alreadyInstalled) {
     return
   }
-
-  // Point the sidecar-side store classes' notification seam at this file's single push
-  // site, so writes the SIDECAR itself performs reach the renderer's D-06 listener the
-  // same way renderer-initiated writes already do. Installed here rather than in
-  // bootstrap because this is the sidecar-only, idempotent entry point that already owns
-  // this channel — and because doing it anywhere else would put the wiring further from
-  // the invariant it has to respect. Under Electron this function never runs, so
-  // `notifyStoreChanged` stays a no-op and the Electron write paths are unchanged.
-  setStoreChangeNotifier(pushStoreChanged)
 
   // `send`-kind (fire-and-forget) registrations: unlike an `invoke` channel there is no
   // response frame and no promise to reject on the renderer side — which is exactly why
@@ -337,7 +336,10 @@ export function registerStoreWriteHandlers(deps: {
         )
         return
       }
-      applyStoreWrite(requireCurrentRegistry(), 'set', storeName, key, value)
+      {
+        const { registry, root } = requireCurrentLayer()
+        applyStoreWrite(registry, root, 'set', storeName, key, value)
+      }
     }
   )
 
@@ -350,7 +352,10 @@ export function registerStoreWriteHandlers(deps: {
         )
         return
       }
-      applyStoreWrite(requireCurrentRegistry(), 'delete', storeName, key)
+      {
+        const { registry, root } = requireCurrentLayer()
+        applyStoreWrite(registry, root, 'delete', storeName, key)
+      }
     }
   )
 
@@ -369,7 +374,7 @@ export function registerStoreWriteHandlers(deps: {
         return
       }
 
-      const registry = requireCurrentRegistry()
+      const { registry, root } = requireCurrentLayer()
 
       if (registry.get(storeName)) {
         // The typed stores are constructed by `createStores`, not by the
@@ -401,6 +406,7 @@ export function registerStoreWriteHandlers(deps: {
       }
 
       new Store({
+        root,
         cwd: 'store_cache',
         name: storeName,
         clearInvalidConfig: true

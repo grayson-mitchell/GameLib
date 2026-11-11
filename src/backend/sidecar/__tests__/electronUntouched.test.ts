@@ -51,6 +51,7 @@
  * proof leaves a widening blind spot.
  */
 
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { defined } from 'backend/testUtils/indexed'
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
@@ -112,7 +113,8 @@ import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createSteamStores } from '../../storeManagers/steam/stores'
 
 const { configStore: steamConfigStore } = createSteamStores({
-  registry: createStoreRegistry()
+  registry: createStoreRegistry(),
+  root: createTestStoreRoot()
 })
 
 type ProgrammedOutcome =

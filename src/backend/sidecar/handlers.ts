@@ -104,6 +104,7 @@ import { registerStoreEmbedFlows } from './storeEmbedFlowRegistration'
 import { registerDepotHostFlows } from './depotHostRegistration'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
 import type { StoreRegistry } from '../stores/storeRegistry'
+import type { StoreRoot } from '../stores/storeRoot'
 import {
   BOOT_SET_STORES,
   // WR-10: T-29-13's dynamic-store-name pattern is single-sourced in storePolicy.ts.
@@ -281,6 +282,7 @@ export function registerHandlers(deps: {
     ipc,
     appState: deps.services.host.appState,
     managers: deps.services.managers,
+    stores: deps.services.stores,
     runner: deps.services.runner,
     config: deps.services.config,
     appInfo: deps.services.appInfo
@@ -403,7 +405,11 @@ export function registerHandlers(deps: {
   // store — hence AFTER registerStoreWriteHandlers(). These are `send`-kind (fire-and-forget)
   // registrations, so unlike an `invoke` channel there is no response frame and no promise
   // to reject, which is exactly why the missing registration was invisible before this phase.
-  registerStoreWriteHandlers({ ipc, registry: deps.services.storeRegistry })
+  registerStoreWriteHandlers({
+    ipc,
+    registry: deps.services.storeRegistry,
+    root: deps.services.storeRoot
+  })
 
   // D-03: the eager payload is EXACTLY the declared boot set — not the
   // unbounded lazy tier (T-29-16, index.tsx's hydration timeout). D-08: this
@@ -416,7 +422,11 @@ export function registerHandlers(deps: {
     for (const name of BOOT_SET_STORES) {
       snapshot[name] = filterStoreSnapshot(
         name,
-        resolveRawStore(deps.services.storeRegistry, name)
+        resolveRawStore(
+          deps.services.storeRegistry,
+          deps.services.storeRoot,
+          name
+        )
       )
     }
     return snapshot
@@ -454,7 +464,11 @@ export function registerHandlers(deps: {
 
       return filterStoreSnapshot(
         storeName,
-        resolveRawStore(deps.services.storeRegistry, storeName)
+        resolveRawStore(
+          deps.services.storeRegistry,
+          deps.services.storeRoot,
+          storeName
+        )
       )
     }
   )
@@ -511,6 +525,7 @@ const CACHE_BACKED_STORE_NAMES: readonly string[] = [
  */
 function resolveRawStore(
   registry: StoreRegistry,
+  root: StoreRoot,
   name: string
 ): Record<string, unknown> {
   // WR-09 (Phase 29 code review): the deny list is consulted HERE, not only inside
@@ -533,6 +548,7 @@ function resolveRawStore(
 
   if (CACHE_BACKED_STORE_NAMES.includes(name)) {
     const cacheBackedStore = new Store({
+      root,
       cwd: 'store_cache',
       name,
       clearInvalidConfig: true

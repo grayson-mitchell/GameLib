@@ -70,6 +70,7 @@ jest.mock('backend/constants/environment', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { defined } from 'backend/testUtils/indexed'
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -1145,7 +1146,8 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       const seamSlot = createFreshSeamSlot()
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const realStores = require('../../humble/stores').createHumbleStores({
-        registry: createStoreRegistry()
+        registry: createStoreRegistry(),
+        root: createTestStoreRoot()
       }) as {
         configStore: {
           set: (key: string, value: unknown) => void

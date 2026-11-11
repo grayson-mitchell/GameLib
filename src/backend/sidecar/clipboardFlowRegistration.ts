@@ -58,7 +58,7 @@ import type { AppState } from '../host/appState'
 import { requestRustInvoke } from './sidecarRpc'
 import { RUST_CLIPBOARD_READ_TEXT } from '../../common/types/sidecarTransport'
 import { getSystemInfo, formatSystemInfo } from '../utils/systeminfo'
-import type { BootServices, StoreManagers } from '../services/types'
+import type { BootServices, StoreManagers, Stores } from '../services/types'
 
 function logSendFailure(channel: string, error: unknown): void {
   console.warn(
@@ -74,6 +74,7 @@ export interface ClipboardFlowDeps {
   config: Pick<GlobalConfigSlice, 'getSettings'>
   appInfo: Pick<AppInfo, 'version'>
   managers: Pick<StoreManagers, 'library'>
+  stores: Pick<Stores, 'systemInfo'>
   /** The boot process runner (66.2); consumers converted by 66.2-05. */
   runner: BootServices['runner']
 }
@@ -128,7 +129,8 @@ export function registerClipboardFlows(deps: ClipboardFlowDeps): void {
           libraryManagers: deps.managers.library,
           runner: deps.runner,
           config: deps.config,
-          appInfo: deps.appInfo
+          appInfo: deps.appInfo,
+          stores: deps.stores
         })
         const formatted = await formatSystemInfo(info)
         deps.appState.writeClipboardText(formatted)

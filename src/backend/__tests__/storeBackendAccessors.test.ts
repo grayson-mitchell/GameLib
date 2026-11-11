@@ -2,6 +2,9 @@ import { mkdtempSync, readFileSync } from 'graceful-fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import GameLibStore from '../store_backend'
+import { createTestStoreRoot } from '../testUtils/testStoreRoot'
+
+const root = createTestStoreRoot()
 
 type Data = Record<string, unknown>
 const dir = () => mkdtempSync(join(tmpdir(), 'gl68-acc-'))
@@ -9,14 +12,14 @@ const disk = (p: string) => JSON.parse(readFileSync(p, 'utf-8'))
 
 describe('GameLibStore accessor overrides (A6)', () => {
   test('set persists and get reads', () => {
-    const s = new GameLibStore<Data>({ cwd: dir(), name: 'a6probe' })
+    const s = new GameLibStore<Data>({ root, cwd: dir(), name: 'a6probe' })
     s.set('k', 1)
     expect(disk(s.path).k).toBe(1)
     expect(s.get('k')).toBe(1)
   })
 
   test('delete, clear and store replacement persist', () => {
-    const s = new GameLibStore<Data>({ cwd: dir(), name: 'a6probe' })
+    const s = new GameLibStore<Data>({ root, cwd: dir(), name: 'a6probe' })
     s.set('k', 1)
     s.set('j', 2)
     s.delete('k')
@@ -39,6 +42,7 @@ describe('GameLibStore accessor overrides (A6)', () => {
       }
     }
     const p = new Probe({
+      root,
       cwd: dir(),
       name: 'a6probe',
       defaults: { seeded: true }
@@ -48,7 +52,7 @@ describe('GameLibStore accessor overrides (A6)', () => {
   })
 
   test('Symbol.iterator yields persisted entries', () => {
-    const s = new GameLibStore<Data>({ cwd: dir(), name: 'a6probe' })
+    const s = new GameLibStore<Data>({ root, cwd: dir(), name: 'a6probe' })
     s.set('k', 1)
     expect(new Map(s)).toEqual(new Map([['k', 1]]))
   })

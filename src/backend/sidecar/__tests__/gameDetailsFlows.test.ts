@@ -328,6 +328,11 @@ jest.mock('../../utils/aborthandler/aborthandler', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+
+// Per case (reset in freshRegistry): the boot is handed this root so the stores a case seeds
+// and the boot's own stores share one file-cell table, as the old module-level registry did.
+let testRoot = createTestStoreRoot()
 import {
   bootFresh,
   writeInvoke,
@@ -424,6 +429,7 @@ let sideloadManager: ManagerMock
 
 function freshRegistry(): void {
   jest.resetModules()
+  testRoot = createTestStoreRoot()
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
   const { createGlobalConfig } = require('backend/config')
@@ -437,7 +443,8 @@ function freshRegistry(): void {
   sidecarRpc = require('../sidecarRpc')
   ;({ gameOverridesStore } =
     require('../../game_overrides/stores').createGameOverridesStores({
-      registry: createStoreRegistry()
+      registry: createStoreRegistry(),
+      root: testRoot
     }))
   /* eslint-enable @typescript-eslint/no-require-imports */
   mockedGlobalConfigGet = createGlobalConfig as jest.Mock
@@ -457,6 +464,7 @@ const boot = () =>
   bootFresh({
     reuseRegistry: true,
     services: {
+      storeRoot: testRoot,
       onlineMonitor: {
         ...createTestOnlineMonitor(),
         isOnline: () => mockedIsOnline() as boolean

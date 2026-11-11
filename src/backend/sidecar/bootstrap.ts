@@ -36,6 +36,7 @@ import { createHostServices, type HostServices } from '../host'
 import { createIpcRegistry, type IpcRegistry } from './ipcRegistry'
 import { createStores } from '../stores/createStores'
 import { createStoreRegistry } from '../stores/storeRegistry'
+import { createStoreRoot } from '../stores/storeRoot'
 import { createStoreManagers } from '../storeManagers'
 import { registerGogdlStubListeners } from '../storeManagers/gog/e2eMock'
 import { registerLegendaryStubListeners } from '../storeManagers/legendary/e2eMock'
@@ -107,7 +108,7 @@ import { createDevSecretVault, type DevSecretVault } from './devSecretVault'
 import axios from 'axios'
 import { randomUUID } from 'node:crypto'
 import { createOnlineMonitor } from '../online_monitor'
-import { createEngineState, lazyNoticeStore } from '../engine/engineState'
+import { createEngineState } from '../engine/engineState'
 import { createWinetricksQueue } from '../tools/winetricksQueue'
 import { getInstallingComponent } from '../tools'
 import type { OnlineMonitor } from '../online_monitor'
@@ -415,6 +416,7 @@ function requireServices(state: BootState): BootServices {
   const {
     stores,
     storeRegistry,
+    storeRoot,
     managers,
     launcher,
     commandRunner,
@@ -444,6 +446,7 @@ function requireServices(state: BootState): BootServices {
   if (
     !stores ||
     !storeRegistry ||
+    !storeRoot ||
     !managers ||
     !launcher ||
     !commandRunner ||
@@ -474,6 +477,7 @@ function requireServices(state: BootState): BootServices {
       [
         'stores',
         'storeRegistry',
+        'storeRoot',
         'managers',
         'launcher',
         'commandRunner',
@@ -506,6 +510,7 @@ function requireServices(state: BootState): BootServices {
   return {
     stores,
     storeRegistry,
+    storeRoot,
     managers,
     launcher,
     commandRunner,
@@ -1347,21 +1352,33 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       // Builds every store family against ONE per-boot registry (66.1 plan 25, A3); that registry
       // is what the name-keyed store RPC handlers resolve through. Store construction opens no
       // timer, watcher or handle.
-      run: (_ctx, _io, state) => {
+      run: (ctx, _io, state) => {
         // Stores and registry are a pair: the registry the RPC handlers resolve through must be
         // the one the stores registered into. Take both from `prebuilt` or build both, so one
-        // can never drift from the other (C-IN-4).
+        // can never drift from the other (C-IN-4). The root joins them: prebuilt stores are
+        // useless without the root they write and notify through, and the write handlers bind
+        // the renderer push on it. A root given alone is honoured and the stores are built on it.
         if (!prebuilt.stores !== !prebuilt.storeRegistry) {
           throw new Error(
             'boot: prebuilt.stores and prebuilt.storeRegistry must be given together'
           )
         }
+        if (prebuilt.stores && !prebuilt.storeRoot) {
+          throw new Error(
+            'boot: prebuilt.stores needs the prebuilt.storeRoot it was built on'
+          )
+        }
+        // The one place a store directory is decided: every store resolves under it.
+        const root =
+          prebuilt.storeRoot ??
+          createStoreRoot({ userData: ctx.paths.userData })
+        state.services.storeRoot = root
         if (prebuilt.stores && prebuilt.storeRegistry) {
           state.services.stores = prebuilt.stores
           state.services.storeRegistry = prebuilt.storeRegistry
         } else {
           const registry = createStoreRegistry()
-          state.services.stores = createStores({ registry })
+          state.services.stores = createStores({ registry, root })
           state.services.storeRegistry = registry
         }
       }
@@ -1677,10 +1694,12 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'engine-state',
       // Builds the one engine decision/notice owner of this boot (D-05, D-66.3-12). Construction
-      // does no I/O and arms no timers; the notice store is resolved lazily on first read. Before
+      // does no I/O and arms no timers; the notice store is read from 'stores' on first use. Before
       // 'store-managers' so ManagerDeps and the launcher can carry it.
       run: (ctx, _io, state) => {
         const host = requireHost(state)
+        const { stores } = state.services
+        if (!stores) throw new Error('boot: stores step must run first')
         state.services.engineState =
           prebuilt.engineState ??
           createEngineState({
@@ -1688,7 +1707,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
               host.pushFrontendMessage('engineStateChanged', engineState),
             now: () => ctx.clock.now(),
             isMac: () => isMac,
-            noticeStore: lazyNoticeStore
+            noticeStore: () => stores.engine.noticeStore
           })
       }
     },

@@ -57,6 +57,7 @@ jest.mock('fs/promises', () => {
 })
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { createTestContext } from 'backend/testUtils/testContext'
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'graceful-fs'
 import { join } from 'node:path'
@@ -71,7 +72,8 @@ import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createMigrationStores } from '../../migration/stores'
 
 const { migrationsStore } = createMigrationStores({
-  registry: createStoreRegistry()
+  registry: createStoreRegistry(),
+  root: createTestStoreRoot()
 })
 
 const actualFsPromises =
@@ -137,7 +139,10 @@ beforeEach(() => {
  */
 function bootMigrations() {
   let freshCp!: jest.Mock
+  // The boot is handed this root so the store read back below shares its file cell.
+  const root = createTestStoreRoot()
   bootFresh({
+    services: { storeRoot: root },
     before: () => {
       /* eslint-disable @typescript-eslint/no-require-imports */
       freshCp = require('fs/promises').cp as jest.Mock
@@ -152,7 +157,8 @@ function bootMigrations() {
   const { createMigrationStores } = require('../../migration/stores')
   /* eslint-enable @typescript-eslint/no-require-imports */
   const freshMigrationStores = createMigrationStores({
-    registry: createStoreRegistry()
+    registry: createStoreRegistry(),
+    root
   })
   return {
     freshCp,

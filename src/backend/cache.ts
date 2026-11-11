@@ -1,10 +1,7 @@
 import Store from './store_backend'
 import type { StoreKind } from './storeVersioning/types'
 
-import {
-  notifyStoreChanged,
-  notifyStoreInvalidated
-} from './storeChangeNotifier'
+import type { StoreRoot } from './stores/storeRoot'
 
 export default class CacheStore<ValueType, KeyType extends string = string> {
   private readonly store: Store
@@ -15,6 +12,7 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
    * `RECOGNIZED_CACHE_STORE_NAMES` lists these same strings.
    */
   private readonly filename: string
+  private readonly root: StoreRoot
   private in_memory_store: Map<string, ValueType>
   private using_in_memory: boolean
   private current_store: Store | Map<string, ValueType>
@@ -33,6 +31,8 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
     filename: string,
     max_value_lifespan: number | null = 60 * 6,
     options: {
+      /** The boot's root: this store's directory, shared cells and renderer push. */
+      root: StoreRoot
       kind: StoreKind
       tokenBearing?: true
       failedView?: 'as-is' | 'empty'
@@ -40,7 +40,9 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
     }
   ) {
     this.filename = filename
+    this.root = options.root
     this.store = new Store({
+      root: options.root,
       cwd: 'store_cache',
       name: filename,
       clearInvalidConfig: true,
@@ -117,7 +119,7 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
    * populated key, no timestamp, and the same empty result the notification exists to
    * fix — a fix that looks correct in the payload and changes nothing observable.
    *
-   * `notifyStoreChanged` is a no-op when the in-memory path is active (see below), so the
+   * `changes.notify` is a no-op when the in-memory path is active (see below), so the
    * `using_in_memory` guard is about correctness, not chattiness: those writes have not
    * reached disk yet, and telling the renderer otherwise would make its snapshot claim a
    * value the sidecar has not persisted.
@@ -128,8 +130,8 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
     this.current_store.set(key, value)
     this.current_store.set(`__timestamp.${key}`, timestamp)
     if (!this.using_in_memory) {
-      notifyStoreChanged({ store: this.filename, key, value })
-      notifyStoreChanged({
+      this.root.changes.notify({ store: this.filename, key, value })
+      this.root.changes.notify({
         store: this.filename,
         key: `__timestamp.${key}`,
         value: timestamp
@@ -142,8 +144,8 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
     this.current_store.delete(key)
     this.current_store.delete(`__timestamp.${key}`)
     if (!this.using_in_memory) {
-      notifyStoreChanged({ store: this.filename, key, deleted: true })
-      notifyStoreChanged({
+      this.root.changes.notify({ store: this.filename, key, deleted: true })
+      this.root.changes.notify({
         store: this.filename,
         key: `__timestamp.${key}`,
         deleted: true
@@ -155,7 +157,7 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
     if (this.refusesDiskWrite()) return
     this.current_store.clear()
     if (!this.using_in_memory) {
-      notifyStoreInvalidated(this.filename)
+      this.root.changes.invalidate(this.filename)
     }
   }
 
@@ -220,7 +222,7 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
       // REPLACES the whole store object — so it is announced as a whole-store
       // invalidation, not as N per-key pushes. Emitting per-key here would also miss
       // every key the commit REMOVED relative to what was on disk before.
-      notifyStoreInvalidated(this.filename)
+      this.root.changes.invalidate(this.filename)
     }
   }
 }

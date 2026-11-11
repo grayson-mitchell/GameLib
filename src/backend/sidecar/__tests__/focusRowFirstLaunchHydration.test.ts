@@ -43,6 +43,7 @@
  * Each "launch" is a fresh module graph (`jest.isolateModules`); the disk is
  * the only state carried between launches, which is what a real relaunch is.
  */
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { ipcViews } from 'backend/testUtils/ipcViews'
 import { defined } from 'backend/testUtils/indexed'
 import {
@@ -116,7 +117,8 @@ function launch(): Launch {
     } = require('backend/sidecar/settingsFlowRegistration')
     const { configStore } =
       require('backend/constants/key_value_stores').createKvsStores({
-        registry: createStoreRegistry()
+        registry: createStoreRegistry(),
+        root: createTestStoreRoot()
       })
     const { configPath } = require('backend/constants/paths')
     const { createGlobalConfig } = require('backend/config')

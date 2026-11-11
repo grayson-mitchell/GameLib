@@ -49,6 +49,7 @@ jest.mock('axios', () => ({
 //    forced `true` for parity with "invoke inline" even though nothing here reads it directly.
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { LogPrefix } from '../../logger'
 import { bootFresh } from './helpers/sidecarHarness'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
@@ -92,7 +93,10 @@ function bootedWorld(opts?: {
     typeof import('../../constants/key_value_stores').createKvsStores
   >['configStore']
   let loggerModule!: typeof import('../../logger')
+  // The boot is handed this root so the store this case seeds and the boot's own share one cell.
+  const root = createTestStoreRoot()
   bootFresh({
+    services: { storeRoot: root },
     before: () => {
       // Load bootstrap first so the module graph resolves in its natural order (requiring the
       // online_monitor mock first hits a circular import and drops its re-exports).
@@ -101,7 +105,7 @@ function bootedWorld(opts?: {
         require('../../storeManagers/legendary/user').LegendaryUser
       GOGUser = require('../../storeManagers/gog/user').GOGUser
       configStore = require('../../constants/key_value_stores').createKvsStores(
-        { registry: createStoreRegistry() }
+        { registry: createStoreRegistry(), root }
       ).configStore
       loggerModule = require('../../logger')
       jest

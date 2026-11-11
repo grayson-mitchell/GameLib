@@ -30,6 +30,7 @@ jest.mock('../constants/environment', () => ({
   isWindows: true
 }))
 
+import { createTestStoreRoot } from '../testUtils/testStoreRoot'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import type { ScriptStep } from 'backend/testUtils/scriptedRunner'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
@@ -41,7 +42,10 @@ import { createTestStores } from 'backend/testUtils/testServices'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createKvsStores } from '../constants/key_value_stores'
 
-const { configStore } = createKvsStores({ registry: createStoreRegistry() })
+const { configStore } = createKvsStores({
+  registry: createStoreRegistry(),
+  root: createTestStoreRoot()
+})
 
 const stores = createTestStores({ kvs: { configStore } as never })
 

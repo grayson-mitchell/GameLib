@@ -90,6 +90,11 @@
 // suite's positive test greps). ─────────────────────────────────────────────
 jest.unmock('i18next')
 
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+
+// Per case (reset in freshRegistry): the boot is handed this root so the stores a case seeds
+// and the boot's own stores share one file-cell table, as the old module-level registry did.
+let testRoot = createTestStoreRoot()
 import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'fs'
 import { relative, resolve, isAbsolute, dirname } from 'path'
 import { tmpdir } from 'os'
@@ -418,6 +423,7 @@ let mockRequestRustInvoke: jest.Mock
 
 function freshRegistry(): void {
   jest.resetModules()
+  testRoot = createTestStoreRoot()
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
   const { createGlobalConfig } = require('backend/config')
@@ -425,7 +431,8 @@ function freshRegistry(): void {
   const { requestRustInvoke } = require('../sidecarRpc')
   ;({ uploadedLogFileStore } =
     require('../../logger/stores').createLoggerStores({
-      registry: createStoreRegistry()
+      registry: createStoreRegistry(),
+      root: testRoot
     }))
   uploaderModule = require('../../logger/uploader')
   /* eslint-enable @typescript-eslint/no-require-imports */
@@ -433,7 +440,11 @@ function freshRegistry(): void {
   mockRequestRustInvoke = requestRustInvoke as jest.Mock
 }
 
-const boot = () => bootFresh({ reuseRegistry: true })
+const boot = () =>
+  bootFresh({
+    reuseRegistry: true,
+    services: { storeRoot: testRoot }
+  })
 
 // freshRegistry() runs in the booting describes' own beforeEach below, NOT
 // file-wide: the WR-02 block asserts facts about the file's original module

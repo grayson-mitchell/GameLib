@@ -5,10 +5,9 @@
 // wall). Constructed at module scope (not lazily) so registration is
 // guaranteed by import time.
 import { TypeCheckedStoreBackend } from '../typed_store'
-import type { StoreRegistry } from 'backend/stores/storeRegistry'
+import type { StoreFamilyDeps } from 'backend/stores/storeRoot'
 
-export function createMigrationStores(deps: { registry: StoreRegistry }) {
-  const { registry } = deps
+export function createMigrationStores(deps: StoreFamilyDeps) {
   const migrationsStore = new TypeCheckedStoreBackend(
     'migrationsStore',
     {
@@ -16,7 +15,7 @@ export function createMigrationStores(deps: { registry: StoreRegistry }) {
       name: 'migrations'
     },
     { kind: 'user-state' },
-    registry
+    deps
   )
 
   return { migrationsStore }

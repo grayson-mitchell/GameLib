@@ -4,10 +4,9 @@
 // downloadqueue.ts's static import of the manager table from
 // 'backend/storeManagers' (spike 009's import-time wall).
 import { TypeCheckedStoreBackend } from '../typed_store'
-import type { StoreRegistry } from 'backend/stores/storeRegistry'
+import type { StoreFamilyDeps } from 'backend/stores/storeRoot'
 
-export function createDownloadManagerStores(deps: { registry: StoreRegistry }) {
-  const { registry } = deps
+export function createDownloadManagerStores(deps: StoreFamilyDeps) {
   const downloadManager = new TypeCheckedStoreBackend(
     'downloadManager',
     {
@@ -15,7 +14,7 @@ export function createDownloadManagerStores(deps: { registry: StoreRegistry }) {
       name: 'download-manager'
     },
     { kind: 'user-state' },
-    registry
+    deps
   )
 
   return { downloadManager }

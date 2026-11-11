@@ -11,10 +11,7 @@ import { createTestHostServices } from './testHostServices'
 import { createTestGameConfigs, createTestGlobalConfig } from './testConfig'
 import { TEST_APP_INFO } from './testContext'
 import type { AppPaths } from '../process/context'
-import {
-  createStoreRegistry,
-  type StoreRegistry
-} from '../stores/storeRegistry'
+import { createStoreRegistry } from '../stores/storeRegistry'
 import { createKvsStores } from '../constants/key_value_stores'
 import { createCrossoverIndexStores } from '../crossover_index/stores'
 import { createDownloadManagerStores } from '../downloadmanager/stores'
@@ -31,6 +28,10 @@ import { createSideloadStores } from '../storeManagers/sideload/stores'
 import { createSteamStores } from '../storeManagers/steam/stores'
 import { createWikiGameInfoStores } from '../wiki_game_info/stores'
 import { createWineManagerStores } from '../wine/manager/stores'
+import { createEngineStores } from '../engine/engineNoticeStore'
+import { createPciIdCaches } from '../utils/systeminfo/gpu/pci_ids'
+import type { StoreFamilyDeps, StoreRoot } from '../stores/storeRoot'
+import { createTestStoreRoot } from './testStoreRoot'
 import type { EngineServices } from '../engine/engineServices'
 import { createFakeClock } from './fakeClock'
 import { createTestOnlineMonitor } from './testOnlineMonitor'
@@ -141,12 +142,14 @@ const STORE_KEYS = [
   'sideload',
   'steam',
   'wikiGameInfo',
-  'wineManager'
+  'wineManager',
+  'engine',
+  'systemInfo'
 ] as const satisfies readonly (keyof Stores)[]
 
 /** Builds one family against the shared registry; each call is lazy (see createTestStores). */
 type FamilyBuilders = {
-  [K in keyof Stores]: (registry: StoreRegistry) => Stores[K]
+  [K in keyof Stores]: (deps: StoreFamilyDeps) => Stores[K]
 }
 
 /**
@@ -157,28 +160,33 @@ type FamilyBuilders = {
  */
 function familyBuilders(): FamilyBuilders {
   return {
-    kvs: (registry) => createKvsStores({ registry }),
-    crossoverIndex: () => createCrossoverIndexStores(),
-    downloadManager: (registry) => createDownloadManagerStores({ registry }),
-    gameOverrides: (registry) => createGameOverridesStores({ registry }),
-    humble: (registry) => createHumbleStores({ registry }),
-    logger: (registry) => createLoggerStores({ registry }),
-    macArch: (registry) => createMacArchStores({ registry }),
-    migration: (registry) => createMigrationStores({ registry }),
-    runsForMe: (registry) => createRunsForMeStores({ registry }),
-    gog: (registry) => createGogStores({ registry }),
-    legendary: (registry) => createLegendaryStores({ registry }),
-    nile: (registry) => createNileStores({ registry }),
-    sideload: (registry) => createSideloadStores({ registry }),
-    steam: (registry) => createSteamStores({ registry }),
-    wikiGameInfo: () => createWikiGameInfoStores(),
-    wineManager: (registry) => createWineManagerStores({ registry })
+    kvs: (deps) => createKvsStores(deps),
+    crossoverIndex: (deps) => createCrossoverIndexStores(deps),
+    downloadManager: (deps) => createDownloadManagerStores(deps),
+    gameOverrides: (deps) => createGameOverridesStores(deps),
+    humble: (deps) => createHumbleStores(deps),
+    logger: (deps) => createLoggerStores(deps),
+    macArch: (deps) => createMacArchStores(deps),
+    migration: (deps) => createMigrationStores(deps),
+    runsForMe: (deps) => createRunsForMeStores(deps),
+    gog: (deps) => createGogStores(deps),
+    legendary: (deps) => createLegendaryStores(deps),
+    nile: (deps) => createNileStores(deps),
+    sideload: (deps) => createSideloadStores(deps),
+    steam: (deps) => createSteamStores(deps),
+    wikiGameInfo: (deps) => createWikiGameInfoStores(deps),
+    wineManager: (deps) => createWineManagerStores(deps),
+    engine: (deps) => createEngineStores(deps),
+    systemInfo: (deps) => createPciIdCaches(deps)
   }
 }
 
-export function createTestStores(overrides: Partial<Stores> = {}): Stores {
+export function createTestStores(
+  overrides: Partial<Stores> = {},
+  root: StoreRoot = createTestStoreRoot()
+): Stores {
   const stores = {} as Stores
-  const registry = createStoreRegistry()
+  const deps: StoreFamilyDeps = { registry: createStoreRegistry(), root }
   const builders = familyBuilders()
   for (const key of STORE_KEYS) {
     const given = overrides[key]
@@ -190,7 +198,7 @@ export function createTestStores(overrides: Partial<Stores> = {}): Stores {
         // Lazy and per family on purpose: building a family touches the real store backend,
         // which a suite that overrides only the slices it reads must never reach, and a
         // suite that mocks one family's module must not break the others.
-        built ??= builders[key](registry)
+        built ??= builders[key](deps)
         return built
       }
     })
@@ -210,7 +218,9 @@ export function createTestServices(
     }
   }
   const host = overrides.host ?? createTestHostServices()
-  const stores = overrides.stores ?? createTestStores()
+  // One root per services bundle: the stores write and notify through the root handlers bind on.
+  const storeRoot = overrides.storeRoot ?? createTestStoreRoot()
+  const stores = overrides.stores ?? createTestStores({}, storeRoot)
   const config = overrides.config ?? createTestGlobalConfig()
   const signInProbe =
     overrides.signInProbe ?? createTestSignInProbe({ ipc: host.ipc })
@@ -218,6 +228,7 @@ export function createTestServices(
   return {
     stores,
     storeRegistry: overrides.storeRegistry ?? createStoreRegistry(),
+    storeRoot,
     managers: overrides.managers ?? createTestManagers(),
     launcher: overrides.launcher ?? unscriptedMembers<Launcher>('launcher', {}),
     commandRunner:

@@ -21,12 +21,14 @@ import { createSteamStores } from 'backend/storeManagers/steam/stores'
 import { createWikiGameInfoStores } from 'backend/wiki_game_info/stores'
 import { createWineManagerStores } from 'backend/wine/manager/stores'
 import type { Stores } from 'backend/services/types'
-import type { StoreRegistry } from './storeRegistry'
+import { createEngineStores } from 'backend/engine/engineNoticeStore'
+import { createPciIdCaches } from 'backend/utils/systeminfo/gpu/pci_ids'
+import type { StoreFamilyDeps } from './storeRoot'
 
-export function createStores(deps: { registry: StoreRegistry }): Stores {
+export function createStores(deps: StoreFamilyDeps): Stores {
   return {
     kvs: createKvsStores(deps),
-    crossoverIndex: createCrossoverIndexStores(),
+    crossoverIndex: createCrossoverIndexStores(deps),
     downloadManager: createDownloadManagerStores(deps),
     gameOverrides: createGameOverridesStores(deps),
     humble: createHumbleStores(deps),
@@ -39,7 +41,9 @@ export function createStores(deps: { registry: StoreRegistry }): Stores {
     nile: createNileStores(deps),
     sideload: createSideloadStores(deps),
     steam: createSteamStores(deps),
-    wikiGameInfo: createWikiGameInfoStores(),
-    wineManager: createWineManagerStores(deps)
+    wikiGameInfo: createWikiGameInfoStores(deps),
+    wineManager: createWineManagerStores(deps),
+    engine: createEngineStores(deps),
+    systemInfo: createPciIdCaches(deps)
   }
 }

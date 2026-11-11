@@ -1,3 +1,4 @@
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createHumbleStores } from '../stores'
 
@@ -10,7 +11,10 @@ const {
   humbleAuditStore,
   humbleLocalRedeemedStore,
   humbleNotifiedExpirationStore
-} = createHumbleStores({ registry: createStoreRegistry() })
+} = createHumbleStores({
+  registry: createStoreRegistry(),
+  root: createTestStoreRoot()
+})
 /**
  * Regression test for D-42/D-43: `humbleOwnershipOverrideStore` (a user's
  * "Not the same game" correction, keyed by `machine_name`) must survive a

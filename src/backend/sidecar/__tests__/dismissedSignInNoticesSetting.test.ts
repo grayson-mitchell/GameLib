@@ -18,6 +18,7 @@
  * `config.json` and the `store/config.json` `settings` mirror the renderer seeds
  * from.
  */
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { ipcViews } from 'backend/testUtils/ipcViews'
 import { defined } from 'backend/testUtils/indexed'
 import {
@@ -86,7 +87,8 @@ function launch(): Launch {
     } = require('backend/sidecar/settingsFlowRegistration')
     const { configStore } =
       require('backend/constants/key_value_stores').createKvsStores({
-        registry: createStoreRegistry()
+        registry: createStoreRegistry(),
+        root: createTestStoreRoot()
       })
     const { configPath } = require('backend/constants/paths')
     const { createGlobalConfig } = require('backend/config')

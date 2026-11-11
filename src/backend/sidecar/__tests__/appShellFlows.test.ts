@@ -65,6 +65,7 @@
  * fresh registry with `inFreshRegistry()` and call `registerAppShellFlows()` themselves.
  */
 
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { defined } from 'backend/testUtils/indexed'
 import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'fs'
 import { join } from 'path'
@@ -334,7 +335,8 @@ function freshRegistry(): void {
   i18next = require('i18next').default
   gameInfoStore =
     require('../../storeManagers/legendary/stores').createLegendaryStores({
-      registry: createStoreRegistry()
+      registry: createStoreRegistry(),
+      root: createTestStoreRoot()
     }).gameInfoStore
   backendEvents = require('../../backend_events').backendEvents
   const aborthandler = require('../../utils/aborthandler/aborthandler')
@@ -1372,7 +1374,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           } = require('../../constants/key_value_stores')
           /* eslint-enable @typescript-eslint/no-require-imports */
           const kvStoresModule = createKvsStores({
-            registry: createStoreRegistry()
+            registry: createStoreRegistry(),
+            root: createTestStoreRoot()
           })
           const isolatedConfigStore = kvStoresModule.configStore
           jest

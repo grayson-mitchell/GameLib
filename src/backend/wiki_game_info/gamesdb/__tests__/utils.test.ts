@@ -1,3 +1,4 @@
+import { createTestStoreRoot } from '../../../testUtils/testStoreRoot'
 import { GamesDBInfo } from 'common/types'
 import { axiosClient } from 'backend/utils'
 import testData from './test-data.json'
@@ -11,7 +12,10 @@ import {
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createGogStores } from 'backend/storeManagers/gog/stores'
 
-const gogStores = createGogStores({ registry: createStoreRegistry() })
+const gogStores = createGogStores({
+  registry: createStoreRegistry(),
+  root: createTestStoreRoot()
+})
 
 jest.mock('backend/logger')
 jest.mock('backend/store_backend')

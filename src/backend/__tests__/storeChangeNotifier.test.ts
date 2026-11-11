@@ -15,47 +15,44 @@
  * `src/preload/__tests__/tauriTransport.test.ts`.
  */
 
+import { createTestStoreRoot } from '../testUtils/testStoreRoot'
 import Store from 'backend/store_backend'
 
 import CacheStore from '../cache'
 import { TypeCheckedStoreBackend } from '../typed_store'
-import {
-  hasStoreChangeNotifier,
-  notifyStoreChanged,
-  notifyStoreInvalidated,
-  setStoreChangeNotifier,
-  withStoreChangeSuppressed
-} from '../storeChangeNotifier'
 import { isAllowedStoreField } from 'common/types/storePolicy'
 import type { StoreChangedPayload } from 'common/types/sidecarTransport'
 import { defined } from './helpers/defined'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createGogStores } from '../storeManagers/gog/stores'
 
+// One root for the whole file: the stores below notify through it, the tests bind it.
+const root = createTestStoreRoot()
+
 const { installedGamesStore } = createGogStores({
-  registry: createStoreRegistry()
+  registry: createStoreRegistry(),
+  root
 })
 
 jest.mock('backend/store_backend')
 
-describe('backend/storeChangeNotifier.ts', () => {
+describe('backend/stores/storeRoot.ts (changes channel)', () => {
   let pushed: StoreChangedPayload[]
 
   beforeEach(() => {
     pushed = []
-    setStoreChangeNotifier((payload) => pushed.push(payload))
+    root.changes.bind((payload) => pushed.push(payload))
   })
 
-  // Module-level state shared across suites — a leaked notifier would make unrelated
-  // suites push into a dead array (or a previous suite's array).
-  afterEach(() => setStoreChangeNotifier(null))
+  // Unbind so a later case never pushes into an earlier case's array.
+  afterEach(() => root.changes.bind(null))
 
   describe('the seam itself', () => {
     test('is a no-op when no notifier is installed — the Electron case', () => {
-      setStoreChangeNotifier(null)
-      expect(hasStoreChangeNotifier()).toBe(false)
+      root.changes.bind(null)
+      expect(root.changes.isBound()).toBe(false)
       expect(() =>
-        notifyStoreChanged({ store: 'configStore', key: 'foo', value: 1 })
+        root.changes.notify({ store: 'configStore', key: 'foo', value: 1 })
       ).not.toThrow()
       expect(pushed).toHaveLength(0)
     })
@@ -63,31 +60,32 @@ describe('backend/storeChangeNotifier.ts', () => {
     test('a throwing notifier never propagates into the caller', () => {
       // The write has already succeeded by the time we notify. A failed notification must
       // degrade to a stale snapshot (the pre-fix behaviour), never to a failed write.
-      setStoreChangeNotifier(() => {
+      root.changes.bind(() => {
         throw new Error('transport is down')
       })
       expect(() =>
-        notifyStoreChanged({ store: 'configStore', key: 'foo', value: 1 })
+        root.changes.notify({ store: 'configStore', key: 'foo', value: 1 })
       ).not.toThrow()
     })
 
-    test('notifyStoreInvalidated marks the whole store, with no meaningful key', () => {
-      notifyStoreInvalidated('gog_library')
+    test('invalidate marks the whole store, with no meaningful key', () => {
+      root.changes.invalidate('gog_library')
       expect(pushed).toEqual([
         { store: 'gog_library', key: '', invalidated: true }
       ])
     })
 
-    test('withStoreChangeSuppressed silences notifications inside it only', () => {
+    test('withSuppressed silences notifications inside it only', () => {
       // Prevents the double-push `skeletonFlows.test.ts` caught: `applyStoreWrite`
       // performs its write THROUGH these store classes and then pushes a richer payload
       // itself, so the class-level notification must stay quiet for that one write.
       const store = new CacheStore<string>('gog_library', undefined, {
+        root,
         kind: 'user-state'
       })
       pushed = []
 
-      withStoreChangeSuppressed(() => store.set('games', 'inner'))
+      root.changes.withSuppressed(() => store.set('games', 'inner'))
       expect(pushed).toHaveLength(0)
 
       store.set('games', 'outer')
@@ -97,12 +95,13 @@ describe('backend/storeChangeNotifier.ts', () => {
     test('suppression nests without an inner scope re-enabling the outer', () => {
       // Why the flag is a counter and not a boolean.
       const store = new CacheStore<string>('gog_library', undefined, {
+        root,
         kind: 'user-state'
       })
       pushed = []
 
-      withStoreChangeSuppressed(() => {
-        withStoreChangeSuppressed(() => store.set('a', '1'))
+      root.changes.withSuppressed(() => {
+        root.changes.withSuppressed(() => store.set('a', '1'))
         store.set('b', '2')
       })
 
@@ -111,13 +110,13 @@ describe('backend/storeChangeNotifier.ts', () => {
 
     test('suppression is released even when the wrapped write throws', () => {
       expect(() =>
-        withStoreChangeSuppressed(() => {
+        root.changes.withSuppressed(() => {
           throw new Error('disk full')
         })
       ).toThrow('disk full')
 
       pushed = []
-      notifyStoreChanged({ store: 'configStore', key: 'theme', value: 'x' })
+      root.changes.notify({ store: 'configStore', key: 'theme', value: 'x' })
       expect(pushed).toHaveLength(1)
     })
   })
@@ -130,6 +129,7 @@ describe('backend/storeChangeNotifier.ts', () => {
       // `storeGet('__timestamp.' + key)` BOTH resolve. Announce only the value and the
       // renderer still renders nothing.
       const store = new CacheStore<string>('gog_library', undefined, {
+        root,
         kind: 'user-state'
       })
       pushed = []
@@ -151,6 +151,7 @@ describe('backend/storeChangeNotifier.ts', () => {
 
     test('delete announces both keys as deleted', () => {
       const store = new CacheStore<string>('gog_library', undefined, {
+        root,
         kind: 'user-state'
       })
       store.set('games', 'x')
@@ -168,6 +169,7 @@ describe('backend/storeChangeNotifier.ts', () => {
       // A per-key encoding cannot express the removals, so the renderer would keep every
       // stale key. Same failure WR-07 fixed for hydrateStore by replacing, not merging.
       const store = new CacheStore<string>('nile_library', undefined, {
+        root,
         kind: 'user-state'
       })
       store.set('library', 'x')
@@ -185,6 +187,7 @@ describe('backend/storeChangeNotifier.ts', () => {
       // would make the renderer's snapshot claim a value the sidecar has not persisted —
       // divergence in the opposite direction.
       const store = new CacheStore<string>('legendary_library', undefined, {
+        root,
         kind: 'user-state'
       })
       store.use_in_memory()
@@ -203,6 +206,7 @@ describe('backend/storeChangeNotifier.ts', () => {
 
     test('commit on a store that never went in-memory announces nothing', () => {
       const store = new CacheStore<string>('gog_library', undefined, {
+        root,
         kind: 'user-state'
       })
       pushed = []
@@ -228,7 +232,8 @@ describe('backend/storeChangeNotifier.ts', () => {
           cwd: 'fonts_store',
           name: 'fonts'
         },
-        { kind: 'user-state' }
+        { kind: 'user-state' },
+        { root }
       )
       pushed = []
 
@@ -247,7 +252,8 @@ describe('backend/storeChangeNotifier.ts', () => {
         {
           cwd: 'store'
         },
-        { kind: 'user-state' }
+        { kind: 'user-state' },
+        { root }
       )
       pushed = []
 
@@ -270,7 +276,8 @@ describe('backend/storeChangeNotifier.ts', () => {
         { cwd: 'store' },
         {
           kind: 'user-state'
-        }
+        },
+        { root }
       )
       const spy = jest
         .spyOn(Object.getPrototypeOf(Store.prototype), 'set')

@@ -66,6 +66,7 @@ jest.mock('../../storeManagers/steam/macSteamOffline', () => {
   }
 })
 
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { defined } from 'backend/testUtils/indexed'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
@@ -187,7 +188,7 @@ describe('sidecar bootstrap (headless boot)', () => {
   })
 
   describe('boot services (66.1-04)', () => {
-    it('a default boot returns BootServices with all twenty-seven fields', () => {
+    it('a default boot returns BootServices with all twenty-eight fields', () => {
       const { services } = bootWithLines()
       expect(Object.keys(services).sort()).toEqual([
         'anonymousClient',
@@ -215,6 +216,7 @@ describe('sidecar bootstrap (headless boot)', () => {
         'steamSession',
         'steamUser',
         'storeRegistry',
+        'storeRoot',
         'stores',
         'winetricksQueue'
       ])
@@ -357,7 +359,8 @@ describe('sidecar bootstrap (headless boot)', () => {
       { cwd: 'store' },
       {
         kind: 'user-state'
-      }
+      },
+      { root: createTestStoreRoot() }
     )
     expect(typeof store.get).toBe('function')
     expect(typeof store.set).toBe('function')
@@ -562,11 +565,18 @@ describe('sidecar bootstrap (headless boot)', () => {
     function bootWithSteamStore(seed: boolean) {
       let logInfoSpy!: jest.SpyInstance
       let store!: SteamStore
+      // The boot builds its stores on this root, so the seeded store shares its file cell with
+      // the boot's own steam config store and the cleanup is observable through it.
+      const root = createTestStoreRoot()
       bootFresh({
+        services: { storeRoot: root },
         before: () => {
           store = fresh<typeof import('../../storeManagers/steam/stores')>(
             '../../storeManagers/steam/stores'
-          ).createSteamStores({ registry: createStoreRegistry() }).configStore
+          ).createSteamStores({
+            registry: createStoreRegistry(),
+            root
+          }).configStore
           lastStore = store
           if (seed) store.set('refreshToken', LEGACY_VALUE)
           logInfoSpy = jest.spyOn(
@@ -615,11 +625,16 @@ describe('sidecar bootstrap (headless boot)', () => {
     it('does NOT route through applyStoreWrite -- the D-04 write guard is never invoked, yet the key is still gone', () => {
       let applyStoreWriteSpy!: jest.SpyInstance
       let store!: SteamStore
+      const root = createTestStoreRoot()
       bootFresh({
+        services: { storeRoot: root },
         before: () => {
           store = fresh<typeof import('../../storeManagers/steam/stores')>(
             '../../storeManagers/steam/stores'
-          ).createSteamStores({ registry: createStoreRegistry() }).configStore
+          ).createSteamStores({
+            registry: createStoreRegistry(),
+            root
+          }).configStore
           lastStore = store
           store.set('refreshToken', LEGACY_VALUE)
           applyStoreWriteSpy = jest.spyOn(

@@ -1,6 +1,6 @@
 import { logWarning, LogPrefix } from 'backend/logger'
 import type { GPUInfo } from '../index'
-import { populateDeviceAndVendorName } from './pci_ids'
+import { populateDeviceAndVendorName, type PciIdCaches } from './pci_ids'
 import type { ProbeDeps } from '../../os/processes'
 
 type PartialGpuInfo = Omit<GPUInfo, 'deviceString' | 'vendorString'>
@@ -8,7 +8,10 @@ type PartialGpuInfo = Omit<GPUInfo, 'deviceString' | 'vendorString'>
 /**
  * Gathers information about the GPUs in the system. See {@link GPUInfo}
  */
-async function getGpuInfo(deps: ProbeDeps): Promise<GPUInfo[]> {
+async function getGpuInfo(
+  deps: ProbeDeps,
+  caches: PciIdCaches
+): Promise<GPUInfo[]> {
   try {
     let partialGpus: PartialGpuInfo[]
     switch (process.platform) {
@@ -30,7 +33,7 @@ async function getGpuInfo(deps: ProbeDeps): Promise<GPUInfo[]> {
         return []
     }
 
-    return await populateDeviceAndVendorName(partialGpus)
+    return await populateDeviceAndVendorName(caches, partialGpus)
   } catch (error) {
     logWarning(['Could not gather GPU info:', error], LogPrefix.Backend)
     return []

@@ -336,6 +336,11 @@ jest.mock('../../discounts/fetchDiscounts', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+
+// Per case (reset in freshRegistry): the boot is handed this root so the stores a case seeds
+// and the boot's own stores share one file-cell table, as the old module-level registry did.
+let testRoot = createTestStoreRoot()
 import {
   existsSync,
   mkdirSync,
@@ -417,15 +422,19 @@ let sideloadManager: ManagerMock
 
 function freshRegistry(): void {
   jest.resetModules()
+  testRoot = createTestStoreRoot()
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
   const { createGlobalConfig } = require('backend/config')
   const { libraryManagerMap } = require('backend/storeManagers')
   ;({ wikiGameInfoStore } =
-    require('../../wiki_game_info/stores').createWikiGameInfoStores())
+    require('../../wiki_game_info/stores').createWikiGameInfoStores({
+      root: testRoot
+    }))
   ;({ configStore } =
     require('../../constants/key_value_stores').createKvsStores({
-      registry: createStoreRegistry()
+      registry: createStoreRegistry(),
+      root: testRoot
     }))
   loggerModule = require('../../logger')
   /* eslint-enable @typescript-eslint/no-require-imports */
@@ -445,6 +454,7 @@ const boot = () =>
   bootFresh({
     reuseRegistry: true,
     services: {
+      storeRoot: testRoot,
       onlineMonitor: {
         ...createTestOnlineMonitor(),
         isOnline: () => mockedIsOnline() as boolean,

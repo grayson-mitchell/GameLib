@@ -14,6 +14,7 @@
  * itself rewrites the setting is the clobber the backstop exists to catch, and
  * the same assertion must fail for it.
  */
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { existsSync, mkdirSync, realpathSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { dirname, sep } from 'path'
@@ -28,7 +29,10 @@ import { makeFakeSignInStores } from './fakeFlagStore'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createKvsStores } from 'backend/constants/key_value_stores'
 
-const { configStore } = createKvsStores({ registry: createStoreRegistry() })
+const { configStore } = createKvsStores({
+  registry: createStoreRegistry(),
+  root: createTestStoreRoot()
+})
 
 jest.mock('backend/logger', () => ({
   ...jest.requireActual('backend/logger'),

@@ -21,6 +21,11 @@
  * DISPATCH (was the right function called, with the right runner) rather than about a real
  * non-Steam launch succeeding end to end.
  */
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+
+// Per case (reset in freshRegistry): the boot is handed this root so the stores a case seeds
+// and the boot's own stores share one file-cell table, as the old module-level registry did.
+let testRoot = createTestStoreRoot()
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 
 // ── os — same disposable-homedir redirect as skeletonFlows.test.ts. Without it this suite
@@ -123,6 +128,7 @@ let recentGamesDeps: RecentGamesModule.RecentGamesDeps
 
 function freshRegistry(): void {
   jest.resetModules()
+  testRoot = createTestStoreRoot()
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
   ;({ getSteamLibraries } = require('backend/utils'))
@@ -132,20 +138,26 @@ function freshRegistry(): void {
   } = require('backend/recent_games/recent_games'))
   ;({ steamLibraryStore } =
     require('backend/storeManagers/steam/stores').createSteamStores({
-      registry: createStoreRegistry()
+      registry: createStoreRegistry(),
+      root: testRoot
     }))
   ;({ createGlobalConfig } = require('backend/config'))
   recentGamesDeps = {
     stores: {
       kvs: require('backend/constants/key_value_stores').createKvsStores({
-        registry: createStoreRegistry()
+        registry: createStoreRegistry(),
+        root: testRoot
       })
     }
   }
   /* eslint-enable @typescript-eslint/no-require-imports */
 }
 
-const boot = () => bootFresh({ reuseRegistry: true })
+const boot = () =>
+  bootFresh({
+    reuseRegistry: true,
+    services: { storeRoot: testRoot }
+  })
 
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
 async function flush(): Promise<void> {
@@ -356,7 +368,7 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
 
       const { input, frames } = bootFresh({
         reuseRegistry: true,
-        services: { config }
+        services: { storeRoot: testRoot, config }
       })
       writeInvoke(input, 'launch-steam-hide', 'launch', [
         { appName: '999002', runner: 'steam' }

@@ -1,4 +1,6 @@
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
+import { createTestStoreRoot } from '../../../testUtils/testStoreRoot'
+import { createPciIdCaches } from '../gpu/pci_ids'
 import { getGpuInfo } from '../gpu'
 import { getGpuInfo_linux, parseLspciGpus } from '../gpu/linux'
 import { getSteamDeckInfo } from '../steamDeck'
@@ -171,7 +173,9 @@ describe('getGpuInfo tolerance', () => {
     const runner = createScriptedRunner([
       { cmd: 'powershell', error: { code: 'ENOENT' } }
     ])
-    await expect(getGpuInfo({ runner })).resolves.toEqual([])
+    await expect(
+      getGpuInfo({ runner }, createPciIdCaches({ root: createTestStoreRoot() }))
+    ).resolves.toEqual([])
   })
 
   it('resolves [] when lspci is missing on linux', async () => {
@@ -179,6 +183,8 @@ describe('getGpuInfo tolerance', () => {
     const runner = createScriptedRunner([
       { cmd: 'lspci', error: { code: 'ENOENT' } }
     ])
-    await expect(getGpuInfo({ runner })).resolves.toEqual([])
+    await expect(
+      getGpuInfo({ runner }, createPciIdCaches({ root: createTestStoreRoot() }))
+    ).resolves.toEqual([])
   })
 })

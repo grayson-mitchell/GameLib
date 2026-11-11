@@ -9,6 +9,9 @@ import {
 import { join } from 'path'
 import { getPath } from '../sidecar/pathShim'
 import GameLibStore from '../store_backend'
+import { createTestStoreRoot } from '../testUtils/testStoreRoot'
+
+const root = createTestStoreRoot()
 import { __resetStoreState, readOnlyReasonOf } from '../storeVersioning/engine'
 import { __resetReadOnlyForTest } from '../storeVersioning/readOnlyStores'
 import { listBackups } from '../storeVersioning/backup'
@@ -47,6 +50,7 @@ describe('GameLibStore versioning', () => {
     const p = fixture('p1', v({ k: 1 }, 99))
     const before = readFileSync(p)
     new GameLibStore({
+      root,
       cwd: 'store_cache',
       name: 'p1',
       defaults: { d: 1 },
@@ -59,6 +63,7 @@ describe('GameLibStore versioning', () => {
     const p = fixture('p1', v({ k: 1 }, 99))
     const before = readFileSync(p)
     const s = new GameLibStore<Record<string, unknown>>({
+      root,
       cwd: 'store_cache',
       name: 'p1',
       defaults: { d: 1 },
@@ -77,6 +82,7 @@ describe('GameLibStore versioning', () => {
   test('reads: user-state as-is, cache empty', () => {
     fixture('p1', v({ k: 'disk' }, 99))
     const u = new GameLibStore<Record<string, unknown>>({
+      root,
       cwd: 'store_cache',
       name: 'p1',
       declaration: { kind: 'user-state' }
@@ -85,6 +91,7 @@ describe('GameLibStore versioning', () => {
 
     fixture('p3c', v({ k: 'disk' }, 99))
     const c = new GameLibStore<Record<string, unknown>>({
+      root,
       cwd: 'store_cache',
       name: 'p3c',
       declaration: { kind: 'cache' }
@@ -95,6 +102,7 @@ describe('GameLibStore versioning', () => {
 
   test('writes stamp the version; clear keeps it', () => {
     const s = new GameLibStore<Record<string, unknown>>({
+      root,
       cwd: 'store_cache',
       name: 'p2',
       declaration: { kind: 'user-state' }
@@ -116,6 +124,7 @@ describe('GameLibStore versioning', () => {
     ])
     fixture('p5', v({ old: 7 }, 1))
     const s = new GameLibStore<Record<string, unknown>>({
+      root,
       cwd: 'store_cache',
       name: 'p5',
       declaration: { kind: 'user-state' }
@@ -135,8 +144,8 @@ describe('GameLibStore versioning', () => {
         join(userData(), 'steam_store')
       )
       const decl = { kind: 'user-state', tokenBearing: true } as const
-      new GameLibStore({ cwd: 'steam_store', declaration: decl })
-      new GameLibStore({ cwd: 'steam_store', declaration: decl })
+      new GameLibStore({ root, cwd: 'steam_store', declaration: decl })
+      new GameLibStore({ root, cwd: 'steam_store', declaration: decl })
       expect(listBackups(p)).toHaveLength(1)
     } finally {
       __setMigrationsForTest('steam_store/config', undefined)
@@ -145,6 +154,7 @@ describe('GameLibStore versioning', () => {
 
   posix('D-13 modes', () => {
     new GameLibStore<Record<string, unknown>>({
+      root,
       cwd: 'fresh_dir',
       name: 'n',
       defaults: { a: 1 },
@@ -160,6 +170,7 @@ describe('GameLibStore versioning', () => {
     chmodSync(tok, 0o666)
     chmodSync(tokDir, 0o755)
     new GameLibStore({
+      root,
       cwd: 'tok_dir',
       declaration: { kind: 'user-state', tokenBearing: true }
     })
@@ -169,7 +180,11 @@ describe('GameLibStore versioning', () => {
     const plainDir = join(userData(), 'plain_dir')
     fixture('config', { t: 1 }, plainDir)
     chmodSync(plainDir, 0o755)
-    new GameLibStore({ cwd: 'plain_dir', declaration: { kind: 'user-state' } })
+    new GameLibStore({
+      root,
+      cwd: 'plain_dir',
+      declaration: { kind: 'user-state' }
+    })
     expect(statSync(plainDir).mode & 0o777).toBe(0o755)
   })
 
@@ -177,11 +192,13 @@ describe('GameLibStore versioning', () => {
     const p = fixture('p1', v({ k: 1 }, 99))
     const before = readFileSync(p)
     new GameLibStore({
+      root,
       cwd: 'store_cache',
       name: 'p1',
       declaration: { kind: 'user-state' }
     })
     const dyn = new GameLibStore<Record<string, unknown>>({
+      root,
       cwd: 'store_cache',
       name: 'p1'
     })

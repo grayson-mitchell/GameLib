@@ -27,10 +27,10 @@
  *   2. A RELATIVE `options.cwd` — and every cache-store call site passes the
  *      relative literal `'store_cache'` — is resolved by `conf` against
  *      `process.cwd()`, i.e. the repo working directory. `electron-store`
- *      joined it onto `app.getPath('userData')` instead.
+ *      joined it onto Electron's userData path instead.
  *
  *   3. With no `cwd` at all, `conf` derives one from `env-paths` + the package
- *      name — a DIFFERENT algorithm from `app.getPath('userData')`. Accepting
+ *      name — a DIFFERENT algorithm from Electron's userData path. Accepting
  *      that default would silently RELOCATE every persisted setting, library
  *      cache and credential in the app, and the app would come up looking
  *      factory-fresh while the old files — which hold `humbleConfigStore`'s
@@ -39,7 +39,7 @@
  *      (threat T-35-16).
  *
  * So `cwd` is ALWAYS passed to `conf` explicitly and ALWAYS absolute, derived
- * from `sidecar/pathShim.ts`'s `getPath('userData')` — the one per-OS
+ * from `the boot's `StoreRoot.userData` — the one per-OS
  * derivation in this codebase, which already matches the conventions Electron
  * itself uses. `conf`'s own default is never allowed to apply. A happy side
  * effect: because `cwd` is always set, `conf` never calls `pkg-up` to infer a
@@ -67,7 +67,7 @@ import Conf from 'conf'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
 import type { StoreOptions } from 'common/types/typed_store'
 import { chmodSync, existsSync, mkdirSync, statSync } from 'fs'
-import { getPath } from './sidecar/pathShim'
+import type { StoreRoot } from './stores/storeRoot'
 import {
   isReadOnlyPath,
   noteRefusedWrite,
@@ -105,7 +105,7 @@ function assertContained(candidate: string, root: string, label: string): void {
 
 /**
  * Reproduces `electron-store`'s `name`/`cwd` translation, sourcing the default
- * cwd from `pathShim` instead of `app.getPath('userData')`, and enforces path
+ * cwd from the boot's `StoreRoot` instead of Electron's userData path, and enforces path
  * containment.
  *
  * The containment check is MOVED (not reimplemented) from
@@ -123,11 +123,12 @@ function assertContained(candidate: string, root: string, label: string): void {
 // type is `any`, so this reference is invisible to ts-prune despite both
 // files being in tsconfig `include`.
 export function translateStoreOptions<T extends Record<string, unknown>>(
-  options: StoreOptions<T> = {}
+  options: StoreOptions<T> = {},
+  root: StoreRoot
 ): TranslatedOptions<T> {
   const { name, cwd, ...rest } = options
   const configName = name ?? 'config'
-  const userData = getPath('userData')
+  const { userData } = root
   const resolvedCwd = cwd
     ? isAbsolute(cwd)
       ? cwd
@@ -159,12 +160,12 @@ export function translateStoreOptions<T extends Record<string, unknown>>(
   // userData just above. Deliberately NOT applied to an absolute caller-supplied
   // `cwd`: `game_overrides/stores.ts` passes an absolute
   // `join(userDataPath, 'store')` where `userDataPath` is Electron's
-  // `app.getPath('userData')`, which is NOT string-identical to `pathShim`'s
+  // Electron's userData path, which is NOT string-identical to the root's
   // (Electron derives the leaf from the app name -- 'gamelib' unpackaged vs
   // electron-builder.yml's productName 'GameLib'). `path.relative` is a pure
   // string operation with no knowledge that macOS/Windows filesystems are
   // case-insensitive, so anchoring an absolute caller-supplied cwd to
-  // pathShim's userData would compute '../gamelib/store' and throw on a path
+  // the root's userData would compute '../gamelib/store' and throw on a path
   // that is in fact the very same directory. Measured: this threw for real
   // during Phase 35 Plan 05 before the anchor was split.
   if (!cwd || !isAbsolute(cwd)) {
@@ -196,12 +197,24 @@ function tightenTokenPaths(filePath: string): void {
   }
 }
 
+type GameLibStoreOptions<T extends Record<string, unknown>> =
+  StoreOptions<T> & {
+    declaration?: StoreDeclaration
+    /** The boot's root: the store's directory and shared state come from it, never from a global. */
+    root?: StoreRoot
+  }
+
 function prepareStore<T extends Record<string, unknown>>(
-  options: (StoreOptions<T> & { declaration?: StoreDeclaration }) | undefined
+  options: GameLibStoreOptions<T> | undefined
 ): TranslatedOptions<T> & { configFileMode: number } {
-  const { declaration, ...rest } = options ?? {}
+  const { declaration, root, ...rest } = options ?? {}
+  if (!root) {
+    throw new Error(
+      '[backend/store_backend] a store must be constructed with a StoreRoot'
+    )
+  }
   // The containment throw is preserved on purpose (WR-11).
-  const translated = translateStoreOptions(rest as StoreOptions<T>)
+  const translated = translateStoreOptions(rest as StoreOptions<T>, root)
   const filePath = resolve(
     translated.cwd,
     `${translated.configName}.${translated.fileExtension ?? 'json'}`
@@ -226,7 +239,7 @@ function prepareStore<T extends Record<string, unknown>>(
 export default class GameLibStore<
   T extends Record<string, unknown> = Record<string, unknown>
 > extends Conf<T> {
-  constructor(options?: StoreOptions<T> & { declaration?: StoreDeclaration }) {
+  constructor(options?: GameLibStoreOptions<T>) {
     super(prepareStore(options))
   }
 

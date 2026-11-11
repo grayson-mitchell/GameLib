@@ -42,6 +42,11 @@
 // default (real) module resolution — it does not substitute a replacement. ─
 jest.unmock('i18next')
 
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+
+// Per case (reset in freshRegistry): the boot is handed this root so the stores a case seeds
+// and the boot's own stores share one file-cell table, as the old module-level registry did.
+let testRoot = createTestStoreRoot()
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { dirname, join } from 'path'
 import { tmpdir } from 'os'
@@ -253,6 +258,7 @@ let mockRequestRustInvoke: jest.Mock
 
 function freshRegistry(): void {
   jest.resetModules()
+  testRoot = createTestStoreRoot()
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
   const { createGlobalConfig } = require('backend/config')
@@ -260,14 +266,19 @@ function freshRegistry(): void {
   ;({ showDialogBoxModalAuto } = require('../../dialog/dialog'))
   ;({ achievementStore } =
     require('../../storeManagers/gog/stores').createGogStores({
-      registry: createStoreRegistry()
+      registry: createStoreRegistry(),
+      root: testRoot
     }))
   /* eslint-enable @typescript-eslint/no-require-imports */
   mockedGlobalConfigGet = createGlobalConfig as jest.Mock
   mockRequestRustInvoke = requestRustInvoke as jest.Mock
 }
 
-const boot = () => bootFresh({ reuseRegistry: true })
+const boot = () =>
+  bootFresh({
+    reuseRegistry: true,
+    services: { storeRoot: testRoot }
+  })
 
 /** Points the mocked createGlobalConfig() at a fresh settings object. */
 function mockAppSettings(partial: Record<string, unknown>) {

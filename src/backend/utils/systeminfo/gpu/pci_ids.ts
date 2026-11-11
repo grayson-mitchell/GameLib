@@ -5,6 +5,7 @@
 import { resolveTxt } from 'dns'
 import { promisify } from 'util'
 import CacheStore from 'backend/cache'
+import type { StoreRoot } from 'backend/stores/storeRoot'
 
 import type { PartialGpuInfo } from './index'
 import type { GPUInfo } from '../index'
@@ -14,16 +15,26 @@ const resolveTxtAsync = promisify(resolveTxt)
 type DeviceNameCacheKey =
   | `${string}_${string}_${string}_${string}` // DeviceSubID_VendorSubID_DeviceID_VendorID
   | `${string}_${string}` // DeviceID_VendorID
-export const deviceNameCache = new CacheStore<string, DeviceNameCacheKey>(
-  'pci_ids_device',
-  60 * 24 * 7,
-  { kind: 'cache' }
-) // 7 days
-export const vendorNameCache = new CacheStore<string, string>(
-  'pci_ids_vendor',
-  60 * 24 * 7,
-  { kind: 'cache' }
-)
+
+/** The two pci.ids lookup caches. On-disk names `pci_ids_device` / `pci_ids_vendor` are fixed. */
+export interface PciIdCaches {
+  deviceNameCache: CacheStore<string, DeviceNameCacheKey>
+  vendorNameCache: CacheStore<string, string>
+}
+
+export function createPciIdCaches(deps: { root: StoreRoot }): PciIdCaches {
+  const deviceNameCache = new CacheStore<string, DeviceNameCacheKey>(
+    'pci_ids_device',
+    60 * 24 * 7,
+    { root: deps.root, kind: 'cache' }
+  ) // 7 days
+  const vendorNameCache = new CacheStore<string, string>(
+    'pci_ids_vendor',
+    60 * 24 * 7,
+    { root: deps.root, kind: 'cache' }
+  )
+  return { deviceNameCache, vendorNameCache }
+}
 
 async function pciIdDnsQuery(pre: string): Promise<string | false> {
   const records: string[][] = await resolveTxtAsync(
@@ -33,6 +44,7 @@ async function pciIdDnsQuery(pre: string): Promise<string | false> {
 }
 
 async function lookupDeviceString(
+  { deviceNameCache }: PciIdCaches,
   vendorId: string,
   deviceId: string,
   subvendorId?: string,
@@ -68,7 +80,10 @@ async function lookupDeviceString(
   return resultWithoutSubIDs
 }
 
-async function lookupVendorString(vendorId: string): Promise<string | false> {
+async function lookupVendorString(
+  { vendorNameCache }: PciIdCaches,
+  vendorId: string
+): Promise<string | false> {
   const cached = vendorNameCache.get(vendorId)
   if (cached) return cached
 
@@ -78,6 +93,7 @@ async function lookupVendorString(vendorId: string): Promise<string | false> {
 }
 
 async function populateDeviceAndVendorName(
+  caches: PciIdCaches,
   partialGpus: PartialGpuInfo[]
 ): Promise<GPUInfo[]> {
   const fullGpuInfo: GPUInfo[] = []
@@ -88,12 +104,13 @@ async function populateDeviceAndVendorName(
     const subdeviceId = gpu.subdeviceId?.toLowerCase()
 
     const deviceString = await lookupDeviceString(
+      caches,
       vendorId,
       deviceId,
       subvendorId,
       subdeviceId
     )
-    const vendorString = await lookupVendorString(vendorId)
+    const vendorString = await lookupVendorString(caches, vendorId)
     if (!deviceString || !vendorString) continue
 
     fullGpuInfo.push({

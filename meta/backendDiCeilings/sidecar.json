@@ -29,7 +29,6 @@
     "src/backend/sidecar/appShellFlowRegistration.ts": 5,
     "src/backend/sidecar/devEpicCookieSweepRegistration.ts": 1,
     "src/backend/sidecar/enrichmentFlowRegistration.ts": 1,
-    "src/backend/sidecar/fileStore.ts": 1,
     "src/backend/sidecar/installedJsonWatcher.ts": 2,
     "src/backend/sidecar/ipcValidation.ts": 3,
     "src/backend/sidecar/outboundHttpRegistry.ts": 3,

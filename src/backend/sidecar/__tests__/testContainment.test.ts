@@ -996,6 +996,7 @@ const IN_SCOPE_SUITES = [
  * filesystem or child process.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
+  'appPathsParity.test.ts',
   'appRootResolution.test.ts',
   'appShellFlows.test.ts',
   'appShellImportGate.test.ts',

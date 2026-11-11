@@ -54,6 +54,11 @@
  * / SidecarNotification / the openExternal SidecarRpcRequest) — never on
  * internals — per the plan's own acceptance criteria.
  */
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+
+// Per case (reset in freshRegistry): the boot is handed this root so the stores a case seeds
+// and the boot's own stores share one file-cell table, as the old module-level registry did.
+let testRoot = createTestStoreRoot()
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 
 // ── os — GAP FIX (2026-07-22): Test 4 below writes fixture data (including a
@@ -165,6 +170,7 @@ let configStore: ReturnType<
 
 function freshRegistry(): void {
   jest.resetModules()
+  testRoot = createTestStoreRoot()
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
   ;({ getPath } = require('../pathShim'))
@@ -174,11 +180,13 @@ function freshRegistry(): void {
   ;({ getSteamLibraries } = require('backend/utils'))
   ;({ configStore: steamConfigStore } =
     require('../../storeManagers/steam/stores').createSteamStores({
-      registry: createStoreRegistry()
+      registry: createStoreRegistry(),
+      root: testRoot
     }))
   ;({ configStore } =
     require('backend/constants/key_value_stores').createKvsStores({
-      registry: createStoreRegistry()
+      registry: createStoreRegistry(),
+      root: testRoot
     }))
   /* eslint-enable @typescript-eslint/no-require-imports */
 }
@@ -188,7 +196,10 @@ function freshRegistry(): void {
 const boot = () =>
   bootFresh({
     reuseRegistry: true,
-    services: { anonymousClient: createTestAnonymousClient() }
+    services: {
+      storeRoot: testRoot,
+      anonymousClient: createTestAnonymousClient()
+    }
   })
 
 /**

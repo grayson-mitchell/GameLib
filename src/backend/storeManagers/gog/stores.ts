@@ -6,10 +6,9 @@ import {
   GamesDBData,
   GogInstallInfo
 } from 'common/types/gog'
-import type { StoreRegistry } from 'backend/stores/storeRegistry'
+import type { StoreFamilyDeps } from 'backend/stores/storeRoot'
 
-export function createGogStores(deps: { registry: StoreRegistry }) {
-  const { registry } = deps
+export function createGogStores(deps: StoreFamilyDeps) {
   const installedGamesStore = new TypeCheckedStoreBackend(
     'gogInstalledGamesStore',
     {
@@ -17,7 +16,7 @@ export function createGogStores(deps: { registry: StoreRegistry }) {
       name: 'installed'
     },
     { kind: 'user-state' },
-    registry
+    deps
   )
   const configStore = new TypeCheckedStoreBackend(
     'gogConfigStore',
@@ -25,22 +24,21 @@ export function createGogStores(deps: { registry: StoreRegistry }) {
       cwd: 'gog_store'
     },
     { kind: 'user-state' },
-    registry
+    deps
   )
   const apiInfoCache = new CacheStore<GamesDBData>('gog_api_info', undefined, {
+    root: deps.root,
     kind: 'cache'
   })
   const libraryStore = new CacheStore<GameInfo[], 'games'>(
     'gog_library',
     null,
-    {
-      kind: 'user-state'
-    }
+    { root: deps.root, kind: 'user-state' }
   )
   const achievementStore = new CacheStore<GOGAchievement[]>(
     'gog_achievements',
     null,
-    { kind: 'cache' }
+    { root: deps.root, kind: 'cache' }
   )
   const syncStore = new TypeCheckedStoreBackend(
     'gogSyncStore',
@@ -50,12 +48,12 @@ export function createGogStores(deps: { registry: StoreRegistry }) {
       clearInvalidConfig: true
     },
     { kind: 'user-state' },
-    registry
+    deps
   )
   const installInfoStore = new CacheStore<GogInstallInfo>(
     'gog_install_info',
     undefined,
-    { kind: 'cache' }
+    { root: deps.root, kind: 'cache' }
   )
   const privateBranchesStore = new TypeCheckedStoreBackend(
     'gogPrivateBranches',
@@ -65,12 +63,12 @@ export function createGogStores(deps: { registry: StoreRegistry }) {
       clearInvalidConfig: true
     },
     { kind: 'user-state' },
-    registry
+    deps
   )
   const playtimeSyncQueue = new CacheStore<Array<GOGSessionSyncQueueItem>>(
     'gog_playtime_sync_queue',
     undefined,
-    { kind: 'user-state' }
+    { root: deps.root, kind: 'user-state' }
   )
 
   return {

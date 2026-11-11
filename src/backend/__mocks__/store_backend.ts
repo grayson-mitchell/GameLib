@@ -7,7 +7,7 @@
  * store tree rather than sharing one with production code paths.
  *
  * The redirect target is a RELATIVE cwd, which the real shim joins onto
- * `pathShim.getPath('userData')`. That is what makes it safe: for the whole
+ * the store root's `userData` (a test root when the caller passes none). That is what makes it safe: for the whole
  * `Backend` jest project, `jest.setupContainment.ts` has already redirected
  * `os.homedir()` and `HOME`/`APPDATA`/`XDG_*` into a disposable per-test-file
  * root, so the resolved userData is itself throwaway.
@@ -21,17 +21,29 @@
 
 import { join } from 'path'
 import type { StoreOptions } from 'common/types/typed_store'
+import type { StoreRoot } from '../stores/storeRoot'
 
 const OriginalStore = jest.requireActual('../store_backend').default
 
 const MOCK_STORE_ROOT = 'jest_store_root'
 
+// A suite that builds a store with no root gets one rooted at the jest-contained userData.
+let defaultRoot: StoreRoot | undefined
+function fallbackRoot(): StoreRoot {
+  const { createTestStoreRoot } = jest.requireActual(
+    '../testUtils/testStoreRoot'
+  )
+  defaultRoot ??= createTestStoreRoot()
+  return defaultRoot as StoreRoot
+}
+
 export default class Store<
   T extends Record<string, unknown> = Record<string, unknown>
 > extends OriginalStore<T> {
-  constructor(options?: StoreOptions<T>) {
+  constructor(options?: StoreOptions<T> & { root?: StoreRoot }) {
     super({
       ...(options ?? {}),
+      root: options?.root ?? fallbackRoot(),
       cwd: options?.cwd ? join(MOCK_STORE_ROOT, options.cwd) : MOCK_STORE_ROOT
     })
   }

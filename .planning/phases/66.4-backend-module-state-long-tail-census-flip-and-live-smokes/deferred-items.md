@@ -1,1 +1,2 @@
 out-of-scope: pnpm lint tests-scope 1 error in src/backend/storeManagers/steam/__tests__/games.test.ts:17574 (no-unnecessary-type-assertion), file untouched by 66.4-03
+out-of-scope (from 66.4-02, found by 66.4-04): meta/sidecarExitCheck.ts trips two ratchets -- `pnpm find-deadcode` (new knip finding: exports, THRESHOLDS) and src/backend/__tests__/tauriShellSource.test.ts "no test or meta script reads main.rs directly" (offender: meta/sidecarExitCheck.ts). Neither touches 66.4-04 files.

@@ -1,3 +1,4 @@
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { gzipSync } from 'node:zlib'
 import { readFileSync } from 'graceful-fs'
 
@@ -13,7 +14,9 @@ import { crossoverIndexSchema, CrossoverIndex } from '../schema'
 import { crossoverIndexHas, crossoverIndexDescriptor } from '../index'
 import { createCrossoverIndexStores } from '../stores'
 
-const crossoverIndex = createCrossoverIndexStores()
+const crossoverIndex = createCrossoverIndexStores({
+  root: createTestStoreRoot()
+})
 
 const { crossoverIndexStore } = crossoverIndex
 const deps = { stores: { crossoverIndex } }

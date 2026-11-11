@@ -75,6 +75,7 @@ jest.mock('axios', () => ({
 //    inline" even though nothing here reads it directly.
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { LogPrefix } from '../../logger'
 import { bootFresh } from './helpers/sidecarHarness'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
@@ -105,7 +106,11 @@ function bootedWorld(opts?: {
   // The boot builds the managers (66.1-23), so the suite builds its own, spies the drain on the
   // gog one, and hands them in prebuilt: the boot's drain call then reaches the spy.
   let gogManager!: import('../../storeManagers/gog/library').default
-  const prebuilt: Partial<import('../../services/types').BootServices> = {}
+  // The boot is handed this root so the queue this case seeds and the boot's own share one cell.
+  const root = createTestStoreRoot()
+  const prebuilt: Partial<import('../../services/types').BootServices> = {
+    storeRoot: root
+  }
   bootFresh({
     services: prebuilt,
     before: () => {
@@ -114,7 +119,8 @@ function bootedWorld(opts?: {
       require('../bootstrap')
       playtimeSyncQueue =
         require('../../storeManagers/gog/stores').createGogStores({
-          registry: createStoreRegistry()
+          registry: createStoreRegistry(),
+          root
         }).playtimeSyncQueue
       opts?.seed?.(playtimeSyncQueue)
       const { createStoreManagers } =

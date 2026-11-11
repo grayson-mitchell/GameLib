@@ -1,3 +1,4 @@
+import { createTestStoreRoot } from '../../../testUtils/testStoreRoot'
 import {
   createTestManagerDeps,
   createTestStores
@@ -22,7 +23,10 @@ import { at } from './fixtures/indexed'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createSteamStores } from '../stores'
 
-const steamStoresModule = createSteamStores({ registry: createStoreRegistry() })
+const steamStoresModule = createSteamStores({
+  registry: createStoreRegistry(),
+  root: createTestStoreRoot()
+})
 
 // 66.3-15: the bottle settings are read through the deps slice, not a module import.
 const getSteamBottleSettings = jest.fn()

@@ -1,3 +1,4 @@
+import { createTestStoreRoot } from '../../../testUtils/testStoreRoot'
 import { readFileSync, copyFileSync, mkdirSync } from 'graceful-fs'
 import { join } from 'path'
 import { DirResult, dirSync } from 'tmp'
@@ -9,7 +10,10 @@ import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createKvsStores } from 'backend/constants/key_value_stores'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 
-const { tsStore } = createKvsStores({ registry: createStoreRegistry() })
+const { tsStore } = createKvsStores({
+  registry: createStoreRegistry(),
+  root: createTestStoreRoot()
+})
 
 jest.mock('backend/logger')
 jest.mock('backend/dialog/dialog')

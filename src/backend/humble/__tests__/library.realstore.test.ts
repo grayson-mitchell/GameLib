@@ -51,6 +51,7 @@ jest.mock('../expirationAlerts', () => ({
 
 // ── Imports (after mocks) — REAL stores/CacheStore ──────────────
 
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { defined } from './defined'
 import { createHumbleLibrary } from '../library'
 import { createHumbleSyncFence } from '../syncFence'
@@ -60,7 +61,8 @@ import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createHumbleStores } from '../stores'
 
 const humbleStoreModule = createHumbleStores({
-  registry: createStoreRegistry()
+  registry: createStoreRegistry(),
+  root: createTestStoreRoot()
 })
 
 const { humbleLibraryStore, humbleSyncStore } = humbleStoreModule

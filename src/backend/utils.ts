@@ -53,10 +53,6 @@ import { readdir, lstat, rm } from 'fs/promises'
 import { backendEvents } from './backend_events'
 import EasyDl from 'easydl'
 
-import {
-  deviceNameCache,
-  vendorNameCache
-} from './utils/systeminfo/gpu/pci_ids'
 import type { AppSettings, WineManagerStatus } from 'common/types'
 import { isUmuSupported } from './utils/compatibility_layers'
 import { isLinux, isMac, isWindows } from './constants/environment'
@@ -325,7 +321,10 @@ function removeSpecialcharacters(text: string): string {
 
 /** The cache families `clearCache` empties. */
 export interface ClearCacheDeps extends DialogBoxDeps {
-  stores: Pick<Stores, 'wikiGameInfo' | 'gog' | 'legendary' | 'nile'>
+  stores: Pick<
+    Stores,
+    'wikiGameInfo' | 'gog' | 'legendary' | 'nile' | 'systemInfo'
+  >
 }
 
 /**
@@ -347,7 +346,7 @@ function clearCache(
   library?: 'gog' | 'legendary' | 'nile',
   fromVersionChange = false
 ) {
-  const { wikiGameInfo, gog, legendary, nile } = deps.stores
+  const { wikiGameInfo, gog, legendary, nile, systemInfo } = deps.stores
   wikiGameInfo.wikiGameInfoStore.clear()
   if (isStore(library, 'gog') || !library) {
     gog.apiInfoCache.clear()
@@ -366,8 +365,8 @@ function clearCache(
   }
 
   if (!fromVersionChange) {
-    deviceNameCache.clear()
-    vendorNameCache.clear()
+    systemInfo.deviceNameCache.clear()
+    systemInfo.vendorNameCache.clear()
   }
 }
 

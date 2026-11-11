@@ -107,7 +107,7 @@ function isContainedGameConfig(appName: string): boolean {
 export function registerSettingsFlows(deps: {
   ipc: Pick<IpcRegistry, 'handle' | 'on'>
   managers: Pick<StoreManagers, 'library'>
-  stores: Pick<Stores, 'kvs'>
+  stores: Pick<Stores, 'kvs' | 'systemInfo'>
   config: Pick<
     GlobalConfigSlice,
     'getSettings' | 'setSetting' | 'set' | 'flush'
@@ -264,7 +264,8 @@ export function registerSettingsFlows(deps: {
         libraryManagers: deps.managers.library,
         runner: deps.runner,
         config: deps.config,
-        appInfo: deps.appInfo
+        appInfo: deps.appInfo,
+        stores: deps.stores
       },
       cache as boolean | undefined
     )

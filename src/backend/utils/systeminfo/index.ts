@@ -20,6 +20,7 @@ import {
 import type { VersionProbeDeps } from '../helperBinaries'
 import type { ProbeDeps } from '../os/processes'
 import type { AppInfo } from 'backend/process/context'
+import type { Stores } from 'backend/services/types'
 import type { GlobalConfigSlice } from 'backend/config'
 import { APP_DISPLAY_NAME } from 'backend/constants/others'
 
@@ -73,7 +74,9 @@ interface SystemInformation {
 let cachedSystemInfo: SystemInformation | null = null
 /** R1 slice: the runner managers the version probes ask. */
 export type SystemInfoDeps = VersionProbeDeps &
-  ProbeDeps & { config: Pick<GlobalConfigSlice, 'getSettings'> } & {
+  ProbeDeps & { stores: Pick<Stores, 'systemInfo'> } & {
+    config: Pick<GlobalConfigSlice, 'getSettings'>
+  } & {
     appInfo: Pick<AppInfo, 'version'>
   }
 
@@ -116,7 +119,7 @@ async function fetchSystemInfo(
 ): Promise<SystemInformation> {
   const cpus = os.cpus()
   const memory = await getMemoryInfo(deps)
-  const gpus = await getGpuInfo(deps)
+  const gpus = await getGpuInfo(deps, deps.stores.systemInfo)
   const detailedOsInfo = await getOsInfo(deps)
   const deckInfo = getSteamDeckInfo(cpus, gpus)
   const versionDeps = deps

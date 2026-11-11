@@ -46,7 +46,7 @@ describe('createTestStores', () => {
 
   it('does not resolve a family until it is read', () => {
     const stores = createTestStores()
-    expect(Object.keys(stores)).toHaveLength(16)
+    expect(Object.keys(stores)).toHaveLength(18)
     const desc = Object.getOwnPropertyDescriptor(stores, 'steam')
     expect(typeof desc?.get).toBe('function')
   })

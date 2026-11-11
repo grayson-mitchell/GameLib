@@ -1,15 +1,8 @@
 import { TypeCheckedStoreBackend } from '../typed_store'
 import { join } from 'node:path'
-import type { StoreRegistry } from 'backend/stores/storeRegistry'
+import type { StoreFamilyDeps } from 'backend/stores/storeRoot'
 
-export function createMacArchStores(deps: { registry: StoreRegistry }) {
-  const { registry } = deps
-  // Read at CALL time, not import time: constants/paths resolves electron's app paths when it is
-  // first evaluated, so a static import made importing this module (and so testUtils/testServices)
-  // touch the platform shell. The factory is the only consumer.
-  type Paths = typeof import('../constants/paths')
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { userDataPath } = require('../constants/paths') as Paths
+export function createMacArchStores(deps: StoreFamilyDeps) {
   /**
    * Persisted macOS arch verdicts for non-Steam runners (quick 261029-t39). One
    * whole-record `verdicts` map keyed `${runner}:${appName}`; read and written as
@@ -21,12 +14,12 @@ export function createMacArchStores(deps: { registry: StoreRegistry }) {
   const macArchStore = new TypeCheckedStoreBackend(
     'macArchStore',
     {
-      cwd: join(userDataPath, 'store'),
+      cwd: join(deps.root.userData, 'store'),
       name: 'mac-arch',
       clearInvalidConfig: true
     },
     { kind: 'user-state' },
-    registry
+    deps
   )
 
   return { macArchStore }

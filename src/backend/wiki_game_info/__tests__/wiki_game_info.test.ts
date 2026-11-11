@@ -1,3 +1,4 @@
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import type { Game } from 'common/types/game_manager'
 import type { GameInfo } from 'common/types'
 
@@ -50,7 +51,9 @@ import { getWikiGameInfo } from '../wiki_game_info'
 import { getInfoFromPCGamingWiki } from '../pcgamingwiki/utils'
 import { createWikiGameInfoStores } from '../stores'
 
-const wikiGameInfoStores = createWikiGameInfoStores()
+const wikiGameInfoStores = createWikiGameInfoStores({
+  root: createTestStoreRoot()
+})
 
 const { wikiGameInfoStore } = wikiGameInfoStores
 const gamesDbDeps = {

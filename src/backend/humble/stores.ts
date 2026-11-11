@@ -5,7 +5,7 @@ import {
   HumbleOrderCacheEntry,
   HumbleSyncState
 } from 'common/types/humble'
-import type { StoreRegistry } from 'backend/stores/storeRegistry'
+import type { StoreFamilyDeps } from 'backend/stores/storeRoot'
 
 /**
  * D-74 (locked: "no new secret-surface class"): the revealed key value and
@@ -57,15 +57,14 @@ interface HumbleLocalRedeemedRecord {
   source?: 'user' | 'ownership-exact'
 }
 
-export function createHumbleStores(deps: { registry: StoreRegistry }) {
-  const { registry } = deps
+export function createHumbleStores(deps: StoreFamilyDeps) {
   const configStore = new TypeCheckedStoreBackend(
     'humbleConfigStore',
     {
       cwd: 'humble_store'
     },
     { kind: 'user-state', tokenBearing: true },
-    registry
+    deps
   )
   // Phase 11 scope. Wiped by HumbleUser.disconnect() alongside configStore
   // (D-03/D-04) — safe to lose since it is fully reconstructible from a
@@ -78,7 +77,7 @@ export function createHumbleStores(deps: { registry: StoreRegistry }) {
   const humbleLibraryStore = new CacheStore<
     HumbleOrderCacheEntryInternal,
     string
-  >('humble_library', null, { kind: 'user-state' })
+  >('humble_library', null, { root: deps.root, kind: 'user-state' })
   // Last-synced timestamp / fail-soft state (D-31/D-32). Also wiped by
   // disconnect() alongside humbleLibraryStore. The whole HumbleSyncState is
   // stored as a single record under the 'state' key (rather than one CacheStore
@@ -88,7 +87,7 @@ export function createHumbleStores(deps: { registry: StoreRegistry }) {
   const humbleSyncStore = new CacheStore<HumbleSyncState, 'state'>(
     'humble_sync',
     null,
-    { kind: 'cache' }
+    { root: deps.root, kind: 'cache' }
   )
   // D-04/D-30: this store is NEVER cleared by HumbleUser.disconnect() — it
   // (and the future audit log) must survive a disconnect/reconnect cycle so a
@@ -98,7 +97,7 @@ export function createHumbleStores(deps: { registry: StoreRegistry }) {
   const humbleRevealedStore = new CacheStore<{ revealedAt: number }, string>(
     'humble_revealed',
     null,
-    { kind: 'user-state' }
+    { root: deps.root, kind: 'user-state' }
   )
   // D-42/D-43: a user's "Not the same game" ownership-match correction, keyed
   // by `machine_name`. Like humbleRevealedStore above, this store is NEVER
@@ -111,7 +110,7 @@ export function createHumbleStores(deps: { registry: StoreRegistry }) {
   const humbleOwnershipOverrideStore = new CacheStore<
     { overriddenAt: number },
     string
-  >('humble_ownership_override', null, { kind: 'user-state' })
+  >('humble_ownership_override', null, { root: deps.root, kind: 'user-state' })
   // D-59 (reinterpreted per D-57 research — the gift-link is a static
   // deep-link GameLib never possesses, so this store does NOT hold a URL):
   // records when the user confirmed the "Open Humble" gift action for a
@@ -126,7 +125,7 @@ export function createHumbleStores(deps: { registry: StoreRegistry }) {
   const humbleGiftedAtStore = new CacheStore<{ giftedAt: number }, string>(
     'humble_gifted_at',
     null,
-    { kind: 'user-state' }
+    { root: deps.root, kind: 'user-state' }
   )
   // Phase 14 guided claim flow. Keyed by a composite `gamekey:machineName`
   // string constructed by the caller (library.ts, later plan) — two different
@@ -139,7 +138,7 @@ export function createHumbleStores(deps: { registry: StoreRegistry }) {
   const humbleAuditStore = new CacheStore<AuditRecord[], string>(
     'humble_audit',
     null,
-    { kind: 'user-state' }
+    { root: deps.root, kind: 'user-state' }
   )
   // Phase 14 guided claim flow (HCLAIM-04, D-77): marks a key as locally
   // redeemed (the user confirmed "Mark as redeemed" in the wizard, ahead of any
@@ -155,7 +154,7 @@ export function createHumbleStores(deps: { registry: StoreRegistry }) {
   const humbleLocalRedeemedStore = new CacheStore<
     HumbleLocalRedeemedRecord,
     string
-  >('humble_local_redeemed', null, { kind: 'user-state' })
+  >('humble_local_redeemed', null, { root: deps.root, kind: 'user-state' })
   // Phase 15 (HSTORE-03, D-92): records the last-notified expiration date per
   // key, keyed by a composite `gamekey:machineName` string (matching
   // humbleAuditStore/humbleLocalRedeemedStore above), so a re-sync that
@@ -176,7 +175,7 @@ export function createHumbleStores(deps: { registry: StoreRegistry }) {
   const humbleNotifiedExpirationStore = new CacheStore<
     { expiration: string },
     string
-  >('humble_notified_expiration', null, { kind: 'user-state' })
+  >('humble_notified_expiration', null, { root: deps.root, kind: 'user-state' })
   // Plan 42-03 (D-42-01 durability): records that the user explicitly Undid an
   // auto-settle (a local-redeemed record with source: 'ownership-exact'),
   // keyed by the same composite `gamekey:machineName` string as
@@ -197,7 +196,7 @@ export function createHumbleStores(deps: { registry: StoreRegistry }) {
   const humbleSettleDeclinedStore = new CacheStore<
     { declinedAt: number },
     string
-  >('humble_settle_declined', null, { kind: 'user-state' })
+  >('humble_settle_declined', null, { root: deps.root, kind: 'user-state' })
 
   return {
     configStore,

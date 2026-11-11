@@ -1,13 +1,17 @@
 import Store from 'backend/store_backend'
 import CacheStore from '../cache'
+import { createTestStoreRoot } from '../testUtils/testStoreRoot'
 import { mkdirSync, writeFileSync, readFileSync, mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join as joinPath } from 'path'
 
 jest.mock('backend/store_backend')
 
+const root = createTestStoreRoot()
+
 describe('backend/cache.ts', () => {
   const testStore = new CacheStore<string>('test_store', undefined, {
+    root,
     kind: 'cache'
   })
   const internalStore = new Store({
@@ -48,6 +52,7 @@ describe('backend/cache.ts', () => {
 
   test('Custom lifetime works', () => {
     const testStore2 = new CacheStore<string>('test_store_2', 60, {
+      root,
       kind: 'cache'
     })
     const three_hours_ago = new Date(now).setHours(now.getHours() - 3)
@@ -59,6 +64,7 @@ describe('backend/cache.ts', () => {
 
   test('Allows having no expiration time', () => {
     const testStore2 = new CacheStore<string>('test_store_2', null, {
+      root,
       kind: 'cache'
     })
     const three_hours_ago = new Date(now).setHours(now.getHours() - 3)
@@ -88,6 +94,7 @@ describe('backend/cache.ts', () => {
 
   test('entries() excludes timestamp bookkeeping on the in-memory store', () => {
     const memStore = new CacheStore<string>('test_store_mem', undefined, {
+      root,
       kind: 'cache'
     })
     memStore.use_in_memory()
@@ -127,7 +134,10 @@ describe('store path parity (Phase 35 D-04)', () => {
     jest.requireActual('conf').default ?? jest.requireActual('conf')
 
   const derivedPath = (name?: string, cwd = 'store_cache') => {
-    const t = translateStoreOptions({ cwd, name, clearInvalidConfig: true })
+    const t = translateStoreOptions(
+      { cwd, name, clearInvalidConfig: true },
+      root
+    )
     return joinPath(t.cwd, `${t.configName}.json`)
   }
 
@@ -238,7 +248,10 @@ describe('store path parity (Phase 35 D-04)', () => {
     )
 
     // Production option shape: relative cwd, no explicit name.
-    const store = new (jest.requireActual('../store_backend').default)({ cwd })
+    const store = new (jest.requireActual('../store_backend').default)({
+      root,
+      cwd
+    })
 
     expect(store.path).toBe(joinPath(dir, 'config.json'))
     expect(store.get('theme')).toBe('midnightMirage')
@@ -256,7 +269,7 @@ describe('store path parity (Phase 35 D-04)', () => {
 
   test('refuses a store name that tries to escape its cwd', () => {
     expect(() =>
-      translateStoreOptions({ cwd: 'store_cache', name: '../../evil' })
+      translateStoreOptions({ cwd: 'store_cache', name: '../../evil' }, root)
     ).toThrow(/outside/)
   })
 })

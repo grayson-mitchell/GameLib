@@ -5,6 +5,8 @@ import { TypeCheckedStoreBackend } from '../../typed_store'
 import { defined } from '../../testUtils/indexed'
 import { createStores } from '../createStores'
 import { createStoreRegistry } from '../storeRegistry'
+import { createStoreRoot } from '../storeRoot'
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { __kindOfForTest } from '../../storeVersioning/engine'
 import fixture from './fixtures/registeredStores.json'
 
@@ -21,7 +23,7 @@ describe('createStoreRegistry', () => {
       'configStore',
       { cwd: 'store' },
       { kind: 'user-state' },
-      mine
+      { registry: mine, root: createTestStoreRoot() }
     )
     expect(mine.get('configStore')).toBe(store)
     expect(mine.getOptions('configStore')).toEqual({ cwd: 'store' })
@@ -36,7 +38,8 @@ describe('createStoreRegistry', () => {
     new TypeCheckedStoreBackend(
       'timestampStore',
       { cwd: 'store', name: 'timestamp' },
-      { kind: 'user-state' }
+      { kind: 'user-state' },
+      { root: createTestStoreRoot() }
     )
     expect(registry.get('timestampStore')).toBeUndefined()
     expect(registry.names()).toEqual([])
@@ -84,7 +87,7 @@ describe('createStores', () => {
 
   it('registers exactly the stores the singletons registered, with identical options and declarations', () => {
     const registry = createStoreRegistry()
-    createStores({ registry })
+    createStores({ registry, root: createTestStoreRoot() })
     expect(registry.names().sort()).toEqual(
       registered.map((entry) => entry.registeredAs).sort()
     )
@@ -115,7 +118,10 @@ describe('createStores', () => {
 
   /** Every CacheStore `createStores` builds, keyed by its file name under store_cache. */
   function builtCacheStores(): Map<string, CacheInternals> {
-    const stores = createStores({ registry: createStoreRegistry() })
+    const stores = createStores({
+      registry: createStoreRegistry(),
+      root: createTestStoreRoot()
+    })
     const built = new Map<string, CacheInternals>()
     for (const family of Object.values(stores)) {
       for (const store of Object.values(family)) {
@@ -131,18 +137,24 @@ describe('createStores', () => {
     return built
   }
 
-  // The pci_ids_* caches are built outside createStores (the systeminfo module), so they are in
-  // the fixture but not in this factory's output.
-  const fixtureCaches = fixture.filter(
-    (entry) =>
-      entry.registeredAs === null && !entry.options.name.startsWith('pci_ids_')
-  )
+  // The fixture predates the engine family: `steam_engine_notices` joined createStores in 66.4
+  // plan 04 (its on-disk name is unchanged), the pci_ids_* caches joined as `systemInfo`.
+  const fixtureCaches = fixture.filter((entry) => entry.registeredAs === null)
+  const ENGINE_NOTICE_CACHE = 'steam_engine_notices'
 
   it('builds exactly the fixture cache stores, each declared with the fixture kind', () => {
     const built = builtCacheStores()
     expect([...built.keys()].sort()).toEqual(
-      [...new Set(fixtureCaches.map((entry) => entry.options.name))].sort()
+      [
+        ...new Set(fixtureCaches.map((entry) => entry.options.name)),
+        ENGINE_NOTICE_CACHE
+      ].sort()
     )
+    expect(
+      __kindOfForTest(
+        defined(built.get(ENGINE_NOTICE_CACHE), 'notices').store.path
+      )
+    ).toBe('user-state')
     for (const entry of fixtureCaches) {
       const name = defined(entry.options.name, 'fixture cache name')
       const path = defined(built.get(name), name).store.path
@@ -164,13 +176,22 @@ describe('createStores', () => {
     expect(crossover?.invalidateCheck({})).toBe(false) // keep-last-good (D-09)
   })
 
+  it('two roots build independent stores: engine notices and pci caches do not share cells', () => {
+    const rootA = createStoreRoot({ userData: createTestStoreRoot().userData })
+    const rootB = createStoreRoot({ userData: createTestStoreRoot().userData })
+    const a = createStores({ registry: createStoreRegistry(), root: rootA })
+    const b = createStores({ registry: createStoreRegistry(), root: rootB })
+    expect(a.engine.noticeStore).not.toBe(b.engine.noticeStore)
+    expect(a.systemInfo.deviceNameCache).not.toBe(b.systemInfo.deviceNameCache)
+  })
+
   it('two boots get independent registries and instances, and no duplicate line', () => {
     const stderr = jest.spyOn(process.stderr, 'write').mockReturnValue(true)
     try {
       const a = createStoreRegistry()
       const b = createStoreRegistry()
-      const storesA = createStores({ registry: a })
-      const storesB = createStores({ registry: b })
+      const storesA = createStores({ registry: a, root: createTestStoreRoot() })
+      const storesB = createStores({ registry: b, root: createTestStoreRoot() })
       expect(stderr).not.toHaveBeenCalled()
       expect(a.names().sort()).toEqual(b.names().sort())
       expect(a.get('configStore')).toBe(storesA.kvs.configStore)

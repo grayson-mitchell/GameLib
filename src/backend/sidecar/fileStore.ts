@@ -10,12 +10,12 @@
  * `backend/cache.ts`'s `use_in_memory()`).
  *
  * Writes the SAME on-disk JSON layout electron-store itself uses (cwd
- * resolved relative to `app.getPath('userData')` unless absolute; file at
+ * resolved relative to Electron's userData path unless absolute; file at
  * `${cwd}/${name}.json`), so a sidecar-written value and an Electron-build-
  * written value read back identically.
  *
  * T-27-03 (Tampering — fileStore JSON path resolution): the on-disk path is
- * resolved ONLY from `pathShim.getPath('userData')` plus the constructor's
+ * resolved ONLY from the root's `userData` plus the constructor's
  * own `options.cwd`/`options.name`, and `resolveStorePath()` ENFORCES that the
  * result lands inside `userData` (resolve+relative containment). A
  * malicious/malformed request frame cannot redirect a write outside the
@@ -39,8 +39,8 @@
  * Electron's `electron-store`/`conf` survives this because it re-reads the
  * file on every access; this file previously cached the loaded JSON once per
  * `FileStore` instance, so the second instance's in-memory copy silently
- * clobbered the first instance's writes on the next `persist()`. `cellRegistry`
- * below keys a single shared `{ data }` cell by resolved `filePath`, so every
+ * clobbered the first instance's writes on the next `persist()`. The root's cell table
+ * (`StoreRoot.cells`) keys a single shared `{ data }` cell by resolved `filePath`, so every
  * `FileStore` instance pointed at the same file reads/writes the SAME
  * in-memory object — matching electron-store's effective behavior without
  * re-reading from disk on every call. `new FileStore()` still returns a
@@ -67,7 +67,7 @@ import {
 } from 'graceful-fs'
 import { dirname, isAbsolute, join, relative, resolve } from 'path'
 import { isSafeKeyPath } from 'common/types/storePolicy'
-import { getPath } from './pathShim'
+import type { FileStoreCell, StoreRoot } from '../stores/storeRoot'
 
 // Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
 // flagged the previously-exported form as a used-in-module finding -- there
@@ -84,32 +84,15 @@ interface FileStoreOptions {
   // CR-04: `false` makes every key a FLAT key (no dot-notation traversal),
   // which is what `uploadedLogs` needs because its keys are dpaste URLs.
   accessPropertiesByDotNotation?: boolean
+  /** The boot's root: its `userData` and its shared-cell table (D-14). */
+  root?: StoreRoot
   [key: string]: unknown
 }
 
-interface FileStoreCell {
-  data: Record<string, unknown>
-}
-
-// D-14: one shared data cell per resolved on-disk path, scoped to this
-// process. Test-only reset below; production code never calls it.
-const cellRegistry = new Map<string, FileStoreCell>()
-
-/**
- * Test-only. Clears the shared cell registry so each test file/case starts
- * from a clean in-memory state. Production code must never call this — doing
- * so would desync any already-constructed `FileStore` instance from the
- * registry (it would keep its own object reference while a NEW cell gets
- * created for the next `new FileStore()` on the same path).
- */
-export function __resetFileStoreRegistry(): void {
-  cellRegistry.clear()
-}
-
-function resolveStorePath(options: FileStoreOptions): string {
+function resolveStorePath(options: FileStoreOptions, root: StoreRoot): string {
   const name = options.name ?? 'config'
   const { cwd } = options
-  const userData = getPath('userData')
+  const { userData } = root
   const baseDir = cwd ? (isAbsolute(cwd) ? cwd : join(userData, cwd)) : userData
   const full = resolve(join(baseDir, `${name}.json`))
 
@@ -271,11 +254,16 @@ export default class FileStore {
   private readonly dotNotation: boolean
 
   constructor(options: FileStoreOptions = {}) {
-    this.filePath = resolveStorePath(options)
+    const { root } = options
+    if (!root) {
+      throw new Error(
+        '[sidecar/fileStore] a store must be constructed with a StoreRoot'
+      )
+    }
+    this.filePath = resolveStorePath(options, root)
     this.dotNotation = options.accessPropertiesByDotNotation !== false
 
-    let cell = cellRegistry.get(this.filePath)
-    if (!cell) {
+    this.cell = root.cells.cellFor(this.filePath, () => {
       const data = load(this.filePath)
 
       // D-02b: seed `options.defaults` UNDER the loaded data — on-disk
@@ -297,10 +285,8 @@ export default class FileStore {
         }
       }
 
-      cell = { data }
-      cellRegistry.set(this.filePath, cell)
-    }
-    this.cell = cell
+      return { data }
+    })
   }
 
   private persist(): void {

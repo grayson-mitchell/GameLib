@@ -32,18 +32,22 @@ import {
   writeFileSync
 } from 'fs'
 import { getPath } from '../pathShim'
-import FileStore, { __resetFileStoreRegistry } from '../fileStore'
+import FileStore from '../fileStore'
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+import type { StoreRoot } from '../../stores/storeRoot'
 
 describe('sidecar fileStore', () => {
+  // A fresh root per case: its cell table is what the old module-level registry reset cleared.
+  let root: StoreRoot
   beforeEach(() => {
-    __resetFileStoreRegistry()
+    root = createTestStoreRoot()
   })
 
   it('same-path collision: two instances at the same resolved path share data (REQ-29-06)', () => {
     // Mirrors the real steamConfigStore/steamBottleConfigStore construction —
     // neither passes `name`, so both resolve to steam_store/config.json.
-    const first = new FileStore({ cwd: 'steam_store' })
-    const second = new FileStore({ cwd: 'steam_store' })
+    const first = new FileStore({ root, cwd: 'steam_store' })
+    const second = new FileStore({ root, cwd: 'steam_store' })
 
     first.set('fromFirst', 'alpha')
     second.set('fromSecond', 'beta')
@@ -56,21 +60,32 @@ describe('sidecar fileStore', () => {
     // Both keys must actually be ON DISK, not just shared in-memory — prove
     // it by resetting the registry (simulating a fresh process) and
     // constructing a third instance.
-    __resetFileStoreRegistry()
-    const third = new FileStore({ cwd: 'steam_store' })
+    root = createTestStoreRoot()
+    const third = new FileStore({ root, cwd: 'steam_store' })
     expect(third.get('fromFirst')).toBe('alpha')
     expect(third.get('fromSecond')).toBe('beta')
+  })
+
+  it('two roots never share a cell: a write through one is invisible to the other until reread', () => {
+    const other = createTestStoreRoot()
+    const a = new FileStore({ root, cwd: 'two_roots_test' })
+    const b = new FileStore({ root: other, cwd: 'two_roots_test' })
+    a.set('k', 'from-a')
+    expect(a.get('k')).toBe('from-a')
+    // b loaded its own cell before a wrote, so it holds its own in-memory copy.
+    expect(b.get('k')).toBeUndefined()
   })
 
   it('options.defaults: unset keys read back as the default, on-disk values win', () => {
     const cwd = 'defaults_test'
 
     // Seed an on-disk value for `existing` before constructing with defaults.
-    const seeded = new FileStore({ cwd })
+    const seeded = new FileStore({ root, cwd })
     seeded.set('existing', 'on-disk-value')
-    __resetFileStoreRegistry()
+    root = createTestStoreRoot()
 
     const store = new FileStore({
+      root,
       cwd,
       defaults: { existing: 'default-value', onlyInDefaults: 'default-only' }
     })
@@ -81,7 +96,7 @@ describe('sidecar fileStore', () => {
 
   it('atomic persist: no temp file remains after a set, and the on-disk JSON parses', () => {
     const cwd = 'atomic_persist_test'
-    const store = new FileStore({ cwd })
+    const store = new FileStore({ root, cwd })
     store.set('key', 'value')
 
     const dir = join(getPath('userData'), cwd)
@@ -105,11 +120,14 @@ describe('sidecar fileStore', () => {
     [{ name: '../../../../../../tmp/evil' }],
     [{ cwd: '/etc', name: 'passwd' }]
   ])('WR-11: refuses a store path that escapes userData (%p)', (options) => {
-    expect(() => new FileStore(options)).toThrow(/outside userData/)
+    expect(() => new FileStore({ ...options, root })).toThrow(
+      /outside userData/
+    )
   })
 
   it('WR-11: an ABSOLUTE cwd inside userData is still accepted (game_overrides shape)', () => {
     const store = new FileStore({
+      root,
       cwd: join(getPath('userData'), 'store'),
       name: 'gameOverrides'
     })
@@ -119,7 +137,7 @@ describe('sidecar fileStore', () => {
 
   it('WR-06: a persisted store file is 0o600 and its directory 0o700', () => {
     const cwd = 'perms_test'
-    const store = new FileStore({ cwd })
+    const store = new FileStore({ root, cwd })
     store.set('token', 'ciphertext')
 
     const dir = join(getPath('userData'), cwd)
@@ -137,7 +155,7 @@ describe('sidecar fileStore', () => {
 
   it('WR-05: a failing rename leaves no orphan .tmp file behind', () => {
     const cwd = 'orphan_tmp_test'
-    const store = new FileStore({ cwd })
+    const store = new FileStore({ root, cwd })
     store.set('seed', 1) // ensures the directory exists
 
     const dir = join(getPath('userData'), cwd)
@@ -179,7 +197,7 @@ describe('sidecar fileStore', () => {
   })
 
   it('dot-notation: set/get/has/delete traverse nested paths', () => {
-    const store = new FileStore({ cwd: 'dot_notation_test' })
+    const store = new FileStore({ root, cwd: 'dot_notation_test' })
 
     store.set('a.b.c', 1)
     expect(store.get('a.b.c')).toBe(1)
@@ -193,6 +211,7 @@ describe('sidecar fileStore', () => {
 
   it('cache.ts surface (D-11): clear/store getter-setter/iterator all work', () => {
     const store = new FileStore({
+      root,
       cwd: 'store_cache',
       name: 'test_cache',
       clearInvalidConfig: true
@@ -225,6 +244,7 @@ describe('sidecar fileStore', () => {
     // `value.uploadedAt` as undefined -> NaN expiry -> the entry never expired.
     const cwd = 'dot_notation_off_test'
     const store = new FileStore({
+      root,
       cwd,
       name: 'uploadedLogs',
       accessPropertiesByDotNotation: false
@@ -261,14 +281,14 @@ describe('sidecar fileStore', () => {
   })
 
   it('CR-04: the default (option absent) is still dot-notation, so nested paths keep working', () => {
-    const store = new FileStore({ cwd: 'dot_notation_default_test' })
+    const store = new FileStore({ root, cwd: 'dot_notation_default_test' })
     store.set('a.b', 1)
     expect(store.get('a.b')).toBe(1)
     expect(store.store).toEqual({ a: { b: 1 } })
   })
 
   it('CR-01: a `__proto__` key path segment cannot pollute Object.prototype', () => {
-    const store = new FileStore({ cwd: 'proto_pollution_test' })
+    const store = new FileStore({ root, cwd: 'proto_pollution_test' })
 
     // The exact renderer-reachable payload from the review's verified chain:
     // window.api.storeSet('timestampStore', '__proto__.polluted', 'PWNED').
@@ -293,15 +313,15 @@ describe('sidecar fileStore', () => {
     const dir = join(getPath('userData'), cwd)
     // Force the directory to exist, then write invalid JSON directly, mimicking
     // a crash mid-write BEFORE this file's atomic-persist fix existed.
-    const store = new FileStore({ cwd })
+    const store = new FileStore({ root, cwd })
     store.set('bootstrap', true) // ensures dir exists
     const filePath = join(dir, 'config.json')
     expect(existsSync(filePath)).toBe(true)
     writeFileSync(filePath, '{ not valid json ')
 
-    __resetFileStoreRegistry()
-    expect(() => new FileStore({ cwd })).not.toThrow()
-    const reloaded = new FileStore({ cwd })
+    root = createTestStoreRoot()
+    expect(() => new FileStore({ root, cwd })).not.toThrow()
+    const reloaded = new FileStore({ root, cwd })
     expect(reloaded.store).toEqual({})
   })
 
@@ -319,18 +339,18 @@ describe('sidecar fileStore', () => {
     'CR-05: a store file containing %s is treated as an empty store, never fatal',
     (_label, contents) => {
       const cwd = `nonobject_json_test_${contents.replace(/\W/g, '')}`
-      const seed = new FileStore({ cwd })
+      const seed = new FileStore({ root, cwd })
       seed.set('bootstrap', true) // ensures the directory exists
       writeFileSync(join(getPath('userData'), cwd, 'config.json'), contents)
-      __resetFileStoreRegistry()
+      root = createTestStoreRoot()
 
       // With defaults present — the exact shape that threw at construction.
       expect(
-        () => new FileStore({ cwd, defaults: { seeded: 'value' } })
+        () => new FileStore({ root, cwd, defaults: { seeded: 'value' } })
       ).not.toThrow()
-      __resetFileStoreRegistry()
+      root = createTestStoreRoot()
 
-      const store = new FileStore({ cwd })
+      const store = new FileStore({ root, cwd })
       expect(store.store).toEqual({})
       // Writes must actually land, not be silently swallowed by a primitive.
       expect(() => store.set('afterCorruption', 'ok')).not.toThrow()

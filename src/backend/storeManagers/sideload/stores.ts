@@ -1,8 +1,7 @@
 import { TypeCheckedStoreBackend } from '../../typed_store'
-import type { StoreRegistry } from 'backend/stores/storeRegistry'
+import type { StoreFamilyDeps } from 'backend/stores/storeRoot'
 
-export function createSideloadStores(deps: { registry: StoreRegistry }) {
-  const { registry } = deps
+export function createSideloadStores(deps: StoreFamilyDeps) {
   const libraryStore = new TypeCheckedStoreBackend(
     'sideloadedStore',
     {
@@ -11,7 +10,7 @@ export function createSideloadStores(deps: { registry: StoreRegistry }) {
       clearInvalidConfig: true
     },
     { kind: 'user-state' },
-    registry
+    deps
   )
 
   return { libraryStore }

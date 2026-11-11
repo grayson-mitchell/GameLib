@@ -1,3 +1,4 @@
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { axiosClient } from 'backend/utils'
 import { GameInfo } from 'common/types'
 
@@ -45,7 +46,9 @@ import {
 } from '../index'
 import { createCrossoverIndexStores } from '../stores'
 
-const crossoverIndex = createCrossoverIndexStores()
+const crossoverIndex = createCrossoverIndexStores({
+  root: createTestStoreRoot()
+})
 const { crossoverIndexStore } = crossoverIndex
 const deps = { stores: { crossoverIndex } }
 

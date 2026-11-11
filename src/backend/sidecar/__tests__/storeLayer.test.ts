@@ -83,6 +83,7 @@ jest.mock('../../storeManagers/steam/user', () => ({
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { TypeCheckedStoreBackend } from '../../typed_store'
 import { createStores } from '../../stores/createStores'
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { createStoreRegistry } from '../../stores/storeRegistry'
 import { createIpcRegistry, type IpcRegistry } from '../ipcRegistry'
 import CacheStore from '../../cache'
@@ -104,13 +105,18 @@ import { createCaptureLog } from '../../testUtils/captureLog'
 
 // One boot's worth of real stores against one registry, exactly what the 'stores' boot step builds.
 const registry = createStoreRegistry()
-const stores = createStores({ registry })
+const root = createTestStoreRoot()
+const stores = createStores({ registry, root })
 const steamConfigStore = stores.steam.configStore
 const humbleConfigStore = stores.humble.configStore
 
 // The snapshot/fetch handlers are written into this boot's own registry (66.3-09); the store write
 // listeners still reach the platform shim's.
-const bootServices = createTestServices({ stores, storeRegistry: registry })
+const bootServices = createTestServices({
+  stores,
+  storeRegistry: registry,
+  storeRoot: root
+})
 registerHandlers({ log: createCaptureLog(), services: bootServices })
 
 /**
@@ -241,6 +247,7 @@ describe('round-trip', () => {
       // for wikigameinfo, wiki_game_info/stores.ts) already
       // constructed.
       const cache = new CacheStore<string, '__gsdProbe'>(name, null, {
+        root,
         kind: 'cache'
       })
 
@@ -396,7 +403,11 @@ describe('allow-list', () => {
 
     try {
       // Idempotent; installs the real `pushStoreChanged` as the store-change notifier.
-      registerStoreWriteHandlers({ ipc: createIpcRegistry(), registry })
+      registerStoreWriteHandlers({
+        ipc: createIpcRegistry(),
+        registry,
+        root
+      })
 
       probeSteamConfig.set('refreshToken', 'leak-canary-refresh-token')
       probeHumbleConfig.set('csrfToken', 'leak-canary-csrf')
@@ -477,7 +488,7 @@ describe('WR-08: duplicate store registration', () => {
           cwd: 'store'
         },
         { kind: 'user-state' },
-        registry
+        { registry, root }
       )
       lines = stderrSpy.mock.calls.map((call) => String(call[0]))
       expect(registry.get('configStore')).toBe(first)
@@ -502,10 +513,12 @@ describe('WR-08: duplicate store registration', () => {
 describe('C-WR-1: two boots in one module registry', () => {
   it('writes and snapshots both use the second boot registry', async () => {
     const registry2 = createStoreRegistry()
-    const stores2 = createStores({ registry: registry2 })
+    const root2 = createTestStoreRoot()
+    const stores2 = createStores({ registry: registry2, root: root2 })
     const services2 = createTestServices({
       stores: stores2,
-      storeRegistry: registry2
+      storeRegistry: registry2,
+      storeRoot: root2
     })
     registerHandlers({ log: createCaptureLog(), services: services2 })
 

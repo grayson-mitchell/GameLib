@@ -8,6 +8,7 @@
  * per-file profile; each "launch" is a fresh module graph. No child process
  * is spawned, so no fake-HOME profile is needed.
  */
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { ipcViews } from 'backend/testUtils/ipcViews'
 import { defined } from 'backend/testUtils/indexed'
 import {
@@ -76,7 +77,8 @@ function launch(): Launch {
     } = require('backend/sidecar/settingsFlowRegistration')
     const { configStore } =
       require('backend/constants/key_value_stores').createKvsStores({
-        registry: createStoreRegistry()
+        registry: createStoreRegistry(),
+        root: createTestStoreRoot()
       })
     const { configPath } = require('backend/constants/paths')
     const { createGlobalConfig } = require('backend/config')

@@ -25,10 +25,7 @@ import {
   ValidStoreName
 } from 'common/types/typed_store'
 import { Get } from 'type-fest'
-import {
-  notifyStoreChanged,
-  notifyStoreInvalidated
-} from './storeChangeNotifier'
+import type { StoreRoot } from './stores/storeRoot'
 
 // REQ-29-01 / Pitfall 4: a `ValidStoreName` string is NOT the on-disk
 // filename — `options.cwd` + (`options.name` ?? 'config') governs that, and
@@ -53,18 +50,22 @@ export class TypeCheckedStoreBackend<
    * path resolution.
    */
   private readonly storeName: Name
+  /** The boot's root: this store's directory, shared cells and renderer push (66.4 plan 04). */
+  private readonly root: StoreRoot
 
   constructor(
     name: Name,
     options: StoreOptions<StoreStructure[Name]>,
     declaration: StoreDeclaration,
-    registry?: StoreRegistry
+    deps: { registry?: StoreRegistry; root: StoreRoot }
   ) {
+    const { registry, root } = deps
     this.storeName = name
+    this.root = root
     // @ts-expect-error Pre-existing generic variance between the per-store
     // `StoreStructure[Name]` shape and the store's own `Record<string, unknown>`
     // default. Carried over verbatim from the electron-store-backed version.
-    this.store = new Store({ ...options, declaration })
+    this.store = new Store({ ...options, declaration, root })
     // The registry (66.1 plan 25) is per boot and owns first-registration-wins plus the
     // duplicate diagnostic (WR-08). A store built with no registry is not RPC-visible.
     registry?.register(
@@ -95,7 +96,7 @@ export class TypeCheckedStoreBackend<
   }
 
   // The three write methods below each announce the change to the renderer AFTER the
-  // write succeeds. See `../storeChangeNotifier` for why this is an injected function
+  // write succeeds. See `./stores/storeRoot` (`changes`) for why this is an injected function
   // rather than a direct `pushFrontendMessage` call, and why it was a no-op back when this
   // ran under the old Electron build.
   // A write that throws must NOT notify — the renderer would then cache a value that is
@@ -131,13 +132,13 @@ export class TypeCheckedStoreBackend<
   ) {
     if (this.readOnly || this.refuseReservedKey(key)) return
     this.store.set(key, value)
-    notifyStoreChanged({ store: this.storeName, key, value })
+    this.root.changes.notify({ store: this.storeName, key, value })
   }
 
   public delete<KeyType extends string>(key: KeyType) {
     if (this.readOnly || this.refuseReservedKey(key)) return
     this.store.delete(key)
-    notifyStoreChanged({ store: this.storeName, key, deleted: true })
+    this.root.changes.notify({ store: this.storeName, key, deleted: true })
   }
 
   public clear() {
@@ -145,7 +146,7 @@ export class TypeCheckedStoreBackend<
     this.store.clear()
     // Whole-store change: no single key describes it, and a per-key encoding could not
     // express the removals at all.
-    notifyStoreInvalidated(this.storeName)
+    this.root.changes.invalidate(this.storeName)
   }
 
   public get raw_store() {
