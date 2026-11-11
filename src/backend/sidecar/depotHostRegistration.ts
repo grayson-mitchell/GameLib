@@ -20,7 +20,7 @@
  * No timers, watchers or handles are created here (sidecar exit contract).
  */
 
-import { ipcMain } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
 import { logWarning, LogPrefix } from 'backend/logger'
 import {
   dispatchDepotJobEvent,
@@ -47,8 +47,10 @@ function logFailure(channel: string, jobId: string | undefined, err: unknown) {
  * Registers the 3 shell-originated depot-host channels (two invoke, one send). Called once from
  * `handlers.ts`.
  */
-export function registerDepotHostFlows(): void {
-  ipcMain.handle(
+export function registerDepotHostFlows(deps: {
+  ipc: Pick<IpcRegistry, 'handle' | 'on'>
+}): void {
+  deps.ipc.handle(
     'depotCdnToken',
     async (_event: unknown, ...args: unknown[]) => {
       const req = args[0]
@@ -69,7 +71,7 @@ export function registerDepotHostFlows(): void {
     }
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'depotManifestRequestCode',
     async (_event: unknown, ...args: unknown[]) => {
       const req = args[0]
@@ -90,7 +92,7 @@ export function registerDepotHostFlows(): void {
     }
   )
 
-  ipcMain.on('depotJobEvent', (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.on('depotJobEvent', (_event: unknown, ...args: unknown[]) => {
     const ev = args[0] as RustJobEvent | undefined
     if (!ev || typeof ev.jobId !== 'string') return
     try {

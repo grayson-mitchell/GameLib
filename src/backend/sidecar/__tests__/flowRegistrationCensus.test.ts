@@ -187,6 +187,7 @@ function read(file: string): string {
   return readFileSync(join(SIDECAR_DIR, file), 'utf-8')
 }
 
+// Registrations write through `ipcMain` (not yet converted) or the injected `deps.ipc` (66.3-09).
 // A channel-name argument is either a string literal (`'channel'`) or -- broadened for
 // quick-260908-ci2's `ipcMain.on(SHELL_WINDOW_FOCUSED, ...)`, the first identifier-based
 // registration on any file this census tracks -- an imported SHARED-CONSTANT identifier
@@ -199,12 +200,18 @@ function countRegistrations(source: string): { invoke: number; send: number } {
   return {
     invoke: (
       source.match(
-        new RegExp(`ipcMain\\.handle\\(\\s*(?:${CHANNEL_ARG_SOURCE})`, 'g')
+        new RegExp(
+          `(?:ipcMain|deps\\.ipc)\\.handle\\(\\s*(?:${CHANNEL_ARG_SOURCE})`,
+          'g'
+        )
       ) ?? []
     ).length,
     send: (
       source.match(
-        new RegExp(`ipcMain\\.on\\(\\s*(?:${CHANNEL_ARG_SOURCE})`, 'g')
+        new RegExp(
+          `(?:ipcMain|deps\\.ipc)\\.on\\(\\s*(?:${CHANNEL_ARG_SOURCE})`,
+          'g'
+        )
       ) ?? []
     ).length
   }

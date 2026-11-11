@@ -53,14 +53,19 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 
 import { registerEosOverlayFlows } from '../eosOverlayFlowRegistration'
-import { handlerRegistry, listenerRegistry } from '../../platform'
+import { createIpcRegistry } from '../ipcRegistry'
 import {
   enable,
   disable,
   isEnabled
 } from '../../storeManagers/legendary/eos_overlay/eos_overlay'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
-import type { IpcHandler } from '../../platform'
+import type { IpcHandler } from '../ipcRegistry'
+
+// This file's own registry: the registration writes into it, nothing else does.
+const ipc = createIpcRegistry()
+const handlerRegistry = ipc.handlerMap()
+const listenerRegistry = ipc.listenerMap()
 
 // ── Registered ONCE for this whole file (not per-test) — mirrors
 // `wineToolsFlows.test.ts`'s own file-scope-once convention. All 8 registrations here are
@@ -80,6 +85,7 @@ const mockLibrary = {
   legendary: { runRunnerCommand: mockRunRunnerCommand }
 }
 const flowDeps = {
+  ipc,
   managers: { library: mockLibrary }
 } as unknown as Parameters<typeof registerEosOverlayFlows>[0]
 registerEosOverlayFlows(flowDeps)
@@ -122,8 +128,8 @@ describe('registration kind — all 8 EOS overlay channels are registered with t
       join(__dirname, '..', 'eosOverlayFlowRegistration.ts'),
       'utf-8'
     )
-    const handleMatches = source.match(/ipcMain\.handle\(/g) ?? []
-    const onMatches = source.match(/ipcMain\.on\(/g) ?? []
+    const handleMatches = source.match(/deps\.ipc\.handle\(/g) ?? []
+    const onMatches = source.match(/deps\.ipc\.on\(/g) ?? []
     expect(handleMatches.length).toBe(8)
     expect(onMatches.length).toBe(0)
   })

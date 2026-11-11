@@ -17,7 +17,7 @@
  */
 import type { GlobalConfigSlice } from 'backend/config'
 import { hasCapability } from 'common/storeCapabilities'
-import { ipcMain } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
 import type {
   BootServices,
   StoreManagers,
@@ -41,6 +41,7 @@ import type { EngineServices } from 'backend/engine/engineServices'
 
 /** Narrow slice (66.1 D-01): only the library managers are read. */
 export interface EngineFlowDeps {
+  ipc: Pick<IpcRegistry, 'handle'>
   managers: Pick<StoreManagers, 'library'>
   stores: Pick<Stores, 'steam' | 'wineManager'>
   spawnAsync: BootServices['spawnAsync']
@@ -99,29 +100,29 @@ async function getEngineStateFor(
  * `engineStateChanged` publisher. Invoke channels use `ipcMain.handle`; the push is not a channel.
  */
 export function registerEngineFlows(deps: EngineFlowDeps): void {
-  ipcMain.handle(
+  deps.ipc.handle(
     'getEngineState',
     async (_event: unknown, ...args: unknown[]) =>
       getEngineStateFor(deps, args[0])
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'listEngineOptions',
     async (_event: unknown, ...args: unknown[]) =>
       listGameEngineOptions(engineServicesOf(deps), args[0])
   )
 
-  ipcMain.handle('getDefaultEngine', () =>
+  deps.ipc.handle('getDefaultEngine', () =>
     Promise.resolve(getDefaultEngine(engineServicesOf(deps)))
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'getPerGameBottleName',
     (_event: unknown, ...args: unknown[]) =>
       Promise.resolve(getPerGameBottleNameFor(args[0]))
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'dismissEngineNotice',
     async (_event: unknown, ...args: unknown[]) => dismissEngineNotice(args[0])
   )

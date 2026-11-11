@@ -55,12 +55,10 @@ import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { TEST_APP_INFO } from 'backend/testUtils/testContext'
 import { defined } from 'backend/testUtils/indexed'
 import { registerClipboardFlows } from '../clipboardFlowRegistration'
-import {
-  bindHostServices,
-  clipboard,
-  listenerRegistry,
-  handlerRegistry
-} from '../../platform'
+import { bindHostServices, clipboard } from '../../platform'
+import { createIpcRegistry } from '../ipcRegistry'
+
+const ipc = createIpcRegistry()
 import { createTestHostServices } from '../../testUtils/testHostServices'
 import { requestRustInvoke } from '../sidecarRpc'
 import { getSystemInfo, formatSystemInfo } from '../../utils/systeminfo'
@@ -102,14 +100,14 @@ async function flush(): Promise<void> {
 
 /** Invokes a registered `ipcMain.on` listener directly, mirroring a `send` frame arriving. */
 function invokeListener(channel: string, ...args: unknown[]): void {
-  const listeners = listenerRegistry.get(channel) ?? []
+  const listeners = ipc.listenerMap().get(channel) ?? []
   expect(listeners.length).toBeGreaterThan(0)
   defined(listeners[0], 'first listener')(undefined, ...args)
 }
 
 /** Invokes a registered `ipcMain.handle` handler directly, mirroring an `invoke` frame arriving. */
 function invokeHandler(channel: string, ...args: unknown[]): Promise<unknown> {
-  const handler = handlerRegistry.get(channel)
+  const handler = ipc.getHandler(channel)
   expect(handler).toBeDefined()
   return Promise.resolve(handler?.(undefined, ...args))
 }
@@ -136,8 +134,8 @@ function snapshotForeignChannels(): Record<
   const snapshot: Record<string, { handler: boolean; listeners: number }> = {}
   for (const channel of FOREIGN_CHANNELS) {
     snapshot[channel] = {
-      handler: handlerRegistry.has(channel),
-      listeners: (listenerRegistry.get(channel) ?? []).length
+      handler: ipc.handlerMap().has(channel),
+      listeners: (ipc.listenerMap().get(channel) ?? []).length
     }
   }
   return snapshot
@@ -148,7 +146,13 @@ const foreignChannelsBefore = snapshotForeignChannels()
 // Registered ONCE for this whole file (not per-test) — `listenerRegistry`/`handlerRegistry`
 // are module-scope maps; calling this more than once would stack a duplicate listener onto
 // the SAME channel array.
+const host = createTestHostServices({
+  rustInvoke: (channel, args) =>
+    mockRequestRustInvoke(channel, args) as Promise<unknown>
+})
 registerClipboardFlows({
+  ipc,
+  appState: host.appState,
   managers: { library: {} } as never,
   runner: {} as never,
   config: createTestGlobalConfig(),
@@ -301,17 +305,17 @@ describe('sidecar clipboard flows (Phase 34.3 Plan 06 — REQ-34.3-03/REQ-34.3-0
 
   it('REQ-34.3-03/REQ-34.3-04 send-vs-handle contract: clipboardWriteText/copySystemInfoToClipboard are listeners, clipboardReadText is a handler -- and NOT the reverse', () => {
     expect(
-      (listenerRegistry.get('clipboardWriteText') ?? []).length
+      (ipc.listenerMap().get('clipboardWriteText') ?? []).length
     ).toBeGreaterThan(0)
-    expect(handlerRegistry.has('clipboardWriteText')).toBe(false)
+    expect(ipc.handlerMap().has('clipboardWriteText')).toBe(false)
 
     expect(
-      (listenerRegistry.get('copySystemInfoToClipboard') ?? []).length
+      (ipc.listenerMap().get('copySystemInfoToClipboard') ?? []).length
     ).toBeGreaterThan(0)
-    expect(handlerRegistry.has('copySystemInfoToClipboard')).toBe(false)
+    expect(ipc.handlerMap().has('copySystemInfoToClipboard')).toBe(false)
 
-    expect(handlerRegistry.has('clipboardReadText')).toBe(true)
-    expect((listenerRegistry.get('clipboardReadText') ?? []).length).toBe(0)
+    expect(ipc.handlerMap().has('clipboardReadText')).toBe(true)
+    expect((ipc.listenerMap().get('clipboardReadText') ?? []).length).toBe(0)
   })
 
   // ── D-14 curated-import scope guard ───────────────────────────────────────────────────────

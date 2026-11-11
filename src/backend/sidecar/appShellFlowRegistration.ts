@@ -8,13 +8,13 @@
  * / `settingsFlowRegistration.ts`'s own objective — prove the real logic runs
  * behind the new transport, not a reimplementation):
  *
- *   invoke (7, `ipcMain.handle`):
+ *   invoke (7, `deps.ipc.handle`):
  *     - `getLoginBackground` -> `appshell/themes.ts` (the custom-theme and
  *       Custom CSS reads beside it were removed in quick 261031-bst)
  *     - `getAppManagementStatus` (quick 261026-b9r) -> `appshell/appManagement.ts`
  *       create-and-unlink probe inside the CrossOver bundle (macOS only)
- *     - `getHeroicVersion` -> `platformApi`'s `app.getVersion()` — Electron
- *       parity is the BARE `app.getVersion()` (`main.ts:754`), not the
+ *     - `getHeroicVersion` -> `platformApi`'s `deps.appInfo.version` — Electron
+ *       parity is the BARE `deps.appInfo.version` (`main.ts:754`), not the
  *       decorated `utils/systeminfo/heroicVersion.ts` form; do not "improve"
  *       it
  *     - `getLatestReleases`/`getCurrentChangelog` -> `appshell/releases.ts`
@@ -25,17 +25,17 @@
  *     - `trayResolveRunner` (Phase 35 Plan 06, D-06) -> resolves a bare
  *       appName to its `Runner` for the Tauri tray's recent-game launch.
  *       Called by the RUST SHELL, not the renderer — the same
- *       `handlerRegistry` direction as `bootstrap.ts`'s `handleProtocolUrl`.
+ *       IPC-registry `handle` direction as `bootstrap.ts`'s `handleProtocolUrl`.
  *       Since Phase 35 Plan 06 persisted `runner` onto `RecentGame`, this is
  *       a LEGACY FALLBACK only: entries written after that change carry their
  *       runner and skip this channel entirely. It is kept because every
  *       pre-existing install's `games.recent` is full of entries that do not
  *       carry one, and stranding those is worse than a probe
  *
- *   send (14, `ipcMain.on`):
+ *   send (14, `deps.ipc.on`):
  *     - `openAppManagementSettings` (quick 261026-b9r) -> opens ONLY the
  *       fixed Privacy_AppBundles URL (no renderer-supplied URL); `relaunchApp`
- *       -> `app.relaunch()` then `app.quit()`, the same pair `resetHeroic` uses
+ *       -> `deps.appState.relaunch()` then `deps.appState.quit()`, the same pair `resetHeroic` uses
  *     - `changeLanguage` -> `appshell/language.ts` (`main.ts:526-528`)
  *     - `notify` -> `backend/dialog/dialog`'s `notify()` (`main.ts:538`),
  *       reaching `platformApi.Notification` -> the existing
@@ -50,7 +50,7 @@
  *     - `abort` -> `callAbortController(id)`, imported directly from
  *       `utils/aborthandler/aborthandler.ts` (`main.ts:15` shape) — NOT via
  *       `utils/ipc_handler.ts` (D-09 below)
- *     - `lock`/`unlock` -> `platformApi.powerSaveBlocker.start()`/`.stop()`,
+ *     - `lock`/`unlock` -> `platformApi.deps.appState.wakeLock.start()`/`.stop()`,
  *       mirroring `main.ts:618-644`'s module-scope `powerId`/`displaySleepId`
  *       guards exactly — an accepted Phase 33 D-08 logged no-op, carried
  *       forward unchanged (D-13)
@@ -65,12 +65,12 @@
  *       dedicated D-11 paragraph above. NOT byte-equivalent to `main.ts`'s
  *       registration shape: `main.ts:560` used `addOneTimeListener` (once-
  *       semantics) for the WHOLE handler; this port used a repeating
- *       `ipcMain.on` and, once plan 35-11 moved boot work inside it, that
+ *       `deps.ipc.on` and, once plan 35-11 moved boot work inside it, that
  *       divergence became reachable (CR-02, `35-REVIEW.md`, closed by plan
  *       35-21 — see `frontendReadyBootWorkDone`'s doc comment below for the
  *       restored one-shot guarantee, scoped to the boot half only)
  *
- * A `send` channel registered with `ipcMain.handle` (or the reverse) fails
+ * A `send` channel registered with `deps.ipc.handle` (or the reverse) fails
  * 100% SILENTLY at runtime (Phase 31 Pitfall 2) — every registration below
  * was cross-checked against `main.ts`'s own `addHandler`/`addListener` call
  * for that exact channel before being written.
@@ -93,8 +93,8 @@
  *     34.1-05/07 own these as from-scratch Tauri work, not extraction.
  *   - `set-connectivity-online` — already live via `bootstrap.ts`'s
  *     `initOnlineMonitor()` call (Phase 33); `platformApi`'s
- *     `listenerRegistry` holds an ARRAY per channel, so a second
- *     `ipcMain.on` registration here would make `setStatus('online')` fire
+ *     the IPC registry's listener map holds an ARRAY per channel, so a second
+ *     `deps.ipc.on` registration here would make `setStatus('online')` fire
  *     twice per message.
  *
  * D-09 (curated-import discipline, carried forward from Phase 30 D-08): no
@@ -110,7 +110,7 @@
  * D-11 (Phase 34.6 Plan 05, REQ-34.6-04/07/13): `frontendReady` (send-kind,
  * `preload/api/misc.ts:93`'s `makeListenerCaller` — NOT invoke-kind, contrary
  * to `IPC-PORT-INVENTORY.md`'s prior claim) is registered here as
- * `ipcMain.on`, calling `logSendHandlerReached('frontendReady')`
+ * `deps.ipc.on`, calling `logSendHandlerReached('frontendReady')`
  * (`./sendChannelObservable.ts`) as its FIRST statement — the only proof
  * available that a send-kind handler ran at all, since a send channel fails
  * silently with no reject and no timeout. The body is a DELIBERATE SUBSET of
@@ -163,7 +163,6 @@
 
 import i18next from 'i18next'
 
-import { ipcMain, app, shell, powerSaveBlocker } from '../platform'
 import { isSnap, isCLINoGui, isMac } from '../constants/environment'
 import { heroicGithubURL } from '../constants/urls'
 import { getLoginBackground } from '../appshell/themes'
@@ -186,7 +185,7 @@ import { acknowledgeDialogDisplay } from '../dialog/displayAck'
 import { detectVCRedist } from '../utils'
 import { assertOpenableExternalUrl } from './openPolicy'
 import { callAbortController } from '../utils/aborthandler/aborthandler'
-import { GlobalConfig, type GlobalConfigSlice } from '../config'
+import type { GlobalConfigSlice } from '../config'
 import { logInfo, LogPrefix } from '../logger'
 import { pushReadOnlyStoresNotice } from './readOnlyStoresNotice'
 // Phase 35 plan 11: boot-time download-queue auto-resume, ported from
@@ -199,6 +198,10 @@ import type {
   StoreManagers,
   QuitHandler
 } from '../services/types'
+import type { IpcRegistry } from './ipcRegistry'
+import type { AppState } from '../host/appState'
+import type { OpenExternal } from '../host/openExternal'
+import type { AppInfo } from '../process/context'
 import { requestRustInvoke } from './sidecarRpc'
 import { RUST_TRAY_SET_ICON } from '../../common/types/sidecarTransport'
 import {
@@ -231,7 +234,7 @@ let displaySleepId: number | undefined
 let trayColorTimer: NodeJS.Timeout | undefined
 
 // CR-02 (35-REVIEW.md, plan 35-21): `frontendReady`'s boot-time download-queue auto-resume
-// must run at most once per sidecar process. The registration stays `ipcMain.on` (not
+// must run at most once per sidecar process. The registration stays `deps.ipc.on` (not
 // `ipcMain.once`) because the send-kind observability (`logSendHandlerReached`, the
 // `logInfo('Frontend Ready', ...)` line) and the Snap warning dialog (260919-sch: now pushed
 // via the in-app `showDialogBoxModalAuto`/`showDialog` path, not a native box) are allowed to
@@ -255,9 +258,9 @@ let frontendReadyBootWorkDone = false
  * failure or a rejected `requestRustInvoke` both log and return — a tray sync must never
  * crash the sidecar (the `sidecar-dialog-reject-crashes` precedent).
  */
-function syncTrayIcon(): void {
+function syncTrayIcon(config: Pick<GlobalConfigSlice, 'getSettings'>): void {
   try {
-    const variant = migrateTrayIconVariant(GlobalConfig.get().getSettings())
+    const variant = migrateTrayIconVariant(config.getSettings())
     requestRustInvoke(RUST_TRAY_SET_ICON, trayIconWireArgs(variant)).catch(
       (error) => logSendFailure('changeTrayColor', error)
     )
@@ -273,6 +276,13 @@ export interface AppShellFlowDeps extends DialogBoxDeps, NotifyDeps {
   quit: Pick<QuitHandler, 'handleExit'>
   stores: Pick<Stores, 'kvs' | 'legendary'>
   config: Pick<GlobalConfigSlice, 'getSettings' | 'setSetting'>
+  ipc: Pick<IpcRegistry, 'handle' | 'on'>
+  appInfo: Pick<AppInfo, 'version'>
+  openExternal: Pick<OpenExternal, 'openExternal'>
+  appState: Pick<
+    AppState,
+    'raiseMainWindowForInAppDialog' | 'relaunch' | 'quit' | 'wakeLock'
+  >
   /** The boot process runner (66.2); consumers converted by 66.2-11. */
   runner: BootServices['runner']
   /** Default `false`; handlers.ts sets it under Jest (see the docstring above). */
@@ -296,24 +306,24 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   // later addition (user-selectable Manage Accounts background artwork).
   // `getCustomThemes`/`getThemeCSS`/`getCustomCSS` removed in quick 261031-bst.
 
-  ipcMain.handle('getLoginBackground', async () => getLoginBackground(deps))
+  deps.ipc.handle('getLoginBackground', async () => getLoginBackground(deps))
 
   // Electron parity is the bare app.getVersion() (main.ts:754) — do not
   // decorate with the versionNames form from heroicVersion.ts.
-  ipcMain.handle('getHeroicVersion', async () => app.getVersion())
+  deps.ipc.handle('getHeroicVersion', async () => deps.appInfo.version)
 
   // Quick 261026-b9r: the probe only runs when invoked (never at boot).
-  ipcMain.handle('getAppManagementStatus', async () =>
+  deps.ipc.handle('getAppManagementStatus', async () =>
     getAppManagementStatus({ runner: deps.runner })
   )
 
-  ipcMain.handle('getLatestReleases', async () =>
+  deps.ipc.handle('getLatestReleases', async () =>
     getLatestReleasesForStartup(deps)
   )
 
-  ipcMain.handle('getCurrentChangelog', async () => getCurrentChangelogEntry())
+  deps.ipc.handle('getCurrentChangelog', async () => getCurrentChangelogEntry())
 
-  ipcMain.handle('getWebviewPreloadPath', async () => {
+  deps.ipc.handle('getWebviewPreloadPath', async () => {
     if (!webviewPreloadPathWarned) {
       webviewPreloadPathWarned = true
       console.warn(
@@ -325,13 +335,13 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
 
   // ── send (14) ─────────────────────────────────────────────────────────
 
-  ipcMain.on('changeLanguage', (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.on('changeLanguage', (_event: unknown, ...args: unknown[]) => {
     changeLanguage(deps, args[0] as string).catch((error) =>
       logSendFailure('changeLanguage', error)
     )
   })
 
-  ipcMain.on('notify', (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.on('notify', (_event: unknown, ...args: unknown[]) => {
     try {
       notify(deps, args[0] as { title: string; body: string })
     } catch (error) {
@@ -341,7 +351,7 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
 
   // The renderer echoes the correlation id of a showDialog frame once the dialog is on screen
   // (see ../dialog/displayAck.ts). An unknown or repeated id is ignored.
-  ipcMain.on('dialogDisplayed', (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.on('dialogDisplayed', (_event: unknown, ...args: unknown[]) => {
     try {
       acknowledgeDialogDisplay(args[0])
     } catch (error) {
@@ -349,7 +359,7 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
     }
   })
 
-  ipcMain.on('quit', () => {
+  deps.ipc.on('quit', () => {
     // Live-gate marker (todo 2026-10-05 cmd-q-and-red-x): proves the shell's routed quit frame
     // landed in the sidecar, before handleExit() can block on the pending-operations confirm.
     logSendHandlerReached('quit')
@@ -357,11 +367,11 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   })
 
   // Quick 261026-b9r (T-b9r-02): takes NO argument; only the constant is ever opened.
-  ipcMain.on('openAppManagementSettings', () => {
+  deps.ipc.on('openAppManagementSettings', () => {
     if (!isMac) return
     try {
       void Promise.resolve(
-        shell.openExternal(APP_MANAGEMENT_SETTINGS_URL)
+        deps.openExternal.openExternal(APP_MANAGEMENT_SETTINGS_URL)
       ).catch((error) => logSendFailure('openAppManagementSettings', error))
     } catch (error) {
       logSendFailure('openAppManagementSettings', error)
@@ -370,25 +380,25 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
 
   // Quick 261026-b9r: platformApi owns the relaunch-vs-quit ordering race
   // (platform/index.ts), so use the same pair resetHeroic does.
-  ipcMain.on('relaunchApp', () => {
+  deps.ipc.on('relaunchApp', () => {
     try {
-      app.relaunch()
-      app.quit()
+      deps.appState.relaunch()
+      deps.appState.quit()
     } catch (error) {
       logSendFailure('relaunchApp', error)
     }
   })
 
-  ipcMain.on('openReleases', () => {
-    void Promise.resolve(shell.openExternal(heroicGithubURL)).catch((error) =>
-      logSendFailure('openReleases', error)
+  deps.ipc.on('openReleases', () => {
+    void Promise.resolve(deps.openExternal.openExternal(heroicGithubURL)).catch(
+      (error) => logSendFailure('openReleases', error)
     )
   })
 
-  ipcMain.on('openWebviewPage', (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.on('openWebviewPage', (_event: unknown, ...args: unknown[]) => {
     try {
       void Promise.resolve(
-        shell.openExternal(
+        deps.openExternal.openExternal(
           assertOpenableExternalUrl(args[0], 'openWebviewPage')
         )
       ).catch((error) => logSendFailure('openWebviewPage', error))
@@ -397,7 +407,7 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
     }
   })
 
-  ipcMain.on('abort', (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.on('abort', (_event: unknown, ...args: unknown[]) => {
     try {
       callAbortController(args[0] as string)
     } catch (error) {
@@ -411,18 +421,18 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   // Now that the stub takes real, DISTINCT OS assertions, the kind is load-bearing and the two
   // branches must pass the same strings main.ts:650/655 passes: a download blocks system sleep,
   // a running game blocks display sleep. Passing one kind for both would be threat T-35-32.
-  ipcMain.on('lock', (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.on('lock', (_event: unknown, ...args: unknown[]) => {
     try {
       const playing = args[0] as boolean
       const isSleepBlocked = powerId !== undefined
       const isDisplaySleepBlocked = displaySleepId !== undefined
 
       if (!playing && !isSleepBlocked) {
-        powerId = powerSaveBlocker.start('prevent-app-suspension')
+        powerId = deps.appState.wakeLock.start('prevent-app-suspension')
       }
 
       if (playing && !isDisplaySleepBlocked) {
-        displaySleepId = powerSaveBlocker.start('prevent-display-sleep')
+        displaySleepId = deps.appState.wakeLock.start('prevent-display-sleep')
       }
     } catch (error) {
       logSendFailure('lock', error)
@@ -437,14 +447,14 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   //
   // Releasing the WRONG id, or never releasing at all, is threat T-35-31: an assertion that
   // outlives the app keeps the machine awake with no UI left to stop it.
-  ipcMain.on('unlock', () => {
+  deps.ipc.on('unlock', () => {
     try {
       if (powerId !== undefined) {
-        powerSaveBlocker.stop(powerId)
+        deps.appState.wakeLock.stop(powerId)
         powerId = undefined
       }
       if (displaySleepId !== undefined) {
-        powerSaveBlocker.stop(displaySleepId)
+        deps.appState.wakeLock.stop(displaySleepId)
         displaySleepId = undefined
       }
     } catch (error) {
@@ -455,7 +465,7 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   // D-13: setTitleBarOverlay has no native overlay left to target under D-06
   // (GameLib's own titlebar buttons render on every platform when frameless)
   // -- a declared, logged no-op. Never throws.
-  ipcMain.on('setTitleBarOverlay', () => {
+  deps.ipc.on('setTitleBarOverlay', () => {
     console.warn(
       "[appShellFlowRegistration] setTitleBarOverlay(): logged no-op (D-13) -- no native titlebar overlay survives under Tauri once D-06 puts GameLib's own buttons on every platform when frameless"
     )
@@ -467,7 +477,7 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   // SUBSET of main.ts:560-601 -- see this module's own docstring for the two
   // exclusions (handleProtocol, initQueue) and why each is preserved, not a
   // regression.
-  ipcMain.on('frontendReady', () => {
+  deps.ipc.on('frontendReady', () => {
     try {
       logSendHandlerReached('frontendReady')
       logInfo('Frontend Ready', LogPrefix.Backend)
@@ -556,7 +566,7 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
       //
       // CR-02 (35-REVIEW.md, plan 35-21): the sidecar OUTLIVES the renderer, so a renderer
       // reload (devtools reload, webview crash-recovery, a future in-app reload path)
-      // re-delivers `frontendReady` into this SAME process. `platformApi`'s `ipcMain.on`
+      // re-delivers `frontendReady` into this SAME process. the IPC registry's `on`
       // has no once-semantics of its own (unlike Electron's real `ipcMain`, which the
       // original `main.ts:560` reached via `addOneTimeListener` -> `ipcMain.once`), so a
       // second delivery would schedule a SECOND `initQueue(true)` against the same queue
@@ -632,7 +642,7 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   // ── Phase 35 Plan 06 (D-06, REQ-35-04): tray recent-game runner resolution ──
   //
   // `trayResolveRunner` is INVOKE-kind and is called by the RUST SHELL, not by the renderer --
-  // the same direction and the same `handlerRegistry` path `bootstrap.ts`'s `handleProtocolUrl`
+  // the same direction and the same IPC-registry `handle` path `bootstrap.ts`'s `handleProtocolUrl`
   // already uses for the single-instance deep-link delivery. It is therefore NOT a
   // `RUST_INVOKE_CHANNELS` member (that list is the opposite, sidecar->Rust, direction).
   //
@@ -646,7 +656,7 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   // resolution is exposed here as a plain in-process lookup and the shell then calls the
   // ordinary, already-hardened `launch` handler with the resolved runner.
   //
-  // MUST be registered with `ipcMain.handle`, never `ipcMain.on` -- this channel has a return
+  // MUST be registered with `deps.ipc.handle`, never `deps.ipc.on` -- this channel has a return
   // value the shell blocks on, and a send-kind registration would fail 100% silently
   // (Phase 31 Pitfall 2).
   //
@@ -656,59 +666,62 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   // that enum, which is why the Electron tray could never launch a Steam recent game at all.
   // Appending rather than prepending keeps the existing order authoritative and makes this
   // strictly more capable than what it replaces.
-  ipcMain.handle('trayResolveRunner', (_event: unknown, ...args: unknown[]) => {
-    const appName = args[0]
-    if (typeof appName !== 'string' || appName.length === 0) {
-      // Never echoes the rejected value, mirroring `handleProtocolUrl`'s own T-34.5-G6-25
-      // discipline -- the shell logs a reason, never a payload.
-      throw new Error('trayResolveRunner: rejected a non-string appName')
-    }
-
-    const searchOrder = [
-      'legendary',
-      'gog',
-      'nile',
-      'sideload',
-      'steam'
-    ] as const
-
-    for (const runner of searchOrder) {
-      try {
-        // Own-property form, never a bare index: the manager record is a plain object
-        // literal, so a bare lookup resolves through `Object.prototype` (the same
-        // T-34.5-46-01 reasoning `handleLaunch`'s own guard carries).
-        if (
-          !Object.prototype.hasOwnProperty.call(deps.managers.library, runner)
-        )
-          continue
-        const info = deps.managers.library[runner]
-          .getGame(appName)
-          .getGameInfo()
-        if (info?.app_name) return runner
-      } catch (error) {
-        // A manager that throws for an unknown appName must not abort the search -- the next
-        // runner may still own this game.
-        logSendFailure(`trayResolveRunner:${runner}`, error)
+  deps.ipc.handle(
+    'trayResolveRunner',
+    (_event: unknown, ...args: unknown[]) => {
+      const appName = args[0]
+      if (typeof appName !== 'string' || appName.length === 0) {
+        // Never echoes the rejected value, mirroring `handleProtocolUrl`'s own T-34.5-G6-25
+        // discipline -- the shell logs a reason, never a payload.
+        throw new Error('trayResolveRunner: rejected a non-string appName')
       }
-    }
 
-    // A `null` return is a normal outcome, not an error: the game may have been uninstalled
-    // and removed from its library since it entered the recent list. The shell logs and does
-    // NOT launch anything.
-    return null
-  })
+      const searchOrder = [
+        'legendary',
+        'gog',
+        'nile',
+        'sideload',
+        'steam'
+      ] as const
+
+      for (const runner of searchOrder) {
+        try {
+          // Own-property form, never a bare index: the manager record is a plain object
+          // literal, so a bare lookup resolves through `Object.prototype` (the same
+          // T-34.5-46-01 reasoning `handleLaunch`'s own guard carries).
+          if (
+            !Object.prototype.hasOwnProperty.call(deps.managers.library, runner)
+          )
+            continue
+          const info = deps.managers.library[runner]
+            .getGame(appName)
+            .getGameInfo()
+          if (info?.app_name) return runner
+        } catch (error) {
+          // A manager that throws for an unknown appName must not abort the search -- the next
+          // runner may still own this game.
+          logSendFailure(`trayResolveRunner:${runner}`, error)
+        }
+      }
+
+      // A `null` return is a normal outcome, not an error: the game may have been uninstalled
+      // and removed from its library since it entered the recent list. The shell logs and does
+      // NOT launch anything.
+      return null
+    }
+  )
 
   // D-11: swap the real Tauri tray's icon via the `tray_set_icon` rustInvoke arm.
   // Mirrors tray_icon.ts:51 exactly -- log immediately (safe: only reachable at
   // runtime, well after the sidecar has booted and initLogger() has run), then a
   // 500ms settle delay before the actual sync so a rapid theme-setting change
   // doesn't race a still-updating `trayIconVariant` value.
-  ipcMain.on('changeTrayColor', () => {
+  deps.ipc.on('changeTrayColor', () => {
     logInfo('Changing Tray icon Color...', LogPrefix.Backend)
     if (trayColorTimer) {
       clearTimeout(trayColorTimer)
     }
-    trayColorTimer = setTimeout(syncTrayIcon, 500)
+    trayColorTimer = setTimeout(() => syncTrayIcon(deps.config), 500)
   })
 
   // Initial sync: correct the tray's startup image (main.rs's `.setup()` builds the tray with
@@ -716,7 +729,7 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   // `downloadQueueFlowRegistration.ts`'s D-05 precedent): `registerAppShellFlows()`
   // runs synchronously at `handlers.ts`'s top-level `import './handlers'`
   // (`bootstrap.ts` Step 2), BEFORE `initLogger()` (Step 3) has run -- and
-  // `GlobalConfig.get()`'s first-ever call in this process can itself synchronously
+  // the config slice's first-ever read in this process can itself synchronously
   // call `logInfo`/`logError` on the config-version-upgrade path (`config.ts:145/
   // 152`), which would throw before the sidecar ever reaches READY if not deferred.
   // `syncTrayIcon()`'s own try/catch additionally covers the same third path this
@@ -746,6 +759,6 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   // import-time-triggered call (the actual leak source, decoupled from any specific `init()`
   // invocation) passes `true` under Jest.
   if (!deps.skipInitialTraySync) {
-    setImmediate(syncTrayIcon)
+    setImmediate(() => syncTrayIcon(deps.config))
   }
 }

@@ -278,16 +278,13 @@ describe('66.1 MH-3: registrations take slices', () => {
   const ZERO_PARAM_REGISTRATIONS: Record<string, string> = {
     registerOAuthLoginFlows:
       'uncoupled: the login-window seam (humble/loginWindowSeam), no store reads',
-    registerDevEpicCookieSweepFlow:
-      'uncoupled: the login-window seam, dev-only cookie sweep, no store reads',
     registerStoreEmbedFlows:
-      'uncoupled: owns the store-embed seam and forwards to Rust, no store reads',
-    registerDepotHostFlows:
-      'uncoupled: the depot job registry (jobRegistry), no store reads',
+      'uncoupled: owns the store-embed seam and forwards to Rust, no store reads'
     // registerHumbleFlows left this list in 66.3-06: it now takes { config, notifications } for the
     // expiration digest (the bindHumbleStores holder it still reads is a plan 17 target).
-    registerHumbleLoginFlows:
-      'COUPLED through bindHumbleStores (HumbleUser/HumbleLibrary): the holder is a 66.3 target (backendDiCeilings header)'
+    // registerDevEpicCookieSweepFlow, registerDepotHostFlows and registerHumbleLoginFlows left it in
+    // 66.3-09: each now takes `{ ipc, ... }`. (HumbleLogin still reads the bindHumbleStores holder
+    // through HumbleUser/HumbleLibrary; that coupling is a plan 17 target, not a registration param.)
   }
 
   it('every exported register*Flows takes a single injected `deps` parameter unless it is on the explicit zero-param allowlist', () => {

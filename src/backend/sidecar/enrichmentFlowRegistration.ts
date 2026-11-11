@@ -99,9 +99,7 @@
  * gates). Transitive reach to `electron` DOES exist here and is EXPECTED --
  * this file's own `import { ... } from '../storeSearch/handlers'` below
  * reaches `handlers.ts`'s own import of `cheapshark.ts`, which itself
- * `import { app } from 'electron'` -- and is safe at runtime because
- * `platformApi`'s `Module._load` interception rewrites every
- * `require('electron')` inside the sidecar process. See
+ * `import { app } from 'electron'`. See
  * `sidecar/__tests__/electronReachLedger.test.ts` for the measured, enforced
  * set of electron-importing modules actually reachable from this slice's
  * four gated entry points. Every import below reaches an
@@ -161,7 +159,7 @@
  */
 
 import type { AppInfo } from '../process/context'
-import { ipcMain } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
 import { getWikiGameInfo } from '../wiki_game_info/wiki_game_info'
 import { gameAnticheatInfo } from '../anticheat/utils'
 import { readGamelibFixStatus, readKnownFixes } from '../knownFixes'
@@ -182,6 +180,7 @@ import type { StoreManagers, Stores } from 'backend/services/types'
 
 /** Narrow slice (66.1 D-01): library managers for game lookup. */
 export interface EnrichmentFlowDeps {
+  ipc: Pick<IpcRegistry, 'handle'>
   appInfo: Pick<AppInfo, 'version'>
   managers: Pick<StoreManagers, 'library'>
   stores: Pick<
@@ -209,7 +208,7 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
   // The `title` argument is accepted and intentionally IGNORED — see the
   // module docstring above. `getWikiGameInfo` re-derives the title off the
   // resolved `Game` itself.
-  ipcMain.handle(
+  deps.ipc.handle(
     'getWikiGameInfo',
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[1] as string
@@ -229,18 +228,20 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
   // everything on Windows (`isWindows` early-return) — see module
   // docstring. `releasesInfoReady` is NOT registered here; it lives in
   // `bootstrap.ts` (plan 34.2-01).
-  ipcMain.handle(
+  deps.ipc.handle(
     'getAnticheatInfo',
     async (_event: unknown, ...args: unknown[]) =>
       gameAnticheatInfo(args[0] as string)
   )
 
-  ipcMain.handle('getKnownFixes', async (_event: unknown, ...args: unknown[]) =>
-    readKnownFixes(args[0] as string, args[1] as Runner)
+  deps.ipc.handle(
+    'getKnownFixes',
+    async (_event: unknown, ...args: unknown[]) =>
+      readKnownFixes(args[0] as string, args[1] as Runner)
   )
 
   // Quick 261027-ch9: GameLib row on the game page. Local + bundled only.
-  ipcMain.handle(
+  deps.ipc.handle(
     'getGamelibFixStatus',
     async (_event: unknown, ...args: unknown[]) =>
       readGamelibFixStatus(args[0] as string, args[1] as Runner)
@@ -248,9 +249,9 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
 
   // Quick 261029-mkz: per-game "Runs for me" override. Untrusted payload:
   // validated before any write (T-mkz-01).
-  ipcMain.handle('getRunsForMeMap', async () => getRunsForMeMap(deps))
+  deps.ipc.handle('getRunsForMeMap', async () => getRunsForMeMap(deps))
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'setRunsForMe',
     async (_event: unknown, ...args: unknown[]) => {
       const payload = args[0] as
@@ -284,7 +285,7 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
   // D-10: exempted from the 60s invoke bound in main.rs's
   // LONG_RUNNING_CHANNELS (Task 2) — fans out over every game in every
   // manager AND calls loadIndex/buildMaps per game. See module docstring.
-  ipcMain.handle('getCrossoverIndex', async () =>
+  deps.ipc.handle('getCrossoverIndex', async () =>
     buildCrossoverRatingMap({
       libraryManagers: deps.managers.library,
       stores: deps.stores
@@ -295,27 +296,27 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
   // storeSearch/handlers.ts (Phase 34.2 Plan 13, closes WR-09), which carry
   // the Phase 20 D-14 try/log/RETHROW contract. A bare pass-through would
   // silently change the error-propagation contract the frontend depends on.
-  ipcMain.handle('searchStores', async (_event: unknown, ...args: unknown[]) =>
+  deps.ipc.handle('searchStores', async (_event: unknown, ...args: unknown[]) =>
     handleSearchStores(deps, args[0] as string)
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'getStoreSearchDeals',
     async (_event: unknown, ...args: unknown[]) =>
       handleGetStoreSearchDeals(deps, args[0] as string)
   )
 
-  ipcMain.handle('getStoreSearchStoreMap', async () =>
+  deps.ipc.handle('getStoreSearchStoreMap', async () =>
     handleGetStoreSearchStoreMap(deps)
   )
 
   // Imports ONLY removeRecentGame from recent_games.ts — not
   // getRecentGames/addRecentGame (curated-import discipline, D-04).
-  ipcMain.handle('removeRecent', async (_event: unknown, ...args: unknown[]) =>
+  deps.ipc.handle('removeRecent', async (_event: unknown, ...args: unknown[]) =>
     removeRecentGame(deps, args[0] as string)
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'getGogDiscounts',
     async (_event: unknown, ...args: unknown[]) =>
       getGogDiscounts(
@@ -334,12 +335,12 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
   // through getSteamGridDbSecretStore(), NEVER GlobalConfig or
   // steamgrid/secureKey.ts directly. See module docstring.
 
-  ipcMain.handle('steamgriddb.hasApiKey', async () => {
+  deps.ipc.handle('steamgriddb.hasApiKey', async () => {
     const apiKey = await getSteamGridDbSecretStore().getApiKey()
     return !!apiKey
   })
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'steamgriddb.setApiKey',
     async (_event: unknown, ...args: unknown[]) => {
       // WR-01 (34.6-REVIEW.md): `args[0] as string` is a CAST, not a check. A non-string
@@ -360,7 +361,7 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
     }
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'steamgriddb.searchGame',
     async (_event: unknown, ...args: unknown[]) => {
       const query = args[0] as string
@@ -382,7 +383,7 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
     }
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'steamgriddb.getGrids',
     async (_event: unknown, ...args: unknown[]) => {
       const gridArgs = args[0] as {
@@ -413,7 +414,7 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
     }
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'steamgriddb.getHeroes',
     async (_event: unknown, ...args: unknown[]) => {
       const heroArgs = args[0] as {

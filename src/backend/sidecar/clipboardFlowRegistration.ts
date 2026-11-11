@@ -10,10 +10,10 @@
  * one file:
  *
  *   send (ipcMain.on, 2):
- *     - `clipboardWriteText` -> `platformApi`'s `clipboard.writeText(text)`, itself a real
+ *     - `clipboardWriteText` -> `platformApi`'s `deps.appState.writeClipboardText(text)`, itself a real
  *       fire-and-forget forward to `RUST_CLIPBOARD_WRITE_TEXT` (Plan 05, `main.ts:1427`)
  *     - `copySystemInfoToClipboard` -> `utils/systeminfo`'s `getSystemInfo()` +
- *       `formatSystemInfo()`, then `clipboard.writeText(formatted)`
+ *       `formatSystemInfo()`, then `deps.appState.writeClipboardText(formatted)`
  *       (`utils/ipc_handler.ts:23-27`)
  *
  *   invoke (ipcMain.handle, 1):
@@ -42,7 +42,7 @@
  * assumption other code relies on). `getSystemInfo`/`formatSystemInfo` are imported directly
  * from `../utils/systeminfo` instead, whose clean export this module relies on unchanged.
  *
- * D-03: `clipboardWriteText`'s registration below only calls `clipboard.writeText(...)` — that
+ * D-03: `clipboardWriteText`'s registration below only calls `deps.appState.writeClipboardText(...)` — that
  * member is ITSELF the fire-and-forget, log-only Rust forward (Plan 05). This registration's
  * own try/catch guards only a synchronous throw at the call site (there is none today, since
  * `clipboard.writeText` never throws synchronously — kept anyway as the same defensive shape
@@ -53,7 +53,8 @@
 
 import type { GlobalConfigSlice } from '../config'
 import type { AppInfo } from '../process/context'
-import { ipcMain, clipboard } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
+import type { AppState } from '../host/appState'
 import { requestRustInvoke } from './sidecarRpc'
 import { RUST_CLIPBOARD_READ_TEXT } from '../../common/types/sidecarTransport'
 import { getSystemInfo, formatSystemInfo } from '../utils/systeminfo'
@@ -68,6 +69,8 @@ function logSendFailure(channel: string, error: unknown): void {
 
 /** Slice the clipboard flows need: the runner managers the system-info probes ask. */
 export interface ClipboardFlowDeps {
+  ipc: Pick<IpcRegistry, 'handle' | 'on'>
+  appState: Pick<AppState, 'writeClipboardText'>
   config: Pick<GlobalConfigSlice, 'getSettings'>
   appInfo: Pick<AppInfo, 'version'>
   managers: Pick<StoreManagers, 'library'>
@@ -82,13 +85,13 @@ export interface ClipboardFlowDeps {
  */
 export function registerClipboardFlows(deps: ClipboardFlowDeps): void {
   // ── send (1): clipboardWriteText — main.ts:1427's addListener('clipboardWriteText', (e,
-  // text) => clipboard.writeText(text)). clipboard.writeText() is ITSELF the real
+  // text) => deps.appState.writeClipboardText(text)). deps.appState.writeClipboardText() is ITSELF the real
   // fire-and-forget Rust forward (Plan 05) — this try/catch guards only a synchronous throw
   // at the call site, never the underlying transport failure (D-03) ──────────────────────────
 
-  ipcMain.on('clipboardWriteText', (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.on('clipboardWriteText', (_event: unknown, ...args: unknown[]) => {
     try {
-      clipboard.writeText(args[0] as string)
+      deps.appState.writeClipboardText(args[0] as string)
     } catch (error) {
       logSendFailure('clipboardWriteText', error)
     }
@@ -99,7 +102,7 @@ export function registerClipboardFlows(deps: ClipboardFlowDeps): void {
   // result, resolves '' rather than rejecting — SIDLogin/index.tsx:137 consumes the value
   // directly and must never see an unhandled rejection ───────────────────────────────────────
 
-  ipcMain.handle('clipboardReadText', async () => {
+  deps.ipc.handle('clipboardReadText', async () => {
     try {
       const text = await requestRustInvoke(RUST_CLIPBOARD_READ_TEXT, [])
       return typeof text === 'string' ? text : ''
@@ -118,7 +121,7 @@ export function registerClipboardFlows(deps: ClipboardFlowDeps): void {
   // ipcMain.on listeners are invoked synchronously and discard their return value — an async
   // listener's own rejection would otherwise be an unhandled rejection ───────────────────────
 
-  ipcMain.on('copySystemInfoToClipboard', () => {
+  deps.ipc.on('copySystemInfoToClipboard', () => {
     void (async () => {
       try {
         const info = await getSystemInfo({
@@ -128,7 +131,7 @@ export function registerClipboardFlows(deps: ClipboardFlowDeps): void {
           appInfo: deps.appInfo
         })
         const formatted = await formatSystemInfo(info)
-        clipboard.writeText(formatted)
+        deps.appState.writeClipboardText(formatted)
       } catch (error) {
         logSendFailure('copySystemInfoToClipboard', error)
       }

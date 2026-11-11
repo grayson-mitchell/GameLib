@@ -290,6 +290,7 @@ import {
   RUST_WAKE_LOCK_STOP
 } from 'common/types/sidecarTransport'
 import pkgJson from '../../../../package.json'
+import { resolveAppInfo } from '../../host/appInfo'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
 // D-08: one boot per test case in a fresh module registry. A top-level import of a
@@ -355,7 +356,26 @@ function freshRegistry(): void {
 
 /** Deps for the tests that call registerAppShellFlows() directly (no boot). */
 function directDeps(stores: unknown = {}) {
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  // Required at call time so a fresh-registry scope hands the registration ITS registry and its
+  // mocked GlobalConfig, not the shared ones.
+  const { interimIpc } = require('../../platform')
+  const { GlobalConfig: scopedConfig } = require('backend/config')
+  /* eslint-enable @typescript-eslint/no-require-imports */
   return {
+    ipc: interimIpc,
+    appInfo: { version: pkgJson.version },
+    openExternal: { openExternal: jest.fn() },
+    appState: {
+      raiseMainWindowForInAppDialog: jest.fn(),
+      relaunch: jest.fn(),
+      quit: jest.fn(),
+      wakeLock: { start: jest.fn(), stop: jest.fn(), isStarted: jest.fn() }
+    },
+    config: {
+      getSettings: () => scopedConfig.get().getSettings(),
+      setSetting: (...args: unknown[]) => scopedConfig.get().setSetting(...args)
+    },
     managers: { library: {} } as never,
     downloadQueue: downloadQueueStub,
     quit: { handleExit: jest.fn().mockResolvedValue(undefined) },
@@ -367,7 +387,29 @@ function directDeps(stores: unknown = {}) {
 function boot() {
   return bootFresh({
     reuseRegistry: true,
-    services: { downloadQueue: downloadQueueStub as never }
+    services: {
+      downloadQueue: downloadQueueStub as never,
+      // Delegates every call to whatever GlobalConfig.get() returns NOW, so `mockAppSettings`
+      // after boot (the tray tests) is what the registrations read, as with the static getter.
+      config: new Proxy(
+        {},
+        {
+          get: (_target, key) => {
+            const current = mockedGlobalConfigGet()
+            const member = current[key]
+            return typeof member === 'function'
+              ? (...args: unknown[]) => mockedGlobalConfigGet()[key](...args)
+              : member
+          }
+        }
+      ) as never,
+      // The real resolution (package.json version), not the test context's placeholder.
+      appInfo: resolveAppInfo({
+        platform: process.platform,
+        osRelease: '',
+        isPackaged: false
+      })
+    }
   })
 }
 

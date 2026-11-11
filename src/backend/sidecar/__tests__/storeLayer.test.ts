@@ -78,7 +78,8 @@ jest.mock('../../storeManagers/steam/user')
 import { TypeCheckedStoreBackend } from '../../typed_store'
 import { createStores } from '../../stores/createStores'
 import { createStoreRegistry } from '../../stores/storeRegistry'
-import { handlerRegistry, listenerRegistry } from '../../platform'
+import { listenerRegistry } from '../../platform'
+import type { IpcRegistry } from '../ipcRegistry'
 import CacheStore from '../../cache'
 import { BOOT_SET_STORES, STORE_ALLOWLIST } from 'common/types/storePolicy'
 import {
@@ -102,10 +103,10 @@ const stores = createStores({ registry })
 const steamConfigStore = stores.steam.configStore
 const humbleConfigStore = stores.humble.configStore
 
-registerHandlers({
-  log: createCaptureLog(),
-  services: createTestServices({ stores, storeRegistry: registry })
-})
+// The snapshot/fetch handlers are written into this boot's own registry (66.3-09); the store write
+// listeners still reach the platform shim's.
+const bootServices = createTestServices({ stores, storeRegistry: registry })
+registerHandlers({ log: createCaptureLog(), services: bootServices })
 
 /**
  * Narrow escape hatch for probing an arbitrary key on a `TypeCheckedStoreBackend`
@@ -128,8 +129,10 @@ function asProbeable(instance: unknown): ProbeableStore {
 }
 
 /** Invokes the real registered `sidecar:store-snapshot` handler directly off the recorder. */
-async function invokeStoreSnapshot(): Promise<Record<string, unknown>> {
-  const handler = handlerRegistry.get(STORE_SNAPSHOT_CHANNEL)
+async function invokeStoreSnapshot(
+  ipc: Pick<IpcRegistry, 'getHandler'> = bootServices.host.ipc
+): Promise<Record<string, unknown>> {
+  const handler = ipc.getHandler(STORE_SNAPSHOT_CHANNEL)
   if (!handler) {
     throw new Error(
       `${STORE_SNAPSHOT_CHANNEL} handler was not registered by ../handlers`
@@ -142,7 +145,7 @@ async function invokeStoreSnapshot(): Promise<Record<string, unknown>> {
 async function invokeStoreFetch(
   storeName: string
 ): Promise<Record<string, unknown>> {
-  const handler = handlerRegistry.get(STORE_FETCH_CHANNEL)
+  const handler = bootServices.host.ipc.getHandler(STORE_FETCH_CHANNEL)
   if (!handler) {
     throw new Error(
       `${STORE_FETCH_CHANNEL} handler was not registered by ../handlers`
@@ -495,13 +498,11 @@ describe('C-WR-1: two boots in one module registry', () => {
   it('writes and snapshots both use the second boot registry', async () => {
     const registry2 = createStoreRegistry()
     const stores2 = createStores({ registry: registry2 })
-    registerHandlers({
-      log: createCaptureLog(),
-      services: createTestServices({
-        stores: stores2,
-        storeRegistry: registry2
-      })
+    const services2 = createTestServices({
+      stores: stores2,
+      storeRegistry: registry2
     })
+    registerHandlers({ log: createCaptureLog(), services: services2 })
 
     const listeners = listenerRegistry.get(STORE_SET_CHANNEL) ?? []
     // The write listeners install once; a second boot must not stack another set.
@@ -526,7 +527,7 @@ describe('C-WR-1: two boots in one module registry', () => {
     expect(secondSet).toHaveBeenCalledWith('overrides', overrides)
     expect(firstSet).not.toHaveBeenCalled()
 
-    const snapshot = await invokeStoreSnapshot()
+    const snapshot = await invokeStoreSnapshot(services2.host.ipc)
     expect(snapshot.gameOverridesStore).toMatchObject({ overrides })
   })
 })

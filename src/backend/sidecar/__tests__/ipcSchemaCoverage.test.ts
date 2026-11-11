@@ -60,7 +60,7 @@ function staticScan(): Scanned {
     testOnly: new Set()
   }
   const re =
-    /\b(ipcMain\.handle|ipcMain\.on|ipcMain\.once|ipc\.handle|addHandler|addListener|addTestOnlyListener)\(\s*(?:'([^']+)'|([A-Z][A-Z0-9_]*)\s*,)/g
+    /\b(ipcMain\.handle|ipcMain\.on|ipcMain\.once|ipc\.handle|ipc\.on|addHandler|addListener|addTestOnlyListener)\(\s*(?:'([^']+)'|([A-Z][A-Z0-9_]*)\s*,)/g
   for (const file of sourceFiles(BACKEND_DIR)) {
     const src = readFileSync(file, 'utf-8')
     // onTestOnly(ipc, env, 'channel', ...): the registry form of addTestOnlyListener (66.3-07).
@@ -69,8 +69,17 @@ function staticScan(): Scanned {
     )) {
       if (m[1]) out.testOnly.add(m[1])
     }
+    // A file-local `const NAME = 'channel'` (devEpicCookieSweepRegistration's, not exported).
+    const local = new Map<string, string>()
+    for (const c of src.matchAll(
+      /\bconst\s+([A-Z][A-Z0-9_]*)\s*=\s*'([^']+)'/g
+    )) {
+      if (c[1] && c[2]) local.set(c[1], c[2])
+    }
     for (const m of src.matchAll(re)) {
-      const channel = m[2] ?? (m[3] === undefined ? undefined : constants[m[3]])
+      const channel =
+        m[2] ??
+        (m[3] === undefined ? undefined : (constants[m[3]] ?? local.get(m[3])))
       if (!channel) continue
       if (m[1] === 'addTestOnlyListener') out.testOnly.add(channel)
       else if (
@@ -98,16 +107,24 @@ async function registered(): Promise<{
   declared: Set<string>
 }> {
   const { registerHandlers } = await import('backend/sidecar/handlers')
-  registerHandlers({
-    log: createCaptureLog(),
-    services: createTestServices()
-  })
+  const services = createTestServices()
+  registerHandlers({ log: createCaptureLog(), services })
   registerSignInProbeOutcomesHandler()
   const scan = staticScan()
-  const invoke = new Set([...handlerRegistry.keys(), ...scan.invoke])
+  // Registrations converted to the injected registry (66.3-09 on) write into the test host's
+  // registry, not the shim's; the rest still reach the shim's.
+  const invoke = new Set([
+    ...handlerRegistry.keys(),
+    ...services.host.ipc.handlerMap().keys(),
+    ...scan.invoke
+  ])
   const testOnly = scan.testOnly
   const send = new Set(
-    [...listenerRegistry.keys(), ...scan.send].filter((c) => !testOnly.has(c))
+    [
+      ...listenerRegistry.keys(),
+      ...services.host.ipc.listenerMap().keys(),
+      ...scan.send
+    ].filter((c) => !testOnly.has(c))
   )
   const parts = declaredParts()
   const push = new Set(

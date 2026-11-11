@@ -16,7 +16,7 @@ import { logWarning } from 'backend/logger'
 import { channelSchemas } from 'common/types/ipc/channelSchemas'
 import { validateInbound } from '../ipcValidation'
 import { registerDepotHostFlows } from '../depotHostRegistration'
-import { handlerRegistry, listenerRegistry } from '../../platform'
+import { createIpcRegistry } from '../ipcRegistry'
 import { registerActiveDepotJob } from '../../storeManagers/steam/depotRust/jobRegistry'
 import type { CdnAuthTokenCache } from '../../storeManagers/steam/depot/cdnAuth'
 import type { RustJobEvent } from '../../storeManagers/steam/depotRust/types'
@@ -37,7 +37,7 @@ function fakeCache(
 }
 
 async function invoke(channel: string, payload: unknown): Promise<unknown> {
-  const handler = defined(handlerRegistry.get(channel), channel)
+  const handler = defined(ipc.getHandler(channel), channel)
   return handler({}, payload)
 }
 
@@ -49,7 +49,8 @@ const warning = (seq: number, jobId = 'job1'): RustJobEvent => ({
   count: 1
 })
 
-beforeAll(() => registerDepotHostFlows())
+const ipc = createIpcRegistry()
+beforeAll(() => registerDepotHostFlows({ ipc }))
 beforeEach(() => jest.clearAllMocks())
 
 describe('depotCdnToken', () => {
@@ -170,7 +171,7 @@ describe('depotManifestRequestCode on an EResult-40 refusal', () => {
 
 describe('depotJobEvent', () => {
   const send = (ev: RustJobEvent) =>
-    defined(listenerRegistry.get('depotJobEvent'), 'listeners').forEach((l) =>
+    defined(ipc.listenerMap().get('depotJobEvent'), 'listeners').forEach((l) =>
       l({}, ev)
     )
 

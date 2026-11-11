@@ -116,7 +116,8 @@ function registeredChannels(
   constants: Record<string, string>
 ): string[] {
   const out: string[] = []
-  const re = /ipcMain\.(?:handle|on)\(\s*(?:'([^']+)'|([A-Z][A-Z0-9_]*)\s*,)/g
+  const re =
+    /(?:ipcMain|deps\.ipc)\.(?:handle|on)\(\s*(?:'([^']+)'|([A-Z][A-Z0-9_]*)\s*,)/g
   for (const m of source.matchAll(re)) {
     const ch = m[1] ?? (m[2] === undefined ? undefined : constants[m[2]])
     if (ch) out.push(ch)

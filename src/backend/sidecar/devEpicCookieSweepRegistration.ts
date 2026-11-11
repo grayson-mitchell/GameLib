@@ -41,9 +41,9 @@
  * reasoning; this is a copy of a value, not a second mechanism.
  */
 
-import { ipcMain } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
+import type { AppInfo } from '../process/context'
 import { getLoginWindowSeamOrThrow } from '../humble/loginWindowSeam'
-import { isPackagedSidecar } from './isPackagedSidecar'
 import { logInfo, LogPrefix } from '../logger'
 
 /** Verbatim copy of `EPIC_COOKIE_CLEAR_NO_WINDOW_LABEL` (`legendary/user.ts:57`). */
@@ -51,7 +51,7 @@ const EPIC_COOKIE_CLEAR_NO_WINDOW_LABEL = 'epic-cookie-clear-no-window'
 
 // Deliberately NOT exported: nothing else references this channel name. The renderer reaches it
 // as a string literal through `sidecar_invoke` (see the docstring above), and the only in-repo
-// consumer is the `ipcMain.handle` call below -- so exporting it would be a dead export, which
+// consumer is the `deps.ipc.handle` call below -- so exporting it would be a dead export, which
 // `pnpm find-deadcode` correctly rejects.
 const DEV_SWEEP_EPIC_COOKIE_DOMAIN = 'devSweepEpicCookieDomain' as const
 
@@ -71,16 +71,19 @@ const DEV_SWEEP_EPIC_COOKIE_DOMAIN = 'devSweepEpicCookieDomain' as const
  * import-time guard `appShellFlowRegistration.ts` documents.
  */
 let registered = false
-export function registerDevEpicCookieSweepFlow(): void {
+export function registerDevEpicCookieSweepFlow(deps: {
+  ipc: Pick<IpcRegistry, 'handle'>
+  appInfo: Pick<AppInfo, 'isPackaged'>
+}): void {
   if (registered) {
     return
   }
-  if (isPackagedSidecar()) {
+  if (deps.appInfo.isPackaged) {
     return
   }
   registered = true
 
-  ipcMain.handle(
+  deps.ipc.handle(
     DEV_SWEEP_EPIC_COOKIE_DOMAIN,
     async (_event: unknown, ...args: unknown[]) => {
       const domain = args[0]

@@ -70,7 +70,7 @@
 
 import type { LogSink } from '../process/types'
 
-import { ipcMain } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
 import type { DownloadQueue } from '../downloadmanager/downloadqueue'
 
 /**
@@ -81,6 +81,7 @@ import type { DownloadQueue } from '../downloadmanager/downloadqueue'
  */
 export function registerDownloadQueueFlows(deps: {
   log: LogSink
+  ipc: Pick<IpcRegistry, 'handle' | 'on'>
   downloadQueue: Pick<
     DownloadQueue,
     | 'removeFromQueue'
@@ -106,25 +107,25 @@ export function registerDownloadQueueFlows(deps: {
   // `downloadmanager/ipc_handler.ts:64-70` — four `ipcMain.on` (send/listener),
   // one `ipcMain.handle` (invoke). Getting this wrong is completely silent at
   // runtime (Phase 31 Pitfall 2).
-  ipcMain.on('removeFromDMQueue', (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.on('removeFromDMQueue', (_event: unknown, ...args: unknown[]) => {
     deps.downloadQueue.removeFromQueue(args[0] as string)
   })
 
-  ipcMain.on('pauseCurrentDownload', () => {
+  deps.ipc.on('pauseCurrentDownload', () => {
     deps.downloadQueue.pauseCurrentDownload()
   })
 
-  ipcMain.on('resumeCurrentDownload', () => {
+  deps.ipc.on('resumeCurrentDownload', () => {
     deps.downloadQueue.resumeCurrentDownload()
   })
 
-  ipcMain.on('cancelDownload', (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.on('cancelDownload', (_event: unknown, ...args: unknown[]) => {
     deps.downloadQueue.cancelCurrentDownload({
       removeDownloaded: args[0] as boolean
     })
   })
 
-  ipcMain.handle('getDMQueueInformation', async () =>
+  deps.ipc.handle('getDMQueueInformation', async () =>
     deps.downloadQueue.getQueueInformation()
   )
 }

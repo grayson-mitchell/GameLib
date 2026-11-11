@@ -78,7 +78,6 @@ import Store from '../store_backend'
 import type { LogSink } from '../process/types'
 import type { BootServices } from '../services/types'
 
-import { ipcMain } from '../platform'
 import { registerSteamFlows } from './steamFlowRegistration'
 import { registerSteamAuthFlows } from './steamAuthFlowRegistration'
 import { registerEngineFlows } from './engineFlowRegistration'
@@ -142,7 +141,8 @@ export function registerHandlers(deps: {
   log: LogSink
   services: BootServices
 }): void {
-  ipcMain.handle('health', async () => 'ok')
+  const ipc = deps.services.host.ipc
+  ipc.handle('health', async () => 'ok')
 
   registerSteamFlows({
     managers: deps.services.managers,
@@ -152,6 +152,7 @@ export function registerHandlers(deps: {
   })
   registerSteamAuthFlows(deps.services)
   registerEngineFlows({
+    ipc,
     managers: deps.services.managers,
     stores: deps.services.stores,
     spawnAsync: deps.services.spawnAsync,
@@ -170,13 +171,13 @@ export function registerHandlers(deps: {
   // D-35-19-15's live gate: a DEV-ONLY single-host Epic cookie sweep, so the
   // `EPIC_COOKIE_HOSTS` sweep can be exercised against ONE sibling apex without
   // `LegendaryUser.logout()` destroying the operator's real Epic session. Self-gated —
-  // `registerDevEpicCookieSweepFlow()` no-ops in a packaged sidecar, so the channel does not
+  // `registerDevEpicCookieSweepFlow` no-ops in a packaged sidecar, so the channel does not
   // exist in a shipped build. Not on the preload surface by design; see that module's docstring.
-  registerDevEpicCookieSweepFlow()
+  registerDevEpicCookieSweepFlow({ ipc, appInfo: deps.services.appInfo })
   // WR-02: without this, plan 30-03's native picker chain was unreachable — `openDialog`
   // is the only backend channel that reaches `dialog.showOpenDialog`, and its sole other
   // caller (`main.ts`) is not in the sidecar's import graph.
-  registerDialogFlows({ dialogs: deps.services.host.dialogs })
+  registerDialogFlows({ ipc, dialogs: deps.services.host.dialogs })
   // Phase 32 Plan 01: the queue-management channels — no ordering constraint
   // relative to the other four calls above (each module owns its own channel
   // names, no cross-module runtime
@@ -184,6 +185,7 @@ export function registerHandlers(deps: {
   // `registerStoreWriteHandlers()` (32-PATTERNS.md).
   registerDownloadQueueFlows({
     log: deps.log,
+    ipc,
     downloadQueue: deps.services.downloadQueue
   })
   // Phase 34.1 Plan 04: the app-shell channels — no ordering constraint
@@ -200,6 +202,9 @@ export function registerHandlers(deps: {
   // -- under real Tauri this is unconditionally `false` and behavior is byte-identical to
   // before.
   registerAppShellFlows({
+    ipc,
+    appInfo: deps.services.appInfo,
+    openExternal: deps.services.host.openExternal,
     managers: deps.services.managers,
     downloadQueue: deps.services.downloadQueue,
     quit: deps.services.quit,
@@ -216,6 +221,7 @@ export function registerHandlers(deps: {
   // channel names, no cross-module runtime dependency at registration time),
   // placed alongside them, before `registerStoreWriteHandlers()`.
   registerGameDetailsFlows({
+    ipc,
     managers: deps.services.managers,
     stores: deps.services.stores,
     notifications: deps.services.host.notifications
@@ -227,6 +233,7 @@ export function registerHandlers(deps: {
   // is already registered by `createStores` (Phase 29), so this
   // module needs no new store plumbing.
   registerEnrichmentFlows({
+    ipc,
     managers: deps.services.managers,
     stores: deps.services.stores,
     appInfo: deps.services.appInfo
@@ -251,6 +258,8 @@ export function registerHandlers(deps: {
   // dependency at registration time), placed alongside them, before
   // `registerStoreWriteHandlers()`.
   registerClipboardFlows({
+    ipc,
+    appState: deps.services.host.appState,
     managers: deps.services.managers,
     runner: deps.services.runner,
     config: deps.services.config,
@@ -280,6 +289,7 @@ export function registerHandlers(deps: {
   // needs (all 9 Humble stores) is already registered by createStores
   // — zero new store plumbing.
   registerHumbleFlows({
+    ipc,
     config: deps.services.config,
     notifications: deps.services.host.notifications
   })
@@ -288,7 +298,7 @@ export function registerHandlers(deps: {
   // — no ordering constraint relative to the
   // other calls above (own channel names, no cross-module runtime dependency at
   // registration time), placed alongside them, before `registerStoreWriteHandlers()`.
-  registerHumbleLoginFlows()
+  registerHumbleLoginFlows({ ipc })
   // Phase 34.4.1 Plan 09 (REQ-34.4.1-08): the `oauthCaptureLogin` handle channel, which
   // drives the four OAuth runners' (legendary/gog/nile) redirect capture through the SAME
   // login-window seam Humble already installed above -- a completely separate concern from
@@ -344,7 +354,7 @@ export function registerHandlers(deps: {
   })
   // Phase 34.6 Plan 08 (REQ-34.6-01): the EOS overlay channel cluster — no ordering constraint
   // relative to the other calls above.
-  registerEosOverlayFlows({ managers: deps.services.managers })
+  registerEosOverlayFlows({ ipc, managers: deps.services.managers })
   // Phase 40 Plan 05 (REQ-40-02/REQ-40-05): the in-app store-embed channels, plus installing the
   // rustInvoke-backed store-embed seam (setStoreEmbedSeam) — no ordering constraint relative to
   // the other calls above (own channel names, no cross-module runtime dependency at registration
@@ -354,7 +364,7 @@ export function registerHandlers(deps: {
   // tokens, manifest request codes and progress events — no ordering constraint relative to the
   // other calls above (own channel names, backed by a Map in jobRegistry.ts), placed before
   // `registerStoreWriteHandlers()`.
-  registerDepotHostFlows()
+  registerDepotHostFlows({ ipc })
   // D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
   // every store instance exists, or a legitimate write would be rejected as an unknown
   // store — hence AFTER registerStoreWriteHandlers(). These are `send`-kind (fire-and-forget)
@@ -368,7 +378,7 @@ export function registerHandlers(deps: {
   // — that defense-in-depth property is PRESERVED, and now enforced by
   // `filterStoreSnapshot` for every store in the walk, not one field of one
   // store (single-sourcing).
-  ipcMain.handle(STORE_SNAPSHOT_CHANNEL, async () => {
+  ipc.handle(STORE_SNAPSHOT_CHANNEL, async () => {
     const snapshot: Record<string, unknown> = {}
     for (const name of BOOT_SET_STORES) {
       snapshot[name] = filterStoreSnapshot(
@@ -384,7 +394,7 @@ export function registerHandlers(deps: {
   // "enforced eagerly but forgotten in the lazy fetch" is exactly the gap
   // this closes). Rides the existing `sidecar_invoke` Tauri command; this is
   // an ordinary internal RPC channel, not a new Tauri command.
-  ipcMain.handle(
+  ipc.handle(
     STORE_FETCH_CHANNEL,
     async (_event: unknown, storeName: unknown) => {
       if (typeof storeName !== 'string') {
@@ -457,7 +467,7 @@ const CACHE_BACKED_STORE_NAMES: readonly string[] = [
  *   - A name in `CACHE_BACKED_STORE_NAMES` resolves through the EXACT
  *     construction shape `backend/cache.ts` uses for every dynamically-named
  *     `CacheStore` (`{ cwd: 'store_cache', name, clearInvalidConfig: true }`).
- *     The sidecar's `Module._load`-substituted `FileStore` shares its D-14
+ *     The sidecar's `FileStore` shares its D-14
  *     path-keyed cell with the real `CacheStore` instance constructed by the
  *     corresponding store-declaration module, so this always reads the
  *     identical on-disk data rather than a fresh, unrelated read.

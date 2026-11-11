@@ -29,7 +29,7 @@
  * `installFlowRegistration.ts` reaches `backend/utils/uninstaller.ts`.
  */
 
-import { ipcMain } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
 import { openDialogCallback } from '../utils/openDialog'
 import type { Dialogs } from '../host/dialogs'
 import type { OpenDialogOptions } from '../platform/types'
@@ -46,9 +46,10 @@ import type { OpenDialogOptions } from '../platform/types'
  * reached at runtime is entirely unmodified.
  */
 export function registerDialogFlows(deps: {
+  ipc: Pick<IpcRegistry, 'handle'>
   dialogs: Pick<Dialogs, 'showOpenDialog'>
 }): void {
-  ipcMain.handle(
+  deps.ipc.handle(
     'openDialog',
     async (_event: unknown, ...args: unknown[]): Promise<string | false> =>
       openDialogCallback(deps, (args[0] ?? {}) as OpenDialogOptions)

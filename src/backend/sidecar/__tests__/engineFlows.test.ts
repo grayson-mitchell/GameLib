@@ -5,14 +5,11 @@
  */
 const handlers = new Map<string, (...a: unknown[]) => Promise<unknown>>()
 
-jest.mock('../../platform', () => ({
-  ipcMain: {
-    handle: (ch: string, fn: (...a: unknown[]) => Promise<unknown>) => {
-      handlers.set(ch, fn)
-    },
-    on: jest.fn()
+const ipc = {
+  handle: (ch: string, fn: (...a: unknown[]) => unknown) => {
+    handlers.set(ch, fn as (...a: unknown[]) => Promise<unknown>)
   }
-}))
+}
 const envState = { isMac: true }
 jest.mock('../../constants/environment', () => ({
   get isMac() {
@@ -76,7 +73,7 @@ const config = createTestGlobalConfig()
 
 describe('engine flows', () => {
   beforeAll(() =>
-    registerEngineFlows({ managers, stores, spawnAsync, runner, config })
+    registerEngineFlows({ ipc, managers, stores, spawnAsync, runner, config })
   )
   beforeEach(() => {
     jest.clearAllMocks()
@@ -102,7 +99,7 @@ describe('engine flows', () => {
       )
     ).toEqual({ kind: 's' })
     expect(steamState).toHaveBeenCalledWith(
-      { managers, stores, spawnAsync, runner, config },
+      { ipc, managers, stores, spawnAsync, runner, config },
       '220'
     )
     expect(getGame).not.toHaveBeenCalled()
@@ -203,7 +200,7 @@ describe('engine flows', () => {
   })
 
   it('wires the publisher to engineStateChanged', () => {
-    registerEngineFlows({ managers, stores, spawnAsync, runner, config })
+    registerEngineFlows({ ipc, managers, stores, spawnAsync, runner, config })
     const publisher = setPublisher.mock.calls[0][0] as (s: unknown) => void
     const state = { appId: '1' }
     publisher(state)

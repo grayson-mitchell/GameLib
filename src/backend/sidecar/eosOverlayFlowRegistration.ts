@@ -48,7 +48,7 @@
  * real `ipcMain` via `backend/ipc`'s `addHandler`, an Electron-only path.
  */
 
-import { ipcMain } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
 import {
   getStatus,
   getLatestVersion,
@@ -63,6 +63,7 @@ import type { StoreManagers } from '../services/types'
 
 /** The slice the EOS overlay channels read. */
 export interface EosOverlayFlowDeps {
+  ipc: Pick<IpcRegistry, 'handle'>
   managers: Pick<StoreManagers, 'library'>
 }
 
@@ -72,7 +73,7 @@ export interface EosOverlayFlowDeps {
  * handler registry happens.
  *
  * No idempotence guard is needed: all 8 registrations are `ipcMain.handle`, which is naturally
- * idempotent (`platform/index.ts`'s `handlerRegistry` is a `Map`, so a second `.set()` for the same
+ * idempotent (the IPC registry's handler table is a `Map`, so a second `.set()` for the same
  * channel replaces the prior entry rather than stacking a duplicate — unlike `ipcMain.on`'s
  * array-append semantics, which is what forces the `let registered = false` guard in modules that
  * register a send-kind channel, e.g. `wineToolsFlowRegistration.ts`).
@@ -80,26 +81,26 @@ export interface EosOverlayFlowDeps {
 export function registerEosOverlayFlows(deps: EosOverlayFlowDeps): void {
   const eosDeps = () => ({ libraryManagers: deps.managers.library })
 
-  ipcMain.handle('getEosOverlayStatus', async () => {
+  deps.ipc.handle('getEosOverlayStatus', async () => {
     return getStatus()
   })
 
-  ipcMain.handle('getLatestEosOverlayVersion', async () => {
+  deps.ipc.handle('getLatestEosOverlayVersion', async () => {
     return getLatestVersion(eosDeps())
   })
 
-  ipcMain.handle('updateEosOverlayInfo', async () => {
+  deps.ipc.handle('updateEosOverlayInfo', async () => {
     return updateInfo(eosDeps())
   })
 
-  ipcMain.handle('installEosOverlay', async () => {
+  deps.ipc.handle('installEosOverlay', async () => {
     return install(eosDeps())
   })
 
   // Phase 35 plan 26 (REQ-35-17): `remove()` now takes an explicit `confirmed` gate — the
   // renderer's `showDialogModal` confirmation happens before this channel is ever invoked.
   // See A-02 above for the historical native-dialog crash-hazard context this replaces.
-  ipcMain.handle(
+  deps.ipc.handle(
     'removeEosOverlay',
     async (_event: unknown, ...args: unknown[]) => {
       const confirmed = args[0] as boolean
@@ -107,7 +108,7 @@ export function registerEosOverlayFlows(deps: EosOverlayFlowDeps): void {
     }
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'enableEosOverlay',
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[0] as string
@@ -115,7 +116,7 @@ export function registerEosOverlayFlows(deps: EosOverlayFlowDeps): void {
     }
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'disableEosOverlay',
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[0] as string
@@ -125,7 +126,7 @@ export function registerEosOverlayFlows(deps: EosOverlayFlowDeps): void {
 
   // `appName` is OPTIONAL on this one channel alone (Electron original:
   // `async (e, appName?) => isEnabled(appName)`) — must work when called with no argument.
-  ipcMain.handle(
+  deps.ipc.handle(
     'isEosOverlayEnabled',
     async (_event: unknown, ...args: unknown[]) => {
       const appName = (args[0] ?? undefined) as string | undefined
