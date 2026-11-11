@@ -145,6 +145,7 @@ jest.mock('axios', () => ({
 
 import GOGLibraryManager from '../library'
 import { GOGUser } from '../user'
+import { logWarning } from 'backend/logger'
 import type { GOGCredentials, Library } from 'common/types/gog'
 import type { GOGImportData, InstalledInfo } from 'common/types'
 
@@ -332,6 +333,70 @@ describe('debug/gog-spawn-reduction fix 4 -- getInstallInfo() login gate is isLo
     expect(result).toBeUndefined()
     expect(mockIsLoggedIn).toHaveBeenCalled()
     expect(mockGetCredentials).not.toHaveBeenCalled()
+    expect(mockCallRunner).toHaveBeenCalledWith(
+      expect.arrayContaining(['info', '123']),
+      expect.objectContaining({ name: 'gog' }),
+      expect.anything()
+    )
+  })
+})
+
+/**
+ * ef8597c02 removed a guard that tested the `isOnline` function reference (always
+ * truthy, so it never fired); 261112-7wp restores it as a call so offline fetches are
+ * blocked while cached install info is still served.
+ */
+describe('getInstallInfo offline guard (261112-7wp) -- restored as a real isOnline() call', () => {
+  let manager: GOGLibraryManager
+
+  beforeEach(() => {
+    manager = new GOGLibraryManager(makeDeps())
+    mockIsOnline.mockReturnValue(true)
+    mockInstallInfoStoreHas.mockReturnValue(false)
+    mockInstalledGamesStoreGet.mockReturnValue([])
+    mockPrivateBranchesStoreGet.mockReturnValue('')
+    mockGetGOGdlBin.mockReturnValue({ dir: '/fake', bin: 'gogdl' })
+    mockIsLoggedIn.mockReturnValue(true)
+  })
+
+  it('offline with no cache: returns undefined, warns, and makes no gogdl or network call', async () => {
+    mockIsOnline.mockReturnValue(false)
+
+    const result = await manager.getInstallInfo('123')
+
+    expect(result).toBeUndefined()
+    expect(mockCallRunner).not.toHaveBeenCalled()
+    expect(mockedAxiosGet).not.toHaveBeenCalled()
+    expect(logWarning).toHaveBeenCalledWith(
+      'App offline, unable to get install info',
+      expect.anything()
+    )
+  })
+
+  it('offline with cached install info: still returns the cached value', async () => {
+    const cached = { game: { app_name: '123' } }
+    mockIsOnline.mockReturnValue(false)
+    mockInstallInfoStoreHas.mockReturnValue(true)
+    mockInstallInfoStoreGet.mockReturnValue(cached)
+
+    const result = await manager.getInstallInfo('123')
+
+    expect(result).toBe(cached)
+    expect(mockCallRunner).not.toHaveBeenCalled()
+  })
+
+  it('online: proceeds past the guard to the gogdl info call', async () => {
+    mockLibraryStoreGet.mockReturnValue([
+      { app_name: '123', title: 'Test Game', install: {} }
+    ])
+    mockCallRunner.mockResolvedValueOnce({
+      stdout: '',
+      stderr: '',
+      abort: true
+    })
+
+    await manager.getInstallInfo('123')
+
     expect(mockCallRunner).toHaveBeenCalledWith(
       expect.arrayContaining(['info', '123']),
       expect.objectContaining({ name: 'gog' }),

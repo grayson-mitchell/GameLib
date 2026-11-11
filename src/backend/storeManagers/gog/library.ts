@@ -739,6 +739,11 @@ export default class GOGLibraryManager implements LibraryManager {
       }
     }
 
+    if (!this.deps.onlineMonitor.isOnline()) {
+      logWarning('App offline, unable to get install info', LogPrefix.Gog)
+      return
+    }
+
     // Login gate only -- debug/gog-spawn-reduction.md fix 4. This used to call
     // GOGUser.getCredentials(this.deps), spawning a `gogdl auth` subprocess purely to check
     // login state; the returned credentials were never used anywhere else in this
