@@ -1562,6 +1562,57 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
     })
   })
 
+  describe('Group 2c: createProcessGuards() instances (D-66.3-10)', () => {
+    afterEach(() => {
+      for (const event of ['unhandledRejection', 'uncaughtException']) {
+        for (const l of process.listeners(event as 'unhandledRejection')) {
+          if (
+            (l as unknown as Record<symbol, unknown>)[
+              Symbol.for('gamelib.processGuards')
+            ] === true
+          ) {
+            process.removeListener(event, l)
+          }
+        }
+      }
+    })
+
+    it('two instances installing on the real process add exactly one listener per event', () => {
+      const before = {
+        rejection: process.listeners('unhandledRejection').length,
+        exception: process.listeners('uncaughtException').length
+      }
+      const a = createGuards()
+      const b = createGuards()
+      a.installUnhandledRejectionGuard()
+      b.installUnhandledRejectionGuard()
+      a.installUncaughtExceptionGuard()
+      b.installUncaughtExceptionGuard()
+      expect(process.listeners('unhandledRejection').length).toBe(
+        before.rejection + 1
+      )
+      expect(process.listeners('uncaughtException').length).toBe(
+        before.exception + 1
+      )
+    })
+
+    it('a sink set on instance A does not affect instance B', () => {
+      const a = createGuards()
+      const b = createGuards()
+      const sinkA = jest.fn()
+      const sinkB = jest.fn()
+      const targetA = new EventEmitter()
+      const targetB = new EventEmitter()
+      a.setUnhandledRejectionLogSink(sinkA)
+      b.setUnhandledRejectionLogSink(sinkB)
+      a.installUnhandledRejectionGuard(targetA)
+      b.installUnhandledRejectionGuard(targetB)
+      targetA.emit('unhandledRejection', new Error('only a'))
+      expect(sinkA).toHaveBeenCalledTimes(1)
+      expect(sinkB).not.toHaveBeenCalled()
+    })
+  })
+
   describe('Group 3: entry-ordering gate (by-construction, source text -- src/sidecar/ is not a jest project root)', () => {
     // WR-04 (gap cycle 1, closed 2026-08-23). This group used to compare
     // `indexOf('installUnhandledRejectionGuard(')` against `indexOf('init()')` in
@@ -1627,6 +1678,40 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       const stripped = stripComments(source)
 
       expect(stripped).toMatch(/^guards\.installUncaughtExceptionGuard\(\)$/m)
+    })
+
+    // 66.2-REVIEW-FIX pattern: the matchers are proven to FIRE against seeded fixtures.
+    const FIRST_IMPORT = "import { guards } from './installRejectionGuard'"
+
+    it('the first-import matcher rejects the old side-effect form and a reordered entry (seeded fixtures)', () => {
+      const oldForm =
+        "import './installRejectionGuard'\nimport { init } from 'backend/sidecar/bootstrap'\ninit()"
+      const reordered =
+        "import { init } from 'backend/sidecar/bootstrap'\nimport { guards } from './installRejectionGuard'\ninit({ guards })"
+      const good =
+        "import { guards } from './installRejectionGuard'\nimport { init } from 'backend/sidecar/bootstrap'\ninit({ guards })"
+      expect(importLines(oldForm)[0]).not.toBe(FIRST_IMPORT)
+      expect(importLines(reordered)[0]).not.toBe(FIRST_IMPORT)
+      expect(importLines(good)[0]).toBe(FIRST_IMPORT)
+    })
+
+    it('src/sidecar/index.ts calls init({ guards }) and no other init(', () => {
+      const stripped = stripComments(
+        readFileSync(join(__dirname, '../../../sidecar/index.ts'), 'utf-8')
+      )
+      expect(stripped).toMatch(/^init\(\{ guards \}\)$/m)
+      expect(stripped.match(/\binit\(/g)).toHaveLength(1)
+    })
+
+    it('WR-04: installRejectionGuard.ts has exactly one import statement, from processGuards', () => {
+      const stripped = stripComments(
+        readFileSync(
+          join(__dirname, '../../../sidecar/installRejectionGuard.ts'),
+          'utf-8'
+        )
+      )
+      expect(stripped.match(/^import\b/gm)).toHaveLength(1)
+      expect(stripped).toContain('export const guards = createProcessGuards()')
     })
 
     it('WR-04: processGuards.ts has ZERO static imports -- the invariant that makes the first-import position safe', () => {
