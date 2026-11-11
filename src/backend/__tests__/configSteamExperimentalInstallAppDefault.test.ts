@@ -23,19 +23,19 @@ jest.mock('../logger', () => ({
   LogPrefix: new Proxy({}, { get: (_t, k) => String(k) })
 }))
 
-import { GlobalConfig } from '../config'
+import { createGlobalConfig } from '../config'
 
 afterAll(() => rmSync(dir, { recursive: true, force: true }))
 
 describe('steamExperimentalInstallApp default', () => {
   it('factory defaults keep the experimental InstallApp feature off', () => {
     expect(
-      GlobalConfig.get().getFactoryDefaults().steamExperimentalInstallApp
+      createGlobalConfig().getFactoryDefaults().steamExperimentalInstallApp
     ).toBe(false)
   })
 
   it('a fresh config with no config file reports it off', () => {
-    expect(GlobalConfig.get().getSettings().steamExperimentalInstallApp).toBe(
+    expect(createGlobalConfig().getSettings().steamExperimentalInstallApp).toBe(
       false
     )
   })

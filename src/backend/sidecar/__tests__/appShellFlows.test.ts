@@ -161,8 +161,10 @@ jest.mock('backend/constants/environment', () => ({
 // ── backend/config mock — avoid a real on-disk config.json write while
 // still exercising the real handler bodies (themes/releases/changeLanguage) ─
 jest.mock('backend/config', () => {
-  const GlobalConfig = { get: jest.fn() }
-  return { GlobalConfig, adoptGlobalConfig: () => GlobalConfig.get() }
+  // The factory the boot's 'config' step would call; its return value is the settings object
+  // each test points it at.
+  const createGlobalConfig = jest.fn()
+  return { createGlobalConfig }
 })
 
 // ── i18next mock (changeLanguage's real call target) — mirrors
@@ -277,7 +279,7 @@ import {
   writeInvoke,
   writeSend
 } from './helpers/sidecarHarness'
-import type { GlobalConfig as GlobalConfigType } from 'backend/config'
+import type { createGlobalConfig as createGlobalConfigType } from 'backend/config'
 import type i18nextType from 'i18next'
 import type { Stores } from 'backend/services/types'
 import type { backendEvents as backendEventsType } from '../../backend_events'
@@ -304,7 +306,7 @@ import { createStoreRegistry } from 'backend/stores/storeRegistry'
 // handle is a `let` rebound by freshRegistry() (bootstrap first, as in 66-04) before
 // each case, and boot() is bootFresh({ reuseRegistry: true }) so the reset is not
 // repeated after the mocks are configured.
-let GlobalConfig: typeof GlobalConfigType
+let createGlobalConfig: typeof createGlobalConfigType
 let i18next: typeof i18nextType
 let gameInfoStore: Stores['legendary']['gameInfoStore']
 let backendEvents: typeof backendEventsType
@@ -328,7 +330,7 @@ function freshRegistry(): void {
   jest.resetModules()
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
-  GlobalConfig = require('backend/config').GlobalConfig
+  createGlobalConfig = require('backend/config').createGlobalConfig
   i18next = require('i18next').default
   gameInfoStore =
     require('../../storeManagers/legendary/stores').createLegendaryStores({
@@ -346,7 +348,7 @@ function freshRegistry(): void {
   gamesConfigPath = require('../../constants/paths').gamesConfigPath
   /* eslint-enable @typescript-eslint/no-require-imports */
 
-  mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+  mockedGlobalConfigGet = createGlobalConfig as jest.Mock
   mockedI18nextChangeLanguage = i18next.changeLanguage as jest.Mock
   mockedGameInfoStoreClear = gameInfoStore.clear as jest.Mock
   mockedCallAbortController = callAbortController as jest.Mock
@@ -369,7 +371,7 @@ function directDeps(stores: unknown = {}) {
   // Required at call time so a fresh-registry scope hands the registration ITS registry and its
   // mocked GlobalConfig, not the shared ones.
   const { createIpcRegistry } = require('../ipcRegistry')
-  const { GlobalConfig: scopedConfig } = require('backend/config')
+  const { createGlobalConfig: scopedConfigFactory } = require('backend/config')
   /* eslint-enable @typescript-eslint/no-require-imports */
   directIpc = createIpcRegistry() as IpcRegistry
   return {
@@ -383,8 +385,9 @@ function directDeps(stores: unknown = {}) {
       wakeLock: { start: jest.fn(), stop: jest.fn(), isStarted: jest.fn() }
     },
     config: {
-      getSettings: () => scopedConfig.get().getSettings(),
-      setSetting: (...args: unknown[]) => scopedConfig.get().setSetting(...args)
+      getSettings: () => scopedConfigFactory().getSettings(),
+      setSetting: (...args: unknown[]) =>
+        scopedConfigFactory().setSetting(...args)
     },
     managers: { library: {} } as never,
     downloadQueue: downloadQueueStub,
@@ -401,7 +404,7 @@ function boot() {
       // The real monitor: this suite pins the connectivity listener it registers on start().
       onlineMonitor: undefined,
       downloadQueue: downloadQueueStub as never,
-      // Delegates every call to whatever GlobalConfig.get() returns NOW, so `mockAppSettings`
+      // Delegates every call to whatever the global config returns NOW, so `mockAppSettings`
       // after boot (the tray tests) is what the registrations read, as with the static getter.
       config: new Proxy(
         {},
@@ -435,7 +438,7 @@ function inFreshRegistry(fn: () => void): void {
   fn()
 }
 
-/** Points the mocked GlobalConfig.get() at a fresh settings object. */
+/** Points the mocked createGlobalConfig() at a fresh settings object. */
 function mockAppSettings(partial: Record<string, unknown>) {
   const setSetting = jest.fn()
   mockedGlobalConfigGet.mockReturnValue({
@@ -1107,8 +1110,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       jest.useFakeTimers({ doNotFake: ['setImmediate'] })
       inFreshRegistry(() => {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const isolatedConfigGet = require('backend/config').GlobalConfig
-          .get as jest.Mock
+        const isolatedConfigGet = require('backend/config')
+          .createGlobalConfig as jest.Mock
         isolatedConfigGet.mockReturnValue({
           getSettings: () => ({ language: 'en' }),
           setSetting: jest.fn(),
@@ -1187,8 +1190,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
       inFreshRegistry(() => {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const isolatedConfigGet = require('backend/config').GlobalConfig
-          .get as jest.Mock
+        const isolatedConfigGet = require('backend/config')
+          .createGlobalConfig as jest.Mock
         isolatedConfigGet.mockReturnValue({
           getSettings: () => ({ language: 'en' }),
           setSetting: jest.fn(),
@@ -1247,7 +1250,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
             sendFrontendMessage: sendMock
           }))
           // eslint-disable-next-line @typescript-eslint/no-require-imports
-          require('backend/config').GlobalConfig.get.mockReturnValue({
+          require('backend/config').createGlobalConfig.mockReturnValue({
             getSettings: () => ({ language: 'en' }),
             setSetting: jest.fn(),
             set: jest.fn(),
@@ -1344,8 +1347,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           isolatedEnv.isSnap = true
           isolatedEnvRef = isolatedEnv
           // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const isolatedConfigGet = require('backend/config').GlobalConfig
-            .get as jest.Mock
+          const isolatedConfigGet = require('backend/config')
+            .createGlobalConfig as jest.Mock
           isolatedConfigGet.mockReturnValue({
             getSettings: () => ({ language: 'en' }),
             setSetting: jest.fn(),
@@ -1487,8 +1490,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
       inFreshRegistry(() => {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const isolatedConfigGet = require('backend/config').GlobalConfig
-          .get as jest.Mock
+        const isolatedConfigGet = require('backend/config')
+          .createGlobalConfig as jest.Mock
         isolatedConfigGet.mockReturnValue({
           getSettings: () => ({ language: 'en' }),
           setSetting: jest.fn(),
@@ -1535,8 +1538,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
       inFreshRegistry(() => {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const isolatedConfigGet = require('backend/config').GlobalConfig
-          .get as jest.Mock
+        const isolatedConfigGet = require('backend/config')
+          .createGlobalConfig as jest.Mock
         isolatedConfigGet.mockReturnValue({
           getSettings: () => ({ language: 'en' }),
           setSetting: jest.fn(),
@@ -1581,8 +1584,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
       inFreshRegistry(() => {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const isolatedConfigGet = require('backend/config').GlobalConfig
-          .get as jest.Mock
+        const isolatedConfigGet = require('backend/config')
+          .createGlobalConfig as jest.Mock
         isolatedConfigGet.mockReturnValue({
           getSettings: () => ({ language: 'en' }),
           setSetting: jest.fn(),
@@ -1806,8 +1809,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       inFreshRegistry(() => {
         // Inside a fresh-registry scope: a static import would resolve against the shared registry.
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const isolatedConfigGet = require('backend/config').GlobalConfig
-          .get as jest.Mock
+        const isolatedConfigGet = require('backend/config')
+          .createGlobalConfig as jest.Mock
         isolatedConfigGet.mockReturnValue({
           getSettings: () => ({ trayIconVariant: 'light' }),
           setSetting: jest.fn(),

@@ -118,7 +118,7 @@ let testingExportsRecentGames: typeof RecentGamesModule.testingExportsRecentGame
 let steamLibraryStore: ReturnType<
   typeof import('backend/storeManagers/steam/stores').createSteamStores
 >['steamLibraryStore']
-let GlobalConfig: typeof import('backend/config').GlobalConfig
+let createGlobalConfig: typeof import('backend/config').createGlobalConfig
 let recentGamesDeps: RecentGamesModule.RecentGamesDeps
 
 function freshRegistry(): void {
@@ -134,7 +134,7 @@ function freshRegistry(): void {
     require('backend/storeManagers/steam/stores').createSteamStores({
       registry: createStoreRegistry()
     }))
-  ;({ GlobalConfig } = require('backend/config'))
+  ;({ createGlobalConfig } = require('backend/config'))
   recentGamesDeps = {
     stores: {
       kvs: require('backend/constants/key_value_stores').createKvsStores({
@@ -338,20 +338,26 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
   ])(
     'in-app steam launch with $minimizeOnLaunch/$noTrayIcon hides=$hides',
     async ({ minimizeOnLaunch, noTrayIcon, hides }) => {
-      const realGet = GlobalConfig.get.bind(GlobalConfig)
-      const getSpy = jest.spyOn(GlobalConfig, 'get').mockImplementation(() => {
-        const config = realGet()
-        return {
-          ...config,
-          getSettings: () => ({
-            ...config.getSettings(),
-            minimizeOnLaunch,
-            noTrayIcon
-          })
-        } as ReturnType<typeof GlobalConfig.get>
+      // The boot's real global config, with only the two launch-hide settings overridden.
+      const real = createGlobalConfig()
+      const config = new Proxy(real, {
+        get: (target, key) => {
+          if (key === 'getSettings') {
+            return () => ({
+              ...target.getSettings(),
+              minimizeOnLaunch,
+              noTrayIcon
+            })
+          }
+          const member = Reflect.get(target, key) as unknown
+          return typeof member === 'function' ? member.bind(target) : member
+        }
       })
 
-      const { input, frames } = boot()
+      const { input, frames } = bootFresh({
+        reuseRegistry: true,
+        services: { config }
+      })
       writeInvoke(input, 'launch-steam-hide', 'launch', [
         { appName: '999002', runner: 'steam' }
       ])
@@ -361,7 +367,6 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
         (frame) =>
           frame.kind === 'rustInvoke' && frame.channel === RUST_MAIN_WINDOW_HIDE
       )
-      getSpy.mockRestore()
       expect(hideFrames).toHaveLength(hides ? 1 : 0)
     }
   )

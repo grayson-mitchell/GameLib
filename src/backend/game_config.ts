@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'graceful-fs'
 
 import { GameConfigVersion, GameSettings } from 'common/types'
-import { GlobalConfig } from './config'
+import type { GlobalConfigSlice } from './config'
 import { logInfo } from 'backend/logger'
 import {
   ensureSettingsMigrated,
@@ -19,14 +19,12 @@ import {
 
 /**
  * This class does config handling for games.
- * This can't be constructed directly. Use the static method get().
+ * This can't be constructed directly. Use `createGameConfigs({ config }).get(appName)`.
  * It automatically selects the appropriate config loader based on the config version.
  *
  * It also implements all the config features that won't change across versions.
  */
 abstract class GameConfig {
-  protected static instances: Map<string, GameConfig> = new Map()
-
   public abstract version: GameConfigVersion
 
   // @ts-expect-error TODO: Somehow figure out how to synchronously load the config
@@ -35,31 +33,15 @@ abstract class GameConfig {
   readonly appName: string
   readonly path: string
 
-  protected constructor(appName: string) {
+  protected readonly globalConfig: Pick<GlobalConfigSlice, 'getSettings'>
+
+  protected constructor(
+    appName: string,
+    globalConfig: Pick<GlobalConfigSlice, 'getSettings'>
+  ) {
     this.appName = appName
     this.path = join(gamesConfigPath, appName + '.json')
-  }
-
-  /**
-   * Get the game's configuartion handler.
-   * If one doesn't exist, create one.
-   *
-   * @param appName Game to get handler of.
-   * @returns GameConfig instance.
-   */
-  public static get(appName: string): GameConfig {
-    // Lazy, per file, memoised: migrates this game's file on its first get and
-    // never sweeps GamesConfig/ at boot (sidecar exit contract).
-    ensureSettingsMigrated(
-      join(gamesConfigPath, appName + '.json'),
-      'settings/game'
-    )
-
-    if (!GameConfig.instances.get(appName)) {
-      GameConfig.instances.set(appName, new GameConfigV0(appName))
-    }
-
-    return GameConfig.instances.get(appName)!
+    this.globalConfig = globalConfig
   }
 
   /**
@@ -116,8 +98,11 @@ class GameConfigV0 extends GameConfig {
   // Based on legacy behaviour.
   protected isExplicit = true
 
-  constructor(appName: string) {
-    super(appName)
+  constructor(
+    appName: string,
+    globalConfig: Pick<GlobalConfigSlice, 'getSettings'>
+  ) {
+    super(appName, globalConfig)
     this.load()
   }
 
@@ -165,7 +150,7 @@ class GameConfigV0 extends GameConfig {
       gamescope,
       verboseLogs,
       advertiseAvxForRosetta
-    } = GlobalConfig.get().getSettings()
+    } = this.globalConfig.getSettings()
 
     // initialize generic defaults
     // TODO: I know more values can be moved that are not used in windows
@@ -296,7 +281,7 @@ class GameConfigV0 extends GameConfig {
     // Explicit overrides CANNOT be the same as defaults.
     // TODO(adityaruplaha): fix this
     const globalConfig = new Map(
-      Object.entries(GlobalConfig.get().getSettings())
+      Object.entries(this.globalConfig.getSettings())
     )
     const defaultedKeys = Object.entries(this.config)
       .filter(([key, value]) => globalConfig.get(key) === value)
@@ -331,10 +316,28 @@ export interface GameConfigs {
   get(appName: string): GameConfigSlice
 }
 
-// interim (66.3-04): delegates to the static per-game cache so no second instance exists; plan 18
-// moves the cache into this closure and deletes GameConfig.get()
-export function createGameConfigs(): GameConfigs {
-  return { get: (appName) => GameConfig.get(appName) }
+/**
+ * Builds the per-game config registry. Called once by the boot's 'config' step; the per-game
+ * cache lives in this closure, so two registries never share an instance. A game's file is
+ * migrated lazily on its first `get` (memoised per file, never sweeps GamesConfig/ at boot: the
+ * sidecar exit contract).
+ */
+export function createGameConfigs(deps: {
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+}): GameConfigs {
+  const instances = new Map<string, GameConfigSlice>()
+  return {
+    get: (appName) => {
+      let instance = instances.get(appName)
+      if (!instance) {
+        ensureSettingsMigrated(
+          join(gamesConfigPath, appName + '.json'),
+          'settings/game'
+        )
+        instance = new GameConfigV0(appName, deps.config)
+        instances.set(appName, instance)
+      }
+      return instance
+    }
+  }
 }
-
-export { GameConfig }

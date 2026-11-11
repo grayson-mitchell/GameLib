@@ -9,7 +9,7 @@
  * The renderer seeds `focusRow` from the `store/config.json` `settings`
  * MIRROR (`configStore.get_nodefault('settings')`), which the migration never
  * wrote (the `settings/global` v0->v1 migration now persists the seed into
- * `config.json` at the first `GlobalConfig.get()`, but still never into the
+ * `config.json` at the first global config build, but still never into the
  * mirror, which is why hydration remains necessary): two stores, one setting, and the renderer read the one the seed never
  * entered. Every existing suite mocks `backend/config`, so the gap was
  * invisible to all of them.
@@ -119,19 +119,20 @@ function launch(): Launch {
         registry: createStoreRegistry()
       })
     const { configPath } = require('backend/constants/paths')
-    const { GlobalConfig } = require('backend/config')
+    const { createGlobalConfig } = require('backend/config')
     const {
       seedFocusRowFromMirror,
       hydrateFocusRowSelection
     } = require('common/focusRowMigration')
     /* eslint-enable @typescript-eslint/no-require-imports */
 
+    const config = createGlobalConfig()
     const ipc = createIpcRegistry()
     const { handlerRegistry, listenerRegistry } = ipcViews(ipc)
 
     registerSettingsFlows({
       ipc,
-      config: GlobalConfig.get(),
+      config,
       gameConfigs: { get: jest.fn() },
       stores: { kvs: { configStore } }
     })

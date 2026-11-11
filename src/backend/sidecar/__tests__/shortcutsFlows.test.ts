@@ -225,7 +225,7 @@ const mockHandleExit = jest.fn()
 const mockSendFrontendMessage = sendFrontendMessage as jest.Mock
 const mockLogWarning = logWarning as jest.Mock
 const mockLogError = logError as jest.Mock
-// The config slice reads through this (`GlobalConfig.get()` is no longer in the module graph).
+// The config slice reads through this (`the global config` is no longer in the module graph).
 const mockGlobalConfigGet = jest.fn()
 const pathDeps = { paths: createPathShimPaths() }
 const mockGetIcon = getIcon as jest.Mock

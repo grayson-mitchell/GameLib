@@ -29,7 +29,7 @@
  * plan 34.6-09 owns reconciling it onto this seam.
  */
 
-import { GlobalConfig } from 'backend/config'
+import type { GlobalConfigSlice } from 'backend/config'
 import { logWarning, LogPrefix } from 'backend/logger'
 
 import { isEncryptedValue, encryptApiKey, decryptApiKey } from './secureKey'
@@ -38,6 +38,8 @@ import type { Stores } from 'backend/services/types'
 /** What the key's persistence reads and writes: the kvs config store behind `GlobalConfig`. */
 export interface SteamGridDbSecretDeps {
   stores: Pick<Stores, 'kvs'>
+  /** The boot-built global config the key's setting is read from and written to. */
+  config: Pick<GlobalConfigSlice, 'getSettings' | 'setSetting'>
 }
 
 export interface SteamGridDbSecretStore {
@@ -78,7 +80,7 @@ export class ElectronSteamGridDbSecretStore implements SteamGridDbSecretStore {
 
   async getApiKey(): Promise<string | undefined> {
     try {
-      const stored = GlobalConfig.get().getSettings().steamGridDbApiKey
+      const stored = this.deps.config.getSettings().steamGridDbApiKey
       if (!stored) return undefined
 
       // Migrate legacy plaintext values on first read — the ONE surviving migration codepath
@@ -86,7 +88,7 @@ export class ElectronSteamGridDbSecretStore implements SteamGridDbSecretStore {
       if (!isEncryptedValue(stored)) {
         const reEncrypted = encryptApiKey(stored)
         if (isEncryptedValue(reEncrypted)) {
-          GlobalConfig.get().setSetting(
+          this.deps.config.setSetting(
             'steamGridDbApiKey',
             reEncrypted,
             this.deps.stores.kvs
@@ -110,7 +112,7 @@ export class ElectronSteamGridDbSecretStore implements SteamGridDbSecretStore {
     try {
       const trimmed = value.trim()
       const stored = trimmed ? encryptApiKey(trimmed) : ''
-      GlobalConfig.get().setSetting(
+      this.deps.config.setSetting(
         'steamGridDbApiKey',
         stored,
         this.deps.stores.kvs
@@ -125,11 +127,7 @@ export class ElectronSteamGridDbSecretStore implements SteamGridDbSecretStore {
 
   async clearApiKey(): Promise<void> {
     try {
-      GlobalConfig.get().setSetting(
-        'steamGridDbApiKey',
-        '',
-        this.deps.stores.kvs
-      )
+      this.deps.config.setSetting('steamGridDbApiKey', '', this.deps.stores.kvs)
     } catch (error) {
       logWarning(
         ['Failed to clear SteamGridDB API key:', error],

@@ -21,7 +21,7 @@
  * Mocked only at the boundaries `settingsFlowRegistration.ts`'s own module
  * docstring names:
  *   - `backend/config` (`GlobalConfig.get`) — mirrors
- *     `installFlows.test.ts`'s own strategy: a real `GlobalConfig.get()` call
+ *     `installFlows.test.ts`'s own strategy: a real `the global config` call
  *     writes a fresh `config.json` to disk via `graceful-fs`, which needs its
  *     parent directory to already exist (real Electron creates it at
  *     app-start via `makeSureFoldersExist`). A plain
@@ -95,19 +95,21 @@ jest.mock('backend/constants/environment', () => ({
 // ── backend/config mock — avoid a real on-disk config.json write while
 // still exercising the real requestAppSettings handler body ─────────────────
 jest.mock('backend/config', () => {
-  const GlobalConfig = { get: jest.fn() }
-  return { GlobalConfig, adoptGlobalConfig: () => GlobalConfig.get() }
+  // The factory the boot's 'config' step would call; its return value is the settings object
+  // each test points it at.
+  const createGlobalConfig = jest.fn()
+  return { createGlobalConfig }
 })
 
 // ── backend/game_config mock — avoid GameConfigV0's own on-disk
 // read/migration path while still exercising the real requestGameSettings
 // non-steam fallback branch ──────────────────────────────────────────────────
 jest.mock('backend/game_config', () => {
-  const GameConfig = { get: jest.fn() }
+  const gameConfigFor = jest.fn()
   return {
-    GameConfig,
+    gameConfigFor,
     createGameConfigs: () => ({
-      get: (appName: string) => GameConfig.get(appName)
+      get: (appName: string) => gameConfigFor(appName)
     })
   }
 })
@@ -183,11 +185,11 @@ function freshRegistry(): void {
     getSystemInfo: mockedGetSystemInfo
   } = require('backend/utils/systeminfo'))
   ;({ hasExecutable: mockedHasExecutable } = require('backend/utils/os/path'))
-  const { GlobalConfig } = require('backend/config')
-  const { GameConfig } = require('backend/game_config')
+  const { createGlobalConfig } = require('backend/config')
+  const { gameConfigFor } = require('backend/game_config')
   /* eslint-enable @typescript-eslint/no-require-imports */
-  mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
-  mockedGameConfigGet = GameConfig.get as jest.Mock
+  mockedGlobalConfigGet = createGlobalConfig as jest.Mock
+  mockedGameConfigGet = gameConfigFor as jest.Mock
   mockedSteamGetGame = managerStubs.library.steam.getGame
   mockedGogGetGame = managerStubs.library.gog.getGame
 }
@@ -205,7 +207,7 @@ beforeEach(() => {
 })
 
 /**
- * Points the mocked GlobalConfig.get() at a fresh settings object, carrying
+ * Points the mocked createGlobalConfig() at a fresh settings object, carrying
  * `setSetting`/`set`/`flush` spies alongside `getSettings` — Phase 31 Plan 01
  * extends this suite's write-path coverage (`setSetting`, `writeConfig`),
  * both of which reach these three additional methods on the real
@@ -261,8 +263,8 @@ describe('sidecar settings-read flows (Phase 30 Plan 06)', () => {
   })
 
   // Must-have 1b: requestGameSettings for a NON-steam appName reaches
-  // GameConfig.get(appName).getSettings(), NOT the marker.
-  it('requestGameSettings for a non-steam appName reaches GameConfig.get(appName).getSettings(), not the unported marker', async () => {
+  // gameConfigs.get(appName).getSettings(), NOT the marker.
+  it('requestGameSettings for a non-steam appName reaches gameConfigs.get(appName).getSettings(), not the unported marker', async () => {
     const { input, frames } = boot()
     writeInvoke(input, 'game-settings-1', 'requestGameSettings', [
       'some-gog-app'
@@ -364,7 +366,7 @@ describe('sidecar settings WRITE flows (Phase 31 Plan 01 — setSetting/writeCon
   // response frame to inspect (31-RESEARCH.md Pitfall 2), so the only
   // meaningful assertion is that the underlying GlobalConfig.setSetting mock
   // was actually invoked with the right arguments.
-  it('setSetting (send) for appName "default" reaches GlobalConfig.get().setSetting with (key, value)', async () => {
+  it('setSetting (send) for appName "default" reaches the global config.setSetting with (key, value)', async () => {
     const { input } = boot()
     writeSend(input, 'set-setting-global-1', 'setSetting', [
       { appName: 'default', key: 'maxWorkers', value: 2 }
@@ -385,9 +387,9 @@ describe('sidecar settings WRITE flows (Phase 31 Plan 01 — setSetting/writeCon
   // GameConfig branch. Mirrors the real UI ordering (useSettingsContext's
   // mount-time requestAppSettings/requestGameSettings always resolve before
   // any user-driven setSetting can fire) per 31-RESEARCH.md Pitfall 4's
-  // ordering precondition, even though this suite's GameConfig.get() is
+  // ordering precondition, even though this suite's gameConfigs.get() is
   // fully mocked (no real gamesConfigPath filesystem dependency to warm).
-  it('setSetting (send) for a non-default appName reaches GameConfig.get(appName).setSetting with (key, value)', async () => {
+  it('setSetting (send) for a non-default appName reaches gameConfigs.get(appName).setSetting with (key, value)', async () => {
     const { input } = boot()
     writeInvoke(input, 'warm-app-settings-1', 'requestAppSettings', [])
     await flush()
@@ -408,7 +410,7 @@ describe('sidecar settings WRITE flows (Phase 31 Plan 01 — setSetting/writeCon
   // through Phase 29's configStore store layer. `writeConfig` is an invoke
   // channel — assert the response resolves ok:true (not the unported
   // marker) AND that the real `writeConfig()` function (backend/utils.ts)
-  // reached GlobalConfig.get().set()/flush() (the mocked target).
+  // reached the global config.set()/flush() (the mocked target).
   it('writeConfig (invoke) for appName "default" resolves ok:true and reaches the real writeConfig() function', async () => {
     const { input, frames } = boot()
     writeInvoke(input, 'write-config-1', 'writeConfig', [
@@ -460,11 +462,11 @@ describe('sidecar settings WRITE flows (Phase 31 Plan 01 — setSetting/writeCon
   })
 
   // WR-01 (Phase 31 Plan 04): a traversal appName on the per-game setSetting
-  // branch is dropped BEFORE it reaches GameConfig.get(appName).setSetting —
+  // branch is dropped BEFORE it reaches gameConfigs.get(appName).setSetting —
   // mirrors storeLayer.test.ts:374's traversal-drop assertion precedent.
   // `setSetting` is a `send` channel (no response frame), so the only
   // meaningful assertion is that the underlying mock was never invoked.
-  it('WR-01: setSetting (send) for a traversal appName is dropped — GameConfig.get(...).setSetting is never called', async () => {
+  it('WR-01: setSetting (send) for a traversal appName is dropped — gameConfigs.get(...).setSetting is never called', async () => {
     const { input } = boot()
     writeSend(input, 'set-setting-traversal-1', 'setSetting', [
       { appName: '../../etc/passwd', key: 'language', value: 'fr' }

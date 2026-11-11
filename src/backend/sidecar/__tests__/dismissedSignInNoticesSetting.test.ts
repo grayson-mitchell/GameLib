@@ -65,9 +65,9 @@ interface Launch {
     key: string
     value: unknown
   }) => void
-  /** `GlobalConfig.get().getSettings()` off the real file. */
+  /** The launch's global config `getSettings()` off the real file. */
   getSettings: () => Record<string, unknown>
-  /** `GlobalConfig.get().getFactoryDefaults()`. */
+  /** The launch's global config `getFactoryDefaults()`. */
   getFactoryDefaults: () => Record<string, unknown>
   /** What the renderer's module-scope seed reads: `configStore.get_nodefault('settings')`. */
   mirrorSettings: () => Record<string, unknown> | undefined
@@ -89,15 +89,16 @@ function launch(): Launch {
         registry: createStoreRegistry()
       })
     const { configPath } = require('backend/constants/paths')
-    const { GlobalConfig } = require('backend/config')
+    const { createGlobalConfig } = require('backend/config')
     /* eslint-enable @typescript-eslint/no-require-imports */
 
+    const config = createGlobalConfig()
     const ipc = createIpcRegistry()
     const { handlerRegistry, listenerRegistry } = ipcViews(ipc)
 
     registerSettingsFlows({
       ipc,
-      config: GlobalConfig.get(),
+      config,
       gameConfigs: { get: jest.fn() },
       stores: { kvs: { configStore } }
     })
@@ -119,8 +120,8 @@ function launch(): Launch {
     l = {
       requestAppSettings: () => handler({}),
       setSetting: (payload) => listener({}, payload),
-      getSettings: () => GlobalConfig.get().getSettings(),
-      getFactoryDefaults: () => GlobalConfig.get().getFactoryDefaults(),
+      getSettings: () => config.getSettings(),
+      getFactoryDefaults: () => config.getFactoryDefaults(),
       mirrorSettings: () => configStore.get_nodefault('settings'),
       configPath,
       mirrorPath

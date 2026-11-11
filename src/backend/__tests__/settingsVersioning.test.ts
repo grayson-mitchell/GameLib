@@ -48,8 +48,8 @@ type GameConfigModule = typeof import('../game_config')
 type EngineConfigModule = typeof import('../engine/engineConfig')
 
 interface Graph {
-  GlobalConfig: ConfigModule['GlobalConfig']
-  GameConfig: GameConfigModule['GameConfig']
+  createGlobalConfig: ConfigModule['createGlobalConfig']
+  createGameConfigs: GameConfigModule['createGameConfigs']
   readStoredGameConfig: EngineConfigModule['readStoredGameConfig']
 }
 
@@ -58,8 +58,8 @@ function freshGraph(): Graph {
   jest.isolateModules(() => {
     /* eslint-disable @typescript-eslint/no-require-imports */
     g = {
-      GlobalConfig: require('../config').GlobalConfig,
-      GameConfig: require('../game_config').GameConfig,
+      createGlobalConfig: require('../config').createGlobalConfig,
+      createGameConfigs: require('../game_config').createGameConfigs,
       readStoredGameConfig: require('../engine/engineConfig')
         .readStoredGameConfig
     }
@@ -96,9 +96,9 @@ describe('global settings', () => {
       version: 'v9'
     })
     writeFileSync(configFile(), text)
-    const { GlobalConfig } = freshGraph()
+    const { createGlobalConfig } = freshGraph()
 
-    const config = GlobalConfig.get()
+    const config = createGlobalConfig()
     expect(config.getSettings().checkUpdatesInterval).toBe(77)
     config.setSetting('language', 'de', {
       configStore: { get_nodefault: jest.fn(), set: jest.fn() } as never
@@ -114,9 +114,9 @@ describe('global settings', () => {
         defaultSettings: { darkTrayIcon: true, language: 'en' }
       })
     )
-    const { GlobalConfig } = freshGraph()
+    const { createGlobalConfig } = freshGraph()
 
-    expect(GlobalConfig.get().getSettings().trayIconVariant).toBe('dark')
+    expect(createGlobalConfig().getSettings().trayIconVariant).toBe('dark')
     const onDisk = JSON.parse(readFileSync(configFile(), 'utf8'))
     expect(onDisk.version).toBe('v1')
     expect(onDisk.defaultSettings.trayIconVariant).toBe('dark')
@@ -125,8 +125,8 @@ describe('global settings', () => {
   })
 
   it('a missing config produces a fresh private v1 file', () => {
-    const { GlobalConfig } = freshGraph()
-    GlobalConfig.get()
+    const { createGlobalConfig } = freshGraph()
+    createGlobalConfig()
     expect(JSON.parse(readFileSync(configFile(), 'utf8')).version).toBe('v1')
     expect(statSync(configFile()).mode & 0o777).toBe(0o600)
   })
@@ -151,9 +151,10 @@ describe('per-game settings', () => {
     seed('app0')
     const before = readFileSync(gameFile('app0'))
     const mtime = statSync(gameFile('app0')).mtimeMs
-    const { GameConfig } = freshGraph()
+    const { createGameConfigs, createGlobalConfig } = freshGraph()
+    const gameConfigs = createGameConfigs({ config: createGlobalConfig() })
 
-    const game = GameConfig.get('app0')
+    const game = gameConfigs.get('app0')
     expect(readFileSync(gameFile('app0')).equals(before)).toBe(true)
     expect(statSync(gameFile('app0')).mtimeMs).toBe(mtime)
     expect(backups('app0')).toHaveLength(0)
@@ -171,9 +172,10 @@ describe('per-game settings', () => {
     )
     seed('app7', 'v7')
     const before = readFileSync(gameFile('app7'))
-    const { GameConfig } = freshGraph()
+    const { createGameConfigs, createGlobalConfig } = freshGraph()
+    const gameConfigs = createGameConfigs({ config: createGlobalConfig() })
 
-    const game = GameConfig.get('app7')
+    const game = gameConfigs.get('app7')
     expect(game.config.targetExe).toBe('a.exe')
     expect(() => game.setSetting('showFps', true)).not.toThrow()
     expect(game.config.showFps).toBe(true)

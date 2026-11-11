@@ -4,7 +4,6 @@
   },
   "moduleState": {
     "src/backend/backend_events.ts": 1,
-    "src/backend/game_config.ts": 1,
     "src/backend/images_cache.ts": 1,
     "src/backend/knownFixOverlayInstall.ts": 1,
     "src/backend/knownFixesFetcher.ts": 1,

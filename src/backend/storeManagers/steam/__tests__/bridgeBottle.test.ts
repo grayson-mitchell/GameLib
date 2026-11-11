@@ -23,7 +23,6 @@ import {
 import { readFileSync as readRealFile } from 'node:fs'
 import { dirname as dirnameOf, join as joinPath } from 'node:path'
 import { userHome } from 'backend/constants/paths'
-import { GlobalConfig } from 'backend/config'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import { createTestStores } from 'backend/testUtils/testServices'
 import { createSteamBottle, DEFAULT_BRIDGE_BOTTLE_NAME } from '../bottle'
@@ -72,12 +71,6 @@ jest.mock('../stores', () => ({
     get: jest.fn(),
     get_nodefault: jest.fn(),
     set: jest.fn()
-  }
-}))
-
-jest.mock('backend/config', () => ({
-  GlobalConfig: {
-    get: jest.fn()
   }
 }))
 
@@ -135,7 +128,8 @@ const mockedRmSync = rmSync as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
 const mockedSet = steamBottleConfigStore.set as jest.Mock
 
-const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+// The settings the injected config slice reads; each test points it at its own object.
+const mockedGlobalConfigGet = jest.fn()
 // 66.3-15: the bottle helpers are an instance over the suite's mocked store and config.
 const steamBottle = createSteamBottle({
   stores: createTestStores({ steam: { steamBottleConfigStore } as never }),

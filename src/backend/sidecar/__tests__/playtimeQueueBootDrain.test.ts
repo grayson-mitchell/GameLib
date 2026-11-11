@@ -159,14 +159,17 @@ function bootedWorld(opts?: {
   })
   const bootCalls = syncQueuedPlaytimeSpy.mock.calls.length
   if (!opts?.drainImpl) syncQueuedPlaytimeSpy.mockClear()
+  const config = {
+    getSettings: jest.fn<Record<string, unknown>, []>(() => ({}))
+  }
   return {
     bootCalls,
     runOnce,
     syncQueuedPlaytimeSpy,
     playtimeSyncQueue,
     loggerModule: require('../../logger') as typeof import('../../logger'),
-    GlobalConfig: (require('../../config') as typeof import('../../config'))
-      .GlobalConfig,
+    // The config slice the helper reads, per world: tests script `getSettings`.
+    config,
     // The helper takes its managers as a dep (66.1-04); pass the same map the suite spies on.
     syncQueuedPlaytimeWhenOnline: () =>
       (
@@ -180,13 +183,7 @@ function bootedWorld(opts?: {
       ).syncQueuedPlaytimeWhenOnline({
         managers: { library: gogManager ? { gog: gogManager } : {} },
         onlineMonitor: { runOnceWhenOnline: runOnce },
-        // Read lazily so a test that spies GlobalConfig.get (or makes it throw) is honoured.
-        config: {
-          getSettings: () =>
-            (
-              require('../../config') as typeof import('../../config')
-            ).GlobalConfig.get().getSettings()
-        }
+        config
       })
   }
 }
@@ -239,13 +236,11 @@ describe('todo 2026-09-06 -- sidecar boot drains queued GOG playtime once online
     it('case 3 -- disabled arm: disablePlaytimeSync skips the drain and logs the exact skip receipt', () => {
       const {
         syncQueuedPlaytimeSpy,
-        GlobalConfig,
+        config,
         loggerModule,
         syncQueuedPlaytimeWhenOnline
       } = bootedWorld()
-      jest.spyOn(GlobalConfig, 'get').mockReturnValue({
-        getSettings: () => ({ disablePlaytimeSync: true })
-      } as unknown as import('../../config').GlobalConfig)
+      config.getSettings.mockReturnValue({ disablePlaytimeSync: true })
       const logDebugSpy = jest.spyOn(loggerModule, 'logDebug')
 
       syncQueuedPlaytimeWhenOnline()
@@ -284,10 +279,10 @@ describe('todo 2026-09-06 -- sidecar boot drains queued GOG playtime once online
       ).toBe(true)
     })
 
-    it('case 5 -- never-fails-boot (outer arm): a throwing GlobalConfig.get() is caught and warned', () => {
-      const { GlobalConfig, loggerModule, syncQueuedPlaytimeWhenOnline } =
+    it('case 5 -- never-fails-boot (outer arm): a throwing config read is caught and warned', () => {
+      const { config, loggerModule, syncQueuedPlaytimeWhenOnline } =
         bootedWorld()
-      jest.spyOn(GlobalConfig, 'get').mockImplementation(() => {
+      config.getSettings.mockImplementation(() => {
         throw new Error('config read failed')
       })
       const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')

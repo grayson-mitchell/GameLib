@@ -23,18 +23,18 @@ jest.mock('../logger', () => ({
   LogPrefix: new Proxy({}, { get: (_t, k) => String(k) })
 }))
 
-import { GlobalConfig } from '../config'
+import { createGlobalConfig } from '../config'
 
 afterAll(() => rmSync(dir, { recursive: true, force: true }))
 
 describe('shareDetectedFixes default (D-09)', () => {
   it('factory defaults keep sharing detected fixes off', () => {
-    expect(GlobalConfig.get().getFactoryDefaults().shareDetectedFixes).toBe(
+    expect(createGlobalConfig().getFactoryDefaults().shareDetectedFixes).toBe(
       false
     )
   })
 
   it('a fresh config with no config file reports it off', () => {
-    expect(GlobalConfig.get().getSettings().shareDetectedFixes).toBe(false)
+    expect(createGlobalConfig().getSettings().shareDetectedFixes).toBe(false)
   })
 })

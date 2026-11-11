@@ -54,7 +54,7 @@
 // discord RPC, etc.) with no bearing on this test's proof of registration kind / pass-through
 // forwarding -- factory-mocked so this suite never drives its real filesystem/child_process
 // side effects.
-// `../../game_config`'s `GameConfig.get(appName).getSettings()` would otherwise exercise real
+// `../../game_config`'s `gameConfigs.get(appName).getSettings()` would otherwise exercise real
 // config-file I/O for a fake `appName` -- factory-mocked so the tool-literal proof test (Describe
 // 5) controls exactly what `getSettings()` resolves to, without touching disk.
 const mockGameConfigGet = jest.fn()

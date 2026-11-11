@@ -165,7 +165,7 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // 43afa3fb9f2352ee25a13811958c017c4474445bc0ea468ce67ed29674087351
   // Re-pinned 2026-11-02 by Phase 59 Plan 25 (G17), per this gate's documented
   // procedure. The per-game write in `setSetting` changed from
-  // `GameConfig.get(appName).setSetting(key, value)` to
+  // `gameConfigs.get(appName).setSetting(key, value)` to
   // `applyGameSetting(appName, key, value)` (one retry, then logError), plus the one
   // import of `./gameSettingWrite`. No registration, channel or guard moved; the D-09
   // `steamLibrary.has(appName)` gate is untouched and still proven by the semantic

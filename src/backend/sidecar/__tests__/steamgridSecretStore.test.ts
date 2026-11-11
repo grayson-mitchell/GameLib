@@ -50,7 +50,7 @@ jest.mock('../../logger', () => ({
   }
 }))
 
-// ── backend/config mock — in-memory settings object standing in for GlobalConfig ────────────────
+// ── in-memory settings object standing in for the injected global config ────────────────
 let backingSettings: { steamGridDbApiKey?: string } = {}
 const mockGetSettings = jest.fn(() => backingSettings)
 const mockSetSetting = jest.fn((key: string, value: unknown) => {
@@ -59,9 +59,6 @@ const mockSetSetting = jest.fn((key: string, value: unknown) => {
 const mockGlobalConfigGet = jest.fn(() => ({
   getSettings: mockGetSettings,
   setSetting: mockSetSetting
-}))
-jest.mock('../../config', () => ({
-  GlobalConfig: { get: mockGlobalConfigGet }
 }))
 
 // ── steamgrid/secureKey mock — controllable ciphertext detection/decryption ─────────────────────
@@ -87,7 +84,17 @@ import { createTestStores } from 'backend/testUtils/testServices'
 
 // The mocked GlobalConfig never reads the kvs slice; the migration just hands it through.
 const secretDeps = {
-  stores: createTestStores({ kvs: { configStore: {} } as never })
+  stores: createTestStores({ kvs: { configStore: {} } as never }),
+  // The injected config slice reads through the in-memory settings object above.
+  config: {
+    getSettings: () => mockGlobalConfigGet().getSettings(),
+    setSetting: (key: string, value: unknown, ...rest: unknown[]) =>
+      (mockGlobalConfigGet().setSetting as (...args: unknown[]) => void)(
+        key,
+        value,
+        ...rest
+      )
+  } as never
 }
 
 type ProgrammedOutcome =

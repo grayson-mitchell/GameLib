@@ -240,8 +240,10 @@ jest.mock('backend/constants/environment', () => ({
 // ── backend/config mock — avoid a real on-disk config.json write while still
 // exercising bootstrap.ts's real i18next init (settings.language) ───────────
 jest.mock('backend/config', () => {
-  const GlobalConfig = { get: jest.fn() }
-  return { GlobalConfig, adoptGlobalConfig: () => GlobalConfig.get() }
+  // The factory the boot's 'config' step would call; its return value is the settings object
+  // each test points it at.
+  const createGlobalConfig = jest.fn()
+  return { createGlobalConfig }
 })
 
 // ── backend/online_monitor mock (full surface, per bootstrap.test.ts's own
@@ -424,7 +426,7 @@ function freshRegistry(): void {
   jest.resetModules()
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
-  const { GlobalConfig } = require('backend/config')
+  const { createGlobalConfig } = require('backend/config')
   const { libraryManagerMap } = require('backend/storeManagers')
   const { notify } = require('../../dialog/dialog')
   const { sendGameStatusUpdate } = require('../../utils')
@@ -438,7 +440,7 @@ function freshRegistry(): void {
       registry: createStoreRegistry()
     }))
   /* eslint-enable @typescript-eslint/no-require-imports */
-  mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+  mockedGlobalConfigGet = createGlobalConfig as jest.Mock
   mockedIsOnline = jest.fn()
   mockedNotify = notify as jest.Mock
   mockedSendGameStatusUpdate = sendGameStatusUpdate as jest.Mock
@@ -466,7 +468,7 @@ beforeEach(() => {
   freshRegistry()
 })
 
-/** Points the mocked GlobalConfig.get() at a fresh settings object. */
+/** Points the mocked createGlobalConfig() at a fresh settings object. */
 function mockAppSettings(partial: Record<string, unknown>) {
   const setSetting = jest.fn()
   mockedGlobalConfigGet.mockReturnValue({

@@ -239,8 +239,10 @@ jest.mock('backend/constants/environment', () => ({
 // ── backend/config — avoid a real on-disk config.json write while leaving the real i18next
 // path intact (mirrors bootstrapWirings.test.ts) ──────────────────────────────────────────────
 jest.mock('backend/config', () => {
-  const GlobalConfig = { get: jest.fn() }
-  return { GlobalConfig, adoptGlobalConfig: () => GlobalConfig.get() }
+  // The factory the boot's 'config' step would call; its return value is the settings object
+  // each test points it at.
+  const createGlobalConfig = jest.fn()
+  return { createGlobalConfig }
 })
 
 // ── backend/anticheat/utils — the fault this whole plan exists to survive. `downloadAntiCheatData`
@@ -300,8 +302,8 @@ function setupIsolatedBootstrapHarness(): {
   bootFresh({
     before: () => {
       /* eslint-disable @typescript-eslint/no-require-imports */
-      const { GlobalConfig } = require('backend/config')
-      ;(GlobalConfig.get as jest.Mock).mockReturnValue({
+      const { createGlobalConfig } = require('backend/config')
+      ;(createGlobalConfig as jest.Mock).mockReturnValue({
         getSettings: () => ({ language: 'en' }),
         setSetting: jest.fn(),
         set: jest.fn(),
@@ -722,8 +724,8 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
           guards,
           before: () => {
             /* eslint-disable @typescript-eslint/no-require-imports */
-            const { GlobalConfig } = require('backend/config')
-            ;(GlobalConfig.get as jest.Mock).mockReturnValue({
+            const { createGlobalConfig } = require('backend/config')
+            ;(createGlobalConfig as jest.Mock).mockReturnValue({
               getSettings: () => ({ language: 'en' }),
               setSetting: jest.fn(),
               set: jest.fn(),
@@ -796,8 +798,8 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
           guards,
           before: () => {
             /* eslint-disable @typescript-eslint/no-require-imports */
-            const { GlobalConfig } = require('backend/config')
-            ;(GlobalConfig.get as jest.Mock).mockReturnValue({
+            const { createGlobalConfig } = require('backend/config')
+            ;(createGlobalConfig as jest.Mock).mockReturnValue({
               getSettings: () => ({ language: 'en' }),
               setSetting: jest.fn(),
               set: jest.fn(),

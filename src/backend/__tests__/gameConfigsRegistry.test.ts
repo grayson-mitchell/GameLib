@@ -1,24 +1,30 @@
-import { adoptGlobalConfig, GlobalConfig } from '../config'
-import { createGameConfigs, GameConfig } from '../game_config'
+import { createGameConfigs } from '../game_config'
 import {
   createTestGameConfigs,
   createTestGlobalConfig
 } from '../testUtils/testConfig'
 
-describe('createGameConfigs (interim delegate)', () => {
-  it('returns the same object as GameConfig.get', () => {
-    expect(createGameConfigs().get('app')).toBe(GameConfig.get('app'))
+describe('createGameConfigs', () => {
+  // The per-game defaults read these two keys of the global settings.
+  const config = createTestGlobalConfig({
+    enviromentOptions: [],
+    wineVersion: { name: 'Wine', type: 'wine', bin: '' }
   })
 
   it('returns the same object on repeated gets', () => {
-    const configs = createGameConfigs()
-    expect(configs.get('app')).toBe(configs.get('app'))
+    const configs = createGameConfigs({ config })
+    expect(configs.get('a')).toBe(configs.get('a'))
   })
-})
 
-describe('adoptGlobalConfig (interim identity)', () => {
-  it('returns the same object as GlobalConfig.get', () => {
-    expect(adoptGlobalConfig()).toBe(GlobalConfig.get())
+  it('returns a different object for a different game', () => {
+    const configs = createGameConfigs({ config })
+    expect(configs.get('a')).not.toBe(configs.get('b'))
+  })
+
+  it('two registries never share an instance', () => {
+    expect(createGameConfigs({ config }).get('a')).not.toBe(
+      createGameConfigs({ config }).get('a')
+    )
   })
 })
 

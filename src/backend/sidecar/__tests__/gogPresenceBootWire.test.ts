@@ -93,8 +93,6 @@ function bootedWorld() {
     runOnce,
     setPresenceSpy,
     loggerModule: require('../../logger') as typeof import('../../logger'),
-    GlobalConfig: (require('../../config') as typeof import('../../config'))
-      .GlobalConfig,
     setGogPresenceWhenOnline: (
       require('../bootstrap') as {
         setGogPresenceWhenOnline: (deps: GOGUserDeps) => void
@@ -133,21 +131,21 @@ describe('todo 2026-09-06 -- sidecar boot sets GOG presence once online (Block H
     })
 
     it('case 3 -- D-K5X-02 receipt: disableGOGPresence still calls setPresence(), no skip-log -- the gate is inside setPresence()', () => {
-      const {
-        setPresenceSpy,
-        GlobalConfig,
-        loggerModule,
-        setGogPresenceWhenOnline
-      } = bootedWorld()
-      jest.spyOn(GlobalConfig, 'get').mockReturnValue({
-        getSettings: () => ({
-          disableGOGPresence: true,
-          disablePlaytimeSync: true
-        })
-      } as unknown as import('../../config').GlobalConfig)
+      const { setPresenceSpy, loggerModule, setGogPresenceWhenOnline } =
+        bootedWorld()
+      // A config that says presence is disabled; Block H must never even read it.
+      const getSettings = jest.fn(() => ({
+        disableGOGPresence: true,
+        disablePlaytimeSync: true
+      }))
+      const deps = {
+        ...presenceDeps,
+        config: { getSettings }
+      } as unknown as GOGUserDeps
       const logDebugSpy = jest.spyOn(loggerModule, 'logDebug')
 
-      setGogPresenceWhenOnline(presenceDeps)
+      setGogPresenceWhenOnline(deps)
+      expect(getSettings).not.toHaveBeenCalled()
 
       // Block H itself reads NO settings -- it must call setPresence() regardless of
       // disableGOGPresence. If someone later "helpfully" hoists a settings read to helper

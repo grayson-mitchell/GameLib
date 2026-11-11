@@ -79,40 +79,19 @@ function getSteamCompatFolder() {
 
 /**
  * This class does config handling.
- * This can't be constructed directly. Use the static method get().
+ * This can't be constructed directly. The boot's 'config' step builds the one instance with
+ * `createGlobalConfig()`.
  * It automatically selects the appropriate config loader based on the config version.
  *
  * It also implements all the config features that won't change across versions.
  */
 abstract class GlobalConfig {
-  protected static globalInstance: GlobalConfig
-
   public abstract version: GlobalConfigVersion
 
   protected config: AppSettings | undefined
 
   public set(config: AppSettings) {
     this.config = config
-  }
-
-  /**
-   * Get the global configuartion handler.
-   * If one doesn't exist, create one.
-   *
-   * @returns GlobalConfig instance.
-   */
-  public static get(): GlobalConfig {
-    // Migrate (or mark read-only) before anything reads the file. Memoised per
-    // path, never throws (Phase 68, D-10).
-    ensureSettingsMigrated(configPath, 'settings/global')
-
-    if (!GlobalConfig.globalInstance) {
-      // A single loader for every version: a newer file loads what this build
-      // understands (D-03) instead of crashing on an unknown version.
-      GlobalConfig.globalInstance = new GlobalConfigV0()
-    }
-
-    return GlobalConfig.globalInstance
   }
 
   /**
@@ -401,9 +380,16 @@ export type GlobalConfigSlice = Pick<
   | 'getMacOsWineSet'
 >
 
-// interim (66.3-04): the 'config' boot step's only static read; plan 18 deletes this and the statics
-export function adoptGlobalConfig(): GlobalConfig {
-  return GlobalConfig.get()
+/**
+ * Builds the global config handler. Called once by the boot's 'config' step; the instance is then
+ * handed to every consumer as `GlobalConfigSlice`. Migrates (or marks read-only) the settings
+ * file before anything reads it; memoised per path and never throws (Phase 68, D-10). A single
+ * loader serves every version: a newer file loads what this build understands (D-03) instead of
+ * crashing on an unknown version.
+ */
+export function createGlobalConfig(): GlobalConfig {
+  ensureSettingsMigrated(configPath, 'settings/global')
+  return new GlobalConfigV0()
 }
 
 export { GlobalConfig }

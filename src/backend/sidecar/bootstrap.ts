@@ -183,7 +183,7 @@ import {
   getRunnerLogWriter,
   LogPrefix
 } from '../logger'
-import { adoptGlobalConfig, type GlobalConfigSlice } from '../config'
+import { createGlobalConfig, type GlobalConfigSlice } from '../config'
 import { createGameConfigs } from '../game_config'
 import { resolveAppInfo } from '../host/appInfo'
 import { isPackagedSidecar } from './isPackagedSidecar'
@@ -1401,10 +1401,12 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // `initOnlineMonitor()`'s and `installTokenStore()`'s placement comments below).
         // MigrationSystem's only migration copies the legendary config folder and never writes
         // config.json, so running after 'migrations' loses nothing. configBootOrder.test.ts pins it.
-        // Interim (66.3-04): adoptGlobalConfig / createGameConfigs return the same objects the
-        // static getters do (no split brain); plan 18 swaps them for real factories.
-        state.services.config = prebuilt.config ?? adoptGlobalConfig()
-        state.services.gameConfigs = prebuilt.gameConfigs ?? createGameConfigs()
+        // createGlobalConfig() runs the settings migration first; the per-game registry holds its
+        // cache in its closure and reads global defaults through the config built here.
+        const config = prebuilt.config ?? createGlobalConfig()
+        state.services.config = config
+        state.services.gameConfigs =
+          prebuilt.gameConfigs ?? createGameConfigs({ config })
         state.services.paths = prebuilt.paths ?? ctx.paths
         state.services.appInfo = prebuilt.appInfo ?? ctx.appInfo
       }
@@ -2104,7 +2106,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'secret-stores',
       run: (ctx, _io, state) => {
-        const { stores, host, onlineMonitor } = requireServices(state)
+        const { stores, host, onlineMonitor, config } = requireServices(state)
         registerDxmtListeners({
           stores,
           runner: ctx.runner,
@@ -2159,7 +2161,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           const steamGridKeyringStore = state.steamGridKeyringStore
           if (!steamGridKeyringStore)
             throw new Error('boot: steamgrid-secrets step must run first')
-          startSidecarSteamGridDbSecretStore(steamGridKeyringStore, { stores })
+          startSidecarSteamGridDbSecretStore(steamGridKeyringStore, {
+            stores,
+            config
+          })
           logInfo('[bootstrap] secret stores: keyring', LogPrefix.Backend)
         }
       }

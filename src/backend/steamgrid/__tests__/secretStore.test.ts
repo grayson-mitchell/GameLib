@@ -16,7 +16,7 @@
  * `backend/config`'s `GlobalConfig` for Humble's `../stores` `configStore`:
  *  - electron       → safeStorage (encrypt/decrypt/availability)
  *  - backend/logger
- *  - backend/config → GlobalConfig.get().getSettings()/setSetting() (in-memory settings object,
+ *  - backend/config → the global config.getSettings()/setSetting() (in-memory settings object,
  *    never `requireActual` — a real `GlobalConfig` pulls in `graceful-fs`/`electron-store` and
  *    reaches the real app-support dir)
  *
@@ -37,7 +37,7 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Backend: 'Backend' }
 }))
 
-// ── backend/config mock — in-memory settings object standing in for GlobalConfig ────────────────
+// ── in-memory settings object standing in for the injected global config ────────────────
 let backingSettings: { steamGridDbApiKey?: string } = {}
 const mockGetSettings = jest.fn(() => backingSettings)
 const mockSetSetting = jest.fn((key: string, value: unknown) => {
@@ -46,11 +46,6 @@ const mockSetSetting = jest.fn((key: string, value: unknown) => {
 let mockGlobalConfigGet = jest.fn(() => ({
   getSettings: mockGetSettings,
   setSetting: mockSetSetting
-}))
-jest.mock('backend/config', () => ({
-  GlobalConfig: {
-    get: () => mockGlobalConfigGet()
-  }
 }))
 
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
@@ -64,7 +59,17 @@ import { defined } from 'backend/testUtils/indexed'
 
 // The mocked GlobalConfig never reads the kvs slice, but the store must hand it through.
 const secretDeps = {
-  stores: createTestStores({ kvs: { configStore: {} } as never })
+  stores: createTestStores({ kvs: { configStore: {} } as never }),
+  // The injected config slice reads through the in-memory settings object above.
+  config: {
+    getSettings: () => mockGlobalConfigGet().getSettings(),
+    setSetting: (key: string, value: unknown, ...rest: unknown[]) =>
+      (mockGlobalConfigGet().setSetting as (...args: unknown[]) => void)(
+        key,
+        value,
+        ...rest
+      )
+  } as never
 }
 
 describe('steamgrid/secretStore', () => {
@@ -172,7 +177,7 @@ describe('steamgrid/secretStore', () => {
       expect(mockSetSetting).not.toHaveBeenCalled()
     })
 
-    describe('total-method contract: GlobalConfig.get() throwing never propagates', () => {
+    describe('total-method contract: the global config throwing never propagates', () => {
       beforeEach(() => {
         mockGlobalConfigGet = jest.fn(() => {
           throw new Error('GlobalConfig unavailable')

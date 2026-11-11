@@ -56,7 +56,6 @@ import type {
   SteamGridDbSecretStore
 } from '../steamgrid/secretStore'
 import { isEncryptedValue, decryptApiKey } from '../steamgrid/secureKey'
-import { GlobalConfig } from '../config'
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
@@ -165,7 +164,7 @@ export async function migrateSteamGridDbApiKey(
   store: Pick<SidecarSteamGridDbSecretStore, 'invalidateCache'>,
   deps: SteamGridDbSecretDeps
 ): Promise<void> {
-  const stored = GlobalConfig.get().getSettings().steamGridDbApiKey
+  const stored = deps.config.getSettings().steamGridDbApiKey
 
   if (!stored || typeof stored !== 'string') {
     // Absent — healthy "nothing to migrate" case (already migrated on a prior run, or no
@@ -231,5 +230,5 @@ export async function migrateSteamGridDbApiKey(
     return
   }
 
-  GlobalConfig.get().setSetting('steamGridDbApiKey', '', deps.stores.kvs)
+  deps.config.setSetting('steamGridDbApiKey', '', deps.stores.kvs)
 }

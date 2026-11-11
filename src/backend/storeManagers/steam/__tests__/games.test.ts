@@ -1,3 +1,4 @@
+import type { GameConfigSlice } from 'backend/game_config'
 import type { SteamDrm } from '../bridge/drm/drmLaunchSetup'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { createTestEngineState } from 'backend/testUtils/testEngineState'
@@ -337,7 +338,11 @@ const steamTestDeps = createTestManagerDeps({
   },
   gameConfigs: {
     get: (appName: string) =>
-      jest.requireMock('backend/game_config').GameConfig.get(appName)
+      (
+        jest.requireMock('backend/game_config').GameConfig.get as (
+          appName: string
+        ) => GameConfigSlice
+      )(appName)
   },
   steamProcesses: createInertSteamProcesses({
     // The DRM instance: its launch setup is the jest.fn()-backed stand-in the
@@ -9215,7 +9220,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     expect(launchBridgeSpy).toHaveBeenCalledTimes(1)
     const { shell } = hostFakes
     expect(
-      (shell.openExternal as jest.Mock).mock.calls.some((c) =>
+      shell.openExternal.mock.calls.some((c) =>
         String(c[0]).startsWith('steam://rungameid')
       )
     ).toBe(false)
@@ -12291,7 +12296,7 @@ describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => 
     const { shell, dialog } = hostFakes
     shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
-    dialogShowMessageBox = dialog.showMessageBox as jest.Mock
+    dialogShowMessageBox = dialog.showMessageBox
     envMock = jest.requireMock('backend/constants/environment')
     envMock.isMac = true
     envMock.isWindows = false
@@ -12440,7 +12445,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
   // BEFORE game.launch() for a bottle-eligible game (isNative()===false) — that
   // pre-step consumes THIS getSettings() result. It must resolve the dedicated
   // bottle store (getSteamBottleSettings), never fall through to an empty
-  // per-appId GameConfig.get(<numeric appId>) (Pitfall-6 phantom-config guard).
+  // per-appId gameConfigs.get(<numeric appId>) (Pitfall-6 phantom-config guard).
 
   describe('bottle-eligible resolution (D-11)', () => {
     let envMock: any
@@ -12453,7 +12458,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
       getSteamBottleSettings.mockReset()
     })
 
-    it('bottle-eligible game: getSettings() resolves getSteamBottleSettings(), NOT GameConfig.get(<appId>)', async () => {
+    it('bottle-eligible game: getSettings() resolves getSteamBottleSettings(), NOT gameConfigs.get(<appId>)', async () => {
       ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
         platformsCaptured: true,
         is_mac_native: false
@@ -12476,7 +12481,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
       expect(gameConfigGetMock).not.toHaveBeenCalled()
     })
 
-    it('non-eligible macOS game (Mac-native): getSettings() falls back to GameConfig.get(<appId>) unchanged', async () => {
+    it('non-eligible macOS game (Mac-native): getSettings() falls back to gameConfigs.get(<appId>) unchanged', async () => {
       ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
         platformsCaptured: true,
         is_mac_native: true
@@ -17487,7 +17492,7 @@ describe('Steam launch watch wiring (261111-9mj)', () => {
     pendingFetches.clear()
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
     const { shell } = hostFakes
-    ;(shell.openExternal as jest.Mock).mockResolvedValue(undefined)
+    shell.openExternal.mockResolvedValue(undefined)
     ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(null)
     startSpy = jest
       .spyOn(steamLaunchWatchModule, 'startSteamLaunchWatch')

@@ -85,20 +85,19 @@ jest.mock('backend/constants/environment', () => ({
 // path intact (mirrors bootstrapWirings.test.ts / settingsFlows.test.ts). The factory's
 // `get` implementation below is a declaration only -- `resetMocks: true` strips it before
 // EVERY test (the same gotcha this file's header names for `child_process.exec`), so it is
-// re-asserted in `beforeEach` too. Without that, `GlobalConfig.get()` returns `undefined`,
+// re-asserted in `beforeEach` too. Without that, the mocked config factory returns `undefined`,
 // `.getSettings()` throws inside `init()`'s own try/catch, and `i18nReady` never gets
 // reassigned off its initial `Promise.resolve()` -- silently racing `checkRosettaInstall()`
 // ahead of a real i18next load instead of proving the fix waits for it.
 jest.mock('backend/config', () => {
-  const GlobalConfig = {
-    get: jest.fn(() => ({
-      getSettings: () => ({ language: 'en' }),
-      setSetting: jest.fn(),
-      set: jest.fn(),
-      flush: jest.fn()
-    }))
-  }
-  return { GlobalConfig, adoptGlobalConfig: () => GlobalConfig.get() }
+  // The factory the boot's 'config' step calls; its return value is the settings object.
+  const createGlobalConfig = jest.fn(() => ({
+    getSettings: () => ({ language: 'en' }),
+    setSetting: jest.fn(),
+    set: jest.fn(),
+    flush: jest.fn()
+  }))
+  return { createGlobalConfig }
 })
 
 // ── i18next — DEFEAT Jest's project-wide automatic manual mock (see header) ────────────────
@@ -143,7 +142,7 @@ function bootProbe(showMessageBox: (...args: unknown[]) => Promise<unknown>) {
           r.value?.head?.mockReset()
         }
       )
-      require('backend/config').GlobalConfig.get.mockReturnValue({
+      require('backend/config').createGlobalConfig.mockReturnValue({
         getSettings: () => ({ language: 'en' }),
         setSetting: jest.fn(),
         set: jest.fn(),

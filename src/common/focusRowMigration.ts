@@ -171,7 +171,7 @@ export function seedFocusRowFromMirror(
 }
 
 export interface FocusRowHydrationDeps {
-  /** `window.api.requestAppSettings`: reaches `GlobalConfig.get().getSettings()`. */
+  /** `window.api.requestAppSettings`: reaches `the global config.getSettings()`. */
   requestAppSettings: () => Promise<unknown>
   /** `window.api.setSetting`: the one setter, which writes the mirror AND `config.json`. */
   setSetting: (payload: {

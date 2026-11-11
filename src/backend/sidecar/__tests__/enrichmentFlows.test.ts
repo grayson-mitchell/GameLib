@@ -203,8 +203,10 @@ jest.mock('backend/constants/environment', () => envMock)
 // ── backend/config mock — avoid a real on-disk config.json write while still
 // exercising bootstrap.ts's real i18next init (settings.language) ───────────
 jest.mock('backend/config', () => {
-  const GlobalConfig = { get: jest.fn() }
-  return { GlobalConfig, adoptGlobalConfig: () => GlobalConfig.get() }
+  // The factory the boot's 'config' step would call; its return value is the settings object
+  // each test points it at.
+  const createGlobalConfig = jest.fn()
+  return { createGlobalConfig }
 })
 
 // ── backend/online_monitor mock (full surface, per bootstrap.test.ts's own
@@ -417,7 +419,7 @@ function freshRegistry(): void {
   jest.resetModules()
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
-  const { GlobalConfig } = require('backend/config')
+  const { createGlobalConfig } = require('backend/config')
   const { libraryManagerMap } = require('backend/storeManagers')
   ;({ wikiGameInfoStore } =
     require('../../wiki_game_info/stores').createWikiGameInfoStores())
@@ -427,7 +429,7 @@ function freshRegistry(): void {
     }))
   loggerModule = require('../../logger')
   /* eslint-enable @typescript-eslint/no-require-imports */
-  mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+  mockedGlobalConfigGet = createGlobalConfig as jest.Mock
   mockedIsOnline = jest.fn()
   mockedRunOnceWhenOnline = jest.fn()
   legendaryManager = libraryManagerMap.legendary as unknown as ManagerMock
@@ -451,7 +453,7 @@ const boot = () =>
     }
   })
 
-/** Points the mocked GlobalConfig.get() at a fresh settings object. */
+/** Points the mocked createGlobalConfig() at a fresh settings object. */
 function mockAppSettings(partial: Record<string, unknown>) {
   const setSetting = jest.fn()
   mockedGlobalConfigGet.mockReturnValue({
@@ -1171,7 +1173,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       const { input, frames } = boot()
       // bootstrap.ts's REAL (unmocked) startSidecarSteamGridDbSecretStore()
       // fires a synchronous-start, fire-and-forget migrateSteamGridDbApiKey()
-      // that reads GlobalConfig.get() on its very first line (Plan 34.6-02,
+      // that reads the global config on its very first line (Plan 34.6-02,
       // A-03) — unrelated to the handler under test here. Cleared AFTER
       // boot() but BEFORE the invoke below so the assertion below
       // is scoped to the hasApiKey handler's OWN behavior only.
@@ -1209,10 +1211,10 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       expect(mockSecretStoreSetApiKey).toHaveBeenCalledWith(
         'a-seeded-test-value'
       )
-      // Amendment A-03's load-bearing assertion: GlobalConfig.get() must
+      // Amendment A-03's load-bearing assertion: the global config must
       // NEVER be called by this handler. RED-proven live during
       // implementation (see 34.6-09-SUMMARY.md) by temporarily adding a
-      // `GlobalConfig.get().setSetting(...)` call inside the handler —
+      // `the global config.setSetting(...)` call inside the handler —
       // this exact assertion failed, and only this one, before the
       // temporary line was reverted.
       expect(mockedGlobalConfigGet).not.toHaveBeenCalled()

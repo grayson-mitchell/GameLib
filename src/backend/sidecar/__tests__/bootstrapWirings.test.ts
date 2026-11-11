@@ -165,8 +165,10 @@ jest.mock('backend/constants/environment', () => ({
 // ── backend/config — avoid a real on-disk config.json write while leaving the real i18next
 // path intact (mirrors settingsFlows.test.ts's own GlobalConfig stub shape) ─────────────────
 jest.mock('backend/config', () => {
-  const GlobalConfig = { get: jest.fn() }
-  return { GlobalConfig, adoptGlobalConfig: () => GlobalConfig.get() }
+  // The factory the boot's 'config' step would call; its return value is the settings object
+  // each test points it at.
+  const createGlobalConfig = jest.fn()
+  return { createGlobalConfig }
 })
 
 /** Buffers newline-delimited output from a PassThrough into discrete lines. */
@@ -235,8 +237,8 @@ function loadHandles(): WiringHandles {
   const axiosModule = require('axios')
   const axiosInstance = axiosModule.default.create()
 
-  const { GlobalConfig } = require('backend/config')
-  ;(GlobalConfig.get as jest.Mock).mockReturnValue({
+  const { createGlobalConfig } = require('backend/config')
+  ;(createGlobalConfig as jest.Mock).mockReturnValue({
     getSettings: () => ({ language: 'en' }),
     setSetting: jest.fn(),
     set: jest.fn(),
@@ -483,7 +485,7 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
     // unrecognised appName (confirmed by direct read of gog/legendary/nile/sideload
     // `games.ts`), which is still a DEFINED object, so `handleLaunch` proceeded past its
     // `if (!gameInfo) return` guard and reached the REAL, unmocked
-    // `GOGGame.getSettings()` -> `GameConfig.get()` -> `new GameConfigV0(...)`, which needs
+    // `GOGGame.getSettings()` -> `gameConfigs.get()` -> `new GameConfigV0(...)`, which needs
     // far more of the real settings-merge machinery (`enviromentOptions` and friends) than
     // this file's minimal `GlobalConfig` mock provides -- an unrelated crash, not the log
     // observable this test exists to prove. Dropping `runner=` here restores the plan's own

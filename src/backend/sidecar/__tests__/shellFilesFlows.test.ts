@@ -145,8 +145,10 @@ jest.mock('backend/constants/environment', () => ({
 // still letting registerAppShellFlows()'s own module-scope syncTrayIcon()
 // (scheduled via setImmediate at handlers.ts import time) resolve safely ────
 jest.mock('backend/config', () => {
-  const GlobalConfig = { get: jest.fn() }
-  return { GlobalConfig, adoptGlobalConfig: () => GlobalConfig.get() }
+  // The factory the boot's 'config' step would call; its return value is the settings object
+  // each test points it at.
+  const createGlobalConfig = jest.fn()
+  return { createGlobalConfig }
 })
 
 // ── legendary stores mock — avoids a real disk-backed CacheStore
@@ -253,7 +255,7 @@ function freshRegistry(): void {
   jest.resetModules()
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
-  const { GlobalConfig } = require('backend/config')
+  const { createGlobalConfig } = require('backend/config')
   const { requestRustInvoke } = require('../sidecarRpc')
   ;({ showDialogBoxModalAuto } = require('../../dialog/dialog'))
   ;({ achievementStore } =
@@ -261,13 +263,13 @@ function freshRegistry(): void {
       registry: createStoreRegistry()
     }))
   /* eslint-enable @typescript-eslint/no-require-imports */
-  mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+  mockedGlobalConfigGet = createGlobalConfig as jest.Mock
   mockRequestRustInvoke = requestRustInvoke as jest.Mock
 }
 
 const boot = () => bootFresh({ reuseRegistry: true })
 
-/** Points the mocked GlobalConfig.get() at a fresh settings object. */
+/** Points the mocked createGlobalConfig() at a fresh settings object. */
 function mockAppSettings(partial: Record<string, unknown>) {
   const setSetting = jest.fn()
   mockedGlobalConfigGet.mockReturnValue({

@@ -343,7 +343,7 @@ export function createSteamBottle(deps: SteamBottleDeps) {
   /**
    * debug/steam-bottle-game-no-launch (Pitfall 6, real-game-launch case):
    * checkWineBeforeLaunch's self-heal persists a corrected wineVersion via
-   * `GameConfig.get(gameInfo.app_name).setSetting('wineVersion', ...)` — a
+   * `gameConfigs.get(gameInfo.app_name).setSetting('wineVersion', ...)` — a
    * store getSteamBottleSettings() never reads. provisionBottle() (step 6
    * above) already works around this for its OWN synthetic-appName validation
    * call by re-persisting the result into steamBottleConfigStore itself; the

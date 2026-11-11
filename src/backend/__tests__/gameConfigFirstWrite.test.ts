@@ -10,7 +10,7 @@ import { join } from 'path'
 
 // G17 (59-30 re-UAT item 22): `GameConfig`'s constructor started an async
 // `load()`, so `this.config` was undefined for a tick. A per-game write that was
-// the title's first `GameConfig.get` in the session threw
+// the title's first per-game `get` in the session threw
 // "Cannot use 'in' operator to search for '<key>' in undefined" and the change
 // was lost; the same-tick retry in applyGameSetting hit the same undefined.
 
@@ -50,24 +50,24 @@ jest.mock('../logger', () => ({
   LogPrefix: { Backend: 'Backend', GameConfig: 'GameConfig' }
 }))
 const globalExtra: Record<string, unknown> = {}
-jest.mock('../config', () => ({
-  GlobalConfig: {
-    get: () => ({
-      getSettings: () => ({
+import { createGameConfigs } from '../game_config'
+
+// The global defaults the per-game config reads through its injected slice.
+const gameConfigs = createGameConfigs({
+  config: {
+    getSettings: () =>
+      ({
         enviromentOptions: [],
         wineVersion: {},
         ...globalExtra
-      })
-    })
+      }) as never
   }
-}))
-
-import { GameConfig } from '../game_config'
+})
 
 afterAll(() => rmSync(dir, { recursive: true, force: true }))
 
 describe('GameConfig first write (G17)', () => {
-  it('a setSetting that is the first GameConfig.get keeps the other settings', () => {
+  it('a setSetting that is the first gameConfigs.get keeps the other settings', () => {
     writeFileSync(join(dir, 'config.json'), '{}')
     const path = join(dir, '1284190.json')
     writeFileSync(
@@ -83,13 +83,13 @@ describe('GameConfig first write (G17)', () => {
     )
 
     expect(() =>
-      GameConfig.get('1284190').setSetting('steamEngineOverride', 'automatic')
+      gameConfigs.get('1284190').setSetting('steamEngineOverride', 'automatic')
     ).not.toThrow()
 
     const written = JSON.parse(readFileSync(path, 'utf-8'))['1284190']
     expect(written.steamEngineOverride).toBe('automatic')
     expect(written.targetExe).toBe('Planet Crafter.exe')
-    expect(GameConfig.get('1284190').config.steamEngineOverride).toBe(
+    expect(gameConfigs.get('1284190').config.steamEngineOverride).toBe(
       'automatic'
     )
   })
@@ -103,7 +103,7 @@ describe('GameConfig first write (G17)', () => {
         explicit: true
       })
     )
-    const config = GameConfig.get('38400')
+    const config = gameConfigs.get('38400')
     config.setSetting('steamEngineOverride', 'automatic')
     await new Promise((resolve) => setImmediate(resolve))
     expect(config.config.steamEngineOverride).toBe('automatic')
@@ -121,7 +121,7 @@ describe('GameConfig first write (G17)', () => {
     it('WR-04: restores the prior value when the write throws', () => {
       writeFileSync(join(dir, 'config.json'), '{}')
       seed('wr04a', { steamEngineOverride: 'pinned:a' })
-      const config = GameConfig.get('wr04a')
+      const config = gameConfigs.get('wr04a')
       failNextWrite.error = new Error('ENOSPC')
       expect(() =>
         config.setSetting('steamEngineOverride', 'automatic')
@@ -132,7 +132,7 @@ describe('GameConfig first write (G17)', () => {
     it('WR-04: removes the key when it was absent before the call', () => {
       writeFileSync(join(dir, 'config.json'), '{}')
       seed('wr04b', { targetExe: 'a.exe' })
-      const config = GameConfig.get('wr04b')
+      const config = gameConfigs.get('wr04b')
       failNextWrite.error = new Error('EACCES')
       expect(() =>
         config.setSetting('steamEngineOverride', 'automatic')
@@ -143,7 +143,7 @@ describe('GameConfig first write (G17)', () => {
     it('WR-04: a successful setSetting still persists to the file', () => {
       writeFileSync(join(dir, 'config.json'), '{}')
       seed('wr04c', { steamEngineOverride: 'pinned:a' })
-      GameConfig.get('wr04c').setSetting('steamEngineOverride', 'automatic')
+      gameConfigs.get('wr04c').setSetting('steamEngineOverride', 'automatic')
       const written = JSON.parse(
         readFileSync(join(dir, 'wr04c.json'), 'utf-8')
       )['wr04c']
@@ -151,9 +151,9 @@ describe('GameConfig first write (G17)', () => {
     })
   })
 
-  it('GameConfig.get for a missing game config no longer creates a file as a side effect (68-05, RESEARCH A5)', () => {
+  it('gameConfigs.get for a missing game config no longer creates a file as a side effect (68-05, RESEARCH A5)', () => {
     writeFileSync(join(dir, 'config.json'), '{}')
-    GameConfig.get('p68missing')
+    gameConfigs.get('p68missing')
     expect(existsSync(join(dir, 'p68missing.json'))).toBe(false)
   })
 
@@ -163,16 +163,16 @@ describe('GameConfig first write (G17)', () => {
     it('a config-less game has no engineOverride even with a global pick', async () => {
       writeFileSync(join(dir, 'config.json'), '{}')
       globalExtra.engineOverride = 'pinned:wine-staging-11.20'
-      expect(GameConfig.get('p61new').config.engineOverride).toBeUndefined()
+      expect(gameConfigs.get('p61new').config.engineOverride).toBeUndefined()
       expect(
-        (await GameConfig.get('p61new').getSettings()).engineOverride
+        (await gameConfigs.get('p61new').getSettings()).engineOverride
       ).toBeUndefined()
     })
 
     it('an unrelated setSetting on a config-less game never writes engineOverride', () => {
       writeFileSync(join(dir, 'config.json'), '{}')
       globalExtra.engineOverride = 'pinned:wine-staging-11.20'
-      GameConfig.get('p61unrelated').setSetting('showFps', true)
+      gameConfigs.get('p61unrelated').setSetting('showFps', true)
       const written = JSON.parse(
         readFileSync(join(dir, 'p61unrelated.json'), 'utf-8')
       )['p61unrelated']
@@ -183,7 +183,7 @@ describe('GameConfig first write (G17)', () => {
     it('an Engine edit still writes engineOverride (D-08)', () => {
       writeFileSync(join(dir, 'config.json'), '{}')
       globalExtra.engineOverride = 'pinned:wine-staging-11.20'
-      GameConfig.get('p61edit').setSetting('engineOverride', 'crossover')
+      gameConfigs.get('p61edit').setSetting('engineOverride', 'crossover')
       const written = JSON.parse(
         readFileSync(join(dir, 'p61edit.json'), 'utf-8')
       )['p61edit']
@@ -191,7 +191,7 @@ describe('GameConfig first write (G17)', () => {
     })
 
     it('no global key leaves a new game without one', () => {
-      expect(GameConfig.get('p61none').config.engineOverride).toBeUndefined()
+      expect(gameConfigs.get('p61none').config.engineOverride).toBeUndefined()
     })
   })
 })

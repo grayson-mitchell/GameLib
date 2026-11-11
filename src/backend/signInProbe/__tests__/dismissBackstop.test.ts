@@ -4,7 +4,7 @@
  *
  * The structural guarantee is that `src/backend/signInProbe/**` never reaches
  * AppSettings (the source gates in `verdict.test.ts` and `pass.test.ts`). This
- * test is the behavioural backstop behind it: the REAL `GlobalConfig`, over the
+ * test is the behavioural backstop behind it: the REAL global config, over the
  * per-file disposable profile `jest.setupContainment.ts` redirects, with fake
  * registrations whose probes are deferred so a dismiss can land mid-pass. The
  * pass then latches through the real `applySignInVerdict` (against fake
@@ -17,7 +17,7 @@
 import { existsSync, mkdirSync, realpathSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { dirname, sep } from 'path'
-import { GlobalConfig } from 'backend/config'
+import { createGlobalConfig } from 'backend/config'
 import { configPath } from 'backend/constants/paths'
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
 import { SIGN_IN_STORES } from 'common/signInState'
@@ -79,8 +79,13 @@ function realpathOfNearestAncestor(target: string): string {
   return realpathSync(current)
 }
 
+// One instance for the file, built on first use (after a test has written the config file), the
+// way the boot's 'config' step builds the one instance of a process.
+let globalConfig: ReturnType<typeof createGlobalConfig> | undefined
+const config = () => (globalConfig ??= createGlobalConfig())
+
 function dismissed(): unknown {
-  return GlobalConfig.get().getSettings().dismissedSignInNotices
+  return config().getSettings().dismissedSignInNotices
 }
 
 describe('T-49-25: a dismiss persisted during a running pass survives it', () => {
@@ -112,7 +117,7 @@ describe('T-49-25: a dismiss persisted during a running pass survives it', () =>
     )
 
     // The user dismisses the GOG notice while the probe is still in flight.
-    GlobalConfig.get().setSetting('dismissedSignInNotices', ['gog'], {
+    config().setSetting('dismissedSignInNotices', ['gog'], {
       configStore
     })
     gate.resolve('expired')
@@ -133,7 +138,7 @@ describe('T-49-25: a dismiss persisted during a running pass survives it', () =>
           // AppSettings from its stale view when the probe settles.
           probe: async () => {
             await gate.promise
-            GlobalConfig.get().setSetting('dismissedSignInNotices', [], {
+            config().setSetting('dismissedSignInNotices', [], {
               configStore
             })
             return 'expired'
@@ -141,7 +146,7 @@ describe('T-49-25: a dismiss persisted during a running pass survives it', () =>
         }
       })
     )
-    GlobalConfig.get().setSetting('dismissedSignInNotices', ['gog'], {
+    config().setSetting('dismissedSignInNotices', ['gog'], {
       configStore
     })
     gate.resolve('expired')

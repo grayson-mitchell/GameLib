@@ -71,7 +71,7 @@
  * Mocked only at the boundaries that would otherwise do real network I/O or
  * a real on-disk config write, mirroring `gameDetailsFlows.test.ts`'s own
  * boundary list: `axios`, `backend/online_monitor` (full surface),
- * `backend/config` (`GlobalConfig.get()`, so `init()`'s i18next-init read
+ * `backend/config` (`the global config`, so `init()`'s i18next-init read
  * doesn't need a real config.json), `backend/constants/environment`
  * (deterministic platform branch), and Jest's own module resolution for
  * `electron`/`electron-store` pointed at the real `platform/index.ts`/
@@ -230,8 +230,10 @@ jest.mock('backend/constants/environment', () => ({
 // ── backend/config — avoid a real on-disk config.json write while still
 // exercising bootstrap.ts's real i18next init (settings.language) ───────────
 jest.mock('backend/config', () => {
-  const GlobalConfig = { get: jest.fn() }
-  return { GlobalConfig, adoptGlobalConfig: () => GlobalConfig.get() }
+  // The factory the boot's 'config' step would call; its return value is the settings object
+  // each test points it at.
+  const createGlobalConfig = jest.fn()
+  return { createGlobalConfig }
 })
 
 // ── backend/online_monitor mock (full surface, per bootstrap.test.ts's own
@@ -418,7 +420,7 @@ function freshRegistry(): void {
   jest.resetModules()
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
-  const { GlobalConfig } = require('backend/config')
+  const { createGlobalConfig } = require('backend/config')
   logger = require('../../logger')
   const { requestRustInvoke } = require('../sidecarRpc')
   ;({ uploadedLogFileStore } =
@@ -427,7 +429,7 @@ function freshRegistry(): void {
     }))
   uploaderModule = require('../../logger/uploader')
   /* eslint-enable @typescript-eslint/no-require-imports */
-  mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+  mockedGlobalConfigGet = createGlobalConfig as jest.Mock
   mockRequestRustInvoke = requestRustInvoke as jest.Mock
 }
 
@@ -437,7 +439,7 @@ const boot = () => bootFresh({ reuseRegistry: true })
 // file-wide: the WR-02 block asserts facts about the file's original module
 // registry and never boots.
 
-/** Points the mocked GlobalConfig.get() at a fresh settings object. */
+/** Points the mocked createGlobalConfig() at a fresh settings object. */
 function mockAppSettings(partial: Record<string, unknown>) {
   mockedGlobalConfigGet.mockReturnValue({
     getSettings: () => partial,

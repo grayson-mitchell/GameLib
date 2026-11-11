@@ -17,7 +17,6 @@ import {
   rmSync
 } from 'graceful-fs'
 import { userHome } from 'backend/constants/paths'
-import { GlobalConfig } from 'backend/config'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import {
   createSteamBottle,
@@ -54,12 +53,6 @@ jest.mock('../stores', () => ({
     get: jest.fn(),
     get_nodefault: jest.fn(),
     set: jest.fn()
-  }
-}))
-
-jest.mock('backend/config', () => ({
-  GlobalConfig: {
-    get: jest.fn()
   }
 }))
 
@@ -117,7 +110,8 @@ const mockedRmSync = rmSync as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
 const mockedSet = steamBottleConfigStore.set as jest.Mock
 
-const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+// The settings the injected config slice reads; each test points it at its own object.
+const mockedGlobalConfigGet = jest.fn()
 // 66.3-15: the bottle helpers are an instance over the suite's mocked store and config.
 const steamBottle = createSteamBottle({
   stores: createTestStores({ steam: { steamBottleConfigStore } as never }),

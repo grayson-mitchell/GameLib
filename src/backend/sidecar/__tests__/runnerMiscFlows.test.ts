@@ -104,7 +104,7 @@ jest.mock('../../save_sync', () => ({
   getDefaultSavePath: (...args: unknown[]) => mockGetDefaultSavePath(...args)
 }))
 
-// ── ../../config — `GlobalConfig.get().getSettings()` is the curated import target for
+// ── ../../config — `the global config.getSettings()` is the curated import target for
 // `getPlaytimeFromRunner`'s `disablePlaytimeSync` read (mirrors steamgridSecretStore.test.ts's
 // own `../../config` mock shape). Both bare `jest.fn()` (no inline implementation), reconfigured
 // per-test via `.mockReturnValue()` -- `resetMocks: true` (project jest config) would otherwise

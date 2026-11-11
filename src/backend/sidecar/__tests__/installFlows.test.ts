@@ -36,7 +36,7 @@
  *     of host OS, mirrors skeletonFlows.test.ts/steamAuthFlows.test.ts).
  *   - `backend/config` (`GlobalConfig.get`) — mirrors
  *     `nativeInstallSetting.test.ts`'s own mock strategy: a real
- *     `GlobalConfig.get()` call writes a fresh `config.json` to disk via
+ *     `the global config` call writes a fresh `config.json` to disk via
  *     `graceful-fs`, which needs its parent directory to already exist (real
  *     Electron creates it at app-start via `makeSureFoldersExist`, a
  *     concern this narrow wiring suite has no reason to reproduce). A plain
@@ -147,8 +147,10 @@ jest.mock('backend/constants/environment', () => ({
 // the real isSteamNativeInstallEnabled()/checkGameUpdates() bodies against a
 // controllable settings object ───────────────────────────────────────────────
 jest.mock('backend/config', () => {
-  const GlobalConfig = { get: jest.fn() }
-  return { GlobalConfig, adoptGlobalConfig: () => GlobalConfig.get() }
+  // The factory the boot's 'config' step would call; its return value is the settings object
+  // each test points it at.
+  const createGlobalConfig = jest.fn()
+  return { createGlobalConfig }
 })
 
 // ── installFormIpc — quick 261030-o77: the toggle-OFF listSteamLibraryTargets
@@ -260,7 +262,7 @@ import type { AppSettings } from 'common/types'
 let i18next: typeof import('i18next').default
 let getSteamLibraries: typeof import('backend/utils').getSteamLibraries
 let writeConfig: typeof import('backend/utils').writeConfig
-let GlobalConfig: typeof import('backend/config').GlobalConfig
+let createGlobalConfig: typeof import('backend/config').createGlobalConfig
 let getSteamBottleEligibilityVerdict: typeof import('../../storeManagers/steam/installFormIpc').getSteamBottleEligibilityVerdict
 let isSteamExperimentalInstallAppEnabled: typeof import('../../storeManagers/steam/experimentalInstallAppSetting').isSteamExperimentalInstallAppEnabled
 let findBridgeInstallBottle: typeof import('../../storeManagers/steam/bridgeBottle').findBridgeInstallBottle
@@ -284,7 +286,7 @@ function freshRegistry(): void {
   require('../bootstrap')
   i18next = require('i18next').default ?? require('i18next')
   ;({ getSteamLibraries, writeConfig } = require('backend/utils'))
-  ;({ GlobalConfig } = require('backend/config'))
+  ;({ createGlobalConfig } = require('backend/config'))
   ;({
     getSteamBottleEligibilityVerdict
   } = require('../../storeManagers/steam/installFormIpc'))
@@ -305,7 +307,7 @@ function freshRegistry(): void {
   ;({ showDialogBoxModalAuto, notify } = require('../../dialog/dialog'))
   loggerModule = require('../../logger')
   /* eslint-enable @typescript-eslint/no-require-imports */
-  mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+  mockedGlobalConfigGet = createGlobalConfig as jest.Mock
   mockedWriteConfig = writeConfig as jest.Mock
   mockedShowDialogBoxModalAuto = showDialogBoxModalAuto as jest.Mock
   mockedNotify = notify as jest.Mock
@@ -328,7 +330,7 @@ const GAMELIB_CATALOG = JSON.parse(
   )
 ) as { installFlows: Record<string, string> }
 
-/** Points the mocked GlobalConfig.get() at a fresh settings object (mirrors
+/** Points the mocked createGlobalConfig() at a fresh settings object (mirrors
  *  nativeInstallSetting.test.ts's own helper). */
 function mockSettings(partial: Partial<AppSettings>) {
   mockedGlobalConfigGet.mockReturnValue({
