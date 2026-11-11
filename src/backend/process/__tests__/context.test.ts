@@ -4,14 +4,29 @@ import { createAppContext } from '../context'
 describe('createAppContext', () => {
   it('returns exactly platform, paths, clock, runner, log', () => {
     const log = { info: jest.fn(), warn: jest.fn(), error: jest.fn() }
-    const paths = { appRoot: '/a', publicDir: '/p', userData: '/u' }
+    const paths = {
+      appRoot: '/a',
+      publicDir: '/p',
+      userData: '/u',
+      appData: '/d',
+      exe: '/e',
+      knownFolder: () => '/k'
+    }
+    const appInfo = {
+      name: 'GameLib',
+      version: '0',
+      userAgentFallback: 'ua',
+      isPackaged: false
+    }
     const ctx = createAppContext({
       platform: 'linux',
       paths,
+      appInfo,
       log,
       baseEnv: {}
     })
     expect(Object.keys(ctx).sort()).toEqual([
+      'appInfo',
       'clock',
       'log',
       'paths',
@@ -29,7 +44,20 @@ describe('createAppContext', () => {
     const profile = createFakeHomeProfile()
     const ctx = createAppContext({
       platform: process.platform,
-      paths: { appRoot: '', publicDir: '', userData: '' },
+      paths: {
+        appRoot: '',
+        publicDir: '',
+        userData: '',
+        appData: '',
+        exe: '',
+        knownFolder: () => ''
+      },
+      appInfo: {
+        name: 'GameLib',
+        version: '0',
+        userAgentFallback: 'ua',
+        isPackaged: false
+      },
       log: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
       baseEnv: profile.childEnv({ GL_CTX_PROBE: 'yes' })
     })

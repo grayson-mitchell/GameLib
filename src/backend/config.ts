@@ -382,4 +382,25 @@ class GlobalConfigV0 extends GlobalConfig {
   }
 }
 
+/**
+ * The instance methods non-test backend code calls on the global config. Consumers declare
+ * their dependency as this slice (or a narrower Pick of it), never the whole class.
+ */
+export type GlobalConfigSlice = Pick<
+  GlobalConfig,
+  | 'getSettings'
+  | 'setSetting'
+  | 'set'
+  | 'flush'
+  | 'getFactoryDefaults'
+  | 'resetToDefaults'
+  | 'getAlternativeWine'
+  | 'getMacOsWineSet'
+>
+
+// interim (66.3-04): the 'config' boot step's only static read; plan 18 deletes this and the statics
+export function adoptGlobalConfig(): GlobalConfig {
+  return GlobalConfig.get()
+}
+
 export { GlobalConfig }

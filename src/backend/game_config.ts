@@ -314,4 +314,27 @@ class GameConfigV0 extends GameConfig {
   }
 }
 
+/** The per-game config members consumers call; test fakes implement exactly this. */
+export type GameConfigSlice = Pick<
+  GameConfig,
+  | 'appName'
+  | 'path'
+  | 'version'
+  | 'config'
+  | 'getSettings'
+  | 'setSetting'
+  | 'resetToDefaults'
+  | 'flush'
+>
+
+export interface GameConfigs {
+  get(appName: string): GameConfigSlice
+}
+
+// interim (66.3-04): delegates to the static per-game cache so no second instance exists; plan 18
+// moves the cache into this closure and deletes GameConfig.get()
+export function createGameConfigs(): GameConfigs {
+  return { get: (appName) => GameConfig.get(appName) }
+}
+
 export { GameConfig }

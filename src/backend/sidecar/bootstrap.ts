@@ -169,6 +169,10 @@ import {
   LogPrefix
 } from '../logger'
 import { GlobalConfig } from '../config'
+import { resolveAppInfo } from '../host/appInfo'
+import { isPackagedSidecar } from './isPackagedSidecar'
+import { getPath } from './pathShim'
+import { release as osRelease } from 'os'
 import { createAppContext } from '../process/context'
 import type { AppContext, AppPaths } from '../process/context'
 import type { LogSink, ProcessRunner } from '../process/types'
@@ -993,9 +997,17 @@ export function bootSidecar(
  */
 export function resolveAppPaths(): AppPaths {
   return {
-    appRoot: platformApi.app.getAppPath(),
+    // Same body the platform delegate's getAppPath() has: never throws, resolves to cwd unpackaged.
+    appRoot: process.env.GAMELIB_APP_ROOT || process.cwd(),
     publicDir,
-    userData: platformApi.app.getPath('userData')
+    userData: getPath('userData'),
+    appData: getPath('appData'),
+    // Lazy: pathShim throws when the Tauri shell did not hand GAMELIB_SHELL_EXE down, and boot
+    // must not die for a path only shortcut code reads.
+    get exe() {
+      return getPath('exe')
+    },
+    knownFolder: (name) => getPath(name)
   }
 }
 
@@ -1008,6 +1020,11 @@ export function init(
     createAppContext({
       platform: process.platform,
       paths: resolveAppPaths(),
+      appInfo: resolveAppInfo({
+        platform: process.platform,
+        osRelease: osRelease(),
+        isPackaged: isPackagedSidecar()
+      }),
       log: createBackendLogSink(),
       baseEnv: process.env
     }),

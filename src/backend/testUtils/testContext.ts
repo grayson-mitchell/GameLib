@@ -5,7 +5,7 @@
  */
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import type { AppContext, AppPaths } from '../process/context'
+import type { AppContext, AppInfo, AppPaths } from '../process/context'
 import type { ProcessRunner } from '../process/types'
 import { createCaptureLog, type CaptureLog } from './captureLog'
 import { createFakeClock, type FakeClock } from './fakeClock'
@@ -15,6 +15,13 @@ import {
   type ScriptedRunner,
   type ScriptStep
 } from './scriptedRunner'
+
+const TEST_APP_INFO: AppInfo = {
+  name: 'GameLib',
+  version: '0.0.0-test',
+  userAgentFallback: 'test-ua',
+  isPackaged: false
+}
 
 export interface TestContext<R extends ProcessRunner = ScriptedRunner> {
   ctx: AppContext
@@ -38,13 +45,17 @@ export function createTestContext<R extends ProcessRunner = ScriptedRunner>(
   const defaults: AppPaths = {
     appRoot,
     publicDir: join(appRoot, 'public'),
-    userData: join(profile.root, 'userData')
+    userData: join(profile.root, 'userData'),
+    appData: join(profile.root, 'appData'),
+    exe: join(profile.root, 'GameLib'),
+    knownFolder: (name) =>
+      join(profile.root, name === 'desktop' ? 'Desktop' : 'Documents')
   }
   // Create directories only for defaults that were not overridden. A caller
   // may pass real repo paths for read-only use (e.g. the sidecar harness's
   // publicDir); creating directories there, or a real userData, would break
   // fake-HOME isolation.
-  for (const key of Object.keys(defaults) as (keyof AppPaths)[]) {
+  for (const key of ['appRoot', 'publicDir', 'userData', 'appData'] as const) {
     if (overrides.paths?.[key] === undefined) {
       mkdirSync(defaults[key], { recursive: true })
     }
@@ -56,7 +67,7 @@ export function createTestContext<R extends ProcessRunner = ScriptedRunner>(
   const log = createCaptureLog()
   const platform = overrides.platform ?? process.platform
   return {
-    ctx: { platform, paths, clock, runner, log },
+    ctx: { platform, paths, appInfo: TEST_APP_INFO, clock, runner, log },
     runner,
     clock,
     log,

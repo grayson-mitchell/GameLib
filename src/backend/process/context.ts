@@ -17,11 +17,24 @@ export interface AppPaths {
   appRoot: string
   publicDir: string
   userData: string
+  appData: string
+  /** The shell executable; resolved on read (it throws when the shell did not hand it down). */
+  exe: string
+  knownFolder: (name: 'desktop' | 'documents') => string
+}
+
+/** App name, version, user agent and packaged flag (structurally the host/appInfo AppInfo). */
+export interface AppInfo {
+  name: string
+  version: string
+  userAgentFallback: string
+  isPackaged: boolean
 }
 
 export interface AppContext {
   platform: NodeJS.Platform
   paths: AppPaths
+  appInfo: AppInfo
   clock: Clock
   runner: ProcessRunner
   log: LogSink
@@ -30,6 +43,7 @@ export interface AppContext {
 export function createAppContext(input: {
   platform: NodeJS.Platform
   paths: AppPaths
+  appInfo: AppInfo
   log: LogSink
   baseEnv: NodeJS.ProcessEnv
 }): AppContext {
@@ -45,6 +59,7 @@ export function createAppContext(input: {
   return {
     platform: input.platform,
     paths: input.paths,
+    appInfo: input.appInfo,
     clock,
     runner,
     log: input.log
