@@ -17,6 +17,8 @@ import {
 const {
   census,
   countModuleState,
+  moduleStateSites,
+  listModuleStateSites,
   countChildProcessImports,
   countJestMock,
   topLevelContainerCalls,
@@ -30,6 +32,42 @@ const {
 
 const REPO_ROOT = join(__dirname, '..', '..')
 const SCRIPT = join(REPO_ROOT, 'meta', 'backendDiCeilings.cjs')
+
+describe('listModuleStateSites', () => {
+  it('records file, line, symbol and kind for each counted site', () => {
+    const rows = moduleStateSites(
+      'let a = 1\nconst m = new Map()\nconst s = Object.freeze([1])',
+      'x.ts'
+    )
+    expect(rows).toEqual([
+      { line: 1, symbol: 'a', kind: 'let' },
+      { line: 2, symbol: 'm', kind: 'new Map' }
+    ])
+  })
+
+  it('reports a mutable static field as kind static', () => {
+    expect(moduleStateSites('class C { static x = 1 }', 'x.ts')).toEqual([
+      { line: 1, symbol: 'x', kind: 'static' }
+    ])
+  })
+
+  it('has, per file, exactly census().moduleState rows, sorted by file then line', () => {
+    const rows = listModuleStateSites() as {
+      file: string
+      line: number
+    }[]
+    const perFile: Record<string, number> = {}
+    for (const r of rows) perFile[r.file] = (perFile[r.file] ?? 0) + 1
+    expect(perFile).toEqual(census().moduleState)
+    const sorted = [...rows].sort(
+      (x, y) =>
+        (x.file < y.file ? -1 : x.file > y.file ? 1 : 0) || x.line - y.line
+    )
+    expect(rows.map((r) => `${r.file}:${r.line}`)).toEqual(
+      sorted.map((r) => `${r.file}:${r.line}`)
+    )
+  })
+})
 
 describe('countModuleState', () => {
   it.each<[string, string, number]>([

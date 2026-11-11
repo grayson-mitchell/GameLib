@@ -198,35 +198,67 @@ function mutatedIds(sf, ids) {
   return hit
 }
 
-function countModuleState(sourceText, fileName = 'x.ts') {
+/**
+ * One record {line, symbol, kind} per counted module-state site. The single definition (D-06):
+ * countModuleState is this list's length and listModuleStateSites reports the same rows per file.
+ */
+function moduleStateSites(sourceText, fileName = 'x.ts') {
   const sf = parse(sourceText, fileName)
-  let n = 0
-  const candidates = new Set()
+  const sites = []
+  const lineOf = (node) =>
+    sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1
+  const candidates = new Map()
   for (const st of sf.statements) {
     if (!ts.isVariableStatement(st)) continue
     if (st.modifiers?.some((m) => m.kind === ts.SyntaxKind.DeclareKeyword))
       continue
     const isConst = (st.declarationList.flags & ts.NodeFlags.Const) !== 0
+    const keyword = isConst
+      ? 'const'
+      : (st.declarationList.flags & ts.NodeFlags.Let) !== 0
+        ? 'let'
+        : 'var'
     for (const decl of st.declarationList.declarations) {
       if (!isConst) {
-        n += namesOf(decl.name).length
+        for (const symbol of namesOf(decl.name))
+          sites.push({ line: lineOf(decl), symbol, kind: keyword })
         continue
       }
       if (!decl.initializer) continue
       const init = unwrap(decl.initializer)
       if (ts.isNewExpression(init)) {
         const callee = init.expression.getText(sf)
-        if (!IMMUTABLE_NEW.has(callee) && !callee.startsWith('Intl.')) n += 1
+        if (!IMMUTABLE_NEW.has(callee) && !callee.startsWith('Intl.'))
+          sites.push({
+            line: lineOf(decl),
+            symbol: ts.isIdentifier(decl.name)
+              ? decl.name.text
+              : decl.name.getText(sf),
+            kind: `new ${callee}`
+          })
       } else if (
         (ts.isObjectLiteralExpression(init) ||
           ts.isArrayLiteralExpression(init)) &&
         ts.isIdentifier(decl.name)
       )
-        candidates.add(decl.name.text)
+        candidates.set(decl.name.text, {
+          line: lineOf(decl),
+          kind: ts.isObjectLiteralExpression(init)
+            ? 'mutated object'
+            : 'mutated array'
+        })
     }
   }
-  if (candidates.size > 0) n += mutatedIds(sf, candidates).size
-  return n + countStaticFields(sf)
+  if (candidates.size > 0)
+    for (const symbol of mutatedIds(sf, new Set(candidates.keys()))) {
+      const c = candidates.get(symbol)
+      sites.push({ line: c.line, symbol, kind: c.kind })
+    }
+  return [...sites, ...staticFieldSites(sf)]
+}
+
+function countModuleState(sourceText, fileName = 'x.ts') {
+  return moduleStateSites(sourceText, fileName).length
 }
 
 /**
@@ -236,8 +268,8 @@ function countModuleState(sourceText, fileName = 'x.ts') {
  * so the ceilings fell while the state moved. Methods, accessors, static blocks and
  * `static readonly` fields do not count (a readonly field cannot be re-bound).
  */
-function countStaticFields(sf) {
-  let n = 0
+function staticFieldSites(sf) {
+  const sites = []
   const visit = (node) => {
     if (
       ts.isPropertyDeclaration(node) &&
@@ -251,12 +283,16 @@ function countStaticFields(sf) {
         !has(ts.SyntaxKind.ReadonlyKeyword) &&
         !has(ts.SyntaxKind.DeclareKeyword)
       )
-        n += 1
+        sites.push({
+          line: sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1,
+          symbol: node.name.getText(sf),
+          kind: 'static'
+        })
     }
     ts.forEachChild(node, visit)
   }
   visit(sf)
-  return n
+  return sites
 }
 
 const BYPASS_NAMES = new Set(['getBuiltinModule', 'createRequire'])
@@ -378,6 +414,34 @@ function walkTs(dir, skipDirs, out, skipFull = new Set()) {
     out.push(full)
   }
   return out
+}
+
+/** The backend files the moduleState census counts (tests and .d.ts excluded, SKIP_PATHS exempt). */
+function moduleStateFiles(root) {
+  const isTest = (f) => /\.(test\.tsx?|d\.ts)$/.test(f)
+  return walkTs(
+    path.join(root, 'src', 'backend'),
+    SKIP_DIRS,
+    [],
+    new Set(SKIP_PATHS.map((p) => path.join(root, ...p.split('/'))))
+  )
+    .sort()
+    .filter((f) => !isTest(f))
+}
+
+/**
+ * One row {file, line, symbol, kind} per site census() counts as moduleState, sorted by file then
+ * line. Same file set, same visit as census(): per file the row count equals census().moduleState.
+ */
+function listModuleStateSites(root = REPO_ROOT) {
+  const rows = []
+  for (const f of moduleStateFiles(root)) {
+    const file = toPosix(path.relative(root, f))
+    const sites = moduleStateSites(fs.readFileSync(f, 'utf8'), f)
+    sites.sort((x, y) => x.line - y.line)
+    for (const s of sites) rows.push({ file, ...s })
+  }
+  return rows
 }
 
 function census(root = REPO_ROOT) {
@@ -784,6 +848,8 @@ function main() {
 module.exports = {
   census,
   countModuleState,
+  moduleStateSites,
+  listModuleStateSites,
   countChildProcessImports,
   countJestMock,
   topLevelContainerCalls,
