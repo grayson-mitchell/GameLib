@@ -4,14 +4,14 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: planning
 stopped_at: Phase 66.3 context gathered
-last_updated: "2026-11-11T03:37:11.861Z"
+last_updated: "2026-11-11T03:49:05.799Z"
 last_activity: 2026-11-11
 progress:
-  total_phases: 18
+  total_phases: 19
   completed_phases: 13
   total_plans: 252
   completed_plans: 252
-  percent: 72
+  percent: 68
 ---
 
 # Project State
@@ -299,6 +299,7 @@ Entries for phases before 44 live in STATE-HISTORY.md § Roadmap Evolution archi
 - Phase 66.1 inserted after Phase 66: Split from Phase 66 at plan time (2026-11-10): ~50 plans at full depth; see ROADMAP § Phase 66
 - Phase 66.2 inserted after Phase 66: Split from Phase 66 at plan time (2026-11-10): ~50 plans at full depth; see ROADMAP § Phase 66
 - Phase 66.3 inserted after Phase 66: Split from Phase 66 at plan time (2026-11-10): ~50 plans at full depth; see ROADMAP § Phase 66
+- Phase 66.4 inserted after Phase 66.3: Split from Phase 66.3 at plan time (2026-11-11, D-66.3-04): long tail, census-to-test flip, poller revive, live macOS smoke + Windows UAT
 
 ### Decisions
 
