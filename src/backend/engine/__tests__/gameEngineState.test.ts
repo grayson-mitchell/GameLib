@@ -8,19 +8,21 @@ import {
   listGameEngineOptions
 } from '../gameEngineState'
 import type { GameEngineStateDeps } from '../gameEngineState'
-import { __resetEngineStateForTests } from '../engineState'
 import { ENGINE_PINS } from '../enginePins'
 import type { CrossoverPreflight } from '../engineDecision'
 import type { EngineConfigDeps } from '../engineConfig'
 import { defined } from './defined'
 import { createTestServices } from 'backend/testUtils/testServices'
+import { createTestEngineState } from 'backend/testUtils/testEngineState'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
 const services = {
   spawnAsync: createTestServices().spawnAsync,
   runner: createScriptedRunner([]),
   wineManagerReleases: () => [],
-  globalSettings: () => global
+  globalSettings: () => global,
+  // A fresh owner per test (beforeEach): no state crosses a test.
+  engineState: createTestEngineState()
 }
 
 jest.mock('backend/logger', () => ({
@@ -79,7 +81,7 @@ beforeEach(() => {
     trialDaysRemaining: null,
     build: '24.0.0.1'
   } as CrossoverPreflight)
-  __resetEngineStateForTests()
+  services.engineState = createTestEngineState()
 })
 
 afterEach(() => rmSync(dir, { recursive: true, force: true }))

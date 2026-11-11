@@ -984,6 +984,10 @@ const IN_SCOPE_SUITES = [
  * starts itself, boots nothing, and reaches no path module, `homedir()`, filesystem or child
  * process. Its landing commit did not classify it; the T-34.2-83 tripwire caught it.
  *
+ * `engineStateWiring.test.ts` (Phase 66.3 Plan 12) is structurally contained: it boots through
+ * `bootFresh` (a createTestContext fake HOME and an in-memory output stream), reads the step order
+ * from `BOOT_STEP_NAMES`, and reaches no real filesystem, `homedir()` or child process.
+ *
  * `configBootOrder.test.ts` (Phase 66.3 Plan 04) is structurally contained: it reads bootstrap.ts as
  * text to pin the 'config' boot step order, boots nothing and spawns nothing.
  *
@@ -1010,6 +1014,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'electronUntouched.test.ts',
   'engineFlows.test.ts',
   'engineOverrideWriteGuard.test.ts',
+  'engineStateWiring.test.ts',
   'engineTempSweepBootWire.test.ts',
   'eosOverlayFlows.test.ts',
   'externalDynamicImportGate.test.ts',

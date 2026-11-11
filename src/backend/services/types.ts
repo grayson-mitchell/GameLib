@@ -27,6 +27,7 @@ import type { GameConfigs } from 'backend/game_config'
 import type { AppInfo, AppPaths } from 'backend/process/context'
 import type { Clock, ProcessRunner } from 'backend/process/types'
 import type { OnlineMonitor } from 'backend/online_monitor'
+import type { EngineStateService } from 'backend/engine/engineState'
 import type { CommandRunner as CommandRunnerImpl } from 'backend/commandRunner'
 import type GOGLibraryManager from 'backend/storeManagers/gog/library'
 import type LegendaryLibraryManager from 'backend/storeManagers/legendary/library'
@@ -141,6 +142,8 @@ export interface ManagerDeps {
   notifications: Notifications
   appState: AppState
   imageTools: HostServices['imageTools']
+  /** The boot-owned engine decision/notice state (D-66.3-12). */
+  engineState: EngineStateService
   /** The boot-owned connectivity monitor, as the slice managers read (D-66.3-11). */
   onlineMonitor: Pick<
     OnlineMonitor,
@@ -178,4 +181,6 @@ export interface BootServices {
   appInfo: AppInfo
   /** Built by the 'online-monitor-owner' boot step, started by 'online-monitor' (D-66.3-11). */
   onlineMonitor: OnlineMonitor
+  /** Built by the 'engine-state' boot step, before 'store-managers' (D-66.3-12). */
+  engineState: EngineStateService
 }

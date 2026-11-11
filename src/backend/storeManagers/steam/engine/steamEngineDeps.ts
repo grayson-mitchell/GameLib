@@ -20,8 +20,10 @@ import type { EngineSwitchDeps } from 'backend/engine/engineSwitch'
 import { readStoredGameConfig } from 'backend/engine/engineConfig'
 import type { EffectiveEngine } from 'backend/engine/engineConfig'
 import { parseEngineOverride } from 'backend/engine/engineIds'
-import { getEngineState } from 'backend/engine/engineState'
-import type { EngineStateDeps } from 'backend/engine/engineState'
+import type {
+  EngineStateDeps,
+  EngineStateService
+} from 'backend/engine/engineState'
 import type { EngineState } from 'common/types/engine'
 import { persistedWineBins } from '../bottle'
 import {
@@ -171,12 +173,15 @@ export function steamEngineStateDeps(
 }
 
 export async function getSteamEngineState(
-  deps: SteamStoresDeps & Parameters<typeof steamDecisionServices>[0],
+  deps: SteamStoresDeps &
+    Parameters<typeof steamDecisionServices>[0] & {
+      engineState: Pick<EngineStateService, 'getEngineState'>
+    },
   appId: unknown,
   over?: Partial<EngineStateDeps>
 ): Promise<EngineState | null> {
   if (typeof appId !== 'string' || !/^\d+$/.test(appId)) return null
-  return getEngineState(
+  return deps.engineState.getEngineState(
     { runner: STEAM_ENGINE_RUNNER, appName: appId },
     steamEngineStateDeps(deps, appId, over)
   )

@@ -134,7 +134,8 @@ function toolSlices(services: BootServices) {
     dialogs: services.host.dialogs,
     appState: services.host.appState,
     notifications: services.host.notifications,
-    onlineMonitor: services.onlineMonitor
+    onlineMonitor: services.onlineMonitor,
+    engineState: services.engineState
   }
 }
 
@@ -161,7 +162,8 @@ export function registerHandlers(deps: {
     stores: deps.services.stores,
     spawnAsync: deps.services.spawnAsync,
     runner: deps.services.runner,
-    config: deps.services.config
+    config: deps.services.config,
+    engineState: deps.services.engineState
   })
   registerInstallFlows({ ...deps.services, ipc })
   registerSettingsFlows({

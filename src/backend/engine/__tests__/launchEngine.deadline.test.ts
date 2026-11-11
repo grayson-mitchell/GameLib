@@ -83,6 +83,7 @@ import { killBottleWineServerWith } from '../bottlePrimitives'
 import { showEngineDialog, showEngineNotice } from '../engineDialogs'
 import { app } from 'backend/platform'
 import { createTestEngineServices } from 'backend/testUtils/testServices'
+import { createTestEngineState } from 'backend/testUtils/testEngineState'
 import type { EngineServices } from '../engineServices'
 import { notify, showDialogBoxModalAuto } from 'backend/dialog/dialog'
 import {
@@ -153,6 +154,7 @@ const services: EngineServices = {
   globalGameSettings: () => ({}) as GameSettings,
   runner: createTestEngineServices().runner,
   onlineMonitor: { isOnline: () => true },
+  engineState: createTestEngineState(),
   notices: createTestHostServices()
 }
 

@@ -39,7 +39,6 @@ import {
   OVERLAY_STEPS,
   type OverlayStep
 } from './bridge/overlay/overlayNotice'
-import { publishOverlayNotice } from 'backend/engine/engineState'
 import { STEAM_ENGINE_RUNNER } from './engine/steamEngineDeps'
 import { readKnownFixes } from 'backend/knownFixes'
 import type { OverlayRunnerReady } from './bridge/overlay/overlayRunnerClone'
@@ -107,7 +106,7 @@ export function notifyOverlaySetupFailed(
     LogPrefix.Steam
   )
   const pushed = (OVERLAY_STEPS as readonly string[]).includes(step)
-    ? publishOverlayNotice(
+    ? steamGame.deps.engineState.publishOverlayNotice(
         { runner: STEAM_ENGINE_RUNNER, appName: steamGame.appId },
         step
       )

@@ -59,6 +59,7 @@ export default class NileGameManager implements Game {
         ManagerDeps,
         | 'libraryManagers'
         | 'onlineMonitor'
+        | 'engineState'
         | 'launcher'
         | 'commandRunner'
         | 'spawnAsync'

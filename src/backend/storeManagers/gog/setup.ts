@@ -32,6 +32,7 @@ export type SetupDeps = Pick<
   GOGManagerDeps,
   | 'libraryManagers'
   | 'onlineMonitor'
+  | 'engineState'
   | 'launcher'
   | 'commandRunner'
   | 'spawnAsync'

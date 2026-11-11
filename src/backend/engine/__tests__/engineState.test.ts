@@ -1,19 +1,45 @@
 import {
   ENGINE_PREFLIGHT_UNHEALTHY_TTL_MS,
   TRIAL_NOTICE_DAYS,
-  __resetEngineStateForTests,
-  dismissEngineNotice,
-  getEngineState,
-  publishLaunchDeadlineNotice as publishDeadline,
-  publishOverlayExitNotice as publishExit,
-  publishOverlayNotice as publishNotice,
-  recordLaunchDecision as recordDecision,
-  setEngineStatePublisher
+  createEngineState
 } from '../engineState'
+import type { EngineStateService } from '../engineState'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import type { EngineStateDeps } from '../engineState'
 import type { CrossoverPreflight, LaunchDecision } from '../engineDecision'
 import type { EngineState } from 'common/types/engine'
+
+// One owner per test (D-66.3-12): the wrappers below read whichever instance `beforeEach` (or a
+// mid-test `freshOwner()`) built, so no state crosses a test and there is no reset hook.
+let owner: EngineStateService
+let publisher: (state: EngineState) => void = () => {}
+const freshOwner = () => {
+  publisher = () => {}
+  owner = createEngineState({
+    publish: (state) => publisher(state),
+    now: () => Date.now(),
+    isMac: () => true,
+    noticeStore: () => {
+      throw new Error('unscripted notice store: tests pass deps.store')
+    }
+  })
+}
+const setEngineStatePublisher = (fn: (state: EngineState) => void) => {
+  publisher = fn
+}
+const getEngineState: EngineStateService['getEngineState'] = (...a) =>
+  owner.getEngineState(...a)
+const dismissEngineNotice: EngineStateService['dismissEngineNotice'] = (...a) =>
+  owner.dismissEngineNotice(...a)
+const publishDeadline: EngineStateService['publishLaunchDeadlineNotice'] = (
+  ...a
+) => owner.publishLaunchDeadlineNotice(...a)
+const publishExit: EngineStateService['publishOverlayExitNotice'] = (...a) =>
+  owner.publishOverlayExitNotice(...a)
+const publishNotice: EngineStateService['publishOverlayNotice'] = (...a) =>
+  owner.publishOverlayNotice(...a)
+const recordDecision: EngineStateService['recordLaunchDecision'] = (...a) =>
+  owner.recordLaunchDecision(...a)
 
 type OverlayNoticeStep = NonNullable<EngineState['overlayNotice']>['step']
 
@@ -132,7 +158,7 @@ function mk(
   return { deps, store, probe }
 }
 
-beforeEach(() => __resetEngineStateForTests())
+beforeEach(() => freshOwner())
 
 describe('getSteamEngineState', () => {
   it('returns null for a non-numeric appId', async () => {
@@ -354,7 +380,7 @@ describe('getSteamEngineState', () => {
     t = ENGINE_PREFLIGHT_UNHEALTHY_TTL_MS + 1
     await getSteamEngineState('1', a.deps)
     expect(a.probe).toHaveBeenCalledTimes(2)
-    __resetEngineStateForTests()
+    freshOwner()
     t = 0
     const b = mk(healthy(null), { now: () => t })
     await getSteamEngineState('1', b.deps)
@@ -386,6 +412,79 @@ describe('getSteamEngineState', () => {
     await Promise.all([a, b])
     await getSteamEngineState('1', deps)
     expect(probe).toHaveBeenCalledTimes(1)
+  })
+})
+
+const expiredPfEarly: CrossoverPreflight = {
+  kind: 'expired',
+  binDir: '/cx/bin',
+  build: TESTED,
+  daysAgo: 1
+}
+
+describe('createEngineState owner isolation (D-66.3-12)', () => {
+  const newOwner = (now: () => number = () => 0) => {
+    const published: EngineState[] = []
+    const svc = createEngineState({
+      publish: (state) => published.push(state),
+      now,
+      isMac: () => true,
+      noticeStore: () => memStore()
+    })
+    return { svc, published }
+  }
+
+  it('two owners never share the preflight cache or the in-flight probe', async () => {
+    const a = newOwner()
+    const b = newOwner()
+    const { deps, probe } = mk(healthy(null))
+    await a.svc.getEngineState(idOf('1'), toDeps('1', deps))
+    await b.svc.getEngineState(idOf('1'), toDeps('1', deps))
+    expect(probe).toHaveBeenCalledTimes(2)
+  })
+
+  it('two owners keep independent notice sequences and last-published bases', () => {
+    const a = newOwner()
+    const b = newOwner()
+    const d = toDeps('1', mk(healthy(null)).deps)
+    const use: LaunchDecision = {
+      kind: 'use',
+      selection: { kind: 'builtin', label: 'Wine', reason: 'cx-missing' },
+      override: 'automatic',
+      preflight: null,
+      logLines: []
+    } as unknown as LaunchDecision
+    a.svc.recordLaunchDecision(idOf('1'), use, 'B', d)
+    a.svc.recordLaunchDecision(idOf('1'), use, 'B', d)
+    b.svc.recordLaunchDecision(idOf('1'), use, 'B', d)
+    expect(a.published.map((p) => p.launchNotice?.seq)).toEqual([1, 2])
+    expect(b.published.map((p) => p.launchNotice?.seq)).toEqual([1])
+    expect(b.svc.publishOverlayExitNotice(idOf('2'))).toBe(false)
+  })
+
+  it('the unhealthy TTL runs on the injected now()', async () => {
+    let t = 1_000
+    const o = newOwner(() => t)
+    const { deps, probe } = mk(expiredPfEarly)
+    await o.svc.getEngineState(idOf('1'), toDeps('1', deps))
+    t += ENGINE_PREFLIGHT_UNHEALTHY_TTL_MS - 1
+    await o.svc.getEngineState(idOf('1'), toDeps('1', deps))
+    expect(probe).toHaveBeenCalledTimes(1)
+    t += 2
+    await o.svc.getEngineState(idOf('1'), toDeps('1', deps))
+    expect(probe).toHaveBeenCalledTimes(2)
+  })
+
+  it('falls back to the owner isMac and notice store when a call supplies none', async () => {
+    const o = newOwner()
+    expect(await o.svc.dismissEngineNotice({ kind: 'no-crossover' })).toEqual({
+      ok: true
+    })
+    const { deps } = mk(healthy(null))
+    const { isMac: _isMac, store: _store, ...rest } = deps
+    expect(
+      await o.svc.getEngineState(idOf('1'), toDeps('1', rest))
+    ).not.toBeNull()
   })
 })
 
@@ -455,12 +554,12 @@ describe('truthful engine state (WR-02, WR-06, WR-07)', () => {
     expect(
       (await getSteamEngineState('1', mk(brokenPf, ov).deps))?.overrideWarning
     ).toBe('cx-broken')
-    __resetEngineStateForTests()
+    freshOwner()
     expect(
       (await getSteamEngineState('1', mk(healthy(null), ov).deps))
         ?.overrideWarning
     ).toBeNull()
-    __resetEngineStateForTests()
+    freshOwner()
     expect(
       (await getSteamEngineState('1', mk(inconclusive, ov).deps))
         ?.overrideWarning
@@ -787,7 +886,7 @@ describe('recordLaunchDecision and publisher', () => {
     setEngineStatePublisher(pub)
     recordLaunchDecision('1', fallback('cx-missing'), 'Other', a.deps)
     expect(pub.mock.calls[0][0].crossoverInstalled).toBe(false)
-    __resetEngineStateForTests()
+    freshOwner()
     setEngineStatePublisher(pub)
     recordLaunchDecision('2', fallback('cx-missing'), 'Other', a.deps)
     expect(pub.mock.calls[1][0].crossoverInstalled).toBe(true)

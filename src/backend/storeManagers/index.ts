@@ -157,6 +157,7 @@ export interface CreateStoreManagersDeps {
   appState: ManagerDeps['appState']
   imageTools: ManagerDeps['imageTools']
   onlineMonitor: ManagerDeps['onlineMonitor']
+  engineState: ManagerDeps['engineState']
 }
 
 /**
@@ -190,7 +191,8 @@ export function createStoreManagers(
     notifications: deps.notifications,
     appState: deps.appState,
     imageTools: deps.imageTools,
-    onlineMonitor: deps.onlineMonitor
+    onlineMonitor: deps.onlineMonitor,
+    engineState: deps.engineState
   }
   const launchHooks = buildLaunchHooks(managerDeps)
   const launcher = createLauncher({
@@ -206,7 +208,8 @@ export function createStoreManagers(
     dialogs: deps.dialogs,
     appState: deps.appState,
     notifications: deps.notifications,
-    onlineMonitor: deps.onlineMonitor
+    onlineMonitor: deps.onlineMonitor,
+    engineState: deps.engineState
   })
   Object.assign(library, {
     sideload: new SideloadLibraryManager(managerDeps),

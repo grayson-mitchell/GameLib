@@ -1,5 +1,6 @@
 import type { SteamDrm } from '../bridge/drm/drmLaunchSetup'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
+import { createTestEngineState } from 'backend/testUtils/testEngineState'
 import {
   createTestManagerDeps,
   createInertSteamProcesses,
@@ -185,11 +186,6 @@ import {
   restoreNeedsAbsentPin
 } from 'backend/engine/engineSwitch'
 import {
-  publishOverlayExitNotice,
-  publishOverlayNotice,
-  recordLaunchDecision
-} from 'backend/engine/engineState'
-import {
   clearEngineSelection,
   getEngineSelection
 } from 'backend/engine/engineRegistry'
@@ -293,7 +289,19 @@ const drmStandIn: Partial<SteamDrm> = {
   prefetchDrmDownloads: () => Promise.resolve({ status: 'not-applicable' })
 }
 
+// The engine state is a boot-owned slice now (D-66.3-12): the recording fakes are injected through
+// the deps instead of a module mock.
+const publishOverlayExitNotice = jest.fn()
+const publishOverlayNotice = jest.fn()
+const recordLaunchDecision = jest.fn()
+
 const steamTestDeps = createTestManagerDeps({
+  engineState: {
+    ...createTestEngineState(),
+    publishOverlayExitNotice,
+    publishOverlayNotice,
+    recordLaunchDecision
+  },
   // The i386-recovery confirm goes through deps.dialogs; the platform dialog mock records it.
   dialogs: {
     ...createTestHostServices().dialogs,
@@ -832,11 +840,6 @@ jest.mock('backend/engine/engineSwitch', () => ({
   prepareBottleForEngine: jest.fn(),
   readBottleEngineMarkerKind: jest.fn(),
   restoreNeedsAbsentPin: jest.fn()
-}))
-jest.mock('backend/engine/engineState', () => ({
-  recordLaunchDecision: jest.fn(),
-  publishOverlayNotice: jest.fn(),
-  publishOverlayExitNotice: jest.fn()
 }))
 jest.mock('backend/engine/fallbackEngine', () => ({
   ensurePinnedEngine: jest.fn(),

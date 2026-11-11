@@ -41,6 +41,7 @@ import {
   LogPrefix,
   logWarning
 } from './logger'
+import type { EngineStateService } from './engine/engineState'
 import {
   engineServicesFrom,
   toolsFrom,
@@ -118,6 +119,7 @@ export interface LauncherDeps extends DialogBoxDeps {
   gameConfigs: Pick<GameConfigs, 'get'>
   appInfo: Pick<AppInfo, 'version'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
+  engineState: EngineStateService
   notifications: Pick<Notifications, 'show'>
   appState: Pick<
     AppState,
@@ -149,6 +151,7 @@ function engineSource(deps: LauncherDeps): EngineServicesSource {
     appState: deps.appState,
     notifications: deps.notifications,
     onlineMonitor: deps.onlineMonitor,
+    engineState: deps.engineState,
     runner: deps.runner,
     stores: deps.stores,
     // The pure env/validation helpers are module functions, so the tools need no handle on the

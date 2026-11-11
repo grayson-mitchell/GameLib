@@ -22,6 +22,7 @@ type NileSetupDeps = Pick<
   ManagerDeps,
   | 'libraryManagers'
   | 'onlineMonitor'
+  | 'engineState'
   | 'launcher'
   | 'commandRunner'
   | 'spawnAsync'

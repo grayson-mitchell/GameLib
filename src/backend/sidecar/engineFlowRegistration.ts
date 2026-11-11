@@ -24,11 +24,6 @@ import type {
   Stores
 } from 'backend/services/types'
 import { isMac } from '../constants/environment'
-import { sendFrontendMessage } from '../ipc'
-import {
-  dismissEngineNotice,
-  setEngineStatePublisher
-} from 'backend/engine/engineState'
 import {
   getDefaultEngine,
   getGameEngineState,
@@ -49,14 +44,20 @@ export interface EngineFlowDeps {
   runner: BootServices['runner']
   /** The global config slice the engine reads its inherited settings from (66.3-06). */
   config: Pick<GlobalConfigSlice, 'getSettings'>
+  /** The boot-owned engine state; its publisher is built by the 'engine-state' boot step (D-66.3-12). */
+  engineState: EngineServices['engineState']
 }
 
 function engineServicesOf(
   deps: EngineFlowDeps
 ): Pick<BootServices, 'spawnAsync'> &
-  Pick<EngineServices, 'runner' | 'wineManagerReleases' | 'globalSettings'> {
+  Pick<
+    EngineServices,
+    'runner' | 'wineManagerReleases' | 'globalSettings' | 'engineState'
+  > {
   return {
     spawnAsync: deps.spawnAsync,
+    engineState: deps.engineState,
     runner: deps.runner,
     wineManagerReleases: wineManagerReleasesFrom(deps),
     globalSettings: () =>
@@ -96,8 +97,8 @@ async function getEngineStateFor(
 
 /**
  * Registers the five engine invoke channels (`getEngineState`, `listEngineOptions`,
- * `getDefaultEngine`, `getPerGameBottleName`, `dismissEngineNotice`) and installs the
- * `engineStateChanged` publisher. Invoke channels use `ipcMain.handle`; the push is not a channel.
+ * `getDefaultEngine`, `getPerGameBottleName`, `dismissEngineNotice`). Invoke channels use
+ * `ipcMain.handle`; the `engineStateChanged` push is the boot-built engine state's publisher.
  */
 export function registerEngineFlows(deps: EngineFlowDeps): void {
   deps.ipc.handle(
@@ -124,10 +125,7 @@ export function registerEngineFlows(deps: EngineFlowDeps): void {
 
   deps.ipc.handle(
     'dismissEngineNotice',
-    async (_event: unknown, ...args: unknown[]) => dismissEngineNotice(args[0])
-  )
-
-  setEngineStatePublisher((state) =>
-    sendFrontendMessage('engineStateChanged', state)
+    async (_event: unknown, ...args: unknown[]) =>
+      deps.engineState.dismissEngineNotice(args[0])
   )
 }

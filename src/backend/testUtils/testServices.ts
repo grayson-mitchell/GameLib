@@ -34,6 +34,7 @@ import { createWineManagerStores } from '../wine/manager/stores'
 import type { EngineServices } from '../engine/engineServices'
 import { createFakeClock } from './fakeClock'
 import { createTestOnlineMonitor } from './testOnlineMonitor'
+import { createTestEngineState } from './testEngineState'
 import type { GameSettings, Runner } from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
 import type {
@@ -222,7 +223,8 @@ export function createTestServices(
     gameConfigs: overrides.gameConfigs ?? createTestGameConfigs(),
     paths: overrides.paths ?? createTestPaths(),
     appInfo: overrides.appInfo ?? TEST_APP_INFO,
-    onlineMonitor: overrides.onlineMonitor ?? createTestOnlineMonitor()
+    onlineMonitor: overrides.onlineMonitor ?? createTestOnlineMonitor(),
+    engineState: overrides.engineState ?? createTestEngineState()
   }
 }
 
@@ -336,7 +338,8 @@ export function createTestManagerDeps(
     notifications: overrides.notifications ?? host.notifications,
     appState: overrides.appState ?? host.appState,
     imageTools: overrides.imageTools ?? host.imageTools,
-    onlineMonitor: overrides.onlineMonitor ?? createTestOnlineMonitor()
+    onlineMonitor: overrides.onlineMonitor ?? createTestOnlineMonitor(),
+    engineState: overrides.engineState ?? createTestEngineState()
   }
 }
 
@@ -355,6 +358,7 @@ export function createTestEngineServices(
     notices: unscriptedMembers<EngineServices['notices']>('notices', {}),
     runner: unscriptedMembers<EngineServices['runner']>('process runner', {}),
     onlineMonitor: createTestOnlineMonitor(),
+    engineState: createTestEngineState(),
     ...overrides
   }
 }
@@ -372,6 +376,7 @@ export function createTestToolsSlices() {
     dialogs: host.dialogs,
     appState: host.appState,
     notifications: host.notifications,
-    onlineMonitor: createTestOnlineMonitor()
+    onlineMonitor: createTestOnlineMonitor(),
+    engineState: createTestEngineState()
   }
 }

@@ -31,7 +31,6 @@ import {
 } from './engineConfig'
 import type { EffectiveEngine, EngineConfigDeps } from './engineConfig'
 import type { EngineServices } from './engineServices'
-import { getEngineState } from './engineState'
 import type { EngineStateDeps } from './engineState'
 import { engineKeyFor } from './gameKey'
 import { resolveGamePrefix } from './gamePrefix'
@@ -89,7 +88,11 @@ function settingsViewFor(
 export async function getGameEngineState(
   services: Pick<
     EngineServices,
-    'spawnAsync' | 'runner' | 'wineManagerReleases' | 'globalSettings'
+    | 'spawnAsync'
+    | 'runner'
+    | 'wineManagerReleases'
+    | 'globalSettings'
+    | 'engineState'
   >,
   identity: unknown,
   deps: GameEngineStateDeps = {}
@@ -110,7 +113,7 @@ export async function getGameEngineState(
     settings: settingsViewFor(id.appName, config, services.globalSettings),
     effective
   })
-  return getEngineState(id, {
+  return services.engineState.getEngineState(id, {
     killCrossoverWineserver: killCrossoverWineserverWith(services),
     runner: services.runner,
     ...releases,

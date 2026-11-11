@@ -10,6 +10,7 @@ import type { GameSettings } from 'common/types'
 import type { SpawnAsync } from 'backend/spawnAsync'
 import type { Tools } from 'backend/tools'
 import type { WineManagerRelease } from './engineDecision'
+import type { EngineStateService } from './engineState'
 
 export interface EngineServices {
   spawnAsync: SpawnAsync
@@ -18,6 +19,8 @@ export interface EngineServices {
   installRemove: Tools['DXVK']['installRemove']
   /** The connectivity slice the pinned-engine download gate reads. */
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
+  /** The boot-owned engine decision/notice state (D-66.3-12). */
+  engineState: EngineStateService
   /** The installed Wine Manager release list, read from the injected wineManager store. */
   wineManagerReleases: () => WineManagerRelease[]
   /** The global settings snapshot the engine's config reads inherit from (66.3-06). */

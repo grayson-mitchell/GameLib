@@ -1191,6 +1191,7 @@ describe('Phase 59 engine registry', () => {
           spawnAsync: d.spawnAsync,
           runner: d.runner,
           onlineMonitor: d.onlineMonitor,
+          engineState: d.engineState,
           notices: d,
           installRemove: mockedInstallRemove,
           wineManagerReleases: () => [],

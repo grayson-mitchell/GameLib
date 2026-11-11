@@ -39,7 +39,6 @@ jest.mock('../engineDialogs', () => ({
   showEngineDialog: jest.fn(),
   notifyEngineFallback: jest.fn()
 }))
-jest.mock('../engineState', () => ({ recordLaunchDecision: jest.fn() }))
 jest.mock('../engineSwitch', () => ({
   prepareBottleForEngine: jest.fn(),
   switchServicesFrom: jest.fn(() => ({

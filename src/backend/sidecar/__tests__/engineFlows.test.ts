@@ -19,11 +19,6 @@ jest.mock('../../constants/environment', () => ({
 const getGame = jest.fn()
 
 const dismiss = jest.fn()
-const setPublisher = jest.fn()
-jest.mock('backend/engine/engineState', () => ({
-  dismissEngineNotice: (...a: unknown[]) => dismiss(...a),
-  setEngineStatePublisher: (...a: unknown[]) => setPublisher(...a)
-}))
 const gameState = jest.fn()
 const gameOptions = jest.fn()
 const defaultEngine = jest.fn()
@@ -38,14 +33,11 @@ const steamState = jest.fn()
 jest.mock('backend/storeManagers/steam/engine/steamEngineDeps', () => ({
   getSteamEngineState: (...a: unknown[]) => steamState(...a)
 }))
-const send = jest.fn()
-jest.mock('../../ipc', () => ({
-  sendFrontendMessage: (...a: unknown[]) => send(...a)
-}))
 
 import { registerEngineFlows } from '../engineFlowRegistration'
 import { createTestServices } from 'backend/testUtils/testServices'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+import { createTestEngineState } from 'backend/testUtils/testEngineState'
 import {
   createTestManagers,
   createTestStores
@@ -70,10 +62,22 @@ function fakeGame(over: { native?: boolean; platform?: string } = {}) {
 const spawnAsync = createTestServices().spawnAsync
 const runner = createTestServices().runner
 const config = createTestGlobalConfig()
+const engineState = {
+  ...createTestEngineState(),
+  dismissEngineNotice: (...a: unknown[]) => dismiss(...a)
+} as unknown as ReturnType<typeof createTestEngineState>
 
 describe('engine flows', () => {
   beforeAll(() =>
-    registerEngineFlows({ ipc, managers, stores, spawnAsync, runner, config })
+    registerEngineFlows({
+      ipc,
+      managers,
+      stores,
+      spawnAsync,
+      runner,
+      config,
+      engineState
+    })
   )
   beforeEach(() => {
     jest.clearAllMocks()
@@ -99,7 +103,7 @@ describe('engine flows', () => {
       )
     ).toEqual({ kind: 's' })
     expect(steamState).toHaveBeenCalledWith(
-      { ipc, managers, stores, spawnAsync, runner, config },
+      { ipc, managers, stores, spawnAsync, runner, config, engineState },
       '220'
     )
     expect(getGame).not.toHaveBeenCalled()
@@ -118,7 +122,8 @@ describe('engine flows', () => {
         spawnAsync,
         runner,
         wineManagerReleases: expect.any(Function),
-        globalSettings: expect.any(Function)
+        globalSettings: expect.any(Function),
+        engineState
       },
       arg
     )
@@ -166,7 +171,8 @@ describe('engine flows', () => {
         spawnAsync,
         runner,
         wineManagerReleases: expect.any(Function),
-        globalSettings: expect.any(Function)
+        globalSettings: expect.any(Function),
+        engineState
       },
       arg
     )
@@ -197,13 +203,5 @@ describe('engine flows', () => {
     const arg = { kind: 'bogus' }
     await handlers.get('dismissEngineNotice')!({}, arg)
     expect(dismiss).toHaveBeenCalledWith(arg)
-  })
-
-  it('wires the publisher to engineStateChanged', () => {
-    registerEngineFlows({ ipc, managers, stores, spawnAsync, runner, config })
-    const publisher = setPublisher.mock.calls[0][0] as (s: unknown) => void
-    const state = { appId: '1' }
-    publisher(state)
-    expect(send).toHaveBeenCalledWith('engineStateChanged', state)
   })
 })

@@ -107,6 +107,7 @@ import { installDevSecretVault } from './devSecretVault'
 import axios from 'axios'
 import { randomUUID } from 'node:crypto'
 import { createOnlineMonitor } from '../online_monitor'
+import { createEngineState, lazyNoticeStore } from '../engine/engineState'
 import type { OnlineMonitor } from '../online_monitor'
 // Block E (todo 2026-09-06, quick-260908-fre). `grep -rn
 // "storeManagers/legendary/user\|storeManagers/gog/user" src/backend/sidecar/` confirms
@@ -263,6 +264,7 @@ export const BOOT_STEP_NAMES = [
   'config',
   'command-runner',
   'online-monitor-owner',
+  'engine-state',
   'store-managers',
   'download-queue',
   'shell-exe-receipt',
@@ -384,7 +386,8 @@ function requireServices(state: BootState): BootServices {
     gameConfigs,
     paths,
     appInfo,
-    onlineMonitor
+    onlineMonitor,
+    engineState
   } = state.services
   if (
     !stores ||
@@ -403,7 +406,8 @@ function requireServices(state: BootState): BootServices {
     !gameConfigs ||
     !paths ||
     !appInfo ||
-    !onlineMonitor
+    !onlineMonitor ||
+    !engineState
   ) {
     const missing = (
       [
@@ -423,7 +427,8 @@ function requireServices(state: BootState): BootServices {
         'gameConfigs',
         'paths',
         'appInfo',
-        'onlineMonitor'
+        'onlineMonitor',
+        'engineState'
       ] as const
     ).filter((name) => !state.services[name])
     throw new Error(`boot services missing: ${missing.join(', ')}`)
@@ -445,7 +450,8 @@ function requireServices(state: BootState): BootServices {
     gameConfigs,
     paths,
     appInfo,
-    onlineMonitor
+    onlineMonitor,
+    engineState
   }
 }
 
@@ -1383,11 +1389,36 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'engine-state',
+      // Builds the one engine decision/notice owner of this boot (D-05, D-66.3-12). Construction
+      // does no I/O and arms no timers; the notice store is resolved lazily on first read. Before
+      // 'store-managers' so ManagerDeps and the launcher can carry it.
+      run: (ctx, _io, state) => {
+        const host = requireHost(state)
+        state.services.engineState =
+          prebuilt.engineState ??
+          createEngineState({
+            publish: (engineState) =>
+              host.pushFrontendMessage('engineStateChanged', engineState),
+            now: () => ctx.clock.now(),
+            isMac: () => isMac,
+            noticeStore: lazyNoticeStore
+          })
+      }
+    },
+    {
       name: 'store-managers',
       run: (ctx, _io, state) => {
         const { stores, commandRunner, spawnAsync, runner } = state.services
-        const { config, gameConfigs, paths, appInfo, host, onlineMonitor } =
-          state.services
+        const {
+          config,
+          gameConfigs,
+          paths,
+          appInfo,
+          host,
+          onlineMonitor,
+          engineState
+        } = state.services
         if (
           !stores ||
           !commandRunner ||
@@ -1398,7 +1429,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !paths ||
           !appInfo ||
           !host ||
-          !onlineMonitor
+          !onlineMonitor ||
+          !engineState
         ) {
           throw new Error(
             'store-managers step ran before stores/command-runner/config/host-services'
@@ -1430,7 +1462,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           notifications: host.notifications,
           appState: host.appState,
           imageTools: host.imageTools,
-          onlineMonitor
+          onlineMonitor,
+          engineState
         })
         state.services.managers = prebuilt.managers ?? built
         state.services.launcher = prebuilt.launcher ?? built.launcher

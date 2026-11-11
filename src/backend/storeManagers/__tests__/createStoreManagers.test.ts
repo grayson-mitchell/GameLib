@@ -54,6 +54,7 @@ function build(over: Partial<Parameters<typeof createStoreManagers>[0]> = {}) {
     appState: fakes.host.appState,
     imageTools: fakes.host.imageTools,
     onlineMonitor: fakes.onlineMonitor,
+    engineState: fakes.engineState,
     ...over
   })
 }

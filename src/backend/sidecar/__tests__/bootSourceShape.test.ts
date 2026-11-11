@@ -43,6 +43,7 @@ describe('bootstrap.ts source shape (D-08)', () => {
       'config',
       'command-runner',
       'online-monitor-owner',
+      'engine-state',
       'store-managers',
       'i18n',
       'register-handlers',

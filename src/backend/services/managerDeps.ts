@@ -22,6 +22,7 @@ export type ManagerDepsSource = Pick<
   | 'paths'
   | 'appInfo'
   | 'onlineMonitor'
+  | 'engineState'
 >
 
 export function managerDepsFromServices(
@@ -46,6 +47,7 @@ export function managerDepsFromServices(
     notifications: source.host.notifications,
     appState: source.host.appState,
     imageTools: source.host.imageTools,
-    onlineMonitor: source.onlineMonitor
+    onlineMonitor: source.onlineMonitor,
+    engineState: source.engineState
   }
 }

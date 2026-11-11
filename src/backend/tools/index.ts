@@ -226,6 +226,8 @@ export interface ToolsDeps extends DialogBoxDeps, NotifyDeps {
   /** `raiseMainWindow` is for the engine's refused-launch dialog (66.3-06). */
   appState: Pick<AppState, 'raiseMainWindowForInAppDialog' | 'raiseMainWindow'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
+  /** The boot-owned engine decision/notice state (D-66.3-12). */
+  engineState: EngineServices['engineState']
   config: Pick<
     GlobalConfigSlice,
     'getSettings' | 'getAlternativeWine' | 'setSetting'
@@ -238,6 +240,7 @@ function engineServicesFor(deps: ToolsDeps): EngineServices {
     spawnAsync: deps.spawnAsync,
     runner: deps.runner,
     onlineMonitor: deps.onlineMonitor,
+    engineState: deps.engineState,
     installRemove: (...a) => createDxvk(deps).installRemove(...a),
     wineManagerReleases: wineManagerReleasesFrom(deps),
     globalSettings: () =>

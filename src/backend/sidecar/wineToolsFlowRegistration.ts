@@ -63,6 +63,7 @@
  * never reach.
  */
 
+import type { EngineStateService } from 'backend/engine/engineState'
 import type { OnlineMonitor } from '../online_monitor'
 import type { AppState } from '../host/appState'
 import type { IpcRegistry } from './ipcRegistry'
@@ -111,6 +112,7 @@ export interface WineToolsFlowDeps extends NotifyDeps, DialogBoxDeps {
   gameConfigs: Pick<GameConfigs, 'get'>
   appInfo: Pick<AppInfo, 'version'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
+  engineState: EngineStateService
   managers: Pick<StoreManagers, 'library'>
   commandRunner: Pick<CommandRunner, 'runWineCommand'>
   launcher: Pick<Launcher, 'validWine' | 'setupEnvVars' | 'setupWineEnvVars'>

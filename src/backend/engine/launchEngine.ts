@@ -57,10 +57,6 @@ import {
   showEngineNotice
 } from './engineDialogs'
 import {
-  publishLaunchDeadlineNotice,
-  recordLaunchDecision
-} from './engineState'
-import {
   prepareBottleForEngine,
   readBottleEngineMarkerKind,
   restoreNeedsAbsentPin,
@@ -151,23 +147,13 @@ const defaultDeps: Omit<
   | 'switchDeps'
   | 'readEffective'
   | 'isCrossoverMissing'
+  | 'recordDecision'
 > = {
   isMac: () => isMac,
   isProvisioned: isBottleProvisioned,
   currentPinInstalled: () => isPinnedEngineInstalled(ENGINE_PINS.current),
   prepare: prepareBottleForEngine,
   sendStatus: (update) => sendGameStatusUpdate(update),
-  recordDecision(id, decision, bottleName, prefix, effective) {
-    recordLaunchDecision(id, decision, bottleName, {
-      bottleFor: () => (bottleName === '' ? null : bottleName),
-      stateWithoutBottle: true,
-      overrideEligible: () => true,
-      overlayEligible: false,
-      effective: () => effective,
-      prefixKind: prefix.kind === 'bottle' ? 'bottle' : 'plain',
-      perGameBottleName: perGameBottleName(id.runner, id.appName)
-    })
-  },
   showDialog: showEngineDialog,
   notifyFallback: notifyEngineFallback
 }
@@ -208,6 +194,17 @@ export async function selectEngineForLaunch(
         onlineMonitor: services.onlineMonitor
       }),
     switchDeps: () => switchServicesFrom(services),
+    recordDecision(id, decision, bottleName, prefix, effective) {
+      services.engineState.recordLaunchDecision(id, decision, bottleName, {
+        bottleFor: () => (bottleName === '' ? null : bottleName),
+        stateWithoutBottle: true,
+        overrideEligible: () => true,
+        overlayEligible: false,
+        effective: () => effective,
+        prefixKind: prefix.kind === 'bottle' ? 'bottle' : 'plain',
+        perGameBottleName: perGameBottleName(id.runner, id.appName)
+      })
+    },
     isCrossoverMissing: () => isCrossoverMissing({ runner: services.runner }),
     readEffective: (id) =>
       readEngineForGame(id, {
@@ -506,13 +503,12 @@ const deadlineWatchers = new Map<EngineKey, { stop(): void }>()
 export interface DeadlineDeps {
   watch: typeof watchForGameProcess
   showNotice: typeof showEngineNotice
-  publishNotice: typeof publishLaunchDeadlineNotice
+  publishNotice: EngineServices['engineState']['publishLaunchDeadlineNotice']
 }
 
-const defaultDeadlineDeps: DeadlineDeps = {
+const defaultDeadlineDeps = {
   watch: watchForGameProcess,
-  showNotice: showEngineNotice,
-  publishNotice: publishLaunchDeadlineNotice
+  showNotice: showEngineNotice
 }
 
 function stopDeadlineWatcher(key: EngineKey): void {
@@ -584,7 +580,11 @@ export function armEngineLaunchDeadline(
   overrides: Partial<DeadlineDeps> = {}
 ): void {
   if (key === null) return
-  const d: DeadlineDeps = { ...defaultDeadlineDeps, ...overrides }
+  const d: DeadlineDeps = {
+    ...defaultDeadlineDeps,
+    publishNotice: services.engineState.publishLaunchDeadlineNotice,
+    ...overrides
+  }
   const ctx = getLaunchOverlayContext(key)
   if (ctx === undefined || ctx.prefix.kind !== 'bottle') return
   const armedSelection = getEngineSelection(key)
