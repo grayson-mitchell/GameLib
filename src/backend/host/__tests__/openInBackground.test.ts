@@ -1,4 +1,4 @@
-import { shouldOpenInBackground } from '../openDetached'
+import { shouldOpenInBackground } from '../openInBackground'
 
 const URL_OFF = 'steam://open/gooffline'
 

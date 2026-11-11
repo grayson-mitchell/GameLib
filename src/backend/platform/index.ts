@@ -80,7 +80,7 @@ import { getPath } from '../sidecar/pathShim'
 import { isPackagedSidecar } from '../sidecar/isPackagedSidecar'
 import { requestRustInvoke } from '../sidecar/sidecarRpc'
 import type { RustInvokeArgsOf } from 'common/types/ipc/rustInvoke'
-import { shouldOpenInBackground } from './openDetached'
+import { shouldOpenInBackground } from '../host/openInBackground'
 import type { ProcessRunner } from '../process/types'
 import { createNativeImage } from '../sidecar/nativeImageShim'
 import {
