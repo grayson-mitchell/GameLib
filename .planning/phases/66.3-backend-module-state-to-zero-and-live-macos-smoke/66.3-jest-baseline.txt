@@ -1,0 +1,12 @@
+# 66.3 jest failure baseline, measured 2026-11-11
+# command: pnpm jest --json --outputFile=/var/folders/f7/stgr185j04g2hm431z971xl40000gn/T/66.3-jest-79613.json --maxWorkers=2 --silent
+# failed tests 8/20604, failed suites 7/940
+# policy: lines may be deleted when they pass; never added.
+meta/__tests__/gamelibCatalogParity.test.ts › gamelib catalog parity public/locales/sl/gamelib.json honours every source rule
+meta/__tests__/genI18nGateScope.test.ts › genI18nGateScope staleness guard -- the reverse direction (REQ-34.10-14) with a real git diff against the upstream merge-base A-17 ANTI-ROT: the committed meta/i18nForkTouchedFiles.json equals the LIVE git derivation
+meta/__tests__/lintTranslations.test.ts › comparePresenceBaseline (REQ-41-01) REQ-41-01 R13: zero drift between the live tree and the committed baseline
+meta/__tests__/lintTranslations.test.ts › lintTranslations (REQ-41-02) live tree REQ-41-02: zero hard failures for the gamelib namespace against the committed tree
+meta/__tests__/x86CallbackWineHarness.test.ts › x86 callback dispatch under Wine (P55-9) fake helper saw HELLO, one 168 drain and CBDISP 168/3/0
+src/backend/__tests__/commandRunner.test.ts › Layer-2: credential redaction census gate (34.5-61) Layer-2: every credential-bearing --flag literal in backend source is a member of the redaction list
+src/backend/__tests__/tauriShellSource.test.ts › WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation gating -- static half only, live half owned by plan 29 item 1 no WebviewWindowBuilder chain passes a STRING LITERAL to .title( -- WR-07's negative half, amended: the prohibited thing is a hard-coded title, not the method
+src/backend/storeManagers/steam/__tests__/macArchKnownFixRouting.test.ts › known-fix macArch 32 routing Intel: never seeds and does not take the bottle-branch result
