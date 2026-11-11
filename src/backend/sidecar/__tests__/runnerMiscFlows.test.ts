@@ -111,9 +111,6 @@ jest.mock('../../save_sync', () => ({
 // wipe a declaration-time implementation before the first test runs. ───────────────────────────
 const mockGlobalConfigGetSettings = jest.fn()
 const mockGlobalConfigGet = jest.fn()
-jest.mock('../../config', () => ({
-  GlobalConfig: { get: (...args: unknown[]) => mockGlobalConfigGet(...args) }
-}))
 
 // ── backend/logger — short-circuits the heavy GameConfig/GlobalConfig/backendEvents import graph
 // `backend/logger/index.ts` pulls in at module scope (mirrors runnerAuthFlowRegistration.ts's own
@@ -203,7 +200,8 @@ import { join } from 'path'
 import { homedir } from 'os'
 
 import { registerRunnerMiscFlows } from '../runnerMiscFlowRegistration'
-import { handlerRegistry, listenerRegistry } from '../../platform'
+import { createIpcRegistry } from '../ipcRegistry'
+import { ipcViews } from 'backend/testUtils/ipcViews'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { getPath } from '../pathShim'
 
@@ -211,8 +209,12 @@ import { getPath } from '../pathShim'
 // are module-scope maps; calling `registerRunnerMiscFlows()` more than once would stack a
 // duplicate registration, mirroring every prior cluster suite's own file-scope-once convention. ──
 // The tools module is mocked above, so the deps are never read.
+const ipc = createIpcRegistry()
+const { handlerRegistry, listenerRegistry } = ipcViews(ipc)
 registerRunnerMiscFlows({
-  managers: managerSlice
+  ipc,
+  managers: managerSlice,
+  config: { getSettings: () => mockGlobalConfigGet().getSettings() }
 } as unknown as Parameters<typeof registerRunnerMiscFlows>[0])
 
 // ── Describe 1: Registration kind ──────────────────────────────────────────────────────────────

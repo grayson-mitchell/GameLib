@@ -4,19 +4,9 @@
  */
 const handlers: Record<string, (...a: unknown[]) => unknown> = {}
 const listeners: Record<string, (...a: unknown[]) => unknown> = {}
-jest.mock('../../platform', () => ({
-  ipcMain: {
-    handle: (c: string, f: never) => (handlers[c] = f),
-    on: (c: string, f: never) => (listeners[c] = f)
-  }
-}))
 jest.mock('../../storeManagers', () => ({ libraryManagerMap: {} }))
 jest.mock('../../storeManagers/steam/state', () => ({ library: new Map() }))
 const mockGlobalSet = jest.fn()
-jest.mock('../../config', () => ({
-  GlobalConfig: { get: () => ({ setSetting: mockGlobalSet }) }
-}))
-jest.mock('../../game_config', () => ({ GameConfig: { get: jest.fn() } }))
 const mockApply = jest.fn()
 jest.mock('../gameSettingWrite', () => ({
   applyGameSetting: (...a: unknown[]) => mockApply(...a)
@@ -38,6 +28,12 @@ import { registerSettingsFlows } from '../settingsFlowRegistration'
 
 let stderr: jest.SpyInstance
 const settingsDeps = {
+  ipc: {
+    handle: (c: string, f: never) => (handlers[c] = f),
+    on: (c: string, f: never) => (listeners[c] = f)
+  },
+  config: { setSetting: mockGlobalSet },
+  gameConfigs: { get: jest.fn() },
   stores: { kvs: { configStore: { get_nodefault: jest.fn(), set: jest.fn() } } }
 } as unknown as Parameters<typeof registerSettingsFlows>[0]
 beforeAll(() => registerSettingsFlows(settingsDeps))

@@ -70,7 +70,8 @@ import { shortcutFiles } from '../shortcuts/shortcuts'
 import { createPathShimPaths } from 'backend/testUtils/pathShimPaths'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { addShortcuts } from '../shortcuts/shortcuts'
-import { handlerRegistry } from 'backend/platform'
+import { createIpcRegistry } from 'backend/sidecar/ipcRegistry'
+import { ipcViews } from 'backend/testUtils/ipcViews'
 import { logWarning } from 'backend/logger'
 import type { GameInfo } from 'common/types'
 import type { Game } from 'common/types/game_manager'
@@ -100,7 +101,10 @@ function hostSlices() {
   }
 }
 
+const ipc = createIpcRegistry()
+const { handlerRegistry } = ipcViews(ipc)
 registerShortcutsFlows({
+  ipc,
   ...hostSlices(),
   managers: createTestManagers({
     library: {

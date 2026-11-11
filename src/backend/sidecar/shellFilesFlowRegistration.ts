@@ -6,7 +6,7 @@
  * recorder, importing the REAL `backend/utils.ts` / `backend/utils/filesystem`
  * functions UNCHANGED:
  *
- *   send (ipcMain.on, 16; `removeFolder` deleted in Phase 72 D-09):
+ *   send (deps.ipc.on, 16; `removeFolder` deleted in Phase 72 D-09):
  *     - `openExternalUrl` -> `assertOpenableExternalUrl` then `shell.openExternal` (Phase 72 D-07)
  *     - `openFolder` -> `classifyFolderTarget`: open a directory, reveal a file or bundle (Phase 72 D-07/D-08)
  *     - `openSupportPage` -> `shell.openExternal(supportURL)` (`main.ts:737`)
@@ -36,7 +36,7 @@
  *       `app.relaunch()` -> `app.quit()` ordering race is fixed entirely
  *       inside `platformApi` by plan 34.3-05 (`main.ts:813`)
  *
- *   invoke (ipcMain.handle, 3):
+ *   invoke (deps.ipc.handle, 3):
  *     - `checkDiskSpace` -> `utils/filesystem`'s `getDiskInfo`/`isWritable`/
  *       `isAccessibleWithinFlatpakSandbox`, gated by the zod `Path` schema's
  *       `.parse()` — this throw-on-invalid-input IS the ASVS V5 control for
@@ -47,7 +47,7 @@
  *     - `pathExists` -> `graceful-fs`'s `existsSync(path)`, the same module
  *       `main.ts:27` imports it from (`main.ts:1461-1463`)
  *
- * A `send` channel registered with `ipcMain.handle` (or the reverse) fails
+ * A `send` channel registered with `deps.ipc.handle` (or the reverse) fails
  * 100% SILENTLY at runtime — no reject, no timeout, no console line (Phase 31
  * Pitfall 2, and the `sidecar-send-channels-fail-silently` project memory).
  * Every registration below was cross-checked against `main.ts`'s own
@@ -82,7 +82,7 @@
  * Deliberately does NOT register:
  *   - `openReleases`, `openWebviewPage`,
  *     `showAboutWindow` — Phase 34.1 channels already registered by
- *     `appShellFlowRegistration.ts`; `listenerRegistry` holds an ARRAY per
+ *     `appShellFlowRegistration.ts`; the IPC registry holds an ARRAY of listeners per
  *     channel, so a second registration here would double-fire them.
  *   - `showLogFileInFolder` — lives in `logger/ipc_handler.ts`, ported by
  *     plan 34.3-04 into `loggerFlowRegistration.ts`.
@@ -90,7 +90,7 @@
 
 import type { AppState } from '../host/appState'
 import type { OpenExternal } from '../host/openExternal'
-import { ipcMain, shell } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
 import { assertOpenableExternalUrl, classifyFolderTarget } from './openPolicy'
 import { assertContainedPath } from './rendererPathGuard'
 import {
@@ -144,20 +144,24 @@ function logSendFailure(channel: string, error: unknown): void {
  * registration onto the handler registry happens.
  */
 export function registerShellFilesFlows(deps: {
+  ipc: Pick<IpcRegistry, 'on' | 'handle'>
   managers: Pick<StoreManagers, 'library'>
   stores: ClearCacheDeps['stores']
   /** The boot process runner (66.2); consumers converted by 66.2-05. */
   runner: BootServices['runner']
   dialogs: ClearCacheDeps['dialogs']
   appState: ClearCacheDeps['appState'] & Pick<AppState, 'relaunch' | 'quit'>
-  openExternal: Pick<OpenExternal, 'showItemInFolder'>
+  openExternal: Pick<
+    OpenExternal,
+    'openExternal' | 'openPath' | 'showItemInFolder'
+  >
 }): void {
   // ── send (11): the URL openers (constant URLs go straight to shell.openExternal) ────
 
-  ipcMain.on('openExternalUrl', (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.on('openExternalUrl', (_event: unknown, ...args: unknown[]) => {
     try {
       void Promise.resolve(
-        shell.openExternal(
+        deps.openExternal.openExternal(
           assertOpenableExternalUrl(args[0], 'openExternalUrl')
         )
       ).catch((error) => logSendFailure('openExternalUrl', error))
@@ -166,76 +170,76 @@ export function registerShellFilesFlows(deps: {
     }
   })
 
-  ipcMain.on('openFolder', (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.on('openFolder', (_event: unknown, ...args: unknown[]) => {
     void (async () => {
       const target = args[0] as string
       const mode = await classifyFolderTarget(target, 'openFolder')
       if (mode === 'open') {
-        await shell.openPath(target)
+        await deps.openExternal.openPath(target)
       } else {
-        shell.showItemInFolder(target)
+        deps.openExternal.showItemInFolder(target)
       }
     })().catch((error) => logSendFailure('openFolder', error))
   })
 
-  ipcMain.on('openSupportPage', () => {
-    void Promise.resolve(shell.openExternal(supportURL)).catch((error) =>
-      logSendFailure('openSupportPage', error)
+  deps.ipc.on('openSupportPage', () => {
+    void Promise.resolve(deps.openExternal.openExternal(supportURL)).catch(
+      (error) => logSendFailure('openSupportPage', error)
     )
   })
 
-  ipcMain.on('openWeblate', () => {
-    void Promise.resolve(shell.openExternal(weblateUrl)).catch((error) =>
-      logSendFailure('openWeblate', error)
+  deps.ipc.on('openWeblate', () => {
+    void Promise.resolve(deps.openExternal.openExternal(weblateUrl)).catch(
+      (error) => logSendFailure('openWeblate', error)
     )
   })
 
-  ipcMain.on('openLoginPage', () => {
-    void Promise.resolve(shell.openExternal(epicLoginUrl)).catch((error) =>
-      logSendFailure('openLoginPage', error)
+  deps.ipc.on('openLoginPage', () => {
+    void Promise.resolve(deps.openExternal.openExternal(epicLoginUrl)).catch(
+      (error) => logSendFailure('openLoginPage', error)
     )
   })
 
-  ipcMain.on('openDiscordLink', () => {
-    void Promise.resolve(shell.openExternal(discordLink)).catch((error) =>
-      logSendFailure('openDiscordLink', error)
+  deps.ipc.on('openDiscordLink', () => {
+    void Promise.resolve(deps.openExternal.openExternal(discordLink)).catch(
+      (error) => logSendFailure('openDiscordLink', error)
     )
   })
 
-  ipcMain.on('openKofiPage', () => {
-    void Promise.resolve(shell.openExternal(kofiPage)).catch((error) =>
-      logSendFailure('openKofiPage', error)
+  deps.ipc.on('openKofiPage', () => {
+    void Promise.resolve(deps.openExternal.openExternal(kofiPage)).catch(
+      (error) => logSendFailure('openKofiPage', error)
     )
   })
 
-  ipcMain.on('openGithubSponsorsPage', () => {
-    void Promise.resolve(shell.openExternal(githubSponsorsPage)).catch(
-      (error) => logSendFailure('openGithubSponsorsPage', error)
+  deps.ipc.on('openGithubSponsorsPage', () => {
+    void Promise.resolve(
+      deps.openExternal.openExternal(githubSponsorsPage)
+    ).catch((error) => logSendFailure('openGithubSponsorsPage', error))
+  })
+
+  deps.ipc.on('openWinePrefixFAQ', () => {
+    void Promise.resolve(deps.openExternal.openExternal(wineprefixFAQ)).catch(
+      (error) => logSendFailure('openWinePrefixFAQ', error)
     )
   })
 
-  ipcMain.on('openWinePrefixFAQ', () => {
-    void Promise.resolve(shell.openExternal(wineprefixFAQ)).catch((error) =>
-      logSendFailure('openWinePrefixFAQ', error)
+  deps.ipc.on('openWikiLink', () => {
+    void Promise.resolve(deps.openExternal.openExternal(wikiLink)).catch(
+      (error) => logSendFailure('openWikiLink', error)
     )
   })
 
-  ipcMain.on('openWikiLink', () => {
-    void Promise.resolve(shell.openExternal(wikiLink)).catch((error) =>
-      logSendFailure('openWikiLink', error)
-    )
-  })
-
-  ipcMain.on('openSidInfoPage', () => {
-    void Promise.resolve(shell.openExternal(sidInfoUrl)).catch((error) =>
-      logSendFailure('openSidInfoPage', error)
+  deps.ipc.on('openSidInfoPage', () => {
+    void Promise.resolve(deps.openExternal.openExternal(sidInfoUrl)).catch(
+      (error) => logSendFailure('openSidInfoPage', error)
     )
   })
 
   // ── send (1): showConfigFileInFolder — reproduces main.ts:755-760's exact
   // two-branch body ─────────────────────────────────────────────────────────
 
-  ipcMain.on(
+  deps.ipc.on(
     'showConfigFileInFolder',
     (_event: unknown, ...args: unknown[]) => {
       try {
@@ -248,7 +252,7 @@ export function registerShellFilesFlows(deps: {
                 `${String(appName)}.json`,
                 'showConfigFileInFolder'
               )
-        shell.showItemInFolder(target)
+        deps.openExternal.showItemInFolder(target)
       } catch (error) {
         logSendFailure('showConfigFileInFolder', error)
       }
@@ -258,7 +262,7 @@ export function registerShellFilesFlows(deps: {
   // ── send (1): showItemInFolder — SYNCHRONOUS body (main.ts:1106), wrapped
   // in a plain try/catch rather than a promise `.catch()` ───────────────────
 
-  ipcMain.on('showItemInFolder', (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.on('showItemInFolder', (_event: unknown, ...args: unknown[]) => {
     try {
       showItemInFolderImpl(deps, args[0] as string)
     } catch (error) {
@@ -273,7 +277,7 @@ export function registerShellFilesFlows(deps: {
   // which never throws. `refreshLibrary` rides the generic frontend_message
   // relay via `pushFrontendMessage` — zero new Rust arms ─────────────────────
 
-  ipcMain.on('clearCache', (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.on('clearCache', (_event: unknown, ...args: unknown[]) => {
     try {
       const showDialog = args[0]
       const fromVersionChange = args[1] === true
@@ -299,18 +303,21 @@ export function registerShellFilesFlows(deps: {
 
   // ── send (1): clearAchievementCache — main.ts:805-811 ─────────────────────
 
-  ipcMain.on('clearAchievementCache', (_event: unknown, ...args: unknown[]) => {
-    try {
-      const appName = args[0] as string
-      clearAchievementCache(deps, appName)
-      logInfo(
-        'Achievement cache was cleared for game: ' + appName,
-        LogPrefix.Backend
-      )
-    } catch (error) {
-      logSendFailure('clearAchievementCache', error)
+  deps.ipc.on(
+    'clearAchievementCache',
+    (_event: unknown, ...args: unknown[]) => {
+      try {
+        const appName = args[0] as string
+        clearAchievementCache(deps, appName)
+        logInfo(
+          'Achievement cache was cleared for game: ' + appName,
+          LogPrefix.Backend
+        )
+      } catch (error) {
+        logSendFailure('clearAchievementCache', error)
+      }
     }
-  })
+  )
 
   // ── send (1): resetHeroic — main.ts:813. Calls the UNMODIFIED utils.ts
   // body; no build-conditional branch here or in utils.ts. The relaunch/quit
@@ -319,7 +326,7 @@ export function registerShellFilesFlows(deps: {
   // other electron-store file in appFolder (Steam token/library, all 10
   // Humble stores, download manager, Wine/wiki/crossover caches) survives ──
 
-  ipcMain.on('resetHeroic', () => {
+  deps.ipc.on('resetHeroic', () => {
     try {
       resetHeroic(deps)
     } catch (error) {
@@ -329,7 +336,7 @@ export function registerShellFilesFlows(deps: {
 
   // ── invoke (3): filesystem/diagnostics ────────────────────────────────────
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'checkDiskSpace',
     async (_event: unknown, ...args: unknown[]): Promise<DiskSpaceData> => {
       // T-34.3-01 (mitigate): Path.parse is the zod schema's OWN validation —
@@ -353,11 +360,11 @@ export function registerShellFilesFlows(deps: {
     }
   )
 
-  ipcMain.handle('getShellPath', async (_event: unknown, ...args: unknown[]) =>
+  deps.ipc.handle('getShellPath', async (_event: unknown, ...args: unknown[]) =>
     getShellPath(args[0] as string)
   )
 
-  ipcMain.handle('pathExists', async (_event: unknown, ...args: unknown[]) =>
+  deps.ipc.handle('pathExists', async (_event: unknown, ...args: unknown[]) =>
     existsSync(args[0] as string)
   )
 }

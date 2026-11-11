@@ -159,8 +159,9 @@ export function registerHandlers(deps: {
     runner: deps.services.runner,
     config: deps.services.config
   })
-  registerInstallFlows(deps.services)
+  registerInstallFlows({ ...deps.services, ipc })
   registerSettingsFlows({
+    ipc,
     managers: deps.services.managers,
     stores: deps.services.stores,
     runner: deps.services.runner,
@@ -244,6 +245,7 @@ export function registerHandlers(deps: {
   // runtime dependency at registration time), placed alongside them, before
   // `registerStoreWriteHandlers()`.
   registerShellFilesFlows({
+    ipc,
     managers: deps.services.managers,
     stores: deps.services.stores,
     runner: deps.services.runner,
@@ -278,6 +280,7 @@ export function registerHandlers(deps: {
   // calls above (own channel name, no cross-module runtime dependency at
   // registration time), placed alongside them, before `registerStoreWriteHandlers()`.
   registerLoggerFlows({
+    ipc,
     stores: deps.services.stores,
     appInfo: deps.services.appInfo,
     openExternal: deps.services.host.openExternal
@@ -306,7 +309,7 @@ export function registerHandlers(deps: {
   // authenticate). No ordering constraint relative to the other calls above (own channel name,
   // no cross-module runtime dependency at registration time), placed alongside them, before
   // `registerStoreWriteHandlers()`.
-  registerOAuthLoginFlows()
+  registerOAuthLoginFlows({ ipc })
   // Phase 34.5 Plan 04 (REQ-34.5-13): the four slice-34.5 clusters — runner auth/sign-out,
   // Wine tools, shortcuts, runner misc. Declared here as EMPTY seams by plan 34.5-04 and
   // filled in one module at a time by the cluster plans (34.5-05 through 34.5-12); all four
@@ -314,6 +317,7 @@ export function registerHandlers(deps: {
   // names, no cross-module runtime dependency at registration time), placed alongside them,
   // before `registerStoreWriteHandlers()`.
   registerRunnerAuthFlows({
+    ipc,
     managers: deps.services.managers,
     stores: deps.services.stores,
     appInfo: deps.services.appInfo,
@@ -331,6 +335,7 @@ export function registerHandlers(deps: {
     ...toolSlices(deps.services)
   })
   registerShortcutsFlows({
+    ipc,
     managers: deps.services.managers,
     quit: deps.services.quit,
     stores: deps.services.stores,
@@ -343,6 +348,7 @@ export function registerHandlers(deps: {
     notifications: deps.services.host.notifications
   })
   registerRunnerMiscFlows({
+    ipc,
     managers: deps.services.managers,
     commandRunner: deps.services.commandRunner,
     launcher: deps.services.launcher,

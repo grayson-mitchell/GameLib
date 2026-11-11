@@ -115,7 +115,7 @@
  */
 
 import { isStore } from 'common/storeCapabilities'
-import { ipcMain } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
 // Load-bearing FIRST import (mirrors steamFlowRegistration.ts's / plan
 // 30-01's steamAuthFlowRegistration.ts's Phase 27 Plan 05 circular-dep fix):
 // force `storeManagers/index.ts` to be the INITIALIZATION ENTRY before the
@@ -195,7 +195,9 @@ function rejectedPathDialogTitle(): string {
   )
 }
 
-export type InstallFlowDeps = ManagerDepsSource
+export type InstallFlowDeps = ManagerDepsSource & {
+  ipc: Pick<IpcRegistry, 'handle'>
+}
 
 /**
  * Registers the nine install-slice invoke handlers. Called once from
@@ -204,7 +206,7 @@ export type InstallFlowDeps = ManagerDepsSource
  * registry happens.
  */
 export function registerInstallFlows(deps: InstallFlowDeps): void {
-  ipcMain.handle(
+  deps.ipc.handle(
     'install',
     async (_event: unknown, ...args: unknown[]): Promise<void> => {
       const params = (args[0] ?? {}) as InstallParams
@@ -238,7 +240,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
   // body reached at runtime is entirely unmodified; only the type of the
   // (always-unused, always-undefined-at-runtime, per sidecarRpc's
   // dispatchInvoke) event parameter is widened here.
-  ipcMain.handle('uninstall', (event: unknown, ...args: unknown[]) =>
+  deps.ipc.handle('uninstall', (event: unknown, ...args: unknown[]) =>
     (
       uninstallGameCallback as (
         deps: { libraryManagers: StoreManagers['library'] },
@@ -258,7 +260,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
     )
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'updateGame',
     async (_event: unknown, ...args: unknown[]): Promise<void> => {
       const params = (args[0] ?? {}) as UpdateParams
@@ -287,7 +289,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
     }
   )
 
-  ipcMain.handle('checkGameUpdates', async () =>
+  deps.ipc.handle('checkGameUpdates', async () =>
     checkGameUpdates({ managers: deps.managers, config: deps.config })
   )
 
@@ -297,7 +299,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
   // regardless of the toggle. The renderer passes the optional appName; the
   // verdict is backend-authoritative. An empty list stays the frontend's one
   // OFF signal (T-o77-01: shape-check the renderer value, fail to []).
-  ipcMain.handle(
+  deps.ipc.handle(
     'listSteamLibraryTargets',
     async (_event: unknown, ...args: unknown[]) => {
       if (isSteamNativeInstallEnabled(deps.config))
@@ -327,7 +329,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
     installAppRoute: false,
     libraries: [] as Awaited<ReturnType<typeof listSteamLibraryTargets>>
   })
-  ipcMain.handle(
+  deps.ipc.handle(
     'getSteamInstallAppTargets',
     async (_event: unknown, ...args: unknown[]) => {
       if (
@@ -360,7 +362,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
   // when the delete setting is ON, no bridge bottle holds the install and its
   // recorded install_path resolves to the native root. Reads the raw library
   // Map entry (no metadata side effect); never rejects, closed on any doubt.
-  ipcMain.handle(
+  deps.ipc.handle(
     'getSteamDeleteRoute',
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[0]
@@ -414,7 +416,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
   // path, bypassing the picker entirely -- the same exposure every other
   // filesystem-touching sidecar channel carries. Accepted at ASVS L1 for a
   // local desktop launcher.
-  ipcMain.handle(
+  deps.ipc.handle(
     'moveInstall',
     async (_event: unknown, ...args: unknown[]): Promise<void> => {
       const { appName, path, runner } = (args[0] ?? {}) as MoveGameArgs
@@ -555,7 +557,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
   // here would close nothing while risking rejection of legitimate
   // configurations (a shared system Wine, a prefix under `~/.wine`). See
   // `.planning/todos/completed/2026-08-24-importgame-wineprefix-wineversion-not-contained-by-34-6-11.md`.
-  ipcMain.handle(
+  deps.ipc.handle(
     'importGame',
     async (_event: unknown, ...args: unknown[]): StatusPromise => {
       const {

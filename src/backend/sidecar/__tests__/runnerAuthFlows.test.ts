@@ -130,7 +130,8 @@ jest.mock('../../storeManagers/nile/user', () => ({
 // ── Imports (after mocks) ───────────────────────────────────────────────────────────────────────
 import { defined } from 'backend/testUtils/indexed'
 import { registerRunnerAuthFlows } from '../runnerAuthFlowRegistration'
-import { handlerRegistry, listenerRegistry } from '../../platform'
+import { createIpcRegistry } from '../ipcRegistry'
+import { ipcViews } from 'backend/testUtils/ipcViews'
 import { logWarning } from 'backend/logger'
 // REAL module — pure, no seam/logger side effects requiring a mock (T-34.5-34 integration proof).
 import { matchOAuthRedirect } from '../oauthLoginCapture'
@@ -140,7 +141,10 @@ import { matchOAuthRedirect } from '../oauthLoginCapture'
 // listener onto logoutGOG (humbleLoginFlows.test.ts's own convention/warning, and the exact
 // hazard this plan's own idempotence guard in runnerAuthFlowRegistration.ts now also protects
 // against independently) ─────────────────────────────────────────────────────────────────────────
+const ipc = createIpcRegistry()
+const { handlerRegistry, listenerRegistry } = ipcViews(ipc)
 const flowDeps = {
+  ipc,
   managers: { library: { marker: 'library' } },
   stores: { marker: 'stores' }
 } as unknown as Parameters<typeof registerRunnerAuthFlows>[0]

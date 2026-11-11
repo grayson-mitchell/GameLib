@@ -88,7 +88,9 @@ const VOID_PARITY_CHANNELS: Record<string, string> = {
 }
 
 /** Multi-line-capable: tolerates the channel name landing on the line after `ipcMain.handle(`. */
-const HANDLE_PATTERN = /ipcMain\.handle\(\s*'([^']+)'/g
+// 66.3-10: registrations moved from the shim's `ipcMain` to the injected `deps.ipc`; both spellings
+// are matched while the wine-tools registration is converted in the same plan.
+const HANDLE_PATTERN = /(?:ipcMain|deps\.ipc)\.handle\(\s*'([^']+)'/g
 
 interface ExtractedChannel {
   channel: string

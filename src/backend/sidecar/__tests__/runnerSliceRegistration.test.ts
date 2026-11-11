@@ -137,6 +137,7 @@ import {
 const services = createTestServices()
 const flowDeps = {
   ...services,
+  ipc: interimIpc,
   dialogs: services.host.dialogs,
   appState: services.host.appState,
   notifications: services.host.notifications,
@@ -837,12 +838,13 @@ describe('23-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30; Phase 45 Plan 0
       notifications: services.host.notifications,
       skipInitialTraySync: true
     })
-    registerInstallFlows(
-      createTestServices({
+    registerInstallFlows({
+      ...createTestServices({
         downloadQueue: { addToQueue: jest.fn() } as never,
         stores: createTestStores()
-      })
-    )
+      }),
+      ipc: interimIpc
+    })
   })
 
   afterAll(() => {

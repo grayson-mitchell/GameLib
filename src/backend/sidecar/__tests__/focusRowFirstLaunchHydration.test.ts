@@ -43,6 +43,7 @@
  * Each "launch" is a fresh module graph (`jest.isolateModules`); the disk is
  * the only state carried between launches, which is what a real relaunch is.
  */
+import { ipcViews } from 'backend/testUtils/ipcViews'
 import { defined } from 'backend/testUtils/indexed'
 import {
   existsSync,
@@ -109,7 +110,7 @@ function launch(): Launch {
   let l!: Launch
   jest.isolateModules(() => {
     /* eslint-disable @typescript-eslint/no-require-imports */
-    const { handlerRegistry, listenerRegistry } = require('backend/platform')
+    const { createIpcRegistry } = require('backend/sidecar/ipcRegistry')
     const {
       registerSettingsFlows
     } = require('backend/sidecar/settingsFlowRegistration')
@@ -118,13 +119,22 @@ function launch(): Launch {
         registry: createStoreRegistry()
       })
     const { configPath } = require('backend/constants/paths')
+    const { GlobalConfig } = require('backend/config')
     const {
       seedFocusRowFromMirror,
       hydrateFocusRowSelection
     } = require('common/focusRowMigration')
     /* eslint-enable @typescript-eslint/no-require-imports */
 
-    registerSettingsFlows({ stores: { kvs: { configStore } } })
+    const ipc = createIpcRegistry()
+    const { handlerRegistry, listenerRegistry } = ipcViews(ipc)
+
+    registerSettingsFlows({
+      ipc,
+      config: GlobalConfig.get(),
+      gameConfigs: { get: jest.fn() },
+      stores: { kvs: { configStore } }
+    })
 
     const handler = handlerRegistry.get('requestAppSettings') as (
       event: unknown

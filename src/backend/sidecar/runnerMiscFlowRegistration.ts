@@ -27,7 +27,7 @@
  * 34.5-RESEARCH.md and this plan's own `<interfaces>` block; no send-kind channels in this
  * cluster):
  *
- *   invoke (ipcMain.handle, 14):
+ *   invoke (deps.ipc.handle, 14):
  *     - `getLegendaryVersion`         -> utils/ipc_handler.ts:18 (DONE — plan 34.5-07)
  *     - `getGogdlVersion`             -> utils/ipc_handler.ts:19 (DONE — plan 34.5-07)
  *     - `getCometVersion`             -> utils/ipc_handler.ts:20 (DONE — plan 34.5-07; D-04's channel)
@@ -77,7 +77,7 @@
  */
 
 import { isStore } from 'common/storeCapabilities'
-import { ipcMain } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
 import {
   getCometVersion,
   getGogdlVersion,
@@ -97,7 +97,6 @@ import { logInfo, logWarning, LogPrefix } from '../logger'
 import { sendFrontendMessage } from '../ipc'
 import { getDefaultSavePath } from '../save_sync'
 import type { SaveSyncDeps } from '../save_sync'
-import { GlobalConfig } from '../config'
 
 /**
  * Registers this cluster's 14 invoke-kind channels. Called once from `handlers.ts` — this module
@@ -109,31 +108,36 @@ import { GlobalConfig } from '../config'
  * (plan 34.5-12), plus the three late-discovered channels `getAchievements`,
  * `getDefaultSavePath` and `getPlaytimeFromRunner` (Phase 34.6 Plan 10, D-14).
  */
-export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
+export function registerRunnerMiscFlows(
+  deps: ToolsDeps &
+    SaveSyncDeps & {
+      ipc: Pick<IpcRegistry, 'handle'>
+    }
+): void {
   const { runWineCommandOnGame } = createTools(deps)
   // ── Runner CLI version probes (main.ts / utils/ipc_handler.ts:18-21) ──────
   // Pure pass-through reads, exactly as the Electron source registers them — no caching, no
   // timeouts, no error wrapping the Electron path does not already have.
   const versionDeps = { libraryManagers: deps.managers.library }
-  ipcMain.handle('getLegendaryVersion', () => getLegendaryVersion(versionDeps))
-  ipcMain.handle('getGogdlVersion', () => getGogdlVersion(versionDeps))
+  deps.ipc.handle('getLegendaryVersion', () => getLegendaryVersion(versionDeps))
+  deps.ipc.handle('getGogdlVersion', () => getGogdlVersion(versionDeps))
   // D-04: `comet` is GOG's Galaxy Communication replacement, gated on
   // `gameInfo.runner === 'gog'` at `launcher.ts:973`.
-  ipcMain.handle('getCometVersion', () =>
+  deps.ipc.handle('getCometVersion', () =>
     getCometVersion({ runner: deps.runner, config: deps.config })
   )
-  ipcMain.handle('getNileVersion', () => getNileVersion(versionDeps))
+  deps.ipc.handle('getNileVersion', () => getNileVersion(versionDeps))
 
   // ── Wine runtime channels (wine/runtimes/ipc_handler.ts:4,6) ──────────────
   // No wave-1 precondition: `runtimePath` (`backend/constants/paths.ts`) resolves from
   // `toolsPath`, which in turn resolves through `pathShim`'s ALREADY-implemented `userData` case
   // — a reader should not add a spurious dependency on plan 34.5-01 for this cluster.
-  ipcMain.handle(
+  deps.ipc.handle(
     'downloadRuntime',
     async (_event: unknown, ...args: unknown[]) =>
       download(deps, args[0] as RuntimeName)
   )
-  ipcMain.handle(
+  deps.ipc.handle(
     'isRuntimeInstalled',
     async (_event: unknown, ...args: unknown[]) =>
       isInstalled(args[0] as RuntimeName)
@@ -144,7 +148,7 @@ export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
   // Wine tooling (winecfg/runExe dispatch — the winetricks GUI branch was removed by Phase 45
   // D-17), not "misc" in domain, and only sat in slice 4's original inventory because that
   // inventory grouped channels by Electron file.
-  ipcMain.handle('callTool', async (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.handle('callTool', async (_event: unknown, ...args: unknown[]) => {
     const { tool, exe, appName, runner } = args[0] as {
       tool: 'winecfg' | 'runExe'
       exe?: string
@@ -191,11 +195,11 @@ export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
     sendGameStatusUpdate({ appName, runner, status: 'done' })
   })
 
-  ipcMain.handle('egsSync', async (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.handle('egsSync', async (_event: unknown, ...args: unknown[]) => {
     return deps.managers.library['legendary'].toggleGamesSync(args[0] as string)
   })
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'getGOGLinuxInstallersLangs',
     async (_event: unknown, ...args: unknown[]) =>
       deps.managers.library['gog'].getLinuxInstallersLanguages(
@@ -205,7 +209,7 @@ export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
 
   // ── Saves-sync channels (main.ts:1255,1263) ────────────────────────────────
   // Plan 34.5-12 Task 2.
-  ipcMain.handle(
+  deps.ipc.handle(
     'syncGOGSaves',
     async (_event: unknown, ...args: unknown[]) => {
       const gogSaves = args[0] as GOGCloudSavesLocation[]
@@ -229,7 +233,7 @@ export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
     }
   )
 
-  ipcMain.handle('syncSaves', async (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.handle('syncSaves', async (_event: unknown, ...args: unknown[]) => {
     const {
       arg = '',
       path: savesPath,
@@ -273,7 +277,7 @@ export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
   // ── Late-discovered channels (main.ts:822-827,1286-1290,1495-1503) ────────
   // Phase 34.6 Plan 10 (REQ-34.6-04/08/09). Byte-equivalent ports of the three remaining
   // 34.5-49-preload-surface-audit "Late-discovered — owner Phase 34.6" channels.
-  ipcMain.handle(
+  deps.ipc.handle(
     'getAchievements',
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[0] as string
@@ -290,7 +294,7 @@ export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
   // curated-import rule. `save_sync.ts:146`'s `getDefaultGogSavePaths`'s `app.getPath('documents')`
   // call (reached only inside the GOG branch, when `game.isNative()`) is already covered by
   // `pathShim.ts`'s `documents` case (plan 34.5-01, REQ-34.5-01) — no new shim work required.
-  ipcMain.handle(
+  deps.ipc.handle(
     'getDefaultSavePath',
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[0] as string
@@ -302,7 +306,7 @@ export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
 
   // Preserve the two bare `return` statements (resolving `undefined`, never `null`/`0`) exactly —
   // a caller distinguishing "sync disabled" from "zero playtime" would break silently otherwise.
-  ipcMain.handle(
+  deps.ipc.handle(
     'getPlaytimeFromRunner',
     async (
       _event: unknown,
@@ -310,7 +314,7 @@ export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
     ): Promise<number | undefined> => {
       const runner = args[0] as Runner
       const appName = args[1] as string
-      const { disablePlaytimeSync } = GlobalConfig.get().getSettings()
+      const { disablePlaytimeSync } = deps.config.getSettings()
       if (disablePlaytimeSync) {
         return
       }

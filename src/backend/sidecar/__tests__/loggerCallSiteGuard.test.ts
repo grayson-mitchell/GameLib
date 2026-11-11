@@ -110,9 +110,13 @@ import { initHeadless } from '../../logger'
 import { LogPrefix } from '../../logger/constants'
 import * as loggerModule from '../../logger'
 import { registerLoggerFlows } from '../loggerFlowRegistration'
-import { listenerRegistry } from '../../platform'
+import { createIpcRegistry } from '../ipcRegistry'
+import { ipcViews } from '../../testUtils/ipcViews'
 
+const ipc = createIpcRegistry()
+const { listenerRegistry } = ipcViews(ipc)
 const loggerDeps = {
+  ipc,
   stores: {} as never,
   appInfo: TEST_APP_INFO,
   openExternal: createTestHostServices().openExternal
@@ -251,8 +255,6 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
     // no boot: loads two modules in an isolated registry, never calls init.
     jest.isolateModules(() => {
       /* eslint-disable @typescript-eslint/no-require-imports */
-      const freshElectronStub =
-        require('../../platform') as typeof import('../../platform')
       const freshRegistration =
         require('../loggerFlowRegistration') as typeof import('../loggerFlowRegistration')
       /* eslint-enable @typescript-eslint/no-require-imports */
@@ -260,9 +262,9 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
       // No initHeadless()/init call anywhere in this fresh, isolated
       // module registry — heroicLogWriter is never assigned, reproducing
       // the recorded "heroicLogWriter unset until bootstrap init" gotcha.
-      freshRegistration.registerLoggerFlows(loggerDeps)
-      const freshListener =
-        freshElectronStub.listenerRegistry.get('logError')?.[0]
+      const freshIpc = createIpcRegistry()
+      freshRegistration.registerLoggerFlows({ ...loggerDeps, ipc: freshIpc })
+      const freshListener = freshIpc.listenerMap().get('logError')?.[0]
       expect(freshListener).toBeDefined()
 
       expect(() => freshListener!(undefined, 'boom')).not.toThrow()
@@ -406,8 +408,6 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
     // no boot: loads two modules in an isolated registry, never calls init.
     jest.isolateModules(() => {
       /* eslint-disable @typescript-eslint/no-require-imports */
-      const freshElectronStub =
-        require('../../platform') as typeof import('../../platform')
       const freshRegistration =
         require('../loggerFlowRegistration') as typeof import('../loggerFlowRegistration')
       /* eslint-enable @typescript-eslint/no-require-imports */
@@ -415,9 +415,9 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
       // No initHeadless()/init call anywhere in this fresh, isolated
       // module registry -- heroicLogWriter is never assigned, reproducing
       // the recorded "heroicLogWriter unset until bootstrap init" gotcha.
-      freshRegistration.registerLoggerFlows(loggerDeps)
-      const freshListener =
-        freshElectronStub.listenerRegistry.get('logInfo')?.[0]
+      const freshIpc = createIpcRegistry()
+      freshRegistration.registerLoggerFlows({ ...loggerDeps, ipc: freshIpc })
+      const freshListener = freshIpc.listenerMap().get('logInfo')?.[0]
       expect(freshListener).toBeDefined()
 
       expect(() => freshListener!(undefined, 'boom')).not.toThrow()

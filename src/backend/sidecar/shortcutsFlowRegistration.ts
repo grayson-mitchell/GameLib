@@ -12,7 +12,7 @@
  * Declared channel list, all 7 (verified against `shortcuts/ipc_handler.ts` and `main.ts` by
  * 34.5-RESEARCH.md and each plan's own `<interfaces>` block):
  *
- *   invoke (ipcMain.handle, 6):
+ *   invoke (deps.ipc.handle, 6):
  *     - `shortcutsExists`  -> shortcuts/ipc_handler.ts (plan 34.5-08)
  *     - `addShortcut`      -> shortcuts/ipc_handler.ts (plan 34.5-08; invoke since 261012-ca6)
  *     - `removeShortcut`   -> shortcuts/ipc_handler.ts (plan 34.5-08; invoke since 261012-ca6)
@@ -20,7 +20,7 @@
  *     - `removeFromSteam`  -> shortcuts/ipc_handler.ts (plan 34.5-11)
  *     - `isAddedToSteam`   -> shortcuts/ipc_handler.ts (plan 34.5-11)
  *
- *   send (ipcMain.on, 1):
+ *   send (deps.ipc.on, 1):
  *     - `processShortcut` -> main.ts:1465 SEND (plan 34.5-08)
  *
  * A `send` channel's rejection reaches NO caller (no reject, no timeout, no console line to the
@@ -82,7 +82,7 @@
  */
 
 import i18next, { t } from 'i18next'
-import { ipcMain } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
 import type { GlobalConfigSlice } from '../config'
 import type { AppPaths } from '../process/context'
 import type { HostServices } from '../host'
@@ -101,7 +101,6 @@ import {
 import { notify, type DialogBoxDeps, type NotifyDeps } from '../dialog/dialog'
 import { isMac } from '../constants/environment'
 import { sendFrontendMessage } from '../ipc'
-import { getMainWindow } from '../main_window'
 import { logWarning, LogPrefix } from '../logger'
 import type { Runner } from 'common/types'
 import type {
@@ -113,6 +112,7 @@ import type {
 
 /** Narrow slice (66.1 D-01): library managers for game lookup, the quit handler for ctrl+q. */
 export interface ShortcutsFlowDeps extends NotifyDeps, DialogBoxDeps {
+  ipc: Pick<IpcRegistry, 'handle' | 'on'>
   managers: Pick<StoreManagers, 'library'>
   quit: Pick<QuitHandler, 'handleExit'>
   stores: Pick<Stores, 'kvs' | 'wikiGameInfo' | 'crossoverIndex'>
@@ -187,9 +187,9 @@ async function shortcutsExistOnDisk(
  *
  * Idempotence guard (Rule 1 fix, discovered by `__tests__/runnerSliceRegistration.test.ts`'s own
  * pre-existing "calling registerXFlows() twice does not throw or stack duplicate listeners" case,
- * and by plan 34.5-08's own `shortcutsFlows.test.ts`): `ipcMain.on` (`platform/index.ts`) appends to
+ * and by plan 34.5-08's own `shortcutsFlows.test.ts`): `deps.ipc.on` (`platform/index.ts`) appends to
  * an array on every call, so a second unguarded call to this function would double-register
- * `processShortcut`'s listener -- unlike `ipcMain.handle`, which is
+ * `processShortcut`'s listener -- unlike `deps.ipc.handle`, which is
  * naturally idempotent (`Map.set` replaces the existing entry) and therefore does not itself need
  * this guard, though it still lives behind it since the guard covers the whole function. Mirrors
  * `runnerAuthFlowRegistration.ts`'s own `let registered = false` guard, itself mirroring
@@ -204,7 +204,7 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
 
   // ── invoke (6) ──────────────────────────────────────────────────────────
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'shortcutsExists',
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[0] as string
@@ -231,59 +231,62 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
   // a `.app` pointing at an empty exe path would be worse. It is caught here, logged, and shown to
   // the user as the error toast instead of the success one; the handler still answers with the disk
   // state, so the call never rejects the renderer.
-  ipcMain.handle('addShortcut', async (_event: unknown, ...args: unknown[]) => {
-    const appName = args[0] as string
-    const runner = args[1] as Runner
-    const fromMenu = (args[2] ?? undefined) as boolean | undefined
+  deps.ipc.handle(
+    'addShortcut',
+    async (_event: unknown, ...args: unknown[]) => {
+      const appName = args[0] as string
+      const runner = args[1] as Runner
+      const fromMenu = (args[2] ?? undefined) as boolean | undefined
 
-    try {
-      await deps.managers.library[runner]
-        .getGame(appName)
-        .addShortcuts(fromMenu)
-    } catch (error) {
-      logChannelFailure('addShortcut', error)
-      notify(deps, {
-        body: t(
-          'box.shortcuts.error',
-          'Shortcuts could not be created. See the log for details.'
-        ),
-        title: t('box.shortcuts.title', 'Shortcuts')
-      })
-      return shortcutsExistOnDisk(deps, appName, runner)
-    }
+      try {
+        await deps.managers.library[runner]
+          .getGame(appName)
+          .addShortcuts(fromMenu)
+      } catch (error) {
+        logChannelFailure('addShortcut', error)
+        notify(deps, {
+          body: t(
+            'box.shortcuts.error',
+            'Shortcuts could not be created. See the log for details.'
+          ),
+          title: t('box.shortcuts.title', 'Shortcuts')
+        })
+        return shortcutsExistOnDisk(deps, appName, runner)
+      }
 
-    const exists = await shortcutsExistOnDisk(deps, appName, runner)
-    if (exists) {
-      const body = i18next.t(
-        'box.shortcuts.message',
-        'Shortcuts were created on Desktop and Start Menu'
-      )
-      // 261027-c4g: name the Desktop when the Desktop link was also made.
-      const bodyMac = macDesktopShortcutWanted(deps)
-        ? i18next.t(
-            'gamelib:box.shortcuts.messageMacDesktop',
-            'Shortcuts were created in the Applications folder and on the Desktop'
-          )
-        : i18next.t(
-            'box.shortcuts.message-mac',
-            'Shortcuts were created on the Applications folder'
-          )
-      notify(deps, {
-        body: isMac ? bodyMac : body,
-        title: i18next.t('box.shortcuts.title', 'Shortcuts')
-      })
-    } else {
-      // Resolving without writing anything is not a success.
-      notify(deps, {
-        body: t(
-          'box.shortcuts.error',
-          'Shortcuts could not be created. See the log for details.'
-        ),
-        title: t('box.shortcuts.title', 'Shortcuts')
-      })
+      const exists = await shortcutsExistOnDisk(deps, appName, runner)
+      if (exists) {
+        const body = i18next.t(
+          'box.shortcuts.message',
+          'Shortcuts were created on Desktop and Start Menu'
+        )
+        // 261027-c4g: name the Desktop when the Desktop link was also made.
+        const bodyMac = macDesktopShortcutWanted(deps)
+          ? i18next.t(
+              'gamelib:box.shortcuts.messageMacDesktop',
+              'Shortcuts were created in the Applications folder and on the Desktop'
+            )
+          : i18next.t(
+              'box.shortcuts.message-mac',
+              'Shortcuts were created on the Applications folder'
+            )
+        notify(deps, {
+          body: isMac ? bodyMac : body,
+          title: i18next.t('box.shortcuts.title', 'Shortcuts')
+        })
+      } else {
+        // Resolving without writing anything is not a success.
+        notify(deps, {
+          body: t(
+            'box.shortcuts.error',
+            'Shortcuts could not be created. See the log for details.'
+          ),
+          title: t('box.shortcuts.title', 'Shortcuts')
+        })
+      }
+      return exists
     }
-    return exists
-  })
+  )
 
   // Quick task 261012-ca6: invoke-kind for the same reason as `addShortcut` above. Resolves the
   // `shortcutsExists` predicate after `removeShortcuts` has settled, so the renderer keeps showing
@@ -291,7 +294,7 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
   // never rejects for a failed one (it logs it), so the disk is read only once the work is done and
   // the toast follows what the disk says: the removal toast only when no shortcut remains, the
   // error toast otherwise.
-  ipcMain.handle(
+  deps.ipc.handle(
     'removeShortcut',
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[0] as string
@@ -368,7 +371,7 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
   // `addNonSteamGame`. That comment and its test pins are NOT duplicated or relocated here.
   // Live-gate item 4 exercises BOTH channels: `addShortcut`'s `.app` path and this channel's VDF
   // path.
-  ipcMain.handle('addToSteam', async (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.handle('addToSteam', async (_event: unknown, ...args: unknown[]) => {
     const appName = args[0] as string
     const runner = args[1] as Runner
     const game = deps.managers.library[runner].getGame(appName)
@@ -388,7 +391,7 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
     )
   })
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'removeFromSteam',
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[0] as string
@@ -398,7 +401,7 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
     }
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'isAddedToSteam',
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[0] as string
@@ -415,18 +418,14 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
   // logged no-ops (Task 1 of this plan, T-34.5-27) -- DECLARED DEGRADED under Tauri, recorded in
   // `34.5-PORTED-CHANNELS.md`. Neither case is deleted and neither is reimplemented with new
   // Tauri window plumbing; that would be new shell work, not a port.
-  ipcMain.on('processShortcut', (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.on('processShortcut', (_event: unknown, ...args: unknown[]) => {
     void (async () => {
       try {
         const combination = args[0] as string
-        const mainWindow = getMainWindow()
-
         switch (combination) {
-          // hotkey to reload the app -- DECLARED DEGRADED under Tauri (T-34.5-27): no sidecar/
-          // WebView reload equivalent, see platform/index.ts's fakeWindow.reload() comment.
-          case 'ctrl+r':
-            mainWindow?.reload()
-            break
+          // ctrl+r (reload) and ctrl+shift+i (devtools) are DECLARED DEGRADED under Tauri
+          // (T-34.5-27): the sidecar has no WebView reload/devtools equivalent. They only ever hit
+          // the platform shim's logged no-ops, so the cases are gone (66.3-10).
           // hotkey to quit the app
           case 'ctrl+q':
             await deps.quit.handleExit()
@@ -442,11 +441,6 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
           // hotkey to open the library screen on frontend
           case 'ctrl+l':
             sendFrontendMessage('openScreen', '/library')
-            break
-          // DECLARED DEGRADED under Tauri (T-34.5-27): no sidecar/WebView devtools equivalent,
-          // see platform/index.ts's fakeWebContents.openDevTools() comment.
-          case 'ctrl+shift+i':
-            mainWindow?.webContents?.openDevTools()
             break
         }
       } catch (error) {

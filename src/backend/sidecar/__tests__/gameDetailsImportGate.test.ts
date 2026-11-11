@@ -202,8 +202,12 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // `deps.gameConfigs` instead of the static `GameConfig.get`). One call-site token; no channel,
   // guard or `steamLibrary.has` gate moved. Prior digest:
   // 12848a5fa1c6b97029eb639186b763f943e9c0535674a7d092dda1c29fad9a60
+  // 66.3-10: re-pin -- the registrations write into the injected `deps.ipc` instead of the shim's
+  // `ipcMain`, and the global/per-game reads go through `deps.config` / `deps.gameConfigs`. No
+  // channel, guard or `steamLibrary.has` gate moved. Prior digest:
+  // 79431e0aef9012f479afdd0a2a90b0a802540acfb4689d29bccd512f82b48588
   const SETTINGS_FLOW_REGISTRATION_SHA256 =
-    '79431e0aef9012f479afdd0a2a90b0a802540acfb4689d29bccd512f82b48588'
+    '769205ad0e807747e633cfee75a725f01ff185db708527a45a350639086f0f5e'
 
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
@@ -246,7 +250,7 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   it('REQ-34.2-10/D-09 Gate 7 semantic pin: settingsFlowRegistration.ts registers exactly these twelve channels', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
     const stripped = stripComments(readFileSync(filePath, 'utf-8'))
-    const channelPattern = /ipcMain\.(?:handle|on)\(\s*['"]([^'"]+)['"]/g
+    const channelPattern = /deps\.ipc\.(?:handle|on)\(\s*['"]([^'"]+)['"]/g
     const found = new Set<string>()
     let match: RegExpExecArray | null
     while ((match = channelPattern.exec(stripped)) !== null) {

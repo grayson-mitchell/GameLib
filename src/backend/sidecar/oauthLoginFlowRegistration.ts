@@ -32,7 +32,7 @@
  * touches those channels' registrations or signatures.
  */
 
-import { ipcMain } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
 import { captureOAuthLogin } from './oauthLoginCapture'
 import type {
   OAuthRunner,
@@ -68,8 +68,10 @@ function isHttpsUrl(value: unknown): value is string {
  * catches everything and RESOLVES a typed outcome; it never rejects
  * (`sidecar-dialog-reject-crashes`).
  */
-export function registerOAuthLoginFlows(): void {
-  ipcMain.handle(
+export function registerOAuthLoginFlows(deps: {
+  ipc: Pick<IpcRegistry, 'handle'>
+}): void {
+  deps.ipc.handle(
     'oauthCaptureLogin',
     async (_event: unknown, ...args: unknown[]) => {
       const params = args[0] as { runner?: unknown; url?: unknown } | undefined

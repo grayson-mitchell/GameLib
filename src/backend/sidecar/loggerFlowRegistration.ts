@@ -14,8 +14,8 @@
  * rejection it replaced.
  *
  * Phase 34.3 (slice 6) must NOT register `logError` a second time.
- * `platform/index.ts`'s `listenerRegistry` holds an ARRAY per channel and
- * `dispatchSend` iterates every listener in it — a second `ipcMain.on`
+ * the IPC registry holds an ARRAY of listeners per channel and
+ * `dispatchSend` iterates every listener in it — a second `deps.ipc.on`
  * registration for this channel would duplicate every frontend log line, not
  * merely be redundant. Both `.planning/IPC-PORT-INVENTORY.md` and this slice's
  * `34.2-PORTED-CHANNELS.md` record this early port so slice 6's own plan does
@@ -27,7 +27,7 @@
  * `deleteUploadedLogFile`, `getUploadedLogFiles`) remain unported, Phase 34.3
  * work — registering any of them here would be an undeclared scope grab.
  *
- * A `send` channel registered with `ipcMain.handle` (or the reverse) fails
+ * A `send` channel registered with `deps.ipc.handle` (or the reverse) fails
  * 100% SILENTLY at runtime (Phase 31 Pitfall 2) — the registration below was
  * cross-checked against that Electron-only handler's own line 15 `addListener`
  * call for this exact channel before being written.
@@ -86,7 +86,7 @@
  * and would otherwise land in `dispatchSend`'s synchronous `catch`
  * (`sidecarRpc.ts:137-146`) rather than this handler's own diagnostic. The
  * whole expression is still prefixed with `void` so the listener body
- * itself stays synchronous and returns `undefined`, preserving `ipcMain.on`
+ * itself stays synchronous and returns `undefined`, preserving `deps.ipc.on`
  * / `dispatchSend`'s listener contract.
  *
  * The `.catch` handler mirrors `processGuards.ts`'s own documented
@@ -122,12 +122,12 @@
  * `logger/ipc_handler.ts`'s own `addListener`/`addHandler` call for that
  * exact channel before being written here:
  *
- *   send (`ipcMain.on`):
+ *   send (`deps.ipc.on`):
  *     - `logInfo` -> `logger/ipc_handler.ts:14` (`addListener('logInfo', ...)`)
  *     - `showLogFileInFolder` -> `logger/ipc_handler.ts:22`
  *       (`addListener('showLogFileInFolder', ...)`)
  *
- *   invoke (`ipcMain.handle`):
+ *   invoke (`deps.ipc.handle`):
  *     - `uploadLogFile` -> `logger/ipc_handler.ts:26`
  *       (`addHandler('uploadLogFile', ...)`)
  *     - `deleteUploadedLogFile` -> `logger/ipc_handler.ts:27`
@@ -184,7 +184,7 @@
  */
 
 import type { OpenExternal } from '../host/openExternal'
-import { ipcMain } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
 import { logErrorSettled, logInfoSettled, LogPrefix } from '../logger'
 import { sanitizeRendererLogMessage } from '../logger/sanitizeRendererLogMessage'
 import { getLogFilePath } from '../logger/paths'
@@ -208,6 +208,7 @@ import {
  */
 export function registerLoggerFlows(
   deps: LogUploaderDeps & {
+    ipc: Pick<IpcRegistry, 'handle' | 'on'>
     openExternal: Pick<OpenExternal, 'showItemInFolder'>
   }
 ): void {
@@ -215,7 +216,7 @@ export function registerLoggerFlows(
   // `addListener('logError', (e, message) => logError(message, LogPrefix.Frontend))`,
   // except the call is now guarded at this call site (WR-02/CR-01) rather
   // than left as a floating promise for processGuards.ts to absorb.
-  ipcMain.on('logError', (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.on('logError', (_event: unknown, ...args: unknown[]) => {
     // CR-01: the synchronous throw path (heroicLogWriter still unassigned
     // before initHeadless()/init() runs) happens during argument evaluation
     // of the call below, before Promise.resolve is ever reached -- so it is
@@ -272,7 +273,7 @@ export function registerLoggerFlows(
   // logInfo is logError's send-shape twin (see this module's header
   // docstring) -- the SAME call-site-guard shape, substituting
   // logInfoSettled for logErrorSettled.
-  ipcMain.on('logInfo', (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.on('logInfo', (_event: unknown, ...args: unknown[]) => {
     // The synchronous throw path (heroicLogWriter still unassigned before
     // initHeadless()/init() runs) happens during argument evaluation of the
     // call below, before Promise.resolve is ever reached -- caught here and
@@ -321,7 +322,7 @@ export function registerLoggerFlows(
   //
   // args[0] is passed WHOLE to getLogFilePath -- it is a GetLogFileArgs
   // object (or undefined for the base Heroic log), not a path string.
-  ipcMain.on('showLogFileInFolder', (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.on('showLogFileInFolder', (_event: unknown, ...args: unknown[]) => {
     try {
       showItemInFolder(
         deps,
@@ -354,12 +355,14 @@ export function registerLoggerFlows(
   // No try/catch here that would swallow the rejection: the frontend owns
   // the "upload failed" state, and LogFileUploadDialog expects the invoke
   // to reject on failure (the Phase 20 D-14 convention).
-  ipcMain.handle('uploadLogFile', async (_event: unknown, ...args: unknown[]) =>
-    uploadLogFile(
-      deps,
-      args[0] as string,
-      args[1] as Parameters<typeof getLogFilePath>[0]
-    )
+  deps.ipc.handle(
+    'uploadLogFile',
+    async (_event: unknown, ...args: unknown[]) =>
+      uploadLogFile(
+        deps,
+        args[0] as string,
+        args[1] as Parameters<typeof getLogFilePath>[0]
+      )
   )
 
   // Electron parity source: src/backend/logger/ipc_handler.ts:27
@@ -368,7 +371,7 @@ export function registerLoggerFlows(
   // channel cannot actually delete anything in either build --
   // logger/uploader.ts:74-77 hardcodes token = '1'. Do NOT fix, guard, or
   // work around that here.
-  ipcMain.handle(
+  deps.ipc.handle(
     'deleteUploadedLogFile',
     async (_event: unknown, ...args: unknown[]) =>
       deleteUploadedLogFile(deps, args[0] as string)
@@ -379,5 +382,5 @@ export function registerLoggerFlows(
   // getUploadedLogFiles's expiry-pruning side effect (a read channel that
   // mutates the store) is preserved -- Electron parity, and it is what
   // frontend/state/UploadedLogFiles.ts reads at module scope.
-  ipcMain.handle('getUploadedLogFiles', async () => getUploadedLogFiles(deps))
+  deps.ipc.handle('getUploadedLogFiles', async () => getUploadedLogFiles(deps))
 }

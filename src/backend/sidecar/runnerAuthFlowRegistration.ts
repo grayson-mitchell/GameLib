@@ -9,7 +9,7 @@
  * Declared channel list (11 total — verified against `main.ts` by 34.5-RESEARCH.md and this
  * plan's own `<interfaces>` block):
  *
- *   invoke (ipcMain.handle, 10):
+ *   invoke (deps.ipc.handle, 10):
  *     - `login`                -> main.ts:877 -> `LegendaryUser.login(sid)`
  *     - `getUserInfo`          -> main.ts:868
  *     - `isLoggedIn`           -> main.ts:875 -> `LegendaryUser.isLoggedIn()`
@@ -21,7 +21,7 @@
  *     - `getAmazonUserInfo`    -> main.ts:872 -> `NileUser.getUserData()`
  *     - `logoutAmazon`         -> main.ts:884 -> `NileUser.logout()`
  *
- *   send (ipcMain.on, 1):
+ *   send (deps.ipc.on, 1):
  *     - `logoutGOG` -> main.ts:880 SEND -> `GOGUser.logout()`. A `send` channel's rejection
  *       reaches NO caller (no reject, no timeout, no console line to the renderer) —
  *       `sidecar-send-channels-fail-silently` project memory. `GOGUser.logout()` gained a D-15
@@ -69,7 +69,7 @@
 import type { DialogBoxDeps } from '../dialog/dialog'
 import type { Notifications } from '../host/notifications'
 import type { AppInfo } from '../process/context'
-import { ipcMain } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
 import { LegendaryUser } from '../storeManagers/legendary/user'
 import { GOGUser } from '../storeManagers/gog/user'
 import { NileUser } from '../storeManagers/nile/user'
@@ -80,6 +80,7 @@ import type { StoreManagers, Stores } from '../services/types'
 
 /** The slices the runner auth channels read: the library managers and the per-runner stores. */
 export interface RunnerAuthFlowDeps extends DialogBoxDeps {
+  ipc: Pick<IpcRegistry, 'handle' | 'on'>
   appInfo: Pick<AppInfo, 'userAgentFallback' | 'version'>
   notifications: Pick<Notifications, 'show'>
   managers: Pick<StoreManagers, 'library'>
@@ -105,9 +106,9 @@ function logSendFailure(channel: string, error: unknown): void {
  *
  * Idempotence guard (Rule 1 fix, discovered by `__tests__/runnerSliceRegistration.test.ts`'s own
  * pre-existing "calling registerXFlows() twice does not throw or stack duplicate listeners"
- * case): `ipcMain.on` (`platform/index.ts`) appends to an array on every call, so a second
+ * case): `deps.ipc.on` (`platform/index.ts`) appends to an array on every call, so a second
  * unguarded call to this function would double-register `logoutGOG`'s listener — unlike the 6
- * `ipcMain.handle` calls above/below, which are naturally idempotent (`Map.set` replaces the
+ * `deps.ipc.handle` calls above/below, which are naturally idempotent (`Map.set` replaces the
  * existing entry). Mirrors `createStores`'s own `let registered = false` guard.
  */
 let registered = false
@@ -127,17 +128,17 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
   registered = true
 
   // Source: main.ts:772 -> `isEpicServiceOffline()`.
-  ipcMain.handle('getEpicGamesStatus', async () => {
+  deps.ipc.handle('getEpicGamesStatus', async () => {
     return isEpicServiceOffline(deps)
   })
 
   // Source: main.ts:868 -> `LegendaryUser.getUserInfo()`.
-  ipcMain.handle('getUserInfo', async () => {
+  deps.ipc.handle('getUserInfo', async () => {
     return LegendaryUser.getUserInfo(userDeps())
   })
 
   // Source: main.ts:875 -> `LegendaryUser.isLoggedIn()`.
-  ipcMain.handle('isLoggedIn', () => {
+  deps.ipc.handle('isLoggedIn', () => {
     return LegendaryUser.isLoggedIn()
   })
 
@@ -146,7 +147,7 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
   // non-string/empty payload WITHOUT calling `LegendaryUser.login`, returning the same
   // `{ status: 'failed', data: undefined }` shape the runner's own `errorMessage()` helper
   // already uses. Never logs the payload value on either path.
-  ipcMain.handle('login', async (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.handle('login', async (_event: unknown, ...args: unknown[]) => {
     const sid = args[0]
     if (typeof sid !== 'string' || sid.length === 0) {
       logWarning(
@@ -159,7 +160,7 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
   })
 
   // Source: main.ts:879 -> `LegendaryUser.logout()`.
-  ipcMain.handle('logoutLegendary', () => {
+  deps.ipc.handle('logoutLegendary', () => {
     return LegendaryUser.logout(userDeps())
   })
 
@@ -167,7 +168,7 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
   // trust-boundary treatment as `login` above. Rejects a non-string/empty payload WITHOUT calling
   // `GOGUser.login`, returning the same `{ status: 'error' }` shape `GOGUser.login`'s own
   // parse-failure paths already use (`gog/user.ts:54-56,61-63`). Never logs the payload value.
-  ipcMain.handle('authGOG', async (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.handle('authGOG', async (_event: unknown, ...args: unknown[]) => {
     const code = args[0]
     if (typeof code !== 'string' || code.length === 0) {
       logWarning(
@@ -185,7 +186,7 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
   // separate PROFILE `configStore` cwd this handler's sibling `getAmazonUserInfo` reads/writes
   // through. Both derive from `appFolder` and resolve through `pathShim`'s already-implemented
   // `userData`, so this delegation needs no new path work.
-  ipcMain.handle('getAmazonLoginData', () => {
+  deps.ipc.handle('getAmazonLoginData', () => {
     return NileUser.getLoginData(userDeps())
   })
 
@@ -205,7 +206,7 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
   // undefined }` shape `NileUser.login`'s own internal failure path already uses
   // (`nile/user.ts:66-71`). Never logs the payload value (T-34.5-36) — a captured authorization
   // code is a credential.
-  ipcMain.handle('authAmazon', async (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.handle('authAmazon', async (_event: unknown, ...args: unknown[]) => {
     const data = args[0] as Partial<NileRegisterData> | undefined | null
     const isValid =
       typeof data === 'object' &&
@@ -229,12 +230,12 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
   })
 
   // Source: main.ts:872 -> `NileUser.getUserData()`.
-  ipcMain.handle('getAmazonUserInfo', async () => {
+  deps.ipc.handle('getAmazonUserInfo', async () => {
     return NileUser.getUserData(userDeps())
   })
 
   // Source: main.ts:884 -> `NileUser.logout()`. Unchanged body — `NileUser.logout()`
-  // (`nile/user.ts`) is `ipcMain.handle`-kind, so unlike `logoutGOG` below its returned promise
+  // (`nile/user.ts`) is `deps.ipc.handle`-kind, so unlike `logoutGOG` below its returned promise
   // is already awaited/propagated by the handle mechanism itself; no extra `.catch()` wiring is
   // needed here for a rejection to reach the caller. Amazon cookies landing in the app-wide jar
   // was the INHERITED, previously-accepted T-34.4.1-47 residual (T-34.5-37, `accept`) — that
@@ -243,12 +244,12 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
   // (`AMAZON_COOKIE_HOSTS`, `nile/user.ts`) after its own credential-side cleanup, so the
   // "do not add a cookie clear" instruction this comment used to carry no longer applies — the
   // clear lives inside `NileUser.logout()`, not in this delegation.
-  ipcMain.handle('logoutAmazon', () => {
+  deps.ipc.handle('logoutAmazon', () => {
     return NileUser.logout(userDeps())
   })
 
   // Source: main.ts:880 -> `addListener('logoutGOG', () => GOGUser.logout())` — the phase's
-  // Repudiation surface (T-34.5-18). `ipcMain.on`, NEVER `ipcMain.handle`. `GOGUser.logout()`
+  // Repudiation surface (T-34.5-18). `deps.ipc.on`, NEVER `deps.ipc.handle`. `GOGUser.logout()`
   // gained a D-15 cookie-clear step (Phase 40 plan 04, T-40-04-07) and now returns a promise, but
   // every line before its first `await` (all of its credential-side cleanup) still runs
   // synchronously the instant it is called — see the header docblock's `logoutGOG` entry for the
@@ -258,7 +259,7 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
   // the call's return value when it looks like a promise (covers a genuine async rejection,
   // which a synchronous try/catch cannot observe). Never awaited here — this stays a fire-and-
   // forget `send` channel by design, exactly as before.
-  ipcMain.on('logoutGOG', () => {
+  deps.ipc.on('logoutGOG', () => {
     try {
       const result: unknown = GOGUser.logout(userDeps())
       if (result && typeof (result as Promise<void>).catch === 'function') {

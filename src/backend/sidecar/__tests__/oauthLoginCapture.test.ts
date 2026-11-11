@@ -52,7 +52,8 @@ import {
 } from '../../humble/loginWindowSeam'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { registerOAuthLoginFlows } from '../oauthLoginFlowRegistration'
-import { handlerRegistry, listenerRegistry } from '../../platform'
+import { createIpcRegistry } from '../ipcRegistry'
+import { ipcViews } from 'backend/testUtils/ipcViews'
 
 const ALL_RUNNERS: OAuthRunner[] = ['legendary', 'gog', 'nile']
 
@@ -803,7 +804,9 @@ describe('resolveUserAgent — diagnostic UA override, exercised via captureOAut
 // module-scope maps; calling registerOAuthLoginFlows() more than once would stack a duplicate
 // listener onto the same channel array (clipboardFlowRegistration's own test docstring names
 // this hazard).
-registerOAuthLoginFlows()
+const ipc = createIpcRegistry()
+const { handlerRegistry, listenerRegistry } = ipcViews(ipc)
+registerOAuthLoginFlows({ ipc })
 
 describe('registerOAuthLoginFlows() — registration kind (REQ-34.4.1-08)', () => {
   it('oauthCaptureLogin is registered as ipcMain.handle, and NOT as ipcMain.on', () => {

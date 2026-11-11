@@ -8,6 +8,7 @@
  * per-file profile; each "launch" is a fresh module graph. No child process
  * is spawned, so no fake-HOME profile is needed.
  */
+import { ipcViews } from 'backend/testUtils/ipcViews'
 import { defined } from 'backend/testUtils/indexed'
 import {
   existsSync,
@@ -69,7 +70,7 @@ function launch(): Launch {
   let l!: Launch
   jest.isolateModules(() => {
     /* eslint-disable @typescript-eslint/no-require-imports */
-    const { handlerRegistry, listenerRegistry } = require('backend/platform')
+    const { createIpcRegistry } = require('backend/sidecar/ipcRegistry')
     const {
       registerSettingsFlows
     } = require('backend/sidecar/settingsFlowRegistration')
@@ -81,7 +82,15 @@ function launch(): Launch {
     const { GlobalConfig } = require('backend/config')
     /* eslint-enable @typescript-eslint/no-require-imports */
 
-    registerSettingsFlows({ stores: { kvs: { configStore } } })
+    const ipc = createIpcRegistry()
+    const { handlerRegistry, listenerRegistry } = ipcViews(ipc)
+
+    registerSettingsFlows({
+      ipc,
+      config: GlobalConfig.get(),
+      gameConfigs: { get: jest.fn() },
+      stores: { kvs: { configStore } }
+    })
 
     const handler = handlerRegistry.get('requestAppSettings') as (
       event: unknown

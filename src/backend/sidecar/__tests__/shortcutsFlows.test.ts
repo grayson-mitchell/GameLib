@@ -147,12 +147,9 @@ import { dirname, join } from 'path'
 import { dirSync, type DirResult } from 'tmp'
 import { realHomeAtSetup } from 'backend/jest.setupContainment'
 import { registerShortcutsFlows } from '../shortcutsFlowRegistration'
-import {
-  bindHostServices,
-  handlerRegistry,
-  interimIpc,
-  listenerRegistry
-} from '../../platform'
+import { bindHostServices } from '../../platform'
+import { createIpcRegistry } from '../ipcRegistry'
+import { ipcViews } from '../../testUtils/ipcViews'
 import { createTestHostServices } from '../../testUtils/testHostServices'
 import { createNativeImage } from '../nativeImageShim'
 import { createRealRunner } from '../../testUtils/realRunner'
@@ -285,7 +282,10 @@ afterAll(() => sipsRunner.dispose())
 // module-scope maps; calling registerShortcutsFlows() more than once would stack a duplicate
 // listener onto the same channel array (clipboardFlowRegistration's own test docstring names this
 // hazard).
+const ipc = createIpcRegistry()
+const { handlerRegistry, listenerRegistry } = ipcViews(ipc)
 registerShortcutsFlows({
+  ipc,
   managers: createTestManagers({
     library: {
       legendary: { getGame: (...a: [string]) => mockGetGame(...a) },
@@ -818,35 +818,16 @@ describe('processShortcut — six-case switch behaviour', () => {
     expect(mockHandleExit).toHaveBeenCalledTimes(1)
   })
 
-  it('ctrl+r does not throw and reaches the platformApi fakeWindow.reload() no-op (T-34.5-27, declared degraded)', async () => {
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
-    try {
+  it.each(['ctrl+r', 'ctrl+shift+i'])(
+    '%s is a declared-degraded no-op under Tauri (T-34.5-27): does not throw, pushes and quits nothing',
+    async (combo) => {
       const listener = listenerRegistry.get('processShortcut')?.[0]
-      expect(() => listener?.(null, 'ctrl+r')).not.toThrow()
+      expect(() => listener?.(null, combo)).not.toThrow()
       await flush()
-      expect(
-        warnSpy.mock.calls.some((call) => String(call[0]).includes('reload'))
-      ).toBe(true)
-    } finally {
-      warnSpy.mockRestore()
+      expect(mockSendFrontendMessage).not.toHaveBeenCalled()
+      expect(mockHandleExit).not.toHaveBeenCalled()
     }
-  })
-
-  it('ctrl+shift+i does not throw and reaches the platformApi fakeWebContents.openDevTools() no-op (T-34.5-27, declared degraded)', async () => {
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
-    try {
-      const listener = listenerRegistry.get('processShortcut')?.[0]
-      expect(() => listener?.(null, 'ctrl+shift+i')).not.toThrow()
-      await flush()
-      expect(
-        warnSpy.mock.calls.some((call) =>
-          String(call[0]).includes('openDevTools')
-        )
-      ).toBe(true)
-    } finally {
-      warnSpy.mockRestore()
-    }
-  })
+  )
 
   it('an unknown combination is a no-op', async () => {
     const listener = listenerRegistry.get('processShortcut')?.[0]
@@ -1240,7 +1221,7 @@ describe('F-34.5-G6-08 discriminator — addToSteam over the REAL RPC frame path
       }
     })
 
-    startRpcServer(input, output, interimIpc)
+    startRpcServer(input, output, ipc)
 
     input.write(
       `${JSON.stringify({

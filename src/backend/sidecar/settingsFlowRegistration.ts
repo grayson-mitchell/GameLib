@@ -8,14 +8,14 @@
  * `installFlowRegistration.ts`'s own objective — prove the real logic runs
  * behind the new transport, not a reimplementation):
  *
- *   - `requestAppSettings` -> `GlobalConfig.get().getSettings()` (identical to
+ *   - `requestAppSettings` -> `deps.config.getSettings()` (identical to
  *     `main.ts:998`).
  *   - `requestGameSettings(appName)` -> the exact steam-routing-then-
  *     GameConfig-fallback logic from `main.ts:1012-1015`: if the in-memory
  *     Steam library Map (`storeManagers/steam/state.ts`, exported as
  *     `library`, aliased here as `steamLibrary`) has `appName`, route through
  *     `deps.managers.library.steam.getGame(appName).getSettings()`; otherwise
- *     fall back to `GameConfig.get(appName).getSettings()`.
+ *     fall back to `deps.gameConfigs.get(appName).getSettings()`.
  *
  * These were originally filed under 30-PORTED-CHANNELS.md's "Deliberately NOT
  * ported this phase" list as two of the six `DownloadDialog` channels — that
@@ -63,9 +63,7 @@ import { existsSync, readFileSync } from 'graceful-fs'
 import { cpus } from 'os'
 import { isAbsolute, relative, resolve } from 'path'
 
-import { ipcMain } from '../platform'
-import { GlobalConfig } from '../config'
-import { GameConfig } from '../game_config'
+import type { IpcRegistry } from './ipcRegistry'
 import { applyGameSetting } from './gameSettingWrite'
 import { isWritableEngineOverride } from '../engine/engineConfig'
 // NOTE: the export is `library`, not `steamLibrary` — there is no export
@@ -111,26 +109,28 @@ function isContainedGameConfig(appName: string): boolean {
  * registry happens.
  */
 export function registerSettingsFlows(deps: {
+  ipc: Pick<IpcRegistry, 'handle' | 'on'>
   managers: Pick<StoreManagers, 'library'>
   stores: Pick<Stores, 'kvs'>
-  config: Pick<GlobalConfigSlice, 'getSettings' | 'set' | 'flush'>
+  config: Pick<
+    GlobalConfigSlice,
+    'getSettings' | 'setSetting' | 'set' | 'flush'
+  >
   gameConfigs: Pick<GameConfigs, 'get'>
   appInfo: Pick<AppInfo, 'version'>
   /** The boot process runner (66.2); consumers converted by 66.2-05. */
   runner: BootServices['runner']
 }): void {
-  ipcMain.handle('requestAppSettings', async () =>
-    GlobalConfig.get().getSettings()
-  )
+  deps.ipc.handle('requestAppSettings', async () => deps.config.getSettings())
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'requestGameSettings',
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[0] as string
       if (steamLibrary.has(appName)) {
         return deps.managers.library.steam.getGame(appName).getSettings()
       }
-      return GameConfig.get(appName).getSettings()
+      return deps.gameConfigs.get(appName).getSettings()
     }
   )
 
@@ -149,13 +149,13 @@ export function registerSettingsFlows(deps: {
   // cross-referenced here so a future reader recognizes the pattern rather
   // than treating it as a new gap.
   //
-  // `setSetting` MUST be registered via `ipcMain.on`, NEVER `ipcMain.handle`
+  // `setSetting` MUST be registered via `deps.ipc.on`, NEVER `deps.ipc.handle`
   // — per 31-RESEARCH.md Pitfall 2, a `send` channel registered as a handler
   // compiles cleanly but fails 100% silently at runtime: `dispatchSend()`
-  // (`sidecarRpc.ts`) looks up `listenerRegistry`, finds an empty array, and
+  // (`sidecarRpc.ts`) looks up the channel's listener list, finds an empty array, and
   // iterates zero times — no error, no log, no rejected promise. Mirrors
   // `main.ts:1046-1052` exactly.
-  ipcMain.on('setSetting', (_event: unknown, payload: unknown) => {
+  deps.ipc.on('setSetting', (_event: unknown, payload: unknown) => {
     const { appName, key, value } = (payload ?? {}) as {
       appName?: unknown
       key?: unknown
@@ -179,14 +179,10 @@ export function registerSettingsFlows(deps: {
       return
     }
     if (appName === 'default') {
-      GlobalConfig.get().setSetting(
-        key as keyof AppSettings,
-        value,
-        deps.stores.kvs
-      )
+      deps.config.setSetting(key as keyof AppSettings, value, deps.stores.kvs)
     } else {
       // WR-01: drop a path-escaping appName before it reaches
-      // `GameConfig.get(appName)` (which joins appName into a filesystem
+      // the per-game config lookup (which joins appName into a filesystem
       // path with no containment of its own — game_config.ts:36).
       if (!isContainedGameConfig(appName)) {
         process.stderr.write(
@@ -202,7 +198,7 @@ export function registerSettingsFlows(deps: {
   // routes through the same `writeConfig()` function (backend/utils.ts:1607)
   // Electron calls, which itself branches `appName === 'default'` between the
   // `configStore`-backed global path and the raw-fs per-game path.
-  ipcMain.handle('writeConfig', async (_event: unknown, payload: unknown) => {
+  deps.ipc.handle('writeConfig', async (_event: unknown, payload: unknown) => {
     const { appName, config } = (payload ?? {}) as {
       appName?: string
       config?: Partial<AppSettings>
@@ -247,13 +243,13 @@ export function registerSettingsFlows(deps: {
   // here (see the module docstring) and stay marker-rejecting (Invariant B).
 
   // main.ts:744
-  ipcMain.handle('getMaxCpus', async () => cpus().length)
+  deps.ipc.handle('getMaxCpus', async () => cpus().length)
 
   // main.ts:755
-  ipcMain.handle('showUpdateSetting', async () => !isFlatpak)
+  deps.ipc.handle('showUpdateSetting', async () => !isFlatpak)
 
   // logger/ipc_handler.ts:17-20
-  ipcMain.handle(
+  deps.ipc.handle(
     'getLogContent',
     async (_event: unknown, appNameOrRunner: unknown) => {
       const logPath = getLogFilePath(
@@ -264,7 +260,7 @@ export function registerSettingsFlows(deps: {
   )
 
   // utils/ipc_handler.ts:22
-  ipcMain.handle('getSystemInfo', async (_event: unknown, cache?: unknown) =>
+  deps.ipc.handle('getSystemInfo', async (_event: unknown, cache?: unknown) =>
     getSystemInfo(
       {
         libraryManagers: deps.managers.library,
@@ -277,7 +273,7 @@ export function registerSettingsFlows(deps: {
   )
 
   // utils/ipc_handler.ts:28-30
-  ipcMain.handle(
+  deps.ipc.handle(
     'hasExecutable',
     async (_event: unknown, executable: unknown) =>
       hasExecutable(executable as string)
@@ -285,7 +281,7 @@ export function registerSettingsFlows(deps: {
 
   // main.ts:1567-1569 — NEW FINDING (31-RESEARCH.md Q1), runner-generic,
   // the manager slice is the same one requestGameSettings uses.
-  ipcMain.handle('isNative', async (_event: unknown, payload: unknown) => {
+  deps.ipc.handle('isNative', async (_event: unknown, payload: unknown) => {
     const { appName, runner } = (payload ?? {}) as {
       appName?: string
       runner?: keyof StoreManagers['library']
@@ -301,12 +297,12 @@ export function registerSettingsFlows(deps: {
   // through GOGGame's own accessors (storeManagers/gog/games.ts:1398,1402),
   // never through the underlying branch-password key store directly — that
   // key scheme lives in exactly one place.
-  ipcMain.handle(
+  deps.ipc.handle(
     'getPrivateBranchPassword',
     async (_event: unknown, ...args: unknown[]) =>
       deps.managers.library.gog.getGame(args[0] as string).getBranchPassword()
   )
-  ipcMain.handle(
+  deps.ipc.handle(
     'setPrivateBranchPassword',
     async (_event: unknown, ...args: unknown[]) =>
       deps.managers.library.gog
