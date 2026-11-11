@@ -171,21 +171,29 @@ jest.mock('../anonymousClient', () => ({
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
 import { SteamUser, type SteamUserBoundDeps } from '../user'
 import type { SteamStoresDeps } from '../library/installRoot'
-import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
+import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
+import type { SteamSessionServices } from 'backend/services/types'
+import type { UserSignInDeps } from '../userSignIn'
 
 // One sign-in owner per case (D-05, D-66.3-13: no reset hooks); `steamDeps` reads it at call time.
 let signInProbe: TestSignInProbe
+let steamSession: SteamSessionServices
 const steamDeps = {
   stores: { steam: { configStore: mockConfigStore } },
   get signIn() {
     return signInProbe
+  },
+  get steamSession() {
+    return steamSession
   }
-} as unknown as SteamStoresDeps & SignInNoteDeps
+} as unknown as UserSignInDeps
 beforeEach(() => {
   signInProbe = createTestSignInProbe()
+  steamSession = createTestSteamSession()
   SteamUser.bindStores({
     ...steamDeps,
     signIn: signInProbe,
+    steamSession,
     macSteamOffline:
       jest.requireMock<NonNullable<SteamUserBoundDeps['macSteamOffline']>>(
         '../macSteamOffline'
@@ -652,8 +660,8 @@ describe('SteamUser', () => {
         sessionOnHandlers['authenticated'],
         'authenticated handler'
       )()
-      await pollQRLogin()
-      await pollQRLogin()
+      await pollQRLogin(steamDeps)
+      await pollQRLogin(steamDeps)
 
       const allLogArgs = [
         ...jest.mocked(logInfo).mock.calls,
@@ -687,7 +695,7 @@ describe('SteamUser', () => {
 
   // ── AUTH-01: QR Poll ───────────────────────────────────────────────────────
 
-  describe('pollQRLogin()', () => {
+  describe('pollQRLogin(steamDeps)', () => {
     beforeEach(async () => {
       mockSessionInstance.startWithQR.mockResolvedValue({
         qrChallengeUrl: 'steam://...qr_url_here',
@@ -703,7 +711,7 @@ describe('SteamUser', () => {
     })
 
     test('returns { status: "waiting" } before authenticated event fires', async () => {
-      const result = await pollQRLogin()
+      const result = await pollQRLogin(steamDeps)
       expect(result.status).toBe('waiting')
     })
 
@@ -717,7 +725,7 @@ describe('SteamUser', () => {
         'authenticated handler'
       )()
 
-      const result = await pollQRLogin()
+      const result = await pollQRLogin(steamDeps)
       expect(result.status).toBe('done')
       expect(result.username).toBeUndefined()
     })
@@ -741,7 +749,7 @@ describe('SteamUser', () => {
 
     test('returns { status: "error" } when session times out', async () => {
       sessionOnHandlers['timeout']?.()
-      const result = await pollQRLogin()
+      const result = await pollQRLogin(steamDeps)
       expect(result.status).toBe('error')
     })
 
@@ -756,7 +764,7 @@ describe('SteamUser', () => {
     }
 
     test('logs the first observation of a fresh attempt as none -> waiting', async () => {
-      await pollQRLogin()
+      await pollQRLogin(steamDeps)
 
       expect(pollLines().some((line) => line.includes('none -> waiting'))).toBe(
         true
@@ -764,17 +772,17 @@ describe('SteamUser', () => {
     })
 
     test('three consecutive polls with no state change emit exactly one line (flood guard, D-02)', async () => {
-      await pollQRLogin()
-      await pollQRLogin()
-      await pollQRLogin()
+      await pollQRLogin(steamDeps)
+      await pollQRLogin(steamDeps)
+      await pollQRLogin(steamDeps)
 
       expect(pollLines()).toHaveLength(1)
     })
 
     test('a status change from waiting to error emits a second line', async () => {
-      await pollQRLogin()
+      await pollQRLogin(steamDeps)
       sessionOnHandlers['timeout']?.()
-      await pollQRLogin()
+      await pollQRLogin(steamDeps)
 
       const lines = pollLines()
       expect(lines).toHaveLength(2)
@@ -782,12 +790,12 @@ describe('SteamUser', () => {
     })
 
     test('a status change from waiting to done emits a second line', async () => {
-      await pollQRLogin()
+      await pollQRLogin(steamDeps)
       await defined(
         sessionOnHandlers['authenticated'],
         'authenticated handler'
       )()
-      await pollQRLogin()
+      await pollQRLogin(steamDeps)
 
       const lines = pollLines()
       expect(lines).toHaveLength(2)
@@ -795,7 +803,7 @@ describe('SteamUser', () => {
     })
 
     test('never logs the persona name on a poll transition line (D-03)', async () => {
-      await pollQRLogin()
+      await pollQRLogin(steamDeps)
       await defined(
         sessionOnHandlers['authenticated'],
         'authenticated handler'
@@ -807,22 +815,22 @@ describe('SteamUser', () => {
       await new Promise((resolve) => process.nextTick(resolve))
       await flushAsync()
 
-      const result = await pollQRLogin()
+      const result = await pollQRLogin(steamDeps)
       expect(result.username).toBe('TestUser')
       expect(pollLines().some((line) => line.includes('TestUser'))).toBe(false)
     })
 
     test('the tracker resets across attempts so a second attempt logs its own first observation', async () => {
-      await pollQRLogin()
+      await pollQRLogin(steamDeps)
       sessionOnHandlers['timeout']?.()
-      await pollQRLogin()
+      await pollQRLogin(steamDeps)
 
       mockSessionInstance.startWithQR.mockResolvedValue({
         qrChallengeUrl: 'steam://...qr_url_here',
         actionRequired: true
       })
       await startQRLogin(steamDeps)
-      await pollQRLogin()
+      await pollQRLogin(steamDeps)
 
       const lines = pollLines()
       expect(lines).toHaveLength(3)
@@ -854,7 +862,7 @@ describe('SteamUser', () => {
       await sessionOnHandlers['authenticated']?.()
 
       // pollQRLogin must be 'done' immediately — not blocked on CM loggedOn
-      const result = await pollQRLogin()
+      const result = await pollQRLogin(steamDeps)
       expect(result.status).toBe('done')
       expect(result.username).toBeUndefined()
     })
@@ -1061,7 +1069,7 @@ describe('SteamUser', () => {
 
       // pollCredentialLogin must reflect the done state so the frontend can
       // navigate away (out-of-band completion — no submitSteamGuardCode needed)
-      const poll = await pollCredentialLogin()
+      const poll = await pollCredentialLogin(steamDeps)
       expect(poll.status).toBe('done')
 
       // submitSteamGuardCode was NOT called — this is the phone-approval path
@@ -1071,7 +1079,7 @@ describe('SteamUser', () => {
 
   // ── AUTH-02: SteamGuard submit ─────────────────────────────────────────────
 
-  describe('submitSteamGuardCode()', () => {
+  describe('submitSteamGuardCode(steamDeps, )', () => {
     beforeEach(async () => {
       // Start a credential session first so this.session is set
       mockSessionInstance.startWithCredentials.mockResolvedValue({
@@ -1093,7 +1101,7 @@ describe('SteamUser', () => {
         setTimeout(() => sessionOnHandlers['authenticated']?.(), 10)
       })
 
-      const result = await submitSteamGuardCode('12345')
+      const result = await submitSteamGuardCode(steamDeps, '12345')
       expect(result.status).toBe('done')
     })
 
@@ -1101,14 +1109,14 @@ describe('SteamUser', () => {
       mockSessionInstance.submitSteamGuardCode.mockRejectedValue(
         new Error('TwoFactorCodeMismatch')
       )
-      const result = await submitSteamGuardCode('99999')
+      const result = await submitSteamGuardCode(steamDeps, '99999')
       expect(result.status).toBe('error')
     })
 
     test('returns { status: "error" } when no active session', async () => {
       // Call logout to clear the session — logout() sets this.session = null
       await SteamUser.logout()
-      const result = await submitSteamGuardCode('12345')
+      const result = await submitSteamGuardCode(steamDeps, '12345')
       expect(result.status).toBe('error')
     })
 
@@ -1124,7 +1132,7 @@ describe('SteamUser', () => {
         setTimeout(() => sessionOnHandlers['authenticated']?.(), 10)
       })
 
-      const result = await submitSteamGuardCode('KQM4F')
+      const result = await submitSteamGuardCode(steamDeps, 'KQM4F')
       expect(result.status).toBe('done')
       expect(mockSessionInstance.submitSteamGuardCode).toHaveBeenCalledWith(
         'KQM4F'
@@ -1141,7 +1149,7 @@ describe('SteamUser', () => {
         setTimeout(() => sessionOnHandlers['authenticated']?.(), 10)
       })
 
-      await submitSteamGuardCode('kqm4f')
+      await submitSteamGuardCode(steamDeps, 'kqm4f')
       expect(mockSessionInstance.submitSteamGuardCode).toHaveBeenCalledWith(
         'KQM4F'
       )
@@ -1157,7 +1165,7 @@ describe('SteamUser', () => {
         setTimeout(() => sessionOnHandlers['authenticated']?.(), 10)
       })
 
-      await submitSteamGuardCode('  kqm4f  ')
+      await submitSteamGuardCode(steamDeps, '  kqm4f  ')
       expect(mockSessionInstance.submitSteamGuardCode).toHaveBeenCalledWith(
         'KQM4F'
       )
@@ -1173,7 +1181,7 @@ describe('SteamUser', () => {
         setTimeout(() => sessionOnHandlers['authenticated']?.(), 10)
       })
 
-      await submitSteamGuardCode('12345')
+      await submitSteamGuardCode(steamDeps, '12345')
       expect(mockSessionInstance.submitSteamGuardCode).toHaveBeenCalledWith(
         '12345'
       )
@@ -1208,7 +1216,7 @@ describe('SteamUser', () => {
 
       // pollQRLogin must return 'done' with username undefined — the background
       // CM connect is still in-flight so the persona name has not arrived yet.
-      const poll1 = await pollQRLogin()
+      const poll1 = await pollQRLogin(steamDeps)
       expect(poll1.status).toBe('done')
       expect(poll1.username).toBeUndefined()
 
@@ -1219,7 +1227,7 @@ describe('SteamUser', () => {
       await flushAsync()
 
       // pollQRLogin should now carry the real persona name
-      const poll2 = await pollQRLogin()
+      const poll2 = await pollQRLogin(steamDeps)
       expect(poll2.status).toBe('done')
       expect(poll2.username).toBe('TestUser')
 
@@ -2392,7 +2400,7 @@ describe('SteamUser', () => {
         'authenticated handler'
       )()
 
-      expect((await pollQRLogin()).status).toBe('done')
+      expect((await pollQRLogin(steamDeps)).status).toBe('done')
 
       mockConfigStore.get_nodefault.mockImplementation((key: string) =>
         key === 'isLoggedIn' ? true : undefined

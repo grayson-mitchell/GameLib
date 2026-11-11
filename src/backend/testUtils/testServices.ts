@@ -36,6 +36,7 @@ import { createFakeClock } from './fakeClock'
 import { createTestOnlineMonitor } from './testOnlineMonitor'
 import { createTestEngineState } from './testEngineState'
 import { createTestSignInProbe } from './testSignInProbe'
+import { createTestSteamSession } from './testSteamSession'
 import type { GameSettings, Runner } from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
 import type {
@@ -234,7 +235,8 @@ export function createTestServices(
         {}
       ),
     signInProbe:
-      overrides.signInProbe ?? createTestSignInProbe({ ipc: host.ipc })
+      overrides.signInProbe ?? createTestSignInProbe({ ipc: host.ipc }),
+    steamSession: overrides.steamSession ?? createTestSteamSession()
   }
 }
 
@@ -350,7 +352,8 @@ export function createTestManagerDeps(
     imageTools: overrides.imageTools ?? host.imageTools,
     onlineMonitor: overrides.onlineMonitor ?? createTestOnlineMonitor(),
     engineState: overrides.engineState ?? createTestEngineState(),
-    signIn: overrides.signIn ?? createTestSignInProbe()
+    signIn: overrides.signIn ?? createTestSignInProbe(),
+    steamSession: overrides.steamSession ?? createTestSteamSession()
   }
 }
 

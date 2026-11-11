@@ -5,9 +5,10 @@
  *
  * A LEAF module by design: it imports nothing from `library.ts`, `games.ts`,
  * `user.ts` or `keyringTokenStore.ts`, so every one of those can import this
- * module without creating a cycle. Module state lives at module scope (a
- * per-process singleton, matching the existing `activeTokenStore` pattern in
- * `tokenStore.ts`). Never persisted; never logs a token.
+ * module without creating a cycle. The latch state is a closure of one
+ * boot-owned instance (D-05, D-66.3-13), built by the 'steam-session-state' boot
+ * step and reached through `ManagerDeps.steamSession.authTrigger`. Never
+ * persisted; never logs a token.
  *
  * Purpose: the observed 9:1 Steam keyring read-failure ratio is HYPOTHESISED
  * to be caused by a context-free macOS Keychain prompt fired unattended
@@ -49,18 +50,18 @@ export type SteamAuthTrigger =
 /**
  * Every trigger except `'startup'`. Used both to decide whether a given
  * trigger unlocks the gate and, doc-comment-adjacent, as the single place
- * that enumerates "what counts as deliberate" — a Set (not a per-call
+ * that enumerates "what counts as deliberate" — a frozen list (not a per-call
  * `!== 'startup'` check scattered around) means adding a new deliberate
  * trigger later is a one-line change here, not a hunt through call sites.
  */
-const DELIBERATE_TRIGGERS: ReadonlySet<SteamAuthTrigger> = new Set([
+const DELIBERATE_TRIGGERS: readonly SteamAuthTrigger[] = Object.freeze([
   'user-refresh',
   'game-page',
   'user-install',
   'user-play',
   'login',
   'boot-probe'
-])
+] as const)
 
 /**
  * Origin -> trigger ALLOWLIST (never a denylist — see `mapRefreshOriginToTrigger`'s
@@ -99,72 +100,56 @@ const ORIGIN_TO_TRIGGER: Readonly<Record<string, SteamAuthTrigger>> = {
  * logon". 'boot-probe', 'game-page', 'user-play' and 'user-install' are
  * deliberately absent (installs acquire their own lease in depot/games).
  */
-const LOGON_GRANTING_TRIGGERS: ReadonlySet<SteamAuthTrigger> = new Set([
+const LOGON_GRANTING_TRIGGERS: readonly SteamAuthTrigger[] = Object.freeze([
   'user-refresh',
   'login'
-])
+] as const)
 
-// ── Module-scoped, per-process state ────────────────────────────────────────
+type SteamRefreshLogonGrant = 'user-refresh' | 'login'
 
-let pendingRefreshLogonGrant: 'user-refresh' | 'login' | null = null
-let unlocked = false
-let lastTrigger: SteamAuthTrigger | undefined
-
-/**
- * Records that `trigger` occurred. If `trigger` is deliberate and the gate
- * was previously locked, this is the locked->unlocked TRANSITION: the gate
- * is unlocked (sticky — see the module doc comment on why a non-sticky gate
- * would be a worse bug than the one this plan fixes) and `true` is returned.
- * A second (or later) deliberate note, or any `'startup'` note, returns
- * `false` — there is no transition to report.
- */
-export function noteSteamAuthTrigger(trigger: SteamAuthTrigger): boolean {
-  lastTrigger = trigger
-  if (!DELIBERATE_TRIGGERS.has(trigger)) return false
-  if (unlocked) return false
-  unlocked = true
-  return true
-}
-
-/** Whether the gate is currently unlocked. Sticky for the life of the process. */
-export function isSteamAuthUnlocked(): boolean {
-  return unlocked
-}
-
-/**
- * The trigger that unlocked the gate, or — while still locked — the most
- * recent trigger noted (which may itself be `'startup'`). Never `undefined`
- * (defaults to `'startup'`, the honest "nothing has happened yet" state) and
- * never a token value; this is a log label only.
- */
-export function currentTriggerLabel(): string {
-  return lastTrigger ?? 'startup'
-}
-
-/**
- * Restores the locked state. Used by tests (call in `beforeEach` so gate
- * state does not leak between specs in the same test file) and by Steam
- * logout, so a signed-out session does not leave a stale unlock behind for
- * whichever account signs in next.
- */
-export function resetSteamAuthTrigger(): void {
-  unlocked = false
-  lastTrigger = undefined
-  pendingRefreshLogonGrant = null
-}
-
-/**
- * Returns and clears the pending one-shot refresh logon grant. Called
- * synchronously as `refresh()`'s first statement, so a grant armed by the
- * dispatch that triggered this refresh is consumed by THIS refresh.
- */
-export function consumeSteamRefreshLogonGrant():
-  | 'user-refresh'
-  | 'login'
-  | null {
-  const grant = pendingRefreshLogonGrant
-  pendingRefreshLogonGrant = null
-  return grant
+export interface SteamAuthTriggerState {
+  /**
+   * Records that `trigger` occurred. If `trigger` is deliberate and the gate
+   * was previously locked, this is the locked->unlocked TRANSITION: the gate
+   * is unlocked (sticky -- a non-sticky gate would be a worse bug than the one
+   * this gate fixes) and `true` is returned. A second (or later) deliberate
+   * note, or any `'startup'` note, returns `false` -- there is no transition
+   * to report.
+   */
+  noteSteamAuthTrigger(trigger: SteamAuthTrigger): boolean
+  /** Whether the gate is currently unlocked. Sticky for the life of the boot. */
+  isSteamAuthUnlocked(): boolean
+  /**
+   * The trigger that unlocked the gate, or -- while still locked -- the most
+   * recent trigger noted (which may itself be `'startup'`). Never `undefined`
+   * (defaults to `'startup'`, the honest "nothing has happened yet" state) and
+   * never a token value; this is a log label only.
+   */
+  currentTriggerLabel(): string
+  /**
+   * Restores the locked state. Used by Steam logout, so a signed-out session
+   * does not leave a stale unlock behind for whichever account signs in next.
+   */
+  resetSteamAuthTrigger(): void
+  /**
+   * Returns and clears the pending one-shot refresh logon grant. Called
+   * synchronously as `refresh()`'s first statement, so a grant armed by the
+   * dispatch that triggered this refresh is consumed by THIS refresh.
+   */
+  consumeSteamRefreshLogonGrant(): SteamRefreshLogonGrant | null
+  /**
+   * Notes a refresh trigger derived from a `refreshLibrary` dispatch, but ONLY
+   * when the dispatch is Steam-inclusive: `runner === 'steam'`, or `runner` is
+   * `undefined` / `null` / `'all'` (the three shapes that already include
+   * Steam in the library managers' fan-out). A named NON-Steam runner (a GOG
+   * login, an Epic refresh) must NEVER unlock the Steam keyring gate -- that
+   * would be a privilege-escalation bug (T-d61-03). Steam-inclusive dispatches
+   * route the origin through the allowlist; everything else is a no-op.
+   */
+  noteRefreshTrigger(
+    runner: string | null | undefined,
+    origin?: string | null
+  ): void
 }
 
 /**
@@ -199,33 +184,49 @@ export function mapRefreshOriginToTrigger(
   return ORIGIN_TO_TRIGGER[origin] ?? 'startup'
 }
 
-/**
- * Notes a refresh trigger derived from a `refreshLibrary` dispatch, but ONLY
- * when the dispatch is Steam-inclusive: `runner === 'steam'`, or `runner` is
- * `undefined` / `null` / `'all'` (the three shapes that already include
- * Steam in the library managers' fan-out — see `main.ts`/`steamFlowRegistration.ts`).
- * A named NON-Steam runner (a GOG login, an Epic refresh) must NEVER unlock
- * the Steam keyring gate — that would be a privilege-escalation bug (T-d61-03):
- * a user acting on an unrelated store would silently arm a Steam Keychain
- * read they never asked for. Steam-inclusive dispatches route the origin
- * through the allowlist above; everything else is a no-op.
- */
-export function noteRefreshTrigger(
-  runner: string | null | undefined,
-  origin?: string | null
-): void {
-  const steamInclusive =
-    runner === 'steam' ||
-    runner === undefined ||
-    runner === null ||
-    runner === 'all'
-  if (!steamInclusive) return
-  const trigger = mapRefreshOriginToTrigger(origin)
-  noteSteamAuthTrigger(trigger)
-  if (
-    (trigger === 'user-refresh' || trigger === 'login') &&
-    LOGON_GRANTING_TRIGGERS.has(trigger)
-  ) {
-    pendingRefreshLogonGrant = trigger
+/** One instance per boot (D-05, D-66.3-13); the three latch fields are closure variables. */
+export function createSteamAuthTrigger(): SteamAuthTriggerState {
+  let pendingRefreshLogonGrant: SteamRefreshLogonGrant | null = null
+  let unlocked = false
+  let lastTrigger: SteamAuthTrigger | undefined
+
+  const noteSteamAuthTrigger = (trigger: SteamAuthTrigger): boolean => {
+    lastTrigger = trigger
+    if (!DELIBERATE_TRIGGERS.includes(trigger)) return false
+    if (unlocked) return false
+    unlocked = true
+    return true
+  }
+
+  return {
+    noteSteamAuthTrigger,
+    isSteamAuthUnlocked: () => unlocked,
+    currentTriggerLabel: () => lastTrigger ?? 'startup',
+    resetSteamAuthTrigger: () => {
+      unlocked = false
+      lastTrigger = undefined
+      pendingRefreshLogonGrant = null
+    },
+    consumeSteamRefreshLogonGrant: () => {
+      const grant = pendingRefreshLogonGrant
+      pendingRefreshLogonGrant = null
+      return grant
+    },
+    noteRefreshTrigger: (runner, origin) => {
+      const steamInclusive =
+        runner === 'steam' ||
+        runner === undefined ||
+        runner === null ||
+        runner === 'all'
+      if (!steamInclusive) return
+      const trigger = mapRefreshOriginToTrigger(origin)
+      noteSteamAuthTrigger(trigger)
+      if (
+        (trigger === 'user-refresh' || trigger === 'login') &&
+        LOGON_GRANTING_TRIGGERS.includes(trigger)
+      ) {
+        pendingRefreshLogonGrant = trigger
+      }
+    }
   }
 }

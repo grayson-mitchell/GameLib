@@ -455,10 +455,13 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       })
       expect(response?.result).not.toBe(UNPORTED_CHANNEL_MARKER)
       expect(jest.mocked(submitSteamGuardCode)).toHaveBeenCalledTimes(1)
-      expect(jest.mocked(submitSteamGuardCode)).toHaveBeenCalledWith('ABCDE')
+      expect(jest.mocked(submitSteamGuardCode)).toHaveBeenCalledWith(
+        expect.anything(),
+        'ABCDE'
+      )
     })
 
-    it('REQ-34.4-01 steamPollCredential invoke resolves a real value and delegates with no arguments', async () => {
+    it('REQ-34.4-01 steamPollCredential invoke resolves a real value and delegates with only the manager deps', async () => {
       jest.mocked(pollCredentialLogin).mockResolvedValue({ status: 'waiting' })
 
       const { input, frames } = boot()
@@ -473,7 +476,9 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       })
       expect(response?.result).not.toBe(UNPORTED_CHANNEL_MARKER)
       expect(jest.mocked(pollCredentialLogin)).toHaveBeenCalledTimes(1)
-      expect(jest.mocked(pollCredentialLogin)).toHaveBeenCalledWith()
+      expect(jest.mocked(pollCredentialLogin)).toHaveBeenCalledWith(
+        expect.objectContaining({ steamSession: expect.anything() })
+      )
     })
   })
 

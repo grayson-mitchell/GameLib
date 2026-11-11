@@ -3,13 +3,13 @@
     "src/backend/storeManagers/steam/__tests__/acfInstalldir.test.ts": 2,
     "src/backend/storeManagers/steam/__tests__/anonymousClient.test.ts": 2,
     "src/backend/storeManagers/steam/__tests__/appinfoOrder.test.ts": 1,
-    "src/backend/storeManagers/steam/__tests__/authSessionLifecycle.test.ts": 11,
+    "src/backend/storeManagers/steam/__tests__/authSessionLifecycle.test.ts": 10,
     "src/backend/storeManagers/steam/__tests__/bridgeBottle.test.ts": 10,
     "src/backend/storeManagers/steam/__tests__/bridgeRouteVerdict.test.ts": 17,
     "src/backend/storeManagers/steam/__tests__/cancelDelete.test.ts": 9,
     "src/backend/storeManagers/steam/__tests__/cdnAuth.test.ts": 1,
     "src/backend/storeManagers/steam/__tests__/clientSetup.test.ts": 8,
-    "src/backend/storeManagers/steam/__tests__/credentialsMissing.test.ts": 9,
+    "src/backend/storeManagers/steam/__tests__/credentialsMissing.test.ts": 8,
     "src/backend/storeManagers/steam/__tests__/depot.clobberGuard.test.ts": 10,
     "src/backend/storeManagers/steam/__tests__/depot.cmPlan.test.ts": 7,
     "src/backend/storeManagers/steam/__tests__/depot.prescreen.test.ts": 7,
@@ -61,7 +61,6 @@
   },
   "moduleState": {
     "src/backend/storeManagers/steam/anonymousClient.ts": 7,
-    "src/backend/storeManagers/steam/authTrigger.ts": 5,
     "src/backend/storeManagers/steam/bottleProcessMonitor.ts": 1,
     "src/backend/storeManagers/steam/bottledSteam.ts": 2,
     "src/backend/storeManagers/steam/bridgeBottle.ts": 1,
@@ -79,7 +78,6 @@
     "src/backend/storeManagers/steam/state.ts": 4,
     "src/backend/storeManagers/steam/tokenStore.ts": 1,
     "src/backend/storeManagers/steam/user.ts": 11,
-    "src/backend/storeManagers/steam/userSignInState.ts": 5,
     "src/backend/storeManagers/steam/userTypes.ts": 2
   }
 }

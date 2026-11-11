@@ -83,17 +83,20 @@ jest.mock('backend/ipc', () => ({
 }))
 
 import { SteamUser } from '../user'
+import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
 
 // SteamUser reads its config store through the bound slice (66.1-18).
+// The boot-owned auth-unlock latches (D-66.3-13); the probe notes 'boot-probe' into this instance.
+const steamSession = createTestSteamSession()
+const isSteamAuthUnlocked = () => steamSession.authTrigger.isSteamAuthUnlocked()
+const currentTriggerLabel = () => steamSession.authTrigger.currentTriggerLabel()
+const resetSteamAuthTrigger = () =>
+  steamSession.authTrigger.resetSteamAuthTrigger()
 SteamUser.bindStores({
   signIn: mockSignIn,
+  steamSession,
   stores: { steam: { configStore: mockConfigStore } }
 } as never)
-import {
-  isSteamAuthUnlocked,
-  currentTriggerLabel,
-  resetSteamAuthTrigger
-} from '../authTrigger'
 
 function setLoggedIn(loggedIn: boolean) {
   mockConfigStore.get_nodefault.mockImplementation((key: string) =>

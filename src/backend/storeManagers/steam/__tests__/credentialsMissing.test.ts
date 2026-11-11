@@ -41,10 +41,6 @@ jest.mock('../tokenStore', () => ({
   readTokenOutcome: (...args: unknown[]) => mockReadTokenOutcome(...args)
 }))
 
-jest.mock('../authTrigger', () => ({
-  currentTriggerLabel: () => 'user-refresh'
-}))
-
 // Phase 49 (49-06): sign-in / sign-out publish through the epoch fence.
 const mockNoteSignInSucceeded = jest.fn()
 const mockNoteSignedOut = jest.fn()
@@ -105,14 +101,25 @@ jest.mock('backend/ipc', () => ({
 
 import { SteamUser, type SteamUserBoundDeps } from '../user'
 import type { SteamStoresDeps } from '../library/installRoot'
+import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
+import type { UserSignInDeps } from '../userSignIn'
 import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
 
+const realSession = createTestSteamSession()
 const steamDeps = {
   stores: { steam: { configStore: mockConfigStore } },
-  signIn: mockSignIn
+  signIn: mockSignIn,
+  steamSession: {
+    signIn: realSession.signIn,
+    authTrigger: {
+      ...realSession.authTrigger,
+      currentTriggerLabel: () => 'user-refresh'
+    }
+  }
 } as unknown as SteamStoresDeps &
   SignInNoteDeps &
-  Pick<SteamUserBoundDeps, 'signIn'>
+  Pick<SteamUserBoundDeps, 'signIn' | 'steamSession'> &
+  UserSignInDeps
 beforeEach(() => {
   SteamUser.bindStores(steamDeps)
 })

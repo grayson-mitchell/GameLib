@@ -6,23 +6,19 @@ import { getTokenStore } from './tokenStore'
 import { withTimeout } from './withTimeout'
 import { SteamUser } from './user'
 import { QR_LOGIN_TIMEOUT_MS, SIGN_IN_PERSONA_TIMEOUT_MS } from './userTypes'
-import {
-  addCredSettleCallback,
-  getCredSessionState,
-  getQrLastLoggedStatus,
-  getQrSessionState,
-  getSession,
-  setCredSessionState,
-  setQrLastLoggedStatus,
-  setQrSessionState,
-  setSession,
-  takeCredSettleCallbacks
-} from './userSignInState'
+import type { SteamSignInState } from './userSignInState'
+import type { SteamSessionServices } from 'backend/services/types'
+
+/** What the Steam sign-in flows read: the stores, the sign-in outcome writer and the boot-owned session state. */
+export type UserSignInDeps = SteamStoresDeps &
+  SignInNoteDeps & {
+    steamSession: { signIn: SteamSessionServices['signIn'] }
+  }
 
 // ── Shared auth success path ───────────────────────────────────────────────
 
 export async function finishAuth(
-  deps: SteamStoresDeps & SignInNoteDeps,
+  deps: UserSignInDeps,
   session: InstanceType<typeof LoginSession>
 ): Promise<string> {
   const refreshToken = session.refreshToken
@@ -50,7 +46,7 @@ export async function finishAuth(
  * steam-session LoginSession, which needs no CM.
  */
 async function resolveSignInProfile(
-  deps: SteamStoresDeps & SignInNoteDeps,
+  deps: UserSignInDeps,
   session: InstanceType<typeof LoginSession>
 ): Promise<string> {
   let personaName = session.accountName || 'Steam User'
@@ -95,12 +91,13 @@ async function resolveSignInProfile(
 }
 
 async function completeQrProfile(
-  deps: SteamStoresDeps & SignInNoteDeps,
+  deps: UserSignInDeps,
   session: InstanceType<typeof LoginSession>
 ): Promise<void> {
+  const signInState = deps.steamSession.signIn
   try {
     const username = await resolveSignInProfile(deps, session)
-    setQrSessionState({ status: 'done', username })
+    signInState.setQrSessionState({ status: 'done', username })
   } catch (err) {
     logWarning(['Steam QR background CM connect failed:', err], LogPrefix.Steam)
   }
@@ -112,9 +109,13 @@ async function completeQrProfile(
  * Called when the credential session authenticates, errors, or times out.
  * Stores the final state and drains any _waitForCredSession() callers.
  */
-function _settleCredSession(status: 'done' | 'error', username?: string): void {
-  setCredSessionState({ status, username })
-  const callbacks = takeCredSettleCallbacks()
+function _settleCredSession(
+  signInState: SteamSignInState,
+  status: 'done' | 'error',
+  username?: string
+): void {
+  signInState.setCredSessionState({ status, username })
+  const callbacks = signInState.takeCredSettleCallbacks()
   for (const cb of callbacks) cb({ status })
 }
 
@@ -124,13 +125,15 @@ function _settleCredSession(status: 'done' | 'error', username?: string): void {
  * so it can share the same authenticated/error/timeout listeners registered
  * in startCredentialLogin without attaching duplicate handlers.
  */
-function _waitForCredSession(): Promise<{ status: 'done' | 'error' }> {
-  const state = getCredSessionState()
+function _waitForCredSession(
+  signInState: SteamSignInState
+): Promise<{ status: 'done' | 'error' }> {
+  const state = signInState.getCredSessionState()
   if (state.status !== 'waiting') {
     return Promise.resolve({ status: state.status })
   }
   return new Promise<{ status: 'done' | 'error' }>((resolve) => {
-    addCredSettleCallback(resolve)
+    signInState.addCredSettleCallback(resolve)
   })
 }
 
@@ -142,43 +145,45 @@ function _waitForCredSession(): Promise<{ status: 'done' | 'error' }> {
  * detect out-of-band completion (e.g. DeviceConfirmation phone approval)
  * while the user is on the guard-code entry screen.
  */
-export async function pollCredentialLogin(): Promise<{
+export async function pollCredentialLogin(
+  deps: Pick<UserSignInDeps, 'steamSession'>
+): Promise<{
   status: 'done' | 'waiting' | 'error'
   username?: string
 }> {
-  const state = getCredSessionState()
+  const signInState = deps.steamSession.signIn
+  const state = signInState.getCredSessionState()
   return { status: state.status, username: state.username }
 }
 
 // ── AUTH-01: QR Login ──────────────────────────────────────────────────────
 
-export async function startQRLogin(
-  deps: SteamStoresDeps & SignInNoteDeps
-): Promise<{
+export async function startQRLogin(deps: UserSignInDeps): Promise<{
   status: 'done' | 'error'
   challengeUrl?: string
 }> {
+  const signInState = deps.steamSession.signIn
   try {
     logInfo('Steam QR login: attempt starting', LogPrefix.Steam)
 
     // Tear down previous session before replacing it
-    const previousSession = getSession()
+    const previousSession = signInState.getSession()
     if (previousSession) {
       logInfo(
         'Steam QR login: cancelling a previous login session before starting a new one',
         LogPrefix.Steam
       )
       previousSession.cancelLoginAttempt()
-      setSession(null)
+      signInState.setSession(null)
     }
 
     const session = new LoginSession(EAuthTokenPlatformType.SteamClient)
     // Give the user 2 minutes to scan and approve. The default 30 s kills the
     // session before the phone's approval round-trip completes.
     session.loginTimeout = QR_LOGIN_TIMEOUT_MS
-    setSession(session)
-    setQrSessionState({ status: 'waiting' })
-    setQrLastLoggedStatus(null)
+    signInState.setSession(session)
+    signInState.setQrSessionState({ status: 'waiting' })
+    signInState.setQrLastLoggedStatus(null)
 
     const response = await session.startWithQR()
 
@@ -198,7 +203,7 @@ export async function startQRLogin(
         // the user approves on their phone — don't block the UI on the CM
         // connection. The persona name (and client.steamID) are populated in
         // the background below and surface on a later poll.
-        setQrSessionState({ status: 'done' })
+        signInState.setQrSessionState({ status: 'done' })
 
         // The background connect shares the single-flight connectingPromise
         // (set synchronously below: the token is passed in memory), so a
@@ -207,18 +212,18 @@ export async function startQRLogin(
         void completeQrProfile(deps, session)
       } catch (err) {
         logError(['Steam QR auth finalization failed:', err], LogPrefix.Steam)
-        setQrSessionState({ status: 'error' })
+        signInState.setQrSessionState({ status: 'error' })
       }
     })
 
     session.once('timeout', () => {
       logWarning('Steam QR session timed out', LogPrefix.Steam)
-      setQrSessionState({ status: 'error' })
+      signInState.setQrSessionState({ status: 'error' })
     })
 
     session.once('error', (err: Error) => {
       logError(['Steam QR session error:', err], LogPrefix.Steam)
-      setQrSessionState({ status: 'error' })
+      signInState.setQrSessionState({ status: 'error' })
     })
 
     logInfo(
@@ -234,17 +239,20 @@ export async function startQRLogin(
 
 // ── AUTH-01: QR Poll ───────────────────────────────────────────────────────
 
-export async function pollQRLogin(): Promise<{
+export async function pollQRLogin(
+  deps: Pick<UserSignInDeps, 'steamSession'>
+): Promise<{
   status: 'done' | 'waiting' | 'error'
   username?: string
 }> {
-  const state = getQrSessionState()
-  if (state.status !== getQrLastLoggedStatus()) {
+  const signInState = deps.steamSession.signIn
+  const state = signInState.getQrSessionState()
+  if (state.status !== signInState.getQrLastLoggedStatus()) {
     logInfo(
-      `Steam QR poll: status ${getQrLastLoggedStatus() ?? 'none'} -> ${state.status}`,
+      `Steam QR poll: status ${signInState.getQrLastLoggedStatus() ?? 'none'} -> ${state.status}`,
       LogPrefix.Steam
     )
-    setQrLastLoggedStatus(state.status)
+    signInState.setQrLastLoggedStatus(state.status)
   }
   if (state.status === 'done') {
     // username is undefined until the background CM connection resolves the
@@ -261,22 +269,23 @@ export async function pollQRLogin(): Promise<{
 // ── AUTH-02: Credential Login ──────────────────────────────────────────────
 
 export async function startCredentialLogin(
-  deps: SteamStoresDeps & SignInNoteDeps,
+  deps: UserSignInDeps,
   username: string,
   password: string
 ): Promise<{ status: 'done' | 'guard_required' | 'error' }> {
+  const signInState = deps.steamSession.signIn
   try {
     // Drain any pending callbacks from a previous guard_required attempt
     // (e.g. user pressed "Back to Credentials" and is starting a new login).
-    const staleCallbacks = takeCredSettleCallbacks()
-    setCredSessionState({ status: 'waiting' })
+    const staleCallbacks = signInState.takeCredSettleCallbacks()
+    signInState.setCredSessionState({ status: 'waiting' })
     for (const cb of staleCallbacks) cb({ status: 'error' })
 
     // Tear down previous session before replacing it
-    const previousSession = getSession()
+    const previousSession = signInState.getSession()
     if (previousSession) {
       previousSession.cancelLoginAttempt()
-      setSession(null)
+      signInState.setSession(null)
     }
 
     const session = new LoginSession(EAuthTokenPlatformType.SteamClient)
@@ -284,7 +293,7 @@ export async function startCredentialLogin(
     // changed after polling starts, LoginSession.js:107). 180 s gives ample
     // time for email retrieval. Mirrors the QR path's 120 s setting.
     session.loginTimeout = 180000
-    setSession(session)
+    signInState.setSession(session)
 
     const response = await session.startWithCredentials({
       accountName: username,
@@ -313,13 +322,13 @@ export async function startCredentialLogin(
       session.once('authenticated', async () => {
         try {
           const personaName = await finishAuth(deps, session)
-          _settleCredSession('done', personaName)
+          _settleCredSession(signInState, 'done', personaName)
         } catch (err) {
           logError(
             ['Steam credential auth finalization failed:', err],
             LogPrefix.Steam
           )
-          _settleCredSession('error')
+          _settleCredSession(signInState, 'error')
         }
       })
 
@@ -333,12 +342,12 @@ export async function startCredentialLogin(
           ],
           LogPrefix.Steam
         )
-        _settleCredSession('error')
+        _settleCredSession(signInState, 'error')
       })
 
       session.once('timeout', () => {
         logWarning('Steam credential session timed out', LogPrefix.Steam)
-        _settleCredSession('error')
+        _settleCredSession(signInState, 'error')
       })
 
       logInfo('Steam Guard required for credential login', LogPrefix.Steam)
@@ -379,9 +388,11 @@ export async function startCredentialLogin(
 // ── AUTH-02: Submit SteamGuard code ───────────────────────────────────────
 
 export async function submitSteamGuardCode(
+  deps: Pick<UserSignInDeps, 'steamSession'>,
   code: string
 ): Promise<{ status: 'done' | 'error' }> {
-  const session = getSession()
+  const signInState = deps.steamSession.signIn
+  const session = signInState.getSession()
   if (!session) {
     logWarning(
       'submitSteamGuardCode called but no active session',
@@ -404,7 +415,7 @@ export async function submitSteamGuardCode(
     // register duplicate listeners here — instead wait for _settleCredSession
     // to be called by the already-registered handlers. This prevents double
     // finishAuth calls and avoids listener leaks.
-    return await _waitForCredSession()
+    return await _waitForCredSession(signInState)
   } catch (err) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const errAny = err as any

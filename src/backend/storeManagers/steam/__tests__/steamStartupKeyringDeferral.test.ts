@@ -297,13 +297,6 @@ import { setTokenStore, type TokenStore } from '../tokenStore'
 import { getSteamLibraries } from 'backend/utils'
 import { library } from '../state'
 import { captureOwnedAppPlatforms } from '../platformCapture'
-import {
-  isSteamAuthUnlocked,
-  resetSteamAuthTrigger,
-  noteSteamAuthTrigger,
-  noteRefreshTrigger,
-  currentTriggerLabel
-} from '../authTrigger'
 import type { GameInfo, InstallArgs } from 'common/types'
 import { at } from './fixtures/indexed'
 import type { Stores } from 'backend/services/types'
@@ -314,6 +307,23 @@ const steamTestDeps = createTestManagerDeps({
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
 })
+
+// The boot-owned auth-unlock latches the manager under test reads (D-66.3-13): one instance for this file.
+const isSteamAuthUnlocked = () =>
+  steamTestDeps.steamSession.authTrigger.isSteamAuthUnlocked()
+const resetSteamAuthTrigger = () =>
+  steamTestDeps.steamSession.authTrigger.resetSteamAuthTrigger()
+const noteSteamAuthTrigger = (
+  trigger: Parameters<
+    typeof steamTestDeps.steamSession.authTrigger.noteSteamAuthTrigger
+  >[0]
+) => steamTestDeps.steamSession.authTrigger.noteSteamAuthTrigger(trigger)
+const noteRefreshTrigger = (
+  runner: string | null | undefined,
+  origin?: string | null
+) => steamTestDeps.steamSession.authTrigger.noteRefreshTrigger(runner, origin)
+const currentTriggerLabel = () =>
+  steamTestDeps.steamSession.authTrigger.currentTriggerLabel()
 SteamUser.bindStores({
   ...steamTestDeps,
   macSteamOffline:

@@ -32,6 +32,8 @@ import type { WinetricksQueue } from 'backend/tools/winetricksQueue'
 import type { SignInEpochs } from 'backend/signInProbe/sessionEpoch'
 import type { SignInProbeOutcomes } from 'backend/signInProbe/outcomes'
 import type { SignInProbePass } from 'backend/signInProbe/pass'
+import type { SteamSignInState } from 'backend/storeManagers/steam/userSignInState'
+import type { SteamAuthTriggerState } from 'backend/storeManagers/steam/authTrigger'
 import type { CommandRunner as CommandRunnerImpl } from 'backend/commandRunner'
 import type GOGLibraryManager from 'backend/storeManagers/gog/library'
 import type LegendaryLibraryManager from 'backend/storeManagers/legendary/library'
@@ -150,6 +152,8 @@ export interface ManagerDeps {
   engineState: EngineStateService
   /** The boot-owned sign-in fence and outcome map the store user modules write through (D-66.3-13). */
   signIn: Pick<SignInProbeServices, 'epochs' | 'outcomes'>
+  /** The boot-owned Steam sign-in session and auth-unlock state (D-66.3-13). */
+  steamSession: SteamSessionServices
   /** The boot-owned connectivity monitor, as the slice managers read (D-66.3-11). */
   onlineMonitor: Pick<
     OnlineMonitor,
@@ -169,6 +173,15 @@ export interface SignInProbeServices {
   epochs: SignInEpochs
   outcomes: SignInProbeOutcomes
   pass: SignInProbePass
+}
+
+/**
+ * The boot-owned Steam session cluster (D-66.3-13), built by the 'steam-session-state' boot step:
+ * the QR / credential sign-in state and the keyring auth-unlock latches.
+ */
+export interface SteamSessionServices {
+  signIn: SteamSignInState
+  authTrigger: SteamAuthTriggerState
 }
 
 export interface BootServices {
@@ -203,4 +216,6 @@ export interface BootServices {
   winetricksQueue: WinetricksQueue
   /** Built by the 'sign-in-probe-state' boot step, before 'store-managers' (D-66.3-13). */
   signInProbe: SignInProbeServices
+  /** Built by the 'steam-session-state' boot step, before 'store-managers' (D-66.3-13). */
+  steamSession: SteamSessionServices
 }

@@ -12,7 +12,6 @@ import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import i18next from 'i18next'
 import { SteamUser } from '../user'
-import { noteSteamAuthTrigger } from '../authTrigger'
 import { library } from '../state'
 import SteamGame from '../games'
 import { isNativeInstallInFlight } from '../gameSessionState'
@@ -191,7 +190,7 @@ export default class SteamLibraryManager implements LibraryManager {
     // itself lives at the top of refresh() below, not here; this call never
     // unlocks anything (noteSteamAuthTrigger('startup') is never deliberate).
     if (SteamUser.isLoggedIn()) {
-      noteSteamAuthTrigger('startup')
+      this.deps.steamSession.authTrigger.noteSteamAuthTrigger('startup')
       this.deps.onlineMonitor.runOnceWhenOnline(() => this.refresh())
     }
 

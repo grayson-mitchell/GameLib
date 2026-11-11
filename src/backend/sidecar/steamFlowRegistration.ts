@@ -75,7 +75,6 @@
 // is gone; the managers arrive as `deps.managers` from the boot `store-managers` step, so this
 // module cannot re-enter storeManagers/index.ts mid-evaluation.
 import { isStore, storeCapabilities } from 'common/storeCapabilities'
-import { noteRefreshTrigger } from '../storeManagers/steam/authTrigger'
 
 import type { IpcRegistry } from './ipcRegistry'
 import type { GlobalConfigSlice } from '../config'
@@ -125,7 +124,7 @@ import { SHELL_WINDOW_FOCUSED } from 'common/types/sidecarTransport'
  *     Humble ownership recompute tail (Phase 12, D-47/D-48).
  */
 async function handleRefreshLibrary(
-  deps: Pick<SteamFlowDeps, 'managers'>,
+  deps: Pick<SteamFlowDeps, 'managers' | 'steamSession'>,
   _event: unknown,
   ...args: unknown[]
 ): Promise<void> {
@@ -151,7 +150,7 @@ async function handleRefreshLibrary(
   // all-runners, and the null/undefined JSON-transport cases documented above)
   // records its trigger the same way main.ts's own handler does.
   const rawOrigin = args[1] as string | undefined | null
-  noteRefreshTrigger(rawRunner, rawOrigin)
+  deps.steamSession.authTrigger.noteRefreshTrigger(rawRunner, rawOrigin)
 
   // Single-runner branch — reproduces main.ts:1051-1053's
   // `library !== undefined && library !== 'all'` gate, extended to also
@@ -406,6 +405,8 @@ export type SteamFlowDeps = Pick<BootServices, 'managers' | 'stores'> & {
   appState: Pick<AppState, 'hideMainWindow'>
   notifications: Pick<BootServices['host']['notifications'], 'show'>
   launcher: Pick<BootServices['launcher'], 'launchEventCallback'>
+  /** The boot-owned keyring auth-unlock latches the refresh dispatch notes into (D-66.3-13). */
+  steamSession: Pick<BootServices['steamSession'], 'authTrigger'>
 }
 
 export function registerSteamFlows(deps: SteamFlowDeps): void {

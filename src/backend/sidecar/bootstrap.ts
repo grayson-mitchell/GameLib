@@ -144,6 +144,8 @@ import gogPresence from '../storeManagers/gog/presence'
 import { createSignInProbePass } from '../signInProbe/pass'
 import { createSignInProbeOutcomes } from '../signInProbe/outcomes'
 import { createSignInEpochs } from '../signInProbe/sessionEpoch'
+import { createSteamSignInState } from '../storeManagers/steam/userSignInState'
+import { createSteamAuthTrigger } from '../storeManagers/steam/authTrigger'
 // Deviation (Rule 3 — blocking, Phase 27 Plan 04): `backend/logger`'s
 // `logInfo`/`logWarning`/`logError` (called throughout the REAL Steam
 // read/action flow code Plan 04 wires up — e.g. library.ts's refresh()
@@ -264,6 +266,7 @@ export const BOOT_STEP_NAMES = [
   'logger',
   'host-services',
   'sign-in-probe-state',
+  'steam-session-state',
   'stores',
   'migrations',
   'config',
@@ -395,7 +398,8 @@ function requireServices(state: BootState): BootServices {
     onlineMonitor,
     engineState,
     winetricksQueue,
-    signInProbe
+    signInProbe,
+    steamSession
   } = state.services
   if (
     !stores ||
@@ -417,7 +421,8 @@ function requireServices(state: BootState): BootServices {
     !onlineMonitor ||
     !engineState ||
     !winetricksQueue ||
-    !signInProbe
+    !signInProbe ||
+    !steamSession
   ) {
     const missing = (
       [
@@ -440,7 +445,8 @@ function requireServices(state: BootState): BootServices {
         'onlineMonitor',
         'engineState',
         'winetricksQueue',
-        'signInProbe'
+        'signInProbe',
+        'steamSession'
       ] as const
     ).filter((name) => !state.services[name])
     throw new Error(`boot services missing: ${missing.join(', ')}`)
@@ -465,7 +471,8 @@ function requireServices(state: BootState): BootServices {
     onlineMonitor,
     engineState,
     winetricksQueue,
-    signInProbe
+    signInProbe,
+    steamSession
   }
 }
 
@@ -1206,6 +1213,19 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'steam-session-state',
+      // Builds the one Steam sign-in session state and auth-unlock latch set of this boot (D-05,
+      // D-66.3-13). Pure in-memory construction: no I/O, timer or handle. Before 'stores' so the
+      // SteamUser holder, bound in 'stores' and rebound in 'command-runner', and every ManagerDeps
+      // carry the same instances.
+      run: (_ctx, _io, state) => {
+        state.services.steamSession = prebuilt.steamSession ?? {
+          signIn: createSteamSignInState(),
+          authTrigger: createSteamAuthTrigger()
+        }
+      }
+    },
+    {
       name: 'stores',
       // Builds every store family against ONE per-boot registry (66.1 plan 25, A3); that registry
       // is what the name-keyed store RPC handlers resolve through. Store construction opens no
@@ -1231,7 +1251,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // slice; bound here, before any step or handler can reach it (66.1-16/18).
         SteamUser.bindStores({
           stores: state.services.stores,
-          signIn: state.services.signInProbe
+          signIn: state.services.signInProbe,
+          steamSession: state.services.steamSession
         })
         bindBottleStores({ stores: state.services.stores })
       }
@@ -1339,6 +1360,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         SteamUser.bindStores({
           stores,
           signIn: state.services.signInProbe,
+          steamSession: state.services.steamSession,
           macSteamOffline: state.services.steamProcesses.macSteamOffline
         })
         state.services.commandRunner =
@@ -1481,7 +1503,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           host,
           onlineMonitor,
           engineState,
-          signInProbe
+          signInProbe,
+          steamSession
         } = state.services
         if (
           !stores ||
@@ -1495,7 +1518,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !host ||
           !onlineMonitor ||
           !engineState ||
-          !signInProbe
+          !signInProbe ||
+          !steamSession
         ) {
           throw new Error(
             'store-managers step ran before stores/command-runner/config/host-services'
@@ -1529,7 +1553,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           imageTools: host.imageTools,
           onlineMonitor,
           engineState,
-          signIn: signInProbe
+          signIn: signInProbe,
+          steamSession
         })
         state.services.managers = prebuilt.managers ?? built
         state.services.launcher = prebuilt.launcher ?? built.launcher

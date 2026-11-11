@@ -1157,8 +1157,8 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       const { bindHumbleStores } = require('../../humble/humbleStores') as {
         bindHumbleStores: (deps: never) => void
       }
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { createTestSignInProbe } =
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('backend/testUtils/testSignInProbe') as {
           createTestSignInProbe: () => unknown
         }

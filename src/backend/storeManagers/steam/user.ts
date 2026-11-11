@@ -1,11 +1,10 @@
-import type { ManagerDeps } from 'backend/services/types'
+import type { ManagerDeps, SteamSessionServices } from 'backend/services/types'
 import { existsSync } from 'graceful-fs'
 import { join } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { SteamStoresDeps } from './library/installRoot'
 import { STEAM_INSTALL_PATHS } from './constants'
 import { getTokenStore, readTokenOutcome } from './tokenStore'
-import { currentTriggerLabel, noteSteamAuthTrigger } from './authTrigger'
 import { applySignInVerdict } from 'backend/signInProbe/verdict'
 import { withTimeout } from './withTimeout'
 import { sendFrontendMessage } from '../../ipc'
@@ -24,7 +23,6 @@ import { platform } from 'process'
 import type { SteamUserData } from 'common/types/steam'
 import SteamUserLib from 'steam-user'
 import type { SignInProbeOutcome } from 'common/signInState'
-import { resetSignInState } from './userSignInState'
 import {
   CANARY_APP_ID,
   CANARY_TIMEOUT_MS,
@@ -48,6 +46,8 @@ export type SteamUserBoundDeps = SteamStoresDeps & {
   macSteamOffline?: SteamUserMacSteamOffline
   /** The boot-owned sign-in fence and outcome map (D-66.3-13); read through `signIn()`. */
   signIn?: ManagerDeps['signIn']
+  /** The boot-owned Steam sign-in session state and auth-unlock latches (D-66.3-13); read through `steamSession()`. */
+  steamSession?: SteamSessionServices
 }
 
 // ── SteamUser static class ────────────────────────────────────────────────────
@@ -79,6 +79,16 @@ export class SteamUser {
     if (!instance) {
       throw new Error(
         'SteamUser: sign-in state read before bindStores supplied it (the sidecar binds it in the stores boot step)'
+      )
+    }
+    return instance
+  }
+
+  private static steamSession(): SteamSessionServices {
+    const instance = this.boundStores?.steamSession
+    if (!instance) {
+      throw new Error(
+        'SteamUser: Steam session state read before bindStores supplied it (the sidecar binds it in the stores boot step)'
       )
     }
     return instance
@@ -192,7 +202,7 @@ export class SteamUser {
   static async probeCredentialPresence(): Promise<SignInProbeOutcome> {
     if (!this.isLoggedIn()) return 'unknown'
     try {
-      noteSteamAuthTrigger('boot-probe')
+      this.steamSession().authTrigger.noteSteamAuthTrigger('boot-probe')
       const outcome = await readTokenOutcome(getTokenStore(), 'boot-probe')
       if (outcome.status === 'present') return 'healthy'
       if (outcome.status === 'absent') return 'expired'
@@ -497,7 +507,7 @@ export class SteamUser {
       // only — no new IPC channel and no frontend banner is added here.
       const outcome = await readTokenOutcome(
         getTokenStore(),
-        currentTriggerLabel()
+        this.steamSession().authTrigger.currentTriggerLabel()
       )
       if (outcome.status === 'unreadable') {
         // Deliberately does NOT contain the substring "no stored refresh
@@ -708,7 +718,7 @@ export class SteamUser {
     this.logonFailure = null
     this.guidedInstallTargets.clear()
     closeAnonymousClient('logout')
-    resetSignInState()
+    this.steamSession().signIn.resetSignInState()
     // Token through the seam (D-09) first, then the remaining session keys
     // configStore.clear() used to wipe — see stores.ts's configStore
     // schema (isLoggedIn/userData are the only other keys ever written there).
@@ -741,7 +751,7 @@ export class SteamUser {
     // rather than two divergent ones.
     const outcome = await readTokenOutcome(
       getTokenStore(),
-      currentTriggerLabel()
+      this.steamSession().authTrigger.currentTriggerLabel()
     )
     if (outcome.status !== 'present') return undefined
     return { refreshToken: outcome.token }

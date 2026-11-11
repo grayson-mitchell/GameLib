@@ -157,6 +157,7 @@ jest.mock('../../launcher', () => ({
 // import-time singleton any more) that `steamFlowRegistration.ts` dispatches through, so
 // `jest.spyOn` on its `refreshInstallState` method observes the real production call path, not
 // a stand-in.
+import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
 import SteamLibraryManager from '../../storeManagers/steam/library'
 import { registerSteamFlows } from '../steamFlowRegistration'
 import { startRpcServer } from '../sidecarRpc'
@@ -180,6 +181,7 @@ const steamFlowDeps = () => ({
   managers: createTestManagers({ library: { steam: libraryManagerMap.steam } }),
   stores: createTestStores(),
   notifications: createTestHostServices().notifications,
+  steamSession: createTestSteamSession(),
   launcher: {
     launchEventCallback: (...args: unknown[]) =>
       launchEventCallbackMock(...args)

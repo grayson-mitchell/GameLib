@@ -211,7 +211,7 @@ describe('sidecar bootstrap (headless boot)', () => {
   })
 
   describe('boot services (66.1-04)', () => {
-    it('a default boot returns BootServices with all twenty fields', () => {
+    it('a default boot returns BootServices with all twenty-one fields', () => {
       const { services } = bootWithLines()
       expect(Object.keys(services).sort()).toEqual([
         'appInfo',
@@ -231,6 +231,7 @@ describe('sidecar bootstrap (headless boot)', () => {
         'signInProbe',
         'spawnAsync',
         'steamProcesses',
+        'steamSession',
         'storeRegistry',
         'stores',
         'winetricksQueue'

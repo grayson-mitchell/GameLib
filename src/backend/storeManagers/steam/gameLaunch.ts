@@ -43,7 +43,6 @@ import { prepareOverlayTokens } from './bridge/overlay/overlayLaunch'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
 import type { CrossoverPreflight } from 'backend/engine/engineDecision'
 import type { EngineSelection } from 'backend/engine/engineTypes'
-import { noteSteamAuthTrigger } from './authTrigger'
 import { detectLaunchDrmWrapper } from './bridge/drm/drmScanExe'
 import { detectSteamDrmInPe } from './bridge/peScan'
 import { type DrmLaunchReady } from './bridge/drm/drmLaunchSetup'
@@ -102,7 +101,7 @@ export async function launch(
   // quick-260817-d61: Play is a deliberate Steam action — unlock the
   // keyring deferral gate before ensurePlatformsCaptured() or anything
   // else in this method runs.
-  noteSteamAuthTrigger('user-play')
+  steamGame.deps.steamSession.authTrigger.noteSteamAuthTrigger('user-play')
   // D-51-07: same auto-clear as install()'s top, before any routing
   // decision below reads the persisted verdict.
   clearStaleBridgeVerdict(steamGame)

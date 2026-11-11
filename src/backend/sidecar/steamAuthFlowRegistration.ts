@@ -175,12 +175,12 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   })
 
   deps.ipc.handle('steamPollQR', async () => {
-    return pollQRLogin()
+    return pollQRLogin(managerDeps())
   })
 
   // Source: main.ts:899 — credential/SteamGuard/TOTP login trio (REQ-34.4-01).
   deps.ipc.handle('steamPollCredential', async () => {
-    return pollCredentialLogin()
+    return pollCredentialLogin(managerDeps())
   })
 
   deps.ipc.handle(
@@ -197,7 +197,7 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   deps.ipc.handle(
     'steamSubmitGuard',
     async (_event: unknown, ...args: unknown[]) => {
-      return submitSteamGuardCode(args[0] as string)
+      return submitSteamGuardCode(managerDeps(), args[0] as string)
     }
   )
 

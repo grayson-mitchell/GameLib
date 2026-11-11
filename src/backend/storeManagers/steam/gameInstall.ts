@@ -24,7 +24,6 @@ import * as bottle from './bottle'
 import * as bridgeBottle from './bridgeBottle'
 import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
 import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
-import { noteSteamAuthTrigger } from './authTrigger'
 import { SteamUser } from './user'
 import { prescreenBridgeDepots } from './depot'
 import { ensureSteamClientReady } from './clientSetup'
@@ -67,7 +66,7 @@ export async function install(
   // quick-260817-d61: Install is a deliberate Steam action — unlock the
   // keyring deferral gate as the first statement, before anything else in
   // this method runs.
-  noteSteamAuthTrigger('user-install')
+  steamGame.deps.steamSession.authTrigger.noteSteamAuthTrigger('user-install')
   // D-51-07: auto-clear a stale persisted scan-miss before any routing
   // decision below reads it — the top of install(), before the resume
   // check, so a bridge route taken later in this same call already sees

@@ -141,7 +141,8 @@ function bootedWorld(opts?: {
         imageTools: fakes.host.imageTools,
         onlineMonitor: fakes.onlineMonitor,
         engineState: fakes.engineState,
-        signIn: fakes.signInProbe
+        signIn: fakes.signInProbe,
+        steamSession: fakes.steamSession
       })
       prebuilt.managers = built
       prebuilt.launcher = built.launcher

@@ -32,7 +32,6 @@ import {
 } from './bridge/overlay/overlayPolicy'
 import { readStoredTitleConfig, pickTitleSettings } from './titleSettings'
 import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
-import { noteSteamAuthTrigger } from './authTrigger'
 import { stopBridgeHelper } from './bridge/helperRegistry'
 import type { EnginePin } from 'backend/engine/enginePins'
 import {
@@ -227,7 +226,7 @@ export default class SteamGame implements Game {
     // log on (ROADMAP SC2; debug friends-signout-steam-user). The call below
     // only labels later keyring reads, it reads no keyring and opens no
     // connection.
-    noteSteamAuthTrigger('game-page')
+    this.deps.steamSession.authTrigger.noteSteamAuthTrigger('game-page')
     const info = this.getGameInfo()
     return (
       info.extra ?? {
@@ -450,7 +449,7 @@ export default class SteamGame implements Game {
   async update(): Promise<InstallResult> {
     // quick-260817-d61: Update is a deliberate Steam action — unlock the
     // keyring deferral gate as the first statement.
-    noteSteamAuthTrigger('user-install')
+    this.deps.steamSession.authTrigger.noteSteamAuthTrigger('user-install')
     logWarning(
       `SteamGame.update not implemented until Phase 2 (appId: ${this.appId})`,
       LogPrefix.Steam

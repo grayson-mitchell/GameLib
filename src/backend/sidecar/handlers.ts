@@ -153,7 +153,8 @@ export function registerHandlers(deps: {
     managers: deps.services.managers,
     stores: deps.services.stores,
     launcher: deps.services.launcher,
-    notifications: deps.services.host.notifications
+    notifications: deps.services.host.notifications,
+    steamSession: deps.services.steamSession
   })
   registerSteamAuthFlows({ ...deps.services, ipc })
   registerEngineFlows({

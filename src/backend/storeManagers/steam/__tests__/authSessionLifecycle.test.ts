@@ -49,10 +49,14 @@ jest.mock('../tokenStore', () => ({
   readTokenOutcome: (...args: unknown[]) => mockReadTokenOutcome(...args)
 }))
 
-jest.mock('../authTrigger', () => ({
-  currentTriggerLabel: () => 'user-refresh',
-  noteSteamAuthTrigger: jest.fn()
-}))
+// The boot-owned Steam session cluster SteamUser reads through its bound slice (66.3-13): inert stand-ins.
+const mockSteamSession = {
+  signIn: { resetSignInState: jest.fn() },
+  authTrigger: {
+    currentTriggerLabel: () => 'user-refresh',
+    noteSteamAuthTrigger: jest.fn()
+  }
+}
 
 const mockApplySignInVerdict = jest.fn()
 jest.mock('backend/signInProbe/verdict', () => ({
@@ -149,6 +153,7 @@ import { SteamUser } from '../user'
 // SteamUser reads its config store through the bound slice (66.1-18).
 SteamUser.bindStores({
   signIn: mockSignIn,
+  steamSession: mockSteamSession,
   stores: { steam: { configStore: mockConfigStore } },
   macSteamOffline: jest.requireMock('../macSteamOffline')
 } as never)

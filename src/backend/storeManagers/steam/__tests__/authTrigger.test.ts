@@ -7,19 +7,51 @@
  * `refreshLibrary` IPC handlers.
  */
 
+import { readFileSync } from 'fs'
+import { join } from 'path'
+import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import {
-  noteSteamAuthTrigger,
-  isSteamAuthUnlocked,
-  currentTriggerLabel,
-  resetSteamAuthTrigger,
+  createSteamAuthTrigger,
   mapRefreshOriginToTrigger,
-  noteRefreshTrigger,
-  consumeSteamRefreshLogonGrant,
-  type SteamAuthTrigger
+  type SteamAuthTrigger,
+  type SteamAuthTriggerState
 } from '../authTrigger'
 
+// One boot-owned latch set per case (D-05, D-66.3-13): no reset hook, a fresh instance each time.
+let state: SteamAuthTriggerState
 beforeEach(() => {
-  resetSteamAuthTrigger()
+  state = createSteamAuthTrigger()
+})
+const noteSteamAuthTrigger: SteamAuthTriggerState['noteSteamAuthTrigger'] = (
+  trigger
+) => state.noteSteamAuthTrigger(trigger)
+const isSteamAuthUnlocked = () => state.isSteamAuthUnlocked()
+const currentTriggerLabel = () => state.currentTriggerLabel()
+const resetSteamAuthTrigger = () => state.resetSteamAuthTrigger()
+const noteRefreshTrigger: SteamAuthTriggerState['noteRefreshTrigger'] = (
+  runner,
+  origin
+) => state.noteRefreshTrigger(runner, origin)
+const consumeSteamRefreshLogonGrant = () =>
+  state.consumeSteamRefreshLogonGrant()
+
+describe('instances and constants (D-66.3-09, D-05)', () => {
+  it('two instances never share an unlock or a logon grant', () => {
+    const other = createSteamAuthTrigger()
+    expect(noteSteamAuthTrigger('user-refresh')).toBe(true)
+    noteRefreshTrigger('steam', 'action-icons-refresh-button')
+    expect(other.isSteamAuthUnlocked()).toBe(false)
+    expect(other.consumeSteamRefreshLogonGrant()).toBeNull()
+    expect(other.currentTriggerLabel()).toBe('startup')
+  })
+
+  it('the trigger lists are frozen arrays, not Sets', () => {
+    const source = stripSourceComments(
+      readFileSync(join(__dirname, '..', 'authTrigger.ts'), 'utf8')
+    )
+    expect(source).not.toMatch(/new Set\(/)
+    expect(source.match(/Object\.freeze\(\[/g)).toHaveLength(2)
+  })
 })
 
 describe('noteSteamAuthTrigger / isSteamAuthUnlocked', () => {

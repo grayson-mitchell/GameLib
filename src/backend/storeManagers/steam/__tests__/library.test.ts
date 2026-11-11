@@ -30,7 +30,6 @@ import { notify } from '../../../dialog/dialog'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
 import { SteamUser } from '../user'
-import { noteRefreshTrigger, resetSteamAuthTrigger } from '../authTrigger'
 import { getAnonymousPicsClient } from '../anonymousClient'
 import { getBottleSteamappsDir } from '../bottle'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
@@ -56,6 +55,14 @@ const steamTestDeps = createTestManagerDeps({
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
 })
+
+// The boot-owned auth-unlock latches the manager under test reads (D-66.3-13): one instance for this file.
+const noteRefreshTrigger = (
+  runner: string | null | undefined,
+  origin?: string | null
+) => steamTestDeps.steamSession.authTrigger.noteRefreshTrigger(runner, origin)
+const resetSteamAuthTrigger = () =>
+  steamTestDeps.steamSession.authTrigger.resetSteamAuthTrigger()
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under

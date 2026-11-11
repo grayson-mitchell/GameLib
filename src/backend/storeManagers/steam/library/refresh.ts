@@ -4,10 +4,6 @@ import { isMac } from 'backend/constants/environment'
 import { getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { SteamUser } from '../user'
-import {
-  consumeSteamRefreshLogonGrant,
-  currentTriggerLabel
-} from '../authTrigger'
 import { getAnonymousPicsClient } from '../anonymousClient'
 import type { ManagerDeps } from 'backend/services/types'
 import { library } from '../state'
@@ -39,14 +35,14 @@ import {
 export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
   // Synchronous and before any await, so a grant armed by the dispatch that
   // triggered THIS call is consumed by this call (and by no other).
-  const grant = consumeSteamRefreshLogonGrant()
+  const grant = deps.steamSession.authTrigger.consumeSteamRefreshLogonGrant()
 
   // Exit path 0: nothing to sync against. `init()` has ALREADY pushed the
   // cached library to the frontend (RESEARCH Finding 9), so emitting 'idle'
   // renders a populated grid and clears any stale 'syncing'.
   const refuseDeferred = async (): Promise<null> => {
     logInfo(
-      `Steam: library refresh deferred — no explicit Refresh and no open Steam session, showing the cached library with no CM logon (trigger=${currentTriggerLabel()})`,
+      `Steam: library refresh deferred — no explicit Refresh and no open Steam session, showing the cached library with no CM logon (trigger=${deps.steamSession.authTrigger.currentTriggerLabel()})`,
       LogPrefix.Steam
     )
     try {
