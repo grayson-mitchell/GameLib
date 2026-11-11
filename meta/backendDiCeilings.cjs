@@ -33,7 +33,10 @@
  *
  * Known residual, documented not hidden: `const reg = createRegistry()` (a
  * call returning a container) is NOT counted syntactically. A fixture test
- * pins that; the 66.3 zero flip and code review cover it.
+ * pins that; the 66.3 zero flip and code review cover it. `containerCallResidual()`
+ * is that pin: it lists every top-level `const x = create*()/make*()/build*()` or
+ * `*Registry/*Cache/*Queue/*Emitter/*Map/*Set()` call in non-test src/backend. It never
+ * feeds census() counts. Phase 66.3 plan 18 expects it to be empty for 66.3-owned files.
  *
  * Baselines live in sharded files meta/backendDiCeilings/*.json (any name),
  * so parallel plans each own a shard. A path may appear in only one shard per
@@ -431,6 +434,59 @@ function census(root = REPO_ROOT) {
   return result
 }
 
+const CONTAINER_NAME =
+  /^(create|make|build)[A-Z]|(Registry|Cache|Queue|Emitter|Map|Set)$/
+const CONTAINER_SKIP_CALLEES = new Set(['require', 'Symbol', 'freeze'])
+const CONTAINER_SKIP_OBJECTS = new Set(['path', 'Object', 'JSON'])
+
+/**
+ * Top-level `const x = <call>()` declarations whose callee reads as a container factory.
+ * Not part of the census (D-66.3-09: the definition is unchanged); a pin for the residual.
+ */
+function topLevelContainerCalls(sourceText, fileName = 'x.ts') {
+  const sf = parse(sourceText, fileName)
+  const out = []
+  for (const st of sf.statements) {
+    if (!ts.isVariableStatement(st)) continue
+    if (st.modifiers?.some((m) => m.kind === ts.SyntaxKind.DeclareKeyword))
+      continue
+    for (const decl of st.declarationList.declarations) {
+      if (!decl.initializer || !ts.isIdentifier(decl.name)) continue
+      const init = unwrap(decl.initializer)
+      if (!ts.isCallExpression(init)) continue
+      const callee = unwrap(init.expression)
+      let name
+      if (ts.isIdentifier(callee)) name = callee.text
+      else if (ts.isPropertyAccessExpression(callee)) {
+        name = callee.name.text
+        const obj = unwrap(callee.expression)
+        if (ts.isIdentifier(obj) && CONTAINER_SKIP_OBJECTS.has(obj.text))
+          continue
+      } else continue
+      if (CONTAINER_SKIP_CALLEES.has(name)) continue
+      if (CONTAINER_NAME.test(name)) out.push(decl.name.text)
+    }
+  }
+  return out
+}
+
+/** Sorted `<repo-relative path>:<identifier>` for the non-test src/backend tree census() walks. */
+function containerCallResidual(root = REPO_ROOT) {
+  const out = []
+  const isTest = (f) => /\.(test\.tsx?|d\.ts)$/.test(f)
+  for (const f of walkTs(
+    path.join(root, 'src', 'backend'),
+    SKIP_DIRS,
+    [],
+    new Set(SKIP_PATHS.map((p) => path.join(root, ...p.split('/'))))
+  ).sort()) {
+    if (isTest(f)) continue
+    for (const id of topLevelContainerCalls(fs.readFileSync(f, 'utf8'), f))
+      out.push(`${toPosix(path.relative(root, f))}:${id}`)
+  }
+  return out.sort()
+}
+
 const isPlainObject = (v) =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
 
@@ -732,6 +788,8 @@ module.exports = {
   countModuleState,
   countChildProcessImports,
   countJestMock,
+  topLevelContainerCalls,
+  containerCallResidual,
   evaluate,
   loadShards,
   SANCTIONED_PATHS,

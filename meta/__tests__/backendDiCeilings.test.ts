@@ -19,6 +19,8 @@ const {
   countModuleState,
   countChildProcessImports,
   countJestMock,
+  topLevelContainerCalls,
+  containerCallResidual,
   evaluate,
   loadShards,
   SANCTIONED_PATHS,
@@ -96,6 +98,56 @@ describe('countModuleState', () => {
 
   it('counts in .tsx files', () => {
     expect(countModuleState('let a = <div />', 'x.tsx')).toBe(1)
+  })
+})
+
+describe('countModuleState D-66.3-09 replacements', () => {
+  it.each<[string, string, number]>([
+    [
+      'ReadonlySet constant still counts',
+      "const X: ReadonlySet<string> = new Set(['a', 'b'])",
+      1
+    ],
+    [
+      'Object.freeze constant does not',
+      'const X = Object.freeze({ a: true, b: true } as const)',
+      0
+    ],
+    ['as const array does not', "const X = ['a', 'b'] as const", 0],
+    [
+      'exported Object.freeze array does not',
+      "export const X = Object.freeze(['a', 'b'] as const)",
+      0
+    ]
+  ])('%s', (_n, src, want) => {
+    expect(countModuleState(src)).toBe(want)
+  })
+})
+
+describe('topLevelContainerCalls', () => {
+  it.each<[string, string, string[]]>([
+    ['create', 'export const q = createQueue()', ['q']],
+    ['make', 'const r = makeRegistry({})', ['r']],
+    ['build', 'const e = buildEmitter()', ['e']],
+    ['suffix rule', 'const c = lookupCache()', ['c']],
+    ['create with Map in name', 'const m = createDeferredMap()', ['m']],
+    ['inside a function', 'function f() { const q = createQueue() }', []],
+    ['Object.freeze', 'const X = Object.freeze({ a: 1 })', []],
+    ['require', "const p = require('x')", []],
+    ['Symbol', "const s = Symbol('x')", []],
+    ['path.join', 'const r = path.join(a, b)', []],
+    ['new Map belongs to countModuleState', 'const n = new Map()', []],
+    ['comment only', '// const q = createQueue()\nconst z = 1', []]
+  ])('%s', (_n, src, want) => {
+    expect(topLevelContainerCalls(src, 'f.ts')).toEqual(want)
+  })
+})
+
+describe('containerCallResidual', () => {
+  it('containerCallResidual() matches the measured residual', () => {
+    expect(containerCallResidual()).toEqual([
+      'src/backend/platform/index.ts:nativeImage'
+    ])
   })
 })
 
