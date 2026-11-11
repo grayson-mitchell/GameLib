@@ -127,6 +127,7 @@
             }
         },
         "quit": {
+            "bridgeHosting": "A game is running through the Steam bridge. Quitting GameLib ends any multiplayer session it is hosting. Quit anyway?",
             "message": "There are pending operations, are you sure?",
             "title": "Exit"
         },
