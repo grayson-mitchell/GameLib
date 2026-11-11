@@ -1,9 +1,6 @@
 const mockSetSetting = jest.fn()
 const mockGet = jest.fn()
 const mockLogError = jest.fn()
-jest.mock('../../game_config', () => ({
-  GameConfig: { get: (a: string) => mockGet(a) }
-}))
 const mockSend = jest.fn()
 jest.mock('../../ipc', () => ({
   sendFrontendMessage: (...a: unknown[]) => mockSend(...a)
@@ -12,6 +9,8 @@ jest.mock('../../logger', () => ({ logError: (m: string) => mockLogError(m) }))
 
 import { applyGameSetting } from '../gameSettingWrite'
 
+const deps = { gameConfigs: { get: (a: string) => mockGet(a) } } as never
+
 describe('applyGameSetting (G17)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -19,7 +18,7 @@ describe('applyGameSetting (G17)', () => {
   })
 
   it('writes once when the config handler works', () => {
-    applyGameSetting('1284190', 'steamEngineOverride', 'automatic')
+    applyGameSetting(deps, '1284190', 'steamEngineOverride', 'automatic')
     expect(mockSetSetting).toHaveBeenCalledTimes(1)
     expect(mockSetSetting).toHaveBeenCalledWith(
       'steamEngineOverride',
@@ -32,7 +31,7 @@ describe('applyGameSetting (G17)', () => {
     mockGet.mockImplementationOnce(() => {
       throw new Error('Unexpected end of JSON input')
     })
-    applyGameSetting('1284190', 'steamEngineOverride', 'automatic')
+    applyGameSetting(deps, '1284190', 'steamEngineOverride', 'automatic')
     expect(mockSetSetting).toHaveBeenCalledTimes(1)
     expect(mockLogError).not.toHaveBeenCalled()
   })
@@ -42,7 +41,7 @@ describe('applyGameSetting (G17)', () => {
       throw new Error('boom')
     })
     expect(() =>
-      applyGameSetting('1284190', 'steamEngineOverride', 'automatic')
+      applyGameSetting(deps, '1284190', 'steamEngineOverride', 'automatic')
     ).not.toThrow()
     expect(mockLogError).toHaveBeenCalledTimes(1)
     expect(mockLogError.mock.calls[0][0]).toContain('1284190')
@@ -52,7 +51,7 @@ describe('applyGameSetting (G17)', () => {
     mockGet.mockImplementation(() => {
       throw new Error('boom')
     })
-    applyGameSetting('1284190', 'steamEngineOverride', 'automatic')
+    applyGameSetting(deps, '1284190', 'steamEngineOverride', 'automatic')
     expect(mockLogError).toHaveBeenCalledTimes(1)
     expect(mockSend).toHaveBeenCalledTimes(1)
     expect(mockSend).toHaveBeenCalledWith('gameSettingWriteFailed', {
@@ -62,11 +61,11 @@ describe('applyGameSetting (G17)', () => {
   })
 
   it('WR-04: no push when a write lands on the first or second attempt', () => {
-    applyGameSetting('1284190', 'steamEngineOverride', 'automatic')
+    applyGameSetting(deps, '1284190', 'steamEngineOverride', 'automatic')
     mockGet.mockImplementationOnce(() => {
       throw new Error('transient')
     })
-    applyGameSetting('1284190', 'steamEngineOverride', 'automatic')
+    applyGameSetting(deps, '1284190', 'steamEngineOverride', 'automatic')
     expect(mockSend).not.toHaveBeenCalled()
   })
 })

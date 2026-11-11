@@ -106,7 +106,7 @@
  * reader must not take it for "repair works for Steam games".
  */
 
-import { ipcMain } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
 import { pushFrontendMessage } from './sidecarRpc'
 import {
   getGameInfo,
@@ -146,13 +146,18 @@ function logSendFailure(channel: string, error: unknown): void {
   )
 }
 
+/** The game-details slice plus the registry the channels are written into. */
+export interface GameDetailsFlowDeps extends GameDetailsDeps {
+  ipc: Pick<IpcRegistry, 'handle' | 'on'>
+}
+
 /**
  * Registers the 19 game-details/settings/override channels (16 invoke + 3
  * send). Called once from `handlers.ts` — this module owns no side effects
  * at import time beyond the imports above; the caller decides when
  * registration onto the handler registry happens.
  */
-export function registerGameDetailsFlows(deps: GameDetailsDeps): void {
+export function registerGameDetailsFlows(deps: GameDetailsFlowDeps): void {
   // Installed FIRST, before any of the 3 send registrations below, so no
   // send can ever fire against gamedetails/overrides.ts's default no-op
   // notifier. Rides the existing generic frontend-message relay
@@ -167,15 +172,15 @@ export function registerGameDetailsFlows(deps: GameDetailsDeps): void {
 
   // ── invoke (15) ───────────────────────────────────────────────────────
 
-  ipcMain.handle('getGameInfo', async (_event: unknown, ...args: unknown[]) =>
+  deps.ipc.handle('getGameInfo', async (_event: unknown, ...args: unknown[]) =>
     getGameInfo(deps, args[0] as string, args[1] as Runner)
   )
 
-  ipcMain.handle('getExtraInfo', async (_event: unknown, ...args: unknown[]) =>
+  deps.ipc.handle('getExtraInfo', async (_event: unknown, ...args: unknown[]) =>
     getExtraInfo(deps, args[0] as string, args[1] as Runner)
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'getGameSettings',
     async (_event: unknown, ...args: unknown[]) =>
       getGameSettings(deps, args[0] as string, args[1] as Runner)
@@ -188,7 +193,7 @@ export function registerGameDetailsFlows(deps: GameDetailsDeps): void {
   // (build?, branch?). args[3] is BUILD and args[4] is BRANCH here, matching
   // frontend/helpers/index.ts:88's forwarding order and main.ts:844's own
   // unpacking order -- the two agreeing ground truths.
-  ipcMain.handle(
+  deps.ipc.handle(
     'getInstallInfo',
     async (_event: unknown, ...args: unknown[]) => {
       const build = args[3] as string | undefined
@@ -205,50 +210,50 @@ export function registerGameDetailsFlows(deps: GameDetailsDeps): void {
   )
 
   // Single {appName, runner} OBJECT argument, not positional args.
-  ipcMain.handle(
+  deps.ipc.handle(
     'isGameAvailable',
     async (_event: unknown, ...args: unknown[]) =>
       isGameAvailable(deps, args[0] as { appName: string; runner: Runner })
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'getLaunchOptions',
     async (_event: unknown, ...args: unknown[]) =>
       getLaunchOptions(deps, args[0] as string, args[1] as Runner)
   )
 
-  ipcMain.handle('kill', async (_event: unknown, ...args: unknown[]) =>
+  deps.ipc.handle('kill', async (_event: unknown, ...args: unknown[]) =>
     kill(deps, args[0] as string, args[1] as Runner)
   )
 
   // INVOKE despite feeling fire-and-forget — main.ts:1110 is addHandler.
-  ipcMain.handle('repair', async (_event: unknown, ...args: unknown[]) =>
+  deps.ipc.handle('repair', async (_event: unknown, ...args: unknown[]) =>
     repair(deps, args[0] as string, args[1] as Runner)
   )
 
   // Single {appName, path, runner} OBJECT argument, not positional args.
-  ipcMain.handle(
+  deps.ipc.handle(
     'changeInstallPath',
     async (_event: unknown, ...args: unknown[]) =>
       changeInstallPath(deps, args[0] as MoveGameArgs)
   )
 
-  ipcMain.handle('readConfig', async (_event: unknown, ...args: unknown[]) =>
+  deps.ipc.handle('readConfig', async (_event: unknown, ...args: unknown[]) =>
     readConfig(deps, args[0] as 'library' | 'user')
   )
 
-  ipcMain.handle('getGameOverride', async () => getGameOverride(deps))
+  deps.ipc.handle('getGameOverride', async () => getGameOverride(deps))
 
-  ipcMain.handle('getGameSdl', async (_event: unknown, ...args: unknown[]) =>
+  deps.ipc.handle('getGameSdl', async (_event: unknown, ...args: unknown[]) =>
     getGameSdl(deps, args[0] as string)
   )
 
-  ipcMain.handle('getAvailableCyberpunkMods', async () =>
+  deps.ipc.handle('getAvailableCyberpunkMods', async () =>
     getAvailableCyberpunkMods(deps)
   )
 
   // INVOKE despite feeling fire-and-forget — main.ts:1520 is addHandler.
-  ipcMain.handle(
+  deps.ipc.handle(
     'setCyberpunkModConfig',
     async (_event: unknown, ...args: unknown[]) =>
       setCyberpunkModConfig(
@@ -259,7 +264,7 @@ export function registerGameDetailsFlows(deps: GameDetailsDeps): void {
 
   // Already-clean pass-through to game_overrides/index.ts, never extracted
   // into gamedetails/dispatch.ts (main.ts:1449-1451).
-  ipcMain.handle(
+  deps.ipc.handle(
     'getGameMetadataOverride',
     async (_event: unknown, ...args: unknown[]) =>
       getGameOverrides(deps, args[0] as string)
@@ -267,11 +272,11 @@ export function registerGameDetailsFlows(deps: GameDetailsDeps): void {
 
   // Already-clean pass-through to game_overrides/index.ts, never extracted
   // into gamedetails/dispatch.ts (main.ts:1453-1455).
-  ipcMain.handle('getAllGameOverrides', async () => getAllGameOverrides(deps))
+  deps.ipc.handle('getAllGameOverrides', async () => getAllGameOverrides(deps))
 
   // ── send (3) ──────────────────────────────────────────────────────────
 
-  ipcMain.on(
+  deps.ipc.on(
     'setGameMetadataOverride',
     (_event: unknown, ...args: unknown[]) => {
       try {
@@ -292,7 +297,7 @@ export function registerGameDetailsFlows(deps: GameDetailsDeps): void {
 
   // THREE positional arguments (appName, runner, status) — not an object,
   // unlike the other two send channels above.
-  ipcMain.on(
+  deps.ipc.on(
     'changeGameVersionPinnedStatus',
     (_event: unknown, ...args: unknown[]) => {
       try {
@@ -308,7 +313,7 @@ export function registerGameDetailsFlows(deps: GameDetailsDeps): void {
     }
   )
 
-  ipcMain.on('addNewApp', (_event: unknown, ...args: unknown[]) => {
+  deps.ipc.on('addNewApp', (_event: unknown, ...args: unknown[]) => {
     try {
       addNewApp(deps, args[0] as GameInfo)
     } catch (error) {

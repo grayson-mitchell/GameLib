@@ -95,7 +95,7 @@ ELECTRON_STUB_PATH = SRC_DIR / "backend" / "platform" / "index.ts"
 #
 # The gate is INVERTED, not RETIRED, because there is still something real and falsifiable left to
 # assert: exactly ONE `getLoginWindowSeam()` call site survives anywhere in `src/` --
-# `sidecar/humbleLoginFlowRegistration.ts`'s smoke-test guard (line 452 as of Phase 40 plan 03's
+# `sidecar/humbleLoginFlowRegistration.ts`'s smoke-test guard (line 454 as of 66.3-09, which added a 2-line `deps` parameter to `registerHumbleLoginFlows`; line 452 as of Phase 40 plan 03's
 # D-11 channel re-census, which deleted two channel registrations above this site and shifted it
 # up by 10 lines from 457, then down by 5 to 452 when the same plan's Task 3 (Rule 1 fix) added a
 # 5-line retirement comment to the docstring above `registerHumbleLoginFlows()` -- see the
@@ -114,7 +114,7 @@ ELECTRON_STUB_PATH = SRC_DIR / "backend" / "platform" / "index.ts"
 # not merely "contains", because "contains" alone would silently tolerate any of the seven deleted
 # predicates regrowing elsewhere in `src/` without ever being noticed by this check.
 EXPECTED_AXIS_A_SURVIVOR_SET = {
-    "src/backend/sidecar/humbleLoginFlowRegistration.ts:452",  # the deliberately-kept smoke guard
+    "src/backend/sidecar/humbleLoginFlowRegistration.ts:454",  # the deliberately-kept smoke guard (452 until 66.3-09 shifted it by 2)
 }
 # Updated Phase 34.4.1 Plan 18 (first regeneration since Plan 10): Plan 12 (already committed,
 # F-1/S-10 closure) moved the safeStorage import OUT of humble/user.ts entirely, into a new

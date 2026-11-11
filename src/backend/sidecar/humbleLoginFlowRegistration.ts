@@ -57,7 +57,7 @@
  * off the main thread at the earliest point in the phase this is possible.
  */
 
-import { ipcMain } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
 import { requestRustInvoke } from './sidecarRpc'
 import {
   RUST_HUMBLE_LOGIN_OPEN,
@@ -342,7 +342,9 @@ export function createRustLoginWindowSeam(): LoginWindowSeam {
  * remaining callers -- see this file's module docstring above and
  * `.planning/phases/40-.../40-CHANNEL-RECENSUS.md`.
  */
-export function registerHumbleLoginFlows(): void {
+export function registerHumbleLoginFlows(deps: {
+  ipc: Pick<IpcRegistry, 'handle' | 'on'>
+}): void {
   // T-34.4.1-10: the ONE call site in the repo. Must run before any of the 4 handlers below could
   // possibly be invoked (registration order, not request order, is what matters here -- all 4 are
   // registered synchronously in this same function before it returns).
@@ -350,7 +352,7 @@ export function registerHumbleLoginFlows(): void {
 
   // ── invoke (3) ──────────────────────────────────────────────────────────────────────────────
 
-  ipcMain.handle('humbleStartLogin', async () => {
+  deps.ipc.handle('humbleStartLogin', async () => {
     try {
       return await HumbleUser.startLogin()
     } catch (error) {
@@ -362,7 +364,7 @@ export function registerHumbleLoginFlows(): void {
     }
   })
 
-  ipcMain.handle('humbleReconnect', async () => {
+  deps.ipc.handle('humbleReconnect', async () => {
     try {
       return await HumbleUser.reconnect()
     } catch (error) {
@@ -374,7 +376,7 @@ export function registerHumbleLoginFlows(): void {
     }
   })
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'humbleRevealKey',
     async (_event: unknown, ...args: unknown[]) => {
       const params = args[0] as { gamekey: string; machineName: string }
@@ -395,7 +397,7 @@ export function registerHumbleLoginFlows(): void {
 
   // ── send (1) ────────────────────────────────────────────────────────────────────────────────
 
-  ipcMain.on('humbleStopLogin', () => {
+  deps.ipc.on('humbleStopLogin', () => {
     void (async () => {
       try {
         HumbleUser.stopLogin()

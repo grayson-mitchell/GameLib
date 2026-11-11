@@ -68,6 +68,7 @@ describe('setSetting engineOverride guard', () => {
       set('Fortnite', value)
       expect(mockApply).toHaveBeenCalledTimes(1)
       expect(mockApply).toHaveBeenCalledWith(
+        expect.anything(),
         'Fortnite',
         'engineOverride',
         value

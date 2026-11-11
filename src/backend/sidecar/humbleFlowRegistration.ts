@@ -104,7 +104,7 @@
  * module graph.
  */
 
-import { ipcMain } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
 import { HumbleUser } from '../humble/user'
 import { HumbleLibrary } from '../humble/library'
 import { runHumbleValidation } from '../humble/validation'
@@ -146,36 +146,38 @@ import type { ExpirationAlertDeps } from '../humble/expirationAlerts'
  * imports above; the caller decides when registration onto the handler
  * registry happens.
  */
-export function registerHumbleFlows(deps: ExpirationAlertDeps): void {
+export function registerHumbleFlows(
+  deps: ExpirationAlertDeps & { ipc: Pick<IpcRegistry, 'handle' | 'on'> }
+): void {
   // ── Library/sync group (REQ-34.4-07) ─────────────────────────────────────
-  ipcMain.handle('humbleGetUserInfo', async () => {
+  deps.ipc.handle('humbleGetUserInfo', async () => {
     return HumbleUser.getUserDetails()
   })
 
-  ipcMain.handle('humbleCheckHealth', async () => {
+  deps.ipc.handle('humbleCheckHealth', async () => {
     // Phase 49 (49-06): the method returns the probe outcome; the channel's
     // contract is still Promise<void>, so the outcome is dropped here.
     await HumbleUser.checkHealthAndFlagExpiry()
   })
 
-  ipcMain.handle('humbleSync', async () => {
+  deps.ipc.handle('humbleSync', async () => {
     return HumbleLibrary.sync(deps)
   })
 
-  ipcMain.handle('humbleGetKeys', async () => {
+  deps.ipc.handle('humbleGetKeys', async () => {
     return HumbleLibrary.getKeys()
   })
 
-  ipcMain.handle('humbleGetSyncState', async () => {
+  deps.ipc.handle('humbleGetSyncState', async () => {
     return HumbleLibrary.getSyncState()
   })
 
   // ── Key-state group (REQ-34.4-07) ────────────────────────────────────────
-  ipcMain.handle('humbleGetGiftedAt', async () => {
+  deps.ipc.handle('humbleGetGiftedAt', async () => {
     return HumbleLibrary.getAllGiftedAt()
   })
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'humbleMarkRedeemed',
     async (_event: unknown, ...args: unknown[]) => {
       const { gamekey, machineName } = args[0] as {
@@ -186,7 +188,7 @@ export function registerHumbleFlows(deps: ExpirationAlertDeps): void {
     }
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'humbleUndoRedeemed',
     async (_event: unknown, ...args: unknown[]) => {
       const { gamekey, machineName } = args[0] as {
@@ -199,7 +201,7 @@ export function registerHumbleFlows(deps: ExpirationAlertDeps): void {
 
   // C4 narrow-exposure channel (ipc_handler.ts:96-101) — never log anything
   // here, never register this on a generic frontend storeGet bridge.
-  ipcMain.handle(
+  deps.ipc.handle(
     'humbleGetRevealedKeyValue',
     async (_event: unknown, ...args: unknown[]) => {
       const { gamekey, machineName } = args[0] as {
@@ -210,7 +212,7 @@ export function registerHumbleFlows(deps: ExpirationAlertDeps): void {
     }
   )
 
-  ipcMain.handle('humbleGetClaimAnnotations', async () => {
+  deps.ipc.handle('humbleGetClaimAnnotations', async () => {
     return HumbleLibrary.getClaimAnnotations()
   })
 
@@ -223,7 +225,7 @@ export function registerHumbleFlows(deps: ExpirationAlertDeps): void {
   // Ported verbatim from humble/ipc_handler.ts:39-54 — do not collapse this
   // guard into a shared helper with humbleRecordGiftLinkOpened's below; the
   // two check different predicates and each carries its own rationale.
-  ipcMain.handle(
+  deps.ipc.handle(
     'humbleSetOwnershipOverride',
     async (_event: unknown, ...args: unknown[]) => {
       const machineName = args[0] as string
@@ -241,14 +243,14 @@ export function registerHumbleFlows(deps: ExpirationAlertDeps): void {
     }
   )
 
-  ipcMain.handle(
+  deps.ipc.handle(
     'humbleClearOwnershipOverride',
     async (_event: unknown, ...args: unknown[]) => {
       return HumbleLibrary.clearOwnershipOverride(args[0] as string)
     }
   )
 
-  ipcMain.handle('humbleGetOwnershipOverrides', async () => {
+  deps.ipc.handle('humbleGetOwnershipOverrides', async () => {
     return HumbleLibrary.getAllOwnershipOverrides()
   })
 
@@ -263,7 +265,7 @@ export function registerHumbleFlows(deps: ExpirationAlertDeps): void {
   // shape above — the renderer must never be trusted to have only shown the
   // gift button on an eligible row. Ported verbatim from
   // humble/ipc_handler.ts:72-91.
-  ipcMain.handle(
+  deps.ipc.handle(
     'humbleRecordGiftLinkOpened',
     async (_event: unknown, ...args: unknown[]) => {
       const machineName = args[0] as string
@@ -305,7 +307,7 @@ export function registerHumbleFlows(deps: ExpirationAlertDeps): void {
   // silently -- a rejection here (e.g. session.fromPartition throwing) must
   // not become an unhandled rejection in the main process. Never rethrows
   // (sidecar-dialog-reject-crashes).
-  ipcMain.on('humbleDisconnect', () => {
+  deps.ipc.on('humbleDisconnect', () => {
     HumbleUser.disconnect().catch((error) =>
       console.warn('[humbleFlowRegistration] humbleDisconnect failed:', error)
     )
@@ -323,6 +325,6 @@ export function registerHumbleFlows(deps: ExpirationAlertDeps): void {
   // function, so it would give the same answer -- this call stays direct
   // because the dependency belongs on the derivation, not on the shim.
   if (!isPackagedSidecar()) {
-    ipcMain.handle('humbleRunValidation', async () => runHumbleValidation())
+    deps.ipc.handle('humbleRunValidation', async () => runHumbleValidation())
   }
 }

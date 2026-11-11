@@ -1,4 +1,4 @@
-import { GameConfig } from '../game_config'
+import type { GameConfigs } from '../game_config'
 import { logError } from '../logger'
 import { sendFrontendMessage } from '../ipc'
 
@@ -14,13 +14,14 @@ import { sendFrontendMessage } from '../ipc'
  * settings screen re-reads the value actually on disk.
  */
 export function applyGameSetting(
+  deps: { gameConfigs: GameConfigs },
   appName: string,
   key: string,
   value: unknown
 ): void {
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      GameConfig.get(appName).setSetting(key, value)
+      deps.gameConfigs.get(appName).setSetting(key, value)
       return
     } catch (error) {
       if (attempt === 2) {

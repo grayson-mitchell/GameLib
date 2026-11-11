@@ -999,14 +999,15 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
 
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const fresh = require('../humbleFlowRegistration') as {
-        registerHumbleFlows: () => void
+        registerHumbleFlows: (deps: unknown) => void
       }
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const freshStub = require('../../platform') as {
         handlerRegistry: Map<string, unknown>
+        interimIpc: unknown
       }
 
-      fresh.registerHumbleFlows()
+      fresh.registerHumbleFlows({ ipc: freshStub.interimIpc })
       expect(freshStub.handlerRegistry.has('humbleRunValidation')).toBe(true)
     })
 
@@ -1017,14 +1018,15 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
 
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const fresh = require('../humbleFlowRegistration') as {
-        registerHumbleFlows: () => void
+        registerHumbleFlows: (deps: unknown) => void
       }
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const freshStub = require('../../platform') as {
         handlerRegistry: Map<string, unknown>
+        interimIpc: unknown
       }
 
-      fresh.registerHumbleFlows()
+      fresh.registerHumbleFlows({ ipc: freshStub.interimIpc })
       expect(freshStub.handlerRegistry.has('humbleRunValidation')).toBe(false)
     })
 
@@ -1040,14 +1042,15 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
 
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const fresh = require('../humbleFlowRegistration') as {
-        registerHumbleFlows: () => void
+        registerHumbleFlows: (deps: unknown) => void
       }
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const freshStub = require('../../platform') as {
         handlerRegistry: Map<string, unknown>
+        interimIpc: unknown
       }
 
-      fresh.registerHumbleFlows()
+      fresh.registerHumbleFlows({ ipc: freshStub.interimIpc })
       expect(freshStub.handlerRegistry.has('humbleRunValidation')).toBe(false)
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('node:sea unavailable'),

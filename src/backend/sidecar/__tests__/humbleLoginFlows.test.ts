@@ -90,7 +90,7 @@ import {
   registerHumbleLoginFlows,
   createRustLoginWindowSeam
 } from '../humbleLoginFlowRegistration'
-import { handlerRegistry, interimIpc, listenerRegistry } from '../../platform'
+import { createIpcRegistry } from '../ipcRegistry'
 import { startRpcServer, requestRustInvoke } from '../sidecarRpc'
 import {
   RUST_HUMBLE_LOGIN_OPEN,
@@ -148,16 +148,17 @@ function startTransport(): { input: PassThrough; frames: Frame[] } {
   const input = new PassThrough()
   const output = new PassThrough()
   const frames = collectFrames(output)
-  startRpcServer(input, output, interimIpc)
+  startRpcServer(input, output, ipc)
   return { input, frames }
 }
 
 // ── Describe 1: Registration kind ──────────────────────────────────────────────────────────────
-// Registered ONCE for this whole file (not per-test) -- `listenerRegistry`/`handlerRegistry` are
-// module-scope maps; calling registerHumbleLoginFlows() more than once would stack a duplicate
+// Registered ONCE for this whole file (not per-test) -- the registry `ipc` is
+// one instance for the file; calling registerHumbleLoginFlows() more than once would stack a duplicate
 // listener onto the same channel array (clipboardFlowRegistration's own test docstring names this
 // hazard).
-registerHumbleLoginFlows()
+const ipc = createIpcRegistry()
+registerHumbleLoginFlows({ ipc })
 
 describe('registration kind — the 4 channels are registered with the correct kind, both directions', () => {
   const HANDLE_CHANNELS = [
@@ -170,16 +171,16 @@ describe('registration kind — the 4 channels are registered with the correct k
   it.each(HANDLE_CHANNELS)(
     'REQ-34.4.1-02/-03/-04 %s is registered as ipcMain.handle, and NOT as ipcMain.on',
     (channel) => {
-      expect(handlerRegistry.has(channel)).toBe(true)
-      expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
+      expect(ipc.handlerMap().has(channel)).toBe(true)
+      expect((ipc.listenerMap().get(channel) ?? []).length).toBe(0)
     }
   )
 
   it.each(SEND_CHANNELS)(
     'REQ-34.4.1-03/-05 %s is registered as ipcMain.on, and NOT as ipcMain.handle',
     (channel) => {
-      expect((listenerRegistry.get(channel) ?? []).length).toBe(1)
-      expect(handlerRegistry.has(channel)).toBe(false)
+      expect((ipc.listenerMap().get(channel) ?? []).length).toBe(1)
+      expect(ipc.handlerMap().has(channel)).toBe(false)
     }
   )
 })

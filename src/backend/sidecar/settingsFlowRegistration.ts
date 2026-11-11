@@ -194,7 +194,7 @@ export function registerSettingsFlows(deps: {
         )
         return
       }
-      applyGameSetting(appName, key, value)
+      applyGameSetting(deps, appName, key, value)
     }
   })
 
