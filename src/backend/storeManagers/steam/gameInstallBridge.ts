@@ -23,7 +23,6 @@ import * as bbLifecycle from './bridgeBottleLifecycle'
 import * as bridgeBottle from './bridgeBottle'
 import { buildFallbackGameSettings } from 'backend/engine/bottlePrimitives'
 import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
-import { SteamUser } from './user'
 import { placeShimForGame } from './bridge/shimGenerate'
 import { resolveBridgeLaunchExe } from './bridge/launchTarget'
 import {
@@ -73,7 +72,7 @@ export async function installBridgeGame(
   // spans provisioning, the download, shim placement and the install-time
   // shared-redist step (acquireAuthenticated may be held across long work;
   // only the idle timer after the last release closes the session).
-  const lease = await SteamUser.acquireAuthenticated({
+  const lease = await steamGame.deps.steamUser.acquireAuthenticated({
     reason: 'user-install',
     guidedAction: 'install',
     appName: steamGame.appId,

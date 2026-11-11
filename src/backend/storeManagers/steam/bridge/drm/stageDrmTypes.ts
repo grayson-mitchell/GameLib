@@ -32,7 +32,12 @@ export type StageDrmBottleInput = {
 /** The command and spawn slices the stage reaches its wine and process work through (66.1 R3). */
 export type StageDrmBottleSlices = Pick<
   ManagerDeps,
-  'commandRunner' | 'spawnAsync' | 'runner' | 'config' | 'steamBottle'
+  | 'commandRunner'
+  | 'spawnAsync'
+  | 'runner'
+  | 'config'
+  | 'steamBottle'
+  | 'steamUser'
 >
 
 export type StageDrmBottleDeps = {

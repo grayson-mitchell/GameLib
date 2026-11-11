@@ -62,6 +62,7 @@ export function readHeadCapped(path: string, maxBytes: number): Buffer | null {
 }
 
 export type WalkCtx = {
+  steamUser: DownloadSteamDepotsOpts['steamUser']
   config: DownloadSteamDepotsOpts['config']
   appId: string
   bottleDir: string
@@ -112,6 +113,7 @@ export async function restoreDrmOriginals(
     let states = shims.map((d) => probeOriginalBackup(ctx.bottleDir, d.path))
     if (states.includes('no-backup')) {
       await (ctx.deps.restoreOriginals ?? restoreBridgeSteamApiOriginals)({
+        steamUser: ctx.steamUser,
         config: ctx.config,
         appId: ctx.appId,
         bottleDir: ctx.bottleDir,

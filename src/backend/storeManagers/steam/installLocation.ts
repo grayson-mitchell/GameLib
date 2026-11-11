@@ -18,8 +18,8 @@ import { isAbsolute, join, relative, resolve } from 'path'
 import type { InstallArgs } from 'common/types'
 import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { SteamUser } from './user'
 import { isPublicOnlyEntry, type AnonymousClientSlice } from './anonymousClient'
+import type { SteamUserSliceDeps } from 'backend/services/types'
 import {
   withTimeout,
   STEAM_PICS_TIMEOUT_MS,
@@ -239,7 +239,7 @@ export function sanitizeInstalldir(
  * hard-fail the whole install over a cosmetic directory-name mismatch.
  */
 async function fetchInstalldir(
-  deps: AnonymousClientSlice,
+  deps: AnonymousClientSlice & SteamUserSliceDeps<'acquireOpenAuthenticated'>,
   appId: string
 ): Promise<string | undefined> {
   if (!NUMERIC_APP_ID.test(appId)) {
@@ -280,7 +280,7 @@ async function fetchInstalldir(
     }
   }
 
-  const open = SteamUser.acquireOpenAuthenticated('user-install')
+  const open = deps.steamUser.acquireOpenAuthenticated('user-install')
   if (open) {
     try {
       const answer = await queryInstalldir(open.client, numericAppId, appId)
@@ -393,7 +393,9 @@ export async function resolveSteamLibraryRoot(
  * from PICS `config.installdir`, sanitized against traversal (T-21-01).
  */
 export async function resolveSteamInstallTarget(
-  deps: SteamLibrariesDeps & AnonymousClientSlice,
+  deps: SteamLibrariesDeps &
+    AnonymousClientSlice &
+    SteamUserSliceDeps<'acquireOpenAuthenticated'>,
   appId: string,
   args: InstallArgs
 ): Promise<SteamInstallTarget> {

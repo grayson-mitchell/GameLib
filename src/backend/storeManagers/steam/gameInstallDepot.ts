@@ -18,7 +18,6 @@ import * as resumeBreadcrumbs from './library/resumeBreadcrumbs'
 import { readAppManifestFlags } from './library/manifestFlags'
 import { isFullyInstalledStateFlags } from './library/installedMap'
 import * as adoption from './macSteamAdoption'
-import { SteamUser } from './user'
 import type { AuthSessionRefusal } from './userTypes'
 import { downloadSteamDepots } from './depot'
 import { ensureSteamClientReady } from './clientSetup'
@@ -228,7 +227,7 @@ export async function runNativeDepotDownload(
     // open session for gated apps) and BEFORE the crash breadcrumb (so a
     // refused install leaves no residue record). Released in finally on
     // every exit path, including abort.
-    const lease = await SteamUser.acquireAuthenticated({
+    const lease = await steamGame.deps.steamUser.acquireAuthenticated({
       reason: 'user-install',
       guidedAction: 'install',
       appName: steamGame.appId,
@@ -517,6 +516,7 @@ export async function runNativeDepotDownloadLeased(
 
   const downloadStart = Date.now()
   const outcome = await downloadSteamDepots(steamGame.appId, {
+    steamUser: steamGame.deps.steamUser,
     config: steamGame.deps.config,
     targetSteamappsDir,
     installdir: resolved.installdir,

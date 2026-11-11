@@ -33,11 +33,11 @@
 
 import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { SteamUser } from '../user'
 import {
   isPublicOnlyEntry,
   type AnonymousClientSlice
 } from '../anonymousClient'
+import type { SteamUserSliceDeps } from 'backend/services/types'
 import { readBridgeVerdict, setBridgeLaunchTarget } from './bridgeVerdict'
 import type { SteamStoresDeps } from '../library/installRoot'
 import { sanitizeInstalldir } from '../installLocation'
@@ -171,7 +171,10 @@ async function readLaunch(
  * no CM connect, so the launch does not wait for DNS to fail.
  */
 export async function resolveBridgeLaunchExe(
-  deps: SteamStoresDeps & BridgeBottleDeps & AnonymousClientSlice,
+  deps: SteamStoresDeps &
+    BridgeBottleDeps &
+    AnonymousClientSlice &
+    SteamUserSliceDeps<'acquireOpenAuthenticated'>,
   appId: string,
   opts?: { offline?: boolean }
 ): Promise<string | undefined> {
@@ -225,7 +228,7 @@ export async function resolveBridgeLaunchExe(
     }
 
     if (!launch) {
-      const open = SteamUser.acquireOpenAuthenticated('user-install')
+      const open = deps.steamUser.acquireOpenAuthenticated('user-install')
       if (open) {
         try {
           const answer = await readLaunch(open.client, appId)

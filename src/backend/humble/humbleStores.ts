@@ -1,10 +1,13 @@
 import type { ManagerDeps, Stores } from 'backend/services/types'
+import type { SteamUser } from 'backend/storeManagers/steam/user'
 
 /** The store families the Humble integration reads (66.1, R1). */
 export interface HumbleStoresDeps {
   stores: Pick<Stores, 'humble' | 'steam'>
   /** The boot-owned sign-in outcome writer (D-66.3-13); read through `humbleSignIn()`. */
   signIn?: ManagerDeps['signIn']
+  /** The boot-owned Steam session (D-66.3-16); read through `humbleSteamUser()`. */
+  steamUser?: Pick<SteamUser, 'isLoggedIn'>
 }
 
 /**
@@ -44,4 +47,15 @@ export const humbleSignIn = (): ManagerDeps['signIn']['outcomes'] => {
     )
   }
   return signIn.outcomes
+}
+
+/** The boot-owned Steam session, for the connectivity gate (D-66.3-16). Throws if bound without `steamUser`. */
+export const humbleSteamUser = (): Pick<SteamUser, 'isLoggedIn'> => {
+  const steamUser = bound().steamUser
+  if (!steamUser) {
+    throw new Error(
+      'Humble Steam session read before bindHumbleStores({ steamUser })'
+    )
+  }
+  return steamUser
 }

@@ -62,7 +62,7 @@ import { LegendaryUser } from 'backend/storeManagers/legendary/user'
 import { GOGUser } from 'backend/storeManagers/gog/user'
 import { NileUser } from 'backend/storeManagers/nile/user'
 import { HumbleUser } from 'backend/humble/user'
-import { SteamUser } from 'backend/storeManagers/steam/user'
+import type { SteamUser } from 'backend/storeManagers/steam/user'
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
 import { SIGN_IN_STORES } from 'common/signInState'
 import type { SignInProbeOutcomes } from './outcomes'
@@ -116,6 +116,8 @@ export interface SignInProbeDeps {
   >
   stores: Pick<Stores, SignInStore>
   appInfo: Pick<ManagerDeps['appInfo'], 'version'>
+  /** The boot-owned Steam session; the probe reads the keyring slot only, never the CM (D-66.3-16). */
+  steamUser: Pick<SteamUser, 'isLoggedIn' | 'probeCredentialPresence'>
   onlineMonitor: Pick<
     ManagerDeps['onlineMonitor'],
     'isOnline' | 'onConnectivityChange'
@@ -159,8 +161,8 @@ export function createSignInProbePassDeps(
       },
       // D-14, D-21: credential presence only -- never opens the Steam CM.
       steam: {
-        isLoggedIn: () => Boolean(SteamUser.isLoggedIn()),
-        probe: () => SteamUser.probeCredentialPresence()
+        isLoggedIn: () => Boolean(deps.steamUser.isLoggedIn()),
+        probe: () => deps.steamUser.probeCredentialPresence()
       }
     }
   }

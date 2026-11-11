@@ -4,14 +4,17 @@ import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
 import type { SteamStoresDeps } from './library/installRoot'
 import { getTokenStore } from './tokenStore'
 import { withTimeout } from './withTimeout'
-import { SteamUser } from './user'
 import { QR_LOGIN_TIMEOUT_MS, SIGN_IN_PERSONA_TIMEOUT_MS } from './userTypes'
 import type { SteamSignInState } from './userSignInState'
-import type { SteamSessionServices } from 'backend/services/types'
+import type {
+  SteamSessionServices,
+  SteamUserSliceDeps
+} from 'backend/services/types'
 
 /** What the Steam sign-in flows read: the stores, the sign-in outcome writer and the boot-owned session state. */
 export type UserSignInDeps = SteamStoresDeps &
-  SignInNoteDeps & {
+  SignInNoteDeps &
+  SteamUserSliceDeps<'acquireAuthenticatedWithToken'> & {
     steamSession: { signIn: SteamSessionServices['signIn'] }
   }
 
@@ -56,7 +59,7 @@ async function resolveSignInProfile(
   } catch {
     // steamID is derived from the token; absence is not fatal here
   }
-  const lease = await SteamUser.acquireAuthenticatedWithToken(
+  const lease = await deps.steamUser.acquireAuthenticatedWithToken(
     { reason: 'login' },
     session.refreshToken
   )

@@ -193,7 +193,14 @@ export type SteamUserSlice = Pick<
   | 'getPersistedSteamId64'
   | 'isLoggedIn'
   | 'isSteamClientInstalled'
+  | 'getUserDetails'
+  | 'logout'
 >
+
+/** What a Steam function reads from the boot-owned SteamUser: exactly the members it calls. */
+export interface SteamUserSliceDeps<K extends keyof SteamUserSlice> {
+  steamUser: Pick<SteamUserSlice, K>
+}
 
 /**
  * The boot-owned sign-in probe state (D-66.3-13): one epoch fence shared by every store's user

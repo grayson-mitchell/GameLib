@@ -7,14 +7,16 @@
 
 import { basename, resolve } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { SteamUser } from '../user'
 import { CdnAuthTokenCache } from '../depot/cdnAuth'
 import { getContentServerHosts } from '../depot/contentServers'
 import type {
   DownloadSelectedDepotFilesOpts,
   DownloadSelectedDepotFilesResult
 } from '../depot/outcome'
-import type { DownloadSteamDepotsOpts } from '../depot/planModel'
+import type {
+  DepotSteamUser,
+  DownloadSteamDepotsOpts
+} from '../depot/planModel'
 import {
   assertNumericAppId,
   buildDepotRefs,
@@ -34,13 +36,15 @@ export type PrescreenResult = 'none' | 'x86' | 'x64' | 'both' | 'unknown'
 /** The two steam_api basenames the bridge prescreen looks for (D-51-06). */
 const STEAM_API_PATTERNS = ['steam_api.dll', 'steam_api64.dll']
 
-type Lease = Awaited<ReturnType<typeof SteamUser.acquireAuthenticated>>
+type AcquireAuthenticated = DepotSteamUser['acquireAuthenticated']
+type Lease = Awaited<ReturnType<AcquireAuthenticated>>
 
 async function acquireOrThrow(
+  steamUser: Pick<DepotSteamUser, 'acquireAuthenticated'>,
   appId: string,
-  reason: Parameters<typeof SteamUser.acquireAuthenticated>[0]['reason']
+  reason: Parameters<AcquireAuthenticated>[0]['reason']
 ): Promise<Extract<Lease, { ok: true }>> {
-  const lease = await SteamUser.acquireAuthenticated({
+  const lease = await steamUser.acquireAuthenticated({
     reason,
     guidedAction: 'install',
     appName: appId
@@ -66,10 +70,10 @@ export async function prescreenBridgeDepotsRust(
   try {
     assertNumericAppId(appId)
     throwIfAborted(opts.signal)
-    lease = await acquireOrThrow(appId, 'prescreen')
+    lease = await acquireOrThrow(opts.steamUser, appId, 'prescreen')
     const refs = await buildDepotRefs(appId, { ...opts, os: 'windows' })
     if (!refs.depots.length) return 'none'
-    const client = getDepotClient()
+    const client = getDepotClient(opts.steamUser)
     const hosts = await getContentServerHosts(client, Number(appId))
     throwIfAborted(opts.signal)
     const tokenCache = new CdnAuthTokenCache(client, Number(appId))
@@ -149,13 +153,13 @@ export async function downloadSelectedDepotFilesRust(
   let lease: Lease | null = null
   try {
     assertNumericAppId(appId)
-    lease = await acquireOrThrow(appId, 'original-restore')
+    lease = await acquireOrThrow(opts.steamUser, appId, 'original-restore')
     throwIfAborted(opts.signal)
     const refs = await buildDepotRefs(appId, opts)
     if (!refs.depots.length || opts.selectPaths.length === 0) {
       return { status: 'done', files: [] }
     }
-    const client = getDepotClient()
+    const client = getDepotClient(opts.steamUser)
     const hosts = await getContentServerHosts(client, Number(appId))
     throwIfAborted(opts.signal)
     const tokenCache = new CdnAuthTokenCache(client, Number(appId))
@@ -206,6 +210,7 @@ export async function downloadSelectedDepotFilesRust(
 }
 
 export interface ResumeVerifyInput {
+  steamUser: DepotSteamUser
   config: DownloadSteamDepotsOpts['config']
   targetSteamappsDir: string
   /** Already sanitized by the caller. */
@@ -232,9 +237,10 @@ export async function resumeVerifyRust(
   input: ResumeVerifyInput
 ): Promise<ResumeVerifyResult> {
   assertNumericAppId(appId)
-  const lease = await acquireOrThrow(appId, 'user-install')
+  const lease = await acquireOrThrow(input.steamUser, appId, 'user-install')
   try {
     const opts: DownloadSteamDepotsOpts = {
+      steamUser: input.steamUser,
       config: input.config,
       targetSteamappsDir: input.targetSteamappsDir,
       installdir: input.installdir,
@@ -244,7 +250,7 @@ export async function resumeVerifyRust(
     // Nothing to verify: let the caller write the honest-empty finalize instead.
     if (!refs.depots.length)
       throw new Error('resume verify: no depots selected')
-    const client = getDepotClient()
+    const client = getDepotClient(input.steamUser)
     const hosts = await getContentServerHosts(client, Number(appId))
     const tokenCache = new CdnAuthTokenCache(client, Number(appId))
     const finalize: RustFinalizeSpec = {
@@ -252,7 +258,7 @@ export async function resumeVerifyRust(
       installdir: input.installdir,
       name: input.name,
       buildid: refs.buildid === '' ? null : refs.buildid,
-      lastOwner: SteamUser.getPersistedSteamId64() ?? null,
+      lastOwner: input.steamUser.getPersistedSteamId64() ?? null,
       allowFullOwnership: true,
       betaKey: refs.branch === 'public' ? undefined : refs.branch
     }

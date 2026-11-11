@@ -28,7 +28,7 @@ import {
   type ExpirationAlertDeps
 } from './expirationAlerts'
 import type { AuditRecord, HumbleKeyInternal } from './stores'
-import { humbleStores, steamStores } from './humbleStores'
+import { humbleStores, humbleSteamUser, steamStores } from './humbleStores'
 import {
   HUMBLE_SYNC_CONCURRENCY,
   HUMBLE_COOLDOWN_MS,
@@ -36,7 +36,6 @@ import {
 } from './constants'
 import { currentSyncGeneration } from './syncFence'
 import { HumbleUser } from './user'
-import { SteamUser } from 'backend/storeManagers/steam/user'
 import { GameInfo } from 'common/types'
 
 // Phase 14 guided claim flow: composite-key discipline (Pattern 3) — every
@@ -138,7 +137,7 @@ interface OrderFetchResult {
  * the gate is open; it is only read from the store when logged in.
  */
 function getSteamGate(): { open: boolean; steamGames: GameInfo[] } {
-  if (!SteamUser.isLoggedIn()) {
+  if (!humbleSteamUser().isLoggedIn()) {
     return { open: false, steamGames: [] }
   }
   const steamGames = steamStores().steamLibraryStore.get('games', [])

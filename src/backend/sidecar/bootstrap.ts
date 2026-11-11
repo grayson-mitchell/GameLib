@@ -2024,10 +2024,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'secret-stores',
       run: (ctx, _io, state) => {
-        const { stores, host, onlineMonitor, signInProbe } =
+        const { stores, host, onlineMonitor, signInProbe, steamUser } =
           requireServices(state)
         bindSteamGridDbSecretDeps({ stores })
-        bindHumbleStores({ stores, signIn: signInProbe })
+        bindHumbleStores({ stores, signIn: signInProbe, steamUser })
         registerDxmtListeners({
           stores,
           runner: ctx.runner,
@@ -2385,6 +2385,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           libraryManagers: services.managers.library,
           stores: services.stores,
           appInfo: services.appInfo,
+          steamUser: services.steamUser,
           onlineMonitor: services.onlineMonitor
         })
       }

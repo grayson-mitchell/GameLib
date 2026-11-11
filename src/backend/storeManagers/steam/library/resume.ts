@@ -105,7 +105,7 @@ async function locateDownloadingTarget(
  * dispatchToBottledSteam, so no silent Steam-in-CrossOver auto-open is introduced here.
  */
 async function buildResumeFinalizeOpts(
-  config: ManagerDeps['config'],
+  deps: Pick<ManagerDeps, 'config' | 'steamUser'>,
   appId: string,
   target: { targetSteamappsDir: string; installdir: string; name: string }
 ): Promise<FinalizeToSteamOpts | null> {
@@ -149,6 +149,7 @@ async function buildResumeFinalizeOpts(
       LogPrefix.Steam
     )
     return {
+      steamUser: deps.steamUser,
       targetSteamappsDir: target.targetSteamappsDir,
       installdir: fallbackInstalldirFor(appId),
       name: target.name,
@@ -158,7 +159,8 @@ async function buildResumeFinalizeOpts(
 
   try {
     const v = await resumeVerifyRust(appId, {
-      config,
+      steamUser: deps.steamUser,
+      config: deps.config,
       targetSteamappsDir: target.targetSteamappsDir,
       installdir,
       name: target.name,
@@ -179,6 +181,7 @@ async function buildResumeFinalizeOpts(
       LogPrefix.Steam
     )
     return {
+      steamUser: deps.steamUser,
       targetSteamappsDir: target.targetSteamappsDir,
       installdir,
       name: target.name,
@@ -226,11 +229,7 @@ export async function resumeInterruptedSteamInstall(
     try {
       const target = await locateDownloadingTarget(deps, appId)
       if (target) {
-        const finalizeOpts = await buildResumeFinalizeOpts(
-          deps.config,
-          appId,
-          target
-        )
+        const finalizeOpts = await buildResumeFinalizeOpts(deps, appId, target)
         // null: the Rust verify_only job already wrote the ACF.
         if (finalizeOpts) await finalizeToSteam(appId, finalizeOpts)
       }

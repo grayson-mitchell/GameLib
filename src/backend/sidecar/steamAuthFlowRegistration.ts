@@ -92,7 +92,7 @@
  *     `{ store: 'steam', outcome: 'error', message: 'invalid-request' }`
  *     WITHOUT reaching `SteamUser.redeemKey` — the renderer payload is
  *     untrusted at runtime despite its type contract. Only a valid payload
- *     calls `SteamUser.redeemKey(store, key)`. Never logs the key value on
+ *     calls `redeemKey(deps, store, key)`. Never logs the key value on
  *     either path.
  *   - `getSteamInstallSize` -> `getSteamInstallSize(appId)` (`main.ts:923-925`,
  *     imported from `steam/games.ts`, not `steam/library.ts`).
@@ -124,7 +124,6 @@ import {
   managerDepsFromServices,
   type ManagerDepsSource
 } from '../services/managerDeps'
-import { SteamUser } from '../storeManagers/steam/user'
 import {
   pollCredentialLogin,
   pollQRLogin,
@@ -166,7 +165,7 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   const { steamSyncStore, steamBottleConfigStore } = deps.stores.steam
   const managerDeps = () => managerDepsFromServices(deps)
   deps.ipc.handle('checkSteamInstalled', async () => {
-    return SteamUser.isSteamClientInstalled()
+    return deps.steamUser.isSteamClientInstalled()
   })
 
   deps.ipc.handle('steamStartQR', async () => {
@@ -202,7 +201,7 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
 
   // Source: main.ts:918,922 — session/identity trio (REQ-34.4-02).
   deps.ipc.handle('getSteamUserInfo', async () => {
-    return SteamUser.getUserDetails()
+    return deps.steamUser.getUserDetails()
   })
 
   deps.ipc.handle('getSteamSyncedAt', async () => {
@@ -218,9 +217,11 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   // can crash the sidecar). Mirrors `humble/ipc_handler.ts:121-125`'s
   // `humbleDisconnect` guard shape.
   deps.ipc.on('logoutSteam', () => {
-    SteamUser.logout().catch((error) =>
-      console.warn('[steamAuthFlowRegistration] logoutSteam failed:', error)
-    )
+    deps.steamUser
+      .logout()
+      .catch((error) =>
+        console.warn('[steamAuthFlowRegistration] logoutSteam failed:', error)
+      )
   })
 
   // Source: main.ts:906-917 — WR-03's trust-boundary validation for a
@@ -243,7 +244,7 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
       ) {
         return { store: 'steam', outcome: 'error', message: 'invalid-request' }
       }
-      return redeemKey('steam', key)
+      return redeemKey(managerDeps(), 'steam', key)
     }
   )
 

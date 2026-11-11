@@ -11,7 +11,6 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import i18next from 'i18next'
-import { SteamUser } from '../user'
 import SteamGame from '../games'
 import { scanDownloadingAppIds } from './acfState'
 import {
@@ -187,7 +186,7 @@ export default class SteamLibraryManager implements LibraryManager {
     // the deferral's log line 'startup' rather than an empty label — the gate
     // itself lives at the top of refresh() below, not here; this call never
     // unlocks anything (noteSteamAuthTrigger('startup') is never deliberate).
-    if (SteamUser.isLoggedIn()) {
+    if (this.deps.steamUser.isLoggedIn()) {
       this.deps.steamSession.authTrigger.noteSteamAuthTrigger('startup')
       this.deps.onlineMonitor.runOnceWhenOnline(() => this.refresh())
     }

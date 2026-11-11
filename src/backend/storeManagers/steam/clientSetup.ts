@@ -34,7 +34,6 @@ import type { ManagerDeps } from 'backend/services/types'
 import type { SpawnDeps } from './provisionBottle'
 import { isMac, isLinux } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../ipc'
-import { SteamUser } from './user'
 import { downloadSetupPayload } from './setupDownloads'
 import {
   STEAM_DOWNLOAD_URL,
@@ -116,7 +115,7 @@ function hasLibraryFoldersVdf(
  * entry point without a second, duplicated guard in main.ts.
  */
 export async function ensureSteamClientReady(
-  deps: Pick<ManagerDeps, 'config'>,
+  deps: Pick<ManagerDeps, 'config' | 'steamUser'>,
   appId: string
 ): Promise<EnsureSteamClientReadyResult> {
   if (!NUMERIC_APP_ID.test(appId)) {
@@ -131,7 +130,7 @@ export async function ensureSteamClientReady(
     }
   }
 
-  if (!SteamUser.isSteamClientInstalled()) {
+  if (!deps.steamUser.isSteamClientInstalled()) {
     logInfo(
       `ensureSteamClientReady: Steam client not installed — requesting guided install for appId ${appId} (D-10)`,
       LogPrefix.Steam

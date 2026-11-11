@@ -3,7 +3,6 @@
 
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { prescreenBridgeDepotsRust } from '../depotRust/secondary'
-import { SteamUser } from '../user'
 import { chooseInstallBranch, resolveUserBetaKey } from './betaBranch'
 import {
   selectAllDepots,
@@ -23,6 +22,7 @@ import {
 } from '../withTimeout'
 import {
   NUMERIC_ID,
+  type DepotSteamUser,
   type DownloadSteamDepotsOpts,
   type AppCommonName,
   type SteamUserDepotClient
@@ -65,8 +65,10 @@ export function throwIfAborted(signal?: AbortSignal): void {
  *  authenticated lease from SteamUser.acquireAuthenticated() (the depotRust entry points and
  *  downloadSharedRedistDepots), and the lease's
  *  client is the one SteamUser.getClient() returns while it is held. */
-export function getDepotClient(): SteamUserDepotClient {
-  const client = SteamUser.getClient()
+export function getDepotClient(
+  steamUser: Pick<DepotSteamUser, 'getClient'>
+): SteamUserDepotClient {
+  const client = steamUser.getClient()
   if (!client) {
     throw new Error(
       'downloadSteamDepots: no authenticated steam-user client available after acquireAuthenticated()'
@@ -124,6 +126,7 @@ function delay(ms: number, signal?: AbortSignal): Promise<void> {
  * cancel is never silently retried).
  */
 export async function withPlanBuildRetry<T>(
+  steamUser: Pick<DepotSteamUser, 'getClient' | 'acquireAuthenticated'>,
   signal: AbortSignal | undefined,
   step: (client: SteamUserDepotClient) => Promise<T>,
   // [Timing] debug/steam-install-slow-start: optional label for temporary
@@ -137,7 +140,7 @@ export async function withPlanBuildRetry<T>(
     throwIfAborted(signal)
     const attemptStart = Date.now()
     try {
-      const result = await step(getDepotClient())
+      const result = await step(getDepotClient(steamUser))
       if (label) {
         logInfo(
           `[Timing] buildDepotRefs/${label}: attempt ${attempt} succeeded in ${Date.now() - attemptStart}ms (total ${Date.now() - overallStart}ms)`,
@@ -179,7 +182,7 @@ export async function withPlanBuildRetry<T>(
       // Phase 54: the reconnect is a wrapped cold connect owned by SteamUser;
       // the outer lease (buildDepotRefs' caller) keeps the session alive, so
       // this inner lease is released at once.
-      const retryLease = await SteamUser.acquireAuthenticated({
+      const retryLease = await steamUser.acquireAuthenticated({
         reason: 'plan-retry'
       })
       if (retryLease.ok) retryLease.release()
@@ -379,11 +382,14 @@ export interface DepotRefsResult {
  * Precondition: the caller holds an authenticated lease (every depotRust entry point does).
  */
 /** SteamID64 and Steam root for the localconfig.vdf leg; steamRoot only when there is an id. */
-function resolveSteamIdentity(config: DownloadSteamDepotsOpts['config']): {
+function resolveSteamIdentity(
+  steamUser: Pick<DepotSteamUser, 'getPersistedSteamId64'>,
+  config: DownloadSteamDepotsOpts['config']
+): {
   steamId64?: string
   steamRoot?: string
 } {
-  const steamId64 = SteamUser.getPersistedSteamId64()
+  const steamId64 = steamUser.getPersistedSteamId64()
   if (!steamId64) return {}
   try {
     const { defaultSteamPath } = config.getSettings()
@@ -403,6 +409,7 @@ export async function buildDepotRefs(
   // withPlanBuildRetry — bounded reconnect+retry instead of a single
   // ensureConnected() up front and no recovery from a mid-loop CM drop.
   const appinfo = await withPlanBuildRetry(
+    opts.steamUser,
     opts.signal,
     (client) => fetchAppInfo(client, numericAppId),
     'fetchAppInfo'
@@ -418,7 +425,7 @@ export async function buildDepotRefs(
     resolveUserBetaKey({
       appId,
       steamappsDir: opts.targetSteamappsDir,
-      ...resolveSteamIdentity(opts.config)
+      ...resolveSteamIdentity(opts.steamUser, opts.config)
     })
   const branch = chooseInstallBranch(appinfo, requested, appId)
   // SPIKE 003 (throwaway): the chosen branch's current buildid, for the StateFlags=4
@@ -434,12 +441,14 @@ export async function buildDepotRefs(
     ).depots?.branches?.[branch]?.buildid ?? ''
   )
   const owned = await withPlanBuildRetry(
+    opts.steamUser,
     opts.signal,
     (client) => getOwnedSets(client),
     'getOwnedSets'
   )
   throwIfAborted(opts.signal)
   const dlcInfos = await withPlanBuildRetry(
+    opts.steamUser,
     opts.signal,
     (client) => fetchDlcInfos(client, appinfo),
     'fetchDlcInfos'
@@ -468,6 +477,7 @@ export async function buildDepotRefs(
     let key: Buffer
     try {
       key = await withPlanBuildRetry(
+        opts.steamUser,
         opts.signal,
         (client) => fetchDepotKey(client, descriptor),
         `fetchDepotKey:${descriptor.id}`

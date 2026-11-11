@@ -13,7 +13,6 @@ import {
   type InstallScriptEntry,
   type SharedRedistKind
 } from '../bridge/sharedRedists'
-import { SteamUser } from '../user'
 import { sanitizeInstalldir } from '../installLocation'
 import { CdnAuthTokenCache } from './cdnAuth'
 import {
@@ -24,6 +23,7 @@ import {
   fetchDepotKey,
   type DepotRefEntry
 } from './plan'
+import type { DepotSteamUser } from './planModel'
 import { resolveContainedPath } from '../depotPaths'
 import {
   downloadSharedRedistDepotsRust,
@@ -59,6 +59,8 @@ export interface SharedRedistDepot {
 }
 
 export interface DownloadSharedRedistOpts {
+  /** The boot-owned authenticated Steam session (D-66.3-16). */
+  steamUser: DepotSteamUser
   /** `<dir>/common/Steamworks Shared/...` is written under this directory. */
   cacheSteamappsDir: string
   /** Trusted-profile opt-ins; widens the policy for depots the game declares only. */
@@ -229,7 +231,7 @@ export async function downloadSharedRedistDepots(
 
   let release: (() => void) | null = null
   if (opts.allowLogon) {
-    const lease = await SteamUser.acquireAuthenticated({
+    const lease = await opts.steamUser.acquireAuthenticated({
       reason: 'shared-redist',
       guidedAction: 'install',
       appName: gameAppId
@@ -237,7 +239,7 @@ export async function downloadSharedRedistDepots(
     if (lease.ok) release = lease.release
   } else {
     release =
-      SteamUser.acquireOpenAuthenticated('shared-redist')?.release ?? null
+      opts.steamUser.acquireOpenAuthenticated('shared-redist')?.release ?? null
   }
   if (!release) {
     logInfo(
@@ -260,6 +262,7 @@ async function downloadSharedRedistDepotsLeased(
   opts: DownloadSharedRedistOpts
 ): Promise<SharedRedistDownloadResult> {
   const gameInfo = await withPlanBuildRetry(
+    opts.steamUser,
     opts.signal,
     (c) => fetchAppInfo(c, Number(gameAppId)),
     `sharedRedist game appinfo ${gameAppId}`
@@ -270,6 +273,7 @@ async function downloadSharedRedistDepotsLeased(
   }
 
   const redistInfo = await withPlanBuildRetry(
+    opts.steamUser,
     opts.signal,
     (c) => fetchAppInfo(c, Number(STEAM_COMMON_REDIST_APP_ID)),
     'sharedRedist 228980 appinfo'
@@ -290,7 +294,7 @@ async function downloadSharedRedistDepotsLeased(
   let hostInfo: SharedRedistHostInfo | undefined
   const getHostInfo = async (): Promise<SharedRedistHostInfo> => {
     if (!hostInfo) {
-      const client = getDepotClient()
+      const client = getDepotClient(opts.steamUser)
       const { hosts, weightedLoads, hostMeta } = await getContentServerHosts(
         client,
         Number(STEAM_COMMON_REDIST_APP_ID)
@@ -328,6 +332,7 @@ async function downloadSharedRedistDepotsLeased(
       }
 
       const key = await withPlanBuildRetry(
+        opts.steamUser,
         opts.signal,
         (c) =>
           fetchDepotKey(c, {
@@ -345,6 +350,7 @@ async function downloadSharedRedistDepotsLeased(
         ownerAppId: STEAM_COMMON_REDIST_APP_ID
       }
       const job: SharedRedistJobArgs = {
+        steamUser: opts.steamUser,
         appId: STEAM_COMMON_REDIST_APP_ID,
         ref,
         cacheSteamappsDir: opts.cacheSteamappsDir,

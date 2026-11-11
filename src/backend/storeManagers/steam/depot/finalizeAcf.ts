@@ -6,12 +6,11 @@
 import { logInfo, LogPrefix } from 'backend/logger'
 import { readdir, stat } from 'node:fs/promises'
 import { resolve, join } from 'path'
-import { SteamUser } from '../user'
 import { writeAppManifest } from './appManifest'
 import { assertNumericAppId } from './plan'
 import { readAppManifestFlags } from '../library/manifestFlags'
 import { isFullyInstalledStateFlags } from '../library/installedMap'
-import { type DepotDownloadFailure } from './planModel'
+import { type DepotDownloadFailure, type DepotSteamUser } from './planModel'
 
 // ─────────────────────────────────────────────────────────────────────────
 // Phase 21 (21-06)/Phase 23 (23-02): finalizeToSteam — the SINGLE recovery
@@ -64,6 +63,8 @@ interface FinalizeDepotEntry {
 }
 
 export interface FinalizeToSteamOpts {
+  /** The boot-owned SteamUser: the persisted SteamID64 becomes LastOwner (D-66.3-16). */
+  steamUser: Pick<DepotSteamUser, 'getPersistedSteamId64'>
   targetSteamappsDir: string
   installdir: string
   name: string
@@ -158,7 +159,7 @@ export async function finalizeToSteam(
   // not the source. LastOwner is a STRING (64-bit), never a JS Number
   // (T-21-04). Falls back to manifest.ts's own "0" default when nothing is
   // persisted.
-  const lastOwner = SteamUser.getPersistedSteamId64()
+  const lastOwner = opts.steamUser.getPersistedSteamId64()
 
   // Phase 23 (23-02, D-01/D-02): the single completeness-gate call site.
   // buildid is ONLY ever the caller-supplied opts.buildid (plan-time PICS

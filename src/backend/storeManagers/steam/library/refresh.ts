@@ -3,7 +3,6 @@ import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import { getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
-import { SteamUser } from '../user'
 import type { ManagerDeps } from 'backend/services/types'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
@@ -55,9 +54,9 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
   }
 
   let release: () => void
-  let client: NonNullable<ReturnType<typeof SteamUser.getClient>>
+  let client: NonNullable<ReturnType<ManagerDeps['steamUser']['getClient']>>
   if (grant) {
-    const lease = await SteamUser.acquireAuthenticated({
+    const lease = await deps.steamUser.acquireAuthenticated({
       reason: grant,
       guidedAction: 'refresh'
     })
@@ -75,7 +74,9 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
       // steam-sync-false-failed-banner: "not ready" is not one condition. A
       // terminal CM rejection (AccessDenied) schedules no retry; name it.
       const rejection =
-        lease.reason === 'logon-rejected' ? SteamUser.getLogonFailure() : null
+        lease.reason === 'logon-rejected'
+          ? deps.steamUser.getLogonFailure()
+          : null
       logWarning(
         rejection
           ? `Steam rejected the stored-credential logon (${rejection.message}), skipping library refresh`
@@ -95,7 +96,7 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
     release = lease.release
     client = lease.client
   } else {
-    const open = SteamUser.acquireOpenAuthenticated('user-refresh')
+    const open = deps.steamUser.acquireOpenAuthenticated('user-refresh')
     if (!open) return refuseDeferred()
     release = open.release
     client = open.client
@@ -125,7 +126,7 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
 
 async function syncOwnedLibrary(
   deps: ManagerDeps,
-  client: NonNullable<ReturnType<typeof SteamUser.getClient>>
+  client: NonNullable<ReturnType<ManagerDeps['steamUser']['getClient']>>
 ): Promise<ExecResult | null> {
   const { steamLibraryStore, steamMetadataStore, steamSyncStore } =
     deps.stores.steam

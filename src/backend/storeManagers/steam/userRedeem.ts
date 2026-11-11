@@ -1,7 +1,7 @@
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import SteamUserLib from 'steam-user'
 import type { RedeemKeyOutcome, RedeemKeyResult } from 'common/types/steam'
-import { SteamUser } from './user'
+import type { SteamUserSliceDeps } from 'backend/services/types'
 
 // ── REQ-26-02/04/05/06: Redeem a single Steam key ──────────────────────────
 
@@ -20,10 +20,11 @@ import { SteamUser } from './user'
  * callers default it to 'steam'; only 'steam' is wired today.
  */
 export async function redeemKey(
+  deps: SteamUserSliceDeps<'acquireAuthenticated'>,
   store: 'steam',
   key: string
 ): Promise<RedeemKeyResult> {
-  const lease = await SteamUser.acquireAuthenticated({
+  const lease = await deps.steamUser.acquireAuthenticated({
     reason: 'redeem',
     guidedAction: 'redeem'
   })

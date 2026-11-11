@@ -23,7 +23,6 @@ import * as bottle from './bottle'
 import * as bridgeBottle from './bridgeBottle'
 import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
 import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
-import { SteamUser } from './user'
 import { prescreenBridgeDepots } from './depot'
 import { ensureSteamClientReady } from './clientSetup'
 import { resolveSteamLibraryRoot } from './installLocation'
@@ -231,18 +230,20 @@ export async function install(
       const bridgeBottleName = bridgeBottle.bridgeBottleNameFor(steamGame.appId)
       // Phase 54: a short lease for the screen alone, so a refusal here
       // stops before a second wrap attempt in installBridgeGame.
-      const prescreenLease = await SteamUser.acquireAuthenticated({
-        reason: 'prescreen',
-        guidedAction: 'install',
-        appName: steamGame.appId,
-        installPath: args.path,
-        forceWindowsViaBottle: args.steamForceWindowsViaBottle
-      })
+      const prescreenLease =
+        await steamGame.deps.steamUser.acquireAuthenticated({
+          reason: 'prescreen',
+          guidedAction: 'install',
+          appName: steamGame.appId,
+          installPath: args.path,
+          forceWindowsViaBottle: args.steamForceWindowsViaBottle
+        })
       if (!prescreenLease.ok) {
         return installResultForRefusal(steamGame, prescreenLease.reason)
       }
       try {
         const prescreenResult = await prescreenBridgeDepots(steamGame.appId, {
+          steamUser: steamGame.deps.steamUser,
           config: steamGame.deps.config,
           targetSteamappsDir: bridgeBottleName
             ? bottle.getBottleSteamappsDir(bridgeBottleName)

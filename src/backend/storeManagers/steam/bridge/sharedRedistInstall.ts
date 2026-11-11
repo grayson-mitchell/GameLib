@@ -322,7 +322,12 @@ async function writeLedger(
 /** What the shared redist install reaches through slices (66.1 R3). */
 export type RedistDeps = Pick<
   ManagerDeps,
-  'commandRunner' | 'spawnAsync' | 'runner' | 'config' | 'steamBottle'
+  | 'commandRunner'
+  | 'spawnAsync'
+  | 'runner'
+  | 'config'
+  | 'steamBottle'
+  | 'steamUser'
 >
 type RunWineCommand = RedistDeps['commandRunner']['runWineCommand']
 
@@ -606,6 +611,7 @@ async function run(
   const { downloadSharedRedistDepots } = await import('../depot')
 
   const result = await downloadSharedRedistDepots(appId, {
+    steamUser: deps.steamUser,
     cacheSteamappsDir: join(steamSupportPath, 'sharedRedist', 'steamapps'),
     optInDepotIds: optIn,
     signal,

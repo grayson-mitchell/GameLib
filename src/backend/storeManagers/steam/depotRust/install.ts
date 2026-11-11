@@ -9,12 +9,14 @@
 
 import { join, resolve } from 'path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { SteamUser } from '../user'
 import { CdnAuthTokenCache } from '../depot/cdnAuth'
 import { getContentServerHosts } from '../depot/contentServers'
 import { finalizeToSteam } from '../depot/finalizeAcf'
 import { classifyDepotError } from '../depotErrors'
-import type { DownloadSteamDepotsOpts } from '../depot/planModel'
+import type {
+  DepotSteamUser,
+  DownloadSteamDepotsOpts
+} from '../depot/planModel'
 import {
   assertNumericAppId,
   buildDepotRefs,
@@ -124,12 +126,13 @@ export async function downloadSteamDepotsRust(
   opts: DownloadSteamDepotsOpts
 ): Promise<DepotDownloadOutcome> {
   let skippedDepots: string[] | undefined
-  let lease: Awaited<ReturnType<typeof SteamUser.acquireAuthenticated>> | null =
-    null
+  let lease: Awaited<
+    ReturnType<DepotSteamUser['acquireAuthenticated']>
+  > | null = null
   try {
     assertNumericAppId(appId)
     throwIfAborted(opts.signal)
-    lease = await SteamUser.acquireAuthenticated({
+    lease = await opts.steamUser.acquireAuthenticated({
       reason: opts.sessionReason ?? 'user-install',
       guidedAction: 'install',
       appName: appId
@@ -154,6 +157,7 @@ export async function downloadSteamDepotsRust(
       // Honest empty finalize: a dangling prior partial is never left unresolved, and there is
       // no download stage to run in Rust.
       await finalizeToSteam(appId, {
+        steamUser: opts.steamUser,
         targetSteamappsDir: opts.targetSteamappsDir,
         installdir: opts.installdir,
         name: refs.name,
@@ -167,7 +171,7 @@ export async function downloadSteamDepotsRust(
         : { status: 'done', skippedDepots }
     }
 
-    const client = getDepotClient()
+    const client = getDepotClient(opts.steamUser)
     const hosts: ContentServerHosts = await getContentServerHosts(
       client,
       Number(appId)
@@ -184,7 +188,7 @@ export async function downloadSteamDepotsRust(
       installdir: opts.installdir,
       name: refs.name,
       buildid: refs.buildid === '' ? null : refs.buildid,
-      lastOwner: SteamUser.getPersistedSteamId64() ?? null,
+      lastOwner: opts.steamUser.getPersistedSteamId64() ?? null,
       allowFullOwnership: opts.signal?.aborted !== true,
       betaKey: refs.branch === 'public' ? undefined : refs.branch
     }
@@ -249,6 +253,7 @@ export interface SharedRedistHostInfo extends ContentServerHosts {
 
 /** One shared redist depot under the shared cache root (D-12). */
 export interface SharedRedistJobArgs {
+  steamUser: Pick<DepotSteamUser, 'getClient'>
   appId: string
   ref: DepotRefEntry
   cacheSteamappsDir: string
@@ -278,7 +283,7 @@ async function runSharedRedistJob(
     signal: args.signal,
     tokenCache: args.host.cdnAuth,
     refreshRequestCode: requestCodeRefresher(
-      getDepotClient(),
+      getDepotClient(args.steamUser),
       new Map([[args.ref.depotId, args.appId]]),
       args.appId
     ),
@@ -323,14 +328,14 @@ export async function verifySharedRedistDepotRust(
  * Steam refused the manifest (EResult 40), so the caller files the depot under `failed`.
  */
 export async function sharedRedistInstallscriptsRust(
-  args: Pick<SharedRedistJobArgs, 'appId' | 'ref' | 'host'>
+  args: Pick<SharedRedistJobArgs, 'steamUser' | 'appId' | 'ref' | 'host'>
 ): Promise<string[]> {
   // The crate asks for CDN tokens under this host job id (73-12).
   const dispose = registerActiveDepotJob(`summary-${args.appId}`, {
     appId: args.appId,
     tokenCache: args.host.cdnAuth,
     refreshRequestCode: requestCodeRefresher(
-      getDepotClient(),
+      getDepotClient(args.steamUser),
       new Map([[args.ref.depotId, args.appId]]),
       args.appId
     ),
