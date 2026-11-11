@@ -39,6 +39,8 @@ import type {
 import type { AnonymousClient } from 'backend/storeManagers/steam/anonymousClient'
 import type { SteamUser } from 'backend/storeManagers/steam/user'
 import type { SteamGridDbSecretStore } from 'backend/steamgrid/secretStore'
+import type { HumbleServices } from 'backend/humble'
+import type { LoginWindowSeamSlot } from 'backend/humble/loginWindowSeam'
 import type { SteamBottle } from 'backend/storeManagers/steam/bottle'
 import type { SteamSignInState } from 'backend/storeManagers/steam/userSignInState'
 import type { SteamAuthTriggerState } from 'backend/storeManagers/steam/authTrigger'
@@ -172,6 +174,8 @@ export interface ManagerDeps {
   anonymousClient: Pick<AnonymousClient, 'get' | 'close'>
   /** The boot-owned authenticated Steam session, as the slice the managers call (D-66.3-16). */
   steamUser: SteamUserSlice
+  /** The boot-owned login-window seam slot the store user modules wipe cookies through (D-66.3-17). */
+  loginWindowSeam: Pick<LoginWindowSeamSlot, 'getOrThrow'>
   /** The boot-owned connectivity monitor, as the slice managers read (D-66.3-11). */
   onlineMonitor: Pick<
     OnlineMonitor,
@@ -284,4 +288,9 @@ export interface BootServices {
    * SteamGridDB API-key owner, over the store this boot selected (keyring or dev vault).
    */
   steamGridSecrets: SteamGridDbSecretStore
+  /**
+   * Built by the 'humble-services' boot step, after 'steam-user' and before 'store-managers'
+   * (D-66.3-17): the Humble user/library/fence/login-window seam of this boot.
+   */
+  humble: HumbleServices
 }

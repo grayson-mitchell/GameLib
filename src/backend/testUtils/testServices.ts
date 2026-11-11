@@ -40,6 +40,8 @@ import { createTestSteamSession } from './testSteamSession'
 import { createTestAnonymousClient } from './testAnonymousClient'
 import { createTestSteamBottle } from './testSteamBottle'
 import { createInertTestSteamUser } from './testSteamUser'
+import { createTestHumbleServices } from './testHumble'
+import { createLoginWindowSeamSlot } from '../humble/loginWindowSeam'
 import { createTestBridgeHelpers } from './testBridgeHelpers'
 import type { GameSettings, Runner } from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
@@ -209,6 +211,9 @@ export function createTestServices(
   const host = overrides.host ?? createTestHostServices()
   const stores = overrides.stores ?? createTestStores()
   const config = overrides.config ?? createTestGlobalConfig()
+  const signInProbe =
+    overrides.signInProbe ?? createTestSignInProbe({ ipc: host.ipc })
+  const steamUser = overrides.steamUser ?? createInertTestSteamUser()
   return {
     stores,
     storeRegistry: overrides.storeRegistry ?? createStoreRegistry(),
@@ -240,15 +245,22 @@ export function createTestServices(
         'winetricks queue',
         {}
       ),
-    signInProbe:
-      overrides.signInProbe ?? createTestSignInProbe({ ipc: host.ipc }),
+    signInProbe,
     steamSession: overrides.steamSession ?? createTestSteamSession(),
     anonymousClient: overrides.anonymousClient ?? createTestAnonymousClient(),
     bridgeHelpers: overrides.bridgeHelpers ?? createTestBridgeHelpers(),
     steamBottle:
       overrides.steamBottle ?? createTestSteamBottle({ stores, config }),
-    steamUser: overrides.steamUser ?? createInertTestSteamUser(),
-    steamGridSecrets: overrides.steamGridSecrets ?? createTestSteamGridSecrets()
+    steamUser,
+    steamGridSecrets:
+      overrides.steamGridSecrets ?? createTestSteamGridSecrets(),
+    humble:
+      overrides.humble ??
+      createTestHumbleServices({
+        stores,
+        steamUser,
+        signInOutcomes: signInProbe.outcomes
+      })
   }
 }
 
@@ -389,7 +401,8 @@ export function createTestManagerDeps(
     bridgeHelpers: overrides.bridgeHelpers ?? createTestBridgeHelpers(),
     steamBottle:
       overrides.steamBottle ?? createTestSteamBottle({ stores, config }),
-    steamUser: overrides.steamUser ?? createInertTestSteamUser()
+    steamUser: overrides.steamUser ?? createInertTestSteamUser(),
+    loginWindowSeam: overrides.loginWindowSeam ?? createLoginWindowSeamSlot()
   }
 }
 

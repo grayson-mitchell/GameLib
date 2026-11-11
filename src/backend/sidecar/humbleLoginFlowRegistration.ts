@@ -26,7 +26,7 @@
  *     - `humbleRevealKey`          -> `ipc_handler.ts:102` -> `HumbleLibrary.revealKey(gamekey, machineName)`
  *
  *   send (ipcMain.on, 1):
- *     - `humbleStopLogin`      -> `ipc_handler.ts:126` -> `HumbleUser.stopLogin()`
+ *     - `humbleStopLogin`      -> `ipc_handler.ts:126` -> `humble.user.stopLogin()`
  *
  * A `send` channel registered with `ipcMain.handle` (or the reverse) fails 100% SILENTLY at
  * runtime -- no reject, no timeout, no console line (`sidecar-send-channels-fail-silently` project
@@ -69,12 +69,9 @@ import {
   RUST_HUMBLE_REVEAL_POST,
   RUST_HUMBLE_LOGIN_CLEAR_STORAGE
 } from '../../common/types/sidecarTransport'
-import { HumbleUser } from '../humble/user'
-import { standardBrowserUserAgentForProcess } from '../humble/userAgent'
-import { HumbleLibrary } from '../humble/library'
+import type { HumbleServices } from '../humble'
+import { standardBrowserUserAgent } from '../humble/userAgent'
 import {
-  setLoginWindowSeam,
-  getLoginWindowSeam,
   type LoginWindowSeam,
   type LoginWindowCookie,
   type LoginWindowCookieRead,
@@ -344,17 +341,23 @@ export function createRustLoginWindowSeam(): LoginWindowSeam {
  */
 export function registerHumbleLoginFlows(deps: {
   ipc: Pick<IpcRegistry, 'handle' | 'on'>
+  /** The boot's Humble services (D-66.3-17): user, library, seam slot and app info, by slice. */
+  humble: Pick<
+    HumbleServices,
+    'user' | 'library' | 'loginWindowSeam' | 'appInfo'
+  >
 }): void {
+  const { humble } = deps
   // T-34.4.1-10: the ONE call site in the repo. Must run before any of the 4 handlers below could
   // possibly be invoked (registration order, not request order, is what matters here -- all 4 are
   // registered synchronously in this same function before it returns).
-  setLoginWindowSeam(createRustLoginWindowSeam())
+  humble.loginWindowSeam.install(createRustLoginWindowSeam())
 
   // ── invoke (3) ──────────────────────────────────────────────────────────────────────────────
 
   deps.ipc.handle('humbleStartLogin', async () => {
     try {
-      return await HumbleUser.startLogin()
+      return await humble.user.startLogin()
     } catch (error) {
       console.warn(
         '[humbleLoginFlowRegistration] humbleStartLogin failed:',
@@ -366,7 +369,7 @@ export function registerHumbleLoginFlows(deps: {
 
   deps.ipc.handle('humbleReconnect', async () => {
     try {
-      return await HumbleUser.reconnect()
+      return await humble.user.reconnect()
     } catch (error) {
       console.warn(
         '[humbleLoginFlowRegistration] humbleReconnect failed:',
@@ -381,7 +384,10 @@ export function registerHumbleLoginFlows(deps: {
     async (_event: unknown, ...args: unknown[]) => {
       const params = args[0] as { gamekey: string; machineName: string }
       try {
-        return await HumbleLibrary.revealKey(params.gamekey, params.machineName)
+        return await humble.library.revealKey(
+          params.gamekey,
+          params.machineName
+        )
       } catch (error) {
         console.warn(
           '[humbleLoginFlowRegistration] humbleRevealKey failed:',
@@ -400,7 +406,7 @@ export function registerHumbleLoginFlows(deps: {
   deps.ipc.on('humbleStopLogin', () => {
     void (async () => {
       try {
-        HumbleUser.stopLogin()
+        humble.user.stopLogin()
       } catch (error) {
         logSendFailure('humbleStopLogin', error)
       }
@@ -451,7 +457,7 @@ export function registerHumbleLoginFlows(deps: {
         }
         smokeLog('starting')
         try {
-          const seam = getLoginWindowSeam()
+          const seam = humble.loginWindowSeam.get()
           if (!seam) {
             smokeLog(
               'no seam installed — aborting (this is a FAIL, not a skip)',
@@ -461,7 +467,7 @@ export function registerHumbleLoginFlows(deps: {
           }
           const label = await seam.open('https://example.com', {
             visible: true,
-            userAgent: standardBrowserUserAgentForProcess()
+            userAgent: standardBrowserUserAgent(humble)
           })
           smokeLog(`opened label=${label}`)
           await new Promise((resolve) => setTimeout(resolve, 2000))

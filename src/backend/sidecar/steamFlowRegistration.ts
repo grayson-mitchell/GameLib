@@ -100,7 +100,6 @@ import { isMac } from '../constants/environment'
 // recent-games side effect — see that branch's own comment below.
 import type { BootServices } from '../services/types'
 import { dispatchSteamLaunch } from '../storeManagers/steam/launchDispatch'
-import { HumbleLibrary } from '../humble/library'
 import { logInfo, logWarning, LogPrefix, RunnerToLogPrefixMap } from '../logger'
 import type { LaunchParams, Runner, StatusPromise } from 'common/types'
 // SHELL_WINDOW_FOCUSED: the third channel registerSteamFlows() below owns (quick-260908-ci2).
@@ -124,7 +123,7 @@ import { SHELL_WINDOW_FOCUSED } from 'common/types/sidecarTransport'
  *     Humble ownership recompute tail (Phase 12, D-47/D-48).
  */
 async function handleRefreshLibrary(
-  deps: Pick<SteamFlowDeps, 'managers' | 'steamSession'>,
+  deps: Pick<SteamFlowDeps, 'managers' | 'steamSession' | 'humble'>,
   _event: unknown,
   ...args: unknown[]
 ): Promise<void> {
@@ -197,14 +196,11 @@ async function handleRefreshLibrary(
 
     // Phase 12 (Plan 04, D-47/D-48) tail, ported from main.ts:1070-1079: a
     // Steam-inclusive refresh triggers the Humble ownership recompute.
-    // `HumbleLibrary` is already in this sidecar bundle's import graph (via
-    // `humbleFlowRegistration.ts`, registered separately in `handlers.ts`)
-    // and has no dependency on `storeManagers`/`steam/library`, so
-    // importing it here directly adds no new module to the bundle and
-    // carries none of this file's circular-import risk.
+    // The library is the boot's one `HumbleLibrary` (D-66.3-17), received by slice
+    // through `deps.humble` -- this file imports nothing from `humble/`.
     if (isStore(runner, 'steam')) {
       try {
-        HumbleLibrary.recomputeOwnership()
+        deps.humble.library.recomputeOwnership()
       } catch (err) {
         logWarning(
           ['Humble ownership recompute after Steam refresh failed:', err],
@@ -262,7 +258,7 @@ async function handleRefreshLibrary(
   // via managers.library, so this always runs on this branch, matching
   // main.ts:1070's `library === undefined || library === 'all'`.
   try {
-    HumbleLibrary.recomputeOwnership()
+    deps.humble.library.recomputeOwnership()
   } catch (err) {
     logWarning(
       ['Humble ownership recompute after Steam refresh failed:', err],
@@ -407,6 +403,10 @@ export type SteamFlowDeps = Pick<BootServices, 'managers' | 'stores'> & {
   launcher: Pick<BootServices['launcher'], 'launchEventCallback'>
   /** The boot-owned keyring auth-unlock latches the refresh dispatch notes into (D-66.3-13). */
   steamSession: Pick<BootServices['steamSession'], 'authTrigger'>
+  /** The boot's Humble library, recomputed after a Steam-inclusive refresh (D-66.3-17). */
+  humble: {
+    library: Pick<BootServices['humble']['library'], 'recomputeOwnership'>
+  }
 }
 
 export function registerSteamFlows(deps: SteamFlowDeps): void {

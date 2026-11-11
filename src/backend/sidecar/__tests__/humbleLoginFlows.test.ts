@@ -66,18 +66,12 @@ jest.mock('backend/constants/environment', () => ({
   isLinux: true
 }))
 
-// ── HumbleUser / HumbleLibrary — automocked; the network/filesystem-touching surface this suite
-// exists to WIRE, not re-test ───────────────────────────────────────────────────────────────────
-jest.mock('../../humble/user')
-jest.mock('../../humble/library')
-
 // ── standardBrowserUserAgent — factory-mocked to a fixed, assertable string. The real
 // implementation reads `app.userAgentFallback`, which platformApi does not populate. ──────────
 const FAKE_USER_AGENT =
   'Mozilla/5.0 (Test) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/999.0.0.0 Safari/537.36'
 jest.mock('../../humble/userAgent', () => ({
-  standardBrowserUserAgent: jest.fn(() => FAKE_USER_AGENT),
-  standardBrowserUserAgentForProcess: jest.fn(() => FAKE_USER_AGENT)
+  standardBrowserUserAgent: jest.fn(() => FAKE_USER_AGENT)
 }))
 
 // ── Imports (after mocks) — sidecarRpc is DELIBERATELY NOT mocked: describe block 2 drives the
@@ -91,6 +85,8 @@ import {
   createRustLoginWindowSeam
 } from '../humbleLoginFlowRegistration'
 import { createIpcRegistry } from '../ipcRegistry'
+import { createTestHumbleServices } from 'backend/testUtils/testHumble'
+import { createTestStores } from 'backend/testUtils/testServices'
 import { startRpcServer, requestRustInvoke } from '../sidecarRpc'
 import {
   RUST_HUMBLE_LOGIN_OPEN,
@@ -158,7 +154,12 @@ function startTransport(): { input: PassThrough; frames: Frame[] } {
 // listener onto the same channel array (clipboardFlowRegistration's own test docstring names this
 // hazard).
 const ipc = createIpcRegistry()
-registerHumbleLoginFlows({ ipc })
+// The Humble services are the boot-style instance from createTestHumbleServices; the user and
+// library inside it are lazy, so this suite never loads them (it wires, it does not re-test).
+registerHumbleLoginFlows({
+  ipc,
+  humble: createTestHumbleServices({ stores: createTestStores() })
+})
 
 describe('registration kind — the 4 channels are registered with the correct kind, both directions', () => {
   const HANDLE_CHANNELS = [

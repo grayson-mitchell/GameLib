@@ -155,7 +155,8 @@ export function registerHandlers(deps: {
     stores: deps.services.stores,
     launcher: deps.services.launcher,
     notifications: deps.services.host.notifications,
-    steamSession: deps.services.steamSession
+    steamSession: deps.services.steamSession,
+    humble: deps.services.humble
   })
   registerSteamAuthFlows({ ...deps.services, ipc })
   registerEngineFlows({
@@ -184,7 +185,11 @@ export function registerHandlers(deps: {
   // `LegendaryUser.logout()` destroying the operator's real Epic session. Self-gated —
   // `registerDevEpicCookieSweepFlow` no-ops in a packaged sidecar, so the channel does not
   // exist in a shipped build. Not on the preload surface by design; see that module's docstring.
-  registerDevEpicCookieSweepFlow({ ipc, appInfo: deps.services.appInfo })
+  registerDevEpicCookieSweepFlow({
+    ipc,
+    appInfo: deps.services.appInfo,
+    loginWindowSeam: deps.services.humble.loginWindowSeam
+  })
   // WR-02: without this, plan 30-03's native picker chain was unreachable — `openDialog`
   // is the only backend channel that reaches `dialog.showOpenDialog`, and its sole other
   // caller (`main.ts`) is not in the sidecar's import graph.
@@ -306,6 +311,7 @@ export function registerHandlers(deps: {
   // — zero new store plumbing.
   registerHumbleFlows({
     ipc,
+    humble: deps.services.humble,
     config: deps.services.config,
     notifications: deps.services.host.notifications
   })
@@ -314,7 +320,7 @@ export function registerHandlers(deps: {
   // — no ordering constraint relative to the
   // other calls above (own channel names, no cross-module runtime dependency at
   // registration time), placed alongside them, before `registerStoreWriteHandlers()`.
-  registerHumbleLoginFlows({ ipc })
+  registerHumbleLoginFlows({ ipc, humble: deps.services.humble })
   // Phase 34.4.1 Plan 09 (REQ-34.4.1-08): the `oauthCaptureLogin` handle channel, which
   // drives the four OAuth runners' (legendary/gog/nile) redirect capture through the SAME
   // login-window seam Humble already installed above -- a completely separate concern from
@@ -322,7 +328,10 @@ export function registerHandlers(deps: {
   // authenticate). No ordering constraint relative to the other calls above (own channel name,
   // no cross-module runtime dependency at registration time), placed alongside them, before
   // `registerStoreWriteHandlers()`.
-  registerOAuthLoginFlows({ ipc })
+  registerOAuthLoginFlows({
+    ipc,
+    loginWindowSeam: deps.services.humble.loginWindowSeam
+  })
   // Phase 34.5 Plan 04 (REQ-34.5-13): the four slice-34.5 clusters — runner auth/sign-out,
   // Wine tools, shortcuts, runner misc. Declared here as EMPTY seams by plan 34.5-04 and
   // filled in one module at a time by the cluster plans (34.5-05 through 34.5-12); all four
@@ -338,7 +347,8 @@ export function registerHandlers(deps: {
     appState: deps.services.host.appState,
     notifications: deps.services.host.notifications,
     onlineMonitor: deps.services.onlineMonitor,
-    signIn: deps.services.signInProbe
+    signIn: deps.services.signInProbe,
+    loginWindowSeam: deps.services.humble.loginWindowSeam
   })
   registerWineToolsFlows({
     ipc,

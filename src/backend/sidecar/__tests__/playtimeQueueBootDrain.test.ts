@@ -146,7 +146,8 @@ function bootedWorld(opts?: {
         anonymousClient: fakes.anonymousClient,
         bridgeHelpers: fakes.bridgeHelpers,
         steamBottle: fakes.steamBottle,
-        steamUser: fakes.steamUser
+        steamUser: fakes.steamUser,
+        loginWindowSeam: fakes.humble.loginWindowSeam
       })
       prebuilt.managers = built
       prebuilt.launcher = built.launcher

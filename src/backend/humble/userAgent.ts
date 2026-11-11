@@ -1,5 +1,4 @@
 import type { AppInfo } from 'backend/process/context'
-import { buildUserAgentFallback } from 'backend/host/appInfo'
 
 /**
  * Standard (non-Electron) browser user agent for Humble-facing requests.
@@ -36,15 +35,4 @@ export function standardBrowserUserAgent(deps: {
     return fallback.replace(/ Electron\/\S+/, '')
   }
   return `Mozilla/5.0 (${platform}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVersion} Safari/537.36`
-}
-
-/**
- * For the Humble statics (humble/user.ts, humble/adapter.ts, humbleLoginFlowRegistration) that
- * hold no AppInfo: derives the same string `AppInfo.userAgentFallback` carries. Plan 17 threads
- * AppInfo into them and deletes this.
- */
-export function standardBrowserUserAgentForProcess(): string {
-  return standardBrowserUserAgent({
-    appInfo: { userAgentFallback: buildUserAgentFallback(process.platform) }
-  })
 }

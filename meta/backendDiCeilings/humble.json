@@ -1,21 +1,12 @@
 {
   "jestMock": {
-    "src/backend/humble/__tests__/adapter.test.ts": 3,
+    "src/backend/humble/__tests__/adapter.test.ts": 2,
     "src/backend/humble/__tests__/expirationAlerts.test.ts": 2,
-    "src/backend/humble/__tests__/library.realstore.test.ts": 6,
-    "src/backend/humble/__tests__/library.test.ts": 5,
-    "src/backend/humble/__tests__/probeSession.test.ts": 7,
-    "src/backend/humble/__tests__/secretStore.test.ts": 2,
+    "src/backend/humble/__tests__/library.realstore.test.ts": 5,
+    "src/backend/humble/__tests__/library.test.ts": 4,
+    "src/backend/humble/__tests__/probeSession.test.ts": 3,
     "src/backend/humble/__tests__/stores.test.ts": 1,
-    "src/backend/humble/__tests__/user.test.ts": 5
+    "src/backend/humble/__tests__/user.test.ts": 4
   },
-  "moduleState": {
-    "src/backend/humble/classify.ts": 1,
-    "src/backend/humble/humbleStores.ts": 1,
-    "src/backend/humble/library.ts": 3,
-    "src/backend/humble/loginWindowSeam.ts": 1,
-    "src/backend/humble/secretStore.ts": 1,
-    "src/backend/humble/syncFence.ts": 1,
-    "src/backend/humble/user.ts": 1
-  }
+  "moduleState": {}
 }

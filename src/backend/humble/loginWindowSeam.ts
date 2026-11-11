@@ -202,47 +202,56 @@ export interface LoginWindowSeam {
   ): Promise<LoginWindowStorageClearResult>
 }
 
-// Module-scoped holder. `null` before registerHumbleLoginFlows() runs at sidecar startup, and
-// whenever a test explicitly clears it via setLoginWindowSeam(null).
-let installed: LoginWindowSeam | null = null
-
-/** Installs (or clears, via `null`) the active login-window seam implementation. */
-export function setLoginWindowSeam(seam: LoginWindowSeam | null): void {
-  installed = seam
+/**
+ * The boot's one login-window seam holder (D-05, C-WR-2): `null` until
+ * `registerHumbleLoginFlows()` installs the rustInvoke-backed seam at sidecar startup, and
+ * whenever a test explicitly clears it via `install(null)`. One slot per boot, shared by every
+ * consumer by slice.
+ */
+export interface LoginWindowSeamSlot {
+  /** Installs (or clears, via `null`) the active login-window seam implementation. */
+  install(seam: LoginWindowSeam | null): void
+  /**
+   * Returns the active login-window seam implementation, or `null` if none is installed.
+   *
+   * Survives only for `install(null)`-driven tests and for the deliberately-kept
+   * smoke-test guard in `humbleLoginFlowRegistration.ts` (gated behind
+   * `process.env.GAMELIB_LOGIN_SEAM_SMOKE === '1'`). Every production call site should use
+   * `getOrThrow()` instead.
+   */
+  get(): LoginWindowSeam | null
+  /**
+   * Returns the active login-window seam implementation, throwing instead of returning `null`.
+   *
+   * This is the accessor every production call site uses. `registerHumbleLoginFlows()`
+   * (`src/backend/sidecar/humbleLoginFlowRegistration.ts`) installs the seam unconditionally at
+   * sidecar startup, before any IPC handler can be reached -- so by the time any handler-reachable
+   * code runs, a seam is always installed. Reaching this accessor before that happens is a wiring
+   * bug, not a supported state, so it fails loudly here rather than at whichever seam member a
+   * caller happens to touch first.
+   */
+  getOrThrow(): LoginWindowSeam
 }
 
-/**
- * Returns the active login-window seam implementation, or `null` if none is installed.
- *
- * Survives only for `setLoginWindowSeam(null)`-driven tests and for the deliberately-kept
- * smoke-test guard in `humbleLoginFlowRegistration.ts` (gated behind
- * `process.env.GAMELIB_LOGIN_SEAM_SMOKE === '1'`). Every production call site should use
- * `getLoginWindowSeamOrThrow()` instead.
- */
-export function getLoginWindowSeam(): LoginWindowSeam | null {
-  return installed
-}
-
-/**
- * Returns the active login-window seam implementation, throwing instead of returning `null`.
- *
- * This is the accessor every production call site uses. `registerHumbleLoginFlows()`
- * (`src/backend/sidecar/humbleLoginFlowRegistration.ts`) installs the seam unconditionally at
- * sidecar startup, before any IPC handler can be reached -- so by the time any handler-reachable
- * code runs, a seam is always installed. Reaching this accessor before that happens is a wiring
- * bug, not a supported state, so it fails loudly here rather than at whichever seam member a
- * caller happens to touch first.
- */
-export function getLoginWindowSeamOrThrow(): LoginWindowSeam {
-  if (installed === null) {
-    throw new Error(
-      'getLoginWindowSeamOrThrow(): no login-window seam is installed. ' +
-        'registerHumbleLoginFlows() (src/backend/sidecar/humbleLoginFlowRegistration.ts) installs ' +
-        'the seam at sidecar startup -- reaching this accessor before that has run is a wiring bug, ' +
-        'not a supported state.'
-    )
+export function createLoginWindowSeamSlot(): LoginWindowSeamSlot {
+  let installed: LoginWindowSeam | null = null
+  return {
+    install: (seam) => {
+      installed = seam
+    },
+    get: () => installed,
+    getOrThrow: () => {
+      if (installed === null) {
+        throw new Error(
+          'getLoginWindowSeamOrThrow(): no login-window seam is installed. ' +
+            'registerHumbleLoginFlows() (src/backend/sidecar/humbleLoginFlowRegistration.ts) installs ' +
+            'the seam at sidecar startup -- reaching this accessor before that has run is a wiring bug, ' +
+            'not a supported state.'
+        )
+      }
+      return installed
+    }
   }
-  return installed
 }
 
 /**

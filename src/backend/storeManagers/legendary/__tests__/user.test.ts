@@ -27,7 +27,7 @@
  *
  * `../../../humble/loginWindowSeam` is NOT mocked — it is a plain module-scoped holder +
  * pure classifier (no platform imports), so tests drive it directly via
- * `setLoginWindowSeam(seam | null)`/`getLoginWindowSeam()`, exactly as production code does.
+ * `seamSlot.install(seam | null)`/`getLoginWindowSeam()`, exactly as production code does.
  */
 
 // `./constants` transitively pulls in `backend/constants/paths.ts`, which
@@ -70,6 +70,9 @@ const mockRunRunnerCommand = jest.fn()
 let probeInstance: ReturnType<typeof createTestSignInProbe> | undefined
 const signInProbe = () => (probeInstance ??= createTestSignInProbe())
 const deps = {
+  get loginWindowSeam() {
+    return seamSlot
+  },
   // Read at call time: the import below sits after the jest.mock block this literal precedes.
   get signIn() {
     return signInProbe()
@@ -109,9 +112,12 @@ import { createTestSignInProbe } from 'backend/testUtils/testSignInProbe'
 import { clearCache, startLegendaryCleanup } from '../../../utils'
 import { logError, logInfo, logWarning } from 'backend/logger'
 import {
-  setLoginWindowSeam,
+  createLoginWindowSeamSlot,
   type LoginWindowSeam
 } from '../../../humble/loginWindowSeam'
+
+// The boot's one login-window seam slot, per test file (66.3-17): the user modules read it through deps.
+const seamSlot = createLoginWindowSeamSlot()
 
 function makeMockSeam(
   overrides: Partial<LoginWindowSeam> = {}
@@ -163,7 +169,7 @@ describe('LegendaryUser.logout(deps)', () => {
     // everything the module-under-test needs a resolved value/return value for must be
     // (re-)established here, not relied on from module-scope `jest.fn(impl)`/`mockResolvedValue`
     // calls (those are stripped too).
-    setLoginWindowSeam(null)
+    seamSlot.install(null)
     mockRunRunnerCommand.mockResolvedValue({
       stdout: '',
       stderr: '',
@@ -173,7 +179,7 @@ describe('LegendaryUser.logout(deps)', () => {
   })
 
   afterEach(() => {
-    setLoginWindowSeam(null)
+    seamSlot.install(null)
   })
 
   // INVERTED (Phase 40 CR-03): this test used to assert that a CLI-error
@@ -189,7 +195,7 @@ describe('LegendaryUser.logout(deps)', () => {
   // instead.
   it('REQ-34.5-04 / CR-03: a CLI-error result still runs the wipe steps and still clears credentials', async () => {
     const seam = makeMockSeam()
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
     mockRunRunnerCommand.mockResolvedValue({
       stdout: '',
       stderr: '',
@@ -214,7 +220,7 @@ describe('LegendaryUser.logout(deps)', () => {
   // is the only reachable trigger for `res.abort`.
   it('CR-03: a CLI-abort result still runs the wipe steps and still clears credentials', async () => {
     const seam = makeMockSeam()
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
     mockRunRunnerCommand.mockResolvedValue({
       stdout: '',
       stderr: '',
@@ -238,7 +244,7 @@ describe('LegendaryUser.logout(deps)', () => {
         .fn()
         .mockRejectedValue(new Error('rust cookie clear failed'))
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
     mockRunRunnerCommand.mockResolvedValue({
       stdout: '',
       stderr: '',
@@ -280,7 +286,7 @@ describe('LegendaryUser.logout(deps)', () => {
         return 3
       })
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
     mockConfigStore.delete.mockImplementation((key: string) => {
       callOrder.push(`configStore.delete:${key}`)
     })
@@ -321,7 +327,7 @@ describe('LegendaryUser.logout(deps)', () => {
         .fn()
         .mockRejectedValue(new Error('rust-side clear failed'))
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     // Phase 35 plan 09 (T-35-39): a FAILED cookie clear is now fatal to
     // logout()'s reported outcome — it used to resolve, swallowing the
@@ -358,7 +364,7 @@ describe('LegendaryUser.logout(deps)', () => {
 
   it('REQ-34.5-04 (T-34.5-20): with a seam installed and a healthy clear, the domain passed is never a blanket/empty value', async () => {
     const seam = makeMockSeam()
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await LegendaryUser.logout(deps)
 
@@ -384,7 +390,7 @@ describe('LegendaryUser.logout(deps)', () => {
         serviceWorkers: 0
       })
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await LegendaryUser.logout(deps)
 
@@ -404,7 +410,7 @@ describe('LegendaryUser.logout(deps)', () => {
         .fn()
         .mockRejectedValue(new Error('rust storage clear failed'))
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     // Phase 35 plan 09: logout REJECTS now (the cookie step is fatal), but the
     // credential-side cleanup — this test's actual subject, T-34.5-19's
@@ -423,7 +429,7 @@ describe('LegendaryUser.logout(deps)', () => {
 
   it('CR-01 (T-34.5-19): with NO seam installed, the credential-side cleanup still runs and the wiring diagnostic still reaches the caller', async () => {
     // Phase 39 CR-01: `beforeEach` above already leaves the seam unset
-    // (`setLoginWindowSeam(null)`) and arms `mockRunRunnerCommand` with a
+    // (`seamSlot.install(null)`) and arms `mockRunRunnerCommand` with a
     // success result, so this test installs NOTHING — that absence is its
     // whole subject. This is the FIRST test in this file to drive logout()
     // past the CLI-success point with no seam installed at all.
@@ -449,7 +455,7 @@ describe('LegendaryUser.logout(deps)', () => {
         .fn()
         .mockRejectedValue(new Error('rust storage clear failed'))
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).resolves.toBeUndefined()
 
@@ -463,7 +469,7 @@ describe('LegendaryUser.logout(deps)', () => {
         .fn()
         .mockRejectedValue(new Error('rust cookie clear failed'))
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     // Phase 35 plan 09: the fatal cookie step is captured and rethrown AFTER
     // the loop, so the remaining steps still run — that is this test's subject
@@ -493,7 +499,7 @@ describe('LegendaryUser.logout(deps)', () => {
     const seam = makeMockSeam({
       clearCookies: jest.fn().mockResolvedValue(4)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await LegendaryUser.logout(deps)
 
@@ -519,7 +525,7 @@ describe('LegendaryUser.logout(deps)', () => {
       cookiesForDomain: jest.fn(),
       clearCookies: jest.fn().mockResolvedValue(0)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     // Phase 35 plan 09 (operator decision D-09-CORRECTED): this used to
     // `logWarning('... removed nothing for epicgames.com')` and let the wipe
@@ -538,7 +544,7 @@ describe('LegendaryUser.logout(deps)', () => {
     const seam = makeMockSeam({
       clearCookies: jest.fn().mockResolvedValue(2)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).resolves.toBeUndefined()
 

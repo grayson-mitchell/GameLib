@@ -18,7 +18,7 @@ export interface AppInfo {
 // path. It DELIBERATELY carries no `Electron/x.y.z` token: the function exists to strip that
 // token so Google's SSO does not fingerprint an embedded browser. Chrome/142.0.7444.52 is the
 // Chromium build of the pinned electron@41.1.1. The platform token follows `platform`.
-export function buildUserAgentFallback(platform: NodeJS.Platform): string {
+function buildUserAgentFallback(platform: NodeJS.Platform): string {
   const chromeVersion = '142.0.7444.52'
   const platformToken =
     platform === 'darwin'

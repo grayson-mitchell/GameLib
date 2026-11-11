@@ -180,7 +180,7 @@ function hasKeyEvidence(tpk: Record<string, unknown>): boolean {
  * keyed GOG key; `gog_keyless` is a second, separately-evidenced value with
  * a different provenance.
  */
-const KNOWN_GAME_KEY_TYPES = new Set([
+const KNOWN_GAME_KEY_TYPES: readonly string[] = Object.freeze([
   'steam',
   'gog',
   'gog_keyless',
@@ -191,7 +191,7 @@ const KNOWN_GAME_KEY_TYPES = new Set([
   'epic_keyless',
   'battlenet',
   'nintendo_direct'
-])
+] as const)
 
 /**
  * D-29 v2 (live-UAT round 6): the tester's PDF-bundle tpks DO carry
@@ -215,7 +215,8 @@ function isDirectRedeemEntitlement(tpk: Record<string, unknown>): boolean {
   return (
     tpk.direct_redeem === true &&
     !(
-      typeof tpk.key_type === 'string' && KNOWN_GAME_KEY_TYPES.has(tpk.key_type)
+      typeof tpk.key_type === 'string' &&
+      KNOWN_GAME_KEY_TYPES.includes(tpk.key_type)
     )
   )
 }

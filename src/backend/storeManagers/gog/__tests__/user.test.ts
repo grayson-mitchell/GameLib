@@ -71,20 +71,26 @@ jest.mock('backend/utils', () => ({
 
 import axios from 'axios'
 import { logError, logWarning } from 'backend/logger'
-import { GOGUser, type GOGUserDeps } from '../user'
+import { GOGUser, type GOGUserDeps, type GOGLoginSeamDeps } from '../user'
 import type { ClearCacheDeps } from 'backend/utils'
 import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
 import { createTestSignInProbe } from 'backend/testUtils/testSignInProbe'
 
 const deps = {
   signIn: createTestSignInProbe(),
+  // logout() reads it only on macOS; this file never installs a seam, so an empty slot is right.
+  loginWindowSeam: {
+    getOrThrow: () => {
+      throw new Error('no seam in this suite')
+    }
+  },
   appInfo: { version: '1.0.0' },
   onlineMonitor: { isOnline: () => true },
   stores: { gog: fakeGogStores },
   libraryManagers: {
     gog: { runRunnerCommand: (...a: unknown[]) => mockRunRunnerCommand(...a) }
   }
-} as unknown as GOGUserDeps & ClearCacheDeps & SignInNoteDeps
+} as unknown as GOGUserDeps & ClearCacheDeps & SignInNoteDeps & GOGLoginSeamDeps
 
 const mockedAxiosGet = axios.get as jest.Mock
 const mockedLogWarning = logWarning as jest.Mock

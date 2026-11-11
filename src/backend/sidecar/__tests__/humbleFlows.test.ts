@@ -69,13 +69,6 @@ jest.mock('backend/constants/environment', () => ({
   isLinux: true
 }))
 
-// ── HumbleUser / HumbleLibrary — automocked; the network/filesystem-touching
-// surface this suite exists to WIRE, not re-test. Their own internal
-// correctness is covered by src/backend/humble/__tests__/user.test.ts and
-// library.test.ts. ───────────────────────────────────────────────────────────
-jest.mock('../../humble/user')
-jest.mock('../../humble/library')
-
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { defined } from 'backend/testUtils/indexed'
 import { readFileSync } from 'fs'
@@ -85,25 +78,65 @@ import { bootFresh, writeInvoke, writeSend } from './helpers/sidecarHarness'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
+import { createLoginWindowSeamSlot } from '../../humble/loginWindowSeam'
+import type { HumbleUser as HumbleUserType } from '../../humble/user'
+import type { HumbleLibrary as HumbleLibraryType } from '../../humble/library'
 
 // D-08: every case boots the sidecar once, in a fresh module registry. Module
 // handles the cases configure or inspect are rebound from that registry in
 // freshRegistry() (run before each case, ahead of any mock configuration), and
 // boot() then boots without a second reset.
 let getSteamLibraries: typeof import('backend/utils').getSteamLibraries
-let HumbleUser: typeof import('../../humble/user').HumbleUser
-let HumbleLibrary: typeof import('../../humble/library').HumbleLibrary
+// The boot's Humble services are jest-fn doubles handed in as `prebuilt.humble` (66.3-17): this
+// suite wires the registrations, it does not re-test the Humble logic (its own correctness is
+// covered by src/backend/humble/__tests__/user.test.ts and library.test.ts).
+const USER_METHODS = [
+  'getUserDetails',
+  'checkHealthAndFlagExpiry',
+  'disconnect',
+  'isLoggedIn',
+  'probeSession'
+] as const
+const LIBRARY_METHODS = [
+  'sync',
+  'getKeys',
+  'getSyncState',
+  'getAllGiftedAt',
+  'markRedeemed',
+  'undoRedeemed',
+  'getRevealedKeyValue',
+  'getClaimAnnotations',
+  'setOwnershipOverride',
+  'clearOwnershipOverride',
+  'getAllOwnershipOverrides',
+  'recordGiftLinkOpened',
+  'recomputeOwnership'
+] as const
+function fakeMembers<T extends object>(
+  names: readonly (keyof T)[]
+): jest.Mocked<T> {
+  return Object.fromEntries(names.map((name) => [name, jest.fn()])) as never
+}
+let HumbleUser: jest.Mocked<HumbleUserType>
+let HumbleLibrary: jest.Mocked<HumbleLibraryType>
+let fakeHumble: Record<string, unknown>
 let isolationIpcMain: typeof import('../../platform').ipcMain
 let isolationHandlerRegistry: typeof import('../../platform').handlerRegistry
 let isolationListenerRegistry: typeof import('../../platform').listenerRegistry
 
 function freshRegistry(): void {
+  HumbleUser = fakeMembers<HumbleUserType>(USER_METHODS)
+  HumbleLibrary = fakeMembers<HumbleLibraryType>(LIBRARY_METHODS)
+  fakeHumble = {
+    user: HumbleUser,
+    library: HumbleLibrary,
+    loginWindowSeam: createLoginWindowSeamSlot(),
+    appInfo: { userAgentFallback: 'Mozilla/5.0 (X11; Linux) Chrome/1.0' }
+  }
   jest.resetModules()
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
   ;({ getSteamLibraries } = require('backend/utils'))
-  ;({ HumbleUser } = require('../../humble/user'))
-  ;({ HumbleLibrary } = require('../../humble/library'))
   ;({
     ipcMain: isolationIpcMain,
     handlerRegistry: isolationHandlerRegistry,
@@ -112,7 +145,8 @@ function freshRegistry(): void {
   /* eslint-enable @typescript-eslint/no-require-imports */
 }
 
-const boot = () => bootFresh({ reuseRegistry: true })
+const boot = () =>
+  bootFresh({ reuseRegistry: true, services: { humble: fakeHumble as never } })
 
 beforeEach(() => {
   freshRegistry()
@@ -1007,7 +1041,10 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         interimIpc: unknown
       }
 
-      fresh.registerHumbleFlows({ ipc: freshStub.interimIpc })
+      fresh.registerHumbleFlows({
+        ipc: freshStub.interimIpc,
+        humble: { user: {}, library: {} }
+      })
       expect(freshStub.handlerRegistry.has('humbleRunValidation')).toBe(true)
     })
 
@@ -1026,7 +1063,10 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         interimIpc: unknown
       }
 
-      fresh.registerHumbleFlows({ ipc: freshStub.interimIpc })
+      fresh.registerHumbleFlows({
+        ipc: freshStub.interimIpc,
+        humble: { user: {}, library: {} }
+      })
       expect(freshStub.handlerRegistry.has('humbleRunValidation')).toBe(false)
     })
 
@@ -1050,7 +1090,10 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         interimIpc: unknown
       }
 
-      fresh.registerHumbleFlows({ ipc: freshStub.interimIpc })
+      fresh.registerHumbleFlows({
+        ipc: freshStub.interimIpc,
+        humble: { user: {}, library: {} }
+      })
       expect(freshStub.handlerRegistry.has('humbleRunValidation')).toBe(false)
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('node:sea unavailable'),
@@ -1107,33 +1150,17 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         LogPrefix: { Backend: 'Backend' }
       }))
 
-      // `jest.requireActual` (NOT plain `require`) is load-bearing here: this
-      // file's own file-wide `jest.mock('../../humble/user')` (hoisted, top
-      // of file) stays registered across `jest.resetModules()` -- resetModules
-      // only clears the INSTANTIATED-module cache, not the configured mock
-      // list -- so a plain `require('../../humble/user')` would still resolve
-      // to a fresh instance of the SAME automock (confirmed by hand: the
-      // first version of this test used plain `require` and failed with
-      // "received value must be a promise", because the automocked
-      // `disconnect()` returns `undefined`, not a Promise). `requireActual`
-      // is the one call that genuinely bypasses the registered mock.
-      const {
-        HumbleUser: RealHumbleUser
-      }: {
-        HumbleUser: { disconnect: () => Promise<void> }
-      } = jest.requireActual('../../humble/user')
-      // Not mocked anywhere in this file, so a plain `require` after
-      // `jest.resetModules()` already returns a fresh, real module -- the
-      // SAME fresh instance `user.ts`'s own `import` resolves to above,
-      // which is why `setLoginWindowSeam()` called through this binding is
-      // visible to the real `disconnect()` call below.
-      const { setLoginWindowSeam } =
+      // The real `HumbleUser`, built over real stores and a per-test seam slot (66.3-17): the
+      // module is no longer automocked file-wide, and the seam is no longer a process-wide holder.
+      const { HumbleUser: RealHumbleUserClass } =
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('../../humble/loginWindowSeam') as {
-          setLoginWindowSeam: (
-            seam: import('../../humble/loginWindowSeam').LoginWindowSeam | null
-          ) => void
-        }
+        require('../../humble/user') as typeof import('../../humble/user')
+      const {
+        createLoginWindowSeamSlot: createFreshSeamSlot
+      }: typeof import('../../humble/loginWindowSeam') =
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('../../humble/loginWindowSeam')
+      const seamSlot = createFreshSeamSlot()
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const realStores = require('../../humble/stores').createHumbleStores({
         registry: createStoreRegistry()
@@ -1153,19 +1180,22 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         }
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { bindHumbleStores } = require('../../humble/humbleStores') as {
-        bindHumbleStores: (deps: never) => void
-      }
       const { createTestSignInProbe } =
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('backend/testUtils/testSignInProbe') as {
-          createTestSignInProbe: () => unknown
-        }
-      bindHumbleStores({
-        stores: { humble: realStores, steam: {} },
-        signIn: createTestSignInProbe()
-      } as never)
+        require('backend/testUtils/testSignInProbe') as typeof import('backend/testUtils/testSignInProbe')
+      const RealHumbleUser = new RealHumbleUserClass({
+        stores: { humble: realStores, steam: {} } as never,
+        secretStore: {
+          isAvailable: async () => true,
+          getSecret: async () => '',
+          setSecret: async () => undefined,
+          clearSecrets: async () => undefined
+        },
+        loginWindowSeam: seamSlot,
+        syncFence: { invalidate: () => undefined },
+        signInOutcomes: createTestSignInProbe().outcomes,
+        appInfo: { userAgentFallback: 'Mozilla/5.0 (X11; Linux) Chrome/1.0' }
+      })
 
       realStores.configStore.set('sessionCookie', 'FAKE-D05-COOKIE-VALUE')
       realStores.humbleLibraryStore.set('fake-order', { keys: [] })
@@ -1183,7 +1213,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       const rejectAlways = () =>
         Promise.reject(new Error('D-05 fake seam: intentionally rejecting'))
       try {
-        setLoginWindowSeam({
+        seamSlot.install({
           open: rejectAlways,
           cookies: rejectAlways,
           cookiesForDomain: rejectAlways,
@@ -1214,7 +1244,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
           expect(String(message)).toMatch(/wipe step/i)
         }
       } finally {
-        setLoginWindowSeam(null)
+        seamSlot.install(null)
       }
 
       clearConfigSpy.mockRestore()

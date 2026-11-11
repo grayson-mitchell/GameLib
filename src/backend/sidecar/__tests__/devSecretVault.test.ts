@@ -458,16 +458,21 @@ describe('devSecretVault', () => {
         .spyOn(freshVault, 'createDevSecretVault')
         .mockReturnValue(null)
       const setTokenStoreSpy = jest.spyOn(freshTokenStore, 'setTokenStore')
-      const installSidecarHumbleSecretStoreSpy = jest.spyOn(
+      const startSidecarHumbleSecretStoreSpy = jest.spyOn(
         freshHumbleStore,
-        'installSidecarHumbleSecretStore'
+        'startSidecarHumbleSecretStore'
       )
 
       try {
-        bootFresh({ reuseRegistry: true })
+        const { services } = bootFresh({ reuseRegistry: true })
+
+        // The Humble services were built over the keyring-backed store (T-66.3-56).
+        expect(services.humble.secretStore).toBeInstanceOf(
+          freshHumbleStore.SidecarHumbleSecretStore
+        )
 
         expect(setTokenStoreSpy).toHaveBeenCalledTimes(1)
-        expect(installSidecarHumbleSecretStoreSpy).toHaveBeenCalledTimes(1)
+        expect(startSidecarHumbleSecretStoreSpy).toHaveBeenCalledTimes(1)
         expect(
           mockLogInfo.mock.calls.some(
             ([message]) => message === '[bootstrap] secret stores: keyring'
@@ -481,7 +486,7 @@ describe('devSecretVault', () => {
       } finally {
         createDevSecretVaultSpy.mockRestore()
         setTokenStoreSpy.mockRestore()
-        installSidecarHumbleSecretStoreSpy.mockRestore()
+        startSidecarHumbleSecretStoreSpy.mockRestore()
       }
     })
 
@@ -511,9 +516,9 @@ describe('devSecretVault', () => {
         .spyOn(freshVault, 'createDevSecretVault')
         .mockReturnValue(fakeVault)
       const setTokenStoreSpy = jest.spyOn(freshTokenStore, 'setTokenStore')
-      const installSidecarHumbleSecretStoreSpy = jest.spyOn(
+      const startSidecarHumbleSecretStoreSpy = jest.spyOn(
         freshHumbleStore,
-        'installSidecarHumbleSecretStore'
+        'startSidecarHumbleSecretStore'
       )
       const migrateHumbleSecretsSpy = jest.spyOn(
         freshHumbleStore,
@@ -521,12 +526,15 @@ describe('devSecretVault', () => {
       )
 
       try {
-        bootFresh({ reuseRegistry: true })
+        const { services } = bootFresh({ reuseRegistry: true })
+
+        // The Humble services were built over the vault's store, never the keyring one (T-66.3-56).
+        expect(services.humble.secretStore).toBe(fakeVault.humbleSecretStore)
 
         expect(setTokenStoreSpy).toHaveBeenCalledTimes(1)
         expect(setTokenStoreSpy).toHaveBeenCalledWith(fakeVault.tokenStore)
-        expect(installSidecarHumbleSecretStoreSpy).not.toHaveBeenCalled()
-        // migrateHumbleSecrets() is only ever fired FROM INSIDE installSidecarHumbleSecretStore()
+        expect(startSidecarHumbleSecretStoreSpy).not.toHaveBeenCalled()
+        // migrateHumbleSecrets() is only ever fired FROM INSIDE startSidecarHumbleSecretStore()
         // (humbleSecretStore.ts) — asserting it directly, not merely inferring it from the line
         // above, is this test's own regression guard against a future edit that calls it from a
         // second site.
@@ -544,7 +552,7 @@ describe('devSecretVault', () => {
       } finally {
         createDevSecretVaultSpy.mockRestore()
         setTokenStoreSpy.mockRestore()
-        installSidecarHumbleSecretStoreSpy.mockRestore()
+        startSidecarHumbleSecretStoreSpy.mockRestore()
         migrateHumbleSecretsSpy.mockRestore()
       }
     })

@@ -20,20 +20,14 @@
  * `storeManagers/steam/tokenStore.ts`'s `TokenStore` shape exactly, widened
  * by a secret key.
  *
- * **This plan is a pure refactor.** The Electron implementation below is the
- * verbatim `encryptionAvailable`/`encryptCookie`/`decryptCookie` bodies moved
- * out of `user.ts`, reading/writing the SAME `configStore` keys under the
- * SAME prefix -- the old Electron build's on-disk `humble_store/config.json` is unchanged
- * in every field. It is installed as this module's DEFAULT (unlike
- * `loginWindowSeam.ts`, whose holder starts `null` because the Electron build never
- * called its setter) -- the Electron-era implementation is real code that had to
- * run there. Consequence worth stating: a sidecar that fails to
- * install its own implementation via `setHumbleSecretStore()` degrades to
- * THIS module's default (plaintext under Tauri, since `safeStorage` here is
- * still the dead stub), not to no storage at all -- plan 13 must prove the
- * install actually happened, not assume it.
- *
- * Store-shaped, not value-transform-shaped, is load-bearing: plan 13's
+ * **The Electron implementation is gone (66.3-17).** It was the verbatim pre-seam
+`encryptionAvailable`/`encryptCookie`/`decryptCookie` bodies over the shim's `safeStorage`, kept
+as this module's DEFAULT; under the sidecar that default meant plaintext (F-1), reachable by
+any build that failed to install a store. The store is now chosen once at boot (the keyring-backed
+`SidecarHumbleSecretStore`, or the dev vault when `GAMELIB_DEV_SECRET_VAULT=1`) and required at
+`createHumbleServices()` construction, so no code path can read a placeholder store.
+
+Store-shaped, not value-transform-shaped, is load-bearing: plan 13's
  * keyring implementation OWNS where the secret lives (an OS Keychain entry
  * reached via a `rustInvoke` round-trip), so a seam that only encoded a
  * value for someone else to write into `configStore` could not express it.
@@ -48,12 +42,6 @@
  * loop that does not exist in the Electron main process.
  */
 
-import { safeStorage } from 'backend/platform'
-
-import { logWarning, LogPrefix } from 'backend/logger'
-
-import { humbleStores } from './humbleStores'
-import { HUMBLE_TOKEN_PREFIX, HUMBLE_TOKEN_STORE_KEY } from './constants'
 import type { TokenReadOutcome } from 'backend/storeManagers/steam/tokenStore'
 
 /** The two secrets `user.ts` persists today. A closed union, not a free
@@ -62,15 +50,6 @@ import type { TokenReadOutcome } from 'backend/storeManagers/steam/tokenStore'
  * inventing a third secret without thinking about where it lands. */
 export type HumbleSecretKey = 'sessionCookie' | 'csrfToken'
 
-// The configStore key each HumbleSecretKey maps to. sessionCookie shares the
-// existing HUMBLE_TOKEN_STORE_KEY constant (== 'sessionCookie'); csrfToken has
-// no dedicated constant today (user.ts always used the literal 'csrfToken'),
-// so this map is the ONE place that fact is recorded.
-const STORE_KEYS: Record<HumbleSecretKey, 'sessionCookie' | 'csrfToken'> = {
-  sessionCookie: HUMBLE_TOKEN_STORE_KEY,
-  csrfToken: 'csrfToken'
-}
-
 export interface HumbleSecretStore {
   /** Whether this store's underlying encryption/secure-storage mechanism is
    * currently usable. Does NOT indicate whether a secret is present.
@@ -78,8 +57,8 @@ export interface HumbleSecretStore {
    * `context` (quick-260905-jx3) is an OPTIONAL, never-secret trigger label,
    * forwarded to `SidecarKeyringSlotStore.isAvailable()` by the sidecar
    * implementation because that call can raise a real Keychain prompt and the
-   * prompt must be attributable afterwards. `ElectronHumbleSecretStore` cannot
-   * prompt and ignores it. */
+   * prompt must be attributable afterwards. A store that cannot prompt ignores
+   * it. */
   isAvailable(context?: string): Promise<boolean>
   /** Returns the stored secret, or `''` when none is stored, the store is
    * unavailable, or decryption failed. */
@@ -95,96 +74,4 @@ export interface HumbleSecretStore {
   setSecret(key: HumbleSecretKey, value: string): Promise<void>
   /** Removes both stored secrets. Never throws. */
   clearSecrets(): Promise<void>
-}
-
-// ── Electron implementation — byte-identical to the pre-seam behavior ───────
-
-/**
- * The Electron build's HumbleSecretStore. Wraps `safeStorage` + `configStore`
- * exactly as `user.ts` did before this seam existed -- the three private
- * methods below are the verbatim bodies of the former
- * `encryptionAvailable`/`encryptCookie`/`decryptCookie` free functions. A
- * behavior diff here is a REQ-34.4.1-02 failure.
- */
-export class ElectronHumbleSecretStore implements HumbleSecretStore {
-  private encryptionAvailable(): boolean {
-    try {
-      return safeStorage.isEncryptionAvailable()
-    } catch {
-      return false
-    }
-  }
-
-  private encryptValue(plain: string): string {
-    if (!plain) return ''
-    if (!this.encryptionAvailable()) {
-      logWarning(
-        'safeStorage unavailable — storing Humble session in plaintext (degraded encryption)',
-        LogPrefix.Backend
-      )
-      return plain
-    }
-    const ciphertext = safeStorage.encryptString(plain).toString('base64')
-    return `${HUMBLE_TOKEN_PREFIX}${ciphertext}`
-  }
-
-  private decryptValue(stored: string): string {
-    if (!stored) return ''
-    if (!stored.startsWith(HUMBLE_TOKEN_PREFIX)) {
-      // Legacy/plaintext fallback (degraded-encryption path above)
-      return stored
-    }
-    if (!this.encryptionAvailable()) return ''
-    try {
-      const buf = Buffer.from(
-        stored.slice(HUMBLE_TOKEN_PREFIX.length),
-        'base64'
-      )
-      return safeStorage.decryptString(buf)
-    } catch (err) {
-      logWarning(
-        ['Failed to decrypt Humble session cookie:', err],
-        LogPrefix.Backend
-      )
-      return ''
-    }
-  }
-
-  async isAvailable(): Promise<boolean> {
-    return Promise.resolve(this.encryptionAvailable())
-  }
-
-  async getSecret(key: HumbleSecretKey): Promise<string> {
-    const stored = humbleStores().configStore.get_nodefault(STORE_KEYS[key])
-    if (!stored || typeof stored !== 'string') return ''
-    return this.decryptValue(stored)
-  }
-
-  async setSecret(key: HumbleSecretKey, value: string): Promise<void> {
-    humbleStores().configStore.set(STORE_KEYS[key], this.encryptValue(value))
-  }
-
-  async clearSecrets(): Promise<void> {
-    humbleStores().configStore.delete(STORE_KEYS.sessionCookie)
-    humbleStores().configStore.delete(STORE_KEYS.csrfToken)
-  }
-}
-
-// ── Registry — swappable per build, no env-var escape hatch ─────────────────
-
-let activeSecretStore: HumbleSecretStore = new ElectronHumbleSecretStore()
-
-/**
- * Installs a different HumbleSecretStore implementation. Only ever called
- * explicitly by a build's own bootstrap path (e.g. the Tauri sidecar
- * installing its keyring-backed implementation in plan 13) -- there is
- * deliberately no env-var/config-driven auto-selection here
- * (Phase 28 REQ-28-07/D-08's rule, applied here).
- */
-export function setHumbleSecretStore(next: HumbleSecretStore): void {
-  activeSecretStore = next
-}
-
-export function getHumbleSecretStore(): HumbleSecretStore {
-  return activeSecretStore
 }

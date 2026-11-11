@@ -105,8 +105,7 @@
  */
 
 import type { IpcRegistry } from './ipcRegistry'
-import { HumbleUser } from '../humble/user'
-import { HumbleLibrary } from '../humble/library'
+import type { HumbleServices } from '../humble'
 import { runHumbleValidation } from '../humble/validation'
 
 /**
@@ -147,34 +146,41 @@ import type { ExpirationAlertDeps } from '../humble/expirationAlerts'
  * registry happens.
  */
 export function registerHumbleFlows(
-  deps: ExpirationAlertDeps & { ipc: Pick<IpcRegistry, 'handle' | 'on'> }
+  deps: ExpirationAlertDeps & {
+    ipc: Pick<IpcRegistry, 'handle' | 'on'>
+    /** The boot's Humble services (D-66.3-17): the one user and library, by slice. */
+    humble: Pick<HumbleServices, 'user' | 'library'>
+  }
 ): void {
   // ── Library/sync group (REQ-34.4-07) ─────────────────────────────────────
   deps.ipc.handle('humbleGetUserInfo', async () => {
-    return HumbleUser.getUserDetails()
+    return deps.humble.user.getUserDetails()
   })
 
   deps.ipc.handle('humbleCheckHealth', async () => {
     // Phase 49 (49-06): the method returns the probe outcome; the channel's
     // contract is still Promise<void>, so the outcome is dropped here.
-    await HumbleUser.checkHealthAndFlagExpiry()
+    await deps.humble.user.checkHealthAndFlagExpiry()
   })
 
   deps.ipc.handle('humbleSync', async () => {
-    return HumbleLibrary.sync(deps)
+    return deps.humble.library.sync({
+      config: deps.config,
+      notifications: deps.notifications
+    })
   })
 
   deps.ipc.handle('humbleGetKeys', async () => {
-    return HumbleLibrary.getKeys()
+    return deps.humble.library.getKeys()
   })
 
   deps.ipc.handle('humbleGetSyncState', async () => {
-    return HumbleLibrary.getSyncState()
+    return deps.humble.library.getSyncState()
   })
 
   // ── Key-state group (REQ-34.4-07) ────────────────────────────────────────
   deps.ipc.handle('humbleGetGiftedAt', async () => {
-    return HumbleLibrary.getAllGiftedAt()
+    return deps.humble.library.getAllGiftedAt()
   })
 
   deps.ipc.handle(
@@ -184,7 +190,7 @@ export function registerHumbleFlows(
         gamekey: string
         machineName: string
       }
-      return HumbleLibrary.markRedeemed(gamekey, machineName)
+      return deps.humble.library.markRedeemed(gamekey, machineName)
     }
   )
 
@@ -195,7 +201,7 @@ export function registerHumbleFlows(
         gamekey: string
         machineName: string
       }
-      return HumbleLibrary.undoRedeemed(gamekey, machineName)
+      return deps.humble.library.undoRedeemed(gamekey, machineName)
     }
   )
 
@@ -208,12 +214,12 @@ export function registerHumbleFlows(
         gamekey: string
         machineName: string
       }
-      return HumbleLibrary.getRevealedKeyValue(gamekey, machineName)
+      return deps.humble.library.getRevealedKeyValue(gamekey, machineName)
     }
   )
 
   deps.ipc.handle('humbleGetClaimAnnotations', async () => {
-    return HumbleLibrary.getClaimAnnotations()
+    return deps.humble.library.getClaimAnnotations()
   })
 
   // ── Ownership-override group (REQ-34.4-07, Plan 05) ──────────────────────
@@ -229,9 +235,9 @@ export function registerHumbleFlows(
     'humbleSetOwnershipOverride',
     async (_event: unknown, ...args: unknown[]) => {
       const machineName = args[0] as string
-      const targetKey = HumbleLibrary.getKeys().find(
-        (key) => key.machineName === machineName
-      )
+      const targetKey = deps.humble.library
+        .getKeys()
+        .find((key) => key.machineName === machineName)
       if (!targetKey || targetKey.matchConfidence !== 'fuzzy') {
         console.warn(
           '[humbleFlowRegistration] rejected humbleSetOwnershipOverride for non-fuzzy machineName:',
@@ -239,19 +245,19 @@ export function registerHumbleFlows(
         )
         return
       }
-      HumbleLibrary.setOwnershipOverride(machineName)
+      deps.humble.library.setOwnershipOverride(machineName)
     }
   )
 
   deps.ipc.handle(
     'humbleClearOwnershipOverride',
     async (_event: unknown, ...args: unknown[]) => {
-      return HumbleLibrary.clearOwnershipOverride(args[0] as string)
+      return deps.humble.library.clearOwnershipOverride(args[0] as string)
     }
   )
 
   deps.ipc.handle('humbleGetOwnershipOverrides', async () => {
-    return HumbleLibrary.getAllOwnershipOverrides()
+    return deps.humble.library.getAllOwnershipOverrides()
   })
 
   // ── Gift links (REQ-34.4-07, Plan 05) ─────────────────────────────────────
@@ -269,9 +275,9 @@ export function registerHumbleFlows(
     'humbleRecordGiftLinkOpened',
     async (_event: unknown, ...args: unknown[]) => {
       const machineName = args[0] as string
-      const targetKey = HumbleLibrary.getKeys().find(
-        (key) => key.machineName === machineName
-      )
+      const targetKey = deps.humble.library
+        .getKeys()
+        .find((key) => key.machineName === machineName)
       if (
         !targetKey ||
         !targetKey.ownedElsewhere ||
@@ -283,7 +289,7 @@ export function registerHumbleFlows(
         )
         return
       }
-      HumbleLibrary.recordGiftLinkOpened(machineName)
+      deps.humble.library.recordGiftLinkOpened(machineName)
     }
   )
 
@@ -308,9 +314,11 @@ export function registerHumbleFlows(
   // not become an unhandled rejection in the main process. Never rethrows
   // (sidecar-dialog-reject-crashes).
   deps.ipc.on('humbleDisconnect', () => {
-    HumbleUser.disconnect().catch((error) =>
-      console.warn('[humbleFlowRegistration] humbleDisconnect failed:', error)
-    )
+    deps.humble.user
+      .disconnect()
+      .catch((error) =>
+        console.warn('[humbleFlowRegistration] humbleDisconnect failed:', error)
+      )
   })
 
   // ── Dev validation (REQ-34.4-08, Plan 05) ─────────────────────────────────
@@ -325,6 +333,8 @@ export function registerHumbleFlows(
   // function, so it would give the same answer -- this call stays direct
   // because the dependency belongs on the derivation, not on the shim.
   if (!isPackagedSidecar()) {
-    deps.ipc.handle('humbleRunValidation', async () => runHumbleValidation())
+    deps.ipc.handle('humbleRunValidation', async () =>
+      runHumbleValidation(deps.humble)
+    )
   }
 }

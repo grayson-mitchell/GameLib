@@ -1,14 +1,14 @@
 /**
- * Unit tests for HumbleUser static class.
+ * Unit tests for HumbleUser (the boot-built instance, D-66.3-17).
  * Covers HACCT-01 (login/encryption), HACCT-02 (health check/reconnect),
  * HACCT-03 (disconnect), and the Pitfall 4/5 secrecy + degraded-encryption
  * requirements (T-10-04/T-10-05).
  *
  * Login is now a main-process WATCH over the shared `persist:humble`
  * partition (D-05/D-17) rather than a BrowserWindow — tests drive the watch
- * via `HumbleUser.notifyLoginNavigated()` (the D-17 forced-revalidation
+ * via `humbleUser.notifyLoginNavigated()` (the D-17 forced-revalidation
  * relay, analogous to the retired did-navigate handler) and
- * `HumbleUser.stopLogin()` (the D-06 silent-cancel relay, analogous to the
+ * `humbleUser.stopLogin()` (the D-06 silent-cancel relay, analogous to the
  * retired window 'closed' handler).
  *
  * Mock boundaries:
@@ -19,15 +19,13 @@
  *  - ../adapter      → getGamekeys
  */
 
-import { bindHumbleStores } from '../humbleStores'
-
 // ── Electron mock (must be first, jest.mock is hoisted) ──────────────────────
 const mockEncryptString = jest.fn((s: string) => Buffer.from(s))
 const mockDecryptString = jest.fn((b: Buffer) => b.toString())
 const mockIsEncryptionAvailable = jest.fn(() => true)
 
 // Typical Electron default UA shape: platform + Chrome version + the
-// Electron-/app-identifying tokens standardBrowserUserAgentForProcess() must strip.
+// Electron-/app-identifying tokens standardBrowserUserAgent() must strip.
 const mockUserAgentFallback =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) GameLib/1.0.0 Chrome/142.0.7444.52 Electron/41.1.1 Safari/537.36'
 
@@ -108,17 +106,14 @@ const mockConfigStore = {
 const mockHumbleLibraryStore = { clear: jest.fn() }
 const mockHumbleSyncStore = { clear: jest.fn() }
 const mockHumbleRevealedStore = { clear: jest.fn() }
-bindHumbleStores({
-  signIn: mockSignIn as never,
-  stores: {
-    humble: {
-      configStore: mockConfigStore,
-      humbleLibraryStore: mockHumbleLibraryStore,
-      humbleSyncStore: mockHumbleSyncStore,
-      humbleRevealedStore: mockHumbleRevealedStore
-    }
-  } as never
-})
+const humbleStoresFixture = {
+  humble: {
+    configStore: mockConfigStore,
+    humbleLibraryStore: mockHumbleLibraryStore,
+    humbleSyncStore: mockHumbleSyncStore,
+    humbleRevealedStore: mockHumbleRevealedStore
+  }
+} as never
 
 // ── adapter mock ───────────────────────────────────────────────────────────
 const mockGetGamekeys = jest.fn()
@@ -126,16 +121,10 @@ jest.mock('../adapter', () => ({
   getGamekeys: (...args: unknown[]) => mockGetGamekeys(...args)
 }))
 
-// ── syncFence mock (CR-01: disconnect must fence the in-flight sync) ───────
+// ── sync fence (CR-01: disconnect must fence the in-flight sync) ───────────
 const mockInvalidateSyncGeneration = jest.fn()
-jest.mock('../syncFence', () => ({
-  currentSyncGeneration: () => 0,
-  invalidateSyncGeneration: (...args: unknown[]) =>
-    mockInvalidateSyncGeneration(...args)
-}))
 
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
-import { standardBrowserUserAgentForProcess } from '../userAgent'
 import {
   HumbleUser,
   standardBrowserUserAgent,
@@ -143,10 +132,79 @@ import {
   VALIDATION_THROTTLE_MS,
   COOKIE_POLL_INTERVAL_MS
 } from '../user'
-import { setLoginWindowSeam, type LoginWindowSeam } from '../loginWindowSeam'
+import {
+  createLoginWindowSeamSlot,
+  type LoginWindowSeam
+} from '../loginWindowSeam'
+import type { HumbleSecretKey, HumbleSecretStore } from '../secretStore'
+import { HUMBLE_TOKEN_PREFIX, HUMBLE_TOKEN_STORE_KEY } from '../constants'
 import { HUMBLE_BASE_URL, HUMBLE_LOGIN_URL } from '../constants'
 
 const flushAsync = async () => new Promise((r) => setImmediate(r))
+
+const appInfo = { userAgentFallback: mockUserAgentFallback }
+const seamSlot = createLoginWindowSeamSlot()
+
+// ── Config-backed secret store double ────────────────────────────────────────
+// 66.3-17 deleted the production Electron store (the dead `safeStorage` default). This double
+// reproduces its persisted shape -- `humble:v1:`-prefixed ciphertext in the config store, or
+// plaintext when encryption is unavailable -- over the file's own crypto mocks, so every
+// assertion below about what `HumbleUser` persists and reads keeps exercising `user.ts` through a
+// store that reports `isAvailable()` the way the old one did.
+const STORE_KEYS: Record<HumbleSecretKey, 'sessionCookie' | 'csrfToken'> = {
+  sessionCookie: HUMBLE_TOKEN_STORE_KEY,
+  csrfToken: 'csrfToken'
+}
+
+class ConfigBackedTestSecretStore implements HumbleSecretStore {
+  async isAvailable(): Promise<boolean> {
+    return mockIsEncryptionAvailable()
+  }
+
+  async getSecret(key: HumbleSecretKey): Promise<string> {
+    const stored = mockConfigStore.get_nodefault(STORE_KEYS[key]) as unknown
+    if (!stored || typeof stored !== 'string') return ''
+    if (!stored.startsWith(HUMBLE_TOKEN_PREFIX)) return stored
+    if (!mockIsEncryptionAvailable()) return ''
+    try {
+      return mockDecryptString(
+        Buffer.from(stored.slice(HUMBLE_TOKEN_PREFIX.length), 'base64')
+      )
+    } catch {
+      return ''
+    }
+  }
+
+  async setSecret(key: HumbleSecretKey, value: string): Promise<void> {
+    let stored = value
+    if (value && mockIsEncryptionAvailable()) {
+      stored = `${HUMBLE_TOKEN_PREFIX}${mockEncryptString(value).toString('base64')}`
+    } else if (value) {
+      mockLogWarning(
+        'safeStorage unavailable — storing Humble session in plaintext (degraded encryption)'
+      )
+    }
+    mockConfigStore.set(STORE_KEYS[key], stored)
+  }
+
+  async clearSecrets(): Promise<void> {
+    mockConfigStore.delete(STORE_KEYS.sessionCookie)
+    mockConfigStore.delete(STORE_KEYS.csrfToken)
+  }
+}
+
+/** One fresh `HumbleUser` per test: its watch state is per instance. */
+let humbleUser: HumbleUser
+function createHumbleUser(): HumbleUser {
+  return new HumbleUser({
+    stores: humbleStoresFixture,
+    secretStore: new ConfigBackedTestSecretStore(),
+    loginWindowSeam: seamSlot,
+    syncFence: { invalidate: () => mockInvalidateSyncGeneration() },
+    signInOutcomes: mockSignIn.outcomes as never,
+    appInfo
+  })
+}
 
 // ── Fake LoginWindowSeam fixture (Phase 34.4.1 Plan 03) ──────────────────────
 // Lifted to module scope by Phase 39 Plan 04 Task 3: after Task 1 collapsed
@@ -164,7 +222,7 @@ const flushAsync = async () => new Promise((r) => setImmediate(r))
 // default. Describes that need their own seam behaviour per-test (e.g.
 // 'login window seam path' overriding mockSeamCookies per test) still keep
 // their own scoped beforeEach — calling installFakeSeamDefaults() /
-// setLoginWindowSeam(fakeSeam) twice is harmless and simply re-applies the
+// seamSlot.install(fakeSeam) twice is harmless and simply re-applies the
 // same healthy defaults after the file-level beforeEach already did.
 const mockSeamOpen = jest.fn()
 const mockSeamCookies = jest.fn()
@@ -244,11 +302,12 @@ describe('HumbleUser', () => {
     // Phase 39 Plan 06: watchForLogin()/finishLogin() are seam-only now, so
     // every describe in this file needs a seam installed by default.
     installFakeSeamDefaults()
-    setLoginWindowSeam(fakeSeam)
+    seamSlot.install(fakeSeam)
+    humbleUser = createHumbleUser()
   })
 
   afterEach(() => {
-    setLoginWindowSeam(null)
+    seamSlot.install(null)
   })
 
   // ── isLoggedIn / getUserDetails ───────────────────────────────────────────
@@ -256,12 +315,12 @@ describe('HumbleUser', () => {
   describe('isLoggedIn()', () => {
     test('returns false when configStore has no isLoggedIn', () => {
       mockConfigStore.get_nodefault.mockReturnValue(undefined)
-      expect(HumbleUser.isLoggedIn()).toBe(false)
+      expect(humbleUser.isLoggedIn()).toBe(false)
     })
 
     test('returns true when isLoggedIn is true in store', () => {
       mockConfigStore.get_nodefault.mockReturnValue(true)
-      expect(HumbleUser.isLoggedIn()).toBe(true)
+      expect(humbleUser.isLoggedIn()).toBe(true)
     })
   })
 
@@ -269,7 +328,7 @@ describe('HumbleUser', () => {
     test('returns stored userData', () => {
       const userData = { username: 'TestUser' }
       mockConfigStore.get_nodefault.mockReturnValue(userData)
-      expect(HumbleUser.getUserDetails()).toEqual(userData)
+      expect(humbleUser.getUserDetails()).toEqual(userData)
     })
   })
 
@@ -280,8 +339,8 @@ describe('HumbleUser', () => {
       // No mockSeamCookies override needed: stopLogin() settles
       // synchronously via `stop: () => settle({ status: 'waiting' })`,
       // before any cookie read can occur.
-      const loginPromise = HumbleUser.startLogin()
-      HumbleUser.stopLogin()
+      const loginPromise = humbleUser.startLogin()
+      humbleUser.stopLogin()
       const result = await loginPromise
 
       expect(result).toEqual({ status: 'waiting' })
@@ -289,15 +348,15 @@ describe('HumbleUser', () => {
     })
 
     test('does not throw and does not log an error for a plain cancel', async () => {
-      const loginPromise = HumbleUser.startLogin()
-      HumbleUser.stopLogin()
+      const loginPromise = humbleUser.startLogin()
+      humbleUser.stopLogin()
 
       await expect(loginPromise).resolves.toEqual({ status: 'waiting' })
       expect(mockLogError).not.toHaveBeenCalled()
     })
 
     test('stopLogin() is a no-op when no watch is active', () => {
-      expect(() => HumbleUser.stopLogin()).not.toThrow()
+      expect(() => humbleUser.stopLogin()).not.toThrow()
     })
 
     test('WR-03: stopLogin() DURING an in-flight validation prevents ALL store writes even when the validation then succeeds (D-06 cancel race)', async () => {
@@ -318,14 +377,14 @@ describe('HumbleUser', () => {
         async () => new Promise((r) => (resolveGamekeys = r))
       )
 
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync() // seam.open() resolves, seamLabel gets set
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await flushAsync()
       expect(mockGetGamekeys).toHaveBeenCalledTimes(1)
 
       // User cancels while getGamekeys is still pending...
-      HumbleUser.stopLogin()
+      humbleUser.stopLogin()
       await expect(loginPromise).resolves.toEqual({ status: 'waiting' })
 
       // ...and the in-flight validation then succeeds. NOTHING may be
@@ -348,7 +407,7 @@ describe('HumbleUser', () => {
         // test never depends on what mockSeamCookies resolves.
         mockSeamCookies.mockResolvedValue({ total: 0, matched: [] })
 
-        const loginPromise = HumbleUser.startLogin()
+        const loginPromise = humbleUser.startLogin()
         jest.advanceTimersByTime(LOGIN_WATCH_TIMEOUT_MS)
 
         await expect(loginPromise).resolves.toEqual({ status: 'waiting' })
@@ -371,11 +430,11 @@ describe('HumbleUser', () => {
         // does not depend on the cookie mock at all.
         mockSeamCookies.mockResolvedValue({ total: 0, matched: [] })
 
-        const loginPromise = HumbleUser.startLogin()
+        const loginPromise = humbleUser.startLogin()
 
         // Just before the deadline, the user navigates (SSO redirect etc.).
         jest.advanceTimersByTime(LOGIN_WATCH_TIMEOUT_MS - 1000)
-        HumbleUser.notifyLoginNavigated()
+        humbleUser.notifyLoginNavigated()
 
         // The original deadline instant passes without settling…
         jest.advanceTimersByTime(2000)
@@ -411,9 +470,9 @@ describe('HumbleUser', () => {
         ]
       })
 
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync() // seam.open() resolves, seamLabel gets set
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       const result = await loginPromise
 
       expect(result.status).toBe('done')
@@ -446,9 +505,9 @@ describe('HumbleUser', () => {
         ]
       })
 
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync()
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await loginPromise
 
       expect(mockConfigStore.set).toHaveBeenCalledWith('expired', false)
@@ -469,9 +528,9 @@ describe('HumbleUser', () => {
         ]
       })
 
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync() // seam.open() resolves, seamLabel gets set
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await loginPromise
 
       expect(mockSendFrontendMessage).toHaveBeenCalledWith('humbleAuthState', {
@@ -490,7 +549,7 @@ describe('HumbleUser', () => {
   // Google SSO restricts embedded browsers detected via Electron/app UA
   // tokens (forcing uncompletable passkey prompts or disallowed_useragent).
 
-  describe('standardBrowserUserAgentForProcess()', () => {
+  describe('standardBrowserUserAgent({ appInfo })', () => {
     test('derives a plain Chrome UA from the runtime fallback: platform + Chrome version kept, Electron/app tokens stripped', () => {
       const ua = standardBrowserUserAgent({
         appInfo: { userAgentFallback: mockUserAgentFallback }
@@ -509,7 +568,7 @@ describe('HumbleUser', () => {
     // Covering twin: 'login window seam path (Phase 34.4.1 Plan 03)' ->
     // 'opens the login window once with HUMBLE_LOGIN_URL, visible: true,
     // and the standard Chrome UA' asserts the SAME guarantee (the watch
-    // opens the window with standardBrowserUserAgentForProcess()) via
+    // opens the window with standardBrowserUserAgent({ appInfo })) via
     // seam.open(...)'s userAgent argument, the only surviving path.
   })
 
@@ -533,9 +592,9 @@ describe('HumbleUser', () => {
       })
       mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync() // seam.open() resolves, seamLabel gets set
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await flushAsync()
 
       // Gamekeys validation ran, but NOTHING was stored — the user still
@@ -544,7 +603,7 @@ describe('HumbleUser', () => {
       expect(mockConfigStore.set).not.toHaveBeenCalled()
 
       // User gives up → still the D-06 silent-cancel path.
-      HumbleUser.stopLogin()
+      humbleUser.stopLogin()
       await expect(loginPromise).resolves.toEqual({ status: 'waiting' })
     })
 
@@ -564,9 +623,9 @@ describe('HumbleUser', () => {
       })
       mockGetGamekeys.mockResolvedValueOnce({ status: 'session_expired' })
 
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync() // seam.open() resolves, seamLabel gets set
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await flushAsync()
       expect(mockConfigStore.set).not.toHaveBeenCalled()
 
@@ -575,7 +634,7 @@ describe('HumbleUser', () => {
       // notifyLoginNavigated(). Same cookie VALUE, but the server-side
       // session is now authenticated.
       mockGetGamekeys.mockResolvedValue({ status: 'ok', data: [] })
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       const result = await loginPromise
 
       expect(result.status).toBe('done')
@@ -600,12 +659,12 @@ describe('HumbleUser', () => {
         })
         mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
-        const loginPromise = HumbleUser.startLogin()
+        const loginPromise = humbleUser.startLogin()
         await flushAsync() // seam.open() resolves, seamLabel gets set
 
         // Forced validation via navigation relay → rejected, throttle
         // starts.
-        HumbleUser.notifyLoginNavigated()
+        humbleUser.notifyLoginNavigated()
         await flushAsync()
         expect(mockGetGamekeys).toHaveBeenCalledTimes(1)
 
@@ -619,7 +678,7 @@ describe('HumbleUser', () => {
         await flushAsync()
         expect(mockGetGamekeys).toHaveBeenCalledTimes(2)
 
-        HumbleUser.stopLogin()
+        humbleUser.stopLogin()
         await loginPromise
       } finally {
         jest.useRealTimers()
@@ -642,10 +701,10 @@ describe('HumbleUser', () => {
         async () => new Promise((r) => (resolveGamekeys = r))
       )
 
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync() // seam.open() resolves, seamLabel gets set
-      HumbleUser.notifyLoginNavigated()
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await flushAsync()
 
       // Second check bailed on the in-flight flag — one validation only.
@@ -671,9 +730,9 @@ describe('HumbleUser', () => {
       })
       mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync() // seam.open() resolves, seamLabel gets set
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await flushAsync()
       expect(mockConfigStore.set).not.toHaveBeenCalledWith('isLoggedIn', true)
 
@@ -690,7 +749,7 @@ describe('HumbleUser', () => {
       })
       mockGetGamekeys.mockResolvedValue({ status: 'ok', data: [] })
 
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       const result = await loginPromise
 
       expect(result.status).toBe('done')
@@ -713,16 +772,16 @@ describe('HumbleUser', () => {
       })
       mockGetGamekeys.mockRejectedValueOnce(new Error('network down'))
 
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync() // seam.open() resolves, seamLabel gets set
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await flushAsync()
 
       expect(mockConfigStore.set).not.toHaveBeenCalled()
 
       // Retry with the SAME value succeeds (not permanently blacklisted).
       mockGetGamekeys.mockResolvedValue({ status: 'ok', data: [] })
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       const result = await loginPromise
 
       expect(result.status).toBe('done')
@@ -747,13 +806,13 @@ describe('HumbleUser', () => {
       })
       mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync() // seam.open() resolves, seamLabel gets set
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await flushAsync()
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await flushAsync()
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await flushAsync()
 
       expect(mockGetGamekeys).toHaveBeenCalledTimes(3)
@@ -763,7 +822,7 @@ describe('HumbleUser', () => {
       expect(rejectionLines.length).toBe(1)
       expect(String(rejectionLines[0][0])).not.toContain('status changed')
 
-      HumbleUser.stopLogin()
+      humbleUser.stopLogin()
       await loginPromise
     })
 
@@ -780,21 +839,21 @@ describe('HumbleUser', () => {
       })
       mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync() // seam.open() resolves, seamLabel gets set
       // Three identical rejections under 'session_expired' — one logged,
       // two suppressed.
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await flushAsync()
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await flushAsync()
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await flushAsync()
 
       // Status changes to 'access_denied' — must log again, never be
       // silently absorbed into the prior suppression count.
       mockGetGamekeys.mockResolvedValue({ status: 'access_denied' })
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await flushAsync()
 
       const rejectionLines = mockLogWarning.mock.calls.filter((c) =>
@@ -808,7 +867,7 @@ describe('HumbleUser', () => {
       )
       expect(rejectionLines[1][0][1]).toBe('access_denied')
 
-      HumbleUser.stopLogin()
+      humbleUser.stopLogin()
       await loginPromise
     })
 
@@ -827,9 +886,9 @@ describe('HumbleUser', () => {
         })
         mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
-        const loginPromise = HumbleUser.startLogin()
+        const loginPromise = humbleUser.startLogin()
         await flushAsync() // seam.open() resolves, seamLabel gets set
-        HumbleUser.notifyLoginNavigated()
+        humbleUser.notifyLoginNavigated()
         await flushAsync()
 
         // Advance well past the liveness heartbeat interval (30s) while the
@@ -845,7 +904,7 @@ describe('HumbleUser', () => {
         )
         expect(heartbeats.length).toBeGreaterThan(0)
 
-        HumbleUser.stopLogin()
+        humbleUser.stopLogin()
         await loginPromise
       } finally {
         jest.useRealTimers()
@@ -865,15 +924,15 @@ describe('HumbleUser', () => {
       })
       mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync() // seam.open() resolves, seamLabel gets set
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await flushAsync()
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await flushAsync()
 
       mockGetGamekeys.mockResolvedValue({ status: 'ok', data: [] })
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       const result = await loginPromise
 
       expect(result.status).toBe('done')
@@ -895,20 +954,20 @@ describe('HumbleUser', () => {
         })
         mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
-        const loginPromise = HumbleUser.startLogin()
+        const loginPromise = humbleUser.startLogin()
         await flushAsync() // seam.open() resolves, seamLabel gets set
-        HumbleUser.notifyLoginNavigated()
+        humbleUser.notifyLoginNavigated()
         await flushAsync()
         expect(mockGetGamekeys).toHaveBeenCalledTimes(1)
 
         // Well INSIDE the 3000ms throttle window — a forced revalidation
         // must still re-check (D-17), unlike an ordinary poll tick.
         jest.advanceTimersByTime(500)
-        HumbleUser.notifyLoginNavigated()
+        humbleUser.notifyLoginNavigated()
         await flushAsync()
         expect(mockGetGamekeys).toHaveBeenCalledTimes(2)
 
-        HumbleUser.stopLogin()
+        humbleUser.stopLogin()
         await loginPromise
       } finally {
         jest.useRealTimers()
@@ -938,9 +997,9 @@ describe('HumbleUser', () => {
         ]
       })
 
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync() // seam.open() resolves, seamLabel gets set
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await loginPromise
 
       expect(mockConfigStore.set).toHaveBeenCalledWith(
@@ -963,9 +1022,9 @@ describe('HumbleUser', () => {
         ]
       })
 
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync() // seam.open() resolves, seamLabel gets set
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await loginPromise
 
       expect(mockConfigStore.set).toHaveBeenCalledWith(
@@ -989,7 +1048,7 @@ describe('HumbleUser', () => {
       mockDecryptString.mockReturnValue('cookie')
       mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
-      await HumbleUser.checkHealthAndFlagExpiry()
+      await humbleUser.checkHealthAndFlagExpiry()
 
       expect(mockConfigStore.set).toHaveBeenCalledWith('expired', true)
       expect(mockSendFrontendMessage).toHaveBeenCalledWith(
@@ -1012,7 +1071,7 @@ describe('HumbleUser', () => {
       mockDecryptString.mockReturnValue('cookie')
       mockGetGamekeys.mockResolvedValue({ status: 'access_denied' })
 
-      await HumbleUser.checkHealthAndFlagExpiry()
+      await humbleUser.checkHealthAndFlagExpiry()
 
       expect(mockConfigStore.set).not.toHaveBeenCalledWith('expired', true)
       expect(mockSendFrontendMessage).not.toHaveBeenCalled()
@@ -1031,22 +1090,22 @@ describe('HumbleUser', () => {
       mockDecryptString.mockReturnValue('cookie')
 
       mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
-      await expect(HumbleUser.checkHealthAndFlagExpiry()).resolves.toBe(
+      await expect(humbleUser.checkHealthAndFlagExpiry()).resolves.toBe(
         'expired'
       )
       mockGetGamekeys.mockResolvedValue({ status: 'access_denied' })
-      await expect(HumbleUser.checkHealthAndFlagExpiry()).resolves.toBe(
+      await expect(humbleUser.checkHealthAndFlagExpiry()).resolves.toBe(
         'unknown'
       )
       mockGetGamekeys.mockResolvedValue({ status: 'ok', data: [] })
-      await expect(HumbleUser.checkHealthAndFlagExpiry()).resolves.toBe(
+      await expect(humbleUser.checkHealthAndFlagExpiry()).resolves.toBe(
         'healthy'
       )
     })
 
     test('does nothing (no adapter call) when there is no stored session cookie', async () => {
       mockConfigStore.get_nodefault.mockReturnValue(undefined)
-      await HumbleUser.checkHealthAndFlagExpiry()
+      await humbleUser.checkHealthAndFlagExpiry()
       expect(mockGetGamekeys).not.toHaveBeenCalled()
     })
 
@@ -1062,7 +1121,7 @@ describe('HumbleUser', () => {
 
       // Must NOT reject — health is unknown, not expired. Phase 49 (49-06):
       // the method now returns the probe outcome, so "unknown" is observable.
-      await expect(HumbleUser.checkHealthAndFlagExpiry()).resolves.toBe(
+      await expect(humbleUser.checkHealthAndFlagExpiry()).resolves.toBe(
         'unknown'
       )
 
@@ -1098,7 +1157,7 @@ describe('HumbleUser', () => {
       mockDecryptString.mockReturnValue('cookie')
       mockGetGamekeys.mockResolvedValue({ status: 'ok' })
 
-      await HumbleUser.checkHealthAndFlagExpiry()
+      await humbleUser.checkHealthAndFlagExpiry()
 
       const csrfCookieCalls = mockCookiesGet.mock.calls.filter(
         ([opts]) => opts?.name === 'csrf_cookie'
@@ -1129,8 +1188,8 @@ describe('HumbleUser', () => {
 
   describe('reconnect() — D-11 partition kept', () => {
     test('watches the persist:humble partition WITHOUT clearing it', async () => {
-      const reconnectPromise = HumbleUser.reconnect()
-      HumbleUser.stopLogin()
+      const reconnectPromise = humbleUser.reconnect()
+      humbleUser.stopLogin()
       await reconnectPromise
 
       // Phase 39 Plan 06: reconnect() is watchForLogin()'s only
@@ -1159,11 +1218,11 @@ describe('HumbleUser', () => {
     // describe only — see the module-scope fixture comment above.
     beforeEach(() => {
       installFakeSeamDefaults()
-      setLoginWindowSeam(fakeSeam)
+      seamSlot.install(fakeSeam)
     })
 
     afterEach(() => {
-      setLoginWindowSeam(null)
+      seamSlot.install(null)
     })
 
     // Two tests formerly here — 'clears all five partition caches and clears
@@ -1182,7 +1241,7 @@ describe('HumbleUser', () => {
     // verbatim against the same single surviving path.
 
     test('Phase 49: disconnect() notes the sign-out so an older probe cannot re-latch expired', async () => {
-      await HumbleUser.disconnect()
+      await humbleUser.disconnect()
 
       expect(mockNoteSignedOut).toHaveBeenCalledTimes(1)
       expect(mockNoteSignedOut).toHaveBeenCalledWith('humble')
@@ -1190,7 +1249,7 @@ describe('HumbleUser', () => {
     })
 
     test('HSYNC-02/D-04/D-30: clears humbleLibraryStore + humbleSyncStore but NEVER humbleRevealedStore', async () => {
-      await HumbleUser.disconnect()
+      await humbleUser.disconnect()
 
       expect(mockHumbleLibraryStore.clear).toHaveBeenCalled()
       expect(mockHumbleSyncStore.clear).toHaveBeenCalled()
@@ -1212,7 +1271,7 @@ describe('HumbleUser', () => {
         callOrder.push('humbleSyncStore.clear')
       })
 
-      await HumbleUser.disconnect()
+      await humbleUser.disconnect()
 
       expect(callOrder[0]).toBe('invalidateSyncGeneration')
       expect(callOrder).toEqual(
@@ -1239,7 +1298,7 @@ describe('HumbleUser', () => {
         callOrder.push(`configStore.delete:${key}`)
       })
 
-      await HumbleUser.disconnect()
+      await humbleUser.disconnect()
 
       expect(callOrder[0]).toBe('configStore.clear')
       expect(callOrder).toEqual(
@@ -1255,7 +1314,7 @@ describe('HumbleUser', () => {
         throw new Error('delete failed')
       })
 
-      await expect(HumbleUser.disconnect()).resolves.toBeUndefined()
+      await expect(humbleUser.disconnect()).resolves.toBeUndefined()
       expect(mockLogWarning).toHaveBeenCalled()
     })
   })
@@ -1295,9 +1354,9 @@ describe('HumbleUser', () => {
         }
       )
 
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync() // seam.open() resolves, seamLabel gets set
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       const result = await loginPromise
       expect(result.status).toBe('done')
 
@@ -1313,7 +1372,7 @@ describe('HumbleUser', () => {
       mockConfigStore.get_nodefault.mockImplementation((key: string) =>
         key === 'csrfToken' ? csrfCall![1] : undefined
       )
-      await expect(HumbleUser.getCsrfToken()).resolves.toBe('raw-csrf-value')
+      await expect(humbleUser.getCsrfToken()).resolves.toBe('raw-csrf-value')
     })
 
     test('csrf_cookie absent at login: nothing stored, login still completes, getCsrfToken() returns undefined (no crash)', async () => {
@@ -1333,9 +1392,9 @@ describe('HumbleUser', () => {
         }
       )
 
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync() // seam.open() resolves, seamLabel gets set
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       const result = await loginPromise
       expect(result.status).toBe('done')
 
@@ -1346,13 +1405,13 @@ describe('HumbleUser', () => {
 
       // configStore never had a csrfToken written — get_nodefault's default
       // beforeEach() wiring (returns undefined) models this correctly.
-      await expect(HumbleUser.getCsrfToken()).resolves.toBeUndefined()
+      await expect(humbleUser.getCsrfToken()).resolves.toBeUndefined()
     })
 
     test('getCsrfToken() returns undefined when configStore has never seen a csrfToken key at all', async () => {
       mockConfigStore.get_nodefault.mockReturnValue(undefined)
-      expect(() => HumbleUser.getCsrfToken()).not.toThrow()
-      await expect(HumbleUser.getCsrfToken()).resolves.toBeUndefined()
+      expect(() => humbleUser.getCsrfToken()).not.toThrow()
+      await expect(humbleUser.getCsrfToken()).resolves.toBeUndefined()
     })
 
     test('csrfToken lives on configStore and is wiped by disconnect() alongside the session cookie', async () => {
@@ -1362,9 +1421,9 @@ describe('HumbleUser', () => {
       // and tears down the fake seam locally rather than depending on the
       // sibling "login window seam path" describe's shared beforeEach.
       installFakeSeamDefaults()
-      setLoginWindowSeam(fakeSeam)
+      seamSlot.install(fakeSeam)
       try {
-        await HumbleUser.disconnect()
+        await humbleUser.disconnect()
         // csrfToken is not a separate CacheStore (Pitfall 1 exclusion list is
         // for humbleRevealedStore/humbleOwnershipOverrideStore/
         // humbleGiftedAtStore — none of which apply here) — it is a
@@ -1372,7 +1431,7 @@ describe('HumbleUser', () => {
         // clears wholesale.
         expect(mockConfigStore.clear).toHaveBeenCalled()
       } finally {
-        setLoginWindowSeam(null)
+        seamSlot.install(null)
       }
     })
 
@@ -1411,9 +1470,9 @@ describe('HumbleUser', () => {
         }
       )
 
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync() // seam.open() resolves, seamLabel gets set
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await loginPromise
 
       const loggerCalls = [
@@ -1445,11 +1504,11 @@ describe('HumbleUser', () => {
     // fixture comment above 'HumbleUser').
     beforeEach(() => {
       installFakeSeamDefaults()
-      setLoginWindowSeam(fakeSeam)
+      seamSlot.install(fakeSeam)
     })
 
     afterEach(() => {
-      setLoginWindowSeam(null)
+      seamSlot.install(null)
     })
 
     // Three tests formerly here — 'returns the live partition csrf_cookie
@@ -1473,7 +1532,7 @@ describe('HumbleUser', () => {
     test('returns undefined when no stored snapshot exists', async () => {
       mockConfigStore.get_nodefault.mockReturnValue(undefined)
 
-      await expect(HumbleUser.getLiveCsrfToken()).resolves.toBeUndefined()
+      await expect(humbleUser.getLiveCsrfToken()).resolves.toBeUndefined()
     })
 
     test('never logs the stored csrf value it returns', async () => {
@@ -1482,7 +1541,7 @@ describe('HumbleUser', () => {
         key === 'csrfToken' ? STORED_SECRET : undefined
       )
 
-      await expect(HumbleUser.getLiveCsrfToken()).resolves.toBe(STORED_SECRET)
+      await expect(humbleUser.getLiveCsrfToken()).resolves.toBe(STORED_SECRET)
 
       const loggerCalls = [
         ...mockLogInfo.mock.calls,
@@ -1514,26 +1573,26 @@ describe('HumbleUser', () => {
   describe('login window seam path (Phase 34.4.1 Plan 03)', () => {
     beforeEach(() => {
       installFakeSeamDefaults()
-      setLoginWindowSeam(fakeSeam)
+      seamSlot.install(fakeSeam)
     })
 
     afterEach(() => {
-      setLoginWindowSeam(null)
+      seamSlot.install(null)
     })
 
     test('opens the login window once with HUMBLE_LOGIN_URL, visible: true, and the standard Chrome UA', async () => {
       mockSeamCookies.mockResolvedValue({ total: 5, matched: [] })
 
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync()
 
       expect(mockSeamOpen).toHaveBeenCalledTimes(1)
       expect(mockSeamOpen).toHaveBeenCalledWith(HUMBLE_LOGIN_URL, {
         visible: true,
-        userAgent: standardBrowserUserAgentForProcess()
+        userAgent: standardBrowserUserAgent({ appInfo })
       })
 
-      HumbleUser.stopLogin()
+      humbleUser.stopLogin()
       await loginPromise
     })
 
@@ -1542,7 +1601,7 @@ describe('HumbleUser', () => {
       try {
         mockSeamCookies.mockResolvedValue({ total: 0, matched: [] })
 
-        const loginPromise = HumbleUser.startLogin()
+        const loginPromise = humbleUser.startLogin()
         await flushAsync() // seam.open() resolves, seamLabel gets set
 
         jest.advanceTimersByTime(1500)
@@ -1567,7 +1626,7 @@ describe('HumbleUser', () => {
       try {
         mockSeamCookies.mockResolvedValue({ total: 5, matched: [] })
 
-        const loginPromise = HumbleUser.startLogin()
+        const loginPromise = humbleUser.startLogin()
         await flushAsync()
 
         jest.advanceTimersByTime(1500)
@@ -1602,7 +1661,7 @@ describe('HumbleUser', () => {
         // gamekeys call) while time is advanced toward the deadline.
         mockSeamCookies.mockResolvedValue({ total: 3, matched: [] })
 
-        const loginPromise = HumbleUser.startLogin()
+        const loginPromise = humbleUser.startLogin()
         await flushAsync()
 
         // Advance to a few poll ticks short of the ORIGINAL deadline —
@@ -1646,7 +1705,7 @@ describe('HumbleUser', () => {
         await flushAsync()
         expect(settled).toBe(false)
 
-        HumbleUser.stopLogin()
+        humbleUser.stopLogin()
         await expect(loginPromise).resolves.toEqual({ status: 'waiting' })
       } finally {
         jest.useRealTimers()
@@ -1674,7 +1733,7 @@ describe('HumbleUser', () => {
         // until the window is destroyed out from under it.
         mockSeamCookies.mockResolvedValue({ total: 3, matched: [] })
 
-        const loginPromise = HumbleUser.startLogin()
+        const loginPromise = humbleUser.startLogin()
         await flushAsync()
 
         mockSeamTakeEvents.mockResolvedValueOnce([{ event: 'closed', url: '' }])
@@ -1723,7 +1782,7 @@ describe('HumbleUser', () => {
           ]
         })
 
-        const loginPromise = HumbleUser.startLogin()
+        const loginPromise = humbleUser.startLogin()
         await flushAsync()
         jest.advanceTimersByTime(1500)
         await flushAsync()
@@ -1738,10 +1797,10 @@ describe('HumbleUser', () => {
     })
 
     test('close(label) is called exactly once when the watch settles via stopLogin() (silent cancel)', async () => {
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync() // seam.open() resolves, seamLabel gets set
 
-      HumbleUser.stopLogin()
+      humbleUser.stopLogin()
 
       await expect(loginPromise).resolves.toEqual({ status: 'waiting' })
       expect(mockSeamClose).toHaveBeenCalledTimes(1)
@@ -1751,10 +1810,10 @@ describe('HumbleUser', () => {
     test('a close() rejection is swallowed — the watch still resolves', async () => {
       mockSeamClose.mockRejectedValue(new Error('close failed'))
 
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync()
 
-      HumbleUser.stopLogin()
+      humbleUser.stopLogin()
 
       await expect(loginPromise).resolves.toEqual({ status: 'waiting' })
       expect(mockLogWarning).toHaveBeenCalled()
@@ -1790,7 +1849,7 @@ describe('HumbleUser', () => {
           }
         )
 
-        const loginPromise = HumbleUser.startLogin()
+        const loginPromise = humbleUser.startLogin()
         await flushAsync()
         jest.advanceTimersByTime(1500)
         await flushAsync()
@@ -1829,7 +1888,7 @@ describe('HumbleUser', () => {
         key === 'csrfToken' ? 'stored-snapshot-under-seam' : undefined
       )
 
-      await expect(HumbleUser.getLiveCsrfToken()).resolves.toBe(
+      await expect(humbleUser.getLiveCsrfToken()).resolves.toBe(
         'stored-snapshot-under-seam'
       )
       expect(mockFromPartition).not.toHaveBeenCalled()
@@ -1855,7 +1914,7 @@ describe('HumbleUser', () => {
           ]
         })
 
-        const loginPromise = HumbleUser.startLogin()
+        const loginPromise = humbleUser.startLogin()
         await flushAsync()
         jest.advanceTimersByTime(1500)
         await flushAsync()
@@ -1880,9 +1939,9 @@ describe('HumbleUser', () => {
     // is now a hard failure, never a silent Electron fallback. Covering
     // twin (re-expressing the new invariant, not the retired one):
     test('with NO seam installed, startLogin() rejects loudly instead of silently falling back (Phase 39 Plan 06)', async () => {
-      setLoginWindowSeam(null)
+      seamSlot.install(null)
 
-      await expect(HumbleUser.startLogin()).rejects.toThrow(
+      await expect(humbleUser.startLogin()).rejects.toThrow(
         /no login-window seam is installed/
       )
       expect(mockSeamOpen).not.toHaveBeenCalled()
@@ -1923,11 +1982,11 @@ describe('HumbleUser', () => {
           ]
         })
 
-        await HumbleUser.checkHealthAndFlagExpiry()
+        await humbleUser.checkHealthAndFlagExpiry()
 
         expect(mockSeamOpen).toHaveBeenCalledWith(HUMBLE_BASE_URL, {
           visible: false,
-          userAgent: standardBrowserUserAgentForProcess()
+          userAgent: standardBrowserUserAgent({ appInfo })
         })
         expect(mockSeamCookies).toHaveBeenCalledWith(
           'csrf-backfill-window-0',
@@ -1958,7 +2017,7 @@ describe('HumbleUser', () => {
         mockSeamOpen.mockResolvedValue('csrf-backfill-window-1')
         mockSeamCookies.mockResolvedValue({ total: 0, matched: [] })
 
-        await HumbleUser.checkHealthAndFlagExpiry()
+        await humbleUser.checkHealthAndFlagExpiry()
 
         expect(mockFromPartition).not.toHaveBeenCalled()
       })
@@ -1970,7 +2029,7 @@ describe('HumbleUser', () => {
 
         // Phase 49 (49-06): the method returns the probe outcome; the session
         // itself was healthy, the failed backfill is non-fatal.
-        await expect(HumbleUser.checkHealthAndFlagExpiry()).resolves.toBe(
+        await expect(humbleUser.checkHealthAndFlagExpiry()).resolves.toBe(
           'healthy'
         )
 
@@ -1989,7 +2048,7 @@ describe('HumbleUser', () => {
 
         // Phase 49 (49-06): the method returns the probe outcome; the session
         // itself was healthy, the failed backfill is non-fatal.
-        await expect(HumbleUser.checkHealthAndFlagExpiry()).resolves.toBe(
+        await expect(humbleUser.checkHealthAndFlagExpiry()).resolves.toBe(
           'healthy'
         )
 
@@ -2015,7 +2074,7 @@ describe('HumbleUser', () => {
         mockDecryptString.mockReturnValue('cookie')
         mockGetGamekeys.mockResolvedValue({ status: 'ok' })
 
-        await HumbleUser.checkHealthAndFlagExpiry()
+        await humbleUser.checkHealthAndFlagExpiry()
 
         expect(mockSeamOpen).not.toHaveBeenCalled()
         expect(mockConfigStore.set).not.toHaveBeenCalledWith(
@@ -2041,7 +2100,7 @@ describe('HumbleUser', () => {
           return 0
         })
 
-        await HumbleUser.disconnect()
+        await humbleUser.disconnect()
 
         expect(callOrder).toEqual(['configStore.clear', 'clearCookies'])
       })
@@ -2050,11 +2109,11 @@ describe('HumbleUser', () => {
         mockSeamOpen.mockResolvedValue('disconnect-window-0')
         mockSeamClearCookies.mockResolvedValue(3)
 
-        await HumbleUser.disconnect()
+        await humbleUser.disconnect()
 
         expect(mockSeamOpen).toHaveBeenCalledWith(HUMBLE_BASE_URL, {
           visible: false,
-          userAgent: standardBrowserUserAgentForProcess()
+          userAgent: standardBrowserUserAgent({ appInfo })
         })
         expect(mockSeamClearCookies).toHaveBeenCalledWith(
           'disconnect-window-0',
@@ -2066,7 +2125,7 @@ describe('HumbleUser', () => {
         mockSeamOpen.mockResolvedValue('disconnect-window-1')
         mockSeamClearCookies.mockRejectedValue(new Error('rust clear failed'))
 
-        await expect(HumbleUser.disconnect()).resolves.toBeUndefined()
+        await expect(humbleUser.disconnect()).resolves.toBeUndefined()
 
         expect(mockSeamClose).toHaveBeenCalledWith('disconnect-window-1')
         expect(mockLogWarning).toHaveBeenCalled()
@@ -2077,7 +2136,7 @@ describe('HumbleUser', () => {
         mockSeamClearCookies.mockResolvedValue(1)
         mockSeamClose.mockRejectedValue(new Error('close failed'))
 
-        await expect(HumbleUser.disconnect()).resolves.toBeUndefined()
+        await expect(humbleUser.disconnect()).resolves.toBeUndefined()
 
         expect(mockSeamClose).toHaveBeenCalledWith('disconnect-window-2')
       })
@@ -2085,7 +2144,7 @@ describe('HumbleUser', () => {
       test('a rejecting seam.open() is caught by the outer guarded step and does not throw out of disconnect()', async () => {
         mockSeamOpen.mockRejectedValue(new Error('open failed'))
 
-        await expect(HumbleUser.disconnect()).resolves.toBeUndefined()
+        await expect(humbleUser.disconnect()).resolves.toBeUndefined()
 
         // No window was ever obtained, so clearCookies/close must not run.
         expect(mockSeamClearCookies).not.toHaveBeenCalled()
@@ -2115,12 +2174,12 @@ describe('HumbleUser', () => {
           serviceWorkers: 0
         })
 
-        await HumbleUser.disconnect()
+        await humbleUser.disconnect()
 
         expect(mockSeamClearCookies).toHaveBeenCalled()
         expect(mockSeamClearStorage).toHaveBeenCalledWith(
           HUMBLE_BASE_URL,
-          standardBrowserUserAgentForProcess()
+          standardBrowserUserAgent({ appInfo })
         )
       })
 
@@ -2130,7 +2189,7 @@ describe('HumbleUser', () => {
         )
         mockSeamClearCookies.mockResolvedValue(2)
 
-        await expect(HumbleUser.disconnect()).resolves.toBeUndefined()
+        await expect(humbleUser.disconnect()).resolves.toBeUndefined()
 
         expect(mockSeamClearCookies).toHaveBeenCalled()
         expect(mockLogWarning).toHaveBeenCalled()
@@ -2148,11 +2207,11 @@ describe('HumbleUser', () => {
           serviceWorkers: 0
         })
 
-        await expect(HumbleUser.disconnect()).resolves.toBeUndefined()
+        await expect(humbleUser.disconnect()).resolves.toBeUndefined()
 
         expect(mockSeamClearStorage).toHaveBeenCalledWith(
           HUMBLE_BASE_URL,
-          standardBrowserUserAgentForProcess()
+          standardBrowserUserAgent({ appInfo })
         )
       })
 
@@ -2165,7 +2224,7 @@ describe('HumbleUser', () => {
           serviceWorkers: 0
         })
 
-        await HumbleUser.disconnect()
+        await humbleUser.disconnect()
 
         const loggerCalls = [
           ...mockLogInfo.mock.calls,
@@ -2211,7 +2270,7 @@ describe('HumbleUser', () => {
             .mockResolvedValueOnce({ total: 2, matched: [] })
           mockSeamClearCookies.mockResolvedValue(3)
 
-          await HumbleUser.disconnect()
+          await humbleUser.disconnect()
 
           const censusCall = mockLogInfo.mock.calls.find(([msg]) =>
             typeof msg === 'string' ? msg.includes('cookie census') : false
@@ -2245,7 +2304,7 @@ describe('HumbleUser', () => {
             .mockResolvedValueOnce({ total: 0, matched: [] })
           mockSeamClearCookies.mockResolvedValue(3)
 
-          await HumbleUser.disconnect()
+          await humbleUser.disconnect()
 
           const discrepancyCall = mockLogWarning.mock.calls.find((c) =>
             String(c[0]).includes('discrepancy')
@@ -2278,7 +2337,7 @@ describe('HumbleUser', () => {
           // jar arithmetic (before.total - after.total === 3) still checks out.
           mockSeamClearCookies.mockResolvedValue(2)
 
-          await HumbleUser.disconnect()
+          await humbleUser.disconnect()
 
           const discrepancyCall = mockLogWarning.mock.calls.find((c) =>
             String(c[0]).includes('discrepancy')
@@ -2295,7 +2354,7 @@ describe('HumbleUser', () => {
           )
           mockSeamClearCookies.mockResolvedValue(0)
 
-          await expect(HumbleUser.disconnect()).resolves.toBeUndefined()
+          await expect(humbleUser.disconnect()).resolves.toBeUndefined()
 
           expect(mockSeamClearCookies).toHaveBeenCalled()
           const incompleteCall = mockLogWarning.mock.calls.find((c) =>
@@ -2317,7 +2376,7 @@ describe('HumbleUser', () => {
             .mockResolvedValueOnce({ total: 2, matched: [] })
           mockSeamClearCookies.mockResolvedValue(3)
 
-          await HumbleUser.disconnect()
+          await humbleUser.disconnect()
 
           const censusCall = mockLogInfo.mock.calls.find(([msg]) =>
             typeof msg === 'string' ? msg.includes('cookie census') : false
@@ -2340,7 +2399,7 @@ describe('HumbleUser', () => {
           )
           mockSeamClearCookies.mockResolvedValue(0)
 
-          await HumbleUser.disconnect()
+          await humbleUser.disconnect()
 
           expect(mockSeamClose).toHaveBeenCalledTimes(1)
           expect(mockSeamClose).toHaveBeenCalledWith('disconnect-window-census')
@@ -2353,7 +2412,7 @@ describe('HumbleUser', () => {
           mockSeamCookiesForDomain.mockResolvedValue({ total: 0, matched: [] })
           mockSeamClearCookies.mockResolvedValue(0)
 
-          await HumbleUser.disconnect()
+          await humbleUser.disconnect()
 
           const censusCall = mockLogInfo.mock.calls.find(([msg]) =>
             typeof msg === 'string' ? msg.includes('cookie census') : false
@@ -2401,9 +2460,9 @@ describe('HumbleUser', () => {
         ]
       })
 
-      const loginPromise = HumbleUser.startLogin()
+      const loginPromise = humbleUser.startLogin()
       await flushAsync() // seam.open() resolves, seamLabel gets set
-      HumbleUser.notifyLoginNavigated()
+      humbleUser.notifyLoginNavigated()
       await loginPromise
 
       const loggerCalls = [

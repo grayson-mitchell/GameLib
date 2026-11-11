@@ -60,6 +60,9 @@ import type { ClearCacheDeps } from 'backend/utils'
 
 // `clearCache` is mocked in this file, so only the nile config store is read.
 const clearDeps = {
+  get loginWindowSeam() {
+    return seamSlot
+  },
   signIn: createTestSignInProbe(),
   stores: {
     nile: jest.requireMock<Stores['nile']>('backend/storeManagers/nile/stores')
@@ -71,9 +74,12 @@ const clearDeps = {
   }
 } as unknown as ClearCacheDeps & NileUserDeps
 import {
-  setLoginWindowSeam,
+  createLoginWindowSeamSlot,
   type LoginWindowSeam
 } from '../../../humble/loginWindowSeam'
+
+// The boot's one login-window seam slot, per test file (66.3-17): the user modules read it through deps.
+const seamSlot = createLoginWindowSeamSlot()
 import type { Stores } from 'backend/services/types'
 
 function makeMockSeam(
@@ -109,7 +115,7 @@ function allLoggedText(): string {
 beforeEach(() => {
   jest.clearAllMocks()
   mockIsMac = true
-  setLoginWindowSeam(null)
+  seamSlot.install(null)
   mockRunRunnerCommand.mockResolvedValue({
     abort: false,
     stdout: '',
@@ -118,7 +124,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  setLoginWindowSeam(null)
+  seamSlot.install(null)
 })
 
 describe('NileUser.logout(clearDeps) credential cleanup runs first and unconditionally (D-15)', () => {
@@ -135,7 +141,7 @@ describe('NileUser.logout(clearDeps) credential cleanup runs first and unconditi
         .fn()
         .mockRejectedValue(new Error('rust-side clear failed'))
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(NileUser.logout(clearDeps)).resolves.toBeUndefined()
 
@@ -148,7 +154,7 @@ describe('NileUser.logout(clearDeps) credential cleanup runs first and unconditi
       cookiesForDomain: jest.fn().mockRejectedValue(new Error('census failed')),
       clearCookies: jest.fn().mockRejectedValue(new Error('clear failed'))
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(NileUser.logout(clearDeps)).resolves.toBeUndefined()
   })
@@ -170,7 +176,7 @@ describe('NileUser.logout(clearDeps) credential cleanup runs first and unconditi
       stderr: ''
     })
     const seam = makeMockSeam()
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(NileUser.logout(clearDeps)).resolves.toBeUndefined()
 
@@ -183,7 +189,7 @@ describe('NileUser.logout(clearDeps) credential cleanup runs first and unconditi
 describe('NileUser.logout(clearDeps) cookie clear (macOS)', () => {
   it('clears the Amazon apex domain against the sentinel no-window label, never a real window', async () => {
     const seam = makeMockSeam()
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await NileUser.logout(clearDeps)
 
@@ -199,7 +205,7 @@ describe('NileUser.logout(clearDeps) cookie clear (macOS)', () => {
     const seam = makeMockSeam({
       clearCookies: jest.fn().mockResolvedValue(7)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await NileUser.logout(clearDeps)
 
@@ -212,7 +218,7 @@ describe('NileUser.logout(clearDeps) cookie clear (macOS)', () => {
       cookiesForDomain: jest.fn().mockResolvedValue({ total: 4, matched: [] }),
       clearCookies: jest.fn().mockResolvedValue(0)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await NileUser.logout(clearDeps)
 
@@ -227,7 +233,7 @@ describe('NileUser.logout(clearDeps) cookie clear (macOS)', () => {
       cookiesForDomain: jest.fn().mockResolvedValue({ total: 0, matched: [] }),
       clearCookies: jest.fn().mockResolvedValue(0)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await NileUser.logout(clearDeps)
 
@@ -239,7 +245,7 @@ describe('NileUser.logout(clearDeps) cookie clear (off macOS)', () => {
   it('attempts no seam call at all -- no Tauri leg ships off macOS yet', async () => {
     mockIsMac = false
     const seam = makeMockSeam()
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await NileUser.logout(clearDeps)
 

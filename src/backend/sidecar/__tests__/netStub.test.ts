@@ -94,9 +94,16 @@ jest.mock('backend/logger', () => ({
 import { net } from '../../platform'
 import { revealKey } from '../../humble/adapter'
 import {
-  setLoginWindowSeam,
+  createLoginWindowSeamSlot,
   type LoginWindowSeam
 } from '../../humble/loginWindowSeam'
+
+// The adapter reads the seam through its injected deps (66.3-17): one slot per test file.
+const seamSlot = createLoginWindowSeamSlot()
+const adapterDeps = {
+  loginWindowSeam: seamSlot,
+  appInfo: { userAgentFallback: 'Mozilla/5.0 (X11; Linux) Chrome/1.0' }
+}
 
 /** Flushes real setImmediate turns so the stub's asynchronous 'error' emission can run. */
 function flushImmediate(times = 3): Promise<void> {
@@ -204,7 +211,7 @@ describe('humblePostRequest surfaces a named transport failure through the login
     // which is the RED signal this file has pinned since 34.4-06-SUMMARY.md's hand RED proof.
     jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] })
     try {
-      setLoginWindowSeam(
+      seamSlot.install(
         fakeSeam(
           asyncRejectingRevealPost(
             'login-window-seam:revealPost-failed (D-06 named-cause fixture)'
@@ -212,7 +219,7 @@ describe('humblePostRequest surfaces a named transport failure through the login
         )
       )
 
-      const promise = revealKey('csrf-token-value', {
+      const promise = revealKey(adapterDeps, 'csrf-token-value', {
         gamekey: 'gamekey-1',
         machineName: 'machine-1',
         keyindex: 0
@@ -241,7 +248,7 @@ describe('humblePostRequest surfaces a named transport failure through the login
       // advanced.
       expect(jest.getTimerCount()).toBe(0)
     } finally {
-      setLoginWindowSeam(null)
+      seamSlot.install(null)
       jest.useRealTimers()
     }
   })

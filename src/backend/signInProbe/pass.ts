@@ -61,7 +61,7 @@ import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
 import { LegendaryUser } from 'backend/storeManagers/legendary/user'
 import { GOGUser } from 'backend/storeManagers/gog/user'
 import { NileUser } from 'backend/storeManagers/nile/user'
-import { HumbleUser } from 'backend/humble/user'
+import type { HumbleUser } from 'backend/humble/user'
 import type { SteamUser } from 'backend/storeManagers/steam/user'
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
 import { SIGN_IN_STORES } from 'common/signInState'
@@ -118,6 +118,8 @@ export interface SignInProbeDeps {
   appInfo: Pick<ManagerDeps['appInfo'], 'version'>
   /** The boot-owned Steam session; the probe reads the keyring slot only, never the CM (D-66.3-16). */
   steamUser: Pick<SteamUser, 'isLoggedIn' | 'probeCredentialPresence'>
+  /** The boot-owned Humble user (D-66.3-17): the Humble registration reads and probes through it. */
+  humbleUser: Pick<HumbleUser, 'isLoggedIn' | 'probeSession'>
   onlineMonitor: Pick<
     ManagerDeps['onlineMonitor'],
     'isOnline' | 'onConnectivityChange'
@@ -156,8 +158,8 @@ export function createSignInProbePassDeps(
       },
       // D-15: the Humble read carries `trigger=boot-probe` through `readSecret`.
       humble: {
-        isLoggedIn: () => Boolean(HumbleUser.isLoggedIn()),
-        probe: () => HumbleUser.probeSession('boot-probe')
+        isLoggedIn: () => Boolean(deps.humbleUser.isLoggedIn()),
+        probe: () => deps.humbleUser.probeSession('boot-probe')
       },
       // D-14, D-21: credential presence only -- never opens the Steam CM.
       steam: {

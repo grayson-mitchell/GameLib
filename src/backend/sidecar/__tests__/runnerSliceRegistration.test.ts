@@ -138,6 +138,7 @@ const services = createTestServices()
 const flowDeps = {
   ...services,
   signIn: services.signInProbe,
+  loginWindowSeam: services.humble.loginWindowSeam,
   ipc: interimIpc,
   dialogs: services.host.dialogs,
   appState: services.host.appState,

@@ -31,7 +31,7 @@
  * value.
  */
 
-import { getLoginWindowSeamOrThrow } from '../humble/loginWindowSeam'
+import type { LoginWindowSeamSlot } from '../humble/loginWindowSeam'
 import { logInfo, logWarning, LogPrefix } from '../logger'
 import { isMac } from '../constants/environment'
 // Defined in common/types/ (not here) so common/types/ipc.ts's AsyncIPCFunctions.
@@ -208,11 +208,12 @@ export function matchOAuthRedirect(
  * asked to close.
  */
 export function captureOAuthLogin(
+  deps: { loginWindowSeam: Pick<LoginWindowSeamSlot, 'getOrThrow'> },
   runner: OAuthRunner,
   loginUrl: string,
   options?: { deadlineMs?: number; pollMs?: number }
 ): Promise<OAuthCaptureOutcome> {
-  const seam = getLoginWindowSeamOrThrow()
+  const seam = deps.loginWindowSeam.getOrThrow()
   const deadlineMs = options?.deadlineMs ?? DEFAULT_DEADLINE_MS
   const pollMs = options?.pollMs ?? DEFAULT_POLL_MS
 

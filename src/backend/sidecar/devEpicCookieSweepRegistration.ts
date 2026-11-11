@@ -43,7 +43,7 @@
 
 import type { IpcRegistry } from './ipcRegistry'
 import type { AppInfo } from '../process/context'
-import { getLoginWindowSeamOrThrow } from '../humble/loginWindowSeam'
+import type { LoginWindowSeamSlot } from '../humble/loginWindowSeam'
 import { logInfo, LogPrefix } from '../logger'
 
 /** Verbatim copy of `EPIC_COOKIE_CLEAR_NO_WINDOW_LABEL` (`legendary/user.ts:57`). */
@@ -74,6 +74,8 @@ let registered = false
 export function registerDevEpicCookieSweepFlow(deps: {
   ipc: Pick<IpcRegistry, 'handle'>
   appInfo: Pick<AppInfo, 'isPackaged'>
+  /** The boot's login-window seam slot (D-66.3-17). */
+  loginWindowSeam: Pick<LoginWindowSeamSlot, 'getOrThrow'>
 }): void {
   if (registered) {
     return
@@ -93,7 +95,7 @@ export function registerDevEpicCookieSweepFlow(deps: {
         )
       }
 
-      const seam = getLoginWindowSeamOrThrow()
+      const seam = deps.loginWindowSeam.getOrThrow()
       const cleared = await seam.clearCookies(
         EPIC_COOKIE_CLEAR_NO_WINDOW_LABEL,
         domain

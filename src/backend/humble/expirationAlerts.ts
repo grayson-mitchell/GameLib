@@ -2,7 +2,7 @@ import i18next from 'i18next'
 import type { GlobalConfigSlice } from 'backend/config'
 import type { Notifications } from 'backend/host/notifications'
 import { isSteamDeckGameMode } from 'backend/constants/environment'
-import { humbleStores } from './humbleStores'
+import type { Stores } from 'backend/services/types'
 import { HumbleKey } from 'common/types/humble'
 
 /**
@@ -20,8 +20,13 @@ export interface ExpirationAlertDeps {
   notifications: Pick<Notifications, 'show'>
 }
 
+/** The digest's deps plus the humble store family it dedups through (D-66.3-17). */
+export type ExpirationAlertRunDeps = ExpirationAlertDeps & {
+  stores: Pick<Stores, 'humble'>
+}
+
 export function detectAndNotifyExpirationTransitions(
-  deps: ExpirationAlertDeps,
+  deps: ExpirationAlertRunDeps,
   keys: HumbleKey[],
   opts: { suppressNotifications: boolean }
 ): void {
@@ -38,25 +43,25 @@ export function detectAndNotifyExpirationTransitions(
     // not fire a spurious notification storm. Legacy entries are left in
     // place (harmless, keeps the backfill idempotent).
     if (
-      !humbleStores().humbleNotifiedExpirationStore.has(composite) &&
-      humbleStores().humbleNotifiedExpirationStore.has(key.machineName)
+      !deps.stores.humble.humbleNotifiedExpirationStore.has(composite) &&
+      deps.stores.humble.humbleNotifiedExpirationStore.has(key.machineName)
     ) {
-      humbleStores().humbleNotifiedExpirationStore.set(
+      deps.stores.humble.humbleNotifiedExpirationStore.set(
         composite,
-        humbleStores().humbleNotifiedExpirationStore.get(key.machineName)!
+        deps.stores.humble.humbleNotifiedExpirationStore.get(key.machineName)!
       )
     }
 
     const current = key.expiration
     const last =
-      humbleStores().humbleNotifiedExpirationStore.get(composite)?.expiration ??
-      null
+      deps.stores.humble.humbleNotifiedExpirationStore.get(composite)
+        ?.expiration ?? null
 
     if (current !== null && current !== last) {
       newlyExpiring.push(key)
       // Always advance the persisted state — even under suppression — so
       // dedup works correctly on every subsequent sync (locked decision 3).
-      humbleStores().humbleNotifiedExpirationStore.set(composite, {
+      deps.stores.humble.humbleNotifiedExpirationStore.set(composite, {
         expiration: current
       })
     }

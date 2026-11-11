@@ -22,7 +22,7 @@
  *
  * This channel is Tauri-only by construction: it is registered in the sidecar's curated module
  * graph only — the module that installs it (`registerOAuthLoginFlows`, below) never runs anywhere
- * else. `captureOAuthLogin()` calls `getLoginWindowSeamOrThrow()`, which is always satisfied here
+ * else. `captureOAuthLogin()` calls the seam slot's `getOrThrow()`, which is always satisfied here
  * because `registerHumbleLoginFlows()` installs the seam unconditionally at sidecar startup,
  * before any IPC handler can be reached.
  *
@@ -34,6 +34,7 @@
 
 import type { IpcRegistry } from './ipcRegistry'
 import { captureOAuthLogin } from './oauthLoginCapture'
+import type { LoginWindowSeamSlot } from '../humble/loginWindowSeam'
 import type {
   OAuthRunner,
   OAuthCaptureOutcome
@@ -70,6 +71,8 @@ function isHttpsUrl(value: unknown): value is string {
  */
 export function registerOAuthLoginFlows(deps: {
   ipc: Pick<IpcRegistry, 'handle'>
+  /** The boot's login-window seam slot (D-66.3-17), installed by `registerHumbleLoginFlows`. */
+  loginWindowSeam: Pick<LoginWindowSeamSlot, 'getOrThrow'>
 }): void {
   deps.ipc.handle(
     'oauthCaptureLogin',
@@ -92,7 +95,7 @@ export function registerOAuthLoginFlows(deps: {
       }
 
       try {
-        return await captureOAuthLogin(params.runner, params.url)
+        return await captureOAuthLogin(deps, params.runner, params.url)
       } catch (error) {
         // captureOAuthLogin() itself never rejects (it resolves a typed { status: 'error' }
         // outcome on every internal failure) -- this catch exists only as an outer fail-safe so a

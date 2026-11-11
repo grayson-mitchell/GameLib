@@ -1,12 +1,12 @@
 /**
- * Unit tests for `SidecarHumbleSecretStore` / `installSidecarHumbleSecretStore()` (Phase 34.4.1
+ * Unit tests for `SidecarHumbleSecretStore` / `createSidecarHumbleSecretStore()` / `startSidecarHumbleSecretStore()` (Phase 34.4.1
  * gap-cycle plan 13 — closing F-1 BLOCKING / REQ-34.4.1-02 / REQ-34.4.1-GAP-02).
  *
  * Mirrors `keyringTokenStore.test.ts`'s mocking convention: `requestRustInvoke` (from
  * `../sidecarRpc`) is mocked with an in-memory per-channel program + call log, so each test can
- * script a resolve/reject outcome and assert on exactly what was sent. `../humble/secretStore`
- * is NOT mocked — the real registry (`setHumbleSecretStore`/`getHumbleSecretStore`) is exercised
- * so the install() test proves an actual registry swap, not a mocked one.
+ * script a resolve/reject outcome and assert on exactly what was sent. The store is a boot-built
+ * instance (66.3-17): there is no registry to swap, so the create/start tests prove construction
+ * does no I/O and that start() logs the receipt line and fires the migration.
  *
  * Task 2 adds the one-time plaintext-migration tests below. `../../humble/stores` IS
  * mocked with an in-memory backing object (never `requireActual` — `tests-clobbering-real-steam-store`
@@ -14,17 +14,12 @@
  * not a safety net).
  *
  * 34.4.1 gap cycle 2 plan 26 (F-9's read-count half, user-approved scope widening) added a
- * process-lifetime read cache to `SidecarKeyringSlotStore`. `SidecarHumbleSecretStore` delegates
- * to `SLOT_STORES`, a MODULE-LEVEL singleton created once when `../humbleSecretStore` is first
- * imported — every `new SidecarHumbleSecretStore()` in every test below shares the SAME two
- * underlying slot-store instances (and this project's Jest config has no `resetModules`, so that
- * singleton persists for this whole test FILE's run, not just one `it()`). Without an explicit
- * reset, an earlier test's successfully-cached read would silently shadow a later test's own
- * scripted `requestRustInvoke` outcome. `resetSidecarHumbleSecretStoreCachesForTests()` (imported
- * above) is the isolation seam for exactly this — called from `beforeEach` below.
+ * process-lifetime read cache to `SidecarKeyringSlotStore`. Since 66.3-17 each
+ * `SidecarHumbleSecretStore` instance owns its own two slot stores, so a fresh instance per test
+ * is a fresh cache: the former `resetSidecarHumbleSecretStoreCachesForTests()` isolation seam is
+ * gone.
  */
 
-import { bindHumbleStores } from '../../humble/humbleStores'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
@@ -65,9 +60,9 @@ const mockConfigStore = {
     delete backingStore[key]
   })
 }
-bindHumbleStores({
+const migrationDeps = {
   stores: { humble: { configStore: mockConfigStore } } as never
-})
+}
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { requestRustInvoke } from '../sidecarRpc'
@@ -78,12 +73,11 @@ import {
 } from '../keyringTokenStore'
 import {
   SidecarHumbleSecretStore,
-  installSidecarHumbleSecretStore,
+  createSidecarHumbleSecretStore,
+  startSidecarHumbleSecretStore,
   migrateOneSecret,
-  migrateHumbleSecrets,
-  resetSidecarHumbleSecretStoreCachesForTests
+  migrateHumbleSecrets
 } from '../humbleSecretStore'
-import { getHumbleSecretStore } from '../../humble/secretStore'
 
 type ProgrammedOutcome =
   | { type: 'resolve'; value: unknown }
@@ -103,10 +97,6 @@ describe('SidecarHumbleSecretStore', () => {
     program = {}
     callLog = []
     backingStore = {}
-    // Must run before any test body issues a read -- see this file's header doc comment on the
-    // module-level SLOT_STORES singleton and why a fresh `new SidecarHumbleSecretStore()` per
-    // test does NOT give a fresh cache.
-    resetSidecarHumbleSecretStoreCachesForTests()
     mockConfigStore.get_nodefault.mockImplementation(
       (key: string) => backingStore[key]
     )
@@ -316,11 +306,13 @@ describe('SidecarHumbleSecretStore', () => {
     }
   })
 
-  describe('installSidecarHumbleSecretStore()', () => {
-    it('installs a SidecarHumbleSecretStore instance into the registry and logs a keyring-backed confirmation line', () => {
-      installSidecarHumbleSecretStore()
+  describe('createSidecarHumbleSecretStore() / startSidecarHumbleSecretStore(store, deps)', () => {
+    it('builds a SidecarHumbleSecretStore, and start logs a keyring-backed confirmation line', () => {
+      const store = createSidecarHumbleSecretStore()
+      expect(store).toBeInstanceOf(SidecarHumbleSecretStore)
 
-      expect(getHumbleSecretStore()).toBeInstanceOf(SidecarHumbleSecretStore)
+      startSidecarHumbleSecretStore(store, migrationDeps)
+
       expect(mockLogInfo).toHaveBeenCalledWith(
         expect.stringContaining(
           'Humble secret store installed: keyring-backed (humble-session/humble-csrf slots)'
@@ -329,8 +321,14 @@ describe('SidecarHumbleSecretStore', () => {
       )
     })
 
+    it('construction does no I/O: nothing is sent to the keyring until start() runs the migration', () => {
+      createSidecarHumbleSecretStore()
+
+      expect(callLog).toEqual([])
+    })
+
     it('fires the migration without blocking (returns before any keyring call settles)', async () => {
-      // A never-resolving keyring_set proves install() itself did not await migration.
+      // A never-resolving keyring_set proves start() itself did not await migration.
       mockRequestRustInvoke.mockImplementation(
         (channel: string, args: unknown[]) => {
           callLog.push({ channel, args })
@@ -341,8 +339,23 @@ describe('SidecarHumbleSecretStore', () => {
       )
       backingStore['sessionCookie'] = 'plaintext-cookie'
 
-      expect(() => installSidecarHumbleSecretStore()).not.toThrow()
-      expect(getHumbleSecretStore()).toBeInstanceOf(SidecarHumbleSecretStore)
+      expect(() =>
+        startSidecarHumbleSecretStore(
+          createSidecarHumbleSecretStore(),
+          migrationDeps
+        )
+      ).not.toThrow()
+    })
+
+    it('two instances do not share a read cache', async () => {
+      programChannel('keyring_get', { type: 'resolve', value: 'first' })
+      const a = createSidecarHumbleSecretStore()
+      const b = createSidecarHumbleSecretStore()
+      await expect(a.getSecret('sessionCookie')).resolves.toBe('first')
+
+      programChannel('keyring_get', { type: 'resolve', value: 'second' })
+
+      await expect(b.getSecret('sessionCookie')).resolves.toBe('second')
     })
   })
 
@@ -357,7 +370,11 @@ describe('SidecarHumbleSecretStore', () => {
         value: 'plaintext-cookie-value'
       })
 
-      await migrateOneSecret('sessionCookie')
+      await migrateOneSecret(
+        new SidecarHumbleSecretStore(),
+        migrationDeps,
+        'sessionCookie'
+      )
 
       expect(callLog).toEqual([
         {
@@ -377,7 +394,11 @@ describe('SidecarHumbleSecretStore', () => {
         error: new Error('keyring:unavailable:PlatformFailure')
       })
 
-      await migrateOneSecret('sessionCookie')
+      await migrateOneSecret(
+        new SidecarHumbleSecretStore(),
+        migrationDeps,
+        'sessionCookie'
+      )
 
       expect(backingStore['sessionCookie']).toBe('plaintext-cookie-value')
       expect(backingStore['encryptionDegraded']).toBeUndefined()
@@ -394,7 +415,11 @@ describe('SidecarHumbleSecretStore', () => {
         error: new Error('keyring:unavailable:PlatformFailure')
       })
 
-      await migrateOneSecret('sessionCookie')
+      await migrateOneSecret(
+        new SidecarHumbleSecretStore(),
+        migrationDeps,
+        'sessionCookie'
+      )
 
       expect(backingStore['sessionCookie']).toBe('plaintext-cookie-value')
       expect(backingStore['encryptionDegraded']).toBeUndefined()
@@ -409,7 +434,11 @@ describe('SidecarHumbleSecretStore', () => {
         value: 'a-completely-different-value'
       })
 
-      await migrateOneSecret('sessionCookie')
+      await migrateOneSecret(
+        new SidecarHumbleSecretStore(),
+        migrationDeps,
+        'sessionCookie'
+      )
 
       expect(backingStore['sessionCookie']).toBe('plaintext-cookie-value')
       expect(backingStore['encryptionDegraded']).toBeUndefined()
@@ -419,7 +448,11 @@ describe('SidecarHumbleSecretStore', () => {
     it('with the configStore key already absent, performs NO keyring write (runs at most once per successful move)', async () => {
       // backingStore starts empty (beforeEach) -- sessionCookie was never stored, or a prior
       // migration already ran.
-      await migrateOneSecret('sessionCookie')
+      await migrateOneSecret(
+        new SidecarHumbleSecretStore(),
+        migrationDeps,
+        'sessionCookie'
+      )
 
       expect(callLog).toEqual([])
       expect(mockLogWarning).not.toHaveBeenCalled()
@@ -433,7 +466,11 @@ describe('SidecarHumbleSecretStore', () => {
         value: 'plaintext-csrf-value'
       })
 
-      await migrateOneSecret('csrfToken')
+      await migrateOneSecret(
+        new SidecarHumbleSecretStore(),
+        migrationDeps,
+        'csrfToken'
+      )
 
       expect(callLog).toEqual([
         {
@@ -454,7 +491,11 @@ describe('SidecarHumbleSecretStore', () => {
         value: 'mismatched-value'
       })
 
-      await migrateOneSecret('sessionCookie')
+      await migrateOneSecret(
+        new SidecarHumbleSecretStore(),
+        migrationDeps,
+        'sessionCookie'
+      )
 
       for (const call of mockLogWarning.mock.calls) {
         expect(JSON.stringify(call)).not.toContain(SECRET)
@@ -486,7 +527,7 @@ describe('SidecarHumbleSecretStore', () => {
         }
       )
 
-      await migrateHumbleSecrets()
+      await migrateHumbleSecrets(new SidecarHumbleSecretStore(), migrationDeps)
 
       // sessionCookie migrated successfully...
       expect(backingStore['sessionCookie']).toBeUndefined()
@@ -521,7 +562,7 @@ describe('SidecarHumbleSecretStore', () => {
 
       const store = new SidecarHumbleSecretStore()
       const before = await store.getSecret('sessionCookie')
-      await migrateHumbleSecrets()
+      await migrateHumbleSecrets(store, migrationDeps)
       const after = await store.getSecret('sessionCookie')
 
       expect(before).toBe('') // honest pre-migration state: nothing in the keyring yet
@@ -532,7 +573,7 @@ describe('SidecarHumbleSecretStore', () => {
 
   // ── Read caching, inherited from SidecarKeyringSlotStore (34.4.1 gap cycle 2 plan 26) ───────
 
-  describe('read caching (inherited from SidecarKeyringSlotStore via the shared SLOT_STORES singleton)', () => {
+  describe('read caching (inherited from SidecarKeyringSlotStore via each instance own slot stores)', () => {
     it('getSecret() caches a successful read -- a second call for the same key issues NO further keyring_get', async () => {
       programChannel('keyring_get', { type: 'resolve', value: 'cookie-value' })
       const store = new SidecarHumbleSecretStore()
@@ -689,7 +730,6 @@ describe('SidecarHumbleSecretStore.readSecret (Phase 49, D-15)', () => {
     program = {}
     callLog = []
     backingStore = {}
-    resetSidecarHumbleSecretStoreCachesForTests()
     mockRequestRustInvoke.mockImplementation(
       (channel: string, args: unknown[]) => {
         callLog.push({ channel, args })

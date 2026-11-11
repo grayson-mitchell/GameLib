@@ -22,7 +22,6 @@
  * the Phase 12 ownership-recompute tests exercise the real two-tier matcher.
  */
 
-import { bindHumbleStores } from '../humbleStores'
 import type {
   HumbleKey,
   HumbleKeyState,
@@ -216,25 +215,22 @@ function resetStoreMocks() {
 
 const mockSteamLibraryStoreGet = jest.fn()
 // The Steam session slice the connectivity gate reads (66.3-16): a plain object, no module mock.
-bindHumbleStores({
-  steamUser: { isLoggedIn: () => mockSteamIsLoggedIn() },
-  stores: {
-    humble: {
-      humbleLibraryStore: mockLibraryStore,
-      humbleSyncStore: mockSyncStore,
-      humbleRevealedStore: mockRevealedStore,
-      humbleOwnershipOverrideStore: mockOverrideStore,
-      humbleLocalRedeemedStore: mockLocalRedeemedStore,
-      humbleAuditStore: mockAuditStore,
-      humbleSettleDeclinedStore: mockSettleDeclinedStore
-    },
-    steam: {
-      steamLibraryStore: {
-        get: (...args: unknown[]) => mockSteamLibraryStoreGet(...args)
-      }
+const storesSlice = {
+  humble: {
+    humbleLibraryStore: mockLibraryStore,
+    humbleSyncStore: mockSyncStore,
+    humbleRevealedStore: mockRevealedStore,
+    humbleOwnershipOverrideStore: mockOverrideStore,
+    humbleLocalRedeemedStore: mockLocalRedeemedStore,
+    humbleAuditStore: mockAuditStore,
+    humbleSettleDeclinedStore: mockSettleDeclinedStore
+  },
+  steam: {
+    steamLibraryStore: {
+      get: (...args: unknown[]) => mockSteamLibraryStoreGet(...args)
     }
-  } as never
-})
+  }
+} as never
 
 const mockSteamIsLoggedIn = jest.fn()
 
@@ -259,13 +255,6 @@ const mockGetCsrfToken = jest.fn(() => 'csrf-token-value')
 // WR-03: revealKey now sources the csrf token from the LIVE partition cookie
 // (getLiveCsrfToken) rather than the stored login-time snapshot.
 const mockGetLiveCsrfToken = jest.fn(() => Promise.resolve('csrf-token-value'))
-jest.mock('../user', () => ({
-  HumbleUser: {
-    getCredentials: () => mockGetCredentials(),
-    getCsrfToken: () => mockGetCsrfToken(),
-    getLiveCsrfToken: () => mockGetLiveCsrfToken()
-  }
-}))
 
 // ── ipc / logger mocks ───────────────────────────────────────────────────
 
@@ -300,8 +289,9 @@ jest.mock('../expirationAlerts', () => ({
 // ── Imports (after mocks) ────────────────────────────────────────────────
 
 import { defined } from './defined'
-import { HumbleLibrary } from '../library'
-import { invalidateSyncGeneration } from '../syncFence'
+import { createHumbleLibrary } from '../library'
+import { createHumbleSyncFence } from '../syncFence'
+import { createLoginWindowSeamSlot } from '../loginWindowSeam'
 import {
   HUMBLE_SYNC_CONCURRENCY,
   HUMBLE_CLASSIFIER_VERSION
@@ -309,6 +299,25 @@ import {
 import { selectKeysWaiting } from 'common/humble/viewFilters'
 
 const flushAsync = async () => new Promise((r) => setImmediate(r))
+
+// One fresh library, fence and seam slot per test (66.3-17): the sync single-flight, the reveal
+// dedupe and the disconnect fence are per-instance, so no test sees another test's in-flight work.
+let HumbleLibrary: ReturnType<typeof createHumbleLibrary>
+let syncFence: ReturnType<typeof createHumbleSyncFence>
+function buildLibrary(): ReturnType<typeof createHumbleLibrary> {
+  syncFence = createHumbleSyncFence()
+  return createHumbleLibrary({
+    stores: storesSlice,
+    user: {
+      getCredentials: async () => mockGetCredentials(),
+      getLiveCsrfToken: () => mockGetLiveCsrfToken()
+    },
+    syncFence,
+    steamUser: { isLoggedIn: () => mockSteamIsLoggedIn() },
+    loginWindowSeam: createLoginWindowSeamSlot(),
+    appInfo: { userAgentFallback: 'Mozilla/5.0 (X11; Linux) Chrome/1.0' }
+  })
+}
 
 function makeRawOrder(
   gamekey: string,
@@ -412,6 +421,7 @@ const syncDeps = {
 
 describe('HumbleLibrary', () => {
   beforeEach(() => {
+    HumbleLibrary = buildLibrary()
     libraryData.clear()
     syncData.clear()
     revealedData.clear()
@@ -566,7 +576,7 @@ describe('HumbleLibrary', () => {
 
       expect(mockDetectAndNotifyExpirationTransitions).toHaveBeenCalledTimes(1)
       expect(mockDetectAndNotifyExpirationTransitions).toHaveBeenCalledWith(
-        syncDeps,
+        { ...syncDeps, stores: storesSlice },
         HumbleLibrary.getKeys(),
         { suppressNotifications: false }
       )
@@ -584,7 +594,7 @@ describe('HumbleLibrary', () => {
       await HumbleLibrary.sync(syncDeps)
 
       expect(mockDetectAndNotifyExpirationTransitions).toHaveBeenCalledWith(
-        syncDeps,
+        { ...syncDeps, stores: storesSlice },
         expect.anything(),
         { suppressNotifications: true }
       )
@@ -838,7 +848,7 @@ describe('HumbleLibrary', () => {
     // Simulates exactly what HumbleUser.disconnect() does to library state:
     // bump the generation FIRST, then wipe the stores.
     function simulateDisconnect() {
-      invalidateSyncGeneration()
+      syncFence.invalidate()
       libraryData.clear()
       syncData.clear()
     }
@@ -2939,11 +2949,15 @@ describe('HumbleLibrary', () => {
       // Round 6: no cookie/fullCookieHeader argument — the reveal POST's
       // login-window seam transport sources the live seam's own cookie jar
       // natively (see adapter.ts).
-      expect(mockAdapterRevealKey).toHaveBeenCalledWith('csrf-token-value', {
-        gamekey: 'gk1',
-        machineName: 'gk1_key',
-        keyindex: 'idx-1'
-      })
+      expect(mockAdapterRevealKey).toHaveBeenCalledWith(
+        expect.objectContaining({ loginWindowSeam: expect.anything() }),
+        'csrf-token-value',
+        {
+          gamekey: 'gk1',
+          machineName: 'gk1_key',
+          keyindex: 'idx-1'
+        }
+      )
       expect(
         defined(
           libraryData.get('gk1')?.keys[0],
@@ -3323,11 +3337,11 @@ describe('HumbleLibrary', () => {
       )
       expect(call).toBeDefined()
       // Round 6: no cookie/fullCookieHeader argument — see adapter.ts.
-      expect(mockAdapterRevealKey).toHaveBeenCalledWith(undefined, {
-        gamekey: 'gk1',
-        machineName: 'gk1_key',
-        keyindex: 'idx-1'
-      })
+      expect(mockAdapterRevealKey).toHaveBeenCalledWith(
+        expect.objectContaining({ loginWindowSeam: expect.anything() }),
+        undefined,
+        { gamekey: 'gk1', machineName: 'gk1_key', keyindex: 'idx-1' }
+      )
     })
 
     // Round 6 (debug session humble-reveal-key-fails): round 5's
@@ -3348,11 +3362,11 @@ describe('HumbleLibrary', () => {
 
       await HumbleLibrary.revealKey('gk1', 'gk1_key')
 
-      expect(mockAdapterRevealKey).toHaveBeenCalledWith('live-rotated-token', {
-        gamekey: 'gk1',
-        machineName: 'gk1_key',
-        keyindex: 'idx-1'
-      })
+      expect(mockAdapterRevealKey).toHaveBeenCalledWith(
+        expect.objectContaining({ loginWindowSeam: expect.anything() }),
+        'live-rotated-token',
+        { gamekey: 'gk1', machineName: 'gk1_key', keyindex: 'idx-1' }
+      )
     })
 
     // ── Phase 34.4.1 gap-cycle plan 17 (F-8), collapsed in 39-03 ──────────
@@ -3385,11 +3399,15 @@ describe('HumbleLibrary', () => {
       )
       expect(call).toBeDefined()
       expect(String(call?.[0][0])).not.toContain('fullCookieJarPresent')
-      expect(mockAdapterRevealKey).toHaveBeenCalledWith('csrf-token-value', {
-        gamekey: 'gk1',
-        machineName: 'gk1_key',
-        keyindex: 'idx-1'
-      })
+      expect(mockAdapterRevealKey).toHaveBeenCalledWith(
+        expect.objectContaining({ loginWindowSeam: expect.anything() }),
+        'csrf-token-value',
+        {
+          gamekey: 'gk1',
+          machineName: 'gk1_key',
+          keyindex: 'idx-1'
+        }
+      )
     })
 
     test('definitive failure (access_denied) logs the exact adapter status — the previously-silent 401/403/429 mapAxiosError gap', async () => {

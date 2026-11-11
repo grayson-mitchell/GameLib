@@ -61,6 +61,7 @@ function build(over: Partial<Parameters<typeof createStoreManagers>[0]> = {}) {
     bridgeHelpers: fakes.bridgeHelpers,
     steamBottle: fakes.steamBottle,
     steamUser: fakes.steamUser,
+    loginWindowSeam: fakes.humble.loginWindowSeam,
     ...over
   })
 }

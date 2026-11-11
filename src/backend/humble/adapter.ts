@@ -8,11 +8,9 @@ import {
   HUMBLE_REDEEM_PATH,
   HUMBLE_REQUIRED_HEADERS
 } from './constants'
-import { standardBrowserUserAgentForProcess } from './userAgent'
-import {
-  getLoginWindowSeamOrThrow,
-  type LoginWindowSeam
-} from './loginWindowSeam'
+import { standardBrowserUserAgent } from './userAgent'
+import type { AppInfo } from 'backend/process/context'
+import type { LoginWindowSeam, LoginWindowSeamSlot } from './loginWindowSeam'
 
 /**
  * C5 isolation wall: every outgoing Humble HTTP call and every incoming
@@ -241,13 +239,21 @@ function coerceJsonBody(raw: string): unknown {
  * SAME `RevealResponseSchema`/error-mapping path; see
  * `humblePostRequestViaSeam`'s own doc comment below.
  */
+/** What the reveal POST reads: the boot's login-window seam slot and the app info (UA source). */
+export interface HumbleAdapterDeps {
+  loginWindowSeam: Pick<LoginWindowSeamSlot, 'getOrThrow'>
+  appInfo: Pick<AppInfo, 'userAgentFallback'>
+}
+
 function humblePostRequest(
+  deps: HumbleAdapterDeps,
   path: string,
   body: string,
   csrfToken?: string
 ): Promise<HumbleRawResponse> {
   return humblePostRequestViaSeam(
-    getLoginWindowSeamOrThrow(),
+    deps.loginWindowSeam.getOrThrow(),
+    deps.appInfo,
     path,
     body,
     csrfToken
@@ -270,6 +276,7 @@ function humblePostRequest(
  */
 async function humblePostRequestViaSeam(
   seam: LoginWindowSeam,
+  appInfo: Pick<AppInfo, 'userAgentFallback'>,
   path: string,
   body: string,
   csrfToken?: string
@@ -296,7 +303,7 @@ async function humblePostRequestViaSeam(
         path,
         body,
         csrfToken,
-        userAgent: standardBrowserUserAgentForProcess()
+        userAgent: standardBrowserUserAgent({ appInfo })
       }),
       timeoutPromise
     ])
@@ -574,6 +581,7 @@ export async function getOrderDetail(
  * what this function sends on the wire.
  */
 export async function revealKey(
+  deps: HumbleAdapterDeps,
   csrfToken: string | undefined,
   params: { gamekey: string; machineName: string; keyindex: string | number }
 ): Promise<AdapterResult<{ key: string }> | { status: 'rejected_by_server' }> {
@@ -585,6 +593,7 @@ export async function revealKey(
       keyindex: String(params.keyindex)
     }).toString()
     const response = await humblePostRequest(
+      deps,
       HUMBLE_REDEEM_PATH,
       body,
       csrfToken

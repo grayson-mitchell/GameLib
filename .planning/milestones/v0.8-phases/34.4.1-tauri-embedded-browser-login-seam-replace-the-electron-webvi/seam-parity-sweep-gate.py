@@ -114,7 +114,7 @@ ELECTRON_STUB_PATH = SRC_DIR / "backend" / "platform" / "index.ts"
 # not merely "contains", because "contains" alone would silently tolerate any of the seven deleted
 # predicates regrowing elsewhere in `src/` without ever being noticed by this check.
 EXPECTED_AXIS_A_SURVIVOR_SET = {
-    "src/backend/sidecar/humbleLoginFlowRegistration.ts:454",  # the deliberately-kept smoke guard (452 until 66.3-09 shifted it by 2)
+    "src/backend/sidecar/humbleLoginFlowRegistration.ts:460",  # the deliberately-kept smoke guard (454 until 66.3-17 moved it; 452 until 66.3-09)
 }
 # Updated Phase 34.4.1 Plan 18 (first regeneration since Plan 10): Plan 12 (already committed,
 # F-1/S-10 closure) moved the safeStorage import OUT of humble/user.ts entirely, into a new
@@ -130,9 +130,14 @@ EXPECTED_AXIS_A_SURVIVOR_SET = {
 # safeStorage -- `isEncryptionAvailable()` was always false on the sidecar's stand-in, so the
 # branches that needed a working safeStorage were deleted and the module keeps the same
 # observable results. Another IMPORTER-LOCATION update (the importer is gone, not hidden).
-EXPECTED_AXIS_B_SAFESTORAGE_IMPORTERS = [
-    "src/backend/humble/secretStore.ts",
-]
+# Updated 2026-11-12 by Phase 66.3 plan 17 (D-66.3-01): humble/secretStore.ts stopped importing
+# safeStorage -- the Electron `HumbleSecretStore` default (the dead `safeStorage`-backed store that
+# meant plaintext under the sidecar) and its registry were DELETED; the store is now chosen once at
+# boot (keyring or dev vault) and required at `createHumbleServices()` construction. The last
+# expected importer is gone, not hidden. Another IMPORTER-LOCATION update, not a loosening: the
+# gate's other checks (the strict Axis B doc-comment bar, the SILENTLY-DROPPED path pin) are
+# untouched, and a safeStorage import re-appearing anywhere is still enumerated by the live walk.
+EXPECTED_AXIS_B_SAFESTORAGE_IMPORTERS: list[str] = []
 
 # The set of sites the sweep is ALLOWED to classify SILENTLY-DROPPED, pinned by quick task
 # 260823-ofm so that wiring this script into CI actually guards something. Before the pin the
@@ -215,7 +220,13 @@ def repo_relative(path: Path) -> str:
 # Axis A — mechanical enumeration
 # ---------------------------------------------------------------------------------------------
 
-SEAM_CALL_RE = re.compile(r"getLoginWindowSeam\(\)")
+# 66.3-17 replaced the static `getLoginWindowSeam()` holder accessor with the boot-built slot's
+# `loginWindowSeam.get()` (humble/loginWindowSeam.ts `createLoginWindowSeamSlot`). The RENAME moved
+# the one surviving site (the smoke guard) from `getLoginWindowSeam()` to
+# `humble.loginWindowSeam.get()`; the pattern follows it, and the survivor set is still checked for
+# exact equality below, so this does not admit any additional site. The slot's strict accessor is
+# `getOrThrow()`, which this pattern does not match.
+SEAM_CALL_RE = re.compile(r"(?:\bgetLoginWindowSeam|\bloginWindowSeam\.get)\(\)")
 
 
 def find_axis_a_call_sites() -> list[tuple[Path, int, int]]:
@@ -629,7 +640,12 @@ SITE_PROFILES = {
         # docstring/inline-comment set) added a 5-line retirement note to the docstring immediately
         # above `registerHumbleLoginFlows()`, shifting this site back down by 5 -- inside the +/-5
         # window's boundary but requiring a hint refresh regardless since 447 no longer matched.
-        "line_hint": 452,
+        # Refreshed AGAIN (66.3-17): 452 -> 460 (the survivor set above says 454 -> 460). 66.3-09's
+        # pin (454) was one 2-line `deps` parameter past the old 452; 66.3-17 added the `humble`
+        # slice to `registerHumbleLoginFlows`'s deps and a `const { humble } = deps` line above the
+        # guard, shifting it to 460, and renamed the call to `humble.loginWindowSeam.get()`. The
+        # +/-5 window (452 vs 460) is exceeded, so the hint moves with the site: same guard.
+        "line_hint": 460,
         "anchors": [
             "GAMELIB_LOGIN_SEAM_SMOKE",
             "this is a FAIL, not a skip",

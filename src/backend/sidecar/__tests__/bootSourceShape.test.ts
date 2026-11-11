@@ -41,7 +41,12 @@ describe('bootstrap.ts source shape (D-08)', () => {
       'stores',
       'migrations',
       'config',
+      // 66.3-17: the secret-store choice and the Humble/SteamGridDB owners are built before any
+      // handler is registered; the keyring touch (migration) stays in 'secret-stores' below.
+      'secret-vault',
+      'steamgrid-secrets',
       'command-runner',
+      'humble-services',
       'online-monitor-owner',
       'engine-state',
       'winetricks-queue',
@@ -279,12 +284,13 @@ describe('66.1 MH-3: registrations take slices', () => {
    * A new zero-param registration fails here until someone decides which it is.
    */
   const ZERO_PARAM_REGISTRATIONS: Record<string, string> = {
-    // registerHumbleFlows left this list in 66.3-06: it now takes { config, notifications } for the
-    // expiration digest (the bindHumbleStores holder it still reads is a plan 17 target).
-    // registerOAuthLoginFlows and registerStoreEmbedFlows left it in 66.3-10 (each now takes `{ ipc }`).
-    // registerDevEpicCookieSweepFlow, registerDepotHostFlows and registerHumbleLoginFlows left it in
-    // 66.3-09: each now takes `{ ipc, ... }`. (HumbleLogin still reads the bindHumbleStores holder
-    // through HumbleUser/HumbleLibrary; that coupling is a plan 17 target, not a registration param.)
+    // registerHumbleFlows left this list in 66.3-06 and registerDevEpicCookieSweepFlow,
+    // registerDepotHostFlows and registerHumbleLoginFlows in 66.3-09, each as a rows-only change
+    // that kept a COUPLED hidden holder (bindHumbleStores). 66.3-17 deleted that holder: both Humble
+    // registrations now take a single injected deps object carrying `humble` (the boot's user,
+    // library, seam slot and app info), and registerOAuthLoginFlows / registerDevEpicCookieSweepFlow
+    // take the boot's seam slot. registerOAuthLoginFlows and registerStoreEmbedFlows left it in
+    // 66.3-10 (each now takes `{ ipc, ... }`).
   }
 
   it('every exported register*Flows takes a single injected `deps` parameter unless it is on the explicit zero-param allowlist', () => {

@@ -90,15 +90,6 @@ jest.mock('backend/storeManagers/gog/user', () => ({
 jest.mock('backend/storeManagers/nile/user', () => ({
   NileUser: { isLoggedIn: () => mockUsers.loggedIn.nile }
 }))
-jest.mock('backend/humble/user', () => ({
-  HumbleUser: {
-    isLoggedIn: () => mockUsers.loggedIn.humble,
-    probeSession: (context: string) => {
-      mockUsers.calls.push(`humble:${context}`)
-      return Promise.resolve('healthy')
-    }
-  }
-}))
 jest.mock('../runnerProbes', () => ({
   ...jest.requireActual('../runnerProbes'),
   probeLegendarySession: () => {
@@ -125,6 +116,14 @@ const probeSlice = {
   stores: fakeVerdictStores,
   // The boot-owned Steam session slice (66.3-16): the probe reads the keyring slot only; any
   // ensureConnected call would be a CM logon and is counted.
+  // The boot-owned Humble user (66.3-17): read through deps, not a module mock.
+  humbleUser: {
+    isLoggedIn: () => mockUsers.loggedIn.humble,
+    probeSession: (context: string) => {
+      mockUsers.calls.push(`humble:${context}`)
+      return Promise.resolve('healthy' as const)
+    }
+  },
   steamUser: {
     isLoggedIn: () => mockUsers.loggedIn.steam,
     probeCredentialPresence: () => {

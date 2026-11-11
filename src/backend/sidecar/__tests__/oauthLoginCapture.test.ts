@@ -47,9 +47,13 @@ import {
   type OAuthRunner
 } from '../oauthLoginCapture'
 import {
-  setLoginWindowSeam,
+  createLoginWindowSeamSlot,
   type LoginWindowSeam
 } from '../../humble/loginWindowSeam'
+
+// The capture reads the seam through its injected deps (66.3-17): one slot per test file.
+const seamSlot = createLoginWindowSeamSlot()
+const captureDeps = { loginWindowSeam: seamSlot }
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { registerOAuthLoginFlows } from '../oauthLoginFlowRegistration'
 import { createIpcRegistry } from '../ipcRegistry'
@@ -220,18 +224,22 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
     mockSeamOpen.mockResolvedValue('oauth-capture-0')
     mockSeamTakeEvents.mockResolvedValue([])
     mockSeamClose.mockResolvedValue(true)
-    setLoginWindowSeam(fakeSeam)
+    seamSlot.install(fakeSeam)
   })
 
   afterEach(() => {
-    setLoginWindowSeam(null)
+    seamSlot.install(null)
   })
 
   it('throws synchronously when no seam is installed (wiring bug, not a supported state)', () => {
-    setLoginWindowSeam(null)
+    seamSlot.install(null)
 
     expect(() =>
-      captureOAuthLogin('legendary', 'https://www.epicgames.com/id/login')
+      captureOAuthLogin(
+        captureDeps,
+        'legendary',
+        'https://www.epicgames.com/id/login'
+      )
     ).toThrow(/no login-window seam is installed/)
     expect(mockSeamOpen).not.toHaveBeenCalled()
   })
@@ -240,6 +248,7 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
     jest.useFakeTimers({ doNotFake: ['setImmediate'] })
     try {
       const promise = captureOAuthLogin(
+        captureDeps,
         'legendary',
         'https://www.epicgames.com/id/login'
       )
@@ -283,7 +292,11 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
         }
       ])
 
-      const promise = captureOAuthLogin('gog', 'https://auth.gog.com/auth')
+      const promise = captureOAuthLogin(
+        captureDeps,
+        'gog',
+        'https://auth.gog.com/auth'
+      )
       await flushAsync()
 
       jest.advanceTimersByTime(500)
@@ -320,6 +333,7 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
       ])
 
       const promise = captureOAuthLogin(
+        captureDeps,
         'nile',
         'https://www.amazon.com/ap/signin',
         {
@@ -350,7 +364,11 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
   it('resolves { status: "error" } (never rejects) when open() throws', async () => {
     mockSeamOpen.mockRejectedValue(new Error('open failed'))
 
-    const promise = captureOAuthLogin('nile', 'https://amazon.com/ap/signin')
+    const promise = captureOAuthLogin(
+      captureDeps,
+      'nile',
+      'https://amazon.com/ap/signin'
+    )
 
     await expect(promise).resolves.toEqual({
       status: 'error',
@@ -369,7 +387,11 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
     try {
       mockSeamTakeEvents.mockResolvedValue([{ event: 'closed', url: '' }])
 
-      const promise = captureOAuthLogin('gog', 'https://auth.gog.com/auth')
+      const promise = captureOAuthLogin(
+        captureDeps,
+        'gog',
+        'https://auth.gog.com/auth'
+      )
       await flushAsync()
 
       jest.advanceTimersByTime(500)
@@ -391,6 +413,7 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
       mockSeamTakeEvents.mockResolvedValue([{ event: 'closed', url: '' }])
 
       const promise = captureOAuthLogin(
+        captureDeps,
         'nile',
         'https://www.amazon.com/ap/signin'
       )
@@ -419,6 +442,7 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
       mockSeamTakeEvents.mockResolvedValue([{ event: 'closed', url: '' }])
 
       const promise = captureOAuthLogin(
+        captureDeps,
         'legendary',
         'https://www.epicgames.com/id/login'
       )
@@ -447,7 +471,11 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
         { event: 'closed', url: '' }
       ])
 
-      const promise = captureOAuthLogin('gog', 'https://auth.gog.com/auth')
+      const promise = captureOAuthLogin(
+        captureDeps,
+        'gog',
+        'https://auth.gog.com/auth'
+      )
       await flushAsync()
       jest.advanceTimersByTime(500)
       await flushAsync()
@@ -475,7 +503,11 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
         }
       ])
 
-      const promise = captureOAuthLogin('gog', 'https://auth.gog.com/auth')
+      const promise = captureOAuthLogin(
+        captureDeps,
+        'gog',
+        'https://auth.gog.com/auth'
+      )
       await flushAsync()
       jest.advanceTimersByTime(500)
       await flushAsync()
@@ -496,7 +528,11 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
         }
       ])
 
-      const promise = captureOAuthLogin('gog', 'https://auth.gog.com/auth')
+      const promise = captureOAuthLogin(
+        captureDeps,
+        'gog',
+        'https://auth.gog.com/auth'
+      )
       await flushAsync()
       jest.advanceTimersByTime(500)
       await flushAsync()
@@ -525,6 +561,7 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
       mockSeamTakeEvents.mockRejectedValue(new Error('takeEvents failed'))
 
       const promise = captureOAuthLogin(
+        captureDeps,
         'nile',
         'https://www.amazon.com/ap/signin'
       )
@@ -570,14 +607,14 @@ describe('captureOAuthLogin — nav host logging (plan 34.5-24 Task 1)', () => {
     mockSeamOpen.mockResolvedValue('oauth-capture-nav-0')
     mockSeamTakeEvents.mockResolvedValue([])
     mockSeamClose.mockResolvedValue(true)
-    setLoginWindowSeam(fakeSeam)
+    seamSlot.install(fakeSeam)
     const loggerModule: { logInfo: jest.Mock } =
       jest.requireMock('backend/logger')
     loggerModule.logInfo.mockClear()
   })
 
   afterEach(() => {
-    setLoginWindowSeam(null)
+    seamSlot.install(null)
   })
 
   function navHostLines(): string[] {
@@ -597,6 +634,7 @@ describe('captureOAuthLogin — nav host logging (plan 34.5-24 Task 1)', () => {
       ])
 
       const promise = captureOAuthLogin(
+        captureDeps,
         'legendary',
         'https://www.epicgames.com/id/login',
         {
@@ -627,10 +665,15 @@ describe('captureOAuthLogin — nav host logging (plan 34.5-24 Task 1)', () => {
         { event: 'started', url: 'not a url' }
       ])
 
-      const promise = captureOAuthLogin('gog', 'https://auth.gog.com/auth', {
-        deadlineMs: 1000,
-        pollMs: 500
-      })
+      const promise = captureOAuthLogin(
+        captureDeps,
+        'gog',
+        'https://auth.gog.com/auth',
+        {
+          deadlineMs: 1000,
+          pollMs: 500
+        }
+      )
       await flushAsync()
 
       const lines = navHostLines()
@@ -654,6 +697,7 @@ describe('captureOAuthLogin — nav host logging (plan 34.5-24 Task 1)', () => {
     ])
 
     const result = await captureOAuthLogin(
+      captureDeps,
       'legendary',
       'https://www.epicgames.com/id/login'
     )
@@ -710,20 +754,25 @@ describe('resolveUserAgent — diagnostic UA override, exercised via captureOAut
     mockSeamOpen.mockResolvedValue('oauth-capture-ua-0')
     mockSeamTakeEvents.mockResolvedValue([])
     mockSeamClose.mockResolvedValue(true)
-    setLoginWindowSeam(fakeSeam)
+    seamSlot.install(fakeSeam)
   })
 
   afterEach(() => {
-    setLoginWindowSeam(null)
+    seamSlot.install(null)
     process.env = { ...ORIGINAL_ENV }
   })
 
   it('with GAMELIB_OAUTH_UA_LEGENDARY UNSET, the seam receives exactly the default literal agent', async () => {
     delete process.env.GAMELIB_OAUTH_UA_LEGENDARY
 
-    await captureOAuthLogin('legendary', 'https://www.epicgames.com/id/login', {
-      deadlineMs: 5
-    })
+    await captureOAuthLogin(
+      captureDeps,
+      'legendary',
+      'https://www.epicgames.com/id/login',
+      {
+        deadlineMs: 5
+      }
+    )
 
     expect(mockSeamOpen).toHaveBeenCalledWith(
       'https://www.epicgames.com/id/login',
@@ -737,10 +786,15 @@ describe('resolveUserAgent — diagnostic UA override, exercised via captureOAut
   it("setting GAMELIB_OAUTH_UA_LEGENDARY changes only legendary's argument, and gog stays at its default in the same suite run", async () => {
     process.env.GAMELIB_OAUTH_UA_LEGENDARY = 'Mozilla/5.0 TestOverrideAgent'
 
-    await captureOAuthLogin('legendary', 'https://www.epicgames.com/id/login', {
-      deadlineMs: 5
-    })
-    await captureOAuthLogin('gog', 'https://auth.gog.com/auth', {
+    await captureOAuthLogin(
+      captureDeps,
+      'legendary',
+      'https://www.epicgames.com/id/login',
+      {
+        deadlineMs: 5
+      }
+    )
+    await captureOAuthLogin(captureDeps, 'gog', 'https://auth.gog.com/auth', {
       deadlineMs: 5
     })
 
@@ -765,9 +819,14 @@ describe('resolveUserAgent — diagnostic UA override, exercised via captureOAut
   it('a whitespace-only override falls back to the default (an empty UA is the forbidden failure mode)', async () => {
     process.env.GAMELIB_OAUTH_UA_LEGENDARY = '   '
 
-    await captureOAuthLogin('legendary', 'https://www.epicgames.com/id/login', {
-      deadlineMs: 5
-    })
+    await captureOAuthLogin(
+      captureDeps,
+      'legendary',
+      'https://www.epicgames.com/id/login',
+      {
+        deadlineMs: 5
+      }
+    )
 
     expect(mockSeamOpen).toHaveBeenCalledWith(
       'https://www.epicgames.com/id/login',
@@ -785,9 +844,14 @@ describe('resolveUserAgent — diagnostic UA override, exercised via captureOAut
     const override = 'Mozilla/5.0 TestOverrideAgent'
     process.env.GAMELIB_OAUTH_UA_LEGENDARY = override
 
-    await captureOAuthLogin('legendary', 'https://www.epicgames.com/id/login', {
-      deadlineMs: 5
-    })
+    await captureOAuthLogin(
+      captureDeps,
+      'legendary',
+      'https://www.epicgames.com/id/login',
+      {
+        deadlineMs: 5
+      }
+    )
 
     const overrideLines = loggerModule.logInfo.mock.calls
       .map(([msg]: [unknown]) => String(msg))
@@ -806,7 +870,7 @@ describe('resolveUserAgent — diagnostic UA override, exercised via captureOAut
 // this hazard).
 const ipc = createIpcRegistry()
 const { handlerRegistry, listenerRegistry } = ipcViews(ipc)
-registerOAuthLoginFlows({ ipc })
+registerOAuthLoginFlows({ ipc, loginWindowSeam: seamSlot })
 
 describe('registerOAuthLoginFlows() — registration kind (REQ-34.4.1-08)', () => {
   it('oauthCaptureLogin is registered as ipcMain.handle, and NOT as ipcMain.on', () => {
@@ -815,7 +879,7 @@ describe('registerOAuthLoginFlows() — registration kind (REQ-34.4.1-08)', () =
   })
 
   it('resolves { status: "error" } for an unknown runner, without ever reaching the seam', async () => {
-    setLoginWindowSeam(null)
+    seamSlot.install(null)
     const handler = handlerRegistry.get('oauthCaptureLogin')
     expect(handler).toBeDefined()
 
@@ -831,7 +895,7 @@ describe('registerOAuthLoginFlows() — registration kind (REQ-34.4.1-08)', () =
   })
 
   it('resolves { status: "error" } for a non-https url', async () => {
-    setLoginWindowSeam(null)
+    seamSlot.install(null)
     const handler = handlerRegistry.get('oauthCaptureLogin')
 
     const result = await handler?.(undefined, {
@@ -864,7 +928,7 @@ describe('registerOAuthLoginFlows() — registration kind (REQ-34.4.1-08)', () =
         revealPost: jest.fn(),
         clearStorage: jest.fn()
       }
-      setLoginWindowSeam(fakeSeam)
+      seamSlot.install(fakeSeam)
 
       const handler = handlerRegistry.get('oauthCaptureLogin')
       const resultPromise = handler?.(undefined, {
@@ -883,7 +947,7 @@ describe('registerOAuthLoginFlows() — registration kind (REQ-34.4.1-08)', () =
       await flushAsync()
       await resultPromise
 
-      setLoginWindowSeam(null)
+      seamSlot.install(null)
     } finally {
       jest.useRealTimers()
     }

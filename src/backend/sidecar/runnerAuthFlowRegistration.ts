@@ -89,6 +89,8 @@ export interface RunnerAuthFlowDeps extends DialogBoxDeps {
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   /** The boot-owned sign-in fence and outcome map the login/logout paths report through. */
   signIn: ManagerDeps['signIn']
+  /** The boot's login-window seam slot, for the logout cookie wipes (D-66.3-17). */
+  loginWindowSeam: ManagerDeps['loginWindowSeam']
 }
 
 function logSendFailure(channel: string, error: unknown): void {
@@ -125,7 +127,8 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
     stores: deps.stores,
     libraryManagers: deps.managers.library,
     onlineMonitor: deps.onlineMonitor,
-    signIn: deps.signIn
+    signIn: deps.signIn,
+    loginWindowSeam: deps.loginWindowSeam
   })
 
   if (registered) {

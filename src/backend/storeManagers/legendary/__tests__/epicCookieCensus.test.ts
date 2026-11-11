@@ -114,6 +114,9 @@ const mockRunRunnerCommand = jest.fn()
 let probeInstance: ReturnType<typeof createTestSignInProbe> | undefined
 const signInProbe = () => (probeInstance ??= createTestSignInProbe())
 const deps = {
+  get loginWindowSeam() {
+    return seamSlot
+  },
   // Read at call time: the import below sits after the jest.mock block this literal precedes.
   get signIn() {
     return signInProbe()
@@ -166,10 +169,13 @@ import { LegendaryUser } from '../user'
 import { createTestSignInProbe } from 'backend/testUtils/testSignInProbe'
 import { logError, logInfo, logWarning } from 'backend/logger'
 import {
-  setLoginWindowSeam,
+  createLoginWindowSeamSlot,
   type LoginWindowSeam,
   type LoginWindowCookieRead
 } from '../../../humble/loginWindowSeam'
+
+// The boot's one login-window seam slot, per test file (66.3-17): the user modules read it through deps.
+const seamSlot = createLoginWindowSeamSlot()
 
 /**
  * The domains this plan's fatality rule is exercised against, written out
@@ -263,11 +269,11 @@ beforeEach(() => {
   mockClearData.mockResolvedValue(undefined)
   mockRunRunnerCommand.mockResolvedValue({ stdout: '', stderr: '' })
   mockIsMac = true
-  setLoginWindowSeam(null)
+  seamSlot.install(null)
 })
 
 afterEach(() => {
-  setLoginWindowSeam(null)
+  seamSlot.install(null)
 })
 
 describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
@@ -286,7 +292,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
       cookiesForDomain: jest.fn().mockResolvedValue(cookieRead(9, 0)),
       clearCookies: jest.fn().mockResolvedValue(1)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await LegendaryUser.logout(deps)
 
@@ -340,7 +346,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
         .mockResolvedValue(cookieRead(0, 0)),
       clearCookies: jest.fn().mockResolvedValue(1)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await LegendaryUser.logout(deps)
 
@@ -361,7 +367,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
         .mockResolvedValue(cookieRead(9, 0)),
       clearCookies: jest.fn().mockResolvedValue(2)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).resolves.toBeUndefined()
 
@@ -402,7 +408,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
         ),
       clearCookies: jest.fn().mockResolvedValue(2)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await LegendaryUser.logout(deps)
 
@@ -451,7 +457,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
       }),
       clearCookies: jest.fn().mockResolvedValue(3)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       /post-clear verification found 5 Epic-owned cookie\(s\) still present/
@@ -472,7 +478,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
         ),
       clearCookies: jest.fn().mockResolvedValue(3)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).rejects.toThrow()
 
@@ -525,7 +531,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
       }),
       clearCookies: jest.fn().mockResolvedValue(3)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       /post-clear verification could not read the cookie jar/
@@ -546,7 +552,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
       }),
       clearCookies: jest.fn().mockResolvedValue(3)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).rejects.toThrow()
 
@@ -570,7 +576,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
       cookiesForDomain: jest.fn().mockResolvedValue(cookieRead(0, 0)),
       clearCookies: jest.fn().mockResolvedValue(3)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       /post-clear verification could not read the cookie jar/
@@ -629,7 +635,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
         }),
       clearCookies: jest.fn().mockResolvedValue(3)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     // 1. Fatal, naming the ONE unconfirmed host. The em-dash immediately after
     //    the single host name is what distinguishes this from the all-five case,
@@ -681,7 +687,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
       cookiesForDomain: jest.fn().mockResolvedValue(cookieRead(9, 0)),
       clearCookies: jest.fn().mockResolvedValue(1)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await LegendaryUser.logout(deps)
 
@@ -702,7 +708,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
       cookiesForDomain: jest.fn().mockResolvedValue(cookieRead(9, 0)),
       clearCookies: jest.fn().mockResolvedValue(1)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await LegendaryUser.logout(deps)
 
@@ -733,7 +739,7 @@ describe('Task 2: jar-liveness fatality rule (CR-04 part 2, D-35-19-15)', () => 
       cookiesForDomain: jest.fn().mockResolvedValue(cookieRead(1, 0)),
       clearCookies: jest.fn().mockResolvedValue(0)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).resolves.toBeUndefined()
 
@@ -764,7 +770,7 @@ describe('Task 2: jar-liveness fatality rule (CR-04 part 2, D-35-19-15)', () => 
       .mockResolvedValueOnce(0) // fortnite.com: broken
       .mockResolvedValue(0)
     const seam = makeMockSeam({ cookiesForDomain, clearCookies })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       /removed nothing for fortnite\.com despite the jar proving cookies were present beforehand/
@@ -793,7 +799,7 @@ describe('Task 2: jar-liveness fatality rule (CR-04 part 2, D-35-19-15)', () => 
         .mockRejectedValue(new Error('rust-side census read failed')),
       clearCookies: jest.fn().mockResolvedValue(0)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       /removed nothing across all 5 Epic-owned domains/
@@ -812,7 +818,7 @@ describe('Task 2: jar-liveness fatality rule (CR-04 part 2, D-35-19-15)', () => 
       cookiesForDomain: jest.fn().mockResolvedValue(cookieRead(0, 0)),
       clearCookies: jest.fn().mockResolvedValue(0)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       /removed nothing across all 5 Epic-owned domains/
@@ -873,7 +879,7 @@ describe('D-35-29-01 (quick q93) the census produces EVIDENCE, and both consumin
       cookiesForDomain,
       clearCookies: jest.fn().mockResolvedValue(0)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       /removed nothing for epicgames\.com despite the jar proving cookies were present beforehand/
@@ -911,7 +917,7 @@ describe('D-35-29-01 (quick q93) the census produces EVIDENCE, and both consumin
         ),
       clearCookies: jest.fn().mockResolvedValue(0)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     // NOT the broken-host message — the generic fail-closed one. The detector
     // never ran.
@@ -935,7 +941,7 @@ describe('D-35-29-01 (quick q93) the census produces EVIDENCE, and both consumin
       cookiesForDomain: jest.fn().mockResolvedValue(cookieRead(7, 0)),
       clearCookies: jest.fn().mockResolvedValue(0)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).resolves.toBeUndefined()
 

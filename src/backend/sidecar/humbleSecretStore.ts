@@ -3,13 +3,13 @@
  * `HumbleSecretStore` seam (Phase 34.4.1 gap-cycle plan 13, closing F-1 BLOCKING /
  * REQ-34.4.1-02 / REQ-34.4.1-GAP-02).
  *
- * `humble/secretStore.ts` (plan 12) defines the seam and installs `ElectronHumbleSecretStore`
- * (plaintext-under-Tauri, since the sidecar's `safeStorage` stub is hardcoded dead) as its
- * DEFAULT — a build that fails to install its own implementation silently keeps that default.
+ * `humble/secretStore.ts` (plan 12) defines the seam; the boot (66.3-17) builds this store
+ * (or the dev vault) once and requires it at `createHumbleServices()` construction -- the
+ * plaintext-under-Tauri Electron default is deleted.
  * This module is the sidecar's own implementation: it binds `sessionCookie` to the
  * `humble-session` keyring slot and `csrfToken` to the `humble-csrf` slot, both allowlisted by
- * plan 11 (`keyringTokenStore.ts`), and installs itself via `installSidecarHumbleSecretStore()`
- * — the same install-site convention `bootstrap.ts` already uses for Steam's
+ * plan 11 (`keyringTokenStore.ts`), and is built by `createSidecarHumbleSecretStore()` and handed to the boot
+ * — the same convention `bootstrap.ts` already uses for Steam's
  * `SidecarKeyringTokenStore`.
  *
  * Totality discipline mirrored EXACTLY from `SidecarKeyringSlotStore` (plan 11): every method
@@ -26,11 +26,10 @@
  * surface only at runtime as `keyring:unknown-slot`, nowhere earlier.
  *
  * **Read caching is inherited, not reimplemented (34.4.1 gap cycle 2 plan 26, F-9's read-count
- * half — user-approved scope widening, see `34.4.1-26-SUMMARY.md`).** `SLOT_STORES` below holds
- * exactly ONE `SidecarKeyringSlotStore` per secret, created once at module load and reused for
- * the sidecar's entire lifetime — every `getSecret`/`setSecret`/`isAvailable`/`clearSecrets` call
- * across the whole process, regardless of how many `SidecarHumbleSecretStore` wrapper instances
- * exist, hits the SAME two slot-store instances. `SidecarKeyringSlotStore`'s own cache + in-flight
+ * half — user-approved scope widening, see `34.4.1-26-SUMMARY.md`).** `slotStores` below holds
+ * exactly ONE `SidecarKeyringSlotStore` per secret per store INSTANCE. The boot builds exactly one
+ * instance (66.3-17), so every `getSecret`/`setSecret`/`isAvailable`/`clearSecrets` call across the
+ * whole process hits the SAME two slot-store instances. `SidecarKeyringSlotStore`'s own cache + in-flight
  * dedupe (see its doc comment) therefore applies here for free: `storeHumbleSecret()`'s
  * `isAvailable()` probe after every write, and every `HumbleUser.getCredentials()`/
  * `getCsrfToken()` call, no longer each cost a fresh Keychain round trip. `clearSecrets()`
@@ -50,24 +49,29 @@ import {
   KEYRING_SLOT_HUMBLE_SESSION,
   KEYRING_SLOT_HUMBLE_CSRF
 } from './keyringTokenStore'
-import {
-  setHumbleSecretStore,
-  type HumbleSecretStore,
-  type HumbleSecretKey
-} from '../humble/secretStore'
+import type { HumbleSecretStore, HumbleSecretKey } from '../humble/secretStore'
 import type { TokenReadOutcome } from '../storeManagers/steam/tokenStore'
-import { humbleStores } from '../humble/humbleStores'
+import type { Stores } from '../services/types'
 import { HUMBLE_TOKEN_STORE_KEY } from '../humble/constants'
 
-/** One `SidecarKeyringSlotStore` per secret, bound once at module load. Each instance is
- * already total on its own (see the doc comment above) — this map only ever selects which one
- * a given `HumbleSecretKey` addresses; it adds no behavior of its own. */
-const SLOT_STORES: Record<HumbleSecretKey, SidecarKeyringSlotStore> = {
-  sessionCookie: new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION),
-  csrfToken: new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_CSRF)
-}
-
 export class SidecarHumbleSecretStore implements HumbleSecretStore {
+  /** One `SidecarKeyringSlotStore` per secret, owned by THIS instance (D-05, C-WR-2: the former
+   * module-level `SLOT_STORES` is gone). Each is already total on its own (see the doc comment
+   * above) -- this map only ever selects which one a given `HumbleSecretKey` addresses; it adds no
+   * behavior of its own. */
+  private readonly slotStores: Record<
+    HumbleSecretKey,
+    SidecarKeyringSlotStore
+  > = {
+    sessionCookie: new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION),
+    csrfToken: new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_CSRF)
+  }
+
+  /** Drops one slot's read cache (the migration writes around it to prove a real round trip). */
+  invalidateCache(key: HumbleSecretKey): void {
+    this.slotStores[key].invalidateCache()
+  }
+
   async isAvailable(context?: string): Promise<boolean> {
     // Both slots live in the SAME OS Keychain, addressed under the SAME
     // application/service identity (only the account name differs — see
@@ -77,13 +81,13 @@ export class SidecarHumbleSecretStore implements HumbleSecretStore {
     // Forwarded so the Keychain prompt this can raise is attributable to a caller rather than
     // logged as `trigger=unspecified` (quick-260905-jx3). The default names THIS seam, not the
     // slot, so a log line still says something useful when a caller passes nothing.
-    return SLOT_STORES.sessionCookie.isAvailable(
+    return this.slotStores.sessionCookie.isAvailable(
       context ?? 'humble-secret-store-availability'
     )
   }
 
   async getSecret(key: HumbleSecretKey): Promise<string> {
-    return SLOT_STORES[key].getToken()
+    return this.slotStores[key].getToken()
   }
 
   /**
@@ -104,11 +108,11 @@ export class SidecarHumbleSecretStore implements HumbleSecretStore {
     key: HumbleSecretKey,
     context?: string
   ): Promise<TokenReadOutcome> {
-    return SLOT_STORES[key].readToken(context)
+    return this.slotStores[key].readToken(context)
   }
 
   async setSecret(key: HumbleSecretKey, value: string): Promise<void> {
-    return SLOT_STORES[key].setToken(value)
+    return this.slotStores[key].setToken(value)
   }
 
   async clearSecrets(): Promise<void> {
@@ -118,35 +122,49 @@ export class SidecarHumbleSecretStore implements HumbleSecretStore {
     // clearToken() call invalidates its OWN cache before issuing its delete (see
     // keyringTokenStore.ts) -- no additional invalidation is needed here.
     await Promise.allSettled([
-      SLOT_STORES.sessionCookie.clearToken(),
-      SLOT_STORES.csrfToken.clearToken()
+      this.slotStores.sessionCookie.clearToken(),
+      this.slotStores.csrfToken.clearToken()
     ])
   }
 }
 
 /**
- * Installs `SidecarHumbleSecretStore` as the sidecar's active Humble secret store and logs a
- * confirmation line to `gamelib.log`. Plan 12's own doc comment already flagged the risk this
- * line exists to close: a FAILED install silently degrades to the Electron default, which under
- * the sidecar means plaintext (F-1, again) — so the install must be OBSERVABLE, not assumed.
- * The live-gate re-run (plan 20) greps `gamelib.log` for this exact line.
- *
- * Also fires (never awaited — sidecar startup is synchronous) the one-time plaintext migration
- * below, so an existing plaintext Humble credential moves into the keyring the first time this
- * install runs against it.
+ * Builds the keyring-backed Humble secret store the boot injects into `createHumbleServices()`
+ * (a boot-built instance, no registry). Construction does no I/O and arms nothing; the receipt
+ * line and the one-time plaintext migration belong to `startSidecarHumbleSecretStore()` below,
+ * which the 'secret-stores' boot step runs after the RPC server is bound (T-28-10 placement).
  */
-export function installSidecarHumbleSecretStore(): void {
-  setHumbleSecretStore(new SidecarHumbleSecretStore())
+export function createSidecarHumbleSecretStore(): SidecarHumbleSecretStore {
+  return new SidecarHumbleSecretStore()
+}
+
+/**
+ * Logs a confirmation line to `gamelib.log` and fires (never awaited -- sidecar startup is
+ * synchronous) the one-time plaintext migration below, so an existing plaintext Humble credential
+ * moves into the keyring the first time this runs against it. Plan 12's own doc comment flagged
+ * the risk this line exists to close: a store that is not actually the keyring one would persist
+ * the session in plaintext (F-1, again) -- so the choice must be OBSERVABLE, not assumed. The
+ * live-gate re-run (plan 20) greps `gamelib.log` for this exact line.
+ */
+export function startSidecarHumbleSecretStore(
+  store: Pick<SidecarHumbleSecretStore, 'invalidateCache'>,
+  deps: HumbleMigrationDeps
+): void {
   logInfo(
     '[bootstrap] Humble secret store installed: keyring-backed (humble-session/humble-csrf slots)',
     LogPrefix.Backend
   )
-  void migrateHumbleSecrets().catch((error) => {
+  void migrateHumbleSecrets(store, deps).catch((error) => {
     logWarning(
       `Humble secret migration failed unexpectedly: ${errorMessage(error)}`,
       LogPrefix.Backend
     )
   })
+}
+
+/** What the one-time migration reads and writes: the humble config store family. */
+export interface HumbleMigrationDeps {
+  stores: Pick<Stores, 'humble'>
 }
 
 // ── One-time plaintext-to-keyring migration (Task 2, D-GAP-01/T-34.4.1-57) ──────────────────────
@@ -185,10 +203,14 @@ function errorMessage(error: unknown): string {
  * is exactly the `navigator.clipboard`-under-Tauri failure shape this project has already been
  * bitten by. A mismatched readback is NEVER rounded up to success.
  */
-export async function migrateOneSecret(key: HumbleSecretKey): Promise<void> {
+export async function migrateOneSecret(
+  store: Pick<SidecarHumbleSecretStore, 'invalidateCache'>,
+  deps: HumbleMigrationDeps,
+  key: HumbleSecretKey
+): Promise<void> {
   const { configKey, slot } = MIGRATION_TARGETS[key]
 
-  const plaintext = humbleStores().configStore.get_nodefault(configKey)
+  const plaintext = deps.stores.humble.configStore.get_nodefault(configKey)
   if (!plaintext || typeof plaintext !== 'string') {
     // Absent — healthy "nothing to migrate" case (already migrated on a prior run, or this
     // secret was never stored). No keyring write, no log.
@@ -205,7 +227,7 @@ export async function migrateOneSecret(key: HumbleSecretKey): Promise<void> {
     return
   }
 
-  // The write went straight to `requestRustInvoke` (bypassing SLOT_STORES[key]'s own
+  // The write went straight to `requestRustInvoke` (bypassing the slot store's own
   // setToken(), which is what normally invalidates its cache) BECAUSE this migration must prove
   // the readback came from a REAL keyring round trip, not a cache (the "liveness proof" this
   // function's own doc comment describes) -- but that same bypass means the store's cache is
@@ -215,7 +237,7 @@ export async function migrateOneSecret(key: HumbleSecretKey): Promise<void> {
   // this line, a `getSecret()` called BEFORE migration -- which legitimately caches the
   // pre-migration '' -- would keep resolving that stale cached '' forever after, even though the
   // migration just wrote a real value).
-  SLOT_STORES[key].invalidateCache()
+  store.invalidateCache(key)
 
   let readback: unknown
   try {
@@ -236,30 +258,18 @@ export async function migrateOneSecret(key: HumbleSecretKey): Promise<void> {
     return
   }
 
-  humbleStores().configStore.delete(configKey)
-  humbleStores().configStore.set('encryptionDegraded', false)
+  deps.stores.humble.configStore.delete(configKey)
+  deps.stores.humble.configStore.set('encryptionDegraded', false)
 }
 
 /**
  * Runs the one-time migration for both secrets, independently. Called (fire-and-forget) from
- * `installSidecarHumbleSecretStore()` above.
+ * `startSidecarHumbleSecretStore()` above.
  */
-export async function migrateHumbleSecrets(): Promise<void> {
-  await migrateOneSecret('sessionCookie')
-  await migrateOneSecret('csrfToken')
-}
-
-/**
- * Test-only reset hook (34.4.1 gap cycle 2 plan 26). `SLOT_STORES` is a module-level singleton
- * (see this module's own doc comment) that outlives any individual `SidecarHumbleSecretStore`
- * instance and persists for the lifetime of the whole test FILE (this project's Jest config has
- * no `resetModules`) -- creating a fresh `new SidecarHumbleSecretStore()` per test does NOT give
- * a fresh cache. This export is `humbleSecretStore.test.ts`'s isolation seam: called from that
- * file's `beforeEach`, it clears both slots' read cache so each test's own scripted
- * `requestRustInvoke` outcome is actually exercised, never shadowed by an earlier test's cached
- * success. Never called from production code.
- */
-export function resetSidecarHumbleSecretStoreCachesForTests(): void {
-  SLOT_STORES.sessionCookie.invalidateCache()
-  SLOT_STORES.csrfToken.invalidateCache()
+export async function migrateHumbleSecrets(
+  store: Pick<SidecarHumbleSecretStore, 'invalidateCache'>,
+  deps: HumbleMigrationDeps
+): Promise<void> {
+  await migrateOneSecret(store, deps, 'sessionCookie')
+  await migrateOneSecret(store, deps, 'csrfToken')
 }

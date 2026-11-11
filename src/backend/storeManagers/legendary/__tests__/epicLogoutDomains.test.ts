@@ -103,6 +103,9 @@ const mockRunRunnerCommand = jest.fn()
 let probeInstance: ReturnType<typeof createTestSignInProbe> | undefined
 const signInProbe = () => (probeInstance ??= createTestSignInProbe())
 const deps = {
+  get loginWindowSeam() {
+    return seamSlot
+  },
   // Read at call time: the import below sits after the jest.mock block this literal precedes.
   get signIn() {
     return signInProbe()
@@ -142,9 +145,12 @@ import { join } from 'path'
 import { LegendaryUser } from '../user'
 import { logError, logInfo, logWarning } from 'backend/logger'
 import {
-  setLoginWindowSeam,
+  createLoginWindowSeamSlot,
   type LoginWindowSeam
 } from '../../../humble/loginWindowSeam'
+
+// The boot's one login-window seam slot, per test file (66.3-17): the user modules read it through deps.
+const seamSlot = createLoginWindowSeamSlot()
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
 const LEGENDARY_USER_TS = join(__dirname, '../user.ts')
@@ -244,17 +250,17 @@ beforeEach(() => {
   // A clean CLI logout: no early return, so the wipe steps actually run.
   mockRunRunnerCommand.mockResolvedValue({ stdout: '', stderr: '' })
   mockIsMac = true
-  setLoginWindowSeam(null)
+  seamSlot.install(null)
 })
 
 afterEach(() => {
-  setLoginWindowSeam(null)
+  seamSlot.install(null)
 })
 
 describe('Epic logout clears every Epic-owned domain (T-35-37)', () => {
   it('attempts EVERY approved Epic-owned apex, exactly once each, against the SAME window label', async () => {
     const seam = makeMockSeam()
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await LegendaryUser.logout(deps)
 
@@ -291,7 +297,7 @@ describe('Epic logout clears every Epic-owned domain (T-35-37)', () => {
   it('on macOS opens NO window for the sweep, and closes none', async () => {
     mockIsMac = true
     const seam = makeMockSeam()
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await LegendaryUser.logout(deps)
 
@@ -305,7 +311,7 @@ describe('Epic logout clears every Epic-owned domain (T-35-37)', () => {
   it('off macOS opens ONE hidden window for the whole sweep, NOT pointed at Epic, and closes it exactly once', async () => {
     mockIsMac = false
     const seam = makeMockSeam()
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await LegendaryUser.logout(deps)
 
@@ -334,7 +340,7 @@ describe('Epic logout clears every Epic-owned domain (T-35-37)', () => {
         .mockResolvedValueOnce(1)
         .mockRejectedValueOnce(new Error('rust-side clear failed'))
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       'rust-side clear failed'
@@ -353,7 +359,7 @@ describe('Epic logout clears every Epic-owned domain (T-35-37)', () => {
         .mockResolvedValueOnce(1)
         .mockRejectedValueOnce(new Error('rust-side clear failed'))
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       'rust-side clear failed'
@@ -378,7 +384,7 @@ describe('the per-domain deltas are summed, and only a ZERO TOTAL fails (T-35-39
         .mockResolvedValueOnce(1)
         .mockResolvedValueOnce(2)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await LegendaryUser.logout(deps)
 
@@ -406,7 +412,7 @@ describe('the per-domain deltas are summed, and only a ZERO TOTAL fails (T-35-39
         .mockResolvedValueOnce(0)
         .mockResolvedValueOnce(0)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).resolves.toBeUndefined()
     expect(logError).not.toHaveBeenCalled()
@@ -423,7 +429,7 @@ describe('the per-domain deltas are summed, and only a ZERO TOTAL fails (T-35-39
       cookiesForDomain: jest.fn(),
       clearCookies: jest.fn().mockResolvedValue(0)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       /removed nothing across all 5 Epic-owned domains/
@@ -444,7 +450,7 @@ describe('the per-domain deltas are summed, and only a ZERO TOTAL fails (T-35-39
       cookiesForDomain: jest.fn(),
       clearCookies: jest.fn().mockResolvedValue(0)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).rejects.toThrow()
 
@@ -462,7 +468,7 @@ describe('the per-domain deltas are summed, and only a ZERO TOTAL fails (T-35-39
       cookiesForDomain: jest.fn(),
       clearCookies: jest.fn().mockResolvedValue(0)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).rejects.toThrow()
 
@@ -475,7 +481,7 @@ describe('logs carry counts and domains only — never a cookie name or value (T
     const seam = makeMockSeam({
       clearCookies: jest.fn().mockResolvedValue(3)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await LegendaryUser.logout(deps)
 
@@ -503,7 +509,7 @@ describe('logs carry counts and domains only — never a cookie name or value (T
       cookiesForDomain: jest.fn(),
       clearCookies: jest.fn().mockResolvedValue(0)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(LegendaryUser.logout(deps)).rejects.toThrow()
 

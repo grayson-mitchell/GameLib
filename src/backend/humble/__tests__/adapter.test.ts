@@ -70,15 +70,11 @@ function lastRevealPostInput(): {
 }
 
 // Typical Electron default UA shape (mirrors user.test.ts's own fixture) —
-// standardBrowserUserAgent() (userAgent.ts) reads app.userAgentFallback to
+// standardBrowserUserAgent() (userAgent.ts) reads the injected appInfo.userAgentFallback to
 // build the reveal POST's User-Agent header, passed through unchanged to
 // the login-window seam's revealPost() input.
 const MOCK_USER_AGENT_FALLBACK =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) GameLib/1.0.0 Chrome/142.0.7444.52 Electron/41.1.1 Safari/537.36'
-
-jest.mock('backend/platform', () => ({
-  app: { userAgentFallback: MOCK_USER_AGENT_FALLBACK }
-}))
 
 // ── Logger mock (factory to prevent transitive module load failures) ────────
 const mockLogInfo = jest.fn()
@@ -94,9 +90,19 @@ jest.mock('backend/logger', () => ({
 }))
 
 import { getGamekeys, getOrderDetail, revealKey } from '../adapter'
-import { setLoginWindowSeam, type LoginWindowSeam } from '../loginWindowSeam'
+import {
+  createLoginWindowSeamSlot,
+  type LoginWindowSeam
+} from '../loginWindowSeam'
 
 const COOKIE = 'super-secret-cookie-value'
+
+// One slot per test file: the adapter reads the seam through its injected deps.
+const seamSlot = createLoginWindowSeamSlot()
+const adapterDeps = {
+  loginWindowSeam: seamSlot,
+  appInfo: { userAgentFallback: MOCK_USER_AGENT_FALLBACK }
+}
 
 function makeAxiosError(
   status: number,
@@ -592,26 +598,23 @@ describe('revealKey', () => {
   }
 
   beforeEach(() => {
-    setLoginWindowSeam(fakeSeam(mockRevealPost))
+    seamSlot.install(fakeSeam(mockRevealPost))
   })
 
   afterEach(() => {
-    // Load-bearing: the seam holder is a module-level singleton
-    // (`backend/humble/loginWindowSeam.ts`) and would otherwise leak into
-    // every OTHER test file that imports the real (unmocked) module in the
-    // same jest worker.
-    setLoginWindowSeam(null)
+    // The slot is per test file; clear it so a test that expects "no seam" starts empty.
+    seamSlot.install(null)
   })
 
   test('{success:true, key} -> ok with the key value', async () => {
     queueSeamResponse(200, { success: true, key: FAKE_KEY })
-    const result = await revealKey(undefined, params())
+    const result = await revealKey(adapterDeps, undefined, params())
     expect(result).toEqual({ status: 'ok', data: { key: FAKE_KEY } })
   })
 
   test('D-29-03: a SUCCESSFUL reveal emits one INFO completion line with a duration', async () => {
     queueSeamResponse(200, { success: true, key: FAKE_KEY })
-    await revealKey(undefined, params())
+    await revealKey(adapterDeps, undefined, params())
     const call = mockLogInfo.mock.calls.find((c) =>
       JSON.stringify(c).includes('reveal succeeded')
     )
@@ -623,7 +626,7 @@ describe('revealKey', () => {
 
   test('D-29-03: the revealed key reaches NO log sink on the success path (C4)', async () => {
     queueSeamResponse(200, { success: true, key: FAKE_KEY })
-    await revealKey(undefined, params())
+    await revealKey(adapterDeps, undefined, params())
     for (const logged of allLoggedStrings()) {
       expect(logged).not.toContain(FAKE_KEY)
     }
@@ -631,7 +634,7 @@ describe('revealKey', () => {
 
   test('{success:false, error_msg} -> rejected_by_server (definitive server denial, never schema_error)', async () => {
     queueSeamResponse(200, { success: false, error_msg: 'already redeemed' })
-    const result = await revealKey(undefined, params())
+    const result = await revealKey(adapterDeps, undefined, params())
     expect(result).toEqual({ status: 'rejected_by_server' })
   })
 
@@ -640,7 +643,7 @@ describe('revealKey', () => {
       success: false,
       error_msg: 'already redeemed by SNEAKY-KEY-VALUE'
     })
-    await revealKey(undefined, params())
+    await revealKey(adapterDeps, undefined, params())
     const rejectedLog = mockLogWarning.mock.calls.find((c) =>
       JSON.stringify(c).includes('rejected by server')
     )
@@ -651,37 +654,37 @@ describe('revealKey', () => {
 
   test('success true but key missing -> schema_error, raw is undefined', async () => {
     queueSeamResponse(200, { success: true })
-    const result = await revealKey(undefined, params())
+    const result = await revealKey(adapterDeps, undefined, params())
     expect(result).toEqual({ status: 'schema_error', raw: undefined })
   })
 
   test('success absent (nullish) -> schema_error, raw is undefined (genuine shape drift, not a server verdict)', async () => {
     queueSeamResponse(200, { key: FAKE_KEY })
-    const result = await revealKey(undefined, params())
+    const result = await revealKey(adapterDeps, undefined, params())
     expect(result).toEqual({ status: 'schema_error', raw: undefined })
   })
 
   test('body shape drift (non-object) -> schema_error carrying the raw body', async () => {
     queueSeamResponse(200, 'not-an-object')
-    const result = await revealKey(undefined, params())
+    const result = await revealKey(adapterDeps, undefined, params())
     expect(result).toEqual({ status: 'schema_error', raw: 'not-an-object' })
   })
 
   test('HTTP 401 -> session_expired', async () => {
     queueSeamResponse(401, { error_msg: 'expired' })
-    const result = await revealKey(undefined, params())
+    const result = await revealKey(adapterDeps, undefined, params())
     expect(result).toEqual({ status: 'session_expired' })
   })
 
   test('HTTP 403 -> access_denied (D-78: definitive failure)', async () => {
     queueSeamResponse(403, { error_msg: 'forbidden' })
-    const result = await revealKey(undefined, params())
+    const result = await revealKey(adapterDeps, undefined, params())
     expect(result).toEqual({ status: 'access_denied' })
   })
 
   test('HTTP 429 -> access_denied', async () => {
     queueSeamResponse(429, { error_msg: 'rate limited' })
-    const result = await revealKey(undefined, params())
+    const result = await revealKey(adapterDeps, undefined, params())
     expect(result).toEqual({ status: 'access_denied' })
   })
 
@@ -709,7 +712,7 @@ describe('revealKey', () => {
       403,
       '<!DOCTYPE html><html><body>Attention Required! | Cloudflare</body></html>'
     )
-    await revealKey(undefined, params())
+    await revealKey(adapterDeps, undefined, params())
     const call = mockLogWarning.mock.calls.find((c) =>
       JSON.stringify(c).includes('reveal HTTP failure diagnostic')
     )
@@ -726,7 +729,7 @@ describe('revealKey', () => {
 
   test('round 5: a 403 with a genuine Humble JSON body logs looksLikeHtml=false (distinguishes real denial from a WAF challenge)', async () => {
     queueSeamResponse(403, { success: false, error_msg: 'forbidden' })
-    await revealKey(undefined, params())
+    await revealKey(adapterDeps, undefined, params())
     const call = mockLogWarning.mock.calls.find((c) =>
       JSON.stringify(c).includes('reveal HTTP failure diagnostic')
     )
@@ -750,7 +753,7 @@ describe('revealKey', () => {
 
   test('a network-level error (no HTTP response at all) rethrows — D-78 ambiguous-outcome caller responsibility', async () => {
     queueSeamError(new Error('humble_reveal_post:connection_reset'))
-    await expect(revealKey(undefined, params())).rejects.toThrow(
+    await expect(revealKey(adapterDeps, undefined, params())).rejects.toThrow(
       'connection_reset'
     )
   })
@@ -768,9 +771,9 @@ describe('revealKey', () => {
     try {
       // Never resolves/rejects — simulates a stalled login-window fetch().
       mockRevealPost.mockImplementation(() => new Promise(() => {}))
-      const assertion = expect(revealKey(undefined, params())).rejects.toThrow(
-        'timed out'
-      )
+      const assertion = expect(
+        revealKey(adapterDeps, undefined, params())
+      ).rejects.toThrow('timed out')
       await jest.advanceTimersByTimeAsync(15_000)
       await assertion
     } finally {
@@ -786,9 +789,9 @@ describe('revealKey', () => {
   test('never logs the csrf token, the key value, or an error_msg containing a key-shaped string', async () => {
     const SNEAKY_ERROR_MSG = 'key was DDDDD-EEEEE-FFFFF already used'
     queueSeamResponse(200, { success: true, key: FAKE_KEY })
-    await revealKey(CSRF_TOKEN, params())
+    await revealKey(adapterDeps, CSRF_TOKEN, params())
     queueSeamResponse(200, { success: false, error_msg: SNEAKY_ERROR_MSG })
-    await revealKey(CSRF_TOKEN, params())
+    await revealKey(adapterDeps, CSRF_TOKEN, params())
 
     for (const logged of allLoggedStrings()) {
       expect(logged).not.toContain(CSRF_TOKEN)
@@ -800,7 +803,7 @@ describe('revealKey', () => {
 
   test('never logs the csrf token on HTTP error paths either', async () => {
     queueSeamResponse(401, { error_msg: 'expired' })
-    await revealKey(CSRF_TOKEN, params())
+    await revealKey(adapterDeps, CSRF_TOKEN, params())
     for (const logged of allLoggedStrings()) {
       expect(logged).not.toContain(CSRF_TOKEN)
     }
@@ -821,7 +824,7 @@ describe('revealKey', () => {
         status: 200,
         body: JSON.stringify({ success: true, key: FAKE_KEY })
       })
-      const result = await revealKey(undefined, params())
+      const result = await revealKey(adapterDeps, undefined, params())
       expect(result).toEqual({ status: 'ok', data: { key: FAKE_KEY } })
     })
 
@@ -830,7 +833,7 @@ describe('revealKey', () => {
         status: 403,
         body: '<!DOCTYPE html><html><body>Attention Required! | Cloudflare</body></html>'
       })
-      const result = await revealKey(undefined, params())
+      const result = await revealKey(adapterDeps, undefined, params())
       expect(result).toEqual({ status: 'access_denied' })
     })
 
@@ -839,20 +842,20 @@ describe('revealKey', () => {
         status: 401,
         body: JSON.stringify({ error_msg: 'expired' })
       })
-      const result = await revealKey(undefined, params())
+      const result = await revealKey(adapterDeps, undefined, params())
       expect(result).toEqual({ status: 'session_expired' })
     })
 
     test('a seam rejection propagates as a network-level error', async () => {
       mockRevealPost.mockRejectedValue(new Error('humble_reveal_post:timeout'))
-      await expect(revealKey(undefined, params())).rejects.toThrow(
+      await expect(revealKey(adapterDeps, undefined, params())).rejects.toThrow(
         'humble_reveal_post:timeout'
       )
     })
 
     test('calls seam.revealPost with HUMBLE_BASE_URL, the redeem path, the form-encoded body, the csrf token and a non-empty userAgent', async () => {
       queueSeamResponse(200, { success: true, key: FAKE_KEY })
-      await revealKey(CSRF_TOKEN, params(3))
+      await revealKey(adapterDeps, CSRF_TOKEN, params(3))
       expect(mockRevealPost).toHaveBeenCalledTimes(1)
       const input = lastRevealPostInput()
       expect(input.originUrl).toBe('https://www.humblebundle.com')

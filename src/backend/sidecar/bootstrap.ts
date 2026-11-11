@@ -86,15 +86,18 @@ import {
 } from '../storeManagers/steam/tokenStore'
 import { createSteamBottle } from '../storeManagers/steam/bottle'
 import { SidecarKeyringTokenStore } from './keyringTokenStore'
-import { installSidecarHumbleSecretStore } from './humbleSecretStore'
+import {
+  createSidecarHumbleSecretStore,
+  startSidecarHumbleSecretStore,
+  type SidecarHumbleSecretStore
+} from './humbleSecretStore'
 import {
   createSidecarSteamGridDbSecretStore,
   startSidecarSteamGridDbSecretStore,
   type SidecarSteamGridDbSecretStore
 } from './steamgridSecretStore'
 import { createSteamGridDbSecrets } from '../steamgrid/secretStore'
-import { bindHumbleStores } from '../humble/humbleStores'
-import { setHumbleSecretStore } from '../humble/secretStore'
+import { createHumbleServices } from '../humble'
 import { registerDxmtListeners } from '../tools/dxmt'
 // 34.5 gap cycle 4 plan 36 (developer-scoped Routing addition): the dev-only plaintext vault
 // that this branch installs INSTEAD OF the two keyring stores below, when opted into. Import
@@ -292,6 +295,7 @@ export const BOOT_STEP_NAMES = [
   'steam-bottle',
   'command-runner',
   'steam-user',
+  'humble-services',
   'online-monitor-owner',
   'engine-state',
   'winetricks-queue',
@@ -362,6 +366,8 @@ interface BootState {
   secretVault: DevSecretVault | null
   /** The keyring-backed SteamGridDB store this boot built, when no dev vault was selected. */
   steamGridKeyringStore: SidecarSteamGridDbSecretStore | null
+  /** The keyring-backed Humble store this boot built, when no dev vault was selected. */
+  humbleKeyringStore: SidecarHumbleSecretStore | null
 }
 
 /**
@@ -439,7 +445,8 @@ function requireServices(state: BootState): BootServices {
     bridgeHelpers,
     steamBottle,
     steamUser,
-    steamGridSecrets
+    steamGridSecrets,
+    humble
   } = state.services
   if (
     !stores ||
@@ -467,7 +474,8 @@ function requireServices(state: BootState): BootServices {
     !bridgeHelpers ||
     !steamBottle ||
     !steamUser ||
-    !steamGridSecrets
+    !steamGridSecrets ||
+    !humble
   ) {
     const missing = (
       [
@@ -496,7 +504,8 @@ function requireServices(state: BootState): BootServices {
         'bridgeHelpers',
         'steamBottle',
         'steamUser',
-        'steamGridSecrets'
+        'steamGridSecrets',
+        'humble'
       ] as const
     ).filter((name) => !state.services[name])
     throw new Error(`boot services missing: ${missing.join(', ')}`)
@@ -527,7 +536,8 @@ function requireServices(state: BootState): BootServices {
     bridgeHelpers,
     steamBottle,
     steamUser,
-    steamGridSecrets
+    steamGridSecrets,
+    humble
   }
 }
 
@@ -1126,7 +1136,8 @@ export function bootSidecar(
     i18nReady: Promise.resolve(),
     services: {},
     secretVault: null,
-    steamGridKeyringStore: null
+    steamGridKeyringStore: null,
+    humbleKeyringStore: null
   }
   runBootSteps(ctx, { input, output, guards }, state, prebuilt)
   return requireServices(state)
@@ -1593,6 +1604,41 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'humble-services',
+      // Builds the Humble user, library, sync fence and login-window seam slot of this boot (D-05,
+      // D-66.3-17), replacing the static holders. Path taken: EARLY CONSTRUCTION, before
+      // 'store-managers' (ManagerDeps carries the seam slot) and 'register-handlers'. It is possible
+      // because the store choice (keyring vs dev vault) is made in 'secret-vault' and the keyring
+      // store's construction does no I/O: the keyring is touched only by the one-time migration in
+      // 'secret-stores', after 'rpc-server' (T-28-10). The seam slot starts empty; the
+      // rustInvoke-backed seam is installed by registerHumbleLoginFlows, before any handler runs.
+      run: (_ctx, _io, state) => {
+        const { stores, signInProbe, steamUser, appInfo } = state.services
+        if (!stores) throw new Error('boot: stores step must run first')
+        if (!appInfo) throw new Error('boot: config step must run first')
+        if (!signInProbe || !steamUser)
+          throw new Error(
+            'boot: sign-in-probe-state / steam-user steps must run first'
+          )
+        let secretStore
+        if (state.secretVault) {
+          secretStore = state.secretVault.humbleSecretStore
+        } else {
+          state.humbleKeyringStore = createSidecarHumbleSecretStore()
+          secretStore = state.humbleKeyringStore
+        }
+        state.services.humble =
+          prebuilt.humble ??
+          createHumbleServices({
+            stores,
+            secretStore,
+            steamUser,
+            signInOutcomes: signInProbe.outcomes,
+            appInfo
+          })
+      }
+    },
+    {
       name: 'online-monitor-owner',
       // Builds the one monitor of this boot (D-05). Construction does no I/O: the listeners, the
       // handler and the first probe belong to the 'online-monitor' step (start()), whose position
@@ -1666,7 +1712,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           anonymousClient,
           bridgeHelpers,
           steamBottle,
-          steamUser
+          steamUser,
+          humble
         } = state.services
         if (
           !stores ||
@@ -1685,7 +1732,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !anonymousClient ||
           !bridgeHelpers ||
           !steamBottle ||
-          !steamUser
+          !steamUser ||
+          !humble
         ) {
           throw new Error(
             'store-managers step ran before stores/command-runner/config/host-services'
@@ -1724,7 +1772,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           anonymousClient,
           bridgeHelpers,
           steamBottle,
-          steamUser
+          steamUser,
+          loginWindowSeam: humble.loginWindowSeam
         })
         state.services.managers = prebuilt.managers ?? built
         state.services.launcher = prebuilt.launcher ?? built.launcher
@@ -2074,9 +2123,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'secret-stores',
       run: (ctx, _io, state) => {
-        const { stores, host, onlineMonitor, signInProbe, steamUser } =
-          requireServices(state)
-        bindHumbleStores({ stores, signIn: signInProbe, steamUser })
+        const { stores, host, onlineMonitor } = requireServices(state)
         registerDxmtListeners({
           stores,
           runner: ctx.runner,
@@ -2092,13 +2139,13 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // UNCHANGED by both arms of the exclusive branch immediately below (34.5 gap cycle 4 plan 36):
         // installDevSecretVault() only performs local file I/O (no RPC), but the keyring arm it
         // replaces on the OTHER side of this branch needs the same live transport
-        // installSidecarHumbleSecretStore()'s migration logic does, so the branch as a whole stays
+        // startSidecarHumbleSecretStore()'s migration logic does, so the branch as a whole stays
         // below startRpcServer() regardless of which arm a given boot takes.
         //
         // Exclusive, not additive (34.5 gap cycle 4 plan 36, Routing's developer-scoped dev-vault
         // item): calling installDevSecretVault() first and checking its return value BEFORE touching
         // either keyring install is deliberate. Running the vault install alongside or after the
-        // keyring installs would leave installSidecarHumbleSecretStore()'s fire-and-forget
+        // keyring installs would leave startSidecarHumbleSecretStore()'s fire-and-forget
         // migrateHumbleSecrets() already dispatched -- a migration that reads the keyring and writes
         // configStore, i.e. precisely the Keychain interaction this branch exists to let a developer
         // avoid -- and would mean a boot that both prompted for Keychain access AND then discarded the
@@ -2112,19 +2159,20 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         const devSecretVault = state.secretVault
         if (devSecretVault) {
           installTokenStore(devSecretVault.tokenStore)
-          setHumbleSecretStore(devSecretVault.humbleSecretStore)
           logInfo('[bootstrap] secret stores: dev-vault', LogPrefix.Backend)
         } else {
           installTokenStore(new SidecarKeyringTokenStore())
-          // Phase 34.4.1 gap-cycle plan 13 (F-1 BLOCKING closure): install the keyring-backed Humble
-          // secret store the same way and at the same site as the Steam TokenStore just above. Must
-          // run AFTER startRpcServer() for the same reason installTokenStore() does (its migration
-          // logic calls requestRustInvoke, which needs a live transport), and harmless to call on
-          // every bootstrap.test.ts/*Flows.test.ts init() re-run -- setHumbleSecretStore() just
-          // reassigns a registry variable (no accumulating listener, unlike
-          // onlineMonitorInitialized's guard above).
-          installSidecarHumbleSecretStore()
-          // Phase 34.6 plan 02 (A-03): same placement reasoning as installSidecarHumbleSecretStore()
+          // Phase 34.4.1 gap-cycle plan 13 (F-1 BLOCKING closure): the keyring-backed Humble
+          // secret store was already built and injected into the Humble services by the
+          // 'humble-services' step (66.3-17); this arm only runs its observable receipt line and the
+          // one-time plaintext migration, at the same site as the Steam TokenStore just above. Must
+          // run AFTER startRpcServer() for the same reason installTokenStore() does (the migration
+          // calls requestRustInvoke, which needs a live transport).
+          const humbleKeyringStore = state.humbleKeyringStore
+          if (!humbleKeyringStore)
+            throw new Error('boot: humble-services step must run first')
+          startSidecarHumbleSecretStore(humbleKeyringStore, { stores })
+          // Phase 34.6 plan 02 (A-03): same placement reasoning as startSidecarHumbleSecretStore()
           // just above -- its migration also calls requestRustInvoke, so it must run AFTER
           // startRpcServer() and inside this same keyring arm.
           const steamGridKeyringStore = state.steamGridKeyringStore
@@ -2440,6 +2488,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           stores: services.stores,
           appInfo: services.appInfo,
           steamUser: services.steamUser,
+          humbleUser: services.humble.user,
           onlineMonitor: services.onlineMonitor
         })
       }

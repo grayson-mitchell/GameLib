@@ -12,9 +12,9 @@ import { isMac } from 'backend/constants/environment'
 import { legendaryUserInfo } from './constants'
 import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
 import {
-  getLoginWindowSeamOrThrow,
   classifyCookieRead,
-  type CookieReadVerdict
+  type CookieReadVerdict,
+  type LoginWindowSeamSlot
 } from '../../humble/loginWindowSeam'
 import { standardBrowserUserAgent } from '../../humble/userAgent'
 import type { AppInfo } from 'backend/process/context'
@@ -117,6 +117,8 @@ export interface LegendaryUserInfoDeps {
 export interface LegendaryUserDeps
   extends LegendaryUserInfoDeps, DialogBoxDeps, SignInNoteDeps {
   appInfo: Pick<AppInfo, 'userAgentFallback'>
+  /** The boot's login-window seam slot, for the logout wipe (D-66.3-17). */
+  loginWindowSeam: Pick<LoginWindowSeamSlot, 'getOrThrow'>
   libraryManagers: Pick<ManagerDeps['libraryManagers'], 'legendary'>
   stores: LegendaryUserInfoDeps['stores'] & {
     legendary: Stores['legendary']
@@ -247,7 +249,7 @@ export class LegendaryUser {
     // below -- a symbolic reference on purpose: a hardcoded line number here
     // has already gone stale once, per Phase 40 CR-03). Before this fix, a
     // bare `const seam =
-    // getLoginWindowSeamOrThrow()` at this exact spot threw outside the
+    // deps.loginWindowSeam.getOrThrow()` at this exact spot threw outside the
     // loop's guard, aborting logout() before the cleanup ran — the pinned
     // no-seam test above proves it. This leaves the `wipeSteps` declaration
     // and the guarded loop as the only statements between CLI success and
@@ -276,7 +278,7 @@ export class LegendaryUser {
         async () => {
           // Seam acquired here, not once above (CR-01 — see the comment
           // ahead of `wipeSteps`).
-          const seam = getLoginWindowSeamOrThrow()
+          const seam = deps.loginWindowSeam.getOrThrow()
           // Plan 15's clearStorage() opens and closes its OWN hidden
           // window inside the Rust arm (humble_login_clear_storage) — no
           // label is needed or returned here, unlike the cookie step
@@ -300,7 +302,7 @@ export class LegendaryUser {
         async () => {
           // Seam acquired here, not once above (CR-01 — see the comment
           // ahead of `wipeSteps`).
-          const seam = getLoginWindowSeamOrThrow()
+          const seam = deps.loginWindowSeam.getOrThrow()
           // Phase 34.4.1 Plan 23 (F-6 Defect B, deliberate cross-phase edit into open
           // Phase 34.5 -- see this plan's own SUMMARY): `seam.clearCookies` routes to
           // the exact SAME `humble_login_clear_cookies` Rust arm `humble/user.ts`'s

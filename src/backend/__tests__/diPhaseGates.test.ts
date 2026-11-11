@@ -319,7 +319,6 @@ describe('66.3 gates (skeleton; plan 18 adds the end state)', () => {
     'src/backend/steamgrid/secretStore.ts',
     'src/backend/sidecar/steamgridSecretStore.ts',
     'src/backend/humble/classify.ts',
-    'src/backend/humble/humbleStores.ts',
     'src/backend/humble/library.ts',
     'src/backend/humble/loginWindowSeam.ts',
     'src/backend/humble/secretStore.ts',
@@ -361,8 +360,10 @@ describe('66.3 gates (skeleton; plan 18 adds the end state)', () => {
     expect(callsStaticConfigGet('gameConfigs.get(appName)')).toBe(false)
   })
 
-  it('OWNED_66_3 lists the 29 files 66.3 owns, all existing and none sanctioned', () => {
-    expect(OWNED_66_3).toHaveLength(29)
+  it('OWNED_66_3 lists the 28 files 66.3 owns, all existing and none sanctioned', () => {
+    // 66.3-17 deleted humble/humbleStores.ts outright (its holder had no remaining reader), so it
+    // leaves the owned list: the file went away, it did not move.
+    expect(OWNED_66_3).toHaveLength(28)
     const root = join(BACKEND, '..', '..')
     const sanctioned = [
       'src/backend/logger/index.ts',

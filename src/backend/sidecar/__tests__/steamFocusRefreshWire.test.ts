@@ -188,6 +188,7 @@ const steamFlowDeps = () => ({
   stores: createTestStores(),
   notifications: createTestHostServices().notifications,
   steamSession: createTestSteamSession(),
+  humble: { library: { recomputeOwnership: () => undefined } },
   launcher: {
     launchEventCallback: (...args: unknown[]) =>
       launchEventCallbackMock(...args)

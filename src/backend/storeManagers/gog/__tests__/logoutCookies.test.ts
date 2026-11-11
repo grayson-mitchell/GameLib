@@ -78,18 +78,24 @@ jest.mock('backend/constants/environment', () => {
 })
 
 import { logWarning, logInfo } from 'backend/logger'
-import { GOGUser, type GOGUserDeps } from '../user'
+import { GOGUser, type GOGUserDeps, type GOGLoginSeamDeps } from '../user'
 import { createTestSignInProbe } from 'backend/testUtils/testSignInProbe'
 
 const deps = {
+  get loginWindowSeam() {
+    return seamSlot
+  },
   signIn: createTestSignInProbe(),
   stores: { gog: fakeGogStores },
   libraryManagers: { gog: { runRunnerCommand: jest.fn() } }
-} as unknown as GOGUserDeps & ClearCacheDeps & SignInNoteDeps
+} as unknown as GOGUserDeps & ClearCacheDeps & SignInNoteDeps & GOGLoginSeamDeps
 import {
-  setLoginWindowSeam,
+  createLoginWindowSeamSlot,
   type LoginWindowSeam
 } from '../../../humble/loginWindowSeam'
+
+// The boot's one login-window seam slot, per test file (66.3-17): the user modules read it through deps.
+const seamSlot = createLoginWindowSeamSlot()
 import type { ClearCacheDeps } from 'backend/utils'
 import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
 
@@ -127,12 +133,12 @@ function allLoggedText(): string {
 beforeEach(() => {
   jest.clearAllMocks()
   mockIsMac = true
-  setLoginWindowSeam(null)
+  seamSlot.install(null)
   GOGUser.__resetCredentialsCacheForTests()
 })
 
 afterEach(() => {
-  setLoginWindowSeam(null)
+  seamSlot.install(null)
 })
 
 describe('GOGUser.logout(deps) credential cleanup runs first and unconditionally (D-15)', () => {
@@ -150,7 +156,7 @@ describe('GOGUser.logout(deps) credential cleanup runs first and unconditionally
         .fn()
         .mockRejectedValue(new Error('rust-side clear failed'))
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(GOGUser.logout(deps)).resolves.toBeUndefined()
 
@@ -162,7 +168,7 @@ describe('GOGUser.logout(deps) credential cleanup runs first and unconditionally
       cookiesForDomain: jest.fn().mockRejectedValue(new Error('census failed')),
       clearCookies: jest.fn().mockRejectedValue(new Error('clear failed'))
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await expect(GOGUser.logout(deps)).resolves.toBeUndefined()
   })
@@ -171,7 +177,7 @@ describe('GOGUser.logout(deps) credential cleanup runs first and unconditionally
 describe('GOGUser.logout(deps) cookie clear (macOS)', () => {
   it('clears the GOG apex domain against the sentinel no-window label, never a real window', async () => {
     const seam = makeMockSeam()
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await GOGUser.logout(deps)
 
@@ -188,7 +194,7 @@ describe('GOGUser.logout(deps) cookie clear (macOS)', () => {
     const seam = makeMockSeam({
       clearCookies: jest.fn().mockResolvedValue(5)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await GOGUser.logout(deps)
 
@@ -201,7 +207,7 @@ describe('GOGUser.logout(deps) cookie clear (macOS)', () => {
       cookiesForDomain: jest.fn().mockResolvedValue({ total: 3, matched: [] }),
       clearCookies: jest.fn().mockResolvedValue(0)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await GOGUser.logout(deps)
 
@@ -216,7 +222,7 @@ describe('GOGUser.logout(deps) cookie clear (macOS)', () => {
       cookiesForDomain: jest.fn().mockResolvedValue({ total: 0, matched: [] }),
       clearCookies: jest.fn().mockResolvedValue(0)
     })
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await GOGUser.logout(deps)
 
@@ -228,7 +234,7 @@ describe('GOGUser.logout(deps) cookie clear (off macOS)', () => {
   it('attempts no seam call at all -- no Tauri leg ships off macOS yet', async () => {
     mockIsMac = false
     const seam = makeMockSeam()
-    setLoginWindowSeam(seam)
+    seamSlot.install(seam)
 
     await GOGUser.logout(deps)
 

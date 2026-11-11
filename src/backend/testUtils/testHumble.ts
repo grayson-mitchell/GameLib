@@ -1,0 +1,93 @@
+/**
+ * A fresh, isolated set of Humble services for consumer tests (D-66.3-17). Plain objects, no
+ * jest APIs. Two calls never share a sync fence, a login-window seam slot or a secret store.
+ *
+ * The user and the library pull the adapter, the logger and the IPC layer in; they are built
+ * lazily, on first read, so a suite that mocks one of those modules is not broken by merely
+ * importing this fake (the `createTestSignInProbe` precedent).
+ */
+import type { HumbleServices, HumbleServicesDeps } from '../humble'
+import { createHumbleSyncFence } from '../humble/syncFence'
+import { createLoginWindowSeamSlot } from '../humble/loginWindowSeam'
+import type { HumbleSecretKey, HumbleSecretStore } from '../humble/secretStore'
+import { TEST_APP_INFO } from './testContext'
+import { createTestSignInProbe } from './testSignInProbe'
+import { createInertTestSteamUser } from './testSteamUser'
+import type { Stores } from '../services/types'
+
+/** An in-memory secret store: no keyring, no config store. */
+function createTestHumbleSecretStore(
+  initial: Partial<Record<HumbleSecretKey, string>> = {}
+): HumbleSecretStore {
+  const secrets: Partial<Record<HumbleSecretKey, string>> = { ...initial }
+  return {
+    isAvailable: async () => true,
+    getSecret: async (key) => secrets[key] ?? '',
+    setSecret: async (key, value) => {
+      secrets[key] = value
+    },
+    clearSecrets: async () => {
+      delete secrets.sessionCookie
+      delete secrets.csrfToken
+    }
+  }
+}
+
+export function createTestHumbleServices(
+  opts: Partial<HumbleServicesDeps> & {
+    stores: Pick<Stores, 'humble' | 'steam'>
+  }
+): HumbleServices {
+  const syncFence = createHumbleSyncFence()
+  const loginWindowSeam = createLoginWindowSeamSlot()
+  const secretStore = opts.secretStore ?? createTestHumbleSecretStore()
+  const appInfo = opts.appInfo ?? TEST_APP_INFO
+  // The user and the library share the fence and seam slot this fake hands out.
+  let user: HumbleServices['user'] | undefined
+  let library: HumbleServices['library'] | undefined
+  const build = (): void => {
+    if (user && library) return
+    const { HumbleUser } = loadHumbleUser()
+    const { createHumbleLibrary } = loadHumbleLibrary()
+    user = new HumbleUser({
+      stores: opts.stores,
+      secretStore,
+      loginWindowSeam,
+      syncFence,
+      signInOutcomes: opts.signInOutcomes ?? createTestSignInProbe().outcomes,
+      appInfo
+    })
+    library = createHumbleLibrary({
+      stores: opts.stores,
+      user,
+      syncFence,
+      steamUser: opts.steamUser ?? createInertTestSteamUser(),
+      loginWindowSeam,
+      appInfo
+    })
+  }
+  return {
+    get user() {
+      build()
+      return user as HumbleServices['user']
+    },
+    get library() {
+      build()
+      return library as HumbleServices['library']
+    },
+    syncFence,
+    loginWindowSeam,
+    secretStore,
+    appInfo
+  }
+}
+
+function loadHumbleUser(): typeof import('../humble/user') {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('../humble/user') as typeof import('../humble/user')
+}
+
+function loadHumbleLibrary(): typeof import('../humble/library') {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('../humble/library') as typeof import('../humble/library')
+}

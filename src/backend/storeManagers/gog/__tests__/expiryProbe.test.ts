@@ -21,7 +21,7 @@ import {
 import { applySignInVerdict } from 'backend/signInProbe/verdict'
 import { probeGogSession } from 'backend/signInProbe/runnerProbes'
 import type { FakeFlagStore } from 'backend/signInProbe/__tests__/fakeFlagStore'
-import { GOGUser, type GOGUserDeps } from '../user'
+import { GOGUser, type GOGUserDeps, type GOGLoginSeamDeps } from '../user'
 import type { ClearCacheDeps } from 'backend/utils'
 import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
 import type { SignInEpochs } from 'backend/signInProbe/sessionEpoch'
@@ -42,6 +42,11 @@ const deps = {
     return probe.epochs
   },
   appInfo: { version: '1.0.0' },
+  loginWindowSeam: {
+    getOrThrow: () => {
+      throw new Error('no seam in this suite')
+    }
+  },
   // Read at call time so a case can flip `mockOnline`.
   onlineMonitor: { isOnline: () => mockOnline },
   stores: { gog: { configStore: gogConfigStore } },
@@ -52,7 +57,8 @@ const deps = {
   }
 } as unknown as GOGUserDeps &
   ClearCacheDeps &
-  SignInNoteDeps & { epochs: SignInEpochs }
+  SignInNoteDeps &
+  GOGLoginSeamDeps & { epochs: SignInEpochs }
 
 let mockOnline = true
 let mockAuthConfigExists = true

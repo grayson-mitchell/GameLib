@@ -16,22 +16,29 @@
  * authenticated requests at their next dispatch, and every store commit,
  * sync-state write and renderer push is skipped.
  *
- * Kept in its own leaf module (imported by both library.ts and user.ts) so the
+ * Kept in its own leaf module (imported by both library.ts and user.ts, which receive
+ * the boot's one instance by slice) so the
  * fence never creates a library.ts <-> user.ts circular import (the WR-09
  * hazard class).
  */
 
-let generation = 0
-
-/** The current store generation — captured by runSync() at sync start. */
-export function currentSyncGeneration(): number {
-  return generation
+/** The disconnect fence: one per boot, shared by the user (bumps it) and the library (reads it). */
+export interface HumbleSyncFence {
+  /** The current store generation -- captured by runSync() at sync start. */
+  current(): number
+  /**
+   * Invalidates every in-flight sync. Called by HumbleUser.disconnect() BEFORE
+   * the store wipes so no pre-disconnect sync work can survive them.
+   */
+  invalidate(): void
 }
 
-/**
- * Invalidates every in-flight sync. Called by HumbleUser.disconnect() BEFORE
- * the store wipes so no pre-disconnect sync work can survive them.
- */
-export function invalidateSyncGeneration(): void {
-  generation += 1
+export function createHumbleSyncFence(): HumbleSyncFence {
+  let generation = 0
+  return {
+    current: () => generation,
+    invalidate: () => {
+      generation += 1
+    }
+  }
 }

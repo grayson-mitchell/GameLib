@@ -8,7 +8,7 @@ import { clearCache } from 'backend/utils'
 import type { ClearCacheDeps } from 'backend/utils'
 import { gogdlAuthConfig } from './constants'
 import { isMac } from 'backend/constants/environment'
-import { getLoginWindowSeamOrThrow } from '../../humble/loginWindowSeam'
+import type { LoginWindowSeamSlot } from '../../humble/loginWindowSeam'
 import type { SignInProbeOutcome } from 'common/signInState'
 import {
   classifyGogdlAuth,
@@ -37,6 +37,11 @@ const GOG_COOKIE_HOSTS = ['gog.com'] as const
 // `humble_login_clear_cookies`/`humble_login_cookies_for_domain`
 // (`src-tauri/src/main.rs`) straight to their macOS default-data-store
 // fallback, gated by `store_logout_cookie_domain_matches`.
+/** The boot's login-window seam slot, for the logout cookie wipe (D-66.3-17). */
+export interface GOGLoginSeamDeps {
+  loginWindowSeam: Pick<LoginWindowSeamSlot, 'getOrThrow'>
+}
+
 const GOG_COOKIE_CLEAR_NO_WINDOW_LABEL = 'gog-cookie-clear-no-window'
 
 // Phase 40 plan 04, D-15/T-40-04-07/-08: GOG's logout leaves session cookies
@@ -48,11 +53,11 @@ const GOG_COOKIE_CLEAR_NO_WINDOW_LABEL = 'gog-cookie-clear-no-window'
 // cookies against off macOS today. Never fatal to `logout()` -- see the
 // caller's own comment for why credential-side cleanup must never be blocked
 // by this.
-async function clearGogCookiesForLogout(): Promise<void> {
+async function clearGogCookiesForLogout(deps: GOGLoginSeamDeps): Promise<void> {
   if (!isMac) {
     return
   }
-  const seam = getLoginWindowSeamOrThrow()
+  const seam = deps.loginWindowSeam.getOrThrow()
   for (const host of GOG_COOKIE_HOSTS) {
     let beforeTotal: number | null = null
     try {
@@ -431,7 +436,7 @@ export class GOGUser {
   // rejected `logout()` promise (an unhandled rejection at the `ipcMain.on`
   // call site, which cannot `.catch()` a fire-and-forget invocation).
   public static async logout(
-    deps: GOGUserDeps & ClearCacheDeps & SignInNoteDeps
+    deps: GOGUserDeps & ClearCacheDeps & SignInNoteDeps & GOGLoginSeamDeps
   ) {
     clearCache(deps, 'gog')
     deps.stores.gog.configStore.clear()
@@ -447,7 +452,7 @@ export class GOGUser {
     logInfo('Logging user out', LogPrefix.Gog)
 
     try {
-      await clearGogCookiesForLogout()
+      await clearGogCookiesForLogout(deps)
     } catch (error) {
       logWarning(`GOG logout: cookie clear failed: ${error}`, LogPrefix.Gog)
     }

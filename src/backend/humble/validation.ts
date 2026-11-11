@@ -4,13 +4,13 @@ import {
   AdapterResult
 } from 'common/types/humble'
 
-import { HumbleUser } from './user'
+import type { HumbleUser } from './user'
 import { getGamekeys, getOrderDetail } from './adapter'
 
 /**
  * D-12 dev-only in-app debug trigger. Exercises the REAL adapter
  * (getGamekeys/getOrderDetail) with the REAL stored encrypted cookie,
- * decrypted via HumbleUser.getCredentials() — never a
+ * decrypted via the boot's HumbleUser.getCredentials() — never a
  * standalone Node script (D-12: Node CLI is not Electron main).
  *
  * Returns a redacted HumbleValidationReport (D-15): endpoint paths, result
@@ -19,9 +19,16 @@ import { getGamekeys, getOrderDetail } from './adapter'
  * never writes to disk — the human checkpoint (Plan 05 Task 2) transcribes
  * the (still-redacted) result into 10-VALIDATION.md.
  */
-export async function runHumbleValidation(): Promise<HumbleValidationReport> {
+/** What the validation run reads: the boot's one `HumbleUser`, by slice. */
+export interface HumbleValidationDeps {
+  user: Pick<HumbleUser, 'getCredentials'>
+}
+
+export async function runHumbleValidation(
+  deps: HumbleValidationDeps
+): Promise<HumbleValidationReport> {
   const timestamp = new Date().toISOString()
-  const cookie = await HumbleUser.getCredentials()
+  const cookie = await deps.user.getCredentials()
 
   if (!cookie) {
     return {

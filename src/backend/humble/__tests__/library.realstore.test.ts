@@ -26,14 +26,6 @@ jest.mock('../adapter', () => ({
   getOrderDetail: (...args: unknown[]) => mockGetOrderDetail(...args)
 }))
 
-// ── user mock (credentials only) ─────────────────────────────────────────
-
-jest.mock('../user', () => ({
-  HumbleUser: {
-    getCredentials: () => 'cookie-value'
-  }
-}))
-
 // ── ipc / logger mocks ───────────────────────────────────────────────────
 
 const mockSendFrontendMessage = jest.fn()
@@ -59,9 +51,10 @@ jest.mock('../expirationAlerts', () => ({
 
 // ── Imports (after mocks) — REAL stores/CacheStore ──────────────
 
-import { bindHumbleStores } from '../humbleStores'
 import { defined } from './defined'
-import { HumbleLibrary } from '../library'
+import { createHumbleLibrary } from '../library'
+import { createHumbleSyncFence } from '../syncFence'
+import { createLoginWindowSeamSlot } from '../loginWindowSeam'
 import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createHumbleStores } from '../stores'
@@ -75,9 +68,17 @@ const { humbleLibraryStore, humbleSyncStore } = humbleStoreModule
 const steamUser = createTestSteamUser({
   stores: { steam: { configStore: { get_nodefault: () => undefined } } }
 } as never)
-bindHumbleStores({
+// The library under test is one boot-style instance over the REAL stores (66.3-17).
+const HumbleLibrary = createHumbleLibrary({
   stores: { humble: humbleStoreModule, steam: {} } as never,
-  steamUser
+  user: {
+    getCredentials: async () => 'cookie-value',
+    getLiveCsrfToken: async () => undefined
+  },
+  syncFence: createHumbleSyncFence(),
+  steamUser,
+  loginWindowSeam: createLoginWindowSeamSlot(),
+  appInfo: { userAgentFallback: 'Mozilla/5.0 (X11; Linux) Chrome/1.0' }
 })
 
 function makeRawOrder(gamekey: string) {

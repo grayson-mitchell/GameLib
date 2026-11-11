@@ -1,22 +1,20 @@
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
 
-import { humbleSignIn, humbleStores } from './humbleStores'
 import { HUMBLE_BASE_URL, HUMBLE_LOGIN_URL } from './constants'
 import { getGamekeys } from './adapter'
-import { invalidateSyncGeneration } from './syncFence'
+import type { HumbleSyncFence } from './syncFence'
 import { HumbleUserData } from 'common/types/humble'
+import { standardBrowserUserAgent } from './userAgent'
 import {
-  standardBrowserUserAgent,
-  standardBrowserUserAgentForProcess
-} from './userAgent'
-import {
-  getLoginWindowSeamOrThrow,
   classifyCookieRead,
-  type CookieReadVerdict
+  type CookieReadVerdict,
+  type LoginWindowSeamSlot
 } from './loginWindowSeam'
-import { getHumbleSecretStore, type HumbleSecretKey } from './secretStore'
+import type { HumbleSecretKey, HumbleSecretStore } from './secretStore'
 import type { SignInProbeOutcome } from 'common/signInState'
+import type { AppInfo } from 'backend/process/context'
+import type { ManagerDeps, Stores } from 'backend/services/types'
 
 // Re-exported so existing callers (user.test.ts, plus the D-08
 // GAMELIB_LOGIN_SEAM_SMOKE hook in humbleLoginFlowRegistration.ts) are
@@ -95,9 +93,8 @@ type LoginResult = {
 // Phase 34.4.1 Plan 12 (gap-cycle closure for F-1/S-10, REQ-34.4.1-02/
 // REQ-34.4.1-GAP-02): the encryptionAvailable/encryptCookie/decryptCookie
 // free functions that used to live here have moved verbatim into
-// secretStore.ts's ElectronHumbleSecretStore — this is the ONLY place their
-// bodies exist now. `user.ts` never touches the Electron encryption API
-// directly again; every read/write goes through `getHumbleSecretStore()`.
+// secretStore.ts's (now deleted) Electron store — the sidecar keyring store replaced it. `user.ts` never touches the Electron encryption API
+// directly again; every read/write goes through the injected `deps.secretStore`.
 //
 // The user-visible "encryption degraded" flag stays HERE (not in the seam):
 // it is a UI concern, driven off `isAvailable()`, that the Manage Accounts
@@ -107,18 +104,6 @@ type LoginResult = {
 // merely "not set to true") — a user who once logged in with encryption
 // unavailable and later re-logs in on a fixed system must not keep seeing
 // the stale reduced-encryption warning.
-async function storeHumbleSecret(
-  key: HumbleSecretKey,
-  value: string
-): Promise<void> {
-  const store = getHumbleSecretStore()
-  await store.setSecret(key, value)
-  humbleStores().configStore.set(
-    'encryptionDegraded',
-    !(await store.isAvailable('store-humble-secret'))
-  )
-}
-
 // Handle to the currently-running login watch (if any), so stopLogin() /
 // notifyLoginNavigated() (D-06/D-17) can reach it without a BrowserWindow to
 // hang events off of. Hoisted to a static field per D-17's guidance —
@@ -128,27 +113,61 @@ type ActiveWatch = {
   forceRevalidate: () => void
 }
 
-// ── HumbleUser static class ────────────────────────────────────────────────
+// ── HumbleUser (boot-built instance) ───────────────────────────────────────
+
+/**
+ * What the boot hands `HumbleUser` (D-05, D-66.3-17). Every member is required at construction;
+ * nothing is read from a static holder.
+ */
+export interface HumbleUserDeps {
+  stores: Pick<Stores, 'humble'>
+  secretStore: HumbleSecretStore
+  loginWindowSeam: Pick<LoginWindowSeamSlot, 'getOrThrow'>
+  syncFence: Pick<HumbleSyncFence, 'invalidate'>
+  /** The boot-owned sign-in outcome notes (D-66.3-13). */
+  signInOutcomes: ManagerDeps['signIn']['outcomes']
+  appInfo: Pick<AppInfo, 'userAgentFallback'>
+}
 
 export class HumbleUser {
-  private static activeWatch: ActiveWatch | null = null
+  private activeWatch: ActiveWatch | null = null
+
+  constructor(private readonly deps: HumbleUserDeps) {}
+
+  /**
+   * Persists one secret through the injected store, then records the user-visible
+   * "encryption degraded" flag off `isAvailable()` (verbatim from the former free function).
+   */
+  private async storeHumbleSecret(
+    key: HumbleSecretKey,
+    value: string
+  ): Promise<void> {
+    const store = this.deps.secretStore
+    await store.setSecret(key, value)
+    this.deps.stores.humble.configStore.set(
+      'encryptionDegraded',
+      !(await store.isAvailable('store-humble-secret'))
+    )
+  }
 
   // ── HACCT-01/02: login state ─────────────────────────────────────────────
 
-  static isLoggedIn(): boolean {
-    return Boolean(humbleStores().configStore.get_nodefault('isLoggedIn'))
+  isLoggedIn(): boolean {
+    return Boolean(
+      this.deps.stores.humble.configStore.get_nodefault('isLoggedIn')
+    )
   }
 
-  static getUserDetails(): HumbleUserData | undefined {
-    return humbleStores().configStore.get_nodefault('userData')
+  getUserDetails(): HumbleUserData | undefined {
+    return this.deps.stores.humble.configStore.get_nodefault('userData')
   }
 
-  // Async since Phase 34.4.1 Plan 12: routed through getHumbleSecretStore(),
+  // Async since Phase 34.4.1 Plan 12: routed through the injected secret store,
   // whose keyring-backed implementation (plan 13) cannot be synchronous.
   // Precedent: storeManagers/steam/user.ts's SteamUser.getCredentials() has
   // been async since Phase 28 for exactly this reason.
-  static async getCredentials(): Promise<string | undefined> {
-    const cookie = await getHumbleSecretStore().getSecret('sessionCookie')
+  async getCredentials(): Promise<string | undefined> {
+    const cookie = await this.deps.secretStore.getSecret('sessionCookie')
     if (!cookie) return undefined
     return cookie
   }
@@ -158,8 +177,8 @@ export class HumbleUser {
   // process-only: this value must NEVER be included in any
   // sendFrontendMessage payload or HumbleAuthState (see finishLogin's
   // capture site and the class-level doc comment above).
-  static async getCsrfToken(): Promise<string | undefined> {
-    const token = await getHumbleSecretStore().getSecret('csrfToken')
+  async getCsrfToken(): Promise<string | undefined> {
+    const token = await this.deps.secretStore.getSecret('csrfToken')
     if (!token) return undefined
     return token
   }
@@ -177,18 +196,18 @@ export class HumbleUser {
   // live per-partition session read this comment used to describe is gone).
   // Main-process-only, same secrecy discipline as getCsrfToken(): the value
   // must NEVER be logged or included in any sendFrontendMessage payload.
-  static async getLiveCsrfToken(): Promise<string | undefined> {
+  async getLiveCsrfToken(): Promise<string | undefined> {
     // Requires the login-window seam to be installed — see
-    // getLoginWindowSeamOrThrow()'s own doc comment. The returned seam is
+    // the login-window seam slot's `getOrThrow()` doc comment. The returned seam is
     // not otherwise used here: there is no live login window at reveal time
     // to read through, so this always falls straight through to the stored
     // snapshot.
-    getLoginWindowSeamOrThrow()
+    this.deps.loginWindowSeam.getOrThrow()
     logInfo(
       'Humble live csrf read: no live login window at reveal time — using stored snapshot',
       LogPrefix.Backend
     )
-    return HumbleUser.getCsrfToken()
+    return this.getCsrfToken()
   }
 
   // Debug session humble-reveal-key-fails: round 5 added getFullCookieHeader()
@@ -209,21 +228,21 @@ export class HumbleUser {
 
   // ── HACCT-01: Login (D-05/D-06/D-07) ─────────────────────────────────────
 
-  static async startLogin(): Promise<LoginResult> {
-    return HumbleUser.watchForLogin()
+  async startLogin(): Promise<LoginResult> {
+    return this.watchForLogin()
   }
 
   // ── HACCT-02: Reconnect (D-09/D-11 — SAME partition, no clearX call) ─────
 
-  static async reconnect(): Promise<LoginResult> {
-    return HumbleUser.watchForLogin()
+  async reconnect(): Promise<LoginResult> {
+    return this.watchForLogin()
   }
 
   // D-06: silent cancel when the /loginweb/humble route unmounts before a
   // candidate cookie is accepted — settles { status: 'waiting' }, no store
   // writes.
-  static stopLogin(): void {
-    HumbleUser.activeWatch?.stop()
+  stopLogin(): void {
+    this.activeWatch?.stop()
   }
 
   // D-17: relayed from the webview's did-navigate/did-navigate-in-page
@@ -231,25 +250,31 @@ export class HumbleUser {
   // throttle, since a top-level navigation (e.g. the SSO redirect landing
   // back on humblebundle.com) may carry an authenticated cookie under a
   // value that was JUST rejected.
-  static notifyLoginNavigated(): void {
-    HumbleUser.activeWatch?.forceRevalidate()
+  notifyLoginNavigated(): void {
+    this.activeWatch?.forceRevalidate()
   }
 
-  private static watchForLogin(): Promise<LoginResult> {
+  private watchForLogin(): Promise<LoginResult> {
     // Tear down a stale watch from a previous attempt, if any is still
     // active.
-    if (HumbleUser.activeWatch) {
-      HumbleUser.activeWatch.stop()
-      HumbleUser.activeWatch = null
+    if (this.activeWatch) {
+      this.activeWatch.stop()
+      this.activeWatch = null
     }
 
     // D-01/D-02 (Phase 34.4.1 Plan 03): there is no per-partition Electron
     // session shape under the Tauri sidecar (tauri-login-webview-cookies.md §
     // "Requirements" #7), so a seam is installed at sidecar startup and
-    // drives a real Rust-owned login window instead. getLoginWindowSeamOrThrow()
+    // drives a real Rust-owned login window instead. `loginWindowSeam.getOrThrow()`
     // enforces that precondition — if registerHumbleLoginFlows() has not yet
     // run, this throws rather than silently falling back to a dead path.
-    const seam = getLoginWindowSeamOrThrow()
+    const seam = this.deps.loginWindowSeam.getOrThrow()
+    // The hoisted function declarations below have no `this`; they reach the instance through
+    // these two bound members.
+    const clearActiveWatch = (): void => {
+      this.activeWatch = null
+    }
+    const finishLogin = this.finishLogin.bind(this)
 
     return new Promise<LoginResult>((resolve) => {
       let settled = false
@@ -389,7 +414,7 @@ export class HumbleUser {
         settled = true
         clearInterval(pollInterval)
         clearTimeout(watchDeadline)
-        HumbleUser.activeWatch = null
+        clearActiveWatch()
         resolve(result)
         // T-34.4.1-18: close the Rust-owned login window exactly once, on
         // every exit path (done, waiting, error, stop, deadline). Floated —
@@ -542,7 +567,7 @@ export class HumbleUser {
 
           validationInFlight = true
           try {
-            const outcome = await HumbleUser.finishLogin(
+            const outcome = await finishLogin(
               cookieValue,
               settle,
               () => settled,
@@ -592,7 +617,7 @@ export class HumbleUser {
       }
       armDeadline()
 
-      HumbleUser.activeWatch = {
+      this.activeWatch = {
         // D-06: stopping before any cookie is accepted is a silent cancel —
         // no error, no toast, the tile just stays disconnected.
         stop: () => settle({ status: 'waiting' }),
@@ -612,7 +637,7 @@ export class HumbleUser {
       seam
         .open(HUMBLE_LOGIN_URL, {
           visible: true,
-          userAgent: standardBrowserUserAgentForProcess()
+          userAgent: standardBrowserUserAgent(this.deps)
         })
         .then((openedLabel) => {
           if (settled) {
@@ -639,7 +664,7 @@ export class HumbleUser {
     })
   }
 
-  private static async finishLogin(
+  private async finishLogin(
     cookieValue: string,
     settle: (result: LoginResult) => void,
     isSettled: () => boolean,
@@ -689,11 +714,11 @@ export class HumbleUser {
     // backend logged-in while the tile shows disconnected until restart.
     if (isSettled()) return 'transient'
 
-    await storeHumbleSecret('sessionCookie', cookieValue)
-    humbleStores().configStore.set('isLoggedIn', true)
-    humbleStores().configStore.set('expired', false)
+    await this.storeHumbleSecret('sessionCookie', cookieValue)
+    this.deps.stores.humble.configStore.set('isLoggedIn', true)
+    this.deps.stores.humble.configStore.set('expired', false)
     // Phase 49: a completed sign-in outranks any probe that began earlier.
-    humbleSignIn().noteSignInSucceeded('humble')
+    this.deps.signInOutcomes.noteSignInSucceeded('humble')
 
     // Phase 14 (T-14-04, RESEARCH.md Pitfall A): opportunistically capture
     // the csrf_cookie value at the SAME login moment as _simpleauth_sess.
@@ -703,7 +728,7 @@ export class HumbleUser {
     // actually required. Same encryption treatment as the session cookie.
     // Main-process-only: NEVER included in sendFrontendMessage/HumbleAuthState.
     try {
-      const seam = getLoginWindowSeamOrThrow()
+      const seam = this.deps.loginWindowSeam.getOrThrow()
       if (seamLabel !== null) {
         // Read csrf_cookie from the SAME live login window whose
         // _simpleauth_sess candidate was just accepted — cookie-jar identity
@@ -714,7 +739,7 @@ export class HumbleUser {
         ])
         const match = csrfRead.matched.find((c) => c.name === 'csrf_cookie')
         if (match && match.value) {
-          await storeHumbleSecret('csrfToken', match.value)
+          await this.storeHumbleSecret('csrfToken', match.value)
         }
       }
     } catch (err) {
@@ -771,8 +796,8 @@ export class HumbleUser {
    * The HTTP call is bounded by `REQUEST_TIMEOUT_MS` (`adapter.ts`), so this is
    * not unbounded boot work.
    */
-  static async probeSession(context: string): Promise<SignInProbeOutcome> {
-    const store = getHumbleSecretStore()
+  async probeSession(context: string): Promise<SignInProbeOutcome> {
+    const store = this.deps.secretStore
     let cookie = ''
     try {
       if (store.readSecret) {
@@ -817,14 +842,15 @@ export class HumbleUser {
    * renderer path calls it; the channel stays registered, uncalled, because
    * removing it would churn `humbleFlows.test.ts` for no behavioural gain.
    */
-  static async checkHealthAndFlagExpiry(): Promise<SignInProbeOutcome> {
+  async checkHealthAndFlagExpiry(): Promise<SignInProbeOutcome> {
     // A transient/network failure or an unreadable slot is UNKNOWN, so no
     // expiry is flagged and nothing is pushed -- probeSession never rejects,
     // which keeps an offline start from surfacing as an unhandled rejection.
-    const outcome = await HumbleUser.probeSession('humble-health-check')
+    const outcome = await this.probeSession('humble-health-check')
     if (outcome === 'expired') {
-      humbleStores().configStore.set('expired', true)
-      const userData = humbleStores().configStore.get_nodefault('userData')
+      this.deps.stores.humble.configStore.set('expired', true)
+      const userData =
+        this.deps.stores.humble.configStore.get_nodefault('userData')
       sendFrontendMessage('humbleAuthState', {
         isLoggedIn: true,
         username: userData?.username,
@@ -847,7 +873,7 @@ export class HumbleUser {
     // self-healing the gap without requiring the user to disconnect/
     // reconnect. Best-effort/non-fatal, mirrors finishLogin's own capture
     // exactly (never blocks the health check, never logs the value).
-    if (outcome === 'healthy' && !(await HumbleUser.getCsrfToken())) {
+    if (outcome === 'healthy' && !(await this.getCsrfToken())) {
       // S-09 (Phase 34.4.1 Plan 18 gap-cycle closure, D-GAP-03) / Phase 39
       // Plan 05 collapse: this backfill opens a temporary HIDDEN window
       // through the login-window seam -- the same shape disconnect()'s
@@ -859,19 +885,19 @@ export class HumbleUser {
       // reach the jar. Best-effort/non-fatal, mirrors finishLogin's own
       // capture exactly: never blocks the health check, never logs the
       // value.
-      const seam = getLoginWindowSeamOrThrow()
+      const seam = this.deps.loginWindowSeam.getOrThrow()
       let label: string | null = null
       try {
         label = await seam.open(HUMBLE_BASE_URL, {
           visible: false,
-          userAgent: standardBrowserUserAgentForProcess()
+          userAgent: standardBrowserUserAgent(this.deps)
         })
         const csrfRead = await seam.cookies(label, 'www.humblebundle.com', [
           'csrf_cookie'
         ])
         const match = csrfRead.matched.find((c) => c.name === 'csrf_cookie')
         if (match && match.value) {
-          await storeHumbleSecret('csrfToken', match.value)
+          await this.storeHumbleSecret('csrfToken', match.value)
         }
       } catch (err) {
         logWarning(
@@ -898,22 +924,22 @@ export class HumbleUser {
 
   // ── HACCT-03: Disconnect (D-07 — full partition wipe) ─────────────────────
 
-  static async disconnect(): Promise<void> {
+  async disconnect(): Promise<void> {
     // CR-01: fence off any IN-FLIGHT sync before the wipes. A running
     // HumbleLibrary sync captured the cookie at start and would otherwise
     // keep making authenticated requests, silently repopulate the
     // library/sync stores cleared below, and push the pre-disconnect key
     // inventory back over the renderer's cleared state — stale/cross-account
     // inventory bleed (HSYNC-02/D-04).
-    invalidateSyncGeneration()
+    this.deps.syncFence.invalidate()
 
     // The stored credential is the canonical secret — remove it FIRST, so a
     // failed partition-clear step can never leave the (possibly
     // plaintext-degraded) sessionCookie on disk after a user-confirmed
     // disconnect (WR-02 / T-10-07).
-    humbleStores().configStore.clear()
+    this.deps.stores.humble.configStore.clear()
     // Phase 49: fence any boot probe that began before this disconnect.
-    humbleSignIn().noteSignedOut('humble')
+    this.deps.signInOutcomes.noteSignedOut('humble')
 
     // Phase 34.4.1 gap-cycle plan 13 (F-1 BLOCKING closure): clear the
     // keyring-backed session/csrf secrets too, as part of the SAME credential
@@ -924,12 +950,12 @@ export class HumbleUser {
     // a rejection can never abort it or throw out of disconnect() -- the
     // configStore credential delete remains the security boundary (WR-02/
     // T-10-07); this is best-effort cleanup layered on top of it, not a
-    // replacement for it. getHumbleSecretStore().clearSecrets() is already
+    // replacement for it. this.deps.secretStore.clearSecrets() is already
     // total (never rejects) for both the Electron and keyring-backed
     // implementations, but this guard is defense in depth matching the
     // wipeSteps discipline below.
     try {
-      await getHumbleSecretStore().clearSecrets()
+      await this.deps.secretStore.clearSecrets()
     } catch (err) {
       logWarning(
         ['Humble disconnect: keyring secret clear failed (non-fatal):', err],
@@ -940,8 +966,8 @@ export class HumbleUser {
     // Phase 11 (HSYNC-02/D-04): the library cache + sync-state are fully
     // reconstructible from a re-sync, so they are wiped alongside the
     // credential — a stale key inventory must never survive a disconnect.
-    humbleStores().humbleLibraryStore.clear()
-    humbleStores().humbleSyncStore.clear()
+    this.deps.stores.humble.humbleLibraryStore.clear()
+    this.deps.stores.humble.humbleSyncStore.clear()
 
     // Best-effort wipe: each step guarded individually so one rejected
     // step does not abort the rest. Partial failures are logged (never
@@ -985,14 +1011,14 @@ export class HumbleUser {
     // and this threat ID is the durable record of that acceptance (see
     // Phase 39 Plan 04's SUMMARY for how the branch-comparison test that used
     // to validate it was dispositioned).
-    const seam = getLoginWindowSeamOrThrow()
+    const seam = this.deps.loginWindowSeam.getOrThrow()
     const wipeSteps: Array<[string, () => Promise<unknown>]> = [
       [
         'clearHumbleCookies',
         async () => {
           const label = await seam.open(HUMBLE_BASE_URL, {
             visible: false,
-            userAgent: standardBrowserUserAgentForProcess()
+            userAgent: standardBrowserUserAgent(this.deps)
           })
           try {
             // Phase 34.4.1 gap-cycle plan 17 (F-5, item 3(b)): a paired
@@ -1151,7 +1177,7 @@ export class HumbleUser {
           // needed or returned here, unlike the cookie step above.
           const report = await seam.clearStorage(
             HUMBLE_BASE_URL,
-            standardBrowserUserAgentForProcess()
+            standardBrowserUserAgent(this.deps)
           )
           // Only COUNTS are logged — never a storage key or value
           // (T-34.4.1-34 discipline, same as the cookie step above).

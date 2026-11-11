@@ -16,7 +16,7 @@ import { clearCache } from 'backend/utils'
 import type { ClearCacheDeps } from 'backend/utils'
 import { nileUserData } from './constants'
 import { isMac } from 'backend/constants/environment'
-import { getLoginWindowSeamOrThrow } from '../../humble/loginWindowSeam'
+import type { LoginWindowSeamSlot } from '../../humble/loginWindowSeam'
 import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
 
 /** What the CLI-driven NileUser methods need: the nile manager and the stores clearCache wipes. */
@@ -25,8 +25,14 @@ export interface NileStoreDeps {
   stores: Pick<Stores, 'nile'>
 }
 
+/** The boot's login-window seam slot, for the logout cookie wipe (D-66.3-17). */
+interface NileLoginSeamDeps {
+  loginWindowSeam: Pick<LoginWindowSeamSlot, 'getOrThrow'>
+}
+
 export type NileUserDeps = ClearCacheDeps &
-  SignInNoteDeps & {
+  SignInNoteDeps &
+  NileLoginSeamDeps & {
     libraryManagers: Pick<ManagerDeps['libraryManagers'], 'nile'>
   }
 
@@ -57,11 +63,13 @@ const AMAZON_COOKIE_CLEAR_NO_WINDOW_LABEL = 'amazon-cookie-clear-no-window'
 // see `runnerAuthFlowRegistration.ts`'s `logoutAmazon` handler comment, which
 // this plan updates in the same spirit as this function's own change.
 // macOS-only, and never fatal to `logout()` -- see the caller's own comment.
-async function clearAmazonCookiesForLogout(): Promise<void> {
+async function clearAmazonCookiesForLogout(
+  deps: NileLoginSeamDeps
+): Promise<void> {
   if (!isMac) {
     return
   }
-  const seam = getLoginWindowSeamOrThrow()
+  const seam = deps.loginWindowSeam.getOrThrow()
   for (const host of AMAZON_COOKIE_HOSTS) {
     let beforeTotal: number | null = null
     try {
@@ -294,7 +302,7 @@ export class NileUser {
     deps.signIn.outcomes.noteSignedOut('nile')
 
     try {
-      await clearAmazonCookiesForLogout()
+      await clearAmazonCookiesForLogout(deps)
     } catch (error) {
       logWarning(`Amazon logout: cookie clear failed: ${error}`, LogPrefix.Nile)
     }

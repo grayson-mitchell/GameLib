@@ -25,7 +25,6 @@
  *  - backend/constants/environment -> isSteamDeckGameMode (mutable double)
  */
 
-import { bindHumbleStores } from '../humbleStores'
 import type { HumbleKey } from 'common/types/humble'
 import type { HumbleKeyInternal } from '../stores'
 
@@ -43,11 +42,9 @@ const mockNotifiedExpirationStore = {
   has: jest.fn((key: string) => notifiedExpirationData.has(key)),
   clear: jest.fn(() => notifiedExpirationData.clear())
 }
-bindHumbleStores({
-  stores: {
-    humble: { humbleNotifiedExpirationStore: mockNotifiedExpirationStore }
-  } as never
-})
+const humbleStoresSlice = {
+  humble: { humbleNotifiedExpirationStore: mockNotifiedExpirationStore }
+} as never
 
 // ── config slice over a mutable settings double ────────────────────────────
 let mockNotifyHumbleExpirations = true
@@ -55,6 +52,7 @@ const mockGetSettings = jest.fn(() => ({
   notifyHumbleExpirations: mockNotifyHumbleExpirations
 }))
 const deps = {
+  stores: humbleStoresSlice,
   config: { getSettings: () => mockGetSettings() as never },
   notifications: {
     show: (opts: { title?: string; body?: string }) => {
