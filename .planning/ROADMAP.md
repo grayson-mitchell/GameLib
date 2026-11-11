@@ -155,7 +155,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 66: Backend dependency injection replacing module-level singletons** — 9 plans; planned; split 2026-11-10 into 66 (foundation) + 66.1–66.3 (completed 2026-11-09)
 - [x] **Phase 66.1: Backend DI — stores, store managers, flow registrations and launcher** — 37 plans; complete (7/8 live UAT, item 5 blocked pre-existing) (completed 2026-11-10)
 - [x] **Phase 66.2: Every backend spawn through the process runner, then the `child_process` ban** — 12 plans; planned (completed 2026-11-10)
-- [ ] **Phase 66.3: Backend module state to zero, then the live macOS smoke** — 0 plans; not started; split 2026-11-11 into 66.3 (shim, config, D-05 owners, static holders) + 66.4 (D-66.3-04)
+- [ ] **Phase 66.3: Backend module state to zero, then the live macOS smoke** — 18 plans; planned; split 2026-11-11 into 66.3 (shim, config, D-05 owners, static holders) + 66.4 (D-66.3-04)
 - [ ] **Phase 66.4: Backend module state long tail, the census-to-test flip, then the live smokes** — 0 plans; not started
 - [x] **Phase 67: Schema validation at the sidecar IPC boundary** — 20 plans in 14 waves; planned 2026-11-07 (completed 2026-11-07)
 - [x] **Phase 68: Versioned persisted stores and migrations** — 11 plans; planned (completed 2026-11-08)
@@ -760,11 +760,28 @@ The D-14 Rust-overlap exemption table stays empty unless Phase 75 is re-scoped. 
 **Split 2026-11-11 (D-66.3-04):** 66.3 keeps the platform shim dissolution, config injection, the D-05 process-wide owners and the C-WR-2 static holders (item 1 above), and ends with every site it owns at zero and the `moduleState` ceilings lowered. Item 2 (the long tail), the census-to-test flip and the D-17 live smoke move to Phase 66.4.
 **Requirements**: TBD
 **Depends on:** Phase 66.2
-**Plans:** 0 plans
+**Plans:** 18 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 66.3 to break down)
+- [ ] 66.3-01-PLAN.md — Wave 0 gates: census fixtures (D-66.3-09), container-call residual pin, diPhaseGates 66.3 skeleton, jest baseline (wave 1)
+- [ ] 66.3-02-PLAN.md — processGuards as an entry-built zero-import factory, init({ guards }) (D-66.3-10) (wave 2)
+- [ ] 66.3-03-PLAN.md — host services (ipc registry, openExternal, dialogs, notifications, appState, appInfo), 'host-services' boot step, interim shim delegate 8 -> 1 (wave 3)
+- [ ] 66.3-04-PLAN.md — config injection: 'config' boot step, GameConfigs registry seam, AppContext paths/appInfo, ManagerDeps slices (wave 4)
+- [ ] 66.3-05-PLAN.md — cascade A: utils, root helpers and leaf modules off the shim and static config (wave 5)
+- [ ] 66.3-06-PLAN.md — cascade B: config-free logger, launcher, commandRunner, engine/appshell/shortcuts helpers (wave 6)
+- [ ] 66.3-07-PLAN.md — cascade C: GOG/Legendary/Nile/Sideload managers and storeManagerCommon (wave 7)
+- [ ] 66.3-08-PLAN.md — cascade D: stateless Steam manager modules, macSteamOffline openExternal (wave 8)
+- [ ] 66.3-09-PLAN.md — cascade E1: handlers.ts and registrations a-h on the injected registry, channel parity (wave 9)
+- [ ] 66.3-10-PLAN.md — cascade E2: registrations i-w, main_window.ts deleted (wave 10)
+- [ ] 66.3-11-PLAN.md — online_monitor as a boot-owned instance on the clock (wave 11)
+- [ ] 66.3-12-PLAN.md — engineState and winetricksQueue owners (wave 12)
+- [ ] 66.3-13-PLAN.md — Steam session cluster and sign-in probe owners (wave 13)
+- [ ] 66.3-14-PLAN.md — anonymous CM client, bridge helper registry, frozen shim-coverage tables (wave 14)
+- [ ] 66.3-15-PLAN.md — bindBottleStores and bindDxmtStores holders deleted (wave 15)
+- [ ] 66.3-16-PLAN.md — SteamUser static class to one boot instance, bindStores deleted (wave 16)
+- [ ] 66.3-17-PLAN.md — Humble owners, SteamGridDB secret holder, MH-3 rows deleted (wave 17)
+- [ ] 66.3-18-PLAN.md — end state: platform/ deleted, config statics deleted, diPhaseGates 66.3 block, README hand-off to 66.4 (wave 18)
 
 ### Phase 66.4: Backend module state long tail, the census-to-test flip, then the live smokes (INSERTED)
 
