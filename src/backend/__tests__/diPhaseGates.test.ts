@@ -274,3 +274,104 @@ describe('66.2 end state: one process runner', () => {
     expect(block).toMatch(/'no-restricted-imports': \[\s*'error'/)
   })
 })
+
+describe('66.3 gates (skeleton; plan 18 adds the end state)', () => {
+  // Plan 18 adds the census zeros, shim absence and importer absence. Until then per-plan
+  // progress is gated by the moduleState shard ceilings.
+  const importsPlatformShim = (
+    text: string,
+    opts?: { allowTypes?: boolean }
+  ): boolean => {
+    const code = stripSourceComments(text)
+    return code.split('\n').some((line) => {
+      if (opts?.allowTypes && /^\s*import\s+type\b/.test(line)) return false
+      const m =
+        /from\s*(['"])(backend\/platform|(?:\.\.?\/)+platform|\.\/platform)(\/index)?\1/.exec(
+          line
+        )
+      return m !== null
+    })
+  }
+  const callsStaticConfigGet = (text: string): boolean =>
+    /\b(GlobalConfig|GameConfig)\.get\(/.test(stripSourceComments(text))
+
+  const OWNED_66_3 = [
+    'src/backend/platform/index.ts',
+    'src/backend/config.ts',
+    'src/backend/game_config.ts',
+    'src/backend/online_monitor.ts',
+    'src/backend/sidecar/processGuards.ts',
+    'src/backend/engine/engineState.ts',
+    'src/backend/storeManagers/steam/anonymousClient.ts',
+    'src/backend/storeManagers/steam/gameSessionState.ts',
+    'src/backend/storeManagers/steam/userSignInState.ts',
+    'src/backend/storeManagers/steam/authTrigger.ts',
+    'src/backend/storeManagers/steam/state.ts',
+    'src/backend/storeManagers/steam/bridge/helperRegistry.ts',
+    'src/backend/storeManagers/steam/bridge/shimCoverage.ts',
+    'src/backend/tools/winetricksQueue.ts',
+    'src/backend/signInProbe/pass.ts',
+    'src/backend/signInProbe/outcomes.ts',
+    'src/backend/signInProbe/sessionEpoch.ts',
+    'src/backend/storeManagers/steam/user.ts',
+    'src/backend/storeManagers/steam/bottle.ts',
+    'src/backend/tools/dxmt.ts',
+    'src/backend/steamgrid/secretStore.ts',
+    'src/backend/sidecar/steamgridSecretStore.ts',
+    'src/backend/humble/classify.ts',
+    'src/backend/humble/humbleStores.ts',
+    'src/backend/humble/library.ts',
+    'src/backend/humble/loginWindowSeam.ts',
+    'src/backend/humble/secretStore.ts',
+    'src/backend/humble/syncFence.ts',
+    'src/backend/humble/user.ts'
+  ] as const
+
+  it('scans a full backend tree', () => {
+    expect(nonTestSources.length).toBeGreaterThanOrEqual(400)
+  })
+
+  it('importsPlatformShim fires on shim imports and not on comments or siblings', () => {
+    expect(importsPlatformShim("import { app } from 'backend/platform'")).toBe(
+      true
+    )
+    expect(importsPlatformShim("import { a } from '../platform'")).toBe(true)
+    expect(
+      importsPlatformShim("import { a } from '../../platform/index'")
+    ).toBe(true)
+    expect(importsPlatformShim("import { a } from './platform'")).toBe(true)
+    expect(
+      importsPlatformShim("import type { T } from 'backend/platform'", {
+        allowTypes: true
+      })
+    ).toBe(false)
+    expect(importsPlatformShim("// from 'backend/platform'")).toBe(false)
+    expect(
+      importsPlatformShim("import { a } from 'backend/platformCapture'")
+    ).toBe(false)
+  })
+
+  it('callsStaticConfigGet fires on static config reads and not on comments or injected config', () => {
+    expect(
+      callsStaticConfigGet('const s = GlobalConfig.get().getSettings()')
+    ).toBe(true)
+    expect(callsStaticConfigGet('GameConfig.get(appName)')).toBe(true)
+    expect(callsStaticConfigGet('deps.config.getSettings()')).toBe(false)
+    expect(callsStaticConfigGet('// GlobalConfig.get()')).toBe(false)
+    expect(callsStaticConfigGet('gameConfigs.get(appName)')).toBe(false)
+  })
+
+  it('OWNED_66_3 lists the 29 files 66.3 owns, all existing and none sanctioned', () => {
+    expect(OWNED_66_3).toHaveLength(29)
+    const root = join(BACKEND, '..', '..')
+    const sanctioned = [
+      'src/backend/logger/index.ts',
+      'src/backend/sidecar/bootstrap.ts',
+      'src/backend/process/runner.ts'
+    ]
+    for (const p of OWNED_66_3) {
+      expect(existsSync(join(root, p))).toBe(true)
+      expect(sanctioned).not.toContain(p)
+    }
+  })
+})
