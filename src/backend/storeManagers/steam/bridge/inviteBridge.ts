@@ -16,7 +16,7 @@ import type {
   BridgeInviteResult,
   BridgeListFriendsResult
 } from 'common/types/steam'
-import { getBridgeHelperConnection } from './helperRegistry'
+import type { BridgeHelperSlice } from './helperRegistry'
 import {
   CONTROL_ORDINAL,
   CONTROL_SLOT,
@@ -99,9 +99,10 @@ function controlRoundTrip(
 }
 
 export async function listBridgeFriends(
+  deps: { bridgeHelpers: Pick<BridgeHelperSlice, 'getConnection'> },
   appId: string
 ): Promise<BridgeListFriendsResult> {
-  const conn = getBridgeHelperConnection(appId)
+  const conn = deps.bridgeHelpers.getConnection(appId)
   if (!conn) {
     logInfo(`bridge invite [${appId}]: list result=no-helper`, LogPrefix.Steam)
     return { ok: false, reason: 'no-helper' }
@@ -138,6 +139,7 @@ const RESULT_WORDS: Record<number, BridgeInviteResult> = {
 }
 
 export async function sendBridgeInvite(
+  deps: { bridgeHelpers: Pick<BridgeHelperSlice, 'getConnection'> },
   appId: string,
   ordinal: number
 ): Promise<BridgeInviteResult> {
@@ -148,7 +150,7 @@ export async function sendBridgeInvite(
   if (!Number.isInteger(ordinal) || ordinal < 0 || ordinal > 0xffffffff) {
     return log('bad-ordinal')
   }
-  const conn = getBridgeHelperConnection(appId)
+  const conn = deps.bridgeHelpers.getConnection(appId)
   if (!conn) return log('no-helper')
   const payload = await controlRoundTrip(
     conn.port,

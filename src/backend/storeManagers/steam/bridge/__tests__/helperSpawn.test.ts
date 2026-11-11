@@ -4,7 +4,7 @@
  *
  * Supersedes the Phase 24 Plan 06 suite this file replaces: that suite
  * exercised a module-scoped SINGLE shared helper handle
- * (`__resetBridgeHelperStateForTests()` cleared one handle;
+ * (clearing the registry cleared one handle;
  * `shutdownBridgeHelper()` tore down "the" helper). D-51-01 deleted that
  * singleton entirely in favor of a `Map<appId, entry>` registry -- every
  * test below drives TWO distinct appIds to prove the registry, not a
@@ -31,9 +31,8 @@ import { BRIDGE_SECRET_ENV, encodeResponse, STATUS_OK } from '../protocol'
 import { ensureBridgeHelperReady } from '../helperProcess'
 import { classifyInitFlatError } from '../helperSpawn'
 import {
-  __resetBridgeHelperStateForTests,
-  hasLiveBridgeHelper,
-  stopBridgeHelper
+  createBridgeHelperRegistry,
+  type BridgeHelperRegistry
 } from '../helperRegistry'
 import { acknowledgeDialogDisplay } from 'backend/dialog/displayAck'
 
@@ -78,7 +77,13 @@ const fakeRunner = createChildBackedRunner(mockedSpawn)
 const mockedOpenExternal = jest.fn().mockResolvedValue(undefined)
 const mockedOpenBridgeInvitePicker = jest.fn().mockResolvedValue(true)
 const mockedRaiseMainWindow = jest.fn()
+// One registry per case (D-66.3-14); the deps read it through a getter so the cases below stay as
+// they were.
+let registry: BridgeHelperRegistry
 const helperDeps = {
+  get bridgeHelpers() {
+    return registry
+  },
   runner: fakeRunner.runner,
   appState: {
     openBridgeInvitePicker: mockedOpenBridgeInvitePicker,
@@ -171,7 +176,11 @@ const SIGNING_IN = 'ConnectToGlobalUser failed'
 
 describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
   beforeEach(() => {
-    __resetBridgeHelperStateForTests()
+    registry = createBridgeHelperRegistry({
+      steamWaitSchedule: { budgetMs: 60_000, intervalMs: 3_000 },
+      helperPath: () => '/mock/bundle/arm64/darwin/steam-bridge-helper',
+      spawnEnv: () => process.env
+    })
     fakeRunner.reset()
     mockedSpawn.mockReset()
   })
@@ -275,7 +284,7 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
       const child = new FakeChildProcess()
       mockedSpawn.mockReturnValue(child)
       void ensureBridgeHelperReady(helperDeps, '3205720')
-      __resetBridgeHelperStateForTests()
+      registry.helpers.clear()
       child.stderr.emit('data', invite('3205720'))
       expect(inviteCalls()).toHaveLength(0)
     })
@@ -459,10 +468,10 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
       const child = new FakeChildProcess()
       mockedSpawn.mockReturnValue(child)
       void ensureBridgeHelperReady(helperDeps, '123')
-      expect(hasLiveBridgeHelper()).toBe(true)
+      expect(registry.hasLive()).toBe(true)
       fakeRunner.teardownAll()
       expect(child.kill).toHaveBeenCalledTimes(1)
-      expect(hasLiveBridgeHelper()).toBe(false)
+      expect(registry.hasLive()).toBe(false)
     })
 
     test('an exit deletes the registry entry only while it still holds that same handle', async () => {
@@ -471,18 +480,18 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
       mockedSpawn.mockReturnValueOnce(first).mockReturnValueOnce(second)
       void ensureBridgeHelperReady(helperDeps, '123')
       // Replace the entry with a newer helper for the same appId, as a respawn does.
-      stopBridgeHelper('123')
+      registry.stop('123')
       void ensureBridgeHelperReady(helperDeps, '123')
       expect(mockedSpawn).toHaveBeenCalledTimes(2)
       // The first process's late exit must not evict the second helper.
       first.emit('exit', 0, null)
       await Promise.resolve()
       await Promise.resolve()
-      expect(hasLiveBridgeHelper()).toBe(true)
+      expect(registry.hasLive()).toBe(true)
       second.emit('exit', 0, null)
       await Promise.resolve()
       await Promise.resolve()
-      expect(hasLiveBridgeHelper()).toBe(false)
+      expect(registry.hasLive()).toBe(false)
     })
   })
 

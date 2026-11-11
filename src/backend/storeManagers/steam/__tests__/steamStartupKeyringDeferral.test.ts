@@ -189,10 +189,6 @@ jest.mock('../bridge/launchTarget', () => ({
 jest.mock('../bridge/helperProcess', () => ({
   ensureBridgeHelperReady: jest.fn()
 }))
-jest.mock('../bridge/helperRegistry', () => ({
-  stopBridgeHelper: jest.fn()
-}))
-
 jest.mock('backend/launcher', () => ({
   runWineCommand: jest.fn()
 }))

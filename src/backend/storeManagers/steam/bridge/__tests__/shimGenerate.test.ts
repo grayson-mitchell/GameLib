@@ -2683,7 +2683,7 @@ describe('shimGenerate', () => {
         'SteamAPI_Init',
         'SteamAPI_ISteamUser_GetSteamID',
         'SteamAPI_ISteamUser_Bogus'
-      ].filter((n) => !SHIM64_EXPORTED_SYMBOLS.has(n))
+      ].filter((n) => !Object.hasOwn(SHIM64_EXPORTED_SYMBOLS, n))
       expect(result.status).toBe('placed-miss')
       if (result.status === 'placed-miss') {
         expect(result.verdict.missingSymbols).toContain(

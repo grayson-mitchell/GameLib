@@ -46,8 +46,8 @@
  * resolves the REAL dylib and `ensureBridgeHelperReady()` reports `'ready'`
  * instead -- a false pass this test could not see. Fixed by explicitly
  * handing the real spawn THIS SAME `createFakeHomeProfile()` instance's
- * env via the test-only `__setBridgeHelperSpawnEnvForTests()` hook (mirrors
- * `__setBridgeHelperPathForTests()`'s existing shape) -- real isolation,
+ * env through the registry's `spawnEnv` constructor dep (beside its
+ * `helperPath` dep) -- real isolation,
  * not ambient propagation that never happens.
  */
 import { at } from '../../__tests__/fixtures/indexed'
@@ -64,9 +64,9 @@ import { createRealRunner } from 'backend/testUtils/realRunner'
 import { steamBridgeHelperStateDir } from 'backend/constants/paths'
 import { ensureBridgeHelperReady } from '../helperProcess'
 import {
-  stopBridgeHelper,
-  __setBridgeHelperPathForTests,
-  __setBridgeHelperSpawnEnvForTests
+  createBridgeHelperRegistry,
+  DEFAULT_STEAM_WAIT_SCHEDULE,
+  type BridgeHelperRegistry
 } from '../helperRegistry'
 import {
   BRIDGE_SECRET_ENV,
@@ -261,7 +261,11 @@ describeDarwinOnly(
     // The real process runner: the helper spawn is production code, so it runs
     // through the same runner (isolated to its own fake profile).
     const realRunner = createRealRunner()
+    // The registry is built in beforeAll, once the compiled helper path and the fake profile exist.
+    let registry: BridgeHelperRegistry
+    const stopBridgeHelper = (appId: string) => registry.stop(appId)
     const helperDeps = () => ({
+      bridgeHelpers: registry,
       runner: realRunner.runner,
       appState: { openBridgeInvitePicker: async () => true },
       openExternal: { openExternal: async () => undefined }
@@ -288,7 +292,6 @@ describeDarwinOnly(
       })
       chmodSync(compiledHelperPath, 0o755)
 
-      __setBridgeHelperPathForTests(compiledHelperPath)
       // Isolation follow-up (Task 3 live-tracer divergence, measured live
       // 2026-10-17): jest.setupContainment.ts's HOME redirection is visible
       // only to this test's OWN sandboxed JS (process.env/os.homedir()) --
@@ -298,11 +301,15 @@ describeDarwinOnly(
       // ensureBridgeHelperReady() spawn below. On a machine with a
       // genuinely-installed native Steam.app this let the real
       // libsteam_api.dylib resolve under the developer's real $HOME,
-      // flipping the assertion below from 'not-inited' to 'ready'. Pass
-      // THIS SAME createFakeHomeProfile() instance's env explicitly so the
+      // flipping the assertion below from 'not-inited' to 'ready'. The
+      // registry's spawnEnv dep returns THIS SAME createFakeHomeProfile() instance's env explicitly so the
       // real spawn is isolated for real, per CLAUDE.md's "never a
       // hand-rolled env literal -- use createFakeHomeProfile()" convention.
-      __setBridgeHelperSpawnEnvForTests(profile.childEnv())
+      registry = createBridgeHelperRegistry({
+        steamWaitSchedule: DEFAULT_STEAM_WAIT_SCHEDULE,
+        helperPath: () => compiledHelperPath,
+        spawnEnv: () => profile.childEnv()
+      })
     }, 30000)
 
     // WR-03: spreads the fake-HOME env and adds one non-home var -- not a
@@ -319,8 +326,7 @@ describeDarwinOnly(
     }
 
     afterAll(() => {
-      __setBridgeHelperPathForTests(null)
-      __setBridgeHelperSpawnEnvForTests(null)
+      registry.shutdownAll()
       realRunner.dispose()
       profile?.dispose()
     })

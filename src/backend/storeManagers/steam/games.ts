@@ -31,7 +31,6 @@ import {
 } from './bridge/overlay/overlayPolicy'
 import { readStoredTitleConfig, pickTitleSettings } from './titleSettings'
 import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
-import { stopBridgeHelper } from './bridge/helperRegistry'
 import type { EnginePin } from 'backend/engine/enginePins'
 import { isNative, isBottleEligible } from './gameEligibility'
 import { install, ensureBuiltInEngineForInstall } from './gameInstall'
@@ -570,7 +569,7 @@ export default class SteamGame implements Game {
           LogPrefix.Steam
         )
       }
-      stopBridgeHelper(this.appId)
+      this.deps.bridgeHelpers.stop(this.appId)
       const { stopBottleProcessMonitor: endMonitor } =
         await import('./bottleProcessMonitor')
       endMonitor(this.appId)

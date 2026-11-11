@@ -7,6 +7,7 @@ import {
   createTestManagers,
   createTestStores
 } from 'backend/testUtils/testServices'
+import { createTestBridgeHelpers } from 'backend/testUtils/testBridgeHelpers'
 /**
  * Unit tests for SteamGame — LIB-04 (lazy metadata), GAME-01 (launch), GAME-04 (no-Wine),
  * and supporting read methods (getSettings, getExtraInfo, isGameAvailable).
@@ -157,7 +158,6 @@ import {
   resolveBridgeLaunchWorkingDir
 } from '../bridge/launchTarget'
 import { ensureBridgeHelperReady } from '../bridge/helperProcess'
-import { stopBridgeHelper } from '../bridge/helperRegistry'
 import { writeBridgeConfig } from '../bridge/bridgeConfig'
 import {
   startBottleProcessMonitor,
@@ -295,7 +295,10 @@ const publishOverlayExitNotice = jest.fn()
 const publishOverlayNotice = jest.fn()
 const recordLaunchDecision = jest.fn()
 
+// The boot-owned bridge-helper registry's per-appId stop (D-66.3-14), observed by the cases below.
+const stopBridgeHelper = jest.fn()
 const steamTestDeps = createTestManagerDeps({
+  bridgeHelpers: { ...createTestBridgeHelpers(), stop: stopBridgeHelper },
   engineState: {
     ...createTestEngineState(),
     publishOverlayExitNotice,
@@ -791,9 +794,6 @@ jest.mock('../bridge/launchTarget', () => ({
 // consumed by launch()'s bridge branch.
 jest.mock('../bridge/helperProcess', () => ({
   ensureBridgeHelperReady: jest.fn()
-}))
-jest.mock('../bridge/helperRegistry', () => ({
-  stopBridgeHelper: jest.fn()
 }))
 
 // ── bridge/bridgeConfig.ts mock (Phase 51 Plan 01, D-51-01) — the
@@ -2466,7 +2466,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       status: 'written',
       path: '/mock/.../gamelib_bridge.cfg'
     })
-    ;(stopBridgeHelper as jest.Mock).mockReset()
+    stopBridgeHelper.mockReset()
     ;(startBottleProcessMonitor as jest.Mock).mockReset()
     ;(getBottleSteamappsDir as jest.Mock)
       .mockReset()
@@ -2521,7 +2521,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
     it('per-game bottle: kills it once, then stops the helper and the monitor; no no-op warning', async () => {
       const game = await launchBridge(PER_GAME_BOTTLE)
-      ;(stopBridgeHelper as jest.Mock).mockClear()
+      stopBridgeHelper.mockClear()
 
       await game.stop()
 
@@ -2549,7 +2549,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
     it('legacy shared bottle: no kill, helper and monitor still torn down, warning names the shared bottle', async () => {
       const game = await launchBridge('GameLibSteamBridge')
-      ;(stopBridgeHelper as jest.Mock).mockClear()
+      stopBridgeHelper.mockClear()
 
       await game.stop()
 
@@ -12933,7 +12933,7 @@ describe('maybeNotifyBridgeLimited() — the one-time limited-features notice pl
       path: '/mock/.../gamelib_bridge.cfg'
     })
     runWineCommand.mockResolvedValue({ stdout: '', stderr: '' })
-    ;(stopBridgeHelper as jest.Mock).mockReset()
+    stopBridgeHelper.mockReset()
     ;(startBottleProcessMonitor as jest.Mock).mockReset()
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
       '/mock/bridge/bottle/steamapps'

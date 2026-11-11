@@ -41,8 +41,8 @@ import {
 } from './managedImports'
 import { readManagedInterfaceVersionStrings } from './interfaceVersions'
 import {
-  SHIM64_SERVED_INTERFACE_VERSIONS,
-  SHIM_SERVED_INTERFACE_VERSIONS
+  shim64ServedInterfaceVersions,
+  shimServedInterfaceVersions
 } from './shimCoverage'
 
 export type BridgeImportScan =
@@ -411,8 +411,8 @@ export type ManagedScanResult =
 export function servedFamiliesFor(arch: 'x86' | 'x64'): Set<string> {
   const map =
     arch === 'x64'
-      ? SHIM64_SERVED_INTERFACE_VERSIONS
-      : SHIM_SERVED_INTERFACE_VERSIONS
+      ? shim64ServedInterfaceVersions()
+      : shimServedInterfaceVersions()
   return new Set(Array.from(map.values(), (s) => s.family))
 }
 

@@ -213,7 +213,11 @@ import { createSpawnAsync } from '../spawnAsync'
 import { createQuitHandler } from '../quitHandler'
 import { tOrFallback } from '../i18nFallback'
 import { createDownloadQueue } from '../downloadmanager/downloadqueue'
-import { hasLiveBridgeHelper } from '../storeManagers/steam/bridge/helperRegistry'
+import {
+  createBridgeHelperRegistry,
+  DEFAULT_STEAM_WAIT_SCHEDULE
+} from '../storeManagers/steam/bridge/helperRegistry'
+import { steamBridgeHelperPath } from '../constants/paths'
 import { SteamUser } from '../storeManagers/steam/user'
 // Transitional (removed by plan 27): the legacy registries still hold children until plans
 // 23/24/26 move them onto the runner.
@@ -274,6 +278,7 @@ export const BOOT_STEP_NAMES = [
   'sign-in-probe-state',
   'steam-session-state',
   'steam-anonymous-client',
+  'bridge-helper-registry',
   'stores',
   'migrations',
   'config',
@@ -378,6 +383,12 @@ function requireSteamProcesses(state: BootState): SteamProcesses {
   return steamProcesses
 }
 
+function requireBridgeHelpers(state: BootState): BootServices['bridgeHelpers'] {
+  const { bridgeHelpers } = state.services
+  if (!bridgeHelpers) throw new Error('bridge-helper-registry step has not run')
+  return bridgeHelpers
+}
+
 function requireHost(state: BootState): HostServices {
   const { host } = state.services
   if (!host) throw new Error('host-services step has not run')
@@ -407,7 +418,8 @@ function requireServices(state: BootState): BootServices {
     winetricksQueue,
     signInProbe,
     steamSession,
-    anonymousClient
+    anonymousClient,
+    bridgeHelpers
   } = state.services
   if (
     !stores ||
@@ -431,7 +443,8 @@ function requireServices(state: BootState): BootServices {
     !winetricksQueue ||
     !signInProbe ||
     !steamSession ||
-    !anonymousClient
+    !anonymousClient ||
+    !bridgeHelpers
   ) {
     const missing = (
       [
@@ -456,7 +469,8 @@ function requireServices(state: BootState): BootServices {
         'winetricksQueue',
         'signInProbe',
         'steamSession',
-        'anonymousClient'
+        'anonymousClient',
+        'bridgeHelpers'
       ] as const
     ).filter((name) => !state.services[name])
     throw new Error(`boot services missing: ${missing.join(', ')}`)
@@ -483,7 +497,8 @@ function requireServices(state: BootState): BootServices {
     winetricksQueue,
     signInProbe,
     steamSession,
-    anonymousClient
+    anonymousClient,
+    bridgeHelpers
   }
 }
 
@@ -1254,6 +1269,22 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'bridge-helper-registry',
+      // Builds the one bridge-helper registry of this boot (D-05, D-66.3-14): the per-appId helper
+      // map and the exit teardown. Construction spawns nothing and installs no listener (the
+      // process 'exit' teardown is added on the first spawn). The wait schedule, helper path and
+      // spawn env are the production values; a test hands the boot a prebuilt registry.
+      run: (_ctx, _io, state) => {
+        state.services.bridgeHelpers =
+          prebuilt.bridgeHelpers ??
+          createBridgeHelperRegistry({
+            steamWaitSchedule: DEFAULT_STEAM_WAIT_SCHEDULE,
+            helperPath: () => steamBridgeHelperPath,
+            spawnEnv: () => process.env
+          })
+      }
+    },
+    {
       name: 'stores',
       // Builds every store family against ONE per-boot registry (66.1 plan 25, A3); that registry
       // is what the name-keyed store RPC handlers resolve through. Store construction opens no
@@ -1450,7 +1481,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             isLocked: () => existsSync(join(gamesConfigPath, 'lock')),
             // Read lazily: this handler is built before 'download-queue' and only fires after boot.
             isRunning: () => requireServices(state).downloadQueue.isRunning(),
-            isBridgeHosting: hasLiveBridgeHelper,
+            isBridgeHosting: () => requireBridgeHelpers(state).hasLive(),
             showMessageBox: (opts) =>
               requireHost(state).dialogs.showMessageBox(opts),
             t: tOrFallback,
@@ -1536,7 +1567,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           engineState,
           signInProbe,
           steamSession,
-          anonymousClient
+          anonymousClient,
+          bridgeHelpers
         } = state.services
         if (
           !stores ||
@@ -1552,7 +1584,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !engineState ||
           !signInProbe ||
           !steamSession ||
-          !anonymousClient
+          !anonymousClient ||
+          !bridgeHelpers
         ) {
           throw new Error(
             'store-managers step ran before stores/command-runner/config/host-services'
@@ -1588,7 +1621,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           engineState,
           signIn: signInProbe,
           steamSession,
-          anonymousClient
+          anonymousClient,
+          bridgeHelpers
         })
         state.services.managers = prebuilt.managers ?? built
         state.services.launcher = prebuilt.launcher ?? built.launcher

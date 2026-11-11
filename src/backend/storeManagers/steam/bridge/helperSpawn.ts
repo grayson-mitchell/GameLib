@@ -11,23 +11,13 @@ import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import {
-  steamBridgeHelperPath,
-  steamBridgeHelperStateDir
-} from 'backend/constants/paths'
+import { steamBridgeHelperStateDir } from 'backend/constants/paths'
 import type { AppState } from 'backend/host/appState'
 import type { OpenExternal } from 'backend/host/openExternal'
 import { newDialogAckId, trackDialogDisplay } from 'backend/dialog/displayAck'
 import type { LongLivedHandle, ProcessRunner } from 'backend/process/types'
 import { BRIDGE_SECRET_ENV } from './protocol'
-import {
-  helpers,
-  stopBridgeHelper,
-  installExitTeardownOnce,
-  getBridgeHelperPathOverride,
-  getBridgeHelperSpawnEnvOverride
-} from './helperRegistry'
-import type { BridgeHelperEntry } from './helperRegistry'
+import type { BridgeHelperEntry, BridgeHelperSlice } from './helperRegistry'
 
 // Parses the native helper's own stderr announcement line, e.g.
 // `LISTEN 127.0.0.1:64321 appid=206060 mode=full` -- MUST match
@@ -85,6 +75,8 @@ export type HelperSpawnDeps = {
   runner: Pick<ProcessRunner, 'spawnLongLived'>
   appState: Pick<AppState, 'openBridgeInvitePicker'>
   openExternal: Pick<OpenExternal, 'openExternal'>
+  /** The boot-owned helper registry (D-66.3-14). */
+  bridgeHelpers: BridgeHelperSlice
 }
 
 const MIN_EPHEMERAL_PORT = 1024
@@ -105,8 +97,8 @@ const MAX_PORT = 65535
  * identity-only fallback (D-51-04) gets its OWN `<stateDir>/<appId>/identity`
  * subdirectory so its `steam_appid.txt` (always "480") never collides with
  * a full-mode helper's for the same appId. Argv-form spawn (T-24-06) of the
- * fixed, packaged, arch-aware `steamBridgeHelperPath` (or the test
- * override) ONLY -- never an attacker-supplied binary path. The base env is
+ * fixed, packaged, arch-aware `steamBridgeHelperPath` (the registry's
+ * `helperPath`, or a test's own compiled binary) ONLY -- never an attacker-supplied binary path. The base env is
  * still the REAL ambient environment (the helper needs the real $HOME to
  * find Steam's own dylib; or the createFakeHomeProfile override in tests)
  * and exactly one var is added: the per-spawn WR-03 launch secret
@@ -120,13 +112,15 @@ export function ensureHelperSpawned(
   appId: string,
   options?: { identityOnly?: boolean }
 ): BridgeHelperEntry {
+  const registry = deps.bridgeHelpers
+  const helpers = registry.helpers
   const existing = helpers.get(appId)
   if (existing) {
     return existing
   }
 
   const identityOnly = options?.identityOnly ?? false
-  const helperPath = getBridgeHelperPathOverride() ?? steamBridgeHelperPath
+  const helperPath = registry.helperPath()
   const stateDir = identityOnly
     ? join(steamBridgeHelperStateDir, appId, 'identity')
     : join(steamBridgeHelperStateDir, appId)
@@ -161,13 +155,13 @@ export function ensureHelperSpawned(
   const secret = randomBytes(32).toString('hex')
 
   // Base env: the real ambient process.env on every production path (only a
-  // test calling __setBridgeHelperSpawnEnvForTests() with
+  // test whose registry spawnEnv returns
   // createFakeHomeProfile()'s own env ever overrides it; never a hand-rolled
   // literal). The ONLY addition is the launch secret. replaceEnv hands the
   // runner this exact merged object (the runner would otherwise merge its own
   // base env under it).
   const spawnEnv = {
-    ...(getBridgeHelperSpawnEnvOverride() ?? process.env),
+    ...registry.spawnEnv(),
     [BRIDGE_SECRET_ENV]: secret
   }
 
@@ -175,7 +169,7 @@ export function ensureHelperSpawned(
   // the helper never holds the event loop open; the process 'exit' listener
   // below is the drain-path teardown (the runner's teardown registry covers
   // an orderly quit).
-  installExitTeardownOnce()
+  registry.installExitTeardownOnce()
 
   // Assigned once spawnLongLived returns below; the stream/exit callbacks only
   // run later, never during the spawn call itself.
@@ -353,7 +347,7 @@ export function ensureHelperSpawned(
     cwd: stateDir,
     env: spawnEnv,
     replaceEnv: true,
-    teardown: () => stopBridgeHelper(appId),
+    teardown: () => registry.stop(appId),
     onStdout: (chunk) => stdoutRelay.push(chunk),
     onStderr: (chunk) => stderrRelay.push(chunk)
   })

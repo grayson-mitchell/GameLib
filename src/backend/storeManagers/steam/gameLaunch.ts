@@ -53,7 +53,6 @@ import {
   drmStepError,
   type DrmStep
 } from './bridge/drm/steamclientLayerMode'
-import { stopBridgeHelper } from './bridge/helperRegistry'
 import {
   markBridgeLimitedNoticeShown,
   setBridgeIdentityFallback,
@@ -816,7 +815,7 @@ export async function onBridgeLaunchDeadline(
   )
   stopBottleProcessMonitor(steamGame.appId)
   await killBridgeBottleWineServer(steamGame.deps, steamGame.appId, 15_000)
-  stopBridgeHelper(steamGame.appId)
+  steamGame.deps.bridgeHelpers.stop(steamGame.appId)
   clearLaunchRecord()
   clearEngineSelection(steamGame.appId)
   sendLaunchDone(steamGame)

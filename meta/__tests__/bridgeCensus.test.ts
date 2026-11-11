@@ -96,7 +96,7 @@ describe('classifyCensusTitle', () => {
       {
         resolveRequiredInterfaceVersions,
         evaluateShimCoverage,
-        x64ExportedSymbols: new Set()
+        x64ExportedSymbols: {}
       }
     )
 

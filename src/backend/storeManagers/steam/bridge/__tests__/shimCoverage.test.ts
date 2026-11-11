@@ -26,8 +26,8 @@ import { SHIM64_GENERATED_EXPORTS } from '../shimExports.generated'
 import {
   SHIM_EXPORTED_SYMBOLS,
   SHIM64_EXPORTED_SYMBOLS,
-  SHIM_SERVED_INTERFACE_VERSIONS,
-  SHIM64_SERVED_INTERFACE_VERSIONS,
+  shimServedInterfaceVersions,
+  shim64ServedInterfaceVersions,
   SHIM_X64_NULL_OBJECT_FALLBACK,
   SHIM_EXPORT_SET_VERSION,
   computeExportSetVersion,
@@ -36,6 +36,7 @@ import {
   findUnservableInterfaceVersions,
   classifyUnservableInterfaceVersions,
   CORE_STARTUP_FAMILIES,
+  type SymbolTable,
   extractSteamApiNames,
   findRunnerUnservedExports,
   isScanVerdictNowCovered
@@ -79,6 +80,55 @@ function readDefExports(defPath: string = STEAM_API_DEF_PATH): string[] {
     .map((l) => defined(l.split(/\s+/)[0], 'def symbol'))
 }
 
+/** A frozen name -> true table for the coverage inputs a case builds by hand. */
+const tableOf = (names: readonly string[]): SymbolTable =>
+  Object.freeze(
+    Object.fromEntries(names.map((n) => [n, true as const])) as Record<
+      string,
+      true
+    >
+  )
+
+describe('frozen coverage tables (D-66.3-09)', () => {
+  test('lookups answer true for every listed symbol and false for unlisted and prototype keys', () => {
+    for (const name of Object.keys(SHIM_EXPORTED_SYMBOLS)) {
+      expect(Object.hasOwn(SHIM_EXPORTED_SYMBOLS, name)).toBe(true)
+    }
+    for (const name of SHIM64_GENERATED_EXPORTS) {
+      expect(Object.hasOwn(SHIM64_EXPORTED_SYMBOLS, name)).toBe(true)
+    }
+    for (const table of [
+      SHIM_EXPORTED_SYMBOLS,
+      SHIM64_EXPORTED_SYMBOLS,
+      CORE_STARTUP_FAMILIES
+    ]) {
+      expect(Object.hasOwn(table, 'SteamAPI_NotAShimExport')).toBe(false)
+      for (const inherited of ['toString', 'constructor', '__proto__']) {
+        expect(Object.hasOwn(table, inherited)).toBe(false)
+      }
+      expect(Object.isFrozen(table)).toBe(true)
+    }
+  })
+
+  test('an inherited prototype key is never reported as exported or core', () => {
+    expect(
+      evaluateShimCoverage({
+        arch: 'x86',
+        symbols: ['toString', 'constructor'],
+        requiredInterfaceVersions: {},
+        versionProblems: []
+      }).missingSymbols
+    ).toEqual(['toString', 'constructor'])
+    expect(
+      classifyUnservableInterfaceVersions({
+        arch: 'x64',
+        symbols: ['SteamInternal_CreateInterface'],
+        requiredInterfaceVersions: { constructor: 'constructor001' }
+      }).blocking
+    ).toEqual([])
+  })
+})
+
 describe('SHIM_EXPORTED_SYMBOLS (24-CR-02 pin, moved from shimGenerate.test.ts)', () => {
   test('set-equals the export list of the committed native/steam-bridge/generated/steam_api.def, in both directions', () => {
     const defSymbols = readDefExports()
@@ -87,9 +137,11 @@ describe('SHIM_EXPORTED_SYMBOLS (24-CR-02 pin, moved from shimGenerate.test.ts)'
 
     const defSet = new Set(defSymbols)
     const missingFromShim = defSymbols.filter(
-      (s) => !SHIM_EXPORTED_SYMBOLS.has(s)
+      (s) => !Object.hasOwn(SHIM_EXPORTED_SYMBOLS, s)
     )
-    const notInDef = [...SHIM_EXPORTED_SYMBOLS].filter((s) => !defSet.has(s))
+    const notInDef = Object.keys(SHIM_EXPORTED_SYMBOLS).filter(
+      (s) => !defSet.has(s)
+    )
     expect(missingFromShim).toEqual([])
     expect(notInDef).toEqual([])
   })
@@ -109,7 +161,7 @@ const isVersionedAccessorName = (n: string): boolean =>
   /^SteamAPI_Steam[A-Za-z]+_v\d+$/.test(n)
 const servedFlatInterfaces = (): Set<string> =>
   new Set(
-    [...SHIM64_SERVED_INTERFACE_VERSIONS.values()].map((v) => `I${v.family}`)
+    [...shim64ServedInterfaceVersions().values()].map((v) => `I${v.family}`)
   )
 
 describe('SHIM64_EXPORTED_SYMBOLS vs the measured Steamworks.NET flat names (53-04, D-53-02)', () => {
@@ -119,7 +171,7 @@ describe('SHIM64_EXPORTED_SYMBOLS vs the measured Steamworks.NET flat names (53-
       (n) =>
         isInterfaceMethodName(n) &&
         served.has(defined(n.split('_')[1], 'flat-name family')) &&
-        !SHIM64_EXPORTED_SYMBOLS.has(n)
+        !Object.hasOwn(SHIM64_EXPORTED_SYMBOLS, n)
     )
     expect(misses).toEqual([])
   })
@@ -129,21 +181,23 @@ describe('SHIM64_EXPORTED_SYMBOLS vs the measured Steamworks.NET flat names (53-
       (n) => !isInterfaceMethodName(n) && !isVersionedAccessorName(n)
     )
     expect(lifecycle.length).toBeGreaterThan(0)
-    expect(lifecycle.filter((n) => !SHIM64_EXPORTED_SYMBOLS.has(n))).toEqual([])
+    expect(
+      lifecycle.filter((n) => !Object.hasOwn(SHIM64_EXPORTED_SYMBOLS, n))
+    ).toEqual([])
     for (const name of [
       'SteamAPI_ManualDispatch_GetNextCallback',
       'SteamAPI_ManualDispatch_GetAPICallResult',
       'SteamAPI_SetBreakpadAppID',
       'SteamAPI_ReleaseCurrentThreadMemory'
     ]) {
-      expect(SHIM64_EXPORTED_SYMBOLS.has(name)).toBe(true)
+      expect(Object.hasOwn(SHIM64_EXPORTED_SYMBOLS, name)).toBe(true)
     }
 
     // Versioned accessors the shim does not serve are the only other kind of
     // fixture name that may be absent.
     const served = servedFlatInterfaces()
     const unexported = FLAT_NAMES_FIXTURE.names
-      .filter((n) => !SHIM64_EXPORTED_SYMBOLS.has(n))
+      .filter((n) => !Object.hasOwn(SHIM64_EXPORTED_SYMBOLS, n))
       .sort()
     const byFamily: Record<string, number> = {}
     for (const n of unexported) {
@@ -166,10 +220,14 @@ describe('SHIM64_EXPORTED_SYMBOLS vs the measured Steamworks.NET flat names (53-
 
   test('(c) the two Rogue Waters misses are exported', () => {
     expect(
-      SHIM64_EXPORTED_SYMBOLS.has('SteamAPI_ISteamClient_GetISteamUser')
+      Object.hasOwn(
+        SHIM64_EXPORTED_SYMBOLS,
+        'SteamAPI_ISteamClient_GetISteamUser'
+      )
     ).toBe(true)
     expect(
-      SHIM64_EXPORTED_SYMBOLS.has(
+      Object.hasOwn(
+        SHIM64_EXPORTED_SYMBOLS,
         'SteamAPI_ISteamUtils_IsSteamRunningOnSteamDeck'
       )
     ).toBe(true)
@@ -186,9 +244,11 @@ describe('SHIM64_EXPORTED_SYMBOLS (51-15 pin)', () => {
 
     const defSet = new Set(defSymbols)
     const missingFromShim = defSymbols.filter(
-      (s) => !SHIM64_EXPORTED_SYMBOLS.has(s)
+      (s) => !Object.hasOwn(SHIM64_EXPORTED_SYMBOLS, s)
     )
-    const notInDef = [...SHIM64_EXPORTED_SYMBOLS].filter((s) => !defSet.has(s))
+    const notInDef = Object.keys(SHIM64_EXPORTED_SYMBOLS).filter(
+      (s) => !defSet.has(s)
+    )
     expect(missingFromShim).toEqual([])
     expect(notInDef).toEqual([])
   })
@@ -200,13 +260,13 @@ describe('SHIM64_EXPORTED_SYMBOLS (51-15 pin)', () => {
       'SteamAPI_GetHSteamUser',
       'SteamAPI_GetHSteamPipe'
     ]) {
-      expect(SHIM64_EXPORTED_SYMBOLS.has(name)).toBe(true)
+      expect(Object.hasOwn(SHIM64_EXPORTED_SYMBOLS, name)).toBe(true)
       expect(x86Symbols.has(name)).toBe(false)
     }
   })
 })
 
-describe('SHIM_SERVED_INTERFACE_VERSIONS (manifest pin)', () => {
+describe('shimServedInterfaceVersions() (manifest pin)', () => {
   test('keys equal the set of `interface` values across meta/sdk/*.manifest.json whose arches include x86 (manifests without an `arches` field count as x86)', () => {
     const manifestFiles = readdirSync(SDK_MANIFEST_DIR).filter((f) =>
       f.endsWith('.manifest.json')
@@ -225,27 +285,25 @@ describe('SHIM_SERVED_INTERFACE_VERSIONS (manifest pin)', () => {
       }
     }
 
-    expect(new Set(SHIM_SERVED_INTERFACE_VERSIONS.keys())).toEqual(
-      x86Interfaces
-    )
+    expect(new Set(shimServedInterfaceVersions().keys())).toEqual(x86Interfaces)
   })
 
   test('SteamUser023 is served as wire', () => {
-    expect(SHIM_SERVED_INTERFACE_VERSIONS.get('SteamUser023')).toEqual({
+    expect(shimServedInterfaceVersions().get('SteamUser023')).toEqual({
       family: 'SteamUser',
       mode: 'wire'
     })
   })
 
   test('SteamFriends018 is served as wire', () => {
-    expect(SHIM_SERVED_INTERFACE_VERSIONS.get('SteamFriends018')).toEqual({
+    expect(shimServedInterfaceVersions().get('SteamFriends018')).toEqual({
       family: 'SteamFriends',
       mode: 'wire'
     })
   })
 })
 
-describe('SHIM64_SERVED_INTERFACE_VERSIONS / SHIM_X64_NULL_OBJECT_FALLBACK (51-15)', () => {
+describe('shim64ServedInterfaceVersions() / SHIM_X64_NULL_OBJECT_FALLBACK (51-15)', () => {
   test('keys equal the set of `interface` values across meta/sdk/*.manifest.json whose arches include x64', () => {
     const manifestFiles = readdirSync(SDK_MANIFEST_DIR).filter((f) =>
       f.endsWith('.manifest.json')
@@ -261,7 +319,7 @@ describe('SHIM64_SERVED_INTERFACE_VERSIONS / SHIM_X64_NULL_OBJECT_FALLBACK (51-1
       }
     }
 
-    expect(new Set(SHIM64_SERVED_INTERFACE_VERSIONS.keys())).toEqual(
+    expect(new Set(shim64ServedInterfaceVersions().keys())).toEqual(
       x64Interfaces
     )
   })
@@ -272,9 +330,7 @@ describe('SHIM64_SERVED_INTERFACE_VERSIONS / SHIM_X64_NULL_OBJECT_FALLBACK (51-1
   // genuinely wired on x86 is genuinely wired on x64 too.
   test('STEAMUSERSTATS_INTERFACE_VERSION011 is served as wire on x64 (same dispatch code as its x86 Hoard coverage)', () => {
     expect(
-      SHIM64_SERVED_INTERFACE_VERSIONS.get(
-        'STEAMUSERSTATS_INTERFACE_VERSION011'
-      )
+      shim64ServedInterfaceVersions().get('STEAMUSERSTATS_INTERFACE_VERSION011')
     ).toEqual({ family: 'SteamUserStats', mode: 'wire' })
   })
 
@@ -287,7 +343,7 @@ describe('SHIM64_SERVED_INTERFACE_VERSIONS / SHIM_X64_NULL_OBJECT_FALLBACK (51-1
       'SteamUtils008',
       'STEAMAPPS_INTERFACE_VERSION008'
     ]) {
-      expect(SHIM64_SERVED_INTERFACE_VERSIONS.get(version)?.mode).toBe('wire')
+      expect(shim64ServedInterfaceVersions().get(version)?.mode).toBe('wire')
     }
   })
 
@@ -296,13 +352,13 @@ describe('SHIM64_SERVED_INTERFACE_VERSIONS / SHIM_X64_NULL_OBJECT_FALLBACK (51-1
   // stays stub.
   test('SteamClient017 and SteamClient014 are wire on x64', () => {
     for (const version of ['SteamClient017', 'SteamClient014']) {
-      expect(SHIM64_SERVED_INTERFACE_VERSIONS.get(version)?.mode).toBe('wire')
+      expect(shim64ServedInterfaceVersions().get(version)?.mode).toBe('wire')
     }
   })
 
   test('the x64 RemoteStorage013 stays stub', () => {
     expect(
-      SHIM64_SERVED_INTERFACE_VERSIONS.get(
+      shim64ServedInterfaceVersions().get(
         'STEAMREMOTESTORAGE_INTERFACE_VERSION013'
       )?.mode
     ).toBe('stub')
@@ -313,13 +369,14 @@ describe('SHIM64_SERVED_INTERFACE_VERSIONS / SHIM_X64_NULL_OBJECT_FALLBACK (51-1
       'SteamMatchMakingServers002',
       'SteamNetworking005'
     ]) {
-      expect(SHIM64_SERVED_INTERFACE_VERSIONS.get(version)?.mode).toBe('stub')
+      expect(shim64ServedInterfaceVersions().get(version)?.mode).toBe('stub')
     }
-    expect(SHIM64_SERVED_INTERFACE_VERSIONS.get('SteamMatchMaking009')).toEqual(
-      { family: 'SteamMatchMaking', mode: 'wire' }
-    )
+    expect(shim64ServedInterfaceVersions().get('SteamMatchMaking009')).toEqual({
+      family: 'SteamMatchMaking',
+      mode: 'wire'
+    })
     // D-11: the shared manifest is wired on x86 too (not live-verified).
-    expect(SHIM_SERVED_INTERFACE_VERSIONS.get('SteamMatchMaking009')).toEqual({
+    expect(shimServedInterfaceVersions().get('SteamMatchMaking009')).toEqual({
       family: 'SteamMatchMaking',
       mode: 'wire'
     })
@@ -339,15 +396,15 @@ describe('SHIM_EXPORT_SET_VERSION / computeExportSetVersion', () => {
     const baseInputs = {
       x86ExportedSymbols: SHIM_EXPORTED_SYMBOLS,
       x64ExportedSymbols: SHIM64_EXPORTED_SYMBOLS,
-      x86ServedVersions: SHIM_SERVED_INTERFACE_VERSIONS,
-      x64ServedVersions: SHIM64_SERVED_INTERFACE_VERSIONS,
+      x86ServedVersions: shimServedInterfaceVersions(),
+      x64ServedVersions: shim64ServedInterfaceVersions(),
       x64NullObjectFallback: SHIM_X64_NULL_OBJECT_FALLBACK
     }
     const before = computeExportSetVersion(baseInputs)
     const after = computeExportSetVersion({
       ...baseInputs,
-      x86ExportedSymbols: new Set([
-        ...SHIM_EXPORTED_SYMBOLS,
+      x86ExportedSymbols: tableOf([
+        ...Object.keys(SHIM_EXPORTED_SYMBOLS),
         'SteamAPI_SomeNewFutureSymbol'
       ])
     })
@@ -360,8 +417,8 @@ describe('SHIM_EXPORT_SET_VERSION / computeExportSetVersion', () => {
     const inputs = {
       x86ExportedSymbols: SHIM_EXPORTED_SYMBOLS,
       x64ExportedSymbols: SHIM64_EXPORTED_SYMBOLS,
-      x86ServedVersions: SHIM_SERVED_INTERFACE_VERSIONS,
-      x64ServedVersions: SHIM64_SERVED_INTERFACE_VERSIONS,
+      x86ServedVersions: shimServedInterfaceVersions(),
+      x64ServedVersions: shim64ServedInterfaceVersions(),
       x64NullObjectFallback: SHIM_X64_NULL_OBJECT_FALLBACK
     }
     expect(computeExportSetVersion(inputs)).toBe(SHIM_EXPORT_SET_VERSION)
@@ -385,7 +442,7 @@ describe('D-20: export set changes when the SteamStub entry point is removed (56
   })
 
   test('the x64 export tables no longer list the SteamStub entry point', () => {
-    expect(SHIM64_EXPORTED_SYMBOLS.has(RETIRED_ENTRY)).toBe(false)
+    expect(Object.hasOwn(SHIM64_EXPORTED_SYMBOLS, RETIRED_ENTRY)).toBe(false)
     expect(SHIM64_GENERATED_EXPORTS).not.toContain(RETIRED_ENTRY)
   })
 
@@ -485,8 +542,8 @@ describe('evaluateShimCoverageWith (pure core, exercises the x64 null-object fal
   test('a stub-mode served version is reported under stubbedInterfaces, not missingSymbols', () => {
     const result = evaluateShimCoverageWith(
       {
-        x86ExportedSymbols: new Set(['SteamApps']),
-        x64ExportedSymbols: new Set(),
+        x86ExportedSymbols: tableOf(['SteamApps']),
+        x64ExportedSymbols: tableOf([]),
         x86ServedVersions: new Map([
           ['SteamApps008', { family: 'SteamApps', mode: 'stub' as const }]
         ]),
@@ -508,8 +565,8 @@ describe('evaluateShimCoverageWith (pure core, exercises the x64 null-object fal
   test('x64 with SHIM_X64_NULL_OBJECT_FALLBACK true: an unserved required version is stubbed, not missing', () => {
     const result = evaluateShimCoverageWith(
       {
-        x86ExportedSymbols: new Set(),
-        x64ExportedSymbols: new Set(['SteamInternal_CreateInterface']),
+        x86ExportedSymbols: tableOf([]),
+        x64ExportedSymbols: tableOf(['SteamInternal_CreateInterface']),
         x86ServedVersions: new Map(),
         x64ServedVersions: new Map(), // empty -- SteamUser023 is unserved on x64
         x64NullObjectFallback: true
@@ -529,8 +586,8 @@ describe('evaluateShimCoverageWith (pure core, exercises the x64 null-object fal
   test('x64 with SHIM_X64_NULL_OBJECT_FALLBACK false: the same unserved required version is missing, not stubbed', () => {
     const result = evaluateShimCoverageWith(
       {
-        x86ExportedSymbols: new Set(),
-        x64ExportedSymbols: new Set(['SteamUser']),
+        x86ExportedSymbols: tableOf([]),
+        x64ExportedSymbols: tableOf(['SteamUser']),
         x86ServedVersions: new Map(),
         x64ServedVersions: new Map(),
         x64NullObjectFallback: false
@@ -550,8 +607,8 @@ describe('evaluateShimCoverageWith (pure core, exercises the x64 null-object fal
   test('the x64 null-object fallback never applies on x86 (arch-scoped)', () => {
     const result = evaluateShimCoverageWith(
       {
-        x86ExportedSymbols: new Set(),
-        x64ExportedSymbols: new Set(),
+        x86ExportedSymbols: tableOf([]),
+        x64ExportedSymbols: tableOf([]),
         x86ServedVersions: new Map(),
         x64ServedVersions: new Map(),
         x64NullObjectFallback: true
@@ -809,8 +866,8 @@ describe('x64 null-object fallback is runtime-lookup only (CR-03)', () => {
   test('a bare accessor import with an unserved version is missing, not stubbed', () => {
     const result = evaluateShimCoverageWith(
       {
-        x86ExportedSymbols: new Set(),
-        x64ExportedSymbols: new Set(['SteamUser', 'SteamAPI_Init']),
+        x86ExportedSymbols: tableOf([]),
+        x64ExportedSymbols: tableOf(['SteamUser', 'SteamAPI_Init']),
         x86ServedVersions: new Map(),
         x64ServedVersions: new Map(),
         x64NullObjectFallback: true
@@ -834,8 +891,8 @@ describe('x64 null-object fallback is runtime-lookup only (CR-03)', () => {
     ]
     const result = evaluateShimCoverageWith(
       {
-        x86ExportedSymbols: new Set(),
-        x64ExportedSymbols: new Set(symbols),
+        x86ExportedSymbols: tableOf([]),
+        x64ExportedSymbols: tableOf(symbols),
         x86ServedVersions: new Map(),
         x64ServedVersions: new Map(),
         x64NullObjectFallback: true
@@ -857,8 +914,8 @@ describe('x64 null-object fallback is runtime-lookup only (CR-03)', () => {
     const symbols = ['SteamInternal_CreateInterface', 'SteamUser']
     const result = evaluateShimCoverageWith(
       {
-        x86ExportedSymbols: new Set(),
-        x64ExportedSymbols: new Set(symbols),
+        x86ExportedSymbols: tableOf([]),
+        x64ExportedSymbols: tableOf(symbols),
         x86ServedVersions: new Map(),
         x64ServedVersions: new Map(),
         x64NullObjectFallback: true
@@ -876,8 +933,8 @@ describe('x64 null-object fallback is runtime-lookup only (CR-03)', () => {
   test('x86 unserved version is always missing', () => {
     const result = evaluateShimCoverageWith(
       {
-        x86ExportedSymbols: new Set(),
-        x64ExportedSymbols: new Set(),
+        x86ExportedSymbols: tableOf([]),
+        x64ExportedSymbols: tableOf([]),
         x86ServedVersions: new Map(),
         x64ServedVersions: new Map(),
         x64NullObjectFallback: true
@@ -997,19 +1054,19 @@ describe('Grim Dawn (219990) x64 acceptance (52-13)', () => {
   })
 
   test('SteamUser023 and SteamNetworking006 (58-13) are wire, RemoteStorage016 stays stub on x64', () => {
-    expect(SHIM64_SERVED_INTERFACE_VERSIONS.get('SteamUser023')).toEqual({
+    expect(shim64ServedInterfaceVersions().get('SteamUser023')).toEqual({
       family: 'SteamUser',
       mode: 'wire'
     })
-    expect(SHIM64_SERVED_INTERFACE_VERSIONS.get('SteamNetworking006')).toEqual({
+    expect(shim64ServedInterfaceVersions().get('SteamNetworking006')).toEqual({
       family: 'SteamNetworking',
       mode: 'wire'
     })
-    expect(SHIM_SERVED_INTERFACE_VERSIONS.get('SteamNetworking006')).toBe(
+    expect(shimServedInterfaceVersions().get('SteamNetworking006')).toBe(
       undefined
     )
     expect(
-      SHIM64_SERVED_INTERFACE_VERSIONS.get(
+      shim64ServedInterfaceVersions().get(
         'STEAMREMOTESTORAGE_INTERFACE_VERSION016'
       )?.mode
     ).toBe('stub')
@@ -1173,14 +1230,14 @@ describe('Phase 53 sampled titles: no half-served family (Pitfall 4)', () => {
       'SteamGameServer015',
       'SteamGameServerStats001'
     ]) {
-      expect(SHIM64_SERVED_INTERFACE_VERSIONS.has(v)).toBe(true)
+      expect(shim64ServedInterfaceVersions().has(v)).toBe(true)
     }
-    expect(SHIM64_EXPORTED_SYMBOLS.has('SteamInternal_GameServer_Init')).toBe(
-      true
-    )
-    expect(SHIM_EXPORTED_SYMBOLS.has('SteamInternal_GameServer_Init')).toBe(
-      false
-    )
+    expect(
+      Object.hasOwn(SHIM64_EXPORTED_SYMBOLS, 'SteamInternal_GameServer_Init')
+    ).toBe(true)
+    expect(
+      Object.hasOwn(SHIM_EXPORTED_SYMBOLS, 'SteamInternal_GameServer_Init')
+    ).toBe(false)
   })
 
   test('a half-served family is still reported (skew guard works)', () => {
@@ -1221,7 +1278,7 @@ describe('53-12: Steamworks.NET CSteamAPIContext.Init is fully served on x64', (
   for (const [appid, title] of Object.entries(NET_CONTEXT_FIXTURE.titles)) {
     it(`${appid} ${title.name}: every Init-requested version is served`, () => {
       const unserved = title.initRequested.filter(
-        (v) => !SHIM64_SERVED_INTERFACE_VERSIONS.has(v)
+        (v) => !shim64ServedInterfaceVersions().has(v)
       )
       expect(unserved).toEqual([])
     })
@@ -1262,7 +1319,7 @@ describe('quick 261025-t7i: SDK 1.34 versions for CSteamworks64 (Unclaimed World
   }
 
   test.each(NEW)('%s is served %s with %i slots', (v, family, mode, slots) => {
-    expect(SHIM64_SERVED_INTERFACE_VERSIONS.get(v)).toEqual({ family, mode })
+    expect(shim64ServedInterfaceVersions().get(v)).toEqual({ family, mode })
     expect(manifestOf(v).methods).toHaveLength(slots)
   })
 
@@ -1339,7 +1396,7 @@ describe('quick 261025-t7i: SDK 1.34 versions for CSteamworks64 (Unclaimed World
       'Steam_GetHSteamUserCurrent',
       'g_pSteamClientGameServer'
     ]) {
-      expect(SHIM64_EXPORTED_SYMBOLS).toContain(n)
+      expect(Object.hasOwn(SHIM64_EXPORTED_SYMBOLS, n)).toBe(true)
     }
   })
 })
@@ -1443,7 +1500,7 @@ describe('quick 261026-mhg: classifyUnservableInterfaceVersions', () => {
   })
 
   it('CORE_STARTUP_FAMILIES is the six wired families', () => {
-    expect([...CORE_STARTUP_FAMILIES].sort()).toEqual([
+    expect(Object.keys(CORE_STARTUP_FAMILIES).sort()).toEqual([
       'SteamApps',
       'SteamClient',
       'SteamFriends',
@@ -1468,14 +1525,14 @@ describe('58-03 multiplayer baseline served tables', () => {
   ]
   test('the four new versions are served wire on x64 (Utils004 by 58-14, Sockets013 by 58-15, Messages002 by 58-16, MatchMakingServers003 by 58-21) and never on x86', () => {
     for (const k of NEW_KEYS) {
-      expect(SHIM64_SERVED_INTERFACE_VERSIONS.get(k)?.mode).toBe('wire')
-      expect(SHIM_SERVED_INTERFACE_VERSIONS.has(k)).toBe(false)
+      expect(shim64ServedInterfaceVersions().get(k)?.mode).toBe('wire')
+      expect(shimServedInterfaceVersions().has(k)).toBe(false)
     }
   })
   test('the SDK spelling of the matchmaking accessor is exported beside the old one', () => {
     for (const set of [SHIM64_EXPORTED_SYMBOLS]) {
-      expect(set.has('SteamAPI_SteamMatchmaking_v009')).toBe(true)
-      expect(set.has('SteamAPI_SteamMatchMaking_v009')).toBe(true)
+      expect(Object.hasOwn(set, 'SteamAPI_SteamMatchmaking_v009')).toBe(true)
+      expect(Object.hasOwn(set, 'SteamAPI_SteamMatchMaking_v009')).toBe(true)
     }
   })
   test('SHIM_EXPORT_SET_VERSION moved off its pre-58-03 value', () => {
@@ -1488,11 +1545,11 @@ describe('58-03 multiplayer baseline served tables', () => {
 describe('58-18 SteamNetworkingSockets012 served entry', () => {
   test('is served wire on x64 and never on x86', () => {
     expect(
-      SHIM64_SERVED_INTERFACE_VERSIONS.get('SteamNetworkingSockets012')
+      shim64ServedInterfaceVersions().get('SteamNetworkingSockets012')
     ).toEqual({ family: 'SteamNetworkingSockets', mode: 'wire' })
-    expect(
-      SHIM_SERVED_INTERFACE_VERSIONS.has('SteamNetworkingSockets012')
-    ).toBe(false)
+    expect(shimServedInterfaceVersions().has('SteamNetworkingSockets012')).toBe(
+      false
+    )
   })
 })
 
@@ -1550,12 +1607,12 @@ describe('58-12 SteamMatchMaking009 coverage verdicts (D-13)', () => {
     const inputs = {
       x86ExportedSymbols: SHIM_EXPORTED_SYMBOLS,
       x64ExportedSymbols: SHIM64_EXPORTED_SYMBOLS,
-      x86ServedVersions: SHIM_SERVED_INTERFACE_VERSIONS,
-      x64ServedVersions: SHIM64_SERVED_INTERFACE_VERSIONS,
+      x86ServedVersions: shimServedInterfaceVersions(),
+      x64ServedVersions: shim64ServedInterfaceVersions(),
       x64NullObjectFallback: SHIM_X64_NULL_OBJECT_FALLBACK
     }
     expect(computeExportSetVersion(inputs)).toBe(SHIM_EXPORT_SET_VERSION)
-    const stubbed = new Map(SHIM64_SERVED_INTERFACE_VERSIONS)
+    const stubbed = new Map(shim64ServedInterfaceVersions())
     stubbed.set('SteamMatchMaking009', {
       family: 'SteamMatchMaking',
       mode: 'stub'
@@ -1571,13 +1628,13 @@ describe('58-12 SteamMatchMaking009 coverage verdicts (D-13)', () => {
 describe('58-21 SteamMatchMakingServers served entries', () => {
   test('003 is wire and 002 stays a stub on x64, neither on x86', () => {
     expect(
-      SHIM64_SERVED_INTERFACE_VERSIONS.get('SteamMatchMakingServers003')
+      shim64ServedInterfaceVersions().get('SteamMatchMakingServers003')
     ).toEqual({ family: 'SteamMatchMakingServers', mode: 'wire' })
     expect(
-      SHIM64_SERVED_INTERFACE_VERSIONS.get('SteamMatchMakingServers002')?.mode
+      shim64ServedInterfaceVersions().get('SteamMatchMakingServers002')?.mode
     ).toBe('stub')
     expect(
-      SHIM_SERVED_INTERFACE_VERSIONS.has('SteamMatchMakingServers003')
+      shimServedInterfaceVersions().has('SteamMatchMakingServers003')
     ).toBe(false)
   })
 })

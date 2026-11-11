@@ -8,7 +8,6 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { logInfo } from 'backend/logger'
 import { listBridgeFriends, sendBridgeInvite } from '../inviteBridge'
-import { getBridgeHelperConnection } from '../helperRegistry'
 import {
   CONTROL_ORDINAL,
   CONTROL_SLOT,
@@ -25,10 +24,11 @@ jest.mock('backend/logger', () => ({
   logError: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
 }))
-jest.mock('../helperRegistry', () => ({ getBridgeHelperConnection: jest.fn() }))
 
 const SECRET = 'ab'.repeat(32)
-const mockedConn = getBridgeHelperConnection as jest.Mock
+const mockedConn = jest.fn()
+// The boot-owned bridge-helper registry slice (D-66.3-14): a scripted connection lookup.
+const deps = { bridgeHelpers: { getConnection: mockedConn } }
 
 interface Seen {
   helloRole: number | null
@@ -105,7 +105,7 @@ async function waitClosed(): Promise<void> {
 describe('listBridgeFriends', () => {
   test('HELLO with probe role, then slot 13; resolves the decoded list', async () => {
     controlReply = friendPayload()
-    const res = await listBridgeFriends('3205720')
+    const res = await listBridgeFriends(deps, '3205720')
     expect(res).toEqual({
       ok: true,
       friends: [
@@ -120,7 +120,7 @@ describe('listBridgeFriends', () => {
 
   test('no helper -> no-helper, no socket opened', async () => {
     mockedConn.mockReturnValue(null)
-    expect(await listBridgeFriends('3205720')).toEqual({
+    expect(await listBridgeFriends(deps, '3205720')).toEqual({
       ok: false,
       reason: 'no-helper'
     })
@@ -129,7 +129,7 @@ describe('listBridgeFriends', () => {
 
   test('HELLO refusal -> error', async () => {
     helloStatus = STATUS_ERR
-    expect(await listBridgeFriends('3205720')).toEqual({
+    expect(await listBridgeFriends(deps, '3205720')).toEqual({
       ok: false,
       reason: 'error'
     })
@@ -139,7 +139,7 @@ describe('listBridgeFriends', () => {
 
   test('STATUS_ERR on the control frame -> error', async () => {
     controlStatus = STATUS_ERR
-    expect(await listBridgeFriends('3205720')).toEqual({
+    expect(await listBridgeFriends(deps, '3205720')).toEqual({
       ok: false,
       reason: 'error'
     })
@@ -147,7 +147,7 @@ describe('listBridgeFriends', () => {
 
   test('malformed payload -> error', async () => {
     controlReply = Buffer.from([5, 0, 0, 0])
-    expect(await listBridgeFriends('3205720')).toEqual({
+    expect(await listBridgeFriends(deps, '3205720')).toEqual({
       ok: false,
       reason: 'error'
     })
@@ -168,7 +168,7 @@ describe('listBridgeFriends', () => {
       }
       return realSetTimeout(fn, ms)
     }) as typeof setTimeout)
-    const p = listBridgeFriends('3205720')
+    const p = listBridgeFriends(deps, '3205720')
     for (let i = 0; i < 50 && sockets.length === 0; i++) {
       await new Promise((r) => realSetTimeout(r, 10))
     }
@@ -193,7 +193,7 @@ describe('sendBridgeInvite', () => {
   test.each(cases)('i32 %i -> %s', async (code, word) => {
     controlReply = Buffer.alloc(4)
     controlReply.writeInt32LE(code, 0)
-    expect(await sendBridgeInvite('3205720', 2)).toBe(word)
+    expect(await sendBridgeInvite(deps, '3205720', 2)).toBe(word)
     expect(seen.slot).toBe(CONTROL_SLOT.inviteFriend)
     expect(seen.args?.readUInt32LE(0)).toBe(2)
     expect(seen.helloRole).toBe(HELLO_ROLE_PROBE)
@@ -202,21 +202,21 @@ describe('sendBridgeInvite', () => {
   test('unknown code or short reply -> error', async () => {
     controlReply = Buffer.alloc(4)
     controlReply.writeInt32LE(9, 0)
-    expect(await sendBridgeInvite('3205720', 0)).toBe('error')
+    expect(await sendBridgeInvite(deps, '3205720', 0)).toBe('error')
     controlReply = Buffer.alloc(1)
-    expect(await sendBridgeInvite('3205720', 0)).toBe('error')
+    expect(await sendBridgeInvite(deps, '3205720', 0)).toBe('error')
   })
 
   test('no helper -> no-helper without a socket', async () => {
     mockedConn.mockReturnValue(null)
-    expect(await sendBridgeInvite('3205720', 1)).toBe('no-helper')
+    expect(await sendBridgeInvite(deps, '3205720', 1)).toBe('no-helper')
     expect(sockets).toHaveLength(0)
   })
 
   test.each([-1, 1.5, NaN])(
     'ordinal %p -> bad-ordinal before any socket',
     async (o) => {
-      expect(await sendBridgeInvite('3205720', o)).toBe('bad-ordinal')
+      expect(await sendBridgeInvite(deps, '3205720', o)).toBe('bad-ordinal')
       expect(mockedConn).not.toHaveBeenCalled()
       expect(sockets).toHaveLength(0)
     }
@@ -224,14 +224,14 @@ describe('sendBridgeInvite', () => {
 
   test('STATUS_ERR -> error', async () => {
     controlStatus = STATUS_ERR
-    expect(await sendBridgeInvite('3205720', 1)).toBe('error')
+    expect(await sendBridgeInvite(deps, '3205720', 1)).toBe('error')
   })
 })
 
 describe('logging (T-58-105)', () => {
   test('no log call carries a name', async () => {
     controlReply = friendPayload()
-    await listBridgeFriends('3205720')
+    await listBridgeFriends(deps, '3205720')
     const msgs = (logInfo as jest.Mock).mock.calls.map((c) => String(c[0]))
     expect(msgs.length).toBeGreaterThan(0)
     for (const m of msgs) expect(m).not.toContain('Alice')

@@ -32,6 +32,10 @@ import type { WinetricksQueue } from 'backend/tools/winetricksQueue'
 import type { SignInEpochs } from 'backend/signInProbe/sessionEpoch'
 import type { SignInProbeOutcomes } from 'backend/signInProbe/outcomes'
 import type { SignInProbePass } from 'backend/signInProbe/pass'
+import type {
+  BridgeHelperRegistry,
+  BridgeHelperSlice
+} from 'backend/storeManagers/steam/bridge/helperRegistry'
 import type { AnonymousClient } from 'backend/storeManagers/steam/anonymousClient'
 import type { SteamSignInState } from 'backend/storeManagers/steam/userSignInState'
 import type { SteamAuthTriggerState } from 'backend/storeManagers/steam/authTrigger'
@@ -157,6 +161,8 @@ export interface ManagerDeps {
   signIn: Pick<SignInProbeServices, 'epochs' | 'outcomes'>
   /** The boot-owned Steam sign-in session and auth-unlock state (D-66.3-13). */
   steamSession: SteamSessionServices
+  /** The boot-owned bridge-helper registry (D-66.3-14). */
+  bridgeHelpers: BridgeHelperSlice
   /** The boot-owned anonymous CM client for public PICS reads (D-66.3-14). */
   anonymousClient: Pick<AnonymousClient, 'get' | 'close'>
   /** The boot-owned connectivity monitor, as the slice managers read (D-66.3-11). */
@@ -240,4 +246,6 @@ export interface BootServices {
   steamSession: SteamSessionServices
   /** Built by the 'steam-anonymous-client' boot step, before 'store-managers' (D-66.3-14). */
   anonymousClient: AnonymousClient
+  /** Built by the 'bridge-helper-registry' boot step, before 'store-managers' (D-66.3-14). */
+  bridgeHelpers: BridgeHelperRegistry
 }

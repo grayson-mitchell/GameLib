@@ -392,7 +392,7 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
       if (typeof appId !== 'string' || !/^\d{1,10}$/.test(appId)) {
         return { ok: false, reason: 'error' } as const
       }
-      return listBridgeFriends(appId)
+      return listBridgeFriends(deps, appId)
     }
   )
   deps.ipc.handle(
@@ -408,7 +408,7 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
       ) {
         return 'error' as const
       }
-      return sendBridgeInvite(appId, ordinal)
+      return sendBridgeInvite(deps, appId, ordinal)
     }
   )
 

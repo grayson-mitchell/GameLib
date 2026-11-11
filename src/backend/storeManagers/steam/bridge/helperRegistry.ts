@@ -1,30 +1,15 @@
 /**
- * Phase 65 Plan 15 (D-08/D-10) -- the bridge-helper registry: the single owner
- * of the per-appId `helpers` map, the test-only path/env/wait-schedule
- * overrides (with their `__set...ForTests` seams and getters), the exit
- * teardown. Split out of `helperProcess.ts` so the spawn and
- * readiness code reach this state only through exports. A leaf: no top-level
- * work, so `backend/utils` can import it headlessly.
+ * Phase 65 Plan 15 (D-08/D-10), 66.3-14 (D-05) -- the bridge-helper registry: the single owner
+ * of the per-appId `helpers` map and the exit teardown, built once per boot by
+ * `createBridgeHelperRegistry`. The wait schedule, the helper binary path and the spawn env are
+ * constructor deps (boot passes the production values, tests pass fakes), so the old
+ * `__set...ForTests` seams are gone. Split out of `helperProcess.ts` so the spawn and readiness
+ * code reach this state only through the instance. A leaf: no top-level work, so
+ * `backend/utils` can import it headlessly.
  */
 
 import type { LongLivedHandle } from 'backend/process/types'
 import { logInfo, LogPrefix } from 'backend/logger'
-
-let steamWaitScheduleOverride: { budgetMs: number; intervalMs: number } | null =
-  null
-
-export function __setSteamWaitScheduleForTests(
-  schedule: { budgetMs: number; intervalMs: number } | null
-): void {
-  steamWaitScheduleOverride = schedule
-}
-
-export function getSteamWaitScheduleOverride(): {
-  budgetMs: number
-  intervalMs: number
-} | null {
-  return steamWaitScheduleOverride
-}
 
 export interface BridgeHelperEntry {
   appId: string
@@ -58,142 +43,132 @@ export interface BridgeHelperEntry {
   lastInviteRequestMs: number
 }
 
-// D-51-01: per-appId registry -- replaces the Phase 24 module-scoped
-// singleton ChildProcess handle. No module-level `let` of a ChildProcess
-// anywhere in this file (pinned by a source-assertion test,
-// helperProcess.test.ts).
-const helpers = new Map<string, BridgeHelperEntry>()
+/**
+ * How long a launch keeps waiting for Steam to start / sign in (60 s: a cold Mac Steam launch plus
+ * update check plus auto sign-in is tens of seconds, UNMEASURED; the live gate records the real
+ * figure) and the gap between respawns (each failing attempt is a sub-second fast-fail spawn
+ * writing ~4 log lines, so 3 s caps the loop at ~20 spawns). Boot passes this as the production
+ * schedule; a test passes its own.
+ */
+export const DEFAULT_STEAM_WAIT_SCHEDULE: BridgeHelperRegistryDeps['steamWaitSchedule'] =
+  Object.freeze({ budgetMs: 60_000, intervalMs: 3_000 })
 
-export { helpers }
-
-// Test-only override for the packaged, fixed helper binary path -- lets
-// helperIntegration.test.ts point at a real, locally-compiled binary
-// without needing to fake the packaged bundle layout. Defaults to the real
-// packaged path; never set in production.
-let bridgeHelperPathOverride: string | null = null
-
-export function __setBridgeHelperPathForTests(path: string | null): void {
-  bridgeHelperPathOverride = path
+export interface BridgeHelperRegistryDeps {
+  /** The bounded wait for Steam to start / finish signing in (261027-aue). */
+  steamWaitSchedule: { budgetMs: number; intervalMs: number }
+  /** The packaged, fixed helper binary path; a test points it at a locally compiled helper. */
+  helperPath: () => string
+  /**
+   * The spawned child's base env. Production returns the real ambient `process.env`; a test that
+   * really spawns passes `createFakeHomeProfile()`'s own env (jest's containment never reaches a
+   * child, because `node:child_process` reads the REAL host env).
+   */
+  spawnEnv: () => NodeJS.ProcessEnv
 }
 
-export function getBridgeHelperPathOverride(): string | null {
-  return bridgeHelperPathOverride
-}
-
-// Test-only override for the real, unmocked spawn's child env (Phase 51
-// Plan 01, Task 3 live-tracer divergence follow-up). `ensureHelperSpawned`
-// below passes NO `env` option in the default (null) case -- the production
-// spawn must inherit the real ambient environment, per the fakeHomeIsolation
-// gate's prohibition on a hand-rolled env literal. `jest.setupContainment.ts`
-// mutates `process.env`/`os.homedir()` as SEEN BY JEST'S OWN SANDBOXED JS,
-// but `node:child_process`'s builtin module is loaded once, outside that
-// per-test-file sandbox, and reads the REAL host `process.env` when building
-// a child's environment block -- so that containment never reaches a real
-// spawned child (measured live, 2026-10-17: a jest test observes
-// `process.env.HOME` redirected to a fake root while a child spawned from
-// that same test still inherits the developer's real `$HOME`). On a machine
-// with a genuinely-installed native Steam.app, `helperIntegration.test.ts`'s
-// real (unmocked) `ensureBridgeHelperReady()` call was therefore never
-// actually isolated -- it only ever asserted `'not-inited'` because no real
-// dylib existed at the real $HOME's canonical Steam path on prior test
-// hosts. Per CLAUDE.md's "never a hand-rolled env literal -- use
-// createFakeHomeProfile()" convention, the test now passes this hook
-// `createFakeHomeProfile()`'s own `.env` explicitly, closing the gap for
-// real rather than relying on ambient propagation that does not happen.
-let bridgeHelperSpawnEnvOverride: NodeJS.ProcessEnv | null = null
-
-export function __setBridgeHelperSpawnEnvForTests(
-  env: NodeJS.ProcessEnv | null
-): void {
-  bridgeHelperSpawnEnvOverride = env
-}
-
-export function getBridgeHelperSpawnEnvOverride(): NodeJS.ProcessEnv | null {
-  return bridgeHelperSpawnEnvOverride
-}
-
-// 51-REVIEW WR-06: once the helper handles are unref'd, a sidecar that drains
-// at stdin EOF exits while a helper may still be running. A synchronous
-// process 'exit' listener (not a handle, so it holds nothing open, and not a
-// stdin 'end' handler, which the exit contract rules out) kills every
-// remaining helper at that moment. On unix the Rust shell's process-group reap
-// is the backstop; on Windows there is no group reap, so this is the only
-// teardown on the drain path. Installed once, on the first spawn.
-let exitTeardownInstalled = false
-
-export function installExitTeardownOnce(): void {
-  if (exitTeardownInstalled) return
-  exitTeardownInstalled = true
-  process.on('exit', () => shutdownAllBridgeHelpers())
-}
-
-/** Phase 58 Plan 31: the live helper's port and secret, only when both are known. */
-export function getBridgeHelperConnection(
-  appId: string
-): { port: number; secret: string } | null {
-  const entry = helpers.get(appId)
-  if (!entry || entry.port === null || !entry.secret) return null
-  return { port: entry.port, secret: entry.secret }
+export interface BridgeHelperRegistry {
+  /** The per-appId map (D-51-01); the spawn and readiness code read and write it. */
+  readonly helpers: Map<string, BridgeHelperEntry>
+  readonly steamWaitSchedule: BridgeHelperRegistryDeps['steamWaitSchedule']
+  helperPath(): string
+  spawnEnv(): NodeJS.ProcessEnv
+  installExitTeardownOnce(): void
+  /** Phase 58 Plan 31: the live helper's port and secret, only when both are known. */
+  getConnection(appId: string): { port: number; secret: string } | null
+  /**
+   * D-51-01: tears down ONLY the helper for `appId`. Safe to call unconditionally, including for
+   * an appId whose helper was never spawned this session (a no-op). `bottleProcessMonitor`'s
+   * `onStopped` hook calls it the moment a bridge game's own process(es) exit.
+   */
+  stop(appId: string): void
+  /** True while any bridge helper is alive: the quit path asks before ending a hosted session. */
+  hasLive(): boolean
+  /** Tears down every currently-running helper, regardless of appId (the full-app-quit fan-out). */
+  shutdownAll(): void
 }
 
 /**
- * D-51-01: tears down ONLY the helper for `appId`, via the runner's
- * long-lived registry (never called directly from a quit path --
- * see the quit handler). Safe to call unconditionally, including for
- * an appId whose helper was never spawned this session (a no-op).
- *
- * This is the per-appId replacement for Phase 24's old single-shared-helper
- * teardown export (deleted entirely -- pinned by helperProcess.test.ts's
- * own invariant test). bottleProcessMonitor.ts's `onStopped` hook (Phase 51
- * Plan 01 Task 2) calls this the moment a bridge game's own process(es)
- * exit, so a helper's lifetime is tied to its game's, never to the whole
- * app session.
+ * 51-REVIEW WR-06: once the helper handles are unref'd, a sidecar that drains at stdin EOF exits
+ * while a helper may still be running. A synchronous process 'exit' listener (not a handle, so it
+ * holds nothing open, and not a stdin 'end' handler, which the exit contract rules out) kills
+ * every remaining helper at that moment. Process listeners are process-global: the one listener
+ * and the set of registries it fans out to hang off the process object under this tag, so a
+ * second registry (a test boot) adds itself instead of adding a second listener.
  */
-export function stopBridgeHelper(appId: string): void {
-  const entry = helpers.get(appId)
-  if (!entry) {
-    return
+const EXIT_TEARDOWN_TAG = Symbol.for('gamelib.bridgeHelperExitTeardown')
+
+function registerProcessExitTeardown(shutdownAll: () => void): void {
+  const holder = process as unknown as Record<symbol, Set<() => void>>
+  let teardowns = holder[EXIT_TEARDOWN_TAG]
+  if (!teardowns) {
+    const created = new Set<() => void>()
+    teardowns = created
+    holder[EXIT_TEARDOWN_TAG] = created
+    process.on('exit', () => {
+      for (const teardown of created) teardown()
+    })
+  }
+  teardowns.add(shutdownAll)
+}
+
+export function createBridgeHelperRegistry(
+  deps: BridgeHelperRegistryDeps
+): BridgeHelperRegistry {
+  const helpers = new Map<string, BridgeHelperEntry>()
+  let exitTeardownInstalled = false
+
+  function stop(appId: string): void {
+    const entry = helpers.get(appId)
+    if (!entry) {
+      return
+    }
+
+    entry.unregister()
+    helpers.delete(appId)
+
+    logInfo(
+      `stopBridgeHelper: terminating the bridge helper for appId ${appId}`,
+      LogPrefix.Steam
+    )
+    entry.child.kill()
   }
 
-  entry.unregister()
-  helpers.delete(appId)
+  function shutdownAll(): void {
+    for (const appId of Array.from(helpers.keys())) {
+      stop(appId)
+    }
+  }
 
-  logInfo(
-    `stopBridgeHelper: terminating the bridge helper for appId ${appId}`,
-    LogPrefix.Steam
-  )
-  entry.child.kill()
-}
-
-/**
- * True while any bridge helper is alive. A helper lives exactly as long as its game
- * (`stopBridgeHelper` runs when the game's process exits), so this is "a bridged game is
- * running and may be hosting a session" -- the quit path asks before ending that.
- */
-export function hasLiveBridgeHelper(): boolean {
-  return helpers.size > 0
-}
-
-/**
- * Tears down every currently-running bridge helper, regardless of appId --
- * the full-app-quit fan-out. Each individual appId is ALSO independently
- * registered on the runner's own long-lived registry (via
- * `ensureHelperSpawned`), so the runner's `teardownAll()` reaches every
- * helper even if this function is never called directly.
- */
-export function shutdownAllBridgeHelpers(): void {
-  for (const appId of Array.from(helpers.keys())) {
-    stopBridgeHelper(appId)
+  return {
+    helpers,
+    steamWaitSchedule: deps.steamWaitSchedule,
+    helperPath: deps.helperPath,
+    spawnEnv: deps.spawnEnv,
+    installExitTeardownOnce(): void {
+      if (exitTeardownInstalled) return
+      exitTeardownInstalled = true
+      registerProcessExitTeardown(shutdownAll)
+    },
+    getConnection(appId) {
+      const entry = helpers.get(appId)
+      if (!entry || entry.port === null || !entry.secret) return null
+      return { port: entry.port, secret: entry.secret }
+    },
+    stop,
+    hasLive: () => helpers.size > 0,
+    shutdownAll
   }
 }
 
-/**
- * Test-only reset of the per-appId registry -- mirrors bottle.ts's
- * `__stopBottledRaiseLoops` test-hook convention. Never called from
- * production code.
- */
-export function __resetBridgeHelperStateForTests(): void {
-  helpers.clear()
-  bridgeHelperPathOverride = null
-  steamWaitScheduleOverride = null
-}
+/** What the spawn and readiness code (and ManagerDeps) read from the registry. */
+export type BridgeHelperSlice = Pick<
+  BridgeHelperRegistry,
+  | 'helpers'
+  | 'steamWaitSchedule'
+  | 'helperPath'
+  | 'spawnEnv'
+  | 'installExitTeardownOnce'
+  | 'getConnection'
+  | 'stop'
+  | 'hasLive'
+>

@@ -4,7 +4,7 @@
  *
  * Supersedes the Phase 24 Plan 06 suite this file replaces: that suite
  * exercised a module-scoped SINGLE shared helper handle
- * (`__resetBridgeHelperStateForTests()` cleared one handle;
+ * (clearing the registry cleared one handle;
  * `shutdownBridgeHelper()` tore down "the" helper). D-51-01 deleted that
  * singleton entirely in favor of a `Map<appId, entry>` registry -- every
  * test below drives TWO distinct appIds to prove the registry, not a
@@ -42,10 +42,9 @@ import {
 } from '../protocol'
 import { ensureBridgeHelperReady } from '../helperProcess'
 import {
-  __setSteamWaitScheduleForTests,
-  __setBridgeHelperPathForTests,
-  __setBridgeHelperSpawnEnvForTests,
-  __resetBridgeHelperStateForTests
+  createBridgeHelperRegistry,
+  DEFAULT_STEAM_WAIT_SCHEDULE,
+  type BridgeHelperRegistry
 } from '../helperRegistry'
 import { stripSourceComments } from '../../../../testUtils/stripSourceComments'
 
@@ -89,7 +88,23 @@ const fakeRunner = createChildBackedRunner(mockedSpawn)
 // through the deps slice (66.3-08).
 const mockedOpenExternal = jest.fn().mockResolvedValue(undefined)
 const mockedOpenBridgeInvitePicker = jest.fn().mockResolvedValue(true)
+// One registry per case (D-66.3-14): the schedule, helper path and spawn env are constructor deps.
+// The deps read it through a getter so the cases below stay as they were.
+let registry: BridgeHelperRegistry
+function newRegistry(
+  over: Partial<Parameters<typeof createBridgeHelperRegistry>[0]> = {}
+): BridgeHelperRegistry {
+  return createBridgeHelperRegistry({
+    steamWaitSchedule: DEFAULT_STEAM_WAIT_SCHEDULE,
+    helperPath: () => '/mock/bundle/arm64/darwin/steam-bridge-helper',
+    spawnEnv: () => process.env,
+    ...over
+  })
+}
 const helperDeps = {
+  get bridgeHelpers() {
+    return registry
+  },
   runner: fakeRunner.runner,
   appState: { openBridgeInvitePicker: mockedOpenBridgeInvitePicker },
   openExternal: { openExternal: mockedOpenExternal }
@@ -228,7 +243,7 @@ const whoamiErrFrame = encodeResponse(PROBE_REQUEST_ID, STATUS_ERR)
 
 describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
   beforeEach(() => {
-    __resetBridgeHelperStateForTests()
+    registry = newRegistry()
     fakeRunner.reset()
     mockedSpawn.mockReset()
   })
@@ -374,14 +389,10 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     MockedSocket.mockImplementation(
       () => new FakeSocket(healthOkFrame, whoamiOkFrame)
     )
-    __setBridgeHelperSpawnEnvForTests({ HOME: '/fake/home' })
-    try {
-      const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
-      emitListenLine(child, 55001, APP_ID_A)
-      await pending
-    } finally {
-      __setBridgeHelperSpawnEnvForTests(null)
-    }
+    registry = newRegistry({ spawnEnv: () => ({ HOME: '/fake/home' }) })
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
+    emitListenLine(child, 55001, APP_ID_A)
+    await pending
     const env = mockedSpawn.mock.calls[0][2].env
     expect(Object.keys(env).sort()).toEqual(['HOME', BRIDGE_SECRET_ENV].sort())
     expect(env.HOME).toBe('/fake/home')
@@ -802,12 +813,14 @@ describe('261027-aue: wait for Steam to start / sign in', () => {
   const SIGNING_IN = 'ConnectToGlobalUser failed'
 
   beforeEach(() => {
-    __resetBridgeHelperStateForTests()
+    registry = newRegistry()
     fakeRunner.reset()
     mockedSpawn.mockReset()
     mockedSendFrontendMessage.mockClear()
     mockedOpenExternal.mockClear()
-    __setSteamWaitScheduleForTests({ budgetMs: 150, intervalMs: 5 })
+    registry = newRegistry({
+      steamWaitSchedule: { budgetMs: 150, intervalMs: 5 }
+    })
   })
 
   test('Steam quit: starter called once, waiting hook once, no 480 spawn, ready on attempt 3', async () => {

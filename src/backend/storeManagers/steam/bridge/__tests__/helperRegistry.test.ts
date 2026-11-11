@@ -4,7 +4,7 @@
  *
  * Supersedes the Phase 24 Plan 06 suite this file replaces: that suite
  * exercised a module-scoped SINGLE shared helper handle
- * (`__resetBridgeHelperStateForTests()` cleared one handle;
+ * (a test-only reset cleared one handle;
  * `shutdownBridgeHelper()` tore down "the" helper). D-51-01 deleted that
  * singleton entirely in favor of a `Map<appId, entry>` registry -- every
  * test below drives TWO distinct appIds to prove the registry, not a
@@ -28,11 +28,8 @@ import { Socket } from 'node:net'
 import { encodeResponse, STATUS_OK } from '../protocol'
 import { ensureBridgeHelperReady } from '../helperProcess'
 import {
-  stopBridgeHelper,
-  hasLiveBridgeHelper,
-  shutdownAllBridgeHelpers,
-  __setBridgeHelperPathForTests,
-  __resetBridgeHelperStateForTests
+  createBridgeHelperRegistry,
+  type BridgeHelperRegistry
 } from '../helperRegistry'
 
 jest.mock('backend/logger', () => ({
@@ -75,10 +72,32 @@ const fakeRunner = createChildBackedRunner(mockedSpawn)
 // through the deps slice (66.3-08).
 const mockedOpenExternal = jest.fn().mockResolvedValue(undefined)
 const mockedOpenBridgeInvitePicker = jest.fn().mockResolvedValue(true)
-const helperDeps = {
-  runner: fakeRunner.runner,
-  appState: { openBridgeInvitePicker: mockedOpenBridgeInvitePicker },
-  openExternal: { openExternal: mockedOpenExternal }
+const PACKAGED_HELPER_PATH = '/mock/bundle/arm64/darwin/steam-bridge-helper'
+// One registry per case (D-66.3-14): the schedule, helper path and spawn env are constructor deps.
+function newRegistry(
+  over: Partial<Parameters<typeof createBridgeHelperRegistry>[0]> = {}
+): BridgeHelperRegistry {
+  return createBridgeHelperRegistry({
+    steamWaitSchedule: { budgetMs: 150, intervalMs: 5 },
+    helperPath: () => PACKAGED_HELPER_PATH,
+    spawnEnv: () => ({}),
+    ...over
+  })
+}
+let registry: BridgeHelperRegistry
+let helperDeps: {
+  runner: typeof fakeRunner.runner
+  appState: { openBridgeInvitePicker: jest.Mock }
+  openExternal: { openExternal: jest.Mock }
+  bridgeHelpers: BridgeHelperRegistry
+}
+function depsFor(bridgeHelpers: BridgeHelperRegistry): typeof helperDeps {
+  return {
+    runner: fakeRunner.runner,
+    appState: { openBridgeInvitePicker: mockedOpenBridgeInvitePicker },
+    openExternal: { openExternal: mockedOpenExternal },
+    bridgeHelpers
+  }
 }
 const MockedSocket = Socket as unknown as jest.Mock
 
@@ -171,13 +190,14 @@ const whoamiOkFrame = encodeResponse(
 
 describe('helperRegistry.ts (D-10 registry state, seams and teardown)', () => {
   beforeEach(() => {
-    __resetBridgeHelperStateForTests()
+    registry = newRegistry()
+    helperDeps = depsFor(registry)
     fakeRunner.reset()
     mockedSpawn.mockReset()
   })
 
   test('stopBridgeHelper(appId) is a no-op when that appId was never spawned', () => {
-    expect(() => stopBridgeHelper(APP_ID_A)).not.toThrow()
+    expect(() => registry.stop(APP_ID_A)).not.toThrow()
     expect(mockedSpawn).not.toHaveBeenCalled()
   })
 
@@ -195,18 +215,18 @@ describe('helperRegistry.ts (D-10 registry state, seams and teardown)', () => {
     emitListenLine(childB, 55002, APP_ID_B)
     await Promise.all([pendingA, pendingB])
 
-    stopBridgeHelper(APP_ID_A)
+    registry.stop(APP_ID_A)
 
     expect(childA.kill).toHaveBeenCalledTimes(1)
     expect(childB.kill).not.toHaveBeenCalled()
 
     // A second stop for the already-removed appId is a no-op.
-    stopBridgeHelper(APP_ID_A)
+    registry.stop(APP_ID_A)
     expect(childA.kill).toHaveBeenCalledTimes(1)
   })
 
-  test('hasLiveBridgeHelper() is true from spawn until that appId is stopped (the quit confirm keys off it)', async () => {
-    expect(hasLiveBridgeHelper()).toBe(false)
+  test('registry.hasLive() is true from spawn until that appId is stopped (the quit confirm keys off it)', async () => {
+    expect(registry.hasLive()).toBe(false)
 
     const child = new FakeChildProcess()
     mockedSpawn.mockReturnValueOnce(child)
@@ -217,16 +237,15 @@ describe('helperRegistry.ts (D-10 registry state, seams and teardown)', () => {
     emitListenLine(child, 55001, APP_ID_A)
     await pending
 
-    expect(hasLiveBridgeHelper()).toBe(true)
-    stopBridgeHelper(APP_ID_A)
-    expect(hasLiveBridgeHelper()).toBe(false)
+    expect(registry.hasLive()).toBe(true)
+    registry.stop(APP_ID_A)
+    expect(registry.hasLive()).toBe(false)
   })
 
   // 51-REVIEW WR-06 (sidecar exit contract): the runner unref()s the child and
   // its pipes, so a process 'exit' listener must tear down any helper still
   // running when the sidecar drains.
   test('WR-06: a process exit listener kills a still-running helper', async () => {
-    const onSpy = jest.spyOn(process, 'on')
     const child = new FakeChildProcess()
     mockedSpawn.mockReturnValue(child)
     MockedSocket.mockImplementation(
@@ -241,25 +260,17 @@ describe('helperRegistry.ts (D-10 registry state, seams and teardown)', () => {
     // tests); the LISTEN line is still read through its callbacks.
     expect(result).toEqual(expect.objectContaining({ ready: true }))
 
-    const exitListeners = onSpy.mock.calls
-      .filter(([event]) => event === 'exit')
-      .map(([, listener]) => listener as () => void)
-    onSpy.mockRestore()
-    // Installed at most once per module instance; this suite's first spawn
-    // may have happened in an earlier test, so read it from the live list.
-    const installed =
-      exitListeners[0] ??
-      (process
-        .listeners('exit')
-        .find((l) => String(l).includes('shutdownAllBridgeHelpers')) as
-        | (() => void)
-        | undefined)
-    expect(installed).toBeDefined()
-    installed?.()
+    // The one process 'exit' listener fans out to every registry that spawned (tagged on the
+    // process object, not held in a module variable).
+    const teardowns = (process as unknown as Record<symbol, Set<() => void>>)[
+      Symbol.for('gamelib.bridgeHelperExitTeardown')
+    ]
+    expect(teardowns).toBeDefined()
+    for (const teardown of teardowns ?? []) teardown()
     expect(child.kill).toHaveBeenCalledTimes(1)
   })
 
-  test('shutdownAllBridgeHelpers() kills every registered appId', async () => {
+  test('registry.shutdownAll() kills every registered appId', async () => {
     const childA = new FakeChildProcess()
     const childB = new FakeChildProcess()
     mockedSpawn.mockReturnValueOnce(childA).mockReturnValueOnce(childB)
@@ -273,7 +284,7 @@ describe('helperRegistry.ts (D-10 registry state, seams and teardown)', () => {
     emitListenLine(childB, 55002, APP_ID_B)
     await Promise.all([pendingA, pendingB])
 
-    shutdownAllBridgeHelpers()
+    registry.shutdownAll()
 
     expect(childA.kill).toHaveBeenCalledTimes(1)
     expect(childB.kill).toHaveBeenCalledTimes(1)
@@ -310,22 +321,67 @@ describe('helperRegistry.ts (D-10 registry state, seams and teardown)', () => {
     expect(childB.kill).toHaveBeenCalledTimes(1)
   })
 
-  test('__setBridgeHelperPathForTests overrides the spawned binary path; null restores the real packaged path', async () => {
+  test('the registry helperPath dep is the spawned binary path', async () => {
     const child = new FakeChildProcess()
     mockedSpawn.mockReturnValue(child)
     MockedSocket.mockImplementation(
       () => new FakeSocket(healthOkFrame, whoamiOkFrame)
     )
 
-    __setBridgeHelperPathForTests('/custom/test/steam-bridge-helper')
-    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
+    const custom = newRegistry({
+      helperPath: () => '/custom/test/steam-bridge-helper'
+    })
+    const pending = ensureBridgeHelperReady(depsFor(custom), APP_ID_A)
     emitListenLine(child, 55001, APP_ID_A)
     await pending
 
     expect(mockedSpawn.mock.calls[0][0]).toBe(
       '/custom/test/steam-bridge-helper'
     )
+  })
 
-    __setBridgeHelperPathForTests(null)
+  test('two registries never share a helper map, and add at most one process exit listener between them', async () => {
+    const other = newRegistry()
+    const childA = new FakeChildProcess()
+    const childB = new FakeChildProcess()
+    mockedSpawn.mockReturnValueOnce(childA).mockReturnValueOnce(childB)
+    MockedSocket.mockImplementation(
+      () => new FakeSocket(healthOkFrame, whoamiOkFrame)
+    )
+    const onSpy = jest.spyOn(process, 'on')
+    const pendingA = ensureBridgeHelperReady(helperDeps, APP_ID_A)
+    emitListenLine(childA, 55001, APP_ID_A)
+    const pendingB = ensureBridgeHelperReady(depsFor(other), APP_ID_B)
+    emitListenLine(childB, 55002, APP_ID_B)
+    await Promise.all([pendingA, pendingB])
+    const exitAdds = onSpy.mock.calls.filter(([event]) => event === 'exit')
+    onSpy.mockRestore()
+
+    expect(exitAdds.length).toBeLessThanOrEqual(1)
+    expect(registry.helpers.has(APP_ID_B)).toBe(false)
+    expect(other.helpers.has(APP_ID_A)).toBe(false)
+    expect(registry.hasLive()).toBe(true)
+    expect(other.hasLive()).toBe(true)
+    registry.stop(APP_ID_A)
+    expect(registry.hasLive()).toBe(false)
+    expect(other.hasLive()).toBe(true)
+  })
+
+  test('getConnection returns port and secret only for a live helper with a known port', async () => {
+    expect(registry.getConnection(APP_ID_A)).toBeNull()
+    const child = new FakeChildProcess()
+    mockedSpawn.mockReturnValue(child)
+    MockedSocket.mockImplementation(
+      () => new FakeSocket(healthOkFrame, whoamiOkFrame)
+    )
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
+    emitListenLine(child, 55001, APP_ID_A)
+    await pending
+    expect(registry.getConnection(APP_ID_A)).toEqual({
+      port: 55001,
+      secret: expect.stringMatching(/^[0-9a-f]{64}$/)
+    })
+    registry.stop(APP_ID_A)
+    expect(registry.getConnection(APP_ID_A)).toBeNull()
   })
 })

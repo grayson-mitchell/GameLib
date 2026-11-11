@@ -306,7 +306,7 @@ export interface CensusTitleInput {
 export interface CensusCoverageDeps {
   resolveRequiredInterfaceVersions: typeof resolveRequiredInterfaceVersions
   evaluateShimCoverage: typeof evaluateShimCoverage
-  x64ExportedSymbols: ReadonlySet<string>
+  x64ExportedSymbols: Readonly<Record<string, true>>
 }
 
 export const DEFAULT_COVERAGE_DEPS: CensusCoverageDeps = {
@@ -581,7 +581,7 @@ function evaluate(
   exeVersions: string[],
   managedVersions: string[] | null
 ): CensusRow {
-  if (arch === 'x64' && deps.x64ExportedSymbols.size === 0) {
+  if (arch === 'x64' && Object.keys(deps.x64ExportedSymbols).length === 0) {
     return withFlags({
       ...base,
       arch: 'x64',

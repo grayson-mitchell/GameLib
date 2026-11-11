@@ -143,7 +143,8 @@ function bootedWorld(opts?: {
         engineState: fakes.engineState,
         signIn: fakes.signInProbe,
         steamSession: fakes.steamSession,
-        anonymousClient: fakes.anonymousClient
+        anonymousClient: fakes.anonymousClient,
+        bridgeHelpers: fakes.bridgeHelpers
       })
       prebuilt.managers = built
       prebuilt.launcher = built.launcher

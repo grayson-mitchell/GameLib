@@ -58,6 +58,7 @@ function build(over: Partial<Parameters<typeof createStoreManagers>[0]> = {}) {
     signIn: fakes.signInProbe,
     steamSession: fakes.steamSession,
     anonymousClient: fakes.anonymousClient,
+    bridgeHelpers: fakes.bridgeHelpers,
     ...over
   })
 }

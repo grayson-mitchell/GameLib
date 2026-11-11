@@ -63,8 +63,8 @@ import {
 import { CONTROL_SLOT } from '../../src/backend/storeManagers/steam/bridge/protocol'
 import { BARE_ACCESSOR_FAMILY } from '../../src/backend/storeManagers/steam/bridge/interfaceVersions'
 import {
-  SHIM_SERVED_INTERFACE_VERSIONS,
-  SHIM64_SERVED_INTERFACE_VERSIONS
+  shimServedInterfaceVersions,
+  shim64ServedInterfaceVersions
 } from '../../src/backend/storeManagers/steam/bridge/shimCoverage'
 import { at, defined, group } from './fixtures/indexed'
 
@@ -815,8 +815,8 @@ describe('gen_vtables', () => {
       }
       for (const m of manifests) {
         for (const map of [
-          SHIM_SERVED_INTERFACE_VERSIONS,
-          SHIM64_SERVED_INTERFACE_VERSIONS
+          shimServedInterfaceVersions(),
+          shim64ServedInterfaceVersions()
         ]) {
           const served = map.get(m.interface)
           if (served && served.family !== cfgFamilyName(m.family)) {

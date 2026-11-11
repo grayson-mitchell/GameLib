@@ -34,7 +34,6 @@ import { STEAM_ENGINE_RUNNER } from './engine/steamEngineDeps'
 import type { LaunchDeadline } from 'backend/engine/launchDeadline'
 import { drmStepError } from './bridge/drm/steamclientLayerMode'
 import { resolveBridgeLaunchWorkingDir } from './bridge/launchTarget'
-import { stopBridgeHelper } from './bridge/helperRegistry'
 import { appFolder, userHome } from 'backend/constants/paths'
 import {
   DRM_DLLPATH_CHANNEL,
@@ -474,7 +473,7 @@ export async function fireBridgeWineLaunch(
           onUnavailable: () => deadline?.cancel('monitor-unavailable'),
           onStopped: () => {
             clearLaunchRecord()
-            stopBridgeHelper(steamGame.appId)
+            steamGame.deps.bridgeHelpers.stop(steamGame.appId)
             clearEngineSelection(steamGame.appId)
             markGameStopped(ledgerBottle, steamGame.appId)
             relogOnce()

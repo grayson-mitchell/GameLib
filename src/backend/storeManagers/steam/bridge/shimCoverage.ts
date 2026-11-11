@@ -46,39 +46,45 @@ import { SHIM64_GENERATED_EXPORTS } from './shimExports.generated'
 // committed native/steam-bridge/generated/steam_api.def export list in both
 // directions (the 24-CR-02 pin), and so shimGenerate.ts can import it for
 // its own coverage-rejection check.
-export const SHIM_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
-  'SteamAPI_Init',
-  'SteamAPI_InitFlat',
-  'SteamAPI_Shutdown',
-  'SteamAPI_RestartAppIfNecessary',
-  'SteamAPI_IsSteamRunning',
-  'SteamAPI_RunCallbacks',
-  'SteamAPI_RegisterCallback',
-  'SteamAPI_UnregisterCallback',
-  'SteamAPI_RegisterCallResult',
-  'SteamAPI_UnregisterCallResult',
-  'SteamAPI_SteamUser_v023',
-  'SteamAPI_SteamFriends_v018',
+/**
+ * A frozen name -> true lookup (D-66.3-09). Membership is `Object.hasOwn(table, name)`, never
+ * `name in table`: `in` also matches inherited prototype keys such as 'toString' and 'constructor'.
+ */
+export type SymbolTable = Readonly<Record<string, true>>
+
+export const SHIM_EXPORTED_SYMBOLS: SymbolTable = Object.freeze({
+  SteamAPI_Init: true,
+  SteamAPI_InitFlat: true,
+  SteamAPI_Shutdown: true,
+  SteamAPI_RestartAppIfNecessary: true,
+  SteamAPI_IsSteamRunning: true,
+  SteamAPI_RunCallbacks: true,
+  SteamAPI_RegisterCallback: true,
+  SteamAPI_UnregisterCallback: true,
+  SteamAPI_RegisterCallResult: true,
+  SteamAPI_UnregisterCallResult: true,
+  SteamAPI_SteamUser_v023: true,
+  SteamAPI_SteamFriends_v018: true,
   // 51-11: the first locked interface group (ISteamUtils, ISteamApps,
   // ISteamUserStats) plus the older SteamUser016/SteamFriends011 bare
   // accessor versions XCOM (200510) needs -- each manifest's own
   // `flatAccessor`, mirrored here (meta/sdk/isteamuser016.manifest.json,
   // isteamfriends011.manifest.json, isteamutils005.manifest.json,
   // isteamapps004.manifest.json, isteamuserstats010.manifest.json).
-  'SteamAPI_SteamUser_v016',
-  'SteamAPI_SteamFriends_v011',
-  'SteamAPI_SteamUtils_v005',
-  'SteamAPI_SteamApps_v004',
-  'SteamAPI_SteamUserStats_v010',
+  SteamAPI_SteamUser_v016: true,
+  SteamAPI_SteamFriends_v011: true,
+  SteamAPI_SteamUtils_v005: true,
+  SteamAPI_SteamApps_v004: true,
+  SteamAPI_SteamUserStats_v010: true,
   // 261021-pgx: Hoard's (63000) own measured versions -- the 3 new flat
   // accessors (51-11's SteamUser016/SteamUtils005 already serve Hoard,
   // see SHIM_SERVED_INTERFACE_VERSIONS below). See
   // meta/sdk/isteamfriends013.manifest.json,
   // meta/sdk/isteamapps005.manifest.json,
   // meta/sdk/isteamuserstats011.manifest.json.
-  'SteamAPI_SteamFriends_v013',
-  'SteamAPI_SteamApps_v005',
-  'SteamAPI_SteamUserStats_v011',
+  SteamAPI_SteamFriends_v013: true,
+  SteamAPI_SteamApps_v005: true,
+  SteamAPI_SteamUserStats_v011: true,
   // 51-06 Task 2: the bare legacy accessors meta/gen_vtables.ts's
   // `generateDefFile` now exports once per family that has an x86
   // manifest -- resolved per game at runtime via gamelib_bridge.cfg's
@@ -89,11 +95,11 @@ export const SHIM_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   // it. 51-11 added the SteamUtils/SteamApps/SteamUserStats bare
   // accessors; Hoard's (63000) own measured versions are now served too
   // (261021-pgx).
-  'SteamUser',
-  'SteamFriends',
-  'SteamUtils',
-  'SteamApps',
-  'SteamUserStats',
+  SteamUser: true,
+  SteamFriends: true,
+  SteamUtils: true,
+  SteamApps: true,
+  SteamUserStats: true,
   // 51-14 Task 1: the second/last-group families (ROADMAP sub-decision 1)
   // -- ISteamRemoteStorage (cloud-disabled), ISteamMatchmaking /
   // ISteamMatchmakingServers / ISteamNetworking (unavailable). Flat
@@ -104,33 +110,33 @@ export const SHIM_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   // RemoteStorage version, isteamremotestorage010.manifest.json), then
   // the four bare legacy accessors meta/gen_vtables.ts's generateDefFile
   // now exports for these families.
-  'SteamAPI_SteamRemoteStorage_v005',
-  'SteamAPI_SteamMatchMaking_v009',
+  SteamAPI_SteamRemoteStorage_v005: true,
+  SteamAPI_SteamMatchMaking_v009: true,
   // 58-03: the SDK/Steamworks.NET spelling (alias of the line above).
-  'SteamAPI_SteamMatchmaking_v009',
-  'SteamAPI_SteamMatchMakingServers_v002',
-  'SteamAPI_SteamNetworking_v005',
-  'SteamAPI_SteamRemoteStorage_v010',
-  'SteamRemoteStorage',
-  'SteamMatchmaking',
-  'SteamMatchmakingServers',
-  'SteamNetworking',
+  SteamAPI_SteamMatchmaking_v009: true,
+  SteamAPI_SteamMatchMakingServers_v002: true,
+  SteamAPI_SteamNetworking_v005: true,
+  SteamAPI_SteamRemoteStorage_v010: true,
+  SteamRemoteStorage: true,
+  SteamMatchmaking: true,
+  SteamMatchmakingServers: true,
+  SteamNetworking: true,
   // 51-14 Task 2 / 51-RESEARCH Pitfall 2: XCOM's nine SteamGameServer*
   // bare imports (plus two accessors no acceptance-set title imports yet)
   // -- meta/gen_vtables.ts's GAMESERVER_FLAT_STUBS, cdecl flat exports,
   // never manifest-driven.
-  'SteamGameServer_Init',
-  'SteamGameServer_Shutdown',
-  'SteamGameServer_RunCallbacks',
-  'SteamGameServer_BSecure',
-  'SteamGameServer_GetSteamID',
-  'SteamGameServer_GetHSteamPipe',
-  'SteamGameServer_GetHSteamUser',
-  'SteamGameServer',
-  'SteamGameServerStats',
-  'SteamGameServerNetworking',
-  'SteamGameServerUtils'
-])
+  SteamGameServer_Init: true,
+  SteamGameServer_Shutdown: true,
+  SteamGameServer_RunCallbacks: true,
+  SteamGameServer_BSecure: true,
+  SteamGameServer_GetSteamID: true,
+  SteamGameServer_GetHSteamPipe: true,
+  SteamGameServer_GetHSteamUser: true,
+  SteamGameServer: true,
+  SteamGameServerStats: true,
+  SteamGameServerNetworking: true,
+  SteamGameServerUtils: true
+})
 
 // 51-15: D-51-13 GO -- the Win64 shim ships. Mirrors
 // native/steam-bridge/generated/steam_api64.def's EXPORTS list exactly. It
@@ -143,8 +149,10 @@ export const SHIM_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
 // the .def and committed; shimCoverage.test.ts still verifies it against the
 // committed .def in both directions (RESEARCH Pitfall 5). The x86
 // SHIM_EXPORTED_SYMBOLS above stays hand-pinned and unchanged.
-export const SHIM64_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set(
-  SHIM64_GENERATED_EXPORTS
+export const SHIM64_EXPORTED_SYMBOLS: SymbolTable = Object.freeze(
+  Object.fromEntries(
+    SHIM64_GENERATED_EXPORTS.map((name) => [name, true] as const)
+  ) as Record<string, true>
 )
 
 /** A single served interface version's coverage mode: `'wire'` means the
@@ -160,60 +168,62 @@ interface ServedInterface {
 // end-to-end (ISteamUser, ISteamFriends), both fully wired (not stubs).
 // Later Phase 51 plans add more entries here as they wire more interfaces --
 // this module is the SOLE place that list grows, never a second copy.
-export const SHIM_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
+export function shimServedInterfaceVersions(): ReadonlyMap<
   string,
   ServedInterface
-> = new Map([
-  ['SteamUser023', { family: 'SteamUser', mode: 'wire' }],
-  ['SteamFriends018', { family: 'SteamFriends', mode: 'wire' }],
-  // 51-11: XCOM's (200510) measured first-group + User/Friends versions.
-  // 'wire' here follows the same precedent as SteamUser023/SteamFriends018
-  // above -- the VERSION is served (its bare accessor resolves to a real
-  // helper-backed instance) even though most of its individual methods
-  // are mode 'stub' per meta/sdk/wire-policy.json; D-51-02's one-time
-  // notice is what tells the user which parts are truthful vs. stubbed.
-  ['SteamUser016', { family: 'SteamUser', mode: 'wire' }],
-  ['SteamFriends011', { family: 'SteamFriends', mode: 'wire' }],
-  ['SteamUtils005', { family: 'SteamUtils', mode: 'wire' }],
-  ['STEAMAPPS_INTERFACE_VERSION004', { family: 'SteamApps', mode: 'wire' }],
-  [
-    'STEAMUSERSTATS_INTERFACE_VERSION010',
-    { family: 'SteamUserStats', mode: 'wire' }
-  ],
-  // 261021-pgx: Hoard's (63000) measured versions -- SteamUser016/
-  // SteamUtils005 above already match Hoard's own measured strings; these
-  // 3 are the versions Hoard needs that XCOM didn't.
-  ['SteamFriends013', { family: 'SteamFriends', mode: 'wire' }],
-  ['STEAMAPPS_INTERFACE_VERSION005', { family: 'SteamApps', mode: 'wire' }],
-  [
-    'STEAMUSERSTATS_INTERFACE_VERSION011',
-    { family: 'SteamUserStats', mode: 'wire' }
-  ],
-  // 51-14: the second/last-group families -- served, but 'stub' (not
-  // 'wire'): ROADMAP sub-decision 1 answers ISteamRemoteStorage as
-  // cloud-disabled and ISteamMatchmaking/ISteamMatchmakingServers/
-  // ISteamNetworking as unavailable (P2P join stays out of scope per
-  // 24-SPEC). D-51-02's one-time notice is what tells the user these
-  // parts are stubbed.
-  [
-    'STEAMREMOTESTORAGE_INTERFACE_VERSION005',
-    { family: 'SteamRemoteStorage', mode: 'stub' }
-  ],
-  // D-07 / 58-12: lobbies are wired to the real Mac Steam. D-11: this
-  // manifest is shared, so the x86 shim is wired too, but x86 is not
-  // live-verified.
-  ['SteamMatchMaking009', { family: 'SteamMatchMaking', mode: 'wire' }],
-  [
-    'SteamMatchMakingServers002',
-    { family: 'SteamMatchMakingServers', mode: 'stub' }
-  ],
-  ['SteamNetworking005', { family: 'SteamNetworking', mode: 'stub' }],
-  // Hoard's (63000) own measured RemoteStorage version.
-  [
-    'STEAMREMOTESTORAGE_INTERFACE_VERSION010',
-    { family: 'SteamRemoteStorage', mode: 'stub' }
-  ]
-])
+> {
+  return new Map([
+    ['SteamUser023', { family: 'SteamUser', mode: 'wire' }],
+    ['SteamFriends018', { family: 'SteamFriends', mode: 'wire' }],
+    // 51-11: XCOM's (200510) measured first-group + User/Friends versions.
+    // 'wire' here follows the same precedent as SteamUser023/SteamFriends018
+    // above -- the VERSION is served (its bare accessor resolves to a real
+    // helper-backed instance) even though most of its individual methods
+    // are mode 'stub' per meta/sdk/wire-policy.json; D-51-02's one-time
+    // notice is what tells the user which parts are truthful vs. stubbed.
+    ['SteamUser016', { family: 'SteamUser', mode: 'wire' }],
+    ['SteamFriends011', { family: 'SteamFriends', mode: 'wire' }],
+    ['SteamUtils005', { family: 'SteamUtils', mode: 'wire' }],
+    ['STEAMAPPS_INTERFACE_VERSION004', { family: 'SteamApps', mode: 'wire' }],
+    [
+      'STEAMUSERSTATS_INTERFACE_VERSION010',
+      { family: 'SteamUserStats', mode: 'wire' }
+    ],
+    // 261021-pgx: Hoard's (63000) measured versions -- SteamUser016/
+    // SteamUtils005 above already match Hoard's own measured strings; these
+    // 3 are the versions Hoard needs that XCOM didn't.
+    ['SteamFriends013', { family: 'SteamFriends', mode: 'wire' }],
+    ['STEAMAPPS_INTERFACE_VERSION005', { family: 'SteamApps', mode: 'wire' }],
+    [
+      'STEAMUSERSTATS_INTERFACE_VERSION011',
+      { family: 'SteamUserStats', mode: 'wire' }
+    ],
+    // 51-14: the second/last-group families -- served, but 'stub' (not
+    // 'wire'): ROADMAP sub-decision 1 answers ISteamRemoteStorage as
+    // cloud-disabled and ISteamMatchmaking/ISteamMatchmakingServers/
+    // ISteamNetworking as unavailable (P2P join stays out of scope per
+    // 24-SPEC). D-51-02's one-time notice is what tells the user these
+    // parts are stubbed.
+    [
+      'STEAMREMOTESTORAGE_INTERFACE_VERSION005',
+      { family: 'SteamRemoteStorage', mode: 'stub' }
+    ],
+    // D-07 / 58-12: lobbies are wired to the real Mac Steam. D-11: this
+    // manifest is shared, so the x86 shim is wired too, but x86 is not
+    // live-verified.
+    ['SteamMatchMaking009', { family: 'SteamMatchMaking', mode: 'wire' }],
+    [
+      'SteamMatchMakingServers002',
+      { family: 'SteamMatchMakingServers', mode: 'stub' }
+    ],
+    ['SteamNetworking005', { family: 'SteamNetworking', mode: 'stub' }],
+    // Hoard's (63000) own measured RemoteStorage version.
+    [
+      'STEAMREMOTESTORAGE_INTERFACE_VERSION010',
+      { family: 'SteamRemoteStorage', mode: 'stub' }
+    ]
+  ])
+}
 
 // 51-15: D-51-13 GO -- one entry per manifest whose `arches` includes
 // x64. 261021-pgx's STEAMUSERSTATS_INTERFACE_VERSION011 is the one SHARED
@@ -236,190 +246,204 @@ export const SHIM_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
 // notice (no stubbed:SteamClient verdict). The callback-pointer setters and
 // SetLocalIPBinding were always local stubs. The other
 // x64-only families stay 'stub' -- never measured, never invented.
-export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
+export function shim64ServedInterfaceVersions(): ReadonlyMap<
   string,
   ServedInterface
-> = new Map([
-  [
-    'STEAMUSERSTATS_INTERFACE_VERSION011',
-    { family: 'SteamUserStats', mode: 'wire' }
-  ],
-  ['SteamClient017', { family: 'SteamClient', mode: 'wire' }],
-  ['SteamClient014', { family: 'SteamClient', mode: 'wire' }],
-  ['SteamUser019', { family: 'SteamUser', mode: 'wire' }],
-  ['SteamFriends015', { family: 'SteamFriends', mode: 'wire' }],
-  ['SteamUtils008', { family: 'SteamUtils', mode: 'wire' }],
-  ['STEAMAPPS_INTERFACE_VERSION008', { family: 'SteamApps', mode: 'wire' }],
-  [
-    'STEAMREMOTESTORAGE_INTERFACE_VERSION013',
-    { family: 'SteamRemoteStorage', mode: 'stub' }
-  ],
-  // The three shared stub manifests (51-14), arches widened to x64 this
-  // plan -- same stub behavior, arch-neutral (P2P join stays out of
-  // scope, 24-SPEC).
-  // D-07 / 58-12: wired (see the x86 entry; same shared manifest).
-  ['SteamMatchMaking009', { family: 'SteamMatchMaking', mode: 'wire' }],
-  [
-    'SteamMatchMakingServers002',
-    { family: 'SteamMatchMakingServers', mode: 'stub' }
-  ],
-  ['SteamNetworking005', { family: 'SteamNetworking', mode: 'stub' }],
-  // Phase 52 gap closure 52-13: Grim Dawn (219990) x64/Engine.dll names these
-  // three versions. SteamUser023 is wire: the exact native accessor
-  // SteamAPI_SteamUser_v023 backs it with the same dispatch as the x86 entry.
-  // The other two are stub (51-14 sub-decision 1: cloud disabled, P2P
-  // unavailable).
-  ['SteamUser023', { family: 'SteamUser', mode: 'wire' }],
-  // D-07 / 58-13: legacy P2P is wired to the real Mac Steam. Four socket
-  // methods stay local stubs because they carry SteamIPAddress_t by value or
-  // pointer (CreateListenSocket, CreateConnectionSocket, GetSocketInfo,
-  // GetListenSocketInfo; no measured need, D-09).
-  ['SteamNetworking006', { family: 'SteamNetworking', mode: 'wire' }],
-  // 58-03 (D-07): current-version baseline for the multiplayer families, each
-  // extracted from its own Proton block, x64 only (D-11).
-  // 58-21: the server browser is wired (all 18 methods; response objects are
-  // relayed from the helper through CONTROL slot 12). D-07 baseline served it
-  // unconditionally (plan-check decision), although 58-17 measured
-  // MMServers as not observed for Schedule I.
-  [
-    'SteamMatchMakingServers003',
-    { family: 'SteamMatchMakingServers', mode: 'wire' }
-  ],
-  // D-07 / 58-15: connect, listen, accept, close, send, receive, info, status,
-  // identity, authentication, poll groups, lanes and ResetIdentity are wired;
-  // the dedicated-server, custom-signaling, certificate and FakeIP methods stay
-  // local stubs (D-09, D-10) and the destructor slot is never called.
-  // 58-28 (WR-08) coverage limit: a single message above 61260 bytes is
-  // dropped with an `oversize` NET line (the helper's record ceiling). GNS
-  // allows reliable messages up to 512 KB, so titles that send such messages
-  // are not covered.
-  [
-    'SteamNetworkingSockets013',
-    { family: 'SteamNetworkingSockets', mode: 'wire' }
-  ],
-  // D-07 / 58-18: the title's own older import (static string table, 58-17),
-  // extracted from its own Proton block (no aliasing). Wired only where the
-  // parameter list equals SteamNetworkingSockets013's; the rest stay stubs.
-  [
-    'SteamNetworkingSockets012',
-    { family: 'SteamNetworkingSockets', mode: 'wire' }
-  ],
-  // D-07 / 58-14: every virtual except SetDebugOutputFunction is wired (or
-  // answered shim-side from the identity, message-pool and config-store
-  // block); SetDebugOutputFunction is stored locally and never forwarded.
-  ['SteamNetworkingUtils004', { family: 'SteamNetworkingUtils', mode: 'wire' }],
-  // D-07 / 58-16: all six virtuals are wired; ReceiveMessagesOnChannel shares
-  // the 58-15 out-messages kind and carry queue.
-  // 58-28 (WR-08): same 61260-byte single-message ceiling as Sockets (dropped
-  // with an `oversize` NET line); CloseChannelWithUser does not clear the carry
-  // queue because queues are keyed by channel, not by peer.
-  [
-    'SteamNetworkingMessages002',
-    { family: 'SteamNetworkingMessages', mode: 'wire' }
-  ],
-  [
-    'STEAMREMOTESTORAGE_INTERFACE_VERSION016',
-    { family: 'SteamRemoteStorage', mode: 'stub' }
-  ],
-  // Phase 53 (53-01, D-53-03 / D-53-11): each version below is extracted from
-  // its own Proton VTABLE block (never aliased from a neighbour version).
-  // 'wire' where the manifest carries any wire method, else 'stub'.
-  ['SteamClient020', { family: 'SteamClient', mode: 'wire' }],
-  ['SteamClient021', { family: 'SteamClient', mode: 'wire' }],
-  ['SteamUser021', { family: 'SteamUser', mode: 'wire' }],
-  ['SteamFriends017', { family: 'SteamFriends', mode: 'wire' }],
-  ['SteamFriends018', { family: 'SteamFriends', mode: 'wire' }],
-  ['SteamUtils010', { family: 'SteamUtils', mode: 'wire' }],
-  [
-    'STEAMUSERSTATS_INTERFACE_VERSION012',
-    { family: 'SteamUserStats', mode: 'wire' }
-  ],
-  [
-    'STEAMUSERSTATS_INTERFACE_VERSION013',
-    { family: 'SteamUserStats', mode: 'wire' }
-  ],
-  ['SteamInput006', { family: 'SteamInput', mode: 'stub' }],
-  ['SteamGameServer014', { family: 'SteamGameServer', mode: 'stub' }],
-  ['SteamGameServer015', { family: 'SteamGameServer', mode: 'stub' }],
-  ['SteamGameServerStats001', { family: 'SteamGameServerStats', mode: 'stub' }],
-  // Phase 53 gap closure (53-12, D-53-06 measured / D-53-03): Steamworks.NET
-  // CSteamAPIContext.Init set + measured misses; each extracted from its own
-  // Proton VTABLE block. 'wire' only where the manifest carries a wire method.
-  [
-    'STEAMSCREENSHOTS_INTERFACE_VERSION003',
-    { family: 'SteamScreenshots', mode: 'stub' }
-  ],
-  ['SteamMatchGameSearch001', { family: 'SteamGameSearch', mode: 'stub' }],
-  ['STEAMHTTP_INTERFACE_VERSION003', { family: 'SteamHTTP', mode: 'stub' }],
-  ['STEAMUGC_INTERFACE_VERSION016', { family: 'SteamUGC', mode: 'stub' }],
-  ['STEAMUGC_INTERFACE_VERSION017', { family: 'SteamUGC', mode: 'stub' }],
-  ['STEAMUGC_INTERFACE_VERSION020', { family: 'SteamUGC', mode: 'stub' }],
-  [
-    'STEAMAPPLIST_INTERFACE_VERSION001',
-    { family: 'SteamAppList', mode: 'stub' }
-  ],
-  ['STEAMMUSIC_INTERFACE_VERSION001', { family: 'SteamMusic', mode: 'stub' }],
-  [
-    'STEAMMUSICREMOTE_INTERFACE_VERSION001',
-    { family: 'SteamMusicRemote', mode: 'stub' }
-  ],
-  [
-    'STEAMHTMLSURFACE_INTERFACE_VERSION_005',
-    { family: 'SteamHTMLSurface', mode: 'stub' }
-  ],
-  ['STEAMINVENTORY_INTERFACE_V003', { family: 'SteamInventory', mode: 'stub' }],
-  ['STEAMVIDEO_INTERFACE_V002', { family: 'SteamVideo', mode: 'stub' }],
-  ['STEAMVIDEO_INTERFACE_V007', { family: 'SteamVideo', mode: 'stub' }],
-  ['STEAMTIMELINE_INTERFACE_V001', { family: 'SteamTimeline', mode: 'stub' }],
-  [
-    'STEAMPARENTALSETTINGS_INTERFACE_VERSION001',
-    { family: 'SteamParentalSettings', mode: 'stub' }
-  ],
-  ['SteamParties002', { family: 'SteamParties', mode: 'stub' }],
-  [
-    'STEAMREMOTEPLAY_INTERFACE_VERSION001',
-    { family: 'SteamRemotePlay', mode: 'stub' }
-  ],
-  [
-    'STEAMREMOTEPLAY_INTERFACE_VERSION002',
-    { family: 'SteamRemotePlay', mode: 'stub' }
-  ],
-  ['SteamUtils009', { family: 'SteamUtils', mode: 'wire' }],
-  ['SteamController006', { family: 'SteamController', mode: 'stub' }],
-  ['SteamGameServer012', { family: 'SteamGameServer', mode: 'stub' }],
-  // Same family, other versions the sampled titles request (a half-served
-  // family would defeat the x64 null-object answer, Pitfall 4): ELEX asks
-  // STEAMUGC_INTERFACE_VERSION010, Ranch Simulator SteamController008.
-  ['SteamController008', { family: 'SteamController', mode: 'stub' }],
-  ['STEAMUGC_INTERFACE_VERSION010', { family: 'SteamUGC', mode: 'stub' }],
-  // quick 261025-t7i (D-53-03): Unclaimed World (284100) x64 loads
-  // CSteamworks64.dll (Steamworks.NET 7.0.0 / SDK 1.34), whose context init
-  // requests these ten versions. Each is extracted from its own Proton VTABLE
-  // block. Without the rows, findUnservableInterfaceVersions counts them as
-  // half-served-family skew and the j4l guard withholds the shim once the
-  // original DLL is restored. 'wire' only where the manifest carries a wire
-  // method: User018, Utils007 and Apps007 do (Apps007 has 14, so it is wire
-  // like Apps008).
-  ['SteamUser018', { family: 'SteamUser', mode: 'wire' }],
-  ['SteamUtils007', { family: 'SteamUtils', mode: 'wire' }],
-  ['STEAMAPPS_INTERFACE_VERSION007', { family: 'SteamApps', mode: 'wire' }],
-  [
-    'STEAMREMOTESTORAGE_INTERFACE_VERSION012',
-    { family: 'SteamRemoteStorage', mode: 'stub' }
-  ],
-  ['STEAMUGC_INTERFACE_VERSION007', { family: 'SteamUGC', mode: 'stub' }],
-  ['STEAMHTTP_INTERFACE_VERSION002', { family: 'SteamHTTP', mode: 'stub' }],
-  [
-    'STEAMSCREENSHOTS_INTERFACE_VERSION002',
-    { family: 'SteamScreenshots', mode: 'stub' }
-  ],
-  [
-    'STEAMHTMLSURFACE_INTERFACE_VERSION_003',
-    { family: 'SteamHTMLSurface', mode: 'stub' }
-  ],
-  ['STEAMINVENTORY_INTERFACE_V001', { family: 'SteamInventory', mode: 'stub' }],
-  ['STEAMVIDEO_INTERFACE_V001', { family: 'SteamVideo', mode: 'stub' }]
-])
+> {
+  return new Map([
+    [
+      'STEAMUSERSTATS_INTERFACE_VERSION011',
+      { family: 'SteamUserStats', mode: 'wire' }
+    ],
+    ['SteamClient017', { family: 'SteamClient', mode: 'wire' }],
+    ['SteamClient014', { family: 'SteamClient', mode: 'wire' }],
+    ['SteamUser019', { family: 'SteamUser', mode: 'wire' }],
+    ['SteamFriends015', { family: 'SteamFriends', mode: 'wire' }],
+    ['SteamUtils008', { family: 'SteamUtils', mode: 'wire' }],
+    ['STEAMAPPS_INTERFACE_VERSION008', { family: 'SteamApps', mode: 'wire' }],
+    [
+      'STEAMREMOTESTORAGE_INTERFACE_VERSION013',
+      { family: 'SteamRemoteStorage', mode: 'stub' }
+    ],
+    // The three shared stub manifests (51-14), arches widened to x64 this
+    // plan -- same stub behavior, arch-neutral (P2P join stays out of
+    // scope, 24-SPEC).
+    // D-07 / 58-12: wired (see the x86 entry; same shared manifest).
+    ['SteamMatchMaking009', { family: 'SteamMatchMaking', mode: 'wire' }],
+    [
+      'SteamMatchMakingServers002',
+      { family: 'SteamMatchMakingServers', mode: 'stub' }
+    ],
+    ['SteamNetworking005', { family: 'SteamNetworking', mode: 'stub' }],
+    // Phase 52 gap closure 52-13: Grim Dawn (219990) x64/Engine.dll names these
+    // three versions. SteamUser023 is wire: the exact native accessor
+    // SteamAPI_SteamUser_v023 backs it with the same dispatch as the x86 entry.
+    // The other two are stub (51-14 sub-decision 1: cloud disabled, P2P
+    // unavailable).
+    ['SteamUser023', { family: 'SteamUser', mode: 'wire' }],
+    // D-07 / 58-13: legacy P2P is wired to the real Mac Steam. Four socket
+    // methods stay local stubs because they carry SteamIPAddress_t by value or
+    // pointer (CreateListenSocket, CreateConnectionSocket, GetSocketInfo,
+    // GetListenSocketInfo; no measured need, D-09).
+    ['SteamNetworking006', { family: 'SteamNetworking', mode: 'wire' }],
+    // 58-03 (D-07): current-version baseline for the multiplayer families, each
+    // extracted from its own Proton block, x64 only (D-11).
+    // 58-21: the server browser is wired (all 18 methods; response objects are
+    // relayed from the helper through CONTROL slot 12). D-07 baseline served it
+    // unconditionally (plan-check decision), although 58-17 measured
+    // MMServers as not observed for Schedule I.
+    [
+      'SteamMatchMakingServers003',
+      { family: 'SteamMatchMakingServers', mode: 'wire' }
+    ],
+    // D-07 / 58-15: connect, listen, accept, close, send, receive, info, status,
+    // identity, authentication, poll groups, lanes and ResetIdentity are wired;
+    // the dedicated-server, custom-signaling, certificate and FakeIP methods stay
+    // local stubs (D-09, D-10) and the destructor slot is never called.
+    // 58-28 (WR-08) coverage limit: a single message above 61260 bytes is
+    // dropped with an `oversize` NET line (the helper's record ceiling). GNS
+    // allows reliable messages up to 512 KB, so titles that send such messages
+    // are not covered.
+    [
+      'SteamNetworkingSockets013',
+      { family: 'SteamNetworkingSockets', mode: 'wire' }
+    ],
+    // D-07 / 58-18: the title's own older import (static string table, 58-17),
+    // extracted from its own Proton block (no aliasing). Wired only where the
+    // parameter list equals SteamNetworkingSockets013's; the rest stay stubs.
+    [
+      'SteamNetworkingSockets012',
+      { family: 'SteamNetworkingSockets', mode: 'wire' }
+    ],
+    // D-07 / 58-14: every virtual except SetDebugOutputFunction is wired (or
+    // answered shim-side from the identity, message-pool and config-store
+    // block); SetDebugOutputFunction is stored locally and never forwarded.
+    [
+      'SteamNetworkingUtils004',
+      { family: 'SteamNetworkingUtils', mode: 'wire' }
+    ],
+    // D-07 / 58-16: all six virtuals are wired; ReceiveMessagesOnChannel shares
+    // the 58-15 out-messages kind and carry queue.
+    // 58-28 (WR-08): same 61260-byte single-message ceiling as Sockets (dropped
+    // with an `oversize` NET line); CloseChannelWithUser does not clear the carry
+    // queue because queues are keyed by channel, not by peer.
+    [
+      'SteamNetworkingMessages002',
+      { family: 'SteamNetworkingMessages', mode: 'wire' }
+    ],
+    [
+      'STEAMREMOTESTORAGE_INTERFACE_VERSION016',
+      { family: 'SteamRemoteStorage', mode: 'stub' }
+    ],
+    // Phase 53 (53-01, D-53-03 / D-53-11): each version below is extracted from
+    // its own Proton VTABLE block (never aliased from a neighbour version).
+    // 'wire' where the manifest carries any wire method, else 'stub'.
+    ['SteamClient020', { family: 'SteamClient', mode: 'wire' }],
+    ['SteamClient021', { family: 'SteamClient', mode: 'wire' }],
+    ['SteamUser021', { family: 'SteamUser', mode: 'wire' }],
+    ['SteamFriends017', { family: 'SteamFriends', mode: 'wire' }],
+    ['SteamFriends018', { family: 'SteamFriends', mode: 'wire' }],
+    ['SteamUtils010', { family: 'SteamUtils', mode: 'wire' }],
+    [
+      'STEAMUSERSTATS_INTERFACE_VERSION012',
+      { family: 'SteamUserStats', mode: 'wire' }
+    ],
+    [
+      'STEAMUSERSTATS_INTERFACE_VERSION013',
+      { family: 'SteamUserStats', mode: 'wire' }
+    ],
+    ['SteamInput006', { family: 'SteamInput', mode: 'stub' }],
+    ['SteamGameServer014', { family: 'SteamGameServer', mode: 'stub' }],
+    ['SteamGameServer015', { family: 'SteamGameServer', mode: 'stub' }],
+    [
+      'SteamGameServerStats001',
+      { family: 'SteamGameServerStats', mode: 'stub' }
+    ],
+    // Phase 53 gap closure (53-12, D-53-06 measured / D-53-03): Steamworks.NET
+    // CSteamAPIContext.Init set + measured misses; each extracted from its own
+    // Proton VTABLE block. 'wire' only where the manifest carries a wire method.
+    [
+      'STEAMSCREENSHOTS_INTERFACE_VERSION003',
+      { family: 'SteamScreenshots', mode: 'stub' }
+    ],
+    ['SteamMatchGameSearch001', { family: 'SteamGameSearch', mode: 'stub' }],
+    ['STEAMHTTP_INTERFACE_VERSION003', { family: 'SteamHTTP', mode: 'stub' }],
+    ['STEAMUGC_INTERFACE_VERSION016', { family: 'SteamUGC', mode: 'stub' }],
+    ['STEAMUGC_INTERFACE_VERSION017', { family: 'SteamUGC', mode: 'stub' }],
+    ['STEAMUGC_INTERFACE_VERSION020', { family: 'SteamUGC', mode: 'stub' }],
+    [
+      'STEAMAPPLIST_INTERFACE_VERSION001',
+      { family: 'SteamAppList', mode: 'stub' }
+    ],
+    ['STEAMMUSIC_INTERFACE_VERSION001', { family: 'SteamMusic', mode: 'stub' }],
+    [
+      'STEAMMUSICREMOTE_INTERFACE_VERSION001',
+      { family: 'SteamMusicRemote', mode: 'stub' }
+    ],
+    [
+      'STEAMHTMLSURFACE_INTERFACE_VERSION_005',
+      { family: 'SteamHTMLSurface', mode: 'stub' }
+    ],
+    [
+      'STEAMINVENTORY_INTERFACE_V003',
+      { family: 'SteamInventory', mode: 'stub' }
+    ],
+    ['STEAMVIDEO_INTERFACE_V002', { family: 'SteamVideo', mode: 'stub' }],
+    ['STEAMVIDEO_INTERFACE_V007', { family: 'SteamVideo', mode: 'stub' }],
+    ['STEAMTIMELINE_INTERFACE_V001', { family: 'SteamTimeline', mode: 'stub' }],
+    [
+      'STEAMPARENTALSETTINGS_INTERFACE_VERSION001',
+      { family: 'SteamParentalSettings', mode: 'stub' }
+    ],
+    ['SteamParties002', { family: 'SteamParties', mode: 'stub' }],
+    [
+      'STEAMREMOTEPLAY_INTERFACE_VERSION001',
+      { family: 'SteamRemotePlay', mode: 'stub' }
+    ],
+    [
+      'STEAMREMOTEPLAY_INTERFACE_VERSION002',
+      { family: 'SteamRemotePlay', mode: 'stub' }
+    ],
+    ['SteamUtils009', { family: 'SteamUtils', mode: 'wire' }],
+    ['SteamController006', { family: 'SteamController', mode: 'stub' }],
+    ['SteamGameServer012', { family: 'SteamGameServer', mode: 'stub' }],
+    // Same family, other versions the sampled titles request (a half-served
+    // family would defeat the x64 null-object answer, Pitfall 4): ELEX asks
+    // STEAMUGC_INTERFACE_VERSION010, Ranch Simulator SteamController008.
+    ['SteamController008', { family: 'SteamController', mode: 'stub' }],
+    ['STEAMUGC_INTERFACE_VERSION010', { family: 'SteamUGC', mode: 'stub' }],
+    // quick 261025-t7i (D-53-03): Unclaimed World (284100) x64 loads
+    // CSteamworks64.dll (Steamworks.NET 7.0.0 / SDK 1.34), whose context init
+    // requests these ten versions. Each is extracted from its own Proton VTABLE
+    // block. Without the rows, findUnservableInterfaceVersions counts them as
+    // half-served-family skew and the j4l guard withholds the shim once the
+    // original DLL is restored. 'wire' only where the manifest carries a wire
+    // method: User018, Utils007 and Apps007 do (Apps007 has 14, so it is wire
+    // like Apps008).
+    ['SteamUser018', { family: 'SteamUser', mode: 'wire' }],
+    ['SteamUtils007', { family: 'SteamUtils', mode: 'wire' }],
+    ['STEAMAPPS_INTERFACE_VERSION007', { family: 'SteamApps', mode: 'wire' }],
+    [
+      'STEAMREMOTESTORAGE_INTERFACE_VERSION012',
+      { family: 'SteamRemoteStorage', mode: 'stub' }
+    ],
+    ['STEAMUGC_INTERFACE_VERSION007', { family: 'SteamUGC', mode: 'stub' }],
+    ['STEAMHTTP_INTERFACE_VERSION002', { family: 'SteamHTTP', mode: 'stub' }],
+    [
+      'STEAMSCREENSHOTS_INTERFACE_VERSION002',
+      { family: 'SteamScreenshots', mode: 'stub' }
+    ],
+    [
+      'STEAMHTMLSURFACE_INTERFACE_VERSION_003',
+      { family: 'SteamHTMLSurface', mode: 'stub' }
+    ],
+    [
+      'STEAMINVENTORY_INTERFACE_V001',
+      { family: 'SteamInventory', mode: 'stub' }
+    ],
+    ['STEAMVIDEO_INTERFACE_V001', { family: 'SteamVideo', mode: 'stub' }]
+  ])
+}
 
 // 51-15: D-51-13 GO -- the Win64 shim answers an unserved required
 // interface version with a null-object fallback (a real pointer to a
@@ -436,8 +460,8 @@ export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
 export const SHIM_X64_NULL_OBJECT_FALLBACK = true
 
 interface ExportSetVersionInputs {
-  x86ExportedSymbols: ReadonlySet<string>
-  x64ExportedSymbols: ReadonlySet<string>
+  x86ExportedSymbols: SymbolTable
+  x64ExportedSymbols: SymbolTable
   x86ServedVersions: ReadonlyMap<string, ServedInterface>
   x64ServedVersions: ReadonlyMap<string, ServedInterface>
   x64NullObjectFallback: boolean
@@ -467,8 +491,8 @@ function sortedServedEntries(
 export function computeExportSetVersion(
   inputs: ExportSetVersionInputs
 ): string {
-  const x86 = [...inputs.x86ExportedSymbols].sort().join(',')
-  const x64 = [...inputs.x64ExportedSymbols].sort().join(',')
+  const x86 = Object.keys(inputs.x86ExportedSymbols).sort().join(',')
+  const x64 = Object.keys(inputs.x64ExportedSymbols).sort().join(',')
   const served = [
     ...sortedServedEntries(inputs.x86ServedVersions),
     ...sortedServedEntries(inputs.x64ServedVersions)
@@ -485,8 +509,8 @@ export function computeExportSetVersion(
 export const SHIM_EXPORT_SET_VERSION = computeExportSetVersion({
   x86ExportedSymbols: SHIM_EXPORTED_SYMBOLS,
   x64ExportedSymbols: SHIM64_EXPORTED_SYMBOLS,
-  x86ServedVersions: SHIM_SERVED_INTERFACE_VERSIONS,
-  x64ServedVersions: SHIM64_SERVED_INTERFACE_VERSIONS,
+  x86ServedVersions: shimServedInterfaceVersions(),
+  x64ServedVersions: shim64ServedInterfaceVersions(),
   x64NullObjectFallback: SHIM_X64_NULL_OBJECT_FALLBACK
 })
 
@@ -512,8 +536,8 @@ interface ShimCoverageResult {
 }
 
 interface ShimCoverageSets {
-  x86ExportedSymbols: ReadonlySet<string>
-  x64ExportedSymbols: ReadonlySet<string>
+  x86ExportedSymbols: SymbolTable
+  x64ExportedSymbols: SymbolTable
   x86ServedVersions: ReadonlyMap<string, ServedInterface>
   x64ServedVersions: ReadonlyMap<string, ServedInterface>
   x64NullObjectFallback: boolean
@@ -543,7 +567,7 @@ export function evaluateShimCoverageWith(
   const stubbedInterfaces: string[] = []
 
   for (const symbol of input.symbols) {
-    if (!exportedSymbols.has(symbol)) {
+    if (!Object.hasOwn(exportedSymbols, symbol)) {
       missingSymbols.push(symbol)
     }
   }
@@ -598,8 +622,8 @@ export function evaluateShimCoverage(
     {
       x86ExportedSymbols: SHIM_EXPORTED_SYMBOLS,
       x64ExportedSymbols: SHIM64_EXPORTED_SYMBOLS,
-      x86ServedVersions: SHIM_SERVED_INTERFACE_VERSIONS,
-      x64ServedVersions: SHIM64_SERVED_INTERFACE_VERSIONS,
+      x86ServedVersions: shimServedInterfaceVersions(),
+      x64ServedVersions: shim64ServedInterfaceVersions(),
       x64NullObjectFallback: SHIM_X64_NULL_OBJECT_FALLBACK
     },
     input
@@ -651,8 +675,8 @@ export function findUnservableInterfaceVersions(input: {
 }): string[] {
   const served =
     input.arch === 'x86'
-      ? SHIM_SERVED_INTERFACE_VERSIONS
-      : SHIM64_SERVED_INTERFACE_VERSIONS
+      ? shimServedInterfaceVersions()
+      : shim64ServedInterfaceVersions()
   const out: string[] = []
   for (const [family, version] of Object.entries(
     input.requiredInterfaceVersions
@@ -683,14 +707,14 @@ export function findUnservableInterfaceVersions(input: {
  * stats, utils). These are exactly the families the served maps mark
  * `mode: 'wire'`. A null object here makes the game quit or fault.
  */
-export const CORE_STARTUP_FAMILIES: ReadonlySet<string> = new Set([
-  'SteamClient',
-  'SteamUser',
-  'SteamFriends',
-  'SteamUtils',
-  'SteamApps',
-  'SteamUserStats'
-])
+export const CORE_STARTUP_FAMILIES: SymbolTable = Object.freeze({
+  SteamClient: true,
+  SteamUser: true,
+  SteamFriends: true,
+  SteamUtils: true,
+  SteamApps: true,
+  SteamUserStats: true
+})
 
 /**
  * Quick 261026-mhg (operator option a, 2026-10-26): splits the raw
@@ -715,7 +739,7 @@ export function classifyUnservableInterfaceVersions(input: {
   )) {
     if (!unservable.has(version)) continue
     const isBlocking =
-      CORE_STARTUP_FAMILIES.has(family) ||
+      Object.hasOwn(CORE_STARTUP_FAMILIES, family) ||
       !isNullObjectEligible(input.arch, input.symbols, family)
     const list = isBlocking ? blocking : nonCore
     if (
@@ -758,7 +782,7 @@ export function findRunnerUnservedExports(input: {
     input.arch === 'x86' ? SHIM_EXPORTED_SYMBOLS : SHIM64_EXPORTED_SYMBOLS
   const original = input.originalExports
   return [...input.runnerNames]
-    .filter((n) => !served.has(n) && (!original || original.has(n)))
+    .filter((n) => !Object.hasOwn(served, n) && (!original || original.has(n)))
     .sort()
 }
 
@@ -781,9 +805,9 @@ export function isScanVerdictNowCovered(scan: {
     scan.arch === 'x86' ? SHIM_EXPORTED_SYMBOLS : SHIM64_EXPORTED_SYMBOLS
   const served =
     scan.arch === 'x86'
-      ? SHIM_SERVED_INTERFACE_VERSIONS
-      : SHIM64_SERVED_INTERFACE_VERSIONS
+      ? shimServedInterfaceVersions()
+      : shim64ServedInterfaceVersions()
   return scan.missingSymbols.every(
-    (entry) => exported.has(entry) || served.has(entry)
+    (entry) => Object.hasOwn(exported, entry) || served.has(entry)
   )
 }

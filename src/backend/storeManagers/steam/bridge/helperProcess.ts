@@ -63,11 +63,6 @@ import {
   FrameTooLargeError
 } from './protocol'
 import { NUMERIC_APP_ID } from '../gameConstants'
-import {
-  helpers,
-  stopBridgeHelper,
-  getSteamWaitScheduleOverride
-} from './helperRegistry'
 import type { BridgeHelperEntry } from './helperRegistry'
 import { classifyInitFlatError, ensureHelperSpawned } from './helperSpawn'
 import type { HelperSpawnDeps, InitFlatErrorCause } from './helperSpawn'
@@ -77,15 +72,8 @@ import type { HelperSpawnDeps, InitFlatErrorCause } from './helperSpawn'
 // The PORT is no longer fixed -- see BridgeHelperEntry.port below.
 const BRIDGE_HELPER_HOST = '127.0.0.1'
 
-// How long a launch keeps waiting for Steam to start / sign in. A cold Mac
-// Steam launch plus update check plus auto sign-in is tens of seconds --
-// UNMEASURED (the live gate records the real figure). 60 s is long enough
-// that a normal cold start lands inside it, while a user left at Steam's
-// login screen still gets an answer within a minute.
-const STEAM_WAIT_BUDGET_MS = 60_000
-// Gap between respawns. Each failing attempt is a sub-second fast-fail spawn
-// writing ~4 log lines, so 3 s caps the loop at ~20 spawns.
-const STEAM_RETRY_INTERVAL_MS = 3_000
+// The Steam wait budget and respawn interval are the registry's steamWaitSchedule
+// (DEFAULT_STEAM_WAIT_SCHEDULE in helperRegistry.ts is the production value).
 
 // Bounded-poll budget (D-06, T-24-10 -- observable failure, never a hang).
 // Reused across the wait stages: (1) the freshly-spawned process reporting
@@ -428,8 +416,8 @@ async function startSteamDefault(
  *  - 261027-aue: a full helper whose InitFlat failed with a known Steam-state
  *    text (Steam quit / still signing in) enters a bounded wait: Steam is
  *    started when it is not running, `onWaitingForSteam` fires once, and a
- *    fresh helper is respawned every STEAM_RETRY_INTERVAL_MS until it is
- *    ready or STEAM_WAIT_BUDGET_MS passes. Budget exhausted ->
+ *    fresh helper is respawned every steamWaitSchedule.intervalMs until it is
+ *    ready or steamWaitSchedule.budgetMs passes. Budget exhausted ->
  *    `{ status: 'steam-not-running' | 'steam-not-signed-in', ready: false }`
  *    with exactly one `steamBridgeSetupRequired` (fallbackAvailable false).
  *    The 480 fallback is never tried for these causes -- Steam-level failures
@@ -456,8 +444,9 @@ export async function ensureBridgeHelperReady(
   }
 
   // InitFlat runs once per helper process: a failed one can never recover.
-  if (helpers.get(appId)?.initOutcome === 'failed') {
-    stopBridgeHelper(appId)
+  const registry = deps.bridgeHelpers
+  if (registry.helpers.get(appId)?.initOutcome === 'failed') {
+    registry.stop(appId)
   }
 
   let entry = ensureHelperSpawned(deps, appId)
@@ -466,10 +455,7 @@ export async function ensureBridgeHelperReady(
   let waitStart: number | null = null
   let steamStarted = false
   let notified = false
-  const budgetMs =
-    getSteamWaitScheduleOverride()?.budgetMs ?? STEAM_WAIT_BUDGET_MS
-  const intervalMs =
-    getSteamWaitScheduleOverride()?.intervalMs ?? STEAM_RETRY_INTERVAL_MS
+  const { budgetMs, intervalMs } = registry.steamWaitSchedule
   while (probe.outcome === 'steam-wait') {
     const cause = probe.cause as InitFlatErrorCause
     waitStart ??= Date.now()
@@ -481,7 +467,7 @@ export async function ensureBridgeHelperReady(
       steamStarted = true
       await (options.startSteam ?? (() => startSteamDefault(deps)))()
     }
-    stopBridgeHelper(appId)
+    registry.stop(appId)
     await sleep(intervalMs)
     // Budget is checked BEFORE every new spawn (T-aue-02).
     const elapsed = Date.now() - waitStart
@@ -571,7 +557,7 @@ export async function ensureBridgeHelperReady(
     `ensureBridgeHelperReady: full-AppID WHOAMI failed for appId ${appId} -- attempting an identity-only (480) fallback (D-51-04)`,
     LogPrefix.Steam
   )
-  stopBridgeHelper(appId)
+  registry.stop(appId)
   const fallbackEntry = ensureHelperSpawned(deps, appId, { identityOnly: true })
   const fallbackProbe = await probeHelperReadiness(fallbackEntry)
 
