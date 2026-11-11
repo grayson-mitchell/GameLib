@@ -448,7 +448,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
     // (games.test.ts, MAC32-03 Task 3) override this explicitly. Prevents an
     // unhandled rejection from the fire-and-forget promptI386Recovery call
     // on an i386 flip.
-    ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
+    dialog.showMessageBox.mockResolvedValue({ response: 1 })
   })
 
   afterEach(() => {
@@ -852,7 +852,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       art_square: '',
       extra: { reqs: [] }
     })
-    ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
+    dialog.showMessageBox.mockResolvedValue({ response: 1 })
 
     await verifyMacArchGroundTruth(
       steamTestDeps,
@@ -908,7 +908,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
     })
     // Cancel path — promptI386Recovery is a no-op, keeps this test focused
     // on the propagation fix rather than the recovery dialog flow.
-    ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
+    dialog.showMessageBox.mockResolvedValue({ response: 1 })
 
     await verifyMacArchGroundTruth(
       steamTestDeps,
@@ -950,7 +950,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       art_square: '',
       extra: { reqs: [] }
     })
-    ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
+    dialog.showMessageBox.mockResolvedValue({ response: 1 })
 
     await expect(
       verifyMacArchGroundTruth(steamTestDeps, APP_ID, INSTALL_PATH, 'native')
@@ -1029,8 +1029,8 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
       art_cover: 'cover.jpg'
     })
     ;(steamMetadataStore.set as jest.Mock).mockReset()
-    ;(dialog.showMessageBox as jest.Mock).mockReset()
-    ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
+    dialog.showMessageBox.mockReset()
+    dialog.showMessageBox.mockResolvedValue({ response: 1 })
   })
 
   afterEach(() => {

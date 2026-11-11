@@ -289,9 +289,7 @@ describe('known-fix macArch 32 routing', () => {
     expect(stored?.mac_arch_source).toBe('known-fix')
     expect(stored?.mac_arch_verified).not.toBe(true)
     expect(downloadSteamDepots).not.toHaveBeenCalled()
-    const urls = (shell.openExternal as jest.Mock).mock.calls.map((c) =>
-      String(c[0])
-    )
+    const urls = shell.openExternal.mock.calls.map((c) => String(c[0]))
     expect(urls.some((u) => u.startsWith('steam://install'))).toBe(false)
   })
 
