@@ -5,7 +5,7 @@ milestone_name: Steam Bridge & Engine
 status: planning
 stopped_at: Phase 66.4 context gathered
 last_updated: "2026-11-11T17:32:02.809Z"
-last_activity: 2026-11-12 - Completed quick tasks 261112-7wp, 261112-7wv, 261112-7ww, 261112-8w3; 2026-11-11 - Completed quick task 261111-n9y (merged from origin)
+last_activity: 2026-11-12 - Completed quick tasks 261112-7wp, 261112-7wv, 261112-7ww, 261112-8w3, 261112-99y; 2026-11-11 - Completed quick task 261111-n9y (merged from origin)
 progress:
   total_phases: 19
   completed_phases: 14
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 66.4
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-12 - Completed quick tasks 261112-7wp, 261112-7wv, 261112-7ww, 261112-8w3; 2026-11-11 - Completed quick task 261111-n9y (merged from origin)
+Last activity: 2026-11-12 - Completed quick tasks 261112-7wp, 261112-7wv, 261112-7ww, 261112-8w3, 261112-99y; 2026-11-11 - Completed quick task 261111-n9y (merged from origin)
 
 Progress: [██████████] 100%
 
@@ -583,6 +583,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261112-7wv | `SteamUser.logout()` now calls `authTrigger.resetSteamAuthTrigger()` before its first await, re-locking the keyring gate and dropping any armed refresh grant (66.3 latent bug). | 2026-11-12 | d884e5c9c | steam suites + steamAuthSessionPolicy green | [261112-7wv-steam-logout-resets-the-auth-trigger](./quick/261112-7wv-steam-logout-resets-the-auth-trigger/) |
 | 261112-7ww | Linux GPU info enumerated via `lspci -mm -v -n -k` (display classes only) instead of the Electron `getGPUInfo` stand-in that always threw; `getGpuInfo` returns [] on any probe failure so `getSystemInfo` no longer rejects on Linux. | 2026-11-12 | 37d2eb547 | systeminfo 21/21; Deck LCD/OLED fixtures | [261112-7ww-linux-gpu-info-via-lspci-instead-of-elec](./quick/261112-7ww-linux-gpu-info-via-lspci-instead-of-elec/) |
 | 261112-8w3 | Comet token-mode flags `--access-token`/`--refresh-token` added to the commandRunner credential redaction list and census regex; Layer-2 case pins both values redacted. Closes 66.1 security threats T-66.1-16/T-66.1-68. | 2026-11-12 | 05aa1af9c | Jest 70/70 (commandRunner.test); scoped prettier clean | [261112-8w3-add-access-token-refresh-token-to-comman](./quick/261112-8w3-add-access-token-refresh-token-to-comman/) |
+| 261112-99y | Recorded ITAD's 2026-10-01 reply in Phase 47 docs: rate limit follows the app (OAuth branch dead), gate 3 decided (embedded key + hard caching, no proxy yet), Q1 reply ambiguous, affiliate question never asked; gate 1 (ITAD app registration) still blocks planning. | 2026-11-12 | 6ff3cd9ab | docs-only; plan grep checks pass | [261112-99y-record-itad-reply-in-phase-47-docs](./quick/261112-99y-record-itad-reply-in-phase-47-docs/) |
 
 ## Deferred Items
 
