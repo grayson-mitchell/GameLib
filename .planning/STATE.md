@@ -4,13 +4,13 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 66.4 context gathered
-last_updated: "2026-11-11T18:19:15.643Z"
-last_activity: 2026-11-11 -- Phase 66.4 planning complete
+last_updated: "2026-11-11T22:19:13.544Z"
+last_activity: 2026-11-11
 progress:
   total_phases: 19
   completed_phases: 14
   total_plans: 293
-  completed_plans: 270
+  completed_plans: 271
   percent: 74
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 66.4 — backend module state long tail census flip and live smokes
+**Current focus:** Phase 66.4 — backend-module-state-long-tail-census-flip-and-live-smokes
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,10 +72,10 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 ## Current Position
 
-Phase: 66.4
-Plan: Not started
+Phase: 66.4 (backend-module-state-long-tail-census-flip-and-live-smokes) — EXECUTING
+Plan: 2 of 23
 Status: Ready to execute
-Last activity: 2026-11-11 -- Phase 66.4 planning complete
+Last activity: 2026-11-11
 
 Progress: [██████████] 100%
 
