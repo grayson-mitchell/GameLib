@@ -983,6 +983,10 @@ const IN_SCOPE_SUITES = [
  * `diagnostics_channel`-based outbound-request registry against a loopback `http` server it
  * starts itself, boots nothing, and reaches no path module, `homedir()`, filesystem or child
  * process. Its landing commit did not classify it; the T-34.2-83 tripwire caught it.
+ *
+ * `ipcRegistry.test.ts` (Phase 66.3 Plan 03) is structurally contained: it exercises
+ * `createIpcRegistry()` instances with in-memory handlers, and reaches no path module, `homedir()`,
+ * filesystem or child process.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -1020,6 +1024,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'installedJsonWatcher.test.ts',
   'invokeReturnValueSweep.test.ts',
   'ipcDomainCensus.test.ts',
+  'ipcRegistry.test.ts',
   'ipcSchemaCoverage.test.ts',
   'ipcValidation.test.ts',
   'isPackagedSidecar.test.ts',

@@ -49,6 +49,7 @@ jest.mock('../sidecarRpc', () => ({
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { defined } from 'backend/testUtils/indexed'
 import {
+  bindHostServices,
   BrowserWindow,
   Notification,
   app,
@@ -59,6 +60,7 @@ import {
   shell
 } from '../../platform'
 import { requestRustInvoke } from '../sidecarRpc'
+import { createTestHostServices } from '../../testUtils/testHostServices'
 import {
   RUST_APP_EXIT,
   RUST_APP_HIDE,
@@ -89,6 +91,12 @@ function flushMicrotasks(): Promise<void> {
 }
 
 beforeEach(() => {
+  bindHostServices(
+    createTestHostServices({
+      rustInvoke: (channel, args) =>
+        mockRequestRustInvoke(channel, args) as Promise<unknown>
+    })
+  )
   program = null
   callLog = []
   warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
@@ -335,6 +343,12 @@ describe('platformApi app.hide (quick/260815-vvz, raiseFrontmostBottledProcess y
       sidecarRpc.requestRustInvoke.mockImplementation(() =>
         Promise.resolve(null)
       )
+      freshElectronStub.bindHostServices(
+        createTestHostServices({
+          rustInvoke: (channel, args) =>
+            sidecarRpc.requestRustInvoke(channel, args) as Promise<unknown>
+        })
+      )
       result = {
         app: freshElectronStub.app,
         mockInvoke: sidecarRpc.requestRustInvoke
@@ -530,6 +544,12 @@ describe('platformApi app.relaunch/quit race guard (Phase 34.3 Plan 05, D-06, RE
       sidecarRpc.requestRustInvoke.mockImplementation(() =>
         Promise.resolve(null)
       )
+      freshElectronStub.bindHostServices(
+        createTestHostServices({
+          rustInvoke: (channel, args) =>
+            sidecarRpc.requestRustInvoke(channel, args) as Promise<unknown>
+        })
+      )
       result = {
         app: freshElectronStub.app,
         mockInvoke: sidecarRpc.requestRustInvoke
@@ -592,6 +612,12 @@ describe('platformApi app.relaunch/quit race guard (Phase 34.3 Plan 05, D-06, RE
         channel === RUST_APP_RELAUNCH
           ? Promise.reject(new Error('synthetic relaunch transport failure'))
           : Promise.resolve(null)
+      )
+      freshElectronStub.bindHostServices(
+        createTestHostServices({
+          rustInvoke: (channel, args) =>
+            sidecarRpc.requestRustInvoke(channel, args) as Promise<unknown>
+        })
       )
       result = {
         app: freshElectronStub.app,

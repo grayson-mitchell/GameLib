@@ -53,13 +53,31 @@ jest.mock('../../utils/systeminfo', () => ({
 // ── Imports (after mocks) ───────────────────────────────────────────────────────────────────
 import { defined } from 'backend/testUtils/indexed'
 import { registerClipboardFlows } from '../clipboardFlowRegistration'
-import { clipboard, listenerRegistry, handlerRegistry } from '../../platform'
+import {
+  bindHostServices,
+  clipboard,
+  listenerRegistry,
+  handlerRegistry
+} from '../../platform'
+import { createTestHostServices } from '../../testUtils/testHostServices'
 import { requestRustInvoke } from '../sidecarRpc'
 import { getSystemInfo, formatSystemInfo } from '../../utils/systeminfo'
 import {
   RUST_CLIPBOARD_WRITE_TEXT,
   RUST_CLIPBOARD_READ_TEXT
 } from 'common/types/sidecarTransport'
+
+// The shim forwards to bound host services (66.3-03); give every test a fresh instance whose
+// Rust boundary is this file's mocked requestRustInvoke (late-bound, so per-test mockImplementation
+// calls still apply). Fresh services per test also reset the app-state and wake-lock state.
+beforeEach(() => {
+  bindHostServices(
+    createTestHostServices({
+      rustInvoke: (channel, args) =>
+        mockRequestRustInvoke(channel, args) as Promise<unknown>
+    })
+  )
+})
 
 type ProgrammedOutcome =
   | { type: 'resolve'; value: unknown }

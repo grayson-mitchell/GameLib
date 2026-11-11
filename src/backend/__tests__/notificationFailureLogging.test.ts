@@ -3,6 +3,8 @@
  * (via the stub Notification's Electron-shaped 'failed' event, consumed by dialog.ts notify()),
  * and an authorization denial is logged once per process.
  */
+import { createTestHostServices } from '../testUtils/testHostServices'
+
 const mockRequestRustInvoke = jest.fn()
 const mockLogWarning = jest.fn()
 const mockLogInfo = jest.fn()
@@ -27,9 +29,16 @@ type Notify = (n: { title: string; body: string }) => void
 function loadNotify(): { notify: Notify; Notification: any } {
   let loaded: any
   jest.isolateModules(() => {
+    const platform = require('backend/platform')
+    platform.bindHostServices(
+      createTestHostServices({
+        rustInvoke: (channel, args) =>
+          mockRequestRustInvoke(channel, args) as Promise<unknown>
+      })
+    )
     loaded = {
       notify: require('../dialog/dialog').notify,
-      Notification: require('backend/platform').Notification
+      Notification: platform.Notification
     }
   })
   return loaded

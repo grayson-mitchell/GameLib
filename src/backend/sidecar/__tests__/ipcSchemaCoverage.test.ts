@@ -60,14 +60,18 @@ function staticScan(): Scanned {
     testOnly: new Set()
   }
   const re =
-    /\b(ipcMain\.handle|ipcMain\.on|ipcMain\.once|addHandler|addListener|addTestOnlyListener)\(\s*(?:'([^']+)'|([A-Z][A-Z0-9_]*)\s*,)/g
+    /\b(ipcMain\.handle|ipcMain\.on|ipcMain\.once|ipc\.handle|addHandler|addListener|addTestOnlyListener)\(\s*(?:'([^']+)'|([A-Z][A-Z0-9_]*)\s*,)/g
   for (const file of sourceFiles(BACKEND_DIR)) {
     const src = readFileSync(file, 'utf-8')
     for (const m of src.matchAll(re)) {
       const channel = m[2] ?? (m[3] === undefined ? undefined : constants[m[3]])
       if (!channel) continue
       if (m[1] === 'addTestOnlyListener') out.testOnly.add(channel)
-      else if (m[1] === 'ipcMain.handle' || m[1] === 'addHandler')
+      else if (
+        m[1] === 'ipcMain.handle' ||
+        m[1] === 'ipc.handle' ||
+        m[1] === 'addHandler'
+      )
         out.invoke.add(channel)
       else out.send.add(channel)
     }

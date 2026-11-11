@@ -57,7 +57,8 @@ jest.mock('../sidecarRpc', () => ({
 // platform/index.ts's imports) -- its error paths use `console.warn` directly, spied on below.
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { clipboard, dialog } from '../../platform'
+import { bindHostServices, clipboard, dialog } from '../../platform'
+import { createTestHostServices } from '../../testUtils/testHostServices'
 import { requestRustInvoke } from '../sidecarRpc'
 import {
   RUST_DIALOG_MESSAGE,
@@ -65,6 +66,18 @@ import {
   RUST_DIALOG_SAVE,
   RUST_INVOKE_CHANNELS
 } from 'common/types/sidecarTransport'
+
+// The shim forwards to bound host services (66.3-03); give every test a fresh instance whose
+// Rust boundary is this file's mocked requestRustInvoke (late-bound, so per-test mockImplementation
+// calls still apply). Fresh services per test also reset the app-state and wake-lock state.
+beforeEach(() => {
+  bindHostServices(
+    createTestHostServices({
+      rustInvoke: (channel, args) =>
+        mockRequestRustInvoke(channel, args) as Promise<unknown>
+    })
+  )
+})
 
 type ProgrammedOutcome =
   | { type: 'resolve'; value: unknown }

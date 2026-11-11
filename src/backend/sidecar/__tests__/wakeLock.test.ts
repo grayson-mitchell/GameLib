@@ -21,7 +21,8 @@ jest.mock('../sidecarRpc', () => ({
 }))
 
 import { defined } from 'backend/testUtils/indexed'
-import { powerSaveBlocker } from '../../platform'
+import { bindHostServices, powerSaveBlocker } from '../../platform'
+import { createTestHostServices } from '../../testUtils/testHostServices'
 import { requestRustInvoke } from '../sidecarRpc'
 import {
   RUST_INVOKE_CHANNELS,
@@ -30,6 +31,18 @@ import {
 } from 'common/types/sidecarTransport'
 
 const mockRequestRustInvoke = requestRustInvoke as jest.Mock
+
+// The shim forwards to bound host services (66.3-03); give every test a fresh instance whose
+// Rust boundary is this file's mocked requestRustInvoke (late-bound, so per-test mockImplementation
+// calls still apply). Fresh services per test also reset the app-state and wake-lock state.
+beforeEach(() => {
+  bindHostServices(
+    createTestHostServices({
+      rustInvoke: (channel, args) =>
+        mockRequestRustInvoke(channel, args) as Promise<unknown>
+    })
+  )
+})
 
 type ProgrammedOutcome =
   | { type: 'resolve'; value: unknown }

@@ -8,6 +8,7 @@ import { z } from 'zod'
 
 import { handlerRegistry, interimIpc, listenerRegistry } from '../../platform'
 import { startRpcServer } from '../sidecarRpc'
+import { createIpcRegistry } from '../ipcRegistry'
 import {
   logRejection,
   resetIpcRejectionThrottle,
@@ -345,5 +346,50 @@ describe('logRejection throttle (67 review WR-03)', () => {
     // ch0 was evicted: its budget is fresh again rather than remembered forever
     for (let i = 0; i < 5; i++) logRejection('send', verdict('ch0'))
     expect(lines).toHaveLength(1005)
+  })
+})
+
+// Kept last: startRpcServer rebinds sidecarRpc's module-level output stream (a 66.4 site), so
+// this server takes over the stream for whatever runs after it.
+describe('validation still fires through an injected registry (66.3-03, T-66.3-08)', () => {
+  it('an invalid invoke yields the IPC_INVALID_ARGS error frame and an invalid send is dropped', async () => {
+    const ipc = createIpcRegistry()
+    const calls: unknown[][] = []
+    ipc.handle('testInvoke', (async (...a: unknown[]) => {
+      calls.push(a)
+      return 'handled'
+    }) as never)
+    ipc.on('testSend', ((...a: unknown[]) => {
+      calls.push(a)
+    }) as never)
+    const registryInput = new PassThrough()
+    const registryOutput = new PassThrough()
+    const registryFrames = collectFrames(registryOutput)
+    startRpcServer(registryInput, registryOutput, ipc)
+
+    registryInput.write(
+      `${JSON.stringify({ id: 'r1', kind: 'invoke', channel: 'testInvoke', args: [5] })}\n`
+    )
+    registryInput.write(
+      `${JSON.stringify({ id: 'r2', kind: 'send', channel: 'testSend', args: ['nope'] })}\n`
+    )
+    await flush()
+
+    expect(calls).toHaveLength(0)
+    expect(registryFrames).toHaveLength(1)
+    expect(
+      String(registryFrames[0]?.error).startsWith(IPC_INVALID_ARGS_MARKER)
+    ).toBe(true)
+    expect(registryFrames[0]).toMatchObject({ id: 'r1', ok: false })
+
+    registryInput.write(
+      `${JSON.stringify({ id: 'r3', kind: 'invoke', channel: 'testInvoke', args: ['a', true] })}\n`
+    )
+    await flush()
+    expect(registryFrames[1]).toMatchObject({
+      id: 'r3',
+      ok: true,
+      result: 'handled'
+    })
   })
 })
