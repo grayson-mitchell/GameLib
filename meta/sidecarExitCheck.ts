@@ -155,3 +155,219 @@ export function assertRepoRoot(
     )
   }
 }
+
+// ---------------------------------------------------------------------------
+// CLI driver (operator-run, untested -- see module docblock). Report-only: nothing here
+// signals or kills any process; the eof arm only closes the child's own stdin.
+// ---------------------------------------------------------------------------
+
+const DEV_SIDECAR_PATTERN = 'build/main/sidecar.js'
+// externalBin name in src-tauri/src/sidecar.rs (`app.shell().sidecar("gamelib-sidecar")`)
+const PACKAGED_SIDECAR_PATTERN = 'gamelib-sidecar'
+const POLL_MS = 50
+const QUIT_WAIT_MS = 30_000
+const SETTLE_MS = 5000
+const READY_WAIT_MS = 60_000
+
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+
+function pgrepPids(pattern: string): number[] {
+  const result = spawnSync('pgrep', ['-f', pattern], { encoding: 'utf-8' })
+  if (result.status !== 0 || !result.stdout) return []
+  return result.stdout
+    .split('\n')
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isInteger(n) && n > 0)
+}
+
+function snapshotPs(): PsRow[] | { status: 'INVALID'; reason: string } {
+  const r = spawnSync('ps', ['-axo', 'pid=,ppid=,pgid=,command='], {
+    encoding: 'utf-8',
+    maxBuffer: 64 * 1024 * 1024
+  })
+  if (r.status !== 0) {
+    return { status: 'INVALID', reason: `ps exited ${String(r.status)}` }
+  }
+  return parsePs(r.stdout)
+}
+
+function isPidAlive(pid: number): boolean {
+  // `ps -p` existence probe: report-only, nothing is signalled.
+  const r = spawnSync('ps', ['-p', String(pid), '-o', 'pid='], {
+    encoding: 'utf-8'
+  })
+  return r.status === 0 && r.stdout.trim() !== ''
+}
+
+interface Report {
+  mode: 'eof' | 'live'
+  verdict: Verdict
+  latencyMs: number | null
+  survivors: Survivor[]
+  vite: number[]
+  note?: string
+}
+
+function finish(report: Report): never {
+  console.log(JSON.stringify(report, null, 2))
+  console.log(
+    `sidecarExitCheck [${report.mode}]: ${report.verdict}` +
+      (report.latencyMs === null
+        ? ''
+        : ` (exit latency ${report.latencyMs} ms)`)
+  )
+  process.exit(
+    report.verdict === 'PASS' || report.verdict === 'WARN'
+      ? 0
+      : report.verdict === 'FAIL'
+        ? 1
+        : 2
+  )
+}
+
+function invalid(mode: 'eof' | 'live', note: string): never {
+  return finish({
+    mode,
+    verdict: 'INVALID',
+    latencyMs: null,
+    survivors: [],
+    vite: [],
+    note
+  })
+}
+
+async function runLive(): Promise<void> {
+  assertRepoRoot(process.cwd())
+  const sidecarPid = [
+    ...pgrepPids(DEV_SIDECAR_PATTERN),
+    ...pgrepPids(PACKAGED_SIDECAR_PATTERN)
+  ].find((p) => p !== process.pid)
+  const before = snapshotPs()
+  if (!Array.isArray(before)) return invalid('live', before.reason)
+  if (sidecarPid === undefined) {
+    return invalid('live', 'no sidecar process found before quit')
+  }
+  const sidecarRow = before.find((r) => r.pid === sidecarPid)
+  if (!sidecarRow) return invalid('live', 'sidecar pid missing from ps')
+  const shellPid = sidecarRow.ppid
+  const tree = descendantsOf(before, sidecarPid)
+  console.log(`shell pid ${shellPid}, sidecar pid ${sidecarPid}`)
+  for (const r of [sidecarRow, ...tree]) {
+    console.log(`  ${r.pid} <- ${r.ppid}  ${r.command}`)
+  }
+  console.log(
+    'Quit GameLib now (Cmd+Q). Waiting up to 30 s for the shell to exit.'
+  )
+
+  const start = Date.now()
+  let quitAt: number | null = null
+  let goneAt: number | null = null
+  while (Date.now() - start < QUIT_WAIT_MS) {
+    const now = Date.now()
+    if (quitAt === null && !isPidAlive(shellPid)) quitAt = now
+    if (quitAt !== null && !isPidAlive(sidecarPid)) {
+      goneAt = now
+      break
+    }
+    await sleep(POLL_MS)
+  }
+  if (quitAt === null) return invalid('live', 'shell never exited within 30 s')
+
+  const latencyMs = goneAt === null ? null : goneAt - quitAt
+  await sleep(SETTLE_MS)
+  const after = snapshotPs()
+  if (!Array.isArray(after)) return invalid('live', after.reason)
+  const survivors = classifySurvivors([sidecarRow, ...tree], after)
+  return finish({
+    mode: 'live',
+    verdict: exitVerdict({
+      mode: 'live',
+      latencyMs: goneAt === null ? THRESHOLDS.liveFailMs + 1 : latencyMs,
+      survivors,
+      sidecarFound: true
+    }),
+    latencyMs,
+    survivors,
+    vite: pgrepPids('vite')
+  })
+}
+
+async function runEof(): Promise<void> {
+  assertRepoRoot(process.cwd())
+  const sidecarJs = join(process.cwd(), DEV_SIDECAR_PATTERN)
+  if (!existsSync(sidecarJs)) {
+    return invalid(
+      'eof',
+      'build/main/sidecar.js missing: run pnpm build:sidecar'
+    )
+  }
+  const profile = createFakeHomeProfile({ prefix: 'gamelib-sidecarExitCheck-' })
+  try {
+    const child = spawn(process.execPath, [sidecarJs], {
+      env: profile.childEnv(),
+      stdio: ['pipe', 'pipe', 'pipe']
+    })
+    let stdout = ''
+    child.stdout.on('data', (d: Buffer) => {
+      stdout += d.toString()
+    })
+    child.stderr.on('data', () => undefined)
+    const exited = new Promise<void>((resolve) => {
+      child.on('exit', () => resolve())
+    })
+    const readyStart = Date.now()
+    while (
+      !stdout.includes(READY_SENTINEL) &&
+      child.exitCode === null &&
+      Date.now() - readyStart < READY_WAIT_MS
+    ) {
+      await sleep(POLL_MS)
+    }
+    if (!stdout.includes(READY_SENTINEL)) {
+      return invalid('eof', 'sidecar never wrote the READY sentinel')
+    }
+    const pid = child.pid
+    const before = snapshotPs()
+    if (!Array.isArray(before)) return invalid('eof', before.reason)
+    if (pid === undefined) return invalid('eof', 'no child pid')
+    const snapshot = [
+      ...before.filter((r) => r.pid === pid),
+      ...descendantsOf(before, pid)
+    ]
+    const eofAt = Date.now()
+    child.stdin.end()
+    await Promise.race([exited, sleep(READY_WAIT_MS)])
+    const latencyMs = child.exitCode === null ? null : Date.now() - eofAt
+    await sleep(SETTLE_MS)
+    const after = snapshotPs()
+    if (!Array.isArray(after)) return invalid('eof', after.reason)
+    const survivors = classifySurvivors(snapshot, after)
+    return finish({
+      mode: 'eof',
+      verdict: exitVerdict({
+        mode: 'eof',
+        latencyMs: latencyMs ?? THRESHOLDS.eofFailMs + 1,
+        survivors,
+        sidecarFound: snapshot.length > 0
+      }),
+      latencyMs,
+      survivors,
+      vite: []
+    })
+  } finally {
+    profile.dispose()
+  }
+}
+
+if (require.main === module && !process.env.JEST_WORKER_ID) {
+  const modeIdx = process.argv.indexOf('--mode')
+  const mode = modeIdx >= 0 ? process.argv[modeIdx + 1] : 'live'
+  const job = mode === 'eof' ? runEof() : runLive()
+  job.catch((e) => {
+    console.error(e)
+    process.exit(2)
+  })
+}

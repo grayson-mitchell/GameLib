@@ -63,6 +63,7 @@
     "check:ipc-contract": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/genIpcContract.ts --check",
     "check:build-bin-mirror": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/checkBuildBinMirror.ts",
     "capture:shell-scrollback": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/captureShellScrollback.ts",
+    "smoke:exit-check": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/sidecarExitCheck.ts",
     "check:runner-invocations": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/checkRunnerInvocations.ts",
     "lint-translations": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/lintTranslations.ts",
     "lint-translations:gamelib": "export LINT_TRANSLATIONS_NAMESPACES=gamelib && node meta/runTs.cjs --bundle --platform=node --target=node21 meta/lintTranslations.ts",
