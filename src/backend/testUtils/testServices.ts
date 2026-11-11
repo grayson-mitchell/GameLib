@@ -43,6 +43,7 @@ import { createInertTestSteamUser } from './testSteamUser'
 import { createTestHumbleServices } from './testHumble'
 import { createLoginWindowSeamSlot } from '../humble/loginWindowSeam'
 import { createTestBridgeHelpers } from './testBridgeHelpers'
+import { createTestAppPaths } from './testAppPaths'
 import type { GameSettings, Runner } from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
 import type {
@@ -284,7 +285,7 @@ function createTestSteamGridSecrets(
 /** Placeholder paths nothing reads from or creates: a suite that needs real dirs uses createTestContext. */
 function createTestPaths(): AppPaths {
   const root = '/test-gamelib'
-  return {
+  return createTestAppPaths(root, {
     appRoot: `${root}/app`,
     publicDir: `${root}/app/public`,
     userData: `${root}/userData`,
@@ -292,7 +293,7 @@ function createTestPaths(): AppPaths {
     exe: `${root}/GameLib`,
     knownFolder: (name) =>
       `${root}/${name === 'desktop' ? 'Desktop' : 'Documents'}`
-  }
+  })
 }
 
 /** Steam process instances whose members throw until a test scripts them. */

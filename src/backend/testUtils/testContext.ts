@@ -7,6 +7,7 @@ import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import type { AppContext, AppInfo, AppPaths } from '../process/context'
 import type { ProcessRunner } from '../process/types'
+import { createTestAppPaths } from './testAppPaths'
 import { createCaptureLog, type CaptureLog } from './captureLog'
 import { createFakeClock, type FakeClock } from './fakeClock'
 import { createFakeHomeProfile, type FakeHomeProfile } from './fakeHomeProfile'
@@ -42,7 +43,7 @@ export function createTestContext<R extends ProcessRunner = ScriptedRunner>(
 ): TestContext<R> {
   const profile = createFakeHomeProfile({ prefix: 'gamelib-test-context-' })
   const appRoot = join(profile.root, 'app')
-  const defaults: AppPaths = {
+  const defaults: AppPaths = createTestAppPaths(profile.root, {
     appRoot,
     publicDir: join(appRoot, 'public'),
     userData: join(profile.root, 'userData'),
@@ -50,7 +51,7 @@ export function createTestContext<R extends ProcessRunner = ScriptedRunner>(
     exe: join(profile.root, 'GameLib'),
     knownFolder: (name) =>
       join(profile.root, name === 'desktop' ? 'Desktop' : 'Documents')
-  }
+  })
   // Create directories only for defaults that were not overridden. A caller
   // may pass real repo paths for read-only use (e.g. the sidecar harness's
   // publicDir); creating directories there, or a real userData, would break

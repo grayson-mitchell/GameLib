@@ -188,16 +188,17 @@ import { createGameConfigs } from '../game_config'
 import { resolveAppInfo } from '../host/appInfo'
 import { isPackagedSidecar } from './isPackagedSidecar'
 import { getPath } from './pathShim'
-import { release as osRelease } from 'os'
+import { homedir, release as osRelease, tmpdir } from 'os'
+import { derivePaths, resolveAppDataDir } from '../process/appPaths'
 import { createAppContext } from '../process/context'
 import type { AppContext, AppPaths } from '../process/context'
 import type { LogSink, ProcessRunner } from '../process/types'
 import { setIpcRejectionLogSink } from './ipcValidation'
-import { gamesConfigPath, publicDir } from '../constants/paths'
+import { gamesConfigPath } from '../constants/paths'
 import { backendEvents } from '../backend_events'
 import { fetchLastestReleases } from '../utils/releases'
 import { downloadAntiCheatData } from '../anticheat/utils'
-import { isMac } from '../constants/environment'
+import { isMac, isSnap } from '../constants/environment'
 // Block F (todo 2026-09-06, quick-260908-k3x). `checkRosettaInstall()` has no static import
 // edge back into `sidecar/` (`grep -n "from './sidecar\|from '\.\./sidecar" src/backend/
 // utils.ts` returns nothing), so this import introduces no cycle. `isMac` above is already
@@ -1142,19 +1143,40 @@ export function bootSidecar(
  * which knip cannot see.
  */
 export function resolveAppPaths(): AppPaths {
-  return {
-    // Same body the platform delegate's getAppPath() has: never throws, resolves to cwd unpackaged.
-    appRoot: process.env.GAMELIB_APP_ROOT || process.cwd(),
-    publicDir,
-    userData: getPath('userData'),
-    appData: getPath('appData'),
-    // Lazy: pathShim throws when the Tauri shell did not hand GAMELIB_SHELL_EXE down, and boot
-    // must not die for a path only shortcut code reads.
-    get exe() {
-      return getPath('exe')
+  const home = homedir()
+  const appData = resolveAppDataDir(process.platform, process.env, home)
+  // Same body the platform delegate's getAppPath() has: never throws, resolves to cwd unpackaged.
+  const appRoot = process.env.GAMELIB_APP_ROOT || process.cwd()
+  const derived = derivePaths({
+    appData,
+    // The e2e temp config root arrives with 66.4-20; until then constants/paths owns it.
+    configRoot: appData,
+    home,
+    userHome: isSnap ? process.env.SNAP_REAL_HOME! : home,
+    flatpakHome: process.env.XDG_DATA_HOME?.replace('/data', '') || home,
+    appRoot,
+    assetDir:
+      isPackagedSidecar() || process.env.CI === 'e2e' ? 'build' : 'public',
+    arch: process.arch,
+    tempDir: tmpdir()
+  })
+  // `exe` is defined as an accessor after the spread: an object literal with a getter, spread into
+  // another, would run the getter at build time.
+  return Object.defineProperty(
+    {
+      ...derived,
+      appRoot,
+      appData,
+      knownFolder: (name: 'desktop' | 'documents') => getPath(name)
     },
-    knownFolder: (name) => getPath(name)
-  }
+    'exe',
+    {
+      // Lazy: pathShim throws when the Tauri shell did not hand GAMELIB_SHELL_EXE down, and boot
+      // must not die for a path only shortcut code reads.
+      get: () => getPath('exe'),
+      enumerable: true
+    }
+  ) as AppPaths
 }
 
 export function init(
