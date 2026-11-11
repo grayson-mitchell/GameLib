@@ -760,7 +760,7 @@ The D-14 Rust-overlap exemption table stays empty unless Phase 75 is re-scoped. 
 **Split 2026-11-11 (D-66.3-04):** 66.3 keeps the platform shim dissolution, config injection, the D-05 process-wide owners and the C-WR-2 static holders (item 1 above), and ends with every site it owns at zero and the `moduleState` ceilings lowered. Item 2 (the long tail), the census-to-test flip and the D-17 live smoke move to Phase 66.4.
 **Requirements**: TBD
 **Depends on:** Phase 66.2
-**Plans:** 10/18 plans executed
+**Plans:** 11/18 plans executed
 
 Plans:
 
@@ -774,7 +774,7 @@ Plans:
 - [x] 66.3-08-PLAN.md — cascade D: stateless Steam manager modules, macSteamOffline openExternal (wave 8)
 - [x] 66.3-09-PLAN.md — cascade E1: handlers.ts and registrations a-h on the injected registry, channel parity (wave 9)
 - [x] 66.3-10-PLAN.md — cascade E2: registrations i-w, main_window.ts deleted (wave 10)
-- [ ] 66.3-11-PLAN.md — online_monitor as a boot-owned instance on the clock (wave 11)
+- [x] 66.3-11-PLAN.md — online_monitor as a boot-owned instance on the clock (wave 11)
 - [ ] 66.3-12-PLAN.md — engineState and winetricksQueue owners (wave 12)
 - [ ] 66.3-13-PLAN.md — Steam session cluster and sign-in probe owners (wave 13)
 - [ ] 66.3-14-PLAN.md — anonymous CM client, bridge helper registry, frozen shim-coverage tables (wave 14)
