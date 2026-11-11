@@ -1,11 +1,12 @@
 import axios from 'axios'
 import { searchGame, getGrids } from '../utils'
-import { app } from 'backend/platform'
 
 jest.mock('axios')
 const mockedAxios = axios as jest.Mocked<typeof axios>
 
-const userAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeroicGamesLauncher/${app.getVersion()}`
+const deps = { appInfo: { version: '1.2.3-test' } }
+
+const userAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeroicGamesLauncher/${deps.appInfo.version}`
 
 describe('SteamGridDB Utils', () => {
   const apiKey = 'test-api-key'
@@ -25,7 +26,7 @@ describe('SteamGridDB Utils', () => {
       }
       mockedAxios.get.mockResolvedValueOnce({ data: mockData })
 
-      const results = await searchGame(apiKey, 'query')
+      const results = await searchGame(deps, apiKey, 'query')
 
       expect(results).toEqual(mockData.data)
       expect(mockedAxios.get).toHaveBeenCalledWith(
@@ -46,7 +47,7 @@ describe('SteamGridDB Utils', () => {
       }
       mockedAxios.get.mockResolvedValueOnce({ data: mockData })
 
-      await expect(searchGame(apiKey, 'query')).rejects.toThrow(
+      await expect(searchGame(deps, apiKey, 'query')).rejects.toThrow(
         'Invalid API Key'
       )
     })
@@ -57,7 +58,9 @@ describe('SteamGridDB Utils', () => {
       }
       mockedAxios.get.mockResolvedValueOnce({ data: mockData })
 
-      await expect(searchGame(apiKey, 'query')).rejects.toThrow('Search failed')
+      await expect(searchGame(deps, apiKey, 'query')).rejects.toThrow(
+        'Search failed'
+      )
     })
   })
 
@@ -72,7 +75,7 @@ describe('SteamGridDB Utils', () => {
       }
       mockedAxios.get.mockResolvedValueOnce({ data: mockData })
 
-      const results = await getGrids(apiKey, { gameId: 123 })
+      const results = await getGrids(deps, apiKey, { gameId: 123 })
 
       expect(results).toEqual(mockData.data)
       expect(mockedAxios.get).toHaveBeenCalledWith(
@@ -94,7 +97,7 @@ describe('SteamGridDB Utils', () => {
       }
       mockedAxios.get.mockResolvedValueOnce({ data: mockData })
 
-      await getGrids(apiKey, {
+      await getGrids(deps, apiKey, {
         gameId: 123,
         dimensions: ['460x215', '920x430'],
         styles: ['alternate', 'blurred']
@@ -118,7 +121,7 @@ describe('SteamGridDB Utils', () => {
       }
       mockedAxios.get.mockResolvedValueOnce({ data: mockData })
 
-      await expect(getGrids(apiKey, { gameId: 123 })).rejects.toThrow(
+      await expect(getGrids(deps, apiKey, { gameId: 123 })).rejects.toThrow(
         'Game not found'
       )
     })

@@ -38,6 +38,12 @@ export type SetupDeps = Pick<
   | 'spawnAsync'
   | 'stores'
   | 'runner'
+  | 'config'
+  | 'gameConfigs'
+  | 'dialogs'
+  | 'appInfo'
+  | 'appState'
+  | 'notifications'
 >
 
 /*

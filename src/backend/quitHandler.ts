@@ -23,11 +23,7 @@ export interface QuitHandlerDeps {
   isLocked(): boolean
   isRunning(): boolean
   isBridgeHosting(): boolean
-  getMainWindow(): { hide(): void } | null | undefined
-  showMessageBox(
-    win: { hide(): void },
-    opts: QuitMessageBoxOptions
-  ): Promise<{ response: number }>
+  showMessageBox(opts: QuitMessageBoxOptions): Promise<{ response: number }>
   t(key: string, fallback: string): string
   abortAll(): void
   releaseSteam(): Promise<void>
@@ -38,13 +34,11 @@ export interface QuitHandlerDeps {
 export function createQuitHandler(deps: QuitHandlerDeps): QuitHandler {
   async function handleExit(): Promise<void> {
     const isLocked = deps.isLocked()
-    const mainWindow = deps.getMainWindow()
-
     const isBridgeHosting = deps.isBridgeHosting()
     const isRunning = deps.isRunning()
 
-    if ((isLocked || isRunning || isBridgeHosting) && mainWindow) {
-      const { response } = await deps.showMessageBox(mainWindow, {
+    if (isLocked || isRunning || isBridgeHosting) {
+      const { response } = await deps.showMessageBox({
         buttons: [deps.t('box.no', 'No'), deps.t('box.yes', 'Yes')],
         // CR-04: `cancelId` is LOAD-BEARING, not cosmetic. This dialog's sense is
         // INVERTED relative to every other `showMessageBox` caller in the codebase:
@@ -92,7 +86,6 @@ export function createQuitHandler(deps: QuitHandlerDeps): QuitHandler {
       deps.abortAll()
     }
 
-    mainWindow?.hide()
     // Routed-quit layer: log the CM client off and pay any owed Mac Steam goonline. It must finish
     // before app.exit(), which leads to shutdown_child()'s group SIGTERM within milliseconds.
     await deps.releaseSteam()

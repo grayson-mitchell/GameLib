@@ -27,6 +27,11 @@ import { getAnonymousPicsClient } from '../anonymousClient'
 import { classifyDepotError } from '../depotErrors'
 import { readAcfInstalldir } from '../acfInstalldir'
 
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+
+/** The config slice the Steam library lookups read; getSteamLibraries is mocked here. */
+const libDeps = { config: createTestGlobalConfig() }
+
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
@@ -93,7 +98,7 @@ describe('listSteamLibraryTargets', () => {
       .mocked(getSteamLibraries)
       .mockResolvedValue(['/lib/primary', '/lib/secondary'])
 
-    const targets = await listSteamLibraryTargets()
+    const targets = await listSteamLibraryTargets(libDeps)
 
     expect(targets).toEqual([
       {
@@ -119,7 +124,7 @@ describe('resolveSteamInstallTarget', () => {
       }) as never
     )
 
-    const result = await resolveSteamInstallTarget(APP_ID, {
+    const result = await resolveSteamInstallTarget(libDeps, APP_ID, {
       path: '',
       platformToInstall: 'Windows'
     })
@@ -140,7 +145,7 @@ describe('resolveSteamInstallTarget', () => {
       }) as never
     )
 
-    const result = await resolveSteamInstallTarget(APP_ID, {
+    const result = await resolveSteamInstallTarget(libDeps, APP_ID, {
       path: '/lib/secondary',
       platformToInstall: 'Windows'
     })
@@ -158,7 +163,7 @@ describe('resolveSteamInstallTarget', () => {
       }) as never
     )
 
-    const result = await resolveSteamInstallTarget(APP_ID, {
+    const result = await resolveSteamInstallTarget(libDeps, APP_ID, {
       path: '/some/unregistered/arbitrary/path',
       platformToInstall: 'Windows'
     })
@@ -176,13 +181,13 @@ describe('resolveSteamInstallTarget', () => {
     )
 
     await expect(
-      resolveSteamInstallTarget(APP_ID, {
+      resolveSteamInstallTarget(libDeps, APP_ID, {
         path: '',
         platformToInstall: 'Windows'
       })
     ).rejects.toBeInstanceOf(UnsafeInstalldirError)
     await expect(
-      resolveSteamInstallTarget(APP_ID, {
+      resolveSteamInstallTarget(libDeps, APP_ID, {
         path: '',
         platformToInstall: 'Windows'
       })
@@ -198,13 +203,13 @@ describe('resolveSteamInstallTarget', () => {
     )
 
     await expect(
-      resolveSteamInstallTarget(APP_ID, {
+      resolveSteamInstallTarget(libDeps, APP_ID, {
         path: '',
         platformToInstall: 'Windows'
       })
     ).rejects.toBeInstanceOf(UnsafeInstalldirError)
     await expect(
-      resolveSteamInstallTarget(APP_ID, {
+      resolveSteamInstallTarget(libDeps, APP_ID, {
         path: '',
         platformToInstall: 'Windows'
       })
@@ -219,7 +224,7 @@ describe('resolveSteamInstallTarget', () => {
       }) as never
     )
 
-    const result = await resolveSteamInstallTarget(APP_ID, {
+    const result = await resolveSteamInstallTarget(libDeps, APP_ID, {
       path: '',
       platformToInstall: 'Windows'
     })
@@ -248,7 +253,7 @@ describe('resolveSteamInstallTarget', () => {
         }) as never
       )
 
-      const pending = resolveSteamInstallTarget(APP_ID, {
+      const pending = resolveSteamInstallTarget(libDeps, APP_ID, {
         path: '',
         platformToInstall: 'Windows'
       })
@@ -270,7 +275,7 @@ describe('resolveSteamInstallTarget', () => {
     const fakeClient = makeFakeClient()
     jest.mocked(getAnonymousPicsClient).mockResolvedValue(fakeClient as never)
 
-    const result = await resolveSteamInstallTarget('12345; rm -rf /', {
+    const result = await resolveSteamInstallTarget(libDeps, '12345; rm -rf /', {
       path: '',
       platformToInstall: 'Windows'
     })
@@ -290,7 +295,7 @@ describe('resolveSteamInstallTarget', () => {
     )
 
     await expect(
-      resolveSteamInstallTarget(APP_ID, {
+      resolveSteamInstallTarget(libDeps, APP_ID, {
         path: '',
         platformToInstall: 'Windows'
       })
@@ -306,7 +311,7 @@ describe('resolveSteamInstallTarget', () => {
     )
 
     await expect(
-      resolveSteamInstallTarget(APP_ID, {
+      resolveSteamInstallTarget(libDeps, APP_ID, {
         path: '',
         platformToInstall: 'Windows'
       })
@@ -322,7 +327,7 @@ describe('resolveSteamInstallTarget', () => {
     )
 
     await expect(
-      resolveSteamInstallTarget(APP_ID, {
+      resolveSteamInstallTarget(libDeps, APP_ID, {
         path: '',
         platformToInstall: 'Windows'
       })
@@ -337,7 +342,7 @@ describe('resolveSteamInstallTarget', () => {
       }) as never
     )
 
-    const result = await resolveSteamInstallTarget(APP_ID, {
+    const result = await resolveSteamInstallTarget(libDeps, APP_ID, {
       path: '',
       platformToInstall: 'Windows'
     })
@@ -357,7 +362,7 @@ describe('resolveSteamInstallTarget', () => {
     )
 
     await expect(
-      resolveSteamInstallTarget(APP_ID, {
+      resolveSteamInstallTarget(libDeps, APP_ID, {
         path: '',
         platformToInstall: 'Windows'
       })
@@ -374,7 +379,7 @@ describe('resolveSteamInstallTarget', () => {
     })
     jest.mocked(getAnonymousPicsClient).mockResolvedValue(client as never)
 
-    const result = await resolveSteamInstallTarget(APP_ID, {
+    const result = await resolveSteamInstallTarget(libDeps, APP_ID, {
       path: '',
       platformToInstall: 'Windows'
     })
@@ -399,7 +404,7 @@ describe('resolveSteamInstallTarget', () => {
     )
     jest.mocked(readAcfInstalldir).mockReturnValue('app_257350')
 
-    const result = await resolveSteamInstallTarget(APP_ID, {
+    const result = await resolveSteamInstallTarget(libDeps, APP_ID, {
       path: '',
       platformToInstall: 'Windows'
     })
@@ -417,7 +422,7 @@ describe('resolveSteamInstallTarget', () => {
     jest.mocked(getAnonymousPicsClient).mockResolvedValue(null)
     jest.mocked(readAcfInstalldir).mockReturnValue('app_257350')
 
-    const result = await resolveSteamInstallTarget(APP_ID, {
+    const result = await resolveSteamInstallTarget(libDeps, APP_ID, {
       path: '',
       platformToInstall: 'Windows'
     })
@@ -434,7 +439,7 @@ describe('resolveSteamInstallTarget', () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
     jest.mocked(getAnonymousPicsClient).mockResolvedValue(null)
 
-    const result = await resolveSteamInstallTarget(APP_ID, {
+    const result = await resolveSteamInstallTarget(libDeps, APP_ID, {
       path: '',
       platformToInstall: 'Windows'
     })
@@ -447,7 +452,7 @@ describe('resolveSteamInstallTarget', () => {
     jest.mocked(getSteamLibraries).mockResolvedValue([])
 
     await expect(
-      resolveSteamInstallTarget(APP_ID, {
+      resolveSteamInstallTarget(libDeps, APP_ID, {
         path: '',
         platformToInstall: 'Windows'
       })
@@ -689,7 +694,7 @@ describe('resolveSteamInstallTarget — anonymous PICS with open-session fallbac
   })
 
   const target = () =>
-    resolveSteamInstallTarget(APP_ID, {
+    resolveSteamInstallTarget(libDeps, APP_ID, {
       path: '',
       platformToInstall: 'Windows'
     })

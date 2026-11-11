@@ -19,6 +19,8 @@ import {
 } from '../helperBinaries'
 import type { VersionProbeDeps } from '../helperBinaries'
 import type { ProbeDeps } from '../os/processes'
+import type { AppInfo } from 'backend/process/context'
+import type { GlobalConfigSlice } from 'backend/config'
 import { APP_DISPLAY_NAME } from 'backend/constants/others'
 
 type GPUInfo = {
@@ -70,7 +72,10 @@ interface SystemInformation {
 
 let cachedSystemInfo: SystemInformation | null = null
 /** R1 slice: the runner managers the version probes ask. */
-export type SystemInfoDeps = VersionProbeDeps & ProbeDeps
+export type SystemInfoDeps = VersionProbeDeps &
+  ProbeDeps & { config: Pick<GlobalConfigSlice, 'getSettings'> } & {
+    appInfo: Pick<AppInfo, 'version'>
+  }
 
 // In-flight-promise memoization -- debug/gog-spawn-reduction.md fix 3. The value-cache
 // above only helps SEQUENTIAL calls; concurrent callers at boot (backend boot log,
@@ -151,7 +156,7 @@ async function fetchSystemInfo(
     isFlatpak: !!process.env.FLATPAK_ID,
     isAppImage: !!process.env.APPIMAGE,
     softwareInUse: {
-      heroicVersion: getHeroicVersion(),
+      heroicVersion: getHeroicVersion(deps),
       legendaryVersion: legendaryVersion,
       gogdlVersion: gogdlVersion,
       cometVersion: cometVersion,

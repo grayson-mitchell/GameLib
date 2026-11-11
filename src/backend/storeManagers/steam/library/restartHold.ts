@@ -1,5 +1,5 @@
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { notify } from '../../../dialog/dialog'
+import { notify, type NotifyDeps } from '../../../dialog/dialog'
 import i18next from 'i18next'
 import {
   listSteamClientPids,
@@ -20,8 +20,11 @@ import { activePolls, STEAM_HOLD_PROBE_MIN_INTERVAL_MS } from './pollState'
  * in pollInstallOnce's 'downloading' branch). Shared by the fast-path hold and
  * the fast-path no-hold completion so the user-facing text cannot drift.
  */
-export function notifyRestartSteamToFinish(title: string): void {
-  notify({
+export function notifyRestartSteamToFinish(
+  deps: NotifyDeps,
+  title: string
+): void {
+  notify(deps, {
     title,
     body: i18next.t(
       'steam.waitingForSteam.notify',
@@ -77,7 +80,7 @@ export function releaseSteamHold(
 
 /**
  * Drops every app that is holding for a Steam restart from an ACF-derived
- * installed map, mutating and returning it. buildInstalledMap() reads
+ * installed map, mutating and returning it. buildInstalledMap(deps) reads
  * StateFlags only, and a fast-path manifest already reads 4 while the running
  * Steam client is still unaware of it, so without this the window-focus
  * reconcile (refreshInstallState) and a full refresh() would flip the badge

@@ -31,6 +31,7 @@ jest.mock('backend/recent_games/recent_games', () => ({
 
 jest.mock('backend/runsForMe', () => ({ recordPlaySession: jest.fn() }))
 
+import { createTestToolsSlices } from 'backend/testUtils/testServices'
 import { createLauncher } from 'backend/launcher'
 import { createGameLogWriter } from 'backend/logger'
 import { resetLaunchSingleFlightForTests } from 'backend/launchSingleFlight'
@@ -53,6 +54,7 @@ const tsStore = {
   set: jest.fn()
 }
 const { launchEventCallback } = createLauncher({
+  ...createTestToolsSlices(),
   libraryManagers: {
     legendary: { getGame: (...a: unknown[]) => getGameMock(...a) }
   } as never,

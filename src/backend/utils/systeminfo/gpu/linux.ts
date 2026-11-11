@@ -1,4 +1,3 @@
-import { app } from 'backend/platform'
 import { z } from 'zod'
 
 import { hasExecutable } from '../../os/path'
@@ -28,7 +27,9 @@ const GPUInfoSchema = z.object({
 async function getGpuInfo_linux(deps: ProbeDeps): Promise<PartialGpuInfo[]> {
   const gpus: PartialGpuInfo[] = []
 
-  const gpuInfo = await app.getGPUInfo('basic')
+  // Electron's app.getGPUInfo has no Tauri counterpart: the stand-in returned {} (so the parse
+  // below throws, as it did), and nothing else supplies GPU devices here.
+  const gpuInfo: unknown = {}
   const verifiedInfo = GPUInfoSchema.parse(gpuInfo)
   const hasLspci = await hasExecutable('lspci')
 

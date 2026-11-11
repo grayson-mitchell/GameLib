@@ -13,7 +13,7 @@
 // Per-directory, not per-library-list, on purpose: installLocation.ts needs
 // the ACF in the ONE steamapps dir the install has already been targeted at
 // (the resolveOverride/primary match), while library.ts's
-// locateDownloadingTarget composes its own loop over getSteamLibraries() and
+// locateDownloadingTarget composes its own loop over getSteamLibraries(deps) and
 // calls this once per library. Looping belongs to the caller, not here.
 //
 // D-03 contract: this function returns the RAW on-disk value and performs NO

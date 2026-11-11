@@ -1,4 +1,3 @@
-import { GlobalConfig } from 'backend/config'
 import {
   defaultWinePrefix,
   fixesPath,
@@ -7,18 +6,22 @@ import {
 import { notify } from 'backend/dialog/dialog'
 import { logError, logInfo, LogPrefix } from 'backend/logger'
 import type { ManagerDeps } from 'backend/services/types'
+import type { GlobalConfigSlice } from 'backend/config'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { resolveGameTitle } from 'backend/utils/gameTitle'
 import { Runner } from 'common/types'
 import { storeMap } from 'common/utils'
 import { storeCapabilities } from 'common/storeCapabilities'
-import { Event } from 'backend/platform'
+import type { Event } from 'backend/platform/types'
 import { existsSync, readdirSync, rmSync } from 'graceful-fs'
 import i18next from 'i18next'
 import { join } from 'path'
 
 /** R1 slice: the per-runner managers. */
-export type UninstallerDeps = Pick<ManagerDeps, 'libraryManagers'>
+export type UninstallerDeps = Pick<
+  ManagerDeps,
+  'libraryManagers' | 'notifications'
+> & { config: Pick<GlobalConfigSlice, 'getSettings'> }
 
 export const removePrefix = async (
   deps: UninstallerDeps,
@@ -36,8 +39,7 @@ export const removePrefix = async (
   }
 
   // folder exists, do some sanity checks before deleting it
-  const { defaultInstallPath, sharedWinePrefix } =
-    GlobalConfig.get().getSettings()
+  const { defaultInstallPath, sharedWinePrefix } = deps.config.getSettings()
 
   if (winePrefix === defaultInstallPath) {
     logInfo(
@@ -157,7 +159,7 @@ export const uninstallGameCallback = async (
     }
     uninstalled = true
   } catch (error) {
-    notify({
+    notify(deps, {
       title,
       body: i18next.t('notify.uninstallError', 'Error uninstalling')
     })
@@ -177,7 +179,7 @@ export const uninstallGameCallback = async (
     // which fires the "Game Uninstalled" toast when the manifest disappears.
     // Suppress the success notify here for steam to avoid a duplicate/premature toast.
     if (!storeCapabilities[runner].installManagedExternally) {
-      notify({ title, body: i18next.t('notify.uninstalled') })
+      notify(deps, { title, body: i18next.t('notify.uninstalled') })
     }
     logInfo('Finished uninstalling', LogPrefix.Backend)
   }

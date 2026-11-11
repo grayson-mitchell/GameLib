@@ -1,8 +1,8 @@
 /**
- * Pins `standardBrowserUserAgent()`'s behavior when running against the REAL sidecar
+ * Pins `standardBrowserUserAgent(deps)`'s behavior when running against the REAL sidecar
  * `platform/index.ts` (Phase 34.4.1 Plan 02, Task 4, DEFECT 3).
  *
- * `standardBrowserUserAgent()` (declared in `../userAgent.ts`) reads `app.userAgentFallback`
+ * `standardBrowserUserAgent(deps)` (declared in `../userAgent.ts`) reads `app.userAgentFallback`
  * unconditionally. Real Electron populates that property at startup; `platform/index.ts` (the
  * sidecar's `require('electron')` replacement, installed by `bootstrap.ts`'s `Module._load`
  * hook) previously left it `undefined`, so this function threw
@@ -21,10 +21,19 @@
  */
 
 import { standardBrowserUserAgent } from '../userAgent'
+import { resolveAppInfo } from '../../host/appInfo'
 
-describe('standardBrowserUserAgent() against the real sidecar platformApi', () => {
+const deps = {
+  appInfo: resolveAppInfo({
+    platform: process.platform,
+    osRelease: '',
+    isPackaged: false
+  })
+}
+
+describe('standardBrowserUserAgent(deps) against the real sidecar platformApi', () => {
   it('returns a Chrome-shaped UA string with no Electron/x.y.z token', () => {
-    const ua = standardBrowserUserAgent()
+    const ua = standardBrowserUserAgent(deps)
 
     // Happy-path shape produced by the UA template string in userAgent.ts -- proves
     // platformApi's `app.userAgentFallback` matched the platform-extraction regex in
@@ -37,11 +46,11 @@ describe('standardBrowserUserAgent() against the real sidecar platformApi', () =
   })
 
   it('does not throw (the DEFECT 3 regression: app.userAgentFallback was undefined)', () => {
-    expect(() => standardBrowserUserAgent()).not.toThrow()
+    expect(() => standardBrowserUserAgent(deps)).not.toThrow()
   })
 
   it('carries a platform token matching the current process.platform, not a hardcoded macOS value', () => {
-    const ua = standardBrowserUserAgent()
+    const ua = standardBrowserUserAgent(deps)
     if (process.platform === 'darwin') {
       expect(ua).toContain('Macintosh')
     } else if (process.platform === 'win32') {

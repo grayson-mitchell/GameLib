@@ -1,4 +1,4 @@
-import { GlobalConfig } from 'backend/config'
+import type { GlobalConfigSlice } from 'backend/config'
 import { logError, LogPrefix, logInfo } from 'backend/logger'
 import { getSteamLibraries } from 'backend/utils'
 import type { ProcessRunner, RunResult } from 'backend/process/types'
@@ -21,6 +21,11 @@ import { isLinux, isMac } from 'backend/constants/environment'
 
 /** Runner slice the wine discovery functions need: they only ever call `run`. */
 export type WineDiscoveryDeps = { runner: Pick<ProcessRunner, 'run'> }
+
+/** Linux discovery also reads the global settings (custom wine paths, Valve Proton). */
+export type LinuxWineDiscoveryDeps = WineDiscoveryDeps & {
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+}
 
 // mdfind reads the Spotlight index; generous for a cold index (unmeasured, 66.2 research A1).
 const MDFIND_TIMEOUT_MS = 10_000
@@ -72,11 +77,13 @@ export function getDefaultWineBinary(): WineInstallation {
   }
 }
 
-function getCustomWinePaths(): Set<WineInstallation> {
+function getCustomWinePaths(deps: {
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+}): Set<WineInstallation> {
   const customPaths = new Set<WineInstallation>()
   // skips this on new installations to avoid infinite loops
   if (existsSync(configPath)) {
-    const { customWinePaths = [] } = GlobalConfig.get().getSettings()
+    const { customWinePaths = [] } = deps.config.getSettings()
     customWinePaths.forEach((path: string) => {
       if (path.endsWith('proton')) {
         return customPaths.add({
@@ -134,7 +141,7 @@ export function getWineLibs(wineBin: string): {
 }
 
 export async function getLinuxWineSet(
-  deps: WineDiscoveryDeps,
+  deps: LinuxWineDiscoveryDeps,
   scanCustom?: boolean
 ): Promise<Set<WineInstallation>> {
   if (!existsSync(`${toolsPath}/wine`)) {
@@ -176,9 +183,9 @@ export async function getLinuxWineSet(
 
   const protonPaths = [`${toolsPath}/proton/`]
 
-  const { showValveProton } = GlobalConfig.get().getSettings()
+  const { showValveProton } = deps.config.getSettings()
 
-  await getSteamLibraries().then((libs) => {
+  await getSteamLibraries(deps).then((libs) => {
     libs.forEach((path) => {
       if (showValveProton) {
         protonPaths.push(`${path}/steam/steamapps/common`)
@@ -233,7 +240,7 @@ export async function getLinuxWineSet(
 
   let customWineSet = new Set<WineInstallation>()
   if (scanCustom) {
-    customWineSet = getCustomWinePaths()
+    customWineSet = getCustomWinePaths(deps)
   }
 
   return new Set([...proton, ...altWine, ...defaultWineSet, ...customWineSet])

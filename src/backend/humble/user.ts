@@ -10,7 +10,10 @@ import {
 } from 'backend/signInProbe/outcomes'
 import { invalidateSyncGeneration } from './syncFence'
 import { HumbleUserData } from 'common/types/humble'
-import { standardBrowserUserAgent } from './userAgent'
+import {
+  standardBrowserUserAgent,
+  standardBrowserUserAgentForProcess
+} from './userAgent'
 import {
   getLoginWindowSeamOrThrow,
   classifyCookieRead,
@@ -613,7 +616,7 @@ export class HumbleUser {
       seam
         .open(HUMBLE_LOGIN_URL, {
           visible: true,
-          userAgent: standardBrowserUserAgent()
+          userAgent: standardBrowserUserAgentForProcess()
         })
         .then((openedLabel) => {
           if (settled) {
@@ -865,7 +868,7 @@ export class HumbleUser {
       try {
         label = await seam.open(HUMBLE_BASE_URL, {
           visible: false,
-          userAgent: standardBrowserUserAgent()
+          userAgent: standardBrowserUserAgentForProcess()
         })
         const csrfRead = await seam.cookies(label, 'www.humblebundle.com', [
           'csrf_cookie'
@@ -993,7 +996,7 @@ export class HumbleUser {
         async () => {
           const label = await seam.open(HUMBLE_BASE_URL, {
             visible: false,
-            userAgent: standardBrowserUserAgent()
+            userAgent: standardBrowserUserAgentForProcess()
           })
           try {
             // Phase 34.4.1 gap-cycle plan 17 (F-5, item 3(b)): a paired
@@ -1152,7 +1155,7 @@ export class HumbleUser {
           // needed or returned here, unlike the cookie step above.
           const report = await seam.clearStorage(
             HUMBLE_BASE_URL,
-            standardBrowserUserAgent()
+            standardBrowserUserAgentForProcess()
           )
           // Only COUNTS are logged — never a storage key or value
           // (T-34.4.1-34 discipline, same as the cookie step above).

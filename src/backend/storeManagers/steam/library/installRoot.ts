@@ -1,6 +1,6 @@
 import { InstallPlatform } from 'common/types'
 import { isMac, isLinux } from 'backend/constants/environment'
-import { getSteamLibraries } from 'backend/utils'
+import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
 import { resolve, relative, isAbsolute } from 'path'
 import i18next from 'i18next'
 import type { Stores } from 'backend/services/types'
@@ -123,7 +123,7 @@ export function installPlatformForSource(source: AcfSource): InstallPlatform {
   return hostInstallPlatform()
 }
 
-/** resolve()+relative() containment idiom shared by resolveInstallRoot()
+/** resolve()+relative() containment idiom shared by resolveInstallRoot(deps)
  *  below and uninstallBottleGameDirectly()'s own ACF-installdir guard
  *  (games.ts) — never string-prefix matching ("path.join is not
  *  containment", Phase 18). `root` and `candidate` must already be resolve()'d
@@ -145,8 +145,8 @@ export function isPathContainedIn(root: string, candidate: string): boolean {
  *
  * Checks, in order:
  *  1. the CrossOver bottle's steamapps/common/ (getBottleSteamappsRoot() —
- *     the SAME root readAcfState('bottle')/pollUninstallOnce('bottle') use)
- *  2. EVERY native Steam library root from getSteamLibraries()
+ *     the SAME root readAcfState(deps, 'bottle')/pollUninstallOnce('bottle') use)
+ *  2. EVERY native Steam library root from getSteamLibraries(deps)
  *     (libraryfolders.vdf) — not just the default
  *     ~/Library/Application Support/Steam path (a host can register more
  *     than one native library)
@@ -171,6 +171,7 @@ export function isPathContainedIn(root: string, candidate: string): boolean {
  * for what is otherwise a computation with zero side effects.
  */
 export async function resolveInstallRoot(
+  deps: SteamLibrariesDeps,
   installPath: string | undefined
 ): Promise<'bottle' | 'native' | null> {
   if (!installPath || !installPath.trim()) return null
@@ -184,7 +185,7 @@ export async function resolveInstallRoot(
     }
   }
 
-  const libraries = await getSteamLibraries()
+  const libraries = await getSteamLibraries(deps)
   for (const libraryPath of libraries) {
     const nativeCommonRoot = resolve(libraryPath, 'steamapps', 'common')
     if (isPathContainedIn(nativeCommonRoot, resolvedInstallPath)) {

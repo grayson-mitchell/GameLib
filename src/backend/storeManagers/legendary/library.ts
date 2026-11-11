@@ -142,7 +142,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
    */
   private async refreshLegendary(): Promise<ExecResult> {
     logInfo('Refreshing Epic Games...', LogPrefix.Legendary)
-    const epicOffline = await isEpicServiceOffline()
+    const epicOffline = await isEpicServiceOffline(this.deps)
     if (epicOffline) {
       logWarning(
         'Epic is Offline right now, cannot update game list!',
@@ -281,7 +281,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
       '--json': true,
       '--platform': LegendaryPlatform.parse(installPlatform)
     }
-    if (await isEpicServiceOffline()) {
+    if (await isEpicServiceOffline(this.deps)) {
       command['--offline'] = true
     }
     const res = await this.runRunnerCommand(command, { abortId: appName })
@@ -330,7 +330,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
     if (!isLoggedIn || !isOnline()) {
       return []
     }
-    const epicOffline = await isEpicServiceOffline()
+    const epicOffline = await isEpicServiceOffline(this.deps)
     if (epicOffline) {
       logWarning(
         'Epic servers are offline, cannot check for game updates',
@@ -737,7 +737,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
       return runLegendaryCommandStub(command)
     }
 
-    const { dir, bin } = getLegendaryBin()
+    const { dir, bin } = getLegendaryBin(this.deps)
 
     // Set LEGENDARY_CONFIG_PATH to a custom, Heroic-specific location so user-made
     // changes to Legendary's main config file don't affect us

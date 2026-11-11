@@ -1,4 +1,4 @@
-import { app } from 'backend/platform'
+import type { AppPaths } from 'backend/process/context'
 import { access, cp, rename, rm } from 'fs/promises'
 import { join } from 'path'
 
@@ -17,13 +17,14 @@ const exists = async (path: PathLike) =>
 
 export class LegendaryGlobalConfigFolderMigration implements Migration {
   identifier = 'legendary-move-global-config-folder'
+  constructor(private readonly deps: { paths: Pick<AppPaths, 'appData'> }) {}
   async run(): Promise<boolean> {
     const hasHeroicSpecificConfig = await exists(legendaryConfigPath)
     // Don't overwrite existing configuration
     if (hasHeroicSpecificConfig) return true
 
     const globalLegendaryConfig = isLinux
-      ? join(app.getPath('appData'), 'legendary')
+      ? join(this.deps.paths.appData, 'legendary')
       : join(userHome, '.config', 'legendary')
 
     const hasGlobalConfig = await exists(globalLegendaryConfig)

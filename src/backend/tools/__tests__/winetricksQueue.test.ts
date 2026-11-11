@@ -63,7 +63,8 @@ import { createTools } from '../index'
 import type { ToolsDeps } from '../index'
 import {
   createTestServices,
-  createTestStores
+  createTestStores,
+  createTestToolsSlices
 } from 'backend/testUtils/testServices'
 import {
   createDrivableRunner,
@@ -76,6 +77,7 @@ import {
 let runner: DrivableRunner
 
 const toolsDeps: ToolsDeps = {
+  ...createTestToolsSlices(),
   spawnAsync: createTestServices().spawnAsync,
   runner: { run: (...args) => runner.run(...args) },
   stores: createTestStores(),

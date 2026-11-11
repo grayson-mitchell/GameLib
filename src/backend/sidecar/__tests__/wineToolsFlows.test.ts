@@ -99,6 +99,8 @@ jest.mock('../../tools/winetricksQueue', () => ({
   }
 }))
 
+import { createTestHostServices } from 'backend/testUtils/testHostServices'
+import { createTestToolsSlices } from 'backend/testUtils/testServices'
 import { defined } from 'backend/testUtils/indexed'
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -144,7 +146,8 @@ registerWineToolsFlows({
   },
   spawnAsync: jest.fn(),
   stores: createTestStores(),
-  runner: createTestServices().runner
+  runner: createTestServices().runner,
+  ...createTestToolsSlices()
 })
 const registeredSendChannels = [...listenerRegistry]
   .filter(
@@ -270,11 +273,14 @@ describe('pass-through proof — runWineCommand forwards args[0] unchanged, not 
 // so the `doMock` swap became a no-op and was deleted.)
 describe('D-15/T-34.5-30 dialog safety pin — showDialogBoxModalAuto never propagates a rejection', () => {
   it('does not throw synchronously and produces no unhandled rejection when the frontend push fails, using the real platformApi dialog fallback', async () => {
-    let isolatedShowDialogBoxModalAuto!: (props: {
-      title: string
-      message: string
-      type: 'ERROR' | 'INFO' | 'WARNING'
-    }) => void
+    let isolatedShowDialogBoxModalAuto!: (
+      deps: unknown,
+      props: {
+        title: string
+        message: string
+        type: 'ERROR' | 'INFO' | 'WARNING'
+      }
+    ) => void
 
     jest.isolateModules(() => {
       jest.doMock('../sidecarRpc', () => ({
@@ -315,11 +321,17 @@ describe('D-15/T-34.5-30 dialog safety pin — showDialogBoxModalAuto never prop
 
     try {
       expect(() =>
-        isolatedShowDialogBoxModalAuto({
-          title: 'box.error.dxvk.title',
-          message: 'box.error.dxvk.message',
-          type: 'ERROR'
-        })
+        isolatedShowDialogBoxModalAuto(
+          {
+            appState: createTestHostServices().appState,
+            dialogs: createTestHostServices().dialogs
+          },
+          {
+            title: 'box.error.dxvk.title',
+            message: 'box.error.dxvk.message',
+            type: 'ERROR'
+          }
+        )
       ).not.toThrow()
 
       // Let the fire-and-forget `platformApi.dialog.showErrorBox(...)` promise settle before

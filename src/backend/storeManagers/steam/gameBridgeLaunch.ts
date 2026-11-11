@@ -424,7 +424,7 @@ export async function launchBridgeGameBody(
     steamGame.appId,
     {
       onWaitingForSteam: (cause) =>
-        notify({
+        notify(steamGame.deps, {
           title: i18next.t(
             'gamelib:steam.bridge.waiting.title',
             'Waiting for Steam'

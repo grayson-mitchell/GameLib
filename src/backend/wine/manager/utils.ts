@@ -20,7 +20,7 @@ import {
 } from 'backend/utils/aborthandler/aborthandler'
 import { toolsPath } from 'backend/constants/paths'
 import { isLinux, isMac, isWindows } from 'backend/constants/environment'
-import { GlobalConfig } from '../../config'
+import type { GlobalConfigSlice } from '../../config'
 import { join } from 'path'
 import { backendEvents } from 'backend/backend_events'
 import type { Stores } from 'backend/services/types'
@@ -253,13 +253,16 @@ async function updateWineVersionInfos(
   return releases
 }
 
-function getInstallDir(release: WineVersionInfo): string {
+function getInstallDir(
+  deps: { config: Pick<GlobalConfigSlice, 'getSettings'> },
+  release: WineVersionInfo
+): string {
   if (release?.type?.includes('Wine')) {
     return `${toolsPath}/wine`
   } else if (release.type.includes('Toolkit')) {
     return `${toolsPath}/game-porting-toolkit`
   } else {
-    const config = GlobalConfig.get().getSettings()
+    const config = deps.config.getSettings()
     if (config.downloadProtonToSteam && config.defaultSteamPath) {
       const isValidSteamPath = existsSync(
         join(config.defaultSteamPath, 'steam.sh')
@@ -283,7 +286,10 @@ function getInstallDir(release: WineVersionInfo): string {
 }
 
 async function installWineVersion(
-  deps: WineManagerDeps & { runner: Pick<ProcessRunner, 'run'> },
+  deps: WineManagerDeps & {
+    runner: Pick<ProcessRunner, 'run'>
+    config: Pick<GlobalConfigSlice, 'getSettings'>
+  },
   release: WineVersionInfo,
   onProgress: (status: WineManagerStatus) => void
 ) {
@@ -307,7 +313,7 @@ async function installWineVersion(
     LogPrefix.WineDownloader
   )
 
-  const installDir = getInstallDir(release)
+  const installDir = getInstallDir(deps, release)
 
   const abortController = createAbortController(release.version)
 

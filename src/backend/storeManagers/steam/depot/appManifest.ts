@@ -1,7 +1,7 @@
 // Phase 21 (21-02): Hand-templated `.acf` (appmanifest) writer.
 //
 // GameLib has only ever READ appmanifest files, via the project's VDF-parsing
-// package's parse() function (see library.ts readAcfState()). This module
+// package's parse() function (see library.ts readAcfState(deps)). This module
 // WRITES them for the first time — exactly where that library's documented
 // 64-bit rounding bug (RESEARCH.md Pitfall 1) becomes fatal. Every 64-bit
 // value (InstalledDepots[].manifest, lastOwner) is kept a string end-to-end
@@ -22,7 +22,7 @@
 // same directory, fsynced, then renamed over the final `.acf` (T-21-06) — a
 // crash mid-write leaves the prior (or absent) manifest, never a half-written
 // one. Read-side sibling this must stay bit-consistent with: library.ts
-// readAcfState()'s `parseInt(state.StateFlags, 10) & 4` check.
+// readAcfState(deps)'s `parseInt(state.StateFlags, 10) & 4` check.
 //
 // The `name` and `installdir` string fields are untrusted PICS-sourced values
 // (Steam CM network, not user input, but not trusted VDF-structure-wise

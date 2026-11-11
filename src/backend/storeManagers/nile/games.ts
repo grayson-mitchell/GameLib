@@ -64,6 +64,12 @@ export default class NileGameManager implements Game {
         | 'commandRunner'
         | 'spawnAsync'
         | 'runner'
+        | 'config'
+        | 'dialogs'
+        | 'appState'
+        | 'notifications'
+        | 'gameConfigs'
+        | 'appInfo'
       > & {
         stores: Pick<
           ManagerDeps['stores'],
@@ -347,7 +353,7 @@ export default class NileGameManager implements Game {
     if (!launchPrepSuccess) {
       logWriter.logError(['Launch aborted:', launchPrepFailReason])
       this.deps.launcher.launchCleanup()
-      showDialogBoxModalAuto({
+      showDialogBoxModalAuto(this.deps, {
         title: t('box.error.launchAborted', 'Launch aborted'),
         message: launchPrepFailReason!,
         type: 'ERROR'
@@ -416,7 +422,7 @@ export default class NileGameManager implements Game {
       if (!wineLaunchPrepSuccess) {
         logWriter.logError(['Launch aborted:', wineLaunchPrepFailReason])
         if (wineLaunchPrepFailReason) {
-          showDialogBoxModalAuto({
+          showDialogBoxModalAuto(this.deps, {
             title: t('box.error.launchAborted', 'Launch aborted'),
             message: wineLaunchPrepFailReason,
             type: 'ERROR'
@@ -569,7 +575,7 @@ export default class NileGameManager implements Game {
       )
     } else if (!res.abort) {
       await removeShortcutsUtil(this.deps, this)
-      await removeNonSteamGame(this)
+      await removeNonSteamGame(this.deps, this)
       this.deps.libraryManagers.nile.installState(this.id, false)
     }
     sendFrontendMessage('refreshLibrary', 'nile')

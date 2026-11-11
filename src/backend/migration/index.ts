@@ -1,5 +1,6 @@
 import { logError, logInfo } from '../logger'
 
+import type { AppPaths } from '../process/context'
 import { LegendaryGlobalConfigFolderMigration } from './migrations/legendary'
 
 import type { TypeCheckedStore } from 'common/types/typed_store'
@@ -13,11 +14,13 @@ export interface Migration {
 /** The store slice migrations read (66.1, R1). */
 export interface MigrationDeps {
   stores: Pick<Stores, 'migration'>
+  paths: AppPaths
 }
 
 export default class MigrationSystem {
   constructor(deps: MigrationDeps) {
     this.migrationsStore = deps.stores.migration.migrationsStore
+    this.paths = deps.paths
   }
 
   async applyMigrations() {
@@ -65,8 +68,9 @@ export default class MigrationSystem {
   }
 
   private getAllMigrations(): Migration[] {
-    return [new LegendaryGlobalConfigFolderMigration()]
+    return [new LegendaryGlobalConfigFolderMigration({ paths: this.paths })]
   }
 
+  private readonly paths: AppPaths
   private readonly migrationsStore: TypeCheckedStore<'migrationsStore'>
 }

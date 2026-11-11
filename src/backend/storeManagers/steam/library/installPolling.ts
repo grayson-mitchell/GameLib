@@ -261,7 +261,7 @@ export function startInstallPolling(
     // Jest suite that started it (unref() above only stops it from keeping the
     // process alive — it does NOT stop it from firing while the process is
     // otherwise kept busy by a later suite). If it fires after that suite's
-    // module mocks are torn down, readAcfState()'s dependencies
+    // module mocks are torn down, readAcfState(deps)'s dependencies
     // (getSteamLibraries/getSteamBottleSettings) return undefined and throw.
     // Left unguarded, that throw escapes this async setInterval callback as an
     // unhandled rejection and kills the whole Jest worker. Production never

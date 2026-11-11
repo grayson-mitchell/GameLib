@@ -47,8 +47,12 @@ jest.mock('../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 
 // ── dialog/dialog mock ────────────────────────────────────────────────────────
 jest.mock('../../../dialog/dialog', () => ({
-  notify: jest.fn(),
-  showDialogBoxModalAuto: jest.fn()
+  notify: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn()),
+  showDialogBoxModalAuto: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 
 // ── i18next mock ──────────────────────────────────────────────────────────────

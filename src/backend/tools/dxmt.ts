@@ -1,4 +1,5 @@
 import { backendEvents } from 'backend/backend_events'
+import type { DialogBoxDeps } from '../dialog/dialog'
 import { isMac } from 'backend/constants/environment'
 import { logDebug, logError, LogPrefix, logWarning } from 'backend/logger'
 import { isOnline } from 'backend/online_monitor'
@@ -20,7 +21,7 @@ import type { Stores } from 'backend/services/types'
 import type { ProcessRunner } from 'backend/process/types'
 
 /** The store slice the boot-time DXMT update census reads (66.1, R1). */
-export interface DxmtStoresDeps {
+export interface DxmtStoresDeps extends DialogBoxDeps {
   runner: Pick<ProcessRunner, 'run'>
   stores: {
     wineManager: Pick<Stores['wineManager'], 'wineDownloaderInfoStore'>
@@ -52,7 +53,7 @@ function logDXMTSkip(
 }
 
 const DXMT = {
-  getLatest: (deps: { runner: Pick<ProcessRunner, 'run'> }) => {
+  getLatest: (deps: { runner: Pick<ProcessRunner, 'run'> } & DialogBoxDeps) => {
     if (!isOnline()) {
       logWarning(
         'App offline, skipping possible DXMT update.',

@@ -76,7 +76,8 @@ jest.mock('../../humble/library')
 const FAKE_USER_AGENT =
   'Mozilla/5.0 (Test) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/999.0.0.0 Safari/537.36'
 jest.mock('../../humble/userAgent', () => ({
-  standardBrowserUserAgent: jest.fn(() => FAKE_USER_AGENT)
+  standardBrowserUserAgent: jest.fn(() => FAKE_USER_AGENT),
+  standardBrowserUserAgentForProcess: jest.fn(() => FAKE_USER_AGENT)
 }))
 
 // ── Imports (after mocks) — sidecarRpc is DELIBERATELY NOT mocked: describe block 2 drives the

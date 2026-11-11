@@ -8,7 +8,7 @@ import {
   HUMBLE_REDEEM_PATH,
   HUMBLE_REQUIRED_HEADERS
 } from './constants'
-import { standardBrowserUserAgent } from './userAgent'
+import { standardBrowserUserAgentForProcess } from './userAgent'
 import {
   getLoginWindowSeamOrThrow,
   type LoginWindowSeam
@@ -296,7 +296,7 @@ async function humblePostRequestViaSeam(
         path,
         body,
         csrfToken,
-        userAgent: standardBrowserUserAgent()
+        userAgent: standardBrowserUserAgentForProcess()
       }),
       timeoutPromise
     ])

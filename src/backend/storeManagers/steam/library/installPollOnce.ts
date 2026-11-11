@@ -37,7 +37,7 @@ import { stopInstallPolling } from './installStop'
  *   'absent'      → no-op (grace/cap logic lives in startInstallPolling's callback)
  *
  * `source` selects the native (default), bottle-scoped, or bridge-bottle-
- * scoped ACF root — see readAcfState() for the distinction.
+ * scoped ACF root — see readAcfState(deps) for the distinction.
  *
  * Exported for unit testing.
  */
@@ -46,7 +46,7 @@ export async function pollInstallOnce(
   appId: string,
   source: AcfSource = 'native'
 ): Promise<void> {
-  const result = await readAcfState(appId, source)
+  const result = await readAcfState(deps, appId, source)
   const poll = activePolls.get(appId)
 
   if (result.state === 'downloading') {
@@ -211,7 +211,7 @@ export async function pollInstallOnce(
     if (isWaitingForSteamRestart && poll && !poll.notifiedWaiting) {
       poll.notifiedWaiting = true
       const game = library.get(appId)
-      notify({
+      notify(deps, {
         title: game?.title ?? '',
         body: i18next.t(
           'steam.waitingForSteam.notify',
@@ -324,7 +324,7 @@ export async function pollInstallOnce(
       // release below must not repeat it.
       if (!poll.notifiedWaiting) {
         poll.notifiedWaiting = true
-        notifyRestartSteamToFinish(existing?.title ?? '')
+        notifyRestartSteamToFinish(deps, existing?.title ?? '')
       }
       return
     }
@@ -374,7 +374,7 @@ export async function pollInstallOnce(
     // The DM pipeline toast is suppressed for steam — this is the sole source,
     // except on the bridge, where installBridgeGame fires it.
     if (!installerOwnsCompletion) {
-      notify({
+      notify(deps, {
         title: existing?.title ?? '',
         body: i18next.t('notify.install.finished', 'Installation Finished')
       })
@@ -397,7 +397,7 @@ export async function pollInstallOnce(
     // OFF-path poll (Steam owns the download), so this never fires there.
     if (poll?.skippedDepots?.length && !poll.notifiedDepotSkipped) {
       poll.notifiedDepotSkipped = true
-      notify({
+      notify(deps, {
         title: existing?.title ?? '',
         body: i18next.t(
           'steam.download.notify.depotSkipped',
@@ -412,7 +412,7 @@ export async function pollInstallOnce(
     // branch above, gated on StateFlags===GAMELIB_HANDOFF_STATE_FLAGS
     // (1026). That check is structurally unreachable here — the Phase 23
     // "trustworthy 4" fast path (canWriteFullOwnership) writes StateFlags=4
-    // directly via finalizeToSteam, so readAcfState() returns
+    // directly via finalizeToSteam, so readAcfState(deps) returns
     // state:'installed' on the very first poll and this branch is reached
     // WITHOUT ever passing through 'downloading' at all. isNativeHandoff is
     // the correct signal here too — it is set true by games.ts the moment
@@ -432,7 +432,7 @@ export async function pollInstallOnce(
       !poll.notifiedWaiting
     ) {
       poll.notifiedWaiting = true
-      notifyRestartSteamToFinish(existing?.title ?? '')
+      notifyRestartSteamToFinish(deps, existing?.title ?? '')
     }
 
     stopInstallPolling(deps, appId)

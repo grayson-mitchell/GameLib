@@ -20,7 +20,12 @@ import {
 import { app } from 'backend/platform'
 import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
 import i18next from 'i18next'
-import { notify, showDialogBoxModalAuto } from '../../dialog/dialog'
+import {
+  notify,
+  showDialogBoxModalAuto,
+  type DialogBoxDeps,
+  type NotifyDeps
+} from '../../dialog/dialog'
 import { GlobalConfig } from '../../config'
 import { getWikiGameInfo } from 'backend/wiki_game_info/wiki_game_info'
 import { isAppImage, isFlatpak, isWindows } from 'backend/constants/environment'
@@ -36,7 +41,10 @@ const getSteamUserdataDir = async () => {
  * Opens a error dialog in frontend with the error message
  * @param props
  */
-function showErrorInFrontend(props: { gameTitle: string; error: string }) {
+function showErrorInFrontend(
+  deps: DialogBoxDeps,
+  props: { gameTitle: string; error: string }
+) {
   const error = i18next.t('box.error.add.steam.body', {
     defaultValue: 'Adding {{game}} to Steam failed with:{{newLine}} {{error}}',
     game: props.gameTitle,
@@ -50,19 +58,22 @@ function showErrorInFrontend(props: { gameTitle: string; error: string }) {
     'Error Adding Game to Steam'
   )
 
-  showDialogBoxModalAuto({ title, message: error, type: 'ERROR' })
+  showDialogBoxModalAuto(deps, { title, message: error, type: 'ERROR' })
 }
 
 /**
  * Opens a notify window in the frontend with given message
  * @param props
  */
-function notifyFrontend(props: { message: string; adding: boolean }) {
+function notifyFrontend(
+  deps: NotifyDeps,
+  props: { message: string; adding: boolean }
+) {
   const title = props.adding
     ? i18next.t('notify.finished.add.steam.title', 'Added to Steam')
     : i18next.t('notify.finished.remove.steam.title', 'Removed from Steam')
 
-  notify({
+  notify(deps, {
     body: props.message,
     title
   })
@@ -200,9 +211,11 @@ function checkIfAlreadyAdded(object: Partial<ShortcutObject>, title: string) {
 }
 
 /** The icon lookup's managers plus the kvs store the shortcut's last-played read uses. */
-export type NonSteamGameDeps = ShortcutsDeps & {
-  stores: Pick<Stores, 'kvs' | 'wikiGameInfo' | 'crossoverIndex'>
-}
+export type NonSteamGameDeps = ShortcutsDeps &
+  DialogBoxDeps &
+  NotifyDeps & {
+    stores: Pick<Stores, 'kvs' | 'wikiGameInfo' | 'crossoverIndex'>
+  }
 
 /**
  * Adds a non-steam game to steam via editing shortcuts.vdf
@@ -223,7 +236,7 @@ async function addNonSteamGame(
 
   if (error) {
     logError(error, LogPrefix.Shortcuts)
-    showErrorInFrontend({
+    showErrorInFrontend(deps, {
       gameTitle: gameInfo.title,
       error
     })
@@ -352,7 +365,7 @@ async function addNonSteamGame(
   if (!added) {
     const errorMessage = errors.join('\n')
     logError(errorMessage, LogPrefix.Shortcuts)
-    showErrorInFrontend({
+    showErrorInFrontend(deps, {
       gameTitle: gameInfo.title,
       error: errorMessage
     })
@@ -370,7 +383,7 @@ async function addNonSteamGame(
         '{{game}} was successfully added to Steam. A restart of Steam is required for changes to take effect.',
       game: gameInfo.title
     })
-    notifyFrontend({ message, adding: true })
+    notifyFrontend(deps, { message, adding: true })
     return true
   } else {
     logWarning(
@@ -384,7 +397,7 @@ async function addNonSteamGame(
         '{{game}} could not be added to all found Steam users. See logs for more info. A restart of Steam is required for changes to take effect.',
       game: gameInfo.title
     })
-    notifyFrontend({ message, adding: true })
+    notifyFrontend(deps, { message, adding: true })
     return true
   }
 }
@@ -395,7 +408,7 @@ async function addNonSteamGame(
  * @param steamUserdataDir Path to steam userdata directory, optional
  * @returns none
  */
-async function removeNonSteamGame(game: Game): Promise<void> {
+async function removeNonSteamGame(deps: NotifyDeps, game: Game): Promise<void> {
   const gameInfo = game.getGameInfo()
   const steamUserdataDir = await getSteamUserdataDir()
   const { folders, error } = checkSteamUserDataDir(steamUserdataDir)
@@ -481,7 +494,7 @@ async function removeNonSteamGame(game: Game): Promise<void> {
         '{{game}} was successfully removed from Steam. A restart of Steam is required for changes to take effect.',
       game: gameInfo.title
     })
-    notifyFrontend({ message, adding: false })
+    notifyFrontend(deps, { message, adding: false })
   } else {
     logWarning(
       `${gameInfo.title} could not be removed from all found Steam users.`,
@@ -494,7 +507,7 @@ async function removeNonSteamGame(game: Game): Promise<void> {
         '{{game}} could not be removed from all found Steam users. See logs for more info. A restart of Steam is required for changes to take effect.',
       game: gameInfo.title
     })
-    notifyFrontend({ message, adding: false })
+    notifyFrontend(deps, { message, adding: false })
   }
 }
 

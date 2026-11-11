@@ -93,7 +93,7 @@ jest.mock('backend/game_overrides', () => ({
 // ── backend/dialog/dialog mock ──────────────────────────────────────────
 const notifyMock = jest.fn()
 jest.mock('backend/dialog/dialog', () => ({
-  notify: (...args: [unknown]) => notifyMock(...args)
+  notify: (_deps: unknown, ...args: [unknown]) => notifyMock(...args)
 }))
 
 // ── backend/utils mock (sendGameStatusUpdate only -- this module has many

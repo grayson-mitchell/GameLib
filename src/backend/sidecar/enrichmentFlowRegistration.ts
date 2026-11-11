@@ -160,6 +160,7 @@
  * is INVOKE.
  */
 
+import type { AppInfo } from '../process/context'
 import { ipcMain } from '../platform'
 import { getWikiGameInfo } from '../wiki_game_info/wiki_game_info'
 import { gameAnticheatInfo } from '../anticheat/utils'
@@ -181,6 +182,7 @@ import type { StoreManagers, Stores } from 'backend/services/types'
 
 /** Narrow slice (66.1 D-01): library managers for game lookup. */
 export interface EnrichmentFlowDeps {
+  appInfo: Pick<AppInfo, 'version'>
   managers: Pick<StoreManagers, 'library'>
   stores: Pick<
     Stores,
@@ -294,17 +296,17 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
   // the Phase 20 D-14 try/log/RETHROW contract. A bare pass-through would
   // silently change the error-propagation contract the frontend depends on.
   ipcMain.handle('searchStores', async (_event: unknown, ...args: unknown[]) =>
-    handleSearchStores(args[0] as string)
+    handleSearchStores(deps, args[0] as string)
   )
 
   ipcMain.handle(
     'getStoreSearchDeals',
     async (_event: unknown, ...args: unknown[]) =>
-      handleGetStoreSearchDeals(args[0] as string)
+      handleGetStoreSearchDeals(deps, args[0] as string)
   )
 
   ipcMain.handle('getStoreSearchStoreMap', async () =>
-    handleGetStoreSearchStoreMap()
+    handleGetStoreSearchStoreMap(deps)
   )
 
   // Imports ONLY removeRecentGame from recent_games.ts — not
@@ -317,7 +319,11 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
     'getGogDiscounts',
     async (_event: unknown, ...args: unknown[]) =>
       getGogDiscounts(
-        { stores: deps.stores, libraryManagers: deps.managers.library },
+        {
+          stores: deps.stores,
+          libraryManagers: deps.managers.library,
+          appInfo: deps.appInfo
+        },
         args[0] as CatalogLocaleSettings,
         (args[1] as boolean | null | undefined) ?? undefined,
         (args[2] as boolean | null | undefined) ?? undefined
@@ -364,7 +370,7 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
       }
 
       try {
-        const results = await SteamGridDB.searchGame(apiKey, query)
+        const results = await SteamGridDB.searchGame(deps, apiKey, query)
         return results.map((game) => ({
           id: game.id,
           name: game.name
@@ -390,7 +396,7 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
       }
 
       try {
-        const results = await SteamGridDB.getGrids(apiKey, {
+        const results = await SteamGridDB.getGrids(deps, apiKey, {
           gameId: gridArgs.gameId,
           dimensions: gridArgs.dimensions,
           styles: gridArgs.styles
@@ -421,7 +427,7 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
       }
 
       try {
-        const results = await SteamGridDB.getHeroes(apiKey, {
+        const results = await SteamGridDB.getHeroes(deps, apiKey, {
           gameId: heroArgs.gameId,
           dimensions: heroArgs.dimensions,
           styles: heroArgs.styles

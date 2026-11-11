@@ -1620,7 +1620,7 @@ export default class GOGLibraryManager implements LibraryManager {
       return runGogdlCommandStub(commandParts)
     }
 
-    const { dir, bin } = getGOGdlBin()
+    const { dir, bin } = getGOGdlBin(this.deps)
     const authConfig = join(userDataPath, 'gog_store', 'auth.json')
 
     if (!options) {

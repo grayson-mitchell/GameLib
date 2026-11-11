@@ -8,7 +8,12 @@ import { ButtonOptions, DMStatus, InstallParams, Runner } from 'common/types'
 import { InstallResult, InstallErrorAction } from 'common/types/game_manager'
 import { isStore, storeCapabilities } from 'common/storeCapabilities'
 import i18next from 'i18next'
-import { notify, showDialogBoxModalAuto } from '../dialog/dialog'
+import {
+  notify,
+  showDialogBoxModalAuto,
+  type DialogBoxDeps,
+  type NotifyDeps
+} from '../dialog/dialog'
 import { isOnline } from '../online_monitor'
 import pathModule from 'path'
 import { existsSync, rmSync } from 'graceful-fs'
@@ -35,7 +40,10 @@ import type { StoreManagers } from 'backend/services/types'
 export { resolveGameTitle }
 
 /** What the queue element runners read: the library manager map (66.1, R3). */
-type QueueElementDeps = { managers: Pick<StoreManagers, 'library'> }
+type QueueElementDeps = {
+  managers: Pick<StoreManagers, 'library'>
+} & DialogBoxDeps &
+  NotifyDeps
 type LibraryManagerMap = StoreManagers['library']
 
 /**
@@ -149,9 +157,9 @@ async function installQueueElement(
   }
 
   if (isStore(runner, 'legendary')) {
-    const epicOffline = await isEpicServiceOffline()
+    const epicOffline = await isEpicServiceOffline(deps)
     if (epicOffline) {
-      showDialogBoxModalAuto({
+      showDialogBoxModalAuto(deps, {
         title: i18next.t('box.warning.title', 'Warning'),
         message: i18next.t(
           'box.warning.epic.install',
@@ -180,7 +188,7 @@ async function installQueueElement(
   // Steam install is fire-and-forget via steam:// — the ACF poller owns all status
   // transitions. Suppress premature "Installation Started" toast for steam runners.
   if (!storeCapabilities[runner].installManagedExternally) {
-    notify({
+    notify(deps, {
       title,
       body: i18next.t('notify.install.startInstall', 'Installation Started')
     })
@@ -414,7 +422,7 @@ async function installQueueElement(
               }
             ]
           : undefined
-      showDialogBoxModalAuto({
+      showDialogBoxModalAuto(deps, {
         title: i18next.t('box.error.title', 'Error'),
         message: i18next.t(
           'gamelib:box.error.install.failed',
@@ -448,9 +456,9 @@ async function updateQueueElement(
   }
 
   if (isStore(runner, 'legendary')) {
-    const epicOffline = await isEpicServiceOffline()
+    const epicOffline = await isEpicServiceOffline(deps)
     if (epicOffline) {
-      showDialogBoxModalAuto({
+      showDialogBoxModalAuto(deps, {
         title: i18next.t('box.warning.title', 'Warning'),
         message: i18next.t(
           'box.warning.epic.update',
@@ -468,7 +476,7 @@ async function updateQueueElement(
     status: 'updating'
   })
 
-  notify({
+  notify(deps, {
     title,
     body: i18next.t('notify.update.started', 'Update Started')
   })

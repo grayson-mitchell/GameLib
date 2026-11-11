@@ -8,7 +8,8 @@ import {
 } from './utils'
 import { sendFrontendMessage } from '../ipc'
 import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
-import { notify } from '../dialog/dialog'
+import { notify, type DialogBoxDeps, type NotifyDeps } from '../dialog/dialog'
+import type { GlobalConfigSlice } from '../config'
 import i18next from 'i18next'
 import { createRedistDMQueueElement } from 'backend/storeManagers/gog/redist'
 import { getSteamInstallSize } from 'backend/storeManagers/steam/gameRequirements'
@@ -26,7 +27,8 @@ import {
 } from 'common/storeCapabilities'
 
 /** What the queue reads: the persisted queue store, the manager map and the connectivity feed. */
-export interface DownloadQueueDeps {
+export interface DownloadQueueDeps extends DialogBoxDeps, NotifyDeps {
+  config: GlobalConfigSlice
   stores: Pick<Stores, 'downloadManager' | 'steam'>
   managers: Pick<StoreManagers, 'library'>
   onConnectivityChange: typeof OnConnectivityChange
@@ -54,7 +56,11 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
 
   // 66.1-10/11: the steam stores slice arrives from the boot's stores service, so this module
   // no longer loads the steam store backends itself.
-  const steamStoresDeps = { stores: { steam: deps.stores.steam } }
+  const steamStoresDeps = {
+    stores: { steam: deps.stores.steam },
+    config: deps.config,
+    notifications: deps.notifications
+  }
 
   function onConnectivity(
     status: Parameters<Parameters<typeof OnConnectivityChange>[0]>[0]
@@ -439,12 +445,15 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
             .getGame(appName)
             .getGameInfo()
           if (folder_name) {
-            void removeFolder(currentElement.params.path, folder_name).catch(
-              (error) =>
-                logError(
-                  ['Could not remove cancelled download folder:', error],
-                  LogPrefix.DownloadManager
-                )
+            void removeFolder(
+              deps,
+              currentElement.params.path,
+              folder_name
+            ).catch((error) =>
+              logError(
+                ['Could not remove cancelled download folder:', error],
+                LogPrefix.DownloadManager
+              )
             )
           }
         }
@@ -513,7 +522,10 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
         )
         // i18next.t('notify.update.paused', 'Update Paused')
         // i18next.t('notify.install.paused', 'Installation Paused')
-        notify({ title, body: i18next.t(`notify.${element.type}.paused`) })
+        notify(deps, {
+          title,
+          body: i18next.t(`notify.${element.type}.paused`)
+        })
       } else {
         logWarning(
           [action, 'of', element.params.appName, 'aborted!'],
@@ -521,7 +533,10 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
         )
         // i18next.t('notify.update.canceled', 'Update Canceled')
         // i18next.t('notify.install.canceled', 'Installation Canceled')
-        notify({ title, body: i18next.t(`notify.${element.type}.canceled`) })
+        notify(deps, {
+          title,
+          body: i18next.t(`notify.${element.type}.canceled`)
+        })
       }
     } else if (status === 'error') {
       logWarning(
@@ -530,14 +545,14 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
       )
       // i18next.t('notify.update.failed', 'Update Failed')
       // i18next.t('notify.install.failed', 'Installation Failed')
-      notify({ title, body: i18next.t(`notify.${element.type}.failed`) })
+      notify(deps, { title, body: i18next.t(`notify.${element.type}.failed`) })
     } else if (status === 'done') {
       // Steam: ACF poller owns the confirmed-completion toast — suppress the DM one
       // (mirrors the gog-redist early-return guard above). Epic/GOG/Amazon unchanged.
       if (!storeCapabilities[element.params.runner].installManagedExternally) {
         // i18next.t('notify.update.finished', 'Update Finished')
         // i18next.t('notify.install.finished', 'Installation Finished')
-        notify({
+        notify(deps, {
           title,
           body: i18next.t(`notify.${element.type}.finished`)
         })

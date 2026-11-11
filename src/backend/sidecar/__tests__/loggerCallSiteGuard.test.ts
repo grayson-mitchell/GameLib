@@ -45,6 +45,8 @@
  * stream carries the sidecar's newline-delimited JSON RPC frame protocol.
  */
 
+import { TEST_APP_INFO } from 'backend/testUtils/testContext'
+import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
@@ -110,6 +112,12 @@ import * as loggerModule from '../../logger'
 import { registerLoggerFlows } from '../loggerFlowRegistration'
 import { listenerRegistry } from '../../platform'
 
+const loggerDeps = {
+  stores: {} as never,
+  appInfo: TEST_APP_INFO,
+  openExternal: createTestHostServices().openExternal
+}
+
 /**
  * Waits, bounded, alternating a `setImmediate` tick and a short timer, until
  * `predicate()` returns true or the iteration budget is exhausted. Needed
@@ -156,7 +164,7 @@ function hasExpressionBodyErrorWrapper(source: string): boolean {
 describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / REQ-34.2-12 / REQ-34.2-14)', () => {
   beforeAll(() => {
     initHeadless()
-    registerLoggerFlows({ stores: {} as never })
+    registerLoggerFlows(loggerDeps)
     // A second registration would duplicate every frontend log line —
     // platformApi's dispatchSend iterates every listener in the array for
     // a channel.
@@ -252,7 +260,7 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
       // No initHeadless()/init call anywhere in this fresh, isolated
       // module registry — heroicLogWriter is never assigned, reproducing
       // the recorded "heroicLogWriter unset until bootstrap init" gotcha.
-      freshRegistration.registerLoggerFlows({ stores: {} as never })
+      freshRegistration.registerLoggerFlows(loggerDeps)
       const freshListener =
         freshElectronStub.listenerRegistry.get('logError')?.[0]
       expect(freshListener).toBeDefined()
@@ -407,7 +415,7 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
       // No initHeadless()/init call anywhere in this fresh, isolated
       // module registry -- heroicLogWriter is never assigned, reproducing
       // the recorded "heroicLogWriter unset until bootstrap init" gotcha.
-      freshRegistration.registerLoggerFlows({ stores: {} as never })
+      freshRegistration.registerLoggerFlows(loggerDeps)
       const freshListener =
         freshElectronStub.listenerRegistry.get('logInfo')?.[0]
       expect(freshListener).toBeDefined()

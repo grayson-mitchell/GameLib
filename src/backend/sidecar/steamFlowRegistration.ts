@@ -358,7 +358,11 @@ async function handleLaunch(
       app.hideMainWindow()
     }
     const launched = await dispatchSteamLaunch(
-      { libraryManagers: deps.managers.library, stores: deps.stores },
+      {
+        libraryManagers: deps.managers.library,
+        stores: deps.stores,
+        notifications: deps.notifications
+      },
       appName
     )
     return { status: launched ? 'done' : 'error' }
@@ -396,6 +400,7 @@ async function handleLaunch(
  * registration onto the handler registry happens.
  */
 export type SteamFlowDeps = Pick<BootServices, 'managers' | 'stores'> & {
+  notifications: Pick<BootServices['host']['notifications'], 'show'>
   launcher: Pick<BootServices['launcher'], 'launchEventCallback'>
 }
 

@@ -1,17 +1,18 @@
-import { dialog, app } from 'backend/platform'
 import { isStore, storeCapabilities } from 'common/storeCapabilities'
 import { logError, logInfo, LogPrefix } from './logger'
 import i18next from 'i18next'
 import { tOrFallback } from './i18nFallback'
 import { GameInfo, LaunchOption, Runner } from 'common/types'
-import { getMainWindow } from './main_window'
 import { sendFrontendMessage } from './ipc'
 import type { Launcher, StoreManagers, Stores } from './services/types'
 import { z } from 'zod'
 import { windowIcon } from './constants/paths'
 import { Path } from './schemas'
 import { isCLINoGui } from './constants/environment'
-import { GlobalConfig } from './config'
+import type { GlobalConfigSlice } from './config'
+import type { AppState } from './host/appState'
+import type { Dialogs } from './host/dialogs'
+import type { Notifications } from './host/notifications'
 import { assertContainedPath } from './sidecar/rendererPathGuard'
 
 // `steam` is a deliberate addition (D-35-19-05): widening this enum also widens the accepted
@@ -63,6 +64,13 @@ export interface ProtocolDeps {
   managers: Pick<StoreManagers, 'library'>
   launcher: Pick<Launcher, 'launchEventCallback'>
   stores: Pick<Stores, 'kvs'>
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+  notifications: Pick<Notifications, 'show'>
+  dialogs: Pick<Dialogs, 'showMessageBox'>
+  appState: Pick<
+    AppState,
+    'inAppDialogRaiseCount' | 'quit' | 'hideMainWindow' | 'raiseMainWindow'
+  >
 }
 
 export function handleProtocol(deps: ProtocolDeps, args: string[]) {
@@ -95,7 +103,7 @@ function handlePing(url: URL) {
 // answered by now and do not count. A user who chose to install is staying on purpose.
 async function handleLaunchEndingNoGui(deps: ProtocolDeps, url: URL) {
   if (!isCLINoGui) return handleLaunch(deps, url)
-  const dialogsBefore = app.inAppDialogRaiseCount()
+  const dialogsBefore = deps.appState.inAppDialogRaiseCount()
   let result: Awaited<ReturnType<typeof handleLaunch>>
   try {
     result = await handleLaunch(deps, url)
@@ -107,7 +115,7 @@ async function handleLaunchEndingNoGui(deps: ProtocolDeps, url: URL) {
   // staying on purpose. Everything else (including a bare early return) ended with no game.
   if (result?.status === 'done' || result?.status === 'installing')
     return result
-  if (app.inAppDialogRaiseCount() > dialogsBefore) {
+  if (deps.appState.inAppDialogRaiseCount() > dialogsBefore) {
     logInfo(
       '--no-gui launch ended with an in-app dialog on screen, staying open',
       LogPrefix.ProtocolHandler
@@ -118,7 +126,7 @@ async function handleLaunchEndingNoGui(deps: ProtocolDeps, url: URL) {
     '--no-gui launch ended without a game session, exiting app',
     LogPrefix.ProtocolHandler
   )
-  app.quit()
+  deps.appState.quit()
   return result
 }
 
@@ -179,8 +187,7 @@ async function handleLaunch(deps: ProtocolDeps, url: URL) {
   const coldStart = isColdStartLink()
   const hideForThisLaunch =
     urlRequestsNoGui(url) ||
-    (coldStart &&
-      GlobalConfig.get().getSettings().hideWindowOnProtocolLaunch === true)
+    (coldStart && deps.config.getSettings().hideWindowOnProtocolLaunch === true)
 
   if (is_installed) {
     // URL-supplied `arg`/`altExe` are attacker-authored (any web page can emit this link).
@@ -223,7 +230,7 @@ async function handleLaunch(deps: ProtocolDeps, url: URL) {
 
       if (
         (args.length || altExe) &&
-        !(await confirmUrlLaunchParameters(title, altExe, args))
+        !(await confirmUrlLaunchParameters(deps, title, altExe, args))
       ) {
         // Decline means don't launch at all -- not "launch without the URL's args". The
         // user asked for neither, and a launch they did not expect is the surprise this
@@ -250,7 +257,7 @@ async function handleLaunch(deps: ProtocolDeps, url: URL) {
         })`,
         LogPrefix.ProtocolHandler
       )
-      app.hideMainWindow()
+      deps.appState.hideMainWindow()
     }
 
     // Steam is dispatched through the same shared helper the sidecar `launch` handler uses
@@ -266,7 +273,11 @@ async function handleLaunch(deps: ProtocolDeps, url: URL) {
       const { dispatchSteamLaunch } =
         await import('backend/storeManagers/steam/launchDispatch')
       const launched = await dispatchSteamLaunch(
-        { libraryManagers: deps.managers.library, stores: deps.stores },
+        {
+          libraryManagers: deps.managers.library,
+          stores: deps.stores,
+          notifications: deps.notifications
+        },
         appName
       )
       return { status: launched ? 'done' : 'error' }
@@ -283,10 +294,7 @@ async function handleLaunch(deps: ProtocolDeps, url: URL) {
 
   logInfo(`"${title}" not installed.`, LogPrefix.ProtocolHandler)
 
-  const mainWindow = getMainWindow()
-  if (!mainWindow) return
-
-  const { response } = await dialog.showMessageBox(mainWindow, {
+  const { response } = await deps.dialogs.showMessageBox({
     buttons: [tOrFallback('box.yes', 'Yes'), tOrFallback('box.no', 'No')],
     cancelId: 1,
     message: `${title} ${i18next.t(
@@ -302,7 +310,7 @@ async function handleLaunch(deps: ProtocolDeps, url: URL) {
         'Window was hidden but user wants to install, showing GUI',
         LogPrefix.ProtocolHandler
       )
-      app.raiseMainWindow()
+      deps.appState.raiseMainWindow()
     }
     sendFrontendMessage('installGame', appName, gameInfo.runner)
     return { status: 'installing' as const }
@@ -335,6 +343,7 @@ function quoteForDisplay(value: string): string {
 // dialog, or the sidecar stub's fail-safe answer (`cancelId`, see `utils.ts` CR-04) all
 // decline. Resolves true only for an explicit press of "Launch".
 async function confirmUrlLaunchParameters(
+  deps: Pick<ProtocolDeps, 'dialogs'>,
   title: string,
   altExe: Path | undefined,
   args: string[]
@@ -368,10 +377,7 @@ async function confirmUrlLaunchParameters(
     cancelId: 0,
     icon: windowIcon
   }
-  const mainWindow = getMainWindow()
-  const { response } = mainWindow
-    ? await dialog.showMessageBox(mainWindow, options)
-    : await dialog.showMessageBox(options)
+  const { response } = await deps.dialogs.showMessageBox(options)
   return response === 1
 }
 

@@ -32,7 +32,11 @@ import { readFileSync, existsSync } from 'graceful-fs'
 import { rmSync } from 'node:fs'
 import { isAbsolute, join, relative, resolve, sep } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { getSteamLibraries, sendProgressUpdate } from 'backend/utils'
+import {
+  getSteamLibraries,
+  type SteamLibrariesDeps,
+  sendProgressUpdate
+} from 'backend/utils'
 import { library } from './state'
 import { isNativeInstallInFlight } from './gameSessionState'
 import { clearSteamResumeBreadcrumb } from './library/resumeBreadcrumbs'
@@ -58,10 +62,13 @@ function refuse(appId: string, reason: string): CancelDeleteResult {
   return { status: 'refused', reason }
 }
 
-async function collectAllowedRoots(appId: string): Promise<Set<string>> {
+async function collectAllowedRoots(
+  deps: SteamLibrariesDeps,
+  appId: string
+): Promise<Set<string>> {
   const roots = new Set<string>()
   try {
-    for (const lib of await getSteamLibraries()) {
+    for (const lib of await getSteamLibraries(deps)) {
       roots.add(resolve(lib, 'steamapps'))
     }
   } catch {
@@ -89,7 +96,7 @@ async function collectAllowedRoots(appId: string): Promise<Set<string>> {
  * the resume breadcrumb. Never throws; every refusal keeps files and flag.
  */
 export async function deleteCancelledSteamInstall(
-  deps: SteamStoresDeps,
+  deps: SteamStoresDeps & SteamLibrariesDeps,
   appId: string,
   opts?: { pollMs?: number; timeoutMs?: number }
 ): Promise<CancelDeleteResult> {
@@ -111,7 +118,7 @@ export async function deleteCancelledSteamInstall(
       })
     }
 
-    const allowedRoots = await collectAllowedRoots(appId)
+    const allowedRoots = await collectAllowedRoots(deps, appId)
 
     // Synchronous from here: nothing can start between checks and rmSync.
     if (isNativeInstallInFlight(appId)) {

@@ -66,6 +66,9 @@
  * empirically correct, only that it is the control this channel depends on.
  */
 
+import type { DialogBoxDeps } from '../dialog/dialog'
+import type { Notifications } from '../host/notifications'
+import type { AppInfo } from '../process/context'
 import { ipcMain } from '../platform'
 import { LegendaryUser } from '../storeManagers/legendary/user'
 import { GOGUser } from '../storeManagers/gog/user'
@@ -76,7 +79,9 @@ import type { NileRegisterData } from '../../common/types/nile'
 import type { StoreManagers, Stores } from '../services/types'
 
 /** The slices the runner auth channels read: the library managers and the per-runner stores. */
-export interface RunnerAuthFlowDeps {
+export interface RunnerAuthFlowDeps extends DialogBoxDeps {
+  appInfo: Pick<AppInfo, 'userAgentFallback'>
+  notifications: Pick<Notifications, 'show'>
   managers: Pick<StoreManagers, 'library'>
   stores: Pick<Stores, 'gog' | 'legendary' | 'nile' | 'wikiGameInfo' | 'kvs'>
 }
@@ -109,6 +114,9 @@ let registered = false
 export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
   // Built inside each handler (call time), never at registration.
   const userDeps = () => ({
+    appInfo: deps.appInfo,
+    dialogs: deps.dialogs,
+    appState: deps.appState,
     stores: deps.stores,
     libraryManagers: deps.managers.library
   })
@@ -120,7 +128,7 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
 
   // Source: main.ts:772 -> `isEpicServiceOffline()`.
   ipcMain.handle('getEpicGamesStatus', async () => {
-    return isEpicServiceOffline()
+    return isEpicServiceOffline(deps)
   })
 
   // Source: main.ts:868 -> `LegendaryUser.getUserInfo()`.

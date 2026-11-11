@@ -9,12 +9,6 @@ const mockLogError = jest.fn()
 const mockResolveForId = jest.fn()
 const mockGetSettings = jest.fn()
 
-jest.mock('../../game_config', () => ({
-  GameConfig: {
-    get: () => ({ getSettings: (...a: unknown[]) => mockGetSettings(...a) })
-  }
-}))
-
 jest.mock('../../engine/toolSettings', () => ({
   resolveToolSettings: jest.fn(),
   resolveToolSettingsForId: (...args: unknown[]) => mockResolveForId(...args)
@@ -35,10 +29,15 @@ import { createTools } from '../index'
 import type { ToolsDeps } from '../index'
 import {
   createTestServices,
-  createTestStores
+  createTestStores,
+  createTestToolsSlices
 } from 'backend/testUtils/testServices'
 
 const toolsDeps: ToolsDeps = {
+  ...createTestToolsSlices(),
+  gameConfigs: {
+    get: () => ({ getSettings: (...a: unknown[]) => mockGetSettings(...a) })
+  } as never,
   spawnAsync: createTestServices().spawnAsync,
   runner: createTestServices().runner,
   stores: createTestStores(),

@@ -83,7 +83,9 @@ jest.mock('../../../ipc', () => ({
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
-  notify: jest.fn()
+  notify: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 
 // ── i18next mock — returns the fallback string for body assertions ────────────

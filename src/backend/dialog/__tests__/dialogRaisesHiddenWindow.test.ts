@@ -1,7 +1,6 @@
 /**
  * Dialogs re-show a window GameLib hid for a launch (quick 261108-kpc).
  */
-jest.mock('backend/platform')
 jest.mock('backend/logger', () => ({
   LogPrefix: { Backend: 'Backend' },
   logInfo: jest.fn(),
@@ -9,13 +8,15 @@ jest.mock('backend/logger', () => ({
   logError: jest.fn()
 }))
 jest.mock('../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
-jest.mock('../../main_window', () => ({ getMainWindow: jest.fn() }))
 
-import { app } from 'backend/platform'
 import { sendFrontendMessage } from '../../ipc'
 import { showDialogBoxModalAuto } from '../dialog'
 
-const raise = app.raiseMainWindowForInAppDialog as unknown as jest.Mock
+const raise = jest.fn()
+const deps = {
+  appState: { raiseMainWindowForInAppDialog: raise },
+  dialogs: { showErrorBox: jest.fn(), showMessageBox: jest.fn() }
+}
 
 describe('showDialogBoxModalAuto raises a GameLib-hidden window first', () => {
   it('sendFrontendMessage branch', () => {
@@ -26,7 +27,7 @@ describe('showDialogBoxModalAuto raises a GameLib-hidden window first', () => {
       order.push('send')
       return true
     })
-    showDialogBoxModalAuto({ title: 't', message: 'm', type: 'ERROR' })
+    showDialogBoxModalAuto(deps, { title: 't', message: 'm', type: 'ERROR' })
     expect(order).toEqual(['raise', 'send'])
   })
 
@@ -34,13 +35,13 @@ describe('showDialogBoxModalAuto raises a GameLib-hidden window first', () => {
     // The real gating (only a GameLib-hidden window) lives in app.raiseMainWindowIfHiddenByGameLib;
     // this file only pins that the dialog path always consults it exactly once per call.
     ;(sendFrontendMessage as jest.Mock).mockReturnValue(true)
-    showDialogBoxModalAuto({ title: 't', message: 'm', type: 'ERROR' })
+    showDialogBoxModalAuto(deps, { title: 't', message: 'm', type: 'ERROR' })
     expect(raise).toHaveBeenCalledTimes(1)
   })
 
   it('event.sender branch', () => {
     const send = jest.fn()
-    showDialogBoxModalAuto({
+    showDialogBoxModalAuto(deps, {
       event: { sender: { send } } as never,
       title: 't',
       message: 'm',

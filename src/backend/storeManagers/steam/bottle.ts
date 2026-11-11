@@ -310,7 +310,7 @@ export function getSteamBottleSettings(): GameSettings {
   // `wineVersion: storedWineVersion ?? globalSettings.wineVersion` — tolerant
   // of both being absent. `library.ts`'s getBottleSteamappsRoot() calls this
   // getter SOLELY for `wineCrossoverBottle`, and that sits on
-  // readAcfState('bottle')'s hot path: every install poll tick, every
+  // readAcfState(deps, 'bottle')'s hot path: every install poll tick, every
   // uninstall poll tick, buildBottleInstalledMap, refreshInstallState. A
   // `GlobalConfig.getSettings()` result without a `wineVersion` (the sidecar's
   // config layer is a different code path from Electron's, and this repo has

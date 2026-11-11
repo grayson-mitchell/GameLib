@@ -28,11 +28,8 @@ import { parseKnownFixReport } from 'common/knownFixReport'
 import { logInfo } from '../logger'
 import { defined } from './helpers/defined'
 
-// D-09: the real default deps read the setting through GlobalConfig; drive it.
+// D-09: the real default deps read the setting through the injected config slice; drive it.
 let mockSettings: Record<string, unknown> = {}
-jest.mock('../config', () => ({
-  GlobalConfig: { get: () => ({ getSettings: () => mockSettings }) }
-}))
 jest.mock('../constants/environment', () => ({ isMac: true }))
 
 type PostCall = { url: string; body: unknown; signal: AbortSignal }
@@ -123,7 +120,9 @@ describe('gate', () => {
 // The real deps builder over a throwaway in-memory steam store slice.
 const realDeps = () =>
   knownFixReportDeps({
-    stores: { steam: { steamKnownFixReportStore: new Map() } }
+    stores: { steam: { steamKnownFixReportStore: new Map() } },
+    appInfo: { version: '0.8.0' },
+    config: { getSettings: () => mockSettings }
   } as never)
 
 describe('gate with the real default deps (D-09)', () => {

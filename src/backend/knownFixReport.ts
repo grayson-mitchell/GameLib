@@ -22,6 +22,8 @@ import {
   type KnownFixReportOp
 } from 'common/knownFixReport'
 import type { Stores } from 'backend/services/types'
+import type { GlobalConfigSlice } from 'backend/config'
+import type { AppInfo } from 'backend/process/context'
 import { readKnownFixesWithLayer } from './knownFixes'
 import { LogPrefix, logInfo, logWarning } from './logger'
 import { isMac } from './constants/environment'
@@ -90,10 +92,10 @@ type ReportOutcome =
 
 export function knownFixReportDeps(deps: {
   stores: Pick<Stores, 'steam'>
+  appInfo: Pick<AppInfo, 'version'>
+  config: Pick<GlobalConfigSlice, 'getSettings'>
 }): ReportDeps {
-  /* eslint-disable @typescript-eslint/no-require-imports */
-  const lazyVersion = () =>
-    (require('./platform') as typeof import('./platform')).app.getVersion()
+  const lazyVersion = () => deps.appInfo.version
   const store = () => deps.stores.steam.steamKnownFixReportStore
   return {
     post: (url, body, signal) =>
@@ -109,8 +111,7 @@ export function knownFixReportDeps(deps: {
       }),
     isMac: () => isMac,
     isEnabled: () => {
-      const { GlobalConfig } = require('./config') as typeof import('./config')
-      return GlobalConfig.get().getSettings().shareDetectedFixes === true
+      return deps.config.getSettings().shareDetectedFixes === true
     },
     readWinning: (appId) => {
       const res = readKnownFixesWithLayer(appId, 'steam')
@@ -130,7 +131,6 @@ export function knownFixReportDeps(deps: {
     now: Date.now,
     relayUrl
   }
-  /* eslint-enable @typescript-eslint/no-require-imports */
 }
 
 function wasSent(value: unknown): boolean {

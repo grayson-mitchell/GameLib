@@ -18,7 +18,11 @@ jest.mock('backend/constants/paths', () => {
   }
 })
 jest.mock('backend/config', () => ({ GlobalConfig: { get: jest.fn() } }))
-jest.mock('backend/dialog/dialog', () => ({ notify: jest.fn() }))
+jest.mock('backend/dialog/dialog', () => ({
+  notify: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
+}))
 jest.mock('backend/utils', () => ({ sendGameStatusUpdate: jest.fn() }))
 jest.mock('backend/utils/gameTitle', () => ({ resolveGameTitle: jest.fn() }))
 jest.mock('backend/platform', () => ({ Event: {} }))

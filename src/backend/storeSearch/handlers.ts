@@ -1,4 +1,5 @@
 import { logError, LogPrefix } from '../logger'
+import type { AppInfo } from '../process/context'
 import { searchGames, getGameDeals, getStoreMap } from './cheapshark'
 import type {
   StoreSearchResult,
@@ -38,10 +39,11 @@ import type {
  */
 
 export async function handleSearchStores(
+  deps: { appInfo: Pick<AppInfo, 'version'> },
   query: string
 ): Promise<StoreSearchResult[]> {
   try {
-    return await searchGames(query)
+    return await searchGames(deps, query)
   } catch (err) {
     logError(`searchStores handler failed: ${String(err)}`, LogPrefix.Backend)
     throw err
@@ -49,10 +51,11 @@ export async function handleSearchStores(
 }
 
 export async function handleGetStoreSearchDeals(
+  deps: { appInfo: Pick<AppInfo, 'version'> },
   gameId: string
 ): Promise<StoreSearchDeal[]> {
   try {
-    return await getGameDeals(gameId)
+    return await getGameDeals(deps, gameId)
   } catch (err) {
     logError(
       `getStoreSearchDeals handler failed: ${String(err)}`,
@@ -62,11 +65,11 @@ export async function handleGetStoreSearchDeals(
   }
 }
 
-export async function handleGetStoreSearchStoreMap(): Promise<
-  Record<string, StoreSearchStore>
-> {
+export async function handleGetStoreSearchStoreMap(deps: {
+  appInfo: Pick<AppInfo, 'version'>
+}): Promise<Record<string, StoreSearchStore>> {
   try {
-    return await getStoreMap()
+    return await getStoreMap(deps)
   } catch (err) {
     logError(
       `getStoreSearchStoreMap handler failed: ${String(err)}`,

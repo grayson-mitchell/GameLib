@@ -70,7 +70,7 @@ import {
   RUST_HUMBLE_LOGIN_CLEAR_STORAGE
 } from '../../common/types/sidecarTransport'
 import { HumbleUser } from '../humble/user'
-import { standardBrowserUserAgent } from '../humble/userAgent'
+import { standardBrowserUserAgentForProcess } from '../humble/userAgent'
 import { HumbleLibrary } from '../humble/library'
 import {
   setLoginWindowSeam,
@@ -459,7 +459,7 @@ export function registerHumbleLoginFlows(): void {
           }
           const label = await seam.open('https://example.com', {
             visible: true,
-            userAgent: standardBrowserUserAgent()
+            userAgent: standardBrowserUserAgentForProcess()
           })
           smokeLog(`opened label=${label}`)
           await new Promise((resolve) => setTimeout(resolve, 2000))

@@ -44,6 +44,10 @@ import { captureOwnedAppPlatforms } from '../platformCapture'
 import { resumeInterruptedSteamInstall } from '../library/resume'
 import type { Stores } from 'backend/services/types'
 
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+
+const libDeps = { config: createTestGlobalConfig() }
+
 const { steamLibraryStore, steamMetadataStore } =
   jest.requireMock<Stores['steam']>('../stores')
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
@@ -96,7 +100,9 @@ jest.mock('../../../ipc', () => ({
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
-  notify: jest.fn()
+  notify: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 
 // ── i18next mock — returns the fallback string for body assertions ────────────
@@ -356,7 +362,7 @@ describe('SteamLibraryManager', () => {
         }
       })
 
-    const result = await buildInstalledMap()
+    const result = await buildInstalledMap(libDeps)
 
     expect(result.has(570)).toBe(true)
     expect(result.has(440)).toBe(true)
@@ -381,7 +387,7 @@ describe('SteamLibraryManager', () => {
       }
     })
 
-    const result = await buildInstalledMap()
+    const result = await buildInstalledMap(libDeps)
 
     // StateFlags 2 has bit 4 clear → not installed → not in map
     expect(result.size).toBe(0)
@@ -409,7 +415,7 @@ describe('SteamLibraryManager', () => {
       })
 
     // Should not throw
-    const result = await buildInstalledMap()
+    const result = await buildInstalledMap(libDeps)
 
     expect(result.has(440)).toBe(true)
     expect(result.has(570)).toBe(false)

@@ -56,6 +56,9 @@
  * store directly (see `storeManagers/gog/stores.ts`).
  */
 
+import type { GameConfigs } from '../game_config'
+import type { GlobalConfigSlice } from '../config'
+import type { AppInfo } from '../process/context'
 import { existsSync, readFileSync } from 'graceful-fs'
 import { cpus } from 'os'
 import { isAbsolute, relative, resolve } from 'path'
@@ -110,6 +113,9 @@ function isContainedGameConfig(appName: string): boolean {
 export function registerSettingsFlows(deps: {
   managers: Pick<StoreManagers, 'library'>
   stores: Pick<Stores, 'kvs'>
+  config: Pick<GlobalConfigSlice, 'getSettings' | 'set' | 'flush'>
+  gameConfigs: Pick<GameConfigs, 'get'>
+  appInfo: Pick<AppInfo, 'version'>
   /** The boot process runner (66.2); consumers converted by 66.2-05. */
   runner: BootServices['runner']
 }): void {
@@ -260,7 +266,12 @@ export function registerSettingsFlows(deps: {
   // utils/ipc_handler.ts:22
   ipcMain.handle('getSystemInfo', async (_event: unknown, cache?: unknown) =>
     getSystemInfo(
-      { libraryManagers: deps.managers.library, runner: deps.runner },
+      {
+        libraryManagers: deps.managers.library,
+        runner: deps.runner,
+        config: deps.config,
+        appInfo: deps.appInfo
+      },
       cache as boolean | undefined
     )
   )

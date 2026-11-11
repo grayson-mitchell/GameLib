@@ -77,9 +77,9 @@ interface EnsureSteamClientReadyResult {
 
 /**
  * True only when steamapps/libraryfolders.vdf exists under the configured
- * defaultSteamPath — mirrors backend/utils.ts's getSteamLibraries() own vdf
+ * defaultSteamPath — mirrors backend/utils.ts's getSteamLibraries(deps) own vdf
  * path construction, but as a direct existence probe rather than reusing
- * getSteamLibraries()'s return value: getSteamLibraries() ALWAYS includes a
+ * getSteamLibraries(deps)'s return value: getSteamLibraries(deps) ALWAYS includes a
  * hardcoded '/usr/share/steam' fallback entry regardless of whether the vdf
  * exists, so its array length/emptiness can never reliably signal "vdf
  * absent" — reusing it here would silently defeat D-11 by never detecting

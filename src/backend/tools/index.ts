@@ -42,7 +42,12 @@ import {
 import i18next from 'i18next'
 import { dirname, join } from 'path'
 import { isOnline } from '../online_monitor'
-import { showDialogBoxModalAuto } from '../dialog/dialog'
+import {
+  showDialogBoxModalAuto,
+  type DialogBoxDeps,
+  type NotifyDeps
+} from '../dialog/dialog'
+import type { GlobalConfigSlice } from '../config'
 import type {
   CommandRunner,
   Launcher,
@@ -54,7 +59,8 @@ import {
   resolveToolSettingsForId
 } from '../engine/toolSettings'
 import type { ToolSettingsResult } from '../engine/toolSettings'
-import { GameConfig } from '../game_config'
+import type { GameConfigs } from '../game_config'
+import type { AppInfo } from '../process/context'
 import { chmod, readFile, stat } from 'fs/promises'
 import { createVulkan } from '../utils/graphics/vulkan'
 import { lt as semverLt } from 'semver'
@@ -101,7 +107,7 @@ type ReleasesResponse = {
 }
 
 export async function installOrUpdateTool(
-  deps: { runner: Pick<ProcessRunner, 'run'> },
+  deps: { runner: Pick<ProcessRunner, 'run'> } & DialogBoxDeps,
   tool: Tool
 ) {
   if (tool.os !== process.platform) return
@@ -177,7 +183,7 @@ export async function installOrUpdateTool(
         'Error installing DXVK/VKD3D! Check your connection!'
       )
     }
-    showDialogBoxModalAuto({
+    showDialogBoxModalAuto(deps, {
       title,
       message,
       type: 'ERROR'
@@ -207,13 +213,19 @@ export async function installOrUpdateTool(
  * (installingComponent, catalogCache, scriptMetadataCache) stays module-level, so the
  * wrappers below are cheap and several instances share one single-flight slot.
  */
-export interface ToolsDeps {
+export interface ToolsDeps extends DialogBoxDeps, NotifyDeps {
   managers: { library: StoreManagers['library'] }
   commandRunner: Pick<CommandRunner, 'runWineCommand'>
   launcher: Pick<Launcher, 'setupEnvVars' | 'setupWineEnvVars' | 'validWine'>
   spawnAsync: SpawnAsync
   runner: Pick<ProcessRunner, 'run'>
   stores: Pick<Stores, 'wineManager'>
+  gameConfigs: Pick<GameConfigs, 'get'>
+  appInfo: Pick<AppInfo, 'version'>
+  config: Pick<
+    GlobalConfigSlice,
+    'getSettings' | 'getAlternativeWine' | 'setSetting'
+  >
 }
 
 /** The engine's bottle-creation capabilities, built from this tools instance (66.1-22d). */
@@ -222,7 +234,8 @@ function engineServicesFor(deps: ToolsDeps): EngineServices {
     spawnAsync: deps.spawnAsync,
     runner: deps.runner,
     installRemove: (...a) => createDxvk(deps).installRemove(...a),
-    wineManagerReleases: wineManagerReleasesFrom(deps)
+    wineManagerReleases: wineManagerReleasesFrom(deps),
+    notices: deps
   }
 }
 
@@ -865,7 +878,7 @@ function createWinetricks(deps: ToolsDeps) {
 
       try {
         logInfo('Downloading Winetricks', LogPrefix.WineTricks)
-        await downloadFileInet(url, {
+        await downloadFileInet(deps, url, {
           writeToFile: path,
           maxCache: 7 * DAYS,
           axiosConfig: { responseType: 'text' }
@@ -1135,7 +1148,7 @@ function createWinetricks(deps: ToolsDeps) {
 
         const onSpawnError = (error: unknown) => {
           logError(['Winetricks threw Error:', error], LogPrefix.WineTricks)
-          showDialogBoxModalAuto({
+          showDialogBoxModalAuto(deps, {
             title: i18next.t('box.error.winetricks.title', 'Winetricks error'),
             message: i18next.t('box.error.winetricks.message', {
               defaultValue:
@@ -1689,7 +1702,7 @@ async function runWineCommandForPendingInstall(
     )
     return { stdout: '', stderr: '' }
   }
-  const stored = await GameConfig.get(args.appName).getSettings()
+  const stored = await deps.gameConfigs.get(args.appName).getSettings()
   const resolved = await resolveToolSettingsForId(
     engineServicesFor(deps),
     { runner: 'sideload', appName: args.appName, platform: 'Windows' },

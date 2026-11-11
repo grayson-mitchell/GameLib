@@ -1,7 +1,7 @@
 import { join } from 'path'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { parse } from '@node-steam/vdf'
-import { getSteamLibraries } from 'backend/utils'
+import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
 import { getBottleSteamappsDir } from '../bottle'
 import {
   listReadyBridgeBottleNames,
@@ -30,14 +30,14 @@ export function isFullyInstalledStateFlags(stateFlags: number): boolean {
  *
  * Exported for unit testing.
  */
-export async function buildInstalledMap(): Promise<
-  Map<number, { installPath: string; sizeOnDisk: string }>
-> {
+export async function buildInstalledMap(
+  deps: SteamLibrariesDeps
+): Promise<Map<number, { installPath: string; sizeOnDisk: string }>> {
   const installed = new Map<
     number,
     { installPath: string; sizeOnDisk: string }
   >()
-  const libraryPaths = await getSteamLibraries()
+  const libraryPaths = await getSteamLibraries(deps)
 
   for (const libPath of libraryPaths) {
     const steamappsDir = join(libPath, 'steamapps')
@@ -93,9 +93,11 @@ export async function buildInstalledMap(): Promise<
  *
  * Exported for unit testing.
  */
-export async function buildIncompleteInstallSet(): Promise<Set<number>> {
+export async function buildIncompleteInstallSet(
+  deps: SteamLibrariesDeps
+): Promise<Set<number>> {
   const incomplete = new Set<number>()
-  const libraryPaths = await getSteamLibraries()
+  const libraryPaths = await getSteamLibraries(deps)
 
   for (const libPath of libraryPaths) {
     const steamappsDir = join(libPath, 'steamapps')
@@ -139,7 +141,7 @@ export async function buildIncompleteInstallSet(): Promise<Set<number>> {
 }
 
 /**
- * Bottle-scoped sibling of buildInstalledMap() — same StateFlags bitmask +
+ * Bottle-scoped sibling of buildInstalledMap(deps) — same StateFlags bitmask +
  * corrupt-file discipline (T-2-01/T-17-05), rooted at the dedicated CrossOver
  * bottle's own steamapps dir instead of the native defaultSteamPath (Pitfall 2).
  * Returns an empty Map when the bottle steamapps dir doesn't exist yet (e.g.

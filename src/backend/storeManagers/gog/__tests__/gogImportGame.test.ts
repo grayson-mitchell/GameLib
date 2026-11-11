@@ -99,7 +99,9 @@ jest.mock('i18next', () => ({
 }))
 
 jest.mock('../../../dialog/dialog', () => ({
-  showDialogBoxModalAuto: jest.fn()
+  showDialogBoxModalAuto: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 
 jest.mock('../../../ipc', () => ({

@@ -31,6 +31,8 @@
 
 import { ipcMain } from '../platform'
 import { openDialogCallback } from '../utils/openDialog'
+import type { Dialogs } from '../host/dialogs'
+import type { OpenDialogOptions } from '../platform/types'
 
 /**
  * Registers the `openDialog` invoke handler. Called once from `handlers.ts` —
@@ -43,15 +45,12 @@ import { openDialogCallback } from '../utils/openDialog'
  * `uninstallGameCallback`'s Electron `Event` parameter. The function body
  * reached at runtime is entirely unmodified.
  */
-export function registerDialogFlows(): void {
+export function registerDialogFlows(deps: {
+  dialogs: Pick<Dialogs, 'showOpenDialog'>
+}): void {
   ipcMain.handle(
     'openDialog',
     async (_event: unknown, ...args: unknown[]): Promise<string | false> =>
-      (
-        openDialogCallback as (
-          parentWindow: unknown,
-          options: unknown
-        ) => Promise<string | false>
-      )(undefined, args[0] ?? {})
+      openDialogCallback(deps, (args[0] ?? {}) as OpenDialogOptions)
   )
 }

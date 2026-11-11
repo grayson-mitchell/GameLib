@@ -11,7 +11,7 @@ import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { basename, join, resolve, relative, isAbsolute } from 'path'
 import i18next from 'i18next'
 import { logWarning, LogPrefix } from 'backend/logger'
-import { dialog } from 'backend/platform'
+import type { Dialogs } from 'backend/host/dialogs'
 import type { Runner } from 'common/types'
 import type { ProcessRunner } from 'backend/process/types'
 import { storeCapabilities } from 'common/storeCapabilities'
@@ -224,12 +224,13 @@ export function locateMachOCandidates(
  * generic gamelib:box.mac32Detected.* keys.
  */
 export async function promptMac32WindowsReinstall(
+  deps: { dialogs: Pick<Dialogs, 'showMessageBox'> },
   runner: Runner,
   title?: string
 ): Promise<boolean> {
   try {
     const isSteam = storeCapabilities[runner].usesBottleRuntime
-    const { response } = await dialog.showMessageBox(
+    const { response } = await deps.dialogs.showMessageBox(
       isSteam
         ? {
             title: i18next.t(

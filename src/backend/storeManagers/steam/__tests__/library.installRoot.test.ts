@@ -22,6 +22,10 @@ import { join } from 'path'
 import { library } from '../state'
 import type { Stores } from 'backend/services/types'
 
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+
+const libDeps = { config: createTestGlobalConfig() }
+
 const { steamLibraryStore, steamMetadataStore } =
   jest.requireMock<Stores['steam']>('../stores')
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
@@ -74,7 +78,9 @@ jest.mock('../../../ipc', () => ({
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
-  notify: jest.fn()
+  notify: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 
 // ── i18next mock — returns the fallback string for body assertions ────────────
@@ -251,10 +257,10 @@ beforeEach(() => {
 })
 
 // ── debug/steam-bottle-uninstall-reverts (OPERATOR PRODUCT DECISION, LOCKED):
-// resolveInstallRoot() — the SOLE source of truth games.ts's uninstall()
+// resolveInstallRoot(libDeps) — the SOLE source of truth games.ts's uninstall()
 // consults for bottle-vs-native-vs-refuse routing. ──────────────────────────
 
-describe('resolveInstallRoot() (debug/steam-bottle-uninstall-reverts, OPERATOR DECISION LOCKED)', () => {
+describe('resolveInstallRoot(libDeps) (debug/steam-bottle-uninstall-reverts, OPERATOR DECISION LOCKED)', () => {
   let envMock: any
 
   beforeEach(() => {
@@ -272,13 +278,17 @@ describe('resolveInstallRoot() (debug/steam-bottle-uninstall-reverts, OPERATOR D
 
   it('returns "bottle" for an install_path inside the bottle steamapps/common/', async () => {
     const installPath = join(BOTTLE_STEAMAPPS_ROOT, 'common', 'Hoard')
-    await expect(resolveInstallRoot(installPath)).resolves.toBe('bottle')
+    await expect(resolveInstallRoot(libDeps, installPath)).resolves.toBe(
+      'bottle'
+    )
   })
 
   it('returns "native" for an install_path inside a registered native library steamapps/common/', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     const installPath = join('/steam', 'steamapps', 'common', 'CS:GO')
-    await expect(resolveInstallRoot(installPath)).resolves.toBe('native')
+    await expect(resolveInstallRoot(libDeps, installPath)).resolves.toBe(
+      'native'
+    )
   })
 
   it('checks EVERY registered native library root, not just the first', async () => {
@@ -291,27 +301,29 @@ describe('resolveInstallRoot() (debug/steam-bottle-uninstall-reverts, OPERATOR D
       'common',
       'CS:GO'
     )
-    await expect(resolveInstallRoot(installPath)).resolves.toBe('native')
+    await expect(resolveInstallRoot(libDeps, installPath)).resolves.toBe(
+      'native'
+    )
   })
 
   it('returns null for a stale/empty install_path — never falls through to a root', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
-    await expect(resolveInstallRoot(undefined)).resolves.toBeNull()
-    await expect(resolveInstallRoot('')).resolves.toBeNull()
-    await expect(resolveInstallRoot('   ')).resolves.toBeNull()
+    await expect(resolveInstallRoot(libDeps, undefined)).resolves.toBeNull()
+    await expect(resolveInstallRoot(libDeps, '')).resolves.toBeNull()
+    await expect(resolveInstallRoot(libDeps, '   ')).resolves.toBeNull()
   })
 
   it('returns null for an install_path resolving OUTSIDE every known root (bottle AND all native libraries)', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     await expect(
-      resolveInstallRoot('/completely/unrelated/place/Game')
+      resolveInstallRoot(libDeps, '/completely/unrelated/place/Game')
     ).resolves.toBeNull()
   })
 
   it('never treats the bottle/native common/ root itself as "contained" (no installdir segment)', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue([])
     await expect(
-      resolveInstallRoot(join(BOTTLE_STEAMAPPS_ROOT, 'common'))
+      resolveInstallRoot(libDeps, join(BOTTLE_STEAMAPPS_ROOT, 'common'))
     ).resolves.toBeNull()
   })
 
@@ -325,14 +337,14 @@ describe('resolveInstallRoot() (debug/steam-bottle-uninstall-reverts, OPERATOR D
       'etc',
       'passwd'
     )
-    await expect(resolveInstallRoot(traversal)).resolves.toBeNull()
+    await expect(resolveInstallRoot(libDeps, traversal)).resolves.toBeNull()
   })
 
   it('never consults the bottle root at all on a non-mac host — a bottle-shaped path still resolves null there', async () => {
     envMock.isMac = false
     jest.mocked(getSteamLibraries).mockResolvedValue([])
     const installPath = join(BOTTLE_STEAMAPPS_ROOT, 'common', 'Hoard')
-    await expect(resolveInstallRoot(installPath)).resolves.toBeNull()
+    await expect(resolveInstallRoot(libDeps, installPath)).resolves.toBeNull()
     expect(getSteamBottleSettings).not.toHaveBeenCalled()
   })
 })

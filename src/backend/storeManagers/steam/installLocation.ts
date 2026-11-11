@@ -7,16 +7,16 @@
 // path is honoured only when it resolves to exactly one of those registered
 // folders; anything else silently falls back to the primary library rather
 // than writing into an arbitrary/unregistered location (T-21-17). This module
-// never mutates libraryfolders.vdf — it only reads via getSteamLibraries().
+// never mutates libraryfolders.vdf — it only reads via getSteamLibraries(deps).
 //
 // D-09: single-library installs see zero friction (no override needed,
 // primary is picked automatically); multi-library installs get an override
 // picker (frontend, this plan's Task 2) populated from
-// listSteamLibraryTargets(), defaulting to the primary library.
+// listSteamLibraryTargets(deps), defaulting to the primary library.
 
 import { isAbsolute, join, relative, resolve } from 'path'
 import type { InstallArgs } from 'common/types'
-import { getSteamLibraries } from 'backend/utils'
+import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { SteamUser } from './user'
 import { getAnonymousPicsClient, isPublicOnlyEntry } from './anonymousClient'
@@ -55,7 +55,7 @@ interface SteamInstallTarget {
 
 /** One registered Steam library, as surfaced to the frontend override picker
  *  (D-09) and consumed internally by resolveSteamInstallTarget's override
- *  matching. `path` is the library ROOT (getSteamLibraries()'s own return
+ *  matching. `path` is the library ROOT (getSteamLibraries(deps)'s own return
  *  shape), `steamappsDir` is the actual depot-download target directory. */
 // Not exported: verified to have no importer anywhere -- the frontend's
 // InstallModal/SteamDialog/installTarget.ts declares a structurally-identical
@@ -78,12 +78,14 @@ interface AppInstallDirInfo {
 }
 
 /**
- * Every registered Steam library (getSteamLibraries() — read-side only,
+ * Every registered Steam library (getSteamLibraries(deps) — read-side only,
  * libraryfolders.vdf), primary first. Used both by resolveSteamInstallTarget's
  * default/override logic and by the frontend override picker IPC handler.
  */
-export async function listSteamLibraryTargets(): Promise<SteamLibraryTarget[]> {
-  const libraries = await getSteamLibraries()
+export async function listSteamLibraryTargets(
+  deps: SteamLibrariesDeps
+): Promise<SteamLibraryTarget[]> {
+  const libraries = await getSteamLibraries(deps)
   return libraries.map((path, index) => ({
     path,
     steamappsDir: join(path, 'steamapps'),
@@ -370,9 +372,10 @@ function resolveOverride(
  * Used to hand Steam's own InstallApp a folder it already knows.
  */
 export async function resolveSteamLibraryRoot(
+  deps: SteamLibrariesDeps,
   overridePath?: string
 ): Promise<string | undefined> {
-  const libraries = await listSteamLibraryTargets()
+  const libraries = await listSteamLibraryTargets(deps)
   if (!libraries.length) return undefined
   return resolveOverride(overridePath, libraries).path
 }
@@ -385,13 +388,14 @@ export async function resolveSteamLibraryRoot(
  * from PICS `config.installdir`, sanitized against traversal (T-21-01).
  */
 export async function resolveSteamInstallTarget(
+  deps: SteamLibrariesDeps,
   appId: string,
   args: InstallArgs
 ): Promise<SteamInstallTarget> {
   // [Timing] debug/steam-install-slow-start: total duration of this seam,
   // reported below. Temporary instrumentation.
   const start = Date.now()
-  const libraries = await listSteamLibraryTargets()
+  const libraries = await listSteamLibraryTargets(deps)
   if (!libraries.length) {
     throw new Error(
       `resolveSteamInstallTarget: no registered Steam libraries found for appId ${appId}`

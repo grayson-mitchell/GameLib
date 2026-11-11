@@ -437,7 +437,7 @@ export async function fireBridgeWineLaunch(
         `SteamGame: appId ${steamGame.appId} overlay exit notice surface=in-app pushed=${pushed}`,
         LogPrefix.Steam
       )
-      notify({
+      notify(steamGame.deps, {
         title: i18next.t(
           'gamelib:steam.overlay.exit.title',
           'Game closed soon after starting'

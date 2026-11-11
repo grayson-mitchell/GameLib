@@ -51,6 +51,8 @@
  * `void` and cannot surface failure either.
  */
 
+import type { GlobalConfigSlice } from '../config'
+import type { AppInfo } from '../process/context'
 import { ipcMain, clipboard } from '../platform'
 import { requestRustInvoke } from './sidecarRpc'
 import { RUST_CLIPBOARD_READ_TEXT } from '../../common/types/sidecarTransport'
@@ -66,6 +68,8 @@ function logSendFailure(channel: string, error: unknown): void {
 
 /** Slice the clipboard flows need: the runner managers the system-info probes ask. */
 export interface ClipboardFlowDeps {
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+  appInfo: Pick<AppInfo, 'version'>
   managers: Pick<StoreManagers, 'library'>
   /** The boot process runner (66.2); consumers converted by 66.2-05. */
   runner: BootServices['runner']
@@ -119,7 +123,9 @@ export function registerClipboardFlows(deps: ClipboardFlowDeps): void {
       try {
         const info = await getSystemInfo({
           libraryManagers: deps.managers.library,
-          runner: deps.runner
+          runner: deps.runner,
+          config: deps.config,
+          appInfo: deps.appInfo
         })
         const formatted = await formatSystemInfo(info)
         clipboard.writeText(formatted)

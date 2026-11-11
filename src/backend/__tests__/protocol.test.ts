@@ -16,41 +16,23 @@ jest.mock('../constants/paths', () => ({
 
 // Mock GlobalConfig so we can toggle hideWindowOnProtocolLaunch per test
 const mockHideWindowOnProtocolLaunch = jest.fn(() => false)
-jest.mock('../config', () => ({
-  GlobalConfig: {
-    get: () => ({
-      getSettings: () => ({
-        hideWindowOnProtocolLaunch: mockHideWindowOnProtocolLaunch()
-      })
-    })
-  }
-}))
 
 import { handleProtocol, markFrontendReady, RUNNERS } from '../protocol'
 import i18next from 'i18next'
-import { app, dialog } from 'backend/platform'
-import { getMainWindow } from '../main_window'
 import { sendFrontendMessage } from '../ipc'
 import { logInfo, logError } from '../logger'
 import { dispatchSteamLaunch } from '../storeManagers/steam/launchDispatch'
 
-// Mock electron modules
-jest.mock('backend/platform', () => ({
-  app: {
-    quit: jest.fn(),
-    hideMainWindow: jest.fn(),
-    raiseMainWindow: jest.fn(),
-    inAppDialogRaiseCount: jest.fn(() => 0)
-  },
-  dialog: {
-    showMessageBox: jest.fn()
-  }
-}))
-
-// Mock other dependencies
-jest.mock('../main_window', () => ({
-  getMainWindow: jest.fn()
-}))
+// The app-state and dialog slices reach the protocol handler by deps (66.3-05), not by module mock.
+const app = {
+  quit: jest.fn(),
+  hideMainWindow: jest.fn(),
+  raiseMainWindow: jest.fn(),
+  inAppDialogRaiseCount: jest.fn(() => 0)
+}
+const dialog = {
+  showMessageBox: jest.fn()
+}
 
 jest.mock('../ipc', () => ({
   sendFrontendMessage: jest.fn()
@@ -80,7 +62,15 @@ const libraryManagerMap = {
 const launchEventCallback = jest.fn()
 const deps = {
   managers: { library: libraryManagerMap },
-  launcher: { launchEventCallback }
+  launcher: { launchEventCallback },
+  config: {
+    getSettings: () => ({
+      hideWindowOnProtocolLaunch: mockHideWindowOnProtocolLaunch()
+    })
+  },
+  dialogs: dialog,
+  appState: app,
+  notifications: { show: jest.fn() }
 } as never
 
 // Phase 35 plan 20 (D-35-19-05/06): the Steam launch dispatch is now a separate module both
@@ -146,7 +136,6 @@ describe('protocol.ts --no-gui behavior', () => {
       getSettings: () => mockGameSettings
     }
 
-    ;(getMainWindow as jest.Mock).mockReturnValue(mockMainWindow)
     libraryManagerMap.legendary.getGame.mockReturnValue(gameMock)
 
     // Mock other game managers to return empty objects
@@ -168,7 +157,7 @@ describe('protocol.ts --no-gui behavior', () => {
       })
 
       test('should exit app when user clicks No', async () => {
-        ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
+        dialog.showMessageBox.mockResolvedValue({ response: 1 })
 
         await handleProtocol(deps, ['gamelib://launch/test-game'])
 
@@ -176,7 +165,7 @@ describe('protocol.ts --no-gui behavior', () => {
       })
 
       test('should show GUI and install when user clicks Yes', async () => {
-        ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 0 })
+        dialog.showMessageBox.mockResolvedValue({ response: 0 })
 
         await handleProtocol(deps, ['gamelib://launch/test-game'])
 
@@ -196,7 +185,7 @@ describe('protocol.ts --no-gui behavior', () => {
       })
 
       test('should not exit app when user clicks No', async () => {
-        ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
+        dialog.showMessageBox.mockResolvedValue({ response: 1 })
 
         await handleProtocol(deps, ['gamelib://launch/test-game'])
 
@@ -205,7 +194,7 @@ describe('protocol.ts --no-gui behavior', () => {
       })
 
       test('should install when user clicks Yes (normal behavior)', async () => {
-        ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 0 })
+        dialog.showMessageBox.mockResolvedValue({ response: 0 })
 
         await handleProtocol(deps, ['gamelib://launch/test-game'])
 
@@ -243,7 +232,7 @@ describe('protocol.ts --no-gui behavior', () => {
   })
 
   describe('--no-gui launch that ends without a game session exits (cold-start-link-not-installed #3)', () => {
-    const inAppDialogRaiseCount = app.inAppDialogRaiseCount as jest.Mock
+    const inAppDialogRaiseCount = app.inAppDialogRaiseCount
     beforeEach(() => {
       mockGameInfo.is_installed = true
       mockIsCLINoGui.mockReturnValue(true)
@@ -334,12 +323,11 @@ describe('protocol.ts --no-gui behavior', () => {
       mockGameInfo.is_installed = false
       // Uninitialized i18next returns undefined even when given a default.
       ;(i18next.t as unknown as jest.Mock).mockImplementation(() => undefined)
-      ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
+      dialog.showMessageBox.mockResolvedValue({ response: 1 })
 
       await handleProtocol(deps, ['gamelib://launch/test-game'])
 
       expect(dialog.showMessageBox).toHaveBeenCalledWith(
-        mockMainWindow,
         expect.objectContaining({ buttons: ['Yes', 'No'] })
       )
       ;(i18next.t as unknown as jest.Mock).mockImplementation(
@@ -367,18 +355,6 @@ describe('protocol.ts --no-gui behavior', () => {
       expect(dialog.showMessageBox).not.toHaveBeenCalled()
       expect(app.quit).not.toHaveBeenCalled()
     })
-
-    test('should handle missing main window', async () => {
-      ;(getMainWindow as jest.Mock).mockReturnValue(null)
-      mockIsCLINoGui.mockReturnValue(true)
-
-      await handleProtocol(deps, ['gamelib://launch/test-game'])
-
-      // Should return early if no main window available; under --no-gui nothing is left to
-      // wait for, so the process exits (Steam's shortcut button must not stay on Stop)
-      expect(dialog.showMessageBox).not.toHaveBeenCalled()
-      expect(app.quit).toHaveBeenCalledTimes(1)
-    })
   })
 
   describe('hide window on protocol launch', () => {
@@ -397,7 +373,7 @@ describe('protocol.ts --no-gui behavior', () => {
       let isolatedApp!: typeof app
       await jest.isolateModulesAsync(async () => {
         isolatedHandle = (await import('../protocol')).handleProtocol
-        isolatedApp = (await import('backend/platform')).app
+        isolatedApp = app
       })
       mockHideWindowOnProtocolLaunch.mockReturnValue(true)
 
@@ -420,9 +396,7 @@ describe('protocol.ts --no-gui behavior', () => {
       })
       libraryManagerMap.legendary.getGame.mockReturnValue(emptyGameInfoMock)
       const order: string[] = []
-      ;(app.hideMainWindow as jest.Mock).mockImplementation(() =>
-        order.push('hide')
-      )
+      app.hideMainWindow.mockImplementation(() => order.push('hide'))
       ;(dispatchSteamLaunch as jest.Mock).mockImplementation(async () => {
         order.push('dispatch')
         return true
@@ -474,7 +448,7 @@ describe('protocol.ts --no-gui behavior', () => {
       uptimeSpy.mockReturnValue(1)
       mockHideWindowOnProtocolLaunch.mockReturnValue(true)
       // response 0 = Decline in the URL-arg confirmation dialog.
-      ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 0 })
+      dialog.showMessageBox.mockResolvedValue({ response: 0 })
       await handleProtocol(deps, [
         'gamelib://launch?appName=test-game&runner=legendary&arg=--foo'
       ])
@@ -486,7 +460,7 @@ describe('protocol.ts --no-gui behavior', () => {
       uptimeSpy.mockReturnValue(1)
       mockGameInfo.is_installed = false
       mockHideWindowOnProtocolLaunch.mockReturnValue(true)
-      ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 0 })
+      dialog.showMessageBox.mockResolvedValue({ response: 0 })
 
       await handleProtocol(deps, ['gamelib://launch/test-game'])
 
@@ -778,11 +752,10 @@ describe('protocol.ts --no-gui behavior', () => {
 
     const attackUrl =
       'gamelib://launch?appName=Fortnite&runner=legendary&arg=--wrapper%20%22cmd%20/c%20calc%22'
-    const lastDialogOptions = () =>
-      (dialog.showMessageBox as jest.Mock).mock.calls[0].at(-1)
+    const lastDialogOptions = () => dialog.showMessageBox.mock.calls[0].at(-1)
 
     test('a URL with `arg` asks first, and declining launches nothing', async () => {
-      ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({
+      dialog.showMessageBox.mockResolvedValue({
         response: DECLINE
       })
 
@@ -793,7 +766,7 @@ describe('protocol.ts --no-gui behavior', () => {
     })
 
     test("the dialog's dismiss answer (cancelId) is the safe, don't-launch button", async () => {
-      ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({
+      dialog.showMessageBox.mockResolvedValue({
         response: DECLINE
       })
 
@@ -806,7 +779,7 @@ describe('protocol.ts --no-gui behavior', () => {
     })
 
     test('the dialog shows the title, the exact executable and the exact args', async () => {
-      ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({
+      dialog.showMessageBox.mockResolvedValue({
         response: DECLINE
       })
 
@@ -822,7 +795,7 @@ describe('protocol.ts --no-gui behavior', () => {
     })
 
     test('accepting launches with exactly the URL-supplied args and altExe', async () => {
-      ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({
+      dialog.showMessageBox.mockResolvedValue({
         response: LAUNCH
       })
 
@@ -850,7 +823,7 @@ describe('protocol.ts --no-gui behavior', () => {
     ])(
       'an altExe %s is refused: no dialog, no launch',
       async (_label, altExe) => {
-        ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({
+        dialog.showMessageBox.mockResolvedValue({
           response: LAUNCH
         })
 
@@ -865,7 +838,7 @@ describe('protocol.ts --no-gui behavior', () => {
     )
 
     test('gog: `-`-prefixed URL args are stripped before the dialog and the launch', async () => {
-      ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({
+      dialog.showMessageBox.mockResolvedValue({
         response: LAUNCH
       })
 
@@ -880,7 +853,7 @@ describe('protocol.ts --no-gui behavior', () => {
     })
 
     test('an arg cannot forge a line in the dialog: newlines and bidi overrides are escaped', async () => {
-      ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({
+      dialog.showMessageBox.mockResolvedValue({
         response: DECLINE
       })
 

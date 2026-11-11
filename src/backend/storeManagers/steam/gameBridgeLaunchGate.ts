@@ -43,7 +43,7 @@ export function launchBridgeGame(steamGame: SteamGame): Promise<boolean> {
       `SteamGame: appId ${appId} bridge launch already in progress; joining it instead of starting a second (G26)`,
       LogPrefix.Steam
     )
-    notify({
+    notify(steamGame.deps, {
       title: steamGame.getGameInfo().title,
       // Same call shape as the file's other i18next.t uses; the lint ceiling counts warnings.
       // eslint-disable-next-line import-x/no-named-as-default-member

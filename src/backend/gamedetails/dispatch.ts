@@ -58,12 +58,12 @@ import { isDelegatedInstallPolling } from '../storeManagers/steam/library/instal
 import { callAbortController } from '../utils/aborthandler/aborthandler'
 import { isOnline } from '../online_monitor'
 import { sendGameStatusUpdate } from '../utils'
-import { notify } from '../dialog/dialog'
+import { notify, type NotifyDeps } from '../dialog/dialog'
 import { LegendaryUser } from '../storeManagers/legendary/user'
 import { logError, logInfo, logWarning, LogPrefix } from '../logger'
 
 /** What the game-details dispatchers read: the manager map and the kvs config store (66.1, R3). */
-export interface GameDetailsDeps {
+export interface GameDetailsDeps extends NotifyDeps {
   managers: Pick<StoreManagers, 'library'>
   stores: {
     kvs: Pick<Stores['kvs'], 'configStore'>
@@ -240,7 +240,7 @@ export async function repair(
     await deps.managers.library[runner].getGame(appName).repair()
   } catch (error) {
     repairFailed = true
-    notify({
+    notify(deps, {
       title,
       body: i18next.t('notify.error.reparing', 'Error Repairing')
     })
@@ -248,7 +248,7 @@ export async function repair(
   }
 
   if (!repairFailed) {
-    notify({ title, body: i18next.t('notify.finished.reparing') })
+    notify(deps, { title, body: i18next.t('notify.finished.reparing') })
     logInfo('Finished repairing', LogPrefix.Backend)
   }
 

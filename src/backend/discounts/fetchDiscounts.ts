@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { app } from 'backend/platform'
+import type { AppInfo } from 'backend/process/context'
 import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
 import { GOGUser, type GOGUserDeps } from 'backend/storeManagers/gog/user'
 import type {
@@ -66,6 +66,7 @@ const buildUrl = (
 }
 
 const fetchPage = async (
+  deps: { appInfo: Pick<AppInfo, 'version'> },
   page: number,
   locale: CatalogLocaleSettings,
   hideOwned: boolean,
@@ -73,7 +74,7 @@ const fetchPage = async (
   token: string | undefined
 ) => {
   const headers: Record<string, string> = {
-    'User-Agent': `HeroicGamesLauncher/${app.getVersion()}`
+    'User-Agent': `HeroicGamesLauncher/${deps.appInfo.version}`
   }
 
   if ((hideOwned && token) || (wishlistOnly && token)) {
@@ -91,18 +92,19 @@ const fetchPage = async (
 }
 
 const fetchAllDiscounts = async (
+  deps: { appInfo: Pick<AppInfo, 'version'> },
   locale: CatalogLocaleSettings,
   hideOwned: boolean,
   wishlistOnly: boolean,
   token: string | undefined
 ) => {
-  const first = await fetchPage(1, locale, hideOwned, wishlistOnly, token)
+  const first = await fetchPage(deps, 1, locale, hideOwned, wishlistOnly, token)
   const totalPages = Math.min(first.pages, MAX_PAGES)
   if (totalPages <= 1) return first.products
 
   const rest = await Promise.all(
     Array.from({ length: totalPages - 1 }, (_, i) =>
-      fetchPage(i + 2, locale, hideOwned, wishlistOnly, token)
+      fetchPage(deps, i + 2, locale, hideOwned, wishlistOnly, token)
         .then((d) => d.products)
         .catch((err: unknown) => {
           logError(
@@ -128,7 +130,7 @@ const fetchAllDiscounts = async (
 
 /** `getGogDiscounts`'s full handler body; the sidecar's `ipcMain.handle` registration calls it. */
 export async function getGogDiscounts(
-  deps: GOGUserDeps,
+  deps: GOGUserDeps & { appInfo: Pick<AppInfo, 'version'> },
   locale: CatalogLocaleSettings,
   hideOwned = false,
   wishlistOnly = false
@@ -151,6 +153,7 @@ export async function getGogDiscounts(
     }
 
     const products = await fetchAllDiscounts(
+      deps,
       locale,
       hideOwned,
       wishlistOnly,
@@ -165,6 +168,7 @@ export async function getGogDiscounts(
       LogPrefix.Backend
     )
     return await fetchAllDiscounts(
+      deps,
       FALLBACK_LOCALE,
       hideOwned,
       wishlistOnly,

@@ -35,6 +35,7 @@ const mExists = existsSync as unknown as jest.Mock
 const mReaddir = readdirSync as unknown as jest.Mock
 const mReadFile = readFileSync as unknown as jest.Mock
 const mBox = dialog.showMessageBox as unknown as jest.Mock
+const dialogDeps = { dialogs: { showMessageBox: mBox } }
 
 const DREDMOR_DIR = ['DredmorSchema.xsd', 'achievements', 'dredmor']
 function plistNaming(exe: string) {
@@ -229,7 +230,9 @@ describe('locateMachOCandidates', () => {
 describe('promptMac32WindowsReinstall', () => {
   test('steam options are byte-identical to the legacy dialog', async () => {
     mBox.mockResolvedValue({ response: 0 })
-    await expect(promptMac32WindowsReinstall('steam')).resolves.toBe(true)
+    await expect(
+      promptMac32WindowsReinstall(dialogDeps, 'steam')
+    ).resolves.toBe(true)
     expect(mBox.mock.calls[0][0]).toEqual({
       title: '32-bit macOS build detected',
       message:
@@ -242,9 +245,9 @@ describe('promptMac32WindowsReinstall', () => {
     const i18next = jest.requireMock('i18next').default
     i18next.t.mockImplementation((_k: string, d: string) => d)
     mBox.mockResolvedValue({ response: 1 })
-    await expect(promptMac32WindowsReinstall('gog', 'Some Game')).resolves.toBe(
-      false
-    )
+    await expect(
+      promptMac32WindowsReinstall(dialogDeps, 'gog', 'Some Game')
+    ).resolves.toBe(false)
     const opts = mBox.mock.calls[0][0]
     expect(opts.detail).toBe('Some Game')
     expect(opts.buttons).toEqual(['Install Windows version', 'Cancel'])
@@ -256,6 +259,8 @@ describe('promptMac32WindowsReinstall', () => {
   })
   test('never throws', async () => {
     mBox.mockRejectedValue(new Error('x'))
-    await expect(promptMac32WindowsReinstall('legendary')).resolves.toBe(false)
+    await expect(
+      promptMac32WindowsReinstall(dialogDeps, 'legendary')
+    ).resolves.toBe(false)
   })
 })

@@ -61,6 +61,14 @@ function makeLibrary() {
   return { steam: manager(), gog: manager() }
 }
 
+// The dialog and notification helpers are mocked in this file, so the slices are opaque.
+const hostSlices = {
+  config: {} as never,
+  dialogs: {} as never,
+  appState: {} as never,
+  notifications: {} as never
+}
+
 async function makeQueue() {
   const { createDownloadQueue } = await import('../downloadqueue')
   const library = makeLibrary()
@@ -71,7 +79,8 @@ async function makeQueue() {
       steam: {}
     } as never,
     managers: { library } as never,
-    onConnectivityChange
+    onConnectivityChange,
+    ...hostSlices
   })
   // Seeds the queue head from the store seeded by the test, as the boot step does.
   queue.start()
@@ -138,7 +147,9 @@ jest.mock('backend/utils/aborthandler/aborthandler', () => ({
 }))
 
 jest.mock('../../dialog/dialog', () => ({
-  notify: jest.fn()
+  notify: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 
 jest.mock('i18next', () => ({
@@ -778,7 +789,11 @@ describe('downloadqueue.ts — quick-261027-cux: Steam Delete Files routing', ()
 
     cancelCurrentDownload({ removeDownloaded: true })
 
-    expect(removeFolder).toHaveBeenCalledWith('/mock/install/path', 'GogFolder')
+    expect(removeFolder).toHaveBeenCalledWith(
+      expect.anything(),
+      '/mock/install/path',
+      'GogFolder'
+    )
     expect(deleteCancelledSteamInstall).not.toHaveBeenCalled()
   })
 })
@@ -902,7 +917,8 @@ describe('downloadqueue.ts — 66.1-11: boot service, no import-time effects', (
           steam: {}
         } as never,
         managers: { library: makeLibrary() } as never,
-        onConnectivityChange: subscribe
+        onConnectivityChange: subscribe,
+        ...hostSlices
       }
     }
   }

@@ -58,8 +58,12 @@ jest.mock('backend/platform', () => ({
   dialog: { showMessageBox: jest.fn() }
 }))
 jest.mock('backend/dialog/dialog', () => ({
-  notify: jest.fn(),
-  showDialogBoxModalAuto: jest.fn()
+  notify: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn()),
+  showDialogBoxModalAuto: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 jest.mock('graceful-fs', () => ({
   existsSync: jest.fn(),

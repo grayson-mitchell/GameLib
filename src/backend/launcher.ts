@@ -14,6 +14,10 @@ import {
 } from 'common/types'
 // This handles launching games, prefix creation etc..
 
+import type { GlobalConfigSlice } from './config'
+import type { GameConfigs } from './game_config'
+import type { Notifications } from './host/notifications'
+import type { AppInfo } from './process/context'
 import i18next from 'i18next'
 import { existsSync, mkdirSync } from 'graceful-fs'
 import { join, dirname } from 'path'
@@ -52,7 +56,7 @@ import shlex from 'shlex'
 import type { ProcessRunner } from './process/types'
 import { buildGameScopeCommand, probeGamescopeHelp } from './gamescopeCommand'
 import { isOnline } from './online_monitor'
-import { showDialogBoxModalAuto } from './dialog/dialog'
+import { showDialogBoxModalAuto, type DialogBoxDeps } from './dialog/dialog'
 import { readFileSync, writeFileSync } from 'fs'
 import { searchForExecutableOnPath } from './utils/os/path'
 import { download, isInstalled } from './wine/runtimes/runtimes'
@@ -99,7 +103,7 @@ import type LogWriter from './logger/log_writer'
 import { Game } from 'common/types/game_manager'
 
 /** What the launcher is built from (66.1, D-02): constructed once per boot by createStoreManagers. */
-export interface LauncherDeps {
+export interface LauncherDeps extends DialogBoxDeps {
   /** Late-bound: filled by createStoreManagers after the launcher is built, read at call time only. */
   libraryManagers: StoreManagers['library']
   launchHooks: Record<Runner, StoreLaunchHooks>
@@ -108,6 +112,13 @@ export interface LauncherDeps {
   runner: Pick<ProcessRunner, 'run'>
   spawnAsync: SpawnAsync
   stores: Pick<Stores, 'kvs' | 'wineManager' | 'runsForMe'>
+  config: Pick<
+    GlobalConfigSlice,
+    'getSettings' | 'getAlternativeWine' | 'setSetting'
+  >
+  gameConfigs: Pick<GameConfigs, 'get'>
+  appInfo: Pick<AppInfo, 'version'>
+  notifications: Pick<Notifications, 'show'>
 }
 
 /** The display-sleep blocker id of one launcher instance (closure state, not module state). */
@@ -123,6 +134,12 @@ function engineSource(deps: LauncherDeps): EngineServicesSource {
     libraryManagers: deps.libraryManagers,
     commandRunner: deps.commandRunner,
     spawnAsync: deps.spawnAsync,
+    config: deps.config,
+    gameConfigs: deps.gameConfigs,
+    appInfo: deps.appInfo,
+    dialogs: deps.dialogs,
+    appState: deps.appState,
+    notifications: deps.notifications,
     runner: deps.runner,
     stores: deps.stores,
     // The pure env/validation helpers are module functions, so the tools need no handle on the
@@ -142,7 +159,7 @@ async function runLaunchEventCallback(
     gameInfo.install.install_path &&
     !existsSync(gameInfo.install.install_path)
   ) {
-    await askForceUninstall(game, appName)
+    await askForceUninstall(deps, game, appName)
 
     sendGameStatusUpdate({
       appName,
@@ -259,7 +276,7 @@ async function runLaunchEventCallback(
   // persist a derived or fallback engine into wineVersion (D-08).
   if (!isNative && !engineControlled) {
     const isWineOkToLaunch = await checkWineBeforeLaunch(
-      { stores: deps.stores, runner: deps.runner },
+      deps,
       gameInfo,
       gameSettings,
       logWriter
@@ -611,7 +628,7 @@ async function prepareLaunch(
   let offlineMode = gameSettings.offlineMode || !isOnline()
 
   if (!offlineMode && isStore(gameInfo, 'legendary')) {
-    offlineMode = await isEpicServiceOffline()
+    offlineMode = await isEpicServiceOffline(deps)
   }
 
   // R8 (Phase 49): an expired Epic store goes offline for games that can run
@@ -634,7 +651,7 @@ async function prepareLaunch(
   // Update Discord RPC if enabled
   let rpcClient = undefined
   if (globalSettings.discordRPC) {
-    rpcClient = constructAndUpdateRPC(gameInfo)
+    rpcClient = constructAndUpdateRPC(deps, gameInfo)
   }
 
   await logWriter.logInfo([
@@ -678,7 +695,9 @@ async function prepareLaunch(
     'System Info:',
     getSystemInfo({
       libraryManagers: deps.libraryManagers,
-      runner: deps.runner
+      runner: deps.runner,
+      config: deps.config,
+      appInfo: deps.appInfo
     })
       .then(formatSystemInfo)
       .then((s) => `\n${s}\n\n`)
@@ -858,7 +877,7 @@ async function prepareWineLaunch(
       )
     )
     if (!bottleExists) {
-      showDialogBoxModalAuto({
+      showDialogBoxModalAuto(deps, {
         title: i18next.t(
           'box.error.cx-bottle-not-found.title',
           'CrossOver bottle not found'

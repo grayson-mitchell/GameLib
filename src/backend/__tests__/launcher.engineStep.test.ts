@@ -51,6 +51,7 @@ jest.mock('backend/engine/launchSettings', () => ({
   getLaunchSettings: (...a: unknown[]) => overlayMock(...a)
 }))
 
+import { createTestToolsSlices } from 'backend/testUtils/testServices'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { createLauncher } from 'backend/launcher'
@@ -117,6 +118,7 @@ beforeEach(() => {
 // The launcher is built from test deps (66.1-23): the manager table and hooks are plain fakes.
 const tsStore = { has: () => true, get: () => 0, set: jest.fn() }
 const { launchEventCallback } = createLauncher({
+  ...createTestToolsSlices(),
   libraryManagers: {
     legendary: { getGame: (...a: unknown[]) => getGameMock(...a) }
   } as never,

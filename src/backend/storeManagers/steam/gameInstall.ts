@@ -416,9 +416,10 @@ export async function install(
   // hand-off below; a Steam-reported EAppUpdateError is surfaced, not
   // swallowed.
   if (isSteamExperimentalInstallAppEnabled()) {
-    const libraryPath = await resolveSteamLibraryRoot(args?.path).catch(
-      () => undefined
-    )
+    const libraryPath = await resolveSteamLibraryRoot(
+      steamGame.deps,
+      args?.path
+    ).catch(() => undefined)
     const outcome = await requestSteamInstallApp(
       steamGame.appId,
       { libraryPath },
@@ -488,7 +489,7 @@ export async function install(
  *     demotion signal, read directly rather than via `isBottleEligible()`,
  *     which is also true for a merely-not-mac-native title whose native
  *     install is a DIFFERENT case and out of scope here.
- *  3. `readAcfState(appId, 'native').state === 'installed'` — the guard
+ *  3. `readAcfState(deps, appId, 'native').state === 'installed'` — the guard
  *     `install()` has never had.
  *
  * On a match: `removeSteamInstallCopy` deletes the native copy, then
@@ -520,7 +521,11 @@ export async function removeDemotedNativeOrphan(
       return
     }
 
-    const nativeState = await readAcfState(steamGame.appId, 'native')
+    const nativeState = await readAcfState(
+      steamGame.deps,
+      steamGame.appId,
+      'native'
+    )
     if (nativeState.state !== 'installed') {
       return
     }

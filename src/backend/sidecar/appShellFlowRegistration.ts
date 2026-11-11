@@ -176,7 +176,12 @@ import {
   getAppManagementStatus,
   APP_MANAGEMENT_SETTINGS_URL
 } from '../appshell/appManagement'
-import { notify, showDialogBoxModalAuto } from '../dialog/dialog'
+import {
+  notify,
+  showDialogBoxModalAuto,
+  type DialogBoxDeps,
+  type NotifyDeps
+} from '../dialog/dialog'
 import { acknowledgeDialogDisplay } from '../dialog/displayAck'
 import { detectVCRedist } from '../utils'
 import { assertOpenableExternalUrl } from './openPolicy'
@@ -262,7 +267,7 @@ function syncTrayIcon(): void {
 }
 
 /** Narrow dependency slice for `registerAppShellFlows` (66.1, D-01). */
-export interface AppShellFlowDeps {
+export interface AppShellFlowDeps extends DialogBoxDeps, NotifyDeps {
   managers: Pick<StoreManagers, 'library'>
   downloadQueue: Pick<DownloadQueue, 'initQueue'>
   quit: Pick<QuitHandler, 'handleExit'>
@@ -325,7 +330,7 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
 
   ipcMain.on('notify', (_event: unknown, ...args: unknown[]) => {
     try {
-      notify(args[0] as { title: string; body: string })
+      notify(deps, args[0] as { title: string; body: string })
     } catch (error) {
       logSendFailure('notify', error)
     }
@@ -481,7 +486,7 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
           // `.then`/`.catch` is needed here -- this handler's own outer
           // try/catch (this function's body) still satisfies this module's
           // "every send-kind body is wrapped" discipline.
-          showDialogBoxModalAuto({
+          showDialogBoxModalAuto(deps, {
             type: 'MESSAGE',
             title: i18next.t(
               'box.warning.snap.title',

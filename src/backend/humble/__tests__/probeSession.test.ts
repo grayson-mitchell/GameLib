@@ -62,7 +62,8 @@ jest.mock('../syncFence', () => ({
   invalidateSyncGeneration: jest.fn()
 }))
 jest.mock('../userAgent', () => ({
-  standardBrowserUserAgent: () => 'test-agent'
+  standardBrowserUserAgent: () => 'test-agent',
+  standardBrowserUserAgentForProcess: () => 'test-agent'
 }))
 
 const mockGetLoginWindowSeamOrThrow = jest.fn()

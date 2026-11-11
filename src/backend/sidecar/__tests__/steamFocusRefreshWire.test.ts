@@ -25,6 +25,7 @@
  *   T-D — fail-soft consumer: same transport, `refreshInstallState` mocked to REJECT; no
  *         unhandled rejection, and a subsequent frame is still processed afterward.
  */
+import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import {
   readTauriShellProductionFile,
   readTauriShellProductionSource
@@ -174,6 +175,7 @@ const libraryManagerMap = {
 const steamFlowDeps = () => ({
   managers: createTestManagers({ library: { steam: libraryManagerMap.steam } }),
   stores: createTestStores(),
+  notifications: createTestHostServices().notifications,
   launcher: {
     launchEventCallback: (...args: unknown[]) =>
       launchEventCallbackMock(...args)

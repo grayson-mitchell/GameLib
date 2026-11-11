@@ -278,7 +278,9 @@ jest.mock('../../crossover_index/index', () => ({
 // regardless of which channels THIS suite invokes ───────────────────────────
 jest.mock('../../dialog/dialog', () => ({
   ...jest.requireActual('../../dialog/dialog'),
-  notify: jest.fn()
+  notify: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 jest.mock('../../storeManagers/legendary/user', () => ({
   LegendaryUser: { getUserInfo: jest.fn() }
@@ -1277,6 +1279,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       await flush()
 
       expect(mockSteamGridSearchGame).toHaveBeenCalledWith(
+        expect.anything(),
         'a-seeded-test-value',
         'game one'
       )
@@ -1312,6 +1315,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       await flush()
 
       expect(mockSteamGridGetGrids).toHaveBeenCalledWith(
+        expect.anything(),
         'a-seeded-test-value',
         { gameId: 123, dimensions: ['600x900'], styles: ['alternate'] }
       )
@@ -1323,6 +1327,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         }
       ])
       expect(mockSteamGridGetHeroes).toHaveBeenCalledWith(
+        expect.anything(),
         'a-seeded-test-value',
         { gameId: 123, dimensions: undefined, styles: undefined }
       )

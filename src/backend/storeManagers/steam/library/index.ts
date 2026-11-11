@@ -90,7 +90,7 @@ export default class SteamLibraryManager implements LibraryManager {
     // surface step can ever block startup or take down the others.
     // 260821-rb5: case C of the aborted-depot-residue todo (a hard kill —
     // kill -9, crash, power loss — mid native-depot-download) leaves NO
-    // appmanifest_*.acf at all, so scanDownloadingAppIds() below can never
+    // appmanifest_*.acf at all, so scanDownloadingAppIds(this.deps) below can never
     // see it. getSteamResumeBreadcrumbAppIds() is the in-memory (never
     // throws) counterpart, sourced from the install-start breadcrumb
     // (markSteamNativeInstallStarted, games.ts). Unioning the two lists is
@@ -102,7 +102,7 @@ export default class SteamLibraryManager implements LibraryManager {
     const breadcrumbSet = new Set(breadcrumbIds)
     let downloadingIds: string[] = []
     try {
-      downloadingIds = await scanDownloadingAppIds()
+      downloadingIds = await scanDownloadingAppIds(this.deps)
     } catch (err) {
       logWarning(
         [
@@ -168,7 +168,7 @@ export default class SteamLibraryManager implements LibraryManager {
           LogPrefix.Steam
         )
 
-        notify({
+        notify(this.deps, {
           title: existing?.title ?? '',
           body: i18next.t(
             'gamelib:steam.resumeAvailable.notify',

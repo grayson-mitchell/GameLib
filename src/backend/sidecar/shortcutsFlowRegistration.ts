@@ -95,7 +95,7 @@ import {
   removeNonSteamGame,
   isAddedToSteam
 } from '../shortcuts/nonesteamgame/nonesteamgame'
-import { notify } from '../dialog/dialog'
+import { notify, type DialogBoxDeps, type NotifyDeps } from '../dialog/dialog'
 import { isMac } from '../constants/environment'
 import { sendFrontendMessage } from '../ipc'
 import { getMainWindow } from '../main_window'
@@ -109,7 +109,7 @@ import type {
 } from 'backend/services/types'
 
 /** Narrow slice (66.1 D-01): library managers for game lookup, the quit handler for ctrl+q. */
-export interface ShortcutsFlowDeps {
+export interface ShortcutsFlowDeps extends NotifyDeps, DialogBoxDeps {
   managers: Pick<StoreManagers, 'library'>
   quit: Pick<QuitHandler, 'handleExit'>
   stores: Pick<Stores, 'kvs' | 'wikiGameInfo' | 'crossoverIndex'>
@@ -235,7 +235,7 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
         .addShortcuts(fromMenu)
     } catch (error) {
       logChannelFailure('addShortcut', error)
-      notify({
+      notify(deps, {
         body: t(
           'box.shortcuts.error',
           'Shortcuts could not be created. See the log for details.'
@@ -261,13 +261,13 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
             'box.shortcuts.message-mac',
             'Shortcuts were created on the Applications folder'
           )
-      notify({
+      notify(deps, {
         body: isMac ? bodyMac : body,
         title: i18next.t('box.shortcuts.title', 'Shortcuts')
       })
     } else {
       // Resolving without writing anything is not a success.
-      notify({
+      notify(deps, {
         body: t(
           'box.shortcuts.error',
           'Shortcuts could not be created. See the log for details.'
@@ -299,7 +299,7 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
         await deps.managers.library[runner].getGame(appName).removeShortcuts()
       } catch (error) {
         logChannelFailure('removeShortcut', error)
-        notify({
+        notify(deps, {
           body: t(
             'box.shortcuts.error-remove',
             'Shortcuts could not be removed. See the log for details.'
@@ -325,13 +325,13 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
               'Shortcuts were removed from the Applications folder'
             )
 
-        notify({
+        notify(deps, {
           body: isMac ? bodyMac : body,
           // Shared key: catalog 'Shortcuts' wins; the body names the removal.
           title: i18next.t('box.shortcuts.title', 'Shortcuts')
         })
       } else {
-        notify({
+        notify(deps, {
           body: t(
             'box.shortcuts.error-remove',
             'Shortcuts could not be removed. See the log for details.'
@@ -368,7 +368,10 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
       {
         libraryManagers: deps.managers.library,
         stores: deps.stores,
-        runner: deps.runner
+        runner: deps.runner,
+        dialogs: deps.dialogs,
+        appState: deps.appState,
+        notifications: deps.notifications
       },
       game
     )
@@ -380,7 +383,7 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
       const appName = args[0] as string
       const runner = args[1] as Runner
       const game = deps.managers.library[runner].getGame(appName)
-      await removeNonSteamGame(game)
+      await removeNonSteamGame(deps, game)
     }
   )
 

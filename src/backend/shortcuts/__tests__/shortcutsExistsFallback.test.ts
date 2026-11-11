@@ -32,7 +32,9 @@ jest.mock('backend/ipc', () => ({
   sendFrontendMessage: jest.fn()
 }))
 jest.mock('backend/dialog/dialog', () => ({
-  notify: jest.fn()
+  notify: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 jest.mock('backend/constants/environment', () => ({
   ...jest.requireActual('backend/constants/environment'),
@@ -54,6 +56,7 @@ jest.mock('graceful-fs', () => ({
   existsSync: jest.fn()
 }))
 
+import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { existsSync } from 'graceful-fs'
 import { mkdirSync, rmSync, symlinkSync } from 'fs'
 import { dirname, join } from 'path'
@@ -82,7 +85,17 @@ const mockedExistsSync = existsSync as jest.Mock
 // against the real `backend/ipc` -> `backend/platform` chain.
 import { registerShortcutsFlows } from '../../sidecar/shortcutsFlowRegistration'
 
+function hostSlices() {
+  const host = createTestHostServices()
+  return {
+    dialogs: host.dialogs,
+    appState: host.appState,
+    notifications: host.notifications
+  }
+}
+
 registerShortcutsFlows({
+  ...hostSlices(),
   managers: createTestManagers({
     library: {
       legendary: { getGame: (...a: [string]) => mockedGetGame(...a) },

@@ -18,8 +18,7 @@ function setup(
     isLocked: () => false,
     isRunning: () => false,
     isBridgeHosting: () => false,
-    getMainWindow: () => ({ hide: () => void calls.push('hide') }),
-    showMessageBox: async (_w, opts) => {
+    showMessageBox: async (opts) => {
       dialogs.push(opts as unknown as Record<string, unknown>)
       calls.push('dialog')
       return { response }
@@ -39,7 +38,6 @@ describe('createQuitHandler', () => {
     const { calls, deps } = setup()
     await createQuitHandler(deps).handleExit()
     expect(calls).toEqual([
-      'hide',
       'releaseSteam',
       'presence',
       'runner.teardown',
@@ -64,7 +62,6 @@ describe('createQuitHandler', () => {
       'runner.teardown',
       'runner.kill',
       'abort',
-      'hide',
       'releaseSteam',
       'presence',
       'runner.teardown',
@@ -85,15 +82,5 @@ describe('createQuitHandler', () => {
     )
     await createQuitHandler(deps).handleExit()
     expect(String(dialogs[0]!.message)).toMatch(/pending operations/)
-  })
-
-  test('no main window: no dialog, still tears down', async () => {
-    const { calls, deps } = setup({
-      isLocked: () => true,
-      getMainWindow: () => null
-    })
-    await createQuitHandler(deps).handleExit()
-    expect(calls).not.toContain('dialog')
-    expect(calls).toContain('exit')
   })
 })

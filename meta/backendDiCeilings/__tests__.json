@@ -1,18 +1,18 @@
 {
   "jestMock": {
-    "src/backend/__tests__/askForceUninstall.test.ts": 4,
+    "src/backend/__tests__/askForceUninstall.test.ts": 3,
     "src/backend/__tests__/cache.test.ts": 1,
-    "src/backend/__tests__/checkRosettaInstall.test.ts": 5,
+    "src/backend/__tests__/checkRosettaInstall.test.ts": 4,
     "src/backend/__tests__/connectivityNow.test.ts": 2,
     "src/backend/__tests__/constants.test.ts": 1,
-    "src/backend/__tests__/detectVCRedistDialog.test.ts": 4,
+    "src/backend/__tests__/detectVCRedistDialog.test.ts": 3,
     "src/backend/__tests__/gameConfigFirstWrite.test.ts": 5,
     "src/backend/__tests__/getDefaultLegendarySavePathRefresh.test.ts": 11,
     "src/backend/__tests__/getShellPath.test.ts": 4,
     "src/backend/__tests__/knownFixLaunch.test.ts": 2,
     "src/backend/__tests__/knownFixOverlayInstall.test.ts": 1,
     "src/backend/__tests__/knownFixOverlays.test.ts": 3,
-    "src/backend/__tests__/knownFixReport.test.ts": 3,
+    "src/backend/__tests__/knownFixReport.test.ts": 2,
     "src/backend/__tests__/knownFixReportDrift.test.ts": 1,
     "src/backend/__tests__/knownFixes.test.ts": 3,
     "src/backend/__tests__/knownFixesCegSeeds.test.ts": 1,
@@ -28,16 +28,15 @@
     "src/backend/__tests__/launcher.engineStep.test.ts": 7,
     "src/backend/__tests__/launcher_launchSingleFlight.test.ts": 5,
     "src/backend/__tests__/launcher_wineLibFolders.test.ts": 2,
-    "src/backend/__tests__/main_window.test.ts": 2,
+    "src/backend/__tests__/main_window.test.ts": 1,
     "src/backend/__tests__/moveOnUnix.test.ts": 5,
-    "src/backend/__tests__/notificationFailureLogging.test.ts": 5,
+    "src/backend/__tests__/notificationFailureLogging.test.ts": 4,
     "src/backend/__tests__/onlineMonitor.test.ts": 4,
-    "src/backend/__tests__/progress_bar.test.ts": 2,
-    "src/backend/__tests__/protocol.test.ts": 12,
+    "src/backend/__tests__/protocol.test.ts": 9,
     "src/backend/__tests__/settingsVersioning.test.ts": 3,
     "src/backend/__tests__/steamBridgeKnownFixes.test.ts": 8,
     "src/backend/__tests__/storeChangeNotifier.test.ts": 1,
     "src/backend/__tests__/storeLaunchHooks.test.ts": 8,
-    "src/backend/__tests__/utils.test.ts": 6
+    "src/backend/__tests__/utils.test.ts": 4
   }
 }

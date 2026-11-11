@@ -126,9 +126,12 @@ EXPECTED_AXIS_A_SURVIVOR_SET = {
 # its plaintext-on-unavailable write path were DELETED from steam/tokenStore.ts (the default is now
 # a fail-closed UnconfiguredTokenStore; bootstrap installs the real keyring store). tokenStore.ts
 # mentions safeStorage only in comments now. Another IMPORTER-LOCATION update, not a loosening.
+# Updated 2026-11-11 by Phase 66.3 plan 05 (D-66.3-02): steamgrid/secureKey.ts stopped importing
+# safeStorage -- `isEncryptionAvailable()` was always false on the sidecar's stand-in, so the
+# branches that needed a working safeStorage were deleted and the module keeps the same
+# observable results. Another IMPORTER-LOCATION update (the importer is gone, not hidden).
 EXPECTED_AXIS_B_SAFESTORAGE_IMPORTERS = [
     "src/backend/humble/secretStore.ts",
-    "src/backend/steamgrid/secureKey.ts",
 ]
 
 # The set of sites the sweep is ALLOWED to classify SILENTLY-DROPPED, pinned by quick task
@@ -173,9 +176,9 @@ EXPECTED_AXIS_B_SAFESTORAGE_IMPORTERS = [
 # and by `39-SEAM-DISPOSITIONS.md`'s own disposition record. This gate is not the only, or even the
 # primary, place that residual is enforced -- and it cannot be, once there is no branch comparison
 # left to run.
-EXPECTED_SILENT_DROP_SITES = [
-    "src/backend/steamgrid/secureKey.ts",  # S-12 — F-1/F-1b: safeStorage throws under Tauri (Axis B; untouched by this phase)
-]
+# Phase 66.3 plan 05 (D-66.3-02): secureKey.ts (S-12, F-1/F-1b) no longer imports safeStorage, so it is
+# no longer a silent-drop site; the pin is emptied rather than left overstating the gap.
+EXPECTED_SILENT_DROP_SITES: list[str] = []
 
 
 def fail(message: str) -> None:
@@ -1443,7 +1446,14 @@ def self_test() -> None:
     appeared = silent_drop_violations(pinned + [drop_finding("src/backend/brand/new/leak.ts")])
     if appeared is None or "NEW silent drop" not in appeared:
         fail("self-test FAILED: silent_drop_violations did not flag a NEW silently-dropped site")
-    vanished = silent_drop_violations(pinned[:-1])
+    # Phase 66.3 plan 05: the pin may legitimately be empty (every known gap closed), so the
+    # "a pinned site stopped dropping" case is exercised against a synthetic extra pin instead of
+    # `pinned[:-1]`, which is vacuous on an empty pin.
+    EXPECTED_SILENT_DROP_SITES.append("src/backend/self-test/closed-gap.ts")
+    try:
+        vanished = silent_drop_violations(pinned)
+    finally:
+        EXPECTED_SILENT_DROP_SITES.pop()
     if vanished is None or "NO LONGER present" not in vanished:
         fail("self-test FAILED: silent_drop_violations did not flag a site that stopped dropping")
     # A DECLARED finding at an unpinned site must not trip the pin -- only SILENTLY-DROPPED ones.

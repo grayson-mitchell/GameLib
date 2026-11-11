@@ -1,13 +1,12 @@
 import * as utils from '../utils'
 import { readFileSync, existsSync } from 'graceful-fs'
 import { join } from 'path'
-import { GlobalConfig } from '../config'
 import { rm } from 'fs/promises'
 
-jest.mock('backend/platform')
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+import { createTestHostServices } from 'backend/testUtils/testHostServices'
 jest.mock('../logger')
 jest.mock('../dialog/dialog')
-jest.mock('../config')
 jest.mock('fs/promises', () => ({
   ...jest.requireActual('fs/promises'),
   rm: jest.fn()
@@ -18,12 +17,14 @@ jest.mock('graceful-fs', () => ({
   existsSync: jest.fn()
 }))
 
+const cfgDeps = { config: createTestGlobalConfig() }
+
 describe('backend/utils.ts', () => {
   describe('removeFolder', () => {
     it('removes the contained target once, with retries and no timer', async () => {
       jest.mocked(rm).mockResolvedValue(undefined)
       const timer = jest.spyOn(global, 'setTimeout')
-      await utils.removeFolder('/abs/root', 'Game')
+      await utils.removeFolder(cfgDeps, '/abs/root', 'Game')
       expect(rm).toHaveBeenCalledTimes(1)
       expect(rm).toHaveBeenCalledWith(join('/abs/root', 'Game'), {
         recursive: true,
@@ -36,12 +37,14 @@ describe('backend/utils.ts', () => {
     })
 
     it('rejects a relative parent path', async () => {
-      await expect(utils.removeFolder('relative', 'Game')).rejects.toThrow()
+      await expect(
+        utils.removeFolder(cfgDeps, 'relative', 'Game')
+      ).rejects.toThrow()
       expect(rm).not.toHaveBeenCalled()
     })
 
     it('refuses a folder name that escapes the root', async () => {
-      await utils.removeFolder('/abs/root', '../escape')
+      await utils.removeFolder(cfgDeps, '/abs/root', '../escape')
       expect(rm).not.toHaveBeenCalled()
     })
   })
@@ -173,7 +176,7 @@ describe('backend/utils.ts', () => {
     it('returns the arch-native path when it exists (unchanged behaviour)', () => {
       ;(existsSync as jest.Mock).mockImplementation(() => true)
 
-      const { dir, bin } = utils.getLegendaryBin()
+      const { dir, bin } = utils.getLegendaryBin(cfgDeps)
 
       expect(join(dir, bin)).toContain(join('bin', process.arch))
     })
@@ -196,7 +199,7 @@ describe('backend/utils.ts', () => {
         return !path.includes(join('bin', process.arch))
       })
 
-      const { dir, bin } = utils.getGOGdlBin()
+      const { dir, bin } = utils.getGOGdlBin(cfgDeps)
 
       expect(join(dir, bin)).toContain(join('bin', 'x64'))
       expect(join(dir, bin)).not.toContain(join('bin', process.arch))
@@ -207,7 +210,7 @@ describe('backend/utils.ts', () => {
 
       let thrown: unknown
       try {
-        utils.getCometBin()
+        utils.getCometBin(cfgDeps)
       } catch (error) {
         thrown = error
       }
@@ -366,16 +369,18 @@ describe('backend/utils.ts', () => {
     // inside archSpecificBinary, so these overrides must never touch it --
     // asserted here as existsSync never being called during the getter.
     afterEach(() => {
-      GlobalConfig.setConfigValue('altLegendaryBin', undefined as never)
-      GlobalConfig.setConfigValue('altGogdlBin', undefined as never)
-      GlobalConfig.setConfigValue('altNileBin', undefined as never)
+      cfgDeps.config.resetToDefaults()
     })
 
     it('altNileBin bypasses archSpecificBinary entirely', () => {
-      GlobalConfig.setConfigValue('altNileBin', '/Users/dev/custom/nile')
+      cfgDeps.config.setSetting(
+        'altNileBin',
+        '/Users/dev/custom/nile',
+        undefined as never
+      )
       jest.clearAllMocks()
 
-      const { dir, bin } = utils.getNileBin()
+      const { dir, bin } = utils.getNileBin(cfgDeps)
 
       expect(dir).toBe('/Users/dev/custom')
       expect(bin).toBe('nile')
@@ -383,13 +388,14 @@ describe('backend/utils.ts', () => {
     })
 
     it('altLegendaryBin bypasses archSpecificBinary entirely', () => {
-      GlobalConfig.setConfigValue(
+      cfgDeps.config.setSetting(
         'altLegendaryBin',
-        '/Users/dev/custom/legendary'
+        '/Users/dev/custom/legendary',
+        undefined as never
       )
       jest.clearAllMocks()
 
-      const { dir, bin } = utils.getLegendaryBin()
+      const { dir, bin } = utils.getLegendaryBin(cfgDeps)
 
       expect(dir).toBe('/Users/dev/custom')
       expect(bin).toBe('legendary')
@@ -397,10 +403,14 @@ describe('backend/utils.ts', () => {
     })
 
     it('altGogdlBin bypasses archSpecificBinary entirely', () => {
-      GlobalConfig.setConfigValue('altGogdlBin', '/Users/dev/custom/gogdl')
+      cfgDeps.config.setSetting(
+        'altGogdlBin',
+        '/Users/dev/custom/gogdl',
+        undefined as never
+      )
       jest.clearAllMocks()
 
-      const { dir, bin } = utils.getGOGdlBin()
+      const { dir, bin } = utils.getGOGdlBin(cfgDeps)
 
       expect(dir).toBe('/Users/dev/custom')
       expect(bin).toBe('gogdl')
@@ -410,7 +420,10 @@ describe('backend/utils.ts', () => {
 })
 
 describe('errorHandler takes its manager table by deps (66.1-23)', () => {
+  const host = createTestHostServices()
   const throwingTable = {
+    dialogs: host.dialogs,
+    appState: host.appState,
     get libraryManagers(): never {
       throw new Error(
         'errorHandler read libraryManagers on a branch that never needs it'
@@ -444,6 +457,8 @@ describe('errorHandler takes its manager table by deps (66.1-23)', () => {
     }))
     let reads = 0
     const deps = {
+      dialogs: host.dialogs,
+      appState: host.appState,
       get libraryManagers() {
         reads++
         return { gog: { getGame } } as never

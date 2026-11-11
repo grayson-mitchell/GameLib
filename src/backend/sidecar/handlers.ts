@@ -126,6 +126,18 @@ import {
  * boot step (D-08), after the logger and before the RPC server binds; importing
  * this module registers nothing.
  */
+/** The config, app-info and host slices the Wine-tools and runner-misc registrations read. */
+function toolSlices(services: BootServices) {
+  return {
+    config: services.config,
+    gameConfigs: services.gameConfigs,
+    appInfo: services.appInfo,
+    dialogs: services.host.dialogs,
+    appState: services.host.appState,
+    notifications: services.host.notifications
+  }
+}
+
 export function registerHandlers(deps: {
   log: LogSink
   services: BootServices
@@ -135,7 +147,8 @@ export function registerHandlers(deps: {
   registerSteamFlows({
     managers: deps.services.managers,
     stores: deps.services.stores,
-    launcher: deps.services.launcher
+    launcher: deps.services.launcher,
+    notifications: deps.services.host.notifications
   })
   registerSteamAuthFlows(deps.services)
   registerEngineFlows({
@@ -148,7 +161,10 @@ export function registerHandlers(deps: {
   registerSettingsFlows({
     managers: deps.services.managers,
     stores: deps.services.stores,
-    runner: deps.services.runner
+    runner: deps.services.runner,
+    config: deps.services.config,
+    gameConfigs: deps.services.gameConfigs,
+    appInfo: deps.services.appInfo
   })
   // D-35-19-15's live gate: a DEV-ONLY single-host Epic cookie sweep, so the
   // `EPIC_COOKIE_HOSTS` sweep can be exercised against ONE sibling apex without
@@ -159,7 +175,7 @@ export function registerHandlers(deps: {
   // WR-02: without this, plan 30-03's native picker chain was unreachable — `openDialog`
   // is the only backend channel that reaches `dialog.showOpenDialog`, and its sole other
   // caller (`main.ts`) is not in the sidecar's import graph.
-  registerDialogFlows()
+  registerDialogFlows({ dialogs: deps.services.host.dialogs })
   // Phase 32 Plan 01: the queue-management channels — no ordering constraint
   // relative to the other four calls above (each module owns its own channel
   // names, no cross-module runtime
@@ -188,6 +204,9 @@ export function registerHandlers(deps: {
     quit: deps.services.quit,
     stores: deps.services.stores,
     runner: deps.services.runner,
+    dialogs: deps.services.host.dialogs,
+    appState: deps.services.host.appState,
+    notifications: deps.services.host.notifications,
     skipInitialTraySync: process.env.JEST_WORKER_ID !== undefined
   })
   // Phase 34.2 Plans 04+05: the game-details/settings/override channels — no
@@ -196,7 +215,8 @@ export function registerHandlers(deps: {
   // placed alongside them, before `registerStoreWriteHandlers()`.
   registerGameDetailsFlows({
     managers: deps.services.managers,
-    stores: deps.services.stores
+    stores: deps.services.stores,
+    notifications: deps.services.host.notifications
   })
   // Phase 34.2 Plan 06: the enrichment channels — no ordering
   // constraint relative to the other calls above (own channel names, no
@@ -206,7 +226,8 @@ export function registerHandlers(deps: {
   // module needs no new store plumbing.
   registerEnrichmentFlows({
     managers: deps.services.managers,
-    stores: deps.services.stores
+    stores: deps.services.stores,
+    appInfo: deps.services.appInfo
   })
   // Phase 34.3 Plans 01+02 (REQ-34.3-01/-02/-13): the shell/link-opener and
   // filesystem/diagnostics channels — no ordering constraint
@@ -216,7 +237,10 @@ export function registerHandlers(deps: {
   registerShellFilesFlows({
     managers: deps.services.managers,
     stores: deps.services.stores,
-    runner: deps.services.runner
+    runner: deps.services.runner,
+    dialogs: deps.services.host.dialogs,
+    appState: deps.services.host.appState,
+    openExternal: deps.services.host.openExternal
   })
   // Phase 34.3 Plan 06 (REQ-34.3-03/-04/-13): the clipboard channels — the ONLY
   // consumers of this slice's two new dispatch_rust_channel arms
@@ -226,7 +250,9 @@ export function registerHandlers(deps: {
   // `registerStoreWriteHandlers()`.
   registerClipboardFlows({
     managers: deps.services.managers,
-    runner: deps.services.runner
+    runner: deps.services.runner,
+    config: deps.services.config,
+    appInfo: deps.services.appInfo
   })
   // Phase 34.2 gap cycle 2, plan 34.2-16 (REQ-34.2-12), extended by Phase 34.3
   // plan 04: the logger channels. `logError` was ported early from its Phase
@@ -240,7 +266,11 @@ export function registerHandlers(deps: {
   // ALL listeners for a channel). No ordering constraint relative to the other
   // calls above (own channel name, no cross-module runtime dependency at
   // registration time), placed alongside them, before `registerStoreWriteHandlers()`.
-  registerLoggerFlows({ stores: deps.services.stores })
+  registerLoggerFlows({
+    stores: deps.services.stores,
+    appInfo: deps.services.appInfo,
+    openExternal: deps.services.host.openExternal
+  })
   // Phase 34.4 Plans 04+05 (REQ-34.4-07): the library/sync + key-state Humble
   // channels — no ordering constraint relative to the other calls above (own channel
   // names, no cross-module runtime dependency at registration time), placed
@@ -270,7 +300,11 @@ export function registerHandlers(deps: {
   // before `registerStoreWriteHandlers()`.
   registerRunnerAuthFlows({
     managers: deps.services.managers,
-    stores: deps.services.stores
+    stores: deps.services.stores,
+    appInfo: deps.services.appInfo,
+    dialogs: deps.services.host.dialogs,
+    appState: deps.services.host.appState,
+    notifications: deps.services.host.notifications
   })
   registerWineToolsFlows({
     managers: deps.services.managers,
@@ -278,13 +312,17 @@ export function registerHandlers(deps: {
     launcher: deps.services.launcher,
     spawnAsync: deps.services.spawnAsync,
     stores: deps.services.stores,
-    runner: deps.services.runner
+    runner: deps.services.runner,
+    ...toolSlices(deps.services)
   })
   registerShortcutsFlows({
     managers: deps.services.managers,
     quit: deps.services.quit,
     stores: deps.services.stores,
-    runner: deps.services.runner
+    runner: deps.services.runner,
+    dialogs: deps.services.host.dialogs,
+    appState: deps.services.host.appState,
+    notifications: deps.services.host.notifications
   })
   registerRunnerMiscFlows({
     managers: deps.services.managers,
@@ -292,7 +330,9 @@ export function registerHandlers(deps: {
     launcher: deps.services.launcher,
     spawnAsync: deps.services.spawnAsync,
     stores: deps.services.stores,
-    runner: deps.services.runner
+    runner: deps.services.runner,
+    ...toolSlices(deps.services),
+    paths: deps.services.paths
   })
   // Phase 34.6 Plan 08 (REQ-34.6-01): the EOS overlay channel cluster — no ordering constraint
   // relative to the other calls above.

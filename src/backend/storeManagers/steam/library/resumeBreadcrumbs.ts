@@ -138,7 +138,7 @@ export function clearSteamResumeBreadcrumb(
  * install-start breadcrumb is present (both steamResumeInstalldir AND
  * steamResumeTargetSteamappsDir set). Cannot throw. Exported for unit
  * testing, and consumed by init() to union with the ACF-derived
- * scanDownloadingAppIds() result — case C by definition leaves no ACF, so
+ * scanDownloadingAppIds(deps) result — case C by definition leaves no ACF, so
  * the breadcrumb is the ONLY record for that case.
  */
 export function getSteamResumeBreadcrumbAppIds(): string[] {
@@ -158,7 +158,7 @@ export function getSteamResumeBreadcrumbAppIds(): string[] {
  * 260821-rb5 self-heal predicate: is a breadcrumb-carrying appId ALREADY
  * fully installed on disk? Checked at the breadcrumb's OWN persisted
  * `steamResumeTargetSteamappsDir` rather than re-scanning
- * getSteamLibraries() — the only way a bottle-rooted install
+ * getSteamLibraries(deps) — the only way a bottle-rooted install
  * (targetSteamappsDirOverride) is checkable at all here. Reuses
  * isFullyInstalledStateFlags so the installed/incomplete bit logic can
  * never diverge from buildInstalledMap/buildIncompleteInstallSet.

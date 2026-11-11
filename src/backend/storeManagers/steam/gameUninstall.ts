@@ -121,7 +121,7 @@ export async function uninstall(
   // can observe a cleared Map, and the store is written FROM the Map and can
   // never hold an entry a completed refresh dropped.
   const installPath = library.get(steamGame.appId)?.install?.install_path
-  const root = await resolveInstallRoot(installPath)
+  const root = await resolveInstallRoot(steamGame.deps, installPath)
 
   if (root === 'bottle') {
     // debug/steam-bottle-uninstall-reverts (FINAL): direct deletion,
@@ -420,7 +420,7 @@ export async function uninstallUnadoptedMacNativeDirectly(
   })
   if (decision !== 'restart') return null
 
-  const acf = await readAcfState(steamGame.appId, 'native')
+  const acf = await readAcfState(steamGame.deps, steamGame.appId, 'native')
   if (acf.state !== 'installed' || !acf.installPath) return null
 
   // The ACF the decision was made about must be the one that gets deleted.
@@ -501,11 +501,11 @@ export async function removeNativeInstallDirectly(
  * only GameLib-authored ones — see uninstall()'s own JSDoc for the full
  * evidence chain (CW_USEDEFAULT window-position defect). Mirrors
  * uninstallBridgeGame()'s direct-deletion model above, but targets the
- * Phase 17 GameLibSteam bottle's steamapps/ (readAcfState('bottle') /
+ * Phase 17 GameLibSteam bottle's steamapps/ (readAcfState(deps, 'bottle') /
  * getBottleSteamappsDir) instead of the dedicated bridge bottle.
  *
  * NAMING-CONVENTION GENERALIZATION: the install root is resolved via
- * readAcfState('bottle').installPath, which is built directly from the
+ * readAcfState(deps, 'bottle').installPath, which is built directly from the
  * ACF's own on-disk `AppState.installdir` field (library.ts) — never from
  * FALLBACK_INSTALLDIR_PREFIX ('app_...', installLocation.ts) or any other
  * GameLib-specific naming assumption. A Steam-authored installdir like
@@ -544,7 +544,7 @@ export async function removeNativeInstallDirectly(
  * pause/kill it, or wait for it to release anything, by design — see
  * Resolution in the debug file for the full rationale.
  *
- * Resolves the install root via readAcfState('bottle') — the SAME reader
+ * Resolves the install root via readAcfState(deps, 'bottle') — the SAME reader
  * pollUninstallOnce()/library.ts already use for this bottle root — then
  * containment-checks it with the established resolve()+relative() idiom
  * (mirroring resolveBridgeGameInstallRoot; "path.join is not containment",
@@ -555,7 +555,7 @@ export async function removeNativeInstallDirectly(
  * DECISION, LOCKED, item 3): promoted from a nice-to-have to REQUIRED —
  * before touching the ACF at all, re-verifies the library entry's own
  * recorded install.install_path ALSO resolves inside this bottle root
- * (resolveInstallRoot(), library.ts) and aborts, deleting nothing, if not.
+ * (resolveInstallRoot(deps), library.ts) and aborts, deleting nothing, if not.
  * This is defense-in-depth on top of uninstall()'s own routing decision
  * (the caller only reaches this method when that same check already
  * returned 'bottle') — it answers "is this the install the user is
@@ -569,7 +569,7 @@ export async function removeNativeInstallDirectly(
  * pipeline a second time — the manifest is now confirmed absent, exactly
  * the condition that branch already handles for the delegated path's own
  * poller. Because our own rmSync() calls just completed synchronously
- * (no yield to the event loop in between), the readAcfState() re-read
+ * (no yield to the event loop in between), the readAcfState(deps) re-read
  * inside pollUninstallOnce() reliably observes 'absent' from our own
  * write; it is not depending on winning a race against Steam.
  * pollUninstallOnce() ALSO checks the native root for a surviving copy
@@ -618,7 +618,7 @@ export async function uninstallBottleGameDirectly(
   // this appId before control ever reached here. See uninstall()'s comment
   // above for the full evidence chain; do not re-open without new evidence.
   const entryInstallPath = library.get(steamGame.appId)?.install?.install_path
-  const entryRoot = await resolveInstallRoot(entryInstallPath)
+  const entryRoot = await resolveInstallRoot(steamGame.deps, entryInstallPath)
   if (entryRoot !== 'bottle') {
     logWarning(
       `SteamGame: uninstallBottleGameDirectly refused for appId ${steamGame.appId} — the library entry's install_path "${entryInstallPath}" does not resolve inside the bottle root`,
@@ -631,7 +631,7 @@ export async function uninstallBottleGameDirectly(
     }
   }
 
-  const acfState = await readAcfState(steamGame.appId, 'bottle')
+  const acfState = await readAcfState(steamGame.deps, steamGame.appId, 'bottle')
 
   // 34.13 review A-10: readAcfState returns THREE states, and 'downloading'
   // (StateFlags bit 4 unset — a partial install, an interrupted depot

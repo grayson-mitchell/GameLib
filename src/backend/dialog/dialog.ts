@@ -1,13 +1,10 @@
 import { LogPrefix, logInfo, logWarning } from 'backend/logger'
-import {
-  app,
-  dialog,
-  Notification,
-  type IpcMainInvokeEvent
-} from 'backend/platform'
+import type { IpcMainInvokeEvent } from 'backend/platform/types'
 import { ButtonOptions, DialogType } from 'common/types'
-import { getMainWindow } from '../main_window'
 import { sendFrontendMessage } from '../ipc'
+import type { AppState } from '../host/appState'
+import type { Dialogs } from '../host/dialogs'
+import type { Notifications } from '../host/notifications'
 import { isSteamDeckGameMode } from 'backend/constants/environment'
 import { RUST_NOTIFICATION_AUTH_DENIED_PREFIX } from 'common/types/sidecarTransport'
 
@@ -41,22 +38,36 @@ import { RUST_NOTIFICATION_AUTH_DENIED_PREFIX } from 'common/types/sidecarTransp
 // fallback below runs instead). true is NOT proof of display: in the sidecar the stub window never
 // reports destroyed, so the frame is forwarded with no acknowledgement that DialogHandler was
 // subscribed, and the renderer holds one dialog at a time, so a later showDialog can replace it.
-function showDialogBoxModalAuto(props: {
-  event?: IpcMainInvokeEvent
-  title: string
-  message: string
-  type: DialogType
-  buttons?: Array<ButtonOptions>
-  /** Correlation id the renderer echoes back via `dialogDisplayed` (see displayAck.ts). */
-  ackId?: string
-}): boolean {
+/** The host slices the in-app dialog path needs (D-66.3-02): raise the window, native fallback. */
+export interface DialogBoxDeps {
+  appState: Pick<AppState, 'raiseMainWindowForInAppDialog'>
+  dialogs: Pick<Dialogs, 'showErrorBox' | 'showMessageBox'>
+}
+
+/** The host slice `notify` needs. */
+export interface NotifyDeps {
+  notifications: Pick<Notifications, 'show'>
+}
+
+function showDialogBoxModalAuto(
+  deps: DialogBoxDeps,
+  props: {
+    event?: IpcMainInvokeEvent
+    title: string
+    message: string
+    type: DialogType
+    buttons?: Array<ButtonOptions>
+    /** Correlation id the renderer echoes back via `dialogDisplayed` (see displayAck.ts). */
+    ackId?: string
+  }
+): boolean {
   // Re-show a window GameLib itself hid for a game launch (quick 261108-kpc) so the dialog is
   // never rendered into a hidden window. Scope is deliberate: the sidecar cannot observe real
   // window visibility (fakeWindow.isVisible is a stub), and an unconditional raise would steal
   // focus from a running game and Dock-bounce (Critical attention) for every background dialog.
   // A window the user hid (tray / startInTray) is out of scope and unchanged. notify() is
   // untouched (OS notifications are visible regardless).
-  app.raiseMainWindowForInAppDialog()
+  deps.appState.raiseMainWindowForInAppDialog()
   if (props.event) {
     props.event.sender.send(
       'showDialog',
@@ -79,17 +90,12 @@ function showDialogBoxModalAuto(props: {
     } catch (error) {
       logWarning(['showDialogBoxModalAuto:', error], LogPrefix.Backend)
 
-      const window = getMainWindow()
-
       switch (props.type) {
         case 'ERROR':
-          dialog.showErrorBox(props.title, props.message)
+          void deps.dialogs.showErrorBox(props.title, props.message)
           break
         default:
-          if (!window) {
-            break
-          }
-          dialog.showMessageBox(window, {
+          void deps.dialogs.showMessageBox({
             title: props.title,
             message: props.message,
             buttons: props.buttons?.map((button) => button.text) || []
@@ -150,16 +156,14 @@ function describeUserNotificationsSettings(fields: string[]): {
       }
 }
 
-function notify({ body, title }: NotifyType) {
-  if (Notification.isSupported() && !isSteamDeckGameMode) {
-    const mainWindow = getMainWindow()
-    const notify = new Notification({
-      body,
-      title
-    })
-
-    notify.on('click', () => mainWindow?.show())
-    notify.on('failed', (_event: unknown, error: string) => {
+function notify(
+  deps: { notifications: Pick<Notifications, 'show'> },
+  { body, title }: NotifyType
+) {
+  // Notification.isSupported() was always true on the sidecar's stand-in.
+  if (!isSteamDeckGameMode) {
+    // The 'click' -> mainWindow.show() handler was a no-op on the stand-in window: dropped.
+    const onFailed = (error: string) => {
       const denied = error.startsWith(RUST_NOTIFICATION_AUTH_DENIED_PREFIX)
       if (denied) {
         if (loggedNotificationAuthDenied) return
@@ -172,8 +176,8 @@ function notify({ body, title }: NotifyType) {
         `notify(): "${title}" was not delivered (${error})${hint}`,
         LogPrefix.Backend
       )
-    })
-    notify.on('show', (_event: unknown, backend?: string) => {
+    }
+    const onShown = (backend?: string) => {
       // Title and a fixed backend label only, never the body (REQ-30-07/D-09).
       const [label, ...fields] = (backend ?? '').split(';')
       if (label === 'user-notifications') {
@@ -188,8 +192,8 @@ function notify({ body, title }: NotifyType) {
           ? 'handed to tauri-plugin-notification (delivery not confirmable)'
           : 'handed off (delivery not confirmable)'
       logInfo(`notify(): "${title}" ${result}`, LogPrefix.Backend)
-    })
-    notify.show()
+    }
+    deps.notifications.show({ title, body }, { onShown, onFailed })
   } else {
     // REQ-30-07/D-09: a logged no-op, not a silent one -- names the title and the reason,
     // never the body (avoids logging arbitrary notification content).

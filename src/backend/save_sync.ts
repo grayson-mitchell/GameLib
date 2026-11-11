@@ -9,7 +9,7 @@ import {
   realpathSync,
   writeFileSync
 } from 'graceful-fs'
-import { app } from 'backend/platform'
+import type { AppPaths } from 'backend/process/context'
 import type { CommandRunner, Launcher, StoreManagers } from './services/types'
 import type { ProcessRunner } from './process/types'
 import { readWindowsShellFolder } from './sidecar/knownFolders'
@@ -23,6 +23,7 @@ export interface SaveSyncDeps {
   managers: Pick<StoreManagers, 'library'>
   commandRunner: Pick<CommandRunner, 'getWinePath'>
   launcher: Pick<Launcher, 'setupWineEnvVars' | 'verifyWinePrefix'>
+  paths: Pick<AppPaths, 'knownFolder'>
 }
 
 async function getDefaultSavePath(
@@ -168,7 +169,7 @@ async function getDefaultGogSavePaths(
     DOCUMENTS: game.isNative()
       ? ((process.platform === 'win32'
           ? await readWindowsShellFolder(deps, 'Personal')
-          : undefined) ?? app.getPath('documents'))
+          : undefined) ?? deps.paths.knownFolder('documents'))
       : '%USERPROFILE%\\Documents'
   } satisfies Record<SaveFolderVariable, string>
   const resolvedLocations: GOGCloudSavesLocation[] = []

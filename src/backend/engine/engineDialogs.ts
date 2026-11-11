@@ -13,19 +13,27 @@
 import { t } from 'i18next'
 import { app } from 'backend/platform'
 import { logInfo, LogPrefix } from 'backend/logger'
-import { notify, showDialogBoxModalAuto } from 'backend/dialog/dialog'
+import {
+  notify,
+  showDialogBoxModalAuto,
+  type DialogBoxDeps,
+  type NotifyDeps
+} from 'backend/dialog/dialog'
 import { newDialogAckId, trackDialogDisplay } from 'backend/dialog/displayAck'
 import type { FallbackReason } from './engineTypes'
 
-export function showEngineDialog(args: {
-  key: string
-  title: string
-  body: string
-  /** Short tag for the log, e.g. `override-unavailable`. */
-  ackId: string
-}): void {
+export function showEngineDialog(
+  deps: DialogBoxDeps & NotifyDeps,
+  args: {
+    key: string
+    title: string
+    body: string
+    /** Short tag for the log, e.g. `override-unavailable`. */
+    ackId: string
+  }
+): void {
   const { key, title, body, ackId: tag } = args
-  notify({ title, body })
+  notify(deps, { title, body })
   app.raiseMainWindow()
   const ackId = newDialogAckId()
   trackDialogDisplay(ackId, (result) => {
@@ -36,7 +44,7 @@ export function showEngineDialog(args: {
       LogPrefix.Backend
     )
   })
-  const sent = showDialogBoxModalAuto({
+  const sent = showDialogBoxModalAuto(deps, {
     title,
     message: body,
     type: 'MESSAGE',
@@ -49,14 +57,17 @@ export function showEngineDialog(args: {
 }
 
 /** Notify-only notice: a system notification, no window raise, no modal (61-27, WR-02). */
-export function showEngineNotice(args: {
-  key: string
-  title: string
-  body: string
-  ackId: string
-}): void {
+export function showEngineNotice(
+  deps: NotifyDeps,
+  args: {
+    key: string
+    title: string
+    body: string
+    ackId: string
+  }
+): void {
   const { key, title, body, ackId: tag } = args
-  notify({ title, body })
+  notify(deps, { title, body })
   logInfo(
     `[engine-notice] key=${key} tag=${tag} dispatched=notify raise=false`,
     LogPrefix.Backend
@@ -65,6 +76,7 @@ export function showEngineNotice(args: {
 
 /** The "using built-in engine" toast for an Automatic fallback (59 D-06). */
 export function notifyEngineFallback(
+  deps: NotifyDeps,
   title: string,
   reason: FallbackReason
 ): void {
@@ -83,5 +95,5 @@ export function notifyEngineFallback(
             'gamelib:steam.engine.toast.cxMissing',
             'CrossOver not found — using built-in engine'
           )
-  notify({ title, body })
+  notify(deps, { title, body })
 }

@@ -116,7 +116,7 @@ export function notifyOverlaySetupFailed(
     `SteamGame: appId ${steamGame.appId} overlay notice surface=in-app pushed=${pushed}`,
     LogPrefix.Steam
   )
-  notify({
+  notify(steamGame.deps, {
     title: i18next.t(
       'gamelib:steam.overlay.toast.title',
       'Steam overlay unavailable'

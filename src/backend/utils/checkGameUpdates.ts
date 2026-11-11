@@ -18,13 +18,14 @@
  * entry in the library manager map) in both builds, not Steam-only.
  */
 
-import { GlobalConfig } from 'backend/config'
+import type { GlobalConfigSlice } from 'backend/config'
 import { logWarning, LogPrefix } from 'backend/logger'
 import type { StoreManagers } from 'backend/services/types'
 
 /** R1 slice: the per-runner managers and the auto-update queueing. */
 export interface CheckGameUpdatesDeps {
   managers: Pick<StoreManagers, 'library' | 'autoUpdate'>
+  config: Pick<GlobalConfigSlice, 'getSettings'>
 }
 
 export async function checkGameUpdates(
@@ -32,7 +33,7 @@ export async function checkGameUpdates(
 ): Promise<string[]> {
   const { library, autoUpdate } = deps.managers
   let oldGames: string[] = []
-  const { autoUpdateGames } = GlobalConfig.get().getSettings()
+  const { autoUpdateGames } = deps.config.getSettings()
   for (const runner of Object.keys(library) as (keyof typeof library)[]) {
     // WR-05: per-runner isolation. This loop was extracted verbatim from main.ts,
     // where it was unguarded: ONE runner whose CLI or credentials are missing

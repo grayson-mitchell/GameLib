@@ -249,7 +249,7 @@ export async function selectEngineForLaunch(
     return { kind: 'refused', key }
   }
   const dialog = (body: string, ackId: string) =>
-    d.showDialog({ key, title, body, ackId })
+    d.showDialog(services.notices, { key, title, body, ackId })
 
   if (prefix.kind === 'invalid') {
     logWarning(
@@ -491,7 +491,7 @@ export async function selectEngineForLaunch(
     sel.reason !== 'override' &&
     sel.reason !== 'cx-inconclusive'
   ) {
-    d.notifyFallback(title, sel.reason)
+    d.notifyFallback(services.notices, title, sel.reason)
   }
 
   return { kind: 'use', key, selection: sel, prefix }
@@ -527,6 +527,7 @@ function stopDeadlineWatcher(key: EngineKey): void {
  * is very likely running and fullscreen. It is a system notification plus an in-app toast.
  */
 function onEngineLaunchDeadline(
+  services: EngineServices,
   game: Game,
   key: EngineKey,
   armedSelection: EngineSelection | undefined,
@@ -542,7 +543,7 @@ function onEngineLaunchDeadline(
   const info = game.getGameInfo()
   const title = info.title
   const seconds = LAUNCH_DEADLINE_MS / 1000
-  d.showNotice({
+  d.showNotice(services.notices, {
     key,
     title: t(
       'gamelib:steam.engine.notDetected.title',
@@ -590,7 +591,8 @@ export function armEngineLaunchDeadline(
 
   const deadline = armLaunchDeadline({
     key,
-    onDeadline: () => onEngineLaunchDeadline(game, key, armedSelection, d)
+    onDeadline: () =>
+      onEngineLaunchDeadline(services, game, key, armedSelection, d)
   })
   stopDeadlineWatcher(key)
   const watcher = d.watch({

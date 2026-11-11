@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'graceful-fs'
 
+import type { DialogBoxDeps } from 'backend/dialog/dialog'
 import { UserInfo } from 'common/types'
 import { clearCache, startLegendaryCleanup } from '../../utils'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -19,6 +20,7 @@ import {
   type CookieReadVerdict
 } from '../../humble/loginWindowSeam'
 import { standardBrowserUserAgent } from '../../humble/userAgent'
+import type { AppInfo } from 'backend/process/context'
 
 // The real Epic login page. `clearEpicStorage` MUST load it: localStorage,
 // sessionStorage, IndexedDB and Cache Storage are ORIGIN-scoped and are only
@@ -115,7 +117,9 @@ export interface LegendaryUserInfoDeps {
 }
 
 /** What `login` / `logout` need (R3): the legendary manager, its config store and kvs. */
-export interface LegendaryUserDeps extends LegendaryUserInfoDeps {
+export interface LegendaryUserDeps
+  extends LegendaryUserInfoDeps, DialogBoxDeps {
+  appInfo: Pick<AppInfo, 'userAgentFallback'>
   libraryManagers: Pick<ManagerDeps['libraryManagers'], 'legendary'>
   stores: LegendaryUserInfoDeps['stores'] & {
     legendary: Stores['legendary']
@@ -282,7 +286,7 @@ export class LegendaryUser {
           // above.
           const report = await seam.clearStorage(
             EPIC_LOGIN_ORIGIN,
-            standardBrowserUserAgent()
+            standardBrowserUserAgent(deps)
           )
           // Only COUNTS are logged — never a storage key or value
           // (mirrors humble/user.ts's disconnect()).
@@ -326,7 +330,7 @@ export class LegendaryUser {
             ? EPIC_COOKIE_CLEAR_NO_WINDOW_LABEL
             : await seam.open(COOKIE_HANDLE_ORIGIN, {
                 visible: false,
-                userAgent: standardBrowserUserAgent()
+                userAgent: standardBrowserUserAgent(deps)
               })
           try {
             // ONE window for the whole sweep (Phase 35 plan 09): opened

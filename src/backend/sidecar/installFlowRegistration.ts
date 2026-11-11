@@ -38,7 +38,7 @@
  *     (`backend/utils/checkGameUpdates.ts`) reused UNCHANGED, all runners
  *     (D-12, follows D-05b).
  *   - `listSteamLibraryTargets` -> `isSteamNativeInstallEnabled() ||
- *     bottle-eligible(appName) ? listSteamLibraryTargets() : []` (quick
+ *     bottle-eligible(appName) ? listSteamLibraryTargets(deps) : []` (quick
  *     261030-o77: the toggle only scopes mac-native titles; a bottle-routed
  *     title always uses GameLib's depot installer). This is the ACTUAL minimum read-gate the install
  *     button depends on (30-RESEARCH Q6) — NOT any of `DownloadDialog`'s six
@@ -288,7 +288,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
   )
 
   ipcMain.handle('checkGameUpdates', async () =>
-    checkGameUpdates({ managers: deps.managers })
+    checkGameUpdates({ managers: deps.managers, config: deps.config })
   )
 
   // quick 261030-o77: the enableSteamNativeInstall toggle only governs
@@ -300,7 +300,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
   ipcMain.handle(
     'listSteamLibraryTargets',
     async (_event: unknown, ...args: unknown[]) => {
-      if (isSteamNativeInstallEnabled()) return listSteamLibraryTargets()
+      if (isSteamNativeInstallEnabled()) return listSteamLibraryTargets(deps)
       const appName = args[0]
       if (typeof appName !== 'string' || !/^\d+$/.test(appName)) return []
       try {
@@ -308,7 +308,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
           managerDepsFromServices(deps),
           appName
         )
-        return verdict.eligible ? listSteamLibraryTargets() : []
+        return verdict.eligible ? listSteamLibraryTargets(deps) : []
       } catch {
         return []
       }
@@ -347,7 +347,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
         if (verdict.eligible) return closedInstallAppReply()
         return {
           installAppRoute: true,
-          libraries: await listSteamLibraryTargets()
+          libraries: await listSteamLibraryTargets(deps)
         }
       } catch {
         return closedInstallAppReply()
@@ -372,6 +372,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
           return { gamelibDelete: false }
         }
         const root = await resolveInstallRoot(
+          deps,
           steamLibraryMap.get(appName)?.install?.install_path
         )
         return { gamelibDelete: root === 'native' }
@@ -432,7 +433,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
           // below: every sidecar invoke handler's `_event` is always
           // `undefined` at runtime. Neither string interpolates `path`
           // (T-34.6-32).
-          showDialogBoxModalAuto({
+          showDialogBoxModalAuto(deps.host, {
             title: rejectedPathDialogTitle(),
             message: i18next.t(
               'gamelib:installFlows.pathRejectedBodyMove',
@@ -461,13 +462,16 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
       // element is in scope at this call site (unlike downloadqueue.ts's
       // processNotification), so the chain is `live.title || appName`.
       const title = resolveGameTitle(deps.managers.library, runner, appName)
-      notify({ title, body: i18next.t('notify.moving', 'Moving Game') })
+      notify(deps.host, {
+        title,
+        body: i18next.t('notify.moving', 'Moving Game')
+      })
 
       const moveRes = await deps.managers.library[runner]
         .getGame(appName)
         .moveInstall(path)
       if (moveRes.status === 'error') {
-        notify({
+        notify(deps.host, {
           title,
           body: i18next.t('notify.error.move', 'Error Moving Game')
         })
@@ -483,7 +487,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
         // (`dialog.ts:23-31`), which never throws. `main.ts`'s own `event` argument was always
         // the real invoke event; omitting it here is the same mechanical, non-semantic
         // adaptation `clearCache` already uses in `shellFilesFlowRegistration.ts`.
-        showDialogBoxModalAuto({
+        showDialogBoxModalAuto(deps.host, {
           title: i18next.t('box.error.title', 'Error'),
           message: i18next.t(
             'box.error.moving',
@@ -495,7 +499,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
       }
 
       if (moveRes.status === 'done') {
-        notify({ title, body: i18next.t('notify.moved') })
+        notify(deps.host, { title, body: i18next.t('notify.moved') })
         logInfo(`Finished moving ${appName} to ${path}.`, LogPrefix.Backend)
       }
 
@@ -575,7 +579,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
           // rationale as the identical block in moveInstall above -- the
           // rejection was previously silent to the user. Neither string
           // interpolates `path` (T-34.6-32).
-          showDialogBoxModalAuto({
+          showDialogBoxModalAuto(deps.host, {
             title: rejectedPathDialogTitle(),
             message: i18next.t(
               'gamelib:installFlows.pathRejectedBodyImport',
@@ -593,10 +597,10 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
       }
 
       if (isStore(runner, 'legendary')) {
-        const epicOffline = await isEpicServiceOffline()
+        const epicOffline = await isEpicServiceOffline(deps.host)
         if (epicOffline) {
           // No `event` property — see the identical rationale on `moveInstall` above.
-          showDialogBoxModalAuto({
+          showDialogBoxModalAuto(deps.host, {
             title: i18next.t('box.warning.title', 'Warning'),
             message: i18next.t(
               'box.warning.epic.import',
@@ -618,7 +622,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
       })
 
       const abortMessage = () => {
-        notify({
+        notify(deps.host, {
           title,
           body: i18next.t('notify.import.failed', 'Importing Failed')
         })
@@ -665,7 +669,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
         })
       }
 
-      notify({
+      notify(deps.host, {
         title,
         body: i18next.t('notify.install.imported', 'Game Imported')
       })

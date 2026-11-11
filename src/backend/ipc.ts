@@ -1,6 +1,6 @@
 // eslint-disable-next-line no-restricted-imports
 import { ipcMain, type IpcMainEvent } from 'backend/platform'
-import { getMainWindow } from 'backend/main_window'
+import { pushFrontendMessage } from 'backend/sidecar/sidecarRpc'
 
 import type {
   AsyncIPCFunctions,
@@ -39,36 +39,20 @@ function addHandler<ChannelName extends keyof AsyncIPCFunctions>(
 }
 
 /**
- * Sends a message to the main window's webContents if available
- * @returns Whether the message got sent
+ * Pushes a message to the renderer through the sidecar transport (`pushFrontendMessage`).
+ * @returns Whether the message got sent (always true: the transport buffers until its output
+ * stream is bound, so a push before the rpc-server boot step is flushed, not dropped as the old
+ * fake-window path dropped it).
  *
- * debug/steam-install-slow-start (Thread D-1): `getMainWindow()` returns the
- * module-level `mainWindow` reference (or the first `BrowserWindow.getAllWindows()`
- * entry) whenever it is non-null — but a window can be non-null and DESTROYED at
- * the same time, most commonly during app quit (`handleExit()` -> `app.exit()`
- * tears down the window as part of its internal shutdown). A download/install
- * progress heartbeat (e.g. GOG's `onInstallOrUpdateOutput`/`sendProgressUpdate`,
- * or Steam's ACF poller) that fires in that narrow window called
- * `mainWindow.webContents.send(...)` on an already-destroyed window/webContents,
- * which throws "Object has been destroyed" as an UNCAUGHT exception in the main
- * process (Electron's crash dialog: "A uncaught exception occured: TypeError:
- * Object has been destroyed."). Guarding here defensively covers EVERY caller of
- * sendFrontendMessage during teardown, regardless of which one fires.
+ * This replaced a `getMainWindow()?.webContents.send(...)` that went through the platform
+ * shim's fake window, whose `isDestroyed()` was always false; the destroyed-window guard
+ * (debug/steam-install-slow-start, Thread D-1) is moot with no window object.
  */
 function sendFrontendMessage<ChannelName extends keyof FrontendMessages>(
   channel: ChannelName,
   ...args: Parameters<FrontendMessages[ChannelName]>
 ): boolean {
-  const mainWindow = getMainWindow()
-  if (
-    !mainWindow ||
-    mainWindow.isDestroyed() ||
-    mainWindow.webContents.isDestroyed()
-  ) {
-    return false
-  }
-
-  mainWindow.webContents.send(channel, ...args)
+  pushFrontendMessage(channel, ...args)
   return true
 }
 

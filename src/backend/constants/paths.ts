@@ -1,4 +1,6 @@
-import { app } from 'backend/platform'
+// 66.4 hand-off: module-scope reads with no reachable deps stay on the path shim.
+import { getPath } from 'backend/sidecar/pathShim'
+import { isPackagedSidecar } from 'backend/sidecar/isPackagedSidecar'
 import { existsSync, mkdirSync, renameSync } from 'graceful-fs'
 import { homedir } from 'os'
 import { join, resolve } from 'path'
@@ -6,7 +8,7 @@ import { env } from 'process'
 import { dirSync } from 'tmp'
 import { isSnap } from './environment'
 
-let configFolder = app.getPath('appData')
+let configFolder = getPath('appData')
 // If we're running tests, we want a config folder independent of the normal
 // user configuration
 if (process.env.CI === 'e2e') {
@@ -42,7 +44,7 @@ if (process.env.CI !== 'e2e') {
   }
 }
 
-export const userDataPath = app.getPath('userData')
+export const userDataPath = getPath('userData')
 export const toolsPath = join(appFolder, 'tools')
 export const runtimePath = join(toolsPath, 'runtimes')
 export const defaultUmuPath = join(runtimePath, 'umu', 'umu_run.py')
@@ -62,14 +64,14 @@ export const fixesPath = join(appFolder, 'fixes')
 // GameLib-owned known-fix overlay payloads; never a game folder or a bottle.
 export const knownFixOverlaysPath = join(appFolder, 'overlays')
 
-// Anchor on app.getAppPath() (project root in dev, asar root when packaged)
+// Anchor on the app root (GAMELIB_APP_ROOT, else cwd; project root in dev, asar root when packaged)
 // rather than counting `..` from __dirname: electron-vite code-splits the
 // main bundle into build/main/chunks/*, so __dirname is build/main/chunks
 // (not build/main), and the old `resolve(__dirname, '..', ...)` math landed
 // one level off -- e.g. build/public/bin instead of build/bin -- ENOENT'ing
 // every bundled asset (helper, shim, icon, preload, locales). getAppPath() is
 // depth-independent and already the established fix for the sibling
-// build/preload lookup in main_window.ts. Non-packaged points at the source
+// build/preload lookup that main_window.ts once did. Non-packaged points at the source
 // `public/` tree (where build-steam-bridge stages the helper); packaged/CI
 // points at the flattened `build/` output root.
 // `CI === 'e2e'` IS CURRENTLY UNREACHABLE, and that is a recorded decision, not an
@@ -80,8 +82,8 @@ export const knownFixOverlaysPath = join(appFolder, 'overlays')
 // path will want the hook already here with an explanation rather than an orphan to
 // reverse-engineer. DO NOT delete it as dead code without reading D-35-14-01.
 export const publicDir = resolve(
-  app.getAppPath(),
-  app.isPackaged || process.env.CI === 'e2e' ? 'build' : 'public'
+  process.env.GAMELIB_APP_ROOT || process.cwd(),
+  isPackagedSidecar() || process.env.CI === 'e2e' ? 'build' : 'public'
 )
 
 // Curated, in-repo known-fixes layer (decision 6): `public/fixes/` in dev,

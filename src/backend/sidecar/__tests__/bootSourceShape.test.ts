@@ -276,8 +276,6 @@ describe('66.1 MH-3: registrations take slices', () => {
    * A new zero-param registration fails here until someone decides which it is.
    */
   const ZERO_PARAM_REGISTRATIONS: Record<string, string> = {
-    registerDialogFlows:
-      'uncoupled: calls the platform dialog only (utils/openDialog)',
     registerOAuthLoginFlows:
       'uncoupled: the login-window seam (humble/loginWindowSeam), no store reads',
     registerDevEpicCookieSweepFlow:

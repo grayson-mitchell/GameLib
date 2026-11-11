@@ -48,6 +48,10 @@ import { startInstallPolling } from '../library/installPolling'
 import { at } from './fixtures/indexed'
 import type { Stores } from 'backend/services/types'
 
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+
+const libDeps = { config: createTestGlobalConfig() }
+
 const { steamLibraryStore, steamMetadataStore, steamSyncStore } =
   jest.requireMock<Stores['steam']>('../stores')
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
@@ -100,7 +104,9 @@ jest.mock('../../../ipc', () => ({
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
-  notify: jest.fn()
+  notify: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 
 // ── i18next mock — returns the fallback string for body assertions ────────────
@@ -1126,7 +1132,7 @@ describe('SteamLibraryManager', () => {
 
   // ── GAP-17-BOTTLE-PLAY-REVERT: refresh() must be bottle-aware ──────────────
   // Regression coverage for the follow-on to bottle-install-not-recognized:
-  // refresh() previously derived is_installed ONLY from buildInstalledMap()
+  // refresh() previously derived is_installed ONLY from buildInstalledMap(libDeps)
   // (native ACF scan), so a bottle-only-installed game was always reported
   // not-installed by a full refresh() — which is reachable mid-session via the
   // launch-completion 'done' status (see .planning/debug/bottle-install-not-recognized.md).
@@ -1693,7 +1699,7 @@ describe('SteamLibraryManager', () => {
 
   // ── WR-01 (21-17): refresh() re-seeds steamResumePending from on-disk ACF ──
   // Before the fix, refresh() derived each GameInfo's install object purely
-  // from buildInstalledMap() (bit-4-set only). A mid-session resync
+  // from buildInstalledMap(libDeps) (bit-4-set only). A mid-session resync
   // (reachable via the launch-completion 'done' status) therefore silently
   // wiped the same-session steamResumePending marker set by
   // markSteamInstallIncomplete — reverting the distinct "Resume Install"
@@ -1806,7 +1812,7 @@ describe('SteamLibraryManager', () => {
     })
 
     it('buildIncompleteInstallSet returns only the bit-4-unset appId (shares the isFullyInstalledStateFlags predicate)', async () => {
-      const set = await buildIncompleteInstallSet()
+      const set = await buildIncompleteInstallSet(libDeps)
 
       expect(set.has(570)).toBe(true) // 1026 → incomplete
       expect(set.has(440)).toBe(false) // 4 → fully installed, excluded

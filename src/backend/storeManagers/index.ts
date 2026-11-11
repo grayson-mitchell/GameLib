@@ -195,7 +195,13 @@ export function createStoreManagers(
     commandRunner: deps.commandRunner,
     runner: deps.runner,
     spawnAsync: deps.spawnAsync,
-    stores: deps.stores
+    stores: deps.stores,
+    config: deps.config,
+    gameConfigs: deps.gameConfigs,
+    appInfo: deps.appInfo,
+    dialogs: deps.dialogs,
+    appState: deps.appState,
+    notifications: deps.notifications
   })
   Object.assign(library, {
     sideload: new SideloadLibraryManager(managerDeps),

@@ -622,7 +622,7 @@ export default class GOGGame implements Game {
     if (!launchPrepSuccess) {
       logWriter.logError(['Launch aborted:', launchPrepFailReason])
       this.deps.launcher.launchCleanup()
-      showDialogBoxModalAuto({
+      showDialogBoxModalAuto(this.deps, {
         title: t('box.error.launchAborted', 'Launch aborted'),
         message: launchPrepFailReason!,
         type: 'ERROR'
@@ -703,7 +703,7 @@ export default class GOGGame implements Game {
       if (!wineLaunchPrepSuccess) {
         logWriter.logError(['Launch aborted:', wineLaunchPrepFailReason])
         if (wineLaunchPrepFailReason) {
-          showDialogBoxModalAuto({
+          showDialogBoxModalAuto(this.deps, {
             title: t('box.error.launchAborted', 'Launch aborted'),
             message: wineLaunchPrepFailReason,
             type: 'ERROR'
@@ -823,7 +823,7 @@ export default class GOGGame implements Game {
           `\nMods deploy log:\n${result.stdout}\n\n${result.stderr}\n\n\n`
         )
         if (result.stderr.includes('deploy has succeeded')) {
-          showDialogBoxModalAuto({
+          showDialogBoxModalAuto(this.deps, {
             title: 'Mod deploy failed',
             message: `Following logs are also available in game log\n\nredMod log:\n ${result.stdout}\n\n\n${result.stderr}`,
             type: 'ERROR'
@@ -865,7 +865,7 @@ export default class GOGGame implements Game {
           LogPrefix.Gog
         )
       } else {
-        const path = getCometBin()
+        const path = getCometBin(this.deps)
         const secrets = [
           cometCredentials.access_token,
           cometCredentials.refresh_token
@@ -1157,7 +1157,7 @@ export default class GOGGame implements Game {
     gameInfo.install = { is_dlc: false }
     await removeShortcutsUtil(this.deps, this)
     this.deps.stores.gog.syncStore.delete(this.id)
-    await removeNonSteamGame(this)
+    await removeNonSteamGame(this.deps, this)
     sendFrontendMessage('pushGameToLibrary', gameInfo)
     return res
   }

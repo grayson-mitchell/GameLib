@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { app } from 'backend/platform'
+import type { AppInfo } from 'backend/process/context'
 import { logError, LogPrefix } from 'backend/logger'
 import { resolveRunner } from 'common/discounts/storeMapping'
 import type {
@@ -63,9 +63,11 @@ type CheapSharkStore = {
  * schema entry (RESEARCH explicitly rejects a persisted-cache alternative). */
 let storeMapCache: Record<string, StoreSearchStore> | undefined
 
-function buildHeaders(): Record<string, string> {
+function buildHeaders(deps: {
+  appInfo: Pick<AppInfo, 'version'>
+}): Record<string, string> {
   return {
-    'User-Agent': `GameLib/${app.getVersion()}`
+    'User-Agent': `GameLib/${deps.appInfo.version}`
   }
 }
 
@@ -118,14 +120,16 @@ export function mapGameDeals(
  * (RESEARCH: "fetch once backend-side... cached in-memory"). A second call
  * returns the memoized value without a second network request.
  */
-export async function getStoreMap(): Promise<Record<string, StoreSearchStore>> {
+export async function getStoreMap(deps: {
+  appInfo: Pick<AppInfo, 'version'>
+}): Promise<Record<string, StoreSearchStore>> {
   if (storeMapCache) {
     return storeMapCache
   }
   try {
     const { data } = await axios.get<CheapSharkStore[]>(
       `${CHEAPSHARK_BASE}/stores`,
-      { timeout: 15000, headers: buildHeaders() }
+      { timeout: 15000, headers: buildHeaders(deps) }
     )
     const map: Record<string, StoreSearchStore> = {}
     for (const store of data) {
@@ -154,14 +158,17 @@ export async function getStoreMap(): Promise<Record<string, StoreSearchStore>> {
  * Does NOT pass `exact=1` — CheapShark's title search is case-insensitive
  * substring by design (RESEARCH Pitfall 3).
  */
-export async function searchGames(query: string): Promise<StoreSearchResult[]> {
+export async function searchGames(
+  deps: { appInfo: Pick<AppInfo, 'version'> },
+  query: string
+): Promise<StoreSearchResult[]> {
   try {
     const { data } = await axios.get<CheapSharkGameSearchResult[]>(
       `${CHEAPSHARK_BASE}/games`,
       {
         params: { title: query, limit: 60 },
         timeout: 15000,
-        headers: buildHeaders()
+        headers: buildHeaders(deps)
       }
     )
     return mapSearchResults(data)
@@ -179,15 +186,18 @@ export async function searchGames(query: string): Promise<StoreSearchResult[]> {
  * only on row expand. Resolves each deal's store name/runner via the cached
  * `/stores` map.
  */
-export async function getGameDeals(gameId: string): Promise<StoreSearchDeal[]> {
+export async function getGameDeals(
+  deps: { appInfo: Pick<AppInfo, 'version'> },
+  gameId: string
+): Promise<StoreSearchDeal[]> {
   try {
-    const storeMap = await getStoreMap()
+    const storeMap = await getStoreMap(deps)
     const { data } = await axios.get<CheapSharkGameDetail>(
       `${CHEAPSHARK_BASE}/games`,
       {
         params: { id: gameId },
         timeout: 15000,
-        headers: buildHeaders()
+        headers: buildHeaders(deps)
       }
     )
     return mapGameDeals(data, storeMap)

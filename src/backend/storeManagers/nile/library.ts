@@ -540,7 +540,7 @@ export default class NileLibraryManager implements LibraryManager {
       return runNileCommandStub(commandParts)
     }
 
-    const { dir, bin } = getNileBin()
+    const { dir, bin } = getNileBin(this.deps)
 
     // Set NILE_CONFIG_PATH to a custom, Heroic-specific location so user-made
     // changes to Nile's main config file don't affect us

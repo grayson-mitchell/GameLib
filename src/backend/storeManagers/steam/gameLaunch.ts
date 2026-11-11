@@ -275,7 +275,7 @@ export async function launch(
           `SteamGame: Play for ${steamGame.appId} not launched (${outcome.kind}); pending adoption kept`,
           LogPrefix.Steam
         )
-        notify({ title: game, body })
+        notify(steamGame.deps, { title: game, body })
         return false
       }
     }
@@ -342,7 +342,7 @@ export function maybeNotifyBridgeLimited(
     )
   }
 
-  notify({
+  notify(steamGame.deps, {
     title: i18next.t(
       'gamelib:steam.bridge.limited.title',
       'Some Steam features are limited'
@@ -384,7 +384,7 @@ export function maybeNotifyDrmModeFailed(
     i18next.t('gamelib:steam.bridge.drm.detail', 'Details: {{cause}}', {
       cause
     })
-  notify({ title, body })
+  notify(steamGame.deps, { title, body })
   // The failure usually lands while the game is in front. Bring GameLib up first, or the
   // dialog renders into a window nobody can see (display=unconfirmed in the 56-16 gate).
   app.raiseMainWindow()
@@ -398,7 +398,7 @@ export function maybeNotifyDrmModeFailed(
       LogPrefix.Steam
     )
   })
-  const dialogFrameSent = showDialogBoxModalAuto({
+  const dialogFrameSent = showDialogBoxModalAuto(steamGame.deps, {
     title,
     message: body,
     type: 'MESSAGE',
@@ -430,7 +430,7 @@ export function showEngineDialog(
   body: string,
   tag: string
 ): void {
-  notify({ title, body })
+  notify(steamGame.deps, { title, body })
   app.raiseMainWindow()
   const ackId = newDialogAckId()
   const appId = steamGame.appId
@@ -442,7 +442,7 @@ export function showEngineDialog(
       LogPrefix.Steam
     )
   })
-  const sent = showDialogBoxModalAuto({
+  const sent = showDialogBoxModalAuto(steamGame.deps, {
     title,
     message: body,
     type: 'MESSAGE',
@@ -775,7 +775,7 @@ export async function selectLaunchEngine(
               'gamelib:steam.engine.toast.cxMissing',
               'CrossOver not found — using built-in engine'
             )
-    notify({ title, body })
+    notify(steamGame.deps, { title, body })
   }
   // 59-01 `nag_blocks: no`: a CrossOver trial reminder does not block a
   // launch, so no nag handling exists here. An expired bottle does hang

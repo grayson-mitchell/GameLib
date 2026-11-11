@@ -417,7 +417,7 @@ export async function runNativeDepotDownloadLeased(
     // graceful fallback always win its own race; the outer only trips on a
     // non-CM await (the belt-and-suspenders case it exists for).
     resolved = await withTimeout(
-      resolveSteamInstallTarget(steamGame.appId, args), // Plan 09
+      resolveSteamInstallTarget(steamGame.deps, steamGame.appId, args), // Plan 09
       STEAM_PICS_TIMEOUT_MS * 2,
       'resolveSteamInstallTarget'
     )

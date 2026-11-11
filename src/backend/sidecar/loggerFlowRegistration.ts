@@ -183,6 +183,7 @@
  * by this plan or this module.
  */
 
+import type { OpenExternal } from '../host/openExternal'
 import { ipcMain } from '../platform'
 import { logErrorSettled, logInfoSettled, LogPrefix } from '../logger'
 import { sanitizeRendererLogMessage } from '../logger/sanitizeRendererLogMessage'
@@ -205,7 +206,11 @@ import {
  * this module owns no side effects at import time beyond the imports above;
  * the caller decides when registration onto the handler registry happens.
  */
-export function registerLoggerFlows(deps: LogUploaderDeps): void {
+export function registerLoggerFlows(
+  deps: LogUploaderDeps & {
+    openExternal: Pick<OpenExternal, 'showItemInFolder'>
+  }
+): void {
   // Behavior identical to the Electron-only logger IPC handler's own
   // `addListener('logError', (e, message) => logError(message, LogPrefix.Frontend))`,
   // except the call is now guarded at this call site (WR-02/CR-01) rather
@@ -319,6 +324,7 @@ export function registerLoggerFlows(deps: LogUploaderDeps): void {
   ipcMain.on('showLogFileInFolder', (_event: unknown, ...args: unknown[]) => {
     try {
       showItemInFolder(
+        deps,
         getLogFilePath(args[0] as Parameters<typeof getLogFilePath>[0])
       )
     } catch (error: unknown) {

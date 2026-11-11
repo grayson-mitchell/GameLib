@@ -41,6 +41,10 @@ export default class SideloadGame implements Game {
       | 'commandRunner'
       | 'spawnAsync'
       | 'runner'
+      | 'config'
+      | 'dialogs'
+      | 'appState'
+      | 'notifications'
     >
   ) {
     this.id = id
@@ -142,11 +146,11 @@ export default class SideloadGame implements Game {
       rmSync(dirname(executable), { recursive: true })
     }
 
-    notify({ title, body: i18next.t('notify.uninstalled') })
+    notify(this.deps, { title, body: i18next.t('notify.uninstalled') })
 
     removeShortcutsUtil(this.deps, this)
     removeRecentGame(this.deps, this.id)
-    removeNonSteamGame(this)
+    removeNonSteamGame(this.deps, this)
 
     sendGameStatusUpdate({
       appName: this.id,

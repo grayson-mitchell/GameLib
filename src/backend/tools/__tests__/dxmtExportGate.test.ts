@@ -51,6 +51,7 @@ jest.mock('../machoExports', () => ({
   ]
 }))
 
+import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { backendEvents } from 'backend/backend_events'
 import { isOnline } from 'backend/online_monitor'
 import { logWarning } from 'backend/logger'
@@ -75,6 +76,8 @@ const isOnlineMock = isOnline as jest.Mock
 // eslint-disable-next-line @typescript-eslint/unbound-method
 bindDxmtStores({
   runner: createScriptedRunner([]),
+  dialogs: createTestHostServices().dialogs,
+  appState: createTestHostServices().appState,
   stores: {
     wineManager: { wineDownloaderInfoStore: mockWineDownloaderInfoStore }
   } as never

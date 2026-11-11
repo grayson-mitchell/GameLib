@@ -142,7 +142,7 @@ const openNewBrowserGameWindow = async ({
 /** The collaborators the shared launch helper uses (66.1, R3). */
 export type CommonGameDeps = Pick<
   ManagerDeps,
-  'launcher' | 'commandRunner' | 'spawnAsync'
+  'launcher' | 'commandRunner' | 'spawnAsync' | 'dialogs' | 'appState'
 >
 
 export async function launchGame(
@@ -215,7 +215,7 @@ export async function launchGame(
     if (!launchPrepSuccess) {
       logWriter.logError(['Launch aborted:', launchPrepFailReason])
       deps.launcher.launchCleanup()
-      showDialogBoxModalAuto({
+      showDialogBoxModalAuto(deps, {
         title: i18next.t('box.error.launchAborted', 'Launch aborted'),
         message: launchPrepFailReason!,
         type: 'ERROR'

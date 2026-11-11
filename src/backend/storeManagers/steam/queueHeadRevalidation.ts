@@ -6,7 +6,7 @@
 
 import { join, resolve } from 'path'
 import { logInfo, LogPrefix } from 'backend/logger'
-import { getSteamLibraries } from 'backend/utils'
+import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
 import { library } from './state'
 import { NUMERIC_APP_ID } from './gameConstants'
 import type { SteamStoresDeps } from './library/installRoot'
@@ -29,7 +29,7 @@ import {
  *  (b) `<params.path>/steamapps`, only when params.path resolves to a
  *      registered library root. Finding: InstallArgs.path for Steam is a
  *      library ROOT (installLocation.resolveOverride matches it against
- *      getSteamLibraries(), and an empty or unregistered value silently
+ *      getSteamLibraries(deps), and an empty or unregistered value silently
  *      becomes the primary library), never a steamapps dir. An empty or
  *      unregistered path therefore yields false here rather than guessing.
  *
@@ -38,7 +38,7 @@ import {
  * buildid, so Steam's own UpdateRequired bit is the determinable proxy.
  */
 export async function steamQueueHeadAlreadyInstalled(
-  deps: SteamStoresDeps,
+  deps: SteamStoresDeps & SteamLibrariesDeps,
   appId: string,
   params: { path?: string }
 ): Promise<boolean> {
@@ -51,7 +51,7 @@ export async function steamQueueHeadAlreadyInstalled(
       const path = params?.path
       if (typeof path !== 'string' || !path.trim()) return false
       const resolved = resolve(path)
-      const libs = await getSteamLibraries()
+      const libs = await getSteamLibraries(deps)
       if (!libs.some((lib) => resolve(lib) === resolved)) return false
       steamappsDir = join(path, 'steamapps')
     }

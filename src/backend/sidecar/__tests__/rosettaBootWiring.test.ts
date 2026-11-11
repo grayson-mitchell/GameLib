@@ -130,7 +130,7 @@ const ARCH_PROBE_FAILS: ScriptStep = {
  * spied on that registry's platform so the real RUST_DIALOG_MESSAGE forward never arms a timer.
  */
 function bootProbe(showMessageBox: (...args: unknown[]) => Promise<unknown>) {
-  let showMessageBoxSpy!: jest.SpyInstance
+  let showMessageBoxSpy!: jest.Mock
   const sidecar = bootFresh({
     before: () => {
       // Load bootstrap (and with it every axios.create() instance) first, then wipe the
@@ -155,9 +155,17 @@ function bootProbe(showMessageBox: (...args: unknown[]) => Promise<unknown>) {
         set: jest.fn(),
         flush: jest.fn()
       })
-      showMessageBoxSpy = jest
-        .spyOn(require('../../platform').dialog, 'showMessageBox')
-        .mockImplementation(showMessageBox as never)
+      // The boot's host services build their dialogs through createDialogs; swap only
+      // showMessageBox so the real RUST_DIALOG_MESSAGE forward never arms a timer.
+      const hostDialogs = require('../../host/dialogs')
+      const actualCreateDialogs = hostDialogs.createDialogs
+      showMessageBoxSpy = jest.fn(showMessageBox)
+      jest
+        .spyOn(hostDialogs, 'createDialogs')
+        .mockImplementation((deps: unknown) => ({
+          ...actualCreateDialogs(deps),
+          showMessageBox: showMessageBoxSpy
+        }))
     },
     // The failing arch probe: the spawn itself fails when Rosetta is absent.
     context: { script: [ARCH_PROBE_FAILS] }

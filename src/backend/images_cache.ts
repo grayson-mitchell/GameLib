@@ -2,7 +2,6 @@ import { existsSync, createWriteStream, mkdirSync } from 'graceful-fs'
 import { createHash } from 'crypto'
 import { join } from 'path'
 import axios from 'axios'
-import { protocol } from 'backend/platform'
 import { appFolder } from './constants/paths'
 
 const imagesCachePath = join(appFolder, 'images-cache')
@@ -13,15 +12,13 @@ export const initImagesCache = () => {
     mkdirSync(imagesCachePath)
   }
 
-  // use a fake protocol for images we want to cache
-  protocol.handle('imagecache', (request) => {
-    return getImageFromCache(request.url)
-  })
+  // The 'imagecache' protocol registration was a no-op on the platform stand-in and is gone;
+  // nothing imports this module (knip-baselined), so getImageFromCache is exported unreferenced.
 }
 
 const pending = new Map<string, Promise<void>>()
 
-const getImageFromCache = (url: string) => {
+export const getImageFromCache = (url: string) => {
   const realUrl = decodeURIComponent(url.replace('imagecache://', ''))
   // digest of the image url for the file name
   const digest = createHash('sha256').update(realUrl).digest('hex')

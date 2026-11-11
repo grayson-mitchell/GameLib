@@ -34,7 +34,10 @@ import { addRecentGame } from 'backend/recent_games/recent_games'
 import type LogWriter from 'backend/logger/log_writer'
 import type { ManagerDeps } from 'backend/services/types'
 
-type LaunchDispatchDeps = Pick<ManagerDeps, 'libraryManagers'> & {
+type LaunchDispatchDeps = Pick<
+  ManagerDeps,
+  'libraryManagers' | 'notifications'
+> & {
   stores: Pick<ManagerDeps['stores'], 'kvs'>
 }
 
@@ -77,7 +80,7 @@ function notifyAlreadyLaunching(
     const title = deps.libraryManagers.steam
       .getGame(appName)
       .getGameInfo().title
-    notify({
+    notify(deps, {
       title,
       // Same call shape as the file's other i18next.t uses; the lint ceiling counts warnings.
       // eslint-disable-next-line import-x/no-named-as-default-member

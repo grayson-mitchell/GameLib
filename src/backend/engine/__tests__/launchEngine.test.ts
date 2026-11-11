@@ -66,6 +66,7 @@ import {
 } from '../launchEngine'
 import type { EngineServices } from '../engineServices'
 import { createTestEngineServices } from 'backend/testUtils/testServices'
+import { propsOnly } from 'backend/testUtils/propsOnlyMock'
 import type { LaunchEngineDeps } from '../launchEngine'
 import { getEngineSelection, clearEngineSelection } from '../engineRegistry'
 import { getLaunchSettings } from '../launchSettings'
@@ -81,8 +82,8 @@ const services: EngineServices = createTestEngineServices({
 const { setGlobalMocks } = { setGlobalMocks: () => undefined }
 void setGlobalMocks
 
-const showDialog = jest.fn()
-const notifyFallback = jest.fn()
+const showDialog = propsOnly(jest.fn())
+const notifyFallback = propsOnly(jest.fn())
 const recordDecision = jest.fn()
 const ensureGameBottle = jest.fn()
 const ensurePinned = jest.fn()

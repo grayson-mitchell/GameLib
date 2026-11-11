@@ -22,7 +22,17 @@ import { getLaunchSettings } from 'backend/engine/launchSettings'
 
 type NileSetupDeps = Pick<
   ManagerDeps,
-  'libraryManagers' | 'launcher' | 'commandRunner' | 'spawnAsync' | 'runner'
+  | 'libraryManagers'
+  | 'launcher'
+  | 'commandRunner'
+  | 'spawnAsync'
+  | 'runner'
+  | 'config'
+  | 'gameConfigs'
+  | 'dialogs'
+  | 'appInfo'
+  | 'appState'
+  | 'notifications'
 > & { stores: Pick<ManagerDeps['stores'], 'kvs' | 'wineManager'> }
 
 /**

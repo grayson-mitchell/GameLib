@@ -65,8 +65,12 @@ jest.mock('../../utils', () => ({
 }))
 
 jest.mock('../../dialog/dialog', () => ({
-  notify: jest.fn(),
-  showDialogBoxModalAuto: jest.fn()
+  notify: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn()),
+  showDialogBoxModalAuto: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 
 jest.mock('../../online_monitor', () => ({

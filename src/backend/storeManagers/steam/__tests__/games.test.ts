@@ -1,4 +1,5 @@
 import type { SteamDrm } from '../bridge/drm/drmLaunchSetup'
+import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import {
   createTestManagerDeps,
   createInertSteamProcesses,
@@ -269,6 +270,10 @@ import {
 import { at } from './fixtures/indexed'
 import type { Stores } from 'backend/services/types'
 
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+
+const libDeps = { config: createTestGlobalConfig() }
+
 const { steamMetadataStore, steamLibraryStore } =
   jest.requireMock<Stores['steam']>('../stores')
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
@@ -289,6 +294,12 @@ const drmStandIn: Partial<SteamDrm> = {
 }
 
 const steamTestDeps = createTestManagerDeps({
+  // The i386-recovery confirm goes through deps.dialogs; the platform dialog mock records it.
+  dialogs: {
+    ...createTestHostServices().dialogs,
+    showMessageBox: (...a: unknown[]) =>
+      jest.requireMock('backend/platform').dialog.showMessageBox(...a)
+  },
   steamProcesses: createInertSteamProcesses({
     // The DRM instance: its launch setup is the jest.fn()-backed stand-in the
     // '../bridge/drm/drmLaunchSetup' mock below exports (not-applicable by default).
@@ -379,8 +390,12 @@ jest.mock('backend/platform', () => ({
 
 // ── dialog notify mock ────────────────────────────────────────────────────────
 jest.mock('backend/dialog/dialog', () => ({
-  notify: jest.fn(),
-  showDialogBoxModalAuto: jest.fn()
+  notify: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn()),
+  showDialogBoxModalAuto: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 
 // ── GameConfig mock — ensures getSettings() returns defaults ─────────────────
@@ -4588,7 +4603,11 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     expect(targetOrder).toBeLessThan(downloadOrder)
 
     expect(ensureSteamClientReady).toHaveBeenCalledWith(APP_ID)
-    expect(resolveSteamInstallTarget).toHaveBeenCalledWith(APP_ID, {})
+    expect(resolveSteamInstallTarget).toHaveBeenCalledWith(
+      expect.anything(),
+      APP_ID,
+      {}
+    )
     expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
       targetSteamappsDir: TARGET.targetSteamappsDir,
       installdir: TARGET.installdir,
@@ -5039,7 +5058,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
 
       // Load-bearing precondition: an empty ACF scan is what makes this a
       // breadcrumb-only surfacing, not an ACF-derived one.
-      const scanResult = await acfState.scanDownloadingAppIds()
+      const scanResult = await acfState.scanDownloadingAppIds(libDeps)
       expect(scanResult).toEqual([])
 
       await new SteamLibraryManager(steamTestDeps).init()
@@ -5165,7 +5184,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
       .spyOn(gamesModule, 'isNativeInstallInFlight')
       .mockReturnValue(false)
 
-    const scanResult = await acfState.scanDownloadingAppIds()
+    const scanResult = await acfState.scanDownloadingAppIds(libDeps)
     expect(scanResult).toEqual([])
 
     await new SteamLibraryManager(steamTestDeps).init()
@@ -9100,7 +9119,11 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
 
     expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
     expect(shellOpenExternal).not.toHaveBeenCalled()
-    expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(readAcfStateSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      APP_ID,
+      'bottle'
+    )
     expect(pollUninstallOnceSpy).toHaveBeenCalledWith(
       steamTestDeps,
       APP_ID,
@@ -10740,7 +10763,11 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
     expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(startUninstallPollingSpy).not.toHaveBeenCalled()
-    expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(readAcfStateSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      APP_ID,
+      'bottle'
+    )
     // Reuses the SAME confirmed-absent completion pipeline the delegated
     // path's own poller uses — badge flip/persist/notify/flag-clear.
     expect(pollUninstallOnceSpy).toHaveBeenCalledWith(
@@ -10766,7 +10793,11 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
     const result = await game.uninstall({} as any)
 
     expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
-    expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(readAcfStateSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      APP_ID,
+      'bottle'
+    )
     expect(pollUninstallOnceSpy).toHaveBeenCalledWith(
       steamTestDeps,
       APP_ID,
@@ -10789,7 +10820,11 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
     const result = await game.uninstall({} as any)
 
     expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
-    expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(readAcfStateSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      APP_ID,
+      'bottle'
+    )
     expect(pollUninstallOnceSpy).toHaveBeenCalledWith(
       steamTestDeps,
       APP_ID,
@@ -10918,7 +10953,11 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
       )
 
       expect(result.stderr).not.toContain('invalid appId')
-      expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+      expect(readAcfStateSpy).toHaveBeenCalledWith(
+        expect.anything(),
+        APP_ID,
+        'bottle'
+      )
     })
   })
 
@@ -11311,7 +11350,11 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(startUninstallPollingSpy).not.toHaveBeenCalled()
     expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
-    expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(readAcfStateSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      APP_ID,
+      'bottle'
+    )
     expect(pollUninstallOnceSpy).toHaveBeenCalledWith(
       steamTestDeps,
       APP_ID,
@@ -11349,7 +11392,11 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
     const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.uninstall({} as any)
 
-    expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(readAcfStateSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      APP_ID,
+      'bottle'
+    )
     expect(pollUninstallOnceSpy).toHaveBeenCalledWith(
       steamTestDeps,
       APP_ID,
@@ -11399,8 +11446,16 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
     const game = new SteamGame(APP_ID, steamTestDeps)
     await game.uninstall({} as any)
 
-    expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
-    expect(readAcfStateSpy).not.toHaveBeenCalledWith(APP_ID, 'native')
+    expect(readAcfStateSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      APP_ID,
+      'bottle'
+    )
+    expect(readAcfStateSpy).not.toHaveBeenCalledWith(
+      expect.anything(),
+      APP_ID,
+      'native'
+    )
     expect(pollUninstallOnceSpy).toHaveBeenCalledWith(
       steamTestDeps,
       APP_ID,
@@ -11761,7 +11816,11 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
 
     expect(resolveBridgeLaunchExe).not.toHaveBeenCalled()
     expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
-    expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(readAcfStateSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      APP_ID,
+      'bottle'
+    )
     expect(pollUninstallOnceSpy).toHaveBeenCalledWith(
       steamTestDeps,
       APP_ID,
@@ -16136,7 +16195,10 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
       } as any)
 
       expect(result).toEqual({ status: 'done' })
-      expect(resolveSteamLibraryRoot).toHaveBeenCalledWith('/mock/steam')
+      expect(resolveSteamLibraryRoot).toHaveBeenCalledWith(
+        expect.anything(),
+        '/mock/steam'
+      )
       expect(installApp()).toHaveBeenCalledWith(
         APP_ID,
         { libraryPath: '/mock/steam' },

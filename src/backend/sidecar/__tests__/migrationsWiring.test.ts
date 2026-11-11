@@ -57,6 +57,7 @@ jest.mock('fs/promises', () => {
 })
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
+import { createTestContext } from 'backend/testUtils/testContext'
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'graceful-fs'
 import { join } from 'node:path'
 import { app } from 'backend/platform'
@@ -224,7 +225,10 @@ describe('LegendaryGlobalConfigFolderMigration failure-lock (todo 2026-08-16 ste
       })
     })
 
-    await new world.freshSystem({ stores: world.freshStores }).applyMigrations()
+    await new world.freshSystem({
+      stores: world.freshStores,
+      paths: createTestContext().ctx.paths
+    }).applyMigrations()
 
     // THE REGRESSION. Pre-fix, `legendaryConfigPath` existed after this point, so the next
     // launch's `hasHeroicSpecificConfig` check returned `true` on the first line of `run()` and
@@ -246,7 +250,10 @@ describe('LegendaryGlobalConfigFolderMigration failure-lock (todo 2026-08-16 ste
       (actualFsPromises.cp as (...a: unknown[]) => Promise<void>)(...args)
     )
 
-    await new world.freshSystem({ stores: world.freshStores }).applyMigrations()
+    await new world.freshSystem({
+      stores: world.freshStores,
+      paths: createTestContext().ctx.paths
+    }).applyMigrations()
 
     expect(existsSync(migratedMarker())).toBe(true)
     // `await` is load-bearing: a bare `expect(promise).resolves.toBe(...)` returns a

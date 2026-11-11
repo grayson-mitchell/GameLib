@@ -1,4 +1,4 @@
-import { app } from 'backend/platform'
+import type { AppInfo } from 'backend/process/context'
 import { open } from 'fs/promises'
 import { z } from 'zod'
 
@@ -9,6 +9,7 @@ import type { UploadedLogData } from 'common/types'
 import type { Stores } from 'backend/services/types'
 
 async function sendRequestToApi(
+  deps: { appInfo: Pick<AppInfo, 'version'> },
   formData: FormData | string,
   url = 'https://dpaste.com/api/v2/'
 ) {
@@ -16,7 +17,7 @@ async function sendRequestToApi(
     body: formData,
     method: 'post',
     headers: {
-      'User-Agent': `HeroicGamesLauncher/${app.getVersion()}`,
+      'User-Agent': `HeroicGamesLauncher/${deps.appInfo.version}`,
       'Content-Type': 'application/x-www-form-urlencoded'
     }
   }).catch((err) => {
@@ -56,6 +57,7 @@ async function readPartOfFile(file: string, size: number) {
 /** The store slice the log uploader reads (66.1, R1). */
 export interface LogUploaderDeps {
   stores: Pick<Stores, 'logger'>
+  appInfo: Pick<AppInfo, 'version'>
 }
 
 async function uploadLogFile(
@@ -75,7 +77,7 @@ async function uploadLogFile(
 
   const formData = `content=${encodeURIComponent(fileContents.toString())}&expiry_days=${EXPIRY_DAYS}`
 
-  const response = await sendRequestToApi(formData)
+  const response = await sendRequestToApi(deps, formData)
   if (!response) return false
 
   // TODO: dpaste.com does not support deleting files, there's not token
@@ -123,7 +125,7 @@ async function deleteUploadedLogFile(
   formData.set('token', logData.token)
   formData.set('delete', '')
 
-  const response = await sendRequestToApi(formData, url)
+  const response = await sendRequestToApi(deps, formData, url)
   if (!response) return false
 
   if (!response.ok) {

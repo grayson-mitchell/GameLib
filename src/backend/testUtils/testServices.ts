@@ -346,7 +346,24 @@ export function createTestEngineServices(
       throw new Error('unscripted installRemove call')
     },
     wineManagerReleases: () => [],
+    notices: unscriptedMembers<EngineServices['notices']>('notices', {}),
     runner: unscriptedMembers<EngineServices['runner']>('process runner', {}),
     ...overrides
+  }
+}
+
+/**
+ * The config, app-info and host slices `createTools` (ToolsDeps) and the engine source read.
+ * A test spreads this into its tools deps literal.
+ */
+export function createTestToolsSlices() {
+  const host = createTestHostServices()
+  return {
+    config: createTestGlobalConfig(),
+    gameConfigs: createTestGameConfigs(),
+    appInfo: TEST_APP_INFO,
+    dialogs: host.dialogs,
+    appState: host.appState,
+    notifications: host.notifications
   }
 }

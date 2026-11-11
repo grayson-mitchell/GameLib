@@ -88,6 +88,8 @@
  *     plan 34.3-04 into `loggerFlowRegistration.ts`.
  */
 
+import type { AppState } from '../host/appState'
+import type { OpenExternal } from '../host/openExternal'
 import { ipcMain, shell } from '../platform'
 import { assertOpenableExternalUrl, classifyFolderTarget } from './openPolicy'
 import { assertContainedPath } from './rendererPathGuard'
@@ -146,6 +148,9 @@ export function registerShellFilesFlows(deps: {
   stores: ClearCacheDeps['stores']
   /** The boot process runner (66.2); consumers converted by 66.2-05. */
   runner: BootServices['runner']
+  dialogs: ClearCacheDeps['dialogs']
+  appState: ClearCacheDeps['appState'] & Pick<AppState, 'relaunch' | 'quit'>
+  openExternal: Pick<OpenExternal, 'showItemInFolder'>
 }): void {
   // ── send (11): the URL openers (constant URLs go straight to shell.openExternal) ────
 
@@ -255,7 +260,7 @@ export function registerShellFilesFlows(deps: {
 
   ipcMain.on('showItemInFolder', (_event: unknown, ...args: unknown[]) => {
     try {
-      showItemInFolderImpl(args[0] as string)
+      showItemInFolderImpl(deps, args[0] as string)
     } catch (error) {
       logSendFailure('showItemInFolder', error)
     }
@@ -277,7 +282,7 @@ export function registerShellFilesFlows(deps: {
       pushFrontendMessage('refreshLibrary')
 
       if (showDialog) {
-        showDialogBoxModalAuto({
+        showDialogBoxModalAuto(deps, {
           title: i18next.t('box.cache-cleared.title', 'Cache Cleared'),
           message: i18next.t(
             'box.cache-cleared.message',
@@ -316,7 +321,7 @@ export function registerShellFilesFlows(deps: {
 
   ipcMain.on('resetHeroic', () => {
     try {
-      resetHeroic()
+      resetHeroic(deps)
     } catch (error) {
       logSendFailure('resetHeroic', error)
     }

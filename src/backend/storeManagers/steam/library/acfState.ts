@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { rmSync } from 'node:fs'
 import { parse } from '@node-steam/vdf'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { getSteamLibraries } from 'backend/utils'
+import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
 import { library } from '../state'
 import { NUMERIC_APP_ID } from '../gameConstants'
 import { DEFAULT_BRIDGE_BOTTLE_NAME } from '../bottle'
@@ -25,7 +25,7 @@ import { isFullyInstalledStateFlags } from './installedMap'
  * - 'absent':      no manifest found for this appId in any library path
  *
  * `source` selects which steamapps root(s) to scan:
- *  - 'native' (default): every native library path from getSteamLibraries()
+ *  - 'native' (default): every native library path from getSteamLibraries(deps)
  *    — exactly the pre-Phase-17 behavior, byte-for-byte unchanged.
  *  - 'bottle': the single dedicated Phase 17 CrossOver bottle (GameLibSteam)
  *    steamapps root (RESEARCH.md Pitfall 2 — never conflated with the other
@@ -38,6 +38,7 @@ import { isFullyInstalledStateFlags } from './installedMap'
  * Exported for unit testing.
  */
 export async function readAcfState(
+  deps: SteamLibrariesDeps,
   appId: string,
   source: AcfSource = 'native'
 ): Promise<{
@@ -60,7 +61,7 @@ export async function readAcfState(
       ? [getBottleSteamappsRoot()]
       : source === 'bridge'
         ? [getBridgeBottleSteamappsRoot(appId)]
-        : (await getSteamLibraries()).map((libPath) =>
+        : (await getSteamLibraries(deps)).map((libPath) =>
             join(libPath, 'steamapps')
           )
 
@@ -191,13 +192,14 @@ const ALL_ACF_SOURCES: AcfSource[] = ['native', 'bottle', 'bridge']
  * Exported for unit testing.
  */
 export async function enumerateSteamInstallCopies(
+  deps: SteamLibrariesDeps,
   appId: string
 ): Promise<SteamInstallCopy[]> {
   const copies: SteamInstallCopy[] = []
 
   for (const source of ALL_ACF_SOURCES) {
     try {
-      const acfState = await readAcfState(appId, source)
+      const acfState = await readAcfState(deps, appId, source)
       if (acfState.state === 'installed' && acfState.installPath) {
         copies.push({
           source,
@@ -266,7 +268,7 @@ export type RemoveCopyResult =
  * Exported for unit testing.
  */
 export async function removeSteamInstallCopy(
-  deps: SpawnDeps,
+  deps: SpawnDeps & SteamLibrariesDeps,
   appId: string,
   source: AcfSource
 ): Promise<RemoveCopyResult> {
@@ -285,7 +287,7 @@ export async function removeSteamInstallCopy(
   const resolvedBridgeBottleName =
     source === 'bridge' ? resolveBridgeBottleName(appId) : null
 
-  const acfState = await readAcfState(appId, source)
+  const acfState = await readAcfState(deps, appId, source)
 
   if (acfState.state === 'absent') {
     return { status: 'absent', source }
@@ -391,8 +393,10 @@ export async function removeSteamInstallCopy(
  * Used by SteamLibraryManager.init() to resume polling after an app restart.
  * Exported for unit testing.
  */
-export async function scanDownloadingAppIds(): Promise<string[]> {
-  const libraryPaths = await getSteamLibraries()
+export async function scanDownloadingAppIds(
+  deps: SteamLibrariesDeps
+): Promise<string[]> {
+  const libraryPaths = await getSteamLibraries(deps)
   const downloadingIds: string[] = []
 
   for (const libPath of libraryPaths) {

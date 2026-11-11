@@ -37,7 +37,7 @@ jest.mock('backend/logger', () => ({
 
 const notifyMock = jest.fn()
 jest.mock('backend/dialog/dialog', () => ({
-  notify: (...args: unknown[]) => notifyMock(...args)
+  notify: (_deps: unknown, ...args: unknown[]) => notifyMock(...args)
 }))
 
 jest.mock('i18next', () => ({

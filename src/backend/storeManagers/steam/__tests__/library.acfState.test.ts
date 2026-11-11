@@ -23,6 +23,11 @@ import {
 } from '../bridgeBottle'
 import { join } from 'path'
 
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+
+/** The config slice the Steam library lookups read; getSteamLibraries is mocked here. */
+const libDeps = { config: createTestGlobalConfig() }
+
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under
 // this file's mocks (quick 261026-c7r).
@@ -66,7 +71,9 @@ jest.mock('../../../ipc', () => ({
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
-  notify: jest.fn()
+  notify: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 
 // ── i18next mock — returns the fallback string for body assertions ────────────
@@ -267,9 +274,9 @@ beforeEach(() => {
   jest.mocked(backfillBridgeLaunchTargets).mockResolvedValue(0)
 })
 
-// ── D-07: readAcfState() ─────────────────────────────────────────────────────
+// ── D-07: readAcfState(libDeps) ─────────────────────────────────────────────────────
 
-describe('readAcfState()', () => {
+describe('readAcfState(libDeps)', () => {
   beforeEach(() => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(false)
@@ -286,7 +293,7 @@ describe('readAcfState()', () => {
         SizeOnDisk: '9000'
       }
     })
-    const result = await readAcfState('730')
+    const result = await readAcfState(libDeps, '730')
     expect(result.state).toBe('installed')
     expect(result.installPath).toBe(
       join('/steam', 'steamapps', 'common', 'csgo')
@@ -305,7 +312,7 @@ describe('readAcfState()', () => {
         SizeOnDisk: '0'
       }
     })
-    const result = await readAcfState('730')
+    const result = await readAcfState(libDeps, '730')
     expect(result.state).toBe('downloading')
     expect(result.installPath).toBeUndefined()
   })
@@ -326,7 +333,7 @@ describe('readAcfState()', () => {
         BytesToStage: '6'
       }
     })
-    const result = await readAcfState('730')
+    const result = await readAcfState(libDeps, '730')
     expect(result.state).toBe('downloading')
     expect(result.bytesDownloaded).toBe(5)
     expect(result.bytesToDownload).toBe(10)
@@ -345,7 +352,7 @@ describe('readAcfState()', () => {
         SizeOnDisk: '0'
       }
     })
-    const result = await readAcfState('730')
+    const result = await readAcfState(libDeps, '730')
     expect(result.bytesDownloaded).toBe(0)
     expect(result.bytesToDownload).toBe(0)
     expect(result.bytesStaged).toBe(0)
@@ -354,7 +361,7 @@ describe('readAcfState()', () => {
 
   it('returns state:"absent" when no manifest file is found for the appId', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(false)
-    const result = await readAcfState('730')
+    const result = await readAcfState(libDeps, '730')
     expect(result.state).toBe('absent')
   })
 
@@ -363,7 +370,7 @@ describe('readAcfState()', () => {
     ;(readFileSync as jest.Mock).mockImplementation(() => {
       throw new Error('corrupt file')
     })
-    const result = await readAcfState('730')
+    const result = await readAcfState(libDeps, '730')
     expect(result.state).toBe('absent')
   })
 })
@@ -375,7 +382,7 @@ describe('readAcfState()', () => {
 // field set — depot/manifest.ts) through the UNCHANGED read side and lock the
 // round-trip so a future change can't silently break D-05/D-15 reuse.
 
-describe('readAcfState() — D-05/D-15 regression: GameLib-written manifest round-trip', () => {
+describe('readAcfState(libDeps) — D-05/D-15 regression: GameLib-written manifest round-trip', () => {
   beforeEach(() => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(true)
@@ -402,7 +409,7 @@ describe('readAcfState() — D-05/D-15 regression: GameLib-written manifest roun
         MountedDepots: {}
       }
     })
-    const result = await readAcfState('730')
+    const result = await readAcfState(libDeps, '730')
     expect(result.state).toBe('downloading')
   })
 
@@ -426,7 +433,7 @@ describe('readAcfState() — D-05/D-15 regression: GameLib-written manifest roun
         MountedDepots: {}
       }
     })
-    const result = await readAcfState('730')
+    const result = await readAcfState(libDeps, '730')
     expect(result.state).toBe('installed')
     expect(result.installPath).toBe(
       join('/steam', 'steamapps', 'common', 'csgo')
@@ -434,9 +441,9 @@ describe('readAcfState() — D-05/D-15 regression: GameLib-written manifest roun
   })
 })
 
-// ── 17-03: readAcfState('bottle') — bottle-scoped ACF scan, never conflated ───
+// ── 17-03: readAcfState(libDeps, 'bottle') — bottle-scoped ACF scan, never conflated ───
 
-describe('readAcfState(appId, "bottle") — bottle-scoped ACF root', () => {
+describe('readAcfState(libDeps, appId, "bottle") — bottle-scoped ACF root', () => {
   beforeEach(() => {
     jest
       .mocked(getSteamBottleSettings)
@@ -456,7 +463,7 @@ describe('readAcfState(appId, "bottle") — bottle-scoped ACF root', () => {
       }
     })
 
-    const result = await readAcfState('730', 'bottle')
+    const result = await readAcfState(libDeps, '730', 'bottle')
 
     expect(result.state).toBe('installed')
     expect(result.installPath).toBe(
@@ -485,7 +492,7 @@ describe('readAcfState(appId, "bottle") — bottle-scoped ACF root', () => {
       }
     })
 
-    const result = await readAcfState('730', 'bottle')
+    const result = await readAcfState(libDeps, '730', 'bottle')
 
     expect(result.state).toBe('absent')
     // The bottle scan must never even consult the native library-path resolver
@@ -508,7 +515,7 @@ describe('readAcfState(appId, "bottle") — bottle-scoped ACF root', () => {
       }
     })
 
-    const result = await readAcfState('730', 'bottle')
+    const result = await readAcfState(libDeps, '730', 'bottle')
 
     expect(result.state).toBe('installed')
     expect(result.installPath).toBe(
@@ -517,7 +524,7 @@ describe('readAcfState(appId, "bottle") — bottle-scoped ACF root', () => {
     expect(getSteamLibraries).not.toHaveBeenCalled()
   })
 
-  it('existing native readAcfState(appId) behavior is unchanged when no source arg is passed (same fixture, same result)', async () => {
+  it('existing native readAcfState(libDeps, appId) behavior is unchanged when no source arg is passed (same fixture, same result)', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
@@ -530,7 +537,7 @@ describe('readAcfState(appId, "bottle") — bottle-scoped ACF root', () => {
       }
     })
 
-    const result = await readAcfState('730')
+    const result = await readAcfState(libDeps, '730')
 
     expect(result.state).toBe('installed')
     expect(result.installPath).toBe(
@@ -541,10 +548,10 @@ describe('readAcfState(appId, "bottle") — bottle-scoped ACF root', () => {
   })
 })
 
-// ── D-UAT-24-05 (24-12): readAcfState('bridge') — bridge-bottle-scoped ACF
+// ── D-UAT-24-05 (24-12): readAcfState(libDeps, 'bridge') — bridge-bottle-scoped ACF
 // root, distinct from both 'native' and the Phase 17 'bottle' root ─────────
 
-describe('readAcfState(appId, "bridge") — bridge-bottle-scoped ACF root', () => {
+describe('readAcfState(libDeps, appId, "bridge") — bridge-bottle-scoped ACF root', () => {
   beforeEach(() => {
     jest
       .mocked(getBridgeBottleSettings)
@@ -573,7 +580,7 @@ describe('readAcfState(appId, "bridge") — bridge-bottle-scoped ACF root', () =
       }
     })
 
-    const result = await readAcfState('206040', 'bridge')
+    const result = await readAcfState(libDeps, '206040', 'bridge')
 
     expect(result.state).toBe('installed')
     expect(result.installPath).toBe(
@@ -590,7 +597,7 @@ describe('readAcfState(appId, "bridge") — bridge-bottle-scoped ACF root', () =
   it('returns state:"absent" when the bridge bottle steamapps dir does not exist (no throw)', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(false)
 
-    const result = await readAcfState('206040', 'bridge')
+    const result = await readAcfState(libDeps, '206040', 'bridge')
 
     expect(result.state).toBe('absent')
   })
@@ -611,7 +618,7 @@ describe('readAcfState(appId, "bridge") — bridge-bottle-scoped ACF root', () =
       }
     })
 
-    const result = await readAcfState('730', 'bridge')
+    const result = await readAcfState(libDeps, '730', 'bridge')
 
     expect(result.state).toBe('absent')
     expect(getSteamLibraries).not.toHaveBeenCalled()
@@ -633,13 +640,13 @@ describe('readAcfState(appId, "bridge") — bridge-bottle-scoped ACF root', () =
     })
 
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
-    const nativeResult = await readAcfState('206040', 'native')
+    const nativeResult = await readAcfState(libDeps, '206040', 'native')
     expect(nativeResult.state).toBe('absent')
 
     jest
       .mocked(getSteamBottleSettings)
       .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
-    const bottleResult = await readAcfState('206040', 'bottle')
+    const bottleResult = await readAcfState(libDeps, '206040', 'bottle')
     expect(bottleResult.state).toBe('absent')
   })
 })
@@ -748,9 +755,9 @@ describe('findOtherManifestsWithInstalldir() (34.13 review A-13)', () => {
   })
 })
 
-// ── D-07: scanDownloadingAppIds() ────────────────────────────────────────────
+// ── D-07: scanDownloadingAppIds(libDeps) ────────────────────────────────────────────
 
-describe('scanDownloadingAppIds()', () => {
+describe('scanDownloadingAppIds(libDeps)', () => {
   beforeEach(() => {
     library.clear()
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
@@ -781,7 +788,7 @@ describe('scanDownloadingAppIds()', () => {
         SizeOnDisk: '0'
       }
     })
-    const result = await scanDownloadingAppIds()
+    const result = await scanDownloadingAppIds(libDeps)
     expect(result).toContain('730')
   })
 
@@ -808,7 +815,7 @@ describe('scanDownloadingAppIds()', () => {
         SizeOnDisk: '50000'
       }
     })
-    const result = await scanDownloadingAppIds()
+    const result = await scanDownloadingAppIds(libDeps)
     expect(result).not.toContain('730')
   })
 
@@ -824,7 +831,7 @@ describe('scanDownloadingAppIds()', () => {
         SizeOnDisk: '0'
       }
     })
-    const result = await scanDownloadingAppIds()
+    const result = await scanDownloadingAppIds(libDeps)
     expect(result).not.toContain('730')
   })
 })

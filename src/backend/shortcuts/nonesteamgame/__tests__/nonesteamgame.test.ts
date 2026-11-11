@@ -88,7 +88,7 @@ describe('NonSteamGame', () => {
 
     const contentBetween = readFileSync(shortcutFilePath).toString()
 
-    await removeNonSteamGame(game)
+    await removeNonSteamGame(deps, game)
 
     const contentAfter = readFileSync(shortcutFilePath).toString()
     expect(contentBefore).toStrictEqual(contentAfter)
@@ -120,7 +120,7 @@ describe('NonSteamGame', () => {
     // add and remove to see if empty shortcuts.vdf is correctly created
     await addNonSteamGame(deps, game)
 
-    await removeNonSteamGame(game)
+    await removeNonSteamGame(deps, game)
 
     const contentAfter = readFileSync(shortcutFilePath)
 
@@ -176,7 +176,7 @@ describe('NonSteamGame', () => {
       const contentBetween = readFileSync(shortcutFilePath).toString()
       const contentBetween2 = readFileSync(shortcutFilePath2).toString()
 
-      await removeNonSteamGame(game)
+      await removeNonSteamGame(deps, game)
 
       const contentAfter = readFileSync(shortcutFilePath).toString()
       const contentAfter2 = readFileSync(shortcutFilePath2).toString()

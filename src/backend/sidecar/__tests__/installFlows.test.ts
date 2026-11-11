@@ -233,8 +233,12 @@ jest.mock('../../storeManagers/steam/games', () => {
 // existing assertion is weakened by making it observable. ──────────────────
 jest.mock('../../dialog/dialog', () => ({
   ...jest.requireActual('../../dialog/dialog'),
-  showDialogBoxModalAuto: jest.fn(),
-  notify: jest.fn()
+  showDialogBoxModalAuto: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn()),
+  notify: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
@@ -539,6 +543,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     it('setting ON + native root + no bridge bottle -> gamelibDelete true', async () => {
       expect(await invokeRoute(['570'])).toEqual({ gamelibDelete: true })
       expect(resolveInstallRoot).toHaveBeenCalledWith(
+        expect.anything(),
         '/fake/steam/library/steamapps/common/Dota'
       )
     })

@@ -10,6 +10,7 @@ import {
  */
 
 // ── Imports ───────────────────────────────────────────────────────────────────
+import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import SteamLibraryManager from '../library'
 import { startInstallPolling } from '../library/installPolling'
 import { stopInstallPolling } from '../library/installStop'
@@ -69,6 +70,12 @@ const archRunner = {
 } as unknown as ManagerDeps['runner']
 
 const steamTestDeps = createTestManagerDeps({
+  // The i386-recovery confirm goes through deps.dialogs; the platform dialog mock records it.
+  dialogs: {
+    ...createTestHostServices().dialogs,
+    showMessageBox: (...a: unknown[]) =>
+      jest.requireMock('backend/platform').dialog.showMessageBox(...a)
+  },
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule }),
   runner: archRunner
@@ -120,7 +127,9 @@ jest.mock('../../../ipc', () => ({
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
-  notify: jest.fn()
+  notify: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 
 // ── i18next mock — returns the fallback string for body assertions ────────────

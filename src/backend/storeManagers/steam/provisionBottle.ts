@@ -3,6 +3,9 @@
  * bottle.ts in Phase 65 (65-07). Creates the bottle, fetches SteamSetup.exe
  * once and runs it non-silently so the user clicks through the real installer.
  */
+import type { GlobalConfigSlice } from 'backend/config'
+import type { GameConfigs } from 'backend/game_config'
+import type { Dialogs } from 'backend/host/dialogs'
 import { join } from 'path'
 import { existsSync, mkdirSync, rmSync } from 'graceful-fs'
 import type { GameInfo, WineInstallation } from 'common/types'
@@ -159,6 +162,12 @@ export async function provisionBottle(
     spawnAsync: SpawnAsync
     commandRunner: Pick<CommandRunner, 'runWineCommand'>
     runner: Pick<ProcessRunner, 'run'>
+    config: Pick<
+      GlobalConfigSlice,
+      'getSettings' | 'getAlternativeWine' | 'setSetting'
+    >
+    gameConfigs: Pick<GameConfigs, 'get'>
+    dialogs: Pick<Dialogs, 'showMessageBox'>
   },
   opts?: {
     bottleName?: string

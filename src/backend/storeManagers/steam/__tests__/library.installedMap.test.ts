@@ -23,6 +23,11 @@ import {
 } from '../bridgeBottle'
 import { join } from 'path'
 
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+
+/** The config slice the Steam library lookups read; getSteamLibraries is mocked here. */
+const libDeps = { config: createTestGlobalConfig() }
+
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under
 // this file's mocks (quick 261026-c7r).
@@ -66,7 +71,9 @@ jest.mock('../../../ipc', () => ({
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
-  notify: jest.fn()
+  notify: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 
 // ── i18next mock — returns the fallback string for body assertions ────────────
@@ -304,7 +311,7 @@ describe('detector regression lock (D-UAT-09): buildInstalledMap / readAcfState 
         }
       })
 
-    const result = await buildInstalledMap()
+    const result = await buildInstalledMap(libDeps)
 
     expect(result.has(100)).toBe(false)
     expect(result.has(200)).toBe(true)
@@ -323,7 +330,7 @@ describe('detector regression lock (D-UAT-09): buildInstalledMap / readAcfState 
       }
     })
 
-    const incomplete = await readAcfState('100')
+    const incomplete = await readAcfState(libDeps, '100')
     expect(incomplete.state).toBe('downloading')
     ;(vdf.parse as jest.Mock).mockReturnValue({
       AppState: {
@@ -334,7 +341,7 @@ describe('detector regression lock (D-UAT-09): buildInstalledMap / readAcfState 
       }
     })
 
-    const complete = await readAcfState('200')
+    const complete = await readAcfState(libDeps, '200')
     expect(complete.state).toBe('installed')
   })
 })

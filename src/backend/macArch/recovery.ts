@@ -38,6 +38,9 @@ export interface MacArchRecoveryDeps {
   getDownloadQueue: ManagerDeps['getDownloadQueue']
   stores: MacArchStoresDeps['stores']
   runner: Pick<ManagerDeps['runner'], 'run'>
+  config: Pick<ManagerDeps['config'], 'getSettings'>
+  dialogs: ManagerDeps['dialogs']
+  notifications: ManagerDeps['notifications']
 }
 
 /** The verdict store slice (66.1, R1). */
@@ -160,7 +163,7 @@ export async function offerWindowsReinstall(
     return
   }
 
-  if (!(await promptMac32WindowsReinstall(runner, title))) {
+  if (!(await promptMac32WindowsReinstall(deps, runner, title))) {
     logInfo(
       `macArch: user declined; native install kept (32-bit, unrunnable) for ${appName}`,
       lp
@@ -180,7 +183,11 @@ export async function offerWindowsReinstall(
 
     const { uninstallGameCallback } = await import('backend/utils/uninstaller')
     await uninstallGameCallback(
-      { libraryManagers: deps.libraryManagers },
+      {
+        libraryManagers: deps.libraryManagers,
+        config: deps.config,
+        notifications: deps.notifications
+      },
       undefined as never,
       appName,
       runner,

@@ -196,7 +196,6 @@ import { createCommandRunner } from '../commandRunner'
 import { createSpawnAsync } from '../spawnAsync'
 import { createQuitHandler } from '../quitHandler'
 import { tOrFallback } from '../i18nFallback'
-import { getMainWindow } from '../main_window'
 import { createDownloadQueue } from '../downloadmanager/downloadqueue'
 import { hasLiveBridgeHelper } from '../storeManagers/steam/bridge/helperRegistry'
 import { SteamUser } from '../storeManagers/steam/user'
@@ -469,6 +468,19 @@ interface BootStep {
 // (line ~253), then actually CALLED. `require()`'s return type is `any`, so
 // this reference is invisible to ts-prune despite both files being in
 // tsconfig `include`.
+/** The protocol handler's slice of the boot services (host members flattened). */
+function protocolDepsOf(services: BootServices): ProtocolDeps {
+  return {
+    managers: services.managers,
+    launcher: services.launcher,
+    stores: services.stores,
+    config: services.config,
+    dialogs: services.host.dialogs,
+    appState: services.host.appState,
+    notifications: services.host.notifications
+  }
+}
+
 export function deliverStartupProtocolUrl(
   deps: ProtocolDeps,
   argv: string[] = process.argv
@@ -822,12 +834,15 @@ export function syncQueuedPlaytimeWhenOnline(deps: {
  */
 export function checkRosettaWhenMac(
   i18nReady: Promise<void>,
-  deps: { runner: Pick<ProcessRunner, 'run'> }
+  deps: {
+    runner: Pick<ProcessRunner, 'run'>
+    dialogs: Pick<HostServices['dialogs'], 'showMessageBox'>
+  }
 ): void {
   if (!isMac) return
   try {
     i18nReady
-      .then(() => checkRosettaInstall({ runner: deps.runner }))
+      .then(() => checkRosettaInstall(deps))
       .catch((error: unknown) => {
         logWarning(
           `[bootstrap] checkRosettaInstall() failed: ${String(error)}`,
@@ -1151,7 +1166,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'migrations',
-      run: (_ctx, _io, state) => {
+      run: (ctx, _io, state) => {
         // ---- Data migrations (todo 2026-08-16, quick task 260822-s8y) -----------
         // Mirrors `main.ts:412`'s `await MigrationSystem.get().applyMigrations()`, which the headless
         // sidecar never runs -- the same class of gap as `initOnlineMonitor()` below.
@@ -1181,7 +1196,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           // 'stores' runs before this step (pinned by bootSourceShape): same migrationsStore instance.
           const { stores } = state.services
           if (!stores) throw new Error('stores step has not run')
-          new MigrationSystem({ stores })
+          new MigrationSystem({ stores, paths: ctx.paths })
             .applyMigrations()
             .catch((error: unknown) => {
               logWarning(
@@ -1221,6 +1236,12 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         const errorHandlerDeps: ErrorHandlerDeps = {
           get libraryManagers() {
             return requireServices(state).managers.library
+          },
+          get dialogs() {
+            return requireHost(state).dialogs
+          },
+          get appState() {
+            return requireHost(state).appState
           }
         }
         state.services.runner = prebuilt.runner ?? ctx.runner
@@ -1297,8 +1318,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             // Read lazily: this handler is built before 'download-queue' and only fires after boot.
             isRunning: () => requireServices(state).downloadQueue.isRunning(),
             isBridgeHosting: hasLiveBridgeHelper,
-            getMainWindow,
-            showMessageBox: (_win, opts) =>
+            showMessageBox: (opts) =>
               requireHost(state).dialogs.showMessageBox(opts),
             t: tOrFallback,
             abortAll: callAllAbortControllers,
@@ -1372,10 +1392,20 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         }
         let queue = prebuilt.downloadQueue
         if (!queue) {
+          const { host, config } = state.services
+          if (!host || !config) {
+            throw new Error(
+              'download-queue step ran before host-services/config'
+            )
+          }
           queue = createDownloadQueue({
             stores,
             managers,
-            onConnectivityChange
+            onConnectivityChange,
+            config,
+            dialogs: host.dialogs,
+            appState: host.appState,
+            notifications: host.notifications
           })
           queue.start()
         }
@@ -1650,7 +1680,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // startRpcServer() and BEFORE the READY_SENTINEL write below, so the shell can never send a
         // handleProtocolUrl frame for an unregistered channel.
         registerProtocolUrlHandler(requireServices(state).host.ipc, () =>
-          requireServices(state)
+          protocolDepsOf(requireServices(state))
         )
       }
     },
@@ -1676,10 +1706,15 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'secret-stores',
       run: (ctx, _io, state) => {
-        const { stores } = requireServices(state)
+        const { stores, host } = requireServices(state)
         bindSteamGridDbSecretDeps({ stores })
         bindHumbleStores({ stores })
-        bindDxmtStores({ stores, runner: ctx.runner })
+        bindDxmtStores({
+          stores,
+          runner: ctx.runner,
+          dialogs: host.dialogs,
+          appState: host.appState
+        })
         // Placement is load-bearing (Phase 28, T-28-10): must run AFTER startRpcServer() so
         // requestRustInvoke can write frames, and BEFORE any invoke handler body can run (those
         // only fire from the RPC loop below, never at module-import time) so no handler ever
@@ -1942,7 +1977,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // blocked on a warning dialog (see `checkRosettaWhenMac(state.i18nReady)`'s own header for why it can
         // never fail boot). The guard flag lives at this call site, matching Blocks A/B/E, not
         // inside `checkRosettaWhenMac(state.i18nReady)` -- see `rosettaCheckInitialized`'s declaration comment.
-        checkRosettaWhenMac(state.i18nReady, { runner: ctx.runner })
+        checkRosettaWhenMac(state.i18nReady, {
+          runner: ctx.runner,
+          dialogs: requireHost(state).dialogs
+        })
       }
     },
     {
@@ -2030,7 +2068,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // constructed before handleProtocol can possibly touch the manager table. The sign-in probe
         // pass start above is registration only, so protocol-URL delivery is still the last statement
         // that does any work.
-        deliverStartupProtocolUrl(requireServices(state))
+        deliverStartupProtocolUrl(protocolDepsOf(requireServices(state)))
       }
     }
   ]

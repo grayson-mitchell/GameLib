@@ -61,10 +61,12 @@ import { createTools } from '../index'
 import type { ToolsDeps } from '../index'
 import {
   createTestServices,
-  createTestStores
+  createTestStores,
+  createTestToolsSlices
 } from 'backend/testUtils/testServices'
 
 const toolsDeps: ToolsDeps = {
+  ...createTestToolsSlices(),
   spawnAsync: createTestServices().spawnAsync,
   runner: createTestServices().runner,
   stores: createTestStores(),

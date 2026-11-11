@@ -45,6 +45,8 @@ import {
 // `backend/testUtils/stripSourceComments` util (strips block comments first,
 // then the line-prefix filter), imported above as `stripComments`.
 
+const deps = { appInfo: { version: '1.2.3-test' } }
+
 describe('storeSearch/handlers.ts', () => {
   beforeEach(() => {
     mockSearchGames.mockReset()
@@ -59,17 +61,19 @@ describe('storeSearch/handlers.ts', () => {
       const fixture = [{ title: 'Portal 2' }]
       mockSearchGames.mockResolvedValue(fixture)
 
-      const result = await handleSearchStores('portal')
+      const result = await handleSearchStores(deps, 'portal')
 
       expect(result).toBe(fixture)
-      expect(mockSearchGames).toHaveBeenCalledWith('portal')
+      expect(mockSearchGames).toHaveBeenCalledWith(deps, 'portal')
       expect(mockLogError).not.toHaveBeenCalled()
     })
 
     it('handleSearchStores REJECTS (never resolves to an empty result) when the provider rejects, and logs the exact channel prefix', async () => {
       mockSearchGames.mockRejectedValue(new Error('cheapshark unreachable'))
 
-      const outcome = await Promise.allSettled([handleSearchStores('portal')])
+      const outcome = await Promise.allSettled([
+        handleSearchStores(deps, 'portal')
+      ])
 
       // D-14: the promise must be REJECTED, never resolved to [] -- assert
       // the settlement status explicitly, not merely imply it from a
@@ -90,10 +94,10 @@ describe('storeSearch/handlers.ts', () => {
       const fixture = [{ dealID: '1' }]
       mockGetGameDeals.mockResolvedValue(fixture)
 
-      const result = await handleGetStoreSearchDeals('game-1')
+      const result = await handleGetStoreSearchDeals(deps, 'game-1')
 
       expect(result).toBe(fixture)
-      expect(mockGetGameDeals).toHaveBeenCalledWith('game-1')
+      expect(mockGetGameDeals).toHaveBeenCalledWith(deps, 'game-1')
       expect(mockLogError).not.toHaveBeenCalled()
     })
 
@@ -101,7 +105,7 @@ describe('storeSearch/handlers.ts', () => {
       mockGetGameDeals.mockRejectedValue(new Error('cheapshark unreachable'))
 
       const outcome = await Promise.allSettled([
-        handleGetStoreSearchDeals('game-1')
+        handleGetStoreSearchDeals(deps, 'game-1')
       ])
 
       expect(outcome[0].status).toBe('rejected')
@@ -120,7 +124,7 @@ describe('storeSearch/handlers.ts', () => {
       const fixture = { g2a: { name: 'G2A' } }
       mockGetStoreMap.mockResolvedValue(fixture)
 
-      const result = await handleGetStoreSearchStoreMap()
+      const result = await handleGetStoreSearchStoreMap(deps)
 
       expect(result).toBe(fixture)
       expect(mockLogError).not.toHaveBeenCalled()
@@ -129,7 +133,9 @@ describe('storeSearch/handlers.ts', () => {
     it('handleGetStoreSearchStoreMap REJECTS (never resolves to an empty object) when the provider rejects, and logs the exact channel prefix', async () => {
       mockGetStoreMap.mockRejectedValue(new Error('cheapshark unreachable'))
 
-      const outcome = await Promise.allSettled([handleGetStoreSearchStoreMap()])
+      const outcome = await Promise.allSettled([
+        handleGetStoreSearchStoreMap(deps)
+      ])
 
       expect(outcome[0].status).toBe('rejected')
       if (outcome[0].status === 'rejected') {
@@ -152,13 +158,6 @@ describe('storeSearch/handlers.ts', () => {
         "import { addHandler } from 'backend/ipc'"
       ].join('\n')
       expect(stripComments(source)).not.toMatch(/handler failed:/)
-    })
-
-    it("storeSearch/index.ts references the shared module and contains no 'handler failed:' log string", () => {
-      const source = readFileSync(join(__dirname, '..', 'index.ts'), 'utf-8')
-      const stripped = stripComments(source)
-      expect(stripped).toMatch(/from\s+['"]\.\/handlers['"]/)
-      expect(stripped).not.toMatch(/handler failed:/)
     })
 
     it("sidecar/enrichmentFlowRegistration.ts references the shared module and contains no 'handler failed:' log string", () => {

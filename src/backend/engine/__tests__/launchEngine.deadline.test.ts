@@ -33,8 +33,12 @@ jest.mock('backend/platform', () => {
   }
 })
 jest.mock('backend/dialog/dialog', () => ({
-  notify: jest.fn(),
-  showDialogBoxModalAuto: jest.fn()
+  notify: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn()),
+  showDialogBoxModalAuto: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 jest.mock('backend/dialog/displayAck', () => ({
   newDialogAckId: jest.fn(),
@@ -52,6 +56,7 @@ jest.mock('../bottlePrimitives', () => ({
   sanitizeBottleName: (name: string) => name
 }))
 
+import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import type { Game } from 'common/types/game_manager'
 import {
   __resetLaunchEngineForTests,
@@ -143,7 +148,8 @@ const services: EngineServices = {
   spawnAsync: jest.fn(),
   installRemove: jest.fn(),
   wineManagerReleases: () => [],
-  runner: createTestEngineServices().runner
+  runner: createTestEngineServices().runner,
+  notices: createTestHostServices()
 }
 
 function setUp(sel: EngineSelection, kind: 'bottle' | 'plain' = 'bottle') {
@@ -288,7 +294,10 @@ describe('armEngineLaunchDeadline', () => {
 
 describe('showEngineNotice', () => {
   it('only notifies and logs raise=false', () => {
-    showEngineNotice({ key: KEY, title: 'T', body: 'B', ackId: 'x' })
+    showEngineNotice(
+      { notifications: { show: jest.fn() } },
+      { key: KEY, title: 'T', body: 'B', ackId: 'x' }
+    )
     expect(notify).toHaveBeenCalledTimes(1)
     expect(app.raiseMainWindow).not.toHaveBeenCalled()
     expect(showDialogBoxModalAuto).not.toHaveBeenCalled()

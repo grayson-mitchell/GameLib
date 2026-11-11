@@ -23,7 +23,6 @@
  * the skip/installed observability log lines (D7).
  */
 
-jest.mock('backend/platform')
 jest.mock('../dialog/dialog')
 jest.mock('../logger')
 jest.mock('../constants/environment', () => ({
@@ -33,7 +32,7 @@ jest.mock('../constants/environment', () => ({
 
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import type { ScriptStep } from 'backend/testUtils/scriptedRunner'
-import { dialog } from 'backend/platform'
+import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { showDialogBoxModalAuto } from '../dialog/dialog'
 import { detectVCRedist, VC_REDIST_PROBE_TIMEOUT_MS } from '../utils'
 import { logWarning, logError, logInfo } from '../logger'
@@ -47,7 +46,7 @@ const { configStore } = createKvsStores({ registry: createStoreRegistry() })
 const stores = createTestStores({ kvs: { configStore } as never })
 
 const mockedShowDialogBoxModalAuto = showDialogBoxModalAuto as jest.Mock
-const mockedShowMessageBox = dialog.showMessageBox as jest.Mock
+const mockedShowMessageBox = jest.fn()
 const mockedLogWarning = logWarning as jest.Mock
 const mockedLogError = logError as jest.Mock
 const mockedLogInfo = logInfo as jest.Mock
@@ -59,7 +58,19 @@ function probe(result: ScriptStep['result']): ScriptStep {
 
 function depsFor(...steps: ScriptStep[]) {
   const runner = createScriptedRunner(steps)
-  return { runner, deps: { stores, runner } }
+  const host = createTestHostServices()
+  return {
+    runner,
+    deps: {
+      stores,
+      runner,
+      dialogs: {
+        ...host.dialogs,
+        showMessageBox: mockedShowMessageBox
+      },
+      appState: host.appState
+    }
+  }
 }
 
 describe('backend/utils.ts: detectVCRedist (260919-sch)', () => {

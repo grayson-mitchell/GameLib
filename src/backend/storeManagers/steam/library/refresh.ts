@@ -277,7 +277,7 @@ async function syncOwnedLibrary(
     // D-UAT-13: apps whose poll is holding for a Steam restart are NOT
     // installed yet as far as the user-facing state goes (the running
     // Steam client has never read their GameLib-written manifest).
-    const installedMap = withoutSteamRestartHolds(await buildInstalledMap())
+    const installedMap = withoutSteamRestartHolds(await buildInstalledMap(deps))
     const bottleInstalledMap =
       isMac && isSteamBottleProvisioned()
         ? await buildBottleInstalledMap()
@@ -317,7 +317,7 @@ async function syncOwnedLibrary(
     // reverting "Resume Install" back to a bare "Install" (the D-UAT-09
     // symptom). Deriving the flag from on-disk state here makes it durable
     // across any number of refreshes.
-    const incompleteSet = await buildIncompleteInstallSet()
+    const incompleteSet = await buildIncompleteInstallSet(deps)
 
     // 260821-rb5: capture install-start breadcrumbs BEFORE library.clear()
     // below wipes the in-memory Map. refresh() rebuilds every GameInfo
@@ -503,7 +503,7 @@ async function syncOwnedLibrary(
 }
 
 /**
- * Re-reads ACF manifests from disk via buildInstalledMap() and pushes
+ * Re-reads ACF manifests from disk via buildInstalledMap(deps) and pushes
  * updated install badges to the frontend for any game whose is_installed
  * state actually changed since the last read.
  *
@@ -541,7 +541,7 @@ export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
   // D-UAT-13: a window-focus reconcile (the user alt-tabbing to Steam to
   // restart it) must not flip a game that is holding for a Steam restart to
   // installed — see withoutSteamRestartHolds().
-  const installedMap = withoutSteamRestartHolds(await buildInstalledMap())
+  const installedMap = withoutSteamRestartHolds(await buildInstalledMap(deps))
   const bottleInstalledMap =
     isMac && isSteamBottleProvisioned() ? await buildBottleInstalledMap() : null
   // D-UAT-24-07 (quick/261016-u1w D-C): same bridge-map consult as

@@ -120,7 +120,7 @@ export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
   // D-04: `comet` is GOG's Galaxy Communication replacement, gated on
   // `gameInfo.runner === 'gog'` at `launcher.ts:973`.
   ipcMain.handle('getCometVersion', () =>
-    getCometVersion({ runner: deps.runner })
+    getCometVersion({ runner: deps.runner, config: deps.config })
   )
   ipcMain.handle('getNileVersion', () => getNileVersion(versionDeps))
 
@@ -249,7 +249,7 @@ export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
     // reachable from either path; D-15's fire-and-forget-rejection landmine does not apply
     // here. This is a byte-faithful port of inherited Electron behaviour, not a redesign.
     if (isStore(runner, 'legendary')) {
-      const epicOffline = await isEpicServiceOffline()
+      const epicOffline = await isEpicServiceOffline(deps)
       if (epicOffline) {
         logWarning(
           'Epic is offline right now, cannot sync saves!',

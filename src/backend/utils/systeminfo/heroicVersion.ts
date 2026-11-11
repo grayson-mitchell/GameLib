@@ -1,8 +1,8 @@
-import { app } from 'backend/platform'
+import type { AppInfo } from 'backend/process/context'
 import pkg_json from 'backend/../../package.json'
 
-function getHeroicVersion(): string {
-  const VERSION_NUMBER = app.getVersion()
+function getHeroicVersion(deps: { appInfo: Pick<AppInfo, 'version'> }): string {
+  const VERSION_NUMBER = deps.appInfo.version
   const BETA_VERSION_NAME = pkg_json.versionNames.beta
   const STABLE_VERSION_NAME = pkg_json.versionNames.stable
   const isBetaOrAlpha =

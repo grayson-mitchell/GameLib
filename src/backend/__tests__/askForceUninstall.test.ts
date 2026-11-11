@@ -15,17 +15,16 @@
  * default export un-mocked with this identical mock set).
  */
 
-jest.mock('backend/platform')
 jest.mock('../logger')
 jest.mock('../dialog/dialog')
 jest.mock('../config')
 
-import { dialog } from 'backend/platform'
 import { askForceUninstall } from '../utils'
 import type { Game } from 'common/types/game_manager'
 import type { GameInfo } from 'common/types'
 
-const mockedShowMessageBox = dialog.showMessageBox as jest.Mock
+const mockedShowMessageBox = jest.fn()
+const deps = { dialogs: { showMessageBox: mockedShowMessageBox } }
 
 /** A minimal stub `Game` whose `getGameInfo()` is fully controllable, and
  * whose `forceUninstall()` is a no-op jest.fn() (never reached — every test
@@ -49,7 +48,7 @@ describe('backend/utils.ts: askForceUninstall (260905-mv5, site 1)', () => {
     // 260905-mv5 (D-02/D-03, site 1): askForceUninstall was widened to take
     // appName as a second parameter -- resolveTitleForGame needs it as the
     // fallback when getGameInfo().title is absent.
-    await askForceUninstall(game, 'Some Game AppName')
+    await askForceUninstall(deps, game, 'Some Game AppName')
 
     expect(mockedShowMessageBox).toHaveBeenCalledTimes(1)
     const dialogOptions = mockedShowMessageBox.mock.calls[0][0]
@@ -70,7 +69,7 @@ describe('backend/utils.ts: askForceUninstall (260905-mv5, site 1)', () => {
   it('260905-mv5 (no regression): shows the LIVE title when getGameInfo() has one, never appName', async () => {
     const game = makeStubGame({ title: 'Real Live Title' } as GameInfo)
 
-    await askForceUninstall(game, 'fallback-appname-must-not-win')
+    await askForceUninstall(deps, game, 'fallback-appname-must-not-win')
 
     expect(mockedShowMessageBox).toHaveBeenCalledTimes(1)
     const dialogOptions = mockedShowMessageBox.mock.calls[0][0]

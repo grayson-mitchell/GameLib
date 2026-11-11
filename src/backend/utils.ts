@@ -13,7 +13,6 @@ import https from 'node:https'
 // `sidecar/platform/index.ts`: `process.env.npm_package_version` is UNSET in the packaged
 // SEA sidecar binary, so it cannot be the source of the User-Agent version below.
 import pkg_json from 'backend/../../package.json'
-import { app, dialog, shell, Notification } from 'backend/platform'
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'graceful-fs'
 import i18next, { t } from 'i18next'
 import { tOrFallback } from './i18nFallback'
@@ -34,10 +33,15 @@ import {
 import { resolveTitleForGame } from './utils/gameTitle'
 import * as fileSize from 'filesize'
 import { Client as discordClient } from '@xhayper/discord-rpc'
-import { showDialogBoxModalAuto } from './dialog/dialog'
+import { showDialogBoxModalAuto, type DialogBoxDeps } from './dialog/dialog'
 import { sendFrontendMessage } from './ipc'
-import { GlobalConfig } from './config'
-import { GameConfig } from './game_config'
+import type { GlobalConfigSlice } from './config'
+import type { GameConfigs } from './game_config'
+import type { Dialogs } from './host/dialogs'
+import type { Notifications } from './host/notifications'
+import type { OpenExternal } from './host/openExternal'
+import type { AppState } from './host/appState'
+import type { AppInfo } from './process/context'
 import { validWine } from './launcher'
 import {
   installWineVersion,
@@ -169,21 +173,22 @@ async function getWineFromProton(
 }
 
 async function isEpicServiceOffline(
+  deps: { notifications: Pick<Notifications, 'show'> },
   type: 'Epic Games Store' | 'Fortnite' | 'Rocket League' = 'Epic Games Store'
 ) {
   if (!isOnline()) return true
 
   const epicStatusApi = 'https://status.epicgames.com/api/v2/components.json'
-  const notification = new Notification({
-    title: `${type} ${t('epic.offline-notification-title', 'offline')}`,
-    body: t(
-      'epic.offline-notification-body',
-      'GameLib will maybe not work probably!'
-    ),
-    urgency: 'normal',
-    timeoutType: 'default',
-    silent: false
-  })
+  const notification = {
+    show: () =>
+      deps.notifications.show({
+        title: `${type} ${t('epic.offline-notification-title', 'offline')}`,
+        body: t(
+          'epic.offline-notification-body',
+          'GameLib will maybe not work probably!'
+        )
+      })
+  }
 
   try {
     const { data } = await axiosClient.get(epicStatusApi)
@@ -212,13 +217,17 @@ async function isEpicServiceOffline(
   }
 }
 
-export async function askForceUninstall(game: Game, appName: string) {
+export async function askForceUninstall(
+  deps: { dialogs: Pick<Dialogs, 'showMessageBox'> },
+  game: Game,
+  appName: string
+) {
   // Quick task 260905-mv5 (site 1, D-03): getGameInfo() can return
   // `{} as GameInfo` on a double cache miss (D-01) -- resolveTitleForGame
   // falls back to appName so this destructive-confirmation dialog is never
   // nameless.
   const title = resolveTitleForGame(game, appName)
-  const { response } = await dialog.showMessageBox({
+  const { response } = await deps.dialogs.showMessageBox({
     type: 'question',
     title,
     message: i18next.t(
@@ -239,7 +248,10 @@ export async function askForceUninstall(game: Game, appName: string) {
 }
 
 /** errorHandler reads the manager table only in its deleted-folder branch. */
-export type ErrorHandlerDeps = Pick<ManagerDeps, 'libraryManagers'>
+export type ErrorHandlerDeps = Pick<
+  ManagerDeps,
+  'libraryManagers' | 'dialogs' | 'appState'
+>
 
 async function errorHandler(
   deps: ErrorHandlerDeps,
@@ -265,6 +277,7 @@ async function errorHandler(
 
   if (error.includes(deletedFolderMsg) && appName) {
     await askForceUninstall(
+      deps,
       deps.libraryManagers[runner].getGame(appName),
       appName
     )
@@ -277,7 +290,7 @@ async function errorHandler(
       return
     }
 
-    showDialogBoxModalAuto({
+    showDialogBoxModalAuto(deps, {
       title: plat,
       message: i18next.t(
         'box.error.legendary.generic',
@@ -290,7 +303,7 @@ async function errorHandler(
   }
 
   if (error.includes(expiredCredentials)) {
-    showDialogBoxModalAuto({
+    showDialogBoxModalAuto(deps, {
       title: plat,
       message: i18next.t(
         'box.error.credentials.message',
@@ -310,7 +323,7 @@ function removeSpecialcharacters(text: string): string {
 }
 
 /** The cache families `clearCache` empties. */
-export interface ClearCacheDeps {
+export interface ClearCacheDeps extends DialogBoxDeps {
   stores: Pick<Stores, 'wikiGameInfo' | 'gog' | 'legendary' | 'nile'>
 }
 
@@ -364,22 +377,25 @@ function clearAchievementCache(
   deps.stores.gog.achievementStore.delete(appName)
 }
 
-function resetHeroic() {
+function resetHeroic(deps: { appState: Pick<AppState, 'relaunch' | 'quit'> }) {
   const appFolders = [gamesConfigPath, configPath]
   appFolders.forEach((folder) => {
     rmSync(folder, { recursive: true, force: true })
   })
   // wait a sec to avoid racing conditions
   setTimeout(() => {
-    app.relaunch()
-    app.quit()
+    deps.appState.relaunch()
+    deps.appState.quit()
   }, 1000)
 }
 
-function showItemInFolder(item: string) {
+function showItemInFolder(
+  deps: { openExternal: Pick<OpenExternal, 'showItemInFolder'> },
+  item: string
+) {
   if (existsSync(item)) {
     try {
-      shell.showItemInFolder(item)
+      deps.openExternal.showItemInFolder(item)
     } catch (error) {
       logError(
         ['Failed to show item in folder with:', error],
@@ -485,8 +501,10 @@ function archSpecificBinary(binaryName: string) {
 }
 
 let defaultLegendaryPath: string | undefined = undefined
-function getLegendaryBin(): { dir: string; bin: string } {
-  const settings = GlobalConfig.get().getSettings()
+function getLegendaryBin(deps: {
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+}): { dir: string; bin: string } {
+  const settings = deps.config.getSettings()
   if (settings?.altLegendaryBin) {
     return splitPathAndName(settings.altLegendaryBin)
   }
@@ -498,8 +516,10 @@ function getLegendaryBin(): { dir: string; bin: string } {
 }
 
 let defaultGogdlPath: string | undefined = undefined
-function getGOGdlBin(): { dir: string; bin: string } {
-  const settings = GlobalConfig.get().getSettings()
+function getGOGdlBin(deps: {
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+}): { dir: string; bin: string } {
+  const settings = deps.config.getSettings()
   if (settings?.altGogdlBin) {
     return splitPathAndName(settings.altGogdlBin)
   }
@@ -510,8 +530,10 @@ function getGOGdlBin(): { dir: string; bin: string } {
 }
 
 let defaultCometPath: string | undefined = undefined
-function getCometBin(): { dir: string; bin: string } {
-  const settings = GlobalConfig.get().getSettings()
+function getCometBin(deps: {
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+}): { dir: string; bin: string } {
+  const settings = deps.config.getSettings()
   if (settings?.altCometBin) {
     return splitPathAndName(settings.altCometBin)
   }
@@ -522,8 +544,11 @@ function getCometBin(): { dir: string; bin: string } {
 }
 
 let defaultNilePath: string | undefined = undefined
-function getNileBin(): { dir: string; bin: string } {
-  const settings = GlobalConfig.get().getSettings()
+function getNileBin(deps: { config: Pick<GlobalConfigSlice, 'getSettings'> }): {
+  dir: string
+  bin: string
+} {
+  const settings = deps.config.getSettings()
   if (settings?.altNileBin) {
     return splitPathAndName(settings.altNileBin)
   }
@@ -566,8 +591,15 @@ function getFormattedOsName(): string {
   }
 }
 
-export async function getSteamLibraries(): Promise<string[]> {
-  const { defaultSteamPath } = GlobalConfig.get().getSettings()
+/** The one setting the Steam library lookups read: where Steam is installed. */
+export type SteamLibrariesDeps = {
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+}
+
+export async function getSteamLibraries(
+  deps: SteamLibrariesDeps
+): Promise<string[]> {
+  const { defaultSteamPath } = deps.config.getSettings()
   const path = defaultSteamPath.replaceAll("'", '')
   const vdfFile = join(path, 'steamapps', 'libraryfolders.vdf')
   const libraries = ['/usr/share/steam']
@@ -589,12 +621,15 @@ export async function getSteamLibraries(): Promise<string[]> {
   return libraries
 }
 
-function constructAndUpdateRPC(gameInfo: GameInfo): RpcClient {
+function constructAndUpdateRPC(
+  deps: { appInfo: Pick<AppInfo, 'version'> },
+  gameInfo: GameInfo
+): RpcClient {
   const client = new discordClient({
     clientId: '852942976564723722'
   })
 
-  const versionText = `GameLib ${app.getVersion()}`
+  const versionText = `GameLib ${deps.appInfo.version}`
 
   const image = gameInfo.art_icon || gameInfo.art_square
   const title = gameInfo.title
@@ -695,10 +730,12 @@ const VC_REDIST_PROBE_TIMEOUT_MS = 15_000
  * (see `VC_REDIST_PROBE_TIMEOUT_MS` above) so a hung/slow child cannot keep
  * the sidecar process alive past the exit contract's in-flight-work bound.
  */
-async function detectVCRedist(deps: {
-  stores: Pick<Stores, 'kvs'>
-  runner: Pick<ProcessRunner, 'run'>
-}): Promise<void> {
+async function detectVCRedist(
+  deps: {
+    stores: Pick<Stores, 'kvs'>
+    runner: Pick<ProcessRunner, 'run'>
+  } & DialogBoxDeps
+): Promise<void> {
   if (!isWindows) {
     return
   }
@@ -783,7 +820,7 @@ async function detectVCRedist(deps: {
     // array only maps to a native dialog when its length is exactly 2 --
     // it cannot express a third "don't show again" button. Do not restore
     // this natively; see dialog.ts's policy docstring.
-    showDialogBoxModalAuto({
+    showDialogBoxModalAuto(deps, {
       type: 'MESSAGE',
       title: t('box.vcruntime.notfound.title', 'VCRuntime not installed'),
       message: t(
@@ -914,10 +951,11 @@ const getShellPath = (path: string): Promise<string> =>
   )
 
 async function ContinueWithFoundWine(
+  deps: { dialogs: Pick<Dialogs, 'showMessageBox'> },
   selectedWine: string,
   foundWine: string
 ): Promise<{ response: number }> {
-  const { response } = await dialog.showMessageBox({
+  const { response } = await deps.dialogs.showMessageBox({
     title: i18next.t('box.warning.wine-change.title', 'Wine not found!'),
     message: i18next.t('box.warning.wine-change.message', {
       defaultValue:
@@ -935,6 +973,10 @@ async function ContinueWithFoundWine(
 export async function downloadDefaultWine(deps: {
   stores: Pick<Stores, 'kvs' | 'wineManager'>
   runner: Pick<ProcessRunner, 'run'>
+  config: Pick<
+    GlobalConfigSlice,
+    'getSettings' | 'getAlternativeWine' | 'setSetting'
+  >
 }) {
   if (isWindows) return null
   // refresh wine list
@@ -972,7 +1014,7 @@ export async function downloadDefaultWine(deps: {
   if (result === 'success') {
     let downloadedWine = null
     try {
-      const wineList = await GlobalConfig.get().getAlternativeWine({
+      const wineList = await deps.config.getAlternativeWine({
         wineDownloaderInfoStore:
           deps.stores.wineManager.wineDownloaderInfoStore,
         runner: deps.runner
@@ -984,11 +1026,7 @@ export async function downloadDefaultWine(deps: {
       }
       downloadedWine = firstWine
       logInfo(`Changing wine version to ${downloadedWine.name}`)
-      GlobalConfig.get().setSetting(
-        'wineVersion',
-        downloadedWine,
-        deps.stores.kvs
-      )
+      deps.config.setSetting('wineVersion', downloadedWine, deps.stores.kvs)
     } catch (error) {
       logError(
         ['Error when changing wine version to default', error],
@@ -1004,6 +1042,12 @@ export async function checkWineBeforeLaunch(
   deps: {
     stores: Pick<Stores, 'kvs' | 'wineManager'>
     runner: Pick<ProcessRunner, 'run'>
+    config: Pick<
+      GlobalConfigSlice,
+      'getSettings' | 'getAlternativeWine' | 'setSetting'
+    >
+    gameConfigs: Pick<GameConfigs, 'get'>
+    dialogs: Pick<Dialogs, 'showMessageBox'>
   },
   gameInfo: GameInfo,
   gameSettings: GameSettings,
@@ -1014,7 +1058,7 @@ export async function checkWineBeforeLaunch(
   if (wineIsValid) {
     return true
   } else {
-    const { disableLogs } = GlobalConfig.get().getSettings()
+    const { disableLogs } = deps.config.getSettings()
     if (!disableLogs) {
       logError(
         `Wine version ${gameSettings.wineVersion.name} is not valid, trying another one.`,
@@ -1031,10 +1075,11 @@ export async function checkWineBeforeLaunch(
     }
 
     // check if the default wine is valid now
-    const { wineVersion: defaultwine } = GlobalConfig.get().getSettings()
+    const { wineVersion: defaultwine } = deps.config.getSettings()
     const defaultWineIsValid = await validWine(defaultwine)
     if (defaultWineIsValid) {
       const { response } = await ContinueWithFoundWine(
+        deps,
         gameSettings.wineVersion.name,
         defaultwine.name
       )
@@ -1049,14 +1094,16 @@ export async function checkWineBeforeLaunch(
           ])
         }
         gameSettings.wineVersion = defaultwine
-        GameConfig.get(gameInfo.app_name).setSetting('wineVersion', defaultwine)
+        deps.gameConfigs
+          .get(gameInfo.app_name)
+          .setSetting('wineVersion', defaultwine)
         return true
       } else {
         logInfo('User canceled the launch', LogPrefix.Backend)
         return false
       }
     } else {
-      const wineList = await GlobalConfig.get().getAlternativeWine({
+      const wineList = await deps.config.getAlternativeWine({
         wineDownloaderInfoStore:
           deps.stores.wineManager.wineDownloaderInfoStore,
         runner: deps.runner
@@ -1071,16 +1118,16 @@ export async function checkWineBeforeLaunch(
         if (firstFoundWine) {
           logInfo(`Changing wine version to ${firstFoundWine.name}`)
           gameSettings.wineVersion = firstFoundWine
-          GameConfig.get(gameInfo.app_name).setSetting(
-            'wineVersion',
-            firstFoundWine
-          )
+          deps.gameConfigs
+            .get(gameInfo.app_name)
+            .setSetting('wineVersion', firstFoundWine)
           return true
         }
       }
 
       if (firstFoundWine && isValidWine) {
         const { response } = await ContinueWithFoundWine(
+          deps,
           gameSettings.wineVersion.name,
           firstFoundWine.name
         )
@@ -1088,10 +1135,9 @@ export async function checkWineBeforeLaunch(
         if (response === 0) {
           logInfo(`Changing wine version to ${firstFoundWine.name}`)
           gameSettings.wineVersion = firstFoundWine
-          GameConfig.get(gameInfo.app_name).setSetting(
-            'wineVersion',
-            firstFoundWine
-          )
+          deps.gameConfigs
+            .get(gameInfo.app_name)
+            .setSetting('wineVersion', firstFoundWine)
           return true
         } else {
           logInfo('User canceled the launch', LogPrefix.Backend)
@@ -1348,11 +1394,15 @@ function resolveFolderToRemove(
  * releasing files, so there is deliberately no timer here (sidecar exit
  * contract: nothing may hold the event loop open at stdin EOF).
  */
-async function removeFolder(path: string, folderName: string): Promise<void> {
+async function removeFolder(
+  deps: { config: Pick<GlobalConfigSlice, 'getSettings'> },
+  path: string,
+  folderName: string
+): Promise<void> {
   let root: string
   let name: string
   if (path === 'default') {
-    const { defaultInstallPath } = GlobalConfig.get().getSettings()
+    const { defaultInstallPath } = deps.config.getSettings()
     root = defaultInstallPath.replaceAll("'", '')
     name = folderName
   } else {
@@ -1397,6 +1447,7 @@ async function getPathDiskSize(path: string): Promise<number> {
 
 export async function checkRosettaInstall(deps: {
   runner: Pick<ProcessRunner, 'run'>
+  dialogs: Pick<Dialogs, 'showMessageBox'>
 }) {
   // the spawn itself fails when Rosetta is not installed
   const result = await deps.runner
@@ -1413,7 +1464,7 @@ export async function checkRosettaInstall(deps: {
 
   if (!result) {
     // show a dialog saying that Heroic wont run without rosetta and add information on how to install it
-    await dialog.showMessageBox({
+    await deps.dialogs.showMessageBox({
       title: i18next.t('box.warning.rosetta.title', 'Rosetta not found'),
       message: i18next.t(
         'box.warning.rosetta.message',
@@ -1739,7 +1790,11 @@ const axiosClient = axios.create({
 })
 
 export const writeConfig = (
-  deps: { stores: Pick<Stores, 'kvs'> },
+  deps: {
+    stores: Pick<Stores, 'kvs'>
+    config: Pick<GlobalConfigSlice, 'getSettings' | 'set' | 'flush'>
+    gameConfigs: Pick<GameConfigs, 'get'>
+  },
   appName: string,
   config: Partial<AppSettings>
 ) => {
@@ -1749,8 +1804,8 @@ export const writeConfig = (
   )
   const oldConfig =
     appName === 'default'
-      ? GlobalConfig.get().getSettings()
-      : GameConfig.get(appName).config
+      ? deps.config.getSettings()
+      : deps.gameConfigs.get(appName).config
 
   // log only the changed setting
   const sharedKeys = (
@@ -1769,16 +1824,17 @@ export const writeConfig = (
   }
 
   if (appName === 'default') {
-    GlobalConfig.get().set(config as AppSettings)
-    GlobalConfig.get().flush()
+    deps.config.set(config as AppSettings)
+    deps.config.flush()
     const { configStore } = deps.stores.kvs
     const currentConfigStore = configStore.get_nodefault('settings')
     if (currentConfigStore) {
       configStore.set('settings', { ...currentConfigStore, ...config })
     }
   } else {
-    GameConfig.get(appName).config = config as GameSettings
-    GameConfig.get(appName).flush()
+    const gameConfig = deps.gameConfigs.get(appName)
+    gameConfig.config = config as GameSettings
+    gameConfig.flush()
   }
 }
 

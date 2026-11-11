@@ -134,12 +134,18 @@ import {
 // first-ever or a later no-op — the property under test (two more calls change nothing) holds
 // either way.
 const services = createTestServices()
+const flowDeps = {
+  ...services,
+  dialogs: services.host.dialogs,
+  appState: services.host.appState,
+  notifications: services.host.notifications
+}
 handlerRegistry.clear()
 listenerRegistry.clear()
-registerRunnerAuthFlows(services)
-registerWineToolsFlows(services)
-registerShortcutsFlows(services)
-registerRunnerMiscFlows(services)
+registerRunnerAuthFlows(flowDeps)
+registerWineToolsFlows(flowDeps)
+registerShortcutsFlows(flowDeps)
+registerRunnerMiscFlows(flowDeps)
 // Phase 34.6 Plan 08 (REQ-34.6-01/13, D-09): the EOS overlay cluster joins the module-scope
 // snapshot below. Its absence here (before this plan) is exactly what made the EOS 8 register
 // as EMPTY in this file — the mandatory part of D-09's flip-to-presence is this call, not
@@ -297,25 +303,25 @@ const MODULES: ReadonlyArray<{
 }> = [
   {
     name: 'registerRunnerAuthFlows',
-    register: () => registerRunnerAuthFlows(services),
+    register: () => registerRunnerAuthFlows(flowDeps),
     file: 'runnerAuthFlowRegistration.ts',
     declaredChannels: RUNNER_AUTH_CHANNELS
   },
   {
     name: 'registerWineToolsFlows',
-    register: () => registerWineToolsFlows(services),
+    register: () => registerWineToolsFlows(flowDeps),
     file: 'wineToolsFlowRegistration.ts',
     declaredChannels: WINE_TOOLS_CHANNELS
   },
   {
     name: 'registerShortcutsFlows',
-    register: () => registerShortcutsFlows(services),
+    register: () => registerShortcutsFlows(flowDeps),
     file: 'shortcutsFlowRegistration.ts',
     declaredChannels: SHORTCUTS_CHANNELS
   },
   {
     name: 'registerRunnerMiscFlows',
-    register: () => registerRunnerMiscFlows(services),
+    register: () => registerRunnerMiscFlows(flowDeps),
     file: 'runnerMiscFlowRegistration.ts',
     declaredChannels: RUNNER_MISC_CHANNELS
   },
@@ -820,6 +826,9 @@ describe('23-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30; Phase 45 Plan 0
       quit: { handleExit: jest.fn() },
       stores: createTestStores(),
       runner: createTestServices().runner,
+      dialogs: services.host.dialogs,
+      appState: services.host.appState,
+      notifications: services.host.notifications,
       skipInitialTraySync: true
     })
     registerInstallFlows(

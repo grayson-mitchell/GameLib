@@ -253,7 +253,9 @@ jest.mock('../../protocol', () => ({
 // export) — `notify` and everything else in `dialog.ts` stays real.
 jest.mock('../../dialog/dialog', () => ({
   ...jest.requireActual('../../dialog/dialog'),
-  showDialogBoxModalAuto: jest.fn()
+  showDialogBoxModalAuto: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 
 // ── utils mock (quick 260922-v2e) — keeps the real powershell VC++ runtime

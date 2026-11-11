@@ -22,6 +22,8 @@ jest.mock('axios')
 jest.mock('backend/logger')
 const mockedAxios = axios as jest.Mocked<typeof axios>
 
+const deps = { appInfo: { version: '1.2.3-test' } }
+
 describe('buildRedirectUrl', () => {
   it('interpolates dealID verbatim, never re-encoded', () => {
     const dealId = 'rPSCN3%2FJpoZ0%3D'
@@ -183,7 +185,7 @@ describe('searchGames', () => {
       ]
     })
 
-    const results = await searchGames('portal')
+    const results = await searchGames(deps, 'portal')
 
     expect(mockedAxios.get).toHaveBeenCalledWith(
       'https://www.cheapshark.com/api/1.0/games',
@@ -205,13 +207,13 @@ describe('searchGames', () => {
   it('logs and re-throws on failure (does not swallow)', async () => {
     mockedAxios.get.mockRejectedValueOnce(new Error('network error'))
 
-    await expect(searchGames('portal')).rejects.toThrow('network error')
+    await expect(searchGames(deps, 'portal')).rejects.toThrow('network error')
   })
 })
 
-// NOTE: getStoreMap()'s cache is a module-level singleton, so this is the
+// NOTE: getStoreMap(deps)'s cache is a module-level singleton, so this is the
 // single combined test exercising both getGameDeals (which populates the
-// cache on first use) and a subsequent direct getStoreMap() call (which
+// cache on first use) and a subsequent direct getStoreMap(deps) call (which
 // must reuse the cache) — keeping cache-state assumptions self-contained
 // in one test rather than spread across independently-ordered tests.
 describe('getStoreMap + getGameDeals (session-cached /stores)', () => {
@@ -238,7 +240,7 @@ describe('getStoreMap + getGameDeals (session-cached /stores)', () => {
       }
     })
 
-    const deals = await getGameDeals('82')
+    const deals = await getGameDeals(deps, '82')
 
     expect(deals).toEqual([
       {
@@ -254,9 +256,9 @@ describe('getStoreMap + getGameDeals (session-cached /stores)', () => {
     // 1 call for /stores + 1 call for the game detail.
     expect(mockedAxios.get).toHaveBeenCalledTimes(2)
 
-    // A second, independent getStoreMap() call must reuse the memoized
+    // A second, independent getStoreMap(deps) call must reuse the memoized
     // map — no third axios call.
-    const storeMap = await getStoreMap()
+    const storeMap = await getStoreMap(deps)
     expect(defined(storeMap['1'], 'store 1').storeName).toBe('Steam')
     expect(defined(storeMap['4'], 'store 4').isActive).toBe(false)
     expect(mockedAxios.get).toHaveBeenCalledTimes(2)

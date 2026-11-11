@@ -27,7 +27,7 @@ const mockDecryptString = jest.fn((b: Buffer) => b.toString())
 const mockIsEncryptionAvailable = jest.fn(() => true)
 
 // Typical Electron default UA shape: platform + Chrome version + the
-// Electron-/app-identifying tokens standardBrowserUserAgent() must strip.
+// Electron-/app-identifying tokens standardBrowserUserAgentForProcess() must strip.
 const mockUserAgentFallback =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) GameLib/1.0.0 Chrome/142.0.7444.52 Electron/41.1.1 Safari/537.36'
 
@@ -127,6 +127,7 @@ jest.mock('../syncFence', () => ({
 }))
 
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
+import { standardBrowserUserAgentForProcess } from '../userAgent'
 import {
   HumbleUser,
   standardBrowserUserAgent,
@@ -481,9 +482,11 @@ describe('HumbleUser', () => {
   // Google SSO restricts embedded browsers detected via Electron/app UA
   // tokens (forcing uncompletable passkey prompts or disallowed_useragent).
 
-  describe('standardBrowserUserAgent()', () => {
+  describe('standardBrowserUserAgentForProcess()', () => {
     test('derives a plain Chrome UA from the runtime fallback: platform + Chrome version kept, Electron/app tokens stripped', () => {
-      const ua = standardBrowserUserAgent()
+      const ua = standardBrowserUserAgent({
+        appInfo: { userAgentFallback: mockUserAgentFallback }
+      })
       expect(ua).toBe(
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7444.52 Safari/537.36'
       )
@@ -498,7 +501,7 @@ describe('HumbleUser', () => {
     // Covering twin: 'login window seam path (Phase 34.4.1 Plan 03)' ->
     // 'opens the login window once with HUMBLE_LOGIN_URL, visible: true,
     // and the standard Chrome UA' asserts the SAME guarantee (the watch
-    // opens the window with standardBrowserUserAgent()) via
+    // opens the window with standardBrowserUserAgentForProcess()) via
     // seam.open(...)'s userAgent argument, the only surviving path.
   })
 
@@ -1519,7 +1522,7 @@ describe('HumbleUser', () => {
       expect(mockSeamOpen).toHaveBeenCalledTimes(1)
       expect(mockSeamOpen).toHaveBeenCalledWith(HUMBLE_LOGIN_URL, {
         visible: true,
-        userAgent: standardBrowserUserAgent()
+        userAgent: standardBrowserUserAgentForProcess()
       })
 
       HumbleUser.stopLogin()
@@ -1916,7 +1919,7 @@ describe('HumbleUser', () => {
 
         expect(mockSeamOpen).toHaveBeenCalledWith(HUMBLE_BASE_URL, {
           visible: false,
-          userAgent: standardBrowserUserAgent()
+          userAgent: standardBrowserUserAgentForProcess()
         })
         expect(mockSeamCookies).toHaveBeenCalledWith(
           'csrf-backfill-window-0',
@@ -2043,7 +2046,7 @@ describe('HumbleUser', () => {
 
         expect(mockSeamOpen).toHaveBeenCalledWith(HUMBLE_BASE_URL, {
           visible: false,
-          userAgent: standardBrowserUserAgent()
+          userAgent: standardBrowserUserAgentForProcess()
         })
         expect(mockSeamClearCookies).toHaveBeenCalledWith(
           'disconnect-window-0',
@@ -2109,7 +2112,7 @@ describe('HumbleUser', () => {
         expect(mockSeamClearCookies).toHaveBeenCalled()
         expect(mockSeamClearStorage).toHaveBeenCalledWith(
           HUMBLE_BASE_URL,
-          standardBrowserUserAgent()
+          standardBrowserUserAgentForProcess()
         )
       })
 
@@ -2141,7 +2144,7 @@ describe('HumbleUser', () => {
 
         expect(mockSeamClearStorage).toHaveBeenCalledWith(
           HUMBLE_BASE_URL,
-          standardBrowserUserAgent()
+          standardBrowserUserAgentForProcess()
         )
       })
 

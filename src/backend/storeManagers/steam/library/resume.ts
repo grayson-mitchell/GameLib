@@ -3,7 +3,7 @@ import type { ManagerDeps } from 'backend/services/types'
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { join } from 'path'
 import { isMac, isLinux } from 'backend/constants/environment'
-import { getSteamLibraries } from 'backend/utils'
+import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { library } from '../state'
 import { isNativeInstallInFlight } from '../gameSessionState'
@@ -62,12 +62,15 @@ function hostSteamDepotOsForResume(): string {
  * this lookup) — the caller still starts the poller either way, since D-05's
  * finalize-and-watch action is safe regardless of whether finalize ran.
  */
-async function locateDownloadingTarget(appId: string): Promise<{
+async function locateDownloadingTarget(
+  deps: SteamLibrariesDeps,
+  appId: string
+): Promise<{
   targetSteamappsDir: string
   installdir: string
   name: string
 } | null> {
-  const libraryPaths = await getSteamLibraries()
+  const libraryPaths = await getSteamLibraries(deps)
 
   for (const libPath of libraryPaths) {
     const steamappsDir = join(libPath, 'steamapps')
@@ -220,7 +223,7 @@ export async function resumeInterruptedSteamInstall(
     }
 
     try {
-      const target = await locateDownloadingTarget(appId)
+      const target = await locateDownloadingTarget(deps, appId)
       if (target) {
         const finalizeOpts = await buildResumeFinalizeOpts(appId, target)
         // null: the Rust verify_only job already wrote the ACF.
@@ -312,7 +315,7 @@ export async function rearmPersistedSteamRestartHolds(
           )
           continue
         }
-        const acf = await readAcfState(appId, 'native')
+        const acf = await readAcfState(deps, appId, 'native')
         if (acf.state !== 'installed') {
           clearSteamRestartHold(appId, restartHoldStoreFrom(deps))
           dropped++

@@ -200,7 +200,7 @@ export async function promptI386Recovery(
   deps: ManagerDeps,
   appId: string
 ): Promise<void> {
-  const confirmed = await promptMac32WindowsReinstall('steam')
+  const confirmed = await promptMac32WindowsReinstall(deps, 'steam')
 
   if (!confirmed) {
     logInfo(

@@ -395,7 +395,7 @@ export default class SteamGame implements Game {
   /**
    * debug/steam-bottle-uninstall-reverts (OPERATOR PRODUCT DECISION, LOCKED):
    * uninstall routing is driven SOLELY by where the library entry's own
-   * recorded `install.install_path` resolves (resolveInstallRoot(), library.ts)
+   * recorded `install.install_path` resolves (resolveInstallRoot(deps), library.ts)
    * — never by title attributes (isBottleEligible() / forcedWindowsViaBottle /
    * forcedWindowsViaBottle). Those attributes may still legitimately decide OTHER
    * things (install destination, getSettings()/launch() routing) — only the
@@ -425,7 +425,7 @@ export default class SteamGame implements Game {
    * this fix addresses):
    *   - Phase 24 bridge routing (isBridgeEligible()): the bridge bottle
    *     (GameLibSteamBridge) is a THIRD, separately-provisioned root that
-   *     resolveInstallRoot() does not model — see its own JSDoc.
+   *     resolveInstallRoot(deps) does not model — see its own JSDoc.
    *   - bottle-eligible-but-unprovisioned (D-10/D-11): nothing could
    *     legitimately be installed in a bottle that was never provisioned;
    *     request guided setup rather than a generic refuse.

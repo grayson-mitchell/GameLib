@@ -20,7 +20,6 @@ jest.mock('backend/logger', () => ({
 jest.mock('backend/constants/environment', () => ({
   isSteamDeckGameMode: false
 }))
-jest.mock('../main_window', () => ({ getMainWindow: () => undefined }))
 jest.mock('../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 
 type Notify = (n: { title: string; body: string }) => void
@@ -30,14 +29,15 @@ function loadNotify(): { notify: Notify; Notification: any } {
   let loaded: any
   jest.isolateModules(() => {
     const platform = require('backend/platform')
-    platform.bindHostServices(
-      createTestHostServices({
-        rustInvoke: (channel, args) =>
-          mockRequestRustInvoke(channel, args) as Promise<unknown>
-      })
-    )
+    const host = createTestHostServices({
+      rustInvoke: (channel, args) =>
+        mockRequestRustInvoke(channel, args) as Promise<unknown>
+    })
+    platform.bindHostServices(host)
+    const realNotify = require('../dialog/dialog').notify
     loaded = {
-      notify: require('../dialog/dialog').notify,
+      notify: (n: Parameters<Notify>[0]) =>
+        realNotify({ notifications: host.notifications }, n),
       Notification: platform.Notification
     }
   })

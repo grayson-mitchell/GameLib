@@ -166,7 +166,10 @@ abstract class GlobalConfig {
       return [...macOsWineSet]
     }
 
-    const linuxWineSet = await getLinuxWineSet(deps, scanCustom)
+    const linuxWineSet = await getLinuxWineSet(
+      { ...deps, config: this },
+      scanCustom
+    )
 
     return [...linuxWineSet]
   }

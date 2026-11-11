@@ -1,8 +1,8 @@
 import { GameInfo } from 'common/types'
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
-import { getFileSize } from 'backend/utils'
+import { getFileSize, type SteamLibrariesDeps } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
-import { notify } from '../../../dialog/dialog'
+import { notify, type NotifyDeps } from '../../../dialog/dialog'
 import i18next from 'i18next'
 import { library } from '../state'
 import { clearForcedWindowsViaBottle } from '../gameSessionState'
@@ -21,6 +21,11 @@ import {
 } from './pollState'
 import { readAcfState } from './acfState'
 
+/** The stores plus the config and notification slices the uninstall poll reads. */
+export type UninstallPollDeps = SteamStoresDeps &
+  SteamLibrariesDeps &
+  NotifyDeps
+
 /** Module-level registry of active uninstall polls, keyed by appId string. */
 const activeUninstallPolls = new Map<
   string,
@@ -38,7 +43,7 @@ const STATE_UNINSTALLING = 2048
  *               CORRECT, expected behaviour — before flipping the badge,
  *               check whether the OTHER known root (bottle<->native; the
  *               bridge bottle is a separate, out-of-scope root never routed
- *               through this poller — see resolveInstallRoot()'s own JSDoc)
+ *               through this poller — see resolveInstallRoot(deps)'s own JSDoc)
  *               still has a real install:
  *                 - a surviving copy: install_path/install_size/platform are
  *                   re-resolved to it, is_installed STAYS true (the badge is
@@ -60,15 +65,15 @@ const STATE_UNINSTALLING = 2048
  *
  * Install state is never optimistically flipped (D-02) — only a confirmed-absent
  * manifest (with no surviving copy elsewhere) flips the badge. `source` selects
- * the native (default) or bottle-scoped ACF root — see readAcfState(). Exported
+ * the native (default) or bottle-scoped ACF root — see readAcfState(deps). Exported
  * for unit testing.
  */
 export async function pollUninstallOnce(
-  deps: SteamStoresDeps,
+  deps: UninstallPollDeps,
   appId: string,
   source: AcfSource = 'native'
 ): Promise<void> {
-  const result = await readAcfState(appId, source)
+  const result = await readAcfState(deps, appId, source)
   const poll = activeUninstallPolls.get(appId)
 
   if (result.state === 'absent') {
@@ -132,7 +137,7 @@ export async function pollUninstallOnce(
       (root) => root !== source && (!bridgeAuthoritative || root === 'bridge')
     )) {
       try {
-        const candidateState = await readAcfState(appId, candidate)
+        const candidateState = await readAcfState(deps, appId, candidate)
         if (
           candidateState.state === 'installed' &&
           candidateState.installPath
@@ -179,7 +184,7 @@ export async function pollUninstallOnce(
       // fires here — that would overstate what actually happened. Say what
       // did happen instead: with no toast at all the click read as a failed
       // uninstall (live 2026-10-27, XCOM 200510 native + bottle).
-      notify({
+      notify(deps, {
         title: existing.title,
         body: i18next.t(
           'gamelib:steam.uninstall.copySurvives',
@@ -222,7 +227,7 @@ export async function pollUninstallOnce(
     // on EVERY known root — no surviving copy) so the user gets exactly one
     // "Game Uninstalled" notification per genuinely-complete uninstall. The
     // uninstaller callback toast is suppressed for steam — this is the sole source.
-    notify({
+    notify(deps, {
       title: existing?.title ?? '',
       body: i18next.t('notify.uninstalled', 'Game Uninstalled')
     })
@@ -267,7 +272,7 @@ export async function pollUninstallOnce(
  * Exported for unit testing.
  */
 export function startUninstallPolling(
-  deps: SteamStoresDeps,
+  deps: UninstallPollDeps,
   appId: string,
   intervalMsOrOptions: number | PollOptions = 3000
 ): void {
@@ -309,7 +314,7 @@ export function startUninstallPolling(
     // GAP C): a real poller can outlive the Jest suite that started it —
     // unref() only stops it from keeping the process alive, not from firing
     // while a later suite keeps the process busy. If it fires after that
-    // suite's module mocks are torn down, readAcfState()'s dependencies throw,
+    // suite's module mocks are torn down, readAcfState(deps)'s dependencies throw,
     // and an unguarded throw here would escape as an unhandled rejection and
     // kill the whole Jest worker. Production never expects this branch — it's
     // a defensive, log-only catch; the next tick retries normally.

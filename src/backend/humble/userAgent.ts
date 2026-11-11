@@ -1,4 +1,5 @@
-import { app } from 'backend/platform'
+import type { AppInfo } from 'backend/process/context'
+import { buildUserAgentFallback } from 'backend/host/appInfo'
 
 /**
  * Standard (non-Electron) browser user agent for Humble-facing requests.
@@ -23,8 +24,10 @@ import { app } from 'backend/platform'
  * would cycle back on itself. user.ts re-exports this symbol so its existing
  * callers (ipc_handler.ts, user.test.ts) are unaffected by the move.
  */
-export function standardBrowserUserAgent(): string {
-  const fallback = app.userAgentFallback
+export function standardBrowserUserAgent(deps: {
+  appInfo: Pick<AppInfo, 'userAgentFallback'>
+}): string {
+  const fallback = deps.appInfo.userAgentFallback
   const platform = /^Mozilla\/5\.0 \(([^)]+)\)/.exec(fallback)?.[1]
   const chromeVersion = /Chrome\/(\S+)/.exec(fallback)?.[1]
   if (!platform || !chromeVersion) {
@@ -33,4 +36,15 @@ export function standardBrowserUserAgent(): string {
     return fallback.replace(/ Electron\/\S+/, '')
   }
   return `Mozilla/5.0 (${platform}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVersion} Safari/537.36`
+}
+
+/**
+ * For the Humble statics (humble/user.ts, humble/adapter.ts, humbleLoginFlowRegistration) that
+ * hold no AppInfo: derives the same string `AppInfo.userAgentFallback` carries. Plan 17 threads
+ * AppInfo into them and deletes this.
+ */
+export function standardBrowserUserAgentForProcess(): string {
+  return standardBrowserUserAgent({
+    appInfo: { userAgentFallback: buildUserAgentFallback(process.platform) }
+  })
 }

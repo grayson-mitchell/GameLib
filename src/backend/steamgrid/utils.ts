@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { SGDBGame, SGDBGrid } from 'common/types'
-import { app } from 'backend/platform'
+import type { AppInfo } from 'backend/process/context'
 
 const SGDB_API_URL = 'https://www.steamgriddb.com/api/v2'
 
@@ -10,7 +10,10 @@ interface SGDBResponse<T> {
   errors?: string[]
 }
 
-const userAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeroicGamesLauncher/${app.getVersion()}`
+type SteamGridDeps = { appInfo: Pick<AppInfo, 'version'> }
+
+const userAgentFor = (deps: SteamGridDeps) =>
+  `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeroicGamesLauncher/${deps.appInfo.version}`
 
 /**
  * Search for a game using autocomplete.
@@ -19,6 +22,7 @@ const userAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 
  * @returns List of games found
  */
 export async function searchGame(
+  deps: SteamGridDeps,
   apiKey: string,
   query: string
 ): Promise<SGDBGame[]> {
@@ -27,7 +31,7 @@ export async function searchGame(
     {
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        'User-Agent': userAgent
+        'User-Agent': userAgentFor(deps)
       }
     }
   )
@@ -46,6 +50,7 @@ export async function searchGame(
  * @returns List of grids
  */
 export async function getGrids(
+  deps: SteamGridDeps,
   apiKey: string,
   args: {
     gameId: number
@@ -67,7 +72,7 @@ export async function getGrids(
       params,
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        'User-Agent': userAgent
+        'User-Agent': userAgentFor(deps)
       }
     }
   )
@@ -83,6 +88,7 @@ export async function getGrids(
  * Get heroes (wide hero/cover art) for a specific game.
  */
 export async function getHeroes(
+  deps: SteamGridDeps,
   apiKey: string,
   args: {
     gameId: number
@@ -104,7 +110,7 @@ export async function getHeroes(
       params,
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        'User-Agent': userAgent
+        'User-Agent': userAgentFor(deps)
       }
     }
   )

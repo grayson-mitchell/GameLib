@@ -51,6 +51,8 @@ jest.mock('../../utils/systeminfo', () => ({
 }))
 
 // ── Imports (after mocks) ───────────────────────────────────────────────────────────────────
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+import { TEST_APP_INFO } from 'backend/testUtils/testContext'
 import { defined } from 'backend/testUtils/indexed'
 import { registerClipboardFlows } from '../clipboardFlowRegistration'
 import {
@@ -148,7 +150,9 @@ const foreignChannelsBefore = snapshotForeignChannels()
 // the SAME channel array.
 registerClipboardFlows({
   managers: { library: {} } as never,
-  runner: {} as never
+  runner: {} as never,
+  config: createTestGlobalConfig(),
+  appInfo: TEST_APP_INFO
 })
 
 beforeEach(() => {

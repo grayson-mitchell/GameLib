@@ -25,17 +25,8 @@
  */
 
 // ── Electron mock (must be first, jest.mock is hoisted) ──────────────────────
-const mockEncryptString = jest.fn((s: string) => Buffer.from(s))
-const mockDecryptString = jest.fn((b: Buffer) => b.toString())
-const mockIsEncryptionAvailable = jest.fn(() => true)
-
-jest.mock('backend/platform', () => ({
-  safeStorage: {
-    isEncryptionAvailable: mockIsEncryptionAvailable,
-    encryptString: mockEncryptString,
-    decryptString: mockDecryptString
-  }
-}))
+// secureKey.ts no longer consults safeStorage (66.3-05): it was dead in the sidecar
+// (isEncryptionAvailable() was always false), so every path below is the "unavailable" path.
 
 // ── Logger mock ────────────────────────────────────────────────────────────
 const mockLogWarning = jest.fn()
@@ -82,9 +73,6 @@ describe('steamgrid/secretStore', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     backingSettings = {}
-    mockIsEncryptionAvailable.mockReturnValue(true)
-    mockEncryptString.mockImplementation((s: string) => Buffer.from(s))
-    mockDecryptString.mockImplementation((b: Buffer) => b.toString())
     // resetMocks: true (jest.config.js) wipes even a jest.fn(impl) factory's initial
     // implementation before every test — re-establish the wiring so getSettings/setSetting are
     // genuinely backed by `backingSettings`, not silently no-op stubs that only record calls.
@@ -105,8 +93,7 @@ describe('steamgrid/secretStore', () => {
 
   describe('mock wiring sanity', () => {
     it('a value seeded directly into backingSettings is read back through the mocked GlobalConfig', async () => {
-      backingSettings.steamGridDbApiKey =
-        'sgdb:v1:' + Buffer.from('seeded').toString('base64')
+      backingSettings.steamGridDbApiKey = 'seeded'
       const store = new ElectronSteamGridDbSecretStore(secretDeps)
 
       const value = await store.getApiKey()
@@ -116,37 +103,33 @@ describe('steamgrid/secretStore', () => {
   })
 
   describe('ElectronSteamGridDbSecretStore', () => {
-    it('setApiKey persists a sgdb:v1:-prefixed value, not raw plaintext, and getApiKey round-trips it', async () => {
+    it('setApiKey persists the trimmed key as bare plaintext (no encryption is available) and getApiKey round-trips it', async () => {
       const store = new ElectronSteamGridDbSecretStore(secretDeps)
       await store.setApiKey('  abc123  ')
 
       expect(mockSetSetting).toHaveBeenCalledWith(
         'steamGridDbApiKey',
-        expect.stringMatching(/^sgdb:v1:/),
+        'abc123',
         secretDeps.stores.kvs
       )
       const [, persisted] = defined(
         mockSetSetting.mock.calls[0],
         'setSetting call'
       )
-      expect(persisted).not.toBe('abc123')
+      expect(persisted).toBe('abc123')
 
       const value = await store.getApiKey()
       expect(value).toBe('abc123')
     })
 
-    it('getApiKey on a legacy bare-plaintext value returns it unchanged AND re-encrypts it in the same call', async () => {
+    it('getApiKey on a legacy bare-plaintext value returns it unchanged and does not rewrite it (nothing to encrypt with)', async () => {
       backingSettings.steamGridDbApiKey = 'legacykey'
       const store = new ElectronSteamGridDbSecretStore(secretDeps)
 
       const value = await store.getApiKey()
       expect(value).toBe('legacykey')
-      expect(backingSettings.steamGridDbApiKey).toMatch(/^sgdb:v1:/)
-      expect(mockSetSetting).toHaveBeenCalledWith(
-        'steamGridDbApiKey',
-        expect.stringMatching(/^sgdb:v1:/),
-        secretDeps.stores.kvs
-      )
+      expect(backingSettings.steamGridDbApiKey).toBe('legacykey')
+      expect(mockSetSetting).not.toHaveBeenCalled()
     })
 
     it('getApiKey returns undefined when nothing is stored', async () => {
@@ -168,10 +151,7 @@ describe('steamgrid/secretStore', () => {
       expect(value).toBeUndefined()
     })
 
-    it('when safeStorage.isEncryptionAvailable throws, setApiKey still resolves and persists bare plaintext', async () => {
-      mockIsEncryptionAvailable.mockImplementation(() => {
-        throw new Error('Keychain unavailable')
-      })
+    it('setApiKey resolves and persists bare plaintext', async () => {
       const store = new ElectronSteamGridDbSecretStore(secretDeps)
 
       await expect(store.setApiKey('abc')).resolves.toBeUndefined()
@@ -192,24 +172,11 @@ describe('steamgrid/secretStore', () => {
       await expect(store.getApiKey()).resolves.toBeUndefined()
     })
 
-    it('isAvailable() reflects safeStorage availability via a throwaway probe, never touching GlobalConfig', () => {
+    it('isAvailable() is false (no encryption), via a throwaway probe that never touches GlobalConfig', () => {
       const store = new ElectronSteamGridDbSecretStore(secretDeps)
-      expect(store.isAvailable()).toBe(true)
-
-      mockIsEncryptionAvailable.mockReturnValue(false)
       expect(store.isAvailable()).toBe(false)
       expect(mockGetSettings).not.toHaveBeenCalled()
       expect(mockSetSetting).not.toHaveBeenCalled()
-    })
-
-    it('isAvailable() returns false (never throws) when the encrypt probe itself throws', () => {
-      mockEncryptString.mockImplementation(() => {
-        throw new Error('encrypt failed')
-      })
-      const store = new ElectronSteamGridDbSecretStore(secretDeps)
-
-      expect(() => store.isAvailable()).not.toThrow()
-      expect(store.isAvailable()).toBe(false)
     })
 
     describe('total-method contract: GlobalConfig.get() throwing never propagates', () => {
@@ -225,10 +192,10 @@ describe('steamgrid/secretStore', () => {
         expect(mockLogWarning.mock.calls.length).toBeLessThanOrEqual(1)
       })
 
-      it('setApiKey resolves and logs at most one warning', async () => {
+      it('setApiKey resolves and logs at most two warnings (plaintext notice + the failed write)', async () => {
         const store = new ElectronSteamGridDbSecretStore(secretDeps)
         await expect(store.setApiKey('abc')).resolves.toBeUndefined()
-        expect(mockLogWarning.mock.calls.length).toBeLessThanOrEqual(1)
+        expect(mockLogWarning.mock.calls.length).toBeLessThanOrEqual(2)
       })
 
       it('clearApiKey resolves and logs at most one warning', async () => {

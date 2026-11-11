@@ -302,7 +302,9 @@ jest.mock('backend/storeManagers', () => {
 // notification_show round-trip ───────────────────────────────────────────────
 jest.mock('../../dialog/dialog', () => ({
   ...jest.requireActual('../../dialog/dialog'),
-  notify: jest.fn()
+  notify: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 
 // ── backend/utils mock — narrow override (sendGameStatusUpdate only), real

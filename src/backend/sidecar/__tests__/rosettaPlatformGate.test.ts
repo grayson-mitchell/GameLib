@@ -26,6 +26,7 @@ jest.mock('backend/constants/environment', () => ({
   isFlatpak: false
 }))
 
+import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { checkRosettaWhenMac } from '../bootstrap'
 
@@ -40,7 +41,10 @@ describe('checkRosettaWhenMac() platform gate (todo 2026-09-06, quick-260908-k3x
   it('never runs the arch probe off macOS', async () => {
     // An empty script: any process call would throw "unscripted process call".
     const runner = createScriptedRunner([])
-    checkRosettaWhenMac(Promise.resolve(), { runner })
+    checkRosettaWhenMac(Promise.resolve(), {
+      runner,
+      dialogs: createTestHostServices().dialogs
+    })
     await flush()
 
     expect(runner.calls).toHaveLength(0)

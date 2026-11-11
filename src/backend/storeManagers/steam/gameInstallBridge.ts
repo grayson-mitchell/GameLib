@@ -678,7 +678,7 @@ export async function installBridgeGameLeased(
       status: 'done'
     })
     // GAME-02's one completion toast; the bridge poller skips it.
-    notify({
+    notify(steamGame.deps, {
       title: steamGame.getGameInfo().title,
       body: i18next.t('notify.install.finished', 'Installation Finished')
     })

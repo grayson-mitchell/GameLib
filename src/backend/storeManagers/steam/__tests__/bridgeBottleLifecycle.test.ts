@@ -1183,6 +1183,7 @@ describe('Phase 59 engine registry', () => {
         .mockImplementation((d) => ({
           spawnAsync: d.spawnAsync,
           runner: d.runner,
+          notices: d,
           installRemove: mockedInstallRemove,
           wineManagerReleases: () => []
         }))

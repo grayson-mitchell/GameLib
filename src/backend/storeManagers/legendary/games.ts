@@ -802,7 +802,7 @@ export default class LegendaryGame implements Game {
     } else if (!res.abort) {
       this.deps.libraryManagers.legendary.installState(this.appName, false)
       await removeShortcutsUtil(this.deps, this)
-      await removeNonSteamGame(this)
+      await removeNonSteamGame(this.deps, this)
     }
     sendFrontendMessage('refreshLibrary', 'legendary')
     return res
@@ -958,7 +958,7 @@ export default class LegendaryGame implements Game {
     if (!launchPrepSuccess) {
       logWriter.logError(['Launch aborted:', launchPrepFailReason])
       this.deps.launcher.launchCleanup()
-      showDialogBoxModalAuto({
+      showDialogBoxModalAuto(this.deps, {
         title: t('box.error.launchAborted', 'Launch aborted'),
         message: launchPrepFailReason!,
         type: 'ERROR'
@@ -1028,7 +1028,7 @@ export default class LegendaryGame implements Game {
       if (!wineLaunchPrepSuccess) {
         logWriter.logError(['Launch aborted:', wineLaunchPrepFailReason])
         if (wineLaunchPrepFailReason) {
-          showDialogBoxModalAuto({
+          showDialogBoxModalAuto(this.deps, {
             title: t('box.error.launchAborted', 'Launch aborted'),
             message: wineLaunchPrepFailReason,
             type: 'ERROR'

@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios'
 import { writeFile, stat, readFile } from 'fs/promises'
-import { app } from 'backend/platform'
+import type { AppInfo } from 'backend/process/context'
 
 type JSONValue = string | number | unknown[] | { [key: string]: JSONValue }
 
@@ -24,6 +24,8 @@ interface CommonDownloadOptions<
   }
 }
 
+type DownloadDeps = { appInfo: Pick<AppInfo, 'version'> }
+
 type TextDownloadOptions = CommonDownloadOptions<'text'>
 type ArrayBufferDownloadOptions = CommonDownloadOptions<'arraybuffer'>
 type JsonDownloadOptions = CommonDownloadOptions<undefined | 'json'>
@@ -33,18 +35,22 @@ type DownloadOptions =
   | JsonDownloadOptions
 
 async function downloadFile(
+  deps: DownloadDeps,
   url: string,
   options: TextDownloadOptions
 ): Promise<string | AxiosError>
 async function downloadFile(
+  deps: DownloadDeps,
   url: string,
   options: ArrayBufferDownloadOptions
 ): Promise<Buffer | AxiosError>
 async function downloadFile(
+  deps: DownloadDeps,
   url: string,
   options?: JsonDownloadOptions
 ): Promise<JSONValue | AxiosError>
 async function downloadFile(
+  deps: DownloadDeps,
   url: string,
   options: DownloadOptions = {}
 ): Promise<string | Buffer | JSONValue | AxiosError> {
@@ -70,7 +76,7 @@ async function downloadFile(
     .get(url, {
       ...options.axiosConfig,
       headers: {
-        'User-Agent': `HeroicGamesLauncher/${app.getVersion()}`,
+        'User-Agent': `HeroicGamesLauncher/${deps.appInfo.version}`,
         ...options.axiosConfig?.headers
       }
     })

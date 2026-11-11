@@ -77,7 +77,10 @@ import { WinetricksQueue } from '../tools/winetricksQueue'
 import { isWindows } from '../constants/environment'
 import { assertCommandParts } from './rendererPathGuard'
 import { sendFrontendMessage } from '../ipc'
-import { notify } from '../dialog/dialog'
+import { notify, type DialogBoxDeps, type NotifyDeps } from '../dialog/dialog'
+import type { GlobalConfigSlice } from '../config'
+import type { GameConfigs } from '../game_config'
+import type { AppInfo } from '../process/context'
 import { logDebug, logError, LogPrefix } from '../logger'
 import { backendEvents } from '../backend_events'
 import { t } from 'i18next'
@@ -98,7 +101,13 @@ import type {
 } from 'common/types'
 
 /** Narrow slice (66.1 D-01): exactly the services the Wine-tools handlers call. */
-export interface WineToolsFlowDeps {
+export interface WineToolsFlowDeps extends NotifyDeps, DialogBoxDeps {
+  config: Pick<
+    GlobalConfigSlice,
+    'getSettings' | 'getAlternativeWine' | 'setSetting'
+  >
+  gameConfigs: Pick<GameConfigs, 'get'>
+  appInfo: Pick<AppInfo, 'version'>
   managers: Pick<StoreManagers, 'library'>
   commandRunner: Pick<CommandRunner, 'runWineCommand'>
   launcher: Pick<Launcher, 'validWine' | 'setupEnvVars' | 'setupWineEnvVars'>
@@ -195,7 +204,10 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
         sendFrontendMessage('progressOfWineManager', release.version, state)
       }
 
-      notify({ title: release.version, body: t('notify.install.startInstall') })
+      notify(deps, {
+        title: release.version,
+        body: t('notify.install.startInstall')
+      })
       onProgress({
         status: 'downloading',
         percentage: 0,
@@ -220,7 +232,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
         case 'success':
           notifyBody = t('notify.install.finished')
       }
-      if (notifyBody) notify({ title: release.version, body: notifyBody })
+      if (notifyBody) notify(deps, { title: release.version, body: notifyBody })
       onProgress({
         status: 'idle'
       })
@@ -249,7 +261,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
       const release = args[0] as WineVersionInfo
       const result = await removeWineVersionForRelease(deps, release)
       if (result)
-        notify({ title: release.version, body: t('notify.uninstalled') })
+        notify(deps, { title: release.version, body: t('notify.uninstalled') })
     }
   )
 

@@ -74,8 +74,12 @@ jest.mock('backend/ipc', () => ({
 // and attempt a real (unbound, in this file) rustInvoke round-trip; not this suite's concern
 // (covered by lifecycleStub.test.ts's own Notification describe block).
 jest.mock('backend/dialog/dialog', () => ({
-  notify: jest.fn(),
-  showDialogBoxModalAuto: jest.fn()
+  notify: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn()),
+  showDialogBoxModalAuto: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 
 // ── backend/logger — routes logSendFailure's real logWarning call (and shortcuts.ts's own
@@ -280,7 +284,10 @@ registerShortcutsFlows({
   }),
   quit: { handleExit: () => mockHandleExit() },
   stores: createTestStores(),
-  runner: createTestServices().runner
+  runner: createTestServices().runner,
+  dialogs: createTestHostServices().dialogs,
+  appState: createTestHostServices().appState,
+  notifications: createTestHostServices().notifications
 })
 
 // The real nativeImage shim reaches /usr/bin/sips through the host services' runSync;

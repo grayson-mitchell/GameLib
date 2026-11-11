@@ -8,6 +8,7 @@ import {
   getWineOnMac,
   getWineskinWine
 } from '../compatibility_layers'
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from 'graceful-fs'
 import { dirname, join } from 'path'
 import { tmpdir } from 'os'
@@ -71,7 +72,18 @@ describe('getLinuxWineSet default wine naming', () => {
   const defaultNames = async (
     runner: ReturnType<typeof createScriptedRunner>
   ) =>
-    [...(await getLinuxWineSet({ runner }, false))]
+    [
+      ...(await getLinuxWineSet(
+        {
+          runner,
+          config: createTestGlobalConfig({
+            defaultSteamPath: '/nonexistent/steam',
+            showValveProton: false
+          })
+        },
+        false
+      ))
+    ]
       .filter((w) => w.type === 'wine' && !w.bin.includes('/tools/'))
       .map((w) => w.name)
 

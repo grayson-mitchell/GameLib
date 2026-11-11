@@ -41,6 +41,10 @@ import { SteamUser } from '../user'
 import { removeAllSteamInstallCopies } from '../removeAllCopies'
 import type { Stores } from 'backend/services/types'
 
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+
+const libDeps = { config: createTestGlobalConfig() }
+
 const { steamMetadataStore } = jest.requireMock<Stores['steam']>('../stores')
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
@@ -91,8 +95,12 @@ jest.mock('../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 
 // ── dialog/dialog mock ────────────────────────────────────────────────────────
 jest.mock('../../../dialog/dialog', () => ({
-  notify: jest.fn(),
-  showDialogBoxModalAuto: jest.fn()
+  notify: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn()),
+  showDialogBoxModalAuto: jest
+    .requireActual('backend/testUtils/propsOnlyMock')
+    .propsOnly(jest.fn())
 }))
 
 // ── i18next mock ──────────────────────────────────────────────────────────────
@@ -550,7 +558,7 @@ describe('enumerateSteamInstallCopies', () => {
       name === 'B' ? '/bottle/steamapps' : '/bridge/steamapps'
     )
 
-    const copies = await acfState.enumerateSteamInstallCopies('63000')
+    const copies = await acfState.enumerateSteamInstallCopies(libDeps, '63000')
 
     expect(copies).toEqual([
       {
@@ -568,7 +576,7 @@ describe('enumerateSteamInstallCopies', () => {
       installdir: 'HOARD'
     })
 
-    const copies = await acfState.enumerateSteamInstallCopies('63000')
+    const copies = await acfState.enumerateSteamInstallCopies(libDeps, '63000')
 
     expect(copies).toEqual([])
   })
@@ -610,7 +618,7 @@ describe('enumerateSteamInstallCopies', () => {
       'backend/logger'
     )
 
-    const copies = await acfState.enumerateSteamInstallCopies('63000')
+    const copies = await acfState.enumerateSteamInstallCopies(libDeps, '63000')
 
     expect(order).toEqual(['native', 'bottle', 'bridge'])
     // native: absent (no manifest fixture added); bottle: threw, skipped;
@@ -1213,7 +1221,7 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
   })
 
   it('no native copy on disk -> no call, no error', async () => {
-    // No addManifest() call -> readAcfState('native') resolves 'absent'.
+    // No addManifest() call -> readAcfState(libDeps, 'native') resolves 'absent'.
     const removeSpy = jest.spyOn(acfState, 'removeSteamInstallCopy')
 
     const result = await new SteamGame(APP_ID, steamTestDeps).install({} as any)

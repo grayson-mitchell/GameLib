@@ -62,7 +62,8 @@ import type { ToolsDeps } from '../index'
 import { toolsPath, userHome } from 'backend/constants/paths'
 import {
   createTestServices,
-  createTestStores
+  createTestStores,
+  createTestToolsSlices
 } from 'backend/testUtils/testServices'
 
 const DLLS = ['d3d9.dll', 'd3d11.dll']
@@ -99,6 +100,7 @@ function seed(): void {
 }
 
 const toolsDeps: ToolsDeps = {
+  ...createTestToolsSlices(),
   spawnAsync: createTestServices().spawnAsync,
   runner: createTestServices().runner,
   stores: createTestStores(),
