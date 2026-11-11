@@ -9,14 +9,13 @@
  *
  * Import budget: ./ files only.
  */
+import type { DerivedAppPaths } from './appPaths'
 import { createClock } from './clock'
 import { createProcessRunner } from './runner'
 import type { Clock, LogSink, ProcessRunner } from './types'
 
-export interface AppPaths {
+export interface AppPaths extends DerivedAppPaths {
   appRoot: string
-  publicDir: string
-  userData: string
   appData: string
   /** The shell executable; resolved on read (it throws when the shell did not hand it down). */
   exe: string
