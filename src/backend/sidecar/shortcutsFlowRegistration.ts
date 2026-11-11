@@ -83,6 +83,9 @@
 
 import i18next, { t } from 'i18next'
 import { ipcMain } from '../platform'
+import type { GlobalConfigSlice } from '../config'
+import type { AppPaths } from '../process/context'
+import type { HostServices } from '../host'
 import {
   macDesktopShortcutPresent,
   macDesktopShortcutWanted,
@@ -115,6 +118,9 @@ export interface ShortcutsFlowDeps extends NotifyDeps, DialogBoxDeps {
   stores: Pick<Stores, 'kvs' | 'wikiGameInfo' | 'crossoverIndex'>
   /** The boot process runner: reg.exe (Desktop folder) and powershell.exe (.lnk) on win32. */
   runner: BootServices['runner']
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+  paths: Pick<AppPaths, 'exe' | 'appData' | 'knownFolder'>
+  imageTools: HostServices['imageTools']
 }
 
 function logChannelFailure(channel: string, error: unknown): void {
@@ -156,6 +162,7 @@ async function shortcutsExistOnDisk(
   }
 
   const [desktopFile, menuFile] = shortcutFiles(
+    deps,
     title,
     await windowsDesktopDir(deps)
   )
@@ -252,7 +259,7 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
         'Shortcuts were created on Desktop and Start Menu'
       )
       // 261027-c4g: name the Desktop when the Desktop link was also made.
-      const bodyMac = macDesktopShortcutWanted()
+      const bodyMac = macDesktopShortcutWanted(deps)
         ? i18next.t(
             'gamelib:box.shortcuts.messageMacDesktop',
             'Shortcuts were created in the Applications folder and on the Desktop'
@@ -292,6 +299,7 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
 
       // 261027-c4g: snapshot BEFORE removal; the toast follows what was on disk, not the setting.
       const hadDesktopItem = macDesktopShortcutPresent(
+        deps,
         deps.managers.library[runner].getGame(appName).getGameInfo().title
       )
 
@@ -369,6 +377,9 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
         libraryManagers: deps.managers.library,
         stores: deps.stores,
         runner: deps.runner,
+        config: deps.config,
+        paths: deps.paths,
+        imageTools: deps.imageTools,
         dialogs: deps.dialogs,
         appState: deps.appState,
         notifications: deps.notifications
@@ -393,7 +404,7 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
       const appName = args[0] as string
       const runner = args[1] as Runner
       const game = deps.managers.library[runner].getGame(appName)
-      return isAddedToSteam(game)
+      return isAddedToSteam(deps, game)
     }
   )
 

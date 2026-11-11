@@ -91,6 +91,7 @@ export function steamSwitchDeps(
     | 'killWith'
     | 'installRemove'
     | 'resolveCrossoverBinDir'
+    | 'fallbackSettings'
   > {
   return {
     ...switchServicesFrom(services),

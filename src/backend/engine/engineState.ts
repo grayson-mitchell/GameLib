@@ -94,6 +94,8 @@ export interface EngineStateDeps
     KillDeps,
     ReleasesDeps,
     RunnerDeps {
+  /** The global settings reader for the derived-engine fallback (66.3-06); unused when `effective` is supplied. */
+  globalSettings?: () => Record<string, unknown>
   /** Defaults to the platform flag. */
   isMac?: boolean
   /** Notice dismissals; defaults to the shared `engineNoticeStore`. */
@@ -143,11 +145,14 @@ function effectiveFor(
 ): EffectiveEngine {
   if (deps.effective) return deps.effective(identity)
   // Paths that record a decision always supply `effective`; only the release reader is optional there.
-  if (!deps.wineManagerReleases) {
-    throw new Error('engine state needs effective or wineManagerReleases')
+  if (!deps.wineManagerReleases || !deps.globalSettings) {
+    throw new Error(
+      'engine state needs effective or wineManagerReleases and globalSettings'
+    )
   }
   return readEngineForGame(identity, {
-    wineManagerReleases: deps.wineManagerReleases
+    wineManagerReleases: deps.wineManagerReleases,
+    globalSettings: deps.globalSettings
   })
 }
 

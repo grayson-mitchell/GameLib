@@ -138,6 +138,7 @@ import { runHumbleValidation } from '../humble/validation'
  * never found because it does not exist.
  */
 import { isPackagedSidecar } from './isPackagedSidecar'
+import type { ExpirationAlertDeps } from '../humble/expirationAlerts'
 
 /**
  * Registers all 16 Humble channels this slice owns. Called once from
@@ -145,7 +146,7 @@ import { isPackagedSidecar } from './isPackagedSidecar'
  * imports above; the caller decides when registration onto the handler
  * registry happens.
  */
-export function registerHumbleFlows(): void {
+export function registerHumbleFlows(deps: ExpirationAlertDeps): void {
   // ── Library/sync group (REQ-34.4-07) ─────────────────────────────────────
   ipcMain.handle('humbleGetUserInfo', async () => {
     return HumbleUser.getUserDetails()
@@ -158,7 +159,7 @@ export function registerHumbleFlows(): void {
   })
 
   ipcMain.handle('humbleSync', async () => {
-    return HumbleLibrary.sync()
+    return HumbleLibrary.sync(deps)
   })
 
   ipcMain.handle('humbleGetKeys', async () => {

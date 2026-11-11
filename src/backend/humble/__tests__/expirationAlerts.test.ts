@@ -7,10 +7,8 @@
  *    seeds the notified-state baseline for EVERY current expiration without
  *    firing a single notification (no storm on fresh Humble connect).
  *  - D-90 digest copy: single-key vs 2+-key body/title forms.
- *  - D-91 click handler: focuses the main window then navigates to
- *    /humble-keys/waiting via the app-wide openScreen message.
- *  - D-93 gates: notifyHumbleExpirations setting off, Notification not
- *    supported, and Steam Deck Game Mode all suppress the OS toast — but the
+ *  - D-93 gates: notifyHumbleExpirations setting off and Steam Deck Game
+ *    Mode both suppress the OS toast — but the
  *    dedup store still advances so a later sync doesn't re-fire once the gate
  *    lifts.
  *  - Pitfall 5: digest copy is built exclusively from HumbleKey's
@@ -19,12 +17,11 @@
  *    body, plus improbable-token sentinels on both secret fields.
  *
  * Mock boundaries:
- *  - electron                -> Notification (class double capturing ctor
- *                               args + the registered click handler)
- *  - ../main_window          -> getMainWindow
- *  - ../ipc                  -> sendFrontendMessage
+ *  - deps.notifications      -> a recording double (66.3-06: the digest goes through
+ *                               the injected Notifications slice; the dead 'click'
+ *                               listener and Notification.isSupported() are gone)
  *  - ../stores       -> humbleNotifiedExpirationStore (Map-backed)
- *  - backend/config          -> GlobalConfig.get().getSettings()
+ *  - deps.config             -> a config slice over a mutable settings double
  *  - backend/constants/environment -> isSteamDeckGameMode (mutable double)
  */
 
@@ -32,48 +29,9 @@ import { bindHumbleStores } from '../humbleStores'
 import type { HumbleKey } from 'common/types/humble'
 import type { HumbleKeyInternal } from '../stores'
 
-// ── electron mock (Notification class double) ──────────────────────────────
+// ── notifications double ────────────────────────────────────────────────────
 const mockNotificationCtor = jest.fn()
 const mockNotificationShow = jest.fn()
-let mockIsSupported = true
-let lastClickHandler: (() => void) | undefined
-
-class MockNotification {
-  static isSupported() {
-    return mockIsSupported
-  }
-  show = mockNotificationShow
-  constructor(opts: { title: string; body: string }) {
-    mockNotificationCtor(opts)
-  }
-  on(event: string, cb: () => void) {
-    if (event === 'click') {
-      lastClickHandler = cb
-    }
-  }
-}
-
-jest.mock('backend/platform', () => ({
-  Notification: MockNotification
-}))
-
-// ── ../main_window mock ─────────────────────────────────────────────────────
-const mockShow = jest.fn()
-const mockGetMainWindow = jest.fn((..._args: unknown[]) => ({
-  show: mockShow
-}))
-jest.mock('../../main_window', () => ({
-  getMainWindow: (...args: unknown[]) => mockGetMainWindow(...args)
-}))
-
-// ── ../ipc mock ──────────────────────────────────────────────────────────────
-const mockSendFrontendMessage = jest.fn()
-jest.mock('../../ipc', () => ({
-  sendFrontendMessage: (...args: unknown[]) => mockSendFrontendMessage(...args)
-}))
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: (...args: unknown[]) => mockSendFrontendMessage(...args)
-}))
 
 // ── ../stores mock (Map-backed humbleNotifiedExpirationStore) ──────
 const notifiedExpirationData = new Map<string, { expiration: string }>()
@@ -91,14 +49,20 @@ bindHumbleStores({
   } as never
 })
 
-// ── backend/config mock (GlobalConfig.get().getSettings()) ─────────────────
+// ── config slice over a mutable settings double ────────────────────────────
 let mockNotifyHumbleExpirations = true
 const mockGetSettings = jest.fn(() => ({
   notifyHumbleExpirations: mockNotifyHumbleExpirations
 }))
-jest.mock('backend/config', () => ({
-  GlobalConfig: { get: () => ({ getSettings: mockGetSettings }) }
-}))
+const deps = {
+  config: { getSettings: () => mockGetSettings() as never },
+  notifications: {
+    show: (opts: { title?: string; body?: string }) => {
+      mockNotificationCtor(opts)
+      mockNotificationShow()
+    }
+  }
+}
 
 // ── backend/constants/environment mock (mutable double) ────────────────────
 const mockEnvironment = { isSteamDeckGameMode: false }
@@ -154,10 +118,8 @@ describe('detectAndNotifyExpirationTransitions', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     notifiedExpirationData.clear()
-    mockIsSupported = true
     mockEnvironment.isSteamDeckGameMode = false
     mockNotifyHumbleExpirations = true
-    lastClickHandler = undefined
 
     // jest.config's `resetMocks: true` strips mock implementations before
     // EVERY test — re-establish them here (mirrors library.test.ts's
@@ -179,13 +141,12 @@ describe('detectAndNotifyExpirationTransitions', () => {
     mockNotifiedExpirationStore.clear.mockImplementation(() =>
       notifiedExpirationData.clear()
     )
-    mockGetMainWindow.mockImplementation(() => ({ show: mockShow }))
   })
 
   test('null -> date on a non-baseline sync: pushed to newlyExpiring, store updated, one notification fires', () => {
     const key = makeKey({ expiration: '2026-08-01' })
 
-    detectAndNotifyExpirationTransitions([key], {
+    detectAndNotifyExpirationTransitions(deps, [key], {
       suppressNotifications: false
     })
 
@@ -202,7 +163,7 @@ describe('detectAndNotifyExpirationTransitions', () => {
       expiration: '2026-08-01'
     })
 
-    detectAndNotifyExpirationTransitions([key], {
+    detectAndNotifyExpirationTransitions(deps, [key], {
       suppressNotifications: false
     })
 
@@ -215,7 +176,7 @@ describe('detectAndNotifyExpirationTransitions', () => {
       expiration: '2026-08-01'
     })
 
-    detectAndNotifyExpirationTransitions([key], {
+    detectAndNotifyExpirationTransitions(deps, [key], {
       suppressNotifications: false
     })
 
@@ -238,7 +199,7 @@ describe('detectAndNotifyExpirationTransitions', () => {
       expiration: '2026-09-01'
     })
 
-    detectAndNotifyExpirationTransitions([keyA, keyB], {
+    detectAndNotifyExpirationTransitions(deps, [keyA, keyB], {
       suppressNotifications: true
     })
 
@@ -268,7 +229,7 @@ describe('detectAndNotifyExpirationTransitions', () => {
     })
 
     // First observation: both are null -> date transitions, both should fire.
-    detectAndNotifyExpirationTransitions([keyA, keyB], {
+    detectAndNotifyExpirationTransitions(deps, [keyA, keyB], {
       suppressNotifications: false
     })
     expect(mockNotificationShow).toHaveBeenCalledTimes(1)
@@ -291,7 +252,7 @@ describe('detectAndNotifyExpirationTransitions', () => {
 
     // Second identical sync: neither should re-fire (composite keys already
     // hold each order's own expiration — this is the WR-01 fix).
-    detectAndNotifyExpirationTransitions([keyA, keyB], {
+    detectAndNotifyExpirationTransitions(deps, [keyA, keyB], {
       suppressNotifications: false
     })
     expect(mockNotificationShow).not.toHaveBeenCalled()
@@ -320,7 +281,7 @@ describe('detectAndNotifyExpirationTransitions', () => {
     // Only order-b's expiration changes on this sync.
     const keyBChanged = { ...keyB, expiration: '2026-10-01' }
 
-    detectAndNotifyExpirationTransitions([keyA, keyBChanged], {
+    detectAndNotifyExpirationTransitions(deps, [keyA, keyBChanged], {
       suppressNotifications: false
     })
 
@@ -346,7 +307,7 @@ describe('detectAndNotifyExpirationTransitions', () => {
     // composite-key migration.
     notifiedExpirationData.set('legacy_steam', { expiration: '2026-08-01' })
 
-    detectAndNotifyExpirationTransitions([key], {
+    detectAndNotifyExpirationTransitions(deps, [key], {
       suppressNotifications: false
     })
 
@@ -359,7 +320,7 @@ describe('detectAndNotifyExpirationTransitions', () => {
   test('D-90: a single affected key uses the singular digest body naming the game title', () => {
     const key = makeKey({ title: 'Solo Game', expiration: '2026-08-01' })
 
-    detectAndNotifyExpirationTransitions([key], {
+    detectAndNotifyExpirationTransitions(deps, [key], {
       suppressNotifications: false
     })
 
@@ -372,7 +333,7 @@ describe('detectAndNotifyExpirationTransitions', () => {
     const keyA = makeKey({ machineName: 'a_steam', expiration: '2026-08-01' })
     const keyB = makeKey({ machineName: 'b_steam', expiration: '2026-09-01' })
 
-    detectAndNotifyExpirationTransitions([keyA, keyB], {
+    detectAndNotifyExpirationTransitions(deps, [keyA, keyB], {
       suppressNotifications: false
     })
 
@@ -381,43 +342,11 @@ describe('detectAndNotifyExpirationTransitions', () => {
     expect(opts.body).toContain('2')
   })
 
-  test('D-91: clicking the notification focuses the window then navigates to /humble-keys/waiting', () => {
-    const key = makeKey({ expiration: '2026-08-01' })
-
-    detectAndNotifyExpirationTransitions([key], {
-      suppressNotifications: false
-    })
-
-    expect(lastClickHandler).toBeDefined()
-    lastClickHandler?.()
-
-    expect(mockShow).toHaveBeenCalledTimes(1)
-    expect(mockSendFrontendMessage).toHaveBeenCalledWith(
-      'openScreen',
-      '/humble-keys/waiting'
-    )
-  })
-
   test('D-93: notifyHumbleExpirations off — store still advances but no notification fires', () => {
     mockNotifyHumbleExpirations = false
     const key = makeKey({ expiration: '2026-08-01' })
 
-    detectAndNotifyExpirationTransitions([key], {
-      suppressNotifications: false
-    })
-
-    expect(mockNotifiedExpirationStore.set).toHaveBeenCalledWith(
-      `${key.gamekey}:${key.machineName}`,
-      { expiration: '2026-08-01' }
-    )
-    expect(mockNotificationShow).not.toHaveBeenCalled()
-  })
-
-  test('Pitfall 4: Notification.isSupported() false suppresses the toast (dedup state still advances)', () => {
-    mockIsSupported = false
-    const key = makeKey({ expiration: '2026-08-01' })
-
-    detectAndNotifyExpirationTransitions([key], {
+    detectAndNotifyExpirationTransitions(deps, [key], {
       suppressNotifications: false
     })
 
@@ -432,7 +361,7 @@ describe('detectAndNotifyExpirationTransitions', () => {
     mockEnvironment.isSteamDeckGameMode = true
     const key = makeKey({ expiration: '2026-08-01' })
 
-    detectAndNotifyExpirationTransitions([key], {
+    detectAndNotifyExpirationTransitions(deps, [key], {
       suppressNotifications: false
     })
 
@@ -450,7 +379,7 @@ describe('detectAndNotifyExpirationTransitions', () => {
       revealedKeyValue: REVEALED_SENTINEL
     }
 
-    detectAndNotifyExpirationTransitions([key], {
+    detectAndNotifyExpirationTransitions(deps, [key], {
       suppressNotifications: false
     })
 
@@ -485,7 +414,7 @@ describe('detectAndNotifyExpirationTransitions', () => {
   test('no newly-expiring keys: no notification, no store writes', () => {
     const key = makeKey({ expiration: null })
 
-    detectAndNotifyExpirationTransitions([key], {
+    detectAndNotifyExpirationTransitions(deps, [key], {
       suppressNotifications: false
     })
 

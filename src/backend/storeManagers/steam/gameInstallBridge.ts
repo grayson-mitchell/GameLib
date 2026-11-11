@@ -328,7 +328,11 @@ export async function resolveInstallEngineSettings(
   }
   if (installEngine !== null) {
     return {
-      settings: buildFallbackGameSettings(bridgeBottleName, installEngine)
+      settings: buildFallbackGameSettings(
+        bridgeBottleName,
+        installEngine,
+        steamGame.deps.config.getSettings()
+      )
     }
   }
   // Bottle already existed: the same decision + preparation as a launch.
@@ -368,7 +372,13 @@ export async function resolveInstallEngineSettings(
     return { skipped: `dxvk restore failed: ${prep.detail}` }
   }
   if (isNonCrossover(sel)) {
-    return { settings: buildFallbackGameSettings(bridgeBottleName, sel) }
+    return {
+      settings: buildFallbackGameSettings(
+        bridgeBottleName,
+        sel,
+        steamGame.deps.config.getSettings()
+      )
+    }
   }
   return { settings: bridgeBottle.getBridgeBottleSettings(steamGame.appId) }
 }

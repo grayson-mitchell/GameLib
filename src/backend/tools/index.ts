@@ -1,3 +1,4 @@
+import type { AppState } from 'backend/host/appState'
 import type { SpawnAsync } from 'backend/spawnAsync'
 import type { EngineServices } from 'backend/engine/engineServices'
 import { wineManagerReleasesFrom } from 'backend/engine/wineManagerReleases'
@@ -222,6 +223,8 @@ export interface ToolsDeps extends DialogBoxDeps, NotifyDeps {
   stores: Pick<Stores, 'wineManager'>
   gameConfigs: Pick<GameConfigs, 'get'>
   appInfo: Pick<AppInfo, 'version'>
+  /** `raiseMainWindow` is for the engine's refused-launch dialog (66.3-06). */
+  appState: Pick<AppState, 'raiseMainWindowForInAppDialog' | 'raiseMainWindow'>
   config: Pick<
     GlobalConfigSlice,
     'getSettings' | 'getAlternativeWine' | 'setSetting'
@@ -235,6 +238,9 @@ function engineServicesFor(deps: ToolsDeps): EngineServices {
     runner: deps.runner,
     installRemove: (...a) => createDxvk(deps).installRemove(...a),
     wineManagerReleases: wineManagerReleasesFrom(deps),
+    globalSettings: () =>
+      deps.config.getSettings() as unknown as Record<string, unknown>,
+    globalGameSettings: () => deps.config.getSettings(),
     notices: deps
   }
 }

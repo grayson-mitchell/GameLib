@@ -284,11 +284,10 @@ describe('66.1 MH-3: registrations take slices', () => {
       'uncoupled: owns the store-embed seam and forwards to Rust, no store reads',
     registerDepotHostFlows:
       'uncoupled: the depot job registry (jobRegistry), no store reads',
-    registerHumbleFlows:
-      'COUPLED through bindHumbleStores: HumbleUser/HumbleLibrary read the bound static holder. ' +
-      'Passing a slice here would not remove that read; the holder is a 66.3 target (backendDiCeilings header)',
+    // registerHumbleFlows left this list in 66.3-06: it now takes { config, notifications } for the
+    // expiration digest (the bindHumbleStores holder it still reads is a plan 17 target).
     registerHumbleLoginFlows:
-      'COUPLED through bindHumbleStores (HumbleUser/HumbleLibrary), same 66.3 target as registerHumbleFlows'
+      'COUPLED through bindHumbleStores (HumbleUser/HumbleLibrary): the holder is a 66.3 target (backendDiCeilings header)'
   }
 
   it('every exported register*Flows takes a single injected `deps` parameter unless it is on the explicit zero-param allowlist', () => {

@@ -1185,7 +1185,9 @@ describe('Phase 59 engine registry', () => {
           runner: d.runner,
           notices: d,
           installRemove: mockedInstallRemove,
-          wineManagerReleases: () => []
+          wineManagerReleases: () => [],
+          globalSettings: () => ({}),
+          globalGameSettings: () => ({}) as GameSettings
         }))
       mockedExistsSync.mockReset()
       mockedExistsSync.mockImplementation((p: string) =>

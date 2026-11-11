@@ -155,7 +155,8 @@ export function registerHandlers(deps: {
     managers: deps.services.managers,
     stores: deps.services.stores,
     spawnAsync: deps.services.spawnAsync,
-    runner: deps.services.runner
+    runner: deps.services.runner,
+    config: deps.services.config
   })
   registerInstallFlows(deps.services)
   registerSettingsFlows({
@@ -203,6 +204,7 @@ export function registerHandlers(deps: {
     downloadQueue: deps.services.downloadQueue,
     quit: deps.services.quit,
     stores: deps.services.stores,
+    config: deps.services.config,
     runner: deps.services.runner,
     dialogs: deps.services.host.dialogs,
     appState: deps.services.host.appState,
@@ -277,7 +279,10 @@ export function registerHandlers(deps: {
   // alongside them, before `registerStoreWriteHandlers()`. Every store this module
   // needs (all 9 Humble stores) is already registered by createStores
   // — zero new store plumbing.
-  registerHumbleFlows()
+  registerHumbleFlows({
+    config: deps.services.config,
+    notifications: deps.services.host.notifications
+  })
   // Phase 34.4.1 Plan 02 (REQ-34.4.1-02/-03/-04/-05/-13): the browser-auth channels,
   // plus installing the rustInvoke-backed login-window seam (setLoginWindowSeam)
   // — no ordering constraint relative to the
@@ -320,6 +325,9 @@ export function registerHandlers(deps: {
     quit: deps.services.quit,
     stores: deps.services.stores,
     runner: deps.services.runner,
+    config: deps.services.config,
+    paths: deps.services.paths,
+    imageTools: deps.services.host.imageTools,
     dialogs: deps.services.host.dialogs,
     appState: deps.services.host.appState,
     notifications: deps.services.host.notifications

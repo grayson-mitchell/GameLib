@@ -11,7 +11,7 @@
  * be running (61-27, WR-02): it must not take focus, so it never raises the window or opens a modal.
  */
 import { t } from 'i18next'
-import { app } from 'backend/platform'
+import type { AppState } from 'backend/host/appState'
 import { logInfo, LogPrefix } from 'backend/logger'
 import {
   notify,
@@ -23,7 +23,8 @@ import { newDialogAckId, trackDialogDisplay } from 'backend/dialog/displayAck'
 import type { FallbackReason } from './engineTypes'
 
 export function showEngineDialog(
-  deps: DialogBoxDeps & NotifyDeps,
+  deps: DialogBoxDeps &
+    NotifyDeps & { appState: Pick<AppState, 'raiseMainWindow'> },
   args: {
     key: string
     title: string
@@ -34,7 +35,7 @@ export function showEngineDialog(
 ): void {
   const { key, title, body, ackId: tag } = args
   notify(deps, { title, body })
-  app.raiseMainWindow()
+  deps.appState.raiseMainWindow()
   const ackId = newDialogAckId()
   trackDialogDisplay(ackId, (result) => {
     logInfo(

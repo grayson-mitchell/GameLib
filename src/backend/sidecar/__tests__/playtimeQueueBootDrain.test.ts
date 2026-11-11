@@ -145,7 +145,8 @@ function bootedWorld(opts?: {
         dialogs: fakes.host.dialogs,
         openExternal: fakes.host.openExternal,
         notifications: fakes.host.notifications,
-        appState: fakes.host.appState
+        appState: fakes.host.appState,
+        imageTools: fakes.host.imageTools
       })
       prebuilt.managers = built
       prebuilt.launcher = built.launcher

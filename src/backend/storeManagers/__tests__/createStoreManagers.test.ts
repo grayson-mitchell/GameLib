@@ -52,6 +52,7 @@ function build(over: Partial<Parameters<typeof createStoreManagers>[0]> = {}) {
     openExternal: fakes.host.openExternal,
     notifications: fakes.host.notifications,
     appState: fakes.host.appState,
+    imageTools: fakes.host.imageTools,
     ...over
   })
 }

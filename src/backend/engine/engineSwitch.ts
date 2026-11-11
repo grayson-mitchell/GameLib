@@ -134,7 +134,11 @@ export function switchServicesFrom(
   services: EngineServices
 ): Pick<
   EngineSwitchDeps,
-  'killWith' | 'installRemove' | 'resolveCrossoverBinDir' | 'ensurePinEngine'
+  | 'killWith'
+  | 'installRemove'
+  | 'resolveCrossoverBinDir'
+  | 'ensurePinEngine'
+  | 'fallbackSettings'
 > {
   return {
     resolveCrossoverBinDir: () =>
@@ -142,7 +146,13 @@ export function switchServicesFrom(
     killWith: (...a) =>
       killBottleWineServerWith({ spawnAsync: services.spawnAsync }, ...a),
     installRemove: services.installRemove,
-    ensurePinEngine: (pin) => ensurePinEngineVia(services.runner, pin)
+    ensurePinEngine: (pin) => ensurePinEngineVia(services.runner, pin),
+    fallbackSettings: (bottleName, engine) =>
+      buildFallbackGameSettings(
+        bottleName,
+        engine,
+        services.globalGameSettings()
+      )
   }
 }
 
@@ -154,9 +164,9 @@ const defaultDeps: Omit<
   | 'installRemove'
   | 'resolveCrossoverBinDir'
   | 'ensurePinEngine'
+  | 'fallbackSettings'
 > = {
   getMonitorPhase: () => null,
-  fallbackSettings: buildFallbackGameSettings,
   currentPinEngine: defaultCurrentPinEngine
 }
 
@@ -496,6 +506,7 @@ type PrepareArgs = {
       | 'installRemove'
       | 'resolveCrossoverBinDir'
       | 'ensurePinEngine'
+      | 'fallbackSettings'
     >
 }
 

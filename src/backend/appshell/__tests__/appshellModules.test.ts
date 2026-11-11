@@ -18,14 +18,6 @@ jest.mock('graceful-fs', () => ({
   readFileSync: jest.fn()
 }))
 
-// ── backend/config mock (themes.ts, releases.ts, language.ts) — avoid a real
-// on-disk config.json read/write while exercising the real extracted bodies ─
-jest.mock('../../config', () => ({
-  GlobalConfig: {
-    get: jest.fn()
-  }
-}))
-
 // ── backend/utils mock (releases.ts) — proves the thin startup-gating
 // closure reaches (or doesn't reach) the real getLatestReleases/
 // getCurrentChangelog exports without exercising their own internals ───────
@@ -51,7 +43,6 @@ jest.mock('../../logger', () => ({
   LogPrefix: { Backend: 'Backend' }
 }))
 
-import { GlobalConfig } from '../../config'
 import {
   getLatestReleases as mockedGetLatestReleases,
   getCurrentChangelog as mockedGetCurrentChangelog
@@ -67,7 +58,6 @@ import {
 import { changeLanguage } from '../language'
 import { defined } from 'backend/testUtils/indexed'
 
-const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
 const mockedI18nextChangeLanguage = i18next.changeLanguage as jest.Mock
 // language.ts takes its stores by parameter; the gameInfoStore is a stub, so no disk I/O happens.
 const mockedGameInfoStoreClear = jest.fn()
@@ -79,14 +69,14 @@ const languageDeps = {
   })
 }
 
-/** Points the mocked GlobalConfig.get() at a fresh settings object. */
+/** A config slice over a fresh settings object. */
 function mockAppSettings(partial: Record<string, unknown>) {
   const setSetting = jest.fn()
-  mockedGlobalConfigGet.mockReturnValue({
-    getSettings: () => partial,
+  const config = {
+    getSettings: () => partial as never,
     setSetting
-  })
-  return { setSetting }
+  }
+  return { setSetting, config }
 }
 
 describe('backend/appshell/releases.ts (REQ-34.1-04)', () => {
@@ -95,20 +85,20 @@ describe('backend/appshell/releases.ts (REQ-34.1-04)', () => {
   })
 
   it('REQ-34.1-04 getLatestReleasesForStartup returns [] and does not call getLatestReleases when checkForUpdatesOnStartup is false', async () => {
-    mockAppSettings({ checkForUpdatesOnStartup: false })
+    const { config } = mockAppSettings({ checkForUpdatesOnStartup: false })
 
-    const result = await getLatestReleasesForStartup()
+    const result = await getLatestReleasesForStartup({ config })
 
     expect(result).toEqual([])
     expect(mockedGetLatestReleases).not.toHaveBeenCalled()
   })
 
   it("REQ-34.1-04 getLatestReleasesForStartup forwards getLatestReleases()'s result when checkForUpdatesOnStartup is true", async () => {
-    mockAppSettings({ checkForUpdatesOnStartup: true })
+    const { config } = mockAppSettings({ checkForUpdatesOnStartup: true })
     const releases = [{ id: 1, tag_name: 'v1.0.0' }]
     ;(mockedGetLatestReleases as jest.Mock).mockResolvedValue(releases)
 
-    const result = await getLatestReleasesForStartup()
+    const result = await getLatestReleasesForStartup({ config })
 
     expect(result).toBe(releases)
     expect(mockedGetLatestReleases).toHaveBeenCalledTimes(1)
@@ -131,10 +121,10 @@ describe('backend/appshell/language.ts (REQ-34.1-04)', () => {
   })
 
   it('REQ-34.1-04 changeLanguage calls i18next.changeLanguage, clears gameInfoStore, writes the language setting, and emits languageChanged', async () => {
-    const { setSetting } = mockAppSettings({})
+    const { setSetting, config } = mockAppSettings({})
     const emitSpy = jest.spyOn(backendEvents, 'emit')
 
-    await changeLanguage(languageDeps, 'fr')
+    await changeLanguage({ ...languageDeps, config }, 'fr')
 
     expect(mockedI18nextChangeLanguage).toHaveBeenCalledWith('fr')
     expect(mockedGameInfoStoreClear).toHaveBeenCalledTimes(1)
@@ -145,10 +135,10 @@ describe('backend/appshell/language.ts (REQ-34.1-04)', () => {
   })
 
   it('REQ-34.1-04 changeLanguage emits languageChanged LAST, after GlobalConfig.setSetting', async () => {
-    const { setSetting } = mockAppSettings({})
+    const { setSetting, config } = mockAppSettings({})
     const emitSpy = jest.spyOn(backendEvents, 'emit')
 
-    await changeLanguage(languageDeps, 'de')
+    await changeLanguage({ ...languageDeps, config }, 'de')
 
     const setSettingOrder = setSetting.mock.invocationCallOrder[0]
     const emitOrder = defined(

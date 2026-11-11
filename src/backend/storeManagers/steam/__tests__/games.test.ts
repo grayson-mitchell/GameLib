@@ -7945,7 +7945,8 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         await new SteamGame(APP_ID, steamTestDeps).install({} as any)
         expect(buildFallbackGameSettings).toHaveBeenCalledWith(
           `GameLibSteamBridge-${APP_ID}`,
-          expect.objectContaining({ wineBin: ENGINE_OK.paths.wineBin })
+          expect.objectContaining({ wineBin: ENGINE_OK.paths.wineBin }),
+          expect.anything()
         )
         expect(redistSettings()).toBe(fallback)
       })
@@ -7996,7 +7997,8 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         )
         expect(buildFallbackGameSettings).toHaveBeenCalledWith(
           `GameLibSteamBridge-${APP_ID}`,
-          sel
+          sel,
+          expect.anything()
         )
         expect(redistSettings()).toBe(fallback)
       })

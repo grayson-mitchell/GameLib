@@ -139,6 +139,7 @@ export interface ManagerDeps {
   openExternal: OpenExternal
   notifications: Notifications
   appState: AppState
+  imageTools: HostServices['imageTools']
 }
 
 export interface BootServices {

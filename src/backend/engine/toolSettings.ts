@@ -110,10 +110,11 @@ function releaseBoundDeps(
   'readEffective' | 'nonCrossoverEngine' | 'crossoverBinDir'
 > {
   const releases = { wineManagerReleases: services.wineManagerReleases }
+  const config = { ...releases, globalSettings: services.globalSettings }
   return {
     crossoverBinDir: () =>
       resolveCrossoverBinDirAsync({ runner: services.runner }),
-    readEffective: (id) => readEngineForGame(id, releases),
+    readEffective: (id) => readEngineForGame(id, config),
     nonCrossoverEngine(engineId) {
       if (engineId.startsWith('wine-manager:')) {
         return resolveWineManagerStaging(

@@ -123,6 +123,7 @@ export interface LaunchEngineDeps {
       | 'installRemove'
       | 'resolveCrossoverBinDir'
       | 'ensurePinEngine'
+      | 'fallbackSettings'
     >
   prepare: typeof prepareBottleForEngine
   sendStatus(update: {
@@ -209,7 +210,8 @@ export async function selectEngineForLaunch(
     isCrossoverMissing: () => isCrossoverMissing({ runner: services.runner }),
     readEffective: (id) =>
       readEngineForGame(id, {
-        wineManagerReleases: services.wineManagerReleases
+        wineManagerReleases: services.wineManagerReleases,
+        globalSettings: services.globalSettings
       }),
     decisionDeps: () => ({
       killCrossoverWineserver: killCrossoverWineserverWith(services),

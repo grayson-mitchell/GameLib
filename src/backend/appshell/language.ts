@@ -18,7 +18,7 @@
 import i18next from 'i18next'
 
 import { toI18nextCode } from '../../common/languages'
-import { GlobalConfig } from '../config'
+import type { GlobalConfigSlice } from '../config'
 import { backendEvents } from '../backend_events'
 import { logInfo, logWarning, LogPrefix } from '../logger'
 import type { Stores } from '../services/types'
@@ -48,7 +48,10 @@ import type { Stores } from '../services/types'
  * the catch is never entered.
  */
 export async function changeLanguage(
-  deps: { stores: Pick<Stores, 'kvs' | 'legendary'> },
+  deps: {
+    stores: Pick<Stores, 'kvs' | 'legendary'>
+    config: Pick<GlobalConfigSlice, 'setSetting'>
+  },
   language: string
 ): Promise<void> {
   logInfo(['Changing Language to:', language], LogPrefix.Backend)
@@ -71,6 +74,6 @@ export async function changeLanguage(
     )
   }
   deps.stores.legendary.gameInfoStore.clear()
-  GlobalConfig.get().setSetting('language', language, deps.stores.kvs)
+  deps.config.setSetting('language', language, deps.stores.kvs)
   backendEvents.emit('languageChanged')
 }

@@ -15,7 +15,7 @@
 import { existsSync, readFileSync } from 'graceful-fs'
 import * as path from 'path'
 
-import { GlobalConfig } from '../config'
+import type { GlobalConfigSlice } from '../config'
 
 /**
  * Extensions we are willing to inline as a Manage Accounts background, mapped
@@ -47,8 +47,10 @@ const LOGIN_BACKGROUND_MIME_BY_EXTENSION: Record<string, string> = {
  */
 // Kept async because the registration is an `ipcMain.handle` that resolves a
 // Promise; the read is synchronous internally.
-export async function getLoginBackground(): Promise<string> {
-  const { loginBackgroundPath } = GlobalConfig.get().getSettings()
+export async function getLoginBackground(deps: {
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+}): Promise<string> {
+  const { loginBackgroundPath } = deps.config.getSettings()
 
   if (!loginBackgroundPath || !existsSync(loginBackgroundPath)) {
     return ''

@@ -17,7 +17,6 @@ import {
   generateShortAppId,
   removeImagesFromSteam
 } from './steamhelper'
-import { app } from 'backend/platform'
 import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
 import i18next from 'i18next'
 import {
@@ -26,14 +25,13 @@ import {
   type DialogBoxDeps,
   type NotifyDeps
 } from '../../dialog/dialog'
-import { GlobalConfig } from '../../config'
 import { getWikiGameInfo } from 'backend/wiki_game_info/wiki_game_info'
 import { isAppImage, isFlatpak, isWindows } from 'backend/constants/environment'
 import type { Game } from 'common/types/game_manager'
 import type { Stores } from 'backend/services/types'
 
-const getSteamUserdataDir = async () => {
-  const { defaultSteamPath } = GlobalConfig.get().getSettings()
+const getSteamUserdataDir = async (deps: Pick<ShortcutsDeps, 'config'>) => {
+  const { defaultSteamPath } = deps.config.getSettings()
   return join(defaultSteamPath.replaceAll("'", ''), 'userdata')
 }
 
@@ -228,7 +226,7 @@ async function addNonSteamGame(
   game: Game
 ): Promise<boolean> {
   const gameInfo = game.getGameInfo()
-  const steamUserdataDir = await getSteamUserdataDir()
+  const steamUserdataDir = await getSteamUserdataDir(deps)
   const wikiInfo = await getWikiGameInfo(deps, game)
   const steamID = wikiInfo?.pcgamingwiki?.steamID ?? wikiInfo?.gamesdb?.steamID
 
@@ -278,7 +276,7 @@ async function addNonSteamGame(
     // add new Entry
     const newEntry = {} as ShortcutEntry
     newEntry.AppName = gameInfo.title
-    newEntry.Exe = `"${app.getPath('exe')}"`
+    newEntry.Exe = `"${deps.paths.exe}"`
     newEntry.StartDir = `"${process.cwd()}"`
 
     if (isFlatpak) {
@@ -310,7 +308,7 @@ async function addNonSteamGame(
         )
       )
 
-    await prepareImagesForSteam({
+    await prepareImagesForSteam(deps, {
       steamUserConfigDir: configDir,
       appID: {
         bigPictureAppID: generateAppId(newEntry.Exe, newEntry.AppName),
@@ -408,9 +406,12 @@ async function addNonSteamGame(
  * @param steamUserdataDir Path to steam userdata directory, optional
  * @returns none
  */
-async function removeNonSteamGame(deps: NotifyDeps, game: Game): Promise<void> {
+async function removeNonSteamGame(
+  deps: NotifyDeps & Pick<ShortcutsDeps, 'config'>,
+  game: Game
+): Promise<void> {
   const gameInfo = game.getGameInfo()
-  const steamUserdataDir = await getSteamUserdataDir()
+  const steamUserdataDir = await getSteamUserdataDir(deps)
   const { folders, error } = checkSteamUserDataDir(steamUserdataDir)
 
   // we don't show a error here.
@@ -516,8 +517,11 @@ async function removeNonSteamGame(deps: NotifyDeps, game: Game): Promise<void> {
  * @param game The {@link Game} to check
  * @returns boolean
  */
-async function isAddedToSteam(game: Game): Promise<boolean> {
-  const steamUserdataDir = await getSteamUserdataDir()
+async function isAddedToSteam(
+  deps: Pick<ShortcutsDeps, 'config'>,
+  game: Game
+): Promise<boolean> {
+  const steamUserdataDir = await getSteamUserdataDir(deps)
 
   const { folders, error } = checkSteamUserDataDir(steamUserdataDir)
 

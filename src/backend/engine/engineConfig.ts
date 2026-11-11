@@ -32,7 +32,10 @@ export interface EngineConfigDeps {
   globalSettings(): Record<string, unknown>
 }
 
-function defaultDeps(): Omit<EngineConfigDeps, 'wineManagerReleases'> {
+function defaultDeps(): Omit<
+  EngineConfigDeps,
+  'wineManagerReleases' | 'globalSettings'
+> {
   return {
     pins: ENGINE_PINS,
     pinWineBin(pin) {
@@ -41,16 +44,7 @@ function defaultDeps(): Omit<EngineConfigDeps, 'wineManagerReleases'> {
         require('./fallbackEngine') as typeof import('./fallbackEngine')
       return pinnedEnginePaths(pin as (typeof ENGINE_PINS)['current']).wineBin
     },
-    gamesConfigPath: defaultGamesConfigPath,
-    globalSettings() {
-      const { GlobalConfig } =
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('backend/config') as typeof import('backend/config')
-      return GlobalConfig.get().getSettings() as unknown as Record<
-        string,
-        unknown
-      >
-    }
+    gamesConfigPath: defaultGamesConfigPath
   }
 }
 
@@ -58,7 +52,14 @@ function defaultDeps(): Omit<EngineConfigDeps, 'wineManagerReleases'> {
 type ConfigDepsWithReleases = Partial<EngineConfigDeps> &
   Pick<EngineConfigDeps, 'wineManagerReleases'>
 
-const withDeps = (deps: ConfigDepsWithReleases): EngineConfigDeps => ({
+/** 66.3-06: the global settings reader has no default either (the config slice, via EngineServices). */
+export type ConfigDepsWithSettings = ConfigDepsWithReleases &
+  Pick<EngineConfigDeps, 'globalSettings'>
+
+const withDeps = (
+  deps: ConfigDepsWithReleases
+): Omit<EngineConfigDeps, 'globalSettings'> &
+  Partial<Pick<EngineConfigDeps, 'globalSettings'>> => ({
   ...defaultDeps(),
   ...deps
 })
@@ -189,7 +190,7 @@ export function resolveEffectiveEngine(
  */
 export function readEngineForGame(
   args: { runner: string; appName: string },
-  deps: ConfigDepsWithReleases
+  deps: ConfigDepsWithSettings
 ): EffectiveEngine {
   const d = withDeps(deps)
   const entry = readStoredGameConfig(args.appName, d)
@@ -204,7 +205,7 @@ export function readEngineForGame(
   }
   const inherited =
     entry?.wineVersion === undefined
-      ? (d.globalSettings().wineVersion as WineInstallation | undefined)
+      ? (deps.globalSettings().wineVersion as WineInstallation | undefined)
       : undefined
   return resolveEffectiveEngine(entry, inherited, { derive: true }, d)
 }

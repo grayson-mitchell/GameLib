@@ -196,7 +196,8 @@ const deps = (): Partial<LaunchEngineDeps> => ({
     installRemove,
     resolveCrossoverBinDir: () => Promise.resolve('/cx/bin'),
     currentPinEngine: () => null,
-    ensurePinEngine: () => Promise.resolve(null)
+    ensurePinEngine: () => Promise.resolve(null),
+    fallbackSettings: () => ({}) as GameSettings
   })
 })
 

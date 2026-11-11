@@ -48,6 +48,7 @@ jest.mock('../../ipc', () => ({
 
 import { registerEngineFlows } from '../engineFlowRegistration'
 import { createTestServices } from 'backend/testUtils/testServices'
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import {
   createTestManagers,
   createTestStores
@@ -71,9 +72,12 @@ function fakeGame(over: { native?: boolean; platform?: string } = {}) {
 
 const spawnAsync = createTestServices().spawnAsync
 const runner = createTestServices().runner
+const config = createTestGlobalConfig()
 
 describe('engine flows', () => {
-  beforeAll(() => registerEngineFlows({ managers, stores, spawnAsync, runner }))
+  beforeAll(() =>
+    registerEngineFlows({ managers, stores, spawnAsync, runner, config })
+  )
   beforeEach(() => {
     jest.clearAllMocks()
     envState.isMac = true
@@ -98,7 +102,7 @@ describe('engine flows', () => {
       )
     ).toEqual({ kind: 's' })
     expect(steamState).toHaveBeenCalledWith(
-      { managers, stores, spawnAsync, runner },
+      { managers, stores, spawnAsync, runner, config },
       '220'
     )
     expect(getGame).not.toHaveBeenCalled()
@@ -113,7 +117,12 @@ describe('engine flows', () => {
       kind: 'n'
     })
     expect(gameState).toHaveBeenCalledWith(
-      { spawnAsync, runner, wineManagerReleases: expect.any(Function) },
+      {
+        spawnAsync,
+        runner,
+        wineManagerReleases: expect.any(Function),
+        globalSettings: expect.any(Function)
+      },
       arg
     )
   })
@@ -156,7 +165,12 @@ describe('engine flows', () => {
     const arg = { appName: 'default' }
     const out = await handlers.get('listEngineOptions')!({}, arg)
     expect(gameOptions).toHaveBeenCalledWith(
-      { spawnAsync, runner, wineManagerReleases: expect.any(Function) },
+      {
+        spawnAsync,
+        runner,
+        wineManagerReleases: expect.any(Function),
+        globalSettings: expect.any(Function)
+      },
       arg
     )
     expect(JSON.stringify(out)).not.toContain('/')
@@ -189,7 +203,7 @@ describe('engine flows', () => {
   })
 
   it('wires the publisher to engineStateChanged', () => {
-    registerEngineFlows({ managers, stores, spawnAsync, runner })
+    registerEngineFlows({ managers, stores, spawnAsync, runner, config })
     const publisher = setPublisher.mock.calls[0][0] as (s: unknown) => void
     const state = { appId: '1' }
     publisher(state)

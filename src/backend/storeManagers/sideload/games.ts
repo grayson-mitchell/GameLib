@@ -42,6 +42,8 @@ export default class SideloadGame implements Game {
       | 'spawnAsync'
       | 'runner'
       | 'config'
+      | 'paths'
+      | 'imageTools'
       | 'dialogs'
       | 'appState'
       | 'notifications'

@@ -43,6 +43,7 @@ export function managerDepsFromServices(
     dialogs: source.host.dialogs,
     openExternal: source.host.openExternal,
     notifications: source.host.notifications,
-    appState: source.host.appState
+    appState: source.host.appState,
+    imageTools: source.host.imageTools
   }
 }

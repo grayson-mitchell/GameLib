@@ -3,6 +3,9 @@ import { isStore } from 'common/storeCapabilities'
 import { GameInfo } from 'common/types'
 import { basename, dirname, extname, join } from 'path'
 import type { ManagerDeps } from 'backend/services/types'
+import type { GlobalConfigSlice } from 'backend/config'
+import type { AppPaths } from 'backend/process/context'
+import type { HostServices } from 'backend/host'
 import { downloadFile } from 'backend/utils'
 import { createAbortController } from 'backend/utils/aborthandler/aborthandler'
 import { heroicIconFolder as iconsFolder } from 'backend/constants/paths'
@@ -65,6 +68,15 @@ export interface ShortcutsDeps {
   libraryManagers: Pick<ManagerDeps['libraryManagers'], 'gog'>
   /** Runs powershell.exe (the .lnk writer) and reg.exe (the redirected Desktop folder) on win32. */
   runner: Pick<ManagerDeps['runner'], 'run'>
+  /** The Add-to-Steam and shortcut settings flags (66.3-06). */
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+  /** The shell exe and the Desktop / Start Menu folders the shortcut files are written under. */
+  paths: Pick<AppPaths, 'exe' | 'appData' | 'knownFolder'>
+  /** The icon .icns conversion and the Steam grid artwork. */
+  imageTools: Pick<
+    HostServices['imageTools'],
+    'createFromBuffer' | 'createFromDataURL'
+  >
 }
 
 async function getIcon(

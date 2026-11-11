@@ -426,7 +426,12 @@ function fallbackBridgeBottleSettings(
       `getBridgeBottleSettings: invalid appId "${appId}" (must be numeric)`
     )
   }
-  return buildFallbackGameSettings(resolved, sel)
+  // Interim (66.3-06): plan 08 converts this module's own GlobalConfig.get() reads.
+  return buildFallbackGameSettings(
+    resolved,
+    sel,
+    GlobalConfig.get().getSettings()
+  )
 }
 
 /**

@@ -55,11 +55,6 @@ jest.mock('backend/constants/environment', () =>
 )
 
 // ── backend/config — avoid a real on-disk config.json read while driving the real addShortcuts
-jest.mock('backend/config', () => ({
-  GlobalConfig: {
-    get: jest.fn()
-  }
-}))
 
 // ── backend/utils — getGame/handleExit are the two real exports shortcutsFlowRegistration.ts
 // and this test both need directly controllable; every other real export of this module is
@@ -161,6 +156,7 @@ import {
 import { createTestHostServices } from '../../testUtils/testHostServices'
 import { createNativeImage } from '../nativeImageShim'
 import { createRealRunner } from '../../testUtils/realRunner'
+import { createPathShimPaths } from 'backend/testUtils/pathShimPaths'
 import { getPath } from '../pathShim'
 import {
   createTestManagers,
@@ -169,7 +165,6 @@ import {
 } from 'backend/testUtils/testServices'
 import { sendFrontendMessage } from 'backend/ipc'
 import { logWarning, logError } from 'backend/logger'
-import { GlobalConfig } from 'backend/config'
 import { getIcon } from 'backend/shortcuts/utils'
 import { notify } from 'backend/dialog/dialog'
 import { execFileSync } from 'node:child_process'
@@ -216,9 +211,12 @@ function makeFakeGame(gameInfo: GameInfo) {
     getGameInfo: () => gameInfo,
     addShortcuts: (fromMenu?: boolean) =>
       realAddShortcuts(
-        { libraryManagers: { gog: {} } } as unknown as Parameters<
-          typeof realAddShortcuts
-        >[0],
+        {
+          libraryManagers: { gog: {} },
+          config: { getSettings: () => mockGlobalConfigGet().getSettings() },
+          paths: createPathShimPaths(),
+          imageTools: sipsImageTools
+        } as unknown as Parameters<typeof realAddShortcuts>[0],
         fakeGame,
         fromMenu
       ),
@@ -231,7 +229,9 @@ const mockHandleExit = jest.fn()
 const mockSendFrontendMessage = sendFrontendMessage as jest.Mock
 const mockLogWarning = logWarning as jest.Mock
 const mockLogError = logError as jest.Mock
-const mockGlobalConfigGet = GlobalConfig.get as jest.Mock
+// The config slice reads through this (`GlobalConfig.get()` is no longer in the module graph).
+const mockGlobalConfigGet = jest.fn()
+const pathDeps = { paths: createPathShimPaths() }
 const mockGetIcon = getIcon as jest.Mock
 const mockNotify = notify as jest.Mock
 
@@ -268,6 +268,19 @@ if (HOST_IS_DARWIN) {
   ])
 }
 
+// The real nativeImage shim reaches /usr/bin/sips through the host services' runSync;
+// bound once to a fake-HOME real runner, the same way bootstrap binds ctx.runner. The same
+// imageTools instance is handed to registerShortcutsFlows below (66.3-06).
+const sipsRunner = createRealRunner()
+const sipsImageTools = createNativeImage({
+  runSync: (cmd, argv, opts) => sipsRunner.runner.runSync(cmd, argv, opts)
+})
+bindHostServices({
+  ...createTestHostServices(),
+  imageTools: sipsImageTools
+})
+afterAll(() => sipsRunner.dispose())
+
 // Registered ONCE for this whole file (not per-test) -- `listenerRegistry`/`handlerRegistry` are
 // module-scope maps; calling registerShortcutsFlows() more than once would stack a duplicate
 // listener onto the same channel array (clipboardFlowRegistration's own test docstring names this
@@ -285,21 +298,15 @@ registerShortcutsFlows({
   quit: { handleExit: () => mockHandleExit() },
   stores: createTestStores(),
   runner: createTestServices().runner,
+  config: {
+    getSettings: () => mockGlobalConfigGet().getSettings()
+  },
+  paths: createPathShimPaths(),
+  imageTools: sipsImageTools,
   dialogs: createTestHostServices().dialogs,
   appState: createTestHostServices().appState,
   notifications: createTestHostServices().notifications
 })
-
-// The real nativeImage shim reaches /usr/bin/sips through the host services' runSync;
-// bound once to a fake-HOME real runner, the same way bootstrap binds ctx.runner.
-const sipsRunner = createRealRunner()
-bindHostServices({
-  ...createTestHostServices(),
-  imageTools: createNativeImage({
-    runSync: (cmd, argv, opts) => sipsRunner.runner.runSync(cmd, argv, opts)
-  })
-})
-afterAll(() => sipsRunner.dispose())
 
 const shellExeAtFileLoad = process.env.GAMELIB_SHELL_EXE
 
@@ -423,7 +430,10 @@ describe("shortcutsExists' fallback on an empty getGameInfo() (260905-mv5, site 
     // lookup resolves `getPath('desktop')` outside the containment home.
     const originalPlatform = overrideProcessPlatform('darwin')
     try {
-      const desktopFile = defined(shortcutFiles(title)[0], 'desktop file')
+      const desktopFile = defined(
+        shortcutFiles(pathDeps, title)[0],
+        'desktop file'
+      )
       expect(desktopFile.startsWith(homedir())).toBe(true)
       mkdirSync(desktopFile, { recursive: true })
 
@@ -506,7 +516,7 @@ describe('261012-ca6 add/remove resolve whether shortcuts exist once the work ha
 
   /** The contained `.app` path for `title`, asserted to sit under the jest containment home. */
   function containedApp(title: string): string {
-    const menuFile = defined(shortcutFiles(title)[0], 'menu file')
+    const menuFile = defined(shortcutFiles(pathDeps, title)[0], 'menu file')
     expect(menuFile.startsWith(homedir())).toBe(true)
     created.push(menuFile)
     return menuFile
@@ -680,7 +690,7 @@ describe('261027-c4g mac toast names the Desktop', () => {
   }
 
   function contained(title: string): { desktop: string; menu: string } {
-    const files = shortcutFiles(title)
+    const files = shortcutFiles(pathDeps, title)
     const desktop = defined(files[0], 'desktop file')
     const menu = defined(files[1], 'menu file')
     expect(desktop.startsWith(homedir())).toBe(true)
@@ -899,7 +909,7 @@ describeOnDarwin(
         undefined
       )
 
-      const menuFile = defined(shortcutFiles(title)[1], 'menu file')
+      const menuFile = defined(shortcutFiles(pathDeps, title)[1], 'menu file')
       const runShPath = `${menuFile}/Contents/MacOS/run.sh`
       const icnsPath = `${menuFile}/Contents/Resources/shortcut.icns`
 
@@ -951,7 +961,7 @@ describeOnDarwin(
         undefined
       )
 
-      const menuFile = defined(shortcutFiles(title)[1], 'menu file')
+      const menuFile = defined(shortcutFiles(pathDeps, title)[1], 'menu file')
       const runShPath = `${menuFile}/Contents/MacOS/run.sh`
       expect(existsSync(runShPath)).toBe(true)
       const contents = readFileSync(runShPath, 'utf-8')
@@ -975,7 +985,7 @@ describeOnDarwin(
     it('UNSET: deleting GAMELIB_SHELL_EXE writes no run.sh, does not reject the listener, and logs the failure', async () => {
       delete process.env.GAMELIB_SHELL_EXE
       const title = 'Exe Pin Unset Game'
-      const menuFile = defined(shortcutFiles(title)[1], 'menu file')
+      const menuFile = defined(shortcutFiles(pathDeps, title)[1], 'menu file')
       const runShPath = `${menuFile}/Contents/MacOS/run.sh`
 
       await handlerRegistry.get('addShortcut')?.(
@@ -1004,7 +1014,7 @@ describeOnDarwin(
     it('EMPTY: an empty-string GAMELIB_SHELL_EXE behaves identically to unset — no run.sh, no reject, logged failure', async () => {
       process.env.GAMELIB_SHELL_EXE = ''
       const title = 'Exe Pin Empty Game'
-      const menuFile = defined(shortcutFiles(title)[1], 'menu file')
+      const menuFile = defined(shortcutFiles(pathDeps, title)[1], 'menu file')
       const runShPath = `${menuFile}/Contents/MacOS/run.sh`
 
       await handlerRegistry.get('addShortcut')?.(

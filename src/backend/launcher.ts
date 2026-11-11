@@ -120,7 +120,11 @@ export interface LauncherDeps extends DialogBoxDeps {
   notifications: Pick<Notifications, 'show'>
   appState: Pick<
     AppState,
-    'raiseMainWindowForInAppDialog' | 'hideMainWindow' | 'exit' | 'wakeLock'
+    | 'raiseMainWindow'
+    | 'raiseMainWindowForInAppDialog'
+    | 'hideMainWindow'
+    | 'exit'
+    | 'wakeLock'
   >
 }
 
@@ -310,7 +314,7 @@ async function runLaunchEventCallback(
     // so this block is dead code for Steam; it is kept in place.
     // debug/steam-bottle-game-no-launch (Pitfall 6, real-game-launch gap):
     // checkWineBeforeLaunch's self-heal above persists any corrected
-    // wineVersion via GameConfig.get(gameInfo.app_name).setSetting(...) — a
+    // wineVersion via the game config's setSetting(...) — a
     // store a Steam bottle-eligible game's actual dispatch never reads
     // (dispatchToBottledSteam re-derives gameSettings fresh from
     // getSteamBottleSettings(), which is backed by steamBottleConfigStore,

@@ -64,7 +64,7 @@ const deps = (
   releases = [release()],
   global: Record<string, unknown> = {}
 ): Partial<EngineConfigDeps> &
-  Pick<EngineConfigDeps, 'wineManagerReleases'> => ({
+  Pick<EngineConfigDeps, 'wineManagerReleases' | 'globalSettings'> => ({
   wineManagerReleases: () => releases,
   gamesConfigPath: dir,
   globalSettings: () => global

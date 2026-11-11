@@ -3,23 +3,17 @@ import { join } from 'path'
 import { DirResult, dirSync } from 'tmp'
 import { addNonSteamGame, removeNonSteamGame } from '../nonesteamgame'
 import { showDialogBoxModalAuto } from 'backend/dialog/dialog'
-import { GlobalConfig } from 'backend/config'
 import { logInfo, logError, logWarning } from 'backend/logger'
 import type { Game } from 'common/types/game_manager'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createKvsStores } from 'backend/constants/key_value_stores'
+import { createTestHostServices } from 'backend/testUtils/testHostServices'
 
 const { tsStore } = createKvsStores({ registry: createStoreRegistry() })
 
-// Phase 35 Plan 15: `backend/platform`'s manual mock must be requested BY NAME. The
-// `electron` one it replaces was applied automatically because electron is a
-// node_modules package; a user-module mock is opt-in. See
-// src/backend/platform/__mocks__/index.ts.
-jest.mock('backend/platform')
 jest.mock('backend/logger')
 jest.mock('backend/dialog/dialog')
 jest.mock('backend/utils')
-jest.mock('backend/config')
 jest.mock('backend/wiki_game_info/wiki_game_info')
 
 let tmpDir = {} as DirResult
@@ -31,9 +25,16 @@ function makeGameMock(title: string = 'MyGame', id: string = 'Game'): Game {
   } as Game
 }
 
+let defaultSteamPath = ''
+
+// The config, paths and imageTools slices the add/remove flow reads (66.3-06). No image is
+// converted here: the test fixtures carry no art URLs.
 const deps = {
   libraryManagers: {},
-  stores: { kvs: { tsStore } }
+  stores: { kvs: { tsStore } },
+  config: { getSettings: () => ({ defaultSteamPath }) },
+  paths: { exe: '/test-gamelib/GameLib' },
+  imageTools: createTestHostServices().imageTools
 } as unknown as Parameters<typeof addNonSteamGame>[0]
 
 function copyTestFile(file: string, alternativeUserPath = '') {
@@ -47,7 +48,7 @@ function copyTestFile(file: string, alternativeUserPath = '') {
 describe('NonSteamGame', () => {
   beforeEach(() => {
     tmpDir = dirSync({ unsafeCleanup: true })
-    GlobalConfig.setConfigValue('defaultSteamPath', tmpDir.name + "'")
+    defaultSteamPath = tmpDir.name + "'"
     tmpSteamUserConfigDir = join(
       tmpDir.name,
       'userdata',

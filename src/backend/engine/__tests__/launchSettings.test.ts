@@ -9,16 +9,6 @@ jest.mock('backend/constants/paths', () => ({
     return mockProfile.root
   }
 }))
-jest.mock('backend/config', () => ({
-  GlobalConfig: {
-    get: () => ({
-      getSettings: () => ({
-        enviromentOptions: [{ key: 'GLOBAL', value: '1' }],
-        autoInstallDxvk: true
-      })
-    })
-  }
-}))
 jest.mock('backend/logger', () => ({
   logError: jest.fn(),
   logInfo: jest.fn(),
@@ -157,8 +147,11 @@ describe('buildCrossoverGameSettings', () => {
 })
 
 describe('buildFallbackGameSettings base', () => {
-  it('spreads GlobalConfig without a base', () => {
-    const out = buildFallbackGameSettings('B', pinned)
+  it('spreads the global settings passed as the base', () => {
+    const out = buildFallbackGameSettings('B', pinned, {
+      enviromentOptions: [{ key: 'GLOBAL', value: '1' }],
+      autoInstallDxvk: true
+    } as GameSettings)
     expect(out.enviromentOptions).toEqual(
       expect.arrayContaining([{ key: 'GLOBAL', value: '1' }])
     )

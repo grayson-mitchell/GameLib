@@ -30,18 +30,6 @@ jest.mock('backend/constants/environment', () =>
   )
 )
 
-jest.mock('backend/config', () => ({
-  GlobalConfig: {
-    get: () => ({
-      getSettings: () => ({
-        addDesktopShortcuts: true,
-        addStartMenuShortcuts: true,
-        addSteamShortcuts: false
-      })
-    })
-  }
-}))
-
 jest.mock('backend/shortcuts/utils', () => ({
   getIcon: () => Promise.resolve(undefined)
 }))
@@ -68,6 +56,7 @@ import { removeShortcuts, shortcutFiles } from '../shortcuts/shortcuts'
 import type { GameInfo } from 'common/types'
 import type { Game } from 'common/types/game_manager'
 import { defined } from 'backend/testUtils/indexed'
+import { createPathShimPaths } from 'backend/testUtils/pathShimPaths'
 
 const mockLogError = logError as jest.Mock
 
@@ -87,7 +76,8 @@ const deps = {
         stderr: '',
         timedOut: false
       })
-  }
+  },
+  paths: createPathShimPaths()
 } as unknown as Parameters<typeof removeShortcuts>[0]
 
 function gameFor(title: string): Game {
@@ -117,7 +107,7 @@ afterEach(() => {
 
 /** Both shortcut paths for `title`, asserted to sit under the jest containment home. */
 function containedPaths(title: string): [string, string] {
-  const [desktopPath, menuPath] = shortcutFiles(title)
+  const [desktopPath, menuPath] = shortcutFiles(deps, title)
   const desktopFile = defined(desktopPath, 'desktop shortcut path')
   const menuFile = defined(menuPath, 'menu shortcut path')
   expect(desktopFile.startsWith(homedir())).toBe(true)

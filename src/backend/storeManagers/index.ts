@@ -155,6 +155,7 @@ export interface CreateStoreManagersDeps {
   openExternal: ManagerDeps['openExternal']
   notifications: ManagerDeps['notifications']
   appState: ManagerDeps['appState']
+  imageTools: ManagerDeps['imageTools']
 }
 
 /**
@@ -186,7 +187,8 @@ export function createStoreManagers(
     dialogs: deps.dialogs,
     openExternal: deps.openExternal,
     notifications: deps.notifications,
-    appState: deps.appState
+    appState: deps.appState,
+    imageTools: deps.imageTools
   }
   const launchHooks = buildLaunchHooks(managerDeps)
   const launcher = createLauncher({

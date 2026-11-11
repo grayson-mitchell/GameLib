@@ -97,6 +97,14 @@ function makeRawOrder(gamekey: string) {
   }
 }
 
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+
+// The expiration digest is mocked wholesale; sync only forwards these slices to it.
+const syncDeps = {
+  config: createTestGlobalConfig(),
+  notifications: { show: jest.fn() }
+}
+
 describe('HumbleLibrary against the real CacheStore (electron-store backed)', () => {
   beforeEach(() => {
     humbleLibraryStore.clear()
@@ -111,7 +119,9 @@ describe('HumbleLibrary against the real CacheStore (electron-store backed)', ()
 
     // Pre-fix this rejected with `TypeError: entry.keys is not iterable`
     // as soon as the first order committed.
-    await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+    await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+      status: 'ok'
+    })
 
     const calls = mockSendFrontendMessage.mock.calls
     const progressIndexes = calls
@@ -150,7 +160,7 @@ describe('HumbleLibrary against the real CacheStore (electron-store backed)', ()
       data: makeRawOrder('steam-gk')
     })
 
-    await HumbleLibrary.sync()
+    await HumbleLibrary.sync(syncDeps)
 
     // Pre-fix this threw (humbleGetKeys IPC rejected on every call, so the
     // purchased key never rendered).
@@ -177,7 +187,7 @@ describe('HumbleLibrary against the real CacheStore (electron-store backed)', ()
     )
     const before = Date.now()
 
-    await HumbleLibrary.sync()
+    await HumbleLibrary.sync(syncDeps)
 
     const calls = mockSendFrontendMessage.mock.calls
     // Terminal event is the LAST event of the sync.
@@ -218,7 +228,9 @@ describe('HumbleLibrary against the real CacheStore (electron-store backed)', ()
       raw: '<html>challenge</html>'
     })
 
-    await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'partial' })
+    await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+      status: 'partial'
+    })
 
     expect(HumbleLibrary.getKeys()).toEqual([])
     const stateEvents = mockSendFrontendMessage.mock.calls.filter(
@@ -239,7 +251,7 @@ describe('HumbleLibrary against the real CacheStore (electron-store backed)', ()
       status: 'ok',
       data: makeRawOrder('gk1')
     })
-    await HumbleLibrary.sync()
+    await HumbleLibrary.sync(syncDeps)
     mockSendFrontendMessage.mockClear()
 
     HumbleLibrary.loadCached()

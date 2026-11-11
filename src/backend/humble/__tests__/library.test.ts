@@ -403,6 +403,14 @@ function makeRevealableEntry(
   return { gamekey, keys: [key], allTerminal: false }
 }
 
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+
+// The expiration digest is mocked wholesale; sync only forwards these slices to it.
+const syncDeps = {
+  config: createTestGlobalConfig(),
+  notifications: { show: jest.fn() }
+}
+
 describe('HumbleLibrary', () => {
   beforeEach(() => {
     libraryData.clear()
@@ -476,7 +484,7 @@ describe('HumbleLibrary', () => {
         data: makeRawOrder('new-gk')
       })
 
-      const result = await HumbleLibrary.sync()
+      const result = await HumbleLibrary.sync(syncDeps)
 
       expect(mockGetOrderDetail).toHaveBeenCalledWith('cookie-value', 'new-gk')
       expect(result).toEqual({ status: 'ok' })
@@ -493,7 +501,7 @@ describe('HumbleLibrary', () => {
       })
       mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['frozen-gk'] })
 
-      const result = await HumbleLibrary.sync()
+      const result = await HumbleLibrary.sync(syncDeps)
 
       expect(mockGetOrderDetail).not.toHaveBeenCalled()
       expect(result).toEqual({ status: 'ok' })
@@ -507,7 +515,7 @@ describe('HumbleLibrary', () => {
         data: makeRawOrder('pending-gk', { expiration: '2020-01-01T00:00:00Z' })
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       expect(mockGetOrderDetail).toHaveBeenCalledWith(
         'cookie-value',
@@ -532,7 +540,7 @@ describe('HumbleLibrary', () => {
         Promise.resolve({ status: 'ok', data: makeRawOrder(gk) })
       )
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       expect(mockGetOrderDetail).toHaveBeenCalledTimes(2)
       const fetched = mockGetOrderDetail.mock.calls.map((c) => c[1]).sort()
@@ -555,10 +563,11 @@ describe('HumbleLibrary', () => {
         data: makeRawOrder('new-gk')
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       expect(mockDetectAndNotifyExpirationTransitions).toHaveBeenCalledTimes(1)
       expect(mockDetectAndNotifyExpirationTransitions).toHaveBeenCalledWith(
+        syncDeps,
         HumbleLibrary.getKeys(),
         { suppressNotifications: false }
       )
@@ -573,9 +582,10 @@ describe('HumbleLibrary', () => {
         data: makeRawOrder('new-gk')
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       expect(mockDetectAndNotifyExpirationTransitions).toHaveBeenCalledWith(
+        syncDeps,
         expect.anything(),
         { suppressNotifications: true }
       )
@@ -584,7 +594,7 @@ describe('HumbleLibrary', () => {
     test('a fully-failed sync (getGamekeys denied) never calls detectAndNotifyExpirationTransitions', async () => {
       mockGetGamekeys.mockResolvedValue({ status: 'access_denied' })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       expect(mockDetectAndNotifyExpirationTransitions).not.toHaveBeenCalled()
     })
@@ -614,7 +624,7 @@ describe('HumbleLibrary', () => {
         }
       )
 
-      const syncPromise = HumbleLibrary.sync()
+      const syncPromise = HumbleLibrary.sync(syncDeps)
       await flushAsync()
       expect(mockGetOrderDetail.mock.calls.length).toBeLessThanOrEqual(
         HUMBLE_SYNC_CONCURRENCY
@@ -642,7 +652,7 @@ describe('HumbleLibrary', () => {
       libraryData.set('existing-gk', makeNonTerminalEntry('existing-gk'))
       mockGetGamekeys.mockResolvedValue({ status: 'access_denied' })
 
-      const result = await HumbleLibrary.sync()
+      const result = await HumbleLibrary.sync(syncDeps)
 
       expect(result).toEqual({ status: 'failed' })
       expect(mockGetOrderDetail).not.toHaveBeenCalled()
@@ -661,7 +671,7 @@ describe('HumbleLibrary', () => {
       libraryData.set('existing-gk', makeNonTerminalEntry('existing-gk'))
       mockGetGamekeys.mockResolvedValue({ status: 'schema_error', raw: {} })
 
-      const result = await HumbleLibrary.sync()
+      const result = await HumbleLibrary.sync(syncDeps)
 
       expect(result).toEqual({ status: 'failed' })
       expect(mockGetOrderDetail).not.toHaveBeenCalled()
@@ -678,7 +688,7 @@ describe('HumbleLibrary', () => {
     test('session_expired: returns failed WITHOUT setting syncError/cooldown (Phase 10 owns expiry)', async () => {
       mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
-      const result = await HumbleLibrary.sync()
+      const result = await HumbleLibrary.sync(syncDeps)
 
       expect(result).toEqual({ status: 'failed' })
       const state = HumbleLibrary.getSyncState()
@@ -694,7 +704,7 @@ describe('HumbleLibrary', () => {
       libraryData.set('existing-gk', makeNonTerminalEntry('existing-gk'))
       mockGetGamekeys.mockRejectedValue(new Error('ECONNRESET'))
 
-      await expect(HumbleLibrary.sync()).resolves.toEqual({
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
         status: 'failed'
       })
 
@@ -729,7 +739,7 @@ describe('HumbleLibrary', () => {
         }
       )
 
-      const result = await HumbleLibrary.sync()
+      const result = await HumbleLibrary.sync(syncDeps)
 
       expect(result).toEqual({ status: 'partial' })
       expect(libraryData.get('flaky-gk')).toEqual(priorEntry)
@@ -752,7 +762,7 @@ describe('HumbleLibrary', () => {
         }
       )
 
-      const result = await HumbleLibrary.sync()
+      const result = await HumbleLibrary.sync(syncDeps)
 
       expect(result).toEqual({ status: 'partial' })
       expect(libraryData.get('bad-gk')).toEqual(priorEntry)
@@ -793,7 +803,7 @@ describe('HumbleLibrary', () => {
         }
       )
 
-      const syncPromise = HumbleLibrary.sync()
+      const syncPromise = HumbleLibrary.sync(syncDeps)
       await flushAsync()
 
       // Only the initial HUMBLE_SYNC_CONCURRENCY dispatches happened.
@@ -844,7 +854,7 @@ describe('HumbleLibrary', () => {
           })
       )
 
-      const syncPromise = HumbleLibrary.sync()
+      const syncPromise = HumbleLibrary.sync(syncDeps)
       await flushAsync()
       expect(resolvers.size).toBe(2) // both orders in flight pre-disconnect
 
@@ -895,7 +905,7 @@ describe('HumbleLibrary', () => {
           })
       )
 
-      const syncPromise = HumbleLibrary.sync()
+      const syncPromise = HumbleLibrary.sync(syncDeps)
       await flushAsync()
       // Only the initial concurrency-bound wave is in flight.
       expect(mockGetOrderDetail).toHaveBeenCalledTimes(HUMBLE_SYNC_CONCURRENCY)
@@ -919,7 +929,9 @@ describe('HumbleLibrary', () => {
         data: makeRawOrder('fresh-gk')
       })
 
-      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'ok'
+      })
 
       expect(libraryData.has('fresh-gk')).toBe(true)
       expect(HumbleLibrary.getSyncState().syncedAt).toEqual(expect.any(Number))
@@ -942,7 +954,7 @@ describe('HumbleLibrary', () => {
         data: makeRawOrder('gk1')
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       const events = syncStateEvents()
       expect(events).toHaveLength(1)
@@ -963,7 +975,7 @@ describe('HumbleLibrary', () => {
       mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['bad-gk'] })
       mockGetOrderDetail.mockResolvedValue({ status: 'schema_error', raw: {} })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       const events = syncStateEvents()
       expect(events).toHaveLength(1)
@@ -978,7 +990,7 @@ describe('HumbleLibrary', () => {
     test('gamekeys access_denied: pushed state carries syncError=denied + cooldownUntil', async () => {
       mockGetGamekeys.mockResolvedValue({ status: 'access_denied' })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       const events = syncStateEvents()
       expect(events).toHaveLength(1)
@@ -993,7 +1005,7 @@ describe('HumbleLibrary', () => {
     test('gamekeys thrown (network): pushed state carries syncError=network', async () => {
       mockGetGamekeys.mockRejectedValue(new Error('ECONNRESET'))
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       const events = syncStateEvents()
       expect(events).toHaveLength(1)
@@ -1005,7 +1017,7 @@ describe('HumbleLibrary', () => {
     test('session_expired at gamekeys: state push STILL emitted (renderer must always converge), syncError untouched', async () => {
       mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       const events = syncStateEvents()
       expect(events).toHaveLength(1)
@@ -1017,7 +1029,9 @@ describe('HumbleLibrary', () => {
     test('no stored credentials: state push still emitted', async () => {
       mockGetCredentials.mockReturnValue(undefined as unknown as string)
 
-      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'failed' })
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'failed'
+      })
 
       expect(syncStateEvents()).toHaveLength(1)
     })
@@ -1031,7 +1045,9 @@ describe('HumbleLibrary', () => {
         cooldownUntil: Date.now() + 60_000
       })
 
-      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'failed' })
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'failed'
+      })
 
       expect(mockGetGamekeys).not.toHaveBeenCalled()
       expect(mockGetOrderDetail).not.toHaveBeenCalled()
@@ -1052,7 +1068,9 @@ describe('HumbleLibrary', () => {
       })
       mockGetGamekeys.mockResolvedValue({ status: 'ok', data: [] })
 
-      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'ok'
+      })
 
       expect(mockGetGamekeys).toHaveBeenCalledTimes(1)
     })
@@ -1079,7 +1097,7 @@ describe('HumbleLibrary', () => {
           })
       )
 
-      const syncPromise = HumbleLibrary.sync()
+      const syncPromise = HumbleLibrary.sync(syncDeps)
       await flushAsync()
 
       // The order is still in flight, yet progress already reads 0/1 —
@@ -1107,7 +1125,9 @@ describe('HumbleLibrary', () => {
       })
       mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['frozen-gk'] })
 
-      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'ok'
+      })
 
       expect(progressEvents()).toEqual([
         ['humbleSyncProgress', { done: 0, total: 0 }]
@@ -1138,7 +1158,9 @@ describe('HumbleLibrary', () => {
         }
       })
 
-      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'failed' })
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'failed'
+      })
 
       expect(mockLogError).toHaveBeenCalled()
       expect(HumbleLibrary.getSyncState().syncError).toBe('network')
@@ -1150,7 +1172,9 @@ describe('HumbleLibrary', () => {
 
       // The single-flight guard cleared: a follow-up sync runs fresh.
       mockSendFrontendMessage.mockImplementation(() => {})
-      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'ok'
+      })
     })
   })
 
@@ -1164,8 +1188,8 @@ describe('HumbleLibrary', () => {
           })
       )
 
-      const first = HumbleLibrary.sync()
-      const second = HumbleLibrary.sync()
+      const first = HumbleLibrary.sync(syncDeps)
+      const second = HumbleLibrary.sync(syncDeps)
 
       // Phase 34.4.1 Plan 12: HumbleUser.getCredentials() is now async
       // (routed through the seam), inserting one microtask tick before
@@ -1181,7 +1205,7 @@ describe('HumbleLibrary', () => {
 
       // The guard clears after settle: a THIRD sync runs fresh.
       mockGetGamekeys.mockResolvedValue({ status: 'ok', data: [] })
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
       expect(mockGetGamekeys).toHaveBeenCalledTimes(2)
     })
   })
@@ -1201,7 +1225,7 @@ describe('HumbleLibrary', () => {
         }
       )
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       const summary = mockLogInfo.mock.calls.find((call) =>
         JSON.stringify(call).includes('Humble sync finished')
@@ -1232,7 +1256,7 @@ describe('HumbleLibrary', () => {
         }
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       const zeroKeyWarning = mockLogWarning.mock.calls.find((call) =>
         JSON.stringify(call).includes('zero keys')
@@ -1255,7 +1279,7 @@ describe('HumbleLibrary', () => {
         }
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       const zeroKeyWarning = mockLogWarning.mock.calls.find((call) =>
         JSON.stringify(call).includes('zero keys')
@@ -1277,7 +1301,7 @@ describe('HumbleLibrary', () => {
         }
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       const zeroKeyInfo = mockLogInfo.mock.calls.find((call) =>
         JSON.stringify(call).includes('zero keys')
@@ -1307,7 +1331,7 @@ describe('HumbleLibrary', () => {
         }
       )
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       const summary = mockLogInfo.mock.calls.find((call) =>
         JSON.stringify(call).includes('Humble sync finished')
@@ -1334,7 +1358,7 @@ describe('HumbleLibrary', () => {
         }
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       expect(HumbleLibrary.getKeys()).toHaveLength(0)
       // Legitimate D-29 exclusion shape — informational, never a warning.
@@ -1374,7 +1398,7 @@ describe('HumbleLibrary', () => {
         }
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       const keys = HumbleLibrary.getKeys()
       expect(keys).toHaveLength(1)
@@ -1414,7 +1438,7 @@ describe('HumbleLibrary', () => {
         }
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       expect(HumbleLibrary.getKeys()).toHaveLength(0)
       // Legitimate D-29 exclusion shape — informational, never a warning.
@@ -1472,7 +1496,7 @@ describe('HumbleLibrary', () => {
         }
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       const keys = HumbleLibrary.getKeys()
       expect(keys).toHaveLength(1)
@@ -1510,7 +1534,7 @@ describe('HumbleLibrary', () => {
         }
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       const keys = HumbleLibrary.getKeys()
       expect(keys).toHaveLength(1)
@@ -1592,7 +1616,7 @@ describe('HumbleLibrary', () => {
         data: directRedeemEntitlementResponse
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       // The frozen order WAS re-fetched and its stale rows re-classified away.
       expect(mockGetOrderDetail).toHaveBeenCalledWith(
@@ -1620,7 +1644,7 @@ describe('HumbleLibrary', () => {
         data: directRedeemEntitlementResponse
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       expect(mockGetOrderDetail).toHaveBeenCalledWith(
         'cookie-value',
@@ -1647,7 +1671,7 @@ describe('HumbleLibrary', () => {
         data: makeRawOrder('frozen-gk', { expiration: '2020-01-01T00:00:00Z' })
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       expect(mockGetOrderDetail).toHaveBeenCalledTimes(1)
       expect(
@@ -1663,7 +1687,7 @@ describe('HumbleLibrary', () => {
       // Second sync: version now matches — D-24 freeze semantics restored.
       mockGetOrderDetail.mockClear()
       mockLogInfo.mockClear()
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       expect(mockGetOrderDetail).not.toHaveBeenCalled()
       const versionLog = mockLogInfo.mock.calls.find((call) =>
@@ -1695,7 +1719,7 @@ describe('HumbleLibrary', () => {
         data: makeRawOrder('frozen-gk', { redeemed: true })
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
       expect(
         defined(
           libraryData.get('frozen-gk')?.keys[0],
@@ -1706,7 +1730,7 @@ describe('HumbleLibrary', () => {
       expect(libraryData.get('frozen-gk')?.freezeEligible).toBe(true)
 
       mockGetOrderDetail.mockClear()
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
       expect(mockGetOrderDetail).not.toHaveBeenCalled()
     })
 
@@ -1731,7 +1755,7 @@ describe('HumbleLibrary', () => {
         })
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
       expect(
         defined(
           libraryData.get('expiring-gk')?.keys[0],
@@ -1741,7 +1765,7 @@ describe('HumbleLibrary', () => {
       expect(libraryData.get('expiring-gk')?.freezeEligible).toBe(false)
 
       mockGetOrderDetail.mockClear()
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
       expect(mockGetOrderDetail).toHaveBeenCalledTimes(1)
     })
 
@@ -1776,7 +1800,9 @@ describe('HumbleLibrary', () => {
         status: 'ok',
         data: makeRawOrder('gk1')
       })
-      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'ok'
+      })
       expect(
         defined(
           libraryData.get('gk1')?.keys[0],
@@ -1795,7 +1821,9 @@ describe('HumbleLibrary', () => {
         status: 'ok',
         data: makeRawOrder('gk1', { redeemed: true })
       })
-      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'ok'
+      })
       expect(mockGetOrderDetail).toHaveBeenCalledWith('cookie-value', 'gk1')
       expect(HumbleLibrary.getRevealedKeyValue('gk1', 'gk1_key')).toBe(
         'REDEEMED-VALUE'
@@ -1805,7 +1833,9 @@ describe('HumbleLibrary', () => {
       // Sync 3: the now value-backed REVEALED(no expiration) order is frozen
       // — skipped entirely.
       mockGetOrderDetail.mockClear()
-      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'ok'
+      })
       expect(mockGetOrderDetail).not.toHaveBeenCalled()
     })
 
@@ -1832,7 +1862,7 @@ describe('HumbleLibrary', () => {
         }
       )
 
-      const result = await HumbleLibrary.sync()
+      const result = await HumbleLibrary.sync(syncDeps)
 
       expect(result).toEqual({ status: 'partial' })
       // flaky-gk kept whatever (absent) cache it had; version must stay old
@@ -1851,7 +1881,7 @@ describe('HumbleLibrary', () => {
       })
       mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['frozen-gk'] })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       expect(mockGetOrderDetail).not.toHaveBeenCalled()
       const versionLog = mockLogInfo.mock.calls.find((call) =>
@@ -1873,7 +1903,7 @@ describe('HumbleLibrary', () => {
         data: makeRawOrder('pending-gk')
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       expect(mockGetOrderDetail).toHaveBeenCalledWith(
         'cookie-value',
@@ -1911,7 +1941,7 @@ describe('HumbleLibrary', () => {
         }
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       const diag = mockLogInfo.mock.calls.find((call) =>
         JSON.stringify(call).includes('no extractable expiration')
@@ -1949,7 +1979,9 @@ describe('HumbleLibrary', () => {
         }
       })
 
-      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'ok'
+      })
 
       const keys = HumbleLibrary.getKeys()
       expect(keys).toHaveLength(1)
@@ -1983,7 +2015,7 @@ describe('HumbleLibrary', () => {
         }
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       const keys = HumbleLibrary.getKeys()
       expect(keys).toHaveLength(1)
@@ -2077,7 +2109,7 @@ describe('HumbleLibrary', () => {
         data: makeRawOrder('legacy-gk', { steamAppId: '440' })
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       expect(mockGetOrderDetail).toHaveBeenCalledWith(
         'cookie-value',
@@ -2103,7 +2135,7 @@ describe('HumbleLibrary', () => {
         data: makeRawOrder('gk1', { steamAppId: '440' })
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       const key = libraryData.get('gk1')?.keys[0]
       expect(key?.ownedElsewhere).toBe(true)
@@ -2162,7 +2194,7 @@ describe('HumbleLibrary', () => {
           })
       )
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       const keysUpdatedCalls = mockSendFrontendMessage.mock.calls.filter(
         (c) => c[0] === 'humbleKeysUpdated'
@@ -2202,7 +2234,7 @@ describe('HumbleLibrary', () => {
         }
       )
 
-      const syncPromise = HumbleLibrary.sync()
+      const syncPromise = HumbleLibrary.sync(syncDeps)
       await flushAsync()
 
       // gk1 has committed mid-sync; gk2 is still in flight, so the
@@ -2228,7 +2260,7 @@ describe('HumbleLibrary', () => {
           data: makeRawOrder('gk1', { steamAppId: '440' })
         })
 
-        await HumbleLibrary.sync()
+        await HumbleLibrary.sync(syncDeps)
 
         const key = libraryData.get('gk1')?.keys[0]
         expect(key?.ownedElsewhere).toBe(true)
@@ -2245,7 +2277,7 @@ describe('HumbleLibrary', () => {
           data: makeRawOrder('gk1', { steamAppId: '440' })
         })
 
-        await HumbleLibrary.sync()
+        await HumbleLibrary.sync(syncDeps)
 
         const key = libraryData.get('gk1')?.keys[0]
         expect(key?.ownedElsewhere).toBe(true)
@@ -2264,7 +2296,7 @@ describe('HumbleLibrary', () => {
         data: makeRawOrder('new-gk', { steamAppId: '440' })
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       const keysUpdatedCalls = mockSendFrontendMessage.mock.calls.filter(
         (c) => c[0] === 'humbleKeysUpdated'
@@ -2296,7 +2328,7 @@ describe('HumbleLibrary', () => {
         data: makeRawOrder('new-gk', { steamAppId: '440' })
       })
 
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       const key = libraryData.get('new-gk')?.keys[0]
       expect(key?.ownedElsewhere).toBe(true)
@@ -3057,7 +3089,7 @@ describe('HumbleLibrary', () => {
       mockGetOrderDetail.mockResolvedValue({ status: 'ok', data: rawOrder })
 
       const first = await HumbleLibrary.revealKey('gk1', 'gk1_key')
-      await HumbleLibrary.sync()
+      await HumbleLibrary.sync(syncDeps)
 
       // Pre-fix this read REVEALED: the write-ahead flag survived the refusal
       // and classifyTpk's isLocallyRevealed arm consumed it on the re-sync.
@@ -3913,7 +3945,9 @@ describe('HumbleLibrary', () => {
         data: makeRawOrder('gk1')
       })
 
-      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'ok'
+      })
 
       const key = libraryData.get('gk1')?.keys[0]
       expect(key?.state).toBe('REDEEMED')
@@ -3944,7 +3978,9 @@ describe('HumbleLibrary', () => {
         data: makeRawOrder('gk1', { redeemed: true })
       })
 
-      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'ok'
+      })
 
       const key = libraryData.get('gk1')?.keys[0]
       expect(key?.state).toBe('REDEEMED')
@@ -3973,7 +4009,9 @@ describe('HumbleLibrary', () => {
         data: makeRawOrder('gk1', { redeemed: true })
       })
 
-      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'ok'
+      })
 
       const key = libraryData.get('gk1')?.keys[0]
       expect(key?.state).toBe('REVEALED')
@@ -4002,7 +4040,9 @@ describe('HumbleLibrary', () => {
         data: makeRawOrder('gk1', { redeemed: true })
       })
 
-      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'ok'
+      })
 
       const key = libraryData.get('gk1')?.keys[0]
       expect(key?.state).toBe('REVEALED')
@@ -4061,7 +4101,9 @@ describe('HumbleLibrary', () => {
         status: 'ok',
         data: makeRawOrder('gk1')
       })
-      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'ok'
+      })
       expect(libraryData.get('gk1')?.allTerminal).toBe(true)
 
       // Undo: the mark clears, the key reverts to REVEALED, and the frozen
@@ -4084,7 +4126,9 @@ describe('HumbleLibrary', () => {
       // NOT re-fetched — freezeEligible wins over the allTerminal fallback,
       // and undo never left the two computation sites disagreeing.
       mockGetOrderDetail.mockClear()
-      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'ok'
+      })
       expect(mockGetOrderDetail).not.toHaveBeenCalled()
     })
 
@@ -4110,7 +4154,9 @@ describe('HumbleLibrary', () => {
         status: 'ok',
         data: makeRawOrder('gk1', { expiration: '2099-01-01T00:00:00Z' })
       })
-      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'ok'
+      })
       expect(libraryData.get('gk1')?.allTerminal).toBe(true)
       expect(libraryData.get('gk1')?.freezeEligible).toBe(true)
 
@@ -4130,7 +4176,9 @@ describe('HumbleLibrary', () => {
 
       // Second sync: the order IS re-fetched (thawed, not frozen).
       mockGetOrderDetail.mockClear()
-      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'ok'
+      })
       expect(mockGetOrderDetail).toHaveBeenCalledWith('cookie-value', 'gk1')
 
       // Re-mark REDEEMED: the order REFREEZES (freezeEligible has no expiry
@@ -4155,7 +4203,9 @@ describe('HumbleLibrary', () => {
         data: makeRawOrder('gk1', { redeemed: true })
       })
 
-      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'ok'
+      })
 
       expect(HumbleLibrary.getRevealedKeyValue('gk1', 'gk1_key')).toBe(
         'LOCAL-REVEALED-VALUE'

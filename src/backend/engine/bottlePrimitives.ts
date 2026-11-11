@@ -7,7 +7,6 @@ import { dirname, join, relative, resolve } from 'path'
 import { existsSync, mkdirSync, rmSync } from 'graceful-fs'
 import type { GameSettings } from 'common/types'
 import { userHome } from 'backend/constants/paths'
-import { GlobalConfig } from 'backend/config'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { SpawnAsync } from 'backend/spawnAsync'
 import { writeCxbottleConf } from './adoptBottle'
@@ -157,11 +156,12 @@ const FALLBACK_STRIPPED_ENV_KEYS = new Set([
 export function buildFallbackGameSettings(
   bottleName: string,
   engine: NonCrossoverEngine,
-  base?: GameSettings
+  base: GameSettings
 ): GameSettings {
   // Phase 61: a non-Steam launch passes the game's own stored settings so its launcher args,
-  // target exe and environment survive; Steam passes nothing and gets the global settings.
-  const globalSettings = base ?? GlobalConfig.get().getSettings()
+  // target exe and environment survive; Steam passes the global settings (66.3-06: the caller
+  // reads them from its config slice).
+  const globalSettings = base
   const kept = (globalSettings.enviromentOptions ?? []).filter(
     (e) => !FALLBACK_STRIPPED_ENV_KEYS.has(String(e.key).toUpperCase())
   )
@@ -225,7 +225,8 @@ export function removeCreatedBottleDir(bottleName: string): void {
  * are assigned here.
  */
 export async function createFallbackBottle(
-  deps: BottleSpawnDeps & Pick<EngineServices, 'installRemove'>,
+  deps: BottleSpawnDeps &
+    Pick<EngineServices, 'installRemove' | 'globalGameSettings'>,
   bottleName: string,
   engine: NonCrossoverEngine,
   signal?: AbortSignal
@@ -299,7 +300,11 @@ export async function createFallbackBottle(
     }
     if (engine.dxvk) {
       const ok = await deps.installRemove(
-        buildFallbackGameSettings(bottleName, engine),
+        buildFallbackGameSettings(
+          bottleName,
+          engine,
+          deps.globalGameSettings()
+        ),
         'dxvk',
         'backup',
         engine.dxvk

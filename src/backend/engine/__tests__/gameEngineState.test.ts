@@ -19,7 +19,8 @@ import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 const services = {
   spawnAsync: createTestServices().spawnAsync,
   runner: createScriptedRunner([]),
-  wineManagerReleases: () => []
+  wineManagerReleases: () => [],
+  globalSettings: () => global
 }
 
 jest.mock('backend/logger', () => ({

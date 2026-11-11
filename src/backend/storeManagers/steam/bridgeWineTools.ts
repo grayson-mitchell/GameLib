@@ -63,7 +63,7 @@ export function defaultSteamWineToolsDeps(
     logError: (message) => logError(message, LogPrefix.Steam),
     nonCrossoverEngine: (id) => nonCrossoverEngineFor(services, id),
     fallbackSettings: (bottle, engine) =>
-      buildFallbackGameSettings(bottle, engine)
+      buildFallbackGameSettings(bottle, engine, services.globalGameSettings())
   }
 }
 

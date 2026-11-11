@@ -56,6 +56,7 @@ jest.mock('../bottlePrimitives', () => ({
   sanitizeBottleName: (name: string) => name
 }))
 
+import type { GameSettings } from 'common/types'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import type { Game } from 'common/types/game_manager'
 import {
@@ -148,6 +149,8 @@ const services: EngineServices = {
   spawnAsync: jest.fn(),
   installRemove: jest.fn(),
   wineManagerReleases: () => [],
+  globalSettings: () => ({}),
+  globalGameSettings: () => ({}) as GameSettings,
   runner: createTestEngineServices().runner,
   notices: createTestHostServices()
 }

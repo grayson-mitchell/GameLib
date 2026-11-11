@@ -23,7 +23,10 @@ import {
   isFreezeEligible
 } from './classify'
 import { recomputeOwnership as dedupRecomputeOwnership } from './dedup'
-import { detectAndNotifyExpirationTransitions } from './expirationAlerts'
+import {
+  detectAndNotifyExpirationTransitions,
+  type ExpirationAlertDeps
+} from './expirationAlerts'
 import type { AuditRecord, HumbleKeyInternal } from './stores'
 import { humbleStores, steamStores } from './humbleStores'
 import {
@@ -932,7 +935,7 @@ function emitSyncState(): void {
 // renderer. A second call while one is running joins the in-flight promise.
 let syncInFlight: Promise<SyncOutcome> | null = null
 
-async function sync(): Promise<SyncOutcome> {
+async function sync(deps: ExpirationAlertDeps): Promise<SyncOutcome> {
   if (syncInFlight) {
     return syncInFlight
   }
@@ -947,7 +950,7 @@ async function sync(): Promise<SyncOutcome> {
   // The terminal state push happens on EVERY exit path — success, fail-soft
   // AND an unexpected rejection (so the renderer's `syncing` can never get
   // stuck true again; cf. debug session humble-sync-spinner-never-ends).
-  syncInFlight = runSync()
+  syncInFlight = runSync(deps)
     .catch((err) => {
       logError(['Humble sync: unexpected failure:', err], LogPrefix.Backend)
       // CR-01: never write into a store a mid-sync disconnect just wiped.
@@ -963,7 +966,7 @@ async function sync(): Promise<SyncOutcome> {
   return syncInFlight
 }
 
-async function runSync(): Promise<SyncOutcome> {
+async function runSync(deps: ExpirationAlertDeps): Promise<SyncOutcome> {
   // CR-01 disconnect fence: capture the store generation at sync start.
   // HumbleUser.disconnect() bumps it BEFORE wiping the stores — any mismatch
   // from that point on marks this sync stale: no store commit, no sync-state
@@ -1201,7 +1204,7 @@ async function runSync(): Promise<SyncOutcome> {
   // per-order fetch mutated humbleSyncStore): a first-ever sync silently
   // seeds every current expiration into humbleNotifiedExpirationStore
   // instead of firing a notification storm (locked decision 3).
-  detectAndNotifyExpirationTransitions(getKeys(), {
+  detectAndNotifyExpirationTransitions(deps, getKeys(), {
     suppressNotifications: !hadPriorSyncSnapshot
   })
 

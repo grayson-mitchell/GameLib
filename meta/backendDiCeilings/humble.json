@@ -1,7 +1,7 @@
 {
   "jestMock": {
     "src/backend/humble/__tests__/adapter.test.ts": 3,
-    "src/backend/humble/__tests__/expirationAlerts.test.ts": 7,
+    "src/backend/humble/__tests__/expirationAlerts.test.ts": 2,
     "src/backend/humble/__tests__/library.realstore.test.ts": 6,
     "src/backend/humble/__tests__/library.test.ts": 6,
     "src/backend/humble/__tests__/probeSession.test.ts": 8,

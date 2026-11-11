@@ -51,6 +51,9 @@ export function engineServicesFrom(deps: EngineServicesSource): EngineServices {
     runner: deps.runner,
     installRemove: (...a) => toolsFrom(deps).DXVK.installRemove(...a),
     wineManagerReleases: wineManagerReleasesFrom(deps),
+    globalSettings: () =>
+      deps.config.getSettings() as unknown as Record<string, unknown>,
+    globalGameSettings: () => deps.config.getSettings(),
     notices: {
       dialogs: deps.dialogs,
       appState: deps.appState,

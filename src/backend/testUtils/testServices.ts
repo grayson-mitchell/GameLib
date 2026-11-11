@@ -33,7 +33,7 @@ import { createWikiGameInfoStores } from '../wiki_game_info/stores'
 import { createWineManagerStores } from '../wine/manager/stores'
 import type { EngineServices } from '../engine/engineServices'
 import { createFakeClock } from './fakeClock'
-import type { Runner } from 'common/types'
+import type { GameSettings, Runner } from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
 import type {
   BootServices,
@@ -332,7 +332,8 @@ export function createTestManagerDeps(
     dialogs: overrides.dialogs ?? host.dialogs,
     openExternal: overrides.openExternal ?? host.openExternal,
     notifications: overrides.notifications ?? host.notifications,
-    appState: overrides.appState ?? host.appState
+    appState: overrides.appState ?? host.appState,
+    imageTools: overrides.imageTools ?? host.imageTools
   }
 }
 
@@ -346,6 +347,8 @@ export function createTestEngineServices(
       throw new Error('unscripted installRemove call')
     },
     wineManagerReleases: () => [],
+    globalSettings: () => ({}),
+    globalGameSettings: () => ({}) as GameSettings,
     notices: unscriptedMembers<EngineServices['notices']>('notices', {}),
     runner: unscriptedMembers<EngineServices['runner']>('process runner', {}),
     ...overrides

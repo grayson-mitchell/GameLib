@@ -63,6 +63,7 @@
  * never reach.
  */
 
+import type { AppState } from '../host/appState'
 import { ipcMain } from '../platform'
 import { GlobalConfig } from '../config'
 import { GameConfig } from '../game_config'
@@ -102,6 +103,7 @@ import type {
 
 /** Narrow slice (66.1 D-01): exactly the services the Wine-tools handlers call. */
 export interface WineToolsFlowDeps extends NotifyDeps, DialogBoxDeps {
+  appState: Pick<AppState, 'raiseMainWindow' | 'raiseMainWindowForInAppDialog'>
   config: Pick<
     GlobalConfigSlice,
     'getSettings' | 'getAlternativeWine' | 'setSetting'

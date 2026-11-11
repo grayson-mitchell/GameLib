@@ -19,14 +19,6 @@ const defaultSettings = {
 }
 let mockSettings: typeof defaultSettings = { ...defaultSettings }
 
-jest.mock('backend/config', () => ({
-  GlobalConfig: {
-    get: () => ({
-      getSettings: () => mockSettings
-    })
-  }
-}))
-
 jest.mock('../nonesteamgame/nonesteamgame', () => ({
   addNonSteamGame: (...args: unknown[]) => mockAddNonSteamGame(...args)
 }))
@@ -57,16 +49,22 @@ import { dirname, join } from 'path'
 import { addShortcuts, shortcutFiles } from '../shortcuts/shortcuts'
 import type { GameInfo } from 'common/types'
 
-const deps = {
-  libraryManagers: { gog: {} },
-  runner: { run: (...args: unknown[]) => mockRun(...args) }
-} as unknown as Parameters<typeof addShortcuts>[0]
 import type { Game } from 'common/types/game_manager'
 import { defined } from 'backend/testUtils/indexed'
+import { createPathShimPaths } from 'backend/testUtils/pathShimPaths'
+import { createTestHostServices } from 'backend/testUtils/testHostServices'
+
+const deps = {
+  libraryManagers: { gog: {} },
+  runner: { run: (...args: unknown[]) => mockRun(...args) },
+  config: { getSettings: () => mockSettings },
+  paths: createPathShimPaths(),
+  imageTools: createTestHostServices().imageTools
+} as unknown as Parameters<typeof addShortcuts>[0]
 
 /** Both shortcut paths for `title`; throws if the platform yields none. */
 function bothFiles(title: string): [string, string] {
-  const [first, second] = shortcutFiles(title)
+  const [first, second] = shortcutFiles(deps, title)
   return [
     defined(first, 'desktop shortcut path'),
     defined(second, 'menu shortcut path')
@@ -240,7 +238,7 @@ describe('Steam game (261026-c7r)', () => {
     afterEach(() => {
       if (savedShellExe === undefined) delete process.env.GAMELIB_SHELL_EXE
       else process.env.GAMELIB_SHELL_EXE = savedShellExe
-      for (const app of shortcutFiles(steamGameInfo.title)) {
+      for (const app of shortcutFiles(deps, steamGameInfo.title)) {
         rmSync(app, { recursive: true, force: true })
       }
     })

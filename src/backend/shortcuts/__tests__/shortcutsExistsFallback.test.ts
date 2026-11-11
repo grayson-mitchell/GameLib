@@ -67,15 +67,18 @@ import {
   createTestStores
 } from 'backend/testUtils/testServices'
 import { shortcutFiles } from '../shortcuts/shortcuts'
+import { createPathShimPaths } from 'backend/testUtils/pathShimPaths'
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { addShortcuts } from '../shortcuts/shortcuts'
 import { handlerRegistry } from 'backend/platform'
 import { logWarning } from 'backend/logger'
 import type { GameInfo } from 'common/types'
 import type { Game } from 'common/types/game_manager'
 
-const deps = { libraryManagers: { gog: {} } } as unknown as Parameters<
-  typeof addShortcuts
->[0]
+const deps = {
+  libraryManagers: { gog: {} },
+  paths: createPathShimPaths()
+} as unknown as Parameters<typeof addShortcuts>[0]
 const mockedGetGame = jest.fn()
 const mockedLogWarning = logWarning as jest.Mock
 const mockedExistsSync = existsSync as jest.Mock
@@ -90,7 +93,10 @@ function hostSlices() {
   return {
     dialogs: host.dialogs,
     appState: host.appState,
-    notifications: host.notifications
+    notifications: host.notifications,
+    config: createTestGlobalConfig(),
+    paths: createPathShimPaths(),
+    imageTools: host.imageTools
   }
 }
 
@@ -177,7 +183,7 @@ describe('sidecar/shortcutsFlowRegistration.ts: shortcutsExists (260905-mv5, sit
     mockedGetGame.mockReturnValue(
       makeStubGame({ title: 'Real Game' } as GameInfo)
     )
-    const [desktopFile] = shortcutFiles('Real Game')
+    const [desktopFile] = shortcutFiles(deps, 'Real Game')
     mockedExistsSync.mockImplementation((path: string) => path === desktopFile)
 
     const handler = getRegisteredHandler('shortcutsExists')
@@ -198,13 +204,13 @@ describe('sidecar/shortcutsFlowRegistration.ts: shortcutsExists (260905-mv5, sit
  */
 describe('260905-mv5 Task 1: premise re-verification (plan evidence item 5)', () => {
   it('shortcutFiles(undefined) THROWS (matches plan measurement)', () => {
-    expect(() => shortcutFiles(undefined as unknown as string)).toThrow(
+    expect(() => shortcutFiles(deps, undefined as unknown as string)).toThrow(
       'Input must be string'
     )
   })
 
   it("shortcutFiles('') RETURNS a real non-empty path pair, it does not throw (matches plan measurement)", () => {
-    const [desktopFile, menuFile] = shortcutFiles('')
+    const [desktopFile, menuFile] = shortcutFiles(deps, '')
     expect(desktopFile).toBeTruthy()
     expect(menuFile).toBeTruthy()
     // shortcutFiles switches on process.platform (not the isMac mock above, which is irrelevant
@@ -245,7 +251,7 @@ describe('261026-clh: shortcutsExists on darwin', () => {
     mockedGetGame.mockReturnValue(
       makeStubGame({ title: 'Real Game' } as GameInfo)
     )
-    const [desktopApp, menuApp] = shortcutFiles('Real Game')
+    const [desktopApp, menuApp] = shortcutFiles(deps, 'Real Game')
     expect(desktopApp).not.toEqual(menuApp)
     mockedExistsSync.mockImplementation((path: string) => path === desktopApp)
 
@@ -260,7 +266,7 @@ describe('261026-clh: shortcutsExists on darwin', () => {
       makeStubGame({ title: '261026-ctm Dangling' } as GameInfo)
     )
     mockedExistsSync.mockReturnValue(false)
-    const [desktopApp] = shortcutFiles('261026-ctm Dangling')
+    const [desktopApp] = shortcutFiles(deps, '261026-ctm Dangling')
     if (!desktopApp || !desktopApp.startsWith(homedir())) {
       throw new Error(`refusing to write outside the containment home`)
     }

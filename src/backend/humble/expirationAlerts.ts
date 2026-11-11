@@ -1,9 +1,7 @@
-import { Notification } from 'backend/platform'
 import i18next from 'i18next'
-import { GlobalConfig } from 'backend/config'
+import type { GlobalConfigSlice } from 'backend/config'
+import type { Notifications } from 'backend/host/notifications'
 import { isSteamDeckGameMode } from 'backend/constants/environment'
-import { getMainWindow } from '../main_window'
-import { sendFrontendMessage } from '../ipc'
 import { humbleStores } from './humbleStores'
 import { HumbleKey } from 'common/types/humble'
 
@@ -16,7 +14,14 @@ import { HumbleKey } from 'common/types/humble'
  * seeds the `humbleNotifiedExpirationStore` baseline silently: every current
  * expiration is recorded but nothing is shown.
  */
+/** The slices the digest needs: the D-93 settings gate and the OS notification. */
+export interface ExpirationAlertDeps {
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+  notifications: Pick<Notifications, 'show'>
+}
+
 export function detectAndNotifyExpirationTransitions(
+  deps: ExpirationAlertDeps,
   keys: HumbleKey[],
   opts: { suppressNotifications: boolean }
 ): void {
@@ -70,23 +75,21 @@ export function detectAndNotifyExpirationTransitions(
   }
 
   // D-93 settings gate.
-  if (GlobalConfig.get().getSettings().notifyHumbleExpirations !== true) {
+  if (deps.config.getSettings().notifyHumbleExpirations !== true) {
     return
   }
 
   // Pitfall 4 guard — cloned verbatim from src/backend/dialog/dialog.ts's
-  // notify().
-  if (!Notification.isSupported() || isSteamDeckGameMode) {
+  // notify(). (Notification.isSupported() was always true under the sidecar.)
+  if (isSteamDeckGameMode) {
     return
   }
 
   const { title, body } = buildDigestCopy(newlyExpiring)
-  const notification = new Notification({ title, body })
-  notification.on('click', () => {
-    getMainWindow()?.show()
-    sendFrontendMessage('openScreen', '/humble-keys/waiting')
-  })
-  notification.show()
+  // The old 'click' listener (raise the window, openScreen '/humble-keys/waiting') never ran:
+  // the sidecar's Notification stand-in accepted and ignored 'click'. Notifications.show has no
+  // click callback, so it is dropped rather than carried as dead code.
+  deps.notifications.show({ title, body })
 }
 
 /**

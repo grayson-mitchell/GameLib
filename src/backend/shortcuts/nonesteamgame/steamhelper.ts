@@ -17,34 +17,20 @@ import {
   pictureExt,
   steamDBBaseURL
 } from './constants'
-import { nativeImage } from 'backend/platform'
-import { getMainWindow } from 'backend/main_window'
+import type { HostServices } from 'backend/host'
 
-const generateImage = async (
-  src: string,
-  width: number,
-  height: number
-): Promise<string> => {
-  const window = getMainWindow()
-
-  if (!window) {
-    return Promise.resolve('')
+async function prepareImagesForSteam(
+  deps: { imageTools: Pick<HostServices['imageTools'], 'createFromDataURL'> },
+  props: {
+    steamUserConfigDir: string
+    appID: {
+      bigPictureAppID: string
+      otherGridAppID: string
+    }
+    gameInfo: GameInfo
+    steamID: string | undefined
   }
-
-  return window.webContents.executeJavaScript(
-    `window.imageData("${src}", ${width}, ${height})`
-  )
-}
-
-async function prepareImagesForSteam(props: {
-  steamUserConfigDir: string
-  appID: {
-    bigPictureAppID: string
-    otherGridAppID: string
-  }
-  gameInfo: GameInfo
-  steamID: string | undefined
-}) {
+) {
   const gridFolder = join(props.steamUserConfigDir, 'grid')
   const coverArt = join(gridFolder, props.appID.otherGridAppID + coverArtSufix)
   const headerArt = join(gridFolder, props.appID.otherGridAppID + pictureExt)
@@ -64,14 +50,10 @@ async function prepareImagesForSteam(props: {
   )
 
   const errors: string[] = []
-  let bkgDataUrl = ''
-  if (!props.steamID) {
-    await generateImage(props.gameInfo.art_cover, 1920, 620)
-      .then((img) => (bkgDataUrl = img))
-      .catch((error) =>
-        errors.push(`Failed to generate background image with ${error}`)
-      )
-  }
+  // The background used to be rendered in the main window (`window.imageData`). The sidecar has
+  // no window to run that in (its stand-in returned ''), so a game with no SteamDB id gets no
+  // generated background; the entry is skipped below, as it was.
+  const bkgDataUrl = ''
 
   const images = new Map<string, string>([
     [
@@ -118,7 +100,7 @@ async function prepareImagesForSteam(props: {
           errors.push(error)
         }
       } else {
-        const image = nativeImage.createFromDataURL(imgUrl).toJPEG(90)
+        const image = deps.imageTools.createFromDataURL(imgUrl).toJPEG(90)
 
         const error = createImage(image, key)
 

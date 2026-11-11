@@ -15,6 +15,7 @@
  * Registering installs a closure only: no I/O, timer or handle at register time (sidecar exit
  * contract).
  */
+import type { GlobalConfigSlice } from 'backend/config'
 import { hasCapability } from 'common/storeCapabilities'
 import { ipcMain } from '../platform'
 import type {
@@ -45,16 +46,20 @@ export interface EngineFlowDeps {
   spawnAsync: BootServices['spawnAsync']
   /** The boot process runner (66.2); consumers converted by 66.2-03. */
   runner: BootServices['runner']
+  /** The global config slice the engine reads its inherited settings from (66.3-06). */
+  config: Pick<GlobalConfigSlice, 'getSettings'>
 }
 
 function engineServicesOf(
   deps: EngineFlowDeps
 ): Pick<BootServices, 'spawnAsync'> &
-  Pick<EngineServices, 'runner' | 'wineManagerReleases'> {
+  Pick<EngineServices, 'runner' | 'wineManagerReleases' | 'globalSettings'> {
   return {
     spawnAsync: deps.spawnAsync,
     runner: deps.runner,
-    wineManagerReleases: wineManagerReleasesFrom(deps)
+    wineManagerReleases: wineManagerReleasesFrom(deps),
+    globalSettings: () =>
+      deps.config.getSettings() as unknown as Record<string, unknown>
   }
 }
 

@@ -186,7 +186,7 @@ import { acknowledgeDialogDisplay } from '../dialog/displayAck'
 import { detectVCRedist } from '../utils'
 import { assertOpenableExternalUrl } from './openPolicy'
 import { callAbortController } from '../utils/aborthandler/aborthandler'
-import { GlobalConfig } from '../config'
+import { GlobalConfig, type GlobalConfigSlice } from '../config'
 import { logInfo, LogPrefix } from '../logger'
 import { pushReadOnlyStoresNotice } from './readOnlyStoresNotice'
 // Phase 35 plan 11: boot-time download-queue auto-resume, ported from
@@ -272,6 +272,7 @@ export interface AppShellFlowDeps extends DialogBoxDeps, NotifyDeps {
   downloadQueue: Pick<DownloadQueue, 'initQueue'>
   quit: Pick<QuitHandler, 'handleExit'>
   stores: Pick<Stores, 'kvs' | 'legendary'>
+  config: Pick<GlobalConfigSlice, 'getSettings' | 'setSetting'>
   /** The boot process runner (66.2); consumers converted by 66.2-11. */
   runner: BootServices['runner']
   /** Default `false`; handlers.ts sets it under Jest (see the docstring above). */
@@ -295,7 +296,7 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   // later addition (user-selectable Manage Accounts background artwork).
   // `getCustomThemes`/`getThemeCSS`/`getCustomCSS` removed in quick 261031-bst.
 
-  ipcMain.handle('getLoginBackground', async () => getLoginBackground())
+  ipcMain.handle('getLoginBackground', async () => getLoginBackground(deps))
 
   // Electron parity is the bare app.getVersion() (main.ts:754) — do not
   // decorate with the versionNames form from heroicVersion.ts.
@@ -306,7 +307,9 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
     getAppManagementStatus({ runner: deps.runner })
   )
 
-  ipcMain.handle('getLatestReleases', async () => getLatestReleasesForStartup())
+  ipcMain.handle('getLatestReleases', async () =>
+    getLatestReleasesForStartup(deps)
+  )
 
   ipcMain.handle('getCurrentChangelog', async () => getCurrentChangelogEntry())
 

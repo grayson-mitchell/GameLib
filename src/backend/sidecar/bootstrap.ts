@@ -1379,7 +1379,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           dialogs: host.dialogs,
           openExternal: host.openExternal,
           notifications: host.notifications,
-          appState: host.appState
+          appState: host.appState,
+          imageTools: host.imageTools
         })
         state.services.managers = prebuilt.managers ?? built
         state.services.launcher = prebuilt.launcher ?? built.launcher

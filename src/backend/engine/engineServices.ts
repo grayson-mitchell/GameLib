@@ -3,7 +3,9 @@
  * Type-only imports: the engine never value-imports tools or the services layer.
  */
 import type { DialogBoxDeps, NotifyDeps } from 'backend/dialog/dialog'
+import type { AppState } from 'backend/host/appState'
 import type { ProcessRunner } from 'backend/process/types'
+import type { GameSettings } from 'common/types'
 import type { SpawnAsync } from 'backend/spawnAsync'
 import type { Tools } from 'backend/tools'
 import type { WineManagerRelease } from './engineDecision'
@@ -15,6 +17,11 @@ export interface EngineServices {
   installRemove: Tools['DXVK']['installRemove']
   /** The installed Wine Manager release list, read from the injected wineManager store. */
   wineManagerReleases: () => WineManagerRelease[]
+  /** The global settings snapshot the engine's config reads inherit from (66.3-06). */
+  globalSettings: () => Record<string, unknown>
+  /** The same snapshot typed as the GameSettings base a fallback bottle's settings overlay (66.3-06). */
+  globalGameSettings: () => GameSettings
   /** The dialog and notification slices the engine's user-facing notices go through. */
-  notices: DialogBoxDeps & NotifyDeps
+  notices: DialogBoxDeps &
+    NotifyDeps & { appState: Pick<AppState, 'raiseMainWindow'> }
 }

@@ -16,11 +16,13 @@
 
 import { Release } from 'common/types'
 
-import { GlobalConfig } from '../config'
+import type { GlobalConfigSlice } from '../config'
 import { getLatestReleases, getCurrentChangelog } from '../utils'
 
-export async function getLatestReleasesForStartup(): Promise<Release[]> {
-  const { checkForUpdatesOnStartup } = GlobalConfig.get().getSettings()
+export async function getLatestReleasesForStartup(deps: {
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+}): Promise<Release[]> {
+  const { checkForUpdatesOnStartup } = deps.config.getSettings()
   if (checkForUpdatesOnStartup) {
     return getLatestReleases()
   } else {
