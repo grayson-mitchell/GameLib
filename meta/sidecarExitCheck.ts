@@ -49,7 +49,7 @@ export interface Survivor {
   state: 'alive' | 'reparented'
 }
 
-export const THRESHOLDS = Object.freeze({
+const THRESHOLDS = Object.freeze({
   eofWarnMs: 2000,
   eofFailMs: 5000,
   liveWarnMs: 1500,
@@ -145,7 +145,7 @@ export function assertRepoRoot(
   exists: (p: string) => boolean = existsSync
 ): void {
   const missing = [
-    join(root, 'src-tauri', 'src', 'main.rs'),
+    join(root, 'src-tauri', 'Cargo.toml'),
     join(root, 'meta', 'sidecarExitCheck.ts')
   ].filter((p) => !exists(p))
   if (missing.length > 0) {
