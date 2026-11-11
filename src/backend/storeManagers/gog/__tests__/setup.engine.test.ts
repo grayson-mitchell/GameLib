@@ -97,7 +97,8 @@ const gogDeps = {
     getWinePath: jest.fn(),
     runWineCommand: (...a: unknown[]) => mockRunWine(...a)
   },
-  spawnAsync: jest.fn()
+  spawnAsync: jest.fn(),
+  config: { getSettings: () => ({ disableLogs: true }) }
 } as unknown as SetupDeps
 
 const nileDeps = {

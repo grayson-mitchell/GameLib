@@ -144,7 +144,9 @@ async function setup(
     }
   }
 
-  const logWriter = getRunnerLogWriter('gog')
+  const logWriter = getRunnerLogWriter('gog', {
+    disableLogs: deps.config.getSettings().disableLogs
+  })
   const isWineOkToLaunch = await checkWineBeforeLaunch(
     deps,
     gameInfo,

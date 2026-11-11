@@ -425,7 +425,11 @@ export default class GOGGame implements Game {
     const installLogWriter = await createGameLogWriter(
       this.id,
       'gog',
-      'install'
+      'install',
+      {
+        disableLogs: this.deps.config.getSettings().disableLogs,
+        verboseLogs: false
+      }
     )
     const res = await this.deps.libraryManagers.gog.runRunnerCommand(
       commandParts,
@@ -843,7 +847,9 @@ export default class GOGGame implements Game {
 
     let comet: LongLivedHandle | undefined
 
-    const cometLogWriter = getRunnerLogWriter('comet')
+    const cometLogWriter = getRunnerLogWriter('comet', {
+      disableLogs: this.deps.config.getSettings().disableLogs
+    })
 
     if (
       userData &&
@@ -995,7 +1001,15 @@ export default class GOGGame implements Game {
       commandParts.push('--password', privateBranchPassword)
     }
 
-    const repairLogWriter = await createGameLogWriter(this.id, 'gog', 'repair')
+    const repairLogWriter = await createGameLogWriter(
+      this.id,
+      'gog',
+      'repair',
+      {
+        disableLogs: this.deps.config.getSettings().disableLogs,
+        verboseLogs: false
+      }
+    )
     const res = await this.deps.libraryManagers.gog.runRunnerCommand(
       commandParts,
       {
@@ -1314,7 +1328,15 @@ export default class GOGGame implements Game {
       this.onInstallOrUpdateOutput('updating', data)
     }
 
-    const updateLogWriter = await createGameLogWriter(this.id, 'gog', 'update')
+    const updateLogWriter = await createGameLogWriter(
+      this.id,
+      'gog',
+      'update',
+      {
+        disableLogs: this.deps.config.getSettings().disableLogs,
+        verboseLogs: false
+      }
+    )
     const res = await this.deps.libraryManagers.gog.runRunnerCommand(
       commandParts,
       {

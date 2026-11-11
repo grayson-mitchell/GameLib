@@ -125,7 +125,15 @@ export default class NileGameManager implements Game {
   }
 
   async importGame(folderPath: string): Promise<ExecResult> {
-    const importLogWriter = await createGameLogWriter(this.id, 'nile', 'import')
+    const importLogWriter = await createGameLogWriter(
+      this.id,
+      'nile',
+      'import',
+      {
+        disableLogs: this.deps.config.getSettings().disableLogs,
+        verboseLogs: false
+      }
+    )
     const res = await this.deps.libraryManagers.nile.runRunnerCommand(
       ['import', '--path', folderPath, this.id],
       {
@@ -264,7 +272,11 @@ export default class NileGameManager implements Game {
     const installLogWriter = await createGameLogWriter(
       this.id,
       'nile',
-      'install'
+      'install',
+      {
+        disableLogs: this.deps.config.getSettings().disableLogs,
+        verboseLogs: false
+      }
     )
     const res = await this.deps.libraryManagers.nile.runRunnerCommand(
       commandParts,
@@ -534,7 +546,15 @@ export default class NileGameManager implements Game {
     }
 
     logDebug([this.id, 'is installed at', install_path], LogPrefix.Nile)
-    const repairLogWriter = await createGameLogWriter(this.id, 'nile', 'repair')
+    const repairLogWriter = await createGameLogWriter(
+      this.id,
+      'nile',
+      'repair',
+      {
+        disableLogs: this.deps.config.getSettings().disableLogs,
+        verboseLogs: false
+      }
+    )
     const res = await this.deps.libraryManagers.nile.runRunnerCommand(
       ['verify', '--path', install_path, this.id],
       {
@@ -592,7 +612,15 @@ export default class NileGameManager implements Game {
       this.onInstallOrUpdateOutput('updating', data)
     }
 
-    const updateLogWriter = await createGameLogWriter(this.id, 'nile', 'update')
+    const updateLogWriter = await createGameLogWriter(
+      this.id,
+      'nile',
+      'update',
+      {
+        disableLogs: this.deps.config.getSettings().disableLogs,
+        verboseLogs: false
+      }
+    )
     const res = await this.deps.libraryManagers.nile.runRunnerCommand(
       commandParts,
       {

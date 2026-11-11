@@ -519,7 +519,11 @@ export default class LegendaryGame implements Game {
     const updateLogWriter = await createGameLogWriter(
       this.appName,
       'legendary',
-      'update'
+      'update',
+      {
+        disableLogs: this.deps.config.getSettings().disableLogs,
+        verboseLogs: false
+      }
     )
     const res = await this.deps.libraryManagers.legendary.runRunnerCommand(
       command,
@@ -620,7 +624,11 @@ export default class LegendaryGame implements Game {
     const installLogWriter = await createGameLogWriter(
       this.appName,
       'legendary',
-      'install'
+      'install',
+      {
+        disableLogs: this.deps.config.getSettings().disableLogs,
+        verboseLogs: false
+      }
     )
     let res = await this.deps.libraryManagers.legendary.runRunnerCommand(
       command,
@@ -827,7 +835,11 @@ export default class LegendaryGame implements Game {
     const repairLogWriter = await createGameLogWriter(
       this.appName,
       'legendary',
-      'repair'
+      'repair',
+      {
+        disableLogs: this.deps.config.getSettings().disableLogs,
+        verboseLogs: false
+      }
     )
     const res = await this.deps.libraryManagers.legendary.runRunnerCommand(
       command,
@@ -864,7 +876,11 @@ export default class LegendaryGame implements Game {
     const logWriter = await createGameLogWriter(
       this.appName,
       'legendary',
-      'import'
+      'import',
+      {
+        disableLogs: this.deps.config.getSettings().disableLogs,
+        verboseLogs: false
+      }
     )
     const res = await this.deps.libraryManagers.legendary.runRunnerCommand(
       command,

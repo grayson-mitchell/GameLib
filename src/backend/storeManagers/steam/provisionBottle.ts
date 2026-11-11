@@ -410,7 +410,9 @@ export async function provisionBottle(
       title: 'GameLib Steam Bottle',
       canRunOffline: true
     }
-    const logWriter = getRunnerLogWriter('steam')
+    const logWriter = getRunnerLogWriter('steam', {
+      disableLogs: deps.config.getSettings().disableLogs
+    })
     const wineOk = await checkWineBeforeLaunch(
       deps,
       syntheticGameInfo,

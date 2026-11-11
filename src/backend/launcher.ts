@@ -17,6 +17,7 @@ import {
 import type { GlobalConfigSlice } from './config'
 import type { GameConfigs } from './game_config'
 import type { Notifications } from './host/notifications'
+import type { AppState } from './host/appState'
 import type { AppInfo } from './process/context'
 import i18next from 'i18next'
 import { existsSync, mkdirSync } from 'graceful-fs'
@@ -40,7 +41,6 @@ import {
   LogPrefix,
   logWarning
 } from './logger'
-import { GlobalConfig } from './config'
 import {
   engineServicesFrom,
   toolsFrom,
@@ -63,7 +63,6 @@ import { download, isInstalled } from './wine/runtimes/runtimes'
 import { recordPlaySession } from './runsForMe'
 import { getUmuPath, isUmuSupported } from './utils/compatibility_layers'
 import { copyFile } from 'fs/promises'
-import { app, powerSaveBlocker } from 'backend/platform'
 import { addRecentGame } from './recent_games/recent_games'
 import { readKnownFixes } from './knownFixes'
 import { applyKnownFixProfileRegistry } from './knownFixesRegistry'
@@ -119,6 +118,10 @@ export interface LauncherDeps extends DialogBoxDeps {
   gameConfigs: Pick<GameConfigs, 'get'>
   appInfo: Pick<AppInfo, 'version'>
   notifications: Pick<Notifications, 'show'>
+  appState: Pick<
+    AppState,
+    'raiseMainWindowForInAppDialog' | 'hideMainWindow' | 'exit' | 'wakeLock'
+  >
 }
 
 /** The display-sleep blocker id of one launcher instance (closure state, not module state). */
@@ -179,7 +182,7 @@ async function runLaunchEventCallback(
 
   const { title } = gameInfo
 
-  const { minimizeOnLaunch, noTrayIcon } = GlobalConfig.get().getSettings()
+  const { minimizeOnLaunch, noTrayIcon } = deps.config.getSettings()
 
   const startPlayingDate = new Date()
 
@@ -217,16 +220,19 @@ async function runLaunchEventCallback(
   // "Hide GameLib for every launch" (quick 261108-kpc). macOS restores from the Dock, so it needs
   // no tray icon; elsewhere the tray is the way back.
   if (minimizeOnLaunch && (isMac || !noTrayIcon)) {
-    app.hideMainWindow()
+    deps.appState.hideMainWindow()
   }
 
   // Prevent display from sleep
   if (!deps.power.displayId) {
     logInfo('Preventing display from sleep', LogPrefix.Backend)
-    deps.power.displayId = powerSaveBlocker.start('prevent-display-sleep')
+    deps.power.displayId = deps.appState.wakeLock.start('prevent-display-sleep')
   }
 
-  const logWriter = await createGameLogWriter(appName, runner)
+  const logWriter = await createGameLogWriter(appName, runner, 'launch', {
+    disableLogs: deps.config.getSettings().disableLogs,
+    verboseLogs: (await deps.gameConfigs.get(appName).getSettings()).verboseLogs
+  })
 
   if (!gameSettings.verboseLogs) {
     await logWriter.logWarning('IMPORTANT: Logs are disabled', {
@@ -379,7 +385,7 @@ async function runLaunchEventCallback(
   // Stop display sleep blocker
   if (deps.power.displayId !== null) {
     logInfo('Stopping Display Power Saver Blocker', LogPrefix.Backend)
-    powerSaveBlocker.stop(deps.power.displayId)
+    deps.appState.wakeLock.stop(deps.power.displayId)
   }
 
   // Update playtime and last played date
@@ -392,7 +398,7 @@ async function runLaunchEventCallback(
     sessionPlaytime + tsStore.get(`${appName}.totalPlayed`, 0)
   tsStore.set(`${appName}.totalPlayed`, Math.floor(totalPlaytime))
 
-  const { disablePlaytimeSync } = GlobalConfig.get().getSettings()
+  const { disablePlaytimeSync } = deps.config.getSettings()
   if (isStore(runner, 'gog')) {
     if (!disablePlaytimeSync) {
       await deps.libraryManagers.gog
@@ -440,7 +446,7 @@ async function runLaunchEventCallback(
 
   // Exit if we've been launched without UI
   if (isCLINoGui) {
-    app.exit()
+    deps.appState.exit()
   }
 
   return { status: launchResult ? 'done' : 'error' }
@@ -623,7 +629,7 @@ async function prepareLaunch(
   logWriter: LogWriter,
   gameInfo: GameInfo
 ): Promise<LaunchPreperationResult> {
-  const globalSettings = GlobalConfig.get().getSettings()
+  const globalSettings = deps.config.getSettings()
 
   let offlineMode = gameSettings.offlineMode || !isOnline()
 
@@ -859,7 +865,7 @@ async function prepareWineLaunch(
   )
 
   if (!(await validWine(gameSettings.wineVersion))) {
-    const defaultWine = GlobalConfig.get().getSettings().wineVersion
+    const defaultWine = deps.config.getSettings().wineVersion
     // now check if the default wine is valid as well
     if (!(await validWine(defaultWine))) {
       return { success: false }
@@ -927,8 +933,7 @@ async function prepareWineLaunch(
   }
 
   await verifyWinePrefix(deps, gameSettings)
-  const experimentalFeatures =
-    GlobalConfig.get().getSettings().experimentalFeatures
+  const experimentalFeatures = deps.config.getSettings().experimentalFeatures
 
   let hasUpdated = false
 

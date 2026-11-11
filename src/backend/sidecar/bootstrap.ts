@@ -1257,8 +1257,9 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           })
         // The Mac Steam go-offline instance exists now; SteamUser's wrap and shutdown restore read
         // it through the slot bindStores filled in the 'stores' step (no logon can run before here).
-        const { stores } = state.services
+        const { stores, config } = state.services
         if (!stores) throw new Error('boot: stores step must run first')
+        if (!config) throw new Error('boot: config step must run first')
         SteamUser.bindStores({
           stores,
           macSteamOffline: state.services.steamProcesses.macSteamOffline
@@ -1275,7 +1276,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
               logDebug,
               backendPrefix: LogPrefix.Backend
             },
-            getRunnerLogWriter,
+            getRunnerLogWriter: (runner) =>
+              getRunnerLogWriter(runner, {
+                disableLogs: config.getSettings().disableLogs
+              }),
             abort: {
               create: createAbortController,
               remove: deleteAbortController

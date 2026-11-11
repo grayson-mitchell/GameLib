@@ -123,7 +123,9 @@ export default async function setup(
     }
   }
 
-  const logWriter = getRunnerLogWriter('nile')
+  const logWriter = getRunnerLogWriter('nile', {
+    disableLogs: deps.config.getSettings().disableLogs
+  })
   const isWineOkToLaunch = await checkWineBeforeLaunch(
     deps,
     gameInfo,

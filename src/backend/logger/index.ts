@@ -1,7 +1,4 @@
-import { GameConfig } from 'backend/game_config'
-import { GlobalConfig } from 'backend/config'
 import os from 'os'
-import { backendEvents } from 'backend/backend_events'
 
 import { LogPrefix, RunnerToLogPrefixMap } from './constants'
 import LogWriter from './log_writer'
@@ -79,53 +76,52 @@ const logInfoSettled = (
   ...params: Parameters<LogWriter['logInfo']>
 ): Promise<void> => heroicLogWriter.logInfo(...params)
 
-function getRunnerLogWriter(runner: RunnerOrComet) {
+/**
+ * The caller passes `disableLogs` (66.3-06): this module reads no config. The writer is
+ * cached per runner on first use, so a later call with a different `disableLogs` returns the
+ * first writer.
+ */
+function getRunnerLogWriter(
+  runner: RunnerOrComet,
+  settings: { disableLogs: boolean }
+) {
   const writer = runnerLogWriters.get(runner)
   if (writer) return writer
 
-  const globalConfig = GlobalConfig.get().getSettings()
   const newWriter = new LogWriter(
     getLogFilePath({ runner }),
     false,
-    globalConfig.disableLogs
+    settings.disableLogs
   )
   runnerLogWriters.set(runner, newWriter)
   return newWriter
 }
 
+/**
+ * `verboseLogs` is the per-game setting; it only matters for the 'launch' log type. Both
+ * settings are required (no defaults) so a caller cannot silently skip them.
+ */
 async function createGameLogWriter(
   appName: string,
   runner: Runner,
-  type: GameLogType = 'launch'
+  type: GameLogType,
+  settings: { disableLogs: boolean; verboseLogs: boolean }
 ): Promise<LogWriter> {
-  const logsDisabledGlobally = GlobalConfig.get().getSettings().disableLogs
-  const logsDisabledPerGame =
-    type === 'launch'
-      ? !(await GameConfig.get(appName).getSettings()).verboseLogs
-      : false
+  const logsDisabledPerGame = type === 'launch' ? !settings.verboseLogs : false
 
   return new LogWriter(
     getLogFilePath({ appName, runner, type }),
     false,
-    logsDisabledGlobally || logsDisabledPerGame
+    settings.disableLogs || logsDisabledPerGame
   )
 }
 
 /**
- * Headless-safe writer initialization (Phase 27 Plan 04 deviation — Rule 3,
- * blocking). Assigns `heroicLogWriter` directly, skipping the Electron-app-
- * only side effects `init()` below performs: `GlobalConfig.get()` (assumes
- * an already-initialized `userData` config directory/file — a real
- * Electron app guarantees this before app code runs, a headless sidecar
- * process does not), the one-time system-info dump (shells out to
- * hardware/binary-version probes; the sidecar fetches it lazily instead), and the `settingChanged` event listener (meaningless without
- * GlobalConfig). Used ONLY by the headless sidecar
- * (`backend/sidecar/bootstrap.ts`) so the REAL `logInfo`/`logWarning`/
- * `logError` calls throughout the backend's existing code (reused unchanged
- * by the sidecar's curated Steam flows, Plan 04's own objective) have a
- * writer to dereference, without pulling in Electron-app-only startup
- * machinery the sidecar doesn't have. `init()` itself is completely
- * unmodified — the Electron main process's own startup path is unaffected.
+ * Writer initialization for the headless sidecar (`backend/sidecar/bootstrap.ts`). Assigns
+ * `heroicLogWriter` directly so the REAL `logInfo`/`logWarning`/`logError` calls throughout
+ * the backend have a writer to dereference. The Electron-era `init()` (GlobalConfig read,
+ * one-time system-info dump, `settingChanged` listener) had no caller and was deleted in
+ * 66.3-06 so this module imports no config.
  */
 function initHeadless(): void {
   heroicLogWriter = new LogWriter(getLogFilePath({}), false, false)
@@ -153,61 +149,7 @@ export function logBootFacts(): void {
   )
 }
 
-function init() {
-  // Add a basic error handler to our stdout/stderr. If we don't do this, a
-  // write error on either stream surfaces as a process-level uncaught
-  // exception, which is far more noise than "just" failing to write to a
-  // stream warrants.
-  //
-  // D-35-10-01 (Phase 35): this comment used to name "the main
-  // `process.on('uncaughtException', ...)` handler ... (and presents an error
-  // message to the user)". That was `src/backend/main.ts:618`, which plan
-  // 35-14 deletes with the rest of the Electron build. The catcher of last
-  // resort is now `installUncaughtExceptionGuard()` in
-  // `backend/sidecar/processGuards.ts`, installed from
-  // `src/sidecar/installRejectionGuard.ts`. It is LOG-ONLY and shows the user
-  // nothing (see its doc comment for why the dialog was not carried over), so
-  // the "presents an error message to the user" half of the old rationale no
-  // longer applies -- but the handler below still earns its place: without it
-  // a stream write error becomes a top-level uncaught exception rather than
-  // one line in the log.
-  for (const channel of ['stdout', 'stderr'] as const) {
-    process[channel].once('error', (error: Error) => {
-      heroicLogWriter.writeString(`Error writing to ${channel}: ${error.stack}`)
-
-      process[channel].on('error', () => {
-        // Silence further write errors
-      })
-    })
-  }
-
-  const globalSettings = GlobalConfig.get().getSettings()
-  heroicLogWriter = new LogWriter(
-    getLogFilePath({}),
-    true,
-    globalSettings.disableLogs
-  )
-
-  if (globalSettings.disableLogs)
-    heroicLogWriter.logWarning(
-      'IMPORTANT: Logs are disabled. Enable logs before reporting any issue',
-      { forceLog: true }
-    )
-
-  backendEvents.on('settingChanged', ({ key, oldValue, newValue }) =>
-    heroicLogWriter.logInfo([
-      'Settings key',
-      key,
-      'changed from',
-      oldValue,
-      'to',
-      newValue
-    ])
-  )
-}
-
 export {
-  init,
   initHeadless,
   logDebug,
   logInfo,

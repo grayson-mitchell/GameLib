@@ -655,7 +655,9 @@ export default class GOGLibraryManager implements LibraryManager {
       )
 
       const logContent = `Games List:\n${sortedTitles.join('\n')}\n\nTotal: ${logLines.length}\n`
-      const gogLogWriter = getRunnerLogWriter('gog')
+      const gogLogWriter = getRunnerLogWriter('gog', {
+        disableLogs: this.deps.config.getSettings().disableLogs
+      })
       void gogLogWriter.logInfo(logContent)
     })
 
