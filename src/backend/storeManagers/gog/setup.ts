@@ -2,7 +2,6 @@ import { existsSync } from 'graceful-fs'
 import path from 'node:path'
 import { GameInfo, GameSettings, InstalledInfo } from 'common/types'
 import { checkWineBeforeLaunch, sendGameStatusUpdate } from '../../utils'
-import { GameConfig } from '../../game_config'
 import {
   getRunnerLogWriter,
   logError,
@@ -110,7 +109,7 @@ async function setup(
     return
   }
 
-  const stored = GameConfig.get(appName).config
+  const stored = deps.gameConfigs.get(appName).config
   if (isWindows) {
     return runGogSetup(deps, appName, gameInfo, stored, installRedist)
   }

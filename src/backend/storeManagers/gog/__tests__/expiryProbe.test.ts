@@ -35,6 +35,7 @@ const { configStore: gogConfigStore } = jest.requireMock<Stores['gog']>(
 )
 
 const deps = {
+  appInfo: { version: '1.0.0' },
   stores: { gog: { configStore: gogConfigStore } },
   libraryManagers: {
     gog: {
@@ -47,9 +48,6 @@ let mockOnline = true
 let mockAuthConfigExists = true
 
 jest.mock('axios')
-jest.mock('backend/platform', () => ({
-  app: { getVersion: () => '1.0.0' }
-}))
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),

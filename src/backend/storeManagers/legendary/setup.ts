@@ -4,7 +4,6 @@ import { enable, getStatus, isEnabled } from './eos_overlay/eos_overlay'
 import { split } from 'shlex'
 import { logError, LogPrefix } from 'backend/logger'
 import type { LegendaryManagerDeps } from './library'
-import { GameConfig } from 'backend/game_config'
 import { epicRedistPath } from './constants'
 import { isLinux } from 'backend/constants/environment'
 import LogWriter from 'backend/logger/log_writer'
@@ -28,7 +27,7 @@ export const legendarySetup = async (
     context: 'EPIC'
   })
 
-  const gameSettings = GameConfig.get(appName).config
+  const gameSettings = deps.gameConfigs.get(appName).config
 
   // Fixes games like Fallout New Vegas and Dishonored: Death of the Outsider
   await deps.commandRunner.runWineCommand({

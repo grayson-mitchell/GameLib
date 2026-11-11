@@ -1,4 +1,4 @@
-import { addTestOnlyListener } from 'backend/ipc'
+import { onTestOnly, type IpcRegistry } from 'backend/sidecar/ipcRegistry'
 import { RunnerCommandStub } from 'common/types'
 
 /*
@@ -34,12 +34,16 @@ export const runGogdlCommandStub = async (command: string[]) => {
   })
 }
 
-// Add listeners to be called from e2e tests to stub the gogdl command calls
-addTestOnlyListener(
-  'setGogdlCommandStub',
-  (stubs) => (currentStubs = [...stubs])
-)
-addTestOnlyListener(
-  'resetGogdlCommandStub',
-  () => (currentStubs = [...defaultStubs])
-)
+// Add listeners to be called from e2e tests to stub the gogdl command calls. Registered
+// once at boot (register-handlers), only when env.CI === 'e2e' (onTestOnly checks it).
+export function registerGogdlStubListeners(
+  ipc: Pick<IpcRegistry, 'on'>,
+  env: Pick<NodeJS.ProcessEnv, 'CI'>
+): void {
+  onTestOnly(ipc, env, 'setGogdlCommandStub', (stubs) => {
+    currentStubs = [...stubs]
+  })
+  onTestOnly(ipc, env, 'resetGogdlCommandStub', () => {
+    currentStubs = [...defaultStubs]
+  })
+}

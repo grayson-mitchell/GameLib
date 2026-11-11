@@ -41,14 +41,6 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Gog: 'Gog', Backend: 'Backend' }
 }))
 
-jest.mock('../../../game_config', () => ({
-  GameConfig: { get: jest.fn(() => ({ config: {}, getSettings: jest.fn() })) }
-}))
-
-jest.mock('../../../config', () => ({
-  GlobalConfig: { get: jest.fn(() => ({ config: {} })) }
-}))
-
 jest.mock('../../../utils', () => ({
   errorHandler: jest.fn(),
   getFileSize: jest.fn(() => 0),
@@ -164,12 +156,14 @@ import { existsSync } from 'graceful-fs'
 import { getRunnerLogWriter } from 'backend/logger'
 import shlex from 'shlex'
 import { getCometBin } from '../../../utils'
-import { GlobalConfig } from '../../../config'
+
+let mockSettings: Record<string, unknown> = {}
 
 function makeDeps(): GOGManagerDeps {
   const base = createTestManagerDeps()
   return {
     ...base,
+    config: { ...base.config, getSettings: () => mockSettings } as never,
     libraryManagers: {
       gog: {
         runRunnerCommand: (...a: unknown[]) => mockRunRunnerCommand(...a),
@@ -369,10 +363,7 @@ describe('GOGGame.launch: comet on the process runner', () => {
       dir: '/fake/comet',
       bin: 'comet'
     })
-    ;(GlobalConfig.get as jest.Mock).mockReturnValue({
-      config: {},
-      getSettings: () => opts.settings ?? {}
-    })
+    mockSettings = opts.settings ?? {}
     ;(getRunnerLogWriter as jest.Mock).mockReturnValue(mockCometLog)
     ;(shlex.split as jest.Mock).mockReturnValue([])
     ;(shlex.join as jest.Mock).mockReturnValue('')

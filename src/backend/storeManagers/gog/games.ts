@@ -4,8 +4,6 @@ import {
   resumeAdjustedPercent
 } from './resumeProgress'
 import { join } from 'path'
-import { GameConfig } from '../../game_config'
-import { GlobalConfig } from '../../config'
 import {
   errorHandler,
   getFileSize,
@@ -198,8 +196,8 @@ export default class GOGGame implements Game {
 
   async getSettings(): Promise<GameSettings> {
     return (
-      GameConfig.get(this.id).config ||
-      (await GameConfig.get(this.id).getSettings())
+      this.deps.gameConfigs.get(this.id).config ||
+      (await this.deps.gameConfigs.get(this.id).getSettings())
     )
   }
 
@@ -369,7 +367,7 @@ export default class GOGGame implements Game {
     status: 'done' | 'error' | 'abort'
     error?: string
   }> {
-    const { maxWorkers } = GlobalConfig.get().getSettings()
+    const { maxWorkers } = this.deps.config.getSettings()
     const workers = maxWorkers ? ['--max-workers', `${maxWorkers}`] : []
     const privateBranchPassword = this.deps.stores.gog.privateBranchesStore.get(
       this.id,
@@ -854,7 +852,7 @@ export default class GOGGame implements Game {
     if (
       userData &&
       userData.username &&
-      GlobalConfig.get().getSettings().experimentalFeatures?.cometSupport !==
+      this.deps.config.getSettings().experimentalFeatures?.cometSupport !==
         false
     ) {
       // quick 261110-vdk: `--from-heroic` hard-codes Heroic's config dir, so
@@ -1456,7 +1454,7 @@ export default class GOGGame implements Game {
    * Useful for Update and Repair
    */
   private async getCommandParameters() {
-    const { maxWorkers } = GlobalConfig.get().getSettings()
+    const { maxWorkers } = this.deps.config.getSettings()
     const workers = maxWorkers ? ['--max-workers', `${maxWorkers}`] : []
     const gameData = this.getGameInfo()
     const credentials = await GOGUser.getCredentials(this.deps)

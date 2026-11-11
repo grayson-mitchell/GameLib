@@ -18,10 +18,6 @@
 
 const mockRunRunnerCommand = jest.fn()
 
-jest.mock('backend/platform', () => ({
-  app: { getVersion: () => '1.0.0' }
-}))
-
 // Phase 49 (49-05): login()/logout() now publish the sign-in outcome map through
 // `noteSignInSucceeded` / `noteSignedOut`, which send a frontend message. The
 // real `sendFrontendMessage` needs an Electron window this suite does not have.
@@ -83,6 +79,7 @@ import { GOGUser, type GOGUserDeps } from '../user'
 import type { ClearCacheDeps } from 'backend/utils'
 
 const deps = {
+  appInfo: { version: '1.0.0' },
   stores: { gog: fakeGogStores },
   libraryManagers: {
     gog: { runRunnerCommand: (...a: unknown[]) => mockRunRunnerCommand(...a) }

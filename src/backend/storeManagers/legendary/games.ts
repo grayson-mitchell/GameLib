@@ -10,8 +10,6 @@ import {
   InstallProgress,
   LaunchOption
 } from 'common/types'
-import { GameConfig } from '../../game_config'
-import { GlobalConfig } from '../../config'
 import type { LegendaryManagerDeps } from './library'
 import { checkInstalledMacArch } from 'backend/macArch/recovery'
 import {
@@ -330,15 +328,15 @@ export default class LegendaryGame implements Game {
   }
 
   /**
-   * Alias for `GameConfig.get(appName).config`
+   * Alias for the per-game config `.config`
    * If it doesn't exist, uses getSettings() instead.
    *
    * @returns GameConfig
    */
   async getSettings() {
     return (
-      GameConfig.get(this.appName).config ||
-      (await GameConfig.get(this.appName).getSettings())
+      this.deps.gameConfigs.get(this.appName).config ||
+      (await this.deps.gameConfigs.get(this.appName).getSettings())
     )
   }
 
@@ -492,7 +490,7 @@ export default class LegendaryGame implements Game {
       runner: 'legendary',
       status: 'updating'
     })
-    const { maxWorkers, downloadNoHttps } = GlobalConfig.get().getSettings()
+    const { maxWorkers, downloadNoHttps } = this.deps.config.getSettings()
     const installPlatform = this.getGameInfo().install.platform!
     const info = await this.deps.libraryManagers.legendary.getInstallInfo(
       this.appName,
@@ -593,7 +591,7 @@ export default class LegendaryGame implements Game {
       )
       return { status: 'error' }
     }
-    const { maxWorkers, downloadNoHttps } = GlobalConfig.get().getSettings()
+    const { maxWorkers, downloadNoHttps } = this.deps.config.getSettings()
     const info = await this.deps.libraryManagers.legendary.getInstallInfo(
       this.appName,
       platformToInstall
@@ -821,7 +819,7 @@ export default class LegendaryGame implements Game {
    * Does NOT check for online connectivity.
    */
   async repair(): Promise<ExecResult> {
-    const { maxWorkers, downloadNoHttps } = GlobalConfig.get().getSettings()
+    const { maxWorkers, downloadNoHttps } = this.deps.config.getSettings()
 
     const command: LegendaryCommand = {
       subcommand: 'repair',

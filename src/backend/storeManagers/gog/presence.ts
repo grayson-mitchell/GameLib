@@ -1,9 +1,8 @@
-import { app } from 'backend/platform'
 import { logError, logInfo, LogPrefix } from 'backend/logger'
 import { axiosClient } from 'backend/utils'
 import { GOGUser, type GOGUserDeps } from './user'
 import { isOnline } from 'backend/online_monitor'
-import { GlobalConfig } from 'backend/config'
+import type { GOGManagerDeps } from './library'
 
 interface PresencePayload {
   application_type: string
@@ -13,6 +12,9 @@ interface PresencePayload {
   game_id?: string
 }
 
+/** What presence reads beyond the user deps: the boot config. */
+export type GOGPresenceDeps = GOGUserDeps & Pick<GOGManagerDeps, 'config'>
+
 let CURRENT_GAME = ''
 let interval: NodeJS.Timeout | undefined
 
@@ -20,10 +22,10 @@ function setCurrentGame(game: string) {
   CURRENT_GAME = game
 }
 
-async function setPresence(deps: GOGUserDeps) {
+async function setPresence(deps: GOGPresenceDeps) {
   try {
     const { disablePlaytimeSync, disableGOGPresence } =
-      GlobalConfig.get().getSettings()
+      deps.config.getSettings()
     if (
       disableGOGPresence ||
       disablePlaytimeSync ||
@@ -68,7 +70,7 @@ async function setPresence(deps: GOGUserDeps) {
       application_type: 'GameLib',
       force_update: false,
       presence: 'online',
-      version: app.getVersion(),
+      version: deps.appInfo.version,
       game_id: undefined
     }
 
@@ -137,14 +139,14 @@ async function setPresence(deps: GOGUserDeps) {
  * presence off. If presence is needed again afterward, `setPresence()`'s own `if (!interval)`
  * arm re-creates the timer on its next call, exactly as it does after a fresh process start.
  */
-async function deletePresence(deps: GOGUserDeps, force = false) {
+async function deletePresence(deps: GOGPresenceDeps, force = false) {
   // D-DRS-01 Option A: local timer teardown is unconditional, ahead of every guard below --
   // see this function's own docblock for the full audit and rationale.
   clearInterval(interval)
   interval = undefined
   try {
     const { disablePlaytimeSync, disableGOGPresence } =
-      GlobalConfig.get().getSettings()
+      deps.config.getSettings()
     if (
       disablePlaytimeSync ||
       (!force && disableGOGPresence) ||

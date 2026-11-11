@@ -1,4 +1,4 @@
-import { addTestOnlyListener } from 'backend/ipc'
+import { onTestOnly, type IpcRegistry } from 'backend/sidecar/ipcRegistry'
 import { RunnerCommandStub } from 'common/types'
 import { LegendaryCommand } from './commands'
 
@@ -38,12 +38,16 @@ export const runLegendaryCommandStub = async (command: LegendaryCommand) => {
   })
 }
 
-// Add listeners to be called from e2e tests to stub the legendary command calls
-addTestOnlyListener(
-  'setLegendaryCommandStub',
-  (stubs) => (currentStubs = [...stubs])
-)
-addTestOnlyListener(
-  'resetLegendaryCommandStub',
-  () => (currentStubs = [...defaultStubs])
-)
+// Add listeners to be called from e2e tests to stub the legendary command calls. Registered
+// once at boot (register-handlers), only when env.CI === 'e2e' (onTestOnly checks it).
+export function registerLegendaryStubListeners(
+  ipc: Pick<IpcRegistry, 'on'>,
+  env: Pick<NodeJS.ProcessEnv, 'CI'>
+): void {
+  onTestOnly(ipc, env, 'setLegendaryCommandStub', (stubs) => {
+    currentStubs = [...stubs]
+  })
+  onTestOnly(ipc, env, 'resetLegendaryCommandStub', () => {
+    currentStubs = [...defaultStubs]
+  })
+}

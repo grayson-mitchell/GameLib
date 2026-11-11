@@ -45,6 +45,9 @@ import type { IpcRegistry } from './ipcRegistry'
 import { createStores } from '../stores/createStores'
 import { createStoreRegistry } from '../stores/storeRegistry'
 import { createStoreManagers } from '../storeManagers'
+import { registerGogdlStubListeners } from '../storeManagers/gog/e2eMock'
+import { registerLegendaryStubListeners } from '../storeManagers/legendary/e2eMock'
+import { registerNileStubListeners } from '../storeManagers/nile/e2eMock'
 import {
   createSteamProcesses,
   type SteamProcesses
@@ -115,6 +118,7 @@ import {
 // bundle — each is a second binding onto an already-resident module, not a new edge.
 import { LegendaryUser } from '../storeManagers/legendary/user'
 import { GOGUser, type GOGUserDeps } from '../storeManagers/gog/user'
+import type { GOGPresenceDeps } from '../storeManagers/gog/presence'
 // Block H (todo 2026-09-06, quick-260909-k5x). `grep -rn "gog/presence" src/backend
 // --include='*.ts'` (re-run at execution time) confirms `presence.ts` is ALREADY resident in
 // the sidecar bundle: `utils.ts:43` does `import gogPresence from './storeManagers/gog/
@@ -324,8 +328,14 @@ interface BootState {
  * The GOG user slice for presence, resolved by getter at call time (R4): the 'gog-presence' step
  * and the quit handler read the boot's stores and managers only when they fire.
  */
-function gogPresenceDeps(state: BootState): GOGUserDeps {
+function gogPresenceDeps(state: BootState): GOGPresenceDeps {
   return {
+    get config() {
+      return requireServices(state).config
+    },
+    get appInfo() {
+      return requireServices(state).appInfo
+    },
     stores: {
       get gog() {
         return requireServices(state).stores.gog
@@ -955,7 +965,7 @@ export function checkRosettaWhenMac(
  * @public Consumed by sidecar tests through require() in a fresh module registry (D-08),
  * which knip cannot see.
  */
-export function setGogPresenceWhenOnline(deps: GOGUserDeps): void {
+export function setGogPresenceWhenOnline(deps: GOGPresenceDeps): void {
   try {
     runOnceWhenOnline(() => {
       try {
@@ -1661,8 +1671,16 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'register-handlers',
       // Closures only: installs channel handlers, creates no timer, watcher, socket or child.
-      run: (ctx, _io, state) =>
-        registerHandlers({ log: ctx.log, services: requireServices(state) })
+      run: (ctx, _io, state) => {
+        const services = requireServices(state)
+        registerHandlers({ log: ctx.log, services })
+        // e2e-only command stubs (66.3-07): each registers only when CI === 'e2e'.
+        registerGogdlStubListeners(services.host.ipc, { CI: process.env.CI })
+        registerLegendaryStubListeners(services.host.ipc, {
+          CI: process.env.CI
+        })
+        registerNileStubListeners(services.host.ipc, { CI: process.env.CI })
+      }
     },
     {
       name: 'rpc-server',
@@ -1961,6 +1979,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         reconcileStoreUsersWhenOnline({
           kvs: requireServices(state).stores.kvs,
           gogUser: {
+            appInfo: requireServices(state).appInfo,
             stores: requireServices(state).stores,
             libraryManagers: requireServices(state).managers.library
           }
@@ -2060,7 +2079,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         const services = requireServices(state)
         startSignInProbePass({
           libraryManagers: services.managers.library,
-          stores: services.stores
+          stores: services.stores,
+          appInfo: services.appInfo
         })
       }
     },

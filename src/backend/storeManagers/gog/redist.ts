@@ -10,7 +10,6 @@ import {
   GOGv1Manifest,
   GOGv2Manifest
 } from 'common/types/gog'
-import { GlobalConfig } from 'backend/config'
 import { DMQueueElement } from 'common/types'
 import { GOGUser } from './user'
 import type { GOGManagerDeps } from './library'
@@ -23,7 +22,7 @@ import LogWriter from '../../logger/log_writer'
 /** What the redist helpers read: the gog stores and the manager map. */
 export type RedistDeps = Pick<
   GOGManagerDeps,
-  'stores' | 'libraryManagers' | 'getDownloadQueue'
+  'stores' | 'libraryManagers' | 'getDownloadQueue' | 'config'
 >
 
 export async function checkForRedistUpdates(deps: RedistDeps) {
@@ -185,12 +184,12 @@ export async function getRequiredRedistList(): Promise<string[]> {
 }
 
 export async function updateRedist(
-  deps: Pick<RedistDeps, 'libraryManagers'>,
+  deps: Pick<RedistDeps, 'libraryManagers' | 'config'>,
   redistToSync: string[]
 ): Promise<{
   status: 'done' | 'error'
 }> {
-  const { maxWorkers } = GlobalConfig.get().getSettings()
+  const { maxWorkers } = deps.config.getSettings()
   const workers = maxWorkers ? ['--max-workers', `${maxWorkers}`] : []
   const logPath = path.join(gamesConfigPath, 'gog-redist.log')
 

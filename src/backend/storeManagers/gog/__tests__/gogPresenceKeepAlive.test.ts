@@ -39,10 +39,6 @@
  * inert against this file.
  */
 
-jest.mock('backend/platform', () => ({
-  app: { getVersion: () => '1.0.0' }
-}))
-
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
@@ -63,10 +59,6 @@ jest.mock('backend/utils', () => ({
   }
 }))
 
-jest.mock('backend/config', () => ({
-  GlobalConfig: { get: jest.fn() }
-}))
-
 jest.mock('backend/storeManagers/gog/user', () => ({
   GOGUser: {
     isLoggedIn: jest.fn(),
@@ -75,8 +67,8 @@ jest.mock('backend/storeManagers/gog/user', () => ({
 }))
 
 import { axiosClient } from 'backend/utils'
-import { GlobalConfig } from 'backend/config'
-import { GOGUser, type GOGUserDeps } from 'backend/storeManagers/gog/user'
+import type { GOGPresenceDeps } from '../presence'
+import { GOGUser } from 'backend/storeManagers/gog/user'
 import gogPresence from '../presence'
 
 type MockAxiosClient = {
@@ -84,16 +76,17 @@ type MockAxiosClient = {
   delete: jest.Mock
 }
 const mockAxiosClient = axiosClient as unknown as MockAxiosClient
-// `jest.mocked(GOGUser).isLoggedIn`/`.getCredentials` do NOT trip
-// @typescript-eslint/unbound-method here, but `GlobalConfig.get` is a real class static
-// method and DOES -- so it is deliberately never extracted to a standalone reference below.
-// It is always cast-and-called inline instead: `(GlobalConfig.get as jest.Mock).mockReturnValue(...)`.
-// See depot.test.ts's own precedent comment for the same constraint against a different class.
 const mockIsLoggedIn = jest.mocked(GOGUser).isLoggedIn
 const mockGetCredentials = jest.mocked(GOGUser).getCredentials
 
 // One deps object for every call: GOGUser is mocked, so the slice is never read.
-const deps = { stores: {}, libraryManagers: {} } as unknown as GOGUserDeps
+const mockGetSettings = jest.fn()
+const deps = {
+  stores: {},
+  libraryManagers: {},
+  appInfo: { version: '1.0.0' },
+  config: { getSettings: mockGetSettings }
+} as unknown as GOGPresenceDeps
 
 const FIVE_MINUTES_MS = 5 * 60 * 1000
 
@@ -110,11 +103,9 @@ const FAKE_CREDENTIALS = {
 }
 
 function installDefaultMocks(): void {
-  ;(GlobalConfig.get as jest.Mock).mockReturnValue({
-    getSettings: () => ({
-      disableGOGPresence: false,
-      disablePlaytimeSync: false
-    })
+  mockGetSettings.mockReturnValue({
+    disableGOGPresence: false,
+    disablePlaytimeSync: false
   })
   mockIsLoggedIn.mockReturnValue(true)
   mockGetCredentials.mockResolvedValue(FAKE_CREDENTIALS)
@@ -125,7 +116,6 @@ function installDefaultMocks(): void {
 interface IsolatedPresenceHarness {
   presence: typeof gogPresence
   axiosClient: MockAxiosClient
-  globalConfigGet: jest.Mock
   isLoggedIn: jest.Mock
   getCredentials: jest.Mock
 }
@@ -143,24 +133,20 @@ function loadIsolatedPresence(): IsolatedPresenceHarness {
   jest.isolateModules(() => {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const axiosClientHandle = require('backend/utils').axiosClient
-    const globalConfigGetHandle = require('backend/config').GlobalConfig.get
     const gogUserHandle = require('backend/storeManagers/gog/user').GOGUser
     const presenceHandle = require('../presence').default
     /* eslint-enable @typescript-eslint/no-require-imports */
     harness = {
       presence: presenceHandle,
       axiosClient: axiosClientHandle,
-      globalConfigGet: globalConfigGetHandle,
       isLoggedIn: gogUserHandle.isLoggedIn,
       getCredentials: gogUserHandle.getCredentials
     }
   })
 
-  harness.globalConfigGet.mockReturnValue({
-    getSettings: () => ({
-      disableGOGPresence: false,
-      disablePlaytimeSync: false
-    })
+  mockGetSettings.mockReturnValue({
+    disableGOGPresence: false,
+    disablePlaytimeSync: false
   })
   harness.isLoggedIn.mockReturnValue(true)
   harness.getCredentials.mockResolvedValue(FAKE_CREDENTIALS)
@@ -230,11 +216,8 @@ describe('todo 2026-09-09 -- GOG presence keep-alive re-arm after deletePresence
   // does not depend on Case 1/2 having already run in this file, and does not leave a stray
   // timer behind for whatever test runs after it.
   it('case 3 -- D-DRS-01 receipt: a guarded deletePresence() call still tears down the live keep-alive (Option A hoists teardown above the guards)', async () => {
-    const {
-      presence: isolatedPresence,
-      axiosClient: isolatedAxiosClient,
-      globalConfigGet: isolatedGlobalConfigGet
-    } = loadIsolatedPresence()
+    const { presence: isolatedPresence, axiosClient: isolatedAxiosClient } =
+      loadIsolatedPresence()
 
     // Arm the keep-alive under normal settings.
     await isolatedPresence.setPresence(deps)
@@ -242,11 +225,9 @@ describe('todo 2026-09-09 -- GOG presence keep-alive re-arm after deletePresence
 
     // Now flip disablePlaytimeSync on -- deletePresence()'s early-return guard blocks the
     // network DELETE, but per D-DRS-01 Option A the local teardown runs anyway.
-    isolatedGlobalConfigGet.mockReturnValue({
-      getSettings: () => ({
-        disableGOGPresence: false,
-        disablePlaytimeSync: true
-      })
+    mockGetSettings.mockReturnValue({
+      disableGOGPresence: false,
+      disablePlaytimeSync: true
     })
 
     await isolatedPresence.deletePresence(deps, true)
@@ -258,11 +239,9 @@ describe('todo 2026-09-09 -- GOG presence keep-alive re-arm after deletePresence
     // that actually distinguishes Option A from Option B/today's code: setPresence()'s own
     // disablePlaytimeSync guard would mask a still-live timer's tick either way, so re-enabling
     // before advancing is what makes a surviving timer observable as an extra POST.
-    isolatedGlobalConfigGet.mockReturnValue({
-      getSettings: () => ({
-        disableGOGPresence: false,
-        disablePlaytimeSync: false
-      })
+    mockGetSettings.mockReturnValue({
+      disableGOGPresence: false,
+      disablePlaytimeSync: false
     })
 
     // Under D-DRS-01 Option A, the local keep-alive was torn down UNCONDITIONALLY inside the

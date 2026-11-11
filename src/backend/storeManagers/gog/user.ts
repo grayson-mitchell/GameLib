@@ -7,7 +7,6 @@ import { isOnline } from '../../online_monitor'
 import { GOGCredentials, UserData } from 'common/types/gog'
 import { clearCache } from 'backend/utils'
 import type { ClearCacheDeps } from 'backend/utils'
-import { app } from 'backend/platform'
 import { gogdlAuthConfig } from './constants'
 import { isMac } from 'backend/constants/environment'
 import { getLoginWindowSeamOrThrow } from '../../humble/loginWindowSeam'
@@ -166,6 +165,8 @@ function loginDataToCredentials(data: GOGLoginData): GOGCredentials {
 export interface GOGUserDeps {
   stores: Pick<GOGManagerDeps['stores'], 'gog'>
   libraryManagers: Pick<GOGManagerDeps['libraryManagers'], 'gog'>
+  /** The app version, sent in the users.gog.com User-Agent. */
+  appInfo: Pick<GOGManagerDeps['appInfo'], 'version'>
 }
 
 export class GOGUser {
@@ -280,7 +281,7 @@ export class GOGUser {
       .get(`https://users.gog.com/users/${encodeURIComponent(userId)}`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          'User-Agent': `HeroicGamesLauncher/${app.getVersion()}`
+          'User-Agent': `HeroicGamesLauncher/${deps.appInfo.version}`
         }
       })
       .catch((error) => {

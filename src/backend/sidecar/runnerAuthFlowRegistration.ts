@@ -80,7 +80,7 @@ import type { StoreManagers, Stores } from '../services/types'
 
 /** The slices the runner auth channels read: the library managers and the per-runner stores. */
 export interface RunnerAuthFlowDeps extends DialogBoxDeps {
-  appInfo: Pick<AppInfo, 'userAgentFallback'>
+  appInfo: Pick<AppInfo, 'userAgentFallback' | 'version'>
   notifications: Pick<Notifications, 'show'>
   managers: Pick<StoreManagers, 'library'>
   stores: Pick<Stores, 'gog' | 'legendary' | 'nile' | 'wikiGameInfo' | 'kvs'>

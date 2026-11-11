@@ -27,12 +27,6 @@ jest.mock('graceful-fs', () => ({
 }))
 jest.mock('node:fs/promises', () => ({ readFile: jest.fn() }))
 jest.mock('shlex', () => ({ __esModule: true, default: { split: jest.fn() } }))
-jest.mock('../../../game_config', () => ({
-  GameConfig: { get: () => ({ config: stored }) }
-}))
-jest.mock('backend/game_config', () => ({
-  GameConfig: { get: () => ({ config: stored }) }
-}))
 jest.mock('../../../utils', () => ({
   checkWineBeforeLaunch: (...a: unknown[]) => mockCheckWine(...a),
   sendGameStatusUpdate: jest.fn(),
@@ -98,7 +92,8 @@ const gogDeps = {
     runWineCommand: (...a: unknown[]) => mockRunWine(...a)
   },
   spawnAsync: jest.fn(),
-  config: { getSettings: () => ({ disableLogs: true }) }
+  config: { getSettings: () => ({ disableLogs: true }) },
+  gameConfigs: { get: () => ({ config: stored }) }
 } as unknown as SetupDeps
 
 const nileDeps = {

@@ -110,12 +110,14 @@ export interface SignInProbeDeps {
     'legendary' | 'gog' | 'nile'
   >
   stores: Pick<Stores, SignInStore>
+  appInfo: Pick<ManagerDeps['appInfo'], 'version'>
 }
 
 export function createSignInProbePassDeps(
   deps: SignInProbeDeps
 ): SignInProbePassDeps {
   const gogUserDeps = {
+    appInfo: deps.appInfo,
     stores: { gog: deps.stores.gog },
     libraryManagers: { gog: deps.libraryManagers.gog }
   }
