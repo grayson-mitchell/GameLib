@@ -121,7 +121,8 @@ export default tseslint.config(
     ignores: [
       '**/__tests__/**',
       '**/__mocks__/**',
-      'src/backend/testUtils/**',
+      // src/backend/testUtils is NOT ignored: production value-imports
+      // testUtils/fakeHomeProfile, so it ships (66.2 WR-02).
       'src/backend/jest.*',
       'src/backend/process/runner.ts'
     ],

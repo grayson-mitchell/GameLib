@@ -117,7 +117,8 @@ module.exports = {
         pathNot: [
           '/__tests__/',
           '/__mocks__/',
-          '^src/backend/testUtils/',
+          // src/backend/testUtils is NOT exempt: production value-imports
+          // testUtils/fakeHomeProfile, so it ships (66.2 WR-02).
           '^src/backend/jest\\.',
           '^src/backend/process/runner\\.ts$'
         ]

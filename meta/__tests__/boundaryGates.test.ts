@@ -364,6 +364,25 @@ describe('dependency-cruiser boundary rules (seeded violations)', () => {
     )
   })
 
+  // 66.2 WR-02: production value-imports testUtils, so only its tests are exempt.
+  test('no-child-process-outside-runner covers src/backend/testUtils, not its tests', () => {
+    withSeededRoot(
+      {
+        'src/backend/testUtils/spawny.ts': `import 'node:child_process'\n`,
+        'src/backend/testUtils/__tests__/ok.test.ts': `import 'node:child_process'\n`
+      },
+      ({ cruise }) => {
+        const r = cruise()
+        expect(r.status).not.toBe(0)
+        expect(
+          r.active
+            .filter((v) => v.rule.name === 'no-child-process-outside-runner')
+            .map((v) => v.from)
+        ).toEqual(['src/backend/testUtils/spawny.ts'])
+      }
+    )
+  })
+
   test('games-split-modules-are-leaves allows a type-only import in a phase 65 module', () => {
     withSeededRoot(
       {

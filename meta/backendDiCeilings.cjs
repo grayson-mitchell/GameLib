@@ -65,7 +65,9 @@ const REPO_ROOT = path.join(__dirname, '..')
 const DEFAULT_BASELINE_DIR = path.join(__dirname, 'backendDiCeilings')
 // Tests are colocated, so __tests__/__mocks__/node_modules are skipped at any depth.
 // testUtils is skipped ONLY at src/backend/testUtils (IN-02): a production directory that
-// happens to be named testUtils elsewhere must still be scanned.
+// happens to be named testUtils elsewhere must still be scanned. The skip covers moduleState
+// only: production value-imports testUtils/fakeHomeProfile, so testUtils ships, and its
+// non-test files still count toward childProcess (66.2 WR-02).
 const SKIP_DIRS = new Set(['__tests__', '__mocks__', 'node_modules'])
 const SKIP_PATHS = ['src/backend/testUtils']
 // Floors: about 90% of the files measured on 2026-11-10 (494 scanned non-test backend
@@ -401,6 +403,18 @@ function census(root = REPO_ROOT) {
     const cp = countChildProcessImports(text, f)
     if (ms > 0) result.moduleState[rel(f)] = ms
     if (cp > 0) result.childProcess[rel(f)] = cp
+  }
+  // 66.2 WR-02: the SKIP_PATHS dirs are exempt from moduleState, never from the ban.
+  for (const skipped of SKIP_PATHS) {
+    for (const f of walkTs(
+      path.join(root, ...skipped.split('/')),
+      SKIP_DIRS,
+      []
+    ).sort()) {
+      if (isTest(f)) continue
+      const cp = countChildProcessImports(fs.readFileSync(f, 'utf8'), f)
+      if (cp > 0) result.childProcess[rel(f)] = cp
+    }
   }
   const srcFiles = walkTs(
     path.join(root, 'src'),

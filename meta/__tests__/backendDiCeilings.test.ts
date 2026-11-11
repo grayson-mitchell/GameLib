@@ -556,6 +556,18 @@ describe('backendDiCeilings CLI', () => {
       'src/backend/foo/testUtils/scan.ts': 1
     })
   })
+  // 66.2 WR-02: production value-imports testUtils, so the ban still covers it.
+  it('counts child_process in src/backend/testUtils but not in its tests', () => {
+    write('src/backend/testUtils/spawny.ts', "import 'node:child_process'\n")
+    write(
+      'src/backend/testUtils/__tests__/ok.test.ts',
+      "import 'node:child_process'\n"
+    )
+    write('src/backend/testUtils/ok.test.ts', "import 'child_process'\n")
+    expect(census(tmp).childProcess).toEqual({
+      'src/backend/testUtils/spawny.ts': 1
+    })
+  })
   it('a malformed --shard file is reported as a failure, not thrown', () => {
     write('baselines/bad.json', '{ nope')
     const r = run(['--shard', 'bad'])
