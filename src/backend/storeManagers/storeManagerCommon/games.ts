@@ -1,5 +1,4 @@
-import { GameSettings } from 'common/types'
-import { GameConfig } from '../../game_config'
+import type { GameSettings } from 'common/types'
 import { logInfo, LogPrefix, logWarning } from 'backend/logger'
 import { basename, dirname } from 'path'
 import { constants as FS_CONSTANTS } from 'graceful-fs'
@@ -8,14 +7,8 @@ import type { ManagerDeps } from 'backend/services/types'
 import { access, chmod } from 'fs/promises'
 import shlex from 'shlex'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
-import {
-  createAbortController,
-  deleteAbortController
-} from '../../utils/aborthandler/aborthandler'
-import { BrowserWindow, dialog, Menu } from 'backend/platform'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { isLinux, isMac } from 'backend/constants/environment'
-import { windowIcon } from 'backend/constants/paths'
 import { withKnownFixEnv } from 'backend/knownFixOverlays'
 import { raiseWineGameWindow } from 'backend/utils/wineWindowRaise'
 
@@ -24,125 +17,35 @@ import { Game } from '../../../common/types/game_manager'
 import { getLaunchSettings } from 'backend/engine/launchSettings'
 import { engineKeyFor } from 'backend/engine/gameKey'
 
-async function getAppSettings(appName: string): Promise<GameSettings> {
+/**
+ * Browser games opened a child BrowserWindow. Under the sidecar `new BrowserWindow(...)` threw
+ * (the stand-in was an object literal), so this has always rejected; the window, menu and
+ * confirm-exit dialog code behind it never ran and is gone (D-35-15-01 stays open: a real fix
+ * is a Tauri child window).
+ */
+const openNewBrowserGameWindow = async (): Promise<boolean> => {
+  throw new Error('Browser games are not supported in this build')
+}
+
+async function getAppSettings(
+  gameConfigs: ManagerDeps['gameConfigs'],
+  appName: string
+): Promise<GameSettings> {
   return (
-    GameConfig.get(appName).config ||
-    (await GameConfig.get(appName).getSettings())
+    gameConfigs.get(appName).config ||
+    (await gameConfigs.get(appName).getSettings())
   )
-}
-
-type BrowserGameOptions = {
-  browserUrl: string
-  abortId: string
-  customUserAgent?: string
-  launchFullScreen?: boolean
-}
-
-const openNewBrowserGameWindow = async ({
-  browserUrl,
-  abortId,
-  customUserAgent,
-  launchFullScreen
-}: BrowserGameOptions): Promise<boolean> => {
-  const hostname = new URL(browserUrl).hostname
-
-  return new Promise((res) => {
-    // DEGRADED UNDER TAURI, AND THIS CAST DOES NOT CHANGE THAT -- Phase 35 Plan 15,
-    // ledgered as D-35-15-01. `backend/platform`'s `BrowserWindow` is an object literal with
-    // only `getAllWindows`, so `new BrowserWindow(...)` throws at runtime. It ALREADY did
-    // before this plan: under the sidecar, bootstrap's `Module._load` hook resolved
-    // `require('electron')` to that same stub, so browser games have been broken under Tauri
-    // since the sidecar existed. The import rewrite only made it visible to `tsc`.
-    //
-    // The cast preserves the current behaviour EXACTLY rather than papering over it, because
-    // this plan's constraint is not to fix behaviour it merely notices inside a mechanical
-    // import diff. A real fix is a Tauri child window and belongs to its own plan.
-    const BrowserWindowCtor = BrowserWindow as unknown as new (
-      options?: unknown
-    ) => {
-      setMenu: (menu: unknown) => void
-      webContents: {
-        on: (
-          event: string,
-          cb: (event: { preventDefault: () => void }) => void
-        ) => void
-        setWindowOpenHandler: (handler: unknown) => void
-        userAgent: string
-      }
-      loadURL: (url: string) => Promise<void>
-      on: (event: string, cb: () => void) => void
-      setFullScreen: (flag: boolean) => void
-      menuBarVisible: boolean
-      show: () => void
-      hide: () => void
-      isDestroyed: () => boolean
-      close: () => void
-      destroy: () => void
-    }
-    const browserGame = new BrowserWindowCtor({
-      icon: windowIcon,
-      fullscreen: launchFullScreen ?? false,
-      autoHideMenuBar: true,
-      webPreferences: {
-        partition: `persist:${hostname}`
-      }
-    })
-
-    browserGame.setMenu(
-      Menu.buildFromTemplate([
-        { role: 'close' },
-        { role: 'reload' },
-        { role: 'togglefullscreen' },
-        { role: 'toggleDevTools' }
-      ])
-    )
-
-    const defaultUserAgent =
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36'
-    browserGame.webContents.userAgent = customUserAgent ?? defaultUserAgent
-
-    browserGame.menuBarVisible = false
-    browserGame.loadURL(browserUrl)
-    browserGame.on('ready-to-show', () => browserGame.show())
-
-    const abortController = createAbortController(abortId)
-
-    abortController.signal.addEventListener('abort', () => {
-      browserGame.close()
-    })
-
-    browserGame.webContents.on('will-prevent-unload', (event) => {
-      const choice = dialog.showMessageBoxSync(browserGame, {
-        type: 'question',
-        buttons: ['Yes', 'No'],
-        title: i18next.t(
-          'box.warning.sideload.confirmExit.title',
-          'Are you sure you want to quit?'
-        ),
-        message: i18next.t(
-          'box.warning.sideload.confirmExit.message',
-          'Any unsaved progress might be lost'
-        ),
-        defaultId: 0,
-        cancelId: 1
-      })
-      const leave = choice === 0
-      if (leave) {
-        event.preventDefault()
-      }
-    })
-
-    browserGame.on('closed', () => {
-      deleteAbortController(abortId)
-      res(true)
-    })
-  })
 }
 
 /** The collaborators the shared launch helper uses (66.1, R3). */
 export type CommonGameDeps = Pick<
   ManagerDeps,
-  'launcher' | 'commandRunner' | 'spawnAsync' | 'dialogs' | 'appState'
+  | 'launcher'
+  | 'commandRunner'
+  | 'spawnAsync'
+  | 'dialogs'
+  | 'appState'
+  | 'gameConfigs'
 >
 
 export async function launchGame(
@@ -159,9 +62,11 @@ export async function launchGame(
     install: { executable }
   } = gameInfo
 
-  const { browserUrl, customUserAgent, launchFullScreen } = gameInfo
+  const { browserUrl } = gameInfo
 
-  const gameSettingsOverrides = await GameConfig.get(appName).getSettings()
+  const gameSettingsOverrides = await deps.gameConfigs
+    .get(appName)
+    .getSettings()
   if (
     gameSettingsOverrides.targetExe !== undefined &&
     gameSettingsOverrides.targetExe !== ''
@@ -170,17 +75,12 @@ export async function launchGame(
   }
 
   if (browserUrl) {
-    return openNewBrowserGameWindow({
-      browserUrl,
-      abortId: appName,
-      customUserAgent,
-      launchFullScreen
-    })
+    return openNewBrowserGameWindow()
   }
 
   const gameSettings = getLaunchSettings(
     engineKeyFor(runner, appName),
-    await getAppSettings(appName)
+    await getAppSettings(deps.gameConfigs, appName)
   )
   const { launcherArgs } = gameSettings
   const extraArgs = [...shlex.split(launcherArgs ?? ''), ...args]

@@ -5,7 +5,6 @@ import {
   GameSettings,
   LaunchOption
 } from 'common/types'
-import { GameConfig } from '../../game_config'
 import { sendGameStatusUpdate, shutdownWine } from '../../utils'
 import { logInfo, LogPrefix, logWarning } from 'backend/logger'
 import { dirname } from 'path'
@@ -42,6 +41,7 @@ export default class SideloadGame implements Game {
       | 'spawnAsync'
       | 'runner'
       | 'config'
+      | 'gameConfigs'
       | 'paths'
       | 'imageTools'
       | 'dialogs'
@@ -64,8 +64,8 @@ export default class SideloadGame implements Game {
 
   async getSettings(): Promise<GameSettings> {
     return (
-      GameConfig.get(this.id).config ||
-      (await GameConfig.get(this.id).getSettings())
+      this.deps.gameConfigs.get(this.id).config ||
+      (await this.deps.gameConfigs.get(this.id).getSettings())
     )
   }
 

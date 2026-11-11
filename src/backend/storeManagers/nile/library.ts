@@ -19,7 +19,6 @@ import {
 import { existsSync, readFileSync, writeFileSync } from 'graceful-fs'
 import { getFileSize, getNileBin, removeSpecialcharacters } from 'backend/utils'
 import { dirname, join } from 'path'
-import { app } from 'backend/platform'
 import { copySync } from 'fs-extra'
 import { NileUser } from './user'
 import { runNileCommandStub } from './e2eMock'
@@ -39,7 +38,7 @@ export default class NileLibraryManager implements LibraryManager {
 
   async init() {
     // Migrate user data from global Nile config if necessary
-    const globalNileConfig = join(app.getPath('appData'), 'nile')
+    const globalNileConfig = join(this.deps.paths.appData, 'nile')
     if (!existsSync(nileConfigPath) && existsSync(globalNileConfig)) {
       copySync(globalNileConfig, nileConfigPath)
       await NileUser.getUserData(this.deps)

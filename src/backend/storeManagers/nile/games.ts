@@ -17,7 +17,6 @@ import {
   logWarning,
   createGameLogWriter
 } from 'backend/logger'
-import { GameConfig } from 'backend/game_config'
 import { existsSync } from 'graceful-fs'
 import { showDialogBoxModalAuto } from 'backend/dialog/dialog'
 import { t } from 'i18next'
@@ -34,7 +33,6 @@ import {
   sendProgressUpdate,
   shutdownWine
 } from 'backend/utils'
-import { GlobalConfig } from 'backend/config'
 import {
   addShortcuts as addShortcutsUtil,
   removeShortcuts as removeShortcutsUtil
@@ -81,7 +79,7 @@ export default class NileGameManager implements Game {
   }
 
   async getSettings(): Promise<GameSettings> {
-    const gameConfig = GameConfig.get(this.id)
+    const gameConfig = this.deps.gameConfigs.get(this.id)
     return gameConfig.config || (await gameConfig.getSettings())
   }
 
@@ -260,7 +258,7 @@ export default class NileGameManager implements Game {
   }
 
   async install({ path }: InstallArgs): Promise<InstallResult> {
-    const { maxWorkers } = GlobalConfig.get().getSettings()
+    const { maxWorkers } = this.deps.config.getSettings()
     const workers = maxWorkers ? ['--max-workers', `${maxWorkers}`] : []
 
     const commandParts = ['install', '--base-path', path, ...workers, this.id]
@@ -603,7 +601,7 @@ export default class NileGameManager implements Game {
   }
 
   async update(): Promise<InstallResult> {
-    const { maxWorkers } = GlobalConfig.get().getSettings()
+    const { maxWorkers } = this.deps.config.getSettings()
     const workers = maxWorkers ? ['--max-workers', `${maxWorkers}`] : []
 
     const commandParts = ['update', ...workers, this.id]

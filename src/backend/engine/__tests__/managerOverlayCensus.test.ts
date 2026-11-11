@@ -66,7 +66,7 @@ describe('store manager launch-path overlay census', () => {
       read('storeManagerCommon/games.ts'),
       'export async function launchGame('
     )
-    expect(body).toContain('GameConfig.get(appName).getSettings()')
+    expect(body).toMatch(/gameConfigs\s*\.get\(appName\)\s*\.getSettings\(\)/)
   })
 
   it.each(['legendary', 'gog', 'nile', 'sideload'])(

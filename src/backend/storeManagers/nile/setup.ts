@@ -6,7 +6,6 @@ import {
   logWarning,
   getRunnerLogWriter
 } from 'backend/logger'
-import { GameConfig } from 'backend/game_config'
 import { checkWineBeforeLaunch, sendGameStatusUpdate } from 'backend/utils'
 import { isWindows } from 'backend/constants/environment'
 import { engineServicesFrom } from 'backend/services/engineServices'
@@ -85,7 +84,7 @@ export default async function setup(
     LogPrefix.Nile
   )
 
-  const stored = GameConfig.get(appName).config
+  const stored = deps.gameConfigs.get(appName).config
   if (isWindows) {
     return runNileSetup(deps, appName, basePath, fuel.PostInstall, stored)
   }

@@ -1,4 +1,4 @@
-import { addTestOnlyListener } from 'backend/ipc'
+import { onTestOnly, type IpcRegistry } from 'backend/sidecar/ipcRegistry'
 import { RunnerCommandStub } from 'common/types'
 
 /*
@@ -34,12 +34,16 @@ export const runNileCommandStub = async (command: string[]) => {
   })
 }
 
-// Add listeners to be called from e2e tests to stub the nile command calls
-addTestOnlyListener(
-  'setNileCommandStub',
-  (stubs) => (currentStubs = [...stubs])
-)
-addTestOnlyListener(
-  'resetNileCommandStub',
-  () => (currentStubs = [...defaultStubs])
-)
+// Add listeners to be called from e2e tests to stub the nile command calls. Registered
+// once at boot (register-handlers), only when env.CI === 'e2e' (onTestOnly checks it).
+export function registerNileStubListeners(
+  ipc: Pick<IpcRegistry, 'on'>,
+  env: Pick<NodeJS.ProcessEnv, 'CI'>
+): void {
+  onTestOnly(ipc, env, 'setNileCommandStub', (stubs) => {
+    currentStubs = [...stubs]
+  })
+  onTestOnly(ipc, env, 'resetNileCommandStub', () => {
+    currentStubs = [...defaultStubs]
+  })
+}
