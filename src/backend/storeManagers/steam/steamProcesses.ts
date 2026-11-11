@@ -35,7 +35,7 @@ export function createSteamProcesses(deps: {
   const { runner, clock, platform, config, openExternal } = deps
   return {
     // Mac Steam's go-offline debt and shutdown signal: one instance per boot, handed to SteamUser
-    // (bindStores), the guided Go Offline flows and the boot/quit restore.
+    // (the steam-user boot step), the guided Go Offline flows and the boot/quit restore.
     macSteamOffline: createMacSteamOffline({
       ...createMacSteamOfflineEnvDeps({ config, openExternal }),
       platform,

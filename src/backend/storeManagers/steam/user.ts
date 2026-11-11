@@ -1,4 +1,6 @@
 import type { ManagerDeps, SteamSessionServices } from 'backend/services/types'
+import type { GlobalConfigSlice } from 'backend/config'
+import type { Clock, TimerHandle } from 'backend/process/types'
 import { existsSync } from 'graceful-fs'
 import { join } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -35,113 +37,67 @@ import {
   type OpenAuthenticatedLease
 } from './userTypes'
 
-type SteamUserMacSteamOffline = Pick<
+export type SteamUserMacSteamOffline = Pick<
   MacSteamOffline,
   'withMacSteamOffline' | 'restoreMacSteamOnlineIfOwed'
 >
-export type SteamUserBoundDeps = SteamStoresDeps & {
-  macSteamOffline?: SteamUserMacSteamOffline
-  /** The boot-owned sign-in fence and outcome map (D-66.3-13); read through `signIn()`. */
-  signIn?: ManagerDeps['signIn']
-  /** The boot-owned Steam sign-in session state and auth-unlock latches (D-66.3-13); read through `steamSession()`. */
-  steamSession?: SteamSessionServices
-  /**
-   * The boot-owned anonymous CM client (D-66.3-14); read through `anonymousClient()`. Interim:
-   * rides this bound-deps object until SteamUser itself becomes a boot-owned instance (plan 16).
-   */
-  anonymousClient?: Pick<AnonymousClient, 'close'>
+
+/**
+ * Everything one SteamUser needs, required at construction (D-05, D-66.3-16): there is no unbound
+ * state and no throw-if-unbound accessor.
+ */
+export type SteamUserDeps = SteamStoresDeps & {
+  /** The boot-owned Mac Steam go-offline instance (the wrap and the shutdown restore). */
+  macSteamOffline: SteamUserMacSteamOffline
+  /** The boot-owned sign-in fence and outcome map (D-66.3-13). */
+  signIn: Pick<ManagerDeps['signIn'], 'epochs' | 'outcomes'>
+  /** The boot-owned Steam sign-in session state and auth-unlock latches (D-66.3-13). */
+  steamSession: Pick<SteamSessionServices, 'authTrigger' | 'signIn'>
+  /** The boot-owned anonymous CM client; logout() closes it (D-66.3-14). */
+  anonymousClient: Pick<AnonymousClient, 'close'>
+  /** The boot clock: the idle-close timer lives on it, unref'd (exit contract). */
+  clock: Clock
+  /** The boot-built global config; the Windows Steam-client probe reads defaultSteamPath. */
+  config: Pick<GlobalConfigSlice, 'getSettings'>
 }
 
-// ── SteamUser static class ────────────────────────────────────────────────────
+// ── SteamUser class ───────────────────────────────────────────────────────────
 
+/**
+ * The authenticated Steam CM session owner. One instance per boot, built by the 'steam-user' boot
+ * step (createSteamUser); the single-flight connect, the wrap ordering, the lease count / idle
+ * timer and the session generation fence are per instance and shared by every consumer through
+ * Pick slices.
+ */
 export class SteamUser {
-  // 66.1-16: the steam stores slice this static class reads. Static because
-  // SteamUser has ~20 call sites; the sidecar's 'stores' boot step binds it (66.1-18).
-  // 66.2-09: the same slot also carries the boot-built Mac Steam go-offline instance
-  // (ten acquire sites would otherwise each have to thread it), so no second static exists.
-  private static boundStores: SteamUserBoundDeps | null = null
+  constructor(private readonly deps: SteamUserDeps) {}
 
-  /** Inject the steam stores slice and the Mac Steam instance (boot / tests). */
-  static bindStores(deps: SteamUserBoundDeps | null): void {
-    this.boundStores = deps
-  }
-
-  private static macSteamOffline(): SteamUserMacSteamOffline {
-    const instance = this.boundStores?.macSteamOffline
-    if (!instance) {
-      throw new Error(
-        'SteamUser: Mac Steam offline instance read before bindStores supplied it (the sidecar binds it in the stores boot step)'
-      )
-    }
-    return instance
-  }
-
-  private static signIn(): ManagerDeps['signIn'] {
-    const instance = this.boundStores?.signIn
-    if (!instance) {
-      throw new Error(
-        'SteamUser: sign-in state read before bindStores supplied it (the sidecar binds it in the stores boot step)'
-      )
-    }
-    return instance
-  }
-
-  private static anonymousClient(): Pick<AnonymousClient, 'close'> {
-    const instance = this.boundStores?.anonymousClient
-    if (!instance) {
-      throw new Error(
-        'SteamUser: anonymous client read before bindStores supplied it (the sidecar binds it in the stores boot step)'
-      )
-    }
-    return instance
-  }
-
-  private static steamSession(): SteamSessionServices {
-    const instance = this.boundStores?.steamSession
-    if (!instance) {
-      throw new Error(
-        'SteamUser: Steam session state read before bindStores supplied it (the sidecar binds it in the stores boot step)'
-      )
-    }
-    return instance
-  }
-
-  private static storesDeps(): SteamStoresDeps {
-    if (!this.boundStores) {
-      throw new Error(
-        'SteamUser: stores read before bindStores (the sidecar binds it in the stores boot step)'
-      )
-    }
-    return this.boundStores
-  }
-
-  private static client: InstanceType<typeof SteamUserLib> | null = null
+  private client: InstanceType<typeof SteamUserLib> | null = null
   // Single-flight for the wrapped cold connect; resolves null when connected,
   // otherwise the refusal every joiner reports.
-  private static connectingPromise: Promise<AuthSessionRefusal | null> | null =
-    null
+  private connectingPromise: Promise<AuthSessionRefusal | null> | null = null
   // Live leases (acquireAuthenticated / acquireOpenAuthenticated). The last
   // release arms idleTimer; a bare ensureConnected() takes no lease.
-  private static leaseCount = 0
-  private static idleTimer: ReturnType<typeof setTimeout> | null = null
+  private leaseCount = 0
+  private idleTimer: TimerHandle | null = null
   // 54-REVIEW CR-01: the last install target seen per appName. An install's
   // first acquire (games.ts) carries it; a nested acquire for the same app
   // (depot.ts) does not, so its guided push reads it from here. Without it a
   // guided Continue would reinstall into the default library and route.
-  private static guidedInstallTargets = new Map<string, GuidedInstallTarget>()
+  private guidedInstallTargets = new Map<string, GuidedInstallTarget>()
   // True once releaseForShutdown() has run (stdin EOF: the shell is gone). A reconnect path
   // (ensureConnected's relog, a late login) must not open a NEW CM socket after that, or the
   // sidecar would hold the loop again.
-  private static shuttingDown = false
+  private shuttingDown = false
   // 54-REVIEW WR-07: bumped by logout(). A wrapped connect captures it, and a
   // logon that started before a sign-out never opens (or keeps) a session.
-  private static sessionGeneration = 0
+  private sessionGeneration = 0
   // 54-REVIEW WR-07: abandons the authenticated logon in flight, if any.
-  private static abandonPendingLogon: (() => void) | null = null
+  private abandonPendingLogon: (() => void) | null = null
   // 54-REVIEW WR-07: wraps run one at a time. Single-flight normally makes
   // that true already; after a sign-out mid-wrap, a fresh sign-in's wrap must
   // not overlap the old wrap's goonline.
-  private static wrapTail: Promise<unknown> = Promise.resolve()
+  private wrapTail: Promise<unknown> = Promise.resolve()
   // steam-sync-false-failed-banner: the terminal 'error' the CM ended the most
   // recent logon attempt with (e.g. AccessDenied for a refresh token Steam no
   // longer accepts). Tagged with the client it belongs to so an error from a
@@ -150,7 +106,7 @@ export class SteamUser {
   // mistaken for the current attempt's verdict. Reset at the start of every
   // connectSteamUserClient(). Read through getLogonFailure(), which hands out
   // only message + eresult -- never the client, never the token.
-  private static logonFailure: {
+  private logonFailure: {
     client: InstanceType<typeof SteamUserLib>
     message: string
     eresult?: number
@@ -166,17 +122,9 @@ export class SteamUser {
    * 261101-whs). On darwin and linux it probes STEAM_INSTALL_PATHS. A blank
    * Default Steam path setting returns false without probing anything.
    */
-  static isSteamClientInstalled(): boolean {
+  isSteamClientInstalled(): boolean {
     if (platform === 'win32') {
-      // Loaded on first use, not at module load: backend/config pulls in the
-      // whole backend graph (utils, GOG, Electron paths), and user.ts is on
-      // every startup path and in every suite that touches it (same reason as
-      // macSteamOffline.ts's connectionLogPath).
-      /* eslint-disable @typescript-eslint/no-require-imports */
-      const { GlobalConfig } =
-        require('backend/config') as typeof import('backend/config')
-      /* eslint-enable @typescript-eslint/no-require-imports */
-      const root = GlobalConfig.get()
+      const root = this.deps.config
         .getSettings()
         .defaultSteamPath.replaceAll("'", '')
       // join('', 'steam.exe') would probe a steam.exe relative to the cwd.
@@ -189,9 +137,9 @@ export class SteamUser {
 
   // ── AUTH-03: Login state ───────────────────────────────────────────────────
 
-  static isLoggedIn(): boolean {
+  isLoggedIn(): boolean {
     return Boolean(
-      this.storesDeps().stores.steam.configStore.get_nodefault('isLoggedIn')
+      this.deps.stores.steam.configStore.get_nodefault('isLoggedIn')
     )
   }
 
@@ -211,10 +159,10 @@ export class SteamUser {
    * (P1, 260822-vov). Noting `'boot-probe'` reverses quick task 260817-d61 for a
    * signed-in account, as recorded in `authTrigger.ts`.
    */
-  static async probeCredentialPresence(): Promise<SignInProbeOutcome> {
+  async probeCredentialPresence(): Promise<SignInProbeOutcome> {
     if (!this.isLoggedIn()) return 'unknown'
     try {
-      this.steamSession().authTrigger.noteSteamAuthTrigger('boot-probe')
+      this.deps.steamSession.authTrigger.noteSteamAuthTrigger('boot-probe')
       const outcome = await readTokenOutcome(getTokenStore(), 'boot-probe')
       if (outcome.status === 'present') return 'healthy'
       if (outcome.status === 'absent') return 'expired'
@@ -226,7 +174,7 @@ export class SteamUser {
 
   // ── LIB-01: Authenticated client accessor ─────────────────────────────────
 
-  static getClient(): InstanceType<typeof SteamUserLib> | null {
+  getClient(): InstanceType<typeof SteamUserLib> | null {
     return this.client
   }
 
@@ -241,14 +189,14 @@ export class SteamUser {
    * "not connected yet". Carries message + eresult only: no client handle, no
    * token. See the `logonFailure` field doc.
    */
-  static getLogonFailure(): { message: string; eresult?: number } | null {
+  getLogonFailure(): { message: string; eresult?: number } | null {
     const failure = this.logonFailure
     if (!failure || failure.client !== this.client) return null
     return { message: failure.message, eresult: failure.eresult }
   }
 
   /** True when the CM refused the stored credential itself, not the connection. */
-  private static isCredentialRefusal(rejection: {
+  private isCredentialRefusal(rejection: {
     message: string
     eresult?: number
   }): boolean {
@@ -278,19 +226,19 @@ export class SteamUser {
    * every one would be noise, and `resolveSignInState` already lets a latched
    * flag outrank whatever outcome the boot probe recorded.
    */
-  private static reportLogonVerdict(
+  private reportLogonVerdict(
     outcome: 'healthy' | 'expired',
     epochAtStart: number
   ): void {
     const result = applySignInVerdict(
-      { stores: this.storesDeps().stores, epochs: this.signIn().epochs },
+      { stores: this.deps.stores, epochs: this.deps.signIn.epochs },
       'steam',
       outcome,
       epochAtStart
     )
     if (result !== 'latched' && result !== 'cleared') return
-    this.signIn().outcomes.record('steam', outcome)
-    this.signIn().outcomes.publish()
+    this.deps.signIn.outcomes.record('steam', outcome)
+    this.deps.signIn.outcomes.publish()
   }
 
   /**
@@ -306,7 +254,7 @@ export class SteamUser {
    * directly. Every production caller must use acquireAuthenticated /
    * acquireOpenAuthenticated; steamAuthSessionPolicy.test.ts enforces this.
    */
-  static async ensureConnected(): Promise<boolean> {
+  async ensureConnected(): Promise<boolean> {
     const refusal = await this.ensureAuthenticatedSession('user-refresh')
     // An earlier lease cycle may have armed the idle timer; this un-leased
     // caller is now relying on the session, so it must not be logged off
@@ -320,20 +268,20 @@ export class SteamUser {
    * when it is not already open. Concurrent acquires share one logon. The last
    * release closes the session after AUTH_SESSION_IDLE_GRACE_MS.
    */
-  static acquireAuthenticated(
+  acquireAuthenticated(
     opts: AcquireAuthenticatedOpts
   ): Promise<AuthenticatedLease> {
     return this.acquireInternal(opts)
   }
 
-  static acquireAuthenticatedWithToken(
+  acquireAuthenticatedWithToken(
     opts: AcquireAuthenticatedOpts,
     token: string
   ): Promise<AuthenticatedLease> {
     return this.acquireInternal(opts, token)
   }
 
-  private static async acquireInternal(
+  private async acquireInternal(
     opts: AcquireAuthenticatedOpts,
     token?: string
   ): Promise<AuthenticatedLease> {
@@ -390,7 +338,7 @@ export class SteamUser {
    * keyring and never logs on: launch-path consumers use it so they can reuse
    * an install's session but can never open one.
    */
-  static acquireOpenAuthenticated(
+  acquireOpenAuthenticated(
     reason: AuthSessionReason
   ): OpenAuthenticatedLease | null {
     const client = this.client
@@ -405,17 +353,15 @@ export class SteamUser {
   }
 
   /** configStore userData.steamId when it is a numeric SteamID64 string. */
-  static getPersistedSteamId64(): string | undefined {
+  getPersistedSteamId64(): string | undefined {
     const steamId =
-      this.storesDeps().stores.steam.configStore.get_nodefault(
-        'userData'
-      )?.steamId
+      this.deps.stores.steam.configStore.get_nodefault('userData')?.steamId
     return typeof steamId === 'string' && /^\d+$/.test(steamId)
       ? steamId
       : undefined
   }
 
-  private static makeRelease(): () => void {
+  private makeRelease(): () => void {
     let released = false
     return () => {
       if (released) return
@@ -425,14 +371,13 @@ export class SteamUser {
     }
   }
 
-  private static armIdleTimer(): void {
+  private armIdleTimer(): void {
     if (this.leaseCount > 0 || !this.client) return
     this.clearIdleTimer()
-    this.idleTimer = setTimeout(() => {
+    this.idleTimer = this.deps.clock.setTimeout(() => {
       this.idleTimer = null
       if (this.leaseCount === 0) this.endSession('idle')
     }, AUTH_SESSION_IDLE_GRACE_MS)
-    this.idleTimer.unref?.()
   }
 
   /**
@@ -441,7 +386,7 @@ export class SteamUser {
    * the keyring is not read again. `callerLeases` is how many of the current
    * leases the caller itself holds (acquireInternal counts its own first).
    */
-  private static async ensureAuthenticatedSession(
+  private async ensureAuthenticatedSession(
     reason: AuthSessionReason,
     tokenOverride?: string,
     callerLeases = 0
@@ -472,7 +417,7 @@ export class SteamUser {
         // A live, canary-verified CM connection disproves any latched
         // credentialsMissing verdict — clear it so the tile recovers without
         // waiting for the next login.
-        this.storesDeps().stores.steam.configStore.delete('credentialsMissing')
+        this.deps.stores.steam.configStore.delete('credentialsMissing')
         return null
       } catch (canaryErr) {
         logWarning(
@@ -519,7 +464,7 @@ export class SteamUser {
       // only — no new IPC channel and no frontend banner is added here.
       const outcome = await readTokenOutcome(
         getTokenStore(),
-        this.steamSession().authTrigger.currentTriggerLabel()
+        this.deps.steamSession.authTrigger.currentTriggerLabel()
       )
       if (outcome.status === 'unreadable') {
         // Deliberately does NOT contain the substring "no stored refresh
@@ -545,10 +490,7 @@ export class SteamUser {
         // timed-out read must never be reported as signed-out. Latching it
         // here costs no extra keyring traffic: this branch only runs on reads
         // a deliberate user action already triggered.
-        this.storesDeps().stores.steam.configStore.set(
-          'credentialsMissing',
-          true
-        )
+        this.deps.stores.steam.configStore.set('credentialsMissing', true)
         return 'token-absent'
       }
       token = outcome.token
@@ -558,7 +500,7 @@ export class SteamUser {
     // probe pass does (pass.ts). A sign-in that completes while this logon is
     // in flight bumps the epoch, and whatever the CM then says about the OLD
     // token is refused by `applySignInVerdict` as stale (T-49-10).
-    const epochAtStart = this.signIn().epochs.capture('steam')
+    const epochAtStart = this.deps.signIn.epochs.capture('steam')
     const start = Date.now()
     if (!this.connectingPromise && token !== undefined) {
       if (this.client?.steamID) {
@@ -625,7 +567,7 @@ export class SteamUser {
    * The cold connect, inside the Mac Steam go-offline wrap. A refusal from the
    * wrap (Mac Steam did not log off) means NO logOn call at all.
    */
-  private static wrappedConnect(
+  private wrappedConnect(
     token: string,
     reason: AuthSessionReason,
     generation: number
@@ -637,14 +579,14 @@ export class SteamUser {
     return run
   }
 
-  private static async wrappedConnectNow(
+  private async wrappedConnectNow(
     token: string,
     reason: AuthSessionReason,
     generation: number
   ): Promise<AuthSessionRefusal | null> {
     if (generation !== this.sessionGeneration) return 'not-signed-in'
     try {
-      await this.macSteamOffline().withMacSteamOffline((wrap) =>
+      await this.deps.macSteamOffline.withMacSteamOffline((wrap) =>
         this.connectSteamUserClient(token, { reason, wrap, generation })
       )
     } catch (err) {
@@ -667,7 +609,7 @@ export class SteamUser {
   }
 
   /** Close the current authenticated session (idle, stale canary, CM drop). */
-  private static endSession(cause: string): void {
+  private endSession(cause: string): void {
     this.clearIdleTimer()
     const client = this.client
     if (!client) return
@@ -683,8 +625,8 @@ export class SteamUser {
     )
   }
 
-  private static clearIdleTimer(): void {
-    if (this.idleTimer) clearTimeout(this.idleTimer)
+  private clearIdleTimer(): void {
+    if (this.idleTimer) this.deps.clock.clear(this.idleTimer)
     this.idleTimer = null
   }
 
@@ -705,7 +647,7 @@ export class SteamUser {
    * fire-and-forget IPC convention (e.g. addListener('quit', async () =>
    * handleExit())) — never a floating promise.
    */
-  static async logout(): Promise<void> {
+  async logout(): Promise<void> {
     this.clearIdleTimer()
     this.leaseCount = 0
     // 54-REVIEW WR-07: a wrapped logon already in flight must not open a
@@ -729,33 +671,33 @@ export class SteamUser {
     this.connectingPromise = null
     this.logonFailure = null
     this.guidedInstallTargets.clear()
-    this.anonymousClient().close('logout')
-    this.steamSession().signIn.resetSignInState()
+    this.deps.anonymousClient.close('logout')
+    this.deps.steamSession.signIn.resetSignInState()
     // Token through the seam (D-09) first, then the remaining session keys
     // configStore.clear() used to wipe — see stores.ts's configStore
     // schema (isLoggedIn/userData are the only other keys ever written there).
     await getTokenStore().clearToken()
-    this.storesDeps().stores.steam.configStore.delete('isLoggedIn')
-    this.storesDeps().stores.steam.configStore.delete('userData')
+    this.deps.stores.steam.configStore.delete('isLoggedIn')
+    this.deps.stores.steam.configStore.delete('userData')
     // A signed-out session has no credential to be missing — leaving a stale
     // `true` here would mislabel the next login's tile before any read runs.
-    this.storesDeps().stores.steam.configStore.delete('credentialsMissing')
+    this.deps.stores.steam.configStore.delete('credentialsMissing')
     // Phase 49: fence any boot probe that began before this sign-out.
-    this.signIn().outcomes.noteSignedOut('steam')
+    this.deps.signIn.outcomes.noteSignedOut('steam')
     logInfo('Logging user out from Steam', LogPrefix.Steam)
   }
 
   // ── User details ───────────────────────────────────────────────────────────
 
-  static async getUserDetails(): Promise<SteamUserData | undefined> {
+  async getUserDetails(): Promise<SteamUserData | undefined> {
     const userData =
-      this.storesDeps().stores.steam.configStore.get_nodefault('userData')
+      this.deps.stores.steam.configStore.get_nodefault('userData')
     return userData
   }
 
   // ── Credentials ────────────────────────────────────────────────────────────
 
-  static async getCredentials(): Promise<{ refreshToken: string } | undefined> {
+  async getCredentials(): Promise<{ refreshToken: string } | undefined> {
     // quick-260814-r2d: routed through readTokenOutcome so both `absent` and
     // `unreadable` map to undefined here — this method's signature/return
     // type and every other caller are unchanged. This keeps a single read
@@ -763,7 +705,7 @@ export class SteamUser {
     // rather than two divergent ones.
     const outcome = await readTokenOutcome(
       getTokenStore(),
-      this.steamSession().authTrigger.currentTriggerLabel()
+      this.deps.steamSession.authTrigger.currentTriggerLabel()
     )
     if (outcome.status !== 'present') return undefined
     return { refreshToken: outcome.token }
@@ -784,7 +726,7 @@ export class SteamUser {
    * the wrap at once: it goes back online now and runs no refresh, instead of waiting on a
    * logon that would otherwise land seconds later with Mac Steam online.
    */
-  static releaseForShutdown(): Promise<MacSteamRestoreOutcome> {
+  releaseForShutdown(): Promise<MacSteamRestoreOutcome> {
     this.shuttingDown = true
     this.clearIdleTimer()
     this.abandonPendingLogon?.()
@@ -799,10 +741,10 @@ export class SteamUser {
         )
       }
     }
-    return this.macSteamOffline().restoreMacSteamOnlineIfOwed('shutdown')
+    return this.deps.macSteamOffline.restoreMacSteamOnlineIfOwed('shutdown')
   }
 
-  private static connectSteamUserClient(
+  private connectSteamUserClient(
     refreshToken: string,
     opts: {
       reason: AuthSessionReason
@@ -965,4 +907,174 @@ export class SteamUser {
       client.logOn({ refreshToken })
     })
   }
+
+  // ── Interim compat layer ──────────────────────────────────────────────────
+  private static compatInstance: SteamUser | null = null // @66.3-compat (deleted by 66.3-16 Task 3)
+  static bindCompatInstance(instance: SteamUser | null): void {
+    // @66.3-compat (deleted by 66.3-16 Task 3)
+    SteamUser.compatInstance = instance
+  }
+  private static compat(): SteamUser {
+    // @66.3-compat (deleted by 66.3-16 Task 3)
+    if (!SteamUser.compatInstance) {
+      throw new Error(
+        "SteamUser: read before the boot step bound the instance (the sidecar builds it in the 'steam-user' boot step)"
+      )
+    }
+    return SteamUser.compatInstance
+  }
+  static isSteamClientInstalled(
+    ...args: Parameters<SteamUser['isSteamClientInstalled']>
+  ): ReturnType<SteamUser['isSteamClientInstalled']> {
+    // @66.3-compat (deleted by 66.3-16 Task 3)
+    const inst = SteamUser.compat()
+    return (
+      inst.isSteamClientInstalled as (
+        ...a: unknown[]
+      ) => ReturnType<SteamUser['isSteamClientInstalled']>
+    ).apply(inst, args)
+  }
+  static isLoggedIn(
+    ...args: Parameters<SteamUser['isLoggedIn']>
+  ): ReturnType<SteamUser['isLoggedIn']> {
+    // @66.3-compat (deleted by 66.3-16 Task 3)
+    const inst = SteamUser.compat()
+    return (
+      inst.isLoggedIn as (
+        ...a: unknown[]
+      ) => ReturnType<SteamUser['isLoggedIn']>
+    ).apply(inst, args)
+  }
+  static probeCredentialPresence(
+    ...args: Parameters<SteamUser['probeCredentialPresence']>
+  ): ReturnType<SteamUser['probeCredentialPresence']> {
+    // @66.3-compat (deleted by 66.3-16 Task 3)
+    const inst = SteamUser.compat()
+    return (
+      inst.probeCredentialPresence as (
+        ...a: unknown[]
+      ) => ReturnType<SteamUser['probeCredentialPresence']>
+    ).apply(inst, args)
+  }
+  static getClient(
+    ...args: Parameters<SteamUser['getClient']>
+  ): ReturnType<SteamUser['getClient']> {
+    // @66.3-compat (deleted by 66.3-16 Task 3)
+    const inst = SteamUser.compat()
+    return (
+      inst.getClient as (...a: unknown[]) => ReturnType<SteamUser['getClient']>
+    ).apply(inst, args)
+  }
+  static getLogonFailure(
+    ...args: Parameters<SteamUser['getLogonFailure']>
+  ): ReturnType<SteamUser['getLogonFailure']> {
+    // @66.3-compat (deleted by 66.3-16 Task 3)
+    const inst = SteamUser.compat()
+    return (
+      inst.getLogonFailure as (
+        ...a: unknown[]
+      ) => ReturnType<SteamUser['getLogonFailure']>
+    ).apply(inst, args)
+  }
+  static ensureConnected(
+    ...args: Parameters<SteamUser['ensureConnected']>
+  ): ReturnType<SteamUser['ensureConnected']> {
+    // @66.3-compat (deleted by 66.3-16 Task 3)
+    const inst = SteamUser.compat()
+    return (
+      inst.ensureConnected as (
+        ...a: unknown[]
+      ) => ReturnType<SteamUser['ensureConnected']>
+    ).apply(inst, args)
+  }
+  static acquireAuthenticated(
+    ...args: Parameters<SteamUser['acquireAuthenticated']>
+  ): ReturnType<SteamUser['acquireAuthenticated']> {
+    // @66.3-compat (deleted by 66.3-16 Task 3)
+    const inst = SteamUser.compat()
+    return (
+      inst.acquireAuthenticated as (
+        ...a: unknown[]
+      ) => ReturnType<SteamUser['acquireAuthenticated']>
+    ).apply(inst, args)
+  }
+  static acquireAuthenticatedWithToken(
+    ...args: Parameters<SteamUser['acquireAuthenticatedWithToken']>
+  ): ReturnType<SteamUser['acquireAuthenticatedWithToken']> {
+    // @66.3-compat (deleted by 66.3-16 Task 3)
+    const inst = SteamUser.compat()
+    return (
+      inst.acquireAuthenticatedWithToken as (
+        ...a: unknown[]
+      ) => ReturnType<SteamUser['acquireAuthenticatedWithToken']>
+    ).apply(inst, args)
+  }
+  static acquireOpenAuthenticated(
+    ...args: Parameters<SteamUser['acquireOpenAuthenticated']>
+  ): ReturnType<SteamUser['acquireOpenAuthenticated']> {
+    // @66.3-compat (deleted by 66.3-16 Task 3)
+    const inst = SteamUser.compat()
+    return (
+      inst.acquireOpenAuthenticated as (
+        ...a: unknown[]
+      ) => ReturnType<SteamUser['acquireOpenAuthenticated']>
+    ).apply(inst, args)
+  }
+  static getPersistedSteamId64(
+    ...args: Parameters<SteamUser['getPersistedSteamId64']>
+  ): ReturnType<SteamUser['getPersistedSteamId64']> {
+    // @66.3-compat (deleted by 66.3-16 Task 3)
+    const inst = SteamUser.compat()
+    return (
+      inst.getPersistedSteamId64 as (
+        ...a: unknown[]
+      ) => ReturnType<SteamUser['getPersistedSteamId64']>
+    ).apply(inst, args)
+  }
+  static logout(
+    ...args: Parameters<SteamUser['logout']>
+  ): ReturnType<SteamUser['logout']> {
+    // @66.3-compat (deleted by 66.3-16 Task 3)
+    const inst = SteamUser.compat()
+    return (
+      inst.logout as (...a: unknown[]) => ReturnType<SteamUser['logout']>
+    ).apply(inst, args)
+  }
+  static getUserDetails(
+    ...args: Parameters<SteamUser['getUserDetails']>
+  ): ReturnType<SteamUser['getUserDetails']> {
+    // @66.3-compat (deleted by 66.3-16 Task 3)
+    const inst = SteamUser.compat()
+    return (
+      inst.getUserDetails as (
+        ...a: unknown[]
+      ) => ReturnType<SteamUser['getUserDetails']>
+    ).apply(inst, args)
+  }
+  static getCredentials(
+    ...args: Parameters<SteamUser['getCredentials']>
+  ): ReturnType<SteamUser['getCredentials']> {
+    // @66.3-compat (deleted by 66.3-16 Task 3)
+    const inst = SteamUser.compat()
+    return (
+      inst.getCredentials as (
+        ...a: unknown[]
+      ) => ReturnType<SteamUser['getCredentials']>
+    ).apply(inst, args)
+  }
+  static releaseForShutdown(
+    ...args: Parameters<SteamUser['releaseForShutdown']>
+  ): ReturnType<SteamUser['releaseForShutdown']> {
+    // @66.3-compat (deleted by 66.3-16 Task 3)
+    const inst = SteamUser.compat()
+    return (
+      inst.releaseForShutdown as (
+        ...a: unknown[]
+      ) => ReturnType<SteamUser['releaseForShutdown']>
+    ).apply(inst, args)
+  }
+}
+
+export function createSteamUser(deps: SteamUserDeps): SteamUser {
+  return new SteamUser(deps)
 }

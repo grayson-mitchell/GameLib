@@ -92,7 +92,8 @@ jest.mock('backend/ipc', () => ({
   addHandler: jest.fn()
 }))
 
-import { SteamUser, type SteamUserBoundDeps } from '../user'
+import { SteamUser, type SteamUserDeps } from '../user'
+import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 import type { SteamStoresDeps } from '../library/installRoot'
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
 import type { UserSignInDeps } from '../userSignIn'
@@ -112,10 +113,10 @@ const steamDeps = {
   }
 } as unknown as SteamStoresDeps &
   SignInNoteDeps &
-  Pick<SteamUserBoundDeps, 'signIn' | 'steamSession'> &
+  Pick<SteamUserDeps, 'signIn' | 'steamSession'> &
   UserSignInDeps
 beforeEach(() => {
-  SteamUser.bindStores(steamDeps)
+  SteamUser.bindCompatInstance(createTestSteamUser(steamDeps as never))
 })
 import { finishAuth, startQRLogin } from '../userSignIn'
 import { defined } from './fixtures/indexed'

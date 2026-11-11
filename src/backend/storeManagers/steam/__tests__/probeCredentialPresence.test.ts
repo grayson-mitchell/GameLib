@@ -78,6 +78,7 @@ jest.mock('backend/ipc', () => ({
 }))
 
 import { SteamUser } from '../user'
+import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
 
 // SteamUser reads its config store through the bound slice (66.1-18).
@@ -87,12 +88,14 @@ const isSteamAuthUnlocked = () => steamSession.authTrigger.isSteamAuthUnlocked()
 const currentTriggerLabel = () => steamSession.authTrigger.currentTriggerLabel()
 const resetSteamAuthTrigger = () =>
   steamSession.authTrigger.resetSteamAuthTrigger()
-SteamUser.bindStores({
-  signIn: mockSignIn,
-  steamSession,
-  anonymousClient: { close: jest.fn() },
-  stores: { steam: { configStore: mockConfigStore } }
-} as never)
+SteamUser.bindCompatInstance(
+  createTestSteamUser({
+    signIn: mockSignIn,
+    steamSession,
+    anonymousClient: { close: jest.fn() },
+    stores: { steam: { configStore: mockConfigStore } }
+  } as never)
+)
 
 function setLoggedIn(loggedIn: boolean) {
   mockConfigStore.get_nodefault.mockImplementation((key: string) =>

@@ -102,7 +102,13 @@ jest.mock('backend/constants/environment', () => ({
 // pollQRLogin() (the network/filesystem-touching surface this suite wires,
 // not re-tests); automocked, no factory, mirrors skeletonFlows.test.ts's own
 // LIB-01 convention for this exact module ────────────────────────────────────
-jest.mock('../../storeManagers/steam/user')
+jest.mock('../../storeManagers/steam/user', () => ({
+  ...jest.createMockFromModule<typeof import('../../storeManagers/steam/user')>(
+    '../../storeManagers/steam/user'
+  ),
+  // @66.3-compat interim: the boot builds an instance; consumers still reach the static mocks.
+  createSteamUser: () => ({})
+}))
 jest.mock('../../storeManagers/steam/userSignIn')
 jest.mock('../../storeManagers/steam/userRedeem')
 

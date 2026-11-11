@@ -81,6 +81,7 @@ import {
   clearOrphanedElectronToken
 } from '../tokenStore'
 import { SteamUser } from '../user'
+import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 import type { SteamStoresDeps } from '../library/installRoot'
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
 
@@ -165,10 +166,12 @@ describe('tokenStore', () => {
 
       // Proves the swap point is real: user.ts needed no edit to pick up a
       // different TokenStore implementation per build.
-      SteamUser.bindStores({
-        stores: { steam: { configStore: mockConfigStore } },
-        steamSession: createTestSteamSession()
-      } as never)
+      SteamUser.bindCompatInstance(
+        createTestSteamUser({
+          stores: { steam: { configStore: mockConfigStore } },
+          steamSession: createTestSteamSession()
+        } as never)
+      )
       const creds = await SteamUser.getCredentials()
       expect(creds).toEqual({ refreshToken: 'fake-token' })
       expect(fake.getToken).toHaveBeenCalled()

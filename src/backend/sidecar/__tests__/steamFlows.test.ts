@@ -77,7 +77,13 @@ jest.mock('backend/constants/environment', () => ({
 
 // ── SteamUser mock — mirrors skeletonFlows.test.ts / library.test.ts's LIB-01
 // convention; automocked, no factory. ──────────────────────────────────────────────────────
-jest.mock('../../storeManagers/steam/user')
+jest.mock('../../storeManagers/steam/user', () => ({
+  ...jest.createMockFromModule<typeof import('../../storeManagers/steam/user')>(
+    '../../storeManagers/steam/user'
+  ),
+  // @66.3-compat interim: the boot builds an instance; consumers still reach the static mocks.
+  createSteamUser: () => ({})
+}))
 
 // ── backend/launcher mock — the ONLY store-manager-adjacent mock in this file. Isolates
 // the assertion to DISPATCH (was launchEventCallback called, with runner='gog') rather than

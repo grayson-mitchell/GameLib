@@ -163,7 +163,8 @@ jest.mock('../macSteamOffline', () => {
 const mockCloseAnonymousClient = jest.fn()
 
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
-import { SteamUser, type SteamUserBoundDeps } from '../user'
+import { SteamUser, type SteamUserDeps } from '../user'
+import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
 import type { SteamSessionServices } from 'backend/services/types'
 import type { UserSignInDeps } from '../userSignIn'
@@ -183,18 +184,20 @@ const steamDeps = {
 beforeEach(() => {
   signInProbe = createTestSignInProbe()
   steamSession = createTestSteamSession()
-  SteamUser.bindStores({
-    ...steamDeps,
-    signIn: signInProbe,
-    steamSession,
-    anonymousClient: {
-      close: (...args) => mockCloseAnonymousClient(...args)
-    },
-    macSteamOffline:
-      jest.requireMock<NonNullable<SteamUserBoundDeps['macSteamOffline']>>(
-        '../macSteamOffline'
-      )
-  })
+  SteamUser.bindCompatInstance(
+    createTestSteamUser({
+      ...steamDeps,
+      signIn: signInProbe,
+      steamSession,
+      anonymousClient: {
+        close: (...args: unknown[]) => mockCloseAnonymousClient(...args)
+      },
+      macSteamOffline:
+        jest.requireMock<NonNullable<SteamUserDeps['macSteamOffline']>>(
+          '../macSteamOffline'
+        )
+    })
+  )
 })
 import { redeemKey } from '../userRedeem'
 import {

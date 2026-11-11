@@ -19,15 +19,13 @@ const downloadQueue = {
 const stopMonitors = jest.fn()
 // The Steam monitor instance is injected (66.2-06): the release path only needs its stopAll.
 const releaseAnon = jest.fn()
+const release = jest.fn()
 const deps = {
   downloadQueue,
   anonymousClient: { releaseForShutdown: () => releaseAnon() },
+  steamUser: { releaseForShutdown: () => release() },
   stopAllSteamDownloadMonitors: () => stopMonitors()
 }
-const release = jest.fn()
-jest.mock('../../storeManagers/steam/user', () => ({
-  SteamUser: { releaseForShutdown: () => release() }
-}))
 
 const destroyHttp = jest.fn()
 jest.mock('../outboundHttpRegistry', () => ({

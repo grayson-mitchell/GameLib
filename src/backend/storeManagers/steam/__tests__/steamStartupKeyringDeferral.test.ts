@@ -282,7 +282,8 @@ import { EventEmitter } from 'events'
 import { sendFrontendMessage } from '../../../ipc'
 import SteamLibraryManager from '../library'
 import SteamGame from '../games'
-import { SteamUser, type SteamUserBoundDeps } from '../user'
+import { SteamUser, type SteamUserDeps } from '../user'
+import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 import { setTokenStore, type TokenStore } from '../tokenStore'
 import { getSteamLibraries } from 'backend/utils'
 import { captureOwnedAppPlatforms } from '../platformCapture'
@@ -316,13 +317,15 @@ const noteRefreshTrigger = (
 ) => steamTestDeps.steamSession.authTrigger.noteRefreshTrigger(runner, origin)
 const currentTriggerLabel = () =>
   steamTestDeps.steamSession.authTrigger.currentTriggerLabel()
-SteamUser.bindStores({
-  ...steamTestDeps,
-  macSteamOffline:
-    jest.requireMock<NonNullable<SteamUserBoundDeps['macSteamOffline']>>(
-      '../macSteamOffline'
-    )
-})
+SteamUser.bindCompatInstance(
+  createTestSteamUser({
+    ...steamTestDeps,
+    macSteamOffline:
+      jest.requireMock<NonNullable<SteamUserDeps['macSteamOffline']>>(
+        '../macSteamOffline'
+      )
+  })
+)
 
 const APP_ID = '570'
 

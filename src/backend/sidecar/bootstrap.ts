@@ -218,7 +218,7 @@ import {
   DEFAULT_STEAM_WAIT_SCHEDULE
 } from '../storeManagers/steam/bridge/helperRegistry'
 import { steamBridgeHelperPath } from '../constants/paths'
-import { SteamUser } from '../storeManagers/steam/user'
+import { createSteamUser, SteamUser } from '../storeManagers/steam/user'
 // Transitional (removed by plan 27): the legacy registries still hold children until plans
 // 23/24/26 move them onto the runner.
 import {
@@ -284,6 +284,7 @@ export const BOOT_STEP_NAMES = [
   'config',
   'steam-bottle',
   'command-runner',
+  'steam-user',
   'online-monitor-owner',
   'engine-state',
   'winetricks-queue',
@@ -421,7 +422,8 @@ function requireServices(state: BootState): BootServices {
     steamSession,
     anonymousClient,
     bridgeHelpers,
-    steamBottle
+    steamBottle,
+    steamUser
   } = state.services
   if (
     !stores ||
@@ -447,7 +449,8 @@ function requireServices(state: BootState): BootServices {
     !steamSession ||
     !anonymousClient ||
     !bridgeHelpers ||
-    !steamBottle
+    !steamBottle ||
+    !steamUser
   ) {
     const missing = (
       [
@@ -474,7 +477,8 @@ function requireServices(state: BootState): BootServices {
         'steamSession',
         'anonymousClient',
         'bridgeHelpers',
-        'steamBottle'
+        'steamBottle',
+        'steamUser'
       ] as const
     ).filter((name) => !state.services[name])
     throw new Error(`boot services missing: ${missing.join(', ')}`)
@@ -503,7 +507,8 @@ function requireServices(state: BootState): BootServices {
     steamSession,
     anonymousClient,
     bridgeHelpers,
-    steamBottle
+    steamBottle,
+    steamUser
   }
 }
 
@@ -1311,14 +1316,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           state.services.stores = createStores({ registry })
           state.services.storeRegistry = registry
         }
-        // SteamUser is a static class with ~20 callers, so its store reads go through a bound
-        // slice; bound here, before any step or handler can reach it (66.1-16/18).
-        SteamUser.bindStores({
-          stores: state.services.stores,
-          signIn: state.services.signInProbe,
-          steamSession: state.services.steamSession,
-          anonymousClient: state.services.anonymousClient
-        })
       }
     },
     {
@@ -1418,29 +1415,17 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         state.services.clock = ctx.clock
         // Built once per boot; starts nothing (the poller's interval starts in the Steam
         // manager's init, the monitors spawn per polled install), so the exit contract holds.
-        const { config: bootConfig } = state.services
-        if (!bootConfig) throw new Error('boot: config step must run first')
+        const { config } = state.services
+        if (!config) throw new Error('boot: config step must run first')
         state.services.steamProcesses =
           prebuilt.steamProcesses ??
           createSteamProcesses({
             runner: ctx.runner,
             clock: ctx.clock,
             platform: ctx.platform,
-            config: bootConfig,
+            config,
             openExternal: requireHost(state).openExternal
           })
-        // The Mac Steam go-offline instance exists now; SteamUser's wrap and shutdown restore read
-        // it through the slot bindStores filled in the 'stores' step (no logon can run before here).
-        const { stores, config } = state.services
-        if (!stores) throw new Error('boot: stores step must run first')
-        if (!config) throw new Error('boot: config step must run first')
-        SteamUser.bindStores({
-          stores,
-          signIn: state.services.signInProbe,
-          steamSession: state.services.steamSession,
-          anonymousClient: state.services.anonymousClient,
-          macSteamOffline: state.services.steamProcesses.macSteamOffline
-        })
         state.services.commandRunner =
           prebuilt.commandRunner ??
           createCommandRunner({
@@ -1504,13 +1489,57 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             t: tOrFallback,
             abortAll: callAllAbortControllers,
             releaseSteam: async () => {
-              state.services.anonymousClient?.releaseForShutdown()
-              await SteamUser.releaseForShutdown()
+              // Anonymous client first, then the authenticated session; the session release
+              // still runs when the anonymous release throws.
+              try {
+                state.services.anonymousClient?.releaseForShutdown()
+              } finally {
+                await state.services.steamUser?.releaseForShutdown()
+              }
             },
             deletePresence: () =>
               gogPresence.deletePresence(gogPresenceDeps(state)),
             exit: () => requireHost(state).appState.exit()
           })
+      }
+    },
+    {
+      name: 'steam-user',
+      // Builds the one authenticated Steam session owner of this boot (D-05, D-66.3-16),
+      // replacing the static SteamUser class. After 'command-runner' (the Mac Steam go-offline
+      // instance exists there), before 'store-managers' and 'rpc-server' (the EOF release).
+      // Construction connects nothing and arms no timer: the logon is lazy and the idle-close
+      // timer runs on the boot clock, unref'd (exit contract).
+      run: (_ctx, _io, state) => {
+        const {
+          stores,
+          config,
+          clock,
+          steamProcesses,
+          signInProbe,
+          steamSession,
+          anonymousClient
+        } = state.services
+        if (!stores) throw new Error('boot: stores step must run first')
+        if (!config) throw new Error('boot: config step must run first')
+        if (!clock || !steamProcesses)
+          throw new Error('boot: command-runner step must run first')
+        if (!signInProbe || !steamSession || !anonymousClient)
+          throw new Error(
+            'boot: sign-in / steam-session / anonymous steps must run first'
+          )
+        state.services.steamUser =
+          prebuilt.steamUser ??
+          createSteamUser({
+            stores,
+            signIn: signInProbe,
+            steamSession,
+            anonymousClient,
+            macSteamOffline: steamProcesses.macSteamOffline,
+            clock,
+            config
+          })
+        SteamUser.bindCompatInstance(state.services.steamUser)
       }
     },
     {
@@ -1586,7 +1615,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           steamSession,
           anonymousClient,
           bridgeHelpers,
-          steamBottle
+          steamBottle,
+          steamUser
         } = state.services
         if (
           !stores ||
@@ -1604,7 +1634,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !steamSession ||
           !anonymousClient ||
           !bridgeHelpers ||
-          !steamBottle
+          !steamBottle ||
+          !steamUser
         ) {
           throw new Error(
             'store-managers step ran before stores/command-runner/config/host-services'
@@ -1642,7 +1673,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           steamSession,
           anonymousClient,
           bridgeHelpers,
-          steamBottle
+          steamBottle,
+          steamUser
         })
         state.services.managers = prebuilt.managers ?? built
         state.services.launcher = prebuilt.launcher ?? built.launcher
@@ -1953,6 +1985,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         releaseOnStdinEof(input, {
           downloadQueue: services.downloadQueue,
           anonymousClient: services.anonymousClient,
+          steamUser: services.steamUser,
           stopAllSteamDownloadMonitors: () =>
             services.steamProcesses.downloadMonitor.stopAll()
         })

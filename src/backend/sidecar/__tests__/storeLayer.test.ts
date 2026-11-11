@@ -72,7 +72,13 @@ jest.mock('backend/constants/environment', () => ({
 }))
 
 // ── SteamUser mock — no real network client construction ────────────────────
-jest.mock('../../storeManagers/steam/user')
+jest.mock('../../storeManagers/steam/user', () => ({
+  ...jest.createMockFromModule<typeof import('../../storeManagers/steam/user')>(
+    '../../storeManagers/steam/user'
+  ),
+  // @66.3-compat interim: the boot builds an instance; consumers still reach the static mocks.
+  createSteamUser: () => ({})
+}))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { TypeCheckedStoreBackend } from '../../typed_store'

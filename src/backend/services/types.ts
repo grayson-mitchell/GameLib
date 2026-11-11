@@ -37,6 +37,7 @@ import type {
   BridgeHelperSlice
 } from 'backend/storeManagers/steam/bridge/helperRegistry'
 import type { AnonymousClient } from 'backend/storeManagers/steam/anonymousClient'
+import type { SteamUser } from 'backend/storeManagers/steam/user'
 import type { SteamBottle } from 'backend/storeManagers/steam/bottle'
 import type { SteamSignInState } from 'backend/storeManagers/steam/userSignInState'
 import type { SteamAuthTriggerState } from 'backend/storeManagers/steam/authTrigger'
@@ -168,6 +169,8 @@ export interface ManagerDeps {
   steamBottle: SteamBottle
   /** The boot-owned anonymous CM client for public PICS reads (D-66.3-14). */
   anonymousClient: Pick<AnonymousClient, 'get' | 'close'>
+  /** The boot-owned authenticated Steam session, as the slice the managers call (D-66.3-16). */
+  steamUser: SteamUserSlice
   /** The boot-owned connectivity monitor, as the slice managers read (D-66.3-11). */
   onlineMonitor: Pick<
     OnlineMonitor,
@@ -178,6 +181,19 @@ export interface ManagerDeps {
     | 'recheckConnectivity'
   >
 }
+
+/** The members of the boot-owned SteamUser that production consumers call (D-66.3-16). */
+export type SteamUserSlice = Pick<
+  SteamUser,
+  | 'acquireAuthenticated'
+  | 'acquireAuthenticatedWithToken'
+  | 'acquireOpenAuthenticated'
+  | 'getClient'
+  | 'getLogonFailure'
+  | 'getPersistedSteamId64'
+  | 'isLoggedIn'
+  | 'isSteamClientInstalled'
+>
 
 /**
  * The boot-owned sign-in probe state (D-66.3-13): one epoch fence shared by every store's user
@@ -253,4 +269,6 @@ export interface BootServices {
   bridgeHelpers: BridgeHelperRegistry
   /** Built by the 'steam-bottle' boot step, before 'store-managers' (D-66.3-15). */
   steamBottle: SteamBottle
+  /** Built by the 'steam-user' boot step, after 'command-runner' and before 'store-managers' (D-66.3-16). */
+  steamUser: SteamUser
 }

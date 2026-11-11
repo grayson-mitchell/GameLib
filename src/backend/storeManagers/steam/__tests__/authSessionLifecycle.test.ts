@@ -143,17 +143,20 @@ jest.mock('../macSteamOffline', () => {
 const mockCloseAnonymousClient = jest.fn()
 
 import { SteamUser } from '../user'
+import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 
 // SteamUser reads its config store through the bound slice (66.1-18).
-SteamUser.bindStores({
-  signIn: mockSignIn,
-  steamSession: mockSteamSession,
-  anonymousClient: {
-    close: (...args: unknown[]) => mockCloseAnonymousClient(...args)
-  },
-  stores: { steam: { configStore: mockConfigStore } },
-  macSteamOffline: jest.requireMock('../macSteamOffline')
-} as never)
+SteamUser.bindCompatInstance(
+  createTestSteamUser({
+    signIn: mockSignIn,
+    steamSession: mockSteamSession,
+    anonymousClient: {
+      close: (...args: unknown[]) => mockCloseAnonymousClient(...args)
+    },
+    stores: { steam: { configStore: mockConfigStore } },
+    macSteamOffline: jest.requireMock('../macSteamOffline')
+  } as never)
+)
 import { logInfo, logWarning } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
 import { at } from './fixtures/indexed'

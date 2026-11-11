@@ -8,7 +8,7 @@ export interface HumbleStoresDeps {
 }
 
 /**
- * Static holder for the bound stores slice, the same shape as `SteamUser.bindStores` (66.1-16)
+ * Static holder for the bound stores slice, the same shape as the former static SteamUser holder (66.1-16)
  * and the former Steam bottle holder (66.1-17, replaced by an instance in 66.3-15). The Humble helpers are sync and spread over four modules plus
  * a `HumbleLibrary` object, so they read the slice bound once at boot instead of threading it
  * through every call. Reading before binding throws: never read a store at import time.

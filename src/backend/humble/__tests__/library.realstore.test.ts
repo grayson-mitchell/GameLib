@@ -63,6 +63,7 @@ import { bindHumbleStores } from '../humbleStores'
 import { defined } from './defined'
 import { HumbleLibrary } from '../library'
 import { SteamUser } from 'backend/storeManagers/steam/user'
+import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createHumbleStores } from '../stores'
 
@@ -75,9 +76,11 @@ bindHumbleStores({
   stores: { humble: humbleStoreModule, steam: {} } as never
 })
 // library.ts asks SteamUser.isLoggedIn(); a signed-out Steam config store keeps it a pure read.
-SteamUser.bindStores({
-  stores: { steam: { configStore: { get_nodefault: () => undefined } } }
-} as never)
+SteamUser.bindCompatInstance(
+  createTestSteamUser({
+    stores: { steam: { configStore: { get_nodefault: () => undefined } } }
+  } as never)
+)
 
 function makeRawOrder(gamekey: string) {
   return {

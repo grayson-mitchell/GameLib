@@ -161,6 +161,7 @@ export interface CreateStoreManagersDeps {
   anonymousClient: ManagerDeps['anonymousClient']
   bridgeHelpers: ManagerDeps['bridgeHelpers']
   steamBottle: ManagerDeps['steamBottle']
+  steamUser: ManagerDeps['steamUser']
 }
 
 /**
@@ -200,7 +201,8 @@ export function createStoreManagers(
     steamSession: deps.steamSession,
     anonymousClient: deps.anonymousClient,
     bridgeHelpers: deps.bridgeHelpers,
-    steamBottle: deps.steamBottle
+    steamBottle: deps.steamBottle,
+    steamUser: deps.steamUser
   }
   const launchHooks = buildLaunchHooks(managerDeps)
   const launcher = createLauncher({

@@ -128,7 +128,13 @@ jest.mock('backend/constants/environment', () => ({
 
 // ── SteamUser mock — controls ensureConnected()/getClient() (mirrors
 // library.test.ts's LIB-01 convention); automocked, no factory ──────────────
-jest.mock('../../storeManagers/steam/user')
+jest.mock('../../storeManagers/steam/user', () => ({
+  ...jest.createMockFromModule<typeof import('../../storeManagers/steam/user')>(
+    '../../storeManagers/steam/user'
+  ),
+  // @66.3-compat interim: the boot builds an instance; consumers still reach the static mocks.
+  createSteamUser: () => ({})
+}))
 
 // ── Anonymous PICS client mock (Phase 54) — refresh() captures platforms on
 // the anonymous steam-user client first; automocked so no test opens a real

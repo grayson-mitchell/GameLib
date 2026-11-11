@@ -2,7 +2,7 @@ import type { Readable } from 'node:stream'
 import { callAllAbortControllers } from '../utils/aborthandler/aborthandler'
 import type { DownloadQueue } from '../downloadmanager/downloadqueue'
 import type { AnonymousClient } from '../storeManagers/steam/anonymousClient'
-import { SteamUser } from '../storeManagers/steam/user'
+import type { SteamUser } from '../storeManagers/steam/user'
 import { LogPrefix, logInfo, logWarning } from '../logger'
 import { destroyOutboundHttp } from './outboundHttpRegistry'
 
@@ -20,7 +20,7 @@ export const RESIDUAL_HOLDER_DIAG_MS = 15_000
  *
  *   1. the steam-user CM connection -- a library-owned TCP socket plus heartbeat timer.
  *      Measured: a logged-on client alone keeps a bare node process alive past 60s;
- *      `logOff()` lets it drain in ~100ms. Released by `SteamUser.releaseForShutdown()`,
+ *      `logOff()` lets it drain in ~100ms. Released by `deps.steamUser.releaseForShutdown()`,
  *      which (unlike logout) clears no token -- the user stays signed in.
  *   2. in-flight depot downloads -- referenced by definition (contract half 2). The queue is
  *      PAUSED first (`pauseCurrentDownload()`), then any remaining controller is aborted
@@ -45,6 +45,8 @@ export function releaseOnStdinEof(
     /** The boot-owned anonymous CM client (D-66.3-14); its socket and heartbeat cannot be unref'd. */
     anonymousClient: Pick<AnonymousClient, 'releaseForShutdown'>
     /** Kills every nettop watchdog child (SteamProcesses.downloadMonitor.stopAll). */
+    /** The boot-owned authenticated Steam session; logOff at EOF keeps the user signed in (D-66.3-16). */
+    steamUser: Pick<SteamUser, 'releaseForShutdown'>
     stopAllSteamDownloadMonitors: () => void
   }
 ): void {
@@ -81,7 +83,7 @@ export function releaseOnStdinEof(
     } catch {
       // best-effort: still release the authenticated session below
     }
-    void SteamUser.releaseForShutdown()
+    void deps.steamUser.releaseForShutdown()
     // After the CM release: its synchronous logOff has already started, and CM WebSocket
     // upgrades are excluded from the registry anyway.
     try {
