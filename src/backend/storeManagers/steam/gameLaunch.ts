@@ -244,7 +244,7 @@ export async function launch(
             steamGame.appId,
             pendingAdoptionStoreFrom(steamGame.deps)
           )
-          if (!isWindows) watchSteamLaunch(steamGame.deps, steamGame.appId)
+          watchSteamLaunch(steamGame.deps, steamGame.appId)
           return true
         }
         // Refuse rather than fall back to a plain launch: an unadopted
@@ -279,7 +279,7 @@ export async function launch(
     }
   }
   await steamGame.deps.openExternal.openExternal(url, { activate: false })
-  if (!isWindows) watchSteamLaunch(steamGame.deps, steamGame.appId)
+  watchSteamLaunch(steamGame.deps, steamGame.appId)
   return true
 }
 

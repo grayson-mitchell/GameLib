@@ -34,6 +34,11 @@ export const RESIDUAL_HOLDER_DIAG_MS = 15_000
  *      still holds the loop. See todo 2026-11-09-sidecar-orphaned-after-tauri-dev-ctrl-c /
  *      quick 261110-9w2.
  *
+ * The running-game poller (SteamProcesses.runningPoll) is stopped here too, but it is NOT a fourth
+ * loop-holder: its interval is an unref'd clock timer. It is stopped so a post-EOF tick neither
+ * spawns reg.exe/ps nor writes a gameStatusUpdate frame to a stdout whose peer is gone
+ * (quick 261111-7wo).
+ *
  * This is a deliberate AMENDMENT of "no 'end' handler by design": it does not tear the process
  * down (no process.exit) -- it only drops references to handles that cannot be unref'd, and the
  * process still leaves by drain. It lives here, not in `startRpcServer()`.
@@ -44,10 +49,12 @@ export function releaseOnStdinEof(
     downloadQueue: Pick<DownloadQueue, 'isRunning' | 'pauseCurrentDownload'>
     /** The boot-owned anonymous CM client (D-66.3-14); its socket and heartbeat cannot be unref'd. */
     anonymousClient: Pick<AnonymousClient, 'releaseForShutdown'>
-    /** Kills every nettop watchdog child (SteamProcesses.downloadMonitor.stopAll). */
     /** The boot-owned authenticated Steam session; logOff at EOF keeps the user signed in (D-66.3-16). */
     steamUser: Pick<SteamUser, 'releaseForShutdown'>
+    /** Kills every nettop watchdog child (SteamProcesses.downloadMonitor.stopAll). */
     stopAllSteamDownloadMonitors: () => void
+    /** Stops the running-game poller (SteamProcesses.runningPoll.stop). */
+    stopRunningGamePoll: () => void
   }
 ): void {
   let released = false
@@ -75,6 +82,12 @@ export function releaseOnStdinEof(
       deps.stopAllSteamDownloadMonitors()
     } catch {
       // best-effort: still release the CM socket below
+    }
+    try {
+      // quick 261111-7wo: no post-EOF probe spawn or frame write.
+      deps.stopRunningGamePoll()
+    } catch {
+      // best-effort: still release the CM sockets below
     }
     try {
       // The anonymous CM logon is a library-owned socket too (D-66.3-14). Released first, as

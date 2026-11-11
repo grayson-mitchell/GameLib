@@ -227,9 +227,10 @@ Phase 66.4 owns:
   census-to-test flip (D-13/D-16): turn the moduleState ceilings into a zero-tolerance test and delete
   the section.
 - **D-66.2-03 deferrals:** the `utils.ts` `default*Path` lets, the `tools/index.ts` caches
-  (`installingComponent`, `catalogCache`, `scriptMetadataCache`), `engineNoticeStore`, the two `pci_ids`
-  stores, and the win32 sync fallbacks in `knownFolders` and `pathShim` (the async registry lookup needs a
-  runner).
+  (`installingComponent`, `catalogCache`, `scriptMetadataCache`), `engineNoticeStore` and the two `pci_ids`
+  stores. (The win32 sync fallback in `knownFolders` and `pathShim` was retired in quick 261111-aq4:
+  pathShim's win32 `desktop`/`documents` arms throw, and the two callers use the registry folder or go
+  without it.)
 - **Module-scope pathShim reads introduced as cascade edits:** `constants/paths.ts` (`configFolder`,
   `userDataPath`, `publicDir` from `GAMELIB_APP_ROOT`/`isPackagedSidecar()`), `steam/constants.ts`
   (`steamSupportPath`).
@@ -237,8 +238,8 @@ Phase 66.4 owns:
   `devEpicCookieSweep`, `runnerAuth` and the store-layer registrations.
 - **D-66.3-05:** the live macOS smoke with the scripted orphan/exit checker.
 - **D-66.3-06:** the Windows operator UAT.
-- **D-66.3-07:** reviving the RunningAppID poller.
-- **D-66.3-08:** the 66.2 Windows spawn-path live gate.
+- **D-66.3-07:** reviving the RunningAppID poller (done since: quick 261111-7wo, the `steam-running-poll` boot step).
+- **D-66.3-08:** the 66.2 Windows spawn-path live gate (passed since: quick 261111-5fw).
 - **D-17:** the non-autonomous live smoke.
 
 Known loose ends recorded here rather than fixed: the quit-handler release of the anonymous Steam client

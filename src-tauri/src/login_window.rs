@@ -15,6 +15,10 @@ pub(crate) use humble_helpers::*;
 mod windows_cdp;
 #[cfg(any(target_os = "macos", windows))]
 pub(crate) use windows_cdp::*;
+#[cfg(not(target_os = "macos"))]
+mod owned_modal;
+#[cfg(not(target_os = "macos"))]
+pub(crate) use owned_modal::*;
 #[cfg(target_os = "macos")]
 mod pristine_epic;
 #[cfg(target_os = "macos")]

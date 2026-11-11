@@ -22,14 +22,21 @@
  *   `runner`, `store`, `library`, `value`; any `runner*`/`store*` prefix form
  *   (`runnerStr`, `storeName`); any `*Runner`/`*Store` suffix form
  *   (`removedRunner`, `warnLoginForStore`). Also seen through a computed
- *   property (`x['runner']`, `x?.['runner']`), a cast (`(runner as string)`,
- *   TSAsExpression) and a non-null (`runner!`, TSNonNullExpression). `library`
- *   and `value` are generic, but every arm also needs a store literal on the
- *   other side (or a store-literal case / element), so they only fire against
- *   one of the six store names. UI overlay ids (`mountedOverlay`) are not matched.
+ *   property (`x['runner']`, `x?.['runner']`) and through up to
+ *   WRAP_DEPTH (3) nested wrappers: a cast (`(runner as string)`,
+ *   TSAsExpression), a non-null (`runner!`, TSNonNullExpression), `satisfies`,
+ *   and the optional chain (`game?.runner`), in any composition
+ *   (`(game?.runner as string)`, `(runner as Runner)!`). `library` and `value`
+ *   are generic, but every arm also needs a store literal on the other side (or
+ *   a store-literal case / element), so they only fire against one of the six
+ *   store names. UI overlay ids (`mountedOverlay`) are not matched.
  * - Arms: equality against a store literal; `switch (name)` with at least one
- *   store-literal `case` (so `switch (value) { case 'a': }` is not flagged);
- *   `[..literals..].includes(name)` / `.indexOf(name)`; and an inline
+ *   store-literal `case` OF THAT SWITCH (a `case` of a nested inner switch does
+ *   not count, so `switch (value) { case 'a': switch (x) { case 'steam': } }` is
+ *   not flagged); `[..literals..].includes(name)` / `.indexOf(name)` /
+ *   `.lastIndexOf(name)`, where the literal must be an element of the receiver
+ *   array (an argument such as `includes(runner, 'steam'.length)` does not
+ *   count) and the array may carry `as const` / `satisfies`; and an inline
  *   `new Set([..literals..]).has(name)`.
  * - Not matched: object-literal maps keyed by runner, `runner: 'steam'`
  *   property values, type annotations, comments, template literals.
@@ -39,8 +46,10 @@
  * callback param such as `r` in `.some((r) => r === 'gog')`); named array/set
  * constants (`STEAM_LIKE.includes(runner)`, `STORES.has(runner)`) because the
  * literal is not inline; `Object.is`, `startsWith`, Map/object lookups and
- * template literals; destructured-and-renamed values; and everything in
- * SCOPE_IGNORES plus `src/common/**` (outside SCOPE_FILES).
+ * template literals; destructured-and-renamed values; a wrapper nested deeper
+ * than WRAP_DEPTH; a `Set` built from a cast array (`new Set([..] as const)`);
+ * an optional call (`[..].includes?.(runner)`); and everything in SCOPE_IGNORES
+ * plus `src/common/**` (outside SCOPE_FILES).
  *
  * Rejected alternative: an operand-agnostic rule (any equality against a store
  * literal). A planning-time grep found 15 non-identity comparisons sharing the
@@ -50,7 +59,8 @@
  * (1), and gamesdb `entry.platform_id === 'steam'` (1). Those concern key
  * platforms, UI overlays, URL schemes and third-party ids, not runner identity.
  *
- * Provenance: 62-02 created; 62-23 (WR-02): widened.
+ * Provenance: 62-02 created; 62-23 (WR-02): widened; 62-23 review WR-01/WR-02:
+ * switch/array gates scoped to direct children, wrapper depth composed.
  *
  * Plain CommonJS (matches meta/lintScoped.cjs); eslint.config.mjs ignores *.cjs.
  */
@@ -82,21 +92,38 @@ const LITERAL_RE = `/^(${STORE_LITERALS.join('|')})$/`
 const NAME_RE = `/${RUNNER_NAME.source}/`
 const DENY_RE = NAME_DENYLIST.length ? `/^(${NAME_DENYLIST.join('|')})$/` : null
 
-// Selector fragment: field `f` is a runner/store-named operand. Arms: Identifier,
-// member property, optional member (ChainExpression), computed property
-// (`x['runner']`, `x?.['runner']`), and TSAsExpression / TSNonNullExpression.
+// How many `.expression` wrapper levels nameSide looks through. A wrapper is a
+// TSAsExpression, TSSatisfiesExpression, TSNonNullExpression or ChainExpression;
+// `(runner as Runner)!` is 2 deep, `(game?.runner as string)!` is 3.
+const WRAP_DEPTH = 3
+
+// Selector fragment: field `f` is a runner/store-named operand. At each wrapper
+// depth `p` (f, f.expression, f.expression.expression, ...): an Identifier
+// (`p.name`), a member property (`p.property.name`), or a computed-string
+// property (`x['runner']`, `p.property.value`).
 function nameSide(f) {
-  const arms = [
-    `${f}.name`,
-    `${f}.property.name`,
-    `${f}.expression.property.name`,
-    `${f}.property.value`,
-    `${f}.expression.name`,
-    `${f}.expression.property.value`
-  ]
+  const arms = []
+  let p = f
+  for (let depth = 0; depth <= WRAP_DEPTH; depth++) {
+    arms.push(`${p}.name`, `${p}.property.name`, `${p}.property.value`)
+    p += '.expression'
+  }
   const m = `:matches(${arms.map((a) => `[${a}=${NAME_RE}]`).join(', ')})`
   return DENY_RE ? m + arms.map((a) => `:not([${a}=${DENY_RE}])`).join('') : m
 }
+
+// `> Literal` children only. esquery 1.6 mis-handles a multi-step relative
+// `:has(> A > B)` (matches nothing), so the child chains below nest single-step
+// `:has(> X)` instead.
+const LITERAL_CHILD = `:has(> Literal[value=${LITERAL_RE}])`
+
+// The receiver of `.includes(...)` holds a store literal as one of its own
+// elements: an inline array, optionally wrapped in a cast (`['gog'] as const`,
+// `[..] satisfies readonly string[]`).
+const ARRAY_WITH_LITERAL =
+  `:matches(ArrayExpression.object${LITERAL_CHILD}, ` +
+  ':matches(TSAsExpression, TSSatisfiesExpression).object' +
+  `:has(> ArrayExpression.expression${LITERAL_CHILD}))`
 
 const SELECTORS = Object.freeze([
   {
@@ -107,19 +134,23 @@ const SELECTORS = Object.freeze([
     message: MESSAGE
   },
   {
-    selector: `SwitchStatement${nameSide('discriminant')}:has(SwitchCase[test.value=${LITERAL_RE}])`,
+    // `> SwitchCase`: direct cases only, so a nested switch's case is not counted.
+    selector: `SwitchStatement${nameSide('discriminant')}:has(> SwitchCase[test.value=${LITERAL_RE}])`,
     message: MESSAGE
   },
   {
+    // The literal must be an element of the receiver array, not anywhere in the call.
     selector:
-      "CallExpression[callee.property.name=/^(includes|indexOf)$/][callee.object.type='ArrayExpression']" +
-      `${nameSide('arguments.0')}:has(Literal[value=${LITERAL_RE}])`,
+      'CallExpression[callee.property.name=/^(includes|indexOf|lastIndexOf)$/]' +
+      `${nameSide('arguments.0')}` +
+      `:has(> MemberExpression.callee:has(> ${ARRAY_WITH_LITERAL}))`,
     message: MESSAGE
   },
   {
     selector:
       "CallExpression[callee.property.name='has'][callee.object.type='NewExpression'][callee.object.callee.name='Set']" +
-      `${nameSide('arguments.0')}:has(Literal[value=${LITERAL_RE}])`,
+      `${nameSide('arguments.0')}` +
+      `:has(> MemberExpression.callee:has(> NewExpression.object:has(> ArrayExpression${LITERAL_CHILD})))`,
     message: MESSAGE
   }
 ])

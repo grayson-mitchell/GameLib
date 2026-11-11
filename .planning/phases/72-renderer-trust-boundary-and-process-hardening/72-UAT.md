@@ -1,5 +1,5 @@
 ---
-status: partial
+status: complete
 phase: 72-renderer-trust-boundary-and-process-hardening
 source: [72-03-PLAN.md, 72-07-PLAN.md, 72-10-PLAN.md, 72-12-PLAN.md]
 ---
@@ -10,7 +10,7 @@ source: [72-03-PLAN.md, 72-07-PLAN.md, 72-10-PLAN.md, 72-12-PLAN.md]
 
 - Launch with `pnpm tauri:dev`, never `tauri:dev:run` (it skips the dev-vault flag and Keychain prompts every launch).
 - `tauri dev` builds the sidecar only at startup: restart dev after backend changes.
-- Items 6 and 7 need the operator's Windows PC and a build that includes 72-12 (Job Object). The Windows compile of that code is unproven until the rust-test windows-latest leg runs after a push.
+- Items 6 and 7 need the operator's Windows PC and a build that includes 72-12 (Job Object). That code compiles on Windows: Rust test run 42952556201 on 847c0849f (2026-11-11) passed its windows-latest leg (72-HUMAN-UAT item 3).
 
 ## Tests
 
@@ -42,9 +42,9 @@ result: pass — verified at the 72-03 checkpoint on 2026-11-08 (`gh api repos/g
 ### 6. Windows: normal quit reaps the sidecar tree
 
 expected: (D-20) Launch GameLib, start a legendary or gogdl operation (or a game), quit the app, and Task Manager shows no legendary.exe, gogdl.exe, nile, powershell.exe or game child left running.
-result: pending (operator's Windows PC)
+result: pass. Operator's Windows PC, 2026-11-11, `pnpm tauri:dev` at 076fd3044: with GOG Balrum (1769415595) running under gogdl, a normal quit left no gamelib-sidecar, gogdl or Balrum process behind.
 
 ### 7. Windows: ending the shell reaps the sidecar tree
 
 expected: (D-20) With the same children running, end the GameLib shell process from Task Manager and the same children die with it (the kill-on-close Job Object fires on shell crash).
-result: pending (operator's Windows PC)
+result: pass. Operator's Windows PC, 2026-11-11, `pnpm tauri:dev` at 076fd3044: with GOG Balrum (1769415595) running under gogdl, `Stop-Process -Name gamelib-shell -Force` closed the game window at once. Killing a parent does not kill its children on Windows, so the game ending means the Job Object reaped it. A `Get-Process` run immediately afterwards still listed two gogdl.exe PIDs (PyInstaller launcher and child). Both were gone within about a minute and no timed re-check was run, so how fast gogdl is torn down was not measured.

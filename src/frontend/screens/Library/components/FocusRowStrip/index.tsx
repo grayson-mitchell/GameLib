@@ -7,6 +7,7 @@ import {
   faChevronRight
 } from '@fortawesome/free-solid-svg-icons'
 import { FocusRowSelection, GameInfo, Runner } from 'common/types'
+import { isStore } from 'common/storeCapabilities'
 import { FilterEngineDeps, FilterMode } from 'frontend/types'
 import { runnabilityLabel } from 'frontend/components/UI/NavShell/components/FilterRunnabilityFacet'
 import GamesList from '../GamesList'
@@ -26,7 +27,6 @@ import {
   scrollWithSnapSuspended
 } from './focusRowOverflow'
 import './index.css'
-import { isStore } from 'common/storeCapabilities'
 
 interface Props {
   focusRow: FocusRowSelection

@@ -35,3 +35,6 @@ graphify-out
 # presence-idempotent -- see [[download-helper-binaries-is-tag-idempotent-not-presence-idempotent]].
 public/bin
 
+
+# Machine-local generated file (see .gitignore); its JSON-style output is not prettier-formatted.
+src/backend/storeManagers/steam/depot/lzmaNativeResolvedPaths.generated.cjs

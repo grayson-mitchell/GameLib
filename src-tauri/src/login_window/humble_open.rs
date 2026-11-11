@@ -114,13 +114,115 @@ pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<V
     // existing, completely untouched code below. `url` is only moved into the pristine
     // branch when it is actually taken (`return` on the same expression), so the
     // unconditional uses of `url` further down this arm remain valid.
+    // T-34.4.2-39 single-flight latch (macOS only): see `arm_visible_login_latch_macos`.
+    #[cfg(target_os = "macos")]
+    arm_visible_login_latch_macos(label.clone(), visible)?;
+    // quick-261029-o1w (GOG) and quick-261029-utr (Epic): the pristine window, presented
+    // as a sheet. Placed AFTER the latch so a refused second login never builds a window
+    // and both stores arm the latch. `store` comes only from the validated URL host.
+    #[cfg(target_os = "macos")]
+    if is_epic_login || is_gog_login {
+        let store = if is_epic_login { "epic" } else { "gog" };
+        return open_pristine_login_sheet(app, &label, url, visible, user_agent, store);
+    }
+    // Build the login window (off macOS, owned by main too): see `build_login_window`.
+    let window = build_login_window(
+        app,
+        label.clone(),
+        url,
+        origin.clone(),
+        visible,
+        user_agent,
+        event_label,
+    )?;
+    // AppKit SHEET presentation (Phase 34.4.2 Plan 07, REQ-34.4.2-01/02) -- macOS
+    // only. Supersedes Plan 02's child-window attachment per the operator's binding
+    // design decision of 2026-08-04 (`34.4.2-LIVE-GATE.md`'s "Binding Design
+    // Decision" section): the child-window mechanism went live-CONFIRMED broken
+    // (F-34.4.2-01/-02). Presents a VISIBLE login window as a sheet on `main`
+    // immediately once it exists. Hidden reveal/clear windows this arm also builds
+    // are never presented. The pristine Epic and GOG login windows are presented by
+    // `open_pristine_login_sheet`, which returns before this point (quick-261029-utr
+    // lifted the REQ-34.4.2-10 Epic descope). On Windows/Linux
+    // the login window is owned by main and holds it modal instead
+    // (`present_owned_login_window`, `owned_modal.rs`, quick-261111-d7o); with no usable
+    // main it stays the free-floating window it always was.
+    // quick-261029-osq: install the native bar (and inset the webview below it) BEFORE the
+    // sheet is presented, and confirm it over mpsc. A sheet whose bar is unconfirmed would
+    // have no visible exit (T-34.4.2-15 / T-osq-02), so it is never presented -- the
+    // free-standing visible fallback below (with the OS close button) runs instead.
+    // `Ok` from `with_webview` does not prove the closure ran (see
+    // `humble_login_clear_cookies`' macOS branch), hence the mpsc round-trip.
+    #[cfg(target_os = "macos")]
+    let native_bar_installed =
+        install_native_bar_for_sheet_macos(app, &window, label.clone(), origin.clone(), visible);
+    #[cfg(target_os = "macos")]
+    let sheet_presented = present_visible_login_window_macos(
+        app,
+        &window,
+        label.clone(),
+        visible,
+        native_bar_installed,
+    );
+    #[cfg(not(target_os = "macos"))]
+    let sheet_presented = false;
+    if visible {
+        // F-4 machine record (Phase 34.4.1 Plan 24) -- see this arm's
+        // builder-setup block in `build_login_window` for the full "why record this at all"
+        // rationale. `sheet_presented` (Phase 34.4.2 Plan 07's sheet-presentation
+        // switch, superseding Plan 02's differently-named field) is recorded here;
+        // this print still runs AFTER `.build()`/presentation so it can be included.
+        shell_eprintln!(
+            "[shell] humble_login_open: presentation requested visible=true width=900 height=700 center=true focus_once=true persistent_pin=false light_theme_requested=true sheet_presented={sheet_presented}"
+        );
+    }
+    // Close detection: see `install_login_window_close_hook`.
+    install_login_window_close_hook(app, &window, label.clone());
+    // Seed the title from the validated open URL's origin (Phase 34.5 Plan 27) so
+    // it is visible from the moment the window appears, rather than only after the
+    // first `on_page_load`/`on_document_title_changed` event.
+    if visible {
+        let _ = window.set_title(&login_window_title(&origin, None));
+    }
+    // Dev-only diagnostic (epic-login-non-interactive investigation, 2026-08-01,
+    // F-34.5-G6-01): `open_devtools()` is already forced for the "main" webview
+    // above (the main-window devtools block in `main()`'s `.setup()`, guarded by the
+    // same #[cfg(debug_assertions)]), but
+    // THIS arm builds the login window (`loginwin-N-*`) that all five runners share
+    // -- and it has never had devtools wired up. That gap left the login page's own
+    // JS console unread across four debug cycles despite it being the one webview
+    // that renders third-party OAuth pages (Epic, GOG, Amazon, Humble). Gated on
+    // `visible` to match every other presentation-only call in this arm (the hidden
+    // reveal/clear windows built elsewhere in this file are unaffected) and on
+    // `#[cfg(debug_assertions)]` so it can never reach a packaged build. Skipped on
+    // Linux through `should_auto_open_devtools`: gated on mechanism (the docked-inspector
+    // attach races page boot there), not measured on this window, and applied because
+    // the race is not specific to our page.
+    #[cfg(debug_assertions)]
+    if visible && should_auto_open_devtools(std::env::consts::OS) {
+        window.open_devtools();
+        shell_eprintln!(
+            "[shell] humble_login_open: devtools opened for '{label}' (debug build)"
+        );
+    } else if visible {
+        shell_eprintln!(
+            "[shell] humble_login_open: devtools NOT auto-opened for '{label}' on linux (debug build) -- the inspector attach races page boot; right-click > Inspect Element opens it"
+        );
+    }
+    Ok(Value::String(label))
+}
+
+// A step of `rpc_humble_login_open`: the T-34.4.2-39 single-flight latch (macOS only).
+#[cfg(target_os = "macos")]
+fn arm_visible_login_latch_macos(label: String, visible: bool) -> Result<(), String> {
     // T-34.4.2-39 single-flight guard (Phase 34.4.2 Plan 14): refuse a second VISIBLE
     // login window while one is already pending (armed here, not yet resolved) or
     // presented (`PRESENTED_LOGIN_SHEETS` non-empty), so AppKit is never asked to queue
     // a second `beginSheet:` behind the first -- the concrete failure mode this closes
-    // is typing one store's password into another store's just-arrived sheet. Sits
-    // AFTER the pristine-route variables above and BEFORE the pristine route and the
-    // builder below (quick-261029-utr: Epic's old pre-latch exemption, D-D, is lifted),
+    // is typing one store's password into another store's just-arrived sheet. Called
+    // from `rpc_humble_login_open` AFTER the pristine-route variables and BEFORE the
+    // pristine route and `build_login_window` (quick-261029-utr: Epic's old pre-latch
+    // exemption, D-D, is lifted),
     // so a refused request never gets a window built. Scoped to `visible`
     // only -- hidden reveal/clear windows (e.g. the Humble health-check/disconnect
     // routes in `src/backend/humble/user.ts`, both `visible: false`) never arm or are
@@ -186,14 +288,20 @@ pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<V
             "[shell] humble_login_open: visible login window '{label}' armed as the single pending login flow (T-34.4.2-39)"
         );
     }
-    // quick-261029-o1w (GOG) and quick-261029-utr (Epic): the pristine window, presented
-    // as a sheet. Placed AFTER the latch so a refused second login never builds a window
-    // and both stores arm the latch. `store` comes only from the validated URL host.
-    #[cfg(target_os = "macos")]
-    if is_epic_login || is_gog_login {
-        let store = if is_epic_login { "epic" } else { "gog" };
-        return open_pristine_login_sheet(app, &label, url, visible, user_agent, store);
-    }
+    Ok(())
+}
+
+// A step of `rpc_humble_login_open`: builds the login window and, off macOS, presents it owned
+// by `main` (quick-261111-d7o).
+fn build_login_window(
+    app: &AppHandle,
+    label: String,
+    url: tauri::Url,
+    origin: String,
+    visible: bool,
+    user_agent: &str,
+    event_label: String,
+) -> Result<tauri::WebviewWindow, String> {
     // Shared last-known main-frame origin (Phase 34.5 Plan 27): seeded from the
     // validated open URL so it is never empty, updated only from `on_page_load`
     // (main-frame only, per this arm's own doc comment above), and read by
@@ -213,11 +321,15 @@ pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<V
     // `present_login_window_as_sheet`'s `beginSheet:` call below, with an explicit
     // visible-fallback (see the `sheet_presented` block further down this arm) so a
     // failed attach never leaves the user looking at nothing. Windows/Linux have no
-    // sheet concept and keep exactly today's behavior (REQ-34.4.2-08).
+    // sheet concept; they own the window by `main` and hold main modal instead
+    // (`owned_modal.rs`, quick-261111-d7o), falling back to today's free-floating
+    // window when no usable main exists.
     #[cfg(target_os = "macos")]
     let initial_visible = false;
     #[cfg(not(target_os = "macos"))]
     let initial_visible = visible;
+    #[cfg(not(target_os = "macos"))]
+    let mut login_owner: Option<tauri::WebviewWindow> = None;
     let mut builder =
         tauri::WebviewWindowBuilder::new(app, &label, tauri::WebviewUrl::External(url))
             .user_agent(user_agent)
@@ -285,11 +397,18 @@ pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<V
         // when attachment succeeds, but WOULD be exactly the race described above
         // when it does not run first. The visible-fallback path (below) calls
         // `.center()`/`.set_focus()` itself if attachment is not confirmed, so macOS
-        // loses nothing on the failure path either. Windows/Linux keep the original,
-        // unconditional immediate center+focus.
+        // loses nothing on the failure path either. Windows/Linux first try to make
+        // `main` the window's owner (`attach_login_owner`, built hidden and shown owned,
+        // centered over main, after `.build()`); with no usable main they keep the
+        // original, unconditional immediate center+focus.
         #[cfg(not(target_os = "macos"))]
         {
-            builder = builder.center().focused(true);
+            let (owned_builder, owner) = attach_login_owner(app, builder);
+            builder = owned_builder;
+            match owner {
+                Some(main_window) => login_owner = Some(main_window),
+                None => builder = builder.center().focused(true),
+            }
         }
         builder = builder
             .theme(Some(tauri::Theme::Light))
@@ -379,7 +498,8 @@ pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<V
         // whether the field actually rendered legibly is plan 34.5-28's live
         // check alone. MOVED to after `.build()` by Phase 34.4.2 Plan 02 (still
         // gated on this same `if visible` intent) so it can also record
-        // `sheet_presented` -- see the print call after `window` exists, below.
+        // `sheet_presented` -- see the print call in `rpc_humble_login_open`, after
+        // `build_login_window` returns.
     }
     // Dev-only diagnostic instrumentation (epic-login-non-interactive
     // investigation, 2026-08-02): injects `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`
@@ -387,8 +507,8 @@ pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<V
     // `initialization_script()` on this window BEFORE `.build()` runs --
     // initialization scripts execute before any page script, so this captures
     // Epic's own bootstrap failure instead of only what survives to a later
-    // console read. Gated identically to this arm's `open_devtools()` call
-    // below -- `#[cfg(debug_assertions)]` AND `if visible` -- so it can never
+    // console read. Gated identically to this arm's `open_devtools()` call (in
+    // `rpc_humble_login_open`) -- `#[cfg(debug_assertions)]` AND `if visible` -- so it can never
     // reach a packaged build.
     //
     // THIRD GATE ADDED 2026-08-02, and it DEFAULTS OFF: `GAMELIB_LOGIN_DIAG=1`.
@@ -483,23 +603,22 @@ pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<V
         })
         .build()
         .map_err(|e| format!("humble_login_open:build-failed:{e}"))?;
-    // AppKit SHEET presentation (Phase 34.4.2 Plan 07, REQ-34.4.2-01/02) -- macOS
-    // only. Supersedes Plan 02's child-window attachment per the operator's binding
-    // design decision of 2026-08-04 (`34.4.2-LIVE-GATE.md`'s "Binding Design
-    // Decision" section): the child-window mechanism went live-CONFIRMED broken
-    // (F-34.4.2-01/-02). Presents a VISIBLE login window as a sheet on `main`
-    // immediately once it exists. Hidden reveal/clear windows this arm also builds
-    // are never presented. The pristine Epic and GOG login windows are presented by
-    // `open_pristine_login_sheet`, which returns before this point (quick-261029-utr
-    // lifted the REQ-34.4.2-10 Epic descope). On Windows/Linux
-    // the login window keeps exactly today's free-floating behavior -- declared
-    // UNVERIFIED here, matching the skill's Constraints section.
-    // quick-261029-osq: install the native bar (and inset the webview below it) BEFORE the
-    // sheet is presented, and confirm it over mpsc. A sheet whose bar is unconfirmed would
-    // have no visible exit (T-34.4.2-15 / T-osq-02), so it is never presented -- the
-    // free-standing visible fallback below (with the OS close button) runs instead.
-    // `Ok` from `with_webview` does not prove the closure ran (see
-    // `humble_login_clear_cookies`' macOS branch), hence the mpsc round-trip.
+    #[cfg(not(target_os = "macos"))]
+    if let Some(owner) = login_owner.as_ref() {
+        present_owned_login_window(app, &window, owner, &label);
+    }
+    Ok(window)
+}
+
+// A step of `rpc_humble_login_open`: installs the native login bar for the sheet (macOS only).
+#[cfg(target_os = "macos")]
+fn install_native_bar_for_sheet_macos(
+    app: &AppHandle,
+    window: &tauri::WebviewWindow,
+    label: String,
+    origin: String,
+    visible: bool,
+) -> bool {
     #[cfg(target_os = "macos")]
     let native_bar_installed = if visible {
         let (bar_tx, bar_rx) = mpsc_channel::<bool>();
@@ -543,6 +662,19 @@ pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<V
             "[shell] WARN: humble_login_open: '{label}' native login bar unconfirmed -- not presenting as a sheet (no visible exit)"
         );
     }
+    native_bar_installed
+}
+
+// A step of `rpc_humble_login_open`: presents the visible window as a sheet, or as the visible
+// fallback (macOS only).
+#[cfg(target_os = "macos")]
+fn present_visible_login_window_macos(
+    app: &AppHandle,
+    window: &tauri::WebviewWindow,
+    label: String,
+    visible: bool,
+    native_bar_installed: bool,
+) -> bool {
     #[cfg(target_os = "macos")]
     let sheet_presented = if visible && native_bar_installed {
         // F-34.4.2-04 fix (checkpoint response, 2026-08-04, post commit 751521663):
@@ -583,8 +715,6 @@ pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<V
     } else {
         false
     };
-    #[cfg(not(target_os = "macos"))]
-    let sheet_presented = false;
     // T-34.4.2-39 resolution path 1 of 3 (Phase 34.4.2 Plan 14): sheet presentation
     // CONFIRMED -- clear the pending-login latch now that this request has resolved to
     // an on-screen sheet, membership in `PRESENTED_LOGIN_SHEETS` (set inside
@@ -623,16 +753,15 @@ pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<V
         // sheet-confirmed path above.
         clear_pending_visible_login_window(&label);
     }
-    if visible {
-        // F-4 machine record (Phase 34.4.1 Plan 24) -- see this arm's
-        // builder-setup block above for the full "why record this at all"
-        // rationale. `sheet_presented` (Phase 34.4.2 Plan 07's sheet-presentation
-        // switch, superseding Plan 02's differently-named field) is recorded here;
-        // this print still runs AFTER `.build()`/presentation so it can be included.
-        shell_eprintln!(
-            "[shell] humble_login_open: presentation requested visible=true width=900 height=700 center=true focus_once=true persistent_pin=false light_theme_requested=true sheet_presented={sheet_presented}"
-        );
-    }
+    sheet_presented
+}
+
+// A step of `rpc_humble_login_open`: relays the built window's destruction as a `closed` event.
+fn install_login_window_close_hook(
+    #[cfg_attr(not(target_os = "macos"), allow(unused_variables))] app: &AppHandle,
+    window: &tauri::WebviewWindow,
+    label: String,
+) {
     // Quick task 260803-eee Task 5: close-detection, added AFTER `.build()` because
     // `on_window_event` is a method on the built `WebviewWindow` handle
     // (`tauri-2.11.5/src/webview/webview_window.rs:1524`), not on the builder --
@@ -697,38 +826,6 @@ pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<V
             clear_pending_visible_login_window(&close_event_label);
         }
     });
-    // Seed the title from the validated open URL's origin (Phase 34.5 Plan 27) so
-    // it is visible from the moment the window appears, rather than only after the
-    // first `on_page_load`/`on_document_title_changed` event.
-    if visible {
-        let _ = window.set_title(&login_window_title(&origin, None));
-    }
-    // Dev-only diagnostic (epic-login-non-interactive investigation, 2026-08-01,
-    // F-34.5-G6-01): `open_devtools()` is already forced for the "main" webview
-    // above (the main-window devtools block in `main()`'s `.setup()`, guarded by the
-    // same #[cfg(debug_assertions)]), but
-    // THIS arm builds the login window (`loginwin-N-*`) that all five runners share
-    // -- and it has never had devtools wired up. That gap left the login page's own
-    // JS console unread across four debug cycles despite it being the one webview
-    // that renders third-party OAuth pages (Epic, GOG, Amazon, Humble). Gated on
-    // `visible` to match every other presentation-only call in this arm (the hidden
-    // reveal/clear windows built elsewhere in this file are unaffected) and on
-    // `#[cfg(debug_assertions)]` so it can never reach a packaged build. Skipped on
-    // Linux through `should_auto_open_devtools`: gated on mechanism (the docked-inspector
-    // attach races page boot there), not measured on this window, and applied because
-    // the race is not specific to our page.
-    #[cfg(debug_assertions)]
-    if visible && should_auto_open_devtools(std::env::consts::OS) {
-        window.open_devtools();
-        shell_eprintln!(
-            "[shell] humble_login_open: devtools opened for '{label}' (debug build)"
-        );
-    } else if visible {
-        shell_eprintln!(
-            "[shell] humble_login_open: devtools NOT auto-opened for '{label}' on linux (debug build) -- the inspector attach races page boot; right-click > Inspect Element opens it"
-        );
-    }
-    Ok(Value::String(label))
 }
 
 // Drain (not merely read) `label`'s queued navigation events (Phase 34.4.1 Plan

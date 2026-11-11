@@ -69,8 +69,10 @@
  * Tauri window plumbing (that would be new shell work, not a port).
  *
  * D-09 precondition: this plan runs after REQ-34.5-01, because `shortcutFiles()` (`shortcuts.ts`)
- * calls `getPath('desktop')` on the linux and win32 branches and would throw the moment these
- * channels were registered without it.
+ * calls `getPath('desktop')` on the linux branch and would throw the moment these channels were
+ * registered without it. On win32 the Desktop comes from `windowsDesktopDir` ->
+ * `readWindowsShellFolder` (the registry), and without it no Desktop path exists
+ * (quick 261111-aq4): pathShim's win32 `desktop` arm throws and is never reached.
  *
  * Curated-import rule (inherited from every prior slice's D-08 -> D-09 -> D-04 -> D-14 -> D-02
  * lineage): this module imports the underlying logic modules directly
@@ -226,7 +228,9 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
   // Failure path (T-34.5-26, T-34.5-65, T-34.5-66): `getGame().addShortcuts()` reaches
   // `shortcuts.ts`'s `addShortcuts`, which on darwin calls `generateMacOsApp` -> `getPath('exe')`.
   // That throws when `GAMELIB_SHELL_EXE` is unset or empty, and also when a shortcut file could not
-  // be written (a missing desktop folder, a failed Windows `.lnk`). No catch, fallback or default
+  // be written (a missing desktop folder, a failed Windows `.lnk`, or a win32 Desktop folder the
+  // registry could not resolve, which still leaves the Start Menu `.lnk` written so this handler
+  // answers true from disk). No catch, fallback or default
   // launch command is added upstream -- a failure that writes nothing is the correct outcome, and
   // a `.app` pointing at an empty exe path would be worse. It is caught here, logged, and shown to
   // the user as the error toast instead of the success one; the handler still answers with the disk

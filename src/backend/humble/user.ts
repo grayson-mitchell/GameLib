@@ -1,7 +1,12 @@
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
 
-import { HUMBLE_BASE_URL, HUMBLE_LOGIN_URL } from './constants'
+import { isMac } from 'backend/constants/environment'
+import {
+  HUMBLE_BASE_URL,
+  HUMBLE_LOGIN_URL,
+  HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN
+} from './constants'
 import { getGamekeys } from './adapter'
 import type { HumbleSyncFence } from './syncFence'
 import { HumbleUserData } from 'common/types/humble'
@@ -924,7 +929,15 @@ export class HumbleUser {
 
   // ── HACCT-03: Disconnect (D-07 — full partition wipe) ─────────────────────
 
-  async disconnect(): Promise<void> {
+  /**
+   * `opts.isMac` overrides the host platform for the cookie-clear window's
+   * origin only. Tests pass it so they need no module mock (the
+   * backend-di-ceilings jestMock ratchet). The production caller,
+   * the `humbleDisconnect` handler in humbleFlowRegistration.ts,
+   * passes nothing, so the real host `isMac` decides.
+   */
+  async disconnect(opts: { isMac?: boolean } = {}): Promise<void> {
+    const onMac = opts.isMac ?? isMac
     // CR-01: fence off any IN-FLIGHT sync before the wipes. A running
     // HumbleLibrary sync captured the cookie at start and would otherwise
     // keep making authenticated requests, silently repopulate the
@@ -986,7 +999,8 @@ export class HumbleUser {
     // `finally` so no path — success, rejection, or a thrown open() — ever
     // leaves it open.
     //
-    // A second, INDEPENDENT 'clearHumbleStorage' step calls Plan 15's
+    // An INDEPENDENT 'clearHumbleStorage' step (it runs FIRST -- see the ORDER IS
+    // LOAD-BEARING note on `wipeSteps`) calls Plan 15's
     // `seam.clearStorage(HUMBLE_BASE_URL, ...)`, which clears localStorage,
     // sessionStorage, IndexedDB, Cache Storage and service-worker registrations
     // for Humble's own origin only — same-origin policy scopes it structurally,
@@ -1013,13 +1027,84 @@ export class HumbleUser {
     // to validate it was dispositioned).
     const seam = this.deps.loginWindowSeam.getOrThrow()
     const wipeSteps: Array<[string, () => Promise<unknown>]> = [
+      // ORDER IS LOAD-BEARING (debug session `humble-storage-clear-reseed`).
+      // `clearHumbleStorage` MUST run FIRST and `clearHumbleCookies` MUST run
+      // LAST.
+      //
+      // localStorage/sessionStorage/IndexedDB/Cache Storage are origin-scoped,
+      // so the storage step has no choice but to load a real document from
+      // Humble's own origin -- and Humble's page answers that load by setting
+      // cookies. There is no way to clear Humble's storage without briefly
+      // re-seeding Humble's cookies; the only question is whether anything
+      // sweeps up afterwards. Whichever step runs LAST decides what the jar
+      // holds when disconnect() finishes.
+      //
+      // Measured live on Windows 11, 2026-11-11, with the steps in the OLD
+      // order (cookies, then storage): the cookie step's closing census read
+      // `after(total=75, matched=0)`, and a census taken once the storage step
+      // had finished read `total=77, matched=2` -- the storage window re-seeded
+      // two humblebundle.com cookies behind a census that had already certified
+      // the jar clean. The same two were still there 2000 ms later, so they
+      // were written by the storage window itself and not by a late writer
+      // after it closed; running the clear after the storage window has closed
+      // is therefore sufficient, and no extra settle or re-sweep is needed.
+      // This is the same defect Epic measured on macOS (`__cf_bm` records minted
+      // by a live HTTPS load) -- see the matching ORDER IS LOAD-BEARING note in
+      // storeManagers/legendary/user.ts, session `epic-cookie-clear-read-divergence`.
+      //
+      // Reordering is also what makes the cookie step's own closing census (its
+      // `after` read) meaningful: it can only certify a clean jar if it is the
+      // last thing in this list that touches the jar. Nothing below may follow
+      // the cookie step.
+      //
+      // Fatality is unchanged by the order: NO step here is fatal. The guarded
+      // loop below downgrades every rejection to a warning and the credential
+      // was already wiped before the loop, so neither step can leave the
+      // session on disk. (If the cookie step itself throws, e.g. a rejected
+      // open(), the jar keeps whatever the storage window seeded -- but in the
+      // old order the same failure left the ORIGINAL session cookies there, so
+      // this is not a new exposure.)
+      [
+        'clearHumbleStorage',
+        async () => {
+          // Plan 15's clearStorage() opens and closes its OWN hidden window
+          // inside the Rust arm (humble_login_clear_storage) — no label is
+          // needed or returned here, unlike the cookie step below.
+          const report = await seam.clearStorage(
+            HUMBLE_BASE_URL,
+            standardBrowserUserAgent(this.deps)
+          )
+          // Only COUNTS are logged — never a storage key or value
+          // (T-34.4.1-34 discipline, same as the cookie step below).
+          logInfo(
+            `Humble disconnect: cleared storage — localStorage=${report.localStorage}, ` +
+              `sessionStorage=${report.sessionStorage}, indexedDB=${report.indexedDB}, ` +
+              `caches=${report.caches}, serviceWorkers=${report.serviceWorkers}`,
+            LogPrefix.Backend
+          )
+        }
+      ],
       [
         'clearHumbleCookies',
         async () => {
-          const label = await seam.open(HUMBLE_BASE_URL, {
-            visible: false,
-            userAgent: standardBrowserUserAgent(this.deps)
-          })
+          // The window exists only to hang the app-wide cookie jar off, so on
+          // Windows/Linux it must NOT load Humble: a window built on an https
+          // URL is a navigation (`rpc_humble_login_open` returns at
+          // `.build()`, mid-load), and Humble's loading page keeps re-writing
+          // humblebundle.com cookies into the shared jar while the delete
+          // runs. Measured live on Windows 2026-11-11 (before=31, 23 survived
+          // the first DeleteCookie pass, jar GROWING during an idle watch,
+          // survivors sharing no attribute; a second pass on a quiet jar
+          // removed 26 of 27). See HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN.
+          // macOS keeps the live origin: its eviction path was live-gated
+          // against that window and is unmeasured against this one.
+          const label = await seam.open(
+            onMac ? HUMBLE_BASE_URL : HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN,
+            {
+              visible: false,
+              userAgent: standardBrowserUserAgent(this.deps)
+            }
+          )
           try {
             // Phase 34.4.1 gap-cycle plan 17 (F-5, item 3(b)): a paired
             // before/after jar census, taken INSIDE this step against the
@@ -1094,6 +1179,9 @@ export class HumbleUser {
 
             const before = await readCensus()
             const deleted = await seam.clearCookies(label, 'humblebundle.com')
+            // The closing read: this step runs LAST (see the ORDER IS
+            // LOAD-BEARING note on `wipeSteps`), so `after` is the final word
+            // on the jar -- nothing re-seeds it behind this read.
             const after = await readCensus()
 
             const fmtSide = (c: Census) =>
@@ -1167,26 +1255,6 @@ export class HumbleUser {
               )
             })
           }
-        }
-      ],
-      [
-        'clearHumbleStorage',
-        async () => {
-          // Plan 15's clearStorage() opens and closes its OWN hidden window
-          // inside the Rust arm (humble_login_clear_storage) — no label is
-          // needed or returned here, unlike the cookie step above.
-          const report = await seam.clearStorage(
-            HUMBLE_BASE_URL,
-            standardBrowserUserAgent(this.deps)
-          )
-          // Only COUNTS are logged — never a storage key or value
-          // (T-34.4.1-34 discipline, same as the cookie step above).
-          logInfo(
-            `Humble disconnect: cleared storage — localStorage=${report.localStorage}, ` +
-              `sessionStorage=${report.sessionStorage}, indexedDB=${report.indexedDB}, ` +
-              `caches=${report.caches}, serviceWorkers=${report.serviceWorkers}`,
-            LogPrefix.Backend
-          )
         }
       ]
     ]

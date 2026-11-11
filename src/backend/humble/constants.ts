@@ -13,6 +13,25 @@ export const HUMBLE_LOGIN_PARTITION = 'persist:humble'
 export const HUMBLE_BASE_URL = 'https://www.humblebundle.com'
 export const HUMBLE_LOGIN_URL = 'https://www.humblebundle.com/login'
 
+// Non-macOS only: the origin of the HIDDEN window `HumbleUser.disconnect()`'s
+// 'clearHumbleCookies' step opens purely to hang a cookie store off. It is an
+// RFC 2606 reserved host that cannot resolve, so the window carries the
+// app-wide jar without ever loading Humble. Pointing it at HUMBLE_BASE_URL was
+// the defect in `.planning/debug/webview2-humble-deletecookie.md`: a window
+// built on an https URL IS a navigation (`rpc_humble_login_open` returns at
+// `.build()`, mid-load), and Humble's loading page kept re-writing
+// humblebundle.com cookies into the shared jar while the Windows
+// `DeleteCookie` pass was removing them -- measured live, 23 of 31 survived
+// the first pass, with the jar GROWING during an idle watch. Same fix, same
+// host, same reason as `COOKIE_HANDLE_ORIGIN` in legendary/user.ts (Epic,
+// b5b3464bd). Must be `https`: `login_window_url_arg` rejects any other
+// scheme before a window is built.
+//
+// macOS keeps HUMBLE_BASE_URL: its removal is a WKWebsiteDataStore record
+// eviction that was live-gated against that window, and it has not been
+// measured against this origin.
+export const HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN = 'https://gamelib.invalid/'
+
 // Required on every outgoing Humble API request (adapter.ts) — the likely
 // cause of prior third-party Humble integration failures when omitted.
 export const HUMBLE_REQUIRED_HEADERS = {

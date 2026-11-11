@@ -448,10 +448,16 @@ describe("shortcutsExists' fallback on an empty getGameInfo() (260905-mv5, site 
 // ── Describe 2: Containment ─────────────────────────────────────────────────────────────────────
 describe('containment — getPath(desktop) never resolves under the developer real home (tests-clobbering-real-steam-store rule, applied to a cluster that writes outside the app-support dir by design)', () => {
   it('resolves under the structurally redirected home, and differs from the pre-redirect real home', () => {
-    const desktop = getPath('desktop')
-    expect(desktop.startsWith(homedir())).toBe(true)
-    expect(desktop).not.toBe(realHomeAtSetup)
-    expect(desktop.startsWith(realHomeAtSetup)).toBe(false)
+    // Pinned to linux, CI's own arm: on a win32 host getPath('desktop') throws (261111-aq4).
+    const originalPlatform = overrideProcessPlatform('linux')
+    try {
+      const desktop = getPath('desktop')
+      expect(desktop.startsWith(homedir())).toBe(true)
+      expect(desktop).not.toBe(realHomeAtSetup)
+      expect(desktop.startsWith(realHomeAtSetup)).toBe(false)
+    } finally {
+      overrideProcessPlatform(originalPlatform)
+    }
   })
 })
 

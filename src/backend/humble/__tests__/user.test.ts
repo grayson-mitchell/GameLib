@@ -25,7 +25,7 @@ const mockDecryptString = jest.fn((b: Buffer) => b.toString())
 const mockIsEncryptionAvailable = jest.fn(() => true)
 
 // Typical Electron default UA shape: platform + Chrome version + the
-// Electron-/app-identifying tokens standardBrowserUserAgent() must strip.
+// Electron-/app-identifying tokens standardBrowserUserAgent({ appInfo }) must strip.
 const mockUserAgentFallback =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) GameLib/1.0.0 Chrome/142.0.7444.52 Electron/41.1.1 Safari/537.36'
 
@@ -128,7 +128,11 @@ import {
 } from '../loginWindowSeam'
 import type { HumbleSecretKey, HumbleSecretStore } from '../secretStore'
 import { HUMBLE_TOKEN_PREFIX, HUMBLE_TOKEN_STORE_KEY } from '../constants'
-import { HUMBLE_BASE_URL, HUMBLE_LOGIN_URL } from '../constants'
+import {
+  HUMBLE_BASE_URL,
+  HUMBLE_LOGIN_URL,
+  HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN
+} from '../constants'
 
 const flushAsync = async () => new Promise((r) => setImmediate(r))
 
@@ -2080,6 +2084,7 @@ describe('HumbleUser', () => {
     // instead of session.fromPartition (which has no shape under Tauri).
 
     describe('disconnect() — seam path (Phase 34.4.1 Plan 06, D-08)', () => {
+      // The platform is injected through `disconnect({ isMac })`; no module mock.
       test('credential store is cleared BEFORE the cookie step runs', async () => {
         const callOrder: string[] = []
         mockConfigStore.clear.mockImplementation(() => {
@@ -2095,11 +2100,11 @@ describe('HumbleUser', () => {
         expect(callOrder).toEqual(['configStore.clear', 'clearCookies'])
       })
 
-      test('opens a HIDDEN window on HUMBLE_BASE_URL and clears cookies scoped to exactly humblebundle.com', async () => {
+      test('macOS: opens a HIDDEN window on HUMBLE_BASE_URL and clears cookies scoped to exactly humblebundle.com', async () => {
         mockSeamOpen.mockResolvedValue('disconnect-window-0')
         mockSeamClearCookies.mockResolvedValue(3)
 
-        await humbleUser.disconnect()
+        await humbleUser.disconnect({ isMac: true })
 
         expect(mockSeamOpen).toHaveBeenCalledWith(HUMBLE_BASE_URL, {
           visible: false,
@@ -2109,6 +2114,57 @@ describe('HumbleUser', () => {
           'disconnect-window-0',
           'humblebundle.com'
         )
+      })
+
+      // webview2-humble-deletecookie (live, Windows 2026-11-11): the clear
+      // window is only a handle to the app-wide jar. Built on the live Humble
+      // origin it IS a navigation, and the loading page re-wrote
+      // humblebundle.com cookies while DeleteCookie removed them (23 of 31
+      // survived the first pass). Off macOS it must point at the reserved,
+      // non-resolving host -- the Epic fix (b5b3464bd) for the same class.
+      test('non-macOS: the cookie-clear window is opened on the non-resolving handle origin, NEVER on the live Humble origin', async () => {
+        mockSeamOpen.mockResolvedValue('disconnect-window-handle')
+        mockSeamClearCookies.mockResolvedValue(3)
+
+        await humbleUser.disconnect({ isMac: false })
+
+        expect(mockSeamOpen).toHaveBeenCalledWith(
+          HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN,
+          { visible: false, userAgent: standardBrowserUserAgent({ appInfo }) }
+        )
+        for (const [url] of mockSeamOpen.mock.calls) {
+          expect(url).not.toContain('humblebundle.com')
+        }
+        // The clear itself stays domain-scoped to Humble and runs on THAT
+        // window's label: only the window's origin changed, not the target.
+        expect(mockSeamClearCookies).toHaveBeenCalledWith(
+          'disconnect-window-handle',
+          'humblebundle.com'
+        )
+      })
+
+      test('no argument: the real host platform picks the cookie-clear origin (the production caller passes nothing)', async () => {
+        mockSeamOpen.mockResolvedValue('disconnect-window-default')
+        mockSeamClearCookies.mockResolvedValue(3)
+
+        await humbleUser.disconnect()
+
+        // Computed from process.platform so it holds on ubuntu CI, Windows
+        // and the operator's Mac alike.
+        expect(mockSeamOpen).toHaveBeenCalledWith(
+          process.platform === 'darwin'
+            ? HUMBLE_BASE_URL
+            : HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN,
+          { visible: false, userAgent: standardBrowserUserAgent({ appInfo }) }
+        )
+      })
+
+      test('the handle origin is a reserved, non-resolving https host (login_window_url_arg rejects any other scheme)', () => {
+        const url = new URL(HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN)
+        expect(url.protocol).toBe('https:')
+        // RFC 2606 reserved TLD: can never resolve, so the window can never
+        // reach Humble (or anyone else) and seed the jar it is clearing.
+        expect(url.hostname.endsWith('.invalid')).toBe(true)
       })
 
       test('a rejecting clearCookies does not throw out of disconnect(), and the hidden window is still closed', async () => {
@@ -2185,6 +2241,9 @@ describe('HumbleUser', () => {
         expect(mockLogWarning).toHaveBeenCalled()
       })
 
+      // Since humble-storage-clear-reseed the storage step runs BEFORE the cookie
+      // step, so this holds by construction; the test now pins that a cookie-step
+      // rejection cannot retroactively un-run or fail storage (and stays resolving).
       test('F-6: a rejecting clearCookies step does not prevent the storage step from running', async () => {
         mockSeamClearCookies.mockRejectedValue(
           new Error('rust cookie clear failed')
@@ -2204,6 +2263,79 @@ describe('HumbleUser', () => {
           standardBrowserUserAgent({ appInfo })
         )
       })
+
+      // humble-storage-clear-reseed (live, Windows 2026-11-11): the storage
+      // step loads the LIVE Humble origin (storage is origin-scoped) and that
+      // page re-seeded 2 humblebundle.com cookies (jar census total 75->77,
+      // matched 0->2) behind a cookie census that had already read matched=0.
+      // Whichever step runs LAST decides what the jar holds, so storage must
+      // run FIRST and the cookie step -- whose `after` census is the closing
+      // read -- LAST. Behavioural, on both platform arms: the seam mocks record
+      // invocation order, so swapping the two wipeSteps back turns this red
+      // (the Epic equivalent had to be a source gate only because its mocked
+      // storage step sets no cookies; ordering itself is observable here).
+      // First recorded invocation order of a mock; throws (never silently
+      // passes a comparison against undefined) when it was never called.
+      const firstCallOrder = (m: jest.Mock): number => {
+        const at = m.mock.invocationCallOrder[0]
+        if (at === undefined) throw new Error('mock was never called')
+        return at
+      }
+      describe.each([
+        ['non-macOS', false],
+        ['macOS', true]
+      ])(
+        'wipe-step ORDER (%s): storage first, cookie step last',
+        (_label, mac) => {
+          test('clearStorage is invoked before EVERY jar-touching call of the cookie step (open, census reads, clearCookies)', async () => {
+            await humbleUser.disconnect({ isMac: mac })
+
+            expect(mockSeamClearStorage.mock.invocationCallOrder).toHaveLength(
+              1
+            )
+            const storageAt = firstCallOrder(mockSeamClearStorage)
+
+            const cookieStepCalls = [
+              ...mockSeamOpen.mock.invocationCallOrder,
+              ...mockSeamCookiesForDomain.mock.invocationCallOrder,
+              ...mockSeamClearCookies.mock.invocationCallOrder
+            ]
+            // Guard against a vacuous pass: the cookie step really ran
+            // (open + before census + clear + after census = 4 calls).
+            expect(cookieStepCalls).toHaveLength(4)
+            for (const at of cookieStepCalls) {
+              expect(storageAt).toBeLessThan(at)
+            }
+          })
+
+          test("the cookie step's closing census read is the LAST jar read and follows clearCookies", async () => {
+            await humbleUser.disconnect({ isMac: mac })
+
+            const reads = mockSeamCookiesForDomain.mock.invocationCallOrder
+            expect(reads).toHaveLength(2) // before, after
+            const clearAt = firstCallOrder(mockSeamClearCookies)
+            const storageAt = firstCallOrder(mockSeamClearStorage)
+            const closingRead = Math.max(...reads)
+            expect(closingRead).toBeGreaterThan(clearAt)
+            expect(closingRead).toBeGreaterThan(storageAt)
+          })
+
+          test('the storage log line precedes the cookie census log line (what the operator greps in gamelib.log)', async () => {
+            await humbleUser.disconnect({ isMac: mac })
+
+            const logOrderOf = (needle: string): number => {
+              const idx = mockLogInfo.mock.calls.findIndex(([msg]) =>
+                typeof msg === 'string' ? msg.includes(needle) : false
+              )
+              expect(idx).toBeGreaterThan(-1)
+              return mockLogInfo.mock.invocationCallOrder[idx] ?? -1
+            }
+            expect(logOrderOf('cleared storage')).toBeLessThan(
+              logOrderOf('cookie census')
+            )
+          })
+        }
+      )
 
       test('F-6: only counts are logged for the storage step, never a storage key or value', async () => {
         mockSeamClearStorage.mockResolvedValue({

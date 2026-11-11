@@ -1,0 +1,37 @@
+clippy::cloned_ref_to_slice_refs: 2 (ceiling 2)
+clippy::doc_lazy_continuation: 5 (ceiling 5)
+clippy::if_same_then_else: 1 (ceiling 1)
+clippy::incompatible_msrv: 1 (ceiling 1)
+clippy::manual_hash_one: 1 (ceiling 1)
+clippy::match_like_matches_macro: 1 (ceiling 1)
+clippy::needless_borrows_for_generic_args: 1 (ceiling 1)
+clippy::type_complexity: 2 (ceiling 2)
+clippy::unnecessary_to_owned: 2 (ceiling 2)
+clippy::useless_conversion: 1 (ceiling 1)
+dead_code: 5 (ceiling 5)
+non_snake_case: 2 (ceiling 2)
+src\wake_lock.rs:172:4 dead_code function `wake_lock_reason` is never used
+src\login_window\humble_helpers.rs:100:15 dead_code function `website_data_record_matches_domain` is never used
+src\store_embed\state.rs:252:19 dead_code method `observe_live_url` is never used
+src\single_instance.rs:142:15 dead_code function `single_instance_socket_path` is never used
+src\single_instance.rs:152:15 dead_code function `single_instance_dir` is never used
+src\native_gamepad_shape.rs:176:18 clippy::incompatible_msrv current MSRV (Minimum Supported Rust Version) is `1.77.2` but this item is stable since `1.82.0`
+src\login_window\invite_picker.rs:38:18 clippy::match_like_matches_macro match expression looks like `matches!` macro
+src\login_window\invite_picker.rs:133:59 clippy::useless_conversion useless conversion to the same type: `url::parser::ParseError`
+src\login_window\humble_open.rs:371:49 clippy::needless_borrows_for_generic_args the borrowed expression implements the required traits
+src\login_window\devtools.rs:101:5 clippy::doc_lazy_continuation doc list item without indentation
+src\login_window\devtools.rs:102:5 clippy::doc_lazy_continuation doc list item without indentation
+src\login_window\devtools.rs:103:5 clippy::doc_lazy_continuation doc list item without indentation
+src\login_window\devtools.rs:104:5 clippy::doc_lazy_continuation doc list item without indentation
+src\login_window\devtools.rs:105:5 clippy::doc_lazy_continuation doc list item without indentation
+src\login_window\humble_helpers.rs:23:20 clippy::manual_hash_one manual implementation of `BuildHasher::hash_one`
+src\store_embed\state.rs:496:6 clippy::type_complexity very complex type used. Consider factoring parts into `type` definitions
+src\shell_state.rs:12:25 clippy::type_complexity very complex type used. Consider factoring parts into `type` definitions
+src\login_window\devtools.rs:481:45 clippy::if_same_then_else this `if` has identical blocks
+src\single_instance.rs:558:34 clippy::unnecessary_to_owned unnecessary use of `to_string`
+src\single_instance.rs:575:34 clippy::unnecessary_to_owned unnecessary use of `to_string`
+src\single_instance.rs:686:41 clippy::cloned_ref_to_slice_refs unnecessary use of `clone` to create a slice from a reference
+src\single_instance.rs:870:44 clippy::cloned_ref_to_slice_refs unnecessary use of `clone` to create a slice from a reference
+src\wake_lock.rs:375:8 non_snake_case function `wake_lock_kind_maps_the_two_kinds_to_DIFFERENT_assertions` should have a snake case name
+src\main.rs:3063:8 non_snake_case function `the_keyring_available_arm_only_ever_READS_the_probe_account` should have a snake case name
+PASS (win32, toolchain 1.99.1)

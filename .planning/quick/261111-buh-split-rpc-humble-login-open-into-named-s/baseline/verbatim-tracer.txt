@@ -1,0 +1,21 @@
+OK head (HEAD L90-116) -> rpc_humble_login_open L90-107
+OK latch (HEAD L117-188) -> rpc_humble_login_open L151-188
+OK route (HEAD L189-196) -> rpc_humble_login_open L192-196
+OK build (HEAD L197-496) -> rpc_humble_login_open L202-496
+OK barcomment (comment only)
+OK bar (HEAD L515-557) -> rpc_humble_login_open L515-557
+OK presenta (HEAD L558-597) -> rpc_humble_login_open L558-597
+OK nonmac (HEAD L598-599) -> rpc_humble_login_open L598-599
+OK owner (HEAD L600-603) -> rpc_humble_login_open L600-603
+OK presentb (HEAD L604-641) -> rpc_humble_login_open L609-641
+OK record (HEAD L642-651) -> rpc_humble_login_open L642-651
+OK close (HEAD L652-715) -> install_login_window_close_hook L731-757
+OK tail (HEAD L716-748) -> rpc_humble_login_open L657-686
+GLUE L653 [rpc_humble_login_open]:     install_login_window_close_hook(app, &window, label.clone());
+GLUE L689 [install_login_window_close_hook]: fn install_login_window_close_hook(
+GLUE L690 [install_login_window_close_hook]:     #[cfg_attr(not(target_os = "macos"), allow(unused_variables))] app: &AppHandle,
+GLUE L691 [install_login_window_close_hook]:     window: &tauri::WebviewWindow,
+GLUE L692 [install_login_window_close_hook]:     label: String,
+GLUE L693 [install_login_window_close_hook]: ) {
+GLUE L758 [install_login_window_close_hook]: }
+RESULT: PASS

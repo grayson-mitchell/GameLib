@@ -20,14 +20,18 @@ import {
   listRustTestModuleBlocks,
   listTauriShellSourceFiles,
   GENERATED_MODULES,
+  HUMBLE_LOGIN_OPEN_STEPS,
+  listStepLinkageProblems,
   PRE_SPLIT_SIBLING_MODULES,
   readHandlerBody,
+  readHandlerBodyWithSteps,
   readMacosEpicEmbedSource,
   readTauriShellFile,
   readTauriShellProductionFile,
   readTauriShellProductionSource,
   readTauriShellSource,
   readTopLevelFnBody,
+  readTopLevelFnStatements,
   stripRustTestModules
 } from 'backend/testUtils/tauriShellSource'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -105,11 +109,143 @@ function fnEndAfter(code: string, start: number): number {
 /**
  * Body of the `rpc_humble_login_open` handler (Phase 71 D-10): the dispatcher arm is a one-line
  * call, the body lives in `login_window/humble_open.rs`. `readHandlerBody` throws when the fn is
- * missing, duplicated or near-empty, so a pin over this body cannot pass on an empty slice.
+ * missing, duplicated or near-empty, so a pin over this body cannot pass on an empty slice. The arm
+ * is the handler with each named step's statements (`HUMBLE_LOGIN_OPEN_STEPS`) spliced in at its
+ * call (quick 261111-buh), so ordering pins read across the call sequence as they did before the
+ * split.
  */
 function humbleLoginOpenHandlerBody(code: string): string {
-  return readHandlerBody(code, 'humble_login_open')
+  return readHandlerBodyWithSteps(
+    code,
+    'humble_login_open',
+    HUMBLE_LOGIN_OPEN_STEPS
+  )
 }
+
+describe('rpc_humble_login_open named steps (quick 261111-buh)', () => {
+  const rust = (...lines: string[]): string => lines.join('\n')
+  const handlerFn = (...calls: string[]): string =>
+    rust(
+      'pub(crate) fn rpc_x(args: &[Value]) -> Result<Value, String> {',
+      ...calls.map((c) => `    ${c}();`),
+      '    Ok(Value::Null)',
+      '}'
+    )
+  const stepFn = (name: string): string =>
+    rust(`fn ${name}() {`, '    a();', '    b();', '    c();', '}')
+  const STEPS = ['step_one', 'step_two']
+  const clean = rust(
+    handlerFn('step_one', 'step_two'),
+    stepFn('step_one'),
+    stepFn('step_two')
+  )
+
+  test('the real handler calls every step exactly once, from nowhere else, in list order', () => {
+    expect(HUMBLE_LOGIN_OPEN_STEPS.length).toBeGreaterThan(0)
+    expect(
+      listStepLinkageProblems(
+        loadMainRsCode(),
+        'humble_login_open',
+        HUMBLE_LOGIN_OPEN_STEPS
+      )
+    ).toEqual([])
+  })
+
+  test("every step's statements appear in the spliced handler body", () => {
+    const code = loadMainRsCode()
+    const body = humbleLoginOpenHandlerBody(code)
+    for (const step of HUMBLE_LOGIN_OPEN_STEPS) {
+      expect(body).toContain(readTopLevelFnStatements(code, step))
+    }
+  })
+
+  test('RED proof: a clean synthetic source reports no problems', () => {
+    expect(listStepLinkageProblems(clean, 'x', STEPS)).toEqual([])
+  })
+
+  test('RED proof: calls out of list order are reported', () => {
+    const src = rust(
+      handlerFn('step_two', 'step_one'),
+      stepFn('step_one'),
+      stepFn('step_two')
+    )
+    const problems = listStepLinkageProblems(src, 'x', STEPS)
+    expect(problems.length).toBeGreaterThan(0)
+    expect(problems.join('\n')).toContain('step_one')
+  })
+
+  test('RED proof: a step defined but never called is reported', () => {
+    const src = rust(
+      handlerFn('step_one'),
+      stepFn('step_one'),
+      stepFn('step_two')
+    )
+    const problems = listStepLinkageProblems(src, 'x', STEPS)
+    expect(problems.length).toBeGreaterThan(0)
+    expect(problems.join('\n')).toContain('step_two')
+  })
+
+  test('RED proof: a step called twice is reported', () => {
+    const src = rust(
+      handlerFn('step_one', 'step_two', 'step_two'),
+      stepFn('step_one'),
+      stepFn('step_two')
+    )
+    const problems = listStepLinkageProblems(src, 'x', STEPS)
+    expect(problems.length).toBeGreaterThan(0)
+    expect(problems.join('\n')).toContain('step_two')
+  })
+
+  test('RED proof: a step also called from another fn is reported', () => {
+    const src = rust(
+      clean,
+      'fn other() {',
+      '    step_one();',
+      '    d();',
+      '    e();',
+      '}'
+    )
+    const problems = listStepLinkageProblems(src, 'x', STEPS)
+    expect(problems.length).toBeGreaterThan(0)
+    expect(problems.join('\n')).toContain('step_one')
+  })
+
+  test('RED proof: a step that is not defined is reported', () => {
+    const src = rust(handlerFn('step_one', 'step_two'), stepFn('step_one'))
+    const problems = listStepLinkageProblems(src, 'x', STEPS)
+    expect(problems.length).toBeGreaterThan(0)
+    expect(problems.join('\n')).toContain('step_two')
+  })
+
+  test('splicer: a vertical-signature step lands between its neighbours, signature dropped', () => {
+    const src = rust(
+      'pub(crate) fn rpc_x(args: &[Value]) -> Result<Value, String> {',
+      '    pre();',
+      '    step_one();',
+      '    post();',
+      '}',
+      'fn step_one(',
+      '    x: u8,',
+      ') {',
+      '    s1();',
+      '    s2();',
+      '    s3();',
+      '}'
+    )
+    const spliced = readHandlerBodyWithSteps(src, 'x', ['step_one'])
+    expect(spliced).not.toContain('x: u8')
+    expect(spliced.indexOf('pre();')).toBeGreaterThanOrEqual(0)
+    expect(spliced.indexOf('pre();')).toBeLessThan(spliced.indexOf('s1();'))
+    expect(spliced.indexOf('s3();')).toBeLessThan(spliced.indexOf('post();'))
+  })
+
+  test('splicer: a lone handler with no step fns is returned unchanged', () => {
+    const src = rust(handlerFn('a', 'b'))
+    expect(readHandlerBodyWithSteps(src, 'x', STEPS)).toBe(
+      readHandlerBody(src, 'x')
+    )
+  })
+})
 
 describe('loadMainRsCode comment-stripping helper (self-test)', () => {
   test('a comment-only phrase from main.rs is NOT present in the stripped output', () => {

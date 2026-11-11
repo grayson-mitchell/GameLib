@@ -51,7 +51,7 @@ import {
 } from 'fs'
 import { homedir } from 'os'
 import { dirname, join } from 'path'
-import { logError } from 'backend/logger'
+import { logError, logWarning } from 'backend/logger'
 import { removeShortcuts, shortcutFiles } from '../shortcuts/shortcuts'
 import type { GameInfo } from 'common/types'
 import type { Game } from 'common/types/game_manager'
@@ -59,6 +59,7 @@ import { defined } from 'backend/testUtils/indexed'
 import { createPathShimPaths } from 'backend/testUtils/pathShimPaths'
 
 const mockLogError = logError as jest.Mock
+const mockLogWarning = logWarning as jest.Mock
 
 function overrideProcessPlatform(os: string): string {
   const original = process.platform
@@ -163,6 +164,35 @@ describe('removeShortcuts on linux (261012-ca6)', () => {
 
     await expect(removeShortcuts(deps, gameFor(title))).resolves.toBeUndefined()
 
+    expect(mockLogError).not.toHaveBeenCalled()
+  })
+})
+
+describe('removeShortcuts on win32 (261111-aq4)', () => {
+  beforeEach(() => {
+    originalPlatform = overrideProcessPlatform('win32')
+    mockEnv.isMac = false
+    mockLogWarning.mockClear()
+    mockLogError.mockClear()
+  })
+
+  it('registry Desktop lookup fails: the Start Menu .lnk is removed, no guessed Desktop is unlinked, a warning names the Desktop and nothing rejects', async () => {
+    const title = '261111-aq4 Remove Win32 Game'
+    // The stub reg.exe exits 1, so there is no Desktop path at all.
+    const [desktopFile, menuPath] = shortcutFiles(deps, title)
+    expect(desktopFile).toBeUndefined()
+    const menuFile = defined(menuPath, 'menu shortcut path')
+    expect(menuFile.startsWith(homedir())).toBe(true)
+    created.push(menuFile)
+    mkdirSync(dirname(menuFile), { recursive: true })
+    writeFileSync(menuFile, '')
+    expect(existsSync(menuFile)).toBe(true)
+
+    await expect(removeShortcuts(deps, gameFor(title))).resolves.toBeUndefined()
+
+    expect(existsSync(menuFile)).toBe(false)
+    expect(mockLogWarning).toHaveBeenCalledTimes(1)
+    expect(String(mockLogWarning.mock.calls[0]![0])).toMatch(/Desktop/)
     expect(mockLogError).not.toHaveBeenCalled()
   })
 })

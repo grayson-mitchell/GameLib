@@ -307,9 +307,10 @@ function createTestSteamProcesses(
       'steam drm',
       overrides.drm ?? {}
     ),
-    runningPoll: unscriptedMembers<
-      ManagerDeps['steamProcesses']['runningPoll']
-    >('steam running poll', overrides.runningPoll ?? {}),
+    // Inert, not unscripted, like macSteamOffline: every boot starts the poller and every stdin
+    // EOF stops it (quick 261111-7wo).
+    runningPoll:
+      overrides.runningPoll ?? createInertSteamProcesses().runningPoll,
     downloadMonitor: unscriptedMembers<
       ManagerDeps['steamProcesses']['downloadMonitor']
     >('steam download monitor', overrides.downloadMonitor ?? {})
@@ -344,7 +345,8 @@ export function createInertSteamProcesses(
       start: () => undefined,
       stop: () => undefined,
       pollOnce: () => Promise.resolve(),
-      lastAppId: () => 0
+      lastAppId: () => 0,
+      hold: () => () => undefined
     },
     downloadMonitor: overrides.downloadMonitor ?? {
       start: () => Promise.resolve(),

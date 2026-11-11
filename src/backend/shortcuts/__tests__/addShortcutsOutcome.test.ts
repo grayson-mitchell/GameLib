@@ -44,6 +44,7 @@ import {
   symlinkSync,
   writeFileSync
 } from 'fs'
+import gracefulFs from 'graceful-fs'
 import { homedir } from 'os'
 import { dirname, join } from 'path'
 import { addShortcuts, shortcutFiles } from '../shortcuts/shortcuts'
@@ -62,9 +63,10 @@ const deps = {
   imageTools: createTestHostServices().imageTools
 } as unknown as Parameters<typeof addShortcuts>[0]
 
-/** Both shortcut paths for `title`; throws if the platform yields none. */
-function bothFiles(title: string): [string, string] {
-  const [first, second] = shortcutFiles(deps, title)
+/** Both shortcut paths for `title`; throws if the platform yields none. On win32 the Desktop
+ * comes from the registry, so pass the folder the stub `reg.exe` answers with (261111-aq4). */
+function bothFiles(title: string, windowsDesktop?: string): [string, string] {
+  const [first, second] = shortcutFiles(deps, title, windowsDesktop)
   return [
     defined(first, 'desktop shortcut path'),
     defined(second, 'menu shortcut path')
@@ -89,20 +91,53 @@ const gameInfo = {
 } as unknown as GameInfo
 const game = { getGameInfo: () => gameInfo } as unknown as Game
 
-/** A stand-in for the runner: `reg.exe` finds nothing (the Desktop falls back to
- * `homedir()/Desktop`); the PowerShell run exits with `code`, after creating the `.lnk` named in
- * its env when `code` is 0 (what a real `$lnk.Save()` would do). */
-function fakePowerShell(code: number) {
+/** A Desktop folder the stub `reg.exe` can answer with. It lies OUTSIDE the containment home: on a
+ * POSIX host it is a relative file name in the checkout and on Windows a real `D:\` folder, so no
+ * test may create a file there (261111-aq4). It is only ever asserted on through the powershell
+ * env. */
+const REGISTRY_DESKTOP = 'D:\\GameLibTest\\Desktop'
+
+const regOut = (name: string, type: string, value: string) =>
+  `\r\nHKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\r\n    ${name}    ${type}    ${value}\r\n\r\n`
+
+/** A stand-in for the runner. `reg.exe` answers `REG_SZ <registryDesktop>` for the Desktop, or
+ * exits 1 (a failed lookup) when `registryDesktop` is undefined. The PowerShell run exits with
+ * `code`, after creating the `.lnk` named in its env when `code` is 0 (what a real `$lnk.Save()`
+ * would do) and only when that path sits under the containment home. */
+function fakePowerShell(code: number, registryDesktop?: string) {
+  if (registryDesktop !== undefined && code === 0) {
+    // writeWindowsShortcut checks that the .lnk exists once PowerShell exits 0, and the registry
+    // Desktop must never be created for real (see REGISTRY_DESKTOP), so answer that one existence
+    // check for it. `jest.spyOn` is not a DI-ceiling census site.
+    const realExistsSync = gracefulFs.existsSync
+    existsSyncSpy = jest
+      .spyOn(gracefulFs, 'existsSync')
+      .mockImplementation((path) =>
+        String(path).startsWith(registryDesktop) ? true : realExistsSync(path)
+      )
+  }
   mockRun.mockImplementation(
     (command: string, _args: string[], options: { env: NodeJS.ProcessEnv }) => {
       const base = { signal: null, stdout: '', stderr: '', timedOut: false }
+      if (command === 'reg.exe') {
+        return Promise.resolve(
+          registryDesktop === undefined
+            ? { ...base, code: 1 }
+            : {
+                ...base,
+                code: 0,
+                stdout: regOut('Desktop', 'REG_SZ', registryDesktop)
+              }
+        )
+      }
       if (command !== 'powershell.exe')
         return Promise.resolve({ ...base, code: 1 })
-      if (code === 0) {
+      const lnk = options.env.GAMELIB_LNK_PATH!
+      if (code === 0 && lnk.startsWith(homedir())) {
         // On this POSIX test host the win32 path's backslashes are part of the file name, so
         // its POSIX dirname is the folder to create.
-        mkdirSync(dirname(options.env.GAMELIB_LNK_PATH!), { recursive: true })
-        writeFileSync(options.env.GAMELIB_LNK_PATH!, '')
+        mkdirSync(dirname(lnk), { recursive: true })
+        writeFileSync(lnk, '')
       }
       return Promise.resolve({ ...base, code })
     }
@@ -115,8 +150,11 @@ function powershellCalls(): unknown[][] {
 }
 
 let originalPlatform: string
+let existsSyncSpy: jest.SpyInstance | undefined
 
 afterEach(() => {
+  existsSyncSpy?.mockRestore()
+  existsSyncSpy = undefined
   overrideProcessPlatform(originalPlatform)
   mockSettings = { ...defaultSettings }
 })
@@ -148,18 +186,66 @@ describe('addShortcuts on linux', () => {
 describe('addShortcuts on win32', () => {
   beforeEach(() => {
     originalPlatform = overrideProcessPlatform('win32')
+    mockRun.mockReset()
+  })
+
+  it('shortcutFiles has no Desktop path without a registry folder, and uses it when given (261111-aq4)', () => {
+    const [noDesktop, menu] = shortcutFiles(deps, gameInfo.title)
+    expect(noDesktop).toBeUndefined()
+    expect(defined(menu, 'menu path')).toBe(
+      `${deps.paths.appData}\\Microsoft\\Windows\\Start Menu\\Programs\\${gameInfo.title}.lnk`
+    )
+    const [desktop, sameMenu] = shortcutFiles(
+      deps,
+      gameInfo.title,
+      REGISTRY_DESKTOP
+    )
+    expect(desktop).toBe(`${REGISTRY_DESKTOP}\\${gameInfo.title}.lnk`)
+    expect(sameMenu).toBe(menu)
   })
 
   it('rejects when PowerShell fails to write the .lnk', async () => {
-    fakePowerShell(1)
+    fakePowerShell(1, REGISTRY_DESKTOP)
 
     await expect(addShortcuts(deps, game, true)).rejects.toThrow()
     expect(powershellCalls().length).toBeGreaterThan(0)
   })
 
-  it('writes the desktop and Start Menu .lnk through PowerShell, paths in env, never a shell', async () => {
+  it('registry lookup fails: writes only the Start Menu .lnk and rejects naming the Desktop, never via getPath (261111-aq4)', async () => {
     fakePowerShell(0)
-    const [desktopFile, menuFile] = bothFiles(gameInfo.title)
+    const [, menuFile] = shortcutFiles(deps, gameInfo.title)
+
+    const rejection = addShortcuts(deps, game, true)
+    await expect(rejection).rejects.toThrow(/Desktop/)
+    await expect(rejection).rejects.toThrow(/registry/)
+    // getPath('desktop') would throw the pathShim error; it must never be reached.
+    await expect(rejection).rejects.not.toThrow(/pathShim/)
+
+    expect(powershellCalls()).toHaveLength(1)
+    const env = (powershellCalls()[0]![2] as { env: NodeJS.ProcessEnv }).env
+    expect(env.GAMELIB_LNK_PATH).toBe(menuFile)
+    expect(existsSync(defined(menuFile, 'menu path'))).toBe(true)
+  })
+
+  it('registry lookup fails but no Desktop shortcut was requested: resolves, Start Menu .lnk only (261111-aq4)', async () => {
+    mockSettings = {
+      ...defaultSettings,
+      addDesktopShortcuts: false,
+      addStartMenuShortcuts: true
+    }
+    fakePowerShell(0)
+    const [, menuFile] = shortcutFiles(deps, gameInfo.title)
+
+    await expect(addShortcuts(deps, game)).resolves.toBeUndefined()
+
+    expect(powershellCalls()).toHaveLength(1)
+    const env = (powershellCalls()[0]![2] as { env: NodeJS.ProcessEnv }).env
+    expect(env.GAMELIB_LNK_PATH).toBe(menuFile)
+  })
+
+  it('writes the desktop and Start Menu .lnk through PowerShell, paths in env, never a shell', async () => {
+    fakePowerShell(0, REGISTRY_DESKTOP)
+    const [desktopFile, menuFile] = bothFiles(gameInfo.title, REGISTRY_DESKTOP)
 
     await expect(addShortcuts(deps, game, true)).resolves.toBeUndefined()
 
@@ -211,8 +297,11 @@ describe('Steam game (261026-c7r)', () => {
 
   it('win32: both .lnk writes carry the steam gamelib:// URL', async () => {
     originalPlatform = overrideProcessPlatform('win32')
-    fakePowerShell(0)
-    const [desktopFile, menuFile] = bothFiles(steamGameInfo.title)
+    fakePowerShell(0, REGISTRY_DESKTOP)
+    const [desktopFile, menuFile] = bothFiles(
+      steamGameInfo.title,
+      REGISTRY_DESKTOP
+    )
 
     await addShortcuts(deps, steamGame, true)
 
@@ -239,7 +328,7 @@ describe('Steam game (261026-c7r)', () => {
       if (savedShellExe === undefined) delete process.env.GAMELIB_SHELL_EXE
       else process.env.GAMELIB_SHELL_EXE = savedShellExe
       for (const app of shortcutFiles(deps, steamGameInfo.title)) {
-        rmSync(app, { recursive: true, force: true })
+        if (app) rmSync(app, { recursive: true, force: true })
       }
     })
 

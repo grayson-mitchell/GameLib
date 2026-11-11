@@ -17528,10 +17528,11 @@ describe('Steam launch watch wiring (261111-9mj)', () => {
     expect(startSpy.mock.calls[0]?.[1]).toBe(APP_ID)
   })
 
-  it('G2 win32 launch starts no watch', async () => {
+  it('G2 win32 launch starts the watch too (quick 261111-a9g)', async () => {
     jest.requireMock('backend/constants/environment').isWindows = true
     await new SteamGame(APP_ID, steamTestDeps).launch({} as any)
-    expect(startSpy).not.toHaveBeenCalled()
+    expect(startSpy).toHaveBeenCalledTimes(1)
+    expect(startSpy.mock.calls[0]?.[1]).toBe(APP_ID)
   })
 
   it('G3 stop with a shown watch and no-process sends exactly one done', async () => {
@@ -17565,5 +17566,29 @@ describe('Steam launch watch wiring (261111-9mj)', () => {
         String(c[0]).includes('Steam owns process lifecycle')
       )
     ).toBe(true)
+  })
+
+  it('G6 (am0) win32 failed hand-off: openExternal rejecting starts no watch', async () => {
+    jest.requireMock('backend/constants/environment').isWindows = true
+    const { shell } = hostFakes
+    ;(shell.openExternal as jest.Mock).mockRejectedValueOnce(
+      new Error('opener failed')
+    )
+    await expect(
+      new SteamGame(APP_ID, steamTestDeps).launch({} as any)
+    ).rejects.toThrow('opener failed')
+    expect(shell.openExternal).toHaveBeenCalledTimes(1)
+    expect(startSpy).not.toHaveBeenCalled()
+  })
+
+  it('G7 (am0) win32 failed hand-off: a non-numeric appId starts no watch', async () => {
+    jest.requireMock('backend/constants/environment').isWindows = true
+    const { shell } = hostFakes
+    library.set('abc', makeEntry({ title: 'Not Numeric' }))
+    await expect(
+      new SteamGame('abc', steamTestDeps).launch({} as any)
+    ).resolves.toBe(false)
+    expect(shell.openExternal).not.toHaveBeenCalled()
+    expect(startSpy).not.toHaveBeenCalled()
   })
 })

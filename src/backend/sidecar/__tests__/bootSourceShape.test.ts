@@ -59,6 +59,8 @@ describe('bootstrap.ts source shape (D-08)', () => {
       'secret-stores',
       'orphaned-token-cleanup',
       'online-monitor',
+      // Runs after the RPC server and transport are bound, before READY.
+      'steam-running-poll',
       'rosetta',
       'ready-sentinel',
       'sign-in-probe',

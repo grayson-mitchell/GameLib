@@ -6,8 +6,9 @@
  * the instances built here, so a test builds its own and nothing leaks between boots.
  *
  * Sidecar exit contract: building the instances starts nothing (no timer, child or watcher);
- * the poller's clock interval starts in the Steam library manager's init and is unref'd by
- * default, and the monitors spawn only per polled install and are stopped at stdin EOF.
+ * the 'steam-running-poll' boot step arms the poller's clock interval, which is unref'd by
+ * default and stopped at stdin EOF; the monitors spawn only per polled install and are stopped at
+ * stdin EOF.
  */
 import { sendFrontendMessage } from '../../ipc'
 import type { GlobalConfigSlice } from '../../config'
