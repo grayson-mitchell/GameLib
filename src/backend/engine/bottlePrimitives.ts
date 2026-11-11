@@ -6,7 +6,7 @@
 import { dirname, join, relative, resolve } from 'path'
 import { existsSync, mkdirSync, rmSync } from 'graceful-fs'
 import type { GameSettings } from 'common/types'
-import { userHome } from 'backend/constants/paths'
+import type { AppPaths } from 'backend/process/context'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { SpawnAsync } from 'backend/spawnAsync'
 import { writeCxbottleConf } from './adoptBottle'
@@ -29,9 +29,12 @@ export type FallbackBottleResult = {
  * Directory of a named CrossOver bottle.
  * `<userHome>/Library/Application Support/CrossOver/Bottles/<bottleName>`
  */
-export function getBottleDir(bottleName: string): string {
+export function getBottleDir(
+  paths: Pick<AppPaths, 'userHome'>,
+  bottleName: string
+): string {
   return join(
-    userHome,
+    paths.userHome,
     'Library/Application Support/CrossOver/Bottles',
     bottleName
   )
@@ -72,13 +75,17 @@ export function sanitizeBottleName(name: string | null): string | null {
  * provisionBottle() to decide whether `cxbottle --create` needs to run again
  * (re-entrancy check). For the REAL completion signal, use isBottleReady().
  */
-export function isBottleProvisioned(bottleName: string): boolean {
-  return existsSync(join(getBottleDir(bottleName), 'cxbottle.conf'))
+export function isBottleProvisioned(
+  paths: Pick<AppPaths, 'userHome'>,
+  bottleName: string
+): boolean {
+  return existsSync(join(getBottleDir(paths, bottleName), 'cxbottle.conf'))
 }
 
 /** The one capability the bottle helpers need (66.1 R3). */
 export interface BottleSpawnDeps {
   spawnAsync: SpawnAsync
+  paths: Pick<AppPaths, 'userHome'>
 }
 
 /**
@@ -96,10 +103,11 @@ export async function killBottleWineServerWith(
   extraEnv: Record<string, string>,
   timeoutMs: number
 ): Promise<boolean> {
-  const bottlesRoot = resolve(dirname(getBottleDir('_')))
+  const bottlesRoot = resolve(dirname(getBottleDir(deps.paths, '_')))
   if (
     sanitizeBottleName(bottleName) !== bottleName ||
-    relative(bottlesRoot, resolve(getBottleDir(bottleName))) !== bottleName
+    relative(bottlesRoot, resolve(getBottleDir(deps.paths, bottleName))) !==
+      bottleName
   ) {
     logWarning(
       `killBottleWineServerWith: refusing unsafe bottle "${bottleName}"`,
@@ -112,7 +120,7 @@ export async function killBottleWineServerWith(
       env: {
         ...process.env,
         ...extraEnv,
-        WINEPREFIX: getBottleDir(bottleName)
+        WINEPREFIX: getBottleDir(deps.paths, bottleName)
       },
       timeout: timeoutMs
     })
@@ -136,7 +144,7 @@ export async function killBottleWineServerWith(
   }
 }
 
-const FALLBACK_STRIPPED_ENV_KEYS = new Set([
+const FALLBACK_STRIPPED_ENV_KEYS: readonly string[] = Object.freeze([
   'USER',
   'WINEPREFIX',
   'CX_BOTTLE',
@@ -154,6 +162,7 @@ const FALLBACK_STRIPPED_ENV_KEYS = new Set([
  * engine switch, never by the generic auto-install.
  */
 export function buildFallbackGameSettings(
+  paths: Pick<AppPaths, 'userHome'>,
   bottleName: string,
   engine: NonCrossoverEngine,
   base: GameSettings
@@ -163,12 +172,12 @@ export function buildFallbackGameSettings(
   // reads them from its config slice).
   const globalSettings = base
   const kept = (globalSettings.enviromentOptions ?? []).filter(
-    (e) => !FALLBACK_STRIPPED_ENV_KEYS.has(String(e.key).toUpperCase())
+    (e) => !FALLBACK_STRIPPED_ENV_KEYS.includes(String(e.key).toUpperCase())
   )
   return {
     ...globalSettings,
     wineCrossoverBottle: bottleName,
-    winePrefix: getBottleDir(bottleName),
+    winePrefix: getBottleDir(paths, bottleName),
     wineVersion: {
       type: 'wine',
       bin: engine.wineBin,
@@ -192,9 +201,12 @@ export function buildFallbackGameSettings(
  * Phase 59 removes a bottle dir only when this call created it, and only as a single safe
  * segment directly under the Bottles root (T-59-25).
  */
-export function removeCreatedBottleDir(bottleName: string): void {
-  const bottlesRoot = resolve(dirname(getBottleDir('_')))
-  const dir = resolve(getBottleDir(bottleName))
+export function removeCreatedBottleDir(
+  paths: Pick<AppPaths, 'userHome'>,
+  bottleName: string
+): void {
+  const bottlesRoot = resolve(dirname(getBottleDir(paths, '_')))
+  const dir = resolve(getBottleDir(paths, bottleName))
   if (
     sanitizeBottleName(bottleName) !== bottleName ||
     relative(bottlesRoot, dir) !== bottleName
@@ -231,7 +243,7 @@ export async function createFallbackBottle(
   engine: NonCrossoverEngine,
   signal?: AbortSignal
 ): Promise<FallbackBottleResult> {
-  const dir = getBottleDir(bottleName)
+  const dir = getBottleDir(deps.paths, bottleName)
   const createdHere = !existsSync(dir)
   const env = {
     ...process.env,
@@ -252,7 +264,7 @@ export async function createFallbackBottle(
       { USER: 'crossover' },
       15_000
     )
-    if (createdHere) removeCreatedBottleDir(bottleName)
+    if (createdHere) removeCreatedBottleDir(deps.paths, bottleName)
     return { status: 'error', error }
   }
   const aborted = async (): Promise<FallbackBottleResult> => {
@@ -267,7 +279,7 @@ export async function createFallbackBottle(
       { USER: 'crossover' },
       15_000
     )
-    if (createdHere) removeCreatedBottleDir(bottleName)
+    if (createdHere) removeCreatedBottleDir(deps.paths, bottleName)
     return {
       status: 'error',
       errorCode: PROVISION_ABORTED_CODE,
@@ -301,6 +313,7 @@ export async function createFallbackBottle(
     if (engine.dxvk) {
       const ok = await deps.installRemove(
         buildFallbackGameSettings(
+          deps.paths,
           bottleName,
           engine,
           deps.globalGameSettings()

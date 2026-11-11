@@ -4,11 +4,6 @@ import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 
 const mockProfile = createFakeHomeProfile({ prefix: 'gamelib-launchset-' })
 
-jest.mock('backend/constants/paths', () => ({
-  get userHome() {
-    return mockProfile.root
-  }
-}))
 jest.mock('backend/logger', () => ({
   logError: jest.fn(),
   logInfo: jest.fn(),
@@ -23,12 +18,22 @@ jest.mock('graceful-fs', () => ({
 
 import {
   buildCrossoverGameSettings,
-  clearLaunchOverlayContext,
-  getLaunchSettings,
-  setLaunchOverlayContext
+  createLaunchSettingsRegistry
 } from '../launchSettings'
 import { buildFallbackGameSettings, getBottleDir } from '../bottlePrimitives'
-import { clearEngineSelection, setEngineSelection } from '../engineRegistry'
+import { createEngineRegistry } from '../engineRegistry'
+
+const paths = { userHome: mockProfile.root }
+let registry = createEngineRegistry()
+let overlay = createLaunchSettingsRegistry({ registry, paths })
+let { setEngineSelection } = registry
+let { getLaunchSettings, setLaunchOverlayContext } = overlay
+beforeEach(() => {
+  registry = createEngineRegistry()
+  overlay = createLaunchSettingsRegistry({ registry, paths })
+  ;({ setEngineSelection } = registry)
+  ;({ getLaunchSettings, setLaunchOverlayContext } = overlay)
+})
 
 afterAll(() => mockProfile.dispose())
 
@@ -53,11 +58,6 @@ const pinned = {
   version: '10.0',
   dxvk: null
 }
-
-afterEach(() => {
-  clearEngineSelection(KEY)
-  clearLaunchOverlayContext(KEY)
-})
 
 describe('getLaunchSettings', () => {
   it('returns stored itself when nothing is registered', () => {
@@ -98,7 +98,7 @@ describe('getLaunchSettings', () => {
       prefix: { kind: 'bottle', bottleName: 'GameLib-gog-1234' }
     })
     const out = getLaunchSettings(KEY, stored)
-    expect(out.winePrefix).toBe(getBottleDir('GameLib-gog-1234'))
+    expect(out.winePrefix).toBe(getBottleDir(paths, 'GameLib-gog-1234'))
     expect(out.wineVersion).toEqual({
       type: 'wine',
       bin: '/pin/bin/wine',
@@ -148,12 +148,27 @@ describe('buildCrossoverGameSettings', () => {
 
 describe('buildFallbackGameSettings base', () => {
   it('spreads the global settings passed as the base', () => {
-    const out = buildFallbackGameSettings('B', pinned, {
+    const out = buildFallbackGameSettings(paths, 'B', pinned, {
       enviromentOptions: [{ key: 'GLOBAL', value: '1' }],
       autoInstallDxvk: true
     } as GameSettings)
     expect(out.enviromentOptions).toEqual(
       expect.arrayContaining([{ key: 'GLOBAL', value: '1' }])
     )
+  })
+})
+
+describe('per-boot isolation', () => {
+  it('two overlay registries share no context', () => {
+    setEngineSelection(KEY, pinned)
+    setLaunchOverlayContext(KEY, { prefix: { kind: 'plain' } })
+    const otherRegistry = createEngineRegistry()
+    otherRegistry.setEngineSelection(KEY, pinned)
+    const other = createLaunchSettingsRegistry({
+      registry: otherRegistry,
+      paths
+    })
+    expect(other.getLaunchOverlayContext(KEY)).toBeUndefined()
+    expect(other.getLaunchSettings(KEY, stored)).toBe(stored)
   })
 })

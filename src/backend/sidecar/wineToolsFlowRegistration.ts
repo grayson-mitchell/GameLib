@@ -113,6 +113,9 @@ export interface WineToolsFlowDeps extends NotifyDeps, DialogBoxDeps {
   appInfo: Pick<AppInfo, 'version'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   engineState: EngineStateService
+  /** The boot-owned engine runtime and path roots (66.4-05). */
+  engineRuntime: ToolsDeps['engineRuntime']
+  paths: ToolsDeps['paths']
   /** The Steam bottle slice the Steam Wine-tool resolver reads (66.3-15). */
   steamBottle: ToolsDeps['steamBottle']
   /** The boot-owned winetricks apply queue (D-66.3-12). */

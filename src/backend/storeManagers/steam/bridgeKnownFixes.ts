@@ -47,6 +47,7 @@
  * continues, so it can never mark the bridge failed for the session.
  */
 
+import type { AppPaths } from 'backend/process/context'
 import { isAbsolute, relative, resolve } from 'node:path'
 import type { EnviromentVariable, GameSettings } from 'common/types'
 import type { EngineServicesSource } from 'backend/services/engineServices'
@@ -172,7 +173,7 @@ async function gameMakerGraphicsDefault(
 }
 
 /** What the bridge known-fix applier reaches through a slice (66.1 R3). */
-export type BridgeKnownFixDeps = EngineServicesSource
+export type BridgeKnownFixDeps = EngineServicesSource & { paths: AppPaths }
 
 export async function applySteamBridgeKnownFixes(
   deps: BridgeKnownFixDeps,
@@ -231,7 +232,7 @@ export async function applySteamBridgeKnownFixes(
             onSpawn
           }),
         bridgeBottleSettings.wineCrossoverBottle
-          ? getBottleDir(bridgeBottleSettings.wineCrossoverBottle)
+          ? getBottleDir(deps.paths, bridgeBottleSettings.wineCrossoverBottle)
           : undefined
       )
     }
@@ -247,7 +248,10 @@ export async function applySteamBridgeKnownFixes(
       // the GLOBAL winePrefix.
       const winetricksSettings: GameSettings = {
         ...bridgeBottleSettings,
-        winePrefix: getBottleDir(bridgeBottleSettings.wineCrossoverBottle)
+        winePrefix: getBottleDir(
+          deps.paths,
+          bridgeBottleSettings.wineCrossoverBottle
+        )
       }
       for (const verb of fixes.winetricks) {
         if (typeof verb !== 'string' || verb === '' || verb.startsWith('-')) {

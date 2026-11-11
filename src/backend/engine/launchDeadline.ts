@@ -7,10 +7,11 @@
  * game is never subject to this. This module only reports expiry via
  * `onDeadline`; the caller decides what a fired deadline means.
  *
- * Sidecar exit contract: the timer is unref'd and the registry is empty at
- * load.
+ * Sidecar exit contract: the timer runs on the injected clock (unref'd by default) and
+ * the registry is empty at construction.
  */
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import type { Clock } from 'backend/process/types'
 import { isEngineKey } from './gameKey'
 
 /**
@@ -22,7 +23,7 @@ import { isEngineKey } from './gameKey'
  */
 export const LAUNCH_DEADLINE_MS = 180_000
 
-export type DeadlineCancelReason =
+type DeadlineCancelReason =
   | 'first-match'
   | 'launcher-exited'
   | 'launch-error'
@@ -35,88 +36,89 @@ export interface LaunchDeadline {
   cancel(reason: DeadlineCancelReason): void
 }
 
-const active = new Map<string, LaunchDeadline>()
-
-export function armLaunchDeadline(args: {
+interface ArmLaunchDeadlineArgs {
   key: string
   timeoutMs?: number
   onDeadline: () => void | Promise<void>
-  setTimer?: (fn: () => void, ms: number) => { unref?: () => void } & object
-  clearTimer?: (handle: unknown) => void
-}): LaunchDeadline {
-  const { key, onDeadline } = args
-  if (typeof key !== 'string' || !isEngineKey(key)) {
-    throw new TypeError(`armLaunchDeadline: invalid key "${String(key)}"`)
-  }
-  const timeoutMs = args.timeoutMs ?? LAUNCH_DEADLINE_MS
-  const setTimer =
-    args.setTimer ??
-    ((fn: () => void, ms: number) =>
-      setTimeout(fn, ms) as { unref?: () => void } & object)
-  const clearTimer =
-    args.clearTimer ?? ((h: unknown) => clearTimeout(h as NodeJS.Timeout))
+}
 
-  active.get(key)?.cancel('superseded')
+export interface LaunchDeadlines {
+  armLaunchDeadline: (args: ArmLaunchDeadlineArgs) => LaunchDeadline
+  cancelLaunchDeadline: (key: string, reason: DeadlineCancelReason) => void
+  /** Number of armed deadlines (tests). */
+  activeCount: () => number
+}
 
-  const startedAt = Date.now()
-  let state: LaunchDeadline['state'] = 'armed'
-  // eslint-disable-next-line prefer-const -- assigned after the cancel closure that clears it
-  let handle: ({ unref?: () => void } & object) | undefined
+/** One registry per boot; deadlines run on the injected clock, whose timers are unref'd by default. */
+export function createLaunchDeadlines(deps: { clock: Clock }): LaunchDeadlines {
+  const { clock } = deps
+  const active = new Map<string, LaunchDeadline>()
 
-  const deadline: LaunchDeadline = {
-    key,
-    get state() {
-      return state
-    },
-    cancel(reason) {
-      if (state !== 'armed') return
-      state = 'cancelled'
-      clearTimer(handle)
-      if (active.get(key) === deadline) active.delete(key)
-      logInfo(
-        `Engine: launch deadline for key ${key} cancelled (${reason})`,
-        LogPrefix.Backend
-      )
+  function armLaunchDeadline(args: ArmLaunchDeadlineArgs): LaunchDeadline {
+    const { key, onDeadline } = args
+    if (typeof key !== 'string' || !isEngineKey(key)) {
+      throw new TypeError(`armLaunchDeadline: invalid key "${String(key)}"`)
     }
-  }
+    const timeoutMs = args.timeoutMs ?? LAUNCH_DEADLINE_MS
 
-  handle = setTimer(() => {
-    if (state !== 'armed') return
-    state = 'fired'
-    if (active.get(key) === deadline) active.delete(key)
-    logWarning(
-      `Engine: launch deadline fired for key ${key} after ${Date.now() - startedAt} ms (no game process seen)`,
-      LogPrefix.Backend
-    )
-    const logFailure = (error: unknown) =>
-      logWarning(
-        [`Engine: onDeadline for key ${key} failed`, error],
-        LogPrefix.Backend
-      )
-    try {
-      const result = onDeadline()
-      if (result && typeof result.catch === 'function') {
-        result.catch(logFailure)
+    active.get(key)?.cancel('superseded')
+
+    const startedAt = clock.now()
+    let state: LaunchDeadline['state'] = 'armed'
+    // eslint-disable-next-line prefer-const -- assigned after the cancel closure that clears it
+    let handle: ReturnType<Clock['setTimeout']> | undefined
+
+    const deadline: LaunchDeadline = {
+      key,
+      get state() {
+        return state
+      },
+      cancel(reason) {
+        if (state !== 'armed') return
+        state = 'cancelled'
+        if (handle) clock.clear(handle)
+        if (active.get(key) === deadline) active.delete(key)
+        logInfo(
+          `Engine: launch deadline for key ${key} cancelled (${reason})`,
+          LogPrefix.Backend
+        )
       }
-    } catch (error) {
-      logFailure(error)
     }
-  }, timeoutMs)
-  handle.unref?.()
 
-  active.set(key, deadline)
-  return deadline
-}
+    handle = clock.setTimeout(() => {
+      if (state !== 'armed') return
+      state = 'fired'
+      if (active.get(key) === deadline) active.delete(key)
+      logWarning(
+        `Engine: launch deadline fired for key ${key} after ${clock.now() - startedAt} ms (no game process seen)`,
+        LogPrefix.Backend
+      )
+      const logFailure = (error: unknown) =>
+        logWarning(
+          [`Engine: onDeadline for key ${key} failed`, error],
+          LogPrefix.Backend
+        )
+      try {
+        const result = onDeadline()
+        if (result && typeof result.catch === 'function') {
+          result.catch(logFailure)
+        }
+      } catch (error) {
+        logFailure(error)
+      }
+    }, timeoutMs)
 
-export function cancelLaunchDeadline(
-  key: string,
-  reason: DeadlineCancelReason
-): void {
-  active.get(key)?.cancel(reason)
-}
+    active.set(key, deadline)
+    return deadline
+  }
 
-export function __activeLaunchDeadlineCount(): number {
-  return active.size
+  return {
+    armLaunchDeadline,
+    cancelLaunchDeadline(key, reason) {
+      active.get(key)?.cancel(reason)
+    },
+    activeCount: () => active.size
+  }
 }
 
 /**

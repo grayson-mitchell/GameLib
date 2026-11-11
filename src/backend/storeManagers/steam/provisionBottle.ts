@@ -4,6 +4,8 @@
  * once and runs it non-silently so the user clicks through the real installer.
  */
 import type { GlobalConfigSlice } from 'backend/config'
+import type { AppPaths } from 'backend/process/context'
+import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import type { GameConfigs } from 'backend/game_config'
 import type { AppState } from 'backend/host/appState'
 import type { Dialogs } from 'backend/host/dialogs'
@@ -28,12 +30,8 @@ import {
   STEAM_SETUP_EXE_URL,
   steamSupportPath
 } from './constants'
-import {
-  getBottleDir,
-  isBottleProvisioned,
-  sanitizeBottleName
-} from 'backend/engine/bottlePrimitives'
-import { resolveCrossoverBinDirAsync } from 'backend/engine/crossoverLocation'
+import { sanitizeBottleName } from 'backend/engine/bottlePrimitives'
+import { getBottleDir, isBottleProvisioned } from './bottleDirs'
 import {
   CROSSOVER_CREATE_FAILED,
   CROSSOVER_CREATE_TIMEOUT,
@@ -92,7 +90,11 @@ export type SpawnDeps = {
 
 /** SpawnDeps plus the persisted wine-bin hint the CrossOver lookup reads (66.3-15). */
 export type KillBottleDeps = SpawnDeps & {
+  /** The path roots the bottle kill reads (66.4-05). */
+  paths: Pick<AppPaths, 'userHome'>
   steamBottle: Pick<SteamBottle, 'persistedWineBins'>
+  /** The boot's CrossOver locator (66.4-05). */
+  engineRuntime: Pick<EngineRuntime, 'crossover'>
 }
 
 export async function killBottleWineServer(
@@ -103,7 +105,7 @@ export async function killBottleWineServer(
 ): Promise<boolean> {
   const binDir =
     knownBinDir ??
-    (await resolveCrossoverBinDirAsync(
+    (await deps.engineRuntime.crossover.resolveCrossoverBinDirAsync(
       { runner: deps.runner },
       { hintWineBins: deps.steamBottle.persistedWineBins() }
     ))
@@ -164,6 +166,8 @@ export async function provisionBottle(
     spawnAsync: SpawnAsync
     commandRunner: Pick<CommandRunner, 'runWineCommand'>
     runner: Pick<ProcessRunner, 'run'>
+    paths: Pick<AppPaths, 'userHome'>
+    engineRuntime: Pick<EngineRuntime, 'crossover'>
     config: Pick<
       GlobalConfigSlice,
       'getSettings' | 'getAlternativeWine' | 'setSetting'
@@ -243,7 +247,7 @@ export async function provisionBottle(
   // CrossOver since uninstalled still short-circuits 'done' (step 3), so the
   // missing-CrossOver error is returned only when a recreate or a create is
   // actually needed.
-  const binDir = await resolveCrossoverBinDirAsync(
+  const binDir = await deps.engineRuntime.crossover.resolveCrossoverBinDirAsync(
     { runner: deps.runner },
     {
       wineVersion: opts?.wineVersion,

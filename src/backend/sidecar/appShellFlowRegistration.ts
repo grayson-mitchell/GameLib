@@ -285,6 +285,8 @@ export interface AppShellFlowDeps extends DialogBoxDeps, NotifyDeps {
   >
   /** The boot process runner (66.2); consumers converted by 66.2-11. */
   runner: BootServices['runner']
+  /** The boot's CrossOver locator, read by the App Management probe (66.4-05). */
+  engineRuntime: Pick<BootServices['engineRuntime'], 'crossover'>
   /** Default `false`; handlers.ts sets it under Jest (see the docstring above). */
   skipInitialTraySync?: boolean
 }
@@ -314,7 +316,10 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
 
   // Quick 261026-b9r: the probe only runs when invoked (never at boot).
   deps.ipc.handle('getAppManagementStatus', async () =>
-    getAppManagementStatus({ runner: deps.runner })
+    getAppManagementStatus({
+      runner: deps.runner,
+      engineRuntime: deps.engineRuntime
+    })
   )
 
   deps.ipc.handle('getLatestReleases', async () =>

@@ -836,6 +836,7 @@ describe('23-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30; Phase 45 Plan 0
       stores: createTestStores(),
       config: services.config,
       runner: createTestServices().runner,
+      engineRuntime: createTestServices().engineRuntime,
       dialogs: services.host.dialogs,
       appState: services.host.appState,
       notifications: services.host.notifications,

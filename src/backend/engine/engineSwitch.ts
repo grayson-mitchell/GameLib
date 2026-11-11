@@ -12,7 +12,7 @@
 import type { OnlineMonitor } from 'backend/online_monitor'
 import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'fs'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
-import { toolsPath } from 'backend/constants/paths'
+import type { AppPaths } from 'backend/process/context'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { EngineServices } from './engineServices'
 import type { GameSettings } from 'common/types'
@@ -24,16 +24,10 @@ import {
   killBottleWineServerWith,
   sanitizeBottleName
 } from './bottlePrimitives'
-import { otherGamesRunning } from './bottleLedger'
-import { resolveCrossoverBinDirAsync } from 'backend/engine/crossoverLocation'
+import type { BottleLedger } from './bottleLedger'
 import { ENGINE_PINS, pinById } from './enginePins'
 import type { EnginePin } from './enginePins'
-import {
-  ensurePinnedEngine,
-  isPinnedEngineInstalled,
-  pinnedEnginePaths,
-  pinnedEngineRoot
-} from './fallbackEngine'
+import type { FallbackEngine } from './fallbackEngine'
 import type { EngineSelection, NonCrossoverEngine } from './engineTypes'
 import {
   engineMarkerVersion,
@@ -59,7 +53,21 @@ type EngineMarker = {
   dxvk?: MarkerDxvk
 }
 
+/** What the switch reads from the boot: paths, the pinned-engine owner and the running-games ledger. */
+export interface EngineSwitchContext {
+  paths: Pick<AppPaths, 'userHome' | 'toolsPath'>
+  fallback: Pick<
+    FallbackEngine,
+    | 'pinnedEngineRoot'
+    | 'pinnedEnginePaths'
+    | 'isPinnedEngineInstalled'
+    | 'ensurePinnedEngine'
+  >
+  ledger: Pick<BottleLedger, 'otherGamesRunning'>
+}
+
 export interface EngineSwitchDeps {
+  ctx: EngineSwitchContext
   getMonitorPhase: (key: string) => 'starting' | 'running' | null
   killWith: (
     ...args: Parameters<typeof killBottleWineServerWith> extends [
@@ -87,7 +95,7 @@ export interface EngineSwitchDeps {
   ownBottleName?: (key: string) => string | null
 }
 
-export type PrepareResult =
+type PrepareResult =
   | { ok: true; changed: boolean }
   | {
       ok: false
@@ -102,10 +110,12 @@ export type PrepareResult =
       detail: string
     }
 
-function defaultCurrentPinEngine(): NonCrossoverEngine | null {
+function defaultCurrentPinEngine(
+  ctx: EngineSwitchContext
+): NonCrossoverEngine | null {
   const pin = pinById(ENGINE_PINS.current.id)
-  if (!pin || !isPinnedEngineInstalled(pin)) return null
-  const p = pinnedEnginePaths(pin)
+  if (!pin || !ctx.fallback.isPinnedEngineInstalled(pin)) return null
+  const p = ctx.fallback.pinnedEnginePaths(pin)
   return {
     wineBin: p.wineBin,
     wineserverBin: p.wineserverBin,
@@ -116,11 +126,15 @@ function defaultCurrentPinEngine(): NonCrossoverEngine | null {
 }
 
 async function ensurePinEngineVia(
+  ctx: EngineSwitchContext,
   runner: Pick<ProcessRunner, 'run'>,
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>,
   pin: EnginePin
 ): Promise<NonCrossoverEngine | null> {
-  const res = await ensurePinnedEngine(pin, { runner, onlineMonitor })
+  const res = await ctx.fallback.ensurePinnedEngine(pin, {
+    runner,
+    onlineMonitor
+  })
   if (!res.ok) return null
   return {
     wineBin: res.paths.wineBin,
@@ -133,25 +147,43 @@ async function ensurePinEngineVia(
 
 /** The kill and DXVK restore members of a switch, built from the injected engine services (66.1-22f). */
 export function switchServicesFrom(
-  services: EngineServices
+  services: Pick<
+    EngineServices,
+    | 'paths'
+    | 'engineRuntime'
+    | 'runner'
+    | 'spawnAsync'
+    | 'installRemove'
+    | 'onlineMonitor'
+    | 'globalGameSettings'
+  >
 ): Pick<
   EngineSwitchDeps,
+  | 'ctx'
   | 'killWith'
   | 'installRemove'
   | 'resolveCrossoverBinDir'
   | 'ensurePinEngine'
   | 'fallbackSettings'
 > {
+  const ctx = switchContextFrom(services)
   return {
+    ctx,
     resolveCrossoverBinDir: () =>
-      resolveCrossoverBinDirAsync({ runner: services.runner }),
+      services.engineRuntime.crossover.resolveCrossoverBinDirAsync({
+        runner: services.runner
+      }),
     killWith: (...a) =>
-      killBottleWineServerWith({ spawnAsync: services.spawnAsync }, ...a),
+      killBottleWineServerWith(
+        { spawnAsync: services.spawnAsync, paths: services.paths },
+        ...a
+      ),
     installRemove: services.installRemove,
     ensurePinEngine: (pin) =>
-      ensurePinEngineVia(services.runner, services.onlineMonitor, pin),
+      ensurePinEngineVia(ctx, services.runner, services.onlineMonitor, pin),
     fallbackSettings: (bottleName, engine) =>
       buildFallbackGameSettings(
+        services.paths,
         bottleName,
         engine,
         services.globalGameSettings()
@@ -159,19 +191,33 @@ export function switchServicesFrom(
   }
 }
 
+/** The switch's boot collaborators, read from the engine services. */
+export function switchContextFrom(
+  services: Pick<EngineServices, 'paths' | 'engineRuntime'>
+): EngineSwitchContext {
+  return {
+    paths: services.paths,
+    fallback: services.engineRuntime.fallback,
+    ledger: services.engineRuntime.ledger
+  }
+}
+
 /** Everything except what the caller supplies: `crossoverSettings` (store-specific) and the services-built `killWith`/`installRemove`. */
-const defaultDeps: Omit<
+const defaultDeps = (
+  ctx: EngineSwitchContext
+): Omit<
   EngineSwitchDeps,
+  | 'ctx'
   | 'crossoverSettings'
   | 'killWith'
   | 'installRemove'
   | 'resolveCrossoverBinDir'
   | 'ensurePinEngine'
   | 'fallbackSettings'
-> = {
+> => ({
   getMonitorPhase: () => null,
-  currentPinEngine: defaultCurrentPinEngine
-}
+  currentPinEngine: () => defaultCurrentPinEngine(ctx)
+})
 
 function isInside(root: string, path: string): boolean {
   if (!isAbsolute(path)) return false
@@ -184,11 +230,12 @@ function isInside(root: string, path: string): boolean {
  * or writes a marker; null for an absent/unreadable marker or an unsafe bottle name.
  */
 export function readBottleEngineMarkerKind(
+  ctx: Pick<EngineSwitchContext, 'paths' | 'fallback'>,
   bottleName: string
 ): 'crossover' | 'non-crossover' | null {
   try {
     if (sanitizeBottleName(bottleName) !== bottleName) return null
-    const marker = readMarker(getBottleDir(bottleName))
+    const marker = readMarker(getBottleDir(ctx.paths, bottleName), ctx)
     if (!marker) return null
     return marker.kind === 'crossover' ? 'crossover' : 'non-crossover'
   } catch {
@@ -200,7 +247,10 @@ export function readBottleEngineMarkerKind(
  * WR-01: read-only marker kind plus the pin id (null unless a pinned marker). Same contract as
  * readBottleEngineMarkerKind: never infers or writes a marker.
  */
-export function readBottleEngineMarkerSummary(bottleName: string): {
+export function readBottleEngineMarkerSummary(
+  ctx: Pick<EngineSwitchContext, 'paths' | 'fallback'>,
+  bottleName: string
+): {
   kind: 'crossover' | 'non-crossover'
   pinId: string | null
   /** The recorded Wine Manager version (id already regex-validated), else null. */
@@ -213,12 +263,12 @@ export function readBottleEngineMarkerSummary(bottleName: string): {
 } | null {
   try {
     if (sanitizeBottleName(bottleName) !== bottleName) return null
-    const marker = readMarker(getBottleDir(bottleName))
+    const marker = readMarker(getBottleDir(ctx.paths, bottleName), ctx)
     if (!marker) return null
     const pinWineserverBin =
       marker.kind === 'pinned' &&
       typeof marker.wineserverBin === 'string' &&
-      isInside(pinnedEngineRoot(), marker.wineserverBin) &&
+      isInside(ctx.fallback.pinnedEngineRoot(), marker.wineserverBin) &&
       basename(marker.wineserverBin) === 'wineserver'
         ? marker.wineserverBin
         : null
@@ -239,18 +289,21 @@ export function readBottleEngineMarkerSummary(bottleName: string): {
  * prepareBottleForEngine use, read-only). False whenever the restore needs no pin download,
  * and for any unreadable state.
  */
-export function restoreNeedsAbsentPin(bottleName: string): boolean {
+export function restoreNeedsAbsentPin(
+  ctx: Pick<EngineSwitchContext, 'paths' | 'fallback'>,
+  bottleName: string
+): boolean {
   try {
     if (sanitizeBottleName(bottleName) !== bottleName) return false
-    const bottleDir = getBottleDir(bottleName)
-    const prev = readMarker(bottleDir)
+    const bottleDir = getBottleDir(ctx.paths, bottleName)
+    const prev = readMarker(bottleDir, ctx)
     if (!prev || prev.kind === 'crossover') return false
     const restoreNeeded =
       existsSync(join(bottleDir, DXVK_VERSION_FILE)) || prev.dxvk !== undefined
     if (!restoreNeeded) return false
     const pin =
       (prev.kind === 'pinned' ? pinById(prev.id) : null) ?? ENGINE_PINS.current
-    if (isPinnedEngineInstalled(pin)) return false
+    if (ctx.fallback.isPinnedEngineInstalled(pin)) return false
     // A healthy CrossOver restores from the marker's own DXVK copy without the pin.
     if (
       prev.dxvk &&
@@ -265,7 +318,10 @@ export function restoreNeedsAbsentPin(bottleName: string): boolean {
   }
 }
 
-function readMarker(bottleDir: string): EngineMarker | null {
+function readMarker(
+  bottleDir: string,
+  ctx: Pick<EngineSwitchContext, 'fallback'>
+): EngineMarker | null {
   try {
     ensureEngineMarkerMigrated(markerPath(bottleDir))
     const raw = JSON.parse(
@@ -294,7 +350,7 @@ function readMarker(bottleDir: string): EngineMarker | null {
       const { dir, version } = d as { dir?: unknown; version?: unknown }
       if (
         typeof dir === 'string' &&
-        isInside(pinnedEngineRoot(), dir) &&
+        isInside(ctx.fallback.pinnedEngineRoot(), dir) &&
         typeof version === 'string' &&
         /^[A-Za-z0-9._-]{1,64}$/.test(version)
       ) {
@@ -402,8 +458,8 @@ async function killPrevious(
     return
   }
   const allowed =
-    isInside(pinnedEngineRoot(), bin) ||
-    isInside(join(toolsPath, 'wine'), bin) ||
+    isInside(deps.ctx.fallback.pinnedEngineRoot(), bin) ||
+    isInside(join(deps.ctx.paths.toolsPath, 'wine'), bin) ||
     (binDir !== undefined &&
       resolve(bin) === resolve(join(binDir, 'wineserver')))
   if (!allowed) {
@@ -429,7 +485,9 @@ async function resolveRestoreSource(
 ): Promise<NonCrossoverEngine | null> {
   const pin =
     (prev.kind === 'pinned' ? pinById(prev.id) : null) ?? ENGINE_PINS.current
-  const installed = isPinnedEngineInstalled(pin) ? pinnedEnginePaths(pin) : null
+  const installed = deps.ctx.fallback.isPinnedEngineInstalled(pin)
+    ? deps.ctx.fallback.pinnedEnginePaths(pin)
+    : null
   if (
     prev.dxvk &&
     prev.dxvk !== 'failed' &&
@@ -464,34 +522,44 @@ async function resolveRestoreSource(
  * `deps.ensurePinEngine` is overridable: games.ts passes one that reports download progress
  * through the same engine-download statuses as a launch download.
  */
-export function prepareBottleForEngine(
-  args: PrepareArgs
-): Promise<PrepareResult> {
-  // WR-02: one switch per bottle at a time. The legacy shared bottle is already refused before
-  // any kill (WR-06); this covers the remaining launch-vs-install interleave on a per-game
-  // bottle. A waiting call re-reads the marker in the body, so it never repeats a step.
-  const tail = inFlightSwitches.get(args.bottleName)
-  if (tail) {
-    logInfo(
-      `engine switch for "${args.bottleName}" waits for an in-flight switch (WR-02)`,
-      LogPrefix.Backend
-    )
-  }
-  const mine: Promise<PrepareResult> = (async () => {
-    if (tail) await tail.catch(() => undefined)
-    return prepareBottleForEngineBody(args)
-  })()
-  inFlightSwitches.set(args.bottleName, mine)
-  const clear = (): void => {
-    if (inFlightSwitches.get(args.bottleName) === mine) {
-      inFlightSwitches.delete(args.bottleName)
-    }
-  }
-  mine.then(clear, clear)
-  return mine
+export interface EngineSwitcher {
+  prepareBottleForEngine: (args: PrepareArgs) => Promise<PrepareResult>
 }
 
-const inFlightSwitches = new Map<string, Promise<PrepareResult>>()
+/**
+ * One switcher per boot: the per-bottle in-flight map is closure state, so concurrent switches of
+ * one bottle through this instance serialise; two instances share nothing (66.4-05).
+ */
+export function createEngineSwitcher(): EngineSwitcher {
+  const inFlightSwitches = new Map<string, Promise<PrepareResult>>()
+
+  function prepareBottleForEngine(args: PrepareArgs): Promise<PrepareResult> {
+    // WR-02: one switch per bottle at a time. The legacy shared bottle is already refused before
+    // any kill (WR-06); this covers the remaining launch-vs-install interleave on a per-game
+    // bottle. A waiting call re-reads the marker in the body, so it never repeats a step.
+    const tail = inFlightSwitches.get(args.bottleName)
+    if (tail) {
+      logInfo(
+        `engine switch for "${args.bottleName}" waits for an in-flight switch (WR-02)`,
+        LogPrefix.Backend
+      )
+    }
+    const mine: Promise<PrepareResult> = (async () => {
+      if (tail) await tail.catch(() => undefined)
+      return prepareBottleForEngineBody(args)
+    })()
+    inFlightSwitches.set(args.bottleName, mine)
+    const clear = (): void => {
+      if (inFlightSwitches.get(args.bottleName) === mine) {
+        inFlightSwitches.delete(args.bottleName)
+      }
+    }
+    mine.then(clear, clear)
+    return mine
+  }
+
+  return { prepareBottleForEngine }
+}
 
 type PrepareArgs = {
   key: string
@@ -504,6 +572,7 @@ type PrepareArgs = {
   deps: Partial<EngineSwitchDeps> &
     Pick<
       EngineSwitchDeps,
+      | 'ctx'
       | 'crossoverSettings'
       | 'killWith'
       | 'installRemove'
@@ -518,17 +587,21 @@ async function prepareBottleForEngineBody(
 ): Promise<PrepareResult> {
   const { key, bottleName, next } = args
   const crossoverHealthy = args.crossoverHealthy ?? true
-  const deps: EngineSwitchDeps = { ...defaultDeps, ...args.deps }
+  const deps: EngineSwitchDeps = {
+    ...defaultDeps(args.deps.ctx),
+    ...args.deps
+  }
   // D-16: another game (any store) running in this bottle. Checked before any kill or rewrite.
   const busyRefusal = (): PrepareResult | null => {
-    if (otherGamesRunning(bottleName, key).length === 0) return null
+    if (deps.ctx.ledger.otherGamesRunning(bottleName, key).length === 0)
+      return null
     return {
       ok: false,
       reason: 'bottle-busy',
       detail: `another game is running in bottle "${bottleName}"`
     }
   }
-  const bottleDir = getBottleDir(bottleName)
+  const bottleDir = getBottleDir(deps.ctx.paths, bottleName)
   if (sanitizeBottleName(bottleName) !== bottleName || !existsSync(bottleDir)) {
     return {
       ok: false,
@@ -578,7 +651,7 @@ async function prepareBottleForEngineBody(
     return { ok: true, changed: true }
   }
 
-  const marker = readMarker(bottleDir)
+  const marker = readMarker(bottleDir, deps.ctx)
   // Quick 261109-w52: a marker from a newer build is never inferred over or overwritten
   // (inferMarker would guess prev without the recorded DXVK dir, and the final write would
   // replace the only record). Same-engine launches proceed; every real change is refused.

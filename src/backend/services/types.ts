@@ -29,6 +29,7 @@ import type { AppInfo, AppPaths } from 'backend/process/context'
 import type { Clock, ProcessRunner } from 'backend/process/types'
 import type { OnlineMonitor } from 'backend/online_monitor'
 import type { EngineStateService } from 'backend/engine/engineState'
+import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import type { WinetricksQueue } from 'backend/tools/winetricksQueue'
 import type { SignInEpochs } from 'backend/signInProbe/sessionEpoch'
 import type { SignInProbeOutcomes } from 'backend/signInProbe/outcomes'
@@ -169,6 +170,8 @@ export interface ManagerDeps {
   imageTools: HostServices['imageTools']
   /** The boot-owned engine decision/notice state (D-66.3-12). */
   engineState: EngineStateService
+  /** The boot-owned engine runtime: ledger, registry, deadlines, single-flight maps (66.4-05). */
+  engineRuntime: EngineRuntime
   /** The boot-owned sign-in fence and outcome map the store user modules write through (D-66.3-13). */
   signIn: Pick<SignInProbeServices, 'epochs' | 'outcomes'>
   /** The boot-owned Steam sign-in session and auth-unlock state (D-66.3-13). */
@@ -278,6 +281,8 @@ export interface BootServices {
   onlineMonitor: OnlineMonitor
   /** Built by the 'engine-state' boot step, before 'store-managers' (D-66.3-12). */
   engineState: EngineStateService
+  /** Built by the 'engine-runtime' boot step, after 'engine-state' and before 'store-managers' (66.4-05). */
+  engineRuntime: EngineRuntime
   /** Built by the 'winetricks-queue' boot step, before 'register-handlers' (D-66.3-12). */
   winetricksQueue: WinetricksQueue
   /** Built by the 'sign-in-probe-state' boot step, before 'store-managers' (D-66.3-13). */

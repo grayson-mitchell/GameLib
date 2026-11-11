@@ -47,6 +47,9 @@ export interface EngineFlowDeps {
   config: Pick<GlobalConfigSlice, 'getSettings'>
   /** The boot-owned engine state; its publisher is built by the 'engine-state' boot step (D-66.3-12). */
   engineState: EngineServices['engineState']
+  /** The boot-owned engine runtime and path roots (66.4-05). */
+  engineRuntime: EngineServices['engineRuntime']
+  paths: EngineServices['paths']
   /** The Steam bottle slice the Steam engine state reads (66.3-15). */
   steamBottle: SteamEngineBottle['steamBottle']
 }
@@ -56,11 +59,18 @@ function engineServicesOf(
 ): Pick<BootServices, 'spawnAsync'> &
   Pick<
     EngineServices,
-    'runner' | 'wineManagerReleases' | 'globalSettings' | 'engineState'
+    | 'runner'
+    | 'wineManagerReleases'
+    | 'globalSettings'
+    | 'engineState'
+    | 'engineRuntime'
+    | 'paths'
   > {
   return {
     spawnAsync: deps.spawnAsync,
     engineState: deps.engineState,
+    engineRuntime: deps.engineRuntime,
+    paths: deps.paths,
     runner: deps.runner,
     wineManagerReleases: wineManagerReleasesFrom(deps),
     globalSettings: () =>

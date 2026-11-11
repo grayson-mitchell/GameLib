@@ -173,26 +173,11 @@ import {
   preflightCrossover
 } from 'backend/engine/engineDecision'
 import {
-  prepareBottleForEngine,
   readBottleEngineMarkerKind,
   restoreNeedsAbsentPin
 } from 'backend/engine/engineSwitch'
-import {
-  clearEngineSelection,
-  getEngineSelection
-} from 'backend/engine/engineRegistry'
-import {
-  __resetBottleLedgerForTests,
-  gamesRunningIn
-} from 'backend/engine/bottleLedger'
-import {
-  __activeLaunchDeadlineCount,
-  cancelLaunchDeadline
-} from 'backend/engine/launchDeadline'
-import {
-  ensurePinnedEngine,
-  isPinnedEngineInstalled
-} from 'backend/engine/fallbackEngine'
+import { createFakeClock } from 'backend/testUtils/fakeClock'
+import { createTestEngineRuntime } from 'backend/testUtils/testEngineRuntime'
 import { checkConnectivityNow } from 'backend/connectivityNow'
 import { ENGINE_PINS } from 'backend/engine/enginePins'
 import { existsSync } from 'graceful-fs'
@@ -307,7 +292,42 @@ const hostFakes = {
   app: { raiseMainWindow: jest.fn() },
   dialog: { showMessageBox: jest.fn() }
 }
+// One engine runtime on a fake clock for the whole file (the boot instance of production); the
+// tests below clear what they register (selection, ledger, deadline) exactly as before.
+const mockPrepareBottleForEngine = jest.fn()
+const mockEnsurePinnedEngine = jest.fn()
+const mockIsPinnedEngineInstalled = jest.fn()
+const gamesClock = createFakeClock()
+const testRuntime = createTestEngineRuntime({ clock: gamesClock })
+const getEngineSelection = (k: string) =>
+  testRuntime.registry.getEngineSelection(k)
+const clearEngineSelection = (k: string) =>
+  testRuntime.registry.clearEngineSelection(k)
+const gamesRunningIn = (bottle: string) =>
+  testRuntime.ledger.gamesRunningIn(bottle)
+const __activeLaunchDeadlineCount = () => testRuntime.deadlines.activeCount()
+const cancelLaunchDeadline = (k: string, reason: 'superseded') =>
+  testRuntime.deadlines.cancelLaunchDeadline(k, reason)
+// The launch deadline runs on the runtime clock; timers the mocked redist step arms use jest's.
+const advanceBoth = async (ms: number) => {
+  // Let the launch reach its arm point (microtasks) before the runtime clock moves.
+  await jest.advanceTimersByTimeAsync(0)
+  gamesClock.advance(ms)
+  await jest.advanceTimersByTimeAsync(ms)
+}
+const advanceBothSync = (ms: number) => {
+  gamesClock.advance(ms)
+  jest.advanceTimersByTime(ms)
+}
+const resetBottleLedger = () => {
+  for (const bottle of ['GameLibSteam', 'GameLib']) {
+    for (const key of testRuntime.ledger.gamesRunningIn(bottle)) {
+      testRuntime.ledger.markGameStopped(bottle, key)
+    }
+  }
+}
 const steamTestDeps = createTestManagerDeps({
+  engineRuntime: testRuntime,
   steamUser,
   steamBottle: {
     isBottleReady,
@@ -833,14 +853,27 @@ jest.mock('../engine/steamEngineDeps', () => ({
   steamSwitchDeps: jest.fn(() => ({ crossoverSettings: jest.fn() }))
 }))
 // Phase 59 (59-10): per-launch bottle preparation and state publishing.
+// 66.4-05: the switcher and the fallback-engine owner are boot instances reached through
+// deps.engineRuntime; the runtime built below wraps these recording fakes.
 jest.mock('backend/engine/engineSwitch', () => ({
-  prepareBottleForEngine: jest.fn(),
+  createEngineSwitcher: () => ({
+    prepareBottleForEngine: (...a: unknown[]) =>
+      mockPrepareBottleForEngine(...a)
+  }),
+  switchContextFrom: jest.fn(),
   readBottleEngineMarkerKind: jest.fn(),
   restoreNeedsAbsentPin: jest.fn()
 }))
 jest.mock('backend/engine/fallbackEngine', () => ({
-  ensurePinnedEngine: jest.fn(),
-  isPinnedEngineInstalled: jest.fn()
+  createFallbackEngine: () => ({
+    ensurePinnedEngine: (...a: unknown[]) => mockEnsurePinnedEngine(...a),
+    isPinnedEngineInstalled: (...a: unknown[]) =>
+      mockIsPinnedEngineInstalled(...a),
+    pinnedEnginePaths: jest.fn(),
+    pinnedEngineRoot: jest.fn(),
+    pruneUnpinnedEngines: jest.fn(),
+    sweepStaleEngineTemps: jest.fn()
+  })
 }))
 
 // ── nativeInstallSetting.ts mock (Plan 03's D-13 opt-in read seam) — plain
@@ -2368,7 +2401,7 @@ beforeEach(() => {
     probed: false,
     build: null
   })
-  ;(ensurePinnedEngine as jest.Mock).mockResolvedValue(ENGINE_OK)
+  mockEnsurePinnedEngine.mockResolvedValue(ENGINE_OK)
   // Phase 59 (59-10): healthy CrossOver by default so every pre-existing
   // bridge launch test keeps launching on CrossOver.
   ;(preflightCrossover as jest.Mock).mockResolvedValue(HEALTHY_PREFLIGHT)
@@ -2382,7 +2415,7 @@ beforeEach(() => {
     jest.requireMock('backend/engine/engineDecision')
       .isCrossoverMissing as jest.Mock
   ).mockResolvedValue(false)
-  ;(prepareBottleForEngine as jest.Mock).mockResolvedValue({
+  mockPrepareBottleForEngine.mockResolvedValue({
     ok: true,
     changed: false
   })
@@ -2676,6 +2709,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         } as never)
         await new SteamGame(APP_ID, steamTestDeps).launch({} as any)
         expect(placeShimForGame).toHaveBeenLastCalledWith(
+          steamTestDeps.paths,
           APP_ID,
           RESOLVED_EXE_PATH,
           expect.objectContaining({ persistedOriginalFingerprints: fps })
@@ -2702,6 +2736,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       offline: false
     })
     expect(placeShimForGame).toHaveBeenCalledWith(
+      steamTestDeps.paths,
       APP_ID,
       RESOLVED_EXE_PATH,
       expect.objectContaining({ bottleName: 'GameLibSteamBridge' })
@@ -2712,6 +2747,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       expect.any(Object)
     )
     expect(writeBridgeConfig).toHaveBeenCalledWith({
+      paths: steamTestDeps.paths,
       exePath: RESOLVED_EXE_PATH,
       bottleName: 'GameLibSteamBridge',
       appId: APP_ID,
@@ -3657,6 +3693,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     await game.launch({} as any)
 
     expect(placeShimForGame).toHaveBeenCalledWith(
+      steamTestDeps.paths,
       PERSISTED_APP_ID,
       RESOLVED_EXE_PATH,
       expect.objectContaining({
@@ -3689,6 +3726,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     await game.launch({} as any)
 
     expect(placeShimForGame).toHaveBeenCalledWith(
+      steamTestDeps.paths,
       RETAINED_APP_ID,
       RESOLVED_EXE_PATH,
       expect.objectContaining({
@@ -3723,6 +3761,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     await game.launch({} as any)
 
     expect(placeShimForGame).toHaveBeenCalledWith(
+      steamTestDeps.paths,
       FP_APP_ID,
       RESOLVED_EXE_PATH,
       expect.objectContaining({ persistedOriginalFingerprints: staleFps })
@@ -3761,6 +3800,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     await game.launch({} as any)
 
     expect(placeShimForGame).toHaveBeenCalledWith(
+      steamTestDeps.paths,
       FP_APP_ID,
       RESOLVED_EXE_PATH,
       expect.objectContaining({ persistedOriginalFingerprints: scanFps })
@@ -5835,6 +5875,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     // quick/261016-u1w: placeShimForGame now receives the per-game bottle
     // name explicitly, rather than relying on shimGenerate's own default.
     expect(placeShimForGame).toHaveBeenCalledWith(
+      steamTestDeps.paths,
       APP_ID,
       RESOLVED_EXE_PATH,
       expect.objectContaining({
@@ -6472,6 +6513,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       signal: expect.anything()
     })
     expect(placeShimForGame).toHaveBeenCalledWith(
+      steamTestDeps.paths,
       APP_ID,
       RESOLVED_EXE_PATH,
       expect.objectContaining({
@@ -7360,7 +7402,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     it('pinned decision: downloads with deduplicated whole-percent engine-download statuses, then creates the bottle with fallbackEngine', async () => {
       ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
-      ;(ensurePinnedEngine as jest.Mock).mockImplementation((_pin, opts) => {
+      mockEnsurePinnedEngine.mockImplementation((_pin, opts) => {
         for (const percentage of [0, 0.2, 10.4, 10.2, 99.6, 100]) {
           opts.onProgress({
             phase: 'downloading',
@@ -7398,7 +7440,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     it('G1: real two-archive progress never resets the percent and labels verify/unpack/set-up (trace 2026-11-02)', async () => {
       ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
-      ;(ensurePinnedEngine as jest.Mock).mockImplementation((_pin, opts) => {
+      mockEnsurePinnedEngine.mockImplementation((_pin, opts) => {
         const run = (artifact: 'dxvk' | 'wine') => {
           for (const percentage of [0, 5, 50, 100]) {
             opts.onProgress({ phase: 'downloading', artifact, percentage })
@@ -7431,7 +7473,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     it('G1: once the bottle is ready the status leaves engine-download for installing before the game depots download', async () => {
       ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
-      ;(ensurePinnedEngine as jest.Mock).mockImplementation((_pin, opts) => {
+      mockEnsurePinnedEngine.mockImplementation((_pin, opts) => {
         opts.onProgress({
           phase: 'downloading',
           artifact: 'wine',
@@ -7474,7 +7516,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     it('crossover decision: never downloads the engine (D-05) and passes the create cap', async () => {
       await new SteamGame(APP_ID, steamTestDeps).install({} as any)
-      expect(ensurePinnedEngine).not.toHaveBeenCalled()
+      expect(mockEnsurePinnedEngine).not.toHaveBeenCalled()
       expect(provisionBridgeBottle).toHaveBeenCalledWith(steamTestDeps, {
         bottleName: `GameLibSteamBridge-${APP_ID}`,
         createTimeoutMs: 120_000,
@@ -7495,7 +7537,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         {} as any
       )
 
-      expect(ensurePinnedEngine).toHaveBeenCalledTimes(1)
+      expect(mockEnsurePinnedEngine).toHaveBeenCalledTimes(1)
       expect(provisionBridgeBottle).toHaveBeenCalledTimes(2)
       expect(
         (provisionBridgeBottle as jest.Mock).mock.calls[1][1].fallbackEngine
@@ -7505,7 +7547,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     it('undownloadable engine: error result, terminal done status, never marks the bridge failed or shows setup', async () => {
       ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
-      ;(ensurePinnedEngine as jest.Mock).mockResolvedValue({
+      mockEnsurePinnedEngine.mockResolvedValue({
         ok: false,
         reason: 'offline',
         detail: 'no network'
@@ -7527,7 +7569,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         expect.anything()
       )
       // a later install still routes to the bridge (not marked failed)
-      ;(ensurePinnedEngine as jest.Mock).mockResolvedValue(ENGINE_OK)
+      mockEnsurePinnedEngine.mockResolvedValue(ENGINE_OK)
       await new SteamGame(APP_ID, steamTestDeps).install({} as any)
       expect(provisionBridgeBottle).toHaveBeenCalledTimes(1)
     })
@@ -7545,7 +7587,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           {} as any
         )
         expect(decideCreationEngine).not.toHaveBeenCalled()
-        expect(ensurePinnedEngine).not.toHaveBeenCalled()
+        expect(mockEnsurePinnedEngine).not.toHaveBeenCalled()
         expect(provisionBridgeBottle).not.toHaveBeenCalled()
         expect(expected.status).toBeDefined()
         expect(leaseRelease).not.toHaveBeenCalled()
@@ -7562,7 +7604,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         const result = await new SteamGame(APP_ID, steamTestDeps).install(
           {} as any
         )
-        expect(ensurePinnedEngine).toHaveBeenCalledTimes(1)
+        expect(mockEnsurePinnedEngine).toHaveBeenCalledTimes(1)
         expect(provisionBridgeBottle).toHaveBeenCalledTimes(2)
         expect(
           (provisionBridgeBottle as jest.Mock).mock.calls[1][1].fallbackEngine
@@ -7593,7 +7635,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
       it('WR-01: an aborted engine download is status abort', async () => {
         ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
-        ;(ensurePinnedEngine as jest.Mock).mockResolvedValue({
+        mockEnsurePinnedEngine.mockResolvedValue({
           ok: false,
           reason: 'aborted',
           detail: 'shutting down'
@@ -7613,7 +7655,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       it('WR-01: install cancel mid engine download aborts the signal it received and removes the controller', async () => {
         const registry = wireControllers()
         ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
-        ;(ensurePinnedEngine as jest.Mock).mockImplementation(
+        mockEnsurePinnedEngine.mockImplementation(
           (_pin, opts: { signal: AbortSignal }) => {
             registry.get(APP_ID)!.abort()
             return Promise.resolve(
@@ -7665,7 +7707,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         expect(result).toEqual({ status: 'abort' })
         // no built-in-engine fallback, no setup dialog, no downloads
         expect(provisionBridgeBottle).toHaveBeenCalledTimes(1)
-        expect(ensurePinnedEngine).not.toHaveBeenCalled()
+        expect(mockEnsurePinnedEngine).not.toHaveBeenCalled()
         expect(sendFrontendMessage).not.toHaveBeenCalledWith(
           'steamBridgeSetupRequired',
           expect.anything()
@@ -7713,6 +7755,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         )
         expect(result).toEqual({ status: 'abort' })
         expect(discardNewBridgeBottle).toHaveBeenCalledWith(
+          steamTestDeps.paths,
           `GameLibSteamBridge-${APP_ID}`
         )
         expect(downloadSteamDepots).not.toHaveBeenCalled()
@@ -7811,7 +7854,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
       it('G21: built-in path with a download sends engine contexts, then creating-bottle, then installing', async () => {
         ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
-        ;(ensurePinnedEngine as jest.Mock).mockImplementation((_pin, opts) => {
+        mockEnsurePinnedEngine.mockImplementation((_pin, opts) => {
           opts.onProgress({
             phase: 'downloading',
             artifact: 'wine',
@@ -7952,7 +7995,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         ;(getAbortSignal as jest.Mock).mockReturnValue(controller.signal)
         ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
         await new SteamGame(APP_ID, steamTestDeps).install({} as any)
-        expect((ensurePinnedEngine as jest.Mock).mock.calls[0][1].signal).toBe(
+        expect(mockEnsurePinnedEngine.mock.calls[0][1].signal).toBe(
           controller.signal
         )
         // only the depot run registers or removes controllers, after provisioning
@@ -7973,6 +8016,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
         await new SteamGame(APP_ID, steamTestDeps).install({} as any)
         expect(buildFallbackGameSettings).toHaveBeenCalledWith(
+          steamTestDeps.paths,
           `GameLibSteamBridge-${APP_ID}`,
           expect.objectContaining({ wineBin: ENGINE_OK.paths.wineBin }),
           expect.anything()
@@ -8021,10 +8065,11 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           preflight: { kind: 'expired' }
         })
         await new SteamGame(APP_ID, steamTestDeps).install({} as any)
-        expect(prepareBottleForEngine).toHaveBeenCalledWith(
+        expect(mockPrepareBottleForEngine).toHaveBeenCalledWith(
           expect.objectContaining({ next: sel, crossoverHealthy: false })
         )
         expect(buildFallbackGameSettings).toHaveBeenCalledWith(
+          steamTestDeps.paths,
           `GameLibSteamBridge-${APP_ID}`,
           sel,
           expect.anything()
@@ -8035,7 +8080,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       it('CR-02: an existing bottle on healthy CrossOver gets stock settings', async () => {
         ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
         await new SteamGame(APP_ID, steamTestDeps).install({} as any)
-        expect(prepareBottleForEngine).toHaveBeenCalledWith(
+        expect(mockPrepareBottleForEngine).toHaveBeenCalledWith(
           expect.objectContaining({ crossoverHealthy: true })
         )
         expect(redistSettings()).toEqual({
@@ -8056,7 +8101,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         expect(result.status).toBe('done')
         expect(installSteamBridgeSharedRedists).not.toHaveBeenCalled()
         ;(decideLaunchEngine as jest.Mock).mockResolvedValue(cxDecision())
-        ;(prepareBottleForEngine as jest.Mock).mockResolvedValue({
+        mockPrepareBottleForEngine.mockResolvedValue({
           ok: false,
           reason: 'shared-bottle',
           detail: 'shared'
@@ -15012,13 +15057,11 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         { key: 'SteamAppId', value: id }
       ]
       const pinStaging = (id: string) => {
-        const { setEngineSelection } = jest.requireActual(
-          'backend/engine/engineRegistry'
-        )
+        const { setEngineSelection } = testRuntime.registry
         setEngineSelection(id, {
           kind: 'pinned',
           pinId: 'staging-11',
-          reason: 'user',
+          reason: 'override',
           wineBin: '/engine/wine/bin/wine',
           wineserverBin: '/engine/wine/bin/wineserver',
           label: 'Wine-Staging 11.20',
@@ -15469,13 +15512,11 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
 
       it('fallback engine after an overlay launch ends the clone wineserver', async () => {
         const id = freshId()
-        const { setEngineSelection } = jest.requireActual(
-          'backend/engine/engineRegistry'
-        )
+        const { setEngineSelection } = testRuntime.registry
         setEngineSelection(id, {
           kind: 'pinned',
           pinId: 'staging-11',
-          reason: 'user',
+          reason: 'override',
           wineBin: '/engine/wine/bin/wine',
           wineserverBin: '/engine/wine/bin/wineserver',
           label: 'Wine-Staging 11.20',
@@ -16474,7 +16515,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
   beforeEach(() => {
     resetBridgeFailedSession()
     resetBridgeLaunchBottles()
-    __resetBottleLedgerForTests()
+    resetBottleLedger()
     library.clear()
     pendingFetches.clear()
     library.set(ID, makeEntry({ title: 'Test Game' }))
@@ -16530,7 +16571,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         true
       )
       expect(getEngineSelection(ID)).toMatchObject({ kind: 'crossover' })
-      expect(prepareBottleForEngine).toHaveBeenCalledWith(
+      expect(mockPrepareBottleForEngine).toHaveBeenCalledWith(
         expect.objectContaining({ key: ID, bottleName: PER_GAME })
       )
       expect(notify).not.toHaveBeenCalled()
@@ -16552,7 +16593,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
         true
       )
-      expect(ensurePinnedEngine).not.toHaveBeenCalled()
+      expect(mockEnsurePinnedEngine).not.toHaveBeenCalled()
       expect(registeredAtRead).toMatchObject({ kind: 'pinned' })
       expect(notify).toHaveBeenCalledTimes(1)
       expect((notify as jest.Mock).mock.calls[0][0].body).toContain(
@@ -16590,16 +16631,14 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
         pinnedDecision('cx-missing', { needsDownload: true })
       )
-      ;(ensurePinnedEngine as jest.Mock).mockImplementation(
-        (_pin: unknown, opts: any) => {
-          opts.onProgress({
-            phase: 'downloading',
-            artifact: 'wine',
-            percentage: 40
-          })
-          return Promise.resolve(ENGINE_OK)
-        }
-      )
+      mockEnsurePinnedEngine.mockImplementation((_pin: unknown, opts: any) => {
+        opts.onProgress({
+          phase: 'downloading',
+          artifact: 'wine',
+          percentage: 40
+        })
+        return Promise.resolve(ENGINE_OK)
+      })
       expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
         true
       )
@@ -16615,7 +16654,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
         pinnedDecision('cx-missing', { needsDownload: false })
       )
-      ;(prepareBottleForEngine as jest.Mock).mockImplementation((args: any) => {
+      mockPrepareBottleForEngine.mockImplementation((args: any) => {
         args.onSwitching?.()
         return Promise.resolve({ ok: true })
       })
@@ -16632,7 +16671,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
         pinnedDecision('cx-missing', { needsDownload: true })
       )
-      ;(ensurePinnedEngine as jest.Mock).mockResolvedValue({
+      mockEnsurePinnedEngine.mockResolvedValue({
         ok: false,
         reason: 'offline',
         detail: 'x'
@@ -16709,7 +16748,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
     })
 
     it('game-running from prepareBottleForEngine: false, nothing spawned, registry cleared', async () => {
-      ;(prepareBottleForEngine as jest.Mock).mockResolvedValue({
+      mockPrepareBottleForEngine.mockResolvedValue({
         ok: false,
         reason: 'game-running',
         detail: 'running'
@@ -16729,7 +16768,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
         pinnedDecision('cx-missing', { needsDownload: true })
       )
-      ;(ensurePinnedEngine as jest.Mock).mockResolvedValue({
+      mockEnsurePinnedEngine.mockResolvedValue({
         ok: false,
         reason: 'offline',
         detail: 'x'
@@ -16748,9 +16787,8 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
     })
 
     it('a rejected setEngineSelection shows the selectionRejected dialog (WR-08)', async () => {
-      const registry = jest.requireActual('backend/engine/engineRegistry')
       const spy = jest
-        .spyOn(registry, 'setEngineSelection')
+        .spyOn(testRuntime.registry, 'setEngineSelection')
         .mockReturnValue(false)
       engineDialog().mockClear()
       try {
@@ -16771,7 +16809,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
     })
 
     it('shared-bottle refusal: sharedBottle dialog, selection cleared, nothing spawned (WR-06)', async () => {
-      ;(prepareBottleForEngine as jest.Mock).mockResolvedValue({
+      mockPrepareBottleForEngine.mockResolvedValue({
         ok: false,
         reason: 'shared-bottle',
         detail: 'shared'
@@ -16790,7 +16828,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
     })
 
     it('marker-newer refusal: markerNewer dialog, selection cleared, nothing spawned (261109-w52)', async () => {
-      ;(prepareBottleForEngine as jest.Mock).mockResolvedValue({
+      mockPrepareBottleForEngine.mockResolvedValue({
         ok: false,
         reason: 'marker-newer',
         detail: 'newer'
@@ -16833,7 +16871,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
             .readSteamEngineOverride as jest.Mock
         ).mockReturnValue(o.override)
         ;(readBottleEngineMarkerKind as jest.Mock).mockReturnValue(o.kind)
-        ;(isPinnedEngineInstalled as jest.Mock).mockReturnValue(o.pinInstalled)
+        mockIsPinnedEngineInstalled.mockReturnValue(o.pinInstalled)
         ;(restoreNeedsAbsentPin as jest.Mock).mockReturnValue(o.needsPin)
         engineDialog().mockClear()
       }
@@ -16852,7 +16890,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
           infoMessages().some((m) => m.includes('tag=engine-download-failed'))
         ).toBe(true)
         expect(getEngineSelection(ID)).toBeUndefined()
-        expect(prepareBottleForEngine).not.toHaveBeenCalled()
+        expect(mockPrepareBottleForEngine).not.toHaveBeenCalled()
         expect(runWineCommand).not.toHaveBeenCalled()
         const warn = jest.requireMock('backend/logger').logWarning as jest.Mock
         expect(
@@ -17033,8 +17071,10 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         const game = new SteamGame(ID, steamTestDeps)
         const d = deferred()
         bodySpy().mockReturnValue(d.promise)
-        const reg = await import('backend/engine/engineRegistry')
-        const clearSpy = jest.spyOn(reg, 'clearEngineSelection')
+        const clearSpy = jest.spyOn(
+          testRuntime.registry,
+          'clearEngineSelection'
+        )
         clearSpy.mockClear()
         const a = launchBridgeGame(game)
         const b = launchBridgeGame(game)
@@ -17101,14 +17141,14 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         })
       )
       await new SteamGame(ID, steamTestDeps).launch({} as any)
-      expect(prepareBottleForEngine).toHaveBeenCalledWith(
+      expect(mockPrepareBottleForEngine).toHaveBeenCalledWith(
         expect.objectContaining({ crossoverHealthy: false })
       )
     })
 
     it('a healthy CrossOver decision passes crossoverHealthy:true (G10)', async () => {
       await new SteamGame(ID, steamTestDeps).launch({} as any)
-      expect(prepareBottleForEngine).toHaveBeenCalledWith(
+      expect(mockPrepareBottleForEngine).toHaveBeenCalledWith(
         expect.objectContaining({ crossoverHealthy: true })
       )
     })
@@ -17124,7 +17164,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
     })
 
     it('dxvk-failed while switching to CrossOver blocks the launch with the restoreFailed dialog', async () => {
-      ;(prepareBottleForEngine as jest.Mock).mockResolvedValue({
+      mockPrepareBottleForEngine.mockResolvedValue({
         ok: false,
         reason: 'dxvk-failed',
         detail: 'boom'
@@ -17150,7 +17190,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
         pinnedDecision('cx-missing', { needsDownload: false })
       )
-      ;(prepareBottleForEngine as jest.Mock).mockResolvedValue({
+      mockPrepareBottleForEngine.mockResolvedValue({
         ok: false,
         reason: 'dxvk-failed',
         detail: 'boom'
@@ -17165,17 +17205,15 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
 
     it('prepareBottleForEngine gets an ensurePinEngine that reports engine-download progress', async () => {
       await new SteamGame(ID, steamTestDeps).launch({} as any)
-      const args = (prepareBottleForEngine as jest.Mock).mock.calls[0][0]
-      ;(ensurePinnedEngine as jest.Mock).mockImplementation(
-        (_pin: unknown, opts: any) => {
-          opts.onProgress({
-            phase: 'downloading',
-            artifact: 'wine',
-            percentage: 55
-          })
-          return Promise.resolve(ENGINE_OK)
-        }
-      )
+      const args = mockPrepareBottleForEngine.mock.calls[0][0]
+      mockEnsurePinnedEngine.mockImplementation((_pin: unknown, opts: any) => {
+        opts.onProgress({
+          phase: 'downloading',
+          artifact: 'wine',
+          percentage: 55
+        })
+        return Promise.resolve(ENGINE_OK)
+      })
       const engine = await args.deps.ensurePinEngine({
         id: 'staging-11',
         label: 'Wine-Staging 11.20',
@@ -17289,7 +17327,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       onFirstMatch?.()
       expect(__activeLaunchDeadlineCount()).toBe(0)
       expect(jest.getTimerCount()).toBe(0)
-      jest.advanceTimersByTime(200_000)
+      advanceBothSync(200_000)
       expect(killBridgeBottleWineServer).not.toHaveBeenCalled()
     })
 
@@ -17309,7 +17347,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
           true
         )
         ;(decideLaunchEngine as jest.Mock).mockClear()
-        await jest.advanceTimersByTimeAsync(180_000)
+        await advanceBoth(180_000)
         expect(stopBottleProcessMonitor).toHaveBeenCalledWith(ID)
         expect(killBridgeBottleWineServer).toHaveBeenCalledWith(
           steamTestDeps,
@@ -17332,7 +17370,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
           expect.anything()
         )
         expect(decideLaunchEngine).not.toHaveBeenCalled()
-        expect(ensurePinnedEngine).not.toHaveBeenCalled()
+        expect(mockEnsurePinnedEngine).not.toHaveBeenCalled()
         // not marked failed this session: the next Play still takes the bridge
         runWineCommand.mockClear()
         await new SteamGame(ID, steamTestDeps).launch({} as any)
@@ -17349,7 +17387,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
           () => new Promise((r) => setTimeout(r, 200_000))
         )
         const p = new SteamGame(ID, steamTestDeps).launch({} as any)
-        await jest.advanceTimersByTimeAsync(200_000)
+        await advanceBoth(200_000)
         expect(await p).toBe(false)
         expect(runWineCommand).not.toHaveBeenCalled()
         expect(killBridgeBottleWineServer).toHaveBeenCalled()
@@ -17440,7 +17478,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         expect(__activeLaunchDeadlineCount()).toBe(1)
         onUnavailable?.()
         expect(__activeLaunchDeadlineCount()).toBe(0)
-        await jest.advanceTimersByTimeAsync(200_000)
+        await advanceBoth(200_000)
         expect(killBridgeBottleWineServer).not.toHaveBeenCalled()
       })
     })
@@ -17457,7 +17495,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
           true
         )
         clearEngineSelection(ID)
-        await jest.advanceTimersByTimeAsync(180_000)
+        await advanceBoth(180_000)
         const warnings = (
           jest.requireMock('backend/logger').logWarning as jest.Mock
         ).mock.calls.map((c) => String(c[0]))
@@ -17571,9 +17609,7 @@ describe('Steam launch watch wiring (261111-9mj)', () => {
   it('G6 (am0) win32 failed hand-off: openExternal rejecting starts no watch', async () => {
     jest.requireMock('backend/constants/environment').isWindows = true
     const { shell } = hostFakes
-    ;(shell.openExternal as jest.Mock).mockRejectedValueOnce(
-      new Error('opener failed')
-    )
+    shell.openExternal.mockRejectedValueOnce(new Error('opener failed'))
     await expect(
       new SteamGame(APP_ID, steamTestDeps).launch({} as any)
     ).rejects.toThrow('opener failed')

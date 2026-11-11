@@ -17,10 +17,12 @@
 import type { GameSettings } from 'common/types'
 import { logError, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
-import { getEngineSelection } from 'backend/engine/engineRegistry'
 import { buildFallbackGameSettings } from 'backend/engine/bottlePrimitives'
 import { parseEngineOverride } from 'backend/engine/engineIds'
-import { readBottleEngineMarkerKind } from 'backend/engine/engineSwitch'
+import {
+  readBottleEngineMarkerKind,
+  switchContextFrom
+} from 'backend/engine/engineSwitch'
 import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
 import type { EngineServices } from 'backend/engine/engineServices'
 import { nonCrossoverEngineFor } from 'backend/engine/toolSettings'
@@ -55,23 +57,32 @@ export function defaultSteamWineToolsDeps(
     ownBottleName: bridgeBottleNameFor,
     findInstallBottle: findBridgeInstallBottle,
     hasLiveRunner: (appId) =>
-      getEngineSelection(appId) !== undefined ||
+      services.engineRuntime.registry.getEngineSelection(appId) !== undefined ||
       getDrmBridgeRunner(appId) !== undefined,
     bridgeSettings: (appId) =>
       getBridgeBottleSettings(
         {
           config: { getSettings: () => services.globalGameSettings() },
-          steamBottle: services.steamBottle
+          steamBottle: services.steamBottle,
+          paths: services.paths,
+          engineRuntime: services.engineRuntime
         },
         appId
       ),
-    markerKind: readBottleEngineMarkerKind,
+    markerKind: (bottle) =>
+      readBottleEngineMarkerKind(switchContextFrom(services), bottle),
     // A cycle with steamEngineDeps (which imports this module); only used at call time.
-    engineId: (appId) => parseEngineOverride(readSteamEngineOverride(appId)),
+    engineId: (appId) =>
+      parseEngineOverride(readSteamEngineOverride(services.paths, appId)),
     logError: (message) => logError(message, LogPrefix.Steam),
     nonCrossoverEngine: (id) => nonCrossoverEngineFor(services, id),
     fallbackSettings: (bottle, engine) =>
-      buildFallbackGameSettings(bottle, engine, services.globalGameSettings())
+      buildFallbackGameSettings(
+        services.paths,
+        bottle,
+        engine,
+        services.globalGameSettings()
+      )
   }
 }
 

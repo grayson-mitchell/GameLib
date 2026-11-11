@@ -24,6 +24,7 @@
  * tmp-then-rename (atomic replace, never a partially-written file visible
  * to a concurrently-reading shim).
  */
+import type { AppPaths } from 'backend/process/context'
 import { chmodSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 
@@ -52,6 +53,7 @@ const MIN_EPHEMERAL_PORT = 1024
 const MAX_PORT = 65535
 
 interface WriteBridgeConfigArgs {
+  paths: Pick<AppPaths, 'userHome'>
   /** The game's own resolved `.exe` path -- the cfg is written BESIDE it. */
   exePath: string
   bottleName: string
@@ -181,7 +183,7 @@ export function writeBridgeConfig(
     return { status: 'error', error: `Invalid bottle name: "${bottleName}"` }
   }
 
-  const bottleDir = resolve(getBottleDir(sanitizedBottleName))
+  const bottleDir = resolve(getBottleDir(args.paths, sanitizedBottleName))
   const resolvedExePath = resolve(exePath)
   if (!isContainedWithin(bottleDir, resolvedExePath)) {
     logWarning(

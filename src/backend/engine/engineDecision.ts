@@ -12,13 +12,11 @@
  */
 import { accessSync, constants as fsConstants, existsSync } from 'fs'
 import { dirname, isAbsolute, join, relative } from 'path'
-import { toolsPath } from 'backend/constants/paths'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { ProcessRunner } from 'backend/process/types'
 import type { EngineOption } from 'common/types/engine'
-import { readStoredGameConfig } from './engineConfig'
+import { configPathDepsFrom, readStoredGameConfig } from './engineConfig'
 import { appNameOf } from './gameKey'
-import { otherGamesRunning } from './bottleLedger'
 import { createProbeDemoStatus } from './demoStatus'
 import type { DemoStatusProbe } from './demoStatus'
 import { ENGINE_PINS } from './enginePins'
@@ -33,7 +31,7 @@ import type {
   FallbackReason,
   NonCrossoverEngine
 } from './engineTypes'
-import { isPinnedEngineInstalled, pinnedEnginePaths } from './fallbackEngine'
+import type { EnginePaths } from './fallbackEngine'
 import {
   readCrossoverBuild,
   untestedCrossoverLogLine
@@ -133,13 +131,27 @@ export interface EngineDecisionDeps {
     pinWineserverBin?: string | null
   } | null
   isPinInstalled(pin: EnginePin): boolean
+  /** Where a pin's Wine and DXVK live (the boot's fallback-engine owner). */
+  pinPaths(pin: EnginePin): EnginePaths
   pins: Readonly<{ current: EnginePin; previous: EnginePin | null }>
   fileExists(path: string): boolean
   wineManagerRoot: string
 }
 
 /** The member the spawning decision paths need: the caller's process runner (D-03). */
-export type RunnerDeps = { runner: Pick<ProcessRunner, 'run'> }
+export type RunnerDeps = {
+  runner: Pick<ProcessRunner, 'run'>
+  /** The path roots the defaults read (66.4-05). */
+  paths: Pick<
+    EngineServices['paths'],
+    'toolsPath' | 'userHome' | 'gamesConfigPath'
+  >
+  /** The boot-owned engine runtime pieces the defaults read. */
+  engineRuntime: Pick<
+    EngineServices['engineRuntime'],
+    'ledger' | 'crossover' | 'fallback'
+  >
+}
 
 type NonSpawnDefaults = Omit<
   EngineDecisionDeps,
@@ -152,18 +164,17 @@ type NonSpawnDefaults = Omit<
 
 /** The bin-dir default: Spotlight (mdfind) runs through the caller's runner. */
 function binDirDefault(
-  runner: Pick<ProcessRunner, 'run'>
+  deps: RunnerDeps
 ): Pick<EngineDecisionDeps, 'resolveCrossoverBinDir'> {
   return {
-    async resolveCrossoverBinDir() {
-      const { resolveCrossoverBinDirAsync } =
-        await import('backend/engine/crossoverLocation')
-      return resolveCrossoverBinDirAsync({ runner })
-    }
+    resolveCrossoverBinDir: () =>
+      deps.engineRuntime.crossover.resolveCrossoverBinDirAsync({
+        runner: deps.runner
+      })
   }
 }
 
-function baseEngineDecisionDeps(): NonSpawnDefaults {
+function baseEngineDecisionDeps(rt: RunnerDeps): NonSpawnDefaults {
   return {
     isExecutable(path) {
       try {
@@ -173,29 +184,37 @@ function baseEngineDecisionDeps(): NonSpawnDefaults {
         return false
       }
     },
-    readOverride: (key) => readStoredGameConfig(appNameOf(key))?.engineOverride,
+    readOverride: (key) =>
+      readStoredGameConfig(appNameOf(key), configPathDepsFrom(rt))
+        ?.engineOverride,
     monitorPhase: () => null,
     bottleBusy: (bottleName, key) =>
-      otherGamesRunning(bottleName, key).length > 0,
+      rt.engineRuntime.ledger.otherGamesRunning(bottleName, key).length > 0,
     markerSummary(bottleName) {
       const { readBottleEngineMarkerSummary } =
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('./engineSwitch') as typeof import('./engineSwitch')
-      return readBottleEngineMarkerSummary(bottleName)
+      return readBottleEngineMarkerSummary(
+        { paths: rt.paths, fallback: rt.engineRuntime.fallback },
+        bottleName
+      )
     },
-    isPinInstalled: isPinnedEngineInstalled,
+    isPinInstalled: (pin) =>
+      rt.engineRuntime.fallback.isPinnedEngineInstalled(pin),
+    pinPaths: (pin) => rt.engineRuntime.fallback.pinnedEnginePaths(pin),
     pins: ENGINE_PINS,
     fileExists: existsSync,
-    wineManagerRoot: join(toolsPath, 'wine')
+    wineManagerRoot: join(rt.paths.toolsPath, 'wine')
   }
 }
 
 function defaultEngineDecisionDeps(
-  runner: Pick<ProcessRunner, 'run'>
+  rt: RunnerDeps
 ): Omit<EngineDecisionDeps, 'killCrossoverWineserver' | 'wineManagerReleases'> {
+  const { runner } = rt
   return {
-    ...baseEngineDecisionDeps(),
-    ...binDirDefault(runner),
+    ...baseEngineDecisionDeps(rt),
+    ...binDirDefault(rt),
     probe: createProbeDemoStatus({ runner }),
     readBuild: (binDir) => readCrossoverBuild(binDir, createRunTool({ runner }))
   }
@@ -212,12 +231,12 @@ export type KillDeps = Pick<EngineDecisionDeps, 'killCrossoverWineserver'>
  * through the injected `spawnAsync`. Same wineserver path, CX_ROOT env and 15 s timeout.
  */
 export function killCrossoverWineserverWith(
-  services: Pick<EngineServices, 'spawnAsync'>
+  services: Pick<EngineServices, 'spawnAsync' | 'paths'>
 ): EngineDecisionDeps['killCrossoverWineserver'] {
   return async (bottleName, binDir) => {
     const { killBottleWineServerWith } = await import('./bottlePrimitives')
     await killBottleWineServerWith(
-      { spawnAsync: services.spawnAsync },
+      { spawnAsync: services.spawnAsync, paths: services.paths },
       bottleName,
       join(binDir, 'wineserver'),
       { CX_ROOT: dirname(binDir) },
@@ -230,14 +249,14 @@ export function killCrossoverWineserverWith(
 function withDefaults(
   deps: Partial<EngineDecisionDeps> & RunnerDeps
 ): NonSpawnDefaults & Pick<EngineDecisionDeps, 'resolveCrossoverBinDir'> {
-  return { ...baseEngineDecisionDeps(), ...binDirDefault(deps.runner), ...deps }
+  return { ...baseEngineDecisionDeps(deps), ...binDirDefault(deps), ...deps }
 }
 
 /** For entry points that read the release list and reach no spawn: it is required by type. */
 function withReleases(
-  deps: Partial<EngineDecisionDeps> & ReleasesDeps
+  deps: Partial<EngineDecisionDeps> & ReleasesDeps & RunnerDeps
 ): NonSpawnDefaults & ReleasesDeps {
-  return { ...baseEngineDecisionDeps(), ...deps }
+  return { ...baseEngineDecisionDeps(deps), ...deps }
 }
 
 /** For entry points that read the release list and resolve the bin dir. */
@@ -246,21 +265,21 @@ function withReleasesAndRunner(
 ): NonSpawnDefaults &
   ReleasesDeps &
   Pick<EngineDecisionDeps, 'resolveCrossoverBinDir'> {
-  return { ...baseEngineDecisionDeps(), ...binDirDefault(deps.runner), ...deps }
+  return { ...baseEngineDecisionDeps(deps), ...binDirDefault(deps), ...deps }
 }
 
 /** For decideLaunchEngine: the runner, the kill and the release list are all required by type. */
 function withKillAndReleases(
   deps: Partial<EngineDecisionDeps> & KillDeps & ReleasesDeps & RunnerDeps
 ): EngineDecisionDeps {
-  return { ...defaultEngineDecisionDeps(deps.runner), ...deps }
+  return { ...defaultEngineDecisionDeps(deps), ...deps }
 }
 
 /** For the pre-flight paths: the caller's runner and kill are required by type. */
 function withKill(
   deps: Partial<EngineDecisionDeps> & KillDeps & RunnerDeps
 ): Omit<EngineDecisionDeps, 'wineManagerReleases'> & Partial<ReleasesDeps> {
-  return { ...defaultEngineDecisionDeps(deps.runner), ...deps }
+  return { ...defaultEngineDecisionDeps(deps), ...deps }
 }
 
 /** The CrossOver bin dir the engine layer resolves (a store may inject a wine-bin hint). */
@@ -439,7 +458,7 @@ function wineManagerDxvk(
 ): NonCrossoverEngine['dxvk'] {
   const cur = d.pins.current
   if (d.isPinInstalled(cur)) {
-    return { dir: pinnedEnginePaths(cur).dxvkDir, version: cur.dxvk.version }
+    return { dir: d.pinPaths(cur).dxvkDir, version: cur.dxvk.version }
   }
   logLines.push(
     'Engine: built-in DXVK is not installed; running the Wine Manager build without DXVK'
@@ -449,7 +468,7 @@ function wineManagerDxvk(
 
 export function resolveWineManagerStaging(
   version: string,
-  deps: Partial<EngineDecisionDeps> & ReleasesDeps
+  deps: Partial<EngineDecisionDeps> & ReleasesDeps & RunnerDeps
 ): NonCrossoverEngine | null {
   const d = withReleases(deps)
   if (version.endsWith('-DXMT')) return null
@@ -479,10 +498,11 @@ export function resolveWineManagerStaging(
 }
 
 function pinnedSelection(
+  d: Pick<EngineDecisionDeps, 'pinPaths'>,
   pin: EnginePin,
   reason: FallbackReason | 'cx-inconclusive' | 'override'
 ): EngineSelection {
-  const p = pinnedEnginePaths(pin)
+  const p = d.pinPaths(pin)
   return {
     kind: 'pinned',
     pinId: pin.id,
@@ -537,7 +557,7 @@ export async function decideLaunchEngine(
       }
     }
     return finish(
-      pinnedSelection(pin, 'override'),
+      pinnedSelection(d, pin, 'override'),
       null,
       pin,
       !d.isPinInstalled(pin)
@@ -546,7 +566,7 @@ export async function decideLaunchEngine(
 
   if (override.startsWith('wine-manager:')) {
     const version = override.slice('wine-manager:'.length)
-    const wm = resolveWineManagerStaging(version, d)
+    const wm = resolveWineManagerStaging(version, { ...d, ...deps })
     if (!wm) {
       return {
         kind: 'unavailable',
@@ -571,7 +591,12 @@ export async function decideLaunchEngine(
 
   const preflight = await preflightCrossover(
     args.bottleName,
-    { ...d, runner: deps.runner },
+    {
+      ...d,
+      runner: deps.runner,
+      paths: deps.paths,
+      engineRuntime: deps.engineRuntime
+    },
     { killOnTimeout: true, key: args.key }
   )
 
@@ -597,14 +622,16 @@ export async function decideLaunchEngine(
           `Engine: CrossOver pre-flight inconclusive (${preflight.detail}); keeping the bottle's built-in engine`
         )
         return finish(
-          pinnedSelection(knownPin, 'cx-inconclusive'),
+          pinnedSelection(d, knownPin, 'cx-inconclusive'),
           preflight,
           knownPin,
           !d.isPinInstalled(knownPin)
         )
       }
       const wmVersion = marker.wineManagerVersion ?? null
-      const wm = wmVersion ? resolveWineManagerStaging(wmVersion, d) : null
+      const wm = wmVersion
+        ? resolveWineManagerStaging(wmVersion, { ...d, ...deps })
+        : null
       if (wmVersion && wm) {
         logLines.push(
           `Engine: CrossOver pre-flight inconclusive (${preflight.detail}); keeping the bottle's Wine Manager build ${wmVersion}`
@@ -709,7 +736,7 @@ export async function decideLaunchEngine(
         : 'cx-broken'
   const pin = d.pins.current
   return finish(
-    pinnedSelection(pin, reason),
+    pinnedSelection(d, pin, reason),
     preflight,
     pin,
     !d.isPinInstalled(pin)
@@ -720,7 +747,7 @@ export async function decideCreationEngine(
   args: { key: string },
   deps: Partial<EngineDecisionDeps> & RunnerDeps
 ): Promise<CreationDecision> {
-  const d = { ...defaultEngineDecisionDeps(deps.runner), ...deps }
+  const d = { ...defaultEngineDecisionDeps(deps), ...deps }
   const pin = d.pins.current
   // 59-REVIEW WR-03: presence check only. --demo-status against another
   // title's bottle read that bottle's trial clock, not this one's.

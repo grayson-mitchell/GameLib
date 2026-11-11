@@ -4,6 +4,7 @@
  */
 
 // ── Imports ───────────────────────────────────────────────────────────────────
+import { createEngineRegistry } from 'backend/engine/engineRegistry'
 import { readAcfState } from '../library/acfState'
 import {
   buildInstalledMap,
@@ -30,7 +31,9 @@ import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 const getSteamBottleSettings = jest.fn()
 const libDeps = {
   config: createTestGlobalConfig(),
-  steamBottle: { getSteamBottleSettings, resolveCrossoverWine: jest.fn() }
+  steamBottle: { getSteamBottleSettings, resolveCrossoverWine: jest.fn() },
+  paths: { userHome: '/test-gamelib/home' },
+  engineRuntime: { registry: createEngineRegistry() }
 }
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───

@@ -78,9 +78,9 @@ export async function runBridgeLaunch(steamGame: SteamGame): Promise<boolean> {
     return started
   } finally {
     if (!started) {
-      const { clearEngineSelection } =
-        await import('backend/engine/engineRegistry')
-      clearEngineSelection(steamGame.appId)
+      steamGame.deps.engineRuntime.registry.clearEngineSelection(
+        steamGame.appId
+      )
     }
   }
 }

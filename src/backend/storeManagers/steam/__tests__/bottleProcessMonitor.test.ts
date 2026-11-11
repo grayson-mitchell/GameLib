@@ -15,7 +15,7 @@ import { join } from 'node:path'
 import { logInfo, logWarning } from 'backend/logger'
 import { sendFrontendMessage } from '../../../ipc'
 import { recordPlaySession } from 'backend/runsForMe'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { getBottleDir } from 'backend/storeManagers/steam/bottleDirs'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import {
   readBoundedTail,

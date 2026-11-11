@@ -41,15 +41,13 @@ jest.mock('backend/runsForMe', () => ({ recordPlaySession: jest.fn() }))
 const selectMock = jest.fn()
 const endMock = jest.fn()
 jest.mock('backend/engine/launchEngine', () => ({
+  createLaunchEngineState: () => ({}),
   armEngineLaunchDeadline: jest.fn(),
   selectEngineForLaunch: (...a: unknown[]) => selectMock(...a),
   endEngineLaunch: (...a: unknown[]) => endMock(...a)
 }))
 
 const overlayMock = jest.fn()
-jest.mock('backend/engine/launchSettings', () => ({
-  getLaunchSettings: (...a: unknown[]) => overlayMock(...a)
-}))
 
 import { createTestToolsSlices } from 'backend/testUtils/testServices'
 import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
@@ -118,8 +116,18 @@ beforeEach(() => {
 
 // The launcher is built from test deps (66.1-23): the manager table and hooks are plain fakes.
 const tsStore = { has: () => true, get: () => 0, set: jest.fn() }
+const slices = createTestToolsSlices()
+// The overlay read is a recording fake on the runtime's launch-settings registry.
+const engineRuntime = {
+  ...slices.engineRuntime,
+  launchSettings: {
+    ...slices.engineRuntime.launchSettings,
+    getLaunchSettings: (...a: unknown[]) => overlayMock(...a)
+  } as never
+}
 const { launchEventCallback } = createLauncher({
-  ...createTestToolsSlices(),
+  ...slices,
+  engineRuntime,
   onlineMonitor: createTestOnlineMonitor({ online: false }),
   libraryManagers: {
     legendary: { getGame: (...a: unknown[]) => getGameMock(...a) }
@@ -168,7 +176,7 @@ describe('launcher engine step (61-14)', () => {
     expect(checkWineMock).not.toHaveBeenCalled()
     expect(overlayMock).toHaveBeenCalledWith(KEY, STORED)
     expect(endMock).toHaveBeenCalledTimes(1)
-    expect(endMock).toHaveBeenCalledWith(KEY)
+    expect(endMock).toHaveBeenCalledWith(engineRuntime, KEY)
   })
 
   it("'use': releases the selection when the launch throws", async () => {
@@ -183,7 +191,7 @@ describe('launcher engine step (61-14)', () => {
 
     expect(result).toEqual({ status: 'error' })
     expect(endMock).toHaveBeenCalledTimes(1)
-    expect(endMock).toHaveBeenCalledWith(KEY)
+    expect(endMock).toHaveBeenCalledWith(engineRuntime, KEY)
   })
 
   it.each(['legacy', 'skip'])(

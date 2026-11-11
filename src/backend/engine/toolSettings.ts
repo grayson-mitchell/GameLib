@@ -23,26 +23,22 @@ import {
   buildFallbackGameSettings,
   isBottleProvisioned
 } from './bottlePrimitives'
-import { readEngineForGame } from './engineConfig'
+import { configPathDepsFrom, readEngineForGame } from './engineConfig'
 import type { EffectiveEngine } from './engineConfig'
 import { resolveWineManagerStaging } from './engineDecision'
 import { engineKeyIfEligible } from './engineEligibility'
-import { getEngineSelection } from './engineRegistry'
-import { readBottleEngineMarkerKind } from './engineSwitch'
+import { readBottleEngineMarkerKind, switchContextFrom } from './engineSwitch'
 import type { NonCrossoverEngine } from './engineTypes'
 import { ENGINE_PINS } from './enginePins'
-import { isPinnedEngineInstalled, pinnedEnginePaths } from './fallbackEngine'
 import { engineKeyFor } from './gameKey'
 import type { EngineKey } from './gameKey'
 import { resolveGamePrefix } from './gamePrefix'
 import {
   buildCrossoverGameSettings,
-  buildPlainPrefixSettings,
-  getLaunchSettings
+  buildPlainPrefixSettings
 } from './launchSettings'
-import { ensureGameBottle } from './perGameBottle'
+import type { PerGameBottleFlights } from './perGameBottle'
 import type { EngineServices } from './engineServices'
-import { resolveCrossoverBinDirAsync } from './crossoverLocation'
 
 export type ToolSettingsResult =
   | { kind: 'stored'; settings: GameSettings }
@@ -65,19 +61,22 @@ export interface ToolSettingsDeps {
   readEffective(id: { runner: string; appName: string }): EffectiveEngine
   hasLiveSelection(key: EngineKey): boolean
   resolvePrefix: typeof resolveGamePrefix
-  overlay: typeof getLaunchSettings
+  overlay: (key: EngineKey, stored: GameSettings) => GameSettings
   isProvisioned(bottleName: string): boolean
   ensureGameBottle: (
-    args: Parameters<typeof ensureGameBottle>[1]
-  ) => ReturnType<typeof ensureGameBottle>
+    args: Parameters<PerGameBottleFlights['ensureGameBottle']>[1]
+  ) => ReturnType<PerGameBottleFlights['ensureGameBottle']>
   markerKind(bottleName: string): 'crossover' | 'non-crossover' | null
   crossoverBinDir(): Promise<string | undefined>
   /** The built-in or Wine Manager engine an engine id runs on; null when it is not installed. */
   nonCrossoverEngine(engineId: string): NonCrossoverEngine | null
 }
 
-function pinEngine(pin: (typeof ENGINE_PINS)['current']): NonCrossoverEngine {
-  const p = pinnedEnginePaths(pin)
+function pinEngine(
+  services: Pick<EngineServices, 'engineRuntime'>,
+  pin: (typeof ENGINE_PINS)['current']
+): NonCrossoverEngine {
+  const p = services.engineRuntime.fallback.pinnedEnginePaths(pin)
   return {
     wineBin: p.wineBin,
     wineserverBin: p.wineserverBin,
@@ -87,20 +86,26 @@ function pinEngine(pin: (typeof ENGINE_PINS)['current']): NonCrossoverEngine {
   }
 }
 
-const defaultDeps: Omit<
+const defaultDeps = (
+  services: EngineServices
+): Omit<
   ToolSettingsDeps,
   | 'ensureGameBottle'
   | 'readEffective'
   | 'nonCrossoverEngine'
   | 'crossoverBinDir'
-> = {
+> => ({
   isMac: () => isMac,
-  hasLiveSelection: (key) => getEngineSelection(key) !== undefined,
+  hasLiveSelection: (key) =>
+    services.engineRuntime.registry.getEngineSelection(key) !== undefined,
   resolvePrefix: resolveGamePrefix,
-  overlay: getLaunchSettings,
-  isProvisioned: isBottleProvisioned,
-  markerKind: readBottleEngineMarkerKind
-}
+  overlay: (key, stored) =>
+    services.engineRuntime.launchSettings.getLaunchSettings(key, stored),
+  isProvisioned: (bottleName) =>
+    isBottleProvisioned(services.paths, bottleName),
+  markerKind: (bottleName) =>
+    readBottleEngineMarkerKind(switchContextFrom(services), bottleName)
+})
 
 /** The deps that read the Wine Manager release list through the injected services (66.1-22i). */
 function releaseBoundDeps(
@@ -109,11 +114,22 @@ function releaseBoundDeps(
   ToolSettingsDeps,
   'readEffective' | 'nonCrossoverEngine' | 'crossoverBinDir'
 > {
-  const releases = { wineManagerReleases: services.wineManagerReleases }
-  const config = { ...releases, globalSettings: services.globalSettings }
+  const releases = {
+    wineManagerReleases: services.wineManagerReleases,
+    runner: services.runner,
+    paths: services.paths,
+    engineRuntime: services.engineRuntime
+  }
+  const config = {
+    wineManagerReleases: services.wineManagerReleases,
+    ...configPathDepsFrom(services),
+    globalSettings: services.globalSettings
+  }
   return {
     crossoverBinDir: () =>
-      resolveCrossoverBinDirAsync({ runner: services.runner }),
+      services.engineRuntime.crossover.resolveCrossoverBinDirAsync({
+        runner: services.runner
+      }),
     readEffective: (id) => readEngineForGame(id, config),
     nonCrossoverEngine(engineId) {
       if (engineId.startsWith('wine-manager:')) {
@@ -127,7 +143,9 @@ function releaseBoundDeps(
         ? engineId.slice('pinned:'.length)
         : ENGINE_PINS.current.id
       const pin = pins.find((p) => p?.id === wanted)
-      return pin && isPinnedEngineInstalled(pin) ? pinEngine(pin) : null
+      return pin && services.engineRuntime.fallback.isPinnedEngineInstalled(pin)
+        ? pinEngine(services, pin)
+        : null
     }
   }
 }
@@ -147,7 +165,11 @@ export async function resolveToolSettings(
   opts: { ensureBottle: boolean },
   overrides: Partial<ToolSettingsDeps> = {}
 ): Promise<ToolSettingsResult> {
-  const d = { ...defaultDeps, ...releaseBoundDeps(services), ...overrides }
+  const d = {
+    ...defaultDeps(services),
+    ...releaseBoundDeps(services),
+    ...overrides
+  }
   if (engineKeyIfEligible(game, d.isMac()) === null) {
     return { kind: 'stored', settings: stored }
   }
@@ -179,9 +201,10 @@ export async function resolveToolSettingsForId(
   overrides: Partial<ToolSettingsDeps> = {}
 ): Promise<ToolSettingsResult> {
   const d: ToolSettingsDeps = {
-    ...defaultDeps,
+    ...defaultDeps(services),
     ...releaseBoundDeps(services),
-    ensureGameBottle: (a) => ensureGameBottle(services, a),
+    ensureGameBottle: (a) =>
+      services.engineRuntime.perGameBottle.ensureGameBottle(services, a),
     ...overrides
   }
   const key =
@@ -267,7 +290,7 @@ export async function resolveToolSettingsForId(
     key,
     settings: {
       ...stored,
-      ...buildFallbackGameSettings(bottleName, engine, stored)
+      ...buildFallbackGameSettings(services.paths, bottleName, engine, stored)
     }
   }
 }

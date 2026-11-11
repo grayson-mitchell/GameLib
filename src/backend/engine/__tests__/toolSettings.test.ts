@@ -23,7 +23,7 @@ import type { ToolSettingsDeps } from '../toolSettings'
 import type { EffectiveEngine } from '../engineConfig'
 import type { NonCrossoverEngine } from '../engineTypes'
 import { perGameBottleName } from '../perGameBottle'
-import { getBottleDir } from '../bottlePrimitives'
+import { getBottleDir as getBottleDirIn } from '../bottlePrimitives'
 import type { EngineServices } from '../engineServices'
 import { createTestEngineServices } from 'backend/testUtils/testServices'
 
@@ -206,7 +206,9 @@ describe('per-game bottle', () => {
     })
     expect(result.kind).toBe('engine')
     if (result.kind === 'engine') {
-      expect(result.settings.winePrefix).toBe(getBottleDir(perGame()))
+      expect(result.settings.winePrefix).toBe(
+        getBottleDirIn(services.paths, perGame())
+      )
       expect(result.settings.wineCrossoverBottle).toBe(perGame())
       expect(result.settings.wineVersion.type).toBe('wine')
     }

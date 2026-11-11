@@ -54,24 +54,27 @@ jest.mock('../pinnedEngineProgress', () => ({
 }))
 
 import {
-  __resetLaunchEngineForTests,
-  endEngineLaunch,
+  endEngineLaunch as endEngineLaunchOn,
   selectEngineForLaunch
 } from '../launchEngine'
 import type { EngineServices } from '../engineServices'
 import { createTestEngineServices } from 'backend/testUtils/testServices'
 import type { LaunchEngineDeps } from '../launchEngine'
-import { __resetBottleLedgerForTests } from '../bottleLedger'
-import { clearEngineSelection } from '../engineRegistry'
-import { getBottleDir } from '../bottlePrimitives'
-import { ENGINE_MARKER_FILE } from '../engineSwitch'
+import { userHome } from 'backend/constants/paths'
+import { createTestEngineRuntime } from 'backend/testUtils/testEngineRuntime'
+import { getBottleDir as getBottleDirIn } from '../bottlePrimitives'
+import { ENGINE_MARKER_FILE, switchContextFrom } from '../engineSwitch'
 import { perGameBottleName } from '../perGameBottle'
 import type { EffectiveEngine } from '../engineConfig'
 import type { EngineSelection } from '../engineTypes'
 
-const services: EngineServices = createTestEngineServices({
-  installRemove: jest.fn()
-})
+// Bottles live under the jest-contained HOME, the real `userHome` the constants resolve.
+const paths = { userHome }
+const getBottleDir = (name: string) => getBottleDirIn(paths, name)
+// A fresh engine runtime per test (beforeEach): nothing crosses a test and there is no reset hook.
+let services: EngineServices
+const endEngineLaunch = (key: string) =>
+  endEngineLaunchOn(services.engineRuntime, key as never)
 
 const decide = jest.requireMock('../engineDecision')
   .decideLaunchEngine as jest.Mock
@@ -190,6 +193,7 @@ const deps = (): Partial<LaunchEngineDeps> => ({
   notifyFallback: jest.fn(),
   ensureGameBottle,
   switchDeps: () => ({
+    ctx: switchContextFrom(services),
     getMonitorPhase: () => null,
     killWith,
     installRemove,
@@ -225,9 +229,11 @@ async function launchAndEnd(): Promise<string> {
 
 beforeEach(() => {
   jest.clearAllMocks()
-  __resetBottleLedgerForTests()
-  __resetLaunchEngineForTests()
-  clearEngineSelection(KEY)
+  services = createTestEngineServices({
+    installRemove: jest.fn(),
+    paths: { ...createTestEngineServices().paths, userHome },
+    engineRuntime: createTestEngineRuntime({ paths: { userHome } })
+  })
   killWith.mockResolvedValue(undefined)
   installRemove.mockResolvedValue(true)
   ensureGameBottle.mockImplementation((args: { bottleName: string }) => {

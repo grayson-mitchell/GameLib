@@ -36,6 +36,7 @@ import type { EngineServices } from '../engine/engineServices'
 import { createFakeClock } from './fakeClock'
 import { createTestOnlineMonitor } from './testOnlineMonitor'
 import { createTestEngineState } from './testEngineState'
+import { createTestEngineRuntime } from './testEngineRuntime'
 import { createTestSignInProbe } from './testSignInProbe'
 import { createTestSteamSession } from './testSteamSession'
 import { createTestAnonymousClient } from './testAnonymousClient'
@@ -251,6 +252,7 @@ export function createTestServices(
     appInfo: overrides.appInfo ?? TEST_APP_INFO,
     onlineMonitor: overrides.onlineMonitor ?? createTestOnlineMonitor(),
     engineState: overrides.engineState ?? createTestEngineState(),
+    engineRuntime: overrides.engineRuntime ?? createTestEngineRuntime(),
     winetricksQueue:
       overrides.winetricksQueue ??
       unscriptedMembers<BootServices['winetricksQueue']>(
@@ -409,6 +411,7 @@ export function createTestManagerDeps(
     imageTools: overrides.imageTools ?? host.imageTools,
     onlineMonitor: overrides.onlineMonitor ?? createTestOnlineMonitor(),
     engineState: overrides.engineState ?? createTestEngineState(),
+    engineRuntime: overrides.engineRuntime ?? createTestEngineRuntime(),
     signIn: overrides.signIn ?? createTestSignInProbe(),
     steamSession: overrides.steamSession ?? createTestSteamSession(),
     anonymousClient: overrides.anonymousClient ?? createTestAnonymousClient(),
@@ -436,6 +439,8 @@ export function createTestEngineServices(
     runner: unscriptedMembers<EngineServices['runner']>('process runner', {}),
     onlineMonitor: createTestOnlineMonitor(),
     engineState: createTestEngineState(),
+    engineRuntime: createTestEngineRuntime(),
+    paths: createTestPaths(),
     ...overrides
   }
 }
@@ -456,6 +461,8 @@ export function createTestToolsSlices() {
     notifications: host.notifications,
     onlineMonitor: createTestOnlineMonitor(),
     engineState: createTestEngineState(),
+    engineRuntime: createTestEngineRuntime(),
+    paths: createTestPaths(),
     steamBottle: createTestSteamBottle({ stores: createTestStores(), config })
   }
 }

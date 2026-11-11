@@ -32,18 +32,17 @@ import {
   type SteamBottle
 } from './bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
-import { getEngineSelection } from 'backend/engine/engineRegistry'
 import { isNonCrossover } from 'backend/engine/engineTypes'
 import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
 import {
   createFallbackBottle,
-  getBottleDir,
-  isBottleProvisioned,
   killBottleWineServerWith,
   removeCreatedBottleDir,
   sanitizeBottleName
 } from 'backend/engine/bottlePrimitives'
-import { resolveCrossoverBinDirAsync } from 'backend/engine/crossoverLocation'
+import type { AppPaths } from 'backend/process/context'
+import type { EngineRuntime } from 'backend/engine/engineRuntime'
+import { getBottleDir, isBottleProvisioned } from './bottleDirs'
 
 /**
  * The guard chain shared by removePerGameBridgeBottle and
@@ -53,6 +52,7 @@ import { resolveCrossoverBinDirAsync } from 'backend/engine/crossoverLocation'
  */
 /** SpawnDeps plus the config slice the shared-bottle guard reads (66.3-08). */
 export type BottleLifecycleDeps = KillBottleDeps & {
+  engineRuntime: Pick<EngineRuntime, 'registry'>
   config: Pick<GlobalConfigSlice, 'getSettings'>
   steamBottle: Pick<SteamBottle, 'configStore' | 'persistedWineBins'>
 }
@@ -189,10 +189,11 @@ export async function removePerGameBridgeBottle(
   // rmSync fallback if the dir survives.
   await killBottleWineServer(deps, name)
 
-  const removeBinDir = await resolveCrossoverBinDirAsync(
-    { runner: deps.runner },
-    { hintWineBins: deps.steamBottle.persistedWineBins() }
-  )
+  const removeBinDir =
+    await deps.engineRuntime.crossover.resolveCrossoverBinDirAsync(
+      { runner: deps.runner },
+      { hintWineBins: deps.steamBottle.persistedWineBins() }
+    )
   if (!removeBinDir) {
     logWarning(
       `removePerGameBridgeBottle: no CrossOver install found, skipping cxbottle --delete for "${name}" (rmSync fallback follows)`,
@@ -258,7 +259,7 @@ export async function removePerGameBridgeBottle(
  * stock CrossOver (D-10).
  */
 async function killForRegisteredEngine(
-  deps: KillBottleDeps,
+  deps: KillBottleDeps & { engineRuntime: Pick<EngineRuntime, 'registry'> },
   appId: string,
   name: string,
   timeoutMs?: number,
@@ -267,7 +268,7 @@ async function killForRegisteredEngine(
   if (getDrmBridgeRunner(appId)) {
     return killBottleWineServer(deps, name, drmRunnerBinDir(appId), timeoutMs)
   }
-  const engine = getEngineSelection(appId)
+  const engine = deps.engineRuntime.registry.getEngineSelection(appId)
   if (engine && isNonCrossover(engine)) {
     return killBottleWineServerWith(
       deps,
@@ -473,12 +474,15 @@ export async function endPerGameBridgeBottleSession(
  * already stopped by the post-create kill. Same single-segment-under-Bottles-root guard as
  * removeCreatedBottleDir (T-59-25). Never call for a bottle that pre-existed.
  */
-export function discardNewBridgeBottle(bottleName: string): void {
+export function discardNewBridgeBottle(
+  paths: Pick<AppPaths, 'userHome'>,
+  bottleName: string
+): void {
   logInfo(
     `provisionBridgeBottle: discarding newly created bottle "${bottleName}"`,
     LogPrefix.Steam
   )
-  removeCreatedBottleDir(bottleName)
+  removeCreatedBottleDir(paths, bottleName)
 }
 
 export async function provisionBridgeBottle(
@@ -549,7 +553,7 @@ export async function provisionBridgeBottle(
 
   // (3b) quick 261024-cjq: CrossOver precondition, after the ready
   // short-circuit and before any spawn.
-  const binDir = await resolveCrossoverBinDirAsync(
+  const binDir = await deps.engineRuntime.crossover.resolveCrossoverBinDirAsync(
     { runner: deps.runner },
     {
       wineVersion: opts.wineVersion,
@@ -577,7 +581,7 @@ export async function provisionBridgeBottle(
       LogPrefix.Steam
     )
     await killBottleWineServer(deps, bottleName, binDir, 15_000)
-    if (createdHere) removeCreatedBottleDir(bottleName)
+    if (createdHere) removeCreatedBottleDir(deps.paths, bottleName)
     return {
       status: 'error',
       errorCode: PROVISION_ABORTED,
@@ -608,7 +612,7 @@ export async function provisionBridgeBottle(
         LogPrefix.Steam
       )
       await killBottleWineServer(deps, bottleName, binDir, 15_000)
-      if (createdHere) removeCreatedBottleDir(bottleName)
+      if (createdHere) removeCreatedBottleDir(deps.paths, bottleName)
       return {
         status: 'error',
         errorCode: CROSSOVER_CREATE_TIMEOUT,
@@ -627,7 +631,7 @@ export async function provisionBridgeBottle(
         LogPrefix.Steam
       )
       await killBottleWineServer(deps, bottleName, binDir, 15_000)
-      if (createdHere) removeCreatedBottleDir(bottleName)
+      if (createdHere) removeCreatedBottleDir(deps.paths, bottleName)
       return {
         status: 'error',
         errorCode: CROSSOVER_CREATE_FAILED,
@@ -641,7 +645,7 @@ export async function provisionBridgeBottle(
     )
     if (opts.signal?.aborted) return await abortedCrossOver()
     await killBottleWineServer(deps, bottleName, binDir, 15_000)
-    if (createdHere) removeCreatedBottleDir(bottleName)
+    if (createdHere) removeCreatedBottleDir(deps.paths, bottleName)
     return {
       status: 'error',
       errorCode: CROSSOVER_CREATE_FAILED,

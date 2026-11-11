@@ -1,8 +1,4 @@
-import {
-  clearEngineSelection,
-  getEngineSelection,
-  setEngineSelection
-} from '../engineRegistry'
+import { createEngineRegistry } from '../engineRegistry'
 import type { EngineSelection } from '../engineTypes'
 
 jest.mock('backend/logger', () => ({
@@ -19,9 +15,13 @@ const crossover: EngineSelection = {
 }
 
 describe('engineRegistry keys', () => {
-  afterEach(() => {
-    clearEngineSelection('440')
-    clearEngineSelection('sideload:My Game')
+  const { setEngineSelection, getEngineSelection } = createEngineRegistry()
+
+  test('two registries share no selection', () => {
+    const a = createEngineRegistry()
+    const b = createEngineRegistry()
+    a.setEngineSelection('440', crossover)
+    expect(b.getEngineSelection('440')).toBeUndefined()
   })
 
   test('accepts a store-prefixed key and returns a copy', () => {

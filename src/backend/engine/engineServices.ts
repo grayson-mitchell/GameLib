@@ -11,6 +11,8 @@ import type { SpawnAsync } from 'backend/spawnAsync'
 import type { Tools } from 'backend/tools'
 import type { WineManagerRelease } from './engineDecision'
 import type { EngineStateService } from './engineState'
+import type { EngineRuntime } from './engineRuntime'
+import type { AppPaths } from 'backend/process/context'
 
 export interface EngineServices {
   spawnAsync: SpawnAsync
@@ -21,6 +23,10 @@ export interface EngineServices {
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   /** The boot-owned engine decision/notice state (D-66.3-12). */
   engineState: EngineStateService
+  /** The path roots the engine reads (66.4-05). */
+  paths: Pick<AppPaths, 'userHome' | 'toolsPath' | 'gamesConfigPath'>
+  /** The boot-owned engine runtime: ledger, registry, deadlines, single-flight maps (66.4-05). */
+  engineRuntime: EngineRuntime
   /** The installed Wine Manager release list, read from the injected wineManager store. */
   wineManagerReleases: () => WineManagerRelease[]
   /** The global settings snapshot the engine's config reads inherit from (66.3-06). */

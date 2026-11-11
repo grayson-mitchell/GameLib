@@ -328,6 +328,8 @@ export type RedistDeps = Pick<
   | 'config'
   | 'steamBottle'
   | 'steamUser'
+  | 'paths'
+  | 'engineRuntime'
 >
 type RunWineCommand = RedistDeps['commandRunner']['runWineCommand']
 
@@ -516,7 +518,7 @@ async function run(
   signal: AbortSignal | undefined,
   opts?: { allowLogon?: boolean }
 ): Promise<void> {
-  const bottleDir = getBottleDir(bottleSettings.wineCrossoverBottle)
+  const bottleDir = getBottleDir(deps.paths, bottleSettings.wineCrossoverBottle)
   const ledgerPath = join(bottleDir, LEDGER_FILE)
   const ledger = await readLedger(ledgerPath, appId)
   if (!ledger) return

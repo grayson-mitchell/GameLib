@@ -12,12 +12,18 @@ import { ENGINE_PINS } from '../enginePins'
 import type { CrossoverPreflight } from '../engineDecision'
 import type { EngineConfigDeps } from '../engineConfig'
 import { defined } from './defined'
-import { createTestServices } from 'backend/testUtils/testServices'
+import {
+  createTestEngineServices,
+  createTestServices
+} from 'backend/testUtils/testServices'
 import { createTestEngineState } from 'backend/testUtils/testEngineState'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
+const baseServices = createTestEngineServices()
 const services = {
   spawnAsync: createTestServices().spawnAsync,
+  paths: baseServices.paths,
+  engineRuntime: baseServices.engineRuntime,
   runner: createScriptedRunner([]),
   wineManagerReleases: () => [],
   globalSettings: () => global,

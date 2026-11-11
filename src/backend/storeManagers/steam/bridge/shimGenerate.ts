@@ -71,6 +71,7 @@
  * persists and 51-07's `resolveBridgeRoute` reads back.
  */
 
+import type { AppPaths } from 'backend/process/context'
 import { resolve } from 'node:path'
 import { resolveBridgeBottleName } from '../bridgeBottle'
 import {
@@ -147,11 +148,12 @@ import { placeShimForGameInner } from './shimPlacement'
  * caller decides, so a user's forced 'bridge' route keeps working.
  */
 export async function placeShimForGame(
+  paths: Pick<AppPaths, 'userHome'>,
   appId: string,
   gameExePath: string,
-  opts?: Parameters<typeof placeShimForGameInner>[2]
+  opts?: Parameters<typeof placeShimForGameInner>[3]
 ): Promise<PlaceShimResult> {
-  const result = await placeShimForGameInner(appId, gameExePath, opts)
+  const result = await placeShimForGameInner(paths, appId, gameExePath, opts)
   if (result.status === 'error') return result
   // Gap 11 (56-21): UE titles carry .bind on the Shipping exe, not the
   // bootstrap; stamp from the same resolver launch routing uses.
@@ -160,7 +162,7 @@ export async function placeShimForGame(
   )
   const launchWrapper = stampBottle
     ? await detectLaunchDrmWrapper(
-        resolve(getBottleDir(stampBottle)),
+        resolve(getBottleDir(paths, stampBottle)),
         resolve(gameExePath)
       )
     : undefined

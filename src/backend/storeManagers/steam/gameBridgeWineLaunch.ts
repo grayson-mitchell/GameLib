@@ -11,7 +11,6 @@ import { notify } from 'backend/dialog/dialog'
 import { sendFrontendMessage } from '../../ipc'
 import { getBridgeBottleSettings } from './bridgeBottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
-import { markGameRunning, markGameStopped } from 'backend/engine/bottleLedger'
 // Phase 60: Steam overlay in bridged games (macOS).
 import {
   appendCxEnvTokens,
@@ -121,10 +120,13 @@ export async function fireBridgeWineLaunch(
     const { runWineCommand } = steamGame.deps.commandRunner
     const { startBottleProcessMonitor, getBottleProcessMonitorPhase } =
       await import('./bottleProcessMonitor')
-    const { armLaunchDeadline, bindDeadlineToMonitor } =
+    const { bindDeadlineToMonitor } =
       await import('backend/engine/launchDeadline')
+    const { armLaunchDeadline } = steamGame.deps.engineRuntime.deadlines
     const { getEngineSelection, clearEngineSelection } =
-      await import('backend/engine/engineRegistry')
+      steamGame.deps.engineRuntime.registry
+    const { markGameRunning, markGameStopped } =
+      steamGame.deps.engineRuntime.ledger
     const { applySteamBridgeKnownFixes, steamBridgeLaunchCommandParts } =
       await import('./bridgeKnownFixes')
     const { applyBridgeBottleDllOverrides } =
@@ -461,7 +463,10 @@ export async function fireBridgeWineLaunch(
         startBottleProcessMonitor(steamGame.deps, {
           appId: steamGame.appId,
           installPath: installRoot,
-          bottleDir: getBottleDir(bridgeBottleSettings.wineCrossoverBottle),
+          bottleDir: getBottleDir(
+            steamGame.deps.paths,
+            bridgeBottleSettings.wineCrossoverBottle
+          ),
           kind: 'bridge',
           onFirstMatch: () => {
             deadline?.cancel('first-match')
@@ -626,10 +631,11 @@ export async function fireBridgeWineLaunch(
     return true
   } catch (error) {
     deadline?.cancel('launch-error')
-    void import('backend/engine/engineRegistry').then((m) =>
-      m.clearEngineSelection(steamGame.appId)
+    steamGame.deps.engineRuntime.registry.clearEngineSelection(steamGame.appId)
+    steamGame.deps.engineRuntime.ledger.markGameStopped(
+      bridgeBottleSettings.wineCrossoverBottle,
+      steamGame.appId
     )
-    markGameStopped(bridgeBottleSettings.wineCrossoverBottle, steamGame.appId)
     clearLaunchRecord()
     reportLaunchFailure(error)
     return false

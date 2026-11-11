@@ -4,11 +4,6 @@ import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 
 const mockProfile = createFakeHomeProfile({ prefix: 'gamelib-bottleprim-' })
 
-jest.mock('backend/constants/paths', () => ({
-  get userHome() {
-    return mockProfile.root
-  }
-}))
 jest.mock('backend/config', () => ({ GlobalConfig: { get: jest.fn() } }))
 jest.mock('backend/logger', () => ({
   logError: jest.fn(),
@@ -24,17 +19,18 @@ import {
 } from '../bottlePrimitives'
 
 const spawnAsync = jest.fn()
-const deps = { spawnAsync }
+const paths = { userHome: mockProfile.root }
+const deps = { spawnAsync, paths }
 
 afterAll(() => mockProfile.dispose())
 
 describe('getBottleDir', () => {
   it('sits under the CrossOver Bottles directory', () => {
-    expect(getBottleDir('X')).toBe(
+    expect(getBottleDir(paths, 'X')).toBe(
       join(mockProfile.root, 'Library/Application Support/CrossOver/Bottles/X')
     )
     expect(
-      getBottleDir('X').endsWith(
+      getBottleDir(paths, 'X').endsWith(
         'Library/Application Support/CrossOver/Bottles/X'
       )
     ).toBe(true)
@@ -57,11 +53,14 @@ describe('sanitizeBottleName', () => {
 
 describe('isBottleProvisioned', () => {
   it('is true only when <dir>/cxbottle.conf exists', () => {
-    expect(isBottleProvisioned('Prov')).toBe(false)
-    mkdirSync(getBottleDir('Prov'), { recursive: true })
-    expect(isBottleProvisioned('Prov')).toBe(false)
-    writeFileSync(join(getBottleDir('Prov'), 'cxbottle.conf'), '[Bottle]\n')
-    expect(isBottleProvisioned('Prov')).toBe(true)
+    expect(isBottleProvisioned(paths, 'Prov')).toBe(false)
+    mkdirSync(getBottleDir(paths, 'Prov'), { recursive: true })
+    expect(isBottleProvisioned(paths, 'Prov')).toBe(false)
+    writeFileSync(
+      join(getBottleDir(paths, 'Prov'), 'cxbottle.conf'),
+      '[Bottle]\n'
+    )
+    expect(isBottleProvisioned(paths, 'Prov')).toBe(true)
   })
 })
 
@@ -91,7 +90,9 @@ describe('killBottleWineServerWith', () => {
       '/bin/wineserver',
       ['-k'],
       expect.objectContaining({
-        env: expect.objectContaining({ WINEPREFIX: getBottleDir('Safe') })
+        env: expect.objectContaining({
+          WINEPREFIX: getBottleDir(paths, 'Safe')
+        })
       })
     )
   })

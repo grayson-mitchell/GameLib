@@ -5,6 +5,7 @@
  */
 
 // ── Imports ───────────────────────────────────────────────────────────────────
+import { createEngineRegistry } from 'backend/engine/engineRegistry'
 import {
   findOtherManifestsWithInstalldir,
   readAcfState,
@@ -34,7 +35,9 @@ const getSteamBottleSettings = jest.fn()
 const libDeps = {
   config: createTestGlobalConfig(),
   steamSession,
-  steamBottle: { getSteamBottleSettings, resolveCrossoverWine: jest.fn() }
+  steamBottle: { getSteamBottleSettings, resolveCrossoverWine: jest.fn() },
+  paths: { userHome: '/test-gamelib/home' },
+  engineRuntime: { registry: createEngineRegistry() }
 }
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───

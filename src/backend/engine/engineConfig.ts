@@ -9,7 +9,8 @@
  */
 import { existsSync, readFileSync } from 'fs'
 import { isAbsolute, join, relative, resolve } from 'path'
-import { gamesConfigPath as defaultGamesConfigPath } from 'backend/constants/paths'
+import type { AppPaths } from 'backend/process/context'
+import type { FallbackEngine } from './fallbackEngine'
 import { ensureSettingsMigrated } from 'backend/storeVersioning/settingsFiles'
 import { hasCapability } from 'common/storeCapabilities'
 import type { WineInstallation } from 'common/types'
@@ -32,25 +33,34 @@ export interface EngineConfigDeps {
   globalSettings(): Record<string, unknown>
 }
 
-function defaultDeps(): Omit<
+function defaultDeps(): Pick<EngineConfigDeps, 'pins'> {
+  return { pins: ENGINE_PINS }
+}
+
+/** The path reads the config helpers need (66.4-05): the games-config root and the pin's Wine binary. */
+export type ConfigPathDeps = Pick<
   EngineConfigDeps,
-  'wineManagerReleases' | 'globalSettings'
-> {
+  'gamesConfigPath' | 'pinWineBin'
+>
+
+/** Builds the path reads from the boot's `paths` and fallback-engine owner. */
+export function configPathDepsFrom(source: {
+  paths: Pick<AppPaths, 'gamesConfigPath'>
+  engineRuntime: { fallback: Pick<FallbackEngine, 'pinnedEnginePaths'> }
+}): ConfigPathDeps {
   return {
-    pins: ENGINE_PINS,
-    pinWineBin(pin) {
-      const { pinnedEnginePaths } =
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('./fallbackEngine') as typeof import('./fallbackEngine')
-      return pinnedEnginePaths(pin as (typeof ENGINE_PINS)['current']).wineBin
-    },
-    gamesConfigPath: defaultGamesConfigPath
+    gamesConfigPath: source.paths.gamesConfigPath,
+    pinWineBin: (pin) =>
+      source.engineRuntime.fallback.pinnedEnginePaths(
+        pin as (typeof ENGINE_PINS)['current']
+      ).wineBin
   }
 }
 
-/** 66.1-22i: the release reader has no default; the caller supplies it. */
+/** 66.1-22i: the release reader has no default; the caller supplies it, with the path reads. */
 type ConfigDepsWithReleases = Partial<EngineConfigDeps> &
-  Pick<EngineConfigDeps, 'wineManagerReleases'>
+  Pick<EngineConfigDeps, 'wineManagerReleases'> &
+  ConfigPathDeps
 
 /** 66.3-06: the global settings reader has no default either (the config slice, via EngineServices). */
 export type ConfigDepsWithSettings = ConfigDepsWithReleases &
@@ -72,7 +82,7 @@ const withDeps = (
  */
 export function readStoredGameConfig(
   appName: string,
-  deps?: Partial<Pick<EngineConfigDeps, 'gamesConfigPath'>>
+  deps: Pick<EngineConfigDeps, 'gamesConfigPath'>
 ): Record<string, unknown> | undefined {
   if (
     typeof appName !== 'string' ||
@@ -83,14 +93,14 @@ export function readStoredGameConfig(
   ) {
     return undefined
   }
-  const root = deps?.gamesConfigPath ?? defaultGamesConfigPath
+  const root = deps.gamesConfigPath
   const target = resolve(root, appName + '.json')
   const rel = relative(root, target)
   if (rel.startsWith('..') || isAbsolute(rel)) return undefined
   const path = join(root, `${appName}.json`)
   if (!existsSync(path)) return undefined
-  // Containment checks above passed (T-68-19); a supplied test root is left alone.
-  if (!deps?.gamesConfigPath) ensureSettingsMigrated(path, 'settings/game')
+  // Containment checks above passed (T-68-19).
+  ensureSettingsMigrated(path, 'settings/game')
   try {
     const raw = JSON.parse(readFileSync(path, 'utf8')) as Record<
       string,

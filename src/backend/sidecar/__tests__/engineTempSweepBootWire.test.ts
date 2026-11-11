@@ -21,7 +21,14 @@ jest.mock('axios', () => ({
 const mockSweep = jest.fn()
 jest.mock('backend/engine/fallbackEngine', () => ({
   __esModule: true,
-  sweepStaleEngineTemps: () => mockSweep()
+  createFallbackEngine: () => ({
+    sweepStaleEngineTemps: () => mockSweep(),
+    pinnedEngineRoot: jest.fn(),
+    pinnedEnginePaths: jest.fn(),
+    isPinnedEngineInstalled: jest.fn(),
+    ensurePinnedEngine: jest.fn(),
+    pruneUnpinnedEngines: jest.fn()
+  })
 }))
 
 import { bootFresh } from './helpers/sidecarHarness'

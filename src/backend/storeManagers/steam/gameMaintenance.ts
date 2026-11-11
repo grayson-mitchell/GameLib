@@ -52,7 +52,7 @@ export async function repair(steamGame: SteamGame): Promise<ExecResult> {
     steamUser: steamGame.deps.steamUser,
     config: steamGame.deps.config,
     appId: steamGame.appId,
-    bottleDir: resolve(getBottleDir(bottle)),
+    bottleDir: resolve(getBottleDir(steamGame.deps.paths, bottle)),
     installRoot,
     installdir: basename(installRoot)
   })

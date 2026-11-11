@@ -5,10 +5,9 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Backend: 'Backend' }
 }))
 jest.mock('backend/utils', () => ({ sendGameStatusUpdate: jest.fn() }))
-jest.mock('../fallbackEngine', () => ({ ensurePinnedEngine: jest.fn() }))
 
 import { sendGameStatusUpdate } from 'backend/utils'
-import { ensurePinnedEngine } from '../fallbackEngine'
+import type { FallbackEngine } from '../fallbackEngine'
 import { ensurePinnedEngineReportingStatus } from '../pinnedEngineProgress'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
@@ -18,7 +17,13 @@ const pin = {
   wine: { size: 90, version: 'w1' }
 } as never
 
-const mocked = jest.mocked(ensurePinnedEngine)
+const mocked = jest.fn<
+  ReturnType<FallbackEngine['ensurePinnedEngine']>,
+  Parameters<FallbackEngine['ensurePinnedEngine']>
+>()
+const fallback: Pick<FallbackEngine, 'ensurePinnedEngine'> = {
+  ensurePinnedEngine: mocked
+}
 const sent = jest.mocked(sendGameStatusUpdate)
 
 beforeEach(() => jest.clearAllMocks())
@@ -57,7 +62,8 @@ describe('ensurePinnedEngineReportingStatus', () => {
       appName: 'amzn1.x',
       runner: 'nile',
       processRunner: createScriptedRunner([]),
-      onlineMonitor: { isOnline: () => true }
+      onlineMonitor: { isOnline: () => true },
+      fallback
     })
     expect(r.ok).toBe(true)
     const contexts = sent.mock.calls.map(([p]) => p.context as string)
@@ -87,7 +93,8 @@ describe('ensurePinnedEngineReportingStatus', () => {
       appName: '1',
       runner: 'gog',
       processRunner: createScriptedRunner([]),
-      onlineMonitor: { isOnline: () => true }
+      onlineMonitor: { isOnline: () => true },
+      fallback
     })
     expect(r).toMatchObject({ ok: false, aborted: true })
     expect(sent).toHaveBeenCalledWith({
@@ -108,7 +115,8 @@ describe('ensurePinnedEngineReportingStatus', () => {
       appName: '1',
       runner: 'gog',
       processRunner: createScriptedRunner([]),
-      onlineMonitor: { isOnline: () => true }
+      onlineMonitor: { isOnline: () => true },
+      fallback
     })
     expect(r).toMatchObject({ ok: false, aborted: false, reason: 'offline' })
   })

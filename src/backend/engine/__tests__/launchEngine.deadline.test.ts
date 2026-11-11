@@ -41,7 +41,7 @@ jest.mock('../engineDialogs', () => ({
 jest.mock('../bottlePrimitives', () => ({
   isBottleProvisioned: jest.fn(),
   killBottleWineServerWith: jest.fn(),
-  getBottleDir: (name: string) => `/b/${name}`,
+  getBottleDir: (_paths: unknown, name: string) => `/b/${name}`,
   sanitizeBottleName: (name: string) => name
 }))
 
@@ -49,24 +49,12 @@ import type { GameSettings } from 'common/types'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import type { Game } from 'common/types/game_manager'
 import {
-  __resetLaunchEngineForTests,
   armEngineLaunchDeadline,
-  endEngineLaunch
+  endEngineLaunch as endEngineLaunchOn
 } from '../launchEngine'
-import {
-  __activeLaunchDeadlineCount,
-  cancelLaunchDeadline
-} from '../launchDeadline'
 import { logInfo } from 'backend/logger'
-import {
-  clearEngineSelection,
-  getEngineSelection,
-  setEngineSelection
-} from '../engineRegistry'
-import {
-  __resetLaunchOverlayForTests,
-  setLaunchOverlayContext
-} from '../launchSettings'
+import { createFakeClock } from 'backend/testUtils/fakeClock'
+import { createTestEngineRuntime } from 'backend/testUtils/testEngineRuntime'
 import type { EngineSelection } from '../engineTypes'
 import { killBottleWineServerWith } from '../bottlePrimitives'
 import { showEngineDialog, showEngineNotice } from '../engineDialogs'
@@ -74,11 +62,6 @@ import { createTestEngineServices } from 'backend/testUtils/testServices'
 import { createTestEngineState } from 'backend/testUtils/testEngineState'
 import type { EngineServices } from '../engineServices'
 import { notify, showDialogBoxModalAuto } from 'backend/dialog/dialog'
-import {
-  __resetBottleLedgerForTests,
-  gamesRunningIn,
-  markGameRunning
-} from '../bottleLedger'
 
 const KEY = 'legendary:Quail'
 const CX: EngineSelection = {
@@ -117,27 +100,48 @@ function deps(watcher: { stop(): void } | null = { stop: jest.fn() }) {
   }
 }
 
+// A fresh runtime on a fake clock per test: deadlines fire only when the test advances the clock.
+let clock: ReturnType<typeof createFakeClock>
+let services: EngineServices
+const rt = () => services.engineRuntime
+const getEngineSelection = (k: string) => rt().registry.getEngineSelection(k)
+const setEngineSelection = (k: string, sel: EngineSelection) =>
+  rt().registry.setEngineSelection(k, sel)
+const setLaunchOverlayContext = (
+  k: Parameters<
+    EngineServices['engineRuntime']['launchSettings']['setLaunchOverlayContext']
+  >[0],
+  c: Parameters<
+    EngineServices['engineRuntime']['launchSettings']['setLaunchOverlayContext']
+  >[1]
+) => rt().launchSettings.setLaunchOverlayContext(k, c)
+const gamesRunningIn = (b: string) => rt().ledger.gamesRunningIn(b)
+const markGameRunning = (b: string, k: string) =>
+  rt().ledger.markGameRunning(b, k as never)
+const activeDeadlineCount = () => rt().deadlines.activeCount()
+const endEngineLaunch = (k: string) => endEngineLaunchOn(rt(), k as never)
+const advance = async (ms: number) => {
+  clock.advance(ms)
+  for (let i = 0; i < 5; i++) await Promise.resolve()
+}
+
 beforeEach(() => {
-  jest.useFakeTimers()
-  __resetLaunchEngineForTests()
-  __resetLaunchOverlayForTests()
-  __resetBottleLedgerForTests()
+  clock = createFakeClock()
+  services = {
+    ...baseServices,
+    engineRuntime: createTestEngineRuntime({ clock })
+  }
   ;(killBottleWineServerWith as jest.Mock).mockClear()
   ;(notify as jest.Mock).mockClear()
   app.raiseMainWindow.mockClear()
   ;(showDialogBoxModalAuto as jest.Mock).mockClear()
   ;(showEngineDialog as jest.Mock).mockClear()
-  clearEngineSelection(KEY)
-})
-afterEach(() => {
-  cancelLaunchDeadline(KEY, 'superseded')
-  jest.useRealTimers()
 })
 
 // The main-window raise goes through `notices.appState`; this recording fake is what it calls.
 const app = { raiseMainWindow: jest.fn() }
 const noticeHost = createTestHostServices()
-const services: EngineServices = {
+const baseServices: EngineServices = {
   spawnAsync: jest.fn(),
   installRemove: jest.fn(),
   wineManagerReleases: () => [],
@@ -146,6 +150,8 @@ const services: EngineServices = {
   runner: createTestEngineServices().runner,
   onlineMonitor: { isOnline: () => true },
   engineState: createTestEngineState(),
+  paths: createTestEngineServices().paths,
+  engineRuntime: createTestEngineRuntime(),
   notices: {
     ...noticeHost,
     appState: { ...noticeHost.appState, raiseMainWindow: app.raiseMainWindow }
@@ -167,7 +173,7 @@ describe('armEngineLaunchDeadline', () => {
     setUp(CX)
     const d = deps()
     armEngineLaunchDeadline(services, makeGame(), KEY, d)
-    expect(__activeLaunchDeadlineCount()).toBe(1)
+    expect(activeDeadlineCount()).toBe(1)
     expect(d.watch).toHaveBeenCalledTimes(1)
     expect(d.watch.mock.calls[0]).toBeDefined()
     const args = (
@@ -177,8 +183,8 @@ describe('armEngineLaunchDeadline', () => {
     )[0]
     expect(args.installPath).toBe('/Users/u/Games/Quail')
     args.onFirstMatch('1')
-    expect(__activeLaunchDeadlineCount()).toBe(0)
-    jest.advanceTimersByTime(200_000)
+    expect(activeDeadlineCount()).toBe(0)
+    clock.advance(200_000)
     expect(killBottleWineServerWith).not.toHaveBeenCalled()
   })
 
@@ -186,14 +192,14 @@ describe('armEngineLaunchDeadline', () => {
     setUp(PINNED, 'plain')
     const d = deps()
     armEngineLaunchDeadline(services, makeGame(), KEY, d)
-    expect(__activeLaunchDeadlineCount()).toBe(0)
+    expect(activeDeadlineCount()).toBe(0)
     expect(d.watch).not.toHaveBeenCalled()
   })
 
   it('does nothing without an overlay context (legacy, skip)', () => {
     const d = deps()
     armEngineLaunchDeadline(services, makeGame(), KEY, d)
-    expect(__activeLaunchDeadlineCount()).toBe(0)
+    expect(activeDeadlineCount()).toBe(0)
     expect(d.watch).not.toHaveBeenCalled()
   })
 
@@ -201,13 +207,13 @@ describe('armEngineLaunchDeadline', () => {
     setUp(CX)
     const d = deps(null)
     armEngineLaunchDeadline(services, makeGame(), KEY, d)
-    expect(__activeLaunchDeadlineCount()).toBe(0)
+    expect(activeDeadlineCount()).toBe(0)
     expect(
       (logInfo as jest.Mock).mock.calls.some((c) =>
         String(c[0]).includes('monitor-unavailable')
       )
     ).toBe(true)
-    jest.advanceTimersByTime(200_000)
+    clock.advance(200_000)
     expect(killBottleWineServerWith).not.toHaveBeenCalled()
   })
 
@@ -218,7 +224,7 @@ describe('armEngineLaunchDeadline', () => {
     const game = makeGame()
     armEngineLaunchDeadline(services, game, KEY, d)
     markGameRunning('GameLib-legendary-Quail', KEY)
-    await jest.advanceTimersByTimeAsync(180_000)
+    await advance(180_000)
     expect(watcher.stop).toHaveBeenCalled()
     expect(killBottleWineServerWith).not.toHaveBeenCalled()
     expect(game.stop).not.toHaveBeenCalled()
@@ -252,7 +258,7 @@ describe('armEngineLaunchDeadline', () => {
     const game = makeGame()
     const d = deps()
     armEngineLaunchDeadline(services, game, KEY, d)
-    await jest.advanceTimersByTimeAsync(180_000)
+    await advance(180_000)
     // The deadline actually fired, so the "untouched" assertions below are not vacuous.
     expect(d.publishNotice).toHaveBeenCalledTimes(1)
     expect(killBottleWineServerWith).not.toHaveBeenCalled()
@@ -275,8 +281,8 @@ describe('armEngineLaunchDeadline', () => {
     )[0]
     expect(args.bottleDir).toBe('/b/GameLib-legendary-Quail')
     args.onGiveUp('listing-failures')
-    expect(__activeLaunchDeadlineCount()).toBe(0)
-    await jest.advanceTimersByTimeAsync(200_000)
+    expect(activeDeadlineCount()).toBe(0)
+    await advance(200_000)
     expect(notify).not.toHaveBeenCalled()
     expect(d.publishNotice).not.toHaveBeenCalled()
   })
@@ -288,7 +294,7 @@ describe('armEngineLaunchDeadline', () => {
     armEngineLaunchDeadline(services, makeGame(), KEY, d)
     endEngineLaunch(KEY)
     expect(watcher.stop).toHaveBeenCalled()
-    expect(__activeLaunchDeadlineCount()).toBe(0)
+    expect(activeDeadlineCount()).toBe(0)
   })
 })
 

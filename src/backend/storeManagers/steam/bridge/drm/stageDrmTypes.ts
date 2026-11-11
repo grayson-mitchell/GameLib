@@ -5,7 +5,6 @@
  */
 import type { GameSettings } from 'common/types'
 import type { ManagerDeps } from 'backend/services/types'
-import type { getBottleDir } from 'backend/engine/bottlePrimitives'
 import type {
   findRuntimeLoadedSteamApiDlls,
   findUnrealLayout
@@ -38,10 +37,12 @@ export type StageDrmBottleSlices = Pick<
   | 'config'
   | 'steamBottle'
   | 'steamUser'
+  | 'paths'
+  | 'engineRuntime'
 >
 
 export type StageDrmBottleDeps = {
-  getBottleDir?: typeof getBottleDir
+  getBottleDir?: (bottleName: string) => string
   findDlls?: typeof findRuntimeLoadedSteamApiDlls
   findUnreal?: typeof findUnrealLayout
   restoreOriginals?: typeof restoreBridgeSteamApiOriginals

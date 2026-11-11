@@ -137,6 +137,8 @@ function toolSlices(services: BootServices) {
     notifications: services.host.notifications,
     onlineMonitor: services.onlineMonitor,
     engineState: services.engineState,
+    engineRuntime: services.engineRuntime,
+    paths: services.paths,
     steamBottle: services.steamBottle
   }
 }
@@ -168,6 +170,8 @@ export function registerHandlers(deps: {
     runner: deps.services.runner,
     config: deps.services.config,
     engineState: deps.services.engineState,
+    engineRuntime: deps.services.engineRuntime,
+    paths: deps.services.paths,
     steamBottle: deps.services.steamBottle
   })
   registerInstallFlows({ ...deps.services, ipc })
@@ -228,6 +232,7 @@ export function registerHandlers(deps: {
     stores: deps.services.stores,
     config: deps.services.config,
     runner: deps.services.runner,
+    engineRuntime: deps.services.engineRuntime,
     dialogs: deps.services.host.dialogs,
     appState: deps.services.host.appState,
     notifications: deps.services.host.notifications,

@@ -128,7 +128,10 @@ export async function launchBridgeGameBody(
   // Phase 56 (D-12): steamclient-layer DRM mode branch, before any shim
   // placement (RESEARCH F10).
   const { drmWrapper: launchDrmWrapper, drmExe } = await detectLaunchDrmWrapper(
-    getBottleDir(bridgeBottleSettings.wineCrossoverBottle),
+    getBottleDir(
+      steamGame.deps.paths,
+      bridgeBottleSettings.wineCrossoverBottle
+    ),
     exePath
   )
   if (launchDrmWrapper === 'steamstub' && drmExe !== exePath) {
@@ -302,23 +305,30 @@ export async function launchBridgeGameBody(
   const persistedOriginalFingerprints =
     persistedScan?.originalFingerprints ??
     persistedVerdict?.originalFingerprints
-  const shimResult = await placeShimForGame(steamGame.appId, exePath, {
-    bottleName: bridgeBottleSettings.wineCrossoverBottle,
-    gameInstallRoot:
-      resolveBridgeGameInstallRoot(
-        steamGame,
-        exePath,
-        bridgeBottleSettings.wineCrossoverBottle
-      ) ?? undefined,
-    ...(persistedInterfaceVersions ? { persistedInterfaceVersions } : {}),
-    // quick 261026-lif: lets placement notice a new or changed
-    // `.gamelib-orig` and rescan instead of trusting this verdict.
-    // quick 261026-u1a: after an auto-clear the fingerprints
-    // `clearBridgeScanVerdict` kept at the top level are the fallback. A
-    // stale top-level copy cannot shadow a fresher scan: scan wins, and
-    // every new scan write re-persists into scan.
-    ...(persistedOriginalFingerprints ? { persistedOriginalFingerprints } : {})
-  })
+  const shimResult = await placeShimForGame(
+    steamGame.deps.paths,
+    steamGame.appId,
+    exePath,
+    {
+      bottleName: bridgeBottleSettings.wineCrossoverBottle,
+      gameInstallRoot:
+        resolveBridgeGameInstallRoot(
+          steamGame,
+          exePath,
+          bridgeBottleSettings.wineCrossoverBottle
+        ) ?? undefined,
+      ...(persistedInterfaceVersions ? { persistedInterfaceVersions } : {}),
+      // quick 261026-lif: lets placement notice a new or changed
+      // `.gamelib-orig` and rescan instead of trusting this verdict.
+      // quick 261026-u1a: after an auto-clear the fingerprints
+      // `clearBridgeScanVerdict` kept at the top level are the fallback. A
+      // stale top-level copy cannot shadow a fresher scan: scan wins, and
+      // every new scan write re-persists into scan.
+      ...(persistedOriginalFingerprints
+        ? { persistedOriginalFingerprints }
+        : {})
+    }
+  )
 
   if (shimResult.status === 'shim-not-built' || shimResult.status === 'error') {
     logWarning(
@@ -516,6 +526,7 @@ export async function launchBridgeGameBody(
   // Spike 034: the tier-2 profile's shimFeatures ride in the same cfg.
   const { steamShimFeatureCfgLines } = await import('./bridgeKnownFixes')
   const configResult = writeBridgeConfig({
+    paths: steamGame.deps.paths,
     exePath,
     bottleName: bridgeBottleSettings.wineCrossoverBottle,
     appId: steamGame.appId,

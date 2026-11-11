@@ -3,6 +3,7 @@
  * CrossOver. Runs only with GAMELIB_REAL_CROSSOVER=1 on a Mac that has
  * CrossOver installed; never part of CI. The installed CrossOver is only read.
  */
+import { createTestEngineRuntime } from 'backend/testUtils/testEngineRuntime'
 import { existsSync, mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
@@ -73,7 +74,7 @@ maybe('overlay runner clone against the real CrossOver', () => {
         appFolder,
         crossoverBinDir: CX_BIN
       },
-      { runTool, runner: real.runner }
+      { runTool, runner: real.runner, engineRuntime: createTestEngineRuntime() }
     )
     expect(detected.status).toBe('ok')
     if (detected.status !== 'ok') return

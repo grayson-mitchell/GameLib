@@ -8,6 +8,9 @@ import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import type { EngineStateDeps } from '../engineState'
 import type { CrossoverPreflight, LaunchDecision } from '../engineDecision'
 import type { EngineState } from 'common/types/engine'
+import { createTestEngineServices } from 'backend/testUtils/testServices'
+
+const rt = createTestEngineServices()
 
 // One owner per test (D-66.3-12): the wrappers below read whichever instance `beforeEach` (or a
 // mid-test `freshOwner()`) built, so no state crosses a test and there is no reset hook.
@@ -69,6 +72,8 @@ function toDeps(appId: string, o: SteamStyle): EngineStateDeps {
     killCrossoverWineserver: () => Promise.resolve(),
     wineManagerReleases: () => [],
     runner: createScriptedRunner([]),
+    paths: rt.paths,
+    engineRuntime: rt.engineRuntime,
     ...o,
     bottleFor: () =>
       (o.bridgeInstallBottleFor ?? ((id) => `GameLibSteamBridge-${id}`))(appId),
@@ -914,6 +919,8 @@ describe('generic identities (phase 61 D-12, D-15)', () => {
     killCrossoverWineserver: () => Promise.resolve(),
     wineManagerReleases: () => [],
     runner: createScriptedRunner([]),
+    paths: rt.paths,
+    engineRuntime: rt.engineRuntime,
     bottleFor: () => 'GameLibBottle-Fortnite',
     overrideEligible: () => true,
     overlayEligible: false,

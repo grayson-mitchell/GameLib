@@ -5,7 +5,7 @@
     "src/backend/storeManagers/gog/__tests__/gogPresenceKeepAlive.test.ts": 3,
     "src/backend/storeManagers/gog/__tests__/library.test.ts": 12,
     "src/backend/storeManagers/gog/__tests__/logoutCookies.test.ts": 6,
-    "src/backend/storeManagers/gog/__tests__/setup.engine.test.ts": 13,
+    "src/backend/storeManagers/gog/__tests__/setup.engine.test.ts": 12,
     "src/backend/storeManagers/gog/__tests__/user.test.ts": 5
   },
   "moduleState": {

@@ -21,7 +21,10 @@ const METHODS = [
   'resolveCrossoverWine'
 ] as const satisfies readonly (keyof SteamBottle)[]
 
-export function createTestSteamBottle(deps: SteamBottleDeps): SteamBottle {
+export function createTestSteamBottle(
+  deps: Omit<SteamBottleDeps, 'crossover'> &
+    Partial<Pick<SteamBottleDeps, 'crossover'>>
+): SteamBottle {
   let real: SteamBottle | undefined
   const instance = (): SteamBottle => {
     if (!real) {
@@ -29,7 +32,14 @@ export function createTestSteamBottle(deps: SteamBottleDeps): SteamBottle {
       const { createSteamBottle } =
         require('../storeManagers/steam/bottle') as typeof import('../storeManagers/steam/bottle')
       /* eslint-enable @typescript-eslint/no-require-imports */
-      real = createSteamBottle(deps)
+      /* eslint-disable @typescript-eslint/no-require-imports */
+      const { createTestEngineRuntime } =
+        require('./testEngineRuntime') as typeof import('./testEngineRuntime')
+      /* eslint-enable @typescript-eslint/no-require-imports */
+      real = createSteamBottle({
+        ...deps,
+        crossover: deps.crossover ?? createTestEngineRuntime().crossover
+      })
     }
     return real
   }

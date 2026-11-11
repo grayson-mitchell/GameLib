@@ -68,7 +68,9 @@ const hostSlices = {
   appState: {} as never,
   notifications: {} as never,
   steamSession: {} as never,
-  steamBottle: {} as never
+  steamBottle: {} as never,
+  engineRuntime: {} as never,
+  paths: {} as never
 }
 
 async function makeQueue() {

@@ -71,7 +71,6 @@ import type { LongLivedHandle } from 'backend/process/types'
 
 import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
 import type LogWriter from 'backend/logger/log_writer'
-import { getLaunchSettings } from 'backend/engine/launchSettings'
 import { engineKeyFor } from 'backend/engine/gameKey'
 
 // comet's output is untrusted and may echo tokens; split/join because tokens
@@ -589,10 +588,11 @@ export default class GOGGame implements Game {
     launchArguments?: LaunchOption,
     args: string[] = []
   ): Promise<boolean> {
-    const gameSettings = getLaunchSettings(
-      engineKeyFor(this.getGameInfo().runner, this.id),
-      await this.getSettings()
-    )
+    const gameSettings =
+      this.deps.engineRuntime.launchSettings.getLaunchSettings(
+        engineKeyFor(this.getGameInfo().runner, this.id),
+        await this.getSettings()
+      )
     const gameInfo = this.getGameInfo()
 
     if (
@@ -1501,10 +1501,11 @@ export default class GOGGame implements Game {
   // GOGDL now handles the signal, this is no longer needed
   async stop(stopWine = true): Promise<void> {
     if (stopWine && !this.isNative()) {
-      const gameSettings = getLaunchSettings(
-        engineKeyFor(this.getGameInfo().runner, this.id),
-        await this.getSettings()
-      )
+      const gameSettings =
+        this.deps.engineRuntime.launchSettings.getLaunchSettings(
+          engineKeyFor(this.getGameInfo().runner, this.id),
+          await this.getSettings()
+        )
       await shutdownWine(this.deps, gameSettings)
     }
   }

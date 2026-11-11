@@ -130,7 +130,10 @@ export async function installBridgeGame(
         installEngine = provisioned.engine
         if (signal?.aborted) {
           if (provisioned.createdHere) {
-            bbLifecycle.discardNewBridgeBottle(bridgeBottleName)
+            bbLifecycle.discardNewBridgeBottle(
+              steamGame.deps.paths,
+              bridgeBottleName
+            )
           }
           return stop()
         }
@@ -333,6 +336,7 @@ export async function resolveInstallEngineSettings(
   if (installEngine !== null) {
     return {
       settings: buildFallbackGameSettings(
+        steamGame.deps.paths,
         bridgeBottleName,
         installEngine,
         steamGame.deps.config.getSettings()
@@ -341,7 +345,7 @@ export async function resolveInstallEngineSettings(
   }
   // Bottle already existed: the same decision + preparation as a launch.
   const { decideLaunchEngine } = await import('backend/engine/engineDecision')
-  const { prepareBottleForEngine } = await import('backend/engine/engineSwitch')
+  const { prepareBottleForEngine } = steamGame.deps.engineRuntime.switcher
   const { isNonCrossover } = await import('backend/engine/engineTypes')
   const { steamDecisionDeps, steamDecisionServices, steamSwitchDeps } =
     await import('./engine/steamEngineDeps')
@@ -379,6 +383,7 @@ export async function resolveInstallEngineSettings(
   if (isNonCrossover(sel)) {
     return {
       settings: buildFallbackGameSettings(
+        steamGame.deps.paths,
         bridgeBottleName,
         sel,
         steamGame.deps.config.getSettings()
@@ -464,12 +469,17 @@ export async function installBridgeGameLeased(
     }
   }
 
-  const shimResult = await placeShimForGame(steamGame.appId, exePath, {
-    bottleName: bridgeBottleName,
-    gameInstallRoot:
-      resolveBridgeGameInstallRoot(steamGame, exePath, bridgeBottleName) ??
-      undefined
-  })
+  const shimResult = await placeShimForGame(
+    steamGame.deps.paths,
+    steamGame.appId,
+    exePath,
+    {
+      bottleName: bridgeBottleName,
+      gameInstallRoot:
+        resolveBridgeGameInstallRoot(steamGame, exePath, bridgeBottleName) ??
+        undefined
+    }
+  )
   // Phase 51 Plan 07 (fix during integration, Rule 1): placeShimForGame
   // returns typed statuses rather than throwing. 'no-steam-api' is
   // deliberately NOT a failure here -- nothing needed placing. Amended

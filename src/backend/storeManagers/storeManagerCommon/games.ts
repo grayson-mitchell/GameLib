@@ -14,7 +14,6 @@ import { raiseWineGameWindow } from 'backend/utils/wineWindowRaise'
 
 import type LogWriter from 'backend/logger/log_writer'
 import { Game } from '../../../common/types/game_manager'
-import { getLaunchSettings } from 'backend/engine/launchSettings'
 import { engineKeyFor } from 'backend/engine/gameKey'
 
 /**
@@ -46,6 +45,7 @@ export type CommonGameDeps = Pick<
   | 'dialogs'
   | 'appState'
   | 'gameConfigs'
+  | 'engineRuntime'
 >
 
 export async function launchGame(
@@ -78,7 +78,7 @@ export async function launchGame(
     return openNewBrowserGameWindow()
   }
 
-  const gameSettings = getLaunchSettings(
+  const gameSettings = deps.engineRuntime.launchSettings.getLaunchSettings(
     engineKeyFor(runner, appName),
     await getAppSettings(deps.gameConfigs, appName)
   )

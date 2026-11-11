@@ -24,6 +24,9 @@ import { ENGINE_PINS } from '../enginePins'
 import { parseEngineOverride } from '../engineIds'
 import type { DemoStatus, DemoStatusProbe } from '../demoStatus'
 import { defined } from './defined'
+import { createTestEngineServices } from 'backend/testUtils/testServices'
+
+const rt = createTestEngineServices()
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -63,6 +66,8 @@ function mkDeps(
 ): Partial<EngineDecisionDeps> & KillDeps & ReleasesDeps & RunnerDeps {
   return {
     runner: createScriptedRunner([]),
+    paths: rt.paths,
+    engineRuntime: rt.engineRuntime,
     resolveCrossoverBinDir: () => Promise.resolve(CX_BIN),
     isExecutable: () => true,
     fileExists: () => true,
@@ -76,6 +81,7 @@ function mkDeps(
     markerSummary: () => null,
     wineManagerReleases: () => [],
     isPinInstalled: () => true,
+    pinPaths: (pin) => rt.engineRuntime.fallback.pinnedEnginePaths(pin),
     pins: ENGINE_PINS,
     wineManagerRoot: WM_ROOT,
     ...over
@@ -1032,7 +1038,8 @@ describe('killCrossoverWineserverWith (66.1-22e)', () => {
     await killCrossoverWineserverWith({
       spawnAsync: spawnAsync as unknown as Parameters<
         typeof killCrossoverWineserverWith
-      >[0]['spawnAsync']
+      >[0]['spawnAsync'],
+      paths: rt.paths
     })('GameLibBottle', CX_BIN)
     expect(spawnAsync).toHaveBeenCalledTimes(1)
     const [bin, args, opts] = spawnAsync.mock.calls[0] as unknown as [

@@ -40,7 +40,8 @@ jest.mock('../engineDialogs', () => ({
   notifyEngineFallback: jest.fn()
 }))
 jest.mock('../engineSwitch', () => ({
-  prepareBottleForEngine: jest.fn(),
+  createEngineSwitcher: jest.fn(() => ({ prepareBottleForEngine: jest.fn() })),
+  switchContextFrom: jest.fn(() => ({})),
   switchServicesFrom: jest.fn(() => ({
     killWith: jest.fn(),
     installRemove: jest.fn()
@@ -48,35 +49,38 @@ jest.mock('../engineSwitch', () => ({
   readBottleEngineMarkerKind: jest.fn(() => null),
   restoreNeedsAbsentPin: jest.fn(() => false)
 }))
-jest.mock('../fallbackEngine', () => ({ isPinnedEngineInstalled: jest.fn() }))
 jest.mock('../pinnedEngineProgress', () => ({
   ensurePinnedEngineReportingStatus: jest.fn()
 }))
 jest.mock('../perGameBottle', () => ({
-  ensureGameBottle: jest.fn(),
+  createPerGameBottleFlights: jest.fn(() => ({ ensureGameBottle: jest.fn() })),
   perGameBottleName: (runner: string, appName: string) =>
     `GameLib-${runner}-${appName}`
 }))
 
 import {
-  __resetLaunchEngineForTests,
-  endEngineLaunch,
+  endEngineLaunch as endEngineLaunchOn,
   selectEngineForLaunch
 } from '../launchEngine'
 import type { EngineServices } from '../engineServices'
 import { createTestEngineServices } from 'backend/testUtils/testServices'
 import { propsOnly } from 'backend/testUtils/propsOnlyMock'
 import type { LaunchEngineDeps } from '../launchEngine'
-import { getEngineSelection, clearEngineSelection } from '../engineRegistry'
-import { getLaunchSettings } from '../launchSettings'
-import { gamesRunningIn, __resetBottleLedgerForTests } from '../bottleLedger'
+import type { EngineKey } from '../gameKey'
 import type { EffectiveEngine } from '../engineConfig'
 import type { EngineSelection } from '../engineTypes'
 import { engineLogLabel } from '../engineTypes'
 
-const services: EngineServices = createTestEngineServices({
-  installRemove: jest.fn()
-})
+// A fresh engine runtime per test (beforeEach): nothing crosses a test and there is no reset hook.
+let services: EngineServices
+const getEngineSelection = (k: string) =>
+  services.engineRuntime.registry.getEngineSelection(k)
+const getLaunchSettings = (k: EngineKey | null, stored: GameSettings) =>
+  services.engineRuntime.launchSettings.getLaunchSettings(k, stored)
+const gamesRunningIn = (bottle: string) =>
+  services.engineRuntime.ledger.gamesRunningIn(bottle)
+const endEngineLaunch = (k: EngineKey) =>
+  endEngineLaunchOn(services.engineRuntime, k)
 
 const { setGlobalMocks } = { setGlobalMocks: () => undefined }
 void setGlobalMocks
@@ -219,12 +223,7 @@ const settingsWrite = jest.fn()
 beforeEach(() => {
   jest.clearAllMocks()
   effective = auto
-  __resetBottleLedgerForTests()
-  __resetLaunchEngineForTests()
-  for (const k of ['gog:1234', 'legendary:abc', 'nile:n1', 'sideload:s1']) {
-    clearEngineSelection(k)
-    endEngineLaunch(k)
-  }
+  services = createTestEngineServices({ installRemove: jest.fn() })
   prepare.mockResolvedValue({ ok: true, changed: false })
   ensureGameBottle.mockResolvedValue({
     status: 'done',

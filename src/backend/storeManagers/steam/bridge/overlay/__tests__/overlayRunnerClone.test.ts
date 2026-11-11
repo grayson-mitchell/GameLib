@@ -4,6 +4,7 @@
  * Synthetic CrossOver trees in mkdtemp dirs whose names contain a space, with
  * a faked RunTool (no real spawns).
  */
+import { createTestEngineRuntime } from 'backend/testUtils/testEngineRuntime'
 import { createHash } from 'crypto'
 import {
   existsSync,
@@ -189,6 +190,7 @@ describe('detectCrossoverForOverlay', () => {
           crossoverBinDir: binDir
         },
         {
+          engineRuntime: createTestEngineRuntime(),
           runTool: s.fake.run,
           runner: createScriptedRunner([]),
           platform: over.platform ?? 'darwin'
@@ -225,6 +227,7 @@ describe('detectCrossoverForOverlay', () => {
       {
         platform: 'darwin',
         runner: createScriptedRunner([]),
+        engineRuntime: createTestEngineRuntime(),
         runTool: () => Promise.reject(new Error('must not run'))
       }
     )

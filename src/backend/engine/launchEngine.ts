@@ -13,8 +13,9 @@
  * Deliberately NOT here: bridge failure marking and any reroute to bottled Steam (memory: bottled
  * Steam is a narrow fallback). A fired deadline stops the bottle and says so; it never retries.
  *
- * Sidecar exit contract: module state is empty maps; the only timers are the deadline's and the
- * watcher's, both unref'd and bounded; nothing runs at import.
+ * Sidecar exit contract: per-launch state is the boot's LaunchEngineState (empty maps); the only
+ * timers are the deadline's (injected clock) and the watcher's, both unref'd and bounded; nothing
+ * runs at import.
  */
 import { t } from 'i18next'
 import type { GameSettings, Runner } from 'common/types'
@@ -24,19 +25,8 @@ import type LogWriter from 'backend/logger/log_writer'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { isMac } from 'backend/constants/environment'
 import { getBottleDir, isBottleProvisioned } from './bottlePrimitives'
-import { markGameRunning, markGameStopped } from './bottleLedger'
-import {
-  LAUNCH_DEADLINE_MS,
-  armLaunchDeadline,
-  bindDeadlineToMonitor,
-  cancelLaunchDeadline
-} from './launchDeadline'
+import { LAUNCH_DEADLINE_MS, bindDeadlineToMonitor } from './launchDeadline'
 import { watchForGameProcess } from './gameProcessWatch'
-import {
-  clearEngineSelection,
-  getEngineSelection,
-  setEngineSelection
-} from './engineRegistry'
 import {
   decideLaunchEngine,
   isCrossoverMissing,
@@ -49,7 +39,7 @@ import type {
   RunnerDeps,
   LaunchDecision
 } from './engineDecision'
-import { readEngineForGame } from './engineConfig'
+import { configPathDepsFrom, readEngineForGame } from './engineConfig'
 import type { EffectiveEngine } from './engineConfig'
 import {
   notifyEngineFallback,
@@ -57,29 +47,25 @@ import {
   showEngineNotice
 } from './engineDialogs'
 import {
-  prepareBottleForEngine,
   readBottleEngineMarkerKind,
   restoreNeedsAbsentPin,
+  switchContextFrom,
   switchServicesFrom
 } from './engineSwitch'
-import type { EngineSwitchDeps } from './engineSwitch'
+import type { EngineSwitchDeps, EngineSwitcher } from './engineSwitch'
 import { engineLogLabel, isNonCrossover } from './engineTypes'
 import type { EngineSelection } from './engineTypes'
 import { ENGINE_PINS } from './enginePins'
-import { isPinnedEngineInstalled } from './fallbackEngine'
 import { engineKeyIfEligible } from './engineEligibility'
 import type { EngineKey } from './gameKey'
 import { resolveGamePrefix } from './gamePrefix'
 import type { GamePrefix } from './gamePrefix'
-import {
-  buildCrossoverGameSettings,
-  clearLaunchOverlayContext,
-  getLaunchOverlayContext,
-  setLaunchOverlayContext
-} from './launchSettings'
+import { buildCrossoverGameSettings } from './launchSettings'
 import { offlineLaunchCertainlyBlocked } from './offlineRefusal'
-import { ensureGameBottle, perGameBottleName } from './perGameBottle'
+import { perGameBottleName } from './perGameBottle'
+import type { PerGameBottleFlights } from './perGameBottle'
 import type { EngineServices } from './engineServices'
+import type { EngineRuntime } from './engineRuntime'
 import { ensurePinnedEngineReportingStatus } from './pinnedEngineProgress'
 
 export type LaunchEngineStep =
@@ -98,8 +84,8 @@ export interface LaunchEngineDeps {
   readEffective(id: { runner: string; appName: string }): EffectiveEngine
   isProvisioned(bottleName: string): boolean
   ensureGameBottle: (
-    args: Parameters<typeof ensureGameBottle>[1]
-  ) => ReturnType<typeof ensureGameBottle>
+    args: Parameters<PerGameBottleFlights['ensureGameBottle']>[1]
+  ) => ReturnType<PerGameBottleFlights['ensureGameBottle']>
   decisionDeps(): Partial<EngineDecisionDeps> &
     KillDeps &
     ReleasesDeps &
@@ -109,19 +95,20 @@ export interface LaunchEngineDeps {
   ensurePinned: (
     args: Omit<
       Parameters<typeof ensurePinnedEngineReportingStatus>[0],
-      'processRunner' | 'onlineMonitor'
+      'processRunner' | 'onlineMonitor' | 'fallback'
     >
   ) => ReturnType<typeof ensurePinnedEngineReportingStatus>
   switchDeps(): Partial<EngineSwitchDeps> &
     Pick<
       EngineSwitchDeps,
+      | 'ctx'
       | 'killWith'
       | 'installRemove'
       | 'resolveCrossoverBinDir'
       | 'ensurePinEngine'
       | 'fallbackSettings'
     >
-  prepare: typeof prepareBottleForEngine
+  prepare: EngineSwitcher['prepareBottleForEngine']
   sendStatus(update: {
     appName: string
     runner: Runner
@@ -139,7 +126,9 @@ export interface LaunchEngineDeps {
   notifyFallback: typeof notifyEngineFallback
 }
 
-const defaultDeps: Omit<
+const defaultDeps = (
+  services: EngineServices
+): Omit<
   LaunchEngineDeps,
   | 'ensureGameBottle'
   | 'ensurePinned'
@@ -148,18 +137,59 @@ const defaultDeps: Omit<
   | 'readEffective'
   | 'isCrossoverMissing'
   | 'recordDecision'
-> = {
+> => ({
   isMac: () => isMac,
-  isProvisioned: isBottleProvisioned,
-  currentPinInstalled: () => isPinnedEngineInstalled(ENGINE_PINS.current),
-  prepare: prepareBottleForEngine,
+  isProvisioned: (bottleName) =>
+    isBottleProvisioned(services.paths, bottleName),
+  currentPinInstalled: () =>
+    services.engineRuntime.fallback.isPinnedEngineInstalled(
+      ENGINE_PINS.current
+    ),
+  prepare: (args) =>
+    services.engineRuntime.switcher.prepareBottleForEngine(args),
   sendStatus: (update) => sendGameStatusUpdate(update),
   showDialog: showEngineDialog,
   notifyFallback: notifyEngineFallback
+})
+
+/**
+ * The per-launch bookkeeping of the engine step (66.4-05): the bottle each key was marked running
+ * in (so endEngineLaunch can release it) and the first-match watcher of each armed launch. One per
+ * boot; empty at construction, no timers.
+ */
+export interface LaunchEngineState {
+  rememberLedgerBottle: (key: EngineKey, bottleName: string) => void
+  /** Returns and forgets the bottle `key` was marked running in. */
+  takeLedgerBottle: (key: EngineKey) => string | undefined
+  setWatcher: (key: EngineKey, watcher: { stop(): void }) => void
+  deleteWatcher: (key: EngineKey) => void
+  stopWatcher: (key: EngineKey) => void
 }
 
-/** The bottle each key was marked running in, so endEngineLaunch can release it. */
-const ledgerBottles = new Map<EngineKey, string>()
+export function createLaunchEngineState(): LaunchEngineState {
+  const ledgerBottles = new Map<EngineKey, string>()
+  const deadlineWatchers = new Map<EngineKey, { stop(): void }>()
+  return {
+    rememberLedgerBottle: (key, bottleName) => {
+      ledgerBottles.set(key, bottleName)
+    },
+    takeLedgerBottle(key) {
+      const bottle = ledgerBottles.get(key)
+      ledgerBottles.delete(key)
+      return bottle
+    },
+    setWatcher: (key, watcher) => {
+      deadlineWatchers.set(key, watcher)
+    },
+    deleteWatcher: (key) => {
+      deadlineWatchers.delete(key)
+    },
+    stopWatcher(key) {
+      deadlineWatchers.get(key)?.stop()
+      deadlineWatchers.delete(key)
+    }
+  }
+}
 
 function writeLog(
   key: EngineKey,
@@ -185,13 +215,15 @@ export async function selectEngineForLaunch(
   overrides: Partial<LaunchEngineDeps> = {}
 ): Promise<LaunchEngineStep> {
   const d: LaunchEngineDeps = {
-    ...defaultDeps,
-    ensureGameBottle: (a) => ensureGameBottle(services, a),
+    ...defaultDeps(services),
+    ensureGameBottle: (a) =>
+      services.engineRuntime.perGameBottle.ensureGameBottle(services, a),
     ensurePinned: (a) =>
       ensurePinnedEngineReportingStatus({
         ...a,
         processRunner: services.runner,
-        onlineMonitor: services.onlineMonitor
+        onlineMonitor: services.onlineMonitor,
+        fallback: services.engineRuntime.fallback
       }),
     switchDeps: () => switchServicesFrom(services),
     recordDecision(id, decision, bottleName, prefix, effective) {
@@ -205,16 +237,19 @@ export async function selectEngineForLaunch(
         perGameBottleName: perGameBottleName(id.runner, id.appName)
       })
     },
-    isCrossoverMissing: () => isCrossoverMissing({ runner: services.runner }),
+    isCrossoverMissing: () => isCrossoverMissing(services),
     readEffective: (id) =>
       readEngineForGame(id, {
         wineManagerReleases: services.wineManagerReleases,
-        globalSettings: services.globalSettings
+        globalSettings: services.globalSettings,
+        ...configPathDepsFrom(services)
       }),
     decisionDeps: () => ({
       killCrossoverWineserver: killCrossoverWineserverWith(services),
       wineManagerReleases: services.wineManagerReleases,
-      runner: services.runner
+      runner: services.runner,
+      paths: services.paths,
+      engineRuntime: services.engineRuntime
     }),
     ...overrides
   }
@@ -243,9 +278,10 @@ export async function selectEngineForLaunch(
   })
   if (prefix.kind === 'legacy') return { kind: 'legacy', key }
 
+  const rt = services.engineRuntime
   const refuse = (): LaunchEngineStep => {
-    clearEngineSelection(key)
-    clearLaunchOverlayContext(key)
+    rt.registry.clearEngineSelection(key)
+    rt.launchSettings.clearLaunchOverlayContext(key)
     return { kind: 'refused', key }
   }
   const dialog = (body: string, ackId: string) =>
@@ -308,9 +344,15 @@ export async function selectEngineForLaunch(
       offline: true,
       override: effective.id,
       crossoverMissing: await d.isCrossoverMissing(),
-      markerKind: readBottleEngineMarkerKind(bottleName),
+      markerKind: readBottleEngineMarkerKind(
+        switchContextFrom(services),
+        bottleName
+      ),
       currentPinInstalled: d.currentPinInstalled(),
-      restoreNeedsAbsentPin: restoreNeedsAbsentPin(bottleName)
+      restoreNeedsAbsentPin: restoreNeedsAbsentPin(
+        switchContextFrom(services),
+        bottleName
+      )
     })
     if (refusal.blocked) {
       logWarning(
@@ -370,7 +412,7 @@ export async function selectEngineForLaunch(
   }
 
   const sel = decision.selection
-  if (!setEngineSelection(key, sel)) {
+  if (!rt.registry.setEngineSelection(key, sel)) {
     logWarning(
       `Engine: ${key} engine selection was rejected (${engineLogLabel(sel)}); not launching`,
       LogPrefix.Backend
@@ -388,7 +430,7 @@ export async function selectEngineForLaunch(
 
   const cxBinDir = sel.kind === 'crossover' ? sel.binDir : ''
   const cxBuild = sel.kind === 'crossover' ? sel.crossoverBuild : null
-  setLaunchOverlayContext(
+  rt.launchSettings.setLaunchOverlayContext(
     key,
     prefix.kind === 'bottle'
       ? {
@@ -477,7 +519,9 @@ export async function selectEngineForLaunch(
         return refuse()
       }
     }
-    if (markGameRunning(bottleName, key)) ledgerBottles.set(key, bottleName)
+    if (rt.ledger.markGameRunning(bottleName, key)) {
+      rt.launchState.rememberLedgerBottle(key, bottleName)
+    }
   }
 
   d.recordDecision(id, decision, bottleName, prefix, effective)
@@ -497,9 +541,6 @@ export async function selectEngineForLaunch(
   return { kind: 'use', key, selection: sel, prefix }
 }
 
-/** The first-match watcher of each armed launch, so endEngineLaunch can stop it. */
-const deadlineWatchers = new Map<EngineKey, { stop(): void }>()
-
 export interface DeadlineDeps {
   watch: typeof watchForGameProcess
   showNotice: typeof showEngineNotice
@@ -509,11 +550,6 @@ export interface DeadlineDeps {
 const defaultDeadlineDeps = {
   watch: watchForGameProcess,
   showNotice: showEngineNotice
-}
-
-function stopDeadlineWatcher(key: EngineKey): void {
-  deadlineWatchers.get(key)?.stop()
-  deadlineWatchers.delete(key)
 }
 
 /**
@@ -533,12 +569,13 @@ function onEngineLaunchDeadline(
   d: DeadlineDeps
 ): Promise<void> {
   // G5: the registry entry can be gone by now, so fall back to the selection seen at arm time.
-  const sel = getEngineSelection(key) ?? armedSelection
+  const sel =
+    services.engineRuntime.registry.getEngineSelection(key) ?? armedSelection
   logWarning(
     `Engine: ${key} launch deadline fired (${sel ? engineLogLabel(sel) : 'engine unknown'}) with no game process seen; not stopping anything`,
     LogPrefix.Backend
   )
-  stopDeadlineWatcher(key)
+  services.engineRuntime.launchState.stopWatcher(key)
   const info = game.getGameInfo()
   const title = info.title
   const seconds = LAUNCH_DEADLINE_MS / 1000
@@ -585,53 +622,52 @@ export function armEngineLaunchDeadline(
     publishNotice: services.engineState.publishLaunchDeadlineNotice,
     ...overrides
   }
-  const ctx = getLaunchOverlayContext(key)
+  const rt = services.engineRuntime
+  const ctx = rt.launchSettings.getLaunchOverlayContext(key)
   if (ctx === undefined || ctx.prefix.kind !== 'bottle') return
-  const armedSelection = getEngineSelection(key)
+  const armedSelection = rt.registry.getEngineSelection(key)
   if (armedSelection === undefined) return
   const bottleName = ctx.prefix.bottleName
   const installPath = game.getGameInfo().install?.install_path ?? ''
 
-  const deadline = armLaunchDeadline({
+  const deadline = rt.deadlines.armLaunchDeadline({
     key,
     onDeadline: () =>
       onEngineLaunchDeadline(services, game, key, armedSelection, d)
   })
-  stopDeadlineWatcher(key)
+  rt.launchState.stopWatcher(key)
   const watcher = d.watch({
     services,
     installPath,
-    bottleDir: getBottleDir(bottleName),
+    bottleDir: getBottleDir(services.paths, bottleName),
     onFirstMatch: () => {
-      deadlineWatchers.delete(key)
-      cancelLaunchDeadline(key, 'first-match')
+      rt.launchState.deleteWatcher(key)
+      rt.deadlines.cancelLaunchDeadline(key, 'first-match')
     },
     onGiveUp: () => {
       // WR-01: a lost signal source must not leave a stale deadline armed.
-      deadlineWatchers.delete(key)
-      cancelLaunchDeadline(key, 'monitor-unavailable')
+      rt.launchState.deleteWatcher(key)
+      rt.deadlines.cancelLaunchDeadline(key, 'monitor-unavailable')
     }
   })
-  if (watcher !== null) deadlineWatchers.set(key, watcher)
+  if (watcher !== null) rt.launchState.setWatcher(key, watcher)
   bindDeadlineToMonitor(deadline, watcher, (msg) =>
     logInfo(`Engine: ${key} ${msg}`, LogPrefix.Backend)
   )
 }
 
 /** Release everything a launch held: registry, overlay context, ledger entry and deadline. */
-export function endEngineLaunch(key: EngineKey): void {
-  stopDeadlineWatcher(key)
-  clearEngineSelection(key)
-  clearLaunchOverlayContext(key)
-  const bottle = ledgerBottles.get(key)
-  if (bottle !== undefined) {
-    markGameStopped(bottle, key)
-    ledgerBottles.delete(key)
-  }
-  cancelLaunchDeadline(key, 'launcher-exited')
-}
-
-export function __resetLaunchEngineForTests(): void {
-  ledgerBottles.clear()
-  deadlineWatchers.clear()
+export function endEngineLaunch(
+  rt: Pick<
+    EngineRuntime,
+    'launchState' | 'registry' | 'launchSettings' | 'ledger' | 'deadlines'
+  >,
+  key: EngineKey
+): void {
+  rt.launchState.stopWatcher(key)
+  rt.registry.clearEngineSelection(key)
+  rt.launchSettings.clearLaunchOverlayContext(key)
+  const bottle = rt.launchState.takeLedgerBottle(key)
+  if (bottle !== undefined) rt.ledger.markGameStopped(bottle, key)
+  rt.deadlines.cancelLaunchDeadline(key, 'launcher-exited')
 }

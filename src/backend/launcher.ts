@@ -94,7 +94,6 @@ import {
   endEngineLaunch,
   selectEngineForLaunch
 } from './engine/launchEngine'
-import { getLaunchSettings } from './engine/launchSettings'
 import { engineKeyFor } from './engine/gameKey'
 
 import { singleFlightLaunch } from './launchSingleFlight'
@@ -120,6 +119,9 @@ export interface LauncherDeps extends DialogBoxDeps {
   appInfo: Pick<AppInfo, 'version'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   engineState: EngineStateService
+  /** The boot-owned engine runtime and the path roots the engine reads (66.4-05). */
+  engineRuntime: EngineServicesSource['engineRuntime']
+  paths: EngineServicesSource['paths']
   /** The Steam bottle slice the Steam Wine-tool resolver reads (66.3-15). */
   steamBottle: EngineServicesSource['steamBottle']
   notifications: Pick<Notifications, 'show'>
@@ -154,6 +156,8 @@ function engineSource(deps: LauncherDeps): EngineServicesSource {
     notifications: deps.notifications,
     onlineMonitor: deps.onlineMonitor,
     engineState: deps.engineState,
+    engineRuntime: deps.engineRuntime,
+    paths: deps.paths,
     runner: deps.runner,
     stores: deps.stores,
     steamBottle: deps.steamBottle,
@@ -282,11 +286,14 @@ async function runLaunchEventCallback(
   const engineControlled = engineStep.kind === 'use'
   const engineKey = engineStep.kind === 'use' ? engineStep.key : null
   const releaseEngine = () => {
-    if (engineKey !== null) endEngineLaunch(engineKey)
+    if (engineKey !== null) endEngineLaunch(deps.engineRuntime, engineKey)
   }
   if (engineControlled) {
     // Everything that follows sees the overlay, never the stored settings.
-    gameSettings = getLaunchSettings(engineKey, gameSettings)
+    gameSettings = deps.engineRuntime.launchSettings.getLaunchSettings(
+      engineKey,
+      gameSettings
+    )
   }
 
   // check if isNative, if not, check if wine is valid. An engine-controlled launch skips this:
@@ -872,7 +879,7 @@ async function prepareWineLaunch(
 }> {
   const gameInfo = game.getGameInfo()
 
-  const gameSettings = getLaunchSettings(
+  const gameSettings = deps.engineRuntime.launchSettings.getLaunchSettings(
     engineKeyFor(gameInfo.runner, gameInfo.app_name),
     await game.getSettings()
   )

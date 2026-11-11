@@ -5,16 +5,14 @@
 import { existsSync } from 'graceful-fs'
 import type { WineInstallation } from 'common/types'
 import {
-  crossoverBinDirFromWineBin,
-  resolveCrossoverBinDir,
-  resolveCrossoverBinDirAsync,
-  __resetCrossoverLocationForTests
+  createCrossoverLocator,
+  crossoverBinDirFromWineBin
 } from '../crossoverLocation'
+import type { CrossoverLocator } from '../crossoverLocation'
 import { getCrossover } from 'backend/utils/compatibility_layers'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
 jest.mock('graceful-fs', () => ({ existsSync: jest.fn() }))
-jest.mock('backend/constants/paths', () => ({ userHome: '/Users/test' }))
 jest.mock('backend/utils/compatibility_layers', () => ({
   getCrossover: jest.fn()
 }))
@@ -42,8 +40,12 @@ const only = (...dirs: string[]) => {
 }
 
 describe('crossoverLocation', () => {
+  let locator: CrossoverLocator
+  let resolveCrossoverBinDir: CrossoverLocator['resolveCrossoverBinDir']
+  let resolveCrossoverBinDirAsync: CrossoverLocator['resolveCrossoverBinDirAsync']
   beforeEach(() => {
-    __resetCrossoverLocationForTests()
+    locator = createCrossoverLocator({ paths: { userHome: '/Users/test' } })
+    ;({ resolveCrossoverBinDir, resolveCrossoverBinDirAsync } = locator)
     mockedExists.mockReset()
     mockedGetCrossover.mockReset()
   })
@@ -96,6 +98,18 @@ describe('crossoverLocation', () => {
     ).toBe(vol)
     expect(resolveCrossoverBinDir()).toBe(vol)
     present.clear()
+    expect(resolveCrossoverBinDir()).toBeUndefined()
+  })
+
+  test('a second locator probes again (the memo is per instance)', async () => {
+    const present = only(vol)
+    mockedGetCrossover.mockResolvedValue(
+      new Set([{ bin: `${vol}/wine`, name: 'CX', type: 'crossover' }])
+    )
+    await resolveCrossoverBinDirAsync({ runner: createScriptedRunner([]) })
+    present.clear()
+    const other = createCrossoverLocator({ paths: { userHome: '/Users/test' } })
+    expect(other.resolveCrossoverBinDir()).toBeUndefined()
     expect(resolveCrossoverBinDir()).toBeUndefined()
   })
 

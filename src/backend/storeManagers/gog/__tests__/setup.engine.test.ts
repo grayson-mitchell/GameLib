@@ -17,9 +17,6 @@ jest.mock('backend/engine/launchEngine', () => ({
   selectEngineForLaunch: (...a: unknown[]) => mockSelect(...a),
   endEngineLaunch: (...a: unknown[]) => mockEnd(...a)
 }))
-jest.mock('backend/engine/launchSettings', () => ({
-  getLaunchSettings: (key: string, s: unknown) => (key === 'k' ? overlay : s)
-}))
 jest.mock('backend/constants/environment', () => ({ isWindows: false }))
 jest.mock('graceful-fs', () => ({
   existsSync: (...a: unknown[]) => mockExists(...a)
@@ -92,6 +89,14 @@ const gogDeps = {
     runWineCommand: (...a: unknown[]) => mockRunWine(...a)
   },
   spawnAsync: jest.fn(),
+  // The overlay read is a recording fake on the boot's launch-settings registry.
+  engineRuntime: {
+    launchSettings: {
+      getLaunchSettings: (key: string, s: unknown) =>
+        key === 'k' ? overlay : s
+    }
+  },
+  paths: { userHome: '/home', toolsPath: '/tools', gamesConfigPath: '/games' },
   config: { getSettings: () => ({ disableLogs: true }) },
   gameConfigs: { get: () => ({ config: stored }) }
 } as unknown as SetupDeps
@@ -131,14 +136,14 @@ describe.each(runners)('%s setup on macOS', (_name, run) => {
     )
     expect(mockCheckWine).not.toHaveBeenCalled()
     expect(mockVerifyPrefix).toHaveBeenCalledWith(overlay)
-    expect(mockEnd).toHaveBeenCalledWith('k')
+    expect(mockEnd).toHaveBeenCalledWith(expect.anything(), 'k')
   })
 
   it('use: releases the selection even when the setup throws', async () => {
     mockSelect.mockResolvedValue({ kind: 'use', key: 'k' })
     mockVerifyPrefix.mockRejectedValue(new Error('boom'))
     await expect(run('app')).rejects.toThrow('boom')
-    expect(mockEnd).toHaveBeenCalledWith('k')
+    expect(mockEnd).toHaveBeenCalledWith(expect.anything(), 'k')
   })
 
   it('refused: returns without any wine command', async () => {

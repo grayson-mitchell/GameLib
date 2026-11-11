@@ -5,6 +5,7 @@
  * shimGenerate.ts; see its docblock for the placement design notes.
  */
 
+import type { AppPaths } from 'backend/process/context'
 import { copyFileSync, existsSync, readFileSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve } from 'node:path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -212,6 +213,7 @@ function findRuntimeRunnerGaps(
 }
 
 export async function placeShimForGameInner(
+  paths: Pick<AppPaths, 'userHome'>,
   appId: string,
   gameExePath: string,
   opts?: {
@@ -250,7 +252,7 @@ export async function placeShimForGameInner(
     return { status: 'error', error: `Invalid bottle name: "${rawBottleName}"` }
   }
 
-  const bottleDir = resolve(getBottleDir(bottleName))
+  const bottleDir = resolve(getBottleDir(paths, bottleName))
   const resolvedExePath = resolve(gameExePath)
   if (!isContainedWithin(bottleDir, resolvedExePath)) {
     logWarning(

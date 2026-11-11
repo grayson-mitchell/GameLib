@@ -26,7 +26,7 @@ import { join, resolve } from 'path'
 import { writeFile, unlink } from 'fs/promises'
 
 import type { AppManagementStatus } from '../../common/types'
-import { resolveCrossoverBinDirAsync } from 'backend/engine/crossoverLocation'
+import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import type { ProcessRunner } from 'backend/process/types'
 import { logInfo, logWarning, LogPrefix } from '../logger'
 
@@ -55,6 +55,8 @@ function errorCode(error: unknown): string {
 }
 
 interface AppManagementDeps {
+  /** The boot's CrossOver locator (66.4-05). */
+  engineRuntime: Pick<EngineRuntime, 'crossover'>
   runner: Pick<ProcessRunner, 'run'>
   platform?: NodeJS.Platform
   resolveBinDir?: () => Promise<string | undefined>
@@ -70,7 +72,10 @@ export async function getAppManagementStatus(
 
   const binDir = await (
     deps.resolveBinDir ??
-    (() => resolveCrossoverBinDirAsync({ runner: deps.runner }))
+    (() =>
+      deps.engineRuntime.crossover.resolveCrossoverBinDirAsync({
+        runner: deps.runner
+      }))
   )()
   if (!binDir) return 'not-needed'
 

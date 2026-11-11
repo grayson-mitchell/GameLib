@@ -1,10 +1,9 @@
 import { logInfo, logWarning } from 'backend/logger'
+import { createFakeClock } from 'backend/testUtils/fakeClock'
 import {
   LAUNCH_DEADLINE_MS,
-  armLaunchDeadline,
   bindDeadlineToMonitor,
-  cancelLaunchDeadline,
-  __activeLaunchDeadlineCount
+  createLaunchDeadlines
 } from '../launchDeadline'
 
 jest.mock('backend/logger', () => ({
@@ -13,42 +12,48 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam' }
 }))
 
-describe('launchDeadline', () => {
-  beforeEach(() => jest.useFakeTimers())
-  afterEach(() => {
-    cancelLaunchDeadline('620', 'launch-error')
-    jest.useRealTimers()
-  })
+let clock: ReturnType<typeof createFakeClock>
+let deadlines: ReturnType<typeof createLaunchDeadlines>
+let armLaunchDeadline: typeof deadlines.armLaunchDeadline
+let cancelLaunchDeadline: typeof deadlines.cancelLaunchDeadline
+const activeCount = () => deadlines.activeCount()
+beforeEach(() => {
+  clock = createFakeClock()
+  deadlines = createLaunchDeadlines({ clock })
+  armLaunchDeadline = deadlines.armLaunchDeadline
+  cancelLaunchDeadline = deadlines.cancelLaunchDeadline
+})
 
+describe('launchDeadline', () => {
   test('fires once at the timeout, not before', () => {
     const onDeadline = jest.fn()
     const d = armLaunchDeadline({ key: '620', timeoutMs: 1000, onDeadline })
-    jest.advanceTimersByTime(999)
+    clock.advance(999)
     expect(onDeadline).not.toHaveBeenCalled()
-    jest.advanceTimersByTime(1)
+    clock.advance(1)
     expect(onDeadline).toHaveBeenCalledTimes(1)
     expect(d.state).toBe('fired')
-    expect(jest.getTimerCount()).toBe(0)
-    expect(__activeLaunchDeadlineCount()).toBe(0)
+    expect(clock.pendingCount()).toBe(0)
+    expect(activeCount()).toBe(0)
   })
 
   test('cancel before expiry prevents firing', () => {
     const onDeadline = jest.fn()
     const d = armLaunchDeadline({ key: '620', timeoutMs: 1000, onDeadline })
     d.cancel('first-match')
-    jest.advanceTimersByTime(5000)
+    clock.advance(5000)
     expect(onDeadline).not.toHaveBeenCalled()
     expect(d.state).toBe('cancelled')
-    expect(jest.getTimerCount()).toBe(0)
+    expect(clock.pendingCount()).toBe(0)
   })
 
   test('cancel after fire is a no-op and a second fire is impossible', () => {
     const onDeadline = jest.fn()
     const d = armLaunchDeadline({ key: '620', timeoutMs: 10, onDeadline })
-    jest.advanceTimersByTime(10)
+    clock.advance(10)
     d.cancel('first-match')
     expect(d.state).toBe('fired')
-    jest.advanceTimersByTime(1000)
+    clock.advance(1000)
     expect(onDeadline).toHaveBeenCalledTimes(1)
   })
 
@@ -62,7 +67,7 @@ describe('launchDeadline', () => {
     })
     armLaunchDeadline({ key: '620', timeoutMs: 1000, onDeadline: second })
     expect(d1.state).toBe('cancelled')
-    jest.advanceTimersByTime(1000)
+    clock.advance(1000)
     expect(first).not.toHaveBeenCalled()
     expect(second).toHaveBeenCalledTimes(1)
   })
@@ -74,7 +79,7 @@ describe('launchDeadline', () => {
     expect(d.state).toBe('armed')
     cancelLaunchDeadline('620', 'launcher-exited')
     expect(d.state).toBe('cancelled')
-    expect(__activeLaunchDeadlineCount()).toBe(0)
+    expect(activeCount()).toBe(0)
   })
 
   test('throwing or rejecting onDeadline is caught and the entry removed', async () => {
@@ -85,17 +90,17 @@ describe('launchDeadline', () => {
         throw new Error('boom')
       }
     })
-    jest.advanceTimersByTime(10)
-    expect(__activeLaunchDeadlineCount()).toBe(0)
+    clock.advance(10)
+    expect(activeCount()).toBe(0)
     armLaunchDeadline({
       key: '620',
       timeoutMs: 10,
       onDeadline: () => Promise.reject(new Error('nope'))
     })
-    jest.advanceTimersByTime(10)
+    clock.advance(10)
     await Promise.resolve()
     await Promise.resolve()
-    expect(__activeLaunchDeadlineCount()).toBe(0)
+    expect(activeCount()).toBe(0)
     expect(
       (logWarning as jest.Mock).mock.calls.filter((c) =>
         JSON.stringify(c).includes('failed')
@@ -108,29 +113,32 @@ describe('launchDeadline', () => {
     expect(LAUNCH_DEADLINE_MS).toBe(180_000)
     const onDeadline = jest.fn()
     armLaunchDeadline({ key: '620', onDeadline })
-    jest.advanceTimersByTime(179_999)
+    clock.advance(179_999)
     expect(onDeadline).not.toHaveBeenCalled()
-    jest.advanceTimersByTime(1)
+    clock.advance(1)
     expect(onDeadline).toHaveBeenCalledTimes(1)
   })
 
-  test('timer handle is unref d', () => {
-    const unref = jest.fn()
-    armLaunchDeadline({
-      key: '620',
-      onDeadline: jest.fn(),
-      setTimer: () => ({ unref }),
-      clearTimer: jest.fn()
-    })
-    expect(unref).toHaveBeenCalledTimes(1)
+  test('the timer runs on the injected clock and is never keep-alive (unref d)', () => {
+    armLaunchDeadline({ key: '620', onDeadline: jest.fn() })
+    expect(clock.pendingCount()).toBe(1)
+    expect(clock.keepAliveReasons()).toEqual([])
+    clock.advance(LAUNCH_DEADLINE_MS)
+    expect(clock.pendingCount()).toBe(0)
+  })
+
+  test('two registries share no deadline', () => {
+    const other = createLaunchDeadlines({ clock })
+    armLaunchDeadline({ key: '620', onDeadline: jest.fn() })
+    expect(other.activeCount()).toBe(0)
   })
 
   test('non-numeric appId throws TypeError and arms nothing', () => {
     expect(() =>
       armLaunchDeadline({ key: '../x', onDeadline: jest.fn() })
     ).toThrow(TypeError)
-    expect(__activeLaunchDeadlineCount()).toBe(0)
-    expect(jest.getTimerCount()).toBe(0)
+    expect(activeCount()).toBe(0)
+    expect(clock.pendingCount()).toBe(0)
   })
 
   describe('bindDeadlineToMonitor (CR-01)', () => {
@@ -142,7 +150,7 @@ describe('launchDeadline', () => {
       expect(d.state).toBe('cancelled')
       expect(log).toHaveBeenCalledTimes(1)
       expect(log.mock.calls[0][0]).toContain('monitor-unavailable')
-      jest.advanceTimersByTime(LAUNCH_DEADLINE_MS)
+      clock.advance(LAUNCH_DEADLINE_MS)
       expect(onDeadline).not.toHaveBeenCalled()
     })
 
@@ -168,7 +176,7 @@ describe('launchDeadline', () => {
         timeoutMs: 10,
         onDeadline: jest.fn()
       })
-      jest.advanceTimersByTime(10)
+      clock.advance(10)
       bindDeadlineToMonitor(d, null, log)
       expect(d.state).toBe('fired')
       expect(log).not.toHaveBeenCalled()
@@ -177,19 +185,12 @@ describe('launchDeadline', () => {
 })
 
 describe('launchDeadline store-prefixed keys', () => {
-  beforeEach(() => jest.useFakeTimers())
-  afterEach(() => {
-    cancelLaunchDeadline('gog:1', 'launch-error')
-    cancelLaunchDeadline('620', 'launch-error')
-    jest.useRealTimers()
-  })
-
   test('arms a prefixed key independently of a Steam key', () => {
     const a = armLaunchDeadline({ key: 'gog:1', onDeadline: jest.fn() })
     const b = armLaunchDeadline({ key: '620', onDeadline: jest.fn() })
     expect(a.state).toBe('armed')
     expect(b.state).toBe('armed')
-    expect(__activeLaunchDeadlineCount()).toBe(2)
+    expect(activeCount()).toBe(2)
   })
 
   test('an invalid key throws TypeError', () => {
@@ -198,13 +199,8 @@ describe('launchDeadline store-prefixed keys', () => {
     ).toThrow(TypeError)
   })
 
-  test('unref is called on the timer handle', () => {
-    const unref = jest.fn()
-    armLaunchDeadline({
-      key: 'gog:1',
-      onDeadline: jest.fn(),
-      setTimer: () => ({ unref })
-    })
-    expect(unref).toHaveBeenCalled()
+  test('the timer is not keep-alive (unref d by the clock default)', () => {
+    armLaunchDeadline({ key: 'gog:1', onDeadline: jest.fn() })
+    expect(clock.keepAliveReasons()).toEqual([])
   })
 })

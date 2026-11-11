@@ -25,11 +25,6 @@ const mockIsOnline = jest.fn()
 // The injected connectivity slice; `mockIsOnline` is read at call time.
 const onlineMonitor = { isOnline: () => mockIsOnline() as boolean }
 
-jest.mock('backend/constants/paths', () => ({
-  get toolsPath() {
-    return mockTools
-  }
-}))
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logWarning: jest.fn(),
@@ -73,14 +68,10 @@ jest.mock('backend/utils', () => {
 })
 
 import {
-  ensurePinnedEngine,
-  isPinnedEngineInstalled,
-  pinnedEnginePaths,
-  pinnedEngineRoot,
-  pruneUnpinnedEngines,
-  sweepStaleEngineTemps,
+  createFallbackEngine,
   sha256OfFile,
-  type FallbackDownloadProgress
+  type FallbackDownloadProgress,
+  type FallbackEngine
 } from '../fallbackEngine'
 import { ENGINE_PINS, type EnginePin } from '../enginePins'
 import {
@@ -89,6 +80,12 @@ import {
 } from 'backend/utils/aborthandler/aborthandler'
 
 let work = ''
+let ensurePinnedEngine: FallbackEngine['ensurePinnedEngine']
+let isPinnedEngineInstalled: FallbackEngine['isPinnedEngineInstalled']
+let pinnedEnginePaths: FallbackEngine['pinnedEnginePaths']
+let pinnedEngineRoot: FallbackEngine['pinnedEngineRoot']
+let pruneUnpinnedEngines: FallbackEngine['pruneUnpinnedEngines']
+let sweepStaleEngineTemps: FallbackEngine['sweepStaleEngineTemps']
 // extractFiles is faked above, so the runner is never called; an empty script fails loudly if it is.
 const runner = createScriptedRunner([])
 
@@ -152,6 +149,14 @@ function leftovers(): string[] {
 beforeEach(() => {
   work = mkdtempSync(join(tmpdir(), 'gl-fb-'))
   mockTools = join(work, 'tools')
+  ;({
+    ensurePinnedEngine,
+    isPinnedEngineInstalled,
+    pinnedEnginePaths,
+    pinnedEngineRoot,
+    pruneUnpinnedEngines,
+    sweepStaleEngineTemps
+  } = createFallbackEngine({ paths: { toolsPath: mockTools } }))
   mockDownload.mockReset()
   mockIsOnline.mockReset().mockReturnValue(true)
 })

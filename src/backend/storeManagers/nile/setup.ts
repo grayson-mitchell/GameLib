@@ -16,13 +16,14 @@ import {
   endEngineLaunch,
   selectEngineForLaunch
 } from 'backend/engine/launchEngine'
-import { getLaunchSettings } from 'backend/engine/launchSettings'
 
 type NileSetupDeps = Pick<
   ManagerDeps,
   | 'libraryManagers'
   | 'onlineMonitor'
   | 'engineState'
+  | 'engineRuntime'
+  | 'paths'
   | 'steamBottle'
   | 'launcher'
   | 'commandRunner'
@@ -117,10 +118,10 @@ export default async function setup(
         appName,
         basePath,
         fuel.PostInstall,
-        getLaunchSettings(step.key, stored)
+        deps.engineRuntime.launchSettings.getLaunchSettings(step.key, stored)
       )
     } finally {
-      endEngineLaunch(step.key)
+      endEngineLaunch(deps.engineRuntime, step.key)
     }
   }
 

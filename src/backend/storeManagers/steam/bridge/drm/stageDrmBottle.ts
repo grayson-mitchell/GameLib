@@ -118,7 +118,9 @@ export async function stageDrmBottle(
     if (!/^\d+$/.test(input.appId)) return fail('invalid appId')
     const name = sanitizeBottleName(input.bottleName)
     if (!name) return fail('invalid bottle name')
-    const bottleDir = resolve((deps.getBottleDir ?? getBottleDir)(name))
+    const bottleDir = resolve(
+      (deps.getBottleDir ?? ((n: string) => getBottleDir(deps.paths, n)))(name)
+    )
     const driveC = join(bottleDir, 'drive_c')
     const exePath = resolve(input.exePath)
     const installRoot = resolve(input.installRoot)

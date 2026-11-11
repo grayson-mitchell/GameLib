@@ -5,12 +5,6 @@ import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 
 const mockProfile = createFakeHomeProfile({ prefix: 'gamelib-pergame-' })
 
-jest.mock('backend/constants/paths', () => ({
-  get userHome() {
-    return mockProfile.root
-  },
-  toolsPath: '/tmp/tools'
-}))
 jest.mock('backend/config', () => ({ GlobalConfig: { get: jest.fn() } }))
 jest.mock('backend/logger', () => ({
   logError: jest.fn(),
@@ -25,16 +19,20 @@ import type { EngineServices } from '../engineServices'
 import { createTestEngineServices } from 'backend/testUtils/testServices'
 import {
   createCrossoverBottle,
-  ensureGameBottle,
+  createPerGameBottleFlights,
   perGameBottleName,
   PER_GAME_BOTTLE_NAME_MAX
 } from '../perGameBottle'
 import { getBottleDir, sanitizeBottleName } from '../bottlePrimitives'
 import type { PerGameBottleDeps } from '../perGameBottle'
 
+const paths = { userHome: mockProfile.root, toolsPath: '/tmp/tools' }
 const services: EngineServices = createTestEngineServices({
-  installRemove: jest.fn()
+  installRemove: jest.fn(),
+  paths: { ...createTestEngineServices().paths, ...paths }
 })
+const flights = createPerGameBottleFlights()
+const ensureGameBottle = flights.ensureGameBottle
 
 // Real child process under the fake HOME; a timeout resolves code null like the real helper.
 const spawnAsync = (
@@ -59,7 +57,7 @@ const spawnAsync = (
       )
     }
   )
-const deps = { spawnAsync }
+const deps = { spawnAsync, paths }
 
 afterAll(() => mockProfile.dispose())
 
@@ -135,7 +133,7 @@ describe('createCrossoverBottle (stub cxbottle under a fake HOME)', () => {
     const r = await createCrossoverBottle(deps, 'GameLib-gog-ok', binDir)
     expect(r).toEqual({ status: 'done', createdHere: true })
     expect(
-      existsSync(join(getBottleDir('GameLib-gog-ok'), 'cxbottle.conf'))
+      existsSync(join(getBottleDir(paths, 'GameLib-gog-ok'), 'cxbottle.conf'))
     ).toBe(true)
   })
 
@@ -145,7 +143,7 @@ describe('createCrossoverBottle (stub cxbottle under a fake HOME)', () => {
       status: 'error',
       errorCode: 'crossover-create-failed'
     })
-    expect(existsSync(getBottleDir('GameLib-gog-noconf'))).toBe(false)
+    expect(existsSync(getBottleDir(paths, 'GameLib-gog-noconf'))).toBe(false)
   })
 
   it('reports the cap and removes the created dir on a hang', async () => {
@@ -156,11 +154,11 @@ describe('createCrossoverBottle (stub cxbottle under a fake HOME)', () => {
       status: 'error',
       errorCode: 'crossover-create-timeout'
     })
-    expect(existsSync(getBottleDir('GameLib-gog-hang'))).toBe(false)
+    expect(existsSync(getBottleDir(paths, 'GameLib-gog-hang'))).toBe(false)
   })
 
   it('never removes a pre-existing dir', async () => {
-    const pre = getBottleDir('GameLib-gog-noconf')
+    const pre = getBottleDir(paths, 'GameLib-gog-noconf')
     mkdirSync(pre, { recursive: true })
     const r = await createCrossoverBottle(deps, 'GameLib-gog-noconf', binDir)
     expect(r.status).toBe('error')
@@ -307,6 +305,29 @@ describe('ensureGameBottle', () => {
     release(undefined)
     await Promise.all([a, b])
     expect(d.createFallback).toHaveBeenCalledTimes(1)
+  })
+
+  it('single-flight is per instance; after it settles a new request starts a new creation', async () => {
+    const make = () =>
+      mk({
+        decide: jest
+          .fn()
+          .mockResolvedValue({ kind: 'pinned', reason: 'cx-missing', pin }),
+        createFallback: jest
+          .fn()
+          .mockResolvedValue({ status: 'done', createdHere: true })
+      })
+    const d1 = make()
+    const d2 = make()
+    const other = createPerGameBottleFlights()
+    await Promise.all([
+      ensureGameBottle(services, base, d1),
+      other.ensureGameBottle(services, base, d2)
+    ])
+    expect(d1.createFallback).toHaveBeenCalledTimes(1)
+    expect(d2.createFallback).toHaveBeenCalledTimes(1)
+    await ensureGameBottle(services, base, d1)
+    expect(d1.createFallback).toHaveBeenCalledTimes(2)
   })
 
   it('rejects an unsafe bottle name', async () => {

@@ -25,11 +25,16 @@ import {
 import type { EngineDecisionDeps } from './engineDecision'
 import {
   engineIdOf,
+  configPathDepsFrom,
   readEngineForGame,
   readStoredGameConfig,
   resolveGlobalEngine
 } from './engineConfig'
-import type { EffectiveEngine, EngineConfigDeps } from './engineConfig'
+import type {
+  ConfigPathDeps,
+  EffectiveEngine,
+  EngineConfigDeps
+} from './engineConfig'
 import type { EngineServices } from './engineServices'
 import type { EngineStateDeps } from './engineState'
 import { engineKeyFor } from './gameKey'
@@ -72,10 +77,11 @@ type SettingsView = Pick<
 function settingsViewFor(
   appName: string,
   config: Partial<EngineConfigDeps> | undefined,
-  globalSettings: () => Record<string, unknown>
+  globalSettings: () => Record<string, unknown>,
+  pathDeps: ConfigPathDeps
 ): SettingsView {
   const global = (config?.globalSettings ?? globalSettings)()
-  const stored = readStoredGameConfig(appName, config) ?? {}
+  const stored = readStoredGameConfig(appName, { ...pathDeps, ...config }) ?? {}
   const pick = (k: keyof SettingsView) =>
     stored[k] !== undefined ? stored[k] : global[k]
   return {
@@ -93,6 +99,8 @@ export async function getGameEngineState(
     | 'wineManagerReleases'
     | 'globalSettings'
     | 'engineState'
+    | 'paths'
+    | 'engineRuntime'
   >,
   identity: unknown,
   deps: GameEngineStateDeps = {}
@@ -102,20 +110,29 @@ export async function getGameEngineState(
   if (id === null) return null
   const { config, ...stateDeps } = deps
   const releases = { wineManagerReleases: services.wineManagerReleases }
+  const pathDeps = configPathDepsFrom(services)
   const effective = readEngineForGame(id, {
     ...releases,
+    ...pathDeps,
     globalSettings: services.globalSettings,
     ...config
   })
   const prefix = resolveGamePrefix({
     runner: id.runner,
     appName: id.appName,
-    settings: settingsViewFor(id.appName, config, services.globalSettings),
+    settings: settingsViewFor(
+      id.appName,
+      config,
+      services.globalSettings,
+      pathDeps
+    ),
     effective
   })
   return services.engineState.getEngineState(id, {
     killCrossoverWineserver: killCrossoverWineserverWith(services),
     runner: services.runner,
+    paths: services.paths,
+    engineRuntime: services.engineRuntime,
     ...releases,
     globalSettings: services.globalSettings,
     ...stateDeps,
@@ -151,7 +168,11 @@ function legacyEntry(effective: EffectiveEngine): EngineOption | null {
 export async function listGameEngineOptions(
   services: Pick<
     EngineServices,
-    'wineManagerReleases' | 'runner' | 'globalSettings'
+    | 'wineManagerReleases'
+    | 'runner'
+    | 'globalSettings'
+    | 'paths'
+    | 'engineRuntime'
   >,
   args: unknown,
   deps: {
@@ -162,12 +183,15 @@ export async function listGameEngineOptions(
   const releases = { wineManagerReleases: services.wineManagerReleases }
   const config = {
     ...releases,
+    ...configPathDepsFrom(services),
     globalSettings: services.globalSettings,
     ...deps.config
   }
   const options = await listEngineOverrideOptions({
     ...releases,
     runner: services.runner,
+    paths: services.paths,
+    engineRuntime: services.engineRuntime,
     ...deps.decision
   })
   let effective: EffectiveEngine | null = null
@@ -186,7 +210,10 @@ export async function listGameEngineOptions(
 
 /** D-09: the global default engine, derived or stored, Legacy included. */
 export function getDefaultEngine(
-  services: Pick<EngineServices, 'wineManagerReleases' | 'globalSettings'>,
+  services: Pick<
+    EngineServices,
+    'wineManagerReleases' | 'globalSettings' | 'paths' | 'engineRuntime'
+  >,
   overrides?: Partial<EngineConfigDeps>
 ): {
   effectiveEngineId: string
@@ -195,6 +222,7 @@ export function getDefaultEngine(
 } {
   const deps = {
     wineManagerReleases: services.wineManagerReleases,
+    ...configPathDepsFrom(services),
     globalSettings: services.globalSettings,
     ...overrides
   }

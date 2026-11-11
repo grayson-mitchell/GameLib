@@ -28,7 +28,7 @@ const steamUser = createMockSteamUser()
 import { mockLeaseOk } from './depotLeaseMocks'
 import { selectAllDepots } from '../depot/select'
 import { getBottleSteamappsDir } from '../bottle'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { getBottleDir } from 'backend/storeManagers/steam/bottleDirs'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import {
   createStubRustDepot,

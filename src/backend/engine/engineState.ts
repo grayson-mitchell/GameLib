@@ -24,7 +24,11 @@ import type {
 } from './engineDecision'
 import { engineKeyFor } from './gameKey'
 import type { EngineKey } from './gameKey'
-import { engineIdOf, readEngineForGame } from './engineConfig'
+import {
+  configPathDepsFrom,
+  engineIdOf,
+  readEngineForGame
+} from './engineConfig'
 import type { EffectiveEngine } from './engineConfig'
 import { isBottleProvisioned } from './bottlePrimitives'
 import type { EngineOverrideId } from './engineIds'
@@ -100,13 +104,22 @@ function effectiveFor(
 ): EffectiveEngine {
   if (deps.effective) return deps.effective(identity)
   // Paths that record a decision always supply `effective`; only the release reader is optional there.
-  if (!deps.wineManagerReleases || !deps.globalSettings) {
+  if (
+    !deps.wineManagerReleases ||
+    !deps.globalSettings ||
+    !deps.paths ||
+    !deps.engineRuntime
+  ) {
     throw new Error(
-      'engine state needs effective or wineManagerReleases and globalSettings'
+      'engine state needs effective or wineManagerReleases, globalSettings, paths and engineRuntime'
     )
   }
   return readEngineForGame(identity, {
     wineManagerReleases: deps.wineManagerReleases,
+    ...configPathDepsFrom({
+      paths: deps.paths,
+      engineRuntime: deps.engineRuntime
+    }),
     globalSettings: deps.globalSettings
   })
 }
@@ -203,7 +216,11 @@ function overrideOf(effective: EffectiveEngine): EngineOverrideId {
 /** The state deps for paths that never run a pre-flight (so never need the kill). */
 export type EngineStateDepsNoKill = Omit<
   EngineStateDeps,
-  'killCrossoverWineserver' | 'wineManagerReleases' | 'runner'
+  | 'killCrossoverWineserver'
+  | 'wineManagerReleases'
+  | 'runner'
+  | 'paths'
+  | 'engineRuntime'
 > &
   Partial<KillDeps & ReleasesDeps & RunnerDeps>
 
@@ -306,7 +323,11 @@ export function createEngineState(owner: EngineStateOwnerDeps) {
         // No bottle to probe: report only whether CrossOver is installed.
       } else if (!crossoverInstalled) {
         preflight = { kind: 'missing', detail: 'CrossOver is not installed' }
-      } else if ((deps.isBottleReady ?? isBottleProvisioned)(bottle)) {
+      } else if (
+        (deps.isBottleReady ?? ((n) => isBottleProvisioned(deps.paths, n)))(
+          bottle
+        )
+      ) {
         let p = inflight.get(bottle)
         if (!p) {
           const run =

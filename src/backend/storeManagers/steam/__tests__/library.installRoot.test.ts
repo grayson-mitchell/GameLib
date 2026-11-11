@@ -9,6 +9,7 @@ import {
  */
 
 // ── Imports ───────────────────────────────────────────────────────────────────
+import { createEngineRegistry } from 'backend/engine/engineRegistry'
 import SteamLibraryManager from '../library'
 import { resolveInstallRoot } from '../library/installRoot'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
@@ -27,7 +28,9 @@ import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 const getSteamBottleSettings = jest.fn()
 const libDeps = {
   config: createTestGlobalConfig(),
-  steamBottle: { getSteamBottleSettings, resolveCrossoverWine: jest.fn() }
+  steamBottle: { getSteamBottleSettings, resolveCrossoverWine: jest.fn() },
+  paths: { userHome: '/test-gamelib/home' },
+  engineRuntime: { registry: createEngineRegistry() }
 }
 
 const { steamLibraryStore, steamMetadataStore } =

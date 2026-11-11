@@ -9,6 +9,7 @@
  *  - graceful-fs mocked (existsSync) — no real filesystem access
  *  - electron mocked (app.getPath) — backend/constants/paths imports it
  */
+import { userHome } from 'backend/constants/paths'
 import {
   existsSync,
   mkdirSync,
@@ -30,7 +31,7 @@ import {
   stopBottleProcessMonitor
 } from '../bottleProcessMonitor'
 import { createSteamBottle, getBottleSteamExePath } from '../bottle'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { getBottleDir } from 'backend/storeManagers/steam/bottleDirs'
 import {
   tellBottledSteamToLaunch,
   tellBottledSteamToUninstall,
@@ -111,11 +112,10 @@ jest.mock('backend/logger', () => ({
 const CX_BIN_DIR =
   '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin'
 const cxState: { binDir: string | undefined } = { binDir: CX_BIN_DIR }
-jest.mock('backend/engine/crossoverLocation', () => ({
+const crossover = {
   resolveCrossoverBinDir: () => cxState.binDir,
-  resolveCrossoverBinDirAsync: () => Promise.resolve(cxState.binDir),
-  crossoverBinDirFromWineBin: (bin: string) => bin
-}))
+  resolveCrossoverBinDirAsync: () => Promise.resolve(cxState.binDir)
+}
 
 const mockedExistsSync = existsSync as jest.Mock
 const mockedMkdirSync = mkdirSync as jest.Mock
@@ -130,7 +130,8 @@ const mockedGlobalConfigGet = jest.fn()
 // 66.3-15: the bottle helpers are an instance over the suite's mocked store and config.
 const steamBottle = createSteamBottle({
   stores: createTestStores({ steam: { steamBottleConfigStore } as never }),
-  config: { getSettings: () => mockedGlobalConfigGet().getSettings() }
+  config: { getSettings: () => mockedGlobalConfigGet().getSettings() },
+  crossover
 })
 // Recording fakes handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
@@ -144,6 +145,7 @@ const library = steamSession.libraryState.library
 const bottledDeps = {
   steamSession,
   steamBottle,
+  paths: { userHome },
   appState: { hide: () => mockedAppHide() },
   spawnAsync: mockedSpawnAsync,
   commandRunner: { runWineCommand: mockedRunWineCommand }

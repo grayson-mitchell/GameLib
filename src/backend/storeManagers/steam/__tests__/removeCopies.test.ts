@@ -23,6 +23,7 @@ import {
  *  - ../state is NOT mocked — real library Map, cleared in beforeEach
  */
 
+import { createEngineRegistry } from 'backend/engine/engineRegistry'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { rmSync } from 'node:fs'
 // Plain 'fs' (not 'node:fs', not 'graceful-fs') is never mocked in this file
@@ -53,7 +54,12 @@ const steamBottle = {
   isSteamBottleProvisioned: jest.fn(),
   resolveCrossoverWine: jest.fn()
 }
-const libDeps = { config: createTestGlobalConfig(), steamBottle }
+const libDeps = {
+  config: createTestGlobalConfig(),
+  steamBottle,
+  paths: { userHome: '/test-gamelib/home' },
+  engineRuntime: { registry: createEngineRegistry() }
+}
 
 const { steamMetadataStore } = jest.requireMock<Stores['steam']>('../stores')
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')

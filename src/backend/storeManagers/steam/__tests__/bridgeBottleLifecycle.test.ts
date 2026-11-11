@@ -9,6 +9,7 @@
  *  - graceful-fs mocked (existsSync) — no real filesystem access
  *  - electron mocked (app.getPath) — backend/constants/paths imports it
  */
+import { createEngineRegistry } from 'backend/engine/engineRegistry'
 import {
   existsSync,
   mkdirSync,
@@ -51,16 +52,15 @@ import {
   setDrmBridgeRunner,
   clearDrmBridgeRunner
 } from '../bridgeBottle'
-import {
-  getBottleDir,
-  killBottleWineServerWith
-} from 'backend/engine/bottlePrimitives'
+import { killBottleWineServerWith } from 'backend/engine/bottlePrimitives'
+import { getBottleDir } from '../bottleDirs'
 import type { DrmBridgeRunner } from '../bridgeBottle'
 import { __stopBottledRaiseLoops } from '../bottledSteam'
-import {
-  setEngineSelection,
-  clearEngineSelection
-} from 'backend/engine/engineRegistry'
+const setEngineSelection = (
+  ...a: Parameters<typeof engineRuntime.registry.setEngineSelection>
+) => engineRuntime.registry.setEngineSelection(...a)
+const clearEngineSelection = (key: string) =>
+  engineRuntime.registry.clearEngineSelection(key)
 import type { NonCrossoverSelection } from 'backend/engine/engineTypes'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
@@ -125,11 +125,14 @@ jest.mock('backend/logger', () => ({
 const CX_BIN_DIR =
   '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin'
 const cxState: { binDir: string | undefined } = { binDir: CX_BIN_DIR }
-jest.mock('backend/engine/crossoverLocation', () => ({
+// 66.4-05: the locator is a plain fake over that state, handed to the code under test through
+// the engine-runtime slice (a fresh selection registry per suite).
+const crossover = {
   resolveCrossoverBinDir: () => cxState.binDir,
-  resolveCrossoverBinDirAsync: () => Promise.resolve(cxState.binDir),
-  crossoverBinDirFromWineBin: (bin: string) => bin
-}))
+  resolveCrossoverBinDirAsync: () => Promise.resolve(cxState.binDir)
+}
+const engineRuntime = { crossover, registry: createEngineRegistry() }
+const paths = { userHome }
 
 const mockedExistsSync = existsSync as jest.Mock
 const mockedMkdirSync = mkdirSync as jest.Mock
@@ -144,12 +147,15 @@ const mockedGlobalConfigGet = jest.fn()
 // 66.3-15: the bottle helpers are an instance over the suite's mocked store and config.
 const steamBottle = createSteamBottle({
   stores: createTestStores({ steam: { steamBottleConfigStore } as never }),
-  config: { getSettings: () => mockedGlobalConfigGet().getSettings() }
+  config: { getSettings: () => mockedGlobalConfigGet().getSettings() },
+  crossover
 })
 // The config slice the lifecycle guards and the settings resolvers read (66.3-08), through the mock.
 const bridgeDeps = {
   config: { getSettings: () => mockedGlobalConfigGet().getSettings() },
-  steamBottle
+  steamBottle,
+  paths,
+  engineRuntime
 }
 // Recording fakes handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
@@ -158,7 +164,9 @@ const mockedSpawnAsync = jest.fn()
 const spawnDeps = {
   spawnAsync: mockedSpawnAsync,
   config: bridgeDeps.config,
-  steamBottle
+  steamBottle,
+  paths,
+  engineRuntime
 } as unknown as BottleLifecycleDeps & EngineServicesSource
 const mockedDownloadFile = downloadFile as jest.Mock
 const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
@@ -1179,6 +1187,8 @@ describe('Phase 59 engine registry', () => {
           runner: d.runner,
           onlineMonitor: d.onlineMonitor,
           engineState: d.engineState,
+          engineRuntime: d.engineRuntime,
+          paths: d.paths,
           notices: d,
           installRemove: mockedInstallRemove,
           wineManagerReleases: () => [],
@@ -1511,10 +1521,10 @@ describe('Phase 59 engine registry', () => {
     })
 
     test('discardNewBridgeBottle removes the dir and refuses an unsafe name', () => {
-      discardNewBridgeBottle(name)
+      discardNewBridgeBottle(paths, name)
       expect(mockedRmSync).toHaveBeenCalledWith(...rmCall())
       mockedRmSync.mockClear()
-      discardNewBridgeBottle('a/../b')
+      discardNewBridgeBottle(paths, 'a/../b')
       expect(mockedRmSync).not.toHaveBeenCalled()
     })
 

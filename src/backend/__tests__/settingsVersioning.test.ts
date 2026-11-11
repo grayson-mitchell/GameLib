@@ -187,8 +187,16 @@ describe('per-game settings', () => {
     const before = readFileSync(gameFile('appr'))
     const { readStoredGameConfig } = freshGraph()
 
-    expect(readStoredGameConfig('appr')).toEqual({ targetExe: 'a.exe' })
-    expect(readStoredGameConfig('appr')).toEqual({ targetExe: 'a.exe' })
+    expect(
+      readStoredGameConfig('appr', {
+        gamesConfigPath: join(mockPaths.dir, 'GamesConfig')
+      })
+    ).toEqual({ targetExe: 'a.exe' })
+    expect(
+      readStoredGameConfig('appr', {
+        gamesConfigPath: join(mockPaths.dir, 'GamesConfig')
+      })
+    ).toEqual({ targetExe: 'a.exe' })
     expect(readFileSync(gameFile('appr')).equals(before)).toBe(true)
     expect(backups('appr')).toHaveLength(0)
     expect(existsSync(gameFile('appr'))).toBe(true)

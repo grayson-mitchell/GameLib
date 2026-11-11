@@ -71,7 +71,7 @@ export default class SteamGame implements Game {
       const title = pickTitleSettings(readStoredTitleConfig(this.appId))
       const { readSteamEngineOverride } =
         await import('./engine/steamEngineDeps')
-      const override = readSteamEngineOverride(this.appId)
+      const override = readSteamEngineOverride(this.deps.paths, this.appId)
       // 60-UAT G3, same split as 59-UAT G11: the overlay override is also
       // written to the title's GameConfig, so merge it back ('on'/'off' only;
       // anything else stays Automatic, T-60-06-01).

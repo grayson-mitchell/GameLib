@@ -25,7 +25,6 @@ import {
   endEngineLaunch,
   selectEngineForLaunch
 } from 'backend/engine/launchEngine'
-import { getLaunchSettings } from 'backend/engine/launchSettings'
 
 /** What GOG setup reads: the manager map, the wine launcher helpers and the runners. */
 export type SetupDeps = Pick<
@@ -33,6 +32,8 @@ export type SetupDeps = Pick<
   | 'libraryManagers'
   | 'onlineMonitor'
   | 'engineState'
+  | 'engineRuntime'
+  | 'paths'
   | 'steamBottle'
   | 'launcher'
   | 'commandRunner'
@@ -137,11 +138,11 @@ async function setup(
         deps,
         appName,
         gameInfo,
-        getLaunchSettings(step.key, stored),
+        deps.engineRuntime.launchSettings.getLaunchSettings(step.key, stored),
         installRedist
       )
     } finally {
-      endEngineLaunch(step.key)
+      endEngineLaunch(deps.engineRuntime, step.key)
     }
   }
 

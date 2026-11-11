@@ -27,14 +27,10 @@ import { logWarning, LogPrefix } from 'backend/logger'
 // its pure helpers (e.g. steam/library.ts consumers like games.test.ts). Only
 // the provisioning/command functions actually need it, so defer the load.
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
-import {
-  getBottleDir,
-  isBottleProvisioned
-} from 'backend/engine/bottlePrimitives'
-import {
-  resolveCrossoverBinDir,
-  resolveCrossoverBinDirAsync
-} from 'backend/engine/crossoverLocation'
+import { getBottleDir, isBottleProvisioned } from './bottleDirs'
+import type { AppPaths } from 'backend/process/context'
+import type { EngineRuntime } from 'backend/engine/engineRuntime'
+import type { CrossoverLocator } from 'backend/engine/crossoverLocation'
 
 // ── Phase 24 (24-04): dedicated bridge bottle (macOS native Steam bridge) ──
 // D-08/R6/Pitfall 1: the bridge bottle is a SEPARATE, shared CrossOver
@@ -187,6 +183,14 @@ export function bottleWineArch(bottleName: string): 'win32' | 'win64' | null {
 
 /** What the bottle helpers read: the bottle config store and the global settings. */
 export interface SteamBottleDeps {
+  /**
+   * The boot's CrossOver locator. Read lazily: the 'steam-bottle' boot step runs before
+   * 'engine-runtime', so the boot passes a facade that resolves the runtime at call time.
+   */
+  crossover: Pick<
+    CrossoverLocator,
+    'resolveCrossoverBinDir' | 'resolveCrossoverBinDirAsync'
+  >
   stores: { steam: Pick<Stores['steam'], 'steamBottleConfigStore'> }
   config: Pick<GlobalConfigSlice, 'getSettings'>
 }
@@ -209,7 +213,7 @@ export function createSteamBottle(deps: SteamBottleDeps) {
     runner: Pick<ProcessRunner, 'run'>
   }): Promise<boolean> {
     return (
-      (await resolveCrossoverBinDirAsync(
+      (await deps.crossover.resolveCrossoverBinDirAsync(
         { runner: rdeps.runner },
         { hintWineBins: persistedWineBins() }
       )) !== undefined
@@ -394,7 +398,9 @@ export function createSteamBottle(deps: SteamBottleDeps) {
    * (dev/CI/non-macOS), so the caller can fall back to another wineVersion.
    */
   function resolveCrossoverWine(label: string): WineInstallation | undefined {
-    const binDir = resolveCrossoverBinDir({ hintWineBins: persistedWineBins() })
+    const binDir = deps.crossover.resolveCrossoverBinDir({
+      hintWineBins: persistedWineBins()
+    })
     if (!binDir) {
       return undefined
     }
@@ -426,6 +432,8 @@ export type SteamBottle = ReturnType<typeof createSteamBottle>
 
 /** What a consumer that only resolves the bottle's settings (for example its steamapps dir) needs. */
 export type BottleSettingsDeps = {
+  paths: Pick<AppPaths, 'userHome'>
+  engineRuntime: Pick<EngineRuntime, 'registry'>
   steamBottle: Pick<
     SteamBottle,
     'getSteamBottleSettings' | 'resolveCrossoverWine'

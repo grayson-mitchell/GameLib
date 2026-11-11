@@ -26,6 +26,10 @@ export type EngineServicesSource = Pick<
   > & {
     /** The boot-owned engine decision/notice state (D-66.3-12). */
     engineState: EngineServices['engineState']
+    /** The boot-owned engine runtime (66.4-05). */
+    engineRuntime: EngineServices['engineRuntime']
+    /** The path roots the engine reads (66.4-05). */
+    paths: EngineServices['paths']
     /** The probes the engine spawns (66.2-03): only `run`, so the launcher's slice qualifies. */
     runner: Pick<ManagerDeps['runner'], 'run'>
     /** The members createTools reads; a launcher still being built can supply just these. */
@@ -49,7 +53,9 @@ export function toolsFrom(deps: EngineServicesSource): Tools {
     appState: deps.appState,
     notifications: deps.notifications,
     onlineMonitor: deps.onlineMonitor,
-    engineState: deps.engineState
+    engineState: deps.engineState,
+    engineRuntime: deps.engineRuntime,
+    paths: deps.paths
   })
 }
 
@@ -59,6 +65,8 @@ export function engineServicesFrom(deps: EngineServicesSource): EngineServices {
     runner: deps.runner,
     onlineMonitor: deps.onlineMonitor,
     engineState: deps.engineState,
+    engineRuntime: deps.engineRuntime,
+    paths: deps.paths,
     installRemove: (...a) => toolsFrom(deps).DXVK.installRemove(...a),
     wineManagerReleases: wineManagerReleasesFrom(deps),
     globalSettings: () =>

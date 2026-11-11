@@ -515,8 +515,8 @@ export async function selectLaunchEngine(
   const bottleName = current.wineCrossoverBottle
   const { decideLaunchEngine } = await import('backend/engine/engineDecision')
   const { setEngineSelection, clearEngineSelection } =
-    await import('backend/engine/engineRegistry')
-  const { prepareBottleForEngine } = await import('backend/engine/engineSwitch')
+    steamGame.deps.engineRuntime.registry
+  const { prepareBottleForEngine } = steamGame.deps.engineRuntime.switcher
   const { STEAM_ENGINE_RUNNER, steamEngineStateDeps } =
     await import('./engine/steamEngineDeps')
   const { isNonCrossover } = await import('backend/engine/engineTypes')
@@ -540,16 +540,15 @@ export async function selectLaunchEngine(
     await import('backend/services/engineServices')
   const { parseEngineOverride } = await import('backend/engine/engineIds')
   const earlyOverride = parseEngineOverride(
-    readSteamEngineOverride(steamGame.appId)
+    readSteamEngineOverride(steamGame.deps.paths, steamGame.appId)
   )
   if (
     connectivity.offline &&
     (earlyOverride === 'automatic' || earlyOverride === 'crossover')
   ) {
-    const { readBottleEngineMarkerKind, restoreNeedsAbsentPin } =
-      await import('backend/engine/engineSwitch')
-    const { isPinnedEngineInstalled } =
-      await import('backend/engine/fallbackEngine')
+    const sw = await import('backend/engine/engineSwitch')
+    const { isPinnedEngineInstalled } = steamGame.deps.engineRuntime.fallback
+    const switchCtx = sw.switchContextFrom(steamGame.deps)
     const { ENGINE_PINS } = await import('backend/engine/enginePins')
     const { offlineLaunchCertainlyBlocked } =
       await import('backend/engine/offlineRefusal')
@@ -559,9 +558,9 @@ export async function selectLaunchEngine(
       crossoverMissing: await isCrossoverMissing(
         steamDecisionDeps(steamDecisionServices(steamGame.deps))
       ),
-      markerKind: readBottleEngineMarkerKind(bottleName),
+      markerKind: sw.readBottleEngineMarkerKind(switchCtx, bottleName),
       currentPinInstalled: isPinnedEngineInstalled(ENGINE_PINS.current),
-      restoreNeedsAbsentPin: restoreNeedsAbsentPin(bottleName)
+      restoreNeedsAbsentPin: sw.restoreNeedsAbsentPin(switchCtx, bottleName)
     })
     if (refusal.blocked) {
       const why =
@@ -803,7 +802,7 @@ export async function onBridgeLaunchDeadline(
 ): Promise<void> {
   const { stopBottleProcessMonitor } = await import('./bottleProcessMonitor')
   const { clearEngineSelection, getEngineSelection } =
-    await import('backend/engine/engineRegistry')
+    steamGame.deps.engineRuntime.registry
   const { engineLogLabel } = await import('backend/engine/engineTypes')
   const { LAUNCH_DEADLINE_MS } = await import('backend/engine/launchDeadline')
   // Phase 59 UAT (G5): the monitor's onStopped can clear the registry entry
@@ -840,7 +839,7 @@ export async function prefetchBridgeDrmDownloads(
   bridgeBottleName: string
 ): Promise<void> {
   const { drmWrapper, drmExe } = await detectLaunchDrmWrapper(
-    getBottleDir(bridgeBottleName),
+    getBottleDir(steamGame.deps.paths, bridgeBottleName),
     exePath
   )
   // CEG markers are read once, and only for a steamstub exe.
@@ -871,7 +870,9 @@ export async function prefetchBridgeDrmDownloads(
     },
     {
       runTool: createRunTool({ runner: steamGame.deps.runner }),
-      runner: steamGame.deps.runner
+      runner: steamGame.deps.runner,
+      engineRuntime: steamGame.deps.engineRuntime,
+      paths: steamGame.deps.paths
     }
   )
 }
@@ -944,8 +945,9 @@ export async function launchDrmModeGame(
     )
     return false
   }
+  const { paths } = steamGame.deps
   const gameWinPath = drmBottleWinPath(
-    getBottleDir(ready.bottleSettings.wineCrossoverBottle),
+    getBottleDir(paths, ready.bottleSettings.wineCrossoverBottle),
     exePath
   )
   if (!gameWinPath) {

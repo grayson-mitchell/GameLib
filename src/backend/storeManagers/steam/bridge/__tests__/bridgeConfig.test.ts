@@ -27,6 +27,9 @@ import { join } from 'node:path'
 
 import { writeBridgeConfig, BRIDGE_CONFIG_FILENAME } from '../bridgeConfig'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { userHome } from 'backend/constants/paths'
+
+const appPaths = { userHome }
 import { logError, logWarning } from 'backend/logger'
 
 jest.mock('backend/logger', () => ({
@@ -85,6 +88,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
 
   test('writes port=<n>/appid=<id> beside the exe and returns { status: "written" }', () => {
     const result = writeBridgeConfig({
+      paths: appPaths,
       exePath: gameExePath,
       bottleName: 'GameLibSteamBridge-206060',
       appId: APP_ID,
@@ -104,6 +108,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
 
   test('appends one iface.<Family>=<Version> line per supplied interfaceVersions entry', () => {
     const result = writeBridgeConfig({
+      paths: appPaths,
       exePath: gameExePath,
       bottleName: 'GameLibSteamBridge-206060',
       appId: APP_ID,
@@ -124,6 +129,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
     mkdirSync(join(root, 'outside'), { recursive: true })
 
     const result = writeBridgeConfig({
+      paths: appPaths,
       exePath: outsidePath,
       bottleName: 'GameLibSteamBridge-206060',
       appId: APP_ID,
@@ -139,6 +145,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
 
   test('a non-numeric appId is rejected before any path/write operation', () => {
     const result = writeBridgeConfig({
+      paths: appPaths,
       exePath: gameExePath,
       bottleName: 'GameLibSteamBridge-206060',
       appId: 'not-numeric',
@@ -156,6 +163,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
 
   test('port 54 (below the ephemeral/registered floor) is rejected', () => {
     const result = writeBridgeConfig({
+      paths: appPaths,
       exePath: gameExePath,
       bottleName: 'GameLibSteamBridge-206060',
       appId: APP_ID,
@@ -169,6 +177,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
 
   test('port 70000 (above the valid uint16 range) is rejected', () => {
     const result = writeBridgeConfig({
+      paths: appPaths,
       exePath: gameExePath,
       bottleName: 'GameLibSteamBridge-206060',
       appId: APP_ID,
@@ -182,6 +191,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
 
   test('an unsafe bottle name is rejected, no file written', () => {
     const result = writeBridgeConfig({
+      paths: appPaths,
       exePath: gameExePath,
       bottleName: '../escape',
       appId: APP_ID,
@@ -207,6 +217,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
       const exe = join(gameDir, "Vampire's Fall Origins.exe")
 
       const result = writeBridgeConfig({
+        paths: appPaths,
         exePath: exe,
         bottleName: BOTTLE,
         appId: APP_ID,
@@ -231,6 +242,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
 
     test('a shim beside the exe writes exactly one cfg and no extraPaths key', () => {
       const result = writeBridgeConfig({
+        paths: appPaths,
         exePath: gameExePath,
         bottleName: BOTTLE,
         appId: APP_ID,
@@ -251,6 +263,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
       mkdirSync(sub, { recursive: true })
 
       const result = writeBridgeConfig({
+        paths: appPaths,
         exePath: gameExePath,
         bottleName: BOTTLE,
         appId: APP_ID,
@@ -270,6 +283,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
       mkdirSync(join(root, 'outside'), { recursive: true })
 
       const result = writeBridgeConfig({
+        paths: appPaths,
         exePath: gameExePath,
         bottleName: BOTTLE,
         appId: APP_ID,
@@ -290,6 +304,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
       const missing = join(gameDir, 'does-not-exist')
 
       const result = writeBridgeConfig({
+        paths: appPaths,
         exePath: gameExePath,
         bottleName: BOTTLE,
         appId: APP_ID,
@@ -305,6 +320,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
 
   test('no partial .tmp file survives a rejected call', () => {
     writeBridgeConfig({
+      paths: appPaths,
       exePath: gameExePath,
       bottleName: 'GameLibSteamBridge-206060',
       appId: 'not-numeric',
@@ -320,6 +336,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
   // Spike 034: tier-2 shimFeatures ride in the same cfg as `fix.` lines.
   it('appends fix lines after the port/appid/iface lines, dropping malformed ones', () => {
     const result = writeBridgeConfig({
+      paths: appPaths,
       exePath: gameExePath,
       bottleName: 'GameLibSteamBridge-206060',
       appId: APP_ID,
@@ -346,6 +363,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
       const unityDir = join(gameDir, 'Game_Data', 'Plugins', 'x86_64')
       mkdirSync(unityDir, { recursive: true })
       const result = writeBridgeConfig({
+        paths: appPaths,
         exePath: gameExePath,
         bottleName: BOTTLE,
         appId: APP_ID,
@@ -371,6 +389,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
       const target = join(gameDir, BRIDGE_CONFIG_FILENAME)
       writeFileSync(`${target}.tmp`, 'stale', { mode: 0o644 })
       const result = writeBridgeConfig({
+        paths: appPaths,
         exePath: gameExePath,
         bottleName: BOTTLE,
         appId: APP_ID,
@@ -390,6 +409,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
       'a %s secret is rejected, nothing written, value never logged',
       (_n, bad) => {
         const result = writeBridgeConfig({
+          paths: appPaths,
           exePath: gameExePath,
           bottleName: BOTTLE,
           appId: APP_ID,
@@ -411,6 +431,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
 
     test('a valid secret is never passed to the logger', () => {
       writeBridgeConfig({
+        paths: appPaths,
         exePath: gameExePath,
         bottleName: BOTTLE,
         appId: APP_ID,

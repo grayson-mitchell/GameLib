@@ -6,6 +6,7 @@
  * an injected RunTool for every step. The opt-in real arm at the bottom clones
  * the real CrossOver through the real process runner and is not part of CI.
  */
+import { createTestEngineRuntime } from 'backend/testUtils/testEngineRuntime'
 import { createHash } from 'crypto'
 import {
   existsSync,
@@ -306,6 +307,7 @@ describe('detectAllowedCrossover', () => {
     const res = await detectAllowedCrossover(
       { crossoverBinDir: bin, appFolder },
       {
+        engineRuntime: createTestEngineRuntime(),
         runTool,
         runner: createScriptedRunner([]),
         platform: 'darwin',
@@ -431,6 +433,7 @@ describe('detectAllowedCrossover', () => {
       {
         platform: 'darwin',
         runner: createScriptedRunner([]),
+        engineRuntime: createTestEngineRuntime(),
         runTool: () => Promise.reject(new Error('must not run'))
       }
     )
@@ -1206,7 +1209,7 @@ const realOn =
     const runTool = createRunTool({ runner: real.runner })
     const found = await detectAllowedCrossover(
       {},
-      { runTool, runner: real.runner }
+      { runTool, runner: real.runner, engineRuntime: createTestEngineRuntime() }
     )
     expect(found.status).toBe('ok')
     if (found.status !== 'ok') return

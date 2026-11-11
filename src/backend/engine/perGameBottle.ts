@@ -109,7 +109,7 @@ export async function createCrossoverBottle(
     )
     return { status: 'error', error: `Invalid bottle name: "${bottleName}"` }
   }
-  const createdHere = !existsSync(getBottleDir(bottleName))
+  const createdHere = !existsSync(getBottleDir(deps.paths, bottleName))
   const cleanup = async () => {
     await killBottleWineServerWith(
       deps,
@@ -118,7 +118,7 @@ export async function createCrossoverBottle(
       { CX_ROOT: dirname(binDir) },
       15_000
     )
-    if (createdHere) removeCreatedBottleDir(bottleName)
+    if (createdHere) removeCreatedBottleDir(deps.paths, bottleName)
   }
   const aborted = async (): Promise<CreateBottleResult> => {
     logInfo(
@@ -152,7 +152,7 @@ export async function createCrossoverBottle(
         error: 'CrossOver did not finish creating the bottle'
       }
     }
-    if (!isBottleProvisioned(bottleName)) {
+    if (!isBottleProvisioned(deps.paths, bottleName)) {
       // log-secret-gate-exempt: stderr of cxbottle create (bottle provisioning), not an auth command
       logError(
         [
@@ -194,7 +194,7 @@ export async function createCrossoverBottle(
   return { status: 'done', createdHere }
 }
 
-export type EnsureGameBottleResult =
+type EnsureGameBottleResult =
   | {
       status: 'done'
       createdHere: boolean
@@ -224,26 +224,26 @@ export interface PerGameBottleDeps {
   ensurePin: (
     args: Omit<
       Parameters<typeof ensurePinnedEngineReportingStatus>[0],
-      'processRunner' | 'onlineMonitor'
+      'processRunner' | 'onlineMonitor' | 'fallback'
     >
   ) => Promise<PinnedEngineResult>
   currentPin: () => EnginePin
   isProvisioned: (bottleName: string) => boolean
 }
 
-const defaultDeps: Omit<
+const defaultDeps = (
+  services: Pick<EngineServices, 'paths'>
+): Omit<
   PerGameBottleDeps,
   | 'createCrossover'
   | 'createFallback'
   | 'decide'
   | 'resolveBinDir'
   | 'ensurePin'
-> = {
+> => ({
   currentPin: () => ENGINE_PINS.current,
-  isProvisioned: isBottleProvisioned
-}
-
-const inFlight = new Map<string, Promise<EnsureGameBottleResult>>()
+  isProvisioned: (bottleName) => isBottleProvisioned(services.paths, bottleName)
+})
 
 async function createWithPinned(
   a: {
@@ -332,44 +332,68 @@ async function ensureOnce(
   return createWithPinned(a, d.currentPin(), d)
 }
 
-/** Create the game's bottle once (idempotent; concurrent callers share one creation). */
-export function ensureGameBottle(
-  services: EngineServices,
-  args: {
-    key: EngineKey
-    bottleName: string
-    appName: string
-    runner: Runner
-    signal?: AbortSignal
-  },
-  deps: Partial<PerGameBottleDeps> = {}
-): Promise<EnsureGameBottleResult> {
-  const d: PerGameBottleDeps = {
-    ensurePin: (a) =>
-      ensurePinnedEngineReportingStatus({
-        ...a,
-        processRunner: services.runner,
-        onlineMonitor: services.onlineMonitor
-      }),
-    createCrossover: (...a) => createCrossoverBottle(services, ...a),
-    createFallback: (...a) => createFallbackBottle(services, ...a),
-    decide: (a) => decideCreationEngine(a, { runner: services.runner }),
-    resolveBinDir: () =>
-      resolveCrossoverBinDirForEngine({ runner: services.runner }),
-    ...defaultDeps,
-    ...deps
-  }
-  if (sanitizeBottleName(args.bottleName) !== args.bottleName) {
-    return Promise.resolve({
-      status: 'error',
-      error: `Invalid bottle name: "${args.bottleName}"`
+export interface PerGameBottleFlights {
+  ensureGameBottle: (
+    services: EngineServices,
+    args: {
+      key: EngineKey
+      bottleName: string
+      appName: string
+      runner: Runner
+      signal?: AbortSignal
+    },
+    deps?: Partial<PerGameBottleDeps>
+  ) => Promise<EnsureGameBottleResult>
+}
+
+/**
+ * One flight map per boot (66.4-05): concurrent callers sharing this instance share one creation
+ * per bottle name; after it settles a new call starts a new one.
+ */
+export function createPerGameBottleFlights(): PerGameBottleFlights {
+  const inFlight = new Map<string, Promise<EnsureGameBottleResult>>()
+
+  /** Create the game's bottle once (idempotent; concurrent callers share one creation). */
+  function ensureGameBottle(
+    services: EngineServices,
+    args: {
+      key: EngineKey
+      bottleName: string
+      appName: string
+      runner: Runner
+      signal?: AbortSignal
+    },
+    deps: Partial<PerGameBottleDeps> = {}
+  ): Promise<EnsureGameBottleResult> {
+    const d: PerGameBottleDeps = {
+      ensurePin: (a) =>
+        ensurePinnedEngineReportingStatus({
+          ...a,
+          processRunner: services.runner,
+          onlineMonitor: services.onlineMonitor,
+          fallback: services.engineRuntime.fallback
+        }),
+      createCrossover: (...a) => createCrossoverBottle(services, ...a),
+      createFallback: (...a) => createFallbackBottle(services, ...a),
+      decide: (a) => decideCreationEngine(a, services),
+      resolveBinDir: () => resolveCrossoverBinDirForEngine(services),
+      ...defaultDeps(services),
+      ...deps
+    }
+    if (sanitizeBottleName(args.bottleName) !== args.bottleName) {
+      return Promise.resolve({
+        status: 'error',
+        error: `Invalid bottle name: "${args.bottleName}"`
+      })
+    }
+    const existing = inFlight.get(args.bottleName)
+    if (existing) return existing
+    const p = ensureOnce(args, d).finally(() => {
+      inFlight.delete(args.bottleName)
     })
+    inFlight.set(args.bottleName, p)
+    return p
   }
-  const existing = inFlight.get(args.bottleName)
-  if (existing) return existing
-  const p = ensureOnce(args, d).finally(() => {
-    inFlight.delete(args.bottleName)
-  })
-  inFlight.set(args.bottleName, p)
-  return p
+
+  return { ensureGameBottle }
 }

@@ -9,6 +9,8 @@
  *  - graceful-fs mocked (existsSync) — no real filesystem access
  *  - electron mocked (app.getPath) — backend/constants/paths imports it
  */
+import { createEngineRegistry } from 'backend/engine/engineRegistry'
+import { userHome } from 'backend/constants/paths'
 import {
   existsSync,
   mkdirSync,
@@ -22,7 +24,7 @@ import {
 // `graceful-fs` `readFileSync` import above (manifest.test.ts precedent).
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import { createSteamBottle } from '../bottle'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { getBottleDir } from 'backend/storeManagers/steam/bottleDirs'
 import { __stopBottledRaiseLoops } from '../bottledSteam'
 import { provisionBottle } from '../provisionBottle'
 import { createTestStores } from 'backend/testUtils/testServices'
@@ -90,11 +92,14 @@ jest.mock('backend/logger', () => ({
 const CX_BIN_DIR =
   '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin'
 const cxState: { binDir: string | undefined } = { binDir: CX_BIN_DIR }
-jest.mock('backend/engine/crossoverLocation', () => ({
+// 66.4-05: the locator is a plain fake over that state, handed to the code under test through
+// the engine-runtime slice (a fresh selection registry per suite).
+const crossover = {
   resolveCrossoverBinDir: () => cxState.binDir,
-  resolveCrossoverBinDirAsync: () => Promise.resolve(cxState.binDir),
-  crossoverBinDirFromWineBin: (bin: string) => bin
-}))
+  resolveCrossoverBinDirAsync: () => Promise.resolve(cxState.binDir)
+}
+const engineRuntime = { crossover, registry: createEngineRegistry() }
+const paths = { userHome }
 
 const mockedExistsSync = existsSync as jest.Mock
 const mockedMkdirSync = mkdirSync as jest.Mock
@@ -109,7 +114,8 @@ const mockedGlobalConfigGet = jest.fn()
 // 66.3-15: the bottle helpers are an instance over the suite's mocked store and config.
 const steamBottle = createSteamBottle({
   stores: createTestStores({ steam: { steamBottleConfigStore } as never }),
-  config: { getSettings: () => mockedGlobalConfigGet().getSettings() }
+  config: { getSettings: () => mockedGlobalConfigGet().getSettings() },
+  crossover
 })
 // Recording fakes handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
@@ -121,6 +127,8 @@ const provisionDeps = {
   config: { getSettings: () => mockedGlobalConfigGet().getSettings() },
   stores: createTestStores(),
   steamBottle,
+  paths,
+  engineRuntime,
   spawnAsync: mockedSpawnAsync,
   commandRunner: { runWineCommand: mockedRunWineCommand }
 } as unknown as Parameters<typeof provisionBottle>[0]

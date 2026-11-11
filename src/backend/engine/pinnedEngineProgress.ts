@@ -10,7 +10,7 @@ import type { ProcessRunner } from 'backend/process/types'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendGameStatusUpdate } from 'backend/utils'
 import type { EnginePin } from './enginePins'
-import { ensurePinnedEngine } from './fallbackEngine'
+import type { FallbackEngine } from './fallbackEngine'
 import type { NonCrossoverEngine } from './engineTypes'
 
 export type PinnedEngineResult =
@@ -31,6 +31,8 @@ export async function ensurePinnedEngineReportingStatus(args: {
   /** The process runner the archive extraction runs through (66.2-11). */
   processRunner: Pick<ProcessRunner, 'run'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
+  /** The boot's fallback-engine owner (66.4-05). */
+  fallback: Pick<FallbackEngine, 'ensurePinnedEngine'>
   signal?: AbortSignal
 }): Promise<PinnedEngineResult> {
   const { pin, appName, runner, processRunner, onlineMonitor, signal } = args
@@ -54,7 +56,7 @@ export async function ensurePinnedEngineReportingStatus(args: {
       context
     })
   }
-  const result = await ensurePinnedEngine(pin, {
+  const result = await args.fallback.ensurePinnedEngine(pin, {
     runner: processRunner,
     onlineMonitor,
     signal,

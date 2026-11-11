@@ -18,33 +18,22 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
 }))
-jest.mock('backend/constants/paths', () => ({ toolsPath: '/tools' }))
 jest.mock('backend/engine/bottlePrimitives', () => ({
-  getBottleDir: (name: string) => `${mockState.root}/${name}`,
+  getBottleDir: (_paths: unknown, name: string) => `${mockState.root}/${name}`,
   sanitizeBottleName: (name: string) =>
     /^[A-Za-z0-9_-]+$/.test(name) ? name : '',
   buildFallbackGameSettings: jest.fn(),
   killBottleWineServerWith: jest.fn()
 }))
-jest.mock('backend/engine/crossoverLocation', () => ({
-  resolveCrossoverBinDirAsync: jest.fn()
-}))
-jest.mock('../fallbackEngine', () => ({
-  pinnedEngineRoot: () => mockState.engines,
-  pinnedEnginePaths: jest.fn(),
-  isPinnedEngineInstalled: jest.fn().mockReturnValue(false),
-  ensurePinnedEngine: jest.fn()
-}))
-
 import {
   ENGINE_MARKER_FILE,
-  prepareBottleForEngine,
-  readBottleEngineMarkerKind,
-  readBottleEngineMarkerSummary,
-  restoreNeedsAbsentPin
+  createEngineSwitcher,
+  readBottleEngineMarkerKind as readKind,
+  readBottleEngineMarkerSummary as readSummary,
+  restoreNeedsAbsentPin as needsAbsentPin
 } from '../engineSwitch'
-import type { EngineSwitchDeps } from '../engineSwitch'
-import { __resetBottleLedgerForTests, markGameRunning } from '../bottleLedger'
+import type { EngineSwitchContext, EngineSwitchDeps } from '../engineSwitch'
+import { createBottleLedger } from '../bottleLedger'
 import type { EngineSelection } from '../engineTypes'
 import { defined } from './defined'
 import { __resetStoreState } from 'backend/storeVersioning/engine'
@@ -82,6 +71,14 @@ const pinEngine = {
 
 let dir: string
 let deps: jest.Mocked<EngineSwitchDeps>
+let ctx: EngineSwitchContext
+let ledger: ReturnType<typeof createBottleLedger>
+let prepareBottleForEngine: ReturnType<
+  typeof createEngineSwitcher
+>['prepareBottleForEngine']
+const readBottleEngineMarkerKind = (name: string) => readKind(ctx, name)
+const readBottleEngineMarkerSummary = (name: string) => readSummary(ctx, name)
+const restoreNeedsAbsentPin = (name: string) => needsAbsentPin(ctx, name)
 
 const marker = () =>
   JSON.parse(readFileSync(join(dir, ENGINE_MARKER_FILE), 'utf8'))
@@ -95,7 +92,20 @@ beforeEach(() => {
   mockState.root = mkdtempSync(join(tmpdir(), 'gamelib-switch-'))
   dir = join(mockState.root, NAME)
   mkdirSync(dir)
+  ledger = createBottleLedger()
+  ctx = {
+    paths: { userHome: '/home', toolsPath: '/tools' },
+    fallback: {
+      pinnedEngineRoot: () => mockState.engines,
+      pinnedEnginePaths: jest.fn(),
+      isPinnedEngineInstalled: jest.fn().mockReturnValue(false),
+      ensurePinnedEngine: jest.fn()
+    },
+    ledger
+  }
+  prepareBottleForEngine = createEngineSwitcher().prepareBottleForEngine
   deps = {
+    ctx,
     getMonitorPhase: jest.fn().mockReturnValue(null),
     killWith: jest.fn().mockResolvedValue(true),
     resolveCrossoverBinDir: jest.fn().mockResolvedValue(BIN_DIR),
@@ -941,9 +951,6 @@ describe('G30 / WR-02 engine switch', () => {
 })
 
 describe('prepareBottleForEngine D-16 bottle-busy', () => {
-  beforeEach(() => __resetBottleLedgerForTests())
-  afterAll(() => __resetBottleLedgerForTests())
-
   const runKey = (
     next: EngineSelection,
     over: Partial<EngineSwitchDeps> = {}
@@ -957,7 +964,7 @@ describe('prepareBottleForEngine D-16 bottle-busy', () => {
 
   test('another game running in the bottle refuses an engine change and kills nothing', async () => {
     seedMarker({ kind: 'crossover', id: 'crossover', wineserverBin: '' })
-    markGameRunning(NAME, 'gog:1')
+    ledger.markGameRunning(NAME, 'gog:1')
     const res = await runKey(pinned)
     expect(res).toMatchObject({ ok: false, reason: 'bottle-busy' })
     expect(deps.killWith).not.toHaveBeenCalled()
@@ -975,7 +982,7 @@ describe('prepareBottleForEngine D-16 bottle-busy', () => {
 
   test('marker already matching: no change and no kill even with another game running', async () => {
     seedMarker({ kind: 'crossover', id: 'crossover', wineserverBin: '' })
-    markGameRunning(NAME, 'gog:1')
+    ledger.markGameRunning(NAME, 'gog:1')
     const res = await runKey(crossover)
     expect(res).toEqual({ ok: true, changed: false })
     expect(deps.killWith).not.toHaveBeenCalled()

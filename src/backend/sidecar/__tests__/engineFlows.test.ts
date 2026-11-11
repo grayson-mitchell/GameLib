@@ -40,6 +40,7 @@ import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { createTestSteamBottle } from 'backend/testUtils/testSteamBottle'
 import { createTestEngineState } from 'backend/testUtils/testEngineState'
 import {
+  createTestEngineServices,
   createTestManagers,
   createTestStores
 } from 'backend/testUtils/testServices'
@@ -63,6 +64,7 @@ function fakeGame(over: { native?: boolean; platform?: string } = {}) {
 const spawnAsync = createTestServices().spawnAsync
 const runner = createTestServices().runner
 const config = createTestGlobalConfig()
+const engineServices = createTestEngineServices()
 const steamBottle = createTestSteamBottle({ stores, config })
 const engineState = {
   ...createTestEngineState(),
@@ -79,6 +81,8 @@ describe('engine flows', () => {
       runner,
       config,
       engineState,
+      engineRuntime: engineServices.engineRuntime,
+      paths: engineServices.paths,
       steamBottle
     })
   )
@@ -114,6 +118,8 @@ describe('engine flows', () => {
         runner,
         config,
         engineState,
+        engineRuntime: engineServices.engineRuntime,
+        paths: engineServices.paths,
         steamBottle
       },
       '220'
@@ -135,7 +141,9 @@ describe('engine flows', () => {
         runner,
         wineManagerReleases: expect.any(Function),
         globalSettings: expect.any(Function),
-        engineState
+        engineState,
+        engineRuntime: engineServices.engineRuntime,
+        paths: engineServices.paths
       },
       arg
     )
@@ -184,7 +192,9 @@ describe('engine flows', () => {
         runner,
         wineManagerReleases: expect.any(Function),
         globalSettings: expect.any(Function),
-        engineState
+        engineState,
+        engineRuntime: engineServices.engineRuntime,
+        paths: engineServices.paths
       },
       arg
     )

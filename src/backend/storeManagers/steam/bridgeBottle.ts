@@ -7,14 +7,12 @@ import { dirname, isAbsolute, join } from 'path'
 import { existsSync, readdirSync } from 'graceful-fs'
 import type { GameSettings, WineInstallation } from 'common/types'
 import { logInfo, LogPrefix } from 'backend/logger'
-import { getEngineSelection } from 'backend/engine/engineRegistry'
+import type { AppPaths } from 'backend/process/context'
+import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import { isNonCrossover } from 'backend/engine/engineTypes'
 import type { NonCrossoverSelection } from 'backend/engine/engineTypes'
-import {
-  buildFallbackGameSettings,
-  getBottleDir,
-  isBottleProvisioned
-} from 'backend/engine/bottlePrimitives'
+import { buildFallbackGameSettings } from 'backend/engine/bottlePrimitives'
+import { getBottleDir, isBottleProvisioned } from './bottleDirs'
 import {
   DEFAULT_BRIDGE_BOTTLE_NAME,
   getBottleSteamappsDir,
@@ -188,6 +186,9 @@ export function findBridgeInstallBottle(appId: string): string | null {
 export type BridgeBottleDeps = {
   config: { getSettings(): GameSettings }
   steamBottle: Pick<SteamBottle, 'resolveCrossoverWine'>
+  /** The path roots and the boot's selection registry the fallback settings read (66.4-05). */
+  paths: Pick<AppPaths, 'userHome'>
+  engineRuntime: Pick<EngineRuntime, 'registry'>
 }
 
 function stockBridgeBottleSettings(
@@ -438,7 +439,12 @@ function fallbackBridgeBottleSettings(
       `getBridgeBottleSettings: invalid appId "${appId}" (must be numeric)`
     )
   }
-  return buildFallbackGameSettings(resolved, sel, deps.config.getSettings())
+  return buildFallbackGameSettings(
+    deps.paths,
+    resolved,
+    sel,
+    deps.config.getSettings()
+  )
 }
 
 /**
@@ -463,7 +469,7 @@ export function getBridgeBottleSettings(
       entry.kind
     )
   }
-  const engine = getEngineSelection(appId)
+  const engine = deps.engineRuntime.registry.getEngineSelection(appId)
   if (engine && isNonCrossover(engine)) {
     return fallbackBridgeBottleSettings(deps, appId, engine)
   }

@@ -21,7 +21,6 @@ import { existsSync } from 'graceful-fs'
 import { join } from 'node:path'
 import Backend from 'i18next-fs-backend'
 import i18next from 'i18next'
-import { sweepStaleEngineTemps } from 'backend/engine/fallbackEngine'
 import { startInstalledJsonWatcher } from './installedJsonWatcher'
 import { removeLegacyZoomData } from './legacyZoomDataCleanup'
 import { releaseOnStdinEof } from './stdinEofRelease'
@@ -109,6 +108,7 @@ import axios from 'axios'
 import { randomUUID } from 'node:crypto'
 import { createOnlineMonitor } from '../online_monitor'
 import { createEngineState } from '../engine/engineState'
+import { createEngineRuntime } from '../engine/engineRuntime'
 import { createWinetricksQueue } from '../tools/winetricksQueue'
 import { getInstallingComponent } from '../tools'
 import type { OnlineMonitor } from '../online_monitor'
@@ -292,6 +292,7 @@ export const BOOT_STEP_NAMES = [
   'humble-services',
   'online-monitor-owner',
   'engine-state',
+  'engine-runtime',
   'winetricks-queue',
   'store-managers',
   'download-queue',
@@ -406,6 +407,12 @@ function requireBridgeHelpers(state: BootState): BootServices['bridgeHelpers'] {
   return bridgeHelpers
 }
 
+function requireEngineRuntime(state: BootState): BootServices['engineRuntime'] {
+  const { engineRuntime } = state.services
+  if (!engineRuntime) throw new Error('engine-runtime step has not run')
+  return engineRuntime
+}
+
 function requireHost(state: BootState): HostServices {
   const { host } = state.services
   if (!host) throw new Error('host-services step has not run')
@@ -433,6 +440,7 @@ function requireServices(state: BootState): BootServices {
     appInfo,
     onlineMonitor,
     engineState,
+    engineRuntime,
     winetricksQueue,
     signInProbe,
     steamSession,
@@ -463,6 +471,7 @@ function requireServices(state: BootState): BootServices {
     !appInfo ||
     !onlineMonitor ||
     !engineState ||
+    !engineRuntime ||
     !winetricksQueue ||
     !signInProbe ||
     !steamSession ||
@@ -494,6 +503,7 @@ function requireServices(state: BootState): BootServices {
         'appInfo',
         'onlineMonitor',
         'engineState',
+        'engineRuntime',
         'winetricksQueue',
         'signInProbe',
         'steamSession',
@@ -527,6 +537,7 @@ function requireServices(state: BootState): BootServices {
     appInfo,
     onlineMonitor,
     engineState,
+    engineRuntime,
     winetricksQueue,
     signInProbe,
     steamSession,
@@ -1488,7 +1499,22 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         if (!stores) throw new Error('boot: stores step must run first')
         if (!config) throw new Error('boot: config step must run first')
         state.services.steamBottle =
-          prebuilt.steamBottle ?? createSteamBottle({ stores, config })
+          prebuilt.steamBottle ??
+          createSteamBottle({
+            stores,
+            config,
+            // 'engine-runtime' runs after this step: resolve the locator at call time.
+            crossover: {
+              resolveCrossoverBinDir: (opts) =>
+                requireEngineRuntime(state).crossover.resolveCrossoverBinDir(
+                  opts
+                ),
+              resolveCrossoverBinDirAsync: (d, opts) =>
+                requireEngineRuntime(
+                  state
+                ).crossover.resolveCrossoverBinDirAsync(d, opts)
+            }
+          })
       }
     },
     {
@@ -1712,6 +1738,19 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'engine-runtime',
+      // Builds the one engine runtime of this boot (D-05, 66.4-05): ledger, selection registry,
+      // launch overlay contexts, launch deadlines, switch / bottle-creation / pinned-download
+      // single-flight maps, the CrossOver bin-dir memo. Construction only allocates empty maps: no
+      // I/O and no timer (deadlines run on ctx.clock, whose timers are unref'd). After 'engine-state'
+      // and before 'store-managers' so ManagerDeps and the launcher carry it.
+      run: (ctx, _io, state) => {
+        state.services.engineRuntime =
+          prebuilt.engineRuntime ??
+          createEngineRuntime({ clock: ctx.clock, paths: ctx.paths })
+      }
+    },
+    {
       name: 'winetricks-queue',
       // Builds the one winetricks apply queue of this boot (D-05, D-66.3-12). Construction does no
       // I/O and arms no timer: it only subscribes to the environment-report change signal. Before
@@ -1741,6 +1780,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           host,
           onlineMonitor,
           engineState,
+          engineRuntime,
           signInProbe,
           steamSession,
           anonymousClient,
@@ -1761,6 +1801,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !host ||
           !onlineMonitor ||
           !engineState ||
+          !engineRuntime ||
           !signInProbe ||
           !steamSession ||
           !anonymousClient ||
@@ -1801,6 +1842,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           imageTools: host.imageTools,
           onlineMonitor,
           engineState,
+          engineRuntime,
           signIn: signInProbe,
           steamSession,
           anonymousClient,
@@ -1824,14 +1866,23 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         }
         let queue = prebuilt.downloadQueue
         if (!queue) {
-          const { host, config, onlineMonitor, steamSession, steamBottle } =
-            state.services
+          const {
+            host,
+            config,
+            onlineMonitor,
+            steamSession,
+            steamBottle,
+            engineRuntime,
+            paths
+          } = state.services
           if (
             !host ||
             !config ||
             !onlineMonitor ||
             !steamSession ||
-            !steamBottle
+            !steamBottle ||
+            !engineRuntime ||
+            !paths
           ) {
             throw new Error(
               'download-queue step ran before host-services/config/online-monitor-owner/steam-session-state'
@@ -1846,7 +1897,9 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             appState: host.appState,
             notifications: host.notifications,
             steamSession,
-            steamBottle
+            steamBottle,
+            engineRuntime,
+            paths
           })
           queue.start()
         }
@@ -2412,12 +2465,12 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'engine-temp-sweep',
-      run: () => {
+      run: (_ctx, _io, state) => {
         // Stale engine temp sweep (G20): removes steam-engines/.tmp-* left by an interrupted unpack.
         // Placed after `initLogger()` (it logs) and before READY (no install can hold a temp dir yet).
         // Exit contract: synchronous, creates no handle, nothing in flight once it returns.
         try {
-          sweepStaleEngineTemps()
+          requireEngineRuntime(state).fallback.sweepStaleEngineTemps()
         } catch {
           /* never fails boot */
         }

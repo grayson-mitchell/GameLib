@@ -68,7 +68,7 @@ describe('launcher.ts overlay census', () => {
     const body = bodyOf(launcher, 'async function runLaunchEventCallback(')
     expect(body).toMatch(/\.finally\(async \(\) => \{[\s\S]*releaseEngine\(\)/)
     expect(body).toMatch(/catch \(error\) \{[\s\S]*releaseEngine\(\)/)
-    expect(body).toContain('endEngineLaunch(engineKey)')
+    expect(body).toContain('endEngineLaunch(deps.engineRuntime, engineKey)')
   })
 
   it('imports engine modules only (no store manager reach beyond the index)', () => {

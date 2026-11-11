@@ -35,7 +35,7 @@ jest.mock('backend/logger', () => ({
 }))
 
 import { ENGINE_PINS } from '../enginePins'
-import { pinnedEnginePaths } from '../fallbackEngine'
+import { createFallbackEngine } from '../fallbackEngine'
 import {
   deriveEngineFromWine,
   engineIdOf,
@@ -50,6 +50,9 @@ import type { WineInstallation } from 'common/types'
 
 const dir = mkdtempSync(join(tmpdir(), 'gamelib-engineconfig-'))
 afterAll(() => rmSync(dir, { recursive: true, force: true }))
+const { pinnedEnginePaths } = createFallbackEngine({
+  paths: { toolsPath: join(dir, 'tools') }
+})
 
 const WM_DIR = join(dir, 'wm', 'Wine-Staging-11.0')
 const wmBin = join(WM_DIR, 'Contents', 'Resources', 'wine', 'bin', 'wine')
@@ -64,9 +67,13 @@ const deps = (
   releases = [release()],
   global: Record<string, unknown> = {}
 ): Partial<EngineConfigDeps> &
-  Pick<EngineConfigDeps, 'wineManagerReleases' | 'globalSettings'> => ({
+  Pick<
+    EngineConfigDeps,
+    'wineManagerReleases' | 'globalSettings' | 'gamesConfigPath' | 'pinWineBin'
+  > => ({
   wineManagerReleases: () => releases,
   gamesConfigPath: dir,
+  pinWineBin: (pin) => pinnedEnginePaths(pin as never).wineBin,
   globalSettings: () => global
 })
 const wine = (o: Partial<WineInstallation>): WineInstallation =>

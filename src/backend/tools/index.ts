@@ -231,6 +231,9 @@ export interface ToolsDeps extends DialogBoxDeps, NotifyDeps {
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   /** The boot-owned engine decision/notice state (D-66.3-12). */
   engineState: EngineServices['engineState']
+  /** The boot-owned engine runtime and the path roots the engine reads (66.4-05). */
+  engineRuntime: EngineServices['engineRuntime']
+  paths: EngineServices['paths']
   config: Pick<
     GlobalConfigSlice,
     'getSettings' | 'getAlternativeWine' | 'setSetting'
@@ -244,6 +247,8 @@ function engineServicesFor(deps: ToolsDeps): EngineServices {
     runner: deps.runner,
     onlineMonitor: deps.onlineMonitor,
     engineState: deps.engineState,
+    engineRuntime: deps.engineRuntime,
+    paths: deps.paths,
     installRemove: (...a) => createDxvk(deps).installRemove(...a),
     wineManagerReleases: wineManagerReleasesFrom(deps),
     globalSettings: () =>

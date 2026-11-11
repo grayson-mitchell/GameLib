@@ -25,6 +25,8 @@
  *   deadline and abort id.
  */
 import type { RunTool } from 'backend/engine/runTool'
+import type { EngineRuntime } from 'backend/engine/engineRuntime'
+import type { AppPaths } from 'backend/process/context'
 import type { ProcessRunner } from 'backend/process/types'
 import { dirname, isAbsolute, resolve } from 'path'
 import type { GameSettings, GameStatus } from 'common/types'
@@ -142,6 +144,9 @@ export type DrmSetupOverrides = {
   runTool: RunTool
   /** The runner behind `runTool`; the CrossOver bin-dir lookup (mdfind) runs through it (66.2-07). */
   runner: Pick<ProcessRunner, 'run'>
+  /** The boot's CrossOver locator and the path roots the stage reads (66.4-05). */
+  engineRuntime: Pick<EngineRuntime, 'crossover'>
+  paths: Pick<AppPaths, 'userHome'>
   isMacSteamRunning?: () => Promise<boolean>
   detectCrossover?: typeof detectAllowedCrossover
   ensureComponent?: SteamclientLayerEnsure
@@ -257,7 +262,14 @@ async function ensureDrmDownloads(
   // 2. CrossOver allowlist
   const detect = deps.detectCrossover ?? detectAllowedCrossover
   const crossover = await run('unsupported-crossover', () =>
-    detect({ appFolder }, { runTool: deps.runTool, runner: deps.runner })
+    detect(
+      { appFolder },
+      {
+        runTool: deps.runTool,
+        runner: deps.runner,
+        engineRuntime: deps.engineRuntime
+      }
+    )
   )
   if (crossover.status === 'error')
     return { status: 'error', stage: 'crossover-allowlist', error: crossover }
@@ -478,7 +490,9 @@ async function runSetup(
         runner: deps.runner,
         config: deps.config,
         steamBottle: deps.steamBottle,
-        steamUser: deps.steamUser
+        steamUser: deps.steamUser,
+        paths: deps.paths,
+        engineRuntime: deps.engineRuntime
       })
     )
     if (staged.status === 'error') return fail('bottle-stage', staged)

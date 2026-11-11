@@ -25,7 +25,7 @@
     "src/backend/__tests__/knownFixesOverlay.test.ts": 1,
     "src/backend/__tests__/knownFixesRegistry.test.ts": 3,
     "src/backend/__tests__/knownFixesWithLayer.test.ts": 3,
-    "src/backend/__tests__/launcher.engineStep.test.ts": 7,
+    "src/backend/__tests__/launcher.engineStep.test.ts": 6,
     "src/backend/__tests__/launcher_launchSingleFlight.test.ts": 5,
     "src/backend/__tests__/launcher_wineLibFolders.test.ts": 2,
     "src/backend/__tests__/main_window.test.ts": 1,

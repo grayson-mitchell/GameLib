@@ -297,9 +297,10 @@ export async function prepareTcpOverlay(
   let inputArg: { inputModulePath: string } | Record<string, never> | undefined
   let carried: readonly string[] = []
   try {
-    const { getEngineSelection } = await import('backend/engine/engineRegistry')
     const { isNonCrossover } = await import('backend/engine/engineTypes')
-    const sel = getEngineSelection(steamGame.appId)
+    const sel = steamGame.deps.engineRuntime.registry.getEngineSelection(
+      steamGame.appId
+    )
     const fallbackEngine = sel
       ? isNonCrossover(sel)
       : settings.wineVersion.type !== 'crossover'
@@ -345,6 +346,7 @@ export async function prepareTcpOverlay(
         },
         {
           runTool: createRunTool({ runner: steamGame.deps.runner }),
+          engineRuntime: steamGame.deps.engineRuntime,
           runner: steamGame.deps.runner
         }
       )

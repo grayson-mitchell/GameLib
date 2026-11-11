@@ -156,6 +156,7 @@ export interface CreateStoreManagersDeps {
   imageTools: ManagerDeps['imageTools']
   onlineMonitor: ManagerDeps['onlineMonitor']
   engineState: ManagerDeps['engineState']
+  engineRuntime: ManagerDeps['engineRuntime']
   signIn: ManagerDeps['signIn']
   steamSession: ManagerDeps['steamSession']
   anonymousClient: ManagerDeps['anonymousClient']
@@ -198,6 +199,7 @@ export function createStoreManagers(
     imageTools: deps.imageTools,
     onlineMonitor: deps.onlineMonitor,
     engineState: deps.engineState,
+    engineRuntime: deps.engineRuntime,
     signIn: deps.signIn,
     steamSession: deps.steamSession,
     anonymousClient: deps.anonymousClient,
@@ -222,6 +224,8 @@ export function createStoreManagers(
     notifications: deps.notifications,
     onlineMonitor: deps.onlineMonitor,
     engineState: deps.engineState,
+    engineRuntime: deps.engineRuntime,
+    paths: deps.paths,
     steamBottle: deps.steamBottle
   })
   Object.assign(library, {

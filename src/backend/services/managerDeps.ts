@@ -23,6 +23,7 @@ export type ManagerDepsSource = Pick<
   | 'appInfo'
   | 'onlineMonitor'
   | 'engineState'
+  | 'engineRuntime'
   | 'signInProbe'
   | 'steamSession'
   | 'anonymousClient'
@@ -56,6 +57,7 @@ export function managerDepsFromServices(
     imageTools: source.host.imageTools,
     onlineMonitor: source.onlineMonitor,
     engineState: source.engineState,
+    engineRuntime: source.engineRuntime,
     signIn: {
       epochs: source.signInProbe.epochs,
       outcomes: source.signInProbe.outcomes

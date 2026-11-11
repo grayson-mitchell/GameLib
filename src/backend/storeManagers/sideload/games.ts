@@ -24,7 +24,6 @@ import { removeNonSteamGame } from 'backend/shortcuts/nonesteamgame/nonesteamgam
 import type { ManagerDeps } from 'backend/services/types'
 
 import type LogWriter from 'backend/logger/log_writer'
-import { getLaunchSettings } from 'backend/engine/launchSettings'
 import { engineKeyFor } from 'backend/engine/gameKey'
 
 export default class SideloadGame implements Game {
@@ -43,6 +42,7 @@ export default class SideloadGame implements Game {
       | 'config'
       | 'gameConfigs'
       | 'paths'
+      | 'engineRuntime'
       | 'imageTools'
       | 'dialogs'
       | 'appState'
@@ -110,10 +110,11 @@ export default class SideloadGame implements Game {
 
       if (!this.isNative()) {
         this.deps.runner.killTracked({ runner: 'wine', key: this.id })
-        const gameSettings = getLaunchSettings(
-          engineKeyFor(this.getGameInfo().runner, this.id),
-          await this.getSettings()
-        )
+        const gameSettings =
+          this.deps.engineRuntime.launchSettings.getLaunchSettings(
+            engineKeyFor(this.getGameInfo().runner, this.id),
+            await this.getSettings()
+          )
         // Awaited: the old blocking spawnSync finished before stop() returned (66.2-11).
         await shutdownWine(this.deps, gameSettings)
       }

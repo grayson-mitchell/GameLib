@@ -600,6 +600,7 @@ export async function ensureBuiltInEngineForInstall(
     runner: 'steam',
     processRunner: steamGame.deps.runner,
     onlineMonitor: steamGame.deps.onlineMonitor,
+    fallback: steamGame.deps.engineRuntime.fallback,
     signal
   })
   if (result.ok) return result.engine
