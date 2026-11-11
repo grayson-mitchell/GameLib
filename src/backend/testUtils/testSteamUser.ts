@@ -44,36 +44,51 @@ export function createTestSteamUser(
   })
 }
 
-const SLICE_METHODS = [
-  'acquireAuthenticated',
-  'acquireAuthenticatedWithToken',
-  'acquireOpenAuthenticated',
-  'getClient',
-  'getLogonFailure',
-  'getPersistedSteamId64',
-  'isLoggedIn',
-  'isSteamClientInstalled',
-  'releaseForShutdown',
-  'ensureConnected',
-  'logout',
-  'getUserDetails',
-  'getCredentials',
-  'probeCredentialPresence'
-] as const satisfies readonly (keyof SteamUser)[]
+/**
+ * An inert SteamUser for ManagerDeps bundles that never exercise the session: signed out, no
+ * client, every acquire refused, nothing owed at shutdown. Plain object, no jest APIs, no steam-user
+ * library (the user module is not loaded). A suite that scripts the session builds its own with
+ * `createTestSteamUser` or a jest-fn double.
+ */
+export function createInertTestSteamUser(
+  overrides: Partial<Record<keyof SteamUser, unknown>> = {}
+): SteamUser {
+  const inert: Record<keyof SteamUser, unknown> = {
+    isSteamClientInstalled: () => false,
+    isLoggedIn: () => false,
+    probeCredentialPresence: () => Promise.resolve('unknown'),
+    getClient: () => null,
+    getLogonFailure: () => null,
+    ensureConnected: () => Promise.resolve(false),
+    acquireAuthenticated: () =>
+      Promise.resolve({ ok: false, reason: 'client-not-ready' }),
+    acquireAuthenticatedWithToken: () =>
+      Promise.resolve({ ok: false, reason: 'client-not-ready' }),
+    acquireOpenAuthenticated: () => null,
+    getPersistedSteamId64: () => undefined,
+    logout: () => Promise.resolve(),
+    getUserDetails: () => Promise.resolve(undefined),
+    getCredentials: () => Promise.resolve(undefined),
+    releaseForShutdown: () => Promise.resolve('not-owed')
+  }
+  return { ...inert, ...overrides } as unknown as SteamUser
+}
 
 /**
- * A SteamUser built on the first method call, so a ManagerDeps bundle can carry one without every
- * suite that mocks the user module paying for (or tripping on) the real class.
+ * The inert SteamUser with every member a jest.fn, defaulting to the inert behaviour, for suites
+ * that script or assert on the session (`jest.mocked(steamUser.getClient).mockReturnValue(...)`).
+ * Jest-only: import it from a test file, never from production code. Two calls share nothing.
  */
-export function createLazyTestSteamUser(
-  overrides: TestSteamUserOverrides
-): SteamUser {
-  let real: SteamUser | undefined
-  const instance = (): SteamUser => (real ??= createTestSteamUser(overrides))
-  const out: Record<string, unknown> = {}
-  for (const name of SLICE_METHODS) {
-    out[name] = (...args: unknown[]) =>
-      (instance()[name] as (...a: unknown[]) => unknown)(...args)
+export function createMockSteamUser(
+  overrides: Partial<Record<keyof SteamUser, unknown>> = {}
+): jest.Mocked<SteamUser> {
+  const inert = createInertTestSteamUser(overrides) as unknown as Record<
+    string,
+    (...args: unknown[]) => unknown
+  >
+  const mocked: Record<string, jest.Mock> = {}
+  for (const name of Object.keys(inert)) {
+    mocked[name] = jest.fn(inert[name])
   }
-  return out as unknown as SteamUser
+  return mocked as unknown as jest.Mocked<SteamUser>
 }

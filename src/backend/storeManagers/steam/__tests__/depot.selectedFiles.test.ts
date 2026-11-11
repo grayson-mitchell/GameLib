@@ -13,7 +13,8 @@ import { join, resolve } from 'path'
 
 import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
 import { downloadSelectedDepotFiles } from '../depot'
-import { SteamUser } from '../user'
+import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
+const steamUser = createMockSteamUser()
 import { mockLeaseOk, mockLeaseRefused } from './depotLeaseMocks'
 import { selectAllDepots } from '../depot/select'
 import { at } from './fixtures/indexed'
@@ -36,7 +37,6 @@ jest.mock('backend/utils', () => ({
 jest.mock('backend/sidecar/sidecarRpc', () => ({
   requestRustInvoke: jest.fn()
 }))
-jest.mock('../user')
 jest.mock('../depot/select', () => ({
   ...jest.requireActual('../depot/select'),
   selectAllDepots: jest.fn()
@@ -90,6 +90,7 @@ const call = (
   over: Partial<Parameters<typeof downloadSelectedDepotFiles>[1]> = {}
 ) =>
   downloadSelectedDepotFiles(APP_ID, {
+    steamUser,
     config: createTestGlobalConfig(),
     targetSteamappsDir: staging,
     installdir: 'Game',
@@ -102,8 +103,8 @@ beforeEach(() => {
   jest.clearAllMocks()
   staging = mkdtempSync(join(tmpdir(), 'lif-sel-'))
   client = makeClient()
-  mockLeaseOk()
-  jest.mocked(SteamUser.getClient).mockReturnValue(client as never)
+  mockLeaseOk(steamUser)
+  jest.mocked(steamUser.getClient).mockReturnValue(client as never)
   jest
     .mocked(selectAllDepots)
     .mockReturnValue([
@@ -146,7 +147,7 @@ describe('downloadSelectedDepotFiles', () => {
 
   it('resolves error (never throws) when the CM is not connected', async () => {
     const stub = rust()
-    mockLeaseRefused()
+    mockLeaseRefused(steamUser)
     const r = await call()
     expect(r.status).toBe('error')
     expect(r.error).toBeTruthy()
@@ -154,7 +155,7 @@ describe('downloadSelectedDepotFiles', () => {
   })
 
   it('Phase 54: holds an original-restore lease across the job and releases it once', async () => {
-    const release = mockLeaseOk()
+    const release = mockLeaseOk(steamUser)
     let releasedDuringJob: boolean | undefined
     rust({
       onRun: () => void (releasedDuringJob = release.mock.calls.length > 0)
@@ -162,7 +163,7 @@ describe('downloadSelectedDepotFiles', () => {
     const r = await call()
     expect(r.status).toBe('done')
     expect(releasedDuringJob).toBe(false)
-    expect(jest.mocked(SteamUser.acquireAuthenticated)).toHaveBeenCalledWith({
+    expect(jest.mocked(steamUser.acquireAuthenticated)).toHaveBeenCalledWith({
       reason: 'original-restore',
       guidedAction: 'install',
       appName: '12345'
@@ -171,7 +172,7 @@ describe('downloadSelectedDepotFiles', () => {
   })
 
   it('Phase 54: a rejected job still releases the lease and resolves error', async () => {
-    const release = mockLeaseOk()
+    const release = mockLeaseOk(steamUser)
     jest
       .mocked(requestRustInvoke)
       .mockImplementation(() => Promise.reject(new Error('boom')))

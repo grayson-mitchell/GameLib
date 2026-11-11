@@ -126,7 +126,8 @@ import type {
   DrmDllPathChannel,
   DrmDllOverridesChannel
 } from '../gameDrmLaunch'
-import { SteamUser } from '../user'
+import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
+const steamUser = createMockSteamUser()
 import type { GameInfo, InstallParams } from 'common/types'
 import {
   isSteamNativeDeleteEnabled,
@@ -299,6 +300,7 @@ const crossoverInstalled = jest.fn()
 const isBottleReady = jest.fn()
 const getSteamBottleSettings = jest.fn()
 const steamTestDeps = createTestManagerDeps({
+  steamUser,
   steamBottle: {
     isBottleReady,
     getSteamBottleSettings,
@@ -495,15 +497,6 @@ jest.mock('backend/utils', () => ({
 // a resolved promise so resetMocks:true (which wipes even a factory-supplied
 // implementation before every test) never leaves it undefined, which would
 // throw synchronously before the fire-and-forget .catch() is even reached.
-jest.mock('../user', () => ({
-  SteamUser: {
-    isLoggedIn: jest.fn(),
-    getClient: jest.fn(),
-    ensureConnected: jest.fn().mockResolvedValue(true),
-    acquireAuthenticated: jest.fn(),
-    acquireOpenAuthenticated: jest.fn()
-  }
-}))
 // G25: the fresh connectivity check taken at Play. Default (set in the file-level
 // beforeEach, since resetMocks wipes it) is online.
 jest.mock('backend/connectivityNow', () => ({
@@ -2365,11 +2358,11 @@ afterEach(() => {
 
 beforeEach(() => {
   leaseRelease = jest.fn()
-  ;(SteamUser.acquireAuthenticated as jest.Mock).mockResolvedValue({
+  jest.mocked(steamUser.acquireAuthenticated).mockResolvedValue({
     ok: true,
     client: {},
     release: leaseRelease
-  })
+  } as never)
   ;(applySteamBridgeKnownFixes as jest.Mock).mockImplementation(
     (_deps: unknown, _id: string, settings: unknown) =>
       Promise.resolve(settings)
@@ -2611,6 +2604,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
       expect(restoreBridgeSteamApiOriginals).toHaveBeenCalledTimes(1)
       expect(restoreBridgeSteamApiOriginals).toHaveBeenCalledWith({
+        steamUser: steamTestDeps.steamUser,
         config: steamTestDeps.config,
         appId: APP_ID,
         bottleDir: '/mock/bridge/bottle',
@@ -2888,9 +2882,9 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
     await new SteamGame(APP_ID, steamTestDeps).launch({} as any)
 
-    expect(SteamUser.acquireAuthenticated).not.toHaveBeenCalled()
-    expect(SteamUser.acquireOpenAuthenticated).not.toHaveBeenCalled()
-    expect(SteamUser.ensureConnected).not.toHaveBeenCalled()
+    expect(steamUser.acquireAuthenticated).not.toHaveBeenCalled()
+    expect(steamUser.acquireOpenAuthenticated).not.toHaveBeenCalled()
+    expect(steamUser.ensureConnected).not.toHaveBeenCalled()
     const call = (installSteamBridgeSharedRedists as jest.Mock).mock.calls[0]
     expect(call[4]?.allowLogon).not.toBe(true)
   })
@@ -4646,6 +4640,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
       {}
     )
     expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
+      steamUser: steamTestDeps.steamUser,
       config: steamTestDeps.config,
       targetSteamappsDir: TARGET.targetSteamappsDir,
       installdir: TARGET.installdir,
@@ -4668,14 +4663,14 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
 
     await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
-    expect(SteamUser.acquireAuthenticated).toHaveBeenCalledTimes(1)
-    expect(SteamUser.acquireAuthenticated).toHaveBeenCalledWith({
+    expect(steamUser.acquireAuthenticated).toHaveBeenCalledTimes(1)
+    expect(steamUser.acquireAuthenticated).toHaveBeenCalledWith({
       reason: 'user-install',
       guidedAction: 'install',
       appName: APP_ID
     })
     const acquireOrder = at(
-      (SteamUser.acquireAuthenticated as jest.Mock).mock.invocationCallOrder,
+      jest.mocked(steamUser.acquireAuthenticated).mock.invocationCallOrder,
       0
     )
     expect(acquireOrder).toBeLessThan(
@@ -4696,7 +4691,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
       steamForceWindowsViaBottle: false
     } as any)
 
-    expect(SteamUser.acquireAuthenticated).toHaveBeenCalledWith(
+    expect(steamUser.acquireAuthenticated).toHaveBeenCalledWith(
       expect.objectContaining({
         reason: 'user-install',
         installPath: '/Volumes/Games/SteamLibrary',
@@ -4736,7 +4731,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
 
   it('Phase 54: a go-offline-required refusal defers to the guided step -- no target resolution, no breadcrumb, no download', async () => {
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
-    ;(SteamUser.acquireAuthenticated as jest.Mock).mockResolvedValue({
+    jest.mocked(steamUser.acquireAuthenticated).mockResolvedValue({
       ok: false,
       reason: 'go-offline-required'
     })
@@ -4751,7 +4746,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
 
   it('Phase 54: a token-absent refusal returns the classified not-signed-in error', async () => {
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
-    ;(SteamUser.acquireAuthenticated as jest.Mock).mockResolvedValue({
+    jest.mocked(steamUser.acquireAuthenticated).mockResolvedValue({
       ok: false,
       reason: 'token-absent'
     })
@@ -5084,7 +5079,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
       jest.mocked(steamLibraryStore.get).mockReturnValue(afterStart)
       jest.mocked(getSteamLibraries).mockResolvedValue([])
       ;(existsSync as jest.Mock).mockReturnValue(false)
-      ;(SteamUser.isLoggedIn as jest.Mock).mockReturnValue(false)
+      jest.mocked(steamUser.isLoggedIn).mockReturnValue(false)
       // A restart wipes the in-memory nativeInstallsInFlight registry — the
       // real (unmocked) games.ts map still shows APP_ID in-flight within
       // THIS test process (its promise hasn't settled yet), so this spy
@@ -5144,7 +5139,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
         installdir: TARGET.installdir
       }
     })
-    ;(SteamUser.isLoggedIn as jest.Mock).mockReturnValue(false)
+    jest.mocked(steamUser.isLoggedIn).mockReturnValue(false)
     const inFlightSpy = jest
       .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(false)
@@ -5220,7 +5215,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
       .mockReturnValue([makeEntry({ title: 'Dota 2' })])
     jest.mocked(getSteamLibraries).mockResolvedValue([])
     ;(existsSync as jest.Mock).mockReturnValue(false)
-    ;(SteamUser.isLoggedIn as jest.Mock).mockReturnValue(false)
+    jest.mocked(steamUser.isLoggedIn).mockReturnValue(false)
     const inFlightSpy = jest
       .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(false)
@@ -5626,6 +5621,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
 
     expect(getBottleSteamappsDir).toHaveBeenCalledWith('GameLib')
     expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
+      steamUser: steamTestDeps.steamUser,
       config: steamTestDeps.config,
       targetSteamappsDir: BOTTLE_STEAMAPPS_DIR,
       installdir: RESOLVED_TARGET.installdir,
@@ -5681,6 +5677,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
+      steamUser: steamTestDeps.steamUser,
       config: steamTestDeps.config,
       targetSteamappsDir: BOTTLE_STEAMAPPS_DIR,
       installdir: RESOLVED_TARGET.installdir,
@@ -5836,6 +5833,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       `GameLibSteamBridge-${APP_ID}`
     )
     expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
+      steamUser: steamTestDeps.steamUser,
       config: steamTestDeps.config,
       targetSteamappsDir: BRIDGE_STEAMAPPS_DIR,
       installdir: RESOLVED_TARGET.installdir,
@@ -5860,7 +5858,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(false)
     ;(provisionBridgeBottle as jest.Mock).mockImplementation(() => {
-      expect(SteamUser.acquireAuthenticated).toHaveBeenCalledTimes(1)
+      expect(steamUser.acquireAuthenticated).toHaveBeenCalledTimes(1)
       return Promise.resolve({ status: 'done' })
     })
 
@@ -5868,7 +5866,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     expect(result).toEqual({ status: 'done' })
     expect(provisionBridgeBottle).toHaveBeenCalled()
-    const acquires = (SteamUser.acquireAuthenticated as jest.Mock).mock
+    const acquires = jest.mocked(steamUser.acquireAuthenticated).mock
     expect(acquires.calls).toEqual([
       [{ reason: 'user-install', guidedAction: 'install', appName: APP_ID }],
       [{ reason: 'user-install', guidedAction: 'install', appName: APP_ID }]
@@ -6012,7 +6010,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
   it('Phase 54: a go-offline refusal from the bridge download returns deferredToSetup untouched -- no shim, no redist step', async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
-    ;(SteamUser.acquireAuthenticated as jest.Mock).mockResolvedValue({
+    jest.mocked(steamUser.acquireAuthenticated).mockResolvedValue({
       ok: false,
       reason: 'go-offline-required'
     })
@@ -6969,15 +6967,15 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         status: 'done'
       })
       const releases: jest.Mock[] = []
-      ;(SteamUser.acquireAuthenticated as jest.Mock).mockImplementation(() => {
+      jest.mocked(steamUser.acquireAuthenticated).mockImplementation(() => {
         const release = jest.fn()
         releases.push(release)
-        return Promise.resolve({ ok: true, client: {}, release })
+        return Promise.resolve({ ok: true, client: {}, release } as never)
       })
 
       await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
-      expect(SteamUser.acquireAuthenticated).toHaveBeenNthCalledWith(1, {
+      expect(steamUser.acquireAuthenticated).toHaveBeenNthCalledWith(1, {
         reason: 'prescreen',
         guidedAction: 'install',
         appName: APP_ID
@@ -6988,8 +6986,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       )
       expect(
         at(
-          (SteamUser.acquireAuthenticated as jest.Mock).mock
-            .invocationCallOrder,
+          jest.mocked(steamUser.acquireAuthenticated).mock.invocationCallOrder,
           0
         )
       ).toBeLessThan(prescreenOrder)
@@ -7006,7 +7003,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       })
       ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
       ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
-      ;(SteamUser.acquireAuthenticated as jest.Mock).mockResolvedValue({
+      jest.mocked(steamUser.acquireAuthenticated).mockResolvedValue({
         ok: false,
         reason: 'go-offline-required'
       })
@@ -7019,7 +7016,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       expect(prescreenBridgeDepots).not.toHaveBeenCalled()
       expect(setBridgeSteamApiPrescreenSpy).not.toHaveBeenCalled()
       expect(downloadSteamDepots).not.toHaveBeenCalled()
-      expect(SteamUser.acquireAuthenticated).toHaveBeenCalledTimes(1)
+      expect(steamUser.acquireAuthenticated).toHaveBeenCalledTimes(1)
     })
 
     it("x64 with no Win64 shim bundled: persists 'x64', route recomputes to bottle/win64-no-shim, notice fired, no download", async () => {
@@ -7549,7 +7546,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         (installSteamBridgeSharedRedists as jest.Mock).mock.calls[0]?.[2]
 
       it('G2: a refused session returns before any engine decision, download or bottle creation', async () => {
-        ;(SteamUser.acquireAuthenticated as jest.Mock).mockResolvedValue({
+        jest.mocked(steamUser.acquireAuthenticated).mockResolvedValue({
           ok: false,
           reason: 'logon-rejected'
         })
@@ -8565,9 +8562,11 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     isBottleReady.mockReturnValue(true)
     ;(prescreenBridgeDepots as jest.Mock).mockReset()
     ;(prescreenBridgeDepots as jest.Mock).mockResolvedValue('unknown')
-    ;(SteamUser.acquireAuthenticated as jest.Mock).mockImplementation(() =>
-      Promise.resolve({ ok: true, client: {}, release: jest.fn() })
-    )
+    jest
+      .mocked(steamUser.acquireAuthenticated)
+      .mockImplementation(() =>
+        Promise.resolve({ ok: true, client: {}, release: jest.fn() } as never)
+      )
   }
 
   it('F1: quick 261107-lum — mac-native + proven Windows depot + override routes through the bridge verdict (pending-scan prescreen, then installBridgeGame)', async () => {
@@ -12395,12 +12394,12 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
     library.clear()
     pendingFetches.clear()
     existsSyncMock = jest.requireMock('graceful-fs').existsSync as jest.Mock
-    // quick-260817-d61: re-establish SteamUser.ensureConnected() (resetMocks:
+    // quick-260817-d61: re-establish steamUser.ensureConnected() (resetMocks:
     // true wipes the factory-supplied mockResolvedValue before every test) --
     // getExtraInfo()'s locked->unlocked transition fire-and-forgets a call to
     // it, and a bare jest.fn() with no implementation returns undefined,
     // which would throw synchronously on .catch().
-    jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+    jest.mocked(steamUser.ensureConnected).mockResolvedValue(true)
     // Re-establish GameConfig mock (resetMocks: true clears return values between tests)
     const mockSettings = {
       autoSyncSaves: false,

@@ -109,7 +109,6 @@ jest.mock('i18next', () => {
 })
 
 // ── SteamUser mock — controls getClient() / isLoggedIn() return values ───────
-jest.mock('../user')
 
 // ── electron mock — dialog.showMessageBox (MAC32-03 i386 recovery confirm) +
 // app.getPath (backend/constants/paths reads this at module load time) ───────

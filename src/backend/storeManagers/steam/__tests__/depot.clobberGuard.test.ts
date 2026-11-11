@@ -23,7 +23,8 @@ import { tmpdir } from 'node:os'
 import { join, relative, sep } from 'node:path'
 import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
 import { downloadSteamDepots } from '../depot'
-import { SteamUser } from '../user'
+import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
+const steamUser = createMockSteamUser()
 import { mockLeaseOk } from './depotLeaseMocks'
 import { selectAllDepots } from '../depot/select'
 import { getBottleSteamappsDir } from '../bottle'
@@ -50,7 +51,6 @@ jest.mock('backend/sidecar/sidecarRpc', () => ({
 }))
 
 // ── SteamUser mock — controls acquireAuthenticated()/getClient() return values ────
-jest.mock('../user')
 
 // ── backend/utils mock — the bottle.ts imports (checkWineBeforeLaunch/downloadFile/spawnAsync)
 //    the real getBottleDir/getBottleSteamappsDir chain needs; none is called by those two. ──
@@ -140,8 +140,8 @@ let rust: StubRustDepot
 
 /** One owned depot, a working key, and the stubbed Rust leaf. */
 function setupPlanPlumbing(fakeClient: ReturnType<typeof makeFakeClient>) {
-  mockLeaseOk()
-  jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+  mockLeaseOk(steamUser)
+  jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as never)
   jest
     .mocked(selectAllDepots)
     .mockReturnValue([
@@ -282,6 +282,7 @@ describe('D-08: catch-path finalize must not clobber a complete install (bottle-
     })
 
     const result = await downloadSteamDepots(KCD2_APP_ID, {
+      steamUser,
       config: createTestGlobalConfig(),
       targetSteamappsDir,
       installdir: KCD2_INSTALLDIR,
@@ -334,6 +335,7 @@ describe('D-08: catch-path finalize must not clobber a complete install (bottle-
       )
 
     const result = await downloadSteamDepots(KCD2_APP_ID, {
+      steamUser,
       config: createTestGlobalConfig(),
       targetSteamappsDir,
       installdir: KCD2_INSTALLDIR,

@@ -142,21 +142,15 @@ jest.mock('../macSteamOffline', () => {
 
 const mockCloseAnonymousClient = jest.fn()
 
-import { SteamUser } from '../user'
+import type { SteamUser } from '../user'
 import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
+import { createGlobalTimerClock } from 'backend/testUtils/globalTimerClock'
+import { createFakeClock } from 'backend/testUtils/fakeClock'
 
-// SteamUser reads its config store through the bound slice (66.1-18).
-SteamUser.bindCompatInstance(
-  createTestSteamUser({
-    signIn: mockSignIn,
-    steamSession: mockSteamSession,
-    anonymousClient: {
-      close: (...args: unknown[]) => mockCloseAnonymousClient(...args)
-    },
-    stores: { steam: { configStore: mockConfigStore } },
-    macSteamOffline: jest.requireMock('../macSteamOffline')
-  } as never)
-)
+// One fresh SteamUser per test (66.3-16): nothing to reset between cases. The idle timer rides a
+// clock over the global timers so the jest fake-timer calls below still drive it.
+let steamUser: SteamUser
+let internals: Record<string, any>
 import { logInfo, logWarning } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
 import { at } from './fixtures/indexed'
@@ -164,27 +158,12 @@ import { at } from './fixtures/indexed'
 const FakeLib = jest.requireMock('steam-user')
 const macMock = jest.requireMock('../macSteamOffline')
 
-const internals = SteamUser as unknown as Record<string, any>
-
 function instances(): any[] {
   return FakeLib.instances
 }
 
 function logInfoLines(): string[] {
   return (logInfo as jest.Mock).mock.calls.map((c) => String(c[0]))
-}
-
-function resetSteamUserState(): void {
-  internals.client = null
-  internals.connectingPromise = null
-  internals.shuttingDown = false
-  internals.logonFailure = null
-  internals.leaseCount = 0
-  internals.guidedInstallTargets.clear()
-  internals.wrapTail = Promise.resolve()
-  internals.abandonPendingLogon = null
-  if (internals.idleTimer) clearTimeout(internals.idleTimer)
-  internals.idleTimer = null
 }
 
 beforeEach(() => {
@@ -209,18 +188,27 @@ beforeEach(() => {
     status: 'present',
     token: 'secret-refresh-token'
   })
-  resetSteamUserState()
+  steamUser = createTestSteamUser({
+    signIn: mockSignIn,
+    steamSession: mockSteamSession,
+    anonymousClient: {
+      close: (...args: unknown[]) => mockCloseAnonymousClient(...args)
+    },
+    stores: { steam: { configStore: mockConfigStore } },
+    clock: createGlobalTimerClock(),
+    macSteamOffline: macMock
+  } as never)
+  internals = steamUser as unknown as Record<string, any>
 })
 
 afterEach(() => {
-  resetSteamUserState()
   jest.clearAllTimers()
   jest.useRealTimers()
 })
 
 describe('authenticated connect lifecycle', () => {
   it('builds the client with autoRelogin false and no PICS cache', async () => {
-    expect(await SteamUser.ensureConnected()).toBe(true)
+    expect(await steamUser.ensureConnected()).toBe(true)
     expect(FakeLib.ctorOpts).toHaveLength(1)
     expect(FakeLib.ctorOpts[0]).toEqual(
       expect.objectContaining({ autoRelogin: false, enablePicsCache: false })
@@ -237,7 +225,7 @@ describe('authenticated connect lifecycle', () => {
         return { value, wrap: 'toggled' }
       }
     )
-    await SteamUser.ensureConnected()
+    await steamUser.ensureConnected()
     // logOn recorded relative to the wrap via the constructed instance
     expect(macMock.withMacSteamOffline).toHaveBeenCalledTimes(1)
     expect(instances()).toHaveLength(1)
@@ -256,16 +244,16 @@ describe('authenticated connect lifecycle', () => {
       'go-offline-required'
     )
     expect(instances()).toHaveLength(0)
-    expect(await SteamUser.ensureConnected()).toBe(false)
+    expect(await steamUser.ensureConnected()).toBe(false)
     expect(instances()).toHaveLength(0)
   })
 
   it('a stale canary ends the old client and re-enters the wrapped connect, never relog()', async () => {
-    expect(await SteamUser.ensureConnected()).toBe(true)
+    expect(await steamUser.ensureConnected()).toBe(true)
     const first = instances()[0]
     first.getProductInfo.mockRejectedValue(new Error('stale'))
 
-    expect(await SteamUser.ensureConnected()).toBe(true)
+    expect(await steamUser.ensureConnected()).toBe(true)
 
     expect(first.relog).not.toHaveBeenCalled()
     expect(first.logOff).toHaveBeenCalled()
@@ -275,7 +263,7 @@ describe('authenticated connect lifecycle', () => {
   })
 
   it('a post-logon error ends the session without throwing, and the next call logs on again through the wrap', async () => {
-    await SteamUser.ensureConnected()
+    await steamUser.ensureConnected()
     const first = instances()[0]
     first.steamID = null
     const err: any = new Error('NoConnection')
@@ -283,19 +271,19 @@ describe('authenticated connect lifecycle', () => {
 
     expect(() => first.emit('error', err)).not.toThrow()
 
-    expect(SteamUser.getClient()).toBeNull()
+    expect(steamUser.getClient()).toBeNull()
     expect(logInfoLines()).toContain(
       '[Steam] CM session closed mode=authenticated cause=error'
     )
-    expect(await SteamUser.ensureConnected()).toBe(true)
+    expect(await steamUser.ensureConnected()).toBe(true)
     expect(macMock.withMacSteamOffline).toHaveBeenCalledTimes(2)
     expect(instances()).toHaveLength(2)
   })
 
   it('a post-logon disconnect ends the session too', async () => {
-    await SteamUser.ensureConnected()
+    await steamUser.ensureConnected()
     instances()[0].emit('disconnected', 1, 'gone')
-    expect(SteamUser.getClient()).toBeNull()
+    expect(steamUser.getClient()).toBeNull()
     expect(logInfoLines()).toContain(
       '[Steam] CM session closed mode=authenticated cause=disconnected'
     )
@@ -321,7 +309,7 @@ describe('authenticated connect lifecycle', () => {
     expect(await pending).toBe('client-not-ready')
     expect(instances()[0].logOff).toHaveBeenCalled()
     expect(wrapReturned).toBe(true)
-    expect(SteamUser.getClient()).toBeNull()
+    expect(steamUser.getClient()).toBeNull()
   })
 
   it('maps a CM credential refusal to logon-rejected and reports an expired verdict', async () => {
@@ -404,7 +392,7 @@ describe('authenticated connect lifecycle', () => {
 describe('authenticated session lease', () => {
   const acquire = (
     opts: Record<string, unknown> = { reason: 'user-install' }
-  ) => (SteamUser as any).acquireAuthenticated(opts)
+  ) => (steamUser as any).acquireAuthenticated(opts)
 
   it('two concurrent acquires share one client and one logOn', async () => {
     const [a, b] = await Promise.all([acquire(), acquire()])
@@ -514,7 +502,7 @@ describe('authenticated session lease', () => {
     expect(client.logOff).not.toHaveBeenCalled()
     await jest.advanceTimersByTimeAsync(1)
     expect(client.logOff).toHaveBeenCalledTimes(1)
-    expect(SteamUser.getClient()).toBeNull()
+    expect(steamUser.getClient()).toBeNull()
     expect(logInfoLines()).toContain(
       '[Steam] CM session closed mode=authenticated cause=idle'
     )
@@ -549,7 +537,7 @@ describe('authenticated session lease', () => {
   })
 
   it('acquireOpenAuthenticated is null with no session and never reads the keyring or logs on', () => {
-    expect(SteamUser.acquireOpenAuthenticated('shared-redist')).toBeNull()
+    expect(steamUser.acquireOpenAuthenticated('shared-redist')).toBeNull()
     expect(mockReadTokenOutcome).not.toHaveBeenCalled()
     expect(instances()).toHaveLength(0)
   })
@@ -557,7 +545,7 @@ describe('authenticated session lease', () => {
   it('acquireOpenAuthenticated reuses an open session and cancels the idle timer', async () => {
     const a = await acquire()
     a.release()
-    const open = SteamUser.acquireOpenAuthenticated('shared-redist')
+    const open = steamUser.acquireOpenAuthenticated('shared-redist')
     expect(open).not.toBeNull()
     expect(open?.client).toBe(a.client)
     await jest.advanceTimersByTimeAsync(120000)
@@ -569,16 +557,16 @@ describe('authenticated session lease', () => {
   })
 
   it('a bare ensureConnected opens the session without arming an idle timer', async () => {
-    expect(await SteamUser.ensureConnected()).toBe(true)
+    expect(await steamUser.ensureConnected()).toBe(true)
     await jest.advanceTimersByTimeAsync(120000)
     expect(instances()[0].logOff).not.toHaveBeenCalled()
-    expect(SteamUser.getClient()).not.toBeNull()
+    expect(steamUser.getClient()).not.toBeNull()
   })
 
   it('releaseForShutdown closes the authenticated client, clears the timer and refuses later acquires', async () => {
     const a = await acquire()
     a.release()
-    SteamUser.releaseForShutdown()
+    steamUser.releaseForShutdown()
     expect(instances()[0].logOff).toHaveBeenCalled()
     expect(internals.idleTimer).toBeNull()
     expect(await acquire()).toEqual({ ok: false, reason: 'shutting-down' })
@@ -588,7 +576,7 @@ describe('authenticated session lease', () => {
   it('releaseForShutdown pays the owed goonline after logOff', async () => {
     const a = await acquire()
     a.release()
-    SteamUser.releaseForShutdown()
+    steamUser.releaseForShutdown()
     expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledWith('shutdown')
     expect(at(instances()[0].logOff.mock.invocationCallOrder, 0)).toBeLessThan(
       at(mockRestoreMacSteamOnlineIfOwed.mock.invocationCallOrder, 0)
@@ -596,7 +584,7 @@ describe('authenticated session lease', () => {
   })
 
   it('releaseForShutdown still restores exactly once with no authenticated client', () => {
-    SteamUser.releaseForShutdown()
+    steamUser.releaseForShutdown()
     expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledTimes(1)
     expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledWith('shutdown')
   })
@@ -607,7 +595,7 @@ describe('authenticated session lease', () => {
     instances()[0].logOff.mockImplementation(() => {
       throw new Error('boom')
     })
-    SteamUser.releaseForShutdown()
+    steamUser.releaseForShutdown()
     expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledTimes(1)
   })
 
@@ -615,7 +603,7 @@ describe('authenticated session lease', () => {
     mockRestoreMacSteamOnlineIfOwed.mockImplementation(() =>
       Promise.resolve('restored')
     )
-    await expect(SteamUser.releaseForShutdown()).resolves.toBe('restored')
+    await expect(steamUser.releaseForShutdown()).resolves.toBe('restored')
   })
 
   it('getPersistedSteamId64 returns a numeric stored id and undefined otherwise', () => {
@@ -624,20 +612,20 @@ describe('authenticated session lease', () => {
         key === 'userData' ? { username: 'x', steamId } : undefined
       )
     store('76561198000000000')
-    expect((SteamUser as any).getPersistedSteamId64()).toBe('76561198000000000')
+    expect((steamUser as any).getPersistedSteamId64()).toBe('76561198000000000')
     store('')
-    expect((SteamUser as any).getPersistedSteamId64()).toBeUndefined()
+    expect((steamUser as any).getPersistedSteamId64()).toBeUndefined()
     store('not-a-number')
-    expect((SteamUser as any).getPersistedSteamId64()).toBeUndefined()
+    expect((steamUser as any).getPersistedSteamId64()).toBeUndefined()
     mockConfigStore.get_nodefault.mockReturnValue(undefined)
-    expect((SteamUser as any).getPersistedSteamId64()).toBeUndefined()
+    expect((steamUser as any).getPersistedSteamId64()).toBeUndefined()
   })
 })
 
 describe('sign-out during a wrapped logon (54-REVIEW WR-07)', () => {
   const acquire = (
     opts: Record<string, unknown> = { reason: 'user-refresh' }
-  ) => (SteamUser as any).acquireAuthenticated(opts)
+  ) => (steamUser as any).acquireAuthenticated(opts)
   const settle = async () => {
     for (let i = 0; i < 20; i++) await Promise.resolve()
   }
@@ -655,7 +643,7 @@ describe('sign-out during a wrapped logon (54-REVIEW WR-07)', () => {
     )
     const lease = acquire()
     await settle()
-    await SteamUser.logout()
+    await steamUser.logout()
     release()
     expect(await lease).toEqual({ ok: false, reason: 'not-signed-in' })
     expect(instances()).toHaveLength(0)
@@ -669,14 +657,14 @@ describe('sign-out during a wrapped logon (54-REVIEW WR-07)', () => {
     expect(instances()).toHaveLength(1)
     const inst = instances()[0]
     expect(inst.logOn).toHaveBeenCalledTimes(1)
-    await SteamUser.logout()
+    await steamUser.logout()
     // No timer advance: the wrap is released by the sign-out, not the bound.
     expect(await lease).toEqual({ ok: false, reason: 'not-signed-in' })
     expect(inst.logOff).toHaveBeenCalled()
     inst.steamID = { getSteamID64: () => '76561198000000000' }
     inst.emit('loggedOn')
     expect(internals.client).toBeNull()
-    expect(SteamUser.acquireOpenAuthenticated('user-install')).toBeNull()
+    expect(steamUser.acquireOpenAuthenticated('user-install')).toBeNull()
   })
 
   it("a sign-in after a sign-out mid-wrap does not start its wrap until the old one ends, and the old connect's cleanup leaves the new single-flight alone", async () => {
@@ -694,7 +682,7 @@ describe('sign-out during a wrapped logon (54-REVIEW WR-07)', () => {
     )
     const old = acquire()
     await settle()
-    await SteamUser.logout()
+    await steamUser.logout()
     const fresh = acquire({ reason: 'login' })
     await settle()
     expect(calls).toBe(1)
@@ -713,7 +701,7 @@ describe('sign-out during a wrapped logon (54-REVIEW WR-07)', () => {
 describe('shutdown during a wrapped logon (debug/shutdown-mid-connect-logon-survives)', () => {
   const acquire = (
     opts: Record<string, unknown> = { reason: 'user-refresh' }
-  ) => (SteamUser as any).acquireAuthenticated(opts)
+  ) => (steamUser as any).acquireAuthenticated(opts)
   const settle = async () => {
     for (let i = 0; i < 20; i++) await Promise.resolve()
   }
@@ -730,7 +718,7 @@ describe('shutdown during a wrapped logon (debug/shutdown-mid-connect-logon-surv
     const libraryRetry = jest.fn()
     inst._logonMsgTimeout = setTimeout(libraryRetry, 5000)
 
-    SteamUser.releaseForShutdown()
+    steamUser.releaseForShutdown()
 
     // No timer advance: the wrap is settled by the release, not by the 35 s
     // bound, so it goes back online now and the refresh gets no client.
@@ -752,7 +740,7 @@ describe('shutdown during a wrapped logon (debug/shutdown-mid-connect-logon-surv
     inst.emit('loggedOn')
     expect(inst.logOff).toHaveBeenCalledTimes(2)
     expect(internals.client).toBeNull()
-    expect(SteamUser.acquireOpenAuthenticated('user-install')).toBeNull()
+    expect(steamUser.acquireOpenAuthenticated('user-install')).toBeNull()
     expect(
       logInfoLines().some((l) => l.startsWith('[Timing] SteamUser.loggedOn'))
     ).toBe(false)
@@ -761,7 +749,7 @@ describe('shutdown during a wrapped logon (debug/shutdown-mid-connect-logon-surv
       expect.anything()
     )
     // Nothing reconnects after shutdown: one wrap, one client, one logOn.
-    expect(await SteamUser.ensureConnected()).toBe(false)
+    expect(await steamUser.ensureConnected()).toBe(false)
     expect(macMock.withMacSteamOffline).toHaveBeenCalledTimes(1)
     expect(instances()).toHaveLength(1)
     expect(inst.logOn).toHaveBeenCalledTimes(1)
@@ -776,7 +764,7 @@ describe('shutdown during a wrapped logon (debug/shutdown-mid-connect-logon-surv
     // was not the one being waited on): only the loggedOn backstop is left.
     internals.abandonPendingLogon = null
     internals.client = null
-    SteamUser.releaseForShutdown()
+    steamUser.releaseForShutdown()
     inst.steamID = { getSteamID64: () => '76561198000000000' }
     inst.emit('loggedOn')
     expect(inst.logOff).toHaveBeenCalledTimes(1)
@@ -788,7 +776,7 @@ describe('shutdown during a wrapped logon (debug/shutdown-mid-connect-logon-surv
     const lease = await acquire()
     expect(lease.ok).toBe(true)
     const inst = instances()[0]
-    SteamUser.releaseForShutdown()
+    steamUser.releaseForShutdown()
     expect(inst.logOff).toHaveBeenCalledTimes(1)
     // steam-user answers a logged-on logOff() with 'disconnected'.
     inst.emit('disconnected', 0, 'Logged off')
@@ -805,7 +793,7 @@ describe('shutdown during a wrapped logon (debug/shutdown-mid-connect-logon-surv
 describe('stale canary with other leases held (54-REVIEW WR-08)', () => {
   const acquire = (
     opts: Record<string, unknown> = { reason: 'user-install' }
-  ) => (SteamUser as any).acquireAuthenticated(opts)
+  ) => (steamUser as any).acquireAuthenticated(opts)
 
   it('refuses the new acquire and keeps the session for the holders', async () => {
     const held = await acquire()
@@ -817,10 +805,10 @@ describe('stale canary with other leases held (54-REVIEW WR-08)', () => {
       ok: false,
       reason: 'client-not-ready'
     })
-    expect(await SteamUser.ensureConnected()).toBe(false)
+    expect(await steamUser.ensureConnected()).toBe(false)
 
     expect(first.logOff).not.toHaveBeenCalled()
-    expect(SteamUser.getClient()).toBe(first)
+    expect(steamUser.getClient()).toBe(first)
     expect(instances()).toHaveLength(1)
     expect(internals.leaseCount).toBe(1)
     expect(logInfoLines()).not.toContain(
@@ -839,5 +827,46 @@ describe('stale canary with other leases held (54-REVIEW WR-08)', () => {
     expect(inst.logOff).toHaveBeenCalled()
     expect(instances()).toHaveLength(2)
     second.release()
+  })
+})
+
+// 66.3-16 (D-05, T-66.3-53, T-66.3-54): the session state belongs to the instance, and the idle
+// timer rides the injected clock, unref'd (exit contract), never a module timer.
+describe('per-instance session state (66.3-16)', () => {
+  const build = (clock = createFakeClock()) =>
+    createTestSteamUser({
+      signIn: mockSignIn,
+      steamSession: mockSteamSession,
+      anonymousClient: { close: jest.fn() },
+      stores: { steam: { configStore: mockConfigStore } },
+      clock,
+      macSteamOffline: macMock
+    } as never)
+
+  it('two instances share no client, lease count or connect', async () => {
+    const one = build()
+    const two = build()
+    const lease = await one.acquireAuthenticated({ reason: 'user-refresh' })
+    expect(lease.ok).toBe(true)
+    expect(one.getClient()).not.toBeNull()
+    expect(two.getClient()).toBeNull()
+    expect(two.acquireOpenAuthenticated('user-refresh')).toBeNull()
+    expect(instances()).toHaveLength(1)
+  })
+
+  it('arms the idle timer on the injected clock without keepAlive and logs off when it fires', async () => {
+    const clock = createFakeClock()
+    const instance = build(clock)
+    const lease = await instance.acquireAuthenticated({
+      reason: 'user-refresh'
+    })
+    if (!lease.ok) throw new Error('lease refused')
+    expect(clock.pendingCount()).toBe(0)
+    lease.release()
+    expect(clock.pendingCount()).toBe(1)
+    clock.assertNoKeepAlive()
+    clock.advance(60000)
+    expect(at(instances(), 0).logOff).toHaveBeenCalledTimes(1)
+    expect(instance.getClient()).toBeNull()
   })
 })

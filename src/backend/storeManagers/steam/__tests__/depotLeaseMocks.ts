@@ -1,20 +1,25 @@
 /**
- * Phase 54 (54-05) test helpers for suites that auto-mock '../user'.
- * The depot path acquires an authenticated lease instead of calling
- * ensureConnected(); these helpers script the lease the way the old tests
- * scripted ensureConnected()'s boolean. The lease's client is read lazily
- * from SteamUser.getClient(), so a test may set the client before or after.
+ * Phase 54 (54-05) test helpers for suites that drive the depot path through a mocked SteamUser.
+ * The depot path acquires an authenticated lease instead of calling ensureConnected(); these
+ * helpers script the lease the way the old tests scripted ensureConnected()'s boolean. The lease's
+ * client is read lazily from steamUser.getClient(), so a test may set the client before or after.
+ * 66.3-16: the SteamUser is a per-test jest-fn double passed in, not a module-level static.
  */
-import { SteamUser } from '../user'
+import type { SteamUser } from '../user'
+
+type MockSteamUser = jest.Mocked<SteamUser>
 
 /** acquireAuthenticated resolves a granted lease; returns the release spy. */
-export function mockLeaseOk(onAcquire?: () => void): jest.Mock {
+export function mockLeaseOk(
+  steamUser: MockSteamUser,
+  onAcquire?: () => void
+): jest.Mock {
   const release = jest.fn()
-  jest.mocked(SteamUser.acquireAuthenticated).mockImplementation(async () => {
+  steamUser.acquireAuthenticated.mockImplementation(async () => {
     onAcquire?.()
     return {
       ok: true,
-      client: SteamUser.getClient() as never,
+      client: steamUser.getClient() as never,
       release
     }
   })
@@ -23,18 +28,20 @@ export function mockLeaseOk(onAcquire?: () => void): jest.Mock {
 
 /** acquireAuthenticated refuses (no lease, no client). */
 export function mockLeaseRefused(
+  steamUser: MockSteamUser,
   reason: 'logon-rejected' | 'go-offline-required' = 'logon-rejected'
 ): void {
-  jest
-    .mocked(SteamUser.acquireAuthenticated)
-    .mockResolvedValue({ ok: false, reason } as never)
+  steamUser.acquireAuthenticated.mockResolvedValue({
+    ok: false,
+    reason
+  } as never)
 }
 
 /** acquireOpenAuthenticated returns an open-session lease; returns the release spy. */
-export function mockOpenLease(): jest.Mock {
+export function mockOpenLease(steamUser: MockSteamUser): jest.Mock {
   const release = jest.fn()
-  jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue({
-    client: SteamUser.getClient() as never,
+  steamUser.acquireOpenAuthenticated.mockReturnValue({
+    client: steamUser.getClient() as never,
     release
   })
   return release

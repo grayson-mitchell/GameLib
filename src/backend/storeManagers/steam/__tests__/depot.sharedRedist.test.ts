@@ -22,7 +22,8 @@ import { dirname, join, resolve } from 'path'
 import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
 import { RUST_DEPOT_MANIFEST_SUMMARY } from 'common/types/sidecarTransport'
 import { downloadSharedRedistDepots } from '../depot'
-import { SteamUser } from '../user'
+import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
+const steamUser = createMockSteamUser()
 import { mockLeaseOk, mockLeaseRefused, mockOpenLease } from './depotLeaseMocks'
 import { at, defined } from './fixtures/indexed'
 import {
@@ -54,8 +55,6 @@ jest.mock('backend/utils', () => ({
 jest.mock('backend/sidecar/sidecarRpc', () => ({
   requestRustInvoke: jest.fn()
 }))
-
-jest.mock('../user')
 
 jest.mock('../../../ipc', () => ({
   sendFrontendMessage: jest.fn()
@@ -268,9 +267,9 @@ beforeEach(() => {
   }
   cacheDir = mkdtempSync(join(tmpdir(), 'rkj-depot-'))
   client = makeClient()
-  jest.mocked(SteamUser.getClient).mockReturnValue(client as never)
-  mockLeaseOk()
-  mockOpenLease()
+  jest.mocked(steamUser.getClient).mockReturnValue(client as never)
+  mockLeaseOk(steamUser)
+  mockOpenLease(steamUser)
   failJob = null
   beforeWrite = null
   active = new Map()
@@ -299,6 +298,7 @@ describe('downloadSharedRedistDepots', () => {
     extra: Partial<Parameters<typeof downloadSharedRedistDepots>[1]> = {}
   ) =>
     downloadSharedRedistDepots(appId, {
+      steamUser,
       cacheSteamappsDir: cacheDir,
       optInDepotIds: [],
       ...extra
@@ -309,37 +309,37 @@ describe('downloadSharedRedistDepots', () => {
     ) as Record<string, string>
 
   it('Play time (no allowLogon) with no open session resolves offline and never logs on', async () => {
-    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue(null)
-    jest.mocked(SteamUser.getClient).mockClear()
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue(null)
+    jest.mocked(steamUser.getClient).mockClear()
     const r = await run()
     expect(r).toEqual(OFFLINE)
-    expect(SteamUser.acquireOpenAuthenticated).toHaveBeenCalledWith(
+    expect(steamUser.acquireOpenAuthenticated).toHaveBeenCalledWith(
       'shared-redist'
     )
-    expect(SteamUser.acquireAuthenticated).not.toHaveBeenCalled()
-    expect(SteamUser.getClient).not.toHaveBeenCalled()
+    expect(steamUser.acquireAuthenticated).not.toHaveBeenCalled()
+    expect(steamUser.getClient).not.toHaveBeenCalled()
     expect(requestRustInvoke).not.toHaveBeenCalled()
   })
 
   it('Play time with an open session runs on it and releases it once', async () => {
-    const releaseOpen = mockOpenLease()
+    const releaseOpen = mockOpenLease(steamUser)
     await run()
-    expect(SteamUser.acquireAuthenticated).not.toHaveBeenCalled()
+    expect(steamUser.acquireAuthenticated).not.toHaveBeenCalled()
     expect(releaseOpen).toHaveBeenCalledTimes(1)
   })
 
   it('allowLogon: a refused acquire resolves offline', async () => {
-    mockLeaseRefused('go-offline-required')
+    mockLeaseRefused(steamUser, 'go-offline-required')
     const r = await run(GAME, { allowLogon: true })
     expect(r).toEqual(OFFLINE)
-    expect(SteamUser.acquireOpenAuthenticated).not.toHaveBeenCalled()
+    expect(steamUser.acquireOpenAuthenticated).not.toHaveBeenCalled()
     expect(requestRustInvoke).not.toHaveBeenCalled()
   })
 
   it('allowLogon: acquires a shared-redist install lease and releases it once', async () => {
-    const release = mockLeaseOk()
+    const release = mockLeaseOk(steamUser)
     await run(GAME, { allowLogon: true })
-    expect(SteamUser.acquireAuthenticated).toHaveBeenCalledWith({
+    expect(steamUser.acquireAuthenticated).toHaveBeenCalledWith({
       reason: 'shared-redist',
       guidedAction: 'install',
       appName: GAME
@@ -348,14 +348,14 @@ describe('downloadSharedRedistDepots', () => {
   })
 
   it('allowLogon: releases the lease when a step throws, and the throw propagates', async () => {
-    const release = mockLeaseOk()
+    const release = mockLeaseOk(steamUser)
     jest
       .mocked(client.getProductInfo)
       .mockRejectedValue(new Error('appinfo down'))
     await expect(run(GAME, { allowLogon: true })).rejects.toThrow()
     // Every acquire (the outer lease and each plan-retry lease) is released.
     expect(release.mock.calls.length).toBe(
-      jest.mocked(SteamUser.acquireAuthenticated).mock.calls.length
+      jest.mocked(steamUser.acquireAuthenticated).mock.calls.length
     )
     expect(release).toHaveBeenCalled()
   })

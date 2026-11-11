@@ -29,7 +29,8 @@ import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
-import { SteamUser } from '../user'
+import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
+const steamUser = createMockSteamUser()
 import { getBottleSteamappsDir } from '../bottle'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { finalizeToSteam, downloadSteamDepots } from '../depot'
@@ -52,6 +53,7 @@ const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 // The boot-owned anonymous client (D-66.3-14): a scripted `get`, no CM connection.
 const getAnonymousPicsClient = jest.fn()
 const steamTestDeps = createTestManagerDeps({
+  steamUser,
   anonymousClient: createTestAnonymousClient({ get: getAnonymousPicsClient }),
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
@@ -131,7 +133,6 @@ jest.mock('i18next', () => {
 })
 
 // ── SteamUser mock — controls getClient() / isLoggedIn() return values ───────
-jest.mock('../user')
 
 // ── electron mock — dialog.showMessageBox (MAC32-03 i386 recovery confirm) +
 // app.getPath (backend/constants/paths reads this at module load time) ───────
@@ -295,13 +296,13 @@ describe('SteamLibraryManager', () => {
     // describe below and the structural launch test.
     resetSteamAuthTrigger()
     noteRefreshTrigger('steam', 'action-icons-refresh-button')
-    // Default lease: the client the test installed via SteamUser.getClient().
+    // Default lease: the client the test installed via steamUser.getClient().
     leaseRelease = jest.fn()
-    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue(null)
-    jest.mocked(SteamUser.acquireAuthenticated).mockImplementation(() =>
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue(null)
+    jest.mocked(steamUser.acquireAuthenticated).mockImplementation(() =>
       Promise.resolve({
         ok: true,
-        client: SteamUser.getClient(),
+        client: steamUser.getClient(),
         release: leaseRelease
       } as never)
     )
@@ -876,6 +877,7 @@ describe('SteamLibraryManager', () => {
 
       expect(resumeVerifyRust).toHaveBeenCalledTimes(1)
       expect(resumeVerifyRust).toHaveBeenCalledWith('730', {
+        steamUser: expect.anything(),
         config: expect.anything(),
         targetSteamappsDir: join(tmp, 'steamapps'),
         installdir: 'csgo',

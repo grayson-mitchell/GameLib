@@ -10,6 +10,7 @@
  *  - backend/logger uses factory form (prevents transitive fs-extra native crash)
  *  - ../user is auto-mocked (jest.mock('../user')) so the real steam-user stack never loads
  */
+import { createInertTestSteamUser } from 'backend/testUtils/testSteamUser'
 import {
   existsSync,
   mkdirSync,
@@ -48,7 +49,6 @@ jest.mock('backend/logger', () => ({
 }))
 
 // ── SteamUser mock — keeps the real steam-user stack out of this suite ────────
-jest.mock('../user')
 
 // ── i18next mock — returns the fallback string for classifyDepotError
 //    assertions (library.test.ts's established pattern) ─────────────────────
@@ -614,6 +614,7 @@ describe('finalizeToSteam', () => {
     writeFileSync(join(dir, 'common', 'SomeGame', 'a.bin'), Buffer.alloc(10))
 
     await finalizeToSteam('12345', {
+      steamUser: createInertTestSteamUser(),
       targetSteamappsDir: dir,
       installdir: 'SomeGame',
       name: 'Some Game',
@@ -641,6 +642,7 @@ describe('finalizeToSteam', () => {
     writeFileSync(join(dir, 'common', 'SomeGame', 'a.bin'), Buffer.alloc(123))
 
     await finalizeToSteam('12345', {
+      steamUser: createInertTestSteamUser(),
       targetSteamappsDir: dir,
       installdir: 'SomeGame',
       name: 'Some Game',
@@ -656,6 +658,7 @@ describe('finalizeToSteam', () => {
 
   it('measures 0 bytes and still writes a valid 1026 manifest when nothing has landed on disk yet', async () => {
     await finalizeToSteam('12345', {
+      steamUser: createInertTestSteamUser(),
       targetSteamappsDir: dir,
       installdir: 'NeverStarted',
       name: 'Never Started',
@@ -677,6 +680,7 @@ describe('finalizeToSteam', () => {
       ) // arbitrary non-zero size
 
       await finalizeToSteam('12345', {
+        steamUser: createInertTestSteamUser(),
         targetSteamappsDir: dir,
         installdir: 'SomeGame',
         name: 'Some Game',
@@ -706,6 +710,7 @@ describe('finalizeToSteam', () => {
       writeFileSync(join(dir, 'common', 'SomeGame', 'a.bin'), Buffer.alloc(10))
 
       await finalizeToSteam('12345', {
+        steamUser: createInertTestSteamUser(),
         targetSteamappsDir: dir,
         installdir: 'SomeGame',
         name: 'Some Game',
@@ -726,6 +731,7 @@ describe('finalizeToSteam', () => {
       writeFileSync(join(dir, 'common', 'SomeGame', 'a.bin'), Buffer.alloc(10))
 
       await finalizeToSteam('12345', {
+        steamUser: createInertTestSteamUser(),
         targetSteamappsDir: dir,
         installdir: 'SomeGame',
         name: 'Some Game',
@@ -746,6 +752,7 @@ describe('finalizeToSteam', () => {
       writeFileSync(join(dir, 'common', 'SomeGame', 'a.bin'), Buffer.alloc(10))
 
       await finalizeToSteam('12345', {
+        steamUser: createInertTestSteamUser(),
         targetSteamappsDir: dir,
         installdir: 'SomeGame',
         name: 'Some Game',

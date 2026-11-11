@@ -218,7 +218,7 @@ import {
   DEFAULT_STEAM_WAIT_SCHEDULE
 } from '../storeManagers/steam/bridge/helperRegistry'
 import { steamBridgeHelperPath } from '../constants/paths'
-import { createSteamUser, SteamUser } from '../storeManagers/steam/user'
+import { createSteamUser } from '../storeManagers/steam/user'
 // Transitional (removed by plan 27): the legacy registries still hold children until plans
 // 23/24/26 move them onto the runner.
 import {
@@ -1539,7 +1539,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             clock,
             config
           })
-        SteamUser.bindCompatInstance(state.services.steamUser)
       }
     },
     {

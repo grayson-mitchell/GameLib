@@ -21,6 +21,7 @@
  * DISPATCH (was the right function called, with the right runner) rather than about a real
  * non-Steam launch succeeding end to end.
  */
+import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 
 // ── os — same disposable-homedir redirect as skeletonFlows.test.ts. Without it this suite
 // would reach the developer's real `~/Library/Application Support/GameLib` store files. ──
@@ -77,12 +78,11 @@ jest.mock('backend/constants/environment', () => ({
 
 // ── SteamUser mock — mirrors skeletonFlows.test.ts / library.test.ts's LIB-01
 // convention; automocked, no factory. ──────────────────────────────────────────────────────
+// The boot builds its SteamUser through createSteamUser; hand it the suite's one jest-fn double (66.3-16).
+// `mock`-prefixed so the hoisted factory may reference it; it is initialised before the first require.
+const mockSteamUser = createMockSteamUser()
 jest.mock('../../storeManagers/steam/user', () => ({
-  ...jest.createMockFromModule<typeof import('../../storeManagers/steam/user')>(
-    '../../storeManagers/steam/user'
-  ),
-  // @66.3-compat interim: the boot builds an instance; consumers still reach the static mocks.
-  createSteamUser: () => ({})
+  createSteamUser: () => mockSteamUser
 }))
 
 // ── backend/launcher mock — the ONLY store-manager-adjacent mock in this file. Isolates

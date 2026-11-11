@@ -6,7 +6,7 @@
  *
  * Mock strategy follows installLocation.test.ts's established precedent:
  *  - backend/logger factory mock (prevents transitive fs-extra native crash)
- *  - ../user auto-mocked (jest.mock('../../user')) -- SteamUser.getClient()
+ *  - the SteamUser is a per-file jest-fn double (createMockSteamUser) passed through deps -- steamUser.getClient()
  *    becomes a jest.fn()
  *  - ../../bottle factory-mocked -- getBridgeBottleSettings/
  *    getBottleSteamappsDir only, avoiding bottle.ts's heavy backend/config
@@ -20,7 +20,8 @@ import {
   containWorkingDir,
   backfillBridgeLaunchTargets
 } from '../launchTarget'
-import { SteamUser } from '../../user'
+import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
+const steamUser = createMockSteamUser()
 import { readBridgeVerdict, setBridgeLaunchTarget } from '../bridgeVerdict'
 import { getBottleSteamappsDir } from '../../bottle'
 import { getBridgeBottleSettings } from '../../bridgeBottle'
@@ -35,13 +36,12 @@ jest.mock('backend/logger', () => ({
   }
 }))
 
-jest.mock('../../user')
-
 // The boot-owned anonymous client slice (D-66.3-14): a scripted `get`, no CM connection.
 const getAnonymousPicsClient = jest.fn()
 
 // bridgeVerdict is mocked, so the store slice is never read.
 const DEPS = {
+  steamUser,
   stores: {},
   anonymousClient: { get: getAnonymousPicsClient }
 } as never
@@ -85,8 +85,8 @@ function mockProductInfo(appId: number, appinfo: Record<string, unknown>) {
 describe('resolveBridgeLaunchExe', () => {
   beforeEach(() => {
     jest.mocked(getAnonymousPicsClient).mockReset()
-    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReset()
-    jest.mocked(SteamUser.ensureConnected).mockClear()
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockReset()
+    jest.mocked(steamUser.ensureConnected).mockClear()
     jest.mocked(readBridgeVerdict).mockReset()
     jest.mocked(setBridgeLaunchTarget).mockReset()
     jest.mocked(getBridgeBottleSettings).mockReturnValue({
@@ -107,7 +107,7 @@ describe('resolveBridgeLaunchExe', () => {
     )
     expect(getAnonymousPicsClient).not.toHaveBeenCalled()
     // eslint-disable-next-line @typescript-eslint/unbound-method -- jest mock assertion, same as the other SteamUser checks below
-    expect(SteamUser.acquireOpenAuthenticated).not.toHaveBeenCalled()
+    expect(steamUser.acquireOpenAuthenticated).not.toHaveBeenCalled()
     expect(setBridgeLaunchTarget).not.toHaveBeenCalled()
     expect(logInfo).toHaveBeenCalledWith(
       expect.stringContaining(
@@ -356,8 +356,8 @@ describe('resolveBridgeLaunchExe — anonymous PICS, open session, stored record
 
   beforeEach(() => {
     jest.mocked(getAnonymousPicsClient).mockReset()
-    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReset()
-    jest.mocked(SteamUser.ensureConnected).mockClear()
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockReset()
+    jest.mocked(steamUser.ensureConnected).mockClear()
     jest.mocked(readBridgeVerdict).mockReset()
     jest.mocked(setBridgeLaunchTarget).mockReset()
     jest.mocked(getBridgeBottleSettings).mockReturnValue({
@@ -378,8 +378,8 @@ describe('resolveBridgeLaunchExe — anonymous PICS, open session, stored record
       executable: 'Binaries\\Win32\\Game.exe',
       installdir: 'Game'
     })
-    expect(SteamUser.acquireOpenAuthenticated).not.toHaveBeenCalled()
-    expect(SteamUser.ensureConnected).not.toHaveBeenCalled()
+    expect(steamUser.acquireOpenAuthenticated).not.toHaveBeenCalled()
+    expect(steamUser.ensureConnected).not.toHaveBeenCalled()
   })
 
   it('public_only with an open session resolves from the session, records it, releases once', async () => {
@@ -387,7 +387,7 @@ describe('resolveBridgeLaunchExe — anonymous PICS, open session, stored record
       .mocked(getAnonymousPicsClient)
       .mockResolvedValue(publicOnlyClient() as never)
     const release = jest.fn()
-    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue({
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue({
       client: makeFakeClient({
         getProductInfo: mockProductInfo(GATED_ID, fullAppinfo)
       }),
@@ -403,7 +403,7 @@ describe('resolveBridgeLaunchExe — anonymous PICS, open session, stored record
     jest
       .mocked(getAnonymousPicsClient)
       .mockResolvedValue(publicOnlyClient() as never)
-    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue(null)
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue(null)
     jest.mocked(readBridgeVerdict).mockReturnValue({
       launchTarget: {
         executable: 'Binaries\\Win32\\Game.exe',
@@ -421,7 +421,7 @@ describe('resolveBridgeLaunchExe — anonymous PICS, open session, stored record
 
   it('a tampered stored installdir is rejected by containment and yields undefined', async () => {
     jest.mocked(getAnonymousPicsClient).mockResolvedValue(null)
-    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue(null)
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue(null)
     jest.mocked(readBridgeVerdict).mockReturnValue({
       launchTarget: { executable: 'Game.exe', installdir: '../../escape' }
     })
@@ -433,13 +433,13 @@ describe('resolveBridgeLaunchExe — anonymous PICS, open session, stored record
 
   it('no answer anywhere returns undefined without throwing', async () => {
     jest.mocked(getAnonymousPicsClient).mockResolvedValue(null)
-    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue(null)
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue(null)
     jest.mocked(readBridgeVerdict).mockReturnValue(undefined)
 
     await expect(
       resolveBridgeLaunchExe(DEPS, String(GATED_ID))
     ).resolves.toBeUndefined()
-    expect(SteamUser.ensureConnected).not.toHaveBeenCalled()
+    expect(steamUser.ensureConnected).not.toHaveBeenCalled()
   })
 })
 

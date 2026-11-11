@@ -2,6 +2,7 @@
  * Quick 261026-lif: restoreBridgeSteamApiOriginals. Real fs under
  * mkdtempSync(tmpdir()), an injected `downloadSelected`, no network, no spawn.
  */
+import { createInertTestSteamUser } from 'backend/testUtils/testSteamUser'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { at } from '../../__tests__/fixtures/indexed'
 import {
@@ -113,6 +114,7 @@ function fakeDownload(
 const run = (dl: jest.Mock, extra: Partial<{ signal: AbortSignal }> = {}) =>
   restoreBridgeSteamApiOriginals(
     {
+      steamUser: createInertTestSteamUser(),
       config: createTestGlobalConfig(),
       appId: '123',
       bottleDir: bottle,
@@ -219,6 +221,7 @@ describe('restoreBridgeSteamApiOriginals', () => {
     const dl = fakeDownload({})
     const bad = await restoreBridgeSteamApiOriginals(
       {
+        steamUser: createInertTestSteamUser(),
         config: createTestGlobalConfig(),
         appId: '1/..',
         bottleDir: bottle,
@@ -230,6 +233,7 @@ describe('restoreBridgeSteamApiOriginals', () => {
     expect(bad).toEqual({ status: 'error', outcomes: [] })
     const out = await restoreBridgeSteamApiOriginals(
       {
+        steamUser: createInertTestSteamUser(),
         config: createTestGlobalConfig(),
         appId: '1',
         bottleDir: bottle,

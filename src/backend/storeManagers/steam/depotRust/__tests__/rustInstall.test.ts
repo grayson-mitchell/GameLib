@@ -19,7 +19,8 @@ import { dirname, join } from 'path'
 import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
 import { downloadSharedRedistDepots, downloadSteamDepots } from '../../depot'
 import { classifyDepotError } from '../../depotErrors'
-import { SteamUser } from '../../user'
+import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
+const steamUser = createMockSteamUser()
 import { mockLeaseOk, mockOpenLease } from '../../__tests__/depotLeaseMocks'
 import { selectAllDepots } from '../../depot/select'
 import { requestCodeRefresher } from '../install'
@@ -39,7 +40,6 @@ jest.mock('backend/utils', () => ({
 jest.mock('backend/sidecar/sidecarRpc', () => ({
   requestRustInvoke: jest.fn()
 }))
-jest.mock('../../user')
 jest.mock('../../depot/select', () => ({
   ...jest.requireActual('../../depot/select'),
   selectAllDepots: jest.fn()
@@ -101,6 +101,7 @@ const ALL_BLOCKED_MSG =
   'buildDepotPlan: every selected depot for appId 12345 was blocked by Steam (eresult=40) and had to be skipped: 111, 222'
 
 const OPTS = () => ({
+  steamUser,
   config: createTestGlobalConfig(),
   targetSteamappsDir: steamapps,
   installdir: 'SomeGame',
@@ -111,12 +112,12 @@ beforeEach(() => {
   jest.resetAllMocks()
   steamapps = mkdtempSync(join(tmpdir(), 'rustinstall-'))
   client = makeClient()
-  jest.mocked(SteamUser.getClient).mockReturnValue(client as never)
+  jest.mocked(steamUser.getClient).mockReturnValue(client as never)
   jest
-    .mocked(SteamUser.getPersistedSteamId64)
+    .mocked(steamUser.getPersistedSteamId64)
     .mockReturnValue('76561198012345678')
-  mockLeaseOk()
-  mockOpenLease()
+  mockLeaseOk(steamUser)
+  mockOpenLease(steamUser)
   jest.mocked(selectAllDepots).mockReturnValue([
     { id: '111', manifest: '11111111111111111', size: 0, ownerAppId: APP_ID },
     { id: '222', manifest: '22222222222222222', size: 0, ownerAppId: APP_ID }
@@ -326,6 +327,7 @@ describe('downloadSharedRedistDepots on the rust pipeline', () => {
     const labels: string[] = []
 
     const r = await downloadSharedRedistDepots(APP_ID, {
+      steamUser,
       cacheSteamappsDir: steamapps,
       optInDepotIds: [],
       allowLogon: true,

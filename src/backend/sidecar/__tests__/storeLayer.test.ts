@@ -42,6 +42,7 @@
  * override Jest's resolution directly to exercise the real store-layer
  * code under test rather than the generic fixtures.
  */
+import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 
 jest.mock('os', () => {
   const actual = jest.requireActual('os')
@@ -72,12 +73,11 @@ jest.mock('backend/constants/environment', () => ({
 }))
 
 // ── SteamUser mock — no real network client construction ────────────────────
+// The boot builds its SteamUser through createSteamUser; hand it the suite's one jest-fn double (66.3-16).
+// `mock`-prefixed so the hoisted factory may reference it; it is initialised before the first require.
+const mockSteamUser = createMockSteamUser()
 jest.mock('../../storeManagers/steam/user', () => ({
-  ...jest.createMockFromModule<typeof import('../../storeManagers/steam/user')>(
-    '../../storeManagers/steam/user'
-  ),
-  // @66.3-compat interim: the boot builds an instance; consumers still reach the static mocks.
-  createSteamUser: () => ({})
+  createSteamUser: () => mockSteamUser
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────

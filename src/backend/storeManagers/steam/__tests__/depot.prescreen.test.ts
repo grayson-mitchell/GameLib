@@ -18,7 +18,8 @@ import {
   RUST_DEPOT_MANIFEST_SUMMARY
 } from 'common/types/sidecarTransport'
 import { prescreenBridgeDepots } from '../depot'
-import { SteamUser } from '../user'
+import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
+const steamUser = createMockSteamUser()
 import { mockLeaseOk, mockLeaseRefused } from './depotLeaseMocks'
 import { selectAllDepots } from '../depot/select'
 import { createStubRustDepot } from '../depotRust/__tests__/fixtures/stubRustDepot'
@@ -44,8 +45,6 @@ jest.mock('backend/sidecar/sidecarRpc', () => ({
   requestRustInvoke: jest.fn()
 }))
 
-jest.mock('../user')
-
 jest.mock('../depot/select', () => ({
   ...jest.requireActual('../depot/select'),
   selectAllDepots: jest.fn()
@@ -64,6 +63,7 @@ jest.mock('i18next', () => ({
 
 const APP_ID = '12345'
 const BASE_OPTS = {
+  steamUser,
   config: createTestGlobalConfig(),
   targetSteamappsDir: '/tmp/steamapps',
   installdir: 'SomeGame',
@@ -100,8 +100,8 @@ function makeFakeClient() {
 /** One owned depot per id, and a summary answering `matches` per depot. */
 function setup(matchesByDepot: Record<string, string[]>) {
   const client = makeFakeClient()
-  mockLeaseOk()
-  jest.mocked(SteamUser.getClient).mockReturnValue(client as never)
+  mockLeaseOk(steamUser)
+  jest.mocked(steamUser.getClient).mockReturnValue(client as never)
   jest.mocked(selectAllDepots).mockReturnValue(
     Object.keys(matchesByDepot).map((id) => ({
       id,
@@ -161,7 +161,7 @@ describe('prescreenBridgeDepots classifies the steam_api paths Rust matched', ()
 
 describe('prescreenBridgeDepots — guarded, never throws', () => {
   it("resolves 'unknown' (never rejects) when there is no CM connection", async () => {
-    mockLeaseRefused()
+    mockLeaseRefused(steamUser)
 
     const result = await prescreenBridgeDepots(APP_ID, BASE_OPTS)
 
@@ -181,7 +181,7 @@ describe('prescreenBridgeDepots — guarded, never throws', () => {
 
     expect(result).toBe('unknown')
     // Aborted before even the connection check.
-    expect(jest.mocked(SteamUser.acquireAuthenticated)).not.toHaveBeenCalled()
+    expect(jest.mocked(steamUser.acquireAuthenticated)).not.toHaveBeenCalled()
   })
 
   it("acquires its lease with reason 'prescreen' and still resolves a result", async () => {
@@ -189,7 +189,7 @@ describe('prescreenBridgeDepots — guarded, never throws', () => {
 
     await prescreenBridgeDepots(APP_ID, BASE_OPTS)
 
-    expect(jest.mocked(SteamUser.acquireAuthenticated)).toHaveBeenCalledWith(
+    expect(jest.mocked(steamUser.acquireAuthenticated)).toHaveBeenCalledWith(
       expect.objectContaining({ reason: 'prescreen' })
     )
   })

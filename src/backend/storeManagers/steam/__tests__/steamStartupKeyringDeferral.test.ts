@@ -17,7 +17,7 @@ import {
  *    still reads exactly once, so the "zero" above is non-vacuous.
  *  - Install/Update/Play/game-page-open each unlock the gate as their FIRST
  *    action.
- *  - `SteamUser.ensureConnected()`'s `unreadable` branch never clears a
+ *  - `steamUser.ensureConnected()`'s `unreadable` branch never clears a
  *    token (constraint 5 regression pin).
  *  - `src-tauri/src/main.rs` is untouched (constraint 1).
  *  - Nothing here proves the macOS Keychain prompt actually moved, or that
@@ -65,7 +65,7 @@ jest.mock('../../../ipc', () => ({
 }))
 
 // ── stores mock — configStore/steamLibraryStore/steamMetadataStore/
-// steamSyncStore. `configStore.get_nodefault` drives SteamUser.isLoggedIn(). ─
+// steamSyncStore. `configStore.get_nodefault` drives steamUser.isLoggedIn(). ─
 const mockConfigStore = {
   get: jest.fn(),
   get_nodefault: jest.fn(),
@@ -282,7 +282,7 @@ import { EventEmitter } from 'events'
 import { sendFrontendMessage } from '../../../ipc'
 import SteamLibraryManager from '../library'
 import SteamGame from '../games'
-import { SteamUser, type SteamUserDeps } from '../user'
+import type { SteamUser, SteamUserDeps } from '../user'
 import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 import { setTokenStore, type TokenStore } from '../tokenStore'
 import { getSteamLibraries } from 'backend/utils'
@@ -293,9 +293,30 @@ import type { Stores } from 'backend/services/types'
 
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
-const steamTestDeps = createTestManagerDeps({
+const baseDeps = createTestManagerDeps({
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
+})
+
+// One fresh SteamUser per test (66.3-16), built on the same stores, sign-in and session state the
+// manager under test reads; handed to the manager through its deps.
+const buildSteamUser = (): SteamUser =>
+  createTestSteamUser({
+    stores: baseDeps.stores,
+    signIn: baseDeps.signIn,
+    steamSession: baseDeps.steamSession,
+    anonymousClient: baseDeps.anonymousClient,
+    config: baseDeps.config,
+    macSteamOffline:
+      jest.requireMock<NonNullable<SteamUserDeps['macSteamOffline']>>(
+        '../macSteamOffline'
+      )
+  })
+let steamUser = buildSteamUser()
+const steamTestDeps = { ...baseDeps, steamUser }
+beforeEach(() => {
+  steamUser = buildSteamUser()
+  steamTestDeps.steamUser = steamUser
 })
 
 // The boot-owned Steam library state the code under test reads (D-66.3-13): one instance per file.
@@ -317,15 +338,6 @@ const noteRefreshTrigger = (
 ) => steamTestDeps.steamSession.authTrigger.noteRefreshTrigger(runner, origin)
 const currentTriggerLabel = () =>
   steamTestDeps.steamSession.authTrigger.currentTriggerLabel()
-SteamUser.bindCompatInstance(
-  createTestSteamUser({
-    ...steamTestDeps,
-    macSteamOffline:
-      jest.requireMock<NonNullable<SteamUserDeps['macSteamOffline']>>(
-        '../macSteamOffline'
-      )
-  })
-)
 
 const APP_ID = '570'
 
@@ -506,10 +518,6 @@ describe('Phase 54 SC1: no authenticated logon at launch, both orderings', () =>
 
   beforeEach(() => {
     logOnSpy.mockReset()
-    // releaseForShutdown() in afterEach leaves the singleton shutting down.
-    const internals = SteamUser as unknown as Record<string, unknown>
-    internals.shuttingDown = false
-    internals.client = null
     jest.mocked(captureOwnedAppPlatforms).mockResolvedValue({
       scopedCount: 0,
       capturedCount: 0,
@@ -538,7 +546,7 @@ describe('Phase 54 SC1: no authenticated logon at launch, both orderings', () =>
   })
 
   afterEach(() => {
-    SteamUser.releaseForShutdown()
+    void steamUser.releaseForShutdown()
   })
 
   const authenticatedLogonLines = () => {
@@ -558,7 +566,7 @@ describe('Phase 54 SC1: no authenticated logon at launch, both orderings', () =>
   it('ordering A: boot probe first, then the mount refresh', async () => {
     const manager = new SteamLibraryManager(steamTestDeps)
 
-    await SteamUser.probeCredentialPresence()
+    await steamUser.probeCredentialPresence()
     noteRefreshTrigger(null, 'mount')
     await manager.refresh()
 
@@ -571,7 +579,7 @@ describe('Phase 54 SC1: no authenticated logon at launch, both orderings', () =>
 
     noteRefreshTrigger(null, 'mount')
     await manager.refresh()
-    await SteamUser.probeCredentialPresence()
+    await steamUser.probeCredentialPresence()
     noteRefreshTrigger(null, 'mount')
     await manager.refresh()
 
@@ -582,7 +590,7 @@ describe('Phase 54 SC1: no authenticated logon at launch, both orderings', () =>
   it('non-vacuity control: an explicit Refresh DOES log on, exactly once, with the refresh token', async () => {
     const manager = new SteamLibraryManager(steamTestDeps)
 
-    await SteamUser.probeCredentialPresence()
+    await steamUser.probeCredentialPresence()
     noteRefreshTrigger('steam', 'action-icons-refresh-button')
     await manager.refresh()
 
@@ -633,10 +641,10 @@ describe('SteamGame keyring deferral unlock (quick-260817-d61)', () => {
 
     it('calling getExtraInfo() twice never reaches ensureConnected, acquireAuthenticated or acquireOpenAuthenticated, and still notes the game-page trigger', async () => {
       const ensureSpy = jest
-        .spyOn(SteamUser, 'ensureConnected')
+        .spyOn(steamUser, 'ensureConnected')
         .mockResolvedValue(true)
-      const acquireSpy = jest.spyOn(SteamUser, 'acquireAuthenticated')
-      const openSpy = jest.spyOn(SteamUser, 'acquireOpenAuthenticated')
+      const acquireSpy = jest.spyOn(steamUser, 'acquireAuthenticated')
+      const openSpy = jest.spyOn(steamUser, 'acquireOpenAuthenticated')
       const game = new SteamGame(APP_ID, steamTestDeps)
       expect(isSteamAuthUnlocked()).toBe(false)
 
@@ -658,7 +666,7 @@ describe('SteamGame keyring deferral unlock (quick-260817-d61)', () => {
 // clears a token or touches isLoggedIn (quick-260814-r2d, re-pinned here).
 // ---------------------------------------------------------------------------
 
-describe('SteamUser.ensureConnected() unreadable outcome — constraint 5 regression pin', () => {
+describe('steamUser.ensureConnected() unreadable outcome — constraint 5 regression pin', () => {
   it('calls clearToken ZERO times and leaves isLoggedIn untouched on an unreadable read', async () => {
     const spy = installSpyTokenStore({
       status: 'unreadable',
@@ -669,7 +677,7 @@ describe('SteamUser.ensureConnected() unreadable outcome — constraint 5 regres
     )
     mockConfigStore.delete.mockClear()
 
-    const result = await SteamUser.ensureConnected()
+    const result = await steamUser.ensureConnected()
 
     expect(result).toBe(false)
     expect(spy.clearToken).toHaveBeenCalledTimes(0)

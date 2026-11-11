@@ -7,7 +7,7 @@
  *  - resetMocks: true in jest.config means mock implementations must be
  *    re-established in each test
  *  - graceful-fs mocked (existsSync/mkdirSync) — no real filesystem access
- *  - ../user auto-mocked (SteamUser.isSteamClientInstalled becomes jest.fn())
+ *  - ../user auto-mocked (steamUser.isSteamClientInstalled becomes jest.fn())
  *  - backend/constants/environment mocked as a mutable double
  *    (jest.requireMock, mirrors games.test.ts's own envMock pattern) so the
  *    D-10 Windows/macOS/Linux installer branches can each be exercised
@@ -21,7 +21,11 @@ import { join } from 'path'
 import { downloadFile } from 'backend/utils'
 import { logError, logInfo } from 'backend/logger'
 import { sendFrontendMessage } from '../../../ipc'
-import { SteamUser } from '../user'
+import {
+  createMockSteamUser,
+  createTestSteamUser
+} from 'backend/testUtils/testSteamUser'
+const steamUser = createMockSteamUser()
 import {
   STEAM_DOWNLOAD_URL,
   STEAM_SETUP_EXE_URL,
@@ -61,8 +65,6 @@ jest.mock('../../../ipc', () => ({
   sendFrontendMessage: jest.fn()
 }))
 
-jest.mock('../user')
-
 // Pin steamSupportPath to a path holding a space AND an apostrophe so the
 // PowerShell single-quote escaping is exercised (T-0yc-01). The spread keeps
 // STEAM_INSTALL_PATHS / STEAM_DOWNLOAD_URL / STEAM_SETUP_EXE_URL real.
@@ -85,6 +87,7 @@ const mockedMkdirSync = mkdirSync as jest.Mock
 const mockedGetSettings = jest.fn()
 const mockedOpenExternal = jest.fn()
 const clientDeps = {
+  steamUser,
   config: { getSettings: mockedGetSettings },
   openExternal: { openExternal: mockedOpenExternal }
 } as unknown as Parameters<typeof ensureSteamClientReady>[0]
@@ -97,7 +100,7 @@ const setupDeps = {
   openExternal: { openExternal: mockedOpenExternal }
 } as unknown as Parameters<typeof startGuidedClientInstall>[0]
 const mockedIsSteamClientInstalled =
-  SteamUser.isSteamClientInstalled as jest.Mock
+  steamUser.isSteamClientInstalled as jest.Mock
 const mockedSendFrontendMessage = sendFrontendMessage as jest.Mock
 const mockedLogError = logError as jest.Mock
 const mockedLogInfo = logInfo as jest.Mock
@@ -202,10 +205,12 @@ describe('clientSetup.ts', () => {
         value: 'win32',
         configurable: true
       })
-      const ActualSteamUser =
-        jest.requireActual<typeof import('../user')>('../user').SteamUser
+      const actualSteamUser = createTestSteamUser({
+        stores: {} as never,
+        config: clientDeps.config
+      })
       mockedIsSteamClientInstalled.mockImplementation(() =>
-        ActualSteamUser.isSteamClientInstalled()
+        actualSteamUser.isSteamClientInstalled()
       )
       mockedGetSettings.mockReturnValue({ defaultSteamPath: root })
     })

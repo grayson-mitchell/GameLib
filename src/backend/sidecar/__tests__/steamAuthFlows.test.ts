@@ -43,6 +43,7 @@
  * thread would write back. This proves the token round-trips over the real
  * `rustInvoke` wire protocol, not merely that a function was called.
  */
+import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 
 // ── os — GAP FIX precedent (see module docstring above): redirect homedir()
 // to a disposable per-process tmp directory so this suite can never touch a
@@ -102,12 +103,11 @@ jest.mock('backend/constants/environment', () => ({
 // pollQRLogin() (the network/filesystem-touching surface this suite wires,
 // not re-tests); automocked, no factory, mirrors skeletonFlows.test.ts's own
 // LIB-01 convention for this exact module ────────────────────────────────────
+// The boot builds its SteamUser through createSteamUser; hand it the suite's one jest-fn double (66.3-16).
+// `mock`-prefixed so the hoisted factory may reference it; it is initialised before the first require.
+const mockSteamUser = createMockSteamUser()
 jest.mock('../../storeManagers/steam/user', () => ({
-  ...jest.createMockFromModule<typeof import('../../storeManagers/steam/user')>(
-    '../../storeManagers/steam/user'
-  ),
-  // @66.3-compat interim: the boot builds an instance; consumers still reach the static mocks.
-  createSteamUser: () => ({})
+  createSteamUser: () => mockSteamUser
 }))
 jest.mock('../../storeManagers/steam/userSignIn')
 jest.mock('../../storeManagers/steam/userRedeem')
@@ -143,7 +143,6 @@ import { createStoreRegistry } from 'backend/stores/storeRegistry'
 // handles the cases configure or inspect are rebound from that registry in
 // freshRegistry() (run before each case, ahead of any mock configuration), and
 // boot() then boots without a second reset.
-let SteamUser: typeof import('../../storeManagers/steam/user').SteamUser
 let pollCredentialLogin: typeof import('../../storeManagers/steam/userSignIn').pollCredentialLogin
 let pollQRLogin: typeof import('../../storeManagers/steam/userSignIn').pollQRLogin
 let startCredentialLogin: typeof import('../../storeManagers/steam/userSignIn').startCredentialLogin
@@ -172,7 +171,6 @@ function freshRegistry(): void {
   jest.resetModules()
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
-  ;({ SteamUser } = require('../../storeManagers/steam/user'))
   ;({
     pollCredentialLogin,
     pollQRLogin,
@@ -234,7 +232,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
 
   // Test 1: checkSteamInstalled resolves a real boolean, not the unported marker.
   it('Test 1: checkSteamInstalled invoke resolves a real boolean, not the unported marker', async () => {
-    jest.spyOn(SteamUser, 'isSteamClientInstalled').mockReturnValue(true)
+    jest.spyOn(mockSteamUser, 'isSteamClientInstalled').mockReturnValue(true)
 
     const { input, frames } = boot()
     writeInvoke(input, 'check-1', 'checkSteamInstalled', [])
@@ -243,7 +241,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     const response = frames.find((frame) => frame.id === 'check-1')
     expect(response).toMatchObject({ id: 'check-1', ok: true, result: true })
     expect(
-      jest.spyOn(SteamUser, 'isSteamClientInstalled')
+      jest.spyOn(mockSteamUser, 'isSteamClientInstalled')
     ).toHaveBeenCalledTimes(1)
   })
 
@@ -494,7 +492,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
   // ── Session/identity trio (Phase 34.4 Plan 01, REQ-34.4-02) ──────────────────
   describe('session/identity trio', () => {
     it('REQ-34.4-02 getSteamUserInfo invoke round-trips a real value, not the unported marker', async () => {
-      jest.spyOn(SteamUser, 'getUserDetails').mockResolvedValue({
+      jest.spyOn(mockSteamUser, 'getUserDetails').mockResolvedValue({
         username: 'gsd-tester',
         steamId: 'STEAMID_TEST'
       })
@@ -510,7 +508,9 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         result: { username: 'gsd-tester', steamId: 'STEAMID_TEST' }
       })
       expect(response?.result).not.toBe(UNPORTED_CHANNEL_MARKER)
-      expect(jest.spyOn(SteamUser, 'getUserDetails')).toHaveBeenCalledTimes(1)
+      expect(jest.spyOn(mockSteamUser, 'getUserDetails')).toHaveBeenCalledTimes(
+        1
+      )
     })
 
     it('REQ-34.4-02 getSteamSyncedAt invoke resolves null when the store has no syncedAt (matching `?? null`)', async () => {
@@ -528,7 +528,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
 
     describe('logoutSteam (the G-30-01 send channel)', () => {
       it('REQ-34.4-02 kind proof, positive direction: a logoutSteam SEND frame causes SteamUser.logout to be called exactly once', async () => {
-        jest.spyOn(SteamUser, 'logout').mockResolvedValue(undefined)
+        jest.spyOn(mockSteamUser, 'logout').mockResolvedValue(undefined)
 
         const { input, frames } = boot()
         writeSend(input, 'logout-send-1', 'logoutSteam', [])
@@ -538,11 +538,11 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         expect(
           frames.find((frame) => frame.id === 'logout-send-1')
         ).toBeUndefined()
-        expect(jest.spyOn(SteamUser, 'logout')).toHaveBeenCalledTimes(1)
+        expect(jest.spyOn(mockSteamUser, 'logout')).toHaveBeenCalledTimes(1)
       })
 
       it('REQ-34.4-02 kind proof, negative direction: logoutSteam must NOT be reachable as an invoke handler', async () => {
-        jest.spyOn(SteamUser, 'logout').mockResolvedValue(undefined)
+        jest.spyOn(mockSteamUser, 'logout').mockResolvedValue(undefined)
 
         const { input, frames } = boot()
         writeInvoke(input, 'logout-invoke-1', 'logoutSteam', [])
@@ -555,7 +555,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         // response frame carrying a SteamUser.logout() result — this is the
         // dispatchSend/dispatchInvoke mismatch G-30-01's inverse would produce.
         expect(response?.ok).not.toBe(true)
-        expect(jest.spyOn(SteamUser, 'logout')).not.toHaveBeenCalled()
+        expect(jest.spyOn(mockSteamUser, 'logout')).not.toHaveBeenCalled()
       })
 
       it('REQ-34.4-02 rejection guard: a rejecting SteamUser.logout does not crash the sidecar and the RPC loop keeps serving', async () => {
@@ -569,7 +569,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
 
         try {
           jest
-            .spyOn(SteamUser, 'logout')
+            .spyOn(mockSteamUser, 'logout')
             .mockRejectedValue(new Error('logout transport failure'))
 
           const { input, frames } = boot()
@@ -856,7 +856,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
 
   // ── redeemSteamKey / getSteamInstallSize (Phase 34.4 Plan 02, REQ-34.4-05) ───
   describe('redeem / install size', () => {
-    it('REQ-34.4-05 redeemSteamKey invoke, valid payload: reaches SteamUser.redeemKey with exactly the two positional args and the result round-trips', async () => {
+    it('REQ-34.4-05 redeemSteamKey invoke, valid payload: reaches redeemKey with the boot SteamUser deps and exactly the two positional args and the result round-trips', async () => {
       jest
         .mocked(redeemKey)
         .mockResolvedValue({ store: 'steam', outcome: 'success' })
@@ -875,6 +875,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       })
       expect(jest.mocked(redeemKey)).toHaveBeenCalledTimes(1)
       expect(jest.mocked(redeemKey)).toHaveBeenCalledWith(
+        expect.objectContaining({ steamUser: mockSteamUser }),
         'steam',
         'AAAAA-BBBBB-CCCCC'
       )

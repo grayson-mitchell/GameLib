@@ -7,7 +7,7 @@
  *  - steam-session → LoginSession constructor + instance methods
  *  - steam-user    → SteamUser constructor + instance methods (aliased as SteamUserLib)
  *  - graceful-fs   → existsSync
- *  - backend/config → GlobalConfig.get (Windows Default Steam path)
+ *  - the Windows Default Steam path comes through the injected config slice (mockGetSettings)
  *  - backend/logger
  *  - ../stores → configStore
  */
@@ -47,11 +47,8 @@ jest.mock('graceful-fs', () => ({
   existsSync: mockExistsSync
 }))
 
-// ── backend/config mock (Windows Default Steam path, lazily required) ────────
-const mockGlobalConfigGet = jest.fn()
-jest.mock('backend/config', () => ({
-  GlobalConfig: { get: mockGlobalConfigGet }
-}))
+// ── Global config slice (Windows Default Steam path), injected into the SteamUser under test ──
+const mockGetSettings = jest.fn()
 
 // ── stores mock ───────────────────────────────────────────────────────
 const mockConfigStore = {
@@ -163,10 +160,14 @@ jest.mock('../macSteamOffline', () => {
 const mockCloseAnonymousClient = jest.fn()
 
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
-import { SteamUser, type SteamUserDeps } from '../user'
+import type { SteamUser, SteamUserDeps } from '../user'
+import { createFakeClock, type FakeClock } from 'backend/testUtils/fakeClock'
 import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
-import type { SteamSessionServices } from 'backend/services/types'
+import type {
+  SteamSessionServices,
+  SteamUserSliceDeps
+} from 'backend/services/types'
 import type { UserSignInDeps } from '../userSignIn'
 
 // One sign-in owner per case (D-05, D-66.3-13: no reset hooks); `steamDeps` reads it at call time.
@@ -179,25 +180,33 @@ const steamDeps = {
   },
   get steamSession() {
     return steamSession
+  },
+  get steamUser() {
+    return steamUser
   }
-} as unknown as UserSignInDeps
+} as unknown as UserSignInDeps & SteamUserSliceDeps<'acquireAuthenticated'>
+// One fresh SteamUser and fake clock per test (D-05, 66.3-16): no module state to reset. `steamDeps`
+// reads the instance at call time so the sign-in / redeem flows reach the same one.
+let steamUser: SteamUser
+let clock: FakeClock
 beforeEach(() => {
   signInProbe = createTestSignInProbe()
   steamSession = createTestSteamSession()
-  SteamUser.bindCompatInstance(
-    createTestSteamUser({
-      ...steamDeps,
-      signIn: signInProbe,
-      steamSession,
-      anonymousClient: {
-        close: (...args: unknown[]) => mockCloseAnonymousClient(...args)
-      },
-      macSteamOffline:
-        jest.requireMock<NonNullable<SteamUserDeps['macSteamOffline']>>(
-          '../macSteamOffline'
-        )
-    })
-  )
+  clock = createFakeClock()
+  steamUser = createTestSteamUser({
+    stores: steamDeps.stores,
+    signIn: signInProbe,
+    steamSession,
+    clock,
+    config: { getSettings: mockGetSettings } as never,
+    anonymousClient: {
+      close: (...args: unknown[]) => mockCloseAnonymousClient(...args)
+    },
+    macSteamOffline:
+      jest.requireMock<NonNullable<SteamUserDeps['macSteamOffline']>>(
+        '../macSteamOffline'
+      )
+  })
 })
 import { redeemKey } from '../userRedeem'
 import {
@@ -277,22 +286,6 @@ describe('SteamUser', () => {
       }
     )
 
-    // Phase 54: the lease/idle/connect statics outlive a test; reset them so a
-    // test that leaves a hung connect or a lease behind cannot leak into the next.
-    {
-      const su = SteamUser as unknown as Record<string, any>
-      if (su.idleTimer) clearTimeout(su.idleTimer)
-      su.idleTimer = null
-      su.leaseCount = 0
-      su.connectingPromise = null
-      su.shuttingDown = false
-      su.logonFailure = null
-      su.client = null
-      // 54-REVIEW WR-07: a hung wrap must not hold the next test's wrap.
-      su.wrapTail = Promise.resolve()
-      su.abandonPendingLogon = null
-    }
-
     // Phase 54: re-arm the wrap double (resetMocks: true clears it every test).
     jest
       .requireMock('../macSteamOffline')
@@ -344,9 +337,7 @@ describe('SteamUser', () => {
         configurable: true
       })
     const armWindowsRoot = (defaultSteamPath: string) =>
-      mockGlobalConfigGet.mockReturnValue({
-        getSettings: () => ({ defaultSteamPath })
-      })
+      mockGetSettings.mockReturnValue({ defaultSteamPath })
     const existsOnly = (...present: string[]) =>
       (existsSync as jest.Mock).mockImplementation((p: string) =>
         present.includes(p)
@@ -365,38 +356,38 @@ describe('SteamUser', () => {
     test('returns false when no platform paths exist', () => {
       setPlatform('linux')
       mockExistsSync.mockReturnValue(false)
-      expect(SteamUser.isSteamClientInstalled()).toBe(false)
+      expect(steamUser.isSteamClientInstalled()).toBe(false)
     })
 
     test('returns true when a matching path exists', () => {
       setPlatform('linux')
       // Make existsSync return true for any path
       mockExistsSync.mockReturnValue(true)
-      expect(SteamUser.isSteamClientInstalled()).toBe(true)
+      expect(steamUser.isSteamClientInstalled()).toBe(true)
     })
 
     test('returns false on unknown platform (no paths)', () => {
       setPlatform('freebsd')
       mockExistsSync.mockReturnValue(false)
-      expect(SteamUser.isSteamClientInstalled()).toBe(false)
+      expect(steamUser.isSteamClientInstalled()).toBe(false)
     })
 
     test('darwin calls existsSync with the Steam.app path and never reads GlobalConfig', () => {
       setPlatform('darwin')
       mockExistsSync.mockReturnValue(false)
 
-      SteamUser.isSteamClientInstalled()
+      steamUser.isSteamClientInstalled()
       expect(probedPaths()).toContain('/Applications/Steam.app')
-      expect(mockGlobalConfigGet).not.toHaveBeenCalled()
+      expect(mockGetSettings).not.toHaveBeenCalled()
     })
 
     test('linux calls existsSync with /usr/bin/steam and never reads GlobalConfig', () => {
       setPlatform('linux')
       mockExistsSync.mockReturnValue(false)
 
-      SteamUser.isSteamClientInstalled()
+      steamUser.isSteamClientInstalled()
       expect(probedPaths()).toContain('/usr/bin/steam')
-      expect(mockGlobalConfigGet).not.toHaveBeenCalled()
+      expect(mockGetSettings).not.toHaveBeenCalled()
     })
 
     test('win32 is true when steam.exe exists under the Default Steam path (and only that is probed)', () => {
@@ -404,7 +395,7 @@ describe('SteamUser', () => {
       armWindowsRoot('D:\\Steam')
       existsOnly(join('D:\\Steam', 'steam.exe'))
 
-      expect(SteamUser.isSteamClientInstalled()).toBe(true)
+      expect(steamUser.isSteamClientInstalled()).toBe(true)
       expect(existsSync as jest.Mock).toHaveBeenCalledTimes(1)
       expect(probedPaths()).toEqual([join('D:\\Steam', 'steam.exe')])
     })
@@ -415,7 +406,7 @@ describe('SteamUser', () => {
       armWindowsRoot('C:\\SteamUAT')
       existsOnly(programFilesSteam)
 
-      expect(SteamUser.isSteamClientInstalled()).toBe(false)
+      expect(steamUser.isSteamClientInstalled()).toBe(false)
       expect(probedPaths()).toEqual([join('C:\\SteamUAT', 'steam.exe')])
       expect(probedPaths()).not.toContain(programFilesSteam)
     })
@@ -425,7 +416,7 @@ describe('SteamUser', () => {
       armWindowsRoot("'D:\\Games\\Steam'")
       existsOnly(join('D:\\Games\\Steam', 'steam.exe'))
 
-      expect(SteamUser.isSteamClientInstalled()).toBe(true)
+      expect(steamUser.isSteamClientInstalled()).toBe(true)
       expect(probedPaths()).toEqual([join('D:\\Games\\Steam', 'steam.exe')])
       expect(probedPaths().join('')).not.toContain("'")
     })
@@ -435,7 +426,7 @@ describe('SteamUser', () => {
       armWindowsRoot('')
       mockExistsSync.mockReturnValue(true)
 
-      expect(SteamUser.isSteamClientInstalled()).toBe(false)
+      expect(steamUser.isSteamClientInstalled()).toBe(false)
       expect(existsSync as jest.Mock).not.toHaveBeenCalled()
     })
   })
@@ -445,13 +436,13 @@ describe('SteamUser', () => {
   describe('getCredentials() — token read', () => {
     test('returns undefined when no token stored', async () => {
       mockConfigStore.get_nodefault.mockReturnValue(undefined)
-      const result = await SteamUser.getCredentials()
+      const result = await steamUser.getCredentials()
       expect(result).toBeUndefined()
     })
 
     test('returns undefined when stored value is not a string', async () => {
       mockConfigStore.get_nodefault.mockReturnValue(42)
-      const result = await SteamUser.getCredentials()
+      const result = await steamUser.getCredentials()
       expect(result).toBeUndefined()
     })
   })
@@ -461,17 +452,17 @@ describe('SteamUser', () => {
   describe('isLoggedIn()', () => {
     test('returns false when configStore has no isLoggedIn', () => {
       mockConfigStore.get_nodefault.mockReturnValue(undefined)
-      expect(SteamUser.isLoggedIn()).toBe(false)
+      expect(steamUser.isLoggedIn()).toBe(false)
     })
 
     test('returns false when isLoggedIn is false in store', () => {
       mockConfigStore.get_nodefault.mockReturnValue(false)
-      expect(SteamUser.isLoggedIn()).toBe(false)
+      expect(steamUser.isLoggedIn()).toBe(false)
     })
 
     test('returns true when isLoggedIn is true in store', () => {
       mockConfigStore.get_nodefault.mockReturnValue(true)
-      expect(SteamUser.isLoggedIn()).toBe(true)
+      expect(steamUser.isLoggedIn()).toBe(true)
     })
   })
 
@@ -487,12 +478,12 @@ describe('SteamUser', () => {
 
   describe('logout()', () => {
     test('does NOT call configStore.clear() (D-09 — must go through the seam, never a blanket wipe)', async () => {
-      await SteamUser.logout()
+      await steamUser.logout()
       expect(mockConfigStore.clear).not.toHaveBeenCalled()
     })
 
     test('clears the refresh token via configStore.delete("refreshToken") — the TokenStore seam target key', async () => {
-      await SteamUser.logout()
+      await steamUser.logout()
       expect(mockConfigStore.delete).toHaveBeenCalledWith('refreshToken')
     })
 
@@ -502,13 +493,13 @@ describe('SteamUser', () => {
     // "logged in" after logout. This test fails under that naive fix and
     // only passes when isLoggedIn/userData are ALSO explicitly cleared.
     test('also explicitly clears isLoggedIn and userData session keys (not just the token)', async () => {
-      await SteamUser.logout()
+      await steamUser.logout()
       expect(mockConfigStore.delete).toHaveBeenCalledWith('isLoggedIn')
       expect(mockConfigStore.delete).toHaveBeenCalledWith('userData')
     })
 
     test('does not throw when no steam-user client is connected', async () => {
-      await expect(SteamUser.logout()).resolves.not.toThrow()
+      await expect(steamUser.logout()).resolves.not.toThrow()
     })
 
     test('isLoggedIn returns false after logout clears the isLoggedIn key', async () => {
@@ -518,8 +509,8 @@ describe('SteamUser', () => {
           mockConfigStore.get_nodefault.mockReturnValue(undefined)
         }
       })
-      await SteamUser.logout()
-      expect(SteamUser.isLoggedIn()).toBe(false)
+      await steamUser.logout()
+      expect(steamUser.isLoggedIn()).toBe(false)
     })
   })
 
@@ -528,14 +519,14 @@ describe('SteamUser', () => {
   describe('getUserDetails()', () => {
     test('returns undefined when no userData in store', async () => {
       mockConfigStore.get_nodefault.mockReturnValue(undefined)
-      const result = await SteamUser.getUserDetails()
+      const result = await steamUser.getUserDetails()
       expect(result).toBeUndefined()
     })
 
     test('returns stored userData', async () => {
       const userData = { username: 'TestUser', steamId: '76561197900000000' }
       mockConfigStore.get_nodefault.mockReturnValue(userData)
-      const result = await SteamUser.getUserDetails()
+      const result = await steamUser.getUserDetails()
       expect(result).toEqual(userData)
     })
   })
@@ -546,7 +537,7 @@ describe('SteamUser', () => {
     test('configStore.set is never called with password or credentials keys', async () => {
       // This is asserted across all test methods that call set
       // We verify no call used 'password' as a key
-      await SteamUser.logout()
+      await steamUser.logout()
 
       const setCalls = mockConfigStore.set.mock.calls
       for (const [key] of setCalls) {
@@ -1114,7 +1105,7 @@ describe('SteamUser', () => {
 
     test('returns { status: "error" } when no active session', async () => {
       // Call logout to clear the session — logout() sets this.session = null
-      await SteamUser.logout()
+      await steamUser.logout()
       const result = await submitSteamGuardCode(steamDeps, '12345')
       expect(result.status).toBe('error')
     })
@@ -1272,7 +1263,7 @@ describe('SteamUser', () => {
       // it does NOT call connectSteamUserClient again (no second client, no logOff).
       // Assertion via logOn call count: dedupe guarantees a single logOn total;
       // we cleared counts after authenticated, so 0 logOn calls from ensureConnected.
-      const connectResultPromise = SteamUser.ensureConnected()
+      const connectResultPromise = steamUser.ensureConnected()
 
       // Restore steamID so the loggedOn handler and ensureConnected's final
       // Boolean(this.client?.steamID) check both see a connected client.
@@ -1334,7 +1325,7 @@ describe('SteamUser', () => {
       await sessionOnHandlers['authenticated']?.()
 
       // Now logout
-      await SteamUser.logout()
+      await steamUser.logout()
       expect(mockSteamUserInstance.logOff).toHaveBeenCalled()
       expect(mockConfigStore.delete).toHaveBeenCalledWith('refreshToken')
       expect(mockConfigStore.delete).toHaveBeenCalledWith('isLoggedIn')
@@ -1347,12 +1338,12 @@ describe('SteamUser', () => {
   describe('ensureConnected()', () => {
     beforeEach(async () => {
       // Reset the in-memory client to null so we exercise the reconnect path
-      await SteamUser.logout()
+      await steamUser.logout()
     })
 
     test('returns false when not logged in', async () => {
       mockConfigStore.get_nodefault.mockReturnValue(undefined) // isLoggedIn false
-      const result = await SteamUser.ensureConnected()
+      const result = await steamUser.ensureConnected()
       expect(result).toBe(false)
       expect(mockSteamUserInstance.logOn).not.toHaveBeenCalled()
     })
@@ -1361,7 +1352,7 @@ describe('SteamUser', () => {
       mockConfigStore.get_nodefault.mockImplementation((key: string) =>
         key === 'isLoggedIn' ? true : undefined
       )
-      const result = await SteamUser.ensureConnected()
+      const result = await steamUser.ensureConnected()
       expect(result).toBe(false)
       expect(mockSteamUserInstance.logOn).not.toHaveBeenCalled()
     })
@@ -1378,7 +1369,7 @@ describe('SteamUser', () => {
         })
       })
 
-      const result = await SteamUser.ensureConnected()
+      const result = await steamUser.ensureConnected()
 
       expect(mockSteamUserInstance.logOn).toHaveBeenCalledWith({
         refreshToken: 'stored-plaintext-token'
@@ -1402,7 +1393,7 @@ describe('SteamUser', () => {
       await new Promise((r) => process.nextTick(r)) // let background CM connect settle
       mockSteamUserInstance.logOn.mockClear()
 
-      const result = await SteamUser.ensureConnected()
+      const result = await steamUser.ensureConnected()
       expect(result).toBe(true)
       expect(mockSteamUserInstance.logOn).not.toHaveBeenCalled()
     })
@@ -1453,7 +1444,7 @@ describe('SteamUser', () => {
     const savedSteamID = mockSteamUserInstance.steamID
 
     beforeEach(async () => {
-      await SteamUser.logout()
+      await steamUser.logout()
       // The real client nulls steamID in _disconnect(true) before emitting
       // 'error'; the shared mock instance defaults it to a truthy id.
       mockSteamUserInstance.steamID = null
@@ -1475,7 +1466,7 @@ describe('SteamUser', () => {
       })
 
       let settled: boolean | undefined
-      const pending = SteamUser.ensureConnected().then((r) => {
+      const pending = steamUser.ensureConnected().then((r) => {
         settled = r
         return r
       })
@@ -1499,10 +1490,10 @@ describe('SteamUser', () => {
         process.nextTick(() => steamUserOnHandlers['error']?.(accessDenied))
       })
 
-      expect(SteamUser.getLogonFailure()).toBeNull()
-      const first = SteamUser.ensureConnected()
+      expect(steamUser.getLogonFailure()).toBeNull()
+      const first = steamUser.ensureConnected()
       await flush()
-      expect(SteamUser.getLogonFailure()).toEqual({
+      expect(steamUser.getLogonFailure()).toEqual({
         message: 'AccessDenied',
         eresult: 15
       })
@@ -1517,9 +1508,9 @@ describe('SteamUser', () => {
           steamUserOnHandlers['loggedOn']?.({}, {})
         })
       })
-      const second = SteamUser.ensureConnected()
+      const second = steamUser.ensureConnected()
       await flush()
-      expect(SteamUser.getLogonFailure()).toBeNull()
+      expect(steamUser.getLogonFailure()).toBeNull()
       expect(await second).toBe(true)
     })
 
@@ -1542,7 +1533,7 @@ describe('SteamUser', () => {
           clientA.handlers['loggedOn']?.({}, {})
         })
       })
-      const firstPending = SteamUser.ensureConnected()
+      const firstPending = steamUser.ensureConnected()
       await flush()
       expect(await firstPending).toBe(true)
 
@@ -1556,12 +1547,12 @@ describe('SteamUser', () => {
         )
       })
       let secondResult: boolean | undefined
-      const secondPending = SteamUser.ensureConnected().then((r) => {
+      const secondPending = steamUser.ensureConnected().then((r) => {
         secondResult = r
         return r
       })
       await flush()
-      expect(SteamUser.getLogonFailure()).toBeNull()
+      expect(steamUser.getLogonFailure()).toBeNull()
 
       // 15 s: connect's fallback resolves; ensureConnected enters the grace
       // window (still unsettled -- no false-positive rejection short-circuit).
@@ -1626,7 +1617,7 @@ describe('SteamUser', () => {
     const savedSteamID = mockSteamUserInstance.steamID
 
     beforeEach(async () => {
-      await SteamUser.logout()
+      await steamUser.logout()
       // logout() itself deletes credentialsMissing and publishes a sign-out;
       // start every case from a clean ledger so only ensureConnected() counts.
       mockConfigStore.set.mockClear()
@@ -1646,7 +1637,7 @@ describe('SteamUser', () => {
       rejectLogonWith('AccessDenied', 15)
 
       let settled: boolean | undefined
-      const pending = SteamUser.ensureConnected().then((r) => {
+      const pending = steamUser.ensureConnected().then((r) => {
         settled = r
         return r
       })
@@ -1668,7 +1659,7 @@ describe('SteamUser', () => {
       rejectLogonWith('LogonSessionReplaced', 34)
 
       let settled: boolean | undefined
-      const pending = SteamUser.ensureConnected().then((r) => {
+      const pending = steamUser.ensureConnected().then((r) => {
         settled = r
         return r
       })
@@ -1695,7 +1686,7 @@ describe('SteamUser', () => {
         process.nextTick(() => steamUserOnHandlers['error']?.(accessDenied))
       })
 
-      const pending = SteamUser.ensureConnected()
+      const pending = steamUser.ensureConnected()
       await flush()
 
       expect(credentialsMissingSets()).toEqual([])
@@ -1714,7 +1705,7 @@ describe('SteamUser', () => {
         })
       })
 
-      const result = await SteamUser.ensureConnected()
+      const result = await steamUser.ensureConnected()
 
       expect(result).toBe(true)
       expect(credentialsMissingDeletes()).toEqual([['credentialsMissing']])
@@ -1732,7 +1723,7 @@ describe('SteamUser', () => {
         })
       })
 
-      const result = await SteamUser.ensureConnected()
+      const result = await steamUser.ensureConnected()
 
       expect(result).toBe(true)
       expect(credentialsMissingDeletes()).toEqual([])
@@ -1768,7 +1759,7 @@ describe('SteamUser', () => {
           })
         }
       }
-      await SteamUser.logout()
+      await steamUser.logout()
       const clientA = makeClient()
       const clientB = makeClient()
       MockSteamUserLib.mockImplementationOnce(() => clientA)
@@ -1785,7 +1776,7 @@ describe('SteamUser', () => {
           clientA.handlers['loggedOn']?.({}, {})
         })
       })
-      const first = SteamUser.ensureConnected()
+      const first = steamUser.ensureConnected()
       await flushAll()
       expect(await first).toBe(true)
 
@@ -1801,14 +1792,14 @@ describe('SteamUser', () => {
         })
       })
       let result: boolean | undefined
-      const second = SteamUser.ensureConnected().then((r) => {
+      const second = steamUser.ensureConnected().then((r) => {
         result = r
         return r
       })
       await flushAll()
 
       expect(result).toBe(false)
-      expect(SteamUser.getLogonFailure()).toEqual({
+      expect(steamUser.getLogonFailure()).toEqual({
         message: 'AccessDenied',
         eresult: 15
       })
@@ -1861,13 +1852,13 @@ describe('SteamUser', () => {
     }
 
     test('does NOT log "no stored refresh token" on an unreadable read, and DOES log a distinct retryable warning naming the reason', async () => {
-      await SteamUser.logout()
+      await steamUser.logout()
       mockConfigStore.get_nodefault.mockImplementation((key: string) =>
         key === 'isLoggedIn' ? true : undefined
       )
       installFakeStore({ status: 'unreadable', reason: 'timeout' })
 
-      const result = await SteamUser.ensureConnected()
+      const result = await steamUser.ensureConnected()
 
       expect(result).toBe(false)
       const warningLines = (logWarning as jest.Mock).mock.calls.map((c) =>
@@ -1882,7 +1873,7 @@ describe('SteamUser', () => {
     })
 
     test('an unreadable read calls neither clearToken() on the store nor configStore.delete for isLoggedIn/userData — the session survives', async () => {
-      await SteamUser.logout()
+      await steamUser.logout()
       mockConfigStore.get_nodefault.mockImplementation((key: string) =>
         key === 'isLoggedIn' ? true : undefined
       )
@@ -1892,7 +1883,7 @@ describe('SteamUser', () => {
         reason: 'unavailable'
       })
 
-      await SteamUser.ensureConnected()
+      await steamUser.ensureConnected()
 
       expect(fake.clearToken).not.toHaveBeenCalled()
       expect(mockConfigStore.delete).not.toHaveBeenCalledWith('isLoggedIn')
@@ -1902,13 +1893,13 @@ describe('SteamUser', () => {
     // Regression guard: the absent branch is unchanged -- still the original
     // warning, still returns false. Already true pre-fix.
     test('the absent branch still logs the original "no stored refresh token" warning and returns false', async () => {
-      await SteamUser.logout()
+      await steamUser.logout()
       mockConfigStore.get_nodefault.mockImplementation((key: string) =>
         key === 'isLoggedIn' ? true : undefined
       )
       installFakeStore({ status: 'absent' })
 
-      const result = await SteamUser.ensureConnected()
+      const result = await steamUser.ensureConnected()
 
       expect(result).toBe(false)
       const warningLines = (logWarning as jest.Mock).mock.calls.map((c) =>
@@ -1922,7 +1913,7 @@ describe('SteamUser', () => {
     // Regression guard: the present branch is unchanged -- still reaches the
     // connect path with the token. Already true pre-fix.
     test('the present branch still reaches the connect path with the token', async () => {
-      await SteamUser.logout()
+      await steamUser.logout()
       mockConfigStore.get_nodefault.mockImplementation((key: string) =>
         key === 'isLoggedIn' ? true : undefined
       )
@@ -1933,7 +1924,7 @@ describe('SteamUser', () => {
         })
       })
 
-      const result = await SteamUser.ensureConnected()
+      const result = await steamUser.ensureConnected()
 
       expect(mockSteamUserInstance.logOn).toHaveBeenCalledWith({
         refreshToken: 'fake-outcome-token'
@@ -1946,15 +1937,15 @@ describe('SteamUser', () => {
     // unreadable map to undefined. Already true pre-fix.
     test('getCredentials() still maps present to { refreshToken } and both absent/unreadable to undefined', async () => {
       installFakeStore({ status: 'present', token: 'present-token' })
-      await expect(SteamUser.getCredentials()).resolves.toEqual({
+      await expect(steamUser.getCredentials()).resolves.toEqual({
         refreshToken: 'present-token'
       })
 
       installFakeStore({ status: 'absent' })
-      await expect(SteamUser.getCredentials()).resolves.toBeUndefined()
+      await expect(steamUser.getCredentials()).resolves.toBeUndefined()
 
       installFakeStore({ status: 'unreadable', reason: 'timeout' })
-      await expect(SteamUser.getCredentials()).resolves.toBeUndefined()
+      await expect(steamUser.getCredentials()).resolves.toBeUndefined()
     })
   })
 
@@ -1970,7 +1961,7 @@ describe('SteamUser', () => {
   describe('ensureConnected() — canary + relog revalidation (D-02)', () => {
     beforeEach(async () => {
       // Reset to a clean, connected client before each test in this block.
-      await SteamUser.logout()
+      await steamUser.logout()
       mockSessionInstance.startWithQR.mockResolvedValue({
         qrChallengeUrl: 'steam://test',
         actionRequired: true
@@ -1989,7 +1980,7 @@ describe('SteamUser', () => {
     test('Test 1 — healthy fast path preserved: canary resolves within bound -> returns true without calling relog()', async () => {
       mockSteamUserInstance.getProductInfo.mockResolvedValue({ apps: {} })
 
-      const result = await SteamUser.ensureConnected()
+      const result = await steamUser.ensureConnected()
 
       expect(result).toBe(true)
       expect(mockSteamUserInstance.getProductInfo).toHaveBeenCalledWith(
@@ -2023,7 +2014,7 @@ describe('SteamUser', () => {
       })
       wrapMock().mockClear()
 
-      const result = await SteamUser.ensureConnected()
+      const result = await steamUser.ensureConnected()
 
       expect(result).toBe(true)
       expect(mockSteamUserInstance.relog).not.toHaveBeenCalled()
@@ -2043,7 +2034,7 @@ describe('SteamUser', () => {
           // intentionally never fires 'loggedOn' or 'error'
         })
 
-        const resultPromise = SteamUser.ensureConnected()
+        const resultPromise = steamUser.ensureConnected()
         await jest.advanceTimersByTimeAsync(34999)
         let settled = false
         void resultPromise.then(() => {
@@ -2075,13 +2066,13 @@ describe('SteamUser', () => {
       })
       // The canary needs a populated steamID on the live client first; the
       // real client nulls it when the stale session is logged off.
-      ;(SteamUser as any).client = mockSteamUserInstance
+      ;(steamUser as any).client = mockSteamUserInstance
       mockSteamUserInstance.logOff.mockImplementation(() => {
         mockSteamUserInstance.steamID = null
       })
 
       try {
-        const result = await SteamUser.ensureConnected()
+        const result = await steamUser.ensureConnected()
         expect(result).toBe(false)
         expect(mockSteamUserInstance.relog).not.toHaveBeenCalled()
       } finally {
@@ -2103,7 +2094,7 @@ describe('SteamUser', () => {
         })
       })
 
-      const result = await SteamUser.ensureConnected()
+      const result = await steamUser.ensureConnected()
       expect(result).toBe(true)
       expect(mockSteamUserInstance.relog).not.toHaveBeenCalled()
     })
@@ -2122,7 +2113,7 @@ describe('SteamUser', () => {
       // resolve/reject classification behavior.
       releaseLease = jest.fn()
       acquireSpy = jest
-        .spyOn(SteamUser, 'acquireAuthenticated')
+        .spyOn(steamUser, 'acquireAuthenticated')
         .mockResolvedValue({
           ok: true,
           client: mockSteamUserInstance as any,
@@ -2140,7 +2131,7 @@ describe('SteamUser', () => {
         packageList: { '123': 'Some Game' }
       })
 
-      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey(steamDeps, 'steam', 'TEST-KEY-VALUE')
 
       expect(result).toEqual({
         store: 'steam',
@@ -2157,7 +2148,7 @@ describe('SteamUser', () => {
     test('releases the lease when client.redeemKey rejects', async () => {
       mockSteamUserInstance.redeemKey.mockRejectedValue(new Error('boom'))
 
-      await redeemKey('steam', 'TEST-KEY-VALUE')
+      await redeemKey(steamDeps, 'steam', 'TEST-KEY-VALUE')
 
       expect(releaseLease).toHaveBeenCalledTimes(1)
     })
@@ -2168,7 +2159,7 @@ describe('SteamUser', () => {
         reason: 'go-offline-required'
       })
 
-      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey(steamDeps, 'steam', 'TEST-KEY-VALUE')
 
       expect(result).toEqual({
         store: 'steam',
@@ -2201,7 +2192,7 @@ describe('SteamUser', () => {
         })
         mockSteamUserInstance.redeemKey.mockRejectedValue(err)
 
-        const result = await redeemKey('steam', 'TEST-KEY-VALUE')
+        const result = await redeemKey(steamDeps, 'steam', 'TEST-KEY-VALUE')
 
         expect(result.store).toBe('steam')
         expect(result.outcome).toBe(bucket)
@@ -2215,7 +2206,7 @@ describe('SteamUser', () => {
     test('rejected Error with no purchaseResultDetails -> transport failure classified as "error"', async () => {
       mockSteamUserInstance.redeemKey.mockRejectedValue(new Error('boom'))
 
-      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey(steamDeps, 'steam', 'TEST-KEY-VALUE')
 
       expect(result.store).toBe('steam')
       expect(result.outcome).toBe('error')
@@ -2230,7 +2221,7 @@ describe('SteamUser', () => {
       })
       mockSteamUserInstance.redeemKey.mockRejectedValue(err)
 
-      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey(steamDeps, 'steam', 'TEST-KEY-VALUE')
 
       expect(result.store).toBe('steam')
       expect(result.outcome).toBe('error')
@@ -2239,7 +2230,7 @@ describe('SteamUser', () => {
     test('not connected (lease refused): returns outcome "error" and never calls client.redeemKey', async () => {
       acquireSpy.mockResolvedValue({ ok: false, reason: 'not-signed-in' })
 
-      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey(steamDeps, 'steam', 'TEST-KEY-VALUE')
 
       expect(result).toEqual({
         store: 'steam',
@@ -2252,7 +2243,7 @@ describe('SteamUser', () => {
     test('not connected (client not ready): returns outcome "error" and never calls client.redeemKey', async () => {
       acquireSpy.mockResolvedValue({ ok: false, reason: 'client-not-ready' })
 
-      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey(steamDeps, 'steam', 'TEST-KEY-VALUE')
 
       expect(result.outcome).toBe('error')
       expect(mockSteamUserInstance.redeemKey).not.toHaveBeenCalled()
@@ -2265,7 +2256,7 @@ describe('SteamUser', () => {
         packageList: {}
       })
 
-      await redeemKey('steam', secretKey)
+      await redeemKey(steamDeps, 'steam', secretKey)
 
       const mockedLogInfo = jest.mocked(logInfo)
       const mockedLogWarning = jest.mocked(logWarning)
@@ -2335,7 +2326,7 @@ describe('SteamUser', () => {
         username: 'TestUser',
         steamId: SESSION_STEAM_ID
       })
-      expect((SteamUser as any).leaseCount).toBe(0)
+      expect((steamUser as any).leaseCount).toBe(0)
     })
 
     test('sign-in when the wrap refuses: no logOn, account-name fallback, no guided push, still done', async () => {
@@ -2404,7 +2395,7 @@ describe('SteamUser', () => {
       mockConfigStore.get_nodefault.mockImplementation((key: string) =>
         key === 'isLoggedIn' ? true : undefined
       )
-      const refresh = SteamUser.acquireAuthenticated({ reason: 'user-refresh' })
+      const refresh = steamUser.acquireAuthenticated({ reason: 'user-refresh' })
       mockSteamUserInstance.steamID = savedSteamID
       steamUserOnHandlers['loggedOn']?.({}, {})
 
@@ -2427,7 +2418,7 @@ describe('SteamUser', () => {
         )
       )
 
-      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey(steamDeps, 'steam', 'TEST-KEY-VALUE')
 
       expect(result).toEqual({
         store: 'steam',
@@ -2443,7 +2434,7 @@ describe('SteamUser', () => {
 
     test('redeemKey with any other refusal reports not-connected and pushes nothing', async () => {
       // not signed in: get_nodefault stays undefined
-      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey(steamDeps, 'steam', 'TEST-KEY-VALUE')
 
       expect(result).toEqual({
         store: 'steam',
@@ -2462,20 +2453,20 @@ describe('SteamUser', () => {
         if (key === 'refreshToken') return 'stored-plaintext-token'
         return undefined
       })
-      const lease = await SteamUser.acquireAuthenticated({
+      const lease = await steamUser.acquireAuthenticated({
         reason: 'user-install'
       })
       expect(lease.ok).toBe(true)
       if (lease.ok) lease.release()
-      expect((SteamUser as any).idleTimer).not.toBeNull()
+      expect((steamUser as any).idleTimer).not.toBeNull()
       mockSteamUserInstance.logOff.mockClear()
 
-      await SteamUser.logout()
+      await steamUser.logout()
 
-      expect((SteamUser as any).idleTimer).toBeNull()
+      expect((steamUser as any).idleTimer).toBeNull()
       expect(mockSteamUserInstance.logOff).toHaveBeenCalled()
       expect(mockCloseAnonymousClient).toHaveBeenCalledWith('logout')
-      expect(SteamUser.acquireOpenAuthenticated('shared-redist')).toBeNull()
+      expect(steamUser.acquireOpenAuthenticated('shared-redist')).toBeNull()
     })
   })
 })

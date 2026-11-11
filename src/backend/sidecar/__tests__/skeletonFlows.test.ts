@@ -54,6 +54,7 @@
  * / SidecarNotification / the openExternal SidecarRpcRequest) — never on
  * internals — per the plan's own acceptance criteria.
  */
+import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 
 // ── os — GAP FIX (2026-07-22): Test 4 below writes fixture data (including a
 // fake refreshToken) through the real, unmocked configStore/fileStore module
@@ -128,12 +129,11 @@ jest.mock('backend/constants/environment', () => ({
 
 // ── SteamUser mock — controls ensureConnected()/getClient() (mirrors
 // library.test.ts's LIB-01 convention); automocked, no factory ──────────────
+// The boot builds its SteamUser through createSteamUser; hand it the suite's one jest-fn double (66.3-16).
+// `mock`-prefixed so the hoisted factory may reference it; it is initialised before the first require.
+const mockSteamUser = createMockSteamUser()
 jest.mock('../../storeManagers/steam/user', () => ({
-  ...jest.createMockFromModule<typeof import('../../storeManagers/steam/user')>(
-    '../../storeManagers/steam/user'
-  ),
-  // @66.3-compat interim: the boot builds an instance; consumers still reach the static mocks.
-  createSteamUser: () => ({})
+  createSteamUser: () => mockSteamUser
 }))
 
 // ── Anonymous PICS client mock (Phase 54) — refresh() captures platforms on
@@ -154,7 +154,6 @@ import { createStoreRegistry } from 'backend/stores/storeRegistry'
 // freshRegistry() (run before each case, ahead of any mock configuration), and
 // boot() then boots without a second reset.
 let getPath: typeof import('../pathShim').getPath
-let SteamUser: typeof import('../../storeManagers/steam/user').SteamUser
 let mockLeaseOk: typeof import('../../storeManagers/steam/__tests__/depotLeaseMocks').mockLeaseOk
 let getSteamLibraries: typeof import('backend/utils').getSteamLibraries
 let steamConfigStore: ReturnType<
@@ -169,7 +168,6 @@ function freshRegistry(): void {
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
   ;({ getPath } = require('../pathShim'))
-  ;({ SteamUser } = require('../../storeManagers/steam/user'))
   ;({
     mockLeaseOk
   } = require('../../storeManagers/steam/__tests__/depotLeaseMocks'))
@@ -251,7 +249,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
   it('Test 1 (read flow): refreshLibrary invoke produces a pushGameToLibrary notification carrying a steam GameInfo', async () => {
     // Phase 54 (54-04): a granted refresh takes an authenticated lease via
     // acquireAuthenticated() instead of calling ensureConnected().
-    mockLeaseOk()
+    mockLeaseOk(mockSteamUser)
     const fakeClient = {
       steamID: 'STEAMID_TEST',
       getUserOwnedApps: jest.fn().mockResolvedValue({
@@ -262,7 +260,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       })
     }
 
-    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(mockSteamUser.getClient).mockReturnValue(fakeClient as any)
 
     const { input, frames } = boot()
     // quick-260817-d61: the Steam keyring deferral gate defers an automatic

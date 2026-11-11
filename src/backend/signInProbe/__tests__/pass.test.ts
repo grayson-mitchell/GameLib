@@ -99,19 +99,6 @@ jest.mock('backend/humble/user', () => ({
     }
   }
 }))
-jest.mock('backend/storeManagers/steam/user', () => ({
-  SteamUser: {
-    isLoggedIn: () => mockUsers.loggedIn.steam,
-    probeCredentialPresence: () => {
-      mockUsers.calls.push('steam:probeCredentialPresence')
-      return Promise.resolve('healthy')
-    },
-    ensureConnected: () => {
-      mockUsers.ensureConnectedCalls += 1
-      return Promise.resolve(true)
-    }
-  }
-}))
 jest.mock('../runnerProbes', () => ({
   ...jest.requireActual('../runnerProbes'),
   probeLegendarySession: () => {
@@ -136,6 +123,19 @@ const { fakes: fakeStores, stores: fakeVerdictStores } = makeFakeSignInStores()
 const probeSlice = {
   libraryManagers: {},
   stores: fakeVerdictStores,
+  // The boot-owned Steam session slice (66.3-16): the probe reads the keyring slot only; any
+  // ensureConnected call would be a CM logon and is counted.
+  steamUser: {
+    isLoggedIn: () => mockUsers.loggedIn.steam,
+    probeCredentialPresence: () => {
+      mockUsers.calls.push('steam:probeCredentialPresence')
+      return Promise.resolve('healthy')
+    },
+    ensureConnected: () => {
+      mockUsers.ensureConnectedCalls += 1
+      return Promise.resolve(true)
+    }
+  },
   // The injected monitor slice (66.3-11): captures the connectivity listener.
   onlineMonitor: {
     isOnline: () => mockConnectivity.online,

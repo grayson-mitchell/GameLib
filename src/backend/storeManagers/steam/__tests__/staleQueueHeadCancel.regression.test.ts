@@ -95,7 +95,6 @@ jest.mock('../library/installPolling', () => ({
   startInstallPolling: jest.fn()
 }))
 jest.mock('../macSteamAdoption')
-jest.mock('../user')
 jest.mock('../clientSetup')
 jest.mock('../experimentalInstallAppSetting')
 jest.mock('../steamInstallApp')

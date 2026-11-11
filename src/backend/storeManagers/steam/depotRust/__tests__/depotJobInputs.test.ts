@@ -4,7 +4,8 @@
  */
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { buildDepotRefs } from '../../depot/plan'
-import { SteamUser } from '../../user'
+import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
+const steamUser = createMockSteamUser()
 import { mockLeaseOk } from '../../__tests__/depotLeaseMocks'
 import { selectAllDepots } from '../../depot/select'
 import { getFileSize, sendProgressUpdate } from 'backend/utils'
@@ -23,7 +24,6 @@ jest.mock('backend/utils', () => ({
   getFileSize: jest.fn((n: number) => `${n}B`),
   sendProgressUpdate: jest.fn()
 }))
-jest.mock('../../user')
 jest.mock('../../depot/select', () => ({
   ...jest.requireActual('../../depot/select'),
   selectAllDepots: jest.fn()
@@ -36,6 +36,7 @@ jest.mock('i18next', () => ({
 
 const APP_ID = '12345'
 const OPTS = {
+  steamUser,
   config: createTestGlobalConfig(),
   targetSteamappsDir: '/tmp/steamapps',
   installdir: 'SomeGame',
@@ -73,8 +74,8 @@ function makeClient() {
 }
 
 function wire(client: ReturnType<typeof makeClient>) {
-  mockLeaseOk()
-  jest.mocked(SteamUser.getClient).mockReturnValue(client as never)
+  mockLeaseOk(steamUser)
+  jest.mocked(steamUser.getClient).mockReturnValue(client as never)
   jest.mocked(selectAllDepots).mockReturnValue([
     { id: '111', manifest: '11111111111111111', size: 0, ownerAppId: APP_ID },
     { id: '222', manifest: '22222222222222222', size: 0, ownerAppId: APP_ID }

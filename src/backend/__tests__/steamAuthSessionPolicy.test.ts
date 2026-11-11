@@ -247,7 +247,9 @@ describe('Steam authenticated-session policy (Phase 54 ROADMAP SC3)', () => {
   })
 
   it('Rule H: every steam-user construction passes autoRelogin: false', () => {
-    const re = /new\s+SteamUser(?:Lib)?\s*\(/g
+    // 66.3-16: the SteamUser class has a constructor of its own (createSteamUser's `new SteamUser(deps)`), so
+    // the rule matches the steam-user LIBRARY constructor only; the class is not a CM client.
+    const re = /new\s+SteamUserLib\s*\(/g
     let constructions = 0
     const offenders: string[] = []
     for (const rel of scannedRelPaths) {

@@ -39,7 +39,7 @@ import { createTestSignInProbe } from './testSignInProbe'
 import { createTestSteamSession } from './testSteamSession'
 import { createTestAnonymousClient } from './testAnonymousClient'
 import { createTestSteamBottle } from './testSteamBottle'
-import { createLazyTestSteamUser } from './testSteamUser'
+import { createInertTestSteamUser } from './testSteamUser'
 import { createTestBridgeHelpers } from './testBridgeHelpers'
 import type { GameSettings, Runner } from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
@@ -247,8 +247,7 @@ export function createTestServices(
     bridgeHelpers: overrides.bridgeHelpers ?? createTestBridgeHelpers(),
     steamBottle:
       overrides.steamBottle ?? createTestSteamBottle({ stores, config }),
-    steamUser:
-      overrides.steamUser ?? createLazyTestSteamUser({ stores, config })
+    steamUser: overrides.steamUser ?? createInertTestSteamUser()
   }
 }
 
@@ -372,8 +371,7 @@ export function createTestManagerDeps(
     bridgeHelpers: overrides.bridgeHelpers ?? createTestBridgeHelpers(),
     steamBottle:
       overrides.steamBottle ?? createTestSteamBottle({ stores, config }),
-    steamUser:
-      overrides.steamUser ?? createLazyTestSteamUser({ stores, config })
+    steamUser: overrides.steamUser ?? createInertTestSteamUser()
   }
 }
 

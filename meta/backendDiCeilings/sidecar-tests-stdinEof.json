@@ -1,5 +1,5 @@
 {
   "jestMock": {
-    "src/backend/sidecar/__tests__/stdinEofRelease.test.ts": 4
+    "src/backend/sidecar/__tests__/stdinEofRelease.test.ts": 3
   }
 }

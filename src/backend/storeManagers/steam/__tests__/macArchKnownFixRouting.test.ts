@@ -63,14 +63,6 @@ jest.mock('i18next', () => ({
 }))
 
 // ── SteamUser mock ────────────────────────────────────────────────────────────
-jest.mock('../user', () => ({
-  SteamUser: {
-    isLoggedIn: jest.fn(),
-    getClient: jest.fn(),
-    ensureConnected: jest.fn().mockResolvedValue(true),
-    acquireAuthenticated: jest.fn()
-  }
-}))
 
 // ── electron mock ──────────────────────────────────────────────────────────────
 jest.mock('backend/platform', () => ({
@@ -206,7 +198,8 @@ import { readKnownFixes } from 'backend/knownFixes'
 import { downloadSteamDepots } from '../depot'
 import SteamGame from '../games'
 import { checkBottleEligibility } from '../gameEligibility'
-import { SteamUser } from '../user'
+import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
+const steamUser = createMockSteamUser()
 import type { Stores } from 'backend/services/types'
 
 const { steamMetadataStore } = jest.requireMock<Stores['steam']>('../stores')
@@ -216,6 +209,7 @@ const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 // quick 261024-cjq: plain function (survives resetMocks) — CrossOver present.
 const isBottleReady = jest.fn()
 const steamTestDeps = createTestManagerDeps({
+  steamUser,
   steamBottle: {
     isCrossoverInstalled: () => Promise.resolve(true),
     isBottleReady,
@@ -248,11 +242,11 @@ beforeEach(() => {
   ;(
     jest.requireMock('../clientSetup').ensureSteamClientReady as jest.Mock
   ).mockResolvedValue({ status: 'ready', ready: true })
-  ;(SteamUser.acquireAuthenticated as jest.Mock).mockResolvedValue({
+  jest.mocked(steamUser.acquireAuthenticated).mockResolvedValue({
     ok: true,
     client: {},
     release: jest.fn()
-  })
+  } as never)
   store.set(APP_ID, {
     platformsCaptured: true,
     is_mac_native: true,

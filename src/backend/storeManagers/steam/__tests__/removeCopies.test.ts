@@ -36,7 +36,8 @@ import * as uninstallPollingModule from '../library/uninstallPolling'
 import * as acfState from '../library/acfState'
 import type { AcfSource } from '../library/installRoot'
 import SteamGame from '../games'
-import { SteamUser } from '../user'
+import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
+const steamUser = createMockSteamUser()
 import { removeAllSteamInstallCopies } from '../removeAllCopies'
 import type { Stores } from 'backend/services/types'
 
@@ -58,6 +59,7 @@ const { steamMetadataStore } = jest.requireMock<Stores['steam']>('../stores')
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
+  steamUser,
   steamBottle: steamBottle as never,
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
@@ -123,14 +125,6 @@ jest.mock('i18next', () => ({
 }))
 
 // ── SteamUser mock ────────────────────────────────────────────────────────────
-jest.mock('../user', () => ({
-  SteamUser: {
-    isLoggedIn: jest.fn(),
-    getClient: jest.fn(),
-    ensureConnected: jest.fn().mockResolvedValue(true),
-    acquireAuthenticated: jest.fn()
-  }
-}))
 
 // ── electron mock ──────────────────────────────────────────────────────────────
 jest.mock('backend/platform', () => ({
@@ -340,11 +334,11 @@ const DOWNLOADING_FLAGS = '2'
 
 beforeEach(() => {
   resetFixture()
-  ;(SteamUser.acquireAuthenticated as jest.Mock).mockResolvedValue({
+  jest.mocked(steamUser.acquireAuthenticated).mockResolvedValue({
     ok: true,
     client: {},
     release: jest.fn()
-  })
+  } as never)
 })
 
 // ── Task 1: isAppleSiliconMac host gate ──────────────────────────────────────

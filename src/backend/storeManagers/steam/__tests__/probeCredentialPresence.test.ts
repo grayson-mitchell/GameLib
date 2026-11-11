@@ -77,25 +77,21 @@ jest.mock('backend/ipc', () => ({
   addHandler: jest.fn()
 }))
 
-import { SteamUser } from '../user'
 import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
 
-// SteamUser reads its config store through the bound slice (66.1-18).
 // The boot-owned auth-unlock latches (D-66.3-13); the probe notes 'boot-probe' into this instance.
 const steamSession = createTestSteamSession()
 const isSteamAuthUnlocked = () => steamSession.authTrigger.isSteamAuthUnlocked()
 const currentTriggerLabel = () => steamSession.authTrigger.currentTriggerLabel()
 const resetSteamAuthTrigger = () =>
   steamSession.authTrigger.resetSteamAuthTrigger()
-SteamUser.bindCompatInstance(
-  createTestSteamUser({
-    signIn: mockSignIn,
-    steamSession,
-    anonymousClient: { close: jest.fn() },
-    stores: { steam: { configStore: mockConfigStore } }
-  } as never)
-)
+const steamUser = createTestSteamUser({
+  signIn: mockSignIn,
+  steamSession,
+  anonymousClient: { close: jest.fn() },
+  stores: { steam: { configStore: mockConfigStore } }
+} as never)
 
 function setLoggedIn(loggedIn: boolean) {
   mockConfigStore.get_nodefault.mockImplementation((key: string) =>
@@ -108,8 +104,7 @@ describe('SteamUser.probeCredentialPresence', () => {
 
   beforeEach(() => {
     resetSteamAuthTrigger()
-    ;(SteamUser as unknown as { client: unknown }).client = null
-    ensureConnected = jest.spyOn(SteamUser, 'ensureConnected')
+    ensureConnected = jest.spyOn(steamUser, 'ensureConnected')
     setLoggedIn(true)
   })
 
@@ -120,7 +115,7 @@ describe('SteamUser.probeCredentialPresence', () => {
   it('a logged-out account is unknown with no keyring read and the gate still locked', async () => {
     setLoggedIn(false)
 
-    await expect(SteamUser.probeCredentialPresence()).resolves.toBe('unknown')
+    await expect(steamUser.probeCredentialPresence()).resolves.toBe('unknown')
 
     expect(mockReadTokenOutcome).not.toHaveBeenCalled()
     expect(isSteamAuthUnlocked()).toBe(false)
@@ -129,31 +124,31 @@ describe('SteamUser.probeCredentialPresence', () => {
 
   it('a present token is healthy', async () => {
     mockReadTokenOutcome.mockResolvedValue({ status: 'present', token: 'tok' })
-    await expect(SteamUser.probeCredentialPresence()).resolves.toBe('healthy')
+    await expect(steamUser.probeCredentialPresence()).resolves.toBe('healthy')
   })
 
   it('an absent slot behind a logged-in account is expired', async () => {
     mockReadTokenOutcome.mockResolvedValue({ status: 'absent' })
-    await expect(SteamUser.probeCredentialPresence()).resolves.toBe('expired')
+    await expect(steamUser.probeCredentialPresence()).resolves.toBe('expired')
   })
 
   it.each(['timeout', 'denied'] as const)(
     'an unreadable read (%s) is unknown, never expired',
     async (reason) => {
       mockReadTokenOutcome.mockResolvedValue({ status: 'unreadable', reason })
-      await expect(SteamUser.probeCredentialPresence()).resolves.toBe('unknown')
+      await expect(steamUser.probeCredentialPresence()).resolves.toBe('unknown')
     }
   )
 
   it('a thrown read is unknown', async () => {
     mockReadTokenOutcome.mockRejectedValue(new Error('keyring exploded'))
-    await expect(SteamUser.probeCredentialPresence()).resolves.toBe('unknown')
+    await expect(steamUser.probeCredentialPresence()).resolves.toBe('unknown')
   })
 
   it("reads the keyring exactly once, labelled 'boot-probe'", async () => {
     mockReadTokenOutcome.mockResolvedValue({ status: 'present', token: 'tok' })
 
-    await SteamUser.probeCredentialPresence()
+    await steamUser.probeCredentialPresence()
 
     expect(mockReadTokenOutcome).toHaveBeenCalledTimes(1)
     expect(mockReadTokenOutcome).toHaveBeenCalledWith(
@@ -165,7 +160,7 @@ describe('SteamUser.probeCredentialPresence', () => {
   it('never opens a CM connection (D-21)', async () => {
     mockReadTokenOutcome.mockResolvedValue({ status: 'present', token: 'tok' })
 
-    await SteamUser.probeCredentialPresence()
+    await steamUser.probeCredentialPresence()
 
     expect(ensureConnected).not.toHaveBeenCalled()
     expect(mockSteamUserCtor).not.toHaveBeenCalled()
@@ -174,7 +169,7 @@ describe('SteamUser.probeCredentialPresence', () => {
   it('writes nothing: the pass applies the verdict, not the probe', async () => {
     mockReadTokenOutcome.mockResolvedValue({ status: 'absent' })
 
-    await SteamUser.probeCredentialPresence()
+    await steamUser.probeCredentialPresence()
 
     expect(mockConfigStore.set).not.toHaveBeenCalled()
     expect(mockConfigStore.delete).not.toHaveBeenCalled()
@@ -184,7 +179,7 @@ describe('SteamUser.probeCredentialPresence', () => {
   it('unlocks the gate for a logged-in account (the recorded reversal of 260817-d61)', async () => {
     mockReadTokenOutcome.mockResolvedValue({ status: 'present', token: 'tok' })
 
-    await SteamUser.probeCredentialPresence()
+    await steamUser.probeCredentialPresence()
 
     expect(isSteamAuthUnlocked()).toBe(true)
     expect(currentTriggerLabel()).toBe('boot-probe')

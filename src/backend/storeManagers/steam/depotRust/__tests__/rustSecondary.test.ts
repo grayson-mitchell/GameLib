@@ -14,7 +14,8 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
 import { downloadSelectedDepotFiles, prescreenBridgeDepots } from '../../depot'
-import { SteamUser } from '../../user'
+import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
+const steamUser = createMockSteamUser()
 import { mockLeaseOk } from '../../__tests__/depotLeaseMocks'
 import { selectAllDepots } from '../../depot/select'
 import { getSteamLibraries } from 'backend/utils'
@@ -29,6 +30,7 @@ import { createSteamStores } from '../../stores'
 const steamStoresModule = createSteamStores({ registry: createStoreRegistry() })
 
 const steamTestDeps = createTestManagerDeps({
+  steamUser,
   stores: createTestStores({ steam: steamStoresModule })
 })
 
@@ -47,7 +49,6 @@ jest.mock('backend/utils', () => ({
 jest.mock('backend/sidecar/sidecarRpc', () => ({
   requestRustInvoke: jest.fn()
 }))
-jest.mock('../../user')
 jest.mock('../../depot/select', () => ({
   ...jest.requireActual('../../depot/select'),
   selectAllDepots: jest.fn()
@@ -128,6 +129,7 @@ const ALL_BLOCKED_MSG =
   'buildDepotPlan: every selected depot for appId 12345 was blocked by Steam (eresult=40) and had to be skipped: 111'
 
 const OPTS = () => ({
+  steamUser,
   config: createTestGlobalConfig(),
   targetSteamappsDir: steamapps,
   installdir: 'SomeGame',
@@ -138,11 +140,11 @@ beforeEach(() => {
   jest.resetAllMocks()
   steamapps = mkdtempSync(join(tmpdir(), 'rustsecondary-'))
   client = makeClient()
-  jest.mocked(SteamUser.getClient).mockReturnValue(client as never)
+  jest.mocked(steamUser.getClient).mockReturnValue(client as never)
   jest
-    .mocked(SteamUser.getPersistedSteamId64)
+    .mocked(steamUser.getPersistedSteamId64)
     .mockReturnValue('76561198012345678')
-  mockLeaseOk()
+  mockLeaseOk(steamUser)
   jest
     .mocked(selectAllDepots)
     .mockReturnValue([

@@ -3,7 +3,7 @@ import {
   createInertSteamProcesses,
   createTestStores
 } from 'backend/testUtils/testServices'
-/* eslint-disable @typescript-eslint/unbound-method -- jest mock handles (SteamUser.acquire*), never invoked unbound; same reason as the line-level disables elsewhere in steam/__tests__ */
+/* eslint-disable @typescript-eslint/unbound-method -- jest mock handles (steamUser.acquire*), never invoked unbound; same reason as the line-level disables elsewhere in steam/__tests__ */
 /**
  * SteamLibraryManager.refresh() / refreshInstallState() behaviour (free functions in
  * library/refresh.ts). Moved out of library.test.ts by Phase 65 plan 06 (D-03);
@@ -20,7 +20,8 @@ import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
-import { SteamUser } from '../user'
+import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
+const steamUser = createMockSteamUser()
 import { getBottleSteamappsDir } from '../bottle'
 import {
   getBridgeBottleSettings,
@@ -52,6 +53,7 @@ const getAnonymousPicsClient = jest.fn()
 const getSteamBottleSettings = jest.fn()
 const isSteamBottleProvisioned = jest.fn()
 const steamTestDeps = createTestManagerDeps({
+  steamUser,
   steamBottle: { getSteamBottleSettings, isSteamBottleProvisioned } as never,
   anonymousClient: createTestAnonymousClient({ get: getAnonymousPicsClient }),
   steamProcesses: createInertSteamProcesses(),
@@ -134,7 +136,6 @@ jest.mock('i18next', () => {
 })
 
 // ── SteamUser mock — controls getClient() / isLoggedIn() return values ───────
-jest.mock('../user')
 
 // ── electron mock — dialog.showMessageBox (MAC32-03 i386 recovery confirm) +
 // app.getPath (backend/constants/paths reads this at module load time) ───────
@@ -328,13 +329,13 @@ describe('SteamLibraryManager', () => {
     // describe below and the structural launch test.
     resetSteamAuthTrigger()
     noteRefreshTrigger('steam', 'action-icons-refresh-button')
-    // Default lease: the client the test installed via SteamUser.getClient().
+    // Default lease: the client the test installed via steamUser.getClient().
     leaseRelease = jest.fn()
-    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue(null)
-    jest.mocked(SteamUser.acquireAuthenticated).mockImplementation(() =>
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue(null)
+    jest.mocked(steamUser.acquireAuthenticated).mockImplementation(() =>
       Promise.resolve({
         ok: true,
-        client: SteamUser.getClient(),
+        client: steamUser.getClient(),
         release: leaseRelease
       } as never)
     )
@@ -369,7 +370,7 @@ describe('SteamLibraryManager', () => {
       makeOwnedApp(440, 'Team Fortress 2', 60)
     ]
     const fakeClient = makeFakeClient(apps)
-    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
     jest.mocked(steamLibraryStore.get).mockReturnValue([])
 
     const result = await manager.refresh()
@@ -387,7 +388,7 @@ describe('SteamLibraryManager', () => {
       makeOwnedApp(440, 'Team Fortress 2', 60)
     ]
     const fakeClient = makeFakeClient(apps)
-    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
     jest.mocked(steamLibraryStore.get).mockReturnValue([])
 
     await manager.refresh()
@@ -433,7 +434,7 @@ describe('SteamLibraryManager', () => {
   it('LIB-03: GameInfo.extra.steamPlaytimeMinutes equals app.playtime_forever', async () => {
     const apps = [makeOwnedApp(570, 'Dota 2', 4200)]
     const fakeClient = makeFakeClient(apps)
-    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
     jest.mocked(steamLibraryStore.get).mockReturnValue([])
 
     await manager.refresh()
@@ -450,7 +451,7 @@ describe('SteamLibraryManager', () => {
     const LAST_PLAYED_TS = 1750000000 // arbitrary Unix-seconds timestamp
     const apps = [makeOwnedApp(570, 'Dota 2', 4200, LAST_PLAYED_TS)]
     const fakeClient = makeFakeClient(apps)
-    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
     jest.mocked(steamLibraryStore.get).mockReturnValue([])
 
     await manager.refresh()
@@ -468,7 +469,7 @@ describe('SteamLibraryManager', () => {
   it('D-08 reconciliation: synced GameInfo carries steamPlatformsCaptured:true when cachedMeta.platformsCaptured is true', async () => {
     const apps = [makeOwnedApp(570, 'Dota 2', 120)]
     const fakeClient = makeFakeClient(apps)
-    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
     jest.mocked(steamLibraryStore.get).mockReturnValue([])
     // Quick task 260816-hdg: `is_windows_native` is what makes this fixture
     // mean what its name says — a LEGITIMATELY-WRITTEN post-D-17 entry. Every
@@ -494,7 +495,7 @@ describe('SteamLibraryManager', () => {
   it('260816-hdg: synced GameInfo carries steamPlatformsCaptured:FALSE for a pre-D-17 residue entry (platformsCaptured:true, no is_windows_native)', async () => {
     const apps = [makeOwnedApp(570, 'Dota 2', 120)]
     const fakeClient = makeFakeClient(apps)
-    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
     jest.mocked(steamLibraryStore.get).mockReturnValue([])
     // THE 370-ENTRY RESIDUE SHAPE. The mac answer is real and is left alone;
     // only the depot claim is cleared, so the frontend stops being told a
@@ -517,7 +518,7 @@ describe('SteamLibraryManager', () => {
   it('D-08 reconciliation: synced GameInfo carries steamPlatformsCaptured:false when cachedMeta is absent (never synced)', async () => {
     const apps = [makeOwnedApp(570, 'Dota 2', 120)]
     const fakeClient = makeFakeClient(apps)
-    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
     jest.mocked(steamLibraryStore.get).mockReturnValue([])
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
 
@@ -536,7 +537,7 @@ describe('SteamLibraryManager', () => {
   it('D-17: synced GameInfo carries is_windows_native:true when cachedMeta.is_windows_native is true', async () => {
     const apps = [makeOwnedApp(570, 'Dota 2', 120)]
     const fakeClient = makeFakeClient(apps)
-    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
     jest.mocked(steamLibraryStore.get).mockReturnValue([])
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,
@@ -566,7 +567,7 @@ describe('SteamLibraryManager', () => {
   it('D-17 false-safe: synced GameInfo never carries is_windows_native:true when cachedMeta is absent, and preserves undefined ("never captured")', async () => {
     const apps = [makeOwnedApp(570, 'Dota 2', 120)]
     const fakeClient = makeFakeClient(apps)
-    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
     jest.mocked(steamLibraryStore.get).mockReturnValue([])
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
 
@@ -587,7 +588,7 @@ describe('SteamLibraryManager', () => {
   it('261029-sbi: synced GameInfo carries metacritic_score from cachedMeta', async () => {
     const apps = [makeOwnedApp(570, 'Dota 2', 120)]
     jest
-      .mocked(SteamUser.getClient)
+      .mocked(steamUser.getClient)
       .mockReturnValue(makeFakeClient(apps) as any)
     jest.mocked(steamLibraryStore.get).mockReturnValue([])
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
@@ -608,7 +609,7 @@ describe('SteamLibraryManager', () => {
   it('261029-sbi: absent cachedMeta gives metacritic_score undefined, never 0', async () => {
     const apps = [makeOwnedApp(570, 'Dota 2', 120)]
     jest
-      .mocked(SteamUser.getClient)
+      .mocked(steamUser.getClient)
       .mockReturnValue(makeFakeClient(apps) as any)
     jest.mocked(steamLibraryStore.get).mockReturnValue([])
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
@@ -627,7 +628,7 @@ describe('SteamLibraryManager', () => {
   it('D-17: a CONFIRMED-false cachedMeta stays false -- distinct from the never-captured case above', async () => {
     const apps = [makeOwnedApp(570, 'Dota 2', 120)]
     const fakeClient = makeFakeClient(apps)
-    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
     jest.mocked(steamLibraryStore.get).mockReturnValue([])
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,
@@ -654,7 +655,7 @@ describe('SteamLibraryManager', () => {
       makeOwnedApp(440, 'Never Checked Game', 60)
     ]
     const fakeClient = makeFakeClient(apps)
-    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
     jest.mocked(steamLibraryStore.get).mockReturnValue([])
     ;(steamMetadataStore.get as jest.Mock).mockImplementation(
       (appId: string) => {
@@ -696,7 +697,7 @@ describe('SteamLibraryManager', () => {
       steamID: 'STEAMID_TEST',
       getUserOwnedApps: jest.fn().mockRejectedValue(new Error('CM unreachable'))
     }
-    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
     jest.mocked(steamLibraryStore.get).mockReturnValue(cachedGames)
 
     const result = await manager.refresh()
@@ -727,7 +728,7 @@ describe('SteamLibraryManager', () => {
   describe('SteamLibraryManager.refresh() sync status emission (34.15 D-07)', () => {
     const refuse = (reason: string) =>
       jest
-        .mocked(SteamUser.acquireAuthenticated)
+        .mocked(steamUser.acquireAuthenticated)
         .mockResolvedValue({ ok: false, reason } as never)
 
     it('exit path 1 (client not ready): emits [failed/client-not-ready] and resolves null', async () => {
@@ -742,10 +743,10 @@ describe('SteamLibraryManager', () => {
     })
 
     it('exit path 1 (CM rejected the logon): still ONE failed emit, but names it logon-rejected so it never reads as a readiness race', async () => {
-      // `jest.mocked(SteamUser).x` rather than `jest.mocked(SteamUser.x)`:
+      // `jest.mocked(SteamUser).x` rather than `jest.mocked(steamUser.x)`:
       // the latter is a bare method reference and trips unbound-method.
       refuse('logon-rejected')
-      jest.mocked(SteamUser).getLogonFailure.mockReturnValue({
+      jest.mocked(steamUser).getLogonFailure.mockReturnValue({
         message: 'AccessDenied',
         eresult: 15
       })
@@ -786,12 +787,12 @@ describe('SteamLibraryManager', () => {
 
     it('a granted Refresh asks for the guided Go Offline step', async () => {
       const fakeClient = makeFakeClient([])
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
 
       await manager.refresh()
 
-      expect(SteamUser.acquireAuthenticated).toHaveBeenCalledTimes(1)
-      expect(SteamUser.acquireAuthenticated).toHaveBeenCalledWith({
+      expect(steamUser.acquireAuthenticated).toHaveBeenCalledTimes(1)
+      expect(steamUser.acquireAuthenticated).toHaveBeenCalledWith({
         reason: 'user-refresh',
         guidedAction: 'refresh'
       })
@@ -802,12 +803,12 @@ describe('SteamLibraryManager', () => {
       resetSteamAuthTrigger()
       noteRefreshTrigger('steam', 'login-success')
       jest
-        .mocked(SteamUser.getClient)
+        .mocked(steamUser.getClient)
         .mockReturnValue(makeFakeClient([]) as any)
 
       await manager.refresh()
 
-      expect(SteamUser.acquireAuthenticated).toHaveBeenCalledWith({
+      expect(steamUser.acquireAuthenticated).toHaveBeenCalledWith({
         reason: 'login',
         guidedAction: 'refresh'
       })
@@ -815,13 +816,13 @@ describe('SteamLibraryManager', () => {
 
     it('the grant is one-shot: a second refresh without a new grant does not acquire', async () => {
       jest
-        .mocked(SteamUser.getClient)
+        .mocked(steamUser.getClient)
         .mockReturnValue(makeFakeClient([]) as any)
 
       await manager.refresh()
       await manager.refresh()
 
-      expect(SteamUser.acquireAuthenticated).toHaveBeenCalledTimes(1)
+      expect(steamUser.acquireAuthenticated).toHaveBeenCalledTimes(1)
     })
 
     it('exit path 2 (getUserOwnedApps throws): emits [syncing, failed/owned-apps-failed] AFTER cached games are pushed', async () => {
@@ -835,7 +836,7 @@ describe('SteamLibraryManager', () => {
           .fn()
           .mockRejectedValue(new Error('CM unreachable'))
       }
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(steamLibraryStore.get).mockReturnValue(cachedGames)
 
       await manager.refresh()
@@ -861,7 +862,7 @@ describe('SteamLibraryManager', () => {
     it('exit path 3 (success): emits [syncing, idle] and NO failed payload', async () => {
       const apps = [makeOwnedApp(570, 'Dota 2', 120)]
       const fakeClient = makeFakeClient(apps)
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(steamLibraryStore.get).mockReturnValue([])
 
       await manager.refresh()
@@ -875,7 +876,7 @@ describe('SteamLibraryManager', () => {
     it('exit path 4 (previously-uncaught Steps 2-4 hydration span): emits [syncing, failed/sync-failed], rejects, and NEVER emits idle', async () => {
       const apps = [makeOwnedApp(570, 'Dota 2', 120)]
       const fakeClient = makeFakeClient(apps)
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(steamLibraryStore.get).mockReturnValue([])
       // Forcing seam: steamLibraryStore.set is called at the tail of the
       // Steps 2-4 span with no catch above it at HEAD — this is exactly the
@@ -906,7 +907,7 @@ describe('SteamLibraryManager', () => {
       const result = await manager.refresh()
 
       expect(result).toBeNull()
-      expect(SteamUser.acquireAuthenticated).not.toHaveBeenCalled()
+      expect(steamUser.acquireAuthenticated).not.toHaveBeenCalled()
       expect(steamSyncEmits()).toEqual([{ status: 'idle' }])
     })
 
@@ -921,12 +922,12 @@ describe('SteamLibraryManager', () => {
     it('with an open session: full sync on that client, no new logon, lease released', async () => {
       const fakeClient = makeFakeClient([makeOwnedApp(570, 'Dota 2', 120)])
       jest
-        .mocked(SteamUser.acquireOpenAuthenticated)
+        .mocked(steamUser.acquireOpenAuthenticated)
         .mockReturnValue({ client: fakeClient, release: leaseRelease } as never)
 
       await manager.refresh()
 
-      expect(SteamUser.acquireAuthenticated).not.toHaveBeenCalled()
+      expect(steamUser.acquireAuthenticated).not.toHaveBeenCalled()
       expect(fakeClient.getUserOwnedApps).toHaveBeenCalledTimes(1)
       expect(steamSyncEmits()).toEqual([
         { status: 'syncing' },
@@ -938,7 +939,7 @@ describe('SteamLibraryManager', () => {
     it('releases the open-session lease on the hydration-catch rethrow', async () => {
       const fakeClient = makeFakeClient([makeOwnedApp(570, 'Dota 2', 120)])
       jest
-        .mocked(SteamUser.acquireOpenAuthenticated)
+        .mocked(steamUser.acquireOpenAuthenticated)
         .mockReturnValue({ client: fakeClient, release: leaseRelease } as never)
       jest.mocked(steamLibraryStore.set).mockImplementation(() => {
         throw new Error('disk write failed')
@@ -955,7 +956,7 @@ describe('SteamLibraryManager', () => {
 
     it('a complete anonymous pass is the only pass', async () => {
       const fakeClient = makeFakeClient([makeOwnedApp(570, 'Dota 2', 120)])
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(getAnonymousPicsClient).mockResolvedValue(anon as never)
       jest.mocked(captureOwnedAppPlatforms).mockResolvedValue({
         scopedCount: 1,
@@ -976,7 +977,7 @@ describe('SteamLibraryManager', () => {
 
     it('an incomplete anonymous pass gets a second pass on the held session', async () => {
       const fakeClient = makeFakeClient([makeOwnedApp(570, 'Dota 2', 120)])
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(getAnonymousPicsClient).mockResolvedValue(anon as never)
       jest.mocked(captureOwnedAppPlatforms).mockResolvedValue({
         scopedCount: 1,
@@ -1004,7 +1005,7 @@ describe('SteamLibraryManager', () => {
 
     it('a failed anonymous pass gets a second pass', async () => {
       const fakeClient = makeFakeClient([makeOwnedApp(570, 'Dota 2', 120)])
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(getAnonymousPicsClient).mockResolvedValue(anon as never)
       jest.mocked(captureOwnedAppPlatforms).mockResolvedValue({
         scopedCount: 1,
@@ -1020,7 +1021,7 @@ describe('SteamLibraryManager', () => {
 
     it('261029-sbi: metacritic capture gets the anonymous client and runs before the first push', async () => {
       const fakeClient = makeFakeClient([makeOwnedApp(570, 'Dota 2', 120)])
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(getAnonymousPicsClient).mockResolvedValue(anon as never)
       jest.mocked(captureOwnedAppPlatforms).mockResolvedValue({
         scopedCount: 0,
@@ -1051,7 +1052,7 @@ describe('SteamLibraryManager', () => {
 
     it('261029-sbi: no anonymous client falls back to the held session', async () => {
       const fakeClient = makeFakeClient([makeOwnedApp(570, 'Dota 2', 120)])
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
 
       await manager.refresh()
 
@@ -1064,7 +1065,7 @@ describe('SteamLibraryManager', () => {
 
     it('no anonymous client: one pass on the held session', async () => {
       const fakeClient = makeFakeClient([makeOwnedApp(570, 'Dota 2', 120)])
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
 
       await manager.refresh()
 
@@ -1089,7 +1090,7 @@ describe('SteamLibraryManager', () => {
       })
       const apps = [makeOwnedApp(570, 'Dota 2', 120)]
       const fakeClient = makeFakeClient(apps)
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(steamLibraryStore.get).mockReturnValue([])
 
       const result = await manager.refresh()
@@ -1111,7 +1112,7 @@ describe('SteamLibraryManager', () => {
         .mockRejectedValue(new Error('PICS contract violated'))
       const apps = [makeOwnedApp(570, 'Dota 2', 120)]
       const fakeClient = makeFakeClient(apps)
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(steamLibraryStore.get).mockReturnValue([])
 
       // Pinned, not silently absorbed: captureOwnedAppPlatforms's own
@@ -1179,7 +1180,7 @@ describe('SteamLibraryManager', () => {
 
       const apps = [makeOwnedApp(206020, 'Avernum 4', 30)]
       const fakeClient = makeFakeClient(apps)
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(steamLibraryStore.get).mockReturnValue([])
 
       await manager.refresh()
@@ -1223,7 +1224,7 @@ describe('SteamLibraryManager', () => {
 
       const apps = [makeOwnedApp(206060, 'Avernum 6', 10)]
       const fakeClient = makeFakeClient(apps)
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(steamLibraryStore.get).mockReturnValue([])
 
       await manager.refresh()
@@ -1273,7 +1274,7 @@ describe('SteamLibraryManager', () => {
 
       const apps = [makeOwnedApp(570, 'Dota 2', 5)]
       const fakeClient = makeFakeClient(apps)
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(steamLibraryStore.get).mockReturnValue([])
 
       await manager.refresh()
@@ -1298,7 +1299,7 @@ describe('SteamLibraryManager', () => {
 
       const apps = [makeOwnedApp(206020, 'Avernum 4', 30)]
       const fakeClient = makeFakeClient(apps)
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(steamLibraryStore.get).mockReturnValue([])
 
       await manager.refresh()
@@ -1368,7 +1369,7 @@ describe('SteamLibraryManager', () => {
 
       const apps = [makeOwnedApp(206040, 'Avernum 5', 15)]
       const fakeClient = makeFakeClient(apps)
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(steamLibraryStore.get).mockReturnValue([])
 
       await manager.refresh()
@@ -1441,7 +1442,7 @@ describe('SteamLibraryManager', () => {
         makeOwnedApp(206040, 'Avernum 5', 15),
         makeOwnedApp(206041, 'Game Two', 15)
       ])
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
 
       await manager.refresh()
 
@@ -1458,7 +1459,7 @@ describe('SteamLibraryManager', () => {
 
     it('Phase 54: an ungranted refresh never backfills', async () => {
       armBridgeInstalled()
-      jest.mocked(SteamUser.acquireAuthenticated).mockResolvedValue({
+      jest.mocked(steamUser.acquireAuthenticated).mockResolvedValue({
         ok: false,
         reason: 'go-offline-required'
       } as never)
@@ -1474,7 +1475,7 @@ describe('SteamLibraryManager', () => {
         .mocked(backfillBridgeLaunchTargets)
         .mockRejectedValue(new Error('pics down'))
       const fakeClient = makeFakeClient([makeOwnedApp(206040, 'Avernum 5', 15)])
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
 
       await manager.refresh()
 
@@ -1487,7 +1488,7 @@ describe('SteamLibraryManager', () => {
     it('Phase 54: with no ready bridge bottle the backfill is not called', async () => {
       jest.mocked(listReadyBridgeBottleNames).mockReturnValue([])
       const fakeClient = makeFakeClient([makeOwnedApp(206040, 'Avernum 5', 15)])
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
 
       await manager.refresh()
 
@@ -1503,7 +1504,7 @@ describe('SteamLibraryManager', () => {
 
       const apps = [makeOwnedApp(206040, 'Avernum 5', 15)]
       const fakeClient = makeFakeClient(apps)
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(steamLibraryStore.get).mockReturnValue([])
 
       await manager.refresh()
@@ -1586,7 +1587,7 @@ describe('SteamLibraryManager', () => {
 
       const apps = [makeOwnedApp(206060, 'Avernum 6', 10)]
       const fakeClient = makeFakeClient(apps)
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(steamLibraryStore.get).mockReturnValue([])
 
       await manager.refresh()
@@ -1631,7 +1632,7 @@ describe('SteamLibraryManager', () => {
 
       const apps = [makeOwnedApp(206040, 'Avernum 5', 15)]
       const fakeClient = makeFakeClient(apps)
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(steamLibraryStore.get).mockReturnValue([])
 
       await manager.refresh()
@@ -1679,7 +1680,7 @@ describe('SteamLibraryManager', () => {
 
       const apps = [makeOwnedApp(999, 'Non-Eligible Game', 5)]
       const fakeClient = makeFakeClient(apps)
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(steamLibraryStore.get).mockReturnValue([])
 
       await manager.refresh()
@@ -1753,7 +1754,7 @@ describe('SteamLibraryManager', () => {
         makeOwnedApp(440, 'Team Fortress 2', 60)
       ]
       const fakeClient = makeFakeClient(apps)
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(steamLibraryStore.get).mockReturnValue([])
 
       await manager.refresh()
@@ -1775,7 +1776,7 @@ describe('SteamLibraryManager', () => {
         makeOwnedApp(440, 'Team Fortress 2', 60)
       ]
       const fakeClient = makeFakeClient(apps)
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(steamLibraryStore.get).mockReturnValue([])
 
       await manager.refresh()
@@ -1795,7 +1796,7 @@ describe('SteamLibraryManager', () => {
     it('the re-seeded steamResumePending is persisted to steamLibraryStore (survives a restart mid-session)', async () => {
       const apps = [makeOwnedApp(570, 'Dota 2', 120)]
       const fakeClient = makeFakeClient(apps)
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(steamLibraryStore.get).mockReturnValue([])
 
       await manager.refresh()
@@ -1862,7 +1863,7 @@ describe('SteamLibraryManager', () => {
 
       const apps = [makeOwnedApp(570, 'Dota 2', 120)]
       const fakeClient = makeFakeClient(apps)
-      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
       jest.mocked(steamLibraryStore.get).mockReturnValue([])
 
       await manager.refresh()

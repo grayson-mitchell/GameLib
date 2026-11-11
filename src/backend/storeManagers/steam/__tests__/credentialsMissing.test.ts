@@ -92,7 +92,7 @@ jest.mock('backend/ipc', () => ({
   addHandler: jest.fn()
 }))
 
-import { SteamUser, type SteamUserDeps } from '../user'
+import type { SteamUser, SteamUserDeps } from '../user'
 import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 import type { SteamStoresDeps } from '../library/installRoot'
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
@@ -115,8 +115,11 @@ const steamDeps = {
   SignInNoteDeps &
   Pick<SteamUserDeps, 'signIn' | 'steamSession'> &
   UserSignInDeps
+// One fresh SteamUser per test (66.3-16), also handed to the sign-in flows through their deps.
+let steamUser: SteamUser
 beforeEach(() => {
-  SteamUser.bindCompatInstance(createTestSteamUser(steamDeps as never))
+  steamUser = createTestSteamUser(steamDeps as never)
+  ;(steamDeps as unknown as { steamUser: SteamUser }).steamUser = steamUser
 })
 import { finishAuth, startQRLogin } from '../userSignIn'
 import { defined } from './fixtures/indexed'
@@ -131,13 +134,12 @@ describe('credentialsMissing latch', () => {
     mockConfigStore.get_nodefault.mockImplementation((key: string) =>
       key === 'isLoggedIn' ? true : undefined
     )
-    ;(SteamUser as unknown as { client: unknown }).client = null
   })
 
   it('latches the flag when a successful read proves the token absent', async () => {
     mockReadTokenOutcome.mockResolvedValue({ status: 'absent' })
 
-    const connected = await SteamUser.ensureConnected()
+    const connected = await steamUser.ensureConnected()
 
     expect(connected).toBe(false)
     expect(mockConfigStore.set).toHaveBeenCalledWith(CREDENTIALS_MISSING, true)
@@ -152,7 +154,7 @@ describe('credentialsMissing latch', () => {
       reason: 'timeout'
     })
 
-    const connected = await SteamUser.ensureConnected()
+    const connected = await steamUser.ensureConnected()
 
     expect(connected).toBe(false)
     expect(mockConfigStore.set).not.toHaveBeenCalledWith(
@@ -163,12 +165,12 @@ describe('credentialsMissing latch', () => {
 
   it('clears the flag when a live connection is proven by the canary', async () => {
     const getProductInfo = jest.fn().mockResolvedValue({})
-    ;(SteamUser as unknown as { client: unknown }).client = {
+    ;(steamUser as unknown as { client: unknown }).client = {
       steamID: { getSteamID64: () => '76561197960287930' },
       getProductInfo
     }
 
-    const connected = await SteamUser.ensureConnected()
+    const connected = await steamUser.ensureConnected()
 
     expect(connected).toBe(true)
     expect(mockConfigStore.delete).toHaveBeenCalledWith(CREDENTIALS_MISSING)
@@ -180,7 +182,7 @@ describe('credentialsMissing latch', () => {
   })
 
   it('clears the flag on logout so it cannot survive into the next session', async () => {
-    await SteamUser.logout()
+    await steamUser.logout()
 
     expect(mockConfigStore.delete).toHaveBeenCalledWith(CREDENTIALS_MISSING)
   })
@@ -192,7 +194,7 @@ describe('credentialsMissing latch', () => {
     // with that signal. It must be a sibling key.
     mockReadTokenOutcome.mockResolvedValue({ status: 'absent' })
 
-    await SteamUser.ensureConnected()
+    await steamUser.ensureConnected()
 
     const userDataWrites = mockConfigStore.set.mock.calls.filter(
       ([key]) => key === 'userData'
@@ -217,7 +219,7 @@ describe('credentialsMissing latch', () => {
         .mockResolvedValue({ ok: false, reason: 'go-offline-required' })
 
     it('finishAuth notes the sign-in after clearing credentialsMissing', async () => {
-      const internals = SteamUser as unknown as Internals
+      const internals = steamUser as unknown as Internals
       refuseLease(internals)
 
       await finishAuth(steamDeps, {
@@ -231,7 +233,7 @@ describe('credentialsMissing latch', () => {
     })
 
     it('the QR success path notes the sign-in', async () => {
-      const internals = SteamUser as unknown as Internals
+      const internals = steamUser as unknown as Internals
       refuseLease(internals)
       const handlers: Record<string, () => Promise<void> | void> = {}
       const fakeSession = {
@@ -258,7 +260,7 @@ describe('credentialsMissing latch', () => {
     })
 
     it('logout notes the sign-out', async () => {
-      await SteamUser.logout()
+      await steamUser.logout()
 
       expect(mockNoteSignedOut).toHaveBeenCalledTimes(1)
       expect(mockNoteSignedOut).toHaveBeenCalledWith('steam')

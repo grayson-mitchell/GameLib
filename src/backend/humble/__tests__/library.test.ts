@@ -215,7 +215,9 @@ function resetStoreMocks() {
 // ── Steam store manager mocks (D-48 connectivity double-gate) ──────────────
 
 const mockSteamLibraryStoreGet = jest.fn()
+// The Steam session slice the connectivity gate reads (66.3-16): a plain object, no module mock.
 bindHumbleStores({
+  steamUser: { isLoggedIn: () => mockSteamIsLoggedIn() },
   stores: {
     humble: {
       humbleLibraryStore: mockLibraryStore,
@@ -235,9 +237,6 @@ bindHumbleStores({
 })
 
 const mockSteamIsLoggedIn = jest.fn()
-jest.mock('backend/storeManagers/steam/user', () => ({
-  SteamUser: { isLoggedIn: () => mockSteamIsLoggedIn() }
-}))
 
 // ── adapter mock ─────────────────────────────────────────────────────────
 

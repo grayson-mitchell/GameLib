@@ -80,7 +80,6 @@ import {
   readTokenOutcome,
   clearOrphanedElectronToken
 } from '../tokenStore'
-import { SteamUser } from '../user'
 import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 import type { SteamStoresDeps } from '../library/installRoot'
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
@@ -153,7 +152,7 @@ describe('tokenStore', () => {
   })
 
   describe('registry (setTokenStore/getTokenStore)', () => {
-    it('setTokenStore(fake) swaps the active store, and SteamUser.getCredentials() reads through it', async () => {
+    it('setTokenStore(fake) swaps the active store, and steamUser.getCredentials() reads through it', async () => {
       const fake: TokenStore = {
         isAvailable: jest.fn().mockResolvedValue(true),
         getToken: jest.fn().mockResolvedValue('fake-token'),
@@ -166,13 +165,11 @@ describe('tokenStore', () => {
 
       // Proves the swap point is real: user.ts needed no edit to pick up a
       // different TokenStore implementation per build.
-      SteamUser.bindCompatInstance(
-        createTestSteamUser({
-          stores: { steam: { configStore: mockConfigStore } },
-          steamSession: createTestSteamSession()
-        } as never)
-      )
-      const creds = await SteamUser.getCredentials()
+      const steamUser = createTestSteamUser({
+        stores: { steam: { configStore: mockConfigStore } },
+        steamSession: createTestSteamSession()
+      } as never)
+      const creds = await steamUser.getCredentials()
       expect(creds).toEqual({ refreshToken: 'fake-token' })
       expect(fake.getToken).toHaveBeenCalled()
 

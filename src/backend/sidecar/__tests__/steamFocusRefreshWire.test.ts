@@ -25,6 +25,7 @@
  *   T-D — fail-soft consumer: same transport, `refreshInstallState` mocked to REJECT; no
  *         unhandled rejection, and a subsequent frame is still processed afterward.
  */
+import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import {
   readTauriShellProductionFile,
@@ -146,12 +147,11 @@ jest.mock('backend/constants/environment', () => ({
   isLinux: true
 }))
 
+// The boot builds its SteamUser through createSteamUser; hand it the suite's one jest-fn double (66.3-16).
+// `mock`-prefixed so the hoisted factory may reference it; it is initialised before the first require.
+const mockSteamUser = createMockSteamUser()
 jest.mock('../../storeManagers/steam/user', () => ({
-  ...jest.createMockFromModule<typeof import('../../storeManagers/steam/user')>(
-    '../../storeManagers/steam/user'
-  ),
-  // @66.3-compat interim: the boot builds an instance; consumers still reach the static mocks.
-  createSteamUser: () => ({})
+  createSteamUser: () => mockSteamUser
 }))
 
 const launchEventCallbackMock = jest.fn()

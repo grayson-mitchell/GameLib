@@ -62,7 +62,6 @@ jest.mock('../expirationAlerts', () => ({
 import { bindHumbleStores } from '../humbleStores'
 import { defined } from './defined'
 import { HumbleLibrary } from '../library'
-import { SteamUser } from 'backend/storeManagers/steam/user'
 import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createHumbleStores } from '../stores'
@@ -72,15 +71,14 @@ const humbleStoreModule = createHumbleStores({
 })
 
 const { humbleLibraryStore, humbleSyncStore } = humbleStoreModule
+// library.ts asks the Steam session isLoggedIn(); a signed-out Steam config store keeps it a pure read.
+const steamUser = createTestSteamUser({
+  stores: { steam: { configStore: { get_nodefault: () => undefined } } }
+} as never)
 bindHumbleStores({
-  stores: { humble: humbleStoreModule, steam: {} } as never
+  stores: { humble: humbleStoreModule, steam: {} } as never,
+  steamUser
 })
-// library.ts asks SteamUser.isLoggedIn(); a signed-out Steam config store keeps it a pure read.
-SteamUser.bindCompatInstance(
-  createTestSteamUser({
-    stores: { steam: { configStore: { get_nodefault: () => undefined } } }
-  } as never)
-)
 
 function makeRawOrder(gamekey: string) {
   return {

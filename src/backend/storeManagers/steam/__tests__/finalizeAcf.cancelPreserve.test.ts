@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { finalizeToSteam } from '../depot/finalizeAcf'
+import { createInertTestSteamUser } from 'backend/testUtils/testSteamUser'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -9,7 +10,6 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
-jest.mock('../user')
 
 describe('finalizeToSteam cancel preserves an installed manifest', () => {
   let dir: string
@@ -23,6 +23,7 @@ describe('finalizeToSteam cancel preserves an installed manifest', () => {
   })
 
   const base = () => ({
+    steamUser: createInertTestSteamUser(),
     targetSteamappsDir: dir,
     installdir: 'Cool Game',
     name: 'Cool Game',

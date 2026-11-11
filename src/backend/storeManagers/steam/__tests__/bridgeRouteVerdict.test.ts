@@ -79,15 +79,6 @@ jest.mock('backend/utils', () => ({
   getFileSize: jest.fn(),
   sendGameStatusUpdate: jest.fn()
 }))
-jest.mock('../user', () => ({
-  SteamUser: {
-    isLoggedIn: jest.fn(),
-    getClient: jest.fn(),
-    ensureConnected: jest.fn().mockResolvedValue(true),
-    acquireAuthenticated: jest.fn(),
-    acquireOpenAuthenticated: jest.fn()
-  }
-}))
 jest.mock('backend/connectivityNow', () => ({
   checkConnectivityNow: jest.fn()
 }))

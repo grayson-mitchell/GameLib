@@ -60,7 +60,6 @@ jest.mock('../library/installRoot', () => ({
 jest.mock('../bottle', () => ({
   getBottleSteamappsDir: jest.fn()
 }))
-jest.mock('../user')
 jest.mock('../withTimeout', () => ({
   withTimeout: jest.fn(),
   STEAM_PICS_TIMEOUT_MS: 1,

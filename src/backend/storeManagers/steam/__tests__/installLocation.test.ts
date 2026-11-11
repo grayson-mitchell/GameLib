@@ -8,7 +8,7 @@
  *  - backend/utils is a minimal factory mock — only getSteamLibraries is needed
  *    here, avoiding the heavy gog/library.ts transitive chain the real
  *    utils.ts module pulls in
- *  - ../user is auto-mocked (jest.mock('../user')) — SteamUser.getClient()
+ *  - the SteamUser is a per-file jest-fn double (createMockSteamUser) passed through deps — steamUser.getClient()
  *    becomes a jest.fn(), matching depot.test.ts's established pattern
  */
 import { readFileSync } from 'node:fs'
@@ -22,7 +22,8 @@ import {
   UnsafeInstalldirError
 } from '../installLocation'
 import { STEAM_PICS_TIMEOUT_MS } from '../withTimeout'
-import { SteamUser } from '../user'
+import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
+const steamUser = createMockSteamUser()
 import { classifyDepotError } from '../depotErrors'
 import { readAcfInstalldir } from '../acfInstalldir'
 
@@ -32,6 +33,7 @@ import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 // The boot-owned anonymous client slice (D-66.3-14): a scripted `get`, no CM connection.
 const getAnonymousPicsClient = jest.fn()
 const libDeps = {
+  steamUser,
   config: createTestGlobalConfig(),
   anonymousClient: { get: getAnonymousPicsClient }
 }
@@ -49,8 +51,6 @@ jest.mock('backend/logger', () => ({
 jest.mock('backend/utils', () => ({
   getSteamLibraries: jest.fn()
 }))
-
-jest.mock('../user')
 
 // ── i18next mock — returns the fallback string for classifyDepotError
 //    assertions (depot.test.ts/library.test.ts's established pattern) ──────
@@ -385,9 +385,9 @@ describe('resolveSteamInstallTarget', () => {
 
     expect(result.installdir).toBe('Avadon The Black Fortress')
     expect(result.installdirFallbackUsed).toBeUndefined()
-    expect(jest.mocked(SteamUser.ensureConnected)).not.toHaveBeenCalled()
+    expect(jest.mocked(steamUser.ensureConnected)).not.toHaveBeenCalled()
     expect(
-      jest.mocked(SteamUser.acquireOpenAuthenticated)
+      jest.mocked(steamUser.acquireOpenAuthenticated)
     ).not.toHaveBeenCalled()
   })
 
@@ -688,8 +688,8 @@ describe('resolveSteamInstallTarget — anonymous PICS with open-session fallbac
   beforeEach(() => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
     jest.mocked(readAcfInstalldir).mockReturnValue(undefined)
-    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReset()
-    jest.mocked(SteamUser.ensureConnected).mockClear()
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockReset()
+    jest.mocked(steamUser.ensureConnected).mockClear()
   })
 
   const target = () =>
@@ -705,7 +705,7 @@ describe('resolveSteamInstallTarget — anonymous PICS with open-session fallbac
         makeFakeClient({ getProductInfo: publicOnly }) as never
       )
     const release = jest.fn()
-    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue({
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue({
       client: makeFakeClient({
         getProductInfo: mockProductInfo(12345, 'GatedGame')
       }),
@@ -716,7 +716,7 @@ describe('resolveSteamInstallTarget — anonymous PICS with open-session fallbac
 
     expect(result.installdir).toBe('GatedGame')
     expect(release).toHaveBeenCalledTimes(1)
-    expect(SteamUser.ensureConnected).not.toHaveBeenCalled()
+    expect(steamUser.ensureConnected).not.toHaveBeenCalled()
   })
 
   it('public_only with no open session falls back to app_<id> without throwing or logging on', async () => {
@@ -725,18 +725,18 @@ describe('resolveSteamInstallTarget — anonymous PICS with open-session fallbac
       .mockResolvedValue(
         makeFakeClient({ getProductInfo: publicOnly }) as never
       )
-    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue(null)
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue(null)
 
     const result = await target()
 
     expect(result.installdir).toBe(`app_${APP_ID}`)
-    expect(SteamUser.ensureConnected).not.toHaveBeenCalled()
+    expect(steamUser.ensureConnected).not.toHaveBeenCalled()
   })
 
   it('anonymous client null with an open session falls back to the session', async () => {
     jest.mocked(getAnonymousPicsClient).mockResolvedValue(null)
     const release = jest.fn()
-    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue({
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue({
       client: makeFakeClient({
         getProductInfo: mockProductInfo(12345, 'FromSession')
       }),
@@ -755,7 +755,7 @@ describe('resolveSteamInstallTarget — anonymous PICS with open-session fallbac
         getProductInfo: jest.fn().mockRejectedValue(new Error('cm down'))
       }) as never
     )
-    jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue(null)
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue(null)
 
     const result = await target()
 

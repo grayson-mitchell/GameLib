@@ -21,7 +21,8 @@ import { logError, logWarning } from 'backend/logger'
 import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
 import { downloadSteamDepots, PLAN_BUILD_MAX_ATTEMPTS } from '../depot'
 import { buildDepotRefs } from '../depot/plan'
-import { SteamUser } from '../user'
+import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
+const steamUser = createMockSteamUser()
 import { mockLeaseOk, mockLeaseRefused } from './depotLeaseMocks'
 import { selectAllDepots } from '../depot/select'
 import { classifyDepotError } from '../depotErrors'
@@ -47,7 +48,6 @@ jest.mock('backend/utils', () => ({
 jest.mock('backend/sidecar/sidecarRpc', () => ({
   requestRustInvoke: jest.fn()
 }))
-jest.mock('../user')
 jest.mock('../depot/select', () => ({
   ...jest.requireActual('../depot/select'),
   selectAllDepots: jest.fn()
@@ -64,6 +64,7 @@ jest.mock('i18next', () => ({
 
 const APP_ID = '12345'
 const BASE_OPTS = {
+  steamUser,
   config: createTestGlobalConfig(),
   targetSteamappsDir: '/tmp/steamapps',
   installdir: 'SomeGame',
@@ -116,8 +117,8 @@ let client: FakeClient
 
 function wire(depots = [depot('111')]): FakeClient {
   client = makeFakeClient()
-  mockLeaseOk()
-  jest.mocked(SteamUser.getClient).mockReturnValue(client as never)
+  mockLeaseOk(steamUser)
+  jest.mocked(steamUser.getClient).mockReturnValue(client as never)
   jest.mocked(selectAllDepots).mockReturnValue(depots)
   return client
 }
@@ -279,10 +280,10 @@ describe('buildDepotRefs', () => {
       expect(refs.depots.map((d) => d.depotId)).toEqual(['111'])
       expect(keyCalls).toBe(2)
       // buildDepotRefs takes no lease of its own: the one acquire is the retry's reconnect.
-      expect(jest.mocked(SteamUser.acquireAuthenticated)).toHaveBeenCalledTimes(
+      expect(jest.mocked(steamUser.acquireAuthenticated)).toHaveBeenCalledTimes(
         1
       )
-      expect(jest.mocked(SteamUser.acquireAuthenticated)).toHaveBeenCalledWith({
+      expect(jest.mocked(steamUser.acquireAuthenticated)).toHaveBeenCalledWith({
         reason: 'plan-retry'
       })
     })
@@ -301,7 +302,7 @@ describe('buildDepotRefs', () => {
       expect(c.getDepotDecryptionKey).toHaveBeenCalledTimes(
         PLAN_BUILD_MAX_ATTEMPTS
       )
-      expect(jest.mocked(SteamUser.acquireAuthenticated)).toHaveBeenCalledTimes(
+      expect(jest.mocked(steamUser.acquireAuthenticated)).toHaveBeenCalledTimes(
         PLAN_BUILD_MAX_ATTEMPTS - 1
       )
     })
@@ -518,6 +519,7 @@ describe('buildDepotRefs', () => {
 describe('downloadSteamDepots entry (CM half before the Rust job)', () => {
   let dir: string
   const opts = (over: Record<string, unknown> = {}) => ({
+    steamUser,
     config: createTestGlobalConfig(),
     targetSteamappsDir: dir,
     installdir: 'SomeGame',
@@ -537,13 +539,13 @@ describe('downloadSteamDepots entry (CM half before the Rust job)', () => {
     const stub = rust()
     const out = await downloadSteamDepots('12345; rm -rf /', opts())
     expect(out.status).toBe('error')
-    expect(jest.mocked(SteamUser.acquireAuthenticated)).not.toHaveBeenCalled()
+    expect(jest.mocked(steamUser.acquireAuthenticated)).not.toHaveBeenCalled()
     expect(stub.calls).toHaveLength(0)
   })
 
   it('Phase 54: a refused acquire reports the not-signed-in copy, never touches the client, and runs no job', async () => {
     const stub = rust()
-    mockLeaseRefused('go-offline-required')
+    mockLeaseRefused(steamUser, 'go-offline-required')
 
     const out = await downloadSteamDepots(APP_ID, opts())
 
@@ -556,21 +558,21 @@ describe('downloadSteamDepots entry (CM half before the Rust job)', () => {
     expect(out.status).toBe('error')
     expect(out.error).toBe(expected.message)
     expect(out.errorAction).toBe(expected.action)
-    expect(jest.mocked(SteamUser.getClient)).not.toHaveBeenCalled()
+    expect(jest.mocked(steamUser.getClient)).not.toHaveBeenCalled()
     expect(jest.mocked(logWarning)).toHaveBeenCalled()
     expect(stub.jobs).toHaveLength(0)
   })
 
   it('Phase 54: acquires one user-install lease and releases it once on success', async () => {
     wire()
-    const release = mockLeaseOk()
+    const release = mockLeaseOk(steamUser)
     rust()
 
     const out = await downloadSteamDepots(APP_ID, opts())
 
     expect(out.status).toBe('done')
-    expect(jest.mocked(SteamUser.acquireAuthenticated)).toHaveBeenCalledTimes(1)
-    expect(jest.mocked(SteamUser.acquireAuthenticated)).toHaveBeenCalledWith({
+    expect(jest.mocked(steamUser.acquireAuthenticated)).toHaveBeenCalledTimes(1)
+    expect(jest.mocked(steamUser.acquireAuthenticated)).toHaveBeenCalledWith({
       reason: 'user-install',
       guidedAction: 'install',
       appName: APP_ID
@@ -580,7 +582,7 @@ describe('downloadSteamDepots entry (CM half before the Rust job)', () => {
 
   it('Phase 54: releases the lease once when a CM step throws, and resolves error without a job', async () => {
     wire()
-    const release = mockLeaseOk()
+    const release = mockLeaseOk(steamUser)
     const stub = rust()
     jest.mocked(selectAllDepots).mockImplementation(() => {
       throw new Error('select exploded')
@@ -596,7 +598,7 @@ describe('downloadSteamDepots entry (CM half before the Rust job)', () => {
   it('Phase 54: releases the lease once when the signal aborts after acquire, and resolves cancelled', async () => {
     wire()
     const controller = new AbortController()
-    const release = mockLeaseOk(() => controller.abort())
+    const release = mockLeaseOk(steamUser, () => controller.abort())
     const stub = rust()
 
     const out = await downloadSteamDepots(
@@ -621,7 +623,7 @@ describe('downloadSteamDepots entry (CM half before the Rust job)', () => {
     )
 
     expect(out.status).toBe('cancelled')
-    expect(jest.mocked(SteamUser.acquireAuthenticated)).not.toHaveBeenCalled()
+    expect(jest.mocked(steamUser.acquireAuthenticated)).not.toHaveBeenCalled()
     expect(stub.jobs).toHaveLength(0)
   })
 
