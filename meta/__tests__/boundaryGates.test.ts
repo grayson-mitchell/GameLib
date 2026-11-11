@@ -315,6 +315,55 @@ describe('dependency-cruiser boundary rules (seeded violations)', () => {
     }
   })
 
+  // 66.2 WR-01: an installed npm package resolves to node_modules/<pkg>/..., so the
+  // bare-name anchor alone never matched it. Seed the packages as installed.
+  test('no-child-process-outside-runner fires on installed npm spawn packages', () => {
+    const pkgs = ['execa', 'cross-spawn', 'shelljs', 'node-pty']
+    const seeded: Record<string, string> = {}
+    for (const pkg of pkgs) {
+      seeded[`node_modules/${pkg}/package.json`] = JSON.stringify({
+        name: pkg,
+        version: '1.0.0',
+        main: 'index.js'
+      })
+      seeded[`node_modules/${pkg}/index.js`] = `module.exports = {}\n`
+    }
+    withSeededRoot(
+      {
+        ...seeded,
+        'src/backend/spawny.ts': pkgs.map((p) => `import '${p}'\n`).join('')
+      },
+      ({ cruise }) => {
+        const r = cruise()
+        expect(r.status).not.toBe(0)
+        const hits = r.active
+          .filter((v) => v.rule.name === 'no-child-process-outside-runner')
+          .map((v) => v.to)
+          .sort()
+        expect(hits).toEqual(
+          pkgs.map((p) => `node_modules/${p}/index.js`).sort()
+        )
+      }
+    )
+  })
+
+  test('no-child-process-outside-runner fires on uninstalled npm spawn packages and child_process', () => {
+    withSeededRoot(
+      {
+        'src/backend/spawny.ts': `import 'execa'\nimport 'node:child_process'\n`
+      },
+      ({ cruise }) => {
+        const r = cruise()
+        expect(r.status).not.toBe(0)
+        expect(
+          r.active.filter(
+            (v) => v.rule.name === 'no-child-process-outside-runner'
+          ).length
+        ).toBe(2)
+      }
+    )
+  })
+
   test('games-split-modules-are-leaves allows a type-only import in a phase 65 module', () => {
     withSeededRoot(
       {

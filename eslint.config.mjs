@@ -133,6 +133,11 @@ export default tseslint.config(
             ...RESTRICTED_PATHS,
             { name: 'child_process', message: CHILD_PROCESS_MESSAGE },
             { name: 'node:child_process', message: CHILD_PROCESS_MESSAGE },
+            // 66.2 WR-01: the npm spawn packages are the same bypass.
+            { name: 'execa', message: CHILD_PROCESS_MESSAGE },
+            { name: 'cross-spawn', message: CHILD_PROCESS_MESSAGE },
+            { name: 'shelljs', message: CHILD_PROCESS_MESSAGE },
+            { name: 'node-pty', message: CHILD_PROCESS_MESSAGE },
             {
               name: 'module',
               importNames: ['createRequire'],

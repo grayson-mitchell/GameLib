@@ -122,8 +122,12 @@ module.exports = {
           '^src/backend/process/runner\\.ts$'
         ]
       },
+      // A core module resolves to its bare name. An installed npm package
+      // resolves to node_modules/<pkg>/..., so the bare-name anchor alone never
+      // matched execa or cross-spawn (66.2 WR-01). The bare-name arm stays for
+      // packages that are not installed (couldNotResolve keeps the specifier).
       to: {
-        path: '^(node:)?child_process$|^(execa|cross-spawn|shelljs|node-pty)($|/)'
+        path: '^(node:)?child_process$|^(execa|cross-spawn|shelljs|node-pty)($|/)|(^|/)node_modules/(execa|cross-spawn|shelljs|node-pty)/'
       }
     },
     {
