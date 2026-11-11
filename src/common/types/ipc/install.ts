@@ -117,7 +117,7 @@ interface InstallAsyncReturns {
   // OFF + non-bottle title on macOS; libraries are then the registered targets.
   // quick 261106-s3n: true only when "Delete Steam games directly in GameLib"
   // is ON and this appId is a native-root install (backend-authoritative).
-  getSteamDeleteRoute: Promise<{ gamelibDelete: boolean }>
+  getSteamDeleteRoute: Promise<{ gamelibDelete: boolean; delegated: boolean }>
   getSteamInstallAppTargets: Promise<{
     installAppRoute: boolean
     libraries: SteamLibraryTarget[]

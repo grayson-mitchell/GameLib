@@ -173,6 +173,18 @@ jest.mock('../../storeManagers/steam/bottle', () => ({
   __esModule: true,
   ...jest.requireActual('../../storeManagers/steam/bottle')
 }))
+// The Mac getSteamDeleteRoute cases flip isMac after boot; the DXMT releases listener
+// would then act on the mocked (empty) release data, so it is a no-op here.
+jest.mock('backend/tools/dxmt', () => ({
+  ...jest.requireActual('backend/tools/dxmt'),
+  registerDxmtListeners: () => () => undefined
+}))
+
+jest.mock('../../storeManagers/steam/macSteamAdoption', () => ({
+  ...jest.requireActual('../../storeManagers/steam/macSteamAdoption'),
+  readPendingAdoption: jest.fn()
+}))
+
 jest.mock('../../storeManagers/steam/bridgeBottle', () => ({
   findBridgeInstallBottle: jest.fn()
 }))
@@ -266,6 +278,7 @@ let createGlobalConfig: typeof import('backend/config').createGlobalConfig
 let getSteamBottleEligibilityVerdict: typeof import('../../storeManagers/steam/installFormIpc').getSteamBottleEligibilityVerdict
 let isSteamExperimentalInstallAppEnabled: typeof import('../../storeManagers/steam/experimentalInstallAppSetting').isSteamExperimentalInstallAppEnabled
 let findBridgeInstallBottle: typeof import('../../storeManagers/steam/bridgeBottle').findBridgeInstallBottle
+let readPendingAdoption: typeof import('../../storeManagers/steam/macSteamAdoption').readPendingAdoption
 let resolveInstallRoot: typeof import('../../storeManagers/steam/library/installRoot').resolveInstallRoot
 // One boot-owned Steam session cluster per case (D-05, D-66.3-13); the boot is handed it as a prebuilt service.
 let steamSession: import('backend/services/types').SteamSessionServices
@@ -296,6 +309,9 @@ function freshRegistry(): void {
   ;({
     findBridgeInstallBottle
   } = require('../../storeManagers/steam/bridgeBottle'))
+  ;({
+    readPendingAdoption
+  } = require('../../storeManagers/steam/macSteamAdoption'))
   ;({
     resolveInstallRoot
   } = require('../../storeManagers/steam/library/installRoot'))
@@ -526,8 +542,10 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   })
 
   describe('quick 261106-s3n: getSteamDeleteRoute', () => {
-    const invokeRoute = async (args: unknown[]) => {
+    const invokeRoute = async (args: unknown[], mac = false) => {
       const { input, frames } = boot()
+      // isMac flips only after boot: Mac boot paths (dxmt) must not run here.
+      jest.requireMock('backend/constants/environment').isMac = mac
       writeInvoke(input, 'route-s3n', 'getSteamDeleteRoute', args)
       await flush()
       return (
@@ -537,7 +555,11 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
       )?.result
     }
 
+    const closedReply = { gamelibDelete: false, delegated: false }
+    const delegatedReply = { gamelibDelete: false, delegated: true }
+
     beforeEach(() => {
+      jest.mocked(readPendingAdoption).mockReturnValue(undefined)
       mockSettings({ enableSteamNativeDelete: true, autoUpdateGames: false })
       jest.mocked(findBridgeInstallBottle).mockReturnValue(null)
       jest.mocked(resolveInstallRoot).mockResolvedValue('native')
@@ -547,11 +569,15 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     })
 
     afterEach(() => {
+      jest.requireMock('backend/constants/environment').isMac = false
       steamLibraryMap.delete('570')
     })
 
     it('setting ON + native root + no bridge bottle -> gamelibDelete true', async () => {
-      expect(await invokeRoute(['570'])).toEqual({ gamelibDelete: true })
+      expect(await invokeRoute(['570'])).toEqual({
+        gamelibDelete: true,
+        delegated: false
+      })
       expect(resolveInstallRoot).toHaveBeenCalledWith(
         expect.anything(),
         '/fake/steam/library/steamapps/common/Dota'
@@ -562,34 +588,49 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     // two cases, because a second boot in one registry throws.
     it('setting unset follows enableSteamNativeInstall: on -> true', async () => {
       mockSettings({ enableSteamNativeInstall: true, autoUpdateGames: false })
-      expect(await invokeRoute(['570'])).toEqual({ gamelibDelete: true })
+      expect(await invokeRoute(['570'])).toEqual({
+        gamelibDelete: true,
+        delegated: false
+      })
     })
 
-    it('setting unset follows enableSteamNativeInstall: off -> false', async () => {
+    it('setting unset follows enableSteamNativeInstall: off -> delegated', async () => {
       mockSettings({ enableSteamNativeInstall: false, autoUpdateGames: false })
-      expect(await invokeRoute(['570'])).toEqual({ gamelibDelete: false })
+      expect(await invokeRoute(['570'])).toEqual(delegatedReply)
     })
 
-    it('setting OFF -> false without resolving a root', async () => {
+    it('setting OFF + native, no pending adoption -> delegated true', async () => {
       mockSettings({ enableSteamNativeDelete: false, autoUpdateGames: false })
-      expect(await invokeRoute(['570'])).toEqual({ gamelibDelete: false })
-      expect(resolveInstallRoot).not.toHaveBeenCalled()
+      expect(await invokeRoute(['570'])).toEqual(delegatedReply)
+      expect(resolveInstallRoot).toHaveBeenCalled()
     })
 
-    it('bridge bottle install -> false', async () => {
+    it('bridge bottle install -> not delegated, whatever the setting', async () => {
+      mockSettings({ enableSteamNativeDelete: false, autoUpdateGames: false })
       jest.mocked(findBridgeInstallBottle).mockReturnValue('GameLibSteamBridge')
-      expect(await invokeRoute(['570'])).toEqual({ gamelibDelete: false })
+      expect(await invokeRoute(['570'])).toEqual(closedReply)
+    })
+
+    it('setting OFF + native + Mac + pending adoption -> not delegated', async () => {
+      mockSettings({ enableSteamNativeDelete: false, autoUpdateGames: false })
+      jest.mocked(readPendingAdoption).mockReturnValue({} as never)
+      expect(await invokeRoute(['570'], true)).toEqual(closedReply)
+    })
+
+    it('setting OFF + native + Mac + no record -> delegated', async () => {
+      mockSettings({ enableSteamNativeDelete: false, autoUpdateGames: false })
+      expect(await invokeRoute(['570'], true)).toEqual(delegatedReply)
     })
 
     it.each(['bottle', null] as const)('root %s -> false', async (root) => {
       jest.mocked(resolveInstallRoot).mockResolvedValue(root)
-      expect(await invokeRoute(['570'])).toEqual({ gamelibDelete: false })
+      expect(await invokeRoute(['570'])).toEqual(closedReply)
     })
 
     it.each([[['abc']], [[]], [['5;70']]])(
       'bad appName %j -> false',
       async (args) => {
-        expect(await invokeRoute(args)).toEqual({ gamelibDelete: false })
+        expect(await invokeRoute(args)).toEqual(closedReply)
       }
     )
 
@@ -600,7 +641,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
 
     it('never rejects: a throwing resolver is a closed reply', async () => {
       jest.mocked(resolveInstallRoot).mockRejectedValue(new Error('boom'))
-      expect(await invokeRoute(['570'])).toEqual({ gamelibDelete: false })
+      expect(await invokeRoute(['570'])).toEqual(closedReply)
     })
   })
 

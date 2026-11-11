@@ -166,7 +166,13 @@ export const uninstallGameCallback = async (
   }
 
   if (uninstalled) {
-    if (shouldRemovePrefix) {
+    // quick 261112-90h: Steam bridge/bottle routes remove their own per-game
+    // bottles, and a bottle-eligible title's winePrefix is the shared CrossOver
+    // Steam bottle, which must never be deleted from an uninstall.
+    if (
+      shouldRemovePrefix &&
+      !storeCapabilities[runner].installHandOffToClient
+    ) {
       removePrefix(deps, appName, runner)
     }
     if (shouldRemoveSetting) {

@@ -62,9 +62,11 @@
  *     261105-upw): the install modal's own backend-authoritative
  *     discriminator for the opt-in InstallApp route (feature ON + native
  *     OFF + non-bottle title).
- *   - `getSteamDeleteRoute` -> `{ gamelibDelete }` (quick 261106-s3n): whether
- *     the "Delete Steam games directly in GameLib" setting applies to this
- *     native-root install; drives the renderer's confirm dialog.
+ *   - `getSteamDeleteRoute` -> `{ gamelibDelete, delegated }` (quick
+ *     261106-s3n, 261112-90h): `gamelibDelete` is whether the "Delete Steam
+ *     games directly in GameLib" setting applies to this native-root install;
+ *     `delegated` is true only for steam://uninstall, where Steam's own
+ *     dialog confirms (D-05). Anything not delegated needs GameLib's confirm.
  *   - `moveInstall` -> ported byte-equivalently from `main.ts:1112-1158`
  *     (Phase 34.6 Plan 06, D-02). Plan 34.6-11 (REQ-34.6-05) originally
  *     hardened it by containing the renderer-supplied `path` against
@@ -139,6 +141,11 @@ import {
   isSteamNativeInstallEnabled
 } from '../storeManagers/steam/nativeInstallSetting'
 import { findBridgeInstallBottle } from '../storeManagers/steam/bridgeBottle'
+import {
+  pendingAdoptionStoreFrom,
+  readPendingAdoption
+} from '../storeManagers/steam/macSteamAdoption'
+import { isMac } from 'backend/constants/environment'
 import { resolveInstallRoot } from '../storeManagers/steam/library/installRoot'
 import { getSteamBottleEligibilityVerdict } from '../storeManagers/steam/installFormIpc'
 import { isSteamExperimentalInstallAppEnabled } from '../storeManagers/steam/experimentalInstallAppSetting'
@@ -357,31 +364,50 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
     }
   )
 
-  // quick 261106-s3n: does GameLib itself delete this Steam game? True only
-  // when the delete setting is ON, no bridge bottle holds the install and its
-  // recorded install_path resolves to the native root. Reads the raw library
-  // Map entry (no metadata side effect); never rejects, closed on any doubt.
+  // quick 261106-s3n + 261112-90h: how will this Steam uninstall run?
+  // `delegated: true` means ONLY the native steam://uninstall route, where
+  // Steam's own dialog confirms (D-05); the renderer skips its modal for that
+  // alone. Every other route (bridge, bottle, setting-ON native, Mac native
+  // with a pending adoption) is deleted by GameLib itself, so `delegated` is
+  // false and the renderer must confirm. Mirrors gameUninstall.ts routing.
+  // The Mac pending-adoption check is deliberately conservative: the
+  // backend's real decision needs a live Steam-pid probe that a read-only
+  // route query must not run. A record that later needs no direct delete costs
+  // one extra confirm; no confirm at all is not acceptable. Reads the raw
+  // library Map entry (no metadata side effect); never rejects, and every
+  // closed reply carries delegated: false so the renderer shows the modal.
   deps.ipc.handle(
     'getSteamDeleteRoute',
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[0]
       if (typeof appName !== 'string' || !/^\d+$/.test(appName)) {
-        return { gamelibDelete: false }
+        return { gamelibDelete: false, delegated: false }
       }
       try {
-        if (!isSteamNativeDeleteEnabled(deps.config))
-          return { gamelibDelete: false }
         if (findBridgeInstallBottle(appName) !== null) {
-          return { gamelibDelete: false }
+          return { gamelibDelete: false, delegated: false }
         }
         const root = await resolveInstallRoot(
           deps,
           deps.steamSession.libraryState.library.get(appName)?.install
             ?.install_path
         )
-        return { gamelibDelete: root === 'native' }
+        if (root !== 'native') return { gamelibDelete: false, delegated: false }
+        if (isSteamNativeDeleteEnabled(deps.config)) {
+          return { gamelibDelete: true, delegated: false }
+        }
+        if (
+          isMac &&
+          readPendingAdoption(
+            appName,
+            pendingAdoptionStoreFrom(managerDepsFromServices(deps))
+          )
+        ) {
+          return { gamelibDelete: false, delegated: false }
+        }
+        return { gamelibDelete: false, delegated: true }
       } catch {
-        return { gamelibDelete: false }
+        return { gamelibDelete: false, delegated: false }
       }
     }
   )

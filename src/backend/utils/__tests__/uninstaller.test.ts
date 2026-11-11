@@ -149,6 +149,32 @@ describe('uninstallGameCallback refusal (quick 261107-td5)', () => {
     expect(statuses()).toEqual(['uninstalling'])
   })
 
+  // quick 261112-90h: a bottle-eligible Steam title's winePrefix is the shared
+  // CrossOver Steam bottle; an uninstall must never delete it.
+  it('steam never removes a prefix even when shouldRemovePrefix is true', async () => {
+    const { settings } = setup()
+    uninstall.mockResolvedValue({ stdout: '', stderr: '' })
+    getSettings.mockResolvedValue({ winePrefix: join(gamesConfigPath, 'nope') })
+
+    await uninstallGameCallback(deps, {} as any, APP, 'steam', true, true)
+
+    expect(getSettings).not.toHaveBeenCalled()
+    expect(existsSync(settings)).toBe(false)
+  })
+
+  it('a non-steam runner still removes its prefix when asked', async () => {
+    setup()
+    libraryManagerMap.legendary = {
+      getGame: () => ({ uninstall, getSettings })
+    }
+    uninstall.mockResolvedValue({ stdout: '', stderr: '' })
+    getSettings.mockResolvedValue({ winePrefix: join(gamesConfigPath, 'nope') })
+
+    await uninstallGameCallback(deps, {} as any, APP, 'legendary', true, true)
+
+    expect(getSettings).toHaveBeenCalled()
+  })
+
   it('a throwing uninstall still raises the generic error notify', async () => {
     const { settings } = setup()
     uninstall.mockRejectedValue(new Error('boom'))
