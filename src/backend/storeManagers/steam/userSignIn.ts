@@ -1,6 +1,6 @@
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { LoginSession, EAuthTokenPlatformType } from 'steam-session'
-import { noteSignInSucceeded } from 'backend/signInProbe/outcomes'
+import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
 import type { SteamStoresDeps } from './library/installRoot'
 import { getTokenStore } from './tokenStore'
 import { withTimeout } from './withTimeout'
@@ -22,7 +22,7 @@ import {
 // ── Shared auth success path ───────────────────────────────────────────────
 
 export async function finishAuth(
-  deps: SteamStoresDeps,
+  deps: SteamStoresDeps & SignInNoteDeps,
   session: InstanceType<typeof LoginSession>
 ): Promise<string> {
   const refreshToken = session.refreshToken
@@ -31,7 +31,7 @@ export async function finishAuth(
   deps.stores.steam.configStore.set('isLoggedIn', true)
   deps.stores.steam.configStore.delete('credentialsMissing')
   // Phase 49: a completed sign-in outranks any probe that began earlier.
-  noteSignInSucceeded('steam')
+  deps.signIn.outcomes.noteSignInSucceeded('steam')
 
   // Log on (through the wrapped entry point) only to read the persona name.
   // If this fails the user is still logged in (credentials already stored
@@ -50,7 +50,7 @@ export async function finishAuth(
  * steam-session LoginSession, which needs no CM.
  */
 async function resolveSignInProfile(
-  deps: SteamStoresDeps,
+  deps: SteamStoresDeps & SignInNoteDeps,
   session: InstanceType<typeof LoginSession>
 ): Promise<string> {
   let personaName = session.accountName || 'Steam User'
@@ -95,7 +95,7 @@ async function resolveSignInProfile(
 }
 
 async function completeQrProfile(
-  deps: SteamStoresDeps,
+  deps: SteamStoresDeps & SignInNoteDeps,
   session: InstanceType<typeof LoginSession>
 ): Promise<void> {
   try {
@@ -152,7 +152,9 @@ export async function pollCredentialLogin(): Promise<{
 
 // ── AUTH-01: QR Login ──────────────────────────────────────────────────────
 
-export async function startQRLogin(deps: SteamStoresDeps): Promise<{
+export async function startQRLogin(
+  deps: SteamStoresDeps & SignInNoteDeps
+): Promise<{
   status: 'done' | 'error'
   challengeUrl?: string
 }> {
@@ -190,7 +192,7 @@ export async function startQRLogin(deps: SteamStoresDeps): Promise<{
         deps.stores.steam.configStore.set('isLoggedIn', true)
         deps.stores.steam.configStore.delete('credentialsMissing')
         // Phase 49: a completed sign-in outranks any probe that began earlier.
-        noteSignInSucceeded('steam')
+        deps.signIn.outcomes.noteSignInSucceeded('steam')
 
         // Mark done synchronously so pollQRLogin() returns 'done' as soon as
         // the user approves on their phone — don't block the UI on the CM
@@ -259,7 +261,7 @@ export async function pollQRLogin(): Promise<{
 // ── AUTH-02: Credential Login ──────────────────────────────────────────────
 
 export async function startCredentialLogin(
-  deps: SteamStoresDeps,
+  deps: SteamStoresDeps & SignInNoteDeps,
   username: string,
   password: string
 ): Promise<{ status: 'done' | 'guard_required' | 'error' }> {

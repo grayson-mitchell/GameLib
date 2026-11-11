@@ -10,6 +10,7 @@
  */
 
 import { bindHumbleStores } from '../humbleStores'
+import { createTestSignInProbe } from 'backend/testUtils/testSignInProbe'
 import type { HumbleSecretKey } from '../secretStore'
 
 type ReadOutcome =
@@ -27,6 +28,7 @@ const mockConfigStore = {
   delete: jest.fn()
 }
 bindHumbleStores({
+  signIn: createTestSignInProbe(),
   stores: {
     humble: {
       configStore: mockConfigStore,
@@ -47,10 +49,6 @@ jest.mock('backend/logger', () => ({
 const mockSendFrontendMessage = jest.fn()
 jest.mock('backend/ipc', () => ({
   sendFrontendMessage: (...args: unknown[]) => mockSendFrontendMessage(...args)
-}))
-jest.mock('backend/signInProbe/outcomes', () => ({
-  noteSignInSucceeded: jest.fn(),
-  noteSignedOut: jest.fn()
 }))
 
 const mockGetGamekeys = jest.fn()

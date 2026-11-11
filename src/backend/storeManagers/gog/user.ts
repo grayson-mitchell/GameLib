@@ -14,10 +14,7 @@ import {
   classifyGogdlAuth,
   createBoundedOutputCapture
 } from 'backend/signInProbe/classify'
-import {
-  noteSignedOut,
-  noteSignInSucceeded
-} from 'backend/signInProbe/outcomes'
+import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
 
 // GOG-owned APEX domain(s). Suffix-matching happens Rust-side in
 // `cookie_domain_matches`, so this single apex covers every subdomain that may
@@ -171,7 +168,7 @@ export interface GOGUserDeps {
 
 export class GOGUser {
   static async login(
-    deps: GOGUserDeps,
+    deps: GOGUserDeps & SignInNoteDeps,
     code: string
     // TODO: Write types for this
   ): Promise<{
@@ -219,7 +216,7 @@ export class GOGUser {
     // Phase 49 (R2): a completed sign-in proves the session, so the expiry flag
     // clears and the fence moves.
     deps.stores.gog.configStore.delete('expired')
-    noteSignInSucceeded('gog')
+    deps.signIn.outcomes.noteSignInSucceeded('gog')
     // Seed the fix-1 TTL cache directly from this `gogdl auth --code` exchange's own
     // stdout -- debug/gog-spawn-reduction.md fix 5. Without this, the cache is empty
     // right after login and the very next getCredentials() call (e.g. the post-login
@@ -433,7 +430,9 @@ export class GOGUser {
   // impossible by ORDER already, but the wrap also stops it becoming a
   // rejected `logout()` promise (an unhandled rejection at the `ipcMain.on`
   // call site, which cannot `.catch()` a fire-and-forget invocation).
-  public static async logout(deps: GOGUserDeps & ClearCacheDeps) {
+  public static async logout(
+    deps: GOGUserDeps & ClearCacheDeps & SignInNoteDeps
+  ) {
     clearCache(deps, 'gog')
     deps.stores.gog.configStore.clear()
     if (existsSync(gogdlAuthConfig)) {
@@ -444,7 +443,7 @@ export class GOGUser {
     // Phase 49 (R2): `configStore.clear()` above already dropped the expiry flag;
     // this fences any probe that began before the sign-out and returns the
     // outcome to pending.
-    noteSignedOut('gog')
+    deps.signIn.outcomes.noteSignedOut('gog')
     logInfo('Logging user out', LogPrefix.Gog)
 
     try {

@@ -10,11 +10,7 @@ import { logInfo } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
 import { SIGN_IN_STORES } from 'common/signInState'
-import {
-  __resetSignInEpochsForTests,
-  bumpSignInEpoch,
-  captureSignInEpoch
-} from '../sessionEpoch'
+import { createSignInEpochs } from '../sessionEpoch'
 import { applySignInVerdict } from '../verdict'
 import { makeFakeSignInStores } from './fakeFlagStore'
 
@@ -31,7 +27,16 @@ const logInfoMock = logInfo as unknown as jest.Mock
 const sendMock = sendFrontendMessage as unknown as jest.Mock
 
 const { fakes, stores: verdictStores } = makeFakeSignInStores()
-const deps = { stores: verdictStores }
+// One epoch instance, rebuilt per case (no reset hook: D-05, D-66.3-13).
+let epochs = createSignInEpochs()
+const deps = {
+  stores: verdictStores,
+  get epochs() {
+    return epochs
+  }
+}
+const bumpSignInEpoch = (store: SignInStore) => epochs.bump(store)
+const captureSignInEpoch = (store: SignInStore) => epochs.capture(store)
 
 const stores: Record<
   SignInStore,
@@ -45,7 +50,7 @@ const stores: Record<
 }
 
 beforeEach(() => {
-  __resetSignInEpochsForTests()
+  epochs = createSignInEpochs()
   for (const { fake } of Object.values(stores)) {
     fake.reset()
   }

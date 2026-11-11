@@ -79,16 +79,19 @@ jest.mock('backend/constants/environment', () => {
 
 import { logWarning, logInfo } from 'backend/logger'
 import { GOGUser, type GOGUserDeps } from '../user'
+import { createTestSignInProbe } from 'backend/testUtils/testSignInProbe'
 
 const deps = {
+  signIn: createTestSignInProbe(),
   stores: { gog: fakeGogStores },
   libraryManagers: { gog: { runRunnerCommand: jest.fn() } }
-} as unknown as GOGUserDeps & ClearCacheDeps
+} as unknown as GOGUserDeps & ClearCacheDeps & SignInNoteDeps
 import {
   setLoginWindowSeam,
   type LoginWindowSeam
 } from '../../../humble/loginWindowSeam'
 import type { ClearCacheDeps } from 'backend/utils'
+import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
 
 function makeMockSeam(
   overrides: Partial<LoginWindowSeam> = {}

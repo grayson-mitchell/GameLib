@@ -332,7 +332,8 @@ export function registerHandlers(deps: {
     dialogs: deps.services.host.dialogs,
     appState: deps.services.host.appState,
     notifications: deps.services.host.notifications,
-    onlineMonitor: deps.services.onlineMonitor
+    onlineMonitor: deps.services.onlineMonitor,
+    signIn: deps.services.signInProbe
   })
   registerWineToolsFlows({
     ipc,

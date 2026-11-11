@@ -10,16 +10,10 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
-import { sendFrontendMessage } from 'backend/ipc'
 import {
-  __resetSignInEpochsForTests,
-  captureSignInEpoch
-} from 'backend/signInProbe/sessionEpoch'
-import {
-  __resetSignInProbeOutcomesForTests,
-  getSignInProbeOutcomes,
-  noteSignInSucceeded
-} from 'backend/signInProbe/outcomes'
+  createTestSignInProbe,
+  type TestSignInProbe
+} from 'backend/testUtils/testSignInProbe'
 import { applySignInVerdict } from 'backend/signInProbe/verdict'
 import { probeLegendarySession } from 'backend/signInProbe/runnerProbes'
 import type { FakeFlagStore } from 'backend/signInProbe/__tests__/fakeFlagStore'
@@ -64,8 +58,13 @@ jest.mock('backend/storeManagers/legendary/stores', () => ({
 }))
 
 const flag = legendaryConfigStore as unknown as FakeFlagStore
+// One sign-in owner per case (D-05: no reset hooks); the deps read it at call time.
+let probe: TestSignInProbe
 const verdictDeps = {
-  stores: { legendary: { legendaryConfigStore: flag } }
+  stores: { legendary: { legendaryConfigStore: flag } },
+  get epochs() {
+    return probe.epochs
+  }
 } as unknown as Parameters<typeof applySignInVerdict<'legendary'>>[0]
 const probeDeps = {
   libraryManagers: {
@@ -79,6 +78,7 @@ const kvsConfigStore = { delete: jest.fn(), set: jest.fn(), get: jest.fn() }
 
 function userDeps(): LegendaryUserDeps {
   return {
+    signIn: probe,
     libraryManagers: {
       legendary: {
         runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args)
@@ -90,7 +90,6 @@ function userDeps(): LegendaryUserDeps {
     }
   } as unknown as LegendaryUserDeps
 }
-const sendMock = sendFrontendMessage as unknown as jest.Mock
 
 type RunOptions = { onOutput?: (chunk: string) => void }
 
@@ -113,7 +112,7 @@ function armRunner(
 
 /** The pass's shape: capture the epoch, probe, apply. */
 async function probeAndApply() {
-  const epoch = captureSignInEpoch('legendary')
+  const epoch = probe.epochs.capture('legendary')
   const outcome = await probeLegendarySession(probeDeps)
   return {
     outcome,
@@ -123,8 +122,7 @@ async function probeAndApply() {
 
 beforeEach(() => {
   flag.reset()
-  __resetSignInEpochsForTests()
-  __resetSignInProbeOutcomesForTests()
+  probe = createTestSignInProbe()
   armRunner([])
 })
 
@@ -187,10 +185,10 @@ describe('Epic: sign-in success and logout clear the flag', () => {
     expect(res.status).toBe('done')
     expect(flag.deletes).toContain('expired')
     expect(flag.data.has('expired')).toBe(false)
-    expect(getSignInProbeOutcomes().legendary).toBe('healthy')
-    expect(sendMock).toHaveBeenCalledWith('signInProbeOutcomes', {
-      outcomes: expect.objectContaining({ legendary: 'healthy' })
-    })
+    expect(probe.outcomes.get().legendary).toBe('healthy')
+    expect(probe.pushed).toContainEqual(
+      expect.objectContaining({ legendary: 'healthy' })
+    )
   })
 
   it('a failed login leaves the flag and the outcome alone', async () => {
@@ -201,13 +199,13 @@ describe('Epic: sign-in success and logout clear the flag', () => {
 
     expect(res.status).toBe('failed')
     expect(flag.data.get('expired')).toBe(true)
-    expect(getSignInProbeOutcomes().legendary).toBeUndefined()
+    expect(probe.outcomes.get().legendary).toBeUndefined()
   })
 
   it('logout deletes expired, returns the outcome to pending and bumps the epoch', async () => {
     flag.data.set('expired', true)
-    noteSignInSucceeded('legendary')
-    const epochBefore = captureSignInEpoch('legendary')
+    probe.outcomes.noteSignInSucceeded('legendary')
+    const epochBefore = probe.epochs.capture('legendary')
     armRunner([])
 
     // The cookie wipe steps are not under test (no login-window seam is
@@ -216,8 +214,8 @@ describe('Epic: sign-in success and logout clear the flag', () => {
     await LegendaryUser.logout(userDeps()).catch(() => undefined)
 
     expect(flag.data.has('expired')).toBe(false)
-    expect(getSignInProbeOutcomes().legendary).toBeUndefined()
-    expect(captureSignInEpoch('legendary')).not.toBe(epochBefore)
+    expect(probe.outcomes.get().legendary).toBeUndefined()
+    expect(probe.epochs.capture('legendary')).not.toBe(epochBefore)
   })
 })
 
@@ -232,8 +230,8 @@ describe('Epic: the only latch is applySignInVerdict (source gate)', () => {
 
 describe('Epic: a probe that began before a sign-in cannot re-set expired', () => {
   it('returns stale with no write when the epoch moved after the probe started', () => {
-    const epochAtStart = captureSignInEpoch('legendary')
-    noteSignInSucceeded('legendary')
+    const epochAtStart = probe.epochs.capture('legendary')
+    probe.outcomes.noteSignInSucceeded('legendary')
 
     const result = applySignInVerdict(
       verdictDeps,

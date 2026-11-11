@@ -223,15 +223,12 @@ export default class NileLibraryManager implements LibraryManager {
     try {
       const { createBoundedOutputCapture, classifyNileLibrarySync } =
         await import('backend/signInProbe/classify')
-      const { captureSignInEpoch } =
-        await import('backend/signInProbe/sessionEpoch')
       const { applySignInVerdict } = await import('backend/signInProbe/verdict')
-      const { recordSignInProbeOutcome, publishSignInProbeOutcomes } =
-        await import('backend/signInProbe/outcomes')
+      const { epochs, outcomes } = this.deps.signIn
 
       // Captured before the spawn starts: a sign-in that completes while it
       // is in flight moves the epoch and the verdict is refused (T-49-10).
-      const epoch = captureSignInEpoch('nile')
+      const epoch = epochs.capture('nile')
       const capture = createBoundedOutputCapture()
 
       const res = await this.runRunnerCommand(['library', 'sync'], {
@@ -250,7 +247,7 @@ export default class NileLibraryManager implements LibraryManager {
         aborted: Boolean(res.abort)
       })
       const result = applySignInVerdict(
-        { stores: { nile: this.deps.stores.nile } },
+        { stores: { nile: this.deps.stores.nile }, epochs },
         'nile',
         outcome,
         epoch
@@ -258,8 +255,8 @@ export default class NileLibraryManager implements LibraryManager {
       // Mirrors pass.ts: only a non-stale verdict is recorded and published
       // (T-49-10).
       if (result !== 'stale') {
-        recordSignInProbeOutcome('nile', outcome)
-        publishSignInProbeOutcomes()
+        outcomes.record('nile', outcome)
+        outcomes.publish()
       }
     } catch {
       // refresh() awaits refreshNile() (261102-s32), so this catch is what

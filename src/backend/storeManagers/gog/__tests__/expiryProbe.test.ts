@@ -15,26 +15,32 @@ import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { logError, logInfo, logWarning } from 'backend/logger'
 import {
-  __resetSignInEpochsForTests,
-  captureSignInEpoch
-} from 'backend/signInProbe/sessionEpoch'
-import {
-  __resetSignInProbeOutcomesForTests,
-  getSignInProbeOutcomes,
-  noteSignInSucceeded
-} from 'backend/signInProbe/outcomes'
+  createTestSignInProbe,
+  type TestSignInProbe
+} from 'backend/testUtils/testSignInProbe'
 import { applySignInVerdict } from 'backend/signInProbe/verdict'
 import { probeGogSession } from 'backend/signInProbe/runnerProbes'
 import type { FakeFlagStore } from 'backend/signInProbe/__tests__/fakeFlagStore'
 import { GOGUser, type GOGUserDeps } from '../user'
 import type { ClearCacheDeps } from 'backend/utils'
+import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
+import type { SignInEpochs } from 'backend/signInProbe/sessionEpoch'
 import type { Stores } from 'backend/services/types'
 
 const { configStore: gogConfigStore } = jest.requireMock<Stores['gog']>(
   'backend/storeManagers/gog/stores'
 )
 
+// One sign-in owner per case (D-05: no reset hooks); `deps` reads it at call time.
+let probe: TestSignInProbe
+
 const deps = {
+  get signIn() {
+    return probe
+  },
+  get epochs() {
+    return probe.epochs
+  },
   appInfo: { version: '1.0.0' },
   // Read at call time so a case can flip `mockOnline`.
   onlineMonitor: { isOnline: () => mockOnline },
@@ -44,7 +50,9 @@ const deps = {
       runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args)
     }
   }
-} as unknown as GOGUserDeps & ClearCacheDeps
+} as unknown as GOGUserDeps &
+  ClearCacheDeps &
+  SignInNoteDeps & { epochs: SignInEpochs }
 
 let mockOnline = true
 let mockAuthConfigExists = true
@@ -121,7 +129,7 @@ function armRunner(
 
 /** The pass's shape: capture the epoch, probe, apply. */
 async function probeAndApply() {
-  const epoch = captureSignInEpoch('gog')
+  const epoch = probe.epochs.capture('gog')
   const outcome = await probeGogSession(deps)
   return { outcome, result: applySignInVerdict(deps, 'gog', outcome, epoch) }
 }
@@ -130,8 +138,7 @@ beforeEach(() => {
   mockOnline = true
   mockAuthConfigExists = true
   flag.reset()
-  __resetSignInEpochsForTests()
-  __resetSignInProbeOutcomesForTests()
+  probe = createTestSignInProbe()
   GOGUser.__resetCredentialsCacheForTests()
   armRunner('null')
 })
@@ -365,7 +372,7 @@ describe('GOG: sign-in success and logout clear the flag', () => {
     expect(res.status).toBe('done')
     expect(flag.deletes).toContain('expired')
     expect(flag.data.has('expired')).toBe(false)
-    expect(getSignInProbeOutcomes().gog).toBe('healthy')
+    expect(probe.outcomes.get().gog).toBe('healthy')
   })
 
   it('a failed login leaves the flag and the outcome alone', async () => {
@@ -376,19 +383,19 @@ describe('GOG: sign-in success and logout clear the flag', () => {
 
     expect(res.status).toBe('error')
     expect(flag.data.get('expired')).toBe(true)
-    expect(getSignInProbeOutcomes().gog).toBeUndefined()
+    expect(probe.outcomes.get().gog).toBeUndefined()
   })
 
   it('logout clears expired, returns the outcome to pending and bumps the epoch', async () => {
     flag.data.set('expired', true)
-    noteSignInSucceeded('gog')
-    const epochBefore = captureSignInEpoch('gog')
+    probe.outcomes.noteSignInSucceeded('gog')
+    const epochBefore = probe.epochs.capture('gog')
 
     await GOGUser.logout(deps)
 
     expect(flag.data.has('expired')).toBe(false)
-    expect(getSignInProbeOutcomes().gog).toBeUndefined()
-    expect(captureSignInEpoch('gog')).not.toBe(epochBefore)
+    expect(probe.outcomes.get().gog).toBeUndefined()
+    expect(probe.epochs.capture('gog')).not.toBe(epochBefore)
   })
 })
 
@@ -408,11 +415,11 @@ describe('GOG: the only latch is applySignInVerdict (source gate)', () => {
 
 describe('GOG: a probe that began before a sign-in cannot re-set expired', () => {
   it('returns stale with no write when the epoch moved after the probe started', async () => {
-    const epochAtStart = captureSignInEpoch('gog')
+    const epochAtStart = probe.epochs.capture('gog')
     const outcome = await probeGogSession(deps)
     expect(outcome).toBe('expired')
 
-    noteSignInSucceeded('gog')
+    probe.outcomes.noteSignInSucceeded('gog')
     const result = applySignInVerdict(deps, 'gog', outcome, epochAtStart)
 
     expect(result).toBe('stale')

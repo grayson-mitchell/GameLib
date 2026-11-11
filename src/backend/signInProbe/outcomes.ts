@@ -22,66 +22,85 @@
  * stdout pipe and `addHandler` only registers a callback, so neither leaves
  * in-flight work behind.
  */
-import { addHandler, sendFrontendMessage } from 'backend/ipc'
+import { handleTyped, type IpcRegistry } from 'backend/sidecar/ipcRegistry'
 import type {
   SignInProbeOutcome,
   SignInProbeOutcomeMap,
   SignInStore
 } from 'common/signInState'
-import { bumpSignInEpoch } from './sessionEpoch'
+import type { SignInEpochs } from './sessionEpoch'
 
-const outcomes: SignInProbeOutcomeMap = {}
-let handlerRegistered = false
-
-/** A copy: a caller cannot mutate the module's map through the result. */
-export function getSignInProbeOutcomes(): SignInProbeOutcomeMap {
-  return { ...outcomes }
+export interface SignInProbeOutcomes {
+  /** A copy: a caller cannot mutate the instance's map through the result. */
+  get(): SignInProbeOutcomeMap
+  /** Sets an outcome, or removes the entry (back to pending) for `undefined`. */
+  record(store: SignInStore, outcome: SignInProbeOutcome | undefined): void
+  publish(): void
+  /** Idempotent. The handler is a pure getter and starts nothing. */
+  registerHandler(): void
+  /** A sign-in completed: fence any older probe, mark healthy, re-publish. */
+  noteSignInSucceeded(store: SignInStore): void
+  /** A sign-out completed: fence any older probe, back to pending, re-publish. */
+  noteSignedOut(store: SignInStore): void
 }
 
-/** Sets an outcome, or removes the entry (back to pending) for `undefined`. */
-export function recordSignInProbeOutcome(
-  store: SignInStore,
-  outcome: SignInProbeOutcome | undefined
-): void {
-  if (outcome === undefined) {
-    delete outcomes[store]
-    return
+/** What a store user module needs to report a completed sign-in or sign-out. */
+export interface SignInNoteDeps {
+  signIn: {
+    outcomes: Pick<SignInProbeOutcomes, 'noteSignInSucceeded' | 'noteSignedOut'>
   }
-  outcomes[store] = outcome
 }
 
-export function publishSignInProbeOutcomes(): void {
-  sendFrontendMessage('signInProbeOutcomes', {
-    outcomes: getSignInProbeOutcomes()
-  })
+export interface SignInProbeOutcomesDeps {
+  ipc: Pick<IpcRegistry, 'handle'>
+  push: (
+    channel: 'signInProbeOutcomes',
+    payload: { outcomes: SignInProbeOutcomeMap }
+  ) => void
+  epochs: Pick<SignInEpochs, 'bump'>
 }
 
-/** Idempotent. The handler is a pure getter and starts nothing. */
-export function registerSignInProbeOutcomesHandler(): void {
-  if (handlerRegistered) {
-    return
+/** One instance per boot (D-05, D-66.3-13): the map and the registered-handler latch are closure fields. */
+export function createSignInProbeOutcomes(
+  deps: SignInProbeOutcomesDeps
+): SignInProbeOutcomes {
+  const outcomes: SignInProbeOutcomeMap = {}
+  let handlerRegistered = false
+
+  const get = (): SignInProbeOutcomeMap => ({ ...outcomes })
+
+  const record: SignInProbeOutcomes['record'] = (store, outcome) => {
+    if (outcome === undefined) {
+      delete outcomes[store]
+      return
+    }
+    outcomes[store] = outcome
   }
-  handlerRegistered = true
-  addHandler('getSignInProbeOutcomes', () => getSignInProbeOutcomes())
-}
 
-/** A sign-in completed: fence any older probe, mark healthy, re-publish. */
-export function noteSignInSucceeded(store: SignInStore): void {
-  bumpSignInEpoch(store)
-  recordSignInProbeOutcome(store, 'healthy')
-  publishSignInProbeOutcomes()
-}
-
-/** A sign-out completed: fence any older probe, back to pending, re-publish. */
-export function noteSignedOut(store: SignInStore): void {
-  bumpSignInEpoch(store)
-  recordSignInProbeOutcome(store, undefined)
-  publishSignInProbeOutcomes()
-}
-
-export function __resetSignInProbeOutcomesForTests(): void {
-  for (const key of Object.keys(outcomes)) {
-    delete outcomes[key as SignInStore]
+  const publish = (): void => {
+    deps.push('signInProbeOutcomes', { outcomes: get() })
   }
-  handlerRegistered = false
+
+  return {
+    get,
+    record,
+    publish,
+    registerHandler() {
+      if (handlerRegistered) {
+        return
+      }
+      handlerRegistered = true
+      handleTyped(deps.ipc, 'getSignInProbeOutcomes', () => get())
+    },
+    noteSignInSucceeded(store) {
+      deps.epochs.bump(store)
+      record(store, 'healthy')
+      publish()
+    },
+    noteSignedOut(store) {
+      deps.epochs.bump(store)
+      record(store, undefined)
+      publish()
+    }
+  }
 }

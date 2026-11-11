@@ -10,16 +10,10 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
-import { sendFrontendMessage } from 'backend/ipc'
 import {
-  __resetSignInEpochsForTests,
-  captureSignInEpoch
-} from 'backend/signInProbe/sessionEpoch'
-import {
-  __resetSignInProbeOutcomesForTests,
-  getSignInProbeOutcomes,
-  noteSignInSucceeded
-} from 'backend/signInProbe/outcomes'
+  createTestSignInProbe,
+  type TestSignInProbe
+} from 'backend/testUtils/testSignInProbe'
 import { applySignInVerdict } from 'backend/signInProbe/verdict'
 import { probeNileSession } from 'backend/signInProbe/runnerProbes'
 import type { FakeFlagStore } from 'backend/signInProbe/__tests__/fakeFlagStore'
@@ -32,7 +26,13 @@ const { configStore: nileConfigStore } = jest.requireMock<Stores['nile']>(
 )
 
 // `clearCache` is mocked in this file, so only the nile config store is read.
+// One sign-in owner per case (D-05: no reset hooks); the deps read it at call time.
+let probe: TestSignInProbe
+
 const clearDeps = {
+  get signIn() {
+    return probe
+  },
   stores: { nile: { configStore: nileConfigStore } },
   libraryManagers: {
     nile: {
@@ -70,7 +70,10 @@ jest.mock('backend/storeManagers/nile/stores', () => ({
 
 const flag = nileConfigStore as unknown as FakeFlagStore
 const verdictDeps = {
-  stores: { nile: { configStore: flag } }
+  stores: { nile: { configStore: flag } },
+  get epochs() {
+    return probe.epochs
+  }
 } as unknown as Parameters<typeof applySignInVerdict<'nile'>>[0]
 const probeDeps = {
   libraryManagers: {
@@ -79,7 +82,6 @@ const probeDeps = {
     }
   }
 } as unknown as Parameters<typeof probeNileSession>[0]
-const sendMock = sendFrontendMessage as unknown as jest.Mock
 
 type RunOptions = { onOutput?: (chunk: string) => void }
 
@@ -102,7 +104,7 @@ function armRunner(
 
 /** The pass's shape: capture the epoch, probe, apply. */
 async function probeAndApply() {
-  const epoch = captureSignInEpoch('nile')
+  const epoch = probe.epochs.capture('nile')
   const outcome = await probeNileSession(probeDeps)
   return {
     outcome,
@@ -119,8 +121,7 @@ const REGISTER_DATA = {
 
 beforeEach(() => {
   flag.reset()
-  __resetSignInEpochsForTests()
-  __resetSignInProbeOutcomesForTests()
+  probe = createTestSignInProbe()
   armRunner([])
 })
 
@@ -189,10 +190,10 @@ describe('Amazon: sign-in success and logout clear the flag', () => {
     expect(res.status).toBe('done')
     expect(flag.deletes).toContain('expired')
     expect(flag.data.has('expired')).toBe(false)
-    expect(getSignInProbeOutcomes().nile).toBe('healthy')
-    expect(sendMock).toHaveBeenCalledWith('signInProbeOutcomes', {
-      outcomes: expect.objectContaining({ nile: 'healthy' })
-    })
+    expect(probe.outcomes.get().nile).toBe('healthy')
+    expect(probe.pushed).toContainEqual(
+      expect.objectContaining({ nile: 'healthy' })
+    )
   })
 
   it('a failed login leaves the flag and the outcome alone', async () => {
@@ -203,7 +204,7 @@ describe('Amazon: sign-in success and logout clear the flag', () => {
 
     expect(res.status).toBe('failed')
     expect(flag.data.get('expired')).toBe(true)
-    expect(getSignInProbeOutcomes().nile).toBeUndefined()
+    expect(probe.outcomes.get().nile).toBeUndefined()
   })
 
   it('a login that registers but yields no user data leaves the flag alone', async () => {
@@ -221,15 +222,15 @@ describe('Amazon: sign-in success and logout clear the flag', () => {
 
   it('logout deletes expired, returns the outcome to pending and bumps the epoch', async () => {
     flag.data.set('expired', true)
-    noteSignInSucceeded('nile')
-    const epochBefore = captureSignInEpoch('nile')
+    probe.outcomes.noteSignInSucceeded('nile')
+    const epochBefore = probe.epochs.capture('nile')
     armRunner([])
 
     await NileUser.logout(clearDeps)
 
     expect(flag.data.has('expired')).toBe(false)
-    expect(getSignInProbeOutcomes().nile).toBeUndefined()
-    expect(captureSignInEpoch('nile')).not.toBe(epochBefore)
+    expect(probe.outcomes.get().nile).toBeUndefined()
+    expect(probe.epochs.capture('nile')).not.toBe(epochBefore)
   })
 })
 
@@ -244,8 +245,8 @@ describe('Amazon: the only latch is applySignInVerdict (source gate)', () => {
 
 describe('Amazon: a probe that began before a sign-in cannot re-set expired', () => {
   it('returns stale with no write when the epoch moved after the probe started', () => {
-    const epochAtStart = captureSignInEpoch('nile')
-    noteSignInSucceeded('nile')
+    const epochAtStart = probe.epochs.capture('nile')
+    probe.outcomes.noteSignInSucceeded('nile')
 
     const result = applySignInVerdict(
       verdictDeps,

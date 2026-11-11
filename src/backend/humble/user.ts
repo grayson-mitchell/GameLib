@@ -1,13 +1,9 @@
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
 
-import { humbleStores } from './humbleStores'
+import { humbleSignIn, humbleStores } from './humbleStores'
 import { HUMBLE_BASE_URL, HUMBLE_LOGIN_URL } from './constants'
 import { getGamekeys } from './adapter'
-import {
-  noteSignInSucceeded,
-  noteSignedOut
-} from 'backend/signInProbe/outcomes'
 import { invalidateSyncGeneration } from './syncFence'
 import { HumbleUserData } from 'common/types/humble'
 import {
@@ -697,7 +693,7 @@ export class HumbleUser {
     humbleStores().configStore.set('isLoggedIn', true)
     humbleStores().configStore.set('expired', false)
     // Phase 49: a completed sign-in outranks any probe that began earlier.
-    noteSignInSucceeded('humble')
+    humbleSignIn().noteSignInSucceeded('humble')
 
     // Phase 14 (T-14-04, RESEARCH.md Pitfall A): opportunistically capture
     // the csrf_cookie value at the SAME login moment as _simpleauth_sess.
@@ -917,7 +913,7 @@ export class HumbleUser {
     // disconnect (WR-02 / T-10-07).
     humbleStores().configStore.clear()
     // Phase 49: fence any boot probe that began before this disconnect.
-    noteSignedOut('humble')
+    humbleSignIn().noteSignedOut('humble')
 
     // Phase 34.4.1 gap-cycle plan 13 (F-1 BLOCKING closure): clear the
     // keyring-backed session/csrf secrets too, as part of the SAME credential

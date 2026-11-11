@@ -1,3 +1,4 @@
+import type { ManagerDeps } from 'backend/services/types'
 import { existsSync } from 'graceful-fs'
 import { join } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -5,12 +6,6 @@ import type { SteamStoresDeps } from './library/installRoot'
 import { STEAM_INSTALL_PATHS } from './constants'
 import { getTokenStore, readTokenOutcome } from './tokenStore'
 import { currentTriggerLabel, noteSteamAuthTrigger } from './authTrigger'
-import {
-  noteSignedOut,
-  publishSignInProbeOutcomes,
-  recordSignInProbeOutcome
-} from 'backend/signInProbe/outcomes'
-import { captureSignInEpoch } from 'backend/signInProbe/sessionEpoch'
 import { applySignInVerdict } from 'backend/signInProbe/verdict'
 import { withTimeout } from './withTimeout'
 import { sendFrontendMessage } from '../../ipc'
@@ -51,6 +46,8 @@ type SteamUserMacSteamOffline = Pick<
 >
 export type SteamUserBoundDeps = SteamStoresDeps & {
   macSteamOffline?: SteamUserMacSteamOffline
+  /** The boot-owned sign-in fence and outcome map (D-66.3-13); read through `signIn()`. */
+  signIn?: ManagerDeps['signIn']
 }
 
 // ── SteamUser static class ────────────────────────────────────────────────────
@@ -72,6 +69,16 @@ export class SteamUser {
     if (!instance) {
       throw new Error(
         'SteamUser: Mac Steam offline instance read before bindStores supplied it (the sidecar binds it in the stores boot step)'
+      )
+    }
+    return instance
+  }
+
+  private static signIn(): ManagerDeps['signIn'] {
+    const instance = this.boundStores?.signIn
+    if (!instance) {
+      throw new Error(
+        'SteamUser: sign-in state read before bindStores supplied it (the sidecar binds it in the stores boot step)'
       )
     }
     return instance
@@ -254,14 +261,14 @@ export class SteamUser {
     epochAtStart: number
   ): void {
     const result = applySignInVerdict(
-      this.storesDeps(),
+      { stores: this.storesDeps().stores, epochs: this.signIn().epochs },
       'steam',
       outcome,
       epochAtStart
     )
     if (result !== 'latched' && result !== 'cleared') return
-    recordSignInProbeOutcome('steam', outcome)
-    publishSignInProbeOutcomes()
+    this.signIn().outcomes.record('steam', outcome)
+    this.signIn().outcomes.publish()
   }
 
   /**
@@ -529,7 +536,7 @@ export class SteamUser {
     // probe pass does (pass.ts). A sign-in that completes while this logon is
     // in flight bumps the epoch, and whatever the CM then says about the OLD
     // token is refused by `applySignInVerdict` as stale (T-49-10).
-    const epochAtStart = captureSignInEpoch('steam')
+    const epochAtStart = this.signIn().epochs.capture('steam')
     const start = Date.now()
     if (!this.connectingPromise && token !== undefined) {
       if (this.client?.steamID) {
@@ -712,7 +719,7 @@ export class SteamUser {
     // `true` here would mislabel the next login's tile before any read runs.
     this.storesDeps().stores.steam.configStore.delete('credentialsMissing')
     // Phase 49: fence any boot probe that began before this sign-out.
-    noteSignedOut('steam')
+    this.signIn().outcomes.noteSignedOut('steam')
     logInfo('Logging user out from Steam', LogPrefix.Steam)
   }
 

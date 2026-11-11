@@ -48,10 +48,16 @@ jest.mock('../authTrigger', () => ({
 // Phase 49 (49-06): sign-in / sign-out publish through the epoch fence.
 const mockNoteSignInSucceeded = jest.fn()
 const mockNoteSignedOut = jest.fn()
-jest.mock('backend/signInProbe/outcomes', () => ({
-  noteSignInSucceeded: (...args: unknown[]) => mockNoteSignInSucceeded(...args),
-  noteSignedOut: (...args: unknown[]) => mockNoteSignedOut(...args)
-}))
+const mockSignIn = {
+  outcomes: {
+    noteSignInSucceeded: (...args: unknown[]) =>
+      mockNoteSignInSucceeded(...args),
+    noteSignedOut: (...args: unknown[]) => mockNoteSignedOut(...args),
+    record: jest.fn(),
+    publish: jest.fn()
+  },
+  epochs: { capture: () => 0, isCurrent: () => true, bump: jest.fn() }
+}
 
 jest.mock('backend/logger', () => ({
   logError: jest.fn(),
@@ -97,12 +103,16 @@ jest.mock('backend/ipc', () => ({
   addHandler: jest.fn()
 }))
 
-import { SteamUser } from '../user'
+import { SteamUser, type SteamUserBoundDeps } from '../user'
 import type { SteamStoresDeps } from '../library/installRoot'
+import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
 
 const steamDeps = {
-  stores: { steam: { configStore: mockConfigStore } }
-} as unknown as SteamStoresDeps
+  stores: { steam: { configStore: mockConfigStore } },
+  signIn: mockSignIn
+} as unknown as SteamStoresDeps &
+  SignInNoteDeps &
+  Pick<SteamUserBoundDeps, 'signIn'>
 beforeEach(() => {
   SteamUser.bindStores(steamDeps)
 })

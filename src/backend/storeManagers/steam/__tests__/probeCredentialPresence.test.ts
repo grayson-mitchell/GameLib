@@ -35,10 +35,16 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
 }))
-jest.mock('backend/signInProbe/outcomes', () => ({
-  noteSignInSucceeded: jest.fn(),
-  noteSignedOut: jest.fn()
-}))
+// The sign-in owner SteamUser reads through its bound slice (66.3-13): inert stand-ins.
+const mockSignIn = {
+  outcomes: {
+    noteSignInSucceeded: jest.fn(),
+    noteSignedOut: jest.fn(),
+    publish: jest.fn(),
+    record: jest.fn()
+  },
+  epochs: { capture: () => 0, isCurrent: () => true, bump: jest.fn() }
+}
 
 jest.mock('graceful-fs', () => ({ existsSync: jest.fn(() => false) }))
 jest.mock('steam-session', () => ({
@@ -80,6 +86,7 @@ import { SteamUser } from '../user'
 
 // SteamUser reads its config store through the bound slice (66.1-18).
 SteamUser.bindStores({
+  signIn: mockSignIn,
   stores: { steam: { configStore: mockConfigStore } }
 } as never)
 import {

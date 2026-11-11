@@ -573,9 +573,9 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
     // READY. Returns the violated rules, so the real source must return [] and every
     // RED specimen must return a non-empty list.
     function signInProbeOrderViolations(initBody: string): string[] {
-      const handler = initBody.indexOf('registerSignInProbeOutcomesHandler()')
+      const handler = initBody.indexOf('signInProbe.outcomes.registerHandler()')
       const ready = initBody.indexOf('READY_SENTINEL}')
-      const start = initBody.indexOf('startSignInProbePass(')
+      const start = initBody.indexOf('signInProbe.pass.start(')
       const deliver = initBody.lastIndexOf('deliverStartupProtocolUrl(')
       const violations: string[] = []
       if (ready < 0) violations.push('no READY write')
@@ -612,8 +612,8 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
 
     it('self-test (RED proof): starting the pass BEFORE the READY write fails the gate', () => {
       const initBody = specimen([
-        'registerSignInProbeOutcomesHandler()',
-        'startSignInProbePass()',
+        'signInProbe.outcomes.registerHandler()',
+        'signInProbe.pass.start()',
         READY_LINE,
         'deliverStartupProtocolUrl('
       ])
@@ -624,10 +624,10 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
 
     it('self-test (RED proof): starting the pass AFTER deliverStartupProtocolUrl( fails the gate', () => {
       const initBody = specimen([
-        'registerSignInProbeOutcomesHandler()',
+        'signInProbe.outcomes.registerHandler()',
         READY_LINE,
         'deliverStartupProtocolUrl(',
-        'startSignInProbePass()'
+        'signInProbe.pass.start()'
       ])
       expect(signInProbeOrderViolations(initBody)).toContain(
         'pass is not started before deliverStartupProtocolUrl('
@@ -637,8 +637,8 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
     it('self-test (RED proof): registering the outcomes handler AFTER READY fails the gate', () => {
       const initBody = specimen([
         READY_LINE,
-        'registerSignInProbeOutcomesHandler()',
-        'startSignInProbePass()',
+        'signInProbe.outcomes.registerHandler()',
+        'signInProbe.pass.start()',
         'deliverStartupProtocolUrl('
       ])
       expect(signInProbeOrderViolations(initBody)).toContain(
@@ -648,9 +648,9 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
 
     it('self-test (GREEN proof): the correct order has no violations', () => {
       const initBody = specimen([
-        'registerSignInProbeOutcomesHandler()',
+        'signInProbe.outcomes.registerHandler()',
         READY_LINE,
-        'startSignInProbePass()',
+        'signInProbe.pass.start()',
         'deliverStartupProtocolUrl('
       ])
       expect(signInProbeOrderViolations(initBody)).toEqual([])

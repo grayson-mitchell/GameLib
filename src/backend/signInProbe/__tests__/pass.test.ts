@@ -22,24 +22,20 @@ import { readdirSync, readFileSync, statSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { logInfo, logWarning } from 'backend/logger'
-import { sendFrontendMessage } from 'backend/ipc'
 import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
 import { SIGN_IN_STORES } from 'common/signInState'
-import { __resetSignInEpochsForTests, bumpSignInEpoch } from '../sessionEpoch'
 import {
-  __resetSignInProbeOutcomesForTests,
-  getSignInProbeOutcomes
-} from '../outcomes'
+  createTestSignInProbe,
+  type TestSignInProbe
+} from 'backend/testUtils/testSignInProbe'
 import { SIGN_IN_PROBE_ABORT_IDS } from '../runnerProbes'
 import {
-  __resetSignInProbePassForTests,
   boundedSignInProbe,
+  createSignInProbePass,
   createSignInProbePassDeps,
-  requestSignInProbePass,
   runSignInProbePass,
-  SIGN_IN_PROBE_BOUND_MS,
-  startSignInProbePass
+  SIGN_IN_PROBE_BOUND_MS
 } from '../pass'
 import type {
   SignInProbeDeps,
@@ -132,7 +128,6 @@ jest.mock('../runnerProbes', () => ({
   }
 }))
 
-const sendMock = sendFrontendMessage as unknown as jest.Mock
 const abortMock = callAbortController as unknown as jest.Mock
 const logInfoMock = logInfo as unknown as jest.Mock
 const logWarningMock = logWarning as unknown as jest.Mock
@@ -153,9 +148,10 @@ const probeSlice = {
 const allWrites = () =>
   Object.values(fakeStores).flatMap((fake) => [...fake.sets, ...fake.deletes])
 
-const publishCount = () =>
-  sendMock.mock.calls.filter(([channel]) => channel === 'signInProbeOutcomes')
-    .length
+const publishCount = () => probe.pushed.length
+
+/** One fresh epoch/outcome/pass owner per case (D-05: no reset hooks). */
+let probe: TestSignInProbe
 
 /** Order of `probe()` invocations across a test. */
 let probeCalls: SignInStore[] = []
@@ -191,7 +187,12 @@ function makeDeps(overrides: Overrides = {}): SignInProbePassDeps {
       ...overrides[store]
     }
   }
-  return { registrations, stores: fakeVerdictStores }
+  return {
+    registrations,
+    stores: fakeVerdictStores,
+    epochs: probe.epochs,
+    outcomes: probe.outcomes
+  }
 }
 
 /** Only `store` is logged in; everything else is skipped. */
@@ -244,9 +245,7 @@ beforeEach(() => {
     mockUsers.loggedIn[store] = false
     fakeStores[store].reset()
   }
-  __resetSignInEpochsForTests()
-  __resetSignInProbeOutcomesForTests()
-  __resetSignInProbePassForTests()
+  probe = createTestSignInProbe()
 })
 
 afterEach(() => {
@@ -295,7 +294,7 @@ describe('runSignInProbePass: parallel, once each (D-02, P3)', () => {
       })
     )
     expect([...probeCalls].sort()).toEqual(['gog', 'legendary', 'nile'])
-    expect(getSignInProbeOutcomes()).toEqual({
+    expect(probe.outcomes.get()).toEqual({
       legendary: 'healthy',
       gog: 'healthy',
       nile: 'healthy'
@@ -396,8 +395,8 @@ describe('boundedSignInProbe: the deterministic boundary (R3)', () => {
 
     expect(abortMock).toHaveBeenCalledTimes(1)
     expect(abortMock).toHaveBeenCalledWith(SIGN_IN_PROBE_ABORT_IDS.legendary)
-    expect(getSignInProbeOutcomes().legendary).toBe('unknown')
-    expect(getSignInProbeOutcomes().steam).toBe('unknown')
+    expect(probe.outcomes.get().legendary).toBe('unknown')
+    expect(probe.outcomes.get().steam).toBe('unknown')
   })
 
   it('writes nothing for a bounded probe (a timeout is never evidence of a signed-out store)', async () => {
@@ -410,7 +409,7 @@ describe('boundedSignInProbe: the deterministic boundary (R3)', () => {
     await jest.advanceTimersByTimeAsync(SIGN_IN_PROBE_BOUND_MS)
     await pass
     expect(allWrites()).toEqual([])
-    expect(getSignInProbeOutcomes()).toEqual({ gog: 'unknown' })
+    expect(probe.outcomes.get()).toEqual({ gog: 'unknown' })
   })
 
   it('latches a probe that returns expired just inside the bound', async () => {
@@ -423,7 +422,7 @@ describe('boundedSignInProbe: the deterministic boundary (R3)', () => {
     await jest.advanceTimersByTimeAsync(SIGN_IN_PROBE_BOUND_MS - 1)
     await pass
     expect(fakeStores.gog.sets).toEqual([['expired', true]])
-    expect(getSignInProbeOutcomes()).toEqual({ gog: 'expired' })
+    expect(probe.outcomes.get()).toEqual({ gog: 'expired' })
   })
 })
 
@@ -458,7 +457,7 @@ describe('exit contract: no referenced handle survives a pass (T-49-22)', () => 
   it('unrefs the first-run setImmediate and creates no interval', async () => {
     const handles = trackTimerHandles()
     mockConnectivity.online = true
-    startSignInProbePass(probeSlice, {
+    probe.pass.start(probeSlice, {
       allowInTestWorker: true,
       deps: onlyStore(
         'gog',
@@ -495,10 +494,10 @@ describe('single-flight (D-03, RESEARCH Pitfall 7)', () => {
       })
     )
 
-    requestSignInProbePass(deps)
-    requestSignInProbePass(deps)
-    requestSignInProbePass(deps)
-    requestSignInProbePass(deps)
+    probe.pass.request(deps)
+    probe.pass.request(deps)
+    probe.pass.request(deps)
+    probe.pass.request(deps)
     expect(probeCalls).toEqual(['gog'])
 
     defined(gates[0], 'first gate').resolve('healthy')
@@ -514,7 +513,7 @@ describe('single-flight (D-03, RESEARCH Pitfall 7)', () => {
 
   it('warns, and runs nothing, for a request made before the boot step started the pass (C-WR-5)', () => {
     logWarningMock.mockClear()
-    requestSignInProbePass()
+    probe.pass.request()
     expect(logWarningMock).toHaveBeenCalledTimes(1)
     expect(String(logWarningMock.mock.calls[0]?.[0])).toContain(
       'before the boot step'
@@ -522,14 +521,34 @@ describe('single-flight (D-03, RESEARCH Pitfall 7)', () => {
     expect(probeCalls).toEqual([])
   })
 
+  it('two pass owners never share a single-flight latch or a started flag', async () => {
+    const other = createSignInProbePass(probe)
+    const gate = deferred<SignInProbeOutcome>()
+    const first = onlyStore(
+      'gog',
+      recordingProbe('gog', () => gate.promise)
+    )
+    probe.pass.request(first)
+    // The other instance is not in flight, so it runs its own pass immediately.
+    other.request(
+      onlyStore(
+        'nile',
+        recordingProbe('nile', () => Promise.resolve('healthy'))
+      )
+    )
+    expect(probeCalls).toEqual(['gog', 'nile'])
+    gate.resolve('healthy')
+    await new Promise((resolve) => setImmediate(resolve))
+  })
+
   it('runs a fresh pass for a request made after the previous pass settled', async () => {
     const deps = onlyStore(
       'gog',
       recordingProbe('gog', () => Promise.resolve('healthy'))
     )
-    requestSignInProbePass(deps)
+    probe.pass.request(deps)
     await new Promise((resolve) => setImmediate(resolve))
-    requestSignInProbePass(deps)
+    probe.pass.request(deps)
     await new Promise((resolve) => setImmediate(resolve))
     expect(probeCalls).toEqual(['gog', 'gog'])
   })
@@ -548,7 +567,7 @@ describe('edge gating (D-03, T-49-23)', () => {
 
   it('runs once on a repeated online, again after offline then online, and again after check-online then online', async () => {
     mockConnectivity.online = true
-    startSignInProbePass(probeSlice, {
+    probe.pass.start(probeSlice, {
       allowInTestWorker: true,
       deps: gogOnly()
     })
@@ -574,7 +593,7 @@ describe('edge gating (D-03, T-49-23)', () => {
 
   it('starts nothing while offline until the first online event', async () => {
     mockConnectivity.online = false
-    startSignInProbePass(probeSlice, {
+    probe.pass.start(probeSlice, {
       allowInTestWorker: true,
       deps: gogOnly()
     })
@@ -592,7 +611,7 @@ describe('edge gating (D-03, T-49-23)', () => {
 
   it('does not re-run on a timer', async () => {
     mockConnectivity.online = true
-    startSignInProbePass(probeSlice, {
+    probe.pass.start(probeSlice, {
       allowInTestWorker: true,
       deps: gogOnly()
     })
@@ -605,19 +624,19 @@ describe('edge gating (D-03, T-49-23)', () => {
 describe('test-worker guard', () => {
   it('registers no listener and starts nothing under jest without the opt-in', async () => {
     mockConnectivity.online = true
-    startSignInProbePass(probeSlice)
+    probe.pass.start(probeSlice)
     expect(mockConnectivity.listeners).toHaveLength(0)
     await new Promise((resolve) => setImmediate(resolve))
     expect(mockUsers.calls).toEqual([])
   })
 
   it('registers its listener once with the opt-in, however many times it is called', () => {
-    startSignInProbePass(probeSlice, {
+    probe.pass.start(probeSlice, {
       allowInTestWorker: true,
       deps: makeDeps()
     })
     expect(mockConnectivity.listeners).toHaveLength(1)
-    startSignInProbePass(probeSlice, {
+    probe.pass.start(probeSlice, {
       allowInTestWorker: true,
       deps: makeDeps()
     })
@@ -647,14 +666,14 @@ describe('outcome map and verdict (D-08)', () => {
     // probe was still in flight).
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(getSignInProbeOutcomes().steam).toBe('healthy')
-    expect(getSignInProbeOutcomes().gog).toBeUndefined()
+    expect(probe.outcomes.get().steam).toBe('healthy')
+    expect(probe.outcomes.get().gog).toBeUndefined()
     expect(publishCount()).toBe(SIGN_IN_STORES.length - 1)
 
     slowGate.resolve('healthy')
     await pass
 
-    expect(getSignInProbeOutcomes().gog).toBe('healthy')
+    expect(probe.outcomes.get().gog).toBe('healthy')
     expect(publishCount()).toBe(SIGN_IN_STORES.length)
   })
 
@@ -665,7 +684,7 @@ describe('outcome map and verdict (D-08)', () => {
         steam: { probe: () => Promise.resolve('unknown') }
       })
     )
-    expect(getSignInProbeOutcomes()).toEqual({
+    expect(probe.outcomes.get()).toEqual({
       legendary: 'healthy',
       gog: 'expired',
       nile: 'healthy',
@@ -685,12 +704,12 @@ describe('outcome map and verdict (D-08)', () => {
       })
     )
     // A sign-in completes while the probe is still in flight.
-    bumpSignInEpoch('gog')
+    probe.epochs.bump('gog')
     gate.resolve('expired')
     await pass
 
-    expect(getSignInProbeOutcomes().gog).toBeUndefined()
-    expect(getSignInProbeOutcomes().legendary).toBe('healthy')
+    expect(probe.outcomes.get().gog).toBeUndefined()
+    expect(probe.outcomes.get().legendary).toBe('healthy')
     expect(fakeStores.gog.sets).toEqual([])
     // gog is stale -- nothing recorded, nothing published for it; the other
     // four stores each still record and publish their own outcome.
@@ -701,7 +720,7 @@ describe('outcome map and verdict (D-08)', () => {
     await runSignInProbePass(
       makeDeps({ nile: { probe: () => Promise.reject(new Error('boom')) } })
     )
-    expect(getSignInProbeOutcomes().nile).toBe('unknown')
+    expect(probe.outcomes.get().nile).toBe('unknown')
     expect(fakeStores.nile.sets).toEqual([])
     // nile's rejected probe still resolves to 'unknown' and is recorded (only
     // `stale`/errored verdicts skip the record+publish), so every store in
@@ -715,7 +734,7 @@ describe('default registrations (D-14, D-15, D-21)', () => {
     for (const store of SIGN_IN_STORES) {
       mockUsers.loggedIn[store] = true
     }
-    await runSignInProbePass(createSignInProbePassDeps(probeSlice))
+    await runSignInProbePass(createSignInProbePassDeps(probeSlice, probe))
 
     expect([...mockUsers.calls].sort()).toEqual(
       [
@@ -731,7 +750,7 @@ describe('default registrations (D-14, D-15, D-21)', () => {
 
   it('does not probe a store whose logged-in flag is false', async () => {
     mockUsers.loggedIn.gog = true
-    await runSignInProbePass(createSignInProbePassDeps(probeSlice))
+    await runSignInProbePass(createSignInProbePassDeps(probeSlice, probe))
     expect(mockUsers.calls).toEqual(['gog:probe'])
   })
 })
@@ -862,7 +881,7 @@ describe('src/backend/signInProbe/pass.ts source gates (D-04, T-49-23, P3)', () 
     expect(code).not.toMatch(/from\s+'electron'/)
   })
 
-  it('has no call site for requestSignInProbePass or runSignInProbePass outside pass.ts and __tests__', () => {
+  it('has no call site for pass.request or runSignInProbePass outside pass.ts and __tests__', () => {
     const srcRoot = join(__dirname, '..', '..', '..')
     const offenders: string[] = []
     const walk = (dir: string) => {
@@ -882,7 +901,7 @@ describe('src/backend/signInProbe/pass.ts source gates (D-04, T-49-23, P3)', () 
           continue
         }
         const stripped = stripSourceComments(readFileSync(full, 'utf8'))
-        if (/(requestSignInProbePass|runSignInProbePass)\(/.test(stripped)) {
+        if (/(pass\.request|runSignInProbePass)\(/.test(stripped)) {
           offenders.push(full)
         }
       }

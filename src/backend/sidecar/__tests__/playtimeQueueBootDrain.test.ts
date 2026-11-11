@@ -140,7 +140,8 @@ function bootedWorld(opts?: {
         appState: fakes.host.appState,
         imageTools: fakes.host.imageTools,
         onlineMonitor: fakes.onlineMonitor,
-        engineState: fakes.engineState
+        engineState: fakes.engineState,
+        signIn: fakes.signInProbe
       })
       prebuilt.managers = built
       prebuilt.launcher = built.launcher

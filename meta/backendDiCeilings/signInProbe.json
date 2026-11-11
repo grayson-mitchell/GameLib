@@ -1,14 +1,8 @@
 {
   "jestMock": {
     "src/backend/signInProbe/__tests__/dismissBackstop.test.ts": 2,
-    "src/backend/signInProbe/__tests__/outcomes.test.ts": 1,
     "src/backend/signInProbe/__tests__/pass.test.ts": 9,
     "src/backend/signInProbe/__tests__/runnerProbes.test.ts": 1,
     "src/backend/signInProbe/__tests__/verdict.test.ts": 2
-  },
-  "moduleState": {
-    "src/backend/signInProbe/outcomes.ts": 2,
-    "src/backend/signInProbe/pass.ts": 5,
-    "src/backend/signInProbe/sessionEpoch.ts": 1
   }
 }

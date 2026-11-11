@@ -1,96 +1,100 @@
 /**
  * 49-04 Task 2 (D-08, D-03, T-49-09, T-49-10, T-49-11): the session-epoch
- * fence, the in-memory outcome map, and its push/pull channel.
+ * fence, the in-memory outcome map, and its push/pull channel. 66.3-13: both are
+ * boot-owned instances, so every case builds its own and no reset hook exists.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
-import { addHandler, sendFrontendMessage } from 'backend/ipc'
-import {
-  __resetSignInEpochsForTests,
-  bumpSignInEpoch,
-  captureSignInEpoch,
-  isSignInEpochCurrent
-} from '../sessionEpoch'
-import {
-  __resetSignInProbeOutcomesForTests,
-  getSignInProbeOutcomes,
-  noteSignedOut,
-  noteSignInSucceeded,
-  publishSignInProbeOutcomes,
-  recordSignInProbeOutcome,
-  registerSignInProbeOutcomesHandler
-} from '../outcomes'
+import { createIpcRegistry } from 'backend/sidecar/ipcRegistry'
+import { createSignInEpochs } from '../sessionEpoch'
+import { createSignInProbeOutcomes } from '../outcomes'
 
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: jest.fn(),
-  addHandler: jest.fn()
-}))
-
-const sendMock = sendFrontendMessage as unknown as jest.Mock
-const addHandlerMock = addHandler as unknown as jest.Mock
-
-beforeEach(() => {
-  sendMock.mockReturnValue(true)
-  __resetSignInEpochsForTests()
-  __resetSignInProbeOutcomesForTests()
-})
+function build() {
+  const ipc = createIpcRegistry()
+  const push = jest.fn()
+  const epochs = createSignInEpochs()
+  const outcomes = createSignInProbeOutcomes({ ipc, push, epochs })
+  return { ipc, push, epochs, outcomes }
+}
 
 describe('sessionEpoch', () => {
   it('a bump invalidates a previously captured epoch for that store only', () => {
-    const gog = captureSignInEpoch('gog')
-    const nile = captureSignInEpoch('nile')
-    expect(isSignInEpochCurrent('gog', gog)).toBe(true)
+    const { epochs } = build()
+    const gog = epochs.capture('gog')
+    const nile = epochs.capture('nile')
+    expect(epochs.isCurrent('gog', gog)).toBe(true)
 
-    bumpSignInEpoch('gog')
+    epochs.bump('gog')
 
-    expect(isSignInEpochCurrent('gog', gog)).toBe(false)
-    expect(isSignInEpochCurrent('nile', nile)).toBe(true)
+    expect(epochs.isCurrent('gog', gog)).toBe(false)
+    expect(epochs.isCurrent('nile', nile)).toBe(true)
   })
 
   it('a bump of nile leaves gog current', () => {
-    const gog = captureSignInEpoch('gog')
-    bumpSignInEpoch('nile')
-    expect(isSignInEpochCurrent('gog', gog)).toBe(true)
+    const { epochs } = build()
+    const gog = epochs.capture('gog')
+    epochs.bump('nile')
+    expect(epochs.isCurrent('gog', gog)).toBe(true)
   })
 
   it('a fresh capture after a bump is current', () => {
-    bumpSignInEpoch('steam')
-    const after = captureSignInEpoch('steam')
-    expect(isSignInEpochCurrent('steam', after)).toBe(true)
+    const { epochs } = build()
+    epochs.bump('steam')
+    const after = epochs.capture('steam')
+    expect(epochs.isCurrent('steam', after)).toBe(true)
+  })
+
+  it('a capture taken before a bump on another instance is unaffected (one instance per boot)', () => {
+    const a = createSignInEpochs()
+    const b = createSignInEpochs()
+    const capture = a.capture('humble')
+    b.bump('humble')
+    expect(a.isCurrent('humble', capture)).toBe(true)
   })
 })
 
 describe('outcome map', () => {
   it('records an outcome and returns it', () => {
-    recordSignInProbeOutcome('gog', 'expired')
-    expect(getSignInProbeOutcomes()).toEqual({ gog: 'expired' })
+    const { outcomes } = build()
+    outcomes.record('gog', 'expired')
+    expect(outcomes.get()).toEqual({ gog: 'expired' })
   })
 
-  it('mutating the returned object does not change the module map', () => {
-    recordSignInProbeOutcome('gog', 'expired')
-    const copy = getSignInProbeOutcomes()
+  it('mutating the returned object does not change the instance map', () => {
+    const { outcomes } = build()
+    outcomes.record('gog', 'expired')
+    const copy = outcomes.get()
     copy.gog = 'healthy'
     copy.nile = 'unknown'
-    expect(getSignInProbeOutcomes()).toEqual({ gog: 'expired' })
+    expect(outcomes.get()).toEqual({ gog: 'expired' })
   })
 
   it('recording undefined deletes the entry', () => {
-    recordSignInProbeOutcome('gog', 'expired')
-    recordSignInProbeOutcome('gog', undefined)
-    expect(getSignInProbeOutcomes()).toEqual({})
+    const { outcomes } = build()
+    outcomes.record('gog', 'expired')
+    outcomes.record('gog', undefined)
+    expect(outcomes.get()).toEqual({})
+  })
+
+  it('two instances never share a map', () => {
+    const one = build()
+    const two = build()
+    one.outcomes.record('gog', 'expired')
+    expect(two.outcomes.get()).toEqual({})
   })
 })
 
-describe('publishSignInProbeOutcomes', () => {
-  it('sends one signInProbeOutcomes message whose only key is outcomes', () => {
-    recordSignInProbeOutcome('legendary', 'healthy')
-    recordSignInProbeOutcome('humble', 'unknown')
+describe('publish', () => {
+  it('pushes one signInProbeOutcomes message whose only key is outcomes', () => {
+    const { outcomes, push } = build()
+    outcomes.record('legendary', 'healthy')
+    outcomes.record('humble', 'unknown')
 
-    publishSignInProbeOutcomes()
+    outcomes.publish()
 
-    expect(sendMock).toHaveBeenCalledTimes(1)
-    const [channel, payload] = sendMock.mock.calls[0]
+    expect(push).toHaveBeenCalledTimes(1)
+    const [channel, payload] = push.mock.calls[0]
     expect(channel).toBe('signInProbeOutcomes')
     expect(Object.keys(payload)).toEqual(['outcomes'])
     expect(payload.outcomes).toEqual({
@@ -103,80 +107,87 @@ describe('publishSignInProbeOutcomes', () => {
   })
 
   it('publishes an empty map as {} (all pending)', () => {
-    publishSignInProbeOutcomes()
-    expect(sendMock).toHaveBeenCalledWith('signInProbeOutcomes', {
-      outcomes: {}
-    })
+    const { outcomes, push } = build()
+    outcomes.publish()
+    expect(push).toHaveBeenCalledWith('signInProbeOutcomes', { outcomes: {} })
   })
 })
 
-describe('registerSignInProbeOutcomesHandler', () => {
-  const registrations = () =>
-    addHandlerMock.mock.calls.filter(
-      (call) => call[0] === 'getSignInProbeOutcomes'
-    )
-
+describe('registerHandler', () => {
   it('registers getSignInProbeOutcomes once, however many times it is called', () => {
-    registerSignInProbeOutcomesHandler()
-    registerSignInProbeOutcomesHandler()
-    expect(registrations()).toHaveLength(1)
+    const { outcomes, ipc } = build()
+    const handle = jest.spyOn(ipc, 'handle')
+    outcomes.registerHandler()
+    outcomes.registerHandler()
+    expect(handle).toHaveBeenCalledTimes(1)
+    expect(handle.mock.calls[0]?.[0]).toBe('getSignInProbeOutcomes')
   })
 
   it('the registered handler returns the current map and starts nothing', () => {
-    registerSignInProbeOutcomesHandler()
-    recordSignInProbeOutcome('nile', 'expired')
-    sendMock.mockClear()
+    const { outcomes, ipc, push } = build()
+    outcomes.registerHandler()
+    outcomes.record('nile', 'expired')
 
-    expect(registrations()).toHaveLength(1)
-    const handler = registrations()[0][1] as () => unknown
+    const handler = ipc
+      .handlerMap()
+      .get('getSignInProbeOutcomes') as () => unknown
     expect(handler()).toEqual({ nile: 'expired' })
-    expect(sendMock).not.toHaveBeenCalled()
-    expect(addHandlerMock).toHaveBeenCalledTimes(1)
+    expect(push).not.toHaveBeenCalled()
   })
 
-  it('the registered handler returns a copy, not the module map', () => {
-    registerSignInProbeOutcomesHandler()
-    recordSignInProbeOutcome('nile', 'expired')
-    expect(registrations()).toHaveLength(1)
-    const handler = registrations()[0][1] as () => Record<string, string>
+  it('the registered handler returns a copy, not the instance map', () => {
+    const { outcomes, ipc } = build()
+    outcomes.registerHandler()
+    outcomes.record('nile', 'expired')
+    const handler = ipc
+      .handlerMap()
+      .get('getSignInProbeOutcomes') as () => Record<string, string>
     const result = handler()
     result.nile = 'healthy'
-    expect(getSignInProbeOutcomes()).toEqual({ nile: 'expired' })
+    expect(outcomes.get()).toEqual({ nile: 'expired' })
   })
 })
 
 describe('noteSignInSucceeded / noteSignedOut (D-03: no probe, no keyring read)', () => {
   it('noteSignInSucceeded bumps the epoch, records healthy and publishes once', () => {
-    const before = captureSignInEpoch('legendary')
+    const { outcomes, epochs, push } = build()
+    const before = epochs.capture('legendary')
 
-    noteSignInSucceeded('legendary')
+    outcomes.noteSignInSucceeded('legendary')
 
-    expect(isSignInEpochCurrent('legendary', before)).toBe(false)
-    expect(getSignInProbeOutcomes()).toEqual({ legendary: 'healthy' })
-    expect(sendMock).toHaveBeenCalledTimes(1)
-    expect(sendMock).toHaveBeenCalledWith('signInProbeOutcomes', {
+    expect(epochs.isCurrent('legendary', before)).toBe(false)
+    expect(outcomes.get()).toEqual({ legendary: 'healthy' })
+    expect(push).toHaveBeenCalledTimes(1)
+    expect(push).toHaveBeenCalledWith('signInProbeOutcomes', {
       outcomes: { legendary: 'healthy' }
     })
   })
 
   it('noteSignInSucceeded replaces a stale expired outcome with healthy', () => {
-    recordSignInProbeOutcome('legendary', 'expired')
-    noteSignInSucceeded('legendary')
-    expect(getSignInProbeOutcomes()).toEqual({ legendary: 'healthy' })
+    const { outcomes } = build()
+    outcomes.record('legendary', 'expired')
+    outcomes.noteSignInSucceeded('legendary')
+    expect(outcomes.get()).toEqual({ legendary: 'healthy' })
   })
 
   it('noteSignedOut bumps the epoch, drops the entry and publishes once', () => {
-    recordSignInProbeOutcome('gog', 'healthy')
-    const before = captureSignInEpoch('gog')
+    const { outcomes, epochs, push } = build()
+    outcomes.record('gog', 'healthy')
+    const before = epochs.capture('gog')
 
-    noteSignedOut('gog')
+    outcomes.noteSignedOut('gog')
 
-    expect(isSignInEpochCurrent('gog', before)).toBe(false)
-    expect(getSignInProbeOutcomes()).toEqual({})
-    expect(sendMock).toHaveBeenCalledTimes(1)
-    expect(sendMock).toHaveBeenCalledWith('signInProbeOutcomes', {
-      outcomes: {}
-    })
+    expect(epochs.isCurrent('gog', before)).toBe(false)
+    expect(outcomes.get()).toEqual({})
+    expect(push).toHaveBeenCalledTimes(1)
+    expect(push).toHaveBeenCalledWith('signInProbeOutcomes', { outcomes: {} })
+  })
+
+  it('a bump through one store does not move another store epoch', () => {
+    const { outcomes, epochs } = build()
+    const nile = epochs.capture('nile')
+    outcomes.noteSignInSucceeded('gog')
+    expect(epochs.isCurrent('nile', nile)).toBe(true)
   })
 })
 
@@ -187,12 +198,12 @@ describe('outcomes.ts source gates', () => {
   it('the getSignInProbeOutcomes handler body is a pure getter (T-49-11)', () => {
     const source = read('outcomes.ts')
     const match =
-      /addHandler\(\s*'getSignInProbeOutcomes',\s*\(\)\s*=>\s*([^)]*\(\))\s*\)/.exec(
+      /handleTyped\(\s*deps\.ipc,\s*'getSignInProbeOutcomes',\s*\(\)\s*=>\s*([^)]*\(\))\s*\)/.exec(
         source
       )
     expect(match).not.toBeNull()
     const identifiers = (match?.[1] ?? '').match(/[A-Za-z_$][\w$]*/g)
-    expect(identifiers).toEqual(['getSignInProbeOutcomes'])
+    expect(identifiers).toEqual(['get'])
   })
 
   it('outcomes.ts and sessionEpoch.ts spawn nothing and create no timer', () => {

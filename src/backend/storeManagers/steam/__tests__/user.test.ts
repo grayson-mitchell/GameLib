@@ -171,13 +171,21 @@ jest.mock('../anonymousClient', () => ({
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
 import { SteamUser, type SteamUserBoundDeps } from '../user'
 import type { SteamStoresDeps } from '../library/installRoot'
+import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
 
+// One sign-in owner per case (D-05, D-66.3-13: no reset hooks); `steamDeps` reads it at call time.
+let signInProbe: TestSignInProbe
 const steamDeps = {
-  stores: { steam: { configStore: mockConfigStore } }
-} as unknown as SteamStoresDeps
+  stores: { steam: { configStore: mockConfigStore } },
+  get signIn() {
+    return signInProbe
+  }
+} as unknown as SteamStoresDeps & SignInNoteDeps
 beforeEach(() => {
+  signInProbe = createTestSignInProbe()
   SteamUser.bindStores({
     ...steamDeps,
+    signIn: signInProbe,
     macSteamOffline:
       jest.requireMock<NonNullable<SteamUserBoundDeps['macSteamOffline']>>(
         '../macSteamOffline'
@@ -198,10 +206,9 @@ import { logInfo, logWarning, logError } from 'backend/logger'
 import { setTokenStore, getTokenStore, TokenStore } from '../tokenStore'
 import { sendFrontendMessage } from 'backend/ipc'
 import {
-  __resetSignInEpochsForTests,
-  bumpSignInEpoch
-} from 'backend/signInProbe/sessionEpoch'
-import { __resetSignInProbeOutcomesForTests } from 'backend/signInProbe/outcomes'
+  createTestSignInProbe,
+  type TestSignInProbe
+} from 'backend/testUtils/testSignInProbe'
 import { defined } from './fixtures/indexed'
 
 // Lets every pending microtask chain (wrap -> logon -> lease -> persona) settle.
@@ -1574,8 +1581,6 @@ describe('SteamUser', () => {
   // `applySignInVerdict` the probe pass uses, so the D-19 expired row renders
   // and `resolveSteamSyncIndicator` suppresses the banner.
   describe('ensureConnected() — a CM credential refusal reaches the sign-in surface (quick 261011-rj0)', () => {
-    const sendMock = sendFrontendMessage as unknown as jest.Mock
-
     const stageStoredToken = (extra: Record<string, unknown> = {}) =>
       mockConfigStore.get_nodefault.mockImplementation((key: string) => {
         if (key === 'isLoggedIn') return true
@@ -1606,21 +1611,20 @@ describe('SteamUser', () => {
         ([key]: [string]) => key === 'credentialsMissing'
       )
     const outcomePublishes = () =>
-      sendMock.mock.calls.filter(
-        ([channel]) => channel === 'signInProbeOutcomes'
-      )
+      signInProbe.pushed.map((outcomes) => [
+        'signInProbeOutcomes',
+        { outcomes }
+      ])
 
     const savedSteamID = mockSteamUserInstance.steamID
 
     beforeEach(async () => {
       await SteamUser.logout()
-      __resetSignInEpochsForTests()
-      __resetSignInProbeOutcomesForTests()
       // logout() itself deletes credentialsMissing and publishes a sign-out;
       // start every case from a clean ledger so only ensureConnected() counts.
       mockConfigStore.set.mockClear()
       mockConfigStore.delete.mockClear()
-      sendMock.mockClear()
+      signInProbe.pushed.length = 0
       mockSteamUserInstance.steamID = null
     })
 
@@ -1680,7 +1684,7 @@ describe('SteamUser', () => {
       mockSteamUserInstance.logOn.mockImplementation(() => {
         // The fresh sign-in lands first (noteSignInSucceeded bumps the epoch),
         // then the OLD attempt's refusal arrives.
-        bumpSignInEpoch('steam')
+        signInProbe.epochs.bump('steam')
         process.nextTick(() => steamUserOnHandlers['error']?.(accessDenied))
       })
 

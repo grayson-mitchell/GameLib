@@ -5,7 +5,7 @@
  *
  * Registered set = the union of
  *   - runtime registries after `import('backend/sidecar/handlers')` and
- *     `registerSignInProbeOutcomesHandler()`;
+ *     `signInProbe.outcomes.registerHandler()`;
  *   - a static scan of non-test `src/backend/**` for `ipcMain.handle/on/once`, `addHandler`,
  *     `addListener`, `addTestOnlyListener` (catches bootstrap-time registrations -- handleProtocolUrl,
  *     the online monitor -- and CI=e2e-only TestSync channels, none of which importing the
@@ -30,7 +30,6 @@ import {
   collidingPushSchemas,
   pushSchemaFor
 } from 'common/types/ipc/channelSchemas'
-import { registerSignInProbeOutcomesHandler } from 'backend/signInProbe/outcomes'
 
 type Bucket = 'invoke' | 'send' | 'testOnly' | 'push' | 'local'
 
@@ -109,7 +108,7 @@ async function registered(): Promise<{
   const { registerHandlers } = await import('backend/sidecar/handlers')
   const services = createTestServices()
   registerHandlers({ log: createCaptureLog(), services })
-  registerSignInProbeOutcomesHandler()
+  services.signInProbe.outcomes.registerHandler()
   const scan = staticScan()
   // Registrations converted to the injected registry (66.3-09 on) write into the test host's
   // registry, not the shim's; the rest still reach the shim's.

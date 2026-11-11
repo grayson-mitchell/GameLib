@@ -76,10 +76,17 @@ jest.mock('backend/ipc', () => ({
 // ── sign-in outcome epoch hooks (Phase 49, 49-06) ──────────────────────────
 const mockNoteSignInSucceeded = jest.fn()
 const mockNoteSignedOut = jest.fn()
-jest.mock('backend/signInProbe/outcomes', () => ({
-  noteSignInSucceeded: (...args: unknown[]) => mockNoteSignInSucceeded(...args),
-  noteSignedOut: (...args: unknown[]) => mockNoteSignedOut(...args)
-}))
+// The sign-in owner the Humble holder carries (66.3-13): stand-ins that record the notes.
+const mockSignIn = {
+  outcomes: {
+    noteSignInSucceeded: (...args: unknown[]) =>
+      mockNoteSignInSucceeded(...args),
+    noteSignedOut: (...args: unknown[]) => mockNoteSignedOut(...args),
+    record: jest.fn(),
+    publish: jest.fn()
+  },
+  epochs: { capture: () => 0, isCurrent: () => true, bump: jest.fn() }
+}
 
 // ── stores mock ───────────────────────────────────────────────────────
 const mockConfigStore = {
@@ -102,6 +109,7 @@ const mockHumbleLibraryStore = { clear: jest.fn() }
 const mockHumbleSyncStore = { clear: jest.fn() }
 const mockHumbleRevealedStore = { clear: jest.fn() }
 bindHumbleStores({
+  signIn: mockSignIn as never,
   stores: {
     humble: {
       configStore: mockConfigStore,

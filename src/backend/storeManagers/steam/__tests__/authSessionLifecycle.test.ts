@@ -58,12 +58,16 @@ const mockApplySignInVerdict = jest.fn()
 jest.mock('backend/signInProbe/verdict', () => ({
   applySignInVerdict: (...args: unknown[]) => mockApplySignInVerdict(...args)
 }))
-jest.mock('backend/signInProbe/outcomes', () => ({
-  noteSignInSucceeded: jest.fn(),
-  noteSignedOut: jest.fn(),
-  publishSignInProbeOutcomes: jest.fn(),
-  recordSignInProbeOutcome: jest.fn()
-}))
+// The sign-in owner SteamUser reads through its bound slice (66.3-13): inert stand-ins.
+const mockSignIn = {
+  outcomes: {
+    noteSignInSucceeded: jest.fn(),
+    noteSignedOut: jest.fn(),
+    publish: jest.fn(),
+    record: jest.fn()
+  },
+  epochs: { capture: () => 0, isCurrent: () => true, bump: jest.fn() }
+}
 
 jest.mock('steam-session', () => ({
   LoginSession: jest.fn(),
@@ -144,6 +148,7 @@ import { SteamUser } from '../user'
 
 // SteamUser reads its config store through the bound slice (66.1-18).
 SteamUser.bindStores({
+  signIn: mockSignIn,
   stores: { steam: { configStore: mockConfigStore } },
   macSteamOffline: jest.requireMock('../macSteamOffline')
 } as never)

@@ -53,12 +53,14 @@ jest.mock('backend/constants/environment', () => {
 })
 
 import { logWarning, logInfo } from 'backend/logger'
+import { createTestSignInProbe } from 'backend/testUtils/testSignInProbe'
 import { NileUser } from '../user'
 import type { NileUserDeps } from '../user'
 import type { ClearCacheDeps } from 'backend/utils'
 
 // `clearCache` is mocked in this file, so only the nile config store is read.
 const clearDeps = {
+  signIn: createTestSignInProbe(),
   stores: {
     nile: jest.requireMock<Stores['nile']>('backend/storeManagers/nile/stores')
   },

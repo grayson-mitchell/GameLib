@@ -17,33 +17,30 @@
  */
 import type { SignInStore } from 'common/signInState'
 
-const epochs: Record<SignInStore, number> = {
-  legendary: 0,
-  gog: 0,
-  nile: 0,
-  humble: 0,
-  steam: 0
+export interface SignInEpochs {
+  capture(store: SignInStore): number
+  isCurrent(store: SignInStore, epoch: number): boolean
+  bump(store: SignInStore): void
 }
 
-export function captureSignInEpoch(store: SignInStore): number {
-  return epochs[store]
-}
-
-export function isSignInEpochCurrent(
-  store: SignInStore,
-  epoch: number
-): boolean {
-  return epochs[store] === epoch
-}
-
-export function bumpSignInEpoch(store: SignInStore): void {
-  epochs[store] += 1
-}
-
-export function __resetSignInEpochsForTests(): void {
-  epochs.legendary = 0
-  epochs.gog = 0
-  epochs.nile = 0
-  epochs.humble = 0
-  epochs.steam = 0
+/**
+ * One instance per boot (D-05, D-66.3-13), shared by every store's user module, the probe pass and
+ * the verdict, so a capture taken by one is fenced by a bump from another. Two instances never
+ * share counters.
+ */
+export function createSignInEpochs(): SignInEpochs {
+  const epochs: Record<SignInStore, number> = {
+    legendary: 0,
+    gog: 0,
+    nile: 0,
+    humble: 0,
+    steam: 0
+  }
+  return {
+    capture: (store) => epochs[store],
+    isCurrent: (store, epoch) => epochs[store] === epoch,
+    bump: (store) => {
+      epochs[store] += 1
+    }
+  }
 }

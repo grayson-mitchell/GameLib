@@ -37,7 +37,7 @@ import { sendFrontendMessage } from 'backend/ipc'
 import { logInfo, LogPrefix } from 'backend/logger'
 import type { Stores } from 'backend/services/types'
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
-import { isSignInEpochCurrent } from './sessionEpoch'
+import type { SignInEpochs } from './sessionEpoch'
 
 /**
  * The store family a verdict reads and writes (66.1, R3). `SignInStore` names are
@@ -45,6 +45,8 @@ import { isSignInEpochCurrent } from './sessionEpoch'
  */
 export interface SignInVerdictDeps<S extends SignInStore = SignInStore> {
   stores: Pick<Stores, S>
+  /** The boot's shared epoch fence (D-66.3-13); the verdict only reads it. */
+  epochs: Pick<SignInEpochs, 'isCurrent'>
 }
 
 export type SignInVerdictResult = 'latched' | 'cleared' | 'unchanged' | 'stale'
@@ -113,7 +115,7 @@ function decide<S extends SignInStore>(
   outcome: SignInProbeOutcome,
   epochAtStart: number
 ): SignInVerdictResult {
-  if (!isSignInEpochCurrent(store, epochAtStart)) {
+  if (!deps.epochs.isCurrent(store, epochAtStart)) {
     return 'stale'
   }
   if (outcome === 'unknown') {

@@ -1157,7 +1157,15 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       const { bindHumbleStores } = require('../../humble/humbleStores') as {
         bindHumbleStores: (deps: never) => void
       }
-      bindHumbleStores({ stores: { humble: realStores, steam: {} } } as never)
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { createTestSignInProbe } =
+        require('backend/testUtils/testSignInProbe') as {
+          createTestSignInProbe: () => unknown
+        }
+      bindHumbleStores({
+        stores: { humble: realStores, steam: {} },
+        signIn: createTestSignInProbe()
+      } as never)
 
       realStores.configStore.set('sessionCookie', 'FAKE-D05-COOKIE-VALUE')
       realStores.humbleLibraryStore.set('fake-order', { keys: [] })

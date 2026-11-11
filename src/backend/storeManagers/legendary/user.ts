@@ -10,10 +10,7 @@ import { LegendaryCommand } from './commands'
 import { NonEmptyString } from './commands/base'
 import { isMac } from 'backend/constants/environment'
 import { legendaryUserInfo } from './constants'
-import {
-  noteSignedOut,
-  noteSignInSucceeded
-} from 'backend/signInProbe/outcomes'
+import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
 import {
   getLoginWindowSeamOrThrow,
   classifyCookieRead,
@@ -118,7 +115,7 @@ export interface LegendaryUserInfoDeps {
 
 /** What `login` / `logout` need (R3): the legendary manager, its config store and kvs. */
 export interface LegendaryUserDeps
-  extends LegendaryUserInfoDeps, DialogBoxDeps {
+  extends LegendaryUserInfoDeps, DialogBoxDeps, SignInNoteDeps {
   appInfo: Pick<AppInfo, 'userAgentFallback'>
   libraryManagers: Pick<ManagerDeps['libraryManagers'], 'legendary'>
   stores: LegendaryUserInfoDeps['stores'] & {
@@ -165,7 +162,7 @@ export class LegendaryUser {
       // flag clears and the fence moves. This is the one Epic sign-in success
       // site: legendary `auth` is only ever run with `--code` here.
       deps.stores.legendary.legendaryConfigStore.delete('expired')
-      noteSignInSucceeded('legendary')
+      deps.signIn.outcomes.noteSignInSucceeded('legendary')
 
       const userInfo = this.getUserInfo(deps)
       return { status: 'done', data: userInfo }
@@ -708,7 +705,7 @@ export class LegendaryUser {
     // Phase 49 (R2): sign-out clears the expiry flag and fences any probe that
     // began before it, so a late verdict cannot re-latch a signed-out store.
     deps.stores.legendary.legendaryConfigStore.delete('expired')
-    noteSignedOut('legendary')
+    deps.signIn.outcomes.noteSignedOut('legendary')
 
     // Phase 40 CR-03: gated on `!res.abort`. On abort the app is exiting --
     // the renderer that would observe this rejection is being torn down, so

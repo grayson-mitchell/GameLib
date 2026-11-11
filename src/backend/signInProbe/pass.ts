@@ -65,17 +65,14 @@ import { HumbleUser } from 'backend/humble/user'
 import { SteamUser } from 'backend/storeManagers/steam/user'
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
 import { SIGN_IN_STORES } from 'common/signInState'
-import {
-  recordSignInProbeOutcome,
-  publishSignInProbeOutcomes
-} from './outcomes'
+import type { SignInProbeOutcomes } from './outcomes'
 import {
   probeGogSession,
   probeLegendarySession,
   probeNileSession,
   SIGN_IN_PROBE_ABORT_IDS
 } from './runnerProbes'
-import { captureSignInEpoch } from './sessionEpoch'
+import type { SignInEpochs } from './sessionEpoch'
 import { applySignInVerdict } from './verdict'
 import type { SignInVerdictDeps, SignInVerdictResult } from './verdict'
 import type { ManagerDeps, Stores } from 'backend/services/types'
@@ -100,6 +97,15 @@ export interface SignInProbePassDeps {
   registrations: Record<SignInStore, SignInProbeRegistration>
   /** The five store families the verdict reads and writes. */
   stores: SignInVerdictDeps['stores']
+  /** The boot's shared epoch fence and outcome map (D-66.3-13). */
+  epochs: Pick<SignInEpochs, 'capture' | 'isCurrent'>
+  outcomes: Pick<SignInProbeOutcomes, 'record' | 'publish'>
+}
+
+/** The collaborators `createSignInProbePass` is built over, one pair per boot. */
+export interface SignInProbePassCollaborators {
+  epochs: SignInProbePassDeps['epochs']
+  outcomes: SignInProbePassDeps['outcomes']
 }
 
 /** What the real registrations read: three managers and the five families (66.1, R3). */
@@ -117,7 +123,8 @@ export interface SignInProbeDeps {
 }
 
 export function createSignInProbePassDeps(
-  deps: SignInProbeDeps
+  deps: SignInProbeDeps,
+  collaborators: SignInProbePassCollaborators
 ): SignInProbePassDeps {
   const gogUserDeps = {
     appInfo: deps.appInfo,
@@ -127,6 +134,8 @@ export function createSignInProbePassDeps(
   }
   return {
     stores: deps.stores,
+    epochs: collaborators.epochs,
+    outcomes: collaborators.outcomes,
     registrations: {
       legendary: {
         isLoggedIn: () => Boolean(LegendaryUser.isLoggedIn()),
@@ -239,7 +248,7 @@ export async function runSignInProbePass(
       const registration = deps.registrations[store]
       // Captured before the probe starts: a sign-in that completes while it is
       // in flight moves the epoch and the verdict is refused (T-49-10).
-      const epoch = captureSignInEpoch(store)
+      const epoch = deps.epochs.capture(store)
       const startedAt = Date.now()
 
       const outcome = await boundedSignInProbe(registration.probe, () => {
@@ -263,12 +272,12 @@ export async function runSignInProbePass(
       if (result === 'stale') {
         return `${store}:stale`
       }
-      recordSignInProbeOutcome(store, outcome)
+      deps.outcomes.record(store, outcome)
       // Publish per-store, immediately: a fast store's own verdict must reach
       // the renderer without waiting for slower siblings in the same pass
       // (F-49-R1-2 -- a stale Library sign-in row persisted ~70s behind a
       // once-per-pass publish gated on the slowest probe).
-      publishSignInProbeOutcomes()
+      deps.outcomes.publish()
       return `${store}:${outcome}`
     })
   )
@@ -279,90 +288,103 @@ export async function runSignInProbePass(
   )
 }
 
-let passInFlight = false
-let rerunPending = false
-let started = false
-let lastStatus: string | undefined
-let configuredDeps: SignInProbePassDeps | undefined
+export interface SignInProbePass {
+  /**
+   * Single-flight request. While a pass is in flight this only sets a flag; the pass runs once more
+   * when it settles, however many requests arrived.
+   */
+  request(deps?: SignInProbePassDeps): void
+  /**
+   * Registration only: one connectivity listener and, if already online, one `unref()`'d immediate.
+   * Called once from `init()` after the READY write.
+   *
+   * Under jest it does nothing unless `allowInTestWorker` is set, because many suites call `init()`
+   * with logged-in fixtures and must never run real probes (the Block C precedent).
+   */
+  start(
+    slice: SignInProbeDeps,
+    options?: { allowInTestWorker?: boolean; deps?: SignInProbePassDeps }
+  ): void
+}
 
 /**
- * Single-flight request. While a pass is in flight this only sets a flag; the
- * pass runs once more when it settles, however many requests arrived.
+ * One pass owner per boot (D-05, D-66.3-13). passInFlight / rerunPending / started / lastStatus /
+ * configuredDeps are closure fields, so two instances never share a single-flight latch.
  */
-export function requestSignInProbePass(
-  deps: SignInProbePassDeps | undefined = configuredDeps
-): void {
-  // Nothing can run before `startSignInProbePass` has built the deps. Callers can fire
-  // early (a sign-in event ahead of the boot step), so this stays a no-op, but a loud one:
-  // a silent drop made a lost request look like a pass that found nothing (C-WR-5).
-  if (!deps) {
-    logWarning(
-      '[signInProbe] requestSignInProbePass() before the boot step started the pass; ignored',
-      LogPrefix.Backend
-    )
-    return
+export function createSignInProbePass(
+  collaborators: SignInProbePassCollaborators
+): SignInProbePass {
+  let passInFlight = false
+  let rerunPending = false
+  let started = false
+  let lastStatus: string | undefined
+  let configuredDeps: SignInProbePassDeps | undefined
+
+  function request(
+    deps: SignInProbePassDeps | undefined = configuredDeps
+  ): void {
+    // Nothing can run before `start` has built the deps. Callers can fire early (a sign-in event
+    // ahead of the boot step), so this stays a no-op, but a loud one: a silent drop made a lost
+    // request look like a pass that found nothing (C-WR-5).
+    if (!deps) {
+      logWarning(
+        '[signInProbe] requestSignInProbePass() before the boot step started the pass; ignored',
+        LogPrefix.Backend
+      )
+      return
+    }
+    if (passInFlight) {
+      rerunPending = true
+      return
+    }
+    passInFlight = true
+    void runSignInProbePass(deps)
+      .catch(() => {
+        // Never reject out of a fire-and-forget pass; per-probe failures are
+        // already `unknown`.
+      })
+      .finally(() => {
+        passInFlight = false
+        if (rerunPending) {
+          rerunPending = false
+          request(deps)
+        }
+      })
   }
-  if (passInFlight) {
-    rerunPending = true
-    return
-  }
-  passInFlight = true
-  void runSignInProbePass(deps)
-    .catch(() => {
-      // Never reject out of a fire-and-forget pass; per-probe failures are
-      // already `unknown`.
-    })
-    .finally(() => {
-      passInFlight = false
-      if (rerunPending) {
-        rerunPending = false
-        requestSignInProbePass(deps)
+
+  function start(
+    slice: SignInProbeDeps,
+    options: { allowInTestWorker?: boolean; deps?: SignInProbePassDeps } = {}
+  ): void {
+    if (
+      process.env.JEST_WORKER_ID !== undefined &&
+      !options.allowInTestWorker
+    ) {
+      return
+    }
+    if (started) {
+      return
+    }
+    started = true
+    configuredDeps =
+      options.deps ?? createSignInProbePassDeps(slice, collaborators)
+    const { isOnline, onConnectivityChange } = slice.onlineMonitor
+    lastStatus = isOnline() ? 'online' : 'offline'
+
+    // D-03: only a non-online -> online EDGE starts a pass. A repeated `online`
+    // is not an edge (RESEARCH Pitfall 7).
+    onConnectivityChange((status) => {
+      const edge = status === 'online' && lastStatus !== 'online'
+      lastStatus = status
+      if (edge) {
+        request()
       }
     })
-}
 
-/**
- * Registration only: one connectivity listener and, if already online, one
- * `unref()`'d immediate. Called once from `init()` after the READY write.
- *
- * Under jest it does nothing unless `allowInTestWorker` is set, because many
- * suites call `init()` with logged-in fixtures and must never run real probes
- * (the Block C precedent).
- */
-export function startSignInProbePass(
-  slice: SignInProbeDeps,
-  options: { allowInTestWorker?: boolean; deps?: SignInProbePassDeps } = {}
-): void {
-  if (process.env.JEST_WORKER_ID !== undefined && !options.allowInTestWorker) {
-    return
-  }
-  if (started) {
-    return
-  }
-  started = true
-  configuredDeps = options.deps ?? createSignInProbePassDeps(slice)
-  const { isOnline, onConnectivityChange } = slice.onlineMonitor
-  lastStatus = isOnline() ? 'online' : 'offline'
-
-  // D-03: only a non-online -> online EDGE starts a pass. A repeated `online`
-  // is not an edge (RESEARCH Pitfall 7).
-  onConnectivityChange((status) => {
-    const edge = status === 'online' && lastStatus !== 'online'
-    lastStatus = status
-    if (edge) {
-      requestSignInProbePass()
+    if (isOnline()) {
+      setImmediate(() => request()).unref?.()
     }
-  })
-
-  if (isOnline()) {
-    setImmediate(() => requestSignInProbePass()).unref?.()
   }
-}
 
-export function __resetSignInProbePassForTests(): void {
-  passInFlight = false
-  rerunPending = false
-  started = false
-  lastStatus = undefined
-  configuredDeps = undefined
+  return { request, start }
 }

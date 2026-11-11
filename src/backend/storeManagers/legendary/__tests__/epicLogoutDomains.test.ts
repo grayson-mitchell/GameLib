@@ -100,7 +100,13 @@ const mockConfigStore = {
 }
 
 const mockRunRunnerCommand = jest.fn()
+let probeInstance: ReturnType<typeof createTestSignInProbe> | undefined
+const signInProbe = () => (probeInstance ??= createTestSignInProbe())
 const deps = {
+  // Read at call time: the import below sits after the jest.mock block this literal precedes.
+  get signIn() {
+    return signInProbe()
+  },
   libraryManagers: {
     legendary: {
       runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args)
@@ -130,6 +136,7 @@ jest.mock('../../../humble/userAgent', () => ({
 }))
 
 import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
+import { createTestSignInProbe } from 'backend/testUtils/testSignInProbe'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { LegendaryUser } from '../user'

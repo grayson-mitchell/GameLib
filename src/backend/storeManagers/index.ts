@@ -158,6 +158,7 @@ export interface CreateStoreManagersDeps {
   imageTools: ManagerDeps['imageTools']
   onlineMonitor: ManagerDeps['onlineMonitor']
   engineState: ManagerDeps['engineState']
+  signIn: ManagerDeps['signIn']
 }
 
 /**
@@ -192,7 +193,8 @@ export function createStoreManagers(
     appState: deps.appState,
     imageTools: deps.imageTools,
     onlineMonitor: deps.onlineMonitor,
-    engineState: deps.engineState
+    engineState: deps.engineState,
+    signIn: deps.signIn
   }
   const launchHooks = buildLaunchHooks(managerDeps)
   const launcher = createLauncher({

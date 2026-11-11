@@ -1,8 +1,10 @@
-import type { Stores } from 'backend/services/types'
+import type { ManagerDeps, Stores } from 'backend/services/types'
 
 /** The store families the Humble integration reads (66.1, R1). */
 export interface HumbleStoresDeps {
   stores: Pick<Stores, 'humble' | 'steam'>
+  /** The boot-owned sign-in outcome writer (D-66.3-13); read through `humbleSignIn()`. */
+  signIn?: ManagerDeps['signIn']
 }
 
 /**
@@ -32,3 +34,14 @@ export const humbleStores = (): Stores['humble'] => bound().stores.humble
 
 /** The steam store family (library.ts reads the steam library for the connectivity gate). */
 export const steamStores = (): Stores['steam'] => bound().stores.steam
+
+/** The boot-owned sign-in outcome notes (D-66.3-13). Throws if bound without `signIn`. */
+export const humbleSignIn = (): ManagerDeps['signIn']['outcomes'] => {
+  const signIn = bound().signIn
+  if (!signIn) {
+    throw new Error(
+      'Humble sign-in outcomes read before bindHumbleStores({ signIn })'
+    )
+  }
+  return signIn.outcomes
+}

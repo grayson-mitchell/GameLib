@@ -141,8 +141,9 @@ import gogPresence from '../storeManagers/gog/presence'
 // writers; `pass.ts` is new but only composes modules already resident (the five store users and
 // the online monitor). `pass.ts` imports from `backend/platform` only, never `electron`
 // (electronReachLedger.test.ts).
-import { startSignInProbePass } from '../signInProbe/pass'
-import { registerSignInProbeOutcomesHandler } from '../signInProbe/outcomes'
+import { createSignInProbePass } from '../signInProbe/pass'
+import { createSignInProbeOutcomes } from '../signInProbe/outcomes'
+import { createSignInEpochs } from '../signInProbe/sessionEpoch'
 // Deviation (Rule 3 — blocking, Phase 27 Plan 04): `backend/logger`'s
 // `logInfo`/`logWarning`/`logError` (called throughout the REAL Steam
 // read/action flow code Plan 04 wires up — e.g. library.ts's refresh()
@@ -262,6 +263,7 @@ export const BOOT_STEP_NAMES = [
   'outbound-http-tracking',
   'logger',
   'host-services',
+  'sign-in-probe-state',
   'stores',
   'migrations',
   'config',
@@ -392,7 +394,8 @@ function requireServices(state: BootState): BootServices {
     appInfo,
     onlineMonitor,
     engineState,
-    winetricksQueue
+    winetricksQueue,
+    signInProbe
   } = state.services
   if (
     !stores ||
@@ -413,7 +416,8 @@ function requireServices(state: BootState): BootServices {
     !appInfo ||
     !onlineMonitor ||
     !engineState ||
-    !winetricksQueue
+    !winetricksQueue ||
+    !signInProbe
   ) {
     const missing = (
       [
@@ -435,7 +439,8 @@ function requireServices(state: BootState): BootServices {
         'appInfo',
         'onlineMonitor',
         'engineState',
-        'winetricksQueue'
+        'winetricksQueue',
+        'signInProbe'
       ] as const
     ).filter((name) => !state.services[name])
     throw new Error(`boot services missing: ${missing.join(', ')}`)
@@ -459,7 +464,8 @@ function requireServices(state: BootState): BootServices {
     appInfo,
     onlineMonitor,
     engineState,
-    winetricksQueue
+    winetricksQueue,
+    signInProbe
   }
 }
 
@@ -1173,6 +1179,33 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'sign-in-probe-state',
+      // Builds the one sign-in epoch fence, outcome map and probe pass of this boot (D-05,
+      // D-66.3-13). Construction does no I/O and arms nothing: the outcome handler is registered by
+      // 'sign-in-probe-outcomes' and the pass is started by 'sign-in-probe'. Right after 'host-services'
+      // (it needs the IPC registry and push) and before 'stores', so the Steam and Humble static
+      // holders and every ManagerDeps carry the same instances.
+      run: (_ctx, _io, state) => {
+        const host = requireHost(state)
+        if (prebuilt.signInProbe) {
+          state.services.signInProbe = prebuilt.signInProbe
+          return
+        }
+        const epochs = createSignInEpochs()
+        const outcomes = createSignInProbeOutcomes({
+          ipc: host.ipc,
+          push: (channel, payload) =>
+            host.pushFrontendMessage(channel, payload),
+          epochs
+        })
+        state.services.signInProbe = {
+          epochs,
+          outcomes,
+          pass: createSignInProbePass({ epochs, outcomes })
+        }
+      }
+    },
+    {
       name: 'stores',
       // Builds every store family against ONE per-boot registry (66.1 plan 25, A3); that registry
       // is what the name-keyed store RPC handlers resolve through. Store construction opens no
@@ -1196,7 +1229,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         }
         // SteamUser is a static class with ~20 callers, so its store reads go through a bound
         // slice; bound here, before any step or handler can reach it (66.1-16/18).
-        SteamUser.bindStores({ stores: state.services.stores })
+        SteamUser.bindStores({
+          stores: state.services.stores,
+          signIn: state.services.signInProbe
+        })
         bindBottleStores({ stores: state.services.stores })
       }
     },
@@ -1302,6 +1338,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         if (!config) throw new Error('boot: config step must run first')
         SteamUser.bindStores({
           stores,
+          signIn: state.services.signInProbe,
           macSteamOffline: state.services.steamProcesses.macSteamOffline
         })
         state.services.commandRunner =
@@ -1443,7 +1480,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           appInfo,
           host,
           onlineMonitor,
-          engineState
+          engineState,
+          signInProbe
         } = state.services
         if (
           !stores ||
@@ -1456,7 +1494,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !appInfo ||
           !host ||
           !onlineMonitor ||
-          !engineState
+          !engineState ||
+          !signInProbe
         ) {
           throw new Error(
             'store-managers step ran before stores/command-runner/config/host-services'
@@ -1489,7 +1528,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           appState: host.appState,
           imageTools: host.imageTools,
           onlineMonitor,
-          engineState
+          engineState,
+          signIn: signInProbe
         })
         state.services.managers = prebuilt.managers ?? built
         state.services.launcher = prebuilt.launcher ?? built.launcher
@@ -1828,9 +1868,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'secret-stores',
       run: (ctx, _io, state) => {
-        const { stores, host, onlineMonitor } = requireServices(state)
+        const { stores, host, onlineMonitor, signInProbe } =
+          requireServices(state)
         bindSteamGridDbSecretDeps({ stores })
-        bindHumbleStores({ stores })
+        bindHumbleStores({ stores, signIn: signInProbe })
         bindDxmtStores({
           stores,
           runner: ctx.runner,
@@ -2161,11 +2202,11 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'sign-in-probe-outcomes',
-      run: () => {
+      run: (_ctx, _io, state) => {
         // Phase 49 plan 08 (R3) -- the sign-in probe outcomes PULL handler. Registration only, and
         // placed before the READY write so the renderer's mount-time pull is answerable the moment the
         // shell sees READY. It reads an in-memory map and starts no probe.
-        registerSignInProbeOutcomesHandler()
+        requireServices(state).signInProbe.outcomes.registerHandler()
       }
     },
     {
@@ -2183,7 +2224,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // delivery below. It creates no handle of its own beyond those the pass enumerates in its
         // exit-contract header (every timer unref()'d, spawned children aborted at the bound).
         const services = requireServices(state)
-        startSignInProbePass({
+        services.signInProbe.pass.start({
           libraryManagers: services.managers.library,
           stores: services.stores,
           appInfo: services.appInfo,

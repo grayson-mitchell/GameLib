@@ -29,6 +29,9 @@ import type { Clock, ProcessRunner } from 'backend/process/types'
 import type { OnlineMonitor } from 'backend/online_monitor'
 import type { EngineStateService } from 'backend/engine/engineState'
 import type { WinetricksQueue } from 'backend/tools/winetricksQueue'
+import type { SignInEpochs } from 'backend/signInProbe/sessionEpoch'
+import type { SignInProbeOutcomes } from 'backend/signInProbe/outcomes'
+import type { SignInProbePass } from 'backend/signInProbe/pass'
 import type { CommandRunner as CommandRunnerImpl } from 'backend/commandRunner'
 import type GOGLibraryManager from 'backend/storeManagers/gog/library'
 import type LegendaryLibraryManager from 'backend/storeManagers/legendary/library'
@@ -145,6 +148,8 @@ export interface ManagerDeps {
   imageTools: HostServices['imageTools']
   /** The boot-owned engine decision/notice state (D-66.3-12). */
   engineState: EngineStateService
+  /** The boot-owned sign-in fence and outcome map the store user modules write through (D-66.3-13). */
+  signIn: Pick<SignInProbeServices, 'epochs' | 'outcomes'>
   /** The boot-owned connectivity monitor, as the slice managers read (D-66.3-11). */
   onlineMonitor: Pick<
     OnlineMonitor,
@@ -154,6 +159,16 @@ export interface ManagerDeps {
     | 'getConnectivityStatus'
     | 'recheckConnectivity'
   >
+}
+
+/**
+ * The boot-owned sign-in probe state (D-66.3-13): one epoch fence shared by every store's user
+ * module, the outcome map the renderer reads, and the bounded boot probe pass.
+ */
+export interface SignInProbeServices {
+  epochs: SignInEpochs
+  outcomes: SignInProbeOutcomes
+  pass: SignInProbePass
 }
 
 export interface BootServices {
@@ -186,4 +201,6 @@ export interface BootServices {
   engineState: EngineStateService
   /** Built by the 'winetricks-queue' boot step, before 'register-handlers' (D-66.3-12). */
   winetricksQueue: WinetricksQueue
+  /** Built by the 'sign-in-probe-state' boot step, before 'store-managers' (D-66.3-13). */
+  signInProbe: SignInProbeServices
 }

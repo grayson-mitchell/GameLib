@@ -17,10 +17,7 @@ import type { ClearCacheDeps } from 'backend/utils'
 import { nileUserData } from './constants'
 import { isMac } from 'backend/constants/environment'
 import { getLoginWindowSeamOrThrow } from '../../humble/loginWindowSeam'
-import {
-  noteSignedOut,
-  noteSignInSucceeded
-} from 'backend/signInProbe/outcomes'
+import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
 
 /** What the CLI-driven NileUser methods need: the nile manager and the stores clearCache wipes. */
 /** The persisted-config slice the user reads and writes. */
@@ -28,9 +25,10 @@ export interface NileStoreDeps {
   stores: Pick<Stores, 'nile'>
 }
 
-export type NileUserDeps = ClearCacheDeps & {
-  libraryManagers: Pick<ManagerDeps['libraryManagers'], 'nile'>
-}
+export type NileUserDeps = ClearCacheDeps &
+  SignInNoteDeps & {
+    libraryManagers: Pick<ManagerDeps['libraryManagers'], 'nile'>
+  }
 
 // Amazon-owned APEX domain. Suffix-matching happens Rust-side in
 // `cookie_domain_matches`, so this single apex covers `www.amazon.com` (the
@@ -257,7 +255,7 @@ export class NileUser {
     // Phase 49 (R2): a completed sign-in proves the session, so the expiry flag
     // clears and the fence moves.
     deps.stores.nile.configStore.delete('expired')
-    noteSignInSucceeded('nile')
+    deps.signIn.outcomes.noteSignInSucceeded('nile')
 
     return {
       status: 'done',
@@ -293,7 +291,7 @@ export class NileUser {
     // Phase 49 (R2): sign-out clears the expiry flag and fences any probe that
     // began before it, so a late verdict cannot re-latch a signed-out store.
     deps.stores.nile.configStore.delete('expired')
-    noteSignedOut('nile')
+    deps.signIn.outcomes.noteSignedOut('nile')
 
     try {
       await clearAmazonCookiesForLogout()

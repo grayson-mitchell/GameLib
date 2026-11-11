@@ -2,9 +2,9 @@
  * Phase 49 Plan 08 (R3, A10): the sign-in probe pass is wired into `init()`
  * AFTER the READY write, and its outcomes pull handler is registered BEFORE it.
  *
- * `init()` calls `registerSignInProbeOutcomesHandler()` (registration only, so
+ * `init()` calls `signInProbe.outcomes.registerHandler()` (registration only, so
  * the renderer's mount-time pull is answerable before READY) and then, after
- * `output.write(READY_SENTINEL)`, `startSignInProbePass()` (registration only: a
+ * `output.write(READY_SENTINEL)`, `signInProbe.pass.start()` (registration only: a
  * connectivity listener and an `unref()`'d immediate). READY therefore never
  * waits on the pass.
  *
@@ -42,17 +42,30 @@ jest.mock('axios', () => ({
 const mockOrder: string[] = []
 const mockFullOrder: string[] = []
 jest.mock('../../signInProbe/pass', () => ({
-  startSignInProbePass: () => {
-    mockOrder.push('start')
-    mockFullOrder.push('start')
-  }
+  createSignInProbePass: () => ({
+    request: () => undefined,
+    start: () => {
+      mockOrder.push('start')
+      mockFullOrder.push('start')
+    }
+  })
 }))
-jest.mock('../../signInProbe/outcomes', () => ({
-  ...jest.requireActual('../../signInProbe/outcomes'),
-  registerSignInProbeOutcomesHandler: () => {
-    mockFullOrder.push('handler')
+jest.mock('../../signInProbe/outcomes', () => {
+  const actual = jest.requireActual<
+    typeof import('../../signInProbe/outcomes')
+  >('../../signInProbe/outcomes')
+  return {
+    ...actual,
+    createSignInProbeOutcomes: (
+      deps: Parameters<typeof actual.createSignInProbeOutcomes>[0]
+    ) => ({
+      ...actual.createSignInProbeOutcomes(deps),
+      registerHandler: () => {
+        mockFullOrder.push('handler')
+      }
+    })
   }
-}))
+})
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { PassThrough } from 'node:stream'

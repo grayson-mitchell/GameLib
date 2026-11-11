@@ -137,6 +137,7 @@ import {
 const services = createTestServices()
 const flowDeps = {
   ...services,
+  signIn: services.signInProbe,
   ipc: interimIpc,
   dialogs: services.host.dialogs,
   appState: services.host.appState,

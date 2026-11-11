@@ -21,8 +21,7 @@ import { GlobalConfig } from 'backend/config'
 import { configPath } from 'backend/constants/paths'
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
 import { SIGN_IN_STORES } from 'common/signInState'
-import { __resetSignInEpochsForTests } from '../sessionEpoch'
-import { __resetSignInProbeOutcomesForTests } from '../outcomes'
+import { createTestSignInProbe } from 'backend/testUtils/testSignInProbe'
 import { runSignInProbePass } from '../pass'
 import type { SignInProbePassDeps, SignInProbeRegistration } from '../pass'
 import { makeFakeSignInStores } from './fakeFlagStore'
@@ -64,7 +63,8 @@ function makeDeps(
       ...overrides[store]
     }
   }
-  return { registrations, stores: fakeVerdictStores }
+  const { epochs, outcomes } = createTestSignInProbe()
+  return { registrations, stores: fakeVerdictStores, epochs, outcomes }
 }
 
 function realpathOfNearestAncestor(target: string): string {
@@ -99,8 +99,6 @@ describe('T-49-25: a dismiss persisted during a running pass survives it', () =>
       JSON.stringify({ version: 'v0', defaultSettings: { language: 'en' } })
     )
     gogFlags.reset()
-    __resetSignInEpochsForTests()
-    __resetSignInProbeOutcomesForTests()
   })
 
   afterAll(() => {

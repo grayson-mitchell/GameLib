@@ -77,7 +77,7 @@ import { NileUser } from '../storeManagers/nile/user'
 import { isEpicServiceOffline } from '../utils'
 import { logWarning, LogPrefix } from '../logger'
 import type { NileRegisterData } from '../../common/types/nile'
-import type { StoreManagers, Stores } from '../services/types'
+import type { ManagerDeps, StoreManagers, Stores } from '../services/types'
 
 /** The slices the runner auth channels read: the library managers and the per-runner stores. */
 export interface RunnerAuthFlowDeps extends DialogBoxDeps {
@@ -87,6 +87,8 @@ export interface RunnerAuthFlowDeps extends DialogBoxDeps {
   managers: Pick<StoreManagers, 'library'>
   stores: Pick<Stores, 'gog' | 'legendary' | 'nile' | 'wikiGameInfo' | 'kvs'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
+  /** The boot-owned sign-in fence and outcome map the login/logout paths report through. */
+  signIn: ManagerDeps['signIn']
 }
 
 function logSendFailure(channel: string, error: unknown): void {
@@ -122,7 +124,8 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
     appState: deps.appState,
     stores: deps.stores,
     libraryManagers: deps.managers.library,
-    onlineMonitor: deps.onlineMonitor
+    onlineMonitor: deps.onlineMonitor,
+    signIn: deps.signIn
   })
 
   if (registered) {

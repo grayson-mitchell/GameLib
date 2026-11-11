@@ -35,6 +35,7 @@ import type { EngineServices } from '../engine/engineServices'
 import { createFakeClock } from './fakeClock'
 import { createTestOnlineMonitor } from './testOnlineMonitor'
 import { createTestEngineState } from './testEngineState'
+import { createTestSignInProbe } from './testSignInProbe'
 import type { GameSettings, Runner } from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
 import type {
@@ -200,6 +201,7 @@ export function createTestServices(
       throw new Error('unscripted quit call: handleExit')
     }
   }
+  const host = overrides.host ?? createTestHostServices()
   return {
     stores: overrides.stores ?? createTestStores(),
     storeRegistry: overrides.storeRegistry ?? createStoreRegistry(),
@@ -218,7 +220,7 @@ export function createTestServices(
     downloadQueue:
       overrides.downloadQueue ??
       unscriptedMembers<BootServices['downloadQueue']>('download queue', {}),
-    host: overrides.host ?? createTestHostServices(),
+    host,
     config: overrides.config ?? createTestGlobalConfig(),
     gameConfigs: overrides.gameConfigs ?? createTestGameConfigs(),
     paths: overrides.paths ?? createTestPaths(),
@@ -227,7 +229,12 @@ export function createTestServices(
     engineState: overrides.engineState ?? createTestEngineState(),
     winetricksQueue:
       overrides.winetricksQueue ??
-      unscriptedMembers<BootServices['winetricksQueue']>('winetricks queue', {})
+      unscriptedMembers<BootServices['winetricksQueue']>(
+        'winetricks queue',
+        {}
+      ),
+    signInProbe:
+      overrides.signInProbe ?? createTestSignInProbe({ ipc: host.ipc })
   }
 }
 
@@ -342,7 +349,8 @@ export function createTestManagerDeps(
     appState: overrides.appState ?? host.appState,
     imageTools: overrides.imageTools ?? host.imageTools,
     onlineMonitor: overrides.onlineMonitor ?? createTestOnlineMonitor(),
-    engineState: overrides.engineState ?? createTestEngineState()
+    engineState: overrides.engineState ?? createTestEngineState(),
+    signIn: overrides.signIn ?? createTestSignInProbe()
   }
 }
 

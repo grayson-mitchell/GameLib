@@ -23,6 +23,7 @@ export type ManagerDepsSource = Pick<
   | 'appInfo'
   | 'onlineMonitor'
   | 'engineState'
+  | 'signInProbe'
 >
 
 export function managerDepsFromServices(
@@ -48,6 +49,10 @@ export function managerDepsFromServices(
     appState: source.host.appState,
     imageTools: source.host.imageTools,
     onlineMonitor: source.onlineMonitor,
-    engineState: source.engineState
+    engineState: source.engineState,
+    signIn: {
+      epochs: source.signInProbe.epochs,
+      outcomes: source.signInProbe.outcomes
+    }
   }
 }

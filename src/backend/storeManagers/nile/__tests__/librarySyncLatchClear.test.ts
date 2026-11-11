@@ -13,15 +13,10 @@ import {
  * binary is spawned, which is how the isolated half of the fake-HOME
  * two-profile rule holds by construction.
  */
-import { sendFrontendMessage } from 'backend/ipc'
 import {
-  __resetSignInEpochsForTests,
-  bumpSignInEpoch
-} from 'backend/signInProbe/sessionEpoch'
-import {
-  __resetSignInProbeOutcomesForTests,
-  getSignInProbeOutcomes
-} from 'backend/signInProbe/outcomes'
+  createTestSignInProbe,
+  type TestSignInProbe
+} from 'backend/testUtils/testSignInProbe'
 import {
   NILE_LIBRARY_SYNC_SUCCESS_MARKER,
   NILE_REFRESH_FAILURE_MARKER
@@ -100,7 +95,6 @@ jest.mock('backend/humble/stores', () => ({
 }))
 
 const flag = nileConfigStore as unknown as FakeFlagStore
-const sendMock = sendFrontendMessage as unknown as jest.Mock
 
 /** F5's drive pattern: feed chunks through `onOutput`, no binary spawned. */
 function armRunner(
@@ -133,9 +127,13 @@ async function callRefreshNile(mgr: NileLibraryManager): Promise<ExecResult> {
 // hand-trimmed literal.
 const SUCCESS_CHUNK = `INFO [LIBRARY]:\t ${NILE_LIBRARY_SYNC_SUCCESS_MARKER}`
 
+/** One sign-in owner per case (D-05: no reset hooks). */
+let probe: TestSignInProbe
+
 /** Manager deps whose store families are the mocked modules above (plain fakes, no real stores). */
 function testDeps() {
   return createTestManagerDeps({
+    signIn: probe,
     stores: createTestStores({
       nile: jest.requireMock<Stores['nile']>(
         'backend/storeManagers/nile/stores'
@@ -154,8 +152,7 @@ function testDeps() {
 
 beforeEach(() => {
   flag.reset()
-  __resetSignInEpochsForTests()
-  __resetSignInProbeOutcomesForTests()
+  probe = createTestSignInProbe()
 })
 
 describe('Amazon: a successful library sync clears a latched flag (quick 261016-n7s)', () => {
@@ -168,11 +165,11 @@ describe('Amazon: a successful library sync clears a latched flag (quick 261016-
 
     expect(flag.data.has('expired')).toBe(false)
     expect(flag.deletes).toContain('expired')
-    expect(getSignInProbeOutcomes().nile).toBe('healthy')
-    expect(sendMock).toHaveBeenCalledTimes(1)
-    expect(sendMock).toHaveBeenCalledWith('signInProbeOutcomes', {
-      outcomes: expect.objectContaining({ nile: 'healthy' })
-    })
+    expect(probe.outcomes.get().nile).toBe('healthy')
+    expect(probe.pushed).toHaveLength(1)
+    expect(probe.pushed[0]).toEqual(
+      expect.objectContaining({ nile: 'healthy' })
+    )
   })
 
   it('a failed refresh (400, non-zero exit) leaves a latched flag set and never clears it', async () => {
@@ -190,7 +187,7 @@ describe('Amazon: a successful library sync clears a latched flag (quick 261016-
     // pass.ts: only a 'stale' result skips the record+publish.
     expect(flag.data.get('expired')).toBe(true)
     expect(flag.deletes).not.toContain('expired')
-    expect(getSignInProbeOutcomes().nile).toBe('unknown')
+    expect(probe.outcomes.get().nile).toBe('unknown')
   })
 
   it('an epoch bump mid-flight (a fresh sign-in landing during the spawn) makes the verdict stale: the flag is left untouched and nothing is published (T-49-10)', async () => {
@@ -202,7 +199,7 @@ describe('Amazon: a successful library sync clears a latched flag (quick 261016-
         options?.onOutput?.(SUCCESS_CHUNK, {} as never)
         // Simulates a sign-in completing while this spawn is still in flight --
         // the epoch was already captured before runRunnerCommand was called.
-        bumpSignInEpoch('nile')
+        probe.epochs.bump('nile')
         return Promise.resolve({
           stdout: '',
           stderr: '',
@@ -215,8 +212,8 @@ describe('Amazon: a successful library sync clears a latched flag (quick 261016-
 
     expect(flag.data.get('expired')).toBe(true)
     expect(flag.deletes).not.toContain('expired')
-    expect(getSignInProbeOutcomes().nile).toBeUndefined()
-    expect(sendMock).not.toHaveBeenCalled()
+    expect(probe.outcomes.get().nile).toBeUndefined()
+    expect(probe.pushed).toHaveLength(0)
   })
 
   it('a synchronous throw inside the observer resolves cleanly, with no unhandled rejection and nothing published (F6)', async () => {
@@ -229,6 +226,6 @@ describe('Amazon: a successful library sync clears a latched flag (quick 261016-
       stderr: '',
       stdout: ''
     })
-    expect(sendMock).not.toHaveBeenCalled()
+    expect(probe.pushed).toHaveLength(0)
   })
 })

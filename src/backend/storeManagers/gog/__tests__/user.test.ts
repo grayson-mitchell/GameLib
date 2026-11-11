@@ -73,15 +73,18 @@ import axios from 'axios'
 import { logError, logWarning } from 'backend/logger'
 import { GOGUser, type GOGUserDeps } from '../user'
 import type { ClearCacheDeps } from 'backend/utils'
+import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
+import { createTestSignInProbe } from 'backend/testUtils/testSignInProbe'
 
 const deps = {
+  signIn: createTestSignInProbe(),
   appInfo: { version: '1.0.0' },
   onlineMonitor: { isOnline: () => true },
   stores: { gog: fakeGogStores },
   libraryManagers: {
     gog: { runRunnerCommand: (...a: unknown[]) => mockRunRunnerCommand(...a) }
   }
-} as unknown as GOGUserDeps & ClearCacheDeps
+} as unknown as GOGUserDeps & ClearCacheDeps & SignInNoteDeps
 
 const mockedAxiosGet = axios.get as jest.Mock
 const mockedLogWarning = logWarning as jest.Mock
