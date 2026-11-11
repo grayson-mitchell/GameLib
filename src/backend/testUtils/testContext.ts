@@ -16,7 +16,7 @@ import {
   type ScriptStep
 } from './scriptedRunner'
 
-const TEST_APP_INFO: AppInfo = {
+export const TEST_APP_INFO: AppInfo = {
   name: 'GameLib',
   version: '0.0.0-test',
   userAgentFallback: 'test-ua',

@@ -146,6 +146,15 @@ export interface CreateStoreManagersDeps {
   steamProcesses: ManagerDeps['steamProcesses']
   /** Called only when an update is enqueued (the queue is built after the managers). */
   getDownloadQueue: () => DownloadQueue
+  /** Config, paths and host slices (D-66.3-01/03), passed through to every manager's deps. */
+  config: ManagerDeps['config']
+  gameConfigs: ManagerDeps['gameConfigs']
+  paths: ManagerDeps['paths']
+  appInfo: ManagerDeps['appInfo']
+  dialogs: ManagerDeps['dialogs']
+  openExternal: ManagerDeps['openExternal']
+  notifications: ManagerDeps['notifications']
+  appState: ManagerDeps['appState']
 }
 
 /**
@@ -169,7 +178,15 @@ export function createStoreManagers(
     runner: deps.runner,
     clock: deps.clock,
     steamProcesses: deps.steamProcesses,
-    getDownloadQueue: deps.getDownloadQueue
+    getDownloadQueue: deps.getDownloadQueue,
+    config: deps.config,
+    gameConfigs: deps.gameConfigs,
+    paths: deps.paths,
+    appInfo: deps.appInfo,
+    dialogs: deps.dialogs,
+    openExternal: deps.openExternal,
+    notifications: deps.notifications,
+    appState: deps.appState
   }
   const launchHooks = buildLaunchHooks(managerDeps)
   const launcher = createLauncher({

@@ -95,20 +95,23 @@ jest.mock('backend/constants/environment', () => ({
 
 // ── backend/config mock — avoid a real on-disk config.json write while
 // still exercising the real requestAppSettings handler body ─────────────────
-jest.mock('backend/config', () => ({
-  GlobalConfig: {
-    get: jest.fn()
-  }
-}))
+jest.mock('backend/config', () => {
+  const GlobalConfig = { get: jest.fn() }
+  return { GlobalConfig, adoptGlobalConfig: () => GlobalConfig.get() }
+})
 
 // ── backend/game_config mock — avoid GameConfigV0's own on-disk
 // read/migration path while still exercising the real requestGameSettings
 // non-steam fallback branch ──────────────────────────────────────────────────
-jest.mock('backend/game_config', () => ({
-  GameConfig: {
-    get: jest.fn()
+jest.mock('backend/game_config', () => {
+  const GameConfig = { get: jest.fn() }
+  return {
+    GameConfig,
+    createGameConfigs: () => ({
+      get: (appName: string) => GameConfig.get(appName)
+    })
   }
-}))
+})
 
 // ── backend/storeManagers mock — the steam-routed branch must never
 // construct a real SteamLibraryManager/SteamGame; a plain jest.fn() proves

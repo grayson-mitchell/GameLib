@@ -8,6 +8,9 @@
  * never touches a family never builds it.
  */
 import { createTestHostServices } from './testHostServices'
+import { createTestGameConfigs, createTestGlobalConfig } from './testConfig'
+import { TEST_APP_INFO } from './testContext'
+import type { AppPaths } from '../process/context'
 import {
   createStoreRegistry,
   type StoreRegistry
@@ -213,7 +216,25 @@ export function createTestServices(
     downloadQueue:
       overrides.downloadQueue ??
       unscriptedMembers<BootServices['downloadQueue']>('download queue', {}),
-    host: overrides.host ?? createTestHostServices()
+    host: overrides.host ?? createTestHostServices(),
+    config: overrides.config ?? createTestGlobalConfig(),
+    gameConfigs: overrides.gameConfigs ?? createTestGameConfigs(),
+    paths: overrides.paths ?? createTestPaths(),
+    appInfo: overrides.appInfo ?? TEST_APP_INFO
+  }
+}
+
+/** Placeholder paths nothing reads from or creates: a suite that needs real dirs uses createTestContext. */
+function createTestPaths(): AppPaths {
+  const root = '/test-gamelib'
+  return {
+    appRoot: `${root}/app`,
+    publicDir: `${root}/app/public`,
+    userData: `${root}/userData`,
+    appData: `${root}/appData`,
+    exe: `${root}/GameLib`,
+    knownFolder: (name) =>
+      `${root}/${name === 'desktop' ? 'Desktop' : 'Documents'}`
   }
 }
 
@@ -281,6 +302,7 @@ export function createInertSteamProcesses(
 export function createTestManagerDeps(
   overrides: Partial<ManagerDeps> = {}
 ): ManagerDeps {
+  const host = createTestHostServices()
   return {
     libraryManagers: overrides.libraryManagers ?? createTestManagers().library,
     stores: overrides.stores ?? createTestStores(),
@@ -302,7 +324,15 @@ export function createTestManagerDeps(
       overrides.getDownloadQueue ??
       (() => {
         throw new Error('unscripted call: getDownloadQueue')
-      })
+      }),
+    config: overrides.config ?? createTestGlobalConfig(),
+    gameConfigs: overrides.gameConfigs ?? createTestGameConfigs(),
+    paths: overrides.paths ?? createTestPaths(),
+    appInfo: overrides.appInfo ?? TEST_APP_INFO,
+    dialogs: overrides.dialogs ?? host.dialogs,
+    openExternal: overrides.openExternal ?? host.openExternal,
+    notifications: overrides.notifications ?? host.notifications,
+    appState: overrides.appState ?? host.appState
   }
 }
 

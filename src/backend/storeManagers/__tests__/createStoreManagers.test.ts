@@ -44,6 +44,14 @@ function build(over: Partial<Parameters<typeof createStoreManagers>[0]> = {}) {
     clock: fakes.clock,
     steamProcesses: fakes.steamProcesses,
     getDownloadQueue: () => fakes.downloadQueue,
+    config: fakes.config,
+    gameConfigs: fakes.gameConfigs,
+    paths: fakes.paths,
+    appInfo: fakes.appInfo,
+    dialogs: fakes.host.dialogs,
+    openExternal: fakes.host.openExternal,
+    notifications: fakes.host.notifications,
+    appState: fakes.host.appState,
     ...over
   })
 }

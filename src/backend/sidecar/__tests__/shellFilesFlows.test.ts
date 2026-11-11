@@ -144,11 +144,10 @@ jest.mock('backend/constants/environment', () => ({
 // ── backend/config mock — avoid a real on-disk config.json write while
 // still letting registerAppShellFlows()'s own module-scope syncTrayIcon()
 // (scheduled via setImmediate at handlers.ts import time) resolve safely ────
-jest.mock('backend/config', () => ({
-  GlobalConfig: {
-    get: jest.fn()
-  }
-}))
+jest.mock('backend/config', () => {
+  const GlobalConfig = { get: jest.fn() }
+  return { GlobalConfig, adoptGlobalConfig: () => GlobalConfig.get() }
+})
 
 // ── legendary stores mock — avoids a real disk-backed CacheStore
 // construction (this repo's own "tests clobbering real store" precedent).

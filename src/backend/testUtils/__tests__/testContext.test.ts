@@ -17,13 +17,19 @@ describe('createTestContext', () => {
   it('builds every AppContext field from fakes under the fake HOME', () => {
     const t = make()
     expect(Object.keys(t.ctx).sort()).toEqual(
-      ['clock', 'log', 'paths', 'platform', 'runner'].sort()
+      ['appInfo', 'clock', 'log', 'paths', 'platform', 'runner'].sort()
     )
     expect(t.ctx.runner).toBe(t.runner)
     expect(t.ctx.clock).toBe(t.clock)
-    for (const p of Object.values(t.ctx.paths)) {
+    const { appRoot, publicDir, userData, appData, exe, knownFolder } =
+      t.ctx.paths
+    for (const p of [appRoot, publicDir, userData, appData]) {
       expect(p.startsWith(t.profile.root)).toBe(true)
       expect(existsSync(p)).toBe(true)
+    }
+    // The executable and known folders are paths only: nothing creates them.
+    for (const p of [exe, knownFolder('desktop'), knownFolder('documents')]) {
+      expect(p.startsWith(t.profile.root)).toBe(true)
     }
   })
 

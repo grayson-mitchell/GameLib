@@ -95,8 +95,8 @@ jest.mock('backend/constants/environment', () => ({
 // `.getSettings()` throws inside `init()`'s own try/catch, and `i18nReady` never gets
 // reassigned off its initial `Promise.resolve()` -- silently racing `checkRosettaInstall()`
 // ahead of a real i18next load instead of proving the fix waits for it.
-jest.mock('backend/config', () => ({
-  GlobalConfig: {
+jest.mock('backend/config', () => {
+  const GlobalConfig = {
     get: jest.fn(() => ({
       getSettings: () => ({ language: 'en' }),
       setSetting: jest.fn(),
@@ -104,7 +104,8 @@ jest.mock('backend/config', () => ({
       flush: jest.fn()
     }))
   }
-}))
+  return { GlobalConfig, adoptGlobalConfig: () => GlobalConfig.get() }
+})
 
 // ── i18next — DEFEAT Jest's project-wide automatic manual mock (see header) ────────────────
 jest.unmock('i18next')

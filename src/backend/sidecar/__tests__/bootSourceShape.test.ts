@@ -40,6 +40,7 @@ describe('bootstrap.ts source shape (D-08)', () => {
       'logger',
       'stores',
       'migrations',
+      'config',
       'command-runner',
       'store-managers',
       'i18n',

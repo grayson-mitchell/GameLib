@@ -18,6 +18,13 @@ import type { StoreLaunchHooks } from 'backend/storeManagers'
 import type { DownloadQueue } from 'backend/downloadmanager/downloadqueue'
 import type { Launcher } from 'backend/launcher'
 import type { HostServices } from 'backend/host'
+import type { Dialogs } from 'backend/host/dialogs'
+import type { OpenExternal } from 'backend/host/openExternal'
+import type { Notifications } from 'backend/host/notifications'
+import type { AppState } from 'backend/host/appState'
+import type { GlobalConfigSlice } from 'backend/config'
+import type { GameConfigs } from 'backend/game_config'
+import type { AppInfo, AppPaths } from 'backend/process/context'
 import type { Clock, ProcessRunner } from 'backend/process/types'
 import type { CommandRunner as CommandRunnerImpl } from 'backend/commandRunner'
 import type GOGLibraryManager from 'backend/storeManagers/gog/library'
@@ -122,6 +129,16 @@ export interface ManagerDeps {
    * 'download-queue' boot step, after the managers exist.
    */
   getDownloadQueue: () => DownloadQueue
+  /** The boot-built global config (D-66.3-03). */
+  config: GlobalConfigSlice
+  /** The boot-built per-game config registry (D-66.3-03). */
+  gameConfigs: GameConfigs
+  paths: AppPaths
+  appInfo: AppInfo
+  dialogs: Dialogs
+  openExternal: OpenExternal
+  notifications: Notifications
+  appState: AppState
 }
 
 export interface BootServices {
@@ -142,4 +159,10 @@ export interface BootServices {
   downloadQueue: DownloadQueue
   /** Tauri-native host services (D-66.3-01), built once by the 'host-services' boot step. */
   host: HostServices
+  /** Built once by the 'config' boot step (D-66.3-03). */
+  config: GlobalConfigSlice
+  gameConfigs: GameConfigs
+  /** ctx.paths and ctx.appInfo, carried so ManagerDeps can be assembled from services alone. */
+  paths: AppPaths
+  appInfo: AppInfo
 }

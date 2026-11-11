@@ -146,11 +146,10 @@ jest.mock('backend/constants/environment', () => ({
 // strategy: avoid a real on-disk config.json write while still exercising
 // the real isSteamNativeInstallEnabled()/checkGameUpdates() bodies against a
 // controllable settings object ───────────────────────────────────────────────
-jest.mock('backend/config', () => ({
-  GlobalConfig: {
-    get: jest.fn()
-  }
-}))
+jest.mock('backend/config', () => {
+  const GlobalConfig = { get: jest.fn() }
+  return { GlobalConfig, adoptGlobalConfig: () => GlobalConfig.get() }
+})
 
 // ── installFormIpc — quick 261030-o77: the toggle-OFF listSteamLibraryTargets
 // path asks the backend-authoritative bottle-eligibility verdict. Only that one

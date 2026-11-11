@@ -170,11 +170,10 @@ jest.mock('backend/constants/environment', () => ({
 
 // ── backend/config — avoid a real on-disk config.json write while leaving the real i18next
 // path intact (mirrors settingsFlows.test.ts's own GlobalConfig stub shape) ─────────────────
-jest.mock('backend/config', () => ({
-  GlobalConfig: {
-    get: jest.fn()
-  }
-}))
+jest.mock('backend/config', () => {
+  const GlobalConfig = { get: jest.fn() }
+  return { GlobalConfig, adoptGlobalConfig: () => GlobalConfig.get() }
+})
 
 /** Buffers newline-delimited output from a PassThrough into discrete lines. */
 function collectLines(stream: PassThrough): string[] {

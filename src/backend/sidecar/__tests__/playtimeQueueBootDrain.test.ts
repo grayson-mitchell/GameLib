@@ -137,7 +137,15 @@ function bootedWorld(opts?: {
         runner: fakes.runner,
         clock: fakes.clock,
         steamProcesses: fakes.steamProcesses,
-        getDownloadQueue: () => fakes.downloadQueue
+        getDownloadQueue: () => fakes.downloadQueue,
+        config: fakes.config,
+        gameConfigs: fakes.gameConfigs,
+        paths: fakes.paths,
+        appInfo: fakes.appInfo,
+        dialogs: fakes.host.dialogs,
+        openExternal: fakes.host.openExternal,
+        notifications: fakes.host.notifications,
+        appState: fakes.host.appState
       })
       prebuilt.managers = built
       prebuilt.launcher = built.launcher
@@ -163,10 +171,18 @@ function bootedWorld(opts?: {
         require('../bootstrap') as {
           syncQueuedPlaytimeWhenOnline: (deps: {
             managers: { library: unknown }
+            config: { getSettings: () => unknown }
           }) => void
         }
       ).syncQueuedPlaytimeWhenOnline({
-        managers: { library: gogManager ? { gog: gogManager } : {} }
+        managers: { library: gogManager ? { gog: gogManager } : {} },
+        // Read lazily so a test that spies GlobalConfig.get (or makes it throw) is honoured.
+        config: {
+          getSettings: () =>
+            (
+              require('../../config') as typeof import('../../config')
+            ).GlobalConfig.get().getSettings()
+        }
       })
   }
 }

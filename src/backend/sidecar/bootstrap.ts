@@ -149,7 +149,7 @@ import { registerSignInProbeOutcomesHandler } from '../signInProbe/outcomes'
 // real flow handler ran (discovered by Task 2's own end-to-end test). Uses
 // `initHeadless()` (added by this same deviation, `backend/logger/index.ts`)
 // rather than the real `init()` Electron's main process calls: `init()`
-// pulls in `GlobalConfig.get()` (assumes an already-initialized `userData`
+// pulls in the static global-config getter (assumes an already-initialized `userData`
 // config file — a real Electron app guarantees this, this headless process
 // does not) and fires a fire-and-forget system-info dump (shells out to
 // hardware/binary-version probes; its async chain can outlive a short-lived
@@ -168,7 +168,8 @@ import {
   getRunnerLogWriter,
   LogPrefix
 } from '../logger'
-import { GlobalConfig } from '../config'
+import { adoptGlobalConfig, type GlobalConfigSlice } from '../config'
+import { createGameConfigs } from '../game_config'
 import { resolveAppInfo } from '../host/appInfo'
 import { isPackagedSidecar } from './isPackagedSidecar'
 import { getPath } from './pathShim'
@@ -257,6 +258,7 @@ export const BOOT_STEP_NAMES = [
   'host-services',
   'stores',
   'migrations',
+  'config',
   'command-runner',
   'store-managers',
   'download-queue',
@@ -365,7 +367,11 @@ function requireServices(state: BootState): BootServices {
     spawnAsync,
     quit,
     downloadQueue,
-    host
+    host,
+    config,
+    gameConfigs,
+    paths,
+    appInfo
   } = state.services
   if (
     !stores ||
@@ -379,7 +385,11 @@ function requireServices(state: BootState): BootServices {
     !spawnAsync ||
     !quit ||
     !downloadQueue ||
-    !host
+    !host ||
+    !config ||
+    !gameConfigs ||
+    !paths ||
+    !appInfo
   ) {
     const missing = (
       [
@@ -394,7 +404,11 @@ function requireServices(state: BootState): BootServices {
         'spawnAsync',
         'quit',
         'downloadQueue',
-        'host'
+        'host',
+        'config',
+        'gameConfigs',
+        'paths',
+        'appInfo'
       ] as const
     ).filter((name) => !state.services[name])
     throw new Error(`boot services missing: ${missing.join(', ')}`)
@@ -411,7 +425,11 @@ function requireServices(state: BootState): BootServices {
     spawnAsync,
     quit,
     downloadQueue,
-    host
+    host,
+    config,
+    gameConfigs,
+    paths,
+    appInfo
   }
 }
 
@@ -694,7 +712,7 @@ export function reconcileStoreUsersWhenOnline(deps: {
  * migrations block above already refuse to rely on. Do not "simplify" this back down to fewer
  * guards.
  *
- * SETTINGS READ OUTSIDE THE CALLBACK (D5): `GlobalConfig.get().getSettings()` runs synchronously
+ * SETTINGS READ OUTSIDE THE CALLBACK (D5): `deps.config.getSettings()` runs synchronously
  * at helper-entry time, before `runOnceWhenOnline` is even called, and the `disablePlaytimeSync`
  * branch returns early. Two reasons: fidelity (the deleted `main.ts` read `settings` at
  * `whenReady()` time, not at online time), and determinism (a user toggling the setting between
@@ -735,10 +753,11 @@ export function reconcileStoreUsersWhenOnline(deps: {
  */
 export function syncQueuedPlaytimeWhenOnline(deps: {
   managers: Pick<StoreManagers, 'library'>
+  config: Pick<GlobalConfigSlice, 'getSettings'>
 }): void {
   const library = deps.managers.library
   try {
-    const settings = GlobalConfig.get().getSettings()
+    const settings = deps.config.getSettings()
     if (settings.disablePlaytimeSync) {
       // Verbatim, unprefixed -- see the doc comment above (D6).
       logDebug('Skipping playtime sync queue upload - playtime sync disabled', {
@@ -868,7 +887,7 @@ export function checkRosettaWhenMac(
  * nothing depends on it -- it is not dressed up as a constraint here.
  *
  * D-K5X-02 -- NO SETTINGS HOIST, deliberately DIFFERENT from Block G's D5. Block G hoisted
- * `GlobalConfig.get().getSettings()` to helper entry because the deleted source ITSELF read
+ * the global-config `getSettings()` read to helper entry because the deleted source ITSELF read
  * `settings` at `whenReady()` time (`main.ts:470-476`'s `if (!settings.disablePlaytimeSync)`
  * wrapper). Block H's deleted source had NO such wrapper -- `main.ts:477` was a bare
  * `runOnceWhenOnline(gogPresence.setPresence)` with zero settings access at the call site.
@@ -1179,6 +1198,24 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'config',
+      run: (ctx, _io, state) => {
+        // Placement is load-bearing: AFTER 'logger' and 'migrations', BEFORE 'command-runner' and
+        // 'i18n'. This builds the process's first-ever global-config read, and the
+        // config-version-upgrade path (config.ts:145/152) can itself call `logInfo`/`logError`
+        // synchronously, which throws while `heroicLogWriter` is unset (same ordering reason as
+        // `initOnlineMonitor()`'s and `installTokenStore()`'s placement comments below).
+        // MigrationSystem's only migration copies the legendary config folder and never writes
+        // config.json, so running after 'migrations' loses nothing. configBootOrder.test.ts pins it.
+        // Interim (66.3-04): adoptGlobalConfig / createGameConfigs return the same objects the
+        // static getters do (no split brain); plan 18 swaps them for real factories.
+        state.services.config = prebuilt.config ?? adoptGlobalConfig()
+        state.services.gameConfigs = prebuilt.gameConfigs ?? createGameConfigs()
+        state.services.paths = prebuilt.paths ?? ctx.paths
+        state.services.appInfo = prebuilt.appInfo ?? ctx.appInfo
+      }
+    },
+    {
       name: 'command-runner',
       run: (ctx, _io, state) => {
         const errorHandlerDeps: ErrorHandlerDeps = {
@@ -1235,7 +1272,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
                 state
               ).managers.library.legendary.commandToArgsArray(command),
             wine: {
-              getDefaultSettings: () => GlobalConfig.get().getSettings(),
+              getDefaultSettings: () =>
+                requireServices(state).config.getSettings(),
               // The runner built below: wineboot goes through it, not a legacy launcher function.
               verifyWinePrefix: (settings) => {
                 const { commandRunner } = state.services
@@ -1277,9 +1315,20 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       name: 'store-managers',
       run: (ctx, _io, state) => {
         const { stores, commandRunner, spawnAsync, runner } = state.services
-        if (!stores || !commandRunner || !spawnAsync || !runner) {
+        const { config, gameConfigs, paths, appInfo, host } = state.services
+        if (
+          !stores ||
+          !commandRunner ||
+          !spawnAsync ||
+          !runner ||
+          !config ||
+          !gameConfigs ||
+          !paths ||
+          !appInfo ||
+          !host
+        ) {
           throw new Error(
-            'store-managers step ran before stores/command-runner'
+            'store-managers step ran before stores/command-runner/config/host-services'
           )
         }
         // The 'download-queue' step runs after this one, so the managers reach the queue through
@@ -1298,7 +1347,15 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           runner,
           clock: ctx.clock,
           steamProcesses: requireSteamProcesses(state),
-          getDownloadQueue: () => requireServices(state).downloadQueue
+          getDownloadQueue: () => requireServices(state).downloadQueue,
+          config,
+          gameConfigs,
+          paths,
+          appInfo,
+          dialogs: host.dialogs,
+          openExternal: host.openExternal,
+          notifications: host.notifications,
+          appState: host.appState
         })
         state.services.managers = prebuilt.managers ?? built
         state.services.launcher = prebuilt.launcher ?? built.launcher
@@ -1467,13 +1524,9 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'i18n',
       run: (ctx, _io, state) => {
-        // Placement is load-bearing: must run AFTER `initLogger()` above -- `GlobalConfig.get()`
-        // below is this process's first-ever `GlobalConfig` read, and the config-version-upgrade
-        // path (config.ts:145/152) can itself call `logInfo`/`logError` synchronously, which
-        // throws while `heroicLogWriter` is unset (same ordering reason as
-        // `initOnlineMonitor()`'s and `installTokenStore()`'s placement comments below).
+        // Reads the config the 'config' step built (placement rationale lives on that step).
         try {
-          const settings = GlobalConfig.get().getSettings()
+          const settings = requireServices(state).config.getSettings()
           const localesDir = join(ctx.paths.publicDir, 'locales')
           // Loud-not-silent locale resolution (publicdir-getapppath-chunking gotcha family):
           // under the sidecar, platformApi's `app.getAppPath()` resolves to `process.cwd()`,
@@ -1909,7 +1962,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // itself never fails boot (see its own header), so no additional try/catch is needed at this
         // call site -- matches Blocks D/E/F's call site shape.
         syncQueuedPlaytimeWhenOnline({
-          managers: requireServices(state).managers
+          managers: requireServices(state).managers,
+          config: requireServices(state).config
         })
       }
     },

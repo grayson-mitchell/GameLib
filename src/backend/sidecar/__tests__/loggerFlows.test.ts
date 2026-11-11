@@ -229,11 +229,10 @@ jest.mock('backend/constants/environment', () => ({
 
 // ── backend/config — avoid a real on-disk config.json write while still
 // exercising bootstrap.ts's real i18next init (settings.language) ───────────
-jest.mock('backend/config', () => ({
-  GlobalConfig: {
-    get: jest.fn()
-  }
-}))
+jest.mock('backend/config', () => {
+  const GlobalConfig = { get: jest.fn() }
+  return { GlobalConfig, adoptGlobalConfig: () => GlobalConfig.get() }
+})
 
 // ── backend/online_monitor mock (full surface, per bootstrap.test.ts's own
 // reasoning) — deterministic isOnline()=true, no real electron `net` surface

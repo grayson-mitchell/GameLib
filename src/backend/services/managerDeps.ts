@@ -16,6 +16,11 @@ export type ManagerDepsSource = Pick<
   | 'steamProcesses'
   | 'spawnAsync'
   | 'downloadQueue'
+  | 'host'
+  | 'config'
+  | 'gameConfigs'
+  | 'paths'
+  | 'appInfo'
 >
 
 export function managerDepsFromServices(
@@ -30,6 +35,14 @@ export function managerDepsFromServices(
     runner: source.runner,
     clock: source.clock,
     steamProcesses: source.steamProcesses,
-    getDownloadQueue: () => source.downloadQueue
+    getDownloadQueue: () => source.downloadQueue,
+    config: source.config,
+    gameConfigs: source.gameConfigs,
+    paths: source.paths,
+    appInfo: source.appInfo,
+    dialogs: source.host.dialogs,
+    openExternal: source.host.openExternal,
+    notifications: source.host.notifications,
+    appState: source.host.appState
   }
 }

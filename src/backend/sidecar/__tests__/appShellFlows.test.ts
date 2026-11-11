@@ -160,11 +160,10 @@ jest.mock('backend/constants/environment', () => ({
 
 // ── backend/config mock — avoid a real on-disk config.json write while
 // still exercising the real handler bodies (themes/releases/changeLanguage) ─
-jest.mock('backend/config', () => ({
-  GlobalConfig: {
-    get: jest.fn()
-  }
-}))
+jest.mock('backend/config', () => {
+  const GlobalConfig = { get: jest.fn() }
+  return { GlobalConfig, adoptGlobalConfig: () => GlobalConfig.get() }
+})
 
 // ── i18next mock (changeLanguage's real call target) — mirrors
 // appshellModules.test.ts's own __esModule default shape ───────────────────
