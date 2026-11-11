@@ -104,11 +104,10 @@ import { installDevSecretVault } from './devSecretVault'
 // "App offline, skipping install" even when fully online. Paired with the sidecar
 // `net.isOnline()` stub (platform/index.ts) so the very first status check falls through to the
 // real `pingSites()` ping instead of pinning `'offline'` permanently.
-import {
-  initOnlineMonitor,
-  onConnectivityChange,
-  runOnceWhenOnline
-} from '../online_monitor'
+import axios from 'axios'
+import { randomUUID } from 'node:crypto'
+import { createOnlineMonitor, bindOnlineMonitorCompat } from '../online_monitor'
+import type { OnlineMonitor } from '../online_monitor'
 // Block E (todo 2026-09-06, quick-260908-fre). `grep -rn
 // "storeManagers/legendary/user\|storeManagers/gog/user" src/backend/sidecar/` confirms
 // `./handlers` (Step 2, above) already pulls both classes in transitively:
@@ -263,6 +262,7 @@ export const BOOT_STEP_NAMES = [
   'migrations',
   'config',
   'command-runner',
+  'online-monitor-owner',
   'store-managers',
   'download-queue',
   'shell-exe-receipt',
@@ -336,6 +336,9 @@ function gogPresenceDeps(state: BootState): GOGPresenceDeps {
     get appInfo() {
       return requireServices(state).appInfo
     },
+    get onlineMonitor() {
+      return requireServices(state).onlineMonitor
+    },
     stores: {
       get gog() {
         return requireServices(state).stores.gog
@@ -380,7 +383,8 @@ function requireServices(state: BootState): BootServices {
     config,
     gameConfigs,
     paths,
-    appInfo
+    appInfo,
+    onlineMonitor
   } = state.services
   if (
     !stores ||
@@ -398,7 +402,8 @@ function requireServices(state: BootState): BootServices {
     !config ||
     !gameConfigs ||
     !paths ||
-    !appInfo
+    !appInfo ||
+    !onlineMonitor
   ) {
     const missing = (
       [
@@ -417,7 +422,8 @@ function requireServices(state: BootState): BootServices {
         'config',
         'gameConfigs',
         'paths',
-        'appInfo'
+        'appInfo',
+        'onlineMonitor'
       ] as const
     ).filter((name) => !state.services[name])
     throw new Error(`boot services missing: ${missing.join(', ')}`)
@@ -438,7 +444,8 @@ function requireServices(state: BootState): BootServices {
     config,
     gameConfigs,
     paths,
-    appInfo
+    appInfo,
+    onlineMonitor
   }
 }
 
@@ -660,7 +667,9 @@ export function clearStrandedPlaytimeSyncLock(deps: {
 export function reconcileStoreUsersWhenOnline(deps: {
   kvs: Pick<Stores['kvs'], 'configStore'>
   gogUser: GOGUserDeps
+  onlineMonitor: Pick<OnlineMonitor, 'runOnceWhenOnline'>
 }): void {
+  const { runOnceWhenOnline } = deps.onlineMonitor
   const { configStore } = deps.kvs
   try {
     runOnceWhenOnline(() => {
@@ -776,7 +785,9 @@ export function reconcileStoreUsersWhenOnline(deps: {
 export function syncQueuedPlaytimeWhenOnline(deps: {
   managers: Pick<StoreManagers, 'library'>
   config: Pick<GlobalConfigSlice, 'getSettings'>
+  onlineMonitor: Pick<OnlineMonitor, 'runOnceWhenOnline'>
 }): void {
+  const { runOnceWhenOnline } = deps.onlineMonitor
   const library = deps.managers.library
   try {
     const settings = deps.config.getSettings()
@@ -966,6 +977,7 @@ export function checkRosettaWhenMac(
  * which knip cannot see.
  */
 export function setGogPresenceWhenOnline(deps: GOGPresenceDeps): void {
+  const { runOnceWhenOnline } = deps.onlineMonitor
   try {
     runOnceWhenOnline(() => {
       try {
@@ -1350,10 +1362,33 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'online-monitor-owner',
+      // Builds the one monitor of this boot (D-05). Construction does no I/O: the listeners, the
+      // handler and the first probe belong to the 'online-monitor' step (start()), whose position
+      // after rpc-server and before READY is load-bearing. Before 'store-managers' so ManagerDeps
+      // can carry the slice.
+      run: (ctx, _io, state) => {
+        const host = requireHost(state)
+        const monitor =
+          prebuilt.onlineMonitor ??
+          createOnlineMonitor({
+            clock: ctx.clock,
+            ipc: host.ipc,
+            push: (channel, payload) =>
+              host.pushFrontendMessage(channel, payload),
+            head: (url, opts) => axios.head(url, opts),
+            newEpoch: randomUUID
+          })
+        state.services.onlineMonitor = monitor
+        bindOnlineMonitorCompat(monitor)
+      }
+    },
+    {
       name: 'store-managers',
       run: (ctx, _io, state) => {
         const { stores, commandRunner, spawnAsync, runner } = state.services
-        const { config, gameConfigs, paths, appInfo, host } = state.services
+        const { config, gameConfigs, paths, appInfo, host, onlineMonitor } =
+          state.services
         if (
           !stores ||
           !commandRunner ||
@@ -1363,7 +1398,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !gameConfigs ||
           !paths ||
           !appInfo ||
-          !host
+          !host ||
+          !onlineMonitor
         ) {
           throw new Error(
             'store-managers step ran before stores/command-runner/config/host-services'
@@ -1394,7 +1430,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           openExternal: host.openExternal,
           notifications: host.notifications,
           appState: host.appState,
-          imageTools: host.imageTools
+          imageTools: host.imageTools,
+          onlineMonitor
         })
         state.services.managers = prebuilt.managers ?? built
         state.services.launcher = prebuilt.launcher ?? built.launcher
@@ -1411,16 +1448,17 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         }
         let queue = prebuilt.downloadQueue
         if (!queue) {
-          const { host, config } = state.services
-          if (!host || !config) {
+          const { host, config, onlineMonitor } = state.services
+          if (!host || !config || !onlineMonitor) {
             throw new Error(
-              'download-queue step ran before host-services/config'
+              'download-queue step ran before host-services/config/online-monitor-owner'
             )
           }
           queue = createDownloadQueue({
             stores,
             managers,
-            onConnectivityChange,
+            onConnectivityChange: (callback) =>
+              onlineMonitor.onConnectivityChange(callback),
             config,
             dialogs: host.dialogs,
             appState: host.appState,
@@ -1812,14 +1850,14 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'online-monitor',
-      run: () => {
+      run: (_ctx, _io, state) => {
         // Placement is load-bearing (fix/steam-native-install-stability, 33-05 live-gate gap): must
         // run AFTER startRpcServer()/shim-bind so initOnlineMonitor()'s immediate
         // `sendFrontendMessage('connectivity-changed', ...)` call (inside `setStatus()`) has a live
         // transport to push through, and BEFORE the READY_SENTINEL write below so the frontend's
         // `get-connectivity-status` handler is guaranteed registered before the renderer can possibly
         // ask for it.
-        initOnlineMonitor()
+        requireServices(state).onlineMonitor.start()
       }
     },
     {
@@ -1982,8 +2020,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // here too.
         reconcileStoreUsersWhenOnline({
           kvs: requireServices(state).stores.kvs,
+          onlineMonitor: requireServices(state).onlineMonitor,
           gogUser: {
             appInfo: requireServices(state).appInfo,
+            onlineMonitor: requireServices(state).onlineMonitor,
             stores: requireServices(state).stores,
             libraryManagers: requireServices(state).managers.library
           }
@@ -2029,7 +2069,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // call site -- matches Blocks D/E/F's call site shape.
         syncQueuedPlaytimeWhenOnline({
           managers: requireServices(state).managers,
-          config: requireServices(state).config
+          config: requireServices(state).config,
+          onlineMonitor: requireServices(state).onlineMonitor
         })
       }
     },
@@ -2084,7 +2125,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         startSignInProbePass({
           libraryManagers: services.managers.library,
           stores: services.stores,
-          appInfo: services.appInfo
+          appInfo: services.appInfo,
+          onlineMonitor: services.onlineMonitor
         })
       }
     },

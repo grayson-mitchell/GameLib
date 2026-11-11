@@ -55,7 +55,7 @@ import type {
 import shlex from 'shlex'
 import type { ProcessRunner } from './process/types'
 import { buildGameScopeCommand, probeGamescopeHelp } from './gamescopeCommand'
-import { isOnline } from './online_monitor'
+import type { OnlineMonitor } from './online_monitor'
 import { showDialogBoxModalAuto, type DialogBoxDeps } from './dialog/dialog'
 import { readFileSync, writeFileSync } from 'fs'
 import { searchForExecutableOnPath } from './utils/os/path'
@@ -117,6 +117,7 @@ export interface LauncherDeps extends DialogBoxDeps {
   >
   gameConfigs: Pick<GameConfigs, 'get'>
   appInfo: Pick<AppInfo, 'version'>
+  onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   notifications: Pick<Notifications, 'show'>
   appState: Pick<
     AppState,
@@ -197,7 +198,7 @@ async function runLaunchEventCallback(
 
   logInfo(`Launching ${title} (${appName})`, LogPrefix.Backend)
 
-  if (autoSyncSaves && isOnline()) {
+  if (autoSyncSaves && deps.onlineMonitor.isOnline()) {
     sendGameStatusUpdate({
       appName,
       runner,
@@ -256,7 +257,7 @@ async function runLaunchEventCallback(
     engineServicesFrom(engineSource(deps)),
     game,
     {
-      offline: !isOnline(),
+      offline: !deps.onlineMonitor.isOnline(),
       logWriter
     }
   )
@@ -417,7 +418,7 @@ async function runLaunchEventCallback(
   }
   await addRecentGame({ stores: { kvs: deps.stores.kvs } }, gameInfo)
 
-  if (autoSyncSaves && isOnline()) {
+  if (autoSyncSaves && deps.onlineMonitor.isOnline()) {
     sendGameStatusUpdate({
       appName,
       runner,
@@ -635,7 +636,7 @@ async function prepareLaunch(
 ): Promise<LaunchPreperationResult> {
   const globalSettings = deps.config.getSettings()
 
-  let offlineMode = gameSettings.offlineMode || !isOnline()
+  let offlineMode = gameSettings.offlineMode || !deps.onlineMonitor.isOnline()
 
   if (!offlineMode && isStore(gameInfo, 'legendary')) {
     offlineMode = await isEpicServiceOffline(deps)
@@ -801,7 +802,7 @@ async function prepareLaunch(
 
   if (
     (await isUmuSupported(gameSettings, false)) &&
-    isOnline() &&
+    deps.onlineMonitor.isOnline() &&
     !(await isInstalled('umu')) &&
     (await getUmuPath()) === defaultUmuPath
   ) {
@@ -1067,7 +1068,7 @@ async function prepareWineLaunch(
 
   if (
     gameSettings.eacRuntime &&
-    isOnline() &&
+    deps.onlineMonitor.isOnline() &&
     !(await isInstalled('eac_runtime'))
   ) {
     await download(deps, 'eac_runtime')
@@ -1075,7 +1076,7 @@ async function prepareWineLaunch(
 
   if (
     gameSettings.battlEyeRuntime &&
-    isOnline() &&
+    deps.onlineMonitor.isOnline() &&
     !(await isInstalled('battleye_runtime'))
   ) {
     await download(deps, 'battleye_runtime')

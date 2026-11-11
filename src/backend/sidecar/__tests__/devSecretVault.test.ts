@@ -104,12 +104,6 @@ jest.mock('graceful-fs', () => ({
 // ONLY by Task 2's bootstrap wiring describe block below, which drives the REAL `init`; see
 // that file's header for why the real `initOnlineMonitor()` throws under the default 'electron'
 // automock this project applies to every backend test file). ─────────────────────────────────
-jest.mock('../../online_monitor', () => ({
-  initOnlineMonitor: jest.fn(),
-  isOnline: jest.fn(() => true),
-  runOnceWhenOnline: jest.fn((callback: () => unknown) => callback()),
-  onConnectivityChange: jest.fn()
-}))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────────────────────
 import { statSync, readFileSync } from 'fs'

@@ -47,12 +47,6 @@ jest.mock('axios', () => ({
 //    fetchLastestReleases the same way). `initOnlineMonitor` is stubbed to a no-op so init()'s
 //    own real listener registration never runs against the mocked emitter shape; `isOnline` is
 //    forced `true` for parity with "invoke inline" even though nothing here reads it directly.
-jest.mock('../../online_monitor', () => ({
-  ...jest.requireActual('../../online_monitor'),
-  initOnlineMonitor: jest.fn(),
-  isOnline: jest.fn(() => true),
-  runOnceWhenOnline: jest.fn((cb: () => unknown) => cb())
-}))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { LogPrefix } from '../../logger'
@@ -103,9 +97,6 @@ function bootedWorld(opts?: {
       // Load bootstrap first so the module graph resolves in its natural order (requiring the
       // online_monitor mock first hits a circular import and drops its re-exports).
       require('../bootstrap')
-      require('../../online_monitor').runOnceWhenOnline.mockImplementation(
-        (cb: () => unknown) => cb()
-      )
       LegendaryUser =
         require('../../storeManagers/legendary/user').LegendaryUser
       GOGUser = require('../../storeManagers/gog/user').GOGUser
@@ -131,9 +122,13 @@ function bootedWorld(opts?: {
         require('../bootstrap') as {
           reconcileStoreUsersWhenOnline: (deps: {
             kvs: { configStore: unknown }
+            onlineMonitor: { runOnceWhenOnline: (cb: () => unknown) => void }
           }) => void
         }
-      ).reconcileStoreUsersWhenOnline({ kvs: { configStore } })
+      ).reconcileStoreUsersWhenOnline({
+        kvs: { configStore },
+        onlineMonitor: { runOnceWhenOnline: (cb) => cb() }
+      })
   }
   return lastWorld
 }

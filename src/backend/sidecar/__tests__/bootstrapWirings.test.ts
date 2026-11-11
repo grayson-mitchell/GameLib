@@ -105,12 +105,6 @@ jest.mock('backend/store_backend', () => ({
 // which the generic automock does not provide, and numerous OTHER modules in the `./handlers`
 // import graph call `onConnectivityChange`/`isOnline`/`runOnceWhenOnline` at their own module
 // scope) ──────────────────────────────────────────────────────────────────────────────────
-jest.mock('../../online_monitor', () => ({
-  initOnlineMonitor: jest.fn(),
-  isOnline: jest.fn(() => true),
-  runOnceWhenOnline: jest.fn((callback: () => unknown) => callback()),
-  onConnectivityChange: jest.fn()
-}))
 
 // ── axios — scriptable, dispatches on the requested URL. `mock`-prefixed so the hoisted
 // jest.mock() factory below is allowed to close over these (Jest's out-of-scope-variable

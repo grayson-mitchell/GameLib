@@ -19,12 +19,6 @@
  * header for the full rationale; `onlineMonitorWiring.test.ts` is the dedicated suite that
  * exercises the real, unmocked wiring.
  */
-jest.mock('../../online_monitor', () => ({
-  initOnlineMonitor: jest.fn(),
-  isOnline: jest.fn(() => true),
-  runOnceWhenOnline: jest.fn((callback: () => unknown) => callback()),
-  onConnectivityChange: jest.fn()
-}))
 
 import { defined } from 'backend/testUtils/indexed'
 import { PassThrough } from 'node:stream'

@@ -247,12 +247,6 @@ jest.mock('backend/config', () => {
 // ── backend/online_monitor mock (full surface, per bootstrap.test.ts's own
 // reasoning) — deterministic isOnline()=true for repair's gate, and no real
 // `electron` `net` surface touched by bootstrap.ts's initOnlineMonitor() call ─
-jest.mock('../../online_monitor', () => ({
-  initOnlineMonitor: jest.fn(),
-  isOnline: jest.fn(() => true),
-  runOnceWhenOnline: jest.fn((callback: () => unknown) => callback()),
-  onConnectivityChange: jest.fn()
-}))
 
 // ── backend/storeManagers mock — the boundary all 13 gamedetails/dispatch.ts
 // bodies call into. Six scriptable managers (one per Runner), mirroring
@@ -353,6 +347,7 @@ import { fixesPath, appFolder, userDataPath } from '../../constants/paths'
 import { getLogFilePath } from 'backend/logger/paths'
 import { defined } from 'backend/testUtils/indexed'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
+import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
 
 // ── CR-03 / WR-01 containment guard — MUST run before either describe
 // block's first beforeEach (both end in a destructive
@@ -431,7 +426,6 @@ function freshRegistry(): void {
   require('../bootstrap')
   const { GlobalConfig } = require('backend/config')
   const { libraryManagerMap } = require('backend/storeManagers')
-  const { isOnline } = require('../../online_monitor')
   const { notify } = require('../../dialog/dialog')
   const { sendGameStatusUpdate } = require('../../utils')
   const { LegendaryUser } = require('../../storeManagers/legendary/user')
@@ -446,7 +440,7 @@ function freshRegistry(): void {
     }))
   /* eslint-enable @typescript-eslint/no-require-imports */
   mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
-  mockedIsOnline = isOnline as jest.Mock
+  mockedIsOnline = jest.fn()
   mockedNotify = notify as jest.Mock
   mockedSendGameStatusUpdate = sendGameStatusUpdate as jest.Mock
   mockedGetUserInfo = LegendaryUser.getUserInfo as jest.Mock
@@ -457,7 +451,17 @@ function freshRegistry(): void {
   sideloadManager = libraryManagerMap.sideload as unknown as ManagerMock
 }
 
-const boot = () => bootFresh({ reuseRegistry: true })
+// The monitor the boot hands out: `isOnline` is the jest.fn above, read at call time.
+const boot = () =>
+  bootFresh({
+    reuseRegistry: true,
+    services: {
+      onlineMonitor: {
+        ...createTestOnlineMonitor(),
+        isOnline: () => mockedIsOnline() as boolean
+      }
+    }
+  })
 
 beforeEach(() => {
   freshRegistry()

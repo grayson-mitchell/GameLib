@@ -40,12 +40,6 @@
 // ── online_monitor — full-surface mock (mirrors bootstrapWirings.test.ts's own block: the
 // real function reads `net.isOnline()` from `electron`, which the generic automock does not
 // provide) ───────────────────────────────────────────────────────────────────────────────────
-jest.mock('../../online_monitor', () => ({
-  initOnlineMonitor: jest.fn(),
-  isOnline: jest.fn(() => true),
-  runOnceWhenOnline: jest.fn((callback: () => unknown) => callback()),
-  onConnectivityChange: jest.fn()
-}))
 
 // ── axios — scriptable, never a real network call (mirrors bootstrapWirings.test.ts) ───────
 jest.mock('axios', () => {

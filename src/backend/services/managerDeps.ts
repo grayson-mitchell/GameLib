@@ -21,6 +21,7 @@ export type ManagerDepsSource = Pick<
   | 'gameConfigs'
   | 'paths'
   | 'appInfo'
+  | 'onlineMonitor'
 >
 
 export function managerDepsFromServices(
@@ -44,6 +45,7 @@ export function managerDepsFromServices(
     openExternal: source.host.openExternal,
     notifications: source.host.notifications,
     appState: source.host.appState,
-    imageTools: source.host.imageTools
+    imageTools: source.host.imageTools,
+    onlineMonitor: source.onlineMonitor
   }
 }

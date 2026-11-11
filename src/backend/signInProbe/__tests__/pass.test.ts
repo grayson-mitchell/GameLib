@@ -9,7 +9,7 @@
  *     non-stale result, publish immediately per store rather than once per
  *     pass -- D-08, revised for F-49-R1-2) is the thing under test. The five
  *     persisted-flag stores are plain fakes, as in `verdict.test.ts`.
- *   - FAKE: `backend/online_monitor` (captures the connectivity listener),
+ *   - FAKE: the injected `onlineMonitor` slice (captures the connectivity listener),
  *     `backend/utils/aborthandler/aborthandler` (records abort ids), the logger
  *     and `backend/ipc`, and the five store user modules (default registrations
  *     only).
@@ -68,12 +68,6 @@ const mockConnectivity: {
   online: boolean
   listeners: Array<(status: string) => unknown>
 } = { online: false, listeners: [] }
-jest.mock('backend/online_monitor', () => ({
-  isOnline: () => mockConnectivity.online,
-  onConnectivityChange: (callback: (status: string) => unknown) => {
-    mockConnectivity.listeners.push(callback)
-  }
-}))
 
 // Default-registration doubles. `mockUsers` is read lazily by plain functions.
 const mockUsers: {
@@ -146,7 +140,14 @@ const logWarningMock = logWarning as unknown as jest.Mock
 const { fakes: fakeStores, stores: fakeVerdictStores } = makeFakeSignInStores()
 const probeSlice = {
   libraryManagers: {},
-  stores: fakeVerdictStores
+  stores: fakeVerdictStores,
+  // The injected monitor slice (66.3-11): captures the connectivity listener.
+  onlineMonitor: {
+    isOnline: () => mockConnectivity.online,
+    onConnectivityChange: (callback: (status: string) => unknown) => {
+      mockConnectivity.listeners.push(callback)
+    }
+  }
 } as unknown as SignInProbeDeps
 
 const allWrites = () =>

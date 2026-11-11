@@ -388,6 +388,8 @@ function boot() {
   return bootFresh({
     reuseRegistry: true,
     services: {
+      // The real monitor: this suite pins the connectivity listener it registers on start().
+      onlineMonitor: undefined,
       downloadQueue: downloadQueueStub as never,
       // Delegates every call to whatever GlobalConfig.get() returns NOW, so `mockAppSettings`
       // after boot (the tray tests) is what the registrations read, as with the static getter.

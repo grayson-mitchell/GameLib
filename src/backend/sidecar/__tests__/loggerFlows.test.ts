@@ -237,12 +237,6 @@ jest.mock('backend/config', () => {
 // ── backend/online_monitor mock (full surface, per bootstrap.test.ts's own
 // reasoning) — deterministic isOnline()=true, no real electron `net` surface
 // touched by bootstrap.ts's initOnlineMonitor() call ────────────────────────
-jest.mock('../../online_monitor', () => ({
-  initOnlineMonitor: jest.fn(),
-  isOnline: jest.fn(() => true),
-  runOnceWhenOnline: jest.fn((callback: () => unknown) => callback()),
-  onConnectivityChange: jest.fn()
-}))
 
 // ── sidecarRpc — Phase 34.3 plan 04: PARTIAL mock (mirrors
 // shellFilesFlows.test.ts), real startRpcServer/pushFrontendMessage,

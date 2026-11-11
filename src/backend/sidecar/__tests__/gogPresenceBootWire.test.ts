@@ -54,12 +54,6 @@ jest.mock('axios', () => ({
 //    capture). `initOnlineMonitor` is stubbed to a no-op so init()'s own real listener
 //    registration never runs against the mocked emitter shape; `isOnline` is forced `true` for
 //    parity with "invoke inline" even though nothing here reads it directly.
-jest.mock('../../online_monitor', () => ({
-  ...jest.requireActual('../../online_monitor'),
-  initOnlineMonitor: jest.fn(),
-  isOnline: jest.fn(() => true),
-  runOnceWhenOnline: jest.fn((cb: () => unknown) => cb())
-}))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import type { GOGUserDeps } from '../../storeManagers/gog/user'
@@ -78,14 +72,13 @@ import { bootFresh } from './helpers/sidecarHarness'
  */
 function bootedWorld() {
   let gogPresence!: typeof import('../../storeManagers/gog/presence').default
-  let runOnce!: jest.Mock
   let setPresenceSpy!: jest.SpyInstance
   bootFresh({
     before: () => {
       // Load bootstrap first so the module graph resolves in its natural order (requiring the
       // online_monitor mock first hits a circular import and drops its re-exports).
       require('../bootstrap')
-      runOnce = require('../../online_monitor').runOnceWhenOnline as jest.Mock
+      runOnce.mockReset()
       runOnce.mockImplementation((cb: () => unknown) => cb())
       gogPresence = require('../../storeManagers/gog/presence').default
       setPresenceSpy = jest
@@ -111,9 +104,13 @@ function bootedWorld() {
 }
 /* eslint-enable @typescript-eslint/no-require-imports */
 
+// The monitor slice the helper under test is handed: runOnceWhenOnline invokes inline by default
+// (a case that must capture the callback swaps the implementation).
+const runOnce = jest.fn((cb: () => unknown) => cb())
 const presenceDeps = {
   stores: {},
-  libraryManagers: {}
+  libraryManagers: {},
+  onlineMonitor: { runOnceWhenOnline: runOnce, isOnline: () => true }
 } as unknown as GOGUserDeps
 
 describe('todo 2026-09-06 -- sidecar boot sets GOG presence once online (Block H)', () => {

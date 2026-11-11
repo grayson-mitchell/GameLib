@@ -167,6 +167,7 @@ export interface GOGUserDeps {
   libraryManagers: Pick<GOGManagerDeps['libraryManagers'], 'gog'>
   /** The app version, sent in the users.gog.com User-Agent. */
   appInfo: Pick<GOGManagerDeps['appInfo'], 'version'>
+  onlineMonitor: Pick<GOGManagerDeps['onlineMonitor'], 'isOnline'>
 }
 
 export class GOGUser {

@@ -26,6 +26,7 @@ import type { GlobalConfigSlice } from 'backend/config'
 import type { GameConfigs } from 'backend/game_config'
 import type { AppInfo, AppPaths } from 'backend/process/context'
 import type { Clock, ProcessRunner } from 'backend/process/types'
+import type { OnlineMonitor } from 'backend/online_monitor'
 import type { CommandRunner as CommandRunnerImpl } from 'backend/commandRunner'
 import type GOGLibraryManager from 'backend/storeManagers/gog/library'
 import type LegendaryLibraryManager from 'backend/storeManagers/legendary/library'
@@ -140,6 +141,15 @@ export interface ManagerDeps {
   notifications: Notifications
   appState: AppState
   imageTools: HostServices['imageTools']
+  /** The boot-owned connectivity monitor, as the slice managers read (D-66.3-11). */
+  onlineMonitor: Pick<
+    OnlineMonitor,
+    | 'isOnline'
+    | 'runOnceWhenOnline'
+    | 'onConnectivityChange'
+    | 'getConnectivityStatus'
+    | 'recheckConnectivity'
+  >
 }
 
 export interface BootServices {
@@ -166,4 +176,6 @@ export interface BootServices {
   /** ctx.paths and ctx.appInfo, carried so ManagerDeps can be assembled from services alone. */
   paths: AppPaths
   appInfo: AppInfo
+  /** Built by the 'online-monitor-owner' boot step, started by 'online-monitor' (D-66.3-11). */
+  onlineMonitor: OnlineMonitor
 }

@@ -1,6 +1,6 @@
 {
   "jestMock": {
-    "src/backend/sidecar/__tests__/sidecarRejectionGuard.test.ts": 9,
+    "src/backend/sidecar/__tests__/sidecarRejectionGuard.test.ts": 8,
     "src/backend/sidecar/__tests__/testContainment.test.ts": 5
   }
 }

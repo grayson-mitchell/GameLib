@@ -240,7 +240,8 @@ export function registerHandlers(deps: {
     ipc,
     managers: deps.services.managers,
     stores: deps.services.stores,
-    appInfo: deps.services.appInfo
+    appInfo: deps.services.appInfo,
+    onlineMonitor: deps.services.onlineMonitor
   })
   // Phase 34.3 Plans 01+02 (REQ-34.3-01/-02/-13): the shell/link-opener and
   // filesystem/diagnostics channels — no ordering constraint
@@ -326,7 +327,8 @@ export function registerHandlers(deps: {
     appInfo: deps.services.appInfo,
     dialogs: deps.services.host.dialogs,
     appState: deps.services.host.appState,
-    notifications: deps.services.host.notifications
+    notifications: deps.services.host.notifications,
+    onlineMonitor: deps.services.onlineMonitor
   })
   registerWineToolsFlows({
     ipc,

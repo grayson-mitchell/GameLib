@@ -59,12 +59,6 @@
  * these undefined would reintroduce the exact "Cannot read properties of undefined" import-time
  * crash this suite exists to catch.
  */
-jest.mock('../../online_monitor', () => ({
-  initOnlineMonitor: jest.fn(),
-  isOnline: jest.fn(() => true),
-  runOnceWhenOnline: jest.fn((callback: () => unknown) => callback()),
-  onConnectivityChange: jest.fn()
-}))
 
 const mockRestoreMacSteamOnlineIfOwed = jest.fn()
 jest.mock('../../storeManagers/steam/macSteamOffline', () => {
@@ -97,6 +91,8 @@ import * as util_os_processes from '../../utils/os/processes'
 import * as helperBinaries from '../../utils/helperBinaries'
 import { createStoreRegistry } from '../../stores/storeRegistry'
 import { bootFresh } from './helpers/sidecarHarness'
+import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
+import type { BootServices } from '../../services/types'
 import { getLogFilePath } from '../../logger/paths'
 import {
   READY_SENTINEL,
@@ -130,7 +126,10 @@ function fresh<T>(id: string): T {
 }
 
 /** Boots once and returns the raw output lines (READY sentinel included). */
-function bootWithLines(opts?: { before?: () => void }) {
+function bootWithLines(opts?: {
+  before?: () => void
+  services?: Partial<BootServices>
+}) {
   const output = new PassThrough()
   const lines = collectLines(output)
   const sidecar = bootFresh({ ...opts, output })
@@ -212,7 +211,7 @@ describe('sidecar bootstrap (headless boot)', () => {
   })
 
   describe('boot services (66.1-04)', () => {
-    it('a default boot returns BootServices with all sixteen fields', () => {
+    it('a default boot returns BootServices with all seventeen fields', () => {
       const { services } = bootWithLines()
       expect(Object.keys(services).sort()).toEqual([
         'appInfo',
@@ -224,6 +223,7 @@ describe('sidecar bootstrap (headless boot)', () => {
         'host',
         'launcher',
         'managers',
+        'onlineMonitor',
         'paths',
         'quit',
         'runner',
@@ -730,13 +730,12 @@ describe('one-shot boot (D-08)', () => {
   })
 
   it('one boot writes READY once and initialises the online monitor once', () => {
-    const { lines } = bootWithLines()
+    const onlineMonitor = createTestOnlineMonitor()
+    const start = jest.spyOn(onlineMonitor, 'start')
+    const { lines } = bootWithLines({ services: { onlineMonitor } })
 
     expect(lines.filter((line) => line === READY_SENTINEL)).toHaveLength(1)
-    expect(
-      fresh<typeof import('../../online_monitor')>('../../online_monitor')
-        .initOnlineMonitor
-    ).toHaveBeenCalledTimes(1)
+    expect(start).toHaveBeenCalledTimes(1)
   })
 
   describe('rosetta step on macOS', () => {

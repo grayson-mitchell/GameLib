@@ -37,12 +37,6 @@ jest.mock('axios', () => ({
 
 // ── online_monitor — stubbed so init()'s own listener registration never runs against the
 //    mocked emitter shape. Plain functions: `resetMocks: true` would strip a `jest.fn` body.
-jest.mock('../../online_monitor', () => ({
-  ...jest.requireActual('../../online_monitor'),
-  initOnlineMonitor: () => undefined,
-  isOnline: () => true,
-  runOnceWhenOnline: () => undefined
-}))
 
 // ── The two modules under test's collaborators: each records its call order. ──────────────
 const mockOrder: string[] = []

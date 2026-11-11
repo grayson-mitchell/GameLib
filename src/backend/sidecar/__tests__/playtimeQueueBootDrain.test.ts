@@ -73,12 +73,6 @@ jest.mock('axios', () => ({
 //    `initOnlineMonitor` is stubbed to a no-op so init()'s own real listener registration never
 //    runs against the mocked emitter shape; `isOnline` is forced `true` for parity with "invoke
 //    inline" even though nothing here reads it directly.
-jest.mock('../../online_monitor', () => ({
-  ...jest.requireActual('../../online_monitor'),
-  initOnlineMonitor: jest.fn(),
-  isOnline: jest.fn(() => true),
-  runOnceWhenOnline: jest.fn((cb: () => unknown) => cb())
-}))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { LogPrefix } from '../../logger'
@@ -103,7 +97,7 @@ function bootedWorld(opts?: {
   seed?: (queue: { set: (k: string, v: any) => void }) => void
   drainImpl?: () => Promise<void>
 }) {
-  let runOnce!: jest.Mock
+  const runOnce = jest.fn((cb: () => unknown) => cb())
   let syncQueuedPlaytimeSpy!: jest.SpyInstance
   let playtimeSyncQueue!: ReturnType<
     typeof import('../../storeManagers/gog/stores').createGogStores
@@ -118,8 +112,6 @@ function bootedWorld(opts?: {
       // Load bootstrap first so the module graph resolves in its natural order (requiring the
       // online_monitor mock first hits a circular import and drops its re-exports).
       require('../bootstrap')
-      runOnce = require('../../online_monitor').runOnceWhenOnline as jest.Mock
-      runOnce.mockImplementation((cb: () => unknown) => cb())
       playtimeSyncQueue =
         require('../../storeManagers/gog/stores').createGogStores({
           registry: createStoreRegistry()
@@ -146,7 +138,8 @@ function bootedWorld(opts?: {
         openExternal: fakes.host.openExternal,
         notifications: fakes.host.notifications,
         appState: fakes.host.appState,
-        imageTools: fakes.host.imageTools
+        imageTools: fakes.host.imageTools,
+        onlineMonitor: fakes.onlineMonitor
       })
       prebuilt.managers = built
       prebuilt.launcher = built.launcher
@@ -173,10 +166,12 @@ function bootedWorld(opts?: {
           syncQueuedPlaytimeWhenOnline: (deps: {
             managers: { library: unknown }
             config: { getSettings: () => unknown }
+            onlineMonitor: { runOnceWhenOnline: (cb: () => unknown) => void }
           }) => void
         }
       ).syncQueuedPlaytimeWhenOnline({
         managers: { library: gogManager ? { gog: gogManager } : {} },
+        onlineMonitor: { runOnceWhenOnline: runOnce },
         // Read lazily so a test that spies GlobalConfig.get (or makes it throw) is honoured.
         config: {
           getSettings: () =>

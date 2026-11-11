@@ -33,6 +33,7 @@ import { createWikiGameInfoStores } from '../wiki_game_info/stores'
 import { createWineManagerStores } from '../wine/manager/stores'
 import type { EngineServices } from '../engine/engineServices'
 import { createFakeClock } from './fakeClock'
+import { createTestOnlineMonitor } from './testOnlineMonitor'
 import type { GameSettings, Runner } from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
 import type {
@@ -220,7 +221,8 @@ export function createTestServices(
     config: overrides.config ?? createTestGlobalConfig(),
     gameConfigs: overrides.gameConfigs ?? createTestGameConfigs(),
     paths: overrides.paths ?? createTestPaths(),
-    appInfo: overrides.appInfo ?? TEST_APP_INFO
+    appInfo: overrides.appInfo ?? TEST_APP_INFO,
+    onlineMonitor: overrides.onlineMonitor ?? createTestOnlineMonitor()
   }
 }
 
@@ -333,7 +335,8 @@ export function createTestManagerDeps(
     openExternal: overrides.openExternal ?? host.openExternal,
     notifications: overrides.notifications ?? host.notifications,
     appState: overrides.appState ?? host.appState,
-    imageTools: overrides.imageTools ?? host.imageTools
+    imageTools: overrides.imageTools ?? host.imageTools,
+    onlineMonitor: overrides.onlineMonitor ?? createTestOnlineMonitor()
   }
 }
 

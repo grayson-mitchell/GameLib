@@ -52,6 +52,7 @@ jest.mock('backend/engine/launchSettings', () => ({
 }))
 
 import { createTestToolsSlices } from 'backend/testUtils/testServices'
+import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { createLauncher } from 'backend/launcher'
@@ -119,6 +120,7 @@ beforeEach(() => {
 const tsStore = { has: () => true, get: () => 0, set: jest.fn() }
 const { launchEventCallback } = createLauncher({
   ...createTestToolsSlices(),
+  onlineMonitor: createTestOnlineMonitor({ online: false }),
   libraryManagers: {
     legendary: { getGame: (...a: unknown[]) => getGameMock(...a) }
   } as never,

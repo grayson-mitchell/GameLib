@@ -68,6 +68,7 @@
 
 import type { DialogBoxDeps } from '../dialog/dialog'
 import type { Notifications } from '../host/notifications'
+import type { OnlineMonitor } from '../online_monitor'
 import type { AppInfo } from '../process/context'
 import type { IpcRegistry } from './ipcRegistry'
 import { LegendaryUser } from '../storeManagers/legendary/user'
@@ -85,6 +86,7 @@ export interface RunnerAuthFlowDeps extends DialogBoxDeps {
   notifications: Pick<Notifications, 'show'>
   managers: Pick<StoreManagers, 'library'>
   stores: Pick<Stores, 'gog' | 'legendary' | 'nile' | 'wikiGameInfo' | 'kvs'>
+  onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
 }
 
 function logSendFailure(channel: string, error: unknown): void {
@@ -119,7 +121,8 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
     dialogs: deps.dialogs,
     appState: deps.appState,
     stores: deps.stores,
-    libraryManagers: deps.managers.library
+    libraryManagers: deps.managers.library,
+    onlineMonitor: deps.onlineMonitor
   })
 
   if (registered) {

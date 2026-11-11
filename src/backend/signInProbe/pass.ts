@@ -57,7 +57,6 @@
  * never a token, cookie, captured runner output or error text (T-49-24).
  */
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { isOnline, onConnectivityChange } from 'backend/online_monitor'
 import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
 import { LegendaryUser } from 'backend/storeManagers/legendary/user'
 import { GOGUser } from 'backend/storeManagers/gog/user'
@@ -111,6 +110,10 @@ export interface SignInProbeDeps {
   >
   stores: Pick<Stores, SignInStore>
   appInfo: Pick<ManagerDeps['appInfo'], 'version'>
+  onlineMonitor: Pick<
+    ManagerDeps['onlineMonitor'],
+    'isOnline' | 'onConnectivityChange'
+  >
 }
 
 export function createSignInProbePassDeps(
@@ -118,6 +121,7 @@ export function createSignInProbePassDeps(
 ): SignInProbePassDeps {
   const gogUserDeps = {
     appInfo: deps.appInfo,
+    onlineMonitor: deps.onlineMonitor,
     stores: { gog: deps.stores.gog },
     libraryManagers: { gog: deps.libraryManagers.gog }
   }
@@ -337,6 +341,7 @@ export function startSignInProbePass(
   }
   started = true
   configuredDeps = options.deps ?? createSignInProbePassDeps(slice)
+  const { isOnline, onConnectivityChange } = slice.onlineMonitor
   lastStatus = isOnline() ? 'online' : 'offline'
 
   // D-03: only a non-online -> online EDGE starts a pass. A repeated `online`

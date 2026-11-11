@@ -13,7 +13,8 @@ interface PresencePayload {
 }
 
 /** What presence reads beyond the user deps: the boot config. */
-export type GOGPresenceDeps = GOGUserDeps & Pick<GOGManagerDeps, 'config'>
+export type GOGPresenceDeps = GOGUserDeps &
+  Pick<GOGManagerDeps, 'config' | 'onlineMonitor'>
 
 let CURRENT_GAME = ''
 let interval: NodeJS.Timeout | undefined

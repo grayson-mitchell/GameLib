@@ -187,8 +187,10 @@ export interface EnrichmentFlowDeps {
     Stores,
     'kvs' | 'runsForMe' | 'wikiGameInfo' | 'crossoverIndex' | 'gog'
   >
+  onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
 }
 import type { CatalogLocaleSettings } from 'common/types/discounts'
+import type { OnlineMonitor } from '../online_monitor'
 
 const RUNS_FOR_ME_RUNNERS: ReadonlySet<string> = new Set([
   'legendary',
@@ -323,7 +325,8 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
         {
           stores: deps.stores,
           libraryManagers: deps.managers.library,
-          appInfo: deps.appInfo
+          appInfo: deps.appInfo,
+          onlineMonitor: deps.onlineMonitor
         },
         args[0] as CatalogLocaleSettings,
         (args[1] as boolean | null | undefined) ?? undefined,

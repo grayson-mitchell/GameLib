@@ -32,6 +32,7 @@ jest.mock('backend/recent_games/recent_games', () => ({
 jest.mock('backend/runsForMe', () => ({ recordPlaySession: jest.fn() }))
 
 import { createTestToolsSlices } from 'backend/testUtils/testServices'
+import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
 import { createLauncher } from 'backend/launcher'
 import { createGameLogWriter } from 'backend/logger'
 import { resetLaunchSingleFlightForTests } from 'backend/launchSingleFlight'
@@ -55,6 +56,7 @@ const tsStore = {
 }
 const { launchEventCallback } = createLauncher({
   ...createTestToolsSlices(),
+  onlineMonitor: createTestOnlineMonitor({ online: false }),
   libraryManagers: {
     legendary: { getGame: (...a: unknown[]) => getGameMock(...a) }
   } as never,

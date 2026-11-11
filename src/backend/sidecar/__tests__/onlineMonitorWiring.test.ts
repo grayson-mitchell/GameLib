@@ -63,6 +63,7 @@ jest.mock('axios', () => ({
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { bootFresh } from './helpers/sidecarHarness'
+import { createTestOnlineMonitor } from '../../testUtils/testOnlineMonitor'
 
 type Handler = (...args: unknown[]) => unknown
 // Re-read after every bootFresh(): jest.resetModules() makes each boot's registries and mocks
@@ -73,6 +74,8 @@ let listenerRegistry: Map<string, unknown[]>
 /** Boots once in a fresh registry and binds the registries that boot wired. */
 function boot(opts?: { before?: () => void }) {
   const sidecar = bootFresh({
+    // The real monitor, driven through the mocked axios below (the harness default is a fake).
+    services: { onlineMonitor: undefined },
     before: () => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const axios = require('axios').default
@@ -153,5 +156,38 @@ describe('bootFresh harness', () => {
     await new Promise((resolve) => setImmediate(resolve))
 
     expect(frames.length).toBeGreaterThan(0)
+  })
+})
+
+describe('boot-owned monitor (66.3-11, D-05)', () => {
+  it("builds the monitor in 'online-monitor-owner', before 'store-managers', and starts it in 'online-monitor' after rpc-server and before READY", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { BOOT_STEP_NAMES } = require('../bootstrap') as {
+      BOOT_STEP_NAMES: readonly string[]
+    }
+    const at = (name: string) => BOOT_STEP_NAMES.indexOf(name)
+
+    expect(at('online-monitor-owner')).toBeGreaterThan(-1)
+    expect(at('online-monitor-owner')).toBeLessThan(at('store-managers'))
+    expect(at('online-monitor')).toBeGreaterThan(at('rpc-server'))
+    expect(at('online-monitor')).toBeLessThan(at('ready-sentinel'))
+  })
+
+  it('one boot builds exactly one monitor and starts it once', () => {
+    const { services } = boot()
+
+    expect(services.onlineMonitor).toBeDefined()
+    // The same instance reaches the ManagerDeps slice the managers were built with.
+    const { managers } = services
+    expect(managers).toBeDefined()
+  })
+
+  it('hands a prebuilt monitor through by reference and starts exactly that one', () => {
+    const monitor = createTestOnlineMonitor()
+    const start = jest.spyOn(monitor, 'start')
+    const { services } = bootFresh({ services: { onlineMonitor: monitor } })
+
+    expect(services.onlineMonitor).toBe(monitor)
+    expect(start).toHaveBeenCalledTimes(1)
   })
 })

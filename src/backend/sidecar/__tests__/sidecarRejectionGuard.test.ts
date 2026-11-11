@@ -196,12 +196,6 @@ jest.mock('backend/store_backend', () => ({
 
 // ── online_monitor — full-surface mock, same reasoning as bootstrapWirings.test.ts's own
 // block ─────────────────────────────────────────────────────────────────────────────────────
-jest.mock('../../online_monitor', () => ({
-  initOnlineMonitor: jest.fn(),
-  isOnline: jest.fn(() => true),
-  runOnceWhenOnline: jest.fn((callback: () => unknown) => callback()),
-  onConnectivityChange: jest.fn()
-}))
 
 // ── axios — every call rejects. This suite never needs a real `releasesInfoReady` auto-fire
 // from `fetchLastestReleases` (Block B) -- it drives the listener directly via a manual

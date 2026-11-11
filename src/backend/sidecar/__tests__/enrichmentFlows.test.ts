@@ -210,12 +210,6 @@ jest.mock('backend/config', () => {
 // ── backend/online_monitor mock (full surface, per bootstrap.test.ts's own
 // reasoning) — no real `electron` `net` surface touched by bootstrap.ts's
 // initOnlineMonitor() call ───────────────────────────────────────────────────
-jest.mock('../../online_monitor', () => ({
-  initOnlineMonitor: jest.fn(),
-  isOnline: jest.fn(() => true),
-  runOnceWhenOnline: jest.fn((callback: () => unknown) => callback()),
-  onConnectivityChange: jest.fn()
-}))
 
 // ── backend/storeManagers mock — the boundary buildCrossoverRatingMap's
 // enumeration walks and getGame(appName, runner) resolves through ───────────
@@ -365,6 +359,7 @@ import { getLogFilePath } from 'backend/logger/paths'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import type { GameInfo } from 'common/types'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
+import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
 
 // ── CR-03 / WR-01 containment guard — MUST run before the first
 // beforeEach's destructive rmSync/configStore.set calls (jest runs
@@ -426,7 +421,6 @@ function freshRegistry(): void {
   require('../bootstrap')
   const { GlobalConfig } = require('backend/config')
   const { libraryManagerMap } = require('backend/storeManagers')
-  const { isOnline, runOnceWhenOnline } = require('../../online_monitor')
   ;({ handlerRegistry } = require('../../platform'))
   ;({ wikiGameInfoStore } =
     require('../../wiki_game_info/stores').createWikiGameInfoStores())
@@ -437,8 +431,8 @@ function freshRegistry(): void {
   loggerModule = require('../../logger')
   /* eslint-enable @typescript-eslint/no-require-imports */
   mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
-  mockedIsOnline = isOnline as jest.Mock
-  mockedRunOnceWhenOnline = runOnceWhenOnline as jest.Mock
+  mockedIsOnline = jest.fn()
+  mockedRunOnceWhenOnline = jest.fn()
   legendaryManager = libraryManagerMap.legendary as unknown as ManagerMock
   gogManager = libraryManagerMap.gog as unknown as ManagerMock
   steamManager = libraryManagerMap.steam as unknown as ManagerMock
@@ -446,7 +440,19 @@ function freshRegistry(): void {
   sideloadManager = libraryManagerMap.sideload as unknown as ManagerMock
 }
 
-const boot = () => bootFresh({ reuseRegistry: true })
+// The monitor the boot hands out: the two members this suite drives are the jest.fns above, read
+// at call time so a per-test re-arm is honoured.
+const boot = () =>
+  bootFresh({
+    reuseRegistry: true,
+    services: {
+      onlineMonitor: {
+        ...createTestOnlineMonitor(),
+        isOnline: () => mockedIsOnline() as boolean,
+        runOnceWhenOnline: (callback) => mockedRunOnceWhenOnline(callback)
+      }
+    }
+  })
 
 /** Points the mocked GlobalConfig.get() at a fresh settings object. */
 function mockAppSettings(partial: Record<string, unknown>) {

@@ -127,9 +127,6 @@ jest.mock('backend/logger', () => ({
 
 // ── ../../online_monitor — `isOnline` is the only export `syncSaves` needs; factory-mocked so
 // this suite never constructs the real module's EventEmitter/axios-ping machinery ─────────────
-jest.mock('../../online_monitor', () => ({
-  isOnline: jest.fn(() => true)
-}))
 
 // ── ../../ipc — `sendFrontendMessage` is the only export `callTool`'s gog post-step needs;
 // factory-mocked so this suite never touches the real `electron`/`getMainWindow` chain ─────────

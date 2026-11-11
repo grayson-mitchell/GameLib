@@ -50,6 +50,7 @@ import type { ScriptStep } from '../../../testUtils/scriptedRunner'
 import type { AppPaths } from '../../../process/context'
 import type { BootServices } from '../../../services/types'
 import type { ProcessGuards } from '../../processGuards'
+import { createTestOnlineMonitor } from '../../../testUtils/testOnlineMonitor'
 
 /** A single newline-delimited JSON frame read off the sidecar's output. */
 export type Frame = Record<string, unknown>
@@ -164,7 +165,9 @@ export function bootFresh(opts?: {
     input,
     output,
     guards,
-    opts?.services
+    // A controllable monitor by default (online, start() a no-op): the boot never probes the
+    // network. A case that needs the real monitor passes `onlineMonitor: undefined`.
+    { onlineMonitor: createTestOnlineMonitor(), ...opts?.services }
   )
   return { input, output, frames, testContext, services }
 }
