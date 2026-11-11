@@ -27,7 +27,7 @@ import {
   resolveTaskGroup,
   TASK_GROUP_IDS
 } from 'common/winetricks/verbs'
-import type { IpcRendererEvent } from 'backend/platform'
+import type { IpcRendererEvent } from 'common/types/hostTypes'
 import {
   callOrDeclare,
   WINETRICKS_FEATURE,

@@ -1,12 +1,14 @@
-import process from 'process'
+import { freemem, totalmem } from 'os'
 
 import type { PartialMemoryInfo } from './index'
 
+// Plain Node has no `process.getSystemMemoryInfo()` (an Electron main-process extra the sidecar
+// never had), so the figures come from `os`, which already reports bytes.
 function getMemoryInfo_windows(): PartialMemoryInfo {
-  const { total, free } = process.getSystemMemoryInfo()
+  const total = totalmem()
   return {
-    total: total * 1024,
-    used: (total - free) * 1024
+    total,
+    used: total - freemem()
   }
 }
 

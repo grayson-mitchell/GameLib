@@ -51,6 +51,17 @@ import type { AppPaths } from '../../../process/context'
 import type { BootServices } from '../../../services/types'
 import type { ProcessGuards } from '../../processGuards'
 import { createTestOnlineMonitor } from '../../../testUtils/testOnlineMonitor'
+import type { IpcRegistry } from '../../ipcRegistry'
+import { createRegistryViews } from './registryViews'
+
+// The registry of the most recent bootFresh() (the harness module is imported once per file and
+// survives jest.resetModules(), so this binding is stable across a case's registry resets).
+let bootedIpc: IpcRegistry | null = null
+const bootedViews = createRegistryViews(() => bootedIpc)
+/** Views over the most recently booted sidecar's handler registry. */
+export const handlerRegistry = bootedViews.handlerRegistry
+/** Views over the most recently booted sidecar's listener registry. */
+export const listenerRegistry = bootedViews.listenerRegistry
 
 /** A single newline-delimited JSON frame read off the sidecar's output. */
 export type Frame = Record<string, unknown>
@@ -126,6 +137,7 @@ export function bootFresh(opts?: {
     paths?: Partial<AppPaths>
   }
 }): FreshSidecar {
+  bootedIpc = null
   if (!opts?.reuseRegistry) jest.resetModules()
   opts?.before?.()
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -169,6 +181,7 @@ export function bootFresh(opts?: {
     // network. A case that needs the real monitor passes `onlineMonitor: undefined`.
     { onlineMonitor: createTestOnlineMonitor(), ...opts?.services }
   )
+  bootedIpc = services.host.ipc
   return { input, output, frames, testContext, services }
 }
 

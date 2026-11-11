@@ -55,7 +55,6 @@ import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { TEST_APP_INFO } from 'backend/testUtils/testContext'
 import { defined } from 'backend/testUtils/indexed'
 import { registerClipboardFlows } from '../clipboardFlowRegistration'
-import { bindHostServices, clipboard } from '../../platform'
 import { createIpcRegistry } from '../ipcRegistry'
 
 const ipc = createIpcRegistry()
@@ -66,18 +65,6 @@ import {
   RUST_CLIPBOARD_WRITE_TEXT,
   RUST_CLIPBOARD_READ_TEXT
 } from 'common/types/sidecarTransport'
-
-// The shim forwards to bound host services (66.3-03); give every test a fresh instance whose
-// Rust boundary is this file's mocked requestRustInvoke (late-bound, so per-test mockImplementation
-// calls still apply). Fresh services per test also reset the app-state and wake-lock state.
-beforeEach(() => {
-  bindHostServices(
-    createTestHostServices({
-      rustInvoke: (channel, args) =>
-        mockRequestRustInvoke(channel, args) as Promise<unknown>
-    })
-  )
-})
 
 type ProgrammedOutcome =
   | { type: 'resolve'; value: unknown }
@@ -190,7 +177,7 @@ afterEach(() => {
 describe('sidecar clipboard flows (Phase 34.3 Plan 06 — REQ-34.3-03/REQ-34.3-04)', () => {
   // ── REQ-34.3-03: clipboardWriteText (send) ────────────────────────────────────────────────
 
-  it('REQ-34.3-03 clipboardWriteText (send) reaches clipboard.writeText -> exactly one clipboard_write_text rustInvoke call', async () => {
+  it('REQ-34.3-03 clipboardWriteText (send) reaches appState.writeClipboardText -> exactly one clipboard_write_text rustInvoke call', async () => {
     program = { type: 'resolve', value: null }
     const synthetic = 'synthetic-clipboard-write-text-payload'
 
@@ -256,16 +243,6 @@ describe('sidecar clipboard flows (Phase 34.3 Plan 06 — REQ-34.3-03/REQ-34.3-0
       String(first).includes('clipboardReadText')
     )
     expect(warned).toBe(true)
-  })
-
-  it('REQ-34.3-04 clipboardReadText (invoke) never calls platformApi.clipboard.readText (D-04)', async () => {
-    const readTextSpy = jest.spyOn(clipboard, 'readText')
-    program = { type: 'resolve', value: 'pasted' }
-
-    await invokeHandler('clipboardReadText')
-
-    expect(readTextSpy).not.toHaveBeenCalled()
-    readTextSpy.mockRestore()
   })
 
   // ── REQ-34.3-03: copySystemInfoToClipboard (send) ─────────────────────────────────────────

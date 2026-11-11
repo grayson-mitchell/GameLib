@@ -214,7 +214,9 @@ import {
   Frame,
   bootFresh,
   writeInvoke,
-  writeSend
+  writeSend,
+  handlerRegistry,
+  listenerRegistry
 } from './helpers/sidecarHarness'
 import {
   RUST_SHELL_OPEN_PATH,
@@ -240,8 +242,6 @@ import { createStoreRegistry } from 'backend/stores/storeRegistry'
 // handles the cases configure or inspect are rebound from that registry in
 // freshRegistry() (run before each case, ahead of any mock configuration), and
 // boot() then boots without a second reset.
-let listenerRegistry: typeof import('../../platform').listenerRegistry
-let handlerRegistry: typeof import('../../platform').handlerRegistry
 let showDialogBoxModalAuto: typeof import('../../dialog/dialog').showDialogBoxModalAuto
 let achievementStore: ReturnType<
   typeof import('../../storeManagers/gog/stores').createGogStores
@@ -255,7 +255,6 @@ function freshRegistry(): void {
   require('../bootstrap')
   const { GlobalConfig } = require('backend/config')
   const { requestRustInvoke } = require('../sidecarRpc')
-  ;({ listenerRegistry, handlerRegistry } = require('../../platform'))
   ;({ showDialogBoxModalAuto } = require('../../dialog/dialog'))
   ;({ achievementStore } =
     require('../../storeManagers/gog/stores').createGogStores({

@@ -4,18 +4,18 @@
  *
  * Drives the REAL sidecar RPC server in-process (`downloadQueueFlows.test.ts`'s
  * own real-shim black-box pattern — the shims under test are the actual
- * platform/index.ts/fileStore.ts modules, unmocked) against injected
+ * fileStore.ts module, unmocked) against injected
  * `stream.PassThrough` pairs.
  *
  * **GAP FIX precedent (2026-07-22, see skeletonFlows.test.ts's own header):**
  * this suite's config directory is NOT the real OS config directory. The
  * `jest.mock('os', ...)` below overrides `homedir()` to a disposable
- * per-process tmp directory so the real platformApi/fileStore CODE runs
+ * per-process tmp directory so the real fileStore CODE runs
  * (preserving this suite's fidelity), while the location it reads/writes can
  * never be the developer's real config directory.
  *
  * `jest.mock('electron', ...)` / `jest.mock('backend/store_backend', ...)` below
- * point Jest's OWN module resolution at platform/index.ts/fileStore.ts
+ * point Jest's OWN module resolution at fileStore.ts
  * directly — see skeletonFlows.test.ts's header for why this is necessary.
  *
  * `../sidecarRpc` is PARTIALLY mocked (`jest.requireActual` spread, only
@@ -48,7 +48,7 @@
  *
  * Every other module in the registration/transport/store path
  * (`appShellFlowRegistration.ts`, `handlers.ts`, `bootstrap.ts`,
- * `platform/index.ts`, `fileStore.ts`, `backend/utils` — `handleExit`/
+ * `fileStore.ts`, `backend/utils` — `handleExit`/
  * `openUrlOrFile`, `backend/dialog/dialog` — `notify`, `backend/appshell/*`,
  * `backend/main_window`, `backend/online_monitor`) runs for real, unmodified
  * — in particular `backend/logger` is intentionally NOT mocked (mirrors
@@ -270,14 +270,20 @@ jest.mock('../../utils', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { bootFresh, writeInvoke, writeSend } from './helpers/sidecarHarness'
+import {
+  bootFresh,
+  handlerRegistry,
+  listenerRegistry,
+  writeInvoke,
+  writeSend
+} from './helpers/sidecarHarness'
 import type { GlobalConfig as GlobalConfigType } from 'backend/config'
 import type i18nextType from 'i18next'
 import type { Stores } from 'backend/services/types'
 import type { backendEvents as backendEventsType } from '../../backend_events'
 import type * as aborthandlerModule from '../../utils/aborthandler/aborthandler'
 import type { requestRustInvoke as requestRustInvokeType } from '../sidecarRpc'
-import type * as platformModule from '../../platform'
+import type { IpcRegistry } from '../ipcRegistry'
 import type * as loggerModuleType from '../../logger'
 import type * as protocolModule from '../../protocol'
 import {
@@ -305,8 +311,6 @@ let backendEvents: typeof backendEventsType
 let callAbortController: typeof aborthandlerModule.callAbortController
 let callAllAbortControllers: typeof aborthandlerModule.callAllAbortControllers
 let requestRustInvoke: typeof requestRustInvokeType
-let listenerRegistry: typeof platformModule.listenerRegistry
-let handlerRegistry: typeof platformModule.handlerRegistry
 let loggerModule: typeof loggerModuleType
 let gamesConfigPath: string
 let handleProtocol: typeof protocolModule.handleProtocol
@@ -335,9 +339,6 @@ function freshRegistry(): void {
   callAbortController = aborthandler.callAbortController
   callAllAbortControllers = aborthandler.callAllAbortControllers
   requestRustInvoke = require('../sidecarRpc').requestRustInvoke
-  const platform = require('../../platform')
-  listenerRegistry = platform.listenerRegistry
-  handlerRegistry = platform.handlerRegistry
   loggerModule = require('../../logger')
   const protocol = require('../../protocol')
   handleProtocol = protocol.handleProtocol
@@ -355,15 +356,24 @@ function freshRegistry(): void {
 }
 
 /** Deps for the tests that call registerAppShellFlows() directly (no boot). */
+// The registry the most recent directDeps() handed a direct registration (isolated scopes read
+// the listeners their own registration made).
+let directIpc: IpcRegistry | null = null
+const directListeners = () => ({
+  get: (channel: string): [() => void] =>
+    directIpc?.listenerMap().get(channel) as unknown as [() => void]
+})
+
 function directDeps(stores: unknown = {}) {
   /* eslint-disable @typescript-eslint/no-require-imports */
   // Required at call time so a fresh-registry scope hands the registration ITS registry and its
   // mocked GlobalConfig, not the shared ones.
-  const { interimIpc } = require('../../platform')
+  const { createIpcRegistry } = require('../ipcRegistry')
   const { GlobalConfig: scopedConfig } = require('backend/config')
   /* eslint-enable @typescript-eslint/no-require-imports */
+  directIpc = createIpcRegistry() as IpcRegistry
   return {
-    ipc: interimIpc,
+    ipc: directIpc,
     appInfo: { version: pkgJson.version },
     openExternal: { openExternal: jest.fn() },
     appState: {
@@ -1129,9 +1139,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedModule = require('../appShellFlowRegistration')
         isolatedModule.registerAppShellFlows(directDeps())
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const isolatedPlatform = require('../../platform')
-        const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
+        const isolatedListenerRegistry = directListeners()
         ;[frontendReadyListener] = isolatedListenerRegistry.get('frontendReady')
       })
 
@@ -1202,9 +1210,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { registerAppShellFlows } = require('../appShellFlowRegistration')
         registerAppShellFlows(directDeps())
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const isolatedPlatform = require('../../platform')
-        const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
+        const isolatedListenerRegistry = directListeners()
         ;[frontendReadyListener] = isolatedListenerRegistry.get('frontendReady')
       })
 
@@ -1266,10 +1272,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           require('../appShellFlowRegistration').registerAppShellFlows(
             directDeps()
           )
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const platform = require('../../platform')
-          ;[frontendReadyListener] =
-            platform.listenerRegistry.get('frontendReady')
+          ;[frontendReadyListener] = directListeners().get('frontendReady')
         })
         jest.useFakeTimers({ doNotFake: ['setImmediate'] })
         try {
@@ -1385,9 +1388,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           registerAppShellFlows(
             directDeps({ kvs: { configStore: isolatedConfigStore } })
           )
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const isolatedPlatform = require('../../platform')
-          const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
+          const isolatedListenerRegistry = directListeners()
           ;[frontendReadyListener] =
             isolatedListenerRegistry.get('frontendReady')
         })
@@ -1510,9 +1511,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedModule = require('../appShellFlowRegistration')
         isolatedModule.registerAppShellFlows(directDeps())
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const isolatedPlatform = require('../../platform')
-        const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
+        const isolatedListenerRegistry = directListeners()
         ;[frontendReadyListener] = isolatedListenerRegistry.get('frontendReady')
       })
 
@@ -1558,9 +1557,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedModule = require('../appShellFlowRegistration')
         isolatedModule.registerAppShellFlows(directDeps())
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const isolatedPlatform = require('../../platform')
-        const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
+        const isolatedListenerRegistry = directListeners()
         ;[frontendReadyListener] = isolatedListenerRegistry.get('frontendReady')
       })
 
@@ -1611,9 +1608,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedModule = require('../appShellFlowRegistration')
         isolatedModule.registerAppShellFlows(directDeps())
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const isolatedPlatform = require('../../platform')
-        const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
+        const isolatedListenerRegistry = directListeners()
         ;[frontendReadyListener] = isolatedListenerRegistry.get('frontendReady')
       })
 
@@ -1805,7 +1800,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       // double-register every OTHER channel's listener too (breaking the lock/unlock/
       // abort tests elsewhere in this file, whose bodies assume exactly one listener
       // each). a fresh-registry scope gives a fresh module registry -- a fresh
-      // platformApi (own listenerRegistry), a fresh sidecarRpc mock instance, and a
+      // IPC registry (own listeners), a fresh sidecarRpc mock instance, and a
       // fresh backend/config mock instance -- so this test's own registration can
       // never leak into the shared suite state.
       inFreshRegistry(() => {

@@ -62,16 +62,14 @@ jest.mock('axios', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { bootFresh } from './helpers/sidecarHarness'
+import {
+  bootFresh,
+  handlerRegistry,
+  listenerRegistry
+} from './helpers/sidecarHarness'
 import { createTestOnlineMonitor } from '../../testUtils/testOnlineMonitor'
 
-type Handler = (...args: unknown[]) => unknown
-// Re-read after every bootFresh(): jest.resetModules() makes each boot's registries and mocks
-// different objects from any top-level import.
-let handlerRegistry: Map<string, Handler>
-let listenerRegistry: Map<string, unknown[]>
-
-/** Boots once in a fresh registry and binds the registries that boot wired. */
+/** Boots once in a fresh registry; the harness registry views follow that boot. */
 function boot(opts?: { before?: () => void }) {
   const sidecar = bootFresh({
     // The real monitor, driven through the mocked axios below (the harness default is a fake).
@@ -83,10 +81,6 @@ function boot(opts?: { before?: () => void }) {
       opts?.before?.()
     }
   })
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const platform = require('../../platform')
-  handlerRegistry = platform.handlerRegistry
-  listenerRegistry = platform.listenerRegistry
   return sidecar
 }
 

@@ -6,9 +6,9 @@ import { defined } from 'backend/testUtils/indexed'
 import { PassThrough } from 'node:stream'
 import { z } from 'zod'
 
-import { handlerRegistry, interimIpc, listenerRegistry } from '../../platform'
-import { startRpcServer } from '../sidecarRpc'
 import { createIpcRegistry } from '../ipcRegistry'
+import { createRegistryViews } from './helpers/registryViews'
+import { startRpcServer } from '../sidecarRpc'
 import {
   logRejection,
   resetIpcRejectionThrottle,
@@ -75,6 +75,8 @@ const input = new PassThrough()
 const output = new PassThrough()
 const frames = collectFrames(output)
 // Plain functions record calls: the Jest config resets jest.fn() implementations per test.
+const testIpc = createIpcRegistry()
+const { handlerRegistry, listenerRegistry } = createRegistryViews(() => testIpc)
 const invokeCalls: unknown[][] = []
 const sendCalls: unknown[][] = []
 const invokeHandler = async (...a: unknown[]) => {
@@ -88,7 +90,7 @@ let stderrWrites: string[] = []
 const sinkLines: string[] = []
 
 beforeAll(() => {
-  startRpcServer(input, output, interimIpc)
+  startRpcServer(input, output, testIpc)
   handlerRegistry.set('testInvoke', invokeHandler as never)
   handlerRegistry.set('noSchemaInvoke', (async () => 'free') as never)
   listenerRegistry.set('testSend', [sendListener as never])

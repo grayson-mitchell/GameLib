@@ -1,42 +1,6 @@
-// eslint-disable-next-line no-restricted-imports
-import { ipcMain, type IpcMainEvent } from 'backend/platform'
 import { pushFrontendMessage } from 'backend/sidecar/sidecarRpc'
 
-import type {
-  AsyncIPCFunctions,
-  SyncIPCFunctions,
-  TestSyncIPCFunctions,
-  FrontendMessages
-} from 'common/types/ipc'
-
-function addListener<ChannelName extends keyof SyncIPCFunctions>(
-  channel: ChannelName,
-  listener: (
-    e: IpcMainEvent,
-    ...args: Parameters<SyncIPCFunctions[ChannelName]>
-  ) => void
-) {
-  ipcMain.on(channel, listener as never)
-}
-
-function addTestOnlyListener<ChannelName extends keyof TestSyncIPCFunctions>(
-  channel: ChannelName,
-  listener: (...args: Parameters<TestSyncIPCFunctions[ChannelName]>) => void
-) {
-  if (process.env.CI === 'e2e') ipcMain.on(channel, listener as never)
-}
-
-function addHandler<ChannelName extends keyof AsyncIPCFunctions>(
-  channel: ChannelName,
-  handler: (
-    e: IpcMainEvent,
-    ...args: Parameters<AsyncIPCFunctions[ChannelName]>
-  ) =>
-    | ReturnType<AsyncIPCFunctions[ChannelName]>
-    | Awaited<ReturnType<AsyncIPCFunctions[ChannelName]>>
-) {
-  ipcMain.handle(channel, handler as never)
-}
+import type { FrontendMessages } from 'common/types/ipc'
 
 /**
  * Pushes a message to the renderer through the sidecar transport (`pushFrontendMessage`).
@@ -56,9 +20,4 @@ function sendFrontendMessage<ChannelName extends keyof FrontendMessages>(
   return true
 }
 
-// addOneTimeListener was dropped from this export list (260922-vzw): the
-// only hit outside this module is a `jest.doMock('../../ipc', () => ({
-// addOneTimeListener: jest.fn(), ... }))` mock-object property name in
-// src/backend/sidecar/__tests__/wineToolsFlows.test.ts -- coincidental, not
-// an import of this function. No file imports it from `ipc.ts`.
-export { addListener, addTestOnlyListener, addHandler, sendFrontendMessage }
+export { sendFrontendMessage }

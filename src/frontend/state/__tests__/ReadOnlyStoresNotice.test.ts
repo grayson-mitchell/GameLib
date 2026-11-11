@@ -2,7 +2,7 @@ import {
   handleReadOnlyStoresNoticeSignal,
   useReadOnlyStoresNotice
 } from '../ReadOnlyStoresNotice'
-import type { IpcRendererEvent } from 'backend/platform'
+import type { IpcRendererEvent } from 'common/types/hostTypes'
 
 const evt = {} as IpcRendererEvent
 const send = (p: unknown) => handleReadOnlyStoresNoticeSignal(evt, p)

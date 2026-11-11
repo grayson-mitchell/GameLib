@@ -43,14 +43,6 @@ jest.mock('graceful-fs', () => ({
   rmSync: jest.fn()
 }))
 
-jest.mock('backend/platform', () => ({
-  app: {
-    getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
-    getAppPath: () => '/tmp/mock-path',
-    hide: jest.fn()
-  }
-}))
-
 jest.mock('../stores', () => ({
   steamBottleConfigStore: {
     get: jest.fn(),

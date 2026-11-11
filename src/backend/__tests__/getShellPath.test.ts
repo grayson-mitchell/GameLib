@@ -10,8 +10,6 @@
  */
 import { homedir } from 'os'
 import { normalize } from 'path'
-
-jest.mock('backend/platform')
 jest.mock('../logger')
 jest.mock('../dialog/dialog')
 jest.mock('../config')

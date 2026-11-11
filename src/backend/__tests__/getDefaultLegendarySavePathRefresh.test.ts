@@ -219,11 +219,6 @@ jest.mock('../storeManagers/legendary/games', () => ({
   default: class LegendaryGame {}
 }))
 
-// ── backend/platform mock ─────────────────────────────────────────────────────────────────────
-jest.mock('backend/platform', () => ({
-  app: { getPath: jest.fn(() => '/fake/documents') }
-}))
-
 // ── backend/storeManagers mock -- THE LOAD-BEARING MOCK ──────────────────────────────────────
 // Real module eagerly constructs every store manager at import time; this factory sidesteps
 // that by injecting a REAL LegendaryLibraryManager (constructed here -- no explicit

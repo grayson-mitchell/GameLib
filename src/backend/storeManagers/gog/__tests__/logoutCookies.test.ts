@@ -35,10 +35,6 @@ jest.mock('backend/ipc', () => ({
 
 jest.mock('axios')
 
-jest.mock('backend/platform', () => ({
-  app: { getVersion: () => '1.0.0' }
-}))
-
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),

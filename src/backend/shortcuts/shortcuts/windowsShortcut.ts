@@ -17,8 +17,19 @@
  */
 import { existsSync } from 'graceful-fs'
 import { win32 } from 'path'
-import type { ShortcutDetails } from 'backend/platform'
 import type { ProcessRunner } from '../../process/types'
+
+/** The `.lnk` fields a caller supplies (the shape Electron's `shell.writeShortcutLink` took). */
+export interface ShortcutDetails {
+  appUserModelId?: string
+  args?: string
+  cwd?: string
+  description?: string
+  icon?: string
+  iconIndex?: number
+  target: string
+  toastActivatorClsid?: string
+}
 
 export const POWERSHELL_ARGS = [
   '-NoProfile',

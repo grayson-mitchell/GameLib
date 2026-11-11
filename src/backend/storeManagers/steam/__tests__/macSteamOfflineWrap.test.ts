@@ -25,9 +25,6 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
-jest.mock('backend/platform', () => ({
-  shell: { openExternal: jest.fn() }
-}))
 jest.mock('backend/config', () => ({
   GlobalConfig: {
     get: () => ({ getSettings: () => ({ defaultSteamPath: '' }) })

@@ -360,7 +360,7 @@ describe('66.3 gates (skeleton; plan 18 adds the end state)', () => {
     expect(callsStaticConfigGet('gameConfigs.get(appName)')).toBe(false)
   })
 
-  it('OWNED_66_3 lists the 28 files 66.3 owns, all existing and none sanctioned', () => {
+  it('OWNED_66_3 lists the 28 files 66.3 owns, all existing (but the deleted platform delegate) and none sanctioned', () => {
     // 66.3-17 deleted humble/humbleStores.ts outright (its holder had no remaining reader), so it
     // leaves the owned list: the file went away, it did not move.
     expect(OWNED_66_3).toHaveLength(28)
@@ -371,7 +371,11 @@ describe('66.3 gates (skeleton; plan 18 adds the end state)', () => {
       'src/backend/process/runner.ts'
     ]
     for (const p of OWNED_66_3) {
-      expect(existsSync(join(root, p))).toBe(true)
+      // 66.3-18 deleted the platform delegate: it is on the owned list as the one file that must
+      // no longer exist.
+      expect(existsSync(join(root, p))).toBe(
+        p !== 'src/backend/platform/index.ts'
+      )
       expect(sanctioned).not.toContain(p)
     }
   })

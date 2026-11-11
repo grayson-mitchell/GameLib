@@ -6,29 +6,21 @@
  * `src-tauri/src/main.rs`, 27-01), which imports `init` from this module and
  * calls it unconditionally.
  *
- * This module's ordering is load-bearing (spike 009's sharp edge): nothing in
- * `src/` imports `electron` any more (`meta/__tests__/electronAbsence.test.ts`
- * gates that, and `backend/constants/paths.ts` reads `app.getPath` from
- * `backend/platform`), so no `Module._load` hook is installed. `../platform` is
- * still imported FIRST: Phase 27 Plan 05 found that a module which touches
- * `app.getPath()` at module scope must run after platform/index.ts has loaded
- * (it polyfills `process.getSystemVersion` and builds the stub's ipc
- * registries), and ES modules evaluate every static import in declaration order
- * before the module's own statements. Reordering this first import re-opens the
- * blank-screen boot failure.
+ * This module's ordering is load-bearing (spike 009's sharp edge): nothing in `src/` imports
+ * `electron` (`meta/__tests__/electronAbsence.test.ts` gates that) and the `backend/platform`
+ * facade is gone (66.3): module-scope path reads go through `./pathShim`, and the IPC registry
+ * is built fresh by the 'host-services' boot step.
  */
 
 // ---- Step 1: load the platform layer FIRST, before `./handlers` (below) pulls
 //              in the backend module graph. --------------------------------
 import { installOutboundHttpTracking } from './outboundHttpRegistry'
-import '../platform'
 
 import type { Readable, Writable } from 'node:stream'
 import { existsSync } from 'graceful-fs'
 import { join } from 'node:path'
 import Backend from 'i18next-fs-backend'
 import i18next from 'i18next'
-import * as platformApi from '../platform'
 import { sweepStaleEngineTemps } from 'backend/engine/fallbackEngine'
 import { startInstalledJsonWatcher } from './installedJsonWatcher'
 import { removeLegacyZoomData } from './legacyZoomDataCleanup'
@@ -41,7 +33,7 @@ import { i18nextLanguageOptions, localeFileSegments } from 'common/languages'
 
 import { registerHandlers } from './handlers'
 import { createHostServices, type HostServices } from '../host'
-import type { IpcRegistry } from './ipcRegistry'
+import { createIpcRegistry, type IpcRegistry } from './ipcRegistry'
 import { createStores } from '../stores/createStores'
 import { createStoreRegistry } from '../stores/storeRegistry'
 import { createStoreManagers } from '../storeManagers'
@@ -307,7 +299,6 @@ export const BOOT_STEP_NAMES = [
   'register-handlers',
   'rpc-server',
   'protocol-url-handler',
-  'shim-bind',
   'mac-steam-online-restore',
   'secret-stores',
   'orphaned-token-cleanup',
@@ -1239,14 +1230,13 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'host-services',
       // Built once, right after the logger: the Tauri-native services that replace the Electron
-      // facade. `interimIpc` is the delegate's registry, so `host.ipc` is the one registry
-      // instance (66.1 C-WR-1: no split-brain); plan 18 passes createIpcRegistry() instead.
+      // facade. `host.ipc` is the one registry instance (66.1 C-WR-1: no split-brain), built here.
       run: (ctx, _io, state) => {
         state.services.host =
           prebuilt.host ??
           createHostServices({
             platform: ctx.platform,
-            ipc: platformApi.interimIpc,
+            ipc: createIpcRegistry(),
             requestRustInvoke,
             requestOpenExternal,
             pushFrontendMessage,
@@ -1966,7 +1956,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           const settings = requireServices(state).config.getSettings()
           const localesDir = join(ctx.paths.publicDir, 'locales')
           // Loud-not-silent locale resolution (publicdir-getapppath-chunking gotcha family):
-          // under the sidecar, platformApi's `app.getAppPath()` resolves to `process.cwd()`,
+          // under the sidecar, the app root (`GAMELIB_APP_ROOT`) resolves to `process.cwd()`,
           // not a packaged asar root -- so the packaged-build half of this path cannot be
           // proven by jest and is a named deferred-UAT item. If the resolved directory is
           // absent, warn loudly naming the resolved path rather than silently falling back --
@@ -2102,15 +2092,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
-      name: 'shim-bind',
-      // The interim delegate (platform/index.ts) starts forwarding to the host services exactly
-      // where the old transport binding did: pre-bind pushes are dropped, not buffered. Plan 18
-      // deletes the delegate and this step.
-      run: (_ctx, _io, state) => {
-        platformApi.bindHostServices(requireServices(state).host)
-      }
-    },
-    {
       name: 'mac-steam-online-restore',
       run: (_ctx, _io, state) => {
         // Owed Mac Steam goonline, three layers: routed quit (handleExit), stdin EOF
@@ -2210,7 +2191,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       name: 'online-monitor',
       run: (_ctx, _io, state) => {
         // Placement is load-bearing (fix/steam-native-install-stability, 33-05 live-gate gap): must
-        // run AFTER startRpcServer()/shim-bind so initOnlineMonitor()'s immediate
+        // run AFTER startRpcServer() so initOnlineMonitor()'s immediate
         // `sendFrontendMessage('connectivity-changed', ...)` call (inside `setStatus()`) has a live
         // transport to push through, and BEFORE the READY_SENTINEL write below so the frontend's
         // `get-connectivity-status` handler is guaranteed registered before the renderer can possibly
@@ -2398,7 +2379,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // Placement is constrained from both sides:
         //   - Must be AFTER the i18next block above so `i18nReady` holds the real init promise
         //     rather than the `Promise.resolve()` initial value.
-        //   - Must be AFTER `startRpcServer(input, output)` and `platformApi.bindHostServices(...)`
+        //   - Must be AFTER `startRpcServer(input, output)`
         //     above, because the dialog reaches the shell via `requestRustInvoke`, which needs a
         //     live write stream -- do not rely on the `i18nReady` await pushing this into a later
         //     macrotask; the placement itself must carry it.

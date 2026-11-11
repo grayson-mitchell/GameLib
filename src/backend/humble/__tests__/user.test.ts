@@ -44,16 +44,6 @@ const mockSessionInstance = {
 }
 const mockFromPartition = jest.fn(() => mockSessionInstance)
 
-jest.mock('backend/platform', () => ({
-  app: { userAgentFallback: mockUserAgentFallback },
-  safeStorage: {
-    isEncryptionAvailable: mockIsEncryptionAvailable,
-    encryptString: mockEncryptString,
-    decryptString: mockDecryptString
-  },
-  session: { fromPartition: mockFromPartition }
-}))
-
 // ── Logger mock (factory to prevent transitive module load failures) ────────
 const mockLogInfo = jest.fn()
 const mockLogError = jest.fn()

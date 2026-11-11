@@ -14,10 +14,13 @@ import {
   RUST_DIALOG_SAVE
 } from 'common/types/sidecarTransport'
 import type { RustInvokeArgsOf } from 'common/types/ipc/rustInvoke'
-import type { MessageBoxOptions, OpenDialogOptions } from '../platform/types'
+import type {
+  MessageBoxOptions,
+  OpenDialogOptions
+} from 'common/types/hostTypes'
 import type { RequestRustInvoke } from './index'
 
-export type SaveDialogOptions = RustInvokeArgsOf<typeof RUST_DIALOG_SAVE>[0]
+type SaveDialogOptions = RustInvokeArgsOf<typeof RUST_DIALOG_SAVE>[0]
 
 export interface Dialogs {
   showErrorBox(title?: string, content?: string): Promise<void>

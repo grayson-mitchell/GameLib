@@ -1,4 +1,3 @@
-import type { ShortcutDetails } from 'backend/platform/types'
 import { isStore, storeCapabilities } from 'common/storeCapabilities'
 import {
   chmodSync,
@@ -22,7 +21,7 @@ import sanitize from 'sanitize-filename'
 import { isMac } from 'backend/constants/environment'
 import { userHome } from 'backend/constants/paths'
 import type { Game } from 'common/types/game_manager'
-import { writeWindowsShortcut } from './windowsShortcut'
+import { writeWindowsShortcut, type ShortcutDetails } from './windowsShortcut'
 import { readWindowsShellFolder } from '../../sidecar/knownFolders'
 
 /**

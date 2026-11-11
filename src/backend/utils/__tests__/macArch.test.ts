@@ -1,10 +1,9 @@
 // No real subprocess runs here: the lipo/file probes run on a scripted runner and graceful-fs,
-// the logger, the platform dialog and i18next are mocked, so no fake-HOME profile is needed
+// the logger, the dialog and i18next are mocked, so no fake-HOME profile is needed
 // and no `env` literal appears.
 
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
-import { dialog } from 'backend/platform'
 import {
   machOArchsOfAsync,
   verdictFromArchs,
@@ -23,9 +22,6 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   LogPrefix: { Backend: 'Backend', Steam: 'Steam' }
 }))
-jest.mock('backend/platform', () => ({
-  dialog: { showMessageBox: jest.fn() }
-}))
 jest.mock('i18next', () => ({
   __esModule: true,
   default: { t: jest.fn((_k: string, d: string) => d) }
@@ -34,7 +30,7 @@ jest.mock('i18next', () => ({
 const mExists = existsSync as unknown as jest.Mock
 const mReaddir = readdirSync as unknown as jest.Mock
 const mReadFile = readFileSync as unknown as jest.Mock
-const mBox = dialog.showMessageBox as unknown as jest.Mock
+const mBox = jest.fn()
 const dialogDeps = { dialogs: { showMessageBox: mBox } }
 
 const DREDMOR_DIR = ['DredmorSchema.xsd', 'achievements', 'dredmor']

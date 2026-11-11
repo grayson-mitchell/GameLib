@@ -1,5 +1,5 @@
 import { LogPrefix, logInfo, logWarning } from 'backend/logger'
-import type { IpcMainInvokeEvent } from 'backend/platform/types'
+import type { IpcMainInvokeEvent } from 'common/types/hostTypes'
 import { ButtonOptions, DialogType } from 'common/types'
 import { sendFrontendMessage } from '../ipc'
 import type { AppState } from '../host/appState'

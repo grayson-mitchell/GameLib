@@ -1,6 +1,6 @@
 /**
  * Quick task 261023-vkv: a rejected `notification_show` rustInvoke must reach `logWarning`
- * (via the stub Notification's Electron-shaped 'failed' event, consumed by dialog.ts notify()),
+ * (via the host notifications service's `onFailed` callback, consumed by dialog.ts notify()),
  * and an authorization denial is logged once per process.
  */
 import { createTestHostServices } from '../testUtils/testHostServices'
@@ -25,20 +25,17 @@ jest.mock('../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 type Notify = (n: { title: string; body: string }) => void
 
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.isolateModules needs sync require */
-function loadNotify(): { notify: Notify; Notification: any } {
+function loadNotify(): { notify: Notify } {
   let loaded: any
   jest.isolateModules(() => {
-    const platform = require('backend/platform')
     const host = createTestHostServices({
       rustInvoke: (channel, args) =>
         mockRequestRustInvoke(channel, args) as Promise<unknown>
     })
-    platform.bindHostServices(host)
     const realNotify = require('../dialog/dialog').notify
     loaded = {
       notify: (n: Parameters<Notify>[0]) =>
-        realNotify({ notifications: host.notifications }, n),
-      Notification: platform.Notification
+        realNotify({ notifications: host.notifications }, n)
     }
   })
   return loaded
@@ -56,35 +53,6 @@ describe('notification failure logging', () => {
     jest.spyOn(console, 'warn').mockImplementation(() => undefined)
   })
   afterEach(() => jest.restoreAllMocks())
-
-  it("stub on('failed') receives (event, message), never throws, still warns", async () => {
-    const { Notification } = loadNotify()
-    mockRequestRustInvoke.mockRejectedValue(
-      new Error('notification:delivery-failed: x')
-    )
-    const listener = jest.fn()
-    const n = new Notification({ title: 't', body: 'b' })
-    expect(n.on('failed', listener)).toBe(n)
-    expect(n.on('click', () => undefined)).toBe(n)
-    n.show()
-    await flush()
-    expect(listener).toHaveBeenCalledWith(
-      expect.anything(),
-      'notification:delivery-failed: x'
-    )
-    expect(console.warn).toHaveBeenCalled()
-  })
-
-  it('a throwing failed listener does not escape', async () => {
-    const { Notification } = loadNotify()
-    mockRequestRustInvoke.mockRejectedValue(new Error('e'))
-    const n = new Notification({})
-    n.on('failed', () => {
-      throw new Error('boom')
-    })
-    n.show()
-    await flush()
-  })
 
   it('delivery-failed is logged via logWarning every time', async () => {
     const { notify } = loadNotify()
@@ -113,51 +81,6 @@ describe('notification failure logging', () => {
     await flush()
     expect(mockLogWarning).toHaveBeenCalledTimes(1)
     expect(mockLogWarning.mock.calls[0][0]).toContain('System Settings')
-  })
-
-  it("stub on('show') receives (event, backend label) on success", async () => {
-    const { Notification } = loadNotify()
-    mockRequestRustInvoke.mockResolvedValue('user-notifications')
-    const show = jest.fn()
-    const failed = jest.fn()
-    const n = new Notification({ title: 't', body: 'b' })
-    n.on('show', show)
-    n.on('failed', failed)
-    n.show()
-    await flush()
-    expect(show).toHaveBeenCalledWith(expect.anything(), 'user-notifications')
-    expect(failed).not.toHaveBeenCalled()
-  })
-
-  it("stub on('show') gets undefined when the shell resolves null", async () => {
-    const { Notification } = loadNotify()
-    mockRequestRustInvoke.mockResolvedValue(null)
-    const show = jest.fn()
-    const n = new Notification({})
-    n.on('show', show)
-    n.show()
-    await flush()
-    expect(show).toHaveBeenCalledWith(expect.anything(), undefined)
-  })
-
-  // 52-REVIEW WR-02: without the per-listener guard the throw would land in show()'s chained
-  // .catch and be misreported as a failed (undelivered) notification, so assert both halves.
-  it('a throwing show listener is caught by its own guard, not reported as a failure', async () => {
-    const { Notification } = loadNotify()
-    mockRequestRustInvoke.mockResolvedValue('plugin')
-    const n = new Notification({})
-    const failed = jest.fn()
-    n.on('show', () => {
-      throw new Error('boom')
-    })
-    n.on('failed', failed)
-    n.show()
-    await flush()
-    expect(console.warn).toHaveBeenCalledWith(
-      "[platformApi] Notification 'show' listener threw:",
-      'boom'
-    )
-    expect(failed).not.toHaveBeenCalled()
   })
 
   it('a bare user-notifications label (older shell) logs "accepted by UserNotifications" without settings', async () => {

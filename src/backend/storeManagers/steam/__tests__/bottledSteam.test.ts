@@ -46,14 +46,6 @@ import { at } from './fixtures/indexed'
 const { steamBottleConfigStore } =
   jest.requireMock<Stores['steam']>('../stores')
 
-jest.mock('backend/platform', () => ({
-  app: {
-    getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
-    // Plain method (survives resetMocks) -- publicDir resolves it at module load.
-    getAppPath: () => '/tmp/mock-path'
-  }
-}))
-
 jest.mock('graceful-fs', () => ({
   existsSync: jest.fn(),
   mkdirSync: jest.fn(),

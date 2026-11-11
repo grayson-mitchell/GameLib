@@ -149,7 +149,7 @@ async function fetchSystemInfo(
     GPUs: gpus,
     OS: {
       platform: process.platform,
-      version: process.getSystemVersion(),
+      version: os.release(),
       ...detailedOsInfo
     },
     steamDeckInfo: deckInfo,

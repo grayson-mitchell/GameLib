@@ -24,10 +24,6 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-jest.mock('backend/platform', () => ({
-  app: { getPath: () => '/tmp/test' }
-}))
-
 // ── Logger mock ────────────────────────────────────────────────────────────
 const mockLogWarning = jest.fn()
 const mockLogInfo = jest.fn()

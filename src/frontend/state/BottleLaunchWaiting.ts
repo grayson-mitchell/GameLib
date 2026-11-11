@@ -1,4 +1,4 @@
-import type { IpcRendererEvent } from 'backend/platform'
+import type { IpcRendererEvent } from 'common/types/hostTypes'
 import type { SteamBottleLaunchWaitingCause } from 'common/types/steam'
 import { create } from 'zustand'
 

@@ -32,7 +32,7 @@
 import type { IpcRegistry } from './ipcRegistry'
 import { openDialogCallback } from '../utils/openDialog'
 import type { Dialogs } from '../host/dialogs'
-import type { OpenDialogOptions } from '../platform/types'
+import type { OpenDialogOptions } from 'common/types/hostTypes'
 
 /**
  * Registers the `openDialog` invoke handler. Called once from `handlers.ts` —

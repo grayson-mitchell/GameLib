@@ -12,7 +12,6 @@ import { resolveGameTitle } from 'backend/utils/gameTitle'
 import { Runner } from 'common/types'
 import { storeMap } from 'common/utils'
 import { storeCapabilities } from 'common/storeCapabilities'
-import type { Event } from 'backend/platform/types'
 import { existsSync, readdirSync, rmSync } from 'graceful-fs'
 import i18next from 'i18next'
 import { join } from 'path'
@@ -110,7 +109,7 @@ const removeSettingsAndLogs = (appName: string) => {
 
 export const uninstallGameCallback = async (
   deps: UninstallerDeps,
-  event: Event,
+  event: unknown,
   appName: string,
   runner: Runner,
   shouldRemovePrefix: boolean,

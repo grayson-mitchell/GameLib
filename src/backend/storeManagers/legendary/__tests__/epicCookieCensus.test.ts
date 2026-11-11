@@ -69,12 +69,6 @@ const mockFromPartitionReturn: Record<string, unknown> = {
 
 const mockFromPartition = jest.fn()
 
-jest.mock('backend/platform', () => ({
-  session: {
-    fromPartition: (...args: unknown[]) => mockFromPartition(...args)
-  }
-}))
-
 // Phase 49 (49-05): logout() now publishes the sign-in outcome map through
 // `noteSignedOut`, which sends a frontend message. Real `sendFrontendMessage`
 // needs an Electron window, which this suite does not provide.

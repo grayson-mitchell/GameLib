@@ -1,4 +1,4 @@
-import type { IpcRendererEvent } from 'backend/platform'
+import type { IpcRendererEvent } from 'common/types/hostTypes'
 import { create } from 'zustand'
 import { READ_ONLY_AREAS, READ_ONLY_REASONS } from 'common/types/readOnlyStores'
 import type { ReadOnlyStoresNoticePayload } from 'common/types/readOnlyStores'

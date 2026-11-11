@@ -11,7 +11,7 @@ import {
   resolveRouteNoticeContent,
   knownBadReasonKey
 } from '../SteamBridgeRouteNotice'
-import type { IpcRendererEvent } from 'backend/platform'
+import type { IpcRendererEvent } from 'common/types/hostTypes'
 
 const RESET_STATE = {
   isOpen: false,

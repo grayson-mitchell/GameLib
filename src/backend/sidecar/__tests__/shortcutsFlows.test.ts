@@ -147,7 +147,6 @@ import { dirname, join } from 'path'
 import { dirSync, type DirResult } from 'tmp'
 import { realHomeAtSetup } from 'backend/jest.setupContainment'
 import { registerShortcutsFlows } from '../shortcutsFlowRegistration'
-import { bindHostServices } from '../../platform'
 import { createIpcRegistry } from '../ipcRegistry'
 import { ipcViews } from '../../testUtils/ipcViews'
 import { createTestHostServices } from '../../testUtils/testHostServices'
@@ -266,15 +265,11 @@ if (HOST_IS_DARWIN) {
 }
 
 // The real nativeImage shim reaches /usr/bin/sips through the host services' runSync;
-// bound once to a fake-HOME real runner, the same way bootstrap binds ctx.runner. The same
+// built once over a fake-HOME real runner, the same way bootstrap binds ctx.runner. The same
 // imageTools instance is handed to registerShortcutsFlows below (66.3-06).
 const sipsRunner = createRealRunner()
 const sipsImageTools = createNativeImage({
   runSync: (cmd, argv, opts) => sipsRunner.runner.runSync(cmd, argv, opts)
-})
-bindHostServices({
-  ...createTestHostServices(),
-  imageTools: sipsImageTools
 })
 afterAll(() => sipsRunner.dispose())
 

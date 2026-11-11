@@ -1,7 +1,8 @@
 /**
  * Phase 34.5 Plan 16, Task 3 (G-1, REQ-34.5-12/REQ-34.5-13).
  *
- * Proves both arms of `platformApi.app.getAppPath()`'s `GAMELIB_APP_ROOT` handoff and, from
+ * Proves both arms of the `GAMELIB_APP_ROOT` handoff (read by `constants/paths.ts` and the boot
+ * context's `appRoot`) and, from
  * the JS side, the Rust half of that handoff (mirroring
  * `src/backend/__tests__/tauriShellSource.test.ts`'s existing approach for asserting against
  * real `main.rs` source text rather than reimplementing the Rust logic here).
@@ -38,7 +39,6 @@ import {
   stripSourceComments,
   stripTrailingLineComment
 } from '../../testUtils/stripSourceComments'
-import { app } from '../../platform'
 
 /** Mirrors tauriShellSource.test.ts's loadMainRsCode — comment-stripped source only. */
 function loadMainRsCode(): string {
@@ -70,7 +70,17 @@ function extractFnBody(
   return code.slice(start, end)
 }
 
-describe('platformApi.app.getAppPath() — GAMELIB_APP_ROOT env-set arm', () => {
+/** Requires `backend/constants/paths` fresh so `publicDir` is recomputed from the current env/cwd. */
+function freshPublicDir(): string {
+  let publicDir!: string
+  jest.isolateModules(() => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    publicDir = require('../../constants/paths').publicDir
+  })
+  return publicDir
+}
+
+describe('app root (paths.ts publicDir) — GAMELIB_APP_ROOT env-set arm', () => {
   let saved: string | undefined
 
   beforeEach(() => {
@@ -90,16 +100,16 @@ describe('platformApi.app.getAppPath() — GAMELIB_APP_ROOT env-set arm', () => 
 
   it('returns process.env.GAMELIB_APP_ROOT verbatim when set and non-empty', () => {
     process.env.GAMELIB_APP_ROOT = '/Users/dev/GameLib'
-    expect(app.getAppPath()).toBe('/Users/dev/GameLib')
+    expect(freshPublicDir()).toBe(join('/Users/dev/GameLib', 'public'))
   })
 
   it('returns the value verbatim even when it contains a space, no trimming or quoting', () => {
     process.env.GAMELIB_APP_ROOT = '/Users/dev/Game Lib'
-    expect(app.getAppPath()).toBe('/Users/dev/Game Lib')
+    expect(freshPublicDir()).toBe(join('/Users/dev/Game Lib', 'public'))
   })
 })
 
-describe('platformApi.app.getAppPath() — unset/empty arms fall back to process.cwd()', () => {
+describe('app root (paths.ts publicDir) — unset/empty arms fall back to process.cwd()', () => {
   let saved: string | undefined
   let cwdSpy: jest.SpyInstance<string, []>
 
@@ -119,12 +129,12 @@ describe('platformApi.app.getAppPath() — unset/empty arms fall back to process
 
   it('returns process.cwd() when GAMELIB_APP_ROOT is unset', () => {
     delete process.env.GAMELIB_APP_ROOT
-    expect(app.getAppPath()).toBe('/fake/cwd')
+    expect(freshPublicDir()).toBe(join('/fake/cwd', 'public'))
   })
 
   it('returns process.cwd() when GAMELIB_APP_ROOT is the empty string — REQ-34.5-13: the Electron build and the jest suite observe no behaviour change', () => {
     process.env.GAMELIB_APP_ROOT = ''
-    expect(app.getAppPath()).toBe('/fake/cwd')
+    expect(freshPublicDir()).toBe(join('/fake/cwd', 'public'))
   })
 })
 
@@ -175,7 +185,7 @@ describe('main.rs sets GAMELIB_APP_ROOT on BOTH sidecar spawn paths (Rust half o
 // below therefore does two things together: (1) forces `process.cwd()` to `<repo>/src-tauri`, the
 // literal sidecar condition, and (2) calls the REAL, unmocked `node:fs` `existsSync` against
 // paths resolved by the actual production code path (`backend/constants/paths.ts`, required fresh
-// with `electron` swapped for the real, non-mocked `platformApi` — never restated by hand).
+// unmocked — never restated by hand).
 describe('real-filesystem sidecar-conditions: publicDir resolution under cwd=src-tauri (Phase 34.5 G-1, plan 34.5-17)', () => {
   // Derived from THIS file's own __dirname (src/backend/sidecar/__tests__), never from
   // process.cwd() -- this block mocks process.cwd() for the very things under test, so anything
@@ -203,18 +213,11 @@ describe('real-filesystem sidecar-conditions: publicDir resolution under cwd=src
 
   /**
    * Requires `backend/constants/paths` fresh inside a `jest.isolateModules` sandbox. This suite
-   * declares no `jest.mock('backend/platform', ...)`, so `paths.ts` resolves against the REAL,
-   * unmocked `platformApi` module both here and at this file's own top-level imports -- the
+   * declares no mock of `pathShim`, so `paths.ts` resolves against the real module -- the
    * isolation exists purely to get a FRESH module instance per arm, so `publicDir` (a
    * module-scope constant computed once at import time) is recomputed by `paths.ts:73` itself,
    * against this test's mocked `process.cwd()` and whatever `GAMELIB_APP_ROOT` the calling test
    * set, exactly the way the real sidecar computes it -- never recomputed by this test file.
-   * (Phase 35 Plan 18 update: this used to ALSO swap away from a project-wide default
-   * `jest.mock('electron')` automock via `jest.doMock('electron', () =>
-   * jest.requireActual('../../platform'))`. That automock no longer exists -- Plan 18 retired
-   * the `electron` devDependency outright, and its manual-mock replacement is a first-party
-   * module mock Jest never auto-applies without an explicit per-suite call. The `doMock` line
-   * became a no-op and was deleted.)
    */
   function requirePathsUnderSidecarConditions(): typeof import('../../constants/paths') {
     let isolatedPaths!: typeof import('../../constants/paths')

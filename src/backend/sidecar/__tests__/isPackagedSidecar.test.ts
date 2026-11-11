@@ -11,10 +11,9 @@
  *      `catch` return `false` would unlock that vault inside a shipped binary and every
  *      other test in the repo would stay green.
  *
- *   2. `platformApi`'s `app.isPackaged` DELEGATES to it rather than re-deriving it, and
- *      does so through a getter rather than a value captured at module-construction time.
- *      Both directions are exercised against ONE loaded module instance, because a
- *      snapshot would pass a single-direction test and fail the second read.
+ *   2. `constants/paths.ts` (which picks `build` vs `public` for `publicDir`) CONSUMES it
+ *      rather than re-deriving it: each direction is exercised against a freshly loaded
+ *      `paths.ts`, and the source gate pins that no second derivation exists.
  *
  * No file-wide `jest.mock` here on purpose. `isPackagedSidecar()` performs its
  * `node:sea` require at CALL time, so `jest.doMock` inside a test body reaches it, and
@@ -22,7 +21,7 @@
  */
 
 import { readFileSync } from 'fs'
-import { join } from 'path'
+import { basename, join } from 'path'
 
 import { stripSourceComments } from '../../testUtils/stripSourceComments'
 
@@ -59,7 +58,7 @@ describe('isPackagedSidecar() — the one derivation', () => {
     //     in a packaged build (T-35-12).
     //   - humbleFlowRegistration.ts does NOT register the dev-only humbleRunValidation
     //     channel.
-    //   - platform/index.ts's app.isPackaged reports packaged, so paths.ts resolves
+    //   - paths.ts consults it, so a packaged answer resolves
     //     publicDir to `build` — the bundled layout — rather than the source `public/`.
     // The unsafe direction is the one that looks harmless.
     jest.resetModules()
@@ -81,37 +80,46 @@ describe('isPackagedSidecar() — the one derivation', () => {
   })
 })
 
-describe('platformApi app.isPackaged — a delegating getter, not a second derivation', () => {
+describe('paths.ts publicDir consumes the derivation (no second derivation)', () => {
   afterEach(() => {
     jest.dontMock('node:sea')
     jest.dontMock('../isPackagedSidecar')
     jest.resetModules()
   })
 
-  it('reflects the derivation in BOTH directions on one module instance (proves a getter, not a captured snapshot)', () => {
-    jest.resetModules()
-    const scripted = jest.fn<boolean, []>()
-    jest.doMock('../isPackagedSidecar', () => ({
-      isPackagedSidecar: () => scripted()
-    }))
-
+  const publicDirBase = (): string => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { app } = require('../../platform') as {
-      app: { isPackaged: boolean }
+    const { publicDir } = require('../../constants/paths') as {
+      publicDir: string
     }
+    return basename(publicDir)
+  }
 
-    scripted.mockReturnValue(true)
-    expect(app.isPackaged).toBe(true)
+  it('reflects the derivation in BOTH directions (a packaged answer resolves `build`, a dev answer `public`)', () => {
+    const savedCi = process.env.CI
+    delete process.env.CI
+    try {
+      jest.resetModules()
+      const scripted = jest.fn<boolean, []>()
+      jest.doMock('../isPackagedSidecar', () => ({
+        isPackagedSidecar: () => scripted()
+      }))
 
-    // Same loaded module, same object. A boolean captured when the literal was
-    // constructed could not change here; a getter can.
-    scripted.mockReturnValue(false)
-    expect(app.isPackaged).toBe(false)
+      scripted.mockReturnValue(true)
+      expect(publicDirBase()).toBe('build')
 
-    expect(scripted).toHaveBeenCalledTimes(2)
+      jest.resetModules()
+      scripted.mockReturnValue(false)
+      expect(publicDirBase()).toBe('public')
+    } finally {
+      if (savedCi === undefined) delete process.env.CI
+      else process.env.CI = savedCi
+    }
   })
 
-  it('inherits the fail-closed direction end to end: a throwing node:sea makes app.isPackaged TRUE', () => {
+  it('inherits the fail-closed direction end to end: a throwing node:sea makes publicDir resolve the packaged `build` layout', () => {
+    const savedCi = process.env.CI
+    delete process.env.CI
     jest.resetModules()
     jest.doMock('node:sea', () => {
       throw new Error('node:sea unavailable on this runtime (simulated)')
@@ -119,14 +127,13 @@ describe('platformApi app.isPackaged — a delegating getter, not a second deriv
     const consoleWarnSpy = jest
       .spyOn(console, 'warn')
       .mockImplementation(() => {})
-
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { app } = require('../../platform') as {
-      app: { isPackaged: boolean }
+    try {
+      expect(publicDirBase()).toBe('build')
+    } finally {
+      consoleWarnSpy.mockRestore()
+      if (savedCi === undefined) delete process.env.CI
+      else process.env.CI = savedCi
     }
-    expect(app.isPackaged).toBe(true)
-
-    consoleWarnSpy.mockRestore()
   })
 })
 
@@ -134,25 +141,24 @@ describe('T-35-11 source gate: exactly ONE derivation exists in the sidecar tree
   const sidecarDir = join(__dirname, '..')
   const read = (f: string) =>
     stripSourceComments(readFileSync(join(sidecarDir, f), 'utf8'))
-  const readPlatform = (f: string) =>
-    stripSourceComments(
-      readFileSync(join(__dirname, '../../platform', f), 'utf8')
-    )
+  // Raw text, not comment-stripped: paths.ts holds `'file://'`, which the line-comment stripper
+  // would mistake for a comment start and truncate the rest of its line.
+  const readPaths = () =>
+    readFileSync(join(__dirname, '../../constants/paths.ts'), 'utf8')
 
   it('non-vacuity: the gate can see real code in each file it inspects', () => {
     // Proves the stripper did not eat everything it is about to assert over. Without
     // this, all three assertions below pass against an empty string.
     expect(read('isPackagedSidecar.ts')).toContain("require('node:sea')")
-    expect(readPlatform('index.ts')).toContain('isPackagedSidecar()')
+    expect(readPaths()).toContain('isPackagedSidecar()')
     expect(read('humbleFlowRegistration.ts')).toContain('isPackagedSidecar()')
     expect(read('devSecretVault.ts')).toContain('isPackagedSidecar()')
   })
 
-  it('platform/index.ts delegates and never re-derives, and no longer hardcodes the flag', () => {
-    const src = readPlatform('index.ts')
+  it('constants/paths.ts consumes the shared derivation and never re-derives it', () => {
+    const src = readPaths()
     expect(src).not.toContain("require('node:sea')")
-    expect(src).not.toContain('isPackaged: false')
-    expect(src).toContain('get isPackaged()')
+    expect(src).toContain('import { isPackagedSidecar } from')
   })
 
   it('humbleFlowRegistration.ts re-exports rather than keeping a copy', () => {

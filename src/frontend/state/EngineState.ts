@@ -1,4 +1,4 @@
-import type { IpcRendererEvent } from 'backend/platform'
+import type { IpcRendererEvent } from 'common/types/hostTypes'
 import { create } from 'zustand'
 import type { EngineState } from 'common/types/engine'
 

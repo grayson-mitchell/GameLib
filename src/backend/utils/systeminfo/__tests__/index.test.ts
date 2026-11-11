@@ -58,12 +58,6 @@ import type { SystemInfoDeps } from '../index'
 // to exist (and be threaded through).
 const deps = { libraryManagers: {} } as unknown as SystemInfoDeps
 
-// `process.getSystemVersion` is an Electron-injected extension, not part of plain
-// Node's `process` -- stub it so `fetchSystemInfo()`'s `OS.version` read doesn't throw
-// under Jest's plain Node environment.
-;(process as unknown as { getSystemVersion: () => string }).getSystemVersion =
-  jest.fn(() => '1.0.0')
-
 /** Resolves on the next microtask tick, letting queued promise chains settle. */
 function flushMicrotasks() {
   return new Promise((resolve) => setImmediate(resolve))

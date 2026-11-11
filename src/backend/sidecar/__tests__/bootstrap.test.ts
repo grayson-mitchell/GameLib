@@ -37,18 +37,9 @@
  * mock, not by the structural mechanism the tripwire is supposed to prove).
  *
  * `backend/online_monitor` is mocked (fix/steam-native-install-stability, 33-05 live-gate gap):
- * `init()` now calls the REAL `initOnlineMonitor()`, which reads `net.isOnline()` from
- * `backend/platform`. Phase 35 Plan 18 retired the `electron` devDependency outright and with
- * it the old project-wide `src/backend/__mocks__/electron.ts` automock (Jest only auto-applies
- * a `__mocks__` file for a real node_modules package -- `backend/platform` is first-party, so
- * its mock at `src/backend/platform/__mocks__/index.ts` requires an explicit `jest.mock()` call
- * per suite, per that file's own header comment). This suite declares none, so `net` now
- * resolves to the REAL `backend/platform`'s `net.isOnline()`, which throws under this
- * containment sandbox exactly as the old automock's absent `net` used to. This suite's whole
- * point is proving the sidecar boots without an uncaught exception regardless -- it is not the
- * place to validate online-monitor wiring itself (see `onlineMonitorWiring.test.ts`, which
- * exercises that against the REAL `backend/platform` deliberately). A no-op stub here remains
- * sufficient.
+ * `init()` calls `initOnlineMonitor()`; this suite's whole point is proving the sidecar boots
+ * without an uncaught exception, and it is not the place to validate online-monitor wiring itself
+ * (see `onlineMonitorWiring.test.ts`). A no-op stub here remains sufficient.
  *
  * The mock covers the module's FULL exported surface, not just `initOnlineMonitor`:
  * `./handlers`'s transitive import graph (steamFlowRegistration -> storeManagers/index.ts ->
@@ -185,28 +176,13 @@ describe('sidecar bootstrap (headless boot)', () => {
       )
     })
 
-    it("one boot pays a stale owed goonline once with the 'boot' trigger, after the shim bind", () => {
-      const order: string[] = []
+    it("one boot pays a stale owed goonline once with the 'boot' trigger", () => {
       mockRestoreMacSteamOnlineIfOwed.mockImplementation(async () => {
-        order.push('restore')
         return 'not-owed'
       })
-      bootFresh({
-        before: () => {
-          const platformModule =
-            fresh<typeof import('../../platform')>('../../platform')
-          const realBind = platformModule.bindHostServices
-          jest
-            .spyOn(platformModule, 'bindHostServices')
-            .mockImplementation((...args) => {
-              order.push('bindHostServices')
-              return realBind(...args)
-            })
-        }
-      })
+      bootFresh()
       expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledTimes(1)
       expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledWith('boot')
-      expect(order).toEqual(['bindHostServices', 'restore'])
     })
   })
 
@@ -391,12 +367,8 @@ describe('sidecar bootstrap (headless boot)', () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     expect(() => require('backend/storeManagers/steam/library')).not.toThrow()
 
-    bootFresh()
-    expect(
-      fresh<typeof import('../../platform')>(
-        '../../platform'
-      ).handlerRegistry.has('health')
-    ).toBe(true)
+    const { services } = bootFresh()
+    expect(services.host.ipc.handlerMap().has('health')).toBe(true)
   })
 
   // Phase 34.5 Plan 18, Task 1 (G-3, REQ-34.5-01). Asserts on the emitted log TEXT, not merely
@@ -670,21 +642,12 @@ describe('register-handlers boot step (D-08, C-03)', () => {
     jest.resetModules()
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     require('../handlers')
-    expect(
-      fresh<typeof import('../../platform')>(
-        '../../platform'
-      ).handlerRegistry.has('health')
-    ).toBe(false)
-
-    bootFresh()
-    expect(
-      fresh<typeof import('../../platform')>(
-        '../../platform'
-      ).handlerRegistry.has('health')
-    ).toBe(true)
+    const { services } = bootFresh()
+    // The boot step builds the registry and registers into it; nothing registered before it.
+    expect(services.host.ipc.handlerMap().has('health')).toBe(true)
   })
 
-  it('legacy-zoom cleanup removes seeded data under ctx.paths.userData, not the platform getPath value', async () => {
+  it('legacy-zoom cleanup removes seeded data under ctx.paths.userData', async () => {
     const profile = createFakeHomeProfile({ prefix: 'gamelib-zoom-ctx-' })
     try {
       const ctxUserData = join(profile.root, 'ctx-userData')
@@ -692,11 +655,6 @@ describe('register-handlers boot step (D-08, C-03)', () => {
       mkdirSync(seeded, { recursive: true })
 
       bootFresh({ context: { paths: { userData: ctxUserData } } })
-      expect(
-        fresh<typeof import('../../platform')>('../../platform').app.getPath(
-          'userData'
-        )
-      ).not.toBe(ctxUserData)
 
       for (let turn = 0; turn < 50 && existsSync(seeded); turn++) {
         await new Promise((resolve) => setImmediate(resolve))

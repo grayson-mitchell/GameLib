@@ -18,7 +18,6 @@ import { defined } from 'backend/testUtils/indexed'
 import { readdirSync, readFileSync, statSync } from 'fs'
 import { join } from 'path'
 
-import { handlerRegistry, listenerRegistry } from 'backend/platform'
 import {
   domainSources,
   parseDomainFile,
@@ -110,20 +109,16 @@ async function registered(): Promise<{
   registerHandlers({ log: createCaptureLog(), services })
   services.signInProbe.outcomes.registerHandler()
   const scan = staticScan()
-  // Registrations converted to the injected registry (66.3-09 on) write into the test host's
-  // registry, not the shim's; the rest still reach the shim's.
+  // Every registration writes into the test host's injected registry.
   const invoke = new Set([
-    ...handlerRegistry.keys(),
     ...services.host.ipc.handlerMap().keys(),
     ...scan.invoke
   ])
   const testOnly = scan.testOnly
   const send = new Set(
-    [
-      ...listenerRegistry.keys(),
-      ...services.host.ipc.listenerMap().keys(),
-      ...scan.send
-    ].filter((c) => !testOnly.has(c))
+    [...services.host.ipc.listenerMap().keys(), ...scan.send].filter(
+      (c) => !testOnly.has(c)
+    )
   )
   const parts = declaredParts()
   const push = new Set(
@@ -193,7 +188,7 @@ describe('IPC schema coverage (D-15)', () => {
         expect(['invoke', 'send']).toContain(entry.kind)
       }
       if (reg.testOnly.has(name)) continue
-      if (handlerRegistry.has(name) || reg.invoke.has(name)) {
+      if (reg.invoke.has(name)) {
         // A name can also be a push (collidingPushSchemas), but never in this map.
         expect(entry.kind).toBe('invoke')
       }

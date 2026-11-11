@@ -104,7 +104,7 @@ import {
   setTokenStore,
   getTokenStore
 } from '../../storeManagers/steam/tokenStore'
-// Real (unmocked) pathShim — same module platform/index.ts / fileStore.ts resolve
+// Real (unmocked) pathShim — same module fileStore.ts resolves
 // paths through in production, used here ONLY to compute the real store file's
 // path for a read-only byte comparison. Never used to write.
 import { getPath } from '../pathShim'
@@ -534,17 +534,6 @@ describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)',
       const violations = findSteamTokenSurfaceViolations(source, file)
       expect(violations).toEqual([])
     }
-  })
-
-  it('by-construction gate: platform/index.ts safeStorage.isEncryptionAvailable never regresses to the "always true" lie (comments stripped)', () => {
-    const src = readFileSync(
-      join(__dirname, '../../platform/index.ts'),
-      'utf-8'
-    )
-    const stripped = stripComments(src)
-    expect(stripped).not.toMatch(
-      /isEncryptionAvailable:\s*\(\):\s*boolean\s*=>\s*true/
-    )
   })
 })
 

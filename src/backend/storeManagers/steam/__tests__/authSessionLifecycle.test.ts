@@ -1,20 +1,3 @@
-/**
- * Phase 54 (54-03): the authenticated CM session lifecycle in SteamUser.
- *
- * Every authenticated cold connect runs inside withMacSteamOffline, the client
- * is built with autoRelogin false, a post-logon drop ENDS the session (it is
- * never silently re-logged on), and a logon that is still in flight at the
- * bound is abandoned before the wrap fires goonline.
- *
- * Mock boundaries: steam-user (EventEmitter-backed fake), ./macSteamOffline,
- * ./anonymousClient, ../tokenStore, backend/signInProbe/*, backend/ipc.
- */
-
-jest.mock('backend/platform', () => ({
-  safeStorage: {},
-  app: { getPath: jest.fn(() => '/tmp/test') }
-}))
-
 jest.mock('backend/ipc', () => ({
   sendFrontendMessage: jest.fn(),
   addHandler: jest.fn()

@@ -124,18 +124,6 @@ jest.mock('i18next', () => ({
   default: { t: jest.fn((_key: string, fallback = '') => fallback) }
 }))
 
-// ── SteamUser mock ────────────────────────────────────────────────────────────
-
-// ── electron mock ──────────────────────────────────────────────────────────────
-jest.mock('backend/platform', () => ({
-  dialog: { showMessageBox: jest.fn() },
-  shell: { openExternal: jest.fn() },
-  app: {
-    getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
-    getAppPath: () => '/tmp/mock-path'
-  }
-}))
-
 // ── backend/constants/environment mock — mutable double (this repo's own
 // established pattern, games.test.ts:170/library.test.ts). Defaults to a
 // confirmed Apple Silicon Mac so the Task 2 install() describe block below

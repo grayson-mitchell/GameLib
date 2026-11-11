@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import type { OpenDialogOptions } from 'backend/platform'
+import type { OpenDialogOptions } from 'common/types/hostTypes'
 import { type InvokeFns } from './schemaTypes'
 
 const dialogProperty = z.enum([

@@ -9,7 +9,7 @@ import {
   handleSteamBottleLaunchWaitingSignal,
   resolveWaitingCauseOrder
 } from '../BottleLaunchWaiting'
-import type { IpcRendererEvent } from 'backend/platform'
+import type { IpcRendererEvent } from 'common/types/hostTypes'
 
 describe('useBottleLaunchWaiting store', () => {
   afterEach(() => {

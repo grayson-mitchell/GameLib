@@ -1,7 +1,6 @@
 {
   "jestMock": {
     "src/backend/sidecar/__tests__/depotHostChannels.test.ts": 1,
-    "src/backend/sidecar/__tests__/dialogStub.test.ts": 3,
     "src/backend/sidecar/__tests__/dismissedSignInNoticesSetting.test.ts": 5,
     "src/backend/sidecar/__tests__/electronUntouched.test.ts": 3,
     "src/backend/sidecar/__tests__/engineFlows.test.ts": 3,
@@ -16,8 +15,6 @@
     "src/backend/sidecar/__tests__/isPackagedSidecar.test.ts": 5,
     "src/backend/sidecar/__tests__/keyringTokenStore.test.ts": 2,
     "src/backend/sidecar/__tests__/legacyZoomDataCleanup.test.ts": 1,
-    "src/backend/sidecar/__tests__/lifecycleStub.test.ts": 3,
-    "src/backend/sidecar/__tests__/netStub.test.ts": 4,
     "src/backend/sidecar/__tests__/oauthLoginCapture.test.ts": 1,
     "src/backend/sidecar/__tests__/openPolicy.test.ts": 1,
     "src/backend/sidecar/__tests__/sendChannelObservable.test.ts": 1,

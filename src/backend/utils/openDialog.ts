@@ -16,7 +16,7 @@
  */
 
 import type { Dialogs } from 'backend/host/dialogs'
-import type { OpenDialogOptions } from 'backend/platform/types'
+import type { OpenDialogOptions } from 'common/types/hostTypes'
 
 /**
  * Shows a native open dialog and returns the first picked path, or `false` on cancel.

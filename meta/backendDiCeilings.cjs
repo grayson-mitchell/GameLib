@@ -21,22 +21,20 @@
  *     (and calls of names destructured from jest);
  *     comments never count.
  *
- * 66.3 TARGETS (C-WR-2): when static fields joined the census the baseline ROSE by 17
- * (234 -> 251); that is the ratchet recording existing state, not new growth. The static
- * holders, all to be replaced by injected slices in 66.3: SteamUser (steam/user.ts, 11:
- * boundStores, client, connectingPromise, leaseCount, idleTimer, guidedInstallTargets,
- * shuttingDown, sessionGeneration, abandonPendingLogon, wrapTail, logonFailure) and
- * SteamUser.bindStores; bottle.ts `bindBottleStores`; humble/humbleStores.ts
- * `bindHumbleStores`; tools/dxmt.ts `bindDxmtStores`; humble/user.ts activeWatch;
- * config.ts GlobalConfig.globalInstance; game_config.ts GameConfig.instances.
- * `bindSteamGridDbSecretDeps` is a top-level let and was already counted.
+ * 66.3 COMPLETE (C-WR-2): when static fields joined the census the baseline ROSE by 17
+ * (234 -> 251); that was the ratchet recording existing state, not new growth. Phase 66.3
+ * replaced every static holder it owned with an injected slice (SteamUser, bottle, the
+ * humble/dxmt store binders, humble/user.ts activeWatch, GlobalConfig.globalInstance,
+ * GameConfig.instances) and deleted the `backend/platform` delegate. What remains in the
+ * moduleState section is the long tail owned by Phase 66.4 plus the three sanctioned
+ * entries; see src/backend/process/README.md "Hand-off to 66.4".
  *
  * Known residual, documented not hidden: `const reg = createRegistry()` (a
  * call returning a container) is NOT counted syntactically. A fixture test
  * pins that; the 66.3 zero flip and code review cover it. `containerCallResidual()`
  * is that pin: it lists every top-level `const x = create*()/make*()/build*()` or
  * `*Registry/*Cache/*Queue/*Emitter/*Map/*Set()` call in non-test src/backend. It never
- * feeds census() counts. Phase 66.3 plan 18 expects it to be empty for 66.3-owned files.
+ * feeds census() counts. It is empty (asserted by the 66.3 end-state block in diPhaseGates).
  *
  * Baselines live in sharded files meta/backendDiCeilings/*.json (any name),
  * so parallel plans each own a shard. A path may appear in only one shard per

@@ -9,7 +9,7 @@ import {
   useSteamClientSetup,
   handleSteamClientSetupRequiredSignal
 } from '../SteamClientSetup'
-import type { IpcRendererEvent } from 'backend/platform'
+import type { IpcRendererEvent } from 'common/types/hostTypes'
 
 describe('useSteamClientSetup store', () => {
   afterEach(() => {

@@ -29,7 +29,7 @@
  */
 
 import { PassThrough } from 'node:stream'
-import { bootFresh } from './helpers/sidecarHarness'
+import { bootFresh, handlerRegistry } from './helpers/sidecarHarness'
 import { existsSync, mkdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
@@ -217,7 +217,7 @@ type WiringHandles = {
   i18nextInstance: any
   appFolder: string
   logFilePath: string
-  handlerRegistry: Map<string, (...args: unknown[]) => unknown>
+  handlerRegistry: typeof handlerRegistry
 }
 
 /**
@@ -256,7 +256,6 @@ function loadHandles(): WiringHandles {
   const i18nextInstance = require('i18next')
   const { appFolder } = require('../../constants/paths')
   const { getLogFilePath } = require('../../logger/paths')
-  const { handlerRegistry } = require('../../platform')
   /* eslint-enable @typescript-eslint/no-require-imports */
 
   return {

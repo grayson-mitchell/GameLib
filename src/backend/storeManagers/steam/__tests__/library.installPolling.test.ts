@@ -105,26 +105,6 @@ jest.mock('i18next', () => {
   return { __esModule: true, t, default: { t } }
 })
 
-// ── SteamUser mock — controls getClient() / isLoggedIn() return values ───────
-
-// ── electron mock — dialog.showMessageBox (MAC32-03 i386 recovery confirm) +
-// app.getPath (backend/constants/paths reads this at module load time) ───────
-// library.ts's only electron usage is `dialog`; games.ts's `shell` import
-// (pulled in transitively via `import SteamGame from './games'`) resolves to
-// undefined here, which is fine — SteamGame.install()/forceUninstall() are
-// only reached via a CONFIRMED promptI386Recovery, and this file's tests
-// keep the dialog mocked to a cancel response unless a test explicitly opts
-// into the confirm path.
-jest.mock('backend/platform', () => ({
-  dialog: { showMessageBox: jest.fn() },
-  app: {
-    getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
-    // Plain method (survives resetMocks) -- publicDir resolves it at module load.
-    getAppPath: () => '/tmp/mock-path'
-  },
-  shell: { openExternal: jest.fn() }
-}))
-
 // ── backend/constants/environment mock — platform-switching for reader tests ──
 jest.mock('backend/constants/environment', () => ({
   isWindows: false,

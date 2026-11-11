@@ -15,7 +15,7 @@ import {
   tauriHandleFullscreen,
   tauriHandleFramelessChanged
 } from './tauriWindowChrome'
-import type { IpcRendererEvent } from 'backend/platform'
+import type { IpcRendererEvent } from 'common/types/hostTypes'
 import { tauriGamepadAction } from './tauriGamepadInput'
 import type { GamepadActionArgs } from 'common/types'
 

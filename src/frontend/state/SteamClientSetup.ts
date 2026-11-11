@@ -1,4 +1,4 @@
-import type { IpcRendererEvent } from 'backend/platform'
+import type { IpcRendererEvent } from 'common/types/hostTypes'
 import { create } from 'zustand'
 
 // Not exported: used only within this module (ts-prune / `pnpm find-deadcode`

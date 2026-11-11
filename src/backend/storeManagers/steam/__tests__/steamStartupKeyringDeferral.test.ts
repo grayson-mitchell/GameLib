@@ -93,24 +93,6 @@ jest.mock('../stores', () => ({
   }
 }))
 
-// ── electron mock — shell.openExternal (games.ts), dialog.showMessageBox
-// (library.ts's promptI386Recovery), app.getPath/getAppPath (constants/paths
-// resolves these at module-load time). Every test installs a spy store via
-// setTokenStore() before any read; the module default fails closed.
-jest.mock('backend/platform', () => ({
-  shell: { openExternal: jest.fn() },
-  dialog: { showMessageBox: jest.fn() },
-  app: {
-    getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
-    getAppPath: () => '/tmp/mock-path'
-  },
-  safeStorage: {
-    isEncryptionAvailable: jest.fn().mockReturnValue(true),
-    encryptString: jest.fn((s: string) => Buffer.from(s)),
-    decryptString: jest.fn((b: Buffer) => b.toString())
-  }
-}))
-
 jest.mock('backend/dialog/dialog', () => ({
   notify: jest
     .requireActual('backend/testUtils/propsOnlyMock')

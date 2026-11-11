@@ -62,16 +62,6 @@ jest.mock('backend/utils', () => ({
   spawnAsync: jest.fn()
 }))
 
-// ── electron mock — bottle.ts's transitive import chain (backend/constants/
-//    paths.ts) calls app.getPath() at module load. ──────────────────────────
-jest.mock('backend/platform', () => ({
-  app: {
-    getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
-    getAppPath: () => '/tmp/mock-path',
-    hide: jest.fn()
-  }
-}))
-
 // ── ../stores mock — avoids real TypeCheckedStoreBackend/CacheStore
 //    instantiation at module load (bottle.ts imports steamBottleConfigStore). ─
 jest.mock('../stores', () => ({

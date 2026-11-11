@@ -1,5 +1,5 @@
 import { ButtonOptions, DialogType } from 'common/types'
-import type { IpcRendererEvent } from 'backend/platform'
+import type { IpcRendererEvent } from 'common/types/hostTypes'
 import useUiState from 'frontend/state/uiState'
 import { ackWhenVisible } from './ackWhenVisible'
 import { configStore } from 'frontend/helpers/stores'

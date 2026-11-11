@@ -1,7 +1,7 @@
 {
   "jestMock": {
-    "src/backend/utils/__tests__/macArch.test.ts": 4,
-    "src/backend/utils/__tests__/uninstaller.test.ts": 8,
+    "src/backend/utils/__tests__/macArch.test.ts": 3,
+    "src/backend/utils/__tests__/uninstaller.test.ts": 7,
     "src/backend/utils/__tests__/wineWindowRaise.test.ts": 2,
     "src/backend/utils/aborthandler/__tests__/aborthandler.test.ts": 1,
     "src/backend/utils/systeminfo/__tests__/index.test.ts": 7

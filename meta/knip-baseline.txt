@@ -350,6 +350,5 @@ unlisted	meta/runTs.cjs	esbuild
 unlisted	scripts/steam-appinfo-dump.cjs	qrcode-generator
 unlisted	src/backend/__mocks__/config.ts	common
 unlisted	src/backend/__mocks__/store_backend.ts	common
-unlisted	src/backend/platform/__mocks__/index.ts	backend
 unlisted	src/backend/storeManagers/steam/bridge/drm/__tests__/boundedListing.test.ts	esbuild
 unresolved	tsconfig.json	tslib

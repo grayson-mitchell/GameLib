@@ -35,17 +35,6 @@ import { at } from './fixtures/indexed'
 const { steamBottleConfigStore } =
   jest.requireMock<Stores['steam']>('../stores')
 
-jest.mock('backend/platform', () => ({
-  app: {
-    getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
-    // Plain method (survives resetMocks) -- publicDir resolves it at module load.
-    getAppPath: () => '/tmp/mock-path',
-    // quick/260815-vvz Task 2: bottle.ts now statically `import { app } from 'electron'`,
-    // so the raise-loop miss fallback's `app.hide()` call is reachable from this mock.
-    hide: jest.fn()
-  }
-}))
-
 jest.mock('graceful-fs', () => ({
   existsSync: jest.fn(),
   mkdirSync: jest.fn(),

@@ -62,18 +62,6 @@ jest.mock('i18next', () => ({
   default: { t: jest.fn((_key: string, fallback = '') => fallback) }
 }))
 
-// ── SteamUser mock ────────────────────────────────────────────────────────────
-
-// ── electron mock ──────────────────────────────────────────────────────────────
-jest.mock('backend/platform', () => ({
-  dialog: { showMessageBox: jest.fn() },
-  shell: { openExternal: jest.fn() },
-  app: {
-    getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
-    getAppPath: () => '/tmp/mock-path'
-  }
-}))
-
 // ── backend/constants/environment mock — mutable double (this repo's own
 // established pattern, games.test.ts:170/library.test.ts). Defaults to a
 // confirmed Apple Silicon Mac so the Task 2 install() describe block below
@@ -193,7 +181,6 @@ jest.mock('backend/knownFixes', () => ({ readKnownFixes: jest.fn() }))
 
 import { existsSync, readdirSync } from 'graceful-fs'
 import { getSteamLibraries } from 'backend/utils'
-import { shell } from 'backend/platform'
 import { readKnownFixes } from 'backend/knownFixes'
 import { downloadSteamDepots } from '../depot'
 import SteamGame from '../games'
@@ -208,6 +195,8 @@ const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 // 66.3-15: the bottle helpers are read through the deps slice, so they are plain mocks here.
 // quick 261024-cjq: plain function (survives resetMocks) — CrossOver present.
 const isBottleReady = jest.fn()
+// The steam:// hand-off goes through deps.openExternal; this recording fake is what it calls.
+const shell = { openExternal: jest.fn() }
 const steamTestDeps = createTestManagerDeps({
   steamUser,
   steamBottle: {
@@ -217,11 +206,9 @@ const steamTestDeps = createTestManagerDeps({
     isSteamBottleProvisioned: jest.fn()
   } as never,
   stores: createTestStores({ steam: steamStoresModule }),
-  // The steam:// hand-off goes through deps; the platform mock stays the recording fake.
   openExternal: {
     ...createTestHostServices().openExternal,
-    openExternal: (...a: unknown[]) =>
-      jest.requireMock('backend/platform').shell.openExternal(...a)
+    openExternal: (...a: unknown[]) => shell.openExternal(...a)
   }
 })
 

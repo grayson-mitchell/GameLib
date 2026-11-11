@@ -18,7 +18,6 @@ import { locateMachOBinary, verifyMacArchGroundTruth } from '../library/macArch'
 import { machOArchsOfAsync, verdictFromArchs } from 'backend/utils/macArch'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
-import { dialog } from 'backend/platform'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { reportDetectedFix } from 'backend/knownFixReport'
 import { sendFrontendMessage } from '../../../ipc'
@@ -67,13 +66,13 @@ const archRunner = {
 // 66.3-15: the bottle helpers are read through the deps slice, so they are plain mocks here.
 const getSteamBottleSettings = jest.fn()
 const isSteamBottleProvisioned = jest.fn()
+// The i386-recovery confirm goes through deps.dialogs; this recording fake is what it calls.
+const dialog = { showMessageBox: jest.fn() }
 const steamTestDeps = createTestManagerDeps({
   steamBottle: { getSteamBottleSettings, isSteamBottleProvisioned } as never,
-  // The i386-recovery confirm goes through deps.dialogs; the platform dialog mock records it.
   dialogs: {
     ...createTestHostServices().dialogs,
-    showMessageBox: (...a: unknown[]) =>
-      jest.requireMock('backend/platform').dialog.showMessageBox(...a)
+    showMessageBox: (...a: unknown[]) => dialog.showMessageBox(...a)
   },
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule }),
@@ -147,26 +146,6 @@ jest.mock('i18next', () => {
   const t = jest.fn((_key: string, fallback = '') => fallback)
   return { __esModule: true, t, default: { t } }
 })
-
-// ── SteamUser mock — controls getClient() / isLoggedIn() return values ───────
-
-// ── electron mock — dialog.showMessageBox (MAC32-03 i386 recovery confirm) +
-// app.getPath (backend/constants/paths reads this at module load time) ───────
-// library.ts's only electron usage is `dialog`; games.ts's `shell` import
-// (pulled in transitively via `import SteamGame from './games'`) resolves to
-// undefined here, which is fine — SteamGame.install()/forceUninstall() are
-// only reached via a CONFIRMED promptI386Recovery, and this file's tests
-// keep the dialog mocked to a cancel response unless a test explicitly opts
-// into the confirm path.
-jest.mock('backend/platform', () => ({
-  dialog: { showMessageBox: jest.fn() },
-  app: {
-    getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
-    // Plain method (survives resetMocks) -- publicDir resolves it at module load.
-    getAppPath: () => '/tmp/mock-path'
-  },
-  shell: { openExternal: jest.fn() }
-}))
 
 // ── backend/constants/environment mock — platform-switching for reader tests ──
 jest.mock('backend/constants/environment', () => ({

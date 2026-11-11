@@ -262,7 +262,9 @@ import {
   bootFresh,
   writeInvoke,
   writeSend,
-  findResponse
+  findResponse,
+  handlerRegistry,
+  listenerRegistry
 } from './helpers/sidecarHarness'
 import {
   UNPORTED_CHANNEL_MARKER,
@@ -404,8 +406,6 @@ describe('WR-02: the containment root is minted, not derived from a predictable 
 // handles the cases configure or inspect are rebound from that registry in
 // freshRegistry() (run before each case, ahead of any mock configuration), and
 // boot() then boots without a second reset.
-let handlerRegistry: typeof import('../../platform').handlerRegistry
-let listenerRegistry: typeof import('../../platform').listenerRegistry
 let logger: typeof import('../../logger')
 let uploadedLogFileStore: ReturnType<
   typeof import('../../logger/stores').createLoggerStores
@@ -419,7 +419,6 @@ function freshRegistry(): void {
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
   const { GlobalConfig } = require('backend/config')
-  ;({ handlerRegistry, listenerRegistry } = require('../../platform'))
   logger = require('../../logger')
   const { requestRustInvoke } = require('../sidecarRpc')
   ;({ uploadedLogFileStore } =

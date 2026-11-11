@@ -25,7 +25,6 @@ jest.mock('backend/dialog/dialog', () => ({
 }))
 jest.mock('backend/utils', () => ({ sendGameStatusUpdate: jest.fn() }))
 jest.mock('backend/utils/gameTitle', () => ({ resolveGameTitle: jest.fn() }))
-jest.mock('backend/platform', () => ({ Event: {} }))
 jest.mock('backend/logger', () => ({
   logError: jest.fn(),
   logInfo: jest.fn(),

@@ -74,7 +74,14 @@ import { defined } from 'backend/testUtils/indexed'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-import { bootFresh, writeInvoke, writeSend } from './helpers/sidecarHarness'
+import {
+  bootFresh,
+  handlerRegistry as isolationHandlerRegistry,
+  listenerRegistry as isolationListenerRegistry,
+  writeInvoke,
+  writeSend
+} from './helpers/sidecarHarness'
+import { createIpcRegistry } from '../ipcRegistry'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
@@ -120,9 +127,6 @@ function fakeMembers<T extends object>(
 let HumbleUser: jest.Mocked<HumbleUserType>
 let HumbleLibrary: jest.Mocked<HumbleLibraryType>
 let fakeHumble: Record<string, unknown>
-let isolationIpcMain: typeof import('../../platform').ipcMain
-let isolationHandlerRegistry: typeof import('../../platform').handlerRegistry
-let isolationListenerRegistry: typeof import('../../platform').listenerRegistry
 
 function freshRegistry(): void {
   HumbleUser = fakeMembers<HumbleUserType>(USER_METHODS)
@@ -137,11 +141,6 @@ function freshRegistry(): void {
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
   ;({ getSteamLibraries } = require('backend/utils'))
-  ;({
-    ipcMain: isolationIpcMain,
-    handlerRegistry: isolationHandlerRegistry,
-    listenerRegistry: isolationListenerRegistry
-  } = require('../../platform'))
   /* eslint-enable @typescript-eslint/no-require-imports */
 }
 
@@ -532,11 +531,6 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         expect((isolationListenerRegistry.get(channel) ?? []).length).toBe(1)
         expect(isolationHandlerRegistry.has(channel)).toBe(false)
       }
-      // Sanity: isolationIpcMain is the same platformApi export
-      // humbleFlowRegistration.ts itself imports — proves this guard is
-      // inspecting the real registry the module under test writes to, not a
-      // reimplementation.
-      expect(typeof isolationIpcMain.handle).toBe('function')
     })
 
     it('REQ-34.4-07/08/09 registerHumbleFlows() has registered all 16 Humble channels this slice owns: 15 as ipcMain.handle (incl. humbleRunValidation, dev signal), 1 (humbleDisconnect) as ipcMain.on exactly once', () => {
@@ -1035,17 +1029,13 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       const fresh = require('../humbleFlowRegistration') as {
         registerHumbleFlows: (deps: unknown) => void
       }
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const freshStub = require('../../platform') as {
-        handlerRegistry: Map<string, unknown>
-        interimIpc: unknown
-      }
+      const isolatedIpc = createIpcRegistry()
 
       fresh.registerHumbleFlows({
-        ipc: freshStub.interimIpc,
+        ipc: isolatedIpc,
         humble: { user: {}, library: {} }
       })
-      expect(freshStub.handlerRegistry.has('humbleRunValidation')).toBe(true)
+      expect(isolatedIpc.handlerMap().has('humbleRunValidation')).toBe(true)
     })
 
     it('REQ-34.4-08 NOT registered when node:sea reports this IS a packaged SEA build', () => {
@@ -1057,17 +1047,13 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       const fresh = require('../humbleFlowRegistration') as {
         registerHumbleFlows: (deps: unknown) => void
       }
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const freshStub = require('../../platform') as {
-        handlerRegistry: Map<string, unknown>
-        interimIpc: unknown
-      }
+      const isolatedIpc = createIpcRegistry()
 
       fresh.registerHumbleFlows({
-        ipc: freshStub.interimIpc,
+        ipc: isolatedIpc,
         humble: { user: {}, library: {} }
       })
-      expect(freshStub.handlerRegistry.has('humbleRunValidation')).toBe(false)
+      expect(isolatedIpc.handlerMap().has('humbleRunValidation')).toBe(false)
     })
 
     it('REQ-34.4-08 safe default: NOT registered when node:sea is undeterminable (throws), and the fallback is logged once', () => {
@@ -1084,17 +1070,13 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       const fresh = require('../humbleFlowRegistration') as {
         registerHumbleFlows: (deps: unknown) => void
       }
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const freshStub = require('../../platform') as {
-        handlerRegistry: Map<string, unknown>
-        interimIpc: unknown
-      }
+      const isolatedIpc = createIpcRegistry()
 
       fresh.registerHumbleFlows({
-        ipc: freshStub.interimIpc,
+        ipc: isolatedIpc,
         humble: { user: {}, library: {} }
       })
-      expect(freshStub.handlerRegistry.has('humbleRunValidation')).toBe(false)
+      expect(isolatedIpc.handlerMap().has('humbleRunValidation')).toBe(false)
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('node:sea unavailable'),
         expect.any(Error)

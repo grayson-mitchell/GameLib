@@ -1,5 +1,5 @@
-// First-party type, not the electron package -- see backend/platform/types.ts's own
-// header comment for why: this file must not statically import electron's VALUES
+// First-party type, not the electron package -- see common/types/hostTypes.ts
+// for why: this file must not statically import electron's VALUES
 // (the four lazy Node-only `require` calls of the electron package this file used to
 // carry, one per Electron branch below, were BLOCKER-1 / T-27-07 -- a static named
 // import of the electron package's `ipcRenderer` value compiles to an unconditional
@@ -8,7 +8,7 @@
 // collapsed every Electron/Tauri runtime-detection branch pair below to its Tauri-only
 // body -- nothing runs under Electron anymore, so the four lazy requires are dead code,
 // removed rather than left unreachable.
-import type { IpcRendererEvent } from 'backend/platform'
+import type { IpcRendererEvent } from 'common/types/hostTypes'
 
 import type { AsyncIPCFunctions, SyncIPCFunctions, FrontendMessages } from 'common/types/ipc'
 import { IpcValidationError } from './ipcValidationError'

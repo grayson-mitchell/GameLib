@@ -330,7 +330,9 @@ import {
   bootFresh,
   writeInvoke,
   writeSend,
-  findResponse
+  findResponse,
+  handlerRegistry,
+  listenerRegistry
 } from './helpers/sidecarHarness'
 // Namespace import (not a named import) so `jest.spyOn(sidecarRpc,
 // 'pushFrontendMessage')` (Test 7, crash containment) can override the
@@ -389,8 +391,6 @@ let sidecarRpc: typeof import('../sidecarRpc')
 let gameOverridesStore: ReturnType<
   typeof import('../../game_overrides/stores').createGameOverridesStores
 >['gameOverridesStore']
-let handlerRegistry: typeof import('../../platform').handlerRegistry
-let listenerRegistry: typeof import('../../platform').listenerRegistry
 let mockedGlobalConfigGet: jest.Mock
 let mockedIsOnline: jest.Mock
 let mockedNotify: jest.Mock
@@ -432,7 +432,6 @@ function freshRegistry(): void {
   const {
     callAbortController
   } = require('../../utils/aborthandler/aborthandler')
-  ;({ handlerRegistry, listenerRegistry } = require('../../platform'))
   sidecarRpc = require('../sidecarRpc')
   ;({ gameOverridesStore } =
     require('../../game_overrides/stores').createGameOverridesStores({

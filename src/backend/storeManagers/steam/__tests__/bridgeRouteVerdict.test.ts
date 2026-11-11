@@ -51,15 +51,6 @@ jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
   shortcutFiles: jest.fn()
 }))
 jest.mock('../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
-jest.mock('backend/platform', () => ({
-  shell: { openExternal: jest.fn() },
-  app: {
-    getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
-    getAppPath: () => '/tmp/mock-path',
-    raiseMainWindow: jest.fn()
-  },
-  dialog: { showMessageBox: jest.fn() }
-}))
 jest.mock('backend/dialog/dialog', () => ({
   notify: jest
     .requireActual('backend/testUtils/propsOnlyMock')

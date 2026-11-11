@@ -3,8 +3,6 @@ import type { ScriptStep } from 'backend/testUtils/scriptedRunner'
 import { moveOnUnix } from '../utils'
 import type { SpawnAsync } from '../spawnAsync'
 import type { GameInfo } from 'common/types'
-
-jest.mock('backend/platform')
 jest.mock('../logger')
 jest.mock('../dialog/dialog')
 jest.mock('../config')

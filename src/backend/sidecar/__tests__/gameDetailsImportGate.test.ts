@@ -371,8 +371,14 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // 66.1 plan 25: steam/stores.ts became a factory, so the seam test builds its own
   // `configStore` with createSteamStores (the byte-identity assertions are unchanged). Prior
   // digest: 2b2ff1eb32a9ecfda83532fc1435bf1b4c91ed24accc2858b13fc78676265b24
+  // 66.3 plan 18: `backend/platform` was deleted, and with it the `safeStorage` stub the file's
+  // last by-construction gate ("safeStorage.isEncryptionAvailable never regresses to the
+  // 'always true' lie") read from `platform/index.ts`. That gate guarded a file and a member
+  // that no longer exist, so it was removed (not weakened) together with a comment that named
+  // the deleted module; the keyring and configStore byte-identity proofs are untouched. Prior
+  // digest: 6e5b93958cc11a371e379da76bb261502509faa62481fa401c69c272e856773c
   const ELECTRON_UNTOUCHED_SHA256 =
-    '6e5b93958cc11a371e379da76bb261502509faa62481fa401c69c272e856773c'
+    'f8a84193a4907c3332068e8cd12dad7458c4c0175c7cca14ee0e82b62b7d0950'
 
   it('REQ-34.2-14 Gate 8: electronUntouched.test.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, 'electronUntouched.test.ts')

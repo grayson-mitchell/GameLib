@@ -60,7 +60,7 @@ jest.mock('fs/promises', () => {
 import { createTestContext } from 'backend/testUtils/testContext'
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'graceful-fs'
 import { join } from 'node:path'
-import { app } from 'backend/platform'
+import { getPath } from '../pathShim'
 import { cp } from 'fs/promises'
 import { bootFresh } from './helpers/sidecarHarness'
 import type MigrationSystem from '../../migration'
@@ -90,7 +90,7 @@ const MARKER_CONTENTS = '{"displayName":"migrated"}'
  * leaves nothing behind, not that the path expression is correct.
  */
 const globalLegendaryConfig = isLinux
-  ? join(app.getPath('appData'), 'legendary')
+  ? join(getPath('appData'), 'legendary')
   : join(userHome, '.config', 'legendary')
 
 const stagingPath = `${legendaryConfigPath}.migrating`

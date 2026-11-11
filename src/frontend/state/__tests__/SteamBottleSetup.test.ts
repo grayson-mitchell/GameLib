@@ -10,7 +10,7 @@ import {
   handleSteamBottleSetupRequiredSignal,
   isSteamBottleSetupActiveFor
 } from '../SteamBottleSetup'
-import type { IpcRendererEvent } from 'backend/platform'
+import type { IpcRendererEvent } from 'common/types/hostTypes'
 
 describe('useSteamBottleSetup store', () => {
   afterEach(() => {

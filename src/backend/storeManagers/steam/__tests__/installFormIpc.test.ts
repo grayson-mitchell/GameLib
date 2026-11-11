@@ -36,12 +36,6 @@ jest.mock('backend/logger', () => ({
   }
 }))
 
-jest.mock('backend/platform', () => ({
-  app: {
-    getPath: jest.fn().mockReturnValue('/tmp/mock-path')
-  }
-}))
-
 const mockCheckBottleEligibility = jest.fn()
 jest.mock('../games', () => ({
   __esModule: true,

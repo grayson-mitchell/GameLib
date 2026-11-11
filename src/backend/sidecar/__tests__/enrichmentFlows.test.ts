@@ -350,7 +350,8 @@ import {
   bootFresh,
   writeInvoke,
   findResponse,
-  Frame
+  Frame,
+  handlerRegistry
 } from './helpers/sidecarHarness'
 import { fixesPath, appFolder, userDataPath } from '../../constants/paths'
 import { getLogFilePath } from 'backend/logger/paths'
@@ -396,7 +397,6 @@ type ManagerMock = Record<'getGame' | 'getListOfGames', jest.Mock>
 // boot() then boots without a second reset. The SteamGridDB secret store the
 // boot reads is a file-level double (`mockGetSteamGridDbSecretStore`), so it
 // is configured in the beforeEach, which runs before the boot.
-let handlerRegistry: typeof import('../../platform').handlerRegistry
 let wikiGameInfoStore: ReturnType<
   typeof import('../../wiki_game_info/stores').createWikiGameInfoStores
 >['wikiGameInfoStore']
@@ -419,7 +419,6 @@ function freshRegistry(): void {
   require('../bootstrap')
   const { GlobalConfig } = require('backend/config')
   const { libraryManagerMap } = require('backend/storeManagers')
-  ;({ handlerRegistry } = require('../../platform'))
   ;({ wikiGameInfoStore } =
     require('../../wiki_game_info/stores').createWikiGameInfoStores())
   ;({ configStore } =

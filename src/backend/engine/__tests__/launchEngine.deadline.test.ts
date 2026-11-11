@@ -21,17 +21,6 @@ jest.mock('graceful-fs', () => ({
   ...jest.requireActual('graceful-fs'),
   existsSync: () => true
 }))
-jest.mock('backend/platform', () => {
-  const actual = jest.requireActual('backend/platform')
-  return {
-    ...actual,
-    app: {
-      ...actual.app,
-      getPath: () => '/tmp/gamelib-test',
-      raiseMainWindow: jest.fn()
-    }
-  }
-})
 jest.mock('backend/dialog/dialog', () => ({
   notify: jest
     .requireActual('backend/testUtils/propsOnlyMock')
@@ -81,7 +70,6 @@ import {
 import type { EngineSelection } from '../engineTypes'
 import { killBottleWineServerWith } from '../bottlePrimitives'
 import { showEngineDialog, showEngineNotice } from '../engineDialogs'
-import { app } from 'backend/platform'
 import { createTestEngineServices } from 'backend/testUtils/testServices'
 import { createTestEngineState } from 'backend/testUtils/testEngineState'
 import type { EngineServices } from '../engineServices'
@@ -136,7 +124,7 @@ beforeEach(() => {
   __resetBottleLedgerForTests()
   ;(killBottleWineServerWith as jest.Mock).mockClear()
   ;(notify as jest.Mock).mockClear()
-  ;(app.raiseMainWindow as jest.Mock).mockClear()
+  app.raiseMainWindow.mockClear()
   ;(showDialogBoxModalAuto as jest.Mock).mockClear()
   ;(showEngineDialog as jest.Mock).mockClear()
   clearEngineSelection(KEY)
@@ -146,6 +134,9 @@ afterEach(() => {
   jest.useRealTimers()
 })
 
+// The main-window raise goes through `notices.appState`; this recording fake is what it calls.
+const app = { raiseMainWindow: jest.fn() }
+const noticeHost = createTestHostServices()
 const services: EngineServices = {
   spawnAsync: jest.fn(),
   installRemove: jest.fn(),
@@ -155,7 +146,10 @@ const services: EngineServices = {
   runner: createTestEngineServices().runner,
   onlineMonitor: { isOnline: () => true },
   engineState: createTestEngineState(),
-  notices: createTestHostServices()
+  notices: {
+    ...noticeHost,
+    appState: { ...noticeHost.appState, raiseMainWindow: app.raiseMainWindow }
+  }
 }
 
 function setUp(sel: EngineSelection, kind: 'bottle' | 'plain' = 'bottle') {

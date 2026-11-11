@@ -99,12 +99,11 @@ import { registerEnrichmentFlows } from '../enrichmentFlowRegistration'
 import { registerAppShellFlows } from '../appShellFlowRegistration'
 import { registerInstallFlows } from '../installFlowRegistration'
 import {
-  handlerRegistry,
-  interimIpc,
-  listenerRegistry,
-  IpcHandler,
-  IpcListener
-} from '../../platform'
+  createIpcRegistry,
+  type IpcHandler,
+  type IpcListener
+} from '../ipcRegistry'
+import { createRegistryViews } from './helpers/registryViews'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import {
   createTestServices,
@@ -134,12 +133,14 @@ import {
 // then immediately capture `before`, so it does not matter whether that call is literally the
 // first-ever or a later no-op — the property under test (two more calls change nothing) holds
 // either way.
+const testIpc = createIpcRegistry()
+const { handlerRegistry, listenerRegistry } = createRegistryViews(() => testIpc)
 const services = createTestServices()
 const flowDeps = {
   ...services,
   signIn: services.signInProbe,
   loginWindowSeam: services.humble.loginWindowSeam,
-  ipc: interimIpc,
+  ipc: testIpc,
   dialogs: services.host.dialogs,
   appState: services.host.appState,
   notifications: services.host.notifications,
@@ -155,14 +156,14 @@ registerRunnerMiscFlows(flowDeps)
 // snapshot below. Its absence here (before this plan) is exactly what made the EOS 8 register
 // as EMPTY in this file — the mandatory part of D-09's flip-to-presence is this call, not
 // merely editing an array.
-registerEosOverlayFlows({ ...services, ipc: interimIpc })
+registerEosOverlayFlows({ ...services, ipc: testIpc })
 // Phase 34.6 Plan 09 (REQ-34.6-02/04/08/13): `enrichmentFlowRegistration.ts` joins the snapshot
 // too, so the 5 `steamgriddb.*` names it now registers can flip from Describe 7's absence
 // assertion to Describe 10's presence assertion below. `registerEnrichmentFlows()` carries no
 // idempotence guard, but registers zero send-kind (listener) channels, so a second call here (or
 // from Describe 3's idempotence `it.each`) only overwrites existing `Map` entries in place —
 // harmless, and does not affect `listenerRegistry`'s counts.
-registerEnrichmentFlows({ ...services, ipc: interimIpc })
+registerEnrichmentFlows({ ...services, ipc: testIpc })
 
 const CANONICAL_HANDLER_ENTRIES: ReadonlyArray<[string, IpcHandler]> = [
   ...handlerRegistry.entries()
@@ -337,7 +338,7 @@ const MODULES: ReadonlyArray<{
     // is added underneath it is exactly the kind of stale claim this project's own process
     // lessons warn about.
     name: 'registerEosOverlayFlows',
-    register: () => registerEosOverlayFlows({ ...services, ipc: interimIpc }),
+    register: () => registerEosOverlayFlows({ ...services, ipc: testIpc }),
     file: 'eosOverlayFlowRegistration.ts',
     declaredChannels: EOS_OVERLAY_CHANNELS
   },
@@ -350,7 +351,7 @@ const MODULES: ReadonlyArray<{
     // module docstring, which would fail that describe's "exactly twice" assertion for reasons
     // unrelated to wiring correctness.
     name: 'registerEnrichmentFlows',
-    register: () => registerEnrichmentFlows({ ...services, ipc: interimIpc }),
+    register: () => registerEnrichmentFlows({ ...services, ipc: testIpc }),
     file: 'enrichmentFlowRegistration.ts',
     declaredChannels: ENRICHMENT_CHANNELS
   }
@@ -826,7 +827,7 @@ describe('23-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30; Phase 45 Plan 0
     // two calls do not belong in the shared canonical snapshot or in `MODULES`.
     restoreCanonicalRegistrations()
     registerAppShellFlows({
-      ipc: interimIpc,
+      ipc: testIpc,
       appInfo: services.appInfo,
       openExternal: services.host.openExternal,
       managers: createTestServices().managers,
@@ -845,7 +846,7 @@ describe('23-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30; Phase 45 Plan 0
         downloadQueue: { addToQueue: jest.fn() } as never,
         stores: createTestStores()
       }),
-      ipc: interimIpc
+      ipc: testIpc
     })
   })
 

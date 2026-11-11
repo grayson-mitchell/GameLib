@@ -21,7 +21,6 @@ jest.mock('../sidecarRpc', () => ({
 }))
 
 import { defined } from 'backend/testUtils/indexed'
-import { bindHostServices, powerSaveBlocker } from '../../platform'
 import { createTestHostServices } from '../../testUtils/testHostServices'
 import { requestRustInvoke } from '../sidecarRpc'
 import {
@@ -32,17 +31,23 @@ import {
 
 const mockRequestRustInvoke = requestRustInvoke as jest.Mock
 
-// The shim forwards to bound host services (66.3-03); give every test a fresh instance whose
-// Rust boundary is this file's mocked requestRustInvoke (late-bound, so per-test mockImplementation
-// calls still apply). Fresh services per test also reset the app-state and wake-lock state.
+// Every test gets a fresh host-services instance whose Rust boundary is this file's mocked
+// requestRustInvoke (late-bound, so per-test mockImplementation calls still apply). Fresh
+// services per test also reset the app-state and wake-lock state.
+let host = createTestHostServices()
 beforeEach(() => {
-  bindHostServices(
-    createTestHostServices({
-      rustInvoke: (channel, args) =>
-        mockRequestRustInvoke(channel, args) as Promise<unknown>
-    })
-  )
+  host = createTestHostServices({
+    rustInvoke: (channel, args) =>
+      mockRequestRustInvoke(channel, args) as Promise<unknown>
+  })
 })
+
+/** The wake-lock surface the code under test drives, over this test's host services. */
+const powerSaveBlocker = {
+  start: (type: string): number => host.appState.wakeLock.start(type),
+  stop: (id: number): void => host.appState.wakeLock.stop(id),
+  isStarted: (): boolean => host.appState.wakeLock.isStarted()
+}
 
 type ProgrammedOutcome =
   | { type: 'resolve'; value: unknown }

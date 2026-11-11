@@ -1,22 +1,3 @@
-/**
- * Unit tests for SteamUser static class.
- * Covers AUTH-01 through AUTH-05.
- *
- * Mock boundaries:
- *  - backend/platform → app.getPath
- *  - steam-session → LoginSession constructor + instance methods
- *  - steam-user    → SteamUser constructor + instance methods (aliased as SteamUserLib)
- *  - graceful-fs   → existsSync
- *  - the Windows Default Steam path comes through the injected config slice (mockGetSettings)
- *  - backend/logger
- *  - ../stores → configStore
- */
-
-// ── Electron mock (must be first, jest.mock is hoisted) ──────────────────────
-jest.mock('backend/platform', () => ({
-  app: { getPath: jest.fn(() => '/tmp/test') }
-}))
-
 // Phase 49 (49-06): finishAuth()/logout() now publish the sign-in outcome map
 // through `noteSignInSucceeded` / `noteSignedOut`, which send a frontend
 // message. The real `sendFrontendMessage` needs an Electron window this suite

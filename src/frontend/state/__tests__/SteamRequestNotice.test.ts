@@ -1,4 +1,4 @@
-import type { IpcRendererEvent } from 'backend/platform'
+import type { IpcRendererEvent } from 'common/types/hostTypes'
 import type { SteamRequestNoticePayload } from 'common/types/steam'
 import {
   handleSteamRequestNoticeSignal,

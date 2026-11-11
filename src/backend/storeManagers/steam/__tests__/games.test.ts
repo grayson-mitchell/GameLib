@@ -299,6 +299,13 @@ const stopBridgeHelper = jest.fn()
 const crossoverInstalled = jest.fn()
 const isBottleReady = jest.fn()
 const getSteamBottleSettings = jest.fn()
+// Recording fakes for the host services the manager deps expose (shell.openExternal, the
+// main-window raise, dialog.showMessageBox); the tests assert on these.
+const hostFakes = {
+  shell: { openExternal: jest.fn() },
+  app: { raiseMainWindow: jest.fn() },
+  dialog: { showMessageBox: jest.fn() }
+}
 const steamTestDeps = createTestManagerDeps({
   steamUser,
   steamBottle: {
@@ -313,23 +320,20 @@ const steamTestDeps = createTestManagerDeps({
     publishOverlayNotice,
     recordLaunchDecision
   },
-  // The i386-recovery confirm goes through deps.dialogs; the platform dialog mock records it.
+  // The i386-recovery confirm goes through deps.dialogs; hostFakes records it.
   dialogs: {
     ...createTestHostServices().dialogs,
-    showMessageBox: (...a: unknown[]) =>
-      jest.requireMock('backend/platform').dialog.showMessageBox(...a)
+    showMessageBox: (...a: unknown[]) => hostFakes.dialog.showMessageBox(...a)
   },
   // The steam:// hand-offs, the main-window raise and the per-game config go through deps; the
   // platform / game_config mocks below stay the recording fakes the assertions read.
   openExternal: {
     ...createTestHostServices().openExternal,
-    openExternal: (...a: unknown[]) =>
-      jest.requireMock('backend/platform').shell.openExternal(...a)
+    openExternal: (...a: unknown[]) => hostFakes.shell.openExternal(...a)
   },
   appState: {
     ...createTestHostServices().appState,
-    raiseMainWindow: () =>
-      jest.requireMock('backend/platform').app.raiseMainWindow()
+    raiseMainWindow: () => hostFakes.app.raiseMainWindow()
   },
   gameConfigs: {
     get: (appName: string) =>
@@ -417,24 +421,6 @@ jest.mock('../stores', () => ({
   steamSyncStore: {
     get: jest.fn(),
     set: jest.fn()
-  }
-}))
-
-// ── electron mock — shell.openExternal + dialog.showMessageBox (MAC32-03 i386
-// recovery confirm, library.ts's promptI386Recovery) ─────────────────────────
-jest.mock('backend/platform', () => ({
-  shell: {
-    openExternal: jest.fn()
-  },
-  app: {
-    getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
-    // Plain method (not jest.fn()) so it survives resetMocks -- publicDir in
-    // constants/paths.ts resolves it at module-load time (see __mocks__/electron.ts).
-    getAppPath: () => '/tmp/mock-path',
-    raiseMainWindow: jest.fn()
-  },
-  dialog: {
-    showMessageBox: jest.fn()
   }
 }))
 
@@ -1867,8 +1853,8 @@ describe('SteamGame.launch() — GAME-01', () => {
     envPin.isLinux = true
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('backend/platform')
-    shellOpenExternal = shell.openExternal as jest.Mock
+    const { shell } = hostFakes
+    shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
     notifyMock = jest.requireMock('backend/dialog/dialog').notify as jest.Mock
     logWarningMock = jest.requireMock('backend/logger').logWarning as jest.Mock
@@ -2163,8 +2149,8 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('backend/platform')
-    shellOpenExternal = shell.openExternal as jest.Mock
+    const { shell } = hostFakes
+    shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
     envMock = jest.requireMock('backend/constants/environment')
@@ -4323,8 +4309,8 @@ describe('SteamGame.install() — GAME-02', () => {
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('backend/platform')
-    shellOpenExternal = shell.openExternal as jest.Mock
+    const { shell } = hostFakes
+    shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
     notifyMock = jest.requireMock('backend/dialog/dialog').notify as jest.Mock
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
@@ -4480,8 +4466,8 @@ describe('SteamGame.install() — steam-startup-resume-crash resume-on-click (D-
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('backend/platform')
-    shellOpenExternal = shell.openExternal as jest.Mock
+    const { shell } = hostFakes
+    shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
     startInstallPollingSpy = jest
       .spyOn(installPollingModule, 'startInstallPolling')
@@ -4567,8 +4553,8 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('backend/platform')
-    shellOpenExternal = shell.openExternal as jest.Mock
+    const { shell } = hostFakes
+    shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
     startInstallPollingSpy = jest
@@ -5411,8 +5397,8 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('backend/platform')
-    shellOpenExternal = shell.openExternal as jest.Mock
+    const { shell } = hostFakes
+    shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
     startInstallPollingSpy = jest
@@ -5580,8 +5566,8 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('backend/platform')
-    shellOpenExternal = shell.openExternal as jest.Mock
+    const { shell } = hostFakes
+    shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
     startInstallPollingSpy = jest
@@ -8396,8 +8382,8 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('backend/platform')
-    shellOpenExternal = shell.openExternal as jest.Mock
+    const { shell } = hostFakes
+    shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
     startInstallPollingSpy = jest
@@ -8898,8 +8884,8 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     envMock.isMac = true
     envMock.isWindows = false
     envMock.isLinux = false
-    const { shell } = jest.requireMock('backend/platform')
-    shellOpenExternal = shell.openExternal as jest.Mock
+    const { shell } = hostFakes
+    shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
     startUninstallPollingSpy = jest
       .spyOn(uninstallPollingModule, 'startUninstallPolling')
@@ -9227,7 +9213,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     await launchGame.launch({} as any)
 
     expect(launchBridgeSpy).toHaveBeenCalledTimes(1)
-    const { shell } = jest.requireMock('backend/platform')
+    const { shell } = hostFakes
     expect(
       (shell.openExternal as jest.Mock).mock.calls.some((c) =>
         String(c[0]).startsWith('steam://rungameid')
@@ -9839,8 +9825,8 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('backend/platform')
-    shellOpenExternal = shell.openExternal as jest.Mock
+    const { shell } = hostFakes
+    shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(APP_ID, makeEntry({ title: 'Windows Only Game' }))
     envMock = jest.requireMock('backend/constants/environment')
@@ -10065,8 +10051,8 @@ describe('SteamGame.uninstall() — GAME-03', () => {
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('backend/platform')
-    shellOpenExternal = shell.openExternal as jest.Mock
+    const { shell } = hostFakes
+    shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
     notifyMock = jest.requireMock('backend/dialog/dialog').notify as jest.Mock
     showDialogBoxModalAutoMock = jest.requireMock('backend/dialog/dialog')
@@ -10176,8 +10162,8 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
     pendingFetches.clear()
     envMock = jest.requireMock('backend/constants/environment')
     envMock.isMac = true
-    const { shell } = jest.requireMock('backend/platform')
-    shellOpenExternal = shell.openExternal as jest.Mock
+    const { shell } = hostFakes
+    shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(
       APP_ID,
@@ -10398,8 +10384,8 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
     pendingFetches.clear()
     envMock = jest.requireMock('backend/constants/environment')
     envMock.isMac = true
-    const { shell } = jest.requireMock('backend/platform')
-    shellOpenExternal = shell.openExternal as jest.Mock
+    const { shell } = hostFakes
+    shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(
       APP_ID,
@@ -10601,8 +10587,8 @@ describe('SteamGame.uninstall() — Phase 17 bottle routing (D-10/D-11)', () => 
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('backend/platform')
-    shellOpenExternal = shell.openExternal as jest.Mock
+    const { shell } = hostFakes
+    shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(
       APP_ID,
@@ -10742,8 +10728,8 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('backend/platform')
-    shellOpenExternal = shell.openExternal as jest.Mock
+    const { shell } = hostFakes
+    shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
     // debug/steam-bottle-uninstall-reverts (routing fix): uninstall() now
     // routes off the library entry's own install.install_path (never title
@@ -11273,8 +11259,8 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('backend/platform')
-    shellOpenExternal = shell.openExternal as jest.Mock
+    const { shell } = hostFakes
+    shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
     startUninstallPollingSpy = jest
       .spyOn(uninstallPollingModule, 'startUninstallPolling')
@@ -12302,8 +12288,8 @@ describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => 
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell, dialog } = jest.requireMock('backend/platform')
-    shellOpenExternal = shell.openExternal as jest.Mock
+    const { shell, dialog } = hostFakes
+    shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
     dialogShowMessageBox = dialog.showMessageBox as jest.Mock
     envMock = jest.requireMock('backend/constants/environment')
@@ -14043,9 +14029,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       )
 
       it('raises the main window before the dialog and logs display=confirmed on ack, display=unconfirmed on timeout', async () => {
-        const { app } = jest.requireMock<{
-          app: { raiseMainWindow: jest.Mock }
-        }>('backend/platform')
+        const { app } = hostFakes
         const { acknowledgeDialogDisplay } = jest.requireActual<
           typeof import('backend/dialog/displayAck')
         >('backend/dialog/displayAck')
@@ -14789,9 +14773,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         expect(
           jest.requireMock('backend/dialog/dialog').showDialogBoxModalAuto
         ).not.toHaveBeenCalled()
-        expect(
-          jest.requireMock('backend/platform').app?.raiseMainWindow ?? jest.fn()
-        ).not.toHaveBeenCalled()
+        expect(hostFakes.app.raiseMainWindow).not.toHaveBeenCalled()
       })
 
       it('overlay off: no tokens, no notify, policy source is logged', async () => {
@@ -15970,8 +15952,8 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('backend/platform')
-    shellOpenExternal = shell.openExternal as jest.Mock
+    const { shell } = hostFakes
+    shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
     notifyMock = jest.requireMock('backend/dialog/dialog').notify as jest.Mock
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
@@ -16195,8 +16177,8 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
-    const { shell } = jest.requireMock('backend/platform')
-    shellOpenExternal = shell.openExternal as jest.Mock
+    const { shell } = hostFakes
+    shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
     startInstallPollingSpy = jest
@@ -17504,7 +17486,7 @@ describe('Steam launch watch wiring (261111-9mj)', () => {
     library.clear()
     pendingFetches.clear()
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
-    const { shell } = jest.requireMock('backend/platform')
+    const { shell } = hostFakes
     ;(shell.openExternal as jest.Mock).mockResolvedValue(undefined)
     ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(null)
     startSpy = jest
@@ -17534,7 +17516,7 @@ describe('Steam launch watch wiring (261111-9mj)', () => {
   }
 
   it('G1 launch starts the watch after openExternal', async () => {
-    const { shell } = jest.requireMock('backend/platform')
+    const { shell } = hostFakes
     await new SteamGame(APP_ID, steamTestDeps).launch({} as any)
     expect(shell.openExternal).toHaveBeenCalledTimes(1)
     expect(startSpy).toHaveBeenCalledTimes(1)

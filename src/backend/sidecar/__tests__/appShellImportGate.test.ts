@@ -163,9 +163,6 @@ describe('appShellImportGate (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-12)', 
       expect(working).toMatch(
         /keyringTokenStore\.ts and bootstrap\.ts never reference configStore/
       )
-      expect(working).toMatch(
-        /safeStorage\.isEncryptionAvailable never regresses to the "always true" lie/
-      )
     }
   })
 })

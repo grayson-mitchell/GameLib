@@ -25,7 +25,7 @@ import {
   logDebug
 } from 'backend/logger'
 import { basename, dirname, join, normalize, relative } from 'path'
-import { homedir } from 'os'
+import { homedir, release as osRelease } from 'os'
 import {
   assertContainedPath,
   assertPlausibleAbsolutePath
@@ -1488,7 +1488,7 @@ export function isMacSonomaOrHigher(): boolean {
   if (!isMac) return false
   logInfo('Checking if macOS is Sonoma or higher', LogPrefix.Backend)
 
-  const release = process.getSystemVersion()
+  const release = osRelease()
   const [major] = release.split('.').map(Number)
   const isMacSonomaOrHigher = major !== undefined && major >= 14
 

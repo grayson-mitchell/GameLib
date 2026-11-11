@@ -5,8 +5,7 @@
  * two registries never share a handler. `sidecarRpc` dispatch reads from the instance passed to
  * `startRpcServer`.
  *
- * No `backend/logger` import (see the module-scope note in `backend/platform/index.ts`: the
- * logger's import chain needs the path shim loaded first). Typed registration helpers take the
+ * No `backend/logger` import (the logger's import chain needs the path shim loaded first). Typed registration helpers take the
  * registry as their first argument instead of reaching for a module singleton.
  */
 
@@ -15,7 +14,7 @@ import type {
   SyncIPCFunctions,
   TestSyncIPCFunctions
 } from 'common/types/ipc'
-import type { IpcMainEvent } from '../platform/types'
+import type { IpcMainEvent } from 'common/types/hostTypes'
 
 /** The event object handed to a handler. `sidecarRpc` dispatches with `undefined`. */
 type IpcEvent = unknown

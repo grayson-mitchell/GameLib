@@ -244,7 +244,12 @@ jest.mock('../../dialog/dialog', () => ({
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { bootFresh, writeInvoke } from './helpers/sidecarHarness'
+import {
+  bootFresh,
+  writeInvoke,
+  handlerRegistry,
+  listenerRegistry
+} from './helpers/sidecarHarness'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import type { AppSettings } from 'common/types'
 
@@ -264,8 +269,6 @@ let resolveInstallRoot: typeof import('../../storeManagers/steam/library/install
 let steamSession: import('backend/services/types').SteamSessionServices
 let steamLibraryMap: Map<string, import('common/types').GameInfo>
 let SteamGame: typeof import('../../storeManagers/steam/games').default
-let handlerRegistry: typeof import('../../platform').handlerRegistry
-let listenerRegistry: typeof import('../../platform').listenerRegistry
 let showDialogBoxModalAuto: typeof import('../../dialog/dialog').showDialogBoxModalAuto
 let notify: typeof import('../../dialog/dialog').notify
 let loggerModule: typeof import('../../logger')
@@ -299,7 +302,6 @@ function freshRegistry(): void {
   ).createTestSteamSession()
   steamLibraryMap = steamSession.libraryState.library
   SteamGame = require('../../storeManagers/steam/games').default
-  ;({ handlerRegistry, listenerRegistry } = require('../../platform'))
   ;({ showDialogBoxModalAuto, notify } = require('../../dialog/dialog'))
   loggerModule = require('../../logger')
   /* eslint-enable @typescript-eslint/no-require-imports */
