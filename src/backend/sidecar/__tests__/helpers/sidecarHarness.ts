@@ -49,6 +49,7 @@ import {
 import type { ScriptStep } from '../../../testUtils/scriptedRunner'
 import type { AppPaths } from '../../../process/context'
 import type { BootServices } from '../../../services/types'
+import type { ProcessGuards } from '../../processGuards'
 
 /** A single newline-delimited JSON frame read off the sidecar's output. */
 export type Frame = Record<string, unknown>
@@ -105,6 +106,8 @@ export interface FreshSidecar {
  */
 export function bootFresh(opts?: {
   before?: () => void
+  /** A guards instance the case already holds (to observe the sinks the boot binds). */
+  guards?: ProcessGuards
   /** Inject the output stream (e.g. one that records the READY write). */
   output?: PassThrough
   /**
@@ -130,6 +133,7 @@ export function bootFresh(opts?: {
       ctx: TestContext['ctx'],
       input: PassThrough,
       output: PassThrough,
+      guards: ProcessGuards,
       prebuilt?: Partial<BootServices>
     ) => BootServices
     resolveAppPaths: () => { appRoot: string; publicDir: string }
@@ -147,7 +151,21 @@ export function bootFresh(opts?: {
   const input = new PassThrough()
   const output = opts?.output ?? new PassThrough()
   const frames = collectFrames(output)
-  const services = bootSidecar(testContext.ctx, input, output, opts?.services)
+  // A fresh, UNINSTALLED guards instance from this case's registry: boot only binds its sinks.
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  const guards =
+    opts?.guards ??
+    (
+      require('../../processGuards') as typeof import('../../processGuards')
+    ).createProcessGuards()
+  /* eslint-enable @typescript-eslint/no-require-imports */
+  const services = bootSidecar(
+    testContext.ctx,
+    input,
+    output,
+    guards,
+    opts?.services
+  )
   return { input, output, frames, testContext, services }
 }
 

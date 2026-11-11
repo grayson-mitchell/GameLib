@@ -74,6 +74,7 @@ import { getLogFilePath } from 'backend/logger/paths'
 import { READY_SENTINEL } from 'common/types/sidecarTransport'
 import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 import { bootFresh } from './helpers/sidecarHarness'
+import type { ProcessGuards } from '../processGuards'
 
 // ── i18next — defeat Jest's project-wide automatic manual mock (same load-bearing reasoning
 // as bootstrapWirings.test.ts's own header: without this, `require('i18next')` inside the
@@ -368,6 +369,12 @@ function loadConstantsPaths(): {
   return result
 }
 
+/** A fresh, uninstalled guards instance (D-66.3-10): all state lives in the instance closure. */
+function createGuards(): ProcessGuards {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('../processGuards').createProcessGuards()
+}
+
 /**
  * Requires `processGuards.ts` fresh inside its own `jest.isolateModules()` sandbox, so the
  * module-scope `unhandledRejectionGuardInstalled` singleton (mirroring `bootstrap.ts`'s own
@@ -385,10 +392,8 @@ function loadFreshProcessGuards(): {
   jest.isolateModules(() => {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const loggerModule = require('backend/logger')
-    const {
-      installUnhandledRejectionGuard,
-      setUnhandledRejectionLogSink
-    } = require('../processGuards')
+    const { installUnhandledRejectionGuard, setUnhandledRejectionLogSink } =
+      require('../processGuards').createProcessGuards()
     /* eslint-enable @typescript-eslint/no-require-imports */
     const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
     // WR-04 (gap cycle 1): `processGuards.ts` no longer imports `logWarning` -- it
@@ -422,7 +427,7 @@ function loadRawWithSink(sink: (message: string) => void | Promise<void>): {
   // no boot: loads a module graph without calling bootstrap.init
   jest.isolateModules(() => {
     /* eslint-disable @typescript-eslint/no-require-imports */
-    mod = require('../processGuards')
+    mod = require('../processGuards').createProcessGuards()
     /* eslint-enable @typescript-eslint/no-require-imports */
     ;(
       mod as unknown as {
@@ -471,10 +476,8 @@ function loadFreshUncaughtExceptionGuard(): {
   jest.isolateModules(() => {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const loggerModule = require('backend/logger')
-    const {
-      installUncaughtExceptionGuard,
-      setUncaughtExceptionLogSink
-    } = require('../processGuards')
+    const { installUncaughtExceptionGuard, setUncaughtExceptionLogSink } =
+      require('../processGuards').createProcessGuards()
     /* eslint-enable @typescript-eslint/no-require-imports */
     const logErrorSpy = jest.spyOn(loggerModule, 'logError')
     setUncaughtExceptionLogSink((message: string) => {
@@ -516,7 +519,7 @@ function loadRawProcessGuards(): {
       installStdioErrorGuards,
       installUncaughtExceptionGuard,
       installUnhandledRejectionGuard
-    } = require('../processGuards')
+    } = require('../processGuards').createProcessGuards()
     /* eslint-enable @typescript-eslint/no-require-imports */
     harness = {
       installStdioErrorGuards,
@@ -710,6 +713,7 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
     it('WR-04: a rejection routes to stderr before the boot and to logWarning after it', () => {
       let logWarningSpy!: jest.SpyInstance
       const target = new EventEmitter()
+      const guards = createGuards()
       const stderrWriteSpy = jest
         .spyOn(process.stderr, 'write')
         .mockImplementation(() => true)
@@ -719,6 +723,7 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
         // boot then uses (same registry, or the module-scope `logSink` singleton the boot
         // writes would not be the one the guard reads).
         bootFresh({
+          guards,
           before: () => {
             /* eslint-disable @typescript-eslint/no-require-imports */
             const { GlobalConfig } = require('backend/config')
@@ -728,8 +733,7 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
               set: jest.fn(),
               flush: jest.fn()
             })
-            const installGuard =
-              require('../processGuards').installUnhandledRejectionGuard
+            const installGuard = guards.installUnhandledRejectionGuard
             require('../bootstrap')
             logWarningSpy = jest.spyOn(require('backend/logger'), 'logWarning')
             /* eslint-enable @typescript-eslint/no-require-imports */
@@ -775,6 +779,7 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       let logErrorSpy!: jest.SpyInstance
       let logWarningSpy!: jest.SpyInstance
       const target = new EventEmitter()
+      const guards = createGuards()
 
       const stderrWriteSpy = jest
         .spyOn(process.stderr, 'write')
@@ -792,6 +797,7 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
         // `uncaughtExceptionLogSink` singleton the boot writes would not be the one the
         // guard reads).
         bootFresh({
+          guards,
           before: () => {
             /* eslint-disable @typescript-eslint/no-require-imports */
             const { GlobalConfig } = require('backend/config')
@@ -801,8 +807,7 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
               set: jest.fn(),
               flush: jest.fn()
             })
-            installGuard =
-              require('../processGuards').installUncaughtExceptionGuard
+            installGuard = guards.installUncaughtExceptionGuard
             require('../bootstrap')
             const loggerModule = require('backend/logger')
             logErrorSpy = jest.spyOn(loggerModule, 'logErrorSettled')
@@ -893,7 +898,8 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
          * breaks; the block form survives reflow. */
         /* eslint-disable @typescript-eslint/no-require-imports */
         installGuard =
-          require('../processGuards').installUnhandledRejectionGuard
+          require('../processGuards').createProcessGuards()
+            .installUnhandledRejectionGuard
         /* eslint-enable @typescript-eslint/no-require-imports */
       })
 
@@ -1491,7 +1497,7 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       // no boot: loads a module graph without calling bootstrap.init
       jest.isolateModules(() => {
         /* eslint-disable @typescript-eslint/no-require-imports */
-        const mod = require('../processGuards')
+        const mod = require('../processGuards').createProcessGuards()
         /* eslint-enable @typescript-eslint/no-require-imports */
         installUncaughtExceptionGuard = mod.installUncaughtExceptionGuard
         setUncaughtExceptionLogSink = mod.setUncaughtExceptionLogSink
@@ -1538,13 +1544,15 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       )
       const stripped = stripComments(source)
 
-      expect(stripped).toMatch(/^installStdioErrorGuards\(\)$/m)
+      expect(stripped).toMatch(/^guards\.installStdioErrorGuards\(\)$/m)
 
-      const stdioIndex = stripped.indexOf('installStdioErrorGuards()')
+      const stdioIndex = stripped.indexOf('guards.installStdioErrorGuards()')
       const rejectionIndex = stripped.indexOf(
-        'installUnhandledRejectionGuard()'
+        'guards.installUnhandledRejectionGuard()'
       )
-      const exceptionIndex = stripped.indexOf('installUncaughtExceptionGuard()')
+      const exceptionIndex = stripped.indexOf(
+        'guards.installUncaughtExceptionGuard()'
+      )
 
       expect(stdioIndex).toBeGreaterThan(-1)
       expect(rejectionIndex).toBeGreaterThan(-1)
@@ -1583,7 +1591,9 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       const imports = importLines(source)
 
       expect(imports.length).toBeGreaterThan(1)
-      expect(imports[0]).toBe("import './installRejectionGuard'")
+      expect(imports[0]).toBe(
+        "import { guards } from './installRejectionGuard'"
+      )
       // The property is ordering, not mere presence: bootstrap must come after.
       const bootstrapIndex = imports.findIndex((line) =>
         line.includes('backend/sidecar/bootstrap')
@@ -1601,7 +1611,7 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       // A module-scope call -- column 0, not nested inside a function body. If this
       // ever became a function that something has to remember to call, the import
       // ordering above would stop meaning anything.
-      expect(stripped).toMatch(/^installUnhandledRejectionGuard\(\)$/m)
+      expect(stripped).toMatch(/^guards\.installUnhandledRejectionGuard\(\)$/m)
     })
 
     it('D-35-10-01: installRejectionGuard.ts installs the uncaughtException guard at module scope too', () => {
@@ -1616,7 +1626,7 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       )
       const stripped = stripComments(source)
 
-      expect(stripped).toMatch(/^installUncaughtExceptionGuard\(\)$/m)
+      expect(stripped).toMatch(/^guards\.installUncaughtExceptionGuard\(\)$/m)
     })
 
     it('WR-04: processGuards.ts has ZERO static imports -- the invariant that makes the first-import position safe', () => {
@@ -1643,6 +1653,7 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       // Positive control: the file really was read and really does contain the guard,
       // so the two negatives above cannot pass against an empty or missing read.
       expect(stripped).toContain('installUnhandledRejectionGuard')
+      expect(stripped).toContain('export function createProcessGuards')
     })
 
     it('quick-260913-lkk: the smoke gate’s hardcoded READY literal still equals READY_SENTINEL', () => {

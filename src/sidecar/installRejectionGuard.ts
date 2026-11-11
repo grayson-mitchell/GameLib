@@ -31,13 +31,13 @@
  * has to BE an import.
  *
  * WHY IT IS SAFE TO PUT FIRST, when two earlier attempts were not.
- * `backend/sidecar/processGuards` now has ZERO static imports (enforced by
+ * `backend/sidecar/processGuards` has ZERO static imports (enforced by
  * `sidecarRejectionGuard.test.ts`'s zero-imports gate). Evaluating it therefore
- * pulls in no `backend/*` module, so `bootstrap.ts`'s `Module._load` electron hook
- * still installs before anything that calls `app.getPath()` — the exact invariant
+ * pulls in no `backend/*` module, so nothing that calls
+ * `app.getPath()` is evaluated ahead of the platform layer — the exact invariant
  * attempt (a) broke (`727be5dbb`, `broken pipe (os error 32)`), and the reason
  * attempt (b) reordered the handler graph. The logger is late-bound instead:
- * `bootstrap.init()` installs the sink after `initLogger()`.
+ * the boot logger step binds the sinks on the exported `guards` instance after `initLogger()`.
  *
  * DO NOT ADD AN IMPORT TO THIS FILE, and do not add one to `processGuards.ts`.
  * The invariant is checked by the zero-imports gate and by `pnpm smoke:sidecar`,
@@ -57,19 +57,19 @@
  * changing the gate's assertions is deciding whether this paragraph stays true.
  */
 
-import {
-  installConsoleStdoutRedirect,
-  installStdioErrorGuards,
-  installUncaughtExceptionGuard,
-  installUnhandledRejectionGuard
-} from 'backend/sidecar/processGuards'
+import { createProcessGuards } from 'backend/sidecar/processGuards'
 
-installStdioErrorGuards()
-installUnhandledRejectionGuard()
-installUncaughtExceptionGuard()
+// The ONE guards instance (D-66.3-10). Built and installed here, at module scope, so it is
+// live before any backend module evaluates; `src/sidecar/index.ts` passes it to `init`, whose
+// logger step late-binds the log sinks. `src/sidecar/` is outside the backend census scan.
+export const guards = createProcessGuards()
+
+guards.installStdioErrorGuards()
+guards.installUnhandledRejectionGuard()
+guards.installUncaughtExceptionGuard()
 
 // Stdout is the RPC pipe, so every stdout-bound console method goes to stderr
 // (todo `sidecar-log-output-shares-the-rpc-stdout-pipe`; see the function's doc
 // comment). First-import position matters here too: module-scope `console.log`
 // anywhere in the backend graph must already be redirected.
-installConsoleStdoutRedirect()
+guards.installConsoleStdoutRedirect()

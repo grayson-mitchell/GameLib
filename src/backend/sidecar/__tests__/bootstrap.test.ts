@@ -697,16 +697,21 @@ describe('one-shot boot (D-08)', () => {
     const { testContext } = bootFresh()
     const bootstrap = fresh<typeof import('../bootstrap')>('../bootstrap')
 
+    const guards =
+      fresh<typeof import('../processGuards')>(
+        '../processGuards'
+      ).createProcessGuards()
     expect(() =>
       bootstrap.bootSidecar(
         testContext.ctx,
         new PassThrough(),
-        new PassThrough()
+        new PassThrough(),
+        guards
       )
     ).toThrow(/D-08/)
-    expect(() => bootstrap.init(new PassThrough(), new PassThrough())).toThrow(
-      /D-08/
-    )
+    expect(() =>
+      bootstrap.init({ guards }, new PassThrough(), new PassThrough())
+    ).toThrow(/D-08/)
   })
 
   it('each bootFresh() gets its own context with userData under that context fake HOME', () => {

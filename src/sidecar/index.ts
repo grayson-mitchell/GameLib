@@ -8,10 +8,9 @@
  * build/main/sidecar.js` (`src-tauri/src/main.rs`, 27-01; overridable via
  * `GAMELIB_SIDECAR_ENTRY`).
  *
- * Deliberately a thin, unconditional entry: all the load-bearing shim
- * ordering (the `Module._load` hook, then the backend registration import)
- * lives in `backend/sidecar/bootstrap.ts`'s module scope, executed the
- * moment this file requires it — `init()` only starts the RPC loop and
+ * Deliberately a thin, unconditional entry: all the load-bearing
+ * ordering lives in `backend/sidecar/bootstrap.ts`'s module scope, executed the
+ * moment this file imports it — `init()` only starts the RPC loop and
  * signals READY. Kept separate from `bootstrap.ts` so tests can `require`
  * the bootstrap module without it auto-starting against the real
  * process.stdin/stdout (bootstrap.test.ts calls `init()` itself with
@@ -22,27 +21,27 @@
  * module scope evaluates. ES modules evaluate every static import before any
  * statement in this body, so a CALL here — which is what this file used to do —
  * could never achieve that: `bootstrap.ts`'s whole graph was already evaluated
- * by the time it ran. The install is therefore a side-effect IMPORT, and
- * `'./installRejectionGuard'` MUST stay the first import line in this file.
+ * by the time it ran. The install is therefore done by an IMPORT (the module builds and installs the one
+ * guards instance, exported as `guards` and passed to `init({ guards })`), and
+ * `import { guards } from './installRejectionGuard'` MUST stay the first import line in this file.
  * `sidecarRejectionGuard.test.ts` Group 3 gates exactly that.
  *
  * Two earlier attempts to fix this broke the build, both because
  * `processGuards.ts` still imported `logWarning` from `backend/logger` and so
- * dragged the backend graph into evaluation ahead of `bootstrap.ts`'s
- * `Module._load` electron hook:
+ * dragged the backend graph into evaluation ahead of the platform layer:
  *
- *   (a) side-effect import first in THIS file — `app.getPath()` returned
+ *   (a) a guards import first in THIS file — `app.getPath()` returned
  *       undefined and the sidecar died on boot, surfacing to the user as
  *       `broken pipe (os error 32)` (`727be5dbb`).
- *   (b) side-effect import inside `bootstrap.ts` after the electron hook —
+ *   (b) the import inside `bootstrap.ts` after the platform setup —
  *       sidecar started, but `installFlows.test.ts` Test 1b failed
  *       deterministically with "Cannot read properties of undefined (reading
  *       'map')": the handler graph initialised in a different order.
  *
  * What makes this third attempt work is that `processGuards.ts` now has ZERO
  * static imports and late-binds its logger through
- * `setUnhandledRejectionLogSink()`, which `bootstrap.init()` calls after
- * `initLogger()`. Adding any import to `processGuards.ts` or to
+ * the sink setters, which the boot logger step calls on the instance
+ * passed to `init({ guards })` after `initLogger()`. Adding any import to `processGuards.ts` or to
  * `installRejectionGuard.ts` reintroduces (a).
  *
  * Gate any change to this file's import order on `pnpm smoke:sidecar`. Attempt
@@ -50,7 +49,7 @@
  * byte-offset check before a user's broken build caught it.
  */
 
-import './installRejectionGuard'
+import { guards } from './installRejectionGuard'
 import { init } from 'backend/sidecar/bootstrap'
 
-init()
+init({ guards })

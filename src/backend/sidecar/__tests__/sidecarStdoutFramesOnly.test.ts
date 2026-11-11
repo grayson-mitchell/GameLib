@@ -21,12 +21,20 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { PassThrough } from 'stream'
 
-jest.mock('backend/sidecar/processGuards', () => ({
-  ...jest.requireActual<object>('backend/sidecar/processGuards'),
-  installStdioErrorGuards: () => undefined,
-  installUnhandledRejectionGuard: () => undefined,
-  installUncaughtExceptionGuard: () => undefined
-}))
+jest.mock('backend/sidecar/processGuards', () => {
+  const actual = jest.requireActual<
+    typeof import('backend/sidecar/processGuards')
+  >('backend/sidecar/processGuards')
+  return {
+    ...actual,
+    createProcessGuards: () => ({
+      ...actual.createProcessGuards(),
+      installStdioErrorGuards: () => undefined,
+      installUnhandledRejectionGuard: () => undefined,
+      installUncaughtExceptionGuard: () => undefined
+    })
+  }
+})
 
 // Same inert mock `logWriter.test.ts` uses: LogWriter's first-write branch
 // calls `./index`'s `logDebug`, whose singleton this test never initialises.

@@ -68,6 +68,7 @@ import type { BootServices, StoreManagers, Stores } from '../services/types'
 // and `bootstrap.ts` itself has never been a member.
 import { handleProtocol } from '../protocol'
 import type { ProtocolDeps } from '../protocol'
+import type { ProcessGuards } from './processGuards'
 import {
   startRpcServer,
   pushFrontendMessage,
@@ -214,15 +215,6 @@ import {
 // and any future `Migration` added to `getAllMigrations()` would have shipped as a silent
 // no-op. Same family as the `initOnlineMonitor()` gap above.
 import MigrationSystem from '../migration'
-// WR-04 (gap cycle 1): a PURE import of a module with zero static imports of its
-// own -- it contributes nothing to this file's evaluation graph, which is the whole
-// reason the guard could be hoisted to `src/sidecar/index.ts`'s first import. Placed
-// last deliberately: attempt (b) at WR-04 added a SIDE-EFFECTING import here and
-// reordered the handler graph (`installFlows.test.ts` Test 1b went red).
-import {
-  setUncaughtExceptionLogSink,
-  setUnhandledRejectionLogSink
-} from './processGuards'
 
 // ---- Step 3: start the RPC server, wire the transport, signal READY -------
 
@@ -289,9 +281,19 @@ export const BOOT_STEP_NAMES = [
 
 type BootStepName = (typeof BOOT_STEP_NAMES)[number]
 
+/**
+ * The slice of the entry-built process guards the boot needs: only the two late-bound log sink
+ * setters (D-66.3-10). Never stored on `BootServices` or `AppContext`.
+ */
+type BootGuards = Pick<
+  ProcessGuards,
+  'setUnhandledRejectionLogSink' | 'setUncaughtExceptionLogSink'
+>
+
 interface BootIo {
   input: Readable
   output: Writable
+  guards: BootGuards
 }
 
 /** Values one boot produces for later steps; created inside `bootSidecar`, one per boot. */
@@ -955,6 +957,7 @@ export function bootSidecar(
   ctx: AppContext,
   input: Readable,
   output: Writable,
+  guards: BootGuards,
   prebuilt: Partial<BootServices> = {}
 ): BootServices {
   if (booted) {
@@ -964,7 +967,7 @@ export function bootSidecar(
   }
   booted = true
   const state: BootState = { i18nReady: Promise.resolve(), services: {} }
-  runBootSteps(ctx, { input, output }, state, prebuilt)
+  runBootSteps(ctx, { input, output, guards }, state, prebuilt)
   return requireServices(state)
 }
 
@@ -983,6 +986,7 @@ export function resolveAppPaths(): AppPaths {
 }
 
 export function init(
+  deps: { guards: BootGuards },
   input: Readable = process.stdin,
   output: Writable = process.stdout
 ): void {
@@ -994,7 +998,8 @@ export function init(
       baseEnv: process.env
     }),
     input,
-    output
+    output,
+    deps.guards
   )
 }
 
@@ -1021,7 +1026,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'logger',
-      run: () => {
+      run: (_ctx, io) => {
         initLogger()
         // WR-04 (gap cycle 1): `processGuards.ts` has ZERO static imports so that
         // `src/sidecar/index.ts` can install the unhandledRejection guard as its FIRST
@@ -1031,7 +1036,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // this line the guard writes to stderr, which is the only safe channel that early
         // anyway. Adding an import of `logWarning` to `processGuards.ts` instead would
         // reintroduce the boot failure recorded in `727be5dbb`.
-        setUnhandledRejectionLogSink((message) =>
+        io.guards.setUnhandledRejectionLogSink((message) =>
           logWarning(message, LogPrefix.Backend)
         )
         // D-35-10-01: the `uncaughtException` sibling guard, bound in the same window and
@@ -1041,7 +1046,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // uncaught exception to a warning. Before this line the guard writes to stderr.
         // Phase 72 D-04: returns the write promise (`logErrorSettled`, same severity) so the
         // now-fatal guard can await the flush before exiting.
-        setUncaughtExceptionLogSink((message) =>
+        io.guards.setUncaughtExceptionLogSink((message) =>
           logErrorSettled(message, LogPrefix.Backend)
         )
       }
