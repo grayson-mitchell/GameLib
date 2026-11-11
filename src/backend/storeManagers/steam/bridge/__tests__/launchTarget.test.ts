@@ -21,7 +21,6 @@ import {
   backfillBridgeLaunchTargets
 } from '../launchTarget'
 import { SteamUser } from '../../user'
-import { getAnonymousPicsClient } from '../../anonymousClient'
 import { readBridgeVerdict, setBridgeLaunchTarget } from '../bridgeVerdict'
 import { getBottleSteamappsDir } from '../../bottle'
 import { getBridgeBottleSettings } from '../../bridgeBottle'
@@ -38,13 +37,14 @@ jest.mock('backend/logger', () => ({
 
 jest.mock('../../user')
 
-jest.mock('../../anonymousClient', () => ({
-  ...jest.requireActual('../../anonymousClient'),
-  getAnonymousPicsClient: jest.fn()
-}))
+// The boot-owned anonymous client slice (D-66.3-14): a scripted `get`, no CM connection.
+const getAnonymousPicsClient = jest.fn()
 
 // bridgeVerdict is mocked, so the store slice is never read.
-const DEPS = { stores: {} } as never
+const DEPS = {
+  stores: {},
+  anonymousClient: { get: getAnonymousPicsClient }
+} as never
 
 jest.mock('../bridgeVerdict', () => ({
   readBridgeVerdict: jest.fn(),

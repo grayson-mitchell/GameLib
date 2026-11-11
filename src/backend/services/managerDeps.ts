@@ -25,6 +25,7 @@ export type ManagerDepsSource = Pick<
   | 'engineState'
   | 'signInProbe'
   | 'steamSession'
+  | 'anonymousClient'
 >
 
 export function managerDepsFromServices(
@@ -55,6 +56,7 @@ export function managerDepsFromServices(
       epochs: source.signInProbe.epochs,
       outcomes: source.signInProbe.outcomes
     },
-    steamSession: source.steamSession
+    steamSession: source.steamSession,
+    anonymousClient: source.anonymousClient
   }
 }

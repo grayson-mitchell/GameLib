@@ -4,7 +4,6 @@ import { isMac } from 'backend/constants/environment'
 import { getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { SteamUser } from '../user'
-import { getAnonymousPicsClient } from '../anonymousClient'
 import type { ManagerDeps } from 'backend/services/types'
 import { isSteamBottleProvisioned } from '../bottle'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
@@ -217,7 +216,7 @@ async function syncOwnedLibrary(
       LogPrefix.Steam
     )
   const heldClient = client as unknown as PlatformCapturePicsClient
-  const anonClient = await getAnonymousPicsClient('platform-capture')
+  const anonClient = await deps.anonymousClient.get('platform-capture')
   if (anonClient) {
     const anonSummary = await captureOwnedAppPlatforms(
       deps,

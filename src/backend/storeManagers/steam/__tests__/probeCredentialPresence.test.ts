@@ -72,11 +72,6 @@ jest.mock('../macSteamOffline', () => {
     restoreMacSteamOnlineIfOwed: async () => 'not-owed'
   }
 })
-const mockReleaseAnonymousForShutdown = jest.fn()
-jest.mock('../anonymousClient', () => ({
-  closeAnonymousClient: jest.fn(),
-  releaseAnonymousForShutdown: () => mockReleaseAnonymousForShutdown()
-}))
 jest.mock('backend/ipc', () => ({
   sendFrontendMessage: jest.fn(),
   addHandler: jest.fn()
@@ -95,6 +90,7 @@ const resetSteamAuthTrigger = () =>
 SteamUser.bindStores({
   signIn: mockSignIn,
   steamSession,
+  anonymousClient: { close: jest.fn() },
   stores: { steam: { configStore: mockConfigStore } }
 } as never)
 

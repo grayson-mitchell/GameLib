@@ -144,6 +144,10 @@ import gogPresence from '../storeManagers/gog/presence'
 import { createSignInProbePass } from '../signInProbe/pass'
 import { createSignInProbeOutcomes } from '../signInProbe/outcomes'
 import { createSignInEpochs } from '../signInProbe/sessionEpoch'
+import {
+  createAnonymousClient,
+  createRawAnonymousClient
+} from '../storeManagers/steam/anonymousClient'
 import { createSteamSignInState } from '../storeManagers/steam/userSignInState'
 import { createSteamAuthTrigger } from '../storeManagers/steam/authTrigger'
 import { createSteamLibraryState } from '../storeManagers/steam/state'
@@ -269,6 +273,7 @@ export const BOOT_STEP_NAMES = [
   'host-services',
   'sign-in-probe-state',
   'steam-session-state',
+  'steam-anonymous-client',
   'stores',
   'migrations',
   'config',
@@ -401,7 +406,8 @@ function requireServices(state: BootState): BootServices {
     engineState,
     winetricksQueue,
     signInProbe,
-    steamSession
+    steamSession,
+    anonymousClient
   } = state.services
   if (
     !stores ||
@@ -424,7 +430,8 @@ function requireServices(state: BootState): BootServices {
     !engineState ||
     !winetricksQueue ||
     !signInProbe ||
-    !steamSession
+    !steamSession ||
+    !anonymousClient
   ) {
     const missing = (
       [
@@ -448,7 +455,8 @@ function requireServices(state: BootState): BootServices {
         'engineState',
         'winetricksQueue',
         'signInProbe',
-        'steamSession'
+        'steamSession',
+        'anonymousClient'
       ] as const
     ).filter((name) => !state.services[name])
     throw new Error(`boot services missing: ${missing.join(', ')}`)
@@ -474,7 +482,8 @@ function requireServices(state: BootState): BootServices {
     engineState,
     winetricksQueue,
     signInProbe,
-    steamSession
+    steamSession,
+    anonymousClient
   }
 }
 
@@ -1230,6 +1239,21 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'steam-anonymous-client',
+      // Builds the one anonymous CM client owner of this boot (D-05, D-66.3-14). Construction
+      // connects nothing and arms no timer: the connect is lazy (first `get`), bounded, and its
+      // idle-close timer runs on the boot clock (unref'd). Released at stdin EOF through
+      // releaseOnStdinEof. Before 'stores' so the SteamUser holder carries the same instance.
+      run: (ctx, _io, state) => {
+        state.services.anonymousClient =
+          prebuilt.anonymousClient ??
+          createAnonymousClient({
+            clock: ctx.clock,
+            createClient: createRawAnonymousClient
+          })
+      }
+    },
+    {
       name: 'stores',
       // Builds every store family against ONE per-boot registry (66.1 plan 25, A3); that registry
       // is what the name-keyed store RPC handlers resolve through. Store construction opens no
@@ -1256,7 +1280,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         SteamUser.bindStores({
           stores: state.services.stores,
           signIn: state.services.signInProbe,
-          steamSession: state.services.steamSession
+          steamSession: state.services.steamSession,
+          anonymousClient: state.services.anonymousClient
         })
         bindBottleStores({ stores: state.services.stores })
       }
@@ -1365,6 +1390,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           stores,
           signIn: state.services.signInProbe,
           steamSession: state.services.steamSession,
+          anonymousClient: state.services.anonymousClient,
           macSteamOffline: state.services.steamProcesses.macSteamOffline
         })
         state.services.commandRunner =
@@ -1430,6 +1456,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             t: tOrFallback,
             abortAll: callAllAbortControllers,
             releaseSteam: async () => {
+              state.services.anonymousClient?.releaseForShutdown()
               await SteamUser.releaseForShutdown()
             },
             deletePresence: () =>
@@ -1508,7 +1535,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           onlineMonitor,
           engineState,
           signInProbe,
-          steamSession
+          steamSession,
+          anonymousClient
         } = state.services
         if (
           !stores ||
@@ -1523,7 +1551,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !onlineMonitor ||
           !engineState ||
           !signInProbe ||
-          !steamSession
+          !steamSession ||
+          !anonymousClient
         ) {
           throw new Error(
             'store-managers step ran before stores/command-runner/config/host-services'
@@ -1558,7 +1587,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           onlineMonitor,
           engineState,
           signIn: signInProbe,
-          steamSession
+          steamSession,
+          anonymousClient
         })
         state.services.managers = prebuilt.managers ?? built
         state.services.launcher = prebuilt.launcher ?? built.launcher
@@ -1860,6 +1890,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         const services = requireServices(state)
         releaseOnStdinEof(input, {
           downloadQueue: services.downloadQueue,
+          anonymousClient: services.anonymousClient,
           stopAllSteamDownloadMonitors: () =>
             services.steamProcesses.downloadMonitor.stopAll()
         })

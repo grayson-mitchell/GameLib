@@ -189,9 +189,6 @@ jest.mock('../bridge/allowlist', () => ({
 // PICS scoping and merge logic — the shared beforeEach below defaults it to
 // a no-op success so every pre-existing refresh() test is unaffected; the
 // 'D-03 fail-soft' describe block below overrides this default per-test.
-jest.mock('../anonymousClient', () => ({
-  getAnonymousPicsClient: jest.fn()
-}))
 jest.mock('../bridge/launchTarget', () => ({
   backfillBridgeLaunchTargets: jest.fn()
 }))

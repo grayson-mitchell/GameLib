@@ -140,13 +140,7 @@ jest.mock('../macSteamOffline', () => {
   }
 })
 
-const mockReleaseAnonymousForShutdown = jest.fn()
 const mockCloseAnonymousClient = jest.fn()
-jest.mock('../anonymousClient', () => ({
-  closeAnonymousClient: (...args: unknown[]) =>
-    mockCloseAnonymousClient(...args),
-  releaseAnonymousForShutdown: () => mockReleaseAnonymousForShutdown()
-}))
 
 import { SteamUser } from '../user'
 
@@ -154,6 +148,9 @@ import { SteamUser } from '../user'
 SteamUser.bindStores({
   signIn: mockSignIn,
   steamSession: mockSteamSession,
+  anonymousClient: {
+    close: (...args: unknown[]) => mockCloseAnonymousClient(...args)
+  },
   stores: { steam: { configStore: mockConfigStore } },
   macSteamOffline: jest.requireMock('../macSteamOffline')
 } as never)
@@ -575,20 +572,14 @@ describe('authenticated session lease', () => {
     expect(SteamUser.getClient()).not.toBeNull()
   })
 
-  it('releaseForShutdown closes both clients, clears the timer and refuses later acquires', async () => {
+  it('releaseForShutdown closes the authenticated client, clears the timer and refuses later acquires', async () => {
     const a = await acquire()
     a.release()
     SteamUser.releaseForShutdown()
     expect(instances()[0].logOff).toHaveBeenCalled()
-    expect(mockReleaseAnonymousForShutdown).toHaveBeenCalledTimes(1)
     expect(internals.idleTimer).toBeNull()
     expect(await acquire()).toEqual({ ok: false, reason: 'shutting-down' })
     expect(instances()).toHaveLength(1)
-  })
-
-  it('releaseForShutdown releases the anonymous client even with no authenticated client', () => {
-    SteamUser.releaseForShutdown()
-    expect(mockReleaseAnonymousForShutdown).toHaveBeenCalledTimes(1)
   })
 
   it('releaseForShutdown pays the owed goonline after logOff', async () => {

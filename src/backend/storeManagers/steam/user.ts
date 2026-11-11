@@ -8,10 +8,7 @@ import { getTokenStore, readTokenOutcome } from './tokenStore'
 import { applySignInVerdict } from 'backend/signInProbe/verdict'
 import { withTimeout } from './withTimeout'
 import { sendFrontendMessage } from '../../ipc'
-import {
-  closeAnonymousClient,
-  releaseAnonymousForShutdown
-} from './anonymousClient'
+import type { AnonymousClient } from './anonymousClient'
 import {
   GuidedOfflineRequiredError,
   type MacSteamOffline,
@@ -48,6 +45,11 @@ export type SteamUserBoundDeps = SteamStoresDeps & {
   signIn?: ManagerDeps['signIn']
   /** The boot-owned Steam sign-in session state and auth-unlock latches (D-66.3-13); read through `steamSession()`. */
   steamSession?: SteamSessionServices
+  /**
+   * The boot-owned anonymous CM client (D-66.3-14); read through `anonymousClient()`. Interim:
+   * rides this bound-deps object until SteamUser itself becomes a boot-owned instance (plan 16).
+   */
+  anonymousClient?: Pick<AnonymousClient, 'close'>
 }
 
 // ── SteamUser static class ────────────────────────────────────────────────────
@@ -79,6 +81,16 @@ export class SteamUser {
     if (!instance) {
       throw new Error(
         'SteamUser: sign-in state read before bindStores supplied it (the sidecar binds it in the stores boot step)'
+      )
+    }
+    return instance
+  }
+
+  private static anonymousClient(): Pick<AnonymousClient, 'close'> {
+    const instance = this.boundStores?.anonymousClient
+    if (!instance) {
+      throw new Error(
+        'SteamUser: anonymous client read before bindStores supplied it (the sidecar binds it in the stores boot step)'
       )
     }
     return instance
@@ -717,7 +729,7 @@ export class SteamUser {
     this.connectingPromise = null
     this.logonFailure = null
     this.guidedInstallTargets.clear()
-    closeAnonymousClient('logout')
+    this.anonymousClient().close('logout')
     this.steamSession().signIn.resetSignInState()
     // Token through the seam (D-09) first, then the remaining session keys
     // configStore.clear() used to wipe — see stores.ts's configStore
@@ -764,7 +776,8 @@ export class SteamUser {
    * node process alive indefinitely; `logOff()` lets it drain in ~100ms. Called on stdin EOF.
    * Unlike logout() this clears no token and no stored session -- the user stays signed in.
    * The release also pays any goonline the go-offline wrap owes, after logOff, so no GameLib
-   * logon can land once Mac Steam reconnects.
+   * logon can land once Mac Steam reconnects. The anonymous CM client is released by the caller
+   * (releaseOnStdinEof / the quit handler) through the boot-owned instance, before this call.
    *
    * debug/shutdown-mid-connect-logon-survives: a logon still in flight is abandoned FIRST
    * (abortSteamUserLogon, so steam-user cannot log on again by itself), which also settles
@@ -774,7 +787,6 @@ export class SteamUser {
   static releaseForShutdown(): Promise<MacSteamRestoreOutcome> {
     this.shuttingDown = true
     this.clearIdleTimer()
-    releaseAnonymousForShutdown()
     this.abandonPendingLogon?.()
     const client = this.client
     if (client) {

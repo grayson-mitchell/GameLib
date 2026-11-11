@@ -134,13 +134,13 @@ jest.mock('../../storeManagers/steam/user')
 // the anonymous steam-user client first; automocked so no test opens a real
 // CM connection. Resolves null below, so capture falls back to the held
 // (mocked) client. ─────────────────────────────────────────────────────────
-jest.mock('../../storeManagers/steam/anonymousClient')
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { defined } from 'backend/testUtils/indexed'
 import { existsSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { bootFresh, writeInvoke, writeSend } from './helpers/sidecarHarness'
+import { createTestAnonymousClient } from 'backend/testUtils/testAnonymousClient'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
 // D-08: every case boots the sidecar once, in a fresh module registry. Module
@@ -150,7 +150,6 @@ import { createStoreRegistry } from 'backend/stores/storeRegistry'
 let getPath: typeof import('../pathShim').getPath
 let SteamUser: typeof import('../../storeManagers/steam/user').SteamUser
 let mockLeaseOk: typeof import('../../storeManagers/steam/__tests__/depotLeaseMocks').mockLeaseOk
-let getAnonymousPicsClient: typeof import('../../storeManagers/steam/anonymousClient').getAnonymousPicsClient
 let getSteamLibraries: typeof import('backend/utils').getSteamLibraries
 let steamConfigStore: ReturnType<
   typeof import('../../storeManagers/steam/stores').createSteamStores
@@ -168,9 +167,6 @@ function freshRegistry(): void {
   ;({
     mockLeaseOk
   } = require('../../storeManagers/steam/__tests__/depotLeaseMocks'))
-  ;({
-    getAnonymousPicsClient
-  } = require('../../storeManagers/steam/anonymousClient'))
   ;({ getSteamLibraries } = require('backend/utils'))
   ;({ configStore: steamConfigStore } =
     require('../../storeManagers/steam/stores').createSteamStores({
@@ -183,7 +179,13 @@ function freshRegistry(): void {
   /* eslint-enable @typescript-eslint/no-require-imports */
 }
 
-const boot = () => bootFresh({ reuseRegistry: true })
+// The anonymous CM client is the inert fake (resolves null, no CM connection): capture falls
+// back to the held (mocked) client.
+const boot = () =>
+  bootFresh({
+    reuseRegistry: true,
+    services: { anonymousClient: createTestAnonymousClient() }
+  })
 
 /**
  * One boot, then drop the frames the boot itself emitted. A fresh boot runs
@@ -222,7 +224,6 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // implementations before every test — re-establish the defaults every
     // test relies on.
     jest.mocked(getSteamLibraries).mockResolvedValue([])
-    jest.mocked(getAnonymousPicsClient).mockResolvedValue(null)
   })
 
   // Test 1 (read flow): dispatching a `refreshLibrary` invoke frame through

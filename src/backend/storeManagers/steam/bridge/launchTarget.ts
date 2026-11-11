@@ -34,7 +34,10 @@
 import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { SteamUser } from '../user'
-import { getAnonymousPicsClient, isPublicOnlyEntry } from '../anonymousClient'
+import {
+  isPublicOnlyEntry,
+  type AnonymousClientSlice
+} from '../anonymousClient'
 import { readBridgeVerdict, setBridgeLaunchTarget } from './bridgeVerdict'
 import type { SteamStoresDeps } from '../library/installRoot'
 import { sanitizeInstalldir } from '../installLocation'
@@ -168,7 +171,7 @@ async function readLaunch(
  * no CM connect, so the launch does not wait for DNS to fail.
  */
 export async function resolveBridgeLaunchExe(
-  deps: SteamStoresDeps & BridgeBottleDeps,
+  deps: SteamStoresDeps & BridgeBottleDeps & AnonymousClientSlice,
   appId: string,
   opts?: { offline?: boolean }
 ): Promise<string | undefined> {
@@ -195,11 +198,13 @@ export async function resolveBridgeLaunchExe(
       }
     }
 
-    let anonymous: Awaited<ReturnType<typeof getAnonymousPicsClient>> = null
+    let anonymous: Awaited<
+      ReturnType<AnonymousClientSlice['anonymousClient']['get']>
+    > = null
     if (!launch) {
       try {
         anonymous = await withTimeout(
-          getAnonymousPicsClient('launch-target'),
+          deps.anonymousClient.get('launch-target'),
           STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS,
           'resolveBridgeLaunchExe anonymous connect'
         )

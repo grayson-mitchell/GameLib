@@ -280,12 +280,6 @@ jest.mock('../macSteamOffline', () => ({
   GuidedOfflineRequiredError: class GuidedOfflineRequiredError extends Error {},
   restoreMacSteamOnlineIfOwed: async () => 'not-owed'
 }))
-jest.mock('../anonymousClient', () => ({
-  getAnonymousPicsClient: async () => null,
-  closeAnonymousClient: () => undefined,
-  releaseAnonymousForShutdown: () => undefined
-}))
-
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
 import { EventEmitter } from 'events'

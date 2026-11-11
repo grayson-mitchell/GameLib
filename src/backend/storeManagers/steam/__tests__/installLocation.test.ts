@@ -23,14 +23,18 @@ import {
 } from '../installLocation'
 import { STEAM_PICS_TIMEOUT_MS } from '../withTimeout'
 import { SteamUser } from '../user'
-import { getAnonymousPicsClient } from '../anonymousClient'
 import { classifyDepotError } from '../depotErrors'
 import { readAcfInstalldir } from '../acfInstalldir'
 
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 
 /** The config slice the Steam library lookups read; getSteamLibraries is mocked here. */
-const libDeps = { config: createTestGlobalConfig() }
+// The boot-owned anonymous client slice (D-66.3-14): a scripted `get`, no CM connection.
+const getAnonymousPicsClient = jest.fn()
+const libDeps = {
+  config: createTestGlobalConfig(),
+  anonymousClient: { get: getAnonymousPicsClient }
+}
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -47,11 +51,6 @@ jest.mock('backend/utils', () => ({
 }))
 
 jest.mock('../user')
-
-jest.mock('../anonymousClient', () => ({
-  ...jest.requireActual('../anonymousClient'),
-  getAnonymousPicsClient: jest.fn()
-}))
 
 // ── i18next mock — returns the fallback string for classifyDepotError
 //    assertions (depot.test.ts/library.test.ts's established pattern) ──────

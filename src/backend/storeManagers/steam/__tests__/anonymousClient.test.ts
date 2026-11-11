@@ -34,12 +34,12 @@ import { logInfo } from 'backend/logger'
 import {
   ANON_CONNECT_TIMEOUT_MS,
   ANON_IDLE_CLOSE_MS,
-  __resetAnonymousClientForTests,
-  closeAnonymousClient,
-  getAnonymousPicsClient,
+  createAnonymousClient,
+  createRawAnonymousClient,
   isPublicOnlyEntry,
-  releaseAnonymousForShutdown
+  type AnonymousClient
 } from '../anonymousClient'
+import { createFakeClock, type FakeClock } from 'backend/testUtils/fakeClock'
 import { at } from './fixtures/indexed'
 
 type Fake = {
@@ -53,15 +53,25 @@ type Fake = {
 }
 const fake = SteamUserLib as unknown as Fake
 
+let clock: FakeClock
+let anon: AnonymousClient
+const getAnonymousPicsClient = (reason: string) => anon.get(reason)
+const closeAnonymousClient = (cause: 'idle' | 'logout' | 'shutdown') =>
+  anon.close(cause)
+const releaseAnonymousForShutdown = () => anon.releaseForShutdown()
+
 beforeEach(() => {
-  jest.useFakeTimers()
+  clock = createFakeClock()
   fake.instances.length = 0
-  __resetAnonymousClientForTests()
+  anon = createAnonymousClient({
+    clock,
+    createClient: createRawAnonymousClient
+  })
 })
 
 afterEach(() => {
-  __resetAnonymousClientForTests()
-  jest.useRealTimers()
+  anon.releaseForShutdown()
+  clock.assertNoKeepAlive()
 })
 
 describe('getAnonymousPicsClient', () => {
@@ -103,7 +113,7 @@ describe('getAnonymousPicsClient', () => {
   it('times out after 15s: callers get null, logOff once, next call builds a fresh client', async () => {
     const a = getAnonymousPicsClient('x')
     const b = getAnonymousPicsClient('x')
-    jest.advanceTimersByTime(ANON_CONNECT_TIMEOUT_MS)
+    clock.advance(ANON_CONNECT_TIMEOUT_MS)
     expect(await a).toBeNull()
     expect(await b).toBeNull()
     expect(at(fake.instances, 0).logOff).toHaveBeenCalledTimes(1)
@@ -137,12 +147,12 @@ describe('getAnonymousPicsClient', () => {
     const p = getAnonymousPicsClient('x')
     at(fake.instances, 0).emit('loggedOn')
     await p
-    jest.advanceTimersByTime(ANON_IDLE_CLOSE_MS - 1000)
+    clock.advance(ANON_IDLE_CLOSE_MS - 1000)
     expect(await getAnonymousPicsClient('x')).not.toBeNull()
     expect(fake.instances).toHaveLength(1)
-    jest.advanceTimersByTime(ANON_IDLE_CLOSE_MS - 1000)
+    clock.advance(ANON_IDLE_CLOSE_MS - 1000)
     expect(at(fake.instances, 0).logOff).not.toHaveBeenCalled()
-    jest.advanceTimersByTime(1000)
+    clock.advance(1000)
     expect(at(fake.instances, 0).logOff).toHaveBeenCalledTimes(1)
   })
 })
@@ -160,13 +170,13 @@ describe('idle close with reads in flight (54-REVIEW WR-09)', () => {
       })
     )
     const read = client?.getProductInfo([1], [], true)
-    jest.advanceTimersByTime(ANON_IDLE_CLOSE_MS * 2)
+    clock.advance(ANON_IDLE_CLOSE_MS * 2)
     expect(inst.logOff).not.toHaveBeenCalled()
     finish({ apps: {} })
     await read
-    jest.advanceTimersByTime(ANON_IDLE_CLOSE_MS - 1)
+    clock.advance(ANON_IDLE_CLOSE_MS - 1)
     expect(inst.logOff).not.toHaveBeenCalled()
-    jest.advanceTimersByTime(1)
+    clock.advance(1)
     expect(inst.logOff).toHaveBeenCalledTimes(1)
   })
 
@@ -177,7 +187,7 @@ describe('idle close with reads in flight (54-REVIEW WR-09)', () => {
     const client = await p
     inst.getProductInfo.mockRejectedValue(new Error('timeout'))
     await expect(client?.getProductInfo([1], [])).rejects.toThrow('timeout')
-    jest.advanceTimersByTime(ANON_IDLE_CLOSE_MS)
+    clock.advance(ANON_IDLE_CLOSE_MS)
     expect(inst.logOff).toHaveBeenCalledTimes(1)
   })
 
@@ -220,6 +230,41 @@ describe('shutdown and close', () => {
     expect(at(fake.instances, 0).logOff).toHaveBeenCalledTimes(1)
     void getAnonymousPicsClient('x')
     expect(fake.instances).toHaveLength(2)
+  })
+})
+
+describe('boot ownership (D-66.3-14)', () => {
+  it('constructing the owner connects nothing and arms no timer', () => {
+    expect(fake.instances).toHaveLength(0)
+    expect(clock.pendingCount()).toBe(0)
+  })
+
+  it('arms the idle close on the clock without keepAlive and closes at ANON_IDLE_CLOSE_MS', async () => {
+    const p = getAnonymousPicsClient('x')
+    at(fake.instances, 0).emit('loggedOn')
+    await p
+    expect(clock.pendingCount()).toBe(1)
+    expect(clock.keepAliveReasons()).toEqual([])
+    clock.advance(ANON_IDLE_CLOSE_MS)
+    expect(at(fake.instances, 0).logOff).toHaveBeenCalledTimes(1)
+    expect(clock.pendingCount()).toBe(0)
+  })
+
+  it('two owners never share a cached client, so a close on one leaves the other', async () => {
+    const other = createAnonymousClient({
+      clock,
+      createClient: createRawAnonymousClient
+    })
+    const a = getAnonymousPicsClient('x')
+    at(fake.instances, 0).emit('loggedOn')
+    await a
+    const b = other.get('x')
+    expect(fake.instances).toHaveLength(2)
+    at(fake.instances, 1).emit('loggedOn')
+    await b
+    other.releaseForShutdown()
+    expect(at(fake.instances, 0).logOff).not.toHaveBeenCalled()
+    expect(at(fake.instances, 1).logOff).toHaveBeenCalledTimes(1)
   })
 })
 

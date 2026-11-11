@@ -161,12 +161,6 @@ jest.mock('../macSteamOffline', () => {
   }
 })
 const mockCloseAnonymousClient = jest.fn()
-const mockReleaseAnonymousForShutdown = jest.fn()
-jest.mock('../anonymousClient', () => ({
-  closeAnonymousClient: (...args: unknown[]) =>
-    mockCloseAnonymousClient(...args),
-  releaseAnonymousForShutdown: () => mockReleaseAnonymousForShutdown()
-}))
 
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
 import { SteamUser, type SteamUserBoundDeps } from '../user'
@@ -193,6 +187,9 @@ beforeEach(() => {
     ...steamDeps,
     signIn: signInProbe,
     steamSession,
+    anonymousClient: {
+      close: (...args) => mockCloseAnonymousClient(...args)
+    },
     macSteamOffline:
       jest.requireMock<NonNullable<SteamUserBoundDeps['macSteamOffline']>>(
         '../macSteamOffline'

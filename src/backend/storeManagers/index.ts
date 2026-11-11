@@ -160,6 +160,7 @@ export interface CreateStoreManagersDeps {
   engineState: ManagerDeps['engineState']
   signIn: ManagerDeps['signIn']
   steamSession: ManagerDeps['steamSession']
+  anonymousClient: ManagerDeps['anonymousClient']
 }
 
 /**
@@ -196,7 +197,8 @@ export function createStoreManagers(
     onlineMonitor: deps.onlineMonitor,
     engineState: deps.engineState,
     signIn: deps.signIn,
-    steamSession: deps.steamSession
+    steamSession: deps.steamSession,
+    anonymousClient: deps.anonymousClient
   }
   const launchHooks = buildLaunchHooks(managerDeps)
   const launcher = createLauncher({

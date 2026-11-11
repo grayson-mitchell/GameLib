@@ -21,7 +21,6 @@ import { sendFrontendMessage } from '../../../ipc'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
 import { SteamUser } from '../user'
-import { getAnonymousPicsClient } from '../anonymousClient'
 import {
   getBottleSteamappsDir,
   getSteamBottleSettings,
@@ -42,6 +41,7 @@ import { startInstallPolling } from '../library/installPolling'
 import { at } from './fixtures/indexed'
 import type { Stores } from 'backend/services/types'
 
+import { createTestAnonymousClient } from 'backend/testUtils/testAnonymousClient'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 
 const libDeps = { config: createTestGlobalConfig() }
@@ -50,7 +50,10 @@ const { steamLibraryStore, steamMetadataStore, steamSyncStore } =
   jest.requireMock<Stores['steam']>('../stores')
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
+// The boot-owned anonymous client (D-66.3-14): a scripted `get`, no CM connection.
+const getAnonymousPicsClient = jest.fn()
 const steamTestDeps = createTestManagerDeps({
+  anonymousClient: createTestAnonymousClient({ get: getAnonymousPicsClient }),
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
 })
@@ -229,9 +232,6 @@ jest.mock('../bridge/allowlist', () => ({
 // PICS scoping and merge logic — the shared beforeEach below defaults it to
 // a no-op success so every pre-existing refresh() test is unaffected; the
 // 'D-03 fail-soft' describe block below overrides this default per-test.
-jest.mock('../anonymousClient', () => ({
-  getAnonymousPicsClient: jest.fn()
-}))
 jest.mock('../bridge/launchTarget', () => ({
   backfillBridgeLaunchTargets: jest.fn()
 }))

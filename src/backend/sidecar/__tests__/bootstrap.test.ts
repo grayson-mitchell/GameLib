@@ -211,9 +211,10 @@ describe('sidecar bootstrap (headless boot)', () => {
   })
 
   describe('boot services (66.1-04)', () => {
-    it('a default boot returns BootServices with all twenty-one fields', () => {
+    it('a default boot returns BootServices with all twenty-two fields', () => {
       const { services } = bootWithLines()
       expect(Object.keys(services).sort()).toEqual([
+        'anonymousClient',
         'appInfo',
         'clock',
         'commandRunner',

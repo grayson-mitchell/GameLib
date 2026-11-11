@@ -19,7 +19,7 @@ import type { InstallArgs } from 'common/types'
 import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { SteamUser } from './user'
-import { getAnonymousPicsClient, isPublicOnlyEntry } from './anonymousClient'
+import { isPublicOnlyEntry, type AnonymousClientSlice } from './anonymousClient'
 import {
   withTimeout,
   STEAM_PICS_TIMEOUT_MS,
@@ -238,7 +238,10 @@ export function sanitizeInstalldir(
  * appId-derived name. Never throws: an install-location lookup must not
  * hard-fail the whole install over a cosmetic directory-name mismatch.
  */
-async function fetchInstalldir(appId: string): Promise<string | undefined> {
+async function fetchInstalldir(
+  deps: AnonymousClientSlice,
+  appId: string
+): Promise<string | undefined> {
   if (!NUMERIC_APP_ID.test(appId)) {
     logWarning(
       `SteamGame: rejected non-numeric appId "${appId}" during install-location resolution`,
@@ -250,10 +253,12 @@ async function fetchInstalldir(appId: string): Promise<string | undefined> {
   const numericAppId = Number(appId)
   const start = Date.now()
 
-  let anonymous: Awaited<ReturnType<typeof getAnonymousPicsClient>> = null
+  let anonymous: Awaited<
+    ReturnType<AnonymousClientSlice['anonymousClient']['get']>
+  > = null
   try {
     anonymous = await withTimeout(
-      getAnonymousPicsClient('installdir'),
+      deps.anonymousClient.get('installdir'),
       STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS,
       'fetchInstalldir anonymous connect'
     )
@@ -388,7 +393,7 @@ export async function resolveSteamLibraryRoot(
  * from PICS `config.installdir`, sanitized against traversal (T-21-01).
  */
 export async function resolveSteamInstallTarget(
-  deps: SteamLibrariesDeps,
+  deps: SteamLibrariesDeps & AnonymousClientSlice,
   appId: string,
   args: InstallArgs
 ): Promise<SteamInstallTarget> {
@@ -417,7 +422,9 @@ export async function resolveSteamInstallTarget(
   // (RED-3) — a reinstall pays no cold connect at all.
   const acfInstalldir = readAcfInstalldir(target.steamappsDir, appId)
   const usingAcf = Boolean(acfInstalldir && acfInstalldir.trim())
-  const candidate = usingAcf ? acfInstalldir : await fetchInstalldir(appId)
+  const candidate = usingAcf
+    ? acfInstalldir
+    : await fetchInstalldir(deps, appId)
   logInfo(
     `SteamGame: resolving installdir for appId ${appId} from ${usingAcf ? 'acf' : 'pics'}`,
     LogPrefix.Steam

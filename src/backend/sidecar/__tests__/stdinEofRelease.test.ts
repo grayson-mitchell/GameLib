@@ -18,8 +18,10 @@ const downloadQueue = {
 }
 const stopMonitors = jest.fn()
 // The Steam monitor instance is injected (66.2-06): the release path only needs its stopAll.
+const releaseAnon = jest.fn()
 const deps = {
   downloadQueue,
+  anonymousClient: { releaseForShutdown: () => releaseAnon() },
   stopAllSteamDownloadMonitors: () => stopMonitors()
 }
 const release = jest.fn()
@@ -115,6 +117,25 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
       expect(stopMonitors).toHaveBeenCalledTimes(1)
       expect(release).toHaveBeenCalledTimes(1)
     })
+  })
+
+  it('releases the anonymous CM client before the authenticated session, and still releases the session if it throws', async () => {
+    const order: string[] = []
+    releaseAnon.mockImplementationOnce(() => {
+      order.push('anon')
+      throw new Error('boom')
+    })
+    release.mockImplementationOnce(() => {
+      order.push('cm')
+      return Promise.resolve('not-owed')
+    })
+    const input = new PassThrough()
+    releaseOnStdinEof(input, deps)
+    input.resume()
+    input.end()
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    expect(order).toEqual(['anon', 'cm'])
+    expect(releaseAnon).toHaveBeenCalledTimes(1)
   })
 
   it('destroys outbound HTTP once, after the CM release, and logs count and hosts', async () => {

@@ -1,6 +1,7 @@
 import type { Readable } from 'node:stream'
 import { callAllAbortControllers } from '../utils/aborthandler/aborthandler'
 import type { DownloadQueue } from '../downloadmanager/downloadqueue'
+import type { AnonymousClient } from '../storeManagers/steam/anonymousClient'
 import { SteamUser } from '../storeManagers/steam/user'
 import { LogPrefix, logInfo, logWarning } from '../logger'
 import { destroyOutboundHttp } from './outboundHttpRegistry'
@@ -41,6 +42,8 @@ export function releaseOnStdinEof(
   input: Readable,
   deps: {
     downloadQueue: Pick<DownloadQueue, 'isRunning' | 'pauseCurrentDownload'>
+    /** The boot-owned anonymous CM client (D-66.3-14); its socket and heartbeat cannot be unref'd. */
+    anonymousClient: Pick<AnonymousClient, 'releaseForShutdown'>
     /** Kills every nettop watchdog child (SteamProcesses.downloadMonitor.stopAll). */
     stopAllSteamDownloadMonitors: () => void
   }
@@ -70,6 +73,13 @@ export function releaseOnStdinEof(
       deps.stopAllSteamDownloadMonitors()
     } catch {
       // best-effort: still release the CM socket below
+    }
+    try {
+      // The anonymous CM logon is a library-owned socket too (D-66.3-14). Released first, as
+      // SteamUser.releaseForShutdown() did before it; the quit handler's releaseSteam does the same.
+      deps.anonymousClient.releaseForShutdown()
+    } catch {
+      // best-effort: still release the authenticated session below
     }
     void SteamUser.releaseForShutdown()
     // After the CM release: its synchronous logOff has already started, and CM WebSocket

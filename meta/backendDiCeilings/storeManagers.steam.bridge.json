@@ -10,7 +10,7 @@
     "src/backend/storeManagers/steam/bridge/__tests__/helperSpawn.test.ts": 6,
     "src/backend/storeManagers/steam/bridge/__tests__/importScan.test.ts": 2,
     "src/backend/storeManagers/steam/bridge/__tests__/inviteBridge.test.ts": 2,
-    "src/backend/storeManagers/steam/bridge/__tests__/launchTarget.test.ts": 6,
+    "src/backend/storeManagers/steam/bridge/__tests__/launchTarget.test.ts": 5,
     "src/backend/storeManagers/steam/bridge/__tests__/originalRestore.test.ts": 7,
     "src/backend/storeManagers/steam/bridge/__tests__/peScan.test.ts": 2,
     "src/backend/storeManagers/steam/bridge/__tests__/sharedRedistInstall.test.ts": 8,
