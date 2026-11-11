@@ -1,5 +1,5 @@
 {
   "jestMock": {
-    "src/backend/storeManagers/__tests__/runnerLaunchArgv.test.ts": 8
+    "src/backend/storeManagers/__tests__/runnerLaunchArgv.test.ts": 7
   }
 }

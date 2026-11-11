@@ -149,11 +149,6 @@ jest.mock('i18next', () => ({
 // IMMEDIATELY (per this task's own <behavior> instruction), so init()'s
 // background-sync branch drives refresh() synchronously-ish without a real
 // online-state wait. ─────────────────────────────────────────────────────────
-jest.mock('backend/online_monitor', () => ({
-  runOnceWhenOnline: jest.fn(),
-  isOnline: jest.fn().mockReturnValue(true)
-}))
-
 jest.mock('backend/constants/environment', () => ({
   isWindows: false,
   isMac: false,
@@ -300,7 +295,6 @@ import SteamGame from '../games'
 import { SteamUser, type SteamUserBoundDeps } from '../user'
 import { setTokenStore, type TokenStore } from '../tokenStore'
 import { getSteamLibraries } from 'backend/utils'
-import { runOnceWhenOnline } from 'backend/online_monitor'
 import { library } from '../state'
 import { captureOwnedAppPlatforms } from '../platformCapture'
 import {
@@ -372,9 +366,6 @@ beforeEach(() => {
   library.clear()
   mockConfigStore.get_nodefault.mockReturnValue(undefined)
   jest.mocked(getSteamLibraries).mockResolvedValue([])
-  jest.mocked(runOnceWhenOnline).mockImplementation((cb: () => unknown) => {
-    void cb()
-  })
   // Defaults so init()/migrateStaleArtUrls have empty caches to scan
   // (mirrors library.test.ts's own shared beforeEach).
   const { steamLibraryStore, steamMetadataStore } =

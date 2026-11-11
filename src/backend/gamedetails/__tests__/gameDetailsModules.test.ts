@@ -71,7 +71,10 @@ const managerMocks = {
 }
 
 // The manager map reaches the dispatchers by deps (66.1-11), not by module mock.
+// The connectivity slice: `isOnlineMock` is read at call time so a case can flip it.
+const isOnlineMock = jest.fn()
 const dispatchDeps = {
+  onlineMonitor: { isOnline: () => isOnlineMock() as boolean },
   managers: { library: managerMocks },
   stores: { kvs: { configStore: {} } }
 } as never
@@ -103,12 +106,6 @@ const sendGameStatusUpdateMock = jest.fn()
 jest.mock('backend/utils', () => ({
   sendGameStatusUpdate: (...args: [unknown]) =>
     sendGameStatusUpdateMock(...args)
-}))
-
-// ── backend/online_monitor mock ─────────────────────────────────────────
-const isOnlineMock = jest.fn()
-jest.mock('backend/online_monitor', () => ({
-  isOnline: (...args: []) => isOnlineMock(...args)
 }))
 
 // ── backend/storeManagers/legendary/user mock ───────────────────────────

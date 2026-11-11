@@ -71,7 +71,7 @@ import {
 import { parse } from '@node-steam/vdf'
 
 import type LogWriter from 'backend/logger/log_writer'
-import { isOnline } from './online_monitor'
+import type { OnlineMonitor } from './online_monitor'
 import type { Game } from 'common/types/game_manager'
 import type { ProcessRunner } from 'backend/process/types'
 import { isStore } from 'common/storeCapabilities'
@@ -173,10 +173,13 @@ async function getWineFromProton(
 }
 
 async function isEpicServiceOffline(
-  deps: { notifications: Pick<Notifications, 'show'> },
+  deps: {
+    notifications: Pick<Notifications, 'show'>
+    onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
+  },
   type: 'Epic Games Store' | 'Fortnite' | 'Rocket League' = 'Epic Games Store'
 ) {
-  if (!isOnline()) return true
+  if (!deps.onlineMonitor.isOnline()) return true
 
   const epicStatusApi = 'https://status.epicgames.com/api/v2/components.json'
   const notification = {

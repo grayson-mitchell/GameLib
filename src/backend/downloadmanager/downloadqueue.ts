@@ -1,6 +1,11 @@
 import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
 import { getFileSize, removeFolder, sendGameStatusUpdate } from '../utils'
-import { DMQueueElement, DMStatus, DownloadManagerState } from 'common/types'
+import {
+  ConnectivityStatus,
+  DMQueueElement,
+  DMStatus,
+  DownloadManagerState
+} from 'common/types'
 import {
   installQueueElement,
   resolveGameTitle,
@@ -17,7 +22,7 @@ import { deleteCancelledSteamInstall } from 'backend/storeManagers/steam/cancelD
 import { steamQueueHeadAlreadyInstalled } from 'backend/storeManagers/steam/queueHeadRevalidation'
 import { existsSync } from 'fs'
 import { gogRedistPath } from 'backend/storeManagers/gog/constants'
-import type { onConnectivityChange as OnConnectivityChange } from 'backend/online_monitor'
+import type { OnlineMonitor } from 'backend/online_monitor'
 import type { Stores, StoreManagers } from 'backend/services/types'
 import { keepKnownRunnerElements, upsertFinished } from './finishedList'
 import {
@@ -31,7 +36,7 @@ export interface DownloadQueueDeps extends DialogBoxDeps, NotifyDeps {
   config: GlobalConfigSlice
   stores: Pick<Stores, 'downloadManager' | 'steam'>
   managers: Pick<StoreManagers, 'library'>
-  onConnectivityChange: typeof OnConnectivityChange
+  onlineMonitor: Pick<OnlineMonitor, 'isOnline' | 'onConnectivityChange'>
 }
 
 export function createDownloadQueue(deps: DownloadQueueDeps) {
@@ -62,9 +67,7 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
     notifications: deps.notifications
   }
 
-  function onConnectivity(
-    status: Parameters<Parameters<typeof OnConnectivityChange>[0]>[0]
-  ) {
+  function onConnectivity(status: ConnectivityStatus) {
     if (status === 'offline' && isRunning()) {
       logInfo(
         'System offline, auto-pausing downloads',
@@ -585,7 +588,7 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
    */
   function start() {
     currentElement = getFirstQueueElement()
-    deps.onConnectivityChange(onConnectivity)
+    deps.onlineMonitor.onConnectivityChange(onConnectivity)
   }
 
   return {

@@ -63,6 +63,7 @@
  * never reach.
  */
 
+import type { OnlineMonitor } from '../online_monitor'
 import type { AppState } from '../host/appState'
 import type { IpcRegistry } from './ipcRegistry'
 import {
@@ -109,6 +110,7 @@ export interface WineToolsFlowDeps extends NotifyDeps, DialogBoxDeps {
   >
   gameConfigs: Pick<GameConfigs, 'get'>
   appInfo: Pick<AppInfo, 'version'>
+  onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   managers: Pick<StoreManagers, 'library'>
   commandRunner: Pick<CommandRunner, 'runWineCommand'>
   launcher: Pick<Launcher, 'validWine' | 'setupEnvVars' | 'setupWineEnvVars'>

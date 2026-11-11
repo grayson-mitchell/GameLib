@@ -72,12 +72,6 @@ jest.mock('../user', () => ({
   }
 }))
 
-// ── online_monitor mock ───────────────────────────────────────────────────────
-jest.mock('backend/online_monitor', () => ({
-  runOnceWhenOnline: jest.fn(),
-  isOnline: jest.fn().mockReturnValue(false)
-}))
-
 // ── electron mock ──────────────────────────────────────────────────────────────
 jest.mock('backend/platform', () => ({
   dialog: { showMessageBox: jest.fn() },

@@ -42,6 +42,7 @@ describe('bootstrap.ts source shape (D-08)', () => {
       'migrations',
       'config',
       'command-runner',
+      'online-monitor-owner',
       'store-managers',
       'i18n',
       'register-handlers',

@@ -177,12 +177,6 @@ jest.mock('../launcher', () => ({
   verifyWinePrefix: jest.fn()
 }))
 
-// ── backend/online_monitor mock ──────────────────────────────────────────────────────────────
-jest.mock('backend/online_monitor', () => ({
-  isOnline: jest.fn(() => true),
-  runOnceWhenOnline: jest.fn()
-}))
-
 // ── backend/macArch/recovery mock ────────────────────────────────────────────────────────────
 // 7f9920654 (quick 261029-t39) made legendary/library.ts import this module, whose load chain
 // (macArch/stores -> constants/paths) evaluates app.getAppPath() and constructs a real

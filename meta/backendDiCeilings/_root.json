@@ -9,7 +9,6 @@
     "src/backend/knownFixOverlayInstall.ts": 1,
     "src/backend/knownFixesFetcher.ts": 1,
     "src/backend/launchSingleFlight.ts": 1,
-    "src/backend/online_monitor.ts": 1,
     "src/backend/protocol.ts": 1,
     "src/backend/storeChangeNotifier.ts": 2,
     "src/backend/utils.ts": 4

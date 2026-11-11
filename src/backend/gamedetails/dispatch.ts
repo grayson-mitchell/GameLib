@@ -56,7 +56,7 @@ import type { Stores, StoreManagers } from '../services/types'
 import { attachOverrides, type GameOverridesDeps } from '../game_overrides'
 import { isDelegatedInstallPolling } from '../storeManagers/steam/library/installPolling'
 import { callAbortController } from '../utils/aborthandler/aborthandler'
-import { isOnline } from '../online_monitor'
+import type { OnlineMonitor } from '../online_monitor'
 import { sendGameStatusUpdate } from '../utils'
 import { notify, type NotifyDeps } from '../dialog/dialog'
 import { LegendaryUser } from '../storeManagers/legendary/user'
@@ -64,6 +64,7 @@ import { logError, logInfo, logWarning, LogPrefix } from '../logger'
 
 /** What the game-details dispatchers read: the manager map and the kvs config store (66.1, R3). */
 export interface GameDetailsDeps extends NotifyDeps {
+  onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   managers: Pick<StoreManagers, 'library'>
   stores: {
     kvs: Pick<Stores['kvs'], 'configStore'>
@@ -196,7 +197,7 @@ export async function repair(
   appName: string,
   runner: Runner
 ): Promise<void> {
-  if (!isOnline()) {
+  if (!deps.onlineMonitor.isOnline()) {
     logWarning(
       `App offline, skipping repair for game '${appName}'.`,
       LogPrefix.Backend

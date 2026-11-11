@@ -44,10 +44,6 @@ jest.mock('backend/constants/paths', () => ({
   toolsPath: '/tmp/gamelib-260916-9vh-tools'
 }))
 
-jest.mock('backend/online_monitor', () => ({
-  isOnline: jest.fn()
-}))
-
 jest.mock('backend/logger', () => ({
   logDebug: jest.fn(),
   logError: jest.fn(),
@@ -72,7 +68,6 @@ jest.mock('../machoExports', () => ({
 
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { backendEvents } from 'backend/backend_events'
-import { isOnline } from 'backend/online_monitor'
 import { existsSync } from 'graceful-fs'
 import { installOrUpdateTool } from '../index'
 import { bindDxmtStores } from '../dxmt'
@@ -87,7 +82,7 @@ import type { ReleasesInfo, WineVersionInfo } from 'common/types'
 import '../dxmt'
 
 const installOrUpdateToolMock = installOrUpdateTool as jest.Mock
-const isOnlineMock = isOnline as jest.Mock
+const isOnlineMock = jest.fn()
 // Reading `.get` off the mocked store is a jest mock handle, not a real unbound method
 // call -- `this` is never involved. Hoisting it into a `mock`-prefixed factory variable
 // instead would hit the TDZ, because `jest.mock` is hoisted above this declaration.
@@ -96,6 +91,8 @@ bindDxmtStores({
   runner: createScriptedRunner([]),
   dialogs: createTestHostServices().dialogs,
   appState: createTestHostServices().appState,
+  // Read at call time so a case can flip the mock.
+  onlineMonitor: { isOnline: () => isOnlineMock() as boolean },
   stores: {
     wineManager: { wineDownloaderInfoStore: mockWineDownloaderInfoStore }
   } as never

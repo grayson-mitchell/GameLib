@@ -88,10 +88,6 @@ jest.mock('../user', () => ({
 jest.mock('backend/connectivityNow', () => ({
   checkConnectivityNow: jest.fn()
 }))
-jest.mock('backend/online_monitor', () => ({
-  runOnceWhenOnline: jest.fn(),
-  isOnline: jest.fn()
-}))
 jest.mock('backend/constants/environment', () => ({
   isWindows: false,
   isMac: false,

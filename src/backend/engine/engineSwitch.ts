@@ -9,6 +9,7 @@
  *
  * Nothing runs at import and there are no timers (sidecar exit contract).
  */
+import type { OnlineMonitor } from 'backend/online_monitor'
 import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'fs'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
 import { toolsPath } from 'backend/constants/paths'
@@ -116,9 +117,10 @@ function defaultCurrentPinEngine(): NonCrossoverEngine | null {
 
 async function ensurePinEngineVia(
   runner: Pick<ProcessRunner, 'run'>,
+  onlineMonitor: Pick<OnlineMonitor, 'isOnline'>,
   pin: EnginePin
 ): Promise<NonCrossoverEngine | null> {
-  const res = await ensurePinnedEngine(pin, { runner })
+  const res = await ensurePinnedEngine(pin, { runner, onlineMonitor })
   if (!res.ok) return null
   return {
     wineBin: res.paths.wineBin,
@@ -146,7 +148,8 @@ export function switchServicesFrom(
     killWith: (...a) =>
       killBottleWineServerWith({ spawnAsync: services.spawnAsync }, ...a),
     installRemove: services.installRemove,
-    ensurePinEngine: (pin) => ensurePinEngineVia(services.runner, pin),
+    ensurePinEngine: (pin) =>
+      ensurePinEngineVia(services.runner, services.onlineMonitor, pin),
     fallbackSettings: (bottleName, engine) =>
       buildFallbackGameSettings(
         bottleName,

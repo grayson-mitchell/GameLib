@@ -106,7 +106,7 @@ import { installDevSecretVault } from './devSecretVault'
 // real `pingSites()` ping instead of pinning `'offline'` permanently.
 import axios from 'axios'
 import { randomUUID } from 'node:crypto'
-import { createOnlineMonitor, bindOnlineMonitorCompat } from '../online_monitor'
+import { createOnlineMonitor } from '../online_monitor'
 import type { OnlineMonitor } from '../online_monitor'
 // Block E (todo 2026-09-06, quick-260908-fre). `grep -rn
 // "storeManagers/legendary/user\|storeManagers/gog/user" src/backend/sidecar/` confirms
@@ -1380,7 +1380,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             newEpoch: randomUUID
           })
         state.services.onlineMonitor = monitor
-        bindOnlineMonitorCompat(monitor)
       }
     },
     {
@@ -1457,8 +1456,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           queue = createDownloadQueue({
             stores,
             managers,
-            onConnectivityChange: (callback) =>
-              onlineMonitor.onConnectivityChange(callback),
+            onlineMonitor,
             config,
             dialogs: host.dialogs,
             appState: host.appState,
@@ -1771,12 +1769,13 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'secret-stores',
       run: (ctx, _io, state) => {
-        const { stores, host } = requireServices(state)
+        const { stores, host, onlineMonitor } = requireServices(state)
         bindSteamGridDbSecretDeps({ stores })
         bindHumbleStores({ stores })
         bindDxmtStores({
           stores,
           runner: ctx.runner,
+          onlineMonitor,
           dialogs: host.dialogs,
           appState: host.appState
         })
@@ -1862,7 +1861,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'anticheat-listener',
-      run: () => {
+      run: (_ctx, _io, state) => {
         // Block A — re-homed `releasesInfoReady` anticheat listener (D-04). Reproduces
         // `anticheat/ipc_handler.ts:12-19`'s body exactly, including its `logDebug` line.
         // `anticheat/ipc_handler.ts` itself cannot be side-effect-imported from
@@ -1891,6 +1890,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
               LogPrefix.Backend
             )
             downloadAntiCheatData(
+              { onlineMonitor: requireServices(state).onlineMonitor },
               isMac
                 ? releasesInfo.anticheatFiles.shaMac
                 : releasesInfo.anticheatFiles.shaLinux
@@ -1911,14 +1911,16 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'releases-fetch',
-      run: () => {
+      run: (_ctx, _io, state) => {
         // Block B — fetchLastestReleases() (D-07). Must run AFTER initOnlineMonitor() above,
         // because fetchLastestReleases wraps its work in runOnceWhenOnline, and AFTER Block A so
         // the releasesInfoReady listener exists before the event it responds to can fire. Its own
         // `process.env.CI === 'e2e'` and `isWindows` early-returns are preserved unchanged by
         // calling it as-is — not replicated or bypassed here.
         try {
-          fetchLastestReleases()
+          fetchLastestReleases({
+            onlineMonitor: requireServices(state).onlineMonitor
+          })
         } catch (error) {
           logWarning(
             `[bootstrap] fetchLastestReleases() failed: ${error}`,

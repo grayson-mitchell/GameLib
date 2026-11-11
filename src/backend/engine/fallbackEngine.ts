@@ -30,7 +30,7 @@ import {
   createAbortController,
   deleteAbortController
 } from 'backend/utils/aborthandler/aborthandler'
-import { isOnline } from 'backend/online_monitor'
+import type { OnlineMonitor } from 'backend/online_monitor'
 import { calculateEta, downloadFile, extractFiles } from 'backend/utils'
 import { ENGINE_PINS, type EnginePin, type PinnedArtifact } from './enginePins'
 
@@ -285,13 +285,14 @@ async function doEnsure(
   pin: EnginePin,
   opts: {
     runner: Pick<ProcessRunner, 'run'>
+    onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
     onProgress?: (p: FallbackDownloadProgress) => void
     signal?: AbortSignal
   }
 ): Promise<EnsureResult> {
   const paths = pinnedEnginePaths(pin)
   if (isPinnedEngineInstalled(pin)) return { ok: true, paths }
-  if (!isOnline()) {
+  if (!opts.onlineMonitor.isOnline()) {
     return { ok: false, reason: 'offline', detail: 'no network connection' }
   }
   try {
@@ -320,6 +321,7 @@ export function ensurePinnedEngine(
   opts: {
     /** The process runner the archive extraction runs through (66.2-11). */
     runner: Pick<ProcessRunner, 'run'>
+    onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
     onProgress?: (p: FallbackDownloadProgress) => void
     signal?: AbortSignal
   }
@@ -382,6 +384,7 @@ export function ensurePinnedEngine(
       .then(() =>
         doEnsure(pin, {
           runner: opts.runner,
+          onlineMonitor: opts.onlineMonitor,
           onProgress: (p) => shared.listeners.forEach((l) => l(p)),
           signal: shared.controller.signal
         })

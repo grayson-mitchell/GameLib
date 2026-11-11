@@ -20,10 +20,7 @@
 import dns from 'node:dns'
 import os from 'node:os'
 import { logInfo, logWarning, LogPrefix } from './logger'
-import {
-  getConnectivityStatus,
-  recheckConnectivity
-} from 'backend/online_monitor'
+import type { OnlineMonitor } from 'backend/online_monitor'
 import type { ConnectivityStatus } from 'common/types'
 
 const FRESH_DNS_CAP_MS = 1500
@@ -50,11 +47,9 @@ interface ConnectivityNowDeps {
   timeoutMs: number
 }
 
-const defaultDeps: ConnectivityNowDeps = {
-  status: () => getConnectivityStatus(),
+const defaultDeps: Omit<ConnectivityNowDeps, 'status' | 'onFreshOffline'> = {
   networkInterfaces: () => os.networkInterfaces(),
   lookup: (host) => dns.promises.lookup(host),
-  onFreshOffline: recheckConnectivity,
   hosts: ['github.com', 'gog.com'],
   timeoutMs: FRESH_DNS_CAP_MS
 }
@@ -86,12 +81,21 @@ export function hasRoutableAddress(ifaces: IfaceMap): boolean {
 
 export async function checkConnectivityNow(
   reason: string,
+  onlineMonitor: Pick<
+    OnlineMonitor,
+    'getConnectivityStatus' | 'recheckConnectivity'
+  >,
   deps?: Partial<ConnectivityNowDeps>
 ): Promise<FreshConnectivity> {
   const startedAt = Date.now()
   let result: Omit<FreshConnectivity, 'elapsedMs'>
   try {
-    const d = { ...defaultDeps, ...deps }
+    const d: ConnectivityNowDeps = {
+      ...defaultDeps,
+      status: () => onlineMonitor.getConnectivityStatus(),
+      onFreshOffline: (r, f) => onlineMonitor.recheckConnectivity(r, f),
+      ...deps
+    }
     const st = d.status()
     const notifyFreshOffline = (source: string) => {
       if (st !== 'online') return

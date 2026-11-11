@@ -42,7 +42,7 @@ import {
 } from 'backend/logger'
 import i18next from 'i18next'
 import { dirname, join } from 'path'
-import { isOnline } from '../online_monitor'
+import type { OnlineMonitor } from '../online_monitor'
 import {
   showDialogBoxModalAuto,
   type DialogBoxDeps,
@@ -225,6 +225,7 @@ export interface ToolsDeps extends DialogBoxDeps, NotifyDeps {
   appInfo: Pick<AppInfo, 'version'>
   /** `raiseMainWindow` is for the engine's refused-launch dialog (66.3-06). */
   appState: Pick<AppState, 'raiseMainWindowForInAppDialog' | 'raiseMainWindow'>
+  onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   config: Pick<
     GlobalConfigSlice,
     'getSettings' | 'getAlternativeWine' | 'setSetting'
@@ -236,6 +237,7 @@ function engineServicesFor(deps: ToolsDeps): EngineServices {
   return {
     spawnAsync: deps.spawnAsync,
     runner: deps.runner,
+    onlineMonitor: deps.onlineMonitor,
     installRemove: (...a) => createDxvk(deps).installRemove(...a),
     wineManagerReleases: wineManagerReleasesFrom(deps),
     globalSettings: () =>
@@ -252,7 +254,7 @@ function createDxvk(deps: ToolsDeps) {
       if (isWindows) {
         return
       }
-      if (!isOnline()) {
+      if (!deps.onlineMonitor.isOnline()) {
         logWarning(
           'App offline, skipping possible DXVK update.',
           LogPrefix.ToolInstaller
@@ -878,7 +880,7 @@ function createWinetricks(deps: ToolsDeps) {
         'https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks'
       const path = `${toolsPath}/winetricks`
 
-      if (!isOnline()) {
+      if (!deps.onlineMonitor.isOnline()) {
         return
       }
 

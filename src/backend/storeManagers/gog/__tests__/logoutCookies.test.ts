@@ -46,10 +46,6 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Gog: 'Gog' }
 }))
 
-jest.mock('backend/online_monitor', () => ({
-  isOnline: () => true
-}))
-
 const mockConfigStoreClear = jest.fn<unknown, unknown[]>()
 const fakeGogStores = {
   configStore: {

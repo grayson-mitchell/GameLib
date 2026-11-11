@@ -148,6 +148,7 @@ function engineSource(deps: LauncherDeps): EngineServicesSource {
     dialogs: deps.dialogs,
     appState: deps.appState,
     notifications: deps.notifications,
+    onlineMonitor: deps.onlineMonitor,
     runner: deps.runner,
     stores: deps.stores,
     // The pure env/validation helpers are module functions, so the tools need no handle on the

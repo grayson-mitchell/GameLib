@@ -7,13 +7,13 @@ jest.mock('../logger', () => ({
   logInfo: (...args: unknown[]) => mockLogInfo(...args),
   logWarning: (...args: unknown[]) => mockLogWarning(...args)
 }))
-jest.mock('backend/online_monitor', () => ({
-  getConnectivityStatus: jest.fn(() => 'online'),
-  recheckConnectivity: jest.fn()
-}))
 
 import type { ConnectivityStatus } from 'common/types'
 import { checkConnectivityNow, hasRoutableAddress } from '../connectivityNow'
+import { createTestOnlineMonitor } from '../testUtils/testOnlineMonitor'
+
+// Every case passes its own status/onFreshOffline overrides; the monitor is the default source.
+const monitor = createTestOnlineMonitor()
 
 const lan = {
   en0: [{ address: '192.168.1.20', family: 'IPv4', internal: false }]
@@ -29,6 +29,27 @@ const makeDeps = (over: Record<string, unknown> = {}) => ({
   lookup: jest.fn(() => Promise.resolve({ address: '1.2.3.4' })),
   onFreshOffline: jest.fn(),
   ...over
+})
+
+describe('checkConnectivityNow default sources', () => {
+  it('reads the injected monitor for status and hands a fresh offline back to its recheck', async () => {
+    const own = createTestOnlineMonitor({ online: true })
+    await checkConnectivityNow('launch', own, {
+      hosts: ['a.test'],
+      networkInterfaces: () => loopback,
+      lookup: () => Promise.resolve({ address: '1.2.3.4' })
+    })
+
+    expect(own.rechecks).toEqual([['launch', 'no-interface']])
+  })
+
+  it('a definite monitor offline short-circuits without a recheck', async () => {
+    const own = createTestOnlineMonitor({ online: false })
+    const r = await checkConnectivityNow('launch', own)
+
+    expect(r).toMatchObject({ offline: true, source: 'monitor' })
+    expect(own.rechecks).toEqual([])
+  })
 })
 
 describe('hasRoutableAddress', () => {
@@ -66,7 +87,7 @@ describe('checkConnectivityNow', () => {
 
   it('IN-02: an empty host list fails open, no hook fired', async () => {
     const deps = makeDeps({ hosts: [] })
-    const r = await checkConnectivityNow('t', deps as never)
+    const r = await checkConnectivityNow('t', monitor, deps as never)
     expect(r.offline).toBe(false)
     expect(r.source).toBe('error')
     expect(r.detail).toMatch(/no DNS probe hosts/)
@@ -78,7 +99,7 @@ describe('checkConnectivityNow', () => {
     const deps = makeDeps({
       status: jest.fn((): ConnectivityStatus => 'offline')
     })
-    const r = await checkConnectivityNow('launch', deps)
+    const r = await checkConnectivityNow('launch', monitor, deps)
     expect(r).toMatchObject({ offline: true, source: 'monitor' })
     expect(deps.lookup).not.toHaveBeenCalled()
     expect(deps.onFreshOffline).not.toHaveBeenCalled()
@@ -86,7 +107,7 @@ describe('checkConnectivityNow', () => {
 
   it('G25: no routable address -> offline without a lookup, recheck once', async () => {
     const deps = makeDeps({ networkInterfaces: jest.fn(() => loopback) })
-    const r = await checkConnectivityNow('launch', deps)
+    const r = await checkConnectivityNow('launch', monitor, deps)
     expect(r).toMatchObject({ offline: true, source: 'no-interface' })
     expect(deps.lookup).not.toHaveBeenCalled()
     expect(deps.onFreshOffline).toHaveBeenCalledTimes(1)
@@ -99,7 +120,7 @@ describe('checkConnectivityNow', () => {
         Promise.reject(Object.assign(new Error('x'), { code: 'ENOTFOUND' }))
       )
     })
-    const r = await checkConnectivityNow('launch', deps)
+    const r = await checkConnectivityNow('launch', monitor, deps)
     expect(r).toMatchObject({
       offline: true,
       source: 'dns-failed',
@@ -110,7 +131,7 @@ describe('checkConnectivityNow', () => {
 
   it('G25: resolved lookup -> online dns-ok, no recheck', async () => {
     const deps = makeDeps()
-    const r = await checkConnectivityNow('launch', deps)
+    const r = await checkConnectivityNow('launch', monitor, deps)
     expect(r).toMatchObject({ offline: false, source: 'dns-ok' })
     expect(deps.onFreshOffline).not.toHaveBeenCalled()
   })
@@ -119,7 +140,10 @@ describe('checkConnectivityNow', () => {
     jest.useFakeTimers()
     try {
       const deps = makeDeps({ lookup: jest.fn(() => new Promise(() => {})) })
-      const p = checkConnectivityNow('launch', { ...deps, timeoutMs: 1500 })
+      const p = checkConnectivityNow('launch', monitor, {
+        ...deps,
+        timeoutMs: 1500
+      })
       await jest.advanceTimersByTimeAsync(1500)
       const r = await p
       expect(r).toMatchObject({ offline: false, source: 'dns-timeout' })
@@ -138,7 +162,7 @@ describe('checkConnectivityNow', () => {
       .mockImplementation(((handler: () => void, ms?: number) =>
         Object.assign(realSetTimeout(handler, ms), { unref })) as never)
     try {
-      await checkConnectivityNow('launch', makeDeps())
+      await checkConnectivityNow('launch', monitor, makeDeps())
       expect(unref).toHaveBeenCalled()
     } finally {
       spy.mockRestore()
@@ -151,7 +175,7 @@ describe('checkConnectivityNow', () => {
         throw new Error('boom')
       })
     })
-    const r = await checkConnectivityNow('launch', deps)
+    const r = await checkConnectivityNow('launch', monitor, deps)
     expect(r).toMatchObject({ offline: false, source: 'error' })
   })
 
@@ -159,7 +183,7 @@ describe('checkConnectivityNow', () => {
     const deps = makeDeps({
       status: jest.fn((): ConnectivityStatus => 'check-online')
     })
-    const r = await checkConnectivityNow('launch', deps)
+    const r = await checkConnectivityNow('launch', monitor, deps)
     expect(r).toMatchObject({ offline: false, source: 'dns-ok' })
     expect(deps.onFreshOffline).not.toHaveBeenCalled()
   })
@@ -169,7 +193,7 @@ describe('checkConnectivityNow', () => {
       status: jest.fn((): ConnectivityStatus => 'check-online'),
       networkInterfaces: jest.fn(() => loopback)
     })
-    const r = await checkConnectivityNow('launch', deps)
+    const r = await checkConnectivityNow('launch', monitor, deps)
     expect(r).toMatchObject({ offline: true, source: 'no-interface' })
     expect(deps.onFreshOffline).not.toHaveBeenCalled()
   })
@@ -181,7 +205,7 @@ describe('checkConnectivityNow', () => {
         Promise.reject(Object.assign(new Error('x'), { code: 'ENOTFOUND' }))
       )
     })
-    const r = await checkConnectivityNow('launch', deps)
+    const r = await checkConnectivityNow('launch', monitor, deps)
     expect(r).toMatchObject({ offline: true, source: 'dns-failed' })
     expect(deps.onFreshOffline).not.toHaveBeenCalled()
   })
@@ -193,7 +217,7 @@ describe('checkConnectivityNow', () => {
         throw new Error('hook')
       })
     })
-    const r = await checkConnectivityNow('launch', deps)
+    const r = await checkConnectivityNow('launch', monitor, deps)
     expect(r).toMatchObject({ offline: true, source: 'no-interface' })
     expect(mockLogWarning).toHaveBeenCalledTimes(1)
   })
@@ -207,7 +231,7 @@ describe('checkConnectivityNow', () => {
         throw new Error('hook')
       })
     })
-    const r = await checkConnectivityNow('launch', deps)
+    const r = await checkConnectivityNow('launch', monitor, deps)
     expect(r).toMatchObject({ offline: true, source: 'dns-failed' })
   })
 
@@ -219,7 +243,7 @@ describe('checkConnectivityNow', () => {
           : Promise.resolve({ address: '1.2.3.4' })
       )
     })
-    const r = await checkConnectivityNow('launch', deps)
+    const r = await checkConnectivityNow('launch', monitor, deps)
     expect(r).toMatchObject({ offline: false, source: 'dns-ok' })
     expect(deps.onFreshOffline).not.toHaveBeenCalled()
   })
@@ -234,7 +258,7 @@ describe('checkConnectivityNow', () => {
         )
       )
     })
-    const r = await checkConnectivityNow('launch', deps)
+    const r = await checkConnectivityNow('launch', monitor, deps)
     expect(r).toMatchObject({
       offline: true,
       source: 'dns-failed',
@@ -254,7 +278,10 @@ describe('checkConnectivityNow', () => {
             : new Promise(() => {})
         )
       })
-      const p = checkConnectivityNow('launch', { ...deps, timeoutMs: 1500 })
+      const p = checkConnectivityNow('launch', monitor, {
+        ...deps,
+        timeoutMs: 1500
+      })
       await jest.advanceTimersByTimeAsync(1500)
       const r = await p
       expect(r).toMatchObject({ offline: false, source: 'dns-timeout' })
@@ -265,7 +292,7 @@ describe('checkConnectivityNow', () => {
   })
 
   it('G25: logs exactly one line per call', async () => {
-    await checkConnectivityNow('launch', makeDeps())
+    await checkConnectivityNow('launch', monitor, makeDeps())
     expect(mockLogInfo).toHaveBeenCalledTimes(1)
     expect(String(mockLogInfo.mock.calls[0][0])).toMatch(
       /^Connectivity: fresh check \(launch\) -> online via dns-ok in \d+ms$/

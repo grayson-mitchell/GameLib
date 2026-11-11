@@ -19,10 +19,6 @@ jest.mock('backend/constants/paths', () => ({
   toolsPath: '/tmp/gamelib-rjv-tools'
 }))
 
-jest.mock('backend/online_monitor', () => ({
-  isOnline: jest.fn()
-}))
-
 jest.mock('backend/logger', () => ({
   logDebug: jest.fn(),
   logError: jest.fn(),
@@ -53,7 +49,6 @@ jest.mock('../machoExports', () => ({
 
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { backendEvents } from 'backend/backend_events'
-import { isOnline } from 'backend/online_monitor'
 import { logWarning } from 'backend/logger'
 import {
   copyFileSync,
@@ -72,12 +67,14 @@ import { defined } from 'backend/testUtils/indexed'
 import '../dxmt'
 
 const installMock = installOrUpdateTool as jest.Mock
-const isOnlineMock = isOnline as jest.Mock
+const isOnlineMock = jest.fn()
 // eslint-disable-next-line @typescript-eslint/unbound-method
 bindDxmtStores({
   runner: createScriptedRunner([]),
   dialogs: createTestHostServices().dialogs,
   appState: createTestHostServices().appState,
+  // Read at call time so a case can flip the mock.
+  onlineMonitor: { isOnline: () => isOnlineMock() as boolean },
   stores: {
     wineManager: { wineDownloaderInfoStore: mockWineDownloaderInfoStore }
   } as never

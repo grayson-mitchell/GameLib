@@ -1,4 +1,5 @@
 import { createTestManagerDeps } from 'backend/testUtils/testServices'
+import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
 /**
  * Characterisation probe — quick task 260912-qop, serving the pending todo
  * `2026-09-05-getdefaultsavepath-live-redrive-never-taken-against-a-real-legendary-title.md`.
@@ -146,10 +147,6 @@ jest.mock('../../../utils', () => ({
 
 // ── backend/online_monitor mock ──────────────────────────────────────────────────────────────
 const mockIsOnline = jest.fn((..._args: unknown[]) => true)
-jest.mock('backend/online_monitor', () => ({
-  isOnline: (...args: unknown[]) => mockIsOnline(...args),
-  runOnceWhenOnline: jest.fn()
-}))
 
 // ── ../stores mock ───────────────────────────────────────────────────────────────────
 jest.mock('../stores', () => ({
@@ -269,7 +266,15 @@ describe('getGameInfo(appName, forceReload=true) stale-map characterisation (qui
   let installedJsonPath: string
 
   beforeEach(() => {
-    manager = new LegendaryLibraryManager(createTestManagerDeps())
+    manager = new LegendaryLibraryManager(
+      createTestManagerDeps({
+        onlineMonitor: {
+          ...createTestOnlineMonitor(),
+          isOnline: () => mockIsOnline(),
+          runOnceWhenOnline: jest.fn()
+        }
+      })
+    )
 
     mkdirSync(legendaryMetadata, { recursive: true })
     writeFileSync(

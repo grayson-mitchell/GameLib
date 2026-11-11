@@ -1,7 +1,7 @@
 import { writeFile, readFile } from 'fs/promises'
 import { logDebug, logInfo, LogPrefix, logWarning } from 'backend/logger'
 import { AntiCheatInfo } from 'common/types'
-import { runOnceWhenOnline } from '../online_monitor'
+import type { OnlineMonitor } from '../online_monitor'
 import { axiosClient } from 'backend/utils'
 import { join } from 'node:path'
 import { appFolder } from 'backend/constants/paths'
@@ -20,7 +20,10 @@ async function createMD5(filePath: string) {
 
 const anticheatDataPath = join(appFolder, 'areweanticheatyet.json')
 
-async function downloadAntiCheatData(latestFileHash?: string) {
+async function downloadAntiCheatData(
+  deps: { onlineMonitor: Pick<OnlineMonitor, 'runOnceWhenOnline'> },
+  latestFileHash?: string
+) {
   if (process.env.CI === 'e2e') return
   if (isWindows) return
 
@@ -41,7 +44,7 @@ async function downloadAntiCheatData(latestFileHash?: string) {
     )
   }
 
-  runOnceWhenOnline(async () => {
+  deps.onlineMonitor.runOnceWhenOnline(async () => {
     const url = isMac
       ? 'https://raw.githubusercontent.com/Heroic-Games-Launcher/MacAnticheatData/main/games.json'
       : 'https://raw.githubusercontent.com/Starz0r/AreWeAntiCheatYet/HEAD/games.json'

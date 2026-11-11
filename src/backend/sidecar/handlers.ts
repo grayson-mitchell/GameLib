@@ -133,7 +133,8 @@ function toolSlices(services: BootServices) {
     appInfo: services.appInfo,
     dialogs: services.host.dialogs,
     appState: services.host.appState,
-    notifications: services.host.notifications
+    notifications: services.host.notifications,
+    onlineMonitor: services.onlineMonitor
   }
 }
 
@@ -228,7 +229,8 @@ export function registerHandlers(deps: {
     ipc,
     managers: deps.services.managers,
     stores: deps.services.stores,
-    notifications: deps.services.host.notifications
+    notifications: deps.services.host.notifications,
+    onlineMonitor: deps.services.onlineMonitor
   })
   // Phase 34.2 Plan 06: the enrichment channels — no ordering
   // constraint relative to the other calls above (own channel names, no

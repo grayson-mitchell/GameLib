@@ -54,7 +54,12 @@ const libraryManagerMap = {
     })
   }
 }
-const queueDeps = { managers: { library: libraryManagerMap } } as never
+// The connectivity slice: `isOnline` is a jest.fn each case re-arms.
+const isOnline = jest.fn().mockReturnValue(true)
+const queueDeps = {
+  managers: { library: libraryManagerMap },
+  onlineMonitor: { isOnline: () => isOnline() as boolean }
+} as never
 
 const sendGameStatusUpdateMock = jest.fn()
 
@@ -71,10 +76,6 @@ jest.mock('../../dialog/dialog', () => ({
   showDialogBoxModalAuto: jest
     .requireActual('backend/testUtils/propsOnlyMock')
     .propsOnly(jest.fn())
-}))
-
-jest.mock('../../online_monitor', () => ({
-  isOnline: jest.fn().mockReturnValue(true)
 }))
 
 // mockT is spy-able (jest.fn) so the honest-copy spec below can assert on
@@ -118,7 +119,6 @@ jest.mock('backend/knownFixesFetcher', () => ({
 }))
 
 import { installQueueElement, resolveGameTitle } from '../utils'
-import { isOnline } from '../../online_monitor'
 import { existsSync } from 'graceful-fs'
 import { fetchRemoteKnownFixes } from 'backend/knownFixesFetcher'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
@@ -249,7 +249,7 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
       getGameInfo: getGameInfoMock,
       stop: stopMock
     })
-    ;(isOnline as jest.Mock).mockReturnValue(true)
+    isOnline.mockReturnValue(true)
     ;(existsSync as jest.Mock).mockReturnValue(true)
   })
 
@@ -406,7 +406,7 @@ describe('installQueueElement — 260817-dib: no-progress (stall) install watchd
       getGameInfo: getGameInfoMock,
       stop: stopMock
     })
-    ;(isOnline as jest.Mock).mockReturnValue(true)
+    isOnline.mockReturnValue(true)
     ;(existsSync as jest.Mock).mockReturnValue(true)
   })
 
@@ -572,7 +572,7 @@ describe('installQueueElement — 34.13 A-01: the reshape must not drop InstallA
       getGameInfo: getGameInfoMock,
       stop: stopMock
     })
-    ;(isOnline as jest.Mock).mockReturnValue(true)
+    isOnline.mockReturnValue(true)
     ;(existsSync as jest.Mock).mockReturnValue(true)
   })
 
@@ -634,7 +634,7 @@ describe('installQueueElement — WR-03/D-12: error-path regression coverage', (
       getGameInfo: getGameInfoMock,
       stop: stopMock
     })
-    ;(isOnline as jest.Mock).mockReturnValue(true)
+    isOnline.mockReturnValue(true)
     ;(existsSync as jest.Mock).mockReturnValue(true)
   })
 
@@ -808,7 +808,7 @@ describe('installQueueElement — orphaned-depot abort: a terminal install failu
       getGameInfo: getGameInfoMock,
       stop: stopMock
     })
-    ;(isOnline as jest.Mock).mockReturnValue(true)
+    isOnline.mockReturnValue(true)
     ;(existsSync as jest.Mock).mockReturnValue(true)
   })
 
@@ -909,7 +909,7 @@ describe('installQueueElement — REQ-37-03: the install-failure dialog always n
       getGameInfo: getGameInfoMock,
       stop: stopMock
     })
-    ;(isOnline as jest.Mock).mockReturnValue(true)
+    isOnline.mockReturnValue(true)
     ;(existsSync as jest.Mock).mockReturnValue(true)
   })
 
@@ -976,7 +976,7 @@ describe('installQueueElement — REQ-37-04: no spurious abort-controller-miss E
       getGameInfo: getGameInfoMock,
       stop: stopMock
     })
-    ;(isOnline as jest.Mock).mockReturnValue(true)
+    isOnline.mockReturnValue(true)
     ;(existsSync as jest.Mock).mockReturnValue(true)
   })
 
@@ -1048,7 +1048,7 @@ describe('installQueueElement — quick 261026-avw: every store fetches known fi
       getGameInfo: getGameInfoMock,
       stop: stopMock
     })
-    ;(isOnline as jest.Mock).mockReturnValue(true)
+    isOnline.mockReturnValue(true)
     ;(existsSync as jest.Mock).mockReturnValue(true)
   })
 

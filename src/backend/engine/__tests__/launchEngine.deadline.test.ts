@@ -152,6 +152,7 @@ const services: EngineServices = {
   globalSettings: () => ({}),
   globalGameSettings: () => ({}) as GameSettings,
   runner: createTestEngineServices().runner,
+  onlineMonitor: { isOnline: () => true },
   notices: createTestHostServices()
 }
 

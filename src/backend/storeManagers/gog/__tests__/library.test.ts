@@ -1,4 +1,5 @@
 import { createTestManagerDeps } from 'backend/testUtils/testServices'
+import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
 import type { GOGManagerDeps } from '../library'
 /**
  * Regression coverage for debug/gog-spawn-reduction.md fixes 2 and 4.
@@ -56,10 +57,6 @@ jest.mock('../../../ipc', () => ({
 }))
 
 const mockIsOnline = jest.fn(() => true)
-jest.mock('../../../online_monitor', () => ({
-  isOnline: () => mockIsOnline(),
-  runOnceWhenOnline: jest.fn()
-}))
 
 const mockCallRunner = jest.fn()
 
@@ -173,7 +170,14 @@ function libraryPage(
 
 function makeDeps(): GOGManagerDeps {
   return {
-    ...createTestManagerDeps(),
+    ...createTestManagerDeps({
+      // `mockIsOnline` is read at call time; runOnceWhenOnline never fires (as the old mock).
+      onlineMonitor: {
+        ...createTestOnlineMonitor(),
+        isOnline: () => mockIsOnline(),
+        runOnceWhenOnline: jest.fn()
+      }
+    }),
     stores: { gog: fakeGogStores } as unknown as GOGManagerDeps['stores'],
     commandRunner: {
       callRunner: (...args: unknown[]) => mockCallRunner(...args)

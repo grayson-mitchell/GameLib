@@ -354,6 +354,7 @@ export function createTestEngineServices(
     globalGameSettings: () => ({}) as GameSettings,
     notices: unscriptedMembers<EngineServices['notices']>('notices', {}),
     runner: unscriptedMembers<EngineServices['runner']>('process runner', {}),
+    onlineMonitor: createTestOnlineMonitor(),
     ...overrides
   }
 }
@@ -370,6 +371,7 @@ export function createTestToolsSlices() {
     appInfo: TEST_APP_INFO,
     dialogs: host.dialogs,
     appState: host.appState,
-    notifications: host.notifications
+    notifications: host.notifications,
+    onlineMonitor: createTestOnlineMonitor()
   }
 }

@@ -20,6 +20,7 @@ export type EngineServicesSource = Pick<
     | 'dialogs'
     | 'appState'
     | 'notifications'
+    | 'onlineMonitor'
   > & {
     /** The probes the engine spawns (66.2-03): only `run`, so the launcher's slice qualifies. */
     runner: Pick<ManagerDeps['runner'], 'run'>
@@ -41,7 +42,8 @@ export function toolsFrom(deps: EngineServicesSource): Tools {
     appInfo: deps.appInfo,
     dialogs: deps.dialogs,
     appState: deps.appState,
-    notifications: deps.notifications
+    notifications: deps.notifications,
+    onlineMonitor: deps.onlineMonitor
   })
 }
 
@@ -49,6 +51,7 @@ export function engineServicesFrom(deps: EngineServicesSource): EngineServices {
   return {
     spawnAsync: deps.spawnAsync,
     runner: deps.runner,
+    onlineMonitor: deps.onlineMonitor,
     installRemove: (...a) => toolsFrom(deps).DXVK.installRemove(...a),
     wineManagerReleases: wineManagerReleasesFrom(deps),
     globalSettings: () =>

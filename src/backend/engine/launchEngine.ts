@@ -113,7 +113,7 @@ export interface LaunchEngineDeps {
   ensurePinned: (
     args: Omit<
       Parameters<typeof ensurePinnedEngineReportingStatus>[0],
-      'processRunner'
+      'processRunner' | 'onlineMonitor'
     >
   ) => ReturnType<typeof ensurePinnedEngineReportingStatus>
   switchDeps(): Partial<EngineSwitchDeps> &
@@ -204,7 +204,8 @@ export async function selectEngineForLaunch(
     ensurePinned: (a) =>
       ensurePinnedEngineReportingStatus({
         ...a,
-        processRunner: services.runner
+        processRunner: services.runner,
+        onlineMonitor: services.onlineMonitor
       }),
     switchDeps: () => switchServicesFrom(services),
     isCrossoverMissing: () => isCrossoverMissing({ runner: services.runner }),

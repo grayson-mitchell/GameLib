@@ -4,6 +4,7 @@
  * statuses (one weighted percent across the DXVK and Wine archives, then verify/extract phases,
  * then `setting-up`) as a Steam one.
  */
+import type { OnlineMonitor } from 'backend/online_monitor'
 import type { Runner } from 'common/types'
 import type { ProcessRunner } from 'backend/process/types'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -29,9 +30,10 @@ export async function ensurePinnedEngineReportingStatus(args: {
   runner: Runner
   /** The process runner the archive extraction runs through (66.2-11). */
   processRunner: Pick<ProcessRunner, 'run'>
+  onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   signal?: AbortSignal
 }): Promise<PinnedEngineResult> {
-  const { pin, appName, runner, processRunner, signal } = args
+  const { pin, appName, runner, processRunner, onlineMonitor, signal } = args
   // G1 (59-22): one overall percent across both archives, so the label never
   // resets when the Wine archive starts after the small DXVK one; verify and
   // unpack are their own phases instead of a "0%" download.
@@ -54,6 +56,7 @@ export async function ensurePinnedEngineReportingStatus(args: {
   }
   const result = await ensurePinnedEngine(pin, {
     runner: processRunner,
+    onlineMonitor,
     signal,
     onProgress: (p) => {
       if (p.phase === 'downloading') {

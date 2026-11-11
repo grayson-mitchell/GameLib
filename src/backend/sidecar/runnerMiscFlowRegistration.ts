@@ -92,7 +92,6 @@ import path from 'path'
 import { createTools } from '../tools'
 import type { ToolsDeps } from '../tools'
 import { isEpicServiceOffline, sendGameStatusUpdate } from '../utils'
-import { isOnline } from '../online_monitor'
 import { logInfo, logWarning, LogPrefix } from '../logger'
 import { sendFrontendMessage } from '../ipc'
 import { getDefaultSavePath } from '../save_sync'
@@ -262,7 +261,7 @@ export function registerRunnerMiscFlows(
         return 'Epic is offline right now, cannot sync saves!'
       }
     }
-    if (!isOnline()) {
+    if (!deps.onlineMonitor.isOnline()) {
       logWarning('App is offline, cannot sync saves!', LogPrefix.Backend)
       return 'App is offline, cannot sync saves!'
     }

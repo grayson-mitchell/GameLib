@@ -601,7 +601,10 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
       }
 
       if (isStore(runner, 'legendary')) {
-        const epicOffline = await isEpicServiceOffline(deps.host)
+        const epicOffline = await isEpicServiceOffline({
+          notifications: deps.host.notifications,
+          onlineMonitor: deps.onlineMonitor
+        })
         if (epicOffline) {
           // No `event` property — see the identical rationale on `moveInstall` above.
           showDialogBoxModalAuto(deps.host, {

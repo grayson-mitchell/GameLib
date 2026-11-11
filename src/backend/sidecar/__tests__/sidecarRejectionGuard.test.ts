@@ -690,7 +690,10 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
 
       // isMac:false/isLinux:true (mocked above) -> Block A selects shaLinux, never shaMac.
       expect(downloadAntiCheatDataMock).toHaveBeenCalledTimes(1)
-      expect(downloadAntiCheatDataMock).toHaveBeenCalledWith('mock-sha-linux')
+      expect(downloadAntiCheatDataMock).toHaveBeenCalledWith(
+        expect.objectContaining({ onlineMonitor: expect.anything() }),
+        'mock-sha-linux'
+      )
     })
   })
 

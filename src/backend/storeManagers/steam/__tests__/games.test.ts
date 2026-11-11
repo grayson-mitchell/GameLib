@@ -477,11 +477,6 @@ jest.mock('../user', () => ({
 jest.mock('backend/connectivityNow', () => ({
   checkConnectivityNow: jest.fn()
 }))
-jest.mock('backend/online_monitor', () => ({
-  runOnceWhenOnline: jest.fn(),
-  isOnline: jest.fn()
-}))
-
 // ── backend/constants/environment mock — mutable double, defaults to non-mac ─
 // (mirrors library.test.ts's pattern) so pre-existing tests keep their
 // pre-Phase-17 behavior (isBottleEligible() short-circuits false) unless a
@@ -16879,7 +16874,10 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         blocked({ online: false, needsPin: false, kind: 'crossover' })
         await new SteamGame(ID, steamTestDeps).launch({} as any)
         expect(checkConnectivityNow).toHaveBeenCalledTimes(1)
-        expect(checkConnectivityNow).toHaveBeenCalledWith(`launch ${ID}`)
+        expect(checkConnectivityNow).toHaveBeenCalledWith(
+          `launch ${ID}`,
+          steamTestDeps.onlineMonitor
+        )
         expect(
           at((checkConnectivityNow as jest.Mock).mock.invocationCallOrder, 0)
         ).toBeLessThan(

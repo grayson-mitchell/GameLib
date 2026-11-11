@@ -79,7 +79,7 @@ async function makeQueue() {
       steam: {}
     } as never,
     managers: { library } as never,
-    onConnectivityChange,
+    onlineMonitor: { isOnline: () => true, onConnectivityChange },
     ...hostSlices
   })
   // Seeds the queue head from the store seeded by the test, as the boot step does.
@@ -917,7 +917,10 @@ describe('downloadqueue.ts — 66.1-11: boot service, no import-time effects', (
           steam: {}
         } as never,
         managers: { library: makeLibrary() } as never,
-        onConnectivityChange: subscribe,
+        onlineMonitor: {
+          isOnline: () => true,
+          onConnectivityChange: subscribe
+        },
         ...hostSlices
       }
     }

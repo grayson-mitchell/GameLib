@@ -1,7 +1,7 @@
 {
   "jestMock": {
-    "src/backend/tools/__tests__/dxmtBootFetch.test.ts": 7,
-    "src/backend/tools/__tests__/dxmtExportGate.test.ts": 7,
+    "src/backend/tools/__tests__/dxmtBootFetch.test.ts": 6,
+    "src/backend/tools/__tests__/dxmtExportGate.test.ts": 6,
     "src/backend/tools/__tests__/dxvkInstallRemove.test.ts": 3,
     "src/backend/tools/__tests__/machoExports.test.ts": 2,
     "src/backend/tools/__tests__/runWineCommandForPendingInstall.test.ts": 2,

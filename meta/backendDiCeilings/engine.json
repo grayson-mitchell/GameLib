@@ -10,7 +10,7 @@
     "src/backend/engine/__tests__/engineRegistry.test.ts": 1,
     "src/backend/engine/__tests__/engineState.test.ts": 1,
     "src/backend/engine/__tests__/engineSwitch.test.ts": 5,
-    "src/backend/engine/__tests__/fallbackEngine.test.ts": 4,
+    "src/backend/engine/__tests__/fallbackEngine.test.ts": 3,
     "src/backend/engine/__tests__/gameEngineState.test.ts": 1,
     "src/backend/engine/__tests__/gameProcessWatch.test.ts": 2,
     "src/backend/engine/__tests__/launchDeadline.test.ts": 1,

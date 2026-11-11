@@ -126,12 +126,6 @@ jest.mock('i18next', () => {
 // ── SteamUser mock — controls getClient() / isLoggedIn() return values ───────
 jest.mock('../user')
 
-// ── online_monitor mock — prevents electron/net import at module load time ───
-jest.mock('backend/online_monitor', () => ({
-  runOnceWhenOnline: jest.fn(),
-  isOnline: jest.fn().mockReturnValue(false)
-}))
-
 // ── electron mock — dialog.showMessageBox (MAC32-03 i386 recovery confirm) +
 // app.getPath (backend/constants/paths reads this at module load time) ───────
 // library.ts's only electron usage is `dialog`; games.ts's `shell` import

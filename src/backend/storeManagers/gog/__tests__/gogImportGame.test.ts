@@ -110,11 +110,6 @@ jest.mock('axios', () => ({
   default: { get: jest.fn() }
 }))
 
-jest.mock('backend/online_monitor', () => ({
-  isOnline: jest.fn(() => true),
-  runOnceWhenOnline: jest.fn()
-}))
-
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(),
   readFile: jest.fn()

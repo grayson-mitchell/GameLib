@@ -41,10 +41,6 @@ jest.mock('../../utils', () => ({
   axiosClient: { get: jest.fn() }
 }))
 jest.mock('../../launcher', () => ({ callRunner: jest.fn() }))
-jest.mock('backend/online_monitor', () => ({
-  isOnline: jest.fn(() => true),
-  runOnceWhenOnline: jest.fn()
-}))
 jest.mock('../legendary/stores', () => ({
   libraryStore: { get: jest.fn(() => []), set: jest.fn() },
   installStore: {

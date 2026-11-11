@@ -1,7 +1,7 @@
 import type { ConnectivityStatus } from 'common/types'
 import type { Clock, TimerHandle } from 'backend/process/types'
 import type { IpcRegistry } from 'backend/sidecar/ipcRegistry'
-import { logError, logInfo, logWarning, LogPrefix } from './logger'
+import { logError, logInfo, LogPrefix } from './logger'
 import EventEmitter from 'node:events'
 
 const defaultTimeBetweenRetries = 5
@@ -318,32 +318,3 @@ export function createOnlineMonitor(deps: OnlineMonitorDeps): OnlineMonitor {
     }
   }
 }
-
-// ---- interim compat for consumers not yet moved onto an injected slice -------------------
-let compatMonitor: OnlineMonitor | null = null // @66.3-compat (deleted by 66.3-11 Task 3)
-
-export function bindOnlineMonitorCompat(monitor: OnlineMonitor): void {
-  compatMonitor = monitor
-} // @66.3-compat (deleted by 66.3-11 Task 3)
-
-const unbound = (what: string) =>
-  logWarning(
-    `online_monitor: ${what} called before the boot-owned monitor was bound`,
-    LogPrefix.Connection
-  ) // @66.3-compat (deleted by 66.3-11 Task 3)
-
-export const onConnectivityChange = (
-  callback: (status: ConnectivityStatus) => unknown
-) =>
-  compatMonitor
-    ? compatMonitor.onConnectivityChange(callback)
-    : unbound('onConnectivityChange') // @66.3-compat (deleted by 66.3-11 Task 3)
-export const runOnceWhenOnline = (callback: () => unknown) =>
-  compatMonitor
-    ? compatMonitor.runOnceWhenOnline(callback)
-    : unbound('runOnceWhenOnline') // @66.3-compat (deleted by 66.3-11 Task 3)
-export const isOnline = () => compatMonitor?.isOnline() ?? false // @66.3-compat (deleted by 66.3-11 Task 3)
-export const getConnectivityStatus = (): ConnectivityStatus =>
-  compatMonitor?.getConnectivityStatus() ?? 'check-online' // @66.3-compat (deleted by 66.3-11 Task 3)
-export const recheckConnectivity = (reason: string, finding: string) =>
-  compatMonitor?.recheckConnectivity(reason, finding) // @66.3-compat (deleted by 66.3-11 Task 3)

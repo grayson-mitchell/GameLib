@@ -14,7 +14,7 @@ import {
   type DialogBoxDeps,
   type NotifyDeps
 } from '../dialog/dialog'
-import { isOnline } from '../online_monitor'
+import type { OnlineMonitor } from '../online_monitor'
 import pathModule from 'path'
 import { existsSync, rmSync } from 'graceful-fs'
 import { fetchRemoteKnownFixes } from 'backend/knownFixesFetcher'
@@ -42,6 +42,7 @@ export { resolveGameTitle }
 /** What the queue element runners read: the library manager map (66.1, R3). */
 type QueueElementDeps = {
   managers: Pick<StoreManagers, 'library'>
+  onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
 } & DialogBoxDeps &
   NotifyDeps
 type LibraryManagerMap = StoreManagers['library']
@@ -148,7 +149,7 @@ async function installQueueElement(
   const library = deps.managers.library
   const title = resolveQueueElementTitle(library, runner, appName)
 
-  if (!isOnline()) {
+  if (!deps.onlineMonitor.isOnline()) {
     logWarning(
       `App offline, skipping install for game '${title}'.`,
       LogPrefix.Backend
@@ -447,7 +448,7 @@ async function updateQueueElement(
   const library = deps.managers.library
   const title = resolveQueueElementTitle(library, runner, appName)
 
-  if (!isOnline()) {
+  if (!deps.onlineMonitor.isOnline()) {
     logWarning(
       `App offline, skipping update for game '${title}'.`,
       LogPrefix.Backend

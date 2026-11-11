@@ -2,6 +2,7 @@
  * The injected capabilities the engine's bottle-creation path needs (66.1-22d).
  * Type-only imports: the engine never value-imports tools or the services layer.
  */
+import type { OnlineMonitor } from 'backend/online_monitor'
 import type { DialogBoxDeps, NotifyDeps } from 'backend/dialog/dialog'
 import type { AppState } from 'backend/host/appState'
 import type { ProcessRunner } from 'backend/process/types'
@@ -15,6 +16,8 @@ export interface EngineServices {
   /** Probes the engine spawns: runTool, demo-status (66.2-03). */
   runner: Pick<ProcessRunner, 'run'>
   installRemove: Tools['DXVK']['installRemove']
+  /** The connectivity slice the pinned-engine download gate reads. */
+  onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   /** The installed Wine Manager release list, read from the injected wineManager store. */
   wineManagerReleases: () => WineManagerRelease[]
   /** The global settings snapshot the engine's config reads inherit from (66.3-06). */

@@ -56,7 +56,8 @@ describe('ensurePinnedEngineReportingStatus', () => {
       pin,
       appName: 'amzn1.x',
       runner: 'nile',
-      processRunner: createScriptedRunner([])
+      processRunner: createScriptedRunner([]),
+      onlineMonitor: { isOnline: () => true }
     })
     expect(r.ok).toBe(true)
     const contexts = sent.mock.calls.map(([p]) => p.context as string)
@@ -85,7 +86,8 @@ describe('ensurePinnedEngineReportingStatus', () => {
       pin,
       appName: '1',
       runner: 'gog',
-      processRunner: createScriptedRunner([])
+      processRunner: createScriptedRunner([]),
+      onlineMonitor: { isOnline: () => true }
     })
     expect(r).toMatchObject({ ok: false, aborted: true })
     expect(sent).toHaveBeenCalledWith({
@@ -105,7 +107,8 @@ describe('ensurePinnedEngineReportingStatus', () => {
       pin,
       appName: '1',
       runner: 'gog',
-      processRunner: createScriptedRunner([])
+      processRunner: createScriptedRunner([]),
+      onlineMonitor: { isOnline: () => true }
     })
     expect(r).toMatchObject({ ok: false, aborted: false, reason: 'offline' })
   })

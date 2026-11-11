@@ -22,6 +22,8 @@ import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 let mockTools = ''
 const mockDownload = jest.fn()
 const mockIsOnline = jest.fn()
+// The injected connectivity slice; `mockIsOnline` is read at call time.
+const onlineMonitor = { isOnline: () => mockIsOnline() as boolean }
 
 jest.mock('backend/constants/paths', () => ({
   get toolsPath() {
@@ -33,9 +35,6 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   logError: jest.fn(),
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
-}))
-jest.mock('backend/online_monitor', () => ({
-  isOnline: () => mockIsOnline()
 }))
 jest.mock('backend/utils', () => {
   const actual = {
@@ -182,6 +181,7 @@ test('installed only after ensure writes markers', async () => {
   const phases: string[] = []
   const r = await ensurePinnedEngine(pin, {
     runner,
+    onlineMonitor,
     onProgress: (p: FallbackDownloadProgress) => {
       if (phases[phases.length - 1] !== p.phase) phases.push(p.phase)
     }
@@ -201,7 +201,7 @@ test('installed only after ensure writes markers', async () => {
 
 test('hash mismatch leaves nothing', async () => {
   const pin = await makePin({ badHash: true })
-  const r = await ensurePinnedEngine(pin, { runner })
+  const r = await ensurePinnedEngine(pin, { runner, onlineMonitor })
   expect(r).toMatchObject({ ok: false, reason: 'hash-mismatch' })
   expect(existsSync(pinnedEnginePaths(pin).wineDir)).toBe(false)
   expect(leftovers()).toEqual([])
@@ -209,7 +209,7 @@ test('hash mismatch leaves nothing', async () => {
 
 test('escaping symlink is rejected', async () => {
   const pin = await makePin({ escape: true })
-  const r = await ensurePinnedEngine(pin, { runner })
+  const r = await ensurePinnedEngine(pin, { runner, onlineMonitor })
   expect(r).toMatchObject({ ok: false, reason: 'extract-failed' })
   expect(existsSync(pinnedEnginePaths(pin).wineDir)).toBe(false)
   expect(leftovers()).toEqual([])
@@ -219,7 +219,11 @@ test('aborted signal leaves nothing', async () => {
   const pin = await makePin()
   const ac = new AbortController()
   ac.abort()
-  const r = await ensurePinnedEngine(pin, { runner, signal: ac.signal })
+  const r = await ensurePinnedEngine(pin, {
+    runner,
+    onlineMonitor,
+    signal: ac.signal
+  })
   expect(r).toMatchObject({ ok: false, reason: 'aborted' })
   expect(leftovers()).toEqual([])
   expect(isPinnedEngineInstalled(pin)).toBe(false)
@@ -230,6 +234,7 @@ test('abort during verify resolves aborted and installs nothing', async () => {
   const ac = new AbortController()
   const r = await ensurePinnedEngine(pin, {
     runner,
+    onlineMonitor,
     signal: ac.signal,
     onProgress: (p) => {
       if (p.phase === 'verifying') ac.abort()
@@ -245,6 +250,7 @@ test('abort during extract resolves aborted and installs nothing', async () => {
   const ac = new AbortController()
   const r = await ensurePinnedEngine(pin, {
     runner,
+    onlineMonitor,
     signal: ac.signal,
     onProgress: (p) => {
       if (p.phase === 'extracting') ac.abort()
@@ -259,7 +265,7 @@ test('abort during extract resolves aborted and installs nothing', async () => {
 test('offline makes no download call', async () => {
   const pin = await makePin()
   mockIsOnline.mockReturnValue(false)
-  const r = await ensurePinnedEngine(pin, { runner })
+  const r = await ensurePinnedEngine(pin, { runner, onlineMonitor })
   expect(r).toMatchObject({ ok: false, reason: 'offline' })
   expect(mockDownload).not.toHaveBeenCalled()
 })
@@ -267,8 +273,8 @@ test('offline makes no download call', async () => {
 test('concurrent calls share one download per artifact', async () => {
   const pin = await makePin()
   const [a, b] = await Promise.all([
-    ensurePinnedEngine(pin, { runner }),
-    ensurePinnedEngine(pin, { runner })
+    ensurePinnedEngine(pin, { runner, onlineMonitor }),
+    ensurePinnedEngine(pin, { runner, onlineMonitor })
   ])
   expect(mockDownload).toHaveBeenCalledTimes(2)
   expect(a).toEqual(b)
@@ -316,7 +322,7 @@ const tick = () => new Promise((r) => setImmediate(r))
 test('abort controller is registered during download and released after', async () => {
   const pin = await makePin()
   const id = `steam-engine-download:${pin.id}`
-  const p = ensurePinnedEngine(pin, { runner })
+  const p = ensurePinnedEngine(pin, { runner, onlineMonitor })
   expect(hasAbortController(id)).toBe(true)
   await p
   expect(hasAbortController(id)).toBe(false)
@@ -325,7 +331,7 @@ test('abort controller is registered during download and released after', async 
 test('callAllAbortControllers aborts an in-flight download and cleans temp dirs', async () => {
   const pin = await makePin()
   const seen = hangingDownload()
-  const p = ensurePinnedEngine(pin, { runner })
+  const p = ensurePinnedEngine(pin, { runner, onlineMonitor })
   await tick()
   expect(seen).toHaveLength(1)
   callAllAbortControllers()
@@ -340,8 +346,16 @@ test('concurrent callers each receive every progress event over one download', a
   const a: string[] = []
   const b: string[] = []
   const [ra, rb] = await Promise.all([
-    ensurePinnedEngine(pin, { runner, onProgress: (p) => a.push(p.phase) }),
-    ensurePinnedEngine(pin, { runner, onProgress: (p) => b.push(p.phase) })
+    ensurePinnedEngine(pin, {
+      runner,
+      onlineMonitor,
+      onProgress: (p) => a.push(p.phase)
+    }),
+    ensurePinnedEngine(pin, {
+      runner,
+      onlineMonitor,
+      onProgress: (p) => b.push(p.phase)
+    })
   ])
   expect(ra.ok && rb.ok).toBe(true)
   expect(mockDownload).toHaveBeenCalledTimes(2)
@@ -353,8 +367,12 @@ test('one caller aborting does not abort the others', async () => {
   const pin = await makePin()
   const seen = hangingDownload()
   const acA = new AbortController()
-  const pa = ensurePinnedEngine(pin, { runner, signal: acA.signal })
-  const pb = ensurePinnedEngine(pin, { runner })
+  const pa = ensurePinnedEngine(pin, {
+    runner,
+    onlineMonitor,
+    signal: acA.signal
+  })
+  const pb = ensurePinnedEngine(pin, { runner, onlineMonitor })
   await tick()
   acA.abort()
   await expect(pa).resolves.toMatchObject({ ok: false, reason: 'aborted' })
@@ -376,8 +394,16 @@ test('shared download aborts when every caller has aborted', async () => {
   const seen = hangingDownload()
   const a = new AbortController()
   const b = new AbortController()
-  const pa = ensurePinnedEngine(pin, { runner, signal: a.signal })
-  const pb = ensurePinnedEngine(pin, { runner, signal: b.signal })
+  const pa = ensurePinnedEngine(pin, {
+    runner,
+    onlineMonitor,
+    signal: a.signal
+  })
+  const pb = ensurePinnedEngine(pin, {
+    runner,
+    onlineMonitor,
+    signal: b.signal
+  })
   await tick()
   a.abort()
   expect(defined(seen[0], 'seen[0]').aborted).toBe(false)
@@ -392,7 +418,11 @@ test('a single caller aborting its signal aborts the download', async () => {
   const pin = await makePin()
   const seen = hangingDownload()
   const ac = new AbortController()
-  const p = ensurePinnedEngine(pin, { runner, signal: ac.signal })
+  const p = ensurePinnedEngine(pin, {
+    runner,
+    onlineMonitor,
+    signal: ac.signal
+  })
   await tick()
   ac.abort()
   expect(defined(seen[0], 'seen[0]').aborted).toBe(true)
@@ -404,8 +434,16 @@ test('shutdown wins over live caller signals', async () => {
   hangingDownload()
   const a = new AbortController()
   const b = new AbortController()
-  const pa = ensurePinnedEngine(pin, { runner, signal: a.signal })
-  const pb = ensurePinnedEngine(pin, { runner, signal: b.signal })
+  const pa = ensurePinnedEngine(pin, {
+    runner,
+    onlineMonitor,
+    signal: a.signal
+  })
+  const pb = ensurePinnedEngine(pin, {
+    runner,
+    onlineMonitor,
+    signal: b.signal
+  })
   await tick()
   callAllAbortControllers()
   await expect(pa).resolves.toMatchObject({ ok: false, reason: 'aborted' })
@@ -420,7 +458,7 @@ test('prune removes stale .tmp-* dirs when idle, keeps them during an install', 
 
   const pin = await makePin()
   const seen = hangingDownload()
-  const p = ensurePinnedEngine(pin, { runner })
+  const p = ensurePinnedEngine(pin, { runner, onlineMonitor })
   await tick()
   expect(seen).toHaveLength(1)
   mkdirSync(join(root, '.tmp-other-1'))
@@ -477,7 +515,7 @@ describe('sweepStaleEngineTemps', () => {
     const root = pinnedEngineRoot()
     const pin = await makePin()
     hangingDownload()
-    const p = ensurePinnedEngine(pin, { runner })
+    const p = ensurePinnedEngine(pin, { runner, onlineMonitor })
     await tick()
     mkdirSync(join(root, '.tmp-other-9'))
     sweepStaleEngineTemps()

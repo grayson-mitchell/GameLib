@@ -61,7 +61,10 @@ export async function launchBridgeGameBody(
 ): Promise<boolean> {
   // G25: one fresh connectivity check at Play (the monitor can be stale); the launch-target
   // read and the early offline refusal both use this result.
-  const connectivity = await checkConnectivityNow(`launch ${steamGame.appId}`)
+  const connectivity = await checkConnectivityNow(
+    `launch ${steamGame.appId}`,
+    steamGame.deps.onlineMonitor
+  )
   const exePath = await resolveBridgeLaunchExe(
     steamGame.deps,
     steamGame.appId,
