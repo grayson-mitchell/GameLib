@@ -4,13 +4,13 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 66.4 context gathered
-last_updated: "2026-11-11T22:51:03.570Z"
+last_updated: "2026-11-11T23:42:17.252Z"
 last_activity: 2026-11-11
 progress:
   total_phases: 19
   completed_phases: 14
   total_plans: 293
-  completed_plans: 274
+  completed_plans: 275
   percent: 74
 ---
 
@@ -73,7 +73,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 66.4 (backend-module-state-long-tail-census-flip-and-live-smokes) — EXECUTING
-Plan: 5 of 23
+Plan: 6 of 23
 Status: Ready to execute
 Last activity: 2026-11-11
 
@@ -259,6 +259,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 66.3 P13 | ~4h | 3 tasks | 140 files |
 | Phase 66.3 P15 | ~3h | 2 tasks | 95 files |
 | Phase 66.3 P16 | ~4h | 3 tasks | 80 files |
+| Phase 66.4 P05 | 190min | 2 tasks | 128 files |
 
 ## Accumulated Context
 
@@ -413,6 +414,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 66.3]: 66.3-04: BootServices/ManagerDeps carry config, gameConfigs, paths, appInfo; config boot step pinned after logger+migrations
 - [Phase 66.3]: 66.3-15: bottle helpers are boot-built createSteamBottle ('steam-bottle' step after 'config'); DXMT listeners registered by registerDxmtListeners at 'secret-stores'; createTestSteamBottle is lazy so wholesale-mocked bottle suites still build deps
 - [Phase 66.3]: 66.3-16: SteamUser is one boot-built instance (createSteamUser, step 'steam-user' after command-runner); depot opts bags carry steamUser; humble gate reads it via humbleStores until plan 17
+- [Phase 66.4]: 66.4-05: EngineRuntime built by 'engine-runtime' boot step after 'engine-state'; steam bottle modules bind userHome via steam/bottleDirs.ts until threaded onto ctx.paths
 
 ### Pending Todos
 
@@ -719,7 +721,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-11T22:51:03.562Z
+Last session: 2026-11-11T23:42:12.081Z
 Stopped at: Phase 66.4 context gathered
 Resume file: None
 
