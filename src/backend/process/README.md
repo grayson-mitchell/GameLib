@@ -180,13 +180,71 @@ and the AST census in `meta/backendDiCeilings.cjs` (computed specifiers included
 list is `src/backend/process/runner.ts` alone. The `childProcess` ceiling is deleted and shards
 may not carry the section; the counter stays, so any other site is a new violation.
 
-**Hand-off to 66.3:** `GlobalConfig`, `helperRegistry` and the other module state that sits next to
-the download queue, the secret-store placeholders, the manager modules' module-level Maps, and the
-static stores outside the 16 (`engineNoticeStore`, the two `pci_ids` stores).
-66.2 also deferred these to 66.3 (D-66.2-03): `GlobalConfig.globalInstance`, the `utils.ts`
-`default*Path` lets, and `installingComponent`/`catalogCache`/`scriptMetadataCache` in
-`tools/index.ts`. `knownFolders` and `pathShim` keep a win32 sync fallback (the async registry
-lookup needs a runner) that 66.3 should retire.
+**Hand-off to 66.3:** see "66.3 outcome" below; what 66.3 left is listed under "Hand-off to 66.4".
+
+## 66.3 outcome
+
+**Gone, not relocated:** `src/backend/platform/` (the Electron facade and its interim delegate) no
+longer exists. The live types it carried moved next to their users: the IPC event brands, the dialog
+option bags, `TitleBarOverlay` and `Rectangle` into `src/common/types/hostTypes.ts`, `ShortcutDetails`
+into `shortcuts/shortcuts/windowsShortcut.ts`; the dead Electron-shaped types were deleted. The
+delegate-only stubs (logged no-op `net`, `session`, `Menu`, `protocol`, `Tray`, `BrowserWindow`, the
+sync dialogs, `trashItem`, `safeStorage`) had no non-test caller left and went with it. The
+`process.getSystemVersion` polyfill is replaced by `os.release()` at its two call sites, and the win32
+memory probe reads `os.totalmem()` / `os.freemem()` (plain Node has no `getSystemMemoryInfo`).
+
+**Six host services replace the shim:** `openExternal`, `dialogs`, `notifications`, `appState`
+(window raise/hide, relaunch single-flight, wake locks, clipboard write, bridge picker),
+`imageTools` and `pushFrontendMessage`, built once by the `host-services` boot step over a fresh
+`createIpcRegistry()` and held on `BootServices.host`. The interim bind step is gone;
+`backend/ipc.ts` keeps only `sendFrontendMessage`.
+
+**Config is built at boot:** `createGlobalConfig()` (runs `ensureSettingsMigrated` first) and
+`createGameConfigs({ config })` (the per-game Map lives in its closure) are called only by the
+`config` boot step. `GlobalConfig.get()`, `GameConfig.get()`, `GlobalConfig.globalInstance`, the static
+`instances` Map and the interim `adoptGlobalConfig()` are deleted. The SteamGridDB secret deps carry
+the config slice, so no module reaches for a static config.
+
+**Owners now instances, built by named boot steps:** the online monitor, engine state, the Steam
+anonymous client, game-session/sign-in state, auth trigger, `steam/state`, the bridge helper registry,
+shim coverage, the winetricks queue, the sign-in probe pass/outcomes/epochs, `SteamUser`, the Steam
+bottle helper, dxmt, the SteamGridDB and Humble secret stores and the Humble services (classify,
+library, login-window seam, sync fence, user), and the process guards (entry-built, D-66.3-10).
+Constant `Set`s were frozen rather than moved (D-66.3-09), and stateful cascade edits that only
+thread a slice through an unconverted module follow D-66.3-11 (the module keeps its census count).
+
+**Final numbers:** moduleState 130 (127 long-tail sites in 85 files plus the 3 sanctioned: the
+logger sink, 2, and the boot entry, 1), the sanctioned list is exactly the runner (child_process),
+`logger/index.ts` and `sidecar/bootstrap.ts`, no rust-overlap entry exists, and every one of the
+`OWNED_66_3` files is absent from the census. `diPhaseGates.test.ts` pins all of it, plus the absence
+of any interim scaffolding under `src/`. The moduleState section is still a ceiling, not a ban.
+
+## Hand-off to 66.4
+
+Phase 66.4 owns:
+
+- **The long tail:** about 85 files / 127 sites of module state still counted by the census, and the
+  census-to-test flip (D-13/D-16): turn the moduleState ceilings into a zero-tolerance test and delete
+  the section.
+- **D-66.2-03 deferrals:** the `utils.ts` `default*Path` lets, the `tools/index.ts` caches
+  (`installingComponent`, `catalogCache`, `scriptMetadataCache`), `engineNoticeStore`, the two `pci_ids`
+  stores, and the win32 sync fallbacks in `knownFolders` and `pathShim` (the async registry lookup needs a
+  runner).
+- **Module-scope pathShim reads introduced as cascade edits:** `constants/paths.ts` (`configFolder`,
+  `userDataPath`, `publicDir` from `GAMELIB_APP_ROOT`/`isPackagedSidecar()`), `steam/constants.ts`
+  (`steamSupportPath`).
+- **Latches that survive by design for now:** the module-level `registered` / `currentRegistry` guards in
+  `devEpicCookieSweep`, `runnerAuth` and the store-layer registrations.
+- **D-66.3-05:** the live macOS smoke with the scripted orphan/exit checker.
+- **D-66.3-06:** the Windows operator UAT.
+- **D-66.3-07:** reviving the RunningAppID poller.
+- **D-66.3-08:** the 66.2 Windows spawn-path live gate.
+- **D-17:** the non-autonomous live smoke.
+
+Known loose ends recorded here rather than fixed: the quit-handler release of the anonymous Steam client
+has no unit test; `ElectronSteamGridDbSecretStore` is test-only dead code; `SteamUser.logout()` never calls
+`resetSteamAuthTrigger()` (open latent bug); `isMacSonomaOrHigher()` compares the Darwin kernel major
+(`os.release()`) with the macOS major 14, which is not the same number.
 
 ## Ratchets
 

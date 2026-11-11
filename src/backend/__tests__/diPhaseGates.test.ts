@@ -275,9 +275,7 @@ describe('66.2 end state: one process runner', () => {
   })
 })
 
-describe('66.3 gates (skeleton; plan 18 adds the end state)', () => {
-  // Plan 18 adds the census zeros, shim absence and importer absence. Until then per-plan
-  // progress is gated by the moduleState shard ceilings.
+describe('66.3 end state: shim, config and process-wide owners at zero', () => {
   const importsPlatformShim = (
     text: string,
     opts?: { allowTypes?: boolean }
@@ -378,5 +376,183 @@ describe('66.3 gates (skeleton; plan 18 adds the end state)', () => {
       )
       expect(sanctioned).not.toContain(p)
     }
+  })
+  // The ceilings module is CommonJS (a node script); there is no ESM form to import.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const ceilings = require('../../../meta/backendDiCeilings.cjs') as {
+    census: () => { moduleState: Record<string, number> }
+    containerCallResidual: () => string[]
+    loadShards: () => {
+      merged: {
+        sanctioned: Record<
+          string,
+          { kind: string; moduleState: number; childProcess: number }
+        >
+      }
+      failures: string[]
+    }
+    SANCTIONED_PATHS: Record<string, string[]>
+  }
+  const root = join(BACKEND, '..', '..')
+  const SRC = join(root, 'src')
+
+  // One census walk for the whole block (it reads every backend file).
+  let censusState: Record<string, number> | undefined
+  const moduleStateOf = (): Record<string, number> =>
+    (censusState ??= ceilings.census().moduleState)
+
+  it.each(OWNED_66_3)('%s has no module state', (file) => {
+    expect(moduleStateOf()[file]).toBeUndefined()
+    if (file === 'src/backend/platform/index.ts') {
+      expect(existsSync(join(root, file))).toBe(false)
+    }
+  })
+
+  it('src/backend/platform does not exist', () => {
+    expect(existsSync(join(BACKEND, 'platform'))).toBe(false)
+  })
+
+  const srcFiles = walk(SRC).filter(
+    (f) => /\.(ts|tsx|js|cjs)$/.test(f) && !f.endsWith('.d.ts')
+  )
+
+  it('no non-test file under src imports backend/platform', () => {
+    // The walk covers every source file of the repo's TypeScript tree (backend, common, preload
+    // and frontend), so a type import from the retired facade is caught as well.
+    expect(srcFiles.length).toBeGreaterThanOrEqual(1500)
+    const offenders = srcFiles
+      .filter((f) => !isTestInfra(f) && !/\/__tests__\//.test(f))
+      .filter((f) => importsPlatformShim(readFileSync(f, 'utf-8')))
+      .map((f) => relative(SRC, f))
+    expect(offenders).toEqual([])
+  })
+
+  it('no non-test backend file calls GlobalConfig.get( or GameConfig.get(', () => {
+    const offenders = nonTestSources
+      .filter((f) => callsStaticConfigGet(readFileSync(f, 'utf-8')))
+      .map(rel)
+    expect(offenders).toEqual([])
+  })
+
+  it('the sanctioned moduleState entries are exactly the logger sink and the boot entry (plus the runner)', () => {
+    const { merged, failures } = ceilings.loadShards()
+    expect(failures).toEqual([])
+    const withState = Object.entries(merged.sanctioned)
+      .filter(([, e]) => e.moduleState > 0)
+      .map(([p, e]) => [p, e.moduleState, e.kind])
+      .sort()
+    expect(withState).toEqual([
+      ['src/backend/logger/index.ts', 2, 'logger-sink'],
+      ['src/backend/sidecar/bootstrap.ts', 1, 'boot-entry']
+    ])
+    expect(Object.keys(merged.sanctioned).sort()).toEqual([
+      'src/backend/logger/index.ts',
+      'src/backend/process/runner.ts',
+      'src/backend/sidecar/bootstrap.ts'
+    ])
+  })
+
+  it('no sanctioned entry has kind rust-overlap and its allowed path list is empty (D-14)', () => {
+    const { merged } = ceilings.loadShards()
+    expect(
+      Object.values(merged.sanctioned).filter((e) => e.kind === 'rust-overlap')
+    ).toEqual([])
+    expect(ceilings.SANCTIONED_PATHS['rust-overlap']).toEqual([])
+  })
+
+  it('containerCallResidual() names no OWNED_66_3 file and no platform entry', () => {
+    const residual = ceilings.containerCallResidual()
+    expect(residual).toEqual([])
+    for (const entry of residual) {
+      expect(OWNED_66_3.some((f) => entry.startsWith(f + ':'))).toBe(false)
+      expect(entry).not.toContain('/platform/')
+    }
+  })
+
+  it('moduleState total is 130 (127 long tail + 3 sanctioned): a ceiling, flipped to zero in 66.4', () => {
+    const total = Object.values(moduleStateOf()).reduce((a, b) => a + b, 0)
+    expect(total).toBe(130)
+  })
+
+  // A class member that is `static get(`, or a static field that is not readonly: the two shapes a
+  // static config accessor and its cache take. Methods (`static create(`) and readonly constants
+  // are not state and do not match.
+  const STATIC_GETTER = /\bstatic\s+(async\s+)?get\s*\(/
+  const STATIC_MUTABLE_FIELD =
+    /^\s*(public\s+|protected\s+|private\s+)?static\s+(?!readonly\b)(?!async\b)(?!get\b)(?!set\b)[A-Za-z_$][\w$]*\s*[?!]?\s*[:=;]/m
+  const hasStaticConfigMember = (text: string): boolean => {
+    const code = stripSourceComments(text)
+    return STATIC_GETTER.test(code) || STATIC_MUTABLE_FIELD.test(code)
+  }
+
+  it('hasStaticConfigMember fires on a static getter and a static mutable field, and not on a method, a readonly constant or a comment', () => {
+    expect(hasStaticConfigMember('class A { static get() {} }')).toBe(true)
+    expect(
+      hasStaticConfigMember(
+        'class A {\n  protected static globalInstance: GlobalConfig\n}'
+      )
+    ).toBe(true)
+    expect(
+      hasStaticConfigMember('class A {\n  static instances = new Map()\n}')
+    ).toBe(true)
+    expect(
+      hasStaticConfigMember('class A {\n  private static x?: number;\n}')
+    ).toBe(true)
+    expect(
+      hasStaticConfigMember('class A {\n  static readonly DEFAULTS = {}\n}')
+    ).toBe(false)
+    expect(
+      hasStaticConfigMember('class A {\n  static create(): X { return 1 }\n}')
+    ).toBe(false)
+    expect(
+      hasStaticConfigMember(
+        '// static get() {}\n/* static x = 1 */\nconst a = 1'
+      )
+    ).toBe(false)
+  })
+
+  it('config.ts and game_config.ts have no static get and no static mutable field', () => {
+    for (const f of ['config.ts', 'game_config.ts']) {
+      const text = readFileSync(join(BACKEND, f), 'utf-8')
+      expect(text.length).toBeGreaterThan(0)
+      expect(hasStaticConfigMember(text)).toBe(false)
+    }
+  })
+
+  // The tokens the interim 66.3 scaffolding used. Raw text, not comment-stripped: a comment that
+  // names one is just as stale as code that uses it.
+  const INTERIM_TOKENS = [
+    'interimIpc',
+    'bindHostServices',
+    'shim-bind',
+    'adoptGlobalConfig',
+    '@66.3-compat'
+  ] as const
+  const containsInterimToken = (text: string): string[] =>
+    INTERIM_TOKENS.filter((token) => text.includes(token))
+
+  it.each(INTERIM_TOKENS)(
+    'the interim-scaffolding detector fires on %s and not on clean source',
+    (token) => {
+      expect(containsInterimToken(`const x = ${token}()`)).toEqual([token])
+      expect(containsInterimToken('const x = createIpcRegistry()')).toEqual([])
+    }
+  )
+
+  it('no 66.3 interim scaffolding remains under src', () => {
+    const self = join(BACKEND, '__tests__', 'diPhaseGates.test.ts')
+    const scanned = srcFiles.filter((f) => f !== self)
+    // A walk that saw only a handful of files would pass vacuously.
+    expect(scanned.length).toBeGreaterThanOrEqual(400)
+    const offenders = scanned
+      .map(
+        (f) =>
+          [
+            relative(SRC, f),
+            containsInterimToken(readFileSync(f, 'utf-8'))
+          ] as const
+      )
+      .filter(([, tokens]) => tokens.length > 0)
+    expect(offenders).toEqual([])
   })
 })

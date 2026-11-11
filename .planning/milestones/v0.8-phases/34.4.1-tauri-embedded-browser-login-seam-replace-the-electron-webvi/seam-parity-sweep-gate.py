@@ -1038,7 +1038,13 @@ def is_axis_b_declared(doc_comment: str) -> tuple[bool, str | None]:
 
 
 def classify_axis_b() -> list[Finding]:
-    stub_shape = parse_electron_stub_safestorage()
+    # Updated 2026-11-12 by Phase 66.3 plan 18 (D-66.3-01): `src/backend/platform/` -- the
+    # Electron facade whose dead `safeStorage` stub this classifies importers against -- was
+    # DELETED, and plan 17 had already emptied EXPECTED_AXIS_B_SAFESTORAGE_IMPORTERS, so no finding
+    # ever reads the shape. The stub's absence is therefore accepted (the thing went away, it did
+    # not move), but a safeStorage importer reappearing WITHOUT a stub to classify against is a
+    # hard failure below, never a silent pass: not a loosening of the importer pin.
+    stub_shape = parse_electron_stub_safestorage() if ELECTRON_STUB_PATH.exists() else {}
     for member, shape in stub_shape.items():
         if shape not in ("throws", "hardcoded false"):
             fail(
@@ -1049,6 +1055,11 @@ def classify_axis_b() -> list[Finding]:
 
     findings: list[Finding] = []
     for path in find_safestorage_importers():
+        if not stub_shape:
+            fail(
+                f"{repo_relative(path)} imports safeStorage but the platform stub whose shape Axis B "
+                "classifies against no longer exists — re-derive Axis B before trusting this sweep"
+            )
         rel = repo_relative(path)
         text = path.read_text(encoding="utf-8")
         # Module-doc-comment = the file's own leading /** ... */ block, if any (imports may
