@@ -1,10 +1,10 @@
-import { backendEvents } from 'backend/backend_events'
+import type { backendEvents } from 'backend/backend_events'
 import type { DialogBoxDeps } from '../dialog/dialog'
 import { isMac } from 'backend/constants/environment'
 import { logDebug, logError, LogPrefix, logWarning } from 'backend/logger'
 import type { OnlineMonitor } from 'backend/online_monitor'
 import { installOrUpdateTool } from '.'
-import { Tool, WineVersionInfo } from 'common/types'
+import type { ReleasesInfo, Tool, WineVersionInfo } from 'common/types'
 import { join } from 'path'
 import {
   copyFileSync,
@@ -20,8 +20,8 @@ import type { WinemacMetalCheck } from './machoExports'
 import type { Stores } from 'backend/services/types'
 import type { ProcessRunner } from 'backend/process/types'
 
-/** The store slice the boot-time DXMT update census reads (66.1, R1). */
-export interface DxmtStoresDeps extends DialogBoxDeps {
+/** The store slice the DXMT listeners read (66.1, R1). */
+interface DxmtStoresDeps extends DialogBoxDeps {
   runner: Pick<ProcessRunner, 'run'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   stores: {
@@ -29,14 +29,13 @@ export interface DxmtStoresDeps extends DialogBoxDeps {
   }
 }
 
-/** Static holder (the shape of `SteamUser.bindStores`): the listeners below register at import. */
-class DxmtStores {
-  static bound: DxmtStoresDeps | null = null
-}
-
-/** Binds the slice at boot ('secret-stores' step). */
-export function bindDxmtStores(deps: DxmtStoresDeps): void {
-  DxmtStores.bound = deps
+/**
+ * What `registerDxmtListeners` needs (66.3-15): the store slice and runner the listeners read, and
+ * the emitter they attach to. Every member is required, so a listener can never exist without its
+ * deps: there is no unbound state to skip through.
+ */
+export interface DxmtListenerDeps extends DxmtStoresDeps {
+  events: Pick<typeof backendEvents, 'on' | 'off'>
 }
 
 // Quick 261031-rjv: DXMT v0.80's winemetal.so resolves macdrv metal-view symbols that
@@ -174,7 +173,11 @@ const DXMT = {
   }
 }
 
-backendEvents.on('wineVersionInstalled', async (versionInfo, installDir) => {
+const onWineVersionInstalled = async (
+  deps: DxmtStoresDeps,
+  versionInfo: WineVersionInfo,
+  installDir: string
+) => {
   if (isMac && versionInfo.type === 'Wine-Staging-macOS') {
     const check = await checkWinemacMetalViewExports(
       join(installDir, versionInfo.version),
@@ -184,28 +187,22 @@ backendEvents.on('wineVersionInstalled', async (versionInfo, installDir) => {
       logDXMTSkip('creating', versionInfo.version, check)
       return
     }
-    // The listener is registered at import time; the runner arrives with bindDxmtStores at boot.
-    const bound = DxmtStores.bound
-    if (!bound) {
-      logWarning(
-        'DXMT: runner not bound (no boot ran); skipping the DXMT fetch',
-        LogPrefix.ToolInstaller
-      )
-      return
-    }
-    await DXMT.getLatest(bound)
+    await DXMT.getLatest(deps)
     await DXMT.copyWineAndConfigure(versionInfo, installDir)
   }
-})
+}
 
-backendEvents.on('wineVersionUninstalled', async (versionInfo) => {
+const onWineVersionUninstalled = async (versionInfo: WineVersionInfo) => {
   if (isMac && versionInfo.type === 'Wine-Staging-macOS') {
     await DXMT.deleteWineCopy(versionInfo)
   }
-})
+}
 
 // Update DXMT version in `*-DXMT` wines if new version available
-backendEvents.on('releasesInfoReady', async (releasesInfo) => {
+const onReleasesInfoReady = async (
+  deps: DxmtStoresDeps,
+  releasesInfo: ReleasesInfo
+) => {
   if (!isMac) return
 
   // TODO: should we store just the version instead of the file name?
@@ -247,19 +244,9 @@ backendEvents.on('releasesInfoReady', async (releasesInfo) => {
   // which holds no referenced handle, so it adds no unbounded in-flight boot work (exit
   // contract half 2). It runs only for existing `-DXMT` copies, sequentially; do not move it
   // earlier in boot.
-  // The listener is registered at import time and has no boot services in hand, so it reads the
-  // wine-manager store slice bound at boot (bindDxmtStores). Unbound means no boot ran: nothing to
-  // update.
-  const bound = DxmtStores.bound
-  const wineStores = bound?.stores.wineManager
-  if (!bound || !wineStores) {
-    logWarning(
-      'DXMT: wine-manager stores not bound (no boot ran); skipping the copy update',
-      LogPrefix.ToolInstaller
-    )
-    return
-  }
-  const availableWines = wineStores.wineDownloaderInfoStore.get(
+  // The listener is registered by registerDxmtListeners with its deps in hand (66.3-15), so it
+  // reads the wine-manager store slice it was constructed with; there is no unbound state.
+  const availableWines = deps.stores.wineManager.wineDownloaderInfoStore.get(
     'wine-releases',
     []
   )
@@ -284,7 +271,27 @@ backendEvents.on('releasesInfoReady', async (releasesInfo) => {
 
   if (copiesToUpdate.length === 0) return
 
-  await DXMT.getLatest(bound)
+  await DXMT.getLatest(deps)
 
   copiesToUpdate.forEach((path) => DXMT.copyLatestDXMTFiles(path))
-})
+}
+
+/**
+ * Attaches the three DXMT listeners (`wineVersionInstalled`, `wineVersionUninstalled`,
+ * `releasesInfoReady`) to `deps.events` and returns the function that detaches them. Called by
+ * the 'secret-stores' boot step; importing this module registers nothing (66.3-15, C-WR-2).
+ */
+export function registerDxmtListeners(deps: DxmtListenerDeps): () => void {
+  const installed = (versionInfo: WineVersionInfo, installDir: string) =>
+    onWineVersionInstalled(deps, versionInfo, installDir)
+  const releases = (releasesInfo: ReleasesInfo) =>
+    onReleasesInfoReady(deps, releasesInfo)
+  deps.events.on('wineVersionInstalled', installed)
+  deps.events.on('wineVersionUninstalled', onWineVersionUninstalled)
+  deps.events.on('releasesInfoReady', releases)
+  return () => {
+    deps.events.off('wineVersionInstalled', installed)
+    deps.events.off('wineVersionUninstalled', onWineVersionUninstalled)
+    deps.events.off('releasesInfoReady', releases)
+  }
+}

@@ -67,19 +67,14 @@ jest.mock('../machoExports', () => ({
 }))
 
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
+import { EventEmitter } from 'events'
 import { backendEvents } from 'backend/backend_events'
 import { existsSync } from 'graceful-fs'
 import { installOrUpdateTool } from '../index'
-import { bindDxmtStores } from '../dxmt'
+import { registerDxmtListeners } from '../dxmt'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { checkWinemacMetalViewExports } from '../machoExports'
 import type { ReleasesInfo, WineVersionInfo } from 'common/types'
-
-// Importing the module under test registers its three module-scope `backendEvents`
-// listeners. Imported ONCE for the whole file: re-importing would stack duplicate
-// listeners and inflate every call count, mirroring the file-scope-once convention
-// `wineToolsFlows.test.ts` records for the same reason.
-import '../dxmt'
 
 const installOrUpdateToolMock = installOrUpdateTool as jest.Mock
 const isOnlineMock = jest.fn()
@@ -87,7 +82,10 @@ const isOnlineMock = jest.fn()
 // call -- `this` is never involved. Hoisting it into a `mock`-prefixed factory variable
 // instead would hit the TDZ, because `jest.mock` is hoisted above this declaration.
 // eslint-disable-next-line @typescript-eslint/unbound-method
-bindDxmtStores({
+// 66.3-15: the listeners exist only after registerDxmtListeners, registered ONCE for the whole
+// file (re-registering would stack duplicate listeners and inflate every call count).
+const unregisterDxmt = registerDxmtListeners({
+  events: backendEvents,
   runner: createScriptedRunner([]),
   dialogs: createTestHostServices().dialogs,
   appState: createTestHostServices().appState,
@@ -177,4 +175,74 @@ describe('boot-time DXMT fetch is gated on there being an installed wine to upda
       expect.objectContaining({ name: 'dxmt', os: 'darwin' })
     )
   })
+})
+
+describe('registerDxmtListeners (66.3-15)', () => {
+  it('attaches exactly one listener per event and detaches them all on unregister', () => {
+    const on = jest.fn()
+    const off = jest.fn()
+    const unregister = registerDxmtListeners({
+      events: { on, off } as never,
+      runner: createScriptedRunner([]),
+      dialogs: createTestHostServices().dialogs,
+      appState: createTestHostServices().appState,
+      onlineMonitor: { isOnline: () => true },
+      stores: {
+        wineManager: { wineDownloaderInfoStore: mockWineDownloaderInfoStore }
+      } as never
+    })
+
+    expect(on.mock.calls.map(([name]) => name)).toEqual([
+      'wineVersionInstalled',
+      'wineVersionUninstalled',
+      'releasesInfoReady'
+    ])
+    expect(off).not.toHaveBeenCalled()
+    unregister()
+    expect(off.mock.calls.map(([name]) => name)).toEqual([
+      'wineVersionInstalled',
+      'wineVersionUninstalled',
+      'releasesInfoReady'
+    ])
+    // The same handler objects that were attached are the ones detached.
+    expect(off.mock.calls.map(([, fn]) => fn)).toEqual(
+      on.mock.calls.map(([, fn]) => fn)
+    )
+  })
+
+  it('importing the module registers nothing: no module-scope listener exists', () => {
+    jest.isolateModules(() => {
+      /* eslint-disable @typescript-eslint/no-require-imports */
+      const isolated = (
+        require('backend/backend_events') as typeof import('backend/backend_events')
+      ).backendEvents
+      require('../dxmt')
+      /* eslint-enable @typescript-eslint/no-require-imports */
+      expect(isolated.eventNames()).toEqual([])
+    })
+  })
+
+  it('a listener fires with the deps it was constructed with; detached, it no longer fires', async () => {
+    const fresh = new EventEmitter()
+    const store = { get: jest.fn().mockReturnValue([]) }
+    storeGetMock.mockReturnValue([])
+    const unregister = registerDxmtListeners({
+      events: fresh as never,
+      runner: createScriptedRunner([]),
+      dialogs: createTestHostServices().dialogs,
+      appState: createTestHostServices().appState,
+      onlineMonitor: { isOnline: () => true },
+      stores: { wineManager: { wineDownloaderInfoStore: store } } as never
+    })
+    expect(fresh.listenerCount('releasesInfoReady')).toBe(1)
+    fresh.emit('releasesInfoReady', { dxmt: { tag: 'v0.80' } })
+    await flush()
+    expect(store.get).toHaveBeenCalledWith('wine-releases', [])
+
+    unregister()
+    expect(fresh.listenerCount('releasesInfoReady')).toBe(0)
+    expect(fresh.listenerCount('wineVersionInstalled')).toBe(0)
+  })
+
+  afterAll(() => unregisterDxmt())
 })

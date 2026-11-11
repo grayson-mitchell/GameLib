@@ -433,10 +433,11 @@ describe('sidecar bootstrap wirings (Phase 34.2 Plan 01 -- REQ-34.2-02/04/07/14)
     const releasesInfoReadyRegistrations = onSpy.mock.calls.filter(
       ([eventName]) => eventName === 'releasesInfoReady'
     )
-    // Block A's own, plus `registerWineToolsFlows()`'s listener: handler registration is now the
-    // 'register-handlers' boot step (D-08), so it runs after the spy is installed. The other
-    // features' listeners (dxmt, wine manager) still register at their own module scope.
-    expect(releasesInfoReadyRegistrations).toHaveLength(2)
+    // Block A's own, `registerWineToolsFlows()`'s listener (handler registration is the
+    // 'register-handlers' boot step, D-08) and the DXMT census listener (registered by the
+    // 'secret-stores' boot step since 66.3-15, no longer at module scope), all of which run after
+    // the spy is installed. The wine manager's listener still registers at its own module scope.
+    expect(releasesInfoReadyRegistrations).toHaveLength(3)
   })
 
   it('REQ-34.2-14: the sidecar still reaches READY_SENTINEL and does not throw', async () => {

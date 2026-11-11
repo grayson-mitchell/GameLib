@@ -58,18 +58,17 @@ import {
   rmSync
 } from 'graceful-fs'
 import { installOrUpdateTool } from '../index'
-import { bindDxmtStores } from '../dxmt'
+import { registerDxmtListeners } from '../dxmt'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { checkWinemacMetalViewExports } from '../machoExports'
 import type { ReleasesInfo, WineVersionInfo } from 'common/types'
 import { defined } from 'backend/testUtils/indexed'
 
-import '../dxmt'
-
 const installMock = installOrUpdateTool as jest.Mock
 const isOnlineMock = jest.fn()
 // eslint-disable-next-line @typescript-eslint/unbound-method
-bindDxmtStores({
+registerDxmtListeners({
+  events: backendEvents,
   runner: createScriptedRunner([]),
   dialogs: createTestHostServices().dialogs,
   appState: createTestHostServices().appState,
