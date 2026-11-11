@@ -155,7 +155,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 66: Backend dependency injection replacing module-level singletons** — 9 plans; planned; split 2026-11-10 into 66 (foundation) + 66.1–66.3 (completed 2026-11-09)
 - [x] **Phase 66.1: Backend DI — stores, store managers, flow registrations and launcher** — 37 plans; complete (7/8 live UAT, item 5 blocked pre-existing) (completed 2026-11-10)
 - [x] **Phase 66.2: Every backend spawn through the process runner, then the `child_process` ban** — 12 plans; planned (completed 2026-11-10)
-- [ ] **Phase 66.3: Backend module state to zero, then the live macOS smoke** — 18 plans; planned; split 2026-11-11 into 66.3 (shim, config, D-05 owners, static holders) + 66.4 (D-66.3-04)
+- [x] **Phase 66.3: Backend module state to zero, then the live macOS smoke** — 18 plans; planned; split 2026-11-11 into 66.3 (shim, config, D-05 owners, static holders) + 66.4 (D-66.3-04) (completed 2026-11-11)
 - [ ] **Phase 66.4: Backend module state long tail, the census-to-test flip, then the live smokes** — 0 plans; not started
 - [x] **Phase 67: Schema validation at the sidecar IPC boundary** — 20 plans in 14 waves; planned 2026-11-07 (completed 2026-11-07)
 - [x] **Phase 68: Versioned persisted stores and migrations** — 11 plans; planned (completed 2026-11-08)
@@ -760,7 +760,7 @@ The D-14 Rust-overlap exemption table stays empty unless Phase 75 is re-scoped. 
 **Split 2026-11-11 (D-66.3-04):** 66.3 keeps the platform shim dissolution, config injection, the D-05 process-wide owners and the C-WR-2 static holders (item 1 above), and ends with every site it owns at zero and the `moduleState` ceilings lowered. Item 2 (the long tail), the census-to-test flip and the D-17 live smoke move to Phase 66.4.
 **Requirements**: TBD
 **Depends on:** Phase 66.2
-**Plans:** 17/18 plans executed
+**Plans:** 18/18 plans complete
 
 Plans:
 
@@ -781,7 +781,7 @@ Plans:
 - [x] 66.3-15-PLAN.md — bindBottleStores and bindDxmtStores holders deleted (wave 15)
 - [x] 66.3-16-PLAN.md — SteamUser static class to one boot instance, bindStores deleted (wave 16)
 - [x] 66.3-17-PLAN.md — Humble owners, SteamGridDB secret holder, MH-3 rows deleted (wave 17)
-- [ ] 66.3-18-PLAN.md — end state: platform/ deleted, config statics deleted, diPhaseGates 66.3 block, README hand-off to 66.4 (wave 18)
+- [x] 66.3-18-PLAN.md — end state: platform/ deleted, config statics deleted, diPhaseGates 66.3 block, README hand-off to 66.4 (wave 18)
 
 ### Phase 66.4: Backend module state long tail, the census-to-test flip, then the live smokes (INSERTED)
 
