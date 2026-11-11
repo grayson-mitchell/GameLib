@@ -33,7 +33,7 @@ import {
   registerStoreEmbedFlows,
   createRustStoreEmbedSeam
 } from '../storeEmbedFlowRegistration'
-import { handlerRegistry, listenerRegistry } from '../../platform'
+import { handlerRegistry, interimIpc, listenerRegistry } from '../../platform'
 import { startRpcServer, requestRustInvoke } from '../sidecarRpc'
 import {
   RUST_STORE_EMBED_OPEN,
@@ -87,7 +87,7 @@ function startTransport(): { input: PassThrough; frames: Frame[] } {
   const input = new PassThrough()
   const output = new PassThrough()
   const frames = collectFrames(output)
-  startRpcServer(input, output)
+  startRpcServer(input, output, interimIpc)
   return { input, frames }
 }
 

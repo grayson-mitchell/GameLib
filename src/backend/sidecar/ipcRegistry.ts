@@ -18,7 +18,7 @@ import type {
 import type { IpcMainEvent } from '../platform/types'
 
 /** The event object handed to a handler. `sidecarRpc` dispatches with `undefined`. */
-export type IpcEvent = unknown
+type IpcEvent = unknown
 
 // Return type is `unknown`: it subsumes `Promise<unknown>`, and the handler may still return
 // a Promise; the dispatcher awaits the result regardless.

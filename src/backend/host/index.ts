@@ -24,6 +24,8 @@ export interface HostServices {
   notifications: Notifications
   appState: AppState
   imageTools: ReturnType<typeof createNativeImage>
+  /** Backend -> frontend push (`webContents.send`); a bound transport function. */
+  pushFrontendMessage: (channel: string, ...args: unknown[]) => void
 }
 
 export interface HostServicesDeps {
@@ -32,6 +34,7 @@ export interface HostServicesDeps {
   ipc: IpcRegistry
   requestRustInvoke: RequestRustInvoke
   requestOpenExternal: (url: string) => void
+  pushFrontendMessage: (channel: string, ...args: unknown[]) => void
   openDetached: (url: string, onError?: (code: string) => void) => void
   runSync: ProcessRunner['runSync']
 }
@@ -55,12 +58,7 @@ export function createHostServices(deps: HostServicesDeps): HostServices {
       requestRustInvoke: deps.requestRustInvoke
     }),
     appState,
-    imageTools: createNativeImage({ runSync: deps.runSync })
+    imageTools: createNativeImage({ runSync: deps.runSync }),
+    pushFrontendMessage: deps.pushFrontendMessage
   }
 }
-
-export type { AppState } from './appState'
-export type { Dialogs } from './dialogs'
-export type { Notifications } from './notifications'
-export type { OpenExternal } from './openExternal'
-export type { AppInfo } from './appInfo'

@@ -185,7 +185,7 @@ describe('sidecar bootstrap (headless boot)', () => {
       )
     })
 
-    it("one boot pays a stale owed goonline once with the 'boot' trigger, after bindTransport", () => {
+    it("one boot pays a stale owed goonline once with the 'boot' trigger, after the shim bind", () => {
       const order: string[] = []
       mockRestoreMacSteamOnlineIfOwed.mockImplementation(async () => {
         order.push('restore')
@@ -195,18 +195,18 @@ describe('sidecar bootstrap (headless boot)', () => {
         before: () => {
           const platformModule =
             fresh<typeof import('../../platform')>('../../platform')
-          const realBind = platformModule.bindTransport
+          const realBind = platformModule.bindHostServices
           jest
-            .spyOn(platformModule, 'bindTransport')
+            .spyOn(platformModule, 'bindHostServices')
             .mockImplementation((...args) => {
-              order.push('bindTransport')
+              order.push('bindHostServices')
               return realBind(...args)
             })
         }
       })
       expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledTimes(1)
       expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledWith('boot')
-      expect(order).toEqual(['bindTransport', 'restore'])
+      expect(order).toEqual(['bindHostServices', 'restore'])
     })
   })
 

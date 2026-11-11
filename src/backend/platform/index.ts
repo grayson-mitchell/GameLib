@@ -1,105 +1,44 @@
 /**
- * Electron-module replacement for the headless sidecar (Phase 27 Plan 02 —
- * Task 1).
+ * The 66.3 interim delegate for the Electron-module facade (D-66.3-02).
  *
- * Installed by `bootstrap.ts`'s `Module._load` hook in place of
- * `require('electron')`, BEFORE any backend module is imported. Spike 009
- * mapped 16 distinct Electron main-process APIs touched somewhere in the
- * backend's module graph (`app` x26, `dialog` x9, `BrowserWindow` x7,
- * `shell` x5, `safeStorage` x4, `nativeImage` x4, `Notification` x3,
- * `session`/`screen`/`net`/`Menu` x2, `protocol`/`powerSaveBlocker`/
- * `clipboard`/`Tray`/`ipcMain` x1). `backend/storeManagers/steam/library.ts`
- * pulls in `backend/utils.ts` -> `backend/storeManagers/index.ts`, which
- * eagerly constructs EVERY store manager (GOG/Legendary/Nile/Sideload/
- * Steam) at import time — so this stub covers the full surface, not just
- * Steam's touchpoints, to keep that whole chain import-safe.
+ * `backend/platform` used to be the headless sidecar's stand-in for `require('electron')`:
+ * module state, an ipcMain recorder, a transport binding and real behaviour for dialogs,
+ * notifications, shell, wake locks and the clipboard. That behaviour now lives in the stateless
+ * host services under `src/backend/host/` (built once by the 'host-services' boot step and held
+ * on `BootServices.host`) and the registry in `src/backend/sidecar/ipcRegistry.ts`.
  *
- * Real window/tray/menu/protocol management is explicitly OUT of scope for
- * the skeleton (27-CONTEXT) — these are safe no-op stand-ins, not
- * reimplementations. Only `app.getPath` (paths.ts's import-time wall),
- * `ipcMain` (the RPC dispatch surface handlers.ts registers against),
- * `shell.openExternal` (the E2E action-flow parity path),
- * `BrowserWindow.getAllWindows()` (the `sendFrontendMessage` push path
- * `backend/ipc.ts` already implements via `getMainWindow()`), and
- * `dialog.showOpenDialog` (Phase 30 Plan 03 — the native folder-picker path,
- * forwarded to Rust's `dialog_open` rustInvoke channel) have real
- * behavior — everything else only needs to not throw at import time.
- * `safeStorage` is the one exception below (Phase 28): its Steam
- * refresh-token callers were graduated onto `getTokenStore()` instead, so
- * `safeStorage` itself is intentionally left dead here (throws on use).
+ * What remains here is a thin delegate that keeps every export name its current importers use
+ * until the cascade plans rewire them to take services directly; plan 18 deletes this file.
+ * Exactly one module-state site exists (`bound`, set by `bindHostServices` at the 'shim-bind'
+ * boot step), and the registry behind `ipcMain` / `handlerRegistry` / `listenerRegistry` is the
+ * same object as `BootServices.host.ipc` (`interimIpc`), so there is no split-brain registry.
+ * No `Module._load` hook exists; this module is the esbuild `--alias:electron=` target only for
+ * the type surface, and `from 'backend/platform'` is a plain import.
  *
- * ---------------------------------------------------------------------------
- * PHASE 35 PLAN 13 (D-02, REQ-35-01/REQ-35-02): MOVED HERE from
- * `src/backend/sidecar/platform/index.ts`. The move was mechanical — the file's
- * own content changed by exactly four lines out of 926 (the relative imports
- * whose depth changed). Everything above this block is the original
- * provenance comment, carried forward unaltered because it still documents
- * which API surfaces are real and which are stand-ins.
+ * Unbound behaviour (before 'shim-bind'): `shell.openExternal` and `webContents.send` are
+ * no-ops, as the unbound transport always made them; every other stateful member logs
+ * `[platform delegate] <member> called before the host-services boot step` and returns its
+ * documented safe default (dialogs resolve the caller's cancelId / a cancel, counts are 0,
+ * `powerSaveBlocker.start` returns -1). Nothing here ever throws or rejects.
  *
- * THIS MODULE IS THE SINGLE IMPORT TARGET REPLACING `'electron'` ACROSS THE
- * BACKEND. Plan 35-15 rewrites the tree's ~67 `from 'electron'` sites to
- * `from 'backend/platform'`; plan 35-18 then removes `electron` from
- * `package.json` entirely. As of plan 13 this module has ZERO consumers of the
- * bare `backend/platform` specifier — that is deliberate (D-17 step 1): the
- * module is built and fully tested in isolation, while both shells still
- * build, BEFORE anything irreversible happens.
- *
- * EXPORT COUNT: 22 — unchanged from the pre-move file, so D-02's "same 22
- * exports" holds exactly and no delta needs stating.
- *
- * A note on the census, because the record disagrees with itself:
- * `35-PREFLIGHT.md`'s PD-B section records `PLATFORM_EXPORT_COUNT: 19`,
- * having marked `ElectronStubTransport`, `IpcHandler` and `IpcListener` DEAD.
- * That census answered "is this live PRODUCTION surface?" — its stated rule
- * excluded test files. It does NOT answer "can this export be deleted without
- * breaking the build", which is the question the move actually poses.
- * Re-measured across the whole tree, tests included:
- *   - `IpcHandler`  — LIVE: `eosOverlayFlows.test.ts`, `wineToolsFlows.test.ts`,
- *                     `runnerSliceRegistration.test.ts` (~10 cast sites)
- *   - `IpcListener` — LIVE: `runnerSliceRegistration.test.ts`
- *   - `ElectronStubTransport` — genuinely zero consumers anywhere; the only
- *                     truly dead export. Kept for API-shape parity at zero
- *                     runtime cost (it is an interface: nothing is emitted).
- * Deleting the first two would break three test files, which this plan is
- * separately forbidden from rewriting. So the corrected census is 21 live +
- * 1 dead = 22 shipped, and PD-B itself authorises this ("keep them for
- * API-shape parity at zero functional cost — either is valid").
- * `PLATFORM_EXPORT_COUNT: 19` is SUPERSEDED, not contradicted: it was correct
- * for the production-only question it asked.
- * ---------------------------------------------------------------------------
+ * Still real here (stateless): `app.getPath`, `getAppPath`, `getVersion`, `userAgentFallback`
+ * and `isPackaged`. The window/session/net/menu/protocol/tray members are no-op stand-ins whose
+ * call sites the cascade plans delete; `safeStorage` is intentionally dead (steam/tokenStore.ts).
  */
 
 import { release as osRelease } from 'os'
 
-// Phase 34.1 Plan 04 (T-34.1-17): static import, same pattern
-// `utils/systeminfo/heroicVersion.ts` already uses -- `process.env.npm_package_version`
-// (the previous source of app.getVersion() below) is UNSET in the packaged SEA sidecar
-// binary, so without this every shipped build's `getHeroicVersion` reported '0.0.0'.
-import pkgJson from '../../../package.json'
 import { getPath } from '../sidecar/pathShim'
 import { isPackagedSidecar } from '../sidecar/isPackagedSidecar'
-import { requestRustInvoke } from '../sidecar/sidecarRpc'
-import type { RustInvokeArgsOf } from 'common/types/ipc/rustInvoke'
-import { shouldOpenInBackground } from '../host/openInBackground'
-import type { ProcessRunner } from '../process/types'
-import { createNativeImage } from '../sidecar/nativeImageShim'
+import { resolveAppInfo } from '../host/appInfo'
+import type { HostServices } from '../host'
 import {
-  RUST_APP_EXIT,
-  RUST_APP_HIDE,
-  RUST_MAIN_WINDOW_RAISE,
-  RUST_MAIN_WINDOW_HIDE,
-  RUST_BRIDGE_INVITE_PICKER_OPEN,
-  RUST_APP_RELAUNCH,
-  RUST_CLIPBOARD_WRITE_TEXT,
-  RUST_DIALOG_MESSAGE,
-  RUST_DIALOG_OPEN,
-  RUST_DIALOG_SAVE,
-  RUST_NOTIFICATION_SHOW,
-  RUST_SHELL_OPEN_PATH,
-  RUST_SHELL_SHOW_ITEM_IN_FOLDER,
-  RUST_WAKE_LOCK_START,
-  RUST_WAKE_LOCK_STOP
-} from 'common/types/sidecarTransport'
+  createIpcRegistry,
+  type IpcHandler,
+  type IpcListener
+} from '../sidecar/ipcRegistry'
+import type { MessageBoxOptions, OpenDialogOptions } from './types'
+import type { SaveDialogOptions } from '../host/dialogs'
 
 // ---- process.getSystemVersion polyfill (Phase 31 Plan 01, discovered while
 // wiring `getSystemInfo`) -------------------------------------------------------
@@ -134,463 +73,212 @@ if (
 // here would reintroduce the exact "second wall" bootstrap.ts's docstring warns about, just one
 // file earlier in the chain. `console.warn` is used instead for the one error path below.
 
-// ---- Transport binding ------------------------------------------------------
+// ---- Delegate binding -------------------------------------------------------------
 //
-// platform/index.ts has no knowledge of the RPC transport (sidecarRpc.ts,
-// Task 2) to avoid a circular import — sidecarRpc dispatches TO the handlers
-// this stub's ipcMain records. bootstrap.ts wires the two together via
-// bindTransport() strictly after the RPC server starts, which is always
-// before any real openExternal/sendFrontendMessage call can occur (those
-// only fire from handler bodies invoked over the RPC loop, never at
-// module-import time).
+// bootstrap.ts's 'shim-bind' step calls bindHostServices() strictly after the RPC server
+// starts, which is always before any real call can occur (those only fire from handler bodies
+// invoked over the RPC loop, never at module-import time).
 
-export interface ElectronStubTransport {
-  /** Forwards `shell.openExternal(url)` to the Rust shell's opener command. */
-  openExternal: (url: string) => void
-  /** Forwards `mainWindow.webContents.send(channel, ...args)` as a SidecarNotification. */
-  pushFrontendMessage: (channel: string, ...args: unknown[]) => void
-  /** Detached `open -g <url>` through the process runner. */
-  openDetached: (url: string, onError?: (code: string) => void) => void
-  /** Synchronous spawn through the process runner (nativeImage's `sips`). */
-  runSync: ProcessRunner['runSync']
+let bound: HostServices | null = null
+
+export function bindHostServices(next: HostServices): void {
+  bound = next
 }
 
-let transport: ElectronStubTransport | null = null
-
-export function bindTransport(next: ElectronStubTransport): void {
-  transport = next
+const unbound = (member: string): void => {
+  console.warn(
+    `[platform delegate] ${member} called before the host-services boot step`
+  )
 }
 
 // ---- ipcMain recorder --------------------------------------------------------
 
-// Return type is `unknown` — this collapses `unknown | Promise<unknown>` (the union is
-// redundant since `unknown` already subsumes `Promise<unknown>`), but the handler is still
-// permitted to return a Promise; callers `await` the result regardless.
-export type IpcHandler = (event: unknown, ...args: unknown[]) => unknown
-export type IpcListener = (event: unknown, ...args: unknown[]) => void
+export type { IpcHandler, IpcListener }
 
-/** channel -> registered `ipcMain.handle` handler (req/resp — sidecarRpc dispatches here). */
-export const handlerRegistry = new Map<string, IpcHandler>()
-/** channel -> registered `ipcMain.on`/`ipcMain.once` listeners (fire-and-forget). */
-export const listenerRegistry = new Map<string, IpcListener[]>()
+/** The ONE registry instance; the boot step uses it as `BootServices.host.ipc`. */
+export const interimIpc = createIpcRegistry()
+
+/** channel -> registered `ipcMain.handle` handler. Read/write view over `interimIpc`. */
+export const handlerRegistry = Object.freeze({
+  get: (channel: string): IpcHandler | undefined =>
+    interimIpc.getHandler(channel),
+  has: (channel: string): boolean => interimIpc.handlerMap().has(channel),
+  set: (channel: string, handler: IpcHandler): void =>
+    interimIpc.handle(channel, handler),
+  delete: (channel: string): boolean => {
+    const had = interimIpc.handlerMap().has(channel)
+    interimIpc.removeHandler(channel)
+    return had
+  },
+  clear: (): void => {
+    for (const channel of [...interimIpc.handlerMap().keys()]) {
+      interimIpc.removeHandler(channel)
+    }
+  },
+  keys: () => interimIpc.handlerMap().keys(),
+  entries: () => interimIpc.handlerMap().entries(),
+  [Symbol.iterator]: () => interimIpc.handlerMap().entries(),
+  get size(): number {
+    return interimIpc.handlerMap().size
+  }
+})
+
+/** channel -> registered `ipcMain.on`/`ipcMain.once` listeners. View over `interimIpc`. */
+export const listenerRegistry = Object.freeze({
+  get: (channel: string): readonly IpcListener[] | undefined =>
+    interimIpc.listenerMap().get(channel),
+  has: (channel: string): boolean => interimIpc.listenerMap().has(channel),
+  set: (channel: string, listeners: readonly IpcListener[]): void => {
+    interimIpc.removeAllListeners(channel)
+    for (const listener of listeners) interimIpc.on(channel, listener)
+  },
+  delete: (channel: string): boolean => {
+    const had = interimIpc.listenerMap().has(channel)
+    interimIpc.removeAllListeners(channel)
+    return had
+  },
+  clear: (): void => {
+    for (const channel of [...interimIpc.listenerMap().keys()]) {
+      interimIpc.removeAllListeners(channel)
+    }
+  },
+  keys: () => interimIpc.listenerMap().keys(),
+  entries: () => interimIpc.listenerMap().entries(),
+  [Symbol.iterator]: () => interimIpc.listenerMap().entries(),
+  get size(): number {
+    return interimIpc.listenerMap().size
+  }
+})
 
 export const ipcMain = {
-  handle(channel: string, handler: IpcHandler): void {
-    handlerRegistry.set(channel, handler)
-  },
-  removeHandler(channel: string): void {
-    handlerRegistry.delete(channel)
-  },
-  on(channel: string, listener: IpcListener): void {
-    const listeners = listenerRegistry.get(channel) ?? []
-    listeners.push(listener)
-    listenerRegistry.set(channel, listeners)
-  },
-  once(channel: string, listener: IpcListener): void {
-    const wrapped: IpcListener = (...args) => {
-      const remaining = (listenerRegistry.get(channel) ?? []).filter(
-        (registered) => registered !== wrapped
-      )
-      listenerRegistry.set(channel, remaining)
-      listener(...args)
-    }
-    ipcMain.on(channel, wrapped)
-  }
+  handle: (channel: string, handler: IpcHandler): void =>
+    interimIpc.handle(channel, handler),
+  removeHandler: (channel: string): void => interimIpc.removeHandler(channel),
+  on: (channel: string, listener: IpcListener): void =>
+    interimIpc.on(channel, listener),
+  once: (channel: string, listener: IpcListener): void =>
+    interimIpc.once(channel, listener)
 }
 
 // ---- app ---------------------------------------------------------------------
 
-// app.userAgentFallback (34.4.1-02 Task 4, DEFECT 3): `standardBrowserUserAgent()`
-// (backend/humble/userAgent.ts:26-36) reads this property unconditionally and regex-extracts a
-// `(<platform>)` token and a `Chrome/<version>` token from it. Real Electron populates this at
-// startup with Chromium's own UA string; this stub previously left it `undefined`, so every call
-// under the sidecar threw `Cannot read properties of undefined (reading 'replace')` -- the A4
-// smoke gate's Task-4 DEFECT 3, discovered only once DEFECT 1/2's logging fixes made the sidecar
-// observable at all. Shaped to match the happy-path regex directly (platform token in parens,
-// `Chrome/<version>` present) rather than the function's own defensive fallback branch, and
-// DELIBERATELY carries no `Electron/x.y.z` token -- the whole point of `standardBrowserUserAgent`
-// is to strip that token so Google's SSO does not fingerprint an embedded browser, and a stub
-// that already omits it exercises the happy path the real runtime is meant to produce.
-// `Chrome/142.0.7444.52` is the real Chromium build electron@41.1.1 (this repo's pinned Electron
-// version, see package.json) ships -- the same pairing `humble/__tests__/user.test.ts` already
-// hardcodes for its own synthetic `userAgentFallback` fixture, kept in parity here rather than
-// invented fresh. The platform token is derived from `process.platform` (mirroring
-// `constants/environment.ts`'s `isMac`/`isWindows`/`isLinux` convention) rather than hardcoded to
-// macOS, since the sidecar itself is cross-platform.
-function stubUserAgentFallback(): string {
-  const chromeVersion = '142.0.7444.52'
-  const platformToken =
-    process.platform === 'darwin'
-      ? 'Macintosh; Intel Mac OS X 10_15_7'
-      : process.platform === 'win32'
-        ? 'Windows NT 10.0; Win64; x64'
-        : 'X11; Linux x86_64'
-  return `Mozilla/5.0 (${platformToken}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVersion} Safari/537.36`
-}
-
-// app.quit()/exit()/relaunch() (Phase 33 Plan 04, D-05 app lifecycle essentials): forward a
-// real exit/relaunch request to Tauri's AppHandle via RUST_APP_EXIT/RUST_APP_RELAUNCH, mirroring
-// shell.openExternal's fire-and-forget void-forwarding shape below -- neither the two real
-// sidecar-reachable callers (resetHeroic's relaunch+quit, the handleExit-shaped uninstall/quit
-// exit path) await these or check a return value, so a best-effort forward (never throws, logs
-// on failure) is sufficient. Without this the sidecar's own no-op left a zombie process: the
-// real Tauri window/process never actually exited or relaunched.
-//
-// Phase 34.3 Plan 05 (D-06, REQ-34.3-07): relaunch-vs-quit race guard. In real Electron,
-// app.relaunch() only *registers* a restart and app.quit() *performs* it -- both are needed,
-// ordered, inside one process. Under Tauri, app.restart() alone does everything, and this stub
-// forwards relaunch()/quit() as two INDEPENDENT fire-and-forget frames, each dispatched to
-// dispatch_rust_channel on its own spawned worker thread (main.rs) -- so app_exit's frame can be
-// processed BEFORE app_relaunch's, and the app quits instead of restarting, nondeterministically.
-// resetHeroic (utils.ts) is the real caller that hits this ordering (relaunch() then quit(), one
-// setTimeout tick apart) -- its body is intentionally NOT modified; this guard lives entirely
-// here so utils.ts stays byte-identical for both builds and Phase 35 has one less build-detection
-// conditional to unwind. Not reset on the SUCCESS path: a relaunch is terminal for this process --
-// app.restart() never returns and the process is about to be replaced, so resetting the flag
-// would only reintroduce the race for code that (cannot) run after. It IS reset when the relaunch
-// dispatch REJECTS (CR-01) -- see relaunch()'s catch below: a failed relaunch means the process
-// survives, so holding the flag would make the app permanently unquittable. Rejected alternative:
-// serializing dispatch_rust_channel itself would fix this for every caller, but it would touch
-// the hot path for every single rustInvoke, not just these two rare lifecycle calls.
-let relaunchInFlight = false
-
-// True while GameLib's own launch-time hide (app.hideMainWindow) is in effect. The sidecar cannot
-// observe real window visibility (fakeWindow.isVisible is a stub), so this is the only record.
-let mainWindowHiddenByGameLib = false
-
-// Number of times an in-app (renderer) dialog re-showed the window GameLib hid for a launch.
-// Native prompts (dialog.showMessageBox / showErrorBox) also raise the window but are awaited and
-// gone once answered; an in-app dialog stays on screen, so a `--no-gui` link launch that ended
-// with one must keep GameLib open for the user to read it (protocol.ts handleLaunch).
-let inAppDialogRaiseCount = 0
+// Stateless app facts come from resolveAppInfo(); the getters defer the isPackaged probe to the
+// read (paths.ts reads `app.isPackaged` at module scope, so freezing it at construction would
+// bake in whatever the SEA context looked like at the earliest possible moment).
+// `./isPackagedSidecar` is the SINGLE derivation in the tree; never re-derive it here.
+const appInfo = () =>
+  resolveAppInfo({
+    platform: process.platform,
+    osRelease: osRelease(),
+    isPackaged: isPackagedSidecar()
+  })
 
 export const app = {
   getPath,
   getName: (): string => 'GameLib',
   setName: (): void => {},
-  // Phase 35 Plan 15: signature-only widening, all no-ops. The About panel is a Tauri window
-  // concern (see the `showAboutWindow` channel), and getGPUInfo has no sidecar equivalent --
-  // utils/systeminfo/gpu/linux.ts's caller already tolerates an empty result.
   setAboutPanelOptions: (_options?: unknown): void => {},
   showAboutPanel: (): void => {},
   getGPUInfo: async (_infoType?: string): Promise<unknown> => ({}),
-  // R-34.5-G1-PKG half (b) / D-14 (Phase 35 plan 04). This key held a hardcoded
-  // `false` literal from Phase 27 until now -- and that literal was the root cause of the
-  // packaged-build asset failure. `constants/paths.ts:73-76` computes
-  //   publicDir = resolve(app.getAppPath(), app.isPackaged || CI === 'e2e' ? 'build' : 'public')
-  // so a constant `false` made every packaged run append 'public' to the Tauri resource
-  // dir -- a directory that does not exist inside the bundle -- and every asset resolved
-  // through `publicDir` (runner binaries, locales, changelog.json, webviewPreload.js,
-  // icon.png, the CrossOver index snapshot) ENOENT'd. `main.rs:5495-5496` documents the
-  // same defect independently from the Rust side.
-  //
-  // A GETTER, not a captured boolean, and that is load-bearing: this object literal is
-  // evaluated at MODULE SCOPE, and `paths.ts` reads `app.isPackaged` at module scope too.
-  // Freezing the value at construction time would bake in whatever the SEA context looked
-  // like at the earliest possible moment. A getter defers the probe to the read.
-  //
-  // Delegates to `./isPackagedSidecar` and never re-derives. That module is the SINGLE
-  // derivation in the tree; `devSecretVault.ts`'s fail-closed guardrail (c) and
-  // `humbleFlowRegistration.ts`'s `humbleRunValidation` gate are the other two callers.
-  // Do NOT reintroduce a local `node:sea` probe here or a build-time constant: a second
-  // derivation that disagrees with the first is a silent unlock of the dev secret vault
-  // in a shipped binary (T-35-11/T-35-12), not a tidiness problem.
   get isPackaged(): boolean {
     return isPackagedSidecar()
   },
-  // GAMELIB_APP_ROOT (Phase 34.5 Plan 16, Task 3, G-1): the root cause of live-gate items
-  // 1/2/3/5 was this line returning `process.cwd()`, which under the sidecar is `src-tauri/`
-  // -- so `paths.ts:73`'s `publicDir = resolve(app.getAppPath(), ...)` resolved to
-  // `src-tauri/public`, a directory that does not exist, and every bundled runner binary
-  // (`legendary`/`gogdl`/`nile`/`comet`) ENOENT'd on spawn (see `34.5-APP-ROOT-SWEEP.md` for
-  // the full consumer sweep this single line repairs).
-  //
-  // The value comes from the Tauri shell's own app root, handed down at spawn time exactly
-  // like `GAMELIB_SHELL_EXE` (`main.rs`'s `resolve_dev_app_root`/`resolve_packaged_app_root`,
-  // set on BOTH spawn paths). Returned verbatim, never resolved or existence-checked here --
-  // the shell is the authority for its own root.
-  //
-  // Deliberately non-throwing, unlike `pathShim`'s `case 'exe'`: `getAppPath()` is called at
-  // MODULE SCOPE by `backend/constants/paths.ts`, and a throw there would take the whole
-  // sidecar down at import time, before the logger exists (the standing
-  // `sidecar-console-and-logger-are-invisible` gotcha means that failure would be invisible).
-  // So an unset or empty `GAMELIB_APP_ROOT` falls back to today's `process.cwd()` behaviour
-  // instead -- this is REQ-34.5-13's invariant: jest and any non-Tauri host (including the
-  // real Electron build, which never sets this var) see NO behaviour change. The loudness
-  // lives in plan 34.5-18's boot self-check instead, not here.
+  // GAMELIB_APP_ROOT (Phase 34.5 Plan 16, G-1): the Tauri shell's own app root, handed down at
+  // spawn time. Deliberately non-throwing: `getAppPath()` is called at MODULE SCOPE by
+  // `backend/constants/paths.ts`, so an unset or empty value falls back to `process.cwd()`
+  // (jest and any non-Tauri host see no behaviour change).
   getAppPath: (): string => process.env.GAMELIB_APP_ROOT || process.cwd(),
-  getVersion: (): string => pkgJson.version ?? '0.0.0',
-  userAgentFallback: stubUserAgentFallback(),
+  getVersion: (): string => appInfo().version,
+  get userAgentFallback(): string {
+    return appInfo().userAgentFallback
+  },
   whenReady: (): Promise<void> => Promise.resolve(),
   on: () => app,
   once: () => app,
   quit: (): void => {
-    // D-06: a relaunch already in flight owns this process's teardown -- suppress quit() so its
-    // independently-dispatched app_exit frame cannot win the race and quit instead of restart.
-    if (relaunchInFlight) {
-      console.warn(
-        '[platformApi] app.quit(): suppressed -- a relaunch is already in flight'
-      )
-      return
-    }
-    requestRustInvoke(RUST_APP_EXIT, []).catch((error) => {
-      console.warn(
-        `[platformApi] app.quit(): ${RUST_APP_EXIT} failed:`,
-        error instanceof Error ? error.message : String(error)
-      )
-    })
+    if (!bound) return unbound('app.quit()')
+    bound.appState.quit()
   },
   exit: (): void => {
-    // D-06: see quit()'s comment above -- same suppression, same reason.
-    if (relaunchInFlight) {
-      console.warn(
-        '[platformApi] app.exit(): suppressed -- a relaunch is already in flight'
-      )
-      return
-    }
-    requestRustInvoke(RUST_APP_EXIT, []).catch((error) => {
-      console.warn(
-        `[platformApi] app.exit(): ${RUST_APP_EXIT} failed:`,
-        error instanceof Error ? error.message : String(error)
-      )
-    })
+    if (!bound) return unbound('app.exit()')
+    bound.appState.exit()
   },
   relaunch: (): void => {
-    // D-06: mark a relaunch in flight BEFORE dispatching -- terminal for this process, never
-    // reset (see the module-scope comment above `app` for why resetting would reintroduce the
-    // race).
-    relaunchInFlight = true
-    requestRustInvoke(RUST_APP_RELAUNCH, []).catch((error) => {
-      // CR-01: RELEASE the guard here. On the SUCCESS path this promise never settles -- Rust's
-      // app_relaunch arm sends no response frame and the process is replaced before it could --
-      // so reaching this catch means the relaunch genuinely did NOT happen (transport failure, or
-      // the 60s rustInvoke timeout). This process is therefore NOT being replaced, so the teardown
-      // ownership the flag asserts is void, and there is no pending relaunch frame left for an
-      // exit frame to race against. Leaving it set would permanently no-op app.quit()/app.exit()
-      // for the rest of this process's life -- including the ordinary Quit menu path -- leaving
-      // the app closable only by force-quit. resetHeroic() runs this on every reset.
-      relaunchInFlight = false
-      console.warn(
-        `[platformApi] app.relaunch(): ${RUST_APP_RELAUNCH} failed:`,
-        error instanceof Error ? error.message : String(error)
-      )
-    })
+    if (!bound) return unbound('app.relaunch()')
+    bound.appState.relaunch()
   },
   requestSingleInstanceLock: (): boolean => true,
   setAsDefaultProtocolClient: (): boolean => true,
-  // quick/260815-vvz: `raiseFrontmostBottledProcess`'s (bottle.ts) yield fallback --
-  // when the ~18s poll for a matching bottled Steam installer/uninstaller window comes up
-  // empty, it calls `app.hide()` so GameLib at least steps aside instead of staying in front
-  // of an invisible Steam confirm dialog. Byte-shaped on quit()'s forward above: fire-and-
-  // forget `requestRustInvoke(RUST_APP_HIDE, [])`, forwarded to Tauri's real
-  // `AppHandle::hide()` (macOS-only, `main.rs`'s `app_hide` arm). Two deliberate differences
-  // from quit()/exit(), both load-bearing:
-  //   - No `relaunchInFlight` suppression. That guard exists so quit/exit cannot win a
-  //     process-teardown race against an in-flight relaunch. Hiding a window is not teardown
-  //     and cannot win (or need to win) that race -- suppressing it here would just make the
-  //     yield fallback silently do nothing during a relaunch, with no correctness benefit.
-  //   - Never throws (same total-method convention as every other member here) -- a failed
-  //     hide is a best-effort UX nicety, not something that may affect the install/uninstall
-  //     flow that calls it.
   hide: (): void => {
-    requestRustInvoke(RUST_APP_HIDE, []).catch((error) => {
-      console.warn(
-        `[platformApi] app.hide(): ${RUST_APP_HIDE} failed:`,
-        error instanceof Error ? error.message : String(error)
-      )
-    })
+    if (!bound) return unbound('app.hide()')
+    bound.appState.hide()
   },
-  // Raises the real GameLib window (unminimize + show + focus) through the Rust shell. The
-  // fakeWindow's show()/focus() stay no-ops because other callers use them; this is the one
-  // explicit opt-in, used only before a bridge-notice dialog. Best-effort, never throws.
   raiseMainWindow: (): void => {
-    mainWindowHiddenByGameLib = false
-    requestRustInvoke(RUST_MAIN_WINDOW_RAISE, []).catch((error) => {
-      console.warn(
-        `[platformApi] app.raiseMainWindow(): ${RUST_MAIN_WINDOW_RAISE} failed:`,
-        error instanceof Error ? error.message : String(error)
-      )
-    })
+    if (!bound) return unbound('app.raiseMainWindow()')
+    bound.appState.raiseMainWindow()
   },
-  // Hides GameLib for a game launch (quick 261108-kpc) and remembers that GameLib did it, so
-  // `raiseMainWindowIfHiddenByGameLib` can undo exactly that and nothing else. The fakeWindow's
-  // hide() stays a no-op (handleExit calls it on quit). Best-effort, never throws.
   hideMainWindow: (): void => {
-    mainWindowHiddenByGameLib = true
-    requestRustInvoke(RUST_MAIN_WINDOW_HIDE, []).catch((error) => {
-      console.warn(
-        `[platformApi] app.hideMainWindow(): ${RUST_MAIN_WINDOW_HIDE} failed:`,
-        error instanceof Error ? error.message : String(error)
-      )
-    })
+    if (!bound) return unbound('app.hideMainWindow()')
+    bound.appState.hideMainWindow()
   },
-  // Re-shows the window only if GameLib itself hid it for a launch; every dialog path calls
-  // this first. A second call is a no-op.
   raiseMainWindowIfHiddenByGameLib: (): void => {
-    if (!mainWindowHiddenByGameLib) return
-    app.raiseMainWindow()
+    if (!bound) return unbound('app.raiseMainWindowIfHiddenByGameLib()')
+    bound.appState.raiseMainWindowIfHiddenByGameLib()
   },
-  // Same as raiseMainWindowIfHiddenByGameLib, for the in-app (renderer) dialog path: also records
-  // that a dialog which outlives its caller is now on screen.
   raiseMainWindowForInAppDialog: (): void => {
-    if (mainWindowHiddenByGameLib) inAppDialogRaiseCount++
-    app.raiseMainWindowIfHiddenByGameLib()
+    if (!bound) return unbound('app.raiseMainWindowForInAppDialog()')
+    bound.appState.raiseMainWindowForInAppDialog()
   },
-  inAppDialogRaiseCount: (): number => inAppDialogRaiseCount,
-  // Opens the dedicated `bridge-invite` window for the invite picker (quick 261101-llf) so the
-  // main window is not raised over the game. Resolves true on success, false (after a warn) on
-  // failure. Never throws.
+  inAppDialogRaiseCount: (): number => {
+    if (!bound) {
+      unbound('app.inAppDialogRaiseCount()')
+      return 0
+    }
+    return bound.appState.inAppDialogRaiseCount()
+  },
   openBridgeInvitePicker: (payload: {
     appId: string
     ackId: string
-  }): Promise<boolean> =>
-    requestRustInvoke(RUST_BRIDGE_INVITE_PICKER_OPEN, [payload]).then(
-      () => true,
-      (error) => {
-        console.warn(
-          `[platformApi] app.openBridgeInvitePicker(): ${RUST_BRIDGE_INVITE_PICKER_OPEN} failed:`,
-          error instanceof Error ? error.message : String(error)
-        )
-        return false
-      }
-    )
+  }): Promise<boolean> => {
+    if (!bound) {
+      unbound('app.openBridgeInvitePicker()')
+      return Promise.resolve(false)
+    }
+    return bound.appState.openBridgeInvitePicker(payload)
+  }
 }
 
 // ---- dialog --------------------------------------------------------------------
 //
-// showOpenDialog (Phase 30 Plan 03, D-09/REQ-30-07) and showErrorBox/showSaveDialog
-// (Phase 31 Plan 02, D-03/REQ-31-03/REQ-31-05) forward to the Rust shell's native dialogs via
-// the existing generic `requestRustInvoke()` channel. This is a deliberate, narrow exception
-// to this module's own "no knowledge of the RPC transport" rule above (which exists to avoid
-// a circular import between platform/index.ts and sidecarRpc.ts for the
-// openExternal/pushFrontendMessage bindTransport() pair) — `requestRustInvoke` is imported
-// directly here, matching `keyringTokenStore.ts`'s call shape, because unlike
-// openExternal/pushFrontendMessage this is a one-directional call (platformApi -> sidecarRpc
-// only) with no callback the other way, so it does not reintroduce the bidirectional cycle
-// bindTransport() was built to avoid.
-//
-// showMessageBox is DELIBERATELY NOT wired to RUST_DIALOG_MESSAGE (Phase 31 Plan 04, CR-01
-// de-scope). Rust's dialog is OK-only (`blocking_show()` returns a single bool), but real
-// callers (`promptI386Recovery`, `askForceUninstall`) present multi-button
-// destructive/non-destructive confirms and branch on `response`. Forwarding to the OK-only
-// dialog auto-confirms the destructive branch every time -- a real correctness/security bug
-// (CR-01). The safe fix is to de-wire showMessageBox entirely: it logs a console.warn and
-// RESOLVES the sentinel `{ response: -1, checkboxChecked: false }` -- never forwarding to
-// RUST_DIALOG_MESSAGE and never rejecting. It must never reject/throw because the two live
-// callers `await` it unguarded and fire-and-forget (no try/catch, no `.catch()`), and even
-// though `sidecar/processGuards.ts` now installs a process-level `unhandledRejection` guard
-// (Phase 34.2 Plan 09), that guard is defence-in-depth only -- an always-rejecting stub here
-// would still surface as a logged crash-adjacent warning the first time either path is hit,
-// not a clean no-op. `-1` is neither `0`
-// (promptI386Recovery's affirmative/destructive branch, decline = `response !== 0`) nor `1`
-// (askForceUninstall's destructive branch, decline = `response !== 1`), so it declines BOTH
-// reachable callers.
-//
-// CORRECTED (CR-04, Phase 34.1 code review). This block previously asserted:
-//   "`handleExit`'s inverted sense (`response === 0` = safe "No") is moot: it is wired in
-//    `main.ts` via `app.on('before-quit')`, and `main.ts` is not in the sidecar's curated
-//    import graph, so `handleExit` never runs under the sidecar."
-// That is NO LONGER TRUE. Phase 34.1 Plan 04 registers `ipcMain.on('quit', () =>
-// handleExit())` in `appShellFlowRegistration.ts`, which imports `handleExit` directly from
-// `backend/utils` -- so `handleExit` IS sidecar-reachable, and with it the one caller in this
-// codebase whose SAFE index is 0 rather than the last index. The `safeIndex` fallback below
-// (`cancelId ?? buttons.length - 1`) would have resolved to 1 = "Yes" for its two-button
-// array, i.e. the DESTRUCTIVE branch (killAllTracked +
-// callAllAbortControllers + app.exit) on any transport error or timeout -- fail-OPEN, the
-// exact opposite of this stub's documented property. `handleExit` now declares an explicit
-// `cancelId: 0` (see `backend/utils.ts`) so the first operand of that `??` is used and the
-// fail-safe-to-decline property holds for it too. Any FUTURE caller whose safe button is not
-// the last index must likewise declare `cancelId` -- the positional fallback cannot infer it.
-// Real multi-button `showMessageBox` behavior is deferred to Phase 33 (lifecycle/dialog cluster).
-//
-// UPDATED (2026-09-07, quick task 260907-juv). A second staleness beyond the CR-04
-// correction above: `handleExit()` (`backend/utils.ts`) now ALSO calls
-// the runner's `teardownAll()` immediately before
-// `app.exit()`, unconditionally -- not gated behind this dialog's destructive branch. This
-// tears down GOG's `comet` and the Steam bridge helper gracefully on THIS quit path only;
-// the red-X/Cmd+Q/`osascript` quit path bypasses `handleExit()` entirely and is covered
-// separately by a Rust-side process-group reap in `src-tauri/src/main.rs`. See
-// `.planning/quick/260907-juv-fix-helper-process-orphan-on-app-quit-wi/260907-juv-CONTEXT.md`.
-//
-// The two Sync members (showMessageBoxSync/showOpenDialogSync) stay logged no-ops (D-03) --
-// synchronous dialogs cannot be forwarded across the async rustInvoke transport, so they log a
-// console.warn and return a safe default rather than silently doing nothing.
+// The real behaviour lives in host/dialogs.ts. The delegate keeps the (window, options) call
+// shape the existing callers use. The two Sync members stay logged no-ops (D-03): synchronous
+// dialogs cannot cross the async rustInvoke transport.
+
+const optionsOf = <T>(windowOrOptions?: unknown, maybeOptions?: unknown): T =>
+  (maybeOptions ?? windowOrOptions) as T
 
 export const dialog = {
   showErrorBox: async (title?: string, content?: string): Promise<void> => {
-    app.raiseMainWindowIfHiddenByGameLib()
-    try {
-      await requestRustInvoke(RUST_DIALOG_MESSAGE, [
-        { message: content, title, kind: 'error' }
-      ])
-    } catch (error) {
-      // Never throw to the caller (total-method convention) -- an error dialog that itself
-      // fails to render must not crash the caller's error-handling path.
-      console.warn(
-        `[platformApi] dialog.showErrorBox(): ${RUST_DIALOG_MESSAGE} failed:`,
-        error instanceof Error ? error.message : String(error)
-      )
-    }
+    if (!bound) return unbound('dialog.showErrorBox()')
+    await bound.dialogs.showErrorBox(title, content)
   },
   showMessageBox: async (
-    _windowOrOptions?: unknown,
+    windowOrOptions?: unknown,
     maybeOptions?: unknown
   ): Promise<{ response: number; checkboxChecked: boolean }> => {
-    // Real multi-button forward (Phase 33 Plan 03, D-06/D-07) -- retires the Phase 31 Plan 04
-    // CR-01 `{ response: -1 }` safe-sentinel stopgap. Mirrors showOpenDialog's
-    // forward-to-transport shape: try { requestRustInvoke(RUST_DIALOG_MESSAGE) } catch { safe
-    // default }. Handles both call forms electron's real API supports --
-    // `(window, options)` and `(options)` -- by preferring maybeOptions when present.
-    //
-    // D-07 fail-safe-to-decline: safeIndex is the CALLER's own declared `cancelId`, never a
-    // positional "last index" heuristic (33-RESEARCH Pitfall 4 -- provably wrong for
-    // askForceUninstall, whose destructive button is index 1, not the last index when
-    // buttons.length is 2... the two happen to coincide there, but promptI386Recovery's
-    // destructive button IS index 0 while a "last index" guess would default to 1 -- unsafe).
-    // ANY transport error/timeout resolves `{ response: safeIndex }` -- never `-1`, never
-    // reject/throw (total-method convention; an unguarded reject crashes the sidecar, see
-    // memory: sidecar-dialog-reject-crashes).
-    app.raiseMainWindowIfHiddenByGameLib()
-    const options = (maybeOptions ?? _windowOrOptions) as
-      | {
-          buttons?: string[]
-          cancelId?: number
-          detail?: string
-          message?: string
-          title?: string
-          type?: string
-        }
-      | undefined
-    const safeIndex = options?.cancelId ?? (options?.buttons?.length ?? 1) - 1
-    // Electron renders `detail` as a secondary line under the message; the Rust
-    // `dialog_message` arm reads only `message`, so `detail` is folded into it here. Dropping
-    // it silently hid the executable and arguments the deep-link launch confirm exists to show.
-    const message = [options?.message, options?.detail]
-      .filter((part) => part !== undefined && part !== '')
-      .join('\n\n')
-    try {
-      const result = await requestRustInvoke(RUST_DIALOG_MESSAGE, [
-        {
-          message: message === '' ? options?.message : message,
-          title: options?.title,
-          kind: options?.type,
-          buttons: options?.buttons
-        }
-      ])
-      // result: the clicked button's index (0 / 1), or null when the dialog was dismissed (Esc /
-      // window close) without a button. A dismissal is the caller's cancelId, as in Electron --
-      // the same safeIndex the transport-error path below uses.
-      return {
-        response: typeof result === 'number' ? result : safeIndex,
-        checkboxChecked: false
-      }
-    } catch (error) {
-      console.warn(
-        `[platformApi] dialog.showMessageBox(): ${RUST_DIALOG_MESSAGE} failed, defaulting to safe index ${safeIndex}:`,
-        error instanceof Error ? error.message : String(error)
-      )
+    const options = optionsOf<MessageBoxOptions | undefined>(
+      windowOrOptions,
+      maybeOptions
+    )
+    if (!bound) {
+      unbound('dialog.showMessageBox()')
+      const safeIndex = options?.cancelId ?? (options?.buttons?.length ?? 1) - 1
       return { response: safeIndex, checkboxChecked: false }
     }
+    const result = await bound.dialogs.showMessageBox(
+      options ?? { message: '' }
+    )
+    return { response: result.response, checkboxChecked: false }
   },
   showMessageBoxSync: (_window?: unknown, _options?: unknown): number => {
     console.warn(
@@ -600,26 +288,13 @@ export const dialog = {
   },
   showOpenDialog: async (
     _window?: unknown,
-    options?: RustInvokeArgsOf<typeof RUST_DIALOG_OPEN>[0]
+    options?: OpenDialogOptions
   ): Promise<{ canceled: boolean; filePaths: string[] }> => {
-    try {
-      const result = await requestRustInvoke(RUST_DIALOG_OPEN, [options ?? {}])
-      if (typeof result === 'string') {
-        return { canceled: false, filePaths: [result] }
-      }
-      // `null` (or anything else non-string) is the healthy cancel case.
-      return { canceled: true, filePaths: [] }
-    } catch (error) {
-      // Never throw to the caller (mirrors keyringTokenStore.ts's total-method convention) --
-      // a rejection (timeout, unknown channel, permission denial) resolves as a clean cancel.
-      // console.warn, not logWarning: this file must not import 'backend/logger' (see the
-      // module-scope note above the imports).
-      console.warn(
-        `[platformApi] dialog.showOpenDialog(): ${RUST_DIALOG_OPEN} failed:`,
-        error instanceof Error ? error.message : String(error)
-      )
+    if (!bound) {
+      unbound('dialog.showOpenDialog()')
       return { canceled: true, filePaths: [] }
     }
+    return bound.dialogs.showOpenDialog(options ?? {})
   },
   showOpenDialogSync: (): undefined => {
     console.warn(
@@ -629,45 +304,26 @@ export const dialog = {
   },
   showSaveDialog: async (
     _window?: unknown,
-    options?: RustInvokeArgsOf<typeof RUST_DIALOG_SAVE>[0]
+    options?: SaveDialogOptions
   ): Promise<{ canceled: boolean; filePath?: string }> => {
-    try {
-      const result = await requestRustInvoke(RUST_DIALOG_SAVE, [options ?? {}])
-      if (typeof result === 'string') {
-        return { canceled: false, filePath: result }
-      }
-      // `null` (or anything else non-string) is the healthy cancel case.
-      return { canceled: true, filePath: undefined }
-    } catch (error) {
-      // Never throw to the caller (mirrors keyringTokenStore.ts's total-method convention).
-      console.warn(
-        `[platformApi] dialog.showSaveDialog(): ${RUST_DIALOG_SAVE} failed:`,
-        error instanceof Error ? error.message : String(error)
-      )
+    if (!bound) {
+      unbound('dialog.showSaveDialog()')
       return { canceled: true, filePath: undefined }
     }
+    return bound.dialogs.showSaveDialog(options ?? {})
   }
 }
 
 // ---- Notification ----------------------------------------------------------------
 //
-// Real OS notification (Phase 33 Plan 04, D-05) via tauri-plugin-notification's
-// notification_show rustInvoke arm. isSupported() flips to true; show() forwards the
-// constructor's {title, body} inside a try/catch that console.warns and no-ops on failure --
-// never throws (total-method convention, mirrors showErrorBox's shape). No icon/nativeImage
-// plumbing (33-RESEARCH confirmed the plugin's icon param is optional).
-//
-// Quick task 261023-vkv: show() now reports a rejected notification_show through an
-// Electron-shaped 'failed' event (listener gets `(event, error: string)`), so the consumer --
-// backend/dialog/dialog.ts's notify() -- can log it. The logging lives there, not here: this
-// module must not import backend/logger (module-scope rule near the top of this file).
-// notify() also gates on Notification.isSupported() with its established logged-no-op fallback.
+// Real OS notification via host/notifications.ts. Only 'show' (Electron's own event of that
+// name) and 'failed' are ever emitted; other events (e.g. 'click') are accepted and ignored.
+// The class keeps its per-instance listener table; the shared state is the bound service.
 
 interface NotificationOptions {
   title?: string
   body?: string
-  // Phase 35 Plan 15: type-only widening. utils.ts's offline notification passes these three;
-  // the stub ignores all of them, exactly as it ignored title/body before.
+  // Type-only widening: utils.ts's offline notification passes these three; they are ignored.
   urgency?: 'normal' | 'critical' | 'low'
   timeoutType?: 'default' | 'never'
   silent?: boolean
@@ -691,8 +347,6 @@ export class Notification {
 
   private readonly listeners = new Map<string, NotificationListener[]>()
 
-  // Only 'show' (Electron's own event of that name) and 'failed' are ever emitted; other
-  // events (e.g. 'click') are accepted and ignored.
   on(event?: string, listener?: NotificationListener): this {
     if (event && listener) {
       const list = this.listeners.get(event) ?? []
@@ -702,44 +356,30 @@ export class Notification {
     return this
   }
 
-  show(): void {
-    requestRustInvoke(RUST_NOTIFICATION_SHOW, [
-      { title: this.options.title, body: this.options.body }
-    ])
-      .then((result) => {
-        const backend = typeof result === 'string' ? result : undefined
-        for (const listener of this.listeners.get('show') ?? []) {
-          try {
-            listener({ sender: this }, backend)
-          } catch (listenerError) {
-            console.warn(
-              "[platformApi] Notification 'show' listener threw:",
-              listenerError instanceof Error
-                ? listenerError.message
-                : String(listenerError)
-            )
-          }
-        }
-      })
-      .catch((error) => {
-        const message = error instanceof Error ? error.message : String(error)
+  private emit(event: string, payload: string | undefined): void {
+    for (const listener of this.listeners.get(event) ?? []) {
+      try {
+        listener({ sender: this }, payload)
+      } catch (listenerError) {
         console.warn(
-          `[platformApi] Notification.show(): ${RUST_NOTIFICATION_SHOW} failed:`,
-          message
+          `[platformApi] Notification '${event}' listener threw:`,
+          listenerError instanceof Error
+            ? listenerError.message
+            : String(listenerError)
         )
-        for (const listener of this.listeners.get('failed') ?? []) {
-          try {
-            listener({ sender: this }, message)
-          } catch (listenerError) {
-            console.warn(
-              "[platformApi] Notification 'failed' listener threw:",
-              listenerError instanceof Error
-                ? listenerError.message
-                : String(listenerError)
-            )
-          }
-        }
-      })
+      }
+    }
+  }
+
+  show(): void {
+    if (!bound) return unbound('Notification.show()')
+    bound.notifications.show(
+      { title: this.options.title, body: this.options.body },
+      {
+        onShown: (backend) => this.emit('show', backend),
+        onFailed: (message) => this.emit('failed', message)
+      }
+    )
   }
 
   close(): void {}
@@ -766,69 +406,34 @@ export const safeStorage = {
 // ---- shell -------------------------------------------------------------------------
 
 export const shell = {
-  // Phase 35 Plan 15: signature-only widening. Windows-only in real Electron; returns false
-  // rather than pretending. The sidecar DOES run on Windows, so `shortcuts.ts` no longer calls
-  // this -- it writes `.lnk` files through `shortcuts/shortcuts/windowsShortcut.ts` instead.
+  // Windows-only in real Electron; returns false rather than pretending. The sidecar DOES run on
+  // Windows, so `shortcuts.ts` writes `.lnk` files through `windowsShortcut.ts` instead.
   writeShortcutLink: (
     _shortcutPath: string,
     _operation?: unknown,
     _options?: unknown
   ): boolean => false,
-  // Options used to be dropped: the Rust opener is a plain /usr/bin/open, which activates the
-  // target app. Callers passing { activate: false } are steam/games.ts rungameid launches,
-  // bridge/helperProcess.ts steam://open/main, and macSteamOffline go-offline. On darwin those
-  // (steam: scheme only) now spawn a detached `open -g`. The transport-bound guard keeps jest on
-  // a Mac from spawning a real `open`; non-steam URLs still go through the Rust scheme check.
+  // Unbound (jest on a Mac before 'shim-bind') is a no-op, so no real `open` is ever spawned.
   openExternal: async (url: string, options?: unknown): Promise<void> => {
-    if (!transport) return
-    if (shouldOpenInBackground(process.platform, url, options)) {
-      transport.openDetached(url, (code) =>
-        console.warn(
-          `[platformApi] shell.openExternal(): background open failed (${code})`
-        )
-      )
-      return
-    }
-    transport.openExternal(url)
+    if (!bound) return
+    await bound.openExternal.openExternal(url, options)
   },
-  // Phase 33 Plan 04 (D-05): upgraded from the D-04 logged no-op to a real forward, backed by
-  // tauri-plugin-opener's reveal_item_in_dir (RUST_SHELL_SHOW_ITEM_IN_FOLDER). Fire-and-forget
-  // (mirrors real Electron's void-returning API) -- never throws; a transport failure is logged,
-  // never silent.
   showItemInFolder: (fullPath: string): void => {
-    requestRustInvoke(RUST_SHELL_SHOW_ITEM_IN_FOLDER, [fullPath]).catch(
-      (error) => {
-        console.warn(
-          `[platformApi] shell.showItemInFolder(): ${RUST_SHELL_SHOW_ITEM_IN_FOLDER} failed:`,
-          error instanceof Error ? error.message : String(error)
-        )
-      }
-    )
+    if (!bound) return unbound('shell.showItemInFolder()')
+    bound.openExternal.showItemInFolder(fullPath)
   },
-  // D-05: stays a LOGGED no-op (never silent) -- tauri-plugin-fs 2.5.1 (the only first-party
-  // candidate audited in 33-RESEARCH) has no trash/recycle-bin capability at all in this
-  // version (confirmed by reading its source directly), so there is no vetted first-party Tauri
-  // plugin to forward to. Declared as an accepted gap for Plan 06's 33-PORTED-CHANNELS.md.
+  // D-05: a LOGGED no-op (never silent) -- no vetted first-party Tauri v2 trash plugin exists.
   trashItem: async (): Promise<void> => {
     console.warn(
       '[platformApi] shell.trashItem(): logged no-op (D-05, Phase 33) -- no vetted Tauri v2 trash-capable plugin found; item is NOT moved to the OS trash'
     )
   },
-  // Phase 33 Plan 04 (D-05): real forward via tauri-plugin-opener's open_path
-  // (RUST_SHELL_OPEN_PATH). Mirrors real Electron's shell.openPath contract: resolves an empty
-  // string on success, or a human-readable error string on failure -- never rejects.
   openPath: async (path: string): Promise<string> => {
-    try {
-      await requestRustInvoke(RUST_SHELL_OPEN_PATH, [path])
-      return ''
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      console.warn(
-        `[platformApi] shell.openPath(): ${RUST_SHELL_OPEN_PATH} failed:`,
-        message
-      )
-      return message
+    if (!bound) {
+      unbound('shell.openPath()')
+      return '[platform delegate] not bound'
     }
+    return bound.openExternal.openPath(path)
   }
 }
 
@@ -839,7 +444,8 @@ const fakeWebContents = {
   // Phase 35 Plan 15: signature-only widening, no-op body. steamhelper.ts calls this.
   executeJavaScript: async (_code: string): Promise<string> => '',
   send: (channel: string, ...args: unknown[]): void => {
-    transport?.pushFrontendMessage(channel, ...args)
+    // Unbound: dropped, exactly as the unbound transport always did (no buffering).
+    bound?.pushFrontendMessage(channel, ...args)
   },
   // Phase 34.5 Plan 08 (T-34.5-27): `processShortcut`'s `ctrl+shift+i` case
   // (`main.ts:1465`, `mainWindow?.webContents?.openDevTools()`) is reachable under the sidecar
@@ -990,27 +596,23 @@ export const session = {
   }
 }
 
-// ---- nativeImage (Phase 34.5 gap cycle 6, plan 34.5-45, F-34.5-G6-07) ---------------------
+// ---- nativeImage ------------------------------------------------------------------------
 //
-// Previously a four-line stub with only `createFromPath`/`createFromDataURL`/`createEmpty`, each
-// returning a bare `{}` -- the buffer-based factory member (`createFrom` + `Buffer`) did not
-// exist at all. That made `shortcuts.ts:259`'s icon-buffer conversion call throw ("...is not a
-// function"), so `convertPngToICNS` always failed, `generateMacOsApp` never reached its
-// `run.sh` write, and the throw was swallowed into the generic `Error generating MacOS App` --
-// structurally dead for EVERY macOS game, not target- or icon-format-specific. A second,
-// independent instance of the same defect class sat on `steamhelper.ts:121`'s data-URL-to-JPEG
-// call (reached from `prepareImagesForSteam` on the `addToSteam` path, for any non-`http` image
-// URL) -- `.toJPEG` was not a function on the old bare `{}` either.
-//
-// Now a real, `sips`-backed implementation -- see `nativeImageShim.ts` for the full contract
-// (lazy resize/crop, real toPNG/toJPEG, a loud non-darwin decline instead of a silent empty
-// Buffer).
-export const nativeImage = createNativeImage({
-  runSync: (cmd, argv, opts) => {
-    if (!transport) throw new Error('platformApi transport not bound')
-    return transport.runSync(cmd, argv, opts)
-  }
-})
+// The `sips`-backed implementation is host.imageTools (see nativeImageShim.ts for the full
+// contract). The delegate forwards each factory to the bound instance; unbound, a call throws
+// the same way an unbound transport's runSync did.
+const imageTools = (): HostServices['imageTools'] => {
+  if (!bound) throw new Error('platformApi host services not bound')
+  return bound.imageTools
+}
+
+export const nativeImage = {
+  createFromBuffer: (buffer: Buffer) => imageTools().createFromBuffer(buffer),
+  createFromPath: (path: string) => imageTools().createFromPath(path),
+  createFromDataURL: (dataUrl: string) =>
+    imageTools().createFromDataURL(dataUrl),
+  createEmpty: () => imageTools().createEmpty()
+}
 
 export const screen = {
   getPrimaryDisplay: () => ({
@@ -1125,128 +727,37 @@ export const protocol = {
   ): void => {}
 }
 
-// D-08 (Phase 35 Plan 08, REQ-35-06): REAL as of the Phase 35 cutover this comment's earlier
-// version scheduled. The history is kept because it records why the gap existed and what it cost.
+// ---- powerSaveBlocker / clipboard -----------------------------------------------------
 //
-// WAS (Phase 33): an accepted no-op. 33-RESEARCH found no maintained Tauri v2 wake-lock plugin
-// meeting the "cheap and maintained" bar -- tauri-plugin-nosleep and tauri-plugin-keepawake were
-// both rejected on maintenance recency -- so `start()` logged, returned `-1`, and held nothing.
-// The real cost of that: the system idle-slept during long depot downloads, and `launcher.ts`'s
-// `prevent-display-sleep` let the screen blank while a game was running. Both are user-visible
-// on any machine with default power settings.
-//
-// IS NOW: a real forward to the Rust shell's `wake_lock_start`/`wake_lock_stop` arms, which take
-// genuine per-platform OS power assertions (IOKit on macOS, SetThreadExecutionState on Windows,
-// systemd-inhibit on Linux). 33-RESEARCH's plugin verdict was re-checked before this was written
-// and HELD, so the binding is first-party -- see 35-08-SUMMARY.md for versions and dates.
-//
-// The two assertion KINDS stay distinct end to end. `'prevent-display-sleep'` (a game is running)
-// and `'prevent-app-suspension'` (a download is in progress) are different OS assertions on every
-// platform, and the Rust side rejects any other string rather than defaulting to one of them.
-//
-// SYNC/ASYNC BRIDGE -- why the id is allocated HERE and not taken from Rust:
-// real Electron's `powerSaveBlocker.start()` is SYNCHRONOUS and returns a number, and callers
-// store that number immediately (`launcher.ts`: `powerDisplayId = powerSaveBlocker.start(...)`).
-// The Tauri command behind it is a Promise. A synchronous function structurally cannot await one,
-// so this stub mints its own id, returns it in the same tick, and resolves the Rust id into
-// `heldIds` when the round-trip lands. That keeps every existing call site byte-identical --
-// nothing had to become async -- at the cost of a brief window where an id is held locally but
-// not yet mapped to a Rust assertion, which `stop()` handles explicitly below.
-//
-// Ids start at 1, never 0: `launcher.ts`'s re-entry guard is `if (!powerDisplayId)`, which would
-// read 0 as "no lock held" and take a second assertion on every launch, leaking the first.
-let nextWakeLockId = 1
-
-/**
- * JS id -> the Rust assertion id `wake_lock_start` resolved for it. An entry exists only while
- * the assertion is genuinely held: a rejected start deletes its entry, so a later `stop()` on
- * that id is a no-op rather than an error against an assertion Rust never took.
- *
- * `null` marks "start is still in flight" -- the id is live from the caller's point of view but
- * has no Rust id yet.
- */
-const heldWakeLocks = new Map<number, number | null>()
+// Real behaviour (the sync-id/async-Rust bridge, ids starting at 1 so launcher.ts's
+// `if (!powerDisplayId)` guard works) lives in host/appState.ts `wakeLock`. Unbound,
+// `start` returns -1 and holds nothing.
 
 export const powerSaveBlocker = {
-  // `type` is REQUIRED, matching real Electron's own signature. Deliberately not defaulted: a
-  // default kind is the silent collapse threat T-35-32 describes, and making it required turns
-  // a caller that forgot to say which assertion it wants into a compile error instead.
+  // `type` is REQUIRED, matching real Electron's own signature: a default kind would be the
+  // silent collapse threat T-35-32 describes.
   start: (type: string): number => {
-    const id = nextWakeLockId++
-    heldWakeLocks.set(id, null)
-    requestRustInvoke(RUST_WAKE_LOCK_START, [type])
-      .then((rustId) => {
-        // A `stop()` may have already landed while this was in flight; if it did, the entry is
-        // gone and the assertion must be released rather than recorded as held.
-        if (!heldWakeLocks.has(id)) {
-          if (typeof rustId === 'number') {
-            requestRustInvoke(RUST_WAKE_LOCK_STOP, [rustId]).catch(() => {})
-          }
-          return
-        }
-        if (typeof rustId === 'number') {
-          heldWakeLocks.set(id, rustId)
-        } else {
-          heldWakeLocks.delete(id)
-        }
-      })
-      .catch((error) => {
-        // Failure is logged, never thrown: real Electron's start() cannot surface an error
-        // either, and an unhandled rejection here would take down a game launch. Dropping the
-        // entry is what makes a later stop() on this id a silent no-op instead of an error.
-        heldWakeLocks.delete(id)
-        console.warn(
-          `[platformApi] powerSaveBlocker.start(): ${RUST_WAKE_LOCK_START} failed:`,
-          error instanceof Error ? error.message : String(error)
-        )
-      })
-    return id
+    if (!bound) {
+      unbound('powerSaveBlocker.start()')
+      return -1
+    }
+    return bound.appState.wakeLock.start(type)
   },
-  // `id` is REQUIRED, matching the real API this replaces. The Phase 33 stub took none, which is why the
-  // `unlock` handler in appShellFlowRegistration.ts could not release a specific assertion.
   stop: (id: number): void => {
-    if (!heldWakeLocks.has(id)) return
-    const rustId = heldWakeLocks.get(id)
-    heldWakeLocks.delete(id)
-    // `null` means start never landed. Deleting the entry above is enough: start's own `.then`
-    // sees the missing entry and releases the assertion if one did arrive.
-    if (rustId === null || rustId === undefined) return
-    requestRustInvoke(RUST_WAKE_LOCK_STOP, [rustId]).catch((error) => {
-      console.warn(
-        `[platformApi] powerSaveBlocker.stop(): ${RUST_WAKE_LOCK_STOP} failed:`,
-        error instanceof Error ? error.message : String(error)
-      )
-    })
+    if (!bound) return unbound('powerSaveBlocker.stop()')
+    bound.appState.wakeLock.stop(id)
   },
-  // D-05: answers from real state, not a hardcoded `false`. A stale `false` here is exactly the
-  // lying accessor D-05 targets -- it would tell a caller nothing is holding the machine awake
-  // while an assertion was live.
-  isStarted: (): boolean => heldWakeLocks.size > 0
+  isStarted: (): boolean => bound?.appState.wakeLock.isStarted() ?? false
 }
 
 export const clipboard = {
-  // Phase 34.3 Plan 05 (D-01/D-02/D-03, REQ-34.3-03/04): graduated from the D-04 logged no-op
-  // (Phase 31 -- "deferred to Phase 33", never collected) to a real forward, backed by
-  // tauri-plugin-clipboard-manager's write_text (RUST_CLIPBOARD_WRITE_TEXT). Byte-shape-identical
-  // to shell.showItemInFolder above: fire-and-forget (mirrors real Electron's void-returning
-  // clipboard.writeText) -- never throws; a transport failure is logged, never silent. Log-only
-  // failure is deliberate Electron parity, not a shortcut: real clipboard.writeText is void and
-  // cannot surface failure either, so matching it keeps both builds behaviorally identical.
   writeText: (text: string): void => {
-    requestRustInvoke(RUST_CLIPBOARD_WRITE_TEXT, [text]).catch((error) => {
-      console.warn(
-        `[platformApi] clipboard.writeText(): ${RUST_CLIPBOARD_WRITE_TEXT} failed:`,
-        error instanceof Error ? error.message : String(error)
-      )
-    })
+    if (!bound) return unbound('clipboard.writeText()')
+    bound.appState.writeClipboardText(text)
   },
-  // D-04: DELIBERATELY DEAD -- this member is NOT a shortcut left over, it is a documented,
-  // permanent no-op. Real Electron's clipboard.readText() is synchronous, so this stub stays
-  // synchronous to keep faithfully impersonating that shape -- but a sync function structurally
-  // cannot await a Rust round-trip. The ONLY sidecar-reachable caller is `clipboardReadText`
-  // (registered with addHandler, async), which awaits requestRustInvoke(RUST_CLIPBOARD_READ_TEXT,
-  // []) directly inside its own handler (clipboardFlowRegistration.ts, Plan 06) and never calls
-  // this member. No other backend module may call this and expect a real value.
+  // D-04: DELIBERATELY DEAD -- real Electron's readText() is synchronous, a sync function cannot
+  // await a Rust round-trip. The only sidecar-reachable caller (`clipboardReadText`) awaits
+  // requestRustInvoke(RUST_CLIPBOARD_READ_TEXT, []) directly and never calls this member.
   readText: (): string => ''
 }
 

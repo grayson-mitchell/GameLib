@@ -17,6 +17,7 @@ import type { LibraryManager } from 'common/types/game_manager'
 import type { StoreLaunchHooks } from 'backend/storeManagers'
 import type { DownloadQueue } from 'backend/downloadmanager/downloadqueue'
 import type { Launcher } from 'backend/launcher'
+import type { HostServices } from 'backend/host'
 import type { Clock, ProcessRunner } from 'backend/process/types'
 import type { CommandRunner as CommandRunnerImpl } from 'backend/commandRunner'
 import type GOGLibraryManager from 'backend/storeManagers/gog/library'
@@ -139,4 +140,6 @@ export interface BootServices {
   spawnAsync: SpawnAsync
   quit: QuitHandler
   downloadQueue: DownloadQueue
+  /** Tauri-native host services (D-66.3-01), built once by the 'host-services' boot step. */
+  host: HostServices
 }

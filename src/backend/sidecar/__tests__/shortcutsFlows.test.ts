@@ -149,10 +149,13 @@ import { dirSync, type DirResult } from 'tmp'
 import { realHomeAtSetup } from 'backend/jest.setupContainment'
 import { registerShortcutsFlows } from '../shortcutsFlowRegistration'
 import {
-  bindTransport,
+  bindHostServices,
   handlerRegistry,
+  interimIpc,
   listenerRegistry
 } from '../../platform'
+import { createTestHostServices } from '../../testUtils/testHostServices'
+import { createNativeImage } from '../nativeImageShim'
 import { createRealRunner } from '../../testUtils/realRunner'
 import { getPath } from '../pathShim'
 import {
@@ -280,14 +283,14 @@ registerShortcutsFlows({
   runner: createTestServices().runner
 })
 
-// The real nativeImage shim reaches /usr/bin/sips through platformApi's transport (runner.runSync);
+// The real nativeImage shim reaches /usr/bin/sips through the host services' runSync;
 // bound once to a fake-HOME real runner, the same way bootstrap binds ctx.runner.
 const sipsRunner = createRealRunner()
-bindTransport({
-  openExternal: () => undefined,
-  pushFrontendMessage: () => undefined,
-  openDetached: () => undefined,
-  runSync: (cmd, argv, opts) => sipsRunner.runner.runSync(cmd, argv, opts)
+bindHostServices({
+  ...createTestHostServices(),
+  imageTools: createNativeImage({
+    runSync: (cmd, argv, opts) => sipsRunner.runner.runSync(cmd, argv, opts)
+  })
 })
 afterAll(() => sipsRunner.dispose())
 
@@ -1220,7 +1223,7 @@ describe('F-34.5-G6-08 discriminator — addToSteam over the REAL RPC frame path
       }
     })
 
-    startRpcServer(input, output)
+    startRpcServer(input, output, interimIpc)
 
     input.write(
       `${JSON.stringify({

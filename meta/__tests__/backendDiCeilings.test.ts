@@ -146,7 +146,7 @@ describe('topLevelContainerCalls', () => {
 describe('containerCallResidual', () => {
   it('containerCallResidual() matches the measured residual', () => {
     expect(containerCallResidual()).toEqual([
-      'src/backend/platform/index.ts:nativeImage'
+      'src/backend/platform/index.ts:interimIpc'
     ])
   })
 })

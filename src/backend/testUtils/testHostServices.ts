@@ -29,6 +29,7 @@ export function createTestHostServices(
     ipc: createIpcRegistry(),
     requestRustInvoke,
     requestOpenExternal: () => {},
+    pushFrontendMessage: () => {},
     openDetached: () => {},
     runSync: () => {
       throw new Error('createTestHostServices: runSync not scripted')

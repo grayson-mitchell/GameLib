@@ -7,6 +7,7 @@
  * from a fresh `createStores` against its own registry (the jest fake HOME), so a test that
  * never touches a family never builds it.
  */
+import { createTestHostServices } from './testHostServices'
 import {
   createStoreRegistry,
   type StoreRegistry
@@ -211,7 +212,8 @@ export function createTestServices(
     quit: overrides.quit ?? quit,
     downloadQueue:
       overrides.downloadQueue ??
-      unscriptedMembers<BootServices['downloadQueue']>('download queue', {})
+      unscriptedMembers<BootServices['downloadQueue']>('download queue', {}),
+    host: overrides.host ?? createTestHostServices()
   }
 }
 

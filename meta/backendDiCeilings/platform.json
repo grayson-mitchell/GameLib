@@ -1,8 +1,6 @@
 {
-  "jestMock": {
-    "src/backend/platform/__tests__/mainWindowVisibility.test.ts": 3
-  },
+  "jestMock": {},
   "moduleState": {
-    "src/backend/platform/index.ts": 8
+    "src/backend/platform/index.ts": 1
   }
 }

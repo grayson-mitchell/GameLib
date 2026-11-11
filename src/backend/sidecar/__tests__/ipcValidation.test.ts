@@ -6,7 +6,7 @@ import { defined } from 'backend/testUtils/indexed'
 import { PassThrough } from 'node:stream'
 import { z } from 'zod'
 
-import { handlerRegistry, listenerRegistry } from '../../platform'
+import { handlerRegistry, interimIpc, listenerRegistry } from '../../platform'
 import { startRpcServer } from '../sidecarRpc'
 import {
   logRejection,
@@ -87,7 +87,7 @@ let stderrWrites: string[] = []
 const sinkLines: string[] = []
 
 beforeAll(() => {
-  startRpcServer(input, output)
+  startRpcServer(input, output, interimIpc)
   handlerRegistry.set('testInvoke', invokeHandler as never)
   handlerRegistry.set('noSchemaInvoke', (async () => 'free') as never)
   listenerRegistry.set('testSend', [sendListener as never])

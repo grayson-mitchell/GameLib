@@ -9,6 +9,7 @@
  *
  * Drives `startRpcServer` with `PassThrough` streams only; no store, no child process.
  */
+import { createIpcRegistry } from '../ipcRegistry'
 import { defined } from 'backend/testUtils/indexed'
 import { PassThrough } from 'node:stream'
 
@@ -44,18 +45,16 @@ describe('sidecarRpc inbound framing', () => {
   })
 
   function startEcho(): { input: PassThrough; output: PassThrough } {
-    // Fresh module registry per test, so `sidecarRpc` and the `platform` registry it
-    // dispatches into are the same instance and no binding leaks between tests.
-    const { handlerRegistry } =
-      jest.requireActual<typeof import('../../platform')>('../../platform')
+    // A fresh registry per test, handed to the server: no binding leaks between tests.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const rpc = require('../sidecarRpc') as typeof import('../sidecarRpc')
-    handlerRegistry.set('echo', (_event: unknown, ...args: unknown[]) =>
+    const ipc = createIpcRegistry()
+    ipc.handle('echo', (_event: unknown, ...args: unknown[]) =>
       Promise.resolve(args)
     )
     const input = new PassThrough()
     const output = new PassThrough()
-    rpc.startRpcServer(input, output)
+    rpc.startRpcServer(input, output, ipc)
     return { input, output }
   }
 

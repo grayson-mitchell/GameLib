@@ -40,6 +40,8 @@ import { i18nextLanguageOptions, localeFileSegments } from 'common/languages'
 // Importing `./handlers` registers nothing (D-08); the 'register-handlers' boot step calls it.
 
 import { registerHandlers } from './handlers'
+import { createHostServices, type HostServices } from '../host'
+import type { IpcRegistry } from './ipcRegistry'
 import { createStores } from '../stores/createStores'
 import { createStoreRegistry } from '../stores/storeRegistry'
 import { createStoreManagers } from '../storeManagers'
@@ -72,7 +74,8 @@ import type { ProcessGuards } from './processGuards'
 import {
   startRpcServer,
   pushFrontendMessage,
-  requestOpenExternal
+  requestOpenExternal,
+  requestRustInvoke
 } from './sidecarRpc'
 import {
   setTokenStore as installTokenStore,
@@ -247,6 +250,7 @@ import MigrationSystem from '../migration'
 export const BOOT_STEP_NAMES = [
   'outbound-http-tracking',
   'logger',
+  'host-services',
   'stores',
   'migrations',
   'command-runner',
@@ -258,7 +262,7 @@ export const BOOT_STEP_NAMES = [
   'register-handlers',
   'rpc-server',
   'protocol-url-handler',
-  'transport',
+  'shim-bind',
   'mac-steam-online-restore',
   'secret-stores',
   'orphaned-token-cleanup',
@@ -338,6 +342,12 @@ function requireSteamProcesses(state: BootState): SteamProcesses {
   return steamProcesses
 }
 
+function requireHost(state: BootState): HostServices {
+  const { host } = state.services
+  if (!host) throw new Error('host-services step has not run')
+  return host
+}
+
 function requireServices(state: BootState): BootServices {
   const {
     stores,
@@ -350,7 +360,8 @@ function requireServices(state: BootState): BootServices {
     steamProcesses,
     spawnAsync,
     quit,
-    downloadQueue
+    downloadQueue,
+    host
   } = state.services
   if (
     !stores ||
@@ -363,7 +374,8 @@ function requireServices(state: BootState): BootServices {
     !steamProcesses ||
     !spawnAsync ||
     !quit ||
-    !downloadQueue
+    !downloadQueue ||
+    !host
   ) {
     const missing = (
       [
@@ -377,7 +389,8 @@ function requireServices(state: BootState): BootServices {
         'steamProcesses',
         'spawnAsync',
         'quit',
-        'downloadQueue'
+        'downloadQueue',
+        'host'
       ] as const
     ).filter((name) => !state.services[name])
     throw new Error(`boot services missing: ${missing.join(', ')}`)
@@ -393,7 +406,8 @@ function requireServices(state: BootState): BootServices {
     steamProcesses,
     spawnAsync,
     quit,
-    downloadQueue
+    downloadQueue,
+    host
   }
 }
 
@@ -482,22 +496,22 @@ export function deliverStartupProtocolUrl(
 // checks (`initBody.toContain('registerProtocolUrlHandler()')`), a call-site
 // string match indifferent to the `export` keyword. Called internally by
 // `init()` below.
-function registerProtocolUrlHandler(getDeps: () => ProtocolDeps): void {
-  platformApi.ipcMain.handle(
-    'handleProtocolUrl',
-    (_event: unknown, url?: unknown) => {
-      if (typeof url !== 'string' || !url.startsWith('gamelib://')) {
-        throw new Error('handleProtocolUrl: rejected a non-gamelib argument')
-      }
-      void Promise.resolve(handleProtocol(getDeps(), [url])).catch((error) => {
-        logError(
-          `[bootstrap] registerProtocolUrlHandler: handleProtocol rejected: ${error}`,
-          LogPrefix.Backend
-        )
-      })
-      return true
+function registerProtocolUrlHandler(
+  ipc: Pick<IpcRegistry, 'handle'>,
+  getDeps: () => ProtocolDeps
+): void {
+  ipc.handle('handleProtocolUrl', (_event: unknown, url?: unknown) => {
+    if (typeof url !== 'string' || !url.startsWith('gamelib://')) {
+      throw new Error('handleProtocolUrl: rejected a non-gamelib argument')
     }
-  )
+    void Promise.resolve(handleProtocol(getDeps(), [url])).catch((error) => {
+      logError(
+        `[bootstrap] registerProtocolUrlHandler: handleProtocol rejected: ${error}`,
+        LogPrefix.Backend
+      )
+    })
+    return true
+  })
 }
 
 /**
@@ -1052,6 +1066,26 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'host-services',
+      // Built once, right after the logger: the Tauri-native services that replace the Electron
+      // facade. `interimIpc` is the delegate's registry, so `host.ipc` is the one registry
+      // instance (66.1 C-WR-1: no split-brain); plan 18 passes createIpcRegistry() instead.
+      run: (ctx, _io, state) => {
+        state.services.host =
+          prebuilt.host ??
+          createHostServices({
+            platform: ctx.platform,
+            ipc: platformApi.interimIpc,
+            requestRustInvoke,
+            requestOpenExternal,
+            pushFrontendMessage,
+            openDetached: (url, onError) =>
+              ctx.runner.openDetached(url, onError),
+            runSync: (cmd, argv, opts) => ctx.runner.runSync(cmd, argv, opts)
+          })
+      }
+    },
+    {
       name: 'stores',
       // Builds every store family against ONE per-boot registry (66.1 plan 25, A3); that registry
       // is what the name-keyed store RPC handlers resolve through. Store construction opens no
@@ -1209,11 +1243,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             isRunning: () => requireServices(state).downloadQueue.isRunning(),
             isBridgeHosting: hasLiveBridgeHelper,
             getMainWindow,
-            showMessageBox: (win, opts) =>
-              platformApi.dialog.showMessageBox(
-                win as Parameters<typeof platformApi.dialog.showMessageBox>[0],
-                opts
-              ),
+            showMessageBox: (_win, opts) =>
+              requireHost(state).dialogs.showMessageBox(opts),
             t: tOrFallback,
             abortAll: callAllAbortControllers,
             releaseSteam: async () => {
@@ -1221,7 +1252,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             },
             deletePresence: () =>
               gogPresence.deletePresence(gogPresenceDeps(state)),
-            exit: () => platformApi.app.exit()
+            exit: () => requireHost(state).appState.exit()
           })
       }
     },
@@ -1531,7 +1562,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'rpc-server',
       run: (_ctx, { input, output }, state) => {
-        startRpcServer(input, output)
+        startRpcServer(input, output, requireServices(state).host.ipc)
         // Phase 67 D-09: boundary rejections reach gamelib.log (ipcValidation avoids importing the logger).
         setIpcRejectionLogSink((line) => logWarning(line, LogPrefix.Backend))
         const services = requireServices(state)
@@ -1548,18 +1579,18 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09): registered immediately after
         // startRpcServer() and BEFORE the READY_SENTINEL write below, so the shell can never send a
         // handleProtocolUrl frame for an unregistered channel.
-        registerProtocolUrlHandler(() => requireServices(state))
+        registerProtocolUrlHandler(requireServices(state).host.ipc, () =>
+          requireServices(state)
+        )
       }
     },
     {
-      name: 'transport',
-      run: (ctx) => {
-        platformApi.bindTransport({
-          openExternal: requestOpenExternal,
-          pushFrontendMessage,
-          openDetached: (url, onError) => ctx.runner.openDetached(url, onError),
-          runSync: (cmd, argv, opts) => ctx.runner.runSync(cmd, argv, opts)
-        })
+      name: 'shim-bind',
+      // The interim delegate (platform/index.ts) starts forwarding to the host services exactly
+      // where the old transport binding did: pre-bind pushes are dropped, not buffered. Plan 18
+      // deletes the delegate and this step.
+      run: (_ctx, _io, state) => {
+        platformApi.bindHostServices(requireServices(state).host)
       }
     },
     {
@@ -1651,7 +1682,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       name: 'online-monitor',
       run: () => {
         // Placement is load-bearing (fix/steam-native-install-stability, 33-05 live-gate gap): must
-        // run AFTER startRpcServer()/bindTransport() so initOnlineMonitor()'s immediate
+        // run AFTER startRpcServer()/shim-bind so initOnlineMonitor()'s immediate
         // `sendFrontendMessage('connectivity-changed', ...)` call (inside `setStatus()`) has a live
         // transport to push through, and BEFORE the READY_SENTINEL write below so the frontend's
         // `get-connectivity-status` handler is guaranteed registered before the renderer can possibly
@@ -1833,7 +1864,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // Placement is constrained from both sides:
         //   - Must be AFTER the i18next block above so `i18nReady` holds the real init promise
         //     rather than the `Promise.resolve()` initial value.
-        //   - Must be AFTER `startRpcServer(input, output)` and `platformApi.bindTransport(...)`
+        //   - Must be AFTER `startRpcServer(input, output)` and `platformApi.bindHostServices(...)`
         //     above, because the dialog reaches the shell via `requestRustInvoke`, which needs a
         //     live write stream -- do not rely on the `i18nReady` await pushing this into a later
         //     macrotask; the placement itself must carry it.

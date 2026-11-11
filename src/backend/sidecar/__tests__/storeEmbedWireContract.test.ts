@@ -31,6 +31,7 @@ import { PassThrough } from 'node:stream'
 
 import { createRustStoreEmbedSeam } from '../storeEmbedFlowRegistration'
 import { startRpcServer } from '../sidecarRpc'
+import { createIpcRegistry } from '../ipcRegistry'
 import {
   RUST_STORE_EMBED_OPEN,
   RUST_STORE_EMBED_SET_BOUNDS,
@@ -75,7 +76,7 @@ function startTransport(): { input: PassThrough; frames: Frame[] } {
   const input = new PassThrough()
   const output = new PassThrough()
   const frames = collectFrames(output)
-  startRpcServer(input, output)
+  startRpcServer(input, output, createIpcRegistry())
   return { input, frames }
 }
 

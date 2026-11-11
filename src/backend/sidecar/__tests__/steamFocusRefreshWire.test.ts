@@ -159,7 +159,7 @@ jest.mock('../../launcher', () => ({
 import SteamLibraryManager from '../../storeManagers/steam/library'
 import { registerSteamFlows } from '../steamFlowRegistration'
 import { startRpcServer } from '../sidecarRpc'
-import { listenerRegistry } from '../../platform'
+import { interimIpc, listenerRegistry } from '../../platform'
 import {
   createTestManagerDeps,
   createTestManagers,
@@ -221,7 +221,7 @@ function startTransport(): { input: PassThrough; frames: Frame[] } {
   const input = new PassThrough()
   const output = new PassThrough()
   const frames = collectFrames(output)
-  startRpcServer(input, output)
+  startRpcServer(input, output, interimIpc)
   return { input, frames }
 }
 

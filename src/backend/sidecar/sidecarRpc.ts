@@ -3,10 +3,10 @@
  *
  * Reads newline-delimited `SidecarRpcRequest` frames from an input stream
  * (`process.stdin` in production), dispatches `invoke` requests to the
- * matching handler in platformApi's `handlerRegistry` and writes a
+ * matching handler in the injected IPC registry and writes a
  * `SidecarRpcResponse` (correlated by id) to an output stream
  * (`process.stdout` in production); dispatches `send` requests to
- * `listenerRegistry` fire-and-forget. Also exposes `pushFrontendMessage`
+ * the registry's listeners fire-and-forget. Also exposes `pushFrontendMessage`
  * (backend->frontend push, wired onto platformApi's fake
  * `BrowserWindow.webContents.send` by bootstrap.ts) and
  * `requestOpenExternal` (the `shell.openExternal` parity path — the sidecar
@@ -50,7 +50,7 @@ import {
   type SidecarRpcResponse,
   type SidecarNotification
 } from 'common/types/sidecarTransport'
-import { handlerRegistry, listenerRegistry } from '../platform'
+import type { IpcRegistry } from './ipcRegistry'
 import { validateInbound, logRejection } from './ipcValidation'
 import type { RustInvokeArgsOf } from 'common/types/ipc/rustInvoke'
 
@@ -194,8 +194,13 @@ function isValidRequest(value: unknown): value is SidecarRpcRequest {
   )
 }
 
-async function dispatchInvoke(request: SidecarRpcRequest): Promise<void> {
-  const handler = handlerRegistry.get(request.channel)
+type DispatchRegistry = Pick<IpcRegistry, 'getHandler' | 'getListeners'>
+
+async function dispatchInvoke(
+  request: SidecarRpcRequest,
+  ipc: DispatchRegistry
+): Promise<void> {
+  const handler = ipc.getHandler(request.channel)
   if (!handler) {
     // Tagged as an expected seam gap rather than a malfunction: in the walking skeleton
     // only a curated handful of channels are registered, so every one of the ~217 unported
@@ -241,14 +246,14 @@ async function dispatchInvoke(request: SidecarRpcRequest): Promise<void> {
   }
 }
 
-function dispatchSend(request: SidecarRpcRequest): void {
+function dispatchSend(request: SidecarRpcRequest, ipc: DispatchRegistry): void {
   // Phase 67 D-09: one check before the listener loop; failure is logged and dropped.
   const verdict = validateInbound(request.channel, 'send', request.args)
   if (!verdict.ok) {
     logRejection('send', verdict)
     return
   }
-  const listeners = listenerRegistry.get(request.channel) ?? []
+  const listeners = ipc.getListeners(request.channel)
   for (const listener of listeners) {
     try {
       listener(undefined, ...request.args)
@@ -261,7 +266,7 @@ function dispatchSend(request: SidecarRpcRequest): void {
   }
 }
 
-function handleFrame(line: string): void {
+function handleFrame(line: string, ipc: DispatchRegistry): void {
   let value: unknown
   try {
     value = JSON.parse(line)
@@ -310,9 +315,9 @@ function handleFrame(line: string): void {
     return
   }
   if (value.kind === 'invoke') {
-    void dispatchInvoke(value)
+    void dispatchInvoke(value, ipc)
   } else if (value.kind === 'send') {
-    dispatchSend(value)
+    dispatchSend(value, ipc)
   } else {
     // Unrecognized inbound frame kind -- diagnostic only, never include args/result
     // (T-28-04, token material travels in those fields). 'openExternal' is only ever
@@ -355,7 +360,8 @@ function answerOversizedFrame(head: string): void {
  */
 export function startRpcServer(
   input: Readable = process.stdin,
-  output: Writable = process.stdout
+  output: Writable = process.stdout,
+  ipc: DispatchRegistry
 ): void {
   bindOutputStream(output)
   let buffer = ''
@@ -388,7 +394,7 @@ export function startRpcServer(
       const line = buffer.slice(0, newlineIndex)
       buffer = buffer.slice(newlineIndex + 1)
       if (line.trim().length > 0) {
-        handleFrame(line)
+        handleFrame(line, ipc)
       }
       newlineIndex = buffer.indexOf('\n')
     }
@@ -397,7 +403,7 @@ export function startRpcServer(
 
 /**
  * Backend->frontend push path. Wired onto platformApi's fake
- * `BrowserWindow.webContents.send` (via `bindTransport`) so the existing,
+ * `BrowserWindow.webContents.send` (via `createHostServices`) so the existing,
  * unmodified `backend/ipc.ts`'s `sendFrontendMessage` -> `getMainWindow()`
  * chain produces a well-formed `SidecarNotification` frame headlessly.
  */
@@ -412,7 +418,7 @@ export function pushFrontendMessage(channel: string, ...args: unknown[]): void {
 
 /**
  * `shell.openExternal` parity path. Wired onto platformApi's `shell.openExternal`
- * (via `bindTransport`).
+ * (via `createHostServices`).
  */
 export function requestOpenExternal(url: string): void {
   const request: SidecarRpcRequest = {
