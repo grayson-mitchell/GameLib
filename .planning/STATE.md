@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 66.4
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-11
+Last activity: 2026-11-12 - Completed quick tasks 261112-7wp, 261112-7wv, 261112-7ww
 
 Progress: [██████████] 100%
 
@@ -592,6 +592,9 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | fast | Classified `outboundHttpRegistry.test.ts` (from quick-261110-9w2) as structurally contained in the testContainment T-34.2-83 tripwire. | 2026-11-11 | 243246645 | testContainment 55/55 | — |
 | fast | Added `secret-stores` and `orphaned-token-cleanup` to the bootSourceShape boot-order anchors (T-66-27 follow-up). | 2026-11-11 | 36ff8f493 | bootSourceShape 29/29; swap probe caught | — |
 | fast | Undertale x86 withhold log now names runner-missing SteamAPI_* exports as such instead of "unservable interface versions". | 2026-11-11 | 5ebc29a00 | shimGenerate+shimCoverage 233/233 | — |
+| 261112-7wp | Restored the GOG getInstallInfo offline guard (66.3-11 had deleted it as dead because it tested the `isOnline` reference); now calls `onlineMonitor.isOnline()` after the cache return, so cached info still serves offline. | 2026-11-12 | d2bdd0868 | gog library 18/18 | [261112-7wp-restore-working-gog-offline-guard-in-get](./quick/261112-7wp-restore-working-gog-offline-guard-in-get/) |
+| 261112-7wv | `SteamUser.logout()` now calls `authTrigger.resetSteamAuthTrigger()` before its first await, re-locking the keyring gate and dropping any armed refresh grant (66.3 latent bug). | 2026-11-12 | d884e5c9c | steam suites + steamAuthSessionPolicy green | [261112-7wv-steam-logout-resets-the-auth-trigger](./quick/261112-7wv-steam-logout-resets-the-auth-trigger/) |
+| 261112-7ww | Linux GPU info enumerated via `lspci -mm -v -n -k` (display classes only) instead of the Electron `getGPUInfo` stand-in that always threw; `getGpuInfo` returns [] on any probe failure so `getSystemInfo` no longer rejects on Linux. | 2026-11-12 | 37d2eb547 | systeminfo 21/21; Deck LCD/OLED fixtures | [261112-7ww-linux-gpu-info-via-lspci-instead-of-elec](./quick/261112-7ww-linux-gpu-info-via-lspci-instead-of-elec/) |
 
 ## Deferred Items
 
