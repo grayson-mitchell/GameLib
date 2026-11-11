@@ -5,7 +5,7 @@ import { resolve, relative, isAbsolute } from 'path'
 import i18next from 'i18next'
 import type { Stores } from 'backend/services/types'
 import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
-import { getBridgeBottleSettings } from '../bridgeBottle'
+import { getBridgeBottleSettings, type BridgeBottleDeps } from '../bridgeBottle'
 import { bridgeAllowlist } from '../bridge/allowlist'
 
 /**
@@ -94,9 +94,12 @@ export function getBottleSteamappsRoot(): string {
  * listReadyBridgeBottleNames() and resolve each name's steamapps dir
  * directly via getBottleSteamappsDir().
  */
-export function getBridgeBottleSteamappsRoot(appId: string): string {
+export function getBridgeBottleSteamappsRoot(
+  deps: BridgeBottleDeps,
+  appId: string
+): string {
   return getBottleSteamappsDir(
-    getBridgeBottleSettings(appId).wineCrossoverBottle
+    getBridgeBottleSettings(deps, appId).wineCrossoverBottle
   )
 }
 

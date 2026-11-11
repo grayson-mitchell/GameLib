@@ -101,7 +101,10 @@ export async function launchBridgeGameBody(
   // existence gate, the shim refresh, the readiness gate, the config
   // handoff, AND the runWineCommand() gameSettings below, so the game
   // launches from the SAME bottle its exe was resolved against.
-  let bridgeBottleSettings = getBridgeBottleSettings(steamGame.appId)
+  let bridgeBottleSettings = getBridgeBottleSettings(
+    steamGame.deps,
+    steamGame.appId
+  )
   if (
     !isBridgeBottleReady(bridgeBottleSettings.wineCrossoverBottle) ||
     !existsSync(exePath)
@@ -214,7 +217,10 @@ export async function launchBridgeGameBody(
     // drmLaunchSetup cleared the clone runner, so the TCP launch must not
     // keep the clone wineVersion (D-11).
     if (hadDrmRunner) {
-      bridgeBottleSettings = getBridgeBottleSettings(steamGame.appId)
+      bridgeBottleSettings = getBridgeBottleSettings(
+        steamGame.deps,
+        steamGame.appId
+      )
     }
     // Phase 60: on by default (D-01); with the overlay off a TCP-mode game
     // runs on stock CrossOver exactly as before (D-04). Runs on every TCP

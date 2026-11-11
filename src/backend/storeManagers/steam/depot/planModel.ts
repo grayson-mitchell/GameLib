@@ -3,6 +3,7 @@
 // download pipeline in 73-20; the Rust crate owns both now.
 
 import type SteamUserLib from 'steam-user'
+import type { GlobalConfigSlice } from 'backend/config'
 import { type AuthSessionReason } from '../userTypes'
 
 /** Numeric-only guard for appId before any network/filesystem use (T-21-05). */
@@ -64,6 +65,8 @@ export interface DepotDownloadFailure {
 }
 
 export interface DownloadSteamDepotsOpts {
+  /** Where Steam is installed (defaultSteamPath), read for the user's localconfig.vdf beta choice. */
+  config: Pick<GlobalConfigSlice, 'getSettings'>
   targetSteamappsDir: string
   installdir: string
   /** Required — never defaulted to the host OS here (select.ts's own discipline). */

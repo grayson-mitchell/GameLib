@@ -7,7 +7,7 @@
 import { dirname, isAbsolute, relative, resolve } from 'path'
 import { existsSync, rmSync } from 'graceful-fs'
 import type { WineInstallation } from 'common/types'
-import { GlobalConfig } from 'backend/config'
+import type { GlobalConfigSlice } from 'backend/config'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { EngineServicesSource } from 'backend/services/engineServices'
 import {
@@ -52,7 +52,13 @@ import { resolveCrossoverBinDirAsync } from 'backend/engine/crossoverLocation'
  * the vetted per-game bottle name, or an error string; has no side effect
  * other than logging. `caller` prefixes the log lines.
  */
+/** SpawnDeps plus the config slice the shared-bottle guard reads (66.3-08). */
+export type BottleLifecycleDeps = SpawnDeps & {
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+}
+
 function guardPerGameBridgeBottleName(
+  deps: Pick<BottleLifecycleDeps, 'config'>,
   appId: string,
   caller: string
 ): { ok: true; name: string } | { ok: false; error: string } {
@@ -79,7 +85,7 @@ function guardPerGameBridgeBottleName(
   // (3) Refuse every non-per-game bottle this function could ever be asked
   // to touch, mirroring provisionBottle's CR-01 guard (D-01).
   const storedPhase17Name = bottleConfigStore().get_nodefault('bottleName')
-  const sharedBottle = GlobalConfig.get().getSettings().wineCrossoverBottle
+  const sharedBottle = deps.config.getSettings().wineCrossoverBottle
   const forbidden = new Set<string>([
     DEFAULT_BRIDGE_BOTTLE_NAME,
     DEFAULT_STEAM_BOTTLE_NAME
@@ -153,14 +159,18 @@ function guardPerGameBridgeBottleName(
  * STEAM_SETUP_EXE_URL) — a per-game bridge bottle never has one to clean up.
  */
 export async function removePerGameBridgeBottle(
-  deps: SpawnDeps,
+  deps: BottleLifecycleDeps,
   appId: string
 ): Promise<
   | { status: 'removed' }
   | { status: 'absent' }
   | { status: 'error'; error: string }
 > {
-  const guard = guardPerGameBridgeBottleName(appId, 'removePerGameBridgeBottle')
+  const guard = guardPerGameBridgeBottleName(
+    deps,
+    appId,
+    'removePerGameBridgeBottle'
+  )
   if (!guard.ok) {
     return { status: 'error', error: guard.error }
   }
@@ -294,7 +304,7 @@ async function killForRegisteredEngine(
  * never joins a stock wineserver or the reverse. Same guards; never throws.
  */
 export async function endPerGameBridgeBottleSessionWith(
-  deps: SpawnDeps,
+  deps: BottleLifecycleDeps,
   appId: string,
   bottleName: string | undefined,
   runnerBinDir: string | undefined,
@@ -303,6 +313,7 @@ export async function endPerGameBridgeBottleSessionWith(
   try {
     if (!bottleName || bottleName !== bridgeBottleNameFor(appId)) return false
     const guard = guardPerGameBridgeBottleName(
+      deps,
       appId,
       'endPerGameBridgeBottleSessionWith'
     )
@@ -329,12 +340,13 @@ export async function endPerGameBridgeBottleSessionWith(
  * guard refuses. Never throws.
  */
 export async function killBridgeBottleWineServer(
-  deps: SpawnDeps,
+  deps: BottleLifecycleDeps,
   appId: string,
   timeoutMs: number
 ): Promise<boolean> {
   try {
     const guard = guardPerGameBridgeBottleName(
+      deps,
       appId,
       'killBridgeBottleWineServer'
     )
@@ -350,14 +362,18 @@ export async function killBridgeBottleWineServer(
 }
 
 export async function stopPerGameBridgeBottle(
-  deps: SpawnDeps,
+  deps: BottleLifecycleDeps,
   appId: string
 ): Promise<
   | { status: 'stopped' }
   | { status: 'absent' }
   | { status: 'refused'; error: string }
 > {
-  const guard = guardPerGameBridgeBottleName(appId, 'stopPerGameBridgeBottle')
+  const guard = guardPerGameBridgeBottleName(
+    deps,
+    appId,
+    'stopPerGameBridgeBottle'
+  )
   if (!guard.ok) {
     return { status: 'refused', error: guard.error }
   }
@@ -388,7 +404,7 @@ export async function stopPerGameBridgeBottle(
  * resolves true only when a `wineserver -k` ran to completion.
  */
 export async function endPerGameBridgeBottleSession(
-  deps: SpawnDeps,
+  deps: BottleLifecycleDeps,
   appId: string,
   bottleName: string | undefined,
   timeoutMs: number,
@@ -397,6 +413,7 @@ export async function endPerGameBridgeBottleSession(
   try {
     if (!bottleName || bottleName !== bridgeBottleNameFor(appId)) return false
     const guard = guardPerGameBridgeBottleName(
+      deps,
       appId,
       'endPerGameBridgeBottleSession'
     )

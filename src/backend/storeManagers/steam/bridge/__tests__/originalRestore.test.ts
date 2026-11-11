@@ -2,6 +2,7 @@
  * Quick 261026-lif: restoreBridgeSteamApiOriginals. Real fs under
  * mkdtempSync(tmpdir()), an injected `downloadSelected`, no network, no spawn.
  */
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { at } from '../../__tests__/fixtures/indexed'
 import {
   existsSync,
@@ -112,6 +113,7 @@ function fakeDownload(
 const run = (dl: jest.Mock, extra: Partial<{ signal: AbortSignal }> = {}) =>
   restoreBridgeSteamApiOriginals(
     {
+      config: createTestGlobalConfig(),
       appId: '123',
       bottleDir: bottle,
       installRoot: root,
@@ -216,12 +218,24 @@ describe('restoreBridgeSteamApiOriginals', () => {
   it('returns error with no outcomes for a non-numeric appId or an escaping root', async () => {
     const dl = fakeDownload({})
     const bad = await restoreBridgeSteamApiOriginals(
-      { appId: '1/..', bottleDir: bottle, installRoot: root, installdir: 'G' },
+      {
+        config: createTestGlobalConfig(),
+        appId: '1/..',
+        bottleDir: bottle,
+        installRoot: root,
+        installdir: 'G'
+      },
       { downloadSelected: dl as unknown as Dl }
     )
     expect(bad).toEqual({ status: 'error', outcomes: [] })
     const out = await restoreBridgeSteamApiOriginals(
-      { appId: '1', bottleDir: bottle, installRoot: tmpdir(), installdir: 'G' },
+      {
+        config: createTestGlobalConfig(),
+        appId: '1',
+        bottleDir: bottle,
+        installRoot: tmpdir(),
+        installdir: 'G'
+      },
       { downloadSelected: dl as unknown as Dl }
     )
     expect(out).toEqual({ status: 'error', outcomes: [] })

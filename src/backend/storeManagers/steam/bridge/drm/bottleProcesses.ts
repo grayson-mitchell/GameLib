@@ -138,7 +138,7 @@ async function listingOutput(
  * touched. Best effort; never throws.
  */
 export async function defaultEndStageSession(
-  deps: Pick<ManagerDeps, 'spawnAsync' | 'runner'>,
+  deps: Pick<ManagerDeps, 'spawnAsync' | 'runner' | 'config'>,
   args: {
     appId: string
     bottleName: string

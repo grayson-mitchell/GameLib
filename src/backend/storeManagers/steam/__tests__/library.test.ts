@@ -874,6 +874,7 @@ describe('SteamLibraryManager', () => {
 
       expect(resumeVerifyRust).toHaveBeenCalledTimes(1)
       expect(resumeVerifyRust).toHaveBeenCalledWith('730', {
+        config: expect.anything(),
         targetSteamappsDir: join(tmp, 'steamapps'),
         installdir: 'csgo',
         name: 'csgo',

@@ -6,6 +6,7 @@
  * directory or symlink) is the crate's `select_files_writes_only_selected`; what stays here is
  * the TS policy around the job.
  */
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { existsSync, mkdtempSync, readdirSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join, resolve } from 'path'
@@ -89,6 +90,7 @@ const call = (
   over: Partial<Parameters<typeof downloadSelectedDepotFiles>[1]> = {}
 ) =>
   downloadSelectedDepotFiles(APP_ID, {
+    config: createTestGlobalConfig(),
     targetSteamappsDir: staging,
     installdir: 'Game',
     os: 'windows',

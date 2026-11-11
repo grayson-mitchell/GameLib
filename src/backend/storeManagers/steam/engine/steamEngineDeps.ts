@@ -97,7 +97,11 @@ export function steamSwitchDeps(
     ...switchServicesFrom(services),
     getMonitorPhase: getBottleProcessMonitorPhase,
     ownBottleName: bridgeBottleNameFor,
-    crossoverSettings: getBridgeBottleSettings,
+    crossoverSettings: (appId) =>
+      getBridgeBottleSettings(
+        { config: { getSettings: () => services.globalGameSettings() } },
+        appId
+      ),
     resolveCrossoverBinDir: () => hintedBinDir(services.runner)
   }
 }

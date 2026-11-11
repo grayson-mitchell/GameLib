@@ -60,7 +60,7 @@ export async function readAcfState(
     source === 'bottle'
       ? [getBottleSteamappsRoot()]
       : source === 'bridge'
-        ? [getBridgeBottleSteamappsRoot(appId)]
+        ? [getBridgeBottleSteamappsRoot(deps, appId)]
         : (await getSteamLibraries(deps)).map((libPath) =>
             join(libPath, 'steamapps')
           )

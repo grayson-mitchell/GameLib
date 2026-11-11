@@ -84,7 +84,7 @@ async function collectAllowedRoots(
     /* ignore */
   }
   try {
-    roots.add(resolve(getBridgeBottleSteamappsRoot(appId)))
+    roots.add(resolve(getBridgeBottleSteamappsRoot(deps, appId)))
   } catch {
     /* ignore */
   }

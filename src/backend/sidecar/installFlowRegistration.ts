@@ -300,7 +300,8 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
   ipcMain.handle(
     'listSteamLibraryTargets',
     async (_event: unknown, ...args: unknown[]) => {
-      if (isSteamNativeInstallEnabled()) return listSteamLibraryTargets(deps)
+      if (isSteamNativeInstallEnabled(deps.config))
+        return listSteamLibraryTargets(deps)
       const appName = args[0]
       if (typeof appName !== 'string' || !/^\d+$/.test(appName)) return []
       try {
@@ -330,8 +331,8 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
     'getSteamInstallAppTargets',
     async (_event: unknown, ...args: unknown[]) => {
       if (
-        !isSteamExperimentalInstallAppEnabled() ||
-        isSteamNativeInstallEnabled()
+        !isSteamExperimentalInstallAppEnabled(deps.config) ||
+        isSteamNativeInstallEnabled(deps.config)
       ) {
         return closedInstallAppReply()
       }
@@ -367,7 +368,8 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
         return { gamelibDelete: false }
       }
       try {
-        if (!isSteamNativeDeleteEnabled()) return { gamelibDelete: false }
+        if (!isSteamNativeDeleteEnabled(deps.config))
+          return { gamelibDelete: false }
         if (findBridgeInstallBottle(appName) !== null) {
           return { gamelibDelete: false }
         }

@@ -647,6 +647,7 @@ describe('quick 261024-cjq: CrossOver precondition', () => {
     cxState.binDir = undefined
     mockedExistsSync.mockReturnValue(false)
     const result = await provisionBottle({
+      config: { getSettings: () => mockedGlobalConfigGet().getSettings() },
       stores: createTestStores(),
       spawnAsync: mockedSpawnAsync,
       commandRunner: { runWineCommand: mockedRunWineCommand }

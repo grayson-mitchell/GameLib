@@ -11,6 +11,7 @@
  * TS policy: the CM inputs, the lease, the forced 'windows' selection and the classification of
  * the matches Rust returns.
  */
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
 import {
   RUST_DEPOT_JOB_RUN,
@@ -63,6 +64,7 @@ jest.mock('i18next', () => ({
 
 const APP_ID = '12345'
 const BASE_OPTS = {
+  config: createTestGlobalConfig(),
   targetSteamappsDir: '/tmp/steamapps',
   installdir: 'SomeGame',
   os: 'macos'

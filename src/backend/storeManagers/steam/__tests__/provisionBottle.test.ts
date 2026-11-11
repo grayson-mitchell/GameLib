@@ -133,6 +133,8 @@ const mockedRunWineCommand = jest.fn()
 const mockedDownloadFile = downloadFile as jest.Mock
 // checkWineBeforeLaunch is mocked in this file, so the store slices are never read.
 const provisionDeps = {
+  // Reads through the recording config mock (66.3-08: provisionBottle takes the slice).
+  config: { getSettings: () => mockedGlobalConfigGet().getSettings() },
   stores: createTestStores(),
   spawnAsync: mockedSpawnAsync,
   commandRunner: { runWineCommand: mockedRunWineCommand }

@@ -3,11 +3,14 @@
  * split out of bottle.ts in Phase 65 (65-07). The raise-loop cancellation
  * state, its test seam and the timer `unref` live together here (D-10).
  */
-import { app } from 'backend/platform'
+import type { AppState } from 'backend/host/appState'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { CommandRunner } from 'backend/services/types'
 import type { RunsForMeDeps } from 'backend/runsForMe'
 import type { SpawnDeps } from './provisionBottle'
+
+/** SpawnDeps plus the window-yield the raise fallback uses (66.3-08). */
+export type BottledRaiseDeps = SpawnDeps & { appState: Pick<AppState, 'hide'> }
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
 import { library } from './state'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
@@ -94,7 +97,7 @@ export function __stopBottledRaiseLoops(): void {
  * failure never affects the install/launch flow. No-op on Linux/Windows.
  */
 async function raiseFrontmostBottledProcess(
-  deps: SpawnDeps,
+  deps: BottledRaiseDeps,
   context: string,
   raiseScript: string
 ): Promise<void> {
@@ -166,19 +169,7 @@ async function raiseFrontmostBottledProcess(
         LogPrefix.Steam
       )
       try {
-        // quick/260815-vvz (defect 1): this line used to destructure `app` off a native
-        // dynamic ESM import of the 'electron' module, awaited inline right here. That
-        // bypassed the sidecar's `Module._load` electron interception
-        // (`installElectronHook.ts`, since retired), because esbuild's `--external:electron` (package.json's
-        // `build:sidecar`) leaves such a dynamic import as a real ESM one in the CJS bundle
-        // rather than downleveling it to a `require()`. Node's ESM loader never consults
-        // `Module._load`, so the real `electron` npm package (whose CJS export is a bare path
-        // STRING) loaded instead, and `app` resolved to `undefined` -- this fallback threw
-        // `TypeError: Cannot read properties of undefined (reading 'hide')` instead of
-        // yielding. The static `app` import at the top of this file compiles to a plain
-        // `require()`, which the hook DOES intercept, and gets the real stub.
-        // `externalDynamicImportGate.test.ts` now guards this class of defect permanently.
-        app.hide()
+        deps.appState.hide()
       } catch (error) {
         logWarning(
           [
@@ -198,7 +189,7 @@ async function raiseFrontmostBottledProcess(
 }
 
 export async function raiseInstallerWindow(
-  deps: SpawnDeps,
+  deps: BottledRaiseDeps,
   context: string
 ): Promise<void> {
   const nameClause = INSTALLER_PROCESS_NAMES.map((n) => `name is "${n}"`).join(
@@ -229,7 +220,7 @@ export async function raiseInstallerWindow(
  * Steam's own client/helper processes — i.e. the launched game itself.
  */
 async function raiseBottledGameWindow(
-  deps: SpawnDeps,
+  deps: BottledRaiseDeps,
   context: string
 ): Promise<void> {
   const excludeList = STEAM_CLIENT_PROCESS_NAMES.map((n) => `"${n}"`).join(', ')
@@ -252,7 +243,7 @@ async function raiseBottledGameWindow(
 // ── 17-04: bottled-Steam verb dispatch ──────────────────────────────────────
 
 /** The slices the bottled-Steam dispatch reaches (66.1 R3, R5). */
-export type BottledSteamDeps = SpawnDeps & {
+export type BottledSteamDeps = BottledRaiseDeps & {
   stores: RunsForMeDeps['stores']
   commandRunner: Pick<CommandRunner, 'runWineCommand'>
 }

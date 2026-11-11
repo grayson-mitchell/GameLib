@@ -1,3 +1,4 @@
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import {
   createTestManagerDeps,
   createTestStores
@@ -130,6 +131,7 @@ const ALL_BLOCKED_MSG =
   'buildDepotPlan: every selected depot for appId 12345 was blocked by Steam (eresult=40) and had to be skipped: 111'
 
 const OPTS = () => ({
+  config: createTestGlobalConfig(),
   targetSteamappsDir: steamapps,
   installdir: 'SomeGame',
   os: 'macos'

@@ -6,7 +6,6 @@
 import { dirname, isAbsolute, join } from 'path'
 import { existsSync, readdirSync } from 'graceful-fs'
 import type { GameSettings, WineInstallation } from 'common/types'
-import { GlobalConfig } from 'backend/config'
 import { logInfo, LogPrefix } from 'backend/logger'
 import { getEngineSelection } from 'backend/engine/engineRegistry'
 import { isNonCrossover } from 'backend/engine/engineTypes'
@@ -184,8 +183,15 @@ export function findBridgeInstallBottle(appId: string): string | null {
  * to globalSettings.wineVersion only when CrossOver is not present on disk —
  * identical to today's behavior for dev/CI/non-macOS.
  */
-function stockBridgeBottleSettings(appId: string): GameSettings {
-  const globalSettings = GlobalConfig.get().getSettings()
+/** The slice the bridge-bottle settings resolvers read (66.3-08, D-66.3-03). */
+/** Only the GameSettings view of the global settings is read, so the engine services' `globalGameSettings` satisfies it. */
+export type BridgeBottleDeps = { config: { getSettings(): GameSettings } }
+
+function stockBridgeBottleSettings(
+  deps: BridgeBottleDeps,
+  appId: string
+): GameSettings {
+  const globalSettings = deps.config.getSettings()
   const resolved = resolveBridgeBottleName(appId)
   if (!resolved) {
     throw new Error(
@@ -318,12 +324,13 @@ export function drmRunnerWineInstallation(
  * file) is 56-12's. Throws for a bad appId or an invalid runner.
  */
 export function getDrmBridgeBottleSettings(
+  deps: BridgeBottleDeps,
   appId: string,
   runner: DrmBridgeRunner,
   form: DrmLaunchForm = DRM_LAUNCH_FORM,
   kind: BridgeRunnerKind = 'drm'
 ): GameSettings {
-  const stock = stockBridgeBottleSettings(appId)
+  const stock = stockBridgeBottleSettings(deps, appId)
   const wineVersion = drmRunnerWineInstallation(runner, form, kind)
   if (!wineVersion) {
     throw new Error(
@@ -417,6 +424,7 @@ export function drmRunnerBinDir(appId: string): string | undefined {
 }
 
 function fallbackBridgeBottleSettings(
+  deps: BridgeBottleDeps,
   appId: string,
   sel: NonCrossoverSelection
 ): GameSettings {
@@ -426,12 +434,7 @@ function fallbackBridgeBottleSettings(
       `getBridgeBottleSettings: invalid appId "${appId}" (must be numeric)`
     )
   }
-  // Interim (66.3-06): plan 08 converts this module's own GlobalConfig.get() reads.
-  return buildFallbackGameSettings(
-    resolved,
-    sel,
-    GlobalConfig.get().getSettings()
-  )
+  return buildFallbackGameSettings(resolved, sel, deps.config.getSettings())
 }
 
 /**
@@ -442,10 +445,14 @@ function fallbackBridgeBottleSettings(
  * override) is used; otherwise stock CrossOver.
  * See stockBridgeBottleSettings for the stock resolution.
  */
-export function getBridgeBottleSettings(appId: string): GameSettings {
+export function getBridgeBottleSettings(
+  deps: BridgeBottleDeps,
+  appId: string
+): GameSettings {
   const entry = drmBridgeRunners.get(appId)
   if (entry) {
     return getDrmBridgeBottleSettings(
+      deps,
       appId,
       entry.runner,
       entry.form,
@@ -454,9 +461,9 @@ export function getBridgeBottleSettings(appId: string): GameSettings {
   }
   const engine = getEngineSelection(appId)
   if (engine && isNonCrossover(engine)) {
-    return fallbackBridgeBottleSettings(appId, engine)
+    return fallbackBridgeBottleSettings(deps, appId, engine)
   }
-  return stockBridgeBottleSettings(appId)
+  return stockBridgeBottleSettings(deps, appId)
 }
 
 // quick/261016-u1w (D-C): matches a per-game bridge bottle name

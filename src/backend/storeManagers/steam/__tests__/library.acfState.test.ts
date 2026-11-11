@@ -591,7 +591,10 @@ describe('readAcfState(libDeps, appId, "bridge") — bridge-bottle-scoped ACF ro
     // quick/261016-u1w (D-B threading): the bridge root resolver now threads
     // the appId through to getBridgeBottleSettings, so a per-game bridge
     // bottle can be resolved instead of always the shared legacy name.
-    expect(getBridgeBottleSettings).toHaveBeenCalledWith('206040')
+    expect(getBridgeBottleSettings).toHaveBeenCalledWith(
+      expect.anything(),
+      '206040'
+    )
   })
 
   it('returns state:"absent" when the bridge bottle steamapps dir does not exist (no throw)', async () => {

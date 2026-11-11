@@ -19,8 +19,8 @@ import type {
   SteamBottleEligibilityVerdict,
   SteamBridgeRouteReason
 } from 'common/types/steam'
+import type { GlobalConfigSlice } from 'backend/config'
 import { logWarning, LogPrefix } from 'backend/logger'
-import { GlobalConfig } from 'backend/config'
 import SteamGame from './games'
 import { checkBottleEligibility } from './gameEligibility'
 import { getBridgeRouteVerdict } from './bridgeRouteVerdict'
@@ -226,6 +226,7 @@ export async function persistInstallFormWineVersion(
   deps: {
     stores: Pick<Stores, 'wineManager'>
     runner: Pick<ProcessRunner, 'run'>
+    config: Pick<GlobalConfigSlice, 'getAlternativeWine'>
   },
   input: unknown
 ): Promise<{
@@ -294,7 +295,7 @@ export async function persistInstallFormWineVersion(
   // closed — see this function's own JSDoc for why that degrades safely.
   let detected: WineInstallation[]
   try {
-    detected = await GlobalConfig.get().getAlternativeWine({
+    detected = await deps.config.getAlternativeWine({
       wineDownloaderInfoStore: deps.stores.wineManager.wineDownloaderInfoStore,
       runner: deps.runner
     })

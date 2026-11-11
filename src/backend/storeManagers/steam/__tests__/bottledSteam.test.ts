@@ -21,7 +21,6 @@ import {
 // below. Distinct local name so it never collides with the mocked
 // `graceful-fs` `readFileSync` import above (manifest.test.ts precedent).
 import { join as joinPath } from 'node:path'
-import { app } from 'backend/platform'
 import { GlobalConfig } from 'backend/config'
 import { logWarning } from 'backend/logger'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
@@ -51,10 +50,7 @@ jest.mock('backend/platform', () => ({
   app: {
     getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
     // Plain method (survives resetMocks) -- publicDir resolves it at module load.
-    getAppPath: () => '/tmp/mock-path',
-    // quick/260815-vvz Task 2: bottle.ts now statically `import { app } from 'electron'`,
-    // so the raise-loop miss fallback's `app.hide()` call is reachable from this mock.
-    hide: jest.fn()
+    getAppPath: () => '/tmp/mock-path'
   }
 }))
 
@@ -154,11 +150,12 @@ const mockedSpawnAsync = jest.fn()
 const mockedDownloadFile = downloadFile as jest.Mock
 const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
 const mockedRunWineCommand = jest.fn()
+const mockedAppHide = jest.fn()
 const bottledDeps = {
+  appState: { hide: () => mockedAppHide() },
   spawnAsync: mockedSpawnAsync,
   commandRunner: { runWineCommand: mockedRunWineCommand }
 } as unknown as BottledSteamDeps
-const mockedAppHide = app.hide as jest.Mock
 const mockedLogWarning = logWarning as jest.Mock
 const mockedStartBottleProcessMonitor = jest.mocked(startBottleProcessMonitor)
 const mockedStopBottleProcessMonitor = jest.mocked(stopBottleProcessMonitor)

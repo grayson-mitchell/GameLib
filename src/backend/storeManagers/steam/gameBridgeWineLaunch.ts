@@ -366,7 +366,8 @@ export async function fireBridgeWineLaunch(
         )
         launchSettings = {
           ...launchSettings,
-          wineVersion: getBridgeBottleSettings(steamGame.appId).wineVersion
+          wineVersion: getBridgeBottleSettings(steamGame.deps, steamGame.appId)
+            .wineVersion
         }
       }
       const merged = appendCxEnvTokens(

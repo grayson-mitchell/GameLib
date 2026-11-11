@@ -322,7 +322,7 @@ async function writeLedger(
 /** What the shared redist install reaches through slices (66.1 R3). */
 export type RedistDeps = Pick<
   ManagerDeps,
-  'commandRunner' | 'spawnAsync' | 'runner'
+  'commandRunner' | 'spawnAsync' | 'runner' | 'config'
 >
 type RunWineCommand = RedistDeps['commandRunner']['runWineCommand']
 

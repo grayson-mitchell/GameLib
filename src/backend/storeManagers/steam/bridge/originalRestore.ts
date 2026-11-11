@@ -15,6 +15,7 @@ import { rm } from 'node:fs/promises'
 import { dirname, join, relative, resolve } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { downloadSelectedDepotFiles, normalizeDepotPath } from '../depot'
+import type { DownloadSteamDepotsOpts } from '../depot/planModel'
 import { resolveContainedPath, sha1File } from '../depotPaths'
 import { findRuntimeLoadedSteamApiDlls, isContainedWithin } from './bridgeScan'
 import { isGameLibShimBytes, probeOriginalBackup } from './shimOriginals'
@@ -37,6 +38,7 @@ interface RestoreOutcome {
 }
 
 interface RestoreInput {
+  config: DownloadSteamDepotsOpts['config']
   appId: string
   bottleDir: string
   installRoot: string
@@ -121,6 +123,7 @@ export async function restoreBridgeSteamApiOriginals(
     }
     const stagingSteamapps = join(stagingRoot, 'steamapps')
     const dl = await downloadSelected(appId, {
+      config: input.config,
       targetSteamappsDir: stagingSteamapps,
       installdir,
       os: 'windows',

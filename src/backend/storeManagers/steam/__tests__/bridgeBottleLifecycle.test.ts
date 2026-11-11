@@ -161,12 +161,17 @@ bindBottleStores({
   stores: createTestStores({ steam: { steamBottleConfigStore } as never })
 })
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+// The config slice the lifecycle guards and the settings resolvers read (66.3-08), through the mock.
+const bridgeDeps = {
+  config: { getSettings: () => mockedGlobalConfigGet().getSettings() }
+}
 // Recording fakes handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
 // provisionBridgeBottle also takes the manager slices engineServicesFrom reads; only the fallback
 // cases reach them, and those spy engineServicesFrom (below), so the spawn fake is all that is real.
 const spawnDeps = {
-  spawnAsync: mockedSpawnAsync
+  spawnAsync: mockedSpawnAsync,
+  config: bridgeDeps.config
 } as unknown as { spawnAsync: typeof mockedSpawnAsync } & EngineServicesSource
 const mockedDownloadFile = downloadFile as jest.Mock
 const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
@@ -996,14 +1001,14 @@ describe('Phase 59 engine registry', () => {
   })
 
   test('unregistered: stock CrossOver settings', () => {
-    const s = getBridgeBottleSettings('620')
+    const s = getBridgeBottleSettings(bridgeDeps, '620')
     expect(s.wineVersion.type).not.toBe('wine-staging')
     expect(s.wineVersion.bin).not.toBe(pinned.wineBin)
   })
 
   test('pinned selection yields wine settings with USER=crossover', () => {
     expect(setEngineSelection('620', pinned)).toBe(true)
-    const s = getBridgeBottleSettings('620')
+    const s = getBridgeBottleSettings(bridgeDeps, '620')
     expect(s.wineVersion).toEqual({
       type: 'wine',
       bin: pinned.wineBin,
@@ -1037,7 +1042,9 @@ describe('Phase 59 engine registry', () => {
       reason: 'override'
     } as NonCrossoverSelection
     expect(setEngineSelection('620', wm)).toBe(true)
-    expect(getBridgeBottleSettings('620').wineVersion.bin).toBe(pinned.wineBin)
+    expect(getBridgeBottleSettings(bridgeDeps, '620').wineVersion.bin).toBe(
+      pinned.wineBin
+    )
   })
 
   test('crossover selection stays on the stock path', () => {
@@ -1047,7 +1054,7 @@ describe('Phase 59 engine registry', () => {
       crossoverBuild: '24',
       binDir: CX_BIN_DIR
     })
-    expect(getBridgeBottleSettings('620').wineVersion.bin).not.toBe(
+    expect(getBridgeBottleSettings(bridgeDeps, '620').wineVersion.bin).not.toBe(
       pinned.wineBin
     )
   })
@@ -1063,9 +1070,9 @@ describe('Phase 59 engine registry', () => {
     } as unknown as DrmBridgeRunner
     mockedExistsSync.mockReturnValue(true)
     if (setDrmBridgeRunner('620', drmRunner)) {
-      expect(getBridgeBottleSettings('620').wineVersion.bin).not.toBe(
-        pinned.wineBin
-      )
+      expect(
+        getBridgeBottleSettings(bridgeDeps, '620').wineVersion.bin
+      ).not.toBe(pinned.wineBin)
     }
   })
 
@@ -1076,7 +1083,7 @@ describe('Phase 59 engine registry', () => {
     mockedExistsSync.mockImplementation((p: string) =>
       String(p).startsWith('/pins/')
     )
-    expect(getBridgeBottleSettings('620').wineVersion.bin).not.toBe(
+    expect(getBridgeBottleSettings(bridgeDeps, '620').wineVersion.bin).not.toBe(
       pinned.wineBin
     )
   })
@@ -1084,7 +1091,7 @@ describe('Phase 59 engine registry', () => {
   test('clearEngineSelection restores stock settings', () => {
     setEngineSelection('620', pinned)
     clearEngineSelection('620')
-    expect(getBridgeBottleSettings('620').wineVersion.bin).not.toBe(
+    expect(getBridgeBottleSettings(bridgeDeps, '620').wineVersion.bin).not.toBe(
       pinned.wineBin
     )
   })

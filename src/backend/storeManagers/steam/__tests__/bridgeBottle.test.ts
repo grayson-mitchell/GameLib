@@ -151,9 +151,14 @@ bindBottleStores({
   stores: createTestStores({ steam: { steamBottleConfigStore } as never })
 })
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+// The settings resolvers take the config slice (66.3-08); it reads through the recording mock.
+const bridgeDeps = {
+  config: { getSettings: () => mockedGlobalConfigGet().getSettings() }
+}
 // Recording fake handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
 const spawnDeps = {
+  config: bridgeDeps.config,
   spawnAsync: mockedSpawnAsync,
   runner: createScriptedRunner([])
 }
@@ -486,7 +491,7 @@ describe('bottle.ts', () => {
           getSettings: () => ({ wineVersion: defaultWine }) as GameSettings
         })
 
-        const settings = getBridgeBottleSettings('206040')
+        const settings = getBridgeBottleSettings(bridgeDeps, '206040')
 
         expect(settings.wineCrossoverBottle).toBe('GameLibSteamBridge-206040')
         expect(settings.wineCrossoverBottle).not.toBe(DEFAULT_STEAM_BOTTLE_NAME)
@@ -498,7 +503,7 @@ describe('bottle.ts', () => {
         })
         mockedGetNodefault.mockReturnValue('some-other-bottle')
 
-        const settings = getBridgeBottleSettings('206040')
+        const settings = getBridgeBottleSettings(bridgeDeps, '206040')
 
         expect(settings.wineCrossoverBottle).toBe('GameLibSteamBridge-206040')
       })
@@ -522,7 +527,7 @@ describe('bottle.ts', () => {
           path.endsWith('/CrossOver/bin/wine')
         )
 
-        const settings = getBridgeBottleSettings('206040')
+        const settings = getBridgeBottleSettings(bridgeDeps, '206040')
 
         expect(settings.wineVersion.type).toBe('crossover')
         expect(settings.wineVersion.bin).toMatch(/\/CrossOver\/bin\/wine$/)
@@ -539,7 +544,7 @@ describe('bottle.ts', () => {
         })
         mockedExistsSync.mockReturnValue(false)
 
-        const settings = getBridgeBottleSettings('206040')
+        const settings = getBridgeBottleSettings(bridgeDeps, '206040')
 
         expect(settings.wineVersion).toEqual(gptkGlobalWine)
       })
@@ -552,7 +557,7 @@ describe('bottle.ts', () => {
           path.endsWith('/CrossOver/bin/wine')
         )
 
-        const result = getBridgeBottleSettings('206040')
+        const result = getBridgeBottleSettings(bridgeDeps, '206040')
 
         expect(result).not.toBeInstanceOf(Promise)
         expect(result.wineCrossoverBottle).toBe('GameLibSteamBridge-206040')
@@ -569,7 +574,7 @@ describe('bottle.ts', () => {
             path.includes('cxbottle.conf')
         )
 
-        const settings = getBridgeBottleSettings('206040')
+        const settings = getBridgeBottleSettings(bridgeDeps, '206040')
 
         expect(settings.wineCrossoverBottle).toBe('GameLibSteamBridge-206040')
       })
@@ -580,7 +585,7 @@ describe('bottle.ts', () => {
         })
         mockedExistsSync.mockReturnValue(false)
 
-        const settings = getBridgeBottleSettings('206040')
+        const settings = getBridgeBottleSettings(bridgeDeps, '206040')
 
         expect(settings.wineCrossoverBottle).toBe('GameLibSteamBridge-206040')
       })
@@ -590,7 +595,7 @@ describe('bottle.ts', () => {
           getSettings: () => ({ wineVersion: defaultWine }) as GameSettings
         })
 
-        expect(() => getBridgeBottleSettings('abc')).toThrow(/abc/)
+        expect(() => getBridgeBottleSettings(bridgeDeps, 'abc')).toThrow(/abc/)
       })
     })
 
@@ -687,8 +692,8 @@ describe('bottle.ts', () => {
       })
 
       test('CX variant keeps the bottle name and swaps only the runner', () => {
-        const stock = getBridgeBottleSettings('219990')
-        const drm = getDrmBridgeBottleSettings('219990', R, CX)
+        const stock = getBridgeBottleSettings(bridgeDeps, '219990')
+        const drm = getDrmBridgeBottleSettings(bridgeDeps, '219990', R, CX)
         expect(drm.wineCrossoverBottle).toBe('GameLibSteamBridge-219990')
         expect(drm.wineCrossoverBottle).toBe(stock.wineCrossoverBottle)
         expect(drm.wineVersion).toEqual(drmRunnerWineInstallation(R, CX))
@@ -709,7 +714,7 @@ describe('bottle.ts', () => {
               ]
             }) as unknown as GameSettings
         })
-        const drm = getDrmBridgeBottleSettings('219990', R, RAW)
+        const drm = getDrmBridgeBottleSettings(bridgeDeps, '219990', R, RAW)
         expect(drm.wineVersion.type).toBe('wine')
         expect(drm.winePrefix).toBe(getBottleDir('GameLibSteamBridge-219990'))
         const env = drm.enviromentOptions
@@ -724,25 +729,37 @@ describe('bottle.ts', () => {
       })
 
       test('getDrmBridgeBottleSettings throws on bad appId or runner', () => {
-        expect(() => getDrmBridgeBottleSettings('abc', R, CX)).toThrow('abc')
         expect(() =>
-          getDrmBridgeBottleSettings('219990', { ...R, cxRoot: '/x' }, CX)
+          getDrmBridgeBottleSettings(bridgeDeps, 'abc', R, CX)
+        ).toThrow('abc')
+        expect(() =>
+          getDrmBridgeBottleSettings(
+            bridgeDeps,
+            '219990',
+            { ...R, cxRoot: '/x' },
+            CX
+          )
         ).toThrow('invalid DRM runner')
       })
 
       test('registry routes only the registered appId, and clears', () => {
-        const stock206 = getBridgeBottleSettings('206040').wineVersion
+        const stock206 = getBridgeBottleSettings(
+          bridgeDeps,
+          '206040'
+        ).wineVersion
         expect(setDrmBridgeRunner('219990', R)).toBe(true)
-        expect(getBridgeBottleSettings('219990').wineVersion).toEqual(
-          drmRunnerWineInstallation(R, DRM_LAUNCH_FORM)
-        )
+        expect(
+          getBridgeBottleSettings(bridgeDeps, '219990').wineVersion
+        ).toEqual(drmRunnerWineInstallation(R, DRM_LAUNCH_FORM))
         expect(getDrmBridgeRunner('219990')?.runner.runnerDir).toBe(R.runnerDir)
-        expect(getBridgeBottleSettings('206040').wineVersion).toEqual(stock206)
+        expect(
+          getBridgeBottleSettings(bridgeDeps, '206040').wineVersion
+        ).toEqual(stock206)
         clearDrmBridgeRunner('219990')
         expect(getDrmBridgeRunner('219990')).toBeUndefined()
-        expect(getBridgeBottleSettings('219990').wineVersion).toEqual(
-          defaultWine
-        )
+        expect(
+          getBridgeBottleSettings(bridgeDeps, '219990').wineVersion
+        ).toEqual(defaultWine)
       })
 
       test('registry refuses bad appId or runner', () => {
@@ -807,7 +824,9 @@ describe('bottle.ts', () => {
 
         test('registers and routes the overlay clone', () => {
           expect(setOverlayBridgeRunner('620', OV)).toBe(true)
-          expect(getBridgeBottleSettings('620').wineVersion).toEqual({
+          expect(
+            getBridgeBottleSettings(bridgeDeps, '620').wineVersion
+          ).toEqual({
             bin: OV_ROOT + '/bin/wine',
             wineserver: OV_ROOT + '/bin/wineserver',
             type: 'crossover',

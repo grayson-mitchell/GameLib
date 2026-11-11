@@ -7,12 +7,11 @@
  *
  * This is the ONLY place that should read `steamExperimentalInstallApp`.
  */
-import { GlobalConfig } from 'backend/config'
+import type { GlobalConfigSlice } from 'backend/config'
 import { isMac } from 'backend/constants/environment'
 
-export function isSteamExperimentalInstallAppEnabled(): boolean {
-  return (
-    isMac &&
-    GlobalConfig.get().getSettings().steamExperimentalInstallApp === true
-  )
+export function isSteamExperimentalInstallAppEnabled(
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+): boolean {
+  return isMac && config.getSettings().steamExperimentalInstallApp === true
 }

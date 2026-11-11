@@ -206,6 +206,7 @@ export async function downloadSelectedDepotFilesRust(
 }
 
 export interface ResumeVerifyInput {
+  config: DownloadSteamDepotsOpts['config']
   targetSteamappsDir: string
   /** Already sanitized by the caller. */
   installdir: string
@@ -234,6 +235,7 @@ export async function resumeVerifyRust(
   const lease = await acquireOrThrow(appId, 'user-install')
   try {
     const opts: DownloadSteamDepotsOpts = {
+      config: input.config,
       targetSteamappsDir: input.targetSteamappsDir,
       installdir: input.installdir,
       os: input.os

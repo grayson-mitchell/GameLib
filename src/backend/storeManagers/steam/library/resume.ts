@@ -106,6 +106,7 @@ async function locateDownloadingTarget(
  * dispatchToBottledSteam, so no silent Steam-in-CrossOver auto-open is introduced here.
  */
 async function buildResumeFinalizeOpts(
+  config: ManagerDeps['config'],
   appId: string,
   target: { targetSteamappsDir: string; installdir: string; name: string }
 ): Promise<FinalizeToSteamOpts | null> {
@@ -158,6 +159,7 @@ async function buildResumeFinalizeOpts(
 
   try {
     const v = await resumeVerifyRust(appId, {
+      config,
       targetSteamappsDir: target.targetSteamappsDir,
       installdir,
       name: target.name,
@@ -225,7 +227,11 @@ export async function resumeInterruptedSteamInstall(
     try {
       const target = await locateDownloadingTarget(deps, appId)
       if (target) {
-        const finalizeOpts = await buildResumeFinalizeOpts(appId, target)
+        const finalizeOpts = await buildResumeFinalizeOpts(
+          deps.config,
+          appId,
+          target
+        )
         // null: the Rust verify_only job already wrote the ACF.
         if (finalizeOpts) await finalizeToSteam(appId, finalizeOpts)
       }

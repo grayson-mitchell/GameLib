@@ -5,12 +5,12 @@
  */
 import type { GlobalConfigSlice } from 'backend/config'
 import type { GameConfigs } from 'backend/game_config'
+import type { AppState } from 'backend/host/appState'
 import type { Dialogs } from 'backend/host/dialogs'
 import { join } from 'path'
 import { existsSync, mkdirSync, rmSync } from 'graceful-fs'
 import type { GameInfo, WineInstallation } from 'common/types'
 import type { CommandRunner, Stores } from 'backend/services/types'
-import { GlobalConfig } from 'backend/config'
 import {
   getRunnerLogWriter,
   logError,
@@ -168,6 +168,7 @@ export async function provisionBottle(
     >
     gameConfigs: Pick<GameConfigs, 'get'>
     dialogs: Pick<Dialogs, 'showMessageBox'>
+    appState: Pick<AppState, 'hide'>
   },
   opts?: {
     bottleName?: string
@@ -197,7 +198,7 @@ export async function provisionBottle(
   // BEFORE any store write / cxbottle delete-create / rmSync. Compared against
   // the TRIMMED shared value so a whitespace-padded config value cannot slip
   // past. An unset/empty shared value is inert — it never blocks provisioning.
-  const sharedBottle = GlobalConfig.get().getSettings().wineCrossoverBottle
+  const sharedBottle = deps.config.getSettings().wineCrossoverBottle
   if (
     typeof sharedBottle === 'string' &&
     sharedBottle.trim() &&
@@ -396,7 +397,7 @@ export async function provisionBottle(
   }
 
   // (6) Pitfall 6: checkWineBeforeLaunch writes recovery via
-  // GameConfig.get(appName).setSetting('wineVersion', ...) — use the
+  // the per-game config's setSetting('wineVersion', ...) — use the
   // reserved synthetic appName so it never collides with a real game.
   const bottleSettings = getSteamBottleSettings()
   try {

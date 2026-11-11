@@ -39,7 +39,7 @@ import { readBridgeVerdict, setBridgeLaunchTarget } from './bridgeVerdict'
 import type { SteamStoresDeps } from '../library/installRoot'
 import { sanitizeInstalldir } from '../installLocation'
 import { getBottleSteamappsDir } from '../bottle'
-import { getBridgeBottleSettings } from '../bridgeBottle'
+import { getBridgeBottleSettings, type BridgeBottleDeps } from '../bridgeBottle'
 import {
   withTimeout,
   STEAM_PICS_TIMEOUT_MS,
@@ -168,7 +168,7 @@ async function readLaunch(
  * no CM connect, so the launch does not wait for DNS to fail.
  */
 export async function resolveBridgeLaunchExe(
-  deps: SteamStoresDeps,
+  deps: SteamStoresDeps & BridgeBottleDeps,
   appId: string,
   opts?: { offline?: boolean }
 ): Promise<string | undefined> {
@@ -263,7 +263,7 @@ export async function resolveBridgeLaunchExe(
 
     // quick/261016-u1w (D-B threading): resolve THIS game's own bridge
     // bottle rather than the shared zero-arg default.
-    const bottleName = getBridgeBottleSettings(appId).wineCrossoverBottle
+    const bottleName = getBridgeBottleSettings(deps, appId).wineCrossoverBottle
     const steamappsDir = getBottleSteamappsDir(bottleName)
     // D-02/D-04 (37-10): sanitizeInstalldir may THROW UnsafeInstalldirError on
     // a denylist/containment violation -- applied to every source (anonymous,
@@ -329,14 +329,14 @@ export function containWorkingDir(
  * to the install root it can derive from the exe path.
  */
 export function resolveBridgeLaunchWorkingDir(
-  deps: SteamStoresDeps,
+  deps: SteamStoresDeps & BridgeBottleDeps,
   appId: string
 ): string | undefined {
   if (!NUMERIC_APP_ID.test(appId)) return undefined
   try {
     const stored = readBridgeVerdict(deps, appId)?.launchTarget
     if (!stored) return undefined
-    const bottleName = getBridgeBottleSettings(appId).wineCrossoverBottle
+    const bottleName = getBridgeBottleSettings(deps, appId).wineCrossoverBottle
     const steamappsDir = getBottleSteamappsDir(bottleName)
     const installdir = sanitizeInstalldir(
       stored.installdir,

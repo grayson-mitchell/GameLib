@@ -379,16 +379,14 @@ export interface DepotRefsResult {
  * Precondition: the caller holds an authenticated lease (every depotRust entry point does).
  */
 /** SteamID64 and Steam root for the localconfig.vdf leg; steamRoot only when there is an id. */
-function resolveSteamIdentity(): { steamId64?: string; steamRoot?: string } {
+function resolveSteamIdentity(config: DownloadSteamDepotsOpts['config']): {
+  steamId64?: string
+  steamRoot?: string
+} {
   const steamId64 = SteamUser.getPersistedSteamId64()
   if (!steamId64) return {}
   try {
-    // Lazy: backend/config pulls in the whole backend graph (same as macSteamOffline.ts).
-    /* eslint-disable @typescript-eslint/no-require-imports */
-    const { GlobalConfig } =
-      require('backend/config') as typeof import('backend/config')
-    /* eslint-enable @typescript-eslint/no-require-imports */
-    const { defaultSteamPath } = GlobalConfig.get().getSettings()
+    const { defaultSteamPath } = config.getSettings()
     return { steamId64, steamRoot: defaultSteamPath.replaceAll("'", '') }
   } catch {
     return { steamId64 }
@@ -420,7 +418,7 @@ export async function buildDepotRefs(
     resolveUserBetaKey({
       appId,
       steamappsDir: opts.targetSteamappsDir,
-      ...resolveSteamIdentity()
+      ...resolveSteamIdentity(opts.config)
     })
   const branch = chooseInstallBranch(appinfo, requested, appId)
   // SPIKE 003 (throwaway): the chosen branch's current buildid, for the StateFlags=4

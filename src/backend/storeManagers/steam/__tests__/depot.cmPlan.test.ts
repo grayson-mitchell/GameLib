@@ -13,6 +13,7 @@
  * Everything a manifest decides (filenames, sizes, totals, path collisions, per-file failures)
  * is Rust's and is tested in src-tauri/crates/gamelib-depot.
  */
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -63,6 +64,7 @@ jest.mock('i18next', () => ({
 
 const APP_ID = '12345'
 const BASE_OPTS = {
+  config: createTestGlobalConfig(),
   targetSteamappsDir: '/tmp/steamapps',
   installdir: 'SomeGame',
   os: 'windows'
@@ -516,6 +518,7 @@ describe('buildDepotRefs', () => {
 describe('downloadSteamDepots entry (CM half before the Rust job)', () => {
   let dir: string
   const opts = (over: Record<string, unknown> = {}) => ({
+    config: createTestGlobalConfig(),
     targetSteamappsDir: dir,
     installdir: 'SomeGame',
     os: 'windows',

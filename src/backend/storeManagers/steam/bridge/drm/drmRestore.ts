@@ -24,6 +24,7 @@ import { isGameLibShimBytes, probeOriginalBackup } from '../shimOriginals'
 import { restoreBridgeSteamApiOriginals } from '../originalRestore'
 import { BRIDGE_CONFIG_FILENAME } from '../bridgeConfig'
 import { isPhase52ForwarderBytes } from './drmRegistry'
+import type { DownloadSteamDepotsOpts } from '../../depot/planModel'
 import type { StageDrmBottleDeps } from './stageDrmTypes'
 
 const ORIGINAL_SUFFIX = '.gamelib-orig'
@@ -61,6 +62,7 @@ export function readHeadCapped(path: string, maxBytes: number): Buffer | null {
 }
 
 export type WalkCtx = {
+  config: DownloadSteamDepotsOpts['config']
   appId: string
   bottleDir: string
   exePath: string
@@ -110,6 +112,7 @@ export async function restoreDrmOriginals(
     let states = shims.map((d) => probeOriginalBackup(ctx.bottleDir, d.path))
     if (states.includes('no-backup')) {
       await (ctx.deps.restoreOriginals ?? restoreBridgeSteamApiOriginals)({
+        config: ctx.config,
         appId: ctx.appId,
         bottleDir: ctx.bottleDir,
         installRoot: ctx.installRoot,

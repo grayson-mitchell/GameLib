@@ -23,6 +23,7 @@
  */
 import { closeSync, fstatSync, openSync, readSync } from 'fs'
 import { join } from 'path'
+import type { GlobalConfigSlice } from 'backend/config'
 import { logWarning, LogPrefix } from 'backend/logger'
 import type { LongLivedHandle, ProcessRunner } from 'backend/process/types'
 import { buildWatchdogSpawn } from './childWatchdog'
@@ -67,15 +68,14 @@ type Monitor = {
 }
 
 /** Reads the appended tail of Steam's content_log.txt (the production `readTail`). */
-export function readContentLogTail(offset: number | undefined): {
+export function readContentLogTail(
+  config: Pick<GlobalConfigSlice, 'getSettings'>,
+  offset: number | undefined
+): {
   text: string
   offset: number
 } {
-  /* eslint-disable @typescript-eslint/no-require-imports */
-  const { GlobalConfig } =
-    require('backend/config') as typeof import('backend/config')
-  /* eslint-enable @typescript-eslint/no-require-imports */
-  const { defaultSteamPath } = GlobalConfig.get().getSettings()
+  const { defaultSteamPath } = config.getSettings()
   const path = join(
     defaultSteamPath.replaceAll("'", ''),
     'logs',

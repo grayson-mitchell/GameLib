@@ -16,10 +16,12 @@
  * read seam for `enableSteamNativeDelete` ("Delete Steam games directly in
  * GameLib").
  */
-import { GlobalConfig } from 'backend/config'
+import type { GlobalConfigSlice } from 'backend/config'
 
-export function isSteamNativeInstallEnabled(): boolean {
-  return GlobalConfig.get().getSettings().enableSteamNativeInstall ?? true
+type SettingsReader = Pick<GlobalConfigSlice, 'getSettings'>
+
+export function isSteamNativeInstallEnabled(config: SettingsReader): boolean {
+  return config.getSettings().enableSteamNativeInstall ?? true
 }
 
 /**
@@ -29,9 +31,9 @@ export function isSteamNativeInstallEnabled(): boolean {
  * setting; a persisted value wins either way. This is the ONLY reader of
  * `enableSteamNativeDelete` (it is intentionally not in config.ts defaults).
  */
-export function isSteamNativeDeleteEnabled(): boolean {
+export function isSteamNativeDeleteEnabled(config: SettingsReader): boolean {
   return (
-    GlobalConfig.get().getSettings().enableSteamNativeDelete ??
-    isSteamNativeInstallEnabled()
+    config.getSettings().enableSteamNativeDelete ??
+    isSteamNativeInstallEnabled(config)
   )
 }

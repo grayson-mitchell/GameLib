@@ -5,11 +5,11 @@
  * Mock strategy follows steam/__tests__/bottle.test.ts:
  *  - resetMocks: true in jest.config means mock implementations must be
  *    re-established in each test
- *  - backend/config mocked (GlobalConfig.get) — no real electron-store I/O
+ *  - the config slice is an in-memory createTestGlobalConfig — no real electron-store I/O
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { GlobalConfig } from 'backend/config'
+import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import * as nativeInstallSettingModule from '../nativeInstallSetting'
 import {
   isSteamNativeDeleteEnabled,
@@ -17,42 +17,34 @@ import {
 } from '../nativeInstallSetting'
 import type { AppSettings } from 'common/types'
 
-jest.mock('backend/config', () => ({
-  GlobalConfig: {
-    get: jest.fn()
-  }
-}))
-
-const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+let config = createTestGlobalConfig()
 
 function mockSettings(partial: Partial<AppSettings>) {
-  mockedGlobalConfigGet.mockReturnValue({
-    getSettings: () => partial as AppSettings
-  })
+  config = createTestGlobalConfig(partial)
 }
 
 describe('nativeInstallSetting.ts', () => {
   beforeEach(() => {
-    mockedGlobalConfigGet.mockReset()
+    config = createTestGlobalConfig()
   })
 
   describe('isSteamNativeInstallEnabled', () => {
     it('returns true when the GlobalConfig setting is unset (default ON, quick 261024-exo)', () => {
       mockSettings({})
 
-      expect(isSteamNativeInstallEnabled()).toBe(true)
+      expect(isSteamNativeInstallEnabled(config)).toBe(true)
     })
 
     it('returns true when the setting is explicitly true', () => {
       mockSettings({ enableSteamNativeInstall: true })
 
-      expect(isSteamNativeInstallEnabled()).toBe(true)
+      expect(isSteamNativeInstallEnabled(config)).toBe(true)
     })
 
     it('returns false when the setting is explicitly false', () => {
       mockSettings({ enableSteamNativeInstall: false })
 
-      expect(isSteamNativeInstallEnabled()).toBe(false)
+      expect(isSteamNativeInstallEnabled(config)).toBe(false)
     })
   })
 
@@ -73,7 +65,7 @@ describe('nativeInstallSetting.ts', () => {
       ]
     ])('%s -> %s', (_name, settings, expected) => {
       mockSettings(settings)
-      expect(isSteamNativeDeleteEnabled()).toBe(expected)
+      expect(isSteamNativeDeleteEnabled(config)).toBe(expected)
     })
   })
 

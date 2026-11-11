@@ -324,7 +324,12 @@ export async function resolveInstallEngineSettings(
   installEngine: NonCrossoverEngine | 'crossover' | null
 ): Promise<{ settings: GameSettings } | { skipped: string }> {
   if (installEngine === 'crossover') {
-    return { settings: bridgeBottle.getBridgeBottleSettings(steamGame.appId) }
+    return {
+      settings: bridgeBottle.getBridgeBottleSettings(
+        steamGame.deps,
+        steamGame.appId
+      )
+    }
   }
   if (installEngine !== null) {
     return {
@@ -380,7 +385,12 @@ export async function resolveInstallEngineSettings(
       )
     }
   }
-  return { settings: bridgeBottle.getBridgeBottleSettings(steamGame.appId) }
+  return {
+    settings: bridgeBottle.getBridgeBottleSettings(
+      steamGame.deps,
+      steamGame.appId
+    )
+  }
 }
 
 /** The lease-held part of installBridgeGame: download, shim, redists. */

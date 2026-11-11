@@ -56,7 +56,11 @@ export function defaultSteamWineToolsDeps(
     hasLiveRunner: (appId) =>
       getEngineSelection(appId) !== undefined ||
       getDrmBridgeRunner(appId) !== undefined,
-    bridgeSettings: getBridgeBottleSettings,
+    bridgeSettings: (appId) =>
+      getBridgeBottleSettings(
+        { config: { getSettings: () => services.globalGameSettings() } },
+        appId
+      ),
     markerKind: readBottleEngineMarkerKind,
     // A cycle with steamEngineDeps (which imports this module); only used at call time.
     engineId: (appId) => parseEngineOverride(readSteamEngineOverride(appId)),

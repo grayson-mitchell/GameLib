@@ -4,7 +4,7 @@
     "src/backend/storeManagers/steam/__tests__/bottleProcessMonitor.test.ts": 10,
     "src/backend/storeManagers/steam/__tests__/bottledSteam.test.ts": 11,
     "src/backend/storeManagers/steam/__tests__/bridgeBottleLifecycle.test.ts": 10,
-    "src/backend/storeManagers/steam/__tests__/installFormIpc.test.ts": 7,
+    "src/backend/storeManagers/steam/__tests__/installFormIpc.test.ts": 6,
     "src/backend/storeManagers/steam/__tests__/provisionBottle.test.ts": 10,
     "src/backend/storeManagers/steam/__tests__/steamEngineDeps.test.ts": 5
   },

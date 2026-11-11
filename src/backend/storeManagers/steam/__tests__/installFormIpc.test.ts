@@ -72,11 +72,6 @@ jest.mock('../bottle', () => ({
 // against the engines GameLib itself detected, so the detector is part of
 // this trust boundary and must be drivable per-test.
 const mockGetAlternativeWine = jest.fn()
-jest.mock('backend/config', () => ({
-  GlobalConfig: {
-    get: () => ({ getAlternativeWine: mockGetAlternativeWine })
-  }
-}))
 
 import SteamGame from '../games'
 import { getBridgeRouteVerdict } from '../bridgeRouteVerdict'
@@ -117,6 +112,9 @@ const steamTestDeps = createTestManagerDeps({
 
 const wineDeps = {
   runner: createScriptedRunner([]),
+  config: {
+    getAlternativeWine: (...a: unknown[]) => mockGetAlternativeWine(...a)
+  } as never,
   stores: createTestStores({
     wineManager: { wineDownloaderInfoStore: {} } as never
   })

@@ -369,7 +369,7 @@ export async function prepareTcpOverlay(
       if (setOverlayBridgeRunner(steamGame.appId, ok.runner)) {
         registered = true
         const launched = {
-          settings: getBridgeBottleSettings(steamGame.appId),
+          settings: getBridgeBottleSettings(steamGame.deps, steamGame.appId),
           overlayLaunch: {
             kind: 'cx-env' as const,
             tokens: ok.tokens,
@@ -389,7 +389,9 @@ export async function prepareTcpOverlay(
     // entry was already cleared by drmLaunchSetup, so a stale clone
     // wineVersion must not ride along.
     if (previousRunner?.kind === 'overlay' && !fallbackEngine) {
-      return { settings: getBridgeBottleSettings(steamGame.appId) }
+      return {
+        settings: getBridgeBottleSettings(steamGame.deps, steamGame.appId)
+      }
     }
     if (envVars) {
       carried = envVars.map((v) => `${v.key}=${v.value}`)

@@ -10,8 +10,8 @@ import type { GameSettings } from 'common/types'
 
 /**
  * The title's stored GamesConfig entry, read straight from its file:
- * `GameConfig.get(id).config` is filled asynchronously after construction
- * (59-UAT G11), and `GameConfig.get` creates a missing file. Values are
+ * the per-game config's `.config` is filled asynchronously after construction
+ * (59-UAT G11), and fetching that config creates a missing file. Values are
  * unvalidated. Returns undefined on a bad appId, missing or corrupt file, or a
  * missing/non-object entry.
  */

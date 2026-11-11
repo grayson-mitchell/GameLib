@@ -56,6 +56,7 @@ import type {
 } from './stageDrmTypes'
 import { DRM_LAUNCH_FORM, type DrmLaunchForm } from '../../bridgeBottle'
 import { buildDrmPaths } from './drmPaths'
+import type { ManagerDeps } from 'backend/services/types'
 
 /** Orchestrator stage names, used in logs; distinct from 56-04's DrmStep. */
 export const DRM_SETUP_STEPS = [
@@ -169,7 +170,9 @@ export type DrmSetupOverrides = {
 }
 
 /** The overrides plus the slices the stage and session end need (66.1 R3). */
-export type DrmLaunchSetupDeps = DrmSetupOverrides & StageDrmBottleSlices
+export type DrmLaunchSetupDeps = DrmSetupOverrides &
+  StageDrmBottleSlices &
+  Pick<ManagerDeps, 'config'>
 
 const NUMERIC_APP_ID = /^[0-9]{1,10}$/
 
@@ -310,7 +313,9 @@ async function runSetup(
   const getRunner = deps.getRunner ?? bridgeBottle.getDrmBridgeRunner
   const registerRunner = deps.registerRunner ?? bridgeBottle.setDrmBridgeRunner
   const buildBottleSettings =
-    deps.buildBottleSettings ?? bridgeBottle.getDrmBridgeBottleSettings
+    deps.buildBottleSettings ??
+    ((appId: string, runner: RunnerReady, form: DrmLaunchForm) =>
+      bridgeBottle.getDrmBridgeBottleSettings(deps, appId, runner, form))
   const endBottleSession =
     deps.endBottleSession ??
     ((appId: string, bottleName: string, timeoutMs: number) =>
@@ -470,7 +475,8 @@ async function runSetup(
       stage(stageInput, {
         commandRunner: deps.commandRunner,
         spawnAsync: deps.spawnAsync,
-        runner: deps.runner
+        runner: deps.runner,
+        config: deps.config
       })
     )
     if (staged.status === 'error') return fail('bottle-stage', staged)

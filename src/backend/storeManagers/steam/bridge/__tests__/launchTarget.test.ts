@@ -178,7 +178,10 @@ describe('resolveBridgeLaunchExe', () => {
     expect(getBottleSteamappsDir).toHaveBeenCalledWith('GameLibSteamBridge')
     // quick/261016-u1w (D-B threading): getBridgeBottleSettings is now
     // per-appId so a per-game bridge bottle can be resolved.
-    expect(getBridgeBottleSettings).toHaveBeenCalledWith(APP_ID)
+    expect(getBridgeBottleSettings).toHaveBeenCalledWith(
+      expect.anything(),
+      APP_ID
+    )
   })
 
   it('falls back to a single UNTAGGED launch entry (no oslist) for Windows-only titles -- D-UAT-24-03 (Avernum 5)', async () => {
