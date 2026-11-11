@@ -140,7 +140,6 @@ import {
 } from '../storeManagers/steam/nativeInstallSetting'
 import { findBridgeInstallBottle } from '../storeManagers/steam/bridgeBottle'
 import { resolveInstallRoot } from '../storeManagers/steam/library/installRoot'
-import { library as steamLibraryMap } from '../storeManagers/steam/state'
 import { getSteamBottleEligibilityVerdict } from '../storeManagers/steam/installFormIpc'
 import { isSteamExperimentalInstallAppEnabled } from '../storeManagers/steam/experimentalInstallAppSetting'
 import {
@@ -377,7 +376,8 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
         }
         const root = await resolveInstallRoot(
           deps,
-          steamLibraryMap.get(appName)?.install?.install_path
+          deps.steamSession.libraryState.library.get(appName)?.install
+            ?.install_path
         )
         return { gamelibDelete: root === 'native' }
       } catch {

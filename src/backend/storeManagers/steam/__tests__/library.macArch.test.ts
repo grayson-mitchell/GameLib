@@ -31,7 +31,6 @@ import {
 } from '../bottle'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { join } from 'path'
-import { library } from '../state'
 import type { ManagerDeps, Stores } from 'backend/services/types'
 
 const { steamLibraryStore, steamMetadataStore } =
@@ -80,6 +79,9 @@ const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule }),
   runner: archRunner
 })
+
+// The boot-owned Steam library state the code under test reads (D-66.3-13): one instance per file.
+const library = steamTestDeps.steamSession.libraryState.library
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under

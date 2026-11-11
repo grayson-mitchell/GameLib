@@ -35,7 +35,6 @@ import { getSteamLibraries } from 'backend/utils'
 import * as uninstallPollingModule from '../library/uninstallPolling'
 import * as acfState from '../library/acfState'
 import type { AcfSource } from '../library/installRoot'
-import { library } from '../state'
 import SteamGame from '../games'
 import { SteamUser } from '../user'
 import { removeAllSteamInstallCopies } from '../removeAllCopies'
@@ -52,6 +51,9 @@ const steamTestDeps = createTestManagerDeps({
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
 })
+
+// The boot-owned Steam library state the code under test reads (D-66.3-13): one instance per file.
+const library = steamTestDeps.steamSession.libraryState.library
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under

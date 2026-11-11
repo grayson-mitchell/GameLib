@@ -32,10 +32,9 @@
  *   - `backend/storeManagers` (`libraryManagerMap`) — a minimal stub whose
  *     `steam.getGame` is a jest.fn(), so a steam-routed request never reaches
  *     the real SteamLibraryManager/SteamGame construction.
- *   - `backend/storeManagers/steam/state` (`library`) — the in-memory Steam
- *     library Map is swapped for a plain `Map` this suite controls directly,
- *     so `steamLibrary.has(appName)` is a deterministic per-test fixture, not
- *     whatever the real Steam library happens to contain.
+ *   - the boot-owned Steam session cluster (`steamSession.libraryState.library`) — handed to the
+ *     boot as a prebuilt service, so `steamLibrary.has(appName)` is a deterministic per-test
+ *     fixture, not whatever the real Steam library happens to contain (66.3-13).
  *
  * Every other module in the registration/transport/store path
  * (`settingsFlowRegistration.ts`, `handlers.ts`, `sidecarRpc.ts`,
@@ -127,13 +126,6 @@ const managerStubs = {
   }
 }
 
-// ── backend/storeManagers/steam/state mock — a plain Map this suite controls
-// directly, so `steamLibrary.has(appName)` is a deterministic per-test
-// fixture ────────────────────────────────────────────────────────────────────
-jest.mock('../../storeManagers/steam/state', () => ({
-  library: new Map()
-}))
-
 // ── backend/utils/systeminfo mock (Phase 31 Plan 01) — `getSystemInfo`
 // (ported this plan) transitively shells out to several REAL subprocesses
 // (helperBinaries' version-check execs, macOS's `sysctl`/`vm_stat` via
@@ -169,7 +161,9 @@ import type { AppSettings, GameSettings } from 'common/types'
 // handles the cases configure or inspect are rebound from that registry in
 // freshRegistry() (run before each case, ahead of any mock configuration), and
 // boot() then boots without a second reset.
-let steamLibrary: typeof import('../../storeManagers/steam/state').library
+// One boot-owned Steam session cluster per case (D-05, D-66.3-13); the boot is handed it as a prebuilt service.
+let steamSession: import('backend/services/types').SteamSessionServices
+let steamLibrary: Map<string, import('common/types').GameInfo>
 let mockedGetSystemInfo: typeof import('backend/utils/systeminfo').getSystemInfo
 let mockedHasExecutable: typeof import('backend/utils/os/path').hasExecutable
 let mockedGlobalConfigGet: jest.Mock
@@ -181,7 +175,10 @@ function freshRegistry(): void {
   jest.resetModules()
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
-  ;({ library: steamLibrary } = require('../../storeManagers/steam/state'))
+  steamSession = (
+    require('backend/testUtils/testSteamSession') as typeof import('backend/testUtils/testSteamSession')
+  ).createTestSteamSession()
+  steamLibrary = steamSession.libraryState.library
   ;({
     getSystemInfo: mockedGetSystemInfo
   } = require('backend/utils/systeminfo'))
@@ -198,7 +195,7 @@ function freshRegistry(): void {
 const boot = () =>
   bootFresh({
     reuseRegistry: true,
-    services: { managers: managerStubs as never }
+    services: { managers: managerStubs as never, steamSession }
   })
 
 // Root-level hook: runs before every describe's own beforeEach, so the mock

@@ -66,10 +66,6 @@ import { isAbsolute, relative, resolve } from 'path'
 import type { IpcRegistry } from './ipcRegistry'
 import { applyGameSetting } from './gameSettingWrite'
 import { isWritableEngineOverride } from '../engine/engineConfig'
-// NOTE: the export is `library`, not `steamLibrary` — there is no export
-// named `steamLibrary` from this module. Aliased on import exactly as
-// `main.ts:43` does.
-import { library as steamLibrary } from '../storeManagers/steam/state'
 // `writeConfig` (backend/utils.ts:1607) is already force-imported into the
 // sidecar's module graph via `installFlowRegistration.ts:110`'s own
 // `sendGameStatusUpdate` import from the same module — this named import
@@ -120,6 +116,8 @@ export function registerSettingsFlows(deps: {
   appInfo: Pick<AppInfo, 'version'>
   /** The boot process runner (66.2); consumers converted by 66.2-05. */
   runner: BootServices['runner']
+  /** The boot-owned Steam library map (D-66.3-13). */
+  steamSession: Pick<BootServices['steamSession'], 'libraryState'>
 }): void {
   deps.ipc.handle('requestAppSettings', async () => deps.config.getSettings())
 
@@ -127,7 +125,7 @@ export function registerSettingsFlows(deps: {
     'requestGameSettings',
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[0] as string
-      if (steamLibrary.has(appName)) {
+      if (deps.steamSession.libraryState.library.has(appName)) {
         return deps.managers.library.steam.getGame(appName).getSettings()
       }
       return deps.gameConfigs.get(appName).getSettings()

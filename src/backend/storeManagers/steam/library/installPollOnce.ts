@@ -6,7 +6,6 @@ import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import i18next from 'i18next'
 import type { ManagerDeps } from 'backend/services/types'
-import { library } from '../state'
 import { formatEta, rollingRateMiBs } from '../depotRust/progress'
 import { liveProgress } from '../steamDownloadProgress'
 import { type AcfSource, installPlatformForSource } from './installRoot'
@@ -210,7 +209,7 @@ export async function pollInstallOnce(
 
     if (isWaitingForSteamRestart && poll && !poll.notifiedWaiting) {
       poll.notifiedWaiting = true
-      const game = library.get(appId)
+      const game = deps.steamSession.libraryState.library.get(appId)
       notify(deps, {
         title: game?.title ?? '',
         body: i18next.t(
@@ -302,7 +301,7 @@ export async function pollInstallOnce(
       }
     }
   } else if (result.state === 'installed') {
-    const existing = library.get(appId)
+    const existing = deps.steamSession.libraryState.library.get(appId)
 
     // D-UAT-13 (debug/steam-waiting-for-restart-windows): GameLib's own
     // finalize wrote this manifest at StateFlags=4 (Phase 23 fast path) while
@@ -339,13 +338,13 @@ export async function pollInstallOnce(
           platform: installPlatformForSource(source)
         }
       }
-      library.set(appId, updated)
+      deps.steamSession.libraryState.library.set(appId, updated)
       // GAP-17-BOTTLE-STORE-DIVERGENCE: persist immediately (see
       // refreshInstallState() for rationale) so a restart mid-poll can't read
       // a stale not-installed state from steamLibraryStore.
       deps.stores.steam.steamLibraryStore.set(
         'games',
-        Array.from(library.values())
+        Array.from(deps.steamSession.libraryState.library.values())
       )
       sendFrontendMessage('pushGameToLibrary', updated)
     }

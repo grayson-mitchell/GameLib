@@ -170,7 +170,6 @@ jest.mock('../anonymousClient', () => ({
 
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
 import { SteamUser, type SteamUserBoundDeps } from '../user'
-import type { SteamStoresDeps } from '../library/installRoot'
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
 import type { SteamSessionServices } from 'backend/services/types'
 import type { UserSignInDeps } from '../userSignIn'

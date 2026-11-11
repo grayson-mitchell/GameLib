@@ -146,6 +146,8 @@ import { createSignInProbeOutcomes } from '../signInProbe/outcomes'
 import { createSignInEpochs } from '../signInProbe/sessionEpoch'
 import { createSteamSignInState } from '../storeManagers/steam/userSignInState'
 import { createSteamAuthTrigger } from '../storeManagers/steam/authTrigger'
+import { createSteamLibraryState } from '../storeManagers/steam/state'
+import { createSteamGameSessionState } from '../storeManagers/steam/gameSessionState'
 // Deviation (Rule 3 — blocking, Phase 27 Plan 04): `backend/logger`'s
 // `logInfo`/`logWarning`/`logError` (called throughout the REAL Steam
 // read/action flow code Plan 04 wires up — e.g. library.ts's refresh()
@@ -1214,14 +1216,16 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'steam-session-state',
-      // Builds the one Steam sign-in session state and auth-unlock latch set of this boot (D-05,
+      // Builds the one Steam sign-in session state, auth-unlock latch set, library map and per-session game maps of this boot (D-05,
       // D-66.3-13). Pure in-memory construction: no I/O, timer or handle. Before 'stores' so the
       // SteamUser holder, bound in 'stores' and rebound in 'command-runner', and every ManagerDeps
       // carry the same instances.
       run: (_ctx, _io, state) => {
         state.services.steamSession = prebuilt.steamSession ?? {
           signIn: createSteamSignInState(),
-          authTrigger: createSteamAuthTrigger()
+          authTrigger: createSteamAuthTrigger(),
+          libraryState: createSteamLibraryState(),
+          gameSession: createSteamGameSessionState()
         }
       }
     },
@@ -1571,10 +1575,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         }
         let queue = prebuilt.downloadQueue
         if (!queue) {
-          const { host, config, onlineMonitor } = state.services
-          if (!host || !config || !onlineMonitor) {
+          const { host, config, onlineMonitor, steamSession } = state.services
+          if (!host || !config || !onlineMonitor || !steamSession) {
             throw new Error(
-              'download-queue step ran before host-services/config/online-monitor-owner'
+              'download-queue step ran before host-services/config/online-monitor-owner/steam-session-state'
             )
           }
           queue = createDownloadQueue({
@@ -1584,7 +1588,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             config,
             dialogs: host.dialogs,
             appState: host.appState,
-            notifications: host.notifications
+            notifications: host.notifications,
+            steamSession
           })
           queue.start()
         }

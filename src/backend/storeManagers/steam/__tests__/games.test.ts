@@ -78,13 +78,8 @@ import {
   macArchFromMinOS
 } from '../gameRequirements'
 import {
-  markBridgeFailedThisSession,
-  clearBridgeFailedThisSession,
-  __resetBridgeFailedSessionForTests,
-  __resetBridgeLaunchBottlesForTests,
   markForcedWindowsViaBottle,
-  clearForcedWindowsViaBottle,
-  __resetLoggedEmptyGameInfoMissesForTests
+  clearForcedWindowsViaBottle
 } from '../gameSessionState'
 import SteamLibraryManager from '../library'
 import * as uninstallPollingModule from '../library/uninstallPolling'
@@ -134,7 +129,6 @@ import type {
   DrmDllPathChannel,
   DrmDllOverridesChannel
 } from '../gameDrmLaunch'
-import { library, pendingFetches } from '../state'
 import { SteamUser } from '../user'
 import type { GameInfo, InstallParams } from 'common/types'
 import {
@@ -268,7 +262,13 @@ import type { Stores } from 'backend/services/types'
 
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 
-const libDeps = { config: createTestGlobalConfig() }
+// `libDeps` is declared before steamTestDeps; the scan reads the library map through the same instance.
+const libDeps = {
+  config: createTestGlobalConfig(),
+  get steamSession() {
+    return steamTestDeps.steamSession
+  }
+}
 
 const { steamMetadataStore, steamLibraryStore } =
   jest.requireMock<Stores['steam']>('../stores')
@@ -335,6 +335,21 @@ const steamTestDeps = createTestManagerDeps({
     library: { steam: { launchWatches } as never }
   }).library
 })
+
+// The boot-owned Steam library state the code under test reads (D-66.3-13): one instance per file.
+const library = steamTestDeps.steamSession.libraryState.library
+const pendingFetches = steamTestDeps.steamSession.libraryState.pendingFetches
+// The boot-owned per-session game maps (D-66.3-13): one instance for this file, cleared between cases.
+const gameSession = steamTestDeps.steamSession.gameSession
+const markBridgeFailedThisSession = (appId: string) =>
+  gameSession.markBridgeFailedThisSession(appId)
+const clearBridgeFailedThisSession = (appId: string) =>
+  gameSession.clearBridgeFailedThisSession(appId)
+const resetBridgeFailedSession = () =>
+  gameSession.bridgeFailedThisSession.clear()
+const resetBridgeLaunchBottles = () => gameSession.bridgeLaunchBottles.clear()
+const resetLoggedEmptyGameInfoMisses = () =>
+  gameSession.loggedEmptyGameInfoMisses.clear()
 
 jest.mock('backend/knownFixReport', () => ({
   reportDetectedFix: jest.fn(),
@@ -2402,9 +2417,9 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
   const RESOLVED_EXE_PATH = `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/Avernum4.exe`
 
   beforeEach(() => {
-    __resetBridgeFailedSessionForTests()
+    resetBridgeFailedSession()
     __resetDrmModeNoticeShownForTests()
-    __resetBridgeLaunchBottlesForTests()
+    resetBridgeLaunchBottles()
     library.clear()
     pendingFetches.clear()
     library.set(APP_ID, makeEntry({ title: 'Avernum 4' }))
@@ -5078,7 +5093,10 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
       // stands in for the memory reset a real kill -9 + relaunch would
       // cause.
       const inFlightSpy = jest
-        .spyOn(gamesModule, 'isNativeInstallInFlight')
+        .spyOn(
+          steamTestDeps.steamSession.gameSession,
+          'isNativeInstallInFlight'
+        )
         .mockReturnValue(false)
 
       // Load-bearing precondition: an empty ACF scan is what makes this a
@@ -5130,7 +5148,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
     })
     ;(SteamUser.isLoggedIn as jest.Mock).mockReturnValue(false)
     const inFlightSpy = jest
-      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(false)
 
     await new SteamLibraryManager(steamTestDeps).init()
@@ -5206,7 +5224,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
     ;(existsSync as jest.Mock).mockReturnValue(false)
     ;(SteamUser.isLoggedIn as jest.Mock).mockReturnValue(false)
     const inFlightSpy = jest
-      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(false)
 
     const scanResult = await acfState.scanDownloadingAppIds(libDeps)
@@ -5737,7 +5755,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     '/mock/bridge/bottle/steamapps/common/Avernum 4/Avernum4.exe'
 
   beforeEach(() => {
-    __resetBridgeFailedSessionForTests()
+    resetBridgeFailedSession()
     __resetDrmModeNoticeShownForTests()
     pollStateModule.clearBridgeInstallFinalized(APP_ID)
     library.clear()
@@ -11560,7 +11578,7 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
     '/mock/bridge/bottle/steamapps/common/Avernum 4/Avernum4.exe'
 
   beforeEach(() => {
-    __resetBridgeFailedSessionForTests()
+    resetBridgeFailedSession()
     __resetDrmModeNoticeShownForTests()
     library.clear()
     pendingFetches.clear()
@@ -12670,7 +12688,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
   // per appId, not silent ────────────────────────────────────────────────
   describe('260905-luf: getGameInfo() double cache miss logging (log-once per appId)', () => {
     beforeEach(() => {
-      __resetLoggedEmptyGameInfoMissesForTests()
+      resetLoggedEmptyGameInfoMisses()
     })
 
     it('still returns the {} sentinel unchanged — the logging addition is not a behavior change to the cross-runner contract', () => {
@@ -12890,7 +12908,7 @@ describe('maybeNotifyBridgeLimited() — the one-time limited-features notice pl
   let markBridgeLimitedNoticeShownSpy: jest.SpyInstance
 
   beforeEach(() => {
-    __resetBridgeFailedSessionForTests()
+    resetBridgeFailedSession()
     library.clear()
     pendingFetches.clear()
     library.set(APP_ID, makeEntry({ title: 'Avernum 4' }))
@@ -13617,8 +13635,8 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       )
 
     beforeEach(() => {
-      __resetBridgeFailedSessionForTests()
-      __resetBridgeLaunchBottlesForTests()
+      resetBridgeFailedSession()
+      resetBridgeLaunchBottles()
       library.clear()
       pendingFetches.clear()
       callOrder.length = 0
@@ -16473,8 +16491,8 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
     })
 
   beforeEach(() => {
-    __resetBridgeFailedSessionForTests()
-    __resetBridgeLaunchBottlesForTests()
+    resetBridgeFailedSession()
+    resetBridgeLaunchBottles()
     __resetBottleLedgerForTests()
     library.clear()
     pendingFetches.clear()
@@ -17487,7 +17505,7 @@ describe('Steam launch watch wiring (261111-9mj)', () => {
     env.isLinux = true
     launchWatches.clear()
     // an earlier describe may leave a bridge record that stop() would take first
-    __resetBridgeLaunchBottlesForTests()
+    resetBridgeLaunchBottles()
     ;(sendGameStatusUpdate as jest.Mock).mockClear()
     library.clear()
     pendingFetches.clear()

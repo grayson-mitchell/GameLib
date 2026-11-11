@@ -25,10 +25,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { getSteamLibraries } from 'backend/utils'
 import { createAbortController } from 'backend/utils/aborthandler/aborthandler'
-import { library } from '../state'
 import { downloadSteamDepots } from '../depot'
 import { resolveSteamInstallTarget } from '../installLocation'
-import { isNativeInstallInFlight } from '../gameSessionState'
 import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
 import { getBridgeBottleSteamappsRoot } from '../library/installRoot'
 import { findOtherManifestsWithInstalldir } from '../library/acfState'
@@ -44,6 +42,12 @@ const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })
 })
+
+// The boot-owned Steam library state the code under test reads (D-66.3-13): one instance per file.
+const library = steamTestDeps.steamSession.libraryState.library
+// The boot-owned in-flight map is a plain object, so the per-session probe is spied on the instance (D-66.3-13).
+const inFlightSpy = () =>
+  jest.spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -73,10 +77,6 @@ jest.mock('../depot', () => ({ downloadSteamDepots: jest.fn() }))
 jest.mock('../installLocation', () => ({
   ...jest.requireActual('../installLocation'),
   resolveSteamInstallTarget: jest.fn()
-}))
-jest.mock('../gameSessionState', () => ({
-  isNativeInstallInFlight: jest.fn(),
-  nativeInstallsInFlight: new Map()
 }))
 jest.mock('../bottle', () => ({
   getBottleSteamappsDir: jest.fn(),
@@ -132,7 +132,7 @@ describe('stale queue head cancel regression (73-18)', () => {
       }
     } as unknown as GameInfo)
     jest.mocked(getSteamLibraries).mockResolvedValue([join(tmp, 'lib')])
-    jest.mocked(isNativeInstallInFlight).mockReturnValue(false)
+    inFlightSpy().mockReturnValue(false)
     jest.mocked(findOtherManifestsWithInstalldir).mockReturnValue([])
     jest
       .mocked(getBridgeBottleSteamappsRoot)

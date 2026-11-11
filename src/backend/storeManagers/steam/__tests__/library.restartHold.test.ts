@@ -28,7 +28,6 @@ import {
   readSteamProcessStartTokens
 } from '../steamClientProcess'
 import { join } from 'path'
-import { library } from '../state'
 import { logInfo } from 'backend/logger'
 import type { Stores } from 'backend/services/types'
 
@@ -38,6 +37,9 @@ const steamTestDeps = createTestManagerDeps({
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
 })
+
+// The boot-owned Steam library state the code under test reads (D-66.3-13): one instance per file.
+const library = steamTestDeps.steamSession.libraryState.library
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under

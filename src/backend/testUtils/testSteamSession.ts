@@ -11,9 +11,15 @@ export function createTestSteamSession(): SteamSessionServices {
     require('../storeManagers/steam/userSignInState') as typeof import('../storeManagers/steam/userSignInState')
   const { createSteamAuthTrigger } =
     require('../storeManagers/steam/authTrigger') as typeof import('../storeManagers/steam/authTrigger')
+  const { createSteamLibraryState } =
+    require('../storeManagers/steam/state') as typeof import('../storeManagers/steam/state')
+  const { createSteamGameSessionState } =
+    require('../storeManagers/steam/gameSessionState') as typeof import('../storeManagers/steam/gameSessionState')
   /* eslint-enable @typescript-eslint/no-require-imports */
   return {
     signIn: createSteamSignInState(),
-    authTrigger: createSteamAuthTrigger()
+    authTrigger: createSteamAuthTrigger(),
+    libraryState: createSteamLibraryState(),
+    gameSession: createSteamGameSessionState()
   }
 }

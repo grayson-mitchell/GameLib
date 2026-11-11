@@ -33,7 +33,6 @@ import {
 } from './steamInstallApp'
 import { classifyDepotError } from './depotErrors'
 import { withTimeout, STEAM_PICS_TIMEOUT_MS } from './withTimeout'
-import { nativeInstallsInFlight } from './gameSessionState'
 import { hostSteamDepotOs } from './gameRequirements'
 import * as bottle from './bottle'
 import type SteamGame from './games'
@@ -102,7 +101,10 @@ export async function installDepotDownload(
     signal?: AbortSignal
   }
 ): Promise<InstallResult> {
-  const existing = nativeInstallsInFlight.get(steamGame.appId)
+  const existing =
+    steamGame.deps.steamSession.gameSession.nativeInstallsInFlight.get(
+      steamGame.appId
+    )
   if (existing) {
     if (!existing.aborted) {
       // T-23-12: a LIVE download is already tracked for this appId — join
@@ -120,10 +122,13 @@ export async function installDepotDownload(
   if (opts.signal?.aborted) return { status: 'abort' }
 
   const runPromise = runNativeDepotDownload(steamGame, args, opts)
-  nativeInstallsInFlight.set(steamGame.appId, {
-    promise: runPromise,
-    aborted: false
-  })
+  steamGame.deps.steamSession.gameSession.nativeInstallsInFlight.set(
+    steamGame.appId,
+    {
+      promise: runPromise,
+      aborted: false
+    }
+  )
   return runPromise
 }
 
@@ -341,7 +346,9 @@ export async function runNativeDepotDownload(
     // T-23-13: fail-safe cleanup on success, error, or cancel (including an
     // unhandled throw/rejection) — never leaves this appId permanently
     // blocked from a later re-install.
-    nativeInstallsInFlight.delete(steamGame.appId)
+    steamGame.deps.steamSession.gameSession.nativeInstallsInFlight.delete(
+      steamGame.appId
+    )
     // 59-REVIEW WR-02: a newer install may have registered its own
     // provisioning controller during this run's teardown; remove only ours.
     if (getAbortSignal(steamGame.appId) === controller.signal) {

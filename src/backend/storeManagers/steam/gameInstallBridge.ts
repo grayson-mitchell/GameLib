@@ -31,10 +31,6 @@ import {
   setBridgeSteamApiPrescreen,
   setBridgeUserRoute
 } from './bridge/bridgeVerdict'
-import {
-  markBridgeFailedThisSession,
-  clearBridgeFailedThisSession
-} from './gameSessionState'
 import type SteamGame from './games'
 import { ensureBuiltInEngineForInstall } from './gameInstall'
 import { prefetchBridgeDrmDownloads } from './gameLaunch'
@@ -63,7 +59,9 @@ export async function installBridgeGame(
       `SteamGame: installBridgeGame rejected non-numeric appId ${steamGame.appId} — no per-game bottle name`,
       LogPrefix.Steam
     )
-    markBridgeFailedThisSession(steamGame.appId)
+    steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
+      steamGame.appId
+    )
     return {
       status: 'error',
       error: `Invalid appId: "${steamGame.appId}"`
@@ -283,7 +281,9 @@ export async function provisionBridgeBottleForInstall(
       `SteamGame: bridge bottle provisioning failed for appId ${steamGame.appId}: ${provisionResult.error}`,
       LogPrefix.Steam
     )
-    markBridgeFailedThisSession(steamGame.appId)
+    steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
+      steamGame.appId
+    )
     sendGameStatusUpdate({
       appName: steamGame.appId,
       runner: 'steam',
@@ -432,7 +432,9 @@ export async function installBridgeGameLeased(
   if (downloadResult.status === 'abort') return downloadResult
 
   if (downloadResult.status !== 'done') {
-    markBridgeFailedThisSession(steamGame.appId)
+    steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
+      steamGame.appId
+    )
     return downloadResult
   }
 
@@ -445,7 +447,9 @@ export async function installBridgeGameLeased(
       `SteamGame: installBridgeGame could not resolve a Windows launch executable for appId ${steamGame.appId} — shim not placed`,
       LogPrefix.Steam
     )
-    markBridgeFailedThisSession(steamGame.appId)
+    steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
+      steamGame.appId
+    )
     sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
       reason: 'launch-exe-not-resolved',
@@ -521,7 +525,9 @@ export async function installBridgeGameLeased(
           LogPrefix.Steam
         )
       }
-      markBridgeFailedThisSession(steamGame.appId)
+      steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
+        steamGame.appId
+      )
       sendFrontendMessage('steamBridgeSetupRequired', {
         appName: steamGame.appId,
         reason: 'win64-no-shim',
@@ -534,7 +540,9 @@ export async function installBridgeGameLeased(
       return { status: 'error', error: shimError }
     }
 
-    markBridgeFailedThisSession(steamGame.appId)
+    steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
+      steamGame.appId
+    )
     return { status: 'error', error: shimError }
   }
 
@@ -581,7 +589,9 @@ export async function installBridgeGameLeased(
         LogPrefix.Steam
       )
     }
-    markBridgeFailedThisSession(steamGame.appId)
+    steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
+      steamGame.appId
+    )
     sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
       reason: 'drm-wrapped',
@@ -631,7 +641,9 @@ export async function installBridgeGameLeased(
   // session so a subsequent isBridgeEligible() check (install OR launch)
   // for this appId routes back to the bridge instead of staying stuck on
   // an earlier recoverable failure.
-  clearBridgeFailedThisSession(steamGame.appId)
+  steamGame.deps.steamSession.gameSession.clearBridgeFailedThisSession(
+    steamGame.appId
+  )
 
   // Plan 05 decision: the Steamworks shared redists download under THIS
   // install's logon, so Play never needs one. Never fails the install.

@@ -34,6 +34,8 @@ import type { SignInProbeOutcomes } from 'backend/signInProbe/outcomes'
 import type { SignInProbePass } from 'backend/signInProbe/pass'
 import type { SteamSignInState } from 'backend/storeManagers/steam/userSignInState'
 import type { SteamAuthTriggerState } from 'backend/storeManagers/steam/authTrigger'
+import type { SteamLibraryState } from 'backend/storeManagers/steam/state'
+import type { SteamGameSessionState } from 'backend/storeManagers/steam/gameSessionState'
 import type { CommandRunner as CommandRunnerImpl } from 'backend/commandRunner'
 import type GOGLibraryManager from 'backend/storeManagers/gog/library'
 import type LegendaryLibraryManager from 'backend/storeManagers/legendary/library'
@@ -177,11 +179,26 @@ export interface SignInProbeServices {
 
 /**
  * The boot-owned Steam session cluster (D-66.3-13), built by the 'steam-session-state' boot step:
- * the QR / credential sign-in state and the keyring auth-unlock latches.
+ * the QR / credential sign-in state, the keyring auth-unlock latches, the in-memory library map and
+ * the per-session game maps.
  */
 export interface SteamSessionServices {
   signIn: SteamSignInState
   authTrigger: SteamAuthTriggerState
+  /** The in-memory library map, the metadata-fetch dedup set and the metadata slot limiter. */
+  libraryState: SteamLibraryState
+  /** The per-session game maps: native installs, bridge launches and bridge failures in flight. */
+  gameSession: SteamGameSessionState
+}
+
+/** What a Steam function reads from the boot-owned library map and metadata-slot limiter. */
+export interface SteamLibraryStateDeps {
+  steamSession: Pick<SteamSessionServices, 'libraryState'>
+}
+
+/** What a Steam function reads from the boot-owned per-session game maps. */
+export interface SteamGameSessionDeps {
+  steamSession: Pick<SteamSessionServices, 'gameSession'>
 }
 
 export interface BootServices {

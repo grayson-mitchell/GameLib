@@ -25,7 +25,7 @@ import { GlobalConfig } from 'backend/config'
 import { logWarning } from 'backend/logger'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import { createTestStores } from 'backend/testUtils/testServices'
-import { library } from '../state'
+import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
 import {
   startBottleProcessMonitor,
   stopBottleProcessMonitor
@@ -151,7 +151,11 @@ const mockedDownloadFile = downloadFile as jest.Mock
 const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
 const mockedRunWineCommand = jest.fn()
 const mockedAppHide = jest.fn()
+// The boot-owned Steam library state the dispatch reads (D-66.3-13): one instance for this file.
+const steamSession = createTestSteamSession()
+const library = steamSession.libraryState.library
 const bottledDeps = {
+  steamSession,
   appState: { hide: () => mockedAppHide() },
   spawnAsync: mockedSpawnAsync,
   commandRunner: { runWineCommand: mockedRunWineCommand }

@@ -37,10 +37,6 @@ import { resolveBridgeLaunchWorkingDir } from './bridge/launchTarget'
 import { stopBridgeHelper } from './bridge/helperRegistry'
 import { appFolder, userHome } from 'backend/constants/paths'
 import {
-  bridgeLaunchBottles,
-  markBridgeFailedThisSession
-} from './gameSessionState'
-import {
   DRM_DLLPATH_CHANNEL,
   DRM_DLLOVERRIDES_CHANNEL,
   DRM_REGISTRY_TIMEOUT_MS,
@@ -83,7 +79,9 @@ export async function fireBridgeWineLaunch(
       )
       return
     }
-    markBridgeFailedThisSession(steamGame.appId)
+    steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
+      steamGame.appId
+    )
     sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
       reason: 'bridge-launch-failed',
@@ -94,8 +92,14 @@ export async function fireBridgeWineLaunch(
   // quick 261024-urq: this launch's own record (see bridgeLaunchBottles).
   const launchRecord = { bottle: bridgeBottleSettings.wineCrossoverBottle }
   const clearLaunchRecord = () => {
-    if (bridgeLaunchBottles.get(steamGame.appId) === launchRecord) {
-      bridgeLaunchBottles.delete(steamGame.appId)
+    if (
+      steamGame.deps.steamSession.gameSession.bridgeLaunchBottles.get(
+        steamGame.appId
+      ) === launchRecord
+    ) {
+      steamGame.deps.steamSession.gameSession.bridgeLaunchBottles.delete(
+        steamGame.appId
+      )
     }
   }
   // D-15: the trace is re-logged once, when the game is gone.
@@ -497,7 +501,10 @@ export async function fireBridgeWineLaunch(
       )
     }
 
-    bridgeLaunchBottles.set(steamGame.appId, launchRecord)
+    steamGame.deps.steamSession.gameSession.bridgeLaunchBottles.set(
+      steamGame.appId,
+      launchRecord
+    )
     if (drm) {
       logInfo(drm.anchorLine, LogPrefix.Steam)
       logInfo(

@@ -7,7 +7,6 @@
 import i18next from 'i18next'
 import { logInfo, LogPrefix } from 'backend/logger'
 import { notify } from 'backend/dialog/dialog'
-import { bridgeLaunchesInFlight } from './gameSessionState'
 import { launchBridgeGameBody } from './gameBridgeLaunch'
 import type SteamGame from './games'
 
@@ -37,6 +36,7 @@ import type SteamGame from './games'
  */
 export function launchBridgeGame(steamGame: SteamGame): Promise<boolean> {
   const appId = steamGame.appId
+  const { bridgeLaunchesInFlight } = steamGame.deps.steamSession.gameSession
   const existing = bridgeLaunchesInFlight.get(appId)
   if (existing) {
     logInfo(

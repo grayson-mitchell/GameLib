@@ -436,8 +436,8 @@ export function relogDrmTrace(
 export const drmModeNoticeShownThisSession = new Set<string>()
 
 /**
- * Test-only reset for drmModeNoticeShownThisSession — mirrors gameSessionState.ts's
- * `__resetBridgeFailedSessionForTests()` convention. A test that drives
+ * Test-only reset for drmModeNoticeShownThisSession (still module state; the session maps in
+ * gameSessionState.ts are per-boot instances now, 66.3-13). A test that drives
  * maybeNotifyDrmModeFailed records a per-`${appId}|${step}` notice, which
  * would silence the same notice in a later test sharing that key; call this
  * in a `beforeEach`.

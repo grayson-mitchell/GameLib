@@ -10,7 +10,7 @@ import {
   readAcfState,
   scanDownloadingAppIds
 } from '../library/acfState'
-import { library } from '../state'
+import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries } from 'backend/utils'
@@ -26,7 +26,10 @@ import { join } from 'path'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 
 /** The config slice the Steam library lookups read; getSteamLibraries is mocked here. */
-const libDeps = { config: createTestGlobalConfig() }
+// The boot-owned Steam library state the scan reads (D-66.3-13): one instance for this file.
+const steamSession = createTestSteamSession()
+const library = steamSession.libraryState.library
+const libDeps = { config: createTestGlobalConfig(), steamSession }
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under

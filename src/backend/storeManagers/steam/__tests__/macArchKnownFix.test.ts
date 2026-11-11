@@ -3,6 +3,8 @@
  * formatMacArch32KnownFixEntry.
  */
 
+import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
+
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
@@ -26,20 +28,24 @@ jest.mock('../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 
 const metaStore = new Map<string, Record<string, unknown>>()
 const steamMetadataStore = { get: jest.fn(), set: jest.fn() }
+// The boot-owned Steam library state the seed propagates into (D-66.3-13): one instance for this file.
+const steamSession = createTestSteamSession()
+const library = steamSession.libraryState.library
 const deps = {
+  steamSession,
   stores: {
     steam: {
       steamMetadataStore,
       steamLibraryStore: { get: jest.fn(), set: jest.fn() }
     }
   }
-} as unknown as SteamStoresDeps
+} as unknown as SteamStoresDeps & SteamLibraryStateDeps
 
 import { readKnownFixes } from 'backend/knownFixes'
 import { logWarning, logInfo } from 'backend/logger'
 import { sendFrontendMessage } from '../../../ipc'
-import { library } from '../state'
 import type { SteamStoresDeps } from '../library/installRoot'
+import type { SteamLibraryStateDeps } from 'backend/services/types'
 import {
   formatMacArch32KnownFixEntry,
   knownFixSaysMac32,

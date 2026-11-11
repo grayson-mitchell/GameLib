@@ -6,7 +6,6 @@ import { sendFrontendMessage } from '../../../ipc'
 import { SteamUser } from '../user'
 import { getAnonymousPicsClient } from '../anonymousClient'
 import type { ManagerDeps } from 'backend/services/types'
-import { library } from '../state'
 import { isSteamBottleProvisioned } from '../bottle'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
@@ -328,7 +327,10 @@ async function syncOwnedLibrary(
       string,
       { targetSteamappsDir: string; installdir: string }
     >()
-    for (const [appId, info] of library.entries()) {
+    for (const [
+      appId,
+      info
+    ] of deps.steamSession.libraryState.library.entries()) {
       if (
         info.install?.steamResumeTargetSteamappsDir &&
         info.install?.steamResumeInstalldir
@@ -341,7 +343,7 @@ async function syncOwnedLibrary(
     }
 
     // ── Step 3: build and push one GameInfo per owned game ────────────────
-    library.clear()
+    deps.steamSession.libraryState.library.clear()
     for (const app of ownedApps) {
       const appIdStr = String(app.appid)
       const nativeInstalledData = installedMap.get(app.appid)
@@ -469,12 +471,15 @@ async function syncOwnedLibrary(
         }
       }
 
-      library.set(appIdStr, gameInfo)
+      deps.steamSession.libraryState.library.set(appIdStr, gameInfo)
       sendFrontendMessage('pushGameToLibrary', gameInfo)
     }
 
     // ── Step 4: persist library list and sync timestamp ───────────────────
-    steamLibraryStore.set('games', Array.from(library.values()))
+    steamLibraryStore.set(
+      'games',
+      Array.from(deps.steamSession.libraryState.library.values())
+    )
     steamSyncStore.set('syncedAt', Date.now())
   } catch (err) {
     logError(
@@ -492,10 +497,16 @@ async function syncOwnedLibrary(
     })
     throw err
   }
-  logInfo(`Steam library sync complete: ${library.size} games`, LogPrefix.Steam)
+  logInfo(
+    `Steam library sync complete: ${deps.steamSession.libraryState.library.size} games`,
+    LogPrefix.Steam
+  )
   // 34.15 D-07 exit path 3 of 4 (success).
   sendFrontendMessage('steamSyncStatus', { status: 'idle' })
-  return { stdout: `${library.size} games synced`, stderr: '' }
+  return {
+    stdout: `${deps.steamSession.libraryState.library.size} games synced`,
+    stderr: ''
+  }
 }
 
 /**
@@ -549,7 +560,10 @@ export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
       ? await buildBridgeInstalledMap()
       : null
 
-  for (const [appIdStr, gameInfo] of library.entries()) {
+  for (const [
+    appIdStr,
+    gameInfo
+  ] of deps.steamSession.libraryState.library.entries()) {
     const appId = parseInt(appIdStr, 10)
     const nativeInstalledData = installedMap.get(appId)
     const bottleInstalledData = bottleInstalledMap?.get(appId)
@@ -589,13 +603,16 @@ export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
             }
           : {}
       }
-      library.set(appIdStr, updated)
+      deps.steamSession.libraryState.library.set(appIdStr, updated)
       // GAP-17-BOTTLE-STORE-DIVERGENCE: persist immediately so the in-memory
       // Map and the on-disk cache never diverge (mirrors refresh() and
       // gog/library.ts's installedGamesStore.set-immediately-after-mutate
       // pattern) — otherwise an app restart before the next full refresh()
       // would read a stale is_installed from steamLibraryStore.
-      steamLibraryStore.set('games', Array.from(library.values()))
+      steamLibraryStore.set(
+        'games',
+        Array.from(deps.steamSession.libraryState.library.values())
+      )
       sendFrontendMessage('pushGameToLibrary', updated)
 
       // quick 261024-exo: arch-check backstop for a delegated steam://install

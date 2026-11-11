@@ -1,40 +1,36 @@
 import {
   MAX_CONCURRENT_METADATA_FETCHES,
-  acquireMetadataSlot,
-  releaseMetadataSlot
+  createSteamLibraryState
 } from '../state'
 
 /**
  * The metadata-fetch semaphore caps how many Steam store-API requests run at
  * once so a cold cache (hundreds of games) doesn't open hundreds of parallel
- * TLS connections and mass-time-out.
+ * TLS connections and mass-time-out. 66.3-13: the limiter, the library map and
+ * the dedup set are per-instance (one per boot), so every case builds its own.
  */
 describe('Steam metadata-fetch concurrency limiter', () => {
-  // The limiter is module-level state; always release exactly what we acquire.
   it('grants up to MAX_CONCURRENT_METADATA_FETCHES slots immediately', async () => {
+    const state = createSteamLibraryState()
     const granted = await Promise.all(
       Array.from({ length: MAX_CONCURRENT_METADATA_FETCHES }, () =>
-        acquireMetadataSlot().then(() => true)
+        state.acquireMetadataSlot().then(() => true)
       )
     )
     expect(granted).toHaveLength(MAX_CONCURRENT_METADATA_FETCHES)
     expect(granted.every(Boolean)).toBe(true)
-
-    // cleanup
-    for (let i = 0; i < MAX_CONCURRENT_METADATA_FETCHES; i++) {
-      releaseMetadataSlot()
-    }
   })
 
   it('queues an over-cap request until a slot is released, then hands it the slot', async () => {
+    const state = createSteamLibraryState()
     // Fill every slot.
     for (let i = 0; i < MAX_CONCURRENT_METADATA_FETCHES; i++) {
-      await acquireMetadataSlot()
+      await state.acquireMetadataSlot()
     }
 
     // One more must NOT resolve until a slot frees.
     let overCapResolved = false
-    const overCap = acquireMetadataSlot().then(() => {
+    const overCap = state.acquireMetadataSlot().then(() => {
       overCapResolved = true
     })
 
@@ -43,14 +39,31 @@ describe('Steam metadata-fetch concurrency limiter', () => {
     expect(overCapResolved).toBe(false)
 
     // Release one slot — the waiter should now be granted it.
-    releaseMetadataSlot()
+    state.releaseMetadataSlot()
     await overCap
     expect(overCapResolved).toBe(true)
+  })
 
-    // cleanup: release the slot the waiter now holds + the remaining held slots.
-    releaseMetadataSlot()
-    for (let i = 0; i < MAX_CONCURRENT_METADATA_FETCHES - 1; i++) {
-      releaseMetadataSlot()
+  it('a released slot below the cap lets the next acquire resolve immediately', async () => {
+    const state = createSteamLibraryState()
+    for (let i = 0; i < MAX_CONCURRENT_METADATA_FETCHES; i++) {
+      await state.acquireMetadataSlot()
     }
+    state.releaseMetadataSlot()
+    await expect(state.acquireMetadataSlot()).resolves.toBeUndefined()
+  })
+
+  it('two instances never share a slot count, a library map or a dedup set', async () => {
+    const one = createSteamLibraryState()
+    const two = createSteamLibraryState()
+    for (let i = 0; i < MAX_CONCURRENT_METADATA_FETCHES; i++) {
+      await one.acquireMetadataSlot()
+    }
+    // `one` is full; `two` is untouched, so its acquire resolves at once.
+    await expect(two.acquireMetadataSlot()).resolves.toBeUndefined()
+    one.pendingFetches.add('730')
+    one.library.set('730', { app_name: '730' } as never)
+    expect(two.pendingFetches.size).toBe(0)
+    expect(two.library.size).toBe(0)
   })
 })

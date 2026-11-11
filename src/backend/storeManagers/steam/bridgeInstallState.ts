@@ -8,7 +8,6 @@ import { GameInfo } from 'common/types'
 import { logWarning, LogPrefix } from 'backend/logger'
 import { reportDetectedFix, knownFixReportDeps } from 'backend/knownFixReport'
 import { sendFrontendMessage } from '../../ipc'
-import { library } from './state'
 import * as bottle from './bottle'
 import * as bridgeBottle from './bridgeBottle'
 import {
@@ -155,7 +154,9 @@ export function markBridgeGameInstalled(
   steamGame: SteamGame,
   installPath: string
 ): void {
-  const existing = library.get(steamGame.appId)
+  const existing = steamGame.deps.steamSession.libraryState.library.get(
+    steamGame.appId
+  )
   if (existing) {
     const updated: GameInfo = {
       ...existing,
@@ -166,10 +167,13 @@ export function markBridgeGameInstalled(
         platform: 'Windows'
       }
     }
-    library.set(steamGame.appId, updated)
+    steamGame.deps.steamSession.libraryState.library.set(
+      steamGame.appId,
+      updated
+    )
     steamGame.deps.stores.steam.steamLibraryStore.set(
       'games',
-      Array.from(library.values())
+      Array.from(steamGame.deps.steamSession.libraryState.library.values())
     )
     sendFrontendMessage('pushGameToLibrary', updated)
   }
@@ -193,17 +197,22 @@ export function markBridgeGameInstalled(
  * library entry happens to be present.
  */
 export function markBridgeGameUninstalled(steamGame: SteamGame): void {
-  const existing = library.get(steamGame.appId)
+  const existing = steamGame.deps.steamSession.libraryState.library.get(
+    steamGame.appId
+  )
   if (existing) {
     const updated: GameInfo = {
       ...existing,
       is_installed: false,
       install: {}
     }
-    library.set(steamGame.appId, updated)
+    steamGame.deps.steamSession.libraryState.library.set(
+      steamGame.appId,
+      updated
+    )
     steamGame.deps.stores.steam.steamLibraryStore.set(
       'games',
-      Array.from(library.values())
+      Array.from(steamGame.deps.steamSession.libraryState.library.values())
     )
     sendFrontendMessage('pushGameToLibrary', updated)
   }

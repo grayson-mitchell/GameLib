@@ -36,8 +36,6 @@ import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { finalizeToSteam, downloadSteamDepots } from '../depot'
 import { resumeVerifyRust } from '../depotRust/secondary'
 import { join } from 'path'
-import { library } from '../state'
-import * as gamesModule from '../gameSessionState'
 import { bridgeAllowlist } from '../bridge/allowlist'
 import { captureOwnedAppPlatforms } from '../platformCapture'
 import { resumeInterruptedSteamInstall } from '../library/resume'
@@ -55,6 +53,9 @@ const steamTestDeps = createTestManagerDeps({
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
 })
+
+// The boot-owned Steam library state the code under test reads (D-66.3-13): one instance per file.
+const library = steamTestDeps.steamSession.libraryState.library
 
 // The boot-owned auth-unlock latches the manager under test reads (D-66.3-13): one instance for this file.
 const noteRefreshTrigger = (
@@ -623,7 +624,7 @@ describe('SteamLibraryManager', () => {
     })
 
     const isNativeInstallInFlightSpy = jest
-      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(true)
 
     await manager.init()

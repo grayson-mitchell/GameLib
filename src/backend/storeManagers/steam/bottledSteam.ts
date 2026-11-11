@@ -5,14 +5,16 @@
  */
 import type { AppState } from 'backend/host/appState'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
-import type { CommandRunner } from 'backend/services/types'
+import type {
+  CommandRunner,
+  SteamLibraryStateDeps
+} from 'backend/services/types'
 import type { RunsForMeDeps } from 'backend/runsForMe'
 import type { SpawnDeps } from './provisionBottle'
 
 /** SpawnDeps plus the window-yield the raise fallback uses (66.3-08). */
 export type BottledRaiseDeps = SpawnDeps & { appState: Pick<AppState, 'hide'> }
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
-import { library } from './state'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { NUMERIC_APP_ID } from './gameConstants'
 import {
@@ -243,10 +245,11 @@ async function raiseBottledGameWindow(
 // ── 17-04: bottled-Steam verb dispatch ──────────────────────────────────────
 
 /** The slices the bottled-Steam dispatch reaches (66.1 R3, R5). */
-export type BottledSteamDeps = BottledRaiseDeps & {
-  stores: RunsForMeDeps['stores']
-  commandRunner: Pick<CommandRunner, 'runWineCommand'>
-}
+export type BottledSteamDeps = BottledRaiseDeps &
+  SteamLibraryStateDeps & {
+    stores: RunsForMeDeps['stores']
+    commandRunner: Pick<CommandRunner, 'runWineCommand'>
+  }
 
 type BottledSteamVerb = 'install' | 'launch' | 'uninstall'
 type BottledSteamResult = { status: 'done' | 'error'; error?: string }
@@ -324,7 +327,8 @@ async function dispatchToBottledSteam(
       // import — see the module-load note at the top of this file: a static
       // edge here would drag `backend/ipc` into every unit test that imports
       // bottle.ts for its pure helpers.
-      const installPath = library.get(appId)?.install?.install_path
+      const installPath =
+        deps.steamSession.libraryState.library.get(appId)?.install?.install_path
       if (!installPath) {
         logWarning(
           `tellBottledSteamToLaunch: no install_path known for appId "${appId}" — no process monitor started`,

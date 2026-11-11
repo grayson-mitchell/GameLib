@@ -12,7 +12,7 @@ import { logInfo, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import { seedMacArchFromKnownFix } from './macArchKnownFix'
 import { knownFixSaysCeg } from './drmKnownFix'
-import { pendingFetches, METADATA_FETCH_TIMEOUT_MS } from './state'
+import { METADATA_FETCH_TIMEOUT_MS } from './state'
 import { fetchMetadataIfNeeded } from './gameMetadata'
 // Phase 24 Plan 08 (R4/R7): allowlist-based bridge-vs-fallback routing.
 import { bridgeAllowlist } from './bridge/allowlist'
@@ -28,7 +28,6 @@ import {
 import { isScanVerdictNowCovered } from './bridge/shimCoverage'
 import { builtBridgeShim64Path } from 'backend/constants/paths'
 import type { SteamBridgeRouteVerdict } from 'common/types/steam'
-import { bridgeFailedThisSession } from './gameSessionState'
 import type SteamGame from './games'
 
 export function isNative(steamGame: SteamGame): boolean {
@@ -130,7 +129,10 @@ export function assembleBridgeRouteInput(
     // quick 261027-gtd: curated known-fix drm "ceg" is a pre-download drm-wrapped signal.
     knownFixDrm: knownFixSaysCeg(steamGame.appId) ? 'ceg' : null,
     verdict: readBridgeVerdict(steamGame.deps, steamGame.appId),
-    failedThisSession: bridgeFailedThisSession.has(steamGame.appId),
+    failedThisSession:
+      steamGame.deps.steamSession.gameSession.bridgeFailedThisSession.has(
+        steamGame.appId
+      ),
     win64ShimPresent: existsSync(builtBridgeShim64Path)
   }
 }
@@ -244,11 +246,16 @@ export async function ensurePlatformsCaptured(
   // appId. Wait for it to resolve platformsCaptured, drain from
   // pendingFetches, or hit METADATA_FETCH_TIMEOUT_MS — whichever first, so
   // install()/launch()/uninstall() can never hang indefinitely (T-17-09-01).
-  if (!alreadyCaptured() && pendingFetches.has(steamGame.appId)) {
+  if (
+    !alreadyCaptured() &&
+    steamGame.deps.steamSession.libraryState.pendingFetches.has(steamGame.appId)
+  ) {
     const deadline = Date.now() + METADATA_FETCH_TIMEOUT_MS
     while (
       !alreadyCaptured() &&
-      pendingFetches.has(steamGame.appId) &&
+      steamGame.deps.steamSession.libraryState.pendingFetches.has(
+        steamGame.appId
+      ) &&
       Date.now() < deadline
     ) {
       await new Promise((resolve) => setTimeout(resolve, 100))

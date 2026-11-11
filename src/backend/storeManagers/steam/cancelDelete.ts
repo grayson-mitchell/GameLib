@@ -37,8 +37,6 @@ import {
   type SteamLibrariesDeps,
   sendProgressUpdate
 } from 'backend/utils'
-import { library } from './state'
-import { isNativeInstallInFlight } from './gameSessionState'
 import { clearSteamResumeBreadcrumb } from './library/resumeBreadcrumbs'
 import { findOtherManifestsWithInstalldir } from './library/acfState'
 import { getBridgeBottleSteamappsRoot } from './library/installRoot'
@@ -46,6 +44,10 @@ import { getBottleSteamappsDir, getSteamBottleSettings } from './bottle'
 import { sanitizeInstalldir } from './installLocation'
 import { NUMERIC_APP_ID } from './gameConstants'
 import type { SteamStoresDeps } from './library/installRoot'
+import type {
+  SteamGameSessionDeps,
+  SteamLibraryStateDeps
+} from 'backend/services/types'
 
 /** Local copy by directory convention (see library.ts). */
 
@@ -96,7 +98,10 @@ async function collectAllowedRoots(
  * the resume breadcrumb. Never throws; every refusal keeps files and flag.
  */
 export async function deleteCancelledSteamInstall(
-  deps: SteamStoresDeps & SteamLibrariesDeps,
+  deps: SteamStoresDeps &
+    SteamLibrariesDeps &
+    SteamLibraryStateDeps &
+    SteamGameSessionDeps,
   appId: string,
   opts?: { pollMs?: number; timeoutMs?: number }
 ): Promise<CancelDeleteResult> {
@@ -108,7 +113,7 @@ export async function deleteCancelledSteamInstall(
     const pollMs = opts?.pollMs ?? CANCEL_DELETE_POLL_MS
     const timeoutMs = opts?.timeoutMs ?? CANCEL_DELETE_TIMEOUT_MS
     const start = Date.now()
-    while (isNativeInstallInFlight(appId)) {
+    while (deps.steamSession.gameSession.isNativeInstallInFlight(appId)) {
       if (Date.now() - start >= timeoutMs) {
         return refuse(appId, 'native install still settling')
       }
@@ -121,11 +126,11 @@ export async function deleteCancelledSteamInstall(
     const allowedRoots = await collectAllowedRoots(deps, appId)
 
     // Synchronous from here: nothing can start between checks and rmSync.
-    if (isNativeInstallInFlight(appId)) {
+    if (deps.steamSession.gameSession.isNativeInstallInFlight(appId)) {
       return refuse(appId, 'install restarted')
     }
 
-    const entry = library.get(appId)
+    const entry = deps.steamSession.libraryState.library.get(appId)
     if (!entry || entry.install?.steamResumePending !== true) {
       return refuse(appId, 'no resumable partial install recorded')
     }

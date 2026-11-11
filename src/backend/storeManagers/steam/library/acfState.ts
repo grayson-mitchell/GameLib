@@ -4,7 +4,7 @@ import { rmSync } from 'node:fs'
 import { parse } from '@node-steam/vdf'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
-import { library } from '../state'
+import type { SteamLibraryStateDeps } from 'backend/services/types'
 import { NUMERIC_APP_ID } from '../gameConstants'
 import { DEFAULT_BRIDGE_BOTTLE_NAME } from '../bottle'
 import { removePerGameBridgeBottle } from '../bridgeBottleLifecycle'
@@ -394,7 +394,7 @@ export async function removeSteamInstallCopy(
  * Exported for unit testing.
  */
 export async function scanDownloadingAppIds(
-  deps: SteamLibrariesDeps
+  deps: SteamLibrariesDeps & SteamLibraryStateDeps
 ): Promise<string[]> {
   const libraryPaths = await getSteamLibraries(deps)
   const downloadingIds: string[] = []
@@ -428,7 +428,7 @@ export async function scanDownloadingAppIds(
         if (
           !isNaN(stateFlags) &&
           (stateFlags & 4) === 0 &&
-          library.has(appIdStr)
+          deps.steamSession.libraryState.library.has(appIdStr)
         ) {
           downloadingIds.push(appIdStr)
         }

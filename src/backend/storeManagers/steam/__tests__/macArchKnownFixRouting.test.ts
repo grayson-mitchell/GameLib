@@ -212,7 +212,6 @@ import { existsSync, readdirSync } from 'graceful-fs'
 import { getSteamLibraries } from 'backend/utils'
 import { shell } from 'backend/platform'
 import { readKnownFixes } from 'backend/knownFixes'
-import { library } from '../state'
 import { downloadSteamDepots } from '../depot'
 import SteamGame from '../games'
 import { checkBottleEligibility } from '../gameEligibility'
@@ -231,6 +230,9 @@ const steamTestDeps = createTestManagerDeps({
       jest.requireMock('backend/platform').shell.openExternal(...a)
   }
 })
+
+// The boot-owned Steam library state the code under test reads (D-66.3-13): one instance per file.
+const library = steamTestDeps.steamSession.libraryState.library
 
 const APP_ID = '63000'
 const store = new Map<string, Record<string, unknown>>()

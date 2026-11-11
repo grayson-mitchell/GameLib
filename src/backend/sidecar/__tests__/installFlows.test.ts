@@ -260,7 +260,9 @@ let getSteamBottleEligibilityVerdict: typeof import('../../storeManagers/steam/i
 let isSteamExperimentalInstallAppEnabled: typeof import('../../storeManagers/steam/experimentalInstallAppSetting').isSteamExperimentalInstallAppEnabled
 let findBridgeInstallBottle: typeof import('../../storeManagers/steam/bridgeBottle').findBridgeInstallBottle
 let resolveInstallRoot: typeof import('../../storeManagers/steam/library/installRoot').resolveInstallRoot
-let steamLibraryMap: typeof import('../../storeManagers/steam/state').library
+// One boot-owned Steam session cluster per case (D-05, D-66.3-13); the boot is handed it as a prebuilt service.
+let steamSession: import('backend/services/types').SteamSessionServices
+let steamLibraryMap: Map<string, import('common/types').GameInfo>
 let SteamGame: typeof import('../../storeManagers/steam/games').default
 let handlerRegistry: typeof import('../../platform').handlerRegistry
 let listenerRegistry: typeof import('../../platform').listenerRegistry
@@ -292,7 +294,10 @@ function freshRegistry(): void {
   ;({
     resolveInstallRoot
   } = require('../../storeManagers/steam/library/installRoot'))
-  ;({ library: steamLibraryMap } = require('../../storeManagers/steam/state'))
+  steamSession = (
+    require('backend/testUtils/testSteamSession') as typeof import('backend/testUtils/testSteamSession')
+  ).createTestSteamSession()
+  steamLibraryMap = steamSession.libraryState.library
   SteamGame = require('../../storeManagers/steam/games').default
   ;({ handlerRegistry, listenerRegistry } = require('../../platform'))
   ;({ showDialogBoxModalAuto, notify } = require('../../dialog/dialog'))
@@ -305,7 +310,8 @@ function freshRegistry(): void {
   steamGameMocks = (SteamGame as unknown as MockedSteamGame).__mocks
 }
 
-const boot = () => bootFresh({ reuseRegistry: true })
+const boot = () =>
+  bootFresh({ reuseRegistry: true, services: { steamSession } })
 
 // Plan 34.6-19 (REQ-34.6-05): the fork's own installFlows catalog strings,
 // read from the REAL public/locales/en/gamelib.json (four levels up from

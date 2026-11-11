@@ -7,7 +7,6 @@ import {
 } from 'backend/utils/macArch'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
-import { library } from '../state'
 import { formatMacArch32KnownFixEntry } from '../macArchKnownFix'
 import { reportDetectedFix, knownFixReportDeps } from 'backend/knownFixReport'
 import SteamGame from '../games'
@@ -119,15 +118,18 @@ export async function verifyMacArchGroundTruth(
   // is not frontend-visible). Only update when the game is already present
   // in the Map — never fabricate a GameInfo; the store write above already
   // carries the verdict for the next refresh() rebuild.
-  const currentGameInfo = library.get(appId)
+  const currentGameInfo = deps.steamSession.libraryState.library.get(appId)
   if (currentGameInfo) {
     const updatedGameInfo: GameInfo = { ...currentGameInfo, mac_arch: verdict }
-    library.set(appId, updatedGameInfo)
+    deps.steamSession.libraryState.library.set(appId, updatedGameInfo)
     // GAP-17-BOTTLE-STORE-DIVERGENCE: persist immediately, mirroring every
     // other library-mutating call site in this file — otherwise a restart
     // before the next full refresh() reads a stale mac_arch from
     // steamLibraryStore and the 32-bit badge silently reverts.
-    steamLibraryStore.set('games', Array.from(library.values()))
+    steamLibraryStore.set(
+      'games',
+      Array.from(deps.steamSession.libraryState.library.values())
+    )
     sendFrontendMessage('pushGameToLibrary', updatedGameInfo)
   } else {
     logInfo(
@@ -156,7 +158,10 @@ export async function verifyMacArchGroundTruth(
 
   if (verdict === '32') {
     logInfo(
-      formatMacArch32KnownFixEntry(appId, library.get(appId)?.title),
+      formatMacArch32KnownFixEntry(
+        appId,
+        deps.steamSession.libraryState.library.get(appId)?.title
+      ),
       LogPrefix.Steam
     )
     // Phase 57 detector 1: fire-and-forget (void, never awaited). The client

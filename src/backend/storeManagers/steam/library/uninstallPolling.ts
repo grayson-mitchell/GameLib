@@ -4,7 +4,6 @@ import { getFileSize, type SteamLibrariesDeps } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { notify, type NotifyDeps } from '../../../dialog/dialog'
 import i18next from 'i18next'
-import { library } from '../state'
 import { clearForcedWindowsViaBottle } from '../gameSessionState'
 import {
   type AcfSource,
@@ -20,10 +19,12 @@ import {
   nextSteamRequestNoticeSeq
 } from './pollState'
 import { readAcfState } from './acfState'
+import type { SteamLibraryStateDeps } from 'backend/services/types'
 
 /** The stores plus the config and notification slices the uninstall poll reads. */
 export type UninstallPollDeps = SteamStoresDeps &
   SteamLibrariesDeps &
+  SteamLibraryStateDeps &
   NotifyDeps
 
 /** Module-level registry of active uninstall polls, keyed by appId string. */
@@ -96,7 +97,7 @@ export async function pollUninstallOnce(
     if (source === 'bottle' || source === 'bridge') {
       clearForcedWindowsViaBottle(deps, appId)
     }
-    const existing = library.get(appId)
+    const existing = deps.steamSession.libraryState.library.get(appId)
 
     // debug/steam-bottle-uninstall-reverts (OPERATOR PRODUCT DECISION,
     // LOCKED, item 4/5): check EVERY other known root before declaring this
@@ -168,10 +169,10 @@ export async function pollUninstallOnce(
           platform: installPlatformForSource(survivorSource)
         }
       }
-      library.set(appId, updated)
+      deps.steamSession.libraryState.library.set(appId, updated)
       deps.stores.steam.steamLibraryStore.set(
         'games',
-        Array.from(library.values())
+        Array.from(deps.steamSession.libraryState.library.values())
       )
       sendFrontendMessage('pushGameToLibrary', updated)
       sendFrontendMessage('gameStatusUpdate', {
@@ -209,12 +210,12 @@ export async function pollUninstallOnce(
         is_installed: false,
         install: {}
       }
-      library.set(appId, updated)
+      deps.steamSession.libraryState.library.set(appId, updated)
       // GAP-17-BOTTLE-STORE-DIVERGENCE: persist immediately (see
       // refreshInstallState() for rationale).
       deps.stores.steam.steamLibraryStore.set(
         'games',
-        Array.from(library.values())
+        Array.from(deps.steamSession.libraryState.library.values())
       )
       sendFrontendMessage('pushGameToLibrary', updated)
     }
@@ -354,7 +355,7 @@ export function startUninstallPolling(
       // land on another monitor or not be delivered.
       sendFrontendMessage('steamRequestNotice', {
         appId,
-        title: library.get(appId)?.title ?? '',
+        title: deps.steamSession.libraryState.library.get(appId)?.title ?? '',
         kind: 'uninstall-not-started',
         seq: nextSteamRequestNoticeSeq()
       })

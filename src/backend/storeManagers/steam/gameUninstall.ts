@@ -12,7 +12,6 @@ import { RemoveArgs } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../ipc'
-import { library } from './state'
 import {
   startUninstallPolling,
   pollUninstallOnce
@@ -119,7 +118,9 @@ export async function uninstall(
   // with ZERO await/.then/yield/return/throw in between — so no IPC handler
   // can observe a cleared Map, and the store is written FROM the Map and can
   // never hold an entry a completed refresh dropped.
-  const installPath = library.get(steamGame.appId)?.install?.install_path
+  const installPath = steamGame.deps.steamSession.libraryState.library.get(
+    steamGame.appId
+  )?.install?.install_path
   const root = await resolveInstallRoot(steamGame.deps, installPath)
 
   if (root === 'bottle') {
@@ -195,7 +196,9 @@ export async function uninstall(
 function failUninstall(steamGame: SteamGame, stderr: string): ExecResult {
   sendFrontendMessage('steamRequestNotice', {
     appId: steamGame.appId,
-    title: library.get(steamGame.appId)?.title ?? '',
+    title:
+      steamGame.deps.steamSession.libraryState.library.get(steamGame.appId)
+        ?.title ?? '',
     kind: 'uninstall-failed',
     seq: nextSteamRequestNoticeSeq()
   })
@@ -315,7 +318,9 @@ async function uninstallBridgeGame(steamGame: SteamGame): Promise<ExecResult> {
 export async function uninstallNativeInGameLib(
   steamGame: SteamGame
 ): Promise<ExecResult> {
-  const installPath = library.get(steamGame.appId)?.install?.install_path
+  const installPath = steamGame.deps.steamSession.libraryState.library.get(
+    steamGame.appId
+  )?.install?.install_path
   const { runner } = steamGame.deps
   const decision = await decideSteamNativeDelete(steamGame.appId, installPath, {
     readRunningAppId: () => readRunningAppId({ runner }),
@@ -618,7 +623,9 @@ export async function uninstallBottleGameDirectly(
   // `resolveGameTitle` -> `getGameInfo()` already self-healed the Map for
   // this appId before control ever reached here. See uninstall()'s comment
   // above for the full evidence chain; do not re-open without new evidence.
-  const entryInstallPath = library.get(steamGame.appId)?.install?.install_path
+  const entryInstallPath = steamGame.deps.steamSession.libraryState.library.get(
+    steamGame.appId
+  )?.install?.install_path
   const entryRoot = await resolveInstallRoot(steamGame.deps, entryInstallPath)
   if (entryRoot !== 'bottle') {
     logWarning(

@@ -2,8 +2,8 @@ import { GameInfo, InstalledInfo } from 'common/types'
 import { join } from 'path'
 import { existsSync, readFileSync } from 'graceful-fs'
 import { parse } from '@node-steam/vdf'
-import { library } from '../state'
 import type { SteamStoresDeps } from './installRoot'
+import type { SteamLibraryStateDeps } from 'backend/services/types'
 import { sendFrontendMessage } from '../../../ipc'
 import { isFullyInstalledStateFlags } from './installedMap'
 
@@ -22,10 +22,10 @@ import { isFullyInstalledStateFlags } from './installedMap'
  * surfacing helper in this file.
  */
 export function markSteamInstallIncomplete(
-  deps: SteamStoresDeps,
+  deps: SteamStoresDeps & SteamLibraryStateDeps,
   appId: string
 ): void {
-  const existing = library.get(appId)
+  const existing = deps.steamSession.libraryState.library.get(appId)
   if (!existing) return
 
   const updated: GameInfo = {
@@ -33,8 +33,11 @@ export function markSteamInstallIncomplete(
     is_installed: false,
     install: { ...existing.install, steamResumePending: true }
   }
-  library.set(appId, updated)
-  deps.stores.steam.steamLibraryStore.set('games', Array.from(library.values()))
+  deps.steamSession.libraryState.library.set(appId, updated)
+  deps.stores.steam.steamLibraryStore.set(
+    'games',
+    Array.from(deps.steamSession.libraryState.library.values())
+  )
   sendFrontendMessage('pushGameToLibrary', updated)
 }
 
@@ -64,7 +67,7 @@ export function markSteamInstallIncomplete(
  * microseconds later already finds it on disk.
  */
 export function markSteamNativeInstallStarted(
-  deps: SteamStoresDeps,
+  deps: SteamStoresDeps & SteamLibraryStateDeps,
   appId: string,
   breadcrumb: {
     targetSteamappsDir: string
@@ -72,7 +75,7 @@ export function markSteamNativeInstallStarted(
     installedAtStart?: boolean
   }
 ): void {
-  const existing = library.get(appId)
+  const existing = deps.steamSession.libraryState.library.get(appId)
   if (!existing) return
 
   const updated: GameInfo = {
@@ -85,8 +88,11 @@ export function markSteamNativeInstallStarted(
       steamResumeInstalledAtStart: breadcrumb.installedAtStart === true
     }
   }
-  library.set(appId, updated)
-  deps.stores.steam.steamLibraryStore.set('games', Array.from(library.values()))
+  deps.steamSession.libraryState.library.set(appId, updated)
+  deps.stores.steam.steamLibraryStore.set(
+    'games',
+    Array.from(deps.steamSession.libraryState.library.values())
+  )
   sendFrontendMessage('pushGameToLibrary', updated)
 }
 
@@ -105,10 +111,10 @@ export function markSteamNativeInstallStarted(
  * re-persist on every success.
  */
 export function clearSteamResumeBreadcrumb(
-  deps: SteamStoresDeps,
+  deps: SteamStoresDeps & SteamLibraryStateDeps,
   appId: string
 ): void {
-  const existing = library.get(appId)
+  const existing = deps.steamSession.libraryState.library.get(appId)
   if (!existing) return
   if (
     !existing.install?.steamResumePending &&
@@ -128,8 +134,11 @@ export function clearSteamResumeBreadcrumb(
     ...existing,
     install: { ...install, steamResumePending: false }
   }
-  library.set(appId, updated)
-  deps.stores.steam.steamLibraryStore.set('games', Array.from(library.values()))
+  deps.steamSession.libraryState.library.set(appId, updated)
+  deps.stores.steam.steamLibraryStore.set(
+    'games',
+    Array.from(deps.steamSession.libraryState.library.values())
+  )
   sendFrontendMessage('pushGameToLibrary', updated)
 }
 
@@ -141,9 +150,14 @@ export function clearSteamResumeBreadcrumb(
  * scanDownloadingAppIds(deps) result — case C by definition leaves no ACF, so
  * the breadcrumb is the ONLY record for that case.
  */
-export function getSteamResumeBreadcrumbAppIds(): string[] {
+export function getSteamResumeBreadcrumbAppIds(
+  deps: SteamLibraryStateDeps
+): string[] {
   const ids: string[] = []
-  for (const [appId, info] of library.entries()) {
+  for (const [
+    appId,
+    info
+  ] of deps.steamSession.libraryState.library.entries()) {
     if (
       info.install?.steamResumeInstalldir &&
       info.install?.steamResumeTargetSteamappsDir

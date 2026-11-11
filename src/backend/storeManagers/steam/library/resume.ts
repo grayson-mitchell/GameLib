@@ -1,12 +1,10 @@
 import { GameInfo } from 'common/types'
-import type { ManagerDeps } from 'backend/services/types'
+import type { ManagerDeps, SteamLibraryStateDeps } from 'backend/services/types'
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { join } from 'path'
 import { isMac, isLinux } from 'backend/constants/environment'
 import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
-import { library } from '../state'
-import { isNativeInstallInFlight } from '../gameSessionState'
 import { finalizeToSteam, type FinalizeToSteamOpts } from '../depot'
 import { resumeVerifyRust } from '../depotRust/secondary'
 import {
@@ -63,7 +61,7 @@ function hostSteamDepotOsForResume(): string {
  * finalize-and-watch action is safe regardless of whether finalize ran.
  */
 async function locateDownloadingTarget(
-  deps: SteamLibrariesDeps,
+  deps: SteamLibrariesDeps & SteamLibraryStateDeps,
   appId: string
 ): Promise<{
   targetSteamappsDir: string
@@ -86,7 +84,8 @@ async function locateDownloadingTarget(
     return {
       targetSteamappsDir: steamappsDir,
       installdir,
-      name: library.get(appId)?.title ?? installdir
+      name:
+        deps.steamSession.libraryState.library.get(appId)?.title ?? installdir
     }
   }
 
@@ -214,13 +213,13 @@ export async function resumeInterruptedSteamInstall(
     // Clear the pending-resume marker up front — this call IS the resume
     // attempt; it must never be left stuck "pending" after the user has
     // already acted on it, even if the finalize step below fails.
-    const existing = library.get(appId)
+    const existing = deps.steamSession.libraryState.library.get(appId)
     if (existing?.install?.steamResumePending) {
       const updated: GameInfo = {
         ...existing,
         install: { ...existing.install, steamResumePending: false }
       }
-      library.set(appId, updated)
+      deps.steamSession.libraryState.library.set(appId, updated)
       sendFrontendMessage('pushGameToLibrary', updated)
     }
 
@@ -291,7 +290,10 @@ export async function rearmPersistedSteamRestartHolds(
     const now = Date.now()
     for (const [appId, record] of records) {
       try {
-        if (isNativeInstallInFlight(appId) || activePolls.has(appId)) {
+        if (
+          deps.steamSession.gameSession.isNativeInstallInFlight(appId) ||
+          activePolls.has(appId)
+        ) {
           clearSteamRestartHold(appId, restartHoldStoreFrom(deps))
           dropped++
           continue

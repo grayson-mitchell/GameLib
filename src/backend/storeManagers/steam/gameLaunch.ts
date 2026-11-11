@@ -64,7 +64,6 @@ import {
   appFolder,
   userHome
 } from 'backend/constants/paths'
-import { bridgeFailedThisSession } from './gameSessionState'
 import { buildSteamProtocolUrl } from './gameProtocolUrl'
 import { watchSteamLaunch } from './steamLaunchedDeps'
 import {
@@ -139,7 +138,9 @@ export async function launch(
     // not folded into findBridgeInstallBottle itself.
     if (
       findBridgeInstallBottle(steamGame.appId) !== null &&
-      !bridgeFailedThisSession.has(steamGame.appId)
+      !steamGame.deps.steamSession.gameSession.bridgeFailedThisSession.has(
+        steamGame.appId
+      )
     ) {
       return launchBridgeGame(steamGame)
     }

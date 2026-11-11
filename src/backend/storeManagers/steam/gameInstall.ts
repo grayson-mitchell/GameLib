@@ -15,7 +15,6 @@ import { InstallResult } from 'common/types/game_manager'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac, isAppleSiliconMac } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../ipc'
-import { library } from './state'
 import { pollUninstallOnce } from './library/uninstallPolling'
 import * as resume from './library/resume'
 import { readAcfState, removeSteamInstallCopy } from './library/acfState'
@@ -40,10 +39,7 @@ import {
 } from './bridge/bridgeVerdict'
 import type { EnginePin } from 'backend/engine/enginePins'
 import { ensurePinnedEngineReportingStatus } from 'backend/engine/pinnedEngineProgress'
-import {
-  isNativeInstallInFlight,
-  markForcedWindowsViaBottle
-} from './gameSessionState'
+import { markForcedWindowsViaBottle } from './gameSessionState'
 import { buildSteamProtocolUrl } from './gameProtocolUrl'
 import type SteamGame from './games'
 import {
@@ -94,8 +90,11 @@ export async function install(
   // it — the same live-install-owns-this-appId rule init()'s startup
   // surfacing loop already applies.
   if (
-    library.get(steamGame.appId)?.install?.steamResumePending &&
-    !isNativeInstallInFlight(steamGame.appId)
+    steamGame.deps.steamSession.libraryState.library.get(steamGame.appId)
+      ?.install?.steamResumePending &&
+    !steamGame.deps.steamSession.gameSession.isNativeInstallInFlight(
+      steamGame.appId
+    )
   ) {
     await resume
       .resumeInterruptedSteamInstall(steamGame.deps, steamGame.appId)
@@ -565,8 +564,9 @@ export async function removeDemotedNativeOrphan(
  * so the breadcrumb covers the resume case the review names.
  */
 export function hasBottledSteamCopy(steamGame: SteamGame): boolean {
-  const breadcrumb = library.get(steamGame.appId)?.install
-    ?.steamResumeTargetSteamappsDir
+  const breadcrumb = steamGame.deps.steamSession.libraryState.library.get(
+    steamGame.appId
+  )?.install?.steamResumeTargetSteamappsDir
   if (typeof breadcrumb !== 'string' || breadcrumb === '') {
     return false
   }

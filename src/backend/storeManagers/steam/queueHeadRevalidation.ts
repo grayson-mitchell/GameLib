@@ -6,8 +6,8 @@
 
 import { join, resolve } from 'path'
 import { logInfo, LogPrefix } from 'backend/logger'
+import type { SteamLibraryStateDeps } from 'backend/services/types'
 import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
-import { library } from './state'
 import { NUMERIC_APP_ID } from './gameConstants'
 import type { SteamStoresDeps } from './library/installRoot'
 import { clearSteamResumeBreadcrumb } from './library/resumeBreadcrumbs'
@@ -38,7 +38,7 @@ import {
  * buildid, so Steam's own UpdateRequired bit is the determinable proxy.
  */
 export async function steamQueueHeadAlreadyInstalled(
-  deps: SteamStoresDeps & SteamLibrariesDeps,
+  deps: SteamStoresDeps & SteamLibrariesDeps & SteamLibraryStateDeps,
   appId: string,
   params: { path?: string }
 ): Promise<boolean> {
@@ -46,7 +46,8 @@ export async function steamQueueHeadAlreadyInstalled(
     if (!NUMERIC_APP_ID.test(appId)) return false
 
     let steamappsDir =
-      library.get(appId)?.install?.steamResumeTargetSteamappsDir
+      deps.steamSession.libraryState.library.get(appId)?.install
+        ?.steamResumeTargetSteamappsDir
     if (!steamappsDir) {
       const path = params?.path
       if (typeof path !== 'string' || !path.trim()) return false

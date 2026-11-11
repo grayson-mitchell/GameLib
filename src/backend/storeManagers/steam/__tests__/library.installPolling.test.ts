@@ -21,8 +21,6 @@ import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
 import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { join } from 'path'
-import { library } from '../state'
-import * as gamesModule from '../gameSessionState'
 import {
   startInstallPolling,
   cancelDelegatedInstall,
@@ -37,6 +35,9 @@ const steamTestDeps = createTestManagerDeps({
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
 })
+
+// The boot-owned Steam library state the code under test reads (D-66.3-13): one instance per file.
+const library = steamTestDeps.steamSession.libraryState.library
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under
@@ -347,7 +348,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(false) // D-08: no manifest yet is NORMAL mid-download on this path
     isNativeInstallInFlightSpy = jest
-      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(true) // GameLib's own depot run is streaming chunks right now
     jest.mocked(sendFrontendMessage).mockClear()
 
@@ -384,7 +385,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(false)
     isNativeInstallInFlightSpy = jest
-      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(false) // Steam (or the bottle) owns this download, not GameLib
     jest.mocked(sendFrontendMessage).mockClear()
 
@@ -416,7 +417,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     isNativeInstallInFlightSpy = jest
-      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(true)
 
     // Call 1 — mirrors resumeInterruptedSteamInstall's bare download poll.
@@ -536,7 +537,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock).mockReturnValue(g9oAcf)
     isNativeInstallInFlightSpy = jest
-      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(false)
     jest.mocked(sendFrontendMessage).mockClear()
     g9oLogger().logInfo.mockClear()
@@ -645,7 +646,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(false)
     isNativeInstallInFlightSpy = jest
-      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(false)
     jest.mocked(sendFrontendMessage).mockClear()
     ;(notify as jest.Mock).mockClear()
@@ -703,7 +704,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
   it('D2: a delegated poll stops after MANIFEST_GONE_TICKS consecutive absent ticks once a manifest was seen; a single absent tick does not stop it', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     isNativeInstallInFlightSpy = jest
-      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(false)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock).mockReturnValue(delegatedAcf('1026'))
@@ -735,7 +736,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
   it('D3: a delegated poll that goes absent -> downloading -> installed stops via the installed branch (library flip + done), not the gone/no-manifest branches', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     isNativeInstallInFlightSpy = jest
-      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(false)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     jest.mocked(sendFrontendMessage).mockClear()
@@ -772,7 +773,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
   it('VFQ-1: a manifest that stays downloading disarms the no-activity timeout', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     isNativeInstallInFlightSpy = jest
-      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(false)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(existsSync as jest.Mock).mockReturnValue(true)
@@ -814,7 +815,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(false)
     isNativeInstallInFlightSpy = jest
-      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(true)
     jest.mocked(sendFrontendMessage).mockClear()
     ;(notify as jest.Mock).mockClear()
@@ -850,7 +851,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(false)
     isNativeInstallInFlightSpy = jest
-      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(true)
     jest.mocked(sendFrontendMessage).mockClear()
     ;(notify as jest.Mock).mockClear()
@@ -883,7 +884,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(false)
     isNativeInstallInFlightSpy = jest
-      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(false)
     jest.mocked(sendFrontendMessage).mockClear()
     const interval = 10
@@ -905,7 +906,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(false)
     isNativeInstallInFlightSpy = jest
-      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(true)
     expect(isDelegatedInstallPolling('730')).toBe(false) // no poll
     startInstallPolling(steamTestDeps, '730', { intervalMs: 10 }) // bare poll
@@ -925,7 +926,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
   it('D4: a delegated poll feeds the game page a percent and flags the status managedBySteam (Downloads lists it from that flag)', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     isNativeInstallInFlightSpy = jest
-      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(false)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(existsSync as jest.Mock).mockReturnValue(true)
@@ -970,7 +971,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
   it('D5: a non-delegated poll never flags managedBySteam (a GameLib-driven install already has its own queue row)', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     isNativeInstallInFlightSpy = jest
-      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(false)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(existsSync as jest.Mock).mockReturnValue(true)

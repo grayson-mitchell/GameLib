@@ -1,18 +1,27 @@
 import { GameInfo } from 'common/types'
 
-/**
- * Shared in-memory library Map — populated by SteamLibraryManager.refresh()
- * and read by SteamGame.getGameInfo(). Lives here (not in library.ts) so that
- * games.ts (plan 03) can import it without creating a circular dependency.
- */
-export const library = new Map<string, GameInfo>()
-
-/**
- * Tracks in-flight metadata fetches so SteamGame.fetchMetadataIfNeeded()
- * does not fire concurrent requests for the same AppID.
- * Mitigates T-2-03 (Tampering — repeated CM calls).
- */
-export const pendingFetches = new Set<string>()
+export interface SteamLibraryState {
+  /**
+   * Shared in-memory library Map -- populated by SteamLibraryManager.refresh()
+   * and read by SteamGame.getGameInfo(). Lives here (not in library.ts) so that
+   * games.ts can reach it without creating a circular dependency.
+   */
+  library: Map<string, GameInfo>
+  /**
+   * Tracks in-flight metadata fetches so SteamGame.fetchMetadataIfNeeded()
+   * does not fire concurrent requests for the same AppID.
+   * Mitigates T-2-03 (Tampering -- repeated CM calls).
+   */
+  pendingFetches: Set<string>
+  /** Acquire a metadata-fetch slot, waiting if the concurrency cap is reached. */
+  acquireMetadataSlot(): Promise<void>
+  /**
+   * Release a metadata-fetch slot. If callers are waiting, the slot is handed
+   * directly to the next one (the active count is unchanged); otherwise the count
+   * is decremented.
+   */
+  releaseMetadataSlot(): void
+}
 
 /**
  * Concurrency limiter + timeout for Steam store-API metadata fetches.
@@ -29,28 +38,31 @@ export const pendingFetches = new Set<string>()
 export const MAX_CONCURRENT_METADATA_FETCHES = 5
 export const METADATA_FETCH_TIMEOUT_MS = 15000
 
-let activeMetadataFetches = 0
-const metadataFetchWaiters: Array<() => void> = []
-
-/** Acquire a metadata-fetch slot, waiting if the concurrency cap is reached. */
-export async function acquireMetadataSlot(): Promise<void> {
-  if (activeMetadataFetches < MAX_CONCURRENT_METADATA_FETCHES) {
-    activeMetadataFetches++
-    return
-  }
-  await new Promise<void>((resolve) => metadataFetchWaiters.push(resolve))
-}
-
 /**
- * Release a metadata-fetch slot. If callers are waiting, the slot is handed
- * directly to the next one (the active count is unchanged); otherwise the count
- * is decremented.
+ * One instance per boot (D-05, D-66.3-13): the library map, the dedup set and the slot counter /
+ * waiter queue are all closure state, so two instances never share a fetch slot.
  */
-export function releaseMetadataSlot(): void {
-  const next = metadataFetchWaiters.shift()
-  if (next) {
-    next()
-  } else {
-    activeMetadataFetches--
+export function createSteamLibraryState(): SteamLibraryState {
+  let activeMetadataFetches = 0
+  const metadataFetchWaiters: Array<() => void> = []
+
+  return {
+    library: new Map<string, GameInfo>(),
+    pendingFetches: new Set<string>(),
+    async acquireMetadataSlot() {
+      if (activeMetadataFetches < MAX_CONCURRENT_METADATA_FETCHES) {
+        activeMetadataFetches++
+        return
+      }
+      await new Promise<void>((resolve) => metadataFetchWaiters.push(resolve))
+    },
+    releaseMetadataSlot() {
+      const next = metadataFetchWaiters.shift()
+      if (next) {
+        next()
+      } else {
+        activeMetadataFetches--
+      }
+    }
   }
 }

@@ -20,7 +20,6 @@ import {
 import type { ManagerDeps } from 'backend/services/types'
 import { depotSignalCaptured } from './metadataCapture'
 import { fetchMetadataIfNeeded } from './gameMetadata'
-import { library } from './state'
 import { cancelDelegatedInstall } from './library/installPolling'
 import { getSteamBottleSettings } from './bottle'
 import { stopPerGameBridgeBottle } from './bridgeBottleLifecycle'
@@ -34,11 +33,6 @@ import { readStoredTitleConfig, pickTitleSettings } from './titleSettings'
 import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
 import { stopBridgeHelper } from './bridge/helperRegistry'
 import type { EnginePin } from 'backend/engine/enginePins'
-import {
-  nativeInstallsInFlight,
-  bridgeLaunchBottles,
-  loggedEmptyGameInfoMisses
-} from './gameSessionState'
 import { isNative, isBottleEligible } from './gameEligibility'
 import { install, ensureBuiltInEngineForInstall } from './gameInstall'
 import { launch, sendLaunchDone } from './gameLaunch'
@@ -142,19 +136,25 @@ export default class SteamGame implements Game {
    * than assume this method never returns an empty object.
    */
   getGameInfo(): GameInfo {
-    let existing = library.get(this.appId)
+    let existing = this.deps.steamSession.libraryState.library.get(this.appId)
     if (!existing) {
       const cached = this.deps.stores.steam.steamLibraryStore
         .get('games', [])
         .find((g) => g.app_name === this.appId)
       if (cached) {
-        library.set(this.appId, cached)
+        this.deps.steamSession.libraryState.library.set(this.appId, cached)
         existing = cached
       }
     }
     if (!existing) {
-      if (!loggedEmptyGameInfoMisses.has(this.appId)) {
-        loggedEmptyGameInfoMisses.add(this.appId)
+      if (
+        !this.deps.steamSession.gameSession.loggedEmptyGameInfoMisses.has(
+          this.appId
+        )
+      ) {
+        this.deps.steamSession.gameSession.loggedEmptyGameInfoMisses.add(
+          this.appId
+        )
         logWarning(
           [
             `SteamGame.getGameInfo(): double cache miss for appId ${this.appId} —`,
@@ -467,7 +467,7 @@ export default class SteamGame implements Game {
    * This is for cases where Steam's own uninstall dialog has already completed
    * but the in-memory state has not been reconciled via the focus ACF re-read.
    *
-   * The entry is intentionally KEPT (never library.delete'd): removing it would
+   * The entry is intentionally KEPT (never this.deps.steamSession.libraryState.library.delete'd): removing it would
    * orphan an owned game and drop badge-relevant fields (e.g. mac_arch:'32')
    * during an i386-recovery forceUninstall, which — if a subsequent bottle
    * reinstall does not complete — would leave the game permanently missing
@@ -481,19 +481,19 @@ export default class SteamGame implements Game {
    * pollUninstallOnce() 'absent' branch (~1131-1144).
    */
   async forceUninstall(): Promise<void> {
-    const existing = library.get(this.appId)
+    const existing = this.deps.steamSession.libraryState.library.get(this.appId)
     if (existing) {
       const updated: GameInfo = {
         ...existing,
         is_installed: false,
         install: {}
       }
-      library.set(this.appId, updated)
+      this.deps.steamSession.libraryState.library.set(this.appId, updated)
       // GAP-17-BOTTLE-STORE-DIVERGENCE / GAP-18-06: persist immediately so the
       // not-installed (badge-preserving) state is not lost on the next persist.
       this.deps.stores.steam.steamLibraryStore.set(
         'games',
-        Array.from(library.values())
+        Array.from(this.deps.steamSession.libraryState.library.values())
       )
       sendFrontendMessage('pushGameToLibrary', updated)
     }
@@ -523,7 +523,8 @@ export default class SteamGame implements Game {
    * 1291-1295.
    */
   async stop(_stopWine?: boolean): Promise<void> {
-    const inFlight = nativeInstallsInFlight.get(this.appId)
+    const inFlight =
+      this.deps.steamSession.gameSession.nativeInstallsInFlight.get(this.appId)
     if (inFlight) {
       logInfo(
         `SteamGame: aborting in-flight native depot download for appId ${this.appId}`,
@@ -545,9 +546,10 @@ export default class SteamGame implements Game {
     // so (unlike bottled Steam) it can and must end it. Kill only the game's
     // OWN per-game bottle: the recorded bottle must equal
     // bridgeBottleNameFor(appId) (T-urq-02).
-    const bridgeRecord = bridgeLaunchBottles.get(this.appId)
+    const bridgeRecord =
+      this.deps.steamSession.gameSession.bridgeLaunchBottles.get(this.appId)
     if (bridgeRecord) {
-      bridgeLaunchBottles.delete(this.appId)
+      this.deps.steamSession.gameSession.bridgeLaunchBottles.delete(this.appId)
       if (
         bridgeRecord.bottle === bridgeBottle.bridgeBottleNameFor(this.appId)
       ) {

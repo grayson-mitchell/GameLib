@@ -74,9 +74,6 @@ jest.mock('../../steamRestartHold', () => ({
   decideSteamRestartHoldRearm: jest.fn(),
   listSteamRestartHolds: jest.fn().mockReturnValue(new Map())
 }))
-jest.mock('../../gameSessionState', () => ({
-  isNativeInstallInFlight: jest.fn()
-}))
 jest.mock('backend/constants/environment', () => ({
   isMac: true,
   isLinux: false

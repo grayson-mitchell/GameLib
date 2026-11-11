@@ -33,7 +33,6 @@ import {
   resolveBridgeBottleName
 } from '../bridgeBottle'
 import { join } from 'path'
-import { library } from '../state'
 import { bridgeAllowlist } from '../bridge/allowlist'
 import { captureOwnedAppPlatforms } from '../platformCapture'
 import { captureOwnedAppMetacritic } from '../metacriticCapture'
@@ -55,6 +54,9 @@ const steamTestDeps = createTestManagerDeps({
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
 })
+
+// The boot-owned Steam library state the code under test reads (D-66.3-13): one instance per file.
+const library = steamTestDeps.steamSession.libraryState.library
 
 // The boot-owned auth-unlock latches the manager under test reads (D-66.3-13): one instance for this file.
 const noteRefreshTrigger = (

@@ -9,7 +9,6 @@ import {
  */
 import { existsSync } from 'graceful-fs'
 import { getBridgeRouteVerdict } from '../bridgeRouteVerdict'
-import { library, pendingFetches } from '../state'
 import { isBridgeBottleReady } from '../bridgeBottle'
 import { bridgeAllowlist } from '../bridge/allowlist'
 import type { GameInfo } from 'common/types'
@@ -34,6 +33,10 @@ const steamTestDeps = createTestManagerDeps({
     } as never
   })
 })
+
+// The boot-owned Steam library state the code under test reads (D-66.3-13): one instance per file.
+const library = steamTestDeps.steamSession.libraryState.library
+const pendingFetches = steamTestDeps.steamSession.libraryState.pendingFetches
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),

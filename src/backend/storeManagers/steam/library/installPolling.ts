@@ -1,8 +1,6 @@
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../../ipc'
-import { library } from '../state'
-import { isNativeInstallInFlight } from '../gameSessionState'
 import { type AcfSource, type PollOptions } from './installRoot'
 import type { ManagerDeps } from 'backend/services/types'
 import {
@@ -286,7 +284,7 @@ export function startInstallPolling(
     // writes the ACF only at finalize (D-08), so `seenDownloading` can never
     // become true mid-download — an absent manifest carries NO cancellation
     // signal at all while GameLib's own depot run is still streaming chunks.
-    // isNativeInstallInFlight(appId) is read PER-TICK, never captured at
+    // deps.steamSession.gameSession.isNativeInstallInFlight(appId) is read PER-TICK, never captured at
     // poll-start: on the resumeInterruptedSteamInstall path the flag is
     // still false when this poll is created and only becomes true a moment
     // later once the native depot run registers itself. Do NOT gate this on
@@ -324,7 +322,7 @@ export function startInstallPolling(
         // GameLib's own toast stack (renderer maps `kind` to the string).
         sendFrontendMessage('steamRequestNotice', {
           appId,
-          title: library.get(appId)?.title ?? '',
+          title: deps.steamSession.libraryState.library.get(appId)?.title ?? '',
           kind: 'install-not-started',
           seq: nextSteamRequestNoticeSeq()
         })
@@ -352,7 +350,7 @@ export function startInstallPolling(
     } else if (
       !entry.seenDownloading &&
       entry.ticks >= GRACE_TICKS &&
-      !isNativeInstallInFlight(appId)
+      !deps.steamSession.gameSession.isNativeInstallInFlight(appId)
     ) {
       logWarning(
         `Steam: install polling for appId ${appId} stopped after grace window (${GRACE_TICKS} ticks) — no manifest detected; user may have cancelled`,
@@ -367,7 +365,7 @@ export function startInstallPolling(
     } else if (
       !entry.seenDownloading &&
       entry.ticks === GRACE_TICKS &&
-      isNativeInstallInFlight(appId)
+      deps.steamSession.gameSession.isNativeInstallInFlight(appId)
     ) {
       // Diagnosable suppression, logged ONCE at the exact tick the grace
       // window would otherwise have fired, not on every subsequent tick.

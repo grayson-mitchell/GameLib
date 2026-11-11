@@ -18,7 +18,6 @@ import { sendFrontendMessage } from '../../../ipc'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
-import { library } from '../state'
 import type { Stores } from 'backend/services/types'
 
 const { steamLibraryStore } = jest.requireMock<Stores['steam']>('../stores')
@@ -28,6 +27,9 @@ const steamTestDeps = createTestManagerDeps({
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
 })
+
+// The boot-owned Steam library state the code under test reads (D-66.3-13): one instance per file.
+const library = steamTestDeps.steamSession.libraryState.library
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under

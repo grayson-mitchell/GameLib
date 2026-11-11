@@ -23,7 +23,11 @@ import { steamQueueHeadAlreadyInstalled } from 'backend/storeManagers/steam/queu
 import { existsSync } from 'fs'
 import { gogRedistPath } from 'backend/storeManagers/gog/constants'
 import type { OnlineMonitor } from 'backend/online_monitor'
-import type { Stores, StoreManagers } from 'backend/services/types'
+import type {
+  SteamSessionServices,
+  Stores,
+  StoreManagers
+} from 'backend/services/types'
 import { keepKnownRunnerElements, upsertFinished } from './finishedList'
 import {
   hasCapability,
@@ -37,6 +41,8 @@ export interface DownloadQueueDeps extends DialogBoxDeps, NotifyDeps {
   stores: Pick<Stores, 'downloadManager' | 'steam'>
   managers: Pick<StoreManagers, 'library'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline' | 'onConnectivityChange'>
+  /** The boot-owned library map and per-session game maps the steam queue-head checks read (D-66.3-13). */
+  steamSession: Pick<SteamSessionServices, 'libraryState' | 'gameSession'>
 }
 
 export function createDownloadQueue(deps: DownloadQueueDeps) {
@@ -64,7 +70,8 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
   const steamStoresDeps = {
     stores: { steam: deps.stores.steam },
     config: deps.config,
-    notifications: deps.notifications
+    notifications: deps.notifications,
+    steamSession: deps.steamSession
   }
 
   function onConnectivity(status: ConnectivityStatus) {

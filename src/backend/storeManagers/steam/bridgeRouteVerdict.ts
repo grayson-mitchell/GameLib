@@ -3,7 +3,6 @@ import { isMac } from 'backend/constants/environment'
 import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 import SteamGame from './games'
 import type { ManagerDeps } from 'backend/services/types'
-import { library } from './state'
 import * as bridgeBottle from './bridgeBottle'
 import { NUMERIC_APP_ID } from './gameConstants'
 import {
@@ -86,7 +85,7 @@ export async function getBridgeRouteVerdict(
   if (bridgeBottle.findBridgeInstallBottle(appId) !== null) {
     installedIn = 'bridge'
   } else if (
-    library.get(appId)?.is_installed === true &&
+    deps.steamSession.libraryState.library.get(appId)?.is_installed === true &&
     (await checkBottleEligibility(game))
   ) {
     installedIn = 'bottle'

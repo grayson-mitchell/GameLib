@@ -206,8 +206,14 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // `ipcMain`, and the global/per-game reads go through `deps.config` / `deps.gameConfigs`. No
   // channel, guard or `steamLibrary.has` gate moved. Prior digest:
   // 79431e0aef9012f479afdd0a2a90b0a802540acfb4689d29bccd512f82b48588
+  // 66.3-13: re-pin -- the Steam library map is a boot-owned instance now, so the
+  // `steamLibrary.has(appName)` gate moved to `deps.steamSession.libraryState.library.has(appName)`
+  // (registerSettingsFlows deps gain the `steamSession` slice; the module import is gone). Same
+  // predicate on the same map, no channel or guard moved; the semantic pin below tracks the new
+  // spelling. Prior digest:
+  // 769205ad0e807747e633cfee75a725f01ff185db708527a45a350639086f0f5e
   const SETTINGS_FLOW_REGISTRATION_SHA256 =
-    '769205ad0e807747e633cfee75a725f01ff185db708527a45a350639086f0f5e'
+    'e94fb7155eb1572f4e28a031df8edac0251ad599fbeba20edef40126092332e0'
 
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
@@ -267,15 +273,16 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
     )
   })
 
-  it('REQ-34.2-10/D-09 Gate 7 semantic pin: the requestGameSettings registration still contains the steamLibrary.has( bottle-launch fix', () => {
+  it('REQ-34.2-10/D-09 Gate 7 semantic pin: the requestGameSettings registration still contains the steam library `.has(` bottle-launch fix', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
     const stripped = stripComments(readFileSync(filePath, 'utf-8'))
 
-    // Comment-stripped first so a docstring merely mentioning `steamLibrary`
+    // Comment-stripped first so a docstring merely mentioning the library map
     // cannot satisfy this gate on its own -- this is the specific
     // Steam-detection workaround D-09 exists to protect (from the
-    // `debug/steam-bottle-game-no-launch` investigation).
-    expect(stripped).toMatch(/steamLibrary\.has\(/)
+    // `debug/steam-bottle-game-no-launch` investigation). 66.3-13: the map is
+    // read through the boot-owned `steamSession.libraryState` slice.
+    expect(stripped).toMatch(/steamSession\.libraryState\.library\.has\(/)
   })
 
   // ── Gate 8 (REQ-34.2-14 do-not-touch, WR-01 replacement): electronUntouched

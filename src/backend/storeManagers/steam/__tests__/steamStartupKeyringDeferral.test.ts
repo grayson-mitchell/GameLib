@@ -295,7 +295,6 @@ import SteamGame from '../games'
 import { SteamUser, type SteamUserBoundDeps } from '../user'
 import { setTokenStore, type TokenStore } from '../tokenStore'
 import { getSteamLibraries } from 'backend/utils'
-import { library } from '../state'
 import { captureOwnedAppPlatforms } from '../platformCapture'
 import type { GameInfo, InstallArgs } from 'common/types'
 import { at } from './fixtures/indexed'
@@ -307,6 +306,9 @@ const steamTestDeps = createTestManagerDeps({
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
 })
+
+// The boot-owned Steam library state the code under test reads (D-66.3-13): one instance per file.
+const library = steamTestDeps.steamSession.libraryState.library
 
 // The boot-owned auth-unlock latches the manager under test reads (D-66.3-13): one instance for this file.
 const isSteamAuthUnlocked = () =>

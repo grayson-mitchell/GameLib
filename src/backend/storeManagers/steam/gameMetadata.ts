@@ -5,13 +5,7 @@ import { logWarning, LogPrefix } from 'backend/logger'
 import { sendFrontendMessage } from '../../ipc'
 import { knownFixSaysMac32 } from './macArchKnownFix'
 import { resolvePlatformWrite } from './platformPrecedence'
-import {
-  library,
-  pendingFetches,
-  acquireMetadataSlot,
-  releaseMetadataSlot,
-  METADATA_FETCH_TIMEOUT_MS
-} from './state'
+import { METADATA_FETCH_TIMEOUT_MS } from './state'
 import { STEAM_STORE_API, NUMERIC_APP_ID } from './gameConstants'
 import { macArchFromMinOS } from './gameRequirements'
 import type SteamGame from './games'
@@ -36,7 +30,10 @@ export async function fetchMetadataIfNeeded(
 ): Promise<void> {
   // Guard: if a fetch is already in-flight for this appId, return immediately
   // (pendingFetches.add MUST come before the await — prevents T-2-03 race)
-  if (pendingFetches.has(steamGame.appId)) return
+  if (
+    steamGame.deps.steamSession.libraryState.pendingFetches.has(steamGame.appId)
+  )
+    return
 
   // Guard: non-numeric appId rejected before any URL is constructed (T-06-01),
   // matching the sibling chokepoints getSteamInstallSize and
@@ -55,14 +52,14 @@ export async function fetchMetadataIfNeeded(
   }
   // Notify the frontend a background metadata/art sync is starting (the first
   // pending fetch flips the indicator on; the last one flips it off below).
-  if (pendingFetches.size === 0) {
+  if (steamGame.deps.steamSession.libraryState.pendingFetches.size === 0) {
     sendFrontendMessage('steamMetadataSyncing', { syncing: true })
   }
-  pendingFetches.add(steamGame.appId)
+  steamGame.deps.steamSession.libraryState.pendingFetches.add(steamGame.appId)
 
   // Throttle: wait for a concurrency slot so a cold cache doesn't open
   // hundreds of parallel Steam CDN connections at once (mass ETIMEDOUT).
-  await acquireMetadataSlot()
+  await steamGame.deps.steamSession.libraryState.acquireMetadataSlot()
 
   try {
     const resp = await axios.get(
@@ -91,7 +88,10 @@ export async function fetchMetadataIfNeeded(
         }),
         is_delisted: delistedInfo.is_delisted
       })
-      library.set(steamGame.appId, delistedInfo)
+      steamGame.deps.steamSession.libraryState.library.set(
+        steamGame.appId,
+        delistedInfo
+      )
       sendFrontendMessage('pushGameToLibrary', delistedInfo)
       return
     }
@@ -290,7 +290,10 @@ export async function fetchMetadataIfNeeded(
     })
 
     // Update in-memory library so subsequent getGameInfo calls return enriched data
-    library.set(steamGame.appId, updated)
+    steamGame.deps.steamSession.libraryState.library.set(
+      steamGame.appId,
+      updated
+    )
 
     // Push enriched entry to frontend — GameCard re-renders with real art + title
     sendFrontendMessage('pushGameToLibrary', updated)
@@ -300,10 +303,12 @@ export async function fetchMetadataIfNeeded(
       LogPrefix.Steam
     )
   } finally {
-    releaseMetadataSlot()
-    pendingFetches.delete(steamGame.appId)
+    steamGame.deps.steamSession.libraryState.releaseMetadataSlot()
+    steamGame.deps.steamSession.libraryState.pendingFetches.delete(
+      steamGame.appId
+    )
     // Last pending fetch drained — turn the sync indicator off.
-    if (pendingFetches.size === 0) {
+    if (steamGame.deps.steamSession.libraryState.pendingFetches.size === 0) {
       sendFrontendMessage('steamMetadataSyncing', { syncing: false })
     }
   }

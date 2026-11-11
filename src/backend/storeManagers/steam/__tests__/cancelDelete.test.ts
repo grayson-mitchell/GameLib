@@ -12,8 +12,6 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { getSteamLibraries, sendProgressUpdate } from 'backend/utils'
-import { library } from '../state'
-import { isNativeInstallInFlight } from '../gameSessionState'
 import { clearSteamResumeBreadcrumb } from '../library/resumeBreadcrumbs'
 import { findOtherManifestsWithInstalldir } from '../library/acfState'
 import { getBridgeBottleSteamappsRoot } from '../library/installRoot'
@@ -30,6 +28,12 @@ const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })
 })
 
+// The boot-owned Steam library state the code under test reads (D-66.3-13): one instance per file.
+const library = steamTestDeps.steamSession.libraryState.library
+// The boot-owned in-flight map is a plain object, so the per-session probe is spied on the instance (D-66.3-13).
+const inFlightSpy = () =>
+  jest.spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
+
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
@@ -39,9 +43,6 @@ jest.mock('backend/logger', () => ({
 jest.mock('backend/utils', () => ({
   getSteamLibraries: jest.fn(),
   sendProgressUpdate: jest.fn()
-}))
-jest.mock('../gameSessionState', () => ({
-  isNativeInstallInFlight: jest.fn()
 }))
 jest.mock('../library/resumeBreadcrumbs', () => ({
   clearSteamResumeBreadcrumb: jest.fn()
@@ -106,7 +107,7 @@ describe('deleteCancelledSteamInstall', () => {
     library.clear()
     seed()
     jest.mocked(getSteamLibraries).mockResolvedValue([join(tmp, 'lib')])
-    jest.mocked(isNativeInstallInFlight).mockReturnValue(false)
+    inFlightSpy().mockReturnValue(false)
     jest.mocked(findOtherManifestsWithInstalldir).mockReturnValue([])
     jest
       .mocked(getBridgeBottleSteamappsRoot)
@@ -161,7 +162,7 @@ describe('deleteCancelledSteamInstall', () => {
   })
 
   it('waits for the native run to settle before clearing', async () => {
-    const inFlight = jest.mocked(isNativeInstallInFlight)
+    const inFlight = inFlightSpy()
     inFlight
       .mockReturnValueOnce(true)
       .mockReturnValueOnce(true)
@@ -180,7 +181,7 @@ describe('deleteCancelledSteamInstall', () => {
   })
 
   it('refuses when the settle wait times out', async () => {
-    jest.mocked(isNativeInstallInFlight).mockReturnValue(true)
+    inFlightSpy().mockReturnValue(true)
     const r = await deleteCancelledSteamInstall(steamTestDeps, '123', {
       pollMs: 1,
       timeoutMs: 20

@@ -37,7 +37,6 @@ import {
   writeBridgeModeVerdict
 } from './bridge/bridgeVerdict'
 import { appFolder } from 'backend/constants/paths'
-import { markBridgeFailedThisSession } from './gameSessionState'
 import type SteamGame from './games'
 import {
   persistBridgeDrmSignal,
@@ -77,7 +76,9 @@ export async function launchBridgeGameBody(
       `SteamGame: could not resolve a Windows launch executable for appId ${steamGame.appId} — not launching a bare/undefined path`,
       LogPrefix.Steam
     )
-    markBridgeFailedThisSession(steamGame.appId)
+    steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
+      steamGame.appId
+    )
     sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
       reason: 'launch-exe-not-resolved',
@@ -324,7 +325,9 @@ export async function launchBridgeGameBody(
       `SteamGame: launchBridgeGame could not (re)place the shim for appId ${steamGame.appId}: ${shimResult.status === 'error' ? shimResult.error : `shim-not-built (arch=${shimResult.arch})`}`,
       LogPrefix.Steam
     )
-    markBridgeFailedThisSession(steamGame.appId)
+    steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
+      steamGame.appId
+    )
     sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
       // D-51-13: a missing Win64 shim is its own named reason -- the
@@ -389,7 +392,9 @@ export async function launchBridgeGameBody(
       `SteamGame: launchBridgeGame found Steam CEG DRM in the exe for appId ${steamGame.appId} (${cegMarkers.join(', ')}) -- CEG needs the Windows Steam client, which a bridge bottle does not have; not launching`,
       LogPrefix.Steam
     )
-    markBridgeFailedThisSession(steamGame.appId)
+    steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
+      steamGame.appId
+    )
     sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
       reason: 'drm-wrapped',
@@ -468,7 +473,9 @@ export async function launchBridgeGameBody(
       helperReady.status === 'steam-not-running' ||
       helperReady.status === 'steam-not-signed-in'
     if (!steamStateCause) {
-      markBridgeFailedThisSession(steamGame.appId)
+      steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
+        steamGame.appId
+      )
     }
     sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
@@ -526,7 +533,9 @@ export async function launchBridgeGameBody(
       `SteamGame: launchBridgeGame failed to write gamelib_bridge.cfg for appId ${steamGame.appId}: ${configResult.error}`,
       LogPrefix.Steam
     )
-    markBridgeFailedThisSession(steamGame.appId)
+    steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
+      steamGame.appId
+    )
     sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
       reason: 'bridge-config-write-failed',

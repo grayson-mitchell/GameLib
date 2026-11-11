@@ -174,7 +174,8 @@ export function registerHandlers(deps: {
     runner: deps.services.runner,
     config: deps.services.config,
     gameConfigs: deps.services.gameConfigs,
-    appInfo: deps.services.appInfo
+    appInfo: deps.services.appInfo,
+    steamSession: deps.services.steamSession
   })
   // D-35-19-15's live gate: a DEV-ONLY single-host Epic cookie sweep, so the
   // `EPIC_COOKIE_HOSTS` sweep can be exercised against ONE sibling apex without

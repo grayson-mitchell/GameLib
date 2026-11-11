@@ -12,9 +12,7 @@ import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import i18next from 'i18next'
 import { SteamUser } from '../user'
-import { library } from '../state'
 import SteamGame from '../games'
-import { isNativeInstallInFlight } from '../gameSessionState'
 import { scanDownloadingAppIds } from './acfState'
 import {
   getReconcileRanDuringRearm,
@@ -55,9 +53,9 @@ export default class SteamLibraryManager implements LibraryManager {
 
     const cached = this.deps.stores.steam.steamLibraryStore.get('games', [])
     if (cached.length) {
-      library.clear()
+      this.deps.steamSession.libraryState.library.clear()
       cached.forEach((g) => {
-        library.set(g.app_name, g)
+        this.deps.steamSession.libraryState.library.set(g.app_name, g)
         sendFrontendMessage('pushGameToLibrary', g)
       })
       logInfo(
@@ -89,14 +87,14 @@ export default class SteamLibraryManager implements LibraryManager {
     // 260821-rb5: case C of the aborted-depot-residue todo (a hard kill —
     // kill -9, crash, power loss — mid native-depot-download) leaves NO
     // appmanifest_*.acf at all, so scanDownloadingAppIds(this.deps) below can never
-    // see it. getSteamResumeBreadcrumbAppIds() is the in-memory (never
+    // see it. getSteamResumeBreadcrumbAppIds(this.deps) is the in-memory (never
     // throws) counterpart, sourced from the install-start breadcrumb
     // (markSteamNativeInstallStarted, games.ts). Unioning the two lists is
     // load-bearing, not additive convenience: without it, case C has no
     // record ANYWHERE after a restart. The ACF scan is narrowed to its own
     // try so a scan failure (which case C triggers by definition — there IS
     // no ACF) can never skip breadcrumb surfacing.
-    const breadcrumbIds = getSteamResumeBreadcrumbAppIds()
+    const breadcrumbIds = getSteamResumeBreadcrumbAppIds(this.deps)
     const breadcrumbSet = new Set(breadcrumbIds)
     let downloadingIds: string[] = []
     try {
@@ -118,7 +116,7 @@ export default class SteamLibraryManager implements LibraryManager {
       // resume path racing it — skip entirely and let the live install own
       // this appId's finalize + poll start (installDepotDownload calls
       // startInstallPolling itself once its own run completes).
-      if (isNativeInstallInFlight(appId)) {
+      if (this.deps.steamSession.gameSession.isNativeInstallInFlight(appId)) {
         logInfo(
           `Steam: skipping startup resume-surface for appId ${appId} — already owned by a live in-process install`,
           LogPrefix.Steam
@@ -130,7 +128,7 @@ export default class SteamLibraryManager implements LibraryManager {
       // never throw out of this loop and never block startup or the
       // other appIds in this list.
       try {
-        const existing = library.get(appId)
+        const existing = this.deps.steamSession.libraryState.library.get(appId)
 
         // 260821-rb5 self-heal: a breadcrumb-carrying appId whose on-disk
         // manifest turns out to be fully installed (e.g. Steam itself
@@ -157,7 +155,7 @@ export default class SteamLibraryManager implements LibraryManager {
             ...existing,
             install: { ...existing.install, steamResumePending: true }
           }
-          library.set(appId, updated)
+          this.deps.steamSession.libraryState.library.set(appId, updated)
           sendFrontendMessage('pushGameToLibrary', updated)
         }
 

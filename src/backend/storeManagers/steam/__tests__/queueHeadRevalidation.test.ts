@@ -6,7 +6,6 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { getSteamLibraries } from 'backend/utils'
-import { library } from '../state'
 import { clearSteamResumeBreadcrumb } from '../library/resumeBreadcrumbs'
 import { steamQueueHeadAlreadyInstalled } from '../queueHeadRevalidation'
 import type { GameInfo } from 'common/types'
@@ -18,6 +17,9 @@ const steamStoresModule = createSteamStores({ registry: createStoreRegistry() })
 const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })
 })
+
+// The boot-owned Steam library state the code under test reads (D-66.3-13): one instance per file.
+const library = steamTestDeps.steamSession.libraryState.library
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),

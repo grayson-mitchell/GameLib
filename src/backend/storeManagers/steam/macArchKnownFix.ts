@@ -19,8 +19,8 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { GameInfo } from 'common/types'
 
 import type { SteamMetadataCacheEntry } from './stores'
+import type { SteamLibraryStateDeps } from 'backend/services/types'
 import type { SteamStoresDeps } from './library/installRoot'
-import { library } from './state'
 import { sendFrontendMessage } from '../../ipc'
 
 /**
@@ -46,21 +46,24 @@ export function knownFixSaysMac32(
 }
 
 function propagateToLibrary(
-  deps: SteamStoresDeps,
+  deps: SteamStoresDeps & SteamLibraryStateDeps,
   appId: string,
   macArch: '32' | 'unknown'
 ): void {
-  const current = library.get(appId)
+  const current = deps.steamSession.libraryState.library.get(appId)
   if (!current) return
   const updated: GameInfo = { ...current, mac_arch: macArch }
-  library.set(appId, updated)
-  deps.stores.steam.steamLibraryStore.set('games', Array.from(library.values()))
+  deps.steamSession.libraryState.library.set(appId, updated)
+  deps.stores.steam.steamLibraryStore.set(
+    'games',
+    Array.from(deps.steamSession.libraryState.library.values())
+  )
   sendFrontendMessage('pushGameToLibrary', updated)
 }
 
 /** Synchronous, idempotent, never throws. */
 export function seedMacArchFromKnownFix(
-  deps: SteamStoresDeps,
+  deps: SteamStoresDeps & SteamLibraryStateDeps,
   appId: string
 ): void {
   const { steamMetadataStore } = deps.stores.steam
