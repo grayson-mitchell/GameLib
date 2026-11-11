@@ -173,18 +173,6 @@ jest.mock('../../storeManagers/steam/bottle', () => ({
   __esModule: true,
   ...jest.requireActual('../../storeManagers/steam/bottle')
 }))
-// The Mac getSteamDeleteRoute cases flip isMac after boot; the DXMT releases listener
-// would then act on the mocked (empty) release data, so it is a no-op here.
-jest.mock('backend/tools/dxmt', () => ({
-  ...jest.requireActual('backend/tools/dxmt'),
-  registerDxmtListeners: () => () => undefined
-}))
-
-jest.mock('../../storeManagers/steam/macSteamAdoption', () => ({
-  ...jest.requireActual('../../storeManagers/steam/macSteamAdoption'),
-  readPendingAdoption: jest.fn()
-}))
-
 jest.mock('../../storeManagers/steam/bridgeBottle', () => ({
   findBridgeInstallBottle: jest.fn()
 }))
@@ -278,7 +266,6 @@ let createGlobalConfig: typeof import('backend/config').createGlobalConfig
 let getSteamBottleEligibilityVerdict: typeof import('../../storeManagers/steam/installFormIpc').getSteamBottleEligibilityVerdict
 let isSteamExperimentalInstallAppEnabled: typeof import('../../storeManagers/steam/experimentalInstallAppSetting').isSteamExperimentalInstallAppEnabled
 let findBridgeInstallBottle: typeof import('../../storeManagers/steam/bridgeBottle').findBridgeInstallBottle
-let readPendingAdoption: typeof import('../../storeManagers/steam/macSteamAdoption').readPendingAdoption
 let resolveInstallRoot: typeof import('../../storeManagers/steam/library/installRoot').resolveInstallRoot
 // One boot-owned Steam session cluster per case (D-05, D-66.3-13); the boot is handed it as a prebuilt service.
 let steamSession: import('backend/services/types').SteamSessionServices
@@ -309,9 +296,6 @@ function freshRegistry(): void {
   ;({
     findBridgeInstallBottle
   } = require('../../storeManagers/steam/bridgeBottle'))
-  ;({
-    readPendingAdoption
-  } = require('../../storeManagers/steam/macSteamAdoption'))
   ;({
     resolveInstallRoot
   } = require('../../storeManagers/steam/library/installRoot'))
@@ -542,9 +526,31 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   })
 
   describe('quick 261106-s3n: getSteamDeleteRoute', () => {
-    const invokeRoute = async (args: unknown[], mac = false) => {
-      const { input, frames } = boot()
-      // isMac flips only after boot: Mac boot paths (dxmt) must not run here.
+    const invokeRoute = async (
+      args: unknown[],
+      mac = false,
+      pendingAdoption = false
+    ) => {
+      const { input, frames, services } = boot()
+      // The store is file-backed under the shared fake HOME, so clear any earlier case's record.
+      const pendingStore = services.stores.steam.steamPendingAdoptionStore
+      pendingStore.delete('570')
+      if (pendingAdoption) {
+        // A real record in the boot's own store: readPendingAdoption validates its shape.
+        pendingStore.set('570', {
+          steamPid: 4242,
+          manifestPath: '/fake/steamapps/appmanifest_570.acf',
+          baseline: { content: '', mtimeMs: 1 }
+        })
+      }
+      // isMac flips only after boot: Mac boot paths (dxmt) must not run here. The
+      // releases-info listener would act on the mocked (empty) release data once isMac
+      // is true, so detach it from the boot's own event bus (no module mock needed).
+      /* eslint-disable @typescript-eslint/no-require-imports */
+      ;(
+        require('backend/backend_events') as typeof import('backend/backend_events')
+      ).backendEvents.removeAllListeners('releasesInfoReady')
+      /* eslint-enable @typescript-eslint/no-require-imports */
       jest.requireMock('backend/constants/environment').isMac = mac
       writeInvoke(input, 'route-s3n', 'getSteamDeleteRoute', args)
       await flush()
@@ -559,7 +565,6 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     const delegatedReply = { gamelibDelete: false, delegated: true }
 
     beforeEach(() => {
-      jest.mocked(readPendingAdoption).mockReturnValue(undefined)
       mockSettings({ enableSteamNativeDelete: true, autoUpdateGames: false })
       jest.mocked(findBridgeInstallBottle).mockReturnValue(null)
       jest.mocked(resolveInstallRoot).mockResolvedValue('native')
@@ -613,8 +618,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
 
     it('setting OFF + native + Mac + pending adoption -> not delegated', async () => {
       mockSettings({ enableSteamNativeDelete: false, autoUpdateGames: false })
-      jest.mocked(readPendingAdoption).mockReturnValue({} as never)
-      expect(await invokeRoute(['570'], true)).toEqual(closedReply)
+      expect(await invokeRoute(['570'], true, true)).toEqual(closedReply)
     })
 
     it('setting OFF + native + Mac + no record -> delegated', async () => {
