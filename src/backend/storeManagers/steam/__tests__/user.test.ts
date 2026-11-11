@@ -493,6 +493,42 @@ describe('SteamUser', () => {
       await steamUser.logout()
       expect(steamUser.isLoggedIn()).toBe(false)
     })
+
+    test('locks the auth-trigger gate and clears an armed refresh grant (quick 261112-7wv)', async () => {
+      steamSession.authTrigger.noteRefreshTrigger(
+        'steam',
+        'action-icons-refresh-button'
+      )
+      expect(steamSession.authTrigger.isSteamAuthUnlocked()).toBe(true)
+      await steamUser.logout()
+      expect(steamSession.authTrigger.isSteamAuthUnlocked()).toBe(false)
+      expect(
+        steamSession.authTrigger.consumeSteamRefreshLogonGrant()
+      ).toBeNull()
+      expect(steamSession.authTrigger.currentTriggerLabel()).toBe('startup')
+    })
+
+    test('resets the auth trigger before the first await (slow clearToken cannot leak a grant)', async () => {
+      let releaseClear!: () => void
+      const gate = new Promise<void>((resolve) => {
+        releaseClear = resolve
+      })
+      setTokenStore({
+        ...makeConfigBackedTokenStore(),
+        clearToken: () => gate
+      })
+      steamSession.authTrigger.noteRefreshTrigger(
+        'steam',
+        'action-icons-refresh-button'
+      )
+      const p = steamUser.logout()
+      expect(steamSession.authTrigger.isSteamAuthUnlocked()).toBe(false)
+      expect(
+        steamSession.authTrigger.consumeSteamRefreshLogonGrant()
+      ).toBeNull()
+      releaseClear()
+      await p
+    })
   })
 
   // ── getUserDetails ─────────────────────────────────────────────────────────

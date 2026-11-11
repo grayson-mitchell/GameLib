@@ -37,7 +37,8 @@ const mockSteamSession = {
   signIn: { resetSignInState: jest.fn() },
   authTrigger: {
     currentTriggerLabel: () => 'user-refresh',
-    noteSteamAuthTrigger: jest.fn()
+    noteSteamAuthTrigger: jest.fn(),
+    resetSteamAuthTrigger: jest.fn()
   }
 }
 

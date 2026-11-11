@@ -641,6 +641,7 @@ export class SteamUser {
    * session keys it used to wipe (isLoggedIn, userData) so the observable
    * Electron behavior is unchanged — a blanket clear() would also nuke any
    * other key ever added to this shared store (see stores.ts).
+   * It also restores the locked auth-trigger state (quick 261112-7wv).
    * clearToken() may be an async RPC round-trip to Rust in the sidecar build,
    * so this method is async; addListener('logoutSteam', ...) in main.ts
    * awaits it inside its own async wrapper, matching this file's existing
@@ -673,6 +674,11 @@ export class SteamUser {
     this.guidedInstallTargets.clear()
     this.deps.anonymousClient.close('logout')
     this.deps.steamSession.signIn.resetSignInState()
+    // Quick 261112-7wv: lock the keyring gate and drop any armed refresh logon
+    // grant. Must stay synchronous and before the first await below so a
+    // refresh racing a slow clearToken cannot consume a stale grant. Sits
+    // beside resetSignInState: both are boot-owned steamSession latches.
+    this.deps.steamSession.authTrigger.resetSteamAuthTrigger()
     // Token through the seam (D-09) first, then the remaining session keys
     // configStore.clear() used to wipe — see stores.ts's configStore
     // schema (isLoggedIn/userData are the only other keys ever written there).
