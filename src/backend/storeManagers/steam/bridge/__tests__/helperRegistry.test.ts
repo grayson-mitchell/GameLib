@@ -42,15 +42,6 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam' }
 }))
 
-// 261027-aue: the default Steam starter calls shell.openExternal on macOS only.
-jest.mock('backend/platform', () => ({
-  shell: { openExternal: jest.fn().mockResolvedValue(undefined) },
-  app: {
-    raiseMainWindow: jest.fn(),
-    openBridgeInvitePicker: jest.fn().mockResolvedValue(true)
-  }
-}))
-
 jest.mock('backend/constants/environment', () => ({ isMac: true }))
 
 jest.mock('backend/ipc', () => ({
@@ -80,7 +71,15 @@ jest.mock('node:net', () => ({
 
 const mockedSpawn = jest.fn()
 const fakeRunner = createChildBackedRunner(mockedSpawn)
-const helperDeps = { runner: fakeRunner.runner }
+// 261027-aue: the default Steam starter calls openExternal on macOS only; both services arrive
+// through the deps slice (66.3-08).
+const mockedOpenExternal = jest.fn().mockResolvedValue(undefined)
+const mockedOpenBridgeInvitePicker = jest.fn().mockResolvedValue(true)
+const helperDeps = {
+  runner: fakeRunner.runner,
+  appState: { openBridgeInvitePicker: mockedOpenBridgeInvitePicker },
+  openExternal: { openExternal: mockedOpenExternal }
+}
 const MockedSocket = Socket as unknown as jest.Mock
 
 // PROBE_REQUEST_ID is 1 inside helperProcess.ts -- mirrored here so the

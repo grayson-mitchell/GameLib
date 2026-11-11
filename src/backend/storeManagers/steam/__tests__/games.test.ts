@@ -300,6 +300,22 @@ const steamTestDeps = createTestManagerDeps({
     showMessageBox: (...a: unknown[]) =>
       jest.requireMock('backend/platform').dialog.showMessageBox(...a)
   },
+  // The steam:// hand-offs, the main-window raise and the per-game config go through deps; the
+  // platform / game_config mocks below stay the recording fakes the assertions read.
+  openExternal: {
+    ...createTestHostServices().openExternal,
+    openExternal: (...a: unknown[]) =>
+      jest.requireMock('backend/platform').shell.openExternal(...a)
+  },
+  appState: {
+    ...createTestHostServices().appState,
+    raiseMainWindow: () =>
+      jest.requireMock('backend/platform').app.raiseMainWindow()
+  },
+  gameConfigs: {
+    get: (appName: string) =>
+      jest.requireMock('backend/game_config').GameConfig.get(appName)
+  },
   steamProcesses: createInertSteamProcesses({
     // The DRM instance: its launch setup is the jest.fn()-backed stand-in the
     // '../bridge/drm/drmLaunchSetup' mock below exports (not-applicable by default).
@@ -2584,6 +2600,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
       expect(restoreBridgeSteamApiOriginals).toHaveBeenCalledTimes(1)
       expect(restoreBridgeSteamApiOriginals).toHaveBeenCalledWith({
+        config: steamTestDeps.config,
         appId: APP_ID,
         bottleDir: '/mock/bridge/bottle',
         installRoot: INSTALL_ROOT,
@@ -2710,7 +2727,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     // per-appId, so the resolved bottle used for every readiness/config
     // step and runWineCommand's gameSettings is this game's OWN bridge
     // bottle.
-    expect(getBridgeBottleSettings).toHaveBeenCalledWith(APP_ID)
+    expect(getBridgeBottleSettings).toHaveBeenCalledWith(steamTestDeps, APP_ID)
     expect(runWineCommand).toHaveBeenCalledWith(
       expect.objectContaining({
         commandParts: [RESOLVED_EXE_PATH],
@@ -4404,7 +4421,10 @@ describe('SteamGame.install() — GAME-02', () => {
       const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
 
-      expect(ensureSteamClientReady).toHaveBeenCalledWith(APP_ID)
+      expect(ensureSteamClientReady).toHaveBeenCalledWith(
+        expect.anything(),
+        APP_ID
+      )
       expect(result).toEqual({ status: 'done', deferredToSetup: true })
       expect(shellOpenExternal).not.toHaveBeenCalled()
       expect(startInstallPollingSpy).not.toHaveBeenCalled()
@@ -4573,7 +4593,10 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     expect(downloadSteamDepots).not.toHaveBeenCalled()
     // D-UAT-19: OFF still checks the client (a hand-off with no client to
     // handle steam:// is the bug), but never resolves a depot target.
-    expect(ensureSteamClientReady).toHaveBeenCalledWith(APP_ID)
+    expect(ensureSteamClientReady).toHaveBeenCalledWith(
+      expect.anything(),
+      APP_ID
+    )
     expect(resolveSteamInstallTarget).not.toHaveBeenCalled()
     expect(result).toEqual({ status: 'done' })
   })
@@ -4602,13 +4625,17 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     expect(readyOrder).toBeLessThan(targetOrder)
     expect(targetOrder).toBeLessThan(downloadOrder)
 
-    expect(ensureSteamClientReady).toHaveBeenCalledWith(APP_ID)
+    expect(ensureSteamClientReady).toHaveBeenCalledWith(
+      expect.anything(),
+      APP_ID
+    )
     expect(resolveSteamInstallTarget).toHaveBeenCalledWith(
       expect.anything(),
       APP_ID,
       {}
     )
     expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
+      config: steamTestDeps.config,
       targetSteamappsDir: TARGET.targetSteamappsDir,
       installdir: TARGET.installdir,
       os: expect.any(String),
@@ -5585,6 +5612,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
 
     expect(getBottleSteamappsDir).toHaveBeenCalledWith('GameLib')
     expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
+      config: steamTestDeps.config,
       targetSteamappsDir: BOTTLE_STEAMAPPS_DIR,
       installdir: RESOLVED_TARGET.installdir,
       os: 'windows',
@@ -5639,6 +5667,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
+      config: steamTestDeps.config,
       targetSteamappsDir: BOTTLE_STEAMAPPS_DIR,
       installdir: RESOLVED_TARGET.installdir,
       os: 'windows',
@@ -5793,6 +5822,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       `GameLibSteamBridge-${APP_ID}`
     )
     expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
+      config: steamTestDeps.config,
       targetSteamappsDir: BRIDGE_STEAMAPPS_DIR,
       installdir: RESOLVED_TARGET.installdir,
       os: 'windows',
@@ -11585,7 +11615,7 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
     expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(steamTestDeps, APP_ID)
     // quick/261016-u1w (D-B threading): resolves THIS game's own bridge
     // bottle rather than the shared zero-arg default.
-    expect(getBridgeBottleSettings).toHaveBeenCalledWith(APP_ID)
+    expect(getBridgeBottleSettings).toHaveBeenCalledWith(steamTestDeps, APP_ID)
     // quick/261016-u1w (D-D): this game lives in the LEGACY shared bottle
     // ('GameLibSteamBridge'), not its own per-game bottle, so the whole-bottle
     // removal path must never be reached here.
@@ -13626,7 +13656,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       ;(existsSync as jest.Mock).mockReturnValue(true)
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
       ;(getBridgeBottleSettings as jest.Mock).mockImplementation(
-        (id: string) => ({
+        (_deps: unknown, id: string) => ({
           wineCrossoverBottle: bottleFor(id),
           wineVersion: {
             bin: '/stock/bin/wine',
@@ -14834,7 +14864,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         })
         bottleMod.endPerGameBridgeBottleSessionWith.mockResolvedValue(true)
         ;(getBridgeBottleSettings as jest.Mock).mockImplementation(
-          (id: string) => ({
+          (_deps: unknown, id: string) => ({
             wineCrossoverBottle: bottleFor(id),
             wineVersion: registered.current
               ? { bin: runnerBin, name: 'overlay', type: 'crossover' }
@@ -15404,7 +15434,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           vars: envVarsFor(id)
         })
         ;(getBridgeBottleSettings as jest.Mock).mockImplementation(
-          (bid: string) => ({
+          (_deps: unknown, bid: string) => ({
             wineCrossoverBottle: bottleFor(bid),
             wineVersion: { bin: '/e/wine', name: 'e', type: 'wine' },
             enviromentOptions: [{ key: 'SteamAppId', value: 'old' }]
@@ -15421,7 +15451,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         const launched = await fireBridgeWineLaunch(
           game,
           '/g/game.exe',
-          (getBridgeBottleSettings as jest.Mock)(id),
+          (getBridgeBottleSettings as jest.Mock)(steamTestDeps, id),
           undefined,
           { kind: 'env', vars: envVarsFor(id) }
         )
@@ -15597,7 +15627,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         })
         bottleMod.endPerGameBridgeBottleSessionWith.mockResolvedValue(true)
         ;(getBridgeBottleSettings as jest.Mock).mockImplementation(
-          (id: string) => ({
+          (_deps: unknown, id: string) => ({
             wineCrossoverBottle: bottleFor(id),
             wineVersion: registered.current
               ? { bin: runnerBin, name: 'overlay', type: 'crossover' }

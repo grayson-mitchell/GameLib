@@ -9,7 +9,6 @@
  */
 import { createRunTool } from 'backend/engine/runTool'
 import i18next from 'i18next'
-import { app, shell } from 'backend/platform'
 import { existsSync } from 'graceful-fs'
 import { join } from 'node:path'
 import { GameSettings, LaunchOption } from 'common/types'
@@ -238,7 +237,8 @@ export async function launch(
           createRestartDeps({
             clock: steamGame.deps.clock,
             macSteamOffline: steamGame.deps.steamProcesses.macSteamOffline,
-            launchRunGameId: () => shell.openExternal(url, { activate: false })
+            launchRunGameId: () =>
+              steamGame.deps.openExternal.openExternal(url, { activate: false })
           })
         )
         if (outcome.kind === 'relaunched') {
@@ -280,7 +280,7 @@ export async function launch(
       }
     }
   }
-  await shell.openExternal(url, { activate: false })
+  await steamGame.deps.openExternal.openExternal(url, { activate: false })
   if (!isWindows) watchSteamLaunch(steamGame.deps, steamGame.appId)
   return true
 }
@@ -387,7 +387,7 @@ export function maybeNotifyDrmModeFailed(
   notify(steamGame.deps, { title, body })
   // The failure usually lands while the game is in front. Bring GameLib up first, or the
   // dialog renders into a window nobody can see (display=unconfirmed in the 56-16 gate).
-  app.raiseMainWindow()
+  steamGame.deps.appState.raiseMainWindow()
   const ackId = newDialogAckId()
   const appId = steamGame.appId
   trackDialogDisplay(ackId, (result) => {
@@ -431,7 +431,7 @@ export function showEngineDialog(
   tag: string
 ): void {
   notify(steamGame.deps, { title, body })
-  app.raiseMainWindow()
+  steamGame.deps.appState.raiseMainWindow()
   const ackId = newDialogAckId()
   const appId = steamGame.appId
   trackDialogDisplay(ackId, (result) => {
@@ -783,7 +783,10 @@ export async function selectLaunchEngine(
   // fireBridgeWineLaunch bounds that. GameLib never edits NagTime, the
   // registry or the licence and never suppresses CodeWeavers' prompts.
 
-  return { ok: true, settings: getBridgeBottleSettings(steamGame.appId) }
+  return {
+    ok: true,
+    settings: getBridgeBottleSettings(steamGame.deps, steamGame.appId)
+  }
 }
 
 /**

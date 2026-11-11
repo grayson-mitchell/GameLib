@@ -35,7 +35,6 @@ import {
   hasLiveBridgeHelper,
   stopBridgeHelper
 } from '../helperRegistry'
-import { app } from 'backend/platform'
 import { acknowledgeDialogDisplay } from 'backend/dialog/displayAck'
 
 jest.mock('backend/logger', () => ({
@@ -43,15 +42,6 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
-}))
-
-// 261027-aue: the default Steam starter calls shell.openExternal on macOS only.
-jest.mock('backend/platform', () => ({
-  shell: { openExternal: jest.fn().mockResolvedValue(undefined) },
-  app: {
-    raiseMainWindow: jest.fn(),
-    openBridgeInvitePicker: jest.fn().mockResolvedValue(true)
-  }
 }))
 
 jest.mock('backend/constants/environment', () => ({ isMac: true }))
@@ -83,7 +73,19 @@ jest.mock('node:net', () => ({
 
 const mockedSpawn = jest.fn()
 const fakeRunner = createChildBackedRunner(mockedSpawn)
-const helperDeps = { runner: fakeRunner.runner }
+// 261027-aue: the default Steam starter calls openExternal on macOS only; both services arrive
+// through the deps slice (66.3-08).
+const mockedOpenExternal = jest.fn().mockResolvedValue(undefined)
+const mockedOpenBridgeInvitePicker = jest.fn().mockResolvedValue(true)
+const mockedRaiseMainWindow = jest.fn()
+const helperDeps = {
+  runner: fakeRunner.runner,
+  appState: {
+    openBridgeInvitePicker: mockedOpenBridgeInvitePicker,
+    raiseMainWindow: mockedRaiseMainWindow
+  },
+  openExternal: { openExternal: mockedOpenExternal }
+}
 const MockedSocket = Socket as unknown as jest.Mock
 const mockedSendFrontendMessage = sendFrontendMessage as jest.Mock
 
@@ -180,10 +182,9 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
   describe('INVITE dialog line', () => {
     const invite = (appId: string) =>
       Buffer.from(`[2026-11-01T00:00:00Z] INVITE dialog appid=${appId}\n`)
-    const open = app.openBridgeInvitePicker as jest.Mock
+    const open = mockedOpenBridgeInvitePicker
     beforeEach(() => {
       mockedSendFrontendMessage.mockClear()
-      ;(app.raiseMainWindow as jest.Mock).mockClear()
       open.mockClear()
       open.mockResolvedValue(true)
     })
@@ -200,7 +201,7 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
         appId: '3205720',
         ackId: expect.stringMatching(/.+/)
       })
-      expect(app.raiseMainWindow).not.toHaveBeenCalled()
+      expect(mockedRaiseMainWindow).not.toHaveBeenCalled()
       expect(
         mockedSendFrontendMessage.mock.calls.filter(
           (c) => c[0] === 'steamBridgeInviteRequest'
@@ -267,7 +268,7 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
       void ensureBridgeHelperReady(helperDeps, '3205720')
       child.stderr.emit('data', invite('999'))
       expect(inviteCalls()).toHaveLength(0)
-      expect(app.raiseMainWindow).not.toHaveBeenCalled()
+      expect(mockedRaiseMainWindow).not.toHaveBeenCalled()
     })
 
     test('a line from a stale child does nothing', () => {
@@ -294,7 +295,7 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
         Buffer.from('INVITE dialog appid=3205720 trailing\n')
       )
       expect(inviteCalls()).toHaveLength(0)
-      expect(app.raiseMainWindow).not.toHaveBeenCalled()
+      expect(mockedRaiseMainWindow).not.toHaveBeenCalled()
     })
 
     test('two lines within 2000 ms give one picker open', () => {
@@ -304,7 +305,7 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
       child.stderr.emit('data', invite('3205720'))
       child.stderr.emit('data', invite('3205720'))
       expect(inviteCalls()).toHaveLength(1)
-      expect(app.raiseMainWindow).not.toHaveBeenCalled()
+      expect(mockedRaiseMainWindow).not.toHaveBeenCalled()
     })
   })
 

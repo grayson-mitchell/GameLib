@@ -40,7 +40,8 @@ import {
   ensureMacSteamOfflineOwedMigrated,
   macSteamOfflineOwedVersion
 } from 'backend/storeVersioning/macSteamOfflineOwedFile'
-import { shell } from 'backend/platform'
+import type { GlobalConfigSlice } from 'backend/config'
+import type { OpenExternal } from 'backend/host/openExternal'
 import type { Clock, ProcessRunner, TimerHandle } from 'backend/process/types'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 import type { SteamGoOfflineRetryResult } from 'common/types/steam'
@@ -139,21 +140,14 @@ export type MacSteamOfflineBuildDeps = Omit<
  * The non-spawn members of the deps, as production wires them. The paths are
  * read lazily so importing this module stays cheap.
  */
-export function createMacSteamOfflineEnvDeps(): Omit<
-  MacSteamOfflineBuildDeps,
-  'runner' | 'clock'
-> {
+export function createMacSteamOfflineEnvDeps(deps: {
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+  openExternal: Pick<OpenExternal, 'openExternal'>
+}): Omit<MacSteamOfflineBuildDeps, 'runner' | 'clock'> {
   return {
     platform: process.platform,
     connectionLogPath: () => {
-      // Loaded on first use, not at module load: backend/config pulls in the
-      // whole backend graph (utils, GOG, Electron paths), and user.ts imports
-      // this module on every startup path and in every suite that touches it.
-      /* eslint-disable @typescript-eslint/no-require-imports */
-      const { GlobalConfig } =
-        require('backend/config') as typeof import('backend/config')
-      /* eslint-enable @typescript-eslint/no-require-imports */
-      const { defaultSteamPath } = GlobalConfig.get().getSettings()
+      const { defaultSteamPath } = deps.config.getSettings()
       return join(
         defaultSteamPath.replaceAll("'", ''),
         'logs',
@@ -161,7 +155,8 @@ export function createMacSteamOfflineEnvDeps(): Omit<
       )
     },
     // Refresh's go-offline must not raise Mac Steam (quick 261029-thl); Steam may still self-raise on gooffline.
-    openUrl: (url) => void shell.openExternal(url, { activate: false }),
+    openUrl: (url) =>
+      void deps.openExternal.openExternal(url, { activate: false }),
     onlineDebtPath: () => {
       /* eslint-disable @typescript-eslint/no-require-imports */
       const { appFolder } =

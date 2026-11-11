@@ -47,7 +47,6 @@ import {
   __setBridgeHelperSpawnEnvForTests,
   __resetBridgeHelperStateForTests
 } from '../helperRegistry'
-import { shell } from 'backend/platform'
 import { stripSourceComments } from '../../../../testUtils/stripSourceComments'
 
 jest.mock('backend/logger', () => ({
@@ -55,15 +54,6 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
-}))
-
-// 261027-aue: the default Steam starter calls shell.openExternal on macOS only.
-jest.mock('backend/platform', () => ({
-  shell: { openExternal: jest.fn().mockResolvedValue(undefined) },
-  app: {
-    raiseMainWindow: jest.fn(),
-    openBridgeInvitePicker: jest.fn().mockResolvedValue(true)
-  }
 }))
 
 jest.mock('backend/constants/environment', () => ({ isMac: true }))
@@ -95,7 +85,15 @@ jest.mock('node:net', () => ({
 
 const mockedSpawn = jest.fn()
 const fakeRunner = createChildBackedRunner(mockedSpawn)
-const helperDeps = { runner: fakeRunner.runner }
+// 261027-aue: the default Steam starter calls openExternal on macOS only; both services arrive
+// through the deps slice (66.3-08).
+const mockedOpenExternal = jest.fn().mockResolvedValue(undefined)
+const mockedOpenBridgeInvitePicker = jest.fn().mockResolvedValue(true)
+const helperDeps = {
+  runner: fakeRunner.runner,
+  appState: { openBridgeInvitePicker: mockedOpenBridgeInvitePicker },
+  openExternal: { openExternal: mockedOpenExternal }
+}
 const MockedSocket = Socket as unknown as jest.Mock
 const mockedSendFrontendMessage = sendFrontendMessage as jest.Mock
 
@@ -808,7 +806,7 @@ describe('261027-aue: wait for Steam to start / sign in', () => {
     fakeRunner.reset()
     mockedSpawn.mockReset()
     mockedSendFrontendMessage.mockClear()
-    ;(shell.openExternal as jest.Mock).mockClear()
+    mockedOpenExternal.mockClear()
     __setSteamWaitScheduleForTests({ budgetMs: 150, intervalMs: 5 })
   })
 
@@ -896,7 +894,7 @@ describe('261027-aue: wait for Steam to start / sign in', () => {
 
   test('a failed starter (openExternal rejects) is not fatal', async () => {
     scriptSpawns([NOT_RUNNING, 'ok'])
-    ;(shell.openExternal as jest.Mock).mockRejectedValueOnce(new Error('boom'))
+    mockedOpenExternal.mockRejectedValueOnce(new Error('boom'))
 
     const result = await ensureBridgeHelperReady(helperDeps, APP_ID_A)
 
@@ -908,8 +906,8 @@ describe('261027-aue: wait for Steam to start / sign in', () => {
 
     await ensureBridgeHelperReady(helperDeps, APP_ID_A)
 
-    expect(shell.openExternal).toHaveBeenCalledTimes(1)
-    expect(shell.openExternal).toHaveBeenCalledWith('steam://open/main', {
+    expect(mockedOpenExternal).toHaveBeenCalledTimes(1)
+    expect(mockedOpenExternal).toHaveBeenCalledWith('steam://open/main', {
       activate: false
     })
   })

@@ -176,7 +176,10 @@ export async function runNativeDepotDownload(
 
   try {
     const clientReadyStart = Date.now()
-    const clientReady = await ensureSteamClientReady(steamGame.appId) // Plan 10
+    const clientReady = await ensureSteamClientReady(
+      steamGame.deps,
+      steamGame.appId
+    ) // Plan 10
     logInfo(
       `[Timing] runNativeDepotDownload: ensureSteamClientReady took ${Date.now() - clientReadyStart}ms for appId ${steamGame.appId}`,
       LogPrefix.Steam
@@ -265,7 +268,10 @@ export async function runNativeDepotDownload(
         .probeMacSteamPid({ runner: steamGame.deps.runner })
         .catch(() => null)
       let adoptedByInstallApp = false
-      if (pid !== null && isSteamExperimentalInstallAppEnabled()) {
+      if (
+        pid !== null &&
+        isSteamExperimentalInstallAppEnabled(steamGame.deps.config)
+      ) {
         const outcome = await requestSteamInstallApp(
           steamGame.appId,
           { libraryPath: dirname(dirname(handoff.manifestPath)) },
@@ -504,6 +510,7 @@ export async function runNativeDepotDownloadLeased(
 
   const downloadStart = Date.now()
   const outcome = await downloadSteamDepots(steamGame.appId, {
+    config: steamGame.deps.config,
     targetSteamappsDir,
     installdir: resolved.installdir,
     os: opts.os,

@@ -425,7 +425,7 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   ipcMain.handle(
     'steamClientSetupRecheck',
     async (_event: unknown, ...args: unknown[]) => {
-      return ensureSteamClientReady(args[0] as string)
+      return ensureSteamClientReady(managerDeps(), args[0] as string)
     }
   )
 }

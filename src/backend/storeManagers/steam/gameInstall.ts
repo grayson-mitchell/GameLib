@@ -9,7 +9,6 @@
  */
 
 import i18next from 'i18next'
-import { shell } from 'backend/platform'
 import { resolve } from 'node:path'
 import { InstallArgs } from 'common/types'
 import { InstallResult } from 'common/types/game_manager'
@@ -245,6 +244,7 @@ export async function install(
       }
       try {
         const prescreenResult = await prescreenBridgeDepots(steamGame.appId, {
+          config: steamGame.deps.config,
           targetSteamappsDir: bridgeBottleName
             ? bottle.getBottleSteamappsDir(bridgeBottleName)
             : '',
@@ -372,7 +372,7 @@ export async function install(
   // steam://install path below (D-13 safety valve), gated since D-UAT-19 on
   // a Steam client being there to handle it. The D-15
   // bottle branch above is Plan 11's scope, not this one.
-  if (isSteamNativeInstallEnabled()) {
+  if (isSteamNativeInstallEnabled(steamGame.deps.config)) {
     return installNative(steamGame, args)
   }
 
@@ -388,7 +388,10 @@ export async function install(
   // a missing / never-launched client opens the D-10/D-11 guided setup
   // (ensureSteamClientReady already sent steamClientSetupRequired), and the
   // install is deferred — no openExternal, no poller, no finished entry.
-  const clientReady = await ensureSteamClientReady(steamGame.appId)
+  const clientReady = await ensureSteamClientReady(
+    steamGame.deps,
+    steamGame.appId
+  )
   if (!clientReady.ready) {
     if (
       clientReady.error === undefined &&
@@ -415,7 +418,7 @@ export async function install(
   // 'unavailable' outcome falls through to the unchanged steam://install
   // hand-off below; a Steam-reported EAppUpdateError is surfaced, not
   // swallowed.
-  if (isSteamExperimentalInstallAppEnabled()) {
+  if (isSteamExperimentalInstallAppEnabled(steamGame.deps.config)) {
     const libraryPath = await resolveSteamLibraryRoot(
       steamGame.deps,
       args?.path
@@ -455,7 +458,7 @@ export async function install(
     `SteamGame: delegating install for appId ${steamGame.appId} via ${url}`,
     LogPrefix.Steam
   )
-  await shell.openExternal(url)
+  await steamGame.deps.openExternal.openExternal(url)
 
   // Start ACF polling so the install progress and completion are surfaced
   // in GamerLib without requiring a focus round-trip (D-07). The poller

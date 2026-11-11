@@ -261,7 +261,11 @@ describeDarwinOnly(
     // The real process runner: the helper spawn is production code, so it runs
     // through the same runner (isolated to its own fake profile).
     const realRunner = createRealRunner()
-    const helperDeps = () => ({ runner: realRunner.runner })
+    const helperDeps = () => ({
+      runner: realRunner.runner,
+      appState: { openBridgeInvitePicker: async () => true },
+      openExternal: { openExternal: async () => undefined }
+    })
     let compiledHelperPath: string
 
     beforeAll(() => {

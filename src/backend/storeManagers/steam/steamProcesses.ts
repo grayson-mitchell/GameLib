@@ -10,6 +10,8 @@
  * default, and the monitors spawn only per polled install and are stopped at stdin EOF.
  */
 import { sendFrontendMessage } from '../../ipc'
+import type { GlobalConfigSlice } from '../../config'
+import type { OpenExternal } from '../../host/openExternal'
 import type { Clock, ProcessRunner } from '../../process/types'
 import { createSteamDrm } from './bridge/drm/drmLaunchSetup'
 import { createRunningPoll, readRunningAppId } from './library/runningPoll'
@@ -27,13 +29,15 @@ export function createSteamProcesses(deps: {
   runner: Pick<ProcessRunner, 'run' | 'spawnLongLived' | 'openDetached'>
   clock: Clock
   platform: NodeJS.Platform
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+  openExternal: Pick<OpenExternal, 'openExternal'>
 }) {
-  const { runner, clock, platform } = deps
+  const { runner, clock, platform, config, openExternal } = deps
   return {
     // Mac Steam's go-offline debt and shutdown signal: one instance per boot, handed to SteamUser
     // (bindStores), the guided Go Offline flows and the boot/quit restore.
     macSteamOffline: createMacSteamOffline({
-      ...createMacSteamOfflineEnvDeps(),
+      ...createMacSteamOfflineEnvDeps({ config, openExternal }),
       platform,
       runner,
       clock
@@ -54,7 +58,7 @@ export function createSteamProcesses(deps: {
       runner,
       platform,
       listPids: () => listSteamClientPids({ runner }, 'darwin'),
-      readTail: readContentLogTail,
+      readTail: (offset) => readContentLogTail(config, offset),
       now: () => clock.now(),
       parentPid: process.pid
     })

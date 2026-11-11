@@ -54,7 +54,6 @@ import { Socket } from 'node:net'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
 import { isMac } from 'backend/constants/environment'
-import { shell } from 'backend/platform'
 import {
   HELLO_ROLE_PROBE,
   encodeControl,
@@ -377,10 +376,14 @@ async function probeHelperReadiness(
  * games.ts gives for rungameid. A failed open is not fatal: the loop still
  * waits, the user may start Steam by hand. macOS only (the bridge is macOS).
  */
-async function startSteamDefault(): Promise<void> {
+async function startSteamDefault(
+  deps: Pick<HelperSpawnDeps, 'openExternal'>
+): Promise<void> {
   if (!isMac) return
   try {
-    await shell.openExternal('steam://open/main', { activate: false })
+    await deps.openExternal.openExternal('steam://open/main', {
+      activate: false
+    })
   } catch (error) {
     logWarning(
       ['startSteamDefault: could not open Steam', error],
@@ -476,7 +479,7 @@ export async function ensureBridgeHelperReady(
     }
     if (cause === 'steam-not-running' && !steamStarted) {
       steamStarted = true
-      await (options.startSteam ?? startSteamDefault)()
+      await (options.startSteam ?? (() => startSteamDefault(deps)))()
     }
     stopBridgeHelper(appId)
     await sleep(intervalMs)

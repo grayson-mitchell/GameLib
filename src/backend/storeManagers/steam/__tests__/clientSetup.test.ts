@@ -18,9 +18,7 @@
  */
 import { existsSync, mkdirSync } from 'graceful-fs'
 import { join } from 'path'
-import { GlobalConfig } from 'backend/config'
 import { downloadFile } from 'backend/utils'
-import { shell } from 'backend/platform'
 import { logError, logInfo } from 'backend/logger'
 import { sendFrontendMessage } from '../../../ipc'
 import { SteamUser } from '../user'
@@ -40,15 +38,12 @@ jest.mock('graceful-fs', () => ({
   mkdirSync: jest.fn()
 }))
 
+// user.ts (the real isSteamClientInstalled, win32 gate describe) still reads the static config until
+// its own conversion (66.3-13..16); it shares the slice's getSettings.
 jest.mock('backend/config', () => ({
   GlobalConfig: {
-    get: jest.fn()
+    get: () => ({ getSettings: (...a: unknown[]) => mockedGetSettings(...a) })
   }
-}))
-
-jest.mock('backend/platform', () => ({
-  ...jest.requireActual('backend/platform'),
-  shell: { openExternal: jest.fn() }
 }))
 
 jest.mock('backend/utils', () => ({
@@ -86,15 +81,21 @@ jest.mock('backend/constants/environment', () => ({
 
 const mockedExistsSync = existsSync as jest.Mock
 const mockedMkdirSync = mkdirSync as jest.Mock
-const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+// The config slice and opener handed to the code under test (66.3-08): no module mocks.
+const mockedGetSettings = jest.fn()
+const mockedOpenExternal = jest.fn()
+const clientDeps = {
+  config: { getSettings: mockedGetSettings },
+  openExternal: { openExternal: mockedOpenExternal }
+} as unknown as Parameters<typeof ensureSteamClientReady>[0]
 const mockedDownloadFile = downloadFile as jest.Mock
-const mockedOpenExternal = shell.openExternal as jest.Mock
 // Recording fake handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
 const setupDeps = {
   spawnAsync: mockedSpawnAsync,
-  runner: createScriptedRunner([])
-} as Parameters<typeof startGuidedClientInstall>[0]
+  runner: createScriptedRunner([]),
+  openExternal: { openExternal: mockedOpenExternal }
+} as unknown as Parameters<typeof startGuidedClientInstall>[0]
 const mockedIsSteamClientInstalled =
   SteamUser.isSteamClientInstalled as jest.Mock
 const mockedSendFrontendMessage = sendFrontendMessage as jest.Mock
@@ -111,7 +112,7 @@ describe('clientSetup.ts', () => {
   beforeEach(() => {
     mockedExistsSync.mockReset()
     mockedMkdirSync.mockReset()
-    mockedGlobalConfigGet.mockReset()
+    mockedGetSettings.mockReset()
     mockedDownloadFile.mockReset()
     mockedOpenExternal.mockReset()
     mockedSpawnAsync.mockReset()
@@ -125,8 +126,8 @@ describe('clientSetup.ts', () => {
     envMock.isMac = false
     envMock.isLinux = false
 
-    mockedGlobalConfigGet.mockReturnValue({
-      getSettings: () => ({ defaultSteamPath: '/home/user/.steam/steam' })
+    mockedGetSettings.mockReturnValue({
+      defaultSteamPath: '/home/user/.steam/steam'
     })
     mockedDownloadFile.mockResolvedValue(undefined)
     mockedOpenExternal.mockResolvedValue(undefined)
@@ -138,7 +139,7 @@ describe('clientSetup.ts', () => {
       mockedIsSteamClientInstalled.mockReturnValue(true)
       mockedExistsSync.mockReturnValue(true)
 
-      const result = await ensureSteamClientReady('123')
+      const result = await ensureSteamClientReady(clientDeps, '123')
 
       expect(result).toEqual({ status: 'ready', ready: true })
       expect(mockedSendFrontendMessage).not.toHaveBeenCalled()
@@ -148,7 +149,7 @@ describe('clientSetup.ts', () => {
       mockedIsSteamClientInstalled.mockReturnValue(true)
       mockedExistsSync.mockReturnValue(false)
 
-      const result = await ensureSteamClientReady('123')
+      const result = await ensureSteamClientReady(clientDeps, '123')
 
       expect(result).toEqual({ status: 'needs-launch', ready: false })
       expect(mockedSendFrontendMessage).toHaveBeenCalledWith(
@@ -165,7 +166,7 @@ describe('clientSetup.ts', () => {
     it('SNI-06/D-10: Steam absent -> needs-install, emits steamClientSetupRequired(reason=install)', async () => {
       mockedIsSteamClientInstalled.mockReturnValue(false)
 
-      const result = await ensureSteamClientReady('123')
+      const result = await ensureSteamClientReady(clientDeps, '123')
 
       expect(result).toEqual({ status: 'needs-install', ready: false })
       expect(mockedSendFrontendMessage).toHaveBeenCalledWith(
@@ -177,7 +178,7 @@ describe('clientSetup.ts', () => {
     })
 
     it('T-21-05: a non-numeric appId is rejected before any check and never emits the event', async () => {
-      const result = await ensureSteamClientReady('../etc/passwd')
+      const result = await ensureSteamClientReady(clientDeps, '../etc/passwd')
 
       expect(result.status).toBe('needs-install')
       expect(result.ready).toBe(false)
@@ -206,9 +207,7 @@ describe('clientSetup.ts', () => {
       mockedIsSteamClientInstalled.mockImplementation(() =>
         ActualSteamUser.isSteamClientInstalled()
       )
-      mockedGlobalConfigGet.mockReturnValue({
-        getSettings: () => ({ defaultSteamPath: root })
-      })
+      mockedGetSettings.mockReturnValue({ defaultSteamPath: root })
     })
 
     afterEach(() => {
@@ -221,7 +220,7 @@ describe('clientSetup.ts', () => {
     it('steam.exe under the root but no libraryfolders.vdf -> needs-launch', async () => {
       existsOnly(join(root, 'steam.exe'))
 
-      const result = await ensureSteamClientReady('123')
+      const result = await ensureSteamClientReady(clientDeps, '123')
 
       expect(result).toEqual({ status: 'needs-launch', ready: false })
       expect(mockedSendFrontendMessage).toHaveBeenCalledWith(
@@ -233,7 +232,7 @@ describe('clientSetup.ts', () => {
     it('only the old Program Files Steam.exe exists -> needs-install', async () => {
       existsOnly(programFilesSteam)
 
-      const result = await ensureSteamClientReady('123')
+      const result = await ensureSteamClientReady(clientDeps, '123')
 
       expect(result).toEqual({ status: 'needs-install', ready: false })
       expect(mockedSendFrontendMessage).toHaveBeenCalledWith(
@@ -248,7 +247,7 @@ describe('clientSetup.ts', () => {
         join(root, 'steamapps', 'libraryfolders.vdf')
       )
 
-      const result = await ensureSteamClientReady('123')
+      const result = await ensureSteamClientReady(clientDeps, '123')
 
       expect(result).toEqual({ status: 'ready', ready: true })
       expect(mockedSendFrontendMessage).not.toHaveBeenCalled()

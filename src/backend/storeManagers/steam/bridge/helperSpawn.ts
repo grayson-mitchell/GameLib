@@ -15,7 +15,8 @@ import {
   steamBridgeHelperPath,
   steamBridgeHelperStateDir
 } from 'backend/constants/paths'
-import { app } from 'backend/platform'
+import type { AppState } from 'backend/host/appState'
+import type { OpenExternal } from 'backend/host/openExternal'
 import { newDialogAckId, trackDialogDisplay } from 'backend/dialog/displayAck'
 import type { LongLivedHandle, ProcessRunner } from 'backend/process/types'
 import { BRIDGE_SECRET_ENV } from './protocol'
@@ -80,7 +81,11 @@ export function classifyInitFlatError(
   return 'other'
 }
 
-export type HelperSpawnDeps = { runner: Pick<ProcessRunner, 'spawnLongLived'> }
+export type HelperSpawnDeps = {
+  runner: Pick<ProcessRunner, 'spawnLongLived'>
+  appState: Pick<AppState, 'openBridgeInvitePicker'>
+  openExternal: Pick<OpenExternal, 'openExternal'>
+}
 
 const MIN_EPHEMERAL_PORT = 1024
 const MAX_PORT = 65535
@@ -240,7 +245,7 @@ export function ensureHelperSpawned(
         LogPrefix.Steam
       )
     )
-    void app.openBridgeInvitePicker({ appId, ackId }).then((ok) => {
+    void deps.appState.openBridgeInvitePicker({ appId, ackId }).then((ok) => {
       if (!ok) {
         logWarning(
           `bridge invite [${appId}]: picker window failed`,

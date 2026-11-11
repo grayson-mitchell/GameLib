@@ -5,7 +5,6 @@
 // (gameEligibility/gameLaunchOverlay -> gameInstall -> gameLaunch ->
 // gameBridgeLaunch). A call a test spies on stays a `steamGame.X()` call
 // (quick-261107-an2).
-import { shell } from 'backend/platform'
 import { rmSync } from 'node:fs'
 import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { ExecResult } from 'common/types'
@@ -144,7 +143,8 @@ export async function uninstall(
 
     // quick 261106-s3n: "Delete Steam games directly in GameLib" ON. OFF
     // falls through to everything below, unchanged.
-    if (isSteamNativeDeleteEnabled()) return uninstallNativeInGameLib(steamGame)
+    if (isSteamNativeDeleteEnabled(steamGame.deps.config))
+      return uninstallNativeInGameLib(steamGame)
 
     // quick 261029-l9w: a running Steam that never adopted a GameLib install
     // ignores steam://uninstall, so remove that one state directly.
@@ -155,7 +155,7 @@ export async function uninstall(
       `SteamGame: delegating uninstall for appId ${steamGame.appId} via ${url}`,
       LogPrefix.Steam
     )
-    await shell.openExternal(url)
+    await steamGame.deps.openExternal.openExternal(url)
 
     // Poll ACF so the badge flips to not-installed when Steam removes the
     // appmanifest, without requiring a focus round-trip (D-07). Symmetric to
@@ -204,6 +204,7 @@ function failUninstall(steamGame: SteamGame, stderr: string): ExecResult {
 
 async function uninstallBridgeGame(steamGame: SteamGame): Promise<ExecResult> {
   const bottleName = getBridgeBottleSettings(
+    steamGame.deps,
     steamGame.appId
   ).wineCrossoverBottle
   if (bottleName === bridgeBottleNameFor(steamGame.appId)) {

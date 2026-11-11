@@ -1,3 +1,4 @@
+import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import {
   createTestManagerDeps,
   createTestStores
@@ -228,7 +229,13 @@ const { steamMetadataStore } = jest.requireMock<Stores['steam']>('../stores')
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
-  stores: createTestStores({ steam: steamStoresModule })
+  stores: createTestStores({ steam: steamStoresModule }),
+  // The steam:// hand-off goes through deps; the platform mock stays the recording fake.
+  openExternal: {
+    ...createTestHostServices().openExternal,
+    openExternal: (...a: unknown[]) =>
+      jest.requireMock('backend/platform').shell.openExternal(...a)
+  }
 })
 
 const APP_ID = '63000'

@@ -11,7 +11,6 @@ import { GOGCloudSavesLocation } from 'common/types/gog'
 import { Game, InstallResult, RemoveArgs } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type LogWriter from 'backend/logger/log_writer'
-import { GameConfig } from 'backend/game_config'
 import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
 import { sendFrontendMessage } from '../../ipc'
 import {
@@ -106,7 +105,7 @@ export default class SteamGame implements Game {
         ...(overlayOverride ? { steamOverlayOverride: overlayOverride } : {})
       }
     }
-    const gameConfig = GameConfig.get(this.appId)
+    const gameConfig = this.deps.gameConfigs.get(this.appId)
     return gameConfig.config || (await gameConfig.getSettings())
   }
 

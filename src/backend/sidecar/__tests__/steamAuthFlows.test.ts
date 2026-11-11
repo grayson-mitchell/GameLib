@@ -833,7 +833,10 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         result: { status: 'ready', ready: true }
       })
       expect(ensureSteamClientReady).toHaveBeenCalledTimes(1)
-      expect(ensureSteamClientReady).toHaveBeenCalledWith('999001')
+      expect(ensureSteamClientReady).toHaveBeenCalledWith(
+        expect.anything(),
+        '999001'
+      )
     })
   })
 

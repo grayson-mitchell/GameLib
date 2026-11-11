@@ -1258,12 +1258,16 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         state.services.clock = ctx.clock
         // Built once per boot; starts nothing (the poller's interval starts in the Steam
         // manager's init, the monitors spawn per polled install), so the exit contract holds.
+        const { config: bootConfig } = state.services
+        if (!bootConfig) throw new Error('boot: config step must run first')
         state.services.steamProcesses =
           prebuilt.steamProcesses ??
           createSteamProcesses({
             runner: ctx.runner,
             clock: ctx.clock,
-            platform: ctx.platform
+            platform: ctx.platform,
+            config: bootConfig,
+            openExternal: requireHost(state).openExternal
           })
         // The Mac Steam go-offline instance exists now; SteamUser's wrap and shutdown restore read
         // it through the slot bindStores filled in the 'stores' step (no logon can run before here).

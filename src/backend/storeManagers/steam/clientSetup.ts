@@ -28,10 +28,10 @@
 
 import { join } from 'path'
 import { existsSync, mkdirSync } from 'graceful-fs'
-import { GlobalConfig } from 'backend/config'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
+import type { GlobalConfigSlice } from 'backend/config'
+import type { ManagerDeps } from 'backend/services/types'
 import type { SpawnDeps } from './provisionBottle'
-import { shell } from 'backend/platform'
 import { isMac, isLinux } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../ipc'
 import { SteamUser } from './user'
@@ -86,8 +86,10 @@ interface EnsureSteamClientReadyResult {
  * the never-launched case. Read-only: never creates or writes the file
  * (T-21-21).
  */
-function hasLibraryFoldersVdf(): boolean {
-  const { defaultSteamPath } = GlobalConfig.get().getSettings()
+function hasLibraryFoldersVdf(
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+): boolean {
+  const { defaultSteamPath } = config.getSettings()
   const path = defaultSteamPath.replaceAll("'", '')
   const vdfFile = join(path, 'steamapps', 'libraryfolders.vdf')
   return existsSync(vdfFile)
@@ -114,6 +116,7 @@ function hasLibraryFoldersVdf(): boolean {
  * entry point without a second, duplicated guard in main.ts.
  */
 export async function ensureSteamClientReady(
+  deps: Pick<ManagerDeps, 'config'>,
   appId: string
 ): Promise<EnsureSteamClientReadyResult> {
   if (!NUMERIC_APP_ID.test(appId)) {
@@ -140,7 +143,7 @@ export async function ensureSteamClientReady(
     return { status: 'needs-install', ready: false }
   }
 
-  if (!hasLibraryFoldersVdf()) {
+  if (!hasLibraryFoldersVdf(deps.config)) {
     logInfo(
       `ensureSteamClientReady: Steam installed but never launched (no libraryfolders.vdf) — requesting launch-once prompt for appId ${appId} (D-11)`,
       LogPrefix.Steam
@@ -200,11 +203,11 @@ interface StartGuidedInstallResult {
  * nothing opened (D-UAT-17).
  */
 export async function startGuidedClientInstall(
-  deps: SpawnDeps
+  deps: SpawnDeps & Pick<ManagerDeps, 'openExternal'>
 ): Promise<StartGuidedInstallResult> {
   if (isLinux) {
     try {
-      await shell.openExternal(STEAM_DOWNLOAD_URL)
+      await deps.openExternal.openExternal(STEAM_DOWNLOAD_URL)
       return { status: 'link-opened' }
     } catch (error) {
       logError(
