@@ -56,22 +56,6 @@ jest.mock('backend/platform', () => ({
   session: { fromPartition: mockFromPartition }
 }))
 
-// ── backend/constants/environment mock: `isMac` is switchable per test ──────
-// `disconnect()`'s cookie-clear window origin depends on the platform, and the
-// real `isMac` is the HOST's `process.platform` (CI is ubuntu, the operator's
-// primary box is a Mac), so an unmocked assertion would pass on one and fail on
-// the other. Same shape as legendary's `epicLogoutDomains.test.ts`, and a
-// `defineProperty` for the same reason: an object-literal getter is silently
-// inert under TypeScript's `__assign` spread helper and every branch would
-// measure the real `process.platform`. Defaults to non-macOS.
-let mockIsMac = false
-jest.mock('backend/constants/environment', () => {
-  const actual = jest.requireActual('backend/constants/environment')
-  return Object.defineProperty({ ...actual }, 'isMac', {
-    get: () => mockIsMac
-  })
-})
-
 // ── Logger mock (factory to prevent transitive module load failures) ────────
 const mockLogInfo = jest.fn()
 const mockLogError = jest.fn()
@@ -2040,6 +2024,7 @@ describe('HumbleUser', () => {
     // instead of session.fromPartition (which has no shape under Tauri).
 
     describe('disconnect() — seam path (Phase 34.4.1 Plan 06, D-08)', () => {
+      // The platform is injected through `disconnect({ isMac })`; no module mock.
       test('credential store is cleared BEFORE the cookie step runs', async () => {
         const callOrder: string[] = []
         mockConfigStore.clear.mockImplementation(() => {
@@ -2053,10 +2038,6 @@ describe('HumbleUser', () => {
         await HumbleUser.disconnect()
 
         expect(callOrder).toEqual(['configStore.clear', 'clearCookies'])
-      })
-
-      afterEach(() => {
-        mockIsMac = false
       })
 
       test('macOS: opens a HIDDEN window on HUMBLE_BASE_URL and clears cookies scoped to exactly humblebundle.com', async () => {
@@ -2099,6 +2080,22 @@ describe('HumbleUser', () => {
         expect(mockSeamClearCookies).toHaveBeenCalledWith(
           'disconnect-window-handle',
           'humblebundle.com'
+        )
+      })
+
+      test('no argument: the real host platform picks the cookie-clear origin (the production caller passes nothing)', async () => {
+        mockSeamOpen.mockResolvedValue('disconnect-window-default')
+        mockSeamClearCookies.mockResolvedValue(3)
+
+        await HumbleUser.disconnect()
+
+        // Computed from process.platform so it holds on ubuntu CI, Windows
+        // and the operator's Mac alike.
+        expect(mockSeamOpen).toHaveBeenCalledWith(
+          process.platform === 'darwin'
+            ? HUMBLE_BASE_URL
+            : HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN,
+          { visible: false, userAgent: standardBrowserUserAgent() }
         )
       })
 
@@ -2231,9 +2228,7 @@ describe('HumbleUser', () => {
         'wipe-step ORDER (%s): storage first, cookie step last',
         (_label, mac) => {
           test('clearStorage is invoked before EVERY jar-touching call of the cookie step (open, census reads, clearCookies)', async () => {
-            mockIsMac = mac
-
-            await HumbleUser.disconnect()
+            await HumbleUser.disconnect({ isMac: mac })
 
             expect(mockSeamClearStorage.mock.invocationCallOrder).toHaveLength(
               1
@@ -2254,9 +2249,7 @@ describe('HumbleUser', () => {
           })
 
           test("the cookie step's closing census read is the LAST jar read and follows clearCookies", async () => {
-            mockIsMac = mac
-
-            await HumbleUser.disconnect()
+            await HumbleUser.disconnect({ isMac: mac })
 
             const reads = mockSeamCookiesForDomain.mock.invocationCallOrder
             expect(reads).toHaveLength(2) // before, after
@@ -2268,9 +2261,7 @@ describe('HumbleUser', () => {
           })
 
           test('the storage log line precedes the cookie census log line (what the operator greps in gamelib.log)', async () => {
-            mockIsMac = mac
-
-            await HumbleUser.disconnect()
+            await HumbleUser.disconnect({ isMac: mac })
 
             const logOrderOf = (needle: string): number => {
               const idx = mockLogInfo.mock.calls.findIndex(([msg]) =>
