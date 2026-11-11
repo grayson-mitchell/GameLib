@@ -2060,11 +2060,10 @@ describe('HumbleUser', () => {
       })
 
       test('macOS: opens a HIDDEN window on HUMBLE_BASE_URL and clears cookies scoped to exactly humblebundle.com', async () => {
-        mockIsMac = true
         mockSeamOpen.mockResolvedValue('disconnect-window-0')
         mockSeamClearCookies.mockResolvedValue(3)
 
-        await HumbleUser.disconnect()
+        await HumbleUser.disconnect({ isMac: true })
 
         expect(mockSeamOpen).toHaveBeenCalledWith(HUMBLE_BASE_URL, {
           visible: false,
@@ -2083,11 +2082,10 @@ describe('HumbleUser', () => {
       // survived the first pass). Off macOS it must point at the reserved,
       // non-resolving host -- the Epic fix (b5b3464bd) for the same class.
       test('non-macOS: the cookie-clear window is opened on the non-resolving handle origin, NEVER on the live Humble origin', async () => {
-        mockIsMac = false
         mockSeamOpen.mockResolvedValue('disconnect-window-handle')
         mockSeamClearCookies.mockResolvedValue(3)
 
-        await HumbleUser.disconnect()
+        await HumbleUser.disconnect({ isMac: false })
 
         expect(mockSeamOpen).toHaveBeenCalledWith(
           HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN,

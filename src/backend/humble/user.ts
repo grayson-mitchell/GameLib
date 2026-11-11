@@ -904,7 +904,15 @@ export class HumbleUser {
 
   // ── HACCT-03: Disconnect (D-07 — full partition wipe) ─────────────────────
 
-  static async disconnect(): Promise<void> {
+  /**
+   * `deps.isMac` overrides the host platform for the cookie-clear window's
+   * origin only. Tests pass it so they need no module mock (the
+   * backend-di-ceilings jestMock ratchet). The production caller,
+   * `ipcMain.on('humbleDisconnect', ...)` in humbleFlowRegistration.ts,
+   * passes nothing, so the real host `isMac` decides.
+   */
+  static async disconnect(deps: { isMac?: boolean } = {}): Promise<void> {
+    const onMac = deps.isMac ?? isMac
     // CR-01: fence off any IN-FLIGHT sync before the wipes. A running
     // HumbleLibrary sync captured the cookie at start and would otherwise
     // keep making authenticated requests, silently repopulate the
@@ -1066,7 +1074,7 @@ export class HumbleUser {
           // macOS keeps the live origin: its eviction path was live-gated
           // against that window and is unmeasured against this one.
           const label = await seam.open(
-            isMac ? HUMBLE_BASE_URL : HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN,
+            onMac ? HUMBLE_BASE_URL : HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN,
             {
               visible: false,
               userAgent: standardBrowserUserAgent()
