@@ -37,7 +37,6 @@ import shlex from 'shlex'
 import { legendaryLaunchArgumentFields } from '../runnerLaunchArgv'
 import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
 import { t } from 'i18next'
-import { isOnline } from '../../online_monitor'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
 import { Catalog, Product } from 'common/types/epic-graphql'
 import { sendFrontendMessage } from '../../ipc'
@@ -296,7 +295,7 @@ export default class LegendaryGame implements Game {
     if (cachedExtraInfo) {
       return cachedExtraInfo
     }
-    if (!isOnline()) {
+    if (!this.deps.onlineMonitor.isOnline()) {
       return this.emptyExtraInfo
     }
 

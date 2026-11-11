@@ -46,10 +46,6 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Gog: 'Gog' }
 }))
 
-jest.mock('backend/online_monitor', () => ({
-  isOnline: () => true
-}))
-
 // Narrow factory exposing only what presence.ts consumes -- never mock the whole real utils
 // module, per the established gog-suite pattern (see logoutCookies.test.ts).
 jest.mock('backend/utils', () => ({
@@ -85,6 +81,7 @@ const deps = {
   stores: {},
   libraryManagers: {},
   appInfo: { version: '1.0.0' },
+  onlineMonitor: { isOnline: () => true, runOnceWhenOnline: jest.fn() },
   config: { getSettings: mockGetSettings }
 } as unknown as GOGPresenceDeps
 

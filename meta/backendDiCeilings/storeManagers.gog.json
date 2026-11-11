@@ -1,12 +1,12 @@
 {
   "jestMock": {
-    "src/backend/storeManagers/gog/__tests__/expiryProbe.test.ts": 8,
+    "src/backend/storeManagers/gog/__tests__/expiryProbe.test.ts": 7,
     "src/backend/storeManagers/gog/__tests__/gogImportGame.test.ts": 21,
-    "src/backend/storeManagers/gog/__tests__/gogPresenceKeepAlive.test.ts": 4,
+    "src/backend/storeManagers/gog/__tests__/gogPresenceKeepAlive.test.ts": 3,
     "src/backend/storeManagers/gog/__tests__/library.test.ts": 13,
     "src/backend/storeManagers/gog/__tests__/logoutCookies.test.ts": 8,
-    "src/backend/storeManagers/gog/__tests__/setup.engine.test.ts": 14,
-    "src/backend/storeManagers/gog/__tests__/user.test.ts": 6
+    "src/backend/storeManagers/gog/__tests__/setup.engine.test.ts": 13,
+    "src/backend/storeManagers/gog/__tests__/user.test.ts": 5
   },
   "moduleState": {
     "src/backend/storeManagers/gog/e2eMock.ts": 1,

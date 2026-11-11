@@ -34,7 +34,6 @@ import {
   logWarning
 } from 'backend/logger'
 import { dirname, join } from 'path'
-import { isOnline } from 'backend/online_monitor'
 import { LegendaryCommand } from './commands'
 import { LegendaryAppName, LegendaryPlatform } from './commands/base'
 import { Path } from 'backend/schemas'
@@ -327,7 +326,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
   async listUpdateableGames(): Promise<string[]> {
     const isLoggedIn = LegendaryUser.isLoggedIn()
 
-    if (!isLoggedIn || !isOnline()) {
+    if (!isLoggedIn || !this.deps.onlineMonitor.isOnline()) {
       return []
     }
     const epicOffline = await isEpicServiceOffline(this.deps)

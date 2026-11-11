@@ -36,6 +36,8 @@ const { configStore: gogConfigStore } = jest.requireMock<Stores['gog']>(
 
 const deps = {
   appInfo: { version: '1.0.0' },
+  // Read at call time so a case can flip `mockOnline`.
+  onlineMonitor: { isOnline: () => mockOnline },
   stores: { gog: { configStore: gogConfigStore } },
   libraryManagers: {
     gog: {
@@ -53,9 +55,6 @@ jest.mock('backend/logger', () => ({
   logError: jest.fn(),
   logWarning: jest.fn(),
   LogPrefix: { Gog: 'Gog', Backend: 'Backend' }
-}))
-jest.mock('backend/online_monitor', () => ({
-  isOnline: () => mockOnline
 }))
 jest.mock('backend/ipc', () => ({
   sendFrontendMessage: jest.fn(),

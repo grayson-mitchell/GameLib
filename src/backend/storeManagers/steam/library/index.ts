@@ -13,7 +13,6 @@ import { notify } from '../../../dialog/dialog'
 import i18next from 'i18next'
 import { SteamUser } from '../user'
 import { noteSteamAuthTrigger } from '../authTrigger'
-import { runOnceWhenOnline } from 'backend/online_monitor'
 import { library } from '../state'
 import SteamGame from '../games'
 import { isNativeInstallInFlight } from '../gameSessionState'
@@ -193,7 +192,7 @@ export default class SteamLibraryManager implements LibraryManager {
     // unlocks anything (noteSteamAuthTrigger('startup') is never deliberate).
     if (SteamUser.isLoggedIn()) {
       noteSteamAuthTrigger('startup')
-      runOnceWhenOnline(() => this.refresh())
+      this.deps.onlineMonitor.runOnceWhenOnline(() => this.refresh())
     }
 
     // Start the running-game poller (GAME-05 / D-06). Idempotent, so a re-init

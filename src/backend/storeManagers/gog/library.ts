@@ -40,7 +40,6 @@ import {
   logWarning
 } from 'backend/logger'
 import { getGOGdlBin, getFileSize, axiosClient } from '../../utils'
-import { isOnline, runOnceWhenOnline } from '../../online_monitor'
 import i18next from 'i18next'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { unzipSync } from 'node:zlib'
@@ -110,13 +109,15 @@ export default class GOGLibraryManager implements LibraryManager {
       await mkdir(manifestDir, { recursive: true })
     }
 
-    runOnceWhenOnline(async () => {
+    this.deps.onlineMonitor.runOnceWhenOnline(async () => {
       const credentials = await GOGUser.getCredentials(this.deps)
       for (const appName of installedGamesList) {
         await this.createMissingGogdlManifest(appName, credentials)
       }
     })
-    runOnceWhenOnline(() => checkForRedistUpdates(this.deps))
+    this.deps.onlineMonitor.runOnceWhenOnline(() =>
+      checkForRedistUpdates(this.deps)
+    )
 
     scheduleMacArchSweep(
       this.deps,
@@ -248,7 +249,7 @@ export default class GOGLibraryManager implements LibraryManager {
 
     try {
       for (const session of queue) {
-        if (!isOnline()) {
+        if (!this.deps.onlineMonitor.isOnline()) {
           failed.push(session)
         }
         const response = await this.postPlaytimeSession(session)
@@ -452,7 +453,7 @@ export default class GOGLibraryManager implements LibraryManager {
     for (const game of this.deps.stores.gog.libraryStore.get('games', [])) {
       const copyObject = { ...game }
       if (installedGames.has(game.app_name)) {
-        if (isOnline()) {
+        if (this.deps.onlineMonitor.isOnline()) {
           await this.checkForOfflineInstallerChanges(game.app_name)
         }
         copyObject.install = installedGames.get(game.app_name)!
@@ -558,7 +559,7 @@ export default class GOGLibraryManager implements LibraryManager {
 
     library.set('gog-redist', redistGameInfo)
 
-    if (!isOnline()) {
+    if (!this.deps.onlineMonitor.isOnline()) {
       return this.defaultExecResult
     }
 
@@ -736,11 +737,6 @@ export default class GOGLibraryManager implements LibraryManager {
         )
         return cache
       }
-    }
-
-    if (!isOnline) {
-      logWarning('App offline, unable to get install info')
-      return
     }
 
     // Login gate only -- debug/gog-spawn-reduction.md fix 4. This used to call
@@ -1077,7 +1073,7 @@ export default class GOGLibraryManager implements LibraryManager {
   // This checks for updates of Windows and Mac titles
   // Linux installers need to be checked differently
   async listUpdateableGames(): Promise<string[]> {
-    if (!isOnline() || !GOGUser.isLoggedIn(this.deps)) {
+    if (!this.deps.onlineMonitor.isOnline() || !GOGUser.isLoggedIn(this.deps)) {
       return []
     }
     const credentials = await GOGUser.getCredentials(this.deps)
@@ -1303,7 +1299,7 @@ export default class GOGLibraryManager implements LibraryManager {
    * @returns parsed data used when rendering requirements on GamePage
    */
   async createReqsArray(appName: string, os: 'windows' | 'linux' | 'osx') {
-    if (!isOnline()) {
+    if (!this.deps.onlineMonitor.isOnline()) {
       return []
     }
     const apiData = await this.getGamesData(appName)

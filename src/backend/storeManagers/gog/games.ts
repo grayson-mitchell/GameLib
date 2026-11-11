@@ -60,7 +60,6 @@ import {
   isUmuSupported
 } from 'backend/utils/compatibility_layers'
 import axios, { AxiosError, AxiosResponse } from 'axios'
-import { isOnline, runOnceWhenOnline } from 'backend/online_monitor'
 import { readdir, readFile } from 'fs/promises'
 import ini from 'ini'
 import { getRequiredRedistList, updateRedist } from './redist'
@@ -1553,7 +1552,7 @@ export default class GOGGame implements Game {
       return
     }
 
-    if (!isOnline()) {
+    if (!this.deps.onlineMonitor.isOnline()) {
       logWarning(['App offline, unable to post new session at this time'], {
         prefix: LogPrefix.Gog
       })
@@ -1566,7 +1565,7 @@ export default class GOGGame implements Game {
         userData.galaxyUserId,
         alreadySetData
       )
-      runOnceWhenOnline(() =>
+      this.deps.onlineMonitor.runOnceWhenOnline(() =>
         this.deps.libraryManagers.gog.syncQueuedPlaytime()
       )
       return
@@ -1597,7 +1596,7 @@ export default class GOGGame implements Game {
   }
 
   async getGOGPlaytime(): Promise<number | undefined> {
-    if (!isOnline()) {
+    if (!this.deps.onlineMonitor.isOnline()) {
       return
     }
     const credentials = await GOGUser.getCredentials(this.deps)

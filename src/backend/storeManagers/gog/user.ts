@@ -3,7 +3,6 @@ import { existsSync, unlinkSync } from 'graceful-fs'
 import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
 import { GOGLoginData } from 'common/types'
 import type { GOGManagerDeps } from './library'
-import { isOnline } from '../../online_monitor'
 import { GOGCredentials, UserData } from 'common/types/gog'
 import { clearCache } from 'backend/utils'
 import type { ClearCacheDeps } from 'backend/utils'
@@ -255,7 +254,7 @@ export class GOGUser {
     deps: GOGUserDeps,
     credentials?: Pick<GOGCredentials, 'access_token' | 'user_id'>
   ) {
-    if (!isOnline()) {
+    if (!deps.onlineMonitor.isOnline()) {
       logError('Unable to login information, Heroic offline', LogPrefix.Gog)
       return
     }
@@ -348,7 +347,7 @@ export class GOGUser {
   public static async getCredentialsWithVerdict(
     deps: GOGUserDeps
   ): Promise<CredentialsWithVerdict> {
-    if (!isOnline()) {
+    if (!deps.onlineMonitor.isOnline()) {
       logWarning('Unable to get credentials - app is offline', {
         prefix: LogPrefix.Gog
       })
@@ -414,7 +413,7 @@ export class GOGUser {
       observed: capture.observed(),
       errored: Boolean(res.error),
       aborted: Boolean(res.abort),
-      online: isOnline(),
+      online: deps.onlineMonitor.isOnline(),
       authConfigExists: existsSync(gogdlAuthConfig)
     })
     return { credentials, verdict }

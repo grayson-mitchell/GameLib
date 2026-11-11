@@ -12,7 +12,6 @@ import { engineServicesFrom } from 'backend/services/engineServices'
 import type { GameSettings } from 'common/types'
 import type { ManagerDeps } from 'backend/services/types'
 import type { FuelSchema } from 'common/types/nile'
-import { isOnline } from '../../online_monitor'
 import {
   endEngineLaunch,
   selectEngineForLaunch
@@ -22,6 +21,7 @@ import { getLaunchSettings } from 'backend/engine/launchSettings'
 type NileSetupDeps = Pick<
   ManagerDeps,
   | 'libraryManagers'
+  | 'onlineMonitor'
   | 'launcher'
   | 'commandRunner'
   | 'spawnAsync'
@@ -94,7 +94,7 @@ export default async function setup(
   // persist a derived or fallback engine into wineVersion.
   const game = deps.libraryManagers.nile.getGame(appName)
   const step = await selectEngineForLaunch(engineServicesFrom(deps), game, {
-    offline: !isOnline(),
+    offline: !deps.onlineMonitor.isOnline(),
     purpose: 'setup'
   })
   if (step.kind === 'refused') {

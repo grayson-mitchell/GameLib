@@ -13,7 +13,6 @@ import {
 import { DMQueueElement } from 'common/types'
 import { GOGUser } from './user'
 import type { GOGManagerDeps } from './library'
-import { isOnline } from 'backend/online_monitor'
 import { axiosClient } from 'backend/utils'
 import { gogdlConfigPath, gogRedistPath } from './constants'
 import { gamesConfigPath } from 'backend/constants/paths'
@@ -22,11 +21,11 @@ import LogWriter from '../../logger/log_writer'
 /** What the redist helpers read: the gog stores and the manager map. */
 export type RedistDeps = Pick<
   GOGManagerDeps,
-  'stores' | 'libraryManagers' | 'getDownloadQueue' | 'config'
+  'stores' | 'libraryManagers' | 'getDownloadQueue' | 'config' | 'onlineMonitor'
 >
 
 export async function checkForRedistUpdates(deps: RedistDeps) {
-  if (!GOGUser.isLoggedIn(deps) || !isOnline()) {
+  if (!GOGUser.isLoggedIn(deps) || !deps.onlineMonitor.isOnline()) {
     return
   }
   const manifestPath = path.join(gogRedistPath, '.gogdl-redist-manifest')

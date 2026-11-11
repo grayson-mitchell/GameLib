@@ -21,7 +21,6 @@ import {
 } from 'common/types/gog'
 import { gogdlConfigPath, gogRedistPath, gogSupportPath } from './constants'
 import { isWindows } from 'backend/constants/environment'
-import { isOnline } from '../../online_monitor'
 import {
   endEngineLaunch,
   selectEngineForLaunch
@@ -32,6 +31,7 @@ import { getLaunchSettings } from 'backend/engine/launchSettings'
 export type SetupDeps = Pick<
   GOGManagerDeps,
   | 'libraryManagers'
+  | 'onlineMonitor'
   | 'launcher'
   | 'commandRunner'
   | 'spawnAsync'
@@ -119,7 +119,7 @@ async function setup(
   // persist a derived or fallback engine into wineVersion.
   const game = deps.libraryManagers.gog.getGame(appName)
   const step = await selectEngineForLaunch(engineServicesFrom(deps), game, {
-    offline: !isOnline(),
+    offline: !deps.onlineMonitor.isOnline(),
     purpose: 'setup'
   })
   if (step.kind === 'refused') {

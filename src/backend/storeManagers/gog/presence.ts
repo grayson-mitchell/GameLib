@@ -1,7 +1,6 @@
 import { logError, logInfo, LogPrefix } from 'backend/logger'
 import { axiosClient } from 'backend/utils'
 import { GOGUser, type GOGUserDeps } from './user'
-import { isOnline } from 'backend/online_monitor'
 import type { GOGManagerDeps } from './library'
 
 interface PresencePayload {
@@ -31,7 +30,7 @@ async function setPresence(deps: GOGPresenceDeps) {
       disableGOGPresence ||
       disablePlaytimeSync ||
       !GOGUser.isLoggedIn(deps) ||
-      !isOnline()
+      !deps.onlineMonitor.isOnline()
     )
       return
     const credentials = await GOGUser.getCredentials(deps)
@@ -152,7 +151,7 @@ async function deletePresence(deps: GOGPresenceDeps, force = false) {
       disablePlaytimeSync ||
       (!force && disableGOGPresence) ||
       !GOGUser.isLoggedIn(deps) ||
-      !isOnline()
+      !deps.onlineMonitor.isOnline()
     )
       return
     const credentials = await GOGUser.getCredentials(deps)

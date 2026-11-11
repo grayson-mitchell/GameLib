@@ -20,7 +20,6 @@ jest.mock('backend/engine/launchEngine', () => ({
 jest.mock('backend/engine/launchSettings', () => ({
   getLaunchSettings: (key: string, s: unknown) => (key === 'k' ? overlay : s)
 }))
-jest.mock('../../../online_monitor', () => ({ isOnline: () => true }))
 jest.mock('backend/constants/environment', () => ({ isWindows: false }))
 jest.mock('graceful-fs', () => ({
   existsSync: (...a: unknown[]) => mockExists(...a)
@@ -83,6 +82,7 @@ import gogSetup, { type SetupDeps } from '../setup'
 import nileSetup from '../../nile/setup'
 
 const gogDeps = {
+  onlineMonitor: { isOnline: () => true },
   libraryManagers: {
     gog: { getGameInfo: () => gogInfo, getGame: () => ({}) }
   },

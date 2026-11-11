@@ -35,10 +35,6 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Gog: 'Gog' }
 }))
 
-jest.mock('backend/online_monitor', () => ({
-  isOnline: () => true
-}))
-
 const mockConfigStoreSet = jest.fn()
 const mockConfigStoreClear = jest.fn()
 // A plain `jest.fn(() => true)` default here does NOT survive: this suite's
@@ -80,6 +76,7 @@ import type { ClearCacheDeps } from 'backend/utils'
 
 const deps = {
   appInfo: { version: '1.0.0' },
+  onlineMonitor: { isOnline: () => true },
   stores: { gog: fakeGogStores },
   libraryManagers: {
     gog: { runRunnerCommand: (...a: unknown[]) => mockRunRunnerCommand(...a) }
