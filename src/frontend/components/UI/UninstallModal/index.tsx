@@ -1,3 +1,4 @@
+import { CLOSED_STEAM_DELETE_ROUTE } from 'frontend/screens/Game/GameSubMenu/steamUninstallConfirm'
 import './index.scss'
 import React, { useEffect, useState } from 'react'
 import {
@@ -79,7 +80,7 @@ const UninstallModal: React.FC<UninstallModalProps> = function ({
       // "Delete Steam games directly in GameLib" setting ON.
       const route = await window.api
         .getSteamDeleteRoute(appName)
-        .catch(() => ({ gamelibDelete: false }))
+        .catch(() => CLOSED_STEAM_DELETE_ROUTE)
       setGamelibDelete(route.gamelibDelete)
       setInstallSize(install?.install_size ?? '')
     }
@@ -118,7 +119,11 @@ const UninstallModal: React.FC<UninstallModalProps> = function ({
     storage.removeItem(appName)
   }
 
-  const showWineCheckbox = !isNative && !isDlc
+  // quick 261112-90h: never offer "Remove prefix" for Steam. A bottle-eligible
+  // Steam title's winePrefix is the shared CrossOver Steam bottle, and the
+  // bridge/bottle routes remove their own per-game bottles.
+  const isSteamHandOff = hasCapability(runner, 'installHandOffToClient')
+  const showWineCheckbox = !isNative && !isDlc && !isSteamHandOff
 
   // disallow uninstalling epic games if an epic game is being installed
   if (installingEpicGame && isStore(runner, 'legendary')) {
@@ -229,7 +234,7 @@ const UninstallModal: React.FC<UninstallModalProps> = function ({
                 }}
               />
             )}
-            {disableDeleteWine && (
+            {showWineCheckbox && disableDeleteWine && (
               <p className="default-wine-warning">
                 {t(
                   'gamepage:box.uninstall.prefix_warning',

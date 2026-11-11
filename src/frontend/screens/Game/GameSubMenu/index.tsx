@@ -1,3 +1,7 @@
+import {
+  CLOSED_STEAM_DELETE_ROUTE,
+  steamUninstallNeedsConfirm
+} from './steamUninstallConfirm'
 import './index.css'
 import { hasCapability, isStore } from 'common/storeCapabilities'
 
@@ -539,15 +543,16 @@ export default function GamesSubmenu({
               <button
                 onClick={async () => {
                   if (isSteam) {
-                    // D-05: delegate straight to Steam's own uninstall dialog
-                    // — no GamerLib confirm. quick 261106-s3n: unless the
-                    // "Delete Steam games directly in GameLib" setting is ON
-                    // for this native install, where GameLib's dialog is the
-                    // only confirmation.
+                    // D-05 (no GameLib confirm) now applies only to the
+                    // delegated steam://uninstall route, where Steam shows its
+                    // own dialog. GameLib itself deletes bridge, bottle,
+                    // setting-ON native and unadopted-Mac-native installs, so
+                    // it must confirm them first (66.3 UAT test 5, quick
+                    // 261112-90h).
                     const route = await window.api
                       .getSteamDeleteRoute(appName)
-                      .catch(() => ({ gamelibDelete: false }))
-                    if (route.gamelibDelete) {
+                      .catch(() => CLOSED_STEAM_DELETE_ROUTE)
+                    if (steamUninstallNeedsConfirm(route)) {
                       setShowUninstallModal(true)
                     } else {
                       window.api.uninstall(appName, runner, false, false)
