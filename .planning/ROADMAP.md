@@ -156,7 +156,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 66.1: Backend DI — stores, store managers, flow registrations and launcher** — 37 plans; complete (7/8 live UAT, item 5 blocked pre-existing) (completed 2026-11-10)
 - [x] **Phase 66.2: Every backend spawn through the process runner, then the `child_process` ban** — 12 plans; planned (completed 2026-11-10)
 - [x] **Phase 66.3: Backend module state to zero, then the live macOS smoke** — 18 plans; planned; split 2026-11-11 into 66.3 (shim, config, D-05 owners, static holders) + 66.4 (D-66.3-04) (completed 2026-11-11)
-- [ ] **Phase 66.4: Backend module state long tail, the census-to-test flip, then the live smokes** — 0 plans; not started
+- [ ] **Phase 66.4: Backend module state long tail, the census-to-test flip, then the live smokes** — 23 plans; planned
 - [x] **Phase 67: Schema validation at the sidecar IPC boundary** — 20 plans in 14 waves; planned 2026-11-07 (completed 2026-11-07)
 - [x] **Phase 68: Versioned persisted stores and migrations** — 11 plans; planned (completed 2026-11-08)
 - [ ] **Phase 69: Consolidate frontend state onto GlobalStateV2** — 0 plans; not started
@@ -802,11 +802,33 @@ Plans:
 **Goal:** Finish D-15 step 3 after Phase 66.3. Convert the long tail of about 85 files (about 127 sites) with 1–2 module-state sites each, completely and once each (D-15). This includes the 66.2 deferrals: the `utils.ts` `default*Path` lets; `installingComponent`/`catalogCache`/`scriptMetadataCache` in `tools/index.ts`; `engineNoticeStore`; the two `pci_ids` stores; and retiring the win32 sync fallbacks in `knownFolders`/`pathShim`. Then the census becomes a zero-tolerance test and the `moduleState` ceiling is deleted (D-13, D-16). Next, revive the Steam RunningAppID poller under Tauri as a boot-owned, unref'd, stdin-EOF-stopped step (D-66.3-07). The phase ends with two non-autonomous plans: the D-17 live macOS smoke with a scripted orphan/exit checker (D-66.3-05), and the Windows operator UAT, which covers the 66.2 spawn paths and the poller's Playing state (D-66.3-06, D-66.3-08). Decisions live in `.planning/phases/66.3-backend-module-state-to-zero-and-live-macos-smoke/66.3-CONTEXT.md`.
 **Requirements**: TBD
 **Depends on:** Phase 66.3
-**Plans:** 0 plans
+**Plans:** 23 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 66.4 to break down)
+- [ ] 66.4-01-PLAN.md — Wave 0: 66.4 jest/prettier/census-clean checkers, baseline, installFlows jestMock back under its ceiling, listModuleStateSites (wave 1)
+- [ ] 66.4-02-PLAN.md — sidecarExitCheck orphan/exit checker (live + eof modes) and `pnpm smoke:exit-check` (wave 1)
+- [ ] 66.4-03-PLAN.md — AppPaths carries every derived path: pure derivePaths in process/appPaths.ts, parity pin (wave 2)
+- [ ] 66.4-04-PLAN.md — per-boot StoreRoot: stores off pathShim; storeChangeNotifier, fileStore, engineNoticeStore, pci_ids (wave 3)
+- [ ] 66.4-05-PLAN.md — engine long tail into EngineRuntime; engine paths on ctx.paths (wave 4)
+- [ ] 66.4-06-PLAN.md — Steam launch-path state into SteamLaunchRuntime; launch paths on ctx.paths (wave 5)
+- [ ] 66.4-07-PLAN.md — Steam token-store slot, frozen error constants, session-side paths (wave 6)
+- [ ] 66.4-08-PLAN.md — Steam bridge into BridgeRuntime; steam/constants off pathShim (wave 7)
+- [ ] 66.4-09-PLAN.md — Steam depot and install/uninstall poll state into SteamInstallRuntime (wave 8)
+- [ ] 66.4-10-PLAN.md — GOG into GogRuntime; deriveGogPaths (wave 9)
+- [ ] 66.4-11-PLAN.md — Legendary and Nile runtimes; derive*Paths (wave 10)
+- [ ] 66.4-12-PLAN.md — utils.ts default*Path lets, system-info and HLTB caches; utils paths (wave 11)
+- [ ] 66.4-13-PLAN.md — abort registry and Wine window raiser as boot-owned instances (wave 12)
+- [ ] 66.4-14-PLAN.md — tools/index caches and winetricks environment into ToolsState; tools/wine paths (wave 13)
+- [ ] 66.4-15-PLAN.md — dispatch core: sidecarRpc, ipcValidation, outbound HTTP tracker as instances (wave 14)
+- [ ] 66.4-16-PLAN.md — app-shell timers/blockers, installed.json watcher, embed seam; flow paths (wave 15)
+- [ ] 66.4-17-PLAN.md — AppRuntime: backend events, launch single-flight, image/index caches, known-fix installs; launcher paths (wave 16)
+- [ ] 66.4-18-PLAN.md — store versioning/read-only onto StoreRoot, dialog and misc owners; config/shortcuts paths (wave 17)
+- [ ] 66.4-19-PLAN.md — the five once-only latches converted (D-66.4-01: boot-step single-run per boot registry) (wave 18)
+- [ ] 66.4-20-PLAN.md — 'app-folder' first boot step (heroic rename, e2e dir); constants/paths.ts and pathShim.ts deleted (wave 19)
+- [ ] 66.4-21-PLAN.md — census flip: zero-tolerance test, moduleState ceiling deleted, diPhaseGates 66.4 block, README (wave 20)
+- [ ] 66.4-22-PLAN.md — D-17 live macOS smoke with the exit checker (non-autonomous) (wave 21)
+- [ ] 66.4-23-PLAN.md — Windows delta UAT; close the poller todo (non-autonomous) (wave 21)
 
 ### Phase 67: Schema validation at the sidecar IPC boundary
 
