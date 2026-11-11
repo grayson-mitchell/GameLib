@@ -760,14 +760,14 @@ The D-14 Rust-overlap exemption table stays empty unless Phase 75 is re-scoped. 
 **Split 2026-11-11 (D-66.3-04):** 66.3 keeps the platform shim dissolution, config injection, the D-05 process-wide owners and the C-WR-2 static holders (item 1 above), and ends with every site it owns at zero and the `moduleState` ceilings lowered. Item 2 (the long tail), the census-to-test flip and the D-17 live smoke move to Phase 66.4.
 **Requirements**: TBD
 **Depends on:** Phase 66.2
-**Plans:** 3/18 plans executed
+**Plans:** 4/18 plans executed
 
 Plans:
 
 - [x] 66.3-01-PLAN.md — Wave 0 gates: census fixtures (D-66.3-09), container-call residual pin, diPhaseGates 66.3 skeleton, jest baseline (wave 1)
 - [x] 66.3-02-PLAN.md — processGuards as an entry-built zero-import factory, init({ guards }) (D-66.3-10) (wave 2)
 - [x] 66.3-03-PLAN.md — host services (ipc registry, openExternal, dialogs, notifications, appState, appInfo), 'host-services' boot step, interim shim delegate 8 -> 1 (wave 3)
-- [ ] 66.3-04-PLAN.md — config injection: 'config' boot step, GameConfigs registry seam, AppContext paths/appInfo, ManagerDeps slices (wave 4)
+- [x] 66.3-04-PLAN.md — config injection: 'config' boot step, GameConfigs registry seam, AppContext paths/appInfo, ManagerDeps slices (wave 4)
 - [ ] 66.3-05-PLAN.md — cascade A: utils, root helpers and leaf modules off the shim and static config (wave 5)
 - [ ] 66.3-06-PLAN.md — cascade B: config-free logger, launcher, commandRunner, engine/appshell/shortcuts helpers (wave 6)
 - [ ] 66.3-07-PLAN.md — cascade C: GOG/Legendary/Nile/Sideload managers and storeManagerCommon (wave 7)
