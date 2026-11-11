@@ -177,12 +177,14 @@ export function getRunnerCallWithoutCredentials(
   const modifiedCommand = [...command]
   // Redact sensitive arguments reaching this shared logging path from ANY runner.
   // Census-derived (34.5-61, F-34.5-G6-22/F-34.5-G6-24) via:
-  //   grep -rnE "'--(code|token|code-verifier|client-id|serial|password|secret|refresh-token|api-key)'" \
+  //   grep -rnE "'--(code|token|code-verifier|client-id|serial|password|secret|access-token|refresh-token|api-key)'" \
   //     --include='*.ts' src/backend | grep -v __tests__
   // --code (legendary auth, gog user, nile register) / --token (legendary): pre-existing.
   // --code-verifier (nile PKCE verifier, F-34.5-G6-22) / --password (GOG private-branch
   // password, F-34.5-G6-24, user-chosen secret reused across install/update/library calls) /
   // --serial (nile device serial) / --client-id (nile OAuth client id): added here.
+  // --access-token / --refresh-token (GOG comet token mode, quick 261110-vdk,
+  // storeManagers/gog/games.ts): added 261112-8w3, closes T-66.1-16/T-66.1-68.
   // Exact array-element match is kept deliberately (not prefix match) so `--code` can never
   // swallow `--code-verifier` or vice versa -- each is redacted independently by its own
   // exact-match loop iteration.
@@ -192,7 +194,9 @@ export function getRunnerCallWithoutCredentials(
     '--code-verifier',
     '--password',
     '--serial',
-    '--client-id'
+    '--client-id',
+    '--access-token',
+    '--refresh-token'
   ]) {
     // PowerShell's argument formatting is quite different, instead of having
     // arguments as members of `command`, they're all in one specific member

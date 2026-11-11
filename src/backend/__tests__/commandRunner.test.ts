@@ -372,6 +372,25 @@ describe('Layer-2: credential redaction through the production callRunner path (
     expect(serialized).toContain('<redacted>')
   })
 
+  it('Layer-2: GOG comet token argv (261110-vdk): --access-token and --refresh-token both redacted', async () => {
+    const t = setup([{ cmd: 'gogdl', result: { code: 0 } }])
+    await t.cr.callRunner(
+      [
+        'comet',
+        '--access-token',
+        'SENTINEL_ACCESS_4f1a',
+        '--refresh-token',
+        'SENTINEL_REFRESH_9c3e'
+      ],
+      gogRunner,
+      {}
+    )
+    const serialized = JSON.stringify(t.infoCalls)
+    expect(serialized).not.toContain('SENTINEL_ACCESS_4f1a')
+    expect(serialized).not.toContain('SENTINEL_REFRESH_9c3e')
+    expect(serialized.match(/<redacted>/g)?.length).toBe(2)
+  })
+
   it('Layer-2: the credentials never reach the log writers either', async () => {
     const t = setup([{ cmd: 'gogdl', result: { code: 0 } }])
     const w = makeWriter()
@@ -477,7 +496,7 @@ describe('Layer-2: credential redaction census gate (34.5-61)', () => {
   }
 
   const CENSUS_FLAG_PATTERN =
-    /'--(code|token|code-verifier|client-id|serial|password|secret|refresh-token|api-key)'/g
+    /'--(code|token|code-verifier|client-id|serial|password|secret|access-token|refresh-token|api-key)'/g
 
   function census(): Set<string> {
     const backendRoot = join(__dirname, '..')
@@ -503,7 +522,7 @@ describe('Layer-2: credential redaction census gate (34.5-61)', () => {
     return found
   }
 
-  it('Layer-2: non-vacuity anchor: the redaction list extracted from source contains all six flags', () => {
+  it('Layer-2: non-vacuity anchor: the redaction list extracted from source contains all eight flags', () => {
     expect(extractRedactionList(source)).toEqual(
       expect.arrayContaining([
         '--code',
@@ -511,9 +530,17 @@ describe('Layer-2: credential redaction census gate (34.5-61)', () => {
         '--code-verifier',
         '--password',
         '--serial',
-        '--client-id'
+        '--client-id',
+        '--access-token',
+        '--refresh-token'
       ])
     )
+  })
+
+  it('Layer-2: census detects the GOG comet token flags (not vacuous for them)', () => {
+    const flags = census()
+    expect(flags.has('--access-token')).toBe(true)
+    expect(flags.has('--refresh-token')).toBe(true)
   })
 
   it('Layer-2: every credential-bearing --flag literal in backend source is a member of the redaction list', () => {
