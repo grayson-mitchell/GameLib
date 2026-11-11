@@ -16,6 +16,7 @@ import Badge from '@mui/material/Badge'
 import { Autorenew as AutorenewIcon } from '@mui/icons-material'
 import GELogo from 'frontend/assets/ge-logo.svg?react'
 import CachyOSLogo from 'frontend/assets/cachyos-logo.svg?react'
+import { findWineByOptionValue, wineOptionValue } from './wineSelection'
 
 interface ListItemProps {
   version: WineInstallation
@@ -148,10 +149,10 @@ export default function WineVersionSelector() {
       }
       htmlId="setWineVersion"
       onChange={(event) => {
-        const selected = altWine.find(({ name }) => name === event.target.value)
+        const selected = findWineByOptionValue(altWine, event.target.value)
         if (selected) setWineVersion(selected)
       }}
-      value={wineVersion.name}
+      value={wineOptionValue(wineVersion)}
       labelHelp={
         isLinux ? (
           <InfoBox text="infobox.help" iconOnly>
@@ -230,7 +231,7 @@ export default function WineVersionSelector() {
       }
     >
       {altWine.map((version, i) => (
-        <MenuItem key={i} value={version.name}>
+        <MenuItem key={i} value={wineOptionValue(version)}>
           <WineVersionListItem version={version} />
         </MenuItem>
       ))}

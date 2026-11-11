@@ -12,6 +12,10 @@ import { removeSpecialcharacters } from 'frontend/helpers'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCircleInfo, faWarning } from '@fortawesome/free-solid-svg-icons'
 import { WineVersionListItem } from 'frontend/screens/Settings/components/WineVersionSelector'
+import {
+  findWineByOptionValue,
+  wineOptionValue
+} from 'frontend/screens/Settings/components/wineSelection'
 import { MenuItem } from '@mui/material'
 import { useAwaited } from 'frontend/hooks/useAwaited'
 import { isRunsForMeOn, runsForMeKey } from 'common/runsForMe'
@@ -258,19 +262,17 @@ export default function WineSelector({
           <SelectField
             label={`${t('install.wineversion')}:`}
             htmlId="wineVersion"
-            value={wineVersion?.name || ''}
+            value={wineOptionValue(wineVersion)}
             disabled={useSharedPrefix || engineOptions.length === 0}
             onChange={(e) =>
               setWineVersion(
-                engineOptions.find(
-                  (version) => version.name === e.target.value
-                )!
+                findWineByOptionValue(engineOptions, e.target.value)!
               )
             }
           >
             {engineOptions &&
               engineOptions.map((version, i) => (
-                <MenuItem key={i} value={version.name}>
+                <MenuItem key={i} value={wineOptionValue(version)}>
                   <WineVersionListItem version={version} />
                 </MenuItem>
               ))}
