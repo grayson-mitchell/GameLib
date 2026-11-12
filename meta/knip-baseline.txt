@@ -189,6 +189,7 @@ exports	src/preload/api/misc.ts	Misc.getHeroicVersion
 exports	src/preload/api/misc.ts	Misc.getKnownFixes
 exports	src/preload/api/misc.ts	Misc.getLatestReleases
 exports	src/preload/api/misc.ts	Misc.getShellPath
+exports	src/preload/api/misc.ts	Misc.getSteamUpdateInfo
 exports	src/preload/api/misc.ts	Misc.getUploadedLogFiles
 exports	src/preload/api/misc.ts	Misc.getWebviewPreloadPath
 exports	src/preload/api/misc.ts	Misc.getWikiGameInfo

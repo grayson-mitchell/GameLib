@@ -125,7 +125,7 @@ export interface RustFailure {
   msSinceProgress: number | null
 }
 
-export type RustDeltaMode = 'chunk' | 'commit_resume' | 'file_fallback'
+type RustDeltaMode = 'chunk' | 'commit_resume' | 'file_fallback'
 
 /** outcome.rs `DeltaReport`; file names are manifest-form. */
 export interface RustDeltaReport {
