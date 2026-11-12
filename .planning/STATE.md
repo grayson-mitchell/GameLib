@@ -4,13 +4,13 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Completed 66.4-13-PLAN.md
-last_updated: "2026-11-12T04:59:47.650Z"
+last_updated: "2026-11-12T05:52:46.107Z"
 last_activity: 2026-11-12
 progress:
   total_phases: 19
   completed_phases: 14
   total_plans: 293
-  completed_plans: 286
+  completed_plans: 287
   percent: 74
 ---
 
@@ -73,7 +73,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 66.4 (backend-module-state-long-tail-census-flip-and-live-smokes) — EXECUTING
-Plan: 17 of 23
+Plan: 18 of 23
 Status: Ready to execute
 Last activity: 2026-11-12
 
@@ -261,6 +261,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 66.3 P16 | ~4h | 3 tasks | 80 files |
 | Phase 66.4 P05 | 190min | 2 tasks | 128 files |
 | Phase 66.4 P13 | 100min | 2 tasks | 109 files |
+| Phase 66.4 P66.4-17 | multi-hour | 2 tasks | 146 files |
 
 ## Accumulated Context
 
@@ -417,6 +418,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 66.3]: 66.3-16: SteamUser is one boot-built instance (createSteamUser, step 'steam-user' after command-runner); depot opts bags carry steamUser; humble gate reads it via humbleStores until plan 17
 - [Phase 66.4]: 66.4-05: EngineRuntime built by 'engine-runtime' boot step after 'engine-state'; steam bottle modules bind userHome via steam/bottleDirs.ts until threaded onto ctx.paths
 - [Phase ?]: [66.4-13] 'abort-registry' boot step sits after 'steam-bottle', before 'command-runner' (first consumers precede 'info-caches'); BootServices carries aborts and windowRaiser (39 fields); EOF release aborts through deps.aborts.abortAll() after the queue pause
+- [Phase ?]: 66.4-17: AppRuntime on BootServices/ManagerDeps (field pin 41); 'app-runtime' step after 'abort-registry'; createGlobalConfig takes onSettingChanged; status helpers take StatusUpdateDeps
 
 ### Pending Todos
 
@@ -723,7 +725,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-12T04:59:47.642Z
+Last session: 2026-11-12T05:52:40.408Z
 Stopped at: Completed 66.4-13-PLAN.md
 Resume file: None
 
