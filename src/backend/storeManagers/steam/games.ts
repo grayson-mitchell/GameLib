@@ -1,4 +1,5 @@
 import { existsSync } from 'graceful-fs'
+import i18next from 'i18next'
 import {
   ExtraInfo,
   GameInfo,
@@ -37,6 +38,9 @@ import { cancelSteamLaunchWatch } from './steamLaunchWatch'
 import { steamLaunchedStopDeps } from './steamLaunchedDeps'
 import { moveInstall, repair, syncSaves } from './gameMaintenance'
 import { uninstall } from './gameUninstall'
+import { updateBridgeGame } from './updateBridge'
+import { updateRegisteredSteamGame } from './updateNative'
+import { readAcfUpdateState } from './library/acfUpdateState'
 
 export default class SteamGame implements Game {
   readonly appId: string
@@ -448,13 +452,20 @@ export default class SteamGame implements Game {
     // quick-260817-d61: Update is a deliberate Steam action — unlock the
     // keyring deferral gate as the first statement.
     this.deps.steamSession.authTrigger.noteSteamAuthTrigger('user-install')
-    logWarning(
-      `SteamGame.update not implemented until Phase 2 (appId: ${this.appId})`,
-      LogPrefix.Steam
-    )
+    // Phase 74: bridge installs get the chunk-level delta; Steam-registered
+    // installs are handed to Steam; Phase 17 bottle installs are neither.
+    if (bridgeBottle.findBridgeInstallBottle(this.deps.paths, this.appId)) {
+      return updateBridgeGame(this)
+    }
+    if ((await readAcfUpdateState(this.deps, this.appId, 'native')) !== null) {
+      return updateRegisteredSteamGame(this)
+    }
     return {
       status: 'error',
-      error: 'Steam library not implemented until Phase 2'
+      error: i18next.t(
+        'gamelib:steam.update.notBridgeOrNative',
+        'Steam updates this game inside its bottle.'
+      )
     }
   }
 

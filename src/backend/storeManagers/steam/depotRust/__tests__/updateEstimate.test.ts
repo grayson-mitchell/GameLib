@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 /** Phase 74 plan 10: estimateBridgeUpdate sums the per-depot delta estimates (D-09/D-13/D-14). */
 import { estimateBridgeUpdate } from '../updateEstimate'
 import { summarizeDepots } from '../rustDepot'

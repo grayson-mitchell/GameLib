@@ -22,6 +22,7 @@ import { getBottleSteamappsDir } from '../bottle'
 import type SteamGame from '../games'
 import type { SteamUpdateEstimate } from '../updateDetection'
 import { requestCodeRefresher } from './install'
+import type { RustDeltaEstimate } from './types'
 import { toRustDepotRefs, toRustHosts } from './jobBuilder'
 import { summarizeDepots as summarize } from './rustDepot'
 
@@ -129,7 +130,9 @@ export async function estimateBridgeUpdate(
       )
       return { error: res.error.message }
     }
-    const deltas = res.depots.map((d) => d.delta)
+    const deltas: (RustDeltaEstimate | undefined)[] = res.depots.map(
+      (d) => d.delta
+    )
     let downloadBytes = 0
     let sumChanged = 0
     let maxChanged = 0
