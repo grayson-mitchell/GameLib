@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import type { GameInfo, StatusPromise } from '../../types'
+import type { SteamUpdateInfo } from '../steam'
 
 import {
   nonEmptyString,
@@ -70,6 +71,10 @@ export const installAsyncArgs = {
   listSteamLibraryTargets: z.tuple([optionalArg(z.string().max(64))]),
   getSteamDeleteRoute: z.tuple([optionalArg(z.string().max(64))]),
   getSteamInstallAppTargets: z.tuple([optionalArg(z.string().max(64))]),
+  getSteamUpdateInfo: z.tuple([
+    nonEmptyString(),
+    optionalArg(z.strictObject({ computeSize: z.boolean() }))
+  ]),
   install: z.tuple([z.strictObject(installFields)]),
   uninstall: z.tuple([nonEmptyString(), runnerArg(), z.boolean(), z.boolean()]),
   // `path` is a bounded string, deliberately NOT absolutePathArg(): the handler's
@@ -122,6 +127,7 @@ interface InstallAsyncReturns {
     installAppRoute: boolean
     libraries: SteamLibraryTarget[]
   }>
+  getSteamUpdateInfo: Promise<SteamUpdateInfo | null>
   install: Promise<void>
   uninstall: Promise<void>
   moveInstall: Promise<void>

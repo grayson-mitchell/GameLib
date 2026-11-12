@@ -266,3 +266,21 @@ export interface SteamRequestNoticePayload {
   code?: number
   seq: number
 }
+
+/** Phase 74 plan 11: what the renderer may read about a Steam game's update (D-15: unknown is never stale). */
+export interface SteamUpdateInfo {
+  kind: 'bridge' | 'registered'
+  state: 'stale' | 'current' | 'unknown'
+  installedBuild: string
+  targetBuild?: string
+  branch: string
+  reason?: string
+  estimate?: {
+    downloadBytes: number
+    peakBytes: number
+    oldManifestAvailable: boolean
+    isEstimate: true
+    freeBytes?: number
+  }
+  sizeError?: string
+}

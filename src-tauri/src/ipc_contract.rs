@@ -314,6 +314,7 @@ pub(crate) const RENDERER_CHANNELS: &[&str] = &[
     "getSteamInstallAppTargets",
     "getSteamInstallSize",
     "getSteamSyncedAt",
+    "getSteamUpdateInfo",
     "getSteamUserInfo",
     "getStoreSearchDeals",
     "getStoreSearchStoreMap",

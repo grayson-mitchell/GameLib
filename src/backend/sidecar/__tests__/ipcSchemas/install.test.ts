@@ -40,6 +40,10 @@ const table: FixtureTable<typeof installAsyncArgs> = {
     valid: [['220'], [undefined]],
     invalid: [[true], ['220', 'extra']]
   },
+  getSteamUpdateInfo: {
+    valid: [['1603180'], ['1603180', { computeSize: true }]],
+    invalid: [[''], ['1', { computeSize: 'yes' }], ['1', { extra: 1 }]]
+  },
   install: {
     valid: [
       [

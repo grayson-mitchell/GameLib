@@ -138,6 +138,7 @@ import {
   type UninstallerDeps
 } from '../utils/uninstaller'
 import { checkGameUpdates } from '../utils/checkGameUpdates'
+import { getSteamUpdateInfo } from '../storeManagers/steam/updateInfo'
 import { listSteamLibraryTargets } from '../storeManagers/steam/installLocation'
 import {
   isSteamNativeDeleteEnabled,
@@ -312,6 +313,20 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
       }
 
       await deps.downloadQueue.addToQueue(dmQueueElement)
+    }
+  )
+
+  // Phase 74 plan 11 (T-74-35/36): update info for the renderer. computeSize is the only
+  // path that may take an authenticated lease (explicit click); the schema already shape-checks.
+  deps.ipc.handle(
+    'getSteamUpdateInfo',
+    async (_event: unknown, ...args: unknown[]) => {
+      const appId = args[0]
+      const opts = args[1] as { computeSize?: boolean } | undefined
+      if (typeof appId !== 'string' || !/^\d+$/.test(appId)) return null
+      return getSteamUpdateInfo(managerDepsFromServices(deps), appId, {
+        computeSize: opts?.computeSize === true
+      })
     }
   )
 
