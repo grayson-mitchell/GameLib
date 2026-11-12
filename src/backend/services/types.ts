@@ -9,6 +9,9 @@
  * `{ managers: Pick<StoreManagers, 'library'> }` style interface. Only composition roots
  * see the whole `BootServices`.
  */
+import type { AppShellState } from '../sidecar/appShellFlowRegistration'
+import type { InstalledJsonWatcher } from '../sidecar/installedJsonWatcher'
+import type { StoreEmbedSeamHolder } from '../store/storeEmbedSeam'
 import type { TokenStoreSlot } from 'backend/storeManagers/steam/tokenStore'
 import type { StoreRegistry } from 'backend/stores/storeRegistry'
 import type { StoreRoot } from 'backend/stores/storeRoot'
@@ -293,6 +296,18 @@ export interface SteamLibraryStateDeps {
 /** What a Steam function reads from the boot-owned per-session game maps. */
 export interface SteamGameSessionDeps {
   steamSession: Pick<SteamSessionServices, 'gameSession'>
+}
+
+/**
+ * The sidecar shell's per-boot instances (66.4-16, D-05), built by the 'app-shell-state' boot step:
+ * the app-shell flags/timers/wake-lock ids, the installed.json watcher and the store-embed seam
+ * holder. Carried beside `BootServices` (not on it): only 'register-handlers' and
+ * 'installed-json-watcher' read it.
+ */
+export interface ShellState {
+  appShell: AppShellState
+  installedJson: InstalledJsonWatcher
+  storeEmbed: StoreEmbedSeamHolder
 }
 
 export interface BootServices {

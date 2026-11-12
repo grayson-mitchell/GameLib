@@ -42,6 +42,7 @@
  * override Jest's resolution directly to exercise the real store-layer
  * code under test rather than the generic fixtures.
  */
+import { createTestShellState } from 'backend/testUtils/testShellState'
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 
 jest.mock('os', () => {
@@ -117,7 +118,11 @@ const bootServices = createTestServices({
   storeRegistry: registry,
   storeRoot: root
 })
-registerHandlers({ log: createCaptureLog(), services: bootServices })
+registerHandlers({
+  log: createCaptureLog(),
+  services: bootServices,
+  shellState: createTestShellState(bootServices)
+})
 
 /**
  * Narrow escape hatch for probing an arbitrary key on a `TypeCheckedStoreBackend`
@@ -518,7 +523,11 @@ describe('C-WR-1: two boots in one module registry', () => {
       storeRegistry: registry2,
       storeRoot: root2
     })
-    registerHandlers({ log: createCaptureLog(), services: services2 })
+    registerHandlers({
+      log: createCaptureLog(),
+      services: services2,
+      shellState: createTestShellState(services2)
+    })
 
     // The listeners install once, on the FIRST boot's injected registry (the latch is module state).
     const listeners =

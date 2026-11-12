@@ -66,10 +66,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   INSTALLED_JSON_REFRESH_DEBOUNCE_MS,
-  isInstalledJsonWatcherActive,
-  startInstalledJsonWatcher,
-  stopInstalledJsonWatcher
+  createInstalledJsonWatcher,
+  type InstalledJsonWatcher
 } from '../installedJsonWatcher'
+import { createClock } from '../../process/clock'
+import { createFakeClock } from '../../testUtils/fakeClock'
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -83,10 +84,12 @@ const AFTER_WINDOW = INSTALLED_JSON_REFRESH_DEBOUNCE_MS + 400
 /** Comfortably INSIDE the debounce window, so a second write coalesces with the first. */
 const INSIDE_WINDOW = 80
 
+let watcher: InstalledJsonWatcher
 let tempDir: string
 let installedJson: string
 
 beforeEach(() => {
+  watcher = createInstalledJsonWatcher({ ...watcherDeps, clock: createClock() })
   tempDir = mkdtempSync(join(tmpdir(), 'gamelib-installedjson-watcher-'))
   installedJson = join(tempDir, 'installed.json')
   writeFileSync(installedJson, JSON.stringify({ Iris: { app_name: 'Iris' } }))
@@ -97,7 +100,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  stopInstalledJsonWatcher()
+  watcher.stop()
   rmSync(tempDir, { recursive: true, force: true })
 })
 
@@ -114,9 +117,7 @@ function touchInstalledJson(): void {
 describe('installed.json watcher — the debounce', () => {
   it('collapses two writes INSIDE the window into exactly ONE refresh', async () => {
     const refresh = jest.fn()
-    expect(
-      startInstalledJsonWatcher(watcherDeps, { path: installedJson, refresh })
-    ).toBe(true)
+    expect(watcher.start({ path: installedJson, refresh })).toBe(true)
     await sleep(120)
 
     touchInstalledJson()
@@ -133,9 +134,7 @@ describe('installed.json watcher — the debounce', () => {
 
   it('does NOT collapse two writes SEPARATED by more than the window — two refreshes', async () => {
     const refresh = jest.fn()
-    expect(
-      startInstalledJsonWatcher(watcherDeps, { path: installedJson, refresh })
-    ).toBe(true)
+    expect(watcher.start({ path: installedJson, refresh })).toBe(true)
     await sleep(120)
 
     touchInstalledJson()
@@ -156,10 +155,8 @@ describe('installed.json watcher — the existsSync guard', () => {
     const refresh = jest.fn()
     const missing = join(tempDir, 'no-such-installed.json')
 
-    expect(
-      startInstalledJsonWatcher(watcherDeps, { path: missing, refresh })
-    ).toBe(false)
-    expect(isInstalledJsonWatcherActive()).toBe(false)
+    expect(watcher.start({ path: missing, refresh })).toBe(false)
+    expect(watcher.isActive()).toBe(false)
 
     // Creating the file afterwards must not retroactively arm anything — `main.ts` guards the
     // same way, and a fresh profile has no `installed.json` until the first legendary write.
@@ -171,13 +168,13 @@ describe('installed.json watcher — the existsSync guard', () => {
 })
 
 describe('installed.json watcher — teardown', () => {
-  it('stops refreshing after stopInstalledJsonWatcher()', async () => {
+  it('stops refreshing after watcher.stop()', async () => {
     const refresh = jest.fn()
-    startInstalledJsonWatcher(watcherDeps, { path: installedJson, refresh })
+    watcher.start({ path: installedJson, refresh })
     await sleep(120)
 
-    stopInstalledJsonWatcher()
-    expect(isInstalledJsonWatcherActive()).toBe(false)
+    watcher.stop()
+    expect(watcher.isActive()).toBe(false)
 
     touchInstalledJson()
     await sleep(AFTER_WINDOW)
@@ -187,14 +184,14 @@ describe('installed.json watcher — teardown', () => {
 
   it('drops a refresh already pending inside the debounce window when stopped', async () => {
     const refresh = jest.fn()
-    startInstalledJsonWatcher(watcherDeps, { path: installedJson, refresh })
+    watcher.start({ path: installedJson, refresh })
     await sleep(120)
 
     touchInstalledJson()
     await sleep(INSIDE_WINDOW)
     // Stop while the debounce timer is still armed. Without clearTimeout in the teardown the
     // queued refresh still lands after the watcher is nominally closed.
-    stopInstalledJsonWatcher()
+    watcher.stop()
 
     await sleep(AFTER_WINDOW)
 
@@ -203,9 +200,7 @@ describe('installed.json watcher — teardown', () => {
 
   it('refuses a second start rather than opening a second watch handle (T-35-42)', async () => {
     const refresh = jest.fn()
-    expect(
-      startInstalledJsonWatcher(watcherDeps, { path: installedJson, refresh })
-    ).toBe(true)
+    expect(watcher.start({ path: installedJson, refresh })).toBe(true)
     // THE DETECTING ASSERTION IS THIS RETURN VALUE, and the distinction matters — it was
     // established by deliberately deleting the idempotence guard and re-running.
     //
@@ -216,14 +211,12 @@ describe('installed.json watcher — teardown', () => {
     // non-vacuity anchor, NOT as the T-35-42 signal.
     //
     // What deleting the guard actually produces is a LEAKED libuv handle: the second
-    // `watch()` overwrites `activeWatcher`, so `stopInstalledJsonWatcher()` can never close the
+    // `watch()` overwrites `activeWatcher`, so `watcher.stop()` can never close the
     // first, and the whole jest worker then parks in `uv__io_poll` and never exits. That is the
     // real-world shape of "one write costs N refreshes" accumulating across library
     // re-initialisations — it hangs rather than failing cleanly, which is precisely why the
     // guard is asserted directly instead of through its downstream effect.
-    expect(
-      startInstalledJsonWatcher(watcherDeps, { path: installedJson, refresh })
-    ).toBe(false)
+    expect(watcher.start({ path: installedJson, refresh })).toBe(false)
     await sleep(120)
 
     touchInstalledJson()
@@ -238,9 +231,7 @@ describe('installed.json watcher — the ported production wiring', () => {
     // No `refresh` override: this is the case that proves the port targets the SAME function
     // `main.ts:1046` calls. Every other case injects a spy and would pass against a watcher
     // wired to nothing at all.
-    expect(
-      startInstalledJsonWatcher(watcherDeps, { path: installedJson })
-    ).toBe(true)
+    expect(watcher.start({ path: installedJson })).toBe(true)
     await sleep(120)
 
     touchInstalledJson()
@@ -253,7 +244,7 @@ describe('installed.json watcher — the ported production wiring', () => {
     // The original defect class is silence. A refresh that happens without the log line leaves
     // the live gate with no discharge signal — `35-AB-RETEST.md` item 2 names the presence of
     // this exact string as the observable that would have settled the item.
-    startInstalledJsonWatcher(watcherDeps, { path: installedJson })
+    watcher.start({ path: installedJson })
     await sleep(120)
 
     touchInstalledJson()
@@ -287,9 +278,7 @@ describe('installed.json watcher — the ported production wiring', () => {
 // Restoring the line returned it to green. See the SUMMARY for the full captured output.
 describe('installed.json watcher — the renderer refresh signal (D-35-19-09)', () => {
   it('(a) sends refreshLibrary/legendary exactly once after refreshInstalled resolves', async () => {
-    expect(
-      startInstalledJsonWatcher(watcherDeps, { path: installedJson })
-    ).toBe(true)
+    expect(watcher.start({ path: installedJson })).toBe(true)
     await sleep(120)
 
     touchInstalledJson()
@@ -315,9 +304,7 @@ describe('installed.json watcher — the renderer refresh signal (D-35-19-09)', 
       order.push('sendFrontendMessage')
     })
 
-    expect(
-      startInstalledJsonWatcher(watcherDeps, { path: installedJson })
-    ).toBe(true)
+    expect(watcher.start({ path: installedJson })).toBe(true)
     await sleep(120)
 
     touchInstalledJson()
@@ -344,37 +331,40 @@ describe('installed.json watcher — the renderer refresh signal (D-35-19-09)', 
     // production behaviour (the module still receives no catch, and the rejection still
     // happens); it only gives THIS TEST a handle to observe-and-swallow it, exactly once,
     // scoped to calls made while this spy is installed.
-    const realSetTimeout = global.setTimeout
-    const setTimeoutSpy = jest.spyOn(global, 'setTimeout').mockImplementation(((
-      fn: (...fnArgs: unknown[]) => unknown,
-      ms?: number,
-      ...schedArgs: unknown[]
-    ) => {
-      const wrapped = (...cbArgs: unknown[]) => {
-        const result = fn(...cbArgs)
-        if (
-          result &&
-          typeof (result as Promise<unknown>).catch === 'function'
-        ) {
-          ;(result as Promise<unknown>).catch(() => {
-            /* expected: refreshInstalledMock rejects below; production adds no catch here
-                 by design (see this module's own comment) — this exists only so the rejection
-                 is observed rather than left genuinely unhandled in the test process. */
-          })
-        }
-        return result
+    // The boot clock discards a callback's return value (as `setTimeout` did), so this test's
+    // clock wraps the real one and attaches a `.catch()` to the promise the debounce callback
+    // returns, the same promise that would otherwise go unhandled.
+    const realClock = createClock()
+    watcher = createInstalledJsonWatcher({
+      ...watcherDeps,
+      clock: {
+        ...realClock,
+        setTimeout: (fn, ms, opts) =>
+          realClock.setTimeout(
+            () => {
+              const result = fn() as unknown
+              if (
+                result &&
+                typeof (result as Promise<unknown>).catch === 'function'
+              ) {
+                ;(result as Promise<unknown>).catch(() => {
+                  /* expected: refreshInstalledMock rejects below; production adds no catch
+                     here by design -- this only observes the rejection in the test process. */
+                })
+              }
+            },
+            ms,
+            opts
+          )
       }
-      return realSetTimeout(wrapped as never, ms, ...schedArgs)
-    }) as any)
+    })
 
     try {
       refreshInstalledMock.mockRejectedValueOnce(
         new Error('malformed installed.json')
       )
 
-      expect(
-        startInstalledJsonWatcher(watcherDeps, { path: installedJson })
-      ).toBe(true)
+      expect(watcher.start({ path: installedJson })).toBe(true)
       await sleep(120)
 
       touchInstalledJson()
@@ -383,14 +373,12 @@ describe('installed.json watcher — the renderer refresh signal (D-35-19-09)', 
       expect(refreshInstalledMock).toHaveBeenCalledTimes(1)
       expect(sendFrontendMessageMock).not.toHaveBeenCalled()
     } finally {
-      setTimeoutSpy.mockRestore()
+      watcher.stop()
     }
   }, 15000)
 
   it('(d) collapses two writes INSIDE the window into exactly ONE send, same as the refresh', async () => {
-    expect(
-      startInstalledJsonWatcher(watcherDeps, { path: installedJson })
-    ).toBe(true)
+    expect(watcher.start({ path: installedJson })).toBe(true)
     await sleep(120)
 
     touchInstalledJson()
@@ -402,4 +390,82 @@ describe('installed.json watcher — the renderer refresh signal (D-35-19-09)', 
     expect(refreshInstalledMock).toHaveBeenCalledTimes(1)
     expect(sendFrontendMessageMock).toHaveBeenCalledTimes(1)
   }, 15000)
+})
+
+// 66.4-16 (D-05): the instance owns its handle and its debounce timer -- asserted with a fake
+// `fs.watch` and a fake clock, so no real file or wall time is involved.
+describe('installed.json watcher -- instance state (66.4-16)', () => {
+  function fakeWatch() {
+    const handle = { unref: jest.fn(), close: jest.fn() }
+    let listener: (() => void) | undefined
+    const watch = jest.fn((_target: string, l: () => void) => {
+      listener = l
+      return handle as never
+    })
+    return { handle, watch, fire: () => listener?.() }
+  }
+
+  it('start() opens one unref d watcher; the debounce runs on the clock; stop() closes and clears', () => {
+    const clock = createFakeClock()
+    const fw = fakeWatch()
+    const refresh = jest.fn()
+    const w = createInstalledJsonWatcher({
+      ...watcherDeps,
+      clock,
+      watch: fw.watch,
+      exists: () => true
+    })
+    expect(w.start({ path: '/x/installed.json', refresh })).toBe(true)
+    expect(w.start({ path: '/x/installed.json', refresh })).toBe(false)
+    expect(fw.watch).toHaveBeenCalledTimes(1)
+    expect(fw.handle.unref).toHaveBeenCalledTimes(1)
+    clock.assertNoKeepAlive()
+
+    fw.fire()
+    clock.advance(INSTALLED_JSON_REFRESH_DEBOUNCE_MS - 1)
+    fw.fire()
+    expect(clock.pendingCount()).toBe(1)
+    clock.advance(INSTALLED_JSON_REFRESH_DEBOUNCE_MS - 1)
+    expect(refresh).not.toHaveBeenCalled()
+    clock.advance(1)
+    expect(refresh).toHaveBeenCalledTimes(1)
+
+    fw.fire()
+    expect(clock.pendingCount()).toBe(1)
+    w.stop()
+    expect(clock.pendingCount()).toBe(0)
+    expect(fw.handle.close).toHaveBeenCalledTimes(1)
+    expect(w.isActive()).toBe(false)
+  })
+
+  it('does not open a watcher for a missing file, and two instances hold their own', () => {
+    const a = createInstalledJsonWatcher({
+      ...watcherDeps,
+      clock: createFakeClock(),
+      watch: fakeWatch().watch,
+      exists: () => false
+    })
+    expect(a.start({ path: '/missing' })).toBe(false)
+    expect(a.isActive()).toBe(false)
+
+    const fw = fakeWatch()
+    const b = createInstalledJsonWatcher({
+      ...watcherDeps,
+      clock: createFakeClock(),
+      watch: fw.watch,
+      exists: () => true
+    })
+    const c = createInstalledJsonWatcher({
+      ...watcherDeps,
+      clock: createFakeClock(),
+      watch: fakeWatch().watch,
+      exists: () => true
+    })
+    expect(b.start({ path: '/x' })).toBe(true)
+    expect(c.isActive()).toBe(false)
+    expect(c.start({ path: '/x' })).toBe(true)
+    b.stop()
+    expect(c.isActive()).toBe(true)
+    c.stop()
+  })
 })

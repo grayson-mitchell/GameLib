@@ -75,7 +75,6 @@ import { writeConfig } from '../utils'
 import { getLogFilePath } from '../logger/paths'
 import { hasExecutable } from '../utils/os/path'
 import { isFlatpak } from '../constants/environment'
-import { gamesConfigPath } from '../constants/paths'
 import type { AppSettings } from 'common/types'
 import type { BootServices, Stores, StoreManagers } from '../services/types'
 
@@ -89,7 +88,10 @@ import type { BootServices, Stores, StoreManagers } from '../services/types'
  * `library.ts:1114-1119` (`locateMachOBinary`) — `join()` alone is NOT
  * containment, it does not prevent `'../../'` traversal.
  */
-function isContainedGameConfig(appName: string): boolean {
+function isContainedGameConfig(
+  gamesConfigPath: string,
+  appName: string
+): boolean {
   const target = resolve(gamesConfigPath, appName + '.json')
   const rel = relative(gamesConfigPath, target)
   return !(rel.startsWith('..') || isAbsolute(rel))
@@ -116,7 +118,7 @@ export function registerSettingsFlows(deps: {
   appInfo: Pick<AppInfo, 'version'>
   /** The boot-owned system-information cache (66.4-12). */
   infoCaches: Pick<BootServices['infoCaches'], 'systemInfo'>
-  paths: Pick<BootServices['paths'], 'publicDir'>
+  paths: Pick<BootServices['paths'], 'publicDir' | 'gamesConfigPath'>
   /** The boot process runner (66.2); consumers converted by 66.2-05. */
   runner: BootServices['runner']
   /** The boot-owned Steam library map (D-66.3-13). */
@@ -186,7 +188,7 @@ export function registerSettingsFlows(deps: {
       // WR-01: drop a path-escaping appName before it reaches
       // the per-game config lookup (which joins appName into a filesystem
       // path with no containment of its own — game_config.ts:36).
-      if (!isContainedGameConfig(appName)) {
+      if (!isContainedGameConfig(deps.paths.gamesConfigPath, appName)) {
         process.stderr.write(
           '[settingsFlowRegistration] setSetting dropped a path-escaping appName\n'
         )
@@ -212,7 +214,7 @@ export function registerSettingsFlows(deps: {
     if (
       typeof appName === 'string' &&
       appName !== 'default' &&
-      !isContainedGameConfig(appName)
+      !isContainedGameConfig(deps.paths.gamesConfigPath, appName)
     ) {
       process.stderr.write(
         '[settingsFlowRegistration] writeConfig dropped a path-escaping appName\n'

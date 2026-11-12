@@ -27,6 +27,7 @@
  *      throws (never substitutes) on a missing or non-finite coordinate (T-40-05-04/D-18/D-29).
  */
 
+import { createStoreEmbedSeam } from '../../store/storeEmbedSeam'
 import { PassThrough } from 'node:stream'
 
 import {
@@ -103,7 +104,11 @@ const SAMPLE_BOUNDS = { x: 10, y: 20, w: 800, h: 600 }
 // ── Registered ONCE for this whole file — `handlerRegistry`/`listenerRegistry` are module-scope
 // maps; calling registerStoreEmbedFlows() more than once would stack a duplicate listener onto
 // the same channel array (humbleLoginFlows.test.ts's own docstring names this hazard). ─────────
-registerStoreEmbedFlows({ ipc, requestRustInvoke })
+registerStoreEmbedFlows({
+  ipc,
+  requestRustInvoke,
+  storeEmbed: createStoreEmbedSeam()
+})
 
 // ── Test 1: kind correctness ───────────────────────────────────────────────────────────────────
 describe('kind correctness — the 9 invoke channels and 1 send channel are registered with the correct kind, both directions', () => {

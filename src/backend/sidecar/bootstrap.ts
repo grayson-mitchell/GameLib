@@ -24,7 +24,9 @@ import { existsSync } from 'graceful-fs'
 import { join } from 'node:path'
 import Backend from 'i18next-fs-backend'
 import i18next from 'i18next'
-import { startInstalledJsonWatcher } from './installedJsonWatcher'
+import { createInstalledJsonWatcher } from './installedJsonWatcher'
+import { createAppShellState } from './appShellFlowRegistration'
+import { createStoreEmbedSeam } from '../store/storeEmbedSeam'
 import { removeLegacyZoomData } from './legacyZoomDataCleanup'
 import { releaseOnStdinEof } from './stdinEofRelease'
 import { READY_SENTINEL } from 'common/types/sidecarTransport'
@@ -47,7 +49,12 @@ import {
   createSteamProcesses,
   type SteamProcesses
 } from '../storeManagers/steam/steamProcesses'
-import type { BootServices, StoreManagers, Stores } from '../services/types'
+import type {
+  BootServices,
+  ShellState,
+  StoreManagers,
+  Stores
+} from '../services/types'
 // Block D (finding A1, quick-260907-odi). Adds NO new module to the sidecar bundle:
 // `sidecar/createStores` already imports `playtimeSyncQueue` from this exact
 // module, so this is a second binding onto an already-resident singleton, not a new edge.
@@ -315,6 +322,7 @@ export const BOOT_STEP_NAMES = [
   'shell-exe-receipt',
   'asset-root-check',
   'i18n',
+  'app-shell-state',
   'register-handlers',
   'rpc-server',
   'protocol-url-handler',
@@ -385,6 +393,11 @@ interface BootState {
    */
   outboundHttp: OutboundHttpTracker | null
   /**
+   * This boot's shell instances ('app-shell-state' step), read by 'register-handlers' and
+   * 'installed-json-watcher'. Held here, not on `BootServices`: no handler reads it after boot.
+   */
+  shellState: ShellState | null
+  /**
    * This boot's stdio transport ('sidecar-rpc' step): 'host-services' takes its bound send
    * functions, 'rpc-server' starts it. Held here, not on `BootServices`: the handlers reach the
    * transport through host services.
@@ -450,6 +463,11 @@ function requireHost(state: BootState): HostServices {
   const { host } = state.services
   if (!host) throw new Error('host-services step has not run')
   return host
+}
+
+function requireShellState(state: BootState): ShellState {
+  if (!state.shellState) throw new Error('app-shell-state step has not run')
+  return state.shellState
 }
 
 function requireRpc(state: BootState): SidecarRpc {
@@ -1244,6 +1262,7 @@ export function bootSidecar(
     steamGridKeyringStore: null,
     humbleKeyringStore: null,
     outboundHttp: null,
+    shellState: null,
     rpc: null
   }
   runBootSteps(ctx, { input, output, guards }, state, prebuilt)
@@ -2453,11 +2472,33 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'app-shell-state',
+      // No I/O, no timer, no watcher at construction: the tray timer and the debounce arm lazily
+      // on the boot clock (unref'd), the watcher opens only when 'installed-json-watcher' starts it.
+      run: (ctx, _io, state) => {
+        const services = requireServices(state)
+        state.shellState = {
+          appShell: createAppShellState({ clock: ctx.clock }),
+          installedJson: createInstalledJsonWatcher({
+            clock: ctx.clock,
+            managers: services.managers,
+            paths: services.paths,
+            sendFrontendMessage: requireHost(state).sendFrontendMessage
+          }),
+          storeEmbed: createStoreEmbedSeam()
+        }
+      }
+    },
+    {
       name: 'register-handlers',
       // Closures only: installs channel handlers, creates no timer, watcher, socket or child.
       run: (ctx, _io, state) => {
         const services = requireServices(state)
-        registerHandlers({ log: ctx.log, services })
+        registerHandlers({
+          log: ctx.log,
+          services,
+          shellState: requireShellState(state)
+        })
         // e2e-only command stubs (66.3-07): each registers only when CI === 'e2e'.
         registerGogdlStubListeners(
           services.host.ipc,
@@ -2736,14 +2777,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // under real Tauri this is unconditionally false and the watcher always arms.
         if (process.env.JEST_WORKER_ID === undefined) {
           try {
-            startInstalledJsonWatcher({
-              managers: requireServices(state).managers,
-              paths: requireServices(state).paths,
-              sendFrontendMessage: requireHost(state).sendFrontendMessage
-            })
+            requireShellState(state).installedJson.start()
           } catch (error) {
             logWarning(
-              `[bootstrap] startInstalledJsonWatcher() failed: ${error}`,
+              `[bootstrap] installedJson.start() failed: ${error}`,
               LogPrefix.Backend
             )
           }

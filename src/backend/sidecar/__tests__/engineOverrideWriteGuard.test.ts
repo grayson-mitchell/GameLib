@@ -15,9 +15,6 @@ const mockWriteConfig = jest.fn()
 jest.mock('../../utils', () => ({
   writeConfig: (...a: unknown[]) => mockWriteConfig(...a)
 }))
-jest.mock('../../constants/paths', () => ({
-  gamesConfigPath: '/nonexistent/gamesconfig'
-}))
 jest.mock('../../logger/paths', () => ({ getLogFilePath: jest.fn() }))
 jest.mock('../../utils/systeminfo', () => ({ getSystemInfo: jest.fn() }))
 jest.mock('../../utils/os/path', () => ({ hasExecutable: jest.fn() }))
@@ -31,6 +28,10 @@ const settingsDeps = {
   ipc: {
     handle: (c: string, f: never) => (handlers[c] = f),
     on: (c: string, f: never) => (listeners[c] = f)
+  },
+  paths: {
+    publicDir: '/pub',
+    gamesConfigPath: '/nonexistent/gamesconfig'
   },
   config: { setSetting: mockGlobalSet },
   gameConfigs: { get: jest.fn() },

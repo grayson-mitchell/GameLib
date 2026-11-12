@@ -4,7 +4,7 @@
     "src/backend/sidecar/__tests__/dismissedSignInNoticesSetting.test.ts": 5,
     "src/backend/sidecar/__tests__/electronUntouched.test.ts": 2,
     "src/backend/sidecar/__tests__/engineFlows.test.ts": 3,
-    "src/backend/sidecar/__tests__/engineOverrideWriteGuard.test.ts": 8,
+    "src/backend/sidecar/__tests__/engineOverrideWriteGuard.test.ts": 7,
     "src/backend/sidecar/__tests__/eosOverlayFlows.test.ts": 2,
     "src/backend/sidecar/__tests__/fileStore.test.ts": 1,
     "src/backend/sidecar/__tests__/focusRowFirstLaunchHydration.test.ts": 5,
@@ -25,10 +25,7 @@
     "src/backend/sidecar/__tests__/storeLayer.test.ts": 5
   },
   "moduleState": {
-    "src/backend/sidecar/appShellFlowRegistration.ts": 5,
     "src/backend/sidecar/devEpicCookieSweepRegistration.ts": 1,
-    "src/backend/sidecar/enrichmentFlowRegistration.ts": 1,
-    "src/backend/sidecar/installedJsonWatcher.ts": 2,
     "src/backend/sidecar/runnerAuthFlowRegistration.ts": 1,
     "src/backend/sidecar/shortcutsFlowRegistration.ts": 1,
     "src/backend/sidecar/storeWriteHandlers.ts": 1,

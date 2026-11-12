@@ -315,6 +315,8 @@ import {
 } from 'common/types/sidecarTransport'
 import pkgJson from '../../../../package.json'
 import { resolveAppInfo } from '../../host/appInfo'
+import { createAppShellState } from '../appShellFlowRegistration'
+import { createClock } from '../../process/clock'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
 // D-08: one boot per test case in a fresh module registry. A top-level import of a
@@ -405,7 +407,9 @@ function directDeps(stores: unknown = {}, sendFrontendMessage = jest.fn()) {
     managers: { library: {} } as never,
     downloadQueue: downloadQueueStub,
     quit: { handleExit: jest.fn().mockResolvedValue(undefined) },
-    stores: stores as never
+    stores: stores as never,
+    // A fresh instance per direct registration, as a fresh module registry gave before 66.4-16.
+    appShell: createAppShellState({ clock: createClock() })
   }
 }
 
@@ -1701,6 +1705,9 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       )(undefined)
     }
 
+    // The tray settle timer runs on the boot clock (66.4-16), a FakeClock in a test boot.
+    let advance: (ms: number) => void = () => {}
+
     beforeEach(() => {
       // `logInfo()` (called synchronously by the changeTrayColor listener) needs
       // `heroicLogWriter` assigned, which only happens via bootstrap.ts's real
@@ -1709,7 +1716,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       // describe block self-sufficient regardless of test execution order or a
       // `--testNamePattern` filter that skips the file's earlier `boot()`
       // calls this block would otherwise silently rely on.
-      boot()
+      const booted = boot()
+      advance = (ms) => booted.testContext.clock.advance(ms)
       jest.useFakeTimers()
     })
 
@@ -1723,10 +1731,10 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       fireChangeTrayColor()
       expect(mockRequestRustInvoke).not.toHaveBeenCalled()
 
-      jest.advanceTimersByTime(499)
+      advance(499)
       expect(mockRequestRustInvoke).not.toHaveBeenCalled()
 
-      jest.advanceTimersByTime(1)
+      advance(1)
       expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_TRAY_SET_ICON, [
         { variant: 'dark' }
       ])
@@ -1736,7 +1744,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       mockAppSettings({ trayIconVariant: 'light' })
 
       fireChangeTrayColor()
-      jest.advanceTimersByTime(500)
+      advance(500)
 
       expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_TRAY_SET_ICON, [
         { variant: 'light' }
@@ -1747,7 +1755,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       mockAppSettings({})
 
       fireChangeTrayColor()
-      jest.advanceTimersByTime(500)
+      advance(500)
 
       expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_TRAY_SET_ICON, [
         { variant: 'auto' }
@@ -1758,7 +1766,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       mockAppSettings({ darkTrayIcon: true })
 
       fireChangeTrayColor()
-      jest.advanceTimersByTime(500)
+      advance(500)
 
       expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_TRAY_SET_ICON, [
         { variant: 'dark' }
@@ -1769,7 +1777,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       mockAppSettings({ darkTrayIcon: false })
 
       fireChangeTrayColor()
-      jest.advanceTimersByTime(500)
+      advance(500)
 
       expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_TRAY_SET_ICON, [
         { variant: 'light' }
@@ -1781,7 +1789,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       mockRequestRustInvoke.mockRejectedValueOnce(new Error('rust unreachable'))
 
       fireChangeTrayColor()
-      jest.advanceTimersByTime(500)
+      advance(500)
       // Let the rejected promise's .catch() handler actually run (a plain microtask,
       // independent of the fake timers controlling the 500ms setTimeout above).
       await Promise.resolve()
@@ -1798,11 +1806,11 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       mockAppSettings({ trayIconVariant: 'dark' })
 
       fireChangeTrayColor()
-      jest.advanceTimersByTime(200)
+      advance(200)
       fireChangeTrayColor()
-      jest.advanceTimersByTime(200)
+      advance(200)
       fireChangeTrayColor()
-      jest.advanceTimersByTime(500)
+      advance(500)
 
       expect(mockRequestRustInvoke).toHaveBeenCalledTimes(1)
     })

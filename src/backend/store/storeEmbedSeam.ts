@@ -11,7 +11,7 @@
  * platform-specific in it, mirroring `src/backend/humble/loginWindowSeam.ts` exactly.
  * `storeEmbedFlowRegistration.ts` (imported from the sidecar's own curated module graph)
  * constructs the `rustInvoke`-backed implementation and installs it here via
- * `setStoreEmbedSeam()` — the ONLY call site (T-40-05-seam) — unconditionally at sidecar
+ * `StoreEmbedSeamHolder.set()` — the ONLY call site (T-40-05-seam) — unconditionally at sidecar
  * startup, before any IPC handler can be reached.
  *
  * Constraints that keep this file safe to import broadly: it imports nothing from `'electron'`
@@ -150,22 +150,32 @@ export interface StoreEmbedSeam {
   navigate(url: string): Promise<StoreEmbedNavEvent>
 }
 
-// Module-scoped holder. `null` before registerStoreEmbedFlows() runs at sidecar startup, and
-// whenever a test explicitly clears it via setStoreEmbedSeam(null).
-let installed: StoreEmbedSeam | null = null
-
-/**
- * Installs (or clears, via `null`) the active store-embed seam implementation.
- *
- * `registerStoreEmbedFlows()` (`src/backend/sidecar/storeEmbedFlowRegistration.ts`) is the
- * EXACTLY ONE production call site (mirrors `setLoginWindowSeam()`'s own discipline) — a second
- * call site would make "which implementation is installed" untraceable from one file.
- */
-export function setStoreEmbedSeam(seam: StoreEmbedSeam | null): void {
-  installed = seam
+/** One boot's holder of the active store-embed seam (66.4-16, D-05). */
+export interface StoreEmbedSeamHolder {
+  /**
+   * Installs (or clears, via `null`) the active store-embed seam implementation.
+   *
+   * `registerStoreEmbedFlows()` (`src/backend/sidecar/storeEmbedFlowRegistration.ts`) is the
+   * EXACTLY ONE production call site -- a second call site would make "which implementation is
+   * installed" untraceable from one file.
+   */
+  set(seam: StoreEmbedSeam | null): void
+  /** Returns the active store-embed seam implementation, or `null` if none is installed. */
+  get(): StoreEmbedSeam | null
 }
 
-/** Returns the active store-embed seam implementation, or `null` if none is installed. */
-export function getStoreEmbedSeam(): StoreEmbedSeam | null {
-  return installed
+/**
+ * Builds a holder, `null` until `registerStoreEmbedFlows()` runs at sidecar startup. Instance
+ * state, owned by the boot's 'app-shell-state' step, not a module-level slot.
+ */
+export function createStoreEmbedSeam(): StoreEmbedSeamHolder {
+  let installed: StoreEmbedSeam | null = null
+  return {
+    set(seam) {
+      installed = seam
+    },
+    get() {
+      return installed
+    }
+  }
 }

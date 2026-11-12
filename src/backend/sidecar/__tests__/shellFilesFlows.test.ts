@@ -279,7 +279,9 @@ function freshRegistry(): void {
 const boot = () =>
   bootFresh({
     reuseRegistry: true,
-    services: { storeRoot: testRoot }
+    services: { storeRoot: testRoot },
+    // The registration reads these from the boot's paths (66.4-16); the per-process tmp home.
+    context: { paths: { configPath, gamesConfigPath } }
   })
 
 /** Points the mocked createGlobalConfig() at a fresh settings object. */

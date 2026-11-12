@@ -96,7 +96,10 @@ import { registerEnrichmentFlows } from '../enrichmentFlowRegistration'
 // modules to prove `frontendReady`/`moveInstall`/`importGame` are registered — neither joins the
 // canonical six-module snapshot or the `MODULES` table (see Describe 11's own module-scope
 // comment); they are called only inside that describe's isolated `beforeAll`.
-import { registerAppShellFlows } from '../appShellFlowRegistration'
+import {
+  createAppShellState,
+  registerAppShellFlows
+} from '../appShellFlowRegistration'
 import { registerInstallFlows } from '../installFlowRegistration'
 import {
   createIpcRegistry,
@@ -863,6 +866,7 @@ describe('23-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30; Phase 45 Plan 0
       dialogs: services.host.dialogs,
       appState: services.host.appState,
       notifications: services.host.notifications,
+      appShell: createAppShellState({ clock: services.clock }),
       skipInitialTraySync: true
     })
     registerInstallFlows({

@@ -203,6 +203,7 @@ import type { AppState } from '../host/appState'
 import type { OpenExternal } from '../host/openExternal'
 import type { AppInfo, AppPaths } from '../process/context'
 import type { RequestRustInvoke } from '../host'
+import type { Clock, TimerHandle } from '../process/types'
 import { RUST_TRAY_SET_ICON } from '../../common/types/sidecarTransport'
 import {
   migrateTrayIconVariant,
@@ -218,38 +219,93 @@ function logSendFailure(channel: string, error: unknown): void {
   )
 }
 
-// D-12: logged once, never silent — see the module docstring's
-// `getWebviewPreloadPath` entry for the full rationale.
-let webviewPreloadPathWarned = false
+/**
+ * The app-shell registration's per-boot state (66.4-16, D-05): the one-shot guards, the held
+ * wake-lock ids and the tray colour settle timer, owned by one boot instead of this module.
+ * Built by the 'app-shell-state' boot step; construction arms nothing.
+ *
+ * Exit contract: the tray timer runs on the boot clock (unref'd by default, D-04). The
+ * wake-lock ids name assertions held by the Rust shell (`wakeLock.start` is a rustInvoke), not
+ * a handle in this process, so nothing here can keep the sidecar alive and stdin EOF needs no
+ * release (the shell that owns the assertion is the one that closed the pipe).
+ */
+export interface AppShellState {
+  /** D-12: logged once, never silent -- see `getWebviewPreloadPath`. True the first time only. */
+  claimWebviewPreloadWarning(): boolean
+  /**
+   * CR-02 (35-REVIEW.md, plan 35-21): `frontendReady`'s boot-time download-queue auto-resume
+   * (and, since 260922-v2e, `detectVCRedist`) must run at most once per boot. Returns true to
+   * the first caller only; flipped BEFORE the caller schedules anything, so two synchronous
+   * deliveries in the same tick cannot both observe `true`. The observability/dialog half of
+   * `frontendReady` is allowed to repeat (T-35-107) and does not consult this.
+   */
+  claimFrontendReadyBootWork(): boolean
+  /** Mirrors main.ts:615-617's own guards: the held 'prevent-app-suspension' id, if any. */
+  readonly powerId: number | undefined
+  /** The held 'prevent-display-sleep' id, if any. */
+  readonly displaySleepId: number | undefined
+  holdPower(id: number): void
+  holdDisplaySleep(id: number): void
+  releasePower(): number | undefined
+  releaseDisplaySleep(): number | undefined
+  /**
+   * changeTrayColor's 500ms settle timer (mirrors tray_icon.ts:51): re-arming clears and
+   * reschedules so repeated sends never stack timers (T-34.1-23).
+   */
+  armTrayColorTimer(fn: () => void, ms: number): void
+  /** Clears a pending tray colour timer. */
+  stop(): void
+}
 
-// Mirrors main.ts:615-617's own module-scope guards, kept as this module's
-// OWN state — the sidecar is a separate process from any Electron main
-// process, so there is nothing to share these with.
-let powerId: number | undefined
-let displaySleepId: number | undefined
-
-// changeTrayColor's 500ms settle-delay timer (mirrors tray_icon.ts:51's own setTimeout).
-// Module-level so repeated sends within the window clear-and-reschedule instead of
-// stacking unbounded timers (T-34.1-23).
-let trayColorTimer: NodeJS.Timeout | undefined
-
-// CR-02 (35-REVIEW.md, plan 35-21): `frontendReady`'s boot-time download-queue auto-resume
-// must run at most once per sidecar process. The registration stays `deps.ipc.on` (not
-// `ipcMain.once`) because the send-kind observability (`logSendHandlerReached`, the
-// `logInfo('Frontend Ready', ...)` line) and the Snap warning dialog (260919-sch: now pushed
-// via the in-app `showDialogBoxModalAuto`/`showDialog` path, not a native box) are allowed to
-// repeat -- T-35-107 dispositions a repeated informational dialog as "accept", not a defect -- while
-// `initQueue(true)` is NOT: it has no re-entrancy guard, so a second concurrent call against
-// the same queue head would run two downloaders against one install directory. Guarding only
-// the boot half is the narrower fix of the review's two candidates. Set to `true` BEFORE the
-// `setTimeout` below is scheduled, not inside its callback, so two synchronous deliveries in
-// the same tick (no timers involved yet) cannot both observe `false`.
-//
-// Quick task 260922-v2e: `detectVCRedist()` joined this SAME boot half for the SAME reason --
-// a renderer reload must not re-spawn the powershell VC++ runtime probe. It is guarded by
-// this flag inside the same `if (!frontendReadyBootWorkDone)` block as `initQueue`, not by a
-// second, independent flag.
-let frontendReadyBootWorkDone = false
+export function createAppShellState(deps: { clock: Clock }): AppShellState {
+  let webviewPreloadPathWarned = false
+  let frontendReadyBootWorkDone = false
+  let powerId: number | undefined
+  let displaySleepId: number | undefined
+  let trayColorTimer: TimerHandle | undefined
+  return {
+    claimWebviewPreloadWarning() {
+      if (webviewPreloadPathWarned) return false
+      webviewPreloadPathWarned = true
+      return true
+    },
+    claimFrontendReadyBootWork() {
+      if (frontendReadyBootWorkDone) return false
+      frontendReadyBootWorkDone = true
+      return true
+    },
+    get powerId() {
+      return powerId
+    },
+    get displaySleepId() {
+      return displaySleepId
+    },
+    holdPower(id) {
+      powerId = id
+    },
+    holdDisplaySleep(id) {
+      displaySleepId = id
+    },
+    releasePower() {
+      const id = powerId
+      powerId = undefined
+      return id
+    },
+    releaseDisplaySleep() {
+      const id = displaySleepId
+      displaySleepId = undefined
+      return id
+    },
+    armTrayColorTimer(fn, ms) {
+      if (trayColorTimer) deps.clock.clear(trayColorTimer)
+      trayColorTimer = deps.clock.setTimeout(fn, ms)
+    },
+    stop() {
+      if (trayColorTimer) deps.clock.clear(trayColorTimer)
+      trayColorTimer = undefined
+    }
+  }
+}
 
 /**
  * Read `trayIconVariant` from `GlobalConfig` (migrated from the legacy `darkTrayIcon` boolean
@@ -284,6 +340,8 @@ export interface AppShellFlowDeps extends DialogBoxDeps, NotifyDeps {
   ipc: Pick<IpcRegistry, 'handle' | 'on'>
   appInfo: Pick<AppInfo, 'version'>
   paths: Pick<AppPaths, 'publicDir'>
+  /** This boot's app-shell state instance ('app-shell-state' step, 66.4-16). */
+  appShell: AppShellState
   openExternal: Pick<OpenExternal, 'openExternal'>
   /** The boot's sidecar -> Rust request leg (tray icon sync, 66.4-15). */
   requestRustInvoke: RequestRustInvoke
@@ -339,8 +397,7 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   )
 
   deps.ipc.handle('getWebviewPreloadPath', async () => {
-    if (!webviewPreloadPathWarned) {
-      webviewPreloadPathWarned = true
+    if (deps.appShell.claimWebviewPreloadWarning()) {
       console.warn(
         "[appShellFlowRegistration] getWebviewPreloadPath(): declared-empty return (D-12) -- Tauri has no <webview> tag; the login-webview story is Phase 34.4's"
       )
@@ -439,15 +496,19 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   deps.ipc.on('lock', (_event: unknown, ...args: unknown[]) => {
     try {
       const playing = args[0] as boolean
-      const isSleepBlocked = powerId !== undefined
-      const isDisplaySleepBlocked = displaySleepId !== undefined
+      const isSleepBlocked = deps.appShell.powerId !== undefined
+      const isDisplaySleepBlocked = deps.appShell.displaySleepId !== undefined
 
       if (!playing && !isSleepBlocked) {
-        powerId = deps.appState.wakeLock.start('prevent-app-suspension')
+        deps.appShell.holdPower(
+          deps.appState.wakeLock.start('prevent-app-suspension')
+        )
       }
 
       if (playing && !isDisplaySleepBlocked) {
-        displaySleepId = deps.appState.wakeLock.start('prevent-display-sleep')
+        deps.appShell.holdDisplaySleep(
+          deps.appState.wakeLock.start('prevent-display-sleep')
+        )
       }
     } catch (error) {
       logSendFailure('lock', error)
@@ -464,13 +525,15 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   // outlives the app keeps the machine awake with no UI left to stop it.
   deps.ipc.on('unlock', () => {
     try {
+      const powerId = deps.appShell.powerId
       if (powerId !== undefined) {
         deps.appState.wakeLock.stop(powerId)
-        powerId = undefined
+        deps.appShell.releasePower()
       }
+      const displaySleepId = deps.appShell.displaySleepId
       if (displaySleepId !== undefined) {
         deps.appState.wakeLock.stop(displaySleepId)
-        displaySleepId = undefined
+        deps.appShell.releaseDisplaySleep()
       }
     } catch (error) {
       logSendFailure('unlock', error)
@@ -589,8 +652,7 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
       // (module-scoped, declared above) restores that one-shot guarantee for just this
       // block, without also silencing the observability/dialog logic above, which is
       // allowed to repeat (see that flag's own doc comment).
-      if (!frontendReadyBootWorkDone) {
-        frontendReadyBootWorkDone = true
+      if (deps.appShell.claimFrontendReadyBootWork()) {
         // `.unref()` (the one intentional difference from `main.ts:613`): under
         // Electron this timer lived in a process the app itself kept alive, so
         // holding the event loop open was harmless. The sidecar is a plain
@@ -733,10 +795,7 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   // doesn't race a still-updating `trayIconVariant` value.
   deps.ipc.on('changeTrayColor', () => {
     logInfo('Changing Tray icon Color...', LogPrefix.Backend)
-    if (trayColorTimer) {
-      clearTimeout(trayColorTimer)
-    }
-    trayColorTimer = setTimeout(
+    deps.appShell.armTrayColorTimer(
       () => syncTrayIcon(deps.config, deps.requestRustInvoke),
       500
     )

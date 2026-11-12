@@ -5,7 +5,7 @@
  * Registers the store-embed channels onto the sidecar's `ipcMain` recorder and installs a
  * `rustInvoke`-backed implementation of `StoreEmbedSeam` (`backend/store/storeEmbedSeam.ts`) at
  * sidecar startup. This is the ONLY module that constructs that implementation and the ONLY call
- * site of `setStoreEmbedSeam()` in the whole repo — mirrors `humbleLoginFlowRegistration.ts`'s
+ * site of `storeEmbed.set()` in the whole repo — mirrors `humbleLoginFlowRegistration.ts`'s
  * own `setLoginWindowSeam()` discipline.
  *
  * Channel kinds (cross-checked against `src/preload/api/storeEmbed.ts` — a send-versus-handle
@@ -78,7 +78,7 @@ import {
   RUST_STORE_EMBED_TAKE_NAV_EVENTS
 } from '../../common/types/sidecarTransport'
 import {
-  setStoreEmbedSeam,
+  type StoreEmbedSeamHolder,
   type StoreEmbedSeam,
   type StoreEmbedBounds,
   type StoreEmbedNavEvent
@@ -421,7 +421,7 @@ async function safeNavState(
 
 /**
  * Registers this module's 10 channels (9 invoke, 1 send) and installs the `rustInvoke`-backed
- * seam. EXACTLY ONE call site of `setStoreEmbedSeam()` in the whole repo -- must run before any
+ * seam. EXACTLY ONE call site of `storeEmbed.set()` in the whole repo -- must run before any
  * of the arms below could possibly be invoked (registration order, not request order, is what
  * matters here -- all arms are registered synchronously in this same function before it returns).
  */
@@ -429,9 +429,11 @@ export function registerStoreEmbedFlows(deps: {
   ipc: Pick<IpcRegistry, 'handle' | 'on'>
   /** The boot's sidecar -> Rust request leg, handed to the embed seam (66.4-15). */
   requestRustInvoke: RequestRustInvoke
+  /** This boot's seam holder ('app-shell-state' step, 66.4-16). */
+  storeEmbed: StoreEmbedSeamHolder
 }): void {
   const seam = createRustStoreEmbedSeam(deps.requestRustInvoke)
-  setStoreEmbedSeam(seam)
+  deps.storeEmbed.set(seam)
 
   // ── invoke (9) ──────────────────────────────────────────────────────────────────────────────
 

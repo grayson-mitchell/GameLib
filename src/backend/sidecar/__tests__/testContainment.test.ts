@@ -991,6 +991,10 @@ const IN_SCOPE_SUITES = [
  * `configBootOrder.test.ts` (Phase 66.3 Plan 04) is structurally contained: it reads bootstrap.ts as
  * text to pin the 'config' boot step order, boots nothing and spawns nothing.
  *
+ * `appShellState.test.ts` (Phase 66.4 Plan 16) is structurally contained: it exercises
+ * `createAppShellState()` / `createStoreEmbedSeam()` instances on a fake clock, with no path
+ * module, `homedir()`, filesystem or child process.
+ *
  * `ipcRegistry.test.ts` (Phase 66.3 Plan 03) is structurally contained: it exercises
  * `createIpcRegistry()` instances with in-memory handlers, and reaches no path module, `homedir()`,
  * filesystem or child process.
@@ -1000,6 +1004,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
   'appShellFlows.test.ts',
   'appShellImportGate.test.ts',
+  'appShellState.test.ts',
   'bootSourceShape.test.ts',
   'bootstrap.test.ts',
   'bootstrapUserReconcile.test.ts',

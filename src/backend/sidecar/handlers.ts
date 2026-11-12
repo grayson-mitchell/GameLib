@@ -36,7 +36,7 @@
  * `humble/ipc_handler.ts`, which also registers the channels Phase 34.4.1
  * owns), the curated in-app store-embed channels (`registerStoreEmbedFlows()`,
  * `storeEmbedFlowRegistration.ts` -- Phase 40 Plan 05, REQ-40-02/REQ-40-05, which also installs
- * the `rustInvoke`-backed `StoreEmbedSeam` implementation via `setStoreEmbedSeam()`), and the
+ * the `rustInvoke`-backed `StoreEmbedSeam` implementation via `storeEmbed.set()`), and the
  * two store-layer read handlers (D-03): the eager
  * `sidecar:store-snapshot` (serves the declared `BOOT_SET_STORES`, filtered
  * through the single D-08 allow-list) and the lazy `sidecar:store-fetch`
@@ -76,7 +76,7 @@
 
 import Store from '../store_backend'
 import type { LogSink } from '../process/types'
-import type { BootServices } from '../services/types'
+import type { BootServices, ShellState } from '../services/types'
 
 import { registerSteamFlows } from './steamFlowRegistration'
 import { registerSteamAuthFlows } from './steamAuthFlowRegistration'
@@ -150,6 +150,8 @@ function toolSlices(services: BootServices) {
 export function registerHandlers(deps: {
   log: LogSink
   services: BootServices
+  /** This boot's app-shell / installed.json watcher / store-embed instances ('app-shell-state' step). */
+  shellState: ShellState
 }): void {
   const ipc = deps.services.host.ipc
   ipc.handle('health', async () => 'ok')
@@ -249,6 +251,7 @@ export function registerHandlers(deps: {
     appState: deps.services.host.appState,
     notifications: deps.services.host.notifications,
     paths: deps.services.paths,
+    appShell: deps.shellState.appShell,
     skipInitialTraySync: process.env.JEST_WORKER_ID !== undefined
   })
   // Phase 34.2 Plans 04+05: the game-details/settings/override channels — no
@@ -299,7 +302,8 @@ export function registerHandlers(deps: {
     appState: deps.services.host.appState,
     openExternal: deps.services.host.openExternal,
     pushFrontendMessage: deps.services.host.pushFrontendMessage,
-    sendFrontendMessage: deps.services.host.sendFrontendMessage
+    sendFrontendMessage: deps.services.host.sendFrontendMessage,
+    paths: deps.services.paths
   })
   // Phase 34.3 Plan 06 (REQ-34.3-03/-04/-13): the clipboard channels — the ONLY
   // consumers of this slice's two new dispatch_rust_channel arms
@@ -441,12 +445,13 @@ export function registerHandlers(deps: {
     sendFrontendMessage: deps.services.host.sendFrontendMessage
   })
   // Phase 40 Plan 05 (REQ-40-02/REQ-40-05): the in-app store-embed channels, plus installing the
-  // rustInvoke-backed store-embed seam (setStoreEmbedSeam) — no ordering constraint relative to
+  // rustInvoke-backed store-embed seam (storeEmbed.set) — no ordering constraint relative to
   // the other calls above (own channel names, no cross-module runtime dependency at registration
   // time), placed alongside them, before `registerStoreWriteHandlers()`.
   registerStoreEmbedFlows({
     ipc,
-    requestRustInvoke: deps.services.host.requestRustInvoke
+    requestRustInvoke: deps.services.host.requestRustInvoke,
+    storeEmbed: deps.shellState.storeEmbed
   })
   // Phase 73 Plan 11 (D-03, D-06): the shell-originated channels the Rust depot job uses for CDN
   // tokens, manifest request codes and progress events — no ordering constraint relative to the

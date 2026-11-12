@@ -30,7 +30,6 @@ exports	meta/updaterSigningKey.ts	readCommittedPubkey
 exports	src/backend/constants/urls.ts	GITHUB_API
 exports	src/backend/humble/constants.ts	HUMBLE_FUZZY_MATCH_THRESHOLD
 exports	src/backend/humble/constants.ts	HUMBLE_LOGIN_PARTITION
-exports	src/backend/store/storeEmbedSeam.ts	getStoreEmbedSeam
 exports	src/backend/storeManagers/steam/bridge/drm/runnerEntitlements.ts	parseEntitlementKeys
 exports	src/backend/storeManagers/steam/bridge/overlay/overlayNotice.ts	OVERLAY_CAUSE_MAX_CHARS
 exports	src/backend/storeManagers/steam/bridge/overlay/overlayRunnerClone.ts	verifyOverlayRunnerClone

@@ -226,8 +226,12 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // `applyGameSetting` for the gameSettingWriteFailed push, replacing the module-level
   // `backend/ipc` import). No channel, guard or `steamLibrary.has` gate moved. Prior digest:
   // 4fed5097940f0c1149fd17fb93b85ccec41759ea221d68fedd8195801bc03082
+  // 66.4-16: re-pin -- the registerSettingsFlows `paths` slice gains `gamesConfigPath` (read by the
+  // per-game write containment guard, replacing the `constants/paths` import). No channel, guard
+  // or `steamLibrary.has` gate moved. Prior digest:
+  // 5ccecca3a45fbee8e8f333e6e747e5b7aeab265c56a135ac68a6f0a26dbb0244
   const SETTINGS_FLOW_REGISTRATION_SHA256 =
-    '5ccecca3a45fbee8e8f333e6e747e5b7aeab265c56a135ac68a6f0a26dbb0244'
+    'ea25a6c699e5ac722a01eab7424e6591337c405beb0171abd3c161c4905882b2'
 
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')

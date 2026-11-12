@@ -27,8 +27,8 @@
  * WHAT IS ADDED BEYOND THE PORT, AND WHY. `main.ts` never needed teardown — the Electron main
  * process exits and takes the watcher with it. The sidecar can re-enter its library lifecycle,
  * and an accumulating set of `fs.watch` handles would turn one legendary write into N refreshes
- * and N subprocess invocations (T-35-42). So `startInstalledJsonWatcher` is idempotent (a second
- * call while active is a no-op returning `false`) and `stopInstalledJsonWatcher` both closes the
+ * and N subprocess invocations (T-35-42). So `start` is idempotent (a second
+ * call while active is a no-op returning `false`) and `stop` both closes the
  * handle and clears any refresh still pending inside the debounce window.
  *
  * CURATED-IMPORT DISCIPLINE. This module imports
@@ -40,6 +40,8 @@
 import { existsSync, watch } from 'graceful-fs'
 import { deriveLegendaryPaths } from '../storeManagers/legendary/constants'
 import { logInfo, LogPrefix } from '../logger'
+import type { FSWatcher } from 'node:fs'
+import type { Clock, TimerHandle } from '../process/types'
 import type { SendFrontendMessage } from '../host/frontendMessage'
 import type { ManagerDeps, StoreManagers } from '../services/types'
 
@@ -58,123 +60,143 @@ interface InstalledJsonWatcherOptions {
   refresh?: () => void
 }
 
-let activeWatcher: ReturnType<typeof watch> | undefined
-let refreshTimeout: NodeJS.Timeout | undefined
+/** The `fs.watch` seam: the real one is `graceful-fs`'s; a test hands a fake. */
+type WatchFn = (target: string, listener: () => void) => FSWatcher
 
-/** True while a watch handle is open. Exported so teardown is observable to a test. */
-export function isInstalledJsonWatcherActive(): boolean {
-  return activeWatcher !== undefined
+export interface InstalledJsonWatcher {
+  /** True while a watch handle is open. Exported so teardown is observable to a test. */
+  isActive(): boolean
+  /**
+   * Arms the watcher. Returns `true` when a new watch handle was opened, and `false` when it was
+   * not -- either because the file does not exist yet (a fresh profile has no `installed.json`
+   * until legendary first writes one, which is exactly why `main.ts` guards with `existsSync`)
+   * or because a watcher is already active.
+   *
+   * Must be called once the sidecar is up, NOT at construction: `legendaryInstalled` resolves
+   * through the app-data paths, and the existence check is only meaningful after startup.
+   */
+  start(options?: InstalledJsonWatcherOptions): boolean
+  /**
+   * Closes the watch handle and drops any refresh still queued inside the debounce window.
+   *
+   * Clearing the timeout is not incidental tidiness: without it, a stop issued mid-window still
+   * lets one refresh land after the watcher is nominally gone, which is the shape that makes
+   * "the watcher was torn down" untrue in exactly the case a caller tears it down for.
+   */
+  stop(): void
 }
 
 /**
- * Arms the watcher.
- *
- * Returns `true` when a new watch handle was opened, and `false` when it was not — either
- * because the file does not exist yet (a fresh profile has no `installed.json` until legendary
- * first writes one, which is exactly why `main.ts` guards with `existsSync`) or because a
- * watcher is already active.
- *
- * Must be called once the sidecar is up, NOT at module load: `legendaryInstalled` resolves
- * through the app-data path shim, and the existence check is only meaningful after startup.
+ * One watcher per boot (66.4-16, D-05): the watch handle and the debounce timer are instance
+ * state, the debounce runs on the boot clock (unref'd by default, D-04) and the `FSWatcher` is
+ * unref'd below. Construction opens nothing; the 'installed-json-watcher' boot step calls
+ * `start()`.
  */
-export function startInstalledJsonWatcher(
-  deps: {
-    managers: Pick<StoreManagers, 'library'>
-    paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath'>
-    sendFrontendMessage: SendFrontendMessage
-  },
-  options: InstalledJsonWatcherOptions = {}
-): boolean {
-  if (activeWatcher) {
-    return false
-  }
+export function createInstalledJsonWatcher(deps: {
+  clock: Clock
+  managers: Pick<StoreManagers, 'library'>
+  paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath'>
+  sendFrontendMessage: SendFrontendMessage
+  /** Defaults to graceful-fs `watch`; overridden only by tests. */
+  watch?: WatchFn
+  /** Defaults to graceful-fs `existsSync`; overridden only by tests. */
+  exists?: (path: string) => boolean
+}): InstalledJsonWatcher {
+  let activeWatcher: FSWatcher | undefined
+  let refreshTimeout: TimerHandle | undefined
+  const doWatch: WatchFn = deps.watch ?? ((t, l) => watch(t, l))
+  const exists = deps.exists ?? existsSync
 
-  const target =
-    options.path ?? deriveLegendaryPaths(deps.paths).legendaryInstalled
-  // D-35-19-09 (live-gate criterion 14, UI half): the backend refresh alone left the renderer
-  // with no signal that anything changed, so the Library view never re-rendered without a
-  // manual refresh even though `refreshInstalled()` had already rebuilt the in-memory map. The
-  // send sits AFTER `refreshInstalled()` resolves, not alongside it — a renderer told to
-  // refresh before the backend rebuild lands re-reads the stale set and the user sees nothing
-  // change, which is the same defect one layer over. Matches the exact call shape the three
-  // peer paths already use (`legendary/games.ts:767,1067`, `sideload/library.ts:77`,
-  // `nile/games.ts:512`): `sendFrontendMessage('refreshLibrary', 'legendary')`.
-  //
-  // This inherits the existing debounce for free and fires once per settled change — the send
-  // lives inside the SAME `setTimeout(refresh, ...)` callback the debounce already coalesces,
-  // so no second debounce is added here.
-  //
-  // A rejecting `refreshInstalled()` must NOT send `refreshLibrary`: a failed rebuild has
-  // nothing new for the renderer to read, and criterion 14's own probe proved
-  // `refreshInstalled()` can throw on a malformed file. The rejection is left to propagate
-  // exactly as it did before this change — no catch is added here, which would convert an
-  // observable failure into silence.
-  const refresh =
-    options.refresh ??
-    (async () => {
-      // refreshInstalled() is synchronous in production (library.ts:131, no `async`), but the
-      // `await` is load-bearing for the test contract: installedJsonWatcher.test.ts:365 does
-      // `refreshInstalledMock.mockRejectedValueOnce(...)` and :353 asserts production adds no
-      // catch. Dropping the `await` would let `sendFrontendMessage('refreshLibrary')` fire on a
-      // failed rebuild and turn the rejection into an unhandled one.
-      // eslint-disable-next-line @typescript-eslint/await-thenable
-      await deps.managers.library.legendary.refreshInstalled()
-      deps.sendFrontendMessage('refreshLibrary', 'legendary')
+  function start(options: InstalledJsonWatcherOptions = {}): boolean {
+    if (activeWatcher) {
+      return false
+    }
+
+    const target =
+      options.path ?? deriveLegendaryPaths(deps.paths).legendaryInstalled
+    // D-35-19-09 (live-gate criterion 14, UI half): the backend refresh alone left the renderer
+    // with no signal that anything changed, so the Library view never re-rendered without a
+    // manual refresh even though `refreshInstalled()` had already rebuilt the in-memory map. The
+    // send sits AFTER `refreshInstalled()` resolves, not alongside it — a renderer told to
+    // refresh before the backend rebuild lands re-reads the stale set and the user sees nothing
+    // change, which is the same defect one layer over. Matches the exact call shape the three
+    // peer paths already use (`legendary/games.ts:767,1067`, `sideload/library.ts:77`,
+    // `nile/games.ts:512`): `sendFrontendMessage('refreshLibrary', 'legendary')`.
+    //
+    // This inherits the existing debounce for free and fires once per settled change — the send
+    // lives inside the SAME `setTimeout(refresh, ...)` callback the debounce already coalesces,
+    // so no second debounce is added here.
+    //
+    // A rejecting `refreshInstalled()` must NOT send `refreshLibrary`: a failed rebuild has
+    // nothing new for the renderer to read, and criterion 14's own probe proved
+    // `refreshInstalled()` can throw on a malformed file. The rejection is left to propagate
+    // exactly as it did before this change — no catch is added here, which would convert an
+    // observable failure into silence.
+    const refresh =
+      options.refresh ??
+      (async () => {
+        // refreshInstalled() is synchronous in production (library.ts:131, no `async`), but the
+        // `await` is load-bearing for the test contract: installedJsonWatcher.test.ts:365 does
+        // `refreshInstalledMock.mockRejectedValueOnce(...)` and :353 asserts production adds no
+        // catch. Dropping the `await` would let `sendFrontendMessage('refreshLibrary')` fire on a
+        // failed rebuild and turn the rejection into an unhandled one.
+        // eslint-disable-next-line @typescript-eslint/await-thenable
+        await deps.managers.library.legendary.refreshInstalled()
+        deps.sendFrontendMessage('refreshLibrary', 'legendary')
+      })
+
+    if (!exists(target)) {
+      return false
+    }
+
+    activeWatcher = doWatch(target, () => {
+      logInfo('installed.json updated, refreshing library', LogPrefix.Legendary)
+      // `watch` might fire twice (while Legendary/we are still writing chunks of the file), which
+      // would in turn make LegendaryLibrary fail to decode the JSON data. So instead of
+      // immediately calling LegendaryLibrary.get().refreshInstalled(), call it only after no
+      // writes happen in a 500ms timespan.
+      if (refreshTimeout) deps.clock.clear(refreshTimeout)
+      // A clock timer: unref'd by default, for the same reason as the watcher's own `unref()`
+      // below -- a pending debounce must not be the reason the process is still alive when the
+      // shell has closed stdin.
+      refreshTimeout = deps.clock.setTimeout(
+        refresh,
+        INSTALLED_JSON_REFRESH_DEBOUNCE_MS
+      )
     })
 
-  if (!existsSync(target)) {
-    return false
+    // An `FSWatcher` is a libuv handle and, like any handle, it REFERENCES the event loop -- so
+    // while one is open the process cannot exit on its own. That is wrong for the sidecar: its
+    // lifetime is owned by stdin (the RPC frame stream), and it must exit when the shell closes
+    // it. Without this `unref()` the sidecar started, served, and then HUNG FOREVER on stdin EOF
+    // instead of exiting 0 -- the shell's `shutdown_child()` would then have to SIGKILL it on the
+    // way out, and anything that ever misses that kill leaves an orphan holding an authenticated
+    // session, which is the exact hazard `RunEvent::Exit`'s own comment describes.
+    //
+    // `unref()` does NOT stop the watcher working. It only says "do not keep the process alive
+    // FOR ME". Events still fire for as long as something else holds the loop open, which for the
+    // whole of the sidecar's real life is stdin.
+    //
+    // Found 2026-08-29 by `pnpm smoke:sidecar` and proven by bisection: that gate FAILED with the
+    // watcher wired in and PASSED with it removed, on an otherwise identical tree. No jest test
+    // could have caught it -- the call site is guarded by `JEST_WORKER_ID`, so the live path is
+    // never exercised under jest, and `pnpm build:sidecar` exits 0 because the bundle builds fine,
+    // it just cannot exit.
+    activeWatcher.unref()
+
+    return true
   }
 
-  activeWatcher = watch(target, () => {
-    logInfo('installed.json updated, refreshing library', LogPrefix.Legendary)
-    // `watch` might fire twice (while Legendary/we are still writing chunks of the file), which
-    // would in turn make LegendaryLibrary fail to decode the JSON data. So instead of
-    // immediately calling LegendaryLibrary.get().refreshInstalled(), call it only after no
-    // writes happen in a 500ms timespan.
-    if (refreshTimeout) clearTimeout(refreshTimeout)
-    refreshTimeout = setTimeout(refresh, INSTALLED_JSON_REFRESH_DEBOUNCE_MS)
-    // Same reason as the watcher's own `unref()` below: a pending debounce must not be the
-    // reason the process is still alive when the shell has closed stdin.
-    refreshTimeout.unref?.()
-  })
-
-  // An `FSWatcher` is a libuv handle and, like any handle, it REFERENCES the event loop -- so
-  // while one is open the process cannot exit on its own. That is wrong for the sidecar: its
-  // lifetime is owned by stdin (the RPC frame stream), and it must exit when the shell closes
-  // it. Without this `unref()` the sidecar started, served, and then HUNG FOREVER on stdin EOF
-  // instead of exiting 0 -- the shell's `shutdown_child()` would then have to SIGKILL it on the
-  // way out, and anything that ever misses that kill leaves an orphan holding an authenticated
-  // session, which is the exact hazard `RunEvent::Exit`'s own comment describes.
-  //
-  // `unref()` does NOT stop the watcher working. It only says "do not keep the process alive
-  // FOR ME". Events still fire for as long as something else holds the loop open, which for the
-  // whole of the sidecar's real life is stdin.
-  //
-  // Found 2026-08-29 by `pnpm smoke:sidecar` and proven by bisection: that gate FAILED with the
-  // watcher wired in and PASSED with it removed, on an otherwise identical tree. No jest test
-  // could have caught it -- the call site is guarded by `JEST_WORKER_ID`, so the live path is
-  // never exercised under jest, and `pnpm build:sidecar` exits 0 because the bundle builds fine,
-  // it just cannot exit.
-  activeWatcher.unref()
-
-  return true
-}
-
-/**
- * Closes the watch handle and drops any refresh still queued inside the debounce window.
- *
- * Clearing the timeout is not incidental tidiness: without it, a stop issued mid-window still
- * lets one refresh land after the watcher is nominally gone, which is the shape that makes
- * "the watcher was torn down" untrue in exactly the case a caller tears it down for.
- */
-export function stopInstalledJsonWatcher(): void {
-  if (refreshTimeout) {
-    clearTimeout(refreshTimeout)
-    refreshTimeout = undefined
+  function stop(): void {
+    if (refreshTimeout) {
+      deps.clock.clear(refreshTimeout)
+      refreshTimeout = undefined
+    }
+    if (activeWatcher) {
+      activeWatcher.close()
+      activeWatcher = undefined
+    }
   }
-  if (activeWatcher) {
-    activeWatcher.close()
-    activeWatcher = undefined
-  }
+
+  return { isActive: () => activeWatcher !== undefined, start, stop }
 }

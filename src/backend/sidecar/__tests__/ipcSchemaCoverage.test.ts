@@ -12,6 +12,7 @@
  *     handlers populates). `initOnlineMonitor()` is deliberately never called here: it pings
  *     sites and arms retries.
  */
+import { createTestShellState } from 'backend/testUtils/testShellState'
 import { createTestServices } from 'backend/testUtils/testServices'
 import { createCaptureLog } from 'backend/testUtils/captureLog'
 import { defined } from 'backend/testUtils/indexed'
@@ -106,7 +107,11 @@ async function registered(): Promise<{
 }> {
   const { registerHandlers } = await import('backend/sidecar/handlers')
   const services = createTestServices()
-  registerHandlers({ log: createCaptureLog(), services })
+  registerHandlers({
+    log: createCaptureLog(),
+    services,
+    shellState: createTestShellState(services)
+  })
   services.signInProbe.outcomes.registerHandler()
   const scan = staticScan()
   // Every registration writes into the test host's injected registry.

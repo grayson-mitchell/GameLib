@@ -109,7 +109,6 @@ import {
 } from '../utils/filesystem'
 import { Path } from '../schemas'
 import { existsSync } from 'graceful-fs'
-import { configPath, gamesConfigPath } from '../constants/paths'
 import {
   supportURL,
   weblateUrl,
@@ -158,6 +157,8 @@ export function registerShellFilesFlows(deps: {
   /** This boot's backend -> frontend push (66.4-15). */
   pushFrontendMessage: HostServices['pushFrontendMessage']
   sendFrontendMessage: HostServices['sendFrontendMessage']
+  /** The boot's paths (66.4-16): the config file and the per-game config folder. */
+  paths: Pick<BootServices['paths'], 'configPath' | 'gamesConfigPath'>
 }): void {
   // ── send (11): the URL openers (constant URLs go straight to shell.openExternal) ────
 
@@ -249,9 +250,9 @@ export function registerShellFilesFlows(deps: {
         const appName = args[0]
         const target =
           appName === 'default'
-            ? configPath
+            ? deps.paths.configPath
             : assertContainedPath(
-                gamesConfigPath,
+                deps.paths.gamesConfigPath,
                 `${String(appName)}.json`,
                 'showConfigFileInFolder'
               )
@@ -331,7 +332,13 @@ export function registerShellFilesFlows(deps: {
 
   deps.ipc.on('resetHeroic', () => {
     try {
-      resetHeroic({ ...deps, paths: { configPath, gamesConfigPath } })
+      resetHeroic({
+        ...deps,
+        paths: {
+          configPath: deps.paths.configPath,
+          gamesConfigPath: deps.paths.gamesConfigPath
+        }
+      })
     } catch (error) {
       logSendFailure('resetHeroic', error)
     }

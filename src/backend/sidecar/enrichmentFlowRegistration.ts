@@ -200,13 +200,13 @@ export interface EnrichmentFlowDeps extends FrontendMessageDeps {
 import type { CatalogLocaleSettings } from 'common/types/discounts'
 import type { OnlineMonitor } from '../online_monitor'
 
-const RUNS_FOR_ME_RUNNERS: ReadonlySet<string> = new Set([
+const RUNS_FOR_ME_RUNNERS: readonly string[] = Object.freeze([
   'legendary',
   'gog',
   'sideload',
   'nile',
   'steam'
-])
+] as const)
 
 /**
  * Registers the 17 enrichment channels. Called once from `handlers.ts`
@@ -278,7 +278,7 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
         typeof payload.appName !== 'string' ||
         payload.appName.length === 0 ||
         typeof payload.runner !== 'string' ||
-        !RUNS_FOR_ME_RUNNERS.has(payload.runner) ||
+        !RUNS_FOR_ME_RUNNERS.includes(payload.runner) ||
         typeof payload.on !== 'boolean'
       ) {
         logWarning(
