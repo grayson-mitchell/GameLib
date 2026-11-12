@@ -72,16 +72,6 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam' }
 }))
 
-jest.mock('backend/constants/paths', () => ({
-  // Deliberately non-existent -- every test that needs a real source
-  // binary passes `opts.shimSourcePath`/`opts.shim64SourcePath` explicitly
-  // (dependency injection); this proves the DEFAULT truly falls back to
-  // the real import, not a second hardcoded path.
-  builtBridgeShimPath: '/nonexistent/mock-builtBridgeShimPath/steam_api.dll',
-  builtBridgeShim64Path:
-    '/nonexistent/mock-builtBridgeShim64Path/steam_api64.dll'
-}))
-
 jest.mock('../importScan', () => ({
   scanSteamApiImports: jest.fn()
 }))
@@ -127,7 +117,15 @@ jest.mock('../../bridgeBottle', () => ({
 
 const mockedScanSteamApiImports = scanSteamApiImports as jest.Mock
 const mockedGetBottleDir = getBottleDir as jest.Mock
-const appPaths = { userHome: '/test-home' }
+// Deliberately non-existent shim sources -- every test that needs a real source binary passes
+// `opts.shimSourcePath`/`opts.shim64SourcePath` explicitly (dependency injection); this proves the
+// DEFAULT truly falls back to the paths slice, not a second hardcoded path.
+const appPaths = {
+  userHome: '/test-home',
+  builtBridgeShimPath: '/nonexistent/mock-builtBridgeShimPath/steam_api.dll',
+  builtBridgeShim64Path:
+    '/nonexistent/mock-builtBridgeShim64Path/steam_api64.dll'
+}
 
 // 24-CR-02 pin (quick 260930-vrb). SHIM_EXPORTED_SYMBOLS is a hand-synced copy
 // of the export list in the COMMITTED native/steam-bridge/generated/steam_api.def
@@ -999,11 +997,10 @@ describe('shimGenerate', () => {
     )
   })
 
-  it('falls back to the real builtBridgeShimPath import when no shimSourcePath override is given (BLOCKER 2 default)', async () => {
-    // The jest-mocked backend/constants/paths.builtBridgeShimPath points
-    // at a deliberately nonexistent path -- this proves placeShimForGame
-    // actually reads THAT imported binding by default (not a second,
-    // divergently-hardcoded path that would happen to exist).
+  it('falls back to the paths slice builtBridgeShimPath when no shimSourcePath override is given (BLOCKER 2 default)', async () => {
+    // The slice's builtBridgeShimPath points at a deliberately nonexistent path -- this proves
+    // placeShimForGame actually reads THAT binding by default (not a second, divergently-hardcoded
+    // path that would happen to exist).
     mockedScanSteamApiImports.mockResolvedValue({
       status: 'ok',
       arch: 'x86',
@@ -1096,7 +1093,7 @@ describe('shimGenerate', () => {
     })
   })
 
-  it('BLOCKER 2: the shim placement sources import builtBridgeShimPath from backend/constants/paths and define no second hardcoded .dll source-location string', () => {
+  it('BLOCKER 2: the shim placement sources read builtBridgeShimPath from the paths slice and define no second hardcoded .dll source-location string', () => {
     const files = [
       'shimGenerate.ts',
       'shimOriginals.ts',
@@ -1111,9 +1108,8 @@ describe('shimGenerate', () => {
     // hold the destination FILENAME constants and the paths import.
     for (const src of sources) expect(src.length).toBeGreaterThan(0)
     const source = sources.join('\n')
-    expect(source).toMatch(
-      /import\s*\{[^}]*\bbuiltBridgeShimPath\b[^}]*\}\s*from\s*'backend\/constants\/paths'/
-    )
+    expect(source).toMatch(/\bpaths\.builtBridgeShimPath\b/)
+    expect(source).not.toMatch(/from\s*'backend\/constants\/paths'/)
     // Every absolute-looking `.dll` string literal in the whole file must
     // be one of the two destination FILENAME constants (no path
     // separators), not a second hardcoded source location.

@@ -148,7 +148,10 @@ import { placeShimForGameInner } from './shimPlacement'
  * caller decides, so a user's forced 'bridge' route keeps working.
  */
 export async function placeShimForGame(
-  paths: Pick<AppPaths, 'userHome'>,
+  paths: Pick<
+    AppPaths,
+    'userHome' | 'builtBridgeShimPath' | 'builtBridgeShim64Path'
+  >,
   appId: string,
   gameExePath: string,
   opts?: Parameters<typeof placeShimForGameInner>[3]

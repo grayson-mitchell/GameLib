@@ -280,7 +280,7 @@ export async function install(
       // Bridge rows 8-11 can only owe a known-bad notice; bridge row 7
       // carries 'scan-miss' (quick 261023-oq7). Anything outside the
       // notice vocabulary is a known-bad notice.
-      const noticeReason = NOTICE_REASONS.has(bridgeRoute.reason)
+      const noticeReason = NOTICE_REASONS.includes(bridgeRoute.reason)
         ? bridgeRoute.reason
         : 'known-bad'
       logInfo(

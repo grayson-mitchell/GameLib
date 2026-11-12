@@ -555,9 +555,11 @@ describe('resolveBridgeRoute', () => {
   })
 
   it('exports NOTICE_REASONS as exactly known-bad, scan-miss, win64-no-shim', () => {
-    expect(NOTICE_REASONS).toEqual(
-      new Set(['known-bad', 'scan-miss', 'win64-no-shim'])
-    )
+    expect([...NOTICE_REASONS].sort()).toEqual([
+      'known-bad',
+      'scan-miss',
+      'win64-no-shim'
+    ])
   })
 
   it('D-17 pin: a fully-populated BridgeRouteInput fixture has no key matching /forced/i', () => {

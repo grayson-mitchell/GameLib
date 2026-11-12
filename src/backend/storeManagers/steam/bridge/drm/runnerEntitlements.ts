@@ -1,7 +1,7 @@
 /**
  * Phase 65 plan 17: loader entitlements and ad hoc re-signing, split out of
- * runnerClone.ts. `resignCounter` lives beside `resignLoader`, its only user
- * (D-10). Imports runnerCrossover only.
+ * runnerClone.ts. `resignCounter` lives in the
+ * createRunnerEntitlementSigner closure beside `resignLoader`, its only user (D-10, D-05). Imports runnerCrossover only.
  */
 import { constants as fsConstants, promises as fsp } from 'fs'
 import { basename, join } from 'path'
@@ -83,7 +83,8 @@ function entitlementsPlistFor(keysIn: string[]): string {
  * entitlements the loader has and adds the dyld one. The stock binary is kept
  * next to it as <loader>.gamelib-orig.
  */
-export async function resignLoader(
+async function resignLoaderWith(
+  nextSeq: () => number,
   run: RunTool,
   loader: string,
   partial: string,
@@ -110,10 +111,9 @@ export async function resignLoader(
     } else {
       keys = Array.from(new Set([...stock, DYLD_ENTITLEMENT])).sort()
     }
-    resignCounter += 1
     const plist = join(
       partial,
-      `entitlements-${basename(loader)}-${resignCounter}.plist`
+      `entitlements-${basename(loader)}-${nextSeq()}.plist`
     )
     await fsp.writeFile(
       plist,
@@ -155,7 +155,37 @@ export async function resignLoader(
   }
 }
 
-let resignCounter = 0
+export type ResignLoader = (
+  run: RunTool,
+  loader: string,
+  partial: string,
+  timeoutMs: number,
+  mode: 'strict' | 'derived'
+) => Promise<{ ok: true; keys: string[] } | { ok: false; cause: string }>
+
+export interface RunnerEntitlementSigner {
+  resignLoader: ResignLoader
+}
+
+/**
+ * One signer per boot (D-05, 66.4-08): the entitlement plist sequence number is a closure counter, so
+ * plist names stay unique within a boot and a fresh instance starts over. Construction allocates a
+ * counter and nothing else.
+ */
+export function createRunnerEntitlementSigner(): RunnerEntitlementSigner {
+  let resignCounter = 0
+  return {
+    resignLoader: (run, loader, partial, timeoutMs, mode) =>
+      resignLoaderWith(
+        () => ++resignCounter,
+        run,
+        loader,
+        partial,
+        timeoutMs,
+        mode
+      )
+  }
+}
 
 /**
  * Targeted xattr scrub of a clone. Never `xattr -c`: it would strip the

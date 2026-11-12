@@ -110,6 +110,7 @@ import { createOnlineMonitor } from '../online_monitor'
 import { createEngineState } from '../engine/engineState'
 import { createEngineRuntime } from '../engine/engineRuntime'
 import { createSteamLaunchRuntime } from '../storeManagers/steam/steamLaunchRuntime'
+import { createBridgeRuntime } from '../storeManagers/steam/bridge/bridgeRuntime'
 import { createWinetricksQueue } from '../tools/winetricksQueue'
 import { getInstallingComponent } from '../tools'
 import type { OnlineMonitor } from '../online_monitor'
@@ -220,7 +221,6 @@ import {
   createBridgeHelperRegistry,
   DEFAULT_STEAM_WAIT_SCHEDULE
 } from '../storeManagers/steam/bridge/helperRegistry'
-import { steamBridgeHelperPath } from '../constants/paths'
 import { createSteamUser } from '../storeManagers/steam/user'
 // Transitional (removed by plan 27): the legacy registries still hold children until plans
 // 23/24/26 move them onto the runner.
@@ -296,6 +296,7 @@ export const BOOT_STEP_NAMES = [
   'engine-state',
   'engine-runtime',
   'steam-launch-runtime',
+  'steam-bridge-runtime',
   'winetricks-queue',
   'store-managers',
   'download-queue',
@@ -445,6 +446,7 @@ function requireServices(state: BootState): BootServices {
     engineState,
     engineRuntime,
     steamLaunchRuntime,
+    bridgeRuntime,
     winetricksQueue,
     signInProbe,
     steamSession,
@@ -478,6 +480,7 @@ function requireServices(state: BootState): BootServices {
     !engineState ||
     !engineRuntime ||
     !steamLaunchRuntime ||
+    !bridgeRuntime ||
     !winetricksQueue ||
     !signInProbe ||
     !steamSession ||
@@ -512,6 +515,7 @@ function requireServices(state: BootState): BootServices {
         'engineState',
         'engineRuntime',
         'steamLaunchRuntime',
+        'bridgeRuntime',
         'winetricksQueue',
         'signInProbe',
         'steamSession',
@@ -548,6 +552,7 @@ function requireServices(state: BootState): BootServices {
     engineState,
     engineRuntime,
     steamLaunchRuntime,
+    bridgeRuntime,
     winetricksQueue,
     signInProbe,
     steamSession,
@@ -1373,12 +1378,12 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       // map and the exit teardown. Construction spawns nothing and installs no listener (the
       // process 'exit' teardown is added on the first spawn). The wait schedule, helper path and
       // spawn env are the production values; a test hands the boot a prebuilt registry.
-      run: (_ctx, _io, state) => {
+      run: (ctx, _io, state) => {
         state.services.bridgeHelpers =
           prebuilt.bridgeHelpers ??
           createBridgeHelperRegistry({
             steamWaitSchedule: DEFAULT_STEAM_WAIT_SCHEDULE,
-            helperPath: () => steamBridgeHelperPath,
+            helperPath: () => ctx.paths.steamBridgeHelperPath,
             spawnEnv: () => process.env
           })
       }
@@ -1793,6 +1798,18 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'steam-bridge-runtime',
+      // Builds the one Steam bridge runtime of this boot (D-05, 66.4-08): the DRM and overlay runner
+      // clone single-flight maps, the loader-entitlement plist counter and the shared-redist install
+      // map with its ledger tmp sequence. Construction allocates empty maps and counters only: no I/O,
+      // no timer, no handle, so the sidecar exit contract holds. After 'steam-launch-runtime' and before
+      // 'store-managers' so ManagerDeps carries it.
+      run: (_ctx, _io, state) => {
+        state.services.bridgeRuntime =
+          prebuilt.bridgeRuntime ?? createBridgeRuntime()
+      }
+    },
+    {
       name: 'winetricks-queue',
       // Builds the one winetricks apply queue of this boot (D-05, D-66.3-12). Construction does no
       // I/O and arms no timer: it only subscribes to the environment-report change signal. Before
@@ -1824,6 +1841,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           engineState,
           engineRuntime,
           steamLaunchRuntime,
+          bridgeRuntime,
           signInProbe,
           steamSession,
           tokenStore,
@@ -1847,6 +1865,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !engineState ||
           !engineRuntime ||
           !steamLaunchRuntime ||
+          !bridgeRuntime ||
           !signInProbe ||
           !steamSession ||
           !tokenStore ||
@@ -1890,6 +1909,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           engineState,
           engineRuntime,
           steamLaunchRuntime,
+          bridgeRuntime,
           signIn: signInProbe,
           steamSession,
           tokenStore,

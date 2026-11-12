@@ -20,12 +20,21 @@ import { join } from 'path'
 
 import type { GameSettings } from 'common/types'
 import {
-  installSteamBridgeSharedRedists,
   REDIST_FAILURE_BACKOFF_AFTER,
   REDIST_FAILURE_BACKOFF_MS,
   REDIST_PROCESS_TIMEOUT_MS,
   REDIST_TIMEOUT_BACKOFF_AFTER
 } from '../sharedRedistInstall'
+import { createTestBridgeRuntime } from 'backend/testUtils/testBridgeRuntime'
+
+// One fresh single-flight map and tmp sequence per test (66.4-08).
+let installSteamBridgeSharedRedists: ReturnType<
+  typeof createTestBridgeRuntime
+>['sharedRedist']['installSteamBridgeSharedRedists']
+beforeEach(() => {
+  installSteamBridgeSharedRedists =
+    createTestBridgeRuntime().sharedRedist.installSteamBridgeSharedRedists
+})
 import { parseInstallScript, classifySharedRedist } from '../sharedRedists'
 import type { SharedRedistDepot, SharedRedistDownloadResult } from '../../depot'
 import { downloadSharedRedistDepots } from '../../depot'
@@ -65,17 +74,21 @@ jest.mock('../../bridgeBottle', () => ({
 }))
 // IN-05: a per-test mkdtemp dir, assigned in beforeEach before anything reads it.
 let mockSupportDir = ''
-jest.mock('../../constants', () => ({
-  get steamSupportPath() {
-    return mockSupportDir
-  }
-}))
 
 const mockedRun = jest.fn()
 const DEPS = {
   commandRunner: { runWineCommand: mockedRun },
-  spawnAsync: jest.fn()
-} as unknown as Parameters<typeof installSteamBridgeSharedRedists>[0]
+  spawnAsync: jest.fn(),
+  paths: {
+    get steamSupportPath() {
+      return mockSupportDir
+    }
+  }
+} as unknown as Parameters<
+  ReturnType<
+    typeof createTestBridgeRuntime
+  >['sharedRedist']['installSteamBridgeSharedRedists']
+>[0]
 const mockedDownload = downloadSharedRedistDepots as jest.Mock
 const mockedFixes = readKnownFixProfile as jest.Mock
 const mockedStatus = sendGameStatusUpdate as jest.Mock

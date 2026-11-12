@@ -658,7 +658,7 @@ export async function installBridgeGameLeased(
   // Plan 05 decision: the Steamworks shared redists download under THIS
   // install's logon, so Play never needs one. Never fails the install.
   const { installSteamBridgeSharedRedists } =
-    await import('./bridge/sharedRedistInstall')
+    steamGame.deps.bridgeRuntime.sharedRedist
   // The download queue suppresses Steam's own 'done', and on the bridge the
   // ACF poller leaves completion to this method (quick 261029-exu) and stays
   // silent once this method has marked the install finalized (261031-ihs), so the

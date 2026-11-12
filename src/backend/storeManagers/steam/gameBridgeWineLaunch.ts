@@ -131,7 +131,7 @@ export async function fireBridgeWineLaunch(
     const { applyBridgeBottleDllOverrides } =
       await import('./bridge/bottleDllOverrides')
     const { installSteamBridgeSharedRedists } =
-      await import('./bridge/sharedRedistInstall')
+      steamGame.deps.bridgeRuntime.sharedRedist
 
     // Phase 51 Plan 01 Task 2 (D-51-01): the helper's lifetime is tied to
     // THIS game's own process lifetime, never to the whole app session —

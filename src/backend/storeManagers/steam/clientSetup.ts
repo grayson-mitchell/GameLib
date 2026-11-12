@@ -31,15 +31,12 @@ import { existsSync, mkdirSync } from 'graceful-fs'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { GlobalConfigSlice } from 'backend/config'
 import type { ManagerDeps } from 'backend/services/types'
+import type { AppPaths } from 'backend/process/context'
 import type { SpawnDeps } from './provisionBottle'
 import { isMac, isLinux } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../ipc'
 import { downloadSetupPayload } from './setupDownloads'
-import {
-  STEAM_DOWNLOAD_URL,
-  STEAM_SETUP_EXE_URL,
-  steamSupportPath
-} from './constants'
+import { STEAM_DOWNLOAD_URL, STEAM_SETUP_EXE_URL } from './constants'
 import { NUMERIC_APP_ID } from './gameConstants'
 
 // Shown to the user after the frontend's "Steam setup could not start: " prefix;
@@ -202,7 +199,10 @@ interface StartGuidedInstallResult {
  * nothing opened (D-UAT-17).
  */
 export async function startGuidedClientInstall(
-  deps: SpawnDeps & Pick<ManagerDeps, 'openExternal'>
+  deps: SpawnDeps &
+    Pick<ManagerDeps, 'openExternal'> & {
+      paths: Pick<AppPaths, 'steamSupportPath'>
+    }
 ): Promise<StartGuidedInstallResult> {
   if (isLinux) {
     try {
@@ -225,7 +225,7 @@ export async function startGuidedClientInstall(
 
   const installerUrl = isMac ? STEAM_MAC_INSTALLER_URL : STEAM_SETUP_EXE_URL
   const destFileName = isMac ? 'steam.dmg' : 'SteamSetup.exe'
-  const destDir = join(steamSupportPath, 'redist')
+  const destDir = join(deps.paths.steamSupportPath, 'redist')
   const destPath = join(destDir, destFileName)
 
   try {

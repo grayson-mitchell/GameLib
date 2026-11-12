@@ -340,7 +340,8 @@ export async function prepareTcpOverlay(
         {
           runTool: createRunTool({ runner: steamGame.deps.runner }),
           engineRuntime: steamGame.deps.engineRuntime,
-          runner: steamGame.deps.runner
+          runner: steamGame.deps.runner,
+          bridgeRuntime: steamGame.deps.bridgeRuntime
         }
       )
       if (result.status === 'error') {

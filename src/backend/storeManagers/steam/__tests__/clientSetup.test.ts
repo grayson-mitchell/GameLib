@@ -26,11 +26,7 @@ import {
   createTestSteamUser
 } from 'backend/testUtils/testSteamUser'
 const steamUser = createMockSteamUser()
-import {
-  STEAM_DOWNLOAD_URL,
-  STEAM_SETUP_EXE_URL,
-  steamSupportPath
-} from '../constants'
+import { STEAM_DOWNLOAD_URL, STEAM_SETUP_EXE_URL } from '../constants'
 import {
   ensureSteamClientReady,
   startGuidedClientInstall
@@ -65,13 +61,10 @@ jest.mock('../../../ipc', () => ({
   sendFrontendMessage: jest.fn()
 }))
 
-// Pin steamSupportPath to a path holding a space AND an apostrophe so the
-// PowerShell single-quote escaping is exercised (T-0yc-01). The spread keeps
-// STEAM_INSTALL_PATHS / STEAM_DOWNLOAD_URL / STEAM_SETUP_EXE_URL real.
-jest.mock('../constants', () => ({
-  ...jest.requireActual('../constants'),
-  steamSupportPath: "/Users/Jane O'Brien/AppData/Roaming/gamelib/steam_store"
-}))
+// steamSupportPath is a path holding a space AND an apostrophe so the PowerShell single-quote
+// escaping is exercised (T-0yc-01); it reaches the code under test through the paths slice (66.4-08).
+const steamSupportPath =
+  "/Users/Jane O'Brien/AppData/Roaming/gamelib/steam_store"
 
 // Mutable double, defaults to Windows (mirrors games.test.ts's envMock
 // pattern) — individual tests flip isMac/isLinux via jest.requireMock.
@@ -97,6 +90,7 @@ const mockedSpawnAsync = jest.fn()
 const setupDeps = {
   spawnAsync: mockedSpawnAsync,
   runner: createScriptedRunner([]),
+  paths: { steamSupportPath },
   openExternal: { openExternal: mockedOpenExternal }
 } as unknown as Parameters<typeof startGuidedClientInstall>[0]
 const mockedIsSteamClientInstalled =

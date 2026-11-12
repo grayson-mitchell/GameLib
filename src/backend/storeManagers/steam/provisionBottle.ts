@@ -27,11 +27,13 @@ import { downloadSetupPayload } from './setupDownloads'
 import {
   DEFAULT_STEAM_BOTTLE_NAME,
   STEAM_BOTTLE_RESERVED_APPNAME,
-  STEAM_SETUP_EXE_URL,
-  steamSupportPath
+  STEAM_SETUP_EXE_URL
 } from './constants'
 import { sanitizeBottleName } from 'backend/engine/bottlePrimitives'
-import { getBottleDir, isBottleProvisioned } from './bottleDirs'
+import {
+  getBottleDir,
+  isBottleProvisioned
+} from 'backend/engine/bottlePrimitives'
 import {
   CROSSOVER_CREATE_FAILED,
   CROSSOVER_CREATE_TIMEOUT,
@@ -121,7 +123,7 @@ export async function killBottleWineServer(
     const result = await deps.spawnAsync(wineserverIn(binDir), ['-k'], {
       env: {
         ...process.env,
-        WINEPREFIX: getBottleDir(bottleName),
+        WINEPREFIX: getBottleDir(deps.paths, bottleName),
         CX_ROOT: cxRootFrom(binDir)
       },
       ...(timeoutMs !== undefined ? { timeout: timeoutMs } : {})
@@ -167,7 +169,7 @@ export async function provisionBottle(
     spawnAsync: SpawnAsync
     commandRunner: Pick<CommandRunner, 'runWineCommand'>
     runner: Pick<ProcessRunner, 'run'>
-    paths: Pick<AppPaths, 'userHome'>
+    paths: Pick<AppPaths, 'userHome' | 'steamSupportPath'>
     engineRuntime: Pick<EngineRuntime, 'crossover'>
     steamLaunchRuntime: Pick<SteamLaunchRuntime, 'raiser'>
     config: Pick<
@@ -258,7 +260,8 @@ export async function provisionBottle(
   )
   const needsCxbottle =
     !deps.steamBottle.isBottleReady(bottleName) ||
-    (isBottleProvisioned(bottleName) && bottleWineArch(bottleName) === 'win32')
+    (isBottleProvisioned(deps.paths, bottleName) &&
+      bottleWineArch(bottleName) === 'win32')
   if (!binDir && needsCxbottle) {
     logWarning(
       `provisionBottle: CrossOver not found, cannot provision bottle "${bottleName}"`,
@@ -286,7 +289,7 @@ export async function provisionBottle(
   // touched — bottled-client login lives inside the prefix, so re-login in
   // the fresh bottle is inherent and expected (MACSTEAM-02/MACSTEAM-04).
   if (
-    isBottleProvisioned(bottleName) &&
+    isBottleProvisioned(deps.paths, bottleName) &&
     bottleWineArch(bottleName) === 'win32'
   ) {
     logInfo(
@@ -315,9 +318,12 @@ export async function provisionBottle(
     }
     // Fallback: if cxbottle.conf lingered (delete failed/incomplete), remove
     // the bottle directory directly so the create-guard below rebuilds fresh.
-    if (isBottleProvisioned(bottleName)) {
+    if (isBottleProvisioned(deps.paths, bottleName)) {
       try {
-        rmSync(getBottleDir(bottleName), { recursive: true, force: true })
+        rmSync(getBottleDir(deps.paths, bottleName), {
+          recursive: true,
+          force: true
+        })
       } catch (error) {
         logWarning(
           [
@@ -347,13 +353,13 @@ export async function provisionBottle(
   // (half-provisioned bottle being resumed) — re-running `cxbottle --create`
   // on an existing bottle is unnecessary and this resumes straight into the
   // download/install step.
-  if (!isBottleProvisioned(bottleName)) {
+  if (!isBottleProvisioned(deps.paths, bottleName)) {
     try {
       const { code, stderr } = await deps.spawnAsync(
         cxbottleIn(binDir as string),
         ['--create', '--bottle', bottleName, '--template', 'win10_64']
       )
-      if (!isBottleProvisioned(bottleName)) {
+      if (!isBottleProvisioned(deps.paths, bottleName)) {
         // log-secret-gate-exempt: stderr of cxbottle create (bottle provisioning), not an auth command
         logError(
           [
@@ -390,7 +396,7 @@ export async function provisionBottle(
   // a cached copy on re-provision. mkdirSync the redist dir first (recursive
   // is idempotent, no throw if it already exists) — closes the ENOENT that
   // caused "Failed to download SteamSetup.exe" per the debug root cause.
-  const steamSetupDir = join(steamSupportPath, 'redist')
+  const steamSetupDir = join(deps.paths.steamSupportPath, 'redist')
   const steamSetupExePath = join(steamSetupDir, 'SteamSetup.exe')
   mkdirSync(steamSetupDir, { recursive: true })
   if (!existsSync(steamSetupExePath)) {
@@ -484,7 +490,7 @@ export async function provisionBottle(
   // bottled steam.exe is observed.
   const steamExePath = getBottleSteamExePath(bottleName)
   const steamExeReady =
-    isBottleProvisioned(bottleName) && existsSync(steamExePath)
+    isBottleProvisioned(deps.paths, bottleName) && existsSync(steamExePath)
   if (steamExeReady) {
     deps.steamBottle.configStore().set('provisioned', true)
   }

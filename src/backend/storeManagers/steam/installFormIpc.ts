@@ -383,7 +383,7 @@ export async function handleSetSteamBridgeUserRoute(
   if (acknowledgeReason !== undefined) {
     if (
       typeof acknowledgeReason !== 'string' ||
-      !NOTICE_REASONS.has(acknowledgeReason as SteamBridgeRouteReason)
+      !NOTICE_REASONS.includes(acknowledgeReason as SteamBridgeRouteReason)
     ) {
       logWarning(
         'handleSetSteamBridgeUserRoute: rejected an acknowledgeReason outside the notice reasons (T-51-30)',

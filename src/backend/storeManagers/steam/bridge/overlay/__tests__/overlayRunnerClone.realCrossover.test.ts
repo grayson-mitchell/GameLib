@@ -27,10 +27,11 @@ import {
   WINELOADER_REL,
   sha256File
 } from '../../drm/runnerCrossover'
-import {
-  detectCrossoverForOverlay,
-  ensureOverlayRunnerClone
-} from '../overlayRunnerClone'
+import { detectCrossoverForOverlay } from '../overlayRunnerClone'
+import { createTestBridgeRuntime } from 'backend/testUtils/testBridgeRuntime'
+
+const { ensureOverlayRunnerClone } =
+  createTestBridgeRuntime().overlayRunnerClone
 
 const CX_BIN =
   '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin'

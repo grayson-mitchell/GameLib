@@ -90,13 +90,15 @@ let helperDeps: {
   appState: { openBridgeInvitePicker: jest.Mock }
   openExternal: { openExternal: jest.Mock }
   bridgeHelpers: BridgeHelperRegistry
+  paths: { steamBridgeHelperStateDir: string }
 }
 function depsFor(bridgeHelpers: BridgeHelperRegistry): typeof helperDeps {
   return {
     runner: fakeRunner.runner,
     appState: { openBridgeInvitePicker: mockedOpenBridgeInvitePicker },
     openExternal: { openExternal: mockedOpenExternal },
-    bridgeHelpers
+    bridgeHelpers,
+    paths: { steamBridgeHelperStateDir: '/mock/state/steam-bridge' }
   }
 }
 const MockedSocket = Socket as unknown as jest.Mock

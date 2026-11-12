@@ -1,0 +1,36 @@
+/**
+ * The boot-owned Steam bridge runtime (66.4-08, D-05).
+ *
+ * The bridge's single-flight clone maps, the entitlement plist counter and the shared-redist install
+ * map plus ledger tmp sequence live in per-file `createX()` closures. This bundle builds one of each,
+ * once per boot, in the 'steam-bridge-runtime' boot step; consumers reach it through `Pick<>` slices
+ * on ManagerDeps (D-01).
+ *
+ * Construction only allocates empty maps and counters: no I/O, no timer, no handle (sidecar exit
+ * contract).
+ */
+import { createRunnerCloneFlights } from './drm/runnerClone'
+import type { RunnerCloneFlights } from './drm/runnerClone'
+import { createRunnerEntitlementSigner } from './drm/runnerEntitlements'
+import type { RunnerEntitlementSigner } from './drm/runnerEntitlements'
+import { createOverlayRunnerCloneFlights } from './overlay/overlayRunnerClone'
+import type { OverlayRunnerCloneFlights } from './overlay/overlayRunnerClone'
+import { createSharedRedistInstaller } from './sharedRedistInstall'
+import type { SharedRedistInstaller } from './sharedRedistInstall'
+
+export interface BridgeRuntime {
+  signer: RunnerEntitlementSigner
+  runnerClone: RunnerCloneFlights
+  overlayRunnerClone: OverlayRunnerCloneFlights
+  sharedRedist: SharedRedistInstaller
+}
+
+export function createBridgeRuntime(): BridgeRuntime {
+  const signer = createRunnerEntitlementSigner()
+  return {
+    signer,
+    runnerClone: createRunnerCloneFlights({ signer }),
+    overlayRunnerClone: createOverlayRunnerCloneFlights({ signer }),
+    sharedRedist: createSharedRedistInstaller()
+  }
+}

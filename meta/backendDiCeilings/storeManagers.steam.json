@@ -8,7 +8,7 @@
     "src/backend/storeManagers/steam/__tests__/bridgeRouteVerdict.test.ts": 15,
     "src/backend/storeManagers/steam/__tests__/cancelDelete.test.ts": 7,
     "src/backend/storeManagers/steam/__tests__/cdnAuth.test.ts": 1,
-    "src/backend/storeManagers/steam/__tests__/clientSetup.test.ts": 7,
+    "src/backend/storeManagers/steam/__tests__/clientSetup.test.ts": 6,
     "src/backend/storeManagers/steam/__tests__/credentialsMissing.test.ts": 7,
     "src/backend/storeManagers/steam/__tests__/depot.clobberGuard.test.ts": 8,
     "src/backend/storeManagers/steam/__tests__/depot.cmPlan.test.ts": 6,

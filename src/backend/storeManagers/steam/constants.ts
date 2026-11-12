@@ -1,10 +1,5 @@
 import { join } from 'path'
 import { homedir } from 'os'
-import { getPath } from 'backend/sidecar/pathShim'
-
-// 66.4 hand-off: module-scope read with no reachable deps; becomes AppPaths.userData once the path
-// constants move onto the boot context.
-export const steamSupportPath = join(getPath('userData'), 'steam_store')
 
 // Windows is absent on purpose: SteamUser.isSteamClientInstalled() resolves it
 // from the Default Steam path setting (quick 261101-whs).

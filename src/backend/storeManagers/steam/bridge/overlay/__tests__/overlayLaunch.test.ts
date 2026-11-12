@@ -2,6 +2,7 @@
  * Phase 60 plan 07: overlayLaunch.ts (D-08, D-12, D-13).
  */
 import { createTestEngineRuntime } from 'backend/testUtils/testEngineRuntime'
+import { createTestBridgeRuntime } from 'backend/testUtils/testBridgeRuntime'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
@@ -183,6 +184,7 @@ describe('prepareOverlayLaunch', () => {
   test('success returns runner and tokens', async () => {
     const r = await prepareOverlayLaunch(a, {
       engineRuntime: createTestEngineRuntime(),
+      bridgeRuntime: createTestBridgeRuntime(),
       runTool: noRunTool,
       runner: createScriptedRunner([]),
       checkInputs: okInputs,
@@ -198,6 +200,7 @@ describe('prepareOverlayLaunch', () => {
   test('detect error is returned', async () => {
     const r = await prepareOverlayLaunch(a, {
       engineRuntime: createTestEngineRuntime(),
+      bridgeRuntime: createTestBridgeRuntime(),
       runTool: noRunTool,
       runner: createScriptedRunner([]),
       checkInputs: okInputs,
@@ -213,6 +216,7 @@ describe('prepareOverlayLaunch', () => {
   test('ensure error is returned', async () => {
     const r = await prepareOverlayLaunch(a, {
       engineRuntime: createTestEngineRuntime(),
+      bridgeRuntime: createTestBridgeRuntime(),
       runTool: noRunTool,
       runner: createScriptedRunner([]),
       checkInputs: okInputs,
@@ -227,6 +231,7 @@ describe('prepareOverlayLaunch', () => {
     const ensure = jest.fn()
     const r = await prepareOverlayLaunch(a, {
       engineRuntime: createTestEngineRuntime(),
+      bridgeRuntime: createTestBridgeRuntime(),
       runTool: noRunTool,
       runner: createScriptedRunner([]),
       checkInputs: () =>
@@ -245,6 +250,7 @@ describe('prepareOverlayLaunch', () => {
   test('a throwing dep gives a step error, not a rejection', async () => {
     const r = await prepareOverlayLaunch(a, {
       engineRuntime: createTestEngineRuntime(),
+      bridgeRuntime: createTestBridgeRuntime(),
       runTool: noRunTool,
       runner: createScriptedRunner([]),
       checkInputs: okInputs,

@@ -11,7 +11,7 @@ import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { steamBridgeHelperStateDir } from 'backend/constants/paths'
+import type { AppPaths } from 'backend/process/context'
 import type { AppState } from 'backend/host/appState'
 import type { OpenExternal } from 'backend/host/openExternal'
 import { newDialogAckId, trackDialogDisplay } from 'backend/dialog/displayAck'
@@ -77,6 +77,8 @@ export type HelperSpawnDeps = {
   openExternal: Pick<OpenExternal, 'openExternal'>
   /** The boot-owned helper registry (D-66.3-14). */
   bridgeHelpers: BridgeHelperSlice
+  /** The helper staging root (66.4-08). */
+  paths: Pick<AppPaths, 'steamBridgeHelperStateDir'>
 }
 
 const MIN_EPHEMERAL_PORT = 1024
@@ -122,8 +124,8 @@ export function ensureHelperSpawned(
   const identityOnly = options?.identityOnly ?? false
   const helperPath = registry.helperPath()
   const stateDir = identityOnly
-    ? join(steamBridgeHelperStateDir, appId, 'identity')
-    : join(steamBridgeHelperStateDir, appId)
+    ? join(deps.paths.steamBridgeHelperStateDir, appId, 'identity')
+    : join(deps.paths.steamBridgeHelperStateDir, appId)
   mkdirSync(stateDir, { recursive: true, mode: 0o700 })
 
   // D-51-04: the native helper's own LISTEN line always echoes whatever

@@ -15,9 +15,10 @@ import { promises as fs } from 'graceful-fs'
 import { overlayStepError, type OverlayStepResult } from './overlayNotice'
 import {
   detectCrossoverForOverlay,
-  ensureOverlayRunnerClone,
+  type OverlayRunnerCloneFlights,
   type OverlayRunnerReady
 } from './overlayRunnerClone'
+import type { BridgeRuntime } from '../bridgeRuntime'
 import type { RunTool } from 'backend/engine/runTool'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import type { ProcessRunner } from 'backend/process/types'
@@ -185,7 +186,7 @@ export function buildOverlayEnvVars(
   return overlayEnvValues(a)
 }
 
-const OVERLAY_ENV_KEYS = new Set([
+const OVERLAY_ENV_KEYS: readonly string[] = Object.freeze([
   'GAMELIB_OVERLAY_PROBE_LOG',
   'GAMELIB_OVERLAY_RELEASE_EXPERIMENT',
   'SteamOverlayGameId',
@@ -215,7 +216,7 @@ export function mergeOverlayEnvVars(
       if (v) existingDyld = existingDyld ? `${existingDyld}:${v}` : v
       continue
     }
-    if (OVERLAY_ENV_KEYS.has(e.key) && ours.has(e.key)) continue
+    if (OVERLAY_ENV_KEYS.includes(e.key) && ours.has(e.key)) continue
     rest.push(e)
   }
   const out = vars.map((v) =>
@@ -305,7 +306,8 @@ export async function prepareOverlayLaunch(
   deps: {
     checkInputs?: typeof checkOverlayInputs
     detect?: typeof detectCrossoverForOverlay
-    ensure?: typeof ensureOverlayRunnerClone
+    ensure?: OverlayRunnerCloneFlights['ensureOverlayRunnerClone']
+    bridgeRuntime: Pick<BridgeRuntime, 'overlayRunnerClone'>
     runTool: RunTool
     runner: Pick<ProcessRunner, 'run'>
     engineRuntime: Pick<EngineRuntime, 'crossover'>
@@ -325,7 +327,10 @@ export async function prepareOverlayLaunch(
       }
     )
     if (detected.status === 'error') return detected
-    const ensured = await (deps.ensure ?? ensureOverlayRunnerClone)(
+    const ensured = await (
+      deps.ensure ??
+      deps.bridgeRuntime.overlayRunnerClone.ensureOverlayRunnerClone
+    )(
       { appFolder: a.appFolder, crossover: detected.crossover },
       { runTool: deps.runTool }
     )

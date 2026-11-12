@@ -43,7 +43,8 @@ import {
   detectAllowedCrossover,
   type CrossoverAllowed
 } from './runnerCrossover'
-import { ensureRunnerClone } from './runnerClone'
+import type { RunnerCloneFlights } from './runnerClone'
+import type { BridgeRuntime } from '../bridgeRuntime'
 import type { RunnerReady } from './runnerVerify'
 import {
   createSteamclientLayerInstall,
@@ -151,10 +152,12 @@ export type DrmSetupOverrides = {
   /** The boot's CrossOver locator and the path roots the stage reads (66.4-05). */
   engineRuntime: Pick<EngineRuntime, 'crossover'>
   paths: Pick<AppPaths, 'userHome'>
+  /** The boot's runner clone flights (66.4-08). */
+  bridgeRuntime: Pick<BridgeRuntime, 'runnerClone'>
   isMacSteamRunning?: () => Promise<boolean>
   detectCrossover?: typeof detectAllowedCrossover
   ensureComponent?: SteamclientLayerEnsure
-  ensureRunner?: typeof ensureRunnerClone
+  ensureRunner?: RunnerCloneFlights['ensureRunnerClone']
   ensureValveClient?: ValveClientEnsure
   stageBottle?: typeof stageDrmBottle
   buildBottleSettings?: (
@@ -293,7 +296,8 @@ async function ensureDrmDownloads(
     return { status: 'error', stage: 'component', error: component }
 
   // 4. Runner
-  const ensureRunner = deps.ensureRunner ?? ensureRunnerClone
+  const ensureRunner =
+    deps.ensureRunner ?? deps.bridgeRuntime.runnerClone.ensureRunnerClone
   const runner = await run('runner-clone', () =>
     ensureRunner(
       { appFolder, crossover, component },

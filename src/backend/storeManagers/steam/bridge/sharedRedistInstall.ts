@@ -77,7 +77,6 @@ import { endPerGameBridgeBottleSession } from '../bridgeBottleLifecycle'
 import type { ManagerDeps } from 'backend/services/types'
 import { bridgeBottleNameFor } from '../bridgeBottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
-import { steamSupportPath } from '../constants'
 import {
   ensureSharedRedistLedgerMigrated,
   isSharedRedistLedgerReadOnly,
@@ -162,7 +161,10 @@ type BoundedResult =
   | { timedOut: true }
   | { timedOut: false; code?: number; stdout: string }
 
-const inFlight = new Map<string, Promise<void>>()
+type SharedRedistState = {
+  inFlight: Map<string, Promise<void>>
+  nextTmpSeq: () => number
+}
 
 function emptyLedger(): Ledger {
   return {
@@ -286,20 +288,19 @@ async function readLedger(path: string, appId: string): Promise<Ledger | null> {
   return emptyLedger()
 }
 
-let ledgerTmpSeq = 0
-
 /** Write to a unique temp file and rename it over the ledger, so a crash never tears it (IN-04). */
 async function writeLedger(
   path: string,
   dir: string,
-  ledger: Ledger
+  ledger: Ledger,
+  nextTmpSeq: () => number
 ): Promise<void> {
   if (isSharedRedistLedgerReadOnly(path)) {
     noteRefusedWrite(path)
     return
   }
   await mkdir(dir, { recursive: true })
-  const tmp = `${path}.${process.pid}.${++ledgerTmpSeq}.tmp`
+  const tmp = `${path}.${process.pid}.${nextTmpSeq()}.tmp`
   try {
     await writeFile(
       tmp,
@@ -320,7 +321,7 @@ async function writeLedger(
 }
 
 /** What the shared redist install reaches through slices (66.1 R3). */
-export type RedistDeps = Pick<
+type RedistDeps = Pick<
   ManagerDeps,
   | 'commandRunner'
   | 'spawnAsync'
@@ -455,16 +456,43 @@ async function ensureEngineMono(
   }
 }
 
-export function installSteamBridgeSharedRedists(
+export interface SharedRedistInstaller {
+  installSteamBridgeSharedRedists: (
+    deps: RedistDeps,
+    appId: string,
+    bottleSettings: GameSettings,
+    signal?: AbortSignal,
+    opts?: { allowLogon?: boolean }
+  ) => Promise<void>
+}
+
+/**
+ * One single-flight install map and one ledger tmp sequence per boot (D-05, 66.4-08, 66.3 Pitfall 10):
+ * concurrent installs for one appId share a promise, and tmp names stay unique within a boot.
+ * Construction allocates an empty map and a counter.
+ */
+export function createSharedRedistInstaller(): SharedRedistInstaller {
+  let ledgerTmpSeq = 0
+  const state: SharedRedistState = {
+    inFlight: new Map(),
+    nextTmpSeq: () => ++ledgerTmpSeq
+  }
+  return {
+    installSteamBridgeSharedRedists: (...args) => installWith(state, ...args)
+  }
+}
+
+function installWith(
+  state: SharedRedistState,
   deps: RedistDeps,
   appId: string,
   bottleSettings: GameSettings,
   signal?: AbortSignal,
   opts?: { allowLogon?: boolean }
 ): Promise<void> {
-  const existing = inFlight.get(appId)
+  const existing = state.inFlight.get(appId)
   if (existing) return existing
-  const p = run(deps, appId, bottleSettings, signal, opts)
+  const p = run(state, deps, appId, bottleSettings, signal, opts)
     .catch((error: unknown) => {
       logWarning(
         `Steam ${appId}: shared redist step failed, launching anyway: ${String(error)}`,
@@ -472,9 +500,9 @@ export function installSteamBridgeSharedRedists(
       )
     })
     .finally(() => {
-      inFlight.delete(appId)
+      state.inFlight.delete(appId)
     })
-  inFlight.set(appId, p)
+  state.inFlight.set(appId, p)
   return p
 }
 
@@ -513,6 +541,7 @@ function recordFailure(
 }
 
 async function run(
+  state: SharedRedistState,
   deps: RedistDeps,
   appId: string,
   bottleSettings: GameSettings,
@@ -575,7 +604,7 @@ async function run(
     if (verified && sessionEnded) {
       try {
         delete ledger.displayDriver
-        await writeLedger(ledgerPath, bottleDir, ledger)
+        await writeLedger(ledgerPath, bottleDir, ledger, state.nextTmpSeq)
       } catch {
         // The marker may linger; the next launch repeats a harmless restore.
       }
@@ -608,14 +637,18 @@ async function run(
   if (ledger.settled) {
     // Re-evaluating (opt-in changed): clear the stale mark until this run settles again.
     delete ledger.settled
-    await writeLedger(ledgerPath, bottleDir, ledger)
+    await writeLedger(ledgerPath, bottleDir, ledger, state.nextTmpSeq)
   }
 
   const { downloadSharedRedistDepots } = await import('../depot')
 
   const result = await downloadSharedRedistDepots(appId, {
     steamUser: deps.steamUser,
-    cacheSteamappsDir: join(steamSupportPath, 'sharedRedist', 'steamapps'),
+    cacheSteamappsDir: join(
+      deps.paths.steamSupportPath,
+      'sharedRedist',
+      'steamapps'
+    ),
     optInDepotIds: optIn,
     signal,
     allowLogon: opts?.allowLogon,
@@ -687,7 +720,7 @@ async function run(
       const setNull = buildWineGraphicsSetParts('null')
       if (prior !== null) buildWineGraphicsSetParts(prior) // throws on a value we could not replay
       ledger.displayDriver = { prior, at: new Date().toISOString() }
-      await writeLedger(ledgerPath, bottleDir, ledger)
+      await writeLedger(ledgerPath, bottleDir, ledger, state.nextTmpSeq)
       markerWritten = true
       windowPrior = { prior }
       const add = await runBounded(
@@ -750,7 +783,7 @@ async function run(
           if (ledger.markPending[key] && entry.hasRunKey) {
             if (await writeMark(entry.hasRunKey, entry.name)) {
               delete ledger.markPending[key]
-              await writeLedger(ledgerPath, bottleDir, ledger)
+              await writeLedger(ledgerPath, bottleDir, ledger, state.nextTmpSeq)
             } else {
               logWarning(
                 `Steam ${appId}: still could not write the HasRunKey mark for ${depot.label} (${entry.name})`,
@@ -793,7 +826,12 @@ async function run(
                   LogPrefix.Steam
                 )
                 ledger.done[key] = depot.gid
-                await writeLedger(ledgerPath, bottleDir, ledger)
+                await writeLedger(
+                  ledgerPath,
+                  bottleDir,
+                  ledger,
+                  state.nextTmpSeq
+                )
                 continue
               }
             }
@@ -818,7 +856,7 @@ async function run(
               LogPrefix.Steam
             )
             ledger.rejected[key] = depot.gid
-            await writeLedger(ledgerPath, bottleDir, ledger)
+            await writeLedger(ledgerPath, bottleDir, ledger, state.nextTmpSeq)
             continue
           }
 
@@ -847,14 +885,14 @@ async function run(
                 LogPrefix.Steam
               )
               recordFailure(ledger, key, depot.gid, true)
-              await writeLedger(ledgerPath, bottleDir, ledger)
+              await writeLedger(ledgerPath, bottleDir, ledger, state.nextTmpSeq)
               stop = true
               entryOk = false
               break
             }
             if (!isRedistSuccessExit(depot.kind, r.code)) {
               const f = recordFailure(ledger, key, depot.gid, false)
-              await writeLedger(ledgerPath, bottleDir, ledger)
+              await writeLedger(ledgerPath, bottleDir, ledger, state.nextTmpSeq)
               logWarning(
                 `Steam ${appId}: ${depot.label} (${entry.name}) installer exited with code ${String(r.code)} (consecutive failure ${f.count}), will retry`,
                 LogPrefix.Steam
@@ -890,7 +928,7 @@ async function run(
           delete ledger.timedOut[key]
           delete ledger.failures[key]
           delete ledger.rejected[key]
-          await writeLedger(ledgerPath, bottleDir, ledger)
+          await writeLedger(ledgerPath, bottleDir, ledger, state.nextTmpSeq)
         } catch (error) {
           logWarning(
             `Steam ${appId}: ${depot.label} (${entry.name}) threw, will retry next launch: ${String(error)}`,
@@ -899,7 +937,7 @@ async function run(
           anyFailed = true
           try {
             recordFailure(ledger, key, depot.gid, false)
-            await writeLedger(ledgerPath, bottleDir, ledger)
+            await writeLedger(ledgerPath, bottleDir, ledger, state.nextTmpSeq)
           } catch {
             // The failure count is best effort; the entry already stays not-done and unsettled.
           }
@@ -923,7 +961,7 @@ async function run(
       rejected: Object.keys(ledger.rejected),
       at: new Date().toISOString()
     }
-    await writeLedger(ledgerPath, bottleDir, ledger)
+    await writeLedger(ledgerPath, bottleDir, ledger, state.nextTmpSeq)
   } else {
     logWarning(
       `Steam ${appId}: shared redists not settled (failed: ${result.failed.join(',') || 'none'}${marksPending ? ', HasRunKey marks pending' : ''}), will retry next launch`,

@@ -38,9 +38,17 @@ import type { RunTool, RunToolResult } from 'backend/engine/runTool'
 import {
   OVERLAY_MARKER_SCHEMA,
   detectCrossoverForOverlay,
-  ensureOverlayRunnerClone,
-  type OverlayCrossover
+  type OverlayCrossover,
+  type OverlayRunnerCloneFlights
 } from '../overlayRunnerClone'
+import { createTestBridgeRuntime } from 'backend/testUtils/testBridgeRuntime'
+
+// One fresh single-flight map per test (66.4-08).
+let ensureOverlayRunnerClone: OverlayRunnerCloneFlights['ensureOverlayRunnerClone']
+beforeEach(() => {
+  ensureOverlayRunnerClone =
+    createTestBridgeRuntime().overlayRunnerClone.ensureOverlayRunnerClone
+})
 import { buildOverlayPaths } from '../overlayPaths'
 import { at, defined } from '../../../__tests__/fixtures/indexed'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'

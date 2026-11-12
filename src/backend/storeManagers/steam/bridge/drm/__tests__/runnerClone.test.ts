@@ -37,8 +37,15 @@ jest.mock('backend/logger', () => ({
 import {
   CLONE_ARGV_FALLBACK,
   CLONE_ARGV_PRIMARY,
-  ensureRunnerClone
+  type RunnerCloneFlights
 } from '../runnerClone'
+import { createTestBridgeRuntime } from 'backend/testUtils/testBridgeRuntime'
+
+// One fresh single-flight map per test (66.4-08).
+let ensureRunnerClone: RunnerCloneFlights['ensureRunnerClone']
+beforeEach(() => {
+  ensureRunnerClone = createTestBridgeRuntime().runnerClone.ensureRunnerClone
+})
 import {
   RUNNER_MARKER_FILE,
   RunnerComponentInput,
@@ -466,7 +473,7 @@ describe('detectAllowedCrossover', () => {
       .map((f) => readFileSync(join(__dirname, '..', f), 'utf8'))
       .join('\n')
     expect(src).toMatch(/export async function detectAllowedCrossover/)
-    expect(src).toMatch(/export async function ensureRunnerClone/)
+    expect(src).toMatch(/export function createRunnerCloneFlights/)
     expect(src).not.toMatch(/from 'backend\/launcher'/)
     expect(src).not.toMatch(/from 'backend\/utils'/)
     expect(src).not.toMatch(/constants\/paths/)
@@ -1171,6 +1178,21 @@ describe('verify, rebuild, prune, abort', () => {
     expect(a.status).toBe('ok')
     expect(b.status).toBe('ok')
     expect(s.fake.calls.filter((c) => c.tool === '/bin/cp')).toHaveLength(1)
+  })
+
+  it('does not share in-flight builds between two runtimes (66.4-08)', async () => {
+    const s = setup()
+    const args = {
+      appFolder: s.appFolder,
+      crossover: s.crossover,
+      component: s.component
+    }
+    const deps = { runTool: s.fake.run, applyPatch: s.applyPatch }
+    const other = createTestBridgeRuntime().runnerClone.ensureRunnerClone
+    const first = ensureRunnerClone(args, deps)
+    const second = other(args, deps)
+    expect(second).not.toBe(first)
+    await Promise.all([first, second])
   })
 })
 

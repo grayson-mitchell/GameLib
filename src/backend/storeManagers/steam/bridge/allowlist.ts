@@ -135,9 +135,17 @@ function loadBridgeAllowlist(): BridgeAllowlist {
 
 const bridgeAllowlistData = loadBridgeAllowlist()
 
-const seedAppIdSet = new Set(bridgeAllowlistData.seed.map((game) => game.appId))
-const knownBadReasonByAppId = new Map(
-  bridgeAllowlistData.knownBad.map((entry) => [entry.appId, entry.reason])
+// Built once from the bundled table at module load and never mutated: frozen constants (D-66.3-09).
+const seedAppIds: readonly string[] = Object.freeze(
+  bridgeAllowlistData.seed.map((game) => game.appId)
+)
+const knownBadReasons: readonly (readonly [
+  string,
+  SteamBridgeKnownBadReason
+])[] = Object.freeze(
+  bridgeAllowlistData.knownBad.map((entry) =>
+    Object.freeze([entry.appId, entry.reason] as const)
+  )
 )
 
 export const bridgeAllowlist = {
@@ -153,7 +161,7 @@ export const bridgeAllowlist = {
     if (!NUMERIC_APP_ID.test(appId)) {
       return false
     }
-    return seedAppIdSet.has(appId)
+    return seedAppIds.includes(appId)
   },
 
   /**
@@ -166,6 +174,6 @@ export const bridgeAllowlist = {
     if (!NUMERIC_APP_ID.test(appId)) {
       return null
     }
-    return knownBadReasonByAppId.get(appId) ?? null
+    return knownBadReasons.find(([id]) => id === appId)?.[1] ?? null
   }
 }

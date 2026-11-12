@@ -268,7 +268,8 @@ describeDarwinOnly(
       bridgeHelpers: registry,
       runner: realRunner.runner,
       appState: { openBridgeInvitePicker: async () => true },
-      openExternal: { openExternal: async () => undefined }
+      openExternal: { openExternal: async () => undefined },
+      paths: { steamBridgeHelperStateDir }
     })
     let compiledHelperPath: string
 

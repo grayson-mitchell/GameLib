@@ -45,7 +45,7 @@ import { resolveBridgeMode } from './drm/steamclientLayerMode'
  * informational bridge-route notice since quick 261023-oq7, except for a
  * DRM-mode (steamclient-layer) title, which owes none (quick 261029-avh). Exported for 51-16's dialog/notice
  * wiring and for this module's own tests. */
-export const NOTICE_REASONS: ReadonlySet<SteamBridgeRouteReason> = new Set([
+export const NOTICE_REASONS: readonly SteamBridgeRouteReason[] = Object.freeze([
   'known-bad',
   'scan-miss',
   'win64-no-shim'

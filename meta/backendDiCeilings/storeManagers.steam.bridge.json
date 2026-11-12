@@ -13,8 +13,8 @@
     "src/backend/storeManagers/steam/bridge/__tests__/launchTarget.test.ts": 4,
     "src/backend/storeManagers/steam/bridge/__tests__/originalRestore.test.ts": 7,
     "src/backend/storeManagers/steam/bridge/__tests__/peScan.test.ts": 2,
-    "src/backend/storeManagers/steam/bridge/__tests__/sharedRedistInstall.test.ts": 8,
-    "src/backend/storeManagers/steam/bridge/__tests__/shimGenerate.test.ts": 7,
+    "src/backend/storeManagers/steam/bridge/__tests__/sharedRedistInstall.test.ts": 7,
+    "src/backend/storeManagers/steam/bridge/__tests__/shimGenerate.test.ts": 6,
     "src/backend/storeManagers/steam/bridge/drm/__tests__/bottleProcesses.test.ts": 2,
     "src/backend/storeManagers/steam/bridge/drm/__tests__/drmLaunchSetup.test.ts": 4,
     "src/backend/storeManagers/steam/bridge/drm/__tests__/drmRegistry.test.ts": 1,
@@ -30,14 +30,5 @@
     "src/backend/storeManagers/steam/bridge/overlay/__tests__/overlayRunnerClone.test.ts": 1,
     "src/backend/storeManagers/steam/bridge/overlay/__tests__/overlayWineLog.test.ts": 1
   },
-  "moduleState": {
-    "src/backend/storeManagers/steam/bridge/allowlist.ts": 2,
-    "src/backend/storeManagers/steam/bridge/bridgeRoute.ts": 1,
-    "src/backend/storeManagers/steam/bridge/drm/runnerClone.ts": 1,
-    "src/backend/storeManagers/steam/bridge/drm/runnerEntitlements.ts": 1,
-    "src/backend/storeManagers/steam/bridge/interfaceVersions.ts": 2,
-    "src/backend/storeManagers/steam/bridge/overlay/overlayLaunch.ts": 1,
-    "src/backend/storeManagers/steam/bridge/overlay/overlayRunnerClone.ts": 1,
-    "src/backend/storeManagers/steam/bridge/sharedRedistInstall.ts": 2
-  }
+  "moduleState": {}
 }

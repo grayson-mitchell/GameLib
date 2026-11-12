@@ -868,7 +868,8 @@ export async function prefetchBridgeDrmDownloads(
       runTool: createRunTool({ runner: steamGame.deps.runner }),
       runner: steamGame.deps.runner,
       engineRuntime: steamGame.deps.engineRuntime,
-      paths: steamGame.deps.paths
+      paths: steamGame.deps.paths,
+      bridgeRuntime: steamGame.deps.bridgeRuntime
     }
   )
 }

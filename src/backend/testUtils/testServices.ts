@@ -38,6 +38,7 @@ import { createTestOnlineMonitor } from './testOnlineMonitor'
 import { createTestEngineState } from './testEngineState'
 import { createTestEngineRuntime } from './testEngineRuntime'
 import { createTestSteamLaunchRuntime } from './testSteamLaunchRuntime'
+import { createTestBridgeRuntime } from './testBridgeRuntime'
 import { createTestSignInProbe } from './testSignInProbe'
 import { createTestSteamSession } from './testSteamSession'
 import { createTestAnonymousClient } from './testAnonymousClient'
@@ -257,6 +258,7 @@ export function createTestServices(
     engineRuntime: overrides.engineRuntime ?? createTestEngineRuntime(),
     steamLaunchRuntime:
       overrides.steamLaunchRuntime ?? createTestSteamLaunchRuntime(),
+    bridgeRuntime: overrides.bridgeRuntime ?? createTestBridgeRuntime(),
     winetricksQueue:
       overrides.winetricksQueue ??
       unscriptedMembers<BootServices['winetricksQueue']>(
@@ -419,6 +421,7 @@ export function createTestManagerDeps(
     engineRuntime: overrides.engineRuntime ?? createTestEngineRuntime(),
     steamLaunchRuntime:
       overrides.steamLaunchRuntime ?? createTestSteamLaunchRuntime(),
+    bridgeRuntime: overrides.bridgeRuntime ?? createTestBridgeRuntime(),
     signIn: overrides.signIn ?? createTestSignInProbe(),
     steamSession: overrides.steamSession ?? createTestSteamSession(),
     tokenStore: overrides.tokenStore ?? createTestTokenStoreSlot(),
@@ -471,6 +474,7 @@ export function createTestToolsSlices() {
     engineState: createTestEngineState(),
     engineRuntime: createTestEngineRuntime(),
     steamLaunchRuntime: createTestSteamLaunchRuntime(),
+    bridgeRuntime: createTestBridgeRuntime(),
     paths: createTestPaths(),
     steamBottle: createTestSteamBottle({ stores: createTestStores(), config })
   }

@@ -161,7 +161,10 @@ import {
   applySteamBridgeKnownFixes,
   steamBridgeLaunchCommandParts
 } from '../bridgeKnownFixes'
-import { installSteamBridgeSharedRedists } from '../bridge/sharedRedistInstall'
+import { createSharedRedistInstaller } from '../bridge/sharedRedistInstall'
+
+// The mocked installer below hands out one shared jest.fn from every factory call.
+const { installSteamBridgeSharedRedists } = createSharedRedistInstaller()
 import {
   decideCreationEngine,
   decideLaunchEngine,
@@ -869,9 +872,13 @@ jest.mock('../bridgeKnownFixes', () => ({
 }))
 
 // quick 261025-rkj: the bridge first-launch shared redist step.
-jest.mock('../bridge/sharedRedistInstall', () => ({
-  installSteamBridgeSharedRedists: jest.fn()
-}))
+jest.mock('../bridge/sharedRedistInstall', () => {
+  const installSteamBridgeSharedRedists = jest.fn()
+  return {
+    installSteamBridgeSharedRedists,
+    createSharedRedistInstaller: () => ({ installSteamBridgeSharedRedists })
+  }
+})
 
 // Phase 59 (59-09): engine decision + on-demand download, lazily imported by
 // installBridgeGame. Defaults are set in the file-level beforeEach below.

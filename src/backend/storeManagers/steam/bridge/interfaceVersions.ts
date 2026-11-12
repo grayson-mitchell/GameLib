@@ -55,7 +55,7 @@ const MACRO_FAMILY: Readonly<Record<string, string>> = {
 // families in this set are accepted -- an arbitrary CamelCase-plus-3-digits
 // token (e.g. a version number embedded in some unrelated string) must not
 // be treated as an interface version.
-const CAMEL_CASE_FAMILIES: ReadonlySet<string> = new Set([
+const CAMEL_CASE_FAMILIES: readonly string[] = Object.freeze([
   'SteamUser',
   'SteamFriends',
   'SteamUtils',
@@ -129,7 +129,7 @@ export const BARE_ACCESSOR_FAMILY: Readonly<Record<string, string>> = {
 // -- there is no fixed accessor-to-version mapping to walk for these games;
 // every known family found in the game's own version-string pool is a
 // candidate.
-const RUNTIME_LOOKUP_SYMBOLS: ReadonlySet<string> = new Set([
+const RUNTIME_LOOKUP_SYMBOLS: readonly string[] = Object.freeze([
   'SteamInternal_CreateInterface',
   // quick 261024-i94: take a version string exactly like CreateInterface.
   // (SteamInternal_ContextInit takes none, so it is deliberately absent.)
@@ -156,7 +156,7 @@ const OVERLAP_BYTES = 96
  * rather than importing one bare accessor per interface.
  */
 export function usesRuntimeInterfaceLookup(symbols: string[]): boolean {
-  return symbols.some((symbol) => RUNTIME_LOOKUP_SYMBOLS.has(symbol))
+  return symbols.some((symbol) => RUNTIME_LOOKUP_SYMBOLS.includes(symbol))
 }
 
 /**
@@ -174,7 +174,7 @@ export function familyOfInterfaceVersion(version: string): string | null {
 
   const camelMatch = version.match(CAMEL_VERSION_PATTERN)
   const camelKey = camelMatch?.[1]
-  if (camelKey !== undefined && CAMEL_CASE_FAMILIES.has(camelKey)) {
+  if (camelKey !== undefined && CAMEL_CASE_FAMILIES.includes(camelKey)) {
     return CAMEL_FAMILY_ALIAS[camelKey] ?? camelKey
   }
 

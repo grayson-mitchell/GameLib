@@ -89,7 +89,8 @@ const helperDeps = {
     openBridgeInvitePicker: mockedOpenBridgeInvitePicker,
     raiseMainWindow: mockedRaiseMainWindow
   },
-  openExternal: { openExternal: mockedOpenExternal }
+  openExternal: { openExternal: mockedOpenExternal },
+  paths: { steamBridgeHelperStateDir: '/mock/state/steam-bridge' }
 }
 const MockedSocket = Socket as unknown as jest.Mock
 const mockedSendFrontendMessage = sendFrontendMessage as jest.Mock

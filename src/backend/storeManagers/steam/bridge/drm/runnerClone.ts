@@ -65,7 +65,11 @@ import {
   statRegular,
   type CrossoverAllowed
 } from './runnerCrossover'
-import { resignLoader, scrubCloneXattrs } from './runnerEntitlements'
+import { scrubCloneXattrs } from './runnerEntitlements'
+import type {
+  RunnerEntitlementSigner,
+  ResignLoader
+} from './runnerEntitlements'
 import {
   MTIME_PINNED_PATHS,
   RUNNER_MARKER_FILE,
@@ -93,7 +97,7 @@ import {
 export const CLONE_ARGV_PRIMARY: readonly string[] = ['-c', '-R']
 export const CLONE_ARGV_FALLBACK: readonly string[] = ['-R', '-p']
 
-export type RunnerCloneDeps = {
+type RunnerCloneDeps = {
   runTool: RunTool
   applyPatch?: (
     clean: Buffer,
@@ -121,12 +125,46 @@ const stepFail = (step: DrmStep, message: string): never => {
 const STALE_CLONE_RE = /^crossover-[0-9]{1,4}(\.[0-9]{1,6}){2,4}$/
 const STALE_PARTIAL_RE = /^\.crossover-([0-9.]+)\.partial-[A-Za-z0-9]+$/
 
-const inFlight = new Map<string, Promise<DrmStepResult<RunnerReady>>>()
+type RunnerCloneState = {
+  inFlight: Map<string, Promise<DrmStepResult<RunnerReady>>>
+  resignLoader: ResignLoader
+}
+
+export interface RunnerCloneFlights {
+  /** The 'runner' step. Never rejects. */
+  ensureRunnerClone: (
+    opts: {
+      appFolder: string
+      crossover: CrossoverAllowed
+      component: RunnerComponentInput
+    },
+    deps: RunnerCloneDeps
+  ) => Promise<DrmStepResult<RunnerReady>>
+}
+
+/**
+ * One single-flight clone map per boot (D-05, 66.4-08, 66.3 Pitfall 10): concurrent callers for the
+ * same runner dir share one clone; a second instance has its own map. Construction allocates an empty
+ * map and nothing else.
+ */
+export function createRunnerCloneFlights(deps: {
+  signer: RunnerEntitlementSigner
+}): RunnerCloneFlights {
+  const state: RunnerCloneState = {
+    inFlight: new Map(),
+    resignLoader: deps.signer.resignLoader
+  }
+  return {
+    ensureRunnerClone: (opts, cloneDeps) =>
+      ensureRunnerCloneWith(state, opts, cloneDeps)
+  }
+}
 
 /**
  * The 'runner' step. Never rejects.
  */
-export async function ensureRunnerClone(
+async function ensureRunnerCloneWith(
+  state: RunnerCloneState,
   opts: {
     appFolder: string
     crossover: CrossoverAllowed
@@ -140,19 +178,19 @@ export async function ensureRunnerClone(
     const runnerDir = paths && build ? paths.runnerDir(build) : null
     if (!paths || !runnerDir)
       return drmStepError('runner-clone', 'invalid runner path')
-    const existing = inFlight.get(runnerDir)
+    const existing = state.inFlight.get(runnerDir)
     if (existing) return await existing
-    const p = runFront(opts, deps, paths.runnersRoot, runnerDir).catch(
+    const p = runFront(state, opts, deps, paths.runnersRoot, runnerDir).catch(
       (e): DrmStepResult<RunnerReady> =>
         e instanceof StepError
           ? drmStepError(e.step, e.message)
           : drmStepError('runner-clone', e)
     )
-    inFlight.set(runnerDir, p)
+    state.inFlight.set(runnerDir, p)
     try {
       return await p
     } finally {
-      inFlight.delete(runnerDir)
+      state.inFlight.delete(runnerDir)
     }
   } catch (e) {
     return drmStepError('runner-clone', e)
@@ -160,6 +198,7 @@ export async function ensureRunnerClone(
 }
 
 async function runFront(
+  state: RunnerCloneState,
   opts: {
     appFolder: string
     crossover: CrossoverAllowed
@@ -218,7 +257,7 @@ async function runFront(
   }
   if (!hasDir) {
     source = 'clone'
-    built = await buildRunner(opts, deps, runnersRoot, runnerDir)
+    built = await buildRunner(state, opts, deps, runnersRoot, runnerDir)
     const v = await verifyRunnerClone(runnerDir, expect, run)
     if (!v.ok) {
       await safeRemove(runnersRoot, runnerDir)
@@ -230,6 +269,7 @@ async function runFront(
   }
 
   const { pruned, pruneSkipped } = await pruneStale(
+    state,
     runnersRoot,
     build,
     run,
@@ -258,6 +298,7 @@ async function runFront(
 }
 
 async function pruneStale(
+  state: RunnerCloneState,
   runnersRoot: string,
   build: string,
   run: RunTool,
@@ -273,7 +314,7 @@ async function pruneStale(
       if (!m) return false
       // a partial of another build that this process is building right now
       if (m[1] === build) return true
-      return !Array.from(inFlight.keys()).some(
+      return !Array.from(state.inFlight.keys()).some(
         (k) => dirname(k) === runnersRoot && basename(k) === `crossover-${m[1]}`
       )
     })
@@ -343,6 +384,7 @@ export async function cloneCrossoverTree(
 }
 
 async function buildRunner(
+  state: RunnerCloneState,
   opts: {
     appFolder: string
     crossover: CrossoverAllowed
@@ -504,7 +546,7 @@ async function buildRunner(
 
     // --- loader re-sign (runner-patch) ---
     const loader = join(dest, LOADER_REL)
-    const signed = await resignLoader(
+    const signed = await state.resignLoader(
       run,
       loader,
       partial,
@@ -517,7 +559,7 @@ async function buildRunner(
     // bin/wine execs bin/wineloader first, and that loader strips DYLD_*
     // unless re-signed. A failure here only costs the overlay tokens.
     const wineloader = join(dest, WINELOADER_REL)
-    const wl = await resignLoader(
+    const wl = await state.resignLoader(
       run,
       wineloader,
       partial,

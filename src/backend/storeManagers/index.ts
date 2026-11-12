@@ -164,6 +164,7 @@ export interface CreateStoreManagersDeps {
   bridgeHelpers: ManagerDeps['bridgeHelpers']
   steamBottle: ManagerDeps['steamBottle']
   steamLaunchRuntime: ManagerDeps['steamLaunchRuntime']
+  bridgeRuntime: ManagerDeps['bridgeRuntime']
   steamUser: ManagerDeps['steamUser']
   loginWindowSeam: ManagerDeps['loginWindowSeam']
 }
@@ -209,6 +210,7 @@ export function createStoreManagers(
     bridgeHelpers: deps.bridgeHelpers,
     steamBottle: deps.steamBottle,
     steamLaunchRuntime: deps.steamLaunchRuntime,
+    bridgeRuntime: deps.bridgeRuntime,
     steamUser: deps.steamUser,
     loginWindowSeam: deps.loginWindowSeam
   }

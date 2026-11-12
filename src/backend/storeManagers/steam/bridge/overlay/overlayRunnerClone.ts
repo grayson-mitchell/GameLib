@@ -48,8 +48,11 @@ import { RUNNER_MARKER_FILE } from '../drm/runnerVerify'
 import {
   DYLD_ENTITLEMENT,
   dumpLoaderEntitlements,
-  resignLoader,
   scrubCloneXattrs
+} from '../drm/runnerEntitlements'
+import type {
+  ResignLoader,
+  RunnerEntitlementSigner
 } from '../drm/runnerEntitlements'
 import type { RunTool } from 'backend/engine/runTool'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
@@ -263,15 +266,44 @@ export async function verifyOverlayRunnerClone(
   }
 }
 
-const inFlight = new Map<
-  string,
-  Promise<OverlayStepResult<{ runner: OverlayRunnerReady }>>
->()
+type OverlayCloneState = {
+  inFlight: Map<
+    string,
+    Promise<OverlayStepResult<{ runner: OverlayRunnerReady }>>
+  >
+  resignLoader: ResignLoader
+}
+
+export interface OverlayRunnerCloneFlights {
+  /** The 'clone' / 'resign' steps. Never rejects. */
+  ensureOverlayRunnerClone: (
+    opts: { appFolder: string; crossover: OverlayCrossover },
+    deps: OverlayDeps
+  ) => Promise<OverlayStepResult<{ runner: OverlayRunnerReady }>>
+}
+
+/**
+ * One single-flight overlay clone map per boot (D-05, 66.4-08, 66.3 Pitfall 10). Construction
+ * allocates an empty map and nothing else.
+ */
+export function createOverlayRunnerCloneFlights(deps: {
+  signer: RunnerEntitlementSigner
+}): OverlayRunnerCloneFlights {
+  const state: OverlayCloneState = {
+    inFlight: new Map(),
+    resignLoader: deps.signer.resignLoader
+  }
+  return {
+    ensureOverlayRunnerClone: (opts, cloneDeps) =>
+      ensureOverlayRunnerCloneWith(state, opts, cloneDeps)
+  }
+}
 
 /**
  * The 'clone' / 'resign' steps. Never rejects.
  */
-export async function ensureOverlayRunnerClone(
+async function ensureOverlayRunnerCloneWith(
+  state: OverlayCloneState,
   opts: { appFolder: string; crossover: OverlayCrossover },
   deps: OverlayDeps
 ): Promise<OverlayStepResult<{ runner: OverlayRunnerReady }>> {
@@ -282,9 +314,10 @@ export async function ensureOverlayRunnerClone(
     if (!paths || !runnerDir) {
       return overlayStepError('clone', 'invalid overlay runner path')
     }
-    const existing = inFlight.get(runnerDir)
+    const existing = state.inFlight.get(runnerDir)
     if (existing) return await existing
     const p = runFront(
+      state,
       opts.crossover,
       deps,
       paths.runnersRoot,
@@ -295,11 +328,11 @@ export async function ensureOverlayRunnerClone(
           ? overlayStepError(e.step, e.message)
           : overlayStepError('clone', e)
     )
-    inFlight.set(runnerDir, p)
+    state.inFlight.set(runnerDir, p)
     try {
       return await p
     } finally {
-      inFlight.delete(runnerDir)
+      state.inFlight.delete(runnerDir)
     }
   } catch (e) {
     return overlayStepError('clone', e)
@@ -307,6 +340,7 @@ export async function ensureOverlayRunnerClone(
 }
 
 async function runFront(
+  state: OverlayCloneState,
   crossover: OverlayCrossover,
   deps: OverlayDeps,
   runnersRoot: string,
@@ -334,7 +368,7 @@ async function runFront(
   if (hasDir) {
     const v = await verifyOverlayRunnerClone(runnerDir, crossover, run)
     if (v.ok) {
-      await pruneStale(runnersRoot, build, run, timeouts.ps)
+      await pruneStale(state, runnersRoot, build, run, timeouts.ps)
       return {
         status: 'ok',
         runner: readyFor(runnerDir, build, { source: 'cache' })
@@ -358,7 +392,13 @@ async function runFront(
     }
   }
 
-  const built = await buildRunner(crossover, deps, runnersRoot, runnerDir)
+  const built = await buildRunner(
+    state,
+    crossover,
+    deps,
+    runnersRoot,
+    runnerDir
+  )
   const v = await verifyOverlayRunnerClone(runnerDir, crossover, run)
   if (!v.ok) {
     await safeRemoveOverlay(runnersRoot, runnerDir)
@@ -367,7 +407,7 @@ async function runFront(
       `fresh overlay runner failed verification: ${v.reason}`
     )
   }
-  await pruneStale(runnersRoot, build, run, timeouts.ps)
+  await pruneStale(state, runnersRoot, build, run, timeouts.ps)
   return {
     status: 'ok',
     runner: readyFor(runnerDir, build, { source: 'clone', ...built })
@@ -385,6 +425,7 @@ async function safeRemoveOverlay(
 }
 
 async function pruneStale(
+  state: OverlayCloneState,
   runnersRoot: string,
   build: string,
   run: RunTool,
@@ -399,7 +440,7 @@ async function pruneStale(
       const m = STALE_PARTIAL_RE.exec(n)
       if (!m) return false
       if (m[1] === build) return true
-      return !Array.from(inFlight.keys()).some(
+      return !Array.from(state.inFlight.keys()).some(
         (k) => dirname(k) === runnersRoot && basename(k) === `crossover-${m[1]}`
       )
     })
@@ -425,6 +466,7 @@ async function pruneStale(
 }
 
 async function buildRunner(
+  state: OverlayCloneState,
   crossover: OverlayCrossover,
   deps: OverlayDeps,
   runnersRoot: string,
@@ -490,7 +532,7 @@ async function buildRunner(
     const loader = join(dest, LOADER_REL)
     const wineloader = join(dest, WINELOADER_REL)
     for (const target of [loader, wineloader]) {
-      const signed = await resignLoader(
+      const signed = await state.resignLoader(
         run,
         target,
         partial,

@@ -104,7 +104,7 @@ const engineRuntime = { crossover, registry: createEngineRegistry() }
 const steamLaunchRuntime = createTestSteamLaunchRuntime({
   clock: createGlobalTimerClock()
 })
-const paths = { userHome }
+const paths = { userHome, steamSupportPath: '/test/steam_store' }
 
 const mockedExistsSync = existsSync as jest.Mock
 const mockedMkdirSync = mkdirSync as jest.Mock

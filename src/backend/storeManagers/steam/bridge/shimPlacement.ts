@@ -9,10 +9,6 @@ import type { AppPaths } from 'backend/process/context'
 import { copyFileSync, existsSync, readFileSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve } from 'node:path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
-import {
-  builtBridgeShim64Path,
-  builtBridgeShimPath
-} from 'backend/constants/paths'
 import type { SteamBridgeScanVerdict } from '../stores'
 import { resolveBridgeBottleName } from '../bridgeBottle'
 import {
@@ -213,7 +209,10 @@ function findRuntimeRunnerGaps(
 }
 
 export async function placeShimForGameInner(
-  paths: Pick<AppPaths, 'userHome'>,
+  paths: Pick<
+    AppPaths,
+    'userHome' | 'builtBridgeShimPath' | 'builtBridgeShim64Path'
+  >,
   appId: string,
   gameExePath: string,
   opts?: {
@@ -297,8 +296,8 @@ export async function placeShimForGameInner(
       )
       const sourceFor = (name: 'steam_api.dll' | 'steam_api64.dll') =>
         name === 'steam_api64.dll'
-          ? (opts?.shim64SourcePath ?? builtBridgeShim64Path)
-          : (opts?.shimSourcePath ?? builtBridgeShimPath)
+          ? (opts?.shim64SourcePath ?? paths.builtBridgeShim64Path)
+          : (opts?.shimSourcePath ?? paths.builtBridgeShimPath)
 
       // Debug undertale-shim-placed-no-hello: a 32-bit runner that resolves
       // SteamAPI_* by name (GetProcAddress) from a runtime-loaded steam_api.dll
@@ -702,8 +701,8 @@ export async function placeShimForGameInner(
 
   const shimSourcePath =
     arch === 'x64'
-      ? (opts?.shim64SourcePath ?? builtBridgeShim64Path)
-      : (opts?.shimSourcePath ?? builtBridgeShimPath)
+      ? (opts?.shim64SourcePath ?? paths.builtBridgeShim64Path)
+      : (opts?.shimSourcePath ?? paths.builtBridgeShimPath)
 
   if (!existsSync(shimSourcePath)) {
     // Dev-time expected state (x86), or simply "not shipped yet" (x64,
