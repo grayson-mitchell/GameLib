@@ -66,6 +66,7 @@ function build(over: Partial<Parameters<typeof createStoreManagers>[0]> = {}) {
     nileRuntime: fakes.nileRuntime,
     infoCaches: fakes.infoCaches,
     aborts: fakes.aborts,
+    appRuntime: fakes.appRuntime,
     windowRaiser: fakes.windowRaiser,
     toolsState: fakes.toolsState,
     signIn: fakes.signInProbe,

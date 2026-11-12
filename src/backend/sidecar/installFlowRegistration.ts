@@ -179,6 +179,7 @@ import {
 } from './rendererPathGuard'
 import { isWritableEngineOverride } from '../engine/engineConfig'
 import { importEngineSettings } from '../engine/importEngineSettings'
+import type { StatusUpdateDeps } from '../appRuntime'
 import { logError, logInfo, LogPrefix } from '../logger'
 import i18next from 'i18next'
 import type {
@@ -205,6 +206,16 @@ function rejectedPathDialogTitle(): string {
 
 export type InstallFlowDeps = ManagerDepsSource & {
   ipc: Pick<IpcRegistry, 'handle'>
+}
+
+/** The renderer push plus the boot's event bus, for the status helpers. */
+function statusDeps(
+  deps: Pick<InstallFlowDeps, 'host' | 'appRuntime'>
+): StatusUpdateDeps {
+  return {
+    sendFrontendMessage: deps.host.sendFrontendMessage,
+    appRuntime: deps.appRuntime
+  }
 }
 
 /**
@@ -264,7 +275,8 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
         config: deps.config,
         notifications: deps.host.notifications,
         paths: deps.paths,
-        sendFrontendMessage: deps.host.sendFrontendMessage
+        sendFrontendMessage: deps.host.sendFrontendMessage,
+        appRuntime: deps.appRuntime
       },
       event,
       args[0] as string,
@@ -479,7 +491,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
             ),
             type: 'ERROR'
           })
-          sendGameStatusUpdate(deps.host, {
+          sendGameStatusUpdate(statusDeps(deps), {
             appName,
             runner,
             status: 'done'
@@ -488,7 +500,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
         throw error
       }
 
-      sendGameStatusUpdate(deps.host, {
+      sendGameStatusUpdate(statusDeps(deps), {
         appName,
         runner,
         status: 'moving'
@@ -541,7 +553,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
         logInfo(`Finished moving ${appName} to ${path}.`, LogPrefix.Backend)
       }
 
-      sendGameStatusUpdate(deps.host, {
+      sendGameStatusUpdate(statusDeps(deps), {
         appName,
         runner,
         status: 'done'
@@ -625,7 +637,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
             ),
             type: 'ERROR'
           })
-          sendGameStatusUpdate(deps.host, {
+          sendGameStatusUpdate(statusDeps(deps), {
             appName,
             runner,
             status: 'done'
@@ -656,7 +668,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
       // Quick task 260905-luf: same unguarded-destructure fix as moveInstall
       // above -- see that call site's comment.
       const title = resolveGameTitle(deps.managers.library, runner, appName)
-      sendGameStatusUpdate(deps.host, {
+      sendGameStatusUpdate(statusDeps(deps), {
         appName,
         runner,
         status: 'importing'
@@ -667,7 +679,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
           title,
           body: i18next.t('notify.import.failed', 'Importing Failed')
         })
-        sendGameStatusUpdate(deps.host, {
+        sendGameStatusUpdate(statusDeps(deps), {
           appName,
           runner,
           status: 'done'
@@ -714,7 +726,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
         title,
         body: i18next.t('notify.install.imported', 'Game Imported')
       })
-      sendGameStatusUpdate(deps.host, {
+      sendGameStatusUpdate(statusDeps(deps), {
         appName,
         runner,
         status: 'done'

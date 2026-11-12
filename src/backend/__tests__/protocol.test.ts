@@ -7,17 +7,11 @@ jest.mock('../constants/environment', () => ({
   isSnap: false
 }))
 
-// Mock paths to avoid XDG_CONFIG_HOME issues
-jest.mock('../constants/paths', () => ({
-  windowIcon: 'mock-icon-path',
-  appFolder: '/mock/app/folder',
-  userHome: '/mock/home'
-}))
-
 // Mock GlobalConfig so we can toggle hideWindowOnProtocolLaunch per test
 const mockHideWindowOnProtocolLaunch = jest.fn(() => false)
 
-import { handleProtocol, markFrontendReady, RUNNERS } from '../protocol'
+import { handleProtocol, RUNNERS, type ProtocolDeps } from '../protocol'
+import { createTestAppRuntime } from '../testUtils/testAppRuntime'
 import i18next from 'i18next'
 const sendFrontendMessage = jest.fn()
 import { logInfo, logError } from '../logger'
@@ -67,8 +61,11 @@ const deps = {
   },
   dialogs: dialog,
   appState: app,
-  notifications: { show: jest.fn() }
-} as never
+  notifications: { show: jest.fn() },
+  paths: { windowIcon: 'mock-icon-path' },
+  // Rebuilt per test below: a fresh frontend-ready flag, as one per boot in production.
+  appRuntime: undefined
+} as never as ProtocolDeps
 
 // Phase 35 plan 20 (D-35-19-05/06): the Steam launch dispatch is now a separate module both
 // `protocol.ts` (lazily) and `steamFlowRegistration.ts` import — mocked here so these tests
@@ -107,6 +104,10 @@ jest.mock('process', () => ({
 }))
 
 describe('protocol.ts --no-gui behavior', () => {
+  beforeEach(() => {
+    deps.appRuntime = createTestAppRuntime()
+  })
+
   const mockMainWindow = {
     show: jest.fn(),
     hide: jest.fn(),
@@ -367,18 +368,12 @@ describe('protocol.ts --no-gui behavior', () => {
     afterEach(() => uptimeSpy.mockRestore())
 
     test('cold start (renderer never ready) + setting on hides once, before dispatch', async () => {
-      // Fresh module state: frontendReady has not been seen in this isolate.
-      let isolatedHandle!: typeof handleProtocol
-      let isolatedApp!: typeof app
-      await jest.isolateModulesAsync(async () => {
-        isolatedHandle = (await import('../protocol')).handleProtocol
-        isolatedApp = app
-      })
+      // Fresh runtime: frontendReady has not been seen by this boot.
       mockHideWindowOnProtocolLaunch.mockReturnValue(true)
 
-      await isolatedHandle(deps, ['gamelib://launch/test-game'])
+      await handleProtocol(deps, ['gamelib://launch/test-game'])
 
-      expect(isolatedApp.hideMainWindow).toHaveBeenCalledTimes(1)
+      expect(app.hideMainWindow).toHaveBeenCalledTimes(1)
     })
 
     test('cold start hides on the Steam branch too, before dispatch', async () => {
@@ -415,7 +410,7 @@ describe('protocol.ts --no-gui behavior', () => {
     })
 
     test('uptime inside the cold window still counts as cold after frontendReady', async () => {
-      markFrontendReady()
+      deps.appRuntime.protocol.markFrontendReady()
       uptimeSpy.mockReturnValue(5)
       mockHideWindowOnProtocolLaunch.mockReturnValue(true)
       await handleProtocol(deps, ['gamelib://launch/test-game'])
@@ -423,14 +418,14 @@ describe('protocol.ts --no-gui behavior', () => {
     })
 
     test('warm link + setting on + no gui param does NOT hide', async () => {
-      markFrontendReady()
+      deps.appRuntime.protocol.markFrontendReady()
       mockHideWindowOnProtocolLaunch.mockReturnValue(true)
       await handleProtocol(deps, ['gamelib://launch/test-game'])
       expect(app.hideMainWindow).not.toHaveBeenCalled()
     })
 
     test('warm link + gui=false still hides', async () => {
-      markFrontendReady()
+      deps.appRuntime.protocol.markFrontendReady()
       await handleProtocol(deps, [
         'gamelib://launch?appName=test-game&runner=legendary&gui=false'
       ])

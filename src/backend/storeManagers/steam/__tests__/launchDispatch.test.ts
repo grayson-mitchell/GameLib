@@ -18,7 +18,9 @@ const getGameMock = jest.fn()
 const deps = {
   libraryManagers: {
     steam: { getGame: (...args: unknown[]) => getGameMock(...args) }
-  }
+  },
+  // Built per test below: a fresh single-flight table, as one per boot in production.
+  appRuntime: undefined
 } as unknown as Parameters<typeof dispatchSteamLaunch>[0]
 
 // ── recent_games — the side effect under test. ────────────────────────────────────────────
@@ -47,7 +49,7 @@ jest.mock('i18next', () => ({
 
 // ── Imports (after mocks) ──────────────────────────────────────────────────────────────────
 import { dispatchSteamLaunch } from '../launchDispatch'
-import { resetLaunchSingleFlightForTests } from 'backend/launchSingleFlight'
+import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 
 describe('dispatchSteamLaunch', () => {
   const appId = '999002'
@@ -56,7 +58,8 @@ describe('dispatchSteamLaunch', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    resetLaunchSingleFlightForTests()
+    // A fresh single-flight table per test, as one per boot in production.
+    deps.appRuntime = createTestAppRuntime()
     gameInfo = {
       app_name: appId,
       title: 'Some Steam Game',
@@ -117,7 +120,8 @@ describe('WR-03: single-flight at the launch IPC entry', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    resetLaunchSingleFlightForTests()
+    // A fresh single-flight table per test, as one per boot in production.
+    deps.appRuntime = createTestAppRuntime()
     launchMock = jest.fn()
     getGameMock.mockReturnValue({
       launch: (...args: unknown[]) => launchMock(...args),

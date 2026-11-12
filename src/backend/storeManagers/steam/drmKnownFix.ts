@@ -10,13 +10,16 @@
  * MUST NOT import games.ts or library.ts (import cycle).
  */
 
-import { readKnownFixes } from 'backend/knownFixes'
+import { readKnownFixes, type KnownFixPathsDeps } from 'backend/knownFixes'
 import { logWarning, LogPrefix } from 'backend/logger'
 
 /** True when the title's known fix says `drm: "ceg"`. Never throws. */
-export function knownFixSaysCeg(appId: string): boolean {
+export function knownFixSaysCeg(
+  deps: KnownFixPathsDeps,
+  appId: string
+): boolean {
   try {
-    return readKnownFixes(appId, 'steam')?.drm === 'ceg'
+    return readKnownFixes(deps, appId, 'steam')?.drm === 'ceg'
   } catch (error) {
     logWarning(
       `Steam: could not read known fixes for appId ${appId} while checking drm: ${String(error)}`,

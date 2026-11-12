@@ -2435,7 +2435,7 @@ beforeEach(() => {
       Promise.resolve(settings)
   )
   ;(steamBridgeLaunchCommandParts as jest.Mock).mockImplementation(
-    (_id: string, exePath: string) => [exePath]
+    (_deps: unknown, _id: string, exePath: string) => [exePath]
   )
   ;(installSteamBridgeSharedRedists as jest.Mock).mockResolvedValue(undefined)
   ;(decideCreationEngine as jest.Mock).mockResolvedValue({
@@ -6707,7 +6707,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
-    expect(knownFixSaysCeg).toHaveBeenCalledWith(APP_ID)
+    expect(knownFixSaysCeg).toHaveBeenCalledWith(expect.anything(), APP_ID)
     expect(placeShimForGame).not.toHaveBeenCalled()
     expect(downloadSteamDepots).not.toHaveBeenCalled()
     expect(sendFrontendMessage).toHaveBeenCalledWith('steamBridgeRouteNotice', {

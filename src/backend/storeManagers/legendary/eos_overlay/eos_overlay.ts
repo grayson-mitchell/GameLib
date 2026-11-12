@@ -1,4 +1,4 @@
-import type { FrontendMessageDeps } from '../../../host/frontendMessage'
+import type { StatusUpdateDeps } from 'backend/appRuntime'
 import { existsSync, readFileSync } from 'graceful-fs'
 import { join } from 'path'
 
@@ -16,7 +16,7 @@ import type { ManagerDeps } from 'backend/services/types'
 
 /** The only collaborator the overlay functions need (R3). */
 export type EosOverlayDeps = Pick<ManagerDeps, 'libraryManagers'> &
-  FrontendMessageDeps & {
+  StatusUpdateDeps & {
     /** The boot-owned abort registry the output handlers end the probe command through (66.4-13). */
     aborts: Pick<AbortRegistry, 'call'>
   } & EosOverlayPathDeps

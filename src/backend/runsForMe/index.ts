@@ -15,11 +15,9 @@ export interface RunsForMeDeps {
   sendFrontendMessage: SendFrontendMessage
 }
 
-const VALID_STATES: ReadonlySet<string> = new Set([
-  'auto',
-  'user-on',
-  'user-off'
-])
+const VALID_STATES: ReadonlySet<string> = Object.freeze(
+  new Set(['auto', 'user-on', 'user-off'])
+)
 
 /**
  * The persisted map. Values outside the three-state set are dropped so a

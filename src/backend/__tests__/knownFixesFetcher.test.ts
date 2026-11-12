@@ -4,6 +4,8 @@
  * fixes dir with an injected `get`.
  */
 
+import { tmpdir } from 'os'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import {
   existsSync,
   mkdirSync,
@@ -13,19 +15,6 @@ import {
   writeFileSync
 } from 'fs'
 import { join } from 'path'
-
-jest.mock('../constants/paths', () => {
-  const actual = jest.requireActual('../constants/paths')
-  const path = jest.requireActual('path')
-  const os = jest.requireActual('os')
-  const base = path.join(os.tmpdir(), `gamelib-fetcher-test-${process.pid}`)
-  return {
-    ...actual,
-    fixesPath: path.join(base, 'fixes'),
-    localFixesPath: path.join(base, 'fixes', 'local'),
-    bundledFixesPath: path.join(base, 'bundled')
-  }
-})
 
 jest.mock('../logger', () => ({
   logInfo: jest.fn(),
@@ -39,8 +28,18 @@ import {
   HEROIC_KNOWN_FIXES_BASE,
   KnownFixesGet
 } from '../knownFixesFetcher'
-import { fixesPath, localFixesPath } from '../constants/paths'
 import { logWarning } from '../logger'
+
+// A per-file disposable AppPaths root (66.4-17): the fetcher writes under `deps.paths.fixesPath`, so
+// no module is mocked. The local layer sits inside the remote one, as the derived layout has it.
+const TEST_ROOT = join(tmpdir(), `gamelib-fetcher-test-${process.pid}`)
+const paths = createTestAppPaths(TEST_ROOT, {
+  fixesPath: join(TEST_ROOT, 'fixes'),
+  localFixesPath: join(TEST_ROOT, 'fixes', 'local'),
+  bundledFixesPath: join(TEST_ROOT, 'bundled')
+})
+const { fixesPath, localFixesPath } = paths
+const deps = { paths }
 
 type Reply = { status: number; data?: unknown } | Error
 
@@ -86,7 +85,7 @@ describe('GameLib source', () => {
         })
       }
     })
-    await fetchRemoteKnownFixes('284100', 'steam', get)
+    await fetchRemoteKnownFixes(deps, '284100', 'steam', get)
     expect(urls).toEqual([
       'https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/steam/284100-steam.json'
     ])
@@ -104,7 +103,7 @@ describe('GameLib source', () => {
         data: { title: 'fresh' }
       }
     })
-    await fetchRemoteKnownFixes('1207658930', 'gog', get)
+    await fetchRemoteKnownFixes(deps, '1207658930', 'gog', get)
     expect(urls).toEqual([gl('gog', '1207658930')])
     expect(JSON.parse(readFileSync(dest('1207658930', 'gog'), 'utf8'))).toEqual(
       { title: 'fresh' }
@@ -115,7 +114,7 @@ describe('GameLib source', () => {
     const { get } = makeGet({
       [gl('gog', '1')]: { status: 200, data: { title: 't' } }
     })
-    await fetchRemoteKnownFixes('1', 'gog', get)
+    await fetchRemoteKnownFixes(deps, '1', 'gog', get)
     expect(readdirSync(fixesPath).filter((f) => f.includes('.tmp'))).toEqual([])
   })
 })
@@ -129,7 +128,7 @@ describe('Heroic fallback', () => {
     const { get, urls } = makeGet({
       [he(store, app)]: { status: 200, data: { title: 'heroic' } }
     })
-    await fetchRemoteKnownFixes(app, runner, get)
+    await fetchRemoteKnownFixes(deps, app, runner, get)
     expect(urls).toEqual([gl(store, app), he(store, app)])
     expect(JSON.parse(readFileSync(dest(app, store), 'utf8'))).toEqual({
       title: 'heroic'
@@ -138,7 +137,7 @@ describe('Heroic fallback', () => {
 
   it('gog Heroic URL is exact', async () => {
     const { get, urls } = makeGet({})
-    await fetchRemoteKnownFixes('1207658930', 'gog', get)
+    await fetchRemoteKnownFixes(deps, '1207658930', 'gog', get)
     expect(urls[1]).toBe(
       'https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/gog/1207658930-gog.json'
     )
@@ -149,7 +148,7 @@ describe('Heroic fallback', () => {
     async (runner, store) => {
       writeFileSync(dest('77', store), '{"title":"old"}')
       const { get, urls } = makeGet({})
-      await fetchRemoteKnownFixes('77', runner, get)
+      await fetchRemoteKnownFixes(deps, '77', runner, get)
       expect(urls).toEqual([gl(store, '77')])
       expect(existsSync(dest('77', store))).toBe(false)
     }
@@ -158,14 +157,14 @@ describe('Heroic fallback', () => {
   it('both 404 deletes the stale file (epic)', async () => {
     writeFileSync(dest('App', 'epic'), '{"title":"old"}')
     const { get } = makeGet({})
-    await fetchRemoteKnownFixes('App', 'legendary', get)
+    await fetchRemoteKnownFixes(deps, 'App', 'legendary', get)
     expect(existsSync(dest('App', 'epic'))).toBe(false)
   })
 
   it('GameLib 404 then Heroic throws leaves dest untouched', async () => {
     writeFileSync(dest('1', 'gog'), '{"title":"old"}')
     const { get } = makeGet({ [he('gog', '1')]: new Error('boom') })
-    await fetchRemoteKnownFixes('1', 'gog', get)
+    await fetchRemoteKnownFixes(deps, '1', 'gog', get)
     expect(readFileSync(dest('1', 'gog'), 'utf8')).toBe('{"title":"old"}')
   })
 })
@@ -177,7 +176,7 @@ describe('indeterminate GameLib answers', () => {
   it('network error: resolves, no fallback, file untouched', async () => {
     const { get, urls } = makeGet({ [gl('gog', '1')]: new Error('ETIMEDOUT') })
     await expect(
-      fetchRemoteKnownFixes('1', 'gog', get)
+      fetchRemoteKnownFixes(deps, '1', 'gog', get)
     ).resolves.toBeUndefined()
     expect(urls).toEqual([gl('gog', '1')])
     expect(readFileSync(dest('1', 'gog'), 'utf8')).toBe(OLD)
@@ -185,7 +184,7 @@ describe('indeterminate GameLib answers', () => {
 
   it.each([500, 403])('status %i behaves like a network error', async (s) => {
     const { get, urls } = makeGet({ [gl('gog', '1')]: { status: s } })
-    await fetchRemoteKnownFixes('1', 'gog', get)
+    await fetchRemoteKnownFixes(deps, '1', 'gog', get)
     expect(urls).toEqual([gl('gog', '1')])
     expect(readFileSync(dest('1', 'gog'), 'utf8')).toBe(OLD)
   })
@@ -197,7 +196,7 @@ describe('indeterminate GameLib answers', () => {
     const { get, urls } = makeGet({
       [gl('gog', '1')]: { status: 200, data: body }
     })
-    await fetchRemoteKnownFixes('1', 'gog', get)
+    await fetchRemoteKnownFixes(deps, '1', 'gog', get)
     expect(urls).toEqual([gl('gog', '1')])
     expect(readFileSync(dest('1', 'gog'), 'utf8')).toBe(OLD)
     expect(logWarning).toHaveBeenCalled()
@@ -207,14 +206,14 @@ describe('indeterminate GameLib answers', () => {
 describe('guards', () => {
   it('sideload makes no requests', async () => {
     const { get, urls } = makeGet({})
-    await fetchRemoteKnownFixes('x', 'sideload', get)
+    await fetchRemoteKnownFixes(deps, 'x', 'sideload', get)
     expect(urls).toEqual([])
     expect(readdirSync(fixesPath)).toEqual(['local'])
   })
 
   it('rejects a traversing appName', async () => {
     const { get, urls } = makeGet({})
-    await fetchRemoteKnownFixes('../escape', 'gog', get)
+    await fetchRemoteKnownFixes(deps, '../escape', 'gog', get)
     expect(urls).toEqual([])
     expect(logWarning).toHaveBeenCalled()
     expect(existsSync(join(fixesPath, '..', 'escape-gog.json'))).toBe(false)
@@ -232,7 +231,7 @@ describe('guards', () => {
       { [gl('steam', '9')]: { status: 500 } }
     ]
     for (const o of outcomes) {
-      await fetchRemoteKnownFixes('9', 'steam', makeGet(o).get)
+      await fetchRemoteKnownFixes(deps, '9', 'steam', makeGet(o).get)
     }
     expect(readFileSync(local, 'utf8')).toBe('L')
     expect(readFileSync(profile, 'utf8')).toBe('P')

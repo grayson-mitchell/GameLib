@@ -126,7 +126,9 @@ export function assembleBridgeRouteInput(
     // not-known-bad default resolveBridgeRoute's `!== null` check needs.
     knownBadReason: bridgeAllowlist.knownBadReason(steamGame.appId) ?? null,
     // quick 261027-gtd: curated known-fix drm "ceg" is a pre-download drm-wrapped signal.
-    knownFixDrm: knownFixSaysCeg(steamGame.appId) ? 'ceg' : null,
+    knownFixDrm: knownFixSaysCeg(steamGame.deps, steamGame.appId)
+      ? 'ceg'
+      : null,
     verdict: readBridgeVerdict(steamGame.deps, steamGame.appId),
     failedThisSession:
       steamGame.deps.steamSession.gameSession.bridgeFailedThisSession.has(

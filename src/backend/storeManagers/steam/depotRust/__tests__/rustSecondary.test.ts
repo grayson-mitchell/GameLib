@@ -1,3 +1,4 @@
+import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
 import { createTestStoreRoot } from '../../../../testUtils/testStoreRoot'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
@@ -17,7 +18,8 @@ import { join } from 'path'
 const requestRustInvoke = jest.fn()
 const depotTransport = {
   requestRustInvoke,
-  sendFrontendMessage: jest.fn()
+  sendFrontendMessage: jest.fn(),
+  appRuntime: createTestAppRuntime()
 }
 import { downloadSelectedDepotFiles, prescreenBridgeDepots } from '../../depot'
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'

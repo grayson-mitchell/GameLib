@@ -12,6 +12,7 @@
  * (launcher imports it, and utils imports launcher).
  */
 
+import type { AppPaths } from 'backend/process/context'
 import { isAbsolute, join, resolve, sep } from 'path'
 import type { EnviromentVariable, GameSettings, Runner } from 'common/types'
 import {
@@ -21,10 +22,12 @@ import {
 } from 'common/knownFixOverlayCatalogue'
 import { readKnownFixProfile } from 'backend/knownFixes'
 import { logDebug, logInfo, logWarning, LogPrefix } from 'backend/logger'
-import {
-  ensureOverlayInstalled,
-  OverlayInstallDeps
-} from 'backend/knownFixOverlayInstall'
+import type { AppRuntimeSlice } from 'backend/appRuntime'
+import type { OverlayInstallDeps } from 'backend/knownFixOverlayInstall'
+
+/** What an overlay install reads: the abort registry, the overlays root and this boot's install single-flight. */
+export type OverlayEnvDeps = OverlayInstallDeps &
+  AppRuntimeSlice<'overlayInstalls'>
 
 export const MAX_OVERLAY_ENTRIES = 8
 const MAX_LOGGED_VALUE = 512
@@ -129,7 +132,7 @@ export async function resolveKnownFixOverlayEnv(
     wineType: string | undefined
     baseValue: (key: string) => string | undefined
     platform?: NodeJS.Platform
-    deps: OverlayInstallDeps
+    deps: OverlayEnvDeps
   }
 ): Promise<Record<string, string>> {
   const result: Record<string, string> = {}
@@ -149,7 +152,12 @@ export async function resolveKnownFixOverlayEnv(
         )
         continue
       }
-      const dir = await ensureOverlayInstalled(entry, ctx, opts.deps)
+      const dir =
+        await opts.deps.appRuntime.overlayInstalls.ensureOverlayInstalled(
+          entry,
+          ctx,
+          opts.deps
+        )
       if (!dir) continue
       const envKey = KNOWN_FIX_OVERLAY_TARGET_ENV[entry.target]
       result[envKey] = appendPathList(
@@ -176,7 +184,13 @@ export async function resolveKnownFixOverlayEnv(
 
 /** Overlay env for a non-Steam launch; precedence mirrors the runner commandEnv. */
 export async function knownFixProfileOverlayEnv(
-  deps: Pick<OverlayInstallDeps, 'aborts'>,
+  deps: Pick<OverlayInstallDeps, 'aborts'> &
+    AppRuntimeSlice<'overlayInstalls'> & {
+      paths: Pick<
+        AppPaths,
+        'knownFixOverlaysPath' | 'bundledFixesPath' | 'localFixesPath'
+      >
+    },
   appName: string,
   runner: Runner,
   gameSettings: GameSettings,
@@ -184,9 +198,13 @@ export async function knownFixProfileOverlayEnv(
   logPrefix: LogPrefix = LogPrefix.Backend
 ): Promise<Record<string, string>> {
   return resolveKnownFixOverlayEnv(
-    readKnownFixProfile(appName, runner)?.overlays,
+    readKnownFixProfile(deps, appName, runner)?.overlays,
     {
-      deps: { aborts: deps.aborts },
+      deps: {
+        aborts: deps.aborts,
+        paths: deps.paths,
+        appRuntime: deps.appRuntime
+      },
       label: `${runner} ${appName}`,
       logPrefix,
       wineType: gameSettings.wineVersion?.type,

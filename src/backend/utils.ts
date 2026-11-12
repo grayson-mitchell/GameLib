@@ -36,10 +36,7 @@ import { checkEpicServiceOffline } from './utils/epicServiceStatus'
 import * as fileSize from 'filesize'
 import { Client as discordClient } from '@xhayper/discord-rpc'
 import { showDialogBoxModalAuto, type DialogBoxDeps } from './dialog/dialog'
-import type {
-  FrontendMessageDeps,
-  SendFrontendMessage
-} from './host/frontendMessage'
+import type { SendFrontendMessage } from './host/frontendMessage'
 import type { GlobalConfigSlice } from './config'
 import type { GameConfigs } from './game_config'
 import type { Dialogs } from './host/dialogs'
@@ -54,7 +51,7 @@ import {
 } from './wine/manager/utils'
 import type { CommandRunner, ManagerDeps, Stores } from './services/types'
 import { readdir, lstat, rm } from 'fs/promises'
-import { backendEvents } from './backend_events'
+import type { AppRuntimeSlice, StatusUpdateDeps } from './appRuntime'
 import EasyDl from 'easydl'
 
 import type { AppSettings, WineManagerStatus } from 'common/types'
@@ -977,17 +974,19 @@ async function ContinueWithFoundWine(
   return { response }
 }
 
-export async function downloadDefaultWine(deps: {
-  aborts: Pick<AbortRegistry, 'create' | 'delete'>
-  stores: Pick<Stores, 'kvs' | 'wineManager'>
-  runner: Pick<ProcessRunner, 'run'>
-  paths: Pick<AppPaths, 'toolsPath' | 'userHome' | 'configPath'>
-  config: Pick<
-    GlobalConfigSlice,
-    'getSettings' | 'getAlternativeWine' | 'setSetting'
-  >
-  sendFrontendMessage: SendFrontendMessage
-}) {
+export async function downloadDefaultWine(
+  deps: AppRuntimeSlice<'events'> & {
+    aborts: Pick<AbortRegistry, 'create' | 'delete'>
+    stores: Pick<Stores, 'kvs' | 'wineManager'>
+    runner: Pick<ProcessRunner, 'run'>
+    paths: Pick<AppPaths, 'toolsPath' | 'userHome' | 'configPath'>
+    config: Pick<
+      GlobalConfigSlice,
+      'getSettings' | 'getAlternativeWine' | 'setSetting'
+    >
+    sendFrontendMessage: SendFrontendMessage
+  }
+) {
   if (isWindows) return null
   // refresh wine list
   await updateWineVersionInfos(deps, true)
@@ -1051,7 +1050,7 @@ export async function downloadDefaultWine(deps: {
 }
 
 export async function checkWineBeforeLaunch(
-  deps: {
+  deps: AppRuntimeSlice<'events'> & {
     aborts: Pick<AbortRegistry, 'create' | 'delete'>
     stores: Pick<Stores, 'kvs' | 'wineManager'>
     runner: Pick<ProcessRunner, 'run'>
@@ -1525,14 +1524,14 @@ export function isMacSonomaOrHigher(): boolean {
   return isMacSonomaOrHigher
 }
 
-function sendGameStatusUpdate(deps: FrontendMessageDeps, payload: GameStatus) {
+function sendGameStatusUpdate(deps: StatusUpdateDeps, payload: GameStatus) {
   deps.sendFrontendMessage('gameStatusUpdate', payload)
-  backendEvents.emit('gameStatusUpdate', payload)
+  deps.appRuntime.events.emit('gameStatusUpdate', payload)
 }
 
-function sendProgressUpdate(deps: FrontendMessageDeps, payload: GameStatus) {
+function sendProgressUpdate(deps: StatusUpdateDeps, payload: GameStatus) {
   deps.sendFrontendMessage('progressUpdate', payload)
-  backendEvents.emit(`progressUpdate-${payload.appName}`, payload)
+  deps.appRuntime.events.emit(`progressUpdate-${payload.appName}`, payload)
 }
 
 interface ProgressCallback {

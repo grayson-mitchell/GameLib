@@ -47,14 +47,19 @@
  * continues, so it can never mark the bridge failed for the session.
  */
 
+import type { AppRuntimeSlice, StatusUpdateDeps } from 'backend/appRuntime'
 import type { RustInvokeDeps } from '../../host/rustInvokeDeps'
-import type { FrontendMessageDeps } from '../../host/frontendMessage'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { AppPaths } from 'backend/process/context'
 import { isAbsolute, relative, resolve } from 'node:path'
 import type { EnviromentVariable, GameSettings } from 'common/types'
 import type { EngineServicesSource } from 'backend/services/engineServices'
-import { readKnownFixes, readKnownFixProfile } from 'backend/knownFixes'
+import {
+  readKnownFixes,
+  readKnownFixProfile,
+  type KnownFixLocalPathsDeps,
+  type KnownFixPathsDeps
+} from 'backend/knownFixes'
 import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { logWarning, LogPrefix } from 'backend/logger'
@@ -98,8 +103,15 @@ const MAX_WGL_PATTERNS = 16
  * profile's `shimFeatures`. An unknown feature or invalid parameter is dropped
  * with a warning, never passed to the shim.
  */
-export function steamShimFeatureCfgLines(appId: string): string[] {
-  const features: unknown = readKnownFixProfile(appId, 'steam')?.shimFeatures
+export function steamShimFeatureCfgLines(
+  deps: KnownFixLocalPathsDeps,
+  appId: string
+): string[] {
+  const features: unknown = readKnownFixProfile(
+    deps,
+    appId,
+    'steam'
+  )?.shimFeatures
   if (features === undefined) return []
   if (typeof features !== 'object' || features === null) {
     logWarning(
@@ -178,7 +190,8 @@ async function gameMakerGraphicsDefault(
 
 /** What the bridge known-fix applier reaches through a slice (66.1 R3). */
 export type BridgeKnownFixDeps = EngineServicesSource &
-  FrontendMessageDeps &
+  StatusUpdateDeps &
+  AppRuntimeSlice<'overlayInstalls'> &
   RustInvokeDeps & {
     paths: AppPaths
     aborts: Pick<AbortRegistry, 'create' | 'delete'>
@@ -191,8 +204,8 @@ export async function applySteamBridgeKnownFixes(
   installRoot: string | undefined,
   exePath?: string
 ): Promise<GameSettings> {
-  const fixes = readKnownFixes(appId, 'steam')
-  const profile = readKnownFixProfile(appId, 'steam')
+  const fixes = readKnownFixes(deps, appId, 'steam')
+  const profile = readKnownFixProfile(deps, appId, 'steam')
   if (!fixes && !profile) {
     const entry = await gameMakerGraphicsDefault(
       deps,
@@ -356,7 +369,11 @@ export async function applySteamBridgeKnownFixes(
       ...tier1Entries
     ]
     const overlayEnv = await resolveKnownFixOverlayEnv(profile?.overlays, {
-      deps: { aborts: deps.aborts },
+      deps: {
+        aborts: deps.aborts,
+        paths: deps.paths,
+        appRuntime: deps.appRuntime
+      },
       label: `Steam ${appId}`,
       logPrefix: LogPrefix.Steam,
       wineType: bridgeBottleSettings.wineVersion?.type,
@@ -414,12 +431,13 @@ export async function applySteamBridgeKnownFixes(
  * follow. Never throws: any failure keeps the default exe.
  */
 export function steamBridgeLaunchCommandParts(
+  deps: KnownFixPathsDeps,
   appId: string,
   exePath: string,
   installRoot: string | undefined
 ): string[] {
   try {
-    const fix = readKnownFixLaunchOverrides(appId, 'steam', installRoot)
+    const fix = readKnownFixLaunchOverrides(deps, appId, 'steam', installRoot)
     return [fix.exeOverride ?? exePath, ...fix.launchArgs]
   } catch (error) {
     logWarning(

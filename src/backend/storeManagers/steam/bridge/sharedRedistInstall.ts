@@ -60,7 +60,7 @@
  * only runs inside a user-initiated launch, never at boot.
  */
 
-import type { FrontendMessageDeps } from '../../../host/frontendMessage'
+import type { StatusUpdateDeps } from 'backend/appRuntime'
 import {
   readFile,
   writeFile,
@@ -322,7 +322,7 @@ async function writeLedger(
 }
 
 /** What the shared redist install reaches through slices (66.1 R3). */
-type RedistDeps = FrontendMessageDeps &
+type RedistDeps = StatusUpdateDeps &
   Pick<
     ManagerDeps,
     | 'commandRunner'
@@ -556,7 +556,7 @@ async function run(
   const ledger = await readLedger(ledgerPath, appId)
   if (!ledger) return
   const optIn = normaliseSharedRedistOptIn(
-    readKnownFixProfile(appId, 'steam')?.steamSharedRedists
+    readKnownFixProfile(deps, appId, 'steam')?.steamSharedRedists
   ).sort()
 
   const { runWineCommand } = deps.commandRunner

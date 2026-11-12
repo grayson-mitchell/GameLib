@@ -213,6 +213,7 @@ async function waitFor(
 type WiringHandles = {
   deliverStartupProtocolUrl: (deps: unknown, argv?: string[]) => boolean
 
+  appRuntime: any
   backendEvents: any
   axiosGet: jest.Mock
 
@@ -245,7 +246,11 @@ function loadHandles(): WiringHandles {
     flush: jest.fn()
   })
 
-  const { backendEvents } = require('../../backend_events')
+  // The boot's app runtime, built in THIS registry and handed to the boot (its event bus is the
+  // bus the wirings subscribe to and emit on).
+  const { createTestAppRuntime } = require('../../testUtils/testAppRuntime')
+  const appRuntime = createTestAppRuntime()
+  const backendEvents = appRuntime.events
   const { deliverStartupProtocolUrl } = require('../bootstrap')
   // Plain CJS require -- NOT `.default`. TS's `import i18next from 'i18next'`
   // (used by bootstrap.ts) compiles under esModuleInterop to
@@ -262,6 +267,7 @@ function loadHandles(): WiringHandles {
 
   return {
     deliverStartupProtocolUrl,
+    appRuntime,
     backendEvents,
     axiosGet: axiosInstance.get,
     i18nextInstance,
@@ -291,6 +297,11 @@ function bootWirings(beforeBoot?: (h: WiringHandles) => void): WiringHandles & {
   const lines = collectLines(output)
   const sidecar = bootFresh({
     output,
+    services: {
+      get appRuntime() {
+        return handles.appRuntime
+      }
+    },
     // The boot's anticheat data path is ctx.paths.appFolder (66.4-14); point it at this registry's
     // shimmed app folder, which `before` has loaded by the time the context is built.
     context: {
@@ -421,7 +432,7 @@ describe('sidecar bootstrap wirings (Phase 34.2 Plan 01 -- REQ-34.2-02/04/07/14)
   })
 
   it('REQ-34.2-07 one boot yields exactly one fetch and one listener', async () => {
-    // `backendEvents` is a real, unmocked, process-wide singleton -- the `./handlers` import
+    // `backendEvents` is this boot's real, unmocked event bus -- the `./handlers` import
     // graph already registers its OWN unrelated `releasesInfoReady` listeners
     // (backend/tools/dxmt.ts, backend/wine/manager/ipc_handler.ts), so a raw
     // `listenerCount('releasesInfoReady')` would be polluted by those legitimate,

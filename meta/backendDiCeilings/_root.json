@@ -1,13 +1,5 @@
 {
   "jestMock": {
     "src/backend/jest.setupContainment.ts": 2
-  },
-  "moduleState": {
-    "src/backend/backend_events.ts": 1,
-    "src/backend/images_cache.ts": 1,
-    "src/backend/knownFixOverlayInstall.ts": 1,
-    "src/backend/knownFixesFetcher.ts": 1,
-    "src/backend/launchSingleFlight.ts": 1,
-    "src/backend/protocol.ts": 1
   }
 }

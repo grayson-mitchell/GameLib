@@ -142,6 +142,7 @@ function toolSlices(services: BootServices) {
     paths: services.paths,
     aborts: services.aborts,
     toolsState: services.toolsState,
+    appRuntime: services.appRuntime,
     steamBottle: services.steamBottle,
     steamLaunchRuntime: services.steamLaunchRuntime
   }
@@ -158,6 +159,7 @@ export function registerHandlers(deps: {
 
   registerSteamFlows({
     ipc,
+    appRuntime: deps.services.appRuntime,
     config: deps.services.config,
     appState: deps.services.host.appState,
     managers: deps.services.managers,
@@ -235,6 +237,7 @@ export function registerHandlers(deps: {
   // before.
   registerAppShellFlows({
     ipc,
+    appRuntime: deps.services.appRuntime,
     appInfo: deps.services.appInfo,
     aborts: deps.services.aborts,
     openExternal: deps.services.host.openExternal,
@@ -260,6 +263,7 @@ export function registerHandlers(deps: {
   // placed alongside them, before `registerStoreWriteHandlers()`.
   registerGameDetailsFlows({
     ipc,
+    appRuntime: deps.services.appRuntime,
     managers: deps.services.managers,
     aborts: deps.services.aborts,
     stores: deps.services.stores,
@@ -278,6 +282,7 @@ export function registerHandlers(deps: {
   // module needs no new store plumbing.
   registerEnrichmentFlows({
     ipc,
+    appRuntime: deps.services.appRuntime,
     managers: deps.services.managers,
     stores: deps.services.stores,
     appInfo: deps.services.appInfo,
@@ -410,6 +415,7 @@ export function registerHandlers(deps: {
   })
   registerShortcutsFlows({
     ipc,
+    appRuntime: deps.services.appRuntime,
     managers: deps.services.managers,
     quit: deps.services.quit,
     stores: deps.services.stores,
@@ -439,6 +445,7 @@ export function registerHandlers(deps: {
   // relative to the other calls above.
   registerEosOverlayFlows({
     ipc,
+    appRuntime: deps.services.appRuntime,
     managers: deps.services.managers,
     aborts: deps.services.aborts,
     paths: deps.services.paths,

@@ -7,6 +7,7 @@
  * write Task 1's verbatim installscript fixtures into a per-test mkdtemp directory under
  * os.tmpdir(), the only path this file ever removes) and the verify_only cache check.
  */
+import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
 import {
   existsSync,
@@ -23,7 +24,8 @@ import { dirname, join, resolve } from 'path'
 const requestRustInvoke = jest.fn()
 const depotTransport = {
   requestRustInvoke,
-  sendFrontendMessage: jest.fn()
+  sendFrontendMessage: jest.fn(),
+  appRuntime: createTestAppRuntime()
 }
 import { RUST_DEPOT_MANIFEST_SUMMARY } from 'common/types/sidecarTransport'
 import { downloadSharedRedistDepots } from '../depot'

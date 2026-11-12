@@ -74,6 +74,7 @@
 // 66.1-22: the former load-bearing `import { managers.library } from '../storeManagers'`
 // is gone; the managers arrive as `deps.managers` from the boot `store-managers` step, so this
 // module cannot re-enter storeManagers/index.ts mid-evaluation.
+import type { AppRuntimeSlice } from 'backend/appRuntime'
 import type { SendFrontendMessage } from '../host/frontendMessage'
 import { isStore, storeCapabilities } from 'common/storeCapabilities'
 
@@ -359,7 +360,8 @@ async function handleLaunch(
         libraryManagers: deps.managers.library,
         stores: deps.stores,
         notifications: deps.notifications,
-        sendFrontendMessage: deps.sendFrontendMessage
+        sendFrontendMessage: deps.sendFrontendMessage,
+        appRuntime: deps.appRuntime
       },
       appName
     )
@@ -397,20 +399,21 @@ async function handleLaunch(
  * effects at import time beyond registration; the caller decides when
  * registration onto the handler registry happens.
  */
-export type SteamFlowDeps = Pick<BootServices, 'managers' | 'stores'> & {
-  ipc: Pick<IpcRegistry, 'handle' | 'on'>
-  config: Pick<GlobalConfigSlice, 'getSettings'>
-  appState: Pick<AppState, 'hideMainWindow'>
-  notifications: Pick<BootServices['host']['notifications'], 'show'>
-  sendFrontendMessage: SendFrontendMessage
-  launcher: Pick<BootServices['launcher'], 'launchEventCallback'>
-  /** The boot-owned keyring auth-unlock latches the refresh dispatch notes into (D-66.3-13). */
-  steamSession: Pick<BootServices['steamSession'], 'authTrigger'>
-  /** The boot's Humble library, recomputed after a Steam-inclusive refresh (D-66.3-17). */
-  humble: {
-    library: Pick<BootServices['humble']['library'], 'recomputeOwnership'>
+export type SteamFlowDeps = Pick<BootServices, 'managers' | 'stores'> &
+  AppRuntimeSlice<'events' | 'launchFlights'> & {
+    ipc: Pick<IpcRegistry, 'handle' | 'on'>
+    config: Pick<GlobalConfigSlice, 'getSettings'>
+    appState: Pick<AppState, 'hideMainWindow'>
+    notifications: Pick<BootServices['host']['notifications'], 'show'>
+    sendFrontendMessage: SendFrontendMessage
+    launcher: Pick<BootServices['launcher'], 'launchEventCallback'>
+    /** The boot-owned keyring auth-unlock latches the refresh dispatch notes into (D-66.3-13). */
+    steamSession: Pick<BootServices['steamSession'], 'authTrigger'>
+    /** The boot's Humble library, recomputed after a Steam-inclusive refresh (D-66.3-17). */
+    humble: {
+      library: Pick<BootServices['humble']['library'], 'recomputeOwnership'>
+    }
   }
-}
 
 export function registerSteamFlows(deps: SteamFlowDeps): void {
   deps.ipc.handle('refreshLibrary', (event: unknown, ...args: unknown[]) =>

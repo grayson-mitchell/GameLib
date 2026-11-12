@@ -9,6 +9,7 @@ jest.mock('backend/logger', () => ({
   LogPrefix: new Proxy({}, { get: (_t, p) => String(p) })
 }))
 
+import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import {
   RUST_DEPOT_JOB_CANCEL,
   RUST_DEPOT_JOB_RUN,
@@ -23,7 +24,8 @@ const invokeMock = jest.fn()
 const newRegistry = () =>
   createDepotJobRegistry({
     requestRustInvoke: invokeMock as never,
-    sendFrontendMessage: jest.fn()
+    sendFrontendMessage: jest.fn(),
+    appRuntime: createTestAppRuntime()
   })
 
 const JOB: RustDepotJob = {

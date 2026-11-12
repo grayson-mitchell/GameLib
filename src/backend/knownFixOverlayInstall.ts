@@ -27,7 +27,7 @@ import {
   KnownFixOverlayCatalogueEntry,
   overlayArchiveUrl
 } from 'common/knownFixOverlayCatalogue'
-import { knownFixOverlaysPath } from 'backend/constants/paths'
+import type { AppPaths } from 'backend/process/context'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { readOverlayTarGz } from './knownFixOverlayArchive'
@@ -44,6 +44,7 @@ export type OverlayArchiveFetch = (
 export interface OverlayInstallDeps {
   /** The boot-owned abort registry: stdin EOF cancels a running overlay download through it (66.4-13). */
   aborts: Pick<AbortRegistry, 'create' | 'delete'>
+  paths: Pick<AppPaths, 'knownFixOverlaysPath'>
   overlaysRoot?: string
   fetchArchive?: OverlayArchiveFetch
   timeoutMs?: number
@@ -56,7 +57,7 @@ interface OverlayLogContext {
 
 function overlayInstallDir(
   entry: KnownFixOverlayCatalogueEntry,
-  root: string = knownFixOverlaysPath
+  root: string
 ): string {
   return join(root, entry.id)
 }
@@ -182,8 +183,6 @@ async function downloadBounded(
   }
 }
 
-const inFlight = new Map<string, Promise<string | null>>()
-
 async function installOnce(
   entry: KnownFixOverlayCatalogueEntry,
   ctx: OverlayLogContext,
@@ -276,34 +275,52 @@ async function installOnce(
   }
 }
 
-/** Returns the verified install dir, or null (after a warning). Never rejects. */
-export async function ensureOverlayInstalled(
-  entry: KnownFixOverlayCatalogueEntry,
-  ctx: OverlayLogContext,
-  deps: OverlayInstallDeps
-): Promise<string | null> {
-  try {
-    if (!ID_PATTERN.test(entry.id)) throw new Error('invalid overlay id')
-    const root = resolve(deps.overlaysRoot ?? knownFixOverlaysPath)
-    const target = overlayInstallDir(entry, root)
-    const rel = relative(root, resolve(target))
-    if (rel === '' || rel.startsWith('..') || isAbsolute(rel)) {
-      throw new Error('install dir escapes the overlays root')
+export interface KnownFixOverlayInstalls {
+  ensureOverlayInstalled(
+    entry: KnownFixOverlayCatalogueEntry,
+    ctx: OverlayLogContext,
+    deps: OverlayInstallDeps
+  ): Promise<string | null>
+}
+
+/**
+ * One overlay-install single-flight table per boot (66.4-17, D-05): concurrent installs of the same
+ * overlay target join one download. Construction allocates an empty map.
+ */
+export function createKnownFixOverlayInstalls(): KnownFixOverlayInstalls {
+  const inFlight = new Map<string, Promise<string | null>>()
+
+  /** Returns the verified install dir, or null (after a warning). Never rejects. */
+  async function ensureOverlayInstalled(
+    entry: KnownFixOverlayCatalogueEntry,
+    ctx: OverlayLogContext,
+    deps: OverlayInstallDeps
+  ): Promise<string | null> {
+    try {
+      if (!ID_PATTERN.test(entry.id)) throw new Error('invalid overlay id')
+      const root = resolve(deps.overlaysRoot ?? deps.paths.knownFixOverlaysPath)
+      const target = overlayInstallDir(entry, root)
+      const rel = relative(root, resolve(target))
+      if (rel === '' || rel.startsWith('..') || isAbsolute(rel)) {
+        throw new Error('install dir escapes the overlays root')
+      }
+      const pending = inFlight.get(target)
+      if (pending) return await pending
+      const run = installOnce(entry, ctx, root, target, deps).finally(() =>
+        inFlight.delete(target)
+      )
+      inFlight.set(target, run)
+      return await run
+    } catch (err) {
+      logWarning(
+        `${ctx.label}: overlay ${entry.id} not installed (${
+          err instanceof Error ? err.message : String(err)
+        }); launching without it`,
+        ctx.logPrefix
+      )
+      return null
     }
-    const pending = inFlight.get(target)
-    if (pending) return await pending
-    const run = installOnce(entry, ctx, root, target, deps).finally(() =>
-      inFlight.delete(target)
-    )
-    inFlight.set(target, run)
-    return await run
-  } catch (err) {
-    logWarning(
-      `${ctx.label}: overlay ${entry.id} not installed (${
-        err instanceof Error ? err.message : String(err)
-      }); launching without it`,
-      ctx.logPrefix
-    )
-    return null
   }
+
+  return { ensureOverlayInstalled }
 }

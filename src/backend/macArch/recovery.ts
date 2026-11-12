@@ -43,6 +43,7 @@ export interface MacArchRecoveryDeps {
   notifications: ManagerDeps['notifications']
   sendFrontendMessage: ManagerDeps['sendFrontendMessage']
   paths: ManagerDeps['paths']
+  appRuntime: Pick<ManagerDeps['appRuntime'], 'events'>
 }
 
 /** The verdict store slice (66.1, R1). */
@@ -190,7 +191,8 @@ export async function offerWindowsReinstall(
         config: deps.config,
         notifications: deps.notifications,
         paths: deps.paths,
-        sendFrontendMessage: deps.sendFrontendMessage
+        sendFrontendMessage: deps.sendFrontendMessage,
+        appRuntime: deps.appRuntime
       },
       undefined as never,
       appName,

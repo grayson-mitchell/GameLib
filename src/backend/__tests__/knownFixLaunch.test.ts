@@ -6,6 +6,7 @@
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'fs'
 import { join, resolve } from 'path'
 import { tmpdir } from 'os'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 
 const mockLogWarning = jest.fn()
 jest.mock('../logger', () => ({
@@ -41,6 +42,9 @@ beforeEach(() => {
   writeFileSync(join(base, 'outside.exe'), 'x')
 })
 afterEach(() => rmSync(base, { recursive: true, force: true }))
+
+// The reader is mocked, so the layer directories only have to satisfy the type.
+const deps = { paths: createTestAppPaths('/test-gamelib') }
 
 const run = (o: string, p = install) => resolveKnownFixExeOverride(p, o, 'L')
 
@@ -92,7 +96,7 @@ describe('resolveKnownFixExeOverride', () => {
 describe('readKnownFixLaunchOverrides', () => {
   it('returns empty overrides with no fix', () => {
     mockReadKnownFixes.mockReturnValue(null)
-    expect(readKnownFixLaunchOverrides('a', 'gog', install)).toEqual({
+    expect(readKnownFixLaunchOverrides(deps, 'a', 'gog', install)).toEqual({
       launchArgs: [],
       exeOverride: undefined
     })
@@ -104,7 +108,7 @@ describe('readKnownFixLaunchOverrides', () => {
       launchArgs: ['-x'],
       exeOverride: 'bin/game.exe'
     })
-    expect(readKnownFixLaunchOverrides('a', 'gog', install)).toEqual({
+    expect(readKnownFixLaunchOverrides(deps, 'a', 'gog', install)).toEqual({
       launchArgs: ['-x'],
       exeOverride: resolve(install, 'bin/game.exe')
     })
@@ -116,7 +120,7 @@ describe('readKnownFixLaunchOverrides', () => {
       launchArgs: ['-x'],
       exeOverride: 'bin/game.exe'
     })
-    expect(readKnownFixLaunchOverrides('a', 'gog', undefined)).toEqual({
+    expect(readKnownFixLaunchOverrides(deps, 'a', 'gog', undefined)).toEqual({
       launchArgs: ['-x'],
       exeOverride: undefined
     })

@@ -27,7 +27,7 @@
 //
 // D-UAT-11 (quick-261029-o5a): a successful delete also zeroes the frontend progress.
 
-import type { FrontendMessageDeps } from '../../host/frontendMessage'
+import type { StatusUpdateDeps } from 'backend/appRuntime'
 import { parse } from '@node-steam/vdf'
 import { readFileSync, existsSync } from 'graceful-fs'
 import { rmSync } from 'node:fs'
@@ -106,7 +106,7 @@ export async function deleteCancelledSteamInstall(
     BottleSettingsDeps &
     SteamLibraryStateDeps &
     SteamGameSessionDeps &
-    FrontendMessageDeps,
+    StatusUpdateDeps,
   appId: string,
   opts?: { pollMs?: number; timeoutMs?: number }
 ): Promise<CancelDeleteResult> {

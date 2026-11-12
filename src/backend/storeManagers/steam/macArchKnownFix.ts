@@ -13,7 +13,7 @@
  * MUST NOT import games.ts or library.ts (import cycle).
  */
 
-import { readKnownFixes } from 'backend/knownFixes'
+import { readKnownFixes, type KnownFixPathsDeps } from 'backend/knownFixes'
 import { isAppleSiliconMac } from 'backend/constants/environment'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { GameInfo } from 'common/types'
@@ -29,13 +29,14 @@ import type { FrontendMessageDeps } from '../../host/frontendMessage'
  * already Mach-O verified, and the known fix says macArch "32".
  */
 export function knownFixSaysMac32(
+  deps: KnownFixPathsDeps,
   appId: string,
   existing: SteamMetadataCacheEntry | undefined
 ): boolean {
   if (!isAppleSiliconMac) return false
   if (existing?.mac_arch_verified === true) return false
   try {
-    return readKnownFixes(appId, 'steam')?.macArch === '32'
+    return readKnownFixes(deps, appId, 'steam')?.macArch === '32'
   } catch (error) {
     logWarning(
       `Steam: could not read known fixes for appId ${appId} while checking macArch: ${String(error)}`,
@@ -63,13 +64,16 @@ function propagateToLibrary(
 
 /** Synchronous, idempotent, never throws. */
 export function seedMacArchFromKnownFix(
-  deps: SteamStoresDeps & SteamLibraryStateDeps & FrontendMessageDeps,
+  deps: SteamStoresDeps &
+    SteamLibraryStateDeps &
+    FrontendMessageDeps &
+    KnownFixPathsDeps,
   appId: string
 ): void {
   const { steamMetadataStore } = deps.stores.steam
   try {
     const existing = steamMetadataStore.get(appId)
-    const hint = knownFixSaysMac32(appId, existing)
+    const hint = knownFixSaysMac32(deps, appId, existing)
 
     if (hint) {
       if (
@@ -95,7 +99,7 @@ export function seedMacArchFromKnownFix(
       isAppleSiliconMac &&
       existing?.mac_arch_verified === true &&
       existing.mac_arch !== '32' &&
-      readKnownFixesSafe(appId) === '32'
+      readKnownFixesSafe(deps, appId) === '32'
     ) {
       logWarning(
         `Steam: curated known fix for appId ${appId} says macArch "32" but the verified Mach-O verdict is '${existing.mac_arch}'; the entry should be corrected`,
@@ -126,9 +130,12 @@ export function seedMacArchFromKnownFix(
   }
 }
 
-function readKnownFixesSafe(appId: string): string | undefined {
+function readKnownFixesSafe(
+  deps: KnownFixPathsDeps,
+  appId: string
+): string | undefined {
   try {
-    return readKnownFixes(appId, 'steam')?.macArch
+    return readKnownFixes(deps, appId, 'steam')?.macArch
   } catch {
     return undefined
   }

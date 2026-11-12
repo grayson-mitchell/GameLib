@@ -1100,6 +1100,7 @@ export default class LegendaryGame implements Game {
 
     // Known-fix launchArgs / exeOverride (quick 261029-mbl).
     const knownFix = readKnownFixLaunchOverrides(
+      this.deps,
       this.appName,
       'legendary',
       gameInfo.install.install_path

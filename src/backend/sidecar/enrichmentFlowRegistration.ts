@@ -158,6 +158,7 @@
  * is INVOKE.
  */
 
+import type { AppRuntimeSlice } from 'backend/appRuntime'
 import type { FrontendMessageDeps } from '../host/frontendMessage'
 import type { AppInfo } from '../process/context'
 import type { IpcRegistry } from './ipcRegistry'
@@ -180,7 +181,8 @@ import type { Runner } from 'common/types'
 import type { ManagerDeps, StoreManagers, Stores } from 'backend/services/types'
 
 /** Narrow slice (66.1 D-01): library managers for game lookup. */
-export interface EnrichmentFlowDeps extends FrontendMessageDeps {
+export interface EnrichmentFlowDeps
+  extends FrontendMessageDeps, AppRuntimeSlice<'events' | 'crossoverIndex'> {
   ipc: Pick<IpcRegistry, 'handle'>
   appInfo: Pick<AppInfo, 'version'>
   managers: Pick<StoreManagers, 'library'>
@@ -193,7 +195,15 @@ export interface EnrichmentFlowDeps extends FrontendMessageDeps {
   infoCaches: Pick<ManagerDeps['infoCaches'], 'hltb'>
   /** The GOG credential cache and path roots the discounts handler reads (66.4-10). */
   gogRuntime: Pick<ManagerDeps['gogRuntime'], 'credentials'>
-  paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath' | 'userData'>
+  paths: Pick<
+    ManagerDeps['paths'],
+    | 'appFolder'
+    | 'toolsPath'
+    | 'userData'
+    | 'fixesPath'
+    | 'bundledFixesPath'
+    | 'localFixesPath'
+  >
   /** The boot-built SteamGridDB API-key owner (D-66.3-17); the key never touches GlobalConfig here. */
   steamGridSecrets: SteamGridDbSecretStore
 }
@@ -229,7 +239,8 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
         {
           libraryManagers: deps.managers.library,
           stores: deps.stores,
-          infoCaches: deps.infoCaches
+          infoCaches: deps.infoCaches,
+          appRuntime: deps.appRuntime
         },
         game,
         forceRefresh
@@ -251,14 +262,14 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
   deps.ipc.handle(
     'getKnownFixes',
     async (_event: unknown, ...args: unknown[]) =>
-      readKnownFixes(args[0] as string, args[1] as Runner)
+      readKnownFixes(deps, args[0] as string, args[1] as Runner)
   )
 
   // Quick 261027-ch9: GameLib row on the game page. Local + bundled only.
   deps.ipc.handle(
     'getGamelibFixStatus',
     async (_event: unknown, ...args: unknown[]) =>
-      readGamelibFixStatus(args[0] as string, args[1] as Runner)
+      readGamelibFixStatus(deps, args[0] as string, args[1] as Runner)
   )
 
   // Quick 261029-mkz: per-game "Runs for me" override. Untrusted payload:
@@ -302,7 +313,8 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
   deps.ipc.handle('getCrossoverIndex', async () =>
     buildCrossoverRatingMap({
       libraryManagers: deps.managers.library,
-      stores: deps.stores
+      stores: deps.stores,
+      appRuntime: deps.appRuntime
     })
   )
 

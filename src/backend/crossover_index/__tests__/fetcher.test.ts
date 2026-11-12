@@ -5,13 +5,12 @@ import { readFileSync } from 'graceful-fs'
 import { axiosClient } from 'backend/utils'
 import { GameInfo } from 'common/types'
 import {
-  loadIndex,
+  createCrossoverIndexFetcher,
   IndexDescriptor,
-  FAILURE_BACKOFF_MINUTES,
-  resetIndexFailureBackoff
+  FAILURE_BACKOFF_MINUTES
 } from '../fetcher'
 import { crossoverIndexSchema, CrossoverIndex } from '../schema'
-import { crossoverIndexHas, crossoverIndexDescriptor } from '../index'
+import { createCrossoverIndex, crossoverIndexDescriptor } from '../index'
 import { createCrossoverIndexStores } from '../stores'
 
 const crossoverIndex = createCrossoverIndexStores({
@@ -20,6 +19,15 @@ const crossoverIndex = createCrossoverIndexStores({
 
 const { crossoverIndexStore } = crossoverIndex
 const deps = { stores: { crossoverIndex } }
+
+// A fetcher per test, as one per boot in production (its failure backoff is per instance). The clock
+// reads `Date.now`, so the tests' `Date.now` spies drive it.
+const newFetcher = () =>
+  createCrossoverIndexFetcher({
+    clock: { now: () => Date.now() },
+    paths: { publicDir: '/test-public' }
+  })
+let fetcher = newFetcher()
 
 jest.mock('backend/logger')
 jest.mock('backend/store_backend')
@@ -66,7 +74,7 @@ describe('loadIndex', () => {
     // store writes that clear() performs.
     jest.restoreAllMocks()
     crossoverIndexStore.clear()
-    resetIndexFailureBackoff()
+    fetcher = newFetcher()
     mockedReadFileSync.mockReset()
   })
 
@@ -78,7 +86,7 @@ describe('loadIndex', () => {
     })
     const getSpy = jest.spyOn(axiosClient, 'get')
 
-    const result = await loadIndex(deps, descriptor)
+    const result = await fetcher.loadIndex(deps, descriptor)
 
     expect(result).toEqual(cachedData)
     expect(getSpy).not.toHaveBeenCalled()
@@ -90,7 +98,7 @@ describe('loadIndex', () => {
       .spyOn(axiosClient, 'get')
       .mockResolvedValueOnce({ data: gzippedJson(freshData) })
 
-    const result = await loadIndex(deps, descriptor)
+    const result = await fetcher.loadIndex(deps, descriptor)
 
     expect(result).toEqual(freshData)
     const stored = crossoverIndexStore.get(descriptor.name) as {
@@ -115,7 +123,7 @@ describe('loadIndex', () => {
       .spyOn(axiosClient, 'get')
       .mockResolvedValueOnce({ data: gzippedJson(invalidPayload) })
 
-    const result = await loadIndex(deps, descriptor)
+    const result = await fetcher.loadIndex(deps, descriptor)
 
     expect(result).toEqual(lastGood)
     const stored = crossoverIndexStore.get(descriptor.name) as {
@@ -137,7 +145,7 @@ describe('loadIndex', () => {
       .spyOn(axiosClient, 'get')
       .mockResolvedValueOnce({ data: gzippedJson(invalidPayload) })
 
-    const result = await loadIndex(deps, descriptor)
+    const result = await fetcher.loadIndex(deps, descriptor)
 
     expect(result).toEqual(bundledData)
     // WR-01: the bundled fallback must be written into crossoverIndexStore,
@@ -157,7 +165,7 @@ describe('loadIndex', () => {
       .spyOn(axiosClient, 'get')
       .mockRejectedValueOnce(new Error('network down'))
 
-    const result = await loadIndex(deps, descriptor)
+    const result = await fetcher.loadIndex(deps, descriptor)
 
     expect(result).toEqual(bundledData)
     const stored = crossoverIndexStore.get(descriptor.name) as {
@@ -195,7 +203,7 @@ describe('loadIndex', () => {
       .mockRejectedValue(new Error('network down'))
 
     for (let i = 0; i < 5; i++) {
-      const result = await loadIndex(deps, staleDescriptor)
+      const result = await fetcher.loadIndex(deps, staleDescriptor)
       // Degradation is unchanged: every call still serves last-good data.
       expect(result).toEqual(lastGood)
     }
@@ -217,11 +225,11 @@ describe('loadIndex', () => {
       .mockRejectedValue(new Error('network down'))
 
     const realNow = Date.now()
-    await loadIndex(deps, staleDescriptor)
+    await fetcher.loadIndex(deps, staleDescriptor)
     expect(getSpy).toHaveBeenCalledTimes(1)
 
     // Suppressed while inside the window...
-    await loadIndex(deps, staleDescriptor)
+    await fetcher.loadIndex(deps, staleDescriptor)
     expect(getSpy).toHaveBeenCalledTimes(1)
 
     // ...and retried once past it. Anti-vacuity for the test above: without
@@ -229,7 +237,7 @@ describe('loadIndex', () => {
     jest
       .spyOn(Date, 'now')
       .mockReturnValue(realNow + FAILURE_BACKOFF_MINUTES * 60 * 1000 + 1000)
-    await loadIndex(deps, staleDescriptor)
+    await fetcher.loadIndex(deps, staleDescriptor)
     expect(getSpy).toHaveBeenCalledTimes(2)
   })
 
@@ -252,8 +260,8 @@ describe('loadIndex', () => {
       .mockRejectedValueOnce(new Error('network down'))
       .mockResolvedValueOnce({ data: gzippedJson(freshData) })
 
-    await loadIndex(deps, failing)
-    const result = await loadIndex(deps, healthy)
+    await fetcher.loadIndex(deps, failing)
+    const result = await fetcher.loadIndex(deps, healthy)
 
     expect(result).toEqual(freshData)
     expect(getSpy).toHaveBeenCalledTimes(2)
@@ -266,7 +274,9 @@ describe('loadIndex', () => {
     }
     const getSpy = jest.spyOn(axiosClient, 'get')
 
-    await expect(loadIndex(deps, insecureDescriptor)).rejects.toThrow(/https/i)
+    await expect(fetcher.loadIndex(deps, insecureDescriptor)).rejects.toThrow(
+      /https/i
+    )
 
     expect(getSpy).not.toHaveBeenCalled()
   })
@@ -281,7 +291,7 @@ describe('loadIndex', () => {
       .spyOn(axiosClient, 'get')
       .mockRejectedValueOnce(new Error('network down'))
 
-    const result = await loadIndex(deps, descriptor)
+    const result = await fetcher.loadIndex(deps, descriptor)
 
     expect(result).toBeNull()
   })
@@ -296,7 +306,7 @@ describe('loadIndex', () => {
       .spyOn(axiosClient, 'get')
       .mockRejectedValueOnce(new Error('maxContentLength size exceeded'))
 
-    const result = await loadIndex(deps, descriptor)
+    const result = await fetcher.loadIndex(deps, descriptor)
 
     expect(result).toEqual(lastGood)
   })
@@ -311,7 +321,7 @@ describe('loadIndex', () => {
       .spyOn(axiosClient, 'get')
       .mockResolvedValueOnce({ data: Buffer.from('not gzipped data') })
 
-    const result = await loadIndex(deps, descriptor)
+    const result = await fetcher.loadIndex(deps, descriptor)
 
     expect(result).toEqual(lastGood)
   })
@@ -322,6 +332,7 @@ describe('crossoverIndexHas — WR-01 self-heal via bundled snapshot', () => {
     crossoverIndexStore.clear()
     jest.restoreAllMocks()
     mockedReadFileSync.mockReset()
+    fetcher = newFetcher()
   })
 
   test('network never succeeded + bundled snapshot present -> crossoverIndexHas() true', async () => {
@@ -342,12 +353,14 @@ describe('crossoverIndexHas — WR-01 self-heal via bundled snapshot', () => {
 
     // Before any lookup has ever run, the self-heal probe is blind -- the
     // store is genuinely empty (no network success, no prior lookup).
-    expect(crossoverIndexHas(deps, gameInfo)).toBe(false)
+    expect(
+      createCrossoverIndex({ fetcher }).crossoverIndexHas(deps, gameInfo)
+    ).toBe(false)
 
     // Mirrors what getCodeweaversFromIndex() does on every real lookup:
     // loadIndex() tries the network, fails, and (post WR-01 fix) persists
     // the bundled snapshot into crossoverIndexStore as a side effect.
-    const result = await loadIndex(deps, crossoverIndexDescriptor)
+    const result = await fetcher.loadIndex(deps, crossoverIndexDescriptor)
     expect(result).toEqual(bundledData)
 
     // The synchronous self-heal probe now sees it -- WITHOUT itself calling
@@ -355,6 +368,8 @@ describe('crossoverIndexHas — WR-01 self-heal via bundled snapshot', () => {
     // does. This is the exact gap WR-01 describes: a machine whose network
     // fetch has never once succeeded must still self-heal off the bundled
     // snapshot.
-    expect(crossoverIndexHas(deps, gameInfo)).toBe(true)
+    expect(
+      createCrossoverIndex({ fetcher }).crossoverIndexHas(deps, gameInfo)
+    ).toBe(true)
   })
 })

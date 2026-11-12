@@ -8,7 +8,7 @@
  * heartbeat that emits progress whether or not bytes moved — an
  * arrival-armed watchdog would never trip for a wedged Steam install.
  */
-import { backendEvents } from 'backend/backend_events'
+import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import {
   INSTALL_NO_PROGRESS_TIMEOUT_MS,
   isStallError,
@@ -17,6 +17,7 @@ import {
 } from '../installStallWatchdog'
 import { createAbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { logError } from 'backend/logger'
+import type { GameStatus } from 'common/types'
 
 // 260907-sxp T-C: bare jest.fn()s with no implementation, per this project's
 // jest.config.js `resetMocks: true` trap (see installStallWatchdog.test.ts's
@@ -32,6 +33,15 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logWarning: jest.fn()
 }))
+
+// One runtime (one event bus) per test, as one per boot in production; `withStallTimeout` listens on it.
+let appRuntime = createTestAppRuntime()
+const backendEvents = {
+  emit: (name: `progressUpdate-${string}`, payload: GameStatus) =>
+    appRuntime.events.emit(name, payload),
+  listenerCount: (name: `progressUpdate-${string}`) =>
+    appRuntime.events.listenerCount(name)
+}
 
 function emitProgress(
   appName: string,
@@ -50,6 +60,7 @@ describe('withStallTimeout', () => {
   let aborts: ReturnType<typeof createAbortRegistry>
   beforeEach(() => {
     aborts = createAbortRegistry()
+    appRuntime = createTestAppRuntime()
   })
   afterEach(() => {
     jest.useRealTimers()
@@ -59,7 +70,7 @@ describe('withStallTimeout', () => {
     jest.useFakeTimers()
     const appName = 'never-settles-advancing'
     const guarded = withStallTimeout(
-      { aborts },
+      { aborts, appRuntime },
       new Promise(() => {}),
       appName,
       INSTALL_NO_PROGRESS_TIMEOUT_MS,
@@ -88,7 +99,7 @@ describe('withStallTimeout', () => {
     const appName = 'heartbeat-only'
     const stallMs = 5 * 60 * 1000
     const guarded = withStallTimeout(
-      { aborts },
+      { aborts, appRuntime },
       new Promise(() => {}),
       appName,
       stallMs,
@@ -111,7 +122,7 @@ describe('withStallTimeout', () => {
     const appName = 'bytes-only'
     const stallMs = 5000
     const guarded = withStallTimeout(
-      { aborts },
+      { aborts, appRuntime },
       new Promise(() => {}),
       appName,
       stallMs,
@@ -141,7 +152,7 @@ describe('withStallTimeout', () => {
     const appName = 'percent-only'
     const stallMs = 5000
     const guarded = withStallTimeout(
-      { aborts },
+      { aborts, appRuntime },
       new Promise(() => {}),
       appName,
       stallMs,
@@ -170,7 +181,7 @@ describe('withStallTimeout', () => {
     const appName = 'never-reports'
     const stallMs = 5000
     const guarded = withStallTimeout(
-      { aborts },
+      { aborts, appRuntime },
       new Promise(() => {}),
       appName,
       stallMs,
@@ -188,7 +199,7 @@ describe('withStallTimeout', () => {
     const appName = 'stall-error-shape'
     const stallMs = 5000
     const guarded = withStallTimeout(
-      { aborts },
+      { aborts, appRuntime },
       new Promise(() => {}),
       appName,
       stallMs,
@@ -213,7 +224,7 @@ describe('withStallTimeout', () => {
       setTimeout(() => resolve('ok'), 1000)
     })
     const guarded = withStallTimeout(
-      { aborts },
+      { aborts, appRuntime },
       inner,
       appName,
       stallMs,
@@ -233,7 +244,7 @@ describe('withStallTimeout', () => {
       setTimeout(() => reject(boom), 1000)
     })
     const guarded = withStallTimeout(
-      { aborts },
+      { aborts, appRuntime },
       inner,
       appName,
       stallMs,
@@ -254,7 +265,7 @@ describe('withStallTimeout', () => {
     const baseline = backendEvents.listenerCount(eventName)
 
     const resolved = withStallTimeout(
-      { aborts },
+      { aborts, appRuntime },
       Promise.resolve('x'),
       appName,
       5000,
@@ -264,7 +275,7 @@ describe('withStallTimeout', () => {
     expect(backendEvents.listenerCount(eventName)).toBe(baseline)
 
     const guarded = withStallTimeout(
-      { aborts },
+      { aborts, appRuntime },
       new Promise(() => {}),
       appName,
       5000,
@@ -282,7 +293,7 @@ describe('withStallTimeout', () => {
     const otherAppName = 'scoped-b'
     const stallMs = 5000
     const guarded = withStallTimeout(
-      { aborts },
+      { aborts, appRuntime },
       new Promise(() => {}),
       appName,
       stallMs,
@@ -309,7 +320,7 @@ describe('withStallTimeout', () => {
     const controller = aborts.create(appName)
     try {
       const guarded = withStallTimeout(
-        { aborts },
+        { aborts, appRuntime },
         new Promise(() => {}),
         appName,
         stallMs,
@@ -341,7 +352,7 @@ describe('withStallTimeout', () => {
       })
 
       const guarded = withStallTimeout(
-        { aborts },
+        { aborts, appRuntime },
         new Promise(() => {}),
         appName,
         stallMs,
@@ -368,7 +379,7 @@ describe('withStallTimeout', () => {
     const stallMs = 5000
 
     const guarded = withStallTimeout(
-      { aborts },
+      { aborts, appRuntime },
       new Promise(() => {}),
       appName,
       stallMs,
@@ -398,7 +409,7 @@ describe('withStallTimeout', () => {
 
     try {
       const guarded = withStallTimeout(
-        { aborts },
+        { aborts, appRuntime },
         inner,
         appName,
         stallMs,

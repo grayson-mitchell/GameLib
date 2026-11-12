@@ -51,6 +51,7 @@ export default class SideloadGame implements Game {
       | 'appState'
       | 'notifications'
       | 'sendFrontendMessage'
+      | 'appRuntime'
     >
   ) {
     this.id = id

@@ -33,7 +33,7 @@ import type {
 } from 'common/types'
 import { readKnownFixProfile } from 'backend/knownFixes'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { userHome } from 'backend/constants/paths'
+import type { AppPaths } from 'backend/process/context'
 
 export const REGISTRY_FIX_TIMEOUT_MS = 15_000
 const REGISTRY_ROOTS = [
@@ -539,6 +539,7 @@ export async function applyRegistryFixes(
  * settings, or undefined when unknown (= no skip, old behaviour).
  */
 export function knownFixPrefixDir(
+  deps: { paths: Pick<AppPaths, 'userHome'> },
   gameSettings: GameSettings
 ): string | undefined {
   const type = gameSettings.wineVersion?.type
@@ -548,7 +549,7 @@ export function knownFixPrefixDir(
     if (!bottle) return undefined
     // Mirrors steam/bottle.ts getBottleDir without importing that module.
     return join(
-      userHome,
+      deps.paths.userHome,
       'Library/Application Support/CrossOver/Bottles',
       bottle
     )
@@ -570,14 +571,17 @@ export function knownFixPrefixDir(
  * Steam path because `wineserver --wait` can block.
  */
 export async function applyKnownFixProfileRegistry(
-  deps: { commandRunner: Pick<CommandRunner, 'runWineCommand'> },
+  deps: {
+    commandRunner: Pick<CommandRunner, 'runWineCommand'>
+    paths: Pick<AppPaths, 'userHome' | 'bundledFixesPath' | 'localFixesPath'>
+  },
   appName: string,
   runner: Runner,
   gameSettings: GameSettings
 ): Promise<void> {
   const label = `${runner} ${appName}`
   try {
-    const profile = readKnownFixProfile(appName, runner)
+    const profile = readKnownFixProfile(deps, appName, runner)
     const ctx = { label, logPrefix: LogPrefix.Backend }
     const raw = profile ? knownFixProfileRegistryFixes(profile, ctx) : undefined
     if (raw === undefined) return
@@ -592,7 +596,7 @@ export async function applyKnownFixProfileRegistry(
           protonVerb: 'runinprefix',
           onSpawn
         }),
-      knownFixPrefixDir(gameSettings)
+      knownFixPrefixDir(deps, gameSettings)
     )
   } catch (error) {
     logWarning(

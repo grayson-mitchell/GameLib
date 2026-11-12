@@ -24,7 +24,7 @@
  *   deadline are the process runner's (unref'd there); each long step is bounded by its own module's
  *   deadline and abort id.
  */
-import type { FrontendMessageDeps } from 'backend/host/frontendMessage'
+import type { StatusUpdateDeps } from 'backend/appRuntime'
 import type { RunTool } from 'backend/engine/runTool'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import type { AppPaths } from 'backend/process/context'
@@ -146,7 +146,7 @@ type DrmInstanceSteps = {
 }
 
 /** Overridable steps; every member defaults to the instance's implementation. */
-export type DrmSetupOverrides = FrontendMessageDeps & {
+export type DrmSetupOverrides = StatusUpdateDeps & {
   /** The caller's tool runner (66.2-03); the clone and allowlist steps spawn through it. */
   runTool: RunTool
   /** The runner behind `runTool`; the CrossOver bin-dir lookup (mdfind) runs through it (66.2-07). */

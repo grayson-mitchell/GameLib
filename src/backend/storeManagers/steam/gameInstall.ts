@@ -605,6 +605,7 @@ export async function ensureBuiltInEngineForInstall(
     onlineMonitor: steamGame.deps.onlineMonitor,
     fallback: steamGame.deps.engineRuntime.fallback,
     sendFrontendMessage: steamGame.deps.sendFrontendMessage,
+    appRuntime: steamGame.deps.appRuntime,
     signal
   })
   if (result.ok) return result.engine

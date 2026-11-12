@@ -18,9 +18,6 @@ jest.mock('backend/logger', () => ({
 }))
 
 const mockEnsure = jest.fn()
-jest.mock('backend/knownFixOverlayInstall', () => ({
-  ensureOverlayInstalled: (...a: unknown[]) => mockEnsure(...a)
-}))
 
 const mockReadProfile = jest.fn()
 jest.mock('backend/knownFixes', () => {
@@ -52,10 +49,20 @@ const ctx = { label: 'test', logPrefix: LogPrefix.Backend }
 const DIR = '/over/lays/gst-libav-1.24.13'
 const PLUG = `${DIR}/lib/gstreamer-1.0`
 
-// ensureOverlayInstalled is mocked: the registry only has to satisfy the type.
+// The install single-flight is a scripted fake (`mockEnsure`) and the registry only has to satisfy the type.
 const overlayDeps = {
-  aborts: { create: () => new AbortController(), delete: () => undefined }
-}
+  aborts: { create: () => new AbortController(), delete: () => undefined },
+  paths: {
+    knownFixOverlaysPath: '/over/lays',
+    bundledFixesPath: '/bundled/fixes',
+    localFixesPath: '/local/fixes'
+  },
+  appRuntime: {
+    overlayInstalls: {
+      ensureOverlayInstalled: (...a: unknown[]) => mockEnsure(...a)
+    }
+  }
+} as unknown as Parameters<typeof knownFixProfileOverlayEnv>[0]
 
 const resolveOpts = (over: Record<string, unknown> = {}) => ({
   ...ctx,

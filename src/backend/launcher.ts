@@ -71,14 +71,6 @@ import { readKnownFixes } from './knownFixes'
 import { applyKnownFixProfileRegistry } from './knownFixesRegistry'
 import { knownFixProfileOverlayEnv, logKnownFixEnv } from './knownFixOverlays'
 import {
-  sharedWinePrefix,
-  flatpakHome,
-  galaxyCommunicationExePath,
-  gamesConfigPath,
-  runtimePath,
-  userHome
-} from './constants/paths'
-import {
   isCLINoGui,
   isLinux,
   isMac,
@@ -97,13 +89,16 @@ import {
 } from './engine/launchEngine'
 import { engineKeyFor } from './engine/gameKey'
 
-import { singleFlightLaunch } from './launchSingleFlight'
+import type { AppRuntimeSlice } from './appRuntime'
 import type { PartialDeep } from 'type-fest'
 import type LogWriter from './logger/log_writer'
 import { Game } from 'common/types/game_manager'
 
 /** What the launcher is built from (66.1, D-02): constructed once per boot by createStoreManagers. */
-export interface LauncherDeps extends DialogBoxDeps {
+export interface LauncherDeps
+  extends
+    DialogBoxDeps,
+    AppRuntimeSlice<'events' | 'launchFlights' | 'overlayInstalls'> {
   /** Late-bound: filled by createStoreManagers after the launcher is built, read at call time only. */
   libraryManagers: StoreManagers['library']
   launchHooks: Record<Runner, StoreLaunchHooks>
@@ -125,7 +120,21 @@ export interface LauncherDeps extends DialogBoxDeps {
   /** The boot-owned engine runtime and the path roots the engine reads (66.4-05). */
   engineRuntime: EngineServicesSource['engineRuntime']
   paths: EngineServicesSource['paths'] &
-    Pick<AppPaths, 'runtimePath' | 'appFolder'>
+    Pick<
+      AppPaths,
+      | 'runtimePath'
+      | 'appFolder'
+      | 'flatpakHome'
+      | 'sharedWinePrefix'
+      | 'galaxyCommunicationExePath'
+      | 'gamesConfigPath'
+      | 'userHome'
+      | 'fixesPath'
+      | 'bundledFixesPath'
+      | 'localFixesPath'
+      | 'knownFixOverlaysPath'
+      | 'defaultUmuPath'
+    >
   /** The boot-owned abort registry the tool downloads and known-fix overlay downloads register in (66.4-13). */
   aborts: Pick<AbortRegistry, 'create' | 'delete'>
   /** The boot-owned tools state the tool wrappers share (66.4-14). */
@@ -159,6 +168,7 @@ function engineSource(deps: LauncherDeps): EngineServicesSource {
     spawnAsync: deps.spawnAsync,
     aborts: deps.aborts,
     toolsState: deps.toolsState,
+    appRuntime: deps.appRuntime,
     config: deps.config,
     gameConfigs: deps.gameConfigs,
     appInfo: deps.appInfo,
@@ -176,7 +186,12 @@ function engineSource(deps: LauncherDeps): EngineServicesSource {
     steamLaunchRuntime: deps.steamLaunchRuntime,
     // The pure env/validation helpers are module functions, so the tools need no handle on the
     // launcher being built (checker warning 6).
-    launcher: { setupEnvVars, setupWineEnvVars, validWine }
+    launcher: {
+      setupEnvVars,
+      setupWineEnvVars: (gameSettings, gameId) =>
+        setupWineEnvVars(deps, gameSettings, gameId),
+      validWine
+    }
   }
 }
 
@@ -449,7 +464,8 @@ async function runLaunchEventCallback(
   await addRecentGame(
     {
       stores: { kvs: deps.stores.kvs },
-      sendFrontendMessage: deps.sendFrontendMessage
+      sendFrontendMessage: deps.sendFrontendMessage,
+      appRuntime: deps.appRuntime
     },
     gameInfo
   )
@@ -501,7 +517,7 @@ const launchEventCallback = (
   deps: LaunchCtx,
   params: LaunchParams
 ): StatusPromise =>
-  singleFlightLaunch(
+  deps.appRuntime.launchFlights.singleFlightLaunch(
     params.runner,
     params.appName,
     () => {
@@ -757,7 +773,7 @@ async function prepareLaunch(
     'Game Settings:',
     filterGameSettingsForLog(gameSettings, !native),
     '\n',
-    `Stored at: ${join(gamesConfigPath, gameInfo.app_name + '.json')}`,
+    `Stored at: ${join(deps.paths.gamesConfigPath, gameInfo.app_name + '.json')}`,
     '\n\n'
   ])
 
@@ -920,7 +936,7 @@ async function prepareWineLaunch(
   if (isMac && gameSettings.wineVersion.type === 'crossover') {
     const bottleExists = existsSync(
       join(
-        userHome,
+        deps.paths.userHome,
         'Library/Application Support/CrossOver/Bottles',
         gameSettings.wineCrossoverBottle,
         'cxbottle.conf'
@@ -1021,7 +1037,7 @@ async function prepareWineLaunch(
 
   // Tier-2 profile registry, every launch (Decision 1, quick 261026-j6x).
   await applyKnownFixProfileRegistry(
-    { commandRunner: deps.commandRunner },
+    { commandRunner: deps.commandRunner, paths: deps.paths },
     gameInfo.app_name,
     gameInfo.runner,
     gameSettings
@@ -1031,7 +1047,7 @@ async function prepareWineLaunch(
   const tier1Env =
     opts.mergesTier1Env === false
       ? {}
-      : getKnownFixesEnvVariables(gameInfo.app_name, gameInfo.runner)
+      : getKnownFixesEnvVariables(deps, gameInfo.app_name, gameInfo.runner)
   const knownFixEnv = await knownFixProfileOverlayEnv(
     deps,
     gameInfo.app_name,
@@ -1072,7 +1088,7 @@ async function prepareWineLaunch(
 
       if (!existsSync(communicationDest)) {
         mkdirSync(dirname(communicationDest), { recursive: true })
-        await copyFile(galaxyCommunicationExePath, communicationDest)
+        await copyFile(deps.paths.galaxyCommunicationExePath, communicationDest)
         await deps.commandRunner.runWineCommand({
           commandParts: [
             'sc',
@@ -1122,7 +1138,7 @@ async function prepareWineLaunch(
     await download(deps, 'battleye_runtime')
   }
 
-  const envVars = setupWineEnvVars(gameSettings, gameInfo.folder_name)
+  const envVars = setupWineEnvVars(deps, gameSettings, gameInfo.folder_name)
 
   // Phase 61-16 (D-18): after installFixes and the known-fix overlay env, so prerequisite
   // installers never count against the deadline (RESEARCH Pitfall 3).
@@ -1144,7 +1160,7 @@ async function installFixes(
   appName: string,
   runner: Runner
 ) {
-  const knownFixes = readKnownFixes(appName, runner)
+  const knownFixes = readKnownFixes(deps, appName, runner)
 
   if (!knownFixes) return
 
@@ -1189,8 +1205,12 @@ async function installFixes(
   }
 }
 
-function getKnownFixesEnvVariables(appName: string, runner: Runner) {
-  const knownFixes = readKnownFixes(appName, runner)
+function getKnownFixesEnvVariables(
+  deps: Pick<LauncherDeps, 'paths'>,
+  appName: string,
+  runner: Runner
+) {
+  const knownFixes = readKnownFixes(deps, appName, runner)
 
   return knownFixes?.envVariables || {}
 }
@@ -1265,7 +1285,12 @@ function setupWrapperEnvVars(wrapperEnv: WrapperEnv) {
  * @param gameId If Proton and the Steam Runtime are used, the SteamGameId variable will be set to `heroic-gameId` if it's unset
  * @returns A Record that can be passed to execAsync/spawn
  */
-export function setupWineEnvVars(gameSettings: GameSettings, gameId = '0') {
+export function setupWineEnvVars(
+  deps: { paths: Pick<AppPaths, 'flatpakHome' | 'runtimePath'> },
+  gameSettings: GameSettings,
+  gameId = '0'
+) {
+  const { flatpakHome, runtimePath } = deps.paths
   const { wineVersion, winePrefix, wineCrossoverBottle } = gameSettings
 
   const ret: Record<string, string> = {}
@@ -1554,11 +1579,11 @@ export async function validWine(
 export async function verifyWinePrefix(
   deps: {
     commandRunner: Pick<CommandRunner, 'runWineCommand'>
-    paths: Pick<AppPaths, 'defaultUmuPath'>
+    paths: Pick<AppPaths, 'defaultUmuPath' | 'sharedWinePrefix'>
   },
   settings: GameSettings
 ): Promise<{ res: ExecResult }> {
-  const { winePrefix = sharedWinePrefix, wineVersion } = settings
+  const { winePrefix = deps.paths.sharedWinePrefix, wineVersion } = settings
 
   const isValidWine = await validWine(wineVersion)
 
@@ -1664,10 +1689,14 @@ export interface Launcher {
   ): ReturnType<typeof prepareWineLaunch>
   setupEnvVars: typeof setupEnvVars
   setupWrapperEnvVars: typeof setupWrapperEnvVars
-  setupWineEnvVars: typeof setupWineEnvVars
+  setupWineEnvVars(
+    ...a: DropFirst<Parameters<typeof setupWineEnvVars>>
+  ): ReturnType<typeof setupWineEnvVars>
   setupWrappers: typeof setupWrappers
   launchEventCallback(params: LaunchParams): StatusPromise
-  getKnownFixesEnvVariables: typeof getKnownFixesEnvVariables
+  getKnownFixesEnvVariables(
+    ...a: DropFirst<Parameters<typeof getKnownFixesEnvVariables>>
+  ): ReturnType<typeof getKnownFixesEnvVariables>
   validWine: typeof validWine
   verifyWinePrefix(
     ...a: DropFirst<Parameters<typeof verifyWinePrefix>>
@@ -1690,10 +1719,10 @@ export function createLauncher(deps: LauncherDeps): Launcher {
     prepareWineLaunch: (...a) => prepareWineLaunch(deps, ...a),
     setupEnvVars,
     setupWrapperEnvVars,
-    setupWineEnvVars,
+    setupWineEnvVars: (...a) => setupWineEnvVars(deps, ...a),
     setupWrappers,
     launchEventCallback: (params) => launchEventCallback(ctx, params),
-    getKnownFixesEnvVariables,
+    getKnownFixesEnvVariables: (...a) => getKnownFixesEnvVariables(deps, ...a),
     validWine,
     verifyWinePrefix: (...a) => verifyWinePrefix(deps, ...a)
   }

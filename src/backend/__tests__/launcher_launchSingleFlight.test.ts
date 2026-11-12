@@ -35,7 +35,6 @@ import { createTestToolsSlices } from 'backend/testUtils/testServices'
 import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
 import { createLauncher } from 'backend/launcher'
 import { createGameLogWriter } from 'backend/logger'
-import { resetLaunchSingleFlightForTests } from 'backend/launchSingleFlight'
 import { defined } from './helpers/defined'
 
 function makeLogWriter() {
@@ -54,25 +53,28 @@ const tsStore = {
   get: (_key: string, fallback: number) => fallback,
   set: jest.fn()
 }
-const { launchEventCallback } = createLauncher({
-  ...createTestToolsSlices(),
-  onlineMonitor: createTestOnlineMonitor({ online: false }),
-  libraryManagers: {
-    legendary: { getGame: (...a: unknown[]) => getGameMock(...a) }
-  } as never,
-  launchHooks: { legendary: {} } as never,
-  commandRunner: {} as never,
-  runner: { run: () => Promise.reject(new Error('unscripted run')) } as never,
-  spawnAsync: (() => Promise.reject(new Error('unscripted spawn'))) as never,
-  stores: { kvs: { tsStore }, wineManager: {}, runsForMe: {} } as never
-})
+const buildLauncher = () =>
+  createLauncher({
+    ...createTestToolsSlices(),
+    onlineMonitor: createTestOnlineMonitor({ online: false }),
+    libraryManagers: {
+      legendary: { getGame: (...a: unknown[]) => getGameMock(...a) }
+    } as never,
+    launchHooks: { legendary: {} } as never,
+    commandRunner: {} as never,
+    runner: { run: () => Promise.reject(new Error('unscripted run')) } as never,
+    spawnAsync: (() => Promise.reject(new Error('unscripted spawn'))) as never,
+    stores: { kvs: { tsStore }, wineManager: {}, runsForMe: {} } as never
+  })
+let launchEventCallback: ReturnType<typeof buildLauncher>['launchEventCallback']
 
 describe('launchEventCallback single-flight (WR-03)', () => {
   let resolvers: Array<(v: boolean) => void>
   let launchMock: jest.Mock
 
   beforeEach(() => {
-    resetLaunchSingleFlightForTests()
+    // A fresh launcher (and so a fresh single-flight table) per test, as one per boot in production.
+    launchEventCallback = buildLauncher().launchEventCallback
     resolvers = []
     sendGameStatusUpdateMock.mockClear()
     getSettingsMock.mockReturnValue({

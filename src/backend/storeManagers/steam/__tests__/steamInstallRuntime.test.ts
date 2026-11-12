@@ -2,6 +2,7 @@
  * 66.4-09: the Steam install runtime holds per-instance state. Two runtimes share no app order,
  * schema cache, lock, job, poll or hold entry; construction arms no timer.
  */
+import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { createSteamInstallRuntime } from '../steamInstallRuntime'
 import { createTestHostServices } from '../../../testUtils/testHostServices'
 import { createCdnSchemaCache } from '../depot/cdnAuth'
@@ -21,11 +22,16 @@ function picsClient(appId: number, depots: string[]) {
   return { _send: original }
 }
 
+const transport = () => ({
+  ...createTestHostServices(),
+  appRuntime: createTestAppRuntime()
+})
+
 describe('createSteamInstallRuntime', () => {
   it('arms no timer at construction', () => {
     jest.useFakeTimers()
     try {
-      createSteamInstallRuntime(createTestHostServices())
+      createSteamInstallRuntime(transport())
       expect(jest.getTimerCount()).toBe(0)
     } finally {
       jest.useRealTimers()
@@ -33,8 +39,8 @@ describe('createSteamInstallRuntime', () => {
   })
 
   it('two runtimes share no appinfo order', async () => {
-    const a = createSteamInstallRuntime(createTestHostServices())
-    const b = createSteamInstallRuntime(createTestHostServices())
+    const a = createSteamInstallRuntime(transport())
+    const b = createSteamInstallRuntime(transport())
     const client = picsClient(10, ['3', '2', '1'])
     await a.appinfoOrder.withAppInfoOrderCapture(client, () => {
       client._send({ msg: PICS }, {}, () => undefined)
@@ -45,8 +51,8 @@ describe('createSteamInstallRuntime', () => {
   })
 
   it('two runtimes share no shared-redist lock and the temp sequence is per instance', async () => {
-    const a = createSteamInstallRuntime(createTestHostServices())
-    const b = createSteamInstallRuntime(createTestHostServices())
+    const a = createSteamInstallRuntime(transport())
+    const b = createSteamInstallRuntime(transport())
     expect([
       a.sharedRedistLocks.nextTmpSeq(),
       a.sharedRedistLocks.nextTmpSeq()
@@ -89,8 +95,8 @@ describe('createSteamInstallRuntime', () => {
   })
 
   it('depot job registries are independent and drop stale or foreign events', () => {
-    const a = createSteamInstallRuntime(createTestHostServices())
-    const b = createSteamInstallRuntime(createTestHostServices())
+    const a = createSteamInstallRuntime(transport())
+    const b = createSteamInstallRuntime(transport())
     const seen: number[] = []
     const dispose = a.depotJobs.registerActiveDepotJob('j', {
       appId: '1',
@@ -116,8 +122,8 @@ describe('createSteamInstallRuntime', () => {
   })
 
   it('install poll state, notice sequence and bridge-finalized set are per instance', () => {
-    const a = createSteamInstallRuntime(createTestHostServices())
-    const b = createSteamInstallRuntime(createTestHostServices())
+    const a = createSteamInstallRuntime(transport())
+    const b = createSteamInstallRuntime(transport())
     a.polls.markBridgeInstallFinalized('730')
     expect(a.polls.isBridgeInstallFinalized('730')).toBe(true)
     expect(b.polls.isBridgeInstallFinalized('730')).toBe(false)
@@ -136,8 +142,8 @@ describe('createSteamInstallRuntime', () => {
   })
 
   it('restart-hold bookkeeping fails closed through a rearm cycle and reads its own polls', () => {
-    const a = createSteamInstallRuntime(createTestHostServices())
-    const b = createSteamInstallRuntime(createTestHostServices())
+    const a = createSteamInstallRuntime(transport())
+    const b = createSteamInstallRuntime(transport())
     const { restartHold } = a
     a.polls.activePolls.set('5', { steamHold: 'holding' } as never)
     a.polls.activePolls.set('6', { steamHold: 'unprobed' } as never)

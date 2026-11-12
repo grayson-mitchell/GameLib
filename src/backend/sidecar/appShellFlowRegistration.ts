@@ -161,6 +161,7 @@
  * discipline (see the `sidecar-dialog-reject-crashes` precedent).
  */
 
+import type { AppRuntimeSlice } from 'backend/appRuntime'
 import i18next from 'i18next'
 
 import { isSnap, isCLINoGui, isMac } from '../constants/environment'
@@ -209,7 +210,6 @@ import {
   migrateTrayIconVariant,
   trayIconWireArgs
 } from '../../common/trayIconVariant'
-import { markFrontendReady } from '../protocol'
 import { logSendHandlerReached } from './sendChannelObservable'
 
 function logSendFailure(channel: string, error: unknown): void {
@@ -329,7 +329,8 @@ function syncTrayIcon(
 }
 
 /** Narrow dependency slice for `registerAppShellFlows` (66.1, D-01). */
-export interface AppShellFlowDeps extends DialogBoxDeps, NotifyDeps {
+export interface AppShellFlowDeps
+  extends DialogBoxDeps, NotifyDeps, AppRuntimeSlice<'events' | 'protocol'> {
   managers: Pick<StoreManagers, 'library'>
   /** The boot-owned abort registry the `abort` channel signals (66.4-13). */
   aborts: Pick<AbortRegistry, 'call'>
@@ -560,7 +561,7 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
       logSendHandlerReached('frontendReady')
       logInfo('Frontend Ready', LogPrefix.Backend)
       // Cold-start vs warm discriminator for gamelib:// links (quick 261108-kpc).
-      markFrontendReady()
+      deps.appRuntime.protocol.markFrontendReady()
 
       if (isSnap) {
         const showSnapWarning = deps.stores.kvs.configStore.get(

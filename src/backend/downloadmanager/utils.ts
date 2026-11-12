@@ -1,3 +1,4 @@
+import type { AppRuntimeSlice } from 'backend/appRuntime'
 import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
 import { isEpicServiceOffline, sendGameStatusUpdate } from '../utils'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
@@ -15,7 +16,10 @@ import type { OnlineMonitor } from '../online_monitor'
 import pathModule from 'path'
 import { existsSync, rmSync } from 'graceful-fs'
 import type { AppPaths } from 'backend/process/context'
-import { fetchRemoteKnownFixes } from 'backend/knownFixesFetcher'
+import {
+  fetchRemoteKnownFixes,
+  type KnownFixesFetchDeps
+} from 'backend/knownFixesFetcher'
 import { deriveGogPaths } from 'backend/storeManagers/gog/constants'
 import { isTimeoutError } from 'backend/storeManagers/steam/withTimeout'
 import {
@@ -44,9 +48,10 @@ type QueueElementDeps = {
   /** The boot-owned abort registry the terminal-error branch and the stall watchdog abort through (66.4-13). */
   aborts: Pick<AbortRegistry, 'has' | 'call'>
   /** The gog manifest directory is derived from these. */
-  paths: Pick<AppPaths, 'appFolder' | 'toolsPath' | 'userData'>
+  paths: Pick<AppPaths, 'appFolder' | 'toolsPath' | 'userData' | 'fixesPath'>
 } & DialogBoxDeps &
-  NotifyDeps
+  NotifyDeps &
+  AppRuntimeSlice<'events'>
 type LibraryManagerMap = StoreManagers['library']
 
 /**
@@ -248,7 +253,7 @@ async function installQueueElement(
   // affordance" for those cases, exactly as before this plan.
   let installErrorAction: InstallErrorAction | undefined
   try {
-    downloadFixesFor(appName, runner)
+    downloadFixesFor(deps, appName, runner)
 
     const installResult: InstallResult = await withStallTimeout(
       deps,
@@ -524,8 +529,12 @@ async function updateQueueElement(
 
 // quick 261026-avw (decision 6): every store fetches GameLib's known-fixes repo
 // first; the fetcher owns the Heroic fallback and never rejects.
-function downloadFixesFor(appName: string, runner: Runner) {
-  fetchRemoteKnownFixes(appName, runner).catch((error) =>
+function downloadFixesFor(
+  deps: KnownFixesFetchDeps,
+  appName: string,
+  runner: Runner
+) {
+  fetchRemoteKnownFixes(deps, appName, runner).catch((error) =>
     logWarning(
       `Known fixes fetch failed for ${appName}: ${error}`,
       LogPrefix.Backend

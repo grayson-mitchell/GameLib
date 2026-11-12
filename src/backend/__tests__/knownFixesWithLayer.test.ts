@@ -5,6 +5,8 @@
  * knownFixesLayered.test.ts.
  */
 
+import { tmpdir } from 'os'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { mkdirSync, rmSync, writeFileSync } from 'fs'
 import { join } from 'path'
 
@@ -18,21 +20,6 @@ jest.mock('os', () => {
   }
 })
 
-jest.mock('../constants/paths', () => {
-  const actual = jest.requireActual('../constants/paths')
-  const path = jest.requireActual('path')
-  const os = jest.requireActual('os')
-  return {
-    ...actual,
-    bundledFixesPath: path.join(
-      os.tmpdir(),
-      `gamelib-bundled-fixes-test-${process.pid}-withlayer`,
-      'public',
-      'fixes'
-    )
-  }
-})
-
 jest.mock('../logger', () => ({
   logInfo: jest.fn(),
   logWarning: jest.fn(),
@@ -41,8 +28,20 @@ jest.mock('../logger', () => ({
 }))
 
 import { readKnownFixes, readKnownFixesWithLayer } from '../knownFixes'
-import { bundledFixesPath, fixesPath, localFixesPath } from '../constants/paths'
 import { defined } from './helpers/defined'
+
+// A per-file disposable AppPaths root (66.4-17): the known-fix readers take their layer directories
+// from `deps.paths`, so no module is mocked. The bundled layer is nested as `<root>/public/fixes`,
+// the same depth as the shipped `<app>/public/fixes`.
+const TEST_ROOT = join(
+  tmpdir(),
+  `gamelib-bundled-fixes-test-${process.pid}-withlayer`
+)
+const paths = createTestAppPaths(TEST_ROOT, {
+  bundledFixesPath: join(TEST_ROOT, 'public', 'fixes')
+})
+const { bundledFixesPath, fixesPath, localFixesPath } = paths
+const deps = { paths }
 
 function put(dir: string, app: string) {
   mkdirSync(dir, { recursive: true })
@@ -68,8 +67,8 @@ describe('readKnownFixesWithLayer (D-12)', () => {
   beforeEach(clean)
 
   it('returns null when no layer has a file', () => {
-    expect(readKnownFixesWithLayer('77', 'steam')).toBeNull()
-    expect(readKnownFixes('77', 'steam')).toBeNull()
+    expect(readKnownFixesWithLayer(deps, '77', 'steam')).toBeNull()
+    expect(readKnownFixes(deps, '77', 'steam')).toBeNull()
   })
 
   it('walks local > bundled > remote and matches readKnownFixes', () => {
@@ -80,11 +79,11 @@ describe('readKnownFixesWithLayer (D-12)', () => {
     const expected = ['local', 'bundled', 'remote'] as const
     const dirs = [localFixesPath, bundledFixesPath, fixesPath]
     expected.forEach((layer, i) => {
-      const res = readKnownFixesWithLayer('77', 'steam')
+      const res = readKnownFixesWithLayer(deps, '77', 'steam')
       expect(res?.layer).toBe(layer)
-      expect(res?.fix).toEqual(readKnownFixes('77', 'steam'))
+      expect(res?.fix).toEqual(readKnownFixes(deps, '77', 'steam'))
       rmSync(defined(dirs[i], 'layer dir'), { recursive: true, force: true })
     })
-    expect(readKnownFixesWithLayer('77', 'steam')).toBeNull()
+    expect(readKnownFixesWithLayer(deps, '77', 'steam')).toBeNull()
   })
 })

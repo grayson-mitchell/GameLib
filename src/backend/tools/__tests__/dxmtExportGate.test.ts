@@ -44,7 +44,10 @@ jest.mock('../machoExports', () => ({
 }))
 
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
-import { backendEvents } from 'backend/backend_events'
+import { createBackendEvents } from 'backend/backend_events'
+
+// One event bus for the file, as one per boot in production.
+const backendEvents = createBackendEvents()
 import { logWarning } from 'backend/logger'
 import {
   copyFileSync,

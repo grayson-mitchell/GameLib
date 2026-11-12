@@ -36,6 +36,7 @@ import type { EngineServices } from '../engine/engineServices'
 import { createFakeClock } from './fakeClock'
 import { createTestOnlineMonitor } from './testOnlineMonitor'
 import { createTestEngineState } from './testEngineState'
+import { createTestAppRuntime } from './testAppRuntime'
 import { createTestEngineRuntime } from './testEngineRuntime'
 import { createTestSteamLaunchRuntime } from './testSteamLaunchRuntime'
 import { createTestBridgeRuntime } from './testBridgeRuntime'
@@ -279,6 +280,7 @@ export function createTestServices(
     nileRuntime: overrides.nileRuntime ?? createTestNileRuntime(),
     infoCaches: overrides.infoCaches ?? createTestInfoCaches(),
     aborts: overrides.aborts ?? createTestAbortRegistry(),
+    appRuntime: overrides.appRuntime ?? createTestAppRuntime(),
     windowRaiser: overrides.windowRaiser ?? createTestWindowRaiser(),
     toolsState: overrides.toolsState ?? createTestToolsState(),
     winetricksQueue:
@@ -455,6 +457,7 @@ export function createTestManagerDeps(
     nileRuntime: overrides.nileRuntime ?? createTestNileRuntime(),
     infoCaches: overrides.infoCaches ?? createTestInfoCaches(),
     aborts: overrides.aborts ?? createTestAbortRegistry(),
+    appRuntime: overrides.appRuntime ?? createTestAppRuntime(),
     windowRaiser: overrides.windowRaiser ?? createTestWindowRaiser(),
     toolsState: overrides.toolsState ?? createTestToolsState(),
     signIn: overrides.signIn ?? createTestSignInProbe(),
@@ -521,6 +524,7 @@ export function createTestToolsSlices(
     nileRuntime: createTestNileRuntime(),
     infoCaches: createTestInfoCaches(),
     aborts: createTestAbortRegistry(),
+    appRuntime: createTestAppRuntime(),
     windowRaiser: createTestWindowRaiser(),
     toolsState: createTestToolsState(),
     paths: createTestPaths(),

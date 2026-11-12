@@ -1,4 +1,4 @@
-import type { FrontendMessageDeps } from '../../host/frontendMessage'
+import type { StatusUpdateDeps } from 'backend/appRuntime'
 import { existsSync } from 'graceful-fs'
 import path from 'node:path'
 import { GameInfo, GameSettings, InstalledInfo } from 'common/types'
@@ -28,7 +28,7 @@ import {
 } from 'backend/engine/launchEngine'
 
 /** What GOG setup reads: the manager map, the wine launcher helpers and the runners. */
-export type SetupDeps = FrontendMessageDeps &
+export type SetupDeps = StatusUpdateDeps &
   Pick<
     GOGManagerDeps,
     | 'libraryManagers'

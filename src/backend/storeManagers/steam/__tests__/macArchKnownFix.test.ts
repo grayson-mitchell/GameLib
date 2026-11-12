@@ -4,6 +4,8 @@
  */
 
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
+import type { KnownFixPathsDeps } from 'backend/knownFixes'
 
 const sendFrontendMessage = jest.fn()
 
@@ -34,13 +36,18 @@ const library = steamSession.libraryState.library
 const deps = {
   sendFrontendMessage,
   steamSession,
+  // The reader is mocked, so the layer directories only have to satisfy the type.
+  paths: createTestAppPaths('/test-gamelib'),
   stores: {
     steam: {
       steamMetadataStore,
       steamLibraryStore: { get: jest.fn(), set: jest.fn() }
     }
   }
-} as unknown as SteamStoresDeps & SteamLibraryStateDeps & FrontendMessageDeps
+} as unknown as SteamStoresDeps &
+  SteamLibraryStateDeps &
+  FrontendMessageDeps &
+  KnownFixPathsDeps
 
 import { readKnownFixes } from 'backend/knownFixes'
 import { logWarning, logInfo } from 'backend/logger'
@@ -85,20 +92,20 @@ beforeEach(() => {
 describe('knownFixSaysMac32', () => {
   test('true on Apple silicon with the hint', () => {
     readFixes.mockReturnValue({ title: 'H', macArch: '32' })
-    expect(knownFixSaysMac32('63000', undefined)).toBe(true)
+    expect(knownFixSaysMac32(deps, '63000', undefined)).toBe(true)
   })
 
   test('false on Intel and never reads the file', () => {
     env.isAppleSiliconMac = false
     readFixes.mockReturnValue({ title: 'H', macArch: '32' })
-    expect(knownFixSaysMac32('63000', undefined)).toBe(false)
+    expect(knownFixSaysMac32(deps, '63000', undefined)).toBe(false)
     expect(readFixes).not.toHaveBeenCalled()
   })
 
   test('false when Mach-O verified', () => {
     readFixes.mockReturnValue({ title: 'H', macArch: '32' })
     expect(
-      knownFixSaysMac32('63000', { mac_arch_verified: true } as never)
+      knownFixSaysMac32(deps, '63000', { mac_arch_verified: true } as never)
     ).toBe(false)
   })
 
@@ -106,7 +113,7 @@ describe('knownFixSaysMac32', () => {
     readFixes.mockImplementation(() => {
       throw new Error('boom')
     })
-    expect(knownFixSaysMac32('63000', undefined)).toBe(false)
+    expect(knownFixSaysMac32(deps, '63000', undefined)).toBe(false)
   })
 })
 

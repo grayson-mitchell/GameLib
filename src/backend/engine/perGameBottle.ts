@@ -224,7 +224,11 @@ export interface PerGameBottleDeps {
   ensurePin: (
     args: Omit<
       Parameters<typeof ensurePinnedEngineReportingStatus>[0],
-      'processRunner' | 'onlineMonitor' | 'fallback' | 'sendFrontendMessage'
+      | 'processRunner'
+      | 'onlineMonitor'
+      | 'fallback'
+      | 'sendFrontendMessage'
+      | 'appRuntime'
     >
   ) => Promise<PinnedEngineResult>
   currentPin: () => EnginePin
@@ -372,7 +376,8 @@ export function createPerGameBottleFlights(): PerGameBottleFlights {
           processRunner: services.runner,
           onlineMonitor: services.onlineMonitor,
           fallback: services.engineRuntime.fallback,
-          sendFrontendMessage: services.notices.sendFrontendMessage
+          sendFrontendMessage: services.notices.sendFrontendMessage,
+          appRuntime: services.notices.appRuntime
         }),
       createCrossover: (...a) => createCrossoverBottle(services, ...a),
       createFallback: (...a) => createFallbackBottle(services, ...a),

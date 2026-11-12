@@ -1,3 +1,4 @@
+import type { AppRuntimeSlice } from 'backend/appRuntime'
 import type { SteamEngineBottle } from 'backend/storeManagers/steam/bottle'
 import type { AppState } from 'backend/host/appState'
 import type { SpawnAsync } from 'backend/spawnAsync'
@@ -219,7 +220,8 @@ export async function installOrUpdateTool(
  * boot-owned `toolsState` (66.4-14), so the wrappers below are cheap and every instance of a
  * boot shares one single-flight slot and one set of caches.
  */
-export interface ToolsDeps extends DialogBoxDeps, NotifyDeps {
+export interface ToolsDeps
+  extends DialogBoxDeps, NotifyDeps, AppRuntimeSlice<'events'> {
   /** The boot-owned tools state: single-flight slot, caches, winetricks environment (66.4-14). */
   toolsState: ToolsState
   managers: { library: StoreManagers['library'] }

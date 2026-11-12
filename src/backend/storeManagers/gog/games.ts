@@ -644,6 +644,7 @@ export default class GOGGame implements Game {
     // Known-fix launchArgs / exeOverride (quick 261029-mbl). Precedence:
     // altExe > user targetExe > known-fix exeOverride > default.
     const knownFix = readKnownFixLaunchOverrides(
+      this.deps,
       this.id,
       'gog',
       gameInfo.install.install_path

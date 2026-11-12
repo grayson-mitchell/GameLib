@@ -50,7 +50,7 @@ import {
 import i18next from 'i18next'
 import { createTestStores } from 'backend/testUtils/testServices'
 import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
-import { backendEvents } from '../../backend_events'
+import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 
 import {
   getLatestReleasesForStartup,
@@ -125,9 +125,10 @@ describe('backend/appshell/language.ts (REQ-34.1-04)', () => {
 
   it('REQ-34.1-04 changeLanguage calls i18next.changeLanguage, clears gameInfoStore, writes the language setting, and emits languageChanged', async () => {
     const { setSetting, config } = mockAppSettings({})
-    const emitSpy = jest.spyOn(backendEvents, 'emit')
+    const appRuntime = createTestAppRuntime()
+    const emitSpy = jest.spyOn(appRuntime.events, 'emit')
 
-    await changeLanguage({ ...languageDeps, config }, 'fr')
+    await changeLanguage({ ...languageDeps, config, appRuntime }, 'fr')
 
     expect(mockedI18nextChangeLanguage).toHaveBeenCalledWith('fr')
     expect(mockedGameInfoStoreClear).toHaveBeenCalledTimes(1)
@@ -139,9 +140,10 @@ describe('backend/appshell/language.ts (REQ-34.1-04)', () => {
 
   it('REQ-34.1-04 changeLanguage emits languageChanged LAST, after GlobalConfig.setSetting', async () => {
     const { setSetting, config } = mockAppSettings({})
-    const emitSpy = jest.spyOn(backendEvents, 'emit')
+    const appRuntime = createTestAppRuntime()
+    const emitSpy = jest.spyOn(appRuntime.events, 'emit')
 
-    await changeLanguage({ ...languageDeps, config }, 'de')
+    await changeLanguage({ ...languageDeps, config, appRuntime }, 'de')
 
     const setSettingOrder = setSetting.mock.invocationCallOrder[0]
     const emitOrder = defined(

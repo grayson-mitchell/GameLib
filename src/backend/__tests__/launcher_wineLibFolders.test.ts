@@ -30,7 +30,16 @@ function loadWith(platform: { isMac: boolean; isLinux: boolean }) {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     logError = require('backend/logger').logError
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    setup = require('backend/launcher').setupWineEnvVars
+    const { setupWineEnvVars } = require('backend/launcher')
+    // The launcher's path slice is explicit (66.4-17): the flatpak home and the runtime folder.
+    setup = (settings, id) =>
+      setupWineEnvVars(
+        {
+          paths: { flatpakHome: '/test/flatpak', runtimePath: '/test/runtime' }
+        },
+        settings,
+        id
+      )
   })
   return { setup, logError }
 }

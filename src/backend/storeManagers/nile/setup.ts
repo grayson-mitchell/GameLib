@@ -1,4 +1,4 @@
-import type { FrontendMessageDeps } from '../../host/frontendMessage'
+import type { StatusUpdateDeps } from 'backend/appRuntime'
 import {
   LogPrefix,
   logDebug,
@@ -18,7 +18,7 @@ import {
   selectEngineForLaunch
 } from 'backend/engine/launchEngine'
 
-type NileSetupDeps = FrontendMessageDeps &
+type NileSetupDeps = StatusUpdateDeps &
   Pick<
     ManagerDeps,
     | 'libraryManagers'

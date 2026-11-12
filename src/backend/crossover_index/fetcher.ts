@@ -3,7 +3,8 @@ import { join } from 'path'
 import { gunzipSync } from 'node:zlib'
 import type { z } from 'zod'
 
-import { publicDir } from 'backend/constants/paths'
+import type { AppPaths } from 'backend/process/context'
+import type { Clock } from 'backend/process/types'
 import { axiosClient } from 'backend/utils'
 import { logError, logInfo, LogPrefix } from 'backend/logger'
 
@@ -53,7 +54,10 @@ function parseGzippedJson(buffer: ArrayBuffer | Buffer): unknown {
  * throwing. Any other read/parse/validation failure is treated the same way
  * — this is a best-effort fallback, never a hard requirement.
  */
-function loadBundledSnapshot<T>(desc: IndexDescriptor<T>): T | null {
+function loadBundledSnapshot<T>(
+  publicDir: string,
+  desc: IndexDescriptor<T>
+): T | null {
   try {
     const buffer = readFileSync(join(publicDir, desc.bundledPath))
     const json = parseGzippedJson(buffer)
@@ -91,14 +95,16 @@ function loadBundledSnapshot<T>(desc: IndexDescriptor<T>): T | null {
  * network payload the next time the TTL expires and a fetch succeeds.
  */
 function persistBundledFallback<T>(
+  publicDir: string,
+  now: () => number,
   deps: CrossoverIndexDeps,
   desc: IndexDescriptor<T>
 ): T | null {
-  const bundled = loadBundledSnapshot(desc)
+  const bundled = loadBundledSnapshot(publicDir, desc)
   if (bundled) {
     deps.stores.crossoverIndex.crossoverIndexStore.set(desc.name, {
       data: bundled,
-      fetchedAt: Date.now()
+      fetchedAt: now()
     })
   }
   return bundled
@@ -146,100 +152,110 @@ function assertHttps<T>(desc: IndexDescriptor<T>): void {
 export const FAILURE_BACKOFF_MINUTES = 5
 
 /**
- * Last failed refresh per `descriptor.name`. Keyed by descriptor rather than
- * module-global because D-19's premise is that a second index (the deferred
- * mac-arch-overrides one) shares this loader — one index being down must not
- * silence another. Process-local by design: a restart SHOULD get a fresh
- * attempt.
+ * Last failed refresh per `descriptor.name`, kept per fetcher instance (one per boot). Keyed by
+ * descriptor rather than instance-global because D-19's premise is that a second index (the
+ * deferred mac-arch-overrides one) shares this loader — one index being down must not silence
+ * another. A restart (a new boot) SHOULD get a fresh attempt.
  */
-const lastFailureAt = new Map<string, number>()
-
-/**
- * Clears the WR-07 back-off. A TEST SEAM, and named as one: the back-off is
- * deliberately process-wide, so a suite that drives `loadIndex` through a
- * failure leaks the suppression into every later test sharing that
- * `descriptor.name`. That is correct production behaviour and a hazard in a
- * test file, so tests reset it explicitly rather than by guessing at unique
- * names. Not called from production code.
- */
-export function resetIndexFailureBackoff(): void {
-  lastFailureAt.clear()
+export interface CrossoverIndexFetcherDeps {
+  clock: Pick<Clock, 'now'>
+  paths: Pick<AppPaths, 'publicDir'>
 }
 
-function recordFailure(desc: IndexDescriptor<unknown>): void {
-  lastFailureAt.set(desc.name, Date.now())
+export interface CrossoverIndexFetcher {
+  /**
+   * D-19 generic fetch → gunzip → validate → keep-last-good layer. On ANY
+   * failure (schema rejection, network error, gunzip/JSON error, oversized
+   * payload) it returns the last-good cached value, falling back to the
+   * bundled snapshot, falling back to null — and NEVER throws further and
+   * NEVER overwrites a good cached value with a bad one (D-09 / T-19-01,
+   * T-19-05).
+   */
+  loadIndex<T>(
+    deps: CrossoverIndexDeps,
+    desc: IndexDescriptor<T>
+  ): Promise<T | null>
 }
 
-function withinFailureBackoff(desc: IndexDescriptor<unknown>): boolean {
-  const failedAt = lastFailureAt.get(desc.name)
-  if (failedAt === undefined) {
-    return false
+export function createCrossoverIndexFetcher(
+  fetcherDeps: CrossoverIndexFetcherDeps
+): CrossoverIndexFetcher {
+  const { clock } = fetcherDeps
+  const { publicDir } = fetcherDeps.paths
+  const lastFailureAt = new Map<string, number>()
+  const now = () => clock.now()
+
+  function recordFailure(desc: IndexDescriptor<unknown>): void {
+    lastFailureAt.set(desc.name, now())
   }
-  return (Date.now() - failedAt) / 1000 / 60 <= FAILURE_BACKOFF_MINUTES
-}
 
-/**
- * D-19 generic fetch → gunzip → validate → keep-last-good layer. On ANY
- * failure (schema rejection, network error, gunzip/JSON error, oversized
- * payload) it returns the last-good cached value, falling back to the
- * bundled snapshot, falling back to null — and NEVER throws further and
- * NEVER overwrites a good cached value with a bad one (D-09 / T-19-01,
- * T-19-05).
- */
-export async function loadIndex<T>(
-  deps: CrossoverIndexDeps,
-  desc: IndexDescriptor<T>
-): Promise<T | null> {
-  assertHttps(desc)
-
-  const cached = deps.stores.crossoverIndex.crossoverIndexStore.get(
-    desc.name
-  ) as CachedIndex<T> | undefined
-
-  if (cached) {
-    const minutesSinceFetch = (Date.now() - cached.fetchedAt) / 1000 / 60
-    if (minutesSinceFetch <= desc.ttlMinutes) {
-      return cached.data
+  function withinFailureBackoff(desc: IndexDescriptor<unknown>): boolean {
+    const failedAt = lastFailureAt.get(desc.name)
+    if (failedAt === undefined) {
+      return false
     }
+    return (now() - failedAt) / 1000 / 60 <= FAILURE_BACKOFF_MINUTES
   }
 
-  // WR-07: the cache is stale (or absent) and a refresh failed recently — serve
-  // the degraded value without re-attempting. Identical return shape to both
-  // failure branches below, so the caller sees no behavioural difference.
-  if (withinFailureBackoff(desc)) {
-    return cached?.data ?? persistBundledFallback(deps, desc)
-  }
+  async function loadIndex<T>(
+    deps: CrossoverIndexDeps,
+    desc: IndexDescriptor<T>
+  ): Promise<T | null> {
+    assertHttps(desc)
 
-  try {
-    const { data } = await axiosClient.get<ArrayBuffer>(desc.url, {
-      responseType: 'arraybuffer',
-      maxContentLength: MAX_CONTENT_LENGTH
-    })
+    const cached = deps.stores.crossoverIndex.crossoverIndexStore.get(
+      desc.name
+    ) as CachedIndex<T> | undefined
 
-    const json = parseGzippedJson(data)
-    const parsed = desc.schema.safeParse(json)
+    if (cached) {
+      const minutesSinceFetch = (now() - cached.fetchedAt) / 1000 / 60
+      if (minutesSinceFetch <= desc.ttlMinutes) {
+        return cached.data
+      }
+    }
 
-    if (!parsed.success) {
+    // WR-07: the cache is stale (or absent) and a refresh failed recently — serve
+    // the degraded value without re-attempting. Identical return shape to both
+    // failure branches below, so the caller sees no behavioural difference.
+    if (withinFailureBackoff(desc)) {
+      return cached?.data ?? persistBundledFallback(publicDir, now, deps, desc)
+    }
+
+    try {
+      const { data } = await axiosClient.get<ArrayBuffer>(desc.url, {
+        responseType: 'arraybuffer',
+        maxContentLength: MAX_CONTENT_LENGTH
+      })
+
+      const json = parseGzippedJson(data)
+      const parsed = desc.schema.safeParse(json)
+
+      if (!parsed.success) {
+        logError(
+          ['Rejected index payload', desc.name, parsed.error.issues],
+          LogPrefix.Backend
+        )
+        recordFailure(desc)
+        return (
+          cached?.data ?? persistBundledFallback(publicDir, now, deps, desc)
+        )
+      }
+
+      lastFailureAt.delete(desc.name)
+      deps.stores.crossoverIndex.crossoverIndexStore.set(desc.name, {
+        data: parsed.data,
+        fetchedAt: now()
+      })
+      return parsed.data
+    } catch (error) {
       logError(
-        ['Rejected index payload', desc.name, parsed.error.issues],
+        ['Index refresh failed, keeping last good', desc.name, error],
         LogPrefix.Backend
       )
       recordFailure(desc)
-      return cached?.data ?? persistBundledFallback(deps, desc)
+      return cached?.data ?? persistBundledFallback(publicDir, now, deps, desc)
     }
-
-    lastFailureAt.delete(desc.name)
-    deps.stores.crossoverIndex.crossoverIndexStore.set(desc.name, {
-      data: parsed.data,
-      fetchedAt: Date.now()
-    })
-    return parsed.data
-  } catch (error) {
-    logError(
-      ['Index refresh failed, keeping last good', desc.name, error],
-      LogPrefix.Backend
-    )
-    recordFailure(desc)
-    return cached?.data ?? persistBundledFallback(deps, desc)
   }
+
+  return { loadIndex }
 }

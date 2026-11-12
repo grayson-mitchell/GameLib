@@ -14,6 +14,7 @@ jest.mock('../macSteamOffline', () => ({
   MAC_STEAM_OFFLINE_OWED_FILE: 'mac-steam-offline-owed.json'
 }))
 
+import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import {
   isSteamAdoptedAcf,
   decidePlayAdoption,
@@ -328,6 +329,7 @@ describe('createRestartDeps', () => {
     const openUrlDetached = jest.fn()
     const deps = createRestartDeps({
       sendFrontendMessage: jest.fn(),
+      appRuntime: createTestAppRuntime(),
       clock,
       paths: { appFolder: '/test/appFolder', userHome: '/test/home' },
       macSteamOffline: { isSteamRunning, openUrlDetached },

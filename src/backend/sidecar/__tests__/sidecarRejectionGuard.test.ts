@@ -292,6 +292,7 @@ async function flush(times = 6): Promise<void> {
  * `import()` (mirrors bootstrapWirings.test.ts's own precedent).
  */
 function setupIsolatedBootstrapHarness(): {
+  appRuntime: any
   backendEvents: any
   downloadAntiCheatDataMock: jest.Mock
   logWarningMock: jest.SpyInstance
@@ -300,6 +301,13 @@ function setupIsolatedBootstrapHarness(): {
   // D-08: one boot per case through bootFresh(); the handles are read from the SAME fresh
   // registry the boot runs in. Require order is unchanged (bootstrap before logger).
   bootFresh({
+    // The boot's app runtime, built in the same fresh registry by `before` below: its event bus is
+    // the one the boot's Block A listener subscribes to.
+    services: {
+      get appRuntime() {
+        return harness.appRuntime
+      }
+    },
     before: () => {
       /* eslint-disable @typescript-eslint/no-require-imports */
       const { createGlobalConfig } = require('backend/config')
@@ -310,7 +318,8 @@ function setupIsolatedBootstrapHarness(): {
         flush: jest.fn()
       })
 
-      const { backendEvents } = require('../../backend_events')
+      const { createTestAppRuntime } = require('../../testUtils/testAppRuntime')
+      const appRuntime = createTestAppRuntime()
       require('../bootstrap')
       const { downloadAntiCheatData } = require('../../anticheat/utils')
       const loggerModule = require('backend/logger')
@@ -323,7 +332,8 @@ function setupIsolatedBootstrapHarness(): {
       const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
 
       harness = {
-        backendEvents,
+        appRuntime,
+        backendEvents: appRuntime.events,
         downloadAntiCheatDataMock: downloadAntiCheatData,
         logWarningMock: logWarningSpy
       }

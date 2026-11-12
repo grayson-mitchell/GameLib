@@ -99,7 +99,8 @@ import {
 import {
   addNonSteamGame,
   removeNonSteamGame,
-  isAddedToSteam
+  isAddedToSteam,
+  type NonSteamGameDeps
 } from '../shortcuts/nonesteamgame/nonesteamgame'
 import { notify, type DialogBoxDeps, type NotifyDeps } from '../dialog/dialog'
 import { isMac } from '../constants/environment'
@@ -114,7 +115,8 @@ import type {
 } from 'backend/services/types'
 
 /** Narrow slice (66.1 D-01): library managers for game lookup, the quit handler for ctrl+q. */
-export interface ShortcutsFlowDeps extends NotifyDeps, DialogBoxDeps {
+export interface ShortcutsFlowDeps
+  extends NotifyDeps, DialogBoxDeps, Pick<NonSteamGameDeps, 'appRuntime'> {
   ipc: Pick<IpcRegistry, 'handle' | 'on'>
   managers: Pick<StoreManagers, 'library'>
   quit: Pick<QuitHandler, 'handleExit'>
@@ -396,6 +398,7 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
         imageTools: deps.imageTools,
         dialogs: deps.dialogs,
         sendFrontendMessage: deps.sendFrontendMessage,
+        appRuntime: deps.appRuntime,
         appState: deps.appState,
         notifications: deps.notifications
       },

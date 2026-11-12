@@ -6,7 +6,7 @@
  * `../index` wholesale to test the D-16 three-state contract in isolation,
  * which makes the real `getCodeweaversFromIndex` -> `loadIndex` call chain
  * -- the exact thing this gate measures -- invisible to it. Here `../index`
- * is REAL and only `../fetcher` is mocked, so the assertion is about the
+ * is REAL and only the fetcher is scripted, so the assertion is about the
  * genuine call graph.
  *
  * Why call COUNT and not wall-clock: a timing assertion would be flaky and
@@ -22,17 +22,20 @@ const envMock = { isWindows: false, isMac: true, isLinux: false }
 jest.mock('backend/constants/environment', () => envMock)
 
 const loadIndexMock = jest.fn()
-jest.mock('../fetcher', () => ({
-  ...jest.requireActual('../fetcher'),
-  loadIndex: (...args: unknown[]) => loadIndexMock(...args)
-}))
 
 const getListOfGamesMock = jest.fn<GameInfo[], []>()
 
 import { buildCrossoverRatingMap } from '../crossoverRatingMap'
+import { createCrossoverIndex } from '../index'
 
+// The REAL lookups over a scripted fetcher: the call graph under test is genuine.
 const ratingMapDeps = {
-  libraryManagers: { steam: { getListOfGames: getListOfGamesMock } }
+  libraryManagers: { steam: { getListOfGames: getListOfGamesMock } },
+  appRuntime: {
+    crossoverIndex: createCrossoverIndex({
+      fetcher: { loadIndex: (...a) => loadIndexMock(...a) }
+    })
+  }
 } as unknown as Parameters<typeof buildCrossoverRatingMap>[0]
 
 const GAME_COUNT = 50

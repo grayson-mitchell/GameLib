@@ -26,10 +26,10 @@
  * notification.
  */
 
+import type { AppRuntimeSlice } from 'backend/appRuntime'
 import i18next from 'i18next'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { notify } from 'backend/dialog/dialog'
-import { singleFlightLaunch } from 'backend/launchSingleFlight'
 import { addRecentGame } from 'backend/recent_games/recent_games'
 import type LogWriter from 'backend/logger/log_writer'
 import type { ManagerDeps } from 'backend/services/types'
@@ -39,7 +39,7 @@ type LaunchDispatchDeps = Pick<
   'libraryManagers' | 'notifications' | 'sendFrontendMessage'
 > & {
   stores: Pick<ManagerDeps['stores'], 'kvs'>
-}
+} & AppRuntimeSlice<'events' | 'launchFlights'>
 
 /**
  * Launches a Steam title and, on success, records it as a recent game.
@@ -60,7 +60,7 @@ export function dispatchSteamLaunch(
   deps: LaunchDispatchDeps,
   appName: string
 ): Promise<boolean> {
-  return singleFlightLaunch(
+  return deps.appRuntime.launchFlights.singleFlightLaunch(
     'steam',
     appName,
     () => notifyAlreadyLaunching(deps, appName),

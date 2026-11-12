@@ -32,6 +32,7 @@ export type ManagerDepsSource = Pick<
   | 'nileRuntime'
   | 'infoCaches'
   | 'aborts'
+  | 'appRuntime'
   | 'windowRaiser'
   | 'toolsState'
   | 'signInProbe'
@@ -79,6 +80,7 @@ export function managerDepsFromServices(
     nileRuntime: source.nileRuntime,
     infoCaches: source.infoCaches,
     aborts: source.aborts,
+    appRuntime: source.appRuntime,
     windowRaiser: source.windowRaiser,
     toolsState: source.toolsState,
     signIn: {

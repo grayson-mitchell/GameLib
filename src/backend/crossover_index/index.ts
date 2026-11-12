@@ -3,7 +3,11 @@ import { storeCapabilities } from 'common/storeCapabilities'
 import { CodeweaversInfo, GameInfo } from 'common/types'
 import { slugify } from 'backend/wiki_game_info/codeweavers/utils'
 
-import { loadIndex, type CrossoverIndexDeps, IndexDescriptor } from './fetcher'
+import type {
+  CrossoverIndexDeps,
+  CrossoverIndexFetcher,
+  IndexDescriptor
+} from './fetcher'
 import { crossoverIndexSchema, CrossoverIndex } from './schema'
 import type { CachedIndex } from './stores'
 import { normalize, NAME_MATCHING_SHIPS } from './normalize'
@@ -30,35 +34,6 @@ export type IndexLookupInput = Pick<GameInfo, 'runner' | 'app_name' | 'title'>
 interface IndexMaps {
   bySteamId: Map<string, number>
   byName: Map<string, number>
-}
-
-/** Memoized keyed on `generatedAt` so the maps rebuild only when the
- * underlying payload actually swaps (not on every lookup). */
-let memoized: { generatedAt: string; maps: IndexMaps } | null = null
-
-function buildMaps(index: CrossoverIndex): IndexMaps {
-  if (memoized && memoized.generatedAt === index.generatedAt) {
-    return memoized.maps
-  }
-
-  const bySteamId = new Map<string, number>()
-  const byName = new Map<string, number>()
-
-  // First-wins on collision — the builder already deduped by D-04, this is
-  // just a defensive tie-break so the runtime lookup never has to choose.
-  for (const entry of index.entries) {
-    if (entry.steamid && !bySteamId.has(entry.steamid)) {
-      bySteamId.set(entry.steamid, entry.rating)
-    }
-    const key = normalize(entry.name)
-    if (!byName.has(key)) {
-      byName.set(key, entry.rating)
-    }
-  }
-
-  const maps = { bySteamId, byName }
-  memoized = { generatedAt: index.generatedAt, maps }
-  return maps
 }
 
 /**
@@ -90,117 +65,6 @@ function resolveRating(
 }
 
 /**
- * Index-only CrossOver lookup (D-11). Three outcomes, with ZERO network calls
- * beyond `loadIndex`'s own cached/TTL'd fetch (which itself never throws):
- *  - hit: a `CodeweaversInfo` carrying the index rating and `slugify(title)`.
- *  - loaded miss: the index loaded but has no admissible match (including a
- *    gated-out non-Steam name match). Returns the "checked, none found" marker
- *    `{ macRating: null, linuxRating: null, slug: '' }` so the caller caches it
- *    and the UI shows "Unrated". The slug is empty on purpose: the official
- *    dump has no Mac-rated entry, so a constructed /compatibility/crossover/
- *    <slug> page would likely be a soft-404, and an empty slug makes the UI
- *    open the CodeWeavers search instead.
- *  - unavailable (index could not load, or the lookup threw): null, which the
- *    caller treats as retryable rather than a cached miss.
- * Never fabricates a rating and never adds a `medal` field (D-12 --
- * `CodeweaversInfo` is unchanged).
- */
-export async function getCodeweaversFromIndex(
-  deps: CrossoverIndexDeps,
-  gameInfo: IndexLookupInput
-): Promise<CodeweaversInfo | null> {
-  try {
-    const index = await loadIndex(deps, crossoverIndexDescriptor)
-    if (!index) {
-      return null
-    }
-
-    const maps = buildMaps(index)
-    const rating = resolveRating(gameInfo, maps)
-    if (rating === null) {
-      return { macRating: null, linuxRating: null, slug: '' }
-    }
-
-    return {
-      macRating: rating,
-      linuxRating: null,
-      slug: slugify(gameInfo.title)
-    }
-  } catch (error) {
-    logError(
-      [
-        `Was not able to look up CrossOver index rating for ${gameInfo.title}`,
-        error
-      ],
-      LogPrefix.Backend
-    )
-    return null
-  }
-}
-
-/**
- * WR-07 (34.2-REVIEW.md round 1): batch entry point for callers that resolve
- * MANY games in one pass. Loads the index once and returns a resolver closed
- * over the built maps.
- *
- * `getCodeweaversFromIndex` is the right shape for a single lookup and the
- * wrong shape for a loop: it calls `loadIndex` per invocation, and `loadIndex`
- * reads the whole payload back out of `crossoverIndexStore` every time
- * (electron-store's `get` re-reads and re-parses the backing file on each
- * access — measured at ~1.4ms per call against a 239KB / 2421-entry real
- * store). Per game that is a linear cost for a value that cannot change
- * mid-pass, and on a stale cache it was a network attempt per game.
- * `buildMaps` was already memoized on `generatedAt`, so map construction was
- * never the cost — the repeated LOAD was.
- *
- * Resolution is identical to `getCodeweaversFromIndex`'s: the same D-02-gated
- * `resolveRating`. A total load failure yields a resolver returning null for
- * everything, matching that function's null-on-any-miss contract, so callers
- * cannot tell a failed load from a miss — deliberate, and the same
- * degradation D-09 already specifies.
- */
-export async function buildIndexResolver(
-  deps: CrossoverIndexDeps
-): Promise<(gameInfo: IndexLookupInput) => number | null> {
-  try {
-    const index = await loadIndex(deps, crossoverIndexDescriptor)
-    if (!index) {
-      return () => null
-    }
-
-    const maps = buildMaps(index)
-    return (gameInfo: IndexLookupInput) => resolveRating(gameInfo, maps)
-  } catch (error) {
-    logError(
-      ['Was not able to load the CrossOver index for batch resolution', error],
-      LogPrefix.Backend
-    )
-    return () => null
-  }
-}
-
-/**
- * Synchronous self-heal probe (D-13): reads the store's last-good payload
- * (no network) and applies the SAME D-02-gated resolution as
- * `getCodeweaversFromIndex`. Used by `wiki_game_info.ts` to decide whether a
- * cached Phase-16 "checked, none found" miss is now covered by the index.
- */
-export function crossoverIndexHas(
-  deps: CrossoverIndexDeps,
-  gameInfo: IndexLookupInput
-): boolean {
-  const cached = deps.stores.crossoverIndex.crossoverIndexStore.get(
-    crossoverIndexDescriptor.name
-  ) as CachedIndex<CrossoverIndex> | undefined
-  if (!cached) {
-    return false
-  }
-
-  const maps = buildMaps(cached.data)
-  return resolveRating(gameInfo, maps) !== null
-}
-
-/**
  * D-16 eligibility predicate consumed by 19-06's `buildCrossoverRatingMap`:
  * "was this game looked up at all?" Steam-runner games are ALWAYS eligible
  * (the exact-AppID join is ungated); a non-Steam game is eligible only when
@@ -215,4 +79,172 @@ export function isCrossoverIndexEligible(
     storeCapabilities[gameInfo.runner].appNameIsSteamAppId ||
     NAME_MATCHING_SHIPS
   )
+}
+
+export interface CrossoverIndexLookups {
+  getCodeweaversFromIndex(
+    deps: CrossoverIndexDeps,
+    gameInfo: IndexLookupInput
+  ): Promise<CodeweaversInfo | null>
+  buildIndexResolver(
+    deps: CrossoverIndexDeps
+  ): Promise<(gameInfo: IndexLookupInput) => number | null>
+  crossoverIndexHas(
+    deps: CrossoverIndexDeps,
+    gameInfo: IndexLookupInput
+  ): boolean
+}
+
+/**
+ * One memoized index-maps slot per boot (66.4-17, D-05): the maps rebuild only when the underlying
+ * payload's `generatedAt` swaps. Construction allocates nothing.
+ */
+export function createCrossoverIndex(deps: {
+  fetcher: Pick<CrossoverIndexFetcher, 'loadIndex'>
+}): CrossoverIndexLookups {
+  const { fetcher } = deps
+  /** Memoized keyed on `generatedAt` so the maps rebuild only when the
+   * underlying payload actually swaps (not on every lookup). */
+  let memoized: { generatedAt: string; maps: IndexMaps } | null = null
+
+  function buildMaps(index: CrossoverIndex): IndexMaps {
+    if (memoized && memoized.generatedAt === index.generatedAt) {
+      return memoized.maps
+    }
+
+    const bySteamId = new Map<string, number>()
+    const byName = new Map<string, number>()
+
+    // First-wins on collision — the builder already deduped by D-04, this is
+    // just a defensive tie-break so the runtime lookup never has to choose.
+    for (const entry of index.entries) {
+      if (entry.steamid && !bySteamId.has(entry.steamid)) {
+        bySteamId.set(entry.steamid, entry.rating)
+      }
+      const key = normalize(entry.name)
+      if (!byName.has(key)) {
+        byName.set(key, entry.rating)
+      }
+    }
+
+    const maps = { bySteamId, byName }
+    memoized = { generatedAt: index.generatedAt, maps }
+    return maps
+  }
+
+  /**
+   * Index-only CrossOver lookup (D-11). Three outcomes, with ZERO network calls
+   * beyond `loadIndex`'s own cached/TTL'd fetch (which itself never throws):
+   *  - hit: a `CodeweaversInfo` carrying the index rating and `slugify(title)`.
+   *  - loaded miss: the index loaded but has no admissible match (including a
+   *    gated-out non-Steam name match). Returns the "checked, none found" marker
+   *    `{ macRating: null, linuxRating: null, slug: '' }` so the caller caches it
+   *    and the UI shows "Unrated". The slug is empty on purpose: the official
+   *    dump has no Mac-rated entry, so a constructed /compatibility/crossover/
+   *    <slug> page would likely be a soft-404, and an empty slug makes the UI
+   *    open the CodeWeavers search instead.
+   *  - unavailable (index could not load, or the lookup threw): null, which the
+   *    caller treats as retryable rather than a cached miss.
+   * Never fabricates a rating and never adds a `medal` field (D-12 --
+   * `CodeweaversInfo` is unchanged).
+   */
+  async function getCodeweaversFromIndex(
+    deps: CrossoverIndexDeps,
+    gameInfo: IndexLookupInput
+  ): Promise<CodeweaversInfo | null> {
+    try {
+      const index = await fetcher.loadIndex(deps, crossoverIndexDescriptor)
+      if (!index) {
+        return null
+      }
+
+      const maps = buildMaps(index)
+      const rating = resolveRating(gameInfo, maps)
+      if (rating === null) {
+        return { macRating: null, linuxRating: null, slug: '' }
+      }
+
+      return {
+        macRating: rating,
+        linuxRating: null,
+        slug: slugify(gameInfo.title)
+      }
+    } catch (error) {
+      logError(
+        [
+          `Was not able to look up CrossOver index rating for ${gameInfo.title}`,
+          error
+        ],
+        LogPrefix.Backend
+      )
+      return null
+    }
+  }
+
+  /**
+   * WR-07 (34.2-REVIEW.md round 1): batch entry point for callers that resolve
+   * MANY games in one pass. Loads the index once and returns a resolver closed
+   * over the built maps.
+   *
+   * `getCodeweaversFromIndex` is the right shape for a single lookup and the
+   * wrong shape for a loop: it calls `loadIndex` per invocation, and `loadIndex`
+   * reads the whole payload back out of `crossoverIndexStore` every time
+   * (electron-store's `get` re-reads and re-parses the backing file on each
+   * access — measured at ~1.4ms per call against a 239KB / 2421-entry real
+   * store). Per game that is a linear cost for a value that cannot change
+   * mid-pass, and on a stale cache it was a network attempt per game.
+   * `buildMaps` was already memoized on `generatedAt`, so map construction was
+   * never the cost — the repeated LOAD was.
+   *
+   * Resolution is identical to `getCodeweaversFromIndex`'s: the same D-02-gated
+   * `resolveRating`. A total load failure yields a resolver returning null for
+   * everything, matching that function's null-on-any-miss contract, so callers
+   * cannot tell a failed load from a miss — deliberate, and the same
+   * degradation D-09 already specifies.
+   */
+  async function buildIndexResolver(
+    deps: CrossoverIndexDeps
+  ): Promise<(gameInfo: IndexLookupInput) => number | null> {
+    try {
+      const index = await fetcher.loadIndex(deps, crossoverIndexDescriptor)
+      if (!index) {
+        return () => null
+      }
+
+      const maps = buildMaps(index)
+      return (gameInfo: IndexLookupInput) => resolveRating(gameInfo, maps)
+    } catch (error) {
+      logError(
+        [
+          'Was not able to load the CrossOver index for batch resolution',
+          error
+        ],
+        LogPrefix.Backend
+      )
+      return () => null
+    }
+  }
+
+  /**
+   * Synchronous self-heal probe (D-13): reads the store's last-good payload
+   * (no network) and applies the SAME D-02-gated resolution as
+   * `getCodeweaversFromIndex`. Used by `wiki_game_info.ts` to decide whether a
+   * cached Phase-16 "checked, none found" miss is now covered by the index.
+   */
+  function crossoverIndexHas(
+    deps: CrossoverIndexDeps,
+    gameInfo: IndexLookupInput
+  ): boolean {
+    const cached = deps.stores.crossoverIndex.crossoverIndexStore.get(
+      crossoverIndexDescriptor.name
+    ) as CachedIndex<CrossoverIndex> | undefined
+    if (!cached) {
+      return false
+    }
+
+    const maps = buildMaps(cached.data)
+    return resolveRating(gameInfo, maps) !== null
+  }
+
+  return { getCodeweaversFromIndex, buildIndexResolver, crossoverIndexHas }
 }

@@ -653,9 +653,6 @@ describe('runWineCommandForGame Windows-branch shell removal (T-34.5-C6-49-03, P
         logError: jest.fn(),
         LogPrefix: { Backend: 'Backend', WineDownloader: 'WineDownloader' }
       }))
-      jest.doMock('../../backend_events', () => ({
-        backendEvents: { on: jest.fn(), emit: jest.fn() }
-      }))
       jest.doMock('../sendChannelObservable', () => ({
         logSendHandlerReached: jest.fn()
       }))
@@ -680,6 +677,8 @@ describe('runWineCommandForGame Windows-branch shell removal (T-34.5-C6-49-03, P
           setupEnvVars: jest.fn(),
           setupWineEnvVars: jest.fn()
         },
+        // The boot's event bus is a scripted fake here: the releases listener only has to subscribe.
+        appRuntime: { events: { on: jest.fn(), emit: jest.fn() } },
         spawnAsync: spawnAsyncMock
       })
       isolatedHandler = isolatedIpc.getHandler(

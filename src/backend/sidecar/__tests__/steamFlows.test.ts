@@ -21,6 +21,7 @@
  * DISPATCH (was the right function called, with the right runner) rather than about a real
  * non-Steam launch succeeding end to end.
  */
+import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 
 // Per case (reset in freshRegistry): the boot is handed this root so the stores a case seeds
@@ -124,7 +125,9 @@ let steamLibraryStore: ReturnType<
   typeof import('backend/storeManagers/steam/stores').createSteamStores
 >['steamLibraryStore']
 let createGlobalConfig: typeof import('backend/config').createGlobalConfig
-let recentGamesDeps: RecentGamesModule.RecentGamesDeps
+let recentGamesDeps: RecentGamesModule.RecentGamesDeps & {
+  appRuntime: ReturnType<typeof createTestAppRuntime>
+}
 
 function freshRegistry(): void {
   jest.resetModules()
@@ -144,6 +147,7 @@ function freshRegistry(): void {
   ;({ createGlobalConfig } = require('backend/config'))
   recentGamesDeps = {
     sendFrontendMessage: jest.fn(),
+    appRuntime: createTestAppRuntime(),
     stores: {
       kvs: require('backend/constants/key_value_stores').createKvsStores({
         registry: createStoreRegistry(),

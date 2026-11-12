@@ -1,3 +1,4 @@
+import type { AppRuntimeSlice } from 'backend/appRuntime'
 import { notify } from 'backend/dialog/dialog'
 import { logError, logInfo, LogPrefix } from 'backend/logger'
 import type { ManagerDeps } from 'backend/services/types'
@@ -15,7 +16,9 @@ import { join } from 'path'
 export type UninstallerDeps = Pick<
   ManagerDeps,
   'libraryManagers' | 'notifications' | 'paths' | 'sendFrontendMessage'
-> & { config: Pick<GlobalConfigSlice, 'getSettings'> }
+> & {
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+} & AppRuntimeSlice<'events'>
 
 export const removePrefix = async (
   deps: UninstallerDeps,

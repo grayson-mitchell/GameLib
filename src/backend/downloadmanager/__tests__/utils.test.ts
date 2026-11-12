@@ -55,7 +55,14 @@ const libraryManagerMap = {
 }
 // The connectivity slice: `isOnline` is a jest.fn each case re-arms.
 const isOnline = jest.fn().mockReturnValue(true)
+// The boot's event bus the stall watchdog listens on: a fresh runtime per test (built in the
+// file-scope `beforeEach` below), as one per boot in production.
+let appRuntime: import('backend/appRuntime').AppRuntime
 const queueDeps = {
+  get appRuntime() {
+    return appRuntime
+  },
+  paths: { fixesPath: '/test-fixes' },
   managers: { library: libraryManagerMap },
   aborts: {
     call: (id: string) => callAbortController(id),
@@ -126,7 +133,7 @@ import { existsSync } from 'graceful-fs'
 import { fetchRemoteKnownFixes } from 'backend/knownFixesFetcher'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
 import { logWarning, logError, LogPrefix } from 'backend/logger'
-import { backendEvents } from 'backend/backend_events'
+import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { downloadFile } from '../../utils'
 import type { InstallParams, GameStatus, GameInfo } from 'common/types'
 import { readFileSync } from 'fs'
@@ -185,7 +192,7 @@ function emitAdvance(
     status: 'installing',
     progress: { bytes: '', eta: '', ...progress }
   }
-  backendEvents.emit(`progressUpdate-${appName}`, payload)
+  appRuntime.events.emit(`progressUpdate-${appName}`, payload)
 }
 
 // File-scope, applies to every test in this file (registered outside any
@@ -193,6 +200,7 @@ function emitAdvance(
 // including the very first one -- re-apply it here rather than duplicating
 // this block into every describe's own beforeEach.
 beforeEach(() => {
+  appRuntime = createTestAppRuntime()
   // resetMocks:true also wipes the fetcher mock's resolved value; the real
   // fetcher always returns a promise.
   ;(fetchRemoteKnownFixes as jest.Mock).mockResolvedValue(undefined)
@@ -1062,6 +1070,7 @@ describe('installQueueElement — quick 261026-avw: every store fetches known fi
     await installQueueElement(queueDeps, makeParams())
 
     expect(fetchRemoteKnownFixes).toHaveBeenCalledWith(
+      expect.anything(),
       expect.any(String),
       'steam'
     )
@@ -1082,7 +1091,11 @@ describe('installQueueElement — quick 261026-avw: every store fetches known fi
       })
     )
 
-    expect(fetchRemoteKnownFixes).toHaveBeenCalledWith('1207658930', 'gog')
+    expect(fetchRemoteKnownFixes).toHaveBeenCalledWith(
+      expect.anything(),
+      '1207658930',
+      'gog'
+    )
     expect(downloadFile).not.toHaveBeenCalledWith(
       expect.objectContaining({
         url: expect.stringContaining('known-fixes')

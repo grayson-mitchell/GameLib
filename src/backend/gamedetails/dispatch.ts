@@ -37,7 +37,7 @@
  * regression.
  */
 
-import type { FrontendMessageDeps } from '../host/frontendMessage'
+import type { StatusUpdateDeps } from 'backend/appRuntime'
 import i18next from 'i18next'
 
 import type {
@@ -65,7 +65,7 @@ import { LegendaryUser } from '../storeManagers/legendary/user'
 import { logError, logInfo, logWarning, LogPrefix } from '../logger'
 
 /** What the game-details dispatchers read: the manager map and the kvs config store (66.1, R3). */
-export interface GameDetailsDeps extends NotifyDeps, FrontendMessageDeps {
+export interface GameDetailsDeps extends NotifyDeps, StatusUpdateDeps {
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   managers: Pick<StoreManagers, 'library'>
   /** The boot-owned abort registry a kill signals through (66.4-13). */

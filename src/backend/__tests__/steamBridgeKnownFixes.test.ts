@@ -6,6 +6,7 @@
  * mocked; no child process is spawned.
  */
 
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
@@ -25,19 +26,6 @@ jest.mock('os', () => {
 // Under jest app.getAppPath() resolves to the repo root, so the real
 // bundledFixesPath is the repo's own public/fixes. Point it at a tmp dir so the
 // tests can never write to or delete the shipped profiles.
-jest.mock('../constants/paths', () => {
-  const actual = jest.requireActual('../constants/paths')
-  const path = jest.requireActual('path')
-  const os = jest.requireActual('os')
-  return {
-    ...actual,
-    bundledFixesPath: path.join(
-      os.tmpdir(),
-      `gamelib-bundled-fixes-test-${process.pid}-bridge`
-    )
-  }
-})
-
 const mockWinetricksInstall = jest.fn()
 const mockRunWineCommand = jest.fn()
 const mockSendGameStatusUpdate = jest.fn()
@@ -71,7 +59,6 @@ jest.mock('backend/engine/bottlePrimitives', () => ({
 jest.mock('../storeManagers/steam/bottle', () => ({}))
 
 import type { GameSettings } from 'common/types'
-import { bundledFixesPath, fixesPath, localFixesPath } from '../constants/paths'
 import {
   applySteamBridgeKnownFixes,
   buildRegistryFixCommandParts,
@@ -81,6 +68,19 @@ import {
 } from '../storeManagers/steam/bridgeKnownFixes'
 import { defined } from './helpers/defined'
 
+// A per-file disposable AppPaths root (66.4-17): the known-fix readers take their layer directories
+// from `deps.paths`, so no module is mocked. The bundled layer is nested as `<root>/public/fixes`,
+// the same depth as the shipped `<app>/public/fixes`.
+const TEST_ROOT = join(
+  tmpdir(),
+  `gamelib-bundled-fixes-test-${process.pid}-bridge`
+)
+const paths = createTestAppPaths(TEST_ROOT, {
+  bundledFixesPath: join(TEST_ROOT, 'public', 'fixes')
+})
+const { bundledFixesPath, fixesPath, localFixesPath } = paths
+const deps = { paths }
+
 const APP_ID = '480'
 const ROOT =
   '/mock/Bottles/GameLibSteamBridge-480/drive_c/steamapps/common/Game'
@@ -88,7 +88,8 @@ const ROOT =
 const DEPS = {
   commandRunner: {
     runWineCommand: (...args: unknown[]) => mockRunWineCommand(...args)
-  }
+  },
+  paths
 } as unknown as Parameters<typeof applySteamBridgeKnownFixes>[0]
 
 const BRIDGE = {
@@ -720,7 +721,7 @@ describe('bundled 63000 profile', () => {
       fs.readFileSync(path.join(fixesDir, '63000-steam.profile.json'), 'utf8')
     )
     writeBundled(parsed)
-    expect(steamShimFeatureCfgLines(APP_ID)).toEqual([
+    expect(steamShimFeatureCfgLines(deps, APP_ID)).toEqual([
       'fix.wgl.hideExtensions=WGL_ARB_create_context*'
     ])
     expect(parsed.evidence).toContain('034-known-fixes-v2-hoard')
@@ -739,7 +740,7 @@ describe('steamShimFeatureCfgLines', () => {
 
   it('turns a local profile into one fix line', () => {
     writeLocal({ shimFeatures: HIDE })
-    expect(steamShimFeatureCfgLines(APP_ID)).toEqual([
+    expect(steamShimFeatureCfgLines(deps, APP_ID)).toEqual([
       'fix.wgl.hideExtensions=WGL_ARB_create_context*'
     ])
   })
@@ -750,7 +751,7 @@ describe('steamShimFeatureCfgLines', () => {
         'wgl.hideExtensions': ['WGL_ARB_create_context', 'WGL_EXT_swap*']
       }
     })
-    expect(steamShimFeatureCfgLines(APP_ID)).toEqual([
+    expect(steamShimFeatureCfgLines(deps, APP_ID)).toEqual([
       'fix.wgl.hideExtensions=WGL_ARB_create_context,WGL_EXT_swap*'
     ])
   })
@@ -761,7 +762,7 @@ describe('steamShimFeatureCfgLines', () => {
       JSON.stringify({ shimFeatures: HIDE })
     )
     writeIn(localFixesPath, { shimFeatures: HIDE })
-    expect(steamShimFeatureCfgLines(APP_ID)).toEqual([])
+    expect(steamShimFeatureCfgLines(deps, APP_ID)).toEqual([])
   })
 
   it.each([
@@ -774,13 +775,13 @@ describe('steamShimFeatureCfgLines', () => {
     [Array.from({ length: 17 }, (_, i) => `WGL_${i}`)]
   ])('drops the feature for invalid patterns %j', (patterns) => {
     writeLocal({ shimFeatures: { 'wgl.hideExtensions': patterns } })
-    expect(steamShimFeatureCfgLines(APP_ID)).toEqual([])
+    expect(steamShimFeatureCfgLines(deps, APP_ID)).toEqual([])
     expect(mockLogWarning).toHaveBeenCalled()
   })
 
   it('drops an unknown feature and keeps the known one', () => {
     writeLocal({ shimFeatures: { ...HIDE, 'gl.nope': true } })
-    expect(steamShimFeatureCfgLines(APP_ID)).toEqual([
+    expect(steamShimFeatureCfgLines(deps, APP_ID)).toEqual([
       'fix.wgl.hideExtensions=WGL_ARB_create_context*'
     ])
     expect(mockLogWarning).toHaveBeenCalledWith(
@@ -945,7 +946,7 @@ describe('steamBridgeLaunchCommandParts (quick 261029-mbl)', () => {
   })
 
   it('returns just the exe with no fixes file', () => {
-    expect(steamBridgeLaunchCommandParts('70', exe, root)).toEqual([exe])
+    expect(steamBridgeLaunchCommandParts(deps, '70', exe, root)).toEqual([exe])
   })
 
   it('appends launchArgs after the exe', () => {
@@ -953,7 +954,7 @@ describe('steamBridgeLaunchCommandParts (quick 261029-mbl)', () => {
       join(fixesPath, '70-steam.json'),
       JSON.stringify({ launchArgs: ['-dx11'] })
     )
-    expect(steamBridgeLaunchCommandParts('70', exe, root)).toEqual([
+    expect(steamBridgeLaunchCommandParts(deps, '70', exe, root)).toEqual([
       exe,
       '-dx11'
     ])
@@ -964,7 +965,7 @@ describe('steamBridgeLaunchCommandParts (quick 261029-mbl)', () => {
       join(fixesPath, '70-steam.json'),
       JSON.stringify({ exeOverride: 'bin/alt.exe', launchArgs: ['-x'] })
     )
-    expect(steamBridgeLaunchCommandParts('70', exe, root)).toEqual([
+    expect(steamBridgeLaunchCommandParts(deps, '70', exe, root)).toEqual([
       join(root, 'bin', 'alt.exe'),
       '-x'
     ])
@@ -975,12 +976,15 @@ describe('steamBridgeLaunchCommandParts (quick 261029-mbl)', () => {
       join(fixesPath, '70-steam.json'),
       JSON.stringify({ exeOverride: 'bin/missing.exe', launchArgs: ['-x'] })
     )
-    expect(steamBridgeLaunchCommandParts('70', exe, root)).toEqual([exe, '-x'])
+    expect(steamBridgeLaunchCommandParts(deps, '70', exe, root)).toEqual([
+      exe,
+      '-x'
+    ])
     writeFileSync(
       join(fixesPath, '70-steam.json'),
       JSON.stringify({ exeOverride: 'bin/alt.exe', launchArgs: ['-x'] })
     )
-    expect(steamBridgeLaunchCommandParts('70', exe, undefined)).toEqual([
+    expect(steamBridgeLaunchCommandParts(deps, '70', exe, undefined)).toEqual([
       exe,
       '-x'
     ])

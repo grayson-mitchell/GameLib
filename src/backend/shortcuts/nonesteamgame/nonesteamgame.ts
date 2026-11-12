@@ -25,7 +25,10 @@ import {
   type DialogBoxDeps,
   type NotifyDeps
 } from '../../dialog/dialog'
-import { getWikiGameInfo } from 'backend/wiki_game_info/wiki_game_info'
+import {
+  getWikiGameInfo,
+  type WikiGameInfoDeps
+} from 'backend/wiki_game_info/wiki_game_info'
 import { isAppImage, isFlatpak, isWindows } from 'backend/constants/environment'
 import type { Game } from 'common/types/game_manager'
 import type { InfoCaches, Stores } from 'backend/services/types'
@@ -214,7 +217,7 @@ export type NonSteamGameDeps = ShortcutsDeps &
   NotifyDeps & {
     stores: Pick<Stores, 'kvs' | 'wikiGameInfo' | 'crossoverIndex'>
     infoCaches: Pick<InfoCaches, 'hltb'>
-  }
+  } & Pick<WikiGameInfoDeps, 'appRuntime'>
 
 /**
  * Adds a non-steam game to steam via editing shortcuts.vdf

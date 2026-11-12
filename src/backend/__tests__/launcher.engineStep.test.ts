@@ -56,7 +56,6 @@ import { join } from 'path'
 import { createLauncher } from 'backend/launcher'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { createGameLogWriter } from 'backend/logger'
-import { resetLaunchSingleFlightForTests } from 'backend/launchSingleFlight'
 
 const KEY = 'legendary:Quail'
 const STORED = { verboseLogs: true, wineVersion: { name: 'stored' } }
@@ -72,7 +71,8 @@ let launchMock: jest.Mock
 
 beforeEach(() => {
   calls.length = 0
-  resetLaunchSingleFlightForTests()
+  // A fresh launcher (and so a fresh single-flight table) per test, as one per boot in production.
+  launchEventCallback = buildLauncher().launchEventCallback
   globalSettingsMock.mockReturnValue({
     minimizeOnLaunch: false,
     noTrayIcon: true,
@@ -125,19 +125,21 @@ const engineRuntime = {
     getLaunchSettings: (...a: unknown[]) => overlayMock(...a)
   } as never
 }
-const { launchEventCallback } = createLauncher({
-  ...slices,
-  engineRuntime,
-  onlineMonitor: createTestOnlineMonitor({ online: false }),
-  libraryManagers: {
-    legendary: { getGame: (...a: unknown[]) => getGameMock(...a) }
-  } as never,
-  launchHooks: { legendary: {} } as never,
-  commandRunner: {} as never,
-  runner: { run: () => Promise.reject(new Error('unscripted run')) } as never,
-  spawnAsync: (() => Promise.reject(new Error('unscripted spawn'))) as never,
-  stores: { kvs: { tsStore }, wineManager: {}, runsForMe: {} } as never
-})
+const buildLauncher = () =>
+  createLauncher({
+    ...slices,
+    engineRuntime,
+    onlineMonitor: createTestOnlineMonitor({ online: false }),
+    libraryManagers: {
+      legendary: { getGame: (...a: unknown[]) => getGameMock(...a) }
+    } as never,
+    launchHooks: { legendary: {} } as never,
+    commandRunner: {} as never,
+    runner: { run: () => Promise.reject(new Error('unscripted run')) } as never,
+    spawnAsync: (() => Promise.reject(new Error('unscripted spawn'))) as never,
+    stores: { kvs: { tsStore }, wineManager: {}, runsForMe: {} } as never
+  })
+let launchEventCallback: ReturnType<typeof buildLauncher>['launchEventCallback']
 
 const run = () => launchEventCallback({ appName: 'Quail', runner: 'legendary' })
 

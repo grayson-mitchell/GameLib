@@ -12,6 +12,7 @@
  * `electron-store` is never `requireActual`'d anywhere in this file.
  */
 
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
@@ -38,19 +39,6 @@ jest.mock('os', () => {
 // bundledFixesPath is the repo's own public/fixes. `readKnownFixes` now reads the
 // bundled layer, so redirect it to a tmp dir (quick 261025-vnf) so tests can
 // never read or delete shipped files.
-jest.mock('../constants/paths', () => {
-  const actual = jest.requireActual('../constants/paths')
-  const path = jest.requireActual('path')
-  const os = jest.requireActual('os')
-  return {
-    ...actual,
-    bundledFixesPath: path.join(
-      os.tmpdir(),
-      `gamelib-bundled-fixes-test-${process.pid}-plain`
-    )
-  }
-})
-
 jest.mock('../logger', () => ({
   logWarning: jest.fn()
 }))
@@ -62,9 +50,21 @@ import {
   TIER1_KNOWN_FIX_KEYS
 } from '../knownFixes'
 import type { KnowFixesInfo } from 'common/types'
-import { bundledFixesPath, fixesPath } from '../constants/paths'
 import { logWarning as mockedLogWarning } from '../logger'
 import { defined } from './helpers/defined'
+
+// A per-file disposable AppPaths root (66.4-17): the known-fix readers take their layer directories
+// from `deps.paths`, so no module is mocked. The bundled layer is nested as `<root>/public/fixes`,
+// the same depth as the shipped `<app>/public/fixes`.
+const TEST_ROOT = join(
+  tmpdir(),
+  `gamelib-bundled-fixes-test-${process.pid}-plain`
+)
+const paths = createTestAppPaths(TEST_ROOT, {
+  bundledFixesPath: join(TEST_ROOT, 'public', 'fixes')
+})
+const { bundledFixesPath, fixesPath } = paths
+const deps = { paths }
 
 describe('readKnownFixes', () => {
   beforeEach(() => {
@@ -77,7 +77,7 @@ describe('readKnownFixes', () => {
   })
 
   it('REQ-34.2-05 returns null when no fix file exists for the appName/runner pair', () => {
-    expect(readKnownFixes('no-such-app', 'gog')).toBeNull()
+    expect(readKnownFixes(deps, 'no-such-app', 'gog')).toBeNull()
   })
 
   it('REQ-34.2-05 returns the parsed object when a well-formed fix file exists', () => {
@@ -87,13 +87,13 @@ describe('readKnownFixes', () => {
       JSON.stringify(fixture)
     )
 
-    expect(readKnownFixes('well-formed-app', 'gog')).toEqual(fixture)
+    expect(readKnownFixes(deps, 'well-formed-app', 'gog')).toEqual(fixture)
   })
 
   it('REQ-34.2-05 returns null AND logs a warning when the file exists but is malformed JSON', () => {
     writeFileSync(join(fixesPath, 'malformed-app-gog.json'), '{ not valid json')
 
-    const result = readKnownFixes('malformed-app', 'gog')
+    const result = readKnownFixes(deps, 'malformed-app', 'gog')
 
     expect(result).toBeNull()
     expect(mockedLogWarning).toHaveBeenCalledTimes(1)
@@ -114,8 +114,10 @@ describe('readKnownFixes', () => {
       JSON.stringify(legendaryFixture)
     )
 
-    expect(readKnownFixes('shared-app', 'gog')).toEqual(gogFixture)
-    expect(readKnownFixes('shared-app', 'legendary')).toEqual(legendaryFixture)
+    expect(readKnownFixes(deps, 'shared-app', 'gog')).toEqual(gogFixture)
+    expect(readKnownFixes(deps, 'shared-app', 'legendary')).toEqual(
+      legendaryFixture
+    )
   })
 
   it('quick 261024-tny reads <id>-steam.json for runner steam, never <id>-undefined.json', () => {
@@ -129,8 +131,8 @@ describe('readKnownFixes', () => {
       JSON.stringify({ winetricks: ['stale'] })
     )
 
-    expect(readKnownFixes('steamapp-1', 'steam')).toEqual(steamFixture)
-    expect(readKnownFixes('steamapp-2', 'steam')).toBeNull()
+    expect(readKnownFixes(deps, 'steamapp-1', 'steam')).toEqual(steamFixture)
+    expect(readKnownFixes(deps, 'steamapp-2', 'steam')).toBeNull()
   })
 
   // WR-06 (34.2-REVIEW.md round 1): `appName` reaches this function as a free
@@ -145,7 +147,7 @@ describe('readKnownFixes', () => {
     writeFileSync(outside, JSON.stringify({ winetricks: ['pwned'] }))
 
     try {
-      expect(readKnownFixes('../outside-the-fixes-dir', 'gog')).toBeNull()
+      expect(readKnownFixes(deps, '../outside-the-fixes-dir', 'gog')).toBeNull()
       expect(mockedLogWarning).toHaveBeenCalledWith(
         expect.stringContaining('outside the known-fixes directory')
       )
@@ -162,7 +164,7 @@ describe('readKnownFixes', () => {
     writeFileSync(deep, JSON.stringify({ winetricks: ['pwned-deep'] }))
 
     try {
-      expect(readKnownFixes('../../deep-escape', 'gog')).toBeNull()
+      expect(readKnownFixes(deps, '../../deep-escape', 'gog')).toBeNull()
     } finally {
       rmSync(deep, { force: true })
     }
@@ -177,7 +179,7 @@ describe('readKnownFixes', () => {
       join(fixesPath, 'ordinary-app-gog.json'),
       JSON.stringify(fixture)
     )
-    expect(readKnownFixes('ordinary-app', 'gog')).toEqual(fixture)
+    expect(readKnownFixes(deps, 'ordinary-app', 'gog')).toEqual(fixture)
   })
 
   it('REQ-34.2-05 resolves fixesPath under os.tmpdir(), never the real config directory', () => {

@@ -49,7 +49,7 @@ import {
   Runner
 } from 'common/types'
 import { storeMap } from 'common/utils'
-import { bundledFixesPath, fixesPath, localFixesPath } from './constants/paths'
+import type { AppPaths } from './process/context'
 import { logWarning } from './logger'
 
 const TIER1_FILE_SUFFIX = '.json'
@@ -304,15 +304,26 @@ function filterTier2Profile(
   return out as unknown as KnownFixProfile
 }
 
+/** The layer directories the known-fix readers walk, from the boot's paths (66.4-17). */
+export interface KnownFixPathsDeps {
+  paths: Pick<AppPaths, 'fixesPath' | 'bundledFixesPath' | 'localFixesPath'>
+}
+
+/** The local and bundled layers only: tier 2 and the status probe never read the remote directory. */
+export interface KnownFixLocalPathsDeps {
+  paths: Pick<AppPaths, 'bundledFixesPath' | 'localFixesPath'>
+}
+
 /** Tier 1: `<appName>-<store>.json`, local > bundled > remote, allow-listed. */
 export function readKnownFixes(
+  deps: KnownFixPathsDeps,
   appName: string,
   runner: Runner
 ): KnowFixesInfo | null {
   const layers: [string, string][] = [
-    [localFixesPath, 'local'],
-    [bundledFixesPath, 'bundled'],
-    [fixesPath, 'remote']
+    [deps.paths.localFixesPath, 'local'],
+    [deps.paths.bundledFixesPath, 'bundled'],
+    [deps.paths.fixesPath, 'remote']
   ]
   for (const [dir, label] of layers) {
     const parsed = readFixesFileWithin(
@@ -337,13 +348,14 @@ type KnownFixLayer = 'local' | 'bundled' | 'remote'
  * (a user-private override). Never throws.
  */
 export function readKnownFixesWithLayer(
+  deps: KnownFixPathsDeps,
   appName: string,
   runner: Runner
 ): { fix: KnowFixesInfo; layer: KnownFixLayer } | null {
   const layers: [string, KnownFixLayer][] = [
-    [localFixesPath, 'local'],
-    [bundledFixesPath, 'bundled'],
-    [fixesPath, 'remote']
+    [deps.paths.localFixesPath, 'local'],
+    [deps.paths.bundledFixesPath, 'bundled'],
+    [deps.paths.fixesPath, 'remote']
   ]
   for (const [dir, label] of layers) {
     const parsed = readFixesFileWithin(
@@ -365,12 +377,13 @@ export function readKnownFixesWithLayer(
  * `fixesPath` directory is deliberately absent from the layer list.
  */
 export function readKnownFixProfile(
+  deps: KnownFixLocalPathsDeps,
   appName: string,
   runner: Runner
 ): KnownFixProfile | null {
   const layers: [string, string][] = [
-    [localFixesPath, 'local'],
-    [bundledFixesPath, 'bundled']
+    [deps.paths.localFixesPath, 'local'],
+    [deps.paths.bundledFixesPath, 'bundled']
   ]
   for (const [dir, label] of layers) {
     const parsed = readFixesFileWithin(
@@ -394,13 +407,14 @@ export function readKnownFixProfile(
  * (quick 261027-gtd).
  */
 export function readGamelibFixStatus(
+  deps: KnownFixLocalPathsDeps,
   appName: string,
   runner: Runner
 ): GamelibFixStatus | null {
   if (storeMap[runner] === undefined) return null
   const layers: ['local' | 'bundled', string][] = [
-    ['local', localFixesPath],
-    ['bundled', bundledFixesPath]
+    ['local', deps.paths.localFixesPath],
+    ['bundled', deps.paths.bundledFixesPath]
   ]
   for (const [label, dir] of layers) {
     const parsed = readFixesFileWithin(

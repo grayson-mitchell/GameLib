@@ -24,7 +24,7 @@ import {
   getWineOnMac,
   getWineskinWine
 } from './utils/compatibility_layers'
-import { backendEvents } from './backend_events'
+import type { BackendEvents } from './backend_events'
 import { isFlatpak, isLinux, isMac, isWindows } from './constants/environment'
 import {
   configPath,
@@ -80,6 +80,16 @@ function getSteamCompatFolder() {
 }
 
 /**
+ * What the config reports outward (66.4-17): the boot wires `onSettingChanged` to its event bus's
+ * `settingChanged` event. Optional so a test that does not observe the event builds a config bare.
+ */
+export interface GlobalConfigDeps {
+  onSettingChanged?: (
+    ...args: Parameters<BackendEvents['settingChanged']>
+  ) => void
+}
+
+/**
  * This class does config handling.
  * This can't be constructed directly. The boot's 'config' step builds the one instance with
  * `createGlobalConfig()`.
@@ -89,6 +99,8 @@ function getSteamCompatFolder() {
  */
 abstract class GlobalConfig {
   public abstract version: GlobalConfigVersion
+
+  constructor(protected readonly deps: GlobalConfigDeps = {}) {}
 
   protected config: AppSettings | undefined
 
@@ -222,8 +234,8 @@ abstract class GlobalConfig {
 class GlobalConfigV0 extends GlobalConfig {
   public version: GlobalConfigVersion = currentGlobalConfigVersion
 
-  constructor() {
-    super()
+  constructor(deps?: GlobalConfigDeps) {
+    super(deps)
     this.load()
   }
 
@@ -360,7 +372,7 @@ class GlobalConfigV0 extends GlobalConfig {
     config[key] = value as never
     this.config = config
 
-    backendEvents.emit('settingChanged', { key, oldValue, newValue: value })
+    this.deps.onSettingChanged?.({ key, oldValue, newValue: value })
 
     return this.flush()
   }
@@ -401,9 +413,9 @@ export type GlobalConfigSlice = Pick<
  * loader serves every version: a newer file loads what this build understands (D-03) instead of
  * crashing on an unknown version.
  */
-export function createGlobalConfig(): GlobalConfig {
+export function createGlobalConfig(deps?: GlobalConfigDeps): GlobalConfig {
   ensureSettingsMigrated(configPath, 'settings/global')
-  return new GlobalConfigV0()
+  return new GlobalConfigV0(deps)
 }
 
 export { GlobalConfig }

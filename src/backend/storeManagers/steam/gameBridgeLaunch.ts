@@ -533,7 +533,7 @@ export async function launchBridgeGameBody(
     // WR-03: the secret of the exact helper entry whose port this is.
     secret: helperReady.secret,
     shimPaths,
-    fixLines: steamShimFeatureCfgLines(steamGame.appId),
+    fixLines: steamShimFeatureCfgLines(steamGame.deps, steamGame.appId),
     ...(interfaceVersionsForConfig
       ? { interfaceVersions: interfaceVersionsForConfig }
       : {})

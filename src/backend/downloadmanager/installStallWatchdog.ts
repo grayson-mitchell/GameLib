@@ -1,4 +1,4 @@
-import { backendEvents } from 'backend/backend_events'
+import type { AppRuntimeSlice } from 'backend/appRuntime'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { LogPrefix, logInfo, logWarning } from 'backend/logger'
 import type { GameStatus } from 'common/types'
@@ -67,7 +67,9 @@ export function isStallError(err: unknown): err is StallError {
  * clears its timer, on BOTH the resolve and the reject path.
  */
 export async function withStallTimeout<T>(
-  deps: { aborts: Pick<AbortRegistry, 'has' | 'call'> },
+  deps: {
+    aborts: Pick<AbortRegistry, 'has' | 'call'>
+  } & AppRuntimeSlice<'events'>,
   promise: Promise<T>,
   appName: string,
   stallMs: number,
@@ -144,7 +146,7 @@ export async function withStallTimeout<T>(
 
   const stallPromise = new Promise<never>((_resolve, reject) => {
     rejectStall = reject
-    backendEvents.on(eventName, listener)
+    deps.appRuntime.events.on(eventName, listener)
     // Arm the initial timer at call time — a runner that never reports
     // progress (sideload) behaves exactly as the old fixed ceiling.
     rearm()
@@ -154,6 +156,6 @@ export async function withStallTimeout<T>(
     return await Promise.race([promise, stallPromise])
   } finally {
     clearTimeout(timer)
-    backendEvents.off(eventName, listener)
+    deps.appRuntime.events.off(eventName, listener)
   }
 }

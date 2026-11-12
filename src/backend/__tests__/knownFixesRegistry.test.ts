@@ -5,6 +5,8 @@
  * tmp-redirected fixes dirs. runWineCommand is mocked; nothing is spawned.
  */
 
+import { tmpdir } from 'os'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { mkdirSync, rmSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
@@ -20,19 +22,6 @@ jest.mock('os', () => {
 })
 
 // Never write to the repo's public/fixes.
-jest.mock('../constants/paths', () => {
-  const actual = jest.requireActual('../constants/paths')
-  const path = jest.requireActual('path')
-  const os = jest.requireActual('os')
-  return {
-    ...actual,
-    bundledFixesPath: path.join(
-      os.tmpdir(),
-      `gamelib-bundled-fixes-test-${process.pid}-registry`
-    )
-  }
-})
-
 const mockRunWineCommand = jest.fn()
 const mockLogWarning = jest.fn()
 const mockLogInfo = jest.fn()
@@ -40,7 +29,10 @@ const commandDeps = {
   commandRunner: {
     runWineCommand: (...args: unknown[]) => mockRunWineCommand(...args)
   }
-} as unknown as Parameters<typeof applyKnownFixProfileRegistry>[0]
+} as unknown as Pick<
+  Parameters<typeof applyKnownFixProfileRegistry>[0],
+  'commandRunner'
+>
 
 jest.mock('backend/logger', () => ({
   logWarning: (...args: unknown[]) => mockLogWarning(...args),
@@ -49,7 +41,6 @@ jest.mock('backend/logger', () => ({
 }))
 
 import type { GameSettings } from 'common/types'
-import { bundledFixesPath, fixesPath, localFixesPath } from '../constants/paths'
 import {
   applyKnownFixProfileRegistry,
   applyRegistryFixes,
@@ -63,6 +54,19 @@ import {
   type ValidRegistryFix
 } from '../knownFixesRegistry'
 import { defined } from './helpers/defined'
+
+// A per-file disposable AppPaths root (66.4-17): the known-fix readers take their layer directories
+// from `deps.paths`, so no module is mocked. The bundled layer is nested as `<root>/public/fixes`,
+// the same depth as the shipped `<app>/public/fixes`.
+const TEST_ROOT = join(
+  tmpdir(),
+  `gamelib-bundled-fixes-test-${process.pid}-registry`
+)
+const paths = createTestAppPaths(TEST_ROOT, {
+  bundledFixesPath: join(TEST_ROOT, 'public', 'fixes')
+})
+const { bundledFixesPath, fixesPath, localFixesPath } = paths
+const deps = { paths }
 
 const CTX = { label: 'gog 123', logPrefix: 'Backend' } as never
 const KEY = 'HKCU\\Software\\Foo'
@@ -461,25 +465,30 @@ describe('knownFixPrefixDir', () => {
   it('maps each wine type to its registry dir', () => {
     expect(
       knownFixPrefixDir(
+        deps,
         s({ winePrefix: '/x', wineVersion: { type: 'proton' } })
       )
     ).toBe(join('/x', 'pfx'))
     expect(
-      knownFixPrefixDir(s({ winePrefix: '/x', wineVersion: { type: 'wine' } }))
+      knownFixPrefixDir(
+        deps,
+        s({ winePrefix: '/x', wineVersion: { type: 'wine' } })
+      )
     ).toBe('/x')
     expect(
       knownFixPrefixDir(
+        deps,
         s({ wineCrossoverBottle: 'B', wineVersion: { type: 'crossover' } })
       )
     ).toMatch(/CrossOver\/Bottles\/B$/)
   })
   it('is undefined when unknown', () => {
-    expect(knownFixPrefixDir(s({ winePrefix: '/x' }))).toBeUndefined()
+    expect(knownFixPrefixDir(deps, s({ winePrefix: '/x' }))).toBeUndefined()
     expect(
-      knownFixPrefixDir(s({ wineVersion: { type: 'wine' } }))
+      knownFixPrefixDir(deps, s({ wineVersion: { type: 'wine' } }))
     ).toBeUndefined()
     expect(
-      knownFixPrefixDir(s({ wineVersion: { type: 'crossover' } }))
+      knownFixPrefixDir(deps, s({ wineVersion: { type: 'crossover' } }))
     ).toBeUndefined()
   })
 })
@@ -666,7 +675,12 @@ describe('applyKnownFixProfileRegistry', () => {
   it('applies a bundled -gog.profile.json to the game own prefix', async () => {
     writeIn(bundledFixesPath, 'gog', { title: 't', registry: [ENTRY] })
 
-    await applyKnownFixProfileRegistry(commandDeps, 'GOGAPP', 'gog', SETTINGS)
+    await applyKnownFixProfileRegistry(
+      { ...commandDeps, paths },
+      'GOGAPP',
+      'gog',
+      SETTINGS
+    )
 
     expect(mockRunWineCommand).toHaveBeenCalledTimes(2)
     const first = mockRunWineCommand.mock.calls[0][0]
@@ -687,7 +701,7 @@ describe('applyKnownFixProfileRegistry', () => {
     writeIn(localFixesPath, 'epic', { title: 't', registry: [ENTRY] })
 
     await applyKnownFixProfileRegistry(
-      commandDeps,
+      { ...commandDeps, paths },
       'GOGAPP',
       'legendary',
       SETTINGS
@@ -699,15 +713,30 @@ describe('applyKnownFixProfileRegistry', () => {
   it('ignores a profile that exists only in the remote fixes dir', async () => {
     writeIn(fixesPath, 'gog', { title: 't', registry: [ENTRY] })
 
-    await applyKnownFixProfileRegistry(commandDeps, 'GOGAPP', 'gog', SETTINGS)
+    await applyKnownFixProfileRegistry(
+      { ...commandDeps, paths },
+      'GOGAPP',
+      'gog',
+      SETTINGS
+    )
 
     expect(mockRunWineCommand).not.toHaveBeenCalled()
   })
 
   it('does nothing, silently, with no profile or no registry', async () => {
-    await applyKnownFixProfileRegistry(commandDeps, 'GOGAPP', 'gog', SETTINGS)
+    await applyKnownFixProfileRegistry(
+      { ...commandDeps, paths },
+      'GOGAPP',
+      'gog',
+      SETTINGS
+    )
     writeIn(bundledFixesPath, 'gog', { title: 't' })
-    await applyKnownFixProfileRegistry(commandDeps, 'GOGAPP', 'gog', SETTINGS)
+    await applyKnownFixProfileRegistry(
+      { ...commandDeps, paths },
+      'GOGAPP',
+      'gog',
+      SETTINGS
+    )
 
     expect(mockRunWineCommand).not.toHaveBeenCalled()
     expect(mockLogWarning).not.toHaveBeenCalled()
@@ -718,7 +747,12 @@ describe('applyKnownFixProfileRegistry', () => {
     mockRunWineCommand.mockRejectedValue(new Error('nope'))
 
     await expect(
-      applyKnownFixProfileRegistry(commandDeps, 'GOGAPP', 'gog', SETTINGS)
+      applyKnownFixProfileRegistry(
+        { ...commandDeps, paths },
+        'GOGAPP',
+        'gog',
+        SETTINGS
+      )
     ).resolves.toBeUndefined()
 
     expect(mockLogWarning).toHaveBeenCalledWith(
@@ -732,7 +766,12 @@ describe('applyKnownFixProfileRegistry', () => {
       dllOverrides: [{ exe: 'Game.exe', dlls: { nvapi64: 'disabled' } }]
     })
 
-    await applyKnownFixProfileRegistry(commandDeps, 'GOGAPP', 'gog', SETTINGS)
+    await applyKnownFixProfileRegistry(
+      { ...commandDeps, paths },
+      'GOGAPP',
+      'gog',
+      SETTINGS
+    )
 
     expect(mockRunWineCommand).toHaveBeenCalledTimes(1)
     const arg = mockRunWineCommand.mock.calls[0][0]
@@ -758,7 +797,12 @@ describe('applyKnownFixProfileRegistry', () => {
       dllOverrides: [{ exe: 'Game.exe', dlls: { nvapi64: 'native' } }]
     })
 
-    await applyKnownFixProfileRegistry(commandDeps, 'GOGAPP', 'gog', SETTINGS)
+    await applyKnownFixProfileRegistry(
+      { ...commandDeps, paths },
+      'GOGAPP',
+      'gog',
+      SETTINGS
+    )
 
     expect(mockRunWineCommand).toHaveBeenCalledTimes(2)
     expect(mockRunWineCommand.mock.calls[0][0].commandParts[2]).toBe(KEY)
@@ -770,8 +814,18 @@ describe('applyKnownFixProfileRegistry', () => {
   it('writes on every call, not only the first', async () => {
     writeIn(bundledFixesPath, 'gog', { title: 't', registry: [ENTRY] })
 
-    await applyKnownFixProfileRegistry(commandDeps, 'GOGAPP', 'gog', SETTINGS)
-    await applyKnownFixProfileRegistry(commandDeps, 'GOGAPP', 'gog', SETTINGS)
+    await applyKnownFixProfileRegistry(
+      { ...commandDeps, paths },
+      'GOGAPP',
+      'gog',
+      SETTINGS
+    )
+    await applyKnownFixProfileRegistry(
+      { ...commandDeps, paths },
+      'GOGAPP',
+      'gog',
+      SETTINGS
+    )
 
     expect(mockRunWineCommand).toHaveBeenCalledTimes(4)
   })

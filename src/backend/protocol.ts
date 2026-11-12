@@ -1,3 +1,4 @@
+import type { AppRuntime } from './appRuntime'
 import { isStore, storeCapabilities } from 'common/storeCapabilities'
 import { logError, logInfo, LogPrefix } from './logger'
 import i18next from 'i18next'
@@ -6,10 +7,10 @@ import { GameInfo, LaunchOption, Runner } from 'common/types'
 import type { SendFrontendMessage } from 'backend/host/frontendMessage'
 import type { Launcher, StoreManagers, Stores } from './services/types'
 import { z } from 'zod'
-import { windowIcon } from './constants/paths'
 import { Path } from './schemas'
 import { isCLINoGui } from './constants/environment'
 import type { GlobalConfigSlice } from './config'
+import type { AppPaths } from './process/context'
 import type { AppState } from './host/appState'
 import type { Dialogs } from './host/dialogs'
 import type { Notifications } from './host/notifications'
@@ -49,14 +50,31 @@ function urlRequestsNoGui(url: URL): boolean {
 // `hideWindowOnProtocolLaunch` applies to cold-start links only (quick 261108-kpc): a link that
 // reaches an already-running GameLib leaves its window alone unless it carries gui=false.
 const COLD_START_WINDOW_SECONDS = 15
-let frontendReadySeen = false
 
-export function markFrontendReady(): void {
-  frontendReadySeen = true
+/**
+ * The one-way "renderer reported ready" flag of one boot (66.4-17, D-05): it flips once per
+ * instance, and a fresh boot starts un-ready. Construction allocates a boolean.
+ */
+export interface ProtocolState {
+  markFrontendReady(): void
+  isFrontendReady(): boolean
 }
 
-function isColdStartLink(): boolean {
-  return !frontendReadySeen || process.uptime() < COLD_START_WINDOW_SECONDS
+export function createProtocolState(): ProtocolState {
+  let frontendReadySeen = false
+  return {
+    markFrontendReady: () => {
+      frontendReadySeen = true
+    },
+    isFrontendReady: () => frontendReadySeen
+  }
+}
+
+function isColdStartLink(deps: Pick<ProtocolDeps, 'appRuntime'>): boolean {
+  return (
+    !deps.appRuntime.protocol.isFrontendReady() ||
+    process.uptime() < COLD_START_WINDOW_SECONDS
+  )
 }
 
 /** What a protocol launch reads: the library managers and the launcher's launch callback (66.1, R3). */
@@ -72,6 +90,8 @@ export interface ProtocolDeps {
     'inAppDialogRaiseCount' | 'quit' | 'hideMainWindow' | 'raiseMainWindow'
   >
   sendFrontendMessage: SendFrontendMessage
+  appRuntime: Pick<AppRuntime, 'protocol' | 'events' | 'launchFlights'>
+  paths: Pick<AppPaths, 'windowIcon'>
 }
 
 export function handleProtocol(deps: ProtocolDeps, args: string[]) {
@@ -172,7 +192,7 @@ async function handleLaunch(deps: ProtocolDeps, url: URL) {
   // A cold-start link is handled before any library refresh has populated the managers'
   // installed maps (the renderer drives `refreshLibrary`, and `initStoreManagers` is dead under
   // Tauri), so `is_installed` would read false for an installed game. Load it from disk first.
-  if (isColdStartLink()) await loadInstalledStateFromDisk(deps, runner)
+  if (isColdStartLink(deps)) await loadInstalledStateFromDisk(deps, runner)
   const gameInfo = findGame(deps, appName, runner)
   if (!gameInfo) {
     return logError(
@@ -185,7 +205,7 @@ async function handleLaunch(deps: ProtocolDeps, url: URL) {
   const settings = await deps.managers.library[gameInfo.runner]
     .getGame(appName)
     .getSettings()
-  const coldStart = isColdStartLink()
+  const coldStart = isColdStartLink(deps)
   const hideForThisLaunch =
     urlRequestsNoGui(url) ||
     (coldStart && deps.config.getSettings().hideWindowOnProtocolLaunch === true)
@@ -278,7 +298,8 @@ async function handleLaunch(deps: ProtocolDeps, url: URL) {
           libraryManagers: deps.managers.library,
           stores: deps.stores,
           notifications: deps.notifications,
-          sendFrontendMessage: deps.sendFrontendMessage
+          sendFrontendMessage: deps.sendFrontendMessage,
+          appRuntime: deps.appRuntime
         },
         appName
       )
@@ -304,7 +325,7 @@ async function handleLaunch(deps: ProtocolDeps, url: URL) {
       'Is Not Installed, do you wish to Install it?'
     )}`,
     title: title,
-    icon: windowIcon
+    icon: deps.paths.windowIcon
   })
   if (response === 0) {
     if (isCLINoGui || hideForThisLaunch) {
@@ -345,7 +366,7 @@ function quoteForDisplay(value: string): string {
 // dialog, or the sidecar stub's fail-safe answer (`cancelId`, see `utils.ts` CR-04) all
 // decline. Resolves true only for an explicit press of "Launch".
 async function confirmUrlLaunchParameters(
-  deps: Pick<ProtocolDeps, 'dialogs'>,
+  deps: Pick<ProtocolDeps, 'dialogs' | 'paths'>,
   title: string,
   altExe: Path | undefined,
   args: string[]
@@ -377,7 +398,7 @@ async function confirmUrlLaunchParameters(
     ],
     defaultId: 0,
     cancelId: 0,
-    icon: windowIcon
+    icon: deps.paths.windowIcon
   }
   const { response } = await deps.dialogs.showMessageBox(options)
   return response === 1

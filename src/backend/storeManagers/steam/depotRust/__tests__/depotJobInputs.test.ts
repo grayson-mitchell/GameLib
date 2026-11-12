@@ -2,6 +2,7 @@
  * Phase 73 Plan 13 Task 1 (renamed from depotPipelineFlag.test.ts in 73-19, when the D-16 flag
  * was removed): the CM-only plan half, the job builder and the progress bridge.
  */
+import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { buildDepotRefs } from '../../depot/plan'
@@ -257,7 +258,7 @@ describe('progress bridge', () => {
   it('emits the downloadFiles payload shape with rolling rates and ETA', () => {
     let t = 10_000
     const bridge = createProgressBridge(
-      { sendFrontendMessage: jest.fn() },
+      { sendFrontendMessage: jest.fn(), appRuntime: createTestAppRuntime() },
       '777',
       'steam',
       () => t
@@ -292,7 +293,7 @@ describe('progress bridge', () => {
   it('throttles bursts but re-sends on unchanged counters after the throttle window', () => {
     let t = 0
     const bridge = createProgressBridge(
-      { sendFrontendMessage: jest.fn() },
+      { sendFrontendMessage: jest.fn(), appRuntime: createTestAppRuntime() },
       '777',
       'steam',
       () => t

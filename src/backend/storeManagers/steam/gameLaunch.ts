@@ -231,6 +231,7 @@ export async function launch(
             paths: steamGame.deps.paths,
             macSteamOffline: steamGame.deps.steamProcesses.macSteamOffline,
             sendFrontendMessage: steamGame.deps.sendFrontendMessage,
+            appRuntime: steamGame.deps.appRuntime,
             launchRunGameId: () =>
               steamGame.deps.openExternal.openExternal(url, { activate: false })
           })
@@ -869,6 +870,7 @@ export async function prefetchBridgeDrmDownloads(
       runTool: createRunTool({ runner: steamGame.deps.runner }),
       runner: steamGame.deps.runner,
       sendFrontendMessage: steamGame.deps.sendFrontendMessage,
+      appRuntime: steamGame.deps.appRuntime,
       engineRuntime: steamGame.deps.engineRuntime,
       paths: steamGame.deps.paths,
       bridgeRuntime: steamGame.deps.bridgeRuntime

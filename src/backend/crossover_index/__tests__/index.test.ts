@@ -29,21 +29,13 @@ jest.mock('../normalize', () => ({
 const normalizeMock: { NAME_MATCHING_SHIPS: boolean } =
   jest.requireMock('../normalize')
 
-// ── backend/crossover_index/fetcher mock — loadIndex replaced so the test
-// controls exactly what the "index" is without a network/gunzip round-trip.
+// ── a scripted fetcher — loadIndex replaced so the test controls exactly what the "index" is
+// without a network/gunzip round-trip.
 const loadIndexMock = jest.fn()
-jest.mock('../fetcher', () => ({
-  ...jest.requireActual('../fetcher'),
-  loadIndex: (...args: unknown[]) => loadIndexMock(...args)
-}))
 
 // Imported AFTER the jest.mock calls above so the mocked modules are wired
 // in before index.ts's own imports resolve.
-import {
-  getCodeweaversFromIndex,
-  crossoverIndexHas,
-  isCrossoverIndexEligible
-} from '../index'
+import { createCrossoverIndex, isCrossoverIndexEligible } from '../index'
 import { createCrossoverIndexStores } from '../stores'
 
 const crossoverIndex = createCrossoverIndexStores({
@@ -51,6 +43,23 @@ const crossoverIndex = createCrossoverIndexStores({
 })
 const { crossoverIndexStore } = crossoverIndex
 const deps = { stores: { crossoverIndex } }
+
+// One lookup instance (and so one maps memo) per test, as one per boot in production.
+let lookups = createCrossoverIndex({
+  fetcher: { loadIndex: (...a) => loadIndexMock(...a) }
+})
+beforeEach(() => {
+  lookups = createCrossoverIndex({
+    fetcher: { loadIndex: (...a) => loadIndexMock(...a) }
+  })
+})
+const { getCodeweaversFromIndex, crossoverIndexHas } = {
+  getCodeweaversFromIndex: (
+    ...a: Parameters<typeof lookups.getCodeweaversFromIndex>
+  ) => lookups.getCodeweaversFromIndex(...a),
+  crossoverIndexHas: (...a: Parameters<typeof lookups.crossoverIndexHas>) =>
+    lookups.crossoverIndexHas(...a)
+}
 
 function makeIndex(overrides: Partial<CrossoverIndex> = {}): CrossoverIndex {
   return {

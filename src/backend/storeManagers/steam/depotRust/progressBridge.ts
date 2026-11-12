@@ -3,6 +3,7 @@
 // No timers: the Rust side's own heartbeat arrives as progress events; an event with unchanged
 // counters still re-sends the payload once the throttle window has passed.
 
+import type { StatusUpdateDeps } from 'backend/appRuntime'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { getFileSize, sendProgressUpdate } from 'backend/utils'
 import type { Runner } from 'common/types'
@@ -13,10 +14,9 @@ import {
   rollingRateMiBs
 } from './progress'
 import type { RustJobEvent } from './types'
-import type { FrontendMessageDeps } from 'backend/host/frontendMessage'
 
 export function createProgressBridge(
-  deps: FrontendMessageDeps,
+  deps: StatusUpdateDeps,
   appName: string,
   runner: Runner = 'steam',
   now: () => number = Date.now

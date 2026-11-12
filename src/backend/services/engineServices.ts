@@ -28,6 +28,7 @@ export type EngineServicesSource = Pick<
     | 'steamLaunchRuntime'
     | 'aborts'
     | 'toolsState'
+    | 'appRuntime'
   > & {
     /** The boot-owned engine decision/notice state (D-66.3-12). */
     engineState: EngineServices['engineState']
@@ -65,6 +66,7 @@ export function toolsFrom(deps: EngineServicesSource): Tools {
     onlineMonitor: deps.onlineMonitor,
     engineState: deps.engineState,
     engineRuntime: deps.engineRuntime,
+    appRuntime: deps.appRuntime,
     paths: deps.paths
   })
 }
@@ -86,7 +88,8 @@ export function engineServicesFrom(deps: EngineServicesSource): EngineServices {
       dialogs: deps.dialogs,
       appState: deps.appState,
       notifications: deps.notifications,
-      sendFrontendMessage: deps.sendFrontendMessage
+      sendFrontendMessage: deps.sendFrontendMessage,
+      appRuntime: deps.appRuntime
     }
   }
 }

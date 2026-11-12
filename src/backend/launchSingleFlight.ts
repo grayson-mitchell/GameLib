@@ -13,34 +13,44 @@
  * owner settles. Has no imports, so it adds no import cycle.
  */
 
-const launchesInFlight = new Map<string, Promise<unknown>>()
-
-export function singleFlightLaunch<T>(
-  runner: string,
-  appName: string,
-  onJoin: () => void | Promise<void>,
-  run: () => Promise<T>
-): Promise<T> {
-  const key = `${runner}:${appName}`
-  const existing = launchesInFlight.get(key)
-  if (existing) {
-    // A throwing or rejecting notifier must never reject the joiner.
-    Promise.resolve()
-      .then(onJoin)
-      .catch(() => undefined)
-    return existing as Promise<T>
-  }
-
-  const p = run()
-  launchesInFlight.set(key, p)
-  p.finally(() => {
-    if (launchesInFlight.get(key) === p) {
-      launchesInFlight.delete(key)
-    }
-  }).catch(() => undefined)
-  return p
+export interface LaunchFlights {
+  singleFlightLaunch<T>(
+    runner: string,
+    appName: string,
+    onJoin: () => void | Promise<void>,
+    run: () => Promise<T>
+  ): Promise<T>
 }
 
-export function resetLaunchSingleFlightForTests(): void {
-  launchesInFlight.clear()
+/** One launch single-flight table per boot (66.4-17, D-05). Construction allocates an empty map. */
+export function createLaunchFlights(): LaunchFlights {
+  const launchesInFlight = new Map<string, Promise<unknown>>()
+
+  function singleFlightLaunch<T>(
+    runner: string,
+    appName: string,
+    onJoin: () => void | Promise<void>,
+    run: () => Promise<T>
+  ): Promise<T> {
+    const key = `${runner}:${appName}`
+    const existing = launchesInFlight.get(key)
+    if (existing) {
+      // A throwing or rejecting notifier must never reject the joiner.
+      Promise.resolve()
+        .then(onJoin)
+        .catch(() => undefined)
+      return existing as Promise<T>
+    }
+
+    const p = run()
+    launchesInFlight.set(key, p)
+    p.finally(() => {
+      if (launchesInFlight.get(key) === p) {
+        launchesInFlight.delete(key)
+      }
+    }).catch(() => undefined)
+    return p
+  }
+
+  return { singleFlightLaunch }
 }

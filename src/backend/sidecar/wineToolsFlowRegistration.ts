@@ -83,7 +83,7 @@ import type { GlobalConfigSlice } from '../config'
 import type { GameConfigs } from '../game_config'
 import type { AppInfo } from '../process/context'
 import { logDebug, logError, LogPrefix } from '../logger'
-import { backendEvents } from '../backend_events'
+import type { AppRuntimeSlice } from '../appRuntime'
 import { t } from 'i18next'
 import type {
   BootServices,
@@ -102,7 +102,8 @@ import type {
 } from 'common/types'
 
 /** Narrow slice (66.1 D-01): exactly the services the Wine-tools handlers call. */
-export interface WineToolsFlowDeps extends NotifyDeps, DialogBoxDeps {
+export interface WineToolsFlowDeps
+  extends NotifyDeps, DialogBoxDeps, AppRuntimeSlice<'events'> {
   ipc: Pick<IpcRegistry, 'handle'>
   appState: Pick<AppState, 'raiseMainWindow' | 'raiseMainWindowForInAppDialog'>
   config: Pick<
@@ -293,7 +294,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
   // silently drop wine-list refresh behaviour the Electron build has, with nothing failing
   // (T-34.5-16). Registered inside `registerWineToolsFlows()` so it is subject to plan 34.5-04's
   // idempotence assertion.
-  backendEvents.on('releasesInfoReady', (releasesInfo) => {
+  deps.appRuntime.events.on('releasesInfoReady', (releasesInfo) => {
     logDebug('Releases info ready, checking wine releases', LogPrefix.Backend)
     void updateWineListsIfOutdated(deps, releasesInfo)
   })

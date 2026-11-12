@@ -39,6 +39,7 @@ import type { BridgeRuntime } from 'backend/storeManagers/steam/bridge/bridgeRun
 import type { GogRuntime } from 'backend/storeManagers/gog/gogRuntime'
 import type { LegendaryRuntime } from 'backend/storeManagers/legendary/legendaryRuntime'
 import type { NileRuntime } from 'backend/storeManagers/nile/nileRuntime'
+import type { AppRuntime } from 'backend/appRuntime'
 import type { SystemInfoCache } from 'backend/utils/systeminfo'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { WineWindowRaiser } from 'backend/utils/wineWindowRaise'
@@ -213,6 +214,8 @@ export interface ManagerDeps {
   infoCaches: InfoCaches
   /** The boot-owned abort-controller registry every cancellable job registers in; stdin EOF and quit abort it (66.4-13). */
   aborts: AbortRegistry
+  /** The boot-owned app runtime: event bus, frontend-ready flag, launch single-flight, image fetches, CrossOver index, overlay installs (66.4-17). */
+  appRuntime: AppRuntime
   /** The boot-owned Wine window raiser: its raise timers run on the boot clock (66.4-13). */
   windowRaiser: WineWindowRaiser
   /** The boot-owned tools state: single-flight slot, catalog and script-metadata caches, winetricks environment (66.4-14). */
@@ -358,6 +361,8 @@ export interface BootServices {
   infoCaches: InfoCaches
   /** The boot-owned abort-controller registry every cancellable job registers in; stdin EOF and quit abort it (66.4-13). */
   aborts: AbortRegistry
+  /** Built by the 'app-runtime' boot step, after 'abort-registry' and before 'store-managers' (66.4-17). */
+  appRuntime: AppRuntime
   /** The boot-owned Wine window raiser: its raise timers run on the boot clock (66.4-13). */
   windowRaiser: WineWindowRaiser
   /** The boot-owned tools state: single-flight slot, catalog and script-metadata caches, winetricks environment (66.4-14). */

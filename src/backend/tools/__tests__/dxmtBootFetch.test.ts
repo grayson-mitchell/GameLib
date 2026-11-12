@@ -64,7 +64,7 @@ jest.mock('../machoExports', () => ({
 
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { EventEmitter } from 'events'
-import { backendEvents } from 'backend/backend_events'
+import { createBackendEvents } from 'backend/backend_events'
 import { existsSync } from 'graceful-fs'
 import { installOrUpdateTool } from '../index'
 import { registerDxmtListeners } from '../dxmt'
@@ -79,6 +79,9 @@ const isOnlineMock = jest.fn()
 // Reading `.get` off the mocked store is a jest mock handle, not a real unbound method
 // call -- `this` is never involved. Hoisting it into a `mock`-prefixed factory variable
 // instead would hit the TDZ, because `jest.mock` is hoisted above this declaration.
+
+// One event bus for the file, as one per boot in production.
+const backendEvents = createBackendEvents()
 
 // 66.3-15: the listeners exist only after registerDxmtListeners, registered ONCE for the whole
 // file (re-registering would stack duplicate listeners and inflate every call count).
@@ -219,9 +222,11 @@ describe('registerDxmtListeners (66.3-15)', () => {
   it('importing the module registers nothing: no module-scope listener exists', () => {
     jest.isolateModules(() => {
       /* eslint-disable @typescript-eslint/no-require-imports */
+      // The bus is per boot now (no module singleton), so a bus built before the import is the one
+      // a module-scope subscription would have to land on.
       const isolated = (
         require('backend/backend_events') as typeof import('backend/backend_events')
-      ).backendEvents
+      ).createBackendEvents()
       require('../dxmt')
       /* eslint-enable @typescript-eslint/no-require-imports */
       expect(isolated.eventNames()).toEqual([])

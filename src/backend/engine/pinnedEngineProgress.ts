@@ -4,12 +4,12 @@
  * statuses (one weighted percent across the DXVK and Wine archives, then verify/extract phases,
  * then `setting-up`) as a Steam one.
  */
+import type { StatusUpdateDeps } from 'backend/appRuntime'
 import type { OnlineMonitor } from 'backend/online_monitor'
 import type { Runner } from 'common/types'
 import type { ProcessRunner } from 'backend/process/types'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendGameStatusUpdate } from 'backend/utils'
-import type { SendFrontendMessage } from 'backend/host/frontendMessage'
 import type { EnginePin } from './enginePins'
 import type { FallbackEngine } from './fallbackEngine'
 import type { NonCrossoverEngine } from './engineTypes'
@@ -34,7 +34,8 @@ export async function ensurePinnedEngineReportingStatus(args: {
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   /** The boot's fallback-engine owner (66.4-05). */
   fallback: Pick<FallbackEngine, 'ensurePinnedEngine'>
-  sendFrontendMessage: SendFrontendMessage
+  sendFrontendMessage: StatusUpdateDeps['sendFrontendMessage']
+  appRuntime: StatusUpdateDeps['appRuntime']
   signal?: AbortSignal
 }): Promise<PinnedEngineResult> {
   const { pin, appName, runner, processRunner, onlineMonitor, signal } = args

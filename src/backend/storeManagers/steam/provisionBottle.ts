@@ -3,6 +3,7 @@
  * bottle.ts in Phase 65 (65-07). Creates the bottle, fetches SteamSetup.exe
  * once and runs it non-silently so the user clicks through the real installer.
  */
+import type { AppRuntimeSlice } from 'backend/appRuntime'
 import type { SendFrontendMessage } from '../../host/frontendMessage'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { GlobalConfigSlice } from 'backend/config'
@@ -166,7 +167,7 @@ export async function killBottleWineServer(
  * own first-run update.
  */
 export async function provisionBottle(
-  deps: {
+  deps: AppRuntimeSlice<'events'> & {
     /** The boot-owned abort registry the default-Wine download registers in (66.4-13). */
     aborts: Pick<AbortRegistry, 'create' | 'delete'>
     stores: Pick<Stores, 'kvs' | 'wineManager'>

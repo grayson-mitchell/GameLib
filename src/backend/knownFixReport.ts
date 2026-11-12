@@ -23,7 +23,7 @@ import {
 } from 'common/knownFixReport'
 import type { Stores } from 'backend/services/types'
 import type { GlobalConfigSlice } from 'backend/config'
-import type { AppInfo } from 'backend/process/context'
+import type { AppInfo, AppPaths } from 'backend/process/context'
 import { readKnownFixesWithLayer } from './knownFixes'
 import { LogPrefix, logInfo, logWarning } from './logger'
 import { isMac } from './constants/environment'
@@ -93,6 +93,7 @@ export function knownFixReportDeps(deps: {
   appInfo: Pick<AppInfo, 'version'>
   config: Pick<GlobalConfigSlice, 'getSettings'>
   aborts: ReportDeps['aborts']
+  paths: Pick<AppPaths, 'fixesPath' | 'bundledFixesPath' | 'localFixesPath'>
 }): ReportDeps {
   const lazyVersion = () => deps.appInfo.version
   const store = () => deps.stores.steam.steamKnownFixReportStore
@@ -114,7 +115,7 @@ export function knownFixReportDeps(deps: {
       return deps.config.getSettings().shareDetectedFixes === true
     },
     readWinning: (appId) => {
-      const res = readKnownFixesWithLayer(appId, 'steam')
+      const res = readKnownFixesWithLayer(deps, appId, 'steam')
       return res
         ? {
             fix: res.fix as unknown as Record<string, unknown>,

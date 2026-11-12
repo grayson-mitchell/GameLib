@@ -575,7 +575,12 @@ export async function fireBridgeWineLaunch(
     const winePromise = runWineCommand({
       commandParts: drm
         ? [...drmCommandPrefix, drm.ready.bottle.helperWinPath, drm.gameWinPath]
-        : steamBridgeLaunchCommandParts(steamGame.appId, exePath, installRoot),
+        : steamBridgeLaunchCommandParts(
+            steamGame.deps,
+            steamGame.appId,
+            exePath,
+            installRoot
+          ),
       gameSettings: launchSettings,
       wait: false,
       protonVerb: 'run',

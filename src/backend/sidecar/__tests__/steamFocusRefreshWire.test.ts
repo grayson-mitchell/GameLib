@@ -25,6 +25,7 @@
  *   T-D — fail-soft consumer: same transport, `refreshInstallState` mocked to REJECT; no
  *         unhandled rejection, and a subsequent frame is still processed afterward.
  */
+import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import {
@@ -184,6 +185,7 @@ const libraryManagerMap = {
 const ipc = createIpcRegistry()
 const steamFlowDeps = () => ({
   sendFrontendMessage: jest.fn(),
+  appRuntime: createTestAppRuntime(),
   ipc,
   config: { getSettings: () => ({}) } as never,
   appState: createTestHostServices().appState,

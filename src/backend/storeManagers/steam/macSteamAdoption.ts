@@ -17,7 +17,7 @@
  * depot completion branch is the single writer); Steam-performed installs never
  * restart Steam. Steam is never signalled or killed here.
  */
-import type { SendFrontendMessage } from '../../host/frontendMessage'
+import type { StatusUpdateDeps } from 'backend/appRuntime'
 import { existsSync, statSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { parse } from '@node-steam/vdf'
@@ -245,7 +245,8 @@ export function createRestartDeps(deps: {
   paths: Pick<AppPaths, 'appFolder' | 'userHome'>
   macSteamOffline: Pick<MacSteamOffline, 'isSteamRunning' | 'openUrlDetached'>
   launchRunGameId: () => Promise<unknown>
-  sendFrontendMessage: SendFrontendMessage
+  sendFrontendMessage: StatusUpdateDeps['sendFrontendMessage']
+  appRuntime: StatusUpdateDeps['appRuntime']
 }): RestartDeps {
   const { clock, macSteamOffline } = deps
   return {

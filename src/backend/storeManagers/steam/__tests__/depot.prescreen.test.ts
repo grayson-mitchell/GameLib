@@ -11,12 +11,14 @@
  * TS policy: the CM inputs, the lease, the forced 'windows' selection and the classification of
  * the matches Rust returns.
  */
+import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 const requestRustInvoke = jest.fn()
 const depotTransport = {
   requestRustInvoke,
-  sendFrontendMessage: jest.fn()
+  sendFrontendMessage: jest.fn(),
+  appRuntime: createTestAppRuntime()
 }
 import {
   RUST_DEPOT_JOB_RUN,

@@ -48,6 +48,7 @@
  * real `ipcMain` via `backend/ipc`'s `addHandler`, an Electron-only path.
  */
 
+import type { AppRuntimeSlice } from 'backend/appRuntime'
 import type { SendFrontendMessage } from '../host/frontendMessage'
 import type { IpcRegistry } from './ipcRegistry'
 import {
@@ -63,7 +64,7 @@ import {
 import type { ManagerDeps, StoreManagers } from '../services/types'
 
 /** The slice the EOS overlay channels read. */
-export interface EosOverlayFlowDeps {
+export interface EosOverlayFlowDeps extends AppRuntimeSlice<'events'> {
   ipc: Pick<IpcRegistry, 'handle'>
   managers: Pick<StoreManagers, 'library'>
   aborts: Pick<ManagerDeps['aborts'], 'call'>
@@ -87,7 +88,8 @@ export function registerEosOverlayFlows(deps: EosOverlayFlowDeps): void {
     libraryManagers: deps.managers.library,
     aborts: deps.aborts,
     paths: deps.paths,
-    sendFrontendMessage: deps.sendFrontendMessage
+    sendFrontendMessage: deps.sendFrontendMessage,
+    appRuntime: deps.appRuntime
   })
 
   deps.ipc.handle('getEosOverlayStatus', async () => {

@@ -76,6 +76,7 @@ export default class NileGameManager implements Game {
         | 'sendFrontendMessage'
         | 'gameConfigs'
         | 'appInfo'
+        | 'appRuntime'
       > & {
         stores: Pick<
           ManagerDeps['stores'],
@@ -390,6 +391,7 @@ export default class NileGameManager implements Game {
     // Known-fix launchArgs / exeOverride (quick 261029-mbl). Precedence:
     // altExe > user targetExe > known-fix exeOverride > default.
     const knownFix = readKnownFixLaunchOverrides(
+      this.deps,
       this.id,
       'nile',
       gameInfo.install.install_path

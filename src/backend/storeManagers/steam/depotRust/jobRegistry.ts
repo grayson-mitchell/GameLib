@@ -7,6 +7,7 @@
 // disposer register returns. Jobs still running at stdin EOF are stopped through their install's
 // AbortController (abortAll), which runDepotJob forwards as depot_job_cancel.
 
+import type { AppRuntimeSlice } from 'backend/appRuntime'
 import type { HostServices } from 'backend/host'
 import type { CdnAuthTokenCache } from '../depot/cdnAuth'
 import type { RustJobEvent } from './types'
@@ -30,11 +31,15 @@ interface Entry {
   lastSeq: number
 }
 
-/** The shell link a depot job runs over: the sidecar -> Rust request leg and the renderer push. */
+/**
+ * The shell link a depot job runs over: the sidecar -> Rust request leg and the renderer push, plus
+ * the boot's event bus the progress bridge feeds the install stall watchdog through (66.4-17).
+ */
 export type DepotTransport = Pick<
   HostServices,
   'requestRustInvoke' | 'sendFrontendMessage'
->
+> &
+  AppRuntimeSlice<'events'>
 
 export interface DepotJobRegistry {
   /** This boot's transport: the depot_* invokes and the progress push go through it (66.4-15). */

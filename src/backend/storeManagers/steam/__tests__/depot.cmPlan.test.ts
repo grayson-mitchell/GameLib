@@ -13,6 +13,7 @@
  * Everything a manifest decides (filenames, sizes, totals, path collisions, per-file failures)
  * is Rust's and is tested in src-tauri/crates/gamelib-depot.
  */
+import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
@@ -22,7 +23,8 @@ import { logError, logWarning } from 'backend/logger'
 const requestRustInvoke = jest.fn()
 const depotTransport = {
   requestRustInvoke,
-  sendFrontendMessage: jest.fn()
+  sendFrontendMessage: jest.fn(),
+  appRuntime: createTestAppRuntime()
 }
 import { downloadSteamDepots, PLAN_BUILD_MAX_ATTEMPTS } from '../depot'
 import { buildDepotRefs } from '../depot/plan'

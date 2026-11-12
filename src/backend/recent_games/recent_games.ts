@@ -1,5 +1,5 @@
 import { GameInfo, RecentGame } from 'common/types'
-import { backendEvents } from '../backend_events'
+import type { AppRuntimeSlice } from '../appRuntime'
 import type { SendFrontendMessage } from 'backend/host/frontendMessage'
 import type { Stores } from '../services/types'
 
@@ -9,19 +9,25 @@ export interface RecentGamesDeps {
   sendFrontendMessage: SendFrontendMessage
 }
 
+/** What the recent-games writers need: the stores, the push seam and the boot's event bus. */
+type RecentGamesWriteDeps = RecentGamesDeps & AppRuntimeSlice<'events'>
+
 const getRecentGames = async (deps: RecentGamesDeps) =>
   deps.stores.kvs.configStore.get('games.recent', [])
 
-const setRecentGames = (deps: RecentGamesDeps, recentGames: RecentGame[]) => {
+const setRecentGames = (
+  deps: RecentGamesWriteDeps,
+  recentGames: RecentGame[]
+) => {
   // store
   deps.stores.kvs.configStore.set('games.recent', recentGames)
 
   // emit
   deps.sendFrontendMessage('recentGamesChanged', recentGames)
-  backendEvents.emit('recentGamesChanged', recentGames)
+  deps.appRuntime.events.emit('recentGamesChanged', recentGames)
 }
 
-const addRecentGame = async (deps: RecentGamesDeps, game: GameInfo) => {
+const addRecentGame = async (deps: RecentGamesWriteDeps, game: GameInfo) => {
   const games = await getRecentGames(deps)
 
   // update list
@@ -43,7 +49,10 @@ const addRecentGame = async (deps: RecentGamesDeps, game: GameInfo) => {
   setRecentGames(deps, updatedList)
 }
 
-const removeRecentGame = async (deps: RecentGamesDeps, appName: string) => {
+const removeRecentGame = async (
+  deps: RecentGamesWriteDeps,
+  appName: string
+) => {
   const games = await getRecentGames(deps)
 
   if (games.length) {

@@ -264,7 +264,13 @@ const mockBuildIndexResolver = jest.fn()
 jest.mock('../../crossover_index/index', () => ({
   isCrossoverIndexEligible: (...args: unknown[]) =>
     mockIsCrossoverIndexEligible(...args),
-  buildIndexResolver: (...args: unknown[]) => mockBuildIndexResolver(...args)
+  // The boot builds its lookups with this factory (66.4-17): the mock exposes the factory name and
+  // hands back lookups whose resolver is the scripted one.
+  createCrossoverIndex: () => ({
+    buildIndexResolver: (...args: unknown[]) => mockBuildIndexResolver(...args),
+    getCodeweaversFromIndex: jest.fn(),
+    crossoverIndexHas: jest.fn()
+  })
 }))
 
 // ── backend/dialog/dialog / backend/utils / legendary/user / aborthandler —
@@ -449,8 +455,12 @@ function freshRegistry(): void {
 const boot = () =>
   bootFresh({
     reuseRegistry: true,
-    // The anticheat data path is ctx.paths.appFolder (66.4-14): the shimmed app folder.
-    context: { paths: { appFolder } },
+    // The anticheat data path is ctx.paths.appFolder (66.4-14): the shimmed app folder. The known-fix
+    // layers are ctx.paths too (66.4-17): the remote layer is the shimmed `fixesPath` this suite writes
+    // its fixtures under, the local layer nests inside it.
+    context: {
+      paths: { appFolder, fixesPath, localFixesPath: join(fixesPath, 'local') }
+    },
     services: {
       storeRoot: testRoot,
       onlineMonitor: {

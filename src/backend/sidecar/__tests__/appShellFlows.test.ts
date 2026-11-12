@@ -260,8 +260,7 @@ const downloadQueueStub = {
 // it, so it clears the mock immediately before invoking frontendReady).
 jest.mock('../../protocol', () => ({
   ...jest.requireActual('../../protocol'),
-  handleProtocol: jest.fn(),
-  markFrontendReady: jest.fn()
+  handleProtocol: jest.fn()
 }))
 
 // ── dialog mock (260919-sch) — the Snap warning dialog now moves through
@@ -299,7 +298,7 @@ import {
 import type { createGlobalConfig as createGlobalConfigType } from 'backend/config'
 import type i18nextType from 'i18next'
 import type { Stores } from 'backend/services/types'
-import type { backendEvents as backendEventsType } from '../../backend_events'
+import type { AppRuntime } from '../../appRuntime'
 import type { RequestRustInvoke } from '../../host'
 import type { IpcRegistry } from '../ipcRegistry'
 import type * as loggerModuleType from '../../logger'
@@ -327,12 +326,14 @@ import { createStoreRegistry } from 'backend/stores/storeRegistry'
 let createGlobalConfig: typeof createGlobalConfigType
 let i18next: typeof i18nextType
 let gameInfoStore: Stores['legendary']['gameInfoStore']
-let backendEvents: typeof backendEventsType
+// The boot's app runtime of the current case, built in the same fresh registry as the boot (its
+// event bus and frontend-ready flag are the ones the registrations use).
+let appRuntime: AppRuntime
+let backendEvents: AppRuntime['events']
 let requestRustInvoke: RequestRustInvoke
 let loggerModule: typeof loggerModuleType
 let gamesConfigPath: string
 let handleProtocol: typeof protocolModule.handleProtocol
-let markFrontendReady: typeof protocolModule.markFrontendReady
 
 let mockedGlobalConfigGet: jest.Mock
 let mockedI18nextChangeLanguage: jest.Mock
@@ -351,12 +352,12 @@ function freshRegistry(): void {
       registry: createStoreRegistry(),
       root: createTestStoreRoot()
     }).gameInfoStore
-  backendEvents = require('../../backend_events').backendEvents
+  appRuntime = require('../../testUtils/testAppRuntime').createTestAppRuntime()
+  backendEvents = appRuntime.events
   requestRustInvoke = require('../sidecarRpc').requestRustInvoke
   loggerModule = require('../../logger')
   const protocol = require('../../protocol')
   handleProtocol = protocol.handleProtocol
-  markFrontendReady = protocol.markFrontendReady
   gamesConfigPath = require('../../constants/paths').gamesConfigPath
   /* eslint-enable @typescript-eslint/no-require-imports */
 
@@ -409,7 +410,8 @@ function directDeps(stores: unknown = {}, sendFrontendMessage = jest.fn()) {
     quit: { handleExit: jest.fn().mockResolvedValue(undefined) },
     stores: stores as never,
     // A fresh instance per direct registration, as a fresh module registry gave before 66.4-16.
-    appShell: createAppShellState({ clock: createClock() })
+    appShell: createAppShellState({ clock: createClock() }),
+    appRuntime
   }
 }
 
@@ -418,6 +420,7 @@ function boot() {
   return bootFresh({
     reuseRegistry: true,
     services: {
+      appRuntime,
       // The real monitor: this suite pins the connectivity listener it registers on start().
       onlineMonitor: undefined,
       downloadQueue: downloadQueueStub as never,
@@ -1087,13 +1090,13 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     })
 
     it('marks the frontend ready for the cold-start/warm gamelib:// link discriminator (quick 261108-kpc)', async () => {
-      ;(markFrontendReady as jest.Mock).mockClear()
+      expect(appRuntime.protocol.isFrontendReady()).toBe(false)
 
       const { input } = boot()
       writeSend(input, 'frontend-ready-3', 'frontendReady', [])
       await flush()
 
-      expect(markFrontendReady).toHaveBeenCalled()
+      expect(appRuntime.protocol.isFrontendReady()).toBe(true)
     })
 
     // ── Phase 35 plan 11: boot-time download-queue auto-resume (SEAM Phase 32

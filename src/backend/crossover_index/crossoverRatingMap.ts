@@ -20,8 +20,8 @@ import type { ManagerDeps, Stores } from 'backend/services/types'
 
 import {
   isCrossoverIndexEligible,
-  buildIndexResolver,
-  IndexLookupInput
+  IndexLookupInput,
+  type CrossoverIndexLookups
 } from './index'
 
 /**
@@ -44,6 +44,10 @@ import {
 export interface CrossoverRatingMapDeps {
   libraryManagers: ManagerDeps['libraryManagers']
   stores: Pick<Stores, 'crossoverIndex'>
+  /** This boot's CrossOver index lookups: its fetch backoff and memoized maps (66.4-17). */
+  appRuntime: {
+    crossoverIndex: Pick<CrossoverIndexLookups, 'buildIndexResolver'>
+  }
 }
 
 export async function buildCrossoverRatingMap(
@@ -75,7 +79,8 @@ export async function buildCrossoverRatingMap(
         continue
       }
 
-      resolveRatingFor ??= await buildIndexResolver(deps)
+      resolveRatingFor ??=
+        await deps.appRuntime.crossoverIndex.buildIndexResolver(deps)
       map[gameInfo.app_name] = resolveRatingFor(gameInfo)
     }
   }

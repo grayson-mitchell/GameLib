@@ -36,7 +36,7 @@ import {
 
 import { Runner } from 'common/types'
 import { storeMap } from 'common/utils'
-import { fixesPath } from './constants/paths'
+import type { AppPaths } from './process/context'
 import { filterTier1KnownFixes } from './knownFixes'
 import { logInfo, logWarning, LogPrefix } from './logger'
 
@@ -46,11 +46,9 @@ export const HEROIC_KNOWN_FIXES_BASE =
   'https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main'
 
 /** Heroic's feed covers Epic, GOG and Amazon only (decision 6). */
-const HEROIC_FALLBACK_RUNNERS: ReadonlySet<Runner> = new Set<Runner>([
-  'legendary',
-  'gog',
-  'nile'
-])
+const HEROIC_FALLBACK_RUNNERS: ReadonlySet<Runner> = Object.freeze(
+  new Set<Runner>(['legendary', 'gog', 'nile'])
+)
 
 export type KnownFixesGet = (
   url: string
@@ -71,11 +69,21 @@ function parseBody(data: unknown): unknown {
   return data
 }
 
-async function run(appName: string, runner: Runner, get: KnownFixesGet) {
+/** The path slice the known-fixes fetch writes under (66.4-17). */
+export interface KnownFixesFetchDeps {
+  paths: Pick<AppPaths, 'fixesPath'>
+}
+
+async function run(
+  deps: KnownFixesFetchDeps,
+  appName: string,
+  runner: Runner,
+  get: KnownFixesGet
+) {
   const store = storeMap[runner]
   if (!store) return
 
-  const root = resolve(fixesPath)
+  const root = resolve(deps.paths.fixesPath)
   const dest = resolve(root, `${appName}-${store}.json`)
   const rel = relative(root, dest)
   if (!rel || rel.startsWith('..') || isAbsolute(rel) || rel.includes(sep)) {
@@ -155,12 +163,13 @@ async function run(appName: string, runner: Runner, get: KnownFixesGet) {
 
 /** Never rejects. */
 export async function fetchRemoteKnownFixes(
+  deps: KnownFixesFetchDeps,
   appName: string,
   runner: Runner,
   get: KnownFixesGet = defaultGet
 ): Promise<void> {
   try {
-    await run(appName, runner, get)
+    await run(deps, appName, runner, get)
   } catch (error) {
     logWarning(
       `Known fixes fetch failed for ${appName}: ${String(error)}`,

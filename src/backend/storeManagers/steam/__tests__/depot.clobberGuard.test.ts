@@ -11,6 +11,7 @@
  * cancel_still_finalizes_1026 / blocked_manifest_skips_that_depot_and_installs_the_rest,
  * reconcile.rs verify_structural_integrity cases) and in depotRust/__tests__/rustInstall.test.ts.
  */
+import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import {
@@ -25,7 +26,8 @@ import { join, relative, sep } from 'node:path'
 const requestRustInvoke = jest.fn()
 const depotTransport = {
   requestRustInvoke,
-  sendFrontendMessage: jest.fn()
+  sendFrontendMessage: jest.fn(),
+  appRuntime: createTestAppRuntime()
 }
 import { downloadSteamDepots } from '../depot'
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'

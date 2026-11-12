@@ -61,7 +61,8 @@ export function resolveLaunchOverlay(steamGame: SteamGame): {
       platform: process.platform,
       userOverride: readStoredOverlayOverride(steamGame.appId, steamGame.deps),
       knownFixOff:
-        readKnownFixes(steamGame.appId, 'steam')?.steamGameOverlay === 'off'
+        readKnownFixes(steamGame.deps, steamGame.appId, 'steam')
+          ?.steamGameOverlay === 'off'
     })
     logInfo(
       `SteamGame: appId ${steamGame.appId} overlay=${r.enabled ? 'on' : 'off'} source=${r.source}`,

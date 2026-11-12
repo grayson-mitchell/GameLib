@@ -1,3 +1,4 @@
+import type { AppRuntimeSlice } from 'backend/appRuntime'
 import type { BottleSettingsDeps } from 'backend/storeManagers/steam/bottle'
 import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
 import { getFileSize, removeFolder, sendGameStatusUpdate } from '../utils'
@@ -37,7 +38,8 @@ import {
 } from 'common/storeCapabilities'
 
 /** What the queue reads: the persisted queue store, the manager map and the connectivity feed. */
-export interface DownloadQueueDeps extends DialogBoxDeps, NotifyDeps {
+export interface DownloadQueueDeps
+  extends DialogBoxDeps, NotifyDeps, AppRuntimeSlice<'events'> {
   config: GlobalConfigSlice
   stores: Pick<Stores, 'downloadManager' | 'steam'>
   managers: Pick<StoreManagers, 'library'>
@@ -52,7 +54,10 @@ export interface DownloadQueueDeps extends DialogBoxDeps, NotifyDeps {
   engineRuntime: BottleSettingsDeps['engineRuntime']
   steamLaunchRuntime: BottleSettingsDeps['steamLaunchRuntime']
   paths: BottleSettingsDeps['paths'] &
-    Pick<AppPaths, 'appFolder' | 'toolsPath' | 'userData' | 'gamesConfigPath'>
+    Pick<
+      AppPaths,
+      'appFolder' | 'toolsPath' | 'userData' | 'gamesConfigPath' | 'fixesPath'
+    >
 }
 
 export function createDownloadQueue(deps: DownloadQueueDeps) {
@@ -86,7 +91,8 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
     engineRuntime: deps.engineRuntime,
     steamLaunchRuntime: deps.steamLaunchRuntime,
     paths: deps.paths,
-    sendFrontendMessage: deps.sendFrontendMessage
+    sendFrontendMessage: deps.sendFrontendMessage,
+    appRuntime: deps.appRuntime
   }
 
   function onConnectivity(status: ConnectivityStatus) {

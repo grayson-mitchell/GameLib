@@ -6,6 +6,7 @@
  * directory or symlink) is the crate's `select_files_writes_only_selected`; what stays here is
  * the TS policy around the job.
  */
+import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { existsSync, mkdtempSync, readdirSync, rmSync } from 'fs'
@@ -15,7 +16,8 @@ import { join, resolve } from 'path'
 const requestRustInvoke = jest.fn()
 const depotTransport = {
   requestRustInvoke,
-  sendFrontendMessage: jest.fn()
+  sendFrontendMessage: jest.fn(),
+  appRuntime: createTestAppRuntime()
 }
 import { downloadSelectedDepotFiles } from '../depot'
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'

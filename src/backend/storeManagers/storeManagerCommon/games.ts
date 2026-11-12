@@ -1,4 +1,4 @@
-import type { FrontendMessageDeps } from '../../host/frontendMessage'
+import type { StatusUpdateDeps } from 'backend/appRuntime'
 import type { GameSettings } from 'common/types'
 import { logInfo, LogPrefix, logWarning } from 'backend/logger'
 import { basename, dirname } from 'path'
@@ -37,7 +37,7 @@ async function getAppSettings(
 }
 
 /** The collaborators the shared launch helper uses (66.1, R3). */
-export type CommonGameDeps = FrontendMessageDeps &
+export type CommonGameDeps = StatusUpdateDeps &
   Pick<
     ManagerDeps,
     | 'launcher'

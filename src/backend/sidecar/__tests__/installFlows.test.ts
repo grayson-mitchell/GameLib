@@ -549,11 +549,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
       // isMac flips only after boot: Mac boot paths (dxmt) must not run here. The
       // releases-info listener would act on the mocked (empty) release data once isMac
       // is true, so detach it from the boot's own event bus (no module mock needed).
-      /* eslint-disable @typescript-eslint/no-require-imports */
-      ;(
-        require('backend/backend_events') as typeof import('backend/backend_events')
-      ).backendEvents.removeAllListeners('releasesInfoReady')
-      /* eslint-enable @typescript-eslint/no-require-imports */
+      services.appRuntime.events.removeAllListeners('releasesInfoReady')
       jest.requireMock('backend/constants/environment').isMac = mac
       writeInvoke(input, 'route-s3n', 'getSteamDeleteRoute', args)
       await flush()

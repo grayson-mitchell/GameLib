@@ -182,7 +182,11 @@ export async function fetchMetadataIfNeeded(
     //     is_mac_native already routes correctly via the existing
     //     isBottleEligible() D-11 OR-branch, making this signal moot.
     const macArchVerified = existingMeta?.mac_arch_verified === true
-    const knownFix32 = knownFixSaysMac32(steamGame.appId, existingMeta)
+    const knownFix32 = knownFixSaysMac32(
+      steamGame.deps,
+      steamGame.appId,
+      existingMeta
+    )
     const mac_arch: GameInfo['mac_arch'] = macArchVerified
       ? existingMeta.mac_arch
       : knownFix32

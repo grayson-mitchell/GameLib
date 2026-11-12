@@ -209,7 +209,8 @@ import type { AppContext, AppPaths } from '../process/context'
 import type { LogSink, ProcessRunner } from '../process/types'
 import { createIpcValidator } from './ipcValidation'
 import { gamesConfigPath } from '../constants/paths'
-import { backendEvents } from '../backend_events'
+import { createAppRuntime } from '../appRuntime'
+import type { AppRuntime } from '../appRuntime'
 import { fetchLastestReleases } from '../utils/releases'
 import { downloadAntiCheatData } from '../anticheat/utils'
 import { isMac, isSnap } from '../constants/environment'
@@ -302,6 +303,7 @@ export const BOOT_STEP_NAMES = [
   'steamgrid-secrets',
   'steam-bottle',
   'abort-registry',
+  'app-runtime',
   'command-runner',
   'steam-user',
   'humble-services',
@@ -481,6 +483,12 @@ function requireAborts(state: BootState): AbortRegistry {
   return aborts
 }
 
+function requireAppRuntime(state: BootState): AppRuntime {
+  const { appRuntime } = state.services
+  if (!appRuntime) throw new Error('app-runtime step has not run')
+  return appRuntime
+}
+
 function requireToolsState(state: BootState): ToolsState {
   const { toolsState } = state.services
   if (!toolsState) throw new Error('tools-state step has not run')
@@ -517,6 +525,7 @@ function requireServices(state: BootState): BootServices {
     nileRuntime,
     infoCaches,
     aborts,
+    appRuntime,
     windowRaiser,
     toolsState,
     winetricksQueue,
@@ -559,6 +568,7 @@ function requireServices(state: BootState): BootServices {
     !nileRuntime ||
     !infoCaches ||
     !aborts ||
+    !appRuntime ||
     !windowRaiser ||
     !toolsState ||
     !winetricksQueue ||
@@ -602,6 +612,7 @@ function requireServices(state: BootState): BootServices {
         'nileRuntime',
         'infoCaches',
         'aborts',
+        'appRuntime',
         'windowRaiser',
         'toolsState',
         'winetricksQueue',
@@ -647,6 +658,7 @@ function requireServices(state: BootState): BootServices {
     nileRuntime,
     infoCaches,
     aborts,
+    appRuntime,
     windowRaiser,
     toolsState,
     winetricksQueue,
@@ -708,7 +720,9 @@ function protocolDepsOf(services: BootServices): ProtocolDeps {
     dialogs: services.host.dialogs,
     sendFrontendMessage: services.host.sendFrontendMessage,
     appState: services.host.appState,
-    notifications: services.host.notifications
+    notifications: services.host.notifications,
+    appRuntime: services.appRuntime,
+    paths: services.paths
   }
 }
 
@@ -1604,7 +1618,13 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // config.json, so running after 'migrations' loses nothing. configBootOrder.test.ts pins it.
         // createGlobalConfig() runs the settings migration first; the per-game registry holds its
         // cache in its closure and reads global defaults through the config built here.
-        const config = prebuilt.config ?? createGlobalConfig()
+        const config =
+          prebuilt.config ??
+          createGlobalConfig({
+            // The bus is built by the later 'app-runtime' step; a setting can only change at call time.
+            onSettingChanged: (change) =>
+              requireAppRuntime(state).events.emit('settingChanged', change)
+          })
         state.services.config = config
         state.services.gameConfigs =
           prebuilt.gameConfigs ?? createGameConfigs({ config })
@@ -1680,6 +1700,18 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         state.services.aborts = prebuilt.aborts ?? createAbortRegistry()
         state.services.windowRaiser =
           prebuilt.windowRaiser ?? createWineWindowRaiser({ clock: ctx.clock })
+      }
+    },
+    {
+      name: 'app-runtime',
+      // Builds the app runtime of this boot (D-05, 66.4-17): event bus, frontend-ready flag, launch
+      // single-flight, image fetches, CrossOver index fetch and memo, overlay install single-flight.
+      // Construction only: no I/O, no timer, no listener. After 'abort-registry', before
+      // 'store-managers' (and every consumer of the bus, flags and flights).
+      run: (ctx, _io, state) => {
+        state.services.appRuntime =
+          prebuilt.appRuntime ??
+          createAppRuntime({ clock: ctx.clock, paths: ctx.paths })
       }
     },
     {
@@ -1766,7 +1798,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
               },
               validWine,
               setupEnvVars,
-              setupWineEnvVars,
+              setupWineEnvVars: (settings, gameId) =>
+                setupWineEnvVars({ paths: ctx.paths }, settings, gameId),
               isUmuSupported: (settings) =>
                 isUmuSupported({ paths: ctx.paths }, settings),
               getUmuPath: () => getUmuPath({ paths: ctx.paths })
@@ -1976,7 +2009,11 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       run: (_ctx, _io, state) => {
         state.services.steamInstallRuntime =
           prebuilt.steamInstallRuntime ??
-          createSteamInstallRuntime(requireHost(state))
+          createSteamInstallRuntime({
+            requestRustInvoke: requireHost(state).requestRustInvoke,
+            sendFrontendMessage: requireHost(state).sendFrontendMessage,
+            appRuntime: requireAppRuntime(state)
+          })
       }
     },
     {
@@ -2044,7 +2081,14 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           createWinetricksQueue({
             push: (channel, queueState) =>
               host.pushFrontendMessage(channel, queueState),
-            sendGameStatus: (update) => sendGameStatusUpdate(host, update),
+            sendGameStatus: (update) =>
+              sendGameStatusUpdate(
+                {
+                  sendFrontendMessage: host.sendFrontendMessage,
+                  appRuntime: requireAppRuntime(state)
+                },
+                update
+              ),
             getInstallingComponent: () => toolsState.installing.get(),
             environment: toolsState.winetricksEnv
           })
@@ -2071,6 +2115,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           nileRuntime,
           infoCaches,
           aborts,
+          appRuntime,
           windowRaiser,
           toolsState,
           signInProbe,
@@ -2103,6 +2148,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !nileRuntime ||
           !infoCaches ||
           !aborts ||
+          !appRuntime ||
           !windowRaiser ||
           !toolsState ||
           !signInProbe ||
@@ -2157,6 +2203,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           nileRuntime,
           infoCaches,
           aborts,
+          appRuntime,
           windowRaiser,
           toolsState,
           signIn: signInProbe,
@@ -2192,6 +2239,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             engineRuntime,
             steamLaunchRuntime,
             aborts,
+            appRuntime,
             paths
           } = state.services
           if (
@@ -2203,6 +2251,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             !engineRuntime ||
             !steamLaunchRuntime ||
             !aborts ||
+            !appRuntime ||
             !paths
           ) {
             throw new Error(
@@ -2223,6 +2272,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             engineRuntime,
             steamLaunchRuntime,
             aborts,
+            appRuntime,
             paths
           })
           queue.start()
@@ -2580,7 +2630,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           appState: host.appState,
           sendFrontendMessage: host.sendFrontendMessage,
           requestRustInvoke: host.requestRustInvoke,
-          events: backendEvents
+          events: requireAppRuntime(state).events
         })
         // Placement is load-bearing (Phase 28, T-28-10): must run AFTER startRpcServer() so
         // requestRustInvoke can write frames, and BEFORE any invoke handler body can run (those
@@ -2702,26 +2752,29 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // own internal try/catch, so an `EACCES`/`ENOENT`/TOCTOU/is-a-directory fault on the local
         // anticheat cache file would otherwise reject an unguarded promise.
         try {
-          backendEvents.on('releasesInfoReady', (releasesInfo) => {
-            logDebug(
-              'Releases info ready, checking anticheat data',
-              LogPrefix.Backend
-            )
-            downloadAntiCheatData(
-              {
-                onlineMonitor: requireServices(state).onlineMonitor,
-                paths: requireServices(state).paths
-              },
-              isMac
-                ? releasesInfo.anticheatFiles.shaMac
-                : releasesInfo.anticheatFiles.shaLinux
-            ).catch((error) => {
-              logWarning(
-                `[bootstrap] downloadAntiCheatData failed: ${String(error)}`,
+          requireAppRuntime(state).events.on(
+            'releasesInfoReady',
+            (releasesInfo) => {
+              logDebug(
+                'Releases info ready, checking anticheat data',
                 LogPrefix.Backend
               )
-            })
-          })
+              downloadAntiCheatData(
+                {
+                  onlineMonitor: requireServices(state).onlineMonitor,
+                  paths: requireServices(state).paths
+                },
+                isMac
+                  ? releasesInfo.anticheatFiles.shaMac
+                  : releasesInfo.anticheatFiles.shaLinux
+              ).catch((error) => {
+                logWarning(
+                  `[bootstrap] downloadAntiCheatData failed: ${String(error)}`,
+                  LogPrefix.Backend
+                )
+              })
+            }
+          )
         } catch (error) {
           logWarning(
             `[bootstrap] Failed to register releasesInfoReady anticheat listener: ${error}`,
@@ -2740,7 +2793,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // calling it as-is — not replicated or bypassed here.
         try {
           fetchLastestReleases({
-            onlineMonitor: requireServices(state).onlineMonitor
+            onlineMonitor: requireServices(state).onlineMonitor,
+            appRuntime: requireAppRuntime(state)
           })
         } catch (error) {
           logWarning(
@@ -2940,15 +2994,18 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         setGogPresenceWhenOnline(gogPresenceDeps(state))
         // React immediately when the user toggles GOG presence on/off in settings. Registered here
         // (not at presence.ts import) because the listener needs the boot's deps.
-        backendEvents.on('settingChanged', ({ key, newValue }) => {
-          if (key !== 'disableGOGPresence') return
-          const deps = gogPresenceDeps(state)
-          if (newValue) {
-            void gogPresence.deletePresence(deps, true)
-          } else {
-            void gogPresence.setPresence(deps)
+        requireAppRuntime(state).events.on(
+          'settingChanged',
+          ({ key, newValue }) => {
+            if (key !== 'disableGOGPresence') return
+            const deps = gogPresenceDeps(state)
+            if (newValue) {
+              void gogPresence.deletePresence(deps, true)
+            } else {
+              void gogPresence.setPresence(deps)
+            }
           }
-        })
+        )
       }
     },
     {

@@ -19,7 +19,7 @@ import i18next from 'i18next'
 
 import { toI18nextCode } from '../../common/languages'
 import type { GlobalConfigSlice } from '../config'
-import { backendEvents } from '../backend_events'
+import type { AppRuntimeSlice } from '../appRuntime'
 import { logInfo, logWarning, LogPrefix } from '../logger'
 import type { Stores } from '../services/types'
 
@@ -42,7 +42,7 @@ import type { Stores } from '../services/types'
  * depends on -- the renderer runs its OWN i18next instance (`src/frontend/index.tsx`)
  * for every string it displays, so a missing BACKEND translator degrades backend-side
  * strings (tray/dialog/notification labels) but must never block persisting the choice.
- * Ordering is unchanged, and `backendEvents.emit('languageChanged')` MUST stay last.
+ * Ordering is unchanged, and `events.emit('languageChanged')` MUST stay last.
  *
  * Under Electron nothing changes: i18next IS initialized there, the call resolves, and
  * the catch is never entered.
@@ -51,7 +51,7 @@ export async function changeLanguage(
   deps: {
     stores: Pick<Stores, 'kvs' | 'legendary'>
     config: Pick<GlobalConfigSlice, 'setSetting'>
-  },
+  } & AppRuntimeSlice<'events'>,
   language: string
 ): Promise<void> {
   logInfo(['Changing Language to:', language], LogPrefix.Backend)
@@ -75,5 +75,5 @@ export async function changeLanguage(
   }
   deps.stores.legendary.gameInfoStore.clear()
   deps.config.setSetting('language', language, deps.stores.kvs)
-  backendEvents.emit('languageChanged')
+  deps.appRuntime.events.emit('languageChanged')
 }

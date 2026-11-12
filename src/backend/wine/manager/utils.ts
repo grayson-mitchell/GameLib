@@ -19,7 +19,7 @@ import type { AppPaths } from 'backend/process/context'
 import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import type { GlobalConfigSlice } from '../../config'
 import { join } from 'path'
-import { backendEvents } from 'backend/backend_events'
+import type { AppRuntimeSlice } from 'backend/appRuntime'
 import type { Stores } from 'backend/services/types'
 import type { ProcessRunner } from 'backend/process/types'
 
@@ -293,7 +293,7 @@ async function installWineVersion(
     paths: Pick<AppPaths, 'toolsPath'>
     /** The boot-owned abort registry a release download registers in (66.4-13). */
     aborts: Pick<AbortRegistry, 'create' | 'delete'>
-  },
+  } & AppRuntimeSlice<'events'>,
   release: WineVersionInfo,
   onProgress: (status: WineManagerStatus) => void
 ) {
@@ -330,7 +330,8 @@ async function installWineVersion(
       overwrite: release.hasUpdate,
       onProgress: onProgress,
       abortSignal: abortController.signal,
-      runner: deps.runner
+      runner: deps.runner,
+      appRuntime: deps.appRuntime
     })
     updatedInfo = {
       ...response.versionInfo,
@@ -394,7 +395,7 @@ async function installWineVersion(
 }
 
 async function removeWineVersion(
-  deps: WineManagerDeps,
+  deps: WineManagerDeps & AppRuntimeSlice<'events'>,
   release: WineVersionInfo
 ): Promise<boolean> {
   if (!deps.stores.wineManager.wineDownloaderInfoStore.has('wine-releases')) {
@@ -431,7 +432,7 @@ async function removeWineVersion(
     try {
       rmSync(installDir, { recursive: true })
       // A copy: the stored entry's installDir is cleared below, and the DXMT listener reads it.
-      backendEvents.emit('wineVersionUninstalled', { ...stored })
+      deps.appRuntime.events.emit('wineVersionUninstalled', { ...stored })
     } catch (error) {
       logError(error, LogPrefix.WineDownloader)
       logWarning(

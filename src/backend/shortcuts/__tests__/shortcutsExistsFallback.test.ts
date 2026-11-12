@@ -53,6 +53,7 @@ jest.mock('graceful-fs', () => ({
   existsSync: jest.fn()
 }))
 
+import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { createTestInfoCaches } from 'backend/testUtils/testEpicAmazonRuntimes'
 import { createTestAbortRegistry } from 'backend/testUtils/testAbortRegistry'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
@@ -117,6 +118,7 @@ function overrideProcessPlatform(os: string): string {
 
 registerShortcutsFlows({
   sendFrontendMessage,
+  appRuntime: createTestAppRuntime(),
   ipc,
   ...hostSlices(),
   managers: createTestManagers({

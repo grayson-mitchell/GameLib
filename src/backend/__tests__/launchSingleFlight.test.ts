@@ -1,7 +1,4 @@
-import {
-  singleFlightLaunch,
-  resetLaunchSingleFlightForTests
-} from '../launchSingleFlight'
+import { createLaunchFlights } from '../launchSingleFlight'
 
 function deferred<T>() {
   let resolve!: (v: T) => void
@@ -14,7 +11,13 @@ function deferred<T>() {
 }
 
 describe('singleFlightLaunch', () => {
-  beforeEach(() => resetLaunchSingleFlightForTests())
+  // One table per test, as one per boot in production.
+  let singleFlightLaunch: ReturnType<
+    typeof createLaunchFlights
+  >['singleFlightLaunch']
+  beforeEach(() => {
+    singleFlightLaunch = createLaunchFlights().singleFlightLaunch
+  })
 
   it('joins a concurrent same-key call: run once, onJoin once, same result', async () => {
     const d = deferred<string>()

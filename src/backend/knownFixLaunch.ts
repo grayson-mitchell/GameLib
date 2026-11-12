@@ -18,7 +18,11 @@ import { realpathSync, statSync } from 'fs'
 import { isAbsolute, relative, resolve } from 'path'
 
 import { Runner } from 'common/types'
-import { isValidExeOverrideShape, readKnownFixes } from './knownFixes'
+import {
+  isValidExeOverrideShape,
+  readKnownFixes,
+  type KnownFixPathsDeps
+} from './knownFixes'
 import { logInfo, logWarning, LogPrefix } from './logger'
 
 function escapes(rel: string): boolean {
@@ -65,13 +69,14 @@ interface KnownFixLaunchOverrides {
 }
 
 export function readKnownFixLaunchOverrides(
+  deps: KnownFixPathsDeps,
   appName: string,
   runner: Runner,
   installPath: string | undefined
 ): KnownFixLaunchOverrides {
   const label = `Known fix for '${appName}'`
   try {
-    const fix = readKnownFixes(appName, runner)
+    const fix = readKnownFixes(deps, appName, runner)
     const launchArgs = fix?.launchArgs ?? []
     let exeOverride: string | undefined
     if (fix?.exeOverride) {

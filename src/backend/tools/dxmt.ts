@@ -1,5 +1,5 @@
 import type { RustInvokeDeps } from '../host/rustInvokeDeps'
-import type { backendEvents } from 'backend/backend_events'
+import type { BackendEventBus } from 'backend/backend_events'
 import type { DialogBoxDeps } from '../dialog/dialog'
 import { isMac } from 'backend/constants/environment'
 import { logDebug, logError, LogPrefix, logWarning } from 'backend/logger'
@@ -42,7 +42,7 @@ interface DxmtStoresDeps extends DialogBoxDeps, RustInvokeDeps {
  * deps: there is no unbound state to skip through.
  */
 export interface DxmtListenerDeps extends DxmtStoresDeps {
-  events: Pick<typeof backendEvents, 'on' | 'off'>
+  events: Pick<BackendEventBus, 'on' | 'off'>
 }
 
 // Quick 261031-rjv: DXMT v0.80's winemetal.so resolves macdrv metal-view symbols that

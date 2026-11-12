@@ -7,6 +7,7 @@
  */
 import type { SteamInstallRuntime } from '../storeManagers/steam/steamInstallRuntime'
 import type { DepotTransport } from '../storeManagers/steam/depotRust/jobRegistry'
+import { createTestAppRuntime } from './testAppRuntime'
 import { createTestHostServices } from './testHostServices'
 
 export function createTestSteamInstallRuntime(
@@ -16,5 +17,10 @@ export function createTestSteamInstallRuntime(
   const { createSteamInstallRuntime } =
     require('../storeManagers/steam/steamInstallRuntime') as typeof import('../storeManagers/steam/steamInstallRuntime')
   /* eslint-enable @typescript-eslint/no-require-imports */
-  return createSteamInstallRuntime(transport ?? createTestHostServices())
+  return createSteamInstallRuntime(
+    transport ?? {
+      ...createTestHostServices(),
+      appRuntime: createTestAppRuntime()
+    }
+  )
 }

@@ -325,7 +325,6 @@ files	meta/coldBootTiming.ts	-
 files	meta/measureCrossoverMatching.ts	-
 files	meta/probeSeaInWorker.ts	-
 files	meta/sidecarSeaFsShim.ts	-
-files	src/backend/images_cache.ts	-
 files	src/common/types/proxy-types.ts	-
 files	src/frontend/components/UI/WikiGameInfo/components/MacOSCompatibility/index.scss	-
 files	src/frontend/screens/Login/components/LoginWarning/index.scss	-

@@ -33,6 +33,9 @@ const ratingMapDeps = {
     legendary: { getListOfGames: getListOfGamesMocks.legendary },
     nile: { getListOfGames: getListOfGamesMocks.nile },
     steam: { getListOfGames: getListOfGamesMocks.steam }
+  },
+  appRuntime: {
+    crossoverIndex: { buildIndexResolver: () => buildIndexResolverMock() }
   }
 } as unknown as Parameters<typeof buildCrossoverRatingMap>[0]
 
@@ -51,8 +54,7 @@ const resolveRatingForMock = jest.fn<number | null, [GameInfo]>()
 const buildIndexResolverMock = jest.fn()
 jest.mock('../index', () => ({
   isCrossoverIndexEligible: (...args: [GameInfo]) =>
-    isCrossoverIndexEligibleMock(...args),
-  buildIndexResolver: (...args: []) => buildIndexResolverMock(...args)
+    isCrossoverIndexEligibleMock(...args)
 }))
 
 import { buildCrossoverRatingMap } from '../crossoverRatingMap'

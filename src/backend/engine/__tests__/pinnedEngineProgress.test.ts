@@ -6,6 +6,7 @@ jest.mock('backend/logger', () => ({
 }))
 jest.mock('backend/utils', () => ({ sendGameStatusUpdate: jest.fn() }))
 
+import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { sendGameStatusUpdate } from 'backend/utils'
 import type { FallbackEngine } from '../fallbackEngine'
 import { ensurePinnedEngineReportingStatus } from '../pinnedEngineProgress'
@@ -59,6 +60,7 @@ describe('ensurePinnedEngineReportingStatus', () => {
     })
     const r = await ensurePinnedEngineReportingStatus({
       sendFrontendMessage: jest.fn(),
+      appRuntime: createTestAppRuntime(),
       pin,
       appName: 'amzn1.x',
       runner: 'nile',
@@ -91,6 +93,7 @@ describe('ensurePinnedEngineReportingStatus', () => {
     } as never)
     const r = await ensurePinnedEngineReportingStatus({
       sendFrontendMessage: jest.fn(),
+      appRuntime: createTestAppRuntime(),
       pin,
       appName: '1',
       runner: 'gog',
@@ -114,6 +117,7 @@ describe('ensurePinnedEngineReportingStatus', () => {
     } as never)
     const r = await ensurePinnedEngineReportingStatus({
       sendFrontendMessage: jest.fn(),
+      appRuntime: createTestAppRuntime(),
       pin,
       appName: '1',
       runner: 'gog',

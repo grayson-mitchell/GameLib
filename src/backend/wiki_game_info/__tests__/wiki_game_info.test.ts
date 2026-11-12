@@ -40,11 +40,6 @@ jest.mock('../umu/utils', () => ({
 
 const getCodeweaversFromIndexMock = jest.fn()
 const crossoverIndexHasMock = jest.fn()
-jest.mock('backend/crossover_index', () => ({
-  getCodeweaversFromIndex: (...args: unknown[]) =>
-    getCodeweaversFromIndexMock(...args),
-  crossoverIndexHas: (...args: unknown[]) => crossoverIndexHasMock(...args)
-}))
 
 // Imported AFTER the jest.mock calls above.
 import { getWikiGameInfo } from '../wiki_game_info'
@@ -58,7 +53,15 @@ const wikiGameInfoStores = createWikiGameInfoStores({
 const { wikiGameInfoStore } = wikiGameInfoStores
 const gamesDbDeps = {
   libraryManagers: {},
-  stores: { wikiGameInfo: wikiGameInfoStores, crossoverIndex: {} }
+  stores: { wikiGameInfo: wikiGameInfoStores, crossoverIndex: {} },
+  // The boot's CrossOver index lookups are scripted fakes: the wiring under test is the call, not the index.
+  appRuntime: {
+    crossoverIndex: {
+      getCodeweaversFromIndex: (...args: unknown[]) =>
+        getCodeweaversFromIndexMock(...args),
+      crossoverIndexHas: (...args: unknown[]) => crossoverIndexHasMock(...args)
+    }
+  }
 } as unknown as Parameters<typeof getWikiGameInfo>[0]
 
 const getInfoFromPCGamingWikiMock = getInfoFromPCGamingWiki as jest.Mock
