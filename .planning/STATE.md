@@ -4,14 +4,14 @@ milestone: v0.10
 milestone_name: Foundations
 status: executing
 stopped_at: Phase 74 context gathered
-last_updated: "2026-11-12T10:30:20.177Z"
-last_activity: 2026-11-12
+last_updated: "2026-11-12T17:43:36.273Z"
+last_activity: "2026-11-13 - Completed quick task 261113-8m6: compact Steam bridge route row"
 progress:
   total_phases: 23
-  completed_phases: 14
+  completed_phases: 15
   total_plans: 306
-  completed_plans: 304
-  percent: 61
+  completed_plans: 305
+  percent: 65
 ---
 
 # Project State
@@ -730,7 +730,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-12T10:30:20.169Z
+Last session: 2026-11-12T17:43:36.265Z
 Stopped at: Phase 74 context gathered
 Resume file: None
 
