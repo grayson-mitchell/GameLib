@@ -26,7 +26,7 @@ TS can now start a delta job (`opts.delta.oldGidByDepot`), send `fromManifest`/`
 
 ## Tasks
 1. Wire types, job builder, stage mapping - a7b1000f1
-2. Delta input on downloadSteamDepotsRust - see git log (feat(74-06) second commit)
+2. Delta input on downloadSteamDepotsRust - abd4198f0
 
 ## Behavior
 - Installed depots get `fromManifest` = old GID string (equal GIDs still sent); added depots null; installed depots absent from the new selection become `retiredDepots` (old GID + key via fetchDepotKey under the existing lease; per-depot key failure warns by depot id and drops that retirement).
