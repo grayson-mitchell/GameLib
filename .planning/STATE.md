@@ -4,13 +4,13 @@ milestone: v0.10
 milestone_name: Foundations
 status: executing
 stopped_at: Phase 75 context gathered
-last_updated: "2026-11-12T19:06:13.525Z"
+last_updated: "2026-11-12T19:20:13.737Z"
 last_activity: 2026-11-12
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 315
-  completed_plans: 312
+  completed_plans: 313
   percent: 61
 ---
 
@@ -73,7 +73,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 74 (steam-game-updates) — EXECUTING
-Plan: 20 of 22 (gap closure; 74-14..19 and 74-21 complete; 74-20 next)
+Plan: 22 of 22 (gap closure; 74-14..21 complete; 74-22 next, the live UAT)
 Status: Ready to execute
 Last activity: 2026-11-12
 
@@ -264,6 +264,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 66.4 P66.4-17 | multi-hour | 2 tasks | 146 files |
 | Phase 66.4 P20 | 3h | 2 tasks | 133 files |
 | Phase 74 P01 | 45min | 2 tasks | 9 files |
+| Phase 74 P20 | 60min | 3 tasks | 100 files |
 
 ## Accumulated Context
 
@@ -730,7 +731,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-12T19:06:13.517Z
+Last session: 2026-11-12T19:20:09.690Z
 Stopped at: Phase 75 context gathered
 Resume file: None
 
