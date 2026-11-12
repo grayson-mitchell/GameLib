@@ -23,6 +23,7 @@ import { join } from 'path'
 import type { Stores } from 'backend/services/types'
 
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+import { createTestSteamLaunchRuntime } from 'backend/testUtils/testSteamLaunchRuntime'
 
 // 66.3-15: the bottle settings are read through the deps slice, so they are a plain mock here.
 const getSteamBottleSettings = jest.fn()
@@ -30,7 +31,8 @@ const libDeps = {
   config: createTestGlobalConfig(),
   steamBottle: { getSteamBottleSettings, resolveCrossoverWine: jest.fn() },
   paths: { userHome: '/test-gamelib/home' },
-  engineRuntime: { registry: createEngineRegistry() }
+  engineRuntime: { registry: createEngineRegistry() },
+  steamLaunchRuntime: createTestSteamLaunchRuntime()
 }
 
 const { steamLibraryStore, steamMetadataStore } =
@@ -155,6 +157,7 @@ jest.mock('../bottle', () => ({
   getBottleSteamappsDir: jest.fn()
 }))
 jest.mock('../bridgeBottle', () => ({
+  createDrmBridgeRunners: () => ({}),
   getBridgeBottleSettings: jest.fn(),
   listReadyBridgeBottleNames: jest.fn(),
   resolveBridgeBottleName: jest.fn()
@@ -191,6 +194,7 @@ jest.mock('../bridge/launchTarget', () => ({
   backfillBridgeLaunchTargets: jest.fn()
 }))
 jest.mock('../platformCapture', () => ({
+  createPlatformCaptureQueue: () => ({}),
   captureOwnedAppPlatforms: jest.fn()
 }))
 jest.mock('../metacriticCapture', () => ({

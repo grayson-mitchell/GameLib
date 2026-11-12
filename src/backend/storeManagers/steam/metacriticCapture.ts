@@ -2,8 +2,8 @@ import { logInfo, logError, LogPrefix } from 'backend/logger'
 import { parseMetacriticScore } from 'common/metacriticScore'
 import type { SteamMetadataCacheEntry } from './stores'
 import type { SteamStoresDeps } from './library/installRoot'
-import {
-  withPlatformCaptureLock,
+import type {
+  PlatformCaptureQueue,
   PlatformCapturePicsClient
 } from './platformCapture'
 import { withTimeout, STEAM_PICS_BULK_TIMEOUT_MS } from './withTimeout'
@@ -34,72 +34,77 @@ interface MetacriticCaptureSummary {
 }
 
 export async function captureOwnedAppMetacritic(
-  deps: SteamStoresDeps,
+  deps: SteamStoresDeps & {
+    steamLaunchRuntime: { platformCapture: PlatformCaptureQueue }
+  },
   client: PlatformCapturePicsClient,
   appIds: number[]
 ): Promise<MetacriticCaptureSummary> {
   const { steamMetadataStore } = deps.stores.steam
   let scopedCount = appIds.length
   try {
-    return await withPlatformCaptureLock(async () => {
-      const scoped = appIds.filter(
-        (id) => steamMetadataStore.get(String(id))?.metacriticCaptured !== true
-      )
-      scopedCount = scoped.length
+    return await deps.steamLaunchRuntime.platformCapture.withPlatformCaptureLock(
+      async () => {
+        const scoped = appIds.filter(
+          (id) =>
+            steamMetadataStore.get(String(id))?.metacriticCaptured !== true
+        )
+        scopedCount = scoped.length
 
-      if (scoped.length === 0) {
+        if (scoped.length === 0) {
+          return {
+            scopedCount: 0,
+            capturedCount: 0,
+            skippedCount: 0,
+            failed: false
+          }
+        }
+
+        const response = await withTimeout(
+          client.getProductInfo(scoped, [], true),
+          STEAM_PICS_BULK_TIMEOUT_MS,
+          'captureOwnedAppMetacritic getProductInfo'
+        )
+
+        let capturedCount = 0
+        let skippedCount = 0
+
+        for (const id of scoped) {
+          const isUnknownApp = response.unknownApps?.includes(id) === true
+          const entry = isUnknownApp ? undefined : response.apps?.[id]
+          const appinfo = entry?.appinfo as AppCommonMetacritic | undefined
+          if (!appinfo?.common) {
+            // No answer: stays uncaptured and is retried on the next sync.
+            skippedCount += 1
+            continue
+          }
+
+          const score = parseMetacriticScore(appinfo.common.metacritic_score)
+          const existing = steamMetadataStore.get(String(id))
+          const { metacritic_score: _stale, ...rest } = existing ?? {}
+          // Partial entry cast: this bulk writer has no art source, so
+          // `existing` can legitimately be absent (same as mergePlatformCapture).
+          steamMetadataStore.set(String(id), {
+            ...rest,
+            ...(score !== undefined ? { metacritic_score: score } : {}),
+            metacriticCaptured: true
+          } as SteamMetadataCacheEntry)
+          capturedCount += 1
+        }
+
+        logInfo(
+          `Steam bulk metacritic capture: scoped=${scoped.length} captured=${capturedCount} skipped=${skippedCount}`,
+          LogPrefix.Steam
+        )
+
         return {
-          scopedCount: 0,
-          capturedCount: 0,
-          skippedCount: 0,
+          scopedCount: scoped.length,
+          capturedCount,
+          skippedCount,
           failed: false
         }
       }
-
-      const response = await withTimeout(
-        client.getProductInfo(scoped, [], true),
-        STEAM_PICS_BULK_TIMEOUT_MS,
-        'captureOwnedAppMetacritic getProductInfo'
-      )
-
-      let capturedCount = 0
-      let skippedCount = 0
-
-      for (const id of scoped) {
-        const isUnknownApp = response.unknownApps?.includes(id) === true
-        const entry = isUnknownApp ? undefined : response.apps?.[id]
-        const appinfo = entry?.appinfo as AppCommonMetacritic | undefined
-        if (!appinfo?.common) {
-          // No answer: stays uncaptured and is retried on the next sync.
-          skippedCount += 1
-          continue
-        }
-
-        const score = parseMetacriticScore(appinfo.common.metacritic_score)
-        const existing = steamMetadataStore.get(String(id))
-        const { metacritic_score: _stale, ...rest } = existing ?? {}
-        // Partial entry cast: this bulk writer has no art source, so
-        // `existing` can legitimately be absent (same as mergePlatformCapture).
-        steamMetadataStore.set(String(id), {
-          ...rest,
-          ...(score !== undefined ? { metacritic_score: score } : {}),
-          metacriticCaptured: true
-        } as SteamMetadataCacheEntry)
-        capturedCount += 1
-      }
-
-      logInfo(
-        `Steam bulk metacritic capture: scoped=${scoped.length} captured=${capturedCount} skipped=${skippedCount}`,
-        LogPrefix.Steam
-      )
-
-      return {
-        scopedCount: scoped.length,
-        capturedCount,
-        skippedCount,
-        failed: false
-      }
-    })
+    )
   } catch (err) {
     logError(['Steam bulk metacritic capture failed:', err], LogPrefix.Steam)
     return {

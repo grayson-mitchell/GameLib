@@ -70,6 +70,7 @@ const hostSlices = {
   steamSession: {} as never,
   steamBottle: {} as never,
   engineRuntime: {} as never,
+  steamLaunchRuntime: {} as never,
   paths: {} as never
 }
 

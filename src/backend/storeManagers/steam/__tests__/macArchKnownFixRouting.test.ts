@@ -104,11 +104,13 @@ jest.mock('../bridgeBottleLifecycle', () => ({
   removePerGameBridgeBottle: jest.fn()
 }))
 jest.mock('../bridgeBottle', () => ({
+  createDrmBridgeRunners: () => ({}),
   isBridgeBottleReady: jest.fn(),
   getBridgeBottleSettings: jest.fn(),
   resolveBridgeBottleName: jest.fn()
 }))
 jest.mock('../bottledSteam', () => ({
+  createBottledSteamRaiser: () => ({}),
   tellBottledSteamToLaunch: jest.fn(),
   tellBottledSteamToUninstall: jest.fn()
 }))
@@ -135,7 +137,10 @@ jest.mock('../bridge/helperProcess', () => ({
   ensureBridgeHelperReady: jest.fn()
 }))
 // ── platformCapture mock ──────────────────────────────────────────────────────
-jest.mock('../platformCapture', () => ({ captureOwnedAppPlatforms: jest.fn() }))
+jest.mock('../platformCapture', () => ({
+  createPlatformCaptureQueue: () => ({}),
+  captureOwnedAppPlatforms: jest.fn()
+}))
 jest.mock('../metacriticCapture', () => ({
   captureOwnedAppMetacritic: jest.fn()
 }))

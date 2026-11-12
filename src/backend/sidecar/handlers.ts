@@ -139,7 +139,8 @@ function toolSlices(services: BootServices) {
     engineState: services.engineState,
     engineRuntime: services.engineRuntime,
     paths: services.paths,
-    steamBottle: services.steamBottle
+    steamBottle: services.steamBottle,
+    steamLaunchRuntime: services.steamLaunchRuntime
   }
 }
 
@@ -172,7 +173,8 @@ export function registerHandlers(deps: {
     engineState: deps.services.engineState,
     engineRuntime: deps.services.engineRuntime,
     paths: deps.services.paths,
-    steamBottle: deps.services.steamBottle
+    steamBottle: deps.services.steamBottle,
+    steamLaunchRuntime: deps.services.steamLaunchRuntime
   })
   registerInstallFlows({ ...deps.services, ipc })
   registerSettingsFlows({

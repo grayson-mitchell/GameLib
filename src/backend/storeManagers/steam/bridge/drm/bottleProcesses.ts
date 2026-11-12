@@ -146,6 +146,7 @@ export async function defaultEndStageSession(
     | 'steamBottle'
     | 'paths'
     | 'engineRuntime'
+    | 'steamLaunchRuntime'
   >,
   args: {
     appId: string

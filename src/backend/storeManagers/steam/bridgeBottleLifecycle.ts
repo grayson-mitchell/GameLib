@@ -9,18 +9,14 @@ import { existsSync, rmSync } from 'graceful-fs'
 import type { WineInstallation } from 'common/types'
 import type { GlobalConfigSlice } from 'backend/config'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
+import type { SteamLaunchRuntime } from './steamLaunchRuntime'
 import type { EngineServicesSource } from 'backend/services/engineServices'
 import {
   killBottleWineServer,
   type KillBottleDeps,
   type ProvisionBottleResult
 } from './provisionBottle'
-import {
-  bridgeBottleNameFor,
-  drmRunnerBinDir,
-  getDrmBridgeRunner,
-  isBridgeBottleReady
-} from './bridgeBottle'
+import { bridgeBottleNameFor, isBridgeBottleReady } from './bridgeBottle'
 import {
   CROSSOVER_CREATE_FAILED,
   CROSSOVER_CREATE_TIMEOUT,
@@ -53,6 +49,7 @@ import { getBottleDir, isBottleProvisioned } from './bottleDirs'
 /** SpawnDeps plus the config slice the shared-bottle guard reads (66.3-08). */
 export type BottleLifecycleDeps = KillBottleDeps & {
   engineRuntime: Pick<EngineRuntime, 'registry'>
+  steamLaunchRuntime: Pick<SteamLaunchRuntime, 'drmRunners'>
   config: Pick<GlobalConfigSlice, 'getSettings'>
   steamBottle: Pick<SteamBottle, 'configStore' | 'persistedWineBins'>
 }
@@ -259,14 +256,23 @@ export async function removePerGameBridgeBottle(
  * stock CrossOver (D-10).
  */
 async function killForRegisteredEngine(
-  deps: KillBottleDeps & { engineRuntime: Pick<EngineRuntime, 'registry'> },
+  deps: KillBottleDeps & {
+    engineRuntime: Pick<EngineRuntime, 'registry'>
+    steamLaunchRuntime: Pick<SteamLaunchRuntime, 'drmRunners'>
+  },
   appId: string,
   name: string,
   timeoutMs?: number,
   engineHint?: { wineserverBin: string }
 ): Promise<boolean> {
-  if (getDrmBridgeRunner(appId)) {
-    return killBottleWineServer(deps, name, drmRunnerBinDir(appId), timeoutMs)
+  const { drmRunners } = deps.steamLaunchRuntime
+  if (drmRunners.getDrmBridgeRunner(appId)) {
+    return killBottleWineServer(
+      deps,
+      name,
+      drmRunners.drmRunnerBinDir(appId),
+      timeoutMs
+    )
   }
   const engine = deps.engineRuntime.registry.getEngineSelection(appId)
   if (engine && isNonCrossover(engine)) {

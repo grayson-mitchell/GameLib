@@ -52,6 +52,8 @@ export interface EngineFlowDeps {
   paths: EngineServices['paths']
   /** The Steam bottle slice the Steam engine state reads (66.3-15). */
   steamBottle: SteamEngineBottle['steamBottle']
+  /** The boot's monitor phase and DRM runner registry (66.4-06). */
+  steamLaunchRuntime: SteamEngineBottle['steamLaunchRuntime']
 }
 
 function engineServicesOf(

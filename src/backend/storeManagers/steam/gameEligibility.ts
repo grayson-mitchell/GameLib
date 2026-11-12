@@ -26,7 +26,6 @@ import {
   clearBridgeScanVerdict
 } from './bridge/bridgeVerdict'
 import { isScanVerdictNowCovered } from './bridge/shimCoverage'
-import { builtBridgeShim64Path } from 'backend/constants/paths'
 import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 import type SteamGame from './games'
 
@@ -133,7 +132,7 @@ export function assembleBridgeRouteInput(
       steamGame.deps.steamSession.gameSession.bridgeFailedThisSession.has(
         steamGame.appId
       ),
-    win64ShimPresent: existsSync(builtBridgeShim64Path)
+    win64ShimPresent: existsSync(steamGame.deps.paths.builtBridgeShim64Path)
   }
 }
 

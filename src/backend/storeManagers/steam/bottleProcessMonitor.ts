@@ -49,11 +49,12 @@ import {
   raiseWineGameWindow,
   windowsExeNameFromCommand
 } from 'backend/utils/wineWindowRaise'
+import type { Clock, TimerHandle } from 'backend/process/types'
 import type { SpawnDeps } from './provisionBottle'
 import type { RunsForMeDeps } from 'backend/runsForMe'
 
 /** The monitor's spawn slice plus the runs-for-me store its session record writes (66.1). */
-export type BottleMonitorDeps = SpawnDeps & RunsForMeDeps
+type BottleMonitorDeps = SpawnDeps & RunsForMeDeps
 import { sendFrontendMessage } from '../../ipc'
 import { recordPlaySession } from 'backend/runsForMe'
 import type { SteamBottleLaunchWaitingCause } from 'common/types/steam'
@@ -93,7 +94,7 @@ const STEAM_CLIENT_PROCESS_NAMES = [
 
 interface MonitorEntry {
   cancelled: boolean
-  timers: Set<ReturnType<typeof setTimeout>>
+  timers: Set<TimerHandle>
   onStopped?: () => void
   onFirstMatch?: () => void
   onUnavailable?: () => void
@@ -112,9 +113,13 @@ interface MonitorEntry {
   kind: 'bottled-steam' | 'bridge'
 }
 
-const activeMonitors = new Map<string, MonitorEntry>()
+/** The boot-owned monitor state: one live monitor per appId, timers on the injected clock (66.4-06). */
+interface MonitorState {
+  active: Map<string, MonitorEntry>
+  clock: Pick<Clock, 'setTimeout' | 'clear'>
+}
 
-export interface StartBottleProcessMonitorArgs {
+interface StartBottleProcessMonitorArgs {
   appId: string
   installPath: string
   bottleDir: string
@@ -215,14 +220,17 @@ async function matchedProcesses(
 }
 
 /** Tracked, unref'd sleep — mirrors bottle.ts's own raise-loop sleep helper. */
-function trackedSleep(entry: MonitorEntry, ms: number): Promise<void> {
+function trackedSleep(
+  state: MonitorState,
+  entry: MonitorEntry,
+  ms: number
+): Promise<void> {
   return new Promise<void>((resolve) => {
-    const handle = setTimeout(() => {
+    const handle = state.clock.setTimeout(() => {
       entry.timers.delete(handle)
       resolve()
     }, ms)
     entry.timers.add(handle)
-    handle.unref?.()
   })
 }
 
@@ -242,14 +250,18 @@ function sendTerminalDoneOnce(appId: string, entry: MonitorEntry): void {
   })
 }
 
-function clearEntry(appId: string, entry: MonitorEntry): void {
+function clearEntry(
+  state: MonitorState,
+  appId: string,
+  entry: MonitorEntry
+): void {
   entry.cancelled = true
   for (const handle of entry.timers) {
-    clearTimeout(handle)
+    state.clock.clear(handle)
   }
   entry.timers.clear()
-  if (activeMonitors.get(appId) === entry) {
-    activeMonitors.delete(appId)
+  if (state.active.get(appId) === entry) {
+    state.active.delete(appId)
   }
 }
 
@@ -322,6 +334,7 @@ function recordFirstMatch(
 }
 
 async function runPollLoop(
+  state: MonitorState,
   deps: BottleMonitorDeps,
   appId: string,
   entry: MonitorEntry,
@@ -347,15 +360,15 @@ async function runPollLoop(
     undefined
 
   while (true) {
-    if (entry.cancelled || activeMonitors.get(appId) !== entry) return
+    if (entry.cancelled || state.active.get(appId) !== entry) return
 
     const noMatchElapsed = Date.now() - startedAt
     const interval =
       !entry.everMatched && noMatchElapsed > NO_MATCH_BACKOFF_AFTER_MS
         ? NO_MATCH_BACKOFF_INTERVAL_MS
         : pollIntervalMs
-    await trackedSleep(entry, interval)
-    if (entry.cancelled || activeMonitors.get(appId) !== entry) return
+    await trackedSleep(state, entry, interval)
+    if (entry.cancelled || state.active.get(appId) !== entry) return
 
     let matches: Array<{ pid: string; command: string }>
     try {
@@ -391,7 +404,7 @@ async function runPollLoop(
         }
         // Review WR-05: the give-up path must also stop the helper.
         fireStoppedOnce(appId, entry)
-        clearEntry(appId, entry)
+        clearEntry(state, appId, entry)
         return
       }
       continue
@@ -425,7 +438,7 @@ async function runPollLoop(
       // which never reaches this branch at all. Guarded so a throwing
       // callback cannot prevent `clearEntry()` from running.
       fireStoppedOnce(appId, entry)
-      clearEntry(appId, entry)
+      clearEntry(state, appId, entry)
       return
     }
     // no-op: empty-before-first-match, or still matching after first match.
@@ -447,11 +460,11 @@ async function runPollLoop(
         const paths = bottledSteamLogPaths(bottleDir)
 
         const bootstrapTail = await readBoundedTail(paths.bootstrap)
-        if (entry.cancelled || activeMonitors.get(appId) !== entry) return
+        if (entry.cancelled || state.active.get(appId) !== entry) return
         const consoleTail = await readBoundedTail(paths.console)
-        if (entry.cancelled || activeMonitors.get(appId) !== entry) return
+        if (entry.cancelled || state.active.get(appId) !== entry) return
         const loginTail = await readBoundedTail(paths.login)
-        if (entry.cancelled || activeMonitors.get(appId) !== entry) return
+        if (entry.cancelled || state.active.get(appId) !== entry) return
 
         const detectedCause = classifyBottledSteamBlock({
           bootstrapTail,
@@ -478,7 +491,7 @@ async function runPollLoop(
 }
 
 /** Returned by startBottleProcessMonitor so a launcher wrapper can signal exit. */
-export interface BottleProcessMonitorHandle {
+interface BottleProcessMonitorHandle {
   /**
    * The launch wrapper process has exited (cleanly or not). If a game process
    * was already matched this is a no-op; otherwise one immediate check runs
@@ -492,7 +505,8 @@ export interface BottleProcessMonitorHandle {
  * never blocks the caller, and is a complete no-op on any non-macOS host or
  * when `installPath` does not resolve under `<bottleDir>/drive_c/`.
  */
-export function startBottleProcessMonitor(
+function startMonitor(
+  state: MonitorState,
   deps: BottleMonitorDeps,
   args: StartBottleProcessMonitorArgs
 ): BottleProcessMonitorHandle | null {
@@ -527,7 +541,7 @@ export function startBottleProcessMonitor(
     `${installPath.replace(/[\\/]+$/, '')}${sep}`.toLowerCase()
   ]
 
-  cancelMonitor(appId)
+  cancelMonitor(state, appId)
 
   const entry: MonitorEntry = {
     cancelled: false,
@@ -542,7 +556,7 @@ export function startBottleProcessMonitor(
     terminalSent: false,
     kind
   }
-  activeMonitors.set(appId, entry)
+  state.active.set(appId, entry)
 
   // quick/261024-gvu: Steam launches bypass launcher.ts launchEventCallback
   // (steamFlowRegistration handleLaunch / protocol.ts call dispatchSteamLaunch
@@ -559,6 +573,7 @@ export function startBottleProcessMonitor(
   void (async () => {
     try {
       await runPollLoop(
+        state,
         deps,
         appId,
         entry,
@@ -572,11 +587,11 @@ export function startBottleProcessMonitor(
         LogPrefix.Steam
       )
       sendTerminalDoneOnce(appId, entry)
-      clearEntry(appId, entry)
+      clearEntry(state, appId, entry)
     }
   })()
 
-  const isLive = () => !entry.cancelled && activeMonitors.get(appId) === entry
+  const isLive = () => !entry.cancelled && state.active.get(appId) === entry
   return {
     launcherExited() {
       if (!isLive() || entry.everMatched) return
@@ -599,7 +614,7 @@ export function startBottleProcessMonitor(
           )
           sendTerminalDoneOnce(appId, entry)
           fireStoppedOnce(appId, entry)
-          clearEntry(appId, entry)
+          clearEntry(state, appId, entry)
         } catch (error) {
           logWarning(
             [`bottleProcessMonitor [${appId}]: launcherExited failed`, error],
@@ -612,48 +627,70 @@ export function startBottleProcessMonitor(
 }
 
 /** Cancel and fully tear down the monitor for one appId. No-op if unknown. */
-export function stopBottleProcessMonitor(appId: string): void {
-  const entry = activeMonitors.get(appId)
+function stopMonitor(state: MonitorState, appId: string): void {
+  const entry = state.active.get(appId)
   if (!entry) return
   sendTerminalDoneOnce(appId, entry)
-  clearEntry(appId, entry)
+  clearEntry(state, appId, entry)
 }
 
 /** Silent cancel (supersede / test teardown): no terminal status emitted. */
-function cancelMonitor(appId: string): void {
-  const entry = activeMonitors.get(appId)
+function cancelMonitor(state: MonitorState, appId: string): void {
+  const entry = state.active.get(appId)
   if (!entry) return
-  clearEntry(appId, entry)
+  clearEntry(state, appId, entry)
 }
 
 /**
  * quick/261024-gvu: 'starting' while a monitor is live and no game process has
  * matched yet, 'running' once one has, null when no live monitor exists.
  */
-export function getBottleProcessMonitorPhase(
+function monitorPhase(
+  state: MonitorState,
   appId: string
 ): 'starting' | 'running' | null {
-  const entry = activeMonitors.get(appId)
+  const entry = state.active.get(appId)
   if (!entry || entry.cancelled) return null
   return entry.everMatched ? 'running' : 'starting'
 }
 
-/** Test-only teardown hook: cancel every registered monitor (silently). */
-export function __stopAllBottleProcessMonitors(): void {
-  for (const appId of Array.from(activeMonitors.keys())) {
-    cancelMonitor(appId)
-  }
+export interface BottleProcessMonitors {
+  /** Never throws, never blocks; a no-op on a non-macOS host. */
+  startBottleProcessMonitor: (
+    deps: BottleMonitorDeps,
+    args: StartBottleProcessMonitorArgs
+  ) => BottleProcessMonitorHandle | null
+  /** Cancel and fully tear down the monitor for one appId. No-op if unknown. */
+  stopBottleProcessMonitor: (appId: string) => void
+  getBottleProcessMonitorPhase: (appId: string) => 'starting' | 'running' | null
+  /** Silently cancel every registered monitor (no terminal status emitted). */
+  stopAllBottleProcessMonitors: () => void
+  /** The `kind` an active monitor was started with, `undefined` when none is active. */
+  getActiveMonitorKind: (
+    appId: string
+  ) => 'bottled-steam' | 'bridge' | undefined
 }
 
 /**
- * Test-only observer: the `kind` an active monitor for `appId` was started
- * with (or defaulted to) -- `undefined` if no monitor is active for that
- * appId. Exists purely so a test can assert the documented default
- * (`'bottled-steam'`) without the poll loop itself needing to branch on
- * `kind` yet. Never called from production code.
+ * The per-boot bottle process monitors (D-05, 66.4-06). Construction only allocates an empty map:
+ * no I/O and no timer; the poll sleeps run on the injected clock (unref'd) once a monitor starts.
  */
-export function __getActiveMonitorKindForTests(
-  appId: string
-): 'bottled-steam' | 'bridge' | undefined {
-  return activeMonitors.get(appId)?.kind
+export function createBottleProcessMonitors(deps: {
+  clock: Pick<Clock, 'setTimeout' | 'clear'>
+}): BottleProcessMonitors {
+  const state: MonitorState = {
+    active: new Map<string, MonitorEntry>(),
+    clock: deps.clock
+  }
+  return {
+    startBottleProcessMonitor: (d, args) => startMonitor(state, d, args),
+    stopBottleProcessMonitor: (appId) => stopMonitor(state, appId),
+    getBottleProcessMonitorPhase: (appId) => monitorPhase(state, appId),
+    stopAllBottleProcessMonitors: () => {
+      for (const appId of Array.from(state.active.keys())) {
+        cancelMonitor(state, appId)
+      }
+    },
+    getActiveMonitorKind: (appId) => state.active.get(appId)?.kind
+  }
 }

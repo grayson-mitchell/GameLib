@@ -37,6 +37,7 @@ import { createFakeClock } from './fakeClock'
 import { createTestOnlineMonitor } from './testOnlineMonitor'
 import { createTestEngineState } from './testEngineState'
 import { createTestEngineRuntime } from './testEngineRuntime'
+import { createTestSteamLaunchRuntime } from './testSteamLaunchRuntime'
 import { createTestSignInProbe } from './testSignInProbe'
 import { createTestSteamSession } from './testSteamSession'
 import { createTestAnonymousClient } from './testAnonymousClient'
@@ -253,6 +254,8 @@ export function createTestServices(
     onlineMonitor: overrides.onlineMonitor ?? createTestOnlineMonitor(),
     engineState: overrides.engineState ?? createTestEngineState(),
     engineRuntime: overrides.engineRuntime ?? createTestEngineRuntime(),
+    steamLaunchRuntime:
+      overrides.steamLaunchRuntime ?? createTestSteamLaunchRuntime(),
     winetricksQueue:
       overrides.winetricksQueue ??
       unscriptedMembers<BootServices['winetricksQueue']>(
@@ -412,6 +415,8 @@ export function createTestManagerDeps(
     onlineMonitor: overrides.onlineMonitor ?? createTestOnlineMonitor(),
     engineState: overrides.engineState ?? createTestEngineState(),
     engineRuntime: overrides.engineRuntime ?? createTestEngineRuntime(),
+    steamLaunchRuntime:
+      overrides.steamLaunchRuntime ?? createTestSteamLaunchRuntime(),
     signIn: overrides.signIn ?? createTestSignInProbe(),
     steamSession: overrides.steamSession ?? createTestSteamSession(),
     anonymousClient: overrides.anonymousClient ?? createTestAnonymousClient(),
@@ -462,6 +467,7 @@ export function createTestToolsSlices() {
     onlineMonitor: createTestOnlineMonitor(),
     engineState: createTestEngineState(),
     engineRuntime: createTestEngineRuntime(),
+    steamLaunchRuntime: createTestSteamLaunchRuntime(),
     paths: createTestPaths(),
     steamBottle: createTestSteamBottle({ stores: createTestStores(), config })
   }

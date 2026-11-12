@@ -43,6 +43,7 @@ import { removeAllSteamInstallCopies } from '../removeAllCopies'
 import type { Stores } from 'backend/services/types'
 
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+import { createTestSteamLaunchRuntime } from 'backend/testUtils/testSteamLaunchRuntime'
 
 // 66.3-15: the bottle helpers are read through the deps slice, so they are plain mocks here.
 // quick 261024-cjq: plain function (survives resetMocks) — CrossOver present.
@@ -58,7 +59,8 @@ const libDeps = {
   config: createTestGlobalConfig(),
   steamBottle,
   paths: { userHome: '/test-gamelib/home' },
-  engineRuntime: { registry: createEngineRegistry() }
+  engineRuntime: { registry: createEngineRegistry() },
+  steamLaunchRuntime: createTestSteamLaunchRuntime()
 }
 
 const { steamMetadataStore } = jest.requireMock<Stores['steam']>('../stores')
@@ -172,11 +174,13 @@ jest.mock('../bridgeBottleLifecycle', () => ({
   removePerGameBridgeBottle: jest.fn()
 }))
 jest.mock('../bridgeBottle', () => ({
+  createDrmBridgeRunners: () => ({}),
   isBridgeBottleReady: jest.fn(),
   getBridgeBottleSettings: jest.fn(),
   resolveBridgeBottleName: jest.fn()
 }))
 jest.mock('../bottledSteam', () => ({
+  createBottledSteamRaiser: () => ({}),
   tellBottledSteamToLaunch: jest.fn(),
   tellBottledSteamToUninstall: jest.fn()
 }))
@@ -203,7 +207,10 @@ jest.mock('../bridge/helperProcess', () => ({
   ensureBridgeHelperReady: jest.fn()
 }))
 // ── platformCapture mock ──────────────────────────────────────────────────────
-jest.mock('../platformCapture', () => ({ captureOwnedAppPlatforms: jest.fn() }))
+jest.mock('../platformCapture', () => ({
+  createPlatformCaptureQueue: () => ({}),
+  captureOwnedAppPlatforms: jest.fn()
+}))
 jest.mock('../metacriticCapture', () => ({
   captureOwnedAppMetacritic: jest.fn()
 }))

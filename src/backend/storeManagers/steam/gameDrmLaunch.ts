@@ -433,17 +433,21 @@ export function relogDrmTrace(
 // D-13 (56-12): the [bridge-notice] log line fires on every attempt; the dialog
 // and notify fire once per title and failed step per session. A different
 // failed step is new information, so it shows again. Keyed `${appId}|${step}`.
-export const drmModeNoticeShownThisSession = new Set<string>()
+export interface DrmModeNoticeLatch {
+  /** True the first time `key` is claimed this boot, false after: the dialog shows at most once. */
+  claim: (key: string) => boolean
+}
 
-/**
- * Test-only reset for drmModeNoticeShownThisSession (still module state; the session maps in
- * gameSessionState.ts are per-boot instances now, 66.3-13). A test that drives
- * maybeNotifyDrmModeFailed records a per-`${appId}|${step}` notice, which
- * would silence the same notice in a later test sharing that key; call this
- * in a `beforeEach`.
- */
-export function __resetDrmModeNoticeShownForTests(): void {
-  drmModeNoticeShownThisSession.clear()
+/** Per-boot instance of the once-per-session notice latch (D-05, 66.4-06); construction allocates an empty set. */
+export function createDrmModeNoticeLatch(): DrmModeNoticeLatch {
+  const shown = new Set<string>()
+  return {
+    claim: (key) => {
+      if (shown.has(key)) return false
+      shown.add(key)
+      return true
+    }
+  }
 }
 
 export function engineLabelForLog(sel: EngineSelection): string {

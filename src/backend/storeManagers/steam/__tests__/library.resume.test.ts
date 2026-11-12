@@ -149,6 +149,7 @@ jest.mock('../bottle', () => ({
   isSteamBottleProvisioned: jest.fn()
 }))
 jest.mock('../bridgeBottle', () => ({
+  createDrmBridgeRunners: () => ({}),
   getBridgeBottleSettings: jest.fn(),
   listReadyBridgeBottleNames: jest.fn(),
   resolveBridgeBottleName: jest.fn()
@@ -188,6 +189,7 @@ jest.mock('../bridge/launchTarget', () => ({
   backfillBridgeLaunchTargets: jest.fn()
 }))
 jest.mock('../platformCapture', () => ({
+  createPlatformCaptureQueue: () => ({}),
   captureOwnedAppPlatforms: jest.fn()
 }))
 jest.mock('../metacriticCapture', () => ({

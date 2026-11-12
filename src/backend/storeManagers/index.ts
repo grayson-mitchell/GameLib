@@ -162,6 +162,7 @@ export interface CreateStoreManagersDeps {
   anonymousClient: ManagerDeps['anonymousClient']
   bridgeHelpers: ManagerDeps['bridgeHelpers']
   steamBottle: ManagerDeps['steamBottle']
+  steamLaunchRuntime: ManagerDeps['steamLaunchRuntime']
   steamUser: ManagerDeps['steamUser']
   loginWindowSeam: ManagerDeps['loginWindowSeam']
 }
@@ -205,6 +206,7 @@ export function createStoreManagers(
     anonymousClient: deps.anonymousClient,
     bridgeHelpers: deps.bridgeHelpers,
     steamBottle: deps.steamBottle,
+    steamLaunchRuntime: deps.steamLaunchRuntime,
     steamUser: deps.steamUser,
     loginWindowSeam: deps.loginWindowSeam
   }
@@ -226,7 +228,8 @@ export function createStoreManagers(
     engineState: deps.engineState,
     engineRuntime: deps.engineRuntime,
     paths: deps.paths,
-    steamBottle: deps.steamBottle
+    steamBottle: deps.steamBottle,
+    steamLaunchRuntime: deps.steamLaunchRuntime
   })
   Object.assign(library, {
     sideload: new SideloadLibraryManager(managerDeps),

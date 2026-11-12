@@ -25,6 +25,7 @@ type NileSetupDeps = Pick<
   | 'engineRuntime'
   | 'paths'
   | 'steamBottle'
+  | 'steamLaunchRuntime'
   | 'launcher'
   | 'commandRunner'
   | 'spawnAsync'

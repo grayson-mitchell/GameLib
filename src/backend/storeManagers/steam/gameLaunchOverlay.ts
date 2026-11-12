@@ -15,12 +15,7 @@ import { GameSettings } from 'common/types'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { notify } from 'backend/dialog/dialog'
 import { endPerGameBridgeBottleSessionWith } from './bridgeBottleLifecycle'
-import {
-  getBridgeBottleSettings,
-  getDrmBridgeRunner,
-  clearDrmBridgeRunner,
-  setOverlayBridgeRunner
-} from './bridgeBottle'
+import { getBridgeBottleSettings, type DrmBridgeRunners } from './bridgeBottle'
 // Phase 60: Steam overlay in bridged games (macOS).
 import {
   overlayInputProbeFromEnv,
@@ -43,19 +38,12 @@ import { STEAM_ENGINE_RUNNER } from './engine/steamEngineDeps'
 import { readKnownFixes } from 'backend/knownFixes'
 import type { OverlayRunnerReady } from './bridge/overlay/overlayRunnerClone'
 import { DRM_END_SESSION_TIMEOUT_MS } from './bridge/drm/drmLaunchSetup'
-import {
-  builtOverlayShimPath,
-  builtOverlayInputPath,
-  builtOverlayInputProbePath,
-  appFolder,
-  userHome
-} from 'backend/constants/paths'
 import { MAC_STEAM_CLIENT_SUBPATH } from './gameDrmLaunch'
 import type SteamGame from './games'
 // 60-18 `## G1 experiment verdict`: verdict code and `fix routes:` line. The
 // DRM route is never in the set (D-04: unchanged).
 const OVERLAY_INPUT_FIX_CODE = 'X-RELEASE+BLOCK'
-const OVERLAY_INPUT_FIX_ROUTES: ReadonlySet<string> = new Set([
+const OVERLAY_INPUT_FIX_ROUTES: readonly string[] = Object.freeze([
   'tcp-clone',
   'env'
 ])
@@ -158,8 +146,10 @@ export function overlayInputArg(
 ): { inputModulePath: string } | Record<string, never> {
   const line = (applied: boolean, reason?: string) =>
     overlayInputLine(steamGame, applied, reason)
+  const { builtOverlayInputPath, builtOverlayInputProbePath } =
+    steamGame.deps.paths
   try {
-    if (!OVERLAY_INPUT_FIX_ROUTES.has(route)) {
+    if (!OVERLAY_INPUT_FIX_ROUTES.includes(route)) {
       logInfo(line(false, 'route'), LogPrefix.Steam)
       return {}
     }
@@ -242,6 +232,8 @@ export function overlayProbeArg(steamGame: SteamGame):
       probe: { dylibPath: string; logPath: string; experiment?: string }
     }
   | Record<string, never> {
+  const { appFolder, userHome, builtOverlayInputProbePath } =
+    steamGame.deps.paths
   try {
     const traceRoot = buildOverlayPaths(appFolder)?.traceRoot
     if (!traceRoot) return {}
@@ -286,7 +278,7 @@ export function overlayProbeArg(steamGame: SteamGame):
 export async function prepareTcpOverlay(
   steamGame: SteamGame,
   settings: GameSettings,
-  previousRunner: ReturnType<typeof getDrmBridgeRunner>
+  previousRunner: ReturnType<DrmBridgeRunners['getDrmBridgeRunner']>
 ): Promise<{
   settings: GameSettings
   overlayLaunch?: OverlayLaunchPayload
@@ -296,6 +288,7 @@ export async function prepareTcpOverlay(
   // carries; the one outcome line is logged in `finally`, after every exit.
   let inputArg: { inputModulePath: string } | Record<string, never> | undefined
   let carried: readonly string[] = []
+  const { appFolder, userHome, builtOverlayShimPath } = steamGame.deps.paths
   try {
     const { isNonCrossover } = await import('backend/engine/engineTypes')
     const sel = steamGame.deps.engineRuntime.registry.getEngineSelection(
@@ -367,7 +360,12 @@ export async function prepareTcpOverlay(
       )
     }
     if (ok) {
-      if (setOverlayBridgeRunner(steamGame.appId, ok.runner)) {
+      if (
+        steamGame.deps.steamLaunchRuntime.drmRunners.setOverlayBridgeRunner(
+          steamGame.appId,
+          ok.runner
+        )
+      ) {
         registered = true
         const launched = {
           settings: getBridgeBottleSettings(steamGame.deps, steamGame.appId),
@@ -404,7 +402,11 @@ export async function prepareTcpOverlay(
       `SteamGame: appId ${steamGame.appId} overlay setup threw, launching without the overlay: ${String(error)}`,
       LogPrefix.Steam
     )
-    if (registered) clearDrmBridgeRunner(steamGame.appId)
+    if (registered) {
+      steamGame.deps.steamLaunchRuntime.drmRunners.clearDrmBridgeRunner(
+        steamGame.appId
+      )
+    }
     return { settings }
   } finally {
     if (inputArg) logOverlayInputOutcome(steamGame, inputArg, carried)

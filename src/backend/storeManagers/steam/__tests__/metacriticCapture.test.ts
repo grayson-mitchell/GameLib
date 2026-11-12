@@ -4,8 +4,10 @@
  * resetMocks is on so implementations are set per test).
  */
 import { captureOwnedAppMetacritic } from '../metacriticCapture'
-import { PlatformCapturePicsClient } from '../platformCapture'
-import type { SteamStoresDeps } from '../library/installRoot'
+import {
+  createPlatformCaptureQueue,
+  PlatformCapturePicsClient
+} from '../platformCapture'
 import { logInfo, logError } from 'backend/logger'
 import { STEAM_PICS_BULK_TIMEOUT_MS } from '../withTimeout'
 import appinfo64 from './fixtures/appinfo-64bit.json'
@@ -23,8 +25,9 @@ const steamMetadataStore = {
   entries: jest.fn()
 }
 const deps = {
-  stores: { steam: { steamMetadataStore } }
-} as unknown as SteamStoresDeps
+  stores: { steam: { steamMetadataStore } },
+  steamLaunchRuntime: { platformCapture: createPlatformCaptureQueue() }
+} as unknown as Parameters<typeof captureOwnedAppMetacritic>[0]
 
 const mockedGet = steamMetadataStore.get
 const mockedSet = steamMetadataStore.set

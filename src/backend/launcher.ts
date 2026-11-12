@@ -124,6 +124,7 @@ export interface LauncherDeps extends DialogBoxDeps {
   paths: EngineServicesSource['paths']
   /** The Steam bottle slice the Steam Wine-tool resolver reads (66.3-15). */
   steamBottle: EngineServicesSource['steamBottle']
+  steamLaunchRuntime: EngineServicesSource['steamLaunchRuntime']
   notifications: Pick<Notifications, 'show'>
   appState: Pick<
     AppState,
@@ -161,6 +162,7 @@ function engineSource(deps: LauncherDeps): EngineServicesSource {
     runner: deps.runner,
     stores: deps.stores,
     steamBottle: deps.steamBottle,
+    steamLaunchRuntime: deps.steamLaunchRuntime,
     // The pure env/validation helpers are module functions, so the tools need no handle on the
     // launcher being built (checker warning 6).
     launcher: { setupEnvVars, setupWineEnvVars, validWine }

@@ -26,22 +26,19 @@ import { logWarning } from 'backend/logger'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import { createTestStores } from 'backend/testUtils/testServices'
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
-import {
-  startBottleProcessMonitor,
-  stopBottleProcessMonitor
-} from '../bottleProcessMonitor'
 import { createSteamBottle, getBottleSteamExePath } from '../bottle'
 import { getBottleDir } from 'backend/storeManagers/steam/bottleDirs'
 import {
   tellBottledSteamToLaunch,
   tellBottledSteamToUninstall,
-  __stopBottledRaiseLoops,
+  createBottledSteamRaiser,
   type BottledSteamDeps
 } from '../bottledSteam'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
 import type { Stores } from 'backend/services/types'
 import { at } from './fixtures/indexed'
+import { createGlobalTimerClock } from 'backend/testUtils/globalTimerClock'
 
 const { steamBottleConfigStore } =
   jest.requireMock<Stores['steam']>('../stores')
@@ -75,16 +72,6 @@ jest.mock('backend/engine/adoptBottle', () => ({
 // its progress push through ipc; mocked so the real ipc module never loads.
 jest.mock('../../../ipc', () => ({
   sendFrontendMessage: jest.fn()
-}))
-
-// quick/261016-t3e: the 'launch' verb now lazily imports this module to
-// start a process monitor fire-and-forget — mocked so the launch-verb
-// wiring assertion below can observe the call without exercising the real
-// polling loop (that loop has its own dedicated bottleProcessMonitor.test.ts).
-jest.mock('../bottleProcessMonitor', () => ({
-  startBottleProcessMonitor: jest.fn(),
-  stopBottleProcessMonitor: jest.fn(),
-  __stopAllBottleProcessMonitors: jest.fn()
 }))
 
 // GAP C (17-16): force isMac true so the macOS raise poll loop is exercised
@@ -142,7 +129,23 @@ const mockedAppHide = jest.fn()
 // The boot-owned Steam library state the dispatch reads (D-66.3-13): one instance for this file.
 const steamSession = createTestSteamSession()
 const library = steamSession.libraryState.library
+// quick/261016-t3e: the 'launch' verb starts a process monitor fire-and-forget; the monitors are
+// recording fakes so the launch-verb wiring assertion can observe the call without exercising the
+// real polling loop (that has its own dedicated bottleProcessMonitor.test.ts). The raise loop is a
+// real per-file instance on the global-timer clock so jest fake timers drive it (66.4-06).
+const mockedStartBottleProcessMonitor = jest.fn()
+const mockedStopBottleProcessMonitor = jest.fn()
+const raiser = createBottledSteamRaiser({ clock: createGlobalTimerClock() })
 const bottledDeps = {
+  steamLaunchRuntime: {
+    raiser,
+    monitors: {
+      startBottleProcessMonitor: (...a: unknown[]) =>
+        mockedStartBottleProcessMonitor(...a),
+      stopBottleProcessMonitor: (...a: unknown[]) =>
+        mockedStopBottleProcessMonitor(...a)
+    }
+  },
   steamSession,
   steamBottle,
   paths: { userHome },
@@ -151,8 +154,6 @@ const bottledDeps = {
   commandRunner: { runWineCommand: mockedRunWineCommand }
 } as unknown as BottledSteamDeps
 const mockedLogWarning = logWarning as jest.Mock
-const mockedStartBottleProcessMonitor = jest.mocked(startBottleProcessMonitor)
-const mockedStopBottleProcessMonitor = jest.mocked(stopBottleProcessMonitor)
 
 const defaultWine: WineInstallation = {
   bin: '/usr/bin/wine',
@@ -198,7 +199,7 @@ describe('bottle.ts', () => {
   // fire a dynamic import post-teardown. Restore real timers for the fake-timer
   // leak test.
   afterEach(() => {
-    __stopBottledRaiseLoops()
+    raiser.cancelRaiseLoops()
     jest.useRealTimers()
   })
   describe('tellBottledSteamTo{Launch,Uninstall}', () => {
@@ -401,12 +402,12 @@ describe('bottle.ts', () => {
   })
 
   // ── GAP C (17-16): leak-safe raise loop ────────────────────────────────────
-  describe('raise-loop leak safety (__stopBottledRaiseLoops)', () => {
+  describe('raise-loop leak safety (cancelRaiseLoops)', () => {
     const flushMicrotasks = async (times = 10) => {
       for (let i = 0; i < times; i++) await Promise.resolve()
     }
 
-    test('a fired raise loop schedules a retry timer that __stopBottledRaiseLoops clears (jest.getTimerCount() returns to 0)', async () => {
+    test('a fired raise loop schedules a retry timer that cancelRaiseLoops clears (jest.getTimerCount() returns to 0)', async () => {
       // Ready bottle so the uninstall dispatch reaches `void raiseInstallerWindow`.
       mockedExistsSync.mockReturnValue(true)
       mockedGetNodefault.mockReturnValue(undefined)
@@ -422,7 +423,7 @@ describe('bottle.ts', () => {
       expect(jest.getTimerCount()).toBeGreaterThan(0)
 
       // The teardown hook cancels the loop and clears every tracked timer.
-      __stopBottledRaiseLoops()
+      raiser.cancelRaiseLoops()
       expect(jest.getTimerCount()).toBe(0)
 
       jest.useRealTimers()
@@ -444,7 +445,7 @@ describe('bottle.ts', () => {
 
       expect(jest.getTimerCount()).toBeGreaterThan(0)
 
-      __stopBottledRaiseLoops()
+      raiser.cancelRaiseLoops()
       expect(jest.getTimerCount()).toBe(0)
 
       jest.useRealTimers()
@@ -483,7 +484,7 @@ describe('bottle.ts', () => {
 
       expect(mockedAppHide).toHaveBeenCalledTimes(1)
 
-      __stopBottledRaiseLoops()
+      raiser.cancelRaiseLoops()
       jest.useRealTimers()
     })
 
@@ -505,7 +506,7 @@ describe('bottle.ts', () => {
         'Steam'
       )
 
-      __stopBottledRaiseLoops()
+      raiser.cancelRaiseLoops()
       jest.useRealTimers()
     })
   })

@@ -46,6 +46,7 @@ import {
   type SteamBottle
 } from './bottle'
 import { raiseInstallerWindow } from './bottledSteam'
+import type { SteamLaunchRuntime } from './steamLaunchRuntime'
 
 // ── 17-04: bottle provisioning ──────────────────────────────────────────────
 
@@ -168,6 +169,7 @@ export async function provisionBottle(
     runner: Pick<ProcessRunner, 'run'>
     paths: Pick<AppPaths, 'userHome'>
     engineRuntime: Pick<EngineRuntime, 'crossover'>
+    steamLaunchRuntime: Pick<SteamLaunchRuntime, 'raiser'>
     config: Pick<
       GlobalConfigSlice,
       'getSettings' | 'getAlternativeWine' | 'setSetting'

@@ -47,15 +47,12 @@ import {
   killBridgeBottleWineServer,
   type BottleLifecycleDeps
 } from '../bridgeBottleLifecycle'
-import {
-  getBridgeBottleSettings,
-  setDrmBridgeRunner,
-  clearDrmBridgeRunner
-} from '../bridgeBottle'
+import { getBridgeBottleSettings } from '../bridgeBottle'
 import { killBottleWineServerWith } from 'backend/engine/bottlePrimitives'
 import { getBottleDir } from '../bottleDirs'
 import type { DrmBridgeRunner } from '../bridgeBottle'
-import { __stopBottledRaiseLoops } from '../bottledSteam'
+import { createTestSteamLaunchRuntime } from 'backend/testUtils/testSteamLaunchRuntime'
+import { createGlobalTimerClock } from 'backend/testUtils/globalTimerClock'
 const setEngineSelection = (
   ...a: Parameters<typeof engineRuntime.registry.setEngineSelection>
 ) => engineRuntime.registry.setEngineSelection(...a)
@@ -132,6 +129,12 @@ const crossover = {
   resolveCrossoverBinDirAsync: () => Promise.resolve(cxState.binDir)
 }
 const engineRuntime = { crossover, registry: createEngineRegistry() }
+// One per-boot Steam launch runtime for this suite, on the global-timer clock so jest fake timers drive it (66.4-06).
+const steamLaunchRuntime = createTestSteamLaunchRuntime({
+  clock: createGlobalTimerClock()
+})
+const { setDrmBridgeRunner, clearDrmBridgeRunner } =
+  steamLaunchRuntime.drmRunners
 const paths = { userHome }
 
 const mockedExistsSync = existsSync as jest.Mock
@@ -155,7 +158,8 @@ const bridgeDeps = {
   config: { getSettings: () => mockedGlobalConfigGet().getSettings() },
   steamBottle,
   paths,
-  engineRuntime
+  engineRuntime,
+  steamLaunchRuntime
 }
 // Recording fakes handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
@@ -166,7 +170,8 @@ const spawnDeps = {
   config: bridgeDeps.config,
   steamBottle,
   paths,
-  engineRuntime
+  engineRuntime,
+  steamLaunchRuntime
 } as unknown as BottleLifecycleDeps & EngineServicesSource
 const mockedDownloadFile = downloadFile as jest.Mock
 const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
@@ -216,7 +221,7 @@ describe('bottle.ts', () => {
   // fire a dynamic import post-teardown. Restore real timers for the fake-timer
   // leak test.
   afterEach(() => {
-    __stopBottledRaiseLoops()
+    steamLaunchRuntime.raiser.cancelRaiseLoops()
     jest.useRealTimers()
   })
 

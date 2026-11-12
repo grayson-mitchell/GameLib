@@ -571,9 +571,7 @@ export default class SteamGame implements Game {
         )
       }
       this.deps.bridgeHelpers.stop(this.appId)
-      const { stopBottleProcessMonitor: endMonitor } =
-        await import('./bottleProcessMonitor')
-      endMonitor(this.appId)
+      this.deps.steamLaunchRuntime.monitors.stopBottleProcessMonitor(this.appId)
       return
     }
 
@@ -582,7 +580,7 @@ export default class SteamGame implements Game {
     // NOT kill the game process (Steam/Wine still owns it) — it only ends
     // GameLib's wait/tracking and emits the terminal `done`.
     const { getBottleProcessMonitorPhase, stopBottleProcessMonitor } =
-      await import('./bottleProcessMonitor')
+      this.deps.steamLaunchRuntime.monitors
     const livePhase = getBottleProcessMonitorPhase(this.appId)
     if (livePhase) {
       logInfo(

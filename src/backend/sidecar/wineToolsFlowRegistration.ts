@@ -118,6 +118,7 @@ export interface WineToolsFlowDeps extends NotifyDeps, DialogBoxDeps {
   paths: ToolsDeps['paths']
   /** The Steam bottle slice the Steam Wine-tool resolver reads (66.3-15). */
   steamBottle: ToolsDeps['steamBottle']
+  steamLaunchRuntime: ToolsDeps['steamLaunchRuntime']
   /** The boot-owned winetricks apply queue (D-66.3-12). */
   winetricksQueue: WinetricksQueue
   managers: Pick<StoreManagers, 'library'>

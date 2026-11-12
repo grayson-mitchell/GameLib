@@ -330,6 +330,7 @@ export type RedistDeps = Pick<
   | 'steamUser'
   | 'paths'
   | 'engineRuntime'
+  | 'steamLaunchRuntime'
 >
 type RunWineCommand = RedistDeps['commandRunner']['runWineCommand']
 

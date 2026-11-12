@@ -14,11 +14,7 @@ import { checkConnectivityNow } from 'backend/connectivityNow'
 import { notify } from 'backend/dialog/dialog'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { sendFrontendMessage } from '../../ipc'
-import {
-  isBridgeBottleReady,
-  getBridgeBottleSettings,
-  getDrmBridgeRunner
-} from './bridgeBottle'
+import { isBridgeBottleReady, getBridgeBottleSettings } from './bridgeBottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 // Phase 60: Steam overlay in bridged games (macOS).
 import { type OverlayLaunchPayload } from './bridge/overlay/overlayLaunch'
@@ -36,7 +32,6 @@ import {
   writeBridgeScanVerdict,
   writeBridgeModeVerdict
 } from './bridge/bridgeVerdict'
-import { appFolder } from 'backend/constants/paths'
 import type SteamGame from './games'
 import {
   persistBridgeDrmSignal,
@@ -145,7 +140,10 @@ export async function launchBridgeGameBody(
     launchDrmWrapper === 'steamstub'
       ? await readLaunchExeCegMarkers(steamGame, drmExe, 'launchBridgeGameBody')
       : []
-  const previousRunner = getDrmBridgeRunner(steamGame.appId)
+  const previousRunner =
+    steamGame.deps.steamLaunchRuntime.drmRunners.getDrmBridgeRunner(
+      steamGame.appId
+    )
   // Only a DRM runner's absence changes the settings drmLaunchSetup clears;
   // an overlay entry is handled by prepareTcpOverlay below.
   const hadDrmRunner = previousRunner?.kind === 'drm'
@@ -206,7 +204,7 @@ export async function launchBridgeGameBody(
   const drm = await steamGame.deps.steamProcesses.drm.drmLaunchSetup(
     {
       appId: steamGame.appId,
-      appFolder,
+      appFolder: steamGame.deps.paths.appFolder,
       bottleName: bridgeBottleSettings.wineCrossoverBottle,
       exePath,
       installRoot: drmInstallRoot ?? '',

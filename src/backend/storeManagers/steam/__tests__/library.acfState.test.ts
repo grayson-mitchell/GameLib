@@ -25,6 +25,7 @@ import {
 import { join } from 'path'
 
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+import { createTestSteamLaunchRuntime } from 'backend/testUtils/testSteamLaunchRuntime'
 
 /** The config slice the Steam library lookups read; getSteamLibraries is mocked here. */
 // The boot-owned Steam library state the scan reads (D-66.3-13): one instance for this file.
@@ -37,7 +38,8 @@ const libDeps = {
   steamSession,
   steamBottle: { getSteamBottleSettings, resolveCrossoverWine: jest.fn() },
   paths: { userHome: '/test-gamelib/home' },
-  engineRuntime: { registry: createEngineRegistry() }
+  engineRuntime: { registry: createEngineRegistry() },
+  steamLaunchRuntime: createTestSteamLaunchRuntime()
 }
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
@@ -147,6 +149,7 @@ jest.mock('../bottle', () => ({
   isSteamBottleProvisioned: jest.fn()
 }))
 jest.mock('../bridgeBottle', () => ({
+  createDrmBridgeRunners: () => ({}),
   getBridgeBottleSettings: jest.fn(),
   listReadyBridgeBottleNames: jest.fn(),
   resolveBridgeBottleName: jest.fn()
@@ -183,6 +186,7 @@ jest.mock('../bridge/launchTarget', () => ({
   backfillBridgeLaunchTargets: jest.fn()
 }))
 jest.mock('../platformCapture', () => ({
+  createPlatformCaptureQueue: () => ({}),
   captureOwnedAppPlatforms: jest.fn()
 }))
 jest.mock('../metacriticCapture', () => ({

@@ -35,7 +35,6 @@ import {
 import { steamWineToolsBottle } from '../bridgeWineTools'
 import { readBridgeVerdict } from '../bridge/bridgeVerdict'
 import type { SteamStoresDeps } from '../library/installRoot'
-import { getBottleProcessMonitorPhase } from '../bottleProcessMonitor'
 import { readStoredTitleConfig } from '../titleSettings'
 
 /**
@@ -81,6 +80,7 @@ export function steamDecisionServices(
     paths: deps.paths,
     engineRuntime: deps.engineRuntime,
     steamBottle: deps.steamBottle,
+    steamLaunchRuntime: deps.steamLaunchRuntime,
     wineManagerReleases: wineManagerReleasesFrom(deps)
   }
 }
@@ -102,7 +102,8 @@ export function steamDecisionDeps(
     wineManagerReleases: services.wineManagerReleases,
     resolveCrossoverBinDir: () => hintedBinDir(services),
     readOverride: (appId) => readSteamEngineOverride(services.paths, appId),
-    monitorPhase: getBottleProcessMonitorPhase
+    monitorPhase:
+      services.steamLaunchRuntime.monitors.getBottleProcessMonitorPhase
   }
 }
 
@@ -120,7 +121,8 @@ export function steamSwitchDeps(
   > {
   return {
     ...switchServicesFrom(services),
-    getMonitorPhase: getBottleProcessMonitorPhase,
+    getMonitorPhase:
+      services.steamLaunchRuntime.monitors.getBottleProcessMonitorPhase,
     ownBottleName: bridgeBottleNameFor,
     crossoverSettings: (appId) =>
       getBridgeBottleSettings(
@@ -128,7 +130,8 @@ export function steamSwitchDeps(
           config: { getSettings: () => services.globalGameSettings() },
           steamBottle: services.steamBottle,
           paths: services.paths,
-          engineRuntime: services.engineRuntime
+          engineRuntime: services.engineRuntime,
+          steamLaunchRuntime: services.steamLaunchRuntime
         },
         appId
       ),

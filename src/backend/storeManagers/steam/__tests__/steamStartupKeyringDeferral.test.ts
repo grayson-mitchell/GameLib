@@ -147,10 +147,12 @@ jest.mock('../bridgeBottleLifecycle', () => ({
   provisionBridgeBottle: jest.fn()
 }))
 jest.mock('../bridgeBottle', () => ({
+  createDrmBridgeRunners: () => ({}),
   isBridgeBottleReady: jest.fn(),
   getBridgeBottleSettings: jest.fn()
 }))
 jest.mock('../bottledSteam', () => ({
+  createBottledSteamRaiser: () => ({}),
   tellBottledSteamToLaunch: jest.fn(),
   tellBottledSteamToUninstall: jest.fn()
 }))
@@ -199,6 +201,7 @@ jest.mock('backend/utils/aborthandler/aborthandler', () => ({
 }))
 
 jest.mock('../platformCapture', () => ({
+  createPlatformCaptureQueue: () => ({}),
   captureOwnedAppPlatforms: jest.fn().mockResolvedValue({
     scopedCount: 0,
     capturedCount: 0,

@@ -28,7 +28,8 @@ import {
 } from '../bottle'
 import { sanitizeBottleName } from 'backend/engine/bottlePrimitives'
 import { getBottleDir, isBottleProvisioned } from '../bottleDirs'
-import { __stopBottledRaiseLoops } from '../bottledSteam'
+import { createTestSteamLaunchRuntime } from 'backend/testUtils/testSteamLaunchRuntime'
+import { createGlobalTimerClock } from 'backend/testUtils/globalTimerClock'
 import { provisionBottle } from '../provisionBottle'
 import { createTestStores } from 'backend/testUtils/testServices'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
@@ -101,6 +102,10 @@ const crossover = {
   resolveCrossoverBinDirAsync: () => Promise.resolve(cxState.binDir)
 }
 const engineRuntime = { crossover, registry: createEngineRegistry() }
+// One per-boot Steam launch runtime for this suite, on the global-timer clock so jest fake timers drive it (66.4-06).
+const steamLaunchRuntime = createTestSteamLaunchRuntime({
+  clock: createGlobalTimerClock()
+})
 const paths = { userHome }
 
 const mockedExistsSync = existsSync as jest.Mock
@@ -169,7 +174,7 @@ describe('bottle.ts', () => {
   // fire a dynamic import post-teardown. Restore real timers for the fake-timer
   // leak test.
   afterEach(() => {
-    __stopBottledRaiseLoops()
+    steamLaunchRuntime.raiser.cancelRaiseLoops()
     jest.useRealTimers()
   })
 
@@ -637,6 +642,7 @@ describe('quick 261024-cjq: CrossOver precondition', () => {
       steamBottle,
       paths,
       engineRuntime,
+      steamLaunchRuntime,
       spawnAsync: mockedSpawnAsync,
       commandRunner: { runWineCommand: mockedRunWineCommand }
     } as unknown as Parameters<typeof provisionBottle>[0])

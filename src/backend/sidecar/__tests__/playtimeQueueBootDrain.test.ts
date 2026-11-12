@@ -148,6 +148,7 @@ function bootedWorld(opts?: {
         onlineMonitor: fakes.onlineMonitor,
         engineState: fakes.engineState,
         engineRuntime: fakes.engineRuntime,
+        steamLaunchRuntime: fakes.steamLaunchRuntime,
         signIn: fakes.signInProbe,
         steamSession: fakes.steamSession,
         anonymousClient: fakes.anonymousClient,

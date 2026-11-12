@@ -24,12 +24,10 @@ import {
 } from '../bottleLaunchSignals'
 import { raiseWineGameWindow } from 'backend/utils/wineWindowRaise'
 import {
-  startBottleProcessMonitor,
-  stopBottleProcessMonitor,
-  getBottleProcessMonitorPhase,
-  __stopAllBottleProcessMonitors,
-  __getActiveMonitorKindForTests
+  createBottleProcessMonitors,
+  type BottleProcessMonitors
 } from '../bottleProcessMonitor'
+import { createGlobalTimerClock } from 'backend/testUtils/globalTimerClock'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
 // Importing `getBottleDir` from '../bottle' evaluates the whole module, so
@@ -164,10 +162,24 @@ const flushMicrotasks = async (times = 10) => {
   for (let i = 0; i < times; i++) await Promise.resolve()
 }
 
+// A fresh per-boot instance per test, on the global-timer clock so jest fake timers drive it (66.4-06).
+let monitors: BottleProcessMonitors
+const startBottleProcessMonitor: BottleProcessMonitors['startBottleProcessMonitor'] =
+  (...a) => monitors.startBottleProcessMonitor(...a)
+const stopBottleProcessMonitor: BottleProcessMonitors['stopBottleProcessMonitor'] =
+  (...a) => monitors.stopBottleProcessMonitor(...a)
+const getBottleProcessMonitorPhase: BottleProcessMonitors['getBottleProcessMonitorPhase'] =
+  (...a) => monitors.getBottleProcessMonitorPhase(...a)
+const __stopAllBottleProcessMonitors = () =>
+  monitors.stopAllBottleProcessMonitors()
+const __getActiveMonitorKindForTests: BottleProcessMonitors['getActiveMonitorKind'] =
+  (...a) => monitors.getActiveMonitorKind(...a)
+
 describe('bottleProcessMonitor.ts', () => {
   let envMock: EnvironmentDouble
 
   beforeEach(() => {
+    monitors = createBottleProcessMonitors({ clock: createGlobalTimerClock() })
     mockedSpawnAsync.mockReset()
     mockedLogInfo.mockReset()
     mockedLogWarning.mockReset()

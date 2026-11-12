@@ -35,6 +35,7 @@ export type SetupDeps = Pick<
   | 'engineRuntime'
   | 'paths'
   | 'steamBottle'
+  | 'steamLaunchRuntime'
   | 'launcher'
   | 'commandRunner'
   | 'spawnAsync'

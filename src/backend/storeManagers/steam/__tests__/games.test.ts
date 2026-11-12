@@ -6,8 +6,10 @@ import {
   createTestManagerDeps,
   createInertSteamProcesses,
   createTestManagers,
+  createTestServices,
   createTestStores
 } from 'backend/testUtils/testServices'
+import type { AppPaths } from 'backend/process/context'
 import { createTestBridgeHelpers } from 'backend/testUtils/testBridgeHelpers'
 /**
  * Unit tests for SteamGame — LIB-04 (lazy metadata), GAME-01 (launch), GAME-04 (no-Wine),
@@ -70,9 +72,11 @@ import {
   DRM_DLLOVERRIDES_CHANNEL,
   DRM_TRACE_KEEP_PER_APP,
   MAC_STEAM_CLIENT_SUBPATH,
-  __resetDrmModeNoticeShownForTests
+  createDrmModeNoticeLatch
 } from '../gameDrmLaunch'
 import { buildSteamProtocolUrl } from '../gameProtocolUrl'
+import { createPlatformCaptureQueue } from '../platformCapture'
+import type { SteamLaunchRuntime } from '../steamLaunchRuntime'
 import {
   parseSteamStorageRequirement,
   getSteamInstallSize,
@@ -109,11 +113,7 @@ import {
   stopPerGameBridgeBottle,
   killBridgeBottleWineServer
 } from '../bridgeBottleLifecycle'
-import {
-  isBridgeBottleReady,
-  getBridgeBottleSettings,
-  getDrmBridgeRunner
-} from '../bridgeBottle'
+import { isBridgeBottleReady, getBridgeBottleSettings } from '../bridgeBottle'
 import {
   tellBottledSteamToLaunch,
   tellBottledSteamToUninstall
@@ -157,11 +157,6 @@ import {
 } from '../bridge/launchTarget'
 import { ensureBridgeHelperReady } from '../bridge/helperProcess'
 import { writeBridgeConfig } from '../bridge/bridgeConfig'
-import {
-  startBottleProcessMonitor,
-  getBottleProcessMonitorPhase,
-  stopBottleProcessMonitor
-} from '../bottleProcessMonitor'
 import {
   applySteamBridgeKnownFixes,
   steamBridgeLaunchCommandParts
@@ -326,8 +321,66 @@ const resetBottleLedger = () => {
     }
   }
 }
+// 66.4-06: the Steam launch runtime is a set of recording fakes handed through the deps slice.
+// startBottleProcessMonitor ties the helper's lifetime to the game's own process after a successful
+// wine launch; the phase probe and stop serve the single-flight check (quick/261024-gvu): with
+// resetMocks they return undefined (falsy = no live monitor) unless a test sets them. The DRM
+// runner registry carries the Phase 60 overlay surface; the notice latch is a real, resettable one.
+const startBottleProcessMonitor = jest.fn()
+const getBottleProcessMonitorPhase = jest.fn()
+const stopBottleProcessMonitor = jest.fn()
+const getDrmBridgeRunner = jest.fn()
+let drmNoticeLatch = createDrmModeNoticeLatch()
+const __resetDrmModeNoticeShownForTests = () => {
+  drmNoticeLatch = createDrmModeNoticeLatch()
+}
+const testSteamLaunchRuntime = {
+  monitors: {
+    startBottleProcessMonitor: (...a: unknown[]) =>
+      startBottleProcessMonitor(...a),
+    stopBottleProcessMonitor: (...a: unknown[]) =>
+      stopBottleProcessMonitor(...a),
+    getBottleProcessMonitorPhase: (...a: unknown[]) =>
+      getBottleProcessMonitorPhase(...a),
+    stopAllBottleProcessMonitors: jest.fn(),
+    getActiveMonitorKind: jest.fn()
+  },
+  drmRunners: {
+    getDrmBridgeRunner: (...a: unknown[]) => getDrmBridgeRunner(...a),
+    clearDrmBridgeRunner: jest.fn(),
+    setOverlayBridgeRunner: jest.fn(),
+    setDrmBridgeRunner: jest.fn(),
+    getBridgeRunnerKind: jest.fn(),
+    drmRunnerBinDir: jest.fn()
+  },
+  drmNotice: { claim: (key: string) => drmNoticeLatch.claim(key) },
+  raiser: {
+    raiseFrontmostBottledProcess: jest.fn(),
+    cancelRaiseLoops: jest.fn()
+  },
+  platformCapture: createPlatformCaptureQueue()
+} as unknown as SteamLaunchRuntime
+// 66.4-06: the launch files read the app folder, the home and the built dylib paths from deps.paths,
+// so the Phase 56 test-owned roots (mocked below in backend/constants/paths) ride the paths slice.
+const mockedLaunchPaths = jest.requireMock<
+  Pick<
+    AppPaths,
+    | 'appFolder'
+    | 'userHome'
+    | 'builtOverlayInputPath'
+    | 'builtOverlayInputProbePath'
+  >
+>('backend/constants/paths')
 const steamTestDeps = createTestManagerDeps({
   engineRuntime: testRuntime,
+  steamLaunchRuntime: testSteamLaunchRuntime,
+  paths: {
+    ...createTestServices().paths,
+    appFolder: mockedLaunchPaths.appFolder,
+    userHome: mockedLaunchPaths.userHome,
+    builtOverlayInputPath: mockedLaunchPaths.builtOverlayInputPath,
+    builtOverlayInputProbePath: mockedLaunchPaths.builtOverlayInputProbePath
+  },
   steamUser,
   steamBottle: {
     isBottleReady,
@@ -571,10 +624,7 @@ jest.mock('../bridgeBottle', () => {
   return {
     isBridgeBottleReady,
     getBridgeBottleSettings: jest.fn(),
-    getDrmBridgeRunner: jest.fn(),
-    // Phase 60: overlay runner registry surface (plan 07).
-    clearDrmBridgeRunner: jest.fn(),
-    setOverlayBridgeRunner: jest.fn(),
+    createDrmBridgeRunners: () => ({}),
     // quick/261016-u1w (D-A): plain arrow function, NOT jest.fn() -- resetMocks
     // wipes a jest.fn()'s implementation before every test, but games.ts calls
     // this directly as a pure, deterministic builder, so the factory gives it
@@ -606,6 +656,7 @@ jest.mock('../bridgeBottle', () => {
   }
 })
 jest.mock('../bottledSteam', () => ({
+  createBottledSteamRaiser: () => ({}),
   tellBottledSteamToLaunch: jest.fn(),
   tellBottledSteamToUninstall: jest.fn()
 }))
@@ -804,18 +855,6 @@ jest.mock('../bridge/helperProcess', () => ({
 jest.mock('../bridge/bridgeConfig', () => ({
   writeBridgeConfig: jest.fn(),
   BRIDGE_CONFIG_FILENAME: 'gamelib_bridge.cfg'
-}))
-
-// ── bottleProcessMonitor.ts mock (Phase 51 Plan 01 Task 2) —
-// startBottleProcessMonitor, dynamically imported by launchBridgeGame()
-// after a successful wine launch to tie the helper's lifetime to the
-// game's own process lifetime.
-jest.mock('../bottleProcessMonitor', () => ({
-  startBottleProcessMonitor: jest.fn(),
-  // quick/261024-gvu: single-flight probe + stop; with resetMocks these return
-  // undefined (falsy = no live monitor) unless a test sets them.
-  getBottleProcessMonitorPhase: jest.fn(),
-  stopBottleProcessMonitor: jest.fn()
 }))
 
 // ── bridgeKnownFixes.ts mock (quick 261024-tny) — applySteamBridgeKnownFixes,
@@ -2244,7 +2283,7 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
         is_mac_native: false
       })
       isBottleReady.mockReturnValue(true)
-      ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(phase)
+      getBottleProcessMonitorPhase.mockReturnValue(phase)
       const { logInfo } = jest.requireMock('backend/logger')
 
       const game = new SteamGame(APP_ID, steamTestDeps)
@@ -2267,7 +2306,7 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
       is_mac_native: false
     })
     isBottleReady.mockReturnValue(true)
-    ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(null)
+    getBottleProcessMonitorPhase.mockReturnValue(null)
     ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
       status: 'done'
     })
@@ -2482,7 +2521,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       path: '/mock/.../gamelib_bridge.cfg'
     })
     stopBridgeHelper.mockReset()
-    ;(startBottleProcessMonitor as jest.Mock).mockReset()
+    startBottleProcessMonitor.mockReset()
     ;(getBottleSteamappsDir as jest.Mock)
       .mockReset()
       .mockReturnValue(BRIDGE_STEAMAPPS_DIR)
@@ -2552,7 +2591,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
     it('monitor phase starting (still launching): the kill still happens', async () => {
       const game = await launchBridge(PER_GAME_BOTTLE)
-      ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue('starting')
+      getBottleProcessMonitorPhase.mockReturnValue('starting')
 
       await game.stop()
       expect(stopPerGameBridgeBottle).toHaveBeenCalledWith(
@@ -2580,8 +2619,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
     it('game exited on its own (monitor onStopped) before Stop: no kill', async () => {
       const game = await launchBridge(PER_GAME_BOTTLE)
-      const monitorArgs = (startBottleProcessMonitor as jest.Mock).mock
-        .calls[0][1]
+      const monitorArgs = startBottleProcessMonitor.mock.calls[0][1]
       monitorArgs.onStopped()
 
       await game.stop()
@@ -2599,7 +2637,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     })
 
     it('bottled-Steam route (no bridge launch recorded, monitor running): monitor ended, no kill', async () => {
-      ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue('running')
+      getBottleProcessMonitorPhase.mockReturnValue('running')
       const game = new SteamGame(APP_ID, steamTestDeps)
 
       await game.stop()
@@ -2773,8 +2811,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     // Phase 51 Plan 01 Task 2 (D-51-01): the monitor is started with
     // kind:'bridge' and an onStopped that tears down THIS appId's helper.
     expect(startBottleProcessMonitor).toHaveBeenCalledTimes(1)
-    const monitorArgs = (startBottleProcessMonitor as jest.Mock).mock
-      .calls[0][1]
+    const monitorArgs = startBottleProcessMonitor.mock.calls[0][1]
     expect(monitorArgs.appId).toBe(APP_ID)
     expect(monitorArgs.kind).toBe('bridge')
     expect(monitorArgs.bottleDir).toBe('/mock/bridge/bottle')
@@ -2804,7 +2841,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       0
     )
     expect(applierOrder).toBeLessThan(
-      at((startBottleProcessMonitor as jest.Mock).mock.invocationCallOrder, 0)
+      at(startBottleProcessMonitor.mock.invocationCallOrder, 0)
     )
     expect(applierOrder).toBeLessThan(
       at(runWineCommand.mock.invocationCallOrder, 0)
@@ -2846,9 +2883,9 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     await game.launch({} as any)
 
     expect(runWineCommand.mock.calls[0][0].gameSettings).toBe(withEnv)
-    expect(
-      (startBottleProcessMonitor as jest.Mock).mock.calls[0][1].bottleDir
-    ).toBe('/mock/bridge/bottle')
+    expect(startBottleProcessMonitor.mock.calls[0][1].bottleDir).toBe(
+      '/mock/bridge/bottle'
+    )
   })
 
   it('quick 261024-tny: a rejecting applier never fails the launch -- original settings reach runWineCommand, warning logged, no steamBridgeSetupRequired', async () => {
@@ -2898,7 +2935,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       at((applySteamBridgeKnownFixes as jest.Mock).mock.invocationCallOrder, 0)
     )
     expect(order).toBeLessThan(
-      at((startBottleProcessMonitor as jest.Mock).mock.invocationCallOrder, 0)
+      at(startBottleProcessMonitor.mock.invocationCallOrder, 0)
     )
     expect(order).toBeLessThan(at(runWineCommand.mock.invocationCallOrder, 0))
   })
@@ -3997,7 +4034,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
     it('resolves true with a never-settling wine child; monitor already started, before runWineCommand', async () => {
       const handle = { launcherExited: jest.fn() }
-      ;(startBottleProcessMonitor as jest.Mock).mockReturnValue(handle)
+      startBottleProcessMonitor.mockReturnValue(handle)
       runWineCommand.mockReturnValue(new Promise(() => {}))
 
       const result = await new SteamGame(APP_ID, steamTestDeps).launch(
@@ -4006,20 +4043,19 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
       expect(result).toBe(true)
       expect(startBottleProcessMonitor).toHaveBeenCalledTimes(1)
-      const monitorArgs = (startBottleProcessMonitor as jest.Mock).mock
-        .calls[0][1]
+      const monitorArgs = startBottleProcessMonitor.mock.calls[0][1]
       expect(monitorArgs.kind).toBe('bridge')
       monitorArgs.onStopped()
       expect(stopBridgeHelper).toHaveBeenCalledWith(APP_ID)
       expect(
-        at((startBottleProcessMonitor as jest.Mock).mock.invocationCallOrder, 0)
+        at(startBottleProcessMonitor.mock.invocationCallOrder, 0)
       ).toBeLessThan(at(runWineCommand.mock.invocationCallOrder, 0))
       expect(handle.launcherExited).not.toHaveBeenCalled()
     })
 
     it('wine child resolving calls launcherExited once', async () => {
       const handle = { launcherExited: jest.fn() }
-      ;(startBottleProcessMonitor as jest.Mock).mockReturnValue(handle)
+      startBottleProcessMonitor.mockReturnValue(handle)
       let resolveWine: (v: unknown) => void = () => {}
       runWineCommand.mockReturnValue(
         new Promise((r) => {
@@ -4036,7 +4072,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
     it('wine child rejecting marks failed, sends bridge-launch-failed, calls launcherExited once', async () => {
       const handle = { launcherExited: jest.fn() }
-      ;(startBottleProcessMonitor as jest.Mock).mockReturnValue(handle)
+      startBottleProcessMonitor.mockReturnValue(handle)
       let rejectWine: (e: unknown) => void = () => {}
       runWineCommand.mockReturnValue(
         new Promise((_r, rej) => {
@@ -4146,7 +4182,7 @@ describe('SteamGame.stop() — pending launch monitor (261024-gvu)', () => {
   }
 
   it('ends a live monitor instead of the no-op warning', async () => {
-    ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue('starting')
+    getBottleProcessMonitorPhase.mockReturnValue('starting')
     const game = new SteamGame(APP_ID, steamTestDeps)
     await game.stop()
     expect(stopBottleProcessMonitor).toHaveBeenCalledWith(APP_ID)
@@ -4155,7 +4191,7 @@ describe('SteamGame.stop() — pending launch monitor (261024-gvu)', () => {
   })
 
   it('phase null keeps the no-op warning and does not stop a monitor', async () => {
-    ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(null)
+    getBottleProcessMonitorPhase.mockReturnValue(null)
     const game = new SteamGame(APP_ID, steamTestDeps)
     await game.stop()
     expect(stopBottleProcessMonitor).not.toHaveBeenCalled()
@@ -4174,7 +4210,7 @@ describe('SteamGame.stop() — Steam-launched PID stop (261111-9b7)', () => {
   let stopSpy: jest.SpyInstance
   let doneSpy: jest.SpyInstance
   beforeEach(() => {
-    ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(null)
+    getBottleProcessMonitorPhase.mockReturnValue(null)
     stopSpy = jest.spyOn(stopSteamLaunchedModule, 'stopSteamLaunchedGame')
     doneSpy = jest
       .spyOn(gameLaunchModule, 'sendLaunchDone')
@@ -4214,7 +4250,7 @@ describe('SteamGame.stop() — Steam-launched PID stop (261111-9b7)', () => {
   })
 
   it('live monitor branch never calls it', async () => {
-    ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue('starting')
+    getBottleProcessMonitorPhase.mockReturnValue('starting')
     await new SteamGame(APP_ID, steamTestDeps).stop()
     expect(stopSpy).not.toHaveBeenCalled()
   })
@@ -4233,7 +4269,7 @@ describe('SteamGame.stop() — delegated install cancel (261105-vfq)', () => {
   })
 
   it('cancels the delegated poll and skips the no-op path', async () => {
-    ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(null)
+    getBottleProcessMonitorPhase.mockReturnValue(null)
     const spy = jest
       .spyOn(installPollingModule, 'cancelDelegatedInstall')
       .mockReturnValue(true)
@@ -4243,7 +4279,7 @@ describe('SteamGame.stop() — delegated install cancel (261105-vfq)', () => {
   })
 
   it('keeps the no-op warning when there is no delegated poll', async () => {
-    ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(null)
+    getBottleProcessMonitorPhase.mockReturnValue(null)
     const spy = jest
       .spyOn(installPollingModule, 'cancelDelegatedInstall')
       .mockReturnValue(false)
@@ -12964,7 +13000,7 @@ describe('maybeNotifyBridgeLimited() — the one-time limited-features notice pl
     })
     runWineCommand.mockResolvedValue({ stdout: '', stderr: '' })
     stopBridgeHelper.mockReset()
-    ;(startBottleProcessMonitor as jest.Mock).mockReset()
+    startBottleProcessMonitor.mockReset()
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
       '/mock/bridge/bottle/steamapps'
     )
@@ -13743,7 +13779,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         hasBindSection: false,
         readError: null
       })
-      ;(startBottleProcessMonitor as jest.Mock).mockImplementation(
+      startBottleProcessMonitor.mockImplementation(
         (_deps: unknown, args: { onStopped: () => void }) => {
           onStopped = args.onStopped
           return { launcherExited: jest.fn() }
@@ -13770,7 +13806,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       dialogMock.mockClear()
       ;(sendFrontendMessage as jest.Mock).mockClear()
       ;(tellBottledSteamToLaunch as jest.Mock).mockClear()
-      ;(getDrmBridgeRunner as jest.Mock).mockReturnValue(undefined)
+      getDrmBridgeRunner.mockReturnValue(undefined)
       __drmLaunchSetupMock.mockReset()
     })
     afterEach(() => {
@@ -13984,7 +14020,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       it('not-applicable after a registered runner re-reads the bottle settings', async () => {
         const id = freshId()
         ;(detectDrmWrapper as jest.Mock).mockResolvedValue('none')
-        ;(getDrmBridgeRunner as jest.Mock).mockReturnValue({ kind: 'drm' })
+        getDrmBridgeRunner.mockReturnValue({ kind: 'drm' })
         let calls = 0
         ;(getBridgeBottleSettings as jest.Mock).mockImplementation(() => {
           calls++
@@ -14341,7 +14377,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       it('without a monitor the re-log happens when wine settles', async () => {
         const id = freshId()
         useDrmOk(id)
-        ;(startBottleProcessMonitor as jest.Mock).mockReturnValue(null)
+        startBottleProcessMonitor.mockReturnValue(null)
         let release!: () => void
         runWineCommand.mockImplementation(
           () =>
@@ -14874,9 +14910,10 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       const bottleMod = jest.requireMock<{
         endPerGameBridgeBottleSessionWith: jest.Mock
       }>('../bridgeBottleLifecycle')
-      const bridgeBottleMod = jest.requireMock<{
-        setOverlayBridgeRunner: jest.Mock
-      }>('../bridgeBottle')
+      const bridgeBottleMod = {
+        setOverlayBridgeRunner: testSteamLaunchRuntime.drmRunners
+          .setOverlayBridgeRunner as jest.Mock
+      }
       const runnerBin = '/ov/runner/CrossOver/bin/wine'
       const overlayRunner = {
         crossoverBuild: '26.3.0',
@@ -14980,7 +15017,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
 
       it('overlay turned off after an overlay launch: ends the clone wineserver with the clone bin dir', async () => {
         const id = freshId()
-        ;(getDrmBridgeRunner as jest.Mock).mockReturnValue({
+        getDrmBridgeRunner.mockReturnValue({
           kind: 'overlay',
           runner: overlayRunner
         })
@@ -15546,7 +15583,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
 
       it('same overlay runner as before: no session end', async () => {
         const id = freshId()
-        ;(getDrmBridgeRunner as jest.Mock).mockReturnValue({
+        getDrmBridgeRunner.mockReturnValue({
           kind: 'overlay',
           runner: overlayRunner
         })
@@ -15609,9 +15646,10 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       const bottleMod = jest.requireMock<{
         endPerGameBridgeBottleSessionWith: jest.Mock
       }>('../bridgeBottleLifecycle')
-      const bridgeBottleMod = jest.requireMock<{
-        setOverlayBridgeRunner: jest.Mock
-      }>('../bridgeBottle')
+      const bridgeBottleMod = {
+        setOverlayBridgeRunner: testSteamLaunchRuntime.drmRunners
+          .setOverlayBridgeRunner as jest.Mock
+      }
       const { showDialogBoxModalAuto } = jest.requireMock<{
         showDialogBoxModalAuto: jest.Mock
       }>('backend/dialog/dialog')
@@ -15673,7 +15711,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
             enviromentOptions: []
           })
         )
-        ;(startBottleProcessMonitor as jest.Mock).mockImplementation(
+        startBottleProcessMonitor.mockImplementation(
           (_deps: unknown, a: Monitor) => {
             monitor = a
             return { launcherExited: jest.fn() }
@@ -15858,7 +15896,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
 
       it('with no monitor the watch starts at spawn, once, and the launch does not await it', async () => {
         const id = freshId()
-        ;(startBottleProcessMonitor as jest.Mock).mockReturnValue(null)
+        startBottleProcessMonitor.mockReturnValue(null)
         // never-resolving watch promise: launch must still resolve
         expect(await launchOn(id)).toBe(true)
         if (monitor) return
@@ -17297,12 +17335,10 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
     it('D-16: a bridge launch marks the bottle ledger and onStopped clears it', async () => {
       jest.useFakeTimers()
       let onStopped: (() => void) | undefined
-      ;(startBottleProcessMonitor as jest.Mock).mockImplementation(
-        (_deps: unknown, a: any) => {
-          onStopped = a.onStopped
-          return { launcherExited: jest.fn() }
-        }
-      )
+      startBottleProcessMonitor.mockImplementation((_deps: unknown, a: any) => {
+        onStopped = a.onStopped
+        return { launcherExited: jest.fn() }
+      })
       expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
         true
       )
@@ -17314,12 +17350,10 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
     it('arms a deadline and the first match cancels it (no timers left)', async () => {
       jest.useFakeTimers()
       let onFirstMatch: (() => void) | undefined
-      ;(startBottleProcessMonitor as jest.Mock).mockImplementation(
-        (_deps: unknown, a: any) => {
-          onFirstMatch = a.onFirstMatch
-          return { launcherExited: jest.fn() }
-        }
-      )
+      startBottleProcessMonitor.mockImplementation((_deps: unknown, a: any) => {
+        onFirstMatch = a.onFirstMatch
+        return { launcherExited: jest.fn() }
+      })
       expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
         true
       )
@@ -17333,7 +17367,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
 
     it('fires after spawn with no match: kill before registry clear, helper stopped, done, one dialog, no misrouting', async () => {
       await timerSafe(async () => {
-        ;(startBottleProcessMonitor as jest.Mock).mockReturnValue({
+        startBottleProcessMonitor.mockReturnValue({
           launcherExited: jest.fn()
         })
         const order: string[] = []
@@ -17380,7 +17414,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
 
     it('fires during the redist step: nothing is spawned afterwards and false is returned', async () => {
       await timerSafe(async () => {
-        ;(startBottleProcessMonitor as jest.Mock).mockReturnValue({
+        startBottleProcessMonitor.mockReturnValue({
           launcherExited: jest.fn()
         })
         ;(installSteamBridgeSharedRedists as jest.Mock).mockImplementation(
@@ -17401,10 +17435,10 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         new Promise<void>((r) => (resolveWine = r))
       )
       const handle = { launcherExited: jest.fn() }
-      ;(startBottleProcessMonitor as jest.Mock).mockReturnValue(handle)
+      startBottleProcessMonitor.mockReturnValue(handle)
       // First call is launch()'s single-flight check; the rest see a monitor
       // that never matched.
-      ;(getBottleProcessMonitorPhase as jest.Mock)
+      getBottleProcessMonitorPhase
         .mockReturnValueOnce(null)
         .mockReturnValue('starting')
       await new SteamGame(ID, steamTestDeps).launch({} as any)
@@ -17417,7 +17451,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
     it('a launch error cancels the deadline and clears the selection', async () => {
       jest.useFakeTimers()
       runWineCommand.mockRejectedValue(new Error('boom'))
-      ;(startBottleProcessMonitor as jest.Mock).mockReturnValue({
+      startBottleProcessMonitor.mockReturnValue({
         launcherExited: jest.fn()
       })
       await new SteamGame(ID, steamTestDeps).launch({} as any)
@@ -17429,12 +17463,10 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
 
     it('monitor onStopped clears the engine selection', async () => {
       let onStopped: (() => void) | undefined
-      ;(startBottleProcessMonitor as jest.Mock).mockImplementation(
-        (_deps: unknown, a: any) => {
-          onStopped = a.onStopped
-          return { launcherExited: jest.fn() }
-        }
-      )
+      startBottleProcessMonitor.mockImplementation((_deps: unknown, a: any) => {
+        onStopped = a.onStopped
+        return { launcherExited: jest.fn() }
+      })
       await new SteamGame(ID, steamTestDeps).launch({} as any)
       expect(getEngineSelection(ID)).toBeDefined()
       onStopped?.()
@@ -17456,7 +17488,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
         pinnedDecision('cx-expired')
       )
-      ;(startBottleProcessMonitor as jest.Mock).mockReturnValue({
+      startBottleProcessMonitor.mockReturnValue({
         launcherExited: jest.fn()
       })
       await new SteamGame(ID, steamTestDeps).launch({} as any)
@@ -17466,7 +17498,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
     it('the monitor giving up stands the deadline down: a game nobody can see is never stopped (59-UAT G3)', async () => {
       await timerSafe(async () => {
         let onUnavailable: (() => void) | undefined
-        ;(startBottleProcessMonitor as jest.Mock).mockImplementation(
+        startBottleProcessMonitor.mockImplementation(
           (_deps: unknown, a: any) => {
             onUnavailable = a.onUnavailable
             return { launcherExited: jest.fn() }
@@ -17488,7 +17520,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
           pinnedDecision('cx-missing')
         )
-        ;(startBottleProcessMonitor as jest.Mock).mockReturnValue({
+        startBottleProcessMonitor.mockReturnValue({
           launcherExited: jest.fn()
         })
         expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
@@ -17531,7 +17563,7 @@ describe('Steam launch watch wiring (261111-9mj)', () => {
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
     const { shell } = hostFakes
     shell.openExternal.mockResolvedValue(undefined)
-    ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(null)
+    getBottleProcessMonitorPhase.mockReturnValue(null)
     startSpy = jest
       .spyOn(steamLaunchWatchModule, 'startSteamLaunchWatch')
       .mockReturnValue({ status: 'started', settled: Promise.resolve() })

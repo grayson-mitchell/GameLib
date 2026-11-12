@@ -56,7 +56,11 @@ import type {
   StageDrmBottleInput,
   StageDrmBottleSlices
 } from './stageDrmTypes'
-import { DRM_LAUNCH_FORM, type DrmLaunchForm } from '../../bridgeBottle'
+import {
+  DRM_LAUNCH_FORM,
+  type DrmBridgeRunners,
+  type DrmLaunchForm
+} from '../../bridgeBottle'
 import { buildDrmPaths } from './drmPaths'
 import type { ManagerDeps } from 'backend/services/types'
 
@@ -177,7 +181,10 @@ export type DrmSetupOverrides = {
 /** The overrides plus the slices the stage and session end need (66.1 R3). */
 export type DrmLaunchSetupDeps = DrmSetupOverrides &
   StageDrmBottleSlices &
-  Pick<ManagerDeps, 'config' | 'steamBottle' | 'steamUser'>
+  Pick<
+    ManagerDeps,
+    'config' | 'steamBottle' | 'steamUser' | 'steamLaunchRuntime'
+  >
 
 const NUMERIC_APP_ID = /^[0-9]{1,10}$/
 
@@ -321,9 +328,18 @@ async function runSetup(
   const { appId, appFolder } = input
   const bottleLifecycle = await import('../../bridgeBottleLifecycle')
   const bridgeBottle = await import('../../bridgeBottle')
-  const clearRunner = deps.clearRunner ?? bridgeBottle.clearDrmBridgeRunner
-  const getRunner = deps.getRunner ?? bridgeBottle.getDrmBridgeRunner
-  const registerRunner = deps.registerRunner ?? bridgeBottle.setDrmBridgeRunner
+  // Bound at call time: a caller that overrides all three never reads the runtime.
+  const clearRunner =
+    deps.clearRunner ??
+    ((id: string) =>
+      deps.steamLaunchRuntime.drmRunners.clearDrmBridgeRunner(id))
+  const getRunner =
+    deps.getRunner ??
+    ((id: string) => deps.steamLaunchRuntime.drmRunners.getDrmBridgeRunner(id))
+  const registerRunner =
+    deps.registerRunner ??
+    ((...a: Parameters<DrmBridgeRunners['setDrmBridgeRunner']>) =>
+      deps.steamLaunchRuntime.drmRunners.setDrmBridgeRunner(...a))
   const buildBottleSettings =
     deps.buildBottleSettings ??
     ((appId: string, runner: RunnerReady, form: DrmLaunchForm) =>
@@ -492,7 +508,8 @@ async function runSetup(
         steamBottle: deps.steamBottle,
         steamUser: deps.steamUser,
         paths: deps.paths,
-        engineRuntime: deps.engineRuntime
+        engineRuntime: deps.engineRuntime,
+        steamLaunchRuntime: deps.steamLaunchRuntime
       })
     )
     if (staged.status === 'error') return fail('bottle-stage', staged)
@@ -544,7 +561,8 @@ async function drmLaunchSetupOn(
         // A title whose exe lost `.bind` must not keep the clone.
         const clear =
           deps.clearRunner ??
-          (await import('../../bridgeBottle')).clearDrmBridgeRunner
+          ((id: string) =>
+            deps.steamLaunchRuntime.drmRunners.clearDrmBridgeRunner(id))
         clear(input.appId)
       }
       return { status: 'not-applicable', mode: 'tcp' }

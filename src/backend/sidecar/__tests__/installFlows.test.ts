@@ -174,6 +174,9 @@ jest.mock('../../storeManagers/steam/bottle', () => ({
   ...jest.requireActual('../../storeManagers/steam/bottle')
 }))
 jest.mock('../../storeManagers/steam/bridgeBottle', () => ({
+  createDrmBridgeRunners: jest.requireActual(
+    '../../storeManagers/steam/bridgeBottle'
+  ).createDrmBridgeRunners,
   findBridgeInstallBottle: jest.fn()
 }))
 jest.mock('../../storeManagers/steam/library/installRoot', () => ({

@@ -48,6 +48,7 @@ export interface DownloadQueueDeps extends DialogBoxDeps, NotifyDeps {
   steamBottle: BottleSettingsDeps['steamBottle']
   /** The boot-owned engine runtime and path roots the bridge-bottle settings read (66.4-05). */
   engineRuntime: BottleSettingsDeps['engineRuntime']
+  steamLaunchRuntime: BottleSettingsDeps['steamLaunchRuntime']
   paths: BottleSettingsDeps['paths']
 }
 
@@ -80,6 +81,7 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
     steamSession: deps.steamSession,
     steamBottle: deps.steamBottle,
     engineRuntime: deps.engineRuntime,
+    steamLaunchRuntime: deps.steamLaunchRuntime,
     paths: deps.paths
   }
 

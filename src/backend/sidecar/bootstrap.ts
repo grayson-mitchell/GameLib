@@ -109,6 +109,7 @@ import { randomUUID } from 'node:crypto'
 import { createOnlineMonitor } from '../online_monitor'
 import { createEngineState } from '../engine/engineState'
 import { createEngineRuntime } from '../engine/engineRuntime'
+import { createSteamLaunchRuntime } from '../storeManagers/steam/steamLaunchRuntime'
 import { createWinetricksQueue } from '../tools/winetricksQueue'
 import { getInstallingComponent } from '../tools'
 import type { OnlineMonitor } from '../online_monitor'
@@ -293,6 +294,7 @@ export const BOOT_STEP_NAMES = [
   'online-monitor-owner',
   'engine-state',
   'engine-runtime',
+  'steam-launch-runtime',
   'winetricks-queue',
   'store-managers',
   'download-queue',
@@ -441,6 +443,7 @@ function requireServices(state: BootState): BootServices {
     onlineMonitor,
     engineState,
     engineRuntime,
+    steamLaunchRuntime,
     winetricksQueue,
     signInProbe,
     steamSession,
@@ -472,6 +475,7 @@ function requireServices(state: BootState): BootServices {
     !onlineMonitor ||
     !engineState ||
     !engineRuntime ||
+    !steamLaunchRuntime ||
     !winetricksQueue ||
     !signInProbe ||
     !steamSession ||
@@ -504,6 +508,7 @@ function requireServices(state: BootState): BootServices {
         'onlineMonitor',
         'engineState',
         'engineRuntime',
+        'steamLaunchRuntime',
         'winetricksQueue',
         'signInProbe',
         'steamSession',
@@ -538,6 +543,7 @@ function requireServices(state: BootState): BootServices {
     onlineMonitor,
     engineState,
     engineRuntime,
+    steamLaunchRuntime,
     winetricksQueue,
     signInProbe,
     steamSession,
@@ -1751,6 +1757,20 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'steam-launch-runtime',
+      // Builds the one Steam launch-path runtime of this boot (D-05, 66.4-06): bottle process monitors,
+      // the bottled-Steam raise loop, the DRM / overlay runner registry, the DRM-mode notice latch and
+      // the platform-capture chain. Construction allocates empty collections only: no I/O and no timer;
+      // the monitor and raise-loop timers a launch arms later run on ctx.clock, whose timers are
+      // unref'd, so nothing here can hold the sidecar open at stdin EOF. After 'engine-runtime' and
+      // before 'store-managers' so ManagerDeps carries it.
+      run: (ctx, _io, state) => {
+        state.services.steamLaunchRuntime =
+          prebuilt.steamLaunchRuntime ??
+          createSteamLaunchRuntime({ clock: ctx.clock })
+      }
+    },
+    {
       name: 'winetricks-queue',
       // Builds the one winetricks apply queue of this boot (D-05, D-66.3-12). Construction does no
       // I/O and arms no timer: it only subscribes to the environment-report change signal. Before
@@ -1781,6 +1801,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           onlineMonitor,
           engineState,
           engineRuntime,
+          steamLaunchRuntime,
           signInProbe,
           steamSession,
           anonymousClient,
@@ -1802,6 +1823,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !onlineMonitor ||
           !engineState ||
           !engineRuntime ||
+          !steamLaunchRuntime ||
           !signInProbe ||
           !steamSession ||
           !anonymousClient ||
@@ -1843,6 +1865,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           onlineMonitor,
           engineState,
           engineRuntime,
+          steamLaunchRuntime,
           signIn: signInProbe,
           steamSession,
           anonymousClient,
@@ -1873,6 +1896,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             steamSession,
             steamBottle,
             engineRuntime,
+            steamLaunchRuntime,
             paths
           } = state.services
           if (
@@ -1882,6 +1906,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             !steamSession ||
             !steamBottle ||
             !engineRuntime ||
+            !steamLaunchRuntime ||
             !paths
           ) {
             throw new Error(
@@ -1899,6 +1924,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             steamSession,
             steamBottle,
             engineRuntime,
+            steamLaunchRuntime,
             paths
           })
           queue.start()

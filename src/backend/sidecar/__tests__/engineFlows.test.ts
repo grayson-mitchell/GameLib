@@ -38,6 +38,7 @@ import { registerEngineFlows } from '../engineFlowRegistration'
 import { createTestServices } from 'backend/testUtils/testServices'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { createTestSteamBottle } from 'backend/testUtils/testSteamBottle'
+import { createTestSteamLaunchRuntime } from 'backend/testUtils/testSteamLaunchRuntime'
 import { createTestEngineState } from 'backend/testUtils/testEngineState'
 import {
   createTestEngineServices,
@@ -66,6 +67,7 @@ const runner = createTestServices().runner
 const config = createTestGlobalConfig()
 const engineServices = createTestEngineServices()
 const steamBottle = createTestSteamBottle({ stores, config })
+const steamLaunchRuntime = createTestSteamLaunchRuntime()
 const engineState = {
   ...createTestEngineState(),
   dismissEngineNotice: (...a: unknown[]) => dismiss(...a)
@@ -83,7 +85,8 @@ describe('engine flows', () => {
       engineState,
       engineRuntime: engineServices.engineRuntime,
       paths: engineServices.paths,
-      steamBottle
+      steamBottle,
+      steamLaunchRuntime
     })
   )
   beforeEach(() => {
@@ -120,7 +123,8 @@ describe('engine flows', () => {
         engineState,
         engineRuntime: engineServices.engineRuntime,
         paths: engineServices.paths,
-        steamBottle
+        steamBottle,
+        steamLaunchRuntime
       },
       '220'
     )

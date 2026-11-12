@@ -39,6 +39,7 @@ export type StageDrmBottleSlices = Pick<
   | 'steamUser'
   | 'paths'
   | 'engineRuntime'
+  | 'steamLaunchRuntime'
 >
 
 export type StageDrmBottleDeps = {

@@ -62,6 +62,7 @@ export default class NileGameManager implements Game {
         | 'engineRuntime'
         | 'paths'
         | 'steamBottle'
+        | 'steamLaunchRuntime'
         | 'launcher'
         | 'commandRunner'
         | 'spawnAsync'

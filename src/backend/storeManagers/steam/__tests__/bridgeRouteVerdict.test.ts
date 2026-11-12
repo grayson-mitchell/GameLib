@@ -99,7 +99,7 @@ jest.mock('../bridgeBottle', () => {
   return {
     isBridgeBottleReady,
     getBridgeBottleSettings: jest.fn(),
-    getDrmBridgeRunner: jest.fn(),
+    createDrmBridgeRunners: () => ({}),
     bridgeBottleNameFor: (appId: string): string | null =>
       /^\d+$/.test(appId) ? `GameLibSteamBridge-${appId}` : null,
     findBridgeInstallBottle: (appId: string): string | null => {

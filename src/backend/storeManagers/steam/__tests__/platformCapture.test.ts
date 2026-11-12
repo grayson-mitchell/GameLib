@@ -12,7 +12,7 @@ import {
   parseOslistPlatforms,
   mergePlatformCapture,
   captureOwnedAppPlatforms,
-  withPlatformCaptureLock,
+  createPlatformCaptureQueue,
   CapturedPlatforms,
   PlatformCapturePicsClient
 } from '../platformCapture'
@@ -34,9 +34,14 @@ const steamMetadataStore = {
   set: jest.fn(),
   entries: jest.fn()
 }
+const platformCapture = createPlatformCaptureQueue()
+const { withPlatformCaptureLock } = platformCapture
 const deps = {
-  stores: { steam: { steamMetadataStore } }
-} as unknown as SteamStoresDeps
+  stores: { steam: { steamMetadataStore } },
+  steamLaunchRuntime: { platformCapture }
+} as unknown as SteamStoresDeps & {
+  steamLaunchRuntime: { platformCapture: typeof platformCapture }
+}
 
 const mockedGet = steamMetadataStore.get
 const mockedSet = steamMetadataStore.set

@@ -224,6 +224,8 @@ export interface ToolsDeps extends DialogBoxDeps, NotifyDeps {
   stores: Pick<Stores, 'wineManager'>
   /** The Steam bottle's wine-bin hint and CrossOver resolver, for the Steam Wine-tool resolver (66.3-15). */
   steamBottle: SteamEngineBottle['steamBottle']
+  /** The boot's monitor phase and DRM runner registry the Steam Wine-tool resolver reads (66.4-06). */
+  steamLaunchRuntime: SteamEngineBottle['steamLaunchRuntime']
   gameConfigs: Pick<GameConfigs, 'get'>
   appInfo: Pick<AppInfo, 'version'>
   /** `raiseMainWindow` is for the engine's refused-launch dialog (66.3-06). */
@@ -1621,7 +1623,11 @@ async function resolveGameToolSettings(
     const { resolveSteamWineToolSettings } =
       await import('backend/storeManagers/steam/bridgeWineTools')
     return resolveSteamWineToolSettings(
-      { ...engineServicesFor(deps), steamBottle: deps.steamBottle },
+      {
+        ...engineServicesFor(deps),
+        steamBottle: deps.steamBottle,
+        steamLaunchRuntime: deps.steamLaunchRuntime
+      },
       id.appName
     )
   }

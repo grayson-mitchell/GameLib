@@ -31,6 +31,7 @@ import { getBottleDir, isBottleProvisioned } from './bottleDirs'
 import type { AppPaths } from 'backend/process/context'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import type { CrossoverLocator } from 'backend/engine/crossoverLocation'
+import type { SteamLaunchRuntime } from './steamLaunchRuntime'
 
 // ── Phase 24 (24-04): dedicated bridge bottle (macOS native Steam bridge) ──
 // D-08/R6/Pitfall 1: the bridge bottle is a SEPARATE, shared CrossOver
@@ -434,6 +435,7 @@ export type SteamBottle = ReturnType<typeof createSteamBottle>
 export type BottleSettingsDeps = {
   paths: Pick<AppPaths, 'userHome'>
   engineRuntime: Pick<EngineRuntime, 'registry'>
+  steamLaunchRuntime: Pick<SteamLaunchRuntime, 'drmRunners'>
   steamBottle: Pick<
     SteamBottle,
     'getSteamBottleSettings' | 'resolveCrossoverWine'
@@ -448,4 +450,6 @@ export type BottleReadyDeps = {
 /** The bottle slice the Steam engine deps add to the generic engine services (66.3-15). */
 export type SteamEngineBottle = {
   steamBottle: Pick<SteamBottle, 'persistedWineBins' | 'resolveCrossoverWine'>
+  /** The boot's monitor phase and DRM runner registry the steam engine paths read (66.4-06). */
+  steamLaunchRuntime: Pick<SteamLaunchRuntime, 'monitors' | 'drmRunners'>
 }

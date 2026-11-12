@@ -33,7 +33,6 @@ import { STEAM_ENGINE_RUNNER } from './engine/steamEngineDeps'
 import type { LaunchDeadline } from 'backend/engine/launchDeadline'
 import { drmStepError } from './bridge/drm/steamclientLayerMode'
 import { resolveBridgeLaunchWorkingDir } from './bridge/launchTarget'
-import { appFolder, userHome } from 'backend/constants/paths'
 import {
   DRM_DLLPATH_CHANNEL,
   DRM_DLLOVERRIDES_CHANNEL,
@@ -119,7 +118,7 @@ export async function fireBridgeWineLaunch(
   try {
     const { runWineCommand } = steamGame.deps.commandRunner
     const { startBottleProcessMonitor, getBottleProcessMonitorPhase } =
-      await import('./bottleProcessMonitor')
+      steamGame.deps.steamLaunchRuntime.monitors
     const { bindDeadlineToMonitor } =
       await import('backend/engine/launchDeadline')
     const { armLaunchDeadline } = steamGame.deps.engineRuntime.deadlines
@@ -399,7 +398,7 @@ export async function fireBridgeWineLaunch(
       void Promise.resolve(
         watchOverlayAttach({
           appId: steamGame.appId,
-          consoleLogPath: macSteamConsoleLogPath(userHome),
+          consoleLogPath: macSteamConsoleLogPath(steamGame.deps.paths.userHome),
           launchStartedAt,
           // 60-UAT G2: the DRM helper hop attaches about 13 s in.
           ...(drm ? { timeoutMs: OVERLAY_ATTACH_DRM_TIMEOUT_MS } : {})
@@ -548,7 +547,7 @@ export async function fireBridgeWineLaunch(
     const overlayWineLog =
       overlayInjected && !drm
         ? openOverlayWineLog(
-            buildOverlayPaths(appFolder)?.traceRoot ?? '',
+            buildOverlayPaths(steamGame.deps.paths.appFolder)?.traceRoot ?? '',
             steamGame.appId,
             Date.now()
           )

@@ -5,6 +5,7 @@
  */
 import type { AppPaths } from 'backend/process/context'
 import type { AppState } from 'backend/host/appState'
+import type { Clock, TimerHandle } from 'backend/process/types'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type {
   CommandRunner,
@@ -12,9 +13,14 @@ import type {
 } from 'backend/services/types'
 import type { RunsForMeDeps } from 'backend/runsForMe'
 import type { SpawnDeps } from './provisionBottle'
+import type { BottleProcessMonitors } from './bottleProcessMonitor'
 
 /** SpawnDeps plus the window-yield the raise fallback uses (66.3-08). */
-export type BottledRaiseDeps = SpawnDeps & { appState: Pick<AppState, 'hide'> }
+export type BottledRaiseDeps = SpawnDeps & {
+  appState: Pick<AppState, 'hide'>
+  /** The boot's raise-loop owner (66.4-06). */
+  steamLaunchRuntime: { raiser: BottledSteamRaiser }
+}
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { NUMERIC_APP_ID } from './gameConstants'
@@ -69,21 +75,71 @@ const STEAM_CLIENT_PROCESS_NAMES = [
  * pending sleep never keeps the process alive, and (b) gate each iteration on a
  * cancellation flag so no `import`/spawn runs after teardown.
  */
-let bottledRaiseLoopsCancelled = false
-const activeRaiseTimers = new Set<ReturnType<typeof setTimeout>>()
+
+/** The raise-loop owner: the cancel flag and the live retry timers of one boot (66.4-06, D-05). */
+export interface BottledSteamRaiser {
+  /** The shared raise-to-front core (macOS-only, fire-and-forget). */
+  raiseFrontmostBottledProcess: (
+    deps: BottledRaiseDeps,
+    context: string,
+    raiseScript: string
+  ) => Promise<void>
+  /**
+   * Cancel any in-flight raise loop and clear every tracked retry timer so no loop survives
+   * teardown. A fresh raise loop resets the flag, so a prior cancel never suppresses a later raise.
+   */
+  cancelRaiseLoops: () => void
+}
 
 /**
- * Test-only teardown hook (GAP C): cancel any in-flight raise loop and clear
- * every tracked retry timer so no loop survives a test (`jest.getTimerCount()`
- * returns to 0). Production never calls this — the flag is reset at the start of
- * each raise loop, so a prior cancel never suppresses a legitimate later raise.
+ * Construction allocates an empty timer set and arms nothing; retry sleeps run on the injected
+ * clock (unref'd) only once a loop starts.
  */
-export function __stopBottledRaiseLoops(): void {
-  bottledRaiseLoopsCancelled = true
-  for (const handle of activeRaiseTimers) {
-    clearTimeout(handle)
+export function createBottledSteamRaiser(deps: {
+  clock: Pick<Clock, 'setTimeout' | 'clear'>
+}): BottledSteamRaiser {
+  let cancelled = false
+  const activeTimers = new Set<TimerHandle>()
+
+  const cancelRaiseLoops = (): void => {
+    cancelled = true
+    for (const handle of activeTimers) {
+      deps.clock.clear(handle)
+    }
+    activeTimers.clear()
   }
-  activeRaiseTimers.clear()
+
+  const sleep = (ms: number) =>
+    new Promise<void>((resolve) => {
+      const handle = deps.clock.setTimeout(() => {
+        activeTimers.delete(handle)
+        resolve()
+      }, ms)
+      activeTimers.add(handle)
+    })
+
+  return {
+    cancelRaiseLoops,
+    raiseFrontmostBottledProcess: (d, context, raiseScript) =>
+      raiseLoop(
+        {
+          sleep,
+          isCancelled: () => cancelled,
+          reset: () => {
+            cancelled = false
+          }
+        },
+        d,
+        context,
+        raiseScript
+      )
+  }
+}
+
+interface RaiseLoopState {
+  sleep: (ms: number) => Promise<void>
+  isCancelled: () => boolean
+  reset: () => void
 }
 
 /**
@@ -94,7 +150,8 @@ export function __stopBottledRaiseLoops(): void {
  * back to app.hide() so GameLib at least steps aside. Every step is guarded —
  * failure never affects the install/launch flow. No-op on Linux/Windows.
  */
-async function raiseFrontmostBottledProcess(
+async function raiseLoop(
+  loop: RaiseLoopState,
   deps: BottledRaiseDeps,
   context: string,
   raiseScript: string
@@ -102,25 +159,13 @@ async function raiseFrontmostBottledProcess(
   try {
     // GAP C: a fresh loop clears any prior cancellation (teardown hook only
     // suppresses loops that are already in flight, never future ones).
-    bottledRaiseLoopsCancelled = false
+    loop.reset()
 
     const { isMac } = await import('backend/constants/environment')
-    if (!isMac || bottledRaiseLoopsCancelled) {
+    if (!isMac || loop.isCancelled()) {
       return
     }
 
-    // GAP C: unref the retry timer so a pending sleep never keeps the Node
-    // (Jest worker) process alive; track the handle so the teardown hook can
-    // clear it. Optional-chained unref is a no-op in any non-Node context.
-    const sleep = (ms: number) =>
-      new Promise<void>((resolve) => {
-        const handle = setTimeout(() => {
-          activeRaiseTimers.delete(handle)
-          resolve()
-        }, ms)
-        activeRaiseTimers.add(handle)
-        handle.unref?.()
-      })
     const tryRaise = async (): Promise<string | null> => {
       try {
         const { stdout } = await deps.spawnAsync('osascript', [
@@ -143,9 +188,9 @@ async function raiseFrontmostBottledProcess(
 
     let raised: string | null = null
     for (let attempt = 0; attempt < 12 && !raised; attempt++) {
-      if (bottledRaiseLoopsCancelled) return
-      await sleep(1500)
-      if (bottledRaiseLoopsCancelled) return
+      if (loop.isCancelled()) return
+      await loop.sleep(1500)
+      if (loop.isCancelled()) return
       raised = await tryRaise()
     }
 
@@ -155,11 +200,11 @@ async function raiseFrontmostBottledProcess(
         LogPrefix.Steam
       )
       // Re-raise once after the window settles (splash -> main UI).
-      if (bottledRaiseLoopsCancelled) return
-      await sleep(2500)
-      if (bottledRaiseLoopsCancelled) return
+      if (loop.isCancelled()) return
+      await loop.sleep(2500)
+      if (loop.isCancelled()) return
       await tryRaise()
-    } else if (bottledRaiseLoopsCancelled) {
+    } else if (loop.isCancelled()) {
       return
     } else {
       logWarning(
@@ -206,7 +251,11 @@ export async function raiseInstallerWindow(
     'return (name of p) & " pid=" & (unix id of p)',
     'end tell'
   ].join('\n')
-  await raiseFrontmostBottledProcess(deps, context, raiseScript)
+  await deps.steamLaunchRuntime.raiser.raiseFrontmostBottledProcess(
+    deps,
+    context,
+    raiseScript
+  )
 }
 
 /**
@@ -235,7 +284,11 @@ async function raiseBottledGameWindow(
     'return "none"',
     'end tell'
   ].join('\n')
-  await raiseFrontmostBottledProcess(deps, context, raiseScript)
+  await deps.steamLaunchRuntime.raiser.raiseFrontmostBottledProcess(
+    deps,
+    context,
+    raiseScript
+  )
 }
 
 // ── 17-04: bottled-Steam verb dispatch ──────────────────────────────────────
@@ -244,6 +297,7 @@ async function raiseBottledGameWindow(
 export type BottledSteamDeps = BottledRaiseDeps &
   SteamLibraryStateDeps & {
     paths: Pick<AppPaths, 'userHome'>
+    steamLaunchRuntime: { monitors: BottleProcessMonitors }
     stores: RunsForMeDeps['stores']
     commandRunner: Pick<CommandRunner, 'runWineCommand'>
     steamBottle: Pick<
@@ -340,9 +394,7 @@ async function dispatchToBottledSteam(
         // quick/261024-gvu: awaited so the monitor's `launching` push is sent
         // before runWineCommand and therefore before the launch IPC resolves.
         try {
-          const { startBottleProcessMonitor } =
-            await import('./bottleProcessMonitor')
-          startBottleProcessMonitor(deps, {
+          deps.steamLaunchRuntime.monitors.startBottleProcessMonitor(deps, {
             appId,
             installPath,
             bottleDir: getBottleDir(deps.paths, bottleName)
@@ -374,9 +426,7 @@ async function dispatchToBottledSteam(
     if (verb === 'launch') {
       // quick/261024-gvu: a failed dispatch must not leave Launching held.
       try {
-        const { stopBottleProcessMonitor } =
-          await import('./bottleProcessMonitor')
-        stopBottleProcessMonitor(appId)
+        deps.steamLaunchRuntime.monitors.stopBottleProcessMonitor(appId)
       } catch {
         // never throw from the error path
       }

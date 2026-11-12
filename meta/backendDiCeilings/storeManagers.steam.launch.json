@@ -1,6 +1,0 @@
-{
-  "moduleState": {
-    "src/backend/storeManagers/steam/gameDrmLaunch.ts": 1,
-    "src/backend/storeManagers/steam/gameLaunchOverlay.ts": 1
-  }
-}

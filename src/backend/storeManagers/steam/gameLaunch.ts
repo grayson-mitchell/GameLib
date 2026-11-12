@@ -57,18 +57,12 @@ import {
   setBridgeIdentityFallback,
   writeBridgeModeVerdict
 } from './bridge/bridgeVerdict'
-import {
-  builtOverlayShimPath,
-  appFolder,
-  userHome
-} from 'backend/constants/paths'
 import { buildSteamProtocolUrl } from './gameProtocolUrl'
 import { watchSteamLaunch } from './steamLaunchedDeps'
 import {
   MAC_STEAM_CLIENT_SUBPATH,
   drmBottleWinPath,
   prepareDrmTraceFile,
-  drmModeNoticeShownThisSession,
   engineLabelForLog,
   drmStepNoticeText
 } from './gameDrmLaunch'
@@ -108,9 +102,10 @@ export async function launch(
     // this appId is live (still starting, or already running) a second Play
     // must not queue another `-applaunch` / wine exe — the monitor keeps
     // owning the launching/playing status.
-    const { getBottleProcessMonitorPhase } =
-      await import('./bottleProcessMonitor')
-    const livePhase = getBottleProcessMonitorPhase(steamGame.appId)
+    const livePhase =
+      steamGame.deps.steamLaunchRuntime.monitors.getBottleProcessMonitorPhase(
+        steamGame.appId
+      )
     if (livePhase) {
       logInfo(
         `SteamGame: appId ${steamGame.appId} launch already ${livePhase} — not dispatching another`,
@@ -368,10 +363,9 @@ export function maybeNotifyDrmModeFailed(
 ): void {
   logInfo(formatDrmNoticeLine(steamGame.appId, step, cause), LogPrefix.Steam)
   const key = `${steamGame.appId}|${step}`
-  if (drmModeNoticeShownThisSession.has(key)) {
+  if (!steamGame.deps.steamLaunchRuntime.drmNotice.claim(key)) {
     return
   }
-  drmModeNoticeShownThisSession.add(key)
   const title = i18next.t(
     'gamelib:steam.bridge.drm.title',
     'This game could not start'
@@ -800,7 +794,6 @@ export async function onBridgeLaunchDeadline(
   clearLaunchRecord: () => void,
   armedSelection: EngineSelection | undefined
 ): Promise<void> {
-  const { stopBottleProcessMonitor } = await import('./bottleProcessMonitor')
   const { clearEngineSelection, getEngineSelection } =
     steamGame.deps.engineRuntime.registry
   const { engineLogLabel } = await import('backend/engine/engineTypes')
@@ -812,7 +805,9 @@ export async function onBridgeLaunchDeadline(
     `SteamGame: appId ${steamGame.appId} launch deadline fired (${sel ? engineLogLabel(sel) : 'engine=crossover'}); stopping the bottle`,
     LogPrefix.Steam
   )
-  stopBottleProcessMonitor(steamGame.appId)
+  steamGame.deps.steamLaunchRuntime.monitors.stopBottleProcessMonitor(
+    steamGame.appId
+  )
   await killBridgeBottleWineServer(steamGame.deps, steamGame.appId, 15_000)
   steamGame.deps.bridgeHelpers.stop(steamGame.appId)
   clearLaunchRecord()
@@ -864,7 +859,7 @@ export async function prefetchBridgeDrmDownloads(
   await steamGame.deps.steamProcesses.drm.prefetchDrmDownloads(
     {
       appId: steamGame.appId,
-      appFolder,
+      appFolder: steamGame.deps.paths.appFolder,
       drmWrapper,
       cegMarkers
     },
@@ -910,6 +905,7 @@ export async function launchDrmModeGame(
   installRoot: string,
   ready: DrmLaunchReady
 ): Promise<boolean> {
+  const { appFolder, userHome, builtOverlayShimPath } = steamGame.deps.paths
   const macSteamClientDir = join(userHome, ...MAC_STEAM_CLIENT_SUBPATH)
   if (!existsSync(join(macSteamClientDir, 'steamclient.dylib'))) {
     maybeNotifyDrmModeFailed(

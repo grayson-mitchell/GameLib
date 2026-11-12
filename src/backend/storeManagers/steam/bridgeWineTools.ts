@@ -32,8 +32,7 @@ import { readSteamEngineOverride } from './engine/steamEngineDeps'
 import {
   bridgeBottleNameFor,
   findBridgeInstallBottle,
-  getBridgeBottleSettings,
-  getDrmBridgeRunner
+  getBridgeBottleSettings
 } from './bridgeBottle'
 
 export interface SteamWineToolsDeps {
@@ -58,14 +57,16 @@ export function defaultSteamWineToolsDeps(
     findInstallBottle: findBridgeInstallBottle,
     hasLiveRunner: (appId) =>
       services.engineRuntime.registry.getEngineSelection(appId) !== undefined ||
-      getDrmBridgeRunner(appId) !== undefined,
+      services.steamLaunchRuntime.drmRunners.getDrmBridgeRunner(appId) !==
+        undefined,
     bridgeSettings: (appId) =>
       getBridgeBottleSettings(
         {
           config: { getSettings: () => services.globalGameSettings() },
           steamBottle: services.steamBottle,
           paths: services.paths,
-          engineRuntime: services.engineRuntime
+          engineRuntime: services.engineRuntime,
+          steamLaunchRuntime: services.steamLaunchRuntime
         },
         appId
       ),

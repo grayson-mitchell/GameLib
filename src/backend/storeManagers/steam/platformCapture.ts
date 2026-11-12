@@ -228,27 +228,30 @@ export function mergePlatformCapture(
 // is synchronous and therefore already atomic on its own, and cross-writer
 // ordering between the two DIFFERENT writers is `resolvePlatformWrite`'s
 // job, not this lock's.
-let platformCaptureChain: Promise<unknown> = Promise.resolve()
+export interface PlatformCaptureQueue {
+  /**
+   * Runs `section` after every previously-queued section has settled, REGARDLESS of that prior
+   * section's outcome (resolved or rejected). The chain is re-pointed at a swallowed-outcome
+   * continuation BEFORE this call returns, so a rejected section can never poison the chain for
+   * every later caller; the caller of THIS call still observes the real (un-swallowed) rejection
+   * via the returned promise (T-qcn-02).
+   */
+  withPlatformCaptureLock: <T>(section: () => Promise<T>) => Promise<T>
+}
 
-/**
- * Runs `section` after every previously-queued section has settled,
- * REGARDLESS of that prior section's outcome (resolved or rejected). The
- * module-local chain is re-pointed at a swallowed-outcome continuation
- * BEFORE this call returns, so a rejected section can never poison the
- * chain for every later caller -- the caller of THIS call still observes
- * the real (un-swallowed) rejection via the returned promise.
- *
- * Exported for the test that proves the lock does not wedge (T-qcn-02).
- */
-export async function withPlatformCaptureLock<T>(
-  section: () => Promise<T>
-): Promise<T> {
-  const run = platformCaptureChain.then(section, section)
-  platformCaptureChain = run.then(
-    () => undefined,
-    () => undefined
-  )
-  return run
+/** The per-boot capture chain (D-05, 66.4-06); construction only holds a resolved promise. */
+export function createPlatformCaptureQueue(): PlatformCaptureQueue {
+  let chain: Promise<unknown> = Promise.resolve()
+  return {
+    withPlatformCaptureLock: async <T>(section: () => Promise<T>) => {
+      const run = chain.then(section, section)
+      chain = run.then(
+        () => undefined,
+        () => undefined
+      )
+      return run
+    }
+  }
 }
 
 /** Narrow STRUCTURAL client interface (not the real `steam-user` type) so
@@ -291,7 +294,9 @@ interface PlatformCaptureSummary {
  * later reviewer must not "fix" this back to fail-closed.
  */
 export async function captureOwnedAppPlatforms(
-  deps: SteamStoresDeps,
+  deps: SteamStoresDeps & {
+    steamLaunchRuntime: { platformCapture: PlatformCaptureQueue }
+  },
   client: PlatformCapturePicsClient,
   appIds: number[]
 ): Promise<PlatformCaptureSummary> {
@@ -326,99 +331,101 @@ export async function captureOwnedAppPlatforms(
     // for the same D-07 finding #2 reason the filter step itself was moved
     // in here: the lock/queue primitive is new, and this function's
     // never-throws contract must cover it too.
-    return await withPlatformCaptureLock(async () => {
-      // D-04: reuse depotSignalCaptured() verbatim — never re-derive its
-      // logic. This is what makes "what the bulk job repairs" and "what the
-      // install form calls unresolved" the same set BY CONSTRUCTION.
-      const scoped = appIds.filter(
-        (id) =>
-          !depotSignalCaptured(
-            deps.stores.steam.steamMetadataStore.get(String(id))
-          )
-      )
-      scopedCount = scoped.length
+    return await deps.steamLaunchRuntime.platformCapture.withPlatformCaptureLock(
+      async () => {
+        // D-04: reuse depotSignalCaptured() verbatim — never re-derive its
+        // logic. This is what makes "what the bulk job repairs" and "what the
+        // install form calls unresolved" the same set BY CONSTRUCTION.
+        const scoped = appIds.filter(
+          (id) =>
+            !depotSignalCaptured(
+              deps.stores.steam.steamMetadataStore.get(String(id))
+            )
+        )
+        scopedCount = scoped.length
 
-      if (scoped.length === 0) {
-        // Converging steady state: after the first sync repairs the
-        // residue + never-fetched games, subsequent syncs ask for little
-        // or nothing, and this branch means literally no PICS call is
-        // made.
+        if (scoped.length === 0) {
+          // Converging steady state: after the first sync repairs the
+          // residue + never-fetched games, subsequent syncs ask for little
+          // or nothing, and this branch means literally no PICS call is
+          // made.
+          return {
+            scopedCount: 0,
+            capturedCount: 0,
+            skippedCount: 0,
+            failed: false
+          }
+        }
+
+        const response = await withTimeout(
+          client.getProductInfo(scoped, [], true),
+          STEAM_PICS_BULK_TIMEOUT_MS,
+          'captureOwnedAppPlatforms getProductInfo'
+        )
+
+        let capturedCount = 0
+        let skippedCount = 0
+
+        for (const id of scoped) {
+          // An id that came back in `unknownApps` (delisted / token-gated) is
+          // treated identically to an entirely absent entry — skip, do not
+          // trust whatever (if anything) `apps` happens to hold for it.
+          const isUnknownApp = response.unknownApps?.includes(id) === true
+          const entry = isUnknownApp ? undefined : response.apps?.[id]
+          const appinfo = entry?.appinfo as AppCommonOslist | undefined
+          const parsed = appinfo
+            ? parseOslistPlatforms(appinfo.common?.oslist)
+            : null
+
+          // Missing entry, missing appinfo, missing common, or an
+          // absent/empty/unrecognised oslist all collapse to the same "write
+          // nothing for this app" outcome via parseOslistPlatforms's null
+          // return. This deliberately DIVERGES from fetchAppInfo's single-app
+          // precedent (`depot.ts:456-460`), which THROWS on a missing entry —
+          // that throwing shape must not be copied into this fail-soft bulk
+          // path; a missing/ambiguous per-app answer here is an ordinary,
+          // expected outcome, not an error.
+          if (!parsed) {
+            skippedCount += 1
+            continue
+          }
+
+          // Quick task 260816-qcn (WR-01): `mergePlatformCapture` now reports
+          // whether it genuinely persisted a write. A `false` here means
+          // `resolvePlatformWrite` declined this parse in favour of an
+          // existing, strictly-newer, complete capture (e.g. a concurrent
+          // per-game `appdetails` fetch landed a newer stamp for this appId
+          // between the PICS response arriving and this loop reaching it).
+          // Deliberately folded into `skippedCount` rather than a separate
+          // `declinedCount`: from this log line's perspective both outcomes
+          // mean the same thing -- "nothing new was written to the cache for
+          // this appId this run" -- and folding them keeps the counters'
+          // invariant (`captured + skipped === scoped.length`) true without
+          // adding a fourth number a reader has to reconcile by hand. If a
+          // future reader needs to distinguish "no signal" from "declined by
+          // precedence", split this back out into its own counter rather than
+          // silently re-widening `capturedCount`'s meaning.
+          const wasWritten = mergePlatformCapture(deps, String(id), parsed)
+          if (wasWritten) {
+            capturedCount += 1
+          } else {
+            skippedCount += 1
+          }
+        }
+
+        logInfo(
+          `Steam bulk platform capture: scoped=${scoped.length} captured=${capturedCount} skipped=${skippedCount}`,
+          LogPrefix.Steam
+        )
+
         return {
-          scopedCount: 0,
-          capturedCount: 0,
-          skippedCount: 0,
+          scopedCount: scoped.length,
+          capturedCount,
+          skippedCount,
           failed: false
         }
       }
-
-      const response = await withTimeout(
-        client.getProductInfo(scoped, [], true),
-        STEAM_PICS_BULK_TIMEOUT_MS,
-        'captureOwnedAppPlatforms getProductInfo'
-      )
-
-      let capturedCount = 0
-      let skippedCount = 0
-
-      for (const id of scoped) {
-        // An id that came back in `unknownApps` (delisted / token-gated) is
-        // treated identically to an entirely absent entry — skip, do not
-        // trust whatever (if anything) `apps` happens to hold for it.
-        const isUnknownApp = response.unknownApps?.includes(id) === true
-        const entry = isUnknownApp ? undefined : response.apps?.[id]
-        const appinfo = entry?.appinfo as AppCommonOslist | undefined
-        const parsed = appinfo
-          ? parseOslistPlatforms(appinfo.common?.oslist)
-          : null
-
-        // Missing entry, missing appinfo, missing common, or an
-        // absent/empty/unrecognised oslist all collapse to the same "write
-        // nothing for this app" outcome via parseOslistPlatforms's null
-        // return. This deliberately DIVERGES from fetchAppInfo's single-app
-        // precedent (`depot.ts:456-460`), which THROWS on a missing entry —
-        // that throwing shape must not be copied into this fail-soft bulk
-        // path; a missing/ambiguous per-app answer here is an ordinary,
-        // expected outcome, not an error.
-        if (!parsed) {
-          skippedCount += 1
-          continue
-        }
-
-        // Quick task 260816-qcn (WR-01): `mergePlatformCapture` now reports
-        // whether it genuinely persisted a write. A `false` here means
-        // `resolvePlatformWrite` declined this parse in favour of an
-        // existing, strictly-newer, complete capture (e.g. a concurrent
-        // per-game `appdetails` fetch landed a newer stamp for this appId
-        // between the PICS response arriving and this loop reaching it).
-        // Deliberately folded into `skippedCount` rather than a separate
-        // `declinedCount`: from this log line's perspective both outcomes
-        // mean the same thing -- "nothing new was written to the cache for
-        // this appId this run" -- and folding them keeps the counters'
-        // invariant (`captured + skipped === scoped.length`) true without
-        // adding a fourth number a reader has to reconcile by hand. If a
-        // future reader needs to distinguish "no signal" from "declined by
-        // precedence", split this back out into its own counter rather than
-        // silently re-widening `capturedCount`'s meaning.
-        const wasWritten = mergePlatformCapture(deps, String(id), parsed)
-        if (wasWritten) {
-          capturedCount += 1
-        } else {
-          skippedCount += 1
-        }
-      }
-
-      logInfo(
-        `Steam bulk platform capture: scoped=${scoped.length} captured=${capturedCount} skipped=${skippedCount}`,
-        LogPrefix.Steam
-      )
-
-      return {
-        scopedCount: scoped.length,
-        capturedCount,
-        skippedCount,
-        failed: false
-      }
-    })
+    )
   } catch (err) {
     // T-34.15-01-03 / D-03: a PICS timeout or error (including the bulk
     // socket itself rejecting) logs and returns a failure summary. This
