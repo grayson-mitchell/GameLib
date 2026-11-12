@@ -52,8 +52,14 @@ const ctx = { label: 'test', logPrefix: LogPrefix.Backend }
 const DIR = '/over/lays/gst-libav-1.24.13'
 const PLUG = `${DIR}/lib/gstreamer-1.0`
 
+// ensureOverlayInstalled is mocked: the registry only has to satisfy the type.
+const overlayDeps = {
+  aborts: { create: () => new AbortController(), delete: () => undefined }
+}
+
 const resolveOpts = (over: Record<string, unknown> = {}) => ({
   ...ctx,
+  deps: overlayDeps,
   wineType: 'crossover',
   baseValue: () => undefined,
   platform: 'darwin' as NodeJS.Platform,
@@ -202,15 +208,16 @@ describe('knownFixProfileOverlayEnv base precedence', () => {
   it('tier-1 beats enviromentOptions beats process.env', async () => {
     process.env.GST_PLUGIN_PATH = '/proc'
     expect(
-      await knownFixProfileOverlayEnv('1', 'gog', settings(), {
+      await knownFixProfileOverlayEnv(overlayDeps, '1', 'gog', settings(), {
         GST_PLUGIN_PATH: '/t1'
       })
     ).toEqual({ GST_PLUGIN_PATH: `/t1:${PLUG}` })
-    expect(await knownFixProfileOverlayEnv('1', 'gog', settings(), {})).toEqual(
-      { GST_PLUGIN_PATH: `/opt:${PLUG}` }
-    )
+    expect(
+      await knownFixProfileOverlayEnv(overlayDeps, '1', 'gog', settings(), {})
+    ).toEqual({ GST_PLUGIN_PATH: `/opt:${PLUG}` })
     expect(
       await knownFixProfileOverlayEnv(
+        overlayDeps,
         '1',
         'gog',
         settings({ enviromentOptions: [] }),
@@ -221,7 +228,7 @@ describe('knownFixProfileOverlayEnv base precedence', () => {
 
   it('does not double the dir when tier-1 already holds it', async () => {
     expect(
-      await knownFixProfileOverlayEnv('1', 'gog', settings(), {
+      await knownFixProfileOverlayEnv(overlayDeps, '1', 'gog', settings(), {
         GST_PLUGIN_PATH: PLUG
       })
     ).toEqual({ GST_PLUGIN_PATH: PLUG })

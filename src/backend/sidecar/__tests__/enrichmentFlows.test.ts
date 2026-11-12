@@ -281,10 +281,6 @@ jest.mock('../../dialog/dialog', () => ({
 jest.mock('../../storeManagers/legendary/user', () => ({
   LegendaryUser: { getUserInfo: jest.fn() }
 }))
-jest.mock('../../utils/aborthandler/aborthandler', () => ({
-  ...jest.requireActual('../../utils/aborthandler/aborthandler'),
-  callAbortController: jest.fn()
-}))
 
 // ── steamgrid/secretStore — Amendment A-03 seam. Every steamgriddb.*
 // handler under test MUST call deps.steamGridSecrets exclusively —

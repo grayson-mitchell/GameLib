@@ -46,15 +46,19 @@ import { parsePsLine, processListing } from 'backend/engine/processListing'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import {
-  raiseWineGameWindow,
-  windowsExeNameFromCommand
+  windowsExeNameFromCommand,
+  type WineWindowRaiser
 } from 'backend/utils/wineWindowRaise'
 import type { Clock, TimerHandle } from 'backend/process/types'
 import type { SpawnDeps } from './provisionBottle'
 import type { RunsForMeDeps } from 'backend/runsForMe'
 
 /** The monitor's spawn slice plus the runs-for-me store its session record writes (66.1). */
-type BottleMonitorDeps = SpawnDeps & RunsForMeDeps
+type BottleMonitorDeps = SpawnDeps &
+  RunsForMeDeps & {
+    /** The boot-owned window raiser the first-match raise goes through (66.4-13). */
+    windowRaiser: Pick<WineWindowRaiser, 'raise'>
+  }
 import { sendFrontendMessage } from '../../ipc'
 import { recordPlaySession } from 'backend/runsForMe'
 import type { SteamBottleLaunchWaitingCause } from 'common/types/steam'
@@ -282,7 +286,7 @@ function fireStoppedOnce(appId: string, entry: MonitorEntry): void {
 
 /** First-match bookkeeping shared by the poll loop and launcherExited(). */
 function recordFirstMatch(
-  deps: SpawnDeps,
+  deps: BottleMonitorDeps,
   appId: string,
   entry: MonitorEntry,
   matches: Array<{ pid: string; command: string }>
@@ -320,7 +324,7 @@ function recordFirstMatch(
           .filter((n): n is string => n !== null)
       )
     ]
-    void raiseWineGameWindow(deps, {
+    void deps.windowRaiser.raise(deps, {
       context: `${entry.kind}:${appId}`,
       pids: matches.map((m) => m.pid),
       processNames

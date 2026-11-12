@@ -184,7 +184,7 @@ import {
 import { acknowledgeDialogDisplay } from '../dialog/displayAck'
 import { detectVCRedist } from '../utils'
 import { assertOpenableExternalUrl } from './openPolicy'
-import { callAbortController } from '../utils/aborthandler/aborthandler'
+import type { AbortRegistry } from '../utils/aborthandler/aborthandler'
 import type { GlobalConfigSlice } from '../config'
 import { logInfo, LogPrefix } from '../logger'
 import { pushReadOnlyStoresNotice } from './readOnlyStoresNotice'
@@ -272,6 +272,8 @@ function syncTrayIcon(config: Pick<GlobalConfigSlice, 'getSettings'>): void {
 /** Narrow dependency slice for `registerAppShellFlows` (66.1, D-01). */
 export interface AppShellFlowDeps extends DialogBoxDeps, NotifyDeps {
   managers: Pick<StoreManagers, 'library'>
+  /** The boot-owned abort registry the `abort` channel signals (66.4-13). */
+  aborts: Pick<AbortRegistry, 'call'>
   downloadQueue: Pick<DownloadQueue, 'initQueue'>
   quit: Pick<QuitHandler, 'handleExit'>
   stores: Pick<Stores, 'kvs' | 'legendary'>
@@ -417,7 +419,7 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
 
   deps.ipc.on('abort', (_event: unknown, ...args: unknown[]) => {
     try {
-      callAbortController(args[0] as string)
+      deps.aborts.call(args[0] as string)
     } catch (error) {
       logSendFailure('abort', error)
     }

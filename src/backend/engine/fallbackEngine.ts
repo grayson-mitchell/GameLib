@@ -26,10 +26,7 @@ import {
 import { dirname, isAbsolute, join, relative, resolve } from 'path'
 import type { AppPaths } from 'backend/process/context'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import {
-  createAbortController,
-  deleteAbortController
-} from 'backend/utils/aborthandler/aborthandler'
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { OnlineMonitor } from 'backend/online_monitor'
 import { calculateEta, downloadFile, extractFiles } from 'backend/utils'
 import { ENGINE_PINS, type EnginePin, type PinnedArtifact } from './enginePins'
@@ -168,6 +165,8 @@ export interface FallbackEngine {
  */
 export function createFallbackEngine(deps: {
   paths: Pick<AppPaths, 'toolsPath'>
+  /** The boot-owned abort registry the engine download registers in; stdin EOF aborts it. */
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>
 }): FallbackEngine {
   /** Artifact installs currently holding a `.tmp-*` dir (prune must not touch them). */
   let activeArtifactInstalls = 0
@@ -364,7 +363,7 @@ export function createFallbackEngine(deps: {
     const isFirst = !entry
     if (!entry) {
       // Registered with the shared registry so the sidecar's stdin-EOF release
-      // (callAllAbortControllers) aborts the download: gamelib-conventions
+      // (aborts.abortAll) aborts the download: gamelib-conventions
       // sidecar exit contract, half 2 - in-flight work bounded at quit
       // (59-REVIEW WR-11). Shutdown aborts unconditionally; a caller's own
       // signal only counts toward the all-callers-aborted rule (WR-10).
@@ -375,7 +374,7 @@ export function createFallbackEngine(deps: {
         listeners,
         callers: 0,
         aborted: 0,
-        controller: createAbortController(id)
+        controller: deps.aborts.create(id)
       }
       inFlight.set(pin.id, entry)
     }
@@ -425,7 +424,7 @@ export function createFallbackEngine(deps: {
         )
         .finally(() => {
           if (inFlight.get(pin.id) === shared) inFlight.delete(pin.id)
-          deleteAbortController(id)
+          deps.aborts.delete(id)
         })
     }
     return early ? Promise.race([shared.promise, early]) : shared.promise

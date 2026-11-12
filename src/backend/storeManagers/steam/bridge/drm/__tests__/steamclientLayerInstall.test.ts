@@ -31,10 +31,7 @@ jest.mock('backend/logger', () => ({
 }))
 
 import { buildOverlayTarGz } from 'backend/knownFixOverlayArchive'
-import {
-  callAllAbortControllers,
-  hasAbortController
-} from 'backend/utils/aborthandler/aborthandler'
+import { createAbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import {
   SteamclientLayerCatalogueEntry,
   lookupSteamclientLayer,
@@ -50,8 +47,10 @@ import {
 } from '../steamclientLayerInstall'
 
 // Every test supplies runCodesign, so the instance's runner is never reached.
+const aborts = createAbortRegistry()
 const { ensureSteamclientLayerComponent } = createSteamclientLayerInstall({
-  runner: createScriptedRunner([])
+  runner: createScriptedRunner([]),
+  aborts
 })
 import { at, defined } from '../../../__tests__/fixtures/indexed'
 
@@ -399,16 +398,16 @@ describe('ensureSteamclientLayerComponent', () => {
     const t = await run(entry, { fetchArchive: hang, timeoutMs: 30 })
     expect(t).toMatchObject({ status: 'error', step: 'component-missing' })
     expect((t as { cause: string }).cause).toContain('timed out')
-    expect(hasAbortController(`drm-steamclient-layer:${BUILD}`)).toBe(false)
+    expect(aborts.has(`drm-steamclient-layer:${BUILD}`)).toBe(false)
 
     const pending = run(entry, { fetchArchive: hang, timeoutMs: 60_000 })
     await new Promise((r) => setTimeout(r, 50))
-    expect(hasAbortController(`drm-steamclient-layer:${BUILD}`)).toBe(true)
-    callAllAbortControllers()
+    expect(aborts.has(`drm-steamclient-layer:${BUILD}`)).toBe(true)
+    aborts.abortAll()
     const a = await pending
     expect(a).toMatchObject({ status: 'error', step: 'component-missing' })
     expect((a as { cause: string }).cause).toContain('aborted')
-    expect(hasAbortController(`drm-steamclient-layer:${BUILD}`)).toBe(false)
+    expect(aborts.has(`drm-steamclient-layer:${BUILD}`)).toBe(false)
   })
 
   it('shares one fetch between concurrent calls', async () => {
@@ -533,7 +532,7 @@ describe('module hygiene', () => {
     expect(src).not.toContain('child_process')
   })
   it('leaves no abort controller registered after import', () => {
-    expect(hasAbortController(`drm-steamclient-layer:${BUILD}`)).toBe(false)
+    expect(aborts.has(`drm-steamclient-layer:${BUILD}`)).toBe(false)
   })
 })
 

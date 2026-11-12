@@ -73,6 +73,7 @@ import { existsSync } from 'graceful-fs'
 import { installOrUpdateTool } from '../index'
 import { registerDxmtListeners } from '../dxmt'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
+import { createTestAbortRegistry } from 'backend/testUtils/testAbortRegistry'
 import { checkWinemacMetalViewExports } from '../machoExports'
 import type { ReleasesInfo, WineVersionInfo } from 'common/types'
 
@@ -87,6 +88,7 @@ const isOnlineMock = jest.fn()
 const unregisterDxmt = registerDxmtListeners({
   events: backendEvents,
   runner: createScriptedRunner([]),
+  aborts: createTestAbortRegistry(),
   dialogs: createTestHostServices().dialogs,
   appState: createTestHostServices().appState,
   // Read at call time so a case can flip the mock.
@@ -184,6 +186,7 @@ describe('registerDxmtListeners (66.3-15)', () => {
     const unregister = registerDxmtListeners({
       events: { on, off } as never,
       runner: createScriptedRunner([]),
+      aborts: createTestAbortRegistry(),
       dialogs: createTestHostServices().dialogs,
       appState: createTestHostServices().appState,
       onlineMonitor: { isOnline: () => true },
@@ -229,6 +232,7 @@ describe('registerDxmtListeners (66.3-15)', () => {
     const unregister = registerDxmtListeners({
       events: fresh as never,
       runner: createScriptedRunner([]),
+      aborts: createTestAbortRegistry(),
       dialogs: createTestHostServices().dialogs,
       appState: createTestHostServices().appState,
       onlineMonitor: { isOnline: () => true },

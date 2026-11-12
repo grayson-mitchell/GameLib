@@ -27,11 +27,7 @@ import type { AppInfo } from 'backend/process/context'
 import { readKnownFixesWithLayer } from './knownFixes'
 import { LogPrefix, logInfo, logWarning } from './logger'
 import { isMac } from './constants/environment'
-import {
-  createAbortController,
-  deleteAbortController,
-  hasAbortController
-} from './utils/aborthandler/aborthandler'
+import type { AbortRegistry } from './utils/aborthandler/aborthandler'
 
 // Plan 57-12 replaces the host with the deployed URL after the operator
 // checkpoint, and adds a test that the sentinel is gone.
@@ -60,6 +56,8 @@ export type DetectedFix = {
 }
 
 export interface ReportDeps {
+  /** The boot-owned abort registry the relay post registers in (66.4-13). */
+  aborts: Pick<AbortRegistry, 'has' | 'create' | 'delete'>
   post: RelayPost
   isMac: () => boolean
   isEnabled: () => boolean
@@ -94,10 +92,12 @@ export function knownFixReportDeps(deps: {
   stores: Pick<Stores, 'steam'>
   appInfo: Pick<AppInfo, 'version'>
   config: Pick<GlobalConfigSlice, 'getSettings'>
+  aborts: ReportDeps['aborts']
 }): ReportDeps {
   const lazyVersion = () => deps.appInfo.version
   const store = () => deps.stores.steam.steamKnownFixReportStore
   return {
+    aborts: deps.aborts,
     post: (url, body, signal) =>
       axios.post(url, body, {
         timeout: RELAY_TIMEOUT_MS,
@@ -191,9 +191,9 @@ export async function runKnownFixReport(
     }
 
     const id = `known-fix-report:${sentKey}`
-    if (hasAbortController(id)) return 'in-flight'
+    if (deps.aborts.has(id)) return 'in-flight'
     abortId = id
-    const ctrl = createAbortController(id)
+    const ctrl = deps.aborts.create(id)
     const signal = AbortSignal.any([
       ctrl.signal,
       AbortSignal.timeout(RELAY_TIMEOUT_MS)
@@ -247,7 +247,7 @@ export async function runKnownFixReport(
     )
     return 'error'
   } finally {
-    if (abortId) deleteAbortController(abortId)
+    if (abortId) deps.aborts.delete(abortId)
   }
 }
 

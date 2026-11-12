@@ -24,7 +24,7 @@ import {
 } from 'fs'
 import { tmpdir } from 'os'
 import { join, resolve } from 'path'
-import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
+import { createAbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 
 jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
@@ -43,8 +43,11 @@ import { createTestBridgeRuntime } from 'backend/testUtils/testBridgeRuntime'
 
 // One fresh single-flight map per test (66.4-08).
 let ensureRunnerClone: RunnerCloneFlights['ensureRunnerClone']
+let aborts: ReturnType<typeof createAbortRegistry>
 beforeEach(() => {
-  ensureRunnerClone = createTestBridgeRuntime().runnerClone.ensureRunnerClone
+  aborts = createAbortRegistry()
+  ensureRunnerClone = createTestBridgeRuntime({ aborts }).runnerClone
+    .ensureRunnerClone
 })
 import {
   RUNNER_MARKER_FILE,
@@ -1156,7 +1159,7 @@ describe('verify, rebuild, prune, abort', () => {
       { runTool: s.fake.run, applyPatch: s.applyPatch }
     )
     await new Promise((r) => setTimeout(r, 100))
-    callAbortController('drm-runner-clone:' + BUILD)
+    aborts.call('drm-runner-clone:' + BUILD)
     const res = await p
     expect(res).toMatchObject({ status: 'error', step: 'runner-clone' })
     expect((res as { cause: string }).cause).toContain('aborted')

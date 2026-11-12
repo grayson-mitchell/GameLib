@@ -22,7 +22,6 @@ import { readdirSync, readFileSync, statSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { logInfo, logWarning } from 'backend/logger'
-import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
 import { SIGN_IN_STORES } from 'common/signInState'
 import {
@@ -53,9 +52,6 @@ jest.mock('backend/logger', () => ({
 jest.mock('backend/ipc', () => ({
   sendFrontendMessage: jest.fn(),
   addHandler: jest.fn()
-}))
-jest.mock('backend/utils/aborthandler/aborthandler', () => ({
-  callAbortController: jest.fn()
 }))
 
 // The connectivity listener the pass registers, captured so a test can fire
@@ -106,7 +102,8 @@ jest.mock('../runnerProbes', () => ({
   }
 }))
 
-const abortMock = callAbortController as unknown as jest.Mock
+// The abort registry is injected into the pass deps (66.4-13); this stands in for its `call`.
+const abortMock = jest.fn()
 const logInfoMock = logInfo as unknown as jest.Mock
 const logWarningMock = logWarning as unknown as jest.Mock
 
@@ -124,6 +121,7 @@ const probeSlice = {
       return Promise.resolve('healthy' as const)
     }
   },
+  aborts: { call: (id: string) => abortMock(id) },
   steamUser: {
     isLoggedIn: () => mockUsers.loggedIn.steam,
     probeCredentialPresence: () => {
@@ -190,7 +188,8 @@ function makeDeps(overrides: Overrides = {}): SignInProbePassDeps {
     registrations,
     stores: fakeVerdictStores,
     epochs: probe.epochs,
-    outcomes: probe.outcomes
+    outcomes: probe.outcomes,
+    aborts: { call: (id: string) => abortMock(id) }
   }
 }
 
@@ -759,7 +758,7 @@ describe('R8: the pass only ever aborts its own probes', () => {
     jest.useFakeTimers()
   })
 
-  it('passes only SIGN_IN_PROBE_ABORT_IDS values to callAbortController', async () => {
+  it('passes only SIGN_IN_PROBE_ABORT_IDS values to aborts.call', async () => {
     const pass = runSignInProbePass(
       makeDeps({
         legendary: {

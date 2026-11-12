@@ -37,6 +37,8 @@ import type { GogRuntime } from 'backend/storeManagers/gog/gogRuntime'
 import type { LegendaryRuntime } from 'backend/storeManagers/legendary/legendaryRuntime'
 import type { NileRuntime } from 'backend/storeManagers/nile/nileRuntime'
 import type { SystemInfoCache } from 'backend/utils/systeminfo'
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
+import type { WineWindowRaiser } from 'backend/utils/wineWindowRaise'
 import type { HltbCredentials } from 'backend/wiki_game_info/howlongtobeat/utils'
 import type { SteamInstallRuntime } from 'backend/storeManagers/steam/steamInstallRuntime'
 import type { WinetricksQueue } from 'backend/tools/winetricksQueue'
@@ -201,6 +203,10 @@ export interface ManagerDeps {
   nileRuntime: NileRuntime
   /** The boot-owned system-information and HowLongToBeat credential caches (66.4-12). */
   infoCaches: InfoCaches
+  /** The boot-owned abort-controller registry every cancellable job registers in; stdin EOF and quit abort it (66.4-13). */
+  aborts: AbortRegistry
+  /** The boot-owned Wine window raiser: its raise timers run on the boot clock (66.4-13). */
+  windowRaiser: WineWindowRaiser
   /** The boot-owned sign-in fence and outcome map the store user modules write through (D-66.3-13). */
   signIn: Pick<SignInProbeServices, 'epochs' | 'outcomes'>
   /** The boot-owned Steam sign-in session and auth-unlock state (D-66.3-13). */
@@ -328,6 +334,10 @@ export interface BootServices {
   nileRuntime: NileRuntime
   /** The boot-owned system-information and HowLongToBeat credential caches (66.4-12). */
   infoCaches: InfoCaches
+  /** The boot-owned abort-controller registry every cancellable job registers in; stdin EOF and quit abort it (66.4-13). */
+  aborts: AbortRegistry
+  /** The boot-owned Wine window raiser: its raise timers run on the boot clock (66.4-13). */
+  windowRaiser: WineWindowRaiser
   /** Built by the 'winetricks-queue' boot step, before 'register-handlers' (D-66.3-12). */
   winetricksQueue: WinetricksQueue
   /** Built by the 'sign-in-probe-state' boot step, before 'store-managers' (D-66.3-13). */

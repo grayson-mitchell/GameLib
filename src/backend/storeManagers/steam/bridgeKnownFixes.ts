@@ -47,6 +47,7 @@
  * continues, so it can never mark the bridge failed for the session.
  */
 
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { AppPaths } from 'backend/process/context'
 import { isAbsolute, relative, resolve } from 'node:path'
 import type { EnviromentVariable, GameSettings } from 'common/types'
@@ -173,7 +174,10 @@ async function gameMakerGraphicsDefault(
 }
 
 /** What the bridge known-fix applier reaches through a slice (66.1 R3). */
-export type BridgeKnownFixDeps = EngineServicesSource & { paths: AppPaths }
+export type BridgeKnownFixDeps = EngineServicesSource & {
+  paths: AppPaths
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>
+}
 
 export async function applySteamBridgeKnownFixes(
   deps: BridgeKnownFixDeps,
@@ -346,6 +350,7 @@ export async function applySteamBridgeKnownFixes(
       ...tier1Entries
     ]
     const overlayEnv = await resolveKnownFixOverlayEnv(profile?.overlays, {
+      deps: { aborts: deps.aborts },
       label: `Steam ${appId}`,
       logPrefix: LogPrefix.Steam,
       wineType: bridgeBottleSettings.wineVersion?.type,

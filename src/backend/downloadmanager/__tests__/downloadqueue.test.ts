@@ -63,6 +63,10 @@ function makeLibrary() {
 
 // The dialog and notification helpers are mocked in this file, so the slices are opaque.
 const hostSlices = {
+  aborts: {
+    has: () => false,
+    call: (id: string) => callAbortController(id)
+  },
   config: {} as never,
   dialogs: {} as never,
   appState: {} as never,
@@ -147,10 +151,6 @@ jest.mock('../../ipc', () => ({
   sendFrontendMessage: jest.fn()
 }))
 
-jest.mock('backend/utils/aborthandler/aborthandler', () => ({
-  callAbortController: jest.fn()
-}))
-
 jest.mock('../../dialog/dialog', () => ({
   notify: jest
     .requireActual('backend/testUtils/propsOnlyMock')
@@ -189,7 +189,8 @@ jest.mock('backend/storeManagers/gog/constants', () => ({
 }))
 
 import type { DMQueueElement } from 'common/types'
-import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
+// The abort registry is injected as a dep (66.4-13); this stands in for its `call`.
+const callAbortController = jest.fn()
 import { defined } from 'backend/testUtils/indexed'
 
 function makeQueueElement(appName: string): DMQueueElement {

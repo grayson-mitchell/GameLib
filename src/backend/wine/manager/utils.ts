@@ -14,10 +14,7 @@ import {
 
 import { getAvailableVersions, installVersion } from './downloader/main'
 import { sendFrontendMessage } from '../../ipc'
-import {
-  createAbortController,
-  deleteAbortController
-} from 'backend/utils/aborthandler/aborthandler'
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { toolsPath } from 'backend/constants/paths'
 import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import type { GlobalConfigSlice } from '../../config'
@@ -289,6 +286,8 @@ async function installWineVersion(
   deps: WineManagerDeps & {
     runner: Pick<ProcessRunner, 'run'>
     config: Pick<GlobalConfigSlice, 'getSettings'>
+    /** The boot-owned abort registry a release download registers in (66.4-13). */
+    aborts: Pick<AbortRegistry, 'create' | 'delete'>
   },
   release: WineVersionInfo,
   onProgress: (status: WineManagerStatus) => void
@@ -315,7 +314,7 @@ async function installWineVersion(
 
   const installDir = getInstallDir(deps, release)
 
-  const abortController = createAbortController(release.version)
+  const abortController = deps.aborts.create(release.version)
 
   try {
     const response = await installVersion({
@@ -342,7 +341,7 @@ async function installWineVersion(
       return 'error'
     }
   } finally {
-    deleteAbortController(release.version)
+    deps.aborts.delete(release.version)
   }
 
   // Update stored information

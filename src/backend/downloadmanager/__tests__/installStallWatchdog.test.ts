@@ -15,10 +15,7 @@ import {
   withStallTimeout,
   type StallError
 } from '../installStallWatchdog'
-import {
-  createAbortController,
-  deleteAbortController
-} from 'backend/utils/aborthandler/aborthandler'
+import { createAbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { logError } from 'backend/logger'
 
 // 260907-sxp T-C: bare jest.fn()s with no implementation, per this project's
@@ -49,6 +46,11 @@ function emitProgress(
 }
 
 describe('withStallTimeout', () => {
+  // A fresh registry per test: the watchdog aborts through it (66.4-13).
+  let aborts: ReturnType<typeof createAbortRegistry>
+  beforeEach(() => {
+    aborts = createAbortRegistry()
+  })
   afterEach(() => {
     jest.useRealTimers()
   })
@@ -57,6 +59,7 @@ describe('withStallTimeout', () => {
     jest.useFakeTimers()
     const appName = 'never-settles-advancing'
     const guarded = withStallTimeout(
+      { aborts },
       new Promise(() => {}),
       appName,
       INSTALL_NO_PROGRESS_TIMEOUT_MS,
@@ -85,6 +88,7 @@ describe('withStallTimeout', () => {
     const appName = 'heartbeat-only'
     const stallMs = 5 * 60 * 1000
     const guarded = withStallTimeout(
+      { aborts },
       new Promise(() => {}),
       appName,
       stallMs,
@@ -107,6 +111,7 @@ describe('withStallTimeout', () => {
     const appName = 'bytes-only'
     const stallMs = 5000
     const guarded = withStallTimeout(
+      { aborts },
       new Promise(() => {}),
       appName,
       stallMs,
@@ -136,6 +141,7 @@ describe('withStallTimeout', () => {
     const appName = 'percent-only'
     const stallMs = 5000
     const guarded = withStallTimeout(
+      { aborts },
       new Promise(() => {}),
       appName,
       stallMs,
@@ -164,6 +170,7 @@ describe('withStallTimeout', () => {
     const appName = 'never-reports'
     const stallMs = 5000
     const guarded = withStallTimeout(
+      { aborts },
       new Promise(() => {}),
       appName,
       stallMs,
@@ -181,6 +188,7 @@ describe('withStallTimeout', () => {
     const appName = 'stall-error-shape'
     const stallMs = 5000
     const guarded = withStallTimeout(
+      { aborts },
       new Promise(() => {}),
       appName,
       stallMs,
@@ -204,7 +212,13 @@ describe('withStallTimeout', () => {
     const inner = new Promise((resolve) => {
       setTimeout(() => resolve('ok'), 1000)
     })
-    const guarded = withStallTimeout(inner, appName, stallMs, 'test')
+    const guarded = withStallTimeout(
+      { aborts },
+      inner,
+      appName,
+      stallMs,
+      'test'
+    )
 
     await jest.advanceTimersByTimeAsync(1000)
     await expect(guarded).resolves.toBe('ok')
@@ -218,7 +232,13 @@ describe('withStallTimeout', () => {
     const inner = new Promise((_resolve, reject) => {
       setTimeout(() => reject(boom), 1000)
     })
-    const guarded = withStallTimeout(inner, appName, stallMs, 'test')
+    const guarded = withStallTimeout(
+      { aborts },
+      inner,
+      appName,
+      stallMs,
+      'test'
+    )
     const rejection = guarded.catch((err: unknown) => err)
 
     await jest.advanceTimersByTimeAsync(1000)
@@ -234,6 +254,7 @@ describe('withStallTimeout', () => {
     const baseline = backendEvents.listenerCount(eventName)
 
     const resolved = withStallTimeout(
+      { aborts },
       Promise.resolve('x'),
       appName,
       5000,
@@ -243,6 +264,7 @@ describe('withStallTimeout', () => {
     expect(backendEvents.listenerCount(eventName)).toBe(baseline)
 
     const guarded = withStallTimeout(
+      { aborts },
       new Promise(() => {}),
       appName,
       5000,
@@ -260,6 +282,7 @@ describe('withStallTimeout', () => {
     const otherAppName = 'scoped-b'
     const stallMs = 5000
     const guarded = withStallTimeout(
+      { aborts },
       new Promise(() => {}),
       appName,
       stallMs,
@@ -283,9 +306,10 @@ describe('withStallTimeout', () => {
     jest.useFakeTimers()
     const appName = 'trip-signals-abort'
     const stallMs = 5000
-    const controller = createAbortController(appName)
+    const controller = aborts.create(appName)
     try {
       const guarded = withStallTimeout(
+        { aborts },
         new Promise(() => {}),
         appName,
         stallMs,
@@ -299,7 +323,7 @@ describe('withStallTimeout', () => {
       expect(controller.signal.aborted).toBe(true)
       expect(isStallError(err)).toBe(true)
     } finally {
-      deleteAbortController(appName)
+      aborts.delete(appName)
     }
   })
 
@@ -307,7 +331,7 @@ describe('withStallTimeout', () => {
     jest.useFakeTimers()
     const appName = 'trip-abort-before-reject'
     const stallMs = 5000
-    const controller = createAbortController(appName)
+    const controller = aborts.create(appName)
     try {
       let tick = 0
       let abortTick: number | undefined
@@ -317,6 +341,7 @@ describe('withStallTimeout', () => {
       })
 
       const guarded = withStallTimeout(
+        { aborts },
         new Promise(() => {}),
         appName,
         stallMs,
@@ -333,7 +358,7 @@ describe('withStallTimeout', () => {
       expect(rejectTick).toBeDefined()
       expect(abortTick as number).toBeLessThan(rejectTick as number)
     } finally {
-      deleteAbortController(appName)
+      aborts.delete(appName)
     }
   })
 
@@ -343,6 +368,7 @@ describe('withStallTimeout', () => {
     const stallMs = 5000
 
     const guarded = withStallTimeout(
+      { aborts },
       new Promise(() => {}),
       appName,
       stallMs,
@@ -371,7 +397,13 @@ describe('withStallTimeout', () => {
     process.prependListener('unhandledRejection', onUnhandledRejection)
 
     try {
-      const guarded = withStallTimeout(inner, appName, stallMs, 'test')
+      const guarded = withStallTimeout(
+        { aborts },
+        inner,
+        appName,
+        stallMs,
+        'test'
+      )
       const rejection = guarded.catch((err: unknown) => err)
 
       await jest.advanceTimersByTimeAsync(stallMs)

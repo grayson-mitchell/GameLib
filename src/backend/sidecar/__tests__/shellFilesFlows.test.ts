@@ -172,13 +172,6 @@ jest.mock('../../storeManagers/legendary/stores', () => {
   return { createLegendaryStores: () => stores }
 })
 
-// ── abort handler mock — mirrors appShellFlows.test.ts's boundary choice;
-// not exercised by this plan's own channels ──────────────────────────────────
-jest.mock('../../utils/aborthandler/aborthandler', () => ({
-  callAbortController: jest.fn(),
-  callAllAbortControllers: jest.fn()
-}))
-
 // ── backend/storeManagers mock — the boot's injected library managers come from this module, and
 // `clearCache`'s `startLegendaryCleanup` fires `legendary cleanup` through the injected legendary
 // manager. Without this stub that reaches the REAL legendary runner machinery (`launcher.ts`'s

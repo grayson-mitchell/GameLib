@@ -65,6 +65,7 @@ import type { ManagerDeps, StoreManagers } from '../services/types'
 export interface EosOverlayFlowDeps {
   ipc: Pick<IpcRegistry, 'handle'>
   managers: Pick<StoreManagers, 'library'>
+  aborts: Pick<ManagerDeps['aborts'], 'call'>
   paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath'>
 }
 
@@ -82,6 +83,7 @@ export interface EosOverlayFlowDeps {
 export function registerEosOverlayFlows(deps: EosOverlayFlowDeps): void {
   const eosDeps = () => ({
     libraryManagers: deps.managers.library,
+    aborts: deps.aborts,
     paths: deps.paths
   })
 

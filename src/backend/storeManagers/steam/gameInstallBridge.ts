@@ -9,12 +9,6 @@ import { InstallResult } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { notify } from 'backend/dialog/dialog'
 import { sendGameStatusUpdate } from 'backend/utils'
-import {
-  createAbortController,
-  deleteAbortController,
-  hasAbortController,
-  getAbortSignal
-} from 'backend/utils/aborthandler/aborthandler'
 import { sendFrontendMessage } from '../../ipc'
 import { stopInstallPolling } from './library/installStop'
 import * as pollState from './library/pollState'
@@ -116,11 +110,11 @@ export async function installBridgeGame(
     try {
       if (!bridgeBottle.isBridgeBottleReady(bridgeBottleName)) {
         const reused =
-          hasAbortController(steamGame.appId) &&
-          getAbortSignal(steamGame.appId)?.aborted === false
+          steamGame.deps.aborts.has(steamGame.appId) &&
+          steamGame.deps.aborts.getSignal(steamGame.appId)?.aborted === false
         signal = reused
-          ? getAbortSignal(steamGame.appId)
-          : createAbortController(steamGame.appId).signal
+          ? steamGame.deps.aborts.getSignal(steamGame.appId)
+          : steamGame.deps.aborts.create(steamGame.appId).signal
         ownsController = !reused
         const provisioned = await provisionBridgeBottleForInstall(
           steamGame,
@@ -153,9 +147,9 @@ export async function installBridgeGame(
       if (
         ownsController &&
         signal &&
-        getAbortSignal(steamGame.appId) === signal
+        steamGame.deps.aborts.getSignal(steamGame.appId) === signal
       ) {
-        deleteAbortController(steamGame.appId)
+        steamGame.deps.aborts.delete(steamGame.appId)
       }
     }
   } catch (error) {

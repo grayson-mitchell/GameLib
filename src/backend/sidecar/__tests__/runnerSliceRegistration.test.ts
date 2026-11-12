@@ -831,6 +831,7 @@ describe('23-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30; Phase 45 Plan 0
       appInfo: services.appInfo,
       paths: services.paths,
       openExternal: services.host.openExternal,
+      aborts: services.aborts,
       managers: createTestServices().managers,
       downloadQueue: { initQueue: jest.fn() },
       quit: { handleExit: jest.fn() },

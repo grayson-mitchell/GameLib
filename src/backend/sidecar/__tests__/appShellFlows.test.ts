@@ -212,14 +212,21 @@ jest.mock('../../storeManagers/legendary/stores', () => {
 // ── abort handler mock — a narrow jest.fn() boundary so `abort`'s wiring can
 // be asserted directly, mirroring downloadQueueFlows.test.ts's own boundary
 // choice for backend/storeManagers ───────────────────────────────────────────
+// The registry is boot-built (66.4-13): the mock exposes `createAbortRegistry` (the factory the
+// boot step and createTestServices call) over two narrow jest.fn() boundaries. `abortAll` is
+// what `handleExit`'s DESTRUCTIVE branch calls (CR-04: it must exist, or that branch throws a
+// TypeError partway through and any "did the destructive branch run?" assertion is vacuous).
+const mockedCallAbortController = jest.fn()
+const mockedCallAllAbortControllers = jest.fn()
 jest.mock('../../utils/aborthandler/aborthandler', () => ({
-  callAbortController: jest.fn(),
-  // CR-04: `handleExit`'s DESTRUCTIVE branch calls `callAllAbortControllers()` (it
-  // aborts every in-flight download). It was missing from this mock, so that branch
-  // threw a TypeError partway through instead of running -- which silently made any
-  // "did the destructive branch run?" assertion vacuous. Present and asserted-against
-  // by the CR-04 fail-safe test below.
-  callAllAbortControllers: jest.fn()
+  createAbortRegistry: () => ({
+    create: () => new AbortController(),
+    delete: () => undefined,
+    has: () => false,
+    getSignal: () => undefined,
+    call: (id: string) => mockedCallAbortController(id),
+    abortAll: () => mockedCallAllAbortControllers()
+  })
 }))
 
 // ── download queue stub (66.1-11): the queue is a boot service now, so the boot gets this stub
@@ -284,7 +291,6 @@ import type { createGlobalConfig as createGlobalConfigType } from 'backend/confi
 import type i18nextType from 'i18next'
 import type { Stores } from 'backend/services/types'
 import type { backendEvents as backendEventsType } from '../../backend_events'
-import type * as aborthandlerModule from '../../utils/aborthandler/aborthandler'
 import type { requestRustInvoke as requestRustInvokeType } from '../sidecarRpc'
 import type { IpcRegistry } from '../ipcRegistry'
 import type * as loggerModuleType from '../../logger'
@@ -311,8 +317,6 @@ let createGlobalConfig: typeof createGlobalConfigType
 let i18next: typeof i18nextType
 let gameInfoStore: Stores['legendary']['gameInfoStore']
 let backendEvents: typeof backendEventsType
-let callAbortController: typeof aborthandlerModule.callAbortController
-let callAllAbortControllers: typeof aborthandlerModule.callAllAbortControllers
 let requestRustInvoke: typeof requestRustInvokeType
 let loggerModule: typeof loggerModuleType
 let gamesConfigPath: string
@@ -322,8 +326,6 @@ let markFrontendReady: typeof protocolModule.markFrontendReady
 let mockedGlobalConfigGet: jest.Mock
 let mockedI18nextChangeLanguage: jest.Mock
 let mockedGameInfoStoreClear: jest.Mock
-let mockedCallAbortController: jest.Mock
-let mockedCallAllAbortControllers: jest.Mock
 let mockRequestRustInvoke: jest.Mock
 let mockedHandleProtocol: jest.Mock
 
@@ -339,9 +341,6 @@ function freshRegistry(): void {
       root: createTestStoreRoot()
     }).gameInfoStore
   backendEvents = require('../../backend_events').backendEvents
-  const aborthandler = require('../../utils/aborthandler/aborthandler')
-  callAbortController = aborthandler.callAbortController
-  callAllAbortControllers = aborthandler.callAllAbortControllers
   requestRustInvoke = require('../sidecarRpc').requestRustInvoke
   loggerModule = require('../../logger')
   const protocol = require('../../protocol')
@@ -353,8 +352,6 @@ function freshRegistry(): void {
   mockedGlobalConfigGet = createGlobalConfig as jest.Mock
   mockedI18nextChangeLanguage = i18next.changeLanguage as jest.Mock
   mockedGameInfoStoreClear = gameInfoStore.clear as jest.Mock
-  mockedCallAbortController = callAbortController as jest.Mock
-  mockedCallAllAbortControllers = callAllAbortControllers as jest.Mock
   mockRequestRustInvoke = requestRustInvoke as jest.Mock
   mockedHandleProtocol = handleProtocol as jest.Mock
 }
@@ -380,6 +377,7 @@ function directDeps(stores: unknown = {}) {
     ipc: directIpc,
     appInfo: { version: pkgJson.version },
     openExternal: { openExternal: jest.fn() },
+    aborts: { call: (id: string) => mockedCallAbortController(id) },
     appState: {
       raiseMainWindowForInAppDialog: jest.fn(),
       relaunch: jest.fn(),
@@ -623,7 +621,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   // invalidated the invariant `platformApi.showMessageBox`'s own comment block reasoned
   // from. `handleExit` is the ONE caller in this codebase whose dialog sense is inverted
   // (index 0 = safe "No", index 1 = destructive "Yes" -> kill legendary/gogdl/nile +
-  // callAllAbortControllers + app.exit). These two tests pin the consequences.
+  // abortAll + app.exit). These two tests pin the consequences.
   describe('CR-04 quit with pending operations', () => {
     let lockFile: string
 

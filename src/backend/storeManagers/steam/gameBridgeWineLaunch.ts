@@ -396,13 +396,18 @@ export async function fireBridgeWineLaunch(
       if (attachStarted || !overlayInjected) return
       attachStarted = true
       void Promise.resolve(
-        watchOverlayAttach({
-          appId: steamGame.appId,
-          consoleLogPath: macSteamConsoleLogPath(steamGame.deps.paths.userHome),
-          launchStartedAt,
-          // 60-UAT G2: the DRM helper hop attaches about 13 s in.
-          ...(drm ? { timeoutMs: OVERLAY_ATTACH_DRM_TIMEOUT_MS } : {})
-        })
+        watchOverlayAttach(
+          {
+            appId: steamGame.appId,
+            consoleLogPath: macSteamConsoleLogPath(
+              steamGame.deps.paths.userHome
+            ),
+            launchStartedAt,
+            // 60-UAT G2: the DRM helper hop attaches about 13 s in.
+            ...(drm ? { timeoutMs: OVERLAY_ATTACH_DRM_TIMEOUT_MS } : {})
+          },
+          { aborts: steamGame.deps.aborts }
+        )
       ).catch(() => undefined)
     }
 

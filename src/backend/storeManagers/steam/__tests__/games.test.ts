@@ -230,13 +230,13 @@ function expectOneFailedNotice(title: string): void {
   )
 }
 import { reportDetectedFix } from 'backend/knownFixReport'
-import {
-  createAbortController,
-  callAbortController,
-  deleteAbortController,
-  hasAbortController,
-  getAbortSignal
-} from 'backend/utils/aborthandler/aborthandler'
+// The abort registry is injected into the manager deps (66.4-13): these control the
+// AbortController create/call/delete lifecycle for the native depot-download path (D-02).
+const createAbortController = jest.fn()
+const callAbortController = jest.fn()
+const deleteAbortController = jest.fn()
+const hasAbortController = jest.fn()
+const getAbortSignal = jest.fn()
 import { at } from './fixtures/indexed'
 import type { Stores } from 'backend/services/types'
 
@@ -374,6 +374,14 @@ const mockedLaunchPaths = jest.requireMock<
   >
 >('backend/constants/paths')
 const steamTestDeps = createTestManagerDeps({
+  aborts: {
+    create: (id: string) => createAbortController(id),
+    call: (id: string) => callAbortController(id),
+    delete: (id: string) => deleteAbortController(id),
+    has: (id: string) => hasAbortController(id),
+    getSignal: (id: string) => getAbortSignal(id),
+    abortAll: () => undefined
+  },
   engineRuntime: testRuntime,
   steamLaunchRuntime: testSteamLaunchRuntime,
   paths: {
@@ -989,16 +997,6 @@ beforeEach(() => {
     readError: null
   })
 })
-
-// ── aborthandler mock — controls the AbortController create/call/delete
-// lifecycle for the native depot-download path (D-02).
-jest.mock('backend/utils/aborthandler/aborthandler', () => ({
-  createAbortController: jest.fn(),
-  callAbortController: jest.fn(),
-  deleteAbortController: jest.fn(),
-  hasAbortController: jest.fn(),
-  getAbortSignal: jest.fn()
-}))
 
 // ── Test helpers ──────────────────────────────────────────────────────────────
 
@@ -4317,7 +4315,7 @@ describe('SteamGame.stop() — D-02 native depot-download abort', () => {
       targetSteamappsDir: '/mock/steam/steamapps',
       installdir: APP_ID
     })
-    ;(createAbortController as jest.Mock).mockReturnValue({
+    createAbortController.mockReturnValue({
       signal: 'mock-signal'
     })
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
@@ -4653,7 +4651,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     // bottle branch.
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
     ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(TARGET)
-    ;(createAbortController as jest.Mock).mockReturnValue({
+    createAbortController.mockReturnValue({
       signal: 'mock-signal'
     })
   })
@@ -4957,8 +4955,8 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
     // WR-02: the run removes only its own registered controller
     const registered = new AbortController()
-    ;(createAbortController as jest.Mock).mockReturnValue(registered)
-    ;(getAbortSignal as jest.Mock).mockReturnValue(registered.signal)
+    createAbortController.mockReturnValue(registered)
+    getAbortSignal.mockReturnValue(registered.signal)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
@@ -5086,7 +5084,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
     ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(TARGET)
-    ;(createAbortController as jest.Mock).mockReturnValue({
+    createAbortController.mockReturnValue({
       signal: 'mock-signal'
     })
     // resetMocks: true strips jest.fn() implementations (not just call
@@ -5338,7 +5336,7 @@ describe('SteamGame.install() — single-flight guard (T-23-12/T-23-13)', () => 
       targetSteamappsDir: '/mock/steam/steamapps',
       installdir: APP_ID
     })
-    ;(createAbortController as jest.Mock).mockReturnValue({
+    createAbortController.mockReturnValue({
       signal: { aborted: false }
     })
   })
@@ -5677,7 +5675,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
     })
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
     ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(RESOLVED_TARGET)
-    ;(createAbortController as jest.Mock).mockReturnValue({
+    createAbortController.mockReturnValue({
       signal: 'mock-signal'
     })
   })
@@ -5875,7 +5873,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
     ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(RESOLVED_TARGET)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
-    ;(createAbortController as jest.Mock).mockReturnValue({
+    createAbortController.mockReturnValue({
       signal: 'mock-signal'
     })
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
@@ -7669,18 +7667,14 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       // registry that mimics createAbortController replacing the entry.
       const wireControllers = () => {
         const registry = new Map<string, AbortController>()
-        ;(createAbortController as jest.Mock).mockImplementation((id) => {
+        createAbortController.mockImplementation((id) => {
           const c = new AbortController()
           registry.set(id, c)
           return c
         })
-        ;(hasAbortController as jest.Mock).mockImplementation((id) =>
-          registry.has(id)
-        )
-        ;(getAbortSignal as jest.Mock).mockImplementation(
-          (id) => registry.get(id)?.signal
-        )
-        ;(deleteAbortController as jest.Mock).mockImplementation((id) => {
+        hasAbortController.mockImplementation((id) => registry.has(id))
+        getAbortSignal.mockImplementation((id) => registry.get(id)?.signal)
+        deleteAbortController.mockImplementation((id) => {
           registry.delete(id)
         })
         return registry
@@ -8044,8 +8038,8 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
       it('an existing live appId controller is reused and left alone by the install', async () => {
         const controller = new AbortController()
-        ;(hasAbortController as jest.Mock).mockReturnValue(true)
-        ;(getAbortSignal as jest.Mock).mockReturnValue(controller.signal)
+        hasAbortController.mockReturnValue(true)
+        getAbortSignal.mockReturnValue(controller.signal)
         ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
         await new SteamGame(APP_ID, steamTestDeps).install({} as any)
         expect(mockEnsurePinnedEngine.mock.calls[0][1].signal).toBe(
@@ -8057,7 +8051,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           0
         )
         for (const m of [createAbortController, deleteAbortController]) {
-          for (const order of (m as jest.Mock).mock.invocationCallOrder) {
+          for (const order of m.mock.invocationCallOrder) {
             expect(order).toBeGreaterThan(provisioned)
           }
         }
@@ -16085,7 +16079,7 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
       ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
       ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(TARGET)
-      ;(createAbortController as jest.Mock).mockReturnValue({
+      createAbortController.mockReturnValue({
         signal: 'mock-signal'
       })
       ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
@@ -16406,7 +16400,7 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
     beforeEach(() => {
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
       ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(TARGET)
-      ;(createAbortController as jest.Mock).mockReturnValue({
+      createAbortController.mockReturnValue({
         signal: 'mock-signal'
       })
       ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })

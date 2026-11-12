@@ -218,7 +218,7 @@ describe('LegendaryUser.logout(deps)', () => {
 
   // ADDED (Phase 40 CR-03): the runner had no abort-case test at all before
   // this fix, which is why CR-03 was invisible here. App quit via
-  // `callAllAbortControllers()` from `handleExit()` (`src/backend/utils.ts:318`)
+  // `abortAll()` from `handleExit()` (`src/backend/utils.ts:318`)
   // is the only reachable trigger for `res.abort`.
   it('CR-03: a CLI-abort result still runs the wipe steps and still clears credentials', async () => {
     const seam = makeMockSeam()

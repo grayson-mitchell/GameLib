@@ -156,13 +156,6 @@ jest.mock('../installLocation', () => ({
   resolveSteamInstallTarget: jest.fn()
 }))
 
-// ── aborthandler mock ─────────────────────────────────────────────────────────
-jest.mock('backend/utils/aborthandler/aborthandler', () => ({
-  createAbortController: jest.fn(),
-  callAbortController: jest.fn(),
-  deleteAbortController: jest.fn()
-}))
-
 // ── axios mock (games.ts's fetchMetadataIfNeeded — not exercised by any test
 // in this file, but games.ts is a real, unmocked module here) ───────────────
 jest.mock('axios')

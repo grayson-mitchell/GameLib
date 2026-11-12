@@ -44,7 +44,7 @@
  *   - runner child (`legendary status`, `gogdl auth`, `nile list-updates`):
  *     `callRunner` does not `unref()` it, so it is in-flight work and is
  *     bounded here: at the bound the pass calls
- *     `callAbortController(SIGN_IN_PROBE_ABORT_IDS[store])`.
+ *     `aborts.call(SIGN_IN_PROBE_ABORT_IDS[store])`.
  *   - `keyring_get` invoke (Steam, Humble): rides the sidecar RPC timer, which
  *     is already `unref()`'d; bounded by Rust's 45 s and the 60 s invoke
  *     ceiling, and the pass resolves `unknown` at the bound.
@@ -57,7 +57,7 @@
  * never a token, cookie, captured runner output or error text (T-49-24).
  */
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { LegendaryUser } from 'backend/storeManagers/legendary/user'
 import { GOGUser } from 'backend/storeManagers/gog/user'
 import { NileUser } from 'backend/storeManagers/nile/user'
@@ -100,6 +100,8 @@ export interface SignInProbePassDeps {
   /** The boot's shared epoch fence and outcome map (D-66.3-13). */
   epochs: Pick<SignInEpochs, 'capture' | 'isCurrent'>
   outcomes: Pick<SignInProbeOutcomes, 'record' | 'publish'>
+  /** The boot-owned abort registry the bound aborts a probe's runner child through (66.4-13). */
+  aborts: Pick<AbortRegistry, 'call'>
 }
 
 /** The collaborators `createSignInProbePass` is built over, one pair per boot. */
@@ -116,6 +118,7 @@ export interface SignInProbeDeps {
   >
   stores: Pick<Stores, SignInStore>
   appInfo: Pick<ManagerDeps['appInfo'], 'version'>
+  aborts: Pick<AbortRegistry, 'call'>
   /** The boot-owned Steam session; the probe reads the keyring slot only, never the CM (D-66.3-16). */
   steamUser: Pick<SteamUser, 'isLoggedIn' | 'probeCredentialPresence'>
   /** The boot-owned Humble user (D-66.3-17): the Humble registration reads and probes through it. */
@@ -145,6 +148,7 @@ export function createSignInProbePassDeps(
     stores: deps.stores,
     epochs: collaborators.epochs,
     outcomes: collaborators.outcomes,
+    aborts: deps.aborts,
     registrations: {
       legendary: {
         isLoggedIn: () => Boolean(LegendaryUser.isLoggedIn(deps)),
@@ -263,7 +267,7 @@ export async function runSignInProbePass(
       const outcome = await boundedSignInProbe(registration.probe, () => {
         logInfo(`[signInProbe] ${store} bound reached`, LogPrefix.Backend)
         if (registration.abortId) {
-          callAbortController(registration.abortId)
+          deps.aborts.call(registration.abortId)
         }
       })
       logInfo(

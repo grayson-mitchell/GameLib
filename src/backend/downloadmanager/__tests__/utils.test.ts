@@ -28,10 +28,9 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Backend: 'Backend', DownloadManager: 'DownloadManager' }
 }))
 
-jest.mock('backend/utils/aborthandler/aborthandler', () => ({
-  callAbortController: jest.fn(),
-  hasAbortController: jest.fn()
-}))
+// The abort registry is injected as a dep (66.4-13): these stand in for its has/call.
+const callAbortController = jest.fn()
+const hasAbortController = jest.fn()
 
 const installMock = jest.fn()
 const getGameInfoMock = jest.fn().mockReturnValue({ title: 'Test Game' })
@@ -58,6 +57,10 @@ const libraryManagerMap = {
 const isOnline = jest.fn().mockReturnValue(true)
 const queueDeps = {
   managers: { library: libraryManagerMap },
+  aborts: {
+    call: (id: string) => callAbortController(id),
+    has: (id: string) => hasAbortController(id)
+  },
   onlineMonitor: { isOnline: () => isOnline() as boolean }
 } as never
 
@@ -123,10 +126,6 @@ import { existsSync } from 'graceful-fs'
 import { fetchRemoteKnownFixes } from 'backend/knownFixesFetcher'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
 import { logWarning, logError, LogPrefix } from 'backend/logger'
-import {
-  callAbortController,
-  hasAbortController
-} from 'backend/utils/aborthandler/aborthandler'
 import { backendEvents } from 'backend/backend_events'
 import { downloadFile } from '../../utils'
 import type { InstallParams, GameStatus, GameInfo } from 'common/types'
@@ -213,7 +212,7 @@ beforeEach(() => {
   // aborthandler.test.ts's own afterEach discipline for the real module's
   // shared Map).
   abortControllerRegistry.clear()
-  ;(callAbortController as jest.Mock).mockImplementation((id: string) => {
+  callAbortController.mockImplementation((id: string) => {
     if (abortControllerRegistry.has(id)) {
       abortControllerRegistry.set(id, true)
       return
@@ -226,7 +225,7 @@ beforeEach(() => {
       'Backend'
     )
   })
-  ;(hasAbortController as jest.Mock).mockImplementation((id: string) =>
+  hasAbortController.mockImplementation((id: string) =>
     abortControllerRegistry.has(id)
   )
 })
@@ -1020,13 +1019,13 @@ describe('installQueueElement — REQ-37-04: no spurious abort-controller-miss E
 
     const body = defined(fnMatch?.[1], 'stopCurrentDownload body')
     expect(body).not.toMatch(/await/)
-    const abortIdx = body.indexOf('callAbortController(appName)')
+    const abortIdx = body.indexOf('aborts.call(appName)')
     const stopIdx = body.indexOf('.stop(false)')
     expect(abortIdx).toBeGreaterThan(-1)
     expect(stopIdx).toBeGreaterThan(abortIdx)
   })
 
-  it('case 3 (blindness guard): callAbortController called directly for an id that was never registered — simulating any caller OTHER than the terminal-error branch (SteamGame.stop, stopCurrentDownload, callAllAbortControllers) — still reaches logError, unchanged by this plan', () => {
+  it('case 3 (blindness guard): callAbortController called directly for an id that was never registered — simulating any caller OTHER than the terminal-error branch (SteamGame.stop, stopCurrentDownload, abortAll) — still reaches logError, unchanged by this plan', () => {
     callAbortController('some-other-caller-genuinely-unregistered-id')
 
     expect(loggedAbortControllerMiss()).toBe(true)

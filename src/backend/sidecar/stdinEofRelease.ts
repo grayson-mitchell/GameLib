@@ -1,5 +1,5 @@
 import type { Readable } from 'node:stream'
-import { callAllAbortControllers } from '../utils/aborthandler/aborthandler'
+import type { AbortRegistry } from '../utils/aborthandler/aborthandler'
 import type { DownloadQueue } from '../downloadmanager/downloadqueue'
 import type { AnonymousClient } from '../storeManagers/steam/anonymousClient'
 import type { SteamUser } from '../storeManagers/steam/user'
@@ -24,7 +24,7 @@ export const RESIDUAL_HOLDER_DIAG_MS = 15_000
  *      which (unlike logout) clears no token -- the user stays signed in.
  *   2. in-flight depot downloads -- referenced by definition (contract half 2). The queue is
  *      PAUSED first (`pauseCurrentDownload()`), then any remaining controller is aborted
- *      (`callAllAbortControllers()`). The pause is load-bearing: initQueue keeps a stopped
+ *      (`deps.aborts.abortAll()`). The pause is load-bearing: initQueue keeps a stopped
  *      element in the persisted queue only when the queue is paused. A bare abort recorded
  *      the download as finished and dropped it from the queue (live gate 2026-10-26:
  *      Downloads showed it "Completed" and nothing was resumable on the next launch).
@@ -47,6 +47,8 @@ export function releaseOnStdinEof(
   input: Readable,
   deps: {
     downloadQueue: Pick<DownloadQueue, 'isRunning' | 'pauseCurrentDownload'>
+    /** The boot-owned abort registry (66.4-13): aborted after the queue pause, so every in-flight job ends. */
+    aborts: Pick<AbortRegistry, 'abortAll'>
     /** The boot-owned anonymous CM client (D-66.3-14); its socket and heartbeat cannot be unref'd. */
     anonymousClient: Pick<AnonymousClient, 'releaseForShutdown'>
     /** The boot-owned authenticated Steam session; logOff at EOF keeps the user signed in (D-66.3-16). */
@@ -73,7 +75,7 @@ export function releaseOnStdinEof(
       // best-effort: still abort and release below
     }
     try {
-      callAllAbortControllers()
+      deps.aborts.abortAll()
     } catch {
       // best-effort: still release the CM socket below
     }

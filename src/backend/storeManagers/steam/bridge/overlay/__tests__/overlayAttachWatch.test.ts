@@ -1,8 +1,4 @@
-import {
-  callAbortController,
-  createAbortController
-} from 'backend/utils/aborthandler/aborthandler'
-import * as aborthandler from 'backend/utils/aborthandler/aborthandler'
+import { createAbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 
 import {
   findOverlayAttach,
@@ -78,10 +74,13 @@ describe('watchOverlayAttach', () => {
   beforeEach(() => jest.useFakeTimers())
   afterEach(() => jest.useRealTimers())
 
+  // A fresh registry per call: the watch registers its controller in it (66.4-13).
   const makeDeps = (readTail: jest.Mock) => {
     const unrefs: jest.Mock[] = []
     const log = jest.fn()
+    const aborts = createAbortRegistry()
     const deps = {
+      aborts,
       readTail,
       log,
       now: () => Date.now(),
@@ -93,7 +92,7 @@ describe('watchOverlayAttach', () => {
       },
       clearTimeout: (h: unknown) => clearTimeout((h as { h: never }).h)
     }
-    return { deps, unrefs, log }
+    return { deps, unrefs, log, aborts }
   }
 
   it('resolves attached on the 3rd read and logs once', async () => {
@@ -201,8 +200,8 @@ describe('watchOverlayAttach', () => {
 
   it('aborts mid-watch with no further reads and deletes the controller', async () => {
     const readTail = jest.fn().mockResolvedValue('')
-    const { deps } = makeDeps(readTail)
-    const del = jest.spyOn(aborthandler, 'deleteAbortController')
+    const { deps, aborts } = makeDeps(readTail)
+    const del = jest.spyOn(aborts, 'delete')
     const startedAt = Date.now()
     const p = watchOverlayAttach(
       { appId: '620', consoleLogPath: '/x', launchStartedAt: startedAt },
@@ -210,7 +209,7 @@ describe('watchOverlayAttach', () => {
     )
     await jest.advanceTimersByTimeAsync(1500)
     const reads = readTail.mock.calls.length
-    callAbortController(`overlay-attach:620:${startedAt}`)
+    aborts.call(`overlay-attach:620:${startedAt}`)
     const r = await p
     expect(r).toEqual({ attached: false, aborted: true })
     await jest.advanceTimersByTimeAsync(5000)
@@ -240,6 +239,3 @@ describe('watchOverlayAttach', () => {
     ).resolves.toEqual({ attached: false })
   })
 })
-
-// keep the import used for registration-state sanity
-void createAbortController

@@ -44,6 +44,7 @@ import {
   statRegular
 } from '../drm/runnerCrossover'
 import { cloneCrossoverTree } from '../drm/runnerClone'
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { RUNNER_MARKER_FILE } from '../drm/runnerVerify'
 import {
   DYLD_ENTITLEMENT,
@@ -267,6 +268,7 @@ export async function verifyOverlayRunnerClone(
 }
 
 type OverlayCloneState = {
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>
   inFlight: Map<
     string,
     Promise<OverlayStepResult<{ runner: OverlayRunnerReady }>>
@@ -288,8 +290,10 @@ export interface OverlayRunnerCloneFlights {
  */
 export function createOverlayRunnerCloneFlights(deps: {
   signer: RunnerEntitlementSigner
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>
 }): OverlayRunnerCloneFlights {
   const state: OverlayCloneState = {
+    aborts: deps.aborts,
     inFlight: new Map(),
     resignLoader: deps.signer.resignLoader
   }
@@ -493,11 +497,17 @@ async function buildRunner(
   try {
     deps.onCloneStart?.()
     const t0 = Date.now()
-    const cloned = await cloneCrossoverTree(run, crossover.cxRoot, dest, {
-      abortId: `overlay-runner-clone:${build}`,
-      timeoutMs: timeouts.cp,
-      partial
-    })
+    const cloned = await cloneCrossoverTree(
+      state.aborts,
+      run,
+      crossover.cxRoot,
+      dest,
+      {
+        abortId: `overlay-runner-clone:${build}`,
+        timeoutMs: timeouts.cp,
+        partial
+      }
+    )
     if (!cloned.ok) throw new StepError('clone', cloned.cause)
     logInfo(
       `overlayRunnerClone: crossover-${build} cloned with ${cloned.cloneMethod} in ${Date.now() - t0} ms`,

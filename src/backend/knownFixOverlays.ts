@@ -129,7 +129,7 @@ export async function resolveKnownFixOverlayEnv(
     wineType: string | undefined
     baseValue: (key: string) => string | undefined
     platform?: NodeJS.Platform
-    deps?: OverlayInstallDeps
+    deps: OverlayInstallDeps
   }
 ): Promise<Record<string, string>> {
   const result: Record<string, string> = {}
@@ -176,6 +176,7 @@ export async function resolveKnownFixOverlayEnv(
 
 /** Overlay env for a non-Steam launch; precedence mirrors the runner commandEnv. */
 export async function knownFixProfileOverlayEnv(
+  deps: Pick<OverlayInstallDeps, 'aborts'>,
   appName: string,
   runner: Runner,
   gameSettings: GameSettings,
@@ -185,6 +186,7 @@ export async function knownFixProfileOverlayEnv(
   return resolveKnownFixOverlayEnv(
     readKnownFixProfile(appName, runner)?.overlays,
     {
+      deps: { aborts: deps.aborts },
       label: `${runner} ${appName}`,
       logPrefix,
       wineType: gameSettings.wineVersion?.type,

@@ -1,7 +1,7 @@
 {
   "jestMock": {
     "src/backend/storeManagers/steam/__tests__/bottle.test.ts": 7,
-    "src/backend/storeManagers/steam/__tests__/bottleProcessMonitor.test.ts": 9,
+    "src/backend/storeManagers/steam/__tests__/bottleProcessMonitor.test.ts": 8,
     "src/backend/storeManagers/steam/__tests__/bottledSteam.test.ts": 7,
     "src/backend/storeManagers/steam/__tests__/bridgeBottleLifecycle.test.ts": 7,
     "src/backend/storeManagers/steam/__tests__/installFormIpc.test.ts": 4,

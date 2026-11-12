@@ -66,7 +66,7 @@ import type { AppInfo, AppPaths } from '../process/context'
 import { chmod, readFile, stat } from 'fs/promises'
 import { createVulkan } from '../utils/graphics/vulkan'
 import { lt as semverLt } from 'semver'
-import { createAbortController } from '../utils/aborthandler/aborthandler'
+import type { AbortRegistry } from '../utils/aborthandler/aborthandler'
 import { sendFrontendMessage } from '../ipc'
 import {
   DAYS,
@@ -109,7 +109,10 @@ type ReleasesResponse = {
 }
 
 export async function installOrUpdateTool(
-  deps: { runner: Pick<ProcessRunner, 'run'> } & DialogBoxDeps,
+  deps: {
+    runner: Pick<ProcessRunner, 'run'>
+    aborts: Pick<AbortRegistry, 'create'>
+  } & DialogBoxDeps,
   tool: Tool
 ) {
   if (tool.os !== process.platform) return
@@ -161,7 +164,7 @@ export async function installOrUpdateTool(
     await downloadFile({
       url: downloadUrl,
       dest: latestVersionArchivePath,
-      abortSignal: createAbortController(tool.name).signal
+      abortSignal: deps.aborts.create(tool.name).signal
     })
   } catch (error) {
     logWarning(
@@ -221,6 +224,8 @@ export interface ToolsDeps extends DialogBoxDeps, NotifyDeps {
   launcher: Pick<Launcher, 'setupEnvVars' | 'setupWineEnvVars' | 'validWine'>
   spawnAsync: SpawnAsync
   runner: Pick<ProcessRunner, 'run'>
+  /** The boot-owned abort registry the tool downloads register in (66.4-13). */
+  aborts: Pick<AbortRegistry, 'create'>
   stores: Pick<Stores, 'wineManager'>
   /** The Steam bottle's wine-bin hint and CrossOver resolver, for the Steam Wine-tool resolver (66.3-15). */
   steamBottle: SteamEngineBottle['steamBottle']

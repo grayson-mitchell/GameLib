@@ -25,6 +25,7 @@ export type EngineServicesSource = Pick<
     | 'onlineMonitor'
     | 'steamBottle'
     | 'steamLaunchRuntime'
+    | 'aborts'
   > & {
     /** The boot-owned engine decision/notice state (D-66.3-12). */
     engineState: EngineServices['engineState']
@@ -47,6 +48,7 @@ export function toolsFrom(deps: EngineServicesSource): Tools {
     launcher: deps.launcher,
     spawnAsync: deps.spawnAsync,
     runner: deps.runner,
+    aborts: deps.aborts,
     stores: deps.stores,
     steamBottle: deps.steamBottle,
     steamLaunchRuntime: deps.steamLaunchRuntime,

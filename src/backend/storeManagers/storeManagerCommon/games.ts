@@ -10,7 +10,6 @@ import { showDialogBoxModalAuto } from '../../dialog/dialog'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { isLinux, isMac } from 'backend/constants/environment'
 import { withKnownFixEnv } from 'backend/knownFixOverlays'
-import { raiseWineGameWindow } from 'backend/utils/wineWindowRaise'
 
 import type LogWriter from 'backend/logger/log_writer'
 import { Game } from '../../../common/types/game_manager'
@@ -46,6 +45,7 @@ export type CommonGameDeps = Pick<
   | 'appState'
   | 'gameConfigs'
   | 'engineRuntime'
+  | 'windowRaiser'
 >
 
 export async function launchGame(
@@ -195,7 +195,7 @@ export async function launchGame(
 
     // quick/261024-g3m: fire before the await — wait:true resolves only at game exit.
     if (isMac) {
-      void raiseWineGameWindow(
+      void deps.windowRaiser.raise(
         { spawnAsync: deps.spawnAsync },
         {
           context: `sideload:${appName}`,

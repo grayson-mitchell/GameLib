@@ -15,6 +15,7 @@ import { createRunnerEntitlementSigner } from './drm/runnerEntitlements'
 import type { RunnerEntitlementSigner } from './drm/runnerEntitlements'
 import { createOverlayRunnerCloneFlights } from './overlay/overlayRunnerClone'
 import type { OverlayRunnerCloneFlights } from './overlay/overlayRunnerClone'
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { createSharedRedistInstaller } from './sharedRedistInstall'
 import type { SharedRedistInstaller } from './sharedRedistInstall'
 
@@ -25,12 +26,18 @@ export interface BridgeRuntime {
   sharedRedist: SharedRedistInstaller
 }
 
-export function createBridgeRuntime(): BridgeRuntime {
+export function createBridgeRuntime(deps: {
+  /** The boot-owned abort registry the runner clones register in (66.4-13). */
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>
+}): BridgeRuntime {
   const signer = createRunnerEntitlementSigner()
   return {
     signer,
-    runnerClone: createRunnerCloneFlights({ signer }),
-    overlayRunnerClone: createOverlayRunnerCloneFlights({ signer }),
+    runnerClone: createRunnerCloneFlights({ signer, aborts: deps.aborts }),
+    overlayRunnerClone: createOverlayRunnerCloneFlights({
+      signer,
+      aborts: deps.aborts
+    }),
     sharedRedist: createSharedRedistInstaller()
   }
 }

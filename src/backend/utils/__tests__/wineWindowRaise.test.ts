@@ -1,9 +1,10 @@
 import { logInfo, logWarning } from 'backend/logger'
 import {
-  raiseWineGameWindow,
+  createWineWindowRaiser,
   windowsExeNameFromCommand,
-  __stopWineWindowRaises
+  type WineWindowRaiser
 } from '../wineWindowRaise'
+import { createFakeClock, type FakeClock } from '../../testUtils/fakeClock'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -15,19 +16,42 @@ jest.mock('backend/constants/environment', () => ({ isMac: true }))
 const mockedSpawn = jest.fn()
 const deps = {
   spawnAsync: (...args: unknown[]) => mockedSpawn(...args)
-} as unknown as Parameters<typeof raiseWineGameWindow>[0]
+} as unknown as Parameters<WineWindowRaiser['raise']>[0]
 const mockedInfo = logInfo as jest.Mock
 const mockedWarn = logWarning as jest.Mock
 const ok = (stdout: string) => ({ stdout, stderr: '', code: 0 })
 
+const flush = async () => {
+  for (let i = 0; i < 20; i++) await Promise.resolve()
+}
+
 describe('wineWindowRaise', () => {
+  let clock: FakeClock
+  let raiser: WineWindowRaiser
+  const raiseWineGameWindow: WineWindowRaiser['raise'] = (d, o) =>
+    raiser.raise(d, o)
+  /** Advance the injected clock in steps, flushing the raise loop's promises between them. */
+  const advance = async (ms: number) => {
+    await flush()
+    for (let left = ms; left > 0; left -= 500) {
+      clock.advance(Math.min(500, left))
+      await flush()
+    }
+  }
   beforeEach(() => {
-    jest.useFakeTimers()
+    clock = createFakeClock()
+    raiser = createWineWindowRaiser({ clock })
   })
   afterEach(() => {
-    __stopWineWindowRaises()
-    expect(jest.getTimerCount()).toBe(0)
-    jest.useRealTimers()
+    raiser.stop()
+    expect(clock.pendingCount()).toBe(0)
+  })
+
+  test('construction arms no timer and two raisers are independent', () => {
+    expect(clock.pendingCount()).toBe(0)
+    const other = createWineWindowRaiser({ clock })
+    other.stop()
+    expect(clock.pendingCount()).toBe(0)
   })
 
   test('no-op off macOS', async () => {
@@ -48,14 +72,14 @@ describe('wineWindowRaise', () => {
       pids: ['123'],
       processNames: ['Avernum 6.exe']
     })
-    await jest.advanceTimersByTimeAsync(0)
+    await advance(0)
     expect(mockedSpawn).toHaveBeenCalledTimes(1)
     const [cmd, args] = mockedSpawn.mock.calls[0]
     expect(cmd).toBe('osascript')
     expect(args.slice(2)).toEqual(['1', '123', 'Avernum 6.exe'])
     expect(args[1]).not.toContain('123')
     expect(mockedInfo).toHaveBeenCalled()
-    await jest.advanceTimersByTimeAsync(2500)
+    await advance(2500)
     await p
     expect(mockedSpawn).toHaveBeenCalledTimes(2)
   })
@@ -65,9 +89,9 @@ describe('wineWindowRaise', () => {
       .mockResolvedValueOnce(ok('none'))
       .mockResolvedValue(ok('X.exe pid=5'))
     const p = raiseWineGameWindow(deps, { context: 'c', pids: ['5'] })
-    await jest.advanceTimersByTimeAsync(1500)
+    await advance(1500)
     expect(mockedSpawn).toHaveBeenCalledTimes(2)
-    await jest.advanceTimersByTimeAsync(2500)
+    await advance(2500)
     await p
     expect(mockedSpawn).toHaveBeenCalledTimes(3)
   })
@@ -75,7 +99,7 @@ describe('wineWindowRaise', () => {
   test('persistent miss stops at 12 attempts with one warning', async () => {
     mockedSpawn.mockResolvedValue(ok('none'))
     const p = raiseWineGameWindow(deps, { context: 'c', pids: ['5'] })
-    await jest.advanceTimersByTimeAsync(1500 * 20)
+    await advance(1500 * 20)
     await p
     expect(mockedSpawn).toHaveBeenCalledTimes(12)
     expect(mockedWarn).toHaveBeenCalledTimes(1)
@@ -86,10 +110,10 @@ describe('wineWindowRaise', () => {
       .mockRejectedValueOnce(new Error('boom'))
       .mockResolvedValue(ok('X.exe pid=5'))
     const p = raiseWineGameWindow(deps, { context: 'c', pids: ['5'] })
-    await jest.advanceTimersByTimeAsync(1500)
+    await advance(1500)
     expect(mockedWarn).toHaveBeenCalledTimes(1)
     expect(mockedSpawn).toHaveBeenCalledTimes(2)
-    await jest.advanceTimersByTimeAsync(2500)
+    await advance(2500)
     await expect(p).resolves.toBeUndefined()
   })
 
@@ -100,11 +124,11 @@ describe('wineWindowRaise', () => {
       pids: ['12; do shell script'],
       processNames: ['a"b.exe']
     })
-    await jest.advanceTimersByTimeAsync(0)
+    await advance(0)
     const args = mockedSpawn.mock.calls[0][1]
     expect(args.slice(2)).toEqual(['0', 'a"b.exe'])
     expect(args[1]).not.toContain('a"b.exe')
-    __stopWineWindowRaises()
+    raiser.stop()
     void p // cleared timers never resolve; do not await
   })
 
@@ -123,10 +147,10 @@ describe('wineWindowRaise', () => {
   test('stop mid-loop halts further spawns', async () => {
     mockedSpawn.mockResolvedValue(ok('none'))
     const p = raiseWineGameWindow(deps, { context: 'c', pids: ['5'] })
-    await jest.advanceTimersByTimeAsync(0)
+    await advance(0)
     expect(mockedSpawn).toHaveBeenCalledTimes(1)
-    __stopWineWindowRaises()
-    await jest.advanceTimersByTimeAsync(10000)
+    raiser.stop()
+    await advance(10000)
     expect(mockedSpawn).toHaveBeenCalledTimes(1)
     void p
   })

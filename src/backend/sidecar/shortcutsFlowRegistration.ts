@@ -84,6 +84,7 @@
  */
 
 import i18next, { t } from 'i18next'
+import type { AbortRegistry } from '../utils/aborthandler/aborthandler'
 import type { IpcRegistry } from './ipcRegistry'
 import type { GlobalConfigSlice } from '../config'
 import type { AppPaths } from '../process/context'
@@ -121,6 +122,8 @@ export interface ShortcutsFlowDeps extends NotifyDeps, DialogBoxDeps {
   stores: Pick<Stores, 'kvs' | 'wikiGameInfo' | 'crossoverIndex'>
   /** The boot-owned HowLongToBeat credentials cache (66.4-12). */
   infoCaches: Pick<InfoCaches, 'hltb'>
+  /** The boot-owned abort registry the icon and artwork downloads register in (66.4-13). */
+  aborts: Pick<AbortRegistry, 'create'>
   /** The boot process runner: reg.exe (Desktop folder) and powershell.exe (.lnk) on win32. */
   runner: BootServices['runner']
   config: Pick<GlobalConfigSlice, 'getSettings'>
@@ -387,6 +390,7 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
         libraryManagers: deps.managers.library,
         stores: deps.stores,
         infoCaches: deps.infoCaches,
+        aborts: deps.aborts,
         runner: deps.runner,
         config: deps.config,
         paths: deps.paths,

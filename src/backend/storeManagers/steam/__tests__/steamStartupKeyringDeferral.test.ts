@@ -194,12 +194,6 @@ jest.mock('../installLocation', () => ({
   sanitizeInstalldir: jest.fn((s: string) => s)
 }))
 
-jest.mock('backend/utils/aborthandler/aborthandler', () => ({
-  createAbortController: jest.fn(),
-  callAbortController: jest.fn(),
-  deleteAbortController: jest.fn()
-}))
-
 jest.mock('../platformCapture', () => ({
   createPlatformCaptureQueue: () => ({}),
   captureOwnedAppPlatforms: jest.fn().mockResolvedValue({

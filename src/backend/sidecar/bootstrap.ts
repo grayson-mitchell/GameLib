@@ -239,10 +239,10 @@ import {
 import { getUmuPath, isUmuSupported } from '../utils/compatibility_layers'
 import { searchForExecutableOnPath } from '../utils/os/path'
 import {
-  callAllAbortControllers,
-  createAbortController,
-  deleteAbortController
+  createAbortRegistry,
+  type AbortRegistry
 } from '../utils/aborthandler/aborthandler'
+import { createWineWindowRaiser } from '../utils/wineWindowRaise'
 // Todo 2026-08-16 (quick task 260822-s8y): `applyMigrations()` had exactly ONE call site in
 // the whole repo -- `main.ts:412`, inside Electron's `app.whenReady()` -- so under Tauri the
 // entire migration system was dead code that PRESENTED as live (`createStores`
@@ -295,6 +295,7 @@ export const BOOT_STEP_NAMES = [
   'secret-vault',
   'steamgrid-secrets',
   'steam-bottle',
+  'abort-registry',
   'command-runner',
   'steam-user',
   'humble-services',
@@ -440,6 +441,12 @@ function requireHost(state: BootState): HostServices {
   return host
 }
 
+function requireAborts(state: BootState): AbortRegistry {
+  const { aborts } = state.services
+  if (!aborts) throw new Error('abort-registry step has not run')
+  return aborts
+}
+
 function requireServices(state: BootState): BootServices {
   const {
     stores,
@@ -469,6 +476,8 @@ function requireServices(state: BootState): BootServices {
     legendaryRuntime,
     nileRuntime,
     infoCaches,
+    aborts,
+    windowRaiser,
     winetricksQueue,
     signInProbe,
     steamSession,
@@ -508,6 +517,8 @@ function requireServices(state: BootState): BootServices {
     !legendaryRuntime ||
     !nileRuntime ||
     !infoCaches ||
+    !aborts ||
+    !windowRaiser ||
     !winetricksQueue ||
     !signInProbe ||
     !steamSession ||
@@ -548,6 +559,8 @@ function requireServices(state: BootState): BootServices {
         'legendaryRuntime',
         'nileRuntime',
         'infoCaches',
+        'aborts',
+        'windowRaiser',
         'winetricksQueue',
         'signInProbe',
         'steamSession',
@@ -590,6 +603,8 @@ function requireServices(state: BootState): BootServices {
     legendaryRuntime,
     nileRuntime,
     infoCaches,
+    aborts,
+    windowRaiser,
     winetricksQueue,
     signInProbe,
     steamSession,
@@ -1586,8 +1601,24 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'abort-registry',
+      // Builds the abort-controller registry and the Wine window raiser of this boot (D-05, 66.4-13).
+      // No I/O, no timer, no handle: the raiser arms its (unref'd, ctx.clock) timers only when a game
+      // launches. After 'steam-bottle', before 'command-runner' (which registers its commands in it) and 'engine-runtime'
+      // (the Steam engine download registers in it). Stdin EOF aborts the registry
+      // ('rpc-server' wires releaseOnStdinEof) after pausing the download queue.
+      run: (ctx, _io, state) => {
+        state.services.aborts = prebuilt.aborts ?? createAbortRegistry()
+        state.services.windowRaiser =
+          prebuilt.windowRaiser ?? createWineWindowRaiser({ clock: ctx.clock })
+      }
+    },
+    {
       name: 'command-runner',
       run: (ctx, _io, state) => {
+        const { aborts } = state.services
+        if (!aborts)
+          throw new Error('command-runner step ran before abort-registry')
         const errorHandlerDeps: ErrorHandlerDeps = {
           get libraryManagers() {
             return requireServices(state).managers.library
@@ -1613,7 +1644,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             platform: ctx.platform,
             config,
             openExternal: requireHost(state).openExternal,
-            paths: ctx.paths
+            paths: ctx.paths,
+            aborts
           })
         state.services.commandRunner =
           prebuilt.commandRunner ??
@@ -1632,8 +1664,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
                 disableLogs: config.getSettings().disableLogs
               }),
             abort: {
-              create: createAbortController,
-              remove: deleteAbortController
+              create: (id) => aborts.create(id),
+              remove: (id) => aborts.delete(id)
             },
             // CommandRunnerDeps keeps its (error, appName, runner) shape; the manager table is
             // read only in errorHandler's deleted-folder branch, after boot, like the
@@ -1680,7 +1712,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             showMessageBox: (opts) =>
               requireHost(state).dialogs.showMessageBox(opts),
             t: tOrFallback,
-            abortAll: callAllAbortControllers,
+            abortAll: () => aborts.abortAll(),
             releaseSteam: async () => {
               // Anonymous client first, then the authenticated session; the session release
               // still runs when the anonymous release throws.
@@ -1822,7 +1854,11 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       run: (ctx, _io, state) => {
         state.services.engineRuntime =
           prebuilt.engineRuntime ??
-          createEngineRuntime({ clock: ctx.clock, paths: ctx.paths })
+          createEngineRuntime({
+            clock: ctx.clock,
+            paths: ctx.paths,
+            aborts: requireAborts(state)
+          })
       }
     },
     {
@@ -1848,7 +1884,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       // 'store-managers' so ManagerDeps carries it.
       run: (_ctx, _io, state) => {
         state.services.bridgeRuntime =
-          prebuilt.bridgeRuntime ?? createBridgeRuntime()
+          prebuilt.bridgeRuntime ??
+          createBridgeRuntime({ aborts: requireAborts(state) })
       }
     },
     {
@@ -1944,6 +1981,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           legendaryRuntime,
           nileRuntime,
           infoCaches,
+          aborts,
+          windowRaiser,
           signInProbe,
           steamSession,
           tokenStore,
@@ -1973,6 +2012,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !legendaryRuntime ||
           !nileRuntime ||
           !infoCaches ||
+          !aborts ||
+          !windowRaiser ||
           !signInProbe ||
           !steamSession ||
           !tokenStore ||
@@ -2022,6 +2063,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           legendaryRuntime,
           nileRuntime,
           infoCaches,
+          aborts,
+          windowRaiser,
           signIn: signInProbe,
           steamSession,
           tokenStore,
@@ -2054,6 +2097,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             steamBottle,
             engineRuntime,
             steamLaunchRuntime,
+            aborts,
             paths
           } = state.services
           if (
@@ -2064,6 +2108,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             !steamBottle ||
             !engineRuntime ||
             !steamLaunchRuntime ||
+            !aborts ||
             !paths
           ) {
             throw new Error(
@@ -2082,6 +2127,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             steamBottle,
             engineRuntime,
             steamLaunchRuntime,
+            aborts,
             paths
           })
           queue.start()
@@ -2363,6 +2409,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         const services = requireServices(state)
         releaseOnStdinEof(input, {
           downloadQueue: services.downloadQueue,
+          aborts: services.aborts,
           anonymousClient: services.anonymousClient,
           steamUser: services.steamUser,
           stopAllSteamDownloadMonitors: () =>
@@ -2395,11 +2442,12 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'secret-stores',
       run: (ctx, _io, state) => {
-        const { stores, host, onlineMonitor, config, tokenStore } =
+        const { stores, host, onlineMonitor, config, tokenStore, aborts } =
           requireServices(state)
         registerDxmtListeners({
           stores,
           runner: ctx.runner,
+          aborts,
           onlineMonitor,
           dialogs: host.dialogs,
           appState: host.appState,
@@ -2796,6 +2844,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           libraryManagers: services.managers.library,
           stores: services.stores,
           appInfo: services.appInfo,
+          aborts: services.aborts,
           steamUser: services.steamUser,
           humbleUser: services.humble.user,
           onlineMonitor: services.onlineMonitor,

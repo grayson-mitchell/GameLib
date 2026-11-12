@@ -8,11 +8,6 @@ import { InstallArgs } from 'common/types'
 import { InstallResult } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
-import {
-  createAbortController,
-  deleteAbortController,
-  getAbortSignal
-} from 'backend/utils/aborthandler/aborthandler'
 import { startInstallPolling } from './library/installPolling'
 import * as resumeBreadcrumbs from './library/resumeBreadcrumbs'
 import { readAppManifestFlags } from './library/manifestFlags'
@@ -172,7 +167,7 @@ export async function runNativeDepotDownload(
   // 59-REVIEW WR-03: never register a fresh controller for a cancelled
   // install; nothing is registered, so no finally runs.
   if (opts.signal?.aborted) return { status: 'abort' }
-  const controller = createAbortController(steamGame.appId)
+  const controller = steamGame.deps.aborts.create(steamGame.appId)
   // [Timing] debug/steam-install-slow-start: top-level breakdown of the
   // ~30s pre-download latency across this seam's three major awaits.
   // Temporary instrumentation, remove once root cause is confirmed.
@@ -353,8 +348,10 @@ export async function runNativeDepotDownload(
     )
     // 59-REVIEW WR-02: a newer install may have registered its own
     // provisioning controller during this run's teardown; remove only ours.
-    if (getAbortSignal(steamGame.appId) === controller.signal) {
-      deleteAbortController(steamGame.appId)
+    if (
+      steamGame.deps.aborts.getSignal(steamGame.appId) === controller.signal
+    ) {
+      steamGame.deps.aborts.delete(steamGame.appId)
     }
   }
 }
@@ -403,7 +400,7 @@ export async function runNativeDepotDownloadLeased(
     os: string
     pollerSource?: 'bottle' | 'bridge'
   },
-  controller: ReturnType<typeof createAbortController>,
+  controller: AbortController,
   runStart: number,
   deferredPoll: {
     handoff?: { manifestPath: string; skippedDepots: string[] }

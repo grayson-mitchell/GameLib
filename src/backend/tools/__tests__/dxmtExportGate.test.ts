@@ -60,6 +60,7 @@ import {
 import { installOrUpdateTool } from '../index'
 import { registerDxmtListeners } from '../dxmt'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
+import { createTestAbortRegistry } from 'backend/testUtils/testAbortRegistry'
 import { checkWinemacMetalViewExports } from '../machoExports'
 import type { ReleasesInfo, WineVersionInfo } from 'common/types'
 import { defined } from 'backend/testUtils/indexed'
@@ -70,6 +71,7 @@ const isOnlineMock = jest.fn()
 registerDxmtListeners({
   events: backendEvents,
   runner: createScriptedRunner([]),
+  aborts: createTestAbortRegistry(),
   dialogs: createTestHostServices().dialogs,
   appState: createTestHostServices().appState,
   // Read at call time so a case can flip the mock.

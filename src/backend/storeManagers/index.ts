@@ -170,6 +170,8 @@ export interface CreateStoreManagersDeps {
   legendaryRuntime: ManagerDeps['legendaryRuntime']
   nileRuntime: ManagerDeps['nileRuntime']
   infoCaches: ManagerDeps['infoCaches']
+  aborts: ManagerDeps['aborts']
+  windowRaiser: ManagerDeps['windowRaiser']
   steamUser: ManagerDeps['steamUser']
   loginWindowSeam: ManagerDeps['loginWindowSeam']
 }
@@ -221,6 +223,8 @@ export function createStoreManagers(
     legendaryRuntime: deps.legendaryRuntime,
     nileRuntime: deps.nileRuntime,
     infoCaches: deps.infoCaches,
+    aborts: deps.aborts,
+    windowRaiser: deps.windowRaiser,
     steamUser: deps.steamUser,
     loginWindowSeam: deps.loginWindowSeam
   }
@@ -243,6 +247,7 @@ export function createStoreManagers(
     engineState: deps.engineState,
     engineRuntime: deps.engineRuntime,
     paths: deps.paths,
+    aborts: deps.aborts,
     steamBottle: deps.steamBottle,
     steamLaunchRuntime: deps.steamLaunchRuntime
   })

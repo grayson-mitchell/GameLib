@@ -11,7 +11,7 @@
  *
  * Sidecar exit contract: nothing runs at import or boot. The download is
  * bounded by an unref'd deadline and registered with the abort handler, so
- * `callAllAbortControllers()` at stdin EOF ends it. The codesign child is
+ * `aborts.abortAll()` at stdin EOF ends it. The codesign child is
  * unref'd and SIGKILLed on its own deadline.
  *
  * Extraction happens in Node through the strict `readOverlayTarGz`, with no tar
@@ -42,10 +42,7 @@ import { readOverlayTarGz } from 'backend/knownFixOverlayArchive'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { ProcessRunner } from 'backend/process/types'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
-import {
-  createAbortController,
-  deleteAbortController
-} from 'backend/utils/aborthandler/aborthandler'
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { buildDrmPaths, steamclientLayerComponentId } from './drmPaths'
 import { drmStepError, type DrmStepResult } from './steamclientLayerMode'
 
@@ -178,13 +175,14 @@ export function createRunCodesign(deps: {
 }
 
 async function downloadBounded(
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>,
   abortId: string,
   url: string,
   maxBytes: number,
   fetchArchive: SteamclientLayerArchiveFetch,
   timeoutMs: number
 ): Promise<Buffer> {
-  const controller = createAbortController(abortId)
+  const controller = aborts.create(abortId)
   let timedOut = false
   const timer = setTimeout(() => {
     timedOut = true
@@ -210,7 +208,7 @@ async function downloadBounded(
     return await Promise.race([fetching, aborted])
   } finally {
     clearTimeout(timer)
-    deleteAbortController(abortId)
+    aborts.delete(abortId)
   }
 }
 
@@ -309,7 +307,8 @@ async function installOnce(
   componentRoot: string,
   target: string,
   deps: SteamclientLayerInstallDeps,
-  runCodesignOnRunner: CodesignRunner
+  runCodesignOnRunner: CodesignRunner,
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>
 ): Promise<Ready> {
   const { id } = entry
   let tempDir: string | undefined
@@ -332,6 +331,7 @@ async function installOnce(
     let buf: Buffer
     try {
       buf = await downloadBounded(
+        aborts,
         `drm-steamclient-layer:${entry.crossoverBuild}`,
         steamclientLayerArchiveUrl(entry),
         entry.archiveSize,
@@ -444,6 +444,8 @@ async function installOnce(
  */
 export function createSteamclientLayerInstall(deps: {
   runner: Pick<ProcessRunner, 'run'>
+  /** The boot-owned abort registry the component download registers in (66.4-13). */
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>
 }) {
   const inFlight = new Map<string, Promise<Ready>>()
   const runCodesignOnRunner = createRunCodesign(deps)
@@ -501,7 +503,8 @@ export function createSteamclientLayerInstall(deps: {
         paths.componentRoot,
         target,
         stepDeps,
-        runCodesignOnRunner
+        runCodesignOnRunner,
+        deps.aborts
       ).finally(() => inFlight.delete(target))
       inFlight.set(target, run)
       return await run

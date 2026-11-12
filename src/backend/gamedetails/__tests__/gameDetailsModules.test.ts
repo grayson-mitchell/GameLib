@@ -74,6 +74,7 @@ const managerMocks = {
 // The connectivity slice: `isOnlineMock` is read at call time so a case can flip it.
 const isOnlineMock = jest.fn()
 const dispatchDeps = {
+  aborts: { call: (id: string) => callAbortControllerMock(id) },
   onlineMonitor: { isOnline: () => isOnlineMock() as boolean },
   managers: { library: managerMocks },
   stores: { kvs: { configStore: {} } }
@@ -116,11 +117,8 @@ jest.mock('backend/storeManagers/legendary/user', () => ({
   }
 }))
 
-// ── backend/utils/aborthandler/aborthandler mock ────────────────────────
+// ── abort registry: injected into the dispatch deps (66.4-13) ──────────────
 const callAbortControllerMock = jest.fn()
-jest.mock('backend/utils/aborthandler/aborthandler', () => ({
-  callAbortController: (...args: [string]) => callAbortControllerMock(...args)
-}))
 
 // ── backend/storeManagers/steam/library/installPolling mock (quick 261106-pvk) ─────────
 const isDelegatedInstallPollingMock = jest.fn()

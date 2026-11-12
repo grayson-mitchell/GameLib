@@ -74,12 +74,10 @@ import {
   type FallbackEngine
 } from '../fallbackEngine'
 import { ENGINE_PINS, type EnginePin } from '../enginePins'
-import {
-  callAllAbortControllers,
-  hasAbortController
-} from 'backend/utils/aborthandler/aborthandler'
+import { createAbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 
 let work = ''
+let aborts: ReturnType<typeof createAbortRegistry>
 let ensurePinnedEngine: FallbackEngine['ensurePinnedEngine']
 let isPinnedEngineInstalled: FallbackEngine['isPinnedEngineInstalled']
 let pinnedEnginePaths: FallbackEngine['pinnedEnginePaths']
@@ -148,6 +146,7 @@ function leftovers(): string[] {
 
 beforeEach(() => {
   work = mkdtempSync(join(tmpdir(), 'gl-fb-'))
+  aborts = createAbortRegistry()
   mockTools = join(work, 'tools')
   ;({
     ensurePinnedEngine,
@@ -156,7 +155,7 @@ beforeEach(() => {
     pinnedEngineRoot,
     pruneUnpinnedEngines,
     sweepStaleEngineTemps
-  } = createFallbackEngine({ paths: { toolsPath: mockTools } }))
+  } = createFallbackEngine({ paths: { toolsPath: mockTools }, aborts }))
   mockDownload.mockReset()
   mockIsOnline.mockReset().mockReturnValue(true)
 })
@@ -328,22 +327,22 @@ test('abort controller is registered during download and released after', async 
   const pin = await makePin()
   const id = `steam-engine-download:${pin.id}`
   const p = ensurePinnedEngine(pin, { runner, onlineMonitor })
-  expect(hasAbortController(id)).toBe(true)
+  expect(aborts.has(id)).toBe(true)
   await p
-  expect(hasAbortController(id)).toBe(false)
+  expect(aborts.has(id)).toBe(false)
 })
 
-test('callAllAbortControllers aborts an in-flight download and cleans temp dirs', async () => {
+test('aborts.abortAll aborts an in-flight download and cleans temp dirs', async () => {
   const pin = await makePin()
   const seen = hangingDownload()
   const p = ensurePinnedEngine(pin, { runner, onlineMonitor })
   await tick()
   expect(seen).toHaveLength(1)
-  callAllAbortControllers()
+  aborts.abortAll()
   expect(defined(seen[0], 'seen[0]').aborted).toBe(true)
   await expect(p).resolves.toMatchObject({ ok: false, reason: 'aborted' })
   expect(leftovers()).toEqual([])
-  expect(hasAbortController(`steam-engine-download:${pin.id}`)).toBe(false)
+  expect(aborts.has(`steam-engine-download:${pin.id}`)).toBe(false)
 })
 
 test('concurrent callers each receive every progress event over one download', async () => {
@@ -390,7 +389,7 @@ test('one caller aborting does not abort the others', async () => {
       join(x.dest, x.url.endsWith('/w') ? 'w.tar.gz' : 'd.tar.gz')
     )
   })
-  callAllAbortControllers() // clean up the hung first download
+  aborts.abortAll() // clean up the hung first download
   await pb
 })
 
@@ -450,7 +449,7 @@ test('shutdown wins over live caller signals', async () => {
     signal: b.signal
   })
   await tick()
-  callAllAbortControllers()
+  aborts.abortAll()
   await expect(pa).resolves.toMatchObject({ ok: false, reason: 'aborted' })
   await expect(pb).resolves.toMatchObject({ ok: false, reason: 'aborted' })
 })
@@ -470,7 +469,7 @@ test('prune removes stale .tmp-* dirs when idle, keeps them during an install', 
   pruneUnpinnedEngines()
   expect(existsSync(join(root, '.tmp-other-1'))).toBe(true)
   expect(leftovers().length).toBeGreaterThanOrEqual(2)
-  callAllAbortControllers()
+  aborts.abortAll()
   await p
 })
 
@@ -525,7 +524,7 @@ describe('sweepStaleEngineTemps', () => {
     mkdirSync(join(root, '.tmp-other-9'))
     sweepStaleEngineTemps()
     expect(existsSync(join(root, '.tmp-other-9'))).toBe(true)
-    callAllAbortControllers()
+    aborts.abortAll()
     await p
   })
 

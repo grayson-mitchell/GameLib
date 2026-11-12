@@ -22,7 +22,6 @@ import {
   classifyBottledSteamBlock,
   bottledSteamLogPaths
 } from '../bottleLaunchSignals'
-import { raiseWineGameWindow } from 'backend/utils/wineWindowRaise'
 import {
   createBottleProcessMonitors,
   type BottleProcessMonitors
@@ -72,12 +71,6 @@ jest.mock('backend/runsForMe', () => ({
   recordPlaySession: jest.fn()
 }))
 
-jest.mock('backend/utils/wineWindowRaise', () => ({
-  raiseWineGameWindow: jest.fn(),
-  windowsExeNameFromCommand: jest.requireActual('backend/utils/wineWindowRaise')
-    .windowsExeNameFromCommand
-}))
-
 interface EnvironmentDouble {
   isMac: boolean
   isWindows: boolean
@@ -114,13 +107,15 @@ jest.mock('../bottleLaunchSignals', () => ({
 
 // Recording fake handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
+// The window raiser is injected (66.4-13): `mockedRaise` stands in for its `raise`.
+const mockedRaise = jest.fn()
 const spawnDeps = {
+  windowRaiser: { raise: (...a: unknown[]) => mockedRaise(...a) },
   spawnAsync: mockedSpawnAsync,
   runner: createScriptedRunner([]),
   stores: { runsForMe: {} } as never
 }
 const mockedRecordPlaySession = recordPlaySession as jest.Mock
-const mockedRaise = raiseWineGameWindow as jest.Mock
 const mockedLogInfo = logInfo as jest.Mock
 const mockedLogWarning = logWarning as jest.Mock
 const mockedSendFrontendMessage = sendFrontendMessage as jest.Mock

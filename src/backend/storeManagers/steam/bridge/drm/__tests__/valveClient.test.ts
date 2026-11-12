@@ -20,10 +20,7 @@ import {
 } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import {
-  callAllAbortControllers,
-  hasAbortController
-} from 'backend/utils/aborthandler/aborthandler'
+import { createAbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 
 const mockLogWarning = jest.fn()
 const mockLogInfo = jest.fn()
@@ -58,7 +55,11 @@ import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 // The unzip integration tests must really extract the fixture zips, so they run the real
 // runner under a fake HOME (D-12(b)); every other path never reaches unzip.
 const realRunner = createRealRunner()
-const { ensureValveClient } = createValveClient({ runner: realRunner.runner })
+const aborts = createAbortRegistry()
+const { ensureValveClient } = createValveClient({
+  runner: realRunner.runner,
+  aborts
+})
 afterAll(() => realRunner.dispose())
 
 const FIXTURES = join(__dirname, 'fixtures')
@@ -231,7 +232,7 @@ describe('ensureValveClient', () => {
     mockLogInfo.mockClear()
   })
   afterEach(() => {
-    callAllAbortControllers()
+    aborts.abortAll()
     rmSync(appFolder, { recursive: true, force: true })
   })
 
@@ -460,24 +461,24 @@ describe('ensureValveClient', () => {
     )
     expect(r).toMatchObject({ status: 'error', step: 'valve-fetch' })
     if (r.status === 'error') expect(r.cause).toContain('timed out')
-    expect(hasAbortController('drm-valve-client:manifest')).toBe(false)
-    expect(hasAbortController('drm-valve-client:package')).toBe(false)
+    expect(aborts.has('drm-valve-client:manifest')).toBe(false)
+    expect(aborts.has('drm-valve-client:package')).toBe(false)
     noPartials()
   })
 
-  it('ends a hanging fetch when callAllAbortControllers() runs', async () => {
+  it('ends a hanging fetch when aborts.abortAll() runs', async () => {
     const f = fakes('bins_win64.fixture.zip')
     f.fetchToFile.mockImplementation(() => new Promise(() => undefined))
     const pending = ensureValveClient({ appFolder }, f)
-    while (!hasAbortController('drm-valve-client:package')) {
+    while (!aborts.has('drm-valve-client:package')) {
       await new Promise((r) => setTimeout(r, 5))
     }
-    callAllAbortControllers()
+    aborts.abortAll()
     const r = await pending
     expect(r).toMatchObject({ status: 'error', step: 'valve-fetch' })
     if (r.status === 'error') expect(r.cause).toContain('aborted')
-    expect(hasAbortController('drm-valve-client:manifest')).toBe(false)
-    expect(hasAbortController('drm-valve-client:package')).toBe(false)
+    expect(aborts.has('drm-valve-client:manifest')).toBe(false)
+    expect(aborts.has('drm-valve-client:package')).toBe(false)
   })
 
   itUnzip('shares one run between concurrent calls', async () => {
@@ -521,15 +522,18 @@ describe('ensureValveClient', () => {
     await jest.isolateModulesAsync(async () => {
       await import('../valveClient')
     })
-    expect(hasAbortController('drm-valve-client:manifest')).toBe(false)
-    expect(hasAbortController('drm-valve-client:package')).toBe(false)
+    expect(aborts.has('drm-valve-client:manifest')).toBe(false)
+    expect(aborts.has('drm-valve-client:package')).toBe(false)
   })
 
   it('runs unzip through the runner with empty stdin and the 120 s bound', async () => {
     const runner = createScriptedRunner([
       { cmd: '/usr/bin/unzip', result: { code: 1 } }
     ])
-    const { ensureValveClient: scripted } = createValveClient({ runner })
+    const { ensureValveClient: scripted } = createValveClient({
+      runner,
+      aborts
+    })
     const r = await scripted({ appFolder }, fakes('bins_win64.fixture.zip'))
     expect(r).toMatchObject({ status: 'error', step: 'valve-verify' })
     const opts = runner.calls[0]?.opts as {
@@ -547,8 +551,8 @@ describe('ensureValveClient', () => {
       fetchText: jest.fn(() => new Promise<string>(() => undefined)),
       fetchToFile: jest.fn()
     })
-    const a = createValveClient({ runner: createScriptedRunner([]) })
-    const b = createValveClient({ runner: createScriptedRunner([]) })
+    const a = createValveClient({ runner: createScriptedRunner([]), aborts })
+    const b = createValveClient({ runner: createScriptedRunner([]), aborts })
     const fa = hang()
     const fb = hang()
     const fa2 = hang()
@@ -559,7 +563,7 @@ describe('ensureValveClient', () => {
     expect(fa.fetchText).toHaveBeenCalledTimes(1)
     expect(fa2.fetchText).not.toHaveBeenCalled()
     expect(fb.fetchText).toHaveBeenCalledTimes(1)
-    callAllAbortControllers()
+    aborts.abortAll()
   })
 
   it('createRunUnzip maps a rejected spawn to a null exit', async () => {

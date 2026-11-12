@@ -74,6 +74,7 @@ import {
   updateWineListsIfOutdated
 } from '../wine/manager/utils'
 import { createTools, type ToolsDeps } from '../tools'
+import type { AbortRegistry } from '../utils/aborthandler/aborthandler'
 import type { WinetricksQueue } from '../tools/winetricksQueue'
 import { isWindows } from '../constants/environment'
 import { assertCommandParts } from './rendererPathGuard'
@@ -116,6 +117,7 @@ export interface WineToolsFlowDeps extends NotifyDeps, DialogBoxDeps {
   /** The boot-owned engine runtime and path roots (66.4-05). */
   engineRuntime: ToolsDeps['engineRuntime']
   paths: ToolsDeps['paths']
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>
   /** The Steam bottle slice the Steam Wine-tool resolver reads (66.3-15). */
   steamBottle: ToolsDeps['steamBottle']
   steamLaunchRuntime: ToolsDeps['steamLaunchRuntime']

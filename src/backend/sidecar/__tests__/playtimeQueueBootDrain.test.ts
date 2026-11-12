@@ -155,6 +155,8 @@ function bootedWorld(opts?: {
         legendaryRuntime: fakes.legendaryRuntime,
         nileRuntime: fakes.nileRuntime,
         infoCaches: fakes.infoCaches,
+        aborts: fakes.aborts,
+        windowRaiser: fakes.windowRaiser,
         signIn: fakes.signInProbe,
         steamSession: fakes.steamSession,
         tokenStore: fakes.tokenStore,

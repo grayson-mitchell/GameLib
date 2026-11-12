@@ -1,3 +1,4 @@
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import {
   Runner,
   WineInstallation,
@@ -974,6 +975,7 @@ async function ContinueWithFoundWine(
 }
 
 export async function downloadDefaultWine(deps: {
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>
   stores: Pick<Stores, 'kvs' | 'wineManager'>
   runner: Pick<ProcessRunner, 'run'>
   paths: Pick<AppPaths, 'toolsPath' | 'userHome' | 'configPath'>
@@ -1045,6 +1047,7 @@ export async function downloadDefaultWine(deps: {
 
 export async function checkWineBeforeLaunch(
   deps: {
+    aborts: Pick<AbortRegistry, 'create' | 'delete'>
     stores: Pick<Stores, 'kvs' | 'wineManager'>
     runner: Pick<ProcessRunner, 'run'>
     paths: Pick<AppPaths, 'toolsPath' | 'userHome' | 'configPath'>

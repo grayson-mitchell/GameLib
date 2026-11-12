@@ -14,6 +14,7 @@ import type {
 import type { RunsForMeDeps } from 'backend/runsForMe'
 import type { SpawnDeps } from './provisionBottle'
 import type { BottleProcessMonitors } from './bottleProcessMonitor'
+import type { WineWindowRaiser } from 'backend/utils/wineWindowRaise'
 
 /** SpawnDeps plus the window-yield the raise fallback uses (66.3-08). */
 export type BottledRaiseDeps = SpawnDeps & {
@@ -298,6 +299,7 @@ export type BottledSteamDeps = BottledRaiseDeps &
   SteamLibraryStateDeps & {
     paths: Pick<AppPaths, 'userHome'>
     steamLaunchRuntime: { monitors: BottleProcessMonitors }
+    windowRaiser: Pick<WineWindowRaiser, 'raise'>
     stores: RunsForMeDeps['stores']
     commandRunner: Pick<CommandRunner, 'runWineCommand'>
     steamBottle: Pick<

@@ -10,7 +10,7 @@
  *
  * Sidecar exit contract: the only in-flight work is the archive download. It
  * is bounded by a deadline (unref'd timer) and registered with the app abort
- * handler, so `callAllAbortControllers()` at stdin EOF cancels it. Nothing runs
+ * handler, so `aborts.abortAll()` at stdin EOF cancels it. Nothing runs
  * at boot: install happens only inside a launch whose profile names an overlay.
  *
  * Extraction is done in Node (zlib + an in-repo ustar reader), deliberately: no
@@ -29,10 +29,7 @@ import {
 } from 'common/knownFixOverlayCatalogue'
 import { knownFixOverlaysPath } from 'backend/constants/paths'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import {
-  createAbortController,
-  deleteAbortController
-} from 'backend/utils/aborthandler/aborthandler'
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { readOverlayTarGz } from './knownFixOverlayArchive'
 
 const OVERLAY_DOWNLOAD_TIMEOUT_MS = 120_000
@@ -45,6 +42,8 @@ export type OverlayArchiveFetch = (
 ) => Promise<Buffer>
 
 export interface OverlayInstallDeps {
+  /** The boot-owned abort registry: stdin EOF cancels a running overlay download through it (66.4-13). */
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>
   overlaysRoot?: string
   fetchArchive?: OverlayArchiveFetch
   timeoutMs?: number
@@ -155,6 +154,7 @@ function sha256Hex(buf: Buffer): string {
 }
 
 async function downloadBounded(
+  aborts: OverlayInstallDeps['aborts'],
   id: string,
   url: string,
   maxBytes: number,
@@ -162,7 +162,7 @@ async function downloadBounded(
   timeoutMs: number
 ): Promise<Buffer> {
   const abortId = `known-fix-overlay:${id}`
-  const controller = createAbortController(abortId)
+  const controller = aborts.create(abortId)
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   timer.unref?.()
   try {
@@ -178,7 +178,7 @@ async function downloadBounded(
     return await Promise.race([fetching, aborted])
   } finally {
     clearTimeout(timer)
-    deleteAbortController(abortId)
+    aborts.delete(abortId)
   }
 }
 
@@ -203,6 +203,7 @@ async function installOnce(
 
     await fsPromises.mkdir(root, { recursive: true })
     const buf = await downloadBounded(
+      deps.aborts,
       id,
       overlayArchiveUrl(entry),
       entry.archiveSize,
@@ -279,7 +280,7 @@ async function installOnce(
 export async function ensureOverlayInstalled(
   entry: KnownFixOverlayCatalogueEntry,
   ctx: OverlayLogContext,
-  deps: OverlayInstallDeps = {}
+  deps: OverlayInstallDeps
 ): Promise<string | null> {
   try {
     if (!ID_PATTERN.test(entry.id)) throw new Error('invalid overlay id')

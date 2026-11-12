@@ -7,6 +7,7 @@ import { join } from 'path'
 
 import type { RunTool } from 'backend/engine/runTool'
 import { createBridgeRuntime } from '../bridgeRuntime'
+import { createAbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { bridgeAllowlist } from '../allowlist'
 import { NOTICE_REASONS } from '../bridgeRoute'
 import {
@@ -64,10 +65,10 @@ describe('createBridgeRuntime entitlement signer', () => {
 
   it('numbers plists per instance, increasing, and starts fresh in a new instance', async () => {
     const plists: string[] = []
-    const a = createBridgeRuntime()
+    const a = createBridgeRuntime({ aborts: createAbortRegistry() })
     await sign(a, 'l1', plists)
     await sign(a, 'l2', plists)
-    const b = createBridgeRuntime()
+    const b = createBridgeRuntime({ aborts: createAbortRegistry() })
     await sign(b, 'l3', plists)
     expect(plists.map((p) => p.replace(/^.*-(\d+)\.plist$/, '$1'))).toEqual([
       '1',
@@ -79,8 +80,8 @@ describe('createBridgeRuntime entitlement signer', () => {
 
 describe('createBridgeRuntime isolation', () => {
   it('builds independent flights per call', () => {
-    const a = createBridgeRuntime()
-    const b = createBridgeRuntime()
+    const a = createBridgeRuntime({ aborts: createAbortRegistry() })
+    const b = createBridgeRuntime({ aborts: createAbortRegistry() })
     expect(a.runnerClone).not.toBe(b.runnerClone)
     expect(a.overlayRunnerClone).not.toBe(b.overlayRunnerClone)
     expect(a.sharedRedist).not.toBe(b.sharedRedist)

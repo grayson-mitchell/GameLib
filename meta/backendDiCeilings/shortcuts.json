@@ -1,7 +1,7 @@
 {
   "jestMock": {
     "src/backend/shortcuts/__tests__/addShortcutsOutcome.test.ts": 3,
-    "src/backend/shortcuts/__tests__/getIcon.test.ts": 3,
+    "src/backend/shortcuts/__tests__/getIcon.test.ts": 2,
     "src/backend/shortcuts/__tests__/removeShortcutsOutcome.test.ts": 3,
     "src/backend/shortcuts/__tests__/shortcutsExistsFallback.test.ts": 6,
     "src/backend/shortcuts/nonesteamgame/__tests__/nonesteamgame.test.ts": 4

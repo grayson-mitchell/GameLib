@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'graceful-fs'
 import { join } from 'path'
 
 import { logError, LogPrefix, logWarning } from 'backend/logger'
-import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { LegendaryCommand } from '../commands'
 import { ValidWinePrefix } from '../commands/base'
@@ -14,8 +14,10 @@ import type { Runner } from 'common/types'
 import type { ManagerDeps } from 'backend/services/types'
 
 /** The only collaborator the overlay functions need (R3). */
-export type EosOverlayDeps = Pick<ManagerDeps, 'libraryManagers'> &
-  EosOverlayPathDeps
+export type EosOverlayDeps = Pick<ManagerDeps, 'libraryManagers'> & {
+  /** The boot-owned abort registry the output handlers end the probe command through (66.4-13). */
+  aborts: Pick<AbortRegistry, 'call'>
+} & EosOverlayPathDeps
 
 /** The path roots the overlay's on-disk locations derive from (read from deps.paths, 66.4-11). */
 interface EosOverlayPathDeps {
@@ -125,7 +127,7 @@ async function install(deps: EosOverlayDeps) {
           downloadSize = parseFloat(downloadSizeStr)
           // Output is in MiB, we want it in bytes
           downloadSize = downloadSize * 1024 ** 2
-          callAbortController(eosOverlayAppName)
+          deps.aborts.call(eosOverlayAppName)
         }
       }
     }
@@ -285,7 +287,7 @@ async function isEnabled(
     onOutput: (data: string) => {
       if (data.includes('Overlay enabled')) {
         enabled = data.includes('Yes')
-        callAbortController(eosOverlayAppName)
+        deps.aborts.call(eosOverlayAppName)
       }
     },
     logMessagePrefix: 'Checking if EOS Overlay is enabled'

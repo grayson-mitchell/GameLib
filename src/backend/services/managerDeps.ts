@@ -31,6 +31,8 @@ export type ManagerDepsSource = Pick<
   | 'legendaryRuntime'
   | 'nileRuntime'
   | 'infoCaches'
+  | 'aborts'
+  | 'windowRaiser'
   | 'signInProbe'
   | 'steamSession'
   | 'tokenStore'
@@ -73,6 +75,8 @@ export function managerDepsFromServices(
     legendaryRuntime: source.legendaryRuntime,
     nileRuntime: source.nileRuntime,
     infoCaches: source.infoCaches,
+    aborts: source.aborts,
+    windowRaiser: source.windowRaiser,
     signIn: {
       epochs: source.signInProbe.epochs,
       outcomes: source.signInProbe.outcomes

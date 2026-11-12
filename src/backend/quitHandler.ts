@@ -43,7 +43,7 @@ export function createQuitHandler(deps: QuitHandlerDeps): QuitHandler {
         // CR-04: `cancelId` is LOAD-BEARING, not cosmetic. This dialog's sense is
         // INVERTED relative to every other `showMessageBox` caller in the codebase:
         // index 0 is the SAFE "No" and index 1 is the DESTRUCTIVE "Yes"
-        // (killAllTracked() + callAllAbortControllers() +
+        // (killAllTracked() + abortAll() +
         // app.exit(), i.e. killing an in-flight install/download). The sidecar's
         // `platformApi.showMessageBox` fail-safe default is
         // `options?.cancelId ?? (buttons.length ?? 1) - 1`, which without an explicit

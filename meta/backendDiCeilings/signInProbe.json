@@ -1,7 +1,7 @@
 {
   "jestMock": {
     "src/backend/signInProbe/__tests__/dismissBackstop.test.ts": 2,
-    "src/backend/signInProbe/__tests__/pass.test.ts": 7,
+    "src/backend/signInProbe/__tests__/pass.test.ts": 6,
     "src/backend/signInProbe/__tests__/runnerProbes.test.ts": 1,
     "src/backend/signInProbe/__tests__/verdict.test.ts": 2
   }

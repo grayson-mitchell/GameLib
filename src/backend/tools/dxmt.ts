@@ -4,6 +4,7 @@ import { isMac } from 'backend/constants/environment'
 import { logDebug, logError, LogPrefix, logWarning } from 'backend/logger'
 import type { OnlineMonitor } from 'backend/online_monitor'
 import { installOrUpdateTool } from '.'
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { ReleasesInfo, Tool, WineVersionInfo } from 'common/types'
 import { join } from 'path'
 import {
@@ -23,6 +24,7 @@ import type { ProcessRunner } from 'backend/process/types'
 /** The store slice the DXMT listeners read (66.1, R1). */
 interface DxmtStoresDeps extends DialogBoxDeps {
   runner: Pick<ProcessRunner, 'run'>
+  aborts: Pick<AbortRegistry, 'create'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   stores: {
     wineManager: Pick<Stores['wineManager'], 'wineDownloaderInfoStore'>
@@ -56,6 +58,7 @@ const DXMT = {
   getLatest: (
     deps: {
       runner: Pick<ProcessRunner, 'run'>
+      aborts: Pick<AbortRegistry, 'create'>
       onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
     } & DialogBoxDeps
   ) => {

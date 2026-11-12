@@ -10,17 +10,14 @@
  * nothing, and is bounded to one 64 KiB tail read per second for 10 s (30 s in DRM mode).
  *
  * Sidecar exit contract: every timer is unref'd and tracked, the watch
- * registers an abort controller so callAllAbortControllers() at stdin EOF ends
+ * registers an abort controller so aborts.abortAll() at stdin EOF ends
  * it, and nothing runs at import.
  *
  * Diagnostic only (D-11): no UI, no toast.
  */
 import { join } from 'node:path'
 import { logInfo, LogPrefix } from 'backend/logger'
-import {
-  createAbortController,
-  deleteAbortController
-} from 'backend/utils/aborthandler/aborthandler'
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import {
   parseTimestampedLine,
   readBoundedTail
@@ -56,6 +53,8 @@ type OverlayAttachResult = {
 }
 
 type WatchDeps = {
+  /** The boot-owned abort registry the watch registers in; stdin EOF aborts it (66.4-13). */
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>
   readTail?: (path: string, maxBytes?: number) => Promise<string>
   now?: () => number
   setTimeout?: (fn: () => void, ms: number) => { unref?: () => void }
@@ -110,7 +109,7 @@ export async function watchOverlayAttach(
     gamePid?: number
     timeoutMs?: number
   },
-  deps: WatchDeps = {}
+  deps: WatchDeps
 ): Promise<OverlayAttachResult> {
   const readTail = deps.readTail ?? readBoundedTail
   const now = deps.now ?? Date.now
@@ -124,7 +123,7 @@ export async function watchOverlayAttach(
   if (!APP_ID_RE.test(opts.appId)) return { attached: false }
 
   const abortId = `overlay-attach:${opts.appId}:${opts.launchStartedAt}`
-  const controller = createAbortController(abortId)
+  const controller = deps.aborts.create(abortId)
   const timers = new Set<unknown>()
   const prefix = `SteamGame: appId ${opts.appId} overlay attach:`
   const started = now()
@@ -175,6 +174,6 @@ export async function watchOverlayAttach(
   } finally {
     for (const h of timers) clearT(h)
     timers.clear()
-    deleteAbortController(abortId)
+    deps.aborts.delete(abortId)
   }
 }

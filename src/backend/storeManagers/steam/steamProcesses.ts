@@ -15,6 +15,7 @@ import type { GlobalConfigSlice } from '../../config'
 import type { OpenExternal } from '../../host/openExternal'
 import type { Clock, ProcessRunner } from '../../process/types'
 import type { AppPaths } from '../../process/context'
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { createSteamDrm } from './bridge/drm/drmLaunchSetup'
 import { createRunningPoll, readRunningAppId } from './library/runningPoll'
 import {
@@ -34,8 +35,10 @@ export function createSteamProcesses(deps: {
   config: Pick<GlobalConfigSlice, 'getSettings'>
   openExternal: Pick<OpenExternal, 'openExternal'>
   paths: Pick<AppPaths, 'appFolder' | 'userHome'>
+  /** The boot-owned abort registry the DRM component and Valve client downloads register in (66.4-13). */
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>
 }) {
-  const { runner, clock, platform, config, openExternal, paths } = deps
+  const { runner, clock, platform, config, openExternal, paths, aborts } = deps
   return {
     // Mac Steam's go-offline debt and shutdown signal: one instance per boot, handed to SteamUser
     // (the steam-user boot step), the guided Go Offline flows and the boot/quit restore.
@@ -46,7 +49,7 @@ export function createSteamProcesses(deps: {
       clock
     }),
     // The Steam DRM spawners (pgrep, codesign, unzip) and their three single-flight Maps.
-    drm: createSteamDrm({ runner }),
+    drm: createSteamDrm({ runner, aborts }),
     runningPoll: createRunningPoll({
       clock,
       readRunningAppId: () => readRunningAppId({ runner, paths }, platform),

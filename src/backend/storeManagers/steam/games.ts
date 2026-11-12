@@ -11,7 +11,6 @@ import { GOGCloudSavesLocation } from 'common/types/gog'
 import { Game, InstallResult, RemoveArgs } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type LogWriter from 'backend/logger/log_writer'
-import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
 import { sendFrontendMessage } from '../../ipc'
 import {
   addShortcuts as addShortcutsUtil,
@@ -521,7 +520,7 @@ export default class SteamGame implements Game {
    *   executable path, the close request is `taskkill /PID` without force, and
    *   survivors are force-ended. Only "nothing found" stays a no-op.
    * Mirrors downloadqueue.ts's own stopCurrentDownload ->
-   * callAbortController(appName) call site. Analog: gog/games.ts lines
+   * aborts.call(appName) call site. Analog: gog/games.ts lines
    * 1291-1295.
    */
   async stop(_stopWine?: boolean): Promise<void> {
@@ -536,7 +535,7 @@ export default class SteamGame implements Game {
       // AbortController so a subsequent installDepotDownload() call (pause ->
       // resume) can tell this run is tearing down rather than still live.
       inFlight.aborted = true
-      callAbortController(this.appId)
+      this.deps.aborts.call(this.appId)
       return
     }
 

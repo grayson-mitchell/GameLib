@@ -5,7 +5,7 @@
 // One registry per boot (the SteamInstallRuntime holds it, D-05, 66.4-09): a closure Map and nothing
 // else, no timers, watchers, sockets or handles (sidecar exit contract). Entries are removed by the
 // disposer register returns. Jobs still running at stdin EOF are stopped through their install's
-// AbortController (callAllAbortControllers), which runDepotJob forwards as depot_job_cancel.
+// AbortController (abortAll), which runDepotJob forwards as depot_job_cancel.
 
 import type { CdnAuthTokenCache } from '../depot/cdnAuth'
 import type { RustJobEvent } from './types'

@@ -21,7 +21,7 @@
  *
  * Sidecar exit contract: nothing runs at import; every child, pipe and
  * deadline is unref'd; the long cp is abortable, so the stdin-EOF
- * `callAllAbortControllers()` ends it.
+ * `aborts.abortAll()` ends it.
  *
  * Trust widening (RESEARCH Security Domain): the clone's loader is re-signed
  * ad hoc with `disable-library-validation` kept and the dyld entitlement
@@ -38,10 +38,7 @@ import { basename, dirname, join } from 'path'
 
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { RunTool } from 'backend/engine/runTool'
-import {
-  createAbortController,
-  deleteAbortController
-} from 'backend/utils/aborthandler/aborthandler'
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { buildDrmPaths } from './drmPaths'
 import { applyNtdllPatch, type NtdllPatchResult } from './ntdllPatch'
 import type { NtdllPatchRow } from './ntdllPatchTable'
@@ -126,6 +123,7 @@ const STALE_CLONE_RE = /^crossover-[0-9]{1,4}(\.[0-9]{1,6}){2,4}$/
 const STALE_PARTIAL_RE = /^\.crossover-([0-9.]+)\.partial-[A-Za-z0-9]+$/
 
 type RunnerCloneState = {
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>
   inFlight: Map<string, Promise<DrmStepResult<RunnerReady>>>
   resignLoader: ResignLoader
 }
@@ -149,8 +147,11 @@ export interface RunnerCloneFlights {
  */
 export function createRunnerCloneFlights(deps: {
   signer: RunnerEntitlementSigner
+  /** The boot-owned abort registry the clone registers in (66.4-13). */
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>
 }): RunnerCloneFlights {
   const state: RunnerCloneState = {
+    aborts: deps.aborts,
     inFlight: new Map(),
     resignLoader: deps.signer.resignLoader
   }
@@ -341,6 +342,7 @@ async function pruneStale(
  * fallback. Registers an abort controller under opts.abortId. Never throws.
  */
 export async function cloneCrossoverTree(
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>,
   run: RunTool,
   src: string,
   dest: string,
@@ -348,7 +350,7 @@ export async function cloneCrossoverTree(
 ): Promise<
   { ok: true; cloneMethod: 'cp -c' | 'cp -R' } | { ok: false; cause: string }
 > {
-  const controller = createAbortController(opts.abortId)
+  const controller = aborts.create(opts.abortId)
   let cloneMethod: 'cp -c' | 'cp -R' = 'cp -c'
   try {
     const first = await run('/bin/cp', [...CLONE_ARGV_PRIMARY, src, dest], {
@@ -379,7 +381,7 @@ export async function cloneCrossoverTree(
   } catch (e) {
     return { ok: false, cause: errText(e) }
   } finally {
-    deleteAbortController(opts.abortId)
+    aborts.delete(opts.abortId)
   }
 }
 
@@ -415,11 +417,17 @@ async function buildRunner(
     // --- clone ---
     deps.onCloneStart?.()
     const t0 = Date.now()
-    const cloned = await cloneCrossoverTree(run, crossover.cxRoot, dest, {
-      abortId: `drm-runner-clone:${build}`,
-      timeoutMs: timeouts.cp,
-      partial
-    })
+    const cloned = await cloneCrossoverTree(
+      state.aborts,
+      run,
+      crossover.cxRoot,
+      dest,
+      {
+        abortId: `drm-runner-clone:${build}`,
+        timeoutMs: timeouts.cp,
+        partial
+      }
+    )
     if (!cloned.ok) return stepFail('runner-clone', cloned.cause)
     const cloneMethod = cloned.cloneMethod
     logInfo(

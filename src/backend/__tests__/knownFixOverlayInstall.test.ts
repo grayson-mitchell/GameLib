@@ -41,7 +41,7 @@ import {
   verifyInstalledOverlay,
   OverlayArchiveFetch
 } from '../knownFixOverlayInstall'
-import { hasAbortController } from '../utils/aborthandler/aborthandler'
+import { createAbortRegistry } from '../utils/aborthandler/aborthandler'
 import { defined } from './helpers/defined'
 
 const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex')
@@ -76,7 +76,9 @@ const goodArchive = buildOverlayTarGz(payload)
 const entry = entryFor(payload, goodArchive)
 
 let root: string
+let aborts: ReturnType<typeof createAbortRegistry>
 beforeEach(() => {
+  aborts = createAbortRegistry()
   root = mkdtempSync(join(tmpdir(), 'gamelib-overlay-'))
   mockLogWarning.mockClear()
   mockLogInfo.mockClear()
@@ -94,6 +96,7 @@ describe('ensureOverlayInstalled', () => {
   it('installs fresh, then is idempotent', async () => {
     const fetchArchive = okFetch()
     const dir = await ensureOverlayInstalled(entry, ctx, {
+      aborts,
       overlaysRoot: root,
       fetchArchive
     })
@@ -110,6 +113,7 @@ describe('ensureOverlayInstalled', () => {
     ).toEqual(defined(payload[0], 'first payload').data)
     expect(leftovers()).toEqual([])
     await ensureOverlayInstalled(entry, ctx, {
+      aborts,
       overlaysRoot: root,
       fetchArchive
     })
@@ -119,11 +123,13 @@ describe('ensureOverlayInstalled', () => {
   it('accepts an extra root-level file without fetching', async () => {
     const fetchArchive = okFetch()
     await ensureOverlayInstalled(entry, ctx, {
+      aborts,
       overlaysRoot: root,
       fetchArchive
     })
     writeFileSync(join(root, entry.id, 'SHA256SUMS'), 'x')
     await ensureOverlayInstalled(entry, ctx, {
+      aborts,
       overlaysRoot: root,
       fetchArchive
     })
@@ -165,12 +171,14 @@ describe('ensureOverlayInstalled', () => {
     it('is invalid and gets replaced', async () => {
       const fetchArchive = okFetch()
       const dir = (await ensureOverlayInstalled(entry, ctx, {
+        aborts,
         overlaysRoot: root,
         fetchArchive
       }))!
       damage(dir)
       expect((await verifyInstalledOverlay(dir, entry)).ok).toBe(false)
       await ensureOverlayInstalled(entry, ctx, {
+        aborts,
         overlaysRoot: root,
         fetchArchive
       })
@@ -187,6 +195,7 @@ describe('ensureOverlayInstalled', () => {
     ]) {
       mockLogWarning.mockClear()
       const out = await ensureOverlayInstalled(bad, ctx, {
+        aborts,
         overlaysRoot: root,
         fetchArchive: okFetch()
       })
@@ -218,6 +227,7 @@ describe('ensureOverlayInstalled', () => {
     }
     const hostile = tarOf('../x')
     const out = await ensureOverlayInstalled(entryFor(payload, hostile), ctx, {
+      aborts,
       overlaysRoot: root,
       fetchArchive: () => Promise.resolve(hostile)
     })
@@ -229,6 +239,7 @@ describe('ensureOverlayInstalled', () => {
 
   it('fails open when the fetch rejects', async () => {
     const out = await ensureOverlayInstalled(entry, ctx, {
+      aborts,
       overlaysRoot: root,
       fetchArchive: () => Promise.reject(new Error('HTTP 500'))
     })
@@ -239,6 +250,7 @@ describe('ensureOverlayInstalled', () => {
   it('times out a fetch that never settles', async () => {
     let seen: AbortSignal | undefined
     const out = await ensureOverlayInstalled(entry, ctx, {
+      aborts,
       overlaysRoot: root,
       timeoutMs: 50,
       fetchArchive: (_u, { signal }) => {
@@ -249,14 +261,22 @@ describe('ensureOverlayInstalled', () => {
     expect(out).toBeNull()
     expect(seen?.aborted).toBe(true)
     expect(mockLogWarning.mock.calls[0][0]).toMatch(/timed out/)
-    expect(hasAbortController(`known-fix-overlay:${entry.id}`)).toBe(false)
+    expect(aborts.has(`known-fix-overlay:${entry.id}`)).toBe(false)
   })
 
   it('shares one fetch between concurrent calls', async () => {
     const fetchArchive = okFetch()
     const [a, b] = await Promise.all([
-      ensureOverlayInstalled(entry, ctx, { overlaysRoot: root, fetchArchive }),
-      ensureOverlayInstalled(entry, ctx, { overlaysRoot: root, fetchArchive })
+      ensureOverlayInstalled(entry, ctx, {
+        aborts,
+        overlaysRoot: root,
+        fetchArchive
+      }),
+      ensureOverlayInstalled(entry, ctx, {
+        aborts,
+        overlaysRoot: root,
+        fetchArchive
+      })
     ])
     expect(a).toBe(b)
     expect(fetchArchive).toHaveBeenCalledTimes(1)

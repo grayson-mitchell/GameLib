@@ -47,11 +47,13 @@ import {
   type EngineConfigDeps
 } from '../engineConfig'
 import type { WineInstallation } from 'common/types'
+import { createAbortRegistry } from '../../utils/aborthandler/aborthandler'
 
 const dir = mkdtempSync(join(tmpdir(), 'gamelib-engineconfig-'))
 afterAll(() => rmSync(dir, { recursive: true, force: true }))
 const { pinnedEnginePaths } = createFallbackEngine({
-  paths: { toolsPath: join(dir, 'tools') }
+  paths: { toolsPath: join(dir, 'tools') },
+  aborts: createAbortRegistry()
 })
 
 const WM_DIR = join(dir, 'wm', 'Wine-Staging-11.0')

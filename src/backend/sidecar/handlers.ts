@@ -139,6 +139,7 @@ function toolSlices(services: BootServices) {
     engineState: services.engineState,
     engineRuntime: services.engineRuntime,
     paths: services.paths,
+    aborts: services.aborts,
     steamBottle: services.steamBottle,
     steamLaunchRuntime: services.steamLaunchRuntime
   }
@@ -229,6 +230,7 @@ export function registerHandlers(deps: {
   registerAppShellFlows({
     ipc,
     appInfo: deps.services.appInfo,
+    aborts: deps.services.aborts,
     openExternal: deps.services.host.openExternal,
     managers: deps.services.managers,
     downloadQueue: deps.services.downloadQueue,
@@ -250,6 +252,7 @@ export function registerHandlers(deps: {
   registerGameDetailsFlows({
     ipc,
     managers: deps.services.managers,
+    aborts: deps.services.aborts,
     stores: deps.services.stores,
     notifications: deps.services.host.notifications,
     onlineMonitor: deps.services.onlineMonitor,
@@ -389,6 +392,7 @@ export function registerHandlers(deps: {
     quit: deps.services.quit,
     stores: deps.services.stores,
     infoCaches: deps.services.infoCaches,
+    aborts: deps.services.aborts,
     runner: deps.services.runner,
     config: deps.services.config,
     paths: deps.services.paths,
@@ -413,6 +417,7 @@ export function registerHandlers(deps: {
   registerEosOverlayFlows({
     ipc,
     managers: deps.services.managers,
+    aborts: deps.services.aborts,
     paths: deps.services.paths
   })
   // Phase 40 Plan 05 (REQ-40-02/REQ-40-05): the in-app store-embed channels, plus installing the

@@ -7,9 +7,6 @@ jest.mock('../../logger', () => ({
   logError: jest.fn()
 }))
 const callAll = jest.fn()
-jest.mock('../../utils/aborthandler/aborthandler', () => ({
-  callAllAbortControllers: () => callAll()
-}))
 const running = jest.fn(() => false)
 const pause = jest.fn()
 const downloadQueue = {
@@ -23,6 +20,8 @@ const releaseAnon = jest.fn()
 const release = jest.fn()
 const deps = {
   downloadQueue,
+  // The abort registry is injected (66.4-13): the release path only needs abortAll.
+  aborts: { abortAll: () => callAll() },
   anonymousClient: { releaseForShutdown: () => releaseAnon() },
   steamUser: { releaseForShutdown: () => release() },
   stopAllSteamDownloadMonitors: () => stopMonitors(),

@@ -13,7 +13,7 @@ import {
   updateQueueElement
 } from './utils'
 import { sendFrontendMessage } from '../ipc'
-import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { notify, type DialogBoxDeps, type NotifyDeps } from '../dialog/dialog'
 import type { GlobalConfigSlice } from '../config'
 import i18next from 'i18next'
@@ -43,6 +43,8 @@ export interface DownloadQueueDeps extends DialogBoxDeps, NotifyDeps {
   stores: Pick<Stores, 'downloadManager' | 'steam'>
   managers: Pick<StoreManagers, 'library'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline' | 'onConnectivityChange'>
+  /** The boot-owned abort registry a cancel signals through (66.4-13). */
+  aborts: Pick<AbortRegistry, 'has' | 'call'>
   /** The boot-owned library map and per-session game maps the steam queue-head checks read (D-66.3-13). */
   steamSession: Pick<SteamSessionServices, 'libraryState' | 'gameSession'>
   /** The boot-owned Steam bottle helpers the cancelled-install cleanup resolves the bottle root through (D-66.3-15). */
@@ -509,7 +511,7 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
 
   function stopCurrentDownload() {
     const { appName, runner } = currentElement!.params
-    callAbortController(appName)
+    deps.aborts.call(appName)
     deps.managers.library[runner].getGame(appName).stop(false)
   }
 

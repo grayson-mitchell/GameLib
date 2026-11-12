@@ -1,9 +1,6 @@
 import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
 import { isEpicServiceOffline, sendGameStatusUpdate } from '../utils'
-import {
-  callAbortController,
-  hasAbortController
-} from 'backend/utils/aborthandler/aborthandler'
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { ButtonOptions, DMStatus, InstallParams, Runner } from 'common/types'
 import { InstallResult, InstallErrorAction } from 'common/types/game_manager'
 import { isStore, storeCapabilities } from 'common/storeCapabilities'
@@ -44,6 +41,8 @@ export { resolveGameTitle }
 type QueueElementDeps = {
   managers: Pick<StoreManagers, 'library'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
+  /** The boot-owned abort registry the terminal-error branch and the stall watchdog abort through (66.4-13). */
+  aborts: Pick<AbortRegistry, 'has' | 'call'>
   /** The gog manifest directory is derived from these. */
   paths: Pick<AppPaths, 'appFolder' | 'toolsPath' | 'userData'>
 } & DialogBoxDeps &
@@ -252,6 +251,7 @@ async function installQueueElement(
     downloadFixesFor(appName, runner)
 
     const installResult: InstallResult = await withStallTimeout(
+      deps,
       library[runner].getGame(appName).install({
         path: path.replaceAll("'", ''),
         installDlcs,
@@ -370,12 +370,12 @@ async function installQueueElement(
       // telling, so only a GENUINE miss anywhere else still reaches
       // callAbortController's own ERROR log (see aborthandler.ts's doc
       // comment on hasAbortController for the other-callers rationale).
-      if (hasAbortController(appName)) {
+      if (deps.aborts.has(appName)) {
         logInfo(
           `Aborting in-flight download for ${appName} after terminal install failure`,
           LogPrefix.DownloadManager
         )
-        callAbortController(appName)
+        deps.aborts.call(appName)
       } else {
         logWarning(
           `No in-flight download to abort for ${appName} — the install failed outside its abort controller's lifetime`,

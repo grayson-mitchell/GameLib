@@ -8,13 +8,18 @@
 import { join } from 'path'
 import type { AppPaths } from '../process/context'
 import type { Clock } from '../process/types'
-import type { EngineRuntime } from '../engine/engineRuntime'
+import type { EngineRuntime, EngineRuntimeDeps } from '../engine/engineRuntime'
+import { createTestAbortRegistry } from './testAbortRegistry'
 import { createFakeClock } from './fakeClock'
 
 export type TestEnginePaths = Pick<AppPaths, 'userHome' | 'toolsPath'>
 
 export function createTestEngineRuntime(
-  opts: { clock?: Clock; paths?: Partial<TestEnginePaths> } = {}
+  opts: {
+    clock?: Clock
+    paths?: Partial<TestEnginePaths>
+    aborts?: EngineRuntimeDeps['aborts']
+  } = {}
 ): EngineRuntime {
   /* eslint-disable @typescript-eslint/no-require-imports */
   const { createEngineRuntime } =
@@ -23,6 +28,7 @@ export function createTestEngineRuntime(
   const root = '/test-gamelib'
   return createEngineRuntime({
     clock: opts.clock ?? createFakeClock(),
+    aborts: opts.aborts ?? createTestAbortRegistry(),
     paths: {
       userHome: opts.paths?.userHome ?? join(root, 'home'),
       toolsPath: opts.paths?.toolsPath ?? join(root, 'tools')

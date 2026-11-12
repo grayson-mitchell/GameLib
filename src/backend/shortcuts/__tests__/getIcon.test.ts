@@ -26,9 +26,6 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Backend: 'Backend' }
 }))
-jest.mock('backend/utils/aborthandler/aborthandler', () => ({
-  createAbortController: jest.fn(() => new AbortController())
-}))
 
 import {
   existsSync,
@@ -42,7 +39,6 @@ import { join } from 'path'
 import { getIcon } from '../utils'
 import { downloadFile } from 'backend/utils'
 import { logWarning } from 'backend/logger'
-import { createAbortController } from 'backend/utils/aborthandler/aborthandler'
 import { appFolder } from 'backend/constants/paths'
 import type { GameInfo } from 'common/types'
 
@@ -55,16 +51,18 @@ beforeAll(() => {
 
 const mockedDownloadFile = downloadFile as jest.Mock
 const mockedGetProductApi = jest.fn()
+const mockedCreateAbortController = jest.fn()
 const deps = {
-  libraryManagers: { gog: { getProductApi: mockedGetProductApi } }
+  libraryManagers: { gog: { getProductApi: mockedGetProductApi } },
+  // The abort registry is injected (66.4-13).
+  aborts: { create: (id: string) => mockedCreateAbortController(id) }
 } as unknown as Parameters<typeof getIcon>[0]
 const mockedLogWarning = logWarning as jest.Mock
-const mockedCreateAbortController = createAbortController as jest.Mock
 
 // `resetMocks: true` strips even a jest.fn(impl) constructor-supplied
 // implementation before every test (not just ones set later via
 // mockImplementation), so the abort-controller stub must be re-applied per
-// test rather than relying on the jest.mock(...) factory's inline arrow.
+// test.
 // Without this, the real (unmocked) downloadImage's
 // `createAbortController(imageURL).signal` dereferences undefined on every
 // test after the first, and its own try/catch quietly reports that as a

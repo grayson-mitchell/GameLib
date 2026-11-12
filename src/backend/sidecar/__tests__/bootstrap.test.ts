@@ -189,9 +189,10 @@ describe('sidecar bootstrap (headless boot)', () => {
   })
 
   describe('boot services (66.1-04)', () => {
-    it('a default boot returns BootServices with all thirty-seven fields', () => {
+    it('a default boot returns BootServices with all thirty-nine fields', () => {
       const { services } = bootWithLines()
       expect(Object.keys(services).sort()).toEqual([
+        'aborts',
         'anonymousClient',
         'appInfo',
         'bridgeHelpers',
@@ -228,6 +229,7 @@ describe('sidecar bootstrap (headless boot)', () => {
         'storeRoot',
         'stores',
         'tokenStore',
+        'windowRaiser',
         'winetricksQueue'
       ])
       for (const value of Object.values(services)) expect(value).toBeDefined()

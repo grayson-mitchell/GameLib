@@ -322,10 +322,18 @@ jest.mock('../../storeManagers/legendary/user', () => ({
 
 // ── abort handler mock — narrow override (callAbortController only), real
 // module spread, mirrors appShellFlows.test.ts's own boundary choice ────────
-jest.mock('../../utils/aborthandler/aborthandler', () => ({
-  ...jest.requireActual('../../utils/aborthandler/aborthandler'),
-  callAbortController: jest.fn()
-}))
+const mockedCallAbortController = jest.fn()
+jest.mock('../../utils/aborthandler/aborthandler', () => {
+  const actual = jest.requireActual('../../utils/aborthandler/aborthandler')
+  return {
+    ...actual,
+    // The registry is boot-built (66.4-13): its `call` is the narrow boundary this suite asserts.
+    createAbortRegistry: () => ({
+      ...actual.createAbortRegistry(),
+      call: (id: string) => mockedCallAbortController(id)
+    })
+  }
+})
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
@@ -403,7 +411,6 @@ let mockedIsOnline: jest.Mock
 let mockedNotify: jest.Mock
 let mockedSendGameStatusUpdate: jest.Mock
 let mockedGetUserInfo: jest.Mock
-let mockedCallAbortController: jest.Mock
 
 type ManagerMock = Record<
   | 'addNewApp'
@@ -437,9 +444,6 @@ function freshRegistry(): void {
   const { notify } = require('../../dialog/dialog')
   const { sendGameStatusUpdate } = require('../../utils')
   const { LegendaryUser } = require('../../storeManagers/legendary/user')
-  const {
-    callAbortController
-  } = require('../../utils/aborthandler/aborthandler')
   sidecarRpc = require('../sidecarRpc')
   ;({ gameOverridesStore } =
     require('../../game_overrides/stores').createGameOverridesStores({
@@ -452,7 +456,6 @@ function freshRegistry(): void {
   mockedNotify = notify as jest.Mock
   mockedSendGameStatusUpdate = sendGameStatusUpdate as jest.Mock
   mockedGetUserInfo = LegendaryUser.getUserInfo as jest.Mock
-  mockedCallAbortController = callAbortController as jest.Mock
   legendaryManager = libraryManagerMap.legendary as unknown as ManagerMock
   gogManager = libraryManagerMap.gog as unknown as ManagerMock
   steamManager = libraryManagerMap.steam as unknown as ManagerMock

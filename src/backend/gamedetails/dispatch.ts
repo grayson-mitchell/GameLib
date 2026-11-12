@@ -56,7 +56,7 @@ import type { Stores, StoreManagers, ManagerDeps } from '../services/types'
 import { attachOverrides, type GameOverridesDeps } from '../game_overrides'
 import { isDelegatedInstallPolling } from '../storeManagers/steam/library/installPolling'
 import type { InstallPollState } from '../storeManagers/steam/library/pollState'
-import { callAbortController } from '../utils/aborthandler/aborthandler'
+import type { AbortRegistry } from '../utils/aborthandler/aborthandler'
 import type { OnlineMonitor } from '../online_monitor'
 import { sendGameStatusUpdate } from '../utils'
 import { notify, type NotifyDeps } from '../dialog/dialog'
@@ -67,6 +67,8 @@ import { logError, logInfo, logWarning, LogPrefix } from '../logger'
 export interface GameDetailsDeps extends NotifyDeps {
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   managers: Pick<StoreManagers, 'library'>
+  /** The boot-owned abort registry a kill signals through (66.4-13). */
+  aborts: Pick<AbortRegistry, 'call'>
   steamInstallRuntime: { polls: Pick<InstallPollState, 'activePolls'> }
   /** The path roots the Epic user-info read derives from (66.4-11). */
   paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath'>
@@ -185,7 +187,7 @@ export async function kill(
       isDelegatedInstallPolling(deps, appName)
     )
   ) {
-    callAbortController(appName)
+    deps.aborts.call(appName)
   }
   return deps.managers.library[runner].getGame(appName).stop()
 }

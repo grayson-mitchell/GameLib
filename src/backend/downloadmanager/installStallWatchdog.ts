@@ -1,8 +1,5 @@
 import { backendEvents } from 'backend/backend_events'
-import {
-  callAbortController,
-  hasAbortController
-} from 'backend/utils/aborthandler/aborthandler'
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { LogPrefix, logInfo, logWarning } from 'backend/logger'
 import type { GameStatus } from 'common/types'
 
@@ -70,6 +67,7 @@ export function isStallError(err: unknown): err is StallError {
  * clears its timer, on BOTH the resolve and the reject path.
  */
 export async function withStallTimeout<T>(
+  deps: { aborts: Pick<AbortRegistry, 'has' | 'call'> },
   promise: Promise<T>,
   appName: string,
   stallMs: number,
@@ -98,12 +96,12 @@ export async function withStallTimeout<T>(
     // (c) rejecting first would yield control to the caller's `catch`
     //     before this module has done its own part — this module must not
     //     depend on what any particular caller chooses to do there.
-    if (hasAbortController(appName)) {
+    if (deps.aborts.has(appName)) {
       logInfo(
         `Stall watchdog aborting in-flight download for ${appName} after a trip (no progress for ${seconds}s)`,
         LogPrefix.DownloadManager
       )
-      callAbortController(appName)
+      deps.aborts.call(appName)
     } else {
       logWarning(
         `Stall watchdog tripped for ${appName} but no abort controller is registered — nothing could be signalled`,

@@ -45,6 +45,10 @@ import {
   createTestNileRuntime,
   createTestInfoCaches
 } from './testEpicAmazonRuntimes'
+import {
+  createTestAbortRegistry,
+  createTestWindowRaiser
+} from './testAbortRegistry'
 import { createTestSteamInstallRuntime } from './testSteamInstallRuntime'
 import { createTestSignInProbe } from './testSignInProbe'
 import { createTestSteamSession } from './testSteamSession'
@@ -273,6 +277,8 @@ export function createTestServices(
       overrides.legendaryRuntime ?? createTestLegendaryRuntime(),
     nileRuntime: overrides.nileRuntime ?? createTestNileRuntime(),
     infoCaches: overrides.infoCaches ?? createTestInfoCaches(),
+    aborts: overrides.aborts ?? createTestAbortRegistry(),
+    windowRaiser: overrides.windowRaiser ?? createTestWindowRaiser(),
     winetricksQueue:
       overrides.winetricksQueue ??
       unscriptedMembers<BootServices['winetricksQueue']>(
@@ -443,6 +449,8 @@ export function createTestManagerDeps(
       overrides.legendaryRuntime ?? createTestLegendaryRuntime(),
     nileRuntime: overrides.nileRuntime ?? createTestNileRuntime(),
     infoCaches: overrides.infoCaches ?? createTestInfoCaches(),
+    aborts: overrides.aborts ?? createTestAbortRegistry(),
+    windowRaiser: overrides.windowRaiser ?? createTestWindowRaiser(),
     signIn: overrides.signIn ?? createTestSignInProbe(),
     steamSession: overrides.steamSession ?? createTestSteamSession(),
     tokenStore: overrides.tokenStore ?? createTestTokenStoreSlot(),
@@ -501,6 +509,8 @@ export function createTestToolsSlices() {
     legendaryRuntime: createTestLegendaryRuntime(),
     nileRuntime: createTestNileRuntime(),
     infoCaches: createTestInfoCaches(),
+    aborts: createTestAbortRegistry(),
+    windowRaiser: createTestWindowRaiser(),
     paths: createTestPaths(),
     steamBottle: createTestSteamBottle({ stores: createTestStores(), config })
   }

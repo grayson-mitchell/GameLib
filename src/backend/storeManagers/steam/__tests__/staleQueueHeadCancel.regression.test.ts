@@ -24,7 +24,6 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { getSteamLibraries } from 'backend/utils'
-import { createAbortController } from 'backend/utils/aborthandler/aborthandler'
 import { downloadSteamDepots } from '../depot'
 import { resolveSteamInstallTarget } from '../installLocation'
 import { getBottleSteamappsDir } from '../bottle'
@@ -42,7 +41,18 @@ const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 // 66.3-15: the bottle settings are read through the deps slice, not a module import.
 const getSteamBottleSettings = jest.fn()
 
+// The abort registry is injected into the manager deps (66.4-13).
+const createAbortController = jest.fn()
+
 const steamTestDeps = createTestManagerDeps({
+  aborts: {
+    create: (id: string) => createAbortController(id),
+    delete: () => undefined,
+    getSignal: () => undefined,
+    has: () => false,
+    call: () => undefined,
+    abortAll: () => undefined
+  },
   steamBottle: { getSteamBottleSettings } as never,
   stores: createTestStores({ steam: steamStoresModule })
 })
@@ -67,11 +77,6 @@ jest.mock('backend/constants/environment', () => ({
   isWindows: false,
   isMac: false,
   isLinux: true
-}))
-jest.mock('backend/utils/aborthandler/aborthandler', () => ({
-  createAbortController: jest.fn(),
-  deleteAbortController: jest.fn(),
-  getAbortSignal: jest.fn()
 }))
 jest.mock('../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 jest.mock('../stores', () => ({
@@ -170,7 +175,7 @@ describe('stale queue head cancel regression (73-18)', () => {
       return { status: 'cancelled' } as never
     })
     const controller = new AbortController()
-    jest.mocked(createAbortController).mockReturnValue(controller)
+    createAbortController.mockReturnValue(controller)
 
     const result = await runNativeDepotDownloadLeased(
       { appId: APP_ID, deps: steamTestDeps } as unknown as SteamGame,

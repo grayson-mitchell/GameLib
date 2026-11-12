@@ -21,6 +21,7 @@ import type { EngineRegistry } from './engineRegistry'
 import { createEngineSwitcher } from './engineSwitch'
 import type { EngineSwitcher } from './engineSwitch'
 import { createFallbackEngine } from './fallbackEngine'
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { FallbackEngine } from './fallbackEngine'
 import { createLaunchDeadlines } from './launchDeadline'
 import type { LaunchDeadlines } from './launchDeadline'
@@ -46,6 +47,8 @@ export interface EngineRuntime {
 export interface EngineRuntimeDeps {
   clock: Clock
   paths: Pick<AppPaths, 'userHome' | 'toolsPath'>
+  /** The boot-owned abort registry the Steam engine download registers in (66.4-13). */
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>
 }
 
 export function createEngineRuntime(deps: EngineRuntimeDeps): EngineRuntime {
@@ -55,7 +58,7 @@ export function createEngineRuntime(deps: EngineRuntimeDeps): EngineRuntime {
     crossover: createCrossoverLocator({ paths: deps.paths }),
     registry,
     switcher: createEngineSwitcher(),
-    fallback: createFallbackEngine({ paths: deps.paths }),
+    fallback: createFallbackEngine({ paths: deps.paths, aborts: deps.aborts }),
     deadlines: createLaunchDeadlines({ clock: deps.clock }),
     launchState: createLaunchEngineState(),
     launchSettings: createLaunchSettingsRegistry({

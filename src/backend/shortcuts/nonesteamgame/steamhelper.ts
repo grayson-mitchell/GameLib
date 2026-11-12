@@ -18,9 +18,13 @@ import {
   steamDBBaseURL
 } from './constants'
 import type { HostServices } from 'backend/host'
+import type { ShortcutsDeps } from '../utils'
 
 async function prepareImagesForSteam(
-  deps: { imageTools: Pick<HostServices['imageTools'], 'createFromDataURL'> },
+  deps: {
+    imageTools: Pick<HostServices['imageTools'], 'createFromDataURL'>
+    aborts: ShortcutsDeps['aborts']
+  },
   props: {
     steamUserConfigDir: string
     appID: {
@@ -95,7 +99,7 @@ async function prepareImagesForSteam(
   for (const [key, imgUrl] of images) {
     if (!checkImageExistsAlready(key) && imgUrl) {
       if (imgUrl.startsWith('http')) {
-        const error = await downloadImage(imgUrl, key)
+        const error = await downloadImage(deps, imgUrl, key)
         if (error) {
           errors.push(error)
         }

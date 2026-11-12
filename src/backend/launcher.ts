@@ -1,3 +1,4 @@
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import {
   GameInfo,
   Runner,
@@ -124,6 +125,8 @@ export interface LauncherDeps extends DialogBoxDeps {
   /** The boot-owned engine runtime and the path roots the engine reads (66.4-05). */
   engineRuntime: EngineServicesSource['engineRuntime']
   paths: EngineServicesSource['paths']
+  /** The boot-owned abort registry the tool downloads and known-fix overlay downloads register in (66.4-13). */
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>
   /** The Steam bottle slice the Steam Wine-tool resolver reads (66.3-15). */
   steamBottle: EngineServicesSource['steamBottle']
   steamLaunchRuntime: EngineServicesSource['steamLaunchRuntime']
@@ -151,6 +154,7 @@ function engineSource(deps: LauncherDeps): EngineServicesSource {
     libraryManagers: deps.libraryManagers,
     commandRunner: deps.commandRunner,
     spawnAsync: deps.spawnAsync,
+    aborts: deps.aborts,
     config: deps.config,
     gameConfigs: deps.gameConfigs,
     appInfo: deps.appInfo,
@@ -1015,6 +1019,7 @@ async function prepareWineLaunch(
       ? {}
       : getKnownFixesEnvVariables(gameInfo.app_name, gameInfo.runner)
   const knownFixEnv = await knownFixProfileOverlayEnv(
+    deps,
     gameInfo.app_name,
     gameInfo.runner,
     gameSettings,

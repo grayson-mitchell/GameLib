@@ -68,7 +68,13 @@ function makeDeps(
     }
   }
   const { epochs, outcomes } = createTestSignInProbe()
-  return { registrations, stores: fakeVerdictStores, epochs, outcomes }
+  return {
+    registrations,
+    stores: fakeVerdictStores,
+    epochs,
+    outcomes,
+    aborts: { call: () => undefined }
+  }
 }
 
 function realpathOfNearestAncestor(target: string): string {

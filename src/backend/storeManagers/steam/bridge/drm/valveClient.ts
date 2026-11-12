@@ -12,7 +12,7 @@
  *
  * Sidecar exit contract: nothing runs at import or boot. Every network wait
  * is bounded by an unref'd deadline and registered with the app abort
- * handler, so `callAllAbortControllers()` at stdin EOF ends it. The unzip
+ * handler, so `aborts.abortAll()` at stdin EOF ends it. The unzip
  * child is unref'd and killed on its own deadline.
  *
  * Must NOT import backend/launcher or backend/utils statically (utils imports
@@ -30,10 +30,7 @@ import { pipeline } from 'stream/promises'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { ProcessRunner } from 'backend/process/types'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
-import {
-  createAbortController,
-  deleteAbortController
-} from 'backend/utils/aborthandler/aborthandler'
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { buildDrmPaths } from './drmPaths'
 import { drmStepError, type DrmStepResult } from './steamclientLayerMode'
 
@@ -327,11 +324,12 @@ class ExternalAbortError extends Error {
 }
 
 async function downloadBounded<T>(
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>,
   abortId: string,
   run: (signal: AbortSignal) => Promise<T>,
   timeoutMs: number
 ): Promise<T> {
-  const controller = createAbortController(abortId)
+  const controller = aborts.create(abortId)
   let timedOut = false
   const timer = setTimeout(() => {
     timedOut = true
@@ -355,7 +353,7 @@ async function downloadBounded<T>(
     return await Promise.race([fetching, aborted])
   } finally {
     clearTimeout(timer)
-    deleteAbortController(abortId)
+    aborts.delete(abortId)
   }
 }
 
@@ -493,7 +491,8 @@ function errText(err: unknown): string {
 async function installOnce(
   paths: NonNullable<ReturnType<typeof buildDrmPaths>>,
   deps: ValveClientDeps,
-  runUnzipOnRunner: ValveUnzipRunner
+  runUnzipOnRunner: ValveUnzipRunner,
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>
 ): Promise<DrmStepResult<ValveClientReady>> {
   const root = paths.valveClientRoot
   const fetchText = deps.fetchText ?? defaultFetchText
@@ -531,6 +530,7 @@ async function installOnce(
       if (!url) continue
       try {
         manifestText = await downloadBounded(
+          aborts,
           'drm-valve-client:manifest',
           (signal) =>
             fetchText(url, { signal, maxBytes: MAX_VALVE_MANIFEST_BYTES }),
@@ -573,6 +573,7 @@ async function installOnce(
       try {
         await fsp.rm(zipPath, { force: true })
         await downloadBounded(
+          aborts,
           'drm-valve-client:package',
           (signal) => fetchToFile(url, zipPath, { signal, maxBytes: pkg.size }),
           deps.packageTimeoutMs ?? VALVE_PACKAGE_TIMEOUT_MS
@@ -723,6 +724,8 @@ async function installOnce(
  */
 export function createValveClient(deps: {
   runner: Pick<ProcessRunner, 'run'>
+  /** The boot-owned abort registry the Valve client downloads register in (66.4-13). */
+  aborts: Pick<AbortRegistry, 'create' | 'delete'>
 }) {
   const inFlight = new Map<string, Promise<DrmStepResult<ValveClientReady>>>()
   const runUnzipOnRunner = createRunUnzip(deps)
@@ -740,7 +743,7 @@ export function createValveClient(deps: {
       if (!paths) return drmStepError('valve-fetch', 'invalid app folder')
       const pending = inFlight.get(paths.valveClientRoot)
       if (pending) return await pending
-      const run = installOnce(paths, stepDeps, runUnzipOnRunner)
+      const run = installOnce(paths, stepDeps, runUnzipOnRunner, deps.aborts)
         .then((result) => {
           if (result.status === 'error') {
             logWarning(

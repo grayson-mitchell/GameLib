@@ -20,10 +20,7 @@ import {
   type DetectedFix,
   type ReportDeps
 } from '../knownFixReport'
-import {
-  callAllAbortControllers,
-  hasAbortController
-} from '../utils/aborthandler/aborthandler'
+import { createAbortRegistry } from '../utils/aborthandler/aborthandler'
 import { parseKnownFixReport } from 'common/knownFixReport'
 import { logInfo } from '../logger'
 import { defined } from './helpers/defined'
@@ -37,7 +34,9 @@ type PostCall = { url: string; body: unknown; signal: AbortSignal }
 function makeDeps(over: Partial<ReportDeps> = {}) {
   const calls: PostCall[] = []
   const store = new Map<string, unknown>()
+  const aborts = createAbortRegistry()
   const deps: ReportDeps = {
+    aborts,
     post: (url, body, signal) => {
       calls.push({ url, body, signal })
       return Promise.resolve({ status: 200, data: { status: 'created' } })
@@ -54,7 +53,7 @@ function makeDeps(over: Partial<ReportDeps> = {}) {
     relayUrl: () => 'http://relay.test/v1/reports',
     ...over
   }
-  return { deps, calls, store }
+  return { deps, calls, store, aborts }
 }
 
 const addArch: DetectedFix = {
@@ -122,7 +121,8 @@ const realDeps = () =>
   knownFixReportDeps({
     stores: { steam: { steamKnownFixReportStore: new Map() } },
     appInfo: { version: '0.8.0' },
-    config: { getSettings: () => mockSettings }
+    config: { getSettings: () => mockSettings },
+    aborts: createAbortRegistry()
   } as never)
 
 describe('gate with the real default deps (D-09)', () => {
@@ -327,18 +327,18 @@ describe('abort', () => {
       })
     }
 
-  it('is registered in flight, aborted by callAllAbortControllers, then released', async () => {
+  it('is registered in flight, aborted by aborts.abortAll, then released', async () => {
     const calls: PostCall[] = []
-    const { deps, store } = makeDeps({ post: hanging(calls) })
+    const { deps, store, aborts } = makeDeps({ post: hanging(calls) })
     const run = runKnownFixReport(addArch, deps)
     await new Promise((r) => setImmediate(r))
-    expect(hasAbortController(id)).toBe(true)
+    expect(aborts.has(id)).toBe(true)
     expect(await runKnownFixReport(addArch, deps)).toBe('in-flight')
     expect(calls).toHaveLength(1)
-    callAllAbortControllers()
+    aborts.abortAll()
     expect(await run).toBe('retryable')
     expect(store.size).toBe(0)
-    expect(hasAbortController(id)).toBe(false)
+    expect(aborts.has(id)).toBe(false)
   })
 
   it('reportDetectedFix returns undefined synchronously and never throws', () => {

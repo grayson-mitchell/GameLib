@@ -18,9 +18,12 @@ import {
   type DrmLaunchSetupInput
 } from '../drmLaunchSetup'
 
+import { createAbortRegistry } from 'backend/utils/aborthandler/aborthandler'
+
 // Every step is an injected fake, so the instance's runner is never reached.
 const { drmLaunchSetup, prefetchDrmDownloads } = createSteamDrm({
-  runner: createScriptedRunner([])
+  runner: createScriptedRunner([]),
+  aborts: createAbortRegistry()
 })
 
 jest.mock('../../../bridgeBottleLifecycle', () => ({

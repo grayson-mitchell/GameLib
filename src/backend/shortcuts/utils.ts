@@ -7,7 +7,7 @@ import type { GlobalConfigSlice } from 'backend/config'
 import type { AppPaths } from 'backend/process/context'
 import type { HostServices } from 'backend/host'
 import { downloadFile } from 'backend/utils'
-import { createAbortController } from 'backend/utils/aborthandler/aborthandler'
+import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { heroicIconFolder as iconsFolder } from 'backend/constants/paths'
 import { logWarning, LogPrefix } from 'backend/logger'
 
@@ -26,6 +26,7 @@ function createImage(
 }
 
 async function downloadImage(
+  deps: Pick<ShortcutsDeps, 'aborts'>,
   imageURL: string,
   outputFilePath: string
 ): Promise<string | undefined> {
@@ -33,7 +34,7 @@ async function downloadImage(
     await downloadFile({
       url: imageURL,
       dest: outputFilePath,
-      abortSignal: createAbortController(imageURL).signal
+      abortSignal: deps.aborts.create(imageURL).signal
     })
   } catch (error) {
     return `Donwloading of ${imageURL} failed with:\n${String(error)}`
@@ -68,6 +69,8 @@ export interface ShortcutsDeps {
   libraryManagers: Pick<ManagerDeps['libraryManagers'], 'gog'>
   /** Runs powershell.exe (the .lnk writer) and reg.exe (the redirected Desktop folder) on win32. */
   runner: Pick<ManagerDeps['runner'], 'run'>
+  /** The boot-owned abort registry the icon and artwork downloads register in (66.4-13). */
+  aborts: Pick<AbortRegistry, 'create'>
   /** The Add-to-Steam and shortcut settings flags (66.3-06). */
   config: Pick<GlobalConfigSlice, 'getSettings'>
   /** The shell exe and the Desktop / Start Menu folders the shortcut files are written under. */
@@ -121,7 +124,7 @@ async function getIcon(
       return undefined
     }
 
-    const error = await downloadImage(image, icon)
+    const error = await downloadImage(deps, image, icon)
     if (error) {
       logWarning(
         [`Couldn't download icon for ${appName} with:`, error],

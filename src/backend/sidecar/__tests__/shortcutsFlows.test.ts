@@ -131,6 +131,7 @@ jest.mock('backend/store_backend', () => ({
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { createTestInfoCaches } from 'backend/testUtils/testEpicAmazonRuntimes'
+import { createTestAbortRegistry } from 'backend/testUtils/testAbortRegistry'
 import { defined } from 'backend/testUtils/indexed'
 import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
 import {
@@ -282,6 +283,7 @@ const ipc = createIpcRegistry()
 const { handlerRegistry, listenerRegistry } = ipcViews(ipc)
 registerShortcutsFlows({
   ipc,
+  aborts: createTestAbortRegistry(),
   managers: createTestManagers({
     library: {
       legendary: { getGame: (...a: [string]) => mockGetGame(...a) },

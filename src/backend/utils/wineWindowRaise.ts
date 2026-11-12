@@ -17,6 +17,7 @@
  * (count-of-pids, pids..., names...), so a hostile exe name cannot alter it.
  */
 import type { SpawnAsync } from 'backend/services/types'
+import type { Clock, TimerHandle } from 'backend/process/types'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 
@@ -53,18 +54,6 @@ const RAISE_SCRIPT = [
   'end run'
 ].join('\n')
 
-let cancelled = false
-const activeTimers = new Set<ReturnType<typeof setTimeout>>()
-
-/** Test-only: cancel in-flight raises and clear every tracked timer. */
-export function __stopWineWindowRaises(): void {
-  cancelled = true
-  for (const handle of activeTimers) {
-    clearTimeout(handle)
-  }
-  activeTimers.clear()
-}
-
 /** `C:\Games\X\X.exe -arg` -> `X.exe`; null when there is no `.exe`. */
 export function windowsExeNameFromCommand(command: string): string | null {
   const idx = command.toLowerCase().indexOf('.exe')
@@ -80,71 +69,96 @@ export interface WindowRaiseDeps {
   spawnAsync: SpawnAsync
 }
 
-export async function raiseWineGameWindow(
-  deps: WindowRaiseDeps,
-  opts: {
-    context: string
-    pids?: string[]
-    processNames?: string[]
+/**
+ * The window raiser of one boot (D-05, 66.4-13): the cancel flag and the live raise timers are closure
+ * state, built by the 'abort-registry' boot step. Timers run on the injected clock (unref'd).
+ * No timer is armed at construction.
+ */
+export function createWineWindowRaiser(raiserDeps: { clock: Clock }) {
+  let cancelled = false
+  const activeTimers = new Set<TimerHandle>()
+
+  /** Cancel in-flight raises and clear every tracked timer. */
+  function stop(): void {
+    cancelled = true
+    for (const handle of activeTimers) {
+      raiserDeps.clock.clear(handle)
+    }
+    activeTimers.clear()
   }
-): Promise<void> {
-  const { context } = opts
-  try {
-    if (!isMac) return
-    const pids = (opts.pids ?? []).filter((p) => /^\d+$/.test(p))
-    const names = (opts.processNames ?? []).filter((n) => n.length > 0)
-    if (pids.length === 0 && names.length === 0) return
 
-    cancelled = false
-    const args = ['-e', RAISE_SCRIPT, String(pids.length), ...pids, ...names]
-    const prefix = `raiseWineGameWindow [${context}]:`
-
-    const sleep = (ms: number) =>
-      new Promise<void>((resolve) => {
-        const handle = setTimeout(() => {
-          activeTimers.delete(handle)
-          resolve()
-        }, ms)
-        activeTimers.add(handle)
-        handle.unref?.()
-      })
-    const tryRaise = async (): Promise<string | null> => {
-      try {
-        const { stdout } = await deps.spawnAsync('osascript', args)
-        const out = stdout.trim()
-        return out && out !== 'none' ? out : null
-      } catch (error) {
-        logWarning([`${prefix} osascript raise failed`, error], LogPrefix.Steam)
-        return null
-      }
+  async function raise(
+    deps: WindowRaiseDeps,
+    opts: {
+      context: string
+      pids?: string[]
+      processNames?: string[]
     }
+  ): Promise<void> {
+    const { context } = opts
+    try {
+      if (!isMac) return
+      const pids = (opts.pids ?? []).filter((p) => /^\d+$/.test(p))
+      const names = (opts.processNames ?? []).filter((n) => n.length > 0)
+      if (pids.length === 0 && names.length === 0) return
 
-    let raised: string | null = null
-    for (let attempt = 0; attempt < MAX_ATTEMPTS && !raised; attempt++) {
-      if (cancelled) return
-      if (attempt > 0) {
-        await sleep(ATTEMPT_SPACING_MS)
+      cancelled = false
+      const args = ['-e', RAISE_SCRIPT, String(pids.length), ...pids, ...names]
+      const prefix = `raiseWineGameWindow [${context}]:`
+
+      const sleep = (ms: number) =>
+        new Promise<void>((resolve) => {
+          const handle = raiserDeps.clock.setTimeout(() => {
+            activeTimers.delete(handle)
+            resolve()
+          }, ms)
+          activeTimers.add(handle)
+        })
+      const tryRaise = async (): Promise<string | null> => {
+        try {
+          const { stdout } = await deps.spawnAsync('osascript', args)
+          const out = stdout.trim()
+          return out && out !== 'none' ? out : null
+        } catch (error) {
+          logWarning(
+            [`${prefix} osascript raise failed`, error],
+            LogPrefix.Steam
+          )
+          return null
+        }
+      }
+
+      let raised: string | null = null
+      for (let attempt = 0; attempt < MAX_ATTEMPTS && !raised; attempt++) {
         if (cancelled) return
+        if (attempt > 0) {
+          await sleep(ATTEMPT_SPACING_MS)
+          if (cancelled) return
+        }
+        raised = await tryRaise()
       }
-      raised = await tryRaise()
-    }
 
-    if (raised) {
-      logInfo(`${prefix} raised (${raised})`, LogPrefix.Steam)
-      if (cancelled) return
-      await sleep(SETTLE_MS)
-      if (cancelled) return
-      await tryRaise()
-    } else if (!cancelled) {
+      if (raised) {
+        logInfo(`${prefix} raised (${raised})`, LogPrefix.Steam)
+        if (cancelled) return
+        await sleep(SETTLE_MS)
+        if (cancelled) return
+        await tryRaise()
+      } else if (!cancelled) {
+        logWarning(
+          `${prefix} no matching process after ${MAX_ATTEMPTS} attempts (pids=${pids.join(',')} names=${names.join(',')})`,
+          LogPrefix.Steam
+        )
+      }
+    } catch (error) {
       logWarning(
-        `${prefix} no matching process after ${MAX_ATTEMPTS} attempts (pids=${pids.join(',')} names=${names.join(',')})`,
+        [`raiseWineGameWindow [${context}]: failed`, error],
         LogPrefix.Steam
       )
     }
-  } catch (error) {
-    logWarning(
-      [`raiseWineGameWindow [${context}]: failed`, error],
-      LogPrefix.Steam
-    )
   }
+
+  return { raise, stop }
 }
+
+export type WineWindowRaiser = ReturnType<typeof createWineWindowRaiser>
