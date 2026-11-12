@@ -219,35 +219,70 @@ logger sink, 2, and the boot entry, 1), the sanctioned list is exactly the runne
 `OWNED_66_3` files is absent from the census. `diPhaseGates.test.ts` pins all of it, plus the absence
 of any interim scaffolding under `src/`. The moduleState section is still a ceiling, not a ban.
 
+## 66.4 outcome
+
+**Numbers:** the long tail is at zero (127 sites in 85 files at the start of 66.4, all converted or
+frozen). The census holds exactly the 3 sanctioned sites: `logger/index.ts` 2 (writer and sink state,
+configured once at boot), `sidecar/bootstrap.ts` 1 (the boot entry's one-shot latch), and `process/runner.ts`
+0 (the runner holds no state; it is only the one child_process importer).
+
+**The census is a test, not a ceiling (D-66.4-02):** `src/backend/__tests__/moduleStateCensus.test.ts`
+runs the D-06 census and asserts zero sites outside a literal `SANCTIONED` object with exact counts.
+The `moduleState` section is deleted from `meta/backendDiCeilings.cjs` and every shard; a shard that
+still carries the key fails `loadShards`. `census().moduleState` and `listModuleStateSites()` stay exported
+for the test. `jestMock` is still a ceiling (D-66.3 / D-66.4-03).
+
+**Latch decision (D-66.4-01):** the five once-only latches (`devEpicCookieSweepRegistration`,
+`runnerAuthFlowRegistration`, `shortcutsFlowRegistration`, `wineToolsFlowRegistration`,
+`storeWriteHandlers`) were converted, not sanctioned. Single-run belongs to the boot (each registration
+runs from one named step once per process), so a second call is a bug the boot-shape test catches rather
+than a state variable that hides it. Sanctioning five more files would have widened the list the census
+test treats as a reviewed decision.
+
+**New boot steps, one line each:** `app-folder` (first step: heroic -> GameLib rename and the CI=e2e app
+folder); `stores` (builds the `StoreRoot` from `ctx.paths.userData`); `engine-runtime`; the Steam launch,
+bridge and install runtimes; the GOG, Legendary and Nile runtimes; `info-caches` (system info and
+HowLongToBeat); `abort-registry` (abort controllers and the Wine window raiser); the tools state;
+`app-shell-state` (before `register-handlers`); `app-runtime` (event bus, frontend-ready flag, launch
+single-flight, image dedupe, CrossOver index backoff); and the misc runtime (metadata push, Mac arch prompt
+chain, CheapShark cache). `StoreRoot` is `{ userData, cells, changes }`: the persistent-store directory, the
+shared file cells and the renderer-push channel, built once per boot and passed to every store.
+
+**The paths move:** `ctx.paths` carries the full derived set from a pure `derivePaths(roots)`;
+`resolveAppPaths` in the boot supplies the roots. `backend/constants/paths.ts`, `sidecar/pathShim.ts`,
+`steam/bottleDirs.ts` and `testUtils/pathShimPaths.ts` are deleted and `diPhaseGates.test.ts` pins that
+nothing under `src/` or `meta/` imports them.
+
 ## Hand-off to 66.4
+
+All of it done in 66.4 except the live items; status below.
 
 Phase 66.4 owns:
 
-- **The long tail:** about 85 files / 127 sites of module state still counted by the census, and the
+- **The long tail (done, 66.4-04..19):** about 85 files / 127 sites of module state still counted by the census, and the
   census-to-test flip (D-13/D-16): turn the moduleState ceilings into a zero-tolerance test and delete
   the section.
-- **D-66.2-03 deferrals:** the `utils.ts` `default*Path` lets, the `tools/index.ts` caches
+- **D-66.2-03 deferrals (done, 66.4-12 and 66.4-14):** the `utils.ts` `default*Path` lets, the `tools/index.ts` caches
   (`installingComponent`, `catalogCache`, `scriptMetadataCache`), `engineNoticeStore` and the two `pci_ids`
   stores. (The win32 sync fallback in `knownFolders` and `pathShim` was retired in quick 261111-aq4:
   `resolveKnownFolder`'s win32 arms throw, and the two callers use the registry folder or go
   without it.)
-- **Module-scope pathShim reads introduced as cascade edits:** `constants/paths.ts` (`configFolder`,
+- **Module-scope pathShim reads introduced as cascade edits (done, 66.4-03..20):** `constants/paths.ts` (`configFolder`,
   `userDataPath`, `publicDir` from `GAMELIB_APP_ROOT`/`isPackagedSidecar()`), `steam/constants.ts`
   (`steamSupportPath`). (Done in 66.4-20: `constants/paths.ts`, `sidecar/pathShim.ts` and the Steam
   `bottleDirs.ts` shim are deleted. `process/appPaths.ts` derives every path from explicit roots,
   `resolveAppPaths` in the boot supplies them, and the heroic -> GameLib rename plus the CI=e2e app
   folder run in the first boot step, `app-folder`.)
-- **Latches that survive by design for now:** the module-level `registered` / `currentRegistry` guards in
+- **Latches (done, 66.4-19: converted, D-66.4-01; originally listed as surviving):** the module-level `registered` / `currentRegistry` guards in
   `devEpicCookieSweep`, `runnerAuth` and the store-layer registrations.
-- **D-66.3-05:** the live macOS smoke with the scripted orphan/exit checker.
-- **D-66.3-06:** the Windows operator UAT.
+- **D-66.3-05 (open until 66.4-22):** the live macOS smoke with the scripted orphan/exit checker.
+- **D-66.3-06 (open, operator):** the Windows operator UAT.
 - **D-66.3-07:** reviving the RunningAppID poller (done since: quick 261111-7wo, the `steam-running-poll` boot step).
 - **D-66.3-08:** the 66.2 Windows spawn-path live gate (passed since: quick 261111-5fw).
-- **D-17:** the non-autonomous live smoke.
+- **D-17 (open until 66.4-22/23):** the non-autonomous live smoke.
 
-Known loose ends recorded here rather than fixed: the quit-handler release of the anonymous Steam client
-has no unit test; `ElectronSteamGridDbSecretStore` is test-only dead code; `isMacSonomaOrHigher()` compares the Darwin kernel
-major (`os.release()`) with the macOS major 14, which is not the same number. Fixed since: `SteamUser.logout()`
+Known loose ends, status after 66.4: the quit-handler release of the anonymous Steam client has no unit test (still open; 66.4-16 did not pick it up); `ElectronSteamGridDbSecretStore` is test-only dead code (open); `isMacSonomaOrHigher()` compares the Darwin kernel
+major (`os.release()`) with the macOS major 14, which is not the same number (open: a behaviour change, out of scope for 66.4). Fixed since: `SteamUser.logout()`
 now calls `resetSteamAuthTrigger()` (quick 261112-7wv).
 
 ## Ratchets
@@ -255,4 +290,4 @@ now calls `resetSteamAuthTrigger()` (quick 261112-7wv).
 `pnpm backend-di-ceilings` counts module-level singletons, `jest.mock` sites
 and similar census items per shard in `meta/backendDiCeilings/`. Ceilings only
 shrink: when a conversion lowers a count, lower the shard entry in the same
-commit. Never raise a ceiling to admit growth. `childProcess` is now a ban, not a ceiling (66.2 D-16). The one exception is a census _definition_ change that starts counting state that already existed (e.g. 66.1 review C-WR-2 began counting non-readonly `static` class fields: moduleState 234 -> 251); that re-baseline must name every newly counted site and its owning phase in the same commit. 66.2-01 (C-05/WR-06) began counting jest.doMock/setMock/unstable_mockModule/destructured mock: jestMock 2402 -> 2438, sites: src/backend/**tests**/launcher_wineLibFolders.test.ts:+1, src/backend/**tests**/protocol.test.ts:+1, src/backend/sidecar/**tests**/appShellFlows.test.ts:+1, src/backend/sidecar/**tests**/humbleFlows.test.ts:+4, src/backend/sidecar/**tests**/isPackagedSidecar.test.ts:+5 (new entry), src/backend/sidecar/**tests**/wineToolsFlows.test.ts:+14, src/preload/**tests**/tauriAttach.test.ts:+10 (owning phase 66.2).
+commit. Never raise a ceiling to admit growth. `childProcess` is now a ban, not a ceiling (66.2 D-16), and `moduleState` is a zero-tolerance jest test (`moduleStateCensus.test.ts`, 66.4 D-66.4-02); only `jestMock` remains a ceiling (D-66.4-03). The one exception is a census _definition_ change that starts counting state that already existed (e.g. 66.1 review C-WR-2 began counting non-readonly `static` class fields: moduleState 234 -> 251); that re-baseline must name every newly counted site and its owning phase in the same commit. 66.2-01 (C-05/WR-06) began counting jest.doMock/setMock/unstable_mockModule/destructured mock: jestMock 2402 -> 2438, sites: src/backend/**tests**/launcher_wineLibFolders.test.ts:+1, src/backend/**tests**/protocol.test.ts:+1, src/backend/sidecar/**tests**/appShellFlows.test.ts:+1, src/backend/sidecar/**tests**/humbleFlows.test.ts:+4, src/backend/sidecar/**tests**/isPackagedSidecar.test.ts:+5 (new entry), src/backend/sidecar/**tests**/wineToolsFlows.test.ts:+14, src/preload/**tests**/tauriAttach.test.ts:+10 (owning phase 66.2).

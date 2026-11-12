@@ -384,10 +384,7 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
     containerCallResidual: () => string[]
     loadShards: () => {
       merged: {
-        sanctioned: Record<
-          string,
-          { kind: string; moduleState: number; childProcess: number }
-        >
+        sanctioned: Record<string, { kind: string; childProcess: number }>
       }
       failures: string[]
     }
@@ -445,21 +442,11 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
     expect(offenders).toEqual([])
   })
 
-  it('the sanctioned moduleState entries are exactly the logger sink and the boot entry (plus the runner)', () => {
+  it('the only sanctioned shard entry is the runner (module state is the 66.4 census test)', () => {
     const { merged, failures } = ceilings.loadShards()
     expect(failures).toEqual([])
-    const withState = Object.entries(merged.sanctioned)
-      .filter(([, e]) => e.moduleState > 0)
-      .map(([p, e]) => [p, e.moduleState, e.kind])
-      .sort()
-    expect(withState).toEqual([
-      ['src/backend/logger/index.ts', 2, 'logger-sink'],
-      ['src/backend/sidecar/bootstrap.ts', 1, 'boot-entry']
-    ])
-    expect(Object.keys(merged.sanctioned).sort()).toEqual([
-      'src/backend/logger/index.ts',
-      'src/backend/process/runner.ts',
-      'src/backend/sidecar/bootstrap.ts'
+    expect(Object.keys(merged.sanctioned)).toEqual([
+      'src/backend/process/runner.ts'
     ])
   })
 
@@ -478,15 +465,6 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
       expect(OWNED_66_3.some((f) => entry.startsWith(f + ':'))).toBe(false)
       expect(entry).not.toContain('/platform/')
     }
-  })
-
-  it('moduleState total is 3 (0 long tail + 3 sanctioned) once constants/paths.ts is gone (D-66.4-04): a ceiling, flipped to zero in 66.4', () => {
-    const total = Object.values(moduleStateOf()).reduce((a, b) => a + b, 0)
-    expect(total).toBe(3)
-    expect(Object.keys(moduleStateOf()).sort()).toEqual([
-      'src/backend/logger/index.ts',
-      'src/backend/sidecar/bootstrap.ts'
-    ])
   })
 
   // 66.4-20 (D-66.4-04 / D-66.4-05): the import-bound path sources are deleted, and nothing under
@@ -603,5 +581,191 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
       )
       .filter(([, tokens]) => tokens.length > 0)
     expect(offenders).toEqual([])
+  })
+})
+
+// 66.4 end state (plan 21): the long tail is at zero, the census is a jest test, the path shim is gone.
+describe('66.4 end state: long tail at zero, census is a test, path shim gone', () => {
+  // Every file the 66.4 conversion plans took off the census and that still exists (the 85 shard
+  // entries at the start of 66.4, less the two modules deleted outright).
+  const OWNED_66_4 = [
+    'src/backend/backend_events.ts',
+    'src/backend/crossover_index/fetcher.ts',
+    'src/backend/crossover_index/index.ts',
+    'src/backend/dialog/dialog.ts',
+    'src/backend/dialog/displayAck.ts',
+    'src/backend/engine/bottleLedger.ts',
+    'src/backend/engine/bottlePrimitives.ts',
+    'src/backend/engine/crossoverLocation.ts',
+    'src/backend/engine/engineNoticeStore.ts',
+    'src/backend/engine/engineRegistry.ts',
+    'src/backend/engine/engineSwitch.ts',
+    'src/backend/engine/fallbackEngine.ts',
+    'src/backend/engine/launchDeadline.ts',
+    'src/backend/engine/launchEngine.ts',
+    'src/backend/engine/launchSettings.ts',
+    'src/backend/engine/perGameBottle.ts',
+    'src/backend/gamedetails/overrides.ts',
+    'src/backend/images_cache.ts',
+    'src/backend/knownFixOverlayInstall.ts',
+    'src/backend/knownFixesFetcher.ts',
+    'src/backend/launchSingleFlight.ts',
+    'src/backend/macArch/recovery.ts',
+    'src/backend/protocol.ts',
+    'src/backend/runsForMe/index.ts',
+    'src/backend/sidecar/appShellFlowRegistration.ts',
+    'src/backend/sidecar/devEpicCookieSweepRegistration.ts',
+    'src/backend/sidecar/enrichmentFlowRegistration.ts',
+    'src/backend/sidecar/fileStore.ts',
+    'src/backend/sidecar/installedJsonWatcher.ts',
+    'src/backend/sidecar/ipcValidation.ts',
+    'src/backend/sidecar/outboundHttpRegistry.ts',
+    'src/backend/sidecar/runnerAuthFlowRegistration.ts',
+    'src/backend/sidecar/shortcutsFlowRegistration.ts',
+    'src/backend/sidecar/sidecarRpc.ts',
+    'src/backend/sidecar/storeWriteHandlers.ts',
+    'src/backend/sidecar/wineToolsFlowRegistration.ts',
+    'src/backend/store/storeEmbedSeam.ts',
+    'src/backend/storeManagers/gog/e2eMock.ts',
+    'src/backend/storeManagers/gog/library.ts',
+    'src/backend/storeManagers/gog/presence.ts',
+    'src/backend/storeManagers/gog/resumeProgress.ts',
+    'src/backend/storeManagers/gog/user.ts',
+    'src/backend/storeManagers/legendary/e2eMock.ts',
+    'src/backend/storeManagers/legendary/library.ts',
+    'src/backend/storeManagers/nile/e2eMock.ts',
+    'src/backend/storeManagers/nile/user.ts',
+    'src/backend/storeManagers/steam/bottleProcessMonitor.ts',
+    'src/backend/storeManagers/steam/bottledSteam.ts',
+    'src/backend/storeManagers/steam/bridge/allowlist.ts',
+    'src/backend/storeManagers/steam/bridge/bridgeRoute.ts',
+    'src/backend/storeManagers/steam/bridge/drm/runnerClone.ts',
+    'src/backend/storeManagers/steam/bridge/drm/runnerEntitlements.ts',
+    'src/backend/storeManagers/steam/bridge/interfaceVersions.ts',
+    'src/backend/storeManagers/steam/bridge/overlay/overlayLaunch.ts',
+    'src/backend/storeManagers/steam/bridge/overlay/overlayRunnerClone.ts',
+    'src/backend/storeManagers/steam/bridge/sharedRedistInstall.ts',
+    'src/backend/storeManagers/steam/bridgeBottle.ts',
+    'src/backend/storeManagers/steam/depot/appinfoOrder.ts',
+    'src/backend/storeManagers/steam/depot/cdnAuth.ts',
+    'src/backend/storeManagers/steam/depot/sharedRedist.ts',
+    'src/backend/storeManagers/steam/depotDecodeErrors.ts',
+    'src/backend/storeManagers/steam/depotErrors.ts',
+    'src/backend/storeManagers/steam/depotRust/jobRegistry.ts',
+    'src/backend/storeManagers/steam/gameDrmLaunch.ts',
+    'src/backend/storeManagers/steam/gameLaunchOverlay.ts',
+    'src/backend/storeManagers/steam/library/pollState.ts',
+    'src/backend/storeManagers/steam/library/restartHold.ts',
+    'src/backend/storeManagers/steam/library/uninstallPolling.ts',
+    'src/backend/storeManagers/steam/platformCapture.ts',
+    'src/backend/storeManagers/steam/tokenStore.ts',
+    'src/backend/storeManagers/steam/userTypes.ts',
+    'src/backend/storeMigrations/index.ts',
+    'src/backend/storeSearch/cheapshark.ts',
+    'src/backend/storeVersioning/engine.ts',
+    'src/backend/storeVersioning/readOnlyStores.ts',
+    'src/backend/tools/index.ts',
+    'src/backend/tools/winetricksEnvironment.ts',
+    'src/backend/utils.ts',
+    'src/backend/utils/aborthandler/aborthandler.ts',
+    'src/backend/utils/systeminfo/gpu/pci_ids.ts',
+    'src/backend/utils/systeminfo/index.ts',
+    'src/backend/utils/wineWindowRaise.ts',
+    'src/backend/wiki_game_info/howlongtobeat/utils.ts'
+  ] as const
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const ceilings = require('../../../meta/backendDiCeilings.cjs') as {
+    census: () => { moduleState: Record<string, number> }
+  }
+  const root = join(BACKEND, '..', '..')
+  let censusMemo: Record<string, number> | undefined
+  const moduleStateNow = (): Record<string, number> =>
+    (censusMemo ??= ceilings.census().moduleState)
+
+  /** True when text imports, requires, re-exports or mocks constants/paths or sidecar/pathShim. */
+  const importsPathModules = (text: string): boolean =>
+    /(?:from\s+|import\s*\(\s*|require\s*\(\s*|import\s+|jest\.\w+\s*\(\s*)['"][^'"]*(?:constants\/paths|sidecar\/pathShim|\.\/pathShim|\.\.\/pathShim)['"]/.test(
+      stripSourceComments(text)
+    )
+
+  it('importsPathModules fires on import/require forms and not on comments or siblings', () => {
+    expect(
+      importsPathModules("import { a } from 'backend/constants/paths'")
+    ).toBe(true)
+    expect(importsPathModules("import { a } from './pathShim'")).toBe(true)
+    expect(importsPathModules("const a = require('../sidecar/pathShim')")).toBe(
+      true
+    )
+    expect(importsPathModules("await import('backend/constants/paths')")).toBe(
+      true
+    )
+    expect(importsPathModules("jest.mock('backend/constants/paths')")).toBe(
+      true
+    )
+    expect(
+      importsPathModules("// import { a } from 'backend/constants/paths'")
+    ).toBe(false)
+    expect(
+      importsPathModules("import { a } from 'backend/constants/pathsExtra'")
+    ).toBe(false)
+    expect(importsPathModules("import { a } from './pathShimmer'")).toBe(false)
+    expect(
+      importsPathModules("import { a } from 'backend/constants/other'")
+    ).toBe(false)
+  })
+
+  it('the owned list is a full scan (floor)', () => {
+    expect(OWNED_66_4.length).toBeGreaterThanOrEqual(80)
+  })
+
+  it.each(OWNED_66_4)('%s is absent from the census', (file) => {
+    expect(moduleStateNow()[file]).toBeUndefined()
+  })
+
+  it('pathShim.ts and constants/paths.ts are gone and imported nowhere under src', () => {
+    expect(existsSync(join(root, 'src/backend/sidecar/pathShim.ts'))).toBe(
+      false
+    )
+    expect(existsSync(join(root, 'src/backend/constants/paths.ts'))).toBe(false)
+    const files = walk(join(root, 'src')).filter((f) =>
+      /\.(ts|tsx|js|cjs)$/.test(f)
+    )
+    expect(files.length).toBeGreaterThanOrEqual(1500)
+    const offenders = files
+      .filter(
+        (f) =>
+          f !== __filename &&
+          !/testContainment\.test\.ts$/.test(f) &&
+          !/steamclientLayerInstall\.test\.ts$/.test(f)
+      )
+      .filter((f) => importsPathModules(readFileSync(f, 'utf-8')))
+      .map((f) => relative(root, f))
+    expect(offenders).toEqual([])
+  })
+
+  it('the ceilings script has no moduleState section and no shard carries the key', () => {
+    const cjs = join(root, 'meta/backendDiCeilings.cjs')
+    const sections = /const SECTIONS = \[([^\]]*)\]/.exec(
+      readFileSync(cjs, 'utf-8')
+    )
+    expect(sections?.[1]).toBeDefined()
+    expect(sections?.[1]).not.toContain('moduleState')
+    const dir = join(root, 'meta/backendDiCeilings')
+    const shards = readdirSync(dir).filter((f) => f.endsWith('.json'))
+    expect(shards.length).toBeGreaterThan(0)
+    for (const name of shards)
+      expect(
+        Object.keys(JSON.parse(readFileSync(join(dir, name), 'utf-8')))
+      ).not.toContain('moduleState')
+  })
+
+  it('app-folder is the first boot step', () => {
+    const match = /export const BOOT_STEP_NAMES = \[([\s\S]*?)\] as const/.exec(
+      readFileSync(join(BACKEND, 'sidecar/bootstrap.ts'), 'utf-8')
+    )
+    const names = [...(match?.[1] ?? '').matchAll(/'([^']+)'/g)].map(
+      (m) => m[1]
+    )
+    expect(names[0]).toBe('app-folder')
   })
 })
