@@ -175,8 +175,12 @@ const launch = async ({
   const proceedToLaunch = async () => {
     // First handle update dialog if needed
     if (hasUpdate) {
-      const { ignoreGameUpdates } =
-        await window.api.requestGameSettings(appName)
+      // Steam bridge games get the single backend gate (updateLaunchPrompt.ts, D-04/D-06) and
+      // Steam-registered games get no GameLib prompt (D-07), so the inherited prompt would only
+      // stack a second box (74 UAT item 7).
+      const ignoreGameUpdates = isStore(runner, 'steam')
+        ? true
+        : (await window.api.requestGameSettings(appName)).ignoreGameUpdates
 
       if (ignoreGameUpdates) {
         // If updates are ignored, proceed to check launch options
