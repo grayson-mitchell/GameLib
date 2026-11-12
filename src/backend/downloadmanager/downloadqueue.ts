@@ -22,7 +22,8 @@ import { getSteamInstallSize } from 'backend/storeManagers/steam/gameRequirement
 import { deleteCancelledSteamInstall } from 'backend/storeManagers/steam/cancelDelete'
 import { steamQueueHeadAlreadyInstalled } from 'backend/storeManagers/steam/queueHeadRevalidation'
 import { existsSync } from 'fs'
-import { gogRedistPath } from 'backend/storeManagers/gog/constants'
+import type { AppPaths } from 'backend/process/context'
+import { deriveGogPaths } from 'backend/storeManagers/gog/constants'
 import type { OnlineMonitor } from 'backend/online_monitor'
 import type {
   SteamSessionServices,
@@ -49,7 +50,8 @@ export interface DownloadQueueDeps extends DialogBoxDeps, NotifyDeps {
   /** The boot-owned engine runtime and path roots the bridge-bottle settings read (66.4-05). */
   engineRuntime: BottleSettingsDeps['engineRuntime']
   steamLaunchRuntime: BottleSettingsDeps['steamLaunchRuntime']
-  paths: BottleSettingsDeps['paths']
+  paths: BottleSettingsDeps['paths'] &
+    Pick<AppPaths, 'appFolder' | 'toolsPath' | 'userData' | 'gamesConfigPath'>
 }
 
 export function createDownloadQueue(deps: DownloadQueueDeps) {
@@ -344,10 +346,14 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
             'dependencies' in installInfo.manifest
           ) {
             const newDependencies = installInfo.manifest.dependencies || []
-            if (newDependencies?.length || !existsSync(gogRedistPath)) {
+            if (
+              newDependencies?.length ||
+              !existsSync(deriveGogPaths(deps.paths).gogRedistPath)
+            ) {
               // create redist element
               const redistElement = createRedistDMQueueElement({
-                libraryManagers: deps.managers.library
+                libraryManagers: deps.managers.library,
+                paths: deps.paths
               })
               redistElement.params.dependencies = newDependencies
               elements.push(redistElement)

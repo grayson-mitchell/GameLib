@@ -113,13 +113,13 @@ describe('storeLaunchHooks', () => {
 
   test('gog setPresence sets the current game then awaits setPresence', async () => {
     await storeLaunchHooks.gog.setPresence!('a1')
-    expect(setCurrentGameMock).toHaveBeenCalledWith('a1')
+    expect(setCurrentGameMock).toHaveBeenCalledWith(expect.anything(), 'a1')
     expect(setPresenceMock).toHaveBeenCalledTimes(1)
   })
 
   test('gog clearPresence sets the empty game then awaits setPresence', async () => {
     await storeLaunchHooks.gog.clearPresence!()
-    expect(setCurrentGameMock).toHaveBeenCalledWith('')
+    expect(setCurrentGameMock).toHaveBeenCalledWith(expect.anything(), '')
     expect(setPresenceMock).toHaveBeenCalledTimes(1)
   })
 

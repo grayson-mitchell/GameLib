@@ -14,20 +14,25 @@ import { DMQueueElement } from 'common/types'
 import { GOGUser } from './user'
 import type { GOGManagerDeps } from './library'
 import { axiosClient } from 'backend/utils'
-import { gogdlConfigPath, gogRedistPath } from './constants'
-import { gamesConfigPath } from 'backend/constants/paths'
+import { deriveGogPaths } from './constants'
 import LogWriter from '../../logger/log_writer'
 
 /** What the redist helpers read: the gog stores and the manager map. */
 export type RedistDeps = Pick<
   GOGManagerDeps,
   'stores' | 'libraryManagers' | 'getDownloadQueue' | 'config' | 'onlineMonitor'
->
+> & {
+  paths: Pick<
+    GOGManagerDeps['paths'],
+    'appFolder' | 'toolsPath' | 'userData' | 'gamesConfigPath'
+  >
+}
 
 export async function checkForRedistUpdates(deps: RedistDeps) {
   if (!GOGUser.isLoggedIn(deps) || !deps.onlineMonitor.isOnline()) {
     return
   }
+  const { gogRedistPath } = deriveGogPaths(deps.paths)
   const manifestPath = path.join(gogRedistPath, '.gogdl-redist-manifest')
   let shouldUpdate = false
   if (existsSync(manifestPath)) {
@@ -36,7 +41,7 @@ export async function checkForRedistUpdates(deps: RedistDeps) {
       const fileData = await readFile(manifestPath, { encoding: 'utf8' })
       const manifest: GOGRedistManifest = JSON.parse(fileData)
 
-      const requiredRedistList = await getRequiredRedistList()
+      const requiredRedistList = await getRequiredRedistList(deps)
       const requiredRedist = requiredRedistList.filter((redist) => {
         const foundRedist = manifest.depots.find(
           (dep) => dep.dependencyId === redist
@@ -112,14 +117,14 @@ async function pushRedistUpdateToQueue(deps: RedistDeps) {
 }
 
 export function createRedistDMQueueElement(
-  deps: Pick<RedistDeps, 'libraryManagers'>
+  deps: Pick<RedistDeps, 'libraryManagers' | 'paths'>
 ): DMQueueElement {
   const gameInfo = deps.libraryManagers.gog.getGame('gog-redist').getGameInfo()
   const newElement: DMQueueElement = {
     params: {
       appName: 'gog-redist',
       runner: 'gog',
-      path: gogRedistPath,
+      path: deriveGogPaths(deps.paths).gogRedistPath,
       platformToInstall: 'windows',
       gameInfo,
       size: '?? MB'
@@ -132,10 +137,15 @@ export function createRedistDMQueueElement(
   return newElement
 }
 
-export async function getRequiredRedistList(): Promise<string[]> {
+export async function getRequiredRedistList(
+  deps: Pick<RedistDeps, 'paths'>
+): Promise<string[]> {
   // Scan manifests in gogdl directory to obtain list of redist that will be
   // required
-  const manifestsDir = path.join(gogdlConfigPath, 'manifests')
+  const manifestsDir = path.join(
+    deriveGogPaths(deps.paths).gogdlConfigPath,
+    'manifests'
+  )
   if (!existsSync(manifestsDir)) {
     return ['ISI']
   }
@@ -183,14 +193,15 @@ export async function getRequiredRedistList(): Promise<string[]> {
 }
 
 export async function updateRedist(
-  deps: Pick<RedistDeps, 'libraryManagers' | 'config'>,
+  deps: Pick<RedistDeps, 'libraryManagers' | 'config' | 'paths'>,
   redistToSync: string[]
 ): Promise<{
   status: 'done' | 'error'
 }> {
   const { maxWorkers } = deps.config.getSettings()
   const workers = maxWorkers ? ['--max-workers', `${maxWorkers}`] : []
-  const logPath = path.join(gamesConfigPath, 'gog-redist.log')
+  const logPath = path.join(deps.paths.gamesConfigPath, 'gog-redist.log')
+  const { gogRedistPath } = deriveGogPaths(deps.paths)
 
   const commandParts = [
     'redist',

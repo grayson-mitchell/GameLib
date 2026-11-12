@@ -111,6 +111,7 @@ import { createEngineState } from '../engine/engineState'
 import { createEngineRuntime } from '../engine/engineRuntime'
 import { createSteamLaunchRuntime } from '../storeManagers/steam/steamLaunchRuntime'
 import { createBridgeRuntime } from '../storeManagers/steam/bridge/bridgeRuntime'
+import { createGogRuntime } from '../storeManagers/gog/gogRuntime'
 import { createSteamInstallRuntime } from '../storeManagers/steam/steamInstallRuntime'
 import { createWinetricksQueue } from '../tools/winetricksQueue'
 import { getInstallingComponent } from '../tools'
@@ -299,6 +300,7 @@ export const BOOT_STEP_NAMES = [
   'steam-launch-runtime',
   'steam-bridge-runtime',
   'steam-install-runtime',
+  'gog-runtime',
   'winetricks-queue',
   'store-managers',
   'download-queue',
@@ -386,6 +388,12 @@ function gogPresenceDeps(state: BootState): GOGPresenceDeps {
     get onlineMonitor() {
       return requireServices(state).onlineMonitor
     },
+    get gogRuntime() {
+      return requireServices(state).gogRuntime
+    },
+    get paths() {
+      return requireServices(state).paths
+    },
     stores: {
       get gog() {
         return requireServices(state).stores.gog
@@ -450,6 +458,7 @@ function requireServices(state: BootState): BootServices {
     steamLaunchRuntime,
     bridgeRuntime,
     steamInstallRuntime,
+    gogRuntime,
     winetricksQueue,
     signInProbe,
     steamSession,
@@ -485,6 +494,7 @@ function requireServices(state: BootState): BootServices {
     !steamLaunchRuntime ||
     !bridgeRuntime ||
     !steamInstallRuntime ||
+    !gogRuntime ||
     !winetricksQueue ||
     !signInProbe ||
     !steamSession ||
@@ -521,6 +531,7 @@ function requireServices(state: BootState): BootServices {
         'steamLaunchRuntime',
         'bridgeRuntime',
         'steamInstallRuntime',
+        'gogRuntime',
         'winetricksQueue',
         'signInProbe',
         'steamSession',
@@ -559,6 +570,7 @@ function requireServices(state: BootState): BootServices {
     steamLaunchRuntime,
     bridgeRuntime,
     steamInstallRuntime,
+    gogRuntime,
     winetricksQueue,
     signInProbe,
     steamSession,
@@ -1829,6 +1841,19 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'gog-runtime',
+      // Builds the one GOG runtime of this boot (D-05, 66.4-10): the library and installed-game maps, the
+      // presence keep-alive slot, the resume-progress baselines, the credential cache with its single
+      // in-flight spawn and the e2e gogdl stub slot. Construction allocates empty maps and counters only:
+      // no I/O, no timer, no handle, so the sidecar exit contract holds; the presence interval is armed
+      // later by 'gog-presence' on the boot clock (unref'd). After 'steam-install-runtime' and before
+      // 'store-managers' so ManagerDeps carries it.
+      run: (ctx, _io, state) => {
+        state.services.gogRuntime =
+          prebuilt.gogRuntime ?? createGogRuntime({ clock: ctx.clock })
+      }
+    },
+    {
       name: 'winetricks-queue',
       // Builds the one winetricks apply queue of this boot (D-05, D-66.3-12). Construction does no
       // I/O and arms no timer: it only subscribes to the environment-report change signal. Before
@@ -1862,6 +1887,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           steamLaunchRuntime,
           bridgeRuntime,
           steamInstallRuntime,
+          gogRuntime,
           signInProbe,
           steamSession,
           tokenStore,
@@ -1887,6 +1913,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !steamLaunchRuntime ||
           !bridgeRuntime ||
           !steamInstallRuntime ||
+          !gogRuntime ||
           !signInProbe ||
           !steamSession ||
           !tokenStore ||
@@ -1932,6 +1959,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           steamLaunchRuntime,
           bridgeRuntime,
           steamInstallRuntime,
+          gogRuntime,
           signIn: signInProbe,
           steamSession,
           tokenStore,
@@ -2247,7 +2275,11 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         const services = requireServices(state)
         registerHandlers({ log: ctx.log, services })
         // e2e-only command stubs (66.3-07): each registers only when CI === 'e2e'.
-        registerGogdlStubListeners(services.host.ipc, { CI: process.env.CI })
+        registerGogdlStubListeners(
+          services.host.ipc,
+          { CI: process.env.CI },
+          services.gogRuntime.stubs
+        )
         registerLegendaryStubListeners(services.host.ipc, {
           CI: process.env.CI
         })
@@ -2591,7 +2623,9 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             appInfo: requireServices(state).appInfo,
             onlineMonitor: requireServices(state).onlineMonitor,
             stores: requireServices(state).stores,
-            libraryManagers: requireServices(state).managers.library
+            libraryManagers: requireServices(state).managers.library,
+            gogRuntime: requireServices(state).gogRuntime,
+            paths: requireServices(state).paths
           }
         })
       }
@@ -2694,7 +2728,9 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           appInfo: services.appInfo,
           steamUser: services.steamUser,
           humbleUser: services.humble.user,
-          onlineMonitor: services.onlineMonitor
+          onlineMonitor: services.onlineMonitor,
+          gogRuntime: services.gogRuntime,
+          paths: services.paths
         })
       }
     },

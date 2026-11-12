@@ -3,8 +3,9 @@
  * 2026-09-09-deletepresence-never-resets-interval-so-the-keepalive-cannot-re-arm.md,
  * quick-260910-drs).
  *
- * `presence.ts` declares `let interval` at module scope. `setPresence()` arms a 5-minute
- * keep-alive exactly once, guarded by `if (!interval)`. `deletePresence()` used to call
+ * The keep-alive handle lives on the boot's GogRuntime presence slot (66.4-10; it was a module
+ * `let interval`), armed on the injected clock. `setPresence()` arms a 5-minute
+ * keep-alive exactly once, guarded by the slot's `armKeepAlive()`. `deletePresence()` used to call
  * `clearInterval(interval)` without ever resetting `interval` back to a falsy value --
  * `clearInterval` does not mutate its argument, so `interval` stayed truthy forever and the
  * keep-alive could never re-arm after the first `deletePresence()` call in a process, even
@@ -28,10 +29,8 @@
  *     to Option B (teardown at the original post-guard site), this case goes RED because the
  *     timer survives and the module-scope `interval` stays live past a guarded call.
  *
- * Module-state ordering matters: `interval` is module scope and sticky across every test in this
- * file, which is why Case 1's lifecycle is written as ONE ordered `it` and placed first, and why
- * Case 3 re-requires a virgin module via `jest.isolateModules` rather than relying on Case 1/2's
- * already-armed-or-torn-down module state.
+ * Each case builds its own runtime on its own fake clock, so no case depends on another's
+ * armed-or-torn-down state and no real timer is ever armed.
  *
  * NO reference to the `node:os` specifier or `homedir`/`userInfo` anywhere in this file --
  * containment is already structural via `src/backend/jest.setupContainment.ts` (registered as
@@ -66,6 +65,8 @@ import { axiosClient } from 'backend/utils'
 import type { GOGPresenceDeps } from '../presence'
 import { GOGUser } from 'backend/storeManagers/gog/user'
 import gogPresence from '../presence'
+import { createFakeClock } from 'backend/testUtils/fakeClock'
+import { createTestGogRuntime } from 'backend/testUtils/testGogRuntime'
 
 type MockAxiosClient = {
   post: jest.Mock
@@ -75,15 +76,23 @@ const mockAxiosClient = axiosClient as unknown as MockAxiosClient
 const mockIsLoggedIn = jest.mocked(GOGUser).isLoggedIn
 const mockGetCredentials = jest.mocked(GOGUser).getCredentials
 
-// One deps object for every call: GOGUser is mocked, so the slice is never read.
 const mockGetSettings = jest.fn()
-const deps = {
-  stores: {},
-  libraryManagers: {},
-  appInfo: { version: '1.0.0' },
-  onlineMonitor: { isOnline: () => true, runOnceWhenOnline: jest.fn() },
-  config: { getSettings: mockGetSettings }
-} as unknown as GOGPresenceDeps
+// A fresh runtime on a fresh fake clock per case: GOGUser is mocked, so only the presence slot and
+// the settings/online reads are used.
+let clock = createFakeClock()
+let deps = makeDeps()
+
+function makeDeps(): GOGPresenceDeps {
+  clock = createFakeClock()
+  return {
+    stores: {},
+    libraryManagers: {},
+    appInfo: { version: '1.0.0' },
+    onlineMonitor: { isOnline: () => true, runOnceWhenOnline: jest.fn() },
+    config: { getSettings: mockGetSettings },
+    gogRuntime: createTestGogRuntime(clock)
+  } as unknown as GOGPresenceDeps
+}
 
 const FIVE_MINUTES_MS = 5 * 60 * 1000
 
@@ -110,56 +119,10 @@ function installDefaultMocks(): void {
   mockAxiosClient.delete.mockResolvedValue({ status: 204 })
 }
 
-interface IsolatedPresenceHarness {
-  presence: typeof gogPresence
-  axiosClient: MockAxiosClient
-  isLoggedIn: jest.Mock
-  getCredentials: jest.Mock
-}
-
-/**
- * `interval` is module scope in presence.ts and sticky across every test in this file that
- * imports the module at file scope (Case 1, Case 2's own baseline). Case 2 and Case 3 each need
- * a virgin `interval` unaffected by whatever an earlier case left armed or torn down, so each
- * gets its own fresh module copy via `jest.isolateModules` (mirrors
- * bootstrapWirings.test.ts's own single precedent use of this pattern) rather than relying on
- * file-scope import order. Exactly two call sites use this helper (Case 2, Case 3).
- */
-function loadIsolatedPresence(): IsolatedPresenceHarness {
-  let harness!: IsolatedPresenceHarness
-  jest.isolateModules(() => {
-    /* eslint-disable @typescript-eslint/no-require-imports */
-    const axiosClientHandle = require('backend/utils').axiosClient
-    const gogUserHandle = require('backend/storeManagers/gog/user').GOGUser
-    const presenceHandle = require('../presence').default
-    /* eslint-enable @typescript-eslint/no-require-imports */
-    harness = {
-      presence: presenceHandle,
-      axiosClient: axiosClientHandle,
-      isLoggedIn: gogUserHandle.isLoggedIn,
-      getCredentials: gogUserHandle.getCredentials
-    }
-  })
-
-  mockGetSettings.mockReturnValue({
-    disableGOGPresence: false,
-    disablePlaytimeSync: false
-  })
-  harness.isLoggedIn.mockReturnValue(true)
-  harness.getCredentials.mockResolvedValue(FAKE_CREDENTIALS)
-  harness.axiosClient.post.mockResolvedValue({ status: 204 })
-  harness.axiosClient.delete.mockResolvedValue({ status: 204 })
-
-  return harness
-}
-
 beforeEach(() => {
-  jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] })
+  jest.clearAllMocks()
+  deps = makeDeps()
   installDefaultMocks()
-})
-
-afterEach(() => {
-  jest.useRealTimers()
 })
 
 describe('todo 2026-09-09 -- GOG presence keep-alive re-arm after deletePresence()', () => {
@@ -176,7 +139,7 @@ describe('todo 2026-09-09 -- GOG presence keep-alive re-arm after deletePresence
 
     // A timer that survived teardown would fire here and produce an extra POST before the
     // re-arming call below -- prove it does not.
-    jest.advanceTimersByTime(FIVE_MINUTES_MS)
+    clock.advance(FIVE_MINUTES_MS)
     await Promise.resolve()
     expect(mockAxiosClient.post).toHaveBeenCalledTimes(1)
 
@@ -186,35 +149,34 @@ describe('todo 2026-09-09 -- GOG presence keep-alive re-arm after deletePresence
 
     // Behavioural proof the keep-alive is LIVE again: advancing 5 minutes produces an
     // ADDITIONAL, timer-driven POST -- not merely a truthy timer handle.
-    jest.advanceTimersByTime(FIVE_MINUTES_MS)
+    clock.advance(FIVE_MINUTES_MS)
     await new Promise(setImmediate)
     expect(mockAxiosClient.post).toHaveBeenCalledTimes(3)
   })
 
   // Case 2: guards against the opposite naive fix (unconditional setInterval on every call).
-  // Uses its own isolated module copy so its baseline is not contaminated by whatever Case 1
-  // left `interval` holding.
+  // Uses its own fresh runtime, so its baseline is not contaminated by Case 1.
   it('case 2 -- two consecutive setPresence() calls while a keep-alive is already live arm exactly ONE timer', async () => {
-    const { presence, axiosClient: isolatedAxiosClient } =
-      loadIsolatedPresence()
+    const presence = gogPresence
+    const isolatedAxiosClient = mockAxiosClient
 
     await presence.setPresence(deps)
     await presence.setPresence(deps)
     expect(isolatedAxiosClient.post).toHaveBeenCalledTimes(2)
 
-    jest.advanceTimersByTime(FIVE_MINUTES_MS)
+    clock.advance(FIVE_MINUTES_MS)
     await new Promise(setImmediate)
 
     // Exactly one additional, timer-driven POST -- not two.
     expect(isolatedAxiosClient.post).toHaveBeenCalledTimes(3)
   })
 
-  // Case 3: D-DRS-01 receipt. Also uses an isolated module copy so this case's `interval` state
+  // Case 3: D-DRS-01 receipt. Also uses a fresh runtime so this case's keep-alive state
   // does not depend on Case 1/2 having already run in this file, and does not leave a stray
   // timer behind for whatever test runs after it.
   it('case 3 -- D-DRS-01 receipt: a guarded deletePresence() call still tears down the live keep-alive (Option A hoists teardown above the guards)', async () => {
-    const { presence: isolatedPresence, axiosClient: isolatedAxiosClient } =
-      loadIsolatedPresence()
+    const isolatedPresence = gogPresence
+    const isolatedAxiosClient = mockAxiosClient
 
     // Arm the keep-alive under normal settings.
     await isolatedPresence.setPresence(deps)
@@ -248,7 +210,7 @@ describe('todo 2026-09-09 -- GOG presence keep-alive re-arm after deletePresence
     // above is still live and DOES fire here, producing a second POST once settings are
     // re-enabled -- that is the failure this case is designed to catch if D-DRS-01 is silently
     // reverted.)
-    jest.advanceTimersByTime(FIVE_MINUTES_MS)
+    clock.advance(FIVE_MINUTES_MS)
     await new Promise(setImmediate)
     expect(isolatedAxiosClient.post).toHaveBeenCalledTimes(1)
   })

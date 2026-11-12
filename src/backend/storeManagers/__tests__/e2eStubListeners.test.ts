@@ -1,10 +1,17 @@
 import { createIpcRegistry } from 'backend/sidecar/ipcRegistry'
-import { registerGogdlStubListeners } from '../gog/e2eMock'
+import { createGogdlStubs, registerGogdlStubListeners } from '../gog/e2eMock'
 import { registerLegendaryStubListeners } from '../legendary/e2eMock'
 import { registerNileStubListeners } from '../nile/e2eMock'
 
 const registrars = [
-  ['gog', registerGogdlStubListeners, 'setGogdlCommandStub'],
+  [
+    'gog',
+    (
+      ipc: Parameters<typeof registerGogdlStubListeners>[0],
+      env: Parameters<typeof registerGogdlStubListeners>[1]
+    ) => registerGogdlStubListeners(ipc, env, createGogdlStubs()),
+    'setGogdlCommandStub'
+  ],
   ['legendary', registerLegendaryStubListeners, 'setLegendaryCommandStub'],
   ['nile', registerNileStubListeners, 'setNileCommandStub']
 ] as const

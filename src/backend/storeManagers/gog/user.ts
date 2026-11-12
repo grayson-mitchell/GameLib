@@ -6,7 +6,7 @@ import type { GOGManagerDeps } from './library'
 import { GOGCredentials, UserData } from 'common/types/gog'
 import { clearCache } from 'backend/utils'
 import type { ClearCacheDeps } from 'backend/utils'
-import { gogdlAuthConfig } from './constants'
+import { deriveGogPaths } from './constants'
 import { isMac } from 'backend/constants/environment'
 import type { LoginWindowSeamSlot } from '../../humble/loginWindowSeam'
 import type { SignInProbeOutcome } from 'common/signInState'
@@ -119,11 +119,7 @@ function authLogSanitizer(line: string) {
 // this repo, so the only lever is call-count. `expires_in` (seconds) is GOG's own stated
 // token lifetime; a safety margin avoids handing out a token that's about to expire
 // mid-request. Cleared on logout() so a fresh login never reuses a stale account's token.
-const CREDENTIALS_EXPIRY_SAFETY_MARGIN_MS = 60_000
-let cachedCredentials: GOGCredentials | undefined
-let cachedCredentialsFetchedAt = 0
-
-interface CredentialsWithVerdict {
+export interface CredentialsWithVerdict {
   credentials: GOGCredentials | undefined
   verdict: SignInProbeOutcome
 }
@@ -132,8 +128,7 @@ interface CredentialsWithVerdict {
 // joins identical in-flight commands and a joiner's `onOutput` never fires, so if
 // Block E's `getUserDetails` and the probe pass each reached `runRunnerCommand`
 // separately, whichever arrived second would join a spawn it could not capture and
-// lose the connection-error line D-17 needs. Both go through this promise instead.
-let inFlightCredentials: Promise<CredentialsWithVerdict> | null = null
+// lose the connection-error line D-17 needs. Both go through the runtime's single-flight instead.
 
 // Maps a `gogdl auth --code` token-exchange response (GOGLoginData) into the
 // GOGCredentials shape the fix-1 TTL cache stores -- debug/gog-spawn-reduction.md
@@ -169,6 +164,10 @@ export interface GOGUserDeps {
   /** The app version, sent in the users.gog.com User-Agent. */
   appInfo: Pick<GOGManagerDeps['appInfo'], 'version'>
   onlineMonitor: Pick<GOGManagerDeps['onlineMonitor'], 'isOnline'>
+  /** The credential cache and its single in-flight spawn. */
+  gogRuntime: Pick<GOGManagerDeps['gogRuntime'], 'credentials'>
+  /** The auth.json location is derived from these. */
+  paths: Pick<GOGManagerDeps['paths'], 'appFolder' | 'toolsPath' | 'userData'>
 }
 
 export class GOGUser {
@@ -228,8 +227,7 @@ export class GOGUser {
     // library refresh) spawns its own redundant `gogdl auth`, even though this call's
     // stdout already IS a fresh token. Same expires_in-minus-safety-margin keying as
     // fix 1, cleared by the same logout() path.
-    cachedCredentials = loginDataToCredentials(data)
-    cachedCredentialsFetchedAt = Date.now()
+    deps.gogRuntime.credentials.put(loginDataToCredentials(data))
     // `data.access_token` is already the fresh token this exact `gogdl auth --code` call
     // just obtained -- pass it straight through so `getUserDetails()` doesn't spawn a
     // SECOND `gogdl auth` subprocess (via `getCredentials()`) just to re-derive the same
@@ -357,26 +355,13 @@ export class GOGUser {
     }
     // TTL cache -- debug/gog-spawn-reduction.md fix 1. Skip the `gogdl auth` spawn
     // entirely if the last-fetched token is still within its own stated lifetime.
-    if (
-      cachedCredentials &&
-      Date.now() - cachedCredentialsFetchedAt <
-        cachedCredentials.expires_in * 1000 -
-          CREDENTIALS_EXPIRY_SAFETY_MARGIN_MS
-    ) {
-      return { credentials: cachedCredentials, verdict: 'healthy' }
+    const fresh = deps.gogRuntime.credentials.getFresh()
+    if (fresh) {
+      return { credentials: fresh, verdict: 'healthy' }
     }
-    if (inFlightCredentials) {
-      return inFlightCredentials
-    }
-    const spawned = this.spawnCredentialsWithVerdict(deps)
-    inFlightCredentials = spawned
-    try {
-      return await spawned
-    } finally {
-      if (inFlightCredentials === spawned) {
-        inFlightCredentials = null
-      }
-    }
+    return deps.gogRuntime.credentials.singleFlight(() =>
+      this.spawnCredentialsWithVerdict(deps)
+    )
   }
 
   private static async spawnCredentialsWithVerdict(
@@ -401,8 +386,7 @@ export class GOGUser {
     try {
       credentials = JSON.parse(stdout) as GOGCredentials | undefined
       if (credentials) {
-        cachedCredentials = credentials
-        cachedCredentialsFetchedAt = Date.now()
+        deps.gogRuntime.credentials.put(credentials)
       }
     } catch (error) {
       logError(['Error getting GOG credentials:', error])
@@ -416,7 +400,7 @@ export class GOGUser {
       errored: Boolean(res.error),
       aborted: Boolean(res.abort),
       online: deps.onlineMonitor.isOnline(),
-      authConfigExists: existsSync(gogdlAuthConfig)
+      authConfigExists: existsSync(deriveGogPaths(deps.paths).gogdlAuthConfig)
     })
     return { credentials, verdict }
   }
@@ -440,11 +424,11 @@ export class GOGUser {
   ) {
     clearCache(deps, 'gog')
     deps.stores.gog.configStore.clear()
+    const { gogdlAuthConfig } = deriveGogPaths(deps.paths)
     if (existsSync(gogdlAuthConfig)) {
       unlinkSync(gogdlAuthConfig)
     }
-    cachedCredentials = undefined
-    cachedCredentialsFetchedAt = 0
+    deps.gogRuntime.credentials.clear()
     // Phase 49 (R2): `configStore.clear()` above already dropped the expiry flag;
     // this fences any probe that began before the sign-out and returns the
     // outcome to pending.
@@ -456,19 +440,6 @@ export class GOGUser {
     } catch (error) {
       logWarning(`GOG logout: cookie clear failed: ${error}`, LogPrefix.Gog)
     }
-  }
-
-  /**
-   * Test-only reset hook (debug/gog-spawn-reduction.md fix 1). `cachedCredentials` is a
-   * module-level singleton that outlives any individual test's mocked `runRunnerCommand`
-   * result (this project's Jest config has no `resetModules`), so a token cached by one
-   * test would silently be reused by the next unless cleared here. Called from
-   * `user.test.ts`'s `beforeEach`. Never called from production code.
-   */
-  public static __resetCredentialsCacheForTests(): void {
-    cachedCredentials = undefined
-    cachedCredentialsFetchedAt = 0
-    inFlightCredentials = null
   }
 
   public static isLoggedIn(deps: Pick<GOGUserDeps, 'stores'>) {

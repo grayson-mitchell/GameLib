@@ -185,7 +185,7 @@ jest.mock('fs', () => ({
 }))
 
 jest.mock('backend/storeManagers/gog/constants', () => ({
-  gogRedistPath: '/mock/gog-redist'
+  deriveGogPaths: () => ({ gogRedistPath: '/mock/gog-redist' })
 }))
 
 import type { DMQueueElement } from 'common/types'

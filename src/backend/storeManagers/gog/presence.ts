@@ -12,14 +12,16 @@ interface PresencePayload {
 }
 
 /** What presence reads beyond the user deps: the boot config. */
-export type GOGPresenceDeps = GOGUserDeps &
-  Pick<GOGManagerDeps, 'config' | 'onlineMonitor'>
+export type GOGPresenceDeps = Omit<GOGUserDeps, 'gogRuntime'> &
+  Pick<GOGManagerDeps, 'config' | 'onlineMonitor'> & {
+    gogRuntime: Pick<GOGManagerDeps['gogRuntime'], 'credentials' | 'presence'>
+  }
 
-let CURRENT_GAME = ''
-let interval: NodeJS.Timeout | undefined
-
-function setCurrentGame(game: string) {
-  CURRENT_GAME = game
+function setCurrentGame(
+  deps: Pick<GOGPresenceDeps, 'gogRuntime'>,
+  game: string
+) {
+  deps.gogRuntime.presence.setCurrentGame(game)
 }
 
 async function setPresence(deps: GOGPresenceDeps) {
@@ -36,8 +38,7 @@ async function setPresence(deps: GOGPresenceDeps) {
     const credentials = await GOGUser.getCredentials(deps)
     if (!credentials) return
 
-    if (!interval) {
-      interval = setInterval(() => void setPresence(deps), 5 * 60 * 1000)
+    if (deps.gogRuntime.presence.armKeepAlive(() => void setPresence(deps))) {
       // quick-260913-901: this keep-alive must NEVER be the reason the process cannot exit.
       //
       // The sidecar's lifetime is owned by stdin (the RPC frame stream) and it must exit when
@@ -63,7 +64,8 @@ async function setPresence(deps: GOGPresenceDeps) {
       // The optional call mirrors `installedJsonWatcher.ts:130` -- `gogPresenceKeepAlive.test.ts`
       // drives this line under jest fake timers, whose Timeout substitute is not required to
       // implement `unref()`.
-      interval.unref?.()
+      // The boot clock unrefs every interval it arms (no keepAlive option is passed), so the
+      // contract above holds without a handle to call unref() on.
     }
 
     const payload: PresencePayload = {
@@ -74,8 +76,9 @@ async function setPresence(deps: GOGPresenceDeps) {
       game_id: undefined
     }
 
-    if (CURRENT_GAME !== '') {
-      payload.game_id = CURRENT_GAME
+    const currentGame = deps.gogRuntime.presence.getCurrentGame()
+    if (currentGame !== '') {
+      payload.game_id = currentGame
     }
 
     const response = await axiosClient.post(
@@ -128,7 +131,7 @@ async function setPresence(deps: GOGPresenceDeps) {
  *
  * Every guard's answer is the same: none of the five early-return paths describes a case where
  * the local 5-minute keep-alive should keep ticking. Chosen: OPTION A -- the teardown (this
- * `clearInterval(interval)` call plus resetting `interval` to `undefined`) is hoisted above the
+ * `clearKeepAlive()` call, which clears the clock interval and forgets its handle) is hoisted above the
  * settings read and every guard, so it always runs when `deletePresence()` is called, and the
  * five guards below gate only the network `axiosClient.delete` call. Unconditional local teardown
  * is safe here because `clearInterval` and the `interval` reset touch nothing but this module's
@@ -136,14 +139,13 @@ async function setPresence(deps: GOGPresenceDeps) {
  * file -- and because no reachable call site above wants the keep-alive to outlive a
  * `deletePresence()` call: the quit path is about to exit the process anyway, and the
  * `settingChanged` listener's whole purpose when it calls `deletePresence(true)` is to turn
- * presence off. If presence is needed again afterward, `setPresence()`'s own `if (!interval)`
+ * presence off. If presence is needed again afterward, `setPresence()`'s own `armKeepAlive()`
  * arm re-creates the timer on its next call, exactly as it does after a fresh process start.
  */
 async function deletePresence(deps: GOGPresenceDeps, force = false) {
   // D-DRS-01 Option A: local timer teardown is unconditional, ahead of every guard below --
   // see this function's own docblock for the full audit and rationale.
-  clearInterval(interval)
-  interval = undefined
+  deps.gogRuntime.presence.clearKeepAlive()
   try {
     const { disablePlaytimeSync, disableGOGPresence } =
       deps.config.getSettings()

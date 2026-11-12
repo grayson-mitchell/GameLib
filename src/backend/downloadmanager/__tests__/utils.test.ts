@@ -107,7 +107,7 @@ jest.mock('graceful-fs', () => ({
 }))
 
 jest.mock('backend/storeManagers/gog/constants', () => ({
-  gogdlConfigPath: '/mock/gogdl-config'
+  deriveGogPaths: () => ({ gogdlConfigPath: '/mock/gogdl-config' })
 }))
 
 jest.mock('backend/constants/paths', () => ({

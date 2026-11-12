@@ -188,7 +188,7 @@ describe('sidecar bootstrap (headless boot)', () => {
   })
 
   describe('boot services (66.1-04)', () => {
-    it('a default boot returns BootServices with all thirty-three fields', () => {
+    it('a default boot returns BootServices with all thirty-four fields', () => {
       const { services } = bootWithLines()
       expect(Object.keys(services).sort()).toEqual([
         'anonymousClient',
@@ -202,6 +202,7 @@ describe('sidecar bootstrap (headless boot)', () => {
         'engineRuntime',
         'engineState',
         'gameConfigs',
+        'gogRuntime',
         'host',
         'humble',
         'launcher',

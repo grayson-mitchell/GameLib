@@ -45,17 +45,12 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { unzipSync } from 'node:zlib'
 import { readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { checkForRedistUpdates } from './redist'
-import { runGogdlCommandStub } from './e2eMock'
-import { gogdlConfigPath } from './constants'
-import { userDataPath } from 'backend/constants/paths'
+import { deriveGogPaths } from './constants'
 import GOGGame from './games'
 import type { LibraryManager } from 'common/types/game_manager'
 import { recordedMacArch, scheduleMacArchSweep } from 'backend/macArch/recovery'
 import { readdir } from 'fs/promises'
 import { statSync } from 'fs'
-
-const library: Map<string, GameInfo> = new Map()
-const installedGames: Map<string, InstalledInfo> = new Map()
 
 /**
  * Applies a native-Mac arch verdict (quick 261029-t39) to the in-memory entry
@@ -64,13 +59,14 @@ const installedGames: Map<string, InstalledInfo> = new Map()
  * persisted array from the Map.
  */
 export function applyGogMacArch(
-  deps: Pick<GOGManagerDeps, 'stores'>,
+  deps: Pick<GOGManagerDeps, 'stores' | 'gogRuntime'>,
   appName: string,
   verdict: '32' | '64'
 ) {
   const { libraryStore } = deps.stores.gog
-  const cached = library.get(appName)
-  if (cached) library.set(appName, { ...cached, mac_arch: verdict })
+  const state = deps.gogRuntime.libraryState
+  const cached = state.library.get(appName)
+  if (cached) state.library.set(appName, { ...cached, mac_arch: verdict })
 
   const stored = libraryStore.get('games', [])
   const idx = stored.findIndex((g) => g.app_name === appName)
@@ -80,9 +76,9 @@ export function applyGogMacArch(
     libraryStore.set('games', stored)
   }
 
-  const base = library.get(appName) ?? (entry ? stored[idx] : undefined)
+  const base = state.library.get(appName) ?? (entry ? stored[idx] : undefined)
   if (!base) return
-  const installed = installedGames.get(appName)
+  const installed = state.installedGames.get(appName)
   const updated: GameInfo = installed
     ? { ...base, is_installed: true, install: installed }
     : base
@@ -97,14 +93,26 @@ export default class GOGLibraryManager implements LibraryManager {
 
   private readonly gameCache: Map<string, GOGGame> = new Map()
 
+  private get gogdlConfigPath() {
+    return deriveGogPaths(this.deps.paths).gogdlConfigPath
+  }
+
+  private get library() {
+    return this.deps.gogRuntime.libraryState.library
+  }
+
+  private get installedGames() {
+    return this.deps.gogRuntime.libraryState.installedGames
+  }
+
   async init() {
     await this.refresh()
 
     // Based on installed games scan for missing manifests and attempt to pull
     // them
     logInfo('Checking for existing gog manifests', { prefix: LogPrefix.Gog })
-    const installedGamesList = Array.from(installedGames.keys())
-    const manifestDir = join(gogdlConfigPath, 'manifests')
+    const installedGamesList = Array.from(this.installedGames.keys())
+    const manifestDir = join(this.gogdlConfigPath, 'manifests')
     if (!existsSync(manifestDir)) {
       await mkdir(manifestDir, { recursive: true })
     }
@@ -123,12 +131,12 @@ export default class GOGLibraryManager implements LibraryManager {
       this.deps,
       'gog',
       () =>
-        [...installedGames.values()]
+        [...this.installedGames.values()]
           .filter((i) => i.platform === 'osx' && i.appName)
           .map((i) => ({
             appName: i.appName!,
             installPath: i.install_path,
-            title: library.get(i.appName!)?.title
+            title: this.library.get(i.appName!)?.title
           })),
       (appName, verdict) => applyGogMacArch(this.deps, appName, verdict)
     )
@@ -147,10 +155,10 @@ export default class GOGLibraryManager implements LibraryManager {
     appName: string,
     credentials?: GOGCredentials
   ) {
-    const manifestDir = join(gogdlConfigPath, 'manifests')
+    const manifestDir = join(this.gogdlConfigPath, 'manifests')
 
     const manifestPath = join(manifestDir, appName)
-    const installedData = installedGames.get(appName)! // It exists for sure
+    const installedData = this.installedGames.get(appName)! // It exists for sure
     if (existsSync(manifestPath) || installedData?.platform === 'linux') {
       return
     }
@@ -340,7 +348,7 @@ export default class GOGLibraryManager implements LibraryManager {
 
     let clientId
 
-    const manifestPath = join(gogdlConfigPath, 'manifests', appName)
+    const manifestPath = join(this.gogdlConfigPath, 'manifests', appName)
     if (existsSync(manifestPath)) {
       try {
         const dataRaw = readFileSync(manifestPath, { encoding: 'utf-8' })
@@ -452,25 +460,25 @@ export default class GOGLibraryManager implements LibraryManager {
   private async loadLocalLibrary() {
     for (const game of this.deps.stores.gog.libraryStore.get('games', [])) {
       const copyObject = { ...game }
-      if (installedGames.has(game.app_name)) {
+      if (this.installedGames.has(game.app_name)) {
         if (this.deps.onlineMonitor.isOnline()) {
           await this.checkForOfflineInstallerChanges(game.app_name)
         }
-        copyObject.install = installedGames.get(game.app_name)!
+        copyObject.install = this.installedGames.get(game.app_name)!
         copyObject.is_installed = true
       }
-      library.set(game.app_name, copyObject)
+      this.library.set(game.app_name, copyObject)
     }
     this.deps.stores.gog.installedGamesStore.set(
       'installed',
-      Array.from(installedGames.values())
+      Array.from(this.installedGames.values())
     )
   }
 
   async checkForOfflineInstallerChanges(appName: string) {
     // game could've been updated
     // DLC may've been installed etc..
-    const installedGame = installedGames.get(appName)
+    const installedGame = this.installedGames.get(appName)
     if (
       !installedGame ||
       installedGame.platform === 'linux' ||
@@ -501,7 +509,7 @@ export default class GOGLibraryManager implements LibraryManager {
       installedGame.installedDLCs = dlcs
       // Update gogdl manifest
       try {
-        const manifestPath = join(gogdlConfigPath, 'manifests', appName)
+        const manifestPath = join(this.gogdlConfigPath, 'manifests', appName)
         if (existsSync(manifestPath)) {
           const manifestDataRaw = await readFile(manifestPath, {
             encoding: 'utf8'
@@ -516,7 +524,7 @@ export default class GOGLibraryManager implements LibraryManager {
           prefix: LogPrefix.Gog
         })
       }
-      installedGames.set(appName, installedGame)
+      this.installedGames.set(appName, installedGame)
     }
     // Check buildId
     const data = this.readInfoFile(appName)
@@ -527,7 +535,7 @@ export default class GOGLibraryManager implements LibraryManager {
     if (data.buildId !== installedGame.buildId) {
       // The game was updated, remove gogdl
       // manifest and re-import it
-      const manifestPath = join(gogdlConfigPath, 'manifests', appName)
+      const manifestPath = join(this.gogdlConfigPath, 'manifests', appName)
       if (existsSync(manifestPath)) {
         rmSync(manifestPath)
       }
@@ -535,7 +543,7 @@ export default class GOGLibraryManager implements LibraryManager {
       await this.createMissingGogdlManifest(appName, credentials)
       installedGame.buildId = data.buildId
     }
-    installedGames.set(appName, installedGame)
+    this.installedGames.set(appName, installedGame)
   }
 
   async refresh(): Promise<ExecResult> {
@@ -557,7 +565,7 @@ export default class GOGLibraryManager implements LibraryManager {
         'https://cdn2.steamgriddb.com/file/sgdb-cdn/grid/5fa80a0fb5ff0b2aaca6730ba213219b.png'
     }
 
-    library.set('gog-redist', redistGameInfo)
+    this.library.set('gog-redist', redistGameInfo)
 
     if (!this.deps.onlineMonitor.isOnline()) {
       return this.defaultExecResult
@@ -608,13 +616,15 @@ export default class GOGLibraryManager implements LibraryManager {
 
         const unifiedObject = await this.gogToUnifiedInfo(gdbData)
         if (unifiedObject.app_name) {
-          const oldData = library.get(unifiedObject.app_name)
+          const oldData = this.library.get(unifiedObject.app_name)
           if (oldData) {
             unifiedObject.folder_name = oldData.folder_name
           }
           gamesObjects.push(unifiedObject)
 
-          const installedInfo = installedGames.get(String(game.external_id))
+          const installedInfo = this.installedGames.get(
+            String(game.external_id)
+          )
           // If game is installed, verify if installed game supports cloud saves
           if (installedInfo && installedInfo?.platform !== 'linux') {
             const saveLocations = await this.getSaveSyncLocation(
@@ -633,7 +643,7 @@ export default class GOGLibraryManager implements LibraryManager {
             copyObject.is_installed = true
             copyObject.install = installedInfo
           }
-          library.set(copyObject.app_name, copyObject)
+          this.library.set(copyObject.app_name, copyObject)
         }
         break
       }
@@ -668,7 +678,7 @@ export default class GOGLibraryManager implements LibraryManager {
   }
 
   getGameInfo(slug: string): GameInfo | undefined {
-    return library.get(slug) || this.getInstallAndGameInfo(slug)
+    return this.library.get(slug) || this.getInstallAndGameInfo(slug)
   }
 
   getListOfGames(): GameInfo[] {
@@ -682,7 +692,7 @@ export default class GOGLibraryManager implements LibraryManager {
     if (!game) {
       return
     }
-    const installedInfo = installedGames.get(game.app_name)
+    const installedInfo = this.installedGames.get(game.app_name)
     if (installedInfo) {
       game.is_installed = true
       game.install = installedInfo
@@ -864,12 +874,12 @@ export default class GOGLibraryManager implements LibraryManager {
 
     if (
       !libraryEntry.gog_save_location &&
-      installedGames.get(appName) &&
-      installedGames.get(appName)?.platform !== 'linux'
+      this.installedGames.get(appName) &&
+      this.installedGames.get(appName)?.platform !== 'linux'
     ) {
       gameData.gog_save_location = await this.getSaveSyncLocation(
         appName,
-        installedGames.get(appName)!
+        this.installedGames.get(appName)!
       )
     }
 
@@ -877,7 +887,7 @@ export default class GOGLibraryManager implements LibraryManager {
     libraryEntry.gog_save_location = gameData?.gog_save_location
     gameData.folder_name = gogInfo.folder_name
     this.deps.stores.gog.libraryStore.set('games', libraryArray)
-    library.set(appName, gameData)
+    this.library.set(appName, gameData)
 
     let language = gogInfo.languages[0]
     const foundPreffered = i18next.languages.find((plang) =>
@@ -957,17 +967,17 @@ export default class GOGLibraryManager implements LibraryManager {
       'installed',
       []
     )
-    installedGames.clear()
+    this.installedGames.clear()
     installedArray.forEach((value) => {
       if (!value.appName) {
         return
       }
-      installedGames.set(value.appName, value)
+      this.installedGames.set(value.appName, value)
     })
   }
 
   async changeGameInstallPath(appName: string, newInstallPath: string) {
-    const cachedGameData = library.get(appName)
+    const cachedGameData = this.library.get(appName)
 
     if (
       !cachedGameData ||
@@ -1043,9 +1053,9 @@ export default class GOGLibraryManager implements LibraryManager {
     // touched. Spread the previous record first so fields this function doesn't
     // set (manifest, isDosbox, dosboxConf, versionEtag, branch, pinnedVersion,
     // cyberpunk, ...) survive, then layer the import-owned fields on top so they
-    // still always win. `installedGames.get()` is undefined on a fresh import,
+    // still always win. `this.installedGames.get()` is undefined on a fresh import,
     // and spreading `undefined` is legal -- no branch needed for that case.
-    const previous = installedGames.get(data.appName)
+    const previous = this.installedGames.get(data.appName)
     const installInfo: InstalledInfo = {
       ...previous,
       appName: data.appName,
@@ -1060,14 +1070,14 @@ export default class GOGLibraryManager implements LibraryManager {
       installedDLCs: data.dlcs,
       installedWithDLCs: !!data.dlcs.length
     }
-    installedGames.set(data.appName, installInfo)
-    const gameData = library.get(data.appName)!
+    this.installedGames.set(data.appName, installInfo)
+    const gameData = this.library.get(data.appName)!
     gameData.install = installInfo
     gameData.is_installed = true
-    library.set(data.appName, gameData)
+    this.library.set(data.appName, gameData)
     this.deps.stores.gog.installedGamesStore.set(
       'installed',
-      Array.from(installedGames.values())
+      Array.from(this.installedGames.values())
     )
     this.refreshInstalled()
     await this.createMissingGogdlManifest(data.appName)
@@ -1082,7 +1092,7 @@ export default class GOGLibraryManager implements LibraryManager {
       return []
     }
     const credentials = await GOGUser.getCredentials(this.deps)
-    const installed = Array.from(installedGames.values())
+    const installed = Array.from(this.installedGames.values())
     const updateable: Array<string> = []
     for (const game of installed) {
       if (!game.appName) {
@@ -1345,7 +1355,7 @@ export default class GOGLibraryManager implements LibraryManager {
   /* Get product ids installed in for given game
    */
   listInstalledProducts(appName: string): string[] {
-    const installedData = installedGames.get(appName)
+    const installedData = this.installedGames.get(appName)
     if (!installedData) {
       return []
     }
@@ -1620,11 +1630,11 @@ export default class GOGLibraryManager implements LibraryManager {
     options?: CallRunnerOptions
   ): Promise<ExecResult> {
     if (process.env.CI === 'e2e') {
-      return runGogdlCommandStub(commandParts)
+      return this.deps.gogRuntime.stubs.run(commandParts)
     }
 
     const { dir, bin } = getGOGdlBin(this.deps)
-    const authConfig = join(userDataPath, 'gog_store', 'auth.json')
+    const authConfig = deriveGogPaths(this.deps.paths).gogdlAuthConfig
 
     if (!options) {
       options = {}
@@ -1632,7 +1642,7 @@ export default class GOGLibraryManager implements LibraryManager {
     if (!options.env) {
       options.env = {}
     }
-    options.env.GOGDL_CONFIG_PATH = dirname(gogdlConfigPath)
+    options.env.GOGDL_CONFIG_PATH = dirname(this.gogdlConfigPath)
 
     return this.deps.commandRunner.callRunner(
       ['--auth-config-path', authConfig, ...commandParts],
@@ -1670,15 +1680,15 @@ export default class GOGLibraryManager implements LibraryManager {
   }
 
   changeVersionPinnedStatus(appName: string, status: boolean) {
-    const game = library.get(appName)
-    const installed = installedGames.get(appName)
+    const game = this.library.get(appName)
+    const installed = this.installedGames.get(appName)
     if (!game || !installed) {
       return
     }
     game.install.pinnedVersion = status
     installed.pinnedVersion = status
-    library.set(appName, game)
-    installedGames.set(appName, installed)
+    this.library.set(appName, game)
+    this.installedGames.set(appName, installed)
 
     const installedArray = this.deps.stores.gog.installedGamesStore.get(
       'installed',
@@ -1696,8 +1706,8 @@ export default class GOGLibraryManager implements LibraryManager {
 
   setCyberpunkModConfig(props: { enabled: boolean; modsToLoad: string[] }) {
     const cpId = '1423049311'
-    const game = library.get(cpId)
-    const installed = installedGames.get(cpId)
+    const game = this.library.get(cpId)
+    const installed = this.installedGames.get(cpId)
     if (!game || !installed) {
       return
     }
@@ -1719,8 +1729,8 @@ export default class GOGLibraryManager implements LibraryManager {
       installedArray.splice(index, 1, installed)
     }
 
-    library.set(cpId, game)
-    installedGames.set(cpId, installed)
+    this.library.set(cpId, game)
+    this.installedGames.set(cpId, installed)
     this.deps.stores.gog.installedGamesStore.set('installed', installedArray)
     sendFrontendMessage('pushGameToLibrary', game)
   }

@@ -1,8 +1,4 @@
-import {
-  clearResumeBaseline,
-  parseGogdlProgress,
-  resumeAdjustedPercent
-} from './resumeProgress'
+import { parseGogdlProgress } from './resumeProgress'
 import { join } from 'path'
 import {
   errorHandler,
@@ -64,7 +60,7 @@ import { readdir, readFile } from 'fs/promises'
 import ini from 'ini'
 import { getRequiredRedistList, updateRedist } from './redist'
 import { getUmuId } from 'backend/wiki_game_info/umu/utils'
-import { gogdlConfigPath, gogSupportPath } from './constants'
+import { deriveGogPaths } from './constants'
 import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import { checkInstalledMacArch } from 'backend/macArch/recovery'
 import type { LongLivedHandle } from 'backend/process/types'
@@ -91,6 +87,10 @@ export default class GOGGame implements Game {
     private readonly deps: GOGManagerDeps
   ) {
     this.id = id
+  }
+
+  private get gogPaths() {
+    return deriveGogPaths(this.deps.paths)
   }
 
   async getExtraInfo(): Promise<ExtraInfo> {
@@ -294,7 +294,11 @@ export default class GOGGame implements Game {
       // bytes only; fold the bytes finished before the pause back in.
       const parsed = parseGogdlProgress(data)
       if (parsed && progress.percent !== undefined) {
-        progress.percent = resumeAdjustedPercent(this.id, parsed)
+        progress.percent =
+          this.deps.gogRuntime.resumeBaselines.resumeAdjustedPercent(
+            this.id,
+            parsed
+          )
       }
     }
 
@@ -401,7 +405,7 @@ export default class GOGGame implements Game {
       '--path',
       path,
       '--support',
-      join(gogSupportPath, this.id),
+      join(this.gogPaths.gogSupportPath, this.id),
       ...withDlcs,
       '--lang',
       String(installLanguage),
@@ -446,11 +450,11 @@ export default class GOGGame implements Game {
         ['Failed to install GOG game ', `${this.id}:`, res.error],
         LogPrefix.Gog
       )
-      clearResumeBaseline(this.id)
+      this.deps.gogRuntime.resumeBaselines.clearResumeBaseline(this.id)
       return { status: 'error', error: res.error }
     }
 
-    clearResumeBaseline(this.id)
+    this.deps.gogRuntime.resumeBaselines.clearResumeBaseline(this.id)
 
     // Installation succeded
     // Save new game info to installed games store
@@ -986,7 +990,7 @@ export default class GOGGame implements Game {
       '--path',
       gameData.install.install_path!,
       '--support',
-      join(gogSupportPath, this.id),
+      join(this.gogPaths.gogSupportPath, this.id),
       withDlcs,
       '--lang',
       gameData.install.language || 'en-US',
@@ -1153,11 +1157,15 @@ export default class GOGGame implements Game {
     if (existsSync(object.install_path)) {
       rmSync(object.install_path, { recursive: true })
     }
-    const manifestPath = join(gogdlConfigPath, 'manifests', this.id)
+    const manifestPath = join(
+      this.gogPaths.gogdlConfigPath,
+      'manifests',
+      this.id
+    )
     if (existsSync(manifestPath)) {
       rmSync(manifestPath) // Delete manifest so gogdl won't try to patch the not installed game
     }
-    const supportPath = join(gogSupportPath, this.id)
+    const supportPath = join(this.gogPaths.gogSupportPath, this.id)
     if (existsSync(supportPath)) {
       rmSync(supportPath, { recursive: true }) // Remove unnecessary support dir
     }
@@ -1182,7 +1190,7 @@ export default class GOGGame implements Game {
   }): Promise<{ status: 'done' | 'error' }> {
     // TODO: Implement GOG redist as a subclass of GOGGame & move this logic to it
     if (this.id === 'gog-redist') {
-      const redist = await getRequiredRedistList()
+      const redist = await getRequiredRedistList(this.deps)
       if (updateOverwrites?.dependencies?.length) {
         for (const dep of updateOverwrites.dependencies) {
           if (!redist.includes(dep)) {
@@ -1308,7 +1316,7 @@ export default class GOGGame implements Game {
       '--path',
       gameData.install.install_path!,
       '--support',
-      join(gogSupportPath, this.id),
+      join(this.gogPaths.gogSupportPath, this.id),
       overwrittenWithDlcs,
       '--lang',
       overwrittenLanguage,

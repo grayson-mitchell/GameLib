@@ -94,6 +94,9 @@ export interface RunnerAuthFlowDeps extends DialogBoxDeps {
   signIn: ManagerDeps['signIn']
   /** The boot's login-window seam slot, for the logout cookie wipes (D-66.3-17). */
   loginWindowSeam: ManagerDeps['loginWindowSeam']
+  /** The GOG credential cache and path roots the gog login/logout paths read (66.4-10). */
+  gogRuntime: Pick<ManagerDeps['gogRuntime'], 'credentials'>
+  paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath' | 'userData'>
 }
 
 function logSendFailure(channel: string, error: unknown): void {
@@ -131,7 +134,9 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
     libraryManagers: deps.managers.library,
     onlineMonitor: deps.onlineMonitor,
     signIn: deps.signIn,
-    loginWindowSeam: deps.loginWindowSeam
+    loginWindowSeam: deps.loginWindowSeam,
+    gogRuntime: deps.gogRuntime,
+    paths: deps.paths
   })
 
   if (registered) {

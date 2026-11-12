@@ -19,31 +19,50 @@ const defaultStubs: RunnerCommandStub[] = [
   }
 ]
 
-let currentStubs = [...defaultStubs]
+export interface GogdlStubs {
+  /** Replaces the active stubs. */
+  set(stubs: RunnerCommandStub[]): void
+  /** Restores the default `--version` stub. */
+  reset(): void
+  /** The stubbed result for a command (first stub whose commandParts are all included). */
+  run(command: string[]): Promise<{ stdout: string; stderr: string }>
+}
 
-export const runGogdlCommandStub = async (command: string[]) => {
-  const stub = currentStubs.find((stub) =>
-    stub.commandParts.every((part) => command.includes(part))
-  )
+export function createGogdlStubs(): GogdlStubs {
+  let currentStubs = [...defaultStubs]
+  return {
+    set(stubs) {
+      currentStubs = [...stubs]
+    },
+    reset() {
+      currentStubs = [...defaultStubs]
+    },
+    async run(command) {
+      const stub = currentStubs.find((stub) =>
+        stub.commandParts.every((part) => command.includes(part))
+      )
 
-  if (stub?.response) return stub.response
+      if (stub?.response) return stub.response
 
-  return Promise.resolve({
-    stdout: stub?.stdout || '',
-    stderr: stub?.stderr || ''
-  })
+      return Promise.resolve({
+        stdout: stub?.stdout || '',
+        stderr: stub?.stderr || ''
+      })
+    }
+  }
 }
 
 // Add listeners to be called from e2e tests to stub the gogdl command calls. Registered
 // once at boot (register-handlers), only when env.CI === 'e2e' (onTestOnly checks it).
 export function registerGogdlStubListeners(
   ipc: Pick<IpcRegistry, 'on'>,
-  env: Pick<NodeJS.ProcessEnv, 'CI'>
+  env: Pick<NodeJS.ProcessEnv, 'CI'>,
+  stubs: GogdlStubs
 ): void {
-  onTestOnly(ipc, env, 'setGogdlCommandStub', (stubs) => {
-    currentStubs = [...stubs]
+  onTestOnly(ipc, env, 'setGogdlCommandStub', (next) => {
+    stubs.set(next)
   })
   onTestOnly(ipc, env, 'resetGogdlCommandStub', () => {
-    currentStubs = [...defaultStubs]
+    stubs.reset()
   })
 }

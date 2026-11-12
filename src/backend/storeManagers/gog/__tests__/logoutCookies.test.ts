@@ -51,10 +51,6 @@ const fakeGogStores = {
   }
 }
 
-jest.mock('backend/storeManagers/gog/constants', () => ({
-  gogdlAuthConfig: '/tmp/gamelib-gog-logout-cookies-test/does-not-exist.json'
-}))
-
 jest.mock('backend/utils', () => ({
   clearCache: jest.fn()
 }))
@@ -76,12 +72,17 @@ jest.mock('backend/constants/environment', () => {
 import { logWarning, logInfo } from 'backend/logger'
 import { GOGUser, type GOGUserDeps, type GOGLoginSeamDeps } from '../user'
 import { createTestSignInProbe } from 'backend/testUtils/testSignInProbe'
+import { createTestGogRuntime } from 'backend/testUtils/testGogRuntime'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 
 const deps = {
   get loginWindowSeam() {
     return seamSlot
   },
   signIn: createTestSignInProbe(),
+  gogRuntime: createTestGogRuntime(),
+  // Nothing exists under this root, so the auth.json unlink is skipped.
+  paths: createTestAppPaths('/tmp/gamelib-gog-logout-cookies-test'),
   stores: { gog: fakeGogStores },
   libraryManagers: { gog: { runRunnerCommand: jest.fn() } }
 } as unknown as GOGUserDeps & ClearCacheDeps & SignInNoteDeps & GOGLoginSeamDeps
@@ -130,7 +131,7 @@ beforeEach(() => {
   jest.clearAllMocks()
   mockIsMac = true
   seamSlot.install(null)
-  GOGUser.__resetCredentialsCacheForTests()
+  deps.gogRuntime.credentials.clear()
 })
 
 afterEach(() => {

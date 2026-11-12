@@ -76,11 +76,11 @@ export function buildLaunchHooks(
         })
       },
       setPresence: async (appName) => {
-        gogPresence.setCurrentGame(appName)
+        gogPresence.setCurrentGame(deps, appName)
         await gogPresence.setPresence(deps)
       },
       clearPresence: async () => {
-        gogPresence.setCurrentGame('')
+        gogPresence.setCurrentGame(deps, '')
         await gogPresence.setPresence(deps)
       }
     },
@@ -166,6 +166,7 @@ export interface CreateStoreManagersDeps {
   steamLaunchRuntime: ManagerDeps['steamLaunchRuntime']
   bridgeRuntime: ManagerDeps['bridgeRuntime']
   steamInstallRuntime: ManagerDeps['steamInstallRuntime']
+  gogRuntime: ManagerDeps['gogRuntime']
   steamUser: ManagerDeps['steamUser']
   loginWindowSeam: ManagerDeps['loginWindowSeam']
 }
@@ -213,6 +214,7 @@ export function createStoreManagers(
     steamLaunchRuntime: deps.steamLaunchRuntime,
     bridgeRuntime: deps.bridgeRuntime,
     steamInstallRuntime: deps.steamInstallRuntime,
+    gogRuntime: deps.gogRuntime,
     steamUser: deps.steamUser,
     loginWindowSeam: deps.loginWindowSeam
   }

@@ -19,7 +19,7 @@ import {
   GOGv1Manifest,
   GOGv2Manifest
 } from 'common/types/gog'
-import { gogdlConfigPath, gogRedistPath, gogSupportPath } from './constants'
+import { deriveGogPaths } from './constants'
 import { isWindows } from 'backend/constants/environment'
 import {
   endEngineLaunch,
@@ -177,6 +177,9 @@ async function runGogSetup(
   if (!isWindows) await deps.launcher.verifyWinePrefix(gameSettings)
 
   // Read game manifest
+  const { gogdlConfigPath, gogRedistPath, gogSupportPath } = deriveGogPaths(
+    deps.paths
+  )
   const manifestPath = path.join(gogdlConfigPath, 'manifests', appName)
 
   if (!existsSync(manifestPath)) {

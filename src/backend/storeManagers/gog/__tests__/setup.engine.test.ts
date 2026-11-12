@@ -51,9 +51,11 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Gog: 'Gog', Nile: 'Nile', Backend: 'Backend' }
 }))
 jest.mock('../constants', () => ({
-  gogdlConfigPath: '/cfg',
-  gogRedistPath: '/redist',
-  gogSupportPath: '/support'
+  deriveGogPaths: () => ({
+    gogdlConfigPath: '/cfg',
+    gogRedistPath: '/redist',
+    gogSupportPath: '/support'
+  })
 }))
 
 const gogInfo = {

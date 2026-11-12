@@ -39,6 +39,7 @@ import { createTestEngineState } from './testEngineState'
 import { createTestEngineRuntime } from './testEngineRuntime'
 import { createTestSteamLaunchRuntime } from './testSteamLaunchRuntime'
 import { createTestBridgeRuntime } from './testBridgeRuntime'
+import { createTestGogRuntime } from './testGogRuntime'
 import { createTestSteamInstallRuntime } from './testSteamInstallRuntime'
 import { createTestSignInProbe } from './testSignInProbe'
 import { createTestSteamSession } from './testSteamSession'
@@ -262,6 +263,7 @@ export function createTestServices(
     bridgeRuntime: overrides.bridgeRuntime ?? createTestBridgeRuntime(),
     steamInstallRuntime:
       overrides.steamInstallRuntime ?? createTestSteamInstallRuntime(),
+    gogRuntime: overrides.gogRuntime ?? createTestGogRuntime(),
     winetricksQueue:
       overrides.winetricksQueue ??
       unscriptedMembers<BootServices['winetricksQueue']>(
@@ -427,6 +429,7 @@ export function createTestManagerDeps(
     bridgeRuntime: overrides.bridgeRuntime ?? createTestBridgeRuntime(),
     steamInstallRuntime:
       overrides.steamInstallRuntime ?? createTestSteamInstallRuntime(),
+    gogRuntime: overrides.gogRuntime ?? createTestGogRuntime(),
     signIn: overrides.signIn ?? createTestSignInProbe(),
     steamSession: overrides.steamSession ?? createTestSteamSession(),
     tokenStore: overrides.tokenStore ?? createTestTokenStoreSlot(),
@@ -481,6 +484,7 @@ export function createTestToolsSlices() {
     steamLaunchRuntime: createTestSteamLaunchRuntime(),
     bridgeRuntime: createTestBridgeRuntime(),
     steamInstallRuntime: createTestSteamInstallRuntime(),
+    gogRuntime: createTestGogRuntime(),
     paths: createTestPaths(),
     steamBottle: createTestSteamBottle({ stores: createTestStores(), config })
   }

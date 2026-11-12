@@ -1,14 +1,16 @@
-import {
-  clearResumeBaseline,
-  parseGogdlProgress,
-  resumeAdjustedPercent
-} from '../resumeProgress'
+import { createGogResumeBaselines, parseGogdlProgress } from '../resumeProgress'
 
 const line = (pct: string, done: number, total: number) =>
   `[PROGRESS] INFO: = Progress: ${pct} ${done}/${total}, Running for: 00:00:01, ETA: 00:00:00`
 
 describe('gogdl resumed-download progress', () => {
-  afterEach(() => clearResumeBaseline('g'))
+  let baselines = createGogResumeBaselines()
+  beforeEach(() => {
+    baselines = createGogResumeBaselines()
+  })
+  const resumeAdjustedPercent = (
+    ...args: Parameters<typeof baselines.resumeAdjustedPercent>
+  ) => baselines.resumeAdjustedPercent(...args)
 
   test('parses percent, done and total', () => {
     expect(parseGogdlProgress(line('4.35', 18221309, 419050577))).toEqual({

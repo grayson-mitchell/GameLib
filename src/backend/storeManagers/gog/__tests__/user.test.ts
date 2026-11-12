@@ -61,10 +61,6 @@ const fakeGogStores = {
   }
 }
 
-jest.mock('backend/storeManagers/gog/constants', () => ({
-  gogdlAuthConfig: '/fake/gog_store/auth.json'
-}))
-
 jest.mock('backend/utils', () => ({
   clearCache: jest.fn()
 }))
@@ -75,9 +71,13 @@ import { GOGUser, type GOGUserDeps, type GOGLoginSeamDeps } from '../user'
 import type { ClearCacheDeps } from 'backend/utils'
 import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
 import { createTestSignInProbe } from 'backend/testUtils/testSignInProbe'
+import { createTestGogRuntime } from 'backend/testUtils/testGogRuntime'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 
 const deps = {
   signIn: createTestSignInProbe(),
+  gogRuntime: createTestGogRuntime(),
+  paths: createTestAppPaths('/fake'),
   // logout() reads it only on macOS; this file never installs a seam, so an empty slot is right.
   loginWindowSeam: {
     getOrThrow: () => {
@@ -112,7 +112,7 @@ describe('debug/manage-accounts-slow-update -- GOGUser.login redundant gogdl cal
     // module-level singleton that outlives any individual test -- reset it so each
     // test's own scripted `mockRunRunnerCommand` result is actually exercised, never
     // shadowed by an earlier test's cached token.
-    GOGUser.__resetCredentialsCacheForTests()
+    deps.gogRuntime.credentials.clear()
   })
 
   it('login() does NOT spawn a second gogdl auth subprocess -- reuses the access_token the --code exchange already returned', async () => {
@@ -213,7 +213,7 @@ describe('debug/gog-spawn-reduction fix 5 -- login() seeds the getCredentials() 
     mockConfigStoreGetNodefault.mockImplementation((key: string) =>
       key === 'isLoggedIn' ? true : undefined
     )
-    GOGUser.__resetCredentialsCacheForTests()
+    deps.gogRuntime.credentials.clear()
   })
 
   afterEach(() => {
@@ -308,7 +308,7 @@ describe('debug/gog-spawn-reduction fix 1 -- GOGUser.getCredentials(deps) TTL ca
     mockConfigStoreGetNodefault.mockImplementation((key: string) =>
       key === 'isLoggedIn' ? true : undefined
     )
-    GOGUser.__resetCredentialsCacheForTests()
+    deps.gogRuntime.credentials.clear()
   })
 
   afterEach(() => {
@@ -431,7 +431,7 @@ describe('quick-260821-o34 -- getUserDetails() repointed at users.gog.com/users/
     mockConfigStoreGetNodefault.mockImplementation((key: string) =>
       key === 'isLoggedIn' ? true : undefined
     )
-    GOGUser.__resetCredentialsCacheForTests()
+    deps.gogRuntime.credentials.clear()
   })
 
   it('persists username + galaxyUserId + userId from a wishlist-free response body (the headline regression)', async () => {
@@ -557,7 +557,7 @@ describe('debug/gog-login-not-registered -- getUserDetails() must call users.gog
     mockConfigStoreGetNodefault.mockImplementation((key: string) =>
       key === 'isLoggedIn' ? true : undefined
     )
-    GOGUser.__resetCredentialsCacheForTests()
+    deps.gogRuntime.credentials.clear()
     mockedAxiosGet.mockResolvedValueOnce({
       data: { id: 'galaxy-1', username: 'testuser' }
     })
@@ -611,7 +611,7 @@ describe('debug/log-upload-has-no-redaction F-01 -- gogdl auth stdout must never
     mockConfigStoreGetNodefault.mockImplementation((key: string) =>
       key === 'isLoggedIn' ? true : undefined
     )
-    GOGUser.__resetCredentialsCacheForTests()
+    deps.gogRuntime.credentials.clear()
   })
 
   it('logs no part of the token payload when gogdl stdout fails to parse', async () => {

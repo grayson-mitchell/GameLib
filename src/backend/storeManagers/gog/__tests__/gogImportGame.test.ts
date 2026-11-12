@@ -130,8 +130,10 @@ jest.mock('backend/wiki_game_info/umu/utils', () => ({
 }))
 
 jest.mock('../constants', () => ({
-  gogdlConfigPath: '/fake/gog_store/gogdlConfig',
-  gogSupportPath: '/fake/gog_store/gogdlConfig/gog-support'
+  deriveGogPaths: () => ({
+    gogdlConfigPath: '/fake/gog_store/gogdlConfig',
+    gogSupportPath: '/fake/gog_store/gogdlConfig/gog-support'
+  })
 }))
 
 jest.mock('backend/constants/environment', () => ({

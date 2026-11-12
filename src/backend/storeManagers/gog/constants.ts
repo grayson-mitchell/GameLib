@@ -1,7 +1,18 @@
-import { appFolder, toolsPath, userDataPath } from 'backend/constants/paths'
 import { join } from 'path'
+import type { AppPaths } from 'backend/process/context'
 
-export const gogdlConfigPath = join(appFolder, 'gogdlConfig', 'heroic_gogdl')
-export const gogSupportPath = join(gogdlConfigPath, 'gog-support')
-export const gogRedistPath = join(toolsPath, 'redist', 'gog')
-export const gogdlAuthConfig = join(userDataPath, 'gog_store', 'auth.json')
+/**
+ * The GOG on-disk locations, derived from the boot's paths (D-66.4-04). Nothing is computed at
+ * import: every importer calls this with `deps.paths`.
+ */
+export function deriveGogPaths(
+  paths: Pick<AppPaths, 'appFolder' | 'toolsPath' | 'userData'>
+) {
+  const gogdlConfigPath = join(paths.appFolder, 'gogdlConfig', 'heroic_gogdl')
+  return Object.freeze({
+    gogdlConfigPath,
+    gogSupportPath: join(gogdlConfigPath, 'gog-support'),
+    gogRedistPath: join(paths.toolsPath, 'redist', 'gog'),
+    gogdlAuthConfig: join(paths.userData, 'gog_store', 'auth.json')
+  })
+}

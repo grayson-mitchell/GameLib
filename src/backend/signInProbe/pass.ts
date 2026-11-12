@@ -124,6 +124,9 @@ export interface SignInProbeDeps {
     ManagerDeps['onlineMonitor'],
     'isOnline' | 'onConnectivityChange'
   >
+  /** The GOG credential cache and path roots the gogdl auth probe reads (66.4-10). */
+  gogRuntime: Pick<ManagerDeps['gogRuntime'], 'credentials'>
+  paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath' | 'userData'>
 }
 
 export function createSignInProbePassDeps(
@@ -134,7 +137,9 @@ export function createSignInProbePassDeps(
     appInfo: deps.appInfo,
     onlineMonitor: deps.onlineMonitor,
     stores: { gog: deps.stores.gog },
-    libraryManagers: { gog: deps.libraryManagers.gog }
+    libraryManagers: { gog: deps.libraryManagers.gog },
+    gogRuntime: deps.gogRuntime,
+    paths: deps.paths
   }
   return {
     stores: deps.stores,

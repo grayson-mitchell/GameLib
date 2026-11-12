@@ -128,12 +128,12 @@ const fakeGogStores = {
 }
 
 jest.mock('../redist', () => ({ checkForRedistUpdates: jest.fn() }))
-jest.mock('../e2eMock', () => ({ runGogdlCommandStub: jest.fn() }))
 jest.mock('../constants', () => ({
-  gogdlConfigPath: '/fake/gog_store/gogdlConfig',
-  gogdlAuthConfig: '/fake/gog_store/auth.json'
+  deriveGogPaths: () => ({
+    gogdlConfigPath: '/fake/gog_store/gogdlConfig',
+    gogdlAuthConfig: '/fake/gog_store/auth.json'
+  })
 }))
-jest.mock('backend/constants/paths', () => ({ userDataPath: '/fake/userData' }))
 jest.mock('../games', () => ({ __esModule: true, default: class GOGGame {} }))
 jest.mock('i18next', () => ({ languages: ['en'], language: 'en' }))
 

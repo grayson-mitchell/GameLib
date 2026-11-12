@@ -26,6 +26,8 @@ import type { ClearCacheDeps } from 'backend/utils'
 import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
 import type { SignInEpochs } from 'backend/signInProbe/sessionEpoch'
 import type { Stores } from 'backend/services/types'
+import { createTestGogRuntime } from 'backend/testUtils/testGogRuntime'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 
 const { configStore: gogConfigStore } = jest.requireMock<Stores['gog']>(
   'backend/storeManagers/gog/stores'
@@ -42,6 +44,8 @@ const deps = {
     return probe.epochs
   },
   appInfo: { version: '1.0.0' },
+  gogRuntime: createTestGogRuntime(),
+  paths: createTestAppPaths('/fake'),
   loginWindowSeam: {
     getOrThrow: () => {
       throw new Error('no seam in this suite')
@@ -75,9 +79,6 @@ jest.mock('backend/ipc', () => ({
   addHandler: jest.fn()
 }))
 jest.mock('backend/utils', () => ({ clearCache: jest.fn() }))
-jest.mock('backend/storeManagers/gog/constants', () => ({
-  gogdlAuthConfig: '/fake/gog_store/auth.json'
-}))
 jest.mock('graceful-fs', () => ({
   ...jest.requireActual('graceful-fs'),
   existsSync: () => mockAuthConfigExists,
@@ -145,7 +146,7 @@ beforeEach(() => {
   mockAuthConfigExists = true
   flag.reset()
   probe = createTestSignInProbe()
-  GOGUser.__resetCredentialsCacheForTests()
+  deps.gogRuntime.credentials.clear()
   armRunner('null')
 })
 
@@ -335,7 +336,7 @@ describe('probeGogSession', () => {
     await expect(probeGogSession(deps)).resolves.toBe('expired')
 
     armRunner(JSON.stringify(CREDENTIALS))
-    GOGUser.__resetCredentialsCacheForTests()
+    deps.gogRuntime.credentials.clear()
     await expect(probeGogSession(deps)).resolves.toBe('healthy')
   })
 

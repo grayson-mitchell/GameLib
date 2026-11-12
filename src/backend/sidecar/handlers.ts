@@ -264,6 +264,8 @@ export function registerHandlers(deps: {
     stores: deps.services.stores,
     appInfo: deps.services.appInfo,
     onlineMonitor: deps.services.onlineMonitor,
+    gogRuntime: deps.services.gogRuntime,
+    paths: deps.services.paths,
     steamGridSecrets: deps.services.steamGridSecrets
   })
   // Phase 34.3 Plans 01+02 (REQ-34.3-01/-02/-13): the shell/link-opener and
@@ -358,7 +360,9 @@ export function registerHandlers(deps: {
     notifications: deps.services.host.notifications,
     onlineMonitor: deps.services.onlineMonitor,
     signIn: deps.services.signInProbe,
-    loginWindowSeam: deps.services.humble.loginWindowSeam
+    loginWindowSeam: deps.services.humble.loginWindowSeam,
+    gogRuntime: deps.services.gogRuntime,
+    paths: deps.services.paths
   })
   registerWineToolsFlows({
     ipc,

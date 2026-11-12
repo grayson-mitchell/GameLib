@@ -176,7 +176,7 @@ import * as SteamGridDB from '../steamgrid/utils'
 import { getGogDiscounts } from '../discounts/fetchDiscounts'
 import { logError, logWarning, LogPrefix } from '../logger'
 import type { Runner } from 'common/types'
-import type { StoreManagers, Stores } from 'backend/services/types'
+import type { ManagerDeps, StoreManagers, Stores } from 'backend/services/types'
 
 /** Narrow slice (66.1 D-01): library managers for game lookup. */
 export interface EnrichmentFlowDeps {
@@ -188,6 +188,9 @@ export interface EnrichmentFlowDeps {
     'kvs' | 'runsForMe' | 'wikiGameInfo' | 'crossoverIndex' | 'gog'
   >
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
+  /** The GOG credential cache and path roots the discounts handler reads (66.4-10). */
+  gogRuntime: Pick<ManagerDeps['gogRuntime'], 'credentials'>
+  paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath' | 'userData'>
   /** The boot-built SteamGridDB API-key owner (D-66.3-17); the key never touches GlobalConfig here. */
   steamGridSecrets: SteamGridDbSecretStore
 }
@@ -328,7 +331,9 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
           stores: deps.stores,
           libraryManagers: deps.managers.library,
           appInfo: deps.appInfo,
-          onlineMonitor: deps.onlineMonitor
+          onlineMonitor: deps.onlineMonitor,
+          gogRuntime: deps.gogRuntime,
+          paths: deps.paths
         },
         args[0] as CatalogLocaleSettings,
         (args[1] as boolean | null | undefined) ?? undefined,

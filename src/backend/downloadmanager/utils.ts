@@ -17,8 +17,9 @@ import {
 import type { OnlineMonitor } from '../online_monitor'
 import pathModule from 'path'
 import { existsSync, rmSync } from 'graceful-fs'
+import type { AppPaths } from 'backend/process/context'
 import { fetchRemoteKnownFixes } from 'backend/knownFixesFetcher'
-import { gogdlConfigPath } from 'backend/storeManagers/gog/constants'
+import { deriveGogPaths } from 'backend/storeManagers/gog/constants'
 import { isTimeoutError } from 'backend/storeManagers/steam/withTimeout'
 import {
   withStallTimeout,
@@ -43,6 +44,8 @@ export { resolveGameTitle }
 type QueueElementDeps = {
   managers: Pick<StoreManagers, 'library'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
+  /** The gog manifest directory is derived from these. */
+  paths: Pick<AppPaths, 'appFolder' | 'toolsPath' | 'userData'>
 } & DialogBoxDeps &
   NotifyDeps
 type LibraryManagerMap = StoreManagers['library']
@@ -175,7 +178,11 @@ async function installQueueElement(
   if (isStore(runner, 'gog')) {
     // Sometimes, a game manifest file already exists and that makes the installation
     // end as soon as it's started. We have to delete the file to prevent that issue.
-    const manifestPath = pathModule.join(gogdlConfigPath, 'manifests', appName)
+    const manifestPath = pathModule.join(
+      deriveGogPaths(deps.paths).gogdlConfigPath,
+      'manifests',
+      appName
+    )
     if (existsSync(manifestPath)) rmSync(manifestPath)
   }
 
