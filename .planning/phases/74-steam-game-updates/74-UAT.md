@@ -1,5 +1,5 @@
 ---
-status: complete
+status: pending
 phase: 74-steam-game-updates
 source: [74-13-PLAN.md]
 started: 2026-11-12
@@ -110,12 +110,27 @@ expected: `steam://nav/games/details/<appId>` opens the game page in Steam on Wi
 result: skipped. Deferred by the operator to run on their Windows machine at leisure; tracked in `.planning/todos/pending/2026-11-13-verify-steam-nav-update-handoff-on-windows.md`. The macOS form of the same `steam://nav/games/details/<appId>` hand-off passed in item 11.
 precondition: a Windows or Linux machine with Steam installed.
 
+### 16. Single launch prompt and in-update block (re-run of item 7)
+expected: Play shows ONE native box with Play anyway / Update now / Don't ask again for this build, and no in-app Heroic box first. Play anyway launches the current build (strict bridge criterion not required; the game reaching its menu suffices). Don't ask again launches and the next Play shows no prompt while the badge stays. Update now queues the update and the card does not stay on Launching. While that update is downloading, Play shows "<title> is updating..." and does not launch. Esc on the box launches (never updates).
+result: pending
+precondition: Hell Clock 1782460 or Core Keeper 1621690 (bridge), still stale; sidecar rebuilt and GameLib relaunched with `pnpm tauri:dev`.
+
+### 17. Registered Update with InstallApp ON clears promptly (re-run of item 12)
+expected: Update starts Steam's update with no window; GameLib shows Updating and then, within a few seconds of Steam finishing (log `update of appId <id> finished`), the badge and the Updating state clear without waiting for `ending the update poll quietly`. A second Update click on the now-current game logs `is already current` and does not show Updating.
+result: pending
+precondition: the registered fixture re-staled per spike 069 step 4 (quit Steam, edit the ACF buildid lower, relaunch); the InstallApp opt-in is on and confirmed saved.
+
+### 18. Multi-depot / DLC bridge update keeps DLC content (WR-01)
+expected: On a bridge game whose ACF InstalledDepots lists at least one DLC or language depot besides the base depot, an update completes with `[depot-rust] outcome ... status=completed acf=4`; the log line `retire appId=<id> ...` shows the DLC/language depot under kept (never retired); every file that belonged to that depot before the update still exists afterwards (compare a file list taken before and after); the game launches through the bridge (strict criterion).
+result: pending
+precondition: choose a bridge install with a DLC or language depot (read InstalledDepots in the bridge bottles' appmanifest files). If none is stale, stage one with GameLib quit: copy the ACF aside, set its `buildid` to any lower number while leaving InstalledDepots untouched, relaunch GameLib, Refresh; the badge shows, and Update runs the retire decision over every installed depot with little or nothing to download. Restore nothing afterwards (the update rewrites the ACF). Take before/after file lists with `find <installdir> -type f | sort` into the scratchpad, never into the repo.
+
 ## Summary
 
-total: 15
+total: 18
 passed: 11
 issues: 2
-pending: 0
+pending: 3
 skipped: 2
 blocked: 0
 
