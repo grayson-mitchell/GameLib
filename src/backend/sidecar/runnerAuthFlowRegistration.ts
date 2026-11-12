@@ -195,7 +195,7 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
   // credential directory is `nile_config` (`nile/constants.ts:4`, wired via `NILE_CONFIG_PATH` at
   // `nile/library.ts:486`) — not `nile_store` (`nile/stores.ts:13`), which is the
   // separate PROFILE `configStore` cwd this handler's sibling `getAmazonUserInfo` reads/writes
-  // through. Both derive from `appFolder` and resolve through `pathShim`'s already-implemented
+  // through. Both derive from `appFolder` and resolve through `appPaths`'s already-implemented
   // `userData`, so this delegation needs no new path work.
   deps.ipc.handle('getAmazonLoginData', () => {
     return NileUser.getLoginData(userDeps())

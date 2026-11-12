@@ -1,4 +1,9 @@
-import { derivePaths, fixAsarPath, resolveAppDataDir } from '../appPaths'
+import {
+  derivePaths,
+  fixAsarPath,
+  resolveAppDataDir,
+  resolveKnownFolder
+} from '../appPaths'
 import type { AppPathRoots } from '../appPaths'
 
 const roots: AppPathRoots = {
@@ -60,5 +65,62 @@ describe('resolveAppDataDir', () => {
       '/x'
     )
     expect(resolveAppDataDir('linux', {}, '/H')).toBe('/H/.config')
+  })
+})
+
+describe('resolveKnownFolder (moved from the retired pathShim)', () => {
+  const noXdg = () => undefined
+
+  test('darwin: <home>/Desktop and <home>/Documents', () => {
+    expect(resolveKnownFolder('desktop', 'darwin', {}, '/H', noXdg)).toBe(
+      '/H/Desktop'
+    )
+    expect(resolveKnownFolder('documents', 'darwin', {}, '/H', noXdg)).toBe(
+      '/H/Documents'
+    )
+  })
+
+  test('linux: falls back to <home>/<Name> when nothing else answers', () => {
+    expect(resolveKnownFolder('desktop', 'linux', {}, '/H', noXdg)).toBe(
+      '/H/Desktop'
+    )
+    expect(resolveKnownFolder('documents', 'linux', {}, '/H', noXdg)).toBe(
+      '/H/Documents'
+    )
+  })
+
+  test('linux: the exported XDG variable wins over user-dirs.dirs', () => {
+    const read = jest.fn(() => '/from/user-dirs')
+    expect(
+      resolveKnownFolder(
+        'desktop',
+        'linux',
+        { XDG_DESKTOP_DIR: '/from/env' },
+        '/H',
+        read
+      )
+    ).toBe('/from/env')
+    expect(read).not.toHaveBeenCalled()
+  })
+
+  test('linux: user-dirs.dirs answers when the env var is unset (a localized desktop)', () => {
+    const read = jest.fn((key: string) =>
+      key === 'XDG_DESKTOP_DIR' ? '/H/Schreibtisch' : '/H/Dokumente'
+    )
+    expect(resolveKnownFolder('desktop', 'linux', {}, '/H', read)).toBe(
+      '/H/Schreibtisch'
+    )
+    expect(resolveKnownFolder('documents', 'linux', {}, '/H', read)).toBe(
+      '/H/Dokumente'
+    )
+  })
+
+  test('win32: both folders throw, never a guessed <home>\\Desktop (quick 261111-aq4)', () => {
+    expect(() =>
+      resolveKnownFolder('desktop', 'win32', {}, 'C:\\H', noXdg)
+    ).toThrow(/desktop.*readWindowsShellFolder/)
+    expect(() =>
+      resolveKnownFolder('documents', 'win32', {}, 'C:\\H', noXdg)
+    ).toThrow(/documents.*readWindowsShellFolder/)
   })
 })

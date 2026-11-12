@@ -229,11 +229,14 @@ Phase 66.4 owns:
 - **D-66.2-03 deferrals:** the `utils.ts` `default*Path` lets, the `tools/index.ts` caches
   (`installingComponent`, `catalogCache`, `scriptMetadataCache`), `engineNoticeStore` and the two `pci_ids`
   stores. (The win32 sync fallback in `knownFolders` and `pathShim` was retired in quick 261111-aq4:
-  pathShim's win32 `desktop`/`documents` arms throw, and the two callers use the registry folder or go
+  `resolveKnownFolder`'s win32 arms throw, and the two callers use the registry folder or go
   without it.)
 - **Module-scope pathShim reads introduced as cascade edits:** `constants/paths.ts` (`configFolder`,
   `userDataPath`, `publicDir` from `GAMELIB_APP_ROOT`/`isPackagedSidecar()`), `steam/constants.ts`
-  (`steamSupportPath`).
+  (`steamSupportPath`). (Done in 66.4-20: `constants/paths.ts`, `sidecar/pathShim.ts` and the Steam
+  `bottleDirs.ts` shim are deleted. `process/appPaths.ts` derives every path from explicit roots,
+  `resolveAppPaths` in the boot supplies them, and the heroic -> GameLib rename plus the CI=e2e app
+  folder run in the first boot step, `app-folder`.)
 - **Latches that survive by design for now:** the module-level `registered` / `currentRegistry` guards in
   `devEpicCookieSweep`, `runnerAuth` and the store-layer registrations.
 - **D-66.3-05:** the live macOS smoke with the scripted orphan/exit checker.

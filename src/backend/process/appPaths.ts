@@ -1,6 +1,6 @@
 /**
- * Pure path derivation (Phase 66.4 D-66.4-04). Every path constants/paths.ts
- * derives is computed here from explicit roots: no I/O, no env or process
+ * Pure path derivation (Phase 66.4 D-66.4-04). Every path the retired constants/paths.ts
+ * derived is computed here from explicit roots: no I/O, no env or process
  * reads. Boot (sidecar/bootstrap.ts) supplies the roots.
  *
  * Import budget: node:path only.
@@ -36,6 +36,43 @@ export function resolveAppDataDir(
       return env.APPDATA || join(home, 'AppData', 'Roaming')
     default:
       return env.XDG_CONFIG_HOME || join(home, '.config')
+  }
+}
+
+/**
+ * The user's Desktop or Documents folder (the two names the sidecar ever asks for), moved
+ * verbatim from the deleted sidecar/pathShim. darwin and linux answer synchronously; win32
+ * throws, because the real folder is a registry known folder that may be redirected to OneDrive
+ * (quick 261111-aq4) and a sync read cannot await the registry.
+ *
+ * Linux honours the user's real folder: the exported XDG variable, then `user-dirs.dirs` through
+ * `readXdgUserDir` (injected, so this module stays free of fs), then `<home>/<Name>`.
+ */
+export function resolveKnownFolder(
+  name: 'desktop' | 'documents',
+  platform: NodeJS.Platform,
+  env: NodeJS.ProcessEnv,
+  home: string,
+  readXdgUserDir: (
+    key: 'XDG_DESKTOP_DIR' | 'XDG_DOCUMENTS_DIR'
+  ) => string | undefined
+): string {
+  const folder = name === 'desktop' ? 'Desktop' : 'Documents'
+  switch (platform) {
+    case 'darwin':
+      return join(home, folder)
+    case 'win32':
+      // No guessed `<home>\Desktop` or `<home>\Documents`: on a OneDrive-redirected profile
+      // those are not the real folders (quick 261111-aq4).
+      throw new Error(
+        name === 'desktop'
+          ? `[process/appPaths] getPath('desktop') is not available synchronously on win32 — the Desktop is a registry known folder (User Shell Folders, often redirected to OneDrive); await readWindowsShellFolder(deps, 'Desktop') instead`
+          : `[process/appPaths] getPath('documents') is not available synchronously on win32 — Documents is a registry known folder (User Shell Folders "Personal", often redirected to OneDrive); await readWindowsShellFolder(deps, 'Personal') instead`
+      )
+    default: {
+      const key = name === 'desktop' ? 'XDG_DESKTOP_DIR' : 'XDG_DOCUMENTS_DIR'
+      return env[key] || readXdgUserDir(key) || join(home, folder)
+    }
   }
 }
 

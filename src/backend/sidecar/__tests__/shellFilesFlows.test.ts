@@ -25,13 +25,10 @@
  * pattern exists to avoid: a `jest.mock('i18next', ...)` block here would
  * make the resolved-title assertion pass whether or not `bootstrap.ts`'s
  * i18next init ever ran). `resetHeroic` ACTUALLY DELETES `configPath`/
- * `gamesConfigPath` — the `jest.mock('../pathShim', ...)` block below is the
- * CR-03 containment fix (34.2-10/gameDetailsFlows.test.ts precedent): on
- * darwin the `os` mock alone is sufficient (`pathShim`'s `resolveAppDataDir()`
- * calls `homedir()` directly for that branch), but on win32/linux it prefers
- * `env.APPDATA`/`env.XDG_CONFIG_HOME` over `homedir()` and would bypass the
- * `os` mock entirely — a real, destructive gap for a suite that deletes
- * files. Both mocks root at the SAME disposable tmp directory.
+ * `gamesConfigPath` — those paths come from the boot's own derivation over the
+ * `jest.setupContainment.ts` redirect (HOME and the APPDATA/XDG_* variables all point into the
+ * per-run disposable root), which is what keeps a suite that deletes files off the real profile.
+ * (Until 66.4-20 a `pathShim` mock did this per suite; the shim is deleted.)
  */
 
 // ── i18next -- DEFEAT Jest's project-wide automatic manual mock. Without
@@ -64,41 +61,6 @@ jest.mock('os', () => {
         actual.tmpdir(),
         `gamelib-shellfilesflows-test-home-${process.pid}`
       )
-  }
-})
-
-// ── pathShim — CR-03 (34.2-10 precedent): the REAL choke point.
-// `constants/paths.ts`'s module-scope `app.getPath('appData'|'userData')`
-// calls resolve through `platform/index.ts` -> `pathShim.getPath()`, whose real
-// `resolveAppDataDir()` prefers `env.APPDATA`/`env.XDG_CONFIG_HOME` over
-// `homedir()` on win32/default — bypassing the `os` mock above on those
-// platforms. `resetHeroic` deletes `configPath`/`gamesConfigPath` for real,
-// so this suite must not rely on the darwin-only sufficiency of the `os`
-// mock alone. Rooted at the SAME per-suite tmp directory. ──────────────────
-jest.mock('../pathShim', () => {
-  const actualOs = jest.requireActual('os')
-  const actualPath = jest.requireActual('path')
-  const tmpRoot = actualPath.join(
-    actualOs.tmpdir(),
-    `gamelib-shellfilesflows-test-home-${process.pid}`
-  )
-  return {
-    getPath: (name: string) => {
-      switch (name) {
-        case 'appData':
-          return tmpRoot
-        case 'userData':
-          return actualPath.join(tmpRoot, 'GameLib')
-        case 'temp':
-          return actualOs.tmpdir()
-        case 'home':
-          return tmpRoot
-        default:
-          throw new Error(
-            `[pathShim mock] getPath('${name}') is not shimmed for this test`
-          )
-      }
-    }
   }
 })
 
@@ -233,7 +195,7 @@ import {
   RUST_APP_RELAUNCH,
   RUST_INVOKE_CHANNELS
 } from 'common/types/sidecarTransport'
-import { configPath, gamesConfigPath } from '../../constants/paths'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import {
   supportURL,
   weblateUrl,
@@ -246,6 +208,9 @@ import {
   sidInfoUrl
 } from '../../constants/urls'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
+
+// The config paths a boot derives for the jest-contained HOME (`jest.setupContainment`).
+const { configPath, gamesConfigPath } = createContainedHomeAppPaths()
 
 // D-08: every case boots the sidecar once, in a fresh module registry. Module
 // handles the cases configure or inspect are rebound from that registry in

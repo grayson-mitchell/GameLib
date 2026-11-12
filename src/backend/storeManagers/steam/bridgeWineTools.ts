@@ -14,6 +14,7 @@
  *
  * Sidecar exit contract: nothing runs at import, no timers.
  */
+import type { AppPaths } from 'backend/process/context'
 import type { GameSettings } from 'common/types'
 import { logError, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
@@ -54,7 +55,8 @@ export function defaultSteamWineToolsDeps(
   return {
     isMac,
     ownBottleName: bridgeBottleNameFor,
-    findInstallBottle: findBridgeInstallBottle,
+    findInstallBottle: (appId) =>
+      findBridgeInstallBottle(services.paths, appId),
     hasLiveRunner: (appId) =>
       services.engineRuntime.registry.getEngineSelection(appId) !== undefined ||
       services.steamLaunchRuntime.drmRunners.getDrmBridgeRunner(appId) !==
@@ -101,12 +103,15 @@ export function steamWineToolsBottle(
   return d.findInstallBottle(appId) === own ? own : null
 }
 
-export function isSteamWineToolsEligible(appId: string): boolean {
+export function isSteamWineToolsEligible(
+  paths: Pick<AppPaths, 'userHome'>,
+  appId: string
+): boolean {
   return (
     steamWineToolsBottle(appId, {
       isMac,
       ownBottleName: bridgeBottleNameFor,
-      findInstallBottle: findBridgeInstallBottle
+      findInstallBottle: (id) => findBridgeInstallBottle(paths, id)
     }) !== null
   )
 }

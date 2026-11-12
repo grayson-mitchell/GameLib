@@ -138,6 +138,7 @@ export async function installBottleNative(
   args: InstallArgs
 ): Promise<InstallResult> {
   const targetSteamappsDir = bottle.getBottleSteamappsDir(
+    steamGame.deps.paths,
     steamGame.deps.steamBottle.getSteamBottleSettings().wineCrossoverBottle
   )
   return installDepotDownload(steamGame, args, {

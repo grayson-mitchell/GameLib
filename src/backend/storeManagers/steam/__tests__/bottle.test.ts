@@ -7,7 +7,6 @@
  *  - resetMocks: true in jest.config means mock implementations must be
  *    re-established in each test
  *  - graceful-fs mocked (existsSync) — no real filesystem access
- *  - electron mocked (app.getPath) — backend/constants/paths imports it
  */
 import { createEngineRegistry } from 'backend/engine/engineRegistry'
 import {
@@ -17,7 +16,7 @@ import {
   readFileSync,
   rmSync
 } from 'graceful-fs'
-import { userHome } from 'backend/constants/paths'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import {
   createSteamBottle,
@@ -26,8 +25,11 @@ import {
   bottleWineArch,
   DEFAULT_BRIDGE_BOTTLE_NAME
 } from '../bottle'
-import { sanitizeBottleName } from 'backend/engine/bottlePrimitives'
-import { getBottleDir, isBottleProvisioned } from '../bottleDirs'
+import {
+  getBottleDir,
+  isBottleProvisioned,
+  sanitizeBottleName
+} from 'backend/engine/bottlePrimitives'
 import { createTestSteamLaunchRuntime } from 'backend/testUtils/testSteamLaunchRuntime'
 import { createGlobalTimerClock } from 'backend/testUtils/globalTimerClock'
 import { provisionBottle } from '../provisionBottle'
@@ -100,6 +102,7 @@ const engineRuntime = { crossover, registry: createEngineRegistry() }
 const steamLaunchRuntime = createTestSteamLaunchRuntime({
   clock: createGlobalTimerClock()
 })
+const { userHome } = createContainedHomeAppPaths()
 const paths = { userHome }
 
 const mockedExistsSync = existsSync as jest.Mock
@@ -116,7 +119,8 @@ const mockedGlobalConfigGet = jest.fn()
 const steamBottle = createSteamBottle({
   stores: createTestStores({ steam: { steamBottleConfigStore } as never }),
   config: { getSettings: () => mockedGlobalConfigGet().getSettings() },
-  crossover
+  crossover,
+  paths
 })
 // Recording fakes handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
@@ -174,7 +178,7 @@ describe('bottle.ts', () => {
 
   describe('getBottleDir / getBottleSteamappsDir', () => {
     test('getBottleDir joins userHome + CrossOver Bottles path + name', () => {
-      const dir = getBottleDir('GameLibSteam')
+      const dir = getBottleDir(paths, 'GameLibSteam')
       expect(dir).toBe(
         `${userHome}/Library/Application Support/CrossOver/Bottles/GameLibSteam`
       )
@@ -182,7 +186,7 @@ describe('bottle.ts', () => {
 
     test('getBottleSteamappsDir defaults to the x86 root when neither steam.exe path exists on disk', () => {
       mockedExistsSync.mockReturnValue(false)
-      const dir = getBottleSteamappsDir('GameLibSteam')
+      const dir = getBottleSteamappsDir(paths, 'GameLibSteam')
       expect(dir).toContain('drive_c/Program Files (x86)/Steam/steamapps')
       expect(dir).toContain('GameLibSteam')
     })
@@ -195,11 +199,11 @@ describe('bottle.ts', () => {
         path.includes('Program Files (x86)/Steam/steam.exe')
       )
 
-      expect(getBottleSteamExePath('GameLibSteam')).toBe(
-        `${getBottleDir('GameLibSteam')}/drive_c/Program Files (x86)/Steam/steam.exe`
+      expect(getBottleSteamExePath(paths, 'GameLibSteam')).toBe(
+        `${getBottleDir(paths, 'GameLibSteam')}/drive_c/Program Files (x86)/Steam/steam.exe`
       )
-      expect(getBottleSteamappsDir('GameLibSteam')).toBe(
-        `${getBottleDir('GameLibSteam')}/drive_c/Program Files (x86)/Steam/steamapps`
+      expect(getBottleSteamappsDir(paths, 'GameLibSteam')).toBe(
+        `${getBottleDir(paths, 'GameLibSteam')}/drive_c/Program Files (x86)/Steam/steamapps`
       )
     })
 
@@ -210,11 +214,11 @@ describe('bottle.ts', () => {
           path.includes('cxbottle.conf')
       )
 
-      expect(getBottleSteamExePath('GameLibSteam')).toBe(
-        `${getBottleDir('GameLibSteam')}/drive_c/Program Files/Steam/steam.exe`
+      expect(getBottleSteamExePath(paths, 'GameLibSteam')).toBe(
+        `${getBottleDir(paths, 'GameLibSteam')}/drive_c/Program Files/Steam/steam.exe`
       )
-      expect(getBottleSteamappsDir('GameLibSteam')).toBe(
-        `${getBottleDir('GameLibSteam')}/drive_c/Program Files/Steam/steamapps`
+      expect(getBottleSteamappsDir(paths, 'GameLibSteam')).toBe(
+        `${getBottleDir(paths, 'GameLibSteam')}/drive_c/Program Files/Steam/steamapps`
       )
     })
 
@@ -223,8 +227,8 @@ describe('bottle.ts', () => {
         path.includes('cxbottle.conf')
       )
 
-      expect(getBottleSteamExePath('GameLibSteam')).toBe(
-        `${getBottleDir('GameLibSteam')}/drive_c/Program Files (x86)/Steam/steam.exe`
+      expect(getBottleSteamExePath(paths, 'GameLibSteam')).toBe(
+        `${getBottleDir(paths, 'GameLibSteam')}/drive_c/Program Files (x86)/Steam/steam.exe`
       )
     })
   })
@@ -232,7 +236,7 @@ describe('bottle.ts', () => {
   describe('isBottleProvisioned', () => {
     test('returns true when cxbottle.conf exists', () => {
       mockedExistsSync.mockReturnValue(true)
-      expect(isBottleProvisioned('GameLibSteam')).toBe(true)
+      expect(isBottleProvisioned(paths, 'GameLibSteam')).toBe(true)
       expect(mockedExistsSync).toHaveBeenCalledWith(
         expect.stringContaining('cxbottle.conf')
       )
@@ -240,7 +244,7 @@ describe('bottle.ts', () => {
 
     test('returns false when cxbottle.conf does not exist', () => {
       mockedExistsSync.mockReturnValue(false)
-      expect(isBottleProvisioned('GameLibSteam')).toBe(false)
+      expect(isBottleProvisioned(paths, 'GameLibSteam')).toBe(false)
     })
 
     test('defaults to the stored bottle name when none is passed', () => {
@@ -325,24 +329,24 @@ describe('bottle.ts', () => {
   describe('bottleWineArch', () => {
     test('returns "win32" when cxbottle.conf contains WineArch = win32', () => {
       mockedReadFileSync.mockReturnValue('"WineArch" = "win32"')
-      expect(bottleWineArch('GameLibSteam')).toBe('win32')
+      expect(bottleWineArch(paths, 'GameLibSteam')).toBe('win32')
     })
 
     test('returns "win64" when cxbottle.conf contains WineArch = win64', () => {
       mockedReadFileSync.mockReturnValue('"WineArch" = "win64"')
-      expect(bottleWineArch('GameLibSteam')).toBe('win64')
+      expect(bottleWineArch(paths, 'GameLibSteam')).toBe('win64')
     })
 
     test('returns null when cxbottle.conf is missing/unreadable', () => {
       mockedReadFileSync.mockImplementation(() => {
         throw new Error('ENOENT')
       })
-      expect(bottleWineArch('GameLibSteam')).toBeNull()
+      expect(bottleWineArch(paths, 'GameLibSteam')).toBeNull()
     })
 
     test('returns null when cxbottle.conf has no recognizable WineArch value', () => {
       mockedReadFileSync.mockReturnValue('"SomeOtherKey" = "value"')
-      expect(bottleWineArch('GameLibSteam')).toBeNull()
+      expect(bottleWineArch(paths, 'GameLibSteam')).toBeNull()
     })
   })
 
@@ -657,6 +661,7 @@ describe('createSteamBottle construction (66.3-15)', () => {
 
     createSteamBottle({
       crossover,
+      paths,
       stores: {
         get steam() {
           return getStores() as never
@@ -679,6 +684,7 @@ describe('createSteamBottle construction (66.3-15)', () => {
     }
     const second = createSteamBottle({
       crossover,
+      paths,
       stores: createTestStores({
         steam: { steamBottleConfigStore: other } as never
       }),

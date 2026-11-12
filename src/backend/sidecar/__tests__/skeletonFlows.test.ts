@@ -54,7 +54,10 @@
  * / SidecarNotification / the openExternal SidecarRpcRequest) — never on
  * internals — per the plan's own acceptance criteria.
  */
-import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+import {
+  createTestStoreRoot,
+  testUserDataDir
+} from '../../testUtils/testStoreRoot'
 
 // Per case (reset in freshRegistry): the boot is handed this root so the stores a case seeds
 // and the boot's own stores share one file-cell table, as the old module-level registry did.
@@ -64,7 +67,7 @@ import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 // ── os — GAP FIX (2026-07-22): Test 4 below writes fixture data (including a
 // fake refreshToken) through the real, unmocked configStore/fileStore module
 // instance to prove the snapshot handler filters it out. That module resolves
-// its on-disk path from `homedir()` (pathShim.ts -> resolveAppDataDir), and on
+// its on-disk path from `homedir()` (process/appPaths -> resolveAppDataDir), and on
 // darwin there is no HOME/XDG_CONFIG_HOME override — left unmocked, this would
 // write directly into the developer's REAL
 // `~/Library/Application Support/GameLib/steam_store/config.json`, the exact
@@ -158,7 +161,6 @@ import { createStoreRegistry } from 'backend/stores/storeRegistry'
 // handles the cases configure or inspect are rebound from that registry in
 // freshRegistry() (run before each case, ahead of any mock configuration), and
 // boot() then boots without a second reset.
-let getPath: typeof import('../pathShim').getPath
 let mockLeaseOk: typeof import('../../storeManagers/steam/__tests__/depotLeaseMocks').mockLeaseOk
 let getSteamLibraries: typeof import('backend/utils').getSteamLibraries
 let steamConfigStore: ReturnType<
@@ -173,7 +175,6 @@ function freshRegistry(): void {
   testRoot = createTestStoreRoot()
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
-  ;({ getPath } = require('../pathShim'))
   ;({
     mockLeaseOk
   } = require('../../storeManagers/steam/__tests__/depotLeaseMocks'))
@@ -673,7 +674,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // guard (c) then made permanently unwritable. Only the recognized cache-store
     // names may be constructed.
     it('WR-02: storeNew for an unrecognized name creates no file under store_cache', async () => {
-      const cacheDir = join(getPath('userData'), 'store_cache')
+      const cacheDir = join(testUserDataDir(), 'store_cache')
       const before = existsSync(cacheDir) ? readdirSync(cacheDir) : []
 
       const { input } = boot()

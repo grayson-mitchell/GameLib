@@ -243,7 +243,8 @@ export async function placeShimForGameInner(
   // through to sanitizeBottleName's own typeof-string guard below, taking
   // the existing rejected-bottle-name error branch rather than silently
   // substituting a different bottle.
-  const rawBottleName = opts?.bottleName ?? resolveBridgeBottleName(appId)
+  const rawBottleName =
+    opts?.bottleName ?? resolveBridgeBottleName(paths, appId)
   const bottleName = sanitizeBottleName(rawBottleName)
   if (!bottleName) {
     logError(

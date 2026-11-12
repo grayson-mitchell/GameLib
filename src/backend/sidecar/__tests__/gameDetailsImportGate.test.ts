@@ -408,8 +408,13 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // proof drops the `sidecarRpc` module mock for a local `jest.fn()` it passes in. Same calls, same
   // byte-identity assertions. Prior digest:
   // 13a12594b7e2ea11a6895cd5bacdd3e89924a87a0cf35b4e7bec864a32301a76
+  // 66.4-20: re-pin -- `sidecar/pathShim.ts` is deleted, so the proof computes its read-only store
+  // path from `testUserDataDir()` (the userData a boot derives for the contained HOME) instead of
+  // `getPath('userData')`, and two comments no longer name the shim. Same path, same byte-identity
+  // assertions. Prior digest:
+  // 2206b5c9fa8965c3eb1c1f503dad2c476c185e3d45809840c46af272e62beed3
   const ELECTRON_UNTOUCHED_SHA256 =
-    '2206b5c9fa8965c3eb1c1f503dad2c476c185e3d45809840c46af272e62beed3'
+    '31a3129090194f5d79152bd4f762863c4d48d64931d73490c890529002bc637e'
 
   it('REQ-34.2-14 Gate 8: electronUntouched.test.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, 'electronUntouched.test.ts')

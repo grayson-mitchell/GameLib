@@ -1,4 +1,5 @@
-import * as pathsModule from '../constants/paths'
+import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { createGameConfigs } from '../game_config'
 import {
@@ -7,6 +8,10 @@ import {
 } from '../testUtils/testConfig'
 
 describe('createGameConfigs', () => {
+  const profile = createFakeHomeProfile()
+  afterAll(() => profile.dispose())
+  const pathsModule = createTestAppPaths(profile.root)
+
   // The per-game defaults read these two keys of the global settings.
   const config = createTestGlobalConfig({
     enviromentOptions: [],

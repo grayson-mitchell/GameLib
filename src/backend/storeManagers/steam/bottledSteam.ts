@@ -344,7 +344,7 @@ async function dispatchToBottledSteam(
   const bottleName =
     deps.steamBottle.configStore().get_nodefault('bottleName') ??
     DEFAULT_STEAM_BOTTLE_NAME
-  const steamExePath = getBottleSteamExePath(bottleName)
+  const steamExePath = getBottleSteamExePath(deps.paths, bottleName)
 
   // -silent: if this call is what starts the bottled client, it comes up in
   // the tray with no main window and no Special Offers popup. Login still

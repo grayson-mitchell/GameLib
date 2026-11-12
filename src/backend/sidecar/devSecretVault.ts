@@ -53,7 +53,7 @@ import {
 import { join } from 'path'
 
 import { logError, logWarning, LogPrefix } from 'backend/logger'
-import { getPath } from './pathShim'
+import type { AppPaths } from 'backend/process/context'
 import { isPackagedSidecar } from './isPackagedSidecar'
 import type { TokenStore } from 'backend/storeManagers/steam/tokenStore'
 import type {
@@ -70,7 +70,7 @@ const DEV_SECRET_VAULT_ENV_VAR = 'GAMELIB_DEV_SECRET_VAULT'
 /** File name — deliberately contains `dev-secret-vault` so it is obvious on sight in a
  * directory listing and cannot be mistaken for real application data (D-14/T-27-03's sibling
  * concern, applied to a file this project actively wants a developer to notice). Placed under
- * `pathShim`'s `temp` resolution (`os.tmpdir()`), NOT `userData` — this vault is disposable
+ * `paths.temp` (`os.tmpdir()`), NOT `userData` — this vault is disposable
  * gate-run scratch, never part of the persisted app profile. */
 const VAULT_FILE_NAME = 'gamelib-dev-secret-vault.json'
 
@@ -102,8 +102,8 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-function vaultFilePath(): string {
-  return join(getPath('temp'), VAULT_FILE_NAME)
+function vaultFilePath(paths: Pick<AppPaths, 'temp'>): string {
+  return join(paths.temp, VAULT_FILE_NAME)
 }
 
 /** Re-asserts owner-only permissions on every call (guardrail, T-34.5-C4-41) — a mode set once
@@ -294,7 +294,9 @@ export interface DevSecretVault {
  * `[bootstrap] secret stores: <keyring|dev-vault>` receipt line (`bootstrap.ts`) is keyed
  * directly off whether the boot holds a vault, so a caller can always tell which arm ran.
  */
-export function createDevSecretVault(): DevSecretVault | null {
+export function createDevSecretVault(
+  paths: Pick<AppPaths, 'temp'>
+): DevSecretVault | null {
   if (process.env[DEV_SECRET_VAULT_ENV_VAR] !== '1') {
     return null
   }
@@ -322,7 +324,7 @@ export function createDevSecretVault(): DevSecretVault | null {
     return null
   }
 
-  const path = vaultFilePath()
+  const path = vaultFilePath(paths)
   try {
     ensureVaultFileCreated(path)
   } catch (error) {

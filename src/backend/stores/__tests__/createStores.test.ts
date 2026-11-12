@@ -1,12 +1,14 @@
 import { basename, dirname, join } from 'node:path'
 import CacheStore from '../../cache'
-import { getPath } from '../../sidecar/pathShim'
 import { TypeCheckedStoreBackend } from '../../typed_store'
 import { defined } from '../../testUtils/indexed'
 import { createStores } from '../createStores'
 import { createStoreRegistry } from '../storeRegistry'
 import { createStoreRoot } from '../storeRoot'
-import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+import {
+  createTestStoreRoot,
+  testUserDataDir
+} from '../../testUtils/testStoreRoot'
 import fixture from './fixtures/registeredStores.json'
 
 /**
@@ -100,7 +102,7 @@ describe('createStores', () => {
       const { schema, ...actualOptions } = actual
       // An absolute cwd (game_overrides, runsForMe, macArch) is pinned relative to userData.
       const cwd = String(actualOptions.cwd).replace(
-        getPath('userData'),
+        testUserDataDir(),
         '<userData>'
       )
       expect({ ...actualOptions, cwd }).toEqual(options)
@@ -130,7 +132,7 @@ describe('createStores', () => {
         if (!(store instanceof CacheStore)) continue
         const internals = store as unknown as CacheInternals
         const path = internals.store.path
-        expect(dirname(path)).toBe(join(getPath('userData'), 'store_cache'))
+        expect(dirname(path)).toBe(join(testUserDataDir(), 'store_cache'))
         const name = basename(path, '.json')
         expect(built.has(name)).toBe(false)
         built.set(name, internals)

@@ -75,6 +75,7 @@ export type PollOptions = {
  */
 export function getBottleSteamappsRoot(deps: BottleSettingsDeps): string {
   return getBottleSteamappsDir(
+    deps.paths,
     deps.steamBottle.getSteamBottleSettings().wineCrossoverBottle
   )
 }
@@ -101,6 +102,7 @@ export function getBridgeBottleSteamappsRoot(
   appId: string
 ): string {
   return getBottleSteamappsDir(
+    deps.paths,
     getBridgeBottleSettings(deps, appId).wineCrossoverBottle
   )
 }

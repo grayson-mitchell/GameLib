@@ -65,7 +65,7 @@ export async function uninstall(
   // install's bits actually live, never on where a NEW install would
   // route (unaffected by the install_path routing fix below — see this
   // method's own JSDoc).
-  if (findBridgeInstallBottle(steamGame.appId) !== null) {
+  if (findBridgeInstallBottle(steamGame.deps.paths, steamGame.appId) !== null) {
     return uninstallBridgeGame(steamGame)
   }
 
@@ -278,7 +278,7 @@ async function uninstallBridgeGame(steamGame: SteamGame): Promise<ExecResult> {
   // a `^\d+$` zod regex. manifestPath is built only from steamGame.appId and
   // the resolved bottle's own steamapps dir, never from any other string.
   const manifestPath = join(
-    getBottleSteamappsDir(bottleName),
+    getBottleSteamappsDir(steamGame.deps.paths, bottleName),
     `appmanifest_${steamGame.appId}.acf`
   )
 
@@ -683,7 +683,7 @@ export async function uninstallBottleGameDirectly(
 
   const bottleName =
     steamGame.deps.steamBottle.getSteamBottleSettings().wineCrossoverBottle
-  const steamappsDir = getBottleSteamappsDir(bottleName)
+  const steamappsDir = getBottleSteamappsDir(steamGame.deps.paths, bottleName)
   const commonRoot = resolve(steamappsDir, 'common')
   const resolvedInstallPath = resolve(acfState.installPath)
   const relFromCommon = relative(commonRoot, resolvedInstallPath)

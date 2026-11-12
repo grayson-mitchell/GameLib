@@ -42,6 +42,7 @@ const getAnonymousPicsClient = jest.fn()
 // bridgeVerdict is mocked, so the store slice is never read.
 const DEPS = {
   steamUser,
+  paths: { userHome: '/test-home' },
   stores: {},
   anonymousClient: { get: getAnonymousPicsClient }
 } as never
@@ -175,7 +176,10 @@ describe('resolveBridgeLaunchExe', () => {
     expect(result).toBe(
       join(BRIDGE_STEAMAPPS_DIR, 'common', 'Avernum 4', 'Avernum4.exe')
     )
-    expect(getBottleSteamappsDir).toHaveBeenCalledWith('GameLibSteamBridge')
+    expect(getBottleSteamappsDir).toHaveBeenCalledWith(
+      { userHome: '/test-home' },
+      'GameLibSteamBridge'
+    )
     // quick/261016-u1w (D-B threading): getBridgeBottleSettings is now
     // per-appId so a per-game bridge bottle can be resolved.
     expect(getBridgeBottleSettings).toHaveBeenCalledWith(

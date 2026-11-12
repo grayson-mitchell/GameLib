@@ -81,6 +81,7 @@ async function collectAllowedRoots(
     roots.add(
       resolve(
         getBottleSteamappsDir(
+          deps.paths,
           deps.steamBottle.getSteamBottleSettings().wineCrossoverBottle
         )
       )

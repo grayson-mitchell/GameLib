@@ -8,7 +8,7 @@
  *
  * This module's ordering is load-bearing (spike 009's sharp edge): nothing in `src/` imports
  * `electron` (`meta/__tests__/electronAbsence.test.ts` gates that) and the `backend/platform`
- * facade is gone (66.3): module-scope path reads go through `./pathShim`, and the IPC registry
+ * facade is gone (66.3): module-scope path reads go through `./appPaths`, and the IPC registry
  * is built fresh by the 'host-services' boot step.
  */
 
@@ -20,7 +20,8 @@ import {
 } from './outboundHttpRegistry'
 
 import type { Readable, Writable } from 'node:stream'
-import { existsSync } from 'graceful-fs'
+import { existsSync, mkdirSync, renameSync } from 'graceful-fs'
+import { dirSync, tmpNameSync } from 'tmp'
 import { join } from 'node:path'
 import Backend from 'i18next-fs-backend'
 import i18next from 'i18next'
@@ -202,14 +203,18 @@ import { createGlobalConfig, type GlobalConfigSlice } from '../config'
 import { createGameConfigs } from '../game_config'
 import { resolveAppInfo } from '../host/appInfo'
 import { isPackagedSidecar } from './isPackagedSidecar'
-import { getPath } from './pathShim'
+import { prepareAppFolder } from './appFolderStep'
+import { readXdgUserDir } from './knownFolders'
 import { homedir, release as osRelease, tmpdir } from 'os'
-import { derivePaths, resolveAppDataDir } from '../process/appPaths'
+import {
+  derivePaths,
+  resolveAppDataDir,
+  resolveKnownFolder
+} from '../process/appPaths'
 import { createAppContext } from '../process/context'
 import type { AppContext, AppPaths } from '../process/context'
 import type { LogSink, ProcessRunner } from '../process/types'
 import { createIpcValidator } from './ipcValidation'
-import { gamesConfigPath } from '../constants/paths'
 import { createMiscRuntime } from '../miscRuntime'
 import { createAppRuntime } from '../appRuntime'
 import type { AppRuntime } from '../appRuntime'
@@ -279,6 +284,9 @@ import MigrationSystem from '../migration'
  * before its channel exists); READY precedes the sign-in probe and the
  * startup protocol URL.
  *
+ * 'app-folder' is FIRST (D-66.4-04): the heroic -> GameLib rename and the CI=e2e app folder must
+ * precede every step that reads under the app folder (pathsBootOrder.test.ts pins it).
+ *
  * 'stores' follows 'logger' and precedes 'migrations' (which reads `migrationsStore`);
  * 'command-runner' and 'store-managers' follow 'migrations'. They fill the per-boot
  * `BootServices` from `prebuilt` or the identity facades (66.1).
@@ -289,6 +297,7 @@ import MigrationSystem from '../migration'
  * which knip cannot see.
  */
 export const BOOT_STEP_NAMES = [
+  'app-folder',
   'outbound-http-tracking',
   'logger',
   'sidecar-rpc',
@@ -1297,7 +1306,7 @@ export function bootSidecar(
 }
 
 /**
- * The production path set, read from the platform layer and `backend/constants/paths`.
+ * The production path set, derived from the platform layer by `process/appPaths`.
  *
  * @public Consumed by sidecar tests through require() in a fresh module registry (D-08),
  * which knip cannot see.
@@ -1309,8 +1318,11 @@ export function resolveAppPaths(): AppPaths {
   const appRoot = process.env.GAMELIB_APP_ROOT || process.cwd()
   const derived = derivePaths({
     appData,
-    // The e2e temp config root arrives with 66.4-20; until then constants/paths owns it.
-    configRoot: appData,
+    // CI=e2e (unreachable, D-35-14-01): a name only, no I/O; the 'app-folder' step creates it.
+    configRoot:
+      process.env.CI === 'e2e'
+        ? tmpNameSync({ prefix: 'gamelib-e2e-' })
+        : appData,
     home,
     userHome: isSnap ? process.env.SNAP_REAL_HOME! : home,
     flatpakHome: process.env.XDG_DATA_HOME?.replace('/data', '') || home,
@@ -1327,13 +1339,30 @@ export function resolveAppPaths(): AppPaths {
       ...derived,
       appRoot,
       appData,
-      knownFolder: (name: 'desktop' | 'documents') => getPath(name)
+      knownFolder: (name: 'desktop' | 'documents') =>
+        resolveKnownFolder(
+          name,
+          process.platform,
+          process.env,
+          home,
+          readXdgUserDir
+        )
     },
     'exe',
     {
-      // Lazy: pathShim throws when the Tauri shell did not hand GAMELIB_SHELL_EXE down, and boot
-      // must not die for a path only shortcut code reads.
-      get: () => getPath('exe'),
+      // Lazy: unset GAMELIB_SHELL_EXE throws (T-34.5-02: an empty value must never be written into
+      // a shortcut launch command), and boot must not die for a path only shortcut code reads.
+      // Returned verbatim, never trimmed or existence-checked: the Tauri shell is the authority
+      // for its own path.
+      get: () => {
+        const shellExe = process.env.GAMELIB_SHELL_EXE
+        if (!shellExe) {
+          throw new Error(
+            '[process/appPaths] exe is unavailable: GAMELIB_SHELL_EXE was not set by the Tauri shell at spawn time'
+          )
+        }
+        return shellExe
+      },
       enumerable: true
     }
   ) as AppPaths
@@ -1374,6 +1403,20 @@ function createBackendLogSink(): LogSink {
 // to source-gate the call order of the steps below.
 function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
   return [
+    {
+      name: 'app-folder',
+      // The heroic -> GameLib config-folder move and the CI=e2e app folder, ahead of every step that
+      // reads under the app folder (D-66.4-04). Synchronous and bounded; holds no handle.
+      run: (ctx) => {
+        prepareAppFolder(ctx.paths, {
+          env: process.env,
+          fs: { existsSync, mkdirSync, renameSync },
+          dirSync,
+          log: (line) => console.log(line),
+          logError: (line) => console.error(line)
+        })
+      }
+    },
     {
       name: 'outbound-http-tracking',
       run: (_ctx, _io, state) => {
@@ -1658,8 +1701,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       // After 'logger' (the vault logs) and before every secret owner. Local file I/O only, no
       // RPC, so it needs no transport; the keyring arm needs none at construction either (the
       // keyring is touched only by the migrations in 'secret-stores', after 'rpc-server').
-      run: (_ctx, _io, state) => {
-        state.secretVault = createDevSecretVault()
+      run: (ctx, _io, state) => {
+        state.secretVault = createDevSecretVault(ctx.paths)
       }
     },
     {
@@ -1686,7 +1729,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       // Builds the one Steam bottle helper instance of this boot (D-05, D-66.3-15), replacing the
       // static bottle-stores holder. Needs the bottle config store ('stores') and the global
       // config ('config'); construction reads and writes nothing, so it adds no I/O to boot.
-      run: (_ctx, _io, state) => {
+      run: (ctx, _io, state) => {
         const { stores, config } = state.services
         if (!stores) throw new Error('boot: stores step must run first')
         if (!config) throw new Error('boot: config step must run first')
@@ -1695,6 +1738,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           createSteamBottle({
             stores,
             config,
+            paths: ctx.paths,
             // 'engine-runtime' runs after this step: resolve the locator at call time.
             crossover: {
               resolveCrossoverBinDir: (opts) =>
@@ -1856,7 +1900,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           prebuilt.quit ??
           createQuitHandler({
             runner: ctx.runner,
-            isLocked: () => existsSync(join(gamesConfigPath, 'lock')),
+            isLocked: () => existsSync(join(ctx.paths.gamesConfigPath, 'lock')),
             // Read lazily: this handler is built before 'download-queue' and only fires after boot.
             isRunning: () => requireServices(state).downloadQueue.isRunning(),
             isBridgeHosting: () => requireBridgeHelpers(state).hasLive(),
@@ -2345,12 +2389,12 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // Logs the GAMELIB_SHELL_EXE value the SIDECAR ACTUALLY RECEIVED, not what the Rust shell's
         // own `eprintln!` at main.rs:1231 CLAIMS it sent (that line only ever reaches the shell
         // process's own stderr -- the `pnpm tauri:dev` terminal -- never `gamelib.log`). The child's
-        // own observation is strictly stronger evidence: it proves what pathShim can actually see,
+        // own observation is strictly stronger evidence: it proves what appPaths can actually see,
         // not merely what the parent set on the spawn call. `34.5-LIVE-GATE.md` precondition 5 cites
         // this exact prefix (`GAMELIB_SHELL_EXE received=`) as its evidence source -- the gate's
         // re-run reads it from here, not the terminal.
         //
-        // Reads `process.env.GAMELIB_SHELL_EXE` directly rather than `pathShim.getPath('exe')`,
+        // Reads `process.env.GAMELIB_SHELL_EXE` directly rather than the `exe` path accessor,
         // which THROWS on an unset/empty value (T-34.5-01) -- this diagnostic must report an unset
         // value, never crash boot trying to report it. Placement (after `initLogger()` above, before
         // `output.write(READY_SENTINEL)` below) is load-bearing per the standing

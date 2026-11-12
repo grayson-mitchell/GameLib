@@ -132,8 +132,8 @@ jest.mock('../../utils', () => ({
 }))
 
 // downloadmanager/utils.ts (NOT backend/utils.ts above) — installQueueElement/
-// updateQueueElement pull in backend/constants/paths -> tmp, which crashes
-// outside a real Electron app context. Never exercised by these tests
+// updateQueueElement pull in the install and tools stack, which needs a
+// full boot. Never exercised by these tests
 // (initQueue() is deliberately never called — see file header).
 //
 // 260905-luf: `resolveGameTitle` is real production logic downloadqueue.ts's

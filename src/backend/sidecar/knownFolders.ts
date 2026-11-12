@@ -1,5 +1,5 @@
 /**
- * The user's real Desktop/Documents folders for `pathShim.getPath()`, the way Electron's own
+ * The user's real Desktop/Documents folders for `AppPaths.knownFolder()` (`resolveKnownFolder`), the way Electron's own
  * `app.getPath('desktop'|'documents')` resolves them:
  *
  *   - Linux: `$XDG_CONFIG_HOME/user-dirs.dirs` (written by `xdg-user-dirs-update`), so a
@@ -8,12 +8,12 @@
  *   - Windows: the `User Shell Folders` registry key, which is where OneDrive (and a user's own
  *     "Move" in the folder's Location tab) redirects Desktop and Documents. Read with `reg.exe`
  *     through the process runner (argv, no shell, no new native dependency), awaited by the two
- *     win32 consumers (shortcuts.ts, save_sync.ts); `pathShim` itself is sync and never reads it.
+ *     win32 consumers (shortcuts.ts, save_sync.ts); `resolveKnownFolder` itself is sync and never reads it.
  *
  * Every lookup returns `undefined` when it cannot answer. The Linux lookup then falls back to
- * `homedir()/<Name>` inside pathShim. The Windows lookup has NO fallback: on `undefined`,
+ * `homedir()/<Name>` inside `resolveKnownFolder`. The Windows lookup has NO fallback: on `undefined`,
  * shortcuts.ts writes no Desktop shortcut and reports it, and save_sync.ts leaves out the
- * locations that need Documents. pathShim's win32 `desktop`/`documents` arms throw (quick
+ * locations that need Documents. `resolveKnownFolder`'s win32 arms throw (quick
  * 261111-aq4). Live evidence: on a OneDrive-redirected profile `<profile>\Desktop` did not exist
  * and `<profile>\Documents` was a different folder from the real one.
  */

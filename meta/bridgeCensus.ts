@@ -1296,7 +1296,7 @@ const STEAMAPPS_SUBPATH = join(
 )
 // Quick 261024-f0w: the app's persisted per-title metadata. `cache.ts`
 // opens `CacheStore('steam_metadata')` with `cwd: 'store_cache'`, and
-// `sidecar/pathShim.ts` resolves userData to this directory on macOS.
+// `process/appPaths.ts` resolves userData to this directory on macOS.
 const STEAM_METADATA_PATH = join(
   homedir(),
   'Library/Application Support/gamelib/store_cache/steam_metadata.json'
@@ -1312,7 +1312,7 @@ const OBJDUMP_BIN = '/usr/bin/objdump'
 const MAX_EXE_DEPTH = 4
 
 // Mirrors `shimGenerate.ts`'s `isGameLibShimBytes` marker check verbatim
-// (not imported: that module pulls `backend/constants/paths` and other
+// (not imported: that module pulls `process/appPaths` and other
 // backend imports this zero-backend-import tool must not carry). Either
 // signal alone is sufficient -- a genuine game dll has no reason to
 // contain either string.

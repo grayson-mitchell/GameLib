@@ -104,7 +104,10 @@ export async function launchBridgeGameBody(
     steamGame.appId
   )
   if (
-    !isBridgeBottleReady(bridgeBottleSettings.wineCrossoverBottle) ||
+    !isBridgeBottleReady(
+      steamGame.deps.paths,
+      bridgeBottleSettings.wineCrossoverBottle
+    ) ||
     !existsSync(exePath)
   ) {
     logWarning(

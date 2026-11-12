@@ -584,7 +584,7 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
       'src/backend/ipc.ts',
       'src/backend/launcher.ts',
       'src/backend/storeSearch/cheapshark.ts',
-      'src/backend/constants/paths.ts',
+      'src/backend/process/appPaths.ts',
       'src/backend/utils.ts',
       'src/common/types.ts',
       // Phase 34.3 Plan 07 (D-10): the new edge itself is anti-vacuity-protected --

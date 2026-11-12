@@ -287,7 +287,7 @@ export async function removeSteamInstallCopy(
   // fails resolveBridgeBottleName's own numeric guard, which the check
   // above already rules out for every caller.
   const resolvedBridgeBottleName =
-    source === 'bridge' ? resolveBridgeBottleName(appId) : null
+    source === 'bridge' ? resolveBridgeBottleName(deps.paths, appId) : null
 
   const acfState = await readAcfState(deps, appId, source)
 

@@ -20,8 +20,8 @@
  * `flushUntil`, `flushAsync`, `flushImmediate`) -- eleven flush-family
  * implementations in total. Keep yours local and tuned to your suite.
  *
- * The `jest.mock('os', ...)` block (28 suites) and `jest.mock('../pathShim')`
- * (8 suites) are NOT here because they CANNOT be. `jest.mock` is hoisted to
+ * The `jest.mock('os', ...)` block (28 suites) is NOT here because it CANNOT be (the
+ * `jest.mock('../pathShim')` block it used to sit beside is gone with the shim, 66.4-20). `jest.mock` is hoisted to
  * the top of the file it is written in, and its factory may not close over
  * outer bindings that are not `mock`-prefixed. Calling it from an imported
  * module registers too late to help. WR-10's original suggestion to hoist

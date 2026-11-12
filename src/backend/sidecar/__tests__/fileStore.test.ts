@@ -7,7 +7,7 @@
  * (fixed in commit 92c29a5e); an `afterAll` restore is NOT a safety net
  * because jest force-exits workers. Mirrors the `os` module mock's homedir
  * override from `skeletonFlows.test.ts`, redirecting `homedir()` to a
- * disposable per-process tmp directory before `fileStore`/`pathShim` are ever
+ * disposable per-process tmp directory before `fileStore` is ever
  * imported.
  */
 
@@ -31,9 +31,11 @@ import {
   statSync,
   writeFileSync
 } from 'fs'
-import { getPath } from '../pathShim'
 import FileStore from '../fileStore'
-import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+import {
+  createTestStoreRoot,
+  testUserDataDir
+} from '../../testUtils/testStoreRoot'
 import type { StoreRoot } from '../../stores/storeRoot'
 
 describe('sidecar fileStore', () => {
@@ -99,7 +101,7 @@ describe('sidecar fileStore', () => {
     const store = new FileStore({ root, cwd })
     store.set('key', 'value')
 
-    const dir = join(getPath('userData'), cwd)
+    const dir = join(testUserDataDir(), cwd)
     const entries = readdirSync(dir)
     const tmpFiles = entries.filter((f) => f.includes('.tmp-'))
     expect(tmpFiles).toEqual([])
@@ -128,7 +130,7 @@ describe('sidecar fileStore', () => {
   it('WR-11: an ABSOLUTE cwd inside userData is still accepted (game_overrides shape)', () => {
     const store = new FileStore({
       root,
-      cwd: join(getPath('userData'), 'store'),
+      cwd: join(testUserDataDir(), 'store'),
       name: 'gameOverrides'
     })
     expect(() => store.set('overrides', { a: 1 })).not.toThrow()
@@ -140,7 +142,7 @@ describe('sidecar fileStore', () => {
     const store = new FileStore({ root, cwd })
     store.set('token', 'ciphertext')
 
-    const dir = join(getPath('userData'), cwd)
+    const dir = join(testUserDataDir(), cwd)
 
     expect(statSync(join(dir, 'config.json')).mode & 0o777).toBe(0o600)
 
@@ -158,7 +160,7 @@ describe('sidecar fileStore', () => {
     const store = new FileStore({ root, cwd })
     store.set('seed', 1) // ensures the directory exists
 
-    const dir = join(getPath('userData'), cwd)
+    const dir = join(testUserDataDir(), cwd)
     const fs = jest.requireActual('graceful-fs')
     const renameSpy = jest.spyOn(fs, 'renameSync').mockImplementation(() => {
       throw new Error('EXDEV: cross-device link not permitted')
@@ -264,7 +266,7 @@ describe('sidecar fileStore', () => {
     // The on-disk shape must be flat — interchangeable with the file the Electron
     // build's electron-store writes for this same store.
     const raw = JSON.parse(
-      readFileSync(join(getPath('userData'), cwd, 'uploadedLogs.json'), 'utf-8')
+      readFileSync(join(testUserDataDir(), cwd, 'uploadedLogs.json'), 'utf-8')
     )
     expect(Object.keys(raw)).toEqual([url])
     expect(raw[url]).toEqual(uploadData)
@@ -310,7 +312,7 @@ describe('sidecar fileStore', () => {
 
   it('corrupt file: invalid on-disk JSON yields an empty store instead of throwing', () => {
     const cwd = 'corrupt_file_test'
-    const dir = join(getPath('userData'), cwd)
+    const dir = join(testUserDataDir(), cwd)
     // Force the directory to exist, then write invalid JSON directly, mimicking
     // a crash mid-write BEFORE this file's atomic-persist fix existed.
     const store = new FileStore({ root, cwd })
@@ -341,7 +343,7 @@ describe('sidecar fileStore', () => {
       const cwd = `nonobject_json_test_${contents.replace(/\W/g, '')}`
       const seed = new FileStore({ root, cwd })
       seed.set('bootstrap', true) // ensures the directory exists
-      writeFileSync(join(getPath('userData'), cwd, 'config.json'), contents)
+      writeFileSync(join(testUserDataDir(), cwd, 'config.json'), contents)
       root = createTestStoreRoot()
 
       // With defaults present — the exact shape that threw at construction.

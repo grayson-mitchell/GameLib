@@ -359,7 +359,9 @@ function freshRegistry(): void {
   loggerModule = require('../../logger')
   const protocol = require('../../protocol')
   handleProtocol = protocol.handleProtocol
-  gamesConfigPath = require('../../constants/paths').gamesConfigPath
+  gamesConfigPath =
+    require('../../testUtils/testAppPaths').createContainedHomeAppPaths()
+      .gamesConfigPath
   /* eslint-enable @typescript-eslint/no-require-imports */
 
   mockedGlobalConfigGet = createGlobalConfig as jest.Mock
@@ -422,6 +424,8 @@ function directDeps(stores: unknown = {}, sendFrontendMessage = jest.fn()) {
 function boot() {
   return bootFresh({
     reuseRegistry: true,
+    // The quit handler's lock check reads ctx.paths.gamesConfigPath, the folder the cases write to.
+    context: { paths: { gamesConfigPath } },
     services: {
       appRuntime,
       // The real monitor: this suite pins the connectivity listener it registers on start().

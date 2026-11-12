@@ -7,10 +7,9 @@
  *  - resetMocks: true in jest.config means mock implementations must be
  *    re-established in each test
  *  - graceful-fs mocked (existsSync) — no real filesystem access
- *  - electron mocked (app.getPath) — backend/constants/paths imports it
  */
 import { createEngineRegistry } from 'backend/engine/engineRegistry'
-import { userHome } from 'backend/constants/paths'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import {
   existsSync,
   mkdirSync,
@@ -24,7 +23,7 @@ import {
 // `graceful-fs` `readFileSync` import above (manifest.test.ts precedent).
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import { createSteamBottle } from '../bottle'
-import { getBottleDir } from 'backend/storeManagers/steam/bottleDirs'
+import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { createTestSteamLaunchRuntime } from 'backend/testUtils/testSteamLaunchRuntime'
 import { createGlobalTimerClock } from 'backend/testUtils/globalTimerClock'
 import { provisionBottle } from '../provisionBottle'
@@ -64,7 +63,7 @@ jest.mock('backend/engine/adoptBottle', () => ({
 
 // GAP C (17-16): force isMac true so the macOS raise poll loop is exercised
 // deterministically on every host (the loop is dynamically imported by
-// bottle.ts). isSnap is provided because backend/constants/paths reads it.
+// bottle.ts). isSnap is provided for the environment consumers.
 jest.mock('backend/constants/environment', () => ({
   isMac: true,
   isWindows: false,
@@ -98,6 +97,7 @@ const engineRuntime = { crossover, registry: createEngineRegistry() }
 const steamLaunchRuntime = createTestSteamLaunchRuntime({
   clock: createGlobalTimerClock()
 })
+const { userHome } = createContainedHomeAppPaths()
 const paths = { userHome, steamSupportPath: '/test/steam_store' }
 
 const mockedExistsSync = existsSync as jest.Mock
@@ -112,6 +112,7 @@ const mockedSet = steamBottleConfigStore.set as jest.Mock
 const mockedGlobalConfigGet = jest.fn()
 // 66.3-15: the bottle helpers are an instance over the suite's mocked store and config.
 const steamBottle = createSteamBottle({
+  paths,
   stores: createTestStores({ steam: { steamBottleConfigStore } as never }),
   config: { getSettings: () => mockedGlobalConfigGet().getSettings() },
   crossover
@@ -735,8 +736,8 @@ describe('bottle.ts', () => {
       // SCOPE-FENCE (T-17-DoS): WINEPREFIX is the dedicated Steam bottle's own
       // dir, not the shared GameLib GOG/Epic bottle, and never unset/empty.
       const opts = killCall![2] as { env: NodeJS.ProcessEnv }
-      expect(opts.env.WINEPREFIX).toBe(getBottleDir('GameLibSteam'))
-      expect(opts.env.WINEPREFIX).not.toBe(getBottleDir('GameLib'))
+      expect(opts.env.WINEPREFIX).toBe(getBottleDir(paths, 'GameLibSteam'))
+      expect(opts.env.WINEPREFIX).not.toBe(getBottleDir(paths, 'GameLib'))
       expect(opts.env.WINEPREFIX).toContain('GameLibSteam')
       expect(opts.env.CX_ROOT).toBeTruthy()
     })

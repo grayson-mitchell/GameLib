@@ -9,7 +9,7 @@
  * (env-exact-match opt-in, loud warnings that never leak a value, and packaged-build refusal)
  * hold, not merely that the vault "works".
  *
- * `../pathShim` is mocked so every test resolves the vault file inside a disposable, per-test
+ * Every test hands the vault a `paths.temp` that is a disposable, per-test
  * `mkdtemp` directory (real `graceful-fs`, real filesystem — this project's established
  * black-box-over-mocking-fs precedent, `bootstrap.test.ts`'s own header) rather than the
  * developer's real `os.tmpdir()` shared across concurrent test runs.
@@ -49,29 +49,6 @@ import { join } from 'path'
 let mockLogInfo: jest.SpyInstance
 let mockLogWarning: jest.SpyInstance
 let mockLogError: jest.SpyInstance
-
-// ── pathShim mock — REAL module for every name except 'temp', which each test points at a
-// disposable per-test mkdtemp dir (never the developer's real os.tmpdir()). Must stay REAL for
-// every other name: `platform/index.ts`'s `app.getPath` is a direct re-export of THIS SAME
-// module's `getPath` (`platform/index.ts:39,203`), and `backend/constants/paths.ts` calls
-// `app.getPath('appData'|'userData')` at MODULE SCOPE — a full-replacement mock (Task 1's
-// original, pre-Task-2 shape) would throw on that call the instant anything in this file
-// imports the real `./handlers` graph (Task 2's bootstrap wiring block does, via `../bootstrap`). ─
-const realPathShim: typeof import('../pathShim') =
-  jest.requireActual('../pathShim')
-// Phase 35 Plan 05 (D-04): a DEFAULT implementation is required at module scope, not just in
-// `beforeEach`. `backend/store_backend.ts` resolves its cwd from `pathShim.getPath('userData')`,
-// and `backend/cache.ts` constructs `new CacheStore()` at MODULE SCOPE — so this mock is called
-// during the import graph below, long before any `beforeEach` runs. Without a default it
-// returned `undefined` and `join(undefined, 'store_cache')` threw. Before the swap the same
-// construction went through `electron-store` -> `app.getPath()` -> the `electron` automock, so
-// it never reached this mock at import time. `resetMocks: true` clears this default before each
-// test, which is harmless: `beforeEach` below installs the same fall-through plus the 'temp'
-// redirect.
-const mockGetPath = jest.fn((name: string) => realPathShim.getPath(name))
-jest.mock('../pathShim', () => ({
-  getPath: (name: string) => mockGetPath(name)
-}))
 
 // ── isPackagedSidecar mock — repointed by Phase 35 plan 04 from '../humbleFlowRegistration'
 // to '../isPackagedSidecar', because that plan MOVED the function so app.isPackaged could
@@ -126,12 +103,6 @@ describe('devSecretVault', () => {
     delete process.env[ENV_VAR]
 
     vaultDir = mkdtempSync(join(tmpdir(), 'gamelib-dev-secret-vault-test-'))
-    mockGetPath.mockImplementation((name: string) =>
-      // 'temp' is the only name this suite ever redirects — every other name (Task 2's real
-      // bootstrap `init` needs 'appData'/'userData'/etc. via platformApi's app.getPath) falls
-      // through to the REAL pathShim, see the mock declaration's own comment above.
-      name === 'temp' ? vaultDir : realPathShim.getPath(name)
-    )
 
     mockIsPackagedSidecar.mockReset()
     ;(mockedChmodSync as jest.Mock).mockImplementation(
@@ -171,7 +142,7 @@ describe('devSecretVault', () => {
   // ── Guardrail (a): exact-'1' env opt-in ────────────────────────────────────────────────────
 
   it('unset: returns null and builds nothing (the F-1 regression guard)', () => {
-    expect(createDevSecretVault()).toBeNull()
+    expect(createDevSecretVault({ temp: vaultDir })).toBeNull()
   })
 
   it.each(['0', 'false'])(
@@ -179,7 +150,7 @@ describe('devSecretVault', () => {
     (value) => {
       process.env[ENV_VAR] = value
 
-      expect(createDevSecretVault()).toBeNull()
+      expect(createDevSecretVault({ temp: vaultDir })).toBeNull()
     }
   )
 
@@ -189,7 +160,7 @@ describe('devSecretVault', () => {
     process.env[ENV_VAR] = '1'
     mockIsPackagedSidecar.mockReturnValue(true)
 
-    expect(createDevSecretVault()).toBeNull()
+    expect(createDevSecretVault({ temp: vaultDir })).toBeNull()
     expect(
       mockLogError.mock.calls.some(([message]) =>
         String(message).includes('[dev-secret-vault] REFUSED')
@@ -203,7 +174,7 @@ describe('devSecretVault', () => {
       throw new Error('build-kind detector exploded')
     })
 
-    expect(createDevSecretVault()).toBeNull()
+    expect(createDevSecretVault({ temp: vaultDir })).toBeNull()
   })
 
   it('vault file cannot be created with owner-only permissions: refuses and logs REFUSED', () => {
@@ -213,7 +184,7 @@ describe('devSecretVault', () => {
       throw new Error('EPERM: operation not permitted, chmod')
     })
 
-    expect(createDevSecretVault()).toBeNull()
+    expect(createDevSecretVault({ temp: vaultDir })).toBeNull()
     expect(
       mockLogError.mock.calls.some(([message]) =>
         String(message).includes('[dev-secret-vault] REFUSED')
@@ -227,7 +198,7 @@ describe('devSecretVault', () => {
     process.env[ENV_VAR] = '1'
     mockIsPackagedSidecar.mockReturnValue(false)
 
-    const vault = createDevSecretVault()
+    const vault = createDevSecretVault({ temp: vaultDir })
     if (!vault) throw new Error('expected the dev vault to be built')
     expect(vault.tokenStore).toBeDefined()
     expect(vault.humbleSecretStore).toBeDefined()
@@ -244,7 +215,7 @@ describe('devSecretVault', () => {
     process.env[ENV_VAR] = '1'
     mockIsPackagedSidecar.mockReturnValue(false)
 
-    const vault = createDevSecretVault()
+    const vault = createDevSecretVault({ temp: vaultDir })
     if (!vault) throw new Error('expected the dev vault to be built')
 
     const vaultPath = join(vaultDir, 'gamelib-dev-secret-vault.json')
@@ -256,7 +227,7 @@ describe('devSecretVault', () => {
     process.env[ENV_VAR] = '1'
     mockIsPackagedSidecar.mockReturnValue(false)
 
-    const vault = createDevSecretVault()
+    const vault = createDevSecretVault({ temp: vaultDir })
     if (!vault) throw new Error('expected the dev vault to be built')
 
     // Deliberately random, no natural-language overlap with this module's own log vocabulary
@@ -299,7 +270,7 @@ describe('devSecretVault', () => {
   it('only reads slot/key identifiers into log lines, never the value, on a plain read of an empty slot', async () => {
     process.env[ENV_VAR] = '1'
     mockIsPackagedSidecar.mockReturnValue(false)
-    const vault = createDevSecretVault()
+    const vault = createDevSecretVault({ temp: vaultDir })
     if (!vault) throw new Error('expected the dev vault to be built')
 
     const tokenStore = vault.tokenStore
@@ -316,7 +287,7 @@ describe('devSecretVault', () => {
   it('a store and a wipe of the Steam slot emit distinct, strictly-pinned direction lines, and the wipe leaves the slot present-and-empty on disk at mode 0600', async () => {
     process.env[ENV_VAR] = '1'
     mockIsPackagedSidecar.mockReturnValue(false)
-    const vault = createDevSecretVault()
+    const vault = createDevSecretVault({ temp: vaultDir })
     if (!vault) throw new Error('expected the dev vault to be built')
 
     // Deliberately random, no natural-language overlap with this module's own log vocabulary —
@@ -358,7 +329,7 @@ describe('devSecretVault', () => {
   it('clearing both Humble secrets emits a strictly-pinned wipe line for each slot, and leaves both present-and-empty on disk', async () => {
     process.env[ENV_VAR] = '1'
     mockIsPackagedSidecar.mockReturnValue(false)
-    const vault = createDevSecretVault()
+    const vault = createDevSecretVault({ temp: vaultDir })
     if (!vault) throw new Error('expected the dev vault to be built')
 
     const humbleStore = vault.humbleSecretStore
@@ -390,7 +361,7 @@ describe('devSecretVault', () => {
   it('clearing the SteamGridDB API key emits a strictly-pinned wipe line', async () => {
     process.env[ENV_VAR] = '1'
     mockIsPackagedSidecar.mockReturnValue(false)
-    const vault = createDevSecretVault()
+    const vault = createDevSecretVault({ temp: vaultDir })
     if (!vault) throw new Error('expected the dev vault to be built')
 
     const steamGridDbStore = vault.steamGridDbSecretStore
@@ -410,7 +381,7 @@ describe('devSecretVault', () => {
   it('performs no file I/O at module import — no vault file exists until createDevSecretVault() is called', () => {
     process.env[ENV_VAR] = '1'
     // No install call in this test. `../devSecretVault` was already imported at the top of
-    // this file (before this test's own `beforeEach` ever pointed `mockGetPath` at this fresh
+    // this file (before this test's own `beforeEach` made this fresh
     // `vaultDir`) — if the module performed any file I/O at import time, a file would already
     // sit at this path despite `createDevSecretVault()` never having been called here.
     const vaultPath = join(vaultDir, 'gamelib-dev-secret-vault.json')
@@ -420,7 +391,7 @@ describe('devSecretVault', () => {
   // ── Task 2: the exclusive branch in bootstrap.ts's init ─────────────────────────────────
   //
   // Drives the REAL `../bootstrap` `init` (nested inside this describe block so it inherits
-  // the outer `beforeEach`'s fresh `vaultDir`/`mockGetPath`/mock-reset setup, even though these
+  // the outer `beforeEach`'s fresh `vaultDir`/mock-reset setup, even though these
   // tests mock `createDevSecretVault` directly rather than driving it through a real env var).
   // `createDevSecretVault` itself is spied and forced to a fixed return value per test — Task 1
   // above already proves its OWN real behavior; this block proves only which arm `init` takes

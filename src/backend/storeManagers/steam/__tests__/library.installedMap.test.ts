@@ -216,7 +216,7 @@ const BRIDGE_BOTTLE_STEAMAPPS_ROOT = join(
 /**
  * A per-game bridge bottle's steamapps root (quick/261016-u1w, D-C) — distinct
  * from both the Phase 17 bottle and the legacy shared bridge bottle above, so
- * tests can prove buildBridgeInstalledMap() scans a per-game bottle under its
+ * tests can prove buildBridgeInstalledMap(testPaths) scans a per-game bottle under its
  * own name rather than conflating it with the legacy bridge root.
  */
 const PER_GAME_BRIDGE_BOTTLE_STEAMAPPS_ROOT = join(
@@ -249,6 +249,8 @@ beforeEach(() => {
 })
 
 // ── D-UAT-09 (21-17): isFullyInstalledStateFlags() + detector regression lock ─
+
+const testPaths = { userHome: '/test-home' }
 
 describe('isFullyInstalledStateFlags()', () => {
   it('Test A: bit 4 set (4, 6, 516) -> true; bit 4 clear (1026, 2) -> false', () => {
@@ -384,9 +386,9 @@ describe('buildBottleInstalledMap()', () => {
 // bridge-installed game's badge survives the periodic library sync and focus
 // reconciliation regardless of which bottle it actually lives in.
 
-describe('buildBridgeInstalledMap()', () => {
+describe('buildBridgeInstalledMap(testPaths)', () => {
   beforeEach(() => {
-    // quick/261016-u1w (D-C): buildBridgeInstalledMap() no longer resolves a
+    // quick/261016-u1w (D-C): buildBridgeInstalledMap(testPaths) no longer resolves a
     // single settings object — it loops over listReadyBridgeBottleNames() and
     // resolves each name's steamapps dir directly via getBottleSteamappsDir.
     jest
@@ -401,7 +403,7 @@ describe('buildBridgeInstalledMap()', () => {
   it('(i) returns an empty Map when there are no ready bottles, and never calls readdirSync', async () => {
     jest.mocked(listReadyBridgeBottleNames).mockReturnValue([])
 
-    const result = await buildBridgeInstalledMap()
+    const result = await buildBridgeInstalledMap(testPaths)
 
     expect(result.size).toBe(0)
     expect(readdirSync).not.toHaveBeenCalled()
@@ -410,7 +412,7 @@ describe('buildBridgeInstalledMap()', () => {
   it('returns an empty Map when the bridge bottle steamapps dir does not exist', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(false)
 
-    const result = await buildBridgeInstalledMap()
+    const result = await buildBridgeInstalledMap(testPaths)
 
     expect(result.size).toBe(0)
   })
@@ -428,7 +430,7 @@ describe('buildBridgeInstalledMap()', () => {
       }
     })
 
-    const result = await buildBridgeInstalledMap()
+    const result = await buildBridgeInstalledMap(testPaths)
 
     expect(result.has(206040)).toBe(true)
     expect(result.get(206040)?.installPath).toBe(
@@ -444,14 +446,14 @@ describe('buildBridgeInstalledMap()', () => {
       .mockReturnValue(['GameLibSteamBridge', 'GameLibSteamBridge-206060'])
     jest
       .mocked(getBottleSteamappsDir)
-      .mockImplementation((name: string) =>
+      .mockImplementation((_paths: unknown, name: string) =>
         name === 'GameLibSteamBridge-206060'
           ? PER_GAME_BRIDGE_BOTTLE_STEAMAPPS_ROOT
           : BRIDGE_BOTTLE_STEAMAPPS_ROOT
       )
     jest
       .mocked(resolveBridgeBottleName)
-      .mockImplementation((appId: string) =>
+      .mockImplementation((_paths: unknown, appId: string) =>
         appId === '206060' ? 'GameLibSteamBridge-206060' : 'GameLibSteamBridge'
       )
     ;(existsSync as jest.Mock).mockReturnValue(true)
@@ -485,7 +487,7 @@ describe('buildBridgeInstalledMap()', () => {
           }
     )
 
-    const result = await buildBridgeInstalledMap()
+    const result = await buildBridgeInstalledMap(testPaths)
 
     expect(result.has(206040)).toBe(true)
     expect(result.get(206040)?.installPath).toBe(
@@ -522,7 +524,7 @@ describe('buildBridgeInstalledMap()', () => {
       }
     })
 
-    const result = await buildBridgeInstalledMap()
+    const result = await buildBridgeInstalledMap(testPaths)
 
     expect(result.size).toBe(0)
   })
@@ -533,7 +535,7 @@ describe('buildBridgeInstalledMap()', () => {
       .mockReturnValue(['GameLibSteamBridge', 'GameLibSteamBridge-206040'])
     jest
       .mocked(getBottleSteamappsDir)
-      .mockImplementation((name: string) =>
+      .mockImplementation((_paths: unknown, name: string) =>
         name === 'GameLibSteamBridge-206040'
           ? PER_GAME_BRIDGE_BOTTLE_STEAMAPPS_ROOT
           : BRIDGE_BOTTLE_STEAMAPPS_ROOT
@@ -576,7 +578,7 @@ describe('buildBridgeInstalledMap()', () => {
           }
     )
 
-    const result = await buildBridgeInstalledMap()
+    const result = await buildBridgeInstalledMap(testPaths)
 
     expect(result.has(206040)).toBe(true)
     expect(result.get(206040)?.installPath).toBe(
@@ -595,7 +597,7 @@ describe('buildBridgeInstalledMap()', () => {
       throw new Error('corrupt file')
     })
 
-    const result = await buildBridgeInstalledMap()
+    const result = await buildBridgeInstalledMap(testPaths)
 
     expect(result.size).toBe(0)
   })

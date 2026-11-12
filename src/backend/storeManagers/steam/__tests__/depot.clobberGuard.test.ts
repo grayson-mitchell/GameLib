@@ -35,7 +35,10 @@ const steamUser = createMockSteamUser()
 import { mockLeaseOk } from './depotLeaseMocks'
 import { selectAllDepots } from '../depot/select'
 import { getBottleSteamappsDir } from '../bottle'
-import { getBottleDir } from 'backend/storeManagers/steam/bottleDirs'
+import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
+
+const paths = createContainedHomeAppPaths()
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import {
   createStubRustDepot,
@@ -183,8 +186,8 @@ describe('D-08: catch-path finalize must not clobber a complete install (bottle-
     // Genuinely bottle-shaped target dir — derived from the REAL, unmocked
     // bottle.ts helpers, not a hardcoded lookalike path.
     const bottleSuffix = relative(
-      getBottleDir(BOTTLE_NAME),
-      getBottleSteamappsDir(BOTTLE_NAME)
+      getBottleDir(paths, BOTTLE_NAME),
+      getBottleSteamappsDir(paths, BOTTLE_NAME)
     )
     targetSteamappsDir = join(root, bottleSuffix)
     mkdirSync(targetSteamappsDir, { recursive: true })

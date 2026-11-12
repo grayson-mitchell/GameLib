@@ -1,6 +1,6 @@
 {
   "jestMock": {
-    "src/backend/__tests__/configShareDetectedFixesDefault.test.ts": 3,
-    "src/backend/__tests__/configSteamExperimentalInstallAppDefault.test.ts": 3
+    "src/backend/__tests__/configShareDetectedFixesDefault.test.ts": 2,
+    "src/backend/__tests__/configSteamExperimentalInstallAppDefault.test.ts": 2
   }
 }

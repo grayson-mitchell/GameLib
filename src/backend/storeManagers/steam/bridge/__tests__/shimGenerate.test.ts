@@ -106,7 +106,7 @@ jest.mock('../../bridgeBottle', () => ({
   // wipes a jest.fn()'s implementation before every test, but shimGenerate.ts
   // calls this directly as a pure resolver, so the factory gives it a real
   // (mirrored) implementation that survives resetMocks.
-  resolveBridgeBottleName: (appId: string): string | null =>
+  resolveBridgeBottleName: (_paths: unknown, appId: string): string | null =>
     /^\d+$/.test(appId) ? `GameLibSteamBridge-${appId}` : null
 }))
 
@@ -288,7 +288,7 @@ describe('shimGenerate', () => {
 
     expect(mockedGetBottleDir).toHaveBeenCalledWith(
       appPaths,
-      resolveBridgeBottleName('1234')
+      resolveBridgeBottleName(appPaths, '1234')
     )
     expect(mockedGetBottleDir).not.toHaveBeenCalledWith(
       appPaths,

@@ -9,11 +9,6 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 
 const mockDir = mkdtempSync(join(tmpdir(), 'gamelib-gamesconfig-'))
-// readStoredTitleConfig (titleSettings.ts) still reads the games-config root from the constants.
-jest.mock('backend/constants/paths', () => ({
-  ...jest.requireActual('backend/constants/paths'),
-  gamesConfigPath: mockDir
-}))
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logWarning: jest.fn(),

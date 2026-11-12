@@ -14,14 +14,13 @@
  * itself rewrites the setting is the clobber the backstop exists to catch, and
  * the same assertion must fail for it.
  */
-import * as pathsModule from 'backend/constants/paths'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { existsSync, mkdirSync, realpathSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { dirname, sep } from 'path'
 import { createGlobalConfig } from 'backend/config'
-import { configPath } from 'backend/constants/paths'
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
 import { SIGN_IN_STORES } from 'common/signInState'
 import { createTestSignInProbe } from 'backend/testUtils/testSignInProbe'
@@ -31,6 +30,8 @@ import { makeFakeSignInStores } from './fakeFlagStore'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createKvsStores } from 'backend/constants/key_value_stores'
 
+const pathsModule = createContainedHomeAppPaths()
+const { configPath } = pathsModule
 const { configStore } = createKvsStores({
   registry: createStoreRegistry(),
   root: createTestStoreRoot()

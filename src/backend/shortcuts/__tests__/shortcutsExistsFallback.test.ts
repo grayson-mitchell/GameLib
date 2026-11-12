@@ -67,7 +67,7 @@ import {
   createTestStores
 } from 'backend/testUtils/testServices'
 import { shortcutFiles, addShortcuts } from '../shortcuts/shortcuts'
-import { createPathShimPaths } from 'backend/testUtils/pathShimPaths'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { createIpcRegistry } from 'backend/sidecar/ipcRegistry'
 import { ipcViews } from 'backend/testUtils/ipcViews'
@@ -77,7 +77,7 @@ import type { Game } from 'common/types/game_manager'
 
 const deps = {
   libraryManagers: { gog: {} },
-  paths: createPathShimPaths()
+  paths: createContainedHomeAppPaths()
 } as unknown as Parameters<typeof addShortcuts>[0]
 const mockedGetGame = jest.fn()
 const mockedLogWarning = logWarning as jest.Mock
@@ -97,7 +97,7 @@ function hostSlices() {
     appState: host.appState,
     notifications: host.notifications,
     config: createTestGlobalConfig(),
-    paths: createPathShimPaths(),
+    paths: createContainedHomeAppPaths(),
     infoCaches: createTestInfoCaches(),
     aborts: createTestAbortRegistry(),
     imageTools: host.imageTools

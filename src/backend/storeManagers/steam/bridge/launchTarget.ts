@@ -272,7 +272,7 @@ export async function resolveBridgeLaunchExe(
     // quick/261016-u1w (D-B threading): resolve THIS game's own bridge
     // bottle rather than the shared zero-arg default.
     const bottleName = getBridgeBottleSettings(deps, appId).wineCrossoverBottle
-    const steamappsDir = getBottleSteamappsDir(bottleName)
+    const steamappsDir = getBottleSteamappsDir(deps.paths, bottleName)
     // D-02/D-04 (37-10): sanitizeInstalldir may THROW UnsafeInstalldirError on
     // a denylist/containment violation -- applied to every source (anonymous,
     // session, stored record). The catch below keeps the never-throws contract.
@@ -345,7 +345,7 @@ export function resolveBridgeLaunchWorkingDir(
     const stored = readBridgeVerdict(deps, appId)?.launchTarget
     if (!stored) return undefined
     const bottleName = getBridgeBottleSettings(deps, appId).wineCrossoverBottle
-    const steamappsDir = getBottleSteamappsDir(bottleName)
+    const steamappsDir = getBottleSteamappsDir(deps.paths, bottleName)
     const installdir = sanitizeInstalldir(
       stored.installdir,
       appId,

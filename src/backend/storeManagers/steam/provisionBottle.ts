@@ -270,7 +270,7 @@ export async function provisionBottle(
   const needsCxbottle =
     !deps.steamBottle.isBottleReady(bottleName) ||
     (isBottleProvisioned(deps.paths, bottleName) &&
-      bottleWineArch(bottleName) === 'win32')
+      bottleWineArch(deps.paths, bottleName) === 'win32')
   if (!binDir && needsCxbottle) {
     logWarning(
       `provisionBottle: CrossOver not found, cannot provision bottle "${bottleName}"`,
@@ -299,7 +299,7 @@ export async function provisionBottle(
   // the fresh bottle is inherent and expected (MACSTEAM-02/MACSTEAM-04).
   if (
     isBottleProvisioned(deps.paths, bottleName) &&
-    bottleWineArch(bottleName) === 'win32'
+    bottleWineArch(deps.paths, bottleName) === 'win32'
   ) {
     logInfo(
       `provisionBottle: bottle "${bottleName}" is a stale 32-bit (win32) prefix — recreating as win10_64 (GAP-17-CEF-RENDER)`,
@@ -497,7 +497,7 @@ export async function provisionBottle(
   // click-through. Leave the flag UNTOUCHED when steam.exe is absent; the lazy
   // reconcile inside isBottleReady() flips it true the first time a real
   // bottled steam.exe is observed.
-  const steamExePath = getBottleSteamExePath(bottleName)
+  const steamExePath = getBottleSteamExePath(deps.paths, bottleName)
   const steamExeReady =
     isBottleProvisioned(deps.paths, bottleName) && existsSync(steamExePath)
   if (steamExeReady) {

@@ -125,7 +125,10 @@ export function resolveBridgeGameInstallRoot(
     bottleNameOverride ??
     bridgeBottle.getBridgeBottleSettings(steamGame.deps, steamGame.appId)
       .wineCrossoverBottle
-  const commonRoot = resolve(bottle.getBottleSteamappsDir(bottleName), 'common')
+  const commonRoot = resolve(
+    bottle.getBottleSteamappsDir(steamGame.deps.paths, bottleName),
+    'common'
+  )
   const resolvedExePath = resolve(exePath)
   const relFromCommon = relative(commonRoot, resolvedExePath)
   const installdirSegment = relFromCommon.split(sep)[0]

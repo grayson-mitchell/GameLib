@@ -585,7 +585,7 @@ describe('pollUninstallOnce()', () => {
       // bridge" is indistinguishable from "survives in the bottle".
       jest
         .mocked(getBottleSteamappsDir)
-        .mockImplementation((bottleName: string) =>
+        .mockImplementation((_paths: unknown, bottleName: string) =>
           bottleName === 'GameLibSteamBridge'
             ? '/bridge/steamapps'
             : '/bottle/steamapps'
@@ -650,7 +650,7 @@ describe('pollUninstallOnce()', () => {
           .mockReturnValue({ wineCrossoverBottle: 'GameLibSteamBridge' } as any)
         jest
           .mocked(getBottleSteamappsDir)
-          .mockImplementation((bottleName: string) =>
+          .mockImplementation((_paths: unknown, bottleName: string) =>
             bottleName === 'GameLibSteamBridge'
               ? '/bridge/steamapps'
               : '/bottle/steamapps'

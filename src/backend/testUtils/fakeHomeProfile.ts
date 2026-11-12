@@ -33,7 +33,7 @@
  * preferred over `homedir()` by `getBaseLogPath()`/`resolveAppDataDir()`'s
  * Windows branches; `XDG_STATE_HOME`/`XDG_CONFIG_HOME` by their Linux
  * branches; `XDG_DATA_HOME` is read by first-party code
- * (`src/backend/constants/paths.ts`'s `flatpakHome`); `XDG_CACHE_HOME` covers
+ * (`src/backend/process/appPaths.ts`'s `flatpakHome`); `XDG_CACHE_HOME` covers
  * the remaining XDG base-directory surface a transitive library could consult.
  *
  * The four hand-rolled blocks this module replaced set only `HOME`,

@@ -536,8 +536,9 @@ describe('enumerateSteamInstallCopies', () => {
     bridgeBottleMock.getBridgeBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'BR'
     })
-    bottleMock.getBottleSteamappsDir.mockImplementation((name: string) =>
-      name === 'B' ? '/bottle/steamapps' : '/bridge/steamapps'
+    bottleMock.getBottleSteamappsDir.mockImplementation(
+      (_paths: unknown, name: string) =>
+        name === 'B' ? '/bottle/steamapps' : '/bridge/steamapps'
     )
 
     const copies = await acfState.enumerateSteamInstallCopies(libDeps, '63000')
@@ -905,8 +906,9 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
     mock.getBridgeBottleSettings.mockReturnValue({
       wineCrossoverBottle: PER_GAME_BOTTLE
     })
-    mock.getBottleSteamappsDir.mockImplementation((name: string) =>
-      name === 'SteamBottle' ? BOTTLE_STEAMAPPS : BRIDGE_STEAMAPPS
+    mock.getBottleSteamappsDir.mockImplementation(
+      (_paths: unknown, name: string) =>
+        name === 'SteamBottle' ? BOTTLE_STEAMAPPS : BRIDGE_STEAMAPPS
     )
   })
 

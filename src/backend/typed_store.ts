@@ -5,7 +5,7 @@
 //
 // THE LOAD-BEARING PART, repeated here because this is where the constructor
 // lives: the shim passes `cwd` to `conf` EXPLICITLY, derived from
-// `sidecar/pathShim.ts`'s `getPath('userData')`. `conf`'s own default derives
+// `process/appPaths.ts`'s `getPath('userData')`. `conf`'s own default derives
 // from `env-paths` plus the package name — a DIFFERENT algorithm from
 // `app.getPath('userData')` — and `conf` resolves a RELATIVE `cwd` against
 // `process.cwd()`. It also has no `name` option at all (it reads `configName`).

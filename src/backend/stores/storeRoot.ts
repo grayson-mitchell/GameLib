@@ -1,7 +1,7 @@
 /**
  * Per-boot store root (66.4 plan 04, D-66.4-04 / D-05).
  *
- * Every persistent store used to find its directory through `sidecar/pathShim` at construction
+ * Every persistent store used to find its directory through `process/appPaths` at construction
  * and share two pieces of module state: the file-cell registry (`sidecar/fileStore.ts`, D-14)
  * and the renderer push (`storeChangeNotifier.ts`). A `StoreRoot` is the instance form of all
  * three: the boot's 'stores' step builds one from `ctx.paths.userData` and hands it to every

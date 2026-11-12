@@ -38,7 +38,10 @@ import {
 } from 'backend/engine/bottlePrimitives'
 import type { AppPaths } from 'backend/process/context'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
-import { getBottleDir, isBottleProvisioned } from './bottleDirs'
+import {
+  getBottleDir,
+  isBottleProvisioned
+} from 'backend/engine/bottlePrimitives'
 
 /**
  * The guard chain shared by removePerGameBridgeBottle and
@@ -55,7 +58,7 @@ export type BottleLifecycleDeps = KillBottleDeps & {
 }
 
 function guardPerGameBridgeBottleName(
-  deps: Pick<BottleLifecycleDeps, 'config' | 'steamBottle'>,
+  deps: Pick<BottleLifecycleDeps, 'config' | 'steamBottle' | 'paths'>,
   appId: string,
   caller: string
 ): { ok: true; name: string } | { ok: false; error: string } {
@@ -108,10 +111,12 @@ function guardPerGameBridgeBottleName(
 
   // (4) Containment: the resolved bottle dir must sit exactly one segment
   // (== name) below the Bottles root — never above it, never elsewhere.
-  const bottlesRoot = dirname(getBottleDir(DEFAULT_BRIDGE_BOTTLE_NAME))
+  const bottlesRoot = dirname(
+    getBottleDir(deps.paths, DEFAULT_BRIDGE_BOTTLE_NAME)
+  )
   const relFromRoot = relative(
     resolve(bottlesRoot),
-    resolve(getBottleDir(name))
+    resolve(getBottleDir(deps.paths, name))
   )
   if (relFromRoot !== name) {
     logError(
@@ -143,7 +148,7 @@ function guardPerGameBridgeBottleName(
  *    DEFAULT_STEAM_BOTTLE_NAME, the trimmed stored Phase 17 bottle name
  *    (steamBottleConfigStore), or the trimmed shared GOG/Epic bottle
  *    (GlobalConfig.wineCrossoverBottle) — mirrors provisionBottle's CR-01.
- * 4. Containment: `relative(resolve(bottlesRoot), resolve(getBottleDir(name)))`
+ * 4. Containment: `relative(resolve(bottlesRoot), resolve(getBottleDir(paths, name)))`
  *    must equal `name` exactly, where `bottlesRoot` is the CrossOver
  *    Bottles directory every bottle lives in.
  *
@@ -176,7 +181,7 @@ export async function removePerGameBridgeBottle(
   const { name } = guard
 
   // (5) Nothing on disk — nothing to do.
-  const bottleDir = getBottleDir(name)
+  const bottleDir = getBottleDir(deps.paths, name)
   if (!existsSync(bottleDir)) {
     return { status: 'absent' }
   }
@@ -328,7 +333,7 @@ export async function endPerGameBridgeBottleSessionWith(
     )
     if (!guard.ok) return false
     const { name } = guard
-    if (!existsSync(getBottleDir(name))) return false
+    if (!existsSync(getBottleDir(deps.paths, name))) return false
     logInfo(
       `endPerGameBridgeBottleSessionWith: wineserver -k for bottle "${name}" (appId ${appId})`,
       LogPrefix.Steam
@@ -388,7 +393,7 @@ export async function stopPerGameBridgeBottle(
   }
   const { name } = guard
 
-  if (!existsSync(getBottleDir(name))) {
+  if (!existsSync(getBottleDir(deps.paths, name))) {
     logInfo(
       `stopPerGameBridgeBottle: bottle "${name}" is absent for appId "${appId}", nothing to stop`,
       LogPrefix.Steam
@@ -428,7 +433,7 @@ export async function endPerGameBridgeBottleSession(
     )
     if (!guard.ok) return false
     const { name } = guard
-    if (!existsSync(getBottleDir(name))) return false
+    if (!existsSync(getBottleDir(deps.paths, name))) return false
     logInfo(
       `endPerGameBridgeBottleSession: wineserver -k for bottle "${name}" (appId ${appId})`,
       LogPrefix.Steam
@@ -532,7 +537,7 @@ export async function provisionBridgeBottle(
   }
 
   // (3) Idempotent short-circuit — bridge bottle already created.
-  if (isBridgeBottleReady(bottleName)) {
+  if (isBridgeBottleReady(deps.paths, bottleName)) {
     return { status: 'done', createdHere: false }
   }
 
@@ -580,7 +585,7 @@ export async function provisionBridgeBottle(
 
   // (4) CREATE via the SAME locked cxbottle mechanism provisionBottle()
   // uses (argv form only, arguments as discrete words) — win10_64 template.
-  const createdHere = !existsSync(getBottleDir(bottleName))
+  const createdHere = !existsSync(getBottleDir(deps.paths, bottleName))
   const abortedCrossOver = async (): Promise<ProvisionBottleResult> => {
     logInfo(
       `provisionBridgeBottle: bottle creation cancelled for "${bottleName}"`,
@@ -625,7 +630,7 @@ export async function provisionBridgeBottle(
         error: 'CrossOver did not finish creating the bottle'
       }
     }
-    if (!isBottleProvisioned(bottleName)) {
+    if (!isBottleProvisioned(deps.paths, bottleName)) {
       // log-secret-gate-exempt: stderr of cxbottle create (bridge bottle provisioning), not an auth command
       logError(
         [

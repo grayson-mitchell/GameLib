@@ -69,7 +69,7 @@ export async function getBridgeRouteVerdict(
   const locationChoice =
     windowsBuildChosen === undefined &&
     isForcedWindowsViaBottle(game) &&
-    bridgeBottle.findBridgeInstallBottle(appId) !== null
+    bridgeBottle.findBridgeInstallBottle(deps.paths, appId) !== null
   const verdict = await checkBridgeRoute(game, {
     windowsBuildChosen: explicitChoice || locationChoice
   })
@@ -82,7 +82,7 @@ export async function getBridgeRouteVerdict(
   // GameLibSteam install the widened eligibility must never claim to have
   // moved.
   let installedIn: SteamBridgeRouteVerdict['installedIn'] = null
-  if (bridgeBottle.findBridgeInstallBottle(appId) !== null) {
+  if (bridgeBottle.findBridgeInstallBottle(deps.paths, appId) !== null) {
     installedIn = 'bridge'
   } else if (
     deps.steamSession.libraryState.library.get(appId)?.is_installed === true &&

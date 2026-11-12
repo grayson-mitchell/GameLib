@@ -42,11 +42,6 @@ jest.mock('backend/logger', () => ({
 
 jest.mock('backend/constants/environment', () => ({ isMac: true }))
 
-jest.mock('backend/constants/paths', () => ({
-  steamBridgeHelperPath: '/mock/bundle/arm64/darwin/steam-bridge-helper',
-  steamBridgeHelperStateDir: '/mock/state/steam-bridge'
-}))
-
 jest.mock('node:fs', () => {
   // `mkdirSync` is mocked (no real per-appId staging dir is created by this
   // suite's fake spawns) -- `readFileSync` is the REAL implementation,

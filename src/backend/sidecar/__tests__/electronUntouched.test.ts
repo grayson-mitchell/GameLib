@@ -19,7 +19,7 @@
  * operations, success and failure, actually runs.
  *
  * **Load-bearing real-config-directory convention** (mirrors `skeletonFlows.test.ts`'s module
- * docstring and Test 4): `pathShim.ts` has no `HOME`/`XDG_CONFIG_HOME`/`APPDATA` override for
+ * docstring and Test 4): the derived userData path has no `HOME`/`XDG_CONFIG_HOME`/`APPDATA` override for
  * darwin, so `configStore` reads/writes the developer's REAL
  * `~/Library/Application Support/GameLib/steam_store/config.json` — NOT `steamConfigStore.json`
  * (the store's `name` argument, `'steamConfigStore'`, is never forwarded into electron-store's
@@ -51,7 +51,10 @@
  * proof leaves a widening blind spot.
  */
 
-import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+import {
+  createTestStoreRoot,
+  testUserDataDir
+} from '../../testUtils/testStoreRoot'
 import { defined } from 'backend/testUtils/indexed'
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
@@ -66,7 +69,7 @@ import {
 // would apply instead, and this suite would only prove a synthetic store is
 // untouched, not the actual production `configStore` file path a compiled
 // sidecar/Electron build shares (`~/Library/Application Support/GameLib/...`
-// via `pathShim.ts` -- the whole point of D-04's proof). `jest.requireActual`
+// via the derived appData path -- the whole point of D-04's proof). `jest.requireActual`
 // resolves the SAME singleton module instance `configStore`/`tokenStore.ts`
 // bind onto in production. ────────────────────────────────────────────────
 jest.mock('backend/store_backend', () => ({
@@ -97,10 +100,8 @@ jest.mock('backend/logger', () => ({
 const requestRustInvoke = jest.fn()
 import { SidecarKeyringTokenStore } from '../keyringTokenStore'
 import { createTokenStoreSlot } from '../../storeManagers/steam/tokenStore'
-// Real (unmocked) pathShim — same module fileStore.ts resolves
-// paths through in production, used here ONLY to compute the real store file's
-// path for a read-only byte comparison. Never used to write.
-import { getPath } from '../pathShim'
+// The userData dir a boot derives for the contained HOME, used here ONLY to compute the real
+// store file's path for a read-only byte comparison. Never used to write.
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createSteamStores } from '../../storeManagers/steam/stores'
 
@@ -153,7 +154,7 @@ function currentRefreshToken(): string | undefined {
 // ── Real store file byte-comparison (read-only) ─────────────────────────────
 // Mirrors fileStore.ts's own `resolveStorePath`: name is never forwarded by
 // `TypeCheckedStoreBackend`, so electron-store's default filename applies.
-const REAL_STORE_PATH = join(getPath('userData'), 'steam_store', 'config.json')
+const REAL_STORE_PATH = join(testUserDataDir(), 'steam_store', 'config.json')
 
 /**
  * Reads the real on-disk store file's raw bytes, or `null` if it does not

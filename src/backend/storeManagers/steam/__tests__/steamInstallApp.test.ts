@@ -12,9 +12,6 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
 }))
-jest.mock('backend/constants/paths', () => ({
-  steamBridgeHelperPath: '/nonexistent/steam-bridge-helper'
-}))
 jest.mock('node:fs', () => ({
   ...jest.requireActual('node:fs'),
   existsSync: jest.fn()

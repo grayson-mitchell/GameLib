@@ -1491,7 +1491,7 @@ describe('SteamLibraryManager', () => {
       // so tests must not collapse the two roots into one mockReturnValue.
       jest
         .mocked(getBottleSteamappsDir)
-        .mockImplementation((bottleName: string) =>
+        .mockImplementation((_paths: unknown, bottleName: string) =>
           bottleName === 'GameLibSteamBridge'
             ? BRIDGE_BOTTLE_STEAMAPPS_ROOT
             : BOTTLE_STEAMAPPS_ROOT
@@ -2382,7 +2382,7 @@ describe('SteamLibraryManager', () => {
         } as any)
         jest
           .mocked(getBottleSteamappsDir)
-          .mockImplementation((bottleName: string) =>
+          .mockImplementation((_paths: unknown, bottleName: string) =>
             bottleName === 'GameLibSteamBridge'
               ? BRIDGE_BOTTLE_STEAMAPPS_ROOT
               : BOTTLE_STEAMAPPS_ROOT

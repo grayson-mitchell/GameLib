@@ -1,4 +1,5 @@
 import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
@@ -6,13 +7,6 @@ import { join } from 'path'
 // quick 261105-ord: a fresh config must not opt the user in to InstallApp.
 const dir = mkdtempSync(join(tmpdir(), 'gamelib-config-default-'))
 
-jest.mock('../constants/paths', () => ({
-  ...jest.requireActual('../constants/paths'),
-  configPath: join(dir, 'config.json'),
-  gamesConfigPath: dir,
-  sharedWinePrefix: join(dir, 'prefixes'),
-  userHome: dir
-}))
 jest.mock('../utils/compatibility_layers', () => ({
   getDefaultWineBinary: () => ({ name: 'x', bin: '', type: 'wine' })
 }))
@@ -25,7 +19,12 @@ jest.mock('../logger', () => ({
 }))
 
 import { createGlobalConfig } from '../config'
-import * as pathsModule from '../constants/paths'
+const pathsModule = createTestAppPaths(dir, {
+  configPath: join(dir, 'config.json'),
+  gamesConfigPath: dir,
+  sharedWinePrefix: join(dir, 'prefixes'),
+  userHome: dir
+})
 
 afterAll(() => rmSync(dir, { recursive: true, force: true }))
 

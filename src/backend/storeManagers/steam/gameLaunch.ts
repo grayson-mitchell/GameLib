@@ -128,7 +128,7 @@ export async function launch(
     // bridge bottle from the earlier attempt, so it is checked here too,
     // not folded into findBridgeInstallBottle itself.
     if (
-      findBridgeInstallBottle(steamGame.appId) !== null &&
+      findBridgeInstallBottle(steamGame.deps.paths, steamGame.appId) !== null &&
       !steamGame.deps.steamSession.gameSession.bridgeFailedThisSession.has(
         steamGame.appId
       )

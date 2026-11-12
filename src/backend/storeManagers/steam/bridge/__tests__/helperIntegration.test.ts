@@ -63,7 +63,9 @@ import {
   type FakeHomeProfile
 } from 'backend/testUtils/fakeHomeProfile'
 import { createRealRunner } from 'backend/testUtils/realRunner'
-import { steamBridgeHelperStateDir } from 'backend/constants/paths'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
+
+const { steamBridgeHelperStateDir } = createContainedHomeAppPaths()
 import { ensureBridgeHelperReady } from '../helperProcess'
 import {
   createBridgeHelperRegistry,

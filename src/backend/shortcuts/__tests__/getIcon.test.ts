@@ -9,7 +9,7 @@
  * Mirrors `shortcutsExistsFallback.test.ts`'s mock-block-then-imports layout.
  * This lands in the Backend jest project, so `jest.setupContainment.ts`
  * (registered via `setupFiles`) redirects HOME before this file's own
- * imports run — `heroicIconFolder` (imported transitively by `../utils`)
+ * imports run — `heroicIconFolder` (from the contained AppPaths transitively by `../utils`)
  * therefore resolves under the per-run containment root, never the
  * developer's real `~/Library/Application Support/GameLib/icons`.
  *
@@ -39,7 +39,7 @@ import { join } from 'path'
 import { getIcon } from '../utils'
 import { downloadFile } from 'backend/utils'
 import { logWarning } from 'backend/logger'
-import { appFolder } from 'backend/constants/paths'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import type { GameInfo } from 'common/types'
 
 // getIcon's own `mkdirSync(iconsFolder)` (a direct child of `appFolder`) is
@@ -49,6 +49,7 @@ beforeAll(() => {
   mkdirSync(appFolder, { recursive: true })
 })
 
+const { appFolder } = createContainedHomeAppPaths()
 const mockedDownloadFile = downloadFile as jest.Mock
 const mockedGetProductApi = jest.fn()
 const mockedCreateAbortController = jest.fn()

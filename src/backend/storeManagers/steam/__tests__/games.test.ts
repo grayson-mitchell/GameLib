@@ -11,6 +11,7 @@ import {
   createTestStores
 } from 'backend/testUtils/testServices'
 import type { AppPaths } from 'backend/process/context'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { createTestBridgeHelpers } from 'backend/testUtils/testBridgeHelpers'
 /**
  * Unit tests for SteamGame — LIB-04 (lazy metadata), GAME-01 (launch), GAME-04 (no-Wine),
@@ -366,16 +367,28 @@ const testSteamLaunchRuntime = {
   platformCapture: createPlatformCaptureQueue()
 } as unknown as SteamLaunchRuntime
 // 66.4-06: the launch files read the app folder, the home and the built dylib paths from deps.paths,
-// so the Phase 56 test-owned roots (mocked below in backend/constants/paths) ride the paths slice.
-const mockedLaunchPaths = jest.requireMock<
-  Pick<
-    AppPaths,
-    | 'appFolder'
-    | 'userHome'
-    | 'builtOverlayInputPath'
-    | 'builtOverlayInputProbePath'
-  >
->('backend/constants/paths')
+// so the Phase 56 test-owned roots (declared here) ride the paths slice.
+const mockedLaunchPaths: Pick<
+  AppPaths,
+  | 'appFolder'
+  | 'userHome'
+  | 'builtOverlayInputPath'
+  | 'builtOverlayInputProbePath'
+> = {
+  // Phase 56 (56-12): no test writes under a real app folder.
+  builtOverlayInputPath: join(
+    tmpdir(),
+    `gamelib input games-test-${process.pid}`,
+    'overlay_input.dylib'
+  ),
+  builtOverlayInputProbePath: join(
+    tmpdir(),
+    `gamelib probe games-test-${process.pid}`,
+    'overlay_input_probe.dylib'
+  ),
+  appFolder: join(tmpdir(), `gamelib drm games-test-${process.pid}`),
+  userHome: createContainedHomeAppPaths().userHome
+}
 const steamTestDeps = createTestManagerDeps({
   sendFrontendMessage,
   aborts: {
@@ -650,14 +663,14 @@ jest.mock('../bridgeBottle', () => {
     // test that already sets isBridgeBottleReady(true) to reach the bridge
     // branch gets a correct findBridgeInstallBottle result with zero
     // per-test changes.
-    findBridgeInstallBottle: (appId: string): string | null => {
+    findBridgeInstallBottle: (paths: unknown, appId: string): string | null => {
       const perGameName = /^\d+$/.test(appId)
         ? `GameLibSteamBridge-${appId}`
         : null
-      if (perGameName && isBridgeBottleReady(perGameName)) {
+      if (perGameName && isBridgeBottleReady(paths, perGameName)) {
         return perGameName
       }
-      if (isBridgeBottleReady('GameLibSteamBridge')) {
+      if (isBridgeBottleReady(paths, 'GameLibSteamBridge')) {
         return 'GameLibSteamBridge'
       }
       return null
@@ -816,31 +829,6 @@ jest.mock('../bridge/overlay/overlayLaunch', () => {
 jest.mock('../bridge/peScan', () => ({
   ...jest.requireActual('../bridge/peScan'),
   detectSteamDrmInPe: jest.fn()
-}))
-
-// Phase 56 (56-12): no test writes under a real app folder.
-jest.mock('backend/constants/paths', () => ({
-  ...jest.requireActual('backend/constants/paths'),
-  builtOverlayInputPath: jest
-    .requireActual('node:path')
-    .join(
-      jest.requireActual('node:os').tmpdir(),
-      `gamelib input games-test-${process.pid}`,
-      'overlay_input.dylib'
-    ),
-  builtOverlayInputProbePath: jest
-    .requireActual('node:path')
-    .join(
-      jest.requireActual('node:os').tmpdir(),
-      `gamelib probe games-test-${process.pid}`,
-      'overlay_input_probe.dylib'
-    ),
-  appFolder: jest
-    .requireActual('node:path')
-    .join(
-      jest.requireActual('node:os').tmpdir(),
-      `gamelib drm games-test-${process.pid}`
-    )
 }))
 
 // quick 261026-lif: SteamGame.repair() delegates to the restore helper.
@@ -5701,7 +5689,10 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
     const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
-    expect(getBottleSteamappsDir).toHaveBeenCalledWith('GameLib')
+    expect(getBottleSteamappsDir).toHaveBeenCalledWith(
+      expect.anything(),
+      'GameLib'
+    )
     expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
       installRuntime: steamTestDeps.steamInstallRuntime,
       steamUser: steamTestDeps.steamUser,
@@ -5874,7 +5865,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     // bottle directly (bridgeBottleNameFor(appId)), never the shared
     // legacy name — re-keyed from 'GameLibSteamBridge' to the per-game name.
     ;(getBottleSteamappsDir as jest.Mock).mockImplementation(
-      (bottleName: string) =>
+      (_paths: unknown, bottleName: string) =>
         bottleName === `GameLibSteamBridge-${APP_ID}`
           ? BRIDGE_STEAMAPPS_DIR
           : '/mock/bottle/steamapps'
@@ -5914,6 +5905,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     // quick/261016-u1w (D-A): isBridgeBottleReady is consulted against the
     // PER-GAME bottle name, not the shared legacy name.
     expect(isBridgeBottleReady).toHaveBeenCalledWith(
+      expect.anything(),
       `GameLibSteamBridge-${APP_ID}`
     )
     expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
@@ -6555,7 +6547,8 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     // would resolve to the legacy name. Installs must bypass that
     // resolver entirely and provision/target the per-game name regardless.
     ;(isBridgeBottleReady as jest.Mock).mockImplementation(
-      (bottleName?: string) => bottleName === 'GameLibSteamBridge'
+      (_paths: unknown, bottleName?: string) =>
+        bottleName === 'GameLibSteamBridge'
     )
     ;(provisionBridgeBottle as jest.Mock).mockResolvedValue({
       status: 'done'
@@ -6565,9 +6558,13 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     const result = await game.install({} as any)
 
     expect(isBridgeBottleReady).toHaveBeenCalledWith(
+      expect.anything(),
       `GameLibSteamBridge-${APP_ID}`
     )
-    expect(isBridgeBottleReady).not.toHaveBeenCalledWith('GameLibSteamBridge')
+    expect(isBridgeBottleReady).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'GameLibSteamBridge'
+    )
     expect(provisionBridgeBottle).toHaveBeenCalledWith(steamTestDeps, {
       bottleName: `GameLibSteamBridge-${APP_ID}`,
       createTimeoutMs: 120_000,
@@ -11700,7 +11697,7 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
       wineCrossoverBottle: 'GameLibSteamBridge'
     })
     ;(getBottleSteamappsDir as jest.Mock).mockImplementation(
-      (bottleName: string) =>
+      (_paths: unknown, bottleName: string) =>
         bottleName === 'GameLibSteamBridge'
           ? '/mock/bridge/bottle/steamapps'
           : '/mock/bottle/steamapps'
@@ -11845,7 +11842,7 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
       // getBottleSteamappsDir to the fake '/mock/...' paths, so re-arm here
       // against the real tmp tree.
       ;(getBottleSteamappsDir as jest.Mock).mockImplementation(
-        (bottleName: string) =>
+        (_paths: unknown, bottleName: string) =>
           bottleName === 'GameLibSteamBridge'
             ? bridgeSteamappsDir
             : phase17SteamappsDir
@@ -13231,8 +13228,7 @@ describe('SteamGame shortcuts delegate to the shared module (261026-c7r)', () =>
 describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
   const realFs = jest.requireActual<typeof import('node:fs')>('node:fs')
   const { logInfo, logWarning } = jest.requireMock('backend/logger')
-  const mockedAppFolder = jest.requireMock('backend/constants/paths')
-    .appFolder as string
+  const mockedAppFolder = mockedLaunchPaths.appFolder
   const { formatDrmNoticeLine, formatBridgeDrmAnchor, DRM_STEPS } =
     jest.requireActual('../bridge/drm/steamclientLayerMode')
   const { formatDrmTraceLine, drmRelogPrefix } = jest.requireActual(
@@ -13724,7 +13720,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
     let onStopped: (() => void) | undefined
     const dylib = () =>
       realJoin(
-        jest.requireMock('backend/constants/paths').userHome as string,
+        mockedLaunchPaths.userHome,
         ...MAC_STEAM_CLIENT_SUBPATH,
         'steamclient.dylib'
       )
@@ -14299,7 +14295,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           appId: id,
           traceFile: traceFileOf(call),
           macSteamClientDir: realJoin(
-            jest.requireMock('backend/constants/paths').userHome,
+            mockedLaunchPaths.userHome,
             ...MAC_STEAM_CLIENT_SUBPATH
           ),
           steamDirHost: ready.bottle.steamDirHost,
@@ -14762,8 +14758,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       // injects it. Every other gate would pass here (module present, no probe,
       // fix not off), so only the route keeps the module out.
       it('DRM route: input module never passed, logged applied=false reason=route', async () => {
-        const inputPath = jest.requireMock('backend/constants/paths')
-          .builtOverlayInputPath as string
+        const inputPath = mockedLaunchPaths.builtOverlayInputPath
         const keys = [
           'GAMELIB_OVERLAY_INPUT_FIX',
           'GAMELIB_OVERLAY_INPUT_PROBE',
@@ -14805,8 +14800,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       })
 
       it('probe flag 1: the DRM prepare call receives the probe; unset: none', async () => {
-        const probePath = jest.requireMock('backend/constants/paths')
-          .builtOverlayInputProbePath as string
+        const probePath = mockedLaunchPaths.builtOverlayInputProbePath
         mkdirSync(join(probePath, '..'), { recursive: true })
         writeFileSync(probePath, 'x')
         const saved = process.env.GAMELIB_OVERLAY_INPUT_PROBE
@@ -15192,8 +15186,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
 
       describe('60-11 input probe flag (G1)', () => {
         const saved = process.env.GAMELIB_OVERLAY_INPUT_PROBE
-        const probePath = jest.requireMock('backend/constants/paths')
-          .builtOverlayInputProbePath as string
+        const probePath = mockedLaunchPaths.builtOverlayInputProbePath
         beforeEach(() => {
           mkdirSync(join(probePath, '..'), { recursive: true })
           writeFileSync(probePath, 'x')
@@ -15251,10 +15244,8 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       })
 
       describe('60-20 overlay input fix (G1)', () => {
-        const inputPath = jest.requireMock('backend/constants/paths')
-          .builtOverlayInputPath as string
-        const probePath = jest.requireMock('backend/constants/paths')
-          .builtOverlayInputProbePath as string
+        const inputPath = mockedLaunchPaths.builtOverlayInputPath
+        const probePath = mockedLaunchPaths.builtOverlayInputProbePath
         const keys = [
           'GAMELIB_OVERLAY_INPUT_FIX',
           'GAMELIB_OVERLAY_INPUT_PROBE',
@@ -15785,12 +15776,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         const id = freshId()
         expect(await launchOn(id)).toBe(true)
         expect(__openOverlayWineLogMock).toHaveBeenCalledWith(
-          join(
-            jest.requireMock('backend/constants/paths').appFolder as string,
-            'steam-bridge',
-            'overlay',
-            'trace'
-          ),
+          join(mockedLaunchPaths.appFolder, 'steam-bridge', 'overlay', 'trace'),
           id,
           expect.any(Number)
         )
@@ -15911,7 +15897,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         expect(__watchOverlayAttachMock.mock.calls[0][0]).toEqual({
           appId: id,
           consoleLogPath: join(
-            jest.requireMock('backend/constants/paths').userHome as string,
+            mockedLaunchPaths.userHome,
             'Library',
             'Application Support',
             'Steam',

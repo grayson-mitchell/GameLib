@@ -6,6 +6,6 @@
     "src/backend/storeManagers/steam/__tests__/bridgeBottleLifecycle.test.ts": 6,
     "src/backend/storeManagers/steam/__tests__/installFormIpc.test.ts": 4,
     "src/backend/storeManagers/steam/__tests__/provisionBottle.test.ts": 6,
-    "src/backend/storeManagers/steam/__tests__/steamEngineDeps.test.ts": 5
+    "src/backend/storeManagers/steam/__tests__/steamEngineDeps.test.ts": 4
   }
 }

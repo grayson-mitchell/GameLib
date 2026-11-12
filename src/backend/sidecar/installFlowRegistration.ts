@@ -404,7 +404,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
         return { gamelibDelete: false, delegated: false }
       }
       try {
-        if (findBridgeInstallBottle(appName) !== null) {
+        if (findBridgeInstallBottle(deps.paths, appName) !== null) {
           return { gamelibDelete: false, delegated: false }
         }
         const root = await resolveInstallRoot(

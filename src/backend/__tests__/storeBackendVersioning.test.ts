@@ -7,10 +7,10 @@ import {
   writeFileSync
 } from 'fs'
 import { join } from 'path'
-import { getPath } from '../sidecar/pathShim'
 import GameLibStore from '../store_backend'
 import {
   createVersioningHarness,
+  testUserDataDir,
   type VersioningHarness
 } from '../testUtils/testStoreRoot'
 import { listBackups } from '../storeVersioning/backup'
@@ -20,7 +20,7 @@ let h: VersioningHarness
 let root: VersioningHarness['root']
 const readOnlyReasonOf = (path: string) => h.versioning.readOnlyReasonOf(path)
 
-const userData = () => getPath('userData')
+const userData = () => testUserDataDir()
 const cacheDir = () => join(userData(), 'store_cache')
 const fixture = (name: string, body: unknown, dir = cacheDir()) => {
   mkdirSync(dir, { recursive: true })

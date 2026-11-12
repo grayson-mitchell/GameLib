@@ -11,8 +11,11 @@ import type { AppPaths } from 'backend/process/context'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import { isNonCrossover } from 'backend/engine/engineTypes'
 import type { NonCrossoverSelection } from 'backend/engine/engineTypes'
-import { buildFallbackGameSettings } from 'backend/engine/bottlePrimitives'
-import { getBottleDir, isBottleProvisioned } from './bottleDirs'
+import {
+  buildFallbackGameSettings,
+  getBottleDir,
+  isBottleProvisioned
+} from 'backend/engine/bottlePrimitives'
 import {
   DEFAULT_BRIDGE_BOTTLE_NAME,
   getBottleSteamappsDir,
@@ -36,8 +39,11 @@ import { NUMERIC_APP_ID } from './gameConstants'
  * so `tsc` rejects any caller that forgot which one. Probes exactly the
  * named bottle; a per-game name never touches the legacy or Phase 17 dir.
  */
-export function isBridgeBottleReady(bottleName: string): boolean {
-  return isBottleProvisioned(bottleName)
+export function isBridgeBottleReady(
+  paths: Pick<AppPaths, 'userHome'>,
+  bottleName: string
+): boolean {
+  return isBottleProvisioned(paths, bottleName)
 }
 
 // ── quick/261016-u1w (D-A/D-B): per-game bridge bottles ─────────────────────
@@ -83,7 +89,10 @@ export function bridgeBottleNameFor(appId: string): string | null {
  * bridgeBottleNameFor(appId) directly (installBridgeGame below), so a
  * fresh install can never accidentally land in the legacy shared bottle.
  */
-export function resolveBridgeBottleName(appId: string): string | null {
+export function resolveBridgeBottleName(
+  paths: Pick<AppPaths, 'userHome'>,
+  appId: string
+): string | null {
   const perGameName = bridgeBottleNameFor(appId)
   if (!perGameName) {
     return null
@@ -98,7 +107,7 @@ export function resolveBridgeBottleName(appId: string): string | null {
   // the existence gate, and uninstall/removeSteamInstallCopy targeted the
   // wrong bottle. Steps 1-2 now ARE findBridgeInstallBottle, so the two can
   // never disagree; step 3 (a not-yet-installed game) is unchanged.
-  return findBridgeInstallBottle(appId) ?? perGameName
+  return findBridgeInstallBottle(paths, appId) ?? perGameName
 }
 
 /**
@@ -124,26 +133,32 @@ export function resolveBridgeBottleName(appId: string): string | null {
  *     holds this appId's manifest.
  *  3. Otherwise `null` — nothing is installed via the bridge for this appId.
  */
-export function findBridgeInstallBottle(appId: string): string | null {
+export function findBridgeInstallBottle(
+  paths: Pick<AppPaths, 'userHome'>,
+  appId: string
+): string | null {
   const perGameName = bridgeBottleNameFor(appId)
   if (!perGameName) {
     return null
   }
 
   if (
-    isBridgeBottleReady(perGameName) &&
+    isBridgeBottleReady(paths, perGameName) &&
     existsSync(
-      join(getBottleSteamappsDir(perGameName), `appmanifest_${appId}.acf`)
+      join(
+        getBottleSteamappsDir(paths, perGameName),
+        `appmanifest_${appId}.acf`
+      )
     )
   ) {
     return perGameName
   }
 
   if (
-    isBridgeBottleReady(DEFAULT_BRIDGE_BOTTLE_NAME) &&
+    isBridgeBottleReady(paths, DEFAULT_BRIDGE_BOTTLE_NAME) &&
     existsSync(
       join(
-        getBottleSteamappsDir(DEFAULT_BRIDGE_BOTTLE_NAME),
+        getBottleSteamappsDir(paths, DEFAULT_BRIDGE_BOTTLE_NAME),
         `appmanifest_${appId}.acf`
       )
     )
@@ -198,7 +213,7 @@ function stockBridgeBottleSettings(
   appId: string
 ): GameSettings {
   const globalSettings = deps.config.getSettings()
-  const resolved = resolveBridgeBottleName(appId)
+  const resolved = resolveBridgeBottleName(deps.paths, appId)
   if (!resolved) {
     throw new Error(
       `getBridgeBottleSettings: invalid appId "${appId}" (must be numeric)`
@@ -354,7 +369,7 @@ export function getDrmBridgeBottleSettings(
   return {
     ...stock,
     wineVersion,
-    winePrefix: getBottleDir(stock.wineCrossoverBottle),
+    winePrefix: getBottleDir(deps.paths, stock.wineCrossoverBottle),
     enviromentOptions: [
       ...kept,
       { key: 'WINELOADER', value: runner.wineloaderBin },
@@ -436,7 +451,7 @@ function fallbackBridgeBottleSettings(
   appId: string,
   sel: NonCrossoverSelection
 ): GameSettings {
-  const resolved = resolveBridgeBottleName(appId)
+  const resolved = resolveBridgeBottleName(deps.paths, appId)
   if (!resolved) {
     throw new Error(
       `getBridgeBottleSettings: invalid appId "${appId}" (must be numeric)`
@@ -507,8 +522,10 @@ const perGameBridgeBottlePattern = (): RegExp =>
  * every cycle rather than surfacing once (mirrors buildBridgeInstalledMap's
  * own silent catch).
  */
-export function listReadyBridgeBottleNames(): string[] {
-  const bottlesRoot = dirname(getBottleDir(DEFAULT_BRIDGE_BOTTLE_NAME))
+export function listReadyBridgeBottleNames(
+  paths: Pick<AppPaths, 'userHome'>
+): string[] {
+  const bottlesRoot = dirname(getBottleDir(paths, DEFAULT_BRIDGE_BOTTLE_NAME))
   if (!existsSync(bottlesRoot)) {
     return []
   }
@@ -527,12 +544,12 @@ export function listReadyBridgeBottleNames(): string[] {
     })
     .filter(
       (candidate): candidate is { name: string; appId: number } =>
-        candidate !== null && isBridgeBottleReady(candidate.name)
+        candidate !== null && isBridgeBottleReady(paths, candidate.name)
     )
     .sort((a, b) => a.appId - b.appId)
     .map((candidate) => candidate.name)
 
-  const legacy = isBridgeBottleReady(DEFAULT_BRIDGE_BOTTLE_NAME)
+  const legacy = isBridgeBottleReady(paths, DEFAULT_BRIDGE_BOTTLE_NAME)
     ? [DEFAULT_BRIDGE_BOTTLE_NAME]
     : []
 

@@ -139,33 +139,6 @@ jest.mock('os', () => {
   }
 })
 
-// ── pathShim — CR-03: the REAL choke point. Copied verbatim from
-// gameDetailsFlows.test.ts:136-161 except for the tmp-root name — no
-// platform branch, no environment variable participating. ──────────────────
-jest.mock('../pathShim', () => {
-  const actualOs = jest.requireActual('os')
-  const actualPath = jest.requireActual('path')
-  const tmpRoot = mockTmpRoot
-  return {
-    getPath: (name: string) => {
-      switch (name) {
-        case 'appData':
-          return tmpRoot
-        case 'userData':
-          return actualPath.join(tmpRoot, 'GameLib')
-        case 'temp':
-          return actualOs.tmpdir()
-        case 'home':
-          return tmpRoot
-        default:
-          throw new Error(
-            `[pathShim mock] getPath('${name}') is not shimmed for this test`
-          )
-      }
-    }
-  }
-})
-
 // ── backend/logger/paths — the log path is computed INDEPENDENTLY of
 // pathShim (getBaseLogPath() reads process.env.LOCALAPPDATA/XDG_STATE_HOME
 // plus homedir() directly), so it bypasses both mocks above. Reimplements
@@ -286,8 +259,15 @@ import {
   UNPORTED_CHANNEL_MARKER,
   RUST_SHELL_SHOW_ITEM_IN_FOLDER
 } from 'common/types/sidecarTransport'
-import { fixesPath, appFolder, userDataPath } from '../../constants/paths'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { getLogFilePath } from 'backend/logger/paths'
+
+// The app folders a boot derives for the jest-contained HOME (`jest.setupContainment`).
+const {
+  fixesPath,
+  appFolder,
+  userData: userDataPath
+} = createContainedHomeAppPaths()
 import { LogPrefix } from '../../logger/constants'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
@@ -368,14 +348,10 @@ describe('WR-02: the containment root is minted, not derived from a predictable 
     expect(suffix).not.toBe(String(process.pid))
   })
 
-  it('is the SINGLE source of truth the two EFFECTIVE mock factories read', () => {
+  it('is the SINGLE source of truth the EFFECTIVE logger/paths mock factory reads', () => {
     // Before WR-02 the path was re-derived as a literal in each factory --
-    // three copies to keep in sync. If they ever disagree again, the suite's
-    // containment kit is only partly in effect and this fails loudly.
-    /* eslint-disable @typescript-eslint/no-require-imports */
-    const { getPath } = require('../pathShim') as typeof import('../pathShim')
-    /* eslint-enable @typescript-eslint/no-require-imports */
-    expect(getPath('appData')).toBe(mockTmpRoot)
+    // several copies to keep in sync. If the factory stops reading it, the
+    // suite's containment kit is only partly in effect and this fails loudly.
     expect(getLogFilePath({}).startsWith(mockTmpRoot)).toBe(true)
   })
 

@@ -480,9 +480,47 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
     }
   })
 
-  it('moduleState total is 4 (1 long tail + 3 sanctioned) after the five latches were converted (D-66.4-01): a ceiling, flipped to zero in 66.4', () => {
+  it('moduleState total is 3 (0 long tail + 3 sanctioned) once constants/paths.ts is gone (D-66.4-04): a ceiling, flipped to zero in 66.4', () => {
     const total = Object.values(moduleStateOf()).reduce((a, b) => a + b, 0)
-    expect(total).toBe(4)
+    expect(total).toBe(3)
+    expect(Object.keys(moduleStateOf()).sort()).toEqual([
+      'src/backend/logger/index.ts',
+      'src/backend/sidecar/bootstrap.ts'
+    ])
+  })
+
+  // 66.4-20 (D-66.4-04 / D-66.4-05): the import-bound path sources are deleted, and nothing under
+  // src or meta imports them (a comment naming one is history, not an importer).
+  it.each([
+    'src/backend/constants/paths.ts',
+    'src/backend/sidecar/pathShim.ts',
+    'src/backend/storeManagers/steam/bottleDirs.ts',
+    'src/backend/testUtils/pathShimPaths.ts'
+  ])('%s is deleted', (file) => {
+    expect(existsSync(join(root, file))).toBe(false)
+  })
+
+  it('no file under src or meta imports, requires or mocks backend/constants/paths, sidecar/pathShim or steam/bottleDirs', () => {
+    const files = [
+      ...srcFiles,
+      ...walk(join(root, 'meta')).filter((f) => /\.(ts|tsx|js|cjs)$/.test(f))
+    ]
+      // These name the specifiers as DATA: this gate, testContainment's cross-project specifier
+      // list and its self-test, and a module-hygiene text assertion.
+      .filter(
+        (f) =>
+          f !== __filename &&
+          !/sidecar\/__tests__\/testContainment\.test\.ts$/.test(f) &&
+          !/drm\/__tests__\/steamclientLayerInstall\.test\.ts$/.test(f)
+      )
+    const SPECIFIER =
+      /['"][^'"]*(constants\/paths|sidecar\/pathShim|\.\/pathShim|\.\.\/pathShim|steam\/bottleDirs|\.\/bottleDirs|pathShimPaths)['"]/
+    const offenders = files
+      .filter((f) =>
+        SPECIFIER.test(stripSourceComments(readFileSync(f, 'utf-8')))
+      )
+      .map((f) => relative(root, f))
+    expect(offenders).toEqual([])
   })
 
   // A class member that is `static get(`, or a static field that is not readonly: the two shapes a

@@ -28,11 +28,9 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const sendFrontendMessage = jest.fn()
+const steamBridgeHelperPath = '/mock/bundle/arm64/darwin/steam-bridge-helper'
+const steamBridgeHelperStateDir = '/mock/state/steam-bridge'
 import { logWarning } from 'backend/logger'
-import {
-  steamBridgeHelperPath,
-  steamBridgeHelperStateDir
-} from 'backend/constants/paths'
 import {
   encodeResponse,
   decodeRequest,
@@ -57,11 +55,6 @@ jest.mock('backend/logger', () => ({
 }))
 
 jest.mock('backend/constants/environment', () => ({ isMac: true }))
-
-jest.mock('backend/constants/paths', () => ({
-  steamBridgeHelperPath: '/mock/bundle/arm64/darwin/steam-bridge-helper',
-  steamBridgeHelperStateDir: '/mock/state/steam-bridge'
-}))
 
 jest.mock('node:fs', () => {
   // `mkdirSync` is mocked (no real per-appId staging dir is created by this
@@ -93,7 +86,7 @@ function newRegistry(
 ): BridgeHelperRegistry {
   return createBridgeHelperRegistry({
     steamWaitSchedule: DEFAULT_STEAM_WAIT_SCHEDULE,
-    helperPath: () => '/mock/bundle/arm64/darwin/steam-bridge-helper',
+    helperPath: () => steamBridgeHelperPath,
     spawnEnv: () => process.env,
     ...over
   })
@@ -107,7 +100,7 @@ const helperDeps = {
   runner: fakeRunner.runner,
   appState: { openBridgeInvitePicker: mockedOpenBridgeInvitePicker },
   openExternal: { openExternal: mockedOpenExternal },
-  paths: { steamBridgeHelperStateDir: '/mock/state/steam-bridge' }
+  paths: { steamBridgeHelperStateDir }
 }
 const MockedSocket = Socket as unknown as jest.Mock
 const mockedSendFrontendMessage = sendFrontendMessage

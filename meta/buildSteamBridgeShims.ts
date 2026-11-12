@@ -17,7 +17,7 @@
  *      toolchain, as a RELEASE build (-O2, UBSan off; SHIM_RELEASE_CFLAGS), (meta/downloadZig.ts) via `zig cc -target x86-windows-gnu`
  *      -> `public/bin/${targetArch}/darwin/steam_api.dll` -- the SINGLE
  *      SHARED BUNDLED LOCATION (BLOCKER 2), matching
- *      src/backend/constants/paths.ts's `builtBridgeShimPath` byte-for-byte.
+ *      src/backend/process/appPaths.ts's `builtBridgeShimPath` byte-for-byte.
  *      This script intentionally does NOT import paths.ts -- that module
  *      imports Electron's `app` at load time and would crash under plain
  *      `node`; the path is independently reconstructed here using the exact
@@ -137,7 +137,7 @@ const STEAM_APPID_SOURCE_PATH = join(
  *
  * The value is a Node `process.arch` token (`x64`/`arm64`) because that is
  * what the RUNTIME consumer (`publicDir`/`bin/${process.arch}/darwin` in
- * src/backend/constants/paths.ts) uses to resolve these files.
+ * src/backend/process/appPaths.ts) uses to resolve these files.
  */
 // Exported only for meta/__tests__/buildSteamBridgeShims.test.ts, which
 // lives outside this gate's tsconfig.json scope (include: ["src"]) -- that
@@ -174,7 +174,7 @@ export function machoArchFlag(arch: string): string {
 }
 
 /**
- * Build-time equivalent of `publicDir` (src/backend/constants/paths.ts) --
+ * Build-time equivalent of `publicDir` (src/backend/process/appPaths.ts) --
  * `pnpm build-steam-bridge` (run via `node meta/runTs.cjs`, the meta/
  * convention)
  * always runs from the repo root, so `join('public', 'bin', ...)` -- which
@@ -186,7 +186,7 @@ function bundledBinDir(arch: string = resolveBridgeArch()): string {
   return join('public', 'bin', arch, 'darwin')
 }
 
-/** Matches steamBridgeHelperPath (src/backend/constants/paths.ts, Plan 24-06). */
+/** Matches steamBridgeHelperPath (src/backend/process/appPaths.ts, Plan 24-06). */
 // Exported only for meta/__tests__/buildSteamBridgeShims.test.ts (outside
 // this gate's tsconfig.json scope -- see resolveBridgeArch above).
 export function helperOutputPath(arch: string = resolveBridgeArch()): string {
@@ -195,7 +195,7 @@ export function helperOutputPath(arch: string = resolveBridgeArch()): string {
 
 /**
  * BLOCKER 2 -- the SINGLE shared bundled location. Must match
- * src/backend/constants/paths.ts's `builtBridgeShimPath` exactly; Plan
+ * src/backend/process/appPaths.ts's `builtBridgeShimPath` exactly; Plan
  * 24-05's `shimGenerate.ts` reads FROM this exact path at runtime.
  */
 // Exported only for meta/__tests__/buildSteamBridgeShims.test.ts (outside

@@ -21,7 +21,7 @@
  * DISPATCH (was the right function called, with the right runner) rather than about a real
  * non-Steam launch succeeding end to end.
  */
-import * as pathsModule from 'backend/constants/paths'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
@@ -360,7 +360,7 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
       // The boot's real global config, with only the two launch-hide settings overridden.
       const real = createGlobalConfig({
         versioning: createTestVersioning(),
-        paths: pathsModule
+        paths: createContainedHomeAppPaths()
       })
       const config = new Proxy(real, {
         get: (target, key) => {

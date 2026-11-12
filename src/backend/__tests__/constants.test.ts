@@ -1,4 +1,4 @@
-import { fixAsarPath } from 'backend/constants/paths'
+import { fixAsarPath } from 'backend/process/appPaths'
 
 jest.mock('../logger')
 

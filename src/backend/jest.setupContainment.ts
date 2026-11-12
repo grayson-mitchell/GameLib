@@ -48,7 +48,7 @@
  *    hand. This is what redirects `backend/logger/paths.ts`'s
  *    `getBaseLogPath()` macOS branch — the branch empirically proven to
  *    destroy real data on this host (see "Corrected premise" below) — and
- *    `sidecar/pathShim.ts`'s `resolveAppDataDir()` darwin branch.
+ *    `process/appPaths.ts`'s `resolveAppDataDir()` darwin branch.
  * 2. `process.env.HOME`/`USERPROFILE`/`APPDATA`/`LOCALAPPDATA`/
  *    `XDG_CONFIG_HOME`/`XDG_STATE_HOME`/`XDG_DATA_HOME`/`XDG_CACHE_HOME` are
  *    still set, as defense-in-depth for the Windows/Linux branches of both
@@ -191,7 +191,7 @@
  *    `[jest.setupContainment] REFUSING TO RUN` `Error` if any check fails.
  *    Because `setupFiles` entries run once per test
  *    file strictly BEFORE that file's own imports, this precondition
- *    precedes `constants/paths.ts`'s module-scope `mkdirSync` and every
+ *    precedes any import-time `mkdirSync` (the retired `constants/paths` had one) and every
  *    other import-time filesystem touch -- which is exactly what the
  *    per-suite tripwires in `bootstrap.test.ts` and `loggerFlows.test.ts`
  *    cannot do (they run as the first *test*, after all module-scope
@@ -201,7 +201,7 @@
  *    their own `jest.mock` calls register; that assertion lives in
  *    `structuralContainment.test.ts` Test 2/Test 6 instead.
  * 5. (WR-12) The comment above the `XDG_DATA_HOME`/`XDG_CACHE_HOME`
- *    assignments below is corrected: `src/backend/constants/paths.ts:21`
+ *    assignments below is corrected: the retired `constants/paths.ts:21`
  *    is FIRST-PARTY code that reads `XDG_DATA_HOME` for `flatpakHome`, not
  *    merely "a transitively-imported library" as the prior wording
  *    claimed.
@@ -484,7 +484,7 @@ process.env.LOCALAPPDATA = join(containmentRoot, 'AppData', 'Local')
 process.env.XDG_CONFIG_HOME = join(containmentRoot, '.config')
 process.env.XDG_STATE_HOME = join(containmentRoot, '.local', 'state')
 
-// WR-12 correction: `src/backend/constants/paths.ts:21` is FIRST-PARTY code
+// WR-12 correction: the retired `src/backend/constants/paths.ts:21` was FIRST-PARTY code
 // that reads `XDG_DATA_HOME` --
 // `export const flatpakHome = env.XDG_DATA_HOME?.replace('/data', '') ||
 // homedir()` -- so setting it changes `flatpakHome` for every backend test
@@ -503,7 +503,7 @@ process.env.XDG_CACHE_HOME = join(containmentRoot, '.cache')
 
 // ── WR-10: a PRECONDITION, not a post-hoc detector ─────────────────────────
 // `setupFiles` entries run once per test file, strictly BEFORE that file's
-// own imports -- so this check runs before `constants/paths.ts`'s
+// own imports -- so this check runs before the retired `constants/paths.ts`'s
 // module-scope `mkdirSync` and every other import-time filesystem touch,
 // which is exactly what the per-suite tripwires in `bootstrap.test.ts` and
 // `loggerFlows.test.ts` cannot do (they run as the first *test*, after all

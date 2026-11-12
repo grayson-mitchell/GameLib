@@ -1,35 +1,35 @@
 /**
  * Phase 34.5 Plan 16, Task 3 (G-1, REQ-34.5-12/REQ-34.5-13).
  *
- * Proves both arms of the `GAMELIB_APP_ROOT` handoff (read by `constants/paths.ts` and the boot
- * context's `appRoot`) and, from
+ * Proves both arms of the `GAMELIB_APP_ROOT` handoff (read by the boot's `resolveAppPaths`, which
+ * derives both the context's `appRoot` and `publicDir`) and, from
  * the JS side, the Rust half of that handoff (mirroring
  * `src/backend/__tests__/tauriShellSource.test.ts`'s existing approach for asserting against
  * real `main.rs` source text rather than reimplementing the Rust logic here).
  *
  * Root cause this closes: under the sidecar, `getAppPath()` previously returned
  * `process.cwd()` unconditionally, which is `src-tauri/` — so `publicDir`
- * (`backend/constants/paths.ts:73`) resolved to a directory that does not exist and every
+ * (`derivePaths`) resolved to a directory that does not exist and every
  * bundled runner binary (`legendary`/`gogdl`/`nile`/`comet`) ENOENT'd on spawn. See
  * `.planning/phases/34.5-.../34.5-APP-ROOT-SWEEP.md` for the full consumer sweep this one
  * seam repairs.
  *
- * Containment: this suite declares no `jest.mock('../pathShim', ...)`, so it belongs in
- * `testContainment.test.ts`'s `STRUCTURALLY_CONTAINED_SUITES`, not `IN_SCOPE_SUITES` — see
- * that file's own classification comment for this suite.
+ * Containment: this suite declares no path mock, so it belongs in
+ * `testContainment.test.ts`'s `STRUCTURALLY_CONTAINED_SUITES` — see that file's own
+ * classification comment for this suite.
  *
  * EXTENDED Phase 34.5 Plan 17 (G-1, REQ-34.5-12/REQ-34.5-13) — Task 2, see the
  * "real-filesystem sidecar-conditions" describe block below. The suite above proves both JS-side
  * arms of `getAppPath()` in isolation; it does NOT prove that a correctly-resolved app root
  * actually reaches a real bundled asset on disk. `34.5-16-SUMMARY.md` records the full suite green
  * at 3447/3447 while the underlying app-root defect was live in production, because jest runs
- * with `process.cwd()` already at the repository root, where `publicDir` (`paths.ts:73`) resolves
+ * with `process.cwd()` already at the repository root, where `publicDir` resolves
  * correctly BY ACCIDENT. A test that recomputes the source's own `join(...)` arithmetic and
  * compares two strings proves nothing about that failure mode (the standing
  * `live-gate-beats-green-suite-three-times` lesson) — the block below instead forces
  * `process.cwd()` to `<repo>/src-tauri`, the REAL sidecar condition, and asserts against the REAL
  * filesystem, resolving `publicDir` through the actual production code path
- * (`backend/constants/paths.ts`) rather than restating it.
+ * (`resolveAppPaths`) rather than restating it.
  */
 
 import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
@@ -70,17 +70,17 @@ function extractFnBody(
   return code.slice(start, end)
 }
 
-/** Requires `backend/constants/paths` fresh so `publicDir` is recomputed from the current env/cwd. */
+/** Resolves the boot's AppPaths fresh so `publicDir` is recomputed from the current env/cwd. */
 function freshPublicDir(): string {
   let publicDir!: string
   jest.isolateModules(() => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    publicDir = require('../../constants/paths').publicDir
+    publicDir = require('../bootstrap').resolveAppPaths().publicDir
   })
   return publicDir
 }
 
-describe('app root (paths.ts publicDir) — GAMELIB_APP_ROOT env-set arm', () => {
+describe('app root (resolveAppPaths publicDir) — GAMELIB_APP_ROOT env-set arm', () => {
   let saved: string | undefined
 
   beforeEach(() => {
@@ -89,7 +89,7 @@ describe('app root (paths.ts publicDir) — GAMELIB_APP_ROOT env-set arm', () =>
 
   afterEach(() => {
     // Restore exactly, including "was absent" -- a leaked value here would make a later run's
-    // unset-arm assertions pass for the wrong reason (pathShim.test.ts's own precedent for
+    // unset-arm assertions pass for the wrong reason (the retired pathShim test's own precedent for
     // GAMELIB_SHELL_EXE).
     if (saved === undefined) {
       delete process.env.GAMELIB_APP_ROOT
@@ -109,7 +109,7 @@ describe('app root (paths.ts publicDir) — GAMELIB_APP_ROOT env-set arm', () =>
   })
 })
 
-describe('app root (paths.ts publicDir) — unset/empty arms fall back to process.cwd()', () => {
+describe('app root (resolveAppPaths publicDir) — unset/empty arms fall back to process.cwd()', () => {
   let saved: string | undefined
   let cwdSpy: jest.SpyInstance<string, []>
 
@@ -178,13 +178,13 @@ describe('main.rs sets GAMELIB_APP_ROOT on BOTH sidecar spawn paths (Rust half o
 // THE ARITHMETIC TRAP (read this before touching anything below): the full suite ran green at
 // 3447/3447 (`34.5-16-SUMMARY.md`) while the app-root defect was live in production. That
 // happened because jest's own `process.cwd()` is already the repository root, where `publicDir`
-// (`backend/constants/paths.ts:73`) resolves correctly BY ACCIDENT — no test in that 3447 ever
+// (`derivePaths`) resolves correctly BY ACCIDENT — no test in that 3447 ever
 // forced `cwd` to the real sidecar condition (`src-tauri/`). A test that recomputes the same
 // `join(...)` the source computes and compares two strings would repeat exactly that mistake and
 // prove nothing (the standing `live-gate-beats-green-suite-three-times` lesson). Every assertion
 // below therefore does two things together: (1) forces `process.cwd()` to `<repo>/src-tauri`, the
 // literal sidecar condition, and (2) calls the REAL, unmocked `node:fs` `existsSync` against
-// paths resolved by the actual production code path (`backend/constants/paths.ts`, required fresh
+// paths resolved by the actual production code path (the boot's `resolveAppPaths`, required fresh
 // unmocked — never restated by hand).
 describe('real-filesystem sidecar-conditions: publicDir resolution under cwd=src-tauri (Phase 34.5 G-1, plan 34.5-17)', () => {
   // Derived from THIS file's own __dirname (src/backend/sidecar/__tests__), never from
@@ -212,18 +212,16 @@ describe('real-filesystem sidecar-conditions: publicDir resolution under cwd=src
   })
 
   /**
-   * Requires `backend/constants/paths` fresh inside a `jest.isolateModules` sandbox. This suite
-   * declares no mock of `pathShim`, so `paths.ts` resolves against the real module -- the
-   * isolation exists purely to get a FRESH module instance per arm, so `publicDir` (a
-   * module-scope constant computed once at import time) is recomputed by `paths.ts:73` itself,
-   * against this test's mocked `process.cwd()` and whatever `GAMELIB_APP_ROOT` the calling test
-   * set, exactly the way the real sidecar computes it -- never recomputed by this test file.
+   * Resolves the boot's AppPaths (`resolveAppPaths`) inside a `jest.isolateModules` sandbox, so
+   * `publicDir` is derived by the production code itself, against this test's mocked
+   * `process.cwd()` and whatever `GAMELIB_APP_ROOT` the calling test set, exactly the way the
+   * real sidecar computes it -- never recomputed by this test file.
    */
-  function requirePathsUnderSidecarConditions(): typeof import('../../constants/paths') {
-    let isolatedPaths!: typeof import('../../constants/paths')
+  function requirePathsUnderSidecarConditions(): { publicDir: string } {
+    let isolatedPaths!: { publicDir: string }
     jest.isolateModules(() => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      isolatedPaths = require('../../constants/paths')
+      isolatedPaths = require('../bootstrap').resolveAppPaths()
     })
     return isolatedPaths
   }

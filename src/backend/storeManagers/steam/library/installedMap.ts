@@ -1,4 +1,5 @@
 import { join } from 'path'
+import type { AppPaths } from 'backend/process/context'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { parse } from '@node-steam/vdf'
 import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
@@ -218,16 +219,16 @@ export async function buildBottleInstalledMap(
  *
  * Exported for unit testing.
  */
-export async function buildBridgeInstalledMap(): Promise<
-  Map<number, { installPath: string; sizeOnDisk: string }>
-> {
+export async function buildBridgeInstalledMap(
+  paths: Pick<AppPaths, 'userHome'>
+): Promise<Map<number, { installPath: string; sizeOnDisk: string }>> {
   const installed = new Map<
     number,
     { installPath: string; sizeOnDisk: string }
   >()
 
-  for (const name of listReadyBridgeBottleNames()) {
-    const steamappsDir = getBottleSteamappsDir(name)
+  for (const name of listReadyBridgeBottleNames(paths)) {
+    const steamappsDir = getBottleSteamappsDir(paths, name)
     if (!existsSync(steamappsDir)) continue
 
     let files: string[]
@@ -253,7 +254,7 @@ export async function buildBridgeInstalledMap(): Promise<
         if (
           isInstalled &&
           !isNaN(appid) &&
-          resolveBridgeBottleName(String(appid)) === name
+          resolveBridgeBottleName(paths, String(appid)) === name
         ) {
           installed.set(appid, {
             installPath: join(steamappsDir, 'common', state.installdir ?? ''),

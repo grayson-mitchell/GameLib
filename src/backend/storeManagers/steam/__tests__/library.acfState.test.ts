@@ -541,7 +541,7 @@ describe('readAcfState(libDeps, appId, "bridge") — bridge-bottle-scoped ACF ro
     // without one root's mocked value clobbering the other's.
     jest
       .mocked(getBottleSteamappsDir)
-      .mockImplementation((bottleName: string) =>
+      .mockImplementation((_paths: unknown, bottleName: string) =>
         bottleName === 'GameLibSteamBridge'
           ? BRIDGE_BOTTLE_STEAMAPPS_ROOT
           : BOTTLE_STEAMAPPS_ROOT

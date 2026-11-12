@@ -3,15 +3,17 @@
  * the `__internal__` version key is invisible outside the engine.
  *
  * Uses the REAL store stack (no `store_backend` mock). The backend jest project redirects
- * HOME/APPDATA/XDG_* to a disposable root, so `getPath('userData')` never touches the
+ * HOME/APPDATA/XDG_* to a disposable root, so the userData dir never touches the
  * real profile.
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
-import { getPath } from '../sidecar/pathShim'
 import CacheStore from '../cache'
 import { TypeCheckedStoreBackend } from '../typed_store'
-import { createTestStoreRoot } from '../testUtils/testStoreRoot'
+import {
+  createTestStoreRoot,
+  testUserDataDir
+} from '../testUtils/testStoreRoot'
 import { createStoreRegistry } from '../stores/storeRegistry'
 import { applyStoreWrite } from '../sidecar/storeWriteHandlers'
 import type { StoreChangedPayload } from 'common/types/sidecarTransport'
@@ -20,7 +22,7 @@ import type { StoreChangedPayload } from 'common/types/sidecarTransport'
 // profile the fixtures are written to.
 let root = createTestStoreRoot()
 
-const cacheDir = () => join(getPath('userData'), 'store_cache')
+const cacheDir = () => join(testUserDataDir(), 'store_cache')
 const fixture = (name: string, body: unknown) => {
   mkdirSync(cacheDir(), { recursive: true })
   const p = join(cacheDir(), `${name}.json`)

@@ -27,8 +27,9 @@ import { join } from 'node:path'
 
 import { writeBridgeConfig, BRIDGE_CONFIG_FILENAME } from '../bridgeConfig'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
-import { userHome } from 'backend/constants/paths'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 
+const { userHome } = createContainedHomeAppPaths()
 const appPaths = { userHome }
 import { logError, logWarning } from 'backend/logger'
 

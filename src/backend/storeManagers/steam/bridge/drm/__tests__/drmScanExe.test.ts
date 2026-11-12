@@ -21,11 +21,6 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
 
-jest.mock('backend/constants/paths', () => ({
-  builtBridgeShimPath: '/nonexistent/steam_api.dll',
-  builtBridgeShim64Path: '/nonexistent/steam_api64.dll'
-}))
-
 jest.mock('backend/engine/bottlePrimitives', () => ({
   sanitizeBottleName: (n: string | null) => n,
   getBottleDir: jest.fn()

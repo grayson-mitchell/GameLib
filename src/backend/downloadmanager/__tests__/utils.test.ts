@@ -18,7 +18,7 @@
  *
  * Mock strategy mirrors downloadqueue.test.ts's established convention —
  * every dependency that would otherwise require a real Electron app context
- * (backend/constants/paths, gog/constants) is replaced with a plain mock.
+ * (gog/constants) is replaced with a plain mock.
  */
 
 jest.mock('backend/logger', () => ({
@@ -118,10 +118,6 @@ jest.mock('graceful-fs', () => ({
 
 jest.mock('backend/storeManagers/gog/constants', () => ({
   deriveGogPaths: () => ({ gogdlConfigPath: '/mock/gogdl-config' })
-}))
-
-jest.mock('backend/constants/paths', () => ({
-  fixesPath: '/mock/fixes'
 }))
 
 jest.mock('backend/knownFixesFetcher', () => ({

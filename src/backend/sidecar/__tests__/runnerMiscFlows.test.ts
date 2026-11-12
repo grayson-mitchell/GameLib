@@ -22,12 +22,12 @@
  *   2. Curated-import guard — `runnerMiscFlowRegistration.ts` never imports `utils/ipc_handler.ts`
  *      or `wine/runtimes/ipc_handler.ts` (comment-stripped via the shared `stripSourceComments`
  *      util, so a docblock merely NAMING either file cannot trip the gate).
- *   3. `documents`-path pin — a narrow cross-check that `pathShim`'s `documents` case (plan
+ *   3. `documents`-path pin — a narrow cross-check that the boot paths' `documents` case (plan
  *      34.5-01) resolves without throwing under this suite's redirected home. This does NOT drive
  *      `getDefaultGogSavePaths()` end-to-end (disproportionate for this suite, and per this
  *      plan's own SUMMARY correction, `syncGOGSaves`'s own call chain does not reach that
- *      function anyway) — full `getPath('documents')` switch-case coverage lives in
- *      `pathShim.test.ts`; this is a pointer proving the case this cluster's docstring cites
+ *      function anyway) — full `resolveKnownFolder` coverage lives in
+ *      `appPaths.test.ts`; this is a pointer proving the case this cluster's docstring cites
  *      still resolves, nothing more.
  *   4. `callTool` branch dispatch — with `runWineCommandOnGame` mocked, each of the two remaining
  *      `tool` branches (`winecfg`, `runExe`) is proven to reach the right function with the right
@@ -197,10 +197,10 @@ import { registerRunnerMiscFlows } from '../runnerMiscFlowRegistration'
 import { createIpcRegistry } from '../ipcRegistry'
 import { ipcViews } from 'backend/testUtils/ipcViews'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
-import { getPath } from '../pathShim'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 
 /** Pins `process.platform` for one case. These cases assert the host-platform (linux) arm CI runs;
- * on a win32 host `shortcutFiles`/`getPath` no longer guess a Desktop/Documents folder (quick
+ * on a win32 host `shortcutFiles`/`knownFolder` no longer guess a Desktop/Documents folder (quick
  * 261111-aq4). Restore the returned value in `finally`. */
 function overrideProcessPlatform(os: string): string {
   const original = process.platform
@@ -331,12 +331,12 @@ describe('curated-import guard — no ipc_handler import', () => {
 })
 
 // ── Describe 3: `documents`-path pin (research Pitfall 1 / D-09) ──────────────────────────────
-describe('documents-path pin — pathShim resolves the name this cluster depends on', () => {
-  it("getPath('documents') resolves to a non-empty string under this suite's redirected home, without throwing (narrower proof; full getPath('documents') switch-case coverage lives in pathShim.test.ts)", () => {
-    // Pinned to linux, CI's own arm: on a win32 host getPath('documents') throws (261111-aq4).
+describe('documents-path pin — the boot paths resolve the name this cluster depends on', () => {
+  it("knownFolder('documents') resolves to a non-empty string under this suite's redirected home, without throwing (narrower proof; full resolveKnownFolder coverage lives in appPaths.test.ts)", () => {
+    // Pinned to linux, CI's own arm: on a win32 host knownFolder('documents') throws (261111-aq4).
     const originalPlatform = overrideProcessPlatform('linux')
     try {
-      const documents = getPath('documents')
+      const documents = createContainedHomeAppPaths().knownFolder('documents')
       expect(documents).toEqual(expect.any(String))
       expect(documents.length).toBeGreaterThan(0)
       expect(documents.startsWith(homedir())).toBe(true)

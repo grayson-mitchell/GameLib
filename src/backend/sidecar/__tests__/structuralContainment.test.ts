@@ -19,7 +19,7 @@
  * `src/backend/jest.config.js` temporarily commented out, 5 of 6 tests FAIL
  * (Tests 1, 2, 3, 5, 6 — everything that depends on `jest.setupContainment
  * .ts`'s `jest.mock('os', ...)`/env redirection: `os.homedir()` itself,
- * `getLogFilePath({})`, `pathShim.getPath()`, the platform sweep, and the
+ * `getLogFilePath({})`, `resolveAppPaths()`, the platform sweep, and the
  * anti-vacuity check, whose own assertion explicitly shows the resolved log
  * path IS this developer's real `~/Library/Logs/GameLib/gamelib.log`). Test
  * 4 (`constants/paths`'s `appFolder`/`userDataPath`/`fixesPath`) stays green
@@ -159,31 +159,34 @@ describe('structural containment proof — zero per-suite mocks (34.2 gap cycle 
     assertContained(tmpdir(), logPath)
   })
 
-  it("Test 3: the REAL, unmocked getPath('userData') and getPath('appData') from ../pathShim resolve inside os.tmpdir()", () => {
+  it("Test 3: the REAL, unmocked userData and appData the boot's resolveAppPaths derives resolve inside os.tmpdir()", () => {
     let userDataPath!: string
     let appDataPath!: string
     jest.isolateModules(() => {
       /* eslint-disable @typescript-eslint/no-require-imports */
-      const { getPath } = require('../pathShim')
+      const { resolveAppPaths } = require('../bootstrap')
       /* eslint-enable @typescript-eslint/no-require-imports */
-      userDataPath = getPath('userData')
-      appDataPath = getPath('appData')
+      const paths = resolveAppPaths()
+      userDataPath = paths.userData
+      appDataPath = paths.appData
     })
 
     assertContained(tmpdir(), userDataPath)
     assertContained(tmpdir(), appDataPath)
   })
 
-  it('Test 4: the REAL, unmocked appFolder / userDataPath / fixesPath / flatpakHome from backend/constants/paths resolve inside os.tmpdir()', () => {
+  it("Test 4: the REAL, unmocked appFolder / userData / fixesPath / flatpakHome from the boot's resolveAppPaths resolve inside os.tmpdir()", () => {
     let appFolder!: string
     let userDataPath!: string
     let fixesPath!: string
     let flatpakHome!: string
     jest.isolateModules(() => {
       /* eslint-disable @typescript-eslint/no-require-imports */
-      const paths = require('../../constants/paths')
+      const { resolveAppPaths } = require('../bootstrap')
       /* eslint-enable @typescript-eslint/no-require-imports */
-      ;({ appFolder, userDataPath, fixesPath, flatpakHome } = paths)
+      const paths = resolveAppPaths()
+      ;({ appFolder, fixesPath, flatpakHome } = paths)
+      userDataPath = paths.userData
     })
 
     // flatpakHome (WR-12): nothing previously pinned its value, so a future
@@ -194,7 +197,7 @@ describe('structural containment proof — zero per-suite mocks (34.2 gap cycle 
     }
   })
 
-  it('Test 5 (platform sweep): a freshly-required pathShim still resolves appData inside os.tmpdir() when process.platform is forced to win32 then linux', () => {
+  it('Test 5 (platform sweep): a freshly-required resolveAppPaths still resolves appData inside os.tmpdir() when process.platform is forced to win32 then linux', () => {
     const originalPlatform = process.platform
     try {
       for (const forcedPlatform of ['win32', 'linux'] as const) {
@@ -206,9 +209,9 @@ describe('structural containment proof — zero per-suite mocks (34.2 gap cycle 
         let appDataPath!: string
         jest.isolateModules(() => {
           /* eslint-disable @typescript-eslint/no-require-imports */
-          const { getPath } = require('../pathShim')
+          const { resolveAppPaths } = require('../bootstrap')
           /* eslint-enable @typescript-eslint/no-require-imports */
-          appDataPath = getPath('appData')
+          appDataPath = resolveAppPaths().appData
         })
 
         assertContained(tmpdir(), appDataPath)

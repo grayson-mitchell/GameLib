@@ -51,7 +51,7 @@
  *
  * Neither call site has an existence check in the Electron original, because `app.getPath('exe')`
  * could not meaningfully fail there. Under the sidecar, an unset/empty `GAMELIB_SHELL_EXE` makes
- * `pathShim.getPath('exe')` throw loudly (plan 34.5-01) -- this module adds NO catch, fallback or
+ * the `exe` path accessor throw loudly (plan 34.5-01) -- this module adds NO catch, fallback or
  * default launch-command string around either path. For `addShortcut` (invoke-kind), the throw is
  * caught only by its own channel-level `logChannelFailure` guard and nothing is written. For
  * `addToSteam` (invoke-kind, this plan), the throw REJECTS to the caller -- no guard is added,
@@ -72,7 +72,7 @@
  * calls `getPath('desktop')` on the linux branch and would throw the moment these channels were
  * registered without it. On win32 the Desktop comes from `windowsDesktopDir` ->
  * `readWindowsShellFolder` (the registry), and without it no Desktop path exists
- * (quick 261111-aq4): pathShim's win32 `desktop` arm throws and is never reached.
+ * (quick 261111-aq4): appPaths's win32 `desktop` arm throws and is never reached.
  *
  * Curated-import rule (inherited from every prior slice's D-08 -> D-09 -> D-04 -> D-14 -> D-02
  * lineage): this module imports the underlying logic modules directly
@@ -360,7 +360,7 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
   // Steam shortcut VDF's launch command -- the value Steam later runs when the user clicks the
   // entry in their Steam library. That call site has no existence check in the Electron original,
   // because `app.getPath('exe')` could not meaningfully fail there. Under the sidecar,
-  // `pathShim.getPath('exe')` CAN fail (an unset/empty `GAMELIB_SHELL_EXE`), and per its own
+  // the `exe` path accessor CAN fail (an unset/empty `GAMELIB_SHELL_EXE`), and per its own
   // throw-loudly convention (plan 34.5-01) it throws rather than returning `''`. This channel is
   // invoke-kind, so that throw REJECTS to the caller -- no catch, fallback or default launch
   // string is added here or anywhere upstream; a rejection the caller can observe is strictly

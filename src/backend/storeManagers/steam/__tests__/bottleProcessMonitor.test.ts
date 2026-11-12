@@ -15,7 +15,8 @@ import { join } from 'node:path'
 import { logInfo, logWarning } from 'backend/logger'
 const sendFrontendMessage = jest.fn()
 import { recordPlaySession } from 'backend/runsForMe'
-import { getBottleDir } from 'backend/storeManagers/steam/bottleDirs'
+import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import {
   readBoundedTail,
@@ -132,7 +133,8 @@ const FAKE_LOG_PATHS = {
   login: '/fake/bottle/drive_c/Program Files (x86)/Steam/logs/steamui_login.txt'
 }
 
-const bottleDir = getBottleDir(DEFAULT_STEAM_BOTTLE_NAME)
+const paths = createContainedHomeAppPaths()
+const bottleDir = getBottleDir(paths, DEFAULT_STEAM_BOTTLE_NAME)
 const installPath = join(
   bottleDir,
   'drive_c',

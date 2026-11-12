@@ -197,7 +197,7 @@ export function steamEngineStateDeps(
   const own = bridgeBottleNameFor(appId)
   return {
     ...steamDecisionDeps(steamDecisionServices(deps)),
-    bottleFor: () => findBridgeInstallBottle(appId),
+    bottleFor: () => findBridgeInstallBottle(deps.paths, appId),
     overrideEligible: (_id, bottle) =>
       bottle === own && !isDrmModeFromVerdict(readBridgeVerdict(deps, appId)),
     overlayEligible: true,
@@ -208,7 +208,7 @@ export function steamEngineStateDeps(
         steamWineToolsBottle(appId, {
           isMac: true,
           ownBottleName: bridgeBottleNameFor,
-          findInstallBottle: findBridgeInstallBottle
+          findInstallBottle: (id) => findBridgeInstallBottle(deps.paths, id)
         }),
     effective: (): EffectiveEngine => {
       const raw = readSteamEngineOverride(deps, appId)
@@ -220,7 +220,7 @@ export function steamEngineStateDeps(
     },
     prefixKind: 'bottle',
     perGameBottleName: own,
-    isBottleReady: isBridgeBottleReady,
+    isBottleReady: (name) => isBridgeBottleReady(deps.paths, name),
     ...over
   }
 }

@@ -1,4 +1,4 @@
-import * as pathsModule from '../constants/paths'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { mkdirSync } from 'fs'
 import { join } from 'path'
@@ -33,7 +33,7 @@ describe('config factory defaults are spawn-free', () => {
     const runner = createScriptedRunner([])
     const defaults = createGlobalConfig({
       versioning: createTestVersioning(),
-      paths: pathsModule
+      paths: createTestAppPaths(profile.root)
     }).getFactoryDefaults()
     expect(defaults).toBeDefined()
     expect(runner.calls.length).toBe(0)

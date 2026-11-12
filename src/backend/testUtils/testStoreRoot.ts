@@ -5,6 +5,19 @@ import { createStoreRoot, type StoreRoot } from '../stores/storeRoot'
 import type { Migration } from '../storeVersioning/types'
 
 /**
+ * The OS appData folder for the jest-contained fake HOME: what a booted sidecar derives
+ * (`resolveAppPaths`) and what the retired pathShim's `getPath('appData')` returned.
+ */
+export function testAppDataDir(): string {
+  return resolveAppDataDir(process.platform, process.env, homedir())
+}
+
+/** `<appData>/GameLib` for the jest-contained fake HOME: the default test StoreRoot's userData. */
+export function testUserDataDir(): string {
+  return join(testAppDataDir(), 'GameLib')
+}
+
+/**
  * A fresh StoreRoot for tests. With no argument it roots at the same userData a booted sidecar
  * derives for the jest-contained fake HOME (`jest.setupContainment.ts`), so a suite that reads
  * the files a store wrote through another root on the same directory still lines up. Each call
@@ -19,12 +32,7 @@ export function createTestStoreRoot(
 ): StoreRoot {
   return createStoreRoot({
     ...options,
-    userData:
-      userData ??
-      join(
-        resolveAppDataDir(process.platform, process.env, homedir()),
-        'GameLib'
-      )
+    userData: userData ?? testUserDataDir()
   })
 }
 

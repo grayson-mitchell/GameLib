@@ -42,7 +42,11 @@ export async function repair(steamGame: SteamGame): Promise<ExecResult> {
     steamGame.deps,
     steamGame.appId
   ).wineCrossoverBottle
-  if (!exePath || !isBridgeBottleReady(bottle) || !existsSync(exePath)) {
+  if (
+    !exePath ||
+    !isBridgeBottleReady(steamGame.deps.paths, bottle) ||
+    !existsSync(exePath)
+  ) {
     throw scoped()
   }
   const installRoot = resolveBridgeGameInstallRoot(steamGame, exePath, bottle)

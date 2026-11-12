@@ -11,6 +11,7 @@ import {
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { createTestVersioning } from '../testUtils/testStoreRoot'
+import { createTestAppPaths } from '../testUtils/testAppPaths'
 
 // Phase 68 plan 05: config.json and GamesConfig/<app>.json on the store engine.
 // Every test gets a fresh directory and a fresh module graph, so the
@@ -18,21 +19,6 @@ import { createTestVersioning } from '../testUtils/testStoreRoot'
 
 const mockPaths = { dir: '' }
 
-jest.mock('../constants/paths', () => ({
-  ...jest.requireActual('../constants/paths'),
-  get configPath() {
-    return join(mockPaths.dir, 'config.json')
-  },
-  get gamesConfigPath() {
-    return join(mockPaths.dir, 'GamesConfig')
-  },
-  get sharedWinePrefix() {
-    return join(mockPaths.dir, 'prefixes')
-  },
-  get userHome() {
-    return mockPaths.dir
-  }
-}))
 jest.mock('../utils/compatibility_layers', () => ({
   getDefaultWineBinary: () => ({ name: 'x', bin: '', type: 'wine' })
 }))
@@ -66,9 +52,13 @@ function freshGraph(): Graph {
   jest.isolateModules(() => {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const versioning = createTestVersioning()
-    // The mocked constants/paths (per-test temp dir) is the boot's AppPaths here.
-    const paths =
-      require('../constants/paths') as typeof import('../constants/paths')
+    // The per-test temp dir is the boot's AppPaths here.
+    const paths = createTestAppPaths(mockPaths.dir, {
+      configPath: join(mockPaths.dir, 'config.json'),
+      gamesConfigPath: join(mockPaths.dir, 'GamesConfig'),
+      sharedWinePrefix: join(mockPaths.dir, 'prefixes'),
+      userHome: mockPaths.dir
+    })
     const config = require('../config') as ConfigModule
     const gameConfig = require('../game_config') as GameConfigModule
     const engineConfig = require('../engine/engineConfig') as EngineConfigModule

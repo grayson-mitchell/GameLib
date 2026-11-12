@@ -68,7 +68,7 @@
  * and drag `backend/ipc` (which imports the real `electron`) into this
  * module's import graph. This module therefore imports only from `../utils`,
  * `../utils/filesystem`, `../schemas`, `../constants/urls`,
- * `../constants/paths`, `../dialog/dialog`, `../logger`, `./sidecarRpc`,
+ * `../process/appPaths`, `../dialog/dialog`, `../logger`, `./sidecarRpc`,
  * `i18next`, `node:path`, `graceful-fs`, and `common/types`.
  *
  * Scope honesty (Phase 34.3 Plan 02): `resetHeroic` is narrower than its UI

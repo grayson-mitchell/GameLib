@@ -11,9 +11,9 @@
  *      `catch` return `false` would unlock that vault inside a shipped binary and every
  *      other test in the repo would stay green.
  *
- *   2. `constants/paths.ts` (which picks `build` vs `public` for `publicDir`) CONSUMES it
- *      rather than re-deriving it: each direction is exercised against a freshly loaded
- *      `paths.ts`, and the source gate pins that no second derivation exists.
+ *   2. `bootstrap.ts`'s `resolveAppPaths` (which picks `build` vs `public` for `publicDir`)
+ *      CONSUMES it rather than re-deriving it: each direction is exercised against a freshly
+ *      loaded `resolveAppPaths`, and the source gate pins that no second derivation exists.
  *
  * No file-wide `jest.mock` here on purpose. `isPackagedSidecar()` performs its
  * `node:sea` require at CALL time, so `jest.doMock` inside a test body reaches it, and
@@ -80,7 +80,7 @@ describe('isPackagedSidecar() — the one derivation', () => {
   })
 })
 
-describe('paths.ts publicDir consumes the derivation (no second derivation)', () => {
+describe('resolveAppPaths publicDir consumes the derivation (no second derivation)', () => {
   afterEach(() => {
     jest.dontMock('node:sea')
     jest.dontMock('../isPackagedSidecar')
@@ -89,7 +89,7 @@ describe('paths.ts publicDir consumes the derivation (no second derivation)', ()
 
   const publicDirBase = (): string => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { publicDir } = require('../../constants/paths') as {
+    const { publicDir } = require('../bootstrap').resolveAppPaths() as {
       publicDir: string
     }
     return basename(publicDir)
@@ -141,10 +141,9 @@ describe('T-35-11 source gate: exactly ONE derivation exists in the sidecar tree
   const sidecarDir = join(__dirname, '..')
   const read = (f: string) =>
     stripSourceComments(readFileSync(join(sidecarDir, f), 'utf8'))
-  // Raw text, not comment-stripped: paths.ts holds `'file://'`, which the line-comment stripper
-  // would mistake for a comment start and truncate the rest of its line.
-  const readPaths = () =>
-    readFileSync(join(__dirname, '../../constants/paths.ts'), 'utf8')
+  // Raw text, not comment-stripped: the path derivation holds `'file://'`, which the line-comment
+  // stripper would mistake for a comment start and truncate the rest of its line.
+  const readPaths = () => readFileSync(join(sidecarDir, 'bootstrap.ts'), 'utf8')
 
   it('non-vacuity: the gate can see real code in each file it inspects', () => {
     // Proves the stripper did not eat everything it is about to assert over. Without
@@ -155,7 +154,7 @@ describe('T-35-11 source gate: exactly ONE derivation exists in the sidecar tree
     expect(read('devSecretVault.ts')).toContain('isPackagedSidecar()')
   })
 
-  it('constants/paths.ts consumes the shared derivation and never re-derives it', () => {
+  it('bootstrap.ts consumes the shared derivation and never re-derives it', () => {
     const src = readPaths()
     expect(src).not.toContain("require('node:sea')")
     expect(src).toContain('import { isPackagedSidecar } from')

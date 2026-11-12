@@ -1,4 +1,9 @@
 /**
+ * 66.4-20 NOTE: `sidecar/pathShim.ts` and `constants/paths.ts` are deleted; every `pathShim` mention
+ * below is history. Paths now come from `process/appPaths` (pure derivation from explicit roots),
+ * so the `pathShim` mock kit is gone, Block A pins the derivation instead, and Block B no longer
+ * requires a `pathShim` mock (it requires that none is left behind).
+ *
  * Containment proof + declared-list gate for the sidecar's `pathShim`/
  * `backend/logger/paths` mock kit (Phase 34.2 gap cycle 2, plan 34.2-18 --
  * closes verification gap #3 / CR-03 / WR-01, REQ-34.2-07/-14).
@@ -133,34 +138,6 @@ jest.mock('os', () => {
   return {
     ...actual,
     homedir: () => mockTmpRoot
-  }
-})
-
-// ── pathShim — the SAME mock shape the four in-scope suites use: no
-// platform branch, no environment variable participating. Block A's whole
-// point is proving THIS shape stays safe even when `process.platform` and
-// every relevant env var are adversarial. ───────────────────────────────────
-jest.mock('../pathShim', () => {
-  const actualOs = jest.requireActual('os')
-  const actualPath = jest.requireActual('path')
-  const tmpRoot = mockTmpRoot
-  return {
-    getPath: (name: string) => {
-      switch (name) {
-        case 'appData':
-          return tmpRoot
-        case 'userData':
-          return actualPath.join(tmpRoot, 'GameLib')
-        case 'temp':
-          return actualOs.tmpdir()
-        case 'home':
-          return tmpRoot
-        default:
-          throw new Error(
-            `[pathShim mock] getPath('${name}') is not shimmed for this test`
-          )
-      }
-    }
   }
 })
 
@@ -342,25 +319,48 @@ describe('Block A: env-simulating containment proof (34.2 gap cycle 2, plan 34.2
     }
   })
 
-  it('REQ-34.2-07/-14: a freshly-required constants/paths still yields appFolder/userDataPath/fixesPath inside os.tmpdir()', () => {
+  it('REQ-34.2-07/-14: AppPaths derived from a contained root stay inside os.tmpdir() under hostile platform and env (derivePaths reads neither)', () => {
     withAdversarialPlatformAndEnv(() => {
-      let appFolder!: string
-      let userDataPath!: string
-      let fixesPath!: string
-      // no boot: loads one module fresh to read a path; never calls bootstrap.init
-      jest.isolateModules(() => {
-        /* eslint-disable @typescript-eslint/no-require-imports */
-        const paths = require('../../constants/paths')
-        /* eslint-enable @typescript-eslint/no-require-imports */
-        ;({ appFolder, userDataPath, fixesPath } = paths)
+      // The retired pathShim mock ignored platform and env; the pure derivation does the same by
+      // construction: it takes explicit roots and reads nothing ambient.
+      /* eslint-disable @typescript-eslint/no-require-imports */
+      const { derivePaths } =
+        require('../../process/appPaths') as typeof import('../../process/appPaths')
+      /* eslint-enable @typescript-eslint/no-require-imports */
+      const paths = derivePaths({
+        appData: mockTmpRoot,
+        configRoot: mockTmpRoot,
+        home: mockTmpRoot,
+        userHome: mockTmpRoot,
+        flatpakHome: mockTmpRoot,
+        appRoot: mockTmpRoot,
+        assetDir: 'public',
+        arch: process.arch,
+        tempDir: tmpdir()
       })
 
       const tmpRoot = resolve(tmpdir())
-      for (const candidate of [appFolder, userDataPath, fixesPath]) {
+      for (const candidate of [
+        paths.appFolder,
+        paths.userData,
+        paths.fixesPath
+      ]) {
         const rel = relative(tmpRoot, resolve(candidate))
         expect(rel.startsWith('..')).toBe(false)
         expect(isAbsolute(rel)).toBe(false)
       }
+    })
+  })
+
+  it('REQ-34.2-07/-14 control: the env-reading resolver DOES escape os.tmpdir() under the same hostile conditions, so the test above is not vacuous', () => {
+    withAdversarialPlatformAndEnv((sentinelPaths) => {
+      /* eslint-disable @typescript-eslint/no-require-imports */
+      const { resolveAppDataDir } =
+        require('../../process/appPaths') as typeof import('../../process/appPaths')
+      /* eslint-enable @typescript-eslint/no-require-imports */
+      expect(
+        resolveAppDataDir(process.platform, process.env, mockTmpRoot)
+      ).toBe(sentinelPaths.XDG_CONFIG_HOME)
     })
   })
 
@@ -407,7 +407,8 @@ describe('Block A: env-simulating containment proof (34.2 gap cycle 2, plan 34.2
     }
   })
 
-  // RED-PROOF (recorded verbatim in 34.2-18-SUMMARY.md): commenting out the
+  // RED-PROOF (recorded verbatim in 34.2-18-SUMMARY.md; the pathShim mock it names is gone since
+  // 66.4-20): commenting out the
   // `jest.mock('../pathShim', ...)` block above makes the first assertion
   // test fail on THIS macOS host (appFolder/userDataPath/fixesPath resolve
   // to a path under the `XDG_CONFIG_HOME` sentinel instead), because
@@ -1000,7 +1001,7 @@ const IN_SCOPE_SUITES = [
  * filesystem or child process.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
-  'appPathsParity.test.ts',
+  'appFolderStep.test.ts',
   'appRootResolution.test.ts',
   'appShellFlows.test.ts',
   'appShellImportGate.test.ts',
@@ -1053,11 +1054,12 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'openPolicy.test.ts',
   'outboundHttpRegistry.test.ts',
   'outputStreamBinding.test.ts',
-  'pathShim.test.ts',
+  'pathsBootOrder.test.ts',
   'playtimeLockBootClear.test.ts',
   'playtimeQueueBootDrain.test.ts',
   'rendererAllowList.test.ts',
   'rendererPathGuard.test.ts',
+  'resolveAppPaths.test.ts',
   'rosettaBootWiring.test.ts',
   'rosettaPlatformGate.test.ts',
   'runnerAuthFlows.test.ts',
@@ -1110,12 +1112,12 @@ describe('Block B: declared-list source gate over the four in-scope suites (34.2
   )
 
   it.each(IN_SCOPE_SUITES)(
-    'REQ-34.2-07/-14: %s contains a pathShim jest.mock, matched on comment-stripped source',
+    'REQ-34.2-07/-14: %s leaves no reference to the retired pathShim module, matched on comment-stripped source (66.4-20)',
     (name) => {
       const stripped = stripComments(
         readFileSync(join(__dirname, name), 'utf-8')
       )
-      expect(stripped).toMatch(/jest\.mock\(\s*['"]\.\.\/pathShim['"]/)
+      expect(stripped).not.toMatch(/pathShim/)
     }
   )
 
@@ -1183,13 +1185,15 @@ describe('Block B: declared-list source gate over the four in-scope suites (34.2
   // self-test): stripComments must remove a comment-only line naming a
   // forbidden pattern before matching, proving the stripper itself works
   // rather than merely asserting a raw grep would pass.
-  it("gate self-test: stripComments removes a comment-only jest.mock('../pathShim' line before matching", () => {
+  it('gate self-test: stripComments removes a comment-only pathShim mention before matching, and a live one is still caught', () => {
     const source = [
       "// this comment intentionally says: jest.mock('../pathShim', () => {})",
       "import { readFileSync } from 'fs'"
     ].join('\n')
-    const stripped = stripComments(source)
-    expect(stripped).not.toMatch(/jest\.mock\(\s*['"]\.\.\/pathShim['"]/)
+    expect(stripComments(source)).not.toMatch(/pathShim/)
+    expect(stripComments("jest.mock('../pathShim', () => ({}))\n")).toMatch(
+      /pathShim/
+    )
   })
 })
 

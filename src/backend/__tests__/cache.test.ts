@@ -128,7 +128,8 @@ describe('backend/cache.ts', () => {
 describe('store path parity (Phase 35 D-04)', () => {
   const { translateStoreOptions } = jest.requireActual('../store_backend')
 
-  const { getPath } = jest.requireActual('../sidecar/pathShim')
+  const { testUserDataDir } = jest.requireActual('../testUtils/testStoreRoot')
+  const getUserData = (): string => testUserDataDir()
 
   const RawConf =
     jest.requireActual('conf').default ?? jest.requireActual('conf')
@@ -181,7 +182,7 @@ describe('store path parity (Phase 35 D-04)', () => {
   })
 
   test('each resolves to <userData>/store_cache/<name>.json, never a shared config.json', () => {
-    const expectedDir = joinPath(getPath('userData'), 'store_cache')
+    const expectedDir = joinPath(getUserData(), 'store_cache')
     for (const name of REAL_CACHE_STORE_NAMES) {
       expect(derivedPath(name)).toBe(joinPath(expectedDir, `${name}.json`))
       expect(derivedPath(name).endsWith('/config.json')).toBe(false)
@@ -191,7 +192,7 @@ describe('store path parity (Phase 35 D-04)', () => {
   test('resolves under userData, never under the repo working directory', () => {
     for (const name of REAL_CACHE_STORE_NAMES) {
       const p = derivedPath(name)
-      expect(p.startsWith(getPath('userData'))).toBe(true)
+      expect(p.startsWith(getUserData())).toBe(true)
       expect(p.startsWith(process.cwd())).toBe(false)
     }
   })
@@ -221,7 +222,7 @@ describe('store path parity (Phase 35 D-04)', () => {
       )
       expect(new Set(naive).size).toBe(1)
       expect(naive[0].endsWith('/config.json')).toBe(true)
-      expect(naive[0].startsWith(getPath('userData'))).toBe(false)
+      expect(naive[0].startsWith(getUserData())).toBe(false)
       expect(naive[0].startsWith(scratchReal)).toBe(true)
     } finally {
       process.chdir(previousCwd)
@@ -236,7 +237,7 @@ describe('store path parity (Phase 35 D-04)', () => {
   // assertion is required, not optional.
   test('reads a pre-existing store file written in the OLD backend layout', () => {
     const cwd = 'phase35_roundtrip'
-    const dir = joinPath(getPath('userData'), cwd)
+    const dir = joinPath(getUserData(), cwd)
     mkdirSync(dir, { recursive: true })
     writeFileSync(
       joinPath(dir, 'config.json'),

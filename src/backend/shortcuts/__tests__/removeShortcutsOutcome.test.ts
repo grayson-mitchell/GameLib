@@ -56,7 +56,7 @@ import { removeShortcuts, shortcutFiles } from '../shortcuts/shortcuts'
 import type { GameInfo } from 'common/types'
 import type { Game } from 'common/types/game_manager'
 import { defined } from 'backend/testUtils/indexed'
-import { createPathShimPaths } from 'backend/testUtils/pathShimPaths'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 
 const mockLogError = logError as jest.Mock
 const mockLogWarning = logWarning as jest.Mock
@@ -78,7 +78,7 @@ const deps = {
         timedOut: false
       })
   },
-  paths: createPathShimPaths()
+  paths: createContainedHomeAppPaths()
 } as unknown as Parameters<typeof removeShortcuts>[0]
 
 function gameFor(title: string): Game {

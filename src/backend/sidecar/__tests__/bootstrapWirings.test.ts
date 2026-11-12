@@ -261,7 +261,8 @@ function loadHandles(): WiringHandles {
   // i18next's own CJS export has no literal `.default` property, so appending
   // `.default` here would silently yield `undefined`.
   const i18nextInstance = require('i18next')
-  const { appFolder } = require('../../constants/paths')
+  const { appFolder } =
+    require('../../testUtils/testAppPaths').createContainedHomeAppPaths()
   const { getLogFilePath } = require('../../logger/paths')
   /* eslint-enable @typescript-eslint/no-require-imports */
 

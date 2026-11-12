@@ -150,8 +150,7 @@ import { ipcViews } from '../../testUtils/ipcViews'
 import { createTestHostServices } from '../../testUtils/testHostServices'
 import { createNativeImage } from '../nativeImageShim'
 import { createRealRunner } from '../../testUtils/realRunner'
-import { createPathShimPaths } from 'backend/testUtils/pathShimPaths'
-import { getPath } from '../pathShim'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import {
   createTestManagers,
   createTestServices,
@@ -208,7 +207,7 @@ function makeFakeGame(gameInfo: GameInfo) {
         {
           libraryManagers: { gog: {} },
           config: { getSettings: () => mockGlobalConfigGet().getSettings() },
-          paths: createPathShimPaths(),
+          paths: createContainedHomeAppPaths(),
           imageTools: sipsImageTools
         } as unknown as Parameters<typeof realAddShortcuts>[0],
         fakeGame,
@@ -225,7 +224,7 @@ const mockLogWarning = logWarning as jest.Mock
 const mockLogError = logError as jest.Mock
 // The config slice reads through this (`the global config` is no longer in the module graph).
 const mockGlobalConfigGet = jest.fn()
-const pathDeps = { paths: createPathShimPaths() }
+const pathDeps = { paths: createContainedHomeAppPaths() }
 const mockGetIcon = getIcon as jest.Mock
 const mockNotify = notify as jest.Mock
 
@@ -298,7 +297,7 @@ registerShortcutsFlows({
   config: {
     getSettings: () => mockGlobalConfigGet().getSettings()
   },
-  paths: createPathShimPaths(),
+  paths: createContainedHomeAppPaths(),
   imageTools: sipsImageTools,
   dialogs: createTestHostServices().dialogs,
   appState: createTestHostServices().appState,
@@ -448,12 +447,12 @@ describe("shortcutsExists' fallback on an empty getGameInfo() (260905-mv5, site 
 })
 
 // ── Describe 2: Containment ─────────────────────────────────────────────────────────────────────
-describe('containment — getPath(desktop) never resolves under the developer real home (tests-clobbering-real-steam-store rule, applied to a cluster that writes outside the app-support dir by design)', () => {
+describe('containment — knownFolder(desktop) never resolves under the developer real home (tests-clobbering-real-steam-store rule, applied to a cluster that writes outside the app-support dir by design)', () => {
   it('resolves under the structurally redirected home, and differs from the pre-redirect real home', () => {
-    // Pinned to linux, CI's own arm: on a win32 host getPath('desktop') throws (261111-aq4).
+    // Pinned to linux, CI's own arm: on a win32 host knownFolder('desktop') throws (261111-aq4).
     const originalPlatform = overrideProcessPlatform('linux')
     try {
-      const desktop = getPath('desktop')
+      const desktop = createContainedHomeAppPaths().knownFolder('desktop')
       expect(desktop.startsWith(homedir())).toBe(true)
       expect(desktop).not.toBe(realHomeAtSetup)
       expect(desktop.startsWith(realHomeAtSetup)).toBe(false)

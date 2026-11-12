@@ -53,7 +53,7 @@
  * changed (exact-version match, else the null object).
  *
  * BLOCKER 2: the compiled x86 `.dll` is read from `builtBridgeShimPath`
- * (`backend/constants/paths.ts`, 24-01) -- the SAME shared location 24-07
+ * (`process/appPaths.ts`, 24-01) -- the SAME shared location 24-07
  * (packaging) writes to. This module never invents a second/divergent
  * shim location. At dev time the `.dll` may not exist yet (built by 24-07
  * at packaging) -- that is a typed `'shim-not-built'` result, not a throw.
@@ -169,7 +169,7 @@ export async function placeShimForGame(
   // Gap 11 (56-21): UE titles carry .bind on the Shipping exe, not the
   // bootstrap; stamp from the same resolver launch routing uses.
   const stampBottle = sanitizeBottleName(
-    opts?.bottleName ?? resolveBridgeBottleName(appId)
+    opts?.bottleName ?? resolveBridgeBottleName(paths, appId)
   )
   const launchWrapper = stampBottle
     ? await detectLaunchDrmWrapper(

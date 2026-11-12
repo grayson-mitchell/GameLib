@@ -60,7 +60,7 @@ import {
 import type { EngineServices } from '../engineServices'
 import { createTestEngineServices } from 'backend/testUtils/testServices'
 import type { LaunchEngineDeps } from '../launchEngine'
-import { userHome } from 'backend/constants/paths'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { createTestEngineRuntime } from 'backend/testUtils/testEngineRuntime'
 import { getBottleDir as getBottleDirIn } from '../bottlePrimitives'
 import { ENGINE_MARKER_FILE, switchContextFrom } from '../engineSwitch'
@@ -68,7 +68,8 @@ import { perGameBottleName } from '../perGameBottle'
 import type { EffectiveEngine } from '../engineConfig'
 import type { EngineSelection } from '../engineTypes'
 
-// Bottles live under the jest-contained HOME, the real `userHome` the constants resolve.
+// Bottles live under the jest-contained HOME, the real `userHome` a boot derives.
+const { userHome } = createContainedHomeAppPaths()
 const paths = { userHome }
 const getBottleDir = (name: string) => getBottleDirIn(paths, name)
 // A fresh engine runtime per test (beforeEach): nothing crosses a test and there is no reset hook.

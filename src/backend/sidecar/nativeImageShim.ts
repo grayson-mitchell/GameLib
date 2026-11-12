@@ -2,7 +2,7 @@
  * Sidecar `nativeImage` shim (Phase 34.5 gap cycle 6, plan 34.5-45 — F-34.5-G6-07).
  *
  * A real, macOS `sips`-backed replacement for Electron's `nativeImage` module, structurally
- * modelled on `pathShim.ts` (this sidecar's own precedent for a genuine, minimal Electron-surface
+ * modelled on `process/appPaths.ts` (this sidecar's own precedent for a genuine, minimal Electron-surface
  * shim rather than a no-op recorder): implemented members do real work, and the one thing this
  * shim genuinely cannot do (convert on a non-macOS platform) throws loudly — named, greppable —
  * rather than silently returning garbage.

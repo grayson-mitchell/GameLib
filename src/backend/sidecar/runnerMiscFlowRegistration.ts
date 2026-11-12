@@ -15,10 +15,10 @@
  * inherited legendary save-sync live-verification leg runs (live-gate step 7), or path resolution
  * fails. This plan is where that constraint is satisfied — it lands before the phase's gate-run
  * plan. `save_sync.ts:146`'s `getDefaultGogSavePaths`'s `app.getPath('documents')` call (reached
- * only when `game.isNative()`, inside the GOG branch) is already covered by `pathShim.ts`'s
+ * only when `game.isNative()`, inside the GOG branch) is already covered by `process/appPaths.ts`'s
  * `documents` case on darwin and linux (plan 34.5-01, REQ-34.5-01), so no new shim work is
  * required here. On win32 `save_sync.ts` reads Documents from the registry instead and
- * `pathShim`'s win32 `documents` arm throws (quick 261111-aq4).
+ * `appPaths`'s win32 `documents` arm throws (quick 261111-aq4).
  *
  * D-04 note, recorded here because this is where a future reader will actually find it:
  * `getCometVersion` is GOG's channel. `comet` is the GOG Galaxy Communication replacement,
@@ -61,7 +61,7 @@
  * GUI branch was removed by Phase 45 D-17) — this phase's domain — and was reassigned here
  * rather than ported in 34.1.
  *
- * `documents` gray area (research Pitfall 1 / D-09): `pathShim.ts`'s `documents` case (plan
+ * `documents` gray area (research Pitfall 1 / D-09): `process/appPaths.ts`'s `documents` case (plan
  * 34.5-01, REQ-34.5-01) was added anticipating GOG saves-sync's need for it, and CONTEXT.md/
  * RESEARCH.md both file the single `save_sync.ts:146 getPath('documents')` call site as reached
  * "via `syncGOGSaves`". Direct verification for this plan (`storeManagers/gog/library.ts:94`'s
@@ -133,8 +133,8 @@ export function registerRunnerMiscFlows(
   deps.ipc.handle('getNileVersion', () => getNileVersion(versionDeps))
 
   // ── Wine runtime channels (wine/runtimes/ipc_handler.ts:4,6) ──────────────
-  // No wave-1 precondition: `runtimePath` (`backend/constants/paths.ts`) resolves from
-  // `toolsPath`, which in turn resolves through `pathShim`'s ALREADY-implemented `userData` case
+  // No wave-1 precondition: `runtimePath` (`process/appPaths.ts`) resolves from
+  // `toolsPath`, which in turn resolves through `appPaths`'s ALREADY-implemented `userData` case
   // — a reader should not add a spurious dependency on plan 34.5-01 for this cluster.
   deps.ipc.handle(
     'downloadRuntime',
@@ -221,7 +221,7 @@ export function registerRunnerMiscFlows(
       const arg = args[2] as string
 
       // Research Pitfall 1 / D-09 (see this module's header docstring for the full correction):
-      // `pathShim`'s `documents` case exists for GOG saves-sync's sake — `save_sync.ts:146`
+      // `appPaths`'s `documents` case exists for GOG saves-sync's sake — `save_sync.ts:146`
       // (`getDefaultGogSavePaths`) is the sole `getPath('documents')` call site, gated on
       // `game.isNative()`. Direct verification shows THIS handler's own call chain
       // (`getGame(appName).syncSaves(arg, '', gogSaves)` -> `storeManagers/gog/games.ts`'s
@@ -297,8 +297,8 @@ export function registerRunnerMiscFlows(
   // `getDefaultSavePath` function is imported directly (never `main.ts`) per this module's own
   // curated-import rule. `save_sync.ts:146`'s `getDefaultGogSavePaths`'s `app.getPath('documents')`
   // call (reached only inside the GOG branch, when `game.isNative()`) is already covered by
-  // `pathShim.ts`'s `documents` case on darwin and linux (plan 34.5-01, REQ-34.5-01) — no new
-  // shim work required. On win32 `save_sync.ts` reads Documents from the registry and pathShim's
+  // `process/appPaths.ts`'s `documents` case on darwin and linux (plan 34.5-01, REQ-34.5-01) — no new
+  // shim work required. On win32 `save_sync.ts` reads Documents from the registry and appPaths's
   // win32 arm throws (quick 261111-aq4).
   deps.ipc.handle(
     'getDefaultSavePath',

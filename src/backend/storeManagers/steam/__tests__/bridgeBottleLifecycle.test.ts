@@ -7,7 +7,6 @@
  *  - resetMocks: true in jest.config means mock implementations must be
  *    re-established in each test
  *  - graceful-fs mocked (existsSync) — no real filesystem access
- *  - electron mocked (app.getPath) — backend/constants/paths imports it
  */
 import { createEngineRegistry } from 'backend/engine/engineRegistry'
 import {
@@ -23,7 +22,7 @@ import {
 // `graceful-fs` `readFileSync` import above (manifest.test.ts precedent).
 import { readFileSync as readRealFile } from 'node:fs'
 import { dirname as dirnameOf, join as joinPath } from 'node:path'
-import { userHome } from 'backend/constants/paths'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import * as engineServicesModule from 'backend/services/engineServices'
 import type { EngineServicesSource } from 'backend/services/engineServices'
@@ -49,7 +48,7 @@ import {
 } from '../bridgeBottleLifecycle'
 import { getBridgeBottleSettings } from '../bridgeBottle'
 import { killBottleWineServerWith } from 'backend/engine/bottlePrimitives'
-import { getBottleDir } from '../bottleDirs'
+import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import type { DrmBridgeRunner } from '../bridgeBottle'
 import { createTestSteamLaunchRuntime } from 'backend/testUtils/testSteamLaunchRuntime'
 import { createGlobalTimerClock } from 'backend/testUtils/globalTimerClock'
@@ -93,7 +92,7 @@ jest.mock('backend/engine/adoptBottle', () => ({
 
 // GAP C (17-16): force isMac true so the macOS raise poll loop is exercised
 // deterministically on every host (the loop is dynamically imported by
-// bottle.ts). isSnap is provided because backend/constants/paths reads it.
+// bottle.ts). isSnap is provided for the environment consumers.
 jest.mock('backend/constants/environment', () => ({
   isMac: true,
   isWindows: false,
@@ -129,6 +128,7 @@ const steamLaunchRuntime = createTestSteamLaunchRuntime({
 })
 const { setDrmBridgeRunner, clearDrmBridgeRunner } =
   steamLaunchRuntime.drmRunners
+const { userHome } = createContainedHomeAppPaths()
 const paths = { userHome }
 
 const mockedExistsSync = existsSync as jest.Mock
@@ -143,6 +143,7 @@ const mockedSet = steamBottleConfigStore.set as jest.Mock
 const mockedGlobalConfigGet = jest.fn()
 // 66.3-15: the bottle helpers are an instance over the suite's mocked store and config.
 const steamBottle = createSteamBottle({
+  paths,
   stores: createTestStores({ steam: { steamBottleConfigStore } as never }),
   config: { getSettings: () => mockedGlobalConfigGet().getSettings() },
   crossover
@@ -455,7 +456,7 @@ describe('bottle.ts', () => {
     // behind a guard chain that can never name any other bottle.
     describe('removePerGameBridgeBottle', () => {
       const perGameName = 'GameLibSteamBridge-206040'
-      const perGameDir = getBottleDir(perGameName)
+      const perGameDir = getBottleDir(paths, perGameName)
 
       beforeEach(() => {
         mockedGetNodefault.mockReturnValue(undefined)
@@ -588,8 +589,8 @@ describe('bottle.ts', () => {
       })
 
       test('never spawns against or rmSyncs the legacy bridge bottle or the Phase 17 GameLibSteam bottle dir, across every case above', async () => {
-        const legacyDir = getBottleDir(DEFAULT_BRIDGE_BOTTLE_NAME)
-        const steamDir = getBottleDir(DEFAULT_STEAM_BOTTLE_NAME)
+        const legacyDir = getBottleDir(paths, DEFAULT_BRIDGE_BOTTLE_NAME)
+        const steamDir = getBottleDir(paths, DEFAULT_STEAM_BOTTLE_NAME)
         mockedExistsSync.mockImplementation(
           (path: string) => path === perGameDir
         )
@@ -635,7 +636,7 @@ describe('bottle.ts', () => {
 
     describe('stopPerGameBridgeBottle', () => {
       const perGameName = 'GameLibSteamBridge-206040'
-      const perGameDir = getBottleDir(perGameName)
+      const perGameDir = getBottleDir(paths, perGameName)
 
       beforeEach(() => {
         mockedGetNodefault.mockReturnValue(undefined)
@@ -718,7 +719,7 @@ describe('bottle.ts', () => {
 
     describe('endPerGameBridgeBottleSession', () => {
       const perGameName = 'GameLibSteamBridge-206040'
-      const perGameDir = getBottleDir(perGameName)
+      const perGameDir = getBottleDir(paths, perGameName)
 
       beforeEach(() => {
         mockedGetNodefault.mockReturnValue(undefined)
@@ -1009,7 +1010,7 @@ describe('Phase 59 engine registry', () => {
       wineserver: pinned.wineserverBin,
       name: pinned.label
     })
-    expect(s.winePrefix).toBe(getBottleDir(bottle))
+    expect(s.winePrefix).toBe(getBottleDir(paths, bottle))
     expect(s.wineCrossoverBottle).toBe(bottle)
     expect(s.autoInstallDxvk).toBe(false)
     expect(s.autoInstallDxvkNvapi).toBe(false)
@@ -1103,7 +1104,7 @@ describe('Phase 59 engine registry', () => {
       const [bin, args, opts] = mockedSpawnAsync.mock.calls[0]
       expect(bin).toBe('/pins/wineserver')
       expect(args).toEqual(['-k'])
-      expect(opts.env.WINEPREFIX).toBe(getBottleDir(bottle))
+      expect(opts.env.WINEPREFIX).toBe(getBottleDir(paths, bottle))
       expect(opts.env.USER).toBe('crossover')
       expect(opts.timeout).toBe(5000)
     })
@@ -1232,12 +1233,12 @@ describe('Phase 59 engine registry', () => {
         'wineserver -k'
       ])
       expect(mockedMkdirSync).toHaveBeenCalledWith(
-        dirnameOf(getBottleDir(name)),
+        dirnameOf(getBottleDir(paths, name)),
         { recursive: true }
       )
       const [, , bootOpts] = mockedSpawnAsync.mock.calls[0]
       expect(bootOpts.env).toMatchObject({
-        WINEPREFIX: getBottleDir(name),
+        WINEPREFIX: getBottleDir(paths, name),
         USER: 'crossover',
         WINEDLLOVERRIDES: 'mshtml=',
         WINEDEBUG: '-all'
@@ -1268,7 +1269,7 @@ describe('Phase 59 engine registry', () => {
         })
         expect(result.status).toBe('error')
         expect(mockedWriteConf).not.toHaveBeenCalled()
-        expect(mockedRmSync).toHaveBeenCalledWith(getBottleDir(name), {
+        expect(mockedRmSync).toHaveBeenCalledWith(getBottleDir(paths, name), {
           recursive: true,
           force: true
         })
@@ -1277,7 +1278,7 @@ describe('Phase 59 engine registry', () => {
 
     test('does not remove a bottle dir that existed before the call', async () => {
       mockedExistsSync.mockImplementation(
-        (p: string) => String(p) === getBottleDir(name)
+        (p: string) => String(p) === getBottleDir(paths, name)
       )
       mockedSpawnAsync.mockResolvedValue({ code: 1, stdout: '', stderr: '' })
       const result = await provisionBridgeBottle(spawnDeps, {
@@ -1335,7 +1336,7 @@ describe('Phase 59 engine registry', () => {
       expect(result.errorCode).toBe(CROSSOVER_CREATE_TIMEOUT)
       expect(mockedSpawnAsync.mock.calls[0][2]).toEqual({ timeout: 1000 })
       expect(order.some((o) => o.startsWith('wineserver -k'))).toBe(true)
-      expect(mockedRmSync).toHaveBeenCalledWith(getBottleDir(name), {
+      expect(mockedRmSync).toHaveBeenCalledWith(getBottleDir(paths, name), {
         recursive: true,
         force: true
       })
@@ -1348,7 +1349,7 @@ describe('Phase 59 engine registry', () => {
       })
       expect(result.status).toBe('error')
       expect(result.errorCode).toBe(CROSSOVER_CREATE_FAILED)
-      expect(mockedRmSync).toHaveBeenCalledWith(getBottleDir(name), {
+      expect(mockedRmSync).toHaveBeenCalledWith(getBottleDir(paths, name), {
         recursive: true,
         force: true
       })
@@ -1356,7 +1357,7 @@ describe('Phase 59 engine registry', () => {
 
     test('CROSSOVER_CREATE_FAILED keeps a bottle dir that existed before the call', async () => {
       mockedExistsSync.mockImplementation(
-        (p: string) => String(p) === getBottleDir(name)
+        (p: string) => String(p) === getBottleDir(paths, name)
       )
       mockedSpawnAsync.mockResolvedValue({ code: 1, stdout: '', stderr: 'x' })
       const result = await provisionBridgeBottle(spawnDeps, {
@@ -1372,13 +1373,16 @@ describe('Phase 59 engine registry', () => {
         bottleName: name
       })
       expect(result.errorCode).toBe(CROSSOVER_CREATE_FAILED)
-      expect(mockedRmSync).toHaveBeenCalledWith(getBottleDir(name), {
+      expect(mockedRmSync).toHaveBeenCalledWith(getBottleDir(paths, name), {
         recursive: true,
         force: true
       })
     })
 
-    const rmCall = () => [getBottleDir(name), { recursive: true, force: true }]
+    const rmCall = () => [
+      getBottleDir(paths, name),
+      { recursive: true, force: true }
+    ]
     const killed = () => order.some((o) => o.startsWith('wineserver -k'))
 
     test('WR-04: create-failed branches stop the wineserver before removing the dir', async () => {
@@ -1505,7 +1509,7 @@ describe('Phase 59 engine registry', () => {
     test('abort never removes a bottle dir that existed before the call', async () => {
       const ac = new AbortController()
       mockedExistsSync.mockImplementation(
-        (p: string) => String(p) === getBottleDir(name)
+        (p: string) => String(p) === getBottleDir(paths, name)
       )
       mockedSpawnAsync.mockImplementation(async () => {
         ac.abort()
@@ -1546,7 +1550,7 @@ describe('Phase 59 engine registry', () => {
     test('createdHere is false for a pre-existing not-ready bottle dir', async () => {
       mockedExistsSync.mockImplementation(
         (p: string) =>
-          String(p) === getBottleDir(name) ||
+          String(p) === getBottleDir(paths, name) ||
           (String(p).includes('cxbottle.conf') && order.length > 0)
       )
       mockedSpawnAsync.mockImplementation(
@@ -1565,7 +1569,7 @@ describe('Phase 59 engine registry', () => {
       mockedReadFileSync.mockReturnValue(
         '[Bottle]\n"BottleID" = "A"\n"WineArch" = "win64"\n'
       )
-      expect(bottleWineArch(name)).toBe('win64')
+      expect(bottleWineArch(paths, name)).toBe('win64')
     })
   })
 })

@@ -246,7 +246,10 @@ export async function install(
           steamUser: steamGame.deps.steamUser,
           config: steamGame.deps.config,
           targetSteamappsDir: bridgeBottleName
-            ? bottle.getBottleSteamappsDir(bridgeBottleName)
+            ? bottle.getBottleSteamappsDir(
+                steamGame.deps.paths,
+                bridgeBottleName
+              )
             : '',
           installdir: steamGame.appId,
           os: 'windows'
@@ -576,6 +579,7 @@ export function hasBottledSteamCopy(steamGame: SteamGame): boolean {
     return false
   }
   const steamappsDir = bottle.getBottleSteamappsDir(
+    steamGame.deps.paths,
     steamGame.deps.steamBottle.getSteamBottleSettings().wineCrossoverBottle
   )
   return resolve(breadcrumb) === resolve(steamappsDir)

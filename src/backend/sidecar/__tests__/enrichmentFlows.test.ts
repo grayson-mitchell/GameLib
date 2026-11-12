@@ -85,41 +85,6 @@ jest.mock('os', () => {
   }
 })
 
-// ── pathShim — CR-03: the REAL choke point. `constants/paths.ts`'s
-// module-scope `app.getPath('appData'|'userData')` calls resolve through
-// `platform/index.ts` -> `pathShim.getPath()`, whose real `resolveAppDataDir()`
-// prefers `env.APPDATA`/`env.XDG_CONFIG_HOME` over `homedir()` — bypassing
-// the `jest.mock('os', ...)` redirect above on win32/default. This factory
-// reimplements all four names the real shim supports, rooted at a single
-// per-suite tmp directory, with NO platform branch and NO env var reference —
-// see the module docstring above ───────────────────────────────────────────
-jest.mock('../pathShim', () => {
-  const actualOs = jest.requireActual('os')
-  const actualPath = jest.requireActual('path')
-  const tmpRoot = actualPath.join(
-    actualOs.tmpdir(),
-    `gamelib-enrichmentflows-test-home-${process.pid}`
-  )
-  return {
-    getPath: (name: string) => {
-      switch (name) {
-        case 'appData':
-          return tmpRoot
-        case 'userData':
-          return actualPath.join(tmpRoot, 'GameLib')
-        case 'temp':
-          return actualOs.tmpdir()
-        case 'home':
-          return tmpRoot
-        default:
-          throw new Error(
-            `[pathShim mock] getPath('${name}') is not shimmed for this test`
-          )
-      }
-    }
-  }
-})
-
 // ── backend/logger/paths — WR-01 (34.2 gap cycle 2, plan 34.2-18): the log
 // path is computed INDEPENDENTLY of pathShim -- `getBaseLogPath()`
 // (`backend/logger/paths.ts`) reads `process.env.LOCALAPPDATA`/
@@ -362,8 +327,15 @@ import {
   Frame,
   handlerRegistry
 } from './helpers/sidecarHarness'
-import { fixesPath, appFolder, userDataPath } from '../../constants/paths'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { getLogFilePath } from 'backend/logger/paths'
+
+// The app folders a boot derives for the jest-contained HOME (`jest.setupContainment`).
+const {
+  fixesPath,
+  appFolder,
+  userData: userDataPath
+} = createContainedHomeAppPaths()
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import type { GameInfo } from 'common/types'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
@@ -390,7 +362,7 @@ beforeAll(() => {
     if (rel.startsWith('..') || isAbsolute(rel)) {
       throw new Error(
         `[enrichmentFlows.test.ts] REFUSING TO RUN: "${candidate}" resolves ` +
-          `outside os.tmpdir() (${tmpRoot}) — the pathShim mock redirect is ` +
+          `outside os.tmpdir() (${tmpRoot}) — the jest containment redirect is ` +
           'not in effect, and this suite would rmSync/overwrite a real user ' +
           'config directory.'
       )

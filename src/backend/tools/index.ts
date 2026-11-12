@@ -1656,7 +1656,7 @@ async function runWineCommandOnGame(
   if (!storeCapabilities[runner].winePrefixToolsAvailable) {
     const { isSteamWineToolsEligible } =
       await import('backend/storeManagers/steam/bridgeWineTools')
-    if (!isSteamWineToolsEligible(appName)) {
+    if (!isSteamWineToolsEligible(deps.paths, appName)) {
       logError(
         'runWineCommand called on a Steam game with no per-game bottle (Pitfall 5)',
         LogPrefix.Gog

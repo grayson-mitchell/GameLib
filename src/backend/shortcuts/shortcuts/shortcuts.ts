@@ -317,7 +317,7 @@ function shortcutFiles(
     }
     case 'darwin':
       menuFile = join(deps.paths.userHome, 'Applications', `${gameTitle}.app`)
-      // Not app.getPath('desktop'): the sidecar's pathShim picks its arm from the platform
+      // Not app.getPath('desktop'): the sidecar's appPaths picks its arm from the platform
       // captured at module load, which a test override cannot change.
       desktopFile = join(deps.paths.userHome, 'Desktop', `${gameTitle}.app`)
       break

@@ -107,7 +107,12 @@ export async function installBridgeGame(
       return { status: 'abort' }
     }
     try {
-      if (!bridgeBottle.isBridgeBottleReady(bridgeBottleName)) {
+      if (
+        !bridgeBottle.isBridgeBottleReady(
+          steamGame.deps.paths,
+          bridgeBottleName
+        )
+      ) {
         const reused =
           steamGame.deps.aborts.has(steamGame.appId) &&
           steamGame.deps.aborts.getSignal(steamGame.appId)?.aborted === false
@@ -415,7 +420,10 @@ export async function installBridgeGameLeased(
   steamGame.deps.steamInstallRuntime.polls.clearBridgeInstallFinalized(
     steamGame.appId
   )
-  const targetSteamappsDir = bottle.getBottleSteamappsDir(bridgeBottleName)
+  const targetSteamappsDir = bottle.getBottleSteamappsDir(
+    steamGame.deps.paths,
+    bridgeBottleName
+  )
   const downloadResult = await installDepotDownload(steamGame, args, {
     targetSteamappsDirOverride: targetSteamappsDir,
     os: 'windows',

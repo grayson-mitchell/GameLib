@@ -284,8 +284,8 @@ async function syncOwnedLibrary(
     // bottle provisioned at all skips this scan entirely (no new failing
     // scan, native/bottle behavior unchanged).
     const bridgeInstalledMap =
-      isMac && listReadyBridgeBottleNames().length > 0
-        ? await buildBridgeInstalledMap()
+      isMac && listReadyBridgeBottleNames(deps.paths).length > 0
+        ? await buildBridgeInstalledMap(deps.paths)
         : null
     // Phase 54: repair missing bridge launch targets for installed bridge
     // titles (pre-Phase-54 installs of gated apps) on the lease this Refresh
@@ -560,8 +560,8 @@ export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
   // bridge-installed game's badge back to false either. Gated on ANY
   // bridge bottle being ready, not just the legacy shared one.
   const bridgeInstalledMap =
-    isMac && listReadyBridgeBottleNames().length > 0
-      ? await buildBridgeInstalledMap()
+    isMac && listReadyBridgeBottleNames(deps.paths).length > 0
+      ? await buildBridgeInstalledMap(deps.paths)
       : null
 
   for (const [

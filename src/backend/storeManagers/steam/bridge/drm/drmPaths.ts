@@ -6,7 +6,7 @@
  * clone is keyed by the CrossOver `CFBundleVersion` (D-09/D-10), so a
  * CrossOver update produces a new clone path.
  *
- * This module deliberately does NOT import backend/constants/paths, which
+ * This module deliberately does NOT import process/appPaths, which
  * renames the legacy folder at module load. Consumers pass `appFolder` in.
  *
  * Each getter returns null rather than throwing on input that fails its regex

@@ -1,6 +1,6 @@
 /**
  * Phase 60: on-disk layout for the overlay, sibling to the DRM root under
- * `<appFolder>/steam-bridge/overlay/`. Does NOT import backend/constants/paths
+ * `<appFolder>/steam-bridge/overlay/`. Does NOT import process/appPaths
  * (which renames the legacy folder at load); callers pass `appFolder`.
  * Each getter returns null on bad input or escape (T-60-02-04).
  */

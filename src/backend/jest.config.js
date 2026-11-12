@@ -16,7 +16,7 @@ module.exports = {
   // can opt out of containment by omission (a hand-maintained per-suite
   // list already rotted once — see jest.setupContainment.ts's docstring).
   // Scope is the backend project ONLY: the destruction path
-  // (backend/logger/paths.ts's getBaseLogPath(), sidecar/pathShim.ts's
+  // (backend/logger/paths.ts's getBaseLogPath(), process/appPaths.ts's
   // resolveAppDataDir()) is reachable only from src/backend, so the
   // frontend/common/preload/meta jest projects are deliberately untouched.
   // Do not remove this entry.

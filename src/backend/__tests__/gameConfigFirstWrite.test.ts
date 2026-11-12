@@ -1,4 +1,5 @@
 import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import {
   existsSync,
   mkdtempSync,
@@ -35,12 +36,6 @@ jest.mock('fs', () => {
 
 const dir = mkdtempSync(join(tmpdir(), 'gamelib-gameconfig-'))
 
-jest.mock('../constants/paths', () => ({
-  configPath: join(dir, 'config.json'),
-  gamesConfigPath: dir,
-  sharedWinePrefix: join(dir, 'prefixes'),
-  userHome: dir
-}))
 jest.mock('../constants/environment', () => ({
   isMac: true,
   isWindows: false
@@ -52,7 +47,12 @@ jest.mock('../logger', () => ({
 }))
 const globalExtra: Record<string, unknown> = {}
 import { createGameConfigs } from '../game_config'
-import * as pathsModule from '../constants/paths'
+const pathsModule = createTestAppPaths(dir, {
+  configPath: join(dir, 'config.json'),
+  gamesConfigPath: dir,
+  sharedWinePrefix: join(dir, 'prefixes'),
+  userHome: dir
+})
 
 // The global defaults the per-game config reads through its injected slice.
 const gameConfigs = createGameConfigs({

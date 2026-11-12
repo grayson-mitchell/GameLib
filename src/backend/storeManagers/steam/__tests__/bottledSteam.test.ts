@@ -7,9 +7,8 @@
  *  - resetMocks: true in jest.config means mock implementations must be
  *    re-established in each test
  *  - graceful-fs mocked (existsSync) — no real filesystem access
- *  - electron mocked (app.getPath) — backend/constants/paths imports it
  */
-import { userHome } from 'backend/constants/paths'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import {
   existsSync,
   mkdirSync,
@@ -27,7 +26,7 @@ import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import { createTestStores } from 'backend/testUtils/testServices'
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
 import { createSteamBottle, getBottleSteamExePath } from '../bottle'
-import { getBottleDir } from 'backend/storeManagers/steam/bottleDirs'
+import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import {
   tellBottledSteamToLaunch,
   tellBottledSteamToUninstall,
@@ -70,7 +69,7 @@ jest.mock('backend/engine/adoptBottle', () => ({
 
 // GAP C (17-16): force isMac true so the macOS raise poll loop is exercised
 // deterministically on every host (the loop is dynamically imported by
-// bottle.ts). isSnap is provided because backend/constants/paths reads it.
+// bottle.ts). isSnap is provided for the environment consumers.
 jest.mock('backend/constants/environment', () => ({
   isMac: true,
   isWindows: false,
@@ -109,10 +108,13 @@ const mockedSet = steamBottleConfigStore.set as jest.Mock
 // The settings the injected config slice reads; each test points it at its own object.
 const mockedGlobalConfigGet = jest.fn()
 // 66.3-15: the bottle helpers are an instance over the suite's mocked store and config.
+const { userHome } = createContainedHomeAppPaths()
+const paths = { userHome }
 const steamBottle = createSteamBottle({
   stores: createTestStores({ steam: { steamBottleConfigStore } as never }),
   config: { getSettings: () => mockedGlobalConfigGet().getSettings() },
-  crossover
+  crossover,
+  paths
 })
 // Recording fakes handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
@@ -142,7 +144,7 @@ const bottledDeps = {
   },
   steamSession,
   steamBottle,
-  paths: { userHome },
+  paths,
   appState: { hide: () => mockedAppHide() },
   spawnAsync: mockedSpawnAsync,
   commandRunner: { runWineCommand: mockedRunWineCommand }
@@ -253,7 +255,7 @@ describe('bottle.ts', () => {
       expect(result.status).toBe('done')
       const { commandParts } = mockedRunWineCommand.mock.calls[0][0]
       expect(commandParts[0]).toBe(
-        getBottleSteamExePath(DEFAULT_STEAM_BOTTLE_NAME)
+        getBottleSteamExePath(paths, DEFAULT_STEAM_BOTTLE_NAME)
       )
       expect(commandParts).toContain('-applaunch')
       expect(commandParts).toContain(GOOD_APP_ID)
@@ -262,7 +264,7 @@ describe('bottle.ts', () => {
     // quick/261016-t3e: regression guard for LD-1 + the new launch-verb wiring.
     describe('bottle process monitor wiring (quick/261016-t3e)', () => {
       const seededInstallPath = joinPath(
-        getBottleDir(DEFAULT_STEAM_BOTTLE_NAME),
+        getBottleDir(paths, DEFAULT_STEAM_BOTTLE_NAME),
         'drive_c',
         'Program Files (x86)',
         'Steam',
@@ -371,7 +373,7 @@ describe('bottle.ts', () => {
       expect(result.status).toBe('done')
       const { commandParts } = mockedRunWineCommand.mock.calls[0][0]
       expect(commandParts[0]).toBe(
-        getBottleSteamExePath(DEFAULT_STEAM_BOTTLE_NAME)
+        getBottleSteamExePath(paths, DEFAULT_STEAM_BOTTLE_NAME)
       )
       expect(commandParts.some((p: string) => p.includes(GOOD_APP_ID))).toBe(
         true

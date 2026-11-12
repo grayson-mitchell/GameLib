@@ -80,14 +80,15 @@ function launch(): Launch {
         registry: createStoreRegistry(),
         root: createTestStoreRoot()
       })
-    const paths = require('backend/constants/paths')
+    const paths =
+      require('backend/testUtils/testAppPaths').createContainedHomeAppPaths()
     const { configPath } = paths
     const { createGlobalConfig } = require('backend/config')
     /* eslint-enable @typescript-eslint/no-require-imports */
 
     const config = createGlobalConfig({
       versioning: createTestStoreRoot().versioning,
-      // The mocked constants/paths is this launch's AppPaths.
+      // The jest-contained AppPaths is this launch's AppPaths.
       paths
     })
     const ipc = createIpcRegistry()

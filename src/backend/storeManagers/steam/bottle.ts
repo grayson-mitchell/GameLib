@@ -27,7 +27,10 @@ import { logWarning, LogPrefix } from 'backend/logger'
 // its pure helpers (e.g. steam/library.ts consumers like games.test.ts). Only
 // the provisioning/command functions actually need it, so defer the load.
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
-import { getBottleDir, isBottleProvisioned } from './bottleDirs'
+import {
+  getBottleDir,
+  isBottleProvisioned
+} from 'backend/engine/bottlePrimitives'
 import type { AppPaths } from 'backend/process/context'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import type { CrossoverLocator } from 'backend/engine/crossoverLocation'
@@ -113,8 +116,11 @@ const STEAM_ROOT_SEGMENTS: string[][] = [
  *
  * Pure `existsSync` probe only — never writes to disk.
  */
-function resolveBottleSteamRoot(bottleName: string): string {
-  const bottleDir = getBottleDir(bottleName)
+function resolveBottleSteamRoot(
+  paths: Pick<AppPaths, 'userHome'>,
+  bottleName: string
+): string {
+  const bottleDir = getBottleDir(paths, bottleName)
   const candidateRoots = STEAM_ROOT_SEGMENTS.map((segments) =>
     join(bottleDir, 'drive_c', ...segments)
   )
@@ -139,8 +145,11 @@ function resolveBottleSteamRoot(bottleName: string): string {
  * prefix, regardless of host OS. Resolves under EITHER prefix layout via
  * resolveBottleSteamRoot (GAP-17-PFX86-PATH).
  */
-export function getBottleSteamappsDir(bottleName: string): string {
-  return join(resolveBottleSteamRoot(bottleName), 'steamapps')
+export function getBottleSteamappsDir(
+  paths: Pick<AppPaths, 'userHome'>,
+  bottleName: string
+): string {
+  return join(resolveBottleSteamRoot(paths, bottleName), 'steamapps')
 }
 
 /**
@@ -148,8 +157,11 @@ export function getBottleSteamappsDir(bottleName: string): string {
  * tellBottledSteamTo* dispatch below. Resolves under EITHER prefix layout
  * via resolveBottleSteamRoot (GAP-17-PFX86-PATH).
  */
-export function getBottleSteamExePath(bottleName: string): string {
-  return join(resolveBottleSteamRoot(bottleName), 'steam.exe')
+export function getBottleSteamExePath(
+  paths: Pick<AppPaths, 'userHome'>,
+  bottleName: string
+): string {
+  return join(resolveBottleSteamRoot(paths, bottleName), 'steam.exe')
 }
 
 /**
@@ -166,8 +178,11 @@ export function getBottleSteamExePath(bottleName: string): string {
  * defensively — any error (file missing/unreadable) returns `null` rather
  * than throwing, since this check must never break provisioning.
  */
-export function bottleWineArch(bottleName: string): 'win32' | 'win64' | null {
-  const confPath = join(getBottleDir(bottleName), 'cxbottle.conf')
+export function bottleWineArch(
+  paths: Pick<AppPaths, 'userHome'>,
+  bottleName: string
+): 'win32' | 'win64' | null {
+  const confPath = join(getBottleDir(paths, bottleName), 'cxbottle.conf')
   try {
     const contents = readFileSync(confPath, 'utf-8')
     if (/["']?WineArch["']?\s*=\s*["']?win32["']?/i.test(contents)) {
@@ -194,6 +209,7 @@ export interface SteamBottleDeps {
   >
   stores: { steam: Pick<Stores['steam'], 'steamBottleConfigStore'> }
   config: Pick<GlobalConfigSlice, 'getSettings'>
+  paths: Pick<AppPaths, 'userHome'>
 }
 
 /**
@@ -227,6 +243,7 @@ export function createSteamBottle(deps: SteamBottleDeps) {
    */
   function isSteamBottleProvisioned(): boolean {
     return isBottleProvisioned(
+      deps.paths,
       configStore().get_nodefault('bottleName') ?? DEFAULT_STEAM_BOTTLE_NAME
     )
   }
@@ -248,7 +265,8 @@ export function createSteamBottle(deps: SteamBottleDeps) {
       configStore().get_nodefault('bottleName') ??
       DEFAULT_STEAM_BOTTLE_NAME
     const ready =
-      isBottleProvisioned(name) && existsSync(getBottleSteamExePath(name))
+      isBottleProvisioned(deps.paths, name) &&
+      existsSync(getBottleSteamExePath(deps.paths, name))
 
     // GAP-17-PROVISIONED-FLAG-STUCK: lazy readiness reconcile (intentional
     // write-through side-effect). `provisioned` used to be derived from a race

@@ -52,14 +52,14 @@ import type { GameInfo } from 'common/types'
 
 import type { Game } from 'common/types/game_manager'
 import { defined } from 'backend/testUtils/indexed'
-import { createPathShimPaths } from 'backend/testUtils/pathShimPaths'
+import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 
 const deps = {
   libraryManagers: { gog: {} },
   runner: { run: (...args: unknown[]) => mockRun(...args) },
   config: { getSettings: () => mockSettings },
-  paths: createPathShimPaths(),
+  paths: createContainedHomeAppPaths(),
   imageTools: createTestHostServices().imageTools
 } as unknown as Parameters<typeof addShortcuts>[0]
 

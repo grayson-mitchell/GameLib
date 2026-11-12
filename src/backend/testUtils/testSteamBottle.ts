@@ -22,8 +22,8 @@ const METHODS = [
 ] as const satisfies readonly (keyof SteamBottle)[]
 
 export function createTestSteamBottle(
-  deps: Omit<SteamBottleDeps, 'crossover'> &
-    Partial<Pick<SteamBottleDeps, 'crossover'>>
+  deps: Omit<SteamBottleDeps, 'crossover' | 'paths'> &
+    Partial<Pick<SteamBottleDeps, 'crossover' | 'paths'>>
 ): SteamBottle {
   let real: SteamBottle | undefined
   const instance = (): SteamBottle => {
@@ -38,6 +38,8 @@ export function createTestSteamBottle(
       /* eslint-enable @typescript-eslint/no-require-imports */
       real = createSteamBottle({
         ...deps,
+        // A placeholder home nothing exists under; a suite that reads real dirs passes its own.
+        paths: deps.paths ?? { userHome: '/test-gamelib/home' },
         crossover: deps.crossover ?? createTestEngineRuntime().crossover
       })
     }

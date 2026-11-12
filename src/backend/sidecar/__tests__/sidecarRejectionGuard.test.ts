@@ -105,52 +105,10 @@ jest.mock('os', () => {
   }
 })
 
-// ── pathShim — CR-03: the REAL choke point. `constants/paths.ts`'s module-scope
-// `app.getPath('appData'|'userData')` calls resolve through `platform/index.ts` ->
-// `pathShim.getPath()`, whose real `resolveAppDataDir()` prefers `env.APPDATA` (win32) /
-// `env.XDG_CONFIG_HOME` (default/Linux) over `homedir()` -- bypassing the `jest.mock('os', ...)`
-// redirect above on those platforms. Copied verbatim from `gameDetailsFlows.test.ts:136-161`
-// except for the tmp-root name -- no platform branch, no environment variable participating.
-//
-// NOTE (deliberately NOT reconciled): this tmp root is the PARENT of the per-test
-// `os.homedir()` redirect above (which appends a `mockTestHomeSuffix` segment).
-// `constants/paths.ts`'s `appFolder`/`userDataPath`/`fixesPath` are resolved ONCE, at
-// require-time, via this pathShim mock's `appData`/`userData` branches -- before any
-// per-test suffix exists -- so this root must stay stable across the whole suite's
-// lifetime. Do NOT append `mockTestHomeSuffix` here to "match" the os mock; that would break
-// module-scope singleton resolution the isolated harnesses below rely on. ──────────────────
-jest.mock('../pathShim', () => {
-  const actualOs = jest.requireActual('os')
-  const actualPath = jest.requireActual('path')
-  const tmpRoot = actualPath.join(
-    actualOs.tmpdir(),
-    `gamelib-sidecarrejectionguard-test-home-${process.pid}`
-  )
-  return {
-    getPath: (name: string) => {
-      switch (name) {
-        case 'appData':
-          return tmpRoot
-        case 'userData':
-          return actualPath.join(tmpRoot, 'GameLib')
-        case 'temp':
-          return actualOs.tmpdir()
-        case 'home':
-          return tmpRoot
-        default:
-          throw new Error(
-            `[pathShim mock] getPath('${name}') is not shimmed for this test`
-          )
-      }
-    }
-  }
-})
-
 // ── backend/logger/paths — WR-01: `getLogFilePath`'s real `getBaseLogPath()` computes the log
 // directory INDEPENDENTLY of `pathShim`, straight from `process.env.LOCALAPPDATA`/
-// `XDG_STATE_HOME` plus `homedir()` -- so it bypasses BOTH the `os` mock and the `pathShim`
-// mock above. This factory reimplements `getLogFilePath`'s relative-path derivation (heroic
-// log vs runner log vs game log), rooted at the SAME tmp root as the `pathShim` mock, so
+// `XDG_STATE_HOME` plus `homedir()` -- so it bypasses the `os` mock. This factory reimplements `getLogFilePath`'s relative-path derivation (heroic
+// log vs runner log vs game log), rooted at its own tmp root, so
 // distinct arguments still yield distinct paths. Copied verbatim from
 // `loggerFlows.test.ts:134-158` except for the tmp-root name. Deliberately does NOT call
 // `jest.requireActual('backend/logger')` -- `backend/logger/index.ts` and `log_writer.ts`
@@ -343,16 +301,15 @@ function setupIsolatedBootstrapHarness(): {
 }
 
 /**
- * Requires `constants/paths.ts` fresh inside its own `jest.isolateModules()` sandbox and
- * returns just the three path constants the containment tripwire below needs.
+ * Resolves the boot's AppPaths (`resolveAppPaths`) fresh inside its own `jest.isolateModules()`
+ * sandbox and returns just the three paths the containment tripwire below needs.
  *
  * Refinement (gap cycle 2, plan 34.2-18, IN-03): the tripwire previously called the full
  * `setupIsolatedBootstrapHarness()` above -- building the entire bootstrap graph (backend
  * events, `downloadAntiCheatData`, the `logWarning` spy, GlobalConfig) and leaving an
  * unrestored `jest.spyOn` -- just to read one module's constants. This narrower helper reads
- * only `constants/paths.ts`, still inside `jest.isolateModules()` so the require-time
- * legacy-folder migration in that module runs against the SAME mocked `pathShim` as every
- * other test in this file, without the unrelated side effects.
+ * only the path derivation, still inside `jest.isolateModules()`, without the unrelated side
+ * effects.
  */
 function loadConstantsPaths(): {
   appFolder: string
@@ -363,13 +320,14 @@ function loadConstantsPaths(): {
   // no boot: loads a module graph without calling bootstrap.init
   jest.isolateModules(() => {
     /* eslint-disable @typescript-eslint/no-require-imports */
-    const {
-      appFolder,
-      userDataPath,
-      fixesPath
-    } = require('../../constants/paths')
+    const { resolveAppPaths } = require('../bootstrap')
     /* eslint-enable @typescript-eslint/no-require-imports */
-    result = { appFolder, userDataPath, fixesPath }
+    const paths = resolveAppPaths()
+    result = {
+      appFolder: paths.appFolder,
+      userDataPath: paths.userData,
+      fixesPath: paths.fixesPath
+    }
   })
   return result
 }
