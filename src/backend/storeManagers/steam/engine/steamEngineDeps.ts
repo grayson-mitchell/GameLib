@@ -49,7 +49,7 @@ export function readSteamEngineOverride(
 ): unknown {
   const generic = readStoredGameConfig(appId, paths)?.engineOverride
   if (typeof generic === 'string') return generic
-  return readStoredTitleConfig(appId)?.steamEngineOverride
+  return readStoredTitleConfig(appId, { paths })?.steamEngineOverride
 }
 
 const hintedBinDir = (

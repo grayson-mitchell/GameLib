@@ -11,6 +11,7 @@ import type { SteamUser, SteamUserDeps } from '../storeManagers/steam/user'
 import { createFakeClock } from './fakeClock'
 import { createTestAnonymousClient } from './testAnonymousClient'
 import { createTestSteamSession } from './testSteamSession'
+import { createTestTokenStoreSlot } from './testTokenStore'
 import { createTestSignInProbe } from './testSignInProbe'
 import { createTestGlobalConfig } from './testConfig'
 
@@ -38,6 +39,7 @@ export function createTestSteamUser(
     },
     signIn,
     steamSession: overrides.steamSession ?? createTestSteamSession(),
+    tokenStore: overrides.tokenStore ?? createTestTokenStoreSlot(),
     anonymousClient: overrides.anonymousClient ?? createTestAnonymousClient(),
     clock: overrides.clock ?? createFakeClock(),
     config: overrides.config ?? createTestGlobalConfig()

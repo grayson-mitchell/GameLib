@@ -25,6 +25,7 @@ import { sendGameStatusUpdate } from 'backend/utils'
 import type { SteamStoresDeps } from './library/installRoot'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 import type { Clock, ProcessRunner } from 'backend/process/types'
+import type { AppPaths } from 'backend/process/context'
 import {
   MAC_STEAM_OFFLINE_OWED_FILE,
   type MacSteamOffline
@@ -240,6 +241,7 @@ export interface RestartDeps {
  */
 export function createRestartDeps(deps: {
   clock: Clock
+  paths: Pick<AppPaths, 'appFolder' | 'userHome'>
   macSteamOffline: Pick<MacSteamOffline, 'isSteamRunning' | 'openUrlDetached'>
   launchRunGameId: () => Promise<unknown>
 }): RestartDeps {
@@ -250,16 +252,12 @@ export function createRestartDeps(deps: {
       const { readMacRunningAppId } =
         require('./library/runningPoll') as typeof import('./library/runningPoll')
       /* eslint-enable @typescript-eslint/no-require-imports */
-      return readMacRunningAppId()
+      return readMacRunningAppId({ paths: deps.paths })
     },
     // Restarting Steam mid go-offline wrap would bring it online and kick
     // GameLib's CM session, so refuse while the wrap is owed.
     isOfflineWrapOwed: () => {
-      /* eslint-disable @typescript-eslint/no-require-imports */
-      const { appFolder } =
-        require('backend/constants/paths') as typeof import('backend/constants/paths')
-      /* eslint-enable @typescript-eslint/no-require-imports */
-      return existsSync(join(appFolder, MAC_STEAM_OFFLINE_OWED_FILE))
+      return existsSync(join(deps.paths.appFolder, MAC_STEAM_OFFLINE_OWED_FILE))
     },
     isSteamRunning: () => macSteamOffline.isSteamRunning(),
     openUrlDetached: (url) => macSteamOffline.openUrlDetached(url),

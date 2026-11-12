@@ -41,7 +41,7 @@ const mockConfigStore = {
 }
 // NOTE: '../tokenStore' is intentionally NOT mocked here. logout() must
 // route the refresh token through the real TokenStore seam
-// (getTokenStore().clearToken() -> configStore.delete(TOKEN_STORE_KEY)),
+// (tokenStore.current().clearToken() -> configStore.delete(TOKEN_STORE_KEY)),
 // exercised against the mocked configStore through the config-backed test
 // store installed in beforeEach (the Electron-era production store is gone,
 // D-12; the module default now fails closed) — same approach the pre-existing
@@ -154,6 +154,7 @@ import type { UserSignInDeps } from '../userSignIn'
 // One sign-in owner per case (D-05, D-66.3-13: no reset hooks); `steamDeps` reads it at call time.
 let signInProbe: TestSignInProbe
 let steamSession: SteamSessionServices
+let tokenStore: TokenStoreSlot
 const steamDeps = {
   stores: { steam: { configStore: mockConfigStore } },
   get signIn() {
@@ -161,6 +162,9 @@ const steamDeps = {
   },
   get steamSession() {
     return steamSession
+  },
+  get tokenStore() {
+    return tokenStore
   },
   get steamUser() {
     return steamUser
@@ -173,11 +177,13 @@ let clock: FakeClock
 beforeEach(() => {
   signInProbe = createTestSignInProbe()
   steamSession = createTestSteamSession()
+  tokenStore = createTestTokenStoreSlot()
   clock = createFakeClock()
   steamUser = createTestSteamUser({
     stores: steamDeps.stores,
     signIn: signInProbe,
     steamSession,
+    tokenStore,
     clock,
     config: { getSettings: mockGetSettings } as never,
     anonymousClient: {
@@ -200,7 +206,8 @@ import {
 import { existsSync } from 'graceful-fs'
 import { join } from 'path'
 import { logInfo, logWarning, logError } from 'backend/logger'
-import { setTokenStore, getTokenStore, TokenStore } from '../tokenStore'
+import type { TokenStore, TokenStoreSlot } from '../tokenStore'
+import { createTestTokenStoreSlot } from 'backend/testUtils/testTokenStore'
 import { sendFrontendMessage } from 'backend/ipc'
 import {
   createTestSignInProbe,
@@ -246,7 +253,7 @@ describe('SteamUser', () => {
     mockConfigStore.delete.mockImplementation(() => {})
     mockConfigStore.get_nodefault.mockReturnValue(undefined)
     mockConfigStore.set.mockImplementation(() => {})
-    setTokenStore(makeConfigBackedTokenStore())
+    tokenStore.configure(makeConfigBackedTokenStore())
 
     // Reset handler capture maps
     sessionOnHandlers = {}
@@ -450,7 +457,7 @@ describe('SteamUser', () => {
   // ── AUTH-04: logout ────────────────────────────────────────────────────────
   //
   // D-09 gap fix (28-03): logout() must route the refresh token through the
-  // TokenStore seam (getTokenStore().clearToken() -> configStore.delete(
+  // TokenStore seam (tokenStore.current().clearToken() -> configStore.delete(
   // TOKEN_STORE_KEY), TOKEN_STORE_KEY === 'refreshToken' per constants.ts)
   // instead of a blanket configStore.clear() — and must still clear the
   // remaining session keys (isLoggedIn, userData) explicitly so Electron's
@@ -469,7 +476,7 @@ describe('SteamUser', () => {
     })
 
     // Regression guard for the naive one-line swap
-    // (configStore.clear() -> getTokenStore().clearToken()): that swap alone
+    // (configStore.clear() -> tokenStore.current().clearToken()): that swap alone
     // stops clearing isLoggedIn/userData, so the user would appear to stay
     // "logged in" after logout. This test fails under that naive fix and
     // only passes when isLoggedIn/userData are ALSO explicitly cleared.
@@ -513,7 +520,7 @@ describe('SteamUser', () => {
       const gate = new Promise<void>((resolve) => {
         releaseClear = resolve
       })
-      setTokenStore({
+      tokenStore.configure({
         ...makeConfigBackedTokenStore(),
         clearToken: () => gate
       })
@@ -738,7 +745,7 @@ describe('SteamUser', () => {
     })
 
     test('after auth: hands the refresh token to the TokenStore', async () => {
-      const setTokenSpy = jest.spyOn(getTokenStore(), 'setToken')
+      const setTokenSpy = jest.spyOn(tokenStore.current(), 'setToken')
       await defined(
         sessionOnHandlers['authenticated'],
         'authenticated handler'
@@ -1214,7 +1221,7 @@ describe('SteamUser', () => {
     test('(a) username is undefined immediately after authenticated, then populated when CM loggedOn fires', async () => {
       // Fire authenticated — stores creds via the awaited TokenStore seam, sets
       // qrSessionState='done', and (with the fix) assigns this.connectingPromise.
-      // The handler is async (getTokenStore().setToken() is awaited), so the
+      // The handler is async (tokenStore.current().setToken() is awaited), so the
       // test must await it before asserting on qrSessionState/pollQRLogin.
       await defined(
         sessionOnHandlers['authenticated'],
@@ -1827,17 +1834,17 @@ describe('SteamUser', () => {
 
   // ── quick-260814-r2d: unreadable read is not logged-out ────────────────────
   //
-  // Installs a fake TokenStore through the real setTokenStore() seam, matching
+  // Installs a fake TokenStore through the real tokenStore.configure() seam, matching
   // production's adapter exactly: readToken() resolves the outcome under test,
   // getToken() resolves '' (the lossy adapter's collapse for both absent and
-  // unreadable). setTokenStore() mutates module-global state, so every test in
+  // unreadable). tokenStore.configure() mutates module-global state, so every test in
   // this describe restores the config-backed test store in afterEach --
   // leaving the fake installed would make the OTHER describe blocks in this
   // file (which assume the config-backed store routed through
   // mockConfigStore) order-dependent on whichever test ran last.
   describe('ensureConnected() — unreadable read is not logged-out (quick-260814-r2d)', () => {
     afterEach(() => {
-      setTokenStore(makeConfigBackedTokenStore())
+      tokenStore.configure(makeConfigBackedTokenStore())
     })
 
     function installFakeStore(outcome: {
@@ -1864,7 +1871,7 @@ describe('SteamUser', () => {
                 : { status: 'unreadable', reason: outcome.reason }
           )
       }
-      setTokenStore(fake)
+      tokenStore.configure(fake)
       return fake
     }
 
@@ -2326,7 +2333,7 @@ describe('SteamUser', () => {
     }
 
     test('credentials sign-in: one wrapped logon, no keyring re-read, steamId from the LoginSession, lease released', async () => {
-      const getTokenSpy = jest.spyOn(getTokenStore(), 'getToken')
+      const getTokenSpy = jest.spyOn(tokenStore.current(), 'getToken')
 
       const result = await signInWithCredentials()
 

@@ -101,10 +101,7 @@ jest.mock('backend/logger', () => ({
 // ── Imports (after mocks) — configStore is the REAL, unmocked module ───────
 import { requestRustInvoke } from '../sidecarRpc'
 import { SidecarKeyringTokenStore } from '../keyringTokenStore'
-import {
-  setTokenStore,
-  getTokenStore
-} from '../../storeManagers/steam/tokenStore'
+import { createTokenStoreSlot } from '../../storeManagers/steam/tokenStore'
 // Real (unmocked) pathShim — same module fileStore.ts resolves
 // paths through in production, used here ONLY to compute the real store file's
 // path for a read-only byte comparison. Never used to write.
@@ -382,8 +379,8 @@ describe('steam token surface binding gate helper', () => {
     expect(findSteamTokenSurfaceViolations(src, 'synthetic')).not.toEqual([])
   })
 
-  it('does NOT trip on the real D-04 seam import of setTokenStore (g)', () => {
-    const src = `import { setTokenStore as installTokenStore } from '../storeManagers/steam/tokenStore'\n`
+  it('does NOT trip on the real D-04 seam import of createTokenStoreSlot (g)', () => {
+    const src = `import { createTokenStoreSlot } from '../storeManagers/steam/tokenStore'\n`
     expect(findSteamTokenSurfaceViolations(src, 'synthetic')).toEqual([])
   })
 
@@ -490,22 +487,18 @@ describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)',
     expect(fullSnapshot()).toBe(beforeFull)
   })
 
-  it('the TokenStore seam (setTokenStore/getTokenStore), not just the class directly, leaves configStore byte-identical', async () => {
+  it('the TokenStore seam (createTokenStoreSlot configure/current), not just the class directly, leaves configStore byte-identical', async () => {
     programAllResolve()
     const before = currentRefreshToken()
     const beforeFull = fullSnapshot()
 
-    const previousStore = getTokenStore()
-    try {
-      setTokenStore(new SidecarKeyringTokenStore())
-      // This is the exact call path user.ts's getCredentials()/finishAuth() use in
-      // production — proving the SEAM is safe, not merely the class in isolation.
-      await getTokenStore().setToken('sidecar-only-token')
-      await getTokenStore().getToken()
-      await getTokenStore().clearToken()
-    } finally {
-      setTokenStore(previousStore)
-    }
+    const slot = createTokenStoreSlot({ log: () => undefined })
+    slot.configure(new SidecarKeyringTokenStore())
+    // This is the exact call path user.ts's getCredentials()/finishAuth() use in
+    // production — proving the SEAM is safe, not merely the class in isolation.
+    await slot.current().setToken('sidecar-only-token')
+    await slot.current().getToken()
+    await slot.current().clearToken()
 
     expect(currentRefreshToken()).toBe(before)
     expect(fullSnapshot()).toBe(beforeFull)

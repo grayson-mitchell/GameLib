@@ -151,6 +151,7 @@ function bootedWorld(opts?: {
         steamLaunchRuntime: fakes.steamLaunchRuntime,
         signIn: fakes.signInProbe,
         steamSession: fakes.steamSession,
+        tokenStore: fakes.tokenStore,
         anonymousClient: fakes.anonymousClient,
         bridgeHelpers: fakes.bridgeHelpers,
         steamBottle: fakes.steamBottle,

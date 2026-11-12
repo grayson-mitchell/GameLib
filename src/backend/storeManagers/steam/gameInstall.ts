@@ -426,7 +426,10 @@ export async function install(
     const outcome = await requestSteamInstallApp(
       steamGame.appId,
       { libraryPath },
-      { run: createSteamInstallAppRun({ runner: steamGame.deps.runner }) }
+      {
+        paths: steamGame.deps.paths,
+        run: createSteamInstallAppRun({ runner: steamGame.deps.runner })
+      }
     )
     if (outcome.kind === 'ok') {
       logInfo(

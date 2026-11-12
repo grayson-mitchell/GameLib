@@ -9,6 +9,7 @@
  * `{ managers: Pick<StoreManagers, 'library'> }` style interface. Only composition roots
  * see the whole `BootServices`.
  */
+import type { TokenStoreSlot } from 'backend/storeManagers/steam/tokenStore'
 import type { StoreRegistry } from 'backend/stores/storeRegistry'
 import type { StoreRoot } from 'backend/stores/storeRoot'
 import type { SpawnAsync } from 'backend/spawnAsync'
@@ -179,6 +180,8 @@ export interface ManagerDeps {
   signIn: Pick<SignInProbeServices, 'epochs' | 'outcomes'>
   /** The boot-owned Steam sign-in session and auth-unlock state (D-66.3-13). */
   steamSession: SteamSessionServices
+  /** The boot-owned Steam token store slot the sign-in and user modules read through (66.4-07). */
+  tokenStore: Pick<TokenStoreSlot, 'current'>
   /** The boot-owned bridge-helper registry (D-66.3-14). */
   bridgeHelpers: BridgeHelperSlice
   /** The boot-owned Steam bottle helpers over the bottle config store (D-66.3-15). */
@@ -294,6 +297,8 @@ export interface BootServices {
   signInProbe: SignInProbeServices
   /** Built by the 'steam-session-state' boot step, before 'store-managers' (D-66.3-13). */
   steamSession: SteamSessionServices
+  /** Built by the 'steam-token-store' boot step before 'stores'; configured by 'secret-stores' (66.4-07). */
+  tokenStore: TokenStoreSlot
   /** Built by the 'steam-anonymous-client' boot step, before 'store-managers' (D-66.3-14). */
   anonymousClient: AnonymousClient
   /** Built by the 'bridge-helper-registry' boot step, before 'store-managers' (D-66.3-14). */

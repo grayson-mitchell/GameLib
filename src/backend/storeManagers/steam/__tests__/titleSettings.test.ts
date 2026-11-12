@@ -3,10 +3,7 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 
 const mockDir = mkdtempSync(join(tmpdir(), 'gamelib-title-cfg-'))
-jest.mock('backend/constants/paths', () => ({
-  ...jest.requireActual('backend/constants/paths'),
-  gamesConfigPath: mockDir
-}))
+const deps = { paths: { gamesConfigPath: mockDir } }
 
 import {
   readStoredTitleConfig,
@@ -20,22 +17,22 @@ describe('readStoredTitleConfig', () => {
   it.each(['../x', 'abc', '12345678901', ''])(
     'rejects the malformed appId %p',
     (id) => {
-      expect(readStoredTitleConfig(id)).toBeUndefined()
+      expect(readStoredTitleConfig(id, deps)).toBeUndefined()
     }
   )
 
   it('returns undefined for a missing file', () => {
-    expect(readStoredTitleConfig('111')).toBeUndefined()
+    expect(readStoredTitleConfig('111', deps)).toBeUndefined()
   })
 
   it('returns undefined for corrupt JSON', () => {
     writeFileSync(join(mockDir, '222.json'), '{nope')
-    expect(readStoredTitleConfig('222')).toBeUndefined()
+    expect(readStoredTitleConfig('222', deps)).toBeUndefined()
   })
 
   it('returns undefined when the file has no entry for the appId', () => {
     writeFileSync(join(mockDir, '333.json'), JSON.stringify({ '999': {} }))
-    expect(readStoredTitleConfig('333')).toBeUndefined()
+    expect(readStoredTitleConfig('333', deps)).toBeUndefined()
   })
 
   it.each([
@@ -44,7 +41,7 @@ describe('readStoredTitleConfig', () => {
     ['an array', '[1]']
   ])('returns undefined when the entry is %s', (_n, json) => {
     writeFileSync(join(mockDir, '444.json'), `{"444":${json}}`)
-    expect(readStoredTitleConfig('444')).toBeUndefined()
+    expect(readStoredTitleConfig('444', deps)).toBeUndefined()
   })
 
   it('returns the entry object', () => {
@@ -52,7 +49,7 @@ describe('readStoredTitleConfig', () => {
       join(mockDir, '620.json'),
       JSON.stringify({ '620': { launcherArgs: '-x' } })
     )
-    expect(readStoredTitleConfig('620')).toEqual({ launcherArgs: '-x' })
+    expect(readStoredTitleConfig('620', deps)).toEqual({ launcherArgs: '-x' })
   })
 })
 

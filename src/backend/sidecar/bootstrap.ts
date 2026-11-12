@@ -73,7 +73,7 @@ import {
   requestRustInvoke
 } from './sidecarRpc'
 import {
-  setTokenStore as installTokenStore,
+  createTokenStoreSlot,
   clearOrphanedElectronToken
 } from '../storeManagers/steam/tokenStore'
 import { createSteamBottle } from '../storeManagers/steam/bottle'
@@ -280,6 +280,7 @@ export const BOOT_STEP_NAMES = [
   'host-services',
   'sign-in-probe-state',
   'steam-session-state',
+  'steam-token-store',
   'steam-anonymous-client',
   'bridge-helper-registry',
   'stores',
@@ -447,6 +448,7 @@ function requireServices(state: BootState): BootServices {
     winetricksQueue,
     signInProbe,
     steamSession,
+    tokenStore,
     anonymousClient,
     bridgeHelpers,
     steamBottle,
@@ -479,6 +481,7 @@ function requireServices(state: BootState): BootServices {
     !winetricksQueue ||
     !signInProbe ||
     !steamSession ||
+    !tokenStore ||
     !anonymousClient ||
     !bridgeHelpers ||
     !steamBottle ||
@@ -512,6 +515,7 @@ function requireServices(state: BootState): BootServices {
         'winetricksQueue',
         'signInProbe',
         'steamSession',
+        'tokenStore',
         'anonymousClient',
         'bridgeHelpers',
         'steamBottle',
@@ -547,6 +551,7 @@ function requireServices(state: BootState): BootServices {
     winetricksQueue,
     signInProbe,
     steamSession,
+    tokenStore,
     anonymousClient,
     bridgeHelpers,
     steamBottle,
@@ -1334,6 +1339,20 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'steam-token-store',
+      // Builds the one Steam token store slot of this boot (D-05, 66.4-07). Construction only: the slot
+      // starts on the fail-closed UnconfiguredTokenStore and the 'secret-stores' step configures it
+      // (T-28-10 ordering). No I/O, timer or handle. Before 'stores' so the SteamUser built in
+      // 'steam-user' and every ManagerDeps carry the same slot.
+      run: (_ctx, _io, state) => {
+        state.services.tokenStore =
+          prebuilt.tokenStore ??
+          createTokenStoreSlot({
+            log: (message) => logInfo(message, LogPrefix.Steam)
+          })
+      }
+    },
+    {
       name: 'steam-anonymous-client',
       // Builds the one anonymous CM client owner of this boot (D-05, D-66.3-14). Construction
       // connects nothing and arms no timer: the connect is lazy (first `get`), bounded, and its
@@ -1455,7 +1474,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // 'i18n'. This builds the process's first-ever global-config read, and the
         // config-version-upgrade path (config.ts:145/152) can itself call `logInfo`/`logError`
         // synchronously, which throws while `heroicLogWriter` is unset (same ordering reason as
-        // `initOnlineMonitor()`'s and `installTokenStore()`'s placement comments below).
+        // `initOnlineMonitor()`'s and `tokenStore.configure()`'s placement comments below).
         // MigrationSystem's only migration copies the legendary config folder and never writes
         // config.json, so running after 'migrations' loses nothing. configBootOrder.test.ts pins it.
         // createGlobalConfig() runs the settings migration first; the per-game registry holds its
@@ -1550,7 +1569,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             clock: ctx.clock,
             platform: ctx.platform,
             config,
-            openExternal: requireHost(state).openExternal
+            openExternal: requireHost(state).openExternal,
+            paths: ctx.paths
           })
         state.services.commandRunner =
           prebuilt.commandRunner ??
@@ -1644,13 +1664,14 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           steamProcesses,
           signInProbe,
           steamSession,
+          tokenStore,
           anonymousClient
         } = state.services
         if (!stores) throw new Error('boot: stores step must run first')
         if (!config) throw new Error('boot: config step must run first')
         if (!clock || !steamProcesses)
           throw new Error('boot: command-runner step must run first')
-        if (!signInProbe || !steamSession || !anonymousClient)
+        if (!signInProbe || !steamSession || !tokenStore || !anonymousClient)
           throw new Error(
             'boot: sign-in / steam-session / anonymous steps must run first'
           )
@@ -1660,6 +1681,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             stores,
             signIn: signInProbe,
             steamSession,
+            tokenStore,
             anonymousClient,
             macSteamOffline: steamProcesses.macSteamOffline,
             clock,
@@ -1804,6 +1826,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           steamLaunchRuntime,
           signInProbe,
           steamSession,
+          tokenStore,
           anonymousClient,
           bridgeHelpers,
           steamBottle,
@@ -1826,6 +1849,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !steamLaunchRuntime ||
           !signInProbe ||
           !steamSession ||
+          !tokenStore ||
           !anonymousClient ||
           !bridgeHelpers ||
           !steamBottle ||
@@ -1868,6 +1892,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           steamLaunchRuntime,
           signIn: signInProbe,
           steamSession,
+          tokenStore,
           anonymousClient,
           bridgeHelpers,
           steamBottle,
@@ -2228,7 +2253,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'secret-stores',
       run: (ctx, _io, state) => {
-        const { stores, host, onlineMonitor, config } = requireServices(state)
+        const { stores, host, onlineMonitor, config, tokenStore } =
+          requireServices(state)
         registerDxmtListeners({
           stores,
           runner: ctx.runner,
@@ -2263,15 +2289,15 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // key in `config.json` in the clear via the sidecar's dead `safeStorage` stub.
         const devSecretVault = state.secretVault
         if (devSecretVault) {
-          installTokenStore(devSecretVault.tokenStore)
+          tokenStore.configure(devSecretVault.tokenStore)
           logInfo('[bootstrap] secret stores: dev-vault', LogPrefix.Backend)
         } else {
-          installTokenStore(new SidecarKeyringTokenStore())
+          tokenStore.configure(new SidecarKeyringTokenStore())
           // Phase 34.4.1 gap-cycle plan 13 (F-1 BLOCKING closure): the keyring-backed Humble
           // secret store was already built and injected into the Humble services by the
           // 'humble-services' step (66.3-17); this arm only runs its observable receipt line and the
           // one-time plaintext migration, at the same site as the Steam TokenStore just above. Must
-          // run AFTER startRpcServer() for the same reason installTokenStore() does (the migration
+          // run AFTER startRpcServer() for the same reason tokenStore.configure() does (the migration
           // calls requestRustInvoke, which needs a live transport).
           const humbleKeyringStore = state.humbleKeyringStore
           if (!humbleKeyringStore)

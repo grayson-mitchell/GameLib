@@ -1,4 +1,4 @@
-import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import { logWarning, LogPrefix } from 'backend/logger'
 import type { SteamStoresDeps } from './library/installRoot'
 import { TOKEN_STORE_KEY } from './constants'
 
@@ -151,26 +151,36 @@ class UnconfiguredTokenStore implements TokenStore {
   }
 }
 
-// ── Registry — swappable per build, no env-var escape hatch ─────────────────
-
-let activeTokenStore: TokenStore = new UnconfiguredTokenStore()
+// ── Per-boot slot — swappable per build, no env-var escape hatch ───────────
 
 /**
- * Installs a different TokenStore implementation. Only ever called
- * explicitly by a build's own bootstrap path (e.g. the Tauri sidecar
- * installing its keyring-backed implementation in plan 28-04) — there is
- * deliberately no env-var/config-driven auto-selection here (REQ-28-07/D-08).
+ * The boot-owned holder of the active TokenStore (D-05, 66.4-07). It starts
+ * on the fail-closed `UnconfiguredTokenStore`; the sidecar's 'secret-stores'
+ * step calls `configure()` once with the keyring or dev-vault implementation
+ * (T-28-10 ordering). There is deliberately no env-var/config-driven
+ * auto-selection here (REQ-28-07/D-08). Readers hold `Pick<TokenStoreSlot,
+ * 'current'>`.
  */
-export function setTokenStore(next: TokenStore): void {
-  logInfo(
-    `Steam TokenStore implementation set to ${next.constructor.name}`,
-    LogPrefix.Steam
-  )
-  activeTokenStore = next
+export interface TokenStoreSlot {
+  configure(next: TokenStore): void
+  current(): TokenStore
 }
 
-export function getTokenStore(): TokenStore {
-  return activeTokenStore
+export function createTokenStoreSlot(deps: {
+  log: (message: string) => void
+}): TokenStoreSlot {
+  let active: TokenStore = new UnconfiguredTokenStore()
+  return {
+    configure(next) {
+      deps.log(
+        `Steam TokenStore implementation set to ${next.constructor.name}`
+      )
+      active = next
+    },
+    current() {
+      return active
+    }
+  }
 }
 
 // ── One-time legacy-key cleanup (debug/steam-token-survives-keychain) ───────
@@ -180,7 +190,7 @@ export function getTokenStore(): TokenStore {
  * (`steam_store/config.json`), if present. Called unconditionally from the
  * sidecar's `bootstrap.ts`, AFTER both arms of `init()`'s secret-store install
  * block (keyring or dev-vault) have already run — under either arm,
- * `activeTokenStore` has already been swapped away from the unconfigured
+ * the token store slot has already been configured away from the unconfigured
  * default (T-28-10 ordering), so this key is fully dead under the current
  * sidecar: its only reader was the deleted Electron-era store, and `storeWriteHandlers.ts`'s D-04 guard rejects any renderer-driven
  * write to it.

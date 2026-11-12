@@ -76,12 +76,14 @@ function errorText(err: unknown): string {
  *  isNonRetryableDepotError is exported so withPlanBuildRetry (depot.ts) can
  *  fail fast instead of burning all PLAN_BUILD_MAX_ATTEMPTS attempts on an
  *  error that will recur byte-for-byte identically every time. */
-const NON_RETRYABLE_ERESULTS = new Set([8, 9, 15, 17, 40, 42, 43])
+const NON_RETRYABLE_ERESULTS: readonly number[] = Object.freeze([
+  8, 9, 15, 17, 40, 42, 43
+])
 
 export function isNonRetryableDepotError(err: unknown): boolean {
   if (!err || typeof err !== 'object') return false
   const eresult = (err as { eresult?: unknown }).eresult
-  return typeof eresult === 'number' && NON_RETRYABLE_ERESULTS.has(eresult)
+  return typeof eresult === 'number' && NON_RETRYABLE_ERESULTS.includes(eresult)
 }
 
 /**

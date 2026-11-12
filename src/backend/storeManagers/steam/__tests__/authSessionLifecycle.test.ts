@@ -28,7 +28,10 @@ const mockTokenStore = {
   isAvailable: jest.fn()
 }
 jest.mock('../tokenStore', () => ({
-  getTokenStore: () => mockTokenStore,
+  createTokenStoreSlot: () => ({
+    configure: () => undefined,
+    current: () => mockTokenStore
+  }),
   readTokenOutcome: (...args: unknown[]) => mockReadTokenOutcome(...args)
 }))
 

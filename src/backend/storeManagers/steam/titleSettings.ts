@@ -5,7 +5,7 @@
  */
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { gamesConfigPath } from 'backend/constants/paths'
+import type { AppPaths } from 'backend/process/context'
 import type { GameSettings } from 'common/types'
 
 /**
@@ -16,10 +16,11 @@ import type { GameSettings } from 'common/types'
  * missing/non-object entry.
  */
 export function readStoredTitleConfig(
-  appId: string
+  appId: string,
+  deps: { paths: Pick<AppPaths, 'gamesConfigPath'> }
 ): Record<string, unknown> | undefined {
   if (!/^[0-9]{1,10}$/.test(appId)) return undefined
-  const path = join(gamesConfigPath, `${appId}.json`)
+  const path = join(deps.paths.gamesConfigPath, `${appId}.json`)
   if (!existsSync(path)) return undefined
   try {
     const raw = JSON.parse(readFileSync(path, 'utf8')) as Record<

@@ -328,6 +328,7 @@ describe('createRestartDeps', () => {
     const openUrlDetached = jest.fn()
     const deps = createRestartDeps({
       clock,
+      paths: { appFolder: '/test/appFolder', userHome: '/test/home' },
       macSteamOffline: { isSteamRunning, openUrlDetached },
       launchRunGameId: () => Promise.resolve()
     })

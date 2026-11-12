@@ -3,10 +3,7 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 
 const mockDir = mkdtempSync(join(tmpdir(), 'gamelib-overlay-cfg-'))
-jest.mock('backend/constants/paths', () => ({
-  ...jest.requireActual('backend/constants/paths'),
-  gamesConfigPath: mockDir
-}))
+const deps = { paths: { gamesConfigPath: mockDir } }
 
 import {
   isAbnormalOverlayExit,
@@ -65,21 +62,21 @@ describe('parseOverlayOverride', () => {
 
 describe('readStoredOverlayOverride', () => {
   test.each(['../1', '', '12a'])('bad appId %p is undefined', (id) => {
-    expect(readStoredOverlayOverride(id)).toBeUndefined()
+    expect(readStoredOverlayOverride(id, deps)).toBeUndefined()
   })
   test('missing file is undefined', () => {
-    expect(readStoredOverlayOverride('111')).toBeUndefined()
+    expect(readStoredOverlayOverride('111', deps)).toBeUndefined()
   })
   test('invalid JSON is undefined', () => {
     writeFileSync(join(mockDir, '222.json'), '{nope')
-    expect(readStoredOverlayOverride('222')).toBeUndefined()
+    expect(readStoredOverlayOverride('222', deps)).toBeUndefined()
   })
   test('returns the stored value', () => {
     writeFileSync(
       join(mockDir, '620.json'),
       JSON.stringify({ '620': { steamOverlayOverride: 'off' } })
     )
-    expect(readStoredOverlayOverride('620')).toBe('off')
+    expect(readStoredOverlayOverride('620', deps)).toBe('off')
   })
 })
 

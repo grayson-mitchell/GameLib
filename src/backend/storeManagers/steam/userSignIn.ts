@@ -2,7 +2,7 @@ import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { LoginSession, EAuthTokenPlatformType } from 'steam-session'
 import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
 import type { SteamStoresDeps } from './library/installRoot'
-import { getTokenStore } from './tokenStore'
+import type { TokenStoreSlot } from './tokenStore'
 import { withTimeout } from './withTimeout'
 import { QR_LOGIN_TIMEOUT_MS, SIGN_IN_PERSONA_TIMEOUT_MS } from './userTypes'
 import type { SteamSignInState } from './userSignInState'
@@ -15,6 +15,7 @@ import type {
 export type UserSignInDeps = SteamStoresDeps &
   SignInNoteDeps &
   SteamUserSliceDeps<'acquireAuthenticatedWithToken'> & {
+    tokenStore: Pick<TokenStoreSlot, 'current'>
     steamSession: { signIn: SteamSessionServices['signIn'] }
   }
 
@@ -26,7 +27,7 @@ export async function finishAuth(
 ): Promise<string> {
   const refreshToken = session.refreshToken
   // Store credentials immediately — don't block on the steam-user CM connection.
-  await getTokenStore().setToken(refreshToken)
+  await deps.tokenStore.current().setToken(refreshToken)
   deps.stores.steam.configStore.set('isLoggedIn', true)
   deps.stores.steam.configStore.delete('credentialsMissing')
   // Phase 49: a completed sign-in outranks any probe that began earlier.
@@ -196,7 +197,7 @@ export async function startQRLogin(deps: UserSignInDeps): Promise<{
           'Steam QR login: authenticated event received — finalizing session',
           LogPrefix.Steam
         )
-        await getTokenStore().setToken(session.refreshToken)
+        await deps.tokenStore.current().setToken(session.refreshToken)
         deps.stores.steam.configStore.set('isLoggedIn', true)
         deps.stores.steam.configStore.delete('credentialsMissing')
         // Phase 49: a completed sign-in outranks any probe that began earlier.

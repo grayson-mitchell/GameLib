@@ -386,8 +386,13 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // file's one `createSteamStores({ registry })` call gains `root: createTestStoreRoot()` and one
   // import. No assertion, fixture or proof was altered or weakened. Prior digest:
   // f8a84193a4907c3332068e8cd12dad7458c4c0175c7cca14ee0e82b62b7d0950
+  //
+  // 66.4-07: re-pin -- the Steam token store is a boot-owned slot, so the one seam proof builds
+  // `createTokenStoreSlot()` and drives `configure` / `current` in place of the removed
+  // `setTokenStore` / `getTokenStore` free functions. Same calls, same byte-identity assertions.
+  // Prior digest: b582276b5f3f42c0b4385c504f6719585c9d6e1d3ef0dd9083efca6067c0d9ca
   const ELECTRON_UNTOUCHED_SHA256 =
-    'b582276b5f3f42c0b4385c504f6719585c9d6e1d3ef0dd9083efca6067c0d9ca'
+    '13a12594b7e2ea11a6895cd5bacdd3e89924a87a0cf35b4e7bec864a32301a76'
 
   it('REQ-34.2-14 Gate 8: electronUntouched.test.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, 'electronUntouched.test.ts')

@@ -59,7 +59,10 @@ function steamLaunchWatchDeps(deps: ManagerDeps): SteamLaunchWatchDeps {
       String(deps.steamProcesses.runningPoll.lastAppId()) === appId,
     pollerHold: (appId) => deps.steamProcesses.runningPoll.hold(Number(appId)),
     readRunningAppId: () =>
-      readRunningAppId({ runner: deps.runner }, process.platform),
+      readRunningAppId(
+        { runner: deps.runner, paths: deps.paths },
+        process.platform
+      ),
     pidAlive: (pid) => {
       try {
         process.kill(pid, 0)

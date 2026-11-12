@@ -41,6 +41,7 @@ import { createTestSteamLaunchRuntime } from './testSteamLaunchRuntime'
 import { createTestSignInProbe } from './testSignInProbe'
 import { createTestSteamSession } from './testSteamSession'
 import { createTestAnonymousClient } from './testAnonymousClient'
+import { createTestTokenStoreSlot } from './testTokenStore'
 import { createTestSteamBottle } from './testSteamBottle'
 import { createInertTestSteamUser } from './testSteamUser'
 import { createTestHumbleServices } from './testHumble'
@@ -264,6 +265,7 @@ export function createTestServices(
       ),
     signInProbe,
     steamSession: overrides.steamSession ?? createTestSteamSession(),
+    tokenStore: overrides.tokenStore ?? createTestTokenStoreSlot(),
     anonymousClient: overrides.anonymousClient ?? createTestAnonymousClient(),
     bridgeHelpers: overrides.bridgeHelpers ?? createTestBridgeHelpers(),
     steamBottle:
@@ -419,6 +421,7 @@ export function createTestManagerDeps(
       overrides.steamLaunchRuntime ?? createTestSteamLaunchRuntime(),
     signIn: overrides.signIn ?? createTestSignInProbe(),
     steamSession: overrides.steamSession ?? createTestSteamSession(),
+    tokenStore: overrides.tokenStore ?? createTestTokenStoreSlot(),
     anonymousClient: overrides.anonymousClient ?? createTestAnonymousClient(),
     bridgeHelpers: overrides.bridgeHelpers ?? createTestBridgeHelpers(),
     steamBottle:

@@ -320,13 +320,14 @@ export async function uninstallNativeInGameLib(
   const installPath = steamGame.deps.steamSession.libraryState.library.get(
     steamGame.appId
   )?.install?.install_path
-  const { runner } = steamGame.deps
+  const { runner, paths } = steamGame.deps
   const decision = await decideSteamNativeDelete(steamGame.appId, installPath, {
-    readRunningAppId: () => readRunningAppId({ runner }),
+    readRunningAppId: () => readRunningAppId({ runner, paths }),
     isProcessRunningFromFolder: (folder) =>
       isProcessRunningFromFolder({ runner }, folder),
     requestSteamUninstallApp: (id) =>
       requestSteamUninstallApp(id, {
+        paths,
         run: createSteamInstallAppRun({ runner })
       })
   })

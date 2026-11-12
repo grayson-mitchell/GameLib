@@ -14,6 +14,7 @@ import { sendFrontendMessage } from '../../ipc'
 import type { GlobalConfigSlice } from '../../config'
 import type { OpenExternal } from '../../host/openExternal'
 import type { Clock, ProcessRunner } from '../../process/types'
+import type { AppPaths } from '../../process/context'
 import { createSteamDrm } from './bridge/drm/drmLaunchSetup'
 import { createRunningPoll, readRunningAppId } from './library/runningPoll'
 import {
@@ -32,13 +33,14 @@ export function createSteamProcesses(deps: {
   platform: NodeJS.Platform
   config: Pick<GlobalConfigSlice, 'getSettings'>
   openExternal: Pick<OpenExternal, 'openExternal'>
+  paths: Pick<AppPaths, 'appFolder' | 'userHome'>
 }) {
-  const { runner, clock, platform, config, openExternal } = deps
+  const { runner, clock, platform, config, openExternal, paths } = deps
   return {
     // Mac Steam's go-offline debt and shutdown signal: one instance per boot, handed to SteamUser
     // (the steam-user boot step), the guided Go Offline flows and the boot/quit restore.
     macSteamOffline: createMacSteamOffline({
-      ...createMacSteamOfflineEnvDeps({ config, openExternal }),
+      ...createMacSteamOfflineEnvDeps({ config, openExternal, paths }),
       platform,
       runner,
       clock
@@ -47,7 +49,7 @@ export function createSteamProcesses(deps: {
     drm: createSteamDrm({ runner }),
     runningPoll: createRunningPoll({
       clock,
-      readRunningAppId: () => readRunningAppId({ runner }, platform),
+      readRunningAppId: () => readRunningAppId({ runner, paths }, platform),
       notify: (appId, status) =>
         sendFrontendMessage('gameStatusUpdate', {
           appName: String(appId),

@@ -91,14 +91,14 @@ export const QR_LOGIN_TIMEOUT_MS = 120000
 // node_modules/steam-user/enums/EResult.js; literal numbers rather than
 // `SteamUserLib.EResult` so the test double (which carries no enum) and the
 // runtime cannot disagree.
-export const CREDENTIAL_REFUSAL_ERESULTS: ReadonlySet<number> = new Set([
+export const CREDENTIAL_REFUSAL_ERESULTS: readonly number[] = Object.freeze([
   5, // InvalidPassword
   15, // AccessDenied -- the live case (gamelib.log 2026-10-10/11)
   26, // Revoked
   27, // Expired
   63 // AccountLogonDenied
 ])
-export const CREDENTIAL_REFUSAL_NAMES: ReadonlySet<string> = new Set([
+export const CREDENTIAL_REFUSAL_NAMES: readonly string[] = Object.freeze([
   'InvalidPassword',
   'AccessDenied',
   'Revoked',

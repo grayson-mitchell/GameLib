@@ -37,7 +37,10 @@ const mockTokenStore = {
   isAvailable: jest.fn()
 }
 jest.mock('../tokenStore', () => ({
-  getTokenStore: () => mockTokenStore,
+  createTokenStoreSlot: () => ({
+    configure: () => undefined,
+    current: () => mockTokenStore
+  }),
   readTokenOutcome: (...args: unknown[]) => mockReadTokenOutcome(...args)
 }))
 
@@ -104,6 +107,7 @@ const steamDeps = {
   stores: { steam: { configStore: mockConfigStore } },
   signIn: mockSignIn,
   anonymousClient: { close: jest.fn() },
+  tokenStore: { current: () => mockTokenStore },
   steamSession: {
     signIn: realSession.signIn,
     authTrigger: {

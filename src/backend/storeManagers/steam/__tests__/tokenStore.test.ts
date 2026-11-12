@@ -8,8 +8,8 @@
  *    do not remove"). That store and its plaintext write path are deleted; the
  *    assertions below now prove nothing is ever persisted before bootstrap
  *    installs the keyring / dev-vault store.
- *  - The setTokenStore/getTokenStore registry swap point, proven by routing
- *    user.ts's SteamUser.getCredentials() through a fake implementation.
+ *  - The createTokenStoreSlot configure/current swap point (66.4-07), proven by
+ *    routing user.ts's SteamUser.getCredentials() through a fake implementation.
  *  - REQ-28-03 (no migration): tokenStore.ts contains no import of a
  *    keyring/sidecar transport module.
  *
@@ -71,8 +71,7 @@ jest.mock('steam-user', () => jest.fn())
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
 import {
   TokenStore,
-  setTokenStore,
-  getTokenStore,
+  createTokenStoreSlot,
   readTokenOutcome,
   clearOrphanedElectronToken
 } from '../tokenStore'
@@ -104,35 +103,28 @@ describe('tokenStore', () => {
     mockLogWarning.mockClear()
   })
 
-  // Each test imports a fresh module so the default store is the untouched one.
+  // Each test builds a fresh slot, whose default store is the untouched one.
   describe('default store (UnconfiguredTokenStore, D-12)', () => {
-    function freshModule(): typeof import('../tokenStore') {
-      let mod: typeof import('../tokenStore') | undefined
-      jest.isolateModules(() => {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        mod = require('../tokenStore')
-      })
-      if (!mod) throw new Error('tokenStore failed to load')
-      return mod
+    function freshStore(): TokenStore {
+      return createTokenStoreSlot({ log: jest.fn() }).current()
     }
 
     it('isAvailable() is false', async () => {
-      const store = freshModule().getTokenStore()
+      const store = freshStore()
       await expect(store.isAvailable()).resolves.toBe(false)
     })
 
     it('getToken() returns "" and readToken() reports unreadable/unavailable', async () => {
-      const mod = freshModule()
-      const store = mod.getTokenStore()
+      const store = freshStore()
       await expect(store.getToken()).resolves.toBe('')
-      await expect(mod.readTokenOutcome(store)).resolves.toEqual({
+      await expect(readTokenOutcome(store)).resolves.toEqual({
         status: 'unreadable',
         reason: 'unavailable'
       })
     })
 
     it('setToken() throws "Steam token store not installed" and never writes configStore (T-72-16)', async () => {
-      const store = freshModule().getTokenStore()
+      const store = freshStore()
       await expect(store.setToken('abc')).rejects.toThrow(
         'Steam token store not installed'
       )
@@ -141,14 +133,33 @@ describe('tokenStore', () => {
     })
 
     it('clearToken() resolves without throwing and logs a warning', async () => {
-      const store = freshModule().getTokenStore()
+      const store = freshStore()
       await expect(store.clearToken()).resolves.toBeUndefined()
       expect(mockLogWarning).toHaveBeenCalledTimes(1)
     })
   })
 
-  describe('registry (setTokenStore/getTokenStore)', () => {
-    it('setTokenStore(fake) swaps the active store, and steamUser.getCredentials() reads through it', async () => {
+  describe('slot (createTokenStoreSlot configure/current)', () => {
+    it('two slots are independent, and configure logs the implementation name', () => {
+      const log = jest.fn()
+      const first = createTokenStoreSlot({ log })
+      const second = createTokenStoreSlot({ log: jest.fn() })
+      const fake: TokenStore = {
+        isAvailable: jest.fn().mockResolvedValue(true),
+        getToken: jest.fn().mockResolvedValue(''),
+        setToken: jest.fn().mockResolvedValue(undefined),
+        clearToken: jest.fn().mockResolvedValue(undefined)
+      }
+      const before = second.current()
+      first.configure(fake)
+      expect(first.current()).toBe(fake)
+      expect(second.current()).toBe(before)
+      expect(log).toHaveBeenCalledWith(
+        'Steam TokenStore implementation set to Object'
+      )
+    })
+
+    it('configure(fake) swaps the active store, and steamUser.getCredentials() reads through it', async () => {
       const fake: TokenStore = {
         isAvailable: jest.fn().mockResolvedValue(true),
         getToken: jest.fn().mockResolvedValue('fake-token'),
@@ -156,14 +167,16 @@ describe('tokenStore', () => {
         clearToken: jest.fn().mockResolvedValue(undefined)
       }
 
-      setTokenStore(fake)
-      expect(getTokenStore()).toBe(fake)
+      const tokenStore = createTokenStoreSlot({ log: jest.fn() })
+      tokenStore.configure(fake)
+      expect(tokenStore.current()).toBe(fake)
 
       // Proves the swap point is real: user.ts needed no edit to pick up a
       // different TokenStore implementation per build.
       const steamUser = createTestSteamUser({
         stores: { steam: { configStore: mockConfigStore } },
-        steamSession: createTestSteamSession()
+        steamSession: createTestSteamSession(),
+        tokenStore
       } as never)
       const creds = await steamUser.getCredentials()
       expect(creds).toEqual({ refreshToken: 'fake-token' })

@@ -188,7 +188,7 @@ describe('sidecar bootstrap (headless boot)', () => {
   })
 
   describe('boot services (66.1-04)', () => {
-    it('a default boot returns BootServices with all thirty fields', () => {
+    it('a default boot returns BootServices with all thirty-one fields', () => {
       const { services } = bootWithLines()
       expect(Object.keys(services).sort()).toEqual([
         'anonymousClient',
@@ -220,6 +220,7 @@ describe('sidecar bootstrap (headless boot)', () => {
         'storeRegistry',
         'storeRoot',
         'stores',
+        'tokenStore',
         'winetricksQueue'
       ])
       for (const value of Object.values(services)) expect(value).toBeDefined()
@@ -526,22 +527,14 @@ describe('sidecar bootstrap (headless boot)', () => {
     })
   })
 
-  // D-12 (Phase 72, T-72-18): the Steam token store module default fails closed, so init()
-  // MUST swap in the real store (keyring or dev-vault) before any handler can run.
+  // D-12 (Phase 72, T-72-18): the Steam token store slot starts fail-closed, so the 'secret-stores'
+  // step MUST configure the real store (keyring or dev-vault) before any handler can run.
   describe('boot-time Steam token store install (D-12)', () => {
-    it('one boot replaces the fail-closed module default with the real store', () => {
-      // A fresh registry starts on the module default, so capture it pre-boot (setTokenStore
-      // logs, and the logger is not initialised until the boot runs).
-      let tokenStoreModule!: typeof import('../../storeManagers/steam/tokenStore')
-      let moduleDefault!: ReturnType<typeof tokenStoreModule.getTokenStore>
-      bootFresh({
-        before: () => {
-          tokenStoreModule = fresh('../../storeManagers/steam/tokenStore')
-          moduleDefault = tokenStoreModule.getTokenStore()
-        }
-      })
-
-      expect(tokenStoreModule.getTokenStore()).not.toBe(moduleDefault)
+    it('one boot configures the slot away from the fail-closed default', () => {
+      const { services } = bootFresh()
+      const store = services.tokenStore.current()
+      // The unconfigured default reports the store as unavailable; the configured one is a real store.
+      expect(store.constructor.name).not.toBe('UnconfiguredTokenStore')
     })
   })
 

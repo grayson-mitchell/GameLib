@@ -3,6 +3,7 @@
  * D-03 a known fix can turn it off and the user wins both ways, D-10 the
  * abnormal-exit predicate. No global switch.
  */
+import type { AppPaths } from 'backend/process/context'
 import { readStoredTitleConfig } from '../../titleSettings'
 
 export type OverlayOverride = 'automatic' | 'on' | 'off'
@@ -31,8 +32,11 @@ export function resolveOverlayEnabled(a: {
  * The title's stored overlay override (file-read rationale: titleSettings.ts).
  * Unvalidated: pass through parseOverlayOverride.
  */
-export function readStoredOverlayOverride(appId: string): unknown {
-  return readStoredTitleConfig(appId)?.steamOverlayOverride
+export function readStoredOverlayOverride(
+  appId: string,
+  deps: { paths: Pick<AppPaths, 'gamesConfigPath'> }
+): unknown {
+  return readStoredTitleConfig(appId, deps)?.steamOverlayOverride
 }
 
 export const OVERLAY_ABNORMAL_EXIT_WINDOW_MS = 30_000

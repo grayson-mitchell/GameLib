@@ -43,6 +43,7 @@ import {
 import type { GlobalConfigSlice } from 'backend/config'
 import type { OpenExternal } from 'backend/host/openExternal'
 import type { Clock, ProcessRunner, TimerHandle } from 'backend/process/types'
+import type { AppPaths } from 'backend/process/context'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 import type { SteamGoOfflineRetryResult } from 'common/types/steam'
 
@@ -141,6 +142,7 @@ export type MacSteamOfflineBuildDeps = Omit<
  * read lazily so importing this module stays cheap.
  */
 export function createMacSteamOfflineEnvDeps(deps: {
+  paths: Pick<AppPaths, 'appFolder'>
   config: Pick<GlobalConfigSlice, 'getSettings'>
   openExternal: Pick<OpenExternal, 'openExternal'>
 }): Omit<MacSteamOfflineBuildDeps, 'runner' | 'clock'> {
@@ -157,13 +159,8 @@ export function createMacSteamOfflineEnvDeps(deps: {
     // Refresh's go-offline must not raise Mac Steam (quick 261029-thl); Steam may still self-raise on gooffline.
     openUrl: (url) =>
       void deps.openExternal.openExternal(url, { activate: false }),
-    onlineDebtPath: () => {
-      /* eslint-disable @typescript-eslint/no-require-imports */
-      const { appFolder } =
-        require('backend/constants/paths') as typeof import('backend/constants/paths')
-      /* eslint-enable @typescript-eslint/no-require-imports */
-      return join(appFolder, MAC_STEAM_OFFLINE_OWED_FILE)
-    },
+    onlineDebtPath: () =>
+      join(deps.paths.appFolder, MAC_STEAM_OFFLINE_OWED_FILE),
     isPidAlive: isOwnUserPidAlive,
     selfPid: process.pid,
     systemBootMs: () => Date.now() - uptime() * 1000

@@ -2,11 +2,12 @@ import { logInfo, LogPrefix } from 'backend/logger'
 import { join } from 'path'
 import { existsSync, readFileSync } from 'graceful-fs'
 import { parse } from '@node-steam/vdf'
-import { userHome } from 'backend/constants/paths'
+import type { AppPaths } from 'backend/process/context'
 import type { Clock, ProcessRunner, TimerHandle } from 'backend/process/types'
 
 export interface RunningPollProbeDeps {
   runner: Pick<ProcessRunner, 'run'>
+  paths: Pick<AppPaths, 'userHome'>
 }
 
 /**
@@ -40,9 +41,11 @@ async function windowsRunningAppId(
  * Returns 0 when file absent, parse fails, or key missing.
  */
 /** The macOS reader: pure file read, no spawn. */
-export function readMacRunningAppId(): number {
+export function readMacRunningAppId(
+  deps: Pick<RunningPollProbeDeps, 'paths'>
+): number {
   const regPath = join(
-    userHome,
+    deps.paths.userHome,
     'Library',
     'Application Support',
     'Steam',
@@ -64,8 +67,10 @@ export function readMacRunningAppId(): number {
  * Note: this is ~/.steam/registry.vdf, NOT ~/.steam/steam/registry.vdf (Pitfall 3).
  * Returns 0 when file absent, parse fails, or broken (ValveSoftware/steam-for-linux#9672).
  */
-function linuxRegistryVdfRunningAppId(): number {
-  const regPath = join(userHome, '.steam', 'registry.vdf')
+function linuxRegistryVdfRunningAppId(
+  deps: Pick<RunningPollProbeDeps, 'paths'>
+): number {
+  const regPath = join(deps.paths.userHome, '.steam', 'registry.vdf')
   if (!existsSync(regPath)) return 0
   try {
     const content = readFileSync(regPath, 'utf-8')
@@ -116,9 +121,9 @@ export async function readRunningAppId(
   platform: NodeJS.Platform = process.platform
 ): Promise<number> {
   if (platform === 'win32') return windowsRunningAppId(deps)
-  if (platform === 'darwin') return readMacRunningAppId()
+  if (platform === 'darwin') return readMacRunningAppId(deps)
   // Linux: VDF first, reaper fallback when VDF returns 0 (D-05)
-  const fromRegistry = linuxRegistryVdfRunningAppId()
+  const fromRegistry = linuxRegistryVdfRunningAppId(deps)
   return fromRegistry !== 0 ? fromRegistry : linuxFallbackRunningAppId(deps)
 }
 

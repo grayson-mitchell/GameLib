@@ -11,7 +11,7 @@
  */
 import { existsSync } from 'node:fs'
 
-import { steamBridgeHelperPath } from 'backend/constants/paths'
+import type { AppPaths } from 'backend/process/context'
 import { LogPrefix, logWarning } from 'backend/logger'
 import type { ProcessRunner } from 'backend/process/types'
 
@@ -32,7 +32,7 @@ export type SteamUninstallAppOutcome =
   | { kind: 'error'; code: number; installedApps: number | null }
 
 interface SteamInstallAppDeps {
-  helperPath?: string
+  paths: Pick<AppPaths, 'steamBridgeHelperPath'>
   /** Only consulted by the uninstall caller (default process.platform). */
   platform?: NodeJS.Platform
   run: (
@@ -131,7 +131,7 @@ export async function requestSteamInstallApp(
   if (!/^\d{1,10}$/.test(appId)) {
     return { kind: 'unavailable', reason: 'bad-appid' }
   }
-  const helperPath = deps.helperPath ?? steamBridgeHelperPath
+  const helperPath = deps.paths.steamBridgeHelperPath
   if (!existsSync(helperPath)) {
     warn(appId, 'helper-missing')
     return { kind: 'unavailable', reason: 'helper-missing' }
@@ -176,7 +176,7 @@ export async function requestSteamUninstallApp(
   if ((deps.platform ?? process.platform) !== 'darwin') {
     return { kind: 'unavailable', reason: 'unsupported-platform' }
   }
-  const helperPath = deps.helperPath ?? steamBridgeHelperPath
+  const helperPath = deps.paths.steamBridgeHelperPath
   if (!existsSync(helperPath)) {
     warn(appId, 'helper-missing')
     return { kind: 'unavailable', reason: 'helper-missing' }

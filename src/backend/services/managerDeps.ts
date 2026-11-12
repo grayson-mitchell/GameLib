@@ -27,6 +27,7 @@ export type ManagerDepsSource = Pick<
   | 'steamLaunchRuntime'
   | 'signInProbe'
   | 'steamSession'
+  | 'tokenStore'
   | 'anonymousClient'
   | 'bridgeHelpers'
   | 'steamBottle'
@@ -65,6 +66,7 @@ export function managerDepsFromServices(
       outcomes: source.signInProbe.outcomes
     },
     steamSession: source.steamSession,
+    tokenStore: source.tokenStore,
     anonymousClient: source.anonymousClient,
     bridgeHelpers: source.bridgeHelpers,
     steamBottle: source.steamBottle,

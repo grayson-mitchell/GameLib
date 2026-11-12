@@ -70,7 +70,7 @@ export function rustFailureToError(f: RustFailure): Error {
       // A code outside the decode set would silently reclassify as generic, so the kind's own
       // name stands in when the Rust side sent none (both names are in the set).
       const code = f.code ?? f.kind
-      err.code = DECODE_STAGE_ERROR_CODES.has(code) ? code : f.kind
+      err.code = DECODE_STAGE_ERROR_CODES.includes(code) ? code : f.kind
       return err
     }
     case 'manifest_unavailable': {

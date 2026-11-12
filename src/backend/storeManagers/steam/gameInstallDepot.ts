@@ -279,7 +279,10 @@ export async function runNativeDepotDownload(
         const outcome = await requestSteamInstallApp(
           steamGame.appId,
           { libraryPath: dirname(dirname(handoff.manifestPath)) },
-          { run: createSteamInstallAppRun({ runner: steamGame.deps.runner }) }
+          {
+            paths: steamGame.deps.paths,
+            run: createSteamInstallAppRun({ runner: steamGame.deps.runner })
+          }
         )
         if (outcome.kind === 'ok') {
           adoptedByInstallApp = true

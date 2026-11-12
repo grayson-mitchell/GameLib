@@ -159,6 +159,7 @@ export interface CreateStoreManagersDeps {
   engineRuntime: ManagerDeps['engineRuntime']
   signIn: ManagerDeps['signIn']
   steamSession: ManagerDeps['steamSession']
+  tokenStore: ManagerDeps['tokenStore']
   anonymousClient: ManagerDeps['anonymousClient']
   bridgeHelpers: ManagerDeps['bridgeHelpers']
   steamBottle: ManagerDeps['steamBottle']
@@ -203,6 +204,7 @@ export function createStoreManagers(
     engineRuntime: deps.engineRuntime,
     signIn: deps.signIn,
     steamSession: deps.steamSession,
+    tokenStore: deps.tokenStore,
     anonymousClient: deps.anonymousClient,
     bridgeHelpers: deps.bridgeHelpers,
     steamBottle: deps.steamBottle,

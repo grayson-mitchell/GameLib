@@ -6,7 +6,7 @@ import { join } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { SteamStoresDeps } from './library/installRoot'
 import { STEAM_INSTALL_PATHS } from './constants'
-import { getTokenStore, readTokenOutcome } from './tokenStore'
+import { readTokenOutcome, type TokenStoreSlot } from './tokenStore'
 import { applySignInVerdict } from 'backend/signInProbe/verdict'
 import { withTimeout } from './withTimeout'
 import { sendFrontendMessage } from '../../ipc'
@@ -53,6 +53,8 @@ export type SteamUserDeps = SteamStoresDeps & {
   signIn: Pick<ManagerDeps['signIn'], 'epochs' | 'outcomes'>
   /** The boot-owned Steam sign-in session state and auth-unlock latches (D-66.3-13). */
   steamSession: Pick<SteamSessionServices, 'authTrigger' | 'signIn'>
+  /** The boot-owned token store slot (66.4-07): the keyring / dev-vault store once 'secret-stores' configured it. */
+  tokenStore: Pick<TokenStoreSlot, 'current'>
   /** The boot-owned anonymous CM client; logout() closes it (D-66.3-14). */
   anonymousClient: Pick<AnonymousClient, 'close'>
   /** The boot clock: the idle-close timer lives on it, unref'd (exit contract). */
@@ -163,7 +165,10 @@ export class SteamUser {
     if (!this.isLoggedIn()) return 'unknown'
     try {
       this.deps.steamSession.authTrigger.noteSteamAuthTrigger('boot-probe')
-      const outcome = await readTokenOutcome(getTokenStore(), 'boot-probe')
+      const outcome = await readTokenOutcome(
+        this.deps.tokenStore.current(),
+        'boot-probe'
+      )
       if (outcome.status === 'present') return 'healthy'
       if (outcome.status === 'absent') return 'expired'
       return 'unknown'
@@ -201,9 +206,9 @@ export class SteamUser {
     eresult?: number
   }): boolean {
     if (typeof rejection.eresult === 'number') {
-      return CREDENTIAL_REFUSAL_ERESULTS.has(rejection.eresult)
+      return CREDENTIAL_REFUSAL_ERESULTS.includes(rejection.eresult)
     }
-    return CREDENTIAL_REFUSAL_NAMES.has(rejection.message)
+    return CREDENTIAL_REFUSAL_NAMES.includes(rejection.message)
   }
 
   /**
@@ -463,7 +468,7 @@ export class SteamUser {
       // the retryable condition in the backend log and in the return value
       // only — no new IPC channel and no frontend banner is added here.
       const outcome = await readTokenOutcome(
-        getTokenStore(),
+        this.deps.tokenStore.current(),
         this.deps.steamSession.authTrigger.currentTriggerLabel()
       )
       if (outcome.status === 'unreadable') {
@@ -634,7 +639,7 @@ export class SteamUser {
 
   /**
    * D-09 gap fix (28-03 gap cycle): the refresh token MUST go through the
-   * TokenStore seam (getTokenStore().clearToken()) — never a direct
+   * TokenStore seam (this.deps.tokenStore.current().clearToken()) — never a direct
    * configStore call — so a future Tauri build's keyring-backed store is
    * cleared correctly instead of leaving a stale Keychain entry behind.
    * `configStore.clear()` was replaced with targeted deletes of the specific
@@ -682,7 +687,7 @@ export class SteamUser {
     // Token through the seam (D-09) first, then the remaining session keys
     // configStore.clear() used to wipe — see stores.ts's configStore
     // schema (isLoggedIn/userData are the only other keys ever written there).
-    await getTokenStore().clearToken()
+    await this.deps.tokenStore.current().clearToken()
     this.deps.stores.steam.configStore.delete('isLoggedIn')
     this.deps.stores.steam.configStore.delete('userData')
     // A signed-out session has no credential to be missing — leaving a stale
@@ -710,7 +715,7 @@ export class SteamUser {
     // path through the seam (ensureConnected() above uses the same call)
     // rather than two divergent ones.
     const outcome = await readTokenOutcome(
-      getTokenStore(),
+      this.deps.tokenStore.current(),
       this.deps.steamSession.authTrigger.currentTriggerLabel()
     )
     if (outcome.status !== 'present') return undefined

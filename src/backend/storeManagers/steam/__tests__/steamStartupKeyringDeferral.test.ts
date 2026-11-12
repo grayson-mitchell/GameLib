@@ -11,7 +11,7 @@ import {
  * What this file proves, and what it does NOT prove:
  *  - Startup (`SteamLibraryManager.init()`'s `runOnceWhenOnline` path and a
  *    LOCKED `refresh()`) issues ZERO keyring reads, through the PRODUCTION
- *    `setTokenStore()` seam — never a hand-built replica of the store's
+ *    `tokenStore.configure()` seam — never a hand-built replica of the store's
  *    internals.
  *  - The deliberate path (a Steam action that calls `noteSteamAuthTrigger`)
  *    still reads exactly once, so the "zero" above is non-vacuous.
@@ -32,7 +32,7 @@ import {
  * `games.test.ts` already exercises successfully. Unlike `library.test.ts`
  * and `games.test.ts`, this file does NOT mock `./user` — `SteamUser` must be
  * REAL so `ensureConnected()` genuinely reaches `readTokenOutcome()` and the
- * spy `TokenStore` installed via the production `setTokenStore()` seam.
+ * spy `TokenStore` installed via the production `tokenStore.configure()` seam.
  * `steam-session`/`steam-user` (the two real network-capable npm packages
  * `user.ts` imports) are mocked exactly as `user.test.ts` mocks them, so no
  * real CM connection is ever attempted.
@@ -269,7 +269,8 @@ import SteamLibraryManager from '../library'
 import SteamGame from '../games'
 import type { SteamUser, SteamUserDeps } from '../user'
 import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
-import { setTokenStore, type TokenStore } from '../tokenStore'
+import type { TokenStore } from '../tokenStore'
+import { createTestTokenStoreSlot } from 'backend/testUtils/testTokenStore'
 import { getSteamLibraries } from 'backend/utils'
 import { captureOwnedAppPlatforms } from '../platformCapture'
 import type { GameInfo, InstallArgs } from 'common/types'
@@ -278,7 +279,9 @@ import type { Stores } from 'backend/services/types'
 
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
+const tokenStoreSlot = createTestTokenStoreSlot()
 const baseDeps = createTestManagerDeps({
+  tokenStore: tokenStoreSlot,
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
 })
@@ -290,6 +293,7 @@ const buildSteamUser = (): SteamUser =>
     stores: baseDeps.stores,
     signIn: baseDeps.signIn,
     steamSession: baseDeps.steamSession,
+    tokenStore: tokenStoreSlot,
     anonymousClient: baseDeps.anonymousClient,
     config: baseDeps.config,
     macSteamOffline:
@@ -328,7 +332,7 @@ const APP_ID = '570'
 
 /**
  * A real-shaped `TokenStore` spy, installed through the PRODUCTION
- * `setTokenStore()` seam — per this task's own instruction, never a
+ * `tokenStore.configure()` seam — per this task's own instruction, never a
  * hand-built replica of the store's internals (a replica drifts silently).
  */
 function installSpyTokenStore(outcome: {
@@ -355,7 +359,7 @@ function installSpyTokenStore(outcome: {
     clearToken: jest.fn().mockResolvedValue(undefined),
     readToken: jest.fn().mockResolvedValue(readTokenResult)
   }
-  setTokenStore(spy)
+  tokenStoreSlot.configure(spy)
   return spy
 }
 

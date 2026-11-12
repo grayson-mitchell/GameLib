@@ -229,6 +229,7 @@ export async function launch(
           steamGame.appId,
           createRestartDeps({
             clock: steamGame.deps.clock,
+            paths: steamGame.deps.paths,
             macSteamOffline: steamGame.deps.steamProcesses.macSteamOffline,
             launchRunGameId: () =>
               steamGame.deps.openExternal.openExternal(url, { activate: false })

@@ -40,7 +40,7 @@ describe('requestSteamInstallApp', () => {
       requestSteamInstallApp(
         '440',
         { libraryPath: '/lib' },
-        { helperPath: '/h', run }
+        { paths: { steamBridgeHelperPath: '/h' }, run }
       )
     ).resolves.toEqual({ kind: 'ok', folderIndex: 1 })
     expect(run).toHaveBeenCalledWith(
@@ -52,7 +52,11 @@ describe('requestSteamInstallApp', () => {
 
   it('omits --library when undefined', async () => {
     const run = runWith('{"result":"ok","folderIndex":0}')
-    await requestSteamInstallApp('440', {}, { helperPath: '/h', run })
+    await requestSteamInstallApp(
+      '440',
+      {},
+      { paths: { steamBridgeHelperPath: '/h' }, run }
+    )
     expect(run.mock.calls[0][1]).toEqual(['--steam-installapp', '440'])
   })
 
@@ -62,21 +66,33 @@ describe('requestSteamInstallApp', () => {
       2
     )
     await expect(
-      requestSteamInstallApp('440', {}, { helperPath: '/h', run })
+      requestSteamInstallApp(
+        '440',
+        {},
+        { paths: { steamBridgeHelperPath: '/h' }, run }
+      )
     ).resolves.toEqual({ kind: 'unavailable', reason: 'steam-not-running' })
   })
 
   it('maps an error line', async () => {
     const run = runWith('{"result":"error","eAppUpdateError":18}', 3)
     await expect(
-      requestSteamInstallApp('440', {}, { helperPath: '/h', run })
+      requestSteamInstallApp(
+        '440',
+        {},
+        { paths: { steamBridgeHelperPath: '/h' }, run }
+      )
     ).resolves.toEqual({ kind: 'error', code: 18 })
   })
 
   it('uses the last non-empty stdout line', async () => {
     const run = runWith('noise\n{"result":"ok","folderIndex":0}\n\n')
     await expect(
-      requestSteamInstallApp('440', {}, { helperPath: '/h', run })
+      requestSteamInstallApp(
+        '440',
+        {},
+        { paths: { steamBridgeHelperPath: '/h' }, run }
+      )
     ).resolves.toEqual({ kind: 'ok', folderIndex: 0 })
   })
 
@@ -85,14 +101,14 @@ describe('requestSteamInstallApp', () => {
       requestSteamInstallApp(
         '440',
         {},
-        { helperPath: '/h', run: runWith('garbage', 1) }
+        { paths: { steamBridgeHelperPath: '/h' }, run: runWith('garbage', 1) }
       )
     ).resolves.toEqual({ kind: 'unavailable', reason: 'helper-failed' })
     await expect(
       requestSteamInstallApp(
         '440',
         {},
-        { helperPath: '/h', run: runWith('', null) }
+        { paths: { steamBridgeHelperPath: '/h' }, run: runWith('', null) }
       )
     ).resolves.toEqual({ kind: 'unavailable', reason: 'helper-failed' })
     await expect(
@@ -100,7 +116,7 @@ describe('requestSteamInstallApp', () => {
         '440',
         {},
         {
-          helperPath: '/h',
+          paths: { steamBridgeHelperPath: '/h' },
           run: jest.fn().mockRejectedValue(new Error('boom'))
         }
       )
@@ -111,7 +127,11 @@ describe('requestSteamInstallApp', () => {
     mockedExists.mockReturnValue(false)
     const run = jest.fn()
     await expect(
-      requestSteamInstallApp('440', {}, { helperPath: '/h', run })
+      requestSteamInstallApp(
+        '440',
+        {},
+        { paths: { steamBridgeHelperPath: '/h' }, run }
+      )
     ).resolves.toEqual({ kind: 'unavailable', reason: 'helper-missing' })
     expect(run).not.toHaveBeenCalled()
   })
@@ -119,7 +139,11 @@ describe('requestSteamInstallApp', () => {
   it('never spawns for a non-digit appId', async () => {
     const run = jest.fn()
     await expect(
-      requestSteamInstallApp('4;40', {}, { helperPath: '/h', run })
+      requestSteamInstallApp(
+        '4;40',
+        {},
+        { paths: { steamBridgeHelperPath: '/h' }, run }
+      )
     ).resolves.toEqual({ kind: 'unavailable', reason: 'bad-appid' })
     expect(run).not.toHaveBeenCalled()
   })
@@ -127,7 +151,7 @@ describe('requestSteamInstallApp', () => {
 
 describe('requestSteamUninstallApp (quick 261106-s3n)', () => {
   const deps = (run: jest.Mock) => ({
-    helperPath: '/h',
+    paths: { steamBridgeHelperPath: '/h' },
     run,
     platform: 'darwin' as const
   })

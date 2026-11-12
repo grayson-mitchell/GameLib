@@ -161,7 +161,6 @@ let steamConfigStore: ReturnType<
 let steamBottleConfigStore: ReturnType<
   typeof import('../../storeManagers/steam/stores').createSteamStores
 >['steamBottleConfigStore']
-let getTokenStore: typeof import('../../storeManagers/steam/tokenStore').getTokenStore
 let KEYRING_SLOT_STEAM_REFRESH_TOKEN: typeof import('../keyringTokenStore').KEYRING_SLOT_STEAM_REFRESH_TOKEN
 // 66.3-15: the bottle helpers are a boot-owned instance, handed to the boot as a recording fake.
 const isSteamBottleProvisioned = jest.fn()
@@ -191,7 +190,6 @@ function freshRegistry(): void {
       registry: createStoreRegistry(),
       root: testRoot
     }))
-  ;({ getTokenStore } = require('../../storeManagers/steam/tokenStore'))
   ;({ KEYRING_SLOT_STEAM_REFRESH_TOKEN } = require('../keyringTokenStore'))
   ;({ provisionBottle } = require('../../storeManagers/steam/provisionBottle'))
   ;({
@@ -296,7 +294,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
 
   // Test 4 (token seam + Phase 28 D-04 regression, extended to this channel
   // set): with a mocked poll that reports success, the refresh token —
-  // written through getTokenStore().setToken() exactly as SteamUser's real
+  // written through tokenStore.current().setToken() exactly as SteamUser's real
   // 'authenticated' handler does (user.ts) — round-trips over the real
   // rustInvoke wire protocol (never a direct configStore write), and no
   // snapshot served by sidecar:store-snapshot ever surfaces a refreshToken
@@ -306,13 +304,15 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       .mocked(pollQRLogin)
       .mockResolvedValue({ status: 'done', username: 'gsd-tester' })
 
-    const { input, frames } = boot()
+    const { input, frames, services } = boot()
 
     // Simulates exactly what SteamUser's real 'authenticated' handler does on
     // a successful QR approval (user.ts's startQRLogin/finishAuth): write the
     // refresh token through the TokenStore seam, and only isLoggedIn/userData
     // (never the token itself) onto the shared steamConfigStore.
-    const setTokenPromise = getTokenStore().setToken('QR-SESSION-TEST-TOKEN')
+    const setTokenPromise = services.tokenStore
+      .current()
+      .setToken('QR-SESSION-TEST-TOKEN')
     await flush()
 
     // The seam must reach Rust over the real rustInvoke wire protocol — not a

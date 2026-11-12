@@ -16310,7 +16310,7 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
       expect(installApp()).toHaveBeenCalledWith(
         APP_ID,
         { libraryPath: '/mock/steam' },
-        { run: 'install-app-run' }
+        { paths: expect.anything(), run: 'install-app-run' }
       )
       expect(shellOpenExternal).not.toHaveBeenCalled()
       expect(startInstallPollingSpy).toHaveBeenCalledWith(
@@ -16408,7 +16408,7 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
       expect(installApp()).toHaveBeenCalledWith(
         APP_ID,
         { libraryPath: '/mock/steam' },
-        { run: 'install-app-run' }
+        { paths: expect.anything(), run: 'install-app-run' }
       )
       expect(adoption().recordPendingAdoption).not.toHaveBeenCalled()
       expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(

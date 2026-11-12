@@ -111,7 +111,7 @@ import { chmodSync as mockedChmodSync } from 'graceful-fs'
 import * as loggerModule from 'backend/logger'
 import { createDevSecretVault } from '../devSecretVault'
 import * as devSecretVaultModule from '../devSecretVault'
-import * as tokenStoreModule from 'backend/storeManagers/steam/tokenStore'
+import type * as keyringTokenStoreModule from '../keyringTokenStore'
 import * as humbleSecretStoreModule from '../humbleSecretStore'
 import { bootFresh } from './helpers/sidecarHarness'
 
@@ -435,8 +435,8 @@ describe('devSecretVault', () => {
       const freshLogger = require('backend/logger') as typeof loggerModule
       const freshVault =
         require('../devSecretVault') as typeof devSecretVaultModule
-      const freshTokenStore =
-        require('backend/storeManagers/steam/tokenStore') as typeof tokenStoreModule
+      const freshKeyringTokenStore =
+        require('../keyringTokenStore') as typeof keyringTokenStoreModule
       const freshHumbleStore =
         require('../humbleSecretStore') as typeof humbleSecretStoreModule
       /* eslint-enable @typescript-eslint/no-require-imports */
@@ -449,15 +449,15 @@ describe('devSecretVault', () => {
       mockLogError = jest
         .spyOn(freshLogger, 'logError')
         .mockImplementation(() => {})
-      return { freshVault, freshTokenStore, freshHumbleStore }
+      return { freshVault, freshKeyringTokenStore, freshHumbleStore }
     }
 
     it('vault disabled: installs the keyring stores exactly as today, and emits the keyring receipt line', () => {
-      const { freshVault, freshTokenStore, freshHumbleStore } = freshRegistry()
+      const { freshVault, freshKeyringTokenStore, freshHumbleStore } =
+        freshRegistry()
       const createDevSecretVaultSpy = jest
         .spyOn(freshVault, 'createDevSecretVault')
         .mockReturnValue(null)
-      const setTokenStoreSpy = jest.spyOn(freshTokenStore, 'setTokenStore')
       const startSidecarHumbleSecretStoreSpy = jest.spyOn(
         freshHumbleStore,
         'startSidecarHumbleSecretStore'
@@ -471,7 +471,9 @@ describe('devSecretVault', () => {
           freshHumbleStore.SidecarHumbleSecretStore
         )
 
-        expect(setTokenStoreSpy).toHaveBeenCalledTimes(1)
+        expect(services.tokenStore.current()).toBeInstanceOf(
+          freshKeyringTokenStore.SidecarKeyringTokenStore
+        )
         expect(startSidecarHumbleSecretStoreSpy).toHaveBeenCalledTimes(1)
         expect(
           mockLogInfo.mock.calls.some(
@@ -485,13 +487,12 @@ describe('devSecretVault', () => {
         ).toBe(false)
       } finally {
         createDevSecretVaultSpy.mockRestore()
-        setTokenStoreSpy.mockRestore()
         startSidecarHumbleSecretStoreSpy.mockRestore()
       }
     })
 
     it('vault enabled: installs the vault token store, not the keyring stores, fires no Humble migration, and emits the dev-vault receipt line', () => {
-      const { freshVault, freshTokenStore, freshHumbleStore } = freshRegistry()
+      const { freshVault, freshHumbleStore } = freshRegistry()
       const fakeVault = {
         tokenStore: {
           isAvailable: async () => true,
@@ -515,7 +516,6 @@ describe('devSecretVault', () => {
       const createDevSecretVaultSpy = jest
         .spyOn(freshVault, 'createDevSecretVault')
         .mockReturnValue(fakeVault)
-      const setTokenStoreSpy = jest.spyOn(freshTokenStore, 'setTokenStore')
       const startSidecarHumbleSecretStoreSpy = jest.spyOn(
         freshHumbleStore,
         'startSidecarHumbleSecretStore'
@@ -531,8 +531,7 @@ describe('devSecretVault', () => {
         // The Humble services were built over the vault's store, never the keyring one (T-66.3-56).
         expect(services.humble.secretStore).toBe(fakeVault.humbleSecretStore)
 
-        expect(setTokenStoreSpy).toHaveBeenCalledTimes(1)
-        expect(setTokenStoreSpy).toHaveBeenCalledWith(fakeVault.tokenStore)
+        expect(services.tokenStore.current()).toBe(fakeVault.tokenStore)
         expect(startSidecarHumbleSecretStoreSpy).not.toHaveBeenCalled()
         // migrateHumbleSecrets() is only ever fired FROM INSIDE startSidecarHumbleSecretStore()
         // (humbleSecretStore.ts) — asserting it directly, not merely inferring it from the line
@@ -551,7 +550,6 @@ describe('devSecretVault', () => {
         ).toBe(false)
       } finally {
         createDevSecretVaultSpy.mockRestore()
-        setTokenStoreSpy.mockRestore()
         startSidecarHumbleSecretStoreSpy.mockRestore()
         migrateHumbleSecretsSpy.mockRestore()
       }

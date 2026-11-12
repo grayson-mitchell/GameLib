@@ -16,7 +16,7 @@
  *  attempt rotations (one single chunk alone: 555) before this fix. */
 // Exported for the Rust error map (depotRust/errorMap.ts), which asserts its
 // decode_failed codes stay inside this set.
-export const DECODE_STAGE_ERROR_CODES: ReadonlySet<string> = new Set([
+export const DECODE_STAGE_ERROR_CODES: readonly string[] = Object.freeze([
   'bad_footer_magic',
   'unknown_container',
   'sha1_mismatch',
@@ -34,5 +34,5 @@ export const DECODE_STAGE_ERROR_CODES: ReadonlySet<string> = new Set([
  *  boundary, where a class's prototype chain is not guaranteed to survive. */
 export function isDecodeStageError(err: unknown): boolean {
   const code = (err as { code?: unknown } | undefined)?.code
-  return typeof code === 'string' && DECODE_STAGE_ERROR_CODES.has(code)
+  return typeof code === 'string' && DECODE_STAGE_ERROR_CODES.includes(code)
 }

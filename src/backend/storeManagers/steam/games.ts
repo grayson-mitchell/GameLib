@@ -68,7 +68,9 @@ export default class SteamGame implements Game {
       // title's GameConfig (where the launch reads it), so the shared bottle
       // settings alone made the Settings screen read it back as Automatic.
       const settings = this.deps.steamBottle.getSteamBottleSettings()
-      const title = pickTitleSettings(readStoredTitleConfig(this.appId))
+      const title = pickTitleSettings(
+        readStoredTitleConfig(this.appId, this.deps)
+      )
       const { readSteamEngineOverride } =
         await import('./engine/steamEngineDeps')
       const override = readSteamEngineOverride(this.deps.paths, this.appId)
@@ -76,7 +78,7 @@ export default class SteamGame implements Game {
       // written to the title's GameConfig, so merge it back ('on'/'off' only;
       // anything else stays Automatic, T-60-06-01).
       const overlay = parseOverlayOverride(
-        readStoredOverlayOverride(this.appId)
+        readStoredOverlayOverride(this.appId, this.deps)
       )
       const overlayOverride =
         overlay === 'on' || overlay === 'off' ? overlay : undefined
