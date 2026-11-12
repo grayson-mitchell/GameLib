@@ -1,0 +1,40 @@
+"AppState"
+{
+	"appid"		"333300"
+	"Universe"		"1"
+	"name"		"ADOM (Ancient Domains Of Mystery)"
+	"StateFlags"		"6"
+	"installdir"		"ADOM"
+	"lastupdated"		"1794128523"
+	"LastPlayed"		"0"
+	"SizeOnDisk"		"570502668"
+	"StagingSize"		"0"
+	"buildid"		"3512046"
+	"LastOwner"		"0"
+	"DownloadType"		"4"
+	"UpdateResult"		"0"
+	"BytesToDownload"		"1872128"
+	"BytesDownloaded"		"0"
+	"BytesToStage"		"0"
+	"BytesStaged"		"0"
+	"TargetBuildID"		"5820078"
+	"AutoUpdateBehavior"		"1"
+	"AllowOtherDownloadsWhileRunning"		"0"
+	"ScheduledAutoUpdate"		"1794158347"
+	"InstalledDepots"
+	{
+		"333302"
+		{
+			"manifest"		"1547379086645511101"
+			"size"		"570502668"
+		}
+	}
+	"UserConfig"
+	{
+		"language"		"english"
+	}
+	"MountedConfig"
+	{
+		"language"		"english"
+	}
+}
