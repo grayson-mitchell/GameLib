@@ -10,6 +10,7 @@ files:
 severity: major
 platform: macos
 ready: live-gate
+resolves_phase: 66.4
 ---
 
 ## Problem
