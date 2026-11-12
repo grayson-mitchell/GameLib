@@ -5,7 +5,7 @@
  */
 import type { DepotRefsResult } from '../depot/plan'
 
-export type KeptReason =
+type KeptReason =
   | 'selected'
   | 'skipped'
   | 'still-on-branch'
