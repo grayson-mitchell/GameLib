@@ -11,11 +11,13 @@ import { logError, logInfo, LogPrefix } from 'backend/logger'
 import { Runtime, RuntimeName } from 'common/types'
 import { downloadFile, extractTarFile } from './util'
 import { axiosClient } from 'backend/utils'
-import { runtimePath } from 'backend/constants/paths'
+import type { AppPaths } from 'backend/process/context'
 import type { ProcessRunner } from 'backend/process/types'
 
-async function _get(): Promise<Runtime[]> {
-  mkdirSync(runtimePath, { recursive: true })
+type RuntimePaths = Pick<AppPaths, 'runtimePath'>
+
+async function _get(deps: { paths: RuntimePaths }): Promise<Runtime[]> {
+  mkdirSync(deps.paths.runtimePath, { recursive: true })
   const allRuntimes = await axiosClient.get('https://lutris.net/api/runtimes')
   if (!allRuntimes.data) {
     logError('Failed to fetch runtime list', LogPrefix.Runtime)
@@ -24,11 +26,11 @@ async function _get(): Promise<Runtime[]> {
 }
 
 async function download(
-  deps: { runner: Pick<ProcessRunner, 'run'> },
+  deps: { runner: Pick<ProcessRunner, 'run'>; paths: RuntimePaths },
   name: RuntimeName
 ): Promise<boolean> {
   try {
-    const runtimes = await _get()
+    const runtimes = await _get(deps)
     const runtime = runtimes.find((inst) => {
       return inst.name === name
     })
@@ -41,10 +43,10 @@ async function download(
     )
 
     const tarFileName = runtime.url.split('/').pop()!
-    const tarFilePath = join(runtimePath, tarFileName)
+    const tarFilePath = join(deps.paths.runtimePath, tarFileName)
     await downloadFile(runtime.url, tarFilePath)
 
-    const extractedFolderPath = join(runtimePath, name)
+    const extractedFolderPath = join(deps.paths.runtimePath, name)
 
     if (existsSync(extractedFolderPath)) {
       rmSync(extractedFolderPath, { recursive: true })
@@ -72,10 +74,10 @@ async function download(
   }
 }
 
-async function isInstalled(name: RuntimeName) {
-  if (!existsSync(join(runtimePath, name))) return false
+async function isInstalled(deps: { paths: RuntimePaths }, name: RuntimeName) {
+  if (!existsSync(join(deps.paths.runtimePath, name))) return false
 
-  const runtimes = await _get().catch(() => [])
+  const runtimes = await _get(deps).catch(() => [])
   const runtime = runtimes.find((inst) => inst.name === name)
 
   // this should be impossible, so prevent redownload by faking it's installed
@@ -84,7 +86,7 @@ async function isInstalled(name: RuntimeName) {
     return true
   }
 
-  const version_path = join(runtimePath, name, 'current_version')
+  const version_path = join(deps.paths.runtimePath, name, 'current_version')
 
   if (!existsSync(version_path)) return false
 

@@ -40,10 +40,6 @@ jest.mock('backend/constants/environment', () => ({
   isMac: true
 }))
 
-jest.mock('backend/constants/paths', () => ({
-  toolsPath: '/tmp/gamelib-260916-9vh-tools'
-}))
-
 jest.mock('backend/logger', () => ({
   logDebug: jest.fn(),
   logError: jest.fn(),
@@ -74,6 +70,7 @@ import { installOrUpdateTool } from '../index'
 import { registerDxmtListeners } from '../dxmt'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { createTestAbortRegistry } from 'backend/testUtils/testAbortRegistry'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { checkWinemacMetalViewExports } from '../machoExports'
 import type { ReleasesInfo, WineVersionInfo } from 'common/types'
 
@@ -89,6 +86,7 @@ const unregisterDxmt = registerDxmtListeners({
   events: backendEvents,
   runner: createScriptedRunner([]),
   aborts: createTestAbortRegistry(),
+  paths: createTestAppPaths('/tmp/gamelib-260916-9vh'),
   dialogs: createTestHostServices().dialogs,
   appState: createTestHostServices().appState,
   // Read at call time so a case can flip the mock.
@@ -187,6 +185,7 @@ describe('registerDxmtListeners (66.3-15)', () => {
       events: { on, off } as never,
       runner: createScriptedRunner([]),
       aborts: createTestAbortRegistry(),
+      paths: createTestAppPaths('/tmp/gamelib-260916-9vh'),
       dialogs: createTestHostServices().dialogs,
       appState: createTestHostServices().appState,
       onlineMonitor: { isOnline: () => true },
@@ -233,6 +232,7 @@ describe('registerDxmtListeners (66.3-15)', () => {
       events: fresh as never,
       runner: createScriptedRunner([]),
       aborts: createTestAbortRegistry(),
+      paths: createTestAppPaths('/tmp/gamelib-260916-9vh'),
       dialogs: createTestHostServices().dialogs,
       appState: createTestHostServices().appState,
       onlineMonitor: { isOnline: () => true },

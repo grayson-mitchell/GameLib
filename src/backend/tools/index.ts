@@ -73,7 +73,6 @@ import {
   downloadFile as downloadFileInet
 } from '../utils/inet/downloader'
 import { getUmuPath, isUmuSupported } from 'backend/utils/compatibility_layers'
-import { toolsPath, userHome } from 'backend/constants/paths'
 import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import './dxmt'
 import { Game } from '../../common/types/game_manager'
@@ -109,6 +108,7 @@ export async function installOrUpdateTool(
   deps: {
     runner: Pick<ProcessRunner, 'run'>
     aborts: Pick<AbortRegistry, 'create'>
+    paths: Pick<AppPaths, 'toolsPath'>
   } & DialogBoxDeps,
   tool: Tool
 ) {
@@ -136,9 +136,9 @@ export async function installOrUpdateTool(
   const { name, browser_download_url: downloadUrl } = asset
 
   const latestVersion = name.replace('.tar.gz', '').replace('.tar.xz', '')
-  const latestVersionArchivePath = `${toolsPath}/${tool.name}/${name}`
+  const latestVersionArchivePath = `${deps.paths.toolsPath}/${tool.name}/${name}`
 
-  const installedVersionStorage = `${toolsPath}/${tool.name}/latest_${tool.name}`
+  const installedVersionStorage = `${deps.paths.toolsPath}/${tool.name}/latest_${tool.name}`
   let installedVersion = ''
   if (existsSync(installedVersionStorage)) {
     installedVersion =
@@ -150,10 +150,10 @@ export async function installOrUpdateTool(
 
   const alreadyUpToDate =
     installedVersion === latestVersion &&
-    existsSync(join(toolsPath, tool.name, installedVersion))
+    existsSync(join(deps.paths.toolsPath, tool.name, installedVersion))
   if (alreadyUpToDate) return
 
-  mkdirSync(join(toolsPath, tool.name), { recursive: true })
+  mkdirSync(join(deps.paths.toolsPath, tool.name), { recursive: true })
 
   logInfo([`Updating ${tool.name} to:`, latestVersion], LogPrefix.ToolInstaller)
 
@@ -195,7 +195,11 @@ export async function installOrUpdateTool(
 
   logInfo(`Downloaded ${tool.name}, extracting...`, LogPrefix.ToolInstaller)
 
-  const extractDestination = join(toolsPath, tool.name, latestVersion)
+  const extractDestination = join(
+    deps.paths.toolsPath,
+    tool.name,
+    latestVersion
+  )
   mkdirSync(extractDestination, { recursive: true })
   const extractResult = await extractFiles(deps, {
     path: latestVersionArchivePath,
@@ -241,7 +245,7 @@ export interface ToolsDeps extends DialogBoxDeps, NotifyDeps {
   /** The boot-owned engine runtime and the path roots the engine reads (66.4-05). */
   engineRuntime: EngineServices['engineRuntime']
   paths: EngineServices['paths'] &
-    Pick<AppPaths, 'defaultUmuPath' | 'publicDir'>
+    Pick<AppPaths, 'defaultUmuPath' | 'publicDir' | 'runtimePath'>
   config: Pick<
     GlobalConfigSlice,
     'getSettings' | 'getAlternativeWine' | 'setSetting'
@@ -342,7 +346,7 @@ function createDxvk(deps: ToolsDeps) {
       }
 
       const prefix = gameSettings.winePrefix
-      const winePrefix = prefix.replace('~', userHome)
+      const winePrefix = prefix.replace('~', deps.paths.userHome)
       // A source-pinned install targets a prefix GameLib just created, which has no
       // `.update-timestamp` yet; system.reg is the prefix-exists check there.
       const isValidPrefix = existsSync(
@@ -366,21 +370,24 @@ function createDxvk(deps: ToolsDeps) {
         logWarning('32-bit prefix detected!', LogPrefix.ToolInstaller)
       }
 
-      if (!source && !existsSync(`${toolsPath}/${tool}/latest_${tool}`)) {
+      if (
+        !source &&
+        !existsSync(`${deps.paths.toolsPath}/${tool}/latest_${tool}`)
+      ) {
         logWarning('dxvk not found!', LogPrefix.ToolInstaller)
         await DXVK.getLatest()
       }
 
       const globalVersion = source
         ? source.version
-        : (readFileSync(`${toolsPath}/${tool}/latest_${tool}`)
+        : (readFileSync(`${deps.paths.toolsPath}/${tool}/latest_${tool}`)
             .toString()
             // split() always yields at least one element
             .split('\n')[0] ?? '')
 
       const toolPathx32 = source
         ? join(source.dir, 'x32')
-        : `${toolsPath}/${tool}/${globalVersion}/${
+        : `${deps.paths.toolsPath}/${tool}/${globalVersion}/${
             tool === 'vkd3d' ? 'x86' : 'x32'
           }`
 
@@ -388,7 +395,7 @@ function createDxvk(deps: ToolsDeps) {
 
       const toolPathx64 = source
         ? join(source.dir, 'x64')
-        : `${toolsPath}/${tool}/${globalVersion}/x64`
+        : `${deps.paths.toolsPath}/${tool}/${globalVersion}/x64`
       const dlls64 = readdirSync(toolPathx64)
 
       const currentVersionCheck = `${winePrefix}/current_${tool}`
@@ -877,7 +884,7 @@ function createWinetricks(deps: ToolsDeps) {
 
       const url =
         'https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks'
-      const path = `${toolsPath}/winetricks`
+      const path = `${deps.paths.toolsPath}/winetricks`
 
       if (!deps.onlineMonitor.isOnline()) {
         return
@@ -957,7 +964,7 @@ function createWinetricks(deps: ToolsDeps) {
         return
       }
 
-      let winetricks = `${toolsPath}/winetricks`
+      let winetricks = `${deps.paths.toolsPath}/winetricks`
 
       if (!existsSync(winetricks)) {
         await Winetricks.download()
@@ -1311,7 +1318,7 @@ function createWinetricks(deps: ToolsDeps) {
     // differ in version from this download; metadata still comes from the
     // downloaded script (acceptable, recorded).
     scriptMetadata: async (): Promise<ScriptMetadata | null> => {
-      const path = `${toolsPath}/winetricks`
+      const path = `${deps.paths.toolsPath}/winetricks`
       try {
         const { mtimeMs, size } = await stat(path)
         const key = `${mtimeMs}:${size}`

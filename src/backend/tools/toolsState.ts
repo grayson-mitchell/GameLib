@@ -3,10 +3,7 @@ import type {
   deriveNeedsGuiVerbs,
   parseWinetricksMetadata
 } from 'common/winetricks/metadata'
-import {
-  createWinetricksEnvironment,
-  type WinetricksEnvironment
-} from './winetricksEnvironment'
+import { createWinetricksEnvironment } from './winetricksEnvironment'
 
 // Phase 45 Plan 06 (D-19/D-17): what `Winetricks.scriptMetadata` derives from
 // the downloaded script, cached by the script's `mtimeMs:size`.
@@ -46,4 +43,3 @@ export function createToolsState() {
 }
 
 export type ToolsState = ReturnType<typeof createToolsState>
-export type { WinetricksEnvironment }

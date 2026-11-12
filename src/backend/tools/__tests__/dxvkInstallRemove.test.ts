@@ -19,26 +19,12 @@ import {
   rmSync,
   writeFileSync
 } from 'fs'
+import { tmpdir } from 'os'
 import { join } from 'path'
 import type { GameSettings } from 'common/types'
 import { defined } from 'backend/testUtils/indexed'
 
 const mockRunWineCommand = jest.fn()
-
-// One contained root per file, fixed at mock time: `toolsPath`/`userHome` are plain constants in
-// the real module, and the importer binds them when `tools/index.ts` loads. Each test reseeds
-// the tree beneath it from scratch.
-jest.mock('backend/constants/paths', () => {
-  const { mkdtempSync } = jest.requireActual('fs')
-  const { tmpdir } = jest.requireActual('os')
-  const { join } = jest.requireActual('path')
-  const root = mkdtempSync(join(tmpdir(), 'gamelib-dxvk-'))
-  return {
-    ...jest.requireActual('backend/constants/paths'),
-    toolsPath: join(root, 'tools'),
-    userHome: root
-  }
-})
 
 // `isMac` would rewrite the tool to `dxvk-macOS` and change the tree under test.
 jest.mock('backend/constants/environment', () => ({
@@ -59,7 +45,7 @@ jest.mock('backend/logger', () => {
 
 import { createTools } from '../index'
 import type { ToolsDeps } from '../index'
-import { toolsPath, userHome } from 'backend/constants/paths'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import {
   createTestServices,
   createTestStores,
@@ -68,6 +54,13 @@ import {
 
 const DLLS = ['d3d9.dll', 'd3d11.dll']
 const VERSION = 'dxvk-2.3'
+
+// One contained root per file; each test reseeds the tree beneath it from scratch. The paths are
+// injected through the deps, not mocked (66.4-14).
+const testPaths = createTestAppPaths(
+  mkdtempSync(join(tmpdir(), 'gamelib-dxvk-'))
+)
+const { toolsPath, userHome } = testPaths
 
 let root: string
 let prefix: string
@@ -81,6 +74,7 @@ function label(commandParts: string[]): string {
 
 function seed(): void {
   root = userHome
+  mkdirSync(root, { recursive: true })
   rmSync(toolsPath, { recursive: true, force: true })
   prefix = mkdtempSync(join(root, 'prefix-'))
 
@@ -101,6 +95,7 @@ function seed(): void {
 
 const toolsDeps: ToolsDeps = {
   ...createTestToolsSlices(),
+  paths: testPaths,
   spawnAsync: createTestServices().spawnAsync,
   runner: createTestServices().runner,
   stores: createTestStores(),

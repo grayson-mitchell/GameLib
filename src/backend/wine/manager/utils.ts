@@ -15,7 +15,7 @@ import {
 import { getAvailableVersions, installVersion } from './downloader/main'
 import { sendFrontendMessage } from '../../ipc'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
-import { toolsPath } from 'backend/constants/paths'
+import type { AppPaths } from 'backend/process/context'
 import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import type { GlobalConfigSlice } from '../../config'
 import { join } from 'path'
@@ -251,13 +251,16 @@ async function updateWineVersionInfos(
 }
 
 function getInstallDir(
-  deps: { config: Pick<GlobalConfigSlice, 'getSettings'> },
+  deps: {
+    config: Pick<GlobalConfigSlice, 'getSettings'>
+    paths: Pick<AppPaths, 'toolsPath'>
+  },
   release: WineVersionInfo
 ): string {
   if (release?.type?.includes('Wine')) {
-    return `${toolsPath}/wine`
+    return `${deps.paths.toolsPath}/wine`
   } else if (release.type.includes('Toolkit')) {
-    return `${toolsPath}/game-porting-toolkit`
+    return `${deps.paths.toolsPath}/game-porting-toolkit`
   } else {
     const config = deps.config.getSettings()
     if (config.downloadProtonToSteam && config.defaultSteamPath) {
@@ -278,7 +281,7 @@ function getInstallDir(
         )
       }
     }
-    return `${toolsPath}/proton`
+    return `${deps.paths.toolsPath}/proton`
   }
 }
 
@@ -286,6 +289,7 @@ async function installWineVersion(
   deps: WineManagerDeps & {
     runner: Pick<ProcessRunner, 'run'>
     config: Pick<GlobalConfigSlice, 'getSettings'>
+    paths: Pick<AppPaths, 'toolsPath'>
     /** The boot-owned abort registry a release download registers in (66.4-13). */
     aborts: Pick<AbortRegistry, 'create' | 'delete'>
   },
@@ -295,16 +299,18 @@ async function installWineVersion(
   let updatedInfo: WineVersionInfo
   const variant = release.hasUpdate ? 'update' : 'installation'
 
-  if (!existsSync(`${toolsPath}/wine`)) {
-    mkdirSync(`${toolsPath}/wine`, { recursive: true })
+  if (!existsSync(`${deps.paths.toolsPath}/wine`)) {
+    mkdirSync(`${deps.paths.toolsPath}/wine`, { recursive: true })
   }
 
-  if (isMac && !existsSync(`${toolsPath}/game-porting-toolkit`)) {
-    mkdirSync(`${toolsPath}/game-porting-toolkit`, { recursive: true })
+  if (isMac && !existsSync(`${deps.paths.toolsPath}/game-porting-toolkit`)) {
+    mkdirSync(`${deps.paths.toolsPath}/game-porting-toolkit`, {
+      recursive: true
+    })
   }
 
-  if (!existsSync(`${toolsPath}/proton`)) {
-    mkdirSync(`${toolsPath}/proton`, { recursive: true })
+  if (!existsSync(`${deps.paths.toolsPath}/proton`)) {
+    mkdirSync(`${deps.paths.toolsPath}/proton`, { recursive: true })
   }
 
   logInfo(

@@ -145,7 +145,7 @@ export function registerRunnerMiscFlows(
   deps.ipc.handle(
     'isRuntimeInstalled',
     async (_event: unknown, ...args: unknown[]) =>
-      isInstalled(args[0] as RuntimeName)
+      isInstalled(deps, args[0] as RuntimeName)
   )
 
   // ── "Other" channels (tools/ipc_handler.ts:25, main.ts:840,1251) ──────────

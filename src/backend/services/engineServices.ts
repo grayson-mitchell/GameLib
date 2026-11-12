@@ -34,7 +34,7 @@ export type EngineServicesSource = Pick<
     engineRuntime: EngineServices['engineRuntime']
     /** The path roots the engine reads (66.4-05). */
     paths: EngineServices['paths'] &
-      Pick<AppPaths, 'defaultUmuPath' | 'publicDir'>
+      Pick<AppPaths, 'defaultUmuPath' | 'publicDir' | 'runtimePath'>
     /** The probes the engine spawns (66.2-03): only `run`, so the launcher's slice qualifies. */
     runner: Pick<ManagerDeps['runner'], 'run'>
     /** The members createTools reads; a launcher still being built can supply just these. */

@@ -449,6 +449,8 @@ function freshRegistry(): void {
 const boot = () =>
   bootFresh({
     reuseRegistry: true,
+    // The anticheat data path is ctx.paths.appFolder (66.4-14): the shimmed app folder.
+    context: { paths: { appFolder } },
     services: {
       storeRoot: testRoot,
       onlineMonitor: {

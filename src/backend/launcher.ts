@@ -124,7 +124,8 @@ export interface LauncherDeps extends DialogBoxDeps {
   engineState: EngineStateService
   /** The boot-owned engine runtime and the path roots the engine reads (66.4-05). */
   engineRuntime: EngineServicesSource['engineRuntime']
-  paths: EngineServicesSource['paths']
+  paths: EngineServicesSource['paths'] &
+    Pick<AppPaths, 'runtimePath' | 'appFolder'>
   /** The boot-owned abort registry the tool downloads and known-fix overlay downloads register in (66.4-13). */
   aborts: Pick<AbortRegistry, 'create' | 'delete'>
   /** The boot-owned tools state the tool wrappers share (66.4-14). */
@@ -750,7 +751,7 @@ async function prepareLaunch(
     '\n\n'
   ])
 
-  const acInfoPromise = gameAnticheatInfo(gameInfo.namespace)
+  const acInfoPromise = gameAnticheatInfo(deps, gameInfo.namespace)
   logWriter.logInfo(
     acInfoPromise.then((info) =>
       info?.status ? `Anticheat Status: ${info.status}` : ''
@@ -831,7 +832,7 @@ async function prepareLaunch(
   if (
     (await isUmuSupported(deps, gameSettings, false)) &&
     deps.onlineMonitor.isOnline() &&
-    !(await isInstalled('umu')) &&
+    !(await isInstalled(deps, 'umu')) &&
     (await getUmuPath(deps)) === deps.paths.defaultUmuPath
   ) {
     await download(deps, 'umu')
@@ -1098,7 +1099,7 @@ async function prepareWineLaunch(
   if (
     gameSettings.eacRuntime &&
     deps.onlineMonitor.isOnline() &&
-    !(await isInstalled('eac_runtime'))
+    !(await isInstalled(deps, 'eac_runtime'))
   ) {
     await download(deps, 'eac_runtime')
   }
@@ -1106,7 +1107,7 @@ async function prepareWineLaunch(
   if (
     gameSettings.battlEyeRuntime &&
     deps.onlineMonitor.isOnline() &&
-    !(await isInstalled('battleye_runtime'))
+    !(await isInstalled(deps, 'battleye_runtime'))
   ) {
     await download(deps, 'battleye_runtime')
   }

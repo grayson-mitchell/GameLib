@@ -2467,10 +2467,18 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'secret-stores',
       run: (ctx, _io, state) => {
-        const { stores, host, onlineMonitor, config, tokenStore, aborts } =
-          requireServices(state)
+        const {
+          stores,
+          host,
+          onlineMonitor,
+          config,
+          tokenStore,
+          aborts,
+          paths
+        } = requireServices(state)
         registerDxmtListeners({
           stores,
+          paths,
           runner: ctx.runner,
           aborts,
           onlineMonitor,
@@ -2598,7 +2606,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
               LogPrefix.Backend
             )
             downloadAntiCheatData(
-              { onlineMonitor: requireServices(state).onlineMonitor },
+              {
+                onlineMonitor: requireServices(state).onlineMonitor,
+                paths: requireServices(state).paths
+              },
               isMac
                 ? releasesInfo.anticheatFiles.shaMac
                 : releasesInfo.anticheatFiles.shaLinux

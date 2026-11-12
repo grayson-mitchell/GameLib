@@ -291,6 +291,15 @@ function bootWirings(beforeBoot?: (h: WiringHandles) => void): WiringHandles & {
   const lines = collectLines(output)
   const sidecar = bootFresh({
     output,
+    // The boot's anticheat data path is ctx.paths.appFolder (66.4-14); point it at this registry's
+    // shimmed app folder, which `before` has loaded by the time the context is built.
+    context: {
+      paths: {
+        get appFolder() {
+          return handles.appFolder
+        }
+      }
+    },
     before: () => {
       handles = loadHandles()
       beforeBoot?.(handles)

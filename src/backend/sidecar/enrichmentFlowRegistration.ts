@@ -244,7 +244,7 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
   deps.ipc.handle(
     'getAnticheatInfo',
     async (_event: unknown, ...args: unknown[]) =>
-      gameAnticheatInfo(args[0] as string)
+      gameAnticheatInfo(deps, args[0] as string)
   )
 
   deps.ipc.handle(

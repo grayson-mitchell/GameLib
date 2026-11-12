@@ -15,17 +15,21 @@ import {
   rmSync,
   writeFileSync
 } from 'graceful-fs'
-import { toolsPath } from 'backend/constants/paths'
 import { checkWinemacMetalViewExports } from './machoExports'
 import type { WinemacMetalCheck } from './machoExports'
 import type { Stores } from 'backend/services/types'
 import type { ProcessRunner } from 'backend/process/types'
+import type { AppPaths } from 'backend/process/context'
+
+/** The path root the DXMT files live under (66.4-14). */
+type DxmtPaths = Pick<AppPaths, 'toolsPath'>
 
 /** The store slice the DXMT listeners read (66.1, R1). */
 interface DxmtStoresDeps extends DialogBoxDeps {
   runner: Pick<ProcessRunner, 'run'>
   aborts: Pick<AbortRegistry, 'create'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
+  paths: DxmtPaths
   stores: {
     wineManager: Pick<Stores['wineManager'], 'wineDownloaderInfoStore'>
   }
@@ -60,6 +64,7 @@ const DXMT = {
       runner: Pick<ProcessRunner, 'run'>
       aborts: Pick<AbortRegistry, 'create'>
       onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
+      paths: DxmtPaths
     } & DialogBoxDeps
   ) => {
     if (!deps.onlineMonitor.isOnline()) {
@@ -79,6 +84,7 @@ const DXMT = {
     return installOrUpdateTool(deps, tool)
   },
   copyWineAndConfigure: async (
+    deps: { paths: DxmtPaths },
     versionInfo: WineVersionInfo,
     installDir: string
   ) => {
@@ -87,7 +93,7 @@ const DXMT = {
     try {
       cpSync(wineFilePath, wineCopyFilePath, { recursive: true })
 
-      DXMT.copyLatestDXMTFiles(wineCopyFilePath)
+      DXMT.copyLatestDXMTFiles(deps, wineCopyFilePath)
 
       DXMT.addDXMTSuffixInPlist(wineCopyFilePath)
     } catch (error) {
@@ -100,8 +106,8 @@ const DXMT = {
       }
     }
   },
-  getCurrentDXMTVersion: () => {
-    const versionFilePath = join(toolsPath, 'dxmt', 'latest_dxmt')
+  getCurrentDXMTVersion: (deps: { paths: DxmtPaths }) => {
+    const versionFilePath = join(deps.paths.toolsPath, 'dxmt', 'latest_dxmt')
     if (existsSync(versionFilePath)) {
       // split() always yields at least one element
       return readFileSync(versionFilePath).toString().split('\n')[0] ?? ''
@@ -124,10 +130,10 @@ const DXMT = {
     }
   },
 
-  copyLatestDXMTFiles: (pathToWine: string) => {
-    const dxmtVersion = DXMT.getCurrentDXMTVersion()
+  copyLatestDXMTFiles: (deps: { paths: DxmtPaths }, pathToWine: string) => {
+    const dxmtVersion = DXMT.getCurrentDXMTVersion(deps)
 
-    const pathToDXMT = join(toolsPath, 'dxmt', dxmtVersion)
+    const pathToDXMT = join(deps.paths.toolsPath, 'dxmt', dxmtVersion)
 
     const wineInternalPath = join(
       pathToWine,
@@ -191,7 +197,7 @@ const onWineVersionInstalled = async (
       return
     }
     await DXMT.getLatest(deps)
-    await DXMT.copyWineAndConfigure(versionInfo, installDir)
+    await DXMT.copyWineAndConfigure(deps, versionInfo, installDir)
   }
 }
 
@@ -209,7 +215,7 @@ const onReleasesInfoReady = async (
   if (!isMac) return
 
   // TODO: should we store just the version instead of the file name?
-  const currentDXMTVersion = DXMT.getCurrentDXMTVersion()
+  const currentDXMTVersion = DXMT.getCurrentDXMTVersion(deps)
     .replace(/.*dxmt-/, '')
     .replace(/-builtin.*/, '')
 
@@ -276,7 +282,7 @@ const onReleasesInfoReady = async (
 
   await DXMT.getLatest(deps)
 
-  copiesToUpdate.forEach((path) => DXMT.copyLatestDXMTFiles(path))
+  copiesToUpdate.forEach((path) => DXMT.copyLatestDXMTFiles(deps, path))
 }
 
 /**
