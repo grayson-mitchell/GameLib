@@ -105,7 +105,9 @@ const handlerFor = (channel: string) => {
 }
 
 /** A fresh monitor with its own registry, clock and push log. Nothing is shared between calls. */
-const loadMonitor = (): OnlineMonitor => {
+const loadMonitor = (
+  extra: Partial<Parameters<typeof createOnlineMonitor>[0]> = {}
+): OnlineMonitor => {
   ipc = createIpcRegistry()
   clock = createFakeClock()
   pushed = []
@@ -114,7 +116,8 @@ const loadMonitor = (): OnlineMonitor => {
     ipc,
     push: (channel, payload) => pushed.push([channel, payload as Push]),
     head: (url, opts) => mockHead(url, opts) as unknown,
-    newEpoch: () => `epoch-${++epochCounter}`
+    newEpoch: () => `epoch-${++epochCounter}`,
+    ...extra
   })
 }
 
@@ -518,5 +521,97 @@ describe('G25: recheckConnectivity', () => {
     expect(lines).toContain('Connectivity: offline (from renderer)')
     expect(lines).toContain('Connectivity: online (from renderer)')
     expect(lines).toContain('Connectivity: check-online')
+  })
+})
+
+describe('backend-owned offline watch', () => {
+  const WATCH_MS = 15_000
+
+  const startOnline = async (
+    freshOfflineCheck: () => Promise<{ offline: boolean }>
+  ) => {
+    const monitor = loadMonitor({ freshOfflineCheck })
+    monitor.start()
+    newestRound().forEach((ping) => ping.answer(200))
+    await flush()
+    expect(monitor.isOnline()).toBe(true)
+    return monitor
+  }
+
+  it('goes online -> offline (retrying) when the periodic check finds offline, then recovers', async () => {
+    let offline = true
+    const check = jest.fn(() => Promise.resolve({ offline }))
+    const monitor = await startOnline(check)
+
+    await advance(WATCH_MS)
+    expect(check).toHaveBeenCalledTimes(1)
+    expect(monitor.getConnectivityStatus()).toBe('check-online')
+    expect(lastPush()).toMatchObject({ status: 'check-online' })
+
+    // the network is still down: the probe round fails and the countdown runs
+    newestRound().forEach((ping) => ping.fail('ENOTFOUND'))
+    await flush()
+    expect(lastPush()).toMatchObject({ status: 'check-online', retryIn: 5 })
+
+    // back online: the retried round answers and the banner state clears
+    offline = false
+    await advance(5000)
+    newestRound().forEach((ping) => ping.answer(200))
+    await flush()
+    expect(monitor.isOnline()).toBe(true)
+    expect(lastPush()).toMatchObject({ status: 'online', retryIn: 0 })
+  })
+
+  it('stays online while the check says online', async () => {
+    const check = jest.fn(() => Promise.resolve({ offline: false }))
+    const monitor = await startOnline(check)
+    await advance(WATCH_MS * 3)
+    expect(check).toHaveBeenCalledTimes(3)
+    expect(monitor.isOnline()).toBe(true)
+  })
+
+  it('fails open when the check throws', async () => {
+    const check = jest.fn(() => Promise.reject(new Error('boom')))
+    const monitor = await startOnline(check)
+    await advance(WATCH_MS)
+    expect(monitor.isOnline()).toBe(true)
+  })
+
+  it('arms an unref-by-default timer: no keepAlive on the clock', async () => {
+    await startOnline(() => Promise.resolve({ offline: false }))
+    expect(clock.keepAliveReasons()).toEqual([])
+    clock.assertNoKeepAlive()
+  })
+
+  it('never overlaps checks: a tick during a slow check is skipped', async () => {
+    let finish: (value: { offline: boolean }) => void = () => undefined
+    const check = jest.fn(
+      () =>
+        new Promise<{ offline: boolean }>((resolve) => {
+          finish = resolve
+        })
+    )
+    const monitor = await startOnline(check)
+    await advance(WATCH_MS * 3)
+    expect(check).toHaveBeenCalledTimes(1)
+    finish({ offline: false })
+    await flush()
+    await advance(WATCH_MS)
+    expect(check).toHaveBeenCalledTimes(2)
+    expect(monitor.isOnline()).toBe(true)
+  })
+
+  it('does not check while not online', async () => {
+    const check = jest.fn(() => Promise.resolve({ offline: false }))
+    const monitor = loadMonitor({ freshOfflineCheck: check })
+    monitor.start() // 'check-online', probe never answered
+    await advance(WATCH_MS * 2)
+    expect(check).not.toHaveBeenCalled()
+  })
+
+  it('arms nothing without a freshOfflineCheck', async () => {
+    const monitor = loadMonitor()
+    monitor.start()
+    expect(clock.pendingCount()).toBe(0)
   })
 })

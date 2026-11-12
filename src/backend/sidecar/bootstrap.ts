@@ -112,6 +112,7 @@ import { createDevSecretVault, type DevSecretVault } from './devSecretVault'
 import axios from 'axios'
 import { randomUUID } from 'node:crypto'
 import { createOnlineMonitor } from '../online_monitor'
+import { checkConnectivityNow } from '../connectivityNow'
 import { createEngineState } from '../engine/engineState'
 import { createEngineRuntime } from '../engine/engineRuntime'
 import { createSteamLaunchRuntime } from '../storeManagers/steam/steamLaunchRuntime'
@@ -1933,9 +1934,12 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       // can carry the slice.
       run: (ctx, _io, state) => {
         const host = requireHost(state)
-        const monitor =
+        const monitor: OnlineMonitor =
           prebuilt.onlineMonitor ??
           createOnlineMonitor({
+            // The same fresh check Play uses; the monitor re-runs it while 'online'.
+            freshOfflineCheck: () =>
+              checkConnectivityNow('periodic watch', monitor),
             clock: ctx.clock,
             ipc: host.ipc,
             push: (channel, payload) =>

@@ -6,6 +6,12 @@ import EventEmitter from 'node:events'
 
 const defaultTimeBetweenRetries = 5
 
+// How often the monitor re-checks, on its own, that an 'online' status is still true. The
+// webview's DOM `offline` event is not a reliable source under WKWebView (WebKit counts the
+// always-up utun interfaces as online), so offline detection is backend-owned. The check is
+// the OS-interface + DNS one Play uses (bounded to a 1.5 s DNS cap), never an HTTP round.
+const OFFLINE_WATCH_INTERVAL_MS = 15_000
+
 const PROBE_URLS = [
   'https://github.com',
   'https://store.epicgames.com',
@@ -36,6 +42,14 @@ export interface OnlineMonitorDeps {
     }
   ) => unknown
   newEpoch: () => string
+  /**
+   * A fresh "is this machine offline right now?" check (the OS-interface + DNS one behind
+   * `checkConnectivityNow`). When given, `start()` arms an unref'd interval that runs it while
+   * the status is 'online'. Optional so a monitor built without one only reacts to the renderer.
+   */
+  freshOfflineCheck?: () => Promise<{ offline: boolean }>
+  /** Period of the offline watch. Default 15 s. */
+  offlineWatchIntervalMs?: number
 }
 
 export interface OnlineMonitor {
@@ -100,6 +114,10 @@ export function createOnlineMonitor(deps: OnlineMonitorDeps): OnlineMonitor {
   // round, or leaving 'check-online', cancels the rest, and a cancelled round's outcome is
   // ignored (see `pingSites`).
   const inFlight = new Set<AbortController>()
+
+  // True while a periodic fresh check is running: ticks that land meanwhile are skipped, so
+  // at most one is ever in flight.
+  let watchInFlight = false
 
   const publish = () => {
     seq += 1
@@ -256,6 +274,32 @@ export function createOnlineMonitor(deps: OnlineMonitorDeps): OnlineMonitor {
 
   const isOnline = () => status === 'online'
 
+  const watchTick = () => {
+    const check = deps.freshOfflineCheck
+    if (!check || status !== 'online' || watchInFlight) return
+    watchInFlight = true
+    Promise.resolve()
+      .then(check)
+      .then(
+        (result) => {
+          // The status may have moved while the check ran: only an 'online' one is ours to flip.
+          if (result.offline && status === 'online') {
+            setStatus('check-online', 'periodic check found offline')
+          }
+        },
+        (error: unknown) => {
+          // Fail open: a broken check must never read as offline.
+          logError(
+            ['Connectivity: periodic check failed:', error],
+            LogPrefix.Connection
+          )
+        }
+      )
+      .finally(() => {
+        watchInFlight = false
+      })
+  }
+
   return {
     start() {
       // listen to events from the frontend
@@ -275,6 +319,16 @@ export function createOnlineMonitor(deps: OnlineMonitorDeps): OnlineMonitor {
       deps.ipc.on('set-connectivity-online', () => {
         setStatus('online', 'from renderer')
       })
+
+      // Backend-owned offline detection. Clock timers are unref'd by default (exit is by
+      // event-loop drain at stdin EOF), and the first tick is one interval after boot, so
+      // nothing extra is in flight at boot.
+      if (deps.freshOfflineCheck && process.env.CI !== 'e2e') {
+        deps.clock.setInterval(
+          watchTick,
+          deps.offlineWatchIntervalMs ?? OFFLINE_WATCH_INTERVAL_MS
+        )
+      }
     },
 
     onConnectivityChange(callback) {
