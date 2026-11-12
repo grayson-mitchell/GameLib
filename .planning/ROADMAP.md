@@ -15,7 +15,8 @@ GameLib forks Heroic Games Launcher and adds Steam as a first-class platform alo
 - ✅ **v0.6 Aggregated Store Search** — Phase 20 (shipped 2026-07-15) — `milestones/v0.6-phases/`
 - ✅ **v0.7 Steam Native Install** — Phases 21, 23–26 (closed 2026-10-16 with live-only UAT PARKED, not verified — see MILESTONES.md; Phase 23's gaps G-23-01/G-23-02 were closed 2026-08-19) — `milestones/v0.7-phases/`
 - ✅ **v0.8 Tauri Shell** — Phases 27–50 plus parked Phase 22 (shipped 2026-10-16, **override closeout** — see MILESTONES.md) — archive: `milestones/v0.8-ROADMAP.md` (full phase details, 6008 lines), `milestones/v0.8-phases/`
-- ✅ **v0.9 Steam Bridge & Engine** — Phases 51–60 (shipped 2026-11-06; audit `tech_debt`, no blockers) — archive: `milestones/v0.9-ROADMAP.md`, `milestones/v0.9-MILESTONE-AUDIT.md`, `milestones/v0.9-phases/`. Phases 61–64 are unassigned.
+- ✅ **v0.9 Steam Bridge & Engine** — Phases 51–60 (shipped 2026-11-06; audit `tech_debt`, no blockers) — archive: `milestones/v0.9-ROADMAP.md`, `milestones/v0.9-MILESTONE-AUDIT.md`, `milestones/v0.9-phases/`. Phases 61–75 were run unassigned and adopted by v0.10.
+- 🚧 **v0.10 Foundations** — Phases 61–78 plus Phase 47 (started 2026-11-12; adopts Phases 61–75, 11 already complete) — requirements: `REQUIREMENTS.md`
 
 v0.2–v0.7 were never archived through `/gsd-complete-milestone`; their phase directories (5–26) remain under `.planning/phases/` and their full roadmap entries are preserved verbatim in `milestones/v0.8-ROADMAP.md` lines 238–1051.
 
@@ -120,7 +121,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 44: In-app Winetricks browse UI replacing the search-only panel** — 7/8 plans; ⛔ SUPERSEDED BY PHASE 45 (2026-09-18)
 - [x] **Phase 45: Native in-app Winetricks UI redesigned from scratch** — 12/12 plans; executed; no VERIFICATION.md; winetricks live gate FAILED 2026-10-10 (dialog overflow, verb-1 Queued race) — re-run owed
 - [x] **Phase 46: Windows single-instance guard and gamelib:// deep-link registration** — 7/7 plans; verified
-- [ ] **Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal** — 0/0 plans; never planned (0 plans) — carried forward; ITAD gates closed (app registered 2026-11-12); unblocked for /gsd-plan-phase 47
+- → **Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal** — moved to v0.10 Foundations (2026-11-12)
 - [x] **Phase 48: Focus row — move the library top section into the panel and widen it** — 18/18 plans; completed 2026-10-09; verification stale at close
 - [x] **Phase 49: Cross-store signed-out / offline mode** — 12/12 plans; completed 2026-10-09; verification stale at close
 - [x] **Phase 50: Epic store in-app on macOS — a Rust-managed raw WKWebView subview for /store/epic** — 6/6 plans; verified retrospectively 10/16 truths; gaps_found at close (G-50-16 timeout banner owed a macOS re-run)
@@ -145,7 +146,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 </details>
 
-**Unassigned (next milestone not yet defined)**
+**🚧 v0.10 Foundations (in progress, started 2026-11-12)**
 
 - [x] **Phase 61: Unified macOS engine for all stores** — 27/27 plans (20 + 7 gap closure); re-verified 22/22, operator approved 2026-11-07 (completed 2026-11-07)
 - [x] **Phase 62: Module boundaries and decomposition** — 23 plans (21 + 2 gap closure); complete (completed 2026-11-07)
@@ -159,13 +160,17 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 66.4: Backend module state long tail, the census-to-test flip, then the live smokes** — 23 plans; planned
 - [x] **Phase 67: Schema validation at the sidecar IPC boundary** — 20 plans in 14 waves; planned 2026-11-07 (completed 2026-11-07)
 - [x] **Phase 68: Versioned persisted stores and migrations** — 11 plans; planned (completed 2026-11-08)
-- [ ] **Phase 69: Consolidate frontend state onto GlobalStateV2** — 0 plans; not started
+- [ ] **Phase 69: Consolidate frontend state onto GlobalStateV2** — 26/26 plans executed; verification 8/8, 3 human UAT items pending
 - [ ] **Phase 70: Split GameInfo into shared and per-store shapes** — 0 plans; not started
 - [x] **Phase 71: Rust shell module decomposition** — 20 plans; complete (completed 2026-11-09, gaps closed by 71-19/71-20)
 - [x] **Phase 72: Renderer trust boundary and process hardening** — 0 plans; not started (completed 2026-11-08)
 - [x] **Phase 73: Steam depot download pipeline in Rust** — 21 plans; complete (completed 2026-11-10)
 - [ ] **Phase 74: Steam game updates** — 0 plans; not started
 - [ ] **Phase 75: Steam local file formats in Rust** — 0 plans; not started
+- [ ] **Phase 76: Engine-correct bottle for DRM-mode launches (v0.9 audit S9)** — 0 plans; not started
+- [ ] **Phase 77: Runtime hardening from the v0.9 review debt** — 0 plans; not started
+- [ ] **Phase 78: Verification records and test health after v0.9** — 0 plans; not started
+- [ ] **Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal** — 0 plans; ITAD gates closed 2026-11-12; ready to plan (moved from v0.8)
 
 ## Phase Details
 
@@ -248,9 +253,9 @@ identity so the macOS Keychain ACL never matches and users get re-prompted on ev
 is the actual lever on prompt *quantity*, it is independent of this phase, and it should not wait
 on it.
 
-## Unassigned Phase Details
+## v0.10 Phase Details
 
-Phases 61–64 are not assigned to a milestone yet. Phase details for 51–60 (v0.9) live in
+v0.10 Foundations (started 2026-11-12) adopts Phases 61–75 and Phase 47, and adds Phases 76–78 for the v0.9 audit debt. Milestone-level requirements and traceability: `REQUIREMENTS.md`. Phase details for 51–60 (v0.9) live in
 `milestones/v0.9-ROADMAP.md` (`## v0.9 Phase Details`); their directories are under
 `milestones/v0.9-phases/`.
 
@@ -494,7 +499,7 @@ Plans:
 ### Phase 64: UI to edit themes
 
 **Goal:** Users can make their own theme by copying a built-in one and editing its colours, without the built-in themes ever changing. Three parts: (1) **Theme gallery.** A thumbnail of every theme, each a small launcher preview drawn from that theme's real token values (body, sidebar, active nav row, accent and search outline, library tiles, primary / secondary / success / danger buttons), like the comparison page made on 2026-11-05 (https://claude.ai/artifact/Ji88yFXU7ymdVoTn1kV4kY). (2) **Duplicate, then edit.** Picking a theme and choosing Duplicate creates a new custom theme seeded with the source's resolved token values (`var()` chains followed through `styles/_colors.scss`). The 10 built-in themes in `src/frontend/themes.scss` are read-only. The copy opens a token editor that lists each token with a colour swatch and value, and the copy's thumbnail updates as values change. (3) **Use it.** Saved custom themes appear in the theme selector beside the built-ins and apply app-wide. Custom themes are stored as token data, not CSS files: quick 261031-bst removed the old custom-CSS-file themes and their IPC channels, and `window.setTheme` (`src/frontend/index.tsx`) now maps any non-built-in key to the default, so that fallback needs a custom-theme branch again. Open questions for discuss-phase: whether a copy of Nord Light carries its 23 nested component overrides (they are selectors, not tokens; without them a light copy breaks MUI dialogs, genre tags and context menus); which tokens the editor shows (themes declare 25–56 each); and whether the contrast floors `themeTokens.test.ts` enforces (3:1 border against body and modal backgrounds, accent against the sidebar) become live warnings in the editor. Came from the theme comparison on 2026-11-05.
-**Requirements**: TBD
+**Requirements**: THEME-01, THEME-02 (milestone-level; phase IDs minted by `/gsd-plan-phase`)
 **Depends on:** None
 **Plans:** 0 plans
 
@@ -800,7 +805,7 @@ Plans:
 ### Phase 66.4: Backend module state long tail, the census-to-test flip, then the live smokes (INSERTED)
 
 **Goal:** Finish D-15 step 3 after Phase 66.3. Convert the long tail of about 85 files (about 127 sites) with 1–2 module-state sites each, completely and once each (D-15). This includes the 66.2 deferrals: the `utils.ts` `default*Path` lets; `installingComponent`/`catalogCache`/`scriptMetadataCache` in `tools/index.ts`; `engineNoticeStore`; the two `pci_ids` stores; and retiring the win32 sync fallbacks in `knownFolders`/`pathShim`. Then the census becomes a zero-tolerance test and the `moduleState` ceiling is deleted (D-13, D-16). Next, revive the Steam RunningAppID poller under Tauri as a boot-owned, unref'd, stdin-EOF-stopped step (D-66.3-07). The phase ends with two non-autonomous plans: the D-17 live macOS smoke with a scripted orphan/exit checker (D-66.3-05), and the Windows operator UAT, which covers the 66.2 spawn paths and the poller's Playing state (D-66.3-06, D-66.3-08). Decisions live in `.planning/phases/66.3-backend-module-state-to-zero-and-live-macos-smoke/66.3-CONTEXT.md`.
-**Requirements**: TBD
+**Requirements**: ARCH-01 (milestone-level; phase IDs minted by `/gsd-plan-phase`)
 **Depends on:** Phase 66.3
 **Plans:** 22/23 plans executed
 
@@ -949,7 +954,7 @@ Plans:
 ### Phase 69: Consolidate frontend state onto GlobalStateV2
 
 **Goal:** The frontend has one state system. The 2,259-line `GlobalState.tsx` class component (`extends PureComponent`, 78 `setState` calls), served through `ContextProvider`, is retired in favour of the zustand store in `src/frontend/state/GlobalStateV2.ts` (164 lines today), so a change in one domain no longer re-renders every context consumer. Measured 2026-11-06, excluding tests: 130 frontend files use `ContextProvider` and 20 use `GlobalStateV2`. Three parts: (1) **Slices.** Move state into V2 one domain at a time (library and game list, downloads and install queue, Steam / Epic / GOG / Amazon / Humble auth, settings and theme, UI and dialog state), each with selector hooks (`useShallow`) so components subscribe to what they read. (2) **Ratchet.** Track the remaining `ContextProvider` consumers with a shrink-only count like Phase 62's, ending at zero, then delete `GlobalState.tsx` and the context. (3) **Live checks.** State moves surface as stale-UI and re-render bugs that type checks and unit tests miss, so each wave ends with a smoke check in `pnpm tauri:dev` (Library, Game page, Downloads, sign-in and sign-out per store, ConsoleMode). Measure Library re-render cost on a large library before and after. No behaviour change: anything else found becomes a todo. Open questions for discuss-phase: whether V2 as it stands is the target or needs restructuring first (it already imports `frontend/helpers/electronStores`); where persisted frontend state lives relative to Phase 68's versioned stores; and the order relative to Phase 64, which adds custom-theme state. Depends on Phase 62 because plans 62-17 to 62-19 convert runner checks in the same Library, Game, ConsoleMode and DownloadManager files. Came from the post-Phase-62 architecture review on 2026-11-06.
-**Requirements**: TBD
+**Requirements**: ARCH-02 (milestone-level; phase IDs minted by `/gsd-plan-phase`)
 **Depends on:** Phase 62
 **Plans:** 25/26 plans executed
 
@@ -1032,7 +1037,7 @@ Plans:
 ### Phase 70: Split GameInfo into shared and per-store shapes
 
 **Goal:** `GameInfo` carries only what every store shares, and store-specific data lives in per-store shapes, so shared code stops depending on Steam, GOG or Epic fields. Measured 2026-11-06: the `GameInfo` interface in `src/common/types.ts` (1,336 lines) declares 41 top-level fields; 119 non-test files under `src/` reference it, 71 of them in the frontend. Store-specific fields sit beside shared ones, e.g. `gog_save_location`, `steamPlatformsCaptured`, the Steam Windows-depot and delisted signals and the Steam-only Metacritic score. Three parts: (1) **The split.** A shared core plus a per-store extension keyed by `runner`, as a discriminated union or a typed `storeData` field (discuss-phase decides), with a narrowing helper so a caller that needs Steam fields says so once. Phase 62's capability flags stay on the shared core. (2) **Migration.** Convert readers by area with a shrink-only count of direct store-field reads outside `storeManagers/` and store-specific UI, like Phase 62's ratchets. (3) **`common/types.ts`.** Move other store-specific types next to their store and leave `common/types.ts` with genuinely shared types. Persisted library caches that hold `GameInfo` shapes change shape, so the move goes through Phase 68's versioned migrations if it has landed, or a cache discard on version change otherwise. Open questions for discuss-phase: union versus `storeData`; whether the IPC payloads that carry `GameInfo` change shape at the same time as Phase 67's schemas; and the order relative to Phase 69, which rewrites many of the same frontend readers. Came from the post-Phase-62 architecture review on 2026-11-06.
-**Requirements**: TBD
+**Requirements**: ARCH-03 (milestone-level; phase IDs minted by `/gsd-plan-phase`)
 **Depends on:** Phase 62
 **Plans:** 0 plans
 
@@ -1204,7 +1209,7 @@ Plans:
 ### Phase 74: Steam game updates
 
 **Goal:** GameLib can tell when an installed Steam game has an update and can apply it. Today `SteamGame.update()` (`steam/games.ts` ~445) is a stub that returns an error, and update is one of the four actions GameLib can't start (found while building the Steam Lib Actions table, 2026-11-08). There are two cases. (1) **Steam-registered games** (Mac-native installs, whoever downloaded them): Steam updates these itself, but GameLib can't show "Update available" or start an update. (2) **Bridge games: nothing updates them, which is why this is `major`.** The bridge install writes into the bridge bottle's own `steamapps` (`gameInstallBridge.ts` ~582, `getBridgeBottleSteamappsRoot()`), which Mac Steam never reads, and no Windows Steam runs in that bottle. A bridge game stays on its install build until it is reinstalled, and multiplayer games break once the server moves on. Scope: **detection for both cases**, comparing the installed ACF `buildid` and per-depot manifest GIDs against the public branch in PICS appinfo (the anonymous client already fetches it), shown on the card and game page, checked on library refresh and before launch, and never as an unbounded boot task (sidecar exit contract). **Bridge games: GameLib updates them itself** with a delta download in the Rust depot pipeline Phase 73 builds. Diff the old manifest against the new one per depot, fetch only changed chunks, delete files that are gone, and keep user files the old manifest didn't own. Then rewrite the ACF (`buildid`, `InstalledDepots` GIDs) and redo the GID-keyed follow-ups: steam_api shim rescan and re-placement, the per-GID redist ledger (`bridge/sharedRedistInstall.ts`), and the DRM/known-fix verdicts. Refuse while the game is running, and resume through the download queue the way an install does. **Steam-registered games: ask Steam.** Spike 069 (2026-11-08) answered this: `InstallApp(appId)` on an installed app with a deferred pending update starts it at once and overrides Steam's own delay. On an up-to-date app it is a sub-second no-op. So the Update button is the same helper call 065 uses to install, with the same runtime slot check and fallback. Detection needs no PICS for these games: use `BIsAppUpToDate` / install state 6 over IPC, or the ACF's `StateFlags` 6, `TargetBuildID` ≠ `buildid` and `ScheduledAutoUpdate`. `StartValidatingApp` is there too if a Verify action is wanted. Untested: the game running and signed-out Steam. Because Steam does these updates itself, GameLib's own delta updater is for bridge games only. Spike 070 (2026-11-08) confirmed case 2 live: of 28 existing bridge installs, the 6 whose developers shipped a public build after install (Manor Lords, Core Keeper, Abiotic Factor, Planet Crafter, Hell Clock, Mining Mechs) are all still on their install build. Their ACF, manifest GID and files are unchanged, apart from GameLib's shim files and runtime caches. Those six are ready live-gate fixtures. **Depends on Phase 73** so the delta download is written once, in Rust, not in the TypeScript `steam/depot/` that 73 deletes (operator's choice, 2026-11-08). Live gate: a bridge game with a pending update shows "Update available", updates, keeps saves and user files, and still launches through the bridge; a Mac-native game shows the state and the Update button gets Steam to update it. Came from todo `2026-11-07-implement-steam-game-updates.md` (now in `todos/completed/`).
-**Requirements**: TBD
+**Requirements**: STEAM-01, STEAM-02 (milestone-level; phase IDs minted by `/gsd-plan-phase`)
 **Depends on:** Phase 73
 **Plans:** 0 plans
 
@@ -1215,10 +1220,81 @@ Plans:
 ### Phase 75: Steam local file formats in Rust
 
 **Goal:** Steam's local files are read in Rust, so the ACF format has one implementation. Phase 73 moved the ACF *writer* to Rust while the TypeScript *reader* stays, which is two codecs for one format that can drift. Scope: (1) text VDF reading of `libraryfolders.vdf` and `appmanifest_*.acf`, replacing `@node-steam/vdf`; (2) binary `shortcuts.vdf` read and write, replacing `steam-shortcut-editor`; (3) the local library scan in `steam/library/` (~4.6k non-test lines across the directory, measured 2026-11-09). Reuse Phase 63's pattern unchanged: a Tauri-free crate in the `src-tauri/` Cargo workspace (or the Phase 73 crate's ACF module, extended), `rustInvoke` from the sidecar with the TypeScript signatures unchanged, a CLI binary for headless tools, a parity harness over fixtures (byte-identical round-trip for `shortcuts.vdf`), a dev-only fallback flag, then delete the TypeScript readers and both npm packages. This is the third slice of the incremental Node-to-Rust migration (63 scanners, 73 depot pipeline). Open questions for discuss-phase: whether the owned-apps fetch and metadata/artwork enrichment in `steam/library/` stay in TypeScript (they need `steam-user`/axios) so only the local scan moves; whether the shortcuts writer must preserve unknown fields byte-for-byte; and Steam path discovery on Windows and Linux. The CM-client replacement for `steam-user`/`steam-session`, which gates retiring the sidecar, is a separate spike (2026-11-09). Came from the post-73 migration planning discussion on 2026-11-09.
-**Requirements**: TBD
+**Requirements**: STEAM-03 (milestone-level; phase IDs minted by `/gsd-plan-phase`)
 **Depends on:** Phase 73
 **Plans:** 0 plans
 
 Plans:
 
 - [ ] TBD (run /gsd-plan-phase 75 to break down)
+
+### Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal
+
+**Goal:** Replace the USD-only CheapShark adapter behind `/store-search` with a localised IsThereAnyDeal provider, so a non-US user sees prices in their own currency on the price-checker the way they already do on the Deals tab. This is **Stage 1** of the store-price direction: one integration buying breadth (34 shops, including the key resellers where the discounts actually are) with no GameLib-owned feed infrastructure. Retires the D-13 debt — `SEARCH_CURRENCY = 'USD'` (`src/backend/storeSearch/cheapshark.ts:29`) and `formatUsdPrice()` (`src/frontend/screens/StoreSearch/helpers.ts`, which hardcodes `$` and would render a GBP price as `$14.99 GBP`).
+
+**Requirements**: PRICE-01, PRICE-02, PRICE-03 (phase-level IDs minted during `/gsd-plan-phase 47`). Moved into v0.10 Foundations 2026-11-12.
+**Depends on:** Phase 20 (Aggregated Store Search — CheapShark), which minted the provider-neutral `common/types/storeSearch` vocabulary (D-11/D-12/D-13) this phase is the second implementation of. **Not** Phase 46 — `phase.add` fills `Depends on` with the immediately-preceding phase number as a positional guess, and Phase 46 (Windows single-instance guard) is unrelated; corrected by hand at filing time.
+**Plans:** 0 plans
+
+**Research is already complete** — `.planning/quick/260916-gdg-answer-q2-cheapshark-to-itad-migration-cost/260916-gdg-RESEARCH.md` answers `questions.md` Q2 with claims graded MEASURED / SPEC / UNKNOWN. Do not re-derive it; do preserve its grades when quoting.
+
+**In scope:** the ITAD adapter replacing `cheapshark.ts` (search is 2 calls, not 1 — D-12's "cheapest price inline" breaks); batch Steam AppID matching for the owned badge via `POST /lookup/id/shop/61/v1` (**MEASURED** to work with no API key, so it costs nothing against the quota); `countryCode` locale plumbing from settings through IPC into the adapter; real currency formatting (touches the Currency Contract in `20-UI-SPEC.md` and `formatUsdPrice.test.ts`); a persisted cache (ITAD's terms require one; Phase 20 explicitly rejected one, and `CacheStore` registration lives in four mirrored lists); `429`/`Retry-After` handling degrading to a cached price with a visible timestamp rather than an error; `common/discounts/storeMapping` from CheapShark string IDs to ITAD numeric shop IDs (contained — exactly one production importer, verified 2026-09-24); and passing `obj.deal2.url` through **verbatim** (ITAD's terms forbid altering it, including stripping affiliate tags — comment it as contractual, not stylistic, or a later refactor will "clean up" the URL and breach the terms).
+
+**Explicitly OUT of scope:** the `/discounts` screen — it stays GOG-only and locale-correct; an ITAD-backed deals browser is gated on a one-line written confirmation of ITAD's ambiguous 2026-10-01 reply about the "MUST NOT build a competition to IsThereAnyDeal" clause (see gate 2). Also out: **Stage 2**, a GameLib-owned affiliate-feed/mirroring service, which needs partner approvals that require traffic this project does not yet have and a server it does not yet run — years out, not a near-term option. Also out: Amazon price coverage (ITAD does not track Amazon; operator decision 2026-09-24 accepts this — Amazon is retained-because-built, not a first-class store).
+
+**Three human gates — all closed: gate 1 DONE 2026-11-12, gate 2 ANSWERED, gate 3 DECIDED. Phase 47 is unblocked for `/gsd-plan-phase 47`.**
+
+1. **DONE 2026-11-12** (operator registered the app) — **Register an ITAD app** at `isthereanydeal.com/apps/my/`. Self-service, needs a human account. Makes measurable the one remaining **UNKNOWN** in the research — still **UNKNOWN, not yet measured**; measure it with the app's key during planning/research (never commit the key): which countries/currencies are actually covered (a 14-country sweep of `/service/shops/v1` returned an identical 34-shop list every time, disproving that endpoint as a coverage measure).
+2. **Email to `api@isthereanydeal.com` — SENT 2026-09-24; ANSWERED 2026-10-01** by Tomas Fedor (`tomas@isthereanydeal.com`), recorded here 2026-11-12. The email as sent asked **two** questions, not three:
+   - Q1: "Does the 'no competition' clause rule out (b)?" — (b) being a possible in-app deals/browse surface.
+   - Q2: "Does the rate limit follow the API key, or the unauthenticated account? ... If OAuth moves the budget to each user's own ITAD account ... I'd build the OAuth flow."
+
+   The reply, verbatim:
+
+   > 1. yes, this is fine
+   > 2. rate limit follows the app, doesn't matter whether it's api key or oauth. You can see your current usage in the app section on ITAD. The solution for this might be to have your own intermediate server between ITAD and client, to help with caching.
+
+   **Consequences.** The rate limit follows the **app** — API key vs OAuth makes no difference (an ITAD written statement — vendor statement, 2026-10-01 — not MEASURED). The 1000 req/5min figure keeps its **SPEC** grade. Current usage is visible in the app section on ITAD. **The OAuth branch is DEAD:** OAuth does not move quota to each user, so `hideOwned`/`wishlistOnly` are no longer a reason to build it. Phase 47 builds the **embedded-key + hard-caching** branch.
+   - **Q1 is literally ambiguous.** "yes, this is fine" in reply to "Does the clause rule out (b)?" almost certainly means a deals browser is fine — but a literal "yes" means it _does_ rule it out. A one-line written confirmation from ITAD is owed before any deals-browser work. The deals browser stays **OUT** of Phase 47 scope regardless.
+   - **Correcting the record:** this gate previously said the email also asked whether a partner arrangement on affiliate links was worth discussing. It did not — the affiliate-partnership question was never asked. It is **UNASKED and OPEN**.
+3. **Decide the shared-key strategy — DECIDED 2026-11-12 (operator): no proxy now.** Build: an embedded key; a persisted per-install cache; debounced search; keyless `POST /lookup/id/shop/61/v1` for AppID mapping (**MEASURED** no-key); `429`/`Retry-After` degrading to the cached price with a visible timestamp; an optional user-supplied key setting — each user registering their own ITAD app gets their own budget, which is an **INFERENCE** from "follows the app", to be verified against ITAD's terms before building. Operating policy: monitor usage in ITAD's app dashboard; build Tomas's suggested intermediate caching server only when usage approaches the limit; request a raised limit only if needed.
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 47 to break down)
+
+### Phase 76: Engine-correct bottle for DRM-mode launches (v0.9 audit S9)
+
+**Goal:** A SteamStub title never launches in DRM mode over a bottle the Wine-Staging fallback engine initialised. Today `decideCreationEngine` (`steam/engine/engineDecision.ts` ~537) is presence-only and runs at install (`steam/games.ts` ~2549), before `.bind` is known; a title installed while CrossOver is missing gets a pinned Wine-Staging + DXVK bottle, and the DRM branch (`games.ts` ~5290–5301) only preflights CrossOver and never calls `prepareBottleForEngine`, so a later DRM launch runs the CrossOver clone runner over it. Fix: call `prepareBottleForEngine` in the DRM branch, or refuse the launch with a clear message. Line numbers are from the 2026-11-05 audit and predate Phases 62/65's decomposition — re-locate before planning.
+**Requirements**: DEBT-01
+**Depends on:** None
+**Source:** `milestones/v0.9-MILESTONE-AUDIT.md` (S9, integration 8/9)
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 76 to break down)
+
+### Phase 77: Runtime hardening from the v0.9 review debt
+
+**Goal:** Close three review warnings the v0.9 audit ranks highest: (1) **57 WR-09** — the network-facing known-fix relay reads the request body unbounded when `Content-Length` is missing; bound it (skipped as out of scope in `57-REVIEW-FIX.md`). (2) **56 WR-02** — an `execFile` handle holds the sidecar event loop up to 3 s after stdin EOF, violating the sidecar exit contract (see `Skill("gamelib-conventions")`). (3) **60 WR-01** — a missed overlay close leaves game input blocked; release input on every overlay-close path.
+**Requirements**: DEBT-02, DEBT-03, DEBT-04
+**Depends on:** None
+**Source:** `milestones/v0.9-MILESTONE-AUDIT.md` tech-debt list; `56-VERIFICATION.md`, `57-REVIEW-FIX.md`, `60` review
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 77 to break down)
+
+### Phase 78: Verification records and test health after v0.9
+
+**Goal:** The v0.9 records say what is true, and the suites the audit flagged pass. (1) **Stale records:** `52-VERIFICATION.md` body still reads `gaps_found` / 2026-10-24 under a `passed` frontmatter; the 53 and 58 verification/UAT records list follow-ups (58 WR-01..WR-05) that `58-REVIEW-FIX.md` records as fixed. Bring each up to date against the code. (2) **Test health:** `macArchKnownFixRouting.test.ts` ("Intel: never seeds…", reproduced 2026-11-05, pre-existing status unverified) and the three sidecar suites noted in Phase 54's deferred items — installFlows, runnerSliceRegistration (67 vs 68 channel census), testContainment. Re-run first: Phases 61–73 may already have fixed or changed some of them.
+**Requirements**: DEBT-05, DEBT-06
+**Depends on:** None
+**Source:** `milestones/v0.9-MILESTONE-AUDIT.md`
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 78 to break down)

@@ -1,7 +1,7 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.9
-milestone_name: Steam Bridge & Engine
+milestone: v0.10
+milestone_name: Foundations
 status: executing
 stopped_at: Completed 66.4-13-PLAN.md
 last_updated: "2026-11-12T08:10:55.528Z"
