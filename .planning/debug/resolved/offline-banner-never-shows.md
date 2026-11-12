@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "offline-banner-never-shows: with the network turned off, GameLib never shows its offline state (OfflineMessage banner, App.tsx:124) even after waiting over a minute; operator has never seen the banner in any offline testing (66.3 UAT test 4)."
 created: 2026-11-12T00:00:00Z
 updated: 2026-11-12T00:00:00Z
@@ -84,9 +84,12 @@ started: Discovered 2026-11-12 in 66.3 UAT; operator believes it always behaved 
 ## Resolution
 
 root_cause: Passive offline detection after boot depends solely on the webview's DOM `offline` event (src/frontend/helpers/onlineMonitor.ts -> `connectivity-changed` -> online_monitor setStatus). The sidecar itself never re-probes while 'online'. Under Tauri's WKWebView, WebKit's NetworkStateNotifierMac reports online whenever any non-lo/vnic/vmnet interface has an IPv4/IPv6 entity in SCDynamicStore; macOS keeps utun0..utun9 up with link-local IPv6 entities regardless of Wi-Fi, so navigator.onLine never goes false, the event never fires, the sidecar stays 'online', and OfflineMessage / the Header stale indicator never render. Pre-existing since the Tauri shell (Electron/Chromium supplied the event before); not introduced by 66.3-11.
-fix: (diagnose-only, not applied)
-verification: (not applicable)
-files_changed: []
+fix: online_monitor.ts gains an optional freshOfflineCheck dep (bootstrap wires it to checkConnectivityNow('periodic watch')). start() arms an unref'd clock interval (15 s); each tick, when status is 'online' and no check is in flight, runs the OS-interface + DNS check; offline flips to 'check-online' through setStatus, so the existing retry loop shows the banner and returns to online on its own. Fails open on error; the renderer DOM-event path is kept. Commit 56db31160.
+verification: jest onlineMonitor/connectivityNow/sidecar suites + diPhaseGates pass, tsc clean. LIVE-VERIFIED 2026-11-12 (macOS, pnpm tauri:dev): banner appeared ~15 s after Wi-Fi off and cleared when Wi-Fi returned, no restart.
+files_changed:
+  - src/backend/online_monitor.ts
+  - src/backend/sidecar/bootstrap.ts
+  - src/backend/__tests__/onlineMonitor.test.ts
 
 blind_spots:
   - The Wi-Fi-off SCDynamicStore state was not captured (the investigator cannot drop the network). Expected that utun0..9 IPv6 entities persist; operator can confirm with `printf 'list State:/Network/Interface/.*/IPv[46]\n' | scutil` and `navigator.onLine` in the dev Web Inspector while Wi-Fi is off.

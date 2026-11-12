@@ -9,6 +9,9 @@ files:
 severity: major
 platform: any
 ready: live-gate
+status: completed
+resolved: 2026-11-12
+resolved_by: "56db31160 (debug session offline-banner-never-shows); live-verified on macOS: banner appeared ~15s after Wi-Fi off, cleared when Wi-Fi returned"
 ---
 
 ## Problem
