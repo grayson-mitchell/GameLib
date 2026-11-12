@@ -802,7 +802,7 @@ Plans:
 **Goal:** Finish D-15 step 3 after Phase 66.3. Convert the long tail of about 85 files (about 127 sites) with 1–2 module-state sites each, completely and once each (D-15). This includes the 66.2 deferrals: the `utils.ts` `default*Path` lets; `installingComponent`/`catalogCache`/`scriptMetadataCache` in `tools/index.ts`; `engineNoticeStore`; the two `pci_ids` stores; and retiring the win32 sync fallbacks in `knownFolders`/`pathShim`. Then the census becomes a zero-tolerance test and the `moduleState` ceiling is deleted (D-13, D-16). Next, revive the Steam RunningAppID poller under Tauri as a boot-owned, unref'd, stdin-EOF-stopped step (D-66.3-07). The phase ends with two non-autonomous plans: the D-17 live macOS smoke with a scripted orphan/exit checker (D-66.3-05), and the Windows operator UAT, which covers the 66.2 spawn paths and the poller's Playing state (D-66.3-06, D-66.3-08). Decisions live in `.planning/phases/66.3-backend-module-state-to-zero-and-live-macos-smoke/66.3-CONTEXT.md`.
 **Requirements**: TBD
 **Depends on:** Phase 66.3
-**Plans:** 19/23 plans executed
+**Plans:** 20/23 plans executed
 
 Plans:
 
@@ -825,7 +825,7 @@ Plans:
 - [x] 66.4-17-PLAN.md — AppRuntime: backend events, launch single-flight, image/index caches, known-fix installs; launcher paths (wave 16)
 - [x] 66.4-18-PLAN.md — store versioning/read-only onto StoreRoot, dialog and misc owners; config/shortcuts paths (wave 17)
 - [x] 66.4-19-PLAN.md — the five once-only latches converted (D-66.4-01: boot-step single-run per boot registry) (wave 18)
-- [ ] 66.4-20-PLAN.md — 'app-folder' first boot step (heroic rename, e2e dir); constants/paths.ts and pathShim.ts deleted (wave 19)
+- [x] 66.4-20-PLAN.md — 'app-folder' first boot step (heroic rename, e2e dir); constants/paths.ts and pathShim.ts deleted (wave 19)
 - [ ] 66.4-21-PLAN.md — census flip: zero-tolerance test, moduleState ceiling deleted, diPhaseGates 66.4 block, README (wave 20)
 - [ ] 66.4-22-PLAN.md — D-17 live macOS smoke with the exit checker (non-autonomous) (wave 21)
 - [ ] 66.4-23-PLAN.md — Windows delta UAT; close the poller todo (non-autonomous) (wave 21)
