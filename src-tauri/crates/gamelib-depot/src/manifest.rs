@@ -96,16 +96,37 @@ fn unique_chunk_bytes<'a>(files: impl Iterator<Item = &'a ManifestFile>) -> u64 
         .sum()
 }
 
-/// D-09 estimate for one depot. `old == None` is the D-14 fallback: the reconcile path rewrites
+/// Like `unique_chunk_bytes`, but chunks whose SHA is in `exclude` cost nothing: `delta.rs`
+/// reuses them from the old files through `OldIndex`, so they never cross the CDN.
+fn unique_new_chunk_bytes<'a>(
+    files: impl Iterator<Item = &'a ManifestFile>,
+    exclude: &std::collections::HashSet<[u8; 20]>,
+) -> u64 {
+    let mut seen = std::collections::HashSet::new();
+    files
+        .flat_map(|f| f.chunks.iter())
+        .filter(|c| !exclude.contains(&c.sha) && seen.insert(c.sha))
+        .map(|c| u64::from(c.cb_compressed))
+        .sum()
+}
+
+/// D-09 estimate for one depot. With an old manifest, `max_download_bytes` is the CDN bytes
+/// assuming the old files are intact (chunks present anywhere in the old manifest are reused);
+/// local damage can only raise it, which the "up to" wording covers. `old == None` is the D-14 fallback: the reconcile path rewrites
 /// one file at a time, so its disk peak is the largest single new file.
 fn estimate_delta(old: Option<&DepotManifest>, new: &DepotManifest) -> DeltaEstimate {
     match old {
         Some(o) => {
             let ws = delta::compute_work_set(Some(o), new);
+            let old_shas: std::collections::HashSet<[u8; 20]> = o
+                .files
+                .iter()
+                .flat_map(|f| f.chunks.iter().map(|c| c.sha))
+                .collect();
             DeltaEstimate {
                 old_manifest_available: true,
                 changed_bytes: ws.changed.iter().map(|f| f.size).sum(),
-                max_download_bytes: unique_chunk_bytes(ws.changed.iter().copied()),
+                max_download_bytes: unique_new_chunk_bytes(ws.changed.iter().copied(), &old_shas),
                 changed_files: ws.changed.len() as u64,
                 removed_files: delta::removed_paths(&[o], &[new]).len() as u64,
             }
@@ -587,4 +608,70 @@ async fn write_atomic(path: &Path, bytes: Vec<u8>) -> std::io::Result<()> {
     })
     .await
     .map_err(std::io::Error::other)?
+}
+
+#[cfg(test)]
+mod estimate_tests {
+    use super::*;
+
+    fn chunk(n: u8, cb: u32) -> ChunkRef {
+        ChunkRef {
+            sha: [n; 20],
+            offset: 0,
+            cb_original: cb,
+            cb_compressed: cb,
+            crc: 0,
+        }
+    }
+
+    fn file(name: &str, sha_content: u8, chunks: Vec<ChunkRef>) -> ManifestFile {
+        ManifestFile {
+            filename: name.into(),
+            size: chunks.iter().map(|c| u64::from(c.cb_original)).sum(),
+            flags: 0,
+            sha_content: [sha_content; 20],
+            chunks,
+            linktarget: None,
+        }
+    }
+
+    fn manifest(gid: &str, files: Vec<ManifestFile>) -> DepotManifest {
+        DepotManifest {
+            depot_id: "1".into(),
+            gid: gid.into(),
+            creation_time: 0,
+            total_uncompressed: 0,
+            files,
+        }
+    }
+
+    #[test]
+    fn moved_content_costs_nothing() {
+        let old = manifest("1", vec![file("a", 1, vec![chunk(1, 10), chunk(2, 20)])]);
+        let new = manifest("2", vec![file("b", 2, vec![chunk(2, 20), chunk(1, 10)])]);
+        assert_eq!(estimate_delta(Some(&old), &new).max_download_bytes, 0);
+    }
+
+    #[test]
+    fn only_new_chunks_count() {
+        let old = manifest("1", vec![file("a", 1, vec![chunk(1, 10), chunk(2, 20)])]);
+        let new = manifest(
+            "2",
+            vec![file("a", 3, vec![chunk(1, 10), chunk(2, 20), chunk(9, 7)])],
+        );
+        assert_eq!(estimate_delta(Some(&old), &new).max_download_bytes, 7);
+    }
+
+    #[test]
+    fn shared_new_chunk_counted_once() {
+        let old = manifest("1", vec![file("a", 1, vec![chunk(1, 10)])]);
+        let new = manifest(
+            "2",
+            vec![
+                file("x", 4, vec![chunk(8, 5), chunk(1, 10)]),
+                file("y", 5, vec![chunk(8, 5)]),
+            ],
+        );
+        assert_eq!(estimate_delta(Some(&old), &new).max_download_bytes, 5);
+    }
 }

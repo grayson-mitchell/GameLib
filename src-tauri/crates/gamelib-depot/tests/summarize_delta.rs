@@ -62,7 +62,10 @@ fn estimate_matches_delta_peak() {
     assert_eq!(out.status, Status::Completed, "{:?}", out.failures);
     let report = out.delta.as_ref().expect("delta report");
     assert_eq!(est["changedBytes"].as_u64().unwrap(), report.peak_bytes);
+    // Chunks the old manifest already holds are credited, so the figure is still an upper bound
+    // on the real CDN bytes and only the genuinely new chunks remain.
     assert!(est["maxDownloadBytes"].as_u64().unwrap() >= report.cdn_bytes);
+    assert!(est["maxDownloadBytes"].as_u64().unwrap() < est["changedBytes"].as_u64().unwrap());
 }
 
 #[test]
