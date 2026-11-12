@@ -13,10 +13,11 @@ import { NUMERIC_APP_ID } from './gameConstants'
  *
  * `launch` (Windows Play, quick 261029-i1n) is the only verb with a suffix.
  * The suffix is the fixed literal `/Dialog`, never caller input, so the numeric
- * guard still covers every variable byte of every URL.
+ * guard still covers every variable byte of every URL. `details` (Phase 74
+ * update hand-off) likewise uses the fixed literal prefix `nav/games/details/`.
  */
 export function buildSteamProtocolUrl(
-  verb: 'rungameid' | 'launch' | 'install' | 'uninstall',
+  verb: 'rungameid' | 'launch' | 'install' | 'uninstall' | 'details',
   appId: string
 ): string | null {
   if (!NUMERIC_APP_ID.test(appId)) {
@@ -28,6 +29,9 @@ export function buildSteamProtocolUrl(
   }
   if (verb === 'launch') {
     return `steam://launch/${appId}/Dialog`
+  }
+  if (verb === 'details') {
+    return `steam://nav/games/details/${appId}`
   }
   return `steam://${verb}/${appId}`
 }
