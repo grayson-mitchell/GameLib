@@ -3,7 +3,6 @@ import { access, cp, rename, rm } from 'fs/promises'
 import { join } from 'path'
 
 import { isLinux } from 'backend/constants/environment'
-import { userHome } from 'backend/constants/paths'
 import { deriveLegendaryPaths } from 'backend/storeManagers/legendary/constants'
 
 import type { PathLike } from 'fs'
@@ -19,7 +18,7 @@ export class LegendaryGlobalConfigFolderMigration implements Migration {
   identifier = 'legendary-move-global-config-folder'
   constructor(
     private readonly deps: {
-      paths: Pick<AppPaths, 'appData' | 'appFolder' | 'toolsPath'>
+      paths: Pick<AppPaths, 'appData' | 'appFolder' | 'toolsPath' | 'userHome'>
     }
   ) {}
   async run(): Promise<boolean> {
@@ -30,7 +29,7 @@ export class LegendaryGlobalConfigFolderMigration implements Migration {
 
     const globalLegendaryConfig = isLinux
       ? join(this.deps.paths.appData, 'legendary')
-      : join(userHome, '.config', 'legendary')
+      : join(this.deps.paths.userHome, '.config', 'legendary')
 
     const hasGlobalConfig = await exists(globalLegendaryConfig)
     // Nothing to migrate

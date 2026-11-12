@@ -63,6 +63,7 @@
  * never reach.
  */
 
+import type { Dialogs } from 'backend/host/dialogs'
 import type { EngineStateService } from 'backend/engine/engineState'
 import type { OnlineMonitor } from '../online_monitor'
 import type { AppState } from '../host/appState'
@@ -105,6 +106,7 @@ import type {
 export interface WineToolsFlowDeps
   extends NotifyDeps, DialogBoxDeps, AppRuntimeSlice<'events'> {
   ipc: Pick<IpcRegistry, 'handle'>
+  dialogs: DialogBoxDeps['dialogs'] & Pick<Dialogs, 'displayAcks'>
   appState: Pick<AppState, 'raiseMainWindow' | 'raiseMainWindowForInAppDialog'>
   config: Pick<
     GlobalConfigSlice,

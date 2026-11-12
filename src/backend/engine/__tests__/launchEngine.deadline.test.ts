@@ -29,10 +29,6 @@ jest.mock('backend/dialog/dialog', () => ({
     .requireActual('backend/testUtils/propsOnlyMock')
     .propsOnly(jest.fn())
 }))
-jest.mock('backend/dialog/displayAck', () => ({
-  newDialogAckId: jest.fn(),
-  trackDialogDisplay: jest.fn()
-}))
 jest.mock('../engineDialogs', () => ({
   ...jest.requireActual('../engineDialogs'),
   showEngineDialog: jest.fn(),

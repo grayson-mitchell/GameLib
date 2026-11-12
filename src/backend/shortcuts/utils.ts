@@ -8,7 +8,6 @@ import type { AppPaths } from 'backend/process/context'
 import type { HostServices } from 'backend/host'
 import { downloadFile } from 'backend/utils'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
-import { heroicIconFolder as iconsFolder } from 'backend/constants/paths'
 import { logWarning, LogPrefix } from 'backend/logger'
 
 function createImage(
@@ -74,7 +73,10 @@ export interface ShortcutsDeps {
   /** The Add-to-Steam and shortcut settings flags (66.3-06). */
   config: Pick<GlobalConfigSlice, 'getSettings'>
   /** The shell exe and the Desktop / Start Menu folders the shortcut files are written under. */
-  paths: Pick<AppPaths, 'exe' | 'appData' | 'knownFolder'>
+  paths: Pick<
+    AppPaths,
+    'exe' | 'appData' | 'knownFolder' | 'heroicIconFolder' | 'userHome'
+  >
   /** The icon .icns conversion and the Steam grid artwork. */
   imageTools: Pick<
     HostServices['imageTools'],
@@ -87,6 +89,7 @@ async function getIcon(
   appName: string,
   gameInfo: GameInfo
 ): Promise<string | undefined> {
+  const iconsFolder = deps.paths.heroicIconFolder
   if (!existsSync(iconsFolder)) {
     mkdirSync(iconsFolder)
   }

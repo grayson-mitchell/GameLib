@@ -54,6 +54,8 @@ const mockedGetProductApi = jest.fn()
 const mockedCreateAbortController = jest.fn()
 const deps = {
   libraryManagers: { gog: { getProductApi: mockedGetProductApi } },
+  // The icons folder the boot derives from `appFolder`.
+  paths: { heroicIconFolder: join(appFolder, 'icons') },
   // The abort registry is injected (66.4-13).
   aborts: { create: (id: string) => mockedCreateAbortController(id) }
 } as unknown as Parameters<typeof getIcon>[0]

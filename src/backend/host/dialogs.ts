@@ -1,6 +1,6 @@
 /**
- * Native dialogs (D-66.3-01), forwarded to the Rust shell over `requestRustInvoke`. Holds no
- * state. No method throws or rejects (incident sidecar-dialog-reject-crashes): callers `await`
+ * Native dialogs (D-66.3-01), forwarded to the Rust shell over `requestRustInvoke`. Holds one
+ * piece of state, the in-app dialog display-ack table (`displayAcks`). No method throws or rejects (incident sidecar-dialog-reject-crashes): callers `await`
  * these unguarded, and a rejection would crash the sidecar.
  *
  * D-07 fail-safe-to-decline: `showMessageBox` resolves the CALLER's own declared `cancelId`
@@ -18,11 +18,14 @@ import type {
   MessageBoxOptions,
   OpenDialogOptions
 } from 'common/types/hostTypes'
+import { createDisplayAcks, type DisplayAcks } from '../dialog/displayAck'
 import type { RequestRustInvoke } from './index'
 
 type SaveDialogOptions = RustInvokeArgsOf<typeof RUST_DIALOG_SAVE>[0]
 
 export interface Dialogs {
+  /** Correlates an in-app dialog frame with the renderer's "it is on screen" ack (66.4-18). */
+  readonly displayAcks: DisplayAcks
   showErrorBox(title?: string, content?: string): Promise<void>
   showMessageBox(
     options: MessageBoxOptions
@@ -43,6 +46,7 @@ export function createDialogs(deps: {
   raiseMainWindowIfHiddenByGameLib: () => void
 }): Dialogs {
   return {
+    displayAcks: createDisplayAcks(),
     async showErrorBox(title, content) {
       deps.raiseMainWindowIfHiddenByGameLib()
       try {

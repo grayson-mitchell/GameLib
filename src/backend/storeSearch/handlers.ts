@@ -1,6 +1,11 @@
 import { logError, LogPrefix } from '../logger'
 import type { AppInfo } from '../process/context'
-import { searchGames, getGameDeals, getStoreMap } from './cheapshark'
+import {
+  searchGames,
+  getGameDeals,
+  getStoreMap,
+  type StoreSearchDeps
+} from './cheapshark'
 import type {
   StoreSearchResult,
   StoreSearchDeal,
@@ -51,7 +56,7 @@ export async function handleSearchStores(
 }
 
 export async function handleGetStoreSearchDeals(
-  deps: { appInfo: Pick<AppInfo, 'version'> },
+  deps: StoreSearchDeps,
   gameId: string
 ): Promise<StoreSearchDeal[]> {
   try {
@@ -65,9 +70,9 @@ export async function handleGetStoreSearchDeals(
   }
 }
 
-export async function handleGetStoreSearchStoreMap(deps: {
-  appInfo: Pick<AppInfo, 'version'>
-}): Promise<Record<string, StoreSearchStore>> {
+export async function handleGetStoreSearchStoreMap(
+  deps: StoreSearchDeps
+): Promise<Record<string, StoreSearchStore>> {
   try {
     return await getStoreMap(deps)
   } catch (err) {

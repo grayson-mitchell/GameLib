@@ -1,11 +1,17 @@
 /**
- * OS notifications (D-66.3-01) via tauri-plugin-notification's notification_show arm. Holds no
- * state. `show` never throws: a rejected invoke reports through `onFailed`, and a throwing
+ * OS notifications (D-66.3-01) via tauri-plugin-notification's notification_show arm. Holds one
+ * flag per instance: whether a permission denial has already been reported (66.4-18). A denial
+ * persists until the user changes it in System Settings, so only the first one per boot reaches
+ * `onFailed` and the log is not flooded; other failures are per-delivery and always reach it.
+ * `show` never throws: a rejected invoke reports through `onFailed`, and a throwing
  * callback is caught and warned. The logging of a failed notification lives in the consumer
  * (`backend/dialog/dialog.ts`'s notify()), not here.
  */
 
-import { RUST_NOTIFICATION_SHOW } from 'common/types/sidecarTransport'
+import {
+  RUST_NOTIFICATION_AUTH_DENIED_PREFIX,
+  RUST_NOTIFICATION_SHOW
+} from 'common/types/sidecarTransport'
 import type { RequestRustInvoke } from './index'
 
 export interface Notifications {
@@ -21,6 +27,7 @@ export interface Notifications {
 export function createNotifications(deps: {
   requestRustInvoke: RequestRustInvoke
 }): Notifications {
+  let reportedAuthDenied = false
   return {
     show(options, callbacks) {
       deps
@@ -46,6 +53,10 @@ export function createNotifications(deps: {
             `[host] notifications.show(): ${RUST_NOTIFICATION_SHOW} failed:`,
             message
           )
+          if (message.startsWith(RUST_NOTIFICATION_AUTH_DENIED_PREFIX)) {
+            if (reportedAuthDenied) return
+            reportedAuthDenied = true
+          }
           try {
             callbacks?.onFailed?.(message)
           } catch (listenerError) {

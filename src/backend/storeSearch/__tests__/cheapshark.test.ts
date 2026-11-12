@@ -15,14 +15,23 @@ import {
   mapGameDeals,
   searchGames,
   getGameDeals,
-  getStoreMap
+  getStoreMap,
+  createStoreMapCache,
+  type StoreSearchDeps
 } from '../cheapshark'
 
 jest.mock('axios')
 jest.mock('backend/logger')
 const mockedAxios = axios as jest.Mocked<typeof axios>
 
-const deps = { appInfo: { version: '1.2.3-test' } }
+// A fresh store-map cache per test (the boot's misc runtime), so no fetched map carries over.
+let deps: StoreSearchDeps
+beforeEach(() => {
+  deps = {
+    appInfo: { version: '1.2.3-test' },
+    miscRuntime: { storeMap: createStoreMapCache() }
+  }
+})
 
 describe('buildRedirectUrl', () => {
   it('interpolates dealID verbatim, never re-encoded', () => {

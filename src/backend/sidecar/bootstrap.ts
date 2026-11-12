@@ -210,6 +210,7 @@ import type { AppContext, AppPaths } from '../process/context'
 import type { LogSink, ProcessRunner } from '../process/types'
 import { createIpcValidator } from './ipcValidation'
 import { gamesConfigPath } from '../constants/paths'
+import { createMiscRuntime } from '../miscRuntime'
 import { createAppRuntime } from '../appRuntime'
 import type { AppRuntime } from '../appRuntime'
 import { fetchLastestReleases } from '../utils/releases'
@@ -305,6 +306,7 @@ export const BOOT_STEP_NAMES = [
   'steam-bottle',
   'abort-registry',
   'app-runtime',
+  'misc-runtime',
   'command-runner',
   'steam-user',
   'humble-services',
@@ -533,6 +535,7 @@ function requireServices(state: BootState): BootServices {
     infoCaches,
     aborts,
     appRuntime,
+    miscRuntime,
     windowRaiser,
     toolsState,
     winetricksQueue,
@@ -576,6 +579,7 @@ function requireServices(state: BootState): BootServices {
     !infoCaches ||
     !aborts ||
     !appRuntime ||
+    !miscRuntime ||
     !windowRaiser ||
     !toolsState ||
     !winetricksQueue ||
@@ -620,6 +624,7 @@ function requireServices(state: BootState): BootServices {
         'infoCaches',
         'aborts',
         'appRuntime',
+        'miscRuntime',
         'windowRaiser',
         'toolsState',
         'winetricksQueue',
@@ -666,6 +671,7 @@ function requireServices(state: BootState): BootServices {
     infoCaches,
     aborts,
     appRuntime,
+    miscRuntime,
     windowRaiser,
     toolsState,
     winetricksQueue,
@@ -1629,6 +1635,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           prebuilt.config ??
           createGlobalConfig({
             versioning: requireStoreRoot(state).versioning,
+            paths: prebuilt.paths ?? ctx.paths,
             // The bus is built by the later 'app-runtime' step; a setting can only change at call time.
             onSettingChanged: (change) =>
               requireAppRuntime(state).events.emit('settingChanged', change)
@@ -1638,7 +1645,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           prebuilt.gameConfigs ??
           createGameConfigs({
             config,
-            versioning: requireStoreRoot(state).versioning
+            versioning: requireStoreRoot(state).versioning,
+            paths: prebuilt.paths ?? ctx.paths
           })
         state.services.paths = prebuilt.paths ?? ctx.paths
         state.services.appInfo = prebuilt.appInfo ?? ctx.appInfo
@@ -1724,6 +1732,30 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         state.services.appRuntime =
           prebuilt.appRuntime ??
           createAppRuntime({ clock: ctx.clock, paths: ctx.paths })
+      }
+    },
+    {
+      name: 'misc-runtime',
+      // Builds the misc runtime of this boot (D-05, 66.4-18): the metadata-override push (its notifier
+      // is a constructor dependency, over this boot's frontend push), the Mac arch prompt chain and the
+      // CheapShark store-map cache. Construction only: no I/O, no timer, no handle. Directly after
+      // 'app-runtime', before 'store-managers' (ManagerDeps carries it) and 'register-handlers'.
+      run: (_ctx, _io, state) => {
+        const host = requireHost(state)
+        state.services.miscRuntime =
+          prebuilt.miscRuntime ??
+          createMiscRuntime({
+            metadataChanged: (overrides) => {
+              try {
+                host.pushFrontendMessage('metadataChanged', overrides)
+              } catch (error) {
+                logWarning(
+                  `[bootstrap] metadataChanged push failed: ${error instanceof Error ? error.message : String(error)}`,
+                  LogPrefix.Backend
+                )
+              }
+            }
+          })
       }
     },
     {
@@ -2135,6 +2167,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           infoCaches,
           aborts,
           appRuntime,
+          miscRuntime,
           windowRaiser,
           toolsState,
           signInProbe,
@@ -2168,6 +2201,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !infoCaches ||
           !aborts ||
           !appRuntime ||
+          !miscRuntime ||
           !windowRaiser ||
           !toolsState ||
           !signInProbe ||
@@ -2224,6 +2258,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           infoCaches,
           aborts,
           appRuntime,
+          miscRuntime,
           windowRaiser,
           toolsState,
           signIn: signInProbe,

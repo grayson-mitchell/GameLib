@@ -52,10 +52,12 @@ jest.mock('../logger', () => ({
 }))
 const globalExtra: Record<string, unknown> = {}
 import { createGameConfigs } from '../game_config'
+import * as pathsModule from '../constants/paths'
 
 // The global defaults the per-game config reads through its injected slice.
 const gameConfigs = createGameConfigs({
   versioning: createTestVersioning(),
+  paths: pathsModule,
   config: {
     getSettings: () =>
       ({

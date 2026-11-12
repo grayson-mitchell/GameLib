@@ -14,7 +14,7 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { AppPaths } from 'backend/process/context'
 import type { AppState } from 'backend/host/appState'
 import type { OpenExternal } from 'backend/host/openExternal'
-import { newDialogAckId, trackDialogDisplay } from 'backend/dialog/displayAck'
+import type { Dialogs } from 'backend/host/dialogs'
 import type { LongLivedHandle, ProcessRunner } from 'backend/process/types'
 import { BRIDGE_SECRET_ENV } from './protocol'
 import type { BridgeHelperEntry, BridgeHelperSlice } from './helperRegistry'
@@ -74,6 +74,8 @@ export function classifyInitFlatError(
 export type HelperSpawnDeps = {
   runner: Pick<ProcessRunner, 'spawnLongLived'>
   appState: Pick<AppState, 'openBridgeInvitePicker'>
+  /** The boot's display-ack table the invite picker's ack is tracked in (66.4-18). */
+  dialogs: Pick<Dialogs, 'displayAcks'>
   openExternal: Pick<OpenExternal, 'openExternal'>
   /** The boot-owned helper registry (D-66.3-14). */
   bridgeHelpers: BridgeHelperSlice
@@ -232,8 +234,8 @@ export function ensureHelperSpawned(
       `bridge invite [${appId}]: picker window requested`,
       LogPrefix.Steam
     )
-    const ackId = newDialogAckId()
-    trackDialogDisplay(ackId, (result) =>
+    const ackId = deps.dialogs.displayAcks.newId()
+    deps.dialogs.displayAcks.track(ackId, (result) =>
       logInfo(
         result.confirmed
           ? `bridge invite [${appId}]: display=confirmed elapsedMs=${result.elapsedMs}`

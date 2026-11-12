@@ -193,7 +193,8 @@ jest.mock('../launcher', () => ({
 // TypeCheckedStoreBackend. The macOS-arch sweep is irrelevant to the save-path refresh under test.
 jest.mock('backend/macArch/recovery', () => ({
   recordedMacArch: jest.fn(() => undefined),
-  scheduleMacArchSweep: jest.fn()
+  scheduleMacArchSweep: jest.fn(),
+  createMacArchPromptChain: jest.fn()
 }))
 
 // ── ../storeManagers/legendary/stores mock ───────────────────────────────────────────

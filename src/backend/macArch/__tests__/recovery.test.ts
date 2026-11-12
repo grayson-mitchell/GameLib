@@ -7,7 +7,8 @@ import {
   checkInstalledMacArch,
   offerWindowsReinstall,
   scheduleMacArchSweep,
-  MAX_SWEEP_PROBES
+  MAX_SWEEP_PROBES,
+  createMacArchPromptChain
 } from '../recovery'
 import type { MacArchRecoveryDeps } from '../recovery'
 import * as macArch from 'backend/utils/macArch'
@@ -40,6 +41,7 @@ const getInstallInfo = jest.fn()
 const getGameInfo = jest.fn()
 const deps = {
   stores: { macArch: macArchStores },
+  miscRuntime: { macArchPrompts: createMacArchPromptChain() },
   getDownloadQueue: () => ({
     addToQueue: (...a: unknown[]) => addToQueue(...a)
   }),

@@ -15,6 +15,7 @@
 // a gog/legendary -> recovery -> storeManagers cycle. The managers arrive by
 // injection (66.1).
 
+import type { MiscRuntimeSlice } from '../miscRuntime'
 import { dirname } from 'path'
 import { isMac } from 'backend/constants/environment'
 import {
@@ -33,7 +34,7 @@ import type { Runner } from 'common/types'
 import type { ManagerDeps } from 'backend/services/types'
 
 /** The library managers and download queue the Windows-reinstall flow drives (66.1, R3). */
-export interface MacArchRecoveryDeps {
+export interface MacArchRecoveryDeps extends MiscRuntimeSlice<'macArchPrompts'> {
   libraryManagers: ManagerDeps['libraryManagers']
   getDownloadQueue: ManagerDeps['getDownloadQueue']
   stores: MacArchStoresDeps['stores']
@@ -85,10 +86,22 @@ function record(
   macArchStore.set('verdicts', verdicts)
 }
 
-// Serialises dialogs so two '32' verdicts never show concurrently.
-let promptChain: Promise<void> = Promise.resolve()
-function enqueuePrompt(task: () => Promise<void>) {
-  promptChain = promptChain.then(task).catch(() => undefined)
+export interface MacArchPromptChain {
+  /** Runs `task` after every earlier prompt has settled; a failing task never breaks the chain. */
+  enqueue(task: () => Promise<void>): void
+}
+
+/**
+ * Serialises the Windows-reinstall dialogs so two '32' verdicts never show concurrently. One chain
+ * per boot (66.4-18, D-05): two boots never queue behind each other's dialogs.
+ */
+export function createMacArchPromptChain(): MacArchPromptChain {
+  let promptChain: Promise<void> = Promise.resolve()
+  return {
+    enqueue(task) {
+      promptChain = promptChain.then(task).catch(() => undefined)
+    }
+  }
 }
 
 interface CheckInstalledMacArchArgs {
@@ -130,7 +143,9 @@ export async function checkInstalledMacArch(
     apply(appName, verdict)
     logInfo(`macArch: ${appName} native build is ${verdict}-bit`, lp)
     if (verdict === '32' && prompt) {
-      enqueuePrompt(() => offerWindowsReinstall(deps, runner, appName, title))
+      deps.miscRuntime.macArchPrompts.enqueue(() =>
+        offerWindowsReinstall(deps, runner, appName, title)
+      )
     }
   } catch (e) {
     logError(`macArch: check failed for ${appName}: ${String(e)}`, lp)

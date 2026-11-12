@@ -174,6 +174,7 @@ export interface CreateStoreManagersDeps {
   infoCaches: ManagerDeps['infoCaches']
   aborts: ManagerDeps['aborts']
   appRuntime: ManagerDeps['appRuntime']
+  miscRuntime: ManagerDeps['miscRuntime']
   windowRaiser: ManagerDeps['windowRaiser']
   toolsState: ManagerDeps['toolsState']
   steamUser: ManagerDeps['steamUser']
@@ -232,6 +233,7 @@ export function createStoreManagers(
     infoCaches: deps.infoCaches,
     aborts: deps.aborts,
     appRuntime: deps.appRuntime,
+    miscRuntime: deps.miscRuntime,
     windowRaiser: deps.windowRaiser,
     toolsState: deps.toolsState,
     steamUser: deps.steamUser,

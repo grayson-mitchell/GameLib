@@ -34,7 +34,6 @@ jest.mock('backend/storeManagers/steam/engine/steamEngineDeps', () => ({
   getSteamEngineState: (...a: unknown[]) => steamState(...a)
 }))
 
-import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { registerEngineFlows } from '../engineFlowRegistration'
 import { createTestServices } from 'backend/testUtils/testServices'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'

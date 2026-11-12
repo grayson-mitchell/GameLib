@@ -1,4 +1,5 @@
 import axios from 'axios'
+import type { MiscRuntimeSlice } from '../miscRuntime'
 import type { AppInfo } from 'backend/process/context'
 import { logError, LogPrefix } from 'backend/logger'
 import { resolveRunner } from 'common/discounts/storeMapping'
@@ -59,9 +60,28 @@ type CheapSharkStore = {
   images: { banner: string; logo: string; icon: string }
 }
 
-/** Module-level, in-memory, per-app-session cache — NOT an electron-store
- * schema entry (RESEARCH explicitly rejects a persisted-cache alternative). */
-let storeMapCache: Record<string, StoreSearchStore> | undefined
+export interface StoreMapCache {
+  get(): Record<string, StoreSearchStore> | undefined
+  set(map: Record<string, StoreSearchStore>): void
+}
+
+/** In-memory, per-boot cache of CheapShark's `/stores` directory — NOT an electron-store
+ * schema entry (RESEARCH explicitly rejects a persisted-cache alternative). One per boot
+ * (66.4-18, D-05), so two boots never share a fetched map. */
+export function createStoreMapCache(): StoreMapCache {
+  let cached: Record<string, StoreSearchStore> | undefined
+  return {
+    get: () => cached,
+    set: (map) => {
+      cached = map
+    }
+  }
+}
+
+/** What the CheapShark calls read: the app version for the User-Agent and the boot's store-map cache. */
+export type StoreSearchDeps = {
+  appInfo: Pick<AppInfo, 'version'>
+} & MiscRuntimeSlice<'storeMap'>
 
 function buildHeaders(deps: {
   appInfo: Pick<AppInfo, 'version'>
@@ -120,11 +140,12 @@ export function mapGameDeals(
  * (RESEARCH: "fetch once backend-side... cached in-memory"). A second call
  * returns the memoized value without a second network request.
  */
-export async function getStoreMap(deps: {
-  appInfo: Pick<AppInfo, 'version'>
-}): Promise<Record<string, StoreSearchStore>> {
-  if (storeMapCache) {
-    return storeMapCache
+export async function getStoreMap(
+  deps: StoreSearchDeps
+): Promise<Record<string, StoreSearchStore>> {
+  const cached = deps.miscRuntime.storeMap.get()
+  if (cached) {
+    return cached
   }
   try {
     const { data } = await axios.get<CheapSharkStore[]>(
@@ -140,8 +161,8 @@ export async function getStoreMap(deps: {
         isActive: Boolean(store.isActive)
       }
     }
-    storeMapCache = map
-    return storeMapCache
+    deps.miscRuntime.storeMap.set(map)
+    return map
   } catch (err) {
     logError(
       `Failed to fetch CheapShark store map: ${String(err)}`,
@@ -187,7 +208,7 @@ export async function searchGames(
  * `/stores` map.
  */
 export async function getGameDeals(
-  deps: { appInfo: Pick<AppInfo, 'version'> },
+  deps: StoreSearchDeps,
   gameId: string
 ): Promise<StoreSearchDeal[]> {
   try {

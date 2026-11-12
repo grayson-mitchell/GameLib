@@ -2,7 +2,7 @@ import { GameInfo } from 'common/types'
 import type { GameMetadataOverride } from './stores'
 import type { Stores } from 'backend/services/types'
 import { logInfo, logError, LogPrefix } from 'backend/logger'
-import { userDataPath } from 'backend/constants/paths'
+import type { AppPaths } from 'backend/process/context'
 import { existsSync, readdirSync, unlinkSync } from 'graceful-fs'
 import { join } from 'node:path'
 
@@ -13,9 +13,16 @@ export interface GameOverridesDeps {
 
 const logPrefix: LogPrefix = 'GameOverrides'
 
-const overridesImagesDir = join(userDataPath, 'game_overrides_images')
+/** `setGameOverrides` also removes the images stored under the user-data folder. */
+export type GameOverridesWriteDeps = GameOverridesDeps & {
+  paths: Pick<AppPaths, 'userData'>
+}
 
-const removeImagesMatching = (predicate: (file: string) => boolean) => {
+const removeImagesMatching = (
+  deps: Pick<GameOverridesWriteDeps, 'paths'>,
+  predicate: (file: string) => boolean
+) => {
+  const overridesImagesDir = join(deps.paths.userData, 'game_overrides_images')
   if (!existsSync(overridesImagesDir)) return
   for (const file of readdirSync(overridesImagesDir)) {
     if (!predicate(file)) continue
@@ -30,8 +37,10 @@ const removeImagesMatching = (predicate: (file: string) => boolean) => {
   }
 }
 
-const removeImagesForApp = (appName: string) =>
-  removeImagesMatching((file) => file.startsWith(`${appName}-`))
+const removeImagesForApp = (
+  deps: Pick<GameOverridesWriteDeps, 'paths'>,
+  appName: string
+) => removeImagesMatching(deps, (file) => file.startsWith(`${appName}-`))
 
 /**
  * Get stored overrides for a specific game
@@ -73,7 +82,7 @@ export function getAllGameOverrides(
  * Save custom overrides for a game
  */
 export function setGameOverrides(
-  deps: GameOverridesDeps,
+  deps: GameOverridesWriteDeps,
   appName: string,
   override: GameMetadataOverride
 ): boolean {
@@ -86,7 +95,7 @@ export function setGameOverrides(
     // If override is empty, remove it and drop any stored image files.
     if (!override.title && !override.art_cover && !override.art_square) {
       delete currentOverrides[appName]
-      removeImagesForApp(appName)
+      removeImagesForApp(deps, appName)
     } else {
       currentOverrides[appName] = override
     }

@@ -120,7 +120,8 @@ function launch(): Launch {
         registry: createStoreRegistry(),
         root: createTestStoreRoot()
       })
-    const { configPath } = require('backend/constants/paths')
+    const paths = require('backend/constants/paths')
+    const { configPath } = paths
     const { createGlobalConfig } = require('backend/config')
     const {
       seedFocusRowFromMirror,
@@ -129,7 +130,9 @@ function launch(): Launch {
     /* eslint-enable @typescript-eslint/no-require-imports */
 
     const config = createGlobalConfig({
-      versioning: createTestStoreRoot().versioning
+      versioning: createTestStoreRoot().versioning,
+      // The mocked constants/paths is this launch's AppPaths.
+      paths
     })
     const ipc = createIpcRegistry()
     const { handlerRegistry, listenerRegistry } = ipcViews(ipc)

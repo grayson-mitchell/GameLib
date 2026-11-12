@@ -31,7 +31,9 @@ const mockIsLoggedIn = jest.fn()
 jest.mock('backend/macArch/recovery', () => ({
   recordedMacArch: jest.fn(),
   scheduleMacArchSweep: jest.fn(),
-  checkInstalledMacArch: jest.fn()
+  checkInstalledMacArch: jest.fn(),
+  // The test misc runtime builds its prompt chain from this factory.
+  createMacArchPromptChain: jest.fn()
 }))
 
 jest.mock('../user', () => ({

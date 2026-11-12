@@ -41,6 +41,7 @@ import type { GogRuntime } from 'backend/storeManagers/gog/gogRuntime'
 import type { LegendaryRuntime } from 'backend/storeManagers/legendary/legendaryRuntime'
 import type { NileRuntime } from 'backend/storeManagers/nile/nileRuntime'
 import type { AppRuntime } from 'backend/appRuntime'
+import type { MiscRuntime } from 'backend/miscRuntime'
 import type { SystemInfoCache } from 'backend/utils/systeminfo'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { WineWindowRaiser } from 'backend/utils/wineWindowRaise'
@@ -219,6 +220,8 @@ export interface ManagerDeps {
   aborts: AbortRegistry
   /** The boot-owned app runtime: event bus, frontend-ready flag, launch single-flight, image fetches, CrossOver index, overlay installs (66.4-17). */
   appRuntime: AppRuntime
+  /** The boot-owned misc runtime: metadata-override push, Mac arch prompt chain, CheapShark store map (66.4-18). */
+  miscRuntime: MiscRuntime
   /** The boot-owned Wine window raiser: its raise timers run on the boot clock (66.4-13). */
   windowRaiser: WineWindowRaiser
   /** The boot-owned tools state: single-flight slot, catalog and script-metadata caches, winetricks environment (66.4-14). */
@@ -366,6 +369,8 @@ export interface BootServices {
   aborts: AbortRegistry
   /** Built by the 'app-runtime' boot step, after 'abort-registry' and before 'store-managers' (66.4-17). */
   appRuntime: AppRuntime
+  /** Built by the 'misc-runtime' boot step, right after 'app-runtime' (66.4-18). */
+  miscRuntime: MiscRuntime
   /** The boot-owned Wine window raiser: its raise timers run on the boot clock (66.4-13). */
   windowRaiser: WineWindowRaiser
   /** The boot-owned tools state: single-flight slot, catalog and script-metadata caches, winetricks environment (66.4-14). */

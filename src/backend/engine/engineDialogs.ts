@@ -19,12 +19,15 @@ import {
   type DialogBoxDeps,
   type NotifyDeps
 } from 'backend/dialog/dialog'
-import { newDialogAckId, trackDialogDisplay } from 'backend/dialog/displayAck'
+import type { Dialogs } from 'backend/host/dialogs'
 import type { FallbackReason } from './engineTypes'
 
 export function showEngineDialog(
   deps: DialogBoxDeps &
-    NotifyDeps & { appState: Pick<AppState, 'raiseMainWindow'> },
+    NotifyDeps & {
+      appState: Pick<AppState, 'raiseMainWindow'>
+      dialogs: Pick<Dialogs, 'displayAcks'>
+    },
   args: {
     key: string
     title: string
@@ -36,8 +39,8 @@ export function showEngineDialog(
   const { key, title, body, ackId: tag } = args
   notify(deps, { title, body })
   deps.appState.raiseMainWindow()
-  const ackId = newDialogAckId()
-  trackDialogDisplay(ackId, (result) => {
+  const ackId = deps.dialogs.displayAcks.newId()
+  deps.dialogs.displayAcks.track(ackId, (result) => {
     logInfo(
       result.confirmed
         ? `[engine-notice] key=${key} tag=${tag} display=confirmed elapsedMs=${result.elapsedMs}`

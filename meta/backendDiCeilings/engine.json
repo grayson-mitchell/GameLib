@@ -14,7 +14,7 @@
     "src/backend/engine/__tests__/gameEngineState.test.ts": 1,
     "src/backend/engine/__tests__/gameProcessWatch.test.ts": 2,
     "src/backend/engine/__tests__/launchDeadline.test.ts": 1,
-    "src/backend/engine/__tests__/launchEngine.deadline.test.ts": 9,
+    "src/backend/engine/__tests__/launchEngine.deadline.test.ts": 8,
     "src/backend/engine/__tests__/launchEngine.test.ts": 10,
     "src/backend/engine/__tests__/launchSettings.test.ts": 3,
     "src/backend/engine/__tests__/legacyBottleUntouched.test.ts": 7,

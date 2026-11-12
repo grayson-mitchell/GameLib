@@ -296,11 +296,10 @@ async function readLedger(
 
 /** Write to a unique temp file and rename it over the ledger, so a crash never tears it (IN-04). */
 async function writeLedger(
-  versioning: StoreVersioning,
+  { versioning, nextTmpSeq }: SharedRedistState,
   path: string,
   dir: string,
-  ledger: Ledger,
-  nextTmpSeq: () => number
+  ledger: Ledger
 ): Promise<void> {
   if (isSharedRedistLedgerReadOnly(versioning, path)) {
     versioning.noteRefusedWrite(path)
@@ -616,13 +615,7 @@ async function run(
     if (verified && sessionEnded) {
       try {
         delete ledger.displayDriver
-        await writeLedger(
-          state.versioning,
-          ledgerPath,
-          bottleDir,
-          ledger,
-          state.nextTmpSeq
-        )
+        await writeLedger(state, ledgerPath, bottleDir, ledger)
       } catch {
         // The marker may linger; the next launch repeats a harmless restore.
       }
@@ -655,13 +648,7 @@ async function run(
   if (ledger.settled) {
     // Re-evaluating (opt-in changed): clear the stale mark until this run settles again.
     delete ledger.settled
-    await writeLedger(
-      state.versioning,
-      ledgerPath,
-      bottleDir,
-      ledger,
-      state.nextTmpSeq
-    )
+    await writeLedger(state, ledgerPath, bottleDir, ledger)
   }
 
   const { downloadSharedRedistDepots } = await import('../depot')
@@ -745,13 +732,7 @@ async function run(
       const setNull = buildWineGraphicsSetParts('null')
       if (prior !== null) buildWineGraphicsSetParts(prior) // throws on a value we could not replay
       ledger.displayDriver = { prior, at: new Date().toISOString() }
-      await writeLedger(
-        state.versioning,
-        ledgerPath,
-        bottleDir,
-        ledger,
-        state.nextTmpSeq
-      )
+      await writeLedger(state, ledgerPath, bottleDir, ledger)
       markerWritten = true
       windowPrior = { prior }
       const add = await runBounded(
@@ -814,13 +795,7 @@ async function run(
           if (ledger.markPending[key] && entry.hasRunKey) {
             if (await writeMark(entry.hasRunKey, entry.name)) {
               delete ledger.markPending[key]
-              await writeLedger(
-                state.versioning,
-                ledgerPath,
-                bottleDir,
-                ledger,
-                state.nextTmpSeq
-              )
+              await writeLedger(state, ledgerPath, bottleDir, ledger)
             } else {
               logWarning(
                 `Steam ${appId}: still could not write the HasRunKey mark for ${depot.label} (${entry.name})`,
@@ -863,13 +838,7 @@ async function run(
                   LogPrefix.Steam
                 )
                 ledger.done[key] = depot.gid
-                await writeLedger(
-                  state.versioning,
-                  ledgerPath,
-                  bottleDir,
-                  ledger,
-                  state.nextTmpSeq
-                )
+                await writeLedger(state, ledgerPath, bottleDir, ledger)
                 continue
               }
             }
@@ -894,13 +863,7 @@ async function run(
               LogPrefix.Steam
             )
             ledger.rejected[key] = depot.gid
-            await writeLedger(
-              state.versioning,
-              ledgerPath,
-              bottleDir,
-              ledger,
-              state.nextTmpSeq
-            )
+            await writeLedger(state, ledgerPath, bottleDir, ledger)
             continue
           }
 
@@ -929,26 +892,14 @@ async function run(
                 LogPrefix.Steam
               )
               recordFailure(ledger, key, depot.gid, true)
-              await writeLedger(
-                state.versioning,
-                ledgerPath,
-                bottleDir,
-                ledger,
-                state.nextTmpSeq
-              )
+              await writeLedger(state, ledgerPath, bottleDir, ledger)
               stop = true
               entryOk = false
               break
             }
             if (!isRedistSuccessExit(depot.kind, r.code)) {
               const f = recordFailure(ledger, key, depot.gid, false)
-              await writeLedger(
-                state.versioning,
-                ledgerPath,
-                bottleDir,
-                ledger,
-                state.nextTmpSeq
-              )
+              await writeLedger(state, ledgerPath, bottleDir, ledger)
               logWarning(
                 `Steam ${appId}: ${depot.label} (${entry.name}) installer exited with code ${String(r.code)} (consecutive failure ${f.count}), will retry`,
                 LogPrefix.Steam
@@ -984,13 +935,7 @@ async function run(
           delete ledger.timedOut[key]
           delete ledger.failures[key]
           delete ledger.rejected[key]
-          await writeLedger(
-            state.versioning,
-            ledgerPath,
-            bottleDir,
-            ledger,
-            state.nextTmpSeq
-          )
+          await writeLedger(state, ledgerPath, bottleDir, ledger)
         } catch (error) {
           logWarning(
             `Steam ${appId}: ${depot.label} (${entry.name}) threw, will retry next launch: ${String(error)}`,
@@ -999,13 +944,7 @@ async function run(
           anyFailed = true
           try {
             recordFailure(ledger, key, depot.gid, false)
-            await writeLedger(
-              state.versioning,
-              ledgerPath,
-              bottleDir,
-              ledger,
-              state.nextTmpSeq
-            )
+            await writeLedger(state, ledgerPath, bottleDir, ledger)
           } catch {
             // The failure count is best effort; the entry already stays not-done and unsettled.
           }
@@ -1029,13 +968,7 @@ async function run(
       rejected: Object.keys(ledger.rejected),
       at: new Date().toISOString()
     }
-    await writeLedger(
-      state.versioning,
-      ledgerPath,
-      bottleDir,
-      ledger,
-      state.nextTmpSeq
-    )
+    await writeLedger(state, ledgerPath, bottleDir, ledger)
   } else {
     logWarning(
       `Steam ${appId}: shared redists not settled (failed: ${result.failed.join(',') || 'none'}${marksPending ? ', HasRunKey marks pending' : ''}), will retry next launch`,

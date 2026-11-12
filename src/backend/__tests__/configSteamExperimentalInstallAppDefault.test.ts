@@ -25,6 +25,7 @@ jest.mock('../logger', () => ({
 }))
 
 import { createGlobalConfig } from '../config'
+import * as pathsModule from '../constants/paths'
 
 afterAll(() => rmSync(dir, { recursive: true, force: true }))
 
@@ -32,15 +33,18 @@ describe('steamExperimentalInstallApp default', () => {
   it('factory defaults keep the experimental InstallApp feature off', () => {
     expect(
       createGlobalConfig({
-        versioning: createTestVersioning()
+        versioning: createTestVersioning(),
+        paths: pathsModule
       }).getFactoryDefaults().steamExperimentalInstallApp
     ).toBe(false)
   })
 
   it('a fresh config with no config file reports it off', () => {
     expect(
-      createGlobalConfig({ versioning: createTestVersioning() }).getSettings()
-        .steamExperimentalInstallApp
+      createGlobalConfig({
+        versioning: createTestVersioning(),
+        paths: pathsModule
+      }).getSettings().steamExperimentalInstallApp
     ).toBe(false)
   })
 })

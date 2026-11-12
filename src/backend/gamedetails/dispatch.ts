@@ -72,7 +72,7 @@ export interface GameDetailsDeps extends NotifyDeps, StatusUpdateDeps {
   aborts: Pick<AbortRegistry, 'call'>
   steamInstallRuntime: { polls: Pick<InstallPollState, 'activePolls'> }
   /** The path roots the Epic user-info read derives from (66.4-11). */
-  paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath'>
+  paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath' | 'userData'>
   stores: {
     kvs: Pick<Stores['kvs'], 'configStore'>
   } & GameOverridesDeps['stores']

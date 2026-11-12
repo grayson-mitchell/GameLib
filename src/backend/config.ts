@@ -27,14 +27,6 @@ import {
 } from './utils/compatibility_layers'
 import type { BackendEvents } from './backend_events'
 import { isFlatpak, isLinux, isMac, isWindows } from './constants/environment'
-import {
-  configPath,
-  sharedWinePrefix,
-  gamesConfigPath,
-  heroicInstallPath,
-  userHome,
-  defaultWinePrefixDir
-} from './constants/paths'
 import { join } from 'path'
 import type { ProcessRunner } from './process/types'
 import type { AppPaths } from './process/context'
@@ -52,7 +44,7 @@ export function isFlatpakSteamInstalled(roots: string[]): boolean {
   return roots.some((root) => existsSync(join(root, 'app', FLATPAK_STEAM_APP)))
 }
 
-function getSteamCompatFolder() {
+function getSteamCompatFolder(userHome: string) {
   // Paths are from https://savelocation.net/steam-game-folder
   if (isWindows) {
     const defaultWinPath = join(process.env['PROGRAMFILES(X86)'] ?? '', 'Steam')
@@ -84,7 +76,19 @@ function getSteamCompatFolder() {
  * What the config reports outward (66.4-17): the boot wires `onSettingChanged` to its event bus's
  * `settingChanged` event. Optional so a test that does not observe the event builds a config bare.
  */
+export type GlobalConfigPaths = Pick<
+  AppPaths,
+  | 'configPath'
+  | 'gamesConfigPath'
+  | 'userHome'
+  | 'heroicInstallPath'
+  | 'defaultWinePrefixDir'
+  | 'sharedWinePrefix'
+>
+
 export interface GlobalConfigDeps {
+  /** The boot's path roots: the config file, the games-config folder and the install/prefix defaults. */
+  paths: GlobalConfigPaths
   /** The boot's store-versioning engine (`StoreRoot.versioning`): settings migration and read-only guard. */
   versioning: StoreVersioning
   onSettingChanged?: (
@@ -206,7 +210,11 @@ abstract class GlobalConfig {
   public abstract resetToDefaults(): void
 
   protected writeToFile(config: Record<string, unknown>) {
-    return writeSettingsFile(this.deps.versioning, configPath, config)
+    return writeSettingsFile(
+      this.deps.versioning,
+      this.deps.paths.configPath,
+      config
+    )
   }
 
   /**
@@ -227,7 +235,7 @@ abstract class GlobalConfig {
    */
   protected load() {
     // Config file doesn't exist, make one.
-    if (!existsSync(configPath)) {
+    if (!existsSync(this.deps.paths.configPath)) {
       this.resetToDefaults()
     }
     this.config = this.getSettings()
@@ -247,15 +255,15 @@ class GlobalConfigV0 extends GlobalConfig {
       return this.config
     }
 
-    if (!existsSync(gamesConfigPath)) {
-      mkdirSync(gamesConfigPath, { recursive: true })
+    if (!existsSync(this.deps.paths.gamesConfigPath)) {
+      mkdirSync(this.deps.paths.gamesConfigPath, { recursive: true })
     }
 
-    if (!existsSync(configPath)) {
+    if (!existsSync(this.deps.paths.configPath)) {
       return this.getFactoryDefaults()
     }
 
-    let settings = JSON.parse(readFileSync(configPath, 'utf-8'))
+    let settings = JSON.parse(readFileSync(this.deps.paths.configPath, 'utf-8'))
     const defaultSettings = settings.defaultSettings as AppSettings
 
     // keep old setting value for backwards compatibility, always use defaultWinePrefixDir in new code
@@ -264,7 +272,7 @@ class GlobalConfigV0 extends GlobalConfig {
 
     // fix relative paths
     const winePrefix = !isWindows
-      ? defaultSettings?.winePrefix?.replace('~', userHome)
+      ? defaultSettings?.winePrefix?.replace('~', this.deps.paths.userHome)
       : ''
 
     settings = {
@@ -312,14 +320,14 @@ class GlobalConfigV0 extends GlobalConfig {
       checkForUpdatesOnStartup: !isFlatpak,
       autoUpdateGames: true,
       customWinePaths: [],
-      defaultInstallPath: heroicInstallPath,
+      defaultInstallPath: this.deps.paths.heroicInstallPath,
       focusRow: null,
       dismissedSignInNotices: [],
       trayIconVariant: 'auto',
-      defaultSteamPath: getSteamCompatFolder(),
+      defaultSteamPath: getSteamCompatFolder(this.deps.paths.userHome),
       loginBackgroundPath: '',
-      defaultWinePrefix: defaultWinePrefixDir,
-      defaultWinePrefixDir: defaultWinePrefixDir,
+      defaultWinePrefix: this.deps.paths.defaultWinePrefixDir,
+      defaultWinePrefixDir: this.deps.paths.defaultWinePrefixDir,
       hideChangelogsOnStartup: false,
       language: 'en',
       maxWorkers: 0,
@@ -330,7 +338,7 @@ class GlobalConfigV0 extends GlobalConfig {
       showFps: false,
       useGameMode: isFlatpak,
       wineCrossoverBottle: 'GameLib',
-      winePrefix: isWindows ? '' : sharedWinePrefix,
+      winePrefix: isWindows ? '' : this.deps.paths.sharedWinePrefix,
       wineVersion: defaultWine,
       enableEsync: true,
       enableFsync: isLinux,
@@ -417,7 +425,11 @@ export type GlobalConfigSlice = Pick<
  * crashing on an unknown version.
  */
 export function createGlobalConfig(deps: GlobalConfigDeps): GlobalConfig {
-  ensureSettingsMigrated(deps.versioning, configPath, 'settings/global')
+  ensureSettingsMigrated(
+    deps.versioning,
+    deps.paths.configPath,
+    'settings/global'
+  )
   return new GlobalConfigV0(deps)
 }
 

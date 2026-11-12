@@ -159,6 +159,7 @@ function bootedWorld(opts?: {
         infoCaches: fakes.infoCaches,
         aborts: fakes.aborts,
         appRuntime: fakes.appRuntime,
+        miscRuntime: fakes.miscRuntime,
         windowRaiser: fakes.windowRaiser,
         toolsState: fakes.toolsState,
         signIn: fakes.signInProbe,

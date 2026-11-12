@@ -66,16 +66,13 @@
  * processGuards.ts` (Phase 34.2 Plan 09) now installs a process-level
  * `unhandledRejection` guard, but that is defence-in-depth only — it does
  * not replace this try/catch-at-the-body discipline (the
- * `sidecar-dialog-reject-crashes` precedent). `setMetadataChangedNotifier`
- * is installed, wrapped the same way, once at the TOP of
- * `registerGameDetailsFlows()` — before any of the 3 `ipcMain.on`
- * registrations — so no send can ever fire against the default no-op
- * installed by `gamedetails/overrides.ts`. The installed notifier pushes
- * over the EXISTING generic frontend-message relay
- * (`./sidecarRpc`'s `pushFrontendMessage`, the same function
- * `storeWriteHandlers.ts`'s D-06 `STORE_CHANGED_CHANNEL` push and Phase
- * 34.1's `languageChanged` push both ride) — zero new Rust arms, exactly the
- * Phase 29 `storeChanged` precedent this plan's own interfaces required.
+ * `sidecar-dialog-reject-crashes` precedent). The `metadataChanged` notifier is a
+ * constructor dependency of the boot's misc runtime (66.4-18): the 'misc-runtime'
+ * step builds it over the EXISTING generic frontend-message relay (the host's
+ * `pushFrontendMessage`, the same function `storeWriteHandlers.ts`'s D-06
+ * `STORE_CHANGED_CHANNEL` push and Phase 34.1's `languageChanged` push both
+ * ride) — zero new Rust arms, exactly the Phase 29 `storeChanged` precedent.
+ * `setGameMetadataOverride` reaches it through `deps.miscRuntime`.
  *
  * Deliberately does NOT register:
  *   - The 8 enrichment channels (`getKnownFixes`, `getCrossoverIndex`,
@@ -107,7 +104,6 @@
  */
 
 import type { IpcRegistry } from './ipcRegistry'
-import type { HostServices } from '../host'
 import {
   getGameInfo,
   getExtraInfo,
@@ -127,10 +123,8 @@ import {
   addNewApp
 } from '../gamedetails/dispatch'
 import type { GameDetailsDeps } from '../gamedetails/dispatch'
-import {
-  setGameMetadataOverride,
-  setMetadataChangedNotifier
-} from '../gamedetails/overrides'
+import { setGameMetadataOverride } from '../gamedetails/overrides'
+import type { MiscRuntimeSlice } from '../miscRuntime'
 import { getGameOverrides, getAllGameOverrides } from '../game_overrides'
 import type {
   MoveGameArgs,
@@ -147,10 +141,9 @@ function logSendFailure(channel: string, error: unknown): void {
 }
 
 /** The game-details slice plus the registry the channels are written into. */
-export interface GameDetailsFlowDeps extends GameDetailsDeps {
+export interface GameDetailsFlowDeps
+  extends GameDetailsDeps, MiscRuntimeSlice<'metadataOverrides'> {
   ipc: Pick<IpcRegistry, 'handle' | 'on'>
-  /** This boot's backend -> frontend push, for the metadata-changed notifier (66.4-15). */
-  pushFrontendMessage: HostServices['pushFrontendMessage']
 }
 
 /**
@@ -160,18 +153,6 @@ export interface GameDetailsFlowDeps extends GameDetailsDeps {
  * registration onto the handler registry happens.
  */
 export function registerGameDetailsFlows(deps: GameDetailsFlowDeps): void {
-  // Installed FIRST, before any of the 3 send registrations below, so no
-  // send can ever fire against gamedetails/overrides.ts's default no-op
-  // notifier. Rides the existing generic frontend-message relay
-  // (sidecarRpc's pushFrontendMessage) — zero new Rust arms.
-  setMetadataChangedNotifier((overrides) => {
-    try {
-      deps.pushFrontendMessage('metadataChanged', overrides)
-    } catch (error) {
-      logSendFailure('metadataChanged', error)
-    }
-  })
-
   // ── invoke (15) ───────────────────────────────────────────────────────
 
   deps.ipc.handle('getGameInfo', async (_event: unknown, ...args: unknown[]) =>

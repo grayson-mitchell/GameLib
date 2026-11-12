@@ -19,7 +19,6 @@ import { addNonSteamGame } from '../nonesteamgame/nonesteamgame'
 import type { NonSteamGameDeps } from '../nonesteamgame/nonesteamgame'
 import sanitize from 'sanitize-filename'
 import { isMac } from 'backend/constants/environment'
-import { userHome } from 'backend/constants/paths'
 import type { Game } from 'common/types/game_manager'
 import { writeWindowsShortcut, type ShortcutDetails } from './windowsShortcut'
 import { readWindowsShellFolder } from '../../sidecar/knownFolders'
@@ -304,7 +303,7 @@ function shortcutFiles(
   switch (process.platform) {
     case 'linux': {
       desktopFile = `${deps.paths.knownFolder('desktop')}/${gameTitle}.desktop`
-      menuFile = `${userHome}/.local/share/applications/${gameTitle}.desktop`
+      menuFile = `${deps.paths.userHome}/.local/share/applications/${gameTitle}.desktop`
       break
     }
     case 'win32': {
@@ -317,10 +316,10 @@ function shortcutFiles(
       break
     }
     case 'darwin':
-      menuFile = join(userHome, 'Applications', `${gameTitle}.app`)
+      menuFile = join(deps.paths.userHome, 'Applications', `${gameTitle}.app`)
       // Not app.getPath('desktop'): the sidecar's pathShim picks its arm from the platform
       // captured at module load, which a test override cannot change.
-      desktopFile = join(userHome, 'Desktop', `${gameTitle}.app`)
+      desktopFile = join(deps.paths.userHome, 'Desktop', `${gameTitle}.app`)
       break
   }
 

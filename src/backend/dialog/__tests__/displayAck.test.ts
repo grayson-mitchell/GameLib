@@ -1,12 +1,15 @@
-import {
-  acknowledgeDialogDisplay,
-  pendingDialogAckCount,
-  trackDialogDisplay,
-  newDialogAckId
-} from '../displayAck'
+import { createDisplayAcks, type DisplayAcks } from '../displayAck'
 
 describe('dialog display ack', () => {
-  beforeEach(() => jest.useFakeTimers())
+  let acks: DisplayAcks
+  const acknowledgeDialogDisplay = (id: unknown) => acks.acknowledge(id)
+  const pendingDialogAckCount = () => acks.pendingCount()
+  const trackDialogDisplay: DisplayAcks['track'] = (...a) => acks.track(...a)
+  const newDialogAckId = () => acks.newId()
+  beforeEach(() => {
+    jest.useFakeTimers()
+    acks = createDisplayAcks()
+  })
   afterEach(() => jest.useRealTimers())
 
   it('settles confirmed when the ack arrives, and clears the timer', () => {
@@ -56,5 +59,16 @@ describe('dialog display ack', () => {
     expect(unref).toHaveBeenCalledTimes(1)
     spy.mockRestore()
     acknowledgeDialogDisplay(id)
+  })
+
+  it('an ack resolves only the instance that tracked it', () => {
+    const other = createDisplayAcks()
+    const settle = jest.fn()
+    const id = newDialogAckId()
+    trackDialogDisplay(id, settle, 1000)
+    expect(other.acknowledge(id)).toBe(false)
+    expect(settle).not.toHaveBeenCalled()
+    expect(other.pendingCount()).toBe(0)
+    expect(acks.acknowledge(id)).toBe(true)
   })
 })

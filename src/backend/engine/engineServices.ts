@@ -2,6 +2,7 @@
  * The injected capabilities the engine's bottle-creation path needs (66.1-22d).
  * Type-only imports: the engine never value-imports tools or the services layer.
  */
+import type { Dialogs } from 'backend/host/dialogs'
 import type { StoreVersioning } from 'backend/storeVersioning/engine'
 import type { AppRuntimeSlice } from 'backend/appRuntime'
 import type { OnlineMonitor } from 'backend/online_monitor'
@@ -43,5 +44,8 @@ export interface EngineServices {
   /** The dialog and notification slices the engine's user-facing notices go through. */
   notices: DialogBoxDeps &
     NotifyDeps &
-    AppRuntimeSlice<'events'> & { appState: Pick<AppState, 'raiseMainWindow'> }
+    AppRuntimeSlice<'events'> & {
+      appState: Pick<AppState, 'raiseMainWindow'>
+      dialogs: Pick<Dialogs, 'displayAcks'>
+    }
 }

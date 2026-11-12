@@ -1,4 +1,5 @@
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
+import type { Dialogs } from 'backend/host/dialogs'
 import {
   GameInfo,
   Runner,
@@ -99,6 +100,8 @@ export interface LauncherDeps
   extends
     DialogBoxDeps,
     AppRuntimeSlice<'events' | 'launchFlights' | 'overlayInstalls'> {
+  /** Also the boot's display-ack table (the engine step's refused-launch dialogs, 66.4-18). */
+  dialogs: DialogBoxDeps['dialogs'] & Pick<Dialogs, 'displayAcks'>
   /** Late-bound: filled by createStoreManagers after the launcher is built, read at call time only. */
   libraryManagers: StoreManagers['library']
   launchHooks: Record<Runner, StoreLaunchHooks>

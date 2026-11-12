@@ -14145,9 +14145,8 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
 
       it('raises the main window before the dialog and logs display=confirmed on ack, display=unconfirmed on timeout', async () => {
         const { app } = hostFakes
-        const { acknowledgeDialogDisplay } = jest.requireActual<
-          typeof import('backend/dialog/displayAck')
-        >('backend/dialog/displayAck')
+        const acknowledgeDialogDisplay = (id: string) =>
+          steamTestDeps.dialogs.displayAcks.acknowledge(id)
         jest.useFakeTimers()
         try {
           const confirmedId = freshId()

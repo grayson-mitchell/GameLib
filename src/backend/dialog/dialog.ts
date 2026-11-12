@@ -113,10 +113,6 @@ type NotifyType = {
   body: string
 }
 
-// A denial persists until the user changes it in System Settings, so logging it on every
-// notify() would flood the log; other failures are per-delivery and are logged each time.
-let loggedNotificationAuthDenied = false
-
 // 52-REVIEW WR-01: UserNotifications accepting a request is not proof a banner was shown.
 // Provisional/Ephemeral grants, and Authorized grants with alerts disabled or alert style None,
 // deliver quietly to Notification Center. The Rust shell appends the settings it read on the same
@@ -165,11 +161,9 @@ function notify(
   if (!isSteamDeckGameMode) {
     // The 'click' -> mainWindow.show() handler was a no-op on the stand-in window: dropped.
     const onFailed = (error: string) => {
+      // The host notifications service reports a permission denial once per boot (it owns that
+      // flag), so every failure that reaches here is logged.
       const denied = error.startsWith(RUST_NOTIFICATION_AUTH_DENIED_PREFIX)
-      if (denied) {
-        if (loggedNotificationAuthDenied) return
-        loggedNotificationAuthDenied = true
-      }
       const hint = denied
         ? ' — enable GameLib in System Settings → Notifications'
         : ''

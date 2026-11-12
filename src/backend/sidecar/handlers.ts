@@ -274,7 +274,7 @@ export function registerHandlers(deps: {
     onlineMonitor: deps.services.onlineMonitor,
     steamInstallRuntime: deps.services.steamInstallRuntime,
     paths: deps.services.paths,
-    pushFrontendMessage: deps.services.host.pushFrontendMessage,
+    miscRuntime: deps.services.miscRuntime,
     sendFrontendMessage: deps.services.host.sendFrontendMessage
   })
   // Phase 34.2 Plan 06: the enrichment channels — no ordering
@@ -286,6 +286,7 @@ export function registerHandlers(deps: {
   registerEnrichmentFlows({
     ipc,
     appRuntime: deps.services.appRuntime,
+    miscRuntime: deps.services.miscRuntime,
     managers: deps.services.managers,
     stores: deps.services.stores,
     appInfo: deps.services.appInfo,

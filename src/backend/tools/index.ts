@@ -1,4 +1,5 @@
 import type { AppRuntimeSlice } from 'backend/appRuntime'
+import type { Dialogs } from 'backend/host/dialogs'
 import type { SteamEngineBottle } from 'backend/storeManagers/steam/bottle'
 import type { AppState } from 'backend/host/appState'
 import type { SpawnAsync } from 'backend/spawnAsync'
@@ -224,6 +225,8 @@ export interface ToolsDeps
   extends DialogBoxDeps, NotifyDeps, AppRuntimeSlice<'events'> {
   /** The boot-owned tools state: single-flight slot, caches, winetricks environment (66.4-14). */
   toolsState: ToolsState
+  /** Also the boot's display-ack table: the engine's refused-launch dialogs track their acks in it (66.4-18). */
+  dialogs: DialogBoxDeps['dialogs'] & Pick<Dialogs, 'displayAcks'>
   managers: { library: StoreManagers['library'] }
   commandRunner: Pick<CommandRunner, 'runWineCommand'>
   launcher: Pick<Launcher, 'setupEnvVars' | 'setupWineEnvVars' | 'validWine'>

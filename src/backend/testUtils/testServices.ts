@@ -37,6 +37,7 @@ import { createFakeClock } from './fakeClock'
 import { createTestOnlineMonitor } from './testOnlineMonitor'
 import { createTestEngineState } from './testEngineState'
 import { createTestAppRuntime } from './testAppRuntime'
+import { createTestMiscRuntime } from './testMiscRuntime'
 import { createTestEngineRuntime } from './testEngineRuntime'
 import { createTestSteamLaunchRuntime } from './testSteamLaunchRuntime'
 import { createTestBridgeRuntime } from './testBridgeRuntime'
@@ -281,6 +282,7 @@ export function createTestServices(
     infoCaches: overrides.infoCaches ?? createTestInfoCaches(),
     aborts: overrides.aborts ?? createTestAbortRegistry(),
     appRuntime: overrides.appRuntime ?? createTestAppRuntime(),
+    miscRuntime: overrides.miscRuntime ?? createTestMiscRuntime(),
     windowRaiser: overrides.windowRaiser ?? createTestWindowRaiser(),
     toolsState: overrides.toolsState ?? createTestToolsState(),
     winetricksQueue:
@@ -459,6 +461,7 @@ export function createTestManagerDeps(
     infoCaches: overrides.infoCaches ?? createTestInfoCaches(),
     aborts: overrides.aborts ?? createTestAbortRegistry(),
     appRuntime: overrides.appRuntime ?? createTestAppRuntime(),
+    miscRuntime: overrides.miscRuntime ?? createTestMiscRuntime(),
     windowRaiser: overrides.windowRaiser ?? createTestWindowRaiser(),
     toolsState: overrides.toolsState ?? createTestToolsState(),
     signIn: overrides.signIn ?? createTestSignInProbe(),

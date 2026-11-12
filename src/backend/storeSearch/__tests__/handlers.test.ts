@@ -45,7 +45,11 @@ import {
 // `backend/testUtils/stripSourceComments` util (strips block comments first,
 // then the line-prefix filter), imported above as `stripComments`.
 
-const deps = { appInfo: { version: '1.2.3-test' } }
+const deps = {
+  appInfo: { version: '1.2.3-test' },
+  // The handlers only pass the deps through to the (mocked) CheapShark calls.
+  miscRuntime: { storeMap: { get: () => undefined, set: () => undefined } }
+}
 
 describe('storeSearch/handlers.ts', () => {
   beforeEach(() => {

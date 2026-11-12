@@ -25,6 +25,7 @@ jest.mock('../logger', () => ({
 }))
 
 import { createGlobalConfig } from '../config'
+import * as pathsModule from '../constants/paths'
 
 afterAll(() => rmSync(dir, { recursive: true, force: true }))
 
@@ -32,15 +33,18 @@ describe('shareDetectedFixes default (D-09)', () => {
   it('factory defaults keep sharing detected fixes off', () => {
     expect(
       createGlobalConfig({
-        versioning: createTestVersioning()
+        versioning: createTestVersioning(),
+        paths: pathsModule
       }).getFactoryDefaults().shareDetectedFixes
     ).toBe(false)
   })
 
   it('a fresh config with no config file reports it off', () => {
     expect(
-      createGlobalConfig({ versioning: createTestVersioning() }).getSettings()
-        .shareDetectedFixes
+      createGlobalConfig({
+        versioning: createTestVersioning(),
+        paths: pathsModule
+      }).getSettings().shareDetectedFixes
     ).toBe(false)
   })
 })

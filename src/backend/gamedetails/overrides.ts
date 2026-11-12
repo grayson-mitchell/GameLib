@@ -37,41 +37,51 @@
 import {
   getAllGameOverrides,
   setGameOverrides,
-  type GameOverridesDeps
+  type GameOverridesWriteDeps
 } from '../game_overrides'
 import type { GameMetadataOverride } from '../game_overrides/stores'
 import { logWarning, LogPrefix } from '../logger'
+import type { MiscRuntimeSlice } from '../miscRuntime'
 
-type MetadataChangedNotifier = (
+export type MetadataChangedNotifier = (
   overrides: Record<string, GameMetadataOverride>
 ) => void
 
-let hasWarnedNoNotifier = false
-
-let metadataChangedNotifier: MetadataChangedNotifier = () => {
-  if (!hasWarnedNoNotifier) {
-    hasWarnedNoNotifier = true
-    logWarning(
-      'setGameMetadataOverride: no metadataChanged notifier installed -- the ' +
-        'store write succeeded but no frontend push was sent. Call ' +
-        'setMetadataChangedNotifier() at startup to install one.',
-      LogPrefix.Backend
-    )
-  }
+export interface MetadataOverrides {
+  /** Pushes the changed overrides to the frontend through the notifier given at construction. */
+  notifyChanged(overrides: Record<string, GameMetadataOverride>): void
 }
 
 /**
- * Installs the function that pushes `metadataChanged` to the frontend.
- * `main.ts` installs a `sendFrontendMessage`-backed notifier at module
- * scope; the sidecar registration module installs one backed by
- * `platformApi`'s own relay.
+ * The `metadataChanged` push of one boot (66.4-18, D-05). The notifier is a constructor dependency:
+ * the boot builds it over its own push, so nothing installs it late. Built with none (a test that
+ * does not observe the push), the write still succeeds and a single warning per instance says no
+ * push was sent.
  */
-export function setMetadataChangedNotifier(fn: MetadataChangedNotifier): void {
-  metadataChangedNotifier = fn
+export function createMetadataOverrides(deps: {
+  notify?: MetadataChangedNotifier
+}): MetadataOverrides {
+  let hasWarnedNoNotifier = false
+  return {
+    notifyChanged(overrides) {
+      if (deps.notify) {
+        deps.notify(overrides)
+        return
+      }
+      if (!hasWarnedNoNotifier) {
+        hasWarnedNoNotifier = true
+        logWarning(
+          'setGameMetadataOverride: no metadataChanged notifier was given -- the ' +
+            'store write succeeded but no frontend push was sent.',
+          LogPrefix.Backend
+        )
+      }
+    }
+  }
 }
 
 export function setGameMetadataOverride(
-  deps: GameOverridesDeps,
+  deps: GameOverridesWriteDeps & MiscRuntimeSlice<'metadataOverrides'>,
   args: {
     appName: string
     title?: string
@@ -81,5 +91,5 @@ export function setGameMetadataOverride(
 ): void {
   const { appName, title, art_cover, art_square } = args
   setGameOverrides(deps, appName, { title, art_cover, art_square })
-  metadataChangedNotifier(getAllGameOverrides(deps))
+  deps.miscRuntime.metadataOverrides.notifyChanged(getAllGameOverrides(deps))
 }

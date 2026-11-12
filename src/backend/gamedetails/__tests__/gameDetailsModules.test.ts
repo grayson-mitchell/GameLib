@@ -158,10 +158,7 @@ import {
   getAvailableCyberpunkMods,
   setCyberpunkModConfig
 } from '../dispatch'
-import {
-  setGameMetadataOverride,
-  setMetadataChangedNotifier
-} from '../overrides'
+import { setGameMetadataOverride, createMetadataOverrides } from '../overrides'
 
 const OTHER_RUNNERS_FOR_LEGENDARY = [
   'steam',
@@ -638,42 +635,45 @@ describe('backend/gamedetails/overrides.ts (REQ-34.2-08)', () => {
     jest.clearAllMocks()
   })
 
-  // This test MUST run before any test below installs a notifier via
-  // setMetadataChangedNotifier -- the notifier is a module-scope singleton
-  // (not a jest mock reset by resetMocks), so this is the only point in the
-  // suite where overrides.ts's real, untouched, fail-safe default (a no-op
-  // that logWarning()s once) is genuinely exercised rather than a
-  // test-installed replacement.
-  it('REQ-34.2-08 setGameMetadataOverride still performs the store write and does not throw when NO notifier has ever been installed', () => {
+  // An instance built with no notifier is the real, untouched, fail-safe default (a no-op that
+  // logWarning()s once per instance), exercised here rather than a test-installed replacement.
+  it('REQ-34.2-08 setGameMetadataOverride still performs the store write and does not throw when NO notifier was given', () => {
     getAllGameOverridesMock.mockReturnValue({})
+    const deps = {
+      miscRuntime: { metadataOverrides: createMetadataOverrides({}) }
+    }
 
     expect(() =>
-      setGameMetadataOverride({} as never, {
+      setGameMetadataOverride(deps as never, {
         appName: '440',
         title: 'Custom Title'
       })
     ).not.toThrow()
-    expect(setGameOverridesMock).toHaveBeenCalledWith({}, '440', {
+    expect(setGameOverridesMock).toHaveBeenCalledWith(deps, '440', {
       title: 'Custom Title',
       art_cover: undefined,
       art_square: undefined
     })
   })
 
-  it("REQ-34.2-08 setGameMetadataOverride calls setGameOverrides(appName, {title, art_cover, art_square}) and invokes the installed notifier with getAllGameOverrides()'s value", () => {
+  it("REQ-34.2-08 setGameMetadataOverride calls setGameOverrides(appName, {title, art_cover, art_square}) and invokes the given notifier with getAllGameOverrides()'s value", () => {
     const overridesSnapshot = { '440': { title: 'Custom Title' } }
     getAllGameOverridesMock.mockReturnValue(overridesSnapshot)
     const notifierMock = jest.fn()
-    setMetadataChangedNotifier(notifierMock)
+    const deps = {
+      miscRuntime: {
+        metadataOverrides: createMetadataOverrides({ notify: notifierMock })
+      }
+    }
 
-    setGameMetadataOverride({} as never, {
+    setGameMetadataOverride(deps as never, {
       appName: '440',
       title: 'Custom Title',
       art_cover: 'cover.png',
       art_square: 'square.png'
     })
 
-    expect(setGameOverridesMock).toHaveBeenCalledWith({}, '440', {
+    expect(setGameOverridesMock).toHaveBeenCalledWith(deps, '440', {
       title: 'Custom Title',
       art_cover: 'cover.png',
       art_square: 'square.png'

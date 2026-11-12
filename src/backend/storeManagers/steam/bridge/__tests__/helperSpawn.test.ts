@@ -34,7 +34,7 @@ import {
   createBridgeHelperRegistry,
   type BridgeHelperRegistry
 } from '../helperRegistry'
-import { acknowledgeDialogDisplay } from 'backend/dialog/displayAck'
+import { createDisplayAcks } from 'backend/dialog/displayAck'
 
 jest.mock('backend/logger', () => ({
   logError: jest.fn(),
@@ -78,6 +78,7 @@ const mockedRaiseMainWindow = jest.fn()
 let registry: BridgeHelperRegistry
 const helperDeps = {
   sendFrontendMessage,
+  dialogs: { displayAcks: createDisplayAcks() },
   get bridgeHelpers() {
     return registry
   },
@@ -260,7 +261,7 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
       void ensureBridgeHelperReady(helperDeps, '3205720')
       child.stderr.emit('data', invite('3205720'))
       const ackId = inviteCalls()[0][0].ackId
-      expect(acknowledgeDialogDisplay(ackId)).toBe(true)
+      expect(helperDeps.dialogs.displayAcks.acknowledge(ackId)).toBe(true)
       expect(logInfo).toHaveBeenCalledWith(
         expect.stringMatching(
           /^bridge invite \[3205720\]: display=confirmed elapsedMs=\d+$/

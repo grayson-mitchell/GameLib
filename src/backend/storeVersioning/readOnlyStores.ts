@@ -11,7 +11,7 @@ import type {
   ReadOnlyStoresNoticePayload
 } from '../../common/types/readOnlyStores'
 
-export type ReadOnlyEntry = {
+type ReadOnlyEntry = {
   storeKey: string
   file: string
   reason: StoreReadOnlyReason

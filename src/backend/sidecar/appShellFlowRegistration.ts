@@ -40,7 +40,7 @@
  *     - `notify` -> `backend/dialog/dialog`'s `notify()` (`main.ts:538`),
  *       reaching `platformApi.Notification` -> the existing
  *       `notification_show` rustInvoke arm (Phase 33)
- *     - `dialogDisplayed` -> `dialog/displayAck`'s `acknowledgeDialogDisplay()` (renderer ack that a showDialog frame is on screen)
+ *     - `dialogDisplayed` -> the boot's `dialogs.displayAcks.acknowledge()` (`dialog/displayAck`) (renderer ack that a showDialog frame is on screen)
  *     - `quit` -> `backend/utils`'s `handleExit()` (`main.ts:680`), reaching
  *       `platformApi.app.exit()` -> the existing `app_exit` rustInvoke arm
  *     - `openReleases`/`openWebviewPage` -> thin
@@ -161,6 +161,7 @@
  * discipline (see the `sidecar-dialog-reject-crashes` precedent).
  */
 
+import type { Dialogs } from '../host/dialogs'
 import type { AppRuntimeSlice } from 'backend/appRuntime'
 import i18next from 'i18next'
 
@@ -182,7 +183,6 @@ import {
   type DialogBoxDeps,
   type NotifyDeps
 } from '../dialog/dialog'
-import { acknowledgeDialogDisplay } from '../dialog/displayAck'
 import { detectVCRedist } from '../utils'
 import { assertOpenableExternalUrl } from './openPolicy'
 import type { AbortRegistry } from '../utils/aborthandler/aborthandler'
@@ -333,6 +333,8 @@ function syncTrayIcon(
 export interface AppShellFlowDeps
   extends DialogBoxDeps, NotifyDeps, AppRuntimeSlice<'events' | 'protocol'> {
   managers: Pick<StoreManagers, 'library'>
+  /** The boot's in-app dialog display-ack table the `dialogDisplayed` channel resolves (66.4-18). */
+  dialogs: Pick<Dialogs, 'showErrorBox' | 'showMessageBox' | 'displayAcks'>
   /** The boot's read-only store tracker, flushed to the renderer once per launch (66.4-18). */
   readOnly: Pick<ReadOnlyStores, 'flush'>
   /** The boot-owned abort registry the `abort` channel signals (66.4-13). */
@@ -429,7 +431,7 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   // (see ../dialog/displayAck.ts). An unknown or repeated id is ignored.
   deps.ipc.on('dialogDisplayed', (_event: unknown, ...args: unknown[]) => {
     try {
-      acknowledgeDialogDisplay(args[0])
+      deps.dialogs.displayAcks.acknowledge(args[0])
     } catch (error) {
       logSendFailure('dialogDisplayed', error)
     }

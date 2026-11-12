@@ -66,13 +66,17 @@ function freshGraph(): Graph {
   jest.isolateModules(() => {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const versioning = createTestVersioning()
+    // The mocked constants/paths (per-test temp dir) is the boot's AppPaths here.
+    const paths =
+      require('../constants/paths') as typeof import('../constants/paths')
     const config = require('../config') as ConfigModule
     const gameConfig = require('../game_config') as GameConfigModule
     const engineConfig = require('../engine/engineConfig') as EngineConfigModule
     g = {
-      createGlobalConfig: () => config.createGlobalConfig({ versioning }),
+      createGlobalConfig: () =>
+        config.createGlobalConfig({ versioning, paths }),
       createGameConfigs: (deps) =>
-        gameConfig.createGameConfigs({ ...deps, versioning }),
+        gameConfig.createGameConfigs({ ...deps, versioning, paths }),
       readStoredGameConfig: (appName, deps) =>
         engineConfig.readStoredGameConfig(appName, { ...deps, versioning })
     }

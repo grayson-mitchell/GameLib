@@ -65,7 +65,6 @@ import { cp } from 'fs/promises'
 import { bootFresh } from './helpers/sidecarHarness'
 import type MigrationSystem from '../../migration'
 import { isLinux } from '../../constants/environment'
-import { userHome } from '../../constants/paths'
 import { deriveLegendaryPaths } from '../../storeManagers/legendary/constants'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createMigrationStores } from '../../migration/stores'
@@ -97,7 +96,7 @@ const { legendaryConfigPath } = deriveLegendaryPaths(testPaths)
  */
 const globalLegendaryConfig = isLinux
   ? join(testPaths.appData, 'legendary')
-  : join(userHome, '.config', 'legendary')
+  : join(testPaths.userHome, '.config', 'legendary')
 
 const stagingPath = `${legendaryConfigPath}.migrating`
 
@@ -151,7 +150,8 @@ function bootMigrations() {
       paths: {
         appData: testPaths.appData,
         appFolder: testPaths.appFolder,
-        toolsPath: testPaths.toolsPath
+        toolsPath: testPaths.toolsPath,
+        userHome: testPaths.userHome
       }
     },
     before: () => {

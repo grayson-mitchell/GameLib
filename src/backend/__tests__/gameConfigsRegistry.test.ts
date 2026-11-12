@@ -1,3 +1,4 @@
+import * as pathsModule from '../constants/paths'
 import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { createGameConfigs } from '../game_config'
 import {
@@ -15,7 +16,8 @@ describe('createGameConfigs', () => {
   it('returns the same object on repeated gets', () => {
     const configs = createGameConfigs({
       config,
-      versioning: createTestVersioning()
+      versioning: createTestVersioning(),
+      paths: pathsModule
     })
     expect(configs.get('a')).toBe(configs.get('a'))
   })
@@ -23,16 +25,25 @@ describe('createGameConfigs', () => {
   it('returns a different object for a different game', () => {
     const configs = createGameConfigs({
       config,
-      versioning: createTestVersioning()
+      versioning: createTestVersioning(),
+      paths: pathsModule
     })
     expect(configs.get('a')).not.toBe(configs.get('b'))
   })
 
   it('two registries never share an instance', () => {
     expect(
-      createGameConfigs({ config, versioning: createTestVersioning() }).get('a')
+      createGameConfigs({
+        config,
+        versioning: createTestVersioning(),
+        paths: pathsModule
+      }).get('a')
     ).not.toBe(
-      createGameConfigs({ config, versioning: createTestVersioning() }).get('a')
+      createGameConfigs({
+        config,
+        versioning: createTestVersioning(),
+        paths: pathsModule
+      }).get('a')
     )
   })
 })

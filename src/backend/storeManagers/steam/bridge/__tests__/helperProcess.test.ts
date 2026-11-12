@@ -19,6 +19,7 @@
  * an object overrides `this`), so each test fully controls what each
  * successive CONTROL probe "receives" over the wire.
  */
+import { createDisplayAcks } from 'backend/dialog/displayAck'
 import { at } from '../../__tests__/fixtures/indexed'
 import { EventEmitter } from 'node:events'
 import { createChildBackedRunner } from 'backend/testUtils/childBackedRunner'
@@ -99,6 +100,7 @@ function newRegistry(
 }
 const helperDeps = {
   sendFrontendMessage,
+  dialogs: { displayAcks: createDisplayAcks() },
   get bridgeHelpers() {
     return registry
   },

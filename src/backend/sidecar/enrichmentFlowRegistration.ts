@@ -158,6 +158,7 @@
  * is INVOKE.
  */
 
+import type { MiscRuntimeSlice } from '../miscRuntime'
 import type { AppRuntimeSlice } from 'backend/appRuntime'
 import type { FrontendMessageDeps } from '../host/frontendMessage'
 import type { AppInfo } from '../process/context'
@@ -182,7 +183,10 @@ import type { ManagerDeps, StoreManagers, Stores } from 'backend/services/types'
 
 /** Narrow slice (66.1 D-01): library managers for game lookup. */
 export interface EnrichmentFlowDeps
-  extends FrontendMessageDeps, AppRuntimeSlice<'events' | 'crossoverIndex'> {
+  extends
+    FrontendMessageDeps,
+    AppRuntimeSlice<'events' | 'crossoverIndex'>,
+    MiscRuntimeSlice<'storeMap'> {
   ipc: Pick<IpcRegistry, 'handle'>
   appInfo: Pick<AppInfo, 'version'>
   managers: Pick<StoreManagers, 'library'>

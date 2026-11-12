@@ -189,7 +189,7 @@ describe('sidecar bootstrap (headless boot)', () => {
   })
 
   describe('boot services (66.1-04)', () => {
-    it('a default boot returns BootServices with all forty-one fields', () => {
+    it('a default boot returns BootServices with all forty-two fields', () => {
       const { services } = bootWithLines()
       expect(Object.keys(services).sort()).toEqual([
         'aborts',
@@ -212,6 +212,7 @@ describe('sidecar bootstrap (headless boot)', () => {
         'launcher',
         'legendaryRuntime',
         'managers',
+        'miscRuntime',
         'nileRuntime',
         'onlineMonitor',
         'paths',

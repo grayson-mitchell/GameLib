@@ -25,35 +25,43 @@ interface Pending {
   settle: (result: DialogDisplayResult) => void
 }
 
-const pending = new Map<string, Pending>()
-
-export function newDialogAckId(): string {
-  return randomUUID()
+export interface DisplayAcks {
+  newId(): string
+  track(
+    ackId: string,
+    settle: (result: DialogDisplayResult) => void,
+    timeoutMs?: number
+  ): void
+  /** Returns whether the id was being tracked. A repeated or unknown ack is ignored. */
+  acknowledge(ackId: unknown): boolean
+  pendingCount(): number
 }
 
-export function trackDialogDisplay(
-  ackId: string,
-  settle: (result: DialogDisplayResult) => void,
-  timeoutMs: number = DIALOG_ACK_TIMEOUT_MS
-): void {
-  const timer = setTimeout(() => {
-    if (pending.delete(ackId)) settle({ confirmed: false, timeoutMs })
-  }, timeoutMs)
-  timer.unref()
-  pending.set(ackId, { timer, startedAt: Date.now(), settle })
-}
-
-/** Returns whether the id was being tracked. A repeated or unknown ack is ignored. */
-export function acknowledgeDialogDisplay(ackId: unknown): boolean {
-  if (typeof ackId !== 'string') return false
-  const entry = pending.get(ackId)
-  if (!entry) return false
-  pending.delete(ackId)
-  clearTimeout(entry.timer)
-  entry.settle({ confirmed: true, elapsedMs: Date.now() - entry.startedAt })
-  return true
-}
-
-export function pendingDialogAckCount(): number {
-  return pending.size
+/**
+ * The pending-ack table of one boot's dialogs (66.4-18, D-05). An ack resolves only the entry
+ * its own instance tracked, so two boots (or two tests) never settle each other's dialogs. It
+ * hangs off the `dialogs` host service, which every in-app dialog path already holds.
+ */
+export function createDisplayAcks(): DisplayAcks {
+  const pending = new Map<string, Pending>()
+  return {
+    newId: () => randomUUID(),
+    track(ackId, settle, timeoutMs = DIALOG_ACK_TIMEOUT_MS) {
+      const timer = setTimeout(() => {
+        if (pending.delete(ackId)) settle({ confirmed: false, timeoutMs })
+      }, timeoutMs)
+      timer.unref()
+      pending.set(ackId, { timer, startedAt: Date.now(), settle })
+    },
+    acknowledge(ackId) {
+      if (typeof ackId !== 'string') return false
+      const entry = pending.get(ackId)
+      if (!entry) return false
+      pending.delete(ackId)
+      clearTimeout(entry.timer)
+      entry.settle({ confirmed: true, elapsedMs: Date.now() - entry.startedAt })
+      return true
+    },
+    pendingCount: () => pending.size
+  }
 }

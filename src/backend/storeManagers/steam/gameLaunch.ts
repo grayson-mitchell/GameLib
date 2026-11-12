@@ -14,7 +14,6 @@ import { join } from 'node:path'
 import { GameSettings, LaunchOption } from 'common/types'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { notify, showDialogBoxModalAuto } from 'backend/dialog/dialog'
-import { newDialogAckId, trackDialogDisplay } from 'backend/dialog/displayAck'
 import { sendGameStatusUpdate } from 'backend/utils'
 import type LogWriter from 'backend/logger/log_writer'
 import { isMac, isWindows } from 'backend/constants/environment'
@@ -382,9 +381,9 @@ export function maybeNotifyDrmModeFailed(
   // The failure usually lands while the game is in front. Bring GameLib up first, or the
   // dialog renders into a window nobody can see (display=unconfirmed in the 56-16 gate).
   steamGame.deps.appState.raiseMainWindow()
-  const ackId = newDialogAckId()
+  const ackId = steamGame.deps.dialogs.displayAcks.newId()
   const appId = steamGame.appId
-  trackDialogDisplay(ackId, (result) => {
+  steamGame.deps.dialogs.displayAcks.track(ackId, (result) => {
     logInfo(
       result.confirmed
         ? `[bridge-notice] appId=${appId} display=confirmed elapsedMs=${result.elapsedMs}`
@@ -426,9 +425,9 @@ export function showEngineDialog(
 ): void {
   notify(steamGame.deps, { title, body })
   steamGame.deps.appState.raiseMainWindow()
-  const ackId = newDialogAckId()
+  const ackId = steamGame.deps.dialogs.displayAcks.newId()
   const appId = steamGame.appId
-  trackDialogDisplay(ackId, (result) => {
+  steamGame.deps.dialogs.displayAcks.track(ackId, (result) => {
     logInfo(
       result.confirmed
         ? `[engine-notice] appId=${appId} tag=${tag} display=confirmed elapsedMs=${result.elapsedMs}`

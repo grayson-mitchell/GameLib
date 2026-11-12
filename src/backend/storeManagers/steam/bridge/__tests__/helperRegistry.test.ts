@@ -22,6 +22,7 @@
 
 // Phase 65 Plan 15 (D-03): helperRegistry.ts (D-10 registry state, seams and teardown) -- split out of helperProcess.test.ts by owning module.
 
+import { createDisplayAcks } from 'backend/dialog/displayAck'
 import { EventEmitter } from 'node:events'
 import { createChildBackedRunner } from 'backend/testUtils/childBackedRunner'
 import { Socket } from 'node:net'
@@ -82,6 +83,7 @@ function newRegistry(
 }
 let registry: BridgeHelperRegistry
 let helperDeps: {
+  dialogs: { displayAcks: ReturnType<typeof createDisplayAcks> }
   runner: typeof fakeRunner.runner
   appState: { openBridgeInvitePicker: jest.Mock }
   openExternal: { openExternal: jest.Mock }
@@ -91,6 +93,7 @@ let helperDeps: {
 }
 function depsFor(bridgeHelpers: BridgeHelperRegistry): typeof helperDeps {
   return {
+    dialogs: { displayAcks: createDisplayAcks() },
     runner: fakeRunner.runner,
     appState: { openBridgeInvitePicker: mockedOpenBridgeInvitePicker },
     openExternal: { openExternal: mockedOpenExternal },

@@ -34,6 +34,7 @@ export type ManagerDepsSource = Pick<
   | 'infoCaches'
   | 'aborts'
   | 'appRuntime'
+  | 'miscRuntime'
   | 'windowRaiser'
   | 'toolsState'
   | 'signInProbe'
@@ -83,6 +84,7 @@ export function managerDepsFromServices(
     infoCaches: source.infoCaches,
     aborts: source.aborts,
     appRuntime: source.appRuntime,
+    miscRuntime: source.miscRuntime,
     windowRaiser: source.windowRaiser,
     toolsState: source.toolsState,
     signIn: {

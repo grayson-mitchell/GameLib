@@ -1,8 +1,5 @@
 {
   "jestMock": {
     "src/backend/macArch/__tests__/recovery.test.ts": 4
-  },
-  "moduleState": {
-    "src/backend/macArch/recovery.ts": 1
   }
 }

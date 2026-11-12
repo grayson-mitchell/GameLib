@@ -21,7 +21,7 @@ import type {
   VersionCodec
 } from './types'
 
-export type StoreState = {
+type StoreState = {
   chainKey: string
   kind: StoreKind
   failedView: 'as-is' | 'empty'
@@ -45,7 +45,7 @@ export function storeKeyOf(filePath: string): string {
   return `${basename(dirname(filePath))}/${basename(filePath, '.json')}`
 }
 
-export type KindMismatch = {
+type KindMismatch = {
   path: string
   first: StoreKind
   second: StoreKind

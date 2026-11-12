@@ -128,7 +128,10 @@ export interface ShortcutsFlowDeps
   /** The boot process runner: reg.exe (Desktop folder) and powershell.exe (.lnk) on win32. */
   runner: BootServices['runner']
   config: Pick<GlobalConfigSlice, 'getSettings'>
-  paths: Pick<AppPaths, 'exe' | 'appData' | 'knownFolder'>
+  paths: Pick<
+    AppPaths,
+    'exe' | 'appData' | 'knownFolder' | 'heroicIconFolder' | 'userHome'
+  >
   imageTools: HostServices['imageTools']
 }
 

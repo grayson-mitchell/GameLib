@@ -1,6 +1,9 @@
 import { createNotifications } from '../notifications'
 import type { RequestRustInvoke } from '../index'
-import { RUST_NOTIFICATION_SHOW } from 'common/types/sidecarTransport'
+import {
+  RUST_NOTIFICATION_AUTH_DENIED_PREFIX,
+  RUST_NOTIFICATION_SHOW
+} from 'common/types/sidecarTransport'
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 let warn: jest.SpyInstance
@@ -34,6 +37,32 @@ describe('notifications.show', () => {
     )
     await flush()
     expect(onFailed).toHaveBeenCalledWith('denied')
+  })
+
+  it('reports a permission denial once per instance, other failures every time', async () => {
+    const denied = () =>
+      jest.fn(() =>
+        Promise.reject(new Error(`${RUST_NOTIFICATION_AUTH_DENIED_PREFIX} x`))
+      )
+    const first = build(denied())
+    const onFailed = jest.fn()
+    first.show({ title: 'a' }, { onFailed })
+    first.show({ title: 'b' }, { onFailed })
+    await flush()
+    expect(onFailed).toHaveBeenCalledTimes(1)
+
+    // A second instance (another boot) has its own flag.
+    const second = build(denied())
+    second.show({ title: 'c' }, { onFailed })
+    await flush()
+    expect(onFailed).toHaveBeenCalledTimes(2)
+
+    const other = jest.fn()
+    const broken = build(jest.fn(() => Promise.reject(new Error('boom'))))
+    broken.show({}, { onFailed: other })
+    broken.show({}, { onFailed: other })
+    await flush()
+    expect(other).toHaveBeenCalledTimes(2)
   })
 
   it('catches and warns about a throwing callback', async () => {

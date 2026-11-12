@@ -1,5 +1,7 @@
 import { getPath } from 'backend/sidecar/pathShim'
 import type { AppPaths } from 'backend/process/context'
+import { homedir } from 'os'
+import { join } from 'path'
 
 /**
  * The app paths the shortcut suites need: the same pathShim reads `resolveAppPaths` makes at boot
@@ -8,10 +10,13 @@ import type { AppPaths } from 'backend/process/context'
  */
 export function createPathShimPaths(): Pick<
   AppPaths,
-  'exe' | 'appData' | 'knownFolder'
+  'exe' | 'appData' | 'knownFolder' | 'heroicIconFolder' | 'userHome'
 > {
   return {
     appData: getPath('appData'),
+    // The same two roots constants/paths derived: the OS home and `<appData>/GameLib/icons`.
+    userHome: homedir(),
+    heroicIconFolder: join(getPath('appData'), 'GameLib', 'icons'),
     get exe() {
       return getPath('exe')
     },

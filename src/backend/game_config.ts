@@ -11,12 +11,7 @@ import type { StoreVersioning } from './storeVersioning/engine'
 import { join } from 'path'
 import { currentGameConfigVersion } from 'backend/constants/others'
 import { isMac, isWindows } from './constants/environment'
-import {
-  configPath,
-  sharedWinePrefix,
-  gamesConfigPath,
-  userHome
-} from './constants/paths'
+import type { AppPaths } from './process/context'
 
 /**
  * This class does config handling for games.
@@ -25,6 +20,11 @@ import {
  *
  * It also implements all the config features that won't change across versions.
  */
+export type GameConfigPaths = Pick<
+  AppPaths,
+  'configPath' | 'sharedWinePrefix' | 'gamesConfigPath' | 'userHome'
+>
+
 abstract class GameConfig {
   public abstract version: GameConfigVersion
 
@@ -37,15 +37,18 @@ abstract class GameConfig {
   protected readonly globalConfig: Pick<GlobalConfigSlice, 'getSettings'>
 
   protected readonly versioning: StoreVersioning
+  protected readonly paths: GameConfigPaths
 
   protected constructor(
     appName: string,
     globalConfig: Pick<GlobalConfigSlice, 'getSettings'>,
-    versioning: StoreVersioning
+    versioning: StoreVersioning,
+    paths: GameConfigPaths
   ) {
     this.versioning = versioning
+    this.paths = paths
     this.appName = appName
-    this.path = join(gamesConfigPath, appName + '.json')
+    this.path = join(paths.gamesConfigPath, appName + '.json')
     this.globalConfig = globalConfig
   }
 
@@ -87,7 +90,7 @@ abstract class GameConfig {
    */
   protected load() {
     // Config file doesn't exist, make one.
-    if (!existsSync(configPath)) {
+    if (!existsSync(this.paths.configPath)) {
       this.resetToDefaults()
     }
     // Synchronous: an async load left `this.config` undefined for a tick, so a
@@ -106,9 +109,10 @@ class GameConfigV0 extends GameConfig {
   constructor(
     appName: string,
     globalConfig: Pick<GlobalConfigSlice, 'getSettings'>,
-    versioning: StoreVersioning
+    versioning: StoreVersioning,
+    paths: GameConfigPaths
   ) {
-    super(appName, globalConfig, versioning)
+    super(appName, globalConfig, versioning, paths)
     this.load()
   }
 
@@ -220,11 +224,14 @@ class GameConfigV0 extends GameConfig {
         defaultSettings.wineCrossoverBottle = wineCrossoverBottle
       }
 
-      defaultSettings.winePrefix = winePrefix || sharedWinePrefix
+      defaultSettings.winePrefix = winePrefix || this.paths.sharedWinePrefix
 
       // fix winePrefix if needed
       if (gameSettings.winePrefix?.includes('~')) {
-        gameSettings.winePrefix = gameSettings.winePrefix.replace('~', userHome)
+        gameSettings.winePrefix = gameSettings.winePrefix.replace(
+          '~',
+          this.paths.userHome
+        )
       }
     }
 
@@ -332,6 +339,8 @@ export function createGameConfigs(deps: {
   config: Pick<GlobalConfigSlice, 'getSettings'>
   /** The boot's store-versioning engine (`StoreRoot.versioning`). */
   versioning: StoreVersioning
+  /** The boot's path roots: the games-config folder, the config file and the prefix defaults. */
+  paths: GameConfigPaths
 }): GameConfigs {
   const instances = new Map<string, GameConfigSlice>()
   return {
@@ -340,10 +349,15 @@ export function createGameConfigs(deps: {
       if (!instance) {
         ensureSettingsMigrated(
           deps.versioning,
-          join(gamesConfigPath, appName + '.json'),
+          join(deps.paths.gamesConfigPath, appName + '.json'),
           'settings/game'
         )
-        instance = new GameConfigV0(appName, deps.config, deps.versioning)
+        instance = new GameConfigV0(
+          appName,
+          deps.config,
+          deps.versioning,
+          deps.paths
+        )
         instances.set(appName, instance)
       }
       return instance
