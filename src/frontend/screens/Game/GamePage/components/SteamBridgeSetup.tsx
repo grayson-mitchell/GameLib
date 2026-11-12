@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { cappedSymbolList } from './steamBridgeRouteIssue'
 import { getGameInfo } from 'frontend/helpers'
 import { useSteamBridgeSetup } from 'frontend/state/SteamBridgeSetup'
 import { installSteamGame } from 'frontend/state/InstallGameModal'
@@ -180,7 +181,9 @@ const SteamBridgeSetup = () => {
           <p className="steamBridgeSetupReason">
             {tGamelib('steam.bridge.setup.missingSymbols', {
               defaultValue: 'The bridge does not cover: {{symbols}}',
-              symbols: missingSymbols.join(', ')
+              symbols: cappedSymbolList(missingSymbols, (count) =>
+                tGamelib('steam.bridge.route.moreSymbols', { count })
+              )
             })}
           </p>
         ) : null}

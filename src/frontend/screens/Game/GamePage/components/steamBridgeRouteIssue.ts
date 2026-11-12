@@ -41,3 +41,14 @@ export function resolveBridgeRouteIssue(input: {
   const kind = input.reasonKey ? REASON_ISSUE[input.reasonKey] : undefined
   return kind ? { kind, count: 0 } : null
 }
+
+/** Capped, comma-joined list for sentence interpolation: first SYMBOL_CAP, then "and N more". */
+export function cappedSymbolList(
+  symbols: readonly string[],
+  more: (count: number) => string
+): string {
+  const { shown, hiddenCount } = capSymbols(symbols)
+  return hiddenCount > 0
+    ? `${shown.join(', ')}, ${more(hiddenCount)}`
+    : shown.join(', ')
+}

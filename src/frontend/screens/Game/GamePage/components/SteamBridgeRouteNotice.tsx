@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { cappedSymbolList } from './steamBridgeRouteIssue'
 import { getGameInfo } from 'frontend/helpers'
 import {
   useSteamBridgeRouteNotice,
@@ -173,7 +174,9 @@ const SteamBridgeRouteNotice = () => {
           defaultValue:
             'The native Steam bridge does not cover every Steam call {{title}} makes. Not covered: {{symbols}}.',
           title,
-          symbols: missingSymbols.join(', ')
+          symbols: cappedSymbolList(missingSymbols, (count) =>
+            t('steam.bridge.route.moreSymbols', { count })
+          )
         })
       case 'win64NoShim':
         return t('steam.bridge.routeNotice.win64NoShim', {

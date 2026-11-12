@@ -1,5 +1,6 @@
 import {
   capSymbols,
+  cappedSymbolList,
   resolveBridgeRouteIssue,
   SYMBOL_CAP
 } from '../steamBridgeRouteIssue'
@@ -58,5 +59,16 @@ describe('resolveBridgeRouteIssue', () => {
     expect(
       resolveBridgeRouteIssue({ reasonKey: null, missingSymbols: [] })
     ).toBeNull()
+  })
+})
+
+describe('cappedSymbolList', () => {
+  it('joins everything when within the cap', () => {
+    expect(cappedSymbolList(syms(2), () => 'x')).toBe('sym0, sym1')
+  })
+  it('appends the more suffix past the cap', () => {
+    expect(cappedSymbolList(syms(12), (n) => `and ${n} more`)).toBe(
+      `${syms(10).join(', ')}, and 2 more`
+    )
   })
 })
