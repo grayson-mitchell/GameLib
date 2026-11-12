@@ -79,6 +79,8 @@ export interface Game {
     language?: string
     dlcs?: string[]
     dependencies?: string[]
+    /** Auto-update: no user present; other stores ignore it. */
+    unattended?: boolean
   }) => Promise<InstallResult>
   forceUninstall: () => Promise<void>
   stop: (stopWine?: boolean) => Promise<void>

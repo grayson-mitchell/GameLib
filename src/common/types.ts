@@ -533,6 +533,11 @@ export interface InstallParams extends InstallArgs {
   gameInfo: GameInfo
   runner: Runner
   size?: string
+  /**
+   * Set only by autoUpdate. Tells the store manager no user is present, so it
+   * must not prompt, sign in interactively or unlock the Keychain gate.
+   */
+  unattended?: boolean
 }
 
 export interface UpdateParams {

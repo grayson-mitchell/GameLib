@@ -124,7 +124,11 @@ jest.mock('backend/knownFixesFetcher', () => ({
   fetchRemoteKnownFixes: jest.fn().mockResolvedValue(undefined)
 }))
 
-import { installQueueElement, resolveGameTitle } from '../utils'
+import {
+  installQueueElement,
+  resolveGameTitle,
+  updateQueueElement
+} from '../utils'
 import { existsSync } from 'graceful-fs'
 import { fetchRemoteKnownFixes } from 'backend/knownFixesFetcher'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
@@ -1105,5 +1109,30 @@ describe('installQueueElement — quick 261026-avw: every store fetches known fi
     const result = await installQueueElement(queueDeps, makeParams())
 
     expect(result.status).toBe('done')
+  })
+})
+
+describe('updateQueueElement - 74-19: unattended flag reaches game.update', () => {
+  const updateMock = jest.fn()
+
+  beforeEach(() => {
+    getGameInfoMock.mockReturnValue({ title: 'Test Game' })
+    libraryManagerMap.steam.getGame.mockReturnValue({
+      update: updateMock,
+      getGameInfo: getGameInfoMock,
+      stop: stopMock
+    })
+    isOnline.mockReturnValue(true)
+    updateMock.mockResolvedValue({ status: 'done' })
+  })
+
+  it('forwards unattended: true when params.unattended is true', async () => {
+    await updateQueueElement(queueDeps, makeParams({ unattended: true }))
+    expect(updateMock.mock.calls[0][0].unattended).toBe(true)
+  })
+
+  it('forwards unattended: false for a user-started update', async () => {
+    await updateQueueElement(queueDeps, makeParams())
+    expect(updateMock.mock.calls[0][0].unattended).toBe(false)
   })
 })

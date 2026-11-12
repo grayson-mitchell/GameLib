@@ -1195,6 +1195,8 @@ export default class GOGGame implements Game {
     language?: string
     dlcs?: string[]
     dependencies?: string[]
+    /** Auto-update flag; GOG never prompts here, so it is ignored. */
+    unattended?: boolean
   }): Promise<{ status: 'done' | 'error' }> {
     // TODO: Implement GOG redist as a subclass of GOGGame & move this logic to it
     if (this.id === 'gog-redist') {

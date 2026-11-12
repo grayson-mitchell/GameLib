@@ -216,10 +216,11 @@ describe('createStoreManagers: autoUpdate reaches a queue created later (blocker
     expect(getDownloadQueue).toHaveBeenCalledTimes(1)
     expect(addToQueue).toHaveBeenCalledTimes(1)
     const element = addToQueue.mock.calls[0]?.[0] as {
-      params: { appName: string }
+      params: { appName: string; unattended?: boolean }
       type: string
     }
     expect(element.params.appName).toBe('g1')
+    expect(element.params.unattended).toBe(true)
     expect(element.type).toBe('update')
   })
 

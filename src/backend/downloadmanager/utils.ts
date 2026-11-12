@@ -507,7 +507,8 @@ async function updateQueueElement(
       branch: params.branch,
       language: params.installLanguage,
       dlcs: params.installDlcs,
-      dependencies: params.dependencies
+      dependencies: params.dependencies,
+      unattended: params.unattended === true
     })
 
     if (status === 'error') {

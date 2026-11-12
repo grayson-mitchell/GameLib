@@ -260,7 +260,8 @@ export function createStoreManagers(
         logInfo(`Auto-Updating ${gameInfo.title}`, logPrefix)
         const dmQueueElement: DMQueueElement = buildUpdateQueueElement(
           gameInfo,
-          appName
+          appName,
+          { unattended: true }
         )
         deps
           .getDownloadQueue()
