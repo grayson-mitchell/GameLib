@@ -7,6 +7,7 @@ import { chooseInstallBranch, resolveUserBetaKey } from './betaBranch'
 import {
   selectAllDepots,
   dlcAppIds,
+  branchManifestGid,
   type SteamAppInfo,
   type OwnedSets,
   type DepotDescriptor,
@@ -376,6 +377,54 @@ export interface DepotRefsResult {
   depots: DepotRefEntry[]
   /** Depot ids Steam refused with EResult 40 (Blocked), dropped from the install. */
   skippedDepots: string[]
+  /** Every numeric depot id with a manifest on the branch (or public), across the base app and
+   *  every fetched DLC app, with NO ownership/OS/language/arch/realm filter (WR-01). */
+  branchDepotIds: string[]
+  /** depotId -> the app whose appinfo declares it (first declaration wins). */
+  depotOwners: Record<string, string>
+  /** DLC app ids whose appinfo was actually fetched this run. */
+  fetchedDlcAppIds: string[]
+  /** False when the branch depot list cannot be shown complete: no numeric base depot, or a
+   *  listed DLC app has no fetched entry. A retire decision needs this true. */
+  branchDepotListComplete: boolean
+}
+
+/** The unfiltered branch depot list, owners and completeness (WR-01). Pure. */
+export function collectBranchDepotList(
+  appinfo: SteamAppInfo,
+  dlcInfos: Record<string, SteamAppInfo>,
+  branch: string,
+  appId: string
+): Pick<
+  DepotRefsResult,
+  | 'branchDepotIds'
+  | 'depotOwners'
+  | 'fetchedDlcAppIds'
+  | 'branchDepotListComplete'
+> {
+  const depotOwners: Record<string, string> = {}
+  const branchDepotIds: string[] = []
+  const take = (info: SteamAppInfo | undefined, owner: string) => {
+    for (const [id, d] of Object.entries(info?.depots ?? {})) {
+      if (!/^\d+$/.test(id)) continue
+      if (!branchManifestGid(d, branch, id)) continue
+      if (id in depotOwners) continue
+      depotOwners[id] = owner
+      branchDepotIds.push(id)
+    }
+  }
+  take(appinfo, appId)
+  for (const [dlcId, dlc] of Object.entries(dlcInfos)) take(dlc, dlcId)
+  const baseHasDepots = Object.keys(appinfo?.depots ?? {}).some((k) =>
+    /^\d+$/.test(k)
+  )
+  const missingDlc = dlcAppIds(appinfo).some((id) => !(String(id) in dlcInfos))
+  return {
+    branchDepotIds,
+    depotOwners,
+    fetchedDlcAppIds: Object.keys(dlcInfos),
+    branchDepotListComplete: baseHasDepots && !missingDlc
+  }
 }
 
 /**
@@ -511,7 +560,15 @@ export async function buildDepotRefs(
   }
 
   throwIfAllDepotsSkipped(appId, depots.length, skippedDepots)
-  return { appId, name: displayName, buildid, branch, depots, skippedDepots }
+  return {
+    appId,
+    name: displayName,
+    buildid,
+    branch,
+    depots,
+    skippedDepots,
+    ...collectBranchDepotList(appinfo, dlcInfos, branch, appId)
+  }
 }
 
 /** True (and logs) when `err` is Steam's EResult 40 (Blocked) for a depot: skip it, keep going. */

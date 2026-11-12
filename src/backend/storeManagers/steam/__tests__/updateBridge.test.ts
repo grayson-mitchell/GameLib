@@ -208,6 +208,40 @@ describe('updateBridgeGame', () => {
     expect(inFlight.size).toBe(0)
   })
 
+  it('a committed delta finishes its follow-ups even when the signal aborted', async () => {
+    const { game, signal } = makeGame()
+    jest.mocked(downloadSteamDepotsRust).mockImplementation(() => {
+      signal.abort()
+      return Promise.resolve({
+        status: 'done',
+        delta: { mode: 'chunk', changedFiles: ['a'], committed: true }
+      } as never)
+    })
+    expect(await updateBridgeGame(game)).toEqual({ status: 'done' })
+    expect(runBridgeUpdateFollowUps).toHaveBeenCalled()
+    expect(invalidateSteamUpdateState).toHaveBeenCalled()
+  })
+
+  it('a cancelled outcome that carries a committed delta is treated as done', async () => {
+    jest.mocked(downloadSteamDepotsRust).mockResolvedValue({
+      status: 'cancelled',
+      delta: { mode: 'chunk', changedFiles: [], committed: true }
+    } as never)
+    const { game } = makeGame()
+    expect(await updateBridgeGame(game)).toEqual({ status: 'done' })
+    expect(runBridgeUpdateFollowUps).toHaveBeenCalled()
+  })
+
+  it('a cancelled outcome with an uncommitted delta stays abort', async () => {
+    jest.mocked(downloadSteamDepotsRust).mockResolvedValue({
+      status: 'cancelled',
+      delta: { mode: 'chunk', changedFiles: [], committed: false }
+    } as never)
+    const { game } = makeGame()
+    expect(await updateBridgeGame(game)).toEqual({ status: 'abort' })
+    expect(runBridgeUpdateFollowUps).not.toHaveBeenCalled()
+  })
+
   it('error maps through with no follow-ups and no retry', async () => {
     jest
       .mocked(downloadSteamDepotsRust)

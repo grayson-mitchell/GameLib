@@ -96,7 +96,7 @@ export interface DownloadSteamDepotsOpts {
    *  'prescreen'. Never user-facing. */
   sessionReason?: AuthSessionReason
   /** Phase 74: run as a chunk-level delta. Installed GIDs as strings read from the raw ACF,
-   *  never vdf-parsed (they exceed 2^53). Depots in the map but not selected are retired. */
+   *  never vdf-parsed (they exceed 2^53). Only depots absent from the branch's full PICS depot list (base + DLC apps) are retired; skipped or unselected (ownership, language, OS) depots stay. */
   delta?: { oldGidByDepot: ReadonlyMap<string, string> }
 }
 

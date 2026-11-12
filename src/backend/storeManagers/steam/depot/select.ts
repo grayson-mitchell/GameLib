@@ -143,6 +143,35 @@ export function selectAllDepots(
   return all
 }
 
+const gidOfEntry = (e: string | DepotManifestEntry | undefined) =>
+  typeof e === 'string' ? e : e?.gid
+
+/**
+ * The manifest gid a depot has on `branch`. A depot that is not part of a
+ * beta build has no manifest on it; the public manifest is what Steam itself
+ * serves for such a depot (quick 261110-up7). Shared by selectDepots and the
+ * update retire rule so the two cannot drift.
+ */
+export function branchManifestGid(
+  depot:
+    | { manifests?: Record<string, string | DepotManifestEntry> }
+    | undefined,
+  branch: string,
+  depotId?: string
+): string | undefined {
+  let gid = gidOfEntry(depot?.manifests?.[branch])
+  if (!gid && branch !== 'public') {
+    gid = gidOfEntry(depot?.manifests?.public)
+    if (gid) {
+      logInfo(
+        `Steam depot selection: depot ${depotId ?? ''} has no manifest on branch ${branch}, using its public manifest`,
+        LogPrefix.Steam
+      )
+    }
+  }
+  return gid
+}
+
 /**
  * Include a depot iff:
  *   - it is a real (numeric) depot with a manifest on the target branch (a beta branch falls back to the depot's public manifest)
@@ -214,23 +243,7 @@ export function selectDepots(
       continue
     }
 
-    const gidOf = (e: string | DepotManifestEntry | undefined) =>
-      typeof e === 'string' ? e : e?.gid
-    let m = d?.manifests?.[branch]
-    let gid = gidOf(m)
-    // quick 261110-up7: a depot that is not part of the beta build has no
-    // manifest on it. Dropping it would leave content missing; the public
-    // manifest is what Steam itself serves for such a depot.
-    if (!gid && branch !== 'public') {
-      m = d?.manifests?.public
-      gid = gidOf(m)
-      if (gid) {
-        logInfo(
-          `Steam depot selection: depot ${id} has no manifest on branch ${branch}, using its public manifest`,
-          LogPrefix.Steam
-        )
-      }
-    }
+    const gid = branchManifestGid(d, branch, id)
     if (!gid) continue
 
     const cfg = d.config ?? {}
@@ -279,6 +292,8 @@ export function selectDepots(
       continue
     }
 
+    const onBranch = d?.manifests?.[branch]
+    const m = gidOfEntry(onBranch) ? onBranch : d?.manifests?.public
     out.push({
       id,
       manifest: String(gid), // STRING — 64-bit, must never touch a JS Number

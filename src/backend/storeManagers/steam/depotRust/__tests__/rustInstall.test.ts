@@ -523,3 +523,164 @@ describe('downloadSteamDepots delta input (Phase 74)', () => {
     )
   })
 })
+
+describe('downloadSteamDepots retire rule and committed-wins (WR-01, WR-06)', () => {
+  const G = (n: number) => `10000000000000000${String(n).padStart(2, '0')}`
+  const REPORT = {
+    mode: 'chunk' as const,
+    changedFiles: [],
+    removedFiles: [],
+    reusedBytes: 0,
+    cdnBytes: 0,
+    peakBytes: 0
+  }
+
+  /** Base app 12345 lists DLC 999; depots 500 (base) and 600 (DLC 999) are on the branch. */
+  function wirePics(opts: { dlc?: boolean; baseDepots?: boolean } = {}) {
+    const { dlc = true, baseDepots = true } = opts
+    client.getProductInfo.mockImplementation(((_ids: number[]) => {
+      const apps: Record<number, unknown> = {
+        12345: {
+          appinfo: {
+            common: { name: 'Some Game' },
+            depots: {
+              branches: { public: { buildid: 321 } },
+              ...(baseDepots
+                ? { '500': { manifests: { public: { gid: '5' } } } }
+                : {})
+            },
+            extended: { listofdlc: '999' }
+          }
+        }
+      }
+      if (dlc) {
+        apps[999] = {
+          appinfo: {
+            depots: { '600': { manifests: { public: { gid: '6' } } } }
+          }
+        }
+      }
+      return Promise.resolve({ apps, packages: {} })
+    }) as never)
+  }
+
+  function install(
+    old: Array<[string, string]>,
+    extra: { signal?: AbortSignal } = {}
+  ) {
+    return downloadSteamDepots(APP_ID, {
+      ...OPTS(),
+      ...extra,
+      delta: { oldGidByDepot: new Map(old) }
+    })
+  }
+
+  beforeEach(() => {
+    wirePics()
+    jest.mocked(selectAllDepots).mockReturnValue([
+      {
+        id: '111',
+        manifest: '11111111111111111',
+        size: 0,
+        ownerAppId: APP_ID
+      }
+    ])
+  })
+
+  it('retires only depots absent from the branch list; skipped and still-listed stay', async () => {
+    const stub = createStubRustDepot()
+    invokeMock.mockImplementation(stub.invoke)
+    client.getDepotDecryptionKey.mockImplementation(
+      (_a: number, d: number, cb: (e: Error | null, k: Buffer) => void) =>
+        d === 222
+          ? cb(
+              Object.assign(new Error('blocked'), { eresult: 40 }),
+              Buffer.alloc(0)
+            )
+          : cb(null, Buffer.alloc(32, 7))
+    )
+    jest.mocked(selectAllDepots).mockReturnValue([
+      { id: '111', manifest: '11111111111111111', size: 0, ownerAppId: APP_ID },
+      { id: '222', manifest: '22222222222222222', size: 0, ownerAppId: APP_ID }
+    ])
+    // 111 selected, 222 skipped (EResult 40), 600 unselected but on the branch (DLC), 777 gone.
+    await install([
+      ['111', G(1)],
+      ['222', G(2)],
+      ['600', G(6)],
+      ['777', G(7)]
+    ])
+    expect(stub.jobs[0]?.retiredDepots.map((d) => d.depotId)).toEqual(['777'])
+  })
+
+  it('retires nothing when the branch depot list is incomplete (DLC info missing)', async () => {
+    wirePics({ dlc: false })
+    const stub = createStubRustDepot()
+    invokeMock.mockImplementation(stub.invoke)
+    await install([['777', G(7)]])
+    expect(stub.jobs[0]?.retiredDepots).toEqual([])
+  })
+
+  it('retires nothing when the base depots section is empty', async () => {
+    wirePics({ baseDepots: false })
+    const stub = createStubRustDepot()
+    invokeMock.mockImplementation(stub.invoke)
+    await install([['777', G(7)]])
+    expect(stub.jobs[0]?.retiredDepots).toEqual([])
+  })
+
+  it('keeps an ACF-DLC depot whose DLC app was not fetched; retires one whose DLC was fetched', async () => {
+    const acf = (dlc: string) =>
+      `"AppState"\n{\n"appid" "12345"\n"InstalledDepots"\n{\n"777"\n{\n"manifest" "${G(7)}"\n"size" "1"\n"dlcappid" "${dlc}"\n}\n}\n}\n`
+    const stub = createStubRustDepot()
+    invokeMock.mockImplementation(stub.invoke)
+    writeFileSync(join(steamapps, `appmanifest_${APP_ID}.acf`), acf('555'))
+    await install([['777', G(7)]])
+    expect(stub.jobs[0]?.retiredDepots).toEqual([])
+
+    writeFileSync(join(steamapps, `appmanifest_${APP_ID}.acf`), acf('999'))
+    await install([['777', G(7)]])
+    expect(stub.jobs[1]?.retiredDepots).toMatchObject([
+      { depotId: '777', ownerAppId: '999' }
+    ])
+  })
+
+  it('fetches the retired key with the ACF DLC owner, not the base app id', async () => {
+    writeFileSync(
+      join(steamapps, `appmanifest_${APP_ID}.acf`),
+      `"AppState"\n{\n"InstalledDepots"\n{\n"777"\n{\n"manifest" "${G(7)}"\n"dlcappid" "999"\n}\n}\n}\n`
+    )
+    const stub = createStubRustDepot()
+    invokeMock.mockImplementation(stub.invoke)
+    client.getDepotDecryptionKey.mockClear()
+    await install([['777', G(7)]])
+    expect(client.getDepotDecryptionKey).toHaveBeenCalledWith(
+      999,
+      777,
+      expect.any(Function)
+    )
+  })
+
+  it('an abort that races a committed delta still reports done', async () => {
+    const ctrl = new AbortController()
+    const stub = createStubRustDepot({
+      outcome: { status: 'completed', delta: { ...REPORT, committed: true } },
+      onRun: () => ctrl.abort()
+    })
+    invokeMock.mockImplementation(stub.invoke)
+    const out = await install([['111', G(1)]], { signal: ctrl.signal })
+    expect(out.status).toBe('done')
+    expect(out.delta?.committed).toBe(true)
+  })
+
+  it('an abort over an uncommitted completed delta is still cancelled', async () => {
+    const ctrl = new AbortController()
+    const stub = createStubRustDepot({
+      outcome: { status: 'completed', delta: { ...REPORT, committed: false } },
+      onRun: () => ctrl.abort()
+    })
+    invokeMock.mockImplementation(stub.invoke)
+    const out = await install([['111', G(1)]], { signal: ctrl.signal })
+    expect(out.status).toBe('cancelled')
+  })
+})

@@ -5,7 +5,8 @@
  * Order: refuse while running (before any network or disk work) -> resolve the install from the
  * raw ACF -> refuse an unresolvable branch -> register the abort controller and the in-flight
  * entry -> exact peak-disk check from the manifest-pair estimate -> downloadSteamDepotsRust with
- * `delta` -> map the outcome -> GID-keyed follow-ups on done. No retry here (D-16): a failure
+ * `delta` -> map the outcome -> GID-keyed follow-ups on done. A committed delta counts as done
+ * even if the abort signal fired or the outcome says cancelled: commit is the point of no return. No retry here (D-16): a failure
  * before commit leaves the old build launchable, and the pipeline's own retries are all there is.
  * Exit contract: no timers or handles are created here.
  */
@@ -173,7 +174,10 @@ async function runBridgeUpdate(
       delta: { oldGidByDepot: ctx.oldGidByDepot }
     })
 
-    if (outcome.status === 'cancelled') {
+    // Commit is the point of no return: a committed delta is finished work whatever the abort
+    // signal says, so its follow-ups (shim re-handover, redists, cache invalidation) must run.
+    const committed = outcome.delta?.committed === true
+    if (outcome.status === 'cancelled' && !committed) {
       clearStatus()
       return { status: 'abort' }
     }

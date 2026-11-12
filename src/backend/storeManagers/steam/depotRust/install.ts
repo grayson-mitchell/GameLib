@@ -43,6 +43,8 @@ import {
 } from './jobBuilder'
 import type { DepotJobRegistry } from './jobRegistry'
 import { createProgressBridge } from './progressBridge'
+import { decideRetirement } from './retire'
+import { readAcfInstalledDepots } from '../acfInstalledDepots'
 import { runDepotJob, summarizeDepots } from './rustDepot'
 import type {
   RustDepotJob,
@@ -201,26 +203,53 @@ export async function downloadSteamDepotsRust(
     // retirement only (its files stay until a later full check); the update still runs.
     const retiredDepots: DepotRefEntry[] = []
     if (opts.delta) {
-      const selected = new Set(refs.depots.map((d) => d.depotId))
-      for (const [depotId, oldGid] of opts.delta.oldGidByDepot) {
-        if (selected.has(depotId)) continue
+      const acfDlcOwner = new Map<string, string>()
+      for (const d of readAcfInstalledDepots(opts.targetSteamappsDir, appId)
+        ?.installedDepots ?? []) {
+        if (d.dlcAppId) acfDlcOwner.set(d.depotId, d.dlcAppId)
+      }
+      const decision = decideRetirement({
+        appId,
+        oldGidByDepot: opts.delta.oldGidByDepot,
+        refs,
+        acfDlcOwner
+      })
+      for (const r of decision.retire) {
         throwIfAborted(opts.signal)
         try {
           const key = await fetchDepotKey(client, {
-            id: depotId,
-            manifest: oldGid,
+            id: r.depotId,
+            manifest: r.gid,
             size: 0,
-            ownerAppId: appId
+            ownerAppId: r.ownerAppId
           })
-          retiredDepots.push({ depotId, gid: oldGid, key, ownerAppId: appId })
+          retiredDepots.push({
+            depotId: r.depotId,
+            gid: r.gid,
+            key,
+            ownerAppId: r.ownerAppId
+          })
         } catch (err) {
           if (opts.signal?.aborted) throw err
           logWarning(
-            `downloadSteamDepots: no key for retired depot ${depotId} of appId ${appId}; its files are not removed this update`,
+            `downloadSteamDepots: no key for retired depot ${r.depotId} of appId ${appId}; its files are not removed this update`,
             LogPrefix.Steam
           )
         }
       }
+      if (refs.branchDepotListComplete !== true) {
+        logInfo(
+          `downloadSteamDepotsRust: appId ${appId} branch depot list incomplete; no depot retired this update (kept: ${decision.kept.map((k) => k.depotId).join(',')})`,
+          LogPrefix.Steam
+        )
+      }
+      logInfo(
+        `downloadSteamDepotsRust: retire appId=${appId} candidates=${opts.delta.oldGidByDepot.size} retired=[${retiredDepots.map((d) => d.depotId).join(',')}] kept=[${decision.kept
+          .filter((k) => k.reason !== 'selected')
+          .map((k) => `${k.depotId}:${k.reason}`)
+          .join(',')}]`,
+        LogPrefix.Steam
+      )
     }
     const job = buildDepotJob({
       appId,
@@ -264,7 +293,15 @@ export async function downloadSteamDepotsRust(
       manifestSkipped.length === refs.depots.length
         ? undefined
         : [...refs.skippedDepots, ...manifestSkipped]
-    if (opts.signal?.aborted === true && outcome.status !== 'cancelled') {
+    if (opts.signal?.aborted === true && outcome.delta?.committed === true) {
+      logInfo(
+        `downloadSteamDepotsRust: appId ${appId} abort raced a committed update; reporting done so follow-ups run`,
+        LogPrefix.Steam
+      )
+    } else if (
+      opts.signal?.aborted === true &&
+      outcome.status !== 'cancelled'
+    ) {
       // An abort that raced a finished job still reports cancelled (D-UAT-09).
       return {
         status: 'cancelled',

@@ -11,6 +11,8 @@ export interface AcfInstalledDepot {
   depotId: string
   manifest: string
   size: string
+  /** The DLC app that owns this depot (`dlcappid`), when the ACF records one. */
+  dlcAppId?: string
 }
 
 /** A parsed ACF block: lowercase keys, string leaves, nested blocks. */
@@ -86,10 +88,14 @@ export function parseAcfInstalledDepots(acfText: string): {
       const manifest = acfString(entry, 'manifest')
       const size = acfString(entry, 'size')
       if (manifest === undefined || !ID.test(manifest)) continue
+      const dlc = acfString(entry, 'dlcappid')
       installedDepots.push({
         depotId,
         manifest,
-        size: size !== undefined && ID.test(size) ? size : '0'
+        size: size !== undefined && ID.test(size) ? size : '0',
+        ...(dlc !== undefined && ID.test(dlc) && dlc !== '0'
+          ? { dlcAppId: dlc }
+          : {})
       })
     }
   }

@@ -366,3 +366,48 @@ describe('delta job inputs (Phase 74)', () => {
     ])
   })
 })
+
+describe('collectBranchDepotList (WR-01)', () => {
+  const m = (gid?: string) => (gid ? { manifests: { public: { gid } } } : {})
+  it('lists unfiltered branch depots with their declaring owners and completeness', async () => {
+    const { collectBranchDepotList } = await import('../../depot/plan')
+    const base = {
+      depots: {
+        branches: {},
+        '1': m('a'),
+        '2': { ...m('b'), config: { language: 'french', oslist: 'linux' } },
+        '3': m()
+      },
+      extended: { listofdlc: '999' }
+    }
+    const dlc = { '999': { depots: { '4': m('c'), '1': m('z') } } }
+    const r = collectBranchDepotList(
+      base as never,
+      dlc as never,
+      'public',
+      '10'
+    )
+    expect(r.branchDepotIds).toEqual(['1', '2', '4'])
+    expect(r.depotOwners).toEqual({ '1': '10', '2': '10', '4': '999' })
+    expect(r.fetchedDlcAppIds).toEqual(['999'])
+    expect(r.branchDepotListComplete).toBe(true)
+    expect(
+      collectBranchDepotList(base as never, {}, 'public', '10')
+        .branchDepotListComplete
+    ).toBe(false)
+    expect(
+      collectBranchDepotList(
+        { depots: { branches: {} } } as never,
+        {},
+        'public',
+        '10'
+      ).branchDepotListComplete
+    ).toBe(false)
+  })
+
+  it('branchManifestGid falls back to public on a beta branch', async () => {
+    const { branchManifestGid } = await import('../../depot/select')
+    expect(branchManifestGid(m('p') as never, 'beta')).toBe('p')
+    expect(branchManifestGid(m() as never, 'public')).toBeUndefined()
+  })
+})
