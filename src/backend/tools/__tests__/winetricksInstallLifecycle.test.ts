@@ -217,7 +217,10 @@ describe('Winetricks.install with explicit settings (quick 261024-tny)', () => {
       explicit
     )
     await spawned(1)
-    expect(mockGetWineFromProton).toHaveBeenCalledWith(explicit)
+    expect(mockGetWineFromProton).toHaveBeenCalledWith(
+      expect.anything(),
+      explicit
+    )
 
     const second = await Winetricks.install(
       'steam',

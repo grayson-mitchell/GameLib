@@ -217,8 +217,13 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // the boot's StoreRoot instead of a module-level CacheStore. Two insertions, one deletion; no
   // channel, guard or `steamLibrary.has` gate moved. Prior digest:
   // e94fb7155eb1572f4e28a031df8edac0251ad599fbeba20edef40126092332e0
+  // 66.4-12: re-pin -- the getSystemInfo handler reads the boot-owned system-info cache
+  // (`deps.infoCaches.systemInfo.getSystemInfo`, replacing the module-level getSystemInfo) and the
+  // registerSettingsFlows deps gain `infoCaches` and `paths`. No channel, guard or
+  // `steamLibrary.has` gate moved. Prior digest:
+  // 5a3b10084911e383b9c8791239bd218702451d994c0cbbe5bddc11fd1c17719e
   const SETTINGS_FLOW_REGISTRATION_SHA256 =
-    '5a3b10084911e383b9c8791239bd218702451d994c0cbbe5bddc11fd1c17719e'
+    '4fed5097940f0c1149fd17fb93b85ccec41759ea221d68fedd8195801bc03082'
 
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
