@@ -15,7 +15,7 @@ const R = 'steam.bridge.route.reason.'
 const syms = (n: number) => Array.from({ length: n }, (_, i) => `sym${i}`)
 
 const isEl = (n: unknown): n is El =>
-  !!n && typeof n === 'object' && 'props' in (n as object)
+  !!n && typeof n === 'object' && 'props' in n
 
 const text = (n: ReactNode): string => {
   if (n == null || typeof n === 'boolean') return ''
