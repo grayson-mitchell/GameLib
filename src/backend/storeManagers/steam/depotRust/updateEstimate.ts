@@ -137,9 +137,14 @@ export async function estimateBridgeUpdate(
     let sumChanged = 0
     let maxChanged = 0
     let allOld = true
-    for (const d of deltas) {
+    let newDepotBytes = 0
+    let newDepots = 0
+    for (const [i, d] of deltas.entries()) {
       if (!d) {
-        allOld = false
+        // A depot new in this build has no old GID: all of it is downloaded and written, but it
+        // says nothing about whether the old manifests are available.
+        newDepotBytes += res.depots[i]?.totalBytes ?? 0
+        newDepots += 1
         continue
       }
       downloadBytes += d.maxDownloadBytes
@@ -147,16 +152,17 @@ export async function estimateBridgeUpdate(
       maxChanged = Math.max(maxChanged, d.changedBytes)
       if (!d.oldManifestAvailable) allOld = false
     }
+    downloadBytes += newDepotBytes
     const estimate: SteamUpdateEstimate = {
       targetBuild: refs.buildid,
       downloadBytes,
-      peakBytes: allOld ? sumChanged : maxChanged,
+      peakBytes: (allOld ? sumChanged : maxChanged) + newDepotBytes,
       oldManifestAvailable: allOld,
       computedAt: Date.now()
     }
     deps.steamInstallRuntime.updateStates.setEstimate(appId, estimate)
     logInfo(
-      `estimateBridgeUpdate: appId ${appId} download<=${downloadBytes} peak=${estimate.peakBytes} oldManifest=${allOld}`,
+      `estimateBridgeUpdate: appId ${appId} download<=${downloadBytes} peak=${estimate.peakBytes} oldManifest=${allOld} newDepots=${newDepots}`,
       LogPrefix.Steam
     )
     return estimate

@@ -142,6 +142,36 @@ describe('estimateBridgeUpdate', () => {
     })
   })
 
+  it('adds a depot new in this build to download and peak', async () => {
+    jest.mocked(summarizeDepots).mockResolvedValue({
+      skippedDepots: [],
+      depots: [
+        { delta: delta(10 * GB, 600) },
+        { delta: delta(3 * GB, 300) },
+        { totalBytes: 1000 }
+      ]
+    } as never)
+    const r = await estimateBridgeUpdate(game, {})
+    expect(r).toMatchObject({
+      downloadBytes: 1900,
+      peakBytes: 13 * GB + 1000,
+      oldManifestAvailable: true
+    })
+  })
+
+  it('a new depot alongside a missing old manifest still flags it', async () => {
+    jest.mocked(summarizeDepots).mockResolvedValue({
+      skippedDepots: [],
+      depots: [{ delta: delta(10 * GB, 600, false) }, { totalBytes: 500 }]
+    } as never)
+    const r = await estimateBridgeUpdate(game, {})
+    expect(r).toMatchObject({
+      oldManifestAvailable: false,
+      peakBytes: 10 * GB + 500,
+      downloadBytes: 1100
+    })
+  })
+
   it('a summary error returns the error and stores nothing', async () => {
     jest
       .mocked(summarizeDepots)
