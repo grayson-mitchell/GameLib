@@ -4,7 +4,7 @@ import type { DownloadQueue } from '../downloadmanager/downloadqueue'
 import type { AnonymousClient } from '../storeManagers/steam/anonymousClient'
 import type { SteamUser } from '../storeManagers/steam/user'
 import { LogPrefix, logInfo, logWarning } from '../logger'
-import { destroyOutboundHttp } from './outboundHttpRegistry'
+import type { OutboundHttpTracker } from './outboundHttpRegistry'
 
 /** How long after EOF the sidecar waits before logging what is still holding the loop. */
 export const RESIDUAL_HOLDER_DIAG_MS = 15_000
@@ -46,6 +46,8 @@ export const RESIDUAL_HOLDER_DIAG_MS = 15_000
 export function releaseOnStdinEof(
   input: Readable,
   deps: {
+    /** The boot-owned outbound HTTP tracker: marked shutting down, then every live request destroyed. */
+    outboundHttp: Pick<OutboundHttpTracker, 'markShuttingDown' | 'destroyAll'>
     downloadQueue: Pick<DownloadQueue, 'isRunning' | 'pauseCurrentDownload'>
     /** The boot-owned abort registry (66.4-13): aborted after the queue pause, so every in-flight job ends. */
     aborts: Pick<AbortRegistry, 'abortAll'>
@@ -102,7 +104,8 @@ export function releaseOnStdinEof(
     // After the CM release: its synchronous logOff has already started, and CM WebSocket
     // upgrades are excluded from the registry anyway.
     try {
-      const { destroyed, hosts } = destroyOutboundHttp()
+      deps.outboundHttp.markShuttingDown()
+      const { destroyed, hosts } = deps.outboundHttp.destroyAll()
       logInfo(
         `[sidecar] stdin closed: destroyed ${destroyed} in-flight outbound HTTP request(s)${
           hosts.length ? ` (${hosts.join(', ')})` : ''

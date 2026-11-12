@@ -18,7 +18,13 @@ const stopPoll = jest.fn()
 // The Steam monitor instance is injected (66.2-06): the release path only needs its stopAll.
 const releaseAnon = jest.fn()
 const release = jest.fn()
+const destroyHttp = jest.fn()
+const markShuttingDown = jest.fn()
 const deps = {
+  outboundHttp: {
+    markShuttingDown: () => markShuttingDown(),
+    destroyAll: () => destroyHttp()
+  },
   downloadQueue,
   // The abort registry is injected (66.4-13): the release path only needs abortAll.
   aborts: { abortAll: () => callAll() },
@@ -28,11 +34,6 @@ const deps = {
   // The running-game poller instance (quick 261111-7wo): stopped at EOF, never a loop-holder.
   stopRunningGamePoll: () => stopPoll()
 }
-
-const destroyHttp = jest.fn()
-jest.mock('../outboundHttpRegistry', () => ({
-  destroyOutboundHttp: () => destroyHttp()
-}))
 
 import { logInfo, logWarning } from '../../logger'
 import { RESIDUAL_HOLDER_DIAG_MS, releaseOnStdinEof } from '../stdinEofRelease'

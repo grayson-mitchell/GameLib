@@ -1,11 +1,13 @@
 import http from 'node:http'
 import type { AddressInfo } from 'node:net'
 import {
-  __resetOutboundHttpForTests,
-  destroyOutboundHttp,
-  installOutboundHttpTracking,
-  liveOutboundRequestCount
+  createOutboundHttpTracker,
+  type OutboundHttpTracker
 } from '../outboundHttpRegistry'
+
+let tracker: OutboundHttpTracker
+const liveOutboundRequestCount = () => tracker.liveCount()
+const destroyOutboundHttp = () => tracker.destroyAll()
 
 let server: http.Server
 let port: number
@@ -54,13 +56,13 @@ beforeAll(async () => {
 
 beforeEach(() => {
   okHits = 0
-  installOutboundHttpTracking()
-  __resetOutboundHttpForTests()
+  tracker = createOutboundHttpTracker()
+  tracker.install()
 })
 
 afterEach(() => {
   destroyOutboundHttp()
-  __resetOutboundHttpForTests()
+  tracker.dispose()
   server.closeAllConnections()
   while (privateAgents.length) privateAgents.pop()?.destroy()
 })
@@ -131,8 +133,8 @@ describe('outboundHttpRegistry', () => {
   })
 
   it('subscribes once when installed twice', async () => {
-    installOutboundHttpTracking()
-    installOutboundHttpTracking()
+    tracker.install()
+    tracker.install()
     hang('/hang')
     await waitForLive(1)
     expect(liveOutboundRequestCount()).toBe(1)
@@ -148,5 +150,30 @@ describe('outboundHttpRegistry', () => {
       expect(h).not.toContain('secret')
       expect(h).not.toContain('/')
     }
+  })
+
+  it('dispose unsubscribes, so a second instance never sees the first one’s callbacks', async () => {
+    tracker.dispose()
+    const second = createOutboundHttpTracker()
+    second.install()
+    try {
+      hang('/hang')
+      for (let i = 0; i < 100 && second.liveCount() < 1; i++) await sleep(5)
+      expect(second.liveCount()).toBe(1)
+      expect(tracker.liveCount()).toBe(0)
+      second.destroyAll()
+    } finally {
+      second.dispose()
+    }
+  })
+
+  it('markShuttingDown refuses new requests without destroying live ones', async () => {
+    hang('/hang')
+    await waitForLive(1)
+    tracker.markShuttingDown()
+    expect(liveOutboundRequestCount()).toBe(1)
+    const req = http.get({ host: '127.0.0.1', port, path: '/ok' })
+    const { error } = await settle(req)
+    expect(error?.message).toContain('sidecar shutting down')
   })
 })

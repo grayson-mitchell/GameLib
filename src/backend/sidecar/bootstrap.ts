@@ -14,7 +14,10 @@
 
 // ---- Step 1: load the platform layer FIRST, before `./handlers` (below) pulls
 //              in the backend module graph. --------------------------------
-import { installOutboundHttpTracking } from './outboundHttpRegistry'
+import {
+  createOutboundHttpTracker,
+  type OutboundHttpTracker
+} from './outboundHttpRegistry'
 
 import type { Readable, Writable } from 'node:stream'
 import { existsSync } from 'graceful-fs'
@@ -380,6 +383,11 @@ interface BootState {
   steamGridKeyringStore: SidecarSteamGridDbSecretStore | null
   /** The keyring-backed Humble store this boot built, when no dev vault was selected. */
   humbleKeyringStore: SidecarHumbleSecretStore | null
+  /**
+   * This boot's outbound HTTP tracker ('outbound-http-tracking' step), read by 'rpc-server' for the
+   * stdin-EOF release. Held here, not on `BootServices`: no handler reads it.
+   */
+  outboundHttp: OutboundHttpTracker | null
 }
 
 /**
@@ -1226,7 +1234,8 @@ export function bootSidecar(
     services: {},
     secretVault: null,
     steamGridKeyringStore: null,
-    humbleKeyringStore: null
+    humbleKeyringStore: null,
+    outboundHttp: null
   }
   runBootSteps(ctx, { input, output, guards }, state, prebuilt)
   return requireServices(state)
@@ -1312,11 +1321,13 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
   return [
     {
       name: 'outbound-http-tracking',
-      run: () => {
+      run: (_ctx, _io, state) => {
         // Track outbound HTTP first, ahead of migrations/i18next/boot work, so boot-time requests
-        // are tracked too and destroyed at stdin EOF (quick 261110-9w2). Idempotent, because init()
-        // runs many times per test file.
-        installOutboundHttpTracking()
+        // are tracked too and destroyed at stdin EOF (quick 261110-9w2). One tracker per boot
+        // (66.4-15); its diagnostics_channel subscription is the only side effect.
+        const outboundHttp = createOutboundHttpTracker()
+        outboundHttp.install()
+        state.outboundHttp = outboundHttp
       }
     },
     {
@@ -2432,7 +2443,11 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // Phase 67 D-09: boundary rejections reach gamelib.log (ipcValidation avoids importing the logger).
         setIpcRejectionLogSink((line) => logWarning(line, LogPrefix.Backend))
         const services = requireServices(state)
+        const outboundHttp = state.outboundHttp
+        if (!outboundHttp)
+          throw new Error('outbound-http-tracking step has not run')
         releaseOnStdinEof(input, {
+          outboundHttp,
           downloadQueue: services.downloadQueue,
           aborts: services.aborts,
           anonymousClient: services.anonymousClient,

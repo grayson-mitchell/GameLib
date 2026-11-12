@@ -31,7 +31,6 @@
     "src/backend/sidecar/enrichmentFlowRegistration.ts": 1,
     "src/backend/sidecar/installedJsonWatcher.ts": 2,
     "src/backend/sidecar/ipcValidation.ts": 3,
-    "src/backend/sidecar/outboundHttpRegistry.ts": 3,
     "src/backend/sidecar/runnerAuthFlowRegistration.ts": 1,
     "src/backend/sidecar/shortcutsFlowRegistration.ts": 1,
     "src/backend/sidecar/sidecarRpc.ts": 3,

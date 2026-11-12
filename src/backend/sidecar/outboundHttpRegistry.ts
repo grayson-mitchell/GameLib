@@ -22,14 +22,22 @@ import type { ClientRequest } from 'node:http'
  * The module does nothing at import; the caller logs (no logger import here).
  */
 
-let subscribed = false
-let shuttingDown = false
-const live = new Set<ClientRequest>()
+export interface OutboundHttpTracker {
+  /** Subscribes to the diagnostics channel; a second call on the same instance is a no-op. */
+  install(): void
+  markShuttingDown(): void
+  destroyAll(): { destroyed: number; hosts: string[] }
+  liveCount(): number
+  /** Unsubscribes so a later instance in the same process sees no duplicate callbacks. */
+  dispose(): void
+}
 
-export function installOutboundHttpTracking(): void {
-  if (subscribed) return
-  subscribed = true
-  diagnostics_channel.subscribe('http.client.request.start', (msg) => {
+export function createOutboundHttpTracker(): OutboundHttpTracker {
+  let subscribed = false
+  let shuttingDown = false
+  const live = new Set<ClientRequest>()
+
+  const onStart = (msg: unknown): void => {
     const { request } = msg as { request: ClientRequest }
     if (shuttingDown) {
       request.destroy(
@@ -44,33 +52,43 @@ export function installOutboundHttpTracking(): void {
     if (request.getHeader('upgrade')) return
     live.add(request)
     request.once('close', () => live.delete(request))
-  })
-}
-
-export function destroyOutboundHttp(): { destroyed: number; hosts: string[] } {
-  shuttingDown = true
-  const snapshot = [...live]
-  live.clear()
-  const hosts = new Set<string>()
-  let destroyed = 0
-  for (const request of snapshot) {
-    if (request.destroyed) continue
-    destroyed++
-    if (request.host) hosts.add(request.host)
-    request.destroy(
-      new Error(
-        'sidecar shutting down: in-flight outbound HTTP destroyed at stdin EOF'
-      )
-    )
   }
-  return { destroyed, hosts: [...hosts] }
-}
 
-export function liveOutboundRequestCount(): number {
-  return live.size
-}
-
-export function __resetOutboundHttpForTests(): void {
-  live.clear()
-  shuttingDown = false
+  return {
+    install() {
+      if (subscribed) return
+      subscribed = true
+      diagnostics_channel.subscribe('http.client.request.start', onStart)
+    },
+    markShuttingDown() {
+      shuttingDown = true
+    },
+    destroyAll() {
+      shuttingDown = true
+      const snapshot = [...live]
+      live.clear()
+      const hosts = new Set<string>()
+      let destroyed = 0
+      for (const request of snapshot) {
+        if (request.destroyed) continue
+        destroyed++
+        if (request.host) hosts.add(request.host)
+        request.destroy(
+          new Error(
+            'sidecar shutting down: in-flight outbound HTTP destroyed at stdin EOF'
+          )
+        )
+      }
+      return { destroyed, hosts: [...hosts] }
+    },
+    liveCount() {
+      return live.size
+    },
+    dispose() {
+      if (!subscribed) return
+      subscribed = false
+      diagnostics_channel.unsubscribe('http.client.request.start', onStart)
+      live.clear()
+    }
+  }
 }
