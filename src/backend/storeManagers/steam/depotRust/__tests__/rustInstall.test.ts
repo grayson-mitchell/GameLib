@@ -400,3 +400,126 @@ describe('requestCodeRefresher', () => {
     )
   })
 })
+
+describe('downloadSteamDepots delta input (Phase 74)', () => {
+  const OLD = new Map([
+    ['111', '1000000000000000001'],
+    ['222', '1000000000000000002'],
+    ['999', '1000000000000000009']
+  ])
+  beforeEach(() => {
+    jest.mocked(selectAllDepots).mockReturnValue([
+      { id: '111', manifest: '11111111111111111', size: 0, ownerAppId: APP_ID },
+      { id: '222', manifest: '22222222222222222', size: 0, ownerAppId: APP_ID },
+      { id: '333', manifest: '33333333333333333', size: 0, ownerAppId: APP_ID }
+    ])
+  })
+
+  it('sends fromManifest for installed depots, null for added ones, and retires dropped depots with their key', async () => {
+    const stub = createStubRustDepot()
+    invokeMock.mockImplementation(stub.invoke)
+
+    await downloadSteamDepots(APP_ID, {
+      ...OPTS(),
+      delta: { oldGidByDepot: OLD }
+    })
+
+    const job = stub.jobs[0]
+    expect(
+      job?.depots.map((d) => [d.depotId, d.manifestId, d.fromManifest])
+    ).toEqual([
+      ['111', '11111111111111111', '1000000000000000001'],
+      ['222', '22222222222222222', '1000000000000000002'],
+      ['333', '33333333333333333', null]
+    ])
+    expect(job?.retiredDepots).toEqual([
+      {
+        depotId: '999',
+        manifestId: '1000000000000000009',
+        requestCode: null,
+        key: 'f9'.repeat(32),
+        ownerAppId: APP_ID,
+        fromManifest: null
+      }
+    ])
+  })
+
+  it('drops a retired depot whose key cannot be fetched and still runs the update', async () => {
+    const stub = createStubRustDepot()
+    invokeMock.mockImplementation(stub.invoke)
+    client.getDepotDecryptionKey.mockImplementation(
+      (_a: number, d: number, cb: (e: Error | null, k: Buffer) => void) =>
+        d === 999
+          ? cb(new Error('gone'), Buffer.alloc(0))
+          : cb(null, Buffer.alloc(32, 7))
+    )
+
+    const out = await downloadSteamDepots(APP_ID, {
+      ...OPTS(),
+      delta: { oldGidByDepot: OLD }
+    })
+
+    expect(out.status).toBe('done')
+    expect(stub.jobs[0]?.retiredDepots).toEqual([])
+    expect(stub.jobs[0]?.depots).toHaveLength(3)
+  })
+
+  it('returns the Rust delta report on done, cancelled and error outcomes', async () => {
+    const delta = {
+      mode: 'chunk' as const,
+      changedFiles: ['a.bin'],
+      removedFiles: [],
+      reusedBytes: 5,
+      cdnBytes: 6,
+      peakBytes: 7,
+      committed: true
+    }
+    for (const status of ['completed', 'cancelled', 'error'] as const) {
+      const stub = createStubRustDepot({ outcome: { status, delta } })
+      invokeMock.mockImplementation(stub.invoke)
+      const out = await downloadSteamDepots(APP_ID, {
+        ...OPTS(),
+        delta: { oldGidByDepot: OLD }
+      })
+      expect(out.delta).toEqual(delta)
+    }
+  })
+
+  it('without opts.delta the job is a plain install (no fromManifest, no retirements)', async () => {
+    const stub = createStubRustDepot()
+    invokeMock.mockImplementation(stub.invoke)
+    const out = await downloadSteamDepots(APP_ID, OPTS())
+    expect(stub.jobs[0]?.depots.every((d) => d.fromManifest === null)).toBe(
+      true
+    )
+    expect(stub.jobs[0]?.retiredDepots).toEqual([])
+    expect(out.delta).toBeUndefined()
+  })
+
+  it('finalizes a delta job against the NEW buildid', async () => {
+    const stub = createStubRustDepot()
+    invokeMock.mockImplementation(stub.invoke)
+    await downloadSteamDepots(APP_ID, {
+      ...OPTS(),
+      delta: { oldGidByDepot: OLD }
+    })
+    expect(stub.jobs[0]?.finalize).toMatchObject({ buildid: '321' })
+  })
+
+  it('refreshes the code for an old GID through the same refresher as the new one', async () => {
+    client.getManifestRequestCode.mockClear()
+    const refresh = requestCodeRefresher(
+      client,
+      new Map([['111', APP_ID]]),
+      APP_ID,
+      'public'
+    )
+    await refresh('111', '1000000000000000001')
+    expect(client.getManifestRequestCode).toHaveBeenLastCalledWith(
+      Number(APP_ID),
+      111,
+      '1000000000000000001',
+      'public'
+    )
+  })
+})

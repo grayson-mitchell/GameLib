@@ -20,6 +20,7 @@ import type {
 import {
   assertNumericAppId,
   buildDepotRefs,
+  fetchDepotKey,
   getDepotClient,
   throwIfAborted,
   type DepotRefEntry
@@ -196,13 +197,40 @@ export async function downloadSteamDepotsRust(
       allowFullOwnership: opts.signal?.aborted !== true,
       betaKey: refs.branch === 'public' ? undefined : refs.branch
     }
+    // Phase 74: installed depots the new build dropped. A key that cannot be fetched drops that
+    // retirement only (its files stay until a later full check); the update still runs.
+    const retiredDepots: DepotRefEntry[] = []
+    if (opts.delta) {
+      const selected = new Set(refs.depots.map((d) => d.depotId))
+      for (const [depotId, oldGid] of opts.delta.oldGidByDepot) {
+        if (selected.has(depotId)) continue
+        throwIfAborted(opts.signal)
+        try {
+          const key = await fetchDepotKey(client, {
+            id: depotId,
+            manifest: oldGid,
+            size: 0,
+            ownerAppId: appId
+          })
+          retiredDepots.push({ depotId, gid: oldGid, key, ownerAppId: appId })
+        } catch (err) {
+          if (opts.signal?.aborted) throw err
+          logWarning(
+            `downloadSteamDepots: no key for retired depot ${depotId} of appId ${appId}; its files are not removed this update`,
+            LogPrefix.Steam
+          )
+        }
+      }
+    }
     const job = buildDepotJob({
       appId,
       mode: 'install',
       installRoot: resolve(opts.targetSteamappsDir, 'common', opts.installdir),
       refs: refs.depots,
       hosts,
-      finalize
+      finalize,
+      oldGidByDepot: opts.delta?.oldGidByDepot,
+      retiredDepots
     })
     const bridge = createProgressBridge(
       opts.installRuntime.depotJobs.transport,
@@ -214,7 +242,12 @@ export async function downloadSteamDepotsRust(
       tokenCache,
       refreshRequestCode: requestCodeRefresher(
         client,
-        new Map(refs.depots.map((d) => [d.depotId, d.ownerAppId])),
+        new Map(
+          [...refs.depots, ...retiredDepots].map((d) => [
+            d.depotId,
+            d.ownerAppId
+          ])
+        ),
         appId,
         refs.branch
       ),
@@ -233,7 +266,11 @@ export async function downloadSteamDepotsRust(
         : [...refs.skippedDepots, ...manifestSkipped]
     if (opts.signal?.aborted === true && outcome.status !== 'cancelled') {
       // An abort that raced a finished job still reports cancelled (D-UAT-09).
-      return { status: 'cancelled', skippedDepots }
+      return {
+        status: 'cancelled',
+        skippedDepots,
+        ...(outcome.delta ? { delta: outcome.delta } : {})
+      }
     }
     return rustOutcomeToDepotOutcome(outcome, skippedDepots)
   } catch (err) {
