@@ -92,7 +92,23 @@
         "extraInfoRetry": "Reîncearcă",
         "extraInfoStaleBody": "Acest rezultat a fost stocat în cache înainte de a se înregistra rezultatele încărcării, deci poate fi depășit. Reîmprospătează pentru a verifica.",
         "steamInstallingPercent": "Se instalează… {{percent}}%",
+        "steamUpdateCommitting": "Se aplică actualizarea…",
+        "steamUpdatePlanning": "Se planifică actualizarea…",
         "tabsAriaLabel": "file gameinfo",
+        "update": {
+            "anyway": "Actualizează oricum",
+            "cancel": "Anulează",
+            "checkingSize": "Se verifică dimensiunea actualizării…",
+            "confirmButton": "Actualizează",
+            "confirmTitle": "Actualizezi {{title}}?",
+            "fallback": "GameLib nu poate obține lista de fișiere a versiunii anterioare, așa că va verifica fiecare fișier: descărcare de până la {{download}}.",
+            "notEnoughDisk": "Necesită {{peak}} liberi, {{available}} disponibili.",
+            "registered": "Steam va actualiza acest joc.",
+            "showSize": "Arată dimensiunea actualizării",
+            "sizes": "Descărcare de {{download}} · necesită {{peak}} liberi în timpul actualizării",
+            "sizesEstimate": "Descărcare de până la {{download}} · necesită {{peak}} liberi în timpul actualizării (estimare)",
+            "unknown": "Starea actualizării este necunoscută: GameLib nu vede ramura {{branch}} a acestui joc."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -454,9 +470,22 @@
             },
             "route": {
                 "bottled": "Client Steam în bottle",
+                "issue": {
+                    "failedThisSession": "A eșuat în această sesiune",
+                    "knownBad": "Problemă cunoscută",
+                    "notCovered_one": "{{count}} apel Steam neacoperit",
+                    "notCovered_few": "{{count}} apeluri Steam neacoperite",
+                    "notCovered_other": "{{count}} de apeluri Steam neacoperite",
+                    "scanMiss": "Acoperit parțial",
+                    "win64NoShim": "Fără punte pe 64 de biți"
+                },
                 "label": "Rută Steam",
+                "moreSymbols_one": "și încă {{count}}",
+                "moreSymbols_few": "și încă {{count}}",
+                "moreSymbols_other": "și încă {{count}}",
                 "missingSymbols": "Neacoperit: {{symbols}}",
                 "native": "Pod nativ Steam",
+                "notCoveredHeading": "Neacoperite:",
                 "reason": {
                     "failedThisSession": "Podul a eșuat mai devreme în această sesiune",
                     "knownBad": "Cunoscut că nu funcționează cu podul: {{reason}}",
@@ -529,6 +558,25 @@
             "removeAllCopiesConfirmMessage": "Aceasta elimină fiecare copie instalată a acestui joc din toate locațiile de instalare. Această acțiune nu poate fi anulată.",
             "removeAllCopiesConfirmTitle": "Elimini toate copiile?",
             "removeAllCopiesLabel": "Elimină toate copiile…"
+        },
+        "update": {
+            "branchUnknown": "GameLib nu vede ramura {{branch}} a jocului {{title}}, deci nu îl poate actualiza.",
+            "finished": "Actualizare finalizată",
+            "handoff": "Steam a deschis {{title}}. Actualizează-l din Steam.",
+            "installAppRefused": "Steam a refuzat actualizarea (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam actualizează acest joc în interiorul bottle-ului său.",
+            "notEnoughDisk": "Spațiu liber insuficient pentru a actualiza {{title}}: necesită {{needed}}, {{available}} disponibili.",
+            "prompt": {
+                "dontAskAgain": "Nu mai întreba pentru această versiune",
+                "finishFirst": "Termină actualizarea jocului {{title}} înainte să joci. Reia-o din Descărcări.",
+                "queued": "O actualizare pentru {{title}} așteaptă în Descărcări. Joacă după ce se termină sau scoate-o din coadă.",
+                "updating": "{{title}} se actualizează. Joacă după terminarea actualizării sau pune-o pe pauză în Descărcări.",
+                "message": "{{title}} are o actualizare (versiunea {{targetBuild}}). Actualizezi acum sau joci versiunea pe care o ai?",
+                "playAnyway": "Joacă oricum",
+                "title": "Actualizare disponibilă",
+                "updateNow": "Actualizează acum"
+            },
+            "refusedRunning": "Închide {{title}} înainte de a-l actualiza."
         },
         "engine": {
             "wineTabHint": "GameLib alege motorul Wine și bottle-ul pentru jocurile Steam.",

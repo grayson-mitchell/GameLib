@@ -91,8 +91,24 @@
         "extraInfoRetry": "Yenidən cəhd et",
         "extraInfoStaleBody": "Bu nəticə yükləmə nəticələri qeydə alınmazdan əvvəl keşlənib, ona görə köhnəlmiş ola bilər. Yoxlamaq üçün yeniləyin.",
         "steamInstallingPercent": "Quraşdırılır… {{percent}}%",
+        "steamUpdateCommitting": "Yeniləmə tətbiq olunur…",
+        "steamUpdatePlanning": "Yeniləmə planlaşdırılır…",
         "wineLabel": "Wine:",
-        "tabsAriaLabel": "oyun məlumatı tabları"
+        "tabsAriaLabel": "oyun məlumatı tabları",
+        "update": {
+            "anyway": "Yenə də yenilə",
+            "cancel": "Ləğv et",
+            "checkingSize": "Yeniləmə ölçüsü yoxlanılır…",
+            "confirmButton": "Yenilə",
+            "confirmTitle": "{{title}} yenilənsin?",
+            "fallback": "GameLib əvvəlki quruluşun fayl siyahısını ala bilmir, ona görə hər faylı yoxlayacaq: {{download}} qədər yükləmə.",
+            "notEnoughDisk": "{{peak}} boş yer lazımdır, {{available}} mövcuddur.",
+            "registered": "Steam bu oyunu yeniləyəcək.",
+            "showSize": "Yeniləmə ölçüsünü göstər",
+            "sizes": "Yükləmə {{download}} · yeniləmə zamanı {{peak}} boş yer lazımdır",
+            "sizesEstimate": "Yükləmə ən çox {{download}} · yeniləmə zamanı {{peak}} boş yer lazımdır (təxmini)",
+            "unknown": "Yeniləmə statusu məlum deyil: GameLib bu oyunun {{branch}} budağını görə bilmir."
+        }
     },
     "humble": {
         "lessThanAMinute": "bir dəqiqədən az"
@@ -447,9 +463,20 @@
             },
             "route": {
                 "bottled": "Bağlanmış Steam klienti",
+                "issue": {
+                    "failedThisSession": "Bu sessiyada alınmadı",
+                    "knownBad": "Məlum problem",
+                    "notCovered_one": "{{count}} Steam çağırışı əhatə olunmayıb",
+                    "notCovered_other": "{{count}} Steam çağırışı əhatə olunmayıb",
+                    "scanMiss": "Tam əhatə olunmayıb",
+                    "win64NoShim": "64 bitlik körpü yoxdur"
+                },
                 "label": "Steam marşrutu",
+                "moreSymbols_one": "və daha {{count}}",
+                "moreSymbols_other": "və daha {{count}}",
                 "missingSymbols": "Əhatə olunmayıb: {{symbols}}",
                 "native": "Yerli Steam körpüsü",
+                "notCoveredHeading": "Əhatə olunmayıb:",
                 "reason": {
                     "failedThisSession": "Körpü bu sessiyada daha əvvəl uğursuz oldu",
                     "knownBad": "Körpü ilə işləmədiyi bilinir: {{reason}}",
@@ -522,6 +549,25 @@
             "removeAllCopiesConfirmMessage": "Bu, bütün quraşdırma yerlərindəki bu oyunun hər bir quraşdırılmış nüsxəsini siləcək. Bu geri qaytarıla bilməz.",
             "removeAllCopiesConfirmTitle": "Bütün nüsxələr silinsin?",
             "removeAllCopiesLabel": "Bütün nüsxələri sil…"
+        },
+        "update": {
+            "branchUnknown": "GameLib {{title}} oyununun {{branch}} budağını görə bilmir, ona görə onu yeniləyə bilmir.",
+            "finished": "Yeniləmə tamamlandı",
+            "handoff": "Steam {{title}} oyununu açdı. Onu Steam-dən yeniləyin.",
+            "installAppRefused": "Steam yeniləməni rədd etdi (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam bu oyunu öz bottle mühiti daxilində yeniləyir.",
+            "notEnoughDisk": "{{title}} yeniləmək üçün kifayət qədər boş yer yoxdur: {{needed}} boş yer lazımdır, {{available}} mövcuddur.",
+            "prompt": {
+                "dontAskAgain": "Bu quruluş üçün bir daha soruşma",
+                "finishFirst": "Oynamazdan əvvəl {{title}} yeniləməsini tamamlayın. Onu Yükləmələr bölməsindən davam etdirin.",
+                "queued": "{{title}} üçün yeniləmə Yükləmələrdə gözləyir. Bitdikdən sonra oynayın və ya onu növbədən silin.",
+                "updating": "{{title}} yenilənir. Yeniləmə bitəndə oynayın və ya yeniləməni Yükləmələrdə dayandırın.",
+                "message": "{{title}} üçün yeniləmə var (quruluş {{targetBuild}}). İndi yenilənsin, yoxsa mövcud quruluş oynansın?",
+                "playAnyway": "Yenə də oyna",
+                "title": "Yeniləmə mövcuddur",
+                "updateNow": "İndi yenilə"
+            },
+            "refusedRunning": "Yeniləməzdən əvvəl {{title}} oyununu bağlayın."
         },
         "engine": {
             "wineTabHint": "GameLib Steam oyunları üçün Wine mühərrikini və bottle-ı seçir.",

@@ -93,7 +93,23 @@
         "extraInfoRetry": "Spróbuj ponownie",
         "extraInfoStaleBody": "Ten wynik został zapisany w pamięci podręcznej przed rejestrowaniem wyników wczytywania, więc może być nieaktualny. Odśwież, aby sprawdzić.",
         "steamInstallingPercent": "Instalowanie… {{percent}}%",
+        "steamUpdateCommitting": "Stosowanie aktualizacji…",
+        "steamUpdatePlanning": "Planowanie aktualizacji…",
         "tabsAriaLabel": "karty informacji o grze",
+        "update": {
+            "anyway": "Zaktualizuj mimo to",
+            "cancel": "Anuluj",
+            "checkingSize": "Sprawdzanie rozmiaru aktualizacji…",
+            "confirmButton": "Zaktualizuj",
+            "confirmTitle": "Zaktualizować {{title}}?",
+            "fallback": "GameLib nie może pobrać listy plików poprzedniej wersji, więc sprawdzi każdy plik: pobieranie do {{download}}.",
+            "notEnoughDisk": "Wymaga {{peak}} wolnego miejsca, dostępne: {{available}}.",
+            "registered": "Steam zaktualizuje tę grę.",
+            "showSize": "Pokaż rozmiar aktualizacji",
+            "sizes": "Pobieranie {{download}} · podczas aktualizacji wymaga {{peak}} wolnego miejsca",
+            "sizesEstimate": "Pobieranie do {{download}} · podczas aktualizacji wymaga {{peak}} wolnego miejsca (szacunek)",
+            "unknown": "Stan aktualizacji nieznany: GameLib nie widzi gałęzi {{branch}} tej gry."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -461,9 +477,24 @@
             },
             "route": {
                 "bottled": "Klient Steam w bottle",
+                "issue": {
+                    "failedThisSession": "Nie powiodło się w tej sesji",
+                    "knownBad": "Znany problem",
+                    "notCovered_one": "{{count}} wywołanie Steam nie jest objęte",
+                    "notCovered_few": "{{count}} wywołania Steam nie są objęte",
+                    "notCovered_many": "{{count}} wywołań Steam nie jest objętych",
+                    "notCovered_other": "{{count}} wywołania Steam nie jest objęte",
+                    "scanMiss": "Nie w pełni objęte",
+                    "win64NoShim": "Brak mostu 64-bitowego"
+                },
                 "label": "Trasa Steam",
+                "moreSymbols_one": "i jeszcze {{count}}",
+                "moreSymbols_few": "i jeszcze {{count}}",
+                "moreSymbols_many": "i jeszcze {{count}}",
+                "moreSymbols_other": "i jeszcze {{count}}",
                 "missingSymbols": "Nieobjęte: {{symbols}}",
                 "native": "Natywny most Steam",
+                "notCoveredHeading": "Nieobjęte:",
                 "reason": {
                     "failedThisSession": "Most zawiódł wcześniej w tej sesji",
                     "knownBad": "Wiadomo, że nie działa z mostem: {{reason}}",
@@ -536,6 +567,25 @@
             "removeAllCopiesConfirmMessage": "Spowoduje to usunięcie każdej zainstalowanej kopii tej gry ze wszystkich lokalizacji instalacji. Tej operacji nie można cofnąć.",
             "removeAllCopiesConfirmTitle": "Usunąć wszystkie kopie?",
             "removeAllCopiesLabel": "Usuń wszystkie kopie…"
+        },
+        "update": {
+            "branchUnknown": "GameLib nie widzi gałęzi {{branch}} gry {{title}}, więc nie może jej zaktualizować.",
+            "finished": "Aktualizacja zakończona",
+            "handoff": "Steam otworzył {{title}}. Zaktualizuj grę ze Steama.",
+            "installAppRefused": "Steam odrzucił aktualizację (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam aktualizuje tę grę wewnątrz jej bottle.",
+            "notEnoughDisk": "Za mało wolnego miejsca, aby zaktualizować {{title}}: wymaga {{needed}}, dostępne: {{available}}.",
+            "prompt": {
+                "dontAskAgain": "Nie pytaj ponownie o tę wersję",
+                "finishFirst": "Dokończ aktualizację {{title}} przed graniem. Wznów ją w Pobieraniu.",
+                "queued": "Aktualizacja {{title}} czeka w Pobieraniu. Zagraj po jej zakończeniu lub usuń ją z kolejki.",
+                "updating": "{{title}} jest aktualizowana. Zagraj po zakończeniu aktualizacji lub wstrzymaj ją w Pobieraniu.",
+                "message": "{{title}} ma aktualizację (wersja {{targetBuild}}). Zaktualizować teraz, czy zagrać w obecną wersję?",
+                "playAnyway": "Zagraj mimo to",
+                "title": "Dostępna aktualizacja",
+                "updateNow": "Zaktualizuj teraz"
+            },
+            "refusedRunning": "Zamknij {{title}} przed aktualizacją."
         },
         "engine": {
             "wineTabHint": "GameLib wybiera silnik Wine i bottle dla gier ze Steam.",

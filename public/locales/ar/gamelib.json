@@ -95,7 +95,23 @@
         "extraInfoRetry": "أعد المحاولة",
         "extraInfoStaleBody": "تم تخزين هذه النتيجة مؤقتًا قبل تسجيل نتائج التحميل، لذا قد تكون قديمة. حدّثها للتحقق.",
         "steamInstallingPercent": "جارٍ التثبيت… {{percent}}%",
+        "steamUpdateCommitting": "جارٍ تطبيق التحديث…",
+        "steamUpdatePlanning": "جارٍ التخطيط للتحديث…",
         "tabsAriaLabel": "علامات تبويب معلومات اللعبة",
+        "update": {
+            "anyway": "تحديث على أي حال",
+            "cancel": "إلغاء",
+            "checkingSize": "جارٍ التحقق من حجم التحديث…",
+            "confirmButton": "تحديث",
+            "confirmTitle": "تحديث {{title}}؟",
+            "fallback": "لا يستطيع GameLib الحصول على قائمة ملفات الإصدار السابق، لذا سيفحص كل ملف: تنزيل يصل إلى {{download}}.",
+            "notEnoughDisk": "يحتاج إلى {{peak}} مساحة حرة، والمتاح {{available}}.",
+            "registered": "سيقوم Steam بتحديث هذه اللعبة.",
+            "showSize": "إظهار حجم التحديث",
+            "sizes": "التنزيل {{download}} · يحتاج إلى {{peak}} مساحة حرة أثناء التحديث",
+            "sizesEstimate": "التنزيل حتى {{download}} · يحتاج إلى {{peak}} مساحة حرة أثناء التحديث (تقدير)",
+            "unknown": "حالة التحديث غير معروفة: لا يستطيع GameLib رؤية فرع {{branch}} لهذه اللعبة."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -475,9 +491,28 @@
             },
             "route": {
                 "bottled": "عميل Steam المعبأ",
+                "issue": {
+                    "failedThisSession": "فشل في هذه الجلسة",
+                    "knownBad": "مشكلة معروفة",
+                    "notCovered_zero": "لا استدعاءات Steam غير مغطاة",
+                    "notCovered_one": "استدعاء Steam واحد غير مغطى",
+                    "notCovered_two": "استدعاءان من Steam غير مغطيين",
+                    "notCovered_few": "{{count}} استدعاءات Steam غير مغطاة",
+                    "notCovered_many": "{{count}} استدعاءً من Steam غير مغطى",
+                    "notCovered_other": "{{count}} استدعاء Steam غير مغطى",
+                    "scanMiss": "غير مغطى بالكامل",
+                    "win64NoShim": "لا يوجد جسر 64 بت"
+                },
                 "label": "مسار Steam",
+                "moreSymbols_zero": "ولا شيء آخر",
+                "moreSymbols_one": "وواحد آخر",
+                "moreSymbols_two": "واثنان آخران",
+                "moreSymbols_few": "و{{count}} آخرين",
+                "moreSymbols_many": "و{{count}} آخر",
+                "moreSymbols_other": "و{{count}} آخر",
                 "missingSymbols": "غير مشمول: {{symbols}}",
                 "native": "جسر Steam الأصلي",
+                "notCoveredHeading": "غير مغطى:",
                 "reason": {
                     "failedThisSession": "فشل الجسر في وقت سابق من هذه الجلسة",
                     "knownBad": "معروف أنه لا يعمل مع الجسر: {{reason}}",
@@ -550,6 +585,25 @@
             "removeAllCopiesConfirmMessage": "يؤدي هذا إلى إزالة كل نسخة مثبتة من هذه اللعبة في جميع مواقع التثبيت. لا يمكن التراجع عن هذا الإجراء.",
             "removeAllCopiesConfirmTitle": "إزالة جميع النسخ؟",
             "removeAllCopiesLabel": "إزالة جميع النسخ…"
+        },
+        "update": {
+            "branchUnknown": "لا يستطيع GameLib رؤية فرع {{branch}} للعبة {{title}}، لذلك لا يمكنه تحديثها.",
+            "finished": "اكتمل التحديث",
+            "handoff": "فتح Steam اللعبة {{title}}. حدّثها من Steam.",
+            "installAppRefused": "رفض Steam التحديث (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "يقوم Steam بتحديث هذه اللعبة داخل الحاوية (bottle) الخاصة بها.",
+            "notEnoughDisk": "لا توجد مساحة حرة كافية لتحديث {{title}}: يلزم {{needed}} مساحة حرة، والمتاح {{available}}.",
+            "prompt": {
+                "dontAskAgain": "عدم السؤال مجددًا لهذا الإصدار",
+                "finishFirst": "أنهِ تحديث {{title}} قبل أن تلعب. استأنفه من التنزيلات.",
+                "queued": "هناك تحديث للعبة {{title}} في انتظار التنزيلات. العب بعد انتهائه، أو أزله من قائمة الانتظار.",
+                "updating": "{{title}} قيد التحديث. العب عند انتهاء التحديث، أو أوقف التحديث مؤقتًا من التنزيلات.",
+                "message": "لدى {{title}} تحديث (الإصدار {{targetBuild}}). هل تريد التحديث الآن، أم تشغيل الإصدار الموجود لديك؟",
+                "playAnyway": "العب على أي حال",
+                "title": "يتوفر تحديث",
+                "updateNow": "حدّث الآن"
+            },
+            "refusedRunning": "أغلق {{title}} قبل تحديثها."
         },
         "engine": {
             "wineTabHint": "يختار GameLib محرك Wine وbottle لألعاب Steam.",

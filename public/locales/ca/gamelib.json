@@ -92,7 +92,23 @@
         "extraInfoRetry": "Torna-ho a provar",
         "extraInfoStaleBody": "Aquest resultat es va desar en memòria cau abans de registrar els resultats de la càrrega, per la qual cosa pot estar desactualitzat. Actualitza-ho per comprovar-ho.",
         "steamInstallingPercent": "S'està instal·lant… {{percent}}%",
+        "steamUpdateCommitting": "Aplicant l'actualització…",
+        "steamUpdatePlanning": "Planificant l'actualització…",
         "tabsAriaLabel": "pestanyes d'informació del joc",
+        "update": {
+            "anyway": "Actualitza igualment",
+            "cancel": "Cancel·la",
+            "checkingSize": "Comprovant la mida de l'actualització…",
+            "confirmButton": "Actualitza",
+            "confirmTitle": "Vols actualitzar {{title}}?",
+            "fallback": "GameLib no pot obtenir la llista de fitxers de la versió anterior, així que comprovarà tots els fitxers: baixada de fins a {{download}}.",
+            "notEnoughDisk": "Cal {{peak}} lliures, hi ha {{available}} disponibles.",
+            "registered": "Steam actualitzarà aquest joc.",
+            "showSize": "Mostra la mida de l'actualització",
+            "sizes": "Baixada de {{download}} · cal {{peak}} lliures durant l'actualització",
+            "sizesEstimate": "Baixada de fins a {{download}} · cal {{peak}} lliures durant l'actualització (estimació)",
+            "unknown": "Estat de l'actualització desconegut: GameLib no pot veure la branca {{branch}} d'aquest joc."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -454,9 +470,22 @@
             },
             "route": {
                 "bottled": "Client de Steam en bottle",
+                "issue": {
+                    "failedThisSession": "Ha fallat en aquesta sessió",
+                    "knownBad": "Problema conegut",
+                    "notCovered_one": "{{count}} crida de Steam no coberta",
+                    "notCovered_many": "{{count}} de crides de Steam no cobertes",
+                    "notCovered_other": "{{count}} crides de Steam no cobertes",
+                    "scanMiss": "No està totalment cobert",
+                    "win64NoShim": "Sense pont de 64 bits"
+                },
                 "label": "Ruta de Steam",
+                "moreSymbols_one": "i {{count}} més",
+                "moreSymbols_many": "i {{count}} més",
+                "moreSymbols_other": "i {{count}} més",
                 "missingSymbols": "No cobert: {{symbols}}",
                 "native": "Pont natiu de Steam",
+                "notCoveredHeading": "No cobert:",
                 "reason": {
                     "failedThisSession": "El pont ha fallat abans en aquesta sessió",
                     "knownBad": "Se sap que no funciona amb el pont: {{reason}}",
@@ -529,6 +558,25 @@
             "removeAllCopiesConfirmMessage": "Això elimina totes les còpies instal·lades d'aquest joc a totes les ubicacions d'instal·lació. Aquesta acció no es pot desfer.",
             "removeAllCopiesConfirmTitle": "Vols eliminar totes les còpies?",
             "removeAllCopiesLabel": "Elimina totes les còpies…"
+        },
+        "update": {
+            "branchUnknown": "GameLib no pot veure la branca {{branch}} de {{title}}, així que no el pot actualitzar.",
+            "finished": "Actualització acabada",
+            "handoff": "Steam ha obert {{title}}. Actualitza'l des de Steam.",
+            "installAppRefused": "Steam ha rebutjat l'actualització (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam actualitza aquest joc dins la seva ampolla (bottle).",
+            "notEnoughDisk": "No hi ha prou espai lliure per actualitzar {{title}}: cal {{needed}} lliures, hi ha {{available}} disponibles.",
+            "prompt": {
+                "dontAskAgain": "No ho tornis a preguntar per aquesta versió",
+                "finishFirst": "Acaba d'actualitzar {{title}} abans de jugar. Reprèn-ho des de Baixades.",
+                "queued": "Hi ha una actualització de {{title}} esperant a Baixades. Juga quan acabi o elimina-la de la cua.",
+                "updating": "{{title}} s'està actualitzant. Juga quan acabi l'actualització o posa-la en pausa a Baixades.",
+                "message": "{{title}} té una actualització (versió {{targetBuild}}). Actualitzar ara o jugar la versió que tens?",
+                "playAnyway": "Juga igualment",
+                "title": "Actualització disponible",
+                "updateNow": "Actualitza ara"
+            },
+            "refusedRunning": "Tanca {{title}} abans d'actualitzar-lo."
         },
         "engine": {
             "wineTabHint": "GameLib tria el motor Wine i la bottle per als jocs de Steam.",

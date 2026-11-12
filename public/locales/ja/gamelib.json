@@ -91,7 +91,23 @@
         "extraInfoRetry": "再試行",
         "extraInfoStaleBody": "この結果は読み込み結果が記録される前にキャッシュされたため、古い可能性があります。更新して確認してください。",
         "steamInstallingPercent": "インストール中… {{percent}}%",
+        "steamUpdateCommitting": "アップデートを適用中…",
+        "steamUpdatePlanning": "アップデートを準備中…",
         "tabsAriaLabel": "ゲーム情報タブ",
+        "update": {
+            "anyway": "それでもアップデート",
+            "cancel": "キャンセル",
+            "checkingSize": "アップデートのサイズを確認中…",
+            "confirmButton": "アップデート",
+            "confirmTitle": "{{title}}をアップデートしますか？",
+            "fallback": "GameLibは以前のビルドのファイル一覧を取得できないため、すべてのファイルを確認します。ダウンロードは最大{{download}}です。",
+            "notEnoughDisk": "{{peak}}の空き容量が必要です（利用可能: {{available}}）。",
+            "registered": "Steamがこのゲームをアップデートします。",
+            "showSize": "アップデートのサイズを表示",
+            "sizes": "ダウンロード{{download}} · アップデート中に{{peak}}の空き容量が必要",
+            "sizesEstimate": "ダウンロード最大{{download}} · アップデート中に{{peak}}の空き容量が必要（推定）",
+            "unknown": "アップデートの状態が不明です: GameLibはこのゲームの{{branch}}ブランチを参照できません。"
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -447,9 +463,20 @@
             },
             "route": {
                 "bottled": "ボトル化されたSteamクライアント",
+                "issue": {
+                    "failedThisSession": "このセッションで失敗しました",
+                    "knownBad": "既知の問題",
+                    "notCovered_one": "未対応のSteam呼び出しが{{count}}件",
+                    "notCovered_other": "未対応のSteam呼び出しが{{count}}件",
+                    "scanMiss": "完全には対応していません",
+                    "win64NoShim": "64ビットブリッジなし"
+                },
                 "label": "Steamルート",
+                "moreSymbols_one": "ほか{{count}}件",
+                "moreSymbols_other": "ほか{{count}}件",
                 "missingSymbols": "カバーされていない: {{symbols}}",
                 "native": "ネイティブSteamブリッジ",
+                "notCoveredHeading": "未対応:",
                 "reason": {
                     "failedThisSession": "ブリッジはこのセッションで以前に失敗した",
                     "knownBad": "ブリッジで動作しないことが分かっている: {{reason}}",
@@ -522,6 +549,25 @@
             "removeAllCopiesConfirmMessage": "すべてのインストール先にあるこのゲームのインストール済みコピーがすべて削除されます。この操作は元に戻せません。",
             "removeAllCopiesConfirmTitle": "すべてのコピーを削除しますか？",
             "removeAllCopiesLabel": "すべてのコピーを削除…"
+        },
+        "update": {
+            "branchUnknown": "GameLibは{{title}}の{{branch}}ブランチを参照できないため、アップデートできません。",
+            "finished": "アップデートが完了しました",
+            "handoff": "Steamが{{title}}を開きました。Steamからアップデートしてください。",
+            "installAppRefused": "Steamがアップデートを拒否しました（EAppUpdateError {{code}}）。",
+            "notBridgeOrNative": "Steamはこのゲームをボトル内でアップデートします。",
+            "notEnoughDisk": "{{title}}をアップデートするための空き容量が足りません。{{needed}}の空き容量が必要ですが、利用可能なのは{{available}}です。",
+            "prompt": {
+                "dontAskAgain": "このビルドでは今後確認しない",
+                "finishFirst": "プレイする前に{{title}}のアップデートを完了してください。ダウンロードから再開できます。",
+                "queued": "{{title}}のアップデートがダウンロードで待機中です。完了後にプレイするか、キューから削除してください。",
+                "updating": "{{title}}をアップデート中です。アップデートの完了後にプレイするか、ダウンロードで一時停止してください。",
+                "message": "{{title}}にアップデートがあります（ビルド{{targetBuild}}）。今すぐアップデートしますか？それとも現在のビルドをプレイしますか？",
+                "playAnyway": "それでもプレイ",
+                "title": "アップデートがあります",
+                "updateNow": "今すぐアップデート"
+            },
+            "refusedRunning": "アップデートする前に{{title}}を終了してください。"
         },
         "engine": {
             "wineTabHint": "GameLib が Steam ゲーム用の Wine エンジンとボトルを選びます。",

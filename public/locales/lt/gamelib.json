@@ -93,7 +93,23 @@
         "extraInfoRetry": "Bandyti dar kartą",
         "extraInfoStaleBody": "Šis rezultatas buvo talpinamas podėlyje prieš pradedant registruoti įkėlimo rezultatus, todėl jis gali būti pasenęs. Atnaujinkite, kad patikrintumėte.",
         "steamInstallingPercent": "Diegiama… {{percent}} %",
+        "steamUpdateCommitting": "Taikomas naujinimas…",
+        "steamUpdatePlanning": "Planuojamas naujinimas…",
         "tabsAriaLabel": "žaidimo informacijos skirtukai",
+        "update": {
+            "anyway": "Vis tiek naujinti",
+            "cancel": "Atšaukti",
+            "checkingSize": "Tikrinamas naujinimo dydis…",
+            "confirmButton": "Naujinti",
+            "confirmTitle": "Naujinti {{title}}?",
+            "fallback": "GameLib negali gauti ankstesnės versijos failų sąrašo, todėl patikrins kiekvieną failą: atsisiuntimas iki {{download}}.",
+            "notEnoughDisk": "Reikia {{peak}} laisvos vietos, yra {{available}}.",
+            "registered": "Steam atnaujins šį žaidimą.",
+            "showSize": "Rodyti naujinimo dydį",
+            "sizes": "Atsisiuntimas {{download}} · naujinimo metu reikia {{peak}} laisvos vietos",
+            "sizesEstimate": "Atsisiuntimas iki {{download}} · naujinimo metu reikia {{peak}} laisvos vietos (įvertis)",
+            "unknown": "Naujinimo būsena nežinoma: GameLib nemato šio žaidimo šakos {{branch}}."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -461,9 +477,24 @@
             },
             "route": {
                 "bottled": "Steam klientas bottle",
+                "issue": {
+                    "failedThisSession": "Šioje sesijoje nepavyko",
+                    "knownBad": "Žinoma problema",
+                    "notCovered_one": "{{count}} Steam iškvietimas neaprėptas",
+                    "notCovered_few": "{{count}} Steam iškvietimai neaprėpti",
+                    "notCovered_many": "{{count}} Steam iškvietimo neaprėpta",
+                    "notCovered_other": "{{count}} Steam iškvietimų neaprėpta",
+                    "scanMiss": "Aprėpta ne visiškai",
+                    "win64NoShim": "Nėra 64 bitų tilto"
+                },
                 "label": "Steam maršrutas",
+                "moreSymbols_one": "ir dar {{count}}",
+                "moreSymbols_few": "ir dar {{count}}",
+                "moreSymbols_many": "ir dar {{count}}",
+                "moreSymbols_other": "ir dar {{count}}",
                 "missingSymbols": "Nepadengta: {{symbols}}",
                 "native": "Vietinis Steam tiltas",
+                "notCoveredHeading": "Neaprėpta:",
                 "reason": {
                     "failedThisSession": "Tiltas šioje sesijoje jau anksčiau nepavyko",
                     "knownBad": "Žinoma, kad neveikia su tiltu: {{reason}}",
@@ -536,6 +567,25 @@
             "removeAllCopiesConfirmMessage": "Tai pašalins visas įdiegtas šio žaidimo kopijas iš visų diegimo vietų. Šio veiksmo anuliuoti negalima.",
             "removeAllCopiesConfirmTitle": "Pašalinti visas kopijas?",
             "removeAllCopiesLabel": "Pašalinti visas kopijas…"
+        },
+        "update": {
+            "branchUnknown": "GameLib nemato žaidimo {{title}} šakos {{branch}}, todėl negali jo atnaujinti.",
+            "finished": "Naujinimas baigtas",
+            "handoff": "Steam atidarė {{title}}. Atnaujinkite jį per Steam.",
+            "installAppRefused": "Steam atmetė naujinimą (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam atnaujina šį žaidimą savo bottle viduje.",
+            "notEnoughDisk": "Nepakanka laisvos vietos žaidimui {{title}} atnaujinti: reikia {{needed}}, yra {{available}}.",
+            "prompt": {
+                "dontAskAgain": "Dėl šios versijos daugiau neklausti",
+                "finishFirst": "Užbaikite {{title}} naujinimą prieš žaisdami. Tęskite jį skiltyje Atsisiuntimai.",
+                "queued": "{{title}} naujinimas laukia skiltyje Atsisiuntimai. Žaiskite jam pasibaigus arba pašalinkite jį iš eilės.",
+                "updating": "{{title}} naujinamas. Žaiskite, kai naujinimas baigsis, arba sustabdykite jį skiltyje Atsisiuntimai.",
+                "message": "{{title}} turi naujinimą (versija {{targetBuild}}). Naujinti dabar ar žaisti turimą versiją?",
+                "playAnyway": "Vis tiek žaisti",
+                "title": "Yra naujinimas",
+                "updateNow": "Naujinti dabar"
+            },
+            "refusedRunning": "Uždarykite {{title}} prieš naujindami."
         },
         "engine": {
             "wineTabHint": "GameLib parenka Wine variklį ir bottle „Steam“ žaidimams.",

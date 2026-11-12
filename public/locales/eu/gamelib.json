@@ -91,7 +91,23 @@
         "extraInfoRetry": "Saiatu berriro",
         "extraInfoStaleBody": "Emaitza hau kargaren emaitzak erregistratu baino lehen katxeatu zen, beraz baliteke eguneratua ez egotea. Freskatu egiaztatzeko.",
         "steamInstallingPercent": "Instalatzen… {{percent}}%",
+        "steamUpdateCommitting": "Eguneratzea aplikatzen…",
+        "steamUpdatePlanning": "Eguneratzea planifikatzen…",
         "tabsAriaLabel": "joko informazioaren fitxak",
+        "update": {
+            "anyway": "Eguneratu hala ere",
+            "cancel": "Utzi",
+            "checkingSize": "Eguneratzearen tamaina egiaztatzen…",
+            "confirmButton": "Eguneratu",
+            "confirmTitle": "{{title}} eguneratu nahi duzu?",
+            "fallback": "GameLib-ek ezin du aurreko bertsioaren fitxategi-zerrenda lortu, beraz fitxategi guztiak egiaztatuko ditu: {{download}} arteko deskarga.",
+            "notEnoughDisk": "{{peak}} toki libre behar dira, {{available}} erabilgarri daude.",
+            "registered": "Steam-ek joko hau eguneratuko du.",
+            "showSize": "Erakutsi eguneratzearen tamaina",
+            "sizes": "Deskarga {{download}} · eguneratzean {{peak}} toki libre behar dira",
+            "sizesEstimate": "Deskarga {{download}} arte · eguneratzean {{peak}} toki libre behar dira (zenbatespena)",
+            "unknown": "Eguneratzearen egoera ezezaguna: GameLib-ek ezin du joko honen {{branch}} adarra ikusi."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -447,9 +463,20 @@
             },
             "route": {
                 "bottled": "Steam bezeroa bottle-an",
+                "issue": {
+                    "failedThisSession": "Saio honetan huts egin du",
+                    "knownBad": "Arazo ezaguna",
+                    "notCovered_one": "Steam-eko {{count}} dei ez dago estalita",
+                    "notCovered_other": "Steam-eko {{count}} dei ez daude estalita",
+                    "scanMiss": "Ez dago guztiz estalita",
+                    "win64NoShim": "64 biteko zubirik ez"
+                },
                 "label": "Steam bidea",
+                "moreSymbols_one": "eta {{count}} gehiago",
+                "moreSymbols_other": "eta {{count}} gehiago",
                 "missingSymbols": "Estali gabe: {{symbols}}",
                 "native": "Steam zubi natiboa",
+                "notCoveredHeading": "Estali gabe:",
                 "reason": {
                     "failedThisSession": "Zubiak huts egin zuen saio honetan lehenago",
                     "knownBad": "Zubiarekin ez duela funtzionatzen jakina da: {{reason}}",
@@ -522,6 +549,25 @@
             "removeAllCopiesConfirmMessage": "Honek joko honen instalatutako kopia guztiak kentzen ditu instalazio-kokaleku guztietan. Ezin da desegin.",
             "removeAllCopiesConfirmTitle": "Kopia guztiak kendu?",
             "removeAllCopiesLabel": "Kendu kopia guztiak…"
+        },
+        "update": {
+            "branchUnknown": "GameLib-ek ezin du {{title}} jokoaren {{branch}} adarra ikusi, beraz ezin du eguneratu.",
+            "finished": "Eguneratzea amaitu da",
+            "handoff": "Steam-ek {{title}} ireki du. Eguneratu ezazu Steam-etik.",
+            "installAppRefused": "Steam-ek eguneratzea baztertu du (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam-ek joko hau bere bottle barruan eguneratzen du.",
+            "notEnoughDisk": "Ez dago toki libre nahikorik {{title}} eguneratzeko: {{needed}} behar dira, {{available}} erabilgarri daude.",
+            "prompt": {
+                "dontAskAgain": "Ez galdetu berriro bertsio honetarako",
+                "finishFirst": "Amaitu {{title}} eguneratzea jokatu aurretik. Jarraitu Deskargak atalean.",
+                "queued": "{{title}} jokoaren eguneratze bat Deskargak atalean dago zain. Jokatu amaitzen denean edo kendu ilaratik.",
+                "updating": "{{title}} eguneratzen ari da. Jokatu eguneratzea amaitzen denean edo eten Deskargak atalean.",
+                "message": "{{title}} jokoak eguneratzea du ({{targetBuild}} bertsioa). Orain eguneratu, edo daukazun bertsioa jokatu?",
+                "playAnyway": "Jokatu hala ere",
+                "title": "Eguneratzea eskuragarri",
+                "updateNow": "Eguneratu orain"
+            },
+            "refusedRunning": "Itxi {{title}} eguneratu aurretik."
         },
         "engine": {
             "wineTabHint": "GameLib-ek Wine motorra eta bottle-a hautatzen ditu Steam jokoetarako.",

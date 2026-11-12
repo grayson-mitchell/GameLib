@@ -94,7 +94,23 @@
         "extraInfoRetry": "Bain triail eile as",
         "extraInfoStaleBody": "Cuireadh an toradh seo i dtaisce sula taifeadadh torthaí lódála, mar sin d'fhéadfadh sé a bheith as dáta. Athnuaigh chun a sheiceáil.",
         "steamInstallingPercent": "Ag suiteáil… {{percent}}%",
+        "steamUpdateCommitting": "Nuashonrú á chur i bhfeidhm…",
+        "steamUpdatePlanning": "Nuashonrú á phleanáil…",
         "tabsAriaLabel": "cluaisíní gameinfo",
+        "update": {
+            "anyway": "Nuashonraigh ar aon nós",
+            "cancel": "Cealaigh",
+            "checkingSize": "Méid an nuashonraithe á sheiceáil…",
+            "confirmButton": "Nuashonraigh",
+            "confirmTitle": "Nuashonraigh {{title}}?",
+            "fallback": "Ní féidir le GameLib liosta comhad an tógála roimhe a fháil, mar sin seiceálfaidh sé gach comhad: íoslódáil suas le {{download}}.",
+            "notEnoughDisk": "Teastaíonn {{peak}} saor, tá {{available}} ar fáil.",
+            "registered": "Nuashonrós Steam an cluiche seo.",
+            "showSize": "Taispeáin méid an nuashonraithe",
+            "sizes": "Íoslódáil {{download}} · teastaíonn {{peak}} saor le linn an nuashonraithe",
+            "sizesEstimate": "Íoslódáil suas le {{download}} · teastaíonn {{peak}} saor le linn an nuashonraithe (meastachán)",
+            "unknown": "Stádas an nuashonraithe anaithnid: ní féidir le GameLib brainse {{branch}} an chluiche seo a fheiceáil."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -468,9 +484,26 @@
             },
             "route": {
                 "bottled": "Cliant Steam i mbuidéal",
+                "issue": {
+                    "failedThisSession": "Theip air sa seisiún seo",
+                    "knownBad": "Fadhb aitheanta",
+                    "notCovered_one": "{{count}} ghlao Steam gan clúdach",
+                    "notCovered_two": "{{count}} ghlao Steam gan clúdach",
+                    "notCovered_few": "{{count}} ghlao Steam gan clúdach",
+                    "notCovered_many": "{{count}} nglao Steam gan clúdach",
+                    "notCovered_other": "{{count}} glao Steam gan clúdach",
+                    "scanMiss": "Gan clúdach iomlán",
+                    "win64NoShim": "Gan droichead 64-giotán"
+                },
                 "label": "Bealach Steam",
+                "moreSymbols_one": "agus {{count}} eile",
+                "moreSymbols_two": "agus {{count}} eile",
+                "moreSymbols_few": "agus {{count}} eile",
+                "moreSymbols_many": "agus {{count}} eile",
+                "moreSymbols_other": "agus {{count}} eile",
                 "missingSymbols": "Gan chlúdach: {{symbols}}",
                 "native": "Droichead dúchasach Steam",
+                "notCoveredHeading": "Gan clúdach:",
                 "reason": {
                     "failedThisSession": "Theip ar an droichead níos luaithe sa seisiún seo",
                     "knownBad": "Ar eolas nach n-oibríonn sé leis an droichead: {{reason}}",
@@ -543,6 +576,25 @@
             "removeAllCopiesConfirmMessage": "Bainfidh sé seo gach cóip suiteáilte den chluiche seo ó gach suíomh suiteála. Ní féidir é seo a chur ar ceal.",
             "removeAllCopiesConfirmTitle": "Bain gach cóip?",
             "removeAllCopiesLabel": "Bain gach cóip…"
+        },
+        "update": {
+            "branchUnknown": "Ní féidir le GameLib brainse {{branch}} de {{title}} a fheiceáil, mar sin ní féidir leis é a nuashonrú.",
+            "finished": "Nuashonrú críochnaithe",
+            "handoff": "D'oscail Steam {{title}}. Nuashonraigh é ó Steam.",
+            "installAppRefused": "Dhiúltaigh Steam don nuashonrú (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Nuashonraíonn Steam an cluiche seo taobh istigh dá bottle.",
+            "notEnoughDisk": "Níl go leor spáis shaor ann chun {{title}} a nuashonrú: teastaíonn {{needed}}, tá {{available}} ar fáil.",
+            "prompt": {
+                "dontAskAgain": "Ná fiafraigh arís don tógáil seo",
+                "finishFirst": "Críochnaigh nuashonrú {{title}} sula n-imríonn tú. Atosaigh é ó Íoslódálacha.",
+                "queued": "Tá nuashonrú le haghaidh {{title}} ag fanacht in Íoslódálacha. Imir nuair a bheidh sé críochnaithe, nó bain den scuaine é.",
+                "updating": "Tá {{title}} á nuashonrú. Imir nuair a bheidh an nuashonrú críochnaithe, nó cuir ar sos é in Íoslódálacha.",
+                "message": "Tá nuashonrú ag {{title}} (tógáil {{targetBuild}}). Nuashonraigh anois, nó imir an tógáil atá agat?",
+                "playAnyway": "Imir ar aon nós",
+                "title": "Nuashonrú ar fáil",
+                "updateNow": "Nuashonraigh anois"
+            },
+            "refusedRunning": "Dún {{title}} sula nuashonraíonn tú é."
         },
         "engine": {
             "wineTabHint": "Roghnaíonn GameLib an t-inneall Wine agus an buidéal do chluichí Steam.",

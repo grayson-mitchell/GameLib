@@ -91,7 +91,23 @@
         "extraInfoRetry": "Opnieuw proberen",
         "extraInfoStaleBody": "Dit resultaat is gecachet voordat laadresultaten werden geregistreerd, dus het kan verouderd zijn. Vernieuw om te controleren.",
         "steamInstallingPercent": "Installeren… {{percent}}%",
+        "steamUpdateCommitting": "Update toepassen…",
+        "steamUpdatePlanning": "Update plannen…",
         "tabsAriaLabel": "gameinfo-tabbladen",
+        "update": {
+            "anyway": "Toch bijwerken",
+            "cancel": "Annuleren",
+            "checkingSize": "Updategrootte controleren…",
+            "confirmButton": "Bijwerken",
+            "confirmTitle": "{{title}} bijwerken?",
+            "fallback": "GameLib kan de bestandslijst van de vorige build niet ophalen en controleert daarom elk bestand: download tot {{download}}.",
+            "notEnoughDisk": "Vereist {{peak}} vrije ruimte, {{available}} beschikbaar.",
+            "registered": "Steam werkt deze game bij.",
+            "showSize": "Updategrootte tonen",
+            "sizes": "Download {{download}} · vereist {{peak}} vrije ruimte tijdens de update",
+            "sizesEstimate": "Download tot {{download}} · vereist {{peak}} vrije ruimte tijdens de update (schatting)",
+            "unknown": "Updatestatus onbekend: GameLib kan de {{branch}}-branch van deze game niet zien."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -447,9 +463,20 @@
             },
             "route": {
                 "bottled": "Steam-client in bottle",
+                "issue": {
+                    "failedThisSession": "Mislukt in deze sessie",
+                    "knownBad": "Bekend probleem",
+                    "notCovered_one": "{{count}} Steam-aanroep niet gedekt",
+                    "notCovered_other": "{{count}} Steam-aanroepen niet gedekt",
+                    "scanMiss": "Niet volledig gedekt",
+                    "win64NoShim": "Geen 64-bits bridge"
+                },
                 "label": "Steam-route",
+                "moreSymbols_one": "en nog {{count}}",
+                "moreSymbols_other": "en nog {{count}}",
                 "missingSymbols": "Niet gedekt: {{symbols}}",
                 "native": "Native Steam-brug",
+                "notCoveredHeading": "Niet gedekt:",
                 "reason": {
                     "failedThisSession": "De brug is eerder deze sessie mislukt",
                     "knownBad": "Bekend om niet met de brug te werken: {{reason}}",
@@ -522,6 +549,25 @@
             "removeAllCopiesConfirmMessage": "Dit verwijdert elke geïnstalleerde kopie van deze game op alle installatielocaties. Dit kan niet ongedaan worden gemaakt.",
             "removeAllCopiesConfirmTitle": "Alle kopieën verwijderen?",
             "removeAllCopiesLabel": "Alle kopieën verwijderen…"
+        },
+        "update": {
+            "branchUnknown": "GameLib kan de {{branch}}-branch van {{title}} niet zien en kan het dus niet bijwerken.",
+            "finished": "Update voltooid",
+            "handoff": "Steam heeft {{title}} geopend. Werk het bij via Steam.",
+            "installAppRefused": "Steam heeft de update geweigerd (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam werkt deze game bij binnen de bottle.",
+            "notEnoughDisk": "Niet genoeg vrije ruimte om {{title}} bij te werken: {{needed}} nodig, {{available}} beschikbaar.",
+            "prompt": {
+                "dontAskAgain": "Niet opnieuw vragen voor deze build",
+                "finishFirst": "Rond de update van {{title}} af voordat je speelt. Hervat deze via Downloads.",
+                "queued": "Een update voor {{title}} wacht in Downloads. Speel zodra deze klaar is, of verwijder hem uit de wachtrij.",
+                "updating": "{{title}} wordt bijgewerkt. Speel zodra de update klaar is, of pauzeer hem in Downloads.",
+                "message": "{{title}} heeft een update (build {{targetBuild}}). Nu bijwerken, of de build spelen die je hebt?",
+                "playAnyway": "Toch spelen",
+                "title": "Update beschikbaar",
+                "updateNow": "Nu bijwerken"
+            },
+            "refusedRunning": "Sluit {{title}} voordat je het bijwerkt."
         },
         "engine": {
             "wineTabHint": "GameLib kiest de Wine-engine en de bottle voor Steam-games.",

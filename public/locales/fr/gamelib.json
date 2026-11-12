@@ -46,7 +46,23 @@
         "extraInfoRetry": "Réessayer",
         "extraInfoStaleBody": "Ce résultat a été mis en cache avant l'enregistrement des résultats de chargement, il peut donc être obsolète. Actualisez pour vérifier.",
         "steamInstallingPercent": "Installation… {{percent}} %",
+        "steamUpdateCommitting": "Application de la mise à jour…",
+        "steamUpdatePlanning": "Préparation de la mise à jour…",
         "tabsAriaLabel": "onglets d'infos sur le jeu",
+        "update": {
+            "anyway": "Mettre à jour quand même",
+            "cancel": "Annuler",
+            "checkingSize": "Vérification de la taille de la mise à jour…",
+            "confirmButton": "Mettre à jour",
+            "confirmTitle": "Mettre à jour {{title}} ?",
+            "fallback": "GameLib ne peut pas obtenir la liste des fichiers de la version précédente et vérifiera donc chaque fichier : téléchargement jusqu'à {{download}}.",
+            "notEnoughDisk": "Nécessite {{peak}} libres, {{available}} disponibles.",
+            "registered": "Steam mettra à jour ce jeu.",
+            "showSize": "Afficher la taille de la mise à jour",
+            "sizes": "Téléchargement de {{download}} · nécessite {{peak}} libres pendant la mise à jour",
+            "sizesEstimate": "Téléchargement jusqu'à {{download}} · nécessite {{peak}} libres pendant la mise à jour (estimation)",
+            "unknown": "État de la mise à jour inconnu : GameLib ne peut pas voir la branche {{branch}} de ce jeu."
+        },
         "wineLabel": "Wine :"
     },
     "humble": {
@@ -355,9 +371,22 @@
             },
             "route": {
                 "bottled": "Client Steam en bouteille",
+                "issue": {
+                    "failedThisSession": "Échec durant cette session",
+                    "knownBad": "Problème connu",
+                    "notCovered_one": "{{count}} appel Steam non couvert",
+                    "notCovered_many": "{{count}} d'appels Steam non couverts",
+                    "notCovered_other": "{{count}} appels Steam non couverts",
+                    "scanMiss": "Couverture incomplète",
+                    "win64NoShim": "Pas de pont 64 bits"
+                },
                 "label": "Route Steam",
+                "moreSymbols_one": "et {{count}} de plus",
+                "moreSymbols_many": "et {{count}} de plus",
+                "moreSymbols_other": "et {{count}} de plus",
                 "missingSymbols": "Non couvert : {{symbols}}",
                 "native": "Pont natif Steam",
+                "notCoveredHeading": "Non couvert :",
                 "reason": {
                     "failedThisSession": "Le pont a échoué plus tôt dans cette session",
                     "knownBad": "Connu pour ne pas fonctionner avec le pont : {{reason}}",
@@ -419,6 +448,25 @@
             "removeAllCopiesConfirmMessage": "Ceci supprime toutes les copies installées de ce jeu, quel que soit l'emplacement d'installation. Cette action est irréversible.",
             "removeAllCopiesConfirmTitle": "Supprimer toutes les copies ?",
             "removeAllCopiesLabel": "Supprimer toutes les copies…"
+        },
+        "update": {
+            "branchUnknown": "GameLib ne peut pas voir la branche {{branch}} de {{title}} et ne peut donc pas le mettre à jour.",
+            "finished": "Mise à jour terminée",
+            "handoff": "Steam a ouvert {{title}}. Mettez-le à jour depuis Steam.",
+            "installAppRefused": "Steam a refusé la mise à jour (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam met à jour ce jeu dans sa bottle.",
+            "notEnoughDisk": "Espace libre insuffisant pour mettre à jour {{title}} : {{needed}} nécessaires, {{available}} disponibles.",
+            "prompt": {
+                "dontAskAgain": "Ne plus demander pour cette version",
+                "finishFirst": "Terminez la mise à jour de {{title}} avant de jouer. Reprenez-la depuis Téléchargements.",
+                "queued": "Une mise à jour de {{title}} attend dans Téléchargements. Jouez une fois terminée, ou retirez-la de la file.",
+                "updating": "{{title}} est en cours de mise à jour. Jouez quand elle sera terminée, ou mettez-la en pause dans Téléchargements.",
+                "message": "{{title}} a une mise à jour (build {{targetBuild}}). Mettre à jour maintenant, ou jouer à la version que vous avez ?",
+                "playAnyway": "Jouer quand même",
+                "title": "Mise à jour disponible",
+                "updateNow": "Mettre à jour maintenant"
+            },
+            "refusedRunning": "Fermez {{title}} avant de le mettre à jour."
         },
         "download": {
             "error": {

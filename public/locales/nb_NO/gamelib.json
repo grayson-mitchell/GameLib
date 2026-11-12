@@ -91,7 +91,23 @@
         "extraInfoRetry": "Prøv igjen",
         "extraInfoStaleBody": "Dette resultatet ble hurtiglagret før lasteutfall ble registrert, så det kan være utdatert. Oppdater for å kontrollere.",
         "steamInstallingPercent": "Installerer… {{percent}} %",
+        "steamUpdateCommitting": "Bruker oppdateringen…",
+        "steamUpdatePlanning": "Planlegger oppdateringen…",
         "tabsAriaLabel": "faner for spillinfo",
+        "update": {
+            "anyway": "Oppdater likevel",
+            "cancel": "Avbryt",
+            "checkingSize": "Sjekker oppdateringsstørrelsen…",
+            "confirmButton": "Oppdater",
+            "confirmTitle": "Vil du oppdatere {{title}}?",
+            "fallback": "GameLib kan ikke hente filoversikten for forrige build, så alle filer blir kontrollert: nedlasting på opptil {{download}}.",
+            "notEnoughDisk": "Trenger {{peak}} ledig plass, {{available}} er tilgjengelig.",
+            "registered": "Steam oppdaterer dette spillet.",
+            "showSize": "Vis oppdateringsstørrelse",
+            "sizes": "Nedlasting {{download}} · trenger {{peak}} ledig plass under oppdateringen",
+            "sizesEstimate": "Nedlasting på opptil {{download}} · trenger {{peak}} ledig plass under oppdateringen (estimat)",
+            "unknown": "Oppdateringsstatus ukjent: GameLib kan ikke se spillets {{branch}}-gren."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -447,9 +463,20 @@
             },
             "route": {
                 "bottled": "Steam-klient på flaske",
+                "issue": {
+                    "failedThisSession": "Mislyktes i denne økten",
+                    "knownBad": "Kjent problem",
+                    "notCovered_one": "{{count}} Steam-kall er ikke dekket",
+                    "notCovered_other": "{{count}} Steam-kall er ikke dekket",
+                    "scanMiss": "Ikke fullt dekket",
+                    "win64NoShim": "Ingen 64-biters bro"
+                },
                 "label": "Steam-rute",
+                "moreSymbols_one": "og {{count}} til",
+                "moreSymbols_other": "og {{count}} til",
                 "missingSymbols": "Ikke dekket: {{symbols}}",
                 "native": "Native Steam-bro",
+                "notCoveredHeading": "Ikke dekket:",
                 "reason": {
                     "failedThisSession": "Broen feilet tidligere i denne økten",
                     "knownBad": "Kjent for ikke å fungere med broen: {{reason}}",
@@ -522,6 +549,25 @@
             "removeAllCopiesConfirmMessage": "Dette fjerner alle installerte kopier av dette spillet på alle installasjonssteder. Dette kan ikke angres.",
             "removeAllCopiesConfirmTitle": "Fjerne alle kopier?",
             "removeAllCopiesLabel": "Fjern alle kopier…"
+        },
+        "update": {
+            "branchUnknown": "GameLib kan ikke se {{branch}}-grenen til {{title}}, så spillet kan ikke oppdateres.",
+            "finished": "Oppdateringen er ferdig",
+            "handoff": "Steam åpnet {{title}}. Oppdater det fra Steam.",
+            "installAppRefused": "Steam avviste oppdateringen (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam oppdaterer dette spillet inne i bottlen sin.",
+            "notEnoughDisk": "Ikke nok ledig plass til å oppdatere {{title}}: trenger {{needed}}, {{available}} er tilgjengelig.",
+            "prompt": {
+                "dontAskAgain": "Ikke spør igjen for denne builden",
+                "finishFirst": "Fullfør oppdateringen av {{title}} før du spiller. Gjenoppta den fra Nedlastinger.",
+                "queued": "En oppdatering for {{title}} venter i Nedlastinger. Spill når den er ferdig, eller fjern den fra køen.",
+                "updating": "{{title}} oppdateres. Spill når oppdateringen er ferdig, eller sett den på pause i Nedlastinger.",
+                "message": "{{title}} har en oppdatering (build {{targetBuild}}). Oppdatere nå, eller spille versjonen du har?",
+                "playAnyway": "Spill likevel",
+                "title": "Oppdatering tilgjengelig",
+                "updateNow": "Oppdater nå"
+            },
+            "refusedRunning": "Lukk {{title}} før du oppdaterer det."
         },
         "engine": {
             "wineTabHint": "GameLib velger Wine-motoren og bottle for Steam-spill.",

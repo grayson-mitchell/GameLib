@@ -91,7 +91,23 @@
         "extraInfoRetry": "ხელახლა ცდა",
         "extraInfoStaleBody": "ეს შედეგი ქეშირებულია ჩატვირთვის შედეგების ჩაწერამდე, ამიტომ შეიძლება მოძველებული იყოს. განაახლეთ შესამოწმებლად.",
         "steamInstallingPercent": "მიმდინარეობს დაყენება… {{percent}}%",
+        "steamUpdateCommitting": "განახლების გამოყენება…",
+        "steamUpdatePlanning": "განახლების დაგეგმვა…",
         "tabsAriaLabel": "თამაშის ინფორმაციის ჩანართები",
+        "update": {
+            "anyway": "მაინც განახლება",
+            "cancel": "გაუქმება",
+            "checkingSize": "განახლების ზომის შემოწმება…",
+            "confirmButton": "განახლება",
+            "confirmTitle": "განვაახლოთ {{title}}?",
+            "fallback": "GameLib ვერ იღებს წინა ბილდის ფაილების სიას, ამიტომ შეამოწმებს ყველა ფაილს: ჩამოტვირთვა {{download}}-მდე.",
+            "notEnoughDisk": "საჭიროა {{peak}} თავისუფალი ადგილი, ხელმისაწვდომია {{available}}.",
+            "registered": "Steam განაახლებს ამ თამაშს.",
+            "showSize": "განახლების ზომის ჩვენება",
+            "sizes": "ჩამოტვირთვა {{download}} · განახლებისას საჭიროა {{peak}} თავისუფალი ადგილი",
+            "sizesEstimate": "ჩამოტვირთვა {{download}}-მდე · განახლებისას საჭიროა {{peak}} თავისუფალი ადგილი (შეფასება)",
+            "unknown": "განახლების სტატუსი უცნობია: GameLib ვერ ხედავს ამ თამაშის {{branch}} ბრანჩს."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -447,9 +463,20 @@
             },
             "route": {
                 "bottled": "Steam კლიენტი bottle-ში",
+                "issue": {
+                    "failedThisSession": "ამ სესიაში ჩავარდა",
+                    "knownBad": "ცნობილი პრობლემა",
+                    "notCovered_one": "{{count}} Steam-ის გამოძახება დაუფარავია",
+                    "notCovered_other": "{{count}} Steam-ის გამოძახება დაუფარავია",
+                    "scanMiss": "სრულად დაფარული არ არის",
+                    "win64NoShim": "64-ბიტიანი ხიდი არ არის"
+                },
                 "label": "Steam-ის მარშრუტი",
+                "moreSymbols_one": "და კიდევ {{count}}",
+                "moreSymbols_other": "და კიდევ {{count}}",
                 "missingSymbols": "არ არის დაფარული: {{symbols}}",
                 "native": "მშობლიური Steam ხიდი",
+                "notCoveredHeading": "დაუფარავი:",
                 "reason": {
                     "failedThisSession": "ხიდმა ადრე ამ სესიაში ვერ იმუშავა",
                     "knownBad": "ცნობილია, რომ არ მუშაობს ხიდთან: {{reason}}",
@@ -522,6 +549,25 @@
             "removeAllCopiesConfirmMessage": "ეს წაშლის ამ თამაშის ყველა დაინსტალირებულ ასლს ყველა ინსტალაციის მდებარეობიდან. ამის დაბრუნება შეუძლებელია.",
             "removeAllCopiesConfirmTitle": "წავშალო ყველა ასლი?",
             "removeAllCopiesLabel": "ყველა ასლის წაშლა…"
+        },
+        "update": {
+            "branchUnknown": "GameLib ვერ ხედავს {{title}}-ის {{branch}} ბრანჩს, ამიტომ ვერ განაახლებს მას.",
+            "finished": "განახლება დასრულდა",
+            "handoff": "Steam-მა გახსნა {{title}}. განაახლეთ Steam-იდან.",
+            "installAppRefused": "Steam-მა უარყო განახლება (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam ამ თამაშს განაახლებს თავისივე bottle-ში.",
+            "notEnoughDisk": "{{title}}-ის განახლებისთვის საკმარისი თავისუფალი ადგილი არ არის: საჭიროა {{needed}}, ხელმისაწვდომია {{available}}.",
+            "prompt": {
+                "dontAskAgain": "ამ ბილდისთვის აღარ მკითხო",
+                "finishFirst": "დაასრულეთ {{title}}-ის განახლება თამაშამდე. გააგრძელეთ ჩამოტვირთვებიდან.",
+                "queued": "{{title}}-ის განახლება ჩამოტვირთვებში ელოდება. ითამაშეთ დასრულების შემდეგ ან წაშალეთ რიგიდან.",
+                "updating": "{{title}} ახლდება. ითამაშეთ განახლების დასრულების შემდეგ ან დააპაუზეთ ჩამოტვირთვებში.",
+                "message": "{{title}}-ს აქვს განახლება (ბილდი {{targetBuild}}). განახლდეს ახლა, თუ ითამაშოთ არსებული ბილდი?",
+                "playAnyway": "მაინც თამაში",
+                "title": "განახლება ხელმისაწვდომია",
+                "updateNow": "განახლება ახლა"
+            },
+            "refusedRunning": "დახურეთ {{title}} განახლებამდე."
         },
         "engine": {
             "wineTabHint": "GameLib ირჩევს Wine-ის ძრავას და bottle-ს Steam-ის თამაშებისთვის.",

@@ -94,7 +94,23 @@
         "extraInfoRetry": "Adklask",
         "extraInfoStaleBody": "Er c'hrubuilh eo bet ar disoc'h-mañ a-raok ma voe enrollet an disoc'hoù kargañ, dre-se marteze n'eo ket dedennus mui. Freskaat evit gwiriañ.",
         "steamInstallingPercent": "O staliañ… {{percent}}%",
+        "steamUpdateCommitting": "O lakaat ar hizivadur da dalvezout…",
+        "steamUpdatePlanning": "O steuziañ ar hizivadur…",
         "tabsAriaLabel": "ivinelloù titouroù ar c'hoari",
+        "update": {
+            "anyway": "Hizivaat memes tra",
+            "cancel": "Nullañ",
+            "checkingSize": "O wiriañ ment ar hizivadur…",
+            "confirmButton": "Hizivaat",
+            "confirmTitle": "Hizivaat {{title}} ?",
+            "fallback": "Ne c'hall ket GameLib kaout roll restroù ar stumm a-raok, setu ez eus da wiriañ an holl restroù: pellgargañ betek {{download}}.",
+            "notEnoughDisk": "Ezhomm ez eus eus {{peak}} a blas dieub, {{available}} zo hegerz.",
+            "registered": "Steam a hizivaio ar c'hoari-mañ.",
+            "showSize": "Diskouez ment ar hizivadur",
+            "sizes": "Pellgargañ {{download}} · ezhomm eus {{peak}} a blas dieub e-pad an hizivadur",
+            "sizesEstimate": "Pellgargañ betek {{download}} · ezhomm eus {{peak}} a blas dieub e-pad an hizivadur (priziadenn)",
+            "unknown": "Stad ar hizivadur dianav: ne c'hall ket GameLib gwelout skourr {{branch}} ar c'hoari-mañ."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -468,9 +484,26 @@
             },
             "route": {
                 "bottled": "Arval Steam e voutailh",
+                "issue": {
+                    "failedThisSession": "C'hwitet er sesion-mañ",
+                    "knownBad": "Kudenn anavezet",
+                    "notCovered_one": "{{count}} galv Steam n'eo ket goloet",
+                    "notCovered_two": "{{count}} c'halv Steam n'int ket goloet",
+                    "notCovered_few": "{{count}} galv Steam n'int ket goloet",
+                    "notCovered_many": "{{count}} galv Steam n'int ket goloet",
+                    "notCovered_other": "{{count}} galv Steam n'int ket goloet",
+                    "scanMiss": "N'eo ket goloet penn-da-benn",
+                    "win64NoShim": "Pont 64 bit ebet"
+                },
                 "label": "Hent Steam",
+                "moreSymbols_one": "ha {{count}} all",
+                "moreSymbols_two": "ha {{count}} all",
+                "moreSymbols_few": "ha {{count}} all",
+                "moreSymbols_many": "ha {{count}} all",
+                "moreSymbols_other": "ha {{count}} all",
                 "missingSymbols": "N'eo ket sikouret: {{symbols}}",
                 "native": "Pont orin Steam",
+                "notCoveredHeading": "Ket goloet:",
                 "reason": {
                     "failedThisSession": "C'hwitet eo ar pont a-raok er sesion-mañ",
                     "knownBad": "Anavezet evit ne vont ket en-dro gant ar pont: {{reason}}",
@@ -543,6 +576,25 @@
             "removeAllCopiesConfirmMessage": "Kement-mañ a zilamo pep eilskrid staliet eus ar c'hoarigell-mañ e pep lec'h staliañ. Ne c'hell ket bezañ dizoueret.",
             "removeAllCopiesConfirmTitle": "Dilemel an holl eilskridoù?",
             "removeAllCopiesLabel": "Dilemel an holl eilskridoù…"
+        },
+        "update": {
+            "branchUnknown": "Ne c'hall ket GameLib gwelout skourr {{branch}} {{title}}, setu ne c'hall ket hec'h hizivaat.",
+            "finished": "Echu eo an hizivadur",
+            "handoff": "Steam en deus digoret {{title}}. Hizivit anezhañ eus Steam.",
+            "installAppRefused": "Steam en deus nac'het an hizivadur (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam a hiziv ar c'hoari-mañ e-barzh e voutailh (bottle).",
+            "notEnoughDisk": "N'eus ket plas dieub a-walc'h evit hizivaat {{title}} : ezhomm eus {{needed}} a blas dieub, {{available}} zo hegerz.",
+            "prompt": {
+                "dontAskAgain": "Arabat goulenn en-dro evit ar stumm-mañ",
+                "finishFirst": "Echuit hizivaat {{title}} a-raok c'hoari. Kendalc'hit gantañ diwar Pellgargadennoù.",
+                "queued": "Un hizivadur evit {{title}} a gortoz e Pellgargadennoù. C'hoariit goude m'eo echu, pe tennit anezhañ eus ar rummad.",
+                "updating": "{{title}} a vez hizivaet. C'hoariit pa vo echu an hizivadur, pe lakait ar hizivadur da ehan e Pellgargadennoù.",
+                "message": "Un hizivadur zo evit {{title}} (stumm {{targetBuild}}). Hizivaat bremañ, pe c'hoari gant ar stumm hoc'h eus ?",
+                "playAnyway": "C'hoari memes tra",
+                "title": "Un hizivadur zo hegerz",
+                "updateNow": "Hizivaat bremañ"
+            },
+            "refusedRunning": "Serrit {{title}} a-raok hizivaat anezhañ."
         },
         "engine": {
             "wineTabHint": "GameLib a ziuz ar c’heflusker Wine hag ar voutailh evit c’hoarioù Steam.",

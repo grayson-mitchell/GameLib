@@ -93,7 +93,23 @@
         "extraInfoRetry": "Повторити",
         "extraInfoStaleBody": "Цей результат був кешований до фіксації результатів завантаження, тож може бути застарілим. Оновіть, щоб перевірити.",
         "steamInstallingPercent": "Встановлення… {{percent}}%",
+        "steamUpdateCommitting": "Застосування оновлення…",
+        "steamUpdatePlanning": "Підготовка оновлення…",
         "tabsAriaLabel": "вкладки інформації про гру",
+        "update": {
+            "anyway": "Усе одно оновити",
+            "cancel": "Скасувати",
+            "checkingSize": "Перевірка розміру оновлення…",
+            "confirmButton": "Оновити",
+            "confirmTitle": "Оновити {{title}}?",
+            "fallback": "GameLib не може отримати список файлів попередньої збірки, тому перевірить кожен файл: завантаження до {{download}}.",
+            "notEnoughDisk": "Потрібно {{peak}} вільного місця, доступно {{available}}.",
+            "registered": "Steam оновить цю гру.",
+            "showSize": "Показати розмір оновлення",
+            "sizes": "Завантаження {{download}} · під час оновлення потрібно {{peak}} вільного місця",
+            "sizesEstimate": "Завантаження до {{download}} · під час оновлення потрібно {{peak}} вільного місця (оцінка)",
+            "unknown": "Статус оновлення невідомий: GameLib не бачить гілку {{branch}} цієї гри."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -461,9 +477,24 @@
             },
             "route": {
                 "bottled": "Клієнт Steam у бутлі",
+                "issue": {
+                    "failedThisSession": "Збій у цьому сеансі",
+                    "knownBad": "Відома проблема",
+                    "notCovered_one": "{{count}} виклик Steam не охоплено",
+                    "notCovered_few": "{{count}} виклики Steam не охоплено",
+                    "notCovered_many": "{{count}} викликів Steam не охоплено",
+                    "notCovered_other": "{{count}} виклику Steam не охоплено",
+                    "scanMiss": "Охоплено не повністю",
+                    "win64NoShim": "Немає 64-бітного мосту"
+                },
                 "label": "Маршрут Steam",
+                "moreSymbols_one": "і ще {{count}}",
+                "moreSymbols_few": "і ще {{count}}",
+                "moreSymbols_many": "і ще {{count}}",
+                "moreSymbols_other": "і ще {{count}}",
                 "missingSymbols": "Не охоплено: {{symbols}}",
                 "native": "Нативний міст Steam",
+                "notCoveredHeading": "Не охоплено:",
                 "reason": {
                     "failedThisSession": "Міст уже не спрацював раніше в цій сесії",
                     "knownBad": "Відомо, що не працює з мостом: {{reason}}",
@@ -536,6 +567,25 @@
             "removeAllCopiesConfirmMessage": "Це видалить усі встановлені копії цієї гри з усіх місць встановлення. Цю дію неможливо скасувати.",
             "removeAllCopiesConfirmTitle": "Видалити всі копії?",
             "removeAllCopiesLabel": "Видалити всі копії…"
+        },
+        "update": {
+            "branchUnknown": "GameLib не бачить гілку {{branch}} гри {{title}}, тому не може її оновити.",
+            "finished": "Оновлення завершено",
+            "handoff": "Steam відкрив {{title}}. Оновіть гру через Steam.",
+            "installAppRefused": "Steam відхилив оновлення (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam оновлює цю гру всередині її пляшки (bottle).",
+            "notEnoughDisk": "Недостатньо вільного місця для оновлення {{title}}: потрібно {{needed}}, доступно {{available}}.",
+            "prompt": {
+                "dontAskAgain": "Більше не питати для цієї збірки",
+                "finishFirst": "Завершіть оновлення {{title}}, перш ніж грати. Продовжте його в розділі «Завантаження».",
+                "queued": "Оновлення для {{title}} очікує в розділі «Завантаження». Грайте після його завершення або приберіть його з черги.",
+                "updating": "{{title}} оновлюється. Грайте, коли оновлення завершиться, або призупиніть його в розділі «Завантаження».",
+                "message": "Для {{title}} є оновлення (збірка {{targetBuild}}). Оновити зараз чи грати в поточну збірку?",
+                "playAnyway": "Усе одно грати",
+                "title": "Доступне оновлення",
+                "updateNow": "Оновити зараз"
+            },
+            "refusedRunning": "Закрийте {{title}}, перш ніж оновлювати."
         },
         "engine": {
             "wineTabHint": "GameLib вибирає рушій Wine і бутлку для ігор Steam.",

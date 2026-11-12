@@ -93,7 +93,23 @@
         "extraInfoRetry": "Повторить",
         "extraInfoStaleBody": "Этот результат был закэширован до того, как стали фиксироваться итоги загрузки, поэтому он может быть устаревшим. Обновите, чтобы проверить.",
         "steamInstallingPercent": "Установка… {{percent}}%",
+        "steamUpdateCommitting": "Применение обновления…",
+        "steamUpdatePlanning": "Подготовка обновления…",
         "tabsAriaLabel": "вкладки информации об игре",
+        "update": {
+            "anyway": "Всё равно обновить",
+            "cancel": "Отмена",
+            "checkingSize": "Проверка размера обновления…",
+            "confirmButton": "Обновить",
+            "confirmTitle": "Обновить {{title}}?",
+            "fallback": "GameLib не может получить список файлов предыдущей сборки, поэтому проверит каждый файл: загрузка до {{download}}.",
+            "notEnoughDisk": "Требуется {{peak}} свободного места, доступно {{available}}.",
+            "registered": "Steam обновит эту игру.",
+            "showSize": "Показать размер обновления",
+            "sizes": "Загрузка {{download}} · во время обновления требуется {{peak}} свободного места",
+            "sizesEstimate": "Загрузка до {{download}} · во время обновления требуется {{peak}} свободного места (оценка)",
+            "unknown": "Статус обновления неизвестен: GameLib не видит ветку {{branch}} этой игры."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -461,9 +477,24 @@
             },
             "route": {
                 "bottled": "Клиент Steam в бутылке",
+                "issue": {
+                    "failedThisSession": "Сбой в этом сеансе",
+                    "knownBad": "Известная проблема",
+                    "notCovered_one": "{{count}} вызов Steam не охвачен",
+                    "notCovered_few": "{{count}} вызова Steam не охвачены",
+                    "notCovered_many": "{{count}} вызовов Steam не охвачено",
+                    "notCovered_other": "{{count}} вызова Steam не охвачено",
+                    "scanMiss": "Охвачено не полностью",
+                    "win64NoShim": "Нет 64-битного моста"
+                },
                 "label": "Маршрут Steam",
+                "moreSymbols_one": "и ещё {{count}}",
+                "moreSymbols_few": "и ещё {{count}}",
+                "moreSymbols_many": "и ещё {{count}}",
+                "moreSymbols_other": "и ещё {{count}}",
                 "missingSymbols": "Не охвачено: {{symbols}}",
                 "native": "Нативный мост Steam",
+                "notCoveredHeading": "Не охвачено:",
                 "reason": {
                     "failedThisSession": "Мост уже не сработал ранее в этой сессии",
                     "knownBad": "Известно, что не работает с мостом: {{reason}}",
@@ -536,6 +567,25 @@
             "removeAllCopiesConfirmMessage": "Это удалит все установленные копии этой игры во всех местах установки. Действие нельзя отменить.",
             "removeAllCopiesConfirmTitle": "Удалить все копии?",
             "removeAllCopiesLabel": "Удалить все копии…"
+        },
+        "update": {
+            "branchUnknown": "GameLib не видит ветку {{branch}} игры {{title}}, поэтому не может её обновить.",
+            "finished": "Обновление завершено",
+            "handoff": "Steam открыл {{title}}. Обновите игру через Steam.",
+            "installAppRefused": "Steam отклонил обновление (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam обновляет эту игру внутри её бутылки (bottle).",
+            "notEnoughDisk": "Недостаточно свободного места для обновления {{title}}: требуется {{needed}}, доступно {{available}}.",
+            "prompt": {
+                "dontAskAgain": "Больше не спрашивать для этой сборки",
+                "finishFirst": "Завершите обновление {{title}}, прежде чем играть. Продолжите его в разделе «Загрузки».",
+                "queued": "Обновление для {{title}} ожидает в разделе «Загрузки». Играйте после его завершения или уберите его из очереди.",
+                "updating": "{{title}} обновляется. Играйте, когда обновление завершится, или приостановите его в разделе «Загрузки».",
+                "message": "Для {{title}} есть обновление (сборка {{targetBuild}}). Обновить сейчас или играть в текущую сборку?",
+                "playAnyway": "Всё равно играть",
+                "title": "Доступно обновление",
+                "updateNow": "Обновить сейчас"
+            },
+            "refusedRunning": "Закройте {{title}}, прежде чем обновлять."
         },
         "engine": {
             "wineTabHint": "GameLib выбирает движок Wine и bottle для игр Steam.",

@@ -91,7 +91,23 @@
         "extraInfoRetry": "تلاش دوباره",
         "extraInfoStaleBody": "این نتیجه پیش از ثبت نتایج بارگذاری کش شده است، پس ممکن است قدیمی باشد. برای بررسی، تازه‌سازی کنید.",
         "steamInstallingPercent": "در حال نصب… {{percent}}%",
+        "steamUpdateCommitting": "در حال اعمال به‌روزرسانی…",
+        "steamUpdatePlanning": "در حال برنامه‌ریزی به‌روزرسانی…",
         "tabsAriaLabel": "برگه‌های اطلاعات بازی",
+        "update": {
+            "anyway": "به‌هرحال به‌روزرسانی کن",
+            "cancel": "لغو",
+            "checkingSize": "در حال بررسی حجم به‌روزرسانی…",
+            "confirmButton": "به‌روزرسانی",
+            "confirmTitle": "{{title}} به‌روزرسانی شود؟",
+            "fallback": "GameLib نمی‌تواند فهرست فایل‌های نسخهٔ قبلی را دریافت کند، بنابراین همهٔ فایل‌ها را بررسی می‌کند: دانلود تا {{download}}.",
+            "notEnoughDisk": "به {{peak}} فضای خالی نیاز است، {{available}} در دسترس است.",
+            "registered": "Steam این بازی را به‌روزرسانی می‌کند.",
+            "showSize": "نمایش حجم به‌روزرسانی",
+            "sizes": "دانلود {{download}} · در طول به‌روزرسانی به {{peak}} فضای خالی نیاز است",
+            "sizesEstimate": "دانلود تا {{download}} · در طول به‌روزرسانی به {{peak}} فضای خالی نیاز است (تخمینی)",
+            "unknown": "وضعیت به‌روزرسانی نامشخص است: GameLib نمی‌تواند شاخهٔ {{branch}} این بازی را ببیند."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -447,9 +463,20 @@
             },
             "route": {
                 "bottled": "کلاینت Steam در bottle",
+                "issue": {
+                    "failedThisSession": "در این نشست ناموفق بود",
+                    "knownBad": "مشکل شناخته‌شده",
+                    "notCovered_one": "{{count}} فراخوانی Steam پوشش داده نشده",
+                    "notCovered_other": "{{count}} فراخوانی Steam پوشش داده نشده",
+                    "scanMiss": "به‌طور کامل پوشش داده نشده",
+                    "win64NoShim": "پل ۶۴ بیتی وجود ندارد"
+                },
                 "label": "مسیر Steam",
+                "moreSymbols_one": "و {{count}} مورد دیگر",
+                "moreSymbols_other": "و {{count}} مورد دیگر",
                 "missingSymbols": "پوشش داده نشده: {{symbols}}",
                 "native": "پل بومی Steam",
+                "notCoveredHeading": "پوشش داده نشده:",
                 "reason": {
                     "failedThisSession": "پل زودتر در این جلسه با شکست مواجه شد",
                     "knownBad": "شناخته‌شده برای عدم کار با پل: {{reason}}",
@@ -522,6 +549,25 @@
             "removeAllCopiesConfirmMessage": "این کار هر نسخه نصب‌شده این بازی را در تمام محل‌های نصب حذف می‌کند. این عمل قابل بازگشت نیست.",
             "removeAllCopiesConfirmTitle": "همه نسخه‌ها حذف شوند؟",
             "removeAllCopiesLabel": "حذف همه نسخه‌ها…"
+        },
+        "update": {
+            "branchUnknown": "GameLib نمی‌تواند شاخهٔ {{branch}} بازی {{title}} را ببیند، بنابراین نمی‌تواند آن را به‌روزرسانی کند.",
+            "finished": "به‌روزرسانی پایان یافت",
+            "handoff": "Steam بازی {{title}} را باز کرد. آن را از Steam به‌روزرسانی کنید.",
+            "installAppRefused": "Steam به‌روزرسانی را رد کرد (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam این بازی را درون bottle آن به‌روزرسانی می‌کند.",
+            "notEnoughDisk": "فضای خالی کافی برای به‌روزرسانی {{title}} وجود ندارد: به {{needed}} نیاز است، {{available}} در دسترس است.",
+            "prompt": {
+                "dontAskAgain": "برای این نسخه دوباره نپرس",
+                "finishFirst": "پیش از بازی، به‌روزرسانی {{title}} را تمام کنید. آن را از بخش دانلودها ادامه دهید.",
+                "queued": "یک به‌روزرسانی برای {{title}} در بخش دانلودها منتظر است. پس از اتمام آن بازی کنید یا آن را از صف حذف کنید.",
+                "updating": "{{title}} در حال به‌روزرسانی است. وقتی به‌روزرسانی تمام شد بازی کنید یا آن را در بخش دانلودها متوقف کنید.",
+                "message": "برای {{title}} به‌روزرسانی وجود دارد (نسخهٔ {{targetBuild}}). همین حالا به‌روزرسانی شود یا نسخهٔ موجود اجرا شود؟",
+                "playAnyway": "به‌هرحال بازی کن",
+                "title": "به‌روزرسانی در دسترس است",
+                "updateNow": "همین حالا به‌روزرسانی کن"
+            },
+            "refusedRunning": "پیش از به‌روزرسانی، {{title}} را ببندید."
         },
         "engine": {
             "wineTabHint": "GameLib موتور Wine و بطری را برای بازی‌های Steam انتخاب می‌کند.",

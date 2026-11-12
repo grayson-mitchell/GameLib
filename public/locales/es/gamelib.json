@@ -92,7 +92,23 @@
         "extraInfoRetry": "Reintentar",
         "extraInfoStaleBody": "Este resultado se almacenó en caché antes de que se registraran los resultados de carga, por lo que puede estar desactualizado. Actualiza para comprobarlo.",
         "steamInstallingPercent": "Instalando… {{percent}} %",
+        "steamUpdateCommitting": "Aplicando la actualización…",
+        "steamUpdatePlanning": "Planificando la actualización…",
         "tabsAriaLabel": "pestañas de información del juego",
+        "update": {
+            "anyway": "Actualizar de todos modos",
+            "cancel": "Cancelar",
+            "checkingSize": "Comprobando el tamaño de la actualización…",
+            "confirmButton": "Actualizar",
+            "confirmTitle": "¿Actualizar {{title}}?",
+            "fallback": "GameLib no puede obtener la lista de archivos de la compilación anterior, así que comprobará todos los archivos: descarga de hasta {{download}}.",
+            "notEnoughDisk": "Necesita {{peak}} libres, hay {{available}} disponibles.",
+            "registered": "Steam actualizará este juego.",
+            "showSize": "Mostrar tamaño de la actualización",
+            "sizes": "Descarga de {{download}} · necesita {{peak}} libres durante la actualización",
+            "sizesEstimate": "Descarga de hasta {{download}} · necesita {{peak}} libres durante la actualización (estimado)",
+            "unknown": "Estado de la actualización desconocido: GameLib no puede ver la rama {{branch}} de este juego."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -454,9 +470,22 @@
             },
             "route": {
                 "bottled": "Cliente de Steam en bottle",
+                "issue": {
+                    "failedThisSession": "Falló en esta sesión",
+                    "knownBad": "Problema conocido",
+                    "notCovered_one": "{{count}} llamada de Steam sin cubrir",
+                    "notCovered_many": "{{count}} de llamadas de Steam sin cubrir",
+                    "notCovered_other": "{{count}} llamadas de Steam sin cubrir",
+                    "scanMiss": "No cubierto por completo",
+                    "win64NoShim": "Sin puente de 64 bits"
+                },
                 "label": "Ruta de Steam",
+                "moreSymbols_one": "y {{count}} más",
+                "moreSymbols_many": "y {{count}} más",
+                "moreSymbols_other": "y {{count}} más",
                 "missingSymbols": "No cubierto: {{symbols}}",
                 "native": "Puente nativo de Steam",
+                "notCoveredHeading": "No cubierto:",
                 "reason": {
                     "failedThisSession": "El puente falló antes en esta sesión",
                     "knownBad": "Se sabe que no funciona con el puente: {{reason}}",
@@ -529,6 +558,25 @@
             "removeAllCopiesConfirmMessage": "Esto elimina todas las copias instaladas de este juego en todas las ubicaciones de instalación. Esta acción no se puede deshacer.",
             "removeAllCopiesConfirmTitle": "¿Eliminar todas las copias?",
             "removeAllCopiesLabel": "Eliminar todas las copias…"
+        },
+        "update": {
+            "branchUnknown": "GameLib no puede ver la rama {{branch}} de {{title}}, así que no puede actualizarlo.",
+            "finished": "Actualización terminada",
+            "handoff": "Steam abrió {{title}}. Actualízalo desde Steam.",
+            "installAppRefused": "Steam rechazó la actualización (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam actualiza este juego dentro de su bottle.",
+            "notEnoughDisk": "No hay espacio libre suficiente para actualizar {{title}}: necesita {{needed}} libres, hay {{available}} disponibles.",
+            "prompt": {
+                "dontAskAgain": "No volver a preguntar para esta compilación",
+                "finishFirst": "Termina de actualizar {{title}} antes de jugar. Reanúdalo desde Descargas.",
+                "queued": "Hay una actualización de {{title}} esperando en Descargas. Juega cuando termine o quítala de la cola.",
+                "updating": "{{title}} se está actualizando. Juega cuando termine la actualización o ponla en pausa en Descargas.",
+                "message": "{{title}} tiene una actualización (compilación {{targetBuild}}). ¿Actualizar ahora o jugar la compilación que tienes?",
+                "playAnyway": "Jugar de todos modos",
+                "title": "Actualización disponible",
+                "updateNow": "Actualizar ahora"
+            },
+            "refusedRunning": "Cierra {{title}} antes de actualizarlo."
         },
         "engine": {
             "wineTabHint": "GameLib elige el motor Wine y la bottle para los juegos de Steam.",

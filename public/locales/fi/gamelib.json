@@ -91,7 +91,23 @@
         "extraInfoRetry": "Yritä uudelleen",
         "extraInfoStaleBody": "Tämä tulos tallennettiin välimuistiin ennen kuin latauksen tuloksia alettiin tallentaa, joten se voi olla vanhentunut. Päivitä tarkistaaksesi.",
         "steamInstallingPercent": "Asennetaan… {{percent}} %",
+        "steamUpdateCommitting": "Otetaan päivitystä käyttöön…",
+        "steamUpdatePlanning": "Suunnitellaan päivitystä…",
         "tabsAriaLabel": "pelitietojen välilehdet",
+        "update": {
+            "anyway": "Päivitä silti",
+            "cancel": "Peruuta",
+            "checkingSize": "Tarkistetaan päivityksen kokoa…",
+            "confirmButton": "Päivitä",
+            "confirmTitle": "Päivitetäänkö {{title}}?",
+            "fallback": "GameLib ei saa edellisen version tiedostoluetteloa, joten se tarkistaa jokaisen tiedoston: lataus enintään {{download}}.",
+            "notEnoughDisk": "Tarvitaan {{peak}} vapaata tilaa, saatavilla on {{available}}.",
+            "registered": "Steam päivittää tämän pelin.",
+            "showSize": "Näytä päivityksen koko",
+            "sizes": "Lataus {{download}} · päivityksen aikana tarvitaan {{peak}} vapaata tilaa",
+            "sizesEstimate": "Lataus enintään {{download}} · päivityksen aikana tarvitaan {{peak}} vapaata tilaa (arvio)",
+            "unknown": "Päivityksen tila on tuntematon: GameLib ei näe tämän pelin {{branch}}-haaraa."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -447,9 +463,20 @@
             },
             "route": {
                 "bottled": "Pullotettu Steam-asiakasohjelma",
+                "issue": {
+                    "failedThisSession": "Epäonnistui tässä istunnossa",
+                    "knownBad": "Tunnettu ongelma",
+                    "notCovered_one": "{{count}} Steam-kutsu ei ole katettu",
+                    "notCovered_other": "{{count}} Steam-kutsua ei ole katettu",
+                    "scanMiss": "Ei täysin katettu",
+                    "win64NoShim": "Ei 64-bittistä siltaa"
+                },
                 "label": "Steam-reitti",
+                "moreSymbols_one": "ja {{count}} muu",
+                "moreSymbols_other": "ja {{count}} muuta",
                 "missingSymbols": "Ei katettu: {{symbols}}",
                 "native": "Natiivi Steam-silta",
+                "notCoveredHeading": "Ei katettu:",
                 "reason": {
                     "failedThisSession": "Silta epäonnistui aiemmin tässä istunnossa",
                     "knownBad": "Tunnetusti ei toimi sillan kanssa: {{reason}}",
@@ -522,6 +549,25 @@
             "removeAllCopiesConfirmMessage": "Tämä poistaa kaikki tämän pelin asennetut kopiot kaikista asennussijainneista. Tätä ei voi kumota.",
             "removeAllCopiesConfirmTitle": "Poistetaanko kaikki kopiot?",
             "removeAllCopiesLabel": "Poista kaikki kopiot…"
+        },
+        "update": {
+            "branchUnknown": "GameLib ei näe pelin {{title}} {{branch}}-haaraa, joten se ei voi päivittää sitä.",
+            "finished": "Päivitys valmis",
+            "handoff": "Steam avasi pelin {{title}}. Päivitä se Steamissa.",
+            "installAppRefused": "Steam hylkäsi päivityksen (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam päivittää tämän pelin sen oman bottlen sisällä.",
+            "notEnoughDisk": "Vapaata tilaa ei ole tarpeeksi pelin {{title}} päivittämiseen: tarvitaan {{needed}}, saatavilla on {{available}}.",
+            "prompt": {
+                "dontAskAgain": "Älä kysy uudelleen tästä versiosta",
+                "finishFirst": "Viimeistele pelin {{title}} päivitys ennen pelaamista. Jatka sitä Lataukset-osiossa.",
+                "queued": "Pelin {{title}} päivitys odottaa Lataukset-osiossa. Pelaa sen valmistuttua tai poista se jonosta.",
+                "updating": "Peliä {{title}} päivitetään. Pelaa, kun päivitys on valmis, tai keskeytä se Lataukset-osiossa.",
+                "message": "Pelillä {{title}} on päivitys (versio {{targetBuild}}). Päivitetäänkö nyt vai pelataanko nykyistä versiota?",
+                "playAnyway": "Pelaa silti",
+                "title": "Päivitys saatavilla",
+                "updateNow": "Päivitä nyt"
+            },
+            "refusedRunning": "Sulje {{title}} ennen päivittämistä."
         },
         "engine": {
             "wineTabHint": "GameLib valitsee Steam-peleille Wine-moottorin ja bottlen.",

@@ -91,7 +91,23 @@
         "extraInfoRetry": "Proovi uuesti",
         "extraInfoStaleBody": "See tulemus salvestati vahemällu enne laadimistulemuste registreerimist, seega võib see olla vananenud. Värskenda kontrollimiseks.",
         "steamInstallingPercent": "Paigaldamine… {{percent}}%",
+        "steamUpdateCommitting": "Uuenduse rakendamine…",
+        "steamUpdatePlanning": "Uuenduse planeerimine…",
         "tabsAriaLabel": "mänguinfo vahekaardid",
+        "update": {
+            "anyway": "Uuenda siiski",
+            "cancel": "Tühista",
+            "checkingSize": "Uuenduse suuruse kontrollimine…",
+            "confirmButton": "Uuenda",
+            "confirmTitle": "Kas uuendada {{title}}?",
+            "fallback": "GameLib ei saa eelmise järgu faililoendit kätte, mistõttu kontrollib ta iga faili: allalaadimine kuni {{download}}.",
+            "notEnoughDisk": "Vaja on {{peak}} vaba ruumi, saadaval on {{available}}.",
+            "registered": "Steam uuendab seda mängu.",
+            "showSize": "Näita uuenduse suurust",
+            "sizes": "Allalaadimine {{download}} · uuendamise ajal on vaja {{peak}} vaba ruumi",
+            "sizesEstimate": "Allalaadimine kuni {{download}} · uuendamise ajal on vaja {{peak}} vaba ruumi (hinnang)",
+            "unknown": "Uuenduse olek on teadmata: GameLib ei näe selle mängu haru {{branch}}."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -426,9 +442,20 @@
             },
             "route": {
                 "bottled": "Steami klient pudelis",
+                "issue": {
+                    "failedThisSession": "Selles seansis ebaõnnestus",
+                    "knownBad": "Teadaolev probleem",
+                    "notCovered_one": "{{count}} Steami kutse on katmata",
+                    "notCovered_other": "{{count}} Steami kutset on katmata",
+                    "scanMiss": "Pole täielikult kaetud",
+                    "win64NoShim": "64-bitine sild puudub"
+                },
                 "label": "Steami marsruut",
+                "moreSymbols_one": "ja veel {{count}}",
+                "moreSymbols_other": "ja veel {{count}}",
                 "missingSymbols": "Pole kaetud: {{symbols}}",
                 "native": "Steami natiivne sild",
+                "notCoveredHeading": "Katmata:",
                 "reason": {
                     "failedThisSession": "Sild ebaõnnestus selles seansis varem",
                     "knownBad": "Teadaolevalt ei tööta sillaga: {{reason}}",
@@ -501,6 +528,25 @@
             "removeAllCopiesConfirmMessage": "See eemaldab kõik selle mängu paigaldatud koopiad kõigist paigalduskohtadest. Seda ei saa tagasi võtta.",
             "removeAllCopiesConfirmTitle": "Eemaldada kõik koopiad?",
             "removeAllCopiesLabel": "Eemalda kõik koopiad…"
+        },
+        "update": {
+            "branchUnknown": "GameLib ei näe mängu {{title}} haru {{branch}}, seega ei saa seda uuendada.",
+            "finished": "Uuendus lõpetatud",
+            "handoff": "Steam avas mängu {{title}}. Uuenda seda Steamis.",
+            "installAppRefused": "Steam keeldus uuendusest (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam uuendab seda mängu oma bottle'i sees.",
+            "notEnoughDisk": "Mängu {{title}} uuendamiseks pole piisavalt vaba ruumi: vaja on {{needed}}, saadaval on {{available}}.",
+            "prompt": {
+                "dontAskAgain": "Ära selle järgu kohta enam küsi",
+                "finishFirst": "Lõpeta mängu {{title}} uuendamine enne mängimist. Jätka seda jaotises Allalaadimised.",
+                "queued": "Mängu {{title}} uuendus ootab jaotises Allalaadimised. Mängi pärast selle lõppu või eemalda see järjekorrast.",
+                "updating": "Mängu {{title}} uuendatakse. Mängi, kui uuendus on lõppenud, või peata see jaotises Allalaadimised.",
+                "message": "Mängul {{title}} on uuendus (järk {{targetBuild}}). Uuenda kohe või mängi olemasolevat järku?",
+                "playAnyway": "Mängi siiski",
+                "title": "Uuendus on saadaval",
+                "updateNow": "Uuenda kohe"
+            },
+            "refusedRunning": "Sulge {{title}} enne uuendamist."
         },
         "bottle": {
             "statusPollTimeout": "GameLib lõpetas Steami pudeli seadistuse kohta teadete ootamise. See võib siiski töötada — kontrolli, kas Steami installiakent on näha, ja proovi siis uuesti.",

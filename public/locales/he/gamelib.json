@@ -92,7 +92,23 @@
         "extraInfoRetry": "נסה שוב",
         "extraInfoStaleBody": "תוצאה זו נשמרה במטמון לפני שתוצאות הטעינה נרשמו, ולכן ייתכן שהיא אינה עדכנית. רענן כדי לבדוק.",
         "steamInstallingPercent": "מתקין… {{percent}}%",
+        "steamUpdateCommitting": "מחיל את העדכון…",
+        "steamUpdatePlanning": "מתכנן את העדכון…",
         "tabsAriaLabel": "לשוניות מידע על המשחק",
+        "update": {
+            "anyway": "עדכן בכל זאת",
+            "cancel": "ביטול",
+            "checkingSize": "בודק את גודל העדכון…",
+            "confirmButton": "עדכן",
+            "confirmTitle": "לעדכן את {{title}}?",
+            "fallback": "GameLib לא מצליח לקבל את רשימת הקבצים של הגרסה הקודמת, ולכן יבדוק כל קובץ: הורדה של עד {{download}}.",
+            "notEnoughDisk": "נדרשים {{peak}} פנויים, זמינים {{available}}.",
+            "registered": "Steam יעדכן את המשחק הזה.",
+            "showSize": "הצג את גודל העדכון",
+            "sizes": "הורדה של {{download}} · נדרשים {{peak}} פנויים במהלך העדכון",
+            "sizesEstimate": "הורדה של עד {{download}} · נדרשים {{peak}} פנויים במהלך העדכון (הערכה)",
+            "unknown": "מצב העדכון לא ידוע: GameLib לא רואה את הענף {{branch}} של המשחק הזה."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -454,9 +470,22 @@
             },
             "route": {
                 "bottled": "לקוח Steam ב-bottle",
+                "issue": {
+                    "failedThisSession": "נכשל בהפעלה הזו",
+                    "knownBad": "בעיה ידועה",
+                    "notCovered_one": "קריאת Steam אחת לא מכוסה",
+                    "notCovered_two": "שתי קריאות Steam לא מכוסות",
+                    "notCovered_other": "{{count}} קריאות Steam לא מכוסות",
+                    "scanMiss": "לא מכוסה במלואו",
+                    "win64NoShim": "אין גשר 64 סיביות"
+                },
                 "label": "מסלול Steam",
+                "moreSymbols_one": "ועוד אחד",
+                "moreSymbols_two": "ועוד שניים",
+                "moreSymbols_other": "ועוד {{count}}",
                 "missingSymbols": "לא מכוסה: {{symbols}}",
                 "native": "גשר Steam מובנה",
+                "notCoveredHeading": "לא מכוסה:",
                 "reason": {
                     "failedThisSession": "הגשר נכשל מוקדם יותר בסשן הזה",
                     "knownBad": "ידוע שלא עובד עם הגשר: {{reason}}",
@@ -529,6 +558,25 @@
             "removeAllCopiesConfirmMessage": "פעולה זו תסיר את כל העותקים המותקנים של משחק זה מכל מיקומי ההתקנה. לא ניתן לבטל פעולה זו.",
             "removeAllCopiesConfirmTitle": "להסיר את כל העותקים?",
             "removeAllCopiesLabel": "הסר את כל העותקים…"
+        },
+        "update": {
+            "branchUnknown": "GameLib לא רואה את הענף {{branch}} של {{title}}, ולכן לא יכול לעדכן אותו.",
+            "finished": "העדכון הסתיים",
+            "handoff": "Steam פתח את {{title}}. עדכנו אותו מתוך Steam.",
+            "installAppRefused": "Steam דחה את העדכון (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam מעדכן את המשחק הזה בתוך ה-bottle שלו.",
+            "notEnoughDisk": "אין מספיק מקום פנוי לעדכון {{title}}: נדרשים {{needed}}, זמינים {{available}}.",
+            "prompt": {
+                "dontAskAgain": "אל תשאל שוב לגבי הגרסה הזו",
+                "finishFirst": "סיימו את עדכון {{title}} לפני המשחק. המשיכו אותו מתוך ההורדות.",
+                "queued": "עדכון עבור {{title}} ממתין בהורדות. שחקו לאחר שיסתיים, או הסירו אותו מהתור.",
+                "updating": "{{title}} מתעדכן. שחקו כשהעדכון יסתיים, או השהו אותו בהורדות.",
+                "message": "ל-{{title}} יש עדכון (גרסה {{targetBuild}}). לעדכן עכשיו, או לשחק בגרסה שיש לכם?",
+                "playAnyway": "שחק בכל זאת",
+                "title": "עדכון זמין",
+                "updateNow": "עדכן עכשיו"
+            },
+            "refusedRunning": "סגרו את {{title}} לפני העדכון."
         },
         "engine": {
             "wineTabHint": "GameLib בוחר את מנוע Wine ואת ה-bottle עבור משחקי Steam.",

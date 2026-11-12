@@ -91,7 +91,23 @@
         "extraInfoRetry": "Thử lại",
         "extraInfoStaleBody": "Kết quả này được lưu vào bộ nhớ đệm trước khi kết quả tải được ghi nhận, nên có thể đã lỗi thời. Làm mới để kiểm tra.",
         "steamInstallingPercent": "Đang cài đặt… {{percent}}%",
+        "steamUpdateCommitting": "Đang áp dụng bản cập nhật…",
+        "steamUpdatePlanning": "Đang lập kế hoạch cập nhật…",
         "tabsAriaLabel": "tab thông tin game",
+        "update": {
+            "anyway": "Vẫn cập nhật",
+            "cancel": "Hủy",
+            "checkingSize": "Đang kiểm tra dung lượng bản cập nhật…",
+            "confirmButton": "Cập nhật",
+            "confirmTitle": "Cập nhật {{title}}?",
+            "fallback": "GameLib không thể lấy danh sách tệp của bản dựng trước, nên sẽ kiểm tra từng tệp: tải xuống tối đa {{download}}.",
+            "notEnoughDisk": "Cần {{peak}} dung lượng trống, hiện có {{available}}.",
+            "registered": "Steam sẽ cập nhật trò chơi này.",
+            "showSize": "Hiện dung lượng bản cập nhật",
+            "sizes": "Tải xuống {{download}} · cần {{peak}} dung lượng trống trong khi cập nhật",
+            "sizesEstimate": "Tải xuống tối đa {{download}} · cần {{peak}} dung lượng trống trong khi cập nhật (ước tính)",
+            "unknown": "Không rõ trạng thái cập nhật: GameLib không thấy nhánh {{branch}} của trò chơi này."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -447,9 +463,20 @@
             },
             "route": {
                 "bottled": "Client Steam trong bottle",
+                "issue": {
+                    "failedThisSession": "Thất bại trong phiên này",
+                    "knownBad": "Sự cố đã biết",
+                    "notCovered_one": "{{count}} lệnh gọi Steam chưa được bao phủ",
+                    "notCovered_other": "{{count}} lệnh gọi Steam chưa được bao phủ",
+                    "scanMiss": "Chưa được bao phủ hoàn toàn",
+                    "win64NoShim": "Không có cầu nối 64 bit"
+                },
                 "label": "Lộ trình Steam",
+                "moreSymbols_one": "và {{count}} mục nữa",
+                "moreSymbols_other": "và {{count}} mục nữa",
                 "missingSymbols": "Không được bao phủ: {{symbols}}",
                 "native": "Cầu nối Steam gốc",
+                "notCoveredHeading": "Chưa được bao phủ:",
                 "reason": {
                     "failedThisSession": "Cầu nối đã thất bại trước đó trong phiên này",
                     "knownBad": "Được biết là không hoạt động với cầu nối: {{reason}}",
@@ -522,6 +549,25 @@
             "removeAllCopiesConfirmMessage": "Thao tác này sẽ xóa mọi bản sao đã cài đặt của trò chơi này tại tất cả vị trí cài đặt. Không thể hoàn tác.",
             "removeAllCopiesConfirmTitle": "Xóa tất cả bản sao?",
             "removeAllCopiesLabel": "Xóa tất cả bản sao…"
+        },
+        "update": {
+            "branchUnknown": "GameLib không thấy nhánh {{branch}} của {{title}}, nên không thể cập nhật.",
+            "finished": "Cập nhật hoàn tất",
+            "handoff": "Steam đã mở {{title}}. Hãy cập nhật từ Steam.",
+            "installAppRefused": "Steam đã từ chối bản cập nhật (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam cập nhật trò chơi này bên trong bottle của nó.",
+            "notEnoughDisk": "Không đủ dung lượng trống để cập nhật {{title}}: cần {{needed}}, hiện có {{available}}.",
+            "prompt": {
+                "dontAskAgain": "Không hỏi lại cho bản dựng này",
+                "finishFirst": "Hãy hoàn tất cập nhật {{title}} trước khi chơi. Tiếp tục từ mục Tải xuống.",
+                "queued": "Bản cập nhật cho {{title}} đang chờ trong mục Tải xuống. Chơi sau khi hoàn tất, hoặc xóa khỏi hàng đợi.",
+                "updating": "{{title}} đang được cập nhật. Chơi khi cập nhật xong, hoặc tạm dừng trong mục Tải xuống.",
+                "message": "{{title}} có bản cập nhật (bản dựng {{targetBuild}}). Cập nhật ngay, hay chơi bản dựng hiện có?",
+                "playAnyway": "Vẫn chơi",
+                "title": "Có bản cập nhật",
+                "updateNow": "Cập nhật ngay"
+            },
+            "refusedRunning": "Hãy đóng {{title}} trước khi cập nhật."
         },
         "engine": {
             "wineTabHint": "GameLib chọn engine Wine và bottle cho các game Steam.",

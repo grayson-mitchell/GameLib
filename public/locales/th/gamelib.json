@@ -91,7 +91,23 @@
         "extraInfoRetry": "ลองอีกครั้ง",
         "extraInfoStaleBody": "ผลลัพธ์นี้ถูกแคชไว้ก่อนที่จะมีการบันทึกผลการโหลด จึงอาจไม่เป็นข้อมูลล่าสุด รีเฟรชเพื่อตรวจสอบ",
         "steamInstallingPercent": "กำลังติดตั้ง… {{percent}}%",
+        "steamUpdateCommitting": "กำลังใช้การอัปเดต…",
+        "steamUpdatePlanning": "กำลังวางแผนการอัปเดต…",
         "tabsAriaLabel": "แท็บข้อมูลเกม",
+        "update": {
+            "anyway": "อัปเดตต่อไป",
+            "cancel": "ยกเลิก",
+            "checkingSize": "กำลังตรวจสอบขนาดการอัปเดต…",
+            "confirmButton": "อัปเดต",
+            "confirmTitle": "อัปเดต {{title}} หรือไม่?",
+            "fallback": "GameLib ไม่สามารถรับรายการไฟล์ของบิลด์ก่อนหน้าได้ จึงจะตรวจสอบทุกไฟล์: ดาวน์โหลดสูงสุด {{download}}",
+            "notEnoughDisk": "ต้องการพื้นที่ว่าง {{peak}} มีอยู่ {{available}}",
+            "registered": "Steam จะอัปเดตเกมนี้",
+            "showSize": "แสดงขนาดการอัปเดต",
+            "sizes": "ดาวน์โหลด {{download}} · ต้องการพื้นที่ว่าง {{peak}} ระหว่างการอัปเดต",
+            "sizesEstimate": "ดาวน์โหลดสูงสุด {{download}} · ต้องการพื้นที่ว่าง {{peak}} ระหว่างการอัปเดต (ประมาณการ)",
+            "unknown": "ไม่ทราบสถานะการอัปเดต: GameLib มองไม่เห็นสาขา {{branch}} ของเกมนี้"
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -447,9 +463,20 @@
             },
             "route": {
                 "bottled": "ไคลเอนต์ Steam แบบ bottle",
+                "issue": {
+                    "failedThisSession": "ล้มเหลวในเซสชันนี้",
+                    "knownBad": "ปัญหาที่ทราบ",
+                    "notCovered_one": "การเรียก Steam ที่ไม่ครอบคลุม {{count}} รายการ",
+                    "notCovered_other": "การเรียก Steam ที่ไม่ครอบคลุม {{count}} รายการ",
+                    "scanMiss": "ครอบคลุมไม่ครบ",
+                    "win64NoShim": "ไม่มีบริดจ์ 64 บิต"
+                },
                 "label": "เส้นทาง Steam",
+                "moreSymbols_one": "และอีก {{count}} รายการ",
+                "moreSymbols_other": "และอีก {{count}} รายการ",
                 "missingSymbols": "ไม่ครอบคลุม: {{symbols}}",
                 "native": "บริดจ์ Steam แบบเนทีฟ",
+                "notCoveredHeading": "ไม่ครอบคลุม:",
                 "reason": {
                     "failedThisSession": "บริดจ์ล้มเหลวก่อนหน้านี้ในเซสชันนี้",
                     "knownBad": "ทราบว่าทำงานไม่ได้กับบริดจ์: {{reason}}",
@@ -522,6 +549,25 @@
             "removeAllCopiesConfirmMessage": "การดำเนินการนี้จะลบสำเนาที่ติดตั้งไว้ของเกมนี้ทั้งหมดในทุกตำแหน่งติดตั้ง ไม่สามารถย้อนกลับได้",
             "removeAllCopiesConfirmTitle": "ลบทุกสำเนาหรือไม่?",
             "removeAllCopiesLabel": "ลบทุกสำเนา…"
+        },
+        "update": {
+            "branchUnknown": "GameLib มองไม่เห็นสาขา {{branch}} ของ {{title}} จึงอัปเดตไม่ได้",
+            "finished": "อัปเดตเสร็จสิ้น",
+            "handoff": "Steam เปิด {{title}} แล้ว โปรดอัปเดตจาก Steam",
+            "installAppRefused": "Steam ปฏิเสธการอัปเดต (EAppUpdateError {{code}})",
+            "notBridgeOrNative": "Steam อัปเดตเกมนี้ภายใน bottle ของมัน",
+            "notEnoughDisk": "พื้นที่ว่างไม่พอสำหรับอัปเดต {{title}}: ต้องการ {{needed}} มีอยู่ {{available}}",
+            "prompt": {
+                "dontAskAgain": "ไม่ต้องถามอีกสำหรับบิลด์นี้",
+                "finishFirst": "อัปเดต {{title}} ให้เสร็จก่อนเล่น แล้วทำต่อได้จากดาวน์โหลด",
+                "queued": "อัปเดตของ {{title}} กำลังรออยู่ในดาวน์โหลด เล่นหลังจากเสร็จแล้ว หรือนำออกจากคิว",
+                "updating": "กำลังอัปเดต {{title}} เล่นเมื่ออัปเดตเสร็จ หรือหยุดอัปเดตชั่วคราวในดาวน์โหลด",
+                "message": "{{title}} มีอัปเดต (บิลด์ {{targetBuild}}) จะอัปเดตตอนนี้ หรือเล่นบิลด์ที่มีอยู่?",
+                "playAnyway": "เล่นต่อไป",
+                "title": "มีอัปเดตพร้อมใช้งาน",
+                "updateNow": "อัปเดตตอนนี้"
+            },
+            "refusedRunning": "ปิด {{title}} ก่อนอัปเดต"
         },
         "engine": {
             "wineTabHint": "GameLib เลือกเอนจิน Wine และบอตเทิลสำหรับเกม Steam",

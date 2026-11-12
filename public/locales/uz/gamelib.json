@@ -91,7 +91,23 @@
         "extraInfoRetry": "Qayta urinish",
         "extraInfoStaleBody": "Bu natija yuklash holatlari qayd etilishidan oldin keshlangan, shuning uchun eskirgan bo'lishi mumkin. Tekshirish uchun yangilang.",
         "steamInstallingPercent": "Oʻrnatilmoqda… {{percent}}%",
+        "steamUpdateCommitting": "Yangilanish qo'llanmoqda…",
+        "steamUpdatePlanning": "Yangilanish rejalashtirilmoqda…",
         "tabsAriaLabel": "o'yin ma'lumotlari yorliqlari",
+        "update": {
+            "anyway": "Baribir yangilash",
+            "cancel": "Bekor qilish",
+            "checkingSize": "Yangilanish hajmi tekshirilmoqda…",
+            "confirmButton": "Yangilash",
+            "confirmTitle": "{{title}} yangilansinmi?",
+            "fallback": "GameLib oldingi tuzilmaning fayllar ro'yxatini ola olmaydi, shuning uchun har bir faylni tekshiradi: {{download}} gacha yuklab olish.",
+            "notEnoughDisk": "{{peak}} bo'sh joy kerak, {{available}} mavjud.",
+            "registered": "Steam bu o'yinni yangilaydi.",
+            "showSize": "Yangilanish hajmini ko'rsatish",
+            "sizes": "Yuklab olish {{download}} · yangilanish vaqtida {{peak}} bo'sh joy kerak",
+            "sizesEstimate": "{{download}} gacha yuklab olish · yangilanish vaqtida {{peak}} bo'sh joy kerak (taxminiy)",
+            "unknown": "Yangilanish holati noma'lum: GameLib bu o'yinning {{branch}} tarmog'ini ko'ra olmaydi."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -447,9 +463,20 @@
             },
             "route": {
                 "bottled": "Bottle'dagi Steam klienti",
+                "issue": {
+                    "failedThisSession": "Bu seansda muvaffaqiyatsiz bo'ldi",
+                    "knownBad": "Ma'lum muammo",
+                    "notCovered_one": "{{count}} ta Steam chaqiruvi qamrab olinmagan",
+                    "notCovered_other": "{{count}} ta Steam chaqiruvi qamrab olinmagan",
+                    "scanMiss": "To'liq qamrab olinmagan",
+                    "win64NoShim": "64 bitli ko'prik yo'q"
+                },
                 "label": "Steam marshruti",
+                "moreSymbols_one": "va yana {{count}} ta",
+                "moreSymbols_other": "va yana {{count}} ta",
                 "missingSymbols": "Qamrab olinmagan: {{symbols}}",
                 "native": "Mahalliy Steam ko'prigi",
+                "notCoveredHeading": "Qamrab olinmagan:",
                 "reason": {
                     "failedThisSession": "Ko'prik bu sessiyada avvalroq muvaffaqiyatsiz bo'ldi",
                     "knownBad": "Ko'prik bilan ishlamasligi ma'lum: {{reason}}",
@@ -522,6 +549,25 @@
             "removeAllCopiesConfirmMessage": "Bu barcha o'rnatish joylaridagi ushbu o'yinning barcha o'rnatilgan nusxalarini olib tashlaydi. Bu amalni bekor qilib bo'lmaydi.",
             "removeAllCopiesConfirmTitle": "Barcha nusxalar olib tashlansinmi?",
             "removeAllCopiesLabel": "Barcha nusxalarni olib tashlash…"
+        },
+        "update": {
+            "branchUnknown": "GameLib {{title}} o'yinining {{branch}} tarmog'ini ko'ra olmaydi, shuning uchun uni yangilay olmaydi.",
+            "finished": "Yangilanish tugadi",
+            "handoff": "Steam {{title}} o'yinini ochdi. Uni Steam orqali yangilang.",
+            "installAppRefused": "Steam yangilanishni rad etdi (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam bu o'yinni o'zining bottle muhiti ichida yangilaydi.",
+            "notEnoughDisk": "{{title}} o'yinini yangilash uchun bo'sh joy yetarli emas: {{needed}} kerak, {{available}} mavjud.",
+            "prompt": {
+                "dontAskAgain": "Bu tuzilma uchun boshqa so'ramaslik",
+                "finishFirst": "O'ynashdan oldin {{title}} yangilanishini tugallang. Uni Yuklamalar bo'limidan davom ettiring.",
+                "queued": "{{title}} uchun yangilanish Yuklamalar bo'limida kutmoqda. U tugagach o'ynang yoki navbatdan olib tashlang.",
+                "updating": "{{title}} yangilanmoqda. Yangilanish tugagach o'ynang yoki uni Yuklamalar bo'limida to'xtatib turing.",
+                "message": "{{title}} uchun yangilanish bor ({{targetBuild}} tuzilma). Hozir yangilansinmi yoki mavjud tuzilmada o'ynalsinmi?",
+                "playAnyway": "Baribir o'ynash",
+                "title": "Yangilanish mavjud",
+                "updateNow": "Hozir yangilash"
+            },
+            "refusedRunning": "Yangilashdan oldin {{title}} o'yinini yoping."
         },
         "engine": {
             "wineTabHint": "GameLib Steam o‘yinlari uchun Wine dvigateli va bottle’ni tanlaydi.",

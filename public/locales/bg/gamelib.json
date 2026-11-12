@@ -91,7 +91,23 @@
         "extraInfoRetry": "Опитайте отново",
         "extraInfoStaleBody": "Този резултат е кеширан преди да се записват резултатите от зареждането, така че може да е неактуален. Обновете, за да проверите.",
         "steamInstallingPercent": "Инсталира се… {{percent}}%",
+        "steamUpdateCommitting": "Прилагане на актуализацията…",
+        "steamUpdatePlanning": "Планиране на актуализацията…",
         "tabsAriaLabel": "раздели за информация за играта",
+        "update": {
+            "anyway": "Актуализирай въпреки това",
+            "cancel": "Отказ",
+            "checkingSize": "Проверка на размера на актуализацията…",
+            "confirmButton": "Актуализирай",
+            "confirmTitle": "Да се актуализира ли {{title}}?",
+            "fallback": "GameLib не може да получи списъка с файлове на предишната версия, затова ще провери всеки файл: изтегляне до {{download}}.",
+            "notEnoughDisk": "Нужни са {{peak}} свободно място, налични са {{available}}.",
+            "registered": "Steam ще актуализира тази игра.",
+            "showSize": "Покажи размера на актуализацията",
+            "sizes": "Изтегляне {{download}} · нужни са {{peak}} свободно място по време на актуализацията",
+            "sizesEstimate": "Изтегляне до {{download}} · нужни са {{peak}} свободно място по време на актуализацията (приблизително)",
+            "unknown": "Състоянието на актуализацията е неизвестно: GameLib не вижда клона {{branch}} на тази игра."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -447,9 +463,20 @@
             },
             "route": {
                 "bottled": "Бутилиран клиент на Steam",
+                "issue": {
+                    "failedThisSession": "Неуспешно в тази сесия",
+                    "knownBad": "Известен проблем",
+                    "notCovered_one": "{{count}} извикване на Steam не е покрито",
+                    "notCovered_other": "{{count}} извиквания на Steam не са покрити",
+                    "scanMiss": "Не е покрито изцяло",
+                    "win64NoShim": "Няма 64-битов мост"
+                },
                 "label": "Маршрут на Steam",
+                "moreSymbols_one": "и още {{count}}",
+                "moreSymbols_other": "и още {{count}}",
                 "missingSymbols": "Не е покрито: {{symbols}}",
                 "native": "Нативен мост на Steam",
+                "notCoveredHeading": "Непокрито:",
                 "reason": {
                     "failedThisSession": "Мостът се провали по-рано в тази сесия",
                     "knownBad": "Известно е, че не работи с моста: {{reason}}",
@@ -522,6 +549,25 @@
             "removeAllCopiesConfirmMessage": "Това премахва всяко инсталирано копие на тази игра от всички места за инсталиране. Това не може да бъде отменено.",
             "removeAllCopiesConfirmTitle": "Премахване на всички копия?",
             "removeAllCopiesLabel": "Премахване на всички копия…"
+        },
+        "update": {
+            "branchUnknown": "GameLib не вижда клона {{branch}} на {{title}}, затова не може да я актуализира.",
+            "finished": "Актуализацията приключи",
+            "handoff": "Steam отвори {{title}}. Актуализирайте играта от Steam.",
+            "installAppRefused": "Steam отхвърли актуализацията (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam актуализира тази игра в нейната бутилка (bottle).",
+            "notEnoughDisk": "Няма достатъчно свободно място за актуализиране на {{title}}: нужни са {{needed}}, налични са {{available}}.",
+            "prompt": {
+                "dontAskAgain": "Не питай отново за тази версия",
+                "finishFirst": "Завършете актуализацията на {{title}}, преди да играете. Продължете я от Изтегляния.",
+                "queued": "Актуализация за {{title}} чака в Изтегляния. Играйте, след като приключи, или я премахнете от опашката.",
+                "updating": "{{title}} се актуализира. Играйте, когато актуализацията приключи, или я поставете на пауза в Изтегляния.",
+                "message": "{{title}} има актуализация (версия {{targetBuild}}). Да се актуализира ли сега, или да играете наличната версия?",
+                "playAnyway": "Играй въпреки това",
+                "title": "Налична е актуализация",
+                "updateNow": "Актуализирай сега"
+            },
+            "refusedRunning": "Затворете {{title}}, преди да я актуализирате."
         },
         "engine": {
             "wineTabHint": "GameLib избира двигателя Wine и bottle за игрите от Steam.",

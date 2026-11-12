@@ -445,6 +445,13 @@ const FIXTURE_DIFF_LINES = [
  * audited ZERO violations with `scanScope({ extraFiles })` and were
  * hand-inserted in sorted position into both lists; `generatedAt`
  * unchanged. DECLARED_UNSCANNED_DEBT unchanged.
+ *
+ * 2026-11-13 (Phase 74, plan 74-20): fork-touched 330 -> 398 by a fresh
+ * `pnpm gen-i18n-gate-scope`. The committed list was stale: it lacked the two
+ * Phase 74 files this plan registers (`helpers/steamUpdateConfirm.ts`,
+ * `GamePage/components/SteamUpdateInfo.tsx`) and 66 more added by earlier
+ * phases and quick tasks. None is in `meta/i18nGateScope.json`, so all 68 join
+ * DECLARED_UNSCANNED_DEBT (scope stays 277). Nothing left the list.
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/__mocks__/svgReactStub.tsx',
@@ -512,7 +519,76 @@ const DECLARED_UNSCANNED_DEBT = [
   // without refreshing the artifact. Measured with `scanScope({ extraFiles })`:
   // 3 findings, all log-line text (lines 193/216/220), so it is parked here rather
   // than promoted into `meta/i18nGateScope.json`.
-  'src/frontend/screens/WebView/storeExitRefresh.ts'
+  'src/frontend/screens/WebView/storeExitRefresh.ts',
+  // 74-20: debt surfaced by the 2026-11-13 regeneration (see header)
+  'src/frontend/components/UI/Anticheat/index.tsx',
+  'src/frontend/components/UI/ControllerHints/index.tsx',
+  'src/frontend/components/UI/DLCList/DLC/index.tsx',
+  'src/frontend/components/UI/ExternalLinkDialog/index.tsx',
+  'src/frontend/components/UI/NoticeStack/index.tsx',
+  'src/frontend/components/UI/NoticeStack/noticeSlot.tsx',
+  'src/frontend/components/UI/OfflineMessage/index.tsx',
+  'src/frontend/components/UI/ReadOnlyStoresNotice/index.tsx',
+  'src/frontend/components/UI/ToggleSwitch/index.tsx',
+  'src/frontend/components/UI/UninstallModal/index.tsx',
+  'src/frontend/helpers/externalLinkClicks.ts',
+  'src/frontend/helpers/gamepad_layouts/genius.ts',
+  'src/frontend/helpers/gamepad_layouts/ps.ts',
+  'src/frontend/helpers/gamepad_layouts/standard.ts',
+  'src/frontend/helpers/steamUpdateConfirm.ts',
+  'src/frontend/hooks/hasAnticheatInfo.ts',
+  'src/frontend/hooks/hasProgress.ts',
+  'src/frontend/screens/Discounts/helpers.ts',
+  'src/frontend/screens/DownloadManager/components/SteamManagedItem/SteamManagedItemView.tsx',
+  'src/frontend/screens/DownloadManager/components/SteamManagedItem/index.tsx',
+  'src/frontend/screens/DownloadManager/components/SteamManagedItem/steamManagedModel.ts',
+  'src/frontend/screens/Game/GamePage/components/Description.tsx',
+  'src/frontend/screens/Game/GamePage/components/Developer.tsx',
+  'src/frontend/screens/Game/GamePage/components/ReleaseDate.tsx',
+  'src/frontend/screens/Game/GamePage/components/ReportIssue.tsx',
+  'src/frontend/screens/Game/GamePage/components/SteamBridgeRouteSummary.tsx',
+  'src/frontend/screens/Game/GamePage/components/SteamUpdateInfo.tsx',
+  'src/frontend/screens/Game/GamePage/components/steamBridgeRouteIssue.ts',
+  'src/frontend/screens/Game/GameSubMenu/steamUninstallConfirm.ts',
+  'src/frontend/screens/Game/ModifyInstallModal/GOG/index.tsx',
+  'src/frontend/screens/Library/components/InstallModal/DownloadDialog/BuildSelector.tsx',
+  'src/frontend/screens/Library/components/InstallModal/DownloadDialog/DLCDownloadListing.tsx',
+  'src/frontend/screens/Library/components/InstallModal/EngineSelector/index.tsx',
+  'src/frontend/screens/Library/components/InstallModal/WineSelector/engineInstallChoice.ts',
+  'src/frontend/screens/Library/components/InstallModal/steamLibraryRoute.ts',
+  'src/frontend/screens/Settings/components/AdvertiseAvxForRosetta.tsx',
+  'src/frontend/screens/Settings/components/AllowInstallationBrokenAnticheat.tsx',
+  'src/frontend/screens/Settings/components/AutoDXVK.tsx',
+  'src/frontend/screens/Settings/components/BattlEyeRuntime.tsx',
+  'src/frontend/screens/Settings/components/DefaultInstallPath.tsx',
+  'src/frontend/screens/Settings/components/DisableUMU.tsx',
+  'src/frontend/screens/Settings/components/DiscordRPC.tsx',
+  'src/frontend/screens/Settings/components/DownloadNoHTTPS.tsx',
+  'src/frontend/screens/Settings/components/EnableDXVKFpsLimit.tsx',
+  'src/frontend/screens/Settings/components/EnableFSR.tsx',
+  'src/frontend/screens/Settings/components/EnableFsync.tsx',
+  'src/frontend/screens/Settings/components/EnableMsync.tsx',
+  'src/frontend/screens/Settings/components/EnableSteamNativeDelete.tsx',
+  'src/frontend/screens/Settings/components/EnableWineWayland.tsx',
+  'src/frontend/screens/Settings/components/EnableWoW64.tsx',
+  'src/frontend/screens/Settings/components/GameMode.tsx',
+  'src/frontend/screens/Settings/components/HideChangelogOnStartup.tsx',
+  'src/frontend/screens/Settings/components/Mangohud.tsx',
+  'src/frontend/screens/Settings/components/OfflineMode.tsx',
+  'src/frontend/screens/Settings/components/PreferSystemLibs.tsx',
+  'src/frontend/screens/Settings/components/ShowFPS.tsx',
+  'src/frontend/screens/Settings/components/SteamExperimentalInstallApp.tsx',
+  'src/frontend/screens/Settings/components/WinePrefixesBasePath.tsx',
+  'src/frontend/screens/Settings/components/engineOverrideLogic.ts',
+  'src/frontend/screens/Settings/components/wineSelection.ts',
+  'src/frontend/screens/Settings/sections/CategorySettings/index.tsx',
+  'src/frontend/screens/Settings/sections/LogSettings/components/UploadedLogFilesList/index.tsx',
+  'src/frontend/screens/Settings/sections/SyncSaves/index.tsx',
+  'src/frontend/state/ReadOnlyStoresNotice.ts',
+  'src/frontend/state/SteamRequestNotice.ts',
+  'src/frontend/state/sleepAssertion.ts',
+  'src/frontend/testUtils/storeHookReact.ts',
+  'src/frontend/testUtils/tauriWindow.ts'
 ]
 
 /**
@@ -1216,9 +1292,9 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 277-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 330-file fork-touched set verbatim', () => {
+  it('A0 fixture sanity: the seeded scope is the REAL 277-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 398-file fork-touched set verbatim', () => {
     expect(scopeSnapshot.files.length).toBe(277)
-    expect(forkTouchedSnapshot.files.length).toBe(330)
+    expect(forkTouchedSnapshot.files.length).toBe(398)
     // `freshSnapshot()` is a FIXTURE built from the committed artifact
     // (`files: [...forkTouchedSnapshot.files]`) -- NOT a live git derivation,
     // despite what this assertion used to claim. The live derivation is
@@ -1259,7 +1335,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 277 -> 330 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 277 -> 398 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -1282,7 +1358,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 330', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 398', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -1295,12 +1371,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(330)
+    expect(rewritten.files.length).toBe(398)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 330 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 398 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -1313,7 +1389,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(330)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(398)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {

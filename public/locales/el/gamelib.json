@@ -91,7 +91,23 @@
         "extraInfoRetry": "Επανάληψη",
         "extraInfoStaleBody": "Αυτό το αποτέλεσμα αποθηκεύτηκε προσωρινά πριν καταγραφούν τα αποτελέσματα φόρτωσης, οπότε ίσως είναι παρωχημένο. Ανανεώστε για να ελέγξετε.",
         "steamInstallingPercent": "Εγκατάσταση… {{percent}}%",
+        "steamUpdateCommitting": "Εφαρμογή ενημέρωσης…",
+        "steamUpdatePlanning": "Σχεδιασμός ενημέρωσης…",
         "tabsAriaLabel": "καρτέλες πληροφοριών παιχνιδιού",
+        "update": {
+            "anyway": "Ενημέρωση ούτως ή άλλως",
+            "cancel": "Ακύρωση",
+            "checkingSize": "Έλεγχος μεγέθους ενημέρωσης…",
+            "confirmButton": "Ενημέρωση",
+            "confirmTitle": "Ενημέρωση του {{title}};",
+            "fallback": "Το GameLib δεν μπορεί να λάβει τη λίστα αρχείων της προηγούμενης έκδοσης, γι' αυτό θα ελέγξει κάθε αρχείο: λήψη έως {{download}}.",
+            "notEnoughDisk": "Απαιτούνται {{peak}} ελεύθερα, διαθέσιμα {{available}}.",
+            "registered": "Το Steam θα ενημερώσει αυτό το παιχνίδι.",
+            "showSize": "Εμφάνιση μεγέθους ενημέρωσης",
+            "sizes": "Λήψη {{download}} · απαιτούνται {{peak}} ελεύθερα κατά την ενημέρωση",
+            "sizesEstimate": "Λήψη έως {{download}} · απαιτούνται {{peak}} ελεύθερα κατά την ενημέρωση (εκτίμηση)",
+            "unknown": "Άγνωστη κατάσταση ενημέρωσης: το GameLib δεν βλέπει τον κλάδο {{branch}} αυτού του παιχνιδιού."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -447,9 +463,20 @@
             },
             "route": {
                 "bottled": "Πελάτης Steam σε bottle",
+                "issue": {
+                    "failedThisSession": "Απέτυχε σε αυτή τη συνεδρία",
+                    "knownBad": "Γνωστό πρόβλημα",
+                    "notCovered_one": "{{count}} κλήση Steam δεν καλύπτεται",
+                    "notCovered_other": "{{count}} κλήσεις Steam δεν καλύπτονται",
+                    "scanMiss": "Δεν καλύπτεται πλήρως",
+                    "win64NoShim": "Χωρίς γέφυρα 64 bit"
+                },
                 "label": "Διαδρομή Steam",
+                "moreSymbols_one": "και {{count}} ακόμη",
+                "moreSymbols_other": "και {{count}} ακόμη",
                 "missingSymbols": "Δεν καλύπτεται: {{symbols}}",
                 "native": "Εγγενής γέφυρα Steam",
+                "notCoveredHeading": "Δεν καλύπτονται:",
                 "reason": {
                     "failedThisSession": "Η γέφυρα απέτυχε νωρίτερα σε αυτήν τη συνεδρία",
                     "knownBad": "Γνωστό ότι δεν λειτουργεί με τη γέφυρα: {{reason}}",
@@ -522,6 +549,25 @@
             "removeAllCopiesConfirmMessage": "Αυτό αφαιρεί κάθε εγκατεστημένο αντίγραφο αυτού του παιχνιδιού σε όλες τις θέσεις εγκατάστασης. Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.",
             "removeAllCopiesConfirmTitle": "Αφαίρεση όλων των αντιγράφων;",
             "removeAllCopiesLabel": "Αφαίρεση όλων των αντιγράφων…"
+        },
+        "update": {
+            "branchUnknown": "Το GameLib δεν βλέπει τον κλάδο {{branch}} του {{title}}, επομένως δεν μπορεί να το ενημερώσει.",
+            "finished": "Η ενημέρωση ολοκληρώθηκε",
+            "handoff": "Το Steam άνοιξε το {{title}}. Ενημερώστε το από το Steam.",
+            "installAppRefused": "Το Steam απέρριψε την ενημέρωση (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Το Steam ενημερώνει αυτό το παιχνίδι μέσα στο bottle του.",
+            "notEnoughDisk": "Δεν υπάρχει αρκετός ελεύθερος χώρος για την ενημέρωση του {{title}}: απαιτούνται {{needed}}, διαθέσιμα {{available}}.",
+            "prompt": {
+                "dontAskAgain": "Να μην ερωτηθώ ξανά για αυτή την έκδοση",
+                "finishFirst": "Ολοκληρώστε την ενημέρωση του {{title}} πριν παίξετε. Συνεχίστε την από τις Λήψεις.",
+                "queued": "Μια ενημέρωση για το {{title}} περιμένει στις Λήψεις. Παίξτε μετά την ολοκλήρωσή της ή αφαιρέστε την από την ουρά.",
+                "updating": "Το {{title}} ενημερώνεται. Παίξτε όταν ολοκληρωθεί η ενημέρωση ή θέστε την σε παύση στις Λήψεις.",
+                "message": "Το {{title}} έχει ενημέρωση (έκδοση {{targetBuild}}). Ενημέρωση τώρα ή παιχνίδι με την έκδοση που έχετε;",
+                "playAnyway": "Παίξτε ούτως ή άλλως",
+                "title": "Διαθέσιμη ενημέρωση",
+                "updateNow": "Ενημέρωση τώρα"
+            },
+            "refusedRunning": "Κλείστε το {{title}} πριν το ενημερώσετε."
         },
         "engine": {
             "wineTabHint": "Το GameLib επιλέγει τη μηχανή Wine και το bottle για τα παιχνίδια Steam.",

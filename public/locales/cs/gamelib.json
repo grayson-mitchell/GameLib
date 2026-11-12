@@ -93,7 +93,23 @@
         "extraInfoRetry": "Zkusit znovu",
         "extraInfoStaleBody": "Tento výsledek byl uložen do mezipaměti před zaznamenáním výsledků načtení, takže může být zastaralý. Obnovte pro kontrolu.",
         "steamInstallingPercent": "Instaluji… {{percent}} %",
+        "steamUpdateCommitting": "Používá se aktualizace…",
+        "steamUpdatePlanning": "Plánuje se aktualizace…",
         "tabsAriaLabel": "karty s informacemi o hře",
+        "update": {
+            "anyway": "Přesto aktualizovat",
+            "cancel": "Zrušit",
+            "checkingSize": "Zjišťuje se velikost aktualizace…",
+            "confirmButton": "Aktualizovat",
+            "confirmTitle": "Aktualizovat {{title}}?",
+            "fallback": "GameLib nemůže získat seznam souborů předchozí verze, proto zkontroluje každý soubor: stažení až {{download}}.",
+            "notEnoughDisk": "Potřebuje {{peak}} volného místa, k dispozici je {{available}}.",
+            "registered": "Steam tuto hru aktualizuje.",
+            "showSize": "Zobrazit velikost aktualizace",
+            "sizes": "Stažení {{download}} · během aktualizace potřebuje {{peak}} volného místa",
+            "sizesEstimate": "Stažení až {{download}} · během aktualizace potřebuje {{peak}} volného místa (odhad)",
+            "unknown": "Stav aktualizace není znám: GameLib nevidí větev {{branch}} této hry."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -461,9 +477,24 @@
             },
             "route": {
                 "bottled": "Klient Steam v bottle",
+                "issue": {
+                    "failedThisSession": "V této relaci selhalo",
+                    "knownBad": "Známý problém",
+                    "notCovered_one": "{{count}} volání Steamu není pokryto",
+                    "notCovered_few": "{{count}} volání Steamu nejsou pokryta",
+                    "notCovered_many": "{{count}} volání Steamu není pokryto",
+                    "notCovered_other": "{{count}} volání Steamu není pokryto",
+                    "scanMiss": "Není plně pokryto",
+                    "win64NoShim": "Žádný 64bitový most"
+                },
                 "label": "Trasa Steam",
+                "moreSymbols_one": "a ještě {{count}}",
+                "moreSymbols_few": "a ještě {{count}}",
+                "moreSymbols_many": "a ještě {{count}}",
+                "moreSymbols_other": "a ještě {{count}}",
                 "missingSymbols": "Nepokryto: {{symbols}}",
                 "native": "Nativní most Steam",
+                "notCoveredHeading": "Nepokryto:",
                 "reason": {
                     "failedThisSession": "Most v této relaci již dříve selhal",
                     "knownBad": "Je známo, že nefunguje s mostem: {{reason}}",
@@ -536,6 +567,25 @@
             "removeAllCopiesConfirmMessage": "Tímto se odstraní každá nainstalovaná kopie této hry ve všech umístěních instalace. Tuto akci nelze vrátit zpět.",
             "removeAllCopiesConfirmTitle": "Odstranit všechny kopie?",
             "removeAllCopiesLabel": "Odstranit všechny kopie…"
+        },
+        "update": {
+            "branchUnknown": "GameLib nevidí větev {{branch}} hry {{title}}, takže ji nemůže aktualizovat.",
+            "finished": "Aktualizace dokončena",
+            "handoff": "Steam otevřel hru {{title}}. Aktualizujte ji ze Steamu.",
+            "installAppRefused": "Steam aktualizaci odmítl (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam aktualizuje tuto hru uvnitř jejího bottle.",
+            "notEnoughDisk": "Není dost volného místa pro aktualizaci {{title}}: potřebuje {{needed}}, k dispozici je {{available}}.",
+            "prompt": {
+                "dontAskAgain": "Pro tuto verzi se už neptat",
+                "finishFirst": "Dokončete aktualizaci {{title}}, než začnete hrát. Obnovte ji ve Stahování.",
+                "queued": "Aktualizace hry {{title}} čeká ve Stahování. Hrajte po jejím dokončení nebo ji odeberte z fronty.",
+                "updating": "{{title}} se aktualizuje. Hrajte, až aktualizace skončí, nebo ji pozastavte ve Stahování.",
+                "message": "{{title}} má aktualizaci (verze {{targetBuild}}). Aktualizovat nyní, nebo hrát aktuální verzi?",
+                "playAnyway": "Přesto hrát",
+                "title": "Je k dispozici aktualizace",
+                "updateNow": "Aktualizovat nyní"
+            },
+            "refusedRunning": "Před aktualizací ukončete {{title}}."
         },
         "engine": {
             "wineTabHint": "GameLib vybírá pro hry ze Steamu engine Wine a bottle.",

@@ -91,7 +91,23 @@
         "extraInfoRetry": "Újra",
         "extraInfoStaleBody": "Ez az eredmény a betöltési kimenetek rögzítése előtt lett gyorsítótárazva, így elavult lehet. Frissítsd az ellenőrzéshez.",
         "steamInstallingPercent": "Telepítés… {{percent}}%",
+        "steamUpdateCommitting": "Frissítés alkalmazása…",
+        "steamUpdatePlanning": "Frissítés tervezése…",
         "tabsAriaLabel": "játékinfó fülek",
+        "update": {
+            "anyway": "Frissítés mégis",
+            "cancel": "Mégse",
+            "checkingSize": "Frissítés méretének ellenőrzése…",
+            "confirmButton": "Frissítés",
+            "confirmTitle": "Frissíted a(z) {{title}} játékot?",
+            "fallback": "A GameLib nem tudja lekérni az előző build fájllistáját, ezért minden fájlt ellenőriz: akár {{download}} letöltés.",
+            "notEnoughDisk": "{{peak}} szabad hely szükséges, {{available}} áll rendelkezésre.",
+            "registered": "A Steam frissíteni fogja ezt a játékot.",
+            "showSize": "Frissítés méretének megjelenítése",
+            "sizes": "Letöltés: {{download}} · a frissítés alatt {{peak}} szabad hely szükséges",
+            "sizesEstimate": "Letöltés: legfeljebb {{download}} · a frissítés alatt {{peak}} szabad hely szükséges (becslés)",
+            "unknown": "A frissítés állapota ismeretlen: a GameLib nem látja a játék {{branch}} ágát."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -447,9 +463,20 @@
             },
             "route": {
                 "bottled": "Steam kliens bottle-ban",
+                "issue": {
+                    "failedThisSession": "Ebben a munkamenetben sikertelen",
+                    "knownBad": "Ismert probléma",
+                    "notCovered_one": "{{count}} Steam-hívás nincs lefedve",
+                    "notCovered_other": "{{count}} Steam-hívás nincs lefedve",
+                    "scanMiss": "Nincs teljesen lefedve",
+                    "win64NoShim": "Nincs 64 bites híd"
+                },
                 "label": "Steam útvonal",
+                "moreSymbols_one": "és még {{count}}",
+                "moreSymbols_other": "és még {{count}}",
                 "missingSymbols": "Nem lefedett: {{symbols}}",
                 "native": "Natív Steam híd",
+                "notCoveredHeading": "Nincs lefedve:",
                 "reason": {
                     "failedThisSession": "A híd korábban ebben a munkamenetben meghiúsult",
                     "knownBad": "Ismert, hogy nem működik a híddal: {{reason}}",
@@ -522,6 +549,25 @@
             "removeAllCopiesConfirmMessage": "Ez eltávolítja a játék minden telepített példányát az összes telepítési helyről. Ez nem vonható vissza.",
             "removeAllCopiesConfirmTitle": "Eltávolítod az összes példányt?",
             "removeAllCopiesLabel": "Összes példány eltávolítása…"
+        },
+        "update": {
+            "branchUnknown": "A GameLib nem látja a(z) {{title}} {{branch}} ágát, ezért nem tudja frissíteni.",
+            "finished": "A frissítés befejeződött",
+            "handoff": "A Steam megnyitotta a(z) {{title}} játékot. Frissítsd a Steamből.",
+            "installAppRefused": "A Steam elutasította a frissítést (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "A Steam a bottle-ön belül frissíti ezt a játékot.",
+            "notEnoughDisk": "Nincs elég szabad hely a(z) {{title}} frissítéséhez: {{needed}} szükséges, {{available}} áll rendelkezésre.",
+            "prompt": {
+                "dontAskAgain": "Ennél a buildnél ne kérdezze meg újra",
+                "finishFirst": "Fejezd be a(z) {{title}} frissítését játék előtt. Folytasd a Letöltések között.",
+                "queued": "A(z) {{title}} frissítése a Letöltések között vár. Játssz, ha végzett, vagy távolítsd el a sorból.",
+                "updating": "A(z) {{title}} frissül. Játssz, ha a frissítés befejeződött, vagy szüneteltesd a Letöltések között.",
+                "message": "A(z) {{title}} játékhoz frissítés érhető el ({{targetBuild}} build). Frissítesz most, vagy a meglévő buildet játszod?",
+                "playAnyway": "Játék mégis",
+                "title": "Frissítés érhető el",
+                "updateNow": "Frissítés most"
+            },
+            "refusedRunning": "Zárd be a(z) {{title}} játékot a frissítés előtt."
         },
         "engine": {
             "wineTabHint": "A GameLib választja ki a Wine motort és a bottle-t a Steam-játékokhoz.",

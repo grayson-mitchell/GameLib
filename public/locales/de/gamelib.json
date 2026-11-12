@@ -46,7 +46,23 @@
         "extraInfoRetry": "Erneut versuchen",
         "extraInfoStaleBody": "Dieses Ergebnis wurde zwischengespeichert, bevor Ladeergebnisse erfasst wurden, und könnte daher veraltet sein. Aktualisieren, um zu prüfen.",
         "steamInstallingPercent": "Wird installiert… {{percent}} %",
+        "steamUpdateCommitting": "Update wird angewendet…",
+        "steamUpdatePlanning": "Update wird geplant…",
         "tabsAriaLabel": "Spieleinfo-Tabs",
+        "update": {
+            "anyway": "Trotzdem aktualisieren",
+            "cancel": "Abbrechen",
+            "checkingSize": "Update-Größe wird geprüft…",
+            "confirmButton": "Aktualisieren",
+            "confirmTitle": "{{title}} aktualisieren?",
+            "fallback": "GameLib kann die Dateiliste des vorherigen Builds nicht abrufen und prüft deshalb jede Datei: Download bis zu {{download}}.",
+            "notEnoughDisk": "Benötigt {{peak}} freien Speicher, {{available}} verfügbar.",
+            "registered": "Steam aktualisiert dieses Spiel.",
+            "showSize": "Update-Größe anzeigen",
+            "sizes": "Download {{download}} · benötigt {{peak}} freien Speicher während des Updates",
+            "sizesEstimate": "Download bis zu {{download}} · benötigt {{peak}} freien Speicher während des Updates (Schätzung)",
+            "unknown": "Update-Status unbekannt: GameLib kann den Branch {{branch}} dieses Spiels nicht sehen."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -349,9 +365,20 @@
             },
             "route": {
                 "bottled": "Steam-Client in der Bottle",
+                "issue": {
+                    "failedThisSession": "In dieser Sitzung fehlgeschlagen",
+                    "knownBad": "Bekanntes Problem",
+                    "notCovered_one": "{{count}} Steam-Aufruf nicht abgedeckt",
+                    "notCovered_other": "{{count}} Steam-Aufrufe nicht abgedeckt",
+                    "scanMiss": "Nicht vollständig abgedeckt",
+                    "win64NoShim": "Keine 64-Bit-Bridge"
+                },
                 "label": "Steam-Route",
+                "moreSymbols_one": "und {{count}} weitere",
+                "moreSymbols_other": "und {{count}} weitere",
                 "missingSymbols": "Nicht abgedeckt: {{symbols}}",
                 "native": "Native Steam-Brücke",
+                "notCoveredHeading": "Nicht abgedeckt:",
                 "reason": {
                     "failedThisSession": "Die Brücke ist in dieser Sitzung bereits fehlgeschlagen",
                     "knownBad": "Bekannt dafür, nicht mit der Brücke zu funktionieren: {{reason}}",
@@ -413,6 +440,25 @@
             "removeAllCopiesConfirmMessage": "Dadurch werden alle installierten Kopien dieses Spiels an allen Installationsorten entfernt. Dies kann nicht rückgängig gemacht werden.",
             "removeAllCopiesConfirmTitle": "Alle Kopien entfernen?",
             "removeAllCopiesLabel": "Alle Kopien entfernen…"
+        },
+        "update": {
+            "branchUnknown": "GameLib kann den Branch {{branch}} von {{title}} nicht sehen und kann es daher nicht aktualisieren.",
+            "finished": "Update abgeschlossen",
+            "handoff": "Steam hat {{title}} geöffnet. Aktualisiere es über Steam.",
+            "installAppRefused": "Steam hat das Update abgelehnt (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam aktualisiert dieses Spiel innerhalb seiner Bottle.",
+            "notEnoughDisk": "Nicht genug freier Speicher zum Aktualisieren von {{title}}: benötigt {{needed}} frei, {{available}} verfügbar.",
+            "prompt": {
+                "dontAskAgain": "Für diesen Build nicht erneut fragen",
+                "finishFirst": "Schließe das Update von {{title}} ab, bevor du spielst. Setze es unter Downloads fort.",
+                "queued": "Ein Update für {{title}} wartet unter Downloads. Spiele nach Abschluss oder entferne es aus der Warteschlange.",
+                "updating": "{{title}} wird aktualisiert. Spiele, wenn das Update fertig ist, oder pausiere es unter Downloads.",
+                "message": "{{title}} hat ein Update (Build {{targetBuild}}). Jetzt aktualisieren oder den vorhandenen Build spielen?",
+                "playAnyway": "Trotzdem spielen",
+                "title": "Update verfügbar",
+                "updateNow": "Jetzt aktualisieren"
+            },
+            "refusedRunning": "Beende {{title}}, bevor du es aktualisierst."
         },
         "download": {
             "error": {

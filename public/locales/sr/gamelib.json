@@ -92,7 +92,23 @@
         "extraInfoRetry": "Покушај поново",
         "extraInfoStaleBody": "Овај резултат је кеширан пре него што су резултати учитавања забележени, па може бити застарео. Освежите да бисте проверили.",
         "steamInstallingPercent": "Инсталирање… {{percent}}%",
+        "steamUpdateCommitting": "Примена ажурирања…",
+        "steamUpdatePlanning": "Планирање ажурирања…",
         "tabsAriaLabel": "картице информација о игри",
+        "update": {
+            "anyway": "Ипак ажурирај",
+            "cancel": "Откажи",
+            "checkingSize": "Провера величине ажурирања…",
+            "confirmButton": "Ажурирај",
+            "confirmTitle": "Ажурирати {{title}}?",
+            "fallback": "GameLib не може да добије списак датотека претходне верзије, па ће проверити сваку датотеку: преузимање до {{download}}.",
+            "notEnoughDisk": "Потребно је {{peak}} слободног простора, доступно је {{available}}.",
+            "registered": "Steam ће ажурирати ову игру.",
+            "showSize": "Прикажи величину ажурирања",
+            "sizes": "Преузимање {{download}} · током ажурирања потребно је {{peak}} слободног простора",
+            "sizesEstimate": "Преузимање до {{download}} · током ажурирања потребно је {{peak}} слободног простора (процена)",
+            "unknown": "Статус ажурирања није познат: GameLib не види грану {{branch}} ове игре."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -454,9 +470,22 @@
             },
             "route": {
                 "bottled": "Steam klijent u bočici",
+                "issue": {
+                    "failedThisSession": "Није успело у овој сесији",
+                    "knownBad": "Познат проблем",
+                    "notCovered_one": "{{count}} Steam позив није покривен",
+                    "notCovered_few": "{{count}} Steam позива нису покривена",
+                    "notCovered_other": "{{count}} Steam позива није покривено",
+                    "scanMiss": "Није у потпуности покривено",
+                    "win64NoShim": "Нема 64-битног моста"
+                },
                 "label": "Steam ruta",
+                "moreSymbols_one": "и још {{count}}",
+                "moreSymbols_few": "и још {{count}}",
+                "moreSymbols_other": "и још {{count}}",
                 "missingSymbols": "Nije pokriveno: {{symbols}}",
                 "native": "Nativni Steam most",
+                "notCoveredHeading": "Није покривено:",
                 "reason": {
                     "failedThisSession": "Most je ranije u ovoj sesiji otkazao",
                     "knownBad": "Poznato da ne radi sa mostom: {{reason}}",
@@ -529,6 +558,25 @@
             "removeAllCopiesConfirmMessage": "Ovo uklanja svaku instaliranu kopiju ove igre na svim lokacijama instalacije. Ovo se ne može poništiti.",
             "removeAllCopiesConfirmTitle": "Ukloniti sve kopije?",
             "removeAllCopiesLabel": "Ukloni sve kopije…"
+        },
+        "update": {
+            "branchUnknown": "GameLib не види грану {{branch}} игре {{title}}, па не може да је ажурира.",
+            "finished": "Ажурирање је завршено",
+            "handoff": "Steam је отворио {{title}}. Ажурирајте игру преко Steam-а.",
+            "installAppRefused": "Steam је одбио ажурирање (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam ажурира ову игру унутар њеног bottle-а.",
+            "notEnoughDisk": "Нема довољно слободног простора за ажурирање игре {{title}}: потребно је {{needed}}, доступно је {{available}}.",
+            "prompt": {
+                "dontAskAgain": "Не питај поново за ову верзију",
+                "finishFirst": "Завршите ажурирање игре {{title}} пре играња. Наставите га у Преузимањима.",
+                "queued": "Ажурирање за {{title}} чека у Преузимањима. Играјте кад се заврши или га уклоните из реда.",
+                "updating": "{{title}} се ажурира. Играјте кад се ажурирање заврши или га паузирајте у Преузимањима.",
+                "message": "{{title}} има ажурирање (верзија {{targetBuild}}). Ажурирати сада или играти верзију коју имате?",
+                "playAnyway": "Ипак играј",
+                "title": "Ажурирање је доступно",
+                "updateNow": "Ажурирај сада"
+            },
+            "refusedRunning": "Затворите {{title}} пре ажурирања."
         },
         "engine": {
             "wineTabHint": "GameLib бира Wine енџин и bottle за Steam игре.",

@@ -91,7 +91,23 @@
         "extraInfoRetry": "Coba Lagi",
         "extraInfoStaleBody": "Hasil ini disimpan dalam cache sebelum hasil pemuatan dicatat, sehingga mungkin sudah kedaluwarsa. Segarkan untuk memeriksanya.",
         "steamInstallingPercent": "Menginstal… {{percent}}%",
+        "steamUpdateCommitting": "Menerapkan pembaruan…",
+        "steamUpdatePlanning": "Merencanakan pembaruan…",
         "tabsAriaLabel": "tab info game",
+        "update": {
+            "anyway": "Tetap perbarui",
+            "cancel": "Batal",
+            "checkingSize": "Memeriksa ukuran pembaruan…",
+            "confirmButton": "Perbarui",
+            "confirmTitle": "Perbarui {{title}}?",
+            "fallback": "GameLib tidak dapat mengambil daftar file build sebelumnya, jadi akan memeriksa setiap file: unduhan hingga {{download}}.",
+            "notEnoughDisk": "Membutuhkan {{peak}} ruang kosong, tersedia {{available}}.",
+            "registered": "Steam akan memperbarui game ini.",
+            "showSize": "Tampilkan ukuran pembaruan",
+            "sizes": "Unduhan {{download}} · membutuhkan {{peak}} ruang kosong selama pembaruan",
+            "sizesEstimate": "Unduhan hingga {{download}} · membutuhkan {{peak}} ruang kosong selama pembaruan (perkiraan)",
+            "unknown": "Status pembaruan tidak diketahui: GameLib tidak dapat melihat cabang {{branch}} game ini."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -447,9 +463,20 @@
             },
             "route": {
                 "bottled": "Klien Steam dalam bottle",
+                "issue": {
+                    "failedThisSession": "Gagal pada sesi ini",
+                    "knownBad": "Masalah yang diketahui",
+                    "notCovered_one": "{{count}} panggilan Steam tidak tercakup",
+                    "notCovered_other": "{{count}} panggilan Steam tidak tercakup",
+                    "scanMiss": "Belum tercakup sepenuhnya",
+                    "win64NoShim": "Tidak ada bridge 64-bit"
+                },
                 "label": "Rute Steam",
+                "moreSymbols_one": "dan {{count}} lainnya",
+                "moreSymbols_other": "dan {{count}} lainnya",
                 "missingSymbols": "Tidak tercakup: {{symbols}}",
                 "native": "Jembatan Steam native",
+                "notCoveredHeading": "Tidak tercakup:",
                 "reason": {
                     "failedThisSession": "Jembatan gagal sebelumnya dalam sesi ini",
                     "knownBad": "Diketahui tidak berfungsi dengan jembatan: {{reason}}",
@@ -522,6 +549,25 @@
             "removeAllCopiesConfirmMessage": "Ini akan menghapus setiap salinan game yang terpasang di semua lokasi instalasi. Tindakan ini tidak dapat dibatalkan.",
             "removeAllCopiesConfirmTitle": "Hapus semua salinan?",
             "removeAllCopiesLabel": "Hapus semua salinan…"
+        },
+        "update": {
+            "branchUnknown": "GameLib tidak dapat melihat cabang {{branch}} dari {{title}}, sehingga tidak dapat memperbaruinya.",
+            "finished": "Pembaruan selesai",
+            "handoff": "Steam membuka {{title}}. Perbarui dari Steam.",
+            "installAppRefused": "Steam menolak pembaruan (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam memperbarui game ini di dalam bottle-nya.",
+            "notEnoughDisk": "Ruang kosong tidak cukup untuk memperbarui {{title}}: membutuhkan {{needed}}, tersedia {{available}}.",
+            "prompt": {
+                "dontAskAgain": "Jangan tanya lagi untuk build ini",
+                "finishFirst": "Selesaikan pembaruan {{title}} sebelum bermain. Lanjutkan dari Unduhan.",
+                "queued": "Pembaruan untuk {{title}} menunggu di Unduhan. Mainkan setelah selesai, atau hapus dari antrean.",
+                "updating": "{{title}} sedang diperbarui. Mainkan setelah pembaruan selesai, atau jeda di Unduhan.",
+                "message": "{{title}} memiliki pembaruan (build {{targetBuild}}). Perbarui sekarang, atau mainkan build yang ada?",
+                "playAnyway": "Tetap mainkan",
+                "title": "Pembaruan tersedia",
+                "updateNow": "Perbarui sekarang"
+            },
+            "refusedRunning": "Tutup {{title}} sebelum memperbarui."
         },
         "engine": {
             "wineTabHint": "GameLib memilih mesin Wine dan bottle untuk game Steam.",

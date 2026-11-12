@@ -93,7 +93,23 @@
         "extraInfoRetry": "Poskusi znova",
         "extraInfoStaleBody": "Ta rezultat je bil shranjen v predpomnilnik, preden so se beležili izidi nalaganja, zato je morda zastarel. Osvežite za preverjanje.",
         "steamInstallingPercent": "Nameščanje… {{percent}} %",
+        "steamUpdateCommitting": "Uveljavljanje posodobitve…",
+        "steamUpdatePlanning": "Načrtovanje posodobitve…",
         "tabsAriaLabel": "zavihki informacij o igri",
+        "update": {
+            "anyway": "Vseeno posodobi",
+            "cancel": "Prekliči",
+            "checkingSize": "Preverjanje velikosti posodobitve…",
+            "confirmButton": "Posodobi",
+            "confirmTitle": "Posodobim {{title}}?",
+            "fallback": "GameLib ne more pridobiti seznama datotek prejšnje različice, zato bo preveril vsako datoteko: prenos do {{download}}.",
+            "notEnoughDisk": "Potrebnega je {{peak}} prostega prostora, na voljo je {{available}}.",
+            "registered": "Steam bo posodobil to igro.",
+            "showSize": "Pokaži velikost posodobitve",
+            "sizes": "Prenos {{download}} · med posodobitvijo je potrebnega {{peak}} prostega prostora",
+            "sizesEstimate": "Prenos do {{download}} · med posodobitvijo je potrebnega {{peak}} prostega prostora (ocena)",
+            "unknown": "Stanje posodobitve ni znano: GameLib ne vidi veje {{branch}} te igre."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {
@@ -461,9 +477,24 @@
             },
             "route": {
                 "bottled": "Steam odjemalec v bottle",
+                "issue": {
+                    "failedThisSession": "V tej seji ni uspelo",
+                    "knownBad": "Znana težava",
+                    "notCovered_one": "{{count}} klic Steam ni pokrit",
+                    "notCovered_two": "{{count}} klica Steam nista pokrita",
+                    "notCovered_few": "{{count}} klici Steam niso pokriti",
+                    "notCovered_other": "{{count}} klicev Steam ni pokritih",
+                    "scanMiss": "Ni povsem pokrito",
+                    "win64NoShim": "Ni 64-bitnega mostu"
+                },
                 "label": "Steam pot",
+                "moreSymbols_one": "in še {{count}}",
+                "moreSymbols_two": "in še {{count}}",
+                "moreSymbols_few": "in še {{count}}",
+                "moreSymbols_other": "in še {{count}}",
                 "missingSymbols": "Ni pokrito: {{symbols}}",
                 "native": "Izvorni Steam most",
+                "notCoveredHeading": "Ni pokrito:",
                 "reason": {
                     "failedThisSession": "Most je že prej v tej seji odpovedal",
                     "knownBad": "Znano je, da ne deluje z mostom: {{reason}}",
@@ -536,6 +567,25 @@
             "removeAllCopiesConfirmMessage": "To odstrani vse nameščene kopije te igre na vseh mestih namestitve. Tega dejanja ni mogoče razveljaviti.",
             "removeAllCopiesConfirmTitle": "Odstranim vse kopije?",
             "removeAllCopiesLabel": "Odstrani vse kopije …"
+        },
+        "update": {
+            "branchUnknown": "GameLib ne vidi veje {{branch}} igre {{title}}, zato je ne more posodobiti.",
+            "finished": "Posodobitev je končana",
+            "handoff": "Steam je odprl {{title}}. Posodobite jo prek Steama.",
+            "installAppRefused": "Steam je zavrnil posodobitev (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam posodobi to igro znotraj njenega bottla.",
+            "notEnoughDisk": "Ni dovolj prostega prostora za posodobitev {{title}}: potrebnega je {{needed}}, na voljo je {{available}}.",
+            "prompt": {
+                "dontAskAgain": "Za to različico ne vprašaj več",
+                "finishFirst": "Dokončajte posodobitev igre {{title}}, preden igrate. Nadaljujte jo v Prenosih.",
+                "queued": "Posodobitev za {{title}} čaka v Prenosih. Igrajte, ko se konča, ali jo odstranite iz čakalne vrste.",
+                "updating": "{{title}} se posodablja. Igrajte, ko se posodobitev konča, ali jo začasno ustavite v Prenosih.",
+                "message": "{{title}} ima posodobitev (različica {{targetBuild}}). Posodobim zdaj ali igram različico, ki jo imate?",
+                "playAnyway": "Vseeno igraj",
+                "title": "Na voljo je posodobitev",
+                "updateNow": "Posodobi zdaj"
+            },
+            "refusedRunning": "Zaprite {{title}}, preden jo posodobite."
         },
         "engine": {
             "wineTabHint": "GameLib izbere pogon Wine in bottle za igre Steam.",
