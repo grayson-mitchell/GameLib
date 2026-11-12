@@ -22,7 +22,10 @@ import {
   resolveBridgeGameInstallRoot
 } from '../bridgeInstallState'
 import { prefetchBridgeDrmDownloads } from '../gameLaunch'
-import { resolveInstallEngineSettings } from '../gameInstallBridge'
+import {
+  installSharedRedistsWithLogon,
+  resolveInstallEngineSettings
+} from '../gameInstallBridge'
 import { BRIDGE_SHIM_FILENAME, BRIDGE_SHIM64_FILENAME } from './shimOriginals'
 
 export interface BridgeUpdateFollowUpInput {
@@ -136,13 +139,7 @@ export async function runBridgeUpdateFollowUps(
         LogPrefix.Steam
       )
     } else {
-      await steamGame.deps.bridgeRuntime.sharedRedist.installSteamBridgeSharedRedists(
-        steamGame.deps,
-        appId,
-        redistEngine.settings,
-        undefined,
-        { allowLogon: true }
-      )
+      await installSharedRedistsWithLogon(steamGame, redistEngine.settings)
       report.redistRan = true
     }
   } catch (error) {

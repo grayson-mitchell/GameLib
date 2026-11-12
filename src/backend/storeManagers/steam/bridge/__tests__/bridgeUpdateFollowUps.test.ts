@@ -46,7 +46,17 @@ jest.mock('../../gameLaunch', () => ({
   prefetchBridgeDrmDownloads: jest.fn()
 }))
 jest.mock('../../gameInstallBridge', () => ({
-  resolveInstallEngineSettings: jest.fn()
+  resolveInstallEngineSettings: jest.fn(),
+  // The real owner of the logon-permitted redist run, routed to this file's deps mock.
+  // A plain function, not jest.fn: resetMocks would wipe a mock implementation.
+  installSharedRedistsWithLogon: (game: SteamGame, settings: unknown) =>
+    game.deps.bridgeRuntime.sharedRedist.installSteamBridgeSharedRedists(
+      game.deps,
+      game.appId,
+      settings as never,
+      undefined,
+      { allowLogon: true }
+    )
 }))
 jest.mock('../../bridgeBottleLifecycle', () => ({
   removePerGameBridgeBottle: jest.fn()

@@ -144,7 +144,9 @@ jest.mock('../bridgeBottleLifecycle', () => ({
 jest.mock('../bridgeBottle', () => ({
   createDrmBridgeRunners: () => ({}),
   isBridgeBottleReady: jest.fn(),
-  getBridgeBottleSettings: jest.fn()
+  getBridgeBottleSettings: jest.fn(),
+  // Phase 74: update() dispatches on the bridge install bottle after unlocking the gate.
+  findBridgeInstallBottle: jest.fn(() => null)
 }))
 jest.mock('../bottledSteam', () => ({
   createBottledSteamRaiser: () => ({}),

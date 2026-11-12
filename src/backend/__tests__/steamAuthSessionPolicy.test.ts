@@ -80,6 +80,11 @@ const ACQUIRE_AUTH_ALLOW = [
   // to Rust.
   `${S}depotRust/install.ts`,
   `${S}depotRust/secondary.ts`,
+  // Phase 74 plan 10 (D-09/D-14): the bridge update size estimate takes the same depot lease for
+  // its CM half (appinfo, request codes) before a manifest-to-manifest summary in Rust. It runs
+  // only from an explicit "Show update size" click or from updateBridgeGame itself, never on
+  // refresh or page open (updateInfo.ts gates it on computeSize).
+  `${S}depotRust/updateEstimate.ts`,
   INSTALL,
   INSTALL_DEPOT,
   INSTALL_BRIDGE

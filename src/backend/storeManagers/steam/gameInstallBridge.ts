@@ -398,6 +398,24 @@ export async function resolveInstallEngineSettings(
   }
 }
 
+/**
+ * Phase 54 Rule I: the single owner of a shared-redist run that may log on.
+ * Only a user-started depot transfer reaches it (the install below, and the
+ * Phase 74 bridge update follow-ups); Play passes no allowLogon.
+ */
+export function installSharedRedistsWithLogon(
+  steamGame: SteamGame,
+  settings: GameSettings
+): Promise<void> {
+  return steamGame.deps.bridgeRuntime.sharedRedist.installSteamBridgeSharedRedists(
+    steamGame.deps,
+    steamGame.appId,
+    settings,
+    undefined,
+    { allowLogon: true }
+  )
+}
+
 /** The lease-held part of installBridgeGame: download, shim, redists. */
 export async function installBridgeGameLeased(
   steamGame: SteamGame,
@@ -663,8 +681,6 @@ export async function installBridgeGameLeased(
 
   // Plan 05 decision: the Steamworks shared redists download under THIS
   // install's logon, so Play never needs one. Never fails the install.
-  const { installSteamBridgeSharedRedists } =
-    steamGame.deps.bridgeRuntime.sharedRedist
   // The download queue suppresses Steam's own 'done', and on the bridge the
   // ACF poller leaves completion to this method (quick 261029-exu) and stays
   // silent once this method has marked the install finalized (261031-ihs), so the
@@ -692,12 +708,9 @@ export async function installBridgeGameLeased(
         LogPrefix.Steam
       )
     } else {
-      await installSteamBridgeSharedRedists(
-        steamGame.deps,
-        steamGame.appId,
-        redistEngine.settings,
-        undefined,
-        { allowLogon: true }
+      await installSharedRedistsWithLogon(
+        steamGame,
+        redistEngine.settings
       ).catch((error: unknown) => {
         logWarning(
           `SteamGame: install-time shared redist step failed for appId ${steamGame.appId}: ${String(error)}`,
