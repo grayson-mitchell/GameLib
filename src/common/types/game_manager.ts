@@ -110,6 +110,13 @@ export interface LibraryManager {
     }
   ) => Promise<InstallInfo | undefined>
   listUpdateableGames: () => Promise<string[]>
+  /**
+   * Optional. The subset of listUpdateableGames that may be queued without a
+   * click under autoUpdateGames. Absent means "same as listUpdateableGames".
+   * Phase 74 D-02: Steam-registered games are updated by Steam on its own
+   * schedule; GameLib never queues them.
+   */
+  listAutoUpdateableGames?: () => Promise<string[]>
   changeGameInstallPath: (appName: string, newPath: string) => Promise<void>
   changeVersionPinnedStatus: (appName: string, status: boolean) => void
   installState: (appName: string, state: boolean) => void

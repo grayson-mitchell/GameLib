@@ -19,6 +19,7 @@ import {
 } from './resumeBreadcrumbs'
 import { rearmPersistedSteamRestartHolds } from './resume'
 import { refresh, refreshInstallState } from './refresh'
+import { detectSteamUpdates } from '../updateDetection'
 import type { SteamLaunchWatchRegistry } from '../steamLaunchWatch'
 
 /** The collaborators SteamLibraryManager uses; narrowed by its own plan. */
@@ -293,8 +294,27 @@ export default class SteamLibraryManager implements LibraryManager {
     return undefined
   }
 
+  /** Phase 74: stale appIds (bridge and registered) for the badge list; 'unknown' is never listed (D-15). */
   async listUpdateableGames(): Promise<string[]> {
-    return []
+    return this.staleAppIds()
+  }
+
+  /** Phase 74 D-02: only bridge games are ever queued without a click. */
+  async listAutoUpdateableGames(): Promise<string[]> {
+    return this.staleAppIds('bridge')
+  }
+
+  private async staleAppIds(kind?: 'bridge' | 'registered'): Promise<string[]> {
+    try {
+      const states = await detectSteamUpdates(this.deps)
+      return states
+        .filter((s) => s.state === 'stale' && (!kind || s.kind === kind))
+        .map((s) => s.appId)
+        .sort()
+    } catch (error) {
+      logWarning(['Steam update detection failed:', error], LogPrefix.Steam)
+      return []
+    }
   }
 
   async changeGameInstallPath(
