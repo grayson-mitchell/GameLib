@@ -41,8 +41,9 @@ use crate::reconcile::sha1_file;
 use crate::stall::StallTracker;
 use crate::{JobContext, JobHost};
 use futures_util::stream::{self, StreamExt};
+use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -713,6 +714,147 @@ fn run_commit(plan: &CommitPlan, counters: &Counters) -> (Vec<Failure>, Vec<Stri
 }
 
 // ---------------------------------------------------------------------------
+// Commit journal
+// ---------------------------------------------------------------------------
+
+/// Directory (under the job's `steamapps_dir`) holding one journal per app.
+const JOURNAL_DIR: &str = "gamelib-delta";
+
+/// Written (temp + fsync + rename) right before the first commit rename and removed once the ACF
+/// is finalized. Its presence at job start means a commit may have run partway.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct Journal {
+    app_id: String,
+    new_gids: BTreeMap<String, String>,
+    old_gids: BTreeMap<String, String>,
+    retired: Vec<String>,
+    started_at: u64,
+}
+
+fn all_numeric(s: &str) -> bool {
+    !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit())
+}
+
+impl Journal {
+    /// The journal a job would write: every depot's new GID, every `fromManifest` as the old GID.
+    fn for_job(job: &DepotJob) -> Self {
+        Journal {
+            app_id: job.app_id.clone(),
+            new_gids: job
+                .depots
+                .iter()
+                .map(|d| (d.depot_id.clone(), d.manifest_id.clone()))
+                .collect(),
+            old_gids: job
+                .depots
+                .iter()
+                .filter_map(|d| Some((d.depot_id.clone(), d.from_manifest.clone()?)))
+                .collect(),
+            retired: job
+                .retired_depots
+                .iter()
+                .map(|d| d.depot_id.clone())
+                .collect(),
+            started_at: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0),
+        }
+    }
+
+    /// Same app, same new builds, same installed builds.
+    fn matches(&self, job: &DepotJob) -> bool {
+        let want = Journal::for_job(job);
+        self.app_id == want.app_id
+            && self.new_gids == want.new_gids
+            && self.old_gids == want.old_gids
+    }
+
+    /// Everything numeric: a planted or corrupted journal is never trusted.
+    fn well_formed(&self) -> bool {
+        all_numeric(&self.app_id)
+            && self
+                .new_gids
+                .iter()
+                .chain(&self.old_gids)
+                .all(|(k, v)| all_numeric(k) && all_numeric(v))
+            && self.retired.iter().all(|r| all_numeric(r))
+    }
+}
+
+fn journal_path(spec: &crate::job::FinalizeSpec, app_id: &str) -> Option<PathBuf> {
+    all_numeric(app_id).then(|| {
+        PathBuf::from(&spec.steamapps_dir)
+            .join(JOURNAL_DIR)
+            .join(format!("{app_id}.json"))
+    })
+}
+
+enum JournalState {
+    Absent,
+    /// Present and describing exactly this job: finish the interrupted commit.
+    Resume,
+    /// Present but for another build, or unreadable: the tree state is unknown.
+    Stale,
+}
+
+fn read_journal_state(job: &DepotJob, path: &Path) -> JournalState {
+    let bytes = match fs::read(path) {
+        Ok(b) => b,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return JournalState::Absent,
+        Err(_) => return JournalState::Stale,
+    };
+    match serde_json::from_slice::<Journal>(&bytes) {
+        Ok(j) if j.well_formed() && j.matches(job) => JournalState::Resume,
+        _ => JournalState::Stale,
+    }
+}
+
+fn write_journal(job: &DepotJob, path: &Path) -> io::Result<()> {
+    use io::Write;
+    let dir = path
+        .parent()
+        .ok_or_else(|| io::Error::other("journal path has no parent"))?;
+    let mut b = fs::DirBuilder::new();
+    b.recursive(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+        b.mode(0o700);
+    }
+    b.create(dir)?;
+    let bytes = serde_json::to_vec(&Journal::for_job(job)).map_err(io::Error::other)?;
+    let tmp = dir.join(format!(".{}.tmp", job.app_id));
+    {
+        let mut f = fs::File::create(&tmp)?;
+        f.write_all(&bytes)?;
+        f.sync_all()?;
+    }
+    fs::rename(&tmp, path).inspect_err(|_| {
+        let _ = fs::remove_file(&tmp);
+    })
+}
+
+/// Removes the job's journal (idempotent). Used after a file-level fallback completed.
+pub fn clear_journal(job: &DepotJob) {
+    if let Some(p) = job
+        .finalize
+        .as_ref()
+        .and_then(|s| journal_path(s, &job.app_id))
+    {
+        let _ = fs::remove_file(p);
+    }
+}
+
+/// Where a delta job ended up.
+pub enum DeltaRoute {
+    Done(Outcome),
+    /// Re-run as an ordinary install with `fromManifest` cleared (D-14 / stale journal).
+    Fallback,
+}
+
+// ---------------------------------------------------------------------------
 // The job
 // ---------------------------------------------------------------------------
 
@@ -744,14 +886,41 @@ fn order_failures(mut failures: Vec<Failure>) -> Vec<Failure> {
     failures
 }
 
+/// Writes the "1026" ACF with the previously installed GIDs (the tree is mixed old/new).
+async fn finalize_interrupted(
+    spec: &crate::job::FinalizeSpec,
+    app_id: &str,
+    old_attempted: &[PlannedDepot],
+    failures: &[Failure],
+    outcome: RunOutcome,
+) -> (Option<AcfResult>, Option<Failure>) {
+    let result = RunResult {
+        outcome,
+        all_files_verified: false,
+        all_modes_applied: false,
+        failures: failures.to_vec(),
+    };
+    match acf::finalize(spec, app_id, old_attempted, &result).await {
+        Ok(w) => (
+            Some(AcfResult {
+                state_flags: w.state_flags,
+                size_on_disk: w.size_on_disk.to_string(),
+            }),
+            None,
+        ),
+        Err(f) => (None, Some(f)),
+    }
+}
+
 fn remove_temps(works: &[Work<'_>]) {
     for w in works {
         let _ = fs::remove_file(&w.tmp);
     }
 }
 
-/// Runs a delta install to an `Outcome`. Always returns; every failure is data. The caller has
-/// already run `shape_failure`.
+/// Runs a delta install. Always returns; every failure is data. The caller has already run
+/// `shape_failure`. `Fallback` means the old tree cannot be trusted to diff against and the caller
+/// re-runs the job as an ordinary file-level install.
 pub async fn run_delta(
     job: &DepotJob,
     jctx: &JobContext,
@@ -759,6 +928,25 @@ pub async fn run_delta(
     cancel: CancellationToken,
     emitter: &ProgressEmitter,
     started: Instant,
+) -> DeltaRoute {
+    let mut fallback = false;
+    let o = delta_body(job, jctx, host, cancel, emitter, started, &mut fallback).await;
+    if fallback {
+        DeltaRoute::Fallback
+    } else {
+        DeltaRoute::Done(o)
+    }
+}
+
+/// `fallback` is set when the returned outcome is a throwaway and the caller must fall back.
+async fn delta_body(
+    job: &DepotJob,
+    jctx: &JobContext,
+    host: Arc<dyn JobHost>,
+    cancel: CancellationToken,
+    emitter: &ProgressEmitter,
+    started: Instant,
+    fallback: &mut bool,
 ) -> Outcome {
     let Some(spec) = job.finalize.as_ref() else {
         return fail_outcome(
@@ -775,6 +963,16 @@ pub async fn run_delta(
             started,
         );
     }
+    let journal_file = journal_path(spec, &job.app_id);
+    let resuming = match journal_file.as_deref().map(|p| read_journal_state(job, p)) {
+        Some(JournalState::Resume) => true,
+        Some(JournalState::Stale) => {
+            emitter.warn("a previous update was interrupted for a different build; checking every file instead".to_string());
+            *fallback = true;
+            return outcome_shell(&job.job_id, Status::Cancelled, started);
+        }
+        _ => false,
+    };
     emitter.stage("delta_planning");
 
     let limits = job.limits.as_ref();
@@ -881,11 +1079,35 @@ pub async fn run_delta(
             Some(Err(FetchError::Cancelled)) => {
                 return outcome_shell(&job.job_id, Status::Cancelled, started)
             }
-            Some(Err(FetchError::Failed(mut f))) => {
-                // Plan 74-02 turns this into the file-level fallback; here it ends the job
-                // before anything on disk is touched.
-                f.kind = ErrorKind::ManifestUnavailable;
-                return fail_outcome(&job.job_id, f, started);
+            Some(Err(FetchError::Failed(_))) => {
+                // D-14: without the old manifest only a sha1 reconcile of the new one is safe.
+                emitter.warn("old manifest unavailable; checking every file instead".to_string());
+                *fallback = true;
+                return outcome_shell(&job.job_id, Status::Cancelled, started);
+            }
+        }
+    }
+
+    // Retired depots (the new build dropped them): their manifests feed reuse and cleanup. An
+    // unavailable one is a warning, never a failed update.
+    let mut retired_mans: Vec<(&DepotRef, Option<Arc<DepotManifest>>)> = Vec::new();
+    for r in &job.retired_depots {
+        let r_old = DepotRef {
+            request_code: None,
+            from_manifest: None,
+            ..r.clone()
+        };
+        match store.load(&r_old, &cancel).await {
+            Ok(m) => retired_mans.push((r, Some(m))),
+            Err(FetchError::Cancelled) => {
+                return outcome_shell(&job.job_id, Status::Cancelled, started)
+            }
+            Err(FetchError::Failed(_)) => {
+                emitter.warn(format!(
+                    "retired depot {} manifest unavailable; its files are kept",
+                    r.depot_id
+                ));
+                retired_mans.push((r, None));
             }
         }
     }
@@ -1005,7 +1227,70 @@ pub async fn run_delta(
             }
         }
     }
-    let old_mans: Vec<&DepotManifest> = olds.iter().flatten().map(|m| m.as_ref()).collect();
+    // Resuming an interrupted commit: a work file whose target already holds the new bytes was
+    // renamed in before the kill. Hashing is gated on the journal (a fresh run would read GBs).
+    let mut already: Vec<(PathBuf, &ManifestFile)> = Vec::new();
+    if resuming {
+        let probe: Vec<(PathBuf, [u8; 20], u64)> = works
+            .iter()
+            .map(|w| (w.dest.clone(), w.file.sha_content, w.file.size))
+            .collect();
+        let (c2, st2) = (cancel.clone(), stall.clone());
+        let hashed = tokio::task::spawn_blocking(move || {
+            let mut flags = Vec::with_capacity(probe.len());
+            for (dest, sha, size) in &probe {
+                if c2.is_cancelled() {
+                    return None;
+                }
+                let new = *size != 0 && sha1_file(dest).is_ok_and(|got| got == *sha);
+                st2.record_progress();
+                flags.push(new);
+            }
+            Some(flags)
+        })
+        .await;
+        let flags = match hashed {
+            Ok(Some(f)) => f,
+            Ok(None) => return outcome_shell(&job.job_id, Status::Cancelled, started),
+            Err(_) => {
+                return fail_outcome(
+                    &job.job_id,
+                    plain_failure(ErrorKind::Io, "delta resume check task failed"),
+                    started,
+                )
+            }
+        };
+        let mut pending = Vec::with_capacity(works.len());
+        for (w, is_new) in works.into_iter().zip(flags) {
+            if is_new {
+                already.push((w.dest, w.file));
+            } else {
+                pending.push(w);
+            }
+        }
+        works = pending;
+    }
+    // Temps left by an aborted or paused earlier run are never reused: rebuilt from scratch.
+    {
+        let mut temps: Vec<PathBuf> = works.iter().map(|w| w.tmp.clone()).collect();
+        for (dest, _) in &already {
+            let mut t = dest.clone().into_os_string();
+            t.push(DELTA_TMP_SUFFIX);
+            temps.push(PathBuf::from(t));
+        }
+        let _ = tokio::task::spawn_blocking(move || {
+            for t in &temps {
+                let _ = fs::remove_file(t);
+            }
+        })
+        .await;
+    }
+    let old_mans: Vec<&DepotManifest> = olds
+        .iter()
+        .flatten()
+        .map(|m| m.as_ref())
+        .chain(retired_mans.iter().filter_map(|(_, m)| m.as_deref()))
+        .collect();
     let new_mans: Vec<&DepotManifest> = manifests.iter().map(|m| m.as_ref()).collect();
     let removed = removed_paths(&old_mans, &new_mans);
     let stale_dir_names = removable_dirs(&old_mans, &new_mans, &removed);
@@ -1098,6 +1383,25 @@ pub async fn run_delta(
                 .sum(),
         })
         .collect();
+    // What the ACF names if the tree ends up mixed: the builds that were installed before.
+    let size_of = |m: &DepotManifest| m.files.iter().map(|f| f.size).sum::<u64>();
+    let mut old_attempted: Vec<PlannedDepot> = Vec::new();
+    for (d, o) in kept.iter().zip(&olds) {
+        if let (Some(gid), Some(m)) = (d.from_manifest.as_ref(), o.as_ref()) {
+            old_attempted.push(PlannedDepot {
+                depot_id: d.depot_id.clone(),
+                gid: gid.clone(),
+                size: size_of(m),
+            });
+        }
+    }
+    for (r, m) in &retired_mans {
+        old_attempted.push(PlannedDepot {
+            depot_id: r.depot_id.clone(),
+            gid: r.manifest_id.clone(),
+            size: m.as_deref().map(size_of).unwrap_or(0),
+        });
+    }
     emitter.planned(work_bytes, works.len() as u64, attempted.clone());
     if path_collisions > 0 {
         emitter.warn(format!(
@@ -1171,8 +1475,17 @@ pub async fn run_delta(
     emitter.force(build.snapshot());
 
     let mut report = DeltaReport {
-        mode: DeltaMode::Chunk,
-        changed_files: works.iter().map(|w| w.file.filename.clone()).collect(),
+        mode: if resuming {
+            DeltaMode::CommitResume
+        } else {
+            DeltaMode::Chunk
+        },
+        changed_files: works
+            .iter()
+            .map(|w| w.file)
+            .chain(already.iter().map(|(_, f)| *f))
+            .map(|f| f.filename.clone())
+            .collect(),
         removed_files: removed.clone(),
         reused_bytes: build.reused.load(Ordering::Relaxed),
         cdn_bytes: counters.net_bytes.load(Ordering::Relaxed),
@@ -1192,7 +1505,25 @@ pub async fn run_delta(
         elapsed_ms: started.elapsed().as_millis() as u64,
     };
 
-    // Any failure or cancel before the commit: remove every temp, touch nothing else, no finalize.
+    // The journal goes down before the first rename: a kill from here on is a commit-resume.
+    if failures.is_empty() && !cancel.is_cancelled() && unattempted == 0 {
+        if let Some(path) = journal_file.clone() {
+            let j = job.clone();
+            let written = tokio::task::spawn_blocking(move || write_journal(&j, &path)).await;
+            match written {
+                Ok(Ok(())) => {}
+                Ok(Err(e)) => failures.push(failure(
+                    "(run)",
+                    io_kind(&e),
+                    format!("cannot write the update journal: {e}"),
+                )),
+                Err(_) => failures.push(plain_failure(ErrorKind::Io, "journal task failed")),
+            }
+        }
+    }
+
+    // Any failure or cancel before the commit: remove every temp and touch no game file. A fresh
+    // run leaves the ACF alone; a resume already has a mixed tree, so it is marked unfinished.
     if !failures.is_empty() || cancel.is_cancelled() || unattempted > 0 {
         let tmps_owned: Vec<PathBuf> = works.iter().map(|w| w.tmp.clone()).collect();
         let _ = tokio::task::spawn_blocking(move || {
@@ -1208,6 +1539,17 @@ pub async fn run_delta(
             Status::Cancelled
         };
         let mut o = outcome_shell(&job.job_id, status, started);
+        if resuming {
+            let run = if failures.is_empty() {
+                RunOutcome::Cancelled
+            } else {
+                RunOutcome::Completed
+            };
+            let (acf, f) =
+                finalize_interrupted(spec, &job.app_id, &old_attempted, &failures, run).await;
+            o.acf = acf;
+            failures.extend(f);
+        }
         o.failures = order_failures(failures);
         o.attempted_depots = attempted;
         o.skipped_depots = skipped_depots;
@@ -1225,6 +1567,9 @@ pub async fn run_delta(
     };
     for w in &works {
         modes.push((w.dest.clone(), stub(w.file), true));
+    }
+    for (dest, f) in &already {
+        modes.push((dest.clone(), stub(f), true));
     }
     for (dest, f) in &flag_only {
         modes.push((dest.clone(), stub(f), true));
@@ -1253,7 +1598,6 @@ pub async fn run_delta(
     for w in warnings {
         emitter.warn(w);
     }
-    report.committed = true;
 
     let result = RunResult {
         outcome: RunOutcome::Completed,
@@ -1262,14 +1606,33 @@ pub async fn run_delta(
         failures: failures.clone(),
     };
     let mut acf_out = None;
-    match acf::finalize(spec, &job.app_id, &attempted, &result).await {
-        Ok(w) => {
-            acf_out = Some(AcfResult {
-                state_flags: w.state_flags,
-                size_on_disk: w.size_on_disk.to_string(),
-            });
+    if failures.is_empty() {
+        match acf::finalize(spec, &job.app_id, &attempted, &result).await {
+            Ok(w) => {
+                acf_out = Some(AcfResult {
+                    state_flags: w.state_flags,
+                    size_on_disk: w.size_on_disk.to_string(),
+                });
+                report.committed = true;
+                if let Some(p) = &journal_file {
+                    let _ = fs::remove_file(p);
+                }
+            }
+            Err(f) => failures.push(f),
         }
-        Err(f) => failures.push(f),
+    } else {
+        // Failure after the first rename: 1026 naming the OLD builds, journal kept, so the retry
+        // sends the same fromManifest and resumes this commit (D-16).
+        let (acf, f) = finalize_interrupted(
+            spec,
+            &job.app_id,
+            &old_attempted,
+            &failures,
+            RunOutcome::Completed,
+        )
+        .await;
+        acf_out = acf;
+        failures.extend(f);
     }
     let mode_notes = counters.mode_warnings.load(Ordering::Relaxed);
     if mode_notes > 0 {

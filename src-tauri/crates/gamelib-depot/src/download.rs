@@ -24,8 +24,8 @@ use crate::job::{DepotJob, DepotRef, JobMode, PlannedDepot};
 use crate::manifest::{normalize_depot_path, ManifestStore};
 use crate::model::{ChunkRef, DepotManifest, ManifestFile};
 use crate::outcome::{
-    select_primary_failure, Containers, ErrorKind, Failure, FailureScope, Outcome, SelectedFile,
-    Stats, Status, FAILURE_LOG_CAP,
+    select_primary_failure, Containers, DeltaMode, DeltaReport, ErrorKind, Failure, FailureScope,
+    Outcome, SelectedFile, Stats, Status, FAILURE_LOG_CAP,
 };
 use crate::post::{
     apply_file_modes, apply_macho_fallback, check_symlink_target, detect_path_collisions,
@@ -826,7 +826,36 @@ async fn run_install_inner(
         return o;
     }
     if crate::delta::is_delta_job(job) {
-        return crate::delta::run_delta(job, jctx, host, cancel, emitter, started).await;
+        let route =
+            crate::delta::run_delta(job, jctx, host.clone(), cancel.clone(), emitter, started)
+                .await;
+        if let crate::delta::DeltaRoute::Done(o) = route {
+            return o;
+        }
+        // D-14: the old tree cannot be diffed; reconcile every file against the new manifests.
+        let mut plain = job.clone();
+        for d in &mut plain.depots {
+            d.from_manifest = None;
+        }
+        plain.retired_depots.clear();
+        let mut o = Box::pin(run_install_inner(
+            &plain, jctx, host, cancel, emitter, started,
+        ))
+        .await;
+        let completed = o.status == Status::Completed;
+        if completed {
+            crate::delta::clear_journal(job);
+        }
+        o.delta = Some(DeltaReport {
+            mode: DeltaMode::FileFallback,
+            changed_files: Vec::new(),
+            removed_files: Vec::new(),
+            reused_bytes: 0,
+            cdn_bytes: o.stats.bytes_fetched,
+            peak_bytes: 0,
+            committed: completed,
+        });
+        return o;
     }
     let mode = job.mode;
     // select_files is a partial staging fetch: it never finalizes (no ACF).
