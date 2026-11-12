@@ -164,3 +164,65 @@ fn retired_depot_manifest_unavailable_is_warning() {
     });
     assert!(warned);
 }
+
+fn tree_snapshot(env: &Env, rels: &[&str]) -> Vec<Option<Vec<u8>>> {
+    rels.iter()
+        .map(|r| std::fs::read(env.root().join(r)).ok())
+        .collect()
+}
+
+#[test]
+fn transient_old_manifest_failure_fails_without_fallback() {
+    let (old, new) = drop_file_cases("df-transient");
+    let env = setup(&old, &new);
+    env.fail_old_manifest("940001", 503);
+    let acf_before = env.acf_string();
+    let before = tree_snapshot(&env, &["a.bin", "old_only.bin", "e.bin"]);
+
+    let out = env.run(env.job("df-transient"));
+    assert_eq!(out.status, Status::Error, "{:?}", out.failures);
+    let f = out.failures.first().expect("a failure");
+    assert_eq!(f.http_status, Some(503), "{f:?}");
+    assert_eq!(tree_snapshot(&env, &["a.bin", "old_only.bin", "e.bin"]), before);
+    assert!(tmp_files(env.dir.path()).is_empty());
+    assert_eq!(env.acf_string(), acf_before);
+    let warned = env.host.emits.lock().unwrap().iter().any(|e| {
+        matches!(&e.body, JobEventBody::Warning { message, .. } if message.contains("checking every file instead"))
+    });
+    assert!(!warned, "a transient failure never announces the fallback");
+}
+
+#[test]
+fn transient_old_manifest_failure_keeps_retired_depot_files() {
+    let (old, new) = retired_cases("df-transient-retired");
+    let env = setup(&old, &new);
+    env.fail_old_manifest("940001", 503);
+    let before = tree_snapshot(&env, &["a.bin", "shared.bin", "b_only.bin", "sub/b_shared.bin"]);
+
+    let out = env.run(retired_job(&env, "df-transient-retired"));
+    assert_eq!(out.status, Status::Error, "{:?}", out.failures);
+    assert!(env.root().join("b_only.bin").exists(), "retired files kept");
+    assert_eq!(
+        tree_snapshot(&env, &["a.bin", "shared.bin", "b_only.bin", "sub/b_shared.bin"]),
+        before
+    );
+}
+
+#[test]
+fn commit_rename_failure_removes_no_retired_file() {
+    let (old, new) = retired_cases("df-retired-fail");
+    let env = setup(&old, &new);
+    // shared.bin changes in the new build; a non-empty directory at its path fails its rename.
+    std::fs::remove_file(env.root().join("shared.bin")).unwrap();
+    std::fs::create_dir_all(env.root().join("shared.bin")).unwrap();
+    std::fs::write(env.root().join("shared.bin").join("child"), b"x").unwrap();
+
+    let out = env.run(retired_job(&env, "df-retired-fail"));
+    assert_eq!(out.status, Status::Error, "{:?}", out.failures);
+    assert!(env.root().join("b_only.bin").exists(), "retired file kept");
+    assert!(env.journal_path().exists(), "journal kept for the retry");
+    let warned = env.host.emits.lock().unwrap().iter().any(|e| {
+        matches!(&e.body, JobEventBody::Warning { message, .. } if message.contains("skipped removing 1 retired file"))
+    });
+    assert!(warned, "the skipped removals are announced");
+}

@@ -687,16 +687,24 @@ fn run_commit(plan: &CommitPlan, counters: &Counters) -> (Vec<Failure>, Vec<Stri
             ));
         }
     }
-    for (path, name) in &plan.removed {
-        match fs::symlink_metadata(path) {
-            // The link itself goes, never its target; a directory is not ours to delete here.
-            Ok(m) if !m.is_dir() => {
-                if let Err(e) = fs::remove_file(path) {
-                    warnings.push(format!("could not remove retired file \"{name}\": {e}"));
+    // IN-03: after any commit failure the retired files stay; the retry re-plans the removals.
+    if failures.is_empty() {
+        for (path, name) in &plan.removed {
+            match fs::symlink_metadata(path) {
+                // The link itself goes, never its target; a directory is not ours to delete here.
+                Ok(m) if !m.is_dir() => {
+                    if let Err(e) = fs::remove_file(path) {
+                        warnings.push(format!("could not remove retired file \"{name}\": {e}"));
+                    }
                 }
+                _ => {}
             }
-            _ => {}
         }
+    } else if !plan.removed.is_empty() {
+        warnings.push(format!(
+            "skipped removing {} retired file(s) because the commit had failures; the retry removes them",
+            plan.removed.len()
+        ));
     }
     for d in &plan.stale_dirs {
         let _ = fs::remove_dir(d);
@@ -861,6 +869,19 @@ pub enum DeltaRoute {
 fn finish(mut o: Outcome, started: Instant) -> Outcome {
     o.stats.elapsed_ms = started.elapsed().as_millis() as u64;
     o
+}
+
+/// True when the old manifest is definitively gone or unreadable (D-14 fallback applies).
+/// `ManifestUnavailable` also covers "no request code" (a Node-side refusal degrades to that, see
+/// fetch.rs `request_code_from_node`), so that case still falls back: the old manifest cannot be
+/// obtained by retrying. Everything else (5xx, 429, network, stall, not signed in, no content
+/// servers, io) is transient and must fail the run so the retry sees the old tree intact.
+fn is_definitive_old_manifest_failure(f: &Failure) -> bool {
+    match f.kind {
+        ErrorKind::ManifestDecode | ErrorKind::ManifestUnavailable => true,
+        ErrorKind::CdnHttp => matches!(f.http_status, Some(404) | Some(410)),
+        _ => false,
+    }
 }
 
 fn fail_outcome(job_id: &str, f: Failure, started: Instant) -> Outcome {
@@ -1079,12 +1100,14 @@ async fn delta_body(
             Some(Err(FetchError::Cancelled)) => {
                 return outcome_shell(&job.job_id, Status::Cancelled, started)
             }
-            Some(Err(FetchError::Failed(_))) => {
+            Some(Err(FetchError::Failed(f))) if is_definitive_old_manifest_failure(&f) => {
                 // D-14: without the old manifest only a sha1 reconcile of the new one is safe.
                 emitter.warn("old manifest unavailable; checking every file instead".to_string());
                 *fallback = true;
                 return outcome_shell(&job.job_id, Status::Cancelled, started);
             }
+            // WR-09: a transient failure must not drop retired depots; fail, keep the old tree.
+            Some(Err(FetchError::Failed(f))) => return fail_outcome(&job.job_id, f, started),
         }
     }
 

@@ -341,6 +341,15 @@ impl Env {
             vec![Reply::Status(404, Vec::new())],
         );
     }
+    /// The CDN answers `status` for the old manifest of `depot_id` on every attempt. The fake
+    /// CDN repeats the last scripted reply, which outlasts fetch.rs's 8-attempt budget.
+    pub fn fail_old_manifest(&self, depot_id: &str, status: u16) {
+        let gid = self.old_gid(depot_id).unwrap();
+        self.cdn.script(
+            &format!("/depot/{depot_id}/manifest/{gid}/5/123"),
+            vec![Reply::Status(status, Vec::new())],
+        );
+    }
     /// Writes the commit journal in its documented schema.
     pub fn write_journal(&self, new: &[(&str, String)], old: &[(&str, String)]) {
         let map = |v: &[(&str, String)]| -> Value {
