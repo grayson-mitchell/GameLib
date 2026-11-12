@@ -802,7 +802,7 @@ Plans:
 **Goal:** Finish D-15 step 3 after Phase 66.3. Convert the long tail of about 85 files (about 127 sites) with 1–2 module-state sites each, completely and once each (D-15). This includes the 66.2 deferrals: the `utils.ts` `default*Path` lets; `installingComponent`/`catalogCache`/`scriptMetadataCache` in `tools/index.ts`; `engineNoticeStore`; the two `pci_ids` stores; and retiring the win32 sync fallbacks in `knownFolders`/`pathShim`. Then the census becomes a zero-tolerance test and the `moduleState` ceiling is deleted (D-13, D-16). Next, revive the Steam RunningAppID poller under Tauri as a boot-owned, unref'd, stdin-EOF-stopped step (D-66.3-07). The phase ends with two non-autonomous plans: the D-17 live macOS smoke with a scripted orphan/exit checker (D-66.3-05), and the Windows operator UAT, which covers the 66.2 spawn paths and the poller's Playing state (D-66.3-06, D-66.3-08). Decisions live in `.planning/phases/66.3-backend-module-state-to-zero-and-live-macos-smoke/66.3-CONTEXT.md`.
 **Requirements**: TBD
 **Depends on:** Phase 66.3
-**Plans:** 5/23 plans executed
+**Plans:** 6/23 plans executed
 
 Plans:
 
@@ -811,7 +811,7 @@ Plans:
 - [x] 66.4-03-PLAN.md — AppPaths carries every derived path: pure derivePaths in process/appPaths.ts, parity pin (wave 2)
 - [x] 66.4-04-PLAN.md — per-boot StoreRoot: stores off pathShim; storeChangeNotifier, fileStore, engineNoticeStore, pci_ids (wave 3)
 - [x] 66.4-05-PLAN.md — engine long tail into EngineRuntime; engine paths on ctx.paths (wave 4)
-- [ ] 66.4-06-PLAN.md — Steam launch-path state into SteamLaunchRuntime; launch paths on ctx.paths (wave 5)
+- [x] 66.4-06-PLAN.md — Steam launch-path state into SteamLaunchRuntime; launch paths on ctx.paths (wave 5)
 - [ ] 66.4-07-PLAN.md — Steam token-store slot, frozen error constants, session-side paths (wave 6)
 - [ ] 66.4-08-PLAN.md — Steam bridge into BridgeRuntime; steam/constants off pathShim (wave 7)
 - [ ] 66.4-09-PLAN.md — Steam depot and install/uninstall poll state into SteamInstallRuntime (wave 8)
