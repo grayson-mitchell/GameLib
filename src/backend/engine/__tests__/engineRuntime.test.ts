@@ -12,8 +12,6 @@ import * as logger from 'backend/logger'
 import { createFakeClock } from 'backend/testUtils/fakeClock'
 import { createTestEngineRuntime } from 'backend/testUtils/testEngineRuntime'
 import { createTestEngineServices } from 'backend/testUtils/testServices'
-import { __resetStoreState } from 'backend/storeVersioning/engine'
-import { __resetReadOnlyForTest } from 'backend/storeVersioning/readOnlyStores'
 import { LAUNCH_DEADLINE_MS } from '../launchDeadline'
 import { ENGINE_MARKER_FILE, switchContextFrom } from '../engineSwitch'
 import type { EngineSwitchDeps } from '../engineSwitch'
@@ -140,8 +138,6 @@ describe('single-flight per boot instance', () => {
     dxvk: { dir: '/pin/dxvk', version: 'v1' }
   }
   beforeEach(() => {
-    __resetStoreState()
-    __resetReadOnlyForTest()
     root = mkdtempSync(join(tmpdir(), 'gamelib-runtime-'))
   })
   afterEach(() => rmSync(root, { recursive: true, force: true }))

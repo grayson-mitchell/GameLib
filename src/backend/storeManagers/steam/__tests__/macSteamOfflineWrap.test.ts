@@ -2,10 +2,10 @@
  * Phase 54 (54-01): the go-offline wrap (ROADMAP SC6). Driven only through
  * injected deps: fixture logs live in a mkdtemp dir, pgrep is never spawned.
  */
+import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import * as fs from 'fs'
 import * as os from 'os'
 import { join } from 'path'
-import { __resetStoreState } from 'backend/storeVersioning/engine'
 
 // fs namespace properties are non-configurable, so wrap the two calls the
 // fd-leak assertions need in jest.fn passthroughs.
@@ -88,6 +88,7 @@ function makeDeps(
     },
     now: () => clock,
     onlineDebtPath: () => join(dir, 'owed.json'),
+    versioning: createTestVersioning(),
     openUrlDetached: (url) => {
       urls.push(url)
     },
@@ -112,7 +113,6 @@ beforeEach(() => {
   urls = []
   running = true
   harness = createMacSteamOfflineHarness()
-  __resetStoreState()
 })
 
 afterEach(async () => {

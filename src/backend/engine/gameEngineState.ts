@@ -101,6 +101,7 @@ export async function getGameEngineState(
     | 'engineState'
     | 'paths'
     | 'engineRuntime'
+    | 'versioning'
   >,
   identity: unknown,
   deps: GameEngineStateDeps = {}
@@ -133,6 +134,7 @@ export async function getGameEngineState(
     runner: services.runner,
     paths: services.paths,
     engineRuntime: services.engineRuntime,
+    versioning: services.versioning,
     ...releases,
     globalSettings: services.globalSettings,
     ...stateDeps,
@@ -173,6 +175,7 @@ export async function listGameEngineOptions(
     | 'globalSettings'
     | 'paths'
     | 'engineRuntime'
+    | 'versioning'
   >,
   args: unknown,
   deps: {
@@ -192,6 +195,7 @@ export async function listGameEngineOptions(
     runner: services.runner,
     paths: services.paths,
     engineRuntime: services.engineRuntime,
+    versioning: services.versioning,
     ...deps.decision
   })
   let effective: EffectiveEngine | null = null
@@ -212,7 +216,11 @@ export async function listGameEngineOptions(
 export function getDefaultEngine(
   services: Pick<
     EngineServices,
-    'wineManagerReleases' | 'globalSettings' | 'paths' | 'engineRuntime'
+    | 'wineManagerReleases'
+    | 'globalSettings'
+    | 'paths'
+    | 'engineRuntime'
+    | 'versioning'
   >,
   overrides?: Partial<EngineConfigDeps>
 ): {

@@ -1,3 +1,4 @@
+import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { join } from 'path'
 import {
   createScriptedRunner,
@@ -67,6 +68,7 @@ function mkDeps(
   return {
     runner: createScriptedRunner([]),
     paths: rt.paths,
+    versioning: createTestVersioning(),
     engineRuntime: rt.engineRuntime,
     resolveCrossoverBinDir: () => Promise.resolve(CX_BIN),
     isExecutable: () => true,

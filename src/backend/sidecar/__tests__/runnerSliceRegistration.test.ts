@@ -143,6 +143,7 @@ const flowDeps = {
   sendFrontendMessage: jest.fn(),
   ...services,
   signIn: services.signInProbe,
+  versioning: services.storeRoot.versioning,
   loginWindowSeam: services.humble.loginWindowSeam,
   ipc: testIpc,
   dialogs: services.host.dialogs,
@@ -849,6 +850,7 @@ describe('23-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30; Phase 45 Plan 0
     // two calls do not belong in the shared canonical snapshot or in `MODULES`.
     restoreCanonicalRegistrations()
     registerAppShellFlows({
+      readOnly: services.storeRoot.readOnly,
       requestRustInvoke: jest.fn(),
       sendFrontendMessage: jest.fn(),
       ipc: testIpc,

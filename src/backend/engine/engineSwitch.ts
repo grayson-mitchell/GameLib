@@ -34,6 +34,7 @@ import {
   ensureEngineMarkerMigrated,
   isEngineMarkerReadOnly
 } from 'backend/storeVersioning/engineMarkerFile'
+import type { StoreVersioning } from 'backend/storeVersioning/engine'
 
 export const ENGINE_MARKER_FILE = '.gamelib-engine.json'
 
@@ -64,6 +65,8 @@ export interface EngineSwitchContext {
     | 'ensurePinnedEngine'
   >
   ledger: Pick<BottleLedger, 'otherGamesRunning'>
+  /** The boot's store-versioning engine: the bottle's engine marker is migrated through it. */
+  versioning: StoreVersioning
 }
 
 export interface EngineSwitchDeps {
@@ -151,6 +154,7 @@ export function switchServicesFrom(
     EngineServices,
     | 'paths'
     | 'engineRuntime'
+    | 'versioning'
     | 'runner'
     | 'spawnAsync'
     | 'installRemove'
@@ -193,10 +197,11 @@ export function switchServicesFrom(
 
 /** The switch's boot collaborators, read from the engine services. */
 export function switchContextFrom(
-  services: Pick<EngineServices, 'paths' | 'engineRuntime'>
+  services: Pick<EngineServices, 'paths' | 'engineRuntime' | 'versioning'>
 ): EngineSwitchContext {
   return {
     paths: services.paths,
+    versioning: services.versioning,
     fallback: services.engineRuntime.fallback,
     ledger: services.engineRuntime.ledger
   }
@@ -230,7 +235,7 @@ function isInside(root: string, path: string): boolean {
  * or writes a marker; null for an absent/unreadable marker or an unsafe bottle name.
  */
 export function readBottleEngineMarkerKind(
-  ctx: Pick<EngineSwitchContext, 'paths' | 'fallback'>,
+  ctx: Pick<EngineSwitchContext, 'paths' | 'fallback' | 'versioning'>,
   bottleName: string
 ): 'crossover' | 'non-crossover' | null {
   try {
@@ -248,7 +253,7 @@ export function readBottleEngineMarkerKind(
  * readBottleEngineMarkerKind: never infers or writes a marker.
  */
 export function readBottleEngineMarkerSummary(
-  ctx: Pick<EngineSwitchContext, 'paths' | 'fallback'>,
+  ctx: Pick<EngineSwitchContext, 'paths' | 'fallback' | 'versioning'>,
   bottleName: string
 ): {
   kind: 'crossover' | 'non-crossover'
@@ -290,7 +295,7 @@ export function readBottleEngineMarkerSummary(
  * and for any unreadable state.
  */
 export function restoreNeedsAbsentPin(
-  ctx: Pick<EngineSwitchContext, 'paths' | 'fallback'>,
+  ctx: Pick<EngineSwitchContext, 'paths' | 'fallback' | 'versioning'>,
   bottleName: string
 ): boolean {
   try {
@@ -320,10 +325,10 @@ export function restoreNeedsAbsentPin(
 
 function readMarker(
   bottleDir: string,
-  ctx: Pick<EngineSwitchContext, 'fallback'>
+  ctx: Pick<EngineSwitchContext, 'fallback' | 'versioning'>
 ): EngineMarker | null {
   try {
-    ensureEngineMarkerMigrated(markerPath(bottleDir))
+    ensureEngineMarkerMigrated(ctx.versioning, markerPath(bottleDir))
     const raw = JSON.parse(
       readFileSync(markerPath(bottleDir), 'utf8')
     ) as Partial<EngineMarker>
@@ -363,11 +368,15 @@ function readMarker(
   }
 }
 
-function writeMarker(bottleDir: string, marker: EngineMarker): void {
+function writeMarker(
+  versioning: StoreVersioning,
+  bottleDir: string,
+  marker: EngineMarker
+): void {
   const tmp = join(bottleDir, `${ENGINE_MARKER_FILE}.tmp-${process.pid}`)
   try {
-    ensureEngineMarkerMigrated(markerPath(bottleDir))
-    if (isEngineMarkerReadOnly(markerPath(bottleDir))) {
+    ensureEngineMarkerMigrated(versioning, markerPath(bottleDir))
+    if (isEngineMarkerReadOnly(versioning, markerPath(bottleDir))) {
       logWarning(
         'engine marker is from a newer GameLib build; not overwriting it',
         LogPrefix.Backend
@@ -376,7 +385,7 @@ function writeMarker(bottleDir: string, marker: EngineMarker): void {
     }
     writeFileSync(
       tmp,
-      JSON.stringify({ ...marker, version: engineMarkerVersion() }),
+      JSON.stringify({ ...marker, version: engineMarkerVersion(versioning) }),
       { mode: 0o644 }
     )
     renameSync(tmp, markerPath(bottleDir))
@@ -627,7 +636,7 @@ async function prepareBottleForEngineBody(
     n: Exclude<EngineSelection, { kind: 'crossover' }>
   ): Promise<PrepareResult> => {
     if (!n.dxvk) {
-      writeMarker(bottleDir, markerFor(n))
+      writeMarker(deps.ctx.versioning, bottleDir, markerFor(n))
       return { ok: true, changed: true }
     }
     const ok = await deps.installRemove(
@@ -637,7 +646,7 @@ async function prepareBottleForEngineBody(
       n.dxvk
     )
     if (!ok || !existsSync(dxvkMarkerPath)) {
-      writeMarker(bottleDir, markerFor(n, 'failed'))
+      writeMarker(deps.ctx.versioning, bottleDir, markerFor(n, 'failed'))
       return {
         ok: false,
         reason: 'dxvk-failed',
@@ -645,6 +654,7 @@ async function prepareBottleForEngineBody(
       }
     }
     writeMarker(
+      deps.ctx.versioning,
       bottleDir,
       markerFor(n, { dir: n.dxvk.dir, version: n.dxvk.version })
     )
@@ -655,7 +665,7 @@ async function prepareBottleForEngineBody(
   // Quick 261109-w52: a marker from a newer build is never inferred over or overwritten
   // (inferMarker would guess prev without the recorded DXVK dir, and the final write would
   // replace the only record). Same-engine launches proceed; every real change is refused.
-  if (isEngineMarkerReadOnly(markerPath(bottleDir))) {
+  if (isEngineMarkerReadOnly(deps.ctx.versioning, markerPath(bottleDir))) {
     if (
       marker &&
       identityOf(marker) === identityOf(markerFor(next)) &&
@@ -680,7 +690,7 @@ async function prepareBottleForEngineBody(
       // The last switch into this engine left DXVK uninstalled: retry, no wineserver kill.
       return busyRefusal() ?? installNextDxvk(next)
     }
-    if (!marker) writeMarker(bottleDir, nextMarker)
+    if (!marker) writeMarker(deps.ctx.versioning, bottleDir, nextMarker)
     return { ok: true, changed: false }
   }
 
@@ -785,7 +795,7 @@ async function prepareBottleForEngineBody(
       // CR-03: the restore may have deleted DLLs/overrides before failing; record that so the
       // next launch on either engine repairs the bottle instead of reporting changed:false.
       if (prev.kind !== 'crossover') {
-        writeMarker(bottleDir, { ...prev, dxvk: 'failed' })
+        writeMarker(deps.ctx.versioning, bottleDir, { ...prev, dxvk: 'failed' })
       }
       return {
         ok: false,
@@ -795,6 +805,6 @@ async function prepareBottleForEngineBody(
     }
   }
 
-  writeMarker(bottleDir, nextMarker)
+  writeMarker(deps.ctx.versioning, bottleDir, nextMarker)
   return { ok: true, changed: true }
 }

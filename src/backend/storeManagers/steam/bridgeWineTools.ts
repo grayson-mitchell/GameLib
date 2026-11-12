@@ -74,7 +74,7 @@ export function defaultSteamWineToolsDeps(
       readBottleEngineMarkerKind(switchContextFrom(services), bottle),
     // A cycle with steamEngineDeps (which imports this module); only used at call time.
     engineId: (appId) =>
-      parseEngineOverride(readSteamEngineOverride(services.paths, appId)),
+      parseEngineOverride(readSteamEngineOverride(services, appId)),
     logError: (message) => logError(message, LogPrefix.Steam),
     nonCrossoverEngine: (id) => nonCrossoverEngineFor(services, id),
     fallbackSettings: (bottle, engine) =>

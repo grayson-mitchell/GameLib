@@ -1,4 +1,8 @@
 import {
+  createVersioningHarness,
+  type VersioningHarness
+} from '../../testUtils/testStoreRoot'
+import {
   existsSync,
   mkdtempSync,
   readFileSync,
@@ -8,10 +12,7 @@ import {
 } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { __resetStoreState, readOnlyReasonOf } from '../engine'
 import { listBackups } from '../backup'
-import { __resetReadOnlyForTest } from '../readOnlyStores'
-import { __setMigrationsForTest } from '../../storeMigrations'
 import {
   SHARED_REDIST_LEDGER_CHAIN,
   ensureSharedRedistLedgerMigrated,
@@ -35,15 +36,16 @@ const legacy = (prior: string | null = 'mac') =>
     settled: { optIn: true }
   })
 
+// One engine and tracker per test: nothing carries over between tests.
+let h: VersioningHarness
+
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'gamelib-ledger-'))
   file = join(root, 'gamelib-shared-redists.json')
-  __resetStoreState()
-  __resetReadOnlyForTest()
+  h = createVersioningHarness()
 })
 
 afterEach(() => {
-  __setMigrationsForTest(SHARED_REDIST_LEDGER_CHAIN, undefined)
   rmSync(root, { recursive: true, force: true })
 })
 
@@ -74,10 +76,10 @@ describe('ensureSharedRedistLedgerMigrated', () => {
   it('adopts a legacy v1 ledger with zero byte changes and no backup', () => {
     writeFileSync(file, legacy())
     const before = readFileSync(file)
-    ensureSharedRedistLedgerMigrated(file)
+    ensureSharedRedistLedgerMigrated(h.versioning, file)
     expect(readFileSync(file).equals(before)).toBe(true)
     expect(listBackups(file)).toEqual([])
-    expect(isSharedRedistLedgerReadOnly(file)).toBe(false)
+    expect(isSharedRedistLedgerReadOnly(h.versioning, file)).toBe(false)
   })
 
   it.each(['mac', null])(
@@ -85,10 +87,10 @@ describe('ensureSharedRedistLedgerMigrated', () => {
     (prior) => {
       writeFileSync(file, legacy(prior))
       const original = readFileSync(file)
-      __setMigrationsForTest(SHARED_REDIST_LEDGER_CHAIN, [
+      h.setMigrations(SHARED_REDIST_LEDGER_CHAIN, [
         { id: 'test-v2', to: 2, run: (d) => d }
       ])
-      ensureSharedRedistLedgerMigrated(file)
+      ensureSharedRedistLedgerMigrated(h.versioning, file)
       const backups = listBackups(file)
       expect(backups).toHaveLength(1)
       expect(backups[0]).toMatch(/gamelib-shared-redists\.v1\..*\.bak\.json$/)
@@ -98,31 +100,31 @@ describe('ensureSharedRedistLedgerMigrated', () => {
       expect(live).not.toHaveProperty('__internal__')
       expect(live.displayDriver.prior).toBe(prior)
       expect(live.done).toEqual({ 'dx-1': 'gid-1' })
-      expect(sharedRedistLedgerVersion()).toBe(2)
+      expect(sharedRedistLedgerVersion(h.versioning)).toBe(2)
     }
   )
 
   it('leaves a newer-version ledger untouched and read-only', () => {
     writeFileSync(file, JSON.stringify({ version: 99, done: {} }))
     const before = readFileSync(file)
-    ensureSharedRedistLedgerMigrated(file)
-    expect(isSharedRedistLedgerReadOnly(file)).toBe(true)
-    expect(readOnlyReasonOf(file)).toBe('newer')
+    ensureSharedRedistLedgerMigrated(h.versioning, file)
+    expect(isSharedRedistLedgerReadOnly(h.versioning, file)).toBe(true)
+    expect(h.versioning.readOnlyReasonOf(file)).toBe('newer')
     expect(readFileSync(file).equals(before)).toBe(true)
     expect(listBackups(file)).toEqual([])
   })
 
   it('has no opinion on a corrupt file: untouched, not read-only', () => {
     writeFileSync(file, '{nope')
-    ensureSharedRedistLedgerMigrated(file)
+    ensureSharedRedistLedgerMigrated(h.versioning, file)
     expect(readFileSync(file, 'utf8')).toBe('{nope')
-    expect(isSharedRedistLedgerReadOnly(file)).toBe(false)
+    expect(isSharedRedistLedgerReadOnly(h.versioning, file)).toBe(false)
   })
 
   it('creates nothing for a missing file', () => {
-    ensureSharedRedistLedgerMigrated(file)
+    ensureSharedRedistLedgerMigrated(h.versioning, file)
     expect(existsSync(file)).toBe(false)
     expect(readdirSync(root)).toEqual([])
-    expect(isSharedRedistLedgerReadOnly(file)).toBe(false)
+    expect(isSharedRedistLedgerReadOnly(h.versioning, file)).toBe(false)
   })
 })

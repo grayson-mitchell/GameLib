@@ -34,6 +34,7 @@ jest.mock('backend/storeManagers/steam/engine/steamEngineDeps', () => ({
   getSteamEngineState: (...a: unknown[]) => steamState(...a)
 }))
 
+import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { registerEngineFlows } from '../engineFlowRegistration'
 import { createTestServices } from 'backend/testUtils/testServices'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
@@ -84,6 +85,7 @@ describe('engine flows', () => {
       config,
       engineState,
       engineRuntime: engineServices.engineRuntime,
+      versioning: engineServices.versioning,
       paths: engineServices.paths,
       steamBottle,
       steamLaunchRuntime
@@ -122,6 +124,7 @@ describe('engine flows', () => {
         config,
         engineState,
         engineRuntime: engineServices.engineRuntime,
+        versioning: engineServices.versioning,
         paths: engineServices.paths,
         steamBottle,
         steamLaunchRuntime
@@ -147,6 +150,7 @@ describe('engine flows', () => {
         globalSettings: expect.any(Function),
         engineState,
         engineRuntime: engineServices.engineRuntime,
+        versioning: engineServices.versioning,
         paths: engineServices.paths
       },
       arg
@@ -198,6 +202,7 @@ describe('engine flows', () => {
         globalSettings: expect.any(Function),
         engineState,
         engineRuntime: engineServices.engineRuntime,
+        versioning: engineServices.versioning,
         paths: engineServices.paths
       },
       arg

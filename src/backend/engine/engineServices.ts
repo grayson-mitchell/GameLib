@@ -2,6 +2,7 @@
  * The injected capabilities the engine's bottle-creation path needs (66.1-22d).
  * Type-only imports: the engine never value-imports tools or the services layer.
  */
+import type { StoreVersioning } from 'backend/storeVersioning/engine'
 import type { AppRuntimeSlice } from 'backend/appRuntime'
 import type { OnlineMonitor } from 'backend/online_monitor'
 import type { DialogBoxDeps, NotifyDeps } from 'backend/dialog/dialog'
@@ -31,6 +32,8 @@ export interface EngineServices {
   >
   /** The boot-owned engine runtime: ledger, registry, deadlines, single-flight maps (66.4-05). */
   engineRuntime: EngineRuntime
+  /** The boot's store-versioning engine (`StoreRoot.versioning`): game configs and bottle markers migrate through it. */
+  versioning: StoreVersioning
   /** The installed Wine Manager release list, read from the injected wineManager store. */
   wineManagerReleases: () => WineManagerRelease[]
   /** The global settings snapshot the engine's config reads inherit from (66.3-06). */

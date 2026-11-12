@@ -3,6 +3,7 @@
  * title's GameConfig file, never through GameConfig.get (whose `config` is
  * filled asynchronously, and which creates a missing file).
  */
+import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
@@ -37,7 +38,10 @@ import {
 } from '../engine/steamEngineDeps'
 
 const readStoredEngineOverride = (appId: string) =>
-  readSteamEngineOverride({ gamesConfigPath: mockDir }, appId)
+  readSteamEngineOverride(
+    { paths: { gamesConfigPath: mockDir }, versioning: createTestVersioning() },
+    appId
+  )
 
 afterAll(() => rmSync(mockDir, { recursive: true, force: true }))
 

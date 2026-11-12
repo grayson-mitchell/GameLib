@@ -8,8 +8,7 @@
  * switch logic installed. No `backend/logger` import (keep this layer
  * logger-free).
  */
-import { currentVersionOf } from '../storeMigrations'
-import { isReadOnlyPath, prepareStoreFile } from './engine'
+import type { StoreVersioning } from './engine'
 import type { VersionCodec } from './types'
 
 export const ENGINE_MARKER_CHAIN = 'engine/gamelib-engine-marker' as const
@@ -27,8 +26,11 @@ export const engineMarkerCodec: VersionCodec = {
   write: (data, version) => ({ ...data, version })
 }
 
-export function ensureEngineMarkerMigrated(path: string): void {
-  prepareStoreFile(
+export function ensureEngineMarkerMigrated(
+  versioning: StoreVersioning,
+  path: string
+): void {
+  versioning.prepareStoreFile(
     path,
     ENGINE_MARKER_CHAIN,
     { kind: 'user-state' },
@@ -36,10 +38,13 @@ export function ensureEngineMarkerMigrated(path: string): void {
   )
 }
 
-export function isEngineMarkerReadOnly(path: string): boolean {
-  return isReadOnlyPath(path)
+export function isEngineMarkerReadOnly(
+  versioning: StoreVersioning,
+  path: string
+): boolean {
+  return versioning.isReadOnlyPath(path)
 }
 
-export function engineMarkerVersion(): number {
-  return currentVersionOf(ENGINE_MARKER_CHAIN)
+export function engineMarkerVersion(versioning: StoreVersioning): number {
+  return versioning.currentVersionOf(ENGINE_MARKER_CHAIN)
 }

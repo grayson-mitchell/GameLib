@@ -1,4 +1,8 @@
 import {
+  createVersioningHarness,
+  type VersioningHarness
+} from '../../testUtils/testStoreRoot'
+import {
   copyFileSync,
   mkdirSync,
   mkdtempSync,
@@ -9,9 +13,7 @@ import {
 } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { __resetStoreState } from '../engine'
 import { listBackups } from '../backup'
-import { __resetReadOnlyForTest } from '../readOnlyStores'
 import {
   ensureSettingsMigrated,
   isSettingsFileReadOnly,
@@ -23,15 +25,17 @@ const fixtures = join(__dirname, '..', '..', 'storeMigrations', '__tests__')
 let root: string
 let stderr: jest.SpyInstance
 
+// One engine and tracker per test: nothing carries over between tests.
+let h: VersioningHarness
+
 beforeEach(() => {
+  h = createVersioningHarness()
   root = mkdtempSync(join(tmpdir(), 'settings-files-'))
   stderr = jest.spyOn(process.stderr, 'write').mockImplementation(() => true)
 })
 
 afterEach(() => {
   stderr.mockRestore()
-  __resetStoreState()
-  __resetReadOnlyForTest()
   rmSync(root, { recursive: true, force: true })
 })
 
@@ -40,7 +44,7 @@ describe('ensureSettingsMigrated', () => {
     const path = join(root, 'config.json')
     copyFileSync(join(fixtures, 'fixtures', 'settings-global-v0.json'), path)
     const original = readFileSync(path)
-    ensureSettingsMigrated(path, 'settings/global')
+    ensureSettingsMigrated(h.versioning, path, 'settings/global')
     const out = JSON.parse(readFileSync(path, 'utf8'))
     expect(out.version).toBe('v1')
     expect(out.defaultSettings.trayIconVariant).toBe('dark')
@@ -55,10 +59,10 @@ describe('ensureSettingsMigrated', () => {
     const path = join(root, 'config.json')
     const text = JSON.stringify({ defaultSettings: {}, version: 'v9' })
     writeFileSync(path, text)
-    ensureSettingsMigrated(path, 'settings/global')
+    ensureSettingsMigrated(h.versioning, path, 'settings/global')
     expect(readFileSync(path, 'utf8')).toBe(text)
-    expect(isSettingsFileReadOnly(path)).toBe(true)
-    writeSettingsFile(path, { changed: true })
+    expect(isSettingsFileReadOnly(h.versioning, path)).toBe(true)
+    writeSettingsFile(h.versioning, path, { changed: true })
     expect(readFileSync(path, 'utf8')).toBe(text)
   })
 
@@ -68,25 +72,25 @@ describe('ensureSettingsMigrated', () => {
     const path = join(dir, 'app.json')
     copyFileSync(join(fixtures, 'fixtures', 'settings-game-v0.json'), path)
     const before = readFileSync(path)
-    ensureSettingsMigrated(path, 'settings/game')
+    ensureSettingsMigrated(h.versioning, path, 'settings/game')
     expect(readFileSync(path).equals(before)).toBe(true)
     expect(listBackups(path)).toHaveLength(0)
-    expect(isSettingsFileReadOnly(path)).toBe(false)
+    expect(isSettingsFileReadOnly(h.versioning, path)).toBe(false)
   })
 
   test('is memoised per path', () => {
     const path = join(root, 'config.json')
     copyFileSync(join(fixtures, 'fixtures', 'settings-global-v0.json'), path)
-    ensureSettingsMigrated(path, 'settings/global')
+    ensureSettingsMigrated(h.versioning, path, 'settings/global')
     const after = readFileSync(path, 'utf8')
-    ensureSettingsMigrated(path, 'settings/global')
+    ensureSettingsMigrated(h.versioning, path, 'settings/global')
     expect(readFileSync(path, 'utf8')).toBe(after)
     expect(listBackups(path)).toHaveLength(1)
   })
 
   test('writeSettingsFile writes private 2-space JSON when writable', () => {
     const path = join(root, 'config.json')
-    writeSettingsFile(path, { a: 1 })
+    writeSettingsFile(h.versioning, path, { a: 1 })
     expect(readFileSync(path, 'utf8')).toBe('{\n  "a": 1\n}')
     expect(statSync(path).mode & 0o777).toBe(0o600)
   })

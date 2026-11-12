@@ -158,6 +158,7 @@ export interface CreateStoreManagersDeps {
   onlineMonitor: ManagerDeps['onlineMonitor']
   engineState: ManagerDeps['engineState']
   engineRuntime: ManagerDeps['engineRuntime']
+  versioning: ManagerDeps['versioning']
   signIn: ManagerDeps['signIn']
   steamSession: ManagerDeps['steamSession']
   tokenStore: ManagerDeps['tokenStore']
@@ -191,6 +192,7 @@ export function createStoreManagers(
   const managerDeps: ManagerDeps = {
     libraryManagers: library,
     stores: deps.stores,
+    versioning: deps.versioning,
     commandRunner: deps.commandRunner,
     // The launcher is built below from the same map; managers reach it at call time.
     get launcher() {
@@ -239,6 +241,7 @@ export function createStoreManagers(
   const launcher = createLauncher({
     libraryManagers: library,
     launchHooks,
+    versioning: deps.versioning,
     commandRunner: deps.commandRunner,
     runner: deps.runner,
     spawnAsync: deps.spawnAsync,

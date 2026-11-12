@@ -7,6 +7,7 @@ import {
   ensureSettingsMigrated,
   writeSettingsFile
 } from './storeVersioning/settingsFiles'
+import type { StoreVersioning } from './storeVersioning/engine'
 import { join } from 'path'
 import { currentGameConfigVersion } from 'backend/constants/others'
 import { isMac, isWindows } from './constants/environment'
@@ -35,10 +36,14 @@ abstract class GameConfig {
 
   protected readonly globalConfig: Pick<GlobalConfigSlice, 'getSettings'>
 
+  protected readonly versioning: StoreVersioning
+
   protected constructor(
     appName: string,
-    globalConfig: Pick<GlobalConfigSlice, 'getSettings'>
+    globalConfig: Pick<GlobalConfigSlice, 'getSettings'>,
+    versioning: StoreVersioning
   ) {
+    this.versioning = versioning
     this.appName = appName
     this.path = join(gamesConfigPath, appName + '.json')
     this.globalConfig = globalConfig
@@ -68,7 +73,7 @@ abstract class GameConfig {
   public abstract resetToDefaults(): void
 
   protected writeToFile(config: Record<string, unknown>) {
-    return writeSettingsFile(this.path, config)
+    return writeSettingsFile(this.versioning, this.path, config)
   }
 
   /**
@@ -100,9 +105,10 @@ class GameConfigV0 extends GameConfig {
 
   constructor(
     appName: string,
-    globalConfig: Pick<GlobalConfigSlice, 'getSettings'>
+    globalConfig: Pick<GlobalConfigSlice, 'getSettings'>,
+    versioning: StoreVersioning
   ) {
-    super(appName, globalConfig)
+    super(appName, globalConfig, versioning)
     this.load()
   }
 
@@ -324,6 +330,8 @@ export interface GameConfigs {
  */
 export function createGameConfigs(deps: {
   config: Pick<GlobalConfigSlice, 'getSettings'>
+  /** The boot's store-versioning engine (`StoreRoot.versioning`). */
+  versioning: StoreVersioning
 }): GameConfigs {
   const instances = new Map<string, GameConfigSlice>()
   return {
@@ -331,10 +339,11 @@ export function createGameConfigs(deps: {
       let instance = instances.get(appName)
       if (!instance) {
         ensureSettingsMigrated(
+          deps.versioning,
           join(gamesConfigPath, appName + '.json'),
           'settings/game'
         )
-        instance = new GameConfigV0(appName, deps.config)
+        instance = new GameConfigV0(appName, deps.config, deps.versioning)
         instances.set(appName, instance)
       }
       return instance

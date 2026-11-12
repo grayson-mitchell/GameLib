@@ -12,6 +12,7 @@ import { isAbsolute, join, relative, resolve } from 'path'
 import type { AppPaths } from 'backend/process/context'
 import type { FallbackEngine } from './fallbackEngine'
 import { ensureSettingsMigrated } from 'backend/storeVersioning/settingsFiles'
+import type { StoreVersioning } from 'backend/storeVersioning/engine'
 import { hasCapability } from 'common/storeCapabilities'
 import type { WineInstallation } from 'common/types'
 import { ENGINE_PINS } from './enginePins'
@@ -30,6 +31,8 @@ export interface EngineConfigDeps {
   }>
   pinWineBin(pin: { id: string }): string
   gamesConfigPath: string
+  /** The boot's store-versioning engine: the game config is migrated through it before a read. */
+  versioning: StoreVersioning
   globalSettings(): Record<string, unknown>
 }
 
@@ -40,16 +43,18 @@ function defaultDeps(): Pick<EngineConfigDeps, 'pins'> {
 /** The path reads the config helpers need (66.4-05): the games-config root and the pin's Wine binary. */
 export type ConfigPathDeps = Pick<
   EngineConfigDeps,
-  'gamesConfigPath' | 'pinWineBin'
+  'gamesConfigPath' | 'pinWineBin' | 'versioning'
 >
 
 /** Builds the path reads from the boot's `paths` and fallback-engine owner. */
 export function configPathDepsFrom(source: {
   paths: Pick<AppPaths, 'gamesConfigPath'>
+  versioning: StoreVersioning
   engineRuntime: { fallback: Pick<FallbackEngine, 'pinnedEnginePaths'> }
 }): ConfigPathDeps {
   return {
     gamesConfigPath: source.paths.gamesConfigPath,
+    versioning: source.versioning,
     pinWineBin: (pin) =>
       source.engineRuntime.fallback.pinnedEnginePaths(
         pin as (typeof ENGINE_PINS)['current']
@@ -82,7 +87,7 @@ const withDeps = (
  */
 export function readStoredGameConfig(
   appName: string,
-  deps: Pick<EngineConfigDeps, 'gamesConfigPath'>
+  deps: Pick<EngineConfigDeps, 'gamesConfigPath' | 'versioning'>
 ): Record<string, unknown> | undefined {
   if (
     typeof appName !== 'string' ||
@@ -100,7 +105,7 @@ export function readStoredGameConfig(
   const path = join(root, `${appName}.json`)
   if (!existsSync(path)) return undefined
   // Containment checks above passed (T-68-19).
-  ensureSettingsMigrated(path, 'settings/game')
+  ensureSettingsMigrated(deps.versioning, path, 'settings/game')
   try {
     const raw = JSON.parse(readFileSync(path, 'utf8')) as Record<
       string,

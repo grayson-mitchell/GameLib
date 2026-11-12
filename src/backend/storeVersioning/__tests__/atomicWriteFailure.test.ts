@@ -12,12 +12,11 @@ import { tmpdir } from 'os'
 import { basename, dirname, join } from 'path'
 import { renameSync, writeFileSync } from 'graceful-fs'
 import { atomicWritePrivate, listBackups } from '../backup'
-import { __resetStoreState, runFileMigration } from '../engine'
-import { __resetReadOnlyForTest, listReadOnly } from '../readOnlyStores'
+import { storeVersionCodec } from '../../storeMigrations'
 import {
-  __setMigrationsForTest,
-  storeVersionCodec
-} from '../../storeMigrations'
+  createVersioningHarness,
+  type VersioningHarness
+} from '../../testUtils/testStoreRoot'
 
 jest.mock('graceful-fs', () => ({
   ...jest.requireActual('graceful-fs'),
@@ -81,15 +80,16 @@ beforeEach(() => {
   mkdirSync(join(root, 'store_cache'))
   stderr = jest.spyOn(process.stderr, 'write').mockImplementation(() => true)
   delegate()
+  h = createVersioningHarness()
 })
 
 afterEach(() => {
-  __resetStoreState()
-  __resetReadOnlyForTest()
-  __setMigrationsForTest(KEY, undefined)
   stderr.mockRestore()
   rmSync(root, { recursive: true, force: true })
 })
+
+// One engine, tracker and chain override map per test.
+let h: VersioningHarness
 
 describe('atomicWritePrivate write failures', () => {
   test('temp-write ENOSPC leaves the live file byte-identical and rethrows', () => {
@@ -138,7 +138,7 @@ describe('atomicWritePrivate write failures', () => {
 describe('runFileMigration on a write failure (D-06, CR-01)', () => {
   test('ENOSPC on the migrated-file temp write leaves the store byte-identical and read-only, and the next launch recovers', () => {
     const file = join(root, 'store_cache', 'probe.json')
-    __setMigrationsForTest(KEY, [
+    h.setMigrations(KEY, [
       { id: 'probe-v1-v2', to: 2, run: (d) => ({ renamed: d.old }) }
     ])
     const original = Buffer.from(versioned({ old: 5 }, 1))
@@ -146,7 +146,7 @@ describe('runFileMigration on a write failure (D-06, CR-01)', () => {
     failWritesTo(file)
 
     const run = () =>
-      runFileMigration(file, {
+      h.versioning.runFileMigration(file, {
         chainKey: KEY,
         declaration: { kind: 'user-state' },
         codec: storeVersionCodec
@@ -159,7 +159,7 @@ describe('runFileMigration on a write failure (D-06, CR-01)', () => {
     const backups = listBackups(file)
     expect(backups).toHaveLength(1)
     expect(readFileSync(backups[0] as string).equals(original)).toBe(true)
-    expect(listReadOnly()).toEqual(
+    expect(h.readOnly.list()).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           storeKey: KEY,
@@ -173,8 +173,16 @@ describe('runFileMigration on a write failure (D-06, CR-01)', () => {
     ).toEqual([])
 
     delegate()
-    __resetStoreState()
-    __resetReadOnlyForTest()
+    // The next launch: fresh engine state over the same chain.
+    const chain = [
+      {
+        id: 'probe-v1-v2',
+        to: 2,
+        run: (d: Record<string, unknown>) => ({ renamed: d.old })
+      }
+    ]
+    h = createVersioningHarness()
+    h.setMigrations(KEY, chain)
     expect(run().status).toBe('ok')
     expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({
       renamed: 5,

@@ -3,6 +3,7 @@
  * Driven through the runner and clock an instance is built from; nothing is
  * ever spawned and no steam:// URL is ever fired.
  */
+import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import * as fs from 'fs'
 import * as os from 'os'
 import { join } from 'path'
@@ -84,6 +85,7 @@ function makeDeps(
   return {
     platform: 'darwin',
     connectionLogPath: () => logPath,
+    versioning: createTestVersioning(),
     isSteamRunning: async () => {
       if (running instanceof Error) throw running
       return running
@@ -830,6 +832,7 @@ describe('createMacSteamOffline on the runner and clock', () => {
       runner,
       clock: createFakeClock(BASE),
       platform: 'darwin',
+      versioning: createTestVersioning(),
       connectionLogPath: () => logPath,
       openUrl: (url) => {
         urls.push(url)

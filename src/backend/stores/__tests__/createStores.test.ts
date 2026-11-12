@@ -7,7 +7,6 @@ import { createStores } from '../createStores'
 import { createStoreRegistry } from '../storeRegistry'
 import { createStoreRoot } from '../storeRoot'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
-import { __kindOfForTest } from '../../storeVersioning/engine'
 import fixture from './fixtures/registeredStores.json'
 
 /**
@@ -117,10 +116,13 @@ describe('createStores', () => {
   }
 
   /** Every CacheStore `createStores` builds, keyed by its file name under store_cache. */
+  let builtRoot = createTestStoreRoot()
+  const kindOf = (path: string) => builtRoot.versioning.kindOf(path)
   function builtCacheStores(): Map<string, CacheInternals> {
+    builtRoot = createTestStoreRoot()
     const stores = createStores({
       registry: createStoreRegistry(),
-      root: createTestStoreRoot()
+      root: builtRoot
     })
     const built = new Map<string, CacheInternals>()
     for (const family of Object.values(stores)) {
@@ -151,14 +153,12 @@ describe('createStores', () => {
       ].sort()
     )
     expect(
-      __kindOfForTest(
-        defined(built.get(ENGINE_NOTICE_CACHE), 'notices').store.path
-      )
+      kindOf(defined(built.get(ENGINE_NOTICE_CACHE), 'notices').store.path)
     ).toBe('user-state')
     for (const entry of fixtureCaches) {
       const name = defined(entry.options.name, 'fixture cache name')
       const path = defined(built.get(name), name).store.path
-      expect(__kindOfForTest(path)).toBe(entry.declaration.kind)
+      expect(kindOf(path)).toBe(entry.declaration.kind)
     }
   })
 

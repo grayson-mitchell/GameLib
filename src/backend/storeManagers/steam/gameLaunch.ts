@@ -536,7 +536,7 @@ export async function selectLaunchEngine(
     await import('backend/services/engineServices')
   const { parseEngineOverride } = await import('backend/engine/engineIds')
   const earlyOverride = parseEngineOverride(
-    readSteamEngineOverride(steamGame.deps.paths, steamGame.appId)
+    readSteamEngineOverride(steamGame.deps, steamGame.appId)
   )
   if (
     connectivity.offline &&

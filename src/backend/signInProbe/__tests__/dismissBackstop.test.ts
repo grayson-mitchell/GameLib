@@ -14,6 +14,7 @@
  * itself rewrites the setting is the clobber the backstop exists to catch, and
  * the same assertion must fail for it.
  */
+import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { existsSync, mkdirSync, realpathSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
@@ -88,7 +89,8 @@ function realpathOfNearestAncestor(target: string): string {
 // One instance for the file, built on first use (after a test has written the config file), the
 // way the boot's 'config' step builds the one instance of a process.
 let globalConfig: ReturnType<typeof createGlobalConfig> | undefined
-const config = () => (globalConfig ??= createGlobalConfig())
+const config = () =>
+  (globalConfig ??= createGlobalConfig({ versioning: createTestVersioning() }))
 
 function dismissed(): unknown {
   return config().getSettings().dismissedSignInNotices

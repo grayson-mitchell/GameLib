@@ -21,6 +21,7 @@
  * DISPATCH (was the right function called, with the right runner) rather than about a real
  * non-Steam launch succeeding end to end.
  */
+import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 
@@ -356,7 +357,7 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
     'in-app steam launch with $minimizeOnLaunch/$noTrayIcon hides=$hides',
     async ({ minimizeOnLaunch, noTrayIcon, hides }) => {
       // The boot's real global config, with only the two launch-hide settings overridden.
-      const real = createGlobalConfig()
+      const real = createGlobalConfig({ versioning: createTestVersioning() })
       const config = new Proxy(real, {
         get: (target, key) => {
           if (key === 'getSettings') {

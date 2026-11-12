@@ -26,24 +26,12 @@ export const STORE_MIGRATIONS: Readonly<Record<string, readonly Migration[]>> =
     'engine/gamelib-engine-marker': []
   }
 
-const testOverrides = new Map<string, readonly Migration[] | undefined>()
+/** Chain overrides keyed by chain key; `undefined`-free (an empty chain is `[]`). Test seam only. */
+export type MigrationOverrides = ReadonlyMap<string, readonly Migration[]>
 
-/** Test-only: override (or with `undefined`, clear) a chain. */
-export function __setMigrationsForTest(
-  chainKey: string,
-  chain: readonly Migration[] | undefined
-): void {
-  if (chain === undefined) testOverrides.delete(chainKey)
-  else testOverrides.set(chainKey, chain)
-}
-
-function chainOf(chainKey: string): readonly Migration[] {
-  if (testOverrides.has(chainKey)) return testOverrides.get(chainKey) ?? []
-  return STORE_MIGRATIONS[chainKey] ?? []
-}
-
-export function currentVersionOf(chainKey: string): number {
-  return Math.max(1, ...chainOf(chainKey).map((m) => m.to))
+export interface Migrations {
+  currentVersionOf(chainKey: string): number
+  pendingChain(chainKey: string, fromVersion: number): Migration[]
 }
 
 const ADOPT_V1: Migration = {
@@ -53,17 +41,32 @@ const ADOPT_V1: Migration = {
   run: (d) => d
 }
 
-export function pendingChain(
-  chainKey: string,
-  fromVersion: number
-): Migration[] {
-  const chain = chainOf(chainKey)
-  const steps = chain
-    .filter((m) => m.to > fromVersion)
-    .sort((a, b) => a.to - b.to)
-  const declaresV1 = chain.some((m) => m.to === 1)
-  if (fromVersion < 1 && !declaresV1) return [ADOPT_V1, ...steps]
-  return steps
+/**
+ * The migration runner a root's versioning engine reads chains through. `overrides` replaces a
+ * chain for tests; production passes none and gets STORE_MIGRATIONS. No module state: two
+ * runners with different overrides never see each other's chains.
+ */
+export function createMigrations(options?: {
+  overrides?: MigrationOverrides
+}): Migrations {
+  const overrides = options?.overrides
+  const chainOf = (chainKey: string): readonly Migration[] => {
+    const override = overrides?.get(chainKey)
+    if (override) return override
+    return STORE_MIGRATIONS[chainKey] ?? []
+  }
+  const currentVersionOf = (chainKey: string): number =>
+    Math.max(1, ...chainOf(chainKey).map((m) => m.to))
+  const pendingChain = (chainKey: string, fromVersion: number): Migration[] => {
+    const chain = chainOf(chainKey)
+    const steps = chain
+      .filter((m) => m.to > fromVersion)
+      .sort((a, b) => a.to - b.to)
+    const declaresV1 = chain.some((m) => m.to === 1)
+    if (fromVersion < 1 && !declaresV1) return [ADOPT_V1, ...steps]
+    return steps
+  }
+  return { currentVersionOf, pendingChain }
 }
 
 type Internal = { gamelib?: { schemaVersion?: unknown } }

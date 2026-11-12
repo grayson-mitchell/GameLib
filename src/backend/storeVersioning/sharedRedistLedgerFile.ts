@@ -5,8 +5,7 @@
  * adopting an existing ledger rewrites nothing. Modelled on settingsFiles.ts.
  * No `backend/logger` import (keep the storeVersioning layer logger-free).
  */
-import { currentVersionOf } from '../storeMigrations'
-import { isReadOnlyPath, prepareStoreFile } from './engine'
+import type { StoreVersioning } from './engine'
 import type { VersionCodec } from './types'
 
 /** Fixed chain key; engine state is keyed by path, so it serves every bottle. */
@@ -25,8 +24,11 @@ export const sharedRedistLedgerCodec: VersionCodec = {
   write: (data, version) => ({ ...data, version })
 }
 
-export function ensureSharedRedistLedgerMigrated(path: string): void {
-  prepareStoreFile(
+export function ensureSharedRedistLedgerMigrated(
+  versioning: StoreVersioning,
+  path: string
+): void {
+  versioning.prepareStoreFile(
     path,
     SHARED_REDIST_LEDGER_CHAIN,
     { kind: 'user-state' },
@@ -34,10 +36,13 @@ export function ensureSharedRedistLedgerMigrated(path: string): void {
   )
 }
 
-export function isSharedRedistLedgerReadOnly(path: string): boolean {
-  return isReadOnlyPath(path)
+export function isSharedRedistLedgerReadOnly(
+  versioning: StoreVersioning,
+  path: string
+): boolean {
+  return versioning.isReadOnlyPath(path)
 }
 
-export function sharedRedistLedgerVersion(): number {
-  return currentVersionOf(SHARED_REDIST_LEDGER_CHAIN)
+export function sharedRedistLedgerVersion(versioning: StoreVersioning): number {
+  return versioning.currentVersionOf(SHARED_REDIST_LEDGER_CHAIN)
 }

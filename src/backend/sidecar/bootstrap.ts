@@ -40,7 +40,7 @@ import { createHostServices, type HostServices } from '../host'
 import { createIpcRegistry, type IpcRegistry } from './ipcRegistry'
 import { createStores } from '../stores/createStores'
 import { createStoreRegistry } from '../stores/storeRegistry'
-import { createStoreRoot } from '../stores/storeRoot'
+import { createStoreRoot, type StoreRoot } from '../stores/storeRoot'
 import { createStoreManagers } from '../storeManagers'
 import { registerGogdlStubListeners } from '../storeManagers/gog/e2eMock'
 import { registerLegendaryStubListeners } from '../storeManagers/legendary/e2eMock'
@@ -481,6 +481,12 @@ function requireAborts(state: BootState): AbortRegistry {
   const { aborts } = state.services
   if (!aborts) throw new Error('abort-registry step has not run')
   return aborts
+}
+
+function requireStoreRoot(state: BootState): StoreRoot {
+  const { storeRoot } = state.services
+  if (!storeRoot) throw new Error('stores step has not run')
+  return storeRoot
 }
 
 function requireAppRuntime(state: BootState): AppRuntime {
@@ -1621,13 +1627,18 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         const config =
           prebuilt.config ??
           createGlobalConfig({
+            versioning: requireStoreRoot(state).versioning,
             // The bus is built by the later 'app-runtime' step; a setting can only change at call time.
             onSettingChanged: (change) =>
               requireAppRuntime(state).events.emit('settingChanged', change)
           })
         state.services.config = config
         state.services.gameConfigs =
-          prebuilt.gameConfigs ?? createGameConfigs({ config })
+          prebuilt.gameConfigs ??
+          createGameConfigs({
+            config,
+            versioning: requireStoreRoot(state).versioning
+          })
         state.services.paths = prebuilt.paths ?? ctx.paths
         state.services.appInfo = prebuilt.appInfo ?? ctx.appInfo
       }
@@ -1749,6 +1760,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             config,
             openExternal: requireHost(state).openExternal,
             paths: ctx.paths,
+            versioning: requireStoreRoot(state).versioning,
             aborts,
             sendFrontendMessage: requireHost(state).sendFrontendMessage
           })
@@ -1995,7 +2007,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       run: (_ctx, _io, state) => {
         state.services.bridgeRuntime =
           prebuilt.bridgeRuntime ??
-          createBridgeRuntime({ aborts: requireAborts(state) })
+          createBridgeRuntime({
+            aborts: requireAborts(state),
+            versioning: requireStoreRoot(state).versioning
+          })
       }
     },
     {
@@ -2181,6 +2196,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           clock: ctx.clock,
           steamProcesses: requireSteamProcesses(state),
           getDownloadQueue: () => requireServices(state).downloadQueue,
+          versioning: requireStoreRoot(state).versioning,
           config,
           gameConfigs,
           paths,

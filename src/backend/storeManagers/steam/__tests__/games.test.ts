@@ -1,3 +1,4 @@
+import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import type { GameConfigSlice } from 'backend/game_config'
 import type { SteamDrm } from '../bridge/drm/drmLaunchSetup'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
@@ -163,7 +164,9 @@ import {
 import { createSharedRedistInstaller } from '../bridge/sharedRedistInstall'
 
 // The mocked installer below hands out one shared jest.fn from every factory call.
-const { installSteamBridgeSharedRedists } = createSharedRedistInstaller()
+const { installSteamBridgeSharedRedists } = createSharedRedistInstaller({
+  versioning: createTestVersioning()
+})
 import {
   decideCreationEngine,
   decideLaunchEngine,

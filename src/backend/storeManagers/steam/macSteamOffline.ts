@@ -21,6 +21,7 @@
  *
  * The owed record is versioned by the Phase 68 store engine (quick 261109-vw2).
  */
+import type { StoreVersioning } from 'backend/storeVersioning/engine'
 import {
   closeSync,
   existsSync,
@@ -105,6 +106,8 @@ export interface MacSteamOfflineDeps {
   sleep: (ms: number) => Promise<void>
   now: () => number
   onlineDebtPath: () => string
+  /** The boot's store-versioning engine: the owed-goonline marker is migrated through it. */
+  versioning: StoreVersioning
   openUrlDetached: (url: string) => void
   isPidAlive: (pid: number) => boolean
   selfPid: number
@@ -145,8 +148,10 @@ export function createMacSteamOfflineEnvDeps(deps: {
   paths: Pick<AppPaths, 'appFolder'>
   config: Pick<GlobalConfigSlice, 'getSettings'>
   openExternal: Pick<OpenExternal, 'openExternal'>
+  versioning: StoreVersioning
 }): Omit<MacSteamOfflineBuildDeps, 'runner' | 'clock'> {
   return {
+    versioning: deps.versioning,
     platform: process.platform,
     connectionLogPath: () => {
       const { defaultSteamPath } = deps.config.getSettings()
@@ -220,7 +225,7 @@ interface OnlineDebt {
 
 function readOnlineDebt(deps: MacSteamOfflineDeps): OnlineDebt {
   try {
-    ensureMacSteamOfflineOwedMigrated(deps.onlineDebtPath())
+    ensureMacSteamOfflineOwedMigrated(deps.versioning, deps.onlineDebtPath())
     // Deliberately not `{}` when read-only (newer build): presence is the debt,
     // and the guarded reads below degrade unknown fields to the safe default.
     const parsed: unknown = JSON.parse(
@@ -527,7 +532,7 @@ export function createMacSteamOffline(build: MacSteamOfflineBuildDeps) {
       writeFileSync(
         p,
         JSON.stringify({
-          version: macSteamOfflineOwedVersion(),
+          version: macSteamOfflineOwedVersion(deps.versioning),
           since: new Date(sinceMs).toISOString(),
           by,
           pid: deps.selfPid

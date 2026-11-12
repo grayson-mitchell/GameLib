@@ -1,9 +1,13 @@
 import {
-  __resetReadOnlyForTest,
   areaForStoreKey,
-  flushReadOnlyStores,
-  recordReadOnly
+  createReadOnlyStores,
+  type ReadOnlyStores
 } from '../readOnlyStores'
+
+// One tracker per test (the module reset's replacement).
+let tracker: ReadOnlyStores
+const recordReadOnly: ReadOnlyStores['record'] = (e) => tracker.record(e)
+const flushReadOnlyStores: ReadOnlyStores['flush'] = (s) => tracker.flush(s)
 
 const entry = (storeKey: string, file = 'a.json') => ({
   storeKey,
@@ -13,7 +17,9 @@ const entry = (storeKey: string, file = 'a.json') => ({
 })
 
 describe('readOnlyStores', () => {
-  beforeEach(() => __resetReadOnlyForTest())
+  beforeEach(() => {
+    tracker = createReadOnlyStores()
+  })
 
   it('maps store keys to areas', () => {
     const table: Record<string, string> = {
@@ -49,7 +55,7 @@ describe('readOnlyStores', () => {
     expect(send).not.toHaveBeenCalled()
     expect(log).not.toHaveBeenCalled()
 
-    __resetReadOnlyForTest()
+    tracker = createReadOnlyStores()
     recordReadOnly(entry('store_cache/gog_library'))
     recordReadOnly(entry('gog_store/installed', 'b.json'))
     flushReadOnlyStores({ send, log })
@@ -88,6 +94,16 @@ describe('readOnlyStores', () => {
     for (const e of entries ?? []) {
       expect(Object.keys(e).sort()).toEqual(['area', 'reason'])
     }
+  })
+
+  it('two trackers never share entries, and a construction sink receives records at once', () => {
+    const send = jest.fn()
+    const log = jest.fn()
+    const early = createReadOnlyStores({ sinks: { send, log } })
+    early.record(entry('settings/global'))
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(log).toHaveBeenCalledTimes(1)
+    expect(tracker.list()).toEqual([])
   })
 
   it('swallows throwing sinks', () => {

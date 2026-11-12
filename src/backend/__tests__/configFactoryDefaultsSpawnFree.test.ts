@@ -1,3 +1,4 @@
+import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { mkdirSync } from 'fs'
 import { join } from 'path'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
@@ -29,7 +30,9 @@ describe('config factory defaults are spawn-free', () => {
 
   it('getFactoryDefaults makes no runner call', () => {
     const runner = createScriptedRunner([])
-    const defaults = createGlobalConfig().getFactoryDefaults()
+    const defaults = createGlobalConfig({
+      versioning: createTestVersioning()
+    }).getFactoryDefaults()
     expect(defaults).toBeDefined()
     expect(runner.calls.length).toBe(0)
   })

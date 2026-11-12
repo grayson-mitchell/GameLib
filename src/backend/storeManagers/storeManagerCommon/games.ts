@@ -47,6 +47,7 @@ export type CommonGameDeps = StatusUpdateDeps &
     | 'appState'
     | 'gameConfigs'
     | 'engineRuntime'
+    | 'versioning'
     | 'windowRaiser'
   >
 

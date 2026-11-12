@@ -14,6 +14,7 @@ import {
   ensureSettingsMigrated,
   writeSettingsFile
 } from './storeVersioning/settingsFiles'
+import type { StoreVersioning } from './storeVersioning/engine'
 import {
   getCrossover,
   getDefaultWineBinary,
@@ -84,6 +85,8 @@ function getSteamCompatFolder() {
  * `settingChanged` event. Optional so a test that does not observe the event builds a config bare.
  */
 export interface GlobalConfigDeps {
+  /** The boot's store-versioning engine (`StoreRoot.versioning`): settings migration and read-only guard. */
+  versioning: StoreVersioning
   onSettingChanged?: (
     ...args: Parameters<BackendEvents['settingChanged']>
   ) => void
@@ -100,7 +103,7 @@ export interface GlobalConfigDeps {
 abstract class GlobalConfig {
   public abstract version: GlobalConfigVersion
 
-  constructor(protected readonly deps: GlobalConfigDeps = {}) {}
+  constructor(protected readonly deps: GlobalConfigDeps) {}
 
   protected config: AppSettings | undefined
 
@@ -203,7 +206,7 @@ abstract class GlobalConfig {
   public abstract resetToDefaults(): void
 
   protected writeToFile(config: Record<string, unknown>) {
-    return writeSettingsFile(configPath, config)
+    return writeSettingsFile(this.deps.versioning, configPath, config)
   }
 
   /**
@@ -234,7 +237,7 @@ abstract class GlobalConfig {
 class GlobalConfigV0 extends GlobalConfig {
   public version: GlobalConfigVersion = currentGlobalConfigVersion
 
-  constructor(deps?: GlobalConfigDeps) {
+  constructor(deps: GlobalConfigDeps) {
     super(deps)
     this.load()
   }
@@ -413,8 +416,8 @@ export type GlobalConfigSlice = Pick<
  * loader serves every version: a newer file loads what this build understands (D-03) instead of
  * crashing on an unknown version.
  */
-export function createGlobalConfig(deps?: GlobalConfigDeps): GlobalConfig {
-  ensureSettingsMigrated(configPath, 'settings/global')
+export function createGlobalConfig(deps: GlobalConfigDeps): GlobalConfig {
+  ensureSettingsMigrated(deps.versioning, configPath, 'settings/global')
   return new GlobalConfigV0(deps)
 }
 

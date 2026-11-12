@@ -7,8 +7,13 @@
  * three: the boot's 'stores' step builds one from `ctx.paths.userData` and hands it to every
  * store, so two boots (or two tests) share nothing and no store resolves a path at import.
  *
- * Import budget: a type-only import and nothing else. Stores import this module; it must
+ * Import budget: the pure versioning layer (storeVersioning/engine, readOnlyStores,
+ * storeMigrations: no logger, no IPC) and type-only imports. Stores import this module; it must
  * never reach the IPC layer (see the changes-channel note below) or construct a store.
+ *
+ * Plan 18 adds `versioning` (the per-file version engine, former module state in
+ * storeVersioning/engine.ts) and `readOnly` (the read-only tracker, former readOnlyStores.ts
+ * module state): every store of a boot shares them, two roots never do.
  *
  * The changes channel (formerly `storeChangeNotifier.ts`)
  *
@@ -22,6 +27,16 @@
  * call site: this channel holds a function reference that points at that one site.
  */
 import type { StoreChangedPayload } from 'common/types/sidecarTransport'
+import { createMigrations, type MigrationOverrides } from '../storeMigrations'
+import {
+  createStoreVersioning,
+  type StoreVersioning
+} from '../storeVersioning/engine'
+import {
+  createReadOnlyStores,
+  type ReadOnlyStores,
+  type Sinks as ReadOnlySinks
+} from '../storeVersioning/readOnlyStores'
 import type { StoreRegistry } from './storeRegistry'
 
 export interface FileStoreCell {
@@ -64,6 +79,8 @@ export interface StoreRoot {
   readonly userData: string
   readonly cells: FileStoreCells
   readonly changes: StoreChangeChannel
+  readonly versioning: StoreVersioning
+  readonly readOnly: ReadOnlyStores
 }
 
 function createFileStoreCells(): FileStoreCells {
@@ -118,10 +135,23 @@ export interface StoreFamilyDeps {
   root: StoreRoot
 }
 
-export function createStoreRoot(deps: { userData: string }): StoreRoot {
+export function createStoreRoot(deps: {
+  userData: string
+  /** Test seam: read-only sinks installed at construction (production installs them at flush). */
+  readOnlySinks?: ReadOnlySinks
+  /** Test seam: replacement migration chains for this root's versioning engine. */
+  migrationOverrides?: MigrationOverrides
+}): StoreRoot {
+  const readOnly = createReadOnlyStores({ sinks: deps.readOnlySinks })
+  const versioning = createStoreVersioning({
+    migrations: createMigrations({ overrides: deps.migrationOverrides }),
+    readOnly
+  })
   return {
     userData: deps.userData,
     cells: createFileStoreCells(),
-    changes: createStoreChangeChannel()
+    changes: createStoreChangeChannel(),
+    versioning,
+    readOnly
   }
 }

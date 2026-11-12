@@ -10,6 +10,7 @@
  * default and stopped at stdin EOF; the monitors spawn only per polled install and are stopped at
  * stdin EOF.
  */
+import type { StoreVersioning } from 'backend/storeVersioning/engine'
 import type { SendFrontendMessage } from '../../host/frontendMessage'
 import type { GlobalConfigSlice } from '../../config'
 import type { OpenExternal } from '../../host/openExternal'
@@ -35,6 +36,8 @@ export function createSteamProcesses(deps: {
   config: Pick<GlobalConfigSlice, 'getSettings'>
   openExternal: Pick<OpenExternal, 'openExternal'>
   paths: Pick<AppPaths, 'appFolder' | 'userHome'>
+  /** The boot's store-versioning engine (`StoreRoot.versioning`). */
+  versioning: StoreVersioning
   /** The boot-owned abort registry the DRM component and Valve client downloads register in (66.4-13). */
   aborts: Pick<AbortRegistry, 'create' | 'delete'>
   sendFrontendMessage: SendFrontendMessage
@@ -44,7 +47,12 @@ export function createSteamProcesses(deps: {
     // Mac Steam's go-offline debt and shutdown signal: one instance per boot, handed to SteamUser
     // (the steam-user boot step), the guided Go Offline flows and the boot/quit restore.
     macSteamOffline: createMacSteamOffline({
-      ...createMacSteamOfflineEnvDeps({ config, openExternal, paths }),
+      ...createMacSteamOfflineEnvDeps({
+        config,
+        openExternal,
+        paths,
+        versioning: deps.versioning
+      }),
       platform,
       runner,
       clock

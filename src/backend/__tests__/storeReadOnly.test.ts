@@ -12,14 +12,13 @@ import { getPath } from '../sidecar/pathShim'
 import CacheStore from '../cache'
 import { TypeCheckedStoreBackend } from '../typed_store'
 import { createTestStoreRoot } from '../testUtils/testStoreRoot'
-import { __resetStoreState } from '../storeVersioning/engine'
-import { __resetReadOnlyForTest } from '../storeVersioning/readOnlyStores'
 import { createStoreRegistry } from '../stores/storeRegistry'
 import { applyStoreWrite } from '../sidecar/storeWriteHandlers'
 import type { StoreChangedPayload } from 'common/types/sidecarTransport'
 
-// One root for the file: its userData is the jest-contained profile the fixtures are written to.
-const root = createTestStoreRoot()
+// A fresh root per test (engine, tracker and cells included): its userData is the jest-contained
+// profile the fixtures are written to.
+let root = createTestStoreRoot()
 
 const cacheDir = () => join(getPath('userData'), 'store_cache')
 const fixture = (name: string, body: unknown) => {
@@ -46,6 +45,7 @@ const frontendPush = jest.fn()
 const lines = () => stderr.mock.calls.map((c) => String(c[0]))
 
 beforeEach(() => {
+  root = createTestStoreRoot()
   stderr = jest.spyOn(process.stderr, 'write').mockImplementation(() => true)
   pushed = []
   root.changes.bind((p) => pushed.push(p))
@@ -53,8 +53,6 @@ beforeEach(() => {
 })
 afterEach(() => {
   root.changes.bind(null)
-  __resetStoreState()
-  __resetReadOnlyForTest()
   stderr.mockRestore()
 })
 

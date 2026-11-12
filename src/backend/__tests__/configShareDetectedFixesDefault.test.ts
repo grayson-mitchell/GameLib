@@ -1,3 +1,4 @@
+import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
@@ -29,12 +30,17 @@ afterAll(() => rmSync(dir, { recursive: true, force: true }))
 
 describe('shareDetectedFixes default (D-09)', () => {
   it('factory defaults keep sharing detected fixes off', () => {
-    expect(createGlobalConfig().getFactoryDefaults().shareDetectedFixes).toBe(
-      false
-    )
+    expect(
+      createGlobalConfig({
+        versioning: createTestVersioning()
+      }).getFactoryDefaults().shareDetectedFixes
+    ).toBe(false)
   })
 
   it('a fresh config with no config file reports it off', () => {
-    expect(createGlobalConfig().getSettings().shareDetectedFixes).toBe(false)
+    expect(
+      createGlobalConfig({ versioning: createTestVersioning() }).getSettings()
+        .shareDetectedFixes
+    ).toBe(false)
   })
 })

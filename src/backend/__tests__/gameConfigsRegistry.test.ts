@@ -1,3 +1,4 @@
+import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { createGameConfigs } from '../game_config'
 import {
   createTestGameConfigs,
@@ -12,18 +13,26 @@ describe('createGameConfigs', () => {
   })
 
   it('returns the same object on repeated gets', () => {
-    const configs = createGameConfigs({ config })
+    const configs = createGameConfigs({
+      config,
+      versioning: createTestVersioning()
+    })
     expect(configs.get('a')).toBe(configs.get('a'))
   })
 
   it('returns a different object for a different game', () => {
-    const configs = createGameConfigs({ config })
+    const configs = createGameConfigs({
+      config,
+      versioning: createTestVersioning()
+    })
     expect(configs.get('a')).not.toBe(configs.get('b'))
   })
 
   it('two registries never share an instance', () => {
-    expect(createGameConfigs({ config }).get('a')).not.toBe(
-      createGameConfigs({ config }).get('a')
+    expect(
+      createGameConfigs({ config, versioning: createTestVersioning() }).get('a')
+    ).not.toBe(
+      createGameConfigs({ config, versioning: createTestVersioning() }).get('a')
     )
   })
 })

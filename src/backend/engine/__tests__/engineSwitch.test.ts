@@ -1,3 +1,4 @@
+import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import {
   existsSync,
   mkdirSync,
@@ -36,8 +37,6 @@ import type { EngineSwitchContext, EngineSwitchDeps } from '../engineSwitch'
 import { createBottleLedger } from '../bottleLedger'
 import type { EngineSelection } from '../engineTypes'
 import { defined } from './defined'
-import { __resetStoreState } from 'backend/storeVersioning/engine'
-import { __resetReadOnlyForTest } from 'backend/storeVersioning/readOnlyStores'
 
 const BIN_DIR =
   '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin'
@@ -86,8 +85,6 @@ const seedMarker = (m: object) =>
   writeFileSync(join(dir, ENGINE_MARKER_FILE), JSON.stringify(m))
 
 beforeEach(() => {
-  __resetStoreState()
-  __resetReadOnlyForTest()
   mockState.engines = '/tools/steam-engines'
   mockState.root = mkdtempSync(join(tmpdir(), 'gamelib-switch-'))
   dir = join(mockState.root, NAME)
@@ -101,7 +98,8 @@ beforeEach(() => {
       isPinnedEngineInstalled: jest.fn().mockReturnValue(false),
       ensurePinnedEngine: jest.fn()
     },
-    ledger
+    ledger,
+    versioning: createTestVersioning()
   }
   prepareBottleForEngine = createEngineSwitcher().prepareBottleForEngine
   deps = {

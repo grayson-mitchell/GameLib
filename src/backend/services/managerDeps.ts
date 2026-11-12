@@ -9,6 +9,7 @@ export type ManagerDepsSource = Pick<
   BootServices,
   | 'managers'
   | 'stores'
+  | 'storeRoot'
   | 'launcher'
   | 'commandRunner'
   | 'runner'
@@ -51,6 +52,7 @@ export function managerDepsFromServices(
   return {
     libraryManagers: source.managers.library,
     stores: source.stores,
+    versioning: source.storeRoot.versioning,
     commandRunner: source.commandRunner,
     launcher: source.launcher,
     spawnAsync: source.spawnAsync,

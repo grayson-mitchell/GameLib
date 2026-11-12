@@ -1,3 +1,4 @@
+import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
@@ -30,13 +31,16 @@ afterAll(() => rmSync(dir, { recursive: true, force: true }))
 describe('steamExperimentalInstallApp default', () => {
   it('factory defaults keep the experimental InstallApp feature off', () => {
     expect(
-      createGlobalConfig().getFactoryDefaults().steamExperimentalInstallApp
+      createGlobalConfig({
+        versioning: createTestVersioning()
+      }).getFactoryDefaults().steamExperimentalInstallApp
     ).toBe(false)
   })
 
   it('a fresh config with no config file reports it off', () => {
-    expect(createGlobalConfig().getSettings().steamExperimentalInstallApp).toBe(
-      false
-    )
+    expect(
+      createGlobalConfig({ versioning: createTestVersioning() }).getSettings()
+        .steamExperimentalInstallApp
+    ).toBe(false)
   })
 })

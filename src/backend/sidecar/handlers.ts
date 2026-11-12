@@ -139,6 +139,7 @@ function toolSlices(services: BootServices) {
     onlineMonitor: services.onlineMonitor,
     engineState: services.engineState,
     engineRuntime: services.engineRuntime,
+    versioning: services.storeRoot.versioning,
     paths: services.paths,
     aborts: services.aborts,
     toolsState: services.toolsState,
@@ -180,6 +181,7 @@ export function registerHandlers(deps: {
     config: deps.services.config,
     engineState: deps.services.engineState,
     engineRuntime: deps.services.engineRuntime,
+    versioning: deps.services.storeRoot.versioning,
     paths: deps.services.paths,
     steamBottle: deps.services.steamBottle,
     steamLaunchRuntime: deps.services.steamLaunchRuntime
@@ -237,6 +239,7 @@ export function registerHandlers(deps: {
   // before.
   registerAppShellFlows({
     ipc,
+    readOnly: deps.services.storeRoot.readOnly,
     appRuntime: deps.services.appRuntime,
     appInfo: deps.services.appInfo,
     aborts: deps.services.aborts,

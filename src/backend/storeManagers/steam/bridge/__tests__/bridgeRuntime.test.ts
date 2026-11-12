@@ -1,6 +1,7 @@
 /**
  * 66.4-08: the bridge runtime's per-instance state and the frozen constant tables.
  */
+import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
@@ -65,10 +66,16 @@ describe('createBridgeRuntime entitlement signer', () => {
 
   it('numbers plists per instance, increasing, and starts fresh in a new instance', async () => {
     const plists: string[] = []
-    const a = createBridgeRuntime({ aborts: createAbortRegistry() })
+    const a = createBridgeRuntime({
+      versioning: createTestVersioning(),
+      aborts: createAbortRegistry()
+    })
     await sign(a, 'l1', plists)
     await sign(a, 'l2', plists)
-    const b = createBridgeRuntime({ aborts: createAbortRegistry() })
+    const b = createBridgeRuntime({
+      versioning: createTestVersioning(),
+      aborts: createAbortRegistry()
+    })
     await sign(b, 'l3', plists)
     expect(plists.map((p) => p.replace(/^.*-(\d+)\.plist$/, '$1'))).toEqual([
       '1',
@@ -80,8 +87,14 @@ describe('createBridgeRuntime entitlement signer', () => {
 
 describe('createBridgeRuntime isolation', () => {
   it('builds independent flights per call', () => {
-    const a = createBridgeRuntime({ aborts: createAbortRegistry() })
-    const b = createBridgeRuntime({ aborts: createAbortRegistry() })
+    const a = createBridgeRuntime({
+      versioning: createTestVersioning(),
+      aborts: createAbortRegistry()
+    })
+    const b = createBridgeRuntime({
+      versioning: createTestVersioning(),
+      aborts: createAbortRegistry()
+    })
     expect(a.runnerClone).not.toBe(b.runnerClone)
     expect(a.overlayRunnerClone).not.toBe(b.overlayRunnerClone)
     expect(a.sharedRedist).not.toBe(b.sharedRedist)

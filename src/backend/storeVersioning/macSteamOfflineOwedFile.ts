@@ -6,8 +6,7 @@
  * Kind is user-state: it is the only record that Mac Steam was taken offline on
  * the user's behalf. No `backend/logger` import (keep this layer logger-free).
  */
-import { currentVersionOf } from '../storeMigrations'
-import { isReadOnlyPath, prepareStoreFile } from './engine'
+import type { StoreVersioning } from './engine'
 import type { VersionCodec } from './types'
 
 export const MAC_STEAM_OFFLINE_OWED_CHAIN =
@@ -26,8 +25,11 @@ export const macSteamOfflineOwedCodec: VersionCodec = {
   write: (data, version) => ({ ...data, version })
 }
 
-export function ensureMacSteamOfflineOwedMigrated(path: string): void {
-  prepareStoreFile(
+export function ensureMacSteamOfflineOwedMigrated(
+  versioning: StoreVersioning,
+  path: string
+): void {
+  versioning.prepareStoreFile(
     path,
     MAC_STEAM_OFFLINE_OWED_CHAIN,
     { kind: 'user-state' },
@@ -35,10 +37,15 @@ export function ensureMacSteamOfflineOwedMigrated(path: string): void {
   )
 }
 
-export function isMacSteamOfflineOwedReadOnly(path: string): boolean {
-  return isReadOnlyPath(path)
+export function isMacSteamOfflineOwedReadOnly(
+  versioning: StoreVersioning,
+  path: string
+): boolean {
+  return versioning.isReadOnlyPath(path)
 }
 
-export function macSteamOfflineOwedVersion(): number {
-  return currentVersionOf(MAC_STEAM_OFFLINE_OWED_CHAIN)
+export function macSteamOfflineOwedVersion(
+  versioning: StoreVersioning
+): number {
+  return versioning.currentVersionOf(MAC_STEAM_OFFLINE_OWED_CHAIN)
 }

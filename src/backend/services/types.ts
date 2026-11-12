@@ -9,6 +9,7 @@
  * `{ managers: Pick<StoreManagers, 'library'> }` style interface. Only composition roots
  * see the whole `BootServices`.
  */
+import type { StoreVersioning } from 'backend/storeVersioning/engine'
 import type { AppShellState } from '../sidecar/appShellFlowRegistration'
 import type { InstalledJsonWatcher } from '../sidecar/installedJsonWatcher'
 import type { StoreEmbedSeamHolder } from '../store/storeEmbedSeam'
@@ -160,6 +161,8 @@ export interface InfoCaches {
 }
 
 export interface ManagerDeps {
+  /** The boot's store-versioning engine (`StoreRoot.versioning`, 66.4-18): game configs, bottle markers and ledgers migrate through it. */
+  versioning: StoreVersioning
   libraryManagers: StoreManagers['library']
   stores: Stores
   commandRunner: CommandRunner

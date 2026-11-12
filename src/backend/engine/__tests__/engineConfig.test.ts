@@ -1,3 +1,4 @@
+import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import {
   mkdirSync,
   mkdtempSync,
@@ -65,16 +66,23 @@ const release = (over: Record<string, unknown> = {}) => ({
   installDir: WM_DIR,
   ...over
 })
+// One engine for the file: the config reads migrate through it.
+const versioning = createTestVersioning()
 const deps = (
   releases = [release()],
   global: Record<string, unknown> = {}
 ): Partial<EngineConfigDeps> &
   Pick<
     EngineConfigDeps,
-    'wineManagerReleases' | 'globalSettings' | 'gamesConfigPath' | 'pinWineBin'
+    | 'wineManagerReleases'
+    | 'globalSettings'
+    | 'gamesConfigPath'
+    | 'pinWineBin'
+    | 'versioning'
   > => ({
   wineManagerReleases: () => releases,
   gamesConfigPath: dir,
+  versioning,
   pinWineBin: (pin) => pinnedEnginePaths(pin as never).wineBin,
   globalSettings: () => global
 })
@@ -177,7 +185,9 @@ describe('resolveEffectiveEngine', () => {
 describe('readStoredGameConfig', () => {
   it('rejects traversal and bad names', () => {
     for (const n of ['../x', 'a/b', 'a\\b', '', 'a\0b', '..']) {
-      expect(readStoredGameConfig(n, { gamesConfigPath: dir })).toBeUndefined()
+      expect(
+        readStoredGameConfig(n, { gamesConfigPath: dir, versioning })
+      ).toBeUndefined()
     }
   })
   it('reads entries keyed by appName', () => {
@@ -186,7 +196,9 @@ describe('readStoredGameConfig', () => {
         join(dir, `${n}.json`),
         JSON.stringify({ [n]: { targetExe: n } })
       )
-      expect(readStoredGameConfig(n, { gamesConfigPath: dir })).toEqual({
+      expect(
+        readStoredGameConfig(n, { gamesConfigPath: dir, versioning })
+      ).toEqual({
         targetExe: n
       })
     }

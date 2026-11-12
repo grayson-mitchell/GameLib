@@ -26,14 +26,19 @@ import {
   REDIST_TIMEOUT_BACKOFF_AFTER
 } from '../sharedRedistInstall'
 import { createTestBridgeRuntime } from 'backend/testUtils/testBridgeRuntime'
+import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 
 // One fresh single-flight map and tmp sequence per test (66.4-08).
 let installSteamBridgeSharedRedists: ReturnType<
   typeof createTestBridgeRuntime
 >['sharedRedist']['installSteamBridgeSharedRedists']
+let versioning: ReturnType<typeof createTestVersioning>
+const installerOn = (v: typeof versioning) =>
+  createTestBridgeRuntime({ versioning: v }).sharedRedist
+    .installSteamBridgeSharedRedists
 beforeEach(() => {
-  installSteamBridgeSharedRedists =
-    createTestBridgeRuntime().sharedRedist.installSteamBridgeSharedRedists
+  versioning = createTestVersioning()
+  installSteamBridgeSharedRedists = installerOn(versioning)
 })
 import { parseInstallScript, classifySharedRedist } from '../sharedRedists'
 import type { SharedRedistDepot, SharedRedistDownloadResult } from '../../depot'
@@ -46,9 +51,6 @@ import { bridgeBottleNameFor } from '../../bridgeBottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import * as backupModule from 'backend/storeVersioning/backup'
 import { listBackups } from 'backend/storeVersioning/backup'
-import { __resetStoreState } from 'backend/storeVersioning/engine'
-import { __resetReadOnlyForTest } from 'backend/storeVersioning/readOnlyStores'
-import { __setMigrationsForTest } from 'backend/storeMigrations'
 import {
   SHARED_REDIST_LEDGER_CHAIN,
   sharedRedistLedgerVersion
@@ -188,8 +190,6 @@ const installerCalls = () =>
 
 beforeEach(() => {
   jest.clearAllMocks()
-  __resetStoreState()
-  __resetReadOnlyForTest()
   bottleDir = mkdtempSync(join(tmpdir(), 'rkj-redist-bottle-'))
   mockSupportDir = mkdtempSync(join(tmpdir(), 'rkj-redist-support-'))
   mockedBottleDir.mockReturnValue(bottleDir)
@@ -204,7 +204,6 @@ beforeEach(() => {
 afterEach(() => {
   jest.useRealTimers()
   jest.restoreAllMocks()
-  __setMigrationsForTest(SHARED_REDIST_LEDGER_CHAIN, undefined)
   // Only ever remove the mkdtemp dir created above.
   if (bottleDir.startsWith(tmpdir()))
     rmSync(bottleDir, { recursive: true, force: true })
@@ -1333,7 +1332,7 @@ describe('ledger versioning (quick 261109-uv4)', () => {
   it('round trips: a fresh install is stamped and the second call is settled', async () => {
     mockedDownload.mockResolvedValue(ok([dx()]))
     await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
-    expect(ledger().version).toBe(sharedRedistLedgerVersion())
+    expect(ledger().version).toBe(sharedRedistLedgerVersion(versioning))
     jest.clearAllMocks()
     await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(mockedDownload).not.toHaveBeenCalled()
@@ -1341,9 +1340,12 @@ describe('ledger versioning (quick 261109-uv4)', () => {
   })
 
   it('migrates a v1 ledger through a simulated v2 step, preserving the pending restore', async () => {
-    __setMigrationsForTest(SHARED_REDIST_LEDGER_CHAIN, [
-      { id: 'test-v2', to: 2, run: (d) => d }
-    ])
+    versioning = createTestVersioning({
+      migrationOverrides: new Map([
+        [SHARED_REDIST_LEDGER_CHAIN, [{ id: 'test-v2', to: 2, run: (d) => d }]]
+      ])
+    })
+    installSteamBridgeSharedRedists = installerOn(versioning)
     writeFileSync(ledgerPath(), pendingRestore(1))
     mockedDownload.mockResolvedValue(ok([dx()]))
     nullGfxWine()

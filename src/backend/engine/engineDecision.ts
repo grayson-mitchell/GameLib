@@ -146,6 +146,8 @@ export type RunnerDeps = {
     EngineServices['paths'],
     'toolsPath' | 'userHome' | 'gamesConfigPath'
   >
+  /** The boot's store-versioning engine the stored game config is migrated through. */
+  versioning: EngineServices['versioning']
   /** The boot-owned engine runtime pieces the defaults read. */
   engineRuntime: Pick<
     EngineServices['engineRuntime'],
@@ -195,7 +197,11 @@ function baseEngineDecisionDeps(rt: RunnerDeps): NonSpawnDefaults {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('./engineSwitch') as typeof import('./engineSwitch')
       return readBottleEngineMarkerSummary(
-        { paths: rt.paths, fallback: rt.engineRuntime.fallback },
+        {
+          paths: rt.paths,
+          fallback: rt.engineRuntime.fallback,
+          versioning: rt.versioning
+        },
         bottleName
       )
     },
@@ -595,6 +601,7 @@ export async function decideLaunchEngine(
       ...d,
       runner: deps.runner,
       paths: deps.paths,
+      versioning: deps.versioning,
       engineRuntime: deps.engineRuntime
     },
     { killOnTimeout: true, key: args.key }

@@ -44,6 +44,7 @@ export default class SideloadGame implements Game {
       | 'paths'
       | 'infoCaches'
       | 'engineRuntime'
+      | 'versioning'
       | 'windowRaiser'
       | 'aborts'
       | 'imageTools'

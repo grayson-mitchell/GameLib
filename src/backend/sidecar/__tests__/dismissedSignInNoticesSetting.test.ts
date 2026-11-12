@@ -94,7 +94,9 @@ function launch(): Launch {
     const { createGlobalConfig } = require('backend/config')
     /* eslint-enable @typescript-eslint/no-require-imports */
 
-    const config = createGlobalConfig()
+    const config = createGlobalConfig({
+      versioning: createTestStoreRoot().versioning
+    })
     const ipc = createIpcRegistry()
     const { handlerRegistry, listenerRegistry } = ipcViews(ipc)
 

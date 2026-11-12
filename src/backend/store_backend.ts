@@ -68,14 +68,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
 import type { StoreOptions } from 'common/types/typed_store'
 import { chmodSync, existsSync, mkdirSync, statSync } from 'fs'
 import type { StoreRoot } from './stores/storeRoot'
-import {
-  isReadOnlyPath,
-  noteRefusedWrite,
-  prepareStoreFile,
-  stampForWrite,
-  storeKeyOf,
-  viewOf
-} from './storeVersioning/engine'
+import { storeKeyOf, type StoreVersioning } from './storeVersioning/engine'
 import { storeVersionCodec } from './storeMigrations'
 import type { StoreDeclaration } from './storeVersioning/types'
 
@@ -222,14 +215,24 @@ function prepareStore<T extends Record<string, unknown>>(
   const dir = dirname(filePath)
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 })
   if (declaration?.tokenBearing) tightenTokenPaths(filePath)
-  prepareStoreFile(
+  root.versioning.prepareStoreFile(
     filePath,
     storeKeyOf(filePath),
     declaration,
     storeVersionCodec
   )
-  return { ...translated, configFileMode: 0o600 }
+  // The versioning engine has to be reachable from the accessors below DURING conf's constructor
+  // (its defaults merge writes through `this.store`), before any field of ours can be assigned.
+  // conf stores `serialize` on the instance before it first reads, so the root's engine rides on
+  // that function: per instance, no module state.
+  const serialize = Object.assign(
+    (value: unknown): string => JSON.stringify(value, undefined, '\t'),
+    { versioning: root.versioning }
+  )
+  return { ...translated, serialize, configFileMode: 0o600 }
 }
+
+type VersioningCarrier = { _serialize: { versioning: StoreVersioning } }
 
 /**
  * Drop-in replacement for `electron-store`'s default export. Same constructor
@@ -243,8 +246,12 @@ export default class GameLibStore<
     super(prepareStore(options))
   }
 
+  private get versioning(): StoreVersioning {
+    return (this as unknown as VersioningCarrier)._serialize.versioning
+  }
+
   get readOnly(): boolean {
-    return isReadOnlyPath(this.path)
+    return this.versioning.isReadOnlyPath(this.path)
   }
 
   // The single read and write choke point every conf write funnels through
@@ -254,14 +261,14 @@ export default class GameLibStore<
   // is set by conf before its first `this.store` access, so the guard is live
   // during `super()` (it stops conf's constructor defaults merge on a newer file).
   get store(): T {
-    return viewOf(this.path, super.store)
+    return this.versioning.viewOf(this.path, super.store)
   }
 
   set store(value: T) {
-    if (isReadOnlyPath(this.path)) {
-      noteRefusedWrite(this.path)
+    if (this.versioning.isReadOnlyPath(this.path)) {
+      this.versioning.noteRefusedWrite(this.path)
       return
     }
-    super.store = stampForWrite(this.path, value)
+    super.store = this.versioning.stampForWrite(this.path, value)
   }
 }

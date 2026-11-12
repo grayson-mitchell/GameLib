@@ -65,6 +65,7 @@
  * fresh registry with `inFreshRegistry()` and call `registerAppShellFlows()` themselves.
  */
 
+import { createReadOnlyStores } from '../../storeVersioning/readOnlyStores'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { defined } from 'backend/testUtils/indexed'
 import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'fs'
@@ -411,6 +412,8 @@ function directDeps(stores: unknown = {}, sendFrontendMessage = jest.fn()) {
     stores: stores as never,
     // A fresh instance per direct registration, as a fresh module registry gave before 66.4-16.
     appShell: createAppShellState({ clock: createClock() }),
+    // The boot's read-only tracker (66.4-18): a fresh one per direct registration.
+    readOnly: createReadOnlyStores(),
     appRuntime
   }
 }
@@ -1278,9 +1281,9 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           )
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           require('../../logger').initHeadless()
+          const deps = directDeps({}, sendMock)
           if (withEntry) {
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            require('../../storeVersioning/readOnlyStores').recordReadOnly({
+            deps.readOnly.record({
               storeKey: 'store_cache/steam_library',
               file: 'steam_library.json',
               reason: 'newer',
@@ -1288,9 +1291,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
             })
           }
           // eslint-disable-next-line @typescript-eslint/no-require-imports
-          require('../appShellFlowRegistration').registerAppShellFlows(
-            directDeps({}, sendMock)
-          )
+          require('../appShellFlowRegistration').registerAppShellFlows(deps)
           ;[frontendReadyListener] = directListeners().get('frontendReady')
         })
         jest.useFakeTimers({ doNotFake: ['setImmediate'] })

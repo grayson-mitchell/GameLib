@@ -10,6 +10,7 @@ import {
 } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
+import { createTestVersioning } from '../testUtils/testStoreRoot'
 
 // Phase 68 plan 05: config.json and GamesConfig/<app>.json on the store engine.
 // Every test gets a fresh directory and a fresh module graph, so the
@@ -47,21 +48,33 @@ type ConfigModule = typeof import('../config')
 type GameConfigModule = typeof import('../game_config')
 type EngineConfigModule = typeof import('../engine/engineConfig')
 
+// Each graph also gets its own versioning engine (a root's engine, as at boot): the per-path state
+// resets with it, so the wrappers below bake it in.
 interface Graph {
-  createGlobalConfig: ConfigModule['createGlobalConfig']
-  createGameConfigs: GameConfigModule['createGameConfigs']
-  readStoredGameConfig: EngineConfigModule['readStoredGameConfig']
+  createGlobalConfig: () => ReturnType<ConfigModule['createGlobalConfig']>
+  createGameConfigs: (deps: {
+    config: Parameters<GameConfigModule['createGameConfigs']>[0]['config']
+  }) => ReturnType<GameConfigModule['createGameConfigs']>
+  readStoredGameConfig: (
+    appName: string,
+    deps: { gamesConfigPath: string }
+  ) => ReturnType<EngineConfigModule['readStoredGameConfig']>
 }
 
 function freshGraph(): Graph {
   let g!: Graph
   jest.isolateModules(() => {
     /* eslint-disable @typescript-eslint/no-require-imports */
+    const versioning = createTestVersioning()
+    const config = require('../config') as ConfigModule
+    const gameConfig = require('../game_config') as GameConfigModule
+    const engineConfig = require('../engine/engineConfig') as EngineConfigModule
     g = {
-      createGlobalConfig: require('../config').createGlobalConfig,
-      createGameConfigs: require('../game_config').createGameConfigs,
-      readStoredGameConfig: require('../engine/engineConfig')
-        .readStoredGameConfig
+      createGlobalConfig: () => config.createGlobalConfig({ versioning }),
+      createGameConfigs: (deps) =>
+        gameConfig.createGameConfigs({ ...deps, versioning }),
+      readStoredGameConfig: (appName, deps) =>
+        engineConfig.readStoredGameConfig(appName, { ...deps, versioning })
     }
     /* eslint-enable @typescript-eslint/no-require-imports */
   })

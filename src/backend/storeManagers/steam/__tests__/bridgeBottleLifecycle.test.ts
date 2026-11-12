@@ -1187,6 +1187,7 @@ describe('Phase 59 engine registry', () => {
           onlineMonitor: d.onlineMonitor,
           engineState: d.engineState,
           engineRuntime: d.engineRuntime,
+          versioning: d.versioning,
           paths: d.paths,
           notices: d,
           installRemove: mockedInstallRemove,

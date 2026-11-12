@@ -1,4 +1,8 @@
 import {
+  createVersioningHarness,
+  type VersioningHarness
+} from '../../testUtils/testStoreRoot'
+import {
   existsSync,
   mkdtempSync,
   readFileSync,
@@ -8,10 +12,7 @@ import {
 } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { __resetStoreState, readOnlyReasonOf } from '../engine'
 import { listBackups } from '../backup'
-import { __resetReadOnlyForTest } from '../readOnlyStores'
-import { __setMigrationsForTest } from '../../storeMigrations'
 import {
   ENGINE_MARKER_CHAIN,
   ensureEngineMarkerMigrated,
@@ -50,15 +51,16 @@ const fixtures: Record<string, object> = {
   }
 }
 
+// One engine and tracker per test: nothing carries over between tests.
+let h: VersioningHarness
+
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'gamelib-engine-marker-'))
   file = join(root, FILE_NAME)
-  __resetStoreState()
-  __resetReadOnlyForTest()
+  h = createVersioningHarness()
 })
 
 afterEach(() => {
-  __setMigrationsForTest(ENGINE_MARKER_CHAIN, undefined)
   rmSync(root, { recursive: true, force: true })
 })
 
@@ -99,11 +101,11 @@ describe('ensureEngineMarkerMigrated', () => {
     (name) => {
       writeFileSync(file, JSON.stringify(fixtures[name]))
       const before = readFileSync(file)
-      ensureEngineMarkerMigrated(file)
+      ensureEngineMarkerMigrated(h.versioning, file)
       expect(readFileSync(file).equals(before)).toBe(true)
       expect(listBackups(file)).toEqual([])
       expect(readdirSync(root)).toEqual([FILE_NAME])
-      expect(isEngineMarkerReadOnly(file)).toBe(false)
+      expect(isEngineMarkerReadOnly(h.versioning, file)).toBe(false)
     }
   )
 
@@ -113,9 +115,9 @@ describe('ensureEngineMarkerMigrated', () => {
       JSON.stringify({ version: 1, ...fixtures['crossover'] })
     )
     const before = readFileSync(file)
-    ensureEngineMarkerMigrated(file)
+    ensureEngineMarkerMigrated(h.versioning, file)
     expect(readFileSync(file).equals(before)).toBe(true)
-    expect(isEngineMarkerReadOnly(file)).toBe(false)
+    expect(isEngineMarkerReadOnly(h.versioning, file)).toBe(false)
   })
 
   it('treats a version-2 marker as newer: read-only, untouched', () => {
@@ -124,33 +126,33 @@ describe('ensureEngineMarkerMigrated', () => {
       JSON.stringify({ version: 2, ...fixtures['crossover'] })
     )
     const before = readFileSync(file)
-    ensureEngineMarkerMigrated(file)
-    expect(isEngineMarkerReadOnly(file)).toBe(true)
-    expect(readOnlyReasonOf(file)).toBe('newer')
+    ensureEngineMarkerMigrated(h.versioning, file)
+    expect(isEngineMarkerReadOnly(h.versioning, file)).toBe(true)
+    expect(h.versioning.readOnlyReasonOf(file)).toBe('newer')
     expect(readFileSync(file).equals(before)).toBe(true)
   })
 
   it('has no opinion on malformed JSON', () => {
     writeFileSync(file, '{nope')
-    expect(() => ensureEngineMarkerMigrated(file)).not.toThrow()
+    expect(() => ensureEngineMarkerMigrated(h.versioning, file)).not.toThrow()
     expect(readFileSync(file, 'utf8')).toBe('{nope')
-    expect(isEngineMarkerReadOnly(file)).toBe(false)
+    expect(isEngineMarkerReadOnly(h.versioning, file)).toBe(false)
   })
 
   it('creates nothing for a missing file', () => {
-    ensureEngineMarkerMigrated(file)
+    ensureEngineMarkerMigrated(h.versioning, file)
     expect(existsSync(file)).toBe(false)
     expect(readdirSync(root)).toEqual([])
-    expect(isEngineMarkerReadOnly(file)).toBe(false)
+    expect(isEngineMarkerReadOnly(h.versioning, file)).toBe(false)
   })
 
   it('is at v1, and a v2 migration migrates a legacy marker with a backup', () => {
-    expect(engineMarkerVersion()).toBe(1)
+    expect(engineMarkerVersion(h.versioning)).toBe(1)
     writeFileSync(file, JSON.stringify(fixtures['crossover']))
-    __setMigrationsForTest(ENGINE_MARKER_CHAIN, [
+    h.setMigrations(ENGINE_MARKER_CHAIN, [
       { id: 't', to: 2, run: (d) => ({ ...d, extra: true }) }
     ])
-    ensureEngineMarkerMigrated(file)
+    ensureEngineMarkerMigrated(h.versioning, file)
     const live = JSON.parse(readFileSync(file, 'utf8'))
     expect(live.version).toBe(2)
     expect(live.extra).toBe(true)

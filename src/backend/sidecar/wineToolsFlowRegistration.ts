@@ -116,6 +116,7 @@ export interface WineToolsFlowDeps
   engineState: EngineStateService
   /** The boot-owned engine runtime and path roots (66.4-05). */
   engineRuntime: ToolsDeps['engineRuntime']
+  versioning: ToolsDeps['versioning']
   paths: ToolsDeps['paths']
   aborts: Pick<AbortRegistry, 'create' | 'delete'>
   /** The boot-owned tools state the Tools of this registration share (66.4-14). */

@@ -119,6 +119,8 @@ export interface LauncherDeps
   engineState: EngineStateService
   /** The boot-owned engine runtime and the path roots the engine reads (66.4-05). */
   engineRuntime: EngineServicesSource['engineRuntime']
+  /** The boot's store-versioning engine (66.4-18). */
+  versioning: EngineServicesSource['versioning']
   paths: EngineServicesSource['paths'] &
     Pick<
       AppPaths,
@@ -179,6 +181,7 @@ function engineSource(deps: LauncherDeps): EngineServicesSource {
     onlineMonitor: deps.onlineMonitor,
     engineState: deps.engineState,
     engineRuntime: deps.engineRuntime,
+    versioning: deps.versioning,
     paths: deps.paths,
     runner: deps.runner,
     stores: deps.stores,

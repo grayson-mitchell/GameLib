@@ -8,27 +8,32 @@ import {
 } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import {
-  __kindMismatchesForTest,
-  __resetStoreState,
-  prepareStoreFile,
-  runFileMigration,
-  stampForWrite,
-  storeKeyOf,
-  viewOf
-} from '../engine'
+import { storeKeyOf } from '../engine'
 import { listBackups } from '../backup'
-import { __resetReadOnlyForTest, listReadOnly } from '../readOnlyStores'
+import { STORE_MIGRATIONS, storeVersionCodec } from '../../storeMigrations'
 import {
-  STORE_MIGRATIONS,
-  __setMigrationsForTest,
-  storeVersionCodec
-} from '../../storeMigrations'
+  createVersioningHarness,
+  type VersioningHarness
+} from '../../testUtils/testStoreRoot'
 import type { Migration, StoreDeclaration } from '../types'
 
 const KEY = 'store_cache/probe'
 const decl: StoreDeclaration = { kind: 'user-state' }
 const cacheDecl: StoreDeclaration = { kind: 'cache' }
+
+// One engine and read-only tracker per test (nothing carries over, as the module reset did).
+let h: VersioningHarness
+const setMigrations: VersioningHarness['setMigrations'] = (k, c) =>
+  h.setMigrations(k, c)
+const prepareStoreFile: VersioningHarness['versioning']['prepareStoreFile'] = (
+  ...a
+) => h.versioning.prepareStoreFile(...a)
+const viewOf: VersioningHarness['versioning']['viewOf'] = (...a) =>
+  h.versioning.viewOf(...a)
+const stampForWrite: VersioningHarness['versioning']['stampForWrite'] = (
+  ...a
+) => h.versioning.stampForWrite(...a)
+const listReadOnly = () => h.readOnly.list()
 
 let root: string
 let file: string
@@ -44,13 +49,14 @@ const chain = (run: Migration['run'] = (d) => ({ renamed: d.old })) =>
   [{ id: 'probe-v1-v2', to: 2, run }] as const
 
 const run = (declaration = decl) =>
-  runFileMigration(file, {
+  h.versioning.runFileMigration(file, {
     chainKey: KEY,
     declaration,
     codec: storeVersionCodec
   })
 
 beforeEach(() => {
+  h = createVersioningHarness()
   root = mkdtempSync(join(tmpdir(), 'engine-'))
   mkdirSync(join(root, 'store_cache'))
   file = join(root, 'store_cache', 'probe.json')
@@ -58,9 +64,6 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  __resetStoreState()
-  __resetReadOnlyForTest()
-  __setMigrationsForTest(KEY, undefined)
   stderr.mockRestore()
   rmSync(root, { recursive: true, force: true })
 })
@@ -82,7 +85,7 @@ describe('runFileMigration', () => {
   })
 
   test('real migration rewrites, drops old fields, takes one backup', () => {
-    __setMigrationsForTest(KEY, chain())
+    setMigrations(KEY, chain())
     const original = versioned({ old: 5 }, 1)
     writeFileSync(file, original)
     const s = run()
@@ -111,30 +114,30 @@ describe('runFileMigration', () => {
   })
 
   test('throwing migration leaves file byte-identical and retries next launch', () => {
-    __setMigrationsForTest(
-      KEY,
-      chain(() => {
-        throw new Error('boom')
-      })
-    )
+    const throwing = chain(() => {
+      throw new Error('boom')
+    })
+    setMigrations(KEY, throwing)
     const body = versioned({ old: 1 }, 1)
     writeFileSync(file, body)
     expect(run()).toMatchObject({ status: 'readOnly', reason: 'failed' })
     expect(readFileSync(file, 'utf8')).toBe(body)
     expect(listBackups(file)).toHaveLength(1)
-    __resetStoreState()
+    // A new launch: fresh engine state over the same chain.
+    h = createVersioningHarness()
+    setMigrations(KEY, throwing)
     expect(run()).toMatchObject({ status: 'readOnly', reason: 'failed' })
     expect(listBackups(file)).toHaveLength(1)
   })
 
   test('cache with a real step is discarded; adoption alone is not', () => {
-    __setMigrationsForTest(KEY, chain())
+    setMigrations(KEY, chain())
     writeFileSync(file, versioned({ old: 1 }, 1))
     expect(run(cacheDecl).status).toBe('ok')
     expect(existsSync(file)).toBe(false)
     expect(listBackups(file)).toEqual([])
 
-    __setMigrationsForTest(KEY, undefined)
+    setMigrations(KEY, undefined)
     writeFileSync(file, JSON.stringify({ a: 1 }))
     run(cacheDecl)
     expect(existsSync(file)).toBe(true)
@@ -161,13 +164,13 @@ describe('runFileMigration', () => {
 
 describe('prepareStoreFile / views', () => {
   test('shared path migrates once; kind mismatch is recorded, first kind stays', () => {
-    __setMigrationsForTest(KEY, chain())
+    setMigrations(KEY, chain())
     writeFileSync(file, versioned({ old: 1 }, 1))
     prepareStoreFile(file, KEY, decl, storeVersionCodec)
     prepareStoreFile(file, KEY, cacheDecl, storeVersionCodec)
     expect(listBackups(file)).toHaveLength(1)
     expect(existsSync(file)).toBe(true)
-    expect(__kindMismatchesForTest()).toHaveLength(1)
+    expect(h.versioning.kindMismatches()).toHaveLength(1)
   })
 
   test('viewOf and stampForWrite', () => {

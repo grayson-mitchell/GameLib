@@ -189,6 +189,7 @@ import type { AbortRegistry } from '../utils/aborthandler/aborthandler'
 import type { GlobalConfigSlice } from '../config'
 import { logInfo, LogPrefix } from '../logger'
 import { pushReadOnlyStoresNotice } from './readOnlyStoresNotice'
+import type { ReadOnlyStores } from '../storeVersioning/readOnlyStores'
 // Phase 35 plan 11: boot-time download-queue auto-resume, ported from
 // `main.ts:613` before that file is deleted at plan 35-14. See the
 // `frontendReady` handler below for the full contingency analysis.
@@ -332,6 +333,8 @@ function syncTrayIcon(
 export interface AppShellFlowDeps
   extends DialogBoxDeps, NotifyDeps, AppRuntimeSlice<'events' | 'protocol'> {
   managers: Pick<StoreManagers, 'library'>
+  /** The boot's read-only store tracker, flushed to the renderer once per launch (66.4-18). */
+  readOnly: Pick<ReadOnlyStores, 'flush'>
   /** The boot-owned abort registry the `abort` channel signals (66.4-13). */
   aborts: Pick<AbortRegistry, 'call'>
   downloadQueue: Pick<DownloadQueue, 'initQueue'>
@@ -707,7 +710,7 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
         // runs once per process, giving one notice per launch. Creates no timer or handle
         // (sidecar exit contract); own try/catch so it can never skip the work above.
         try {
-          pushReadOnlyStoresNotice(deps.sendFrontendMessage)
+          pushReadOnlyStoresNotice(deps.readOnly, deps.sendFrontendMessage)
         } catch (error) {
           logSendFailure('frontendReady -> readOnlyStoresNotice', error)
         }

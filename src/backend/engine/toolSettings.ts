@@ -118,6 +118,7 @@ function releaseBoundDeps(
     wineManagerReleases: services.wineManagerReleases,
     runner: services.runner,
     paths: services.paths,
+    versioning: services.versioning,
     engineRuntime: services.engineRuntime
   }
   const config = {

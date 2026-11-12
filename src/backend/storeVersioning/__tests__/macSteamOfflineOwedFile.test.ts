@@ -1,4 +1,8 @@
 import {
+  createVersioningHarness,
+  type VersioningHarness
+} from '../../testUtils/testStoreRoot'
+import {
   existsSync,
   mkdtempSync,
   readFileSync,
@@ -9,10 +13,7 @@ import {
 } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { __resetStoreState, readOnlyReasonOf } from '../engine'
 import { listBackups } from '../backup'
-import { __resetReadOnlyForTest } from '../readOnlyStores'
-import { __setMigrationsForTest } from '../../storeMigrations'
 import {
   MAC_STEAM_OFFLINE_OWED_CHAIN,
   ensureMacSteamOfflineOwedMigrated,
@@ -27,15 +28,16 @@ let file: string
 const legacy = (by: string) =>
   JSON.stringify({ since: '2026-11-01T10:00:00.000Z', by, pid: 4242 })
 
+// One engine and tracker per test: nothing carries over between tests.
+let h: VersioningHarness
+
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'gamelib-owed-'))
   file = join(root, 'mac-steam-offline-owed.json')
-  __resetStoreState()
-  __resetReadOnlyForTest()
+  h = createVersioningHarness()
 })
 
 afterEach(() => {
-  __setMigrationsForTest(MAC_STEAM_OFFLINE_OWED_CHAIN, undefined)
   rmSync(root, { recursive: true, force: true })
 })
 
@@ -71,54 +73,56 @@ describe('ensureMacSteamOfflineOwedMigrated', () => {
     (by) => {
       writeFileSync(file, legacy(by), { mode: 0o600 })
       const before = readFileSync(file)
-      ensureMacSteamOfflineOwedMigrated(file)
+      ensureMacSteamOfflineOwedMigrated(h.versioning, file)
       expect(readFileSync(file).equals(before)).toBe(true)
       if (process.platform !== 'win32')
         expect(statSync(file).mode & 0o777).toBe(0o600)
       expect(listBackups(file)).toEqual([])
       expect(readdirSync(root)).toEqual(['mac-steam-offline-owed.json'])
-      expect(isMacSteamOfflineOwedReadOnly(file)).toBe(false)
+      expect(isMacSteamOfflineOwedReadOnly(h.versioning, file)).toBe(false)
     }
   )
 
   it('leaves a v1-stamped file untouched and writable', () => {
     writeFileSync(file, JSON.stringify({ version: 1, by: 'toggled' }))
     const before = readFileSync(file)
-    ensureMacSteamOfflineOwedMigrated(file)
+    ensureMacSteamOfflineOwedMigrated(h.versioning, file)
     expect(readFileSync(file).equals(before)).toBe(true)
-    expect(isMacSteamOfflineOwedReadOnly(file)).toBe(false)
+    expect(isMacSteamOfflineOwedReadOnly(h.versioning, file)).toBe(false)
   })
 
   it('treats a version-2 file as newer: read-only, untouched', () => {
     writeFileSync(file, JSON.stringify({ version: 2, by: 'toggled' }))
     const before = readFileSync(file)
-    ensureMacSteamOfflineOwedMigrated(file)
-    expect(isMacSteamOfflineOwedReadOnly(file)).toBe(true)
-    expect(readOnlyReasonOf(file)).toBe('newer')
+    ensureMacSteamOfflineOwedMigrated(h.versioning, file)
+    expect(isMacSteamOfflineOwedReadOnly(h.versioning, file)).toBe(true)
+    expect(h.versioning.readOnlyReasonOf(file)).toBe('newer')
     expect(readFileSync(file).equals(before)).toBe(true)
   })
 
   it('has no opinion on malformed JSON', () => {
     writeFileSync(file, '{nope')
-    expect(() => ensureMacSteamOfflineOwedMigrated(file)).not.toThrow()
+    expect(() =>
+      ensureMacSteamOfflineOwedMigrated(h.versioning, file)
+    ).not.toThrow()
     expect(readFileSync(file, 'utf8')).toBe('{nope')
-    expect(isMacSteamOfflineOwedReadOnly(file)).toBe(false)
+    expect(isMacSteamOfflineOwedReadOnly(h.versioning, file)).toBe(false)
   })
 
   it('creates nothing for a missing file', () => {
-    ensureMacSteamOfflineOwedMigrated(file)
+    ensureMacSteamOfflineOwedMigrated(h.versioning, file)
     expect(existsSync(file)).toBe(false)
     expect(readdirSync(root)).toEqual([])
-    expect(isMacSteamOfflineOwedReadOnly(file)).toBe(false)
+    expect(isMacSteamOfflineOwedReadOnly(h.versioning, file)).toBe(false)
   })
 
   it('is at v1, and a v2 migration migrates a legacy file with a backup', () => {
-    expect(macSteamOfflineOwedVersion()).toBe(1)
+    expect(macSteamOfflineOwedVersion(h.versioning)).toBe(1)
     writeFileSync(file, legacy('toggled'), { mode: 0o600 })
-    __setMigrationsForTest(MAC_STEAM_OFFLINE_OWED_CHAIN, [
+    h.setMigrations(MAC_STEAM_OFFLINE_OWED_CHAIN, [
       { id: 't', to: 2, run: (d) => ({ ...d, extra: true }) }
     ])
-    ensureMacSteamOfflineOwedMigrated(file)
+    ensureMacSteamOfflineOwedMigrated(h.versioning, file)
     const live = JSON.parse(readFileSync(file, 'utf8'))
     expect(live.version).toBe(2)
     expect(live.extra).toBe(true)

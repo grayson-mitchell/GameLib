@@ -45,6 +45,7 @@ jest.mock('../bottlePrimitives', () => ({
   sanitizeBottleName: (name: string) => name
 }))
 
+import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import type { GameSettings } from 'common/types'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
@@ -153,6 +154,7 @@ const baseServices: EngineServices = {
   engineState: createTestEngineState(),
   paths: createTestEngineServices().paths,
   engineRuntime: createTestEngineRuntime(),
+  versioning: createTestVersioning(),
   notices: {
     ...noticeHost,
     appRuntime: createTestAppRuntime(),

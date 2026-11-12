@@ -34,6 +34,8 @@ export type EngineServicesSource = Pick<
     engineState: EngineServices['engineState']
     /** The boot-owned engine runtime (66.4-05). */
     engineRuntime: EngineServices['engineRuntime']
+    /** The boot's store-versioning engine (66.4-18). */
+    versioning: EngineServices['versioning']
     /** The path roots the engine reads (66.4-05). */
     paths: EngineServices['paths'] &
       Pick<AppPaths, 'defaultUmuPath' | 'publicDir' | 'runtimePath'>
@@ -66,6 +68,7 @@ export function toolsFrom(deps: EngineServicesSource): Tools {
     onlineMonitor: deps.onlineMonitor,
     engineState: deps.engineState,
     engineRuntime: deps.engineRuntime,
+    versioning: deps.versioning,
     appRuntime: deps.appRuntime,
     paths: deps.paths
   })
@@ -78,6 +81,7 @@ export function engineServicesFrom(deps: EngineServicesSource): EngineServices {
     onlineMonitor: deps.onlineMonitor,
     engineState: deps.engineState,
     engineRuntime: deps.engineRuntime,
+    versioning: deps.versioning,
     paths: deps.paths,
     installRemove: (...a) => toolsFrom(deps).DXVK.installRemove(...a),
     wineManagerReleases: wineManagerReleasesFrom(deps),

@@ -18,13 +18,10 @@ export type ReadOnlyEntry = {
   detail: string
 }
 
-type Sinks = {
+export type Sinks = {
   send: (payload: ReadOnlyStoresNoticePayload) => void
   log: (line: string) => void
 }
-
-const entries: ReadOnlyEntry[] = []
-let sinks: Sinks | undefined
 
 const AREA_BY_KEY: Record<string, ReadOnlyArea> = {
   'store_cache/steam_library': 'steam-library',
@@ -64,65 +61,74 @@ function stderrFailure(what: string, error: unknown): void {
   }
 }
 
-function buildPayload(): ReadOnlyStoresNoticePayload {
-  const seen = new Set<string>()
-  const out: ReadOnlyStoresNoticePayload['entries'] = []
-  for (const e of entries) {
-    const area = areaForStoreKey(e.storeKey)
-    const id = `${area}:${e.reason}`
-    if (seen.has(id)) continue
-    seen.add(id)
-    out.push({ area, reason: e.reason })
-  }
-  return { entries: out }
-}
-
-function logEntry(entry: ReadOnlyEntry): void {
-  if (!sinks) return
-  try {
-    sinks.log(
-      `[storeVersion] ${entry.storeKey} (${entry.file}) is read-only: ${entry.reason} - ${entry.detail}`
-    )
-  } catch (error) {
-    stderrFailure('log', error)
-  }
-}
-
-function publish(): void {
-  if (!sinks || entries.length === 0) return
-  try {
-    sinks.send(buildPayload())
-  } catch (error) {
-    stderrFailure('send', error)
-  }
-}
-
-export function recordReadOnly(entry: ReadOnlyEntry): void {
-  const id = `${entry.storeKey}:${entry.file}`
-  if (entries.some((e) => `${e.storeKey}:${e.file}` === id)) return
-  const copy = { ...entry }
-  entries.push(copy)
-  if (sinks) {
-    logEntry(copy)
-    publish()
-  }
-}
-
-export function listReadOnly(): readonly ReadOnlyEntry[] {
-  return entries
+export interface ReadOnlyStores {
+  record(entry: ReadOnlyEntry): void
+  list(): readonly ReadOnlyEntry[]
+  /**
+   * Once-per-launch delivery: logs one line per read-only store and sends one ids-only
+   * payload. After this call, later `record` entries re-publish the full list.
+   */
+  flush(newSinks: Sinks): void
 }
 
 /**
- * Once-per-launch delivery: logs one line per read-only store and sends one ids-only
- * payload. After this call, later `recordReadOnly` entries re-publish the full list.
+ * Read-only tracking for one store root (66.4 plan 18). Entries and sinks live in this closure,
+ * so two roots never report each other's stores. `deps.sinks` is the construction-time sink
+ * (tests); production leaves it unset and `flush` installs the real one at frontendReady.
  */
-export function flushReadOnlyStores(newSinks: Sinks): void {
-  sinks = newSinks
-  for (const e of entries) logEntry(e)
-  publish()
-}
+export function createReadOnlyStores(deps?: { sinks?: Sinks }): ReadOnlyStores {
+  const entries: ReadOnlyEntry[] = []
+  let sinks: Sinks | undefined = deps?.sinks
 
-export function __resetReadOnlyForTest(): void {
-  entries.length = 0
-  sinks = undefined
+  function buildPayload(): ReadOnlyStoresNoticePayload {
+    const seen = new Set<string>()
+    const out: ReadOnlyStoresNoticePayload['entries'] = []
+    for (const e of entries) {
+      const area = areaForStoreKey(e.storeKey)
+      const id = `${area}:${e.reason}`
+      if (seen.has(id)) continue
+      seen.add(id)
+      out.push({ area, reason: e.reason })
+    }
+    return { entries: out }
+  }
+
+  function logEntry(entry: ReadOnlyEntry): void {
+    if (!sinks) return
+    try {
+      sinks.log(
+        `[storeVersion] ${entry.storeKey} (${entry.file}) is read-only: ${entry.reason} - ${entry.detail}`
+      )
+    } catch (error) {
+      stderrFailure('log', error)
+    }
+  }
+
+  function publish(): void {
+    if (!sinks || entries.length === 0) return
+    try {
+      sinks.send(buildPayload())
+    } catch (error) {
+      stderrFailure('send', error)
+    }
+  }
+
+  return {
+    record(entry) {
+      const id = `${entry.storeKey}:${entry.file}`
+      if (entries.some((e) => `${e.storeKey}:${e.file}` === id)) return
+      const copy = { ...entry }
+      entries.push(copy)
+      if (sinks) {
+        logEntry(copy)
+        publish()
+      }
+    },
+    list: () => entries,
+    flush(newSinks) {
+      sinks = newSinks
+      for (const e of entries) logEntry(e)
+      publish()
+    }
+  }
 }

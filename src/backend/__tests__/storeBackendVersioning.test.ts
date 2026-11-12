@@ -9,13 +9,16 @@ import {
 import { join } from 'path'
 import { getPath } from '../sidecar/pathShim'
 import GameLibStore from '../store_backend'
-import { createTestStoreRoot } from '../testUtils/testStoreRoot'
-
-const root = createTestStoreRoot()
-import { __resetStoreState, readOnlyReasonOf } from '../storeVersioning/engine'
-import { __resetReadOnlyForTest } from '../storeVersioning/readOnlyStores'
+import {
+  createVersioningHarness,
+  type VersioningHarness
+} from '../testUtils/testStoreRoot'
 import { listBackups } from '../storeVersioning/backup'
-import { __setMigrationsForTest } from '../storeMigrations'
+
+// A fresh root (engine, tracker, chain overrides) per test: nothing carries over.
+let h: VersioningHarness
+let root: VersioningHarness['root']
+const readOnlyReasonOf = (path: string) => h.versioning.readOnlyReasonOf(path)
 
 const userData = () => getPath('userData')
 const cacheDir = () => join(userData(), 'store_cache')
@@ -35,13 +38,11 @@ const lines = () => stderr.mock.calls.map((c) => String(c[0]))
 const posix = process.platform === 'win32' ? test.skip : test
 
 beforeEach(() => {
+  h = createVersioningHarness()
+  root = h.root
   stderr = jest.spyOn(process.stderr, 'write').mockImplementation(() => true)
 })
 afterEach(() => {
-  __resetStoreState()
-  __resetReadOnlyForTest()
-  for (const k of ['store_cache/p1', 'store_cache/p5', 'store_cache/p3c'])
-    __setMigrationsForTest(k, undefined)
   stderr.mockRestore()
 })
 
@@ -119,7 +120,7 @@ describe('GameLibStore versioning', () => {
   })
 
   test('migration runs before the first read', () => {
-    __setMigrationsForTest('store_cache/p5', [
+    h.setMigrations('store_cache/p5', [
       { id: 'p5-v1-v2', to: 2, run: (d) => ({ renamed: d.old }) }
     ])
     fixture('p5', v({ old: 7 }, 1))
@@ -134,7 +135,7 @@ describe('GameLibStore versioning', () => {
   })
 
   test('shared path migrates once', () => {
-    __setMigrationsForTest('steam_store/config', [
+    h.setMigrations('steam_store/config', [
       { id: 'sc-v1-v2', to: 2, run: (d) => ({ renamed: d.old }) }
     ])
     try {
@@ -148,7 +149,7 @@ describe('GameLibStore versioning', () => {
       new GameLibStore({ root, cwd: 'steam_store', declaration: decl })
       expect(listBackups(p)).toHaveLength(1)
     } finally {
-      __setMigrationsForTest('steam_store/config', undefined)
+      h.setMigrations('steam_store/config', undefined)
     }
   })
 

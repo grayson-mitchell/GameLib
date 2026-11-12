@@ -245,6 +245,7 @@ export interface ToolsDeps
   engineState: EngineServices['engineState']
   /** The boot-owned engine runtime and the path roots the engine reads (66.4-05). */
   engineRuntime: EngineServices['engineRuntime']
+  versioning: EngineServices['versioning']
   paths: EngineServices['paths'] &
     Pick<AppPaths, 'defaultUmuPath' | 'publicDir' | 'runtimePath'>
   config: Pick<
@@ -261,6 +262,7 @@ function engineServicesFor(deps: ToolsDeps): EngineServices {
     onlineMonitor: deps.onlineMonitor,
     engineState: deps.engineState,
     engineRuntime: deps.engineRuntime,
+    versioning: deps.versioning,
     paths: deps.paths,
     installRemove: (...a) => createDxvk(deps).installRemove(...a),
     wineManagerReleases: wineManagerReleasesFrom(deps),

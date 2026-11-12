@@ -18,7 +18,10 @@ import type { EngineServices } from 'backend/engine/engineServices'
 import { switchServicesFrom } from 'backend/engine/engineSwitch'
 import type { EngineSwitchDeps } from 'backend/engine/engineSwitch'
 import { readStoredGameConfig } from 'backend/engine/engineConfig'
-import type { EffectiveEngine } from 'backend/engine/engineConfig'
+import type {
+  EffectiveEngine,
+  EngineConfigDeps
+} from 'backend/engine/engineConfig'
 import { parseEngineOverride } from 'backend/engine/engineIds'
 import type {
   EngineStateDeps,
@@ -44,12 +47,18 @@ import { readStoredTitleConfig } from '../titleSettings'
  * callers pass the value through parseEngineOverride.
  */
 export function readSteamEngineOverride(
-  paths: Pick<AppPaths, 'gamesConfigPath'>,
+  deps: { paths: Pick<AppPaths, 'gamesConfigPath'> } & Pick<
+    EngineConfigDeps,
+    'versioning'
+  >,
   appId: string
 ): unknown {
-  const generic = readStoredGameConfig(appId, paths)?.engineOverride
+  const generic = readStoredGameConfig(appId, {
+    gamesConfigPath: deps.paths.gamesConfigPath,
+    versioning: deps.versioning
+  })?.engineOverride
   if (typeof generic === 'string') return generic
-  return readStoredTitleConfig(appId, { paths })?.steamEngineOverride
+  return readStoredTitleConfig(appId, deps)?.steamEngineOverride
 }
 
 const hintedBinDir = (
@@ -67,11 +76,17 @@ export function steamDecisionServices(
     runner: EngineServices['runner']
     paths: EngineServices['paths']
     engineRuntime: EngineServices['engineRuntime']
+    versioning: EngineServices['versioning']
     stores: Pick<Stores, 'wineManager'>
   } & SteamEngineBottle
 ): Pick<
   EngineServices,
-  'spawnAsync' | 'runner' | 'wineManagerReleases' | 'paths' | 'engineRuntime'
+  | 'spawnAsync'
+  | 'runner'
+  | 'wineManagerReleases'
+  | 'paths'
+  | 'engineRuntime'
+  | 'versioning'
 > &
   SteamEngineBottle {
   return {
@@ -79,6 +94,7 @@ export function steamDecisionServices(
     runner: deps.runner,
     paths: deps.paths,
     engineRuntime: deps.engineRuntime,
+    versioning: deps.versioning,
     steamBottle: deps.steamBottle,
     steamLaunchRuntime: deps.steamLaunchRuntime,
     wineManagerReleases: wineManagerReleasesFrom(deps)
@@ -88,7 +104,12 @@ export function steamDecisionServices(
 export function steamDecisionDeps(
   services: Pick<
     EngineServices,
-    'spawnAsync' | 'runner' | 'wineManagerReleases' | 'paths' | 'engineRuntime'
+    | 'spawnAsync'
+    | 'runner'
+    | 'wineManagerReleases'
+    | 'paths'
+    | 'engineRuntime'
+    | 'versioning'
   > &
     SteamEngineBottle
 ): Partial<EngineDecisionDeps> &
@@ -98,10 +119,11 @@ export function steamDecisionDeps(
     runner: services.runner,
     paths: services.paths,
     engineRuntime: services.engineRuntime,
+    versioning: services.versioning,
     killCrossoverWineserver: killCrossoverWineserverWith(services),
     wineManagerReleases: services.wineManagerReleases,
     resolveCrossoverBinDir: () => hintedBinDir(services),
-    readOverride: (appId) => readSteamEngineOverride(services.paths, appId),
+    readOverride: (appId) => readSteamEngineOverride(services, appId),
     monitorPhase:
       services.steamLaunchRuntime.monitors.getBottleProcessMonitorPhase
   }
@@ -189,7 +211,7 @@ export function steamEngineStateDeps(
           findInstallBottle: findBridgeInstallBottle
         }),
     effective: (): EffectiveEngine => {
-      const raw = readSteamEngineOverride(deps.paths, appId)
+      const raw = readSteamEngineOverride(deps, appId)
       return {
         kind: 'override',
         id: parseEngineOverride(raw),

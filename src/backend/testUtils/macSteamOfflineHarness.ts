@@ -65,6 +65,7 @@ export function createMacSteamOfflineHarness(): MacSteamOfflineHarness {
         clear: (h) => void cancelled.add(h.id)
       }
       const { platform, connectionLogPath, openUrl, onlineDebtPath } = deps
+      const { versioning } = deps
       const { isPidAlive, selfPid, systemBootMs } = deps
       const built = createMacSteamOffline({
         runner,
@@ -73,6 +74,7 @@ export function createMacSteamOfflineHarness(): MacSteamOfflineHarness {
         connectionLogPath,
         openUrl,
         onlineDebtPath,
+        versioning,
         isPidAlive,
         selfPid,
         systemBootMs

@@ -1,3 +1,4 @@
+import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import {
   existsSync,
   mkdtempSync,
@@ -54,6 +55,7 @@ import { createGameConfigs } from '../game_config'
 
 // The global defaults the per-game config reads through its injected slice.
 const gameConfigs = createGameConfigs({
+  versioning: createTestVersioning(),
   config: {
     getSettings: () =>
       ({

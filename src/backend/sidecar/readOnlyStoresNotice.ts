@@ -1,6 +1,6 @@
 import type { SendFrontendMessage } from '../host/frontendMessage'
 import { logWarning, LogPrefix } from '../logger'
-import { flushReadOnlyStores } from '../storeVersioning/readOnlyStores'
+import type { ReadOnlyStores } from '../storeVersioning/readOnlyStores'
 
 /**
  * Phase 68 D-05: push the read-only stores notice to the renderer. Lives beside
@@ -9,9 +9,10 @@ import { flushReadOnlyStores } from '../storeVersioning/readOnlyStores'
  * Creates no timer or handle (sidecar exit contract).
  */
 export function pushReadOnlyStoresNotice(
+  readOnly: Pick<ReadOnlyStores, 'flush'>,
   sendFrontendMessage: SendFrontendMessage
 ): void {
-  flushReadOnlyStores({
+  readOnly.flush({
     send: (payload) => sendFrontendMessage('readOnlyStoresNotice', payload),
     log: (line) => logWarning(line, LogPrefix.Backend)
   })

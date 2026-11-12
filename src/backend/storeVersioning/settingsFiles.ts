@@ -5,7 +5,7 @@
  * game_config.ts import this module and the logger imports them (cycle).
  */
 import { atomicWritePrivate } from './backup'
-import { isReadOnlyPath, noteRefusedWrite, prepareStoreFile } from './engine'
+import type { StoreVersioning } from './engine'
 import type { VersionCodec } from './types'
 
 export function parseSettingsVersion(raw: unknown): number {
@@ -20,23 +20,33 @@ export const settingsVersionCodec: VersionCodec = {
 }
 
 export function ensureSettingsMigrated(
+  versioning: StoreVersioning,
   path: string,
   chainKey: 'settings/global' | 'settings/game'
 ): void {
-  prepareStoreFile(path, chainKey, { kind: 'user-state' }, settingsVersionCodec)
+  versioning.prepareStoreFile(
+    path,
+    chainKey,
+    { kind: 'user-state' },
+    settingsVersionCodec
+  )
 }
 
-export function isSettingsFileReadOnly(path: string): boolean {
-  return isReadOnlyPath(path)
+export function isSettingsFileReadOnly(
+  versioning: StoreVersioning,
+  path: string
+): boolean {
+  return versioning.isReadOnlyPath(path)
 }
 
 /** Atomic, private write; refused (without throwing) for a read-only file. */
 export function writeSettingsFile(
+  versioning: StoreVersioning,
   path: string,
   data: Record<string, unknown>
 ): void {
-  if (isReadOnlyPath(path)) {
-    noteRefusedWrite(path)
+  if (versioning.isReadOnlyPath(path)) {
+    versioning.noteRefusedWrite(path)
     return
   }
   atomicWritePrivate(path, JSON.stringify(data, null, 2))
