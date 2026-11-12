@@ -21,7 +21,8 @@ jest.mock('../updateDetection', () => ({
     deps: { states: Map<string, unknown> },
     id: string
   ) => deps.states.get(id),
-  STEAM_UPDATE_REFRESH_TIMEOUT_MS: 20000
+  STEAM_UPDATE_REFRESH_TIMEOUT_MS: 20000,
+  STEAM_UPDATE_PRELAUNCH_TIMEOUT_MS: 3000
 }))
 jest.mock('../depotRust/updateEstimate', () => ({
   estimateBridgeUpdate: jest.fn(),
@@ -134,6 +135,9 @@ describe('getSteamUpdateInfo', () => {
   })
 
   it('never estimates a registered game', async () => {
+    detect.mockResolvedValue([
+      { appId: APP, checkedAt: 1, ...stale, kind: 'registered' } as never
+    ])
     const info = await getSteamUpdateInfo(
       deps({ ...stale, kind: 'registered' }),
       APP,
@@ -141,6 +145,32 @@ describe('getSteamUpdateInfo', () => {
     )
     expect(est).not.toHaveBeenCalled()
     expect(info?.kind).toBe('registered')
+  })
+
+  it('re-reads a cached registered state from the ACF', async () => {
+    detect.mockResolvedValue([
+      {
+        appId: APP,
+        checkedAt: 1,
+        ...stale,
+        kind: 'registered',
+        state: 'current'
+      } as never
+    ])
+    const info = await getSteamUpdateInfo(
+      deps({ ...stale, kind: 'registered' }),
+      APP
+    )
+    expect(detect).toHaveBeenCalledWith(expect.anything(), {
+      appIds: [APP],
+      timeoutMs: 3000
+    })
+    expect(info?.state).toBe('current')
+  })
+
+  it('serves a cached bridge state without detection', async () => {
+    await getSteamUpdateInfo(deps(stale), APP)
+    expect(detect).not.toHaveBeenCalled()
   })
 
   it('reports unknown with its reason', async () => {

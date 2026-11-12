@@ -145,7 +145,8 @@ export function startInstallPolling(
       intervalMsOrOptions.awaitingUpdate !== undefined
     ) {
       existingEntry.awaitingUpdate = {
-        fromBuild: intervalMsOrOptions.awaitingUpdate.fromBuild
+        fromBuild: intervalMsOrOptions.awaitingUpdate.fromBuild,
+        targetBuild: intervalMsOrOptions.awaitingUpdate.targetBuild
       }
       logInfo(
         `Steam: in-flight poll for appId ${appId} now watches an update (Phase 74 D-11)`,
@@ -241,7 +242,10 @@ export function startInstallPolling(
     steamPidsAtHandoff: restoredSteamHold?.pids ?? ([] as number[]),
     lastSteamProbeMs: restoredSteamHold ? Date.now() : 0,
     awaitingUpdate: awaitingUpdate
-      ? { fromBuild: awaitingUpdate.fromBuild }
+      ? {
+          fromBuild: awaitingUpdate.fromBuild,
+          targetBuild: awaitingUpdate.targetBuild
+        }
       : undefined
   }
 

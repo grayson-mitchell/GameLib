@@ -2,8 +2,10 @@
  * Update-aware poll tick (Phase 74, D-11): watches a Steam-owned update of an installed game.
  * Progress shows as 'updating'; completion needs the ACF to stop reporting a pending update with
  * StateFlags bit 4 set. Bit 4 alone is never completion (StateFlags 6 = installed + update
- * required, RESEARCH Pitfall 6). No update activity within STEAM_REQUEST_NO_ACTIVITY_TICKS ends the
- * poll quietly; is_installed is never changed here.
+ * required, RESEARCH Pitfall 6). A build equal to the hand-off's target build also completes (a
+ * short update can finish before any pending state is seen). No update activity within
+ * STEAM_REQUEST_NO_ACTIVITY_TICKS ends the poll quietly, invalidating the cached update state, and
+ * completes instead when the ACF is already current. is_installed is never changed here.
  */
 import { logInfo, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
@@ -28,6 +30,30 @@ export async function pollUpdateOnce(
   if (!awaiting) return
   const fields = await readAcfUpdateState(deps, appId, poll.source)
 
+  const complete = (done: { buildid: string }, verb: string): void => {
+    const existing = deps.steamSession.libraryState.library.get(appId)
+    logInfo(
+      `Steam: update of appId ${appId} ${verb} (build ${done.buildid})`,
+      LogPrefix.Steam
+    )
+    stopInstallPolling(deps, appId)
+    invalidateSteamUpdateState(deps, appId)
+    if (existing) deps.sendFrontendMessage('pushGameToLibrary', existing)
+    // libraryState only drops a game from gameUpdates on a done that follows updating, and a 3 s
+    // Steam update can finish before any progress tick sent 'updating' (74 UAT 12).
+    deps.sendFrontendMessage('gameStatusUpdate', {
+      appName: appId,
+      runner: 'steam',
+      status: 'updating',
+      managedBySteam: true
+    })
+    deps.sendFrontendMessage('gameStatusUpdate', {
+      appName: appId,
+      runner: 'steam',
+      status: 'done'
+    })
+  }
+
   if (fields) {
     const pending = isAcfUpdatePending(fields)
     if (pending) awaiting.sawPending = true
@@ -46,21 +72,11 @@ export async function pollUpdateOnce(
       (fields.stateFlags & STATE_FLAG_FULLY_INSTALLED) !== 0 &&
       (awaiting.sawPending ||
         awaiting.sawActivity ||
-        fields.buildid !== awaiting.fromBuild)
+        fields.buildid !== awaiting.fromBuild ||
+        (awaiting.targetBuild !== undefined &&
+          fields.buildid === awaiting.targetBuild))
     ) {
-      const existing = deps.steamSession.libraryState.library.get(appId)
-      logInfo(
-        `Steam: update of appId ${appId} finished (build ${fields.buildid})`,
-        LogPrefix.Steam
-      )
-      stopInstallPolling(deps, appId)
-      invalidateSteamUpdateState(deps, appId)
-      if (existing) deps.sendFrontendMessage('pushGameToLibrary', existing)
-      deps.sendFrontendMessage('gameStatusUpdate', {
-        appName: appId,
-        runner: 'steam',
-        status: 'done'
-      })
+      complete(fields, 'finished')
       return
     }
 
@@ -109,11 +125,20 @@ export async function pollUpdateOnce(
     !awaiting.sawActivity &&
     poll.ticks - poll.delegatedSinceTick >= STEAM_REQUEST_NO_ACTIVITY_TICKS
   ) {
+    if (
+      fields &&
+      !isAcfUpdatePending(fields) &&
+      (fields.stateFlags & STATE_FLAG_FULLY_INSTALLED) !== 0
+    ) {
+      complete(fields, 'finished')
+      return
+    }
     logInfo(
       `Steam: no update activity for appId ${appId} within ${STEAM_REQUEST_NO_ACTIVITY_TICKS} ticks; ending the update poll quietly`,
       LogPrefix.Steam
     )
     stopInstallPolling(deps, appId)
+    invalidateSteamUpdateState(deps, appId)
     deps.sendFrontendMessage('gameStatusUpdate', {
       appName: appId,
       runner: 'steam',

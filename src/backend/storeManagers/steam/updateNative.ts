@@ -16,8 +16,16 @@ import {
 } from './steamInstallApp'
 import { resolveSteamLibraryRoot } from './installLocation'
 import { readRunningAppId } from './library/runningPoll'
-import { readAcfUpdateState } from './library/acfUpdateState'
+import {
+  readAcfUpdateState,
+  isAcfUpdatePending
+} from './library/acfUpdateState'
 import { startInstallPolling } from './library/installPolling'
+import {
+  getLastKnownSteamUpdateState,
+  invalidateSteamUpdateState,
+  type SteamUpdateDeps
+} from './updateDetection'
 
 export async function updateRegisteredSteamGame(
   steamGame: SteamGame
@@ -40,12 +48,30 @@ export async function updateRegisteredSteamGame(
     return { status: 'error', error: `Invalid Steam appId ${appId}` }
   }
 
-  const fromBuild =
-    (await readAcfUpdateState(deps, appId, 'native').catch(() => null))
-      ?.buildid ?? ''
+  const acfFields = await readAcfUpdateState(deps, appId, 'native').catch(
+    () => null
+  )
+  if (
+    acfFields &&
+    !isAcfUpdatePending(acfFields) &&
+    (acfFields.stateFlags & 0x4) !== 0
+  ) {
+    logInfo(
+      `SteamGame: appId ${appId} is already current (build ${acfFields.buildid}); nothing to hand to Steam`,
+      LogPrefix.Steam
+    )
+    invalidateSteamUpdateState(deps, appId)
+    return { status: 'done' }
+  }
+  const fromBuild = acfFields?.buildid ?? ''
+  const targetBuild =
+    acfFields?.targetBuildId && acfFields.targetBuildId !== '0'
+      ? acfFields.targetBuildId
+      : getLastKnownSteamUpdateState(deps as unknown as SteamUpdateDeps, appId)
+          ?.targetBuild
   const pollOptions = {
     delegatedToSteamClient: true,
-    awaitingUpdate: { fromBuild }
+    awaitingUpdate: { fromBuild, targetBuild }
   }
 
   if (isSteamExperimentalInstallAppEnabled(deps.config)) {

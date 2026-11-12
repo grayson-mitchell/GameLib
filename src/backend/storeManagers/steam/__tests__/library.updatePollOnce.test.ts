@@ -68,6 +68,7 @@ function getPoll() {
 }
 
 describe('pollUpdateOnce', () => {
+  beforeEach(() => jest.clearAllMocks())
   afterEach(() => stopInstallPolling(deps, APP))
 
   it('pending (StateFlags 6) reports updating, managed by Steam', async () => {
@@ -119,6 +120,40 @@ describe('pollUpdateOnce', () => {
     )
   })
 
+  it('completes on the target build with no pending state ever seen, updating before done', async () => {
+    startInstallPolling(deps, APP, {
+      delegatedToSteamClient: true,
+      awaitingUpdate: { fromBuild: '100', targetBuild: '200' }
+    })
+    acf({ stateFlags: 4, buildid: '200' })
+    send.mockClear()
+    await pollUpdateOnce(deps, APP, getPoll()!)
+    const statuses = send.mock.calls
+      .filter((c) => c[0] === 'gameStatusUpdate')
+      .map((c) => c[1].status)
+    expect(statuses).toEqual(['updating', 'done'])
+    expect(send).toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({ status: 'updating', managedBySteam: true })
+    )
+    expect(invalidateSteamUpdateState).toHaveBeenCalledWith(deps, APP)
+    expect(getPoll()).toBeUndefined()
+  })
+
+  it('quiet end completes when the ACF is already current', async () => {
+    const p = poll()
+    acf({ stateFlags: 4, buildid: '100' })
+    p.ticks = STEAM_REQUEST_NO_ACTIVITY_TICKS
+    send.mockClear()
+    await pollUpdateOnce(deps, APP, p)
+    const statuses = send.mock.calls
+      .filter((c) => c[0] === 'gameStatusUpdate')
+      .map((c) => c[1].status)
+    expect(statuses.slice(-2)).toEqual(['updating', 'done'])
+    expect(invalidateSteamUpdateState).toHaveBeenCalledWith(deps, APP)
+    expect(getPoll()).toBeUndefined()
+  })
+
   it('ends quietly after the no-activity window', async () => {
     const p = poll()
     acf({ stateFlags: 6, targetBuildId: '200' })
@@ -134,6 +169,7 @@ describe('pollUpdateOnce', () => {
       expect.anything()
     )
     expect(notify).not.toHaveBeenCalled()
+    expect(invalidateSteamUpdateState).toHaveBeenCalledWith(deps, APP)
     expect(getPoll()).toBeUndefined()
   })
 })

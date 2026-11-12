@@ -2,7 +2,7 @@
  * Phase 74 plan 11: the renderer's view of a Steam game's update (STEAM-01).
  *
  * Reads the per-boot update-state cache, falling back to one anonymous, bounded detection when
- * nothing is cached. The size estimate is returned only when it is already cached for the target
+ * nothing is cached; a cached registered state is re-read from the ACF each time. The size estimate is returned only when it is already cached for the target
  * build, or when the caller explicitly asked for it (`computeSize`, a user click) on a stale bridge
  * game: that is the only path here that may take an authenticated lease. Never throws.
  * Exit contract: no timers or handles.
@@ -21,6 +21,7 @@ import {
 import {
   detectSteamUpdates,
   getLastKnownSteamUpdateState,
+  STEAM_UPDATE_PRELAUNCH_TIMEOUT_MS,
   STEAM_UPDATE_REFRESH_TIMEOUT_MS,
   type SteamUpdateDeps,
   type SteamUpdateState
@@ -43,6 +44,14 @@ export async function getSteamUpdateInfo(
         appIds: [appId],
         timeoutMs: STEAM_UPDATE_REFRESH_TIMEOUT_MS
       })
+    } else if (state.kind === 'registered') {
+      // The ACF is the source of truth for a registered game; a cached state goes stale the moment
+      // Steam finishes an update (74 UAT 12), so re-read it (bounded).
+      const [fresh] = await detectSteamUpdates(updateDeps, {
+        appIds: [appId],
+        timeoutMs: STEAM_UPDATE_PRELAUNCH_TIMEOUT_MS
+      })
+      if (fresh) state = fresh
     }
     if (!state) return null
 

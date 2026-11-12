@@ -161,6 +161,8 @@ export type ActiveInstallPoll = {
    *  a changed build; the no-activity window needs `sawActivity`). */
   awaitingUpdate?: {
     fromBuild: string
+    /** Build Steam is moving to, when known at hand-off; reaching it completes the poll. */
+    targetBuild?: string
     sawPending?: boolean
     sawActivity?: boolean
   }

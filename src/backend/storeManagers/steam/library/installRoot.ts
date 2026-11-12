@@ -68,7 +68,7 @@ export type PollOptions = {
   /** Phase 74 (D-11): this poll watches a Steam-owned UPDATE of an installed game, not an install.
    *  `fromBuild` is the buildid the ACF had when the update was requested. Update polls are routed
    *  to pollUpdateOnce and never revert is_installed. */
-  awaitingUpdate?: { fromBuild: string }
+  awaitingUpdate?: { fromBuild: string; targetBuild?: string }
 }
 
 /**

@@ -7,6 +7,7 @@ import { readRunningAppId } from '../library/runningPoll'
 import { readAcfUpdateState } from '../library/acfUpdateState'
 import { resolveSteamLibraryRoot } from '../installLocation'
 import { startInstallPolling } from '../library/installPolling'
+import { invalidateSteamUpdateState } from '../updateDetection'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -30,7 +31,12 @@ jest.mock('../installLocation', () => ({
 }))
 jest.mock('../library/runningPoll', () => ({ readRunningAppId: jest.fn() }))
 jest.mock('../library/acfUpdateState', () => ({
+  ...jest.requireActual('../library/acfUpdateState'),
   readAcfUpdateState: jest.fn()
+}))
+jest.mock('../updateDetection', () => ({
+  invalidateSteamUpdateState: jest.fn(),
+  getLastKnownSteamUpdateState: jest.fn()
 }))
 jest.mock('../library/installPolling', () => ({
   startInstallPolling: jest.fn()
@@ -50,7 +56,7 @@ const game = {
 const URL = 'steam://nav/games/details/333300'
 const opts = {
   delegatedToSteamClient: true,
-  awaitingUpdate: { fromBuild: '777' }
+  awaitingUpdate: { fromBuild: '777', targetBuild: undefined }
 }
 
 describe('updateRegisteredSteamGame', () => {
@@ -104,6 +110,42 @@ describe('updateRegisteredSteamGame', () => {
     await updateRegisteredSteamGame(game)
     expect(requestSteamInstallApp).not.toHaveBeenCalled()
     expect(openExternal).toHaveBeenCalledWith(URL)
+  })
+
+  it('already-current ACF: no hand-off, no poll, cache invalidated', async () => {
+    jest.mocked(readAcfUpdateState).mockResolvedValue({
+      buildid: '777',
+      stateFlags: 4,
+      bytesToDownload: 0,
+      bytesDownloaded: 0,
+      scheduledAutoUpdate: 0
+    } as never)
+    expect(await updateRegisteredSteamGame(game)).toEqual({ status: 'done' })
+    expect(requestSteamInstallApp).not.toHaveBeenCalled()
+    expect(openExternal).not.toHaveBeenCalled()
+    expect(startInstallPolling).not.toHaveBeenCalled()
+    expect(invalidateSteamUpdateState).toHaveBeenCalled()
+  })
+
+  it('pending ACF passes its target build to the poll', async () => {
+    jest.mocked(readAcfUpdateState).mockResolvedValue({
+      buildid: '777',
+      targetBuildId: '5820078',
+      stateFlags: 6,
+      bytesToDownload: 10,
+      bytesDownloaded: 0,
+      scheduledAutoUpdate: 0
+    } as never)
+    jest.mocked(isSteamExperimentalInstallAppEnabled).mockReturnValue(false)
+    await updateRegisteredSteamGame(game)
+    expect(startInstallPolling).toHaveBeenCalledWith(
+      expect.anything(),
+      '333300',
+      {
+        delegatedToSteamClient: true,
+        awaitingUpdate: { fromBuild: '777', targetBuild: '5820078' }
+      }
+    )
   })
 
   it('refuses while the game is running', async () => {
