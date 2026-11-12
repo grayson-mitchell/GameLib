@@ -1,6 +1,6 @@
 {
   "jestMock": {
-    "src/backend/wiki_game_info/__tests__/wiki_game_info.test.ts": 11,
+    "src/backend/wiki_game_info/__tests__/wiki_game_info.test.ts": 10,
     "src/backend/wiki_game_info/applegamingwiki/__tests__/utils.test.ts": 2,
     "src/backend/wiki_game_info/gamesdb/__tests__/utils.test.ts": 2,
     "src/backend/wiki_game_info/howlongtobeat/__tests__/utils.test.ts": 2,
