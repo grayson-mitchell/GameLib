@@ -12,6 +12,8 @@ import {
   invalidateSteamUpdateState
 } from '../updateDetection'
 import { getDiskInfo } from 'backend/utils/filesystem'
+import { logInfo } from 'backend/logger'
+import { notify } from 'backend/dialog/dialog'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -253,6 +255,41 @@ describe('updateBridgeGame', () => {
     })
     expect(runBridgeUpdateFollowUps).not.toHaveBeenCalled()
     expect(downloadSteamDepotsRust).toHaveBeenCalledTimes(1)
+  })
+
+  it('unattended threads the flag to estimate and download', async () => {
+    jest.mocked(downloadSteamDepotsRust).mockResolvedValue({
+      status: 'done',
+      delta: { committed: true, changedFiles: [], mode: 'delta' }
+    } as never)
+    const { game } = makeGame()
+    await updateBridgeGame(game, { unattended: true })
+    expect(estimateBridgeUpdate).toHaveBeenCalledWith(
+      game,
+      expect.objectContaining({ unattended: true })
+    )
+    expect(downloadSteamDepotsRust).toHaveBeenCalledWith(
+      '12345',
+      expect.objectContaining({ unattended: true })
+    )
+  })
+
+  it('unattended refused lease: error result, one log line, no dialog', async () => {
+    jest
+      .mocked(estimateBridgeUpdate)
+      .mockResolvedValue({ error: 'Steam sign-in unavailable (no-session)' })
+    const { game } = makeGame()
+    const r = await updateBridgeGame(game, { unattended: true })
+    expect(r).toMatchObject({
+      status: 'error',
+      error: 'Steam sign-in unavailable (no-session)'
+    })
+    const lines = jest
+      .mocked(logInfo)
+      .mock.calls.filter(([m]) => String(m).includes('unattended=true'))
+    expect(lines).toHaveLength(1)
+    expect(notify).not.toHaveBeenCalled()
+    expect(downloadSteamDepotsRust).not.toHaveBeenCalled()
   })
 
   it('a concurrent update joins the in-flight run (one job)', async () => {

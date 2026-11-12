@@ -28,7 +28,11 @@ import { downloadSharedRedistDepots, downloadSteamDepots } from '../../depot'
 import { classifyDepotError } from '../../depotErrors'
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 const steamUser = createMockSteamUser()
-import { mockLeaseOk, mockOpenLease } from '../../__tests__/depotLeaseMocks'
+import {
+  mockLeaseOk,
+  mockLeaseRefused,
+  mockOpenLease
+} from '../../__tests__/depotLeaseMocks'
 import { selectAllDepots } from '../../depot/select'
 import { requestCodeRefresher } from '../install'
 import { createStubRustDepot } from './fixtures/stubRustDepot'
@@ -682,5 +686,24 @@ describe('downloadSteamDepots retire rule and committed-wins (WR-01, WR-06)', ()
     invokeMock.mockImplementation(stub.invoke)
     const out = await install([['111', G(1)]], { signal: ctrl.signal })
     expect(out.status).toBe('cancelled')
+  })
+})
+
+describe('downloadSteamDepots lease options (74-19 unattended)', () => {
+  const firstLeaseOpts = () =>
+    jest.mocked(steamUser.acquireAuthenticated).mock.calls[0]?.[0]
+
+  it('omits guidedAction for an unattended run', async () => {
+    mockLeaseRefused(steamUser)
+    await downloadSteamDepots(APP_ID, { ...OPTS(), unattended: true })
+    expect(firstLeaseOpts()).toBeDefined()
+    expect(firstLeaseOpts()).not.toHaveProperty('guidedAction')
+    expect(firstLeaseOpts()).toMatchObject({ reason: 'user-install' })
+  })
+
+  it('keeps guidedAction install for a user-started run', async () => {
+    mockLeaseRefused(steamUser)
+    await downloadSteamDepots(APP_ID, OPTS())
+    expect(firstLeaseOpts()).toMatchObject({ guidedAction: 'install' })
   })
 })

@@ -91,6 +91,8 @@ export interface DownloadSteamDepotsOpts {
    *  (ACF BetaKey, then Steam's localconfig.vdf). */
   branch?: string
   signal?: AbortSignal
+  /** Auto-update: no guided sign-in or Go Offline push on a refused lease. */
+  unattended?: boolean
   /** Phase 54, internal: the reason logged with the lease buildDepotPlan
    *  acquires. Defaults to 'user-install'; prescreenBridgeDepots passes
    *  'prescreen'. Never user-facing. */

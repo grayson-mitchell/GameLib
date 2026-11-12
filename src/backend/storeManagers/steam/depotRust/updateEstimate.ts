@@ -61,7 +61,7 @@ export function resolveBridgeUpdateContext(
 
 export async function estimateBridgeUpdate(
   steamGame: SteamGame,
-  opts: { signal?: AbortSignal }
+  opts: { signal?: AbortSignal; unattended?: boolean }
 ): Promise<SteamUpdateEstimate | { error: string }> {
   const { deps, appId } = steamGame
   let lease: Awaited<
@@ -73,8 +73,10 @@ export async function estimateBridgeUpdate(
     if ('error' in ctx) return ctx
     throwIfAborted(opts.signal)
     lease = await deps.steamUser.acquireAuthenticated({
+      // reason stays 'user-install': it drives the macOS go-offline wrap. Unattended
+      // omits guidedAction so a refusal never opens sign-in or pushes Go Offline UI.
       reason: 'user-install',
-      guidedAction: 'install',
+      ...(opts.unattended === true ? {} : { guidedAction: 'install' as const }),
       appName: appId
     })
     if (!lease.ok)

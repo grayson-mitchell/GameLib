@@ -33,7 +33,8 @@ const self = {
     steamSession: { authTrigger: { noteSteamAuthTrigger: note } }
   }
 }
-const run = () => SteamGame.prototype.update.call(self as never)
+const run = (o?: { unattended?: boolean }) =>
+  SteamGame.prototype.update.call(self as never, o)
 
 describe('SteamGame.update dispatch', () => {
   beforeEach(() => {
@@ -42,6 +43,8 @@ describe('SteamGame.update dispatch', () => {
     jest.mocked(findBridgeInstallBottle).mockReturnValue(null)
     jest.mocked(readAcfUpdateState).mockResolvedValue(null)
   })
+
+  beforeEach(() => note.mockClear())
 
   it('bridge install goes to updateBridgeGame', async () => {
     jest.mocked(findBridgeInstallBottle).mockReturnValue('b')
@@ -62,6 +65,20 @@ describe('SteamGame.update dispatch', () => {
     expect(await run()).toMatchObject({ status: 'error' })
     expect(note).toHaveBeenCalledWith('user-install')
     expect(updateBridgeGame).not.toHaveBeenCalled()
+    expect(updateRegisteredSteamGame).not.toHaveBeenCalled()
+  })
+
+  it('unattended bridge update skips the auth trigger and passes the flag', async () => {
+    jest.mocked(findBridgeInstallBottle).mockReturnValue('b')
+    await run({ unattended: true })
+    expect(note).not.toHaveBeenCalled()
+    expect(updateBridgeGame).toHaveBeenCalledWith(self, { unattended: true })
+  })
+
+  it('unattended registered update aborts and never calls Steam (D-02)', async () => {
+    jest.mocked(readAcfUpdateState).mockResolvedValue({ buildid: '1' } as never)
+    expect(await run({ unattended: true })).toEqual({ status: 'abort' })
+    expect(note).not.toHaveBeenCalled()
     expect(updateRegisteredSteamGame).not.toHaveBeenCalled()
   })
 })

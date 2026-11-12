@@ -54,7 +54,8 @@ function freshCachedEstimate(steamGame: SteamGame): SteamUpdateEstimate | null {
 }
 
 export async function updateBridgeGame(
-  steamGame: SteamGame
+  steamGame: SteamGame,
+  opts?: { unattended?: boolean }
 ): Promise<InstallResult> {
   const { deps, appId } = steamGame
   const title = steamGame.getGameInfo().title || appId
@@ -79,7 +80,7 @@ export async function updateBridgeGame(
     await existing.promise.catch(() => undefined)
   }
 
-  const run = runBridgeUpdate(steamGame, title)
+  const run = runBridgeUpdate(steamGame, title, opts?.unattended === true)
   const entry = { promise: run, aborted: false }
   nativeInstallsInFlight.set(appId, entry)
   void run.then(
@@ -96,9 +97,18 @@ export async function updateBridgeGame(
 
 async function runBridgeUpdate(
   steamGame: SteamGame,
-  title: string
+  title: string,
+  unattended: boolean
 ): Promise<InstallResult> {
   const { deps, appId } = steamGame
+  const logUnattendedFailure = (reason: string) => {
+    if (unattended) {
+      logInfo(
+        `updateBridgeGame: appId ${appId} unattended=true update not started: ${reason}`,
+        LogPrefix.Steam
+      )
+    }
+  }
   const clearStatus = () =>
     sendGameStatusUpdate(deps, {
       appName: appId,
@@ -129,12 +139,13 @@ async function runBridgeUpdate(
   try {
     const estimate =
       freshCachedEstimate(steamGame) ??
-      (await estimateBridgeUpdate(steamGame, { signal }))
+      (await estimateBridgeUpdate(steamGame, { signal, unattended }))
     if ('error' in estimate) {
       if (signal?.aborted) {
         clearStatus()
         return { status: 'abort' }
       }
+      logUnattendedFailure(estimate.error)
       return { status: 'error', error: estimate.error }
     }
     if (signal?.aborted) {
@@ -171,6 +182,7 @@ async function runBridgeUpdate(
       os: 'windows',
       branch: ctx.branch,
       signal,
+      unattended,
       delta: { oldGidByDepot: ctx.oldGidByDepot }
     })
 
@@ -186,6 +198,7 @@ async function runBridgeUpdate(
         `updateBridgeGame: appId ${appId} failed: ${outcome.error}`,
         LogPrefix.Steam
       )
+      logUnattendedFailure(outcome.error ?? 'unknown')
       clearStatus()
       return {
         status: 'error',

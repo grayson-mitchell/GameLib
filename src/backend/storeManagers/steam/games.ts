@@ -448,16 +448,29 @@ export default class SteamGame implements Game {
     return uninstall(this, _args)
   }
 
-  async update(): Promise<InstallResult> {
-    // quick-260817-d61: Update is a deliberate Steam action — unlock the
-    // keyring deferral gate as the first statement.
-    this.deps.steamSession.authTrigger.noteSteamAuthTrigger('user-install')
+  async update(overwrites?: { unattended?: boolean }): Promise<InstallResult> {
+    const unattended = overwrites?.unattended === true
+    // quick-260817-d61: a user-started Update is a deliberate Steam action —
+    // unlock the keyring deferral gate as the first statement. An unattended
+    // auto-update must not: it may only use a session already unlocked this boot.
+    if (!unattended) {
+      this.deps.steamSession.authTrigger.noteSteamAuthTrigger('user-install')
+    }
     // Phase 74: bridge installs get the chunk-level delta; Steam-registered
     // installs are handed to Steam; Phase 17 bottle installs are neither.
     if (bridgeBottle.findBridgeInstallBottle(this.deps.paths, this.appId)) {
-      return updateBridgeGame(this)
+      return unattended
+        ? updateBridgeGame(this, { unattended: true })
+        : updateBridgeGame(this)
     }
     if ((await readAcfUpdateState(this.deps, this.appId, 'native')) !== null) {
+      if (unattended) {
+        logInfo(
+          `SteamGame: not auto-updating Steam-registered appId ${this.appId} (D-02)`,
+          LogPrefix.Steam
+        )
+        return { status: 'abort' }
+      }
       return updateRegisteredSteamGame(this)
     }
     return {
