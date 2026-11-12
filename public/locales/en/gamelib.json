@@ -826,6 +826,23 @@
             "removeAllCopiesConfirmTitle": "Remove all copies?",
             "removeAllCopiesLabel": "Remove all copies…",
             "steamError": "Steam couldn't uninstall {{game}} (error {{code}})."
+        },
+        "update": {
+            "branchUnknown": "GameLib can't see the {{branch}} branch of {{title}}, so it can't update it.",
+            "finished": "Update finished",
+            "handoff": "Steam opened {{title}}. Update it from Steam.",
+            "installAppRefused": "Steam refused the update (EAppUpdateError {{code}}).",
+            "notBridgeOrNative": "Steam updates this game inside its bottle.",
+            "notEnoughDisk": "Not enough free space to update {{title}}: needs {{needed}} free, {{available}} available.",
+            "prompt": {
+                "dontAskAgain": "Don't ask again for this build",
+                "finishFirst": "Finish updating {{title}} before you play. Resume it from Downloads.",
+                "message": "{{title}} has an update (build {{targetBuild}}). Update now, or play the build you have?",
+                "playAnyway": "Play anyway",
+                "title": "Update available",
+                "updateNow": "Update now"
+            },
+            "refusedRunning": "Quit {{title}} before updating it."
         }
     },
     "steamgriddb": {

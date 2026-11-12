@@ -358,6 +358,15 @@ export function createSteamStores(deps: StoreFamilyDeps) {
     null,
     { root: deps.root, kind: 'user-state' }
   )
+  // ── Phase 74 D-06: "Don't ask again for this build" acknowledgements ────────
+  // appId -> the target build id the user dismissed the pre-launch update
+  // prompt for. Read through the injected `Stores['steam']` slice
+  // (`readUpdatePromptAck` in updatePromptAck.ts).
+  const steamUpdatePromptAckStore = new CacheStore<unknown>(
+    'steam_update_prompt_ack',
+    null,
+    { root: deps.root, kind: 'user-state' }
+  )
 
   return {
     configStore,
@@ -367,6 +376,7 @@ export function createSteamStores(deps: StoreFamilyDeps) {
     steamSyncStore,
     steamPendingAdoptionStore,
     steamRestartHoldStore,
-    steamKnownFixReportStore
+    steamKnownFixReportStore,
+    steamUpdatePromptAckStore
   }
 }
