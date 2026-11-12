@@ -1,0 +1,20 @@
+.steamBridgeIssueBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-inline-start: 0.5rem;
+  border-radius: 9999px;
+  padding: 0.1rem 0.5rem;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  background: var(--status-warning);
+  color: var(--body-background);
+  cursor: help;
+}
+
+.steamBridgeIssueTooltip {
+  ul {
+    margin: 0.25rem 0;
+    padding-inline-start: 1rem;
+  }
+}

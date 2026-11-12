@@ -11,6 +11,7 @@ import { ratingTier } from './appleRating'
 import { protonTierToStars } from './protonRating'
 import { resolveBridgeRouteDisplay } from './bridgeRouteDisplay'
 import { resolveGamelibFixDisplay } from './gamelibFixDisplay'
+import SteamBridgeRouteSummary from './SteamBridgeRouteSummary'
 import CrossoverIcon from 'frontend/assets/crossover_icon.svg?react'
 
 interface Props {
@@ -257,38 +258,12 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
       )}
       {bridgeLine.visible && (
         <span className="iconWithText steamBridgeRouteRow">
-          <b>
-            {tGamelib('gamelib:steam.bridge.route.label', 'Steam route')}
-            {': '}
-          </b>
-          {tGamelib(
-            bridgeLine.routeKey === 'native'
-              ? 'gamelib:steam.bridge.route.native'
-              : 'gamelib:steam.bridge.route.bottled',
-            bridgeLine.routeKey === 'native'
-              ? 'Native Steam bridge'
-              : 'Bottled Steam client'
-          )}
-          {bridgeLine.reasonKey && (
-            <>
-              {' — '}
-              {tGamelib(`gamelib:${bridgeLine.reasonKey}`, {
-                reason: bridgeLine.reasonParams.reasonKey
-                  ? tGamelib(`gamelib:${bridgeLine.reasonParams.reasonKey}`)
-                  : undefined
-              })}
-            </>
-          )}
-          {bridgeLine.missingSymbols.length > 0 && (
-            <span className="steamBridgeMissingSymbols">
-              {' '}
-              {tGamelib(
-                'gamelib:steam.bridge.route.missingSymbols',
-                'Not covered: {{symbols}}',
-                { symbols: bridgeLine.missingSymbols.join(', ') }
-              )}
-            </span>
-          )}
+          <SteamBridgeRouteSummary
+            routeKey={bridgeLine.routeKey}
+            reasonKey={bridgeLine.reasonKey}
+            reasonParams={bridgeLine.reasonParams}
+            missingSymbols={bridgeLine.missingSymbols}
+          />
           {bridgeLine.limitedLineKeys.map((key) => (
             <span key={key} className="steamBridgeLimitedLine">
               {' '}

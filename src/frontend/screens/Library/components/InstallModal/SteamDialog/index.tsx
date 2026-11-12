@@ -91,6 +91,7 @@ import useAuthState from 'frontend/state/authState'
 import { useSteamAccount } from 'frontend/state/accountHooks'
 import { isRunsForMeOn, runsForMeKey } from 'common/runsForMe'
 import useLibraryState from 'frontend/state/libraryState'
+import SteamBridgeRouteSummary from 'frontend/screens/Game/GamePage/components/SteamBridgeRouteSummary'
 
 interface Props {
   backdropClick: () => void
@@ -738,48 +739,18 @@ export default function SteamDialog({
             {bridgeLine.visible && (
               <div className="infoBox steamBridgeRouteLine">
                 <p>
-                  <b>
-                    {tGamelib(
-                      'gamelib:steam.bridge.route.label',
-                      'Steam route'
-                    )}
-                    {': '}
-                  </b>
-                  {tGamelib(
-                    bridgeLine.routeKey === 'native'
-                      ? 'gamelib:steam.bridge.route.native'
-                      : 'gamelib:steam.bridge.route.bottled',
-                    bridgeLine.routeKey === 'native'
-                      ? 'Native Steam bridge'
-                      : 'Bottled Steam client'
-                  )}
-                  {bridgeLine.reasonKey && (
-                    <>
-                      {' — '}
-                      {tGamelib(`gamelib:${bridgeLine.reasonKey}`, {
-                        reason: bridgeLine.reasonParams.reasonKey
-                          ? tGamelib(
-                              `gamelib:${bridgeLine.reasonParams.reasonKey}`
-                            )
-                          : undefined
-                      })}
-                    </>
-                  )}
+                  <SteamBridgeRouteSummary
+                    routeKey={bridgeLine.routeKey}
+                    reasonKey={bridgeLine.reasonKey}
+                    reasonParams={bridgeLine.reasonParams}
+                    missingSymbols={bridgeLine.missingSymbols}
+                  />
                 </p>
                 {bridgeOwnsEngine && (
                   <p>
                     {tGamelib(
                       'gamelib:steam.install.bridgeEngineNotice',
                       "This game gets its own bottle. To change the engine it runs on, use Engine (advanced) in the game's settings."
-                    )}
-                  </p>
-                )}
-                {bridgeLine.missingSymbols.length > 0 && (
-                  <p>
-                    {tGamelib(
-                      'gamelib:steam.bridge.route.missingSymbols',
-                      'Not covered: {{symbols}}',
-                      { symbols: bridgeLine.missingSymbols.join(', ') }
                     )}
                   </p>
                 )}

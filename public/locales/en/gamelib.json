@@ -623,9 +623,19 @@
             },
             "route": {
                 "bottled": "Bottled Steam client",
+                "issue": {
+                    "failedThisSession": "Failed this session",
+                    "knownBad": "Known issue",
+                    "notCovered_one": "{{count}} Steam call not covered",
+                    "notCovered_other": "{{count}} Steam calls not covered",
+                    "scanMiss": "Not fully covered",
+                    "win64NoShim": "No 64-bit bridge"
+                },
                 "label": "Steam route",
-                "missingSymbols": "Not covered: {{symbols}}",
+                "moreSymbols_one": "and {{count}} more",
+                "moreSymbols_other": "and {{count}} more",
                 "native": "Native Steam bridge",
+                "notCoveredHeading": "Not covered:",
                 "reason": {
                     "failedThisSession": "The bridge failed earlier this session",
                     "knownBad": "Known not to work with the bridge: {{reason}}",
