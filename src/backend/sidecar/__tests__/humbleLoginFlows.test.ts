@@ -87,7 +87,10 @@ import {
 import { createIpcRegistry } from '../ipcRegistry'
 import { createTestHumbleServices } from 'backend/testUtils/testHumble'
 import { createTestStores } from 'backend/testUtils/testServices'
-import { startRpcServer, requestRustInvoke } from '../sidecarRpc'
+import { createTestSidecarRpc } from '../../testUtils/testSidecarRpc'
+
+const rpc = createTestSidecarRpc()
+const { requestRustInvoke } = rpc
 import {
   RUST_HUMBLE_LOGIN_OPEN,
   RUST_HUMBLE_LOGIN_COOKIES,
@@ -144,7 +147,7 @@ function startTransport(): { input: PassThrough; frames: Frame[] } {
   const input = new PassThrough()
   const output = new PassThrough()
   const frames = collectFrames(output)
-  startRpcServer(input, output, ipc)
+  rpc.start(input, output, ipc)
   return { input, frames }
 }
 
@@ -157,6 +160,7 @@ const ipc = createIpcRegistry()
 // The Humble services are the boot-style instance from createTestHumbleServices; the user and
 // library inside it are lazy, so this suite never loads them (it wires, it does not re-test).
 registerHumbleLoginFlows({
+  requestRustInvoke,
   ipc,
   humble: createTestHumbleServices({ stores: createTestStores() })
 })
@@ -187,10 +191,10 @@ describe('registration kind — the 4 channels are registered with the correct k
 })
 
 // ── Describe 2: rustInvoke frame shape ─────────────────────────────────────────────────────────
-describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real sidecarRpc transport', () => {
+describe('rustInvoke frame shape — createRustLoginWindowSeam(requestRustInvoke) drives the real sidecarRpc transport', () => {
   it('humble_login_open: emits [url, visible, userAgent] and resolves the coerced string label', async () => {
     const { input, frames } = startTransport()
-    const seam = createRustLoginWindowSeam()
+    const seam = createRustLoginWindowSeam(requestRustInvoke)
 
     const promise = seam.open('https://www.humblebundle.com/login', {
       visible: true,
@@ -215,7 +219,7 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
 
   it('humble_login_open: throws on a malformed (non-string) response', async () => {
     const { input, frames } = startTransport()
-    const seam = createRustLoginWindowSeam()
+    const seam = createRustLoginWindowSeam(requestRustInvoke)
 
     const promise = seam.open('https://www.humblebundle.com/login', {
       visible: true,
@@ -232,7 +236,7 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
 
   it('humble_login_cookies: emits [label, host, names] and resolves { total, matched }', async () => {
     const { input, frames } = startTransport()
-    const seam = createRustLoginWindowSeam()
+    const seam = createRustLoginWindowSeam(requestRustInvoke)
 
     const promise = seam.cookies('login-humble-1', 'www.humblebundle.com', [
       '_simpleauth_sess'
@@ -276,7 +280,7 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
   // purpose (REQ-34.4.1-13).
   it('humble_login_cookies: throws (never coerces to 0) when the response omits total', async () => {
     const { input, frames } = startTransport()
-    const seam = createRustLoginWindowSeam()
+    const seam = createRustLoginWindowSeam(requestRustInvoke)
 
     const promise = seam.cookies('login-humble-1', 'www.humblebundle.com', [
       '_simpleauth_sess'
@@ -293,7 +297,7 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
   // ── humble_login_cookies_for_domain (Phase 34.4.1 Plan 22, F-6 Defect A, REQ-34.4.1-GAP-07)
   it('humble_login_cookies_for_domain: emits [label, domain, names] and resolves { total, matched }', async () => {
     const { input, frames } = startTransport()
-    const seam = createRustLoginWindowSeam()
+    const seam = createRustLoginWindowSeam(requestRustInvoke)
 
     const promise = seam.cookiesForDomain(
       'login-humble-1',
@@ -339,7 +343,7 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
   // not merely assumed to still hold.
   it('humble_login_cookies_for_domain: throws (never coerces to 0) when the response omits total', async () => {
     const { input, frames } = startTransport()
-    const seam = createRustLoginWindowSeam()
+    const seam = createRustLoginWindowSeam(requestRustInvoke)
 
     const promise = seam.cookiesForDomain(
       'login-humble-1',
@@ -361,7 +365,7 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
   // adjacent to the new code, checked by name per this plan's own binding constraint 1.
   it('humble_login_cookies: (adjacent-already-present check) still throws when the response omits total', async () => {
     const { input, frames } = startTransport()
-    const seam = createRustLoginWindowSeam()
+    const seam = createRustLoginWindowSeam(requestRustInvoke)
 
     const promise = seam.cookies('login-humble-1', 'www.humblebundle.com', [])
     await flush()
@@ -375,7 +379,7 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
 
   it('humble_login_take_events: emits [label] and resolves the coerced event array', async () => {
     const { input, frames } = startTransport()
-    const seam = createRustLoginWindowSeam()
+    const seam = createRustLoginWindowSeam(requestRustInvoke)
 
     const promise = seam.takeEvents('login-humble-1')
     await flush()
@@ -410,7 +414,7 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
   // cancel-detection logic (`captureOAuthLogin`) depends on to ever see it at all.
   it("humble_login_take_events: a 'closed' event passes through uncoerced (does NOT default to 'finished')", async () => {
     const { input, frames } = startTransport()
-    const seam = createRustLoginWindowSeam()
+    const seam = createRustLoginWindowSeam(requestRustInvoke)
 
     const promise = seam.takeEvents('oauth-capture-0')
     await flush()
@@ -432,7 +436,7 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
 
   it('humble_login_take_events: a genuinely unrecognized event value still defaults to "finished" (the pre-existing fail-safe is unchanged)', async () => {
     const { input, frames } = startTransport()
-    const seam = createRustLoginWindowSeam()
+    const seam = createRustLoginWindowSeam(requestRustInvoke)
 
     const promise = seam.takeEvents('login-humble-1')
     await flush()
@@ -457,7 +461,7 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
 
   it('humble_login_close: emits [label] and resolves the coerced boolean', async () => {
     const { input, frames } = startTransport()
-    const seam = createRustLoginWindowSeam()
+    const seam = createRustLoginWindowSeam(requestRustInvoke)
 
     const promise = seam.close('login-humble-1')
     await flush()
@@ -474,7 +478,7 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
 
   it('humble_login_clear_cookies: emits [label, domain] and resolves the coerced count', async () => {
     const { input, frames } = startTransport()
-    const seam = createRustLoginWindowSeam()
+    const seam = createRustLoginWindowSeam(requestRustInvoke)
 
     const promise = seam.clearCookies('login-humble-1', 'humblebundle.com')
     await flush()
@@ -492,7 +496,7 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
   // ── humble_login_clear_storage (34.4.1 gap cycle plan 15, F-6, REQ-34.4.1-06/REQ-34.4.1-GAP-03)
   it('humble_login_clear_storage: emits [originUrl, userAgent] and resolves the coerced per-category report', async () => {
     const { input, frames } = startTransport()
-    const seam = createRustLoginWindowSeam()
+    const seam = createRustLoginWindowSeam(requestRustInvoke)
 
     const promise = seam.clearStorage(
       'https://www.humblebundle.com',
@@ -537,7 +541,7 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
   // the discriminator, exactly as classifyCookieRead's own total/everProvedLive distinction does.
   it("humble_login_clear_storage: an 'unsupported' category is not coerced to 0", async () => {
     const { input, frames } = startTransport()
-    const seam = createRustLoginWindowSeam()
+    const seam = createRustLoginWindowSeam(requestRustInvoke)
 
     const promise = seam.clearStorage(
       'https://www.humblebundle.com',
@@ -568,7 +572,7 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
 
   it('humble_login_clear_storage: throws (never coerces to a fake success) on a malformed response', async () => {
     const { input, frames } = startTransport()
-    const seam = createRustLoginWindowSeam()
+    const seam = createRustLoginWindowSeam(requestRustInvoke)
 
     const promise = seam.clearStorage(
       'https://www.humblebundle.com',
@@ -587,7 +591,7 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
 
   it('humble_login_clear_storage: a rejecting requestRustInvoke surfaces as a rejection, never a swallowed fake success', async () => {
     const { input, frames } = startTransport()
-    const seam = createRustLoginWindowSeam()
+    const seam = createRustLoginWindowSeam(requestRustInvoke)
 
     const promise = seam.clearStorage(
       'https://www.humblebundle.com',

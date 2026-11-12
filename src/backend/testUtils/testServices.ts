@@ -434,6 +434,9 @@ export function createTestManagerDeps(
     paths: overrides.paths ?? createTestPaths(),
     appInfo: overrides.appInfo ?? TEST_APP_INFO,
     dialogs: overrides.dialogs ?? host.dialogs,
+    sendFrontendMessage:
+      overrides.sendFrontendMessage ?? host.sendFrontendMessage,
+    requestRustInvoke: overrides.requestRustInvoke ?? host.requestRustInvoke,
     openExternal: overrides.openExternal ?? host.openExternal,
     notifications: overrides.notifications ?? host.notifications,
     appState: overrides.appState ?? host.appState,
@@ -492,7 +495,9 @@ export function createTestEngineServices(
  * The config, app-info and host slices `createTools` (ToolsDeps) and the engine source read.
  * A test spreads this into its tools deps literal.
  */
-export function createTestToolsSlices() {
+export function createTestToolsSlices(
+  overrides: { sendFrontendMessage?: ManagerDeps['sendFrontendMessage'] } = {}
+) {
   const host = createTestHostServices()
   const config = createTestGlobalConfig()
   return {
@@ -500,6 +505,9 @@ export function createTestToolsSlices() {
     gameConfigs: createTestGameConfigs(),
     appInfo: TEST_APP_INFO,
     dialogs: host.dialogs,
+    sendFrontendMessage:
+      overrides.sendFrontendMessage ?? host.sendFrontendMessage,
+    requestRustInvoke: host.requestRustInvoke,
     appState: host.appState,
     notifications: host.notifications,
     onlineMonitor: createTestOnlineMonitor(),

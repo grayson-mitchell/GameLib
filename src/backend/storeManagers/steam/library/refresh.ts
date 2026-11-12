@@ -2,7 +2,6 @@ import { GameInfo, ExecResult } from 'common/types'
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import { getFileSize } from 'backend/utils'
-import { sendFrontendMessage } from '../../../ipc'
 import type { ManagerDeps } from 'backend/services/types'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
@@ -47,7 +46,7 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
         LogPrefix.Steam
       )
     }
-    sendFrontendMessage('steamSyncStatus', { status: 'idle' })
+    deps.sendFrontendMessage('steamSyncStatus', { status: 'idle' })
     return null
   }
 
@@ -66,7 +65,7 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
           'Steam: library refresh waiting on the guided Go Offline step, no logon issued',
           LogPrefix.Steam
         )
-        sendFrontendMessage('steamSyncStatus', { status: 'idle' })
+        deps.sendFrontendMessage('steamSyncStatus', { status: 'idle' })
         return null
       }
       // steam-sync-false-failed-banner: "not ready" is not one condition. A
@@ -82,7 +81,7 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
         LogPrefix.Steam
       )
       // 34.15 D-07 exit path 1 of 4.
-      sendFrontendMessage('steamSyncStatus', {
+      deps.sendFrontendMessage('steamSyncStatus', {
         status: 'failed',
         reason:
           lease.reason === 'logon-rejected'
@@ -106,7 +105,7 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
         'Steam client not ready (no steamID), skipping library refresh',
         LogPrefix.Steam
       )
-      sendFrontendMessage('steamSyncStatus', {
+      deps.sendFrontendMessage('steamSyncStatus', {
         status: 'failed',
         reason: 'client-not-ready'
       })
@@ -115,7 +114,7 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
     // 34.15 D-06/D-07: 'syncing' is emitted only once a usable lease exists,
     // which gives the Steam sync tri-state STRUCTURAL meaning ("a refresh is
     // currently running").
-    sendFrontendMessage('steamSyncStatus', { status: 'syncing' })
+    deps.sendFrontendMessage('steamSyncStatus', { status: 'syncing' })
     return await syncOwnedLibrary(deps, client)
   } finally {
     release()
@@ -148,12 +147,12 @@ async function syncOwnedLibrary(
     logError(['Steam getUserOwnedApps failed:', err], LogPrefix.Steam)
     // Offline / CM-unreachable fallback — serve cached library (D-09)
     const cached = steamLibraryStore.get('games', [])
-    cached.forEach((g) => sendFrontendMessage('pushGameToLibrary', g))
+    cached.forEach((g) => deps.sendFrontendMessage('pushGameToLibrary', g))
     // 34.15 D-07 exit path 2 of 4. Emitted AFTER the cached-library push
     // loop above so the renderer already has the cached games in hand
     // before it is told the sync failed — the notice must render above a
     // populated grid, never an empty one.
-    sendFrontendMessage('steamSyncStatus', {
+    deps.sendFrontendMessage('steamSyncStatus', {
       status: 'failed',
       reason: 'owned-apps-failed'
     })
@@ -472,7 +471,7 @@ async function syncOwnedLibrary(
       }
 
       deps.steamSession.libraryState.library.set(appIdStr, gameInfo)
-      sendFrontendMessage('pushGameToLibrary', gameInfo)
+      deps.sendFrontendMessage('pushGameToLibrary', gameInfo)
     }
 
     // ── Step 4: persist library list and sync timestamp ───────────────────
@@ -491,7 +490,7 @@ async function syncOwnedLibrary(
     // main.ts's refreshLibrary IPC handler still rejects for a
     // scoped-refresh caller, exactly as before this plan — only the emit
     // is new.
-    sendFrontendMessage('steamSyncStatus', {
+    deps.sendFrontendMessage('steamSyncStatus', {
       status: 'failed',
       reason: 'sync-failed'
     })
@@ -502,7 +501,7 @@ async function syncOwnedLibrary(
     LogPrefix.Steam
   )
   // 34.15 D-07 exit path 3 of 4 (success).
-  sendFrontendMessage('steamSyncStatus', { status: 'idle' })
+  deps.sendFrontendMessage('steamSyncStatus', { status: 'idle' })
   return {
     stdout: `${deps.steamSession.libraryState.library.size} games synced`,
     stderr: ''
@@ -618,7 +617,7 @@ export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
         'games',
         Array.from(deps.steamSession.libraryState.library.values())
       )
-      sendFrontendMessage('pushGameToLibrary', updated)
+      deps.sendFrontendMessage('pushGameToLibrary', updated)
 
       // quick 261024-exo: arch-check backstop for a delegated steam://install
       // whose poll already stopped (no-manifest window or MAX_TICKS expired

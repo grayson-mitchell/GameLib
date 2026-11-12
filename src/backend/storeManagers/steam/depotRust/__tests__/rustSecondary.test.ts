@@ -14,7 +14,11 @@ import {
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
+const requestRustInvoke = jest.fn()
+const depotTransport = {
+  requestRustInvoke,
+  sendFrontendMessage: jest.fn()
+}
 import { downloadSelectedDepotFiles, prescreenBridgeDepots } from '../../depot'
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 const steamUser = createMockSteamUser()
@@ -35,6 +39,7 @@ const steamStoresModule = createSteamStores({
 })
 
 const steamTestDeps = createTestManagerDeps({
+  steamInstallRuntime: createTestSteamInstallRuntime(depotTransport),
   steamUser,
   stores: createTestStores({ steam: steamStoresModule })
 })
@@ -51,14 +56,10 @@ jest.mock('backend/utils', () => ({
   sendProgressUpdate: jest.fn(),
   getSteamLibraries: jest.fn()
 }))
-jest.mock('backend/sidecar/sidecarRpc', () => ({
-  requestRustInvoke: jest.fn()
-}))
 jest.mock('../../depot/select', () => ({
   ...jest.requireActual('../../depot/select'),
   selectAllDepots: jest.fn()
 }))
-jest.mock('../../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 jest.mock('../../library/installPolling', () => ({
   startInstallPolling: jest.fn()
 }))
@@ -130,7 +131,7 @@ const ALL_BLOCKED_MSG =
   'buildDepotPlan: every selected depot for appId 12345 was blocked by Steam (eresult=40) and had to be skipped: 111'
 
 const OPTS = () => ({
-  installRuntime: createTestSteamInstallRuntime(),
+  installRuntime: createTestSteamInstallRuntime(depotTransport),
   steamUser,
   config: createTestGlobalConfig(),
   targetSteamappsDir: steamapps,

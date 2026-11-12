@@ -259,9 +259,6 @@ const mockGetLiveCsrfToken = jest.fn(() => Promise.resolve('csrf-token-value'))
 // ── ipc / logger mocks ───────────────────────────────────────────────────
 
 const mockSendFrontendMessage = jest.fn()
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: (...args: unknown[]) => mockSendFrontendMessage(...args)
-}))
 
 const mockLogInfo = jest.fn()
 const mockLogError = jest.fn()
@@ -307,6 +304,7 @@ let syncFence: ReturnType<typeof createHumbleSyncFence>
 function buildLibrary(): ReturnType<typeof createHumbleLibrary> {
   syncFence = createHumbleSyncFence()
   return createHumbleLibrary({
+    sendFrontendMessage,
     stores: storesSlice,
     user: {
       getCredentials: async () => mockGetCredentials(),
@@ -418,6 +416,9 @@ const syncDeps = {
   config: createTestGlobalConfig(),
   notifications: { show: jest.fn() }
 }
+
+const sendFrontendMessage = (...args: unknown[]) =>
+  mockSendFrontendMessage(...args)
 
 describe('HumbleLibrary', () => {
   beforeEach(() => {

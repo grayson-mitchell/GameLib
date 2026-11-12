@@ -50,7 +50,6 @@ jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
   removeShortcuts: jest.fn(),
   shortcutFiles: jest.fn()
 }))
-jest.mock('../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 jest.mock('backend/dialog/dialog', () => ({
   notify: jest
     .requireActual('backend/testUtils/propsOnlyMock')

@@ -12,7 +12,11 @@ import { existsSync, mkdtempSync, readdirSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join, resolve } from 'path'
 
-import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
+const requestRustInvoke = jest.fn()
+const depotTransport = {
+  requestRustInvoke,
+  sendFrontendMessage: jest.fn()
+}
 import { downloadSelectedDepotFiles } from '../depot'
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 const steamUser = createMockSteamUser()
@@ -35,14 +39,10 @@ jest.mock('backend/utils', () => ({
   getFileSize: jest.fn(),
   sendProgressUpdate: jest.fn()
 }))
-jest.mock('backend/sidecar/sidecarRpc', () => ({
-  requestRustInvoke: jest.fn()
-}))
 jest.mock('../depot/select', () => ({
   ...jest.requireActual('../depot/select'),
   selectAllDepots: jest.fn()
 }))
-jest.mock('../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 jest.mock('i18next', () => ({
   __esModule: true,
   default: { t: (_key: string, fallback = '') => fallback }
@@ -91,7 +91,7 @@ const call = (
   over: Partial<Parameters<typeof downloadSelectedDepotFiles>[1]> = {}
 ) =>
   downloadSelectedDepotFiles(APP_ID, {
-    installRuntime: createTestSteamInstallRuntime(),
+    installRuntime: createTestSteamInstallRuntime(depotTransport),
     steamUser,
     config: createTestGlobalConfig(),
     targetSteamappsDir: staging,

@@ -105,7 +105,7 @@ describe('launchEventCallback single-flight (WR-03)', () => {
 
   const tick = () => new Promise((r) => setImmediate(r))
   const count = (status: string) =>
-    sendGameStatusUpdateMock.mock.calls.filter((c) => c[0].status === status)
+    sendGameStatusUpdateMock.mock.calls.filter((c) => c[1].status === status)
       .length
 
   it('runs the body once for two concurrent calls and shares the result', async () => {

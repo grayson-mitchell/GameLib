@@ -42,7 +42,7 @@
  */
 
 import { logInfo, logWarning, LogPrefix } from '../logger'
-import { requestRustInvoke } from './sidecarRpc'
+import type { RequestRustInvoke } from '../host'
 import {
   RUST_KEYRING_GET,
   RUST_KEYRING_SET
@@ -57,6 +57,11 @@ import type {
 } from '../steamgrid/secretStore'
 import { isEncryptedValue, decryptApiKey } from '../steamgrid/secureKey'
 
+/** What the one-time migration reads and writes, plus the boot's keyring round-trip (66.4-15). */
+export type SteamGridDbMigrationDeps = SteamGridDbSecretDeps & {
+  requestRustInvoke: RequestRustInvoke
+}
+
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
@@ -68,9 +73,14 @@ function errorMessage(error: unknown): string {
  * read cache (D-05, C-WR-2: the former module-scope `SLOT_STORE` is gone).
  */
 export class SidecarSteamGridDbSecretStore implements SteamGridDbSecretStore {
-  private readonly slot = new SidecarKeyringSlotStore(
-    KEYRING_SLOT_STEAMGRID_API_KEY
-  )
+  private readonly slot: SidecarKeyringSlotStore
+
+  constructor(requestRustInvoke: RequestRustInvoke) {
+    this.slot = new SidecarKeyringSlotStore(
+      KEYRING_SLOT_STEAMGRID_API_KEY,
+      requestRustInvoke
+    )
+  }
 
   /** Drops the slot's read cache (the migration writes around it to prove a real round trip). */
   invalidateCache(): void {
@@ -118,8 +128,10 @@ export class SidecarSteamGridDbSecretStore implements SteamGridDbSecretStore {
  * plaintext migration belong to `startSidecarSteamGridDbSecretStore()` below, which the
  * 'secret-stores' boot step runs after the RPC server is bound (T-28-10 placement).
  */
-export function createSidecarSteamGridDbSecretStore(): SidecarSteamGridDbSecretStore {
-  return new SidecarSteamGridDbSecretStore()
+export function createSidecarSteamGridDbSecretStore(
+  requestRustInvoke: RequestRustInvoke
+): SidecarSteamGridDbSecretStore {
+  return new SidecarSteamGridDbSecretStore(requestRustInvoke)
 }
 
 /**
@@ -132,7 +144,7 @@ export function createSidecarSteamGridDbSecretStore(): SidecarSteamGridDbSecretS
  */
 export function startSidecarSteamGridDbSecretStore(
   store: Pick<SidecarSteamGridDbSecretStore, 'invalidateCache'>,
-  deps: SteamGridDbSecretDeps
+  deps: SteamGridDbMigrationDeps
 ): void {
   logInfo('[bootstrap] steamgrid secret store: keyring', LogPrefix.Backend)
   void migrateSteamGridDbApiKey(store, deps).catch((error) => {
@@ -162,7 +174,7 @@ export function startSidecarSteamGridDbSecretStore(
  */
 export async function migrateSteamGridDbApiKey(
   store: Pick<SidecarSteamGridDbSecretStore, 'invalidateCache'>,
-  deps: SteamGridDbSecretDeps
+  deps: SteamGridDbMigrationDeps
 ): Promise<void> {
   const stored = deps.config.getSettings().steamGridDbApiKey
 
@@ -190,7 +202,7 @@ export async function migrateSteamGridDbApiKey(
   }
 
   try {
-    await requestRustInvoke(RUST_KEYRING_SET, [
+    await deps.requestRustInvoke(RUST_KEYRING_SET, [
       plaintext,
       KEYRING_SLOT_STEAMGRID_API_KEY
     ])
@@ -211,7 +223,7 @@ export async function migrateSteamGridDbApiKey(
 
   let readback: unknown
   try {
-    readback = await requestRustInvoke(RUST_KEYRING_GET, [
+    readback = await deps.requestRustInvoke(RUST_KEYRING_GET, [
       KEYRING_SLOT_STEAMGRID_API_KEY
     ])
   } catch (error) {

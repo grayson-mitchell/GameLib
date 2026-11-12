@@ -74,6 +74,7 @@
 // 66.1-22: the former load-bearing `import { managers.library } from '../storeManagers'`
 // is gone; the managers arrive as `deps.managers` from the boot `store-managers` step, so this
 // module cannot re-enter storeManagers/index.ts mid-evaluation.
+import type { SendFrontendMessage } from '../host/frontendMessage'
 import { isStore, storeCapabilities } from 'common/storeCapabilities'
 
 import type { IpcRegistry } from './ipcRegistry'
@@ -357,7 +358,8 @@ async function handleLaunch(
       {
         libraryManagers: deps.managers.library,
         stores: deps.stores,
-        notifications: deps.notifications
+        notifications: deps.notifications,
+        sendFrontendMessage: deps.sendFrontendMessage
       },
       appName
     )
@@ -400,6 +402,7 @@ export type SteamFlowDeps = Pick<BootServices, 'managers' | 'stores'> & {
   config: Pick<GlobalConfigSlice, 'getSettings'>
   appState: Pick<AppState, 'hideMainWindow'>
   notifications: Pick<BootServices['host']['notifications'], 'show'>
+  sendFrontendMessage: SendFrontendMessage
   launcher: Pick<BootServices['launcher'], 'launchEventCallback'>
   /** The boot-owned keyring auth-unlock latches the refresh dispatch notes into (D-66.3-13). */
   steamSession: Pick<BootServices['steamSession'], 'authTrigger'>

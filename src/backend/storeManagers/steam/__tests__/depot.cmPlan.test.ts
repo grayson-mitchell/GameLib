@@ -19,7 +19,11 @@ import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { logError, logWarning } from 'backend/logger'
-import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
+const requestRustInvoke = jest.fn()
+const depotTransport = {
+  requestRustInvoke,
+  sendFrontendMessage: jest.fn()
+}
 import { downloadSteamDepots, PLAN_BUILD_MAX_ATTEMPTS } from '../depot'
 import { buildDepotRefs } from '../depot/plan'
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
@@ -46,15 +50,9 @@ jest.mock('backend/utils', () => ({
   getFileSize: jest.fn(),
   sendProgressUpdate: jest.fn()
 }))
-jest.mock('backend/sidecar/sidecarRpc', () => ({
-  requestRustInvoke: jest.fn()
-}))
 jest.mock('../depot/select', () => ({
   ...jest.requireActual('../depot/select'),
   selectAllDepots: jest.fn()
-}))
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
 }))
 jest.mock('i18next', () => ({
   __esModule: true,
@@ -65,7 +63,7 @@ jest.mock('i18next', () => ({
 
 const APP_ID = '12345'
 const BASE_OPTS = {
-  installRuntime: createTestSteamInstallRuntime(),
+  installRuntime: createTestSteamInstallRuntime(depotTransport),
   steamUser,
   config: createTestGlobalConfig(),
   targetSteamappsDir: '/tmp/steamapps',
@@ -521,7 +519,7 @@ describe('buildDepotRefs', () => {
 describe('downloadSteamDepots entry (CM half before the Rust job)', () => {
   let dir: string
   const opts = (over: Record<string, unknown> = {}) => ({
-    installRuntime: createTestSteamInstallRuntime(),
+    installRuntime: createTestSteamInstallRuntime(depotTransport),
     steamUser,
     config: createTestGlobalConfig(),
     targetSteamappsDir: dir,

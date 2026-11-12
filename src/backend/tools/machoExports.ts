@@ -6,6 +6,7 @@
  *
  * Fail-closed: a transport rejection resolves `ok:false` (the DXMT gate skips), never `ok:true`.
  */
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { invokeScan } from '../scanners/rustScan'
 import { RUST_SCAN_WINEMAC_METAL_EXPORTS } from 'common/types/sidecarTransport'
 import {
@@ -17,11 +18,12 @@ import {
 export type { WinemacMetalCheck } from '../scanners/scanTypes'
 
 export async function checkWinemacMetalViewExports(
+  deps: RustInvokeDeps,
   wineBundlePath: string,
   _caller?: string
 ): Promise<WinemacMetalCheck> {
   try {
-    return await invokeScan(RUST_SCAN_WINEMAC_METAL_EXPORTS, {
+    return await invokeScan(deps, RUST_SCAN_WINEMAC_METAL_EXPORTS, {
       wineBundlePath
     })
   } catch (error) {

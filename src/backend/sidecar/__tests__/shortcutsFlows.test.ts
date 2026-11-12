@@ -60,11 +60,6 @@ jest.mock('backend/constants/environment', () =>
 // and this test both need directly controllable; every other real export of this module is
 // untouched by the channels under test.
 
-// ── backend/ipc — sendFrontendMessage is processShortcut's ctrl+k/j/l push target
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
-
 // ── backend/dialog/dialog — notify() would otherwise construct a real platformApi Notification
 // and attempt a real (unbound, in this file) rustInvoke round-trip; not this suite's concern
 // (covered by lifecycleStub.test.ts's own Notification describe block).
@@ -161,7 +156,7 @@ import {
   createTestServices,
   createTestStores
 } from 'backend/testUtils/testServices'
-import { sendFrontendMessage } from 'backend/ipc'
+const sendFrontendMessage = jest.fn()
 import { logWarning, logError } from 'backend/logger'
 import { getIcon } from 'backend/shortcuts/utils'
 import { notify } from 'backend/dialog/dialog'
@@ -224,7 +219,7 @@ function makeFakeGame(gameInfo: GameInfo) {
 
 const mockGetGame = jest.fn()
 const mockHandleExit = jest.fn()
-const mockSendFrontendMessage = sendFrontendMessage as jest.Mock
+const mockSendFrontendMessage = sendFrontendMessage
 const mockLogWarning = logWarning as jest.Mock
 const mockLogError = logError as jest.Mock
 // The config slice reads through this (`the global config` is no longer in the module graph).
@@ -282,6 +277,7 @@ afterAll(() => sipsRunner.dispose())
 const ipc = createIpcRegistry()
 const { handlerRegistry, listenerRegistry } = ipcViews(ipc)
 registerShortcutsFlows({
+  sendFrontendMessage,
   ipc,
   aborts: createTestAbortRegistry(),
   managers: createTestManagers({
@@ -1203,7 +1199,9 @@ describe('F-34.5-G6-08 discriminator — addToSteam over the REAL RPC frame path
 
   it("the emitted stdout frame has ok:true, an OWN 'result' key, and result === true", async () => {
     const { PassThrough } = await import('node:stream')
-    const { startRpcServer } = await import('../sidecarRpc')
+    const rpc = (
+      await import('../../testUtils/testSidecarRpc')
+    ).createTestSidecarRpc()
 
     const input = new PassThrough()
     const output = new PassThrough()
@@ -1226,7 +1224,7 @@ describe('F-34.5-G6-08 discriminator — addToSteam over the REAL RPC frame path
       }
     })
 
-    startRpcServer(input, output, ipc)
+    rpc.start(input, output, ipc)
 
     input.write(
       `${JSON.stringify({

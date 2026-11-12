@@ -2,7 +2,6 @@ import axios from 'axios'
 import { ExtraInfo, GameInfo } from 'common/types'
 import { parseMetacriticScore } from 'common/metacriticScore'
 import { logWarning, LogPrefix } from 'backend/logger'
-import { sendFrontendMessage } from '../../ipc'
 import { knownFixSaysMac32 } from './macArchKnownFix'
 import { resolvePlatformWrite } from './platformPrecedence'
 import { METADATA_FETCH_TIMEOUT_MS } from './state'
@@ -53,7 +52,9 @@ export async function fetchMetadataIfNeeded(
   // Notify the frontend a background metadata/art sync is starting (the first
   // pending fetch flips the indicator on; the last one flips it off below).
   if (steamGame.deps.steamSession.libraryState.pendingFetches.size === 0) {
-    sendFrontendMessage('steamMetadataSyncing', { syncing: true })
+    steamGame.deps.sendFrontendMessage('steamMetadataSyncing', {
+      syncing: true
+    })
   }
   steamGame.deps.steamSession.libraryState.pendingFetches.add(steamGame.appId)
 
@@ -92,7 +93,7 @@ export async function fetchMetadataIfNeeded(
         steamGame.appId,
         delistedInfo
       )
-      sendFrontendMessage('pushGameToLibrary', delistedInfo)
+      steamGame.deps.sendFrontendMessage('pushGameToLibrary', delistedInfo)
       return
     }
 
@@ -296,7 +297,7 @@ export async function fetchMetadataIfNeeded(
     )
 
     // Push enriched entry to frontend — GameCard re-renders with real art + title
-    sendFrontendMessage('pushGameToLibrary', updated)
+    steamGame.deps.sendFrontendMessage('pushGameToLibrary', updated)
   } catch (err) {
     logWarning(
       [`Steam metadata fetch failed for appId ${steamGame.appId}:`, err],
@@ -309,7 +310,9 @@ export async function fetchMetadataIfNeeded(
     )
     // Last pending fetch drained — turn the sync indicator off.
     if (steamGame.deps.steamSession.libraryState.pendingFetches.size === 0) {
-      sendFrontendMessage('steamMetadataSyncing', { syncing: false })
+      steamGame.deps.sendFrontendMessage('steamMetadataSyncing', {
+        syncing: false
+      })
     }
   }
 }

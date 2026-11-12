@@ -3,6 +3,7 @@
  * bottle.ts in Phase 65 (65-07). Creates the bottle, fetches SteamSetup.exe
  * once and runs it non-silently so the user clicks through the real installer.
  */
+import type { SendFrontendMessage } from '../../host/frontendMessage'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { GlobalConfigSlice } from 'backend/config'
 import type { AppPaths } from 'backend/process/context'
@@ -30,8 +31,8 @@ import {
   STEAM_BOTTLE_RESERVED_APPNAME,
   STEAM_SETUP_EXE_URL
 } from './constants'
-import { sanitizeBottleName } from 'backend/engine/bottlePrimitives'
 import {
+  sanitizeBottleName,
   getBottleDir,
   isBottleProvisioned
 } from 'backend/engine/bottlePrimitives'
@@ -185,6 +186,7 @@ export async function provisionBottle(
     gameConfigs: Pick<GameConfigs, 'get'>
     dialogs: Pick<Dialogs, 'showMessageBox'>
     appState: Pick<AppState, 'hide'>
+    sendFrontendMessage: SendFrontendMessage
     steamBottle: Pick<
       SteamBottle,
       | 'configStore'
@@ -407,7 +409,7 @@ export async function provisionBottle(
   mkdirSync(steamSetupDir, { recursive: true })
   if (!existsSync(steamSetupExePath)) {
     try {
-      await downloadSetupPayload('steam-bottle', {
+      await downloadSetupPayload(deps, 'steam-bottle', {
         url: STEAM_SETUP_EXE_URL,
         dest: steamSetupExePath
       })

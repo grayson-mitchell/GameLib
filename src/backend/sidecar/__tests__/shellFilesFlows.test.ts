@@ -111,10 +111,19 @@ jest.mock('backend/store_backend', () => ({
 
 // ── sidecarRpc — PARTIAL mock: real startRpcServer/pushFrontendMessage/
 // requestOpenExternal, scriptable requestRustInvoke only ────────────────────
-jest.mock('../sidecarRpc', () => ({
-  ...jest.requireActual('../sidecarRpc'),
-  requestRustInvoke: jest.fn()
-}))
+jest.mock('../sidecarRpc', () => {
+  const actual = jest.requireActual('../sidecarRpc')
+  const requestRustInvoke = jest.fn()
+  return {
+    ...actual,
+    requestRustInvoke,
+    // The boot builds its transport through createSidecarRpc; hand it the scriptable fn.
+    createSidecarRpc: (deps: unknown) => ({
+      ...actual.createSidecarRpc(deps),
+      requestRustInvoke
+    })
+  }
+})
 
 // ── axios — bootstrap's init() wires the real initOnlineMonitor(), which
 // immediately calls the real pingSites(), a live axios.head() against

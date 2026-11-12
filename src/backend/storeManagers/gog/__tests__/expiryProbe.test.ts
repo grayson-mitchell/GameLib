@@ -74,10 +74,6 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Gog: 'Gog', Backend: 'Backend' }
 }))
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: jest.fn(),
-  addHandler: jest.fn()
-}))
 jest.mock('backend/utils', () => ({ clearCache: jest.fn() }))
 jest.mock('graceful-fs', () => ({
   ...jest.requireActual('graceful-fs'),

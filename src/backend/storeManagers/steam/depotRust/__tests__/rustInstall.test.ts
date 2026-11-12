@@ -17,7 +17,11 @@ import {
 } from 'fs'
 import { tmpdir } from 'os'
 import { dirname, join } from 'path'
-import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
+const requestRustInvoke = jest.fn()
+const depotTransport = {
+  requestRustInvoke,
+  sendFrontendMessage: jest.fn()
+}
 import { downloadSharedRedistDepots, downloadSteamDepots } from '../../depot'
 import { classifyDepotError } from '../../depotErrors'
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
@@ -38,14 +42,10 @@ jest.mock('backend/utils', () => ({
   getFileSize: jest.fn(),
   sendProgressUpdate: jest.fn()
 }))
-jest.mock('backend/sidecar/sidecarRpc', () => ({
-  requestRustInvoke: jest.fn()
-}))
 jest.mock('../../depot/select', () => ({
   ...jest.requireActual('../../depot/select'),
   selectAllDepots: jest.fn()
 }))
-jest.mock('../../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 jest.mock('i18next', () => ({
   __esModule: true,
   default: { t: (_key: string, fallback = '') => fallback }
@@ -102,7 +102,7 @@ const ALL_BLOCKED_MSG =
   'buildDepotPlan: every selected depot for appId 12345 was blocked by Steam (eresult=40) and had to be skipped: 111, 222'
 
 const OPTS = () => ({
-  installRuntime: createTestSteamInstallRuntime(),
+  installRuntime: createTestSteamInstallRuntime(depotTransport),
   steamUser,
   config: createTestGlobalConfig(),
   targetSteamappsDir: steamapps,
@@ -329,7 +329,7 @@ describe('downloadSharedRedistDepots on the rust pipeline', () => {
     const labels: string[] = []
 
     const r = await downloadSharedRedistDepots(APP_ID, {
-      installRuntime: createTestSteamInstallRuntime(),
+      installRuntime: createTestSteamInstallRuntime(depotTransport),
       steamUser,
       cacheSteamappsDir: steamapps,
       optInDepotIds: [],

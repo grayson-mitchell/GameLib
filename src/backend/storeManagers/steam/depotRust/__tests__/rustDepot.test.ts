@@ -8,11 +8,7 @@ jest.mock('backend/logger', () => ({
   logDebug: jest.fn(),
   LogPrefix: new Proxy({}, { get: (_t, p) => String(p) })
 }))
-jest.mock('backend/sidecar/sidecarRpc', () => ({
-  requestRustInvoke: jest.fn()
-}))
 
-import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
 import {
   RUST_DEPOT_JOB_CANCEL,
   RUST_DEPOT_JOB_RUN,
@@ -23,7 +19,12 @@ import { createDepotJobRegistry } from '../jobRegistry'
 import { cancelDepotJob, runDepotJob, summarizeDepots } from '../rustDepot'
 import type { RustDepotJob, RustOutcome } from '../types'
 
-const invokeMock = requestRustInvoke as unknown as jest.Mock
+const invokeMock = jest.fn()
+const newRegistry = () =>
+  createDepotJobRegistry({
+    requestRustInvoke: invokeMock as never,
+    sendFrontendMessage: jest.fn()
+  })
 
 const JOB: RustDepotJob = {
   jobId: 'job-1',
@@ -37,7 +38,7 @@ const JOB: RustDepotJob = {
   limits: null
 }
 
-let registry = createDepotJobRegistry()
+let registry = newRegistry()
 const hooks = (signal?: AbortSignal) => ({
   registry,
   signal,
@@ -51,7 +52,7 @@ const OUTCOME = { jobId: 'job-1', status: 'completed' } as RustOutcome
 beforeEach(() => {
   jest.useFakeTimers()
   invokeMock.mockReset()
-  registry = createDepotJobRegistry()
+  registry = newRegistry()
 })
 afterEach(() => jest.useRealTimers())
 
@@ -102,7 +103,7 @@ describe('runDepotJob', () => {
 
   it('a rejected cancel is swallowed', async () => {
     invokeMock.mockRejectedValue(new Error('nope'))
-    expect(() => cancelDepotJob('job-1')).not.toThrow()
+    expect(() => cancelDepotJob(registry.transport, 'job-1')).not.toThrow()
     await Promise.resolve()
   })
 
@@ -118,7 +119,7 @@ describe('summarizeDepots', () => {
     const result = { depots: [] }
     invokeMock.mockResolvedValue(result)
     const req = { appId: '480', depots: [], hosts: [], patterns: [] }
-    await expect(summarizeDepots(req)).resolves.toBe(result)
+    await expect(summarizeDepots(registry.transport, req)).resolves.toBe(result)
     expect(invokeMock).toHaveBeenCalledWith(RUST_DEPOT_MANIFEST_SUMMARY, [req])
   })
 })

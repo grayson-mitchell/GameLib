@@ -52,7 +52,7 @@
 import { Socket } from 'node:net'
 
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { sendFrontendMessage } from 'backend/ipc'
+import type { FrontendMessageDeps } from 'backend/host/frontendMessage'
 import { isMac } from 'backend/constants/environment'
 import {
   HELLO_ROLE_PROBE,
@@ -424,7 +424,7 @@ async function startSteamDefault(
  *    fail it identically.
  */
 export async function ensureBridgeHelperReady(
-  deps: HelperSpawnDeps,
+  deps: HelperSpawnDeps & FrontendMessageDeps,
   appId: string,
   options: {
     onWaitingForSteam?: (cause: InitFlatErrorCause) => void
@@ -476,7 +476,7 @@ export async function ensureBridgeHelperReady(
         `ensureBridgeHelperReady: gave up waiting for Steam for appId ${appId} (${cause}) after ${elapsed}ms`,
         LogPrefix.Steam
       )
-      sendFrontendMessage('steamBridgeSetupRequired', {
+      deps.sendFrontendMessage('steamBridgeSetupRequired', {
         appName: appId,
         reason: cause,
         fallbackAvailable: false
@@ -501,7 +501,7 @@ export async function ensureBridgeHelperReady(
         : `ensureBridgeHelperReady: bridge helper unreachable within the poll budget for appId ${appId} (D-06 observable failure)`,
       LogPrefix.Steam
     )
-    sendFrontendMessage('steamBridgeSetupRequired', {
+    deps.sendFrontendMessage('steamBridgeSetupRequired', {
       appName: appId,
       reason: 'unreachable'
     })
@@ -535,7 +535,7 @@ export async function ensureBridgeHelperReady(
       `ensureBridgeHelperReady: identity-only fallback also failed to initialize against a live Steam session for appId ${appId} (D-51-04)`,
       LogPrefix.Steam
     )
-    sendFrontendMessage('steamBridgeSetupRequired', {
+    deps.sendFrontendMessage('steamBridgeSetupRequired', {
       appName: appId,
       reason: 'not-inited'
     })
@@ -585,7 +585,7 @@ export async function ensureBridgeHelperReady(
   // The failed 480 helper is deliberately left registered (helperIntegration
   // inspects it); the next ensureBridgeHelperReady call stops and respawns it
   // because its InitFlat failed (no-reuse rule above).
-  sendFrontendMessage('steamBridgeSetupRequired', {
+  deps.sendFrontendMessage('steamBridgeSetupRequired', {
     appName: appId,
     reason: 'not-inited'
   })

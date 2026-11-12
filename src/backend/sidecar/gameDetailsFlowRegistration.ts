@@ -107,7 +107,7 @@
  */
 
 import type { IpcRegistry } from './ipcRegistry'
-import { pushFrontendMessage } from './sidecarRpc'
+import type { HostServices } from '../host'
 import {
   getGameInfo,
   getExtraInfo,
@@ -149,6 +149,8 @@ function logSendFailure(channel: string, error: unknown): void {
 /** The game-details slice plus the registry the channels are written into. */
 export interface GameDetailsFlowDeps extends GameDetailsDeps {
   ipc: Pick<IpcRegistry, 'handle' | 'on'>
+  /** This boot's backend -> frontend push, for the metadata-changed notifier (66.4-15). */
+  pushFrontendMessage: HostServices['pushFrontendMessage']
 }
 
 /**
@@ -164,7 +166,7 @@ export function registerGameDetailsFlows(deps: GameDetailsFlowDeps): void {
   // (sidecarRpc's pushFrontendMessage) — zero new Rust arms.
   setMetadataChangedNotifier((overrides) => {
     try {
-      pushFrontendMessage('metadataChanged', overrides)
+      deps.pushFrontendMessage('metadataChanged', overrides)
     } catch (error) {
       logSendFailure('metadataChanged', error)
     }

@@ -49,10 +49,6 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Backend: 'Backend' }
 }))
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: jest.fn(),
-  addHandler: jest.fn()
-}))
 
 // The connectivity listener the pass registers, captured so a test can fire
 // `online` / `offline` / `check-online` itself.
@@ -189,7 +185,8 @@ function makeDeps(overrides: Overrides = {}): SignInProbePassDeps {
     stores: fakeVerdictStores,
     epochs: probe.epochs,
     outcomes: probe.outcomes,
-    aborts: { call: (id: string) => abortMock(id) }
+    aborts: { call: (id: string) => abortMock(id) },
+    sendFrontendMessage: jest.fn()
   }
 }
 

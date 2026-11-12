@@ -15,7 +15,7 @@ import { stopInstallPolling } from '../library/installStop'
 import { existsSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
-import { sendFrontendMessage } from '../../../ipc'
+const sendFrontendMessage = jest.fn()
 import { notify } from '../../../dialog/dialog'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
@@ -46,6 +46,7 @@ const stopSteamDownloadMonitor = monitor.stop
 const getSteamBottleSettings = jest.fn()
 
 const steamTestDeps = createTestManagerDeps({
+  sendFrontendMessage,
   steamBottle: { getSteamBottleSettings } as never,
   steamProcesses: createInertSteamProcesses({ downloadMonitor: monitor }),
   stores: createTestStores({ steam: steamStoresModule })
@@ -89,11 +90,6 @@ jest.mock('graceful-fs')
 
 // ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
 jest.mock('@node-steam/vdf')
-
-// ── IPC mock — sendFrontendMessage ───────────────────────────────────────────
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
@@ -385,12 +381,12 @@ describe('pollInstallOnce()', () => {
       }
     })
     await pollInstallOnce(steamTestDeps, '730')
-    const progressCalls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+    const progressCalls = sendFrontendMessage.mock.calls.filter(
       ([channel]) => channel === 'progressUpdate'
     )
     expect(progressCalls).toHaveLength(0)
     // Belt-and-suspenders: no call anywhere ever carries a non-finite percent.
-    for (const [, payload] of (sendFrontendMessage as jest.Mock).mock.calls) {
+    for (const [, payload] of sendFrontendMessage.mock.calls) {
       if (payload?.progress?.percent !== undefined) {
         expect(Number.isFinite(payload.progress.percent)).toBe(true)
       }
@@ -411,7 +407,7 @@ describe('pollInstallOnce()', () => {
       }
     })
     await expect(pollInstallOnce(steamTestDeps, '730')).resolves.toBeUndefined()
-    const call = (sendFrontendMessage as jest.Mock).mock.calls.find(
+    const call = sendFrontendMessage.mock.calls.find(
       ([channel]) => channel === 'progressUpdate'
     )
     expect(call![1].progress.percent).toBe(50)
@@ -447,7 +443,7 @@ describe('pollInstallOnce()', () => {
     jest.advanceTimersByTime(3000) // 3s elapsed between ticks
     await pollInstallOnce(steamTestDeps, '730')
 
-    const progressCalls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+    const progressCalls = sendFrontendMessage.mock.calls.filter(
       ([channel]) => channel === 'progressUpdate'
     )
     expect(progressCalls).toHaveLength(2)
@@ -496,7 +492,7 @@ describe('pollInstallOnce()', () => {
     await pollInstallOnce(steamTestDeps, '730')
     await pollInstallOnce(steamTestDeps, '730') // no jest.advanceTimersByTime — zero elapsed ms
 
-    const progressCalls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+    const progressCalls = sendFrontendMessage.mock.calls.filter(
       ([channel]) => channel === 'progressUpdate'
     )
     for (const [, payload] of progressCalls) {
@@ -527,7 +523,7 @@ describe('pollInstallOnce()', () => {
     jest.advanceTimersByTime(3000)
     await pollInstallOnce(steamTestDeps, '730')
 
-    const progressCalls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+    const progressCalls = sendFrontendMessage.mock.calls.filter(
       ([channel]) => channel === 'progressUpdate'
     )
     expect(progressCalls.length).toBeGreaterThan(0)
@@ -557,7 +553,7 @@ describe('pollInstallOnce()', () => {
       jest.advanceTimersByTime(3000)
     }
 
-    const calls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+    const calls = sendFrontendMessage.mock.calls.filter(
       ([channel]) => channel === 'gameStatusUpdate'
     )
     expect(calls[calls.length - 1][1].context).toBe('steam-paused')
@@ -611,7 +607,7 @@ describe('pollInstallOnce()', () => {
       jest.advanceTimersByTime(3000)
     }
 
-    const calls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+    const calls = sendFrontendMessage.mock.calls.filter(
       ([channel]) => channel === 'gameStatusUpdate'
     )
     for (const [, payload] of calls) {
@@ -642,7 +638,7 @@ describe('pollInstallOnce()', () => {
       jest.advanceTimersByTime(3000)
     }
 
-    const calls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+    const calls = sendFrontendMessage.mock.calls.filter(
       ([channel]) => channel === 'gameStatusUpdate'
     )
     for (const [, payload] of calls) {
@@ -669,7 +665,7 @@ describe('pollInstallOnce()', () => {
       jest.advanceTimersByTime(3000)
     }
 
-    const calls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+    const calls = sendFrontendMessage.mock.calls.filter(
       ([channel]) => channel === 'gameStatusUpdate'
     )
     for (const [, payload] of calls) {
@@ -740,11 +736,11 @@ describe('pollInstallOnce()', () => {
       speedBytesPerSec: speed
     })
     const progressCalls = () =>
-      (sendFrontendMessage as jest.Mock).mock.calls.filter(
+      sendFrontendMessage.mock.calls.filter(
         ([channel]) => channel === 'progressUpdate'
       )
     const statusCalls = () =>
-      (sendFrontendMessage as jest.Mock).mock.calls.filter(
+      sendFrontendMessage.mock.calls.filter(
         ([channel]) => channel === 'gameStatusUpdate'
       )
 
@@ -1056,7 +1052,7 @@ describe('pollInstallOnce()', () => {
         runner: 'steam',
         status: 'done'
       })
-      const contexts = (sendFrontendMessage as jest.Mock).mock.calls
+      const contexts = sendFrontendMessage.mock.calls
         .filter(([channel]) => channel === 'gameStatusUpdate')
         .map(([, payload]) => (payload as { context?: string }).context)
       expect(contexts.every((c) => c === undefined)).toBe(true)
@@ -1482,7 +1478,7 @@ describe('pollInstallOnce()', () => {
       jest.advanceTimersByTime(3000)
     }
 
-    const statusCalls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+    const statusCalls = sendFrontendMessage.mock.calls.filter(
       ([channel]) => channel === 'gameStatusUpdate'
     )
     for (const [, payload] of statusCalls) {
@@ -1491,7 +1487,7 @@ describe('pollInstallOnce()', () => {
     }
     expect(notify).not.toHaveBeenCalled()
 
-    const progressCalls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+    const progressCalls = sendFrontendMessage.mock.calls.filter(
       ([channel]) => channel === 'progressUpdate'
     )
     expect(progressCalls.length).toBeGreaterThan(0)
@@ -1515,7 +1511,7 @@ describe('pollInstallOnce()', () => {
     startInstallPolling(steamTestDeps, '730', 60000) // OFF-path, no isNativeHandoff
     await pollInstallOnce(steamTestDeps, '730') // very first tick — no lastBytesDownloaded baseline yet
 
-    const call = (sendFrontendMessage as jest.Mock).mock.calls.find(
+    const call = sendFrontendMessage.mock.calls.find(
       ([channel]) => channel === 'gameStatusUpdate'
     )
     expect(call![1].context).not.toBe('steam-waiting-for-restart')
@@ -1533,7 +1529,7 @@ describe('pollInstallOnce()', () => {
       }
     })
     await pollInstallOnce(steamTestDeps, '730')
-    const call = (sendFrontendMessage as jest.Mock).mock.calls.find(
+    const call = sendFrontendMessage.mock.calls.find(
       ([channel]) => channel === 'gameStatusUpdate'
     )
     expect(call![1].status).toBe('installing')
@@ -1556,7 +1552,7 @@ describe('pollInstallOnce()', () => {
       }
     })
     await pollInstallOnce(steamTestDeps, '730')
-    const call = (sendFrontendMessage as jest.Mock).mock.calls.find(
+    const call = sendFrontendMessage.mock.calls.find(
       ([channel]) => channel === 'gameStatusUpdate'
     )
     expect(call![1].context).toBeUndefined()

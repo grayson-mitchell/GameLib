@@ -148,7 +148,7 @@ describe('deleteCancelledSteamInstall', () => {
     const r = await deleteCancelledSteamInstall(steamTestDeps, '123', OPTS)
     expect(r.status).toBe('deleted')
     expect(sendProgressUpdate).toHaveBeenCalledTimes(1)
-    expect(sendProgressUpdate).toHaveBeenCalledWith({
+    expect(sendProgressUpdate).toHaveBeenCalledWith(expect.anything(), {
       appName: '123',
       runner: 'steam',
       status: 'done',

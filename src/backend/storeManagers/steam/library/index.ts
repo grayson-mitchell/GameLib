@@ -8,7 +8,6 @@ import {
 } from 'common/types'
 import { LibraryManager } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import i18next from 'i18next'
 import SteamGame from '../games'
@@ -51,7 +50,7 @@ export default class SteamLibraryManager implements LibraryManager {
       this.deps.steamSession.libraryState.library.clear()
       cached.forEach((g) => {
         this.deps.steamSession.libraryState.library.set(g.app_name, g)
-        sendFrontendMessage('pushGameToLibrary', g)
+        this.deps.sendFrontendMessage('pushGameToLibrary', g)
       })
       logInfo(
         `Steam: loaded ${cached.length} games from cache`,
@@ -152,7 +151,7 @@ export default class SteamLibraryManager implements LibraryManager {
             install: { ...existing.install, steamResumePending: true }
           }
           this.deps.steamSession.libraryState.library.set(appId, updated)
-          sendFrontendMessage('pushGameToLibrary', updated)
+          this.deps.sendFrontendMessage('pushGameToLibrary', updated)
         }
 
         logInfo(

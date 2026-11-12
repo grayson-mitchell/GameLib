@@ -109,6 +109,7 @@ const steamTestDeps = createTestManagerDeps({
 })
 
 const wineDeps = {
+  sendFrontendMessage: jest.fn(),
   steamBottle,
   paths: createTestAppPaths('/fake/root'),
   runner: createScriptedRunner([]),

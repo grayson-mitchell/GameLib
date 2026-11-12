@@ -1,11 +1,11 @@
 {
   "jestMock": {
-    "src/backend/storeManagers/nile/__tests__/expiryProbe.test.ts": 4,
+    "src/backend/storeManagers/nile/__tests__/expiryProbe.test.ts": 3,
     "src/backend/storeManagers/nile/__tests__/getUserData.test.ts": 3,
-    "src/backend/storeManagers/nile/__tests__/librarySyncLatchClear.test.ts": 9,
+    "src/backend/storeManagers/nile/__tests__/librarySyncLatchClear.test.ts": 8,
     "src/backend/storeManagers/nile/__tests__/logoutCookies.test.ts": 5,
     "src/backend/storeManagers/nile/__tests__/nileCredentialRedaction.test.ts": 3,
-    "src/backend/storeManagers/nile/__tests__/refreshAwaitsSync.test.ts": 7,
+    "src/backend/storeManagers/nile/__tests__/refreshAwaitsSync.test.ts": 6,
     "src/backend/storeManagers/nile/__tests__/user.test.ts": 3
   },
   "moduleState": {}

@@ -58,8 +58,9 @@ type BottleMonitorDeps = SpawnDeps &
   RunsForMeDeps & {
     /** The boot-owned window raiser the first-match raise goes through (66.4-13). */
     windowRaiser: Pick<WineWindowRaiser, 'raise'>
+    sendFrontendMessage: SendFrontendMessage
   }
-import { sendFrontendMessage } from '../../ipc'
+import type { SendFrontendMessage } from '../../host/frontendMessage'
 import { recordPlaySession } from 'backend/runsForMe'
 import type { SteamBottleLaunchWaitingCause } from 'common/types/steam'
 import {
@@ -111,6 +112,8 @@ interface MonitorEntry {
   stoppedFired: boolean
   /** Guards the single terminal 'done' status (quick/261024-gvu). */
   terminalSent: boolean
+  /** The boot's push, carried so a teardown without deps (stopMonitor) can still send. */
+  sendFrontendMessage: SendFrontendMessage
   /** Carried on the entry so a test can observe the default without the
    * poll loop needing to branch on it (see StartBottleProcessMonitorArgs's
    * own `kind` doc). */
@@ -247,7 +250,7 @@ function trackedSleep(
 function sendTerminalDoneOnce(appId: string, entry: MonitorEntry): void {
   if (entry.terminalSent) return
   entry.terminalSent = true
-  sendFrontendMessage('gameStatusUpdate', {
+  entry.sendFrontendMessage('gameStatusUpdate', {
     appName: appId,
     runner: 'steam',
     status: 'done'
@@ -311,7 +314,7 @@ function recordFirstMatch(
     ],
     LogPrefix.Steam
   )
-  sendFrontendMessage('gameStatusUpdate', {
+  deps.sendFrontendMessage('gameStatusUpdate', {
     appName: appId,
     runner: 'steam',
     status: 'playing'
@@ -484,7 +487,7 @@ async function runPollLoop(
             `[bottle-waiting] appId=${appId} cause=${detectedCause ?? 'none'}`,
             LogPrefix.Steam
           )
-          sendFrontendMessage('steamBottleLaunchWaiting', {
+          deps.sendFrontendMessage('steamBottleLaunchWaiting', {
             appName: appId,
             detectedCause
           })
@@ -558,6 +561,7 @@ function startMonitor(
     matchedAt: 0,
     stoppedFired: false,
     terminalSent: false,
+    sendFrontendMessage: deps.sendFrontendMessage,
     kind
   }
   state.active.set(appId, entry)
@@ -568,7 +572,7 @@ function startMonitor(
   // local playClicked dropped as soon as the launch IPC resolved on hand-off,
   // flickering Play until `playing`. The monitor holds `launching` from here
   // (before the launch IPC resolves) until started / gave up / stopped.
-  sendFrontendMessage('gameStatusUpdate', {
+  deps.sendFrontendMessage('gameStatusUpdate', {
     appName: appId,
     runner: 'steam',
     status: 'launching'

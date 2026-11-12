@@ -14,10 +14,6 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam' }
 }))
 
-jest.mock('backend/sidecar/sidecarRpc', () => ({
-  requestRustInvoke: jest.fn()
-}))
-
 const mockReadFile = jest.fn()
 jest.mock('node:fs/promises', () => {
   const actual = jest.requireActual('node:fs/promises')
@@ -30,12 +26,14 @@ jest.mock('node:fs/promises', () => {
   }
 })
 
-import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
 import {
   detectGameMakerD3d11Runner,
   GAMEMAKER_MSAA_PROBE
 } from '../gameMakerRunner'
 import { buildImportPe } from './fixtures/importPe'
+
+const requestRustInvoke = jest.fn()
+const rust = { requestRustInvoke }
 
 describe('detectGameMakerD3d11Runner (quick 261028-k7l)', () => {
   let dir: string
@@ -73,7 +71,7 @@ describe('detectGameMakerD3d11Runner (quick 261028-k7l)', () => {
   it('matches when all three signals hold', async () => {
     writeExe(['KERNEL32.dll', 'd3d11.dll'])
     writeFileSync(join(dir, 'data.win'), 'FORM')
-    expect(await detectGameMakerD3d11Runner(exe)).toEqual({
+    expect(await detectGameMakerD3d11Runner(rust, exe)).toEqual({
       match: true,
       dataWin: true,
       d3d11Import: true,
@@ -83,7 +81,7 @@ describe('detectGameMakerD3d11Runner (quick 261028-k7l)', () => {
 
   it('does not match, and never reads the exe, without data.win', async () => {
     writeExe(['d3d11.dll'])
-    const r = await detectGameMakerD3d11Runner(exe)
+    const r = await detectGameMakerD3d11Runner(rust, exe)
     expect(r.match).toBe(false)
     expect(r.dataWin).toBe(false)
     expect(mockReadFile).not.toHaveBeenCalled()
@@ -93,7 +91,7 @@ describe('detectGameMakerD3d11Runner (quick 261028-k7l)', () => {
   it('does not match without a d3d11 import', async () => {
     writeExe(['KERNEL32.dll'])
     writeFileSync(join(dir, 'data.win'), 'FORM')
-    const r = await detectGameMakerD3d11Runner(exe)
+    const r = await detectGameMakerD3d11Runner(rust, exe)
     expect(r.match).toBe(false)
     expect(r.d3d11Import).toBe(false)
   })
@@ -101,13 +99,13 @@ describe('detectGameMakerD3d11Runner (quick 261028-k7l)', () => {
   it('matches d3d11.dll case-insensitively', async () => {
     writeExe(['D3D11.DLL'])
     writeFileSync(join(dir, 'data.win'), 'FORM')
-    expect((await detectGameMakerD3d11Runner(exe)).match).toBe(true)
+    expect((await detectGameMakerD3d11Runner(rust, exe)).match).toBe(true)
   })
 
   it('does not match without the MSAA probe string', async () => {
     writeExe(['d3d11.dll'], false)
     writeFileSync(join(dir, 'data.win'), 'FORM')
-    const r = await detectGameMakerD3d11Runner(exe)
+    const r = await detectGameMakerD3d11Runner(rust, exe)
     expect(r.match).toBe(false)
     expect(r.msaaProbe).toBe(false)
   })
@@ -115,14 +113,14 @@ describe('detectGameMakerD3d11Runner (quick 261028-k7l)', () => {
   it('does not count a data.win directory', async () => {
     writeExe(['d3d11.dll'])
     mkdirSync(join(dir, 'data.win'))
-    const r = await detectGameMakerD3d11Runner(exe)
+    const r = await detectGameMakerD3d11Runner(rust, exe)
     expect(r.dataWin).toBe(false)
     expect(r.match).toBe(false)
   })
 
   it('warns once and resolves when the exe is missing', async () => {
     writeFileSync(join(dir, 'data.win'), 'FORM')
-    const r = await detectGameMakerD3d11Runner(exe)
+    const r = await detectGameMakerD3d11Runner(rust, exe)
     expect(r.match).toBe(false)
     expect(mockLogWarning).toHaveBeenCalledTimes(1)
   })
@@ -131,7 +129,7 @@ describe('detectGameMakerD3d11Runner (quick 261028-k7l)', () => {
     scanned = { names: null, readError: null }
     writeFileSync(exe, `not a pe ${GAMEMAKER_MSAA_PROBE}`)
     writeFileSync(join(dir, 'data.win'), 'FORM')
-    const r = await detectGameMakerD3d11Runner(exe)
+    const r = await detectGameMakerD3d11Runner(rust, exe)
     expect(r.match).toBe(false)
     expect(r.d3d11Import).toBe(false)
   })
@@ -142,7 +140,7 @@ describe('detectGameMakerD3d11Runner (quick 261028-k7l)', () => {
     jest
       .mocked(requestRustInvoke)
       .mockResolvedValueOnce({ names: ['D3D11.dll'], readError: null } as never)
-    const r = await detectGameMakerD3d11Runner(exe)
+    const r = await detectGameMakerD3d11Runner(rust, exe)
     expect(r.d3d11Import).toBe(true)
     expect(requestRustInvoke).toHaveBeenCalledWith('scan_pe_imported_dlls', [
       { exePath: exe }
@@ -153,7 +151,7 @@ describe('detectGameMakerD3d11Runner (quick 261028-k7l)', () => {
     writeExe(['d3d11.dll'])
     writeFileSync(join(dir, 'data.win'), 'FORM')
     jest.mocked(requestRustInvoke).mockRejectedValueOnce(new Error('pipe'))
-    const r = await detectGameMakerD3d11Runner(exe)
+    const r = await detectGameMakerD3d11Runner(rust, exe)
     expect(r.d3d11Import).toBe(false)
     expect(r.match).toBe(false)
   })

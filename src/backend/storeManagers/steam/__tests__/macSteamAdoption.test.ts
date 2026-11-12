@@ -327,6 +327,7 @@ describe('createRestartDeps', () => {
     const isSteamRunning = jest.fn().mockResolvedValue(false)
     const openUrlDetached = jest.fn()
     const deps = createRestartDeps({
+      sendFrontendMessage: jest.fn(),
       clock,
       paths: { appFolder: '/test/appFolder', userHome: '/test/home' },
       macSteamOffline: { isSteamRunning, openUrlDetached },

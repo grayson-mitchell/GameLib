@@ -13,7 +13,11 @@
  */
 import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
-import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
+const requestRustInvoke = jest.fn()
+const depotTransport = {
+  requestRustInvoke,
+  sendFrontendMessage: jest.fn()
+}
 import {
   RUST_DEPOT_JOB_RUN,
   RUST_DEPOT_MANIFEST_SUMMARY
@@ -42,17 +46,9 @@ jest.mock('backend/utils', () => ({
   sendProgressUpdate: jest.fn()
 }))
 
-jest.mock('backend/sidecar/sidecarRpc', () => ({
-  requestRustInvoke: jest.fn()
-}))
-
 jest.mock('../depot/select', () => ({
   ...jest.requireActual('../depot/select'),
   selectAllDepots: jest.fn()
-}))
-
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
 }))
 
 jest.mock('i18next', () => ({
@@ -64,7 +60,7 @@ jest.mock('i18next', () => ({
 
 const APP_ID = '12345'
 const BASE_OPTS = {
-  installRuntime: createTestSteamInstallRuntime(),
+  installRuntime: createTestSteamInstallRuntime(depotTransport),
   steamUser,
   config: createTestGlobalConfig(),
   targetSteamappsDir: '/tmp/steamapps',

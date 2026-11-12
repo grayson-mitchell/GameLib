@@ -14,7 +14,7 @@ import {
   markSteamNativeInstallStarted,
   clearSteamResumeBreadcrumb
 } from '../library/resumeBreadcrumbs'
-import { sendFrontendMessage } from '../../../ipc'
+const sendFrontendMessage = jest.fn()
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
@@ -24,6 +24,7 @@ const { steamLibraryStore } = jest.requireMock<Stores['steam']>('../stores')
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
+  sendFrontendMessage,
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
 })
@@ -66,11 +67,6 @@ jest.mock('graceful-fs')
 
 // ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
 jest.mock('@node-steam/vdf')
-
-// ── IPC mock — sendFrontendMessage ───────────────────────────────────────────
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({

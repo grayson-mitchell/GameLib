@@ -14,7 +14,6 @@ import { InstallArgs } from 'common/types'
 import { InstallResult } from 'common/types/game_manager'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac, isAppleSiliconMac } from 'backend/constants/environment'
-import { sendFrontendMessage } from '../../ipc'
 import { pollUninstallOnce } from './library/uninstallPolling'
 import * as resume from './library/resume'
 import { readAcfState, removeSteamInstallCopy } from './library/acfState'
@@ -288,7 +287,7 @@ export async function install(
         `SteamGame: appId ${steamGame.appId} ${bridgeRoute.route} route (${noticeReason}) requires a user notice before any install -- deferring to the in-app dialog`,
         LogPrefix.Steam
       )
-      sendFrontendMessage('steamBridgeRouteNotice', {
+      steamGame.deps.sendFrontendMessage('steamBridgeRouteNotice', {
         appName: steamGame.appId,
         reason: noticeReason,
         knownBadReason: bridgeRoute.knownBadReason,
@@ -328,7 +327,7 @@ export async function install(
         `SteamGame: appId ${steamGame.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of installing`,
         LogPrefix.Steam
       )
-      sendFrontendMessage('steamBottleSetupRequired', {
+      steamGame.deps.sendFrontendMessage('steamBottleSetupRequired', {
         appName: steamGame.appId
       })
       // Nothing was installed and no ACF poller starts here — flag the
@@ -605,6 +604,7 @@ export async function ensureBuiltInEngineForInstall(
     processRunner: steamGame.deps.runner,
     onlineMonitor: steamGame.deps.onlineMonitor,
     fallback: steamGame.deps.engineRuntime.fallback,
+    sendFrontendMessage: steamGame.deps.sendFrontendMessage,
     signal
   })
   if (result.ok) return result.engine

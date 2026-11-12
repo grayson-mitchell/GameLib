@@ -337,6 +337,8 @@ jest.mock('../../utils/aborthandler/aborthandler', () => {
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+import { createTestHostServices } from '../../testUtils/testHostServices'
+import type { BootServices } from '../../services/types'
 
 // Per case (reset in freshRegistry): the boot is handed this root so the stores a case seeds
 // and the boot's own stores share one file-cell table, as the old module-level registry did.
@@ -402,7 +404,6 @@ beforeAll(() => {
 // handles the cases configure or inspect are rebound from that registry in
 // freshRegistry() (run before each case, ahead of any mock configuration), and
 // boot() then boots without a second reset.
-let sidecarRpc: typeof import('../sidecarRpc')
 let gameOverridesStore: ReturnType<
   typeof import('../../game_overrides/stores').createGameOverridesStores
 >['gameOverridesStore']
@@ -444,7 +445,6 @@ function freshRegistry(): void {
   const { notify } = require('../../dialog/dialog')
   const { sendGameStatusUpdate } = require('../../utils')
   const { LegendaryUser } = require('../../storeManagers/legendary/user')
-  sidecarRpc = require('../sidecarRpc')
   ;({ gameOverridesStore } =
     require('../../game_overrides/stores').createGameOverridesStores({
       registry: createStoreRegistry(),
@@ -463,10 +463,11 @@ function freshRegistry(): void {
 }
 
 // The monitor the boot hands out: `isOnline` is the jest.fn above, read at call time.
-const boot = () =>
+const boot = (extra: Partial<BootServices> = {}) =>
   bootFresh({
     reuseRegistry: true,
     services: {
+      ...extra,
       storeRoot: testRoot,
       onlineMonitor: {
         ...createTestOnlineMonitor(),
@@ -721,9 +722,11 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
 
     expect(findResponse(frames, 'repair-1')?.ok).toBe(true)
     expect(mockedSendGameStatusUpdate).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ appName: 'app-1', status: 'repairing' })
     )
     expect(mockedSendGameStatusUpdate).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ appName: 'app-1', status: 'done' })
     )
   })
@@ -1273,18 +1276,18 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
     }
     process.on('unhandledRejection', onUnhandledRejection)
 
-    const pushSpy = jest
-      .spyOn(sidecarRpc, 'pushFrontendMessage')
-      .mockImplementationOnce(() => {
-        throw new Error('boom-notifier')
-      })
+    const pushSpy = jest.fn().mockImplementationOnce(() => {
+      throw new Error('boom-notifier')
+    })
 
     try {
       sideloadManager.addNewApp.mockImplementation(() => {
         throw new Error('boom-addNewApp')
       })
 
-      const { input, frames } = boot()
+      const { input, frames } = boot({
+        host: createTestHostServices({ pushFrontendMessage: pushSpy })
+      })
 
       writeSend(input, 'ana-throw-1', 'addNewApp', [{ app_name: 'boom-app' }])
       await flush()
@@ -1301,7 +1304,6 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
       expect(healthResponse).toMatchObject({ ok: true, result: 'ok' })
       expect(unhandledRejections).toHaveLength(0)
     } finally {
-      pushSpy.mockRestore()
       process.off('unhandledRejection', onUnhandledRejection)
     }
   })

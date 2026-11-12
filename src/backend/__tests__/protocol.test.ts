@@ -19,7 +19,7 @@ const mockHideWindowOnProtocolLaunch = jest.fn(() => false)
 
 import { handleProtocol, markFrontendReady, RUNNERS } from '../protocol'
 import i18next from 'i18next'
-import { sendFrontendMessage } from '../ipc'
+const sendFrontendMessage = jest.fn()
 import { logInfo, logError } from '../logger'
 import { dispatchSteamLaunch } from '../storeManagers/steam/launchDispatch'
 
@@ -33,10 +33,6 @@ const app = {
 const dialog = {
   showMessageBox: jest.fn()
 }
-
-jest.mock('../ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
 
 // The managers and the launcher reach the protocol handler by deps (66.1-11), not by module mock.
 const libraryManagerMap = {
@@ -61,6 +57,7 @@ const libraryManagerMap = {
 }
 const launchEventCallback = jest.fn()
 const deps = {
+  sendFrontendMessage,
   managers: { library: libraryManagerMap },
   launcher: { launchEventCallback },
   config: {

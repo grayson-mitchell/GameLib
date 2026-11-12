@@ -1,8 +1,8 @@
 {
   "jestMock": {
-    "src/backend/storeManagers/legendary/__tests__/epicCookieCensus.test.ts": 6,
-    "src/backend/storeManagers/legendary/__tests__/epicLogoutDomains.test.ts": 6,
-    "src/backend/storeManagers/legendary/__tests__/expiryProbe.test.ts": 6,
+    "src/backend/storeManagers/legendary/__tests__/epicCookieCensus.test.ts": 5,
+    "src/backend/storeManagers/legendary/__tests__/epicLogoutDomains.test.ts": 5,
+    "src/backend/storeManagers/legendary/__tests__/expiryProbe.test.ts": 5,
     "src/backend/storeManagers/legendary/__tests__/getGameInfoForceReloadStaleness.test.ts": 6,
     "src/backend/storeManagers/legendary/__tests__/user.test.ts": 5
   },

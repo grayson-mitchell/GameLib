@@ -1,3 +1,4 @@
+import type { RustInvokeDeps } from '../host/rustInvokeDeps'
 import type { backendEvents } from 'backend/backend_events'
 import type { DialogBoxDeps } from '../dialog/dialog'
 import { isMac } from 'backend/constants/environment'
@@ -25,7 +26,7 @@ import type { AppPaths } from 'backend/process/context'
 type DxmtPaths = Pick<AppPaths, 'toolsPath'>
 
 /** The store slice the DXMT listeners read (66.1, R1). */
-interface DxmtStoresDeps extends DialogBoxDeps {
+interface DxmtStoresDeps extends DialogBoxDeps, RustInvokeDeps {
   runner: Pick<ProcessRunner, 'run'>
   aborts: Pick<AbortRegistry, 'create'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
@@ -189,6 +190,7 @@ const onWineVersionInstalled = async (
 ) => {
   if (isMac && versionInfo.type === 'Wine-Staging-macOS') {
     const check = await checkWinemacMetalViewExports(
+      deps,
       join(installDir, versionInfo.version),
       'wineVersionInstalled'
     )
@@ -268,6 +270,7 @@ const onReleasesInfoReady = async (
     const wineWithDXMTFilePath = `${wine.installDir}-DXMT`
     if (!existsSync(wineWithDXMTFilePath)) continue
     const check = await checkWinemacMetalViewExports(
+      deps,
       wineWithDXMTFilePath,
       'dxmtBootUpdate'
     )

@@ -5,6 +5,7 @@
  * shimGenerate.ts; see its docblock for the placement design notes.
  */
 
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import type { AppPaths } from 'backend/process/context'
 import { copyFileSync, existsSync, readFileSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve } from 'node:path'
@@ -165,9 +166,9 @@ function withhold(input: WithholdInput): PlaceShimResultBase {
 }
 
 /** D-53-12: the shared scan module's injected dependencies. */
-function scanDeps(appId: string): BridgeScanDeps {
+function scanDeps(rust: RustInvokeDeps, appId: string): BridgeScanDeps {
   return {
-    scanImports: (p) => scanSteamApiImports(appId, p, 'bridgeScan'),
+    scanImports: (p) => scanSteamApiImports(rust, appId, p, 'bridgeScan'),
     warn: (m) => logWarning(m, LogPrefix.Steam),
     isShimBytes: isGameLibShimBytes
   }
@@ -209,6 +210,7 @@ function findRuntimeRunnerGaps(
 }
 
 export async function placeShimForGameInner(
+  rust: RustInvokeDeps,
   paths: Pick<
     AppPaths,
     'userHome' | 'builtBridgeShimPath' | 'builtBridgeShim64Path'
@@ -267,6 +269,7 @@ export async function placeShimForGameInner(
   // Scan FIRST: the arch (and therefore the target filename) is not known
   // until the exe's own import table says so.
   const importResult = await scanSteamApiImports(
+    rust,
     appId,
     resolvedExePath,
     'placeShimForGame'
@@ -287,7 +290,7 @@ export async function placeShimForGameInner(
     const runtimeDlls = await findRuntimeDlls(
       walkRoot,
       unreal?.steamworksDir ? [unreal.steamworksDir] : [],
-      scanDeps(appId)
+      scanDeps(rust, appId)
     )
     const firstRuntimeDll = runtimeDlls[0]
     if (firstRuntimeDll !== undefined) {
@@ -424,7 +427,7 @@ export async function placeShimForGameInner(
         walkRoot,
         resolvedExePath,
         unreal?.shippingExes ?? [],
-        scanDeps(appId)
+        scanDeps(rust, appId)
       )
       const combinedMissing: string[] = []
       const delayMissingAll: string[] = []
@@ -451,7 +454,7 @@ export async function placeShimForGameInner(
           resolvedExePath,
           bottleDir,
           nameArch,
-          scanDeps(appId)
+          scanDeps(rust, appId)
         )
         const managedPart =
           managed.kind === 'mono'
@@ -751,7 +754,7 @@ export async function placeShimForGameInner(
       importerRoot,
       resolvedExePath,
       [],
-      scanDeps(appId)
+      scanDeps(rust, appId)
     )
   ).filter((i) => i.arch === importResult.arch)
   const symbols = [

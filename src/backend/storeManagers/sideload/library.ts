@@ -4,7 +4,6 @@ import { readdirSync } from 'graceful-fs'
 import { dirname, join } from 'path'
 import { logWarning } from 'backend/logger'
 import { addShortcuts } from 'backend/shortcuts/shortcuts/shortcuts'
-import { sendFrontendMessage } from 'backend/ipc'
 import { isMac } from 'backend/constants/environment'
 import { LibraryManager } from 'common/types/game_manager'
 import SideloadGame from './games'
@@ -83,7 +82,7 @@ export default class SideloadLibraryManager implements LibraryManager {
 
     this.deps.stores.sideload.libraryStore.set('games', current)
 
-    sendFrontendMessage('refreshLibrary', 'sideload')
+    this.deps.sendFrontendMessage('refreshLibrary', 'sideload')
 
     return
   }

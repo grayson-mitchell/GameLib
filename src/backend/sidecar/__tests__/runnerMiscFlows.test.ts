@@ -131,9 +131,6 @@ jest.mock('backend/logger', () => ({
 // ── ../../ipc — `sendFrontendMessage` is the only export `callTool`'s gog post-step needs;
 // factory-mocked so this suite never touches the real `electron`/`getMainWindow` chain ─────────
 const mockSendFrontendMessage = jest.fn()
-jest.mock('../../ipc', () => ({
-  sendFrontendMessage: (...args: unknown[]) => mockSendFrontendMessage(...args)
-}))
 
 // ── ../../tools — `runWineCommandOnGame` is the curated import target for `callTool`'s two
 // remaining tool branches (`winecfg`/`runExe`); factory-mocked (mirrors `wineToolsFlows.test.ts`'s
@@ -219,11 +216,13 @@ const ipc = createIpcRegistry()
 const { handlerRegistry, listenerRegistry } = ipcViews(ipc)
 registerRunnerMiscFlows({
   ipc,
+  sendFrontendMessage: (...a: unknown[]) => mockSendFrontendMessage(...a),
   managers: managerSlice,
   config: { getSettings: () => mockGlobalConfigGet().getSettings() }
 } as unknown as Parameters<typeof registerRunnerMiscFlows>[0])
 
 // ── Describe 1: Registration kind ──────────────────────────────────────────────────────────────
+
 describe('registration kind — all 11 channels are registered with the correct kind, both directions', () => {
   const VERSION_CHANNELS = [
     'getLegendaryVersion',
@@ -381,7 +380,7 @@ describe('callTool branch dispatch — winetricks/winecfg/runExe, the gog post-s
     expect(mockRunWineCommandOnGame).not.toHaveBeenCalled()
     const { sendGameStatusUpdate }: { sendGameStatusUpdate: jest.Mock } =
       jest.requireMock('backend/utils')
-    expect(sendGameStatusUpdate).toHaveBeenCalledWith({
+    expect(sendGameStatusUpdate).toHaveBeenCalledWith(expect.anything(), {
       appName: 'fake-app',
       runner: 'legendary',
       status: 'done'
@@ -406,7 +405,7 @@ describe('callTool branch dispatch — winetricks/winecfg/runExe, the gog post-s
     )
     const { sendGameStatusUpdate }: { sendGameStatusUpdate: jest.Mock } =
       jest.requireMock('backend/utils')
-    expect(sendGameStatusUpdate).toHaveBeenCalledWith({
+    expect(sendGameStatusUpdate).toHaveBeenCalledWith(expect.anything(), {
       appName: 'fake-app',
       runner: 'legendary',
       status: 'done'
@@ -433,7 +432,7 @@ describe('callTool branch dispatch — winetricks/winecfg/runExe, the gog post-s
     )
     const { sendGameStatusUpdate }: { sendGameStatusUpdate: jest.Mock } =
       jest.requireMock('backend/utils')
-    expect(sendGameStatusUpdate).toHaveBeenCalledWith({
+    expect(sendGameStatusUpdate).toHaveBeenCalledWith(expect.anything(), {
       appName: 'fake-app',
       runner: 'legendary',
       status: 'done'
@@ -450,7 +449,7 @@ describe('callTool branch dispatch — winetricks/winecfg/runExe, the gog post-s
     expect(mockRunWineCommandOnGame).not.toHaveBeenCalled()
     const { sendGameStatusUpdate }: { sendGameStatusUpdate: jest.Mock } =
       jest.requireMock('backend/utils')
-    expect(sendGameStatusUpdate).toHaveBeenCalledWith({
+    expect(sendGameStatusUpdate).toHaveBeenCalledWith(expect.anything(), {
       appName: 'fake-app',
       runner: 'legendary',
       status: 'done'

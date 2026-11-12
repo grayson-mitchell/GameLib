@@ -114,7 +114,7 @@ ELECTRON_STUB_PATH = SRC_DIR / "backend" / "platform" / "index.ts"
 # not merely "contains", because "contains" alone would silently tolerate any of the seven deleted
 # predicates regrowing elsewhere in `src/` without ever being noticed by this check.
 EXPECTED_AXIS_A_SURVIVOR_SET = {
-    "src/backend/sidecar/humbleLoginFlowRegistration.ts:460",  # the deliberately-kept smoke guard (454 until 66.3-17 moved it; 452 until 66.3-09)
+    "src/backend/sidecar/humbleLoginFlowRegistration.ts:466",  # the deliberately-kept smoke guard (460 until 66.4-15 added the requestRustInvoke dep to registerHumbleLoginFlows; 454 until 66.3-17 moved it; 452 until 66.3-09)
 }
 # Updated Phase 34.4.1 Plan 18 (first regeneration since Plan 10): Plan 12 (already committed,
 # F-1/S-10 closure) moved the safeStorage import OUT of humble/user.ts entirely, into a new
@@ -645,7 +645,9 @@ SITE_PROFILES = {
         # slice to `registerHumbleLoginFlows`'s deps and a `const { humble } = deps` line above the
         # guard, shifting it to 460, and renamed the call to `humble.loginWindowSeam.get()`. The
         # +/-5 window (452 vs 460) is exceeded, so the hint moves with the site: same guard.
-        "line_hint": 460,
+        # Refreshed AGAIN (66.4-15): 460 -> 466. `registerHumbleLoginFlows` gained a `requestRustInvoke` dep (a
+        # 6-line addition above this guard) so the login-window seam is built over the boot transport.
+        "line_hint": 466,
         "anchors": [
             "GAMELIB_LOGIN_SEAM_SMOKE",
             "this is a FAIL, not a skip",

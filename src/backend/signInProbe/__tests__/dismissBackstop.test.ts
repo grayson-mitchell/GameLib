@@ -39,11 +39,6 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logWarning: jest.fn()
 }))
-jest.mock('backend/ipc', () => ({
-  ...jest.requireActual('backend/ipc'),
-  sendFrontendMessage: jest.fn(),
-  addHandler: jest.fn()
-}))
 const { fakes, stores: fakeVerdictStores } = makeFakeSignInStores()
 const gogFlags = fakes.gog
 
@@ -73,7 +68,8 @@ function makeDeps(
     stores: fakeVerdictStores,
     epochs,
     outcomes,
-    aborts: { call: () => undefined }
+    aborts: { call: () => undefined },
+    sendFrontendMessage: jest.fn()
   }
 }
 

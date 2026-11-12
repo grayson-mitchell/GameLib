@@ -9,7 +9,6 @@ import { InstallResult } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { notify } from 'backend/dialog/dialog'
 import { sendGameStatusUpdate } from 'backend/utils'
-import { sendFrontendMessage } from '../../ipc'
 import { stopInstallPolling } from './library/installStop'
 import * as pollState from './library/pollState'
 import * as bottle from './bottle'
@@ -83,7 +82,7 @@ export async function installBridgeGame(
     steamGame.deps.steamInstallRuntime.polls.markBridgeInstallFinalized(
       steamGame.appId
     )
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(steamGame.deps, {
       appName: steamGame.appId,
       runner: 'steam',
       status: 'done'
@@ -100,7 +99,7 @@ export async function installBridgeGame(
     let signal: AbortSignal | undefined
     let ownsController = false
     const stop = (): InstallResult => {
-      sendGameStatusUpdate({
+      sendGameStatusUpdate(steamGame.deps, {
         appName: steamGame.appId,
         runner: 'steam',
         status: 'done'
@@ -175,7 +174,7 @@ export async function provisionBridgeBottleForInstall(
   | { result: InstallResult }
 > {
   const abortResult = (): { result: InstallResult } => {
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(steamGame.deps, {
       appName: steamGame.appId,
       runner: 'steam',
       status: 'done'
@@ -185,7 +184,7 @@ export async function provisionBridgeBottleForInstall(
   // G21 (59-36): the bottle-creation stage the Downloads tab and game page
   // render (59-37 maps the context to its label).
   const sendCreatingBottle = () =>
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(steamGame.deps, {
       appName: steamGame.appId,
       runner: 'steam',
       status: 'engine-download',
@@ -282,12 +281,12 @@ export async function provisionBridgeBottleForInstall(
     steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
       steamGame.appId
     )
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(steamGame.deps, {
       appName: steamGame.appId,
       runner: 'steam',
       status: 'done'
     })
-    sendFrontendMessage('steamBridgeSetupRequired', {
+    steamGame.deps.sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
       reason: 'bridge-bottle-provision-failed',
       fallbackAvailable: true,
@@ -300,7 +299,7 @@ export async function provisionBridgeBottleForInstall(
   // G1 (59-22) / G21 (59-36): the creating-bottle stage precedes both
   // engines and nothing else replaces it, so hand the state back to
   // installing whatever engine was used.
-  sendGameStatusUpdate({
+  sendGameStatusUpdate(steamGame.deps, {
     appName: steamGame.appId,
     runner: 'steam',
     status: 'installing'
@@ -405,7 +404,7 @@ export async function installBridgeGameLeased(
   // 59-REVIEW CR-01: synchronous with the depot run's controller
   // registration, so a cancel cannot fall in between.
   if (signal?.aborted) {
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(steamGame.deps, {
       appName: steamGame.appId,
       runner: 'steam',
       status: 'done'
@@ -453,7 +452,7 @@ export async function installBridgeGameLeased(
     steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
       steamGame.appId
     )
-    sendFrontendMessage('steamBridgeSetupRequired', {
+    steamGame.deps.sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
       reason: 'launch-exe-not-resolved',
       fallbackAvailable: true,
@@ -468,6 +467,7 @@ export async function installBridgeGameLeased(
   }
 
   const shimResult = await placeShimForGame(
+    steamGame.deps,
     steamGame.deps.paths,
     steamGame.appId,
     exePath,
@@ -536,7 +536,7 @@ export async function installBridgeGameLeased(
       steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
         steamGame.appId
       )
-      sendFrontendMessage('steamBridgeSetupRequired', {
+      steamGame.deps.sendFrontendMessage('steamBridgeSetupRequired', {
         appName: steamGame.appId,
         reason: 'win64-no-shim',
         missingSymbols,
@@ -600,7 +600,7 @@ export async function installBridgeGameLeased(
     steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
       steamGame.appId
     )
-    sendFrontendMessage('steamBridgeSetupRequired', {
+    steamGame.deps.sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
       reason: 'drm-wrapped',
       fallbackAvailable: true,
@@ -663,7 +663,7 @@ export async function installBridgeGameLeased(
   // final update below is the only status that clears a lingering 'redist'
   // or 'drm-setup' (56-16 Gap 3) and ends the "finishing" state.
   const sendFinishing = () =>
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(steamGame.deps, {
       appName: steamGame.appId,
       runner: 'steam',
       status: 'installing',
@@ -714,7 +714,7 @@ export async function installBridgeGameLeased(
     steamGame.deps.steamInstallRuntime.polls.markBridgeInstallFinalized(
       steamGame.appId
     )
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(steamGame.deps, {
       appName: steamGame.appId,
       runner: 'steam',
       status: 'done'

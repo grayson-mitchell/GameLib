@@ -103,7 +103,6 @@ import {
 } from '../shortcuts/nonesteamgame/nonesteamgame'
 import { notify, type DialogBoxDeps, type NotifyDeps } from '../dialog/dialog'
 import { isMac } from '../constants/environment'
-import { sendFrontendMessage } from '../ipc'
 import { logWarning, LogPrefix } from '../logger'
 import type { Runner } from 'common/types'
 import type {
@@ -396,6 +395,7 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
         paths: deps.paths,
         imageTools: deps.imageTools,
         dialogs: deps.dialogs,
+        sendFrontendMessage: deps.sendFrontendMessage,
         appState: deps.appState,
         notifications: deps.notifications
       },
@@ -444,15 +444,15 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
             break
           // hotkey to open the settings on frontend
           case 'ctrl+k':
-            sendFrontendMessage('openScreen', '/settings/general')
+            deps.sendFrontendMessage('openScreen', '/settings/general')
             break
           // hotkey to open the downloads screen on frontend
           case 'ctrl+j':
-            sendFrontendMessage('openScreen', '/download-manager')
+            deps.sendFrontendMessage('openScreen', '/download-manager')
             break
           // hotkey to open the library screen on frontend
           case 'ctrl+l':
-            sendFrontendMessage('openScreen', '/library')
+            deps.sendFrontendMessage('openScreen', '/library')
             break
         }
       } catch (error) {

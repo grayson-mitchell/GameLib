@@ -69,12 +69,7 @@ import type { BootServices, StoreManagers, Stores } from '../services/types'
 import { handleProtocol } from '../protocol'
 import type { ProtocolDeps } from '../protocol'
 import type { ProcessGuards } from './processGuards'
-import {
-  startRpcServer,
-  pushFrontendMessage,
-  requestOpenExternal,
-  requestRustInvoke
-} from './sidecarRpc'
+import { createSidecarRpc, type SidecarRpc } from './sidecarRpc'
 import {
   createTokenStoreSlot,
   clearOrphanedElectronToken
@@ -205,7 +200,7 @@ import { derivePaths, resolveAppDataDir } from '../process/appPaths'
 import { createAppContext } from '../process/context'
 import type { AppContext, AppPaths } from '../process/context'
 import type { LogSink, ProcessRunner } from '../process/types'
-import { setIpcRejectionLogSink } from './ipcValidation'
+import { createIpcValidator } from './ipcValidation'
 import { gamesConfigPath } from '../constants/paths'
 import { backendEvents } from '../backend_events'
 import { fetchLastestReleases } from '../utils/releases'
@@ -286,6 +281,7 @@ import MigrationSystem from '../migration'
 export const BOOT_STEP_NAMES = [
   'outbound-http-tracking',
   'logger',
+  'sidecar-rpc',
   'host-services',
   'sign-in-probe-state',
   'steam-session-state',
@@ -388,6 +384,12 @@ interface BootState {
    * stdin-EOF release. Held here, not on `BootServices`: no handler reads it.
    */
   outboundHttp: OutboundHttpTracker | null
+  /**
+   * This boot's stdio transport ('sidecar-rpc' step): 'host-services' takes its bound send
+   * functions, 'rpc-server' starts it. Held here, not on `BootServices`: the handlers reach the
+   * transport through host services.
+   */
+  rpc: SidecarRpc | null
 }
 
 /**
@@ -448,6 +450,11 @@ function requireHost(state: BootState): HostServices {
   const { host } = state.services
   if (!host) throw new Error('host-services step has not run')
   return host
+}
+
+function requireRpc(state: BootState): SidecarRpc {
+  if (!state.rpc) throw new Error('sidecar-rpc step has not run')
+  return state.rpc
 }
 
 function requireAborts(state: BootState): AbortRegistry {
@@ -681,6 +688,7 @@ function protocolDepsOf(services: BootServices): ProtocolDeps {
     stores: services.stores,
     config: services.config,
     dialogs: services.host.dialogs,
+    sendFrontendMessage: services.host.sendFrontendMessage,
     appState: services.host.appState,
     notifications: services.host.notifications
   }
@@ -1235,7 +1243,8 @@ export function bootSidecar(
     secretVault: null,
     steamGridKeyringStore: null,
     humbleKeyringStore: null,
-    outboundHttp: null
+    outboundHttp: null,
+    rpc: null
   }
   runBootSteps(ctx, { input, output, guards }, state, prebuilt)
   return requireServices(state)
@@ -1358,18 +1367,35 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'sidecar-rpc',
+      // The one transport instance of this boot (66.4-15, D-05): rustPending, the output stream
+      // and the pre-start line buffer live in its closure. Construction opens no stream and
+      // arms nothing; frames pushed before 'rpc-server' starts it are buffered and flushed on
+      // start, as before. After 'logger' because the validator's sink is the logger (Phase 67
+      // D-09: boundary rejections reach gamelib.log; ipcValidation avoids importing it).
+      run: (ctx, _io, state) => {
+        state.rpc = createSidecarRpc({
+          validator: createIpcValidator({
+            now: () => ctx.clock.now(),
+            sink: (line) => logWarning(line, LogPrefix.Backend)
+          })
+        })
+      }
+    },
+    {
       name: 'host-services',
       // Built once, right after the logger: the Tauri-native services that replace the Electron
       // facade. `host.ipc` is the one registry instance (66.1 C-WR-1: no split-brain), built here.
       run: (ctx, _io, state) => {
+        const rpc = requireRpc(state)
         state.services.host =
           prebuilt.host ??
           createHostServices({
             platform: ctx.platform,
             ipc: createIpcRegistry(),
-            requestRustInvoke,
-            requestOpenExternal,
-            pushFrontendMessage,
+            requestRustInvoke: rpc.requestRustInvoke,
+            requestOpenExternal: rpc.requestOpenExternal,
+            pushFrontendMessage: rpc.pushFrontendMessage,
             openDetached: (url, onError) =>
               ctx.runner.openDetached(url, onError),
             runSync: (cmd, argv, opts) => ctx.runner.runSync(cmd, argv, opts)
@@ -1587,7 +1613,9 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         if (state.secretVault) {
           store = state.secretVault.steamGridDbSecretStore
         } else {
-          state.steamGridKeyringStore = createSidecarSteamGridDbSecretStore()
+          state.steamGridKeyringStore = createSidecarSteamGridDbSecretStore(
+            requireHost(state).requestRustInvoke
+          )
           store = state.steamGridKeyringStore
         }
         state.services.steamGridSecrets =
@@ -1650,6 +1678,9 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           },
           get appState() {
             return requireHost(state).appState
+          },
+          get sendFrontendMessage() {
+            return requireHost(state).sendFrontendMessage
           }
         }
         state.services.runner = prebuilt.runner ?? ctx.runner
@@ -1667,7 +1698,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             config,
             openExternal: requireHost(state).openExternal,
             paths: ctx.paths,
-            aborts
+            aborts,
+            sendFrontendMessage: requireHost(state).sendFrontendMessage
           })
         state.services.commandRunner =
           prebuilt.commandRunner ??
@@ -1786,7 +1818,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             anonymousClient,
             macSteamOffline: steamProcesses.macSteamOffline,
             clock,
-            config
+            config,
+            sendFrontendMessage: requireHost(state).sendFrontendMessage
           })
       }
     },
@@ -1811,7 +1844,9 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         if (state.secretVault) {
           secretStore = state.secretVault.humbleSecretStore
         } else {
-          state.humbleKeyringStore = createSidecarHumbleSecretStore()
+          state.humbleKeyringStore = createSidecarHumbleSecretStore(
+            requireHost(state).requestRustInvoke
+          )
           secretStore = state.humbleKeyringStore
         }
         state.services.humble =
@@ -1821,7 +1856,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             secretStore,
             steamUser,
             signInOutcomes: signInProbe.outcomes,
-            appInfo
+            appInfo,
+            sendFrontendMessage: requireHost(state).sendFrontendMessage
           })
       }
     },
@@ -1920,7 +1956,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       // timers are released at stdin EOF by the install AbortControllers and the poll's own unref'd interval.
       run: (_ctx, _io, state) => {
         state.services.steamInstallRuntime =
-          prebuilt.steamInstallRuntime ?? createSteamInstallRuntime()
+          prebuilt.steamInstallRuntime ??
+          createSteamInstallRuntime(requireHost(state))
       }
     },
     {
@@ -1988,7 +2025,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           createWinetricksQueue({
             push: (channel, queueState) =>
               host.pushFrontendMessage(channel, queueState),
-            sendGameStatus: (update) => sendGameStatusUpdate(update),
+            sendGameStatus: (update) => sendGameStatusUpdate(host, update),
             getInstallingComponent: () => toolsState.installing.get(),
             environment: toolsState.winetricksEnv
           })
@@ -2084,6 +2121,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           paths,
           appInfo,
           dialogs: host.dialogs,
+          sendFrontendMessage: host.sendFrontendMessage,
+          requestRustInvoke: host.requestRustInvoke,
           openExternal: host.openExternal,
           notifications: host.notifications,
           appState: host.appState,
@@ -2159,6 +2198,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             dialogs: host.dialogs,
             appState: host.appState,
             notifications: host.notifications,
+            sendFrontendMessage: host.sendFrontendMessage,
             steamSession,
             steamBottle,
             engineRuntime,
@@ -2439,9 +2479,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'rpc-server',
       run: (_ctx, { input, output }, state) => {
-        startRpcServer(input, output, requireServices(state).host.ipc)
-        // Phase 67 D-09: boundary rejections reach gamelib.log (ipcValidation avoids importing the logger).
-        setIpcRejectionLogSink((line) => logWarning(line, LogPrefix.Backend))
+        requireRpc(state).start(input, output, requireServices(state).host.ipc)
         const services = requireServices(state)
         const outboundHttp = state.outboundHttp
         if (!outboundHttp)
@@ -2499,6 +2537,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           onlineMonitor,
           dialogs: host.dialogs,
           appState: host.appState,
+          sendFrontendMessage: host.sendFrontendMessage,
+          requestRustInvoke: host.requestRustInvoke,
           events: backendEvents
         })
         // Placement is load-bearing (Phase 28, T-28-10): must run AFTER startRpcServer() so
@@ -2530,7 +2570,9 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           tokenStore.configure(devSecretVault.tokenStore)
           logInfo('[bootstrap] secret stores: dev-vault', LogPrefix.Backend)
         } else {
-          tokenStore.configure(new SidecarKeyringTokenStore())
+          tokenStore.configure(
+            new SidecarKeyringTokenStore(requireHost(state).requestRustInvoke)
+          )
           // Phase 34.4.1 gap-cycle plan 13 (F-1 BLOCKING closure): the keyring-backed Humble
           // secret store was already built and injected into the Humble services by the
           // 'humble-services' step (66.3-17); this arm only runs its observable receipt line and the
@@ -2540,7 +2582,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           const humbleKeyringStore = state.humbleKeyringStore
           if (!humbleKeyringStore)
             throw new Error('boot: humble-services step must run first')
-          startSidecarHumbleSecretStore(humbleKeyringStore, { stores })
+          startSidecarHumbleSecretStore(humbleKeyringStore, {
+            stores,
+            requestRustInvoke: requireHost(state).requestRustInvoke
+          })
           // Phase 34.6 plan 02 (A-03): same placement reasoning as startSidecarHumbleSecretStore()
           // just above -- its migration also calls requestRustInvoke, so it must run AFTER
           // startRpcServer() and inside this same keyring arm.
@@ -2549,7 +2594,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             throw new Error('boot: steamgrid-secrets step must run first')
           startSidecarSteamGridDbSecretStore(steamGridKeyringStore, {
             stores,
-            config
+            config,
+            requestRustInvoke: requireHost(state).requestRustInvoke
           })
           logInfo('[bootstrap] secret stores: keyring', LogPrefix.Backend)
         }
@@ -2692,7 +2738,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           try {
             startInstalledJsonWatcher({
               managers: requireServices(state).managers,
-              paths: requireServices(state).paths
+              paths: requireServices(state).paths,
+              sendFrontendMessage: requireHost(state).sendFrontendMessage
             })
           } catch (error) {
             logWarning(
@@ -2900,7 +2947,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           humbleUser: services.humble.user,
           onlineMonitor: services.onlineMonitor,
           gogRuntime: services.gogRuntime,
-          paths: services.paths
+          paths: services.paths,
+          sendFrontendMessage: services.host.sendFrontendMessage
         })
       }
     },

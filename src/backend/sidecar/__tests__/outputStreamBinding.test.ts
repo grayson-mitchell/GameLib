@@ -27,6 +27,8 @@ import { join } from 'path'
 import { PassThrough } from 'node:stream'
 
 import { stripSourceComments } from '../../testUtils/stripSourceComments'
+import { createTestSidecarRpc } from '../../testUtils/testSidecarRpc'
+import { createIpcRegistry } from '../ipcRegistry'
 
 describe('sidecarRpc output-stream binding (IN-04)', () => {
   let stdoutSpy: jest.SpyInstance
@@ -41,13 +43,13 @@ describe('sidecarRpc output-stream binding (IN-04)', () => {
   })
 
   function freshRpc() {
-    // A fresh module registry per test is the point: a static import would be
-    // hoisted above `jest.resetModules()` and every test would then share one
-    // `outputStream`, so the "before any bind" cases could not exist at all.
-    // (The disable must sit on the line directly above the require -- with a
-    // comment in between it applies to the comment and the rule still fires.)
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require('../sidecarRpc') as typeof import('../sidecarRpc')
+    const rpc = createTestSidecarRpc()
+    return {
+      pushFrontendMessage: rpc.pushFrontendMessage,
+      // `start()` binds the output stream and flushes what was buffered before it.
+      attachOutput: (output: PassThrough) =>
+        rpc.start(new PassThrough(), output, createIpcRegistry())
+    }
   }
 
   /**
@@ -81,13 +83,13 @@ describe('sidecarRpc output-stream binding (IN-04)', () => {
   })
 
   it('IN-04 frames pushed before the bind are flushed to the bound stream, in order', () => {
-    const { pushFrontendMessage, bindOutputStream } = freshRpc()
+    const { pushFrontendMessage, attachOutput } = freshRpc()
 
     pushFrontendMessage('storeChanged', { key: 'first' })
     pushFrontendMessage('storeChanged', { key: 'second' })
 
     const output = new PassThrough()
-    bindOutputStream(output)
+    attachOutput(output)
 
     expect(framesFrom(output)).toEqual([
       {
@@ -105,24 +107,24 @@ describe('sidecarRpc output-stream binding (IN-04)', () => {
   })
 
   it('IN-04 the queue is drained by the flush — a second bind replays nothing', () => {
-    const { pushFrontendMessage, bindOutputStream } = freshRpc()
+    const { pushFrontendMessage, attachOutput } = freshRpc()
 
     pushFrontendMessage('storeChanged', { key: 'once' })
 
     const first = new PassThrough()
-    bindOutputStream(first)
+    attachOutput(first)
     expect(framesFrom(first)).toHaveLength(1)
 
     const second = new PassThrough()
-    bindOutputStream(second)
+    attachOutput(second)
     expect(second.read()).toBeNull()
   })
 
   it('IN-04 after the bind, pushes go straight to the bound stream and never to stdout', () => {
-    const { pushFrontendMessage, bindOutputStream } = freshRpc()
+    const { pushFrontendMessage, attachOutput } = freshRpc()
 
     const output = new PassThrough()
-    bindOutputStream(output)
+    attachOutput(output)
     pushFrontendMessage('storeChanged', { key: 'after' })
 
     expect(framesFrom(output)).toEqual([

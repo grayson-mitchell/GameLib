@@ -7,23 +7,23 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   logError: jest.fn()
 }))
-jest.mock('../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 
-import { sendFrontendMessage } from '../../ipc'
+const sendFrontendMessage = jest.fn()
 import { showDialogBoxModalAuto } from '../dialog'
 
 const raise = jest.fn()
 const deps = {
+  sendFrontendMessage,
   appState: { raiseMainWindowForInAppDialog: raise },
   dialogs: { showErrorBox: jest.fn(), showMessageBox: jest.fn() }
 }
 
 describe('showDialogBoxModalAuto raises a GameLib-hidden window first', () => {
   it('sendFrontendMessage branch', () => {
-    ;(sendFrontendMessage as jest.Mock).mockReturnValue(true)
+    sendFrontendMessage.mockReturnValue(true)
     const order: string[] = []
     raise.mockImplementation(() => order.push('raise'))
-    ;(sendFrontendMessage as jest.Mock).mockImplementation(() => {
+    sendFrontendMessage.mockImplementation(() => {
       order.push('send')
       return true
     })
@@ -34,7 +34,7 @@ describe('showDialogBoxModalAuto raises a GameLib-hidden window first', () => {
   it('does not raise when the mock hook is not armed (hook is the gate)', () => {
     // The real gating (only a GameLib-hidden window) lives in app.raiseMainWindowIfHiddenByGameLib;
     // this file only pins that the dialog path always consults it exactly once per call.
-    ;(sendFrontendMessage as jest.Mock).mockReturnValue(true)
+    sendFrontendMessage.mockReturnValue(true)
     showDialogBoxModalAuto(deps, { title: 't', message: 'm', type: 'ERROR' })
     expect(raise).toHaveBeenCalledTimes(1)
   })

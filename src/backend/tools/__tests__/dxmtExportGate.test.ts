@@ -64,8 +64,10 @@ import { defined } from 'backend/testUtils/indexed'
 
 const installMock = installOrUpdateTool as jest.Mock
 const isOnlineMock = jest.fn()
-// eslint-disable-next-line @typescript-eslint/unbound-method
+
 registerDxmtListeners({
+  requestRustInvoke: jest.fn(),
+  sendFrontendMessage: jest.fn(),
   events: backendEvents,
   runner: createScriptedRunner([]),
   aborts: createTestAbortRegistry(),
@@ -152,7 +154,7 @@ describe('wineVersionInstalled gate', () => {
       expect.objectContaining({ name: 'dxmt' })
     )
     expect(checkMock).toHaveBeenCalledTimes(1)
-    expect(checkMock.mock.calls[0][0]).toBe(`${WINES}/wine-staging-ok`)
+    expect(checkMock.mock.calls[0][1]).toBe(`${WINES}/wine-staging-ok`)
     expect(cpSyncMock).toHaveBeenCalledTimes(1)
     expect(cpSyncMock.mock.calls[0][0]).toBe(`${WINES}/wine-staging-ok`)
     expect(cpSyncMock.mock.calls[0][1]).toBe(`${WINES}/wine-staging-ok-DXMT`)
@@ -220,7 +222,7 @@ describe('releasesInfoReady gate', () => {
     await flush()
 
     expect(installMock).toHaveBeenCalledTimes(1)
-    expect(checkMock.mock.calls[0][0]).toBe(`${wine.installDir}-DXMT`)
+    expect(checkMock.mock.calls[0][1]).toBe(`${wine.installDir}-DXMT`)
     expect(copyFileSyncMock).toHaveBeenCalledTimes(11)
     for (const call of copyFileSyncMock.mock.calls as string[][]) {
       expect(
@@ -250,7 +252,7 @@ describe('releasesInfoReady gate', () => {
     const bad = makeWine('wine-bad')
     storeGetMock.mockReturnValue([good, bad])
     dxmtPathsExist(`${good.installDir}-DXMT`, `${bad.installDir}-DXMT`)
-    checkMock.mockImplementation((p: string) =>
+    checkMock.mockImplementation((_deps: unknown, p: string) =>
       Promise.resolve(
         p === `${bad.installDir}-DXMT` ? failResult(p) : { ok: true }
       )

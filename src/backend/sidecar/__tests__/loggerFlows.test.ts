@@ -250,10 +250,19 @@ jest.mock('backend/config', () => {
 // scriptable requestRustInvoke only. Needed for showLogFileInFolder's
 // showItemInFolder -> platformApi.shell.showItemInFolder ->
 // requestRustInvoke(RUST_SHELL_SHOW_ITEM_IN_FOLDER, ...) round-trip. ───────
-jest.mock('../sidecarRpc', () => ({
-  ...jest.requireActual('../sidecarRpc'),
-  requestRustInvoke: jest.fn()
-}))
+jest.mock('../sidecarRpc', () => {
+  const actual = jest.requireActual('../sidecarRpc')
+  const requestRustInvoke = jest.fn()
+  return {
+    ...actual,
+    requestRustInvoke,
+    // The boot builds its transport through createSidecarRpc; hand it the scriptable fn.
+    createSidecarRpc: (deps: unknown) => ({
+      ...actual.createSidecarRpc(deps),
+      requestRustInvoke
+    })
+  }
+})
 
 // Deliberately NOT `jest.mock('backend/logger', ...)`: `backend/logger/
 // index.ts` and `log_writer.ts` import each other circularly. A `jest.mock`

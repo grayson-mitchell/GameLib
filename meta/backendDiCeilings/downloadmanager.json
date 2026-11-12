@@ -1,6 +1,6 @@
 {
   "jestMock": {
-    "src/backend/downloadmanager/__tests__/downloadqueue.test.ts": 12,
+    "src/backend/downloadmanager/__tests__/downloadqueue.test.ts": 11,
     "src/backend/downloadmanager/__tests__/installStallWatchdog.test.ts": 1,
     "src/backend/downloadmanager/__tests__/utils.test.ts": 8
   }

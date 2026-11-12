@@ -7,7 +7,6 @@ import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { GameInfo } from 'common/types'
 import { logWarning, LogPrefix } from 'backend/logger'
 import { reportDetectedFix, knownFixReportDeps } from 'backend/knownFixReport'
-import { sendFrontendMessage } from '../../ipc'
 import * as bottle from './bottle'
 import * as bridgeBottle from './bridgeBottle'
 import {
@@ -175,7 +174,7 @@ export function markBridgeGameInstalled(
       'games',
       Array.from(steamGame.deps.steamSession.libraryState.library.values())
     )
-    sendFrontendMessage('pushGameToLibrary', updated)
+    steamGame.deps.sendFrontendMessage('pushGameToLibrary', updated)
   }
   // Quick 261029-mbi: no 'done' here. The install keeps going (shared
   // redists, DRM prefetch) and installBridgeGame sends the one final 'done';
@@ -214,9 +213,9 @@ export function markBridgeGameUninstalled(steamGame: SteamGame): void {
       'games',
       Array.from(steamGame.deps.steamSession.libraryState.library.values())
     )
-    sendFrontendMessage('pushGameToLibrary', updated)
+    steamGame.deps.sendFrontendMessage('pushGameToLibrary', updated)
   }
-  sendFrontendMessage('gameStatusUpdate', {
+  steamGame.deps.sendFrontendMessage('gameStatusUpdate', {
     appName: steamGame.appId,
     runner: 'steam',
     status: 'done'

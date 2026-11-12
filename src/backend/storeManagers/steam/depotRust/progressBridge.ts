@@ -13,8 +13,10 @@ import {
   rollingRateMiBs
 } from './progress'
 import type { RustJobEvent } from './types'
+import type { FrontendMessageDeps } from 'backend/host/frontendMessage'
 
 export function createProgressBridge(
+  deps: FrontendMessageDeps,
   appName: string,
   runner: Runner = 'steam',
   now: () => number = Date.now
@@ -96,7 +98,7 @@ export function createProgressBridge(
           const remaining = Math.max(totalBytes - ev.doneBytes, 0)
           const etaSec = avgBytesPerSec > 0 ? remaining / avgBytesPerSec : 0
 
-          sendProgressUpdate({
+          sendProgressUpdate(deps, {
             appName,
             runner,
             status: 'installing',

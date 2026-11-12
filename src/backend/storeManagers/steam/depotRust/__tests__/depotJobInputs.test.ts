@@ -29,7 +29,6 @@ jest.mock('../../depot/select', () => ({
   ...jest.requireActual('../../depot/select'),
   selectAllDepots: jest.fn()
 }))
-jest.mock('../../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 jest.mock('i18next', () => ({
   __esModule: true,
   default: { t: (_key: string, fallback = '') => fallback }
@@ -257,7 +256,12 @@ describe('progress bridge', () => {
 
   it('emits the downloadFiles payload shape with rolling rates and ETA', () => {
     let t = 10_000
-    const bridge = createProgressBridge('777', 'steam', () => t)
+    const bridge = createProgressBridge(
+      { sendFrontendMessage: jest.fn() },
+      '777',
+      'steam',
+      () => t
+    )
     bridge.onEvent({
       jobId: 'j',
       seq: 0,
@@ -269,7 +273,7 @@ describe('progress bridge', () => {
     bridge.onEvent(ev(1, 0, 0))
     t += 1000
     bridge.onEvent(ev(2, 500 * 1024, 250 * 1024, 1024 * 1024))
-    const calls = jest.mocked(sendProgressUpdate).mock.calls.map((c) => c[0])
+    const calls = jest.mocked(sendProgressUpdate).mock.calls.map((c) => c[1])
     expect(calls).toHaveLength(2)
     expect(calls[1]).toEqual({
       appName: '777',
@@ -287,7 +291,12 @@ describe('progress bridge', () => {
 
   it('throttles bursts but re-sends on unchanged counters after the throttle window', () => {
     let t = 0
-    const bridge = createProgressBridge('777', 'steam', () => t)
+    const bridge = createProgressBridge(
+      { sendFrontendMessage: jest.fn() },
+      '777',
+      'steam',
+      () => t
+    )
     bridge.onEvent(ev(1, 10, 10, 1_000_000))
     t += 100
     bridge.onEvent(ev(2, 11, 11, 1_000_000))

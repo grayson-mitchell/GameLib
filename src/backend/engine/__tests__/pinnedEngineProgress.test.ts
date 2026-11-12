@@ -58,6 +58,7 @@ describe('ensurePinnedEngineReportingStatus', () => {
       } as never)
     })
     const r = await ensurePinnedEngineReportingStatus({
+      sendFrontendMessage: jest.fn(),
       pin,
       appName: 'amzn1.x',
       runner: 'nile',
@@ -66,14 +67,14 @@ describe('ensurePinnedEngineReportingStatus', () => {
       fallback
     })
     expect(r.ok).toBe(true)
-    const contexts = sent.mock.calls.map(([p]) => p.context as string)
+    const contexts = sent.mock.calls.map(([, p]) => p.context as string)
     const percents = contexts
       .filter((c) => c.startsWith('downloading:'))
       .map((c) => Number(c.split(':')[1]))
     expect(percents.length).toBeGreaterThan(0)
     expect([...percents].sort((a, b) => a - b)).toEqual(percents)
     expect(contexts[contexts.length - 1]).toBe('setting-up')
-    for (const [p] of sent.mock.calls) {
+    for (const [, p] of sent.mock.calls) {
       expect(p).toMatchObject({
         appName: 'amzn1.x',
         runner: 'nile',
@@ -89,6 +90,7 @@ describe('ensurePinnedEngineReportingStatus', () => {
       detail: ''
     } as never)
     const r = await ensurePinnedEngineReportingStatus({
+      sendFrontendMessage: jest.fn(),
       pin,
       appName: '1',
       runner: 'gog',
@@ -97,7 +99,7 @@ describe('ensurePinnedEngineReportingStatus', () => {
       fallback
     })
     expect(r).toMatchObject({ ok: false, aborted: true })
-    expect(sent).toHaveBeenCalledWith({
+    expect(sent).toHaveBeenCalledWith(expect.anything(), {
       appName: '1',
       runner: 'gog',
       status: 'done'
@@ -111,6 +113,7 @@ describe('ensurePinnedEngineReportingStatus', () => {
       detail: 'no net'
     } as never)
     const r = await ensurePinnedEngineReportingStatus({
+      sendFrontendMessage: jest.fn(),
       pin,
       appName: '1',
       runner: 'gog',

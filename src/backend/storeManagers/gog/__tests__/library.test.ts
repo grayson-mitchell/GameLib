@@ -52,10 +52,6 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Gog: 'Gog', ExtraGameInfo: 'ExtraGameInfo' }
 }))
 
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
-
 const mockIsOnline = jest.fn(() => true)
 
 const mockCallRunner = jest.fn()

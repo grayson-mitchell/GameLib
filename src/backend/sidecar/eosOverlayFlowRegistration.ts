@@ -48,6 +48,7 @@
  * real `ipcMain` via `backend/ipc`'s `addHandler`, an Electron-only path.
  */
 
+import type { SendFrontendMessage } from '../host/frontendMessage'
 import type { IpcRegistry } from './ipcRegistry'
 import {
   getStatus,
@@ -67,6 +68,7 @@ export interface EosOverlayFlowDeps {
   managers: Pick<StoreManagers, 'library'>
   aborts: Pick<ManagerDeps['aborts'], 'call'>
   paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath'>
+  sendFrontendMessage: SendFrontendMessage
 }
 
 /**
@@ -84,7 +86,8 @@ export function registerEosOverlayFlows(deps: EosOverlayFlowDeps): void {
   const eosDeps = () => ({
     libraryManagers: deps.managers.library,
     aborts: deps.aborts,
-    paths: deps.paths
+    paths: deps.paths,
+    sendFrontendMessage: deps.sendFrontendMessage
   })
 
   deps.ipc.handle('getEosOverlayStatus', async () => {

@@ -1,3 +1,4 @@
+import type { FrontendMessageDeps } from '../../../host/frontendMessage'
 import { existsSync, readFileSync } from 'graceful-fs'
 import { join } from 'path'
 
@@ -14,10 +15,11 @@ import type { Runner } from 'common/types'
 import type { ManagerDeps } from 'backend/services/types'
 
 /** The only collaborator the overlay functions need (R3). */
-export type EosOverlayDeps = Pick<ManagerDeps, 'libraryManagers'> & {
-  /** The boot-owned abort registry the output handlers end the probe command through (66.4-13). */
-  aborts: Pick<AbortRegistry, 'call'>
-} & EosOverlayPathDeps
+export type EosOverlayDeps = Pick<ManagerDeps, 'libraryManagers'> &
+  FrontendMessageDeps & {
+    /** The boot-owned abort registry the output handlers end the probe command through (66.4-13). */
+    aborts: Pick<AbortRegistry, 'call'>
+  } & EosOverlayPathDeps
 
 /** The path roots the overlay's on-disk locations derive from (read from deps.paths, 66.4-11). */
 interface EosOverlayPathDeps {
@@ -103,7 +105,7 @@ async function updateInfo(deps: EosOverlayDeps) {
  * @returns The error encountered when installing, if any
  */
 async function install(deps: EosOverlayDeps) {
-  sendGameStatusUpdate({
+  sendGameStatusUpdate(deps, {
     appName: eosOverlayAppName,
     runner: 'legendary',
     status: isInstalled(deps) ? 'updating' : 'installing'
@@ -154,7 +156,7 @@ async function install(deps: EosOverlayDeps) {
     }
   )
 
-  sendGameStatusUpdate({
+  sendGameStatusUpdate(deps, {
     appName: eosOverlayAppName,
     runner: 'legendary',
     status: 'done'

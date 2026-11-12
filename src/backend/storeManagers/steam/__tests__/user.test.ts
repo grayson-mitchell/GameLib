@@ -1,12 +1,3 @@
-// Phase 49 (49-06): finishAuth()/logout() now publish the sign-in outcome map
-// through `noteSignInSucceeded` / `noteSignedOut`, which send a frontend
-// message. The real `sendFrontendMessage` needs an Electron window this suite
-// does not have.
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: jest.fn(),
-  addHandler: jest.fn()
-}))
-
 // ── Logger mock (factory to prevent transitive module load failures) ──────────
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -180,6 +171,7 @@ beforeEach(() => {
   tokenStore = createTestTokenStoreSlot()
   clock = createFakeClock()
   steamUser = createTestSteamUser({
+    sendFrontendMessage,
     stores: steamDeps.stores,
     signIn: signInProbe,
     steamSession,
@@ -208,7 +200,7 @@ import { join } from 'path'
 import { logInfo, logWarning, logError } from 'backend/logger'
 import type { TokenStore, TokenStoreSlot } from '../tokenStore'
 import { createTestTokenStoreSlot } from 'backend/testUtils/testTokenStore'
-import { sendFrontendMessage } from 'backend/ipc'
+const sendFrontendMessage = jest.fn()
 import {
   createTestSignInProbe,
   type TestSignInProbe

@@ -43,7 +43,6 @@ import { Entries } from 'type-fest'
 import { deriveLegendaryPaths } from './constants'
 import { isWindows } from 'backend/constants/environment'
 import { recordedMacArch, scheduleMacArchSweep } from 'backend/macArch/recovery'
-import { sendFrontendMessage } from '../../ipc'
 import { LibraryManager } from 'common/types/game_manager'
 import LegendaryGame from './games'
 
@@ -56,7 +55,10 @@ const fallBackImage = 'fallback'
  * pushes the updated entry live.
  */
 export function applyLegendaryMacArch(
-  deps: Pick<LegendaryManagerDeps, 'stores' | 'legendaryRuntime'>,
+  deps: Pick<
+    LegendaryManagerDeps,
+    'stores' | 'legendaryRuntime' | 'sendFrontendMessage'
+  >,
   appName: string,
   verdict: '32' | '64'
 ) {
@@ -77,7 +79,7 @@ export function applyLegendaryMacArch(
 
   const updated =
     deps.legendaryRuntime.libraryState.library.get(appName) ?? entry
-  if (updated) sendFrontendMessage('pushGameToLibrary', updated)
+  if (updated) deps.sendFrontendMessage('pushGameToLibrary', updated)
 }
 
 /** The collaborators LegendaryLibraryManager uses; narrowed by its own plan. */

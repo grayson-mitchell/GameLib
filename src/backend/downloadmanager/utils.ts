@@ -185,7 +185,7 @@ async function installQueueElement(
     if (existsSync(manifestPath)) rmSync(manifestPath)
   }
 
-  sendGameStatusUpdate({
+  sendGameStatusUpdate(deps, {
     appName,
     runner,
     status: 'installing',
@@ -401,7 +401,7 @@ async function installQueueElement(
       wasAborted ||
       status === 'error'
     ) {
-      sendGameStatusUpdate({
+      sendGameStatusUpdate(deps, {
         appName,
         runner,
         status: 'done'
@@ -478,7 +478,7 @@ async function updateQueueElement(
     }
   }
 
-  sendGameStatusUpdate({
+  sendGameStatusUpdate(deps, {
     appName,
     runner,
     status: 'updating'
@@ -514,7 +514,7 @@ async function updateQueueElement(
     errorMessage(`${error}`)
     return { status: 'error' }
   } finally {
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(deps, {
       appName,
       runner,
       status: 'done'

@@ -67,7 +67,6 @@ import { chmod, readFile, stat } from 'fs/promises'
 import { createVulkan } from '../utils/graphics/vulkan'
 import { lt as semverLt } from 'semver'
 import type { AbortRegistry } from '../utils/aborthandler/aborthandler'
-import { sendFrontendMessage } from '../ipc'
 import {
   DAYS,
   downloadFile as downloadFileInet
@@ -1093,7 +1092,7 @@ function createWinetricks(deps: ToolsDeps) {
         }
         const flushProgress = () => {
           if (progressUpdated) {
-            sendFrontendMessage('progressOfWinetricks', {
+            deps.sendFrontendMessage('progressOfWinetricks', {
               messages: executeMessages,
               installingComponent: component,
               lines: pendingLines.splice(0, pendingLines.length),
@@ -1213,7 +1212,7 @@ function createWinetricks(deps: ToolsDeps) {
             onLine?.(exitLine)
             exitLines.push(exitLine)
           }
-          sendFrontendMessage('progressOfWinetricks', {
+          deps.sendFrontendMessage('progressOfWinetricks', {
             messages: ['Done'],
             installingComponent: component,
             failed: code !== 0,
@@ -1403,7 +1402,7 @@ function createWinetricks(deps: ToolsDeps) {
         return 'refused'
       }
       deps.toolsState.installing.set(component)
-      sendFrontendMessage('installing-winetricks-component', component)
+      deps.sendFrontendMessage('installing-winetricks-component', component)
       // Phase 45 Plan 01 (D-11): `onDone` is the only source of truth for this
       // call's own outcome. Defaults to 'failed' -- if `runWithArgs` resolves
       // without ever invoking `onDone` (a shape this plan has not observed but
@@ -1426,7 +1425,7 @@ function createWinetricks(deps: ToolsDeps) {
         )
       } finally {
         deps.toolsState.installing.set('')
-        sendFrontendMessage('installing-winetricks-component', '')
+        deps.sendFrontendMessage('installing-winetricks-component', '')
       }
       return outcome
     },

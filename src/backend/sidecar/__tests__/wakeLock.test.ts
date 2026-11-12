@@ -16,20 +16,16 @@
  * module; the syscalls are verified live at this plan's Task 3 against `pmset -g assertions`.
  */
 
-jest.mock('../sidecarRpc', () => ({
-  requestRustInvoke: jest.fn()
-}))
-
 import { defined } from 'backend/testUtils/indexed'
 import { createTestHostServices } from '../../testUtils/testHostServices'
-import { requestRustInvoke } from '../sidecarRpc'
 import {
   RUST_INVOKE_CHANNELS,
   RUST_WAKE_LOCK_START,
   RUST_WAKE_LOCK_STOP
 } from 'common/types/sidecarTransport'
 
-const mockRequestRustInvoke = requestRustInvoke as jest.Mock
+const requestRustInvoke = jest.fn()
+const mockRequestRustInvoke = requestRustInvoke
 
 // Every test gets a fresh host-services instance whose Rust boundary is this file's mocked
 // requestRustInvoke (late-bound, so per-test mockImplementation calls still apply). Fresh

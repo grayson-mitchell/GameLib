@@ -27,6 +27,7 @@
  * Never throws: failures log a warning and report no match. The caller logs
  * the applied default.
  */
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { readFile, stat } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 
@@ -59,6 +60,7 @@ const signals = (
 })
 
 export async function detectGameMakerD3d11Runner(
+  rust: RustInvokeDeps,
   exePath: string
 ): Promise<GameMakerRunnerSignals> {
   const dataWinPath = join(dirname(exePath), 'data.win')
@@ -87,7 +89,7 @@ export async function detectGameMakerD3d11Runner(
     }
     // Pitfall 7: the whole exe is still read for the MSAA byte probe.
     const buf = await readFile(exePath)
-    const names = await readPeImportedDllNames(exePath, 'gameMakerRunner')
+    const names = await readPeImportedDllNames(rust, exePath, 'gameMakerRunner')
     const d3d11Import =
       names?.some((n) => n.toLowerCase() === 'd3d11.dll') ?? false
     const msaaProbe = buf.includes(GAMEMAKER_MSAA_PROBE, 0, 'latin1')

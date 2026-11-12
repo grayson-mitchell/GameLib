@@ -13,7 +13,7 @@ import {
 } from 'common/types'
 
 import { getAvailableVersions, installVersion } from './downloader/main'
-import { sendFrontendMessage } from '../../ipc'
+import type { SendFrontendMessage } from '../../host/frontendMessage'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { AppPaths } from 'backend/process/context'
 import { isLinux, isMac, isWindows } from 'backend/constants/environment'
@@ -28,6 +28,7 @@ export interface WineManagerDeps {
   stores: {
     wineManager: Pick<Stores['wineManager'], 'wineDownloaderInfoStore'>
   }
+  sendFrontendMessage: SendFrontendMessage
 }
 
 function getLatestLocalVersions(
@@ -246,7 +247,7 @@ async function updateWineVersionInfos(
   }
 
   logInfo('wine versions updated', LogPrefix.WineDownloader)
-  sendFrontendMessage('wineVersionsUpdated')
+  deps.sendFrontendMessage('wineVersionsUpdated')
   return releases
 }
 
@@ -388,7 +389,7 @@ async function installWineVersion(
     LogPrefix.WineDownloader
   )
 
-  sendFrontendMessage('wineVersionsUpdated')
+  deps.sendFrontendMessage('wineVersionsUpdated')
   return 'success'
 }
 
@@ -453,7 +454,7 @@ async function removeWineVersion(
     LogPrefix.WineDownloader
   )
 
-  sendFrontendMessage('wineVersionsUpdated')
+  deps.sendFrontendMessage('wineVersionsUpdated')
   return true
 }
 

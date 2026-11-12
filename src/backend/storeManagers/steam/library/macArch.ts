@@ -12,7 +12,6 @@ import { reportDetectedFix, knownFixReportDeps } from 'backend/knownFixReport'
 import SteamGame from '../games'
 import type { ManagerDeps } from 'backend/services/types'
 import type { AcfSource } from './installRoot'
-import { sendFrontendMessage } from '../../../ipc'
 
 // ── macOS arch ground-truth check (MAC32-03) ─────────────────────────────────
 // Post-install Mach-O binary inspection is the ONLY detector in this phase
@@ -130,7 +129,7 @@ export async function verifyMacArchGroundTruth(
       'games',
       Array.from(deps.steamSession.libraryState.library.values())
     )
-    sendFrontendMessage('pushGameToLibrary', updatedGameInfo)
+    deps.sendFrontendMessage('pushGameToLibrary', updatedGameInfo)
   } else {
     logInfo(
       `Steam: verifyMacArchGroundTruth resolved appId ${appId} but it is not in the in-memory library Map — skipping frontend push (will pick up mac_arch on next refresh)`,

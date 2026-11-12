@@ -8,7 +8,6 @@ import { dirname } from 'node:path'
 import { GameSettings } from 'common/types'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { notify } from 'backend/dialog/dialog'
-import { sendFrontendMessage } from '../../ipc'
 import { getBridgeBottleSettings } from './bridgeBottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 // Phase 60: Steam overlay in bridged games (macOS).
@@ -79,7 +78,7 @@ export async function fireBridgeWineLaunch(
     steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
       steamGame.appId
     )
-    sendFrontendMessage('steamBridgeSetupRequired', {
+    steamGame.deps.sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
       reason: 'bridge-launch-failed',
       fallbackAvailable: true

@@ -64,7 +64,7 @@
  */
 
 import type { IpcRegistry } from './ipcRegistry'
-import { requestRustInvoke } from './sidecarRpc'
+import type { RequestRustInvoke } from '../host'
 import {
   RUST_STORE_EMBED_OPEN,
   RUST_STORE_EMBED_SET_BOUNDS,
@@ -254,7 +254,9 @@ function assertFiniteBounds(bounds: StoreEmbedBounds): void {
  * a live Rust arm coerces the response into the declared return type and THROWS a descriptive
  * Error on a malformed shape -- load-bearing, not defensive (see this file's own header comment).
  */
-export function createRustStoreEmbedSeam(): StoreEmbedSeam {
+export function createRustStoreEmbedSeam(
+  requestRustInvoke: RequestRustInvoke
+): StoreEmbedSeam {
   return {
     async open(url, bounds, storeKey, homeUrl) {
       // Phase 50 Plan 01: `storeKey` now crosses the wire -- `store_embed_open_args` (main.rs)
@@ -425,8 +427,10 @@ async function safeNavState(
  */
 export function registerStoreEmbedFlows(deps: {
   ipc: Pick<IpcRegistry, 'handle' | 'on'>
+  /** The boot's sidecar -> Rust request leg, handed to the embed seam (66.4-15). */
+  requestRustInvoke: RequestRustInvoke
 }): void {
-  const seam = createRustStoreEmbedSeam()
+  const seam = createRustStoreEmbedSeam(deps.requestRustInvoke)
   setStoreEmbedSeam(seam)
 
   // ── invoke (9) ──────────────────────────────────────────────────────────────────────────────

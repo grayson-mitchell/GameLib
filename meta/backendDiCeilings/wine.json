@@ -1,6 +1,6 @@
 {
   "jestMock": {
-    "src/backend/wine/manager/__tests__/removeWineVersion.test.ts": 3,
+    "src/backend/wine/manager/__tests__/removeWineVersion.test.ts": 2,
     "src/backend/wine/manager/downloader/__tests__/main/getter.test.ts": 1,
     "src/backend/wine/manager/downloader/__tests__/utilities/geProtonArch.test.ts": 1,
     "src/backend/wine/manager/downloader/__tests__/utilities/rest.test.ts": 1,

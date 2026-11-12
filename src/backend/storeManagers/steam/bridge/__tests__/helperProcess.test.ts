@@ -26,7 +26,7 @@ import { Socket } from 'node:net'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { sendFrontendMessage } from 'backend/ipc'
+const sendFrontendMessage = jest.fn()
 import { logWarning } from 'backend/logger'
 import {
   steamBridgeHelperPath,
@@ -56,10 +56,6 @@ jest.mock('backend/logger', () => ({
 }))
 
 jest.mock('backend/constants/environment', () => ({ isMac: true }))
-
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
 
 jest.mock('backend/constants/paths', () => ({
   steamBridgeHelperPath: '/mock/bundle/arm64/darwin/steam-bridge-helper',
@@ -102,6 +98,7 @@ function newRegistry(
   })
 }
 const helperDeps = {
+  sendFrontendMessage,
   get bridgeHelpers() {
     return registry
   },
@@ -111,7 +108,7 @@ const helperDeps = {
   paths: { steamBridgeHelperStateDir: '/mock/state/steam-bridge' }
 }
 const MockedSocket = Socket as unknown as jest.Mock
-const mockedSendFrontendMessage = sendFrontendMessage as jest.Mock
+const mockedSendFrontendMessage = sendFrontendMessage
 
 // PROBE_REQUEST_ID is 1 inside helperProcess.ts -- mirrored here so the
 // fixture responses this test hands back decode as matching the request.

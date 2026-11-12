@@ -95,7 +95,6 @@ import { createTools } from '../tools'
 import type { ToolsDeps } from '../tools'
 import { isEpicServiceOffline, sendGameStatusUpdate } from '../utils'
 import { logInfo, logWarning, LogPrefix } from '../logger'
-import { sendFrontendMessage } from '../ipc'
 import { getDefaultSavePath } from '../save_sync'
 import type { SaveSyncDeps } from '../save_sync'
 
@@ -193,11 +192,11 @@ export function registerRunnerMiscFlows(
       )
       const maybeNewGameInfo = deps.managers.library['gog'].getGameInfo(appName)
       if (maybeNewGameInfo) {
-        sendFrontendMessage('pushGameToLibrary', maybeNewGameInfo)
+        deps.sendFrontendMessage('pushGameToLibrary', maybeNewGameInfo)
       }
     }
 
-    sendGameStatusUpdate({ appName, runner, status: 'done' })
+    sendGameStatusUpdate(deps, { appName, runner, status: 'done' })
   })
 
   deps.ipc.handle('egsSync', async (_event: unknown, ...args: unknown[]) => {

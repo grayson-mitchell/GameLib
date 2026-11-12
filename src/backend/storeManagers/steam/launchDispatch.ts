@@ -36,7 +36,7 @@ import type { ManagerDeps } from 'backend/services/types'
 
 type LaunchDispatchDeps = Pick<
   ManagerDeps,
-  'libraryManagers' | 'notifications'
+  'libraryManagers' | 'notifications' | 'sendFrontendMessage'
 > & {
   stores: Pick<ManagerDeps['stores'], 'kvs'>
 }

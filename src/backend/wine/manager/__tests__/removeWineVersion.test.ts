@@ -11,10 +11,6 @@ import type { WineVersionInfo } from 'common/types'
 import { defined } from 'backend/testUtils/indexed'
 
 jest.mock('backend/logger')
-jest.mock('../../../ipc', () => ({
-  ...jest.requireActual('../../../ipc'),
-  sendFrontendMessage: jest.fn()
-}))
 jest.mock('../downloader/main', () => ({
   getAvailableVersions: jest.fn(),
   installVersion: jest.fn()
@@ -33,7 +29,10 @@ const storeModule = (() => {
     }
   }
 })()
-const deps = { stores: { wineManager: storeModule } } as never
+const deps = {
+  stores: { wineManager: storeModule },
+  sendFrontendMessage: jest.fn()
+} as never
 
 import { removeWineVersion } from '../utils'
 const { wineDownloaderInfoStore } = storeModule

@@ -9,7 +9,7 @@ import { STEAM_INSTALL_PATHS } from './constants'
 import { readTokenOutcome, type TokenStoreSlot } from './tokenStore'
 import { applySignInVerdict } from 'backend/signInProbe/verdict'
 import { withTimeout } from './withTimeout'
-import { sendFrontendMessage } from '../../ipc'
+import type { SendFrontendMessage } from '../../host/frontendMessage'
 import type { AnonymousClient } from './anonymousClient'
 import {
   GuidedOfflineRequiredError,
@@ -61,6 +61,7 @@ export type SteamUserDeps = SteamStoresDeps & {
   clock: Clock
   /** The boot-built global config; the Windows Steam-client probe reads defaultSteamPath. */
   config: Pick<GlobalConfigSlice, 'getSettings'>
+  sendFrontendMessage: SendFrontendMessage
 }
 
 // ── SteamUser class ───────────────────────────────────────────────────────────
@@ -236,7 +237,11 @@ export class SteamUser {
     epochAtStart: number
   ): void {
     const result = applySignInVerdict(
-      { stores: this.deps.stores, epochs: this.deps.signIn.epochs },
+      {
+        stores: this.deps.stores,
+        epochs: this.deps.signIn.epochs,
+        sendFrontendMessage: this.deps.sendFrontendMessage
+      },
       'steam',
       outcome,
       epochAtStart
@@ -322,7 +327,7 @@ export class SteamUser {
           opts.guidedAction === 'install' && opts.appName
             ? this.guidedInstallTargets.get(opts.appName)
             : undefined
-        sendFrontendMessage('steamGoOfflineRequired', {
+        this.deps.sendFrontendMessage('steamGoOfflineRequired', {
           action: opts.guidedAction,
           appName: opts.appName,
           ...(target?.installPath !== undefined

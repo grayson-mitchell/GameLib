@@ -1,3 +1,4 @@
+import type { FrontendMessageDeps } from '../../host/frontendMessage'
 import {
   LogPrefix,
   logDebug,
@@ -17,28 +18,29 @@ import {
   selectEngineForLaunch
 } from 'backend/engine/launchEngine'
 
-type NileSetupDeps = Pick<
-  ManagerDeps,
-  | 'libraryManagers'
-  | 'onlineMonitor'
-  | 'engineState'
-  | 'engineRuntime'
-  | 'paths'
-  | 'steamBottle'
-  | 'steamLaunchRuntime'
-  | 'launcher'
-  | 'commandRunner'
-  | 'spawnAsync'
-  | 'aborts'
-  | 'toolsState'
-  | 'runner'
-  | 'config'
-  | 'gameConfigs'
-  | 'dialogs'
-  | 'appInfo'
-  | 'appState'
-  | 'notifications'
-> & { stores: Pick<ManagerDeps['stores'], 'kvs' | 'wineManager'> }
+type NileSetupDeps = FrontendMessageDeps &
+  Pick<
+    ManagerDeps,
+    | 'libraryManagers'
+    | 'onlineMonitor'
+    | 'engineState'
+    | 'engineRuntime'
+    | 'paths'
+    | 'steamBottle'
+    | 'steamLaunchRuntime'
+    | 'launcher'
+    | 'commandRunner'
+    | 'spawnAsync'
+    | 'aborts'
+    | 'toolsState'
+    | 'runner'
+    | 'config'
+    | 'gameConfigs'
+    | 'dialogs'
+    | 'appInfo'
+    | 'appState'
+    | 'notifications'
+  > & { stores: Pick<ManagerDeps['stores'], 'kvs' | 'wineManager'> }
 
 /**
  * Handles installing dependencies for games that include PostInstall scripts
@@ -159,7 +161,7 @@ async function runNileSetup(
 
   logDebug(['PostInstall:', postInstall], LogPrefix.Nile)
 
-  sendGameStatusUpdate({
+  sendGameStatusUpdate(deps, {
     appName,
     runner: 'nile',
     status: 'redist',

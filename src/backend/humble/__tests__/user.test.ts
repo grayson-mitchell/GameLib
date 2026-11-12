@@ -57,9 +57,6 @@ jest.mock('backend/logger', () => ({
 
 // ── backend/ipc mock (sendFrontendMessage for humbleAuthState pushes) ───────
 const mockSendFrontendMessage = jest.fn()
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: (...args: unknown[]) => mockSendFrontendMessage(...args)
-}))
 
 // ── sign-in outcome epoch hooks (Phase 49, 49-06) ──────────────────────────
 const mockNoteSignInSucceeded = jest.fn()
@@ -127,8 +124,9 @@ import {
   type LoginWindowSeam
 } from '../loginWindowSeam'
 import type { HumbleSecretKey, HumbleSecretStore } from '../secretStore'
-import { HUMBLE_TOKEN_PREFIX, HUMBLE_TOKEN_STORE_KEY } from '../constants'
 import {
+  HUMBLE_TOKEN_PREFIX,
+  HUMBLE_TOKEN_STORE_KEY,
   HUMBLE_BASE_URL,
   HUMBLE_LOGIN_URL,
   HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN
@@ -191,6 +189,7 @@ class ConfigBackedTestSecretStore implements HumbleSecretStore {
 let humbleUser: HumbleUser
 function createHumbleUser(): HumbleUser {
   return new HumbleUser({
+    sendFrontendMessage,
     stores: humbleStoresFixture,
     secretStore: new ConfigBackedTestSecretStore(),
     loginWindowSeam: seamSlot,
@@ -274,6 +273,9 @@ function installFakeSeamDefaults(): void {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+const sendFrontendMessage = (...args: unknown[]) =>
+  mockSendFrontendMessage(...args)
+
 describe('HumbleUser', () => {
   beforeEach(() => {
     jest.clearAllMocks()

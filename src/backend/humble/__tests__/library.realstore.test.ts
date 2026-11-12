@@ -29,9 +29,6 @@ jest.mock('../adapter', () => ({
 // ── ipc / logger mocks ───────────────────────────────────────────────────
 
 const mockSendFrontendMessage = jest.fn()
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: (...args: unknown[]) => mockSendFrontendMessage(...args)
-}))
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -60,6 +57,9 @@ import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createHumbleStores } from '../stores'
 
+const sendFrontendMessage = (...args: unknown[]) =>
+  mockSendFrontendMessage(...args)
+
 const humbleStoreModule = createHumbleStores({
   registry: createStoreRegistry(),
   root: createTestStoreRoot()
@@ -72,6 +72,7 @@ const steamUser = createTestSteamUser({
 } as never)
 // The library under test is one boot-style instance over the REAL stores (66.3-17).
 const HumbleLibrary = createHumbleLibrary({
+  sendFrontendMessage,
   stores: { humble: humbleStoreModule, steam: {} } as never,
   user: {
     getCredentials: async () => 'cookie-value',

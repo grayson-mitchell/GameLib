@@ -1,7 +1,7 @@
 import { LogPrefix, logInfo, logWarning } from 'backend/logger'
 import type { IpcMainInvokeEvent } from 'common/types/hostTypes'
 import { ButtonOptions, DialogType } from 'common/types'
-import { sendFrontendMessage } from '../ipc'
+import type { SendFrontendMessage } from '../host/frontendMessage'
 import type { AppState } from '../host/appState'
 import type { Dialogs } from '../host/dialogs'
 import type { Notifications } from '../host/notifications'
@@ -42,6 +42,7 @@ import { RUST_NOTIFICATION_AUTH_DENIED_PREFIX } from 'common/types/sidecarTransp
 export interface DialogBoxDeps {
   appState: Pick<AppState, 'raiseMainWindowForInAppDialog'>
   dialogs: Pick<Dialogs, 'showErrorBox' | 'showMessageBox'>
+  sendFrontendMessage: SendFrontendMessage
 }
 
 /** The host slice `notify` needs. */
@@ -79,7 +80,7 @@ function showDialogBoxModalAuto(
     return true
   } else {
     try {
-      return sendFrontendMessage(
+      return deps.sendFrontendMessage(
         'showDialog',
         props.title,
         props.message,

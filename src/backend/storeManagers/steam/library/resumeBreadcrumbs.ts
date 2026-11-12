@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from 'graceful-fs'
 import { parse } from '@node-steam/vdf'
 import type { SteamStoresDeps } from './installRoot'
 import type { SteamLibraryStateDeps } from 'backend/services/types'
-import { sendFrontendMessage } from '../../../ipc'
+import type { FrontendMessageDeps } from '../../../host/frontendMessage'
 import { isFullyInstalledStateFlags } from './installedMap'
 
 /**
@@ -22,7 +22,7 @@ import { isFullyInstalledStateFlags } from './installedMap'
  * surfacing helper in this file.
  */
 export function markSteamInstallIncomplete(
-  deps: SteamStoresDeps & SteamLibraryStateDeps,
+  deps: SteamStoresDeps & SteamLibraryStateDeps & FrontendMessageDeps,
   appId: string
 ): void {
   const existing = deps.steamSession.libraryState.library.get(appId)
@@ -38,7 +38,7 @@ export function markSteamInstallIncomplete(
     'games',
     Array.from(deps.steamSession.libraryState.library.values())
   )
-  sendFrontendMessage('pushGameToLibrary', updated)
+  deps.sendFrontendMessage('pushGameToLibrary', updated)
 }
 
 /**
@@ -67,7 +67,7 @@ export function markSteamInstallIncomplete(
  * microseconds later already finds it on disk.
  */
 export function markSteamNativeInstallStarted(
-  deps: SteamStoresDeps & SteamLibraryStateDeps,
+  deps: SteamStoresDeps & SteamLibraryStateDeps & FrontendMessageDeps,
   appId: string,
   breadcrumb: {
     targetSteamappsDir: string
@@ -93,7 +93,7 @@ export function markSteamNativeInstallStarted(
     'games',
     Array.from(deps.steamSession.libraryState.library.values())
   )
-  sendFrontendMessage('pushGameToLibrary', updated)
+  deps.sendFrontendMessage('pushGameToLibrary', updated)
 }
 
 /**
@@ -111,7 +111,7 @@ export function markSteamNativeInstallStarted(
  * re-persist on every success.
  */
 export function clearSteamResumeBreadcrumb(
-  deps: SteamStoresDeps & SteamLibraryStateDeps,
+  deps: SteamStoresDeps & SteamLibraryStateDeps & FrontendMessageDeps,
   appId: string
 ): void {
   const existing = deps.steamSession.libraryState.library.get(appId)
@@ -139,7 +139,7 @@ export function clearSteamResumeBreadcrumb(
     'games',
     Array.from(deps.steamSession.libraryState.library.values())
   )
-  sendFrontendMessage('pushGameToLibrary', updated)
+  deps.sendFrontendMessage('pushGameToLibrary', updated)
 }
 
 /**

@@ -25,6 +25,7 @@
  * Callers (games.ts, wired in 56-21) must read CEG markers from `drmExe`, not
  * from the launch exe. Never throws.
  */
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { basename, dirname, resolve } from 'path'
 
 import { logWarning, LogPrefix } from 'backend/logger'
@@ -46,11 +47,12 @@ type ContainFn = (
 ) => Promise<ContainedRealResult>
 
 function containLeaf(
+  rust: RustInvokeDeps,
   path: string,
   rootDir: string,
   _caller: string
 ): Promise<ContainedRealResult> {
-  return invokeScan(RUST_SCAN_CONTAINED_REAL, { path, rootDir })
+  return invokeScan(rust, RUST_SCAN_CONTAINED_REAL, { path, rootDir })
 }
 
 /**
@@ -97,6 +99,7 @@ async function containedUnder(
  * exe. Never throws.
  */
 export async function containedGameExeReal(
+  rust: RustInvokeDeps,
   exePath: string,
   label: string
 ): Promise<string | null> {
@@ -105,7 +108,7 @@ export async function containedGameExeReal(
       dirname(exePath),
       exePath,
       label,
-      containLeaf
+      (p, r, c) => containLeaf(rust, p, r, c)
     )
     return real
   } catch {
@@ -114,6 +117,7 @@ export async function containedGameExeReal(
 }
 
 export async function detectLaunchDrmWrapper(
+  rust: RustInvokeDeps,
   bottleDir: string,
   exePath: string,
   deps: {
@@ -124,9 +128,9 @@ export async function detectLaunchDrmWrapper(
 ): Promise<LaunchDrmWrapper> {
   const detect =
     deps.detect ??
-    ((p: string) => detectDrmWrapper(p, 'detectLaunchDrmWrapper'))
+    ((p: string) => detectDrmWrapper(rust, p, 'detectLaunchDrmWrapper'))
   const findUnreal = deps.findUnreal ?? findUnrealLayout
-  const contain = deps.contain ?? containLeaf
+  const contain = deps.contain ?? ((p, r, c) => containLeaf(rust, p, r, c))
   const gameDir = dirname(exePath)
 
   let launchResult: 'steamstub' | 'none' | undefined

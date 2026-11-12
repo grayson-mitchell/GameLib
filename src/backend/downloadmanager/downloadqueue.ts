@@ -12,7 +12,6 @@ import {
   resolveGameTitle,
   updateQueueElement
 } from './utils'
-import { sendFrontendMessage } from '../ipc'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { notify, type DialogBoxDeps, type NotifyDeps } from '../dialog/dialog'
 import type { GlobalConfigSlice } from '../config'
@@ -86,7 +85,8 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
     steamBottle: deps.steamBottle,
     engineRuntime: deps.engineRuntime,
     steamLaunchRuntime: deps.steamLaunchRuntime,
-    paths: deps.paths
+    paths: deps.paths,
+    sendFrontendMessage: deps.sendFrontendMessage
   }
 
   function onConnectivity(status: ConnectivityStatus) {
@@ -232,7 +232,7 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
           ],
           LogPrefix.DownloadManager
         )
-        sendFrontendMessage(
+        deps.sendFrontendMessage(
           'changedDMQueueInformation',
           downloadManager.get('queue', []),
           queueState
@@ -248,7 +248,7 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
       currentElement = element
 
       queueState = 'running'
-      sendFrontendMessage(
+      deps.sendFrontendMessage(
         'changedDMQueueInformation',
         queuedElements,
         queueState
@@ -292,7 +292,7 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
       return
     }
 
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(deps, {
       appName: element.params.appName,
       runner: element.params.runner,
       folder: element.params.path,
@@ -374,7 +374,7 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
       LogPrefix.DownloadManager
     )
 
-    sendFrontendMessage('changedDMQueueInformation', elements, queueState)
+    deps.sendFrontendMessage('changedDMQueueInformation', elements, queueState)
 
     if (isIdle()) {
       void initQueue()
@@ -420,7 +420,7 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
         !hasCapability(removedRunner, 'installManagedExternally') ||
         forceStatusUpdate
       ) {
-        sendGameStatusUpdate({
+        sendGameStatusUpdate(deps, {
           appName,
           status: 'done'
         })
@@ -431,7 +431,11 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
         LogPrefix.DownloadManager
       )
 
-      sendFrontendMessage('changedDMQueueInformation', elements, queueState)
+      deps.sendFrontendMessage(
+        'changedDMQueueInformation',
+        elements,
+        queueState
+      )
     }
   }
 
@@ -497,7 +501,7 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
     }
     queueState = 'paused'
     autoPaused = false
-    sendFrontendMessage(
+    deps.sendFrontendMessage(
       'changedDMQueueInformation',
       downloadManager.get('queue', []),
       queueState

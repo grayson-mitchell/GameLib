@@ -22,8 +22,7 @@ import {
   NILE_REFRESH_FAILURE_MARKER
 } from 'backend/signInProbe/classify'
 import type { FakeFlagStore } from 'backend/signInProbe/__tests__/fakeFlagStore'
-import type { ExecResult } from 'common/types'
-import type { CallRunnerOptions } from 'common/types'
+import type { ExecResult, CallRunnerOptions } from 'common/types'
 import NileLibraryManager from '../library'
 import type { Stores } from 'backend/services/types'
 
@@ -43,11 +42,6 @@ jest.mock('backend/utils', () => ({
   getFileSize: jest.fn(),
   getNileBin: jest.fn(() => ({ dir: '', bin: 'nile' })),
   removeSpecialcharacters: jest.fn((s: string) => s)
-}))
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: jest.fn(),
-  addHandler: jest.fn(),
-  addTestOnlyListener: jest.fn()
 }))
 
 // Breaks the F2 storeManagers import cycle -- both library.ts (via

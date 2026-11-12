@@ -217,7 +217,7 @@ describe('installSteamBridgeSharedRedists', () => {
     mockedDownload.mockResolvedValue(ok([dx()]))
     await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
 
-    expect(mockedStatus).toHaveBeenCalledWith({
+    expect(mockedStatus).toHaveBeenCalledWith(expect.anything(), {
       appName: APP,
       runner: 'steam',
       status: 'redist',

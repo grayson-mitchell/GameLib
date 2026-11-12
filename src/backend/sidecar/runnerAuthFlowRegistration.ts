@@ -131,6 +131,7 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
   const userDeps = () => ({
     appInfo: deps.appInfo,
     dialogs: deps.dialogs,
+    sendFrontendMessage: deps.sendFrontendMessage,
     appState: deps.appState,
     stores: deps.stores,
     libraryManagers: deps.managers.library,

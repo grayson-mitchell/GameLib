@@ -78,7 +78,6 @@ import type { AbortRegistry } from '../utils/aborthandler/aborthandler'
 import type { WinetricksQueue } from '../tools/winetricksQueue'
 import { isWindows } from '../constants/environment'
 import { assertCommandParts } from './rendererPathGuard'
-import { sendFrontendMessage } from '../ipc'
 import { notify, type DialogBoxDeps, type NotifyDeps } from '../dialog/dialog'
 import type { GlobalConfigSlice } from '../config'
 import type { GameConfigs } from '../game_config'
@@ -195,7 +194,8 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
     return deps.config.getAlternativeWine({
       wineDownloaderInfoStore: deps.stores.wineManager.wineDownloaderInfoStore,
       runner: deps.runner,
-      paths: deps.paths
+      paths: deps.paths,
+      sendFrontendMessage: deps.sendFrontendMessage
     })
   })
 
@@ -219,7 +219,11 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
       const release = args[0] as WineVersionInfo
 
       const onProgress = (state: WineManagerStatus) => {
-        sendFrontendMessage('progressOfWineManager', release.version, state)
+        deps.sendFrontendMessage(
+          'progressOfWineManager',
+          release.version,
+          state
+        )
       }
 
       notify(deps, {

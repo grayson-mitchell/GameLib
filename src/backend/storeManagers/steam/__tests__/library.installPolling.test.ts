@@ -14,7 +14,7 @@ import { stopInstallPolling } from '../library/installStop'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries } from 'backend/utils'
-import { sendFrontendMessage } from '../../../ipc'
+const sendFrontendMessage = jest.fn()
 import { notify } from '../../../dialog/dialog'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
@@ -35,6 +35,7 @@ const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 const getSteamBottleSettings = jest.fn()
 
 const steamTestDeps = createTestManagerDeps({
+  sendFrontendMessage,
   steamBottle: { getSteamBottleSettings } as never,
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
@@ -78,11 +79,6 @@ jest.mock('graceful-fs')
 
 // ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
 jest.mock('@node-steam/vdf')
-
-// ── IPC mock — sendFrontendMessage ───────────────────────────────────────────
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
@@ -466,7 +462,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     await jest.advanceTimersByTimeAsync(10) // tick — observe state BEFORE the extra bare call
 
     const gameStatusCalls = () =>
-      (sendFrontendMessage as jest.Mock).mock.calls.filter(
+      sendFrontendMessage.mock.calls.filter(
         ([channel]) => channel === 'gameStatusUpdate'
       )
     const contextBefore = gameStatusCalls().at(-1)?.[1]?.context
@@ -528,7 +524,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
       String(m).includes('stopped after grace window')
     )
   const installedPushes = () =>
-    (sendFrontendMessage as jest.Mock).mock.calls.filter(
+    sendFrontendMessage.mock.calls.filter(
       ([channel, payload]) =>
         channel === 'pushGameToLibrary' &&
         payload?.app_name === '730' &&
@@ -617,7 +613,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     }
   })
   const doneCalls = () =>
-    (sendFrontendMessage as jest.Mock).mock.calls.filter(
+    sendFrontendMessage.mock.calls.filter(
       ([channel, payload]) =>
         channel === 'gameStatusUpdate' && payload?.status === 'done'
     )
@@ -654,9 +650,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     expect(notify).not.toHaveBeenCalled()
     // PVK-1: the give-up goes to the in-app stack, once.
     expect(
-      (sendFrontendMessage as jest.Mock).mock.calls.filter(
-        ([c]) => c === 'steamRequestNotice'
-      )
+      sendFrontendMessage.mock.calls.filter(([c]) => c === 'steamRequestNotice')
     ).toEqual([
       [
         'steamRequestNotice',
@@ -875,7 +869,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
       })
       await jest.advanceTimersByTimeAsync(interval * 43)
     }
-    const seqs = (sendFrontendMessage as jest.Mock).mock.calls
+    const seqs = sendFrontendMessage.mock.calls
       .filter(([c]) => c === 'steamRequestNotice')
       .map(([, p]) => p.seq as number)
     expect(seqs).toHaveLength(2)
@@ -962,7 +956,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     startInstallPolling(steamTestDeps, '730', { intervalMs: interval })
     await jest.advanceTimersByTimeAsync(interval * 2)
 
-    const installing = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+    const installing = sendFrontendMessage.mock.calls.filter(
       ([channel, payload]) =>
         channel === 'gameStatusUpdate' && payload?.status === 'installing'
     )

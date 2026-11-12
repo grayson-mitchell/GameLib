@@ -41,10 +41,6 @@ jest.mock('backend/logger', () => ({
 
 jest.mock('backend/constants/environment', () => ({ isMac: true }))
 
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
-
 jest.mock('backend/constants/paths', () => ({
   steamBridgeHelperPath: '/mock/bundle/arm64/darwin/steam-bridge-helper',
   steamBridgeHelperStateDir: '/mock/state/steam-bridge'
@@ -91,6 +87,7 @@ let helperDeps: {
   openExternal: { openExternal: jest.Mock }
   bridgeHelpers: BridgeHelperRegistry
   paths: { steamBridgeHelperStateDir: string }
+  sendFrontendMessage: jest.Mock
 }
 function depsFor(bridgeHelpers: BridgeHelperRegistry): typeof helperDeps {
   return {
@@ -98,7 +95,8 @@ function depsFor(bridgeHelpers: BridgeHelperRegistry): typeof helperDeps {
     appState: { openBridgeInvitePicker: mockedOpenBridgeInvitePicker },
     openExternal: { openExternal: mockedOpenExternal },
     bridgeHelpers,
-    paths: { steamBridgeHelperStateDir: '/mock/state/steam-bridge' }
+    paths: { steamBridgeHelperStateDir: '/mock/state/steam-bridge' },
+    sendFrontendMessage
   }
 }
 const MockedSocket = Socket as unknown as jest.Mock
@@ -189,6 +187,8 @@ const whoamiOkFrame = encodeResponse(
   STATUS_OK,
   Buffer.from('76561197995867096')
 )
+
+const sendFrontendMessage = jest.fn()
 
 describe('helperRegistry.ts (D-10 registry state, seams and teardown)', () => {
   beforeEach(() => {

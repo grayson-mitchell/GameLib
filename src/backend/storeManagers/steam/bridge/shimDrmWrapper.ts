@@ -4,6 +4,7 @@
  * design notes.
  */
 
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { resolve } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { invokeScan } from 'backend/scanners/rustScan'
@@ -22,11 +23,12 @@ import type { PlaceShimResultBase, SteamExeDrmSignal } from './shimOriginals'
  * containedGameExeReal.
  */
 export async function detectDrmWrapper(
+  deps: RustInvokeDeps,
   exePath: string,
   _caller = 'placeShimForGame'
 ): Promise<'steamstub' | 'none' | undefined> {
   try {
-    const r = await invokeScan(RUST_SCAN_STEAMSTUB_SECTION, { exePath })
+    const r = await invokeScan(deps, RUST_SCAN_STEAMSTUB_SECTION, { exePath })
     if (r.drmWrapper === null) {
       logWarning(
         `detectDrmWrapper: could not read "${exePath}" (${String(r.readError)})`,
@@ -97,10 +99,11 @@ export function withDrmWrapper(
  * steamclient-layer DRM mode before any shim placement (Phase 56, D-12).
  */
 export async function detectExeSteamDrm(
+  deps: RustInvokeDeps,
   appId: string,
   exePath: string
 ): Promise<SteamExeDrmSignal | null | undefined> {
-  const result = await detectSteamDrmInPe(exePath, 'placeShimForGame')
+  const result = await detectSteamDrmInPe(deps, exePath, 'placeShimForGame')
   if (result.readError !== null) {
     logWarning(
       `placeShimForGame: Steam DRM detection could not read the exe for appId ${appId} -- treating as not CEG (${result.readError})`,

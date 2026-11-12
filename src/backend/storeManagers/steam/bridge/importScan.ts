@@ -30,6 +30,7 @@
  * the zero-spawn ranged reader in `peSteamDrm.ts` and merges it in.
  */
 
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { parseSteamApiImportTable } from './importParse'
 import { NUMERIC_APP_ID } from '../gameConstants'
@@ -57,6 +58,7 @@ export function parseSteamApiImports(objdumpOutput: string): string[] {
  * a `steam_api64.dll` heading is also a typed error (T-51-06).
  */
 export async function scanSteamApiImports(
+  deps: RustInvokeDeps,
   appId: string,
   exePath: string,
   _caller = 'scanSteamApiImports'
@@ -71,6 +73,7 @@ export async function scanSteamApiImports(
 
   try {
     const { diagnostics, ...result } = await invokeScan(
+      deps,
       RUST_SCAN_STEAM_API_IMPORTS,
       { exePath, appId }
     )

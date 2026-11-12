@@ -56,6 +56,7 @@
  * store directly (see `storeManagers/gog/stores.ts`).
  */
 
+import type { SendFrontendMessage } from '../host/frontendMessage'
 import type { GameConfigs } from '../game_config'
 import type { GlobalConfigSlice } from '../config'
 import type { AppInfo } from '../process/context'
@@ -120,6 +121,7 @@ export function registerSettingsFlows(deps: {
   runner: BootServices['runner']
   /** The boot-owned Steam library map (D-66.3-13). */
   steamSession: Pick<BootServices['steamSession'], 'libraryState'>
+  sendFrontendMessage: SendFrontendMessage
 }): void {
   deps.ipc.handle('requestAppSettings', async () => deps.config.getSettings())
 

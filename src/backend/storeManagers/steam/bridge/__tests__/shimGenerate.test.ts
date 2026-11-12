@@ -56,7 +56,6 @@ import { join, resolve } from 'node:path'
 import { placeShimForGame } from '../shimGenerate'
 import { detectDrmWrapper } from '../shimDrmWrapper'
 import * as drmScanExe from '../drm/drmScanExe'
-import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
 import { stubRustScan } from './fixtures/stubRustScan'
 import { scanSteamApiImports } from '../importScan'
 import { SHIM64_EXPORTED_SYMBOLS } from '../shimCoverage'
@@ -64,6 +63,9 @@ import * as bridgeScan from '../bridgeScan'
 import { buildManagedPe } from './fixtures/managedPe'
 import { resolveBridgeBottleName } from '../../bridgeBottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
+
+const requestRustInvoke = jest.fn()
+const rust = { requestRustInvoke }
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -74,13 +76,6 @@ jest.mock('backend/logger', () => ({
 
 jest.mock('../importScan', () => ({
   scanSteamApiImports: jest.fn()
-}))
-
-// Phase 63 plan 07: the rustInvoke leaf. Caller logic is tested against this
-// boundary; by default it answers via stubRustScan (real containment on temp
-// files, "nothing found" for the byte parsers; those live in the Rust tests and goldens). Tests override it with canned results.
-jest.mock('backend/sidecar/sidecarRpc', () => ({
-  requestRustInvoke: jest.fn()
 }))
 
 jest.mock('backend/engine/bottlePrimitives', () => ({
@@ -260,7 +255,7 @@ describe('shimGenerate', () => {
       symbols: ['SteamAPI_Init', 'SteamAPI_Shutdown']
     })
 
-    const result = await placeShimForGame(appPaths, '1234', gameExePath, {
+    const result = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       shimSourcePath: realShimSourcePath
     })
 
@@ -287,7 +282,7 @@ describe('shimGenerate', () => {
       symbols: ['SteamAPI_Init', 'SteamAPI_Shutdown']
     })
 
-    await placeShimForGame(appPaths, '1234', gameExePath, {
+    await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       shimSourcePath: realShimSourcePath
     })
 
@@ -313,7 +308,7 @@ describe('shimGenerate', () => {
       symbols: ['SteamAPI_Init', 'SteamAPI_Shutdown']
     })
 
-    const result = await placeShimForGame(appPaths, '1234', gameExePath, {
+    const result = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       shimSourcePath: realShimSourcePath
     })
 
@@ -333,13 +328,13 @@ describe('shimGenerate', () => {
       symbols: ['SteamAPI_Init', 'SteamAPI_Shutdown']
     })
 
-    const first = await placeShimForGame(appPaths, '1234', gameExePath, {
+    const first = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       shimSourcePath: realShimSourcePath
     })
     expect(first.status).toBe('placed')
     expect(mockedScanSteamApiImports).toHaveBeenCalledTimes(1)
 
-    const second = await placeShimForGame(appPaths, '1234', gameExePath, {
+    const second = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       shimSourcePath: realShimSourcePath
     })
     expect(second).toEqual({
@@ -363,7 +358,7 @@ describe('shimGenerate', () => {
       symbols: ['SteamAPI_Init', 'SteamAPI_ISteamRemoteStorage_v016']
     })
 
-    const result = await placeShimForGame(appPaths, '1234', gameExePath, {
+    const result = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       shimSourcePath: realShimSourcePath
     })
 
@@ -382,7 +377,7 @@ describe('shimGenerate', () => {
     )
 
     // A second call is an identity no-op with no verdict (keeps the miss).
-    const second = await placeShimForGame(appPaths, '1234', gameExePath, {
+    const second = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       shimSourcePath: realShimSourcePath
     })
     expect(second).toEqual({
@@ -401,7 +396,7 @@ describe('shimGenerate', () => {
       symbols: ['SteamAPI_Init', 'SteamAPI_ISteamRemoteStorage_v016']
     })
 
-    const result = await placeShimForGame(appPaths, '1234', gameExePath, {
+    const result = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       shimSourcePath: realShimSourcePath
     })
 
@@ -423,7 +418,7 @@ describe('shimGenerate', () => {
       symbols: ['SteamUser']
     })
 
-    const result = await placeShimForGame(appPaths, '1234', gameExePath, {
+    const result = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       shimSourcePath: realShimSourcePath
     })
 
@@ -446,7 +441,7 @@ describe('shimGenerate', () => {
       symbols: ['SteamUser', 'SteamAPI_ISteamRemoteStorage_v016']
     })
 
-    const result = await placeShimForGame(appPaths, '1234', gameExePath, {
+    const result = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       shimSourcePath: realShimSourcePath
     })
 
@@ -475,7 +470,7 @@ describe('shimGenerate', () => {
       symbols: ['SteamUser']
     })
 
-    const result = await placeShimForGame(appPaths, '1234', gameExePath, {
+    const result = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       shimSourcePath: realShimSourcePath
     })
 
@@ -501,7 +496,7 @@ describe('shimGenerate', () => {
       symbols: ['SteamUser']
     })
 
-    const result = await placeShimForGame(appPaths, '1234', gameExePath, {
+    const result = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       shimSourcePath: realShimSourcePath,
       persistedInterfaceVersions: { SteamUser: 'SteamUser023' }
     })
@@ -522,7 +517,7 @@ describe('shimGenerate', () => {
       symbols: ['SteamUser']
     })
 
-    const result = await placeShimForGame(appPaths, '1234', gameExePath, {
+    const result = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       shimSourcePath: realShimSourcePath
     })
 
@@ -536,6 +531,7 @@ describe('shimGenerate', () => {
 
   it('rejects a non-numeric appId before any copy operation', async () => {
     const result = await placeShimForGame(
+      rust,
       appPaths,
       'not-numeric',
       gameExePath,
@@ -553,7 +549,7 @@ describe('shimGenerate', () => {
   })
 
   it('rejects an unsafe bottle name before any copy operation', async () => {
-    const result = await placeShimForGame(appPaths, '1234', gameExePath, {
+    const result = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       bottleName: '../evil',
       shimSourcePath: realShimSourcePath
     })
@@ -571,7 +567,7 @@ describe('shimGenerate', () => {
     mkdirSync(join(root, 'outside-bottle'), { recursive: true })
     writeFileSync(outsidePath, 'not-in-the-bottle')
 
-    const result = await placeShimForGame(appPaths, '1234', outsidePath, {
+    const result = await placeShimForGame(rust, appPaths, '1234', outsidePath, {
       shimSourcePath: realShimSourcePath
     })
 
@@ -589,7 +585,7 @@ describe('shimGenerate', () => {
       symbols: []
     })
 
-    const result = await placeShimForGame(appPaths, '1234', gameExePath, {
+    const result = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       shimSourcePath: realShimSourcePath
     })
 
@@ -632,6 +628,7 @@ describe('shimGenerate', () => {
       writeFileSync(dll, originalDll)
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '391540',
         gameExePath,
@@ -666,6 +663,7 @@ describe('shimGenerate', () => {
       writeFileSync(dll + BACKUP, originalDll)
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '391540',
         gameExePath,
@@ -687,6 +685,7 @@ describe('shimGenerate', () => {
       writeFileSync(dll, originalDll)
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '391540',
         gameExePath,
@@ -705,6 +704,7 @@ describe('shimGenerate', () => {
       writeFileSync(dll, originalDll)
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '391540',
         gameExePath,
@@ -727,6 +727,7 @@ describe('shimGenerate', () => {
       writeFileSync(dll, originalDll)
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '391540',
         gameExePath,
@@ -759,10 +760,16 @@ describe('shimGenerate', () => {
       const dll = join(gameDir, 'Plugins', 'x86_64', 'steam_api64.dll')
       writeFileSync(dll, 'plain-game-dll')
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shimSourcePath: realShimSourcePath,
-        shim64SourcePath: realShim64SourcePath
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shimSourcePath: realShimSourcePath,
+          shim64SourcePath: realShim64SourcePath
+        }
+      )
 
       expect(result.status).toBe('placed-miss')
       if (result.status === 'placed-miss') {
@@ -784,10 +791,16 @@ describe('shimGenerate', () => {
       const dll = join(gameDir, 'bin', 'Steam_API.dll')
       writeFileSync(dll, 'plain-game-dll')
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shimSourcePath: realShimSourcePath,
-        shim64SourcePath: realShim64SourcePath
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shimSourcePath: realShimSourcePath,
+          shim64SourcePath: realShim64SourcePath
+        }
+      )
 
       expect(result.status).toBe('placed-miss')
       if (result.status === 'placed-miss') {
@@ -806,10 +819,16 @@ describe('shimGenerate', () => {
       writeFileSync(join(gameDir, 'a', 'steam_api.dll'), 'plain')
       writeFileSync(join(gameDir, 'a', 'steam_api64.dll'), 'plain')
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shimSourcePath: realShimSourcePath,
-        shim64SourcePath: realShim64SourcePath
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shimSourcePath: realShimSourcePath,
+          shim64SourcePath: realShim64SourcePath
+        }
+      )
 
       expect(result.status).toBe('placed-miss')
       if (result.status === 'placed-miss') {
@@ -836,7 +855,13 @@ describe('shimGenerate', () => {
         shimSourcePath: realShimSourcePath,
         shim64SourcePath: realShim64SourcePath
       }
-      const first = await placeShimForGame(appPaths, '1234', gameExePath, opts)
+      const first = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        opts
+      )
 
       // quick 261026-lif: the first placement backed the original up, so the
       // caller must hand back the fingerprints the first verdict recorded
@@ -846,10 +871,16 @@ describe('shimGenerate', () => {
           ? first.verdict.originalFingerprints
           : undefined
       expect(persistedOriginalFingerprints).toBeDefined()
-      const second = await placeShimForGame(appPaths, '1234', gameExePath, {
-        ...opts,
-        persistedOriginalFingerprints
-      })
+      const second = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          ...opts,
+          persistedOriginalFingerprints
+        }
+      )
 
       expect(second).toEqual({
         status: 'already-placed',
@@ -869,10 +900,16 @@ describe('shimGenerate', () => {
       const original = join(gameDir, 'Plugins', 'x86_64', 'steam_api64.dll')
       writeFileSync(original, 'plain-game-dll')
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shimSourcePath: realShimSourcePath,
-        shim64SourcePath: realShim64SourcePath
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shimSourcePath: realShimSourcePath,
+          shim64SourcePath: realShim64SourcePath
+        }
+      )
 
       expect(result.status).toBe('placed-miss')
       if (result.status === 'placed-miss') {
@@ -887,10 +924,16 @@ describe('shimGenerate', () => {
       const dll = join(gameDir, 'steam_api.dll')
       writeFileSync(dll, 'GameLibSteamBridgeShim OLD release')
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shimSourcePath: realShimSourcePath,
-        shim64SourcePath: realShim64SourcePath
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shimSourcePath: realShimSourcePath,
+          shim64SourcePath: realShim64SourcePath
+        }
+      )
 
       expect(result.status).toBe('placed-miss')
       if (result.status === 'placed-miss') {
@@ -906,10 +949,16 @@ describe('shimGenerate', () => {
       const dll = join(gameDir, 'steam_api64.dll')
       writeFileSync(dll, 'plain-game-dll')
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shimSourcePath: realShimSourcePath,
-        shim64SourcePath: join(root, 'never-built', 'steam_api64.dll')
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shimSourcePath: realShimSourcePath,
+          shim64SourcePath: join(root, 'never-built', 'steam_api64.dll')
+        }
+      )
 
       expect(result).toEqual({ status: 'shim-not-built', arch: 'x64' })
       expect(readFileSync(dll, 'utf-8')).toBe('plain-game-dll')
@@ -921,9 +970,15 @@ describe('shimGenerate', () => {
       mkdirSync(deep, { recursive: true })
       writeFileSync(join(deep, 'steam_api.dll'), 'plain')
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shimSourcePath: realShimSourcePath
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shimSourcePath: realShimSourcePath
+        }
+      )
 
       expect(result.status).toBe('no-steam-api')
     })
@@ -936,9 +991,15 @@ describe('shimGenerate', () => {
       )
       writeFileSync(realShimSourcePath, 'GameLibSteamBridgeShim bytes')
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shimSourcePath: realShimSourcePath
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shimSourcePath: realShimSourcePath
+        }
+      )
 
       expect(result).toEqual({
         status: 'already-placed',
@@ -955,10 +1016,16 @@ describe('shimGenerate', () => {
       mkdirSync(outside, { recursive: true })
       writeFileSync(join(outside, 'steam_api.dll'), 'plain')
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shimSourcePath: realShimSourcePath,
-        gameInstallRoot: outside
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shimSourcePath: realShimSourcePath,
+          gameInstallRoot: outside
+        }
+      )
 
       expect(result.status).toBe('no-steam-api')
     })
@@ -971,7 +1038,7 @@ describe('shimGenerate', () => {
       symbols: ['SteamAPI_Init']
     })
 
-    const result = await placeShimForGame(appPaths, '1234', gameExePath, {
+    const result = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       shimSourcePath: join(root, 'never-built', 'steam_api.dll')
     })
 
@@ -987,7 +1054,7 @@ describe('shimGenerate', () => {
       symbols: ['SteamAPI_Init']
     })
 
-    const result = await placeShimForGame(appPaths, '1234', gameExePath, {
+    const result = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       shimSourcePath: join(root, 'never-built', 'steam_api.dll')
     })
 
@@ -1007,7 +1074,7 @@ describe('shimGenerate', () => {
       symbols: ['SteamAPI_Init']
     })
 
-    const result = await placeShimForGame(appPaths, '1234', gameExePath)
+    const result = await placeShimForGame(rust, appPaths, '1234', gameExePath)
     expect(result).toEqual({ status: 'shim-not-built', arch: 'x86' })
   })
 
@@ -1023,7 +1090,7 @@ describe('shimGenerate', () => {
       symbols: ['SteamAPI_Init', 'SteamNetworkingUtils']
     })
 
-    const result = await placeShimForGame(appPaths, '1234', gameExePath, {
+    const result = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       shim64SourcePath: realShim64SourcePath
     })
 
@@ -1051,7 +1118,7 @@ describe('shimGenerate', () => {
       symbols: ['SteamAPI_Init']
     })
 
-    const result = await placeShimForGame(appPaths, '1234', gameExePath)
+    const result = await placeShimForGame(rust, appPaths, '1234', gameExePath)
     expect(result).toEqual({ status: 'shim-not-built', arch: 'x64' })
   })
 
@@ -1063,7 +1130,7 @@ describe('shimGenerate', () => {
       symbols: ['SteamAPI_Init']
     })
 
-    const result = await placeShimForGame(appPaths, '1234', gameExePath, {
+    const result = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       shim64SourcePath: join(root, 'never-built', 'steam_api64.dll')
     })
 
@@ -1081,7 +1148,7 @@ describe('shimGenerate', () => {
     })
     writeFileSync(shimDestPath(), 'fake-compiled-pe32-dll-bytes-x86')
 
-    const result = await placeShimForGame(appPaths, '1234', gameExePath, {
+    const result = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       shimSourcePath: realShimSourcePath
     })
 
@@ -1148,7 +1215,7 @@ describe('shimGenerate', () => {
       symbols: readDefExports()
     })
 
-    const result = await placeShimForGame(appPaths, '1234', gameExePath, {
+    const result = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
       shimSourcePath: realShimSourcePath
     })
 
@@ -1167,7 +1234,7 @@ describe('shimGenerate', () => {
     }
     const scanByPath = (table: Record<string, Scan>) =>
       mockedScanSteamApiImports.mockImplementation(
-        (_appId: string, path: string) =>
+        (_rust: unknown, _appId: string, path: string) =>
           Promise.resolve(
             table[path] ?? { status: 'ok', arch: 'none', symbols: [] }
           )
@@ -1195,10 +1262,16 @@ describe('shimGenerate', () => {
         }
       })
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shim64SourcePath: realShim64SourcePath,
-        gameInstallRoot: gameDir
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shim64SourcePath: realShim64SourcePath,
+          gameInstallRoot: gameDir
+        }
+      )
 
       expect(result.status).toBe('placed-miss')
       if (result.status === 'placed-miss') {
@@ -1213,10 +1286,16 @@ describe('shimGenerate', () => {
         [plugin]: { status: 'ok', arch: 'x64', symbols: ['SteamAPI_Init'] }
       })
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shim64SourcePath: realShim64SourcePath,
-        gameInstallRoot: gameDir
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shim64SourcePath: realShim64SourcePath,
+          gameInstallRoot: gameDir
+        }
+      )
 
       expect(result.status).toBe('placed')
       if (result.status === 'placed') {
@@ -1235,10 +1314,16 @@ describe('shimGenerate', () => {
         }
       })
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shim64SourcePath: realShim64SourcePath,
-        gameInstallRoot: gameDir
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shim64SourcePath: realShim64SourcePath,
+          gameInstallRoot: gameDir
+        }
+      )
 
       expect(result.status).toBe('placed')
     })
@@ -1251,12 +1336,12 @@ describe('shimGenerate', () => {
       symlinkSync(plugin, join(gameDir, 'bin', 'Link.dll'))
       scanByPath({ [gameExePath]: exeScan })
 
-      await placeShimForGame(appPaths, '1234', gameExePath, {
+      await placeShimForGame(rust, appPaths, '1234', gameExePath, {
         shim64SourcePath: realShim64SourcePath,
         gameInstallRoot: gameDir
       })
 
-      const scanned = mockedScanSteamApiImports.mock.calls.map((c) => c[1])
+      const scanned = mockedScanSteamApiImports.mock.calls.map((c) => c[2])
       expect(scanned.filter((p) => p === gameExePath)).toHaveLength(1)
       expect(scanned).toContain(plugin)
       expect(scanned).not.toContain(join(gameDir, 'bin', 'readme.txt'))
@@ -1268,7 +1353,7 @@ describe('shimGenerate', () => {
     it('skips an importer whose scan errors and keeps placing', async () => {
       const plugin = mkImporter(join('bin', 'Plugin.dll'))
       mockedScanSteamApiImports.mockImplementation(
-        (_appId: string, path: string) =>
+        (_rust: unknown, _appId: string, path: string) =>
           Promise.resolve(
             path === plugin
               ? { status: 'error', error: 'objdump boom' }
@@ -1276,10 +1361,16 @@ describe('shimGenerate', () => {
           )
       )
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shim64SourcePath: realShim64SourcePath,
-        gameInstallRoot: gameDir
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shim64SourcePath: realShim64SourcePath,
+          gameInstallRoot: gameDir
+        }
+      )
 
       expect(result.status).toBe('placed')
     })
@@ -1289,10 +1380,16 @@ describe('shimGenerate', () => {
       writeFileSync(shim64DestPath(), 'fake-compiled-pe32-dll-bytes-x64')
       mockedScanSteamApiImports.mockResolvedValue(exeScan)
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shim64SourcePath: realShim64SourcePath,
-        gameInstallRoot: gameDir
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shim64SourcePath: realShim64SourcePath,
+          gameInstallRoot: gameDir
+        }
+      )
 
       expect(result.status).toBe('already-placed')
       expect(mockedScanSteamApiImports).toHaveBeenCalledTimes(1)
@@ -1307,7 +1404,7 @@ describe('shimGenerate', () => {
     }
     const scanByPath = (table: Record<string, Scan>) =>
       mockedScanSteamApiImports.mockImplementation(
-        (_appId: string, path: string) =>
+        (_rust: unknown, _appId: string, path: string) =>
           Promise.resolve(
             table[path] ?? { status: 'ok', arch: 'none', symbols: [] }
           )
@@ -1356,6 +1453,7 @@ describe('shimGenerate', () => {
       ])
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1234',
         gameExePath,
@@ -1375,6 +1473,7 @@ describe('shimGenerate', () => {
       const { dll64, dll86 } = grimDawnTree(['SteamInternal_SteamAPI_Init'])
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1234',
         gameExePath,
@@ -1397,6 +1496,7 @@ describe('shimGenerate', () => {
       scanByPath({})
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1234',
         gameExePath,
@@ -1419,6 +1519,7 @@ describe('shimGenerate', () => {
       scanByPath({})
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1234',
         gameExePath,
@@ -1438,7 +1539,7 @@ describe('shimGenerate', () => {
     }
     const scanByPath = (table: Record<string, Scan>) =>
       mockedScanSteamApiImports.mockImplementation(
-        (_appId: string, path: string) =>
+        (_rust: unknown, _appId: string, path: string) =>
           Promise.resolve(
             table[path] ?? { status: 'ok', arch: 'none', symbols: [] }
           )
@@ -1513,6 +1614,7 @@ describe('shimGenerate', () => {
         })
 
         const result = await placeShimForGame(
+          rust,
           appPaths,
           appId,
           gameExePath,
@@ -1528,6 +1630,7 @@ describe('shimGenerate', () => {
         }
         expect(readFileSync(dll, 'utf-8')).toBe(MARK_X64)
         expect(mockedScanSteamApiImports).toHaveBeenCalledWith(
+          expect.anything(),
           appId,
           shipping,
           'bridgeScan'
@@ -1546,6 +1649,7 @@ describe('shimGenerate', () => {
       })
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1363080',
         gameExePath,
@@ -1571,6 +1675,7 @@ describe('shimGenerate', () => {
       })
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1363080',
         gameExePath,
@@ -1581,7 +1686,7 @@ describe('shimGenerate', () => {
       if (result.status === 'placed') {
         expect(result.verdict?.status).toBe('clean')
       }
-      const paths = mockedScanSteamApiImports.mock.calls.map((c) => c[1])
+      const paths = mockedScanSteamApiImports.mock.calls.map((c) => c[2])
       expect(paths.filter((p) => p === shipping)).toHaveLength(1)
       expect(paths[1]).toBe(shipping)
       const warn = jest.requireMock('backend/logger').logWarning
@@ -1607,6 +1712,7 @@ describe('shimGenerate', () => {
       scanByPath({})
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1363080',
         gameExePath,
@@ -1629,6 +1735,7 @@ describe('shimGenerate', () => {
       })
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1363080',
         gameExePath,
@@ -1641,7 +1748,7 @@ describe('shimGenerate', () => {
           'steam_api64.dll@runtime-loaded'
         ])
       }
-      const paths = mockedScanSteamApiImports.mock.calls.map((c) => c[1])
+      const paths = mockedScanSteamApiImports.mock.calls.map((c) => c[2])
       expect(paths).not.toContain(shipping)
       expect(paths).not.toContain(target)
     })
@@ -1665,6 +1772,7 @@ describe('shimGenerate', () => {
       scanByPath({})
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1363080',
         gameExePath,
@@ -1681,6 +1789,7 @@ describe('shimGenerate', () => {
       scanByPath({})
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1234',
         gameExePath,
@@ -1707,9 +1816,15 @@ describe('shimGenerate', () => {
       )
       okImports()
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shimSourcePath: realShimSourcePath
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shimSourcePath: realShimSourcePath
+        }
+      )
 
       expect(result.status).toBe('placed')
       expect(result.drm).toEqual({
@@ -1728,9 +1843,15 @@ describe('shimGenerate', () => {
         .spyOn(drmScanExe, 'detectLaunchDrmWrapper')
         .mockResolvedValue({ drmWrapper: 'steamstub', drmExe: shipping })
       try {
-        const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-          shimSourcePath: realShimSourcePath
-        })
+        const result = await placeShimForGame(
+          rust,
+          appPaths,
+          '1234',
+          gameExePath,
+          {
+            shimSourcePath: realShimSourcePath
+          }
+        )
         expect(result.drm).toEqual({
           kind: 'ceg',
           markers: ['STEAM_SPLIT_GUID']
@@ -1748,9 +1869,15 @@ describe('shimGenerate', () => {
         .spyOn(drmScanExe, 'detectLaunchDrmWrapper')
         .mockResolvedValue({ drmWrapper: 'none', drmExe: gameExePath })
       try {
-        const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-          shimSourcePath: realShimSourcePath
-        })
+        const result = await placeShimForGame(
+          rust,
+          appPaths,
+          '1234',
+          gameExePath,
+          {
+            shimSourcePath: realShimSourcePath
+          }
+        )
         expect(result.drm).toEqual({ kind: 'ceg', markers: ['STEAM_GUIDD'] })
       } finally {
         spy.mockRestore()
@@ -1761,9 +1888,15 @@ describe('shimGenerate', () => {
       writeFileSync(gameExePath, buildMinimalPe([]))
       okImports()
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shimSourcePath: realShimSourcePath
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shimSourcePath: realShimSourcePath
+        }
+      )
 
       expect(result.status).toBe('placed')
       expect(result.drm).toBeNull()
@@ -1772,9 +1905,15 @@ describe('shimGenerate', () => {
     it('a non-PE exe carries no drm key', async () => {
       okImports()
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shimSourcePath: realShimSourcePath
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shimSourcePath: realShimSourcePath
+        }
+      )
 
       expect(result.status).toBe('placed')
       expect('drm' in result).toBe(false)
@@ -1790,6 +1929,7 @@ describe('shimGenerate', () => {
       mockedLogWarning.mockClear()
 
       const badAppId = await placeShimForGame(
+        rust,
         appPaths,
         'not-numeric',
         gameExePath,
@@ -1797,9 +1937,15 @@ describe('shimGenerate', () => {
           shimSourcePath: realShimSourcePath
         }
       )
-      const outside = await placeShimForGame(appPaths, '1234', outsidePath, {
-        shimSourcePath: realShimSourcePath
-      })
+      const outside = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        outsidePath,
+        {
+          shimSourcePath: realShimSourcePath
+        }
+      )
 
       expect(badAppId.status).toBe('error')
       expect(outside.status).toBe('error')
@@ -1821,7 +1967,7 @@ describe('shimGenerate', () => {
     }
     const scanByPath = (table: Record<string, Scan>) =>
       mockedScanSteamApiImports.mockImplementation(
-        (_appId: string, path: string) =>
+        (_rust: unknown, _appId: string, path: string) =>
           Promise.resolve(
             table[path] ?? { status: 'ok', arch: 'none', symbols: [] }
           )
@@ -1846,9 +1992,15 @@ describe('shimGenerate', () => {
       writeFileSync(shimDestPath(), 'game-original-bytes')
       x86Scan()
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shimSourcePath: realShimSourcePath
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shimSourcePath: realShimSourcePath
+        }
+      )
 
       expect(result.status).toBe('placed')
       expect(readFileSync(shimDestPath(), 'utf-8')).toBe(
@@ -1864,9 +2016,15 @@ describe('shimGenerate', () => {
       writeFileSync(shimDestPath() + BACKUP, 'orig')
       x86Scan()
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shimSourcePath: realShimSourcePath
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shimSourcePath: realShimSourcePath
+        }
+      )
 
       expect(result.status).toBe('placed')
       expect(readFileSync(shimDestPath() + BACKUP, 'utf-8')).toBe('orig')
@@ -1877,7 +2035,7 @@ describe('shimGenerate', () => {
       writeFileSync(shimDestPath() + BACKUP, 'old-orig')
       x86Scan()
 
-      await placeShimForGame(appPaths, '1234', gameExePath, {
+      await placeShimForGame(rust, appPaths, '1234', gameExePath, {
         shimSourcePath: realShimSourcePath
       })
 
@@ -1903,11 +2061,17 @@ describe('shimGenerate', () => {
         }
       })
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shimSourcePath: realShimSourcePath,
-        shim64SourcePath: realShim64SourcePath,
-        gameInstallRoot: gameDir
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shimSourcePath: realShimSourcePath,
+          shim64SourcePath: realShim64SourcePath,
+          gameInstallRoot: gameDir
+        }
+      )
 
       expect(result.status).toBe('placed')
       expect(readFileSync(dll64, 'utf-8')).toBe(MARK_X64)
@@ -1921,9 +2085,15 @@ describe('shimGenerate', () => {
       mkdirSync(shimDestPath() + BACKUP)
       x86Scan()
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shimSourcePath: realShimSourcePath
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shimSourcePath: realShimSourcePath
+        }
+      )
 
       expect(result.status).toBe('error')
       expect(readFileSync(shimDestPath(), 'utf-8')).toBe('game-original-bytes')
@@ -1936,9 +2106,15 @@ describe('shimGenerate', () => {
       symlinkSync(outside, shimDestPath() + BACKUP)
       x86Scan()
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shimSourcePath: realShimSourcePath
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shimSourcePath: realShimSourcePath
+        }
+      )
 
       expect(result.status).toBe('error')
       expect(readFileSync(shimDestPath(), 'utf-8')).toBe('game-original-bytes')
@@ -1962,17 +2138,23 @@ describe('shimGenerate', () => {
         }
       })
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shim64SourcePath: realShim64SourcePath,
-        gameInstallRoot: gameDir
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shim64SourcePath: realShim64SourcePath,
+          gameInstallRoot: gameDir
+        }
+      )
 
       expect(result.status).toBe('placed')
       if (result.status === 'placed') {
         expect(result.shimPaths).toEqual([dll64])
       }
       expect(readFileSync(backup, 'utf-8')).toBe('orig64')
-      const paths = mockedScanSteamApiImports.mock.calls.map((c) => c[1])
+      const paths = mockedScanSteamApiImports.mock.calls.map((c) => c[2])
       expect(paths).not.toContain(backup)
     })
   })
@@ -1986,7 +2168,7 @@ describe('shimGenerate', () => {
     }
     const scanByPath = (table: Record<string, Scan>) =>
       mockedScanSteamApiImports.mockImplementation(
-        (_appId: string, path: string) =>
+        (_rust: unknown, _appId: string, path: string) =>
           Promise.resolve(
             table[path] ?? { status: 'ok', arch: 'none', symbols: [] }
           )
@@ -2072,6 +2254,7 @@ describe('shimGenerate', () => {
       })
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1363080',
         gameExePath,
@@ -2109,6 +2292,7 @@ describe('shimGenerate', () => {
       })
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1363080',
         gameExePath,
@@ -2126,6 +2310,7 @@ describe('shimGenerate', () => {
       })
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1363080',
         gameExePath,
@@ -2148,6 +2333,7 @@ describe('shimGenerate', () => {
       })
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1363080',
         gameExePath,
@@ -2174,6 +2360,7 @@ describe('shimGenerate', () => {
       })
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1363080',
         gameExePath,
@@ -2209,6 +2396,7 @@ describe('shimGenerate', () => {
       bogusScan(shipping)
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1363080',
         gameExePath,
@@ -2230,6 +2418,7 @@ describe('shimGenerate', () => {
       bogusScan(shipping)
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1363080',
         gameExePath,
@@ -2257,6 +2446,7 @@ describe('shimGenerate', () => {
       bogusScan(shipping)
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1363080',
         gameExePath,
@@ -2286,6 +2476,7 @@ describe('shimGenerate', () => {
       bogusScan(shipping)
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1363080',
         gameExePath,
@@ -2308,6 +2499,7 @@ describe('shimGenerate', () => {
       bogusScan(shipping)
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1363080',
         gameExePath,
@@ -2333,9 +2525,15 @@ describe('shimGenerate', () => {
         delaySymbols: ['SteamAPI_Bogus']
       })
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shim64SourcePath: realShim64SourcePath
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shim64SourcePath: realShim64SourcePath
+        }
+      )
 
       expect(result.status).toBe('withheld')
       expect(readFileSync(shim64DestPath(), 'utf-8')).toBe(
@@ -2371,9 +2569,15 @@ describe('shimGenerate', () => {
         symbols: ['SteamAPI_Init', 'SteamInternal_CreateInterface']
       })
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shim64SourcePath: realShim64SourcePath
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shim64SourcePath: realShim64SourcePath
+        }
+      )
 
       expect(result.status).toBe('placed-miss')
       if (result.status === 'placed-miss') {
@@ -2396,9 +2600,15 @@ describe('shimGenerate', () => {
         delaySymbols: ['SteamAPI_Bogus']
       })
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shim64SourcePath: realShim64SourcePath
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shim64SourcePath: realShim64SourcePath
+        }
+      )
 
       expect(result.status).toBe('placed-miss')
       if (result.status === 'placed-miss') {
@@ -2431,9 +2641,15 @@ describe('shimGenerate', () => {
         writeFileSync(shim64DestPath(), 'game-original-bytes')
         writeFileSync(shim64DestPath() + BACKUP, 'game-original-bytes')
 
-        const result = await placeShimForGame(appPaths, '411300', gameExePath, {
-          shim64SourcePath: realShim64SourcePath
-        })
+        const result = await placeShimForGame(
+          rust,
+          appPaths,
+          '411300',
+          gameExePath,
+          {
+            shim64SourcePath: realShim64SourcePath
+          }
+        )
 
         expect(result.status).toBe('placed-miss')
         if (result.status === 'placed-miss') {
@@ -2458,9 +2674,15 @@ describe('shimGenerate', () => {
         writeFileSync(shim64DestPath(), 'GameLibSteamBridgeShim old')
         writeFileSync(shim64DestPath() + BACKUP, 'orig-bytes')
 
-        const result = await placeShimForGame(appPaths, '411300', gameExePath, {
-          shim64SourcePath: realShim64SourcePath
-        })
+        const result = await placeShimForGame(
+          rust,
+          appPaths,
+          '411300',
+          gameExePath,
+          {
+            shim64SourcePath: realShim64SourcePath
+          }
+        )
 
         expect(result.status).toBe('placed-miss')
         expect(readFileSync(shim64DestPath(), 'utf-8')).toBe(MARK_X64)
@@ -2476,9 +2698,15 @@ describe('shimGenerate', () => {
         writeFileSync(shim64DestPath(), 'GameLibSteamBridgeShim old')
         writeFileSync(shim64DestPath() + BACKUP, 'orig-bytes')
 
-        const result = await placeShimForGame(appPaths, '411300', gameExePath, {
-          shim64SourcePath: realShim64SourcePath
-        })
+        const result = await placeShimForGame(
+          rust,
+          appPaths,
+          '411300',
+          gameExePath,
+          {
+            shim64SourcePath: realShim64SourcePath
+          }
+        )
 
         expect(result.status).toBe('withheld')
         if (result.status === 'withheld') {
@@ -2506,6 +2734,7 @@ describe('shimGenerate', () => {
         })
 
         const result = await placeShimForGame(
+          rust,
           appPaths,
           '3410180',
           gameExePath,
@@ -2549,19 +2778,23 @@ describe('shimGenerate', () => {
     it('detectDrmWrapper maps the scan_steamstub_section result', async () => {
       const rpc = jest.mocked(requestRustInvoke)
       rpc.mockResolvedValueOnce({ drmWrapper: 'steamstub', readError: null })
-      await expect(detectDrmWrapper(gameExePath)).resolves.toBe('steamstub')
+      await expect(detectDrmWrapper(rust, gameExePath)).resolves.toBe(
+        'steamstub'
+      )
       expect(rpc).toHaveBeenCalledWith('scan_steamstub_section', [
         { exePath: gameExePath }
       ])
       rpc.mockResolvedValueOnce({ drmWrapper: 'none', readError: null })
-      await expect(detectDrmWrapper(gameExePath)).resolves.toBe('none')
+      await expect(detectDrmWrapper(rust, gameExePath)).resolves.toBe('none')
     })
 
     it('detectDrmWrapper logs and resolves undefined on a readError', async () => {
       jest
         .mocked(requestRustInvoke)
         .mockResolvedValueOnce({ drmWrapper: null, readError: 'ENOENT boom' })
-      await expect(detectDrmWrapper('/x/missing.exe')).resolves.toBeUndefined()
+      await expect(
+        detectDrmWrapper(rust, '/x/missing.exe')
+      ).resolves.toBeUndefined()
       expect(
         (
           jest.requireMock('backend/logger').logWarning as jest.Mock
@@ -2577,7 +2810,7 @@ describe('shimGenerate', () => {
       jest
         .mocked(requestRustInvoke)
         .mockRejectedValueOnce(new Error('sidecar down'))
-      await expect(detectDrmWrapper('/x/a.exe')).resolves.toBeUndefined()
+      await expect(detectDrmWrapper(rust, '/x/a.exe')).resolves.toBeUndefined()
       expect(
         (
           jest.requireMock('backend/logger').logWarning as jest.Mock
@@ -2598,7 +2831,7 @@ describe('shimGenerate', () => {
           channel === 'scan_contained_real'
             ? Promise.resolve({ real: gameExePath, reason: null })
             : Promise.reject(new Error('sidecar down'))) as never)
-      const res = await placeShimForGame(appPaths, '1234', gameExePath, {
+      const res = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
         shimSourcePath: realShimSourcePath
       })
       expect(res.status).toBe('placed')
@@ -2609,15 +2842,27 @@ describe('shimGenerate', () => {
     it('flags result and verdict for a .bind exe, then already-placed', async () => {
       writeFileSync(gameExePath, makePe('.bind'))
       scanOk()
-      const first = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shimSourcePath: realShimSourcePath
-      })
+      const first = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shimSourcePath: realShimSourcePath
+        }
+      )
       expect(first.status).toBe('placed')
       expect('drmWrapper' in first && first.drmWrapper).toBe('steamstub')
       expect('verdict' in first && first.verdict?.drmWrapper).toBe('steamstub')
-      const second = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shimSourcePath: realShimSourcePath
-      })
+      const second = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shimSourcePath: realShimSourcePath
+        }
+      )
       expect(second.status).toBe('already-placed')
       expect('drmWrapper' in second && second.drmWrapper).toBe('steamstub')
     })
@@ -2632,9 +2877,15 @@ describe('shimGenerate', () => {
           drmExe: join(root, 'Game-Win64-Shipping.exe')
         })
       try {
-        const res = await placeShimForGame(appPaths, '1234', gameExePath, {
-          shimSourcePath: realShimSourcePath
-        })
+        const res = await placeShimForGame(
+          rust,
+          appPaths,
+          '1234',
+          gameExePath,
+          {
+            shimSourcePath: realShimSourcePath
+          }
+        )
         expect(res.status).toBe('placed')
         expect('drmWrapper' in res && res.drmWrapper).toBe('steamstub')
         expect('verdict' in res && res.verdict?.drmWrapper).toBe('steamstub')
@@ -2650,7 +2901,7 @@ describe('shimGenerate', () => {
         arch: 'x86',
         symbols: []
       })
-      const res = await placeShimForGame(appPaths, '1234', gameExePath, {
+      const res = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
         shimSourcePath: realShimSourcePath
       })
       if (res.status === 'no-steam-api') {
@@ -2661,7 +2912,7 @@ describe('shimGenerate', () => {
     it("reports drmWrapper 'none' (and no verdict key) for a non-.bind exe, placed and already-placed", async () => {
       writeFileSync(gameExePath, makePe('.text'))
       scanOk()
-      const res = await placeShimForGame(appPaths, '1234', gameExePath, {
+      const res = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
         shimSourcePath: realShimSourcePath
       })
       expect(res.status).toBe('placed')
@@ -2669,16 +2920,22 @@ describe('shimGenerate', () => {
       expect(
         'verdict' in res && res.verdict && 'drmWrapper' in res.verdict
       ).toBeFalsy()
-      const again = await placeShimForGame(appPaths, '1234', gameExePath, {
-        shimSourcePath: realShimSourcePath
-      })
+      const again = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          shimSourcePath: realShimSourcePath
+        }
+      )
       expect(again.status).toBe('already-placed')
       expect('drmWrapper' in again && again.drmWrapper).toBe('none')
     })
 
     it('omits drmWrapper when the exe cannot be read', async () => {
       await expect(
-        detectDrmWrapper(join(root, 'missing.exe'))
+        detectDrmWrapper(rust, join(root, 'missing.exe'))
       ).resolves.toBeUndefined()
     })
 
@@ -2689,9 +2946,15 @@ describe('shimGenerate', () => {
         if (machine !== null) pe.writeUInt16LE(machine, 0x80 + 4)
         else pe.writeUInt16LE(0, 0)
         writeFileSync(gameExePath, pe)
-        const res = await placeShimForGame(appPaths, '1234', gameExePath, {
-          shimSourcePath: realShimSourcePath
-        })
+        const res = await placeShimForGame(
+          rust,
+          appPaths,
+          '1234',
+          gameExePath,
+          {
+            shimSourcePath: realShimSourcePath
+          }
+        )
         return 'exeArch' in res ? res.exeArch : 'absent'
       }
       expect(await archOf(0x8664)).toBe('x64')
@@ -2710,7 +2973,7 @@ describe('shimGenerate', () => {
         symbols: ['SteamAPI_Init', 'SteamAPI_Bogus'],
         delaySymbols: ['SteamAPI_Bogus']
       })
-      const res = await placeShimForGame(appPaths, '1234', gameExePath, {
+      const res = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
         shim64SourcePath: realShim64SourcePath
       })
       expect(res.status).toBe('withheld')
@@ -2725,7 +2988,7 @@ describe('shimGenerate', () => {
       const outside = join(root, 'outside.exe')
       writeFileSync(outside, makePe('.bind'))
       scanOk()
-      const res = await placeShimForGame(appPaths, '1234', outside, {
+      const res = await placeShimForGame(rust, appPaths, '1234', outside, {
         shimSourcePath: realShimSourcePath
       })
       expect(res.status).toBe('error')
@@ -2783,6 +3046,7 @@ describe('shimGenerate', () => {
       nothingImported()
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1234',
         gameExePath,
@@ -2808,6 +3072,7 @@ describe('shimGenerate', () => {
       nothingImported()
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1234',
         gameExePath,
@@ -2834,6 +3099,7 @@ describe('shimGenerate', () => {
       nothingImported()
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1234',
         gameExePath,
@@ -2890,6 +3156,7 @@ describe('shimGenerate', () => {
         )
       try {
         const result = await placeShimForGame(
+          rust,
           appPaths,
           '1234',
           gameExePath,
@@ -2917,6 +3184,7 @@ describe('shimGenerate', () => {
       nothingImported()
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1234',
         gameExePath,
@@ -2940,6 +3208,7 @@ describe('shimGenerate', () => {
       nothingImported()
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1234',
         gameExePath,
@@ -3025,7 +3294,7 @@ describe('shimGenerate', () => {
         mkdirSync(join(dll, '..'), { recursive: true })
         writeFileSync(dll, 'plain-game-dll')
         mockedScanSteamApiImports.mockImplementation(
-          (_a: string, path: string) =>
+          (_rust: unknown, _a: string, path: string) =>
             Promise.resolve(
               path === shipping
                 ? {
@@ -3038,11 +3307,17 @@ describe('shimGenerate', () => {
             )
         )
 
-        const result = await placeShimForGame(appPaths, appId, gameExePath, {
-          shimSourcePath: realShimSourcePath,
-          shim64SourcePath: realShim64SourcePath,
-          gameInstallRoot: gameDir
-        })
+        const result = await placeShimForGame(
+          rust,
+          appPaths,
+          appId,
+          gameExePath,
+          {
+            shimSourcePath: realShimSourcePath,
+            shim64SourcePath: realShim64SourcePath,
+            gameInstallRoot: gameDir
+          }
+        )
 
         expect(result.status).toBe('placed')
         if (result.status === 'placed') {
@@ -3084,10 +3359,16 @@ describe('shimGenerate', () => {
       writeFileSync(shimDestPath() + BACKUP, backupBody)
       exeImports()
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        ...optsBase(),
-        persistedInterfaceVersions: {}
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          ...optsBase(),
+          persistedInterfaceVersions: {}
+        }
+      )
 
       expect(result.status).toBe('placed')
       if (result.status === 'placed') {
@@ -3106,6 +3387,7 @@ describe('shimGenerate', () => {
       exeImports()
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1234',
         gameExePath,
@@ -3130,10 +3412,16 @@ describe('shimGenerate', () => {
       writeFileSync(shimDestPath() + BACKUP, backupBody)
       exeImports()
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        ...optsBase(),
-        persistedInterfaceVersions: {}
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          ...optsBase(),
+          persistedInterfaceVersions: {}
+        }
+      )
 
       expect(['placed', 'placed-miss']).toContain(result.status)
       if (result.status === 'placed') {
@@ -3152,10 +3440,16 @@ describe('shimGenerate', () => {
       writeFileSync(shimDestPath() + BACKUP, 'orig-bytes')
       exeImports()
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        ...optsBase(),
-        persistedOriginalFingerprints: { [KEY]: fp('orig-bytes') }
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          ...optsBase(),
+          persistedOriginalFingerprints: { [KEY]: fp('orig-bytes') }
+        }
+      )
 
       expect(result.status).toBe('already-placed')
       expect(result).not.toHaveProperty('verdict')
@@ -3167,10 +3461,16 @@ describe('shimGenerate', () => {
       writeFileSync(shimDestPath() + BACKUP, 'orig-bytes')
       exeImports()
 
-      const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-        ...optsBase(),
-        persistedOriginalFingerprints: { [KEY]: fp('different-bytes') }
-      })
+      const result = await placeShimForGame(
+        rust,
+        appPaths,
+        '1234',
+        gameExePath,
+        {
+          ...optsBase(),
+          persistedOriginalFingerprints: { [KEY]: fp('different-bytes') }
+        }
+      )
 
       expect(result.status).not.toBe('already-placed')
     })
@@ -3181,6 +3481,7 @@ describe('shimGenerate', () => {
       exeImports()
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1234',
         gameExePath,
@@ -3198,6 +3499,7 @@ describe('shimGenerate', () => {
       writeFileSync(dll + BACKUP, 'orig-x64-bytes')
 
       const rescan = await placeShimForGame(
+        rust,
         appPaths,
         '1234',
         gameExePath,
@@ -3210,7 +3512,7 @@ describe('shimGenerate', () => {
         })
       }
 
-      const stay = await placeShimForGame(appPaths, '1234', gameExePath, {
+      const stay = await placeShimForGame(rust, appPaths, '1234', gameExePath, {
         ...optsBase(),
         persistedOriginalFingerprints: { [KEY64]: fp('orig-x64-bytes') }
       })
@@ -3226,7 +3528,7 @@ describe('shimGenerate', () => {
         symbols: ['SteamAPI_Bogus'],
         delaySymbols: ['SteamAPI_Bogus']
       })
-      await placeShimForGame(appPaths, '1234', gameExePath, optsBase())
+      await placeShimForGame(rust, appPaths, '1234', gameExePath, optsBase())
       const warnings = (
         jest.requireMock('backend/logger').logWarning as jest.Mock
       ).mock.calls.map((c) =>
@@ -3248,6 +3550,7 @@ describe('shimGenerate', () => {
       })
 
       const result = await placeShimForGame(
+        rust,
         appPaths,
         '1234',
         gameExePath,
@@ -3318,9 +3621,15 @@ describe('shimGenerate', () => {
 
     it('refuses an escaping symlink: no drmWrapper, no drm (SteamStub)', async () => {
       await withEscapingExe(makeBindPe(), async () => {
-        const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-          shimSourcePath: realShimSourcePath
-        })
+        const result = await placeShimForGame(
+          rust,
+          appPaths,
+          '1234',
+          gameExePath,
+          {
+            shimSourcePath: realShimSourcePath
+          }
+        )
         expect(result.status).not.toBe('error')
         expect('drmWrapper' in result).toBe(false)
         expect(result.drm).toBeUndefined()
@@ -3336,9 +3645,15 @@ describe('shimGenerate', () => {
 
     it('refuses an escaping symlink: CEG scan never reads the target', async () => {
       await withEscapingExe(buildMinimalPe(['STEAM_GUIDD']), async () => {
-        const result = await placeShimForGame(appPaths, '1234', gameExePath, {
-          shimSourcePath: realShimSourcePath
-        })
+        const result = await placeShimForGame(
+          rust,
+          appPaths,
+          '1234',
+          gameExePath,
+          {
+            shimSourcePath: realShimSourcePath
+          }
+        )
         expect(result.drm).toBeUndefined()
         expect('drmWrapper' in result).toBe(false)
       })
@@ -3349,9 +3664,15 @@ describe('shimGenerate', () => {
       try {
         writeFileSync(gameExePath, makeBindPe())
         okImports()
-        const first = await placeShimForGame(appPaths, '1234', gameExePath, {
-          shimSourcePath: realShimSourcePath
-        })
+        const first = await placeShimForGame(
+          rust,
+          appPaths,
+          '1234',
+          gameExePath,
+          {
+            shimSourcePath: realShimSourcePath
+          }
+        )
         expect('drmWrapper' in first && first.drmWrapper).toBe('steamstub')
         expect(spy.mock.calls.length).toBeGreaterThanOrEqual(2)
       } finally {
@@ -3360,9 +3681,15 @@ describe('shimGenerate', () => {
       const spy2 = forceNoBottle()
       try {
         writeFileSync(gameExePath, buildMinimalPe(['STEAM_GUIDD']))
-        const second = await placeShimForGame(appPaths, '1234', gameExePath, {
-          shimSourcePath: realShimSourcePath
-        })
+        const second = await placeShimForGame(
+          rust,
+          appPaths,
+          '1234',
+          gameExePath,
+          {
+            shimSourcePath: realShimSourcePath
+          }
+        )
         expect(second.drm).toEqual({ kind: 'ceg', markers: ['STEAM_GUIDD'] })
       } finally {
         spy2.mockRestore()

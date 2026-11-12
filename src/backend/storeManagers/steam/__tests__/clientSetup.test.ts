@@ -20,7 +20,7 @@ import { existsSync, mkdirSync } from 'graceful-fs'
 import { join } from 'path'
 import { downloadFile } from 'backend/utils'
 import { logError, logInfo } from 'backend/logger'
-import { sendFrontendMessage } from '../../../ipc'
+const sendFrontendMessage = jest.fn()
 import {
   createMockSteamUser,
   createTestSteamUser
@@ -57,10 +57,6 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam' }
 }))
 
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
-
 // steamSupportPath is a path holding a space AND an apostrophe so the PowerShell single-quote
 // escaping is exercised (T-0yc-01); it reaches the code under test through the paths slice (66.4-08).
 const steamSupportPath =
@@ -80,6 +76,7 @@ const mockedMkdirSync = mkdirSync as jest.Mock
 const mockedGetSettings = jest.fn()
 const mockedOpenExternal = jest.fn()
 const clientDeps = {
+  sendFrontendMessage,
   steamUser,
   config: { getSettings: mockedGetSettings },
   openExternal: { openExternal: mockedOpenExternal }
@@ -88,6 +85,7 @@ const mockedDownloadFile = downloadFile as jest.Mock
 // Recording fake handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
 const setupDeps = {
+  sendFrontendMessage,
   spawnAsync: mockedSpawnAsync,
   runner: createScriptedRunner([]),
   paths: { steamSupportPath },
@@ -95,7 +93,7 @@ const setupDeps = {
 } as unknown as Parameters<typeof startGuidedClientInstall>[0]
 const mockedIsSteamClientInstalled =
   steamUser.isSteamClientInstalled as jest.Mock
-const mockedSendFrontendMessage = sendFrontendMessage as jest.Mock
+const mockedSendFrontendMessage = sendFrontendMessage
 const mockedLogError = logError as jest.Mock
 const mockedLogInfo = logInfo as jest.Mock
 

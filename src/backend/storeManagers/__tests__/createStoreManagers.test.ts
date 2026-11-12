@@ -37,6 +37,8 @@ type Built = ReturnType<typeof createStoreManagers>
 function build(over: Partial<Parameters<typeof createStoreManagers>[0]> = {}) {
   const fakes = createTestServices()
   return createStoreManagers({
+    sendFrontendMessage: fakes.host.sendFrontendMessage,
+    requestRustInvoke: fakes.host.requestRustInvoke,
     stores: fakes.stores,
     commandRunner: fakes.commandRunner,
     spawnAsync: fakes.spawnAsync,

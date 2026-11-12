@@ -24,6 +24,7 @@
  *   deadline are the process runner's (unref'd there); each long step is bounded by its own module's
  *   deadline and abort id.
  */
+import type { FrontendMessageDeps } from 'backend/host/frontendMessage'
 import type { RunTool } from 'backend/engine/runTool'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import type { AppPaths } from 'backend/process/context'
@@ -145,7 +146,7 @@ type DrmInstanceSteps = {
 }
 
 /** Overridable steps; every member defaults to the instance's implementation. */
-export type DrmSetupOverrides = {
+export type DrmSetupOverrides = FrontendMessageDeps & {
   /** The caller's tool runner (66.2-03); the clone and allowlist steps spawn through it. */
   runTool: RunTool
   /** The runner behind `runTool`; the CrossOver bin-dir lookup (mdfind) runs through it (66.2-07). */
@@ -358,11 +359,10 @@ async function runSetup(
         bottleName,
         timeoutMs
       ))
+  const { sendGameStatusUpdate } = await import('backend/utils')
   const sendStatus =
     deps.sendStatus ??
-    ((await import('backend/utils')).sendGameStatusUpdate as (
-      payload: GameStatus
-    ) => void)
+    ((payload: GameStatus) => sendGameStatusUpdate(deps, payload))
 
   let lastContext: string | undefined
   let progressSent = false
@@ -636,11 +636,10 @@ async function prefetchDrmDownloadsOn(
     if (!NUMERIC_APP_ID.test(String(appId)) || !isAbsolute(String(appFolder))) {
       return drmStepError('component-missing', 'invalid prefetch input')
     }
+    const { sendGameStatusUpdate } = await import('backend/utils')
     const sendStatus =
       deps.sendStatus ??
-      ((await import('backend/utils')).sendGameStatusUpdate as (
-        payload: GameStatus
-      ) => void)
+      ((payload: GameStatus) => sendGameStatusUpdate(deps, payload))
     let lastContext: string | undefined
     const progress = (context: string) => {
       if (context === lastContext) return

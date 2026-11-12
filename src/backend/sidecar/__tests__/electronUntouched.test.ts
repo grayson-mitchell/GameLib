@@ -74,11 +74,6 @@ jest.mock('backend/store_backend', () => ({
   default: jest.requireActual('../fileStore').default
 }))
 
-// ── sidecarRpc mock — fake Rust responder, in-memory program + call log ─────
-jest.mock('../sidecarRpc', () => ({
-  requestRustInvoke: jest.fn()
-}))
-
 // ── logger mock — mirrors keyringTokenStore.test.ts's existing convention ──
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -99,7 +94,7 @@ jest.mock('backend/logger', () => ({
 }))
 
 // ── Imports (after mocks) — configStore is the REAL, unmocked module ───────
-import { requestRustInvoke } from '../sidecarRpc'
+const requestRustInvoke = jest.fn()
 import { SidecarKeyringTokenStore } from '../keyringTokenStore'
 import { createTokenStoreSlot } from '../../storeManagers/steam/tokenStore'
 // Real (unmocked) pathShim — same module fileStore.ts resolves
@@ -118,7 +113,7 @@ type ProgrammedOutcome =
   | { type: 'resolve'; value: unknown }
   | { type: 'reject'; error: Error }
 
-const mockRequestRustInvoke = requestRustInvoke as jest.Mock
+const mockRequestRustInvoke = requestRustInvoke
 
 let program: Record<string, ProgrammedOutcome> = {}
 
@@ -404,7 +399,7 @@ describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)',
   it('setToken() leaves configStore.refreshToken byte-identical (===)', async () => {
     programAllResolve()
     const before = currentRefreshToken()
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     await store.setToken('sidecar-only-token')
 
@@ -414,7 +409,7 @@ describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)',
   it('getToken() leaves configStore.refreshToken byte-identical (===)', async () => {
     programAllResolve()
     const before = currentRefreshToken()
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     const result = await store.getToken()
 
@@ -425,7 +420,7 @@ describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)',
   it('clearToken() leaves configStore.refreshToken byte-identical (===)', async () => {
     programAllResolve()
     const before = currentRefreshToken()
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     await store.clearToken()
 
@@ -435,7 +430,7 @@ describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)',
   it('isAvailable() leaves configStore.refreshToken byte-identical (===)', async () => {
     programAllResolve()
     const before = currentRefreshToken()
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     await store.isAvailable()
 
@@ -445,7 +440,7 @@ describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)',
   it('all four operations in sequence leave configStore.refreshToken byte-identical (===)', async () => {
     programAllResolve()
     const before = currentRefreshToken()
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     await store.setToken('sidecar-only-token')
     await store.getToken()
@@ -458,7 +453,7 @@ describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)',
   it('every failure path (all four keyring channels rejecting) writes nothing to configStore', async () => {
     programAllReject('keyring:unavailable:PlatformFailure')
     const before = currentRefreshToken()
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     await store.setToken('should-never-persist')
     await store.getToken()
@@ -472,7 +467,7 @@ describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)',
     const beforeFull = fullSnapshot()
 
     programAllResolve()
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
     await store.setToken('sidecar-only-token')
     await store.getToken()
     await store.isAvailable()
@@ -493,7 +488,7 @@ describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)',
     const beforeFull = fullSnapshot()
 
     const slot = createTokenStoreSlot({ log: () => undefined })
-    slot.configure(new SidecarKeyringTokenStore())
+    slot.configure(new SidecarKeyringTokenStore(requestRustInvoke))
     // This is the exact call path user.ts's getCredentials()/finishAuth() use in
     // production — proving the SEAM is safe, not merely the class in isolation.
     await slot.current().setToken('sidecar-only-token')

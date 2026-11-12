@@ -20,7 +20,7 @@ export const legendarySetup = async (
     return
   }
 
-  sendGameStatusUpdate({
+  sendGameStatusUpdate(deps, {
     appName,
     runner: 'legendary',
     status: 'redist',

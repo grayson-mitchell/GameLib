@@ -1,7 +1,7 @@
 import { GameInfo } from 'common/types'
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { getFileSize, type SteamLibrariesDeps } from 'backend/utils'
-import { sendFrontendMessage } from '../../../ipc'
+import type { FrontendMessageDeps } from '../../../host/frontendMessage'
 import { notify, type NotifyDeps } from '../../../dialog/dialog'
 import i18next from 'i18next'
 import { clearForcedWindowsViaBottle } from '../gameSessionState'
@@ -24,7 +24,8 @@ export type UninstallPollDeps = SteamStoresDeps &
   SteamLibrariesDeps &
   BottleSettingsDeps &
   SteamLibraryStateDeps &
-  NotifyDeps & {
+  NotifyDeps &
+  FrontendMessageDeps & {
     steamInstallRuntime: {
       uninstallPolls: UninstallPolls
       polls: Pick<InstallPollState, 'nextSteamRequestNoticeSeq'>
@@ -173,8 +174,8 @@ export async function pollUninstallOnce(
         'games',
         Array.from(deps.steamSession.libraryState.library.values())
       )
-      sendFrontendMessage('pushGameToLibrary', updated)
-      sendFrontendMessage('gameStatusUpdate', {
+      deps.sendFrontendMessage('pushGameToLibrary', updated)
+      deps.sendFrontendMessage('gameStatusUpdate', {
         appName: appId,
         runner: 'steam',
         status: 'done'
@@ -216,9 +217,9 @@ export async function pollUninstallOnce(
         'games',
         Array.from(deps.steamSession.libraryState.library.values())
       )
-      sendFrontendMessage('pushGameToLibrary', updated)
+      deps.sendFrontendMessage('pushGameToLibrary', updated)
     }
-    sendFrontendMessage('gameStatusUpdate', {
+    deps.sendFrontendMessage('gameStatusUpdate', {
       appName: appId,
       runner: 'steam',
       status: 'done'
@@ -244,7 +245,7 @@ export async function pollUninstallOnce(
     ((result.stateFlags ?? 0) & STATE_UNINSTALLING) !== 0
   if (uninstalling) {
     if (poll) poll.seenUninstalling = true
-    sendFrontendMessage('gameStatusUpdate', {
+    deps.sendFrontendMessage('gameStatusUpdate', {
       appName: appId,
       runner: 'steam',
       status: 'uninstalling'
@@ -344,7 +345,7 @@ export function startUninstallPolling(
         `Steam: Steam did not start the uninstall for appId ${appId} — no activity within ${STEAM_REQUEST_NO_ACTIVITY_TICKS} ticks (~2 min) of the request; keeping it installed (quick 261105-vfq)`,
         LogPrefix.Steam
       )
-      sendFrontendMessage('gameStatusUpdate', {
+      deps.sendFrontendMessage('gameStatusUpdate', {
         appName: appId,
         runner: 'steam',
         status: 'done'
@@ -353,7 +354,7 @@ export function startUninstallPolling(
       // the badge correctly stays installed (D-02). quick 261106-pvk: the
       // notice goes to the in-app stack because the system notification can
       // land on another monitor or not be delivered.
-      sendFrontendMessage('steamRequestNotice', {
+      deps.sendFrontendMessage('steamRequestNotice', {
         appId,
         title: deps.steamSession.libraryState.library.get(appId)?.title ?? '',
         kind: 'uninstall-not-started',

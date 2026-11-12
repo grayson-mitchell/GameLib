@@ -4,7 +4,7 @@ import type {
   TokenReadOutcome,
   TokenUnreadableReason
 } from 'backend/storeManagers/steam/tokenStore'
-import { requestRustInvoke } from './sidecarRpc'
+import type { RequestRustInvoke } from '../host'
 import {
   RUST_KEYRING_GET,
   RUST_KEYRING_SET,
@@ -161,7 +161,10 @@ function classifyKeyringFailure(error: unknown): TokenUnreadableReason {
  * have been. On a FAILED write/delete, the cache is left invalidated (empty), never guessed.
  */
 export class SidecarKeyringSlotStore implements TokenStore {
-  constructor(private readonly slot: string) {}
+  constructor(
+    private readonly slot: string,
+    private readonly requestRustInvoke: RequestRustInvoke
+  ) {}
 
   /** Last successful `getToken()` result. `undefined` means "not cached" — deliberately NOT
    * `''` for that state, so a real empty-string-but-cached result (a confirmed no-entry/cleared
@@ -268,7 +271,7 @@ export class SidecarKeyringSlotStore implements TokenStore {
       LogPrefix.Steam
     )
     try {
-      const result = await requestRustInvoke(RUST_KEYRING_AVAILABLE, [
+      const result = await this.requestRustInvoke(RUST_KEYRING_AVAILABLE, [
         this.slot
       ])
       const value = result === true
@@ -407,7 +410,7 @@ export class SidecarKeyringSlotStore implements TokenStore {
       LogPrefix.Steam
     )
     try {
-      result = await requestRustInvoke(RUST_KEYRING_GET, [this.slot])
+      result = await this.requestRustInvoke(RUST_KEYRING_GET, [this.slot])
     } catch (error) {
       logWarning(
         `SidecarKeyringSlotStore(${this.slot}).getToken(): ${RUST_KEYRING_GET} failed: ${errorMessage(error)} trigger=${label} elapsed=${Date.now() - started}ms`,
@@ -477,7 +480,7 @@ export class SidecarKeyringSlotStore implements TokenStore {
     // visible to a concurrent getToken() while this write is in flight.
     this.invalidateCache()
     try {
-      await requestRustInvoke(RUST_KEYRING_SET, [token, this.slot])
+      await this.requestRustInvoke(RUST_KEYRING_SET, [token, this.slot])
       // The write succeeded -- we now know the correct value without another round trip.
       this.cachedToken = { value: token }
       // F-34.5-G6-26: a write is a real Keychain round trip and can prompt, so it must appear in
@@ -502,7 +505,7 @@ export class SidecarKeyringSlotStore implements TokenStore {
     // fixed.
     this.invalidateCache()
     try {
-      await requestRustInvoke(RUST_KEYRING_DELETE, [this.slot])
+      await this.requestRustInvoke(RUST_KEYRING_DELETE, [this.slot])
       // The delete succeeded -- the slot is now confirmed empty.
       this.cachedToken = { value: '' }
       // F-34.5-G6-26: this is the sign-out path, and a delete is a real Keychain round trip that
@@ -563,8 +566,8 @@ export class SidecarKeyringSlotStore implements TokenStore {
  * section (entry added by Phase 30 Plan 04) for the cross-referenced record.
  */
 export class SidecarKeyringTokenStore extends SidecarKeyringSlotStore {
-  constructor() {
-    super(KEYRING_SLOT_STEAM_REFRESH_TOKEN)
+  constructor(requestRustInvoke: RequestRustInvoke) {
+    super(KEYRING_SLOT_STEAM_REFRESH_TOKEN, requestRustInvoke)
   }
 }
 

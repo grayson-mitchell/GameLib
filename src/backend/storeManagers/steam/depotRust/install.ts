@@ -204,7 +204,10 @@ export async function downloadSteamDepotsRust(
       hosts,
       finalize
     })
-    const bridge = createProgressBridge(appId)
+    const bridge = createProgressBridge(
+      opts.installRuntime.depotJobs.transport,
+      appId
+    )
     const outcome = await runDepotJob(job, {
       registry: opts.installRuntime.depotJobs,
       signal: opts.signal,
@@ -285,7 +288,9 @@ async function runSharedRedistJob(
     selectPaths
   })
   const bridge =
-    mode === 'verify_only' ? null : createProgressBridge(args.appId)
+    mode === 'verify_only'
+      ? null
+      : createProgressBridge(args.registry.transport, args.appId)
   const outcome = await runDepotJob(job, {
     registry: args.registry,
     signal: args.signal,
@@ -357,7 +362,7 @@ export async function sharedRedistInstallscriptsRust(
   )
   let res
   try {
-    res = await summarizeDepots({
+    res = await summarizeDepots(args.registry.transport, {
       appId: args.appId,
       depots: toRustDepotRefs([args.ref]),
       hosts: toRustHosts(args.host),

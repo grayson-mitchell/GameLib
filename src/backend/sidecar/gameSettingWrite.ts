@@ -1,6 +1,6 @@
 import type { GameConfigs } from '../game_config'
 import { logError } from '../logger'
-import { sendFrontendMessage } from '../ipc'
+import type { SendFrontendMessage } from '../host/frontendMessage'
 
 /**
  * G17 (59-25): a per-game write that throws (a GamesConfig file read while
@@ -14,7 +14,10 @@ import { sendFrontendMessage } from '../ipc'
  * settings screen re-reads the value actually on disk.
  */
 export function applyGameSetting(
-  deps: { gameConfigs: GameConfigs },
+  deps: {
+    gameConfigs: GameConfigs
+    sendFrontendMessage: SendFrontendMessage
+  },
   appName: string,
   key: string,
   value: unknown
@@ -29,7 +32,7 @@ export function applyGameSetting(
           `${appName}: setSetting ${key} failed after retry: ${String(error)}`
         )
         try {
-          sendFrontendMessage('gameSettingWriteFailed', { appName, key })
+          deps.sendFrontendMessage('gameSettingWriteFailed', { appName, key })
         } catch (sendError) {
           logError(
             `${appName}: gameSettingWriteFailed push failed: ${String(sendError)}`

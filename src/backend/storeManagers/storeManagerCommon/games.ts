@@ -1,3 +1,4 @@
+import type { FrontendMessageDeps } from '../../host/frontendMessage'
 import type { GameSettings } from 'common/types'
 import { logInfo, LogPrefix, logWarning } from 'backend/logger'
 import { basename, dirname } from 'path'
@@ -36,17 +37,18 @@ async function getAppSettings(
 }
 
 /** The collaborators the shared launch helper uses (66.1, R3). */
-export type CommonGameDeps = Pick<
-  ManagerDeps,
-  | 'launcher'
-  | 'commandRunner'
-  | 'spawnAsync'
-  | 'dialogs'
-  | 'appState'
-  | 'gameConfigs'
-  | 'engineRuntime'
-  | 'windowRaiser'
->
+export type CommonGameDeps = FrontendMessageDeps &
+  Pick<
+    ManagerDeps,
+    | 'launcher'
+    | 'commandRunner'
+    | 'spawnAsync'
+    | 'dialogs'
+    | 'appState'
+    | 'gameConfigs'
+    | 'engineRuntime'
+    | 'windowRaiser'
+  >
 
 export async function launchGame(
   deps: CommonGameDeps,
@@ -123,7 +125,7 @@ export async function launchGame(
       return false
     }
 
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(deps, {
       appName,
       runner: gameInfo.runner,
       status: 'playing'

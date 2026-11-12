@@ -42,7 +42,7 @@ function harness(flavour: 'gnu' | 'openrsync' | 'absent', code: number | null) {
     return Promise.resolve({ code, stdout: '', stderr: 'boom' })
   })
   return {
-    deps: { runner, spawnAsync },
+    deps: { runner, spawnAsync, sendFrontendMessage: jest.fn() },
     spawnCalls: (): Array<[string, string[]]> => calls.map(([c, a]) => [c, a])
   }
 }

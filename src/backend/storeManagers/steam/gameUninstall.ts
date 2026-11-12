@@ -11,7 +11,6 @@ import { ExecResult } from 'common/types'
 import { RemoveArgs } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
-import { sendFrontendMessage } from '../../ipc'
 import {
   startUninstallPolling,
   pollUninstallOnce
@@ -82,7 +81,7 @@ export async function uninstall(
       `SteamGame: appId ${steamGame.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of uninstalling`,
       LogPrefix.Steam
     )
-    sendFrontendMessage('steamBottleSetupRequired', {
+    steamGame.deps.sendFrontendMessage('steamBottleSetupRequired', {
       appName: steamGame.appId
     })
     return { stdout: '', stderr: '', refused: true }
@@ -192,7 +191,7 @@ export async function uninstall(
  * getGameInfo() (its fire-and-forget side effect is forbidden on this path).
  */
 function failUninstall(steamGame: SteamGame, stderr: string): ExecResult {
-  sendFrontendMessage('steamRequestNotice', {
+  steamGame.deps.sendFrontendMessage('steamRequestNotice', {
     appId: steamGame.appId,
     title:
       steamGame.deps.steamSession.libraryState.library.get(steamGame.appId)
@@ -338,7 +337,7 @@ export async function uninstallNativeInGameLib(
       | 'uninstall-check-failed',
     code?: number
   ) =>
-    sendFrontendMessage('steamRequestNotice', {
+    steamGame.deps.sendFrontendMessage('steamRequestNotice', {
       appId: steamGame.appId,
       title: game ?? '',
       kind,
@@ -348,7 +347,7 @@ export async function uninstallNativeInGameLib(
   const refuse = (reason: string): ExecResult => {
     // quick 261110-uog: uninstaller.ts logs only stderrLength, so this refusal logs its own reason.
     logWarning(`SteamGame: ${reason}`, LogPrefix.Steam)
-    sendFrontendMessage('gameStatusUpdate', {
+    steamGame.deps.sendFrontendMessage('gameStatusUpdate', {
       appName: steamGame.appId,
       runner: 'steam',
       status: 'done'
@@ -477,7 +476,7 @@ export async function removeNativeInstallDirectly(
     // uninstallGameCallback set "Uninstalling" and suppresses done for steam;
     // clear it (same reason as the A-10 refusal in uninstallBottleGameDirectly).
     // The record is kept, and no steam://uninstall fallback: Steam ignores it.
-    sendFrontendMessage('gameStatusUpdate', {
+    steamGame.deps.sendFrontendMessage('gameStatusUpdate', {
       appName: steamGame.appId,
       runner: 'steam',
       status: 'done'
@@ -661,7 +660,7 @@ export async function uninstallBottleGameDirectly(
       `SteamGame: uninstallBottleGameDirectly refused for appId ${steamGame.appId} — the bottle manifest is mid-download/partial, cancel the in-progress install first`,
       LogPrefix.Steam
     )
-    sendFrontendMessage('gameStatusUpdate', {
+    steamGame.deps.sendFrontendMessage('gameStatusUpdate', {
       appName: steamGame.appId,
       runner: 'steam',
       status: 'done'

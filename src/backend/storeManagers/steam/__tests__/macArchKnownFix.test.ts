@@ -5,6 +5,8 @@
 
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
 
+const sendFrontendMessage = jest.fn()
+
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
@@ -24,14 +26,13 @@ jest.mock('backend/constants/environment', () => ({
   }
 }))
 
-jest.mock('../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
-
 const metaStore = new Map<string, Record<string, unknown>>()
 const steamMetadataStore = { get: jest.fn(), set: jest.fn() }
 // The boot-owned Steam library state the seed propagates into (D-66.3-13): one instance for this file.
 const steamSession = createTestSteamSession()
 const library = steamSession.libraryState.library
 const deps = {
+  sendFrontendMessage,
   steamSession,
   stores: {
     steam: {
@@ -39,12 +40,12 @@ const deps = {
       steamLibraryStore: { get: jest.fn(), set: jest.fn() }
     }
   }
-} as unknown as SteamStoresDeps & SteamLibraryStateDeps
+} as unknown as SteamStoresDeps & SteamLibraryStateDeps & FrontendMessageDeps
 
 import { readKnownFixes } from 'backend/knownFixes'
 import { logWarning, logInfo } from 'backend/logger'
-import { sendFrontendMessage } from '../../../ipc'
 import type { SteamStoresDeps } from '../library/installRoot'
+import type { FrontendMessageDeps } from 'backend/host/frontendMessage'
 import type { SteamLibraryStateDeps } from 'backend/services/types'
 import {
   formatMacArch32KnownFixEntry,
@@ -53,7 +54,7 @@ import {
 } from '../macArchKnownFix'
 
 const readFixes = readKnownFixes as jest.Mock
-// eslint-disable-next-line @typescript-eslint/unbound-method -- jest mock handle, never invoked unbound
+
 const setMock = steamMetadataStore.set
 
 const baseEntry = () => ({
@@ -76,7 +77,7 @@ beforeEach(() => {
   setMock.mockImplementation((id: string, v: Record<string, unknown>) => {
     metaStore.set(id, v)
   })
-  ;(sendFrontendMessage as jest.Mock).mockClear()
+  sendFrontendMessage.mockClear()
   ;(logWarning as jest.Mock).mockClear()
   ;(logInfo as jest.Mock).mockClear()
 })

@@ -1,4 +1,4 @@
-import { sendFrontendMessage } from '../ipc'
+import type { SendFrontendMessage } from '../host/frontendMessage'
 import { logWarning, LogPrefix } from '../logger'
 import { flushReadOnlyStores } from '../storeVersioning/readOnlyStores'
 
@@ -8,7 +8,9 @@ import { flushReadOnlyStores } from '../storeVersioning/readOnlyStores'
  * appShellImportGate (REQ-34.1-12/D-09) forbids that file from importing `../ipc`.
  * Creates no timer or handle (sidecar exit contract).
  */
-export function pushReadOnlyStoresNotice(): void {
+export function pushReadOnlyStoresNotice(
+  sendFrontendMessage: SendFrontendMessage
+): void {
   flushReadOnlyStores({
     send: (payload) => sendFrontendMessage('readOnlyStoresNotice', payload),
     log: (line) => logWarning(line, LogPrefix.Backend)

@@ -20,7 +20,11 @@ import {
 import { tmpdir } from 'os'
 import { dirname, join, resolve } from 'path'
 
-import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
+const requestRustInvoke = jest.fn()
+const depotTransport = {
+  requestRustInvoke,
+  sendFrontendMessage: jest.fn()
+}
 import { RUST_DEPOT_MANIFEST_SUMMARY } from 'common/types/sidecarTransport'
 import { downloadSharedRedistDepots } from '../depot'
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
@@ -51,14 +55,6 @@ jest.mock('backend/logger', () => ({
 jest.mock('backend/utils', () => ({
   getFileSize: jest.fn(),
   sendProgressUpdate: jest.fn()
-}))
-
-jest.mock('backend/sidecar/sidecarRpc', () => ({
-  requestRustInvoke: jest.fn()
-}))
-
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
 }))
 
 jest.mock('i18next', () => ({
@@ -295,9 +291,9 @@ describe('downloadSharedRedistDepots', () => {
     skipped: []
   }
   // One runtime per test: concurrent runs in a test share the boot's lock table, as in production.
-  let installRuntime = createTestSteamInstallRuntime()
+  let installRuntime = createTestSteamInstallRuntime(depotTransport)
   beforeEach(() => {
-    installRuntime = createTestSteamInstallRuntime()
+    installRuntime = createTestSteamInstallRuntime(depotTransport)
   })
   const run = (
     appId = GAME,
@@ -492,22 +488,23 @@ describe('downloadSharedRedistDepots', () => {
 
   it('files a depot under failed when its manifest summary fails (73-19)', async () => {
     const base = makeRust()
-    jest.mocked(requestRustInvoke).mockImplementation((channel, args) =>
-      channel === RUST_DEPOT_MANIFEST_SUMMARY &&
-      at((at(args, 0) as RustSummarizeRequest).depots, 0).depotId === '228990'
-        ? Promise.resolve({
-            error: {
-              file: null,
-              kind: 'manifest_unavailable',
-              message: 'Blocked',
-              code: null,
-              eresult: 40,
-              httpStatus: null,
-              scope: null,
-              msSinceProgress: null
-            }
-          })
-        : base.invoke(channel, args)
+    requestRustInvoke.mockImplementation(
+      (channel: string, args: Array<{ depots: Array<{ depotId: string }> }>) =>
+        channel === RUST_DEPOT_MANIFEST_SUMMARY &&
+        at(at(args, 0).depots, 0).depotId === '228990'
+          ? Promise.resolve({
+              error: {
+                file: null,
+                kind: 'manifest_unavailable',
+                message: 'Blocked',
+                code: null,
+                eresult: 40,
+                httpStatus: null,
+                scope: null,
+                msSinceProgress: null
+              }
+            })
+          : base.invoke(channel, args)
     )
     rust = base
     const r = await run()

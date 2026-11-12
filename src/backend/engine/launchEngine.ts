@@ -95,7 +95,7 @@ export interface LaunchEngineDeps {
   ensurePinned: (
     args: Omit<
       Parameters<typeof ensurePinnedEngineReportingStatus>[0],
-      'processRunner' | 'onlineMonitor' | 'fallback'
+      'processRunner' | 'onlineMonitor' | 'fallback' | 'sendFrontendMessage'
     >
   ) => ReturnType<typeof ensurePinnedEngineReportingStatus>
   switchDeps(): Partial<EngineSwitchDeps> &
@@ -147,7 +147,7 @@ const defaultDeps = (
     ),
   prepare: (args) =>
     services.engineRuntime.switcher.prepareBottleForEngine(args),
-  sendStatus: (update) => sendGameStatusUpdate(update),
+  sendStatus: (update) => sendGameStatusUpdate(services.notices, update),
   showDialog: showEngineDialog,
   notifyFallback: notifyEngineFallback
 })
@@ -223,7 +223,8 @@ export async function selectEngineForLaunch(
         ...a,
         processRunner: services.runner,
         onlineMonitor: services.onlineMonitor,
-        fallback: services.engineRuntime.fallback
+        fallback: services.engineRuntime.fallback,
+        sendFrontendMessage: services.notices.sendFrontendMessage
       }),
     switchDeps: () => switchServicesFrom(services),
     recordDecision(id, decision, bottleName, prefix, effective) {

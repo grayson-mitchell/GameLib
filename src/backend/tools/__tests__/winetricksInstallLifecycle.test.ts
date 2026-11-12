@@ -19,10 +19,6 @@ const mockGetWineFromProton = jest.fn()
 const mockRecordMissingDependencies = jest.fn()
 const mockRecordUnsupportedWine = jest.fn()
 
-jest.mock('../../ipc', () => ({
-  sendFrontendMessage: (...args: unknown[]) => mockSendFrontendMessage(...args)
-}))
-
 jest.mock('../../utils', () => ({
   axiosClient: {},
   downloadFile: jest.fn(),
@@ -74,7 +70,9 @@ let runner: DrivableRunner
 /** Answers the `which` probes; the default finds every dependency. */
 let whichResult: (dependency: string) => DrivenRunResult
 
-const toolsSlices = createTestToolsSlices()
+const toolsSlices = createTestToolsSlices({
+  sendFrontendMessage: mockSendFrontendMessage as never
+})
 const toolsDeps: ToolsDeps = {
   ...toolsSlices,
   // The environment recorders are the observed seam: this file pins which reports the install

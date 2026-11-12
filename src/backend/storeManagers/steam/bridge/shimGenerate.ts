@@ -71,6 +71,7 @@
  * persists and 51-07's `resolveBridgeRoute` reads back.
  */
 
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import type { AppPaths } from 'backend/process/context'
 import { resolve } from 'node:path'
 import { resolveBridgeBottleName } from '../bridgeBottle'
@@ -148,15 +149,22 @@ import { placeShimForGameInner } from './shimPlacement'
  * caller decides, so a user's forced 'bridge' route keeps working.
  */
 export async function placeShimForGame(
+  rust: RustInvokeDeps,
   paths: Pick<
     AppPaths,
     'userHome' | 'builtBridgeShimPath' | 'builtBridgeShim64Path'
   >,
   appId: string,
   gameExePath: string,
-  opts?: Parameters<typeof placeShimForGameInner>[3]
+  opts?: Parameters<typeof placeShimForGameInner>[4]
 ): Promise<PlaceShimResult> {
-  const result = await placeShimForGameInner(paths, appId, gameExePath, opts)
+  const result = await placeShimForGameInner(
+    rust,
+    paths,
+    appId,
+    gameExePath,
+    opts
+  )
   if (result.status === 'error') return result
   // Gap 11 (56-21): UE titles carry .bind on the Shipping exe, not the
   // bootstrap; stamp from the same resolver launch routing uses.
@@ -165,6 +173,7 @@ export async function placeShimForGame(
   )
   const launchWrapper = stampBottle
     ? await detectLaunchDrmWrapper(
+        rust,
         resolve(getBottleDir(paths, stampBottle)),
         resolve(gameExePath)
       )
@@ -174,15 +183,17 @@ export async function placeShimForGame(
   // real path is ever opened (real scanned, lexical returned).
   const fallbackReal = launchWrapper
     ? null
-    : await containedGameExeReal(resolve(gameExePath), 'placeShimForGame')
+    : await containedGameExeReal(rust, resolve(gameExePath), 'placeShimForGame')
   // CR-02: drm (CEG) is read from the same exe the resolver chose for
   // drmWrapper, so launch routing and the persisted verdict agree.
   const drmSource = launchWrapper ? launchWrapper.drmExe : fallbackReal
-  const drm = drmSource ? await detectExeSteamDrm(appId, drmSource) : undefined
+  const drm = drmSource
+    ? await detectExeSteamDrm(rust, appId, drmSource)
+    : undefined
   const fallbackWrapper = launchWrapper
     ? undefined
     : fallbackReal
-      ? await detectDrmWrapper(fallbackReal)
+      ? await detectDrmWrapper(rust, fallbackReal)
       : undefined
   const flagged = withDrmWrapper(
     appId,

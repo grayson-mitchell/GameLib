@@ -23,11 +23,6 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-// ── sidecarRpc mock — fake Rust responder, in-memory program + call log ─────
-jest.mock('../sidecarRpc', () => ({
-  requestRustInvoke: jest.fn()
-}))
-
 // ── logger mock ──────────────────────────────────────────────────────────────
 const mockLogWarning = jest.fn()
 const mockLogInfo = jest.fn()
@@ -60,12 +55,13 @@ const mockConfigStore = {
     delete backingStore[key]
   })
 }
+const requestRustInvoke = jest.fn()
 const migrationDeps = {
-  stores: { humble: { configStore: mockConfigStore } } as never
+  stores: { humble: { configStore: mockConfigStore } } as never,
+  requestRustInvoke
 }
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { requestRustInvoke } from '../sidecarRpc'
 import {
   KEYRING_SLOT_STEAM_REFRESH_TOKEN,
   KEYRING_SLOT_HUMBLE_SESSION,
@@ -83,7 +79,7 @@ type ProgrammedOutcome =
   | { type: 'resolve'; value: unknown }
   | { type: 'reject'; error: Error }
 
-const mockRequestRustInvoke = requestRustInvoke as jest.Mock
+const mockRequestRustInvoke = requestRustInvoke
 
 let program: Record<string, ProgrammedOutcome> = {}
 let callLog: Array<{ channel: string; args: unknown[] }> = []
@@ -126,7 +122,7 @@ describe('SidecarHumbleSecretStore', () => {
   // humble-session slot -- never steam-refresh-token.
   it("setSecret('sessionCookie', v) sends keyring_set with the humble-session slot, never steam-refresh-token", async () => {
     programChannel('keyring_set', { type: 'resolve', value: true })
-    const store = new SidecarHumbleSecretStore()
+    const store = new SidecarHumbleSecretStore(requestRustInvoke)
 
     await store.setSecret('sessionCookie', 'cookie-value')
 
@@ -144,7 +140,7 @@ describe('SidecarHumbleSecretStore', () => {
   // Behavior: setSecret('csrfToken', v) sends keyring_set with the humble-csrf slot.
   it("setSecret('csrfToken', v) sends keyring_set with the humble-csrf slot, distinct from humble-session", async () => {
     programChannel('keyring_set', { type: 'resolve', value: true })
-    const store = new SidecarHumbleSecretStore()
+    const store = new SidecarHumbleSecretStore(requestRustInvoke)
 
     await store.setSecret('csrfToken', 'csrf-value')
 
@@ -157,7 +153,7 @@ describe('SidecarHumbleSecretStore', () => {
   // nothing for that case.
   it('getSecret returns "" without logging when keyring_get reports no entry (null)', async () => {
     programChannel('keyring_get', { type: 'resolve', value: null })
-    const store = new SidecarHumbleSecretStore()
+    const store = new SidecarHumbleSecretStore(requestRustInvoke)
 
     await expect(store.getSecret('sessionCookie')).resolves.toBe('')
     expect(mockLogWarning).not.toHaveBeenCalled()
@@ -170,7 +166,7 @@ describe('SidecarHumbleSecretStore', () => {
       type: 'reject',
       error: new Error('keyring:unavailable:PlatformFailure')
     })
-    const store = new SidecarHumbleSecretStore()
+    const store = new SidecarHumbleSecretStore(requestRustInvoke)
 
     await expect(store.getSecret('sessionCookie')).resolves.toBe('')
     // Two lines: the pre-existing "getToken() ... failed" warning from SidecarKeyringSlotStore,
@@ -189,7 +185,7 @@ describe('SidecarHumbleSecretStore', () => {
       type: 'reject',
       error: new Error('keyring:unavailable:NoStorageAccess')
     })
-    const store = new SidecarHumbleSecretStore()
+    const store = new SidecarHumbleSecretStore(requestRustInvoke)
 
     await expect(store.setSecret('sessionCookie', 'x')).resolves.toBeUndefined()
     expect(mockLogWarning).toHaveBeenCalledTimes(1)
@@ -201,7 +197,7 @@ describe('SidecarHumbleSecretStore', () => {
       type: 'reject',
       error: new Error('keyring:unavailable:PlatformFailure')
     })
-    const store = new SidecarHumbleSecretStore()
+    const store = new SidecarHumbleSecretStore(requestRustInvoke)
 
     await expect(store.clearSecrets()).resolves.toBeUndefined()
 
@@ -217,7 +213,7 @@ describe('SidecarHumbleSecretStore', () => {
 
   it('clearSecrets() deletes both slots when both resolve successfully', async () => {
     programChannel('keyring_delete', { type: 'resolve', value: true })
-    const store = new SidecarHumbleSecretStore()
+    const store = new SidecarHumbleSecretStore(requestRustInvoke)
 
     await store.clearSecrets()
 
@@ -231,14 +227,14 @@ describe('SidecarHumbleSecretStore', () => {
       type: 'reject',
       error: new Error('keyring:unavailable:PlatformFailure')
     })
-    const store = new SidecarHumbleSecretStore()
+    const store = new SidecarHumbleSecretStore(requestRustInvoke)
 
     await expect(store.isAvailable()).resolves.toBe(false)
   })
 
   it('isAvailable() resolves true when keyring_available reports true', async () => {
     programChannel('keyring_available', { type: 'resolve', value: true })
-    const store = new SidecarHumbleSecretStore()
+    const store = new SidecarHumbleSecretStore(requestRustInvoke)
 
     await expect(store.isAvailable()).resolves.toBe(true)
   })
@@ -249,7 +245,7 @@ describe('SidecarHumbleSecretStore', () => {
   // every prompt it causes is logged as `trigger=unspecified` and cannot be traced back here.
   it('forwards a default trigger label to the slot store, so its Keychain prompt is attributable', async () => {
     programChannel('keyring_available', { type: 'resolve', value: true })
-    const store = new SidecarHumbleSecretStore()
+    const store = new SidecarHumbleSecretStore(requestRustInvoke)
 
     await expect(store.isAvailable()).resolves.toBe(true)
 
@@ -265,7 +261,7 @@ describe('SidecarHumbleSecretStore', () => {
 
   it("forwards a CALLER's trigger label verbatim in preference to its own default", async () => {
     programChannel('keyring_available', { type: 'resolve', value: true })
-    const store = new SidecarHumbleSecretStore()
+    const store = new SidecarHumbleSecretStore(requestRustInvoke)
 
     await expect(store.isAvailable('store-humble-secret')).resolves.toBe(true)
 
@@ -296,7 +292,7 @@ describe('SidecarHumbleSecretStore', () => {
       type: 'reject',
       error: new Error('keyring:unavailable:PlatformFailure')
     })
-    const store = new SidecarHumbleSecretStore()
+    const store = new SidecarHumbleSecretStore(requestRustInvoke)
 
     await store.setSecret('sessionCookie', SECRET)
     await store.getSecret('sessionCookie')
@@ -308,7 +304,7 @@ describe('SidecarHumbleSecretStore', () => {
 
   describe('createSidecarHumbleSecretStore() / startSidecarHumbleSecretStore(store, deps)', () => {
     it('builds a SidecarHumbleSecretStore, and start logs a keyring-backed confirmation line', () => {
-      const store = createSidecarHumbleSecretStore()
+      const store = createSidecarHumbleSecretStore(requestRustInvoke)
       expect(store).toBeInstanceOf(SidecarHumbleSecretStore)
 
       startSidecarHumbleSecretStore(store, migrationDeps)
@@ -322,7 +318,7 @@ describe('SidecarHumbleSecretStore', () => {
     })
 
     it('construction does no I/O: nothing is sent to the keyring until start() runs the migration', () => {
-      createSidecarHumbleSecretStore()
+      createSidecarHumbleSecretStore(requestRustInvoke)
 
       expect(callLog).toEqual([])
     })
@@ -341,7 +337,7 @@ describe('SidecarHumbleSecretStore', () => {
 
       expect(() =>
         startSidecarHumbleSecretStore(
-          createSidecarHumbleSecretStore(),
+          createSidecarHumbleSecretStore(requestRustInvoke),
           migrationDeps
         )
       ).not.toThrow()
@@ -349,8 +345,8 @@ describe('SidecarHumbleSecretStore', () => {
 
     it('two instances do not share a read cache', async () => {
       programChannel('keyring_get', { type: 'resolve', value: 'first' })
-      const a = createSidecarHumbleSecretStore()
-      const b = createSidecarHumbleSecretStore()
+      const a = createSidecarHumbleSecretStore(requestRustInvoke)
+      const b = createSidecarHumbleSecretStore(requestRustInvoke)
       await expect(a.getSecret('sessionCookie')).resolves.toBe('first')
 
       programChannel('keyring_get', { type: 'resolve', value: 'second' })
@@ -371,7 +367,7 @@ describe('SidecarHumbleSecretStore', () => {
       })
 
       await migrateOneSecret(
-        new SidecarHumbleSecretStore(),
+        new SidecarHumbleSecretStore(requestRustInvoke),
         migrationDeps,
         'sessionCookie'
       )
@@ -395,7 +391,7 @@ describe('SidecarHumbleSecretStore', () => {
       })
 
       await migrateOneSecret(
-        new SidecarHumbleSecretStore(),
+        new SidecarHumbleSecretStore(requestRustInvoke),
         migrationDeps,
         'sessionCookie'
       )
@@ -416,7 +412,7 @@ describe('SidecarHumbleSecretStore', () => {
       })
 
       await migrateOneSecret(
-        new SidecarHumbleSecretStore(),
+        new SidecarHumbleSecretStore(requestRustInvoke),
         migrationDeps,
         'sessionCookie'
       )
@@ -435,7 +431,7 @@ describe('SidecarHumbleSecretStore', () => {
       })
 
       await migrateOneSecret(
-        new SidecarHumbleSecretStore(),
+        new SidecarHumbleSecretStore(requestRustInvoke),
         migrationDeps,
         'sessionCookie'
       )
@@ -449,7 +445,7 @@ describe('SidecarHumbleSecretStore', () => {
       // backingStore starts empty (beforeEach) -- sessionCookie was never stored, or a prior
       // migration already ran.
       await migrateOneSecret(
-        new SidecarHumbleSecretStore(),
+        new SidecarHumbleSecretStore(requestRustInvoke),
         migrationDeps,
         'sessionCookie'
       )
@@ -467,7 +463,7 @@ describe('SidecarHumbleSecretStore', () => {
       })
 
       await migrateOneSecret(
-        new SidecarHumbleSecretStore(),
+        new SidecarHumbleSecretStore(requestRustInvoke),
         migrationDeps,
         'csrfToken'
       )
@@ -492,7 +488,7 @@ describe('SidecarHumbleSecretStore', () => {
       })
 
       await migrateOneSecret(
-        new SidecarHumbleSecretStore(),
+        new SidecarHumbleSecretStore(requestRustInvoke),
         migrationDeps,
         'sessionCookie'
       )
@@ -527,7 +523,10 @@ describe('SidecarHumbleSecretStore', () => {
         }
       )
 
-      await migrateHumbleSecrets(new SidecarHumbleSecretStore(), migrationDeps)
+      await migrateHumbleSecrets(
+        new SidecarHumbleSecretStore(requestRustInvoke),
+        migrationDeps
+      )
 
       // sessionCookie migrated successfully...
       expect(backingStore['sessionCookie']).toBeUndefined()
@@ -560,7 +559,7 @@ describe('SidecarHumbleSecretStore', () => {
       )
       backingStore['sessionCookie'] = 'round-trip-value'
 
-      const store = new SidecarHumbleSecretStore()
+      const store = new SidecarHumbleSecretStore(requestRustInvoke)
       const before = await store.getSecret('sessionCookie')
       await migrateHumbleSecrets(store, migrationDeps)
       const after = await store.getSecret('sessionCookie')
@@ -576,7 +575,7 @@ describe('SidecarHumbleSecretStore', () => {
   describe('read caching (inherited from SidecarKeyringSlotStore via each instance own slot stores)', () => {
     it('getSecret() caches a successful read -- a second call for the same key issues NO further keyring_get', async () => {
       programChannel('keyring_get', { type: 'resolve', value: 'cookie-value' })
-      const store = new SidecarHumbleSecretStore()
+      const store = new SidecarHumbleSecretStore(requestRustInvoke)
 
       await expect(store.getSecret('sessionCookie')).resolves.toBe(
         'cookie-value'
@@ -595,7 +594,7 @@ describe('SidecarHumbleSecretStore', () => {
         type: 'resolve',
         value: 'shared-scripted-value'
       })
-      const store = new SidecarHumbleSecretStore()
+      const store = new SidecarHumbleSecretStore(requestRustInvoke)
 
       await store.getSecret('sessionCookie')
       await store.getSecret('csrfToken')
@@ -620,7 +619,7 @@ describe('SidecarHumbleSecretStore', () => {
           type: 'reject',
           error: new Error('keyring:timeout')
         })
-        const store = new SidecarHumbleSecretStore()
+        const store = new SidecarHumbleSecretStore(requestRustInvoke)
 
         // sessionCookie fails and is memoized.
         await expect(store.getSecret('sessionCookie')).resolves.toBe('')
@@ -648,7 +647,7 @@ describe('SidecarHumbleSecretStore', () => {
         type: 'resolve',
         value: 'pre-disconnect-value'
       })
-      const store = new SidecarHumbleSecretStore()
+      const store = new SidecarHumbleSecretStore(requestRustInvoke)
 
       await expect(store.getSecret('sessionCookie')).resolves.toBe(
         'pre-disconnect-value'
@@ -670,7 +669,7 @@ describe('SidecarHumbleSecretStore', () => {
 
     it("setSecret() invalidates that slot's cache -- a subsequent getSecret() for the same key returns the newly-set value, never a stale one", async () => {
       programChannel('keyring_get', { type: 'resolve', value: 'old-cookie' })
-      const store = new SidecarHumbleSecretStore()
+      const store = new SidecarHumbleSecretStore(requestRustInvoke)
 
       await expect(store.getSecret('sessionCookie')).resolves.toBe('old-cookie')
 
@@ -683,7 +682,7 @@ describe('SidecarHumbleSecretStore', () => {
 
     it('isAvailable() caches its result -- a second call issues NO further keyring_available', async () => {
       programChannel('keyring_available', { type: 'resolve', value: true })
-      const store = new SidecarHumbleSecretStore()
+      const store = new SidecarHumbleSecretStore(requestRustInvoke)
 
       await expect(store.isAvailable()).resolves.toBe(true)
       await expect(store.isAvailable()).resolves.toBe(true)
@@ -748,7 +747,7 @@ describe('SidecarHumbleSecretStore.readSecret (Phase 49, D-15)', () => {
 
   it("readSecret('sessionCookie', 'boot-probe') issues one keyring_get on the humble-session slot labelled trigger=boot-probe", async () => {
     programChannel('keyring_get', { type: 'resolve', value: 'cookie-value' })
-    const store = new SidecarHumbleSecretStore()
+    const store = new SidecarHumbleSecretStore(requestRustInvoke)
 
     await store.readSecret('sessionCookie', 'boot-probe')
 
@@ -763,7 +762,7 @@ describe('SidecarHumbleSecretStore.readSecret (Phase 49, D-15)', () => {
 
   it('discriminates: a readSecret call with no context is labelled trigger=unspecified, as getToken() is', async () => {
     programChannel('keyring_get', { type: 'resolve', value: 'cookie-value' })
-    const store = new SidecarHumbleSecretStore()
+    const store = new SidecarHumbleSecretStore(requestRustInvoke)
 
     await store.readSecret('sessionCookie')
 
@@ -776,14 +775,20 @@ describe('SidecarHumbleSecretStore.readSecret (Phase 49, D-15)', () => {
   it('passes a present value through as { status: present }', async () => {
     programChannel('keyring_get', { type: 'resolve', value: 'cookie-value' })
     await expect(
-      new SidecarHumbleSecretStore().readSecret('sessionCookie', 'boot-probe')
+      new SidecarHumbleSecretStore(requestRustInvoke).readSecret(
+        'sessionCookie',
+        'boot-probe'
+      )
     ).resolves.toStrictEqual({ status: 'present', token: 'cookie-value' })
   })
 
   it('passes an empty slot through as { status: absent }', async () => {
     programChannel('keyring_get', { type: 'resolve', value: null })
     await expect(
-      new SidecarHumbleSecretStore().readSecret('sessionCookie', 'boot-probe')
+      new SidecarHumbleSecretStore(requestRustInvoke).readSecret(
+        'sessionCookie',
+        'boot-probe'
+      )
     ).resolves.toStrictEqual({ status: 'absent' })
   })
 
@@ -792,16 +797,18 @@ describe('SidecarHumbleSecretStore.readSecret (Phase 49, D-15)', () => {
       type: 'reject',
       error: new Error('keyring:denied')
     })
-    const outcome = await new SidecarHumbleSecretStore().readSecret(
-      'sessionCookie',
-      'boot-probe'
-    )
+    const outcome = await new SidecarHumbleSecretStore(
+      requestRustInvoke
+    ).readSecret('sessionCookie', 'boot-probe')
     expect(outcome.status).toBe('unreadable')
   })
 
   it("readSecret('csrfToken') addresses the humble-csrf slot, not the session slot", async () => {
     programChannel('keyring_get', { type: 'resolve', value: 'csrf-value' })
-    await new SidecarHumbleSecretStore().readSecret('csrfToken', 'x')
+    await new SidecarHumbleSecretStore(requestRustInvoke).readSecret(
+      'csrfToken',
+      'x'
+    )
     expect(callLog).toStrictEqual([
       { channel: 'keyring_get', args: [KEYRING_SLOT_HUMBLE_CSRF] }
     ])

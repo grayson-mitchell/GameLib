@@ -257,7 +257,11 @@ export default class NileLibraryManager implements LibraryManager {
         aborted: Boolean(res.abort)
       })
       const result = applySignInVerdict(
-        { stores: { nile: this.deps.stores.nile }, epochs },
+        {
+          stores: { nile: this.deps.stores.nile },
+          epochs,
+          sendFrontendMessage: this.deps.sendFrontendMessage
+        },
         'nile',
         outcome,
         epoch

@@ -116,6 +116,7 @@ import { ipcViews } from '../../testUtils/ipcViews'
 const ipc = createIpcRegistry()
 const { listenerRegistry } = ipcViews(ipc)
 const loggerDeps = {
+  sendFrontendMessage: jest.fn(),
   ipc,
   stores: {} as never,
   appInfo: TEST_APP_INFO,
@@ -263,7 +264,10 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
       // module registry — heroicLogWriter is never assigned, reproducing
       // the recorded "heroicLogWriter unset until bootstrap init" gotcha.
       const freshIpc = createIpcRegistry()
-      freshRegistration.registerLoggerFlows({ ...loggerDeps, ipc: freshIpc })
+      freshRegistration.registerLoggerFlows({
+        ...loggerDeps,
+        ipc: freshIpc
+      })
       const freshListener = freshIpc.listenerMap().get('logError')?.[0]
       expect(freshListener).toBeDefined()
 
@@ -416,7 +420,10 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
       // module registry -- heroicLogWriter is never assigned, reproducing
       // the recorded "heroicLogWriter unset until bootstrap init" gotcha.
       const freshIpc = createIpcRegistry()
-      freshRegistration.registerLoggerFlows({ ...loggerDeps, ipc: freshIpc })
+      freshRegistration.registerLoggerFlows({
+        ...loggerDeps,
+        ipc: freshIpc
+      })
       const freshListener = freshIpc.listenerMap().get('logInfo')?.[0]
       expect(freshListener).toBeDefined()
 

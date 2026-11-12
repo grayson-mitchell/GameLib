@@ -394,16 +394,14 @@ describe('allow-list', () => {
     // This suite's own `beforeEach` writes three real secret fields through the real
     // store layer, so simply installing the real notifier and watching the wire is a
     // faithful end-to-end exercise of that path.
-    const sidecarRpc = await import('../sidecarRpc')
     const { registerStoreWriteHandlers } = await import('../storeWriteHandlers')
 
-    const pushSpy = jest
-      .spyOn(sidecarRpc, 'pushFrontendMessage')
-      .mockImplementation(() => undefined)
+    const pushSpy = jest.fn<void, [string, ...unknown[]]>()
 
     try {
       // Idempotent; installs the real `pushStoreChanged` as the store-change notifier.
       registerStoreWriteHandlers({
+        pushFrontendMessage: pushSpy,
         ipc: createIpcRegistry(),
         registry,
         root
@@ -435,7 +433,7 @@ describe('allow-list', () => {
       // against a completely broken channel.
       expect(pushedKeys).toContain('isLoggedIn')
     } finally {
-      pushSpy.mockRestore()
+      pushSpy.mockReset()
     }
   })
 

@@ -90,10 +90,6 @@ jest.mock('../macSteamOffline', () => {
     restoreMacSteamOnlineIfOwed: async () => 'not-owed'
   }
 })
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: jest.fn(),
-  addHandler: jest.fn()
-}))
 
 import type { SteamUser, SteamUserDeps } from '../user'
 import { createTestSteamUser } from 'backend/testUtils/testSteamUser'

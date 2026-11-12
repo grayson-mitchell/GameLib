@@ -13,7 +13,7 @@ import {
 import { existsSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
-import { sendFrontendMessage } from '../../../ipc'
+const sendFrontendMessage = jest.fn()
 import { notify } from '../../../dialog/dialog'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
@@ -38,6 +38,7 @@ const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 const getSteamBottleSettings = jest.fn()
 
 const steamTestDeps = createTestManagerDeps({
+  sendFrontendMessage,
   steamBottle: { getSteamBottleSettings } as never,
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
@@ -81,11 +82,6 @@ jest.mock('graceful-fs')
 
 // ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
 jest.mock('@node-steam/vdf')
-
-// ── IPC mock — sendFrontendMessage ───────────────────────────────────────────
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
@@ -826,9 +822,7 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
     g9oLogger().logWarning.mockClear()
     // The old 60 s grace is gone: nothing at tick 21 or 39.
     const requestNotices = () =>
-      (sendFrontendMessage as jest.Mock).mock.calls.filter(
-        ([c]) => c === 'steamRequestNotice'
-      )
+      sendFrontendMessage.mock.calls.filter(([c]) => c === 'steamRequestNotice')
     await jest.advanceTimersByTimeAsync(interval * 21)
     expect(requestNotices()).toHaveLength(0)
     await jest.advanceTimersByTimeAsync(interval * 18)

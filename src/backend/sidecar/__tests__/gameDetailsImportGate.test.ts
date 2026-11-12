@@ -222,8 +222,12 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // registerSettingsFlows deps gain `infoCaches` and `paths`. No channel, guard or
   // `steamLibrary.has` gate moved. Prior digest:
   // 5a3b10084911e383b9c8791239bd218702451d994c0cbbe5bddc11fd1c17719e
+  // 66.4-15: re-pin -- the registerSettingsFlows deps gain `sendFrontendMessage` (handed to
+  // `applyGameSetting` for the gameSettingWriteFailed push, replacing the module-level
+  // `backend/ipc` import). No channel, guard or `steamLibrary.has` gate moved. Prior digest:
+  // 4fed5097940f0c1149fd17fb93b85ccec41759ea221d68fedd8195801bc03082
   const SETTINGS_FLOW_REGISTRATION_SHA256 =
-    '4fed5097940f0c1149fd17fb93b85ccec41759ea221d68fedd8195801bc03082'
+    '5ccecca3a45fbee8e8f333e6e747e5b7aeab265c56a135ac68a6f0a26dbb0244'
 
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
@@ -396,8 +400,12 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // `createTokenStoreSlot()` and drives `configure` / `current` in place of the removed
   // `setTokenStore` / `getTokenStore` free functions. Same calls, same byte-identity assertions.
   // Prior digest: b582276b5f3f42c0b4385c504f6719585c9d6e1d3ef0dd9083efca6067c0d9ca
+  // 66.4-15: re-pin -- the keyring stores take `requestRustInvoke` by constructor, so the seam
+  // proof drops the `sidecarRpc` module mock for a local `jest.fn()` it passes in. Same calls, same
+  // byte-identity assertions. Prior digest:
+  // 13a12594b7e2ea11a6895cd5bacdd3e89924a87a0cf35b4e7bec864a32301a76
   const ELECTRON_UNTOUCHED_SHA256 =
-    '13a12594b7e2ea11a6895cd5bacdd3e89924a87a0cf35b4e7bec864a32301a76'
+    '2206b5c9fa8965c3eb1c1f503dad2c476c185e3d45809840c46af272e62beed3'
 
   it('REQ-34.2-14 Gate 8: electronUntouched.test.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, 'electronUntouched.test.ts')

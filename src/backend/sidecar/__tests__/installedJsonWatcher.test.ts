@@ -37,6 +37,7 @@
 // ── storeManagers — the DEFAULT refresh target, asserted by its own case below ─────────────
 const refreshInstalledMock = jest.fn()
 const watcherDeps = {
+  sendFrontendMessage: (...a: unknown[]) => sendFrontendMessageMock(...a),
   managers: {
     library: {
       legendary: {
@@ -58,9 +59,6 @@ jest.mock('../../logger', () => ({
 // adds. Mocked so the tests below can observe WHETHER and WHEN it fires without a real
 // sidecar transport. ─────────────────────────────────────────────────────────────────────────
 const sendFrontendMessageMock = jest.fn()
-jest.mock('../../ipc', () => ({
-  sendFrontendMessage: (...args: unknown[]) => sendFrontendMessageMock(...args)
-}))
 
 // ── Imports (after mocks) ──────────────────────────────────────────────────────────────────
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'

@@ -96,10 +96,6 @@ jest.mock('../../../dialog/dialog', () => ({
     .propsOnly(jest.fn())
 }))
 
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
-
 jest.mock('backend/utils/compatibility_layers', () => ({
   getWineFlagsArray: jest.fn(),
   isUmuSupported: jest.fn()
@@ -144,13 +140,18 @@ jest.mock('backend/constants/environment', () => ({
 
 import GOGGame from '../games'
 import { GOGUser } from '../user'
-import { logInfo, logWarning, logError, logDebug } from 'backend/logger'
+import {
+  logInfo,
+  logWarning,
+  logError,
+  logDebug,
+  getRunnerLogWriter
+} from 'backend/logger'
 import type { GOGManagerDeps } from '../library'
 import { createTestManagerDeps } from 'backend/testUtils/testServices'
 import type { GOGImportData } from 'common/types'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { existsSync } from 'graceful-fs'
-import { getRunnerLogWriter } from 'backend/logger'
 import shlex from 'shlex'
 import { getCometBin } from '../../../utils'
 

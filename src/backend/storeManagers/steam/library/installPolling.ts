@@ -1,6 +1,5 @@
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
-import { sendFrontendMessage } from '../../../ipc'
 import { type AcfSource, type PollOptions } from './installRoot'
 import type { ManagerDeps } from 'backend/services/types'
 import {
@@ -124,7 +123,7 @@ export function startInstallPolling(
     ) {
       existingEntry.delegatedToSteamClient = true
       existingEntry.delegatedSinceTick = existingEntry.ticks
-      markManagedBySteam(appId)
+      markManagedBySteam(deps, appId)
       logInfo(
         `Steam: upgrading in-flight install poll for appId ${appId} to delegatedToSteamClient (quick 261024-exo)`,
         LogPrefix.Steam
@@ -313,7 +312,7 @@ export function startInstallPolling(
           `Steam: Steam did not start the install for appId ${appId} — no activity within ${STEAM_REQUEST_NO_ACTIVITY_TICKS} ticks (~2 min) of the request; reverting to not installed (quick 261105-vfq)`,
           LogPrefix.Steam
         )
-        sendFrontendMessage('gameStatusUpdate', {
+        deps.sendFrontendMessage('gameStatusUpdate', {
           appName: appId,
           runner: 'steam',
           status: 'done'
@@ -321,7 +320,7 @@ export function startInstallPolling(
         // quick 261106-pvk: the system notification can land on another
         // monitor or not be delivered at all, so the give-up notice goes to
         // GameLib's own toast stack (renderer maps `kind` to the string).
-        sendFrontendMessage('steamRequestNotice', {
+        deps.sendFrontendMessage('steamRequestNotice', {
           appId,
           title: deps.steamSession.libraryState.library.get(appId)?.title ?? '',
           kind: 'install-not-started',
@@ -341,7 +340,7 @@ export function startInstallPolling(
           `Steam: install polling for appId ${appId} stopped — ${delegatedStopReason}`,
           LogPrefix.Steam
         )
-        sendFrontendMessage('gameStatusUpdate', {
+        deps.sendFrontendMessage('gameStatusUpdate', {
           appName: appId,
           runner: 'steam',
           status: 'done'
@@ -357,7 +356,7 @@ export function startInstallPolling(
         `Steam: install polling for appId ${appId} stopped after grace window (${GRACE_TICKS} ticks) — no manifest detected; user may have cancelled`,
         LogPrefix.Steam
       )
-      sendFrontendMessage('gameStatusUpdate', {
+      deps.sendFrontendMessage('gameStatusUpdate', {
         appName: appId,
         runner: 'steam',
         status: 'done'
@@ -387,7 +386,7 @@ export function startInstallPolling(
 
   entry.timer = timer
   activePolls.set(appId, entry)
-  if (delegatedToSteamClient) markManagedBySteam(appId)
+  if (delegatedToSteamClient) markManagedBySteam(deps, appId)
   if (isLiveMonitorEligible(entry))
     void deps.steamProcesses.downloadMonitor.start(appId)
 }
@@ -397,8 +396,11 @@ export function startInstallPolling(
  * Steam from the moment the request is sent (not only after the first
  * downloading tick), so its Cancel is reachable while Steam is silent.
  */
-function markManagedBySteam(appId: string): void {
-  sendFrontendMessage('gameStatusUpdate', {
+function markManagedBySteam(
+  deps: Pick<ManagerDeps, 'sendFrontendMessage'>,
+  appId: string
+): void {
+  deps.sendFrontendMessage('gameStatusUpdate', {
     appName: appId,
     runner: 'steam',
     status: 'installing',
@@ -444,7 +446,10 @@ export function isDelegatedInstallPolling(
  * stopped; false when there is no poll or it is not delegated.
  */
 export function cancelDelegatedInstall(
-  deps: Pick<ManagerDeps, 'steamProcesses' | 'steamInstallRuntime'>,
+  deps: Pick<
+    ManagerDeps,
+    'steamProcesses' | 'steamInstallRuntime' | 'sendFrontendMessage'
+  >,
   appId: string
 ): boolean {
   const entry = deps.steamInstallRuntime.polls.activePolls.get(appId)
@@ -454,7 +459,7 @@ export function cancelDelegatedInstall(
     LogPrefix.Steam
   )
   stopInstallPolling(deps, appId)
-  sendFrontendMessage('gameStatusUpdate', {
+  deps.sendFrontendMessage('gameStatusUpdate', {
     appName: appId,
     runner: 'steam',
     status: 'done'

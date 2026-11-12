@@ -45,7 +45,6 @@ import {
   legendaryLaunchFailureDialog
 } from './launchFailure'
 import { Catalog, Product } from 'common/types/epic-graphql'
-import { sendFrontendMessage } from '../../ipc'
 import { Game } from 'common/types/game_manager'
 import {
   AllowedWineFlags,
@@ -471,7 +470,7 @@ export default class LegendaryGame implements Game {
         LogPrefix.Legendary
       )
 
-      sendProgressUpdate({
+      sendProgressUpdate(this.deps, {
         appName: this.appName,
         runner: 'legendary',
         status: action,
@@ -488,7 +487,7 @@ export default class LegendaryGame implements Game {
    * Does NOT check for online connectivity.
    */
   async update(): Promise<{ status: 'done' | 'error' }> {
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(this.deps, {
       appName: this.appName,
       runner: 'legendary',
       status: 'updating'
@@ -536,7 +535,7 @@ export default class LegendaryGame implements Game {
       }
     )
 
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(this.deps, {
       appName: this.appName,
       runner: 'legendary',
       status: 'done'
@@ -823,7 +822,7 @@ export default class LegendaryGame implements Game {
       await removeShortcutsUtil(this.deps, this)
       await removeNonSteamGame(this.deps, this)
     }
-    sendFrontendMessage('refreshLibrary', 'legendary')
+    this.deps.sendFrontendMessage('refreshLibrary', 'legendary')
     return res
   }
 
@@ -1129,7 +1128,7 @@ export default class LegendaryGame implements Game {
     if (gameInfo.isEAManaged) command['--origin'] = true
     if (gameInfo.isUbisoftManaged) command['--ubisoft'] = true
 
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(this.deps, {
       appName: this.appName,
       runner: 'legendary',
       status: 'playing'
@@ -1200,7 +1199,7 @@ export default class LegendaryGame implements Game {
         }
       )
 
-      sendFrontendMessage('refreshLibrary', 'legendary')
+      this.deps.sendFrontendMessage('refreshLibrary', 'legendary')
     } catch (error) {
       logError(
         [

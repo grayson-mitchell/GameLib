@@ -11,6 +11,7 @@ jest.mock('backend/logger', () => ({
   LogPrefix: new Proxy({}, { get: (_t, p) => String(p) })
 }))
 
+import { createTestHostServices } from '../../testUtils/testHostServices'
 import { defined } from 'backend/testUtils/indexed'
 import { logWarning } from 'backend/logger'
 import { channelSchemas } from 'common/types/ipc/channelSchemas'
@@ -50,7 +51,7 @@ const warning = (seq: number, jobId = 'job1'): RustJobEvent => ({
 })
 
 const ipc = createIpcRegistry()
-const depotJobs = createDepotJobRegistry()
+const depotJobs = createDepotJobRegistry(createTestHostServices())
 beforeAll(() => registerDepotHostFlows({ ipc, depotJobs }))
 beforeEach(() => jest.clearAllMocks())
 

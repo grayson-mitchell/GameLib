@@ -10,7 +10,6 @@ import { legendarySetup } from 'backend/storeManagers/legendary/setup'
 import { resolveEpicOfflineMode } from 'backend/storeManagers/legendary/epicOfflineMode'
 import gogPresence from 'backend/storeManagers/gog/presence'
 import { isEnabled as isEosOverlayEnabled } from 'backend/storeManagers/legendary/eos_overlay/eos_overlay'
-import { sendFrontendMessage } from 'backend/ipc'
 import { createLauncher } from 'backend/launcher'
 import type { Launcher } from 'backend/launcher'
 import type { ManagerDeps, StoreManagers } from 'backend/services/types'
@@ -69,7 +68,7 @@ export function buildLaunchHooks(
     gog: {
       prepareLaunch: async (appName) => {
         await gogSetup(deps, appName)
-        sendFrontendMessage('gameStatusUpdate', {
+        deps.sendFrontendMessage('gameStatusUpdate', {
           appName,
           runner: 'gog',
           status: 'launching'
@@ -150,6 +149,8 @@ export interface CreateStoreManagersDeps {
   paths: ManagerDeps['paths']
   appInfo: ManagerDeps['appInfo']
   dialogs: ManagerDeps['dialogs']
+  sendFrontendMessage: ManagerDeps['sendFrontendMessage']
+  requestRustInvoke: ManagerDeps['requestRustInvoke']
   openExternal: ManagerDeps['openExternal']
   notifications: ManagerDeps['notifications']
   appState: ManagerDeps['appState']
@@ -204,6 +205,8 @@ export function createStoreManagers(
     paths: deps.paths,
     appInfo: deps.appInfo,
     dialogs: deps.dialogs,
+    sendFrontendMessage: deps.sendFrontendMessage,
+    requestRustInvoke: deps.requestRustInvoke,
     openExternal: deps.openExternal,
     notifications: deps.notifications,
     appState: deps.appState,
@@ -243,6 +246,7 @@ export function createStoreManagers(
     infoCaches: deps.infoCaches,
     appInfo: deps.appInfo,
     dialogs: deps.dialogs,
+    sendFrontendMessage: deps.sendFrontendMessage,
     appState: deps.appState,
     notifications: deps.notifications,
     onlineMonitor: deps.onlineMonitor,

@@ -86,18 +86,10 @@ export function formatRejectionLog(
   return `[sidecarRpc] IPC_INVALID_ARGS kind=${kind} channel=${verdict.channel} paths=${verdict.paths.join(',')} codes=${verdict.codes.join(',')}`
 }
 
-let rejectionSink: ((line: string) => void) | null = null
-
-export function setIpcRejectionLogSink(
-  sink: ((line: string) => void) | null
-): void {
-  rejectionSink = sink
-}
-
 // Per-channel rejection throttle (67 review WR-03). A hot channel (a per-frame send whose NaN
 // becomes null, a looping logError) must not write a stderr + gamelib.log line per frame.
-// Counter against Date.now(): NO timer, so it cannot hold the event loop open (sidecar exit
-// contract). The first LOG_BURST rejections per channel per window are logged; the rest are
+// Counter against the injected clock: NO timer, so it cannot hold the event loop open (sidecar
+// exit contract). The first LOG_BURST rejections per channel per window are logged; the rest are
 // counted, and one "suppressed N" line is emitted when the next window opens.
 const LOG_BURST = 5
 const LOG_WINDOW_MS = 60_000
@@ -109,57 +101,71 @@ interface ThrottleState {
   suppressed: number
 }
 
-const throttle = new Map<string, ThrottleState>()
-let nowFn: () => number = Date.now
-
-/** Test seam: inject a clock (pass nothing to restore Date.now) and clear throttle state. */
-export function resetIpcRejectionThrottle(clock?: () => number): void {
-  throttle.clear()
-  nowFn = clock ?? Date.now
+export interface IpcValidatorDeps {
+  /** The boot clock's `now` (a plain function so a test drives the throttle window). */
+  now: () => number
+  /** Receives every emitted rejection line (the logger sink; fail-soft). */
+  sink: (line: string) => void
 }
 
-function emit(line: string): void {
-  process.stderr.write(`${line}\n`)
-  if (rejectionSink) {
+export interface IpcValidator {
+  validateInbound: typeof validateInbound
+  /** Writes the rejection line to stderr (forwarded by the shell) and the sink. */
+  logRejection(
+    kind: 'invoke' | 'send',
+    verdict: Extract<InboundVerdict, { ok: false }>
+  ): void
+}
+
+/**
+ * Per-boot validator (D-05): the throttle map lives in this closure, so two validators never
+ * share rejection counts and nothing survives a boot.
+ */
+export function createIpcValidator(deps: IpcValidatorDeps): IpcValidator {
+  const throttle = new Map<string, ThrottleState>()
+
+  function emit(line: string): void {
+    process.stderr.write(`${line}\n`)
     try {
-      rejectionSink(line)
+      deps.sink(line)
     } catch {
       // Fail-soft: a broken sink must not break dispatch.
     }
   }
-}
 
-/** Writes the rejection line to stderr (forwarded by the shell) and the optional sink. */
-export function logRejection(
-  kind: 'invoke' | 'send',
-  verdict: Extract<InboundVerdict, { ok: false }>
-): void {
-  const now = nowFn()
-  const key = `${kind}:${verdict.channel}`
-  let st = throttle.get(key)
-  if (st && now - st.windowStart >= LOG_WINDOW_MS) {
-    if (st.suppressed > 0) {
-      emit(
-        `[sidecarRpc] IPC_INVALID_ARGS kind=${kind} channel=${verdict.channel} suppressed=${st.suppressed} (last ${LOG_WINDOW_MS / 1000}s)`
-      )
+  function logRejection(
+    kind: 'invoke' | 'send',
+    verdict: Extract<InboundVerdict, { ok: false }>
+  ): void {
+    const now = deps.now()
+    const key = `${kind}:${verdict.channel}`
+    let st = throttle.get(key)
+    if (st && now - st.windowStart >= LOG_WINDOW_MS) {
+      if (st.suppressed > 0) {
+        emit(
+          `[sidecarRpc] IPC_INVALID_ARGS kind=${kind} channel=${verdict.channel} suppressed=${st.suppressed} (last ${LOG_WINDOW_MS / 1000}s)`
+        )
+      }
+      st = undefined
     }
-    st = undefined
-  }
-  if (!st) {
-    if (throttle.size >= MAX_TRACKED_CHANNELS) {
-      // Map iterates in insertion order: evict the oldest tracked channel.
-      const oldest = throttle.keys().next()
-      if (!oldest.done) throttle.delete(oldest.value)
+    if (!st) {
+      if (throttle.size >= MAX_TRACKED_CHANNELS) {
+        // Map iterates in insertion order: evict the oldest tracked channel.
+        const oldest = throttle.keys().next()
+        if (!oldest.done) throttle.delete(oldest.value)
+      }
+      st = { windowStart: now, logged: 0, suppressed: 0 }
     }
-    st = { windowStart: now, logged: 0, suppressed: 0 }
+    // Re-insert so a re-opened window counts as the newest entry.
+    throttle.delete(key)
+    throttle.set(key, st)
+    if (st.logged >= LOG_BURST) {
+      st.suppressed += 1
+      return
+    }
+    st.logged += 1
+    emit(formatRejectionLog(kind, verdict))
   }
-  // Re-insert so a re-opened window counts as the newest entry.
-  throttle.delete(key)
-  throttle.set(key, st)
-  if (st.logged >= LOG_BURST) {
-    st.suppressed += 1
-    return
-  }
-  st.logged += 1
-  emit(formatRejectionLog(kind, verdict))
+
+  return { validateInbound, logRejection }
 }

@@ -1,3 +1,4 @@
+const sendFrontendMessage = jest.fn()
 /**
  * D-51-01 tracer acceptance bar (Phase 51 Plan 01, Task 1): the ONE
  * real-compiled-binary proof that the registry conversion actually works
@@ -93,10 +94,6 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
-}))
-
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: jest.fn()
 }))
 
 const REPO_ROOT = resolve(__dirname, '..', '..', '..', '..', '..', '..')
@@ -265,6 +262,7 @@ describeDarwinOnly(
     let registry: BridgeHelperRegistry
     const stopBridgeHelper = (appId: string) => registry.stop(appId)
     const helperDeps = () => ({
+      sendFrontendMessage,
       bridgeHelpers: registry,
       runner: realRunner.runner,
       appState: { openBridgeInvitePicker: async () => true },

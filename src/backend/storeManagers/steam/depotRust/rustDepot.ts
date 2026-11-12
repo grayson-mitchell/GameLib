@@ -8,7 +8,6 @@
  *
  * Logs jobId and status only, never a job body, event, key or token.
  */
-import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
 import {
   RUST_DEPOT_JOB_CANCEL,
   RUST_DEPOT_JOB_RUN,
@@ -16,7 +15,7 @@ import {
 } from 'common/types/sidecarTransport'
 import { logInfo, LogPrefix } from 'backend/logger'
 import type { CdnAuthTokenCache } from '../depot/cdnAuth'
-import type { DepotJobRegistry } from './jobRegistry'
+import type { DepotJobRegistry, DepotTransport } from './jobRegistry'
 import type {
   RustDepotJob,
   RustJobEvent,
@@ -27,7 +26,7 @@ import type {
 
 export interface RunDepotJobHooks {
   /** The boot-owned job registry the shell's token and event channels look the job up in. */
-  registry: Pick<DepotJobRegistry, 'registerActiveDepotJob'>
+  registry: Pick<DepotJobRegistry, 'registerActiveDepotJob' | 'transport'>
   signal?: AbortSignal
   tokenCache: CdnAuthTokenCache
   refreshRequestCode: (
@@ -38,8 +37,10 @@ export interface RunDepotJobHooks {
 }
 
 /** Fire-and-forget: a rejected cancel is swallowed and the caller never waits on it. */
-export function cancelDepotJob(jobId: string): void {
-  requestRustInvoke(RUST_DEPOT_JOB_CANCEL, [{ jobId }]).catch(() => {})
+export function cancelDepotJob(transport: DepotTransport, jobId: string): void {
+  transport
+    .requestRustInvoke(RUST_DEPOT_JOB_CANCEL, [{ jobId }])
+    .catch(() => {})
 }
 
 function cancelledOutcome(jobId: string): RustOutcome {
@@ -78,12 +79,13 @@ export async function runDepotJob(
     refreshRequestCode: hooks.refreshRequestCode,
     onEvent: hooks.onEvent
   })
-  const onAbort = () => cancelDepotJob(job.jobId)
+  const onAbort = () => cancelDepotJob(hooks.registry.transport, job.jobId)
   signal?.addEventListener('abort', onAbort, { once: true })
   try {
-    const outcome = (await requestRustInvoke(RUST_DEPOT_JOB_RUN, [
-      job
-    ])) as RustOutcome
+    const outcome = (await hooks.registry.transport.requestRustInvoke(
+      RUST_DEPOT_JOB_RUN,
+      [job]
+    )) as RustOutcome
     logInfo(
       `depot job ${job.jobId} finished: ${outcome.status}`,
       LogPrefix.Steam
@@ -96,9 +98,10 @@ export async function runDepotJob(
 }
 
 export function summarizeDepots(
+  transport: DepotTransport,
   req: RustSummarizeRequest
 ): Promise<RustSummarizeResult> {
-  return requestRustInvoke(RUST_DEPOT_MANIFEST_SUMMARY, [
+  return transport.requestRustInvoke(RUST_DEPOT_MANIFEST_SUMMARY, [
     req
   ]) as Promise<RustSummarizeResult>
 }

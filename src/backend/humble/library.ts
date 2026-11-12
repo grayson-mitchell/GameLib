@@ -1,5 +1,5 @@
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { sendFrontendMessage } from 'backend/ipc'
+import type { SendFrontendMessage } from 'backend/host/frontendMessage'
 import {
   ClaimAnnotation,
   HumbleKey,
@@ -52,6 +52,7 @@ export interface HumbleLibraryDeps extends HumbleAdapterDeps {
   syncFence: Pick<HumbleSyncFence, 'current'>
   /** The boot-owned Steam session, for the connectivity gate (D-66.3-16). */
   steamUser: Pick<SteamUser, 'isLoggedIn'>
+  sendFrontendMessage: SendFrontendMessage
 }
 
 /**
@@ -61,6 +62,7 @@ export interface HumbleLibraryDeps extends HumbleAdapterDeps {
  * nobody else.
  */
 export function createHumbleLibrary(libDeps: HumbleLibraryDeps) {
+  const { sendFrontendMessage } = libDeps
   const humbleStores = (): Stores['humble'] => libDeps.stores.humble
   const steamStores = (): Stores['steam'] => libDeps.stores.steam
   const humbleSteamUser = (): Pick<SteamUser, 'isLoggedIn'> => libDeps.steamUser

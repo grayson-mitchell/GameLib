@@ -13,7 +13,6 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { checkConnectivityNow } from 'backend/connectivityNow'
 import { notify } from 'backend/dialog/dialog'
 import { sendGameStatusUpdate } from 'backend/utils'
-import { sendFrontendMessage } from '../../ipc'
 import { isBridgeBottleReady, getBridgeBottleSettings } from './bridgeBottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 // Phase 60: Steam overlay in bridged games (macOS).
@@ -74,7 +73,7 @@ export async function launchBridgeGameBody(
     steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
       steamGame.appId
     )
-    sendFrontendMessage('steamBridgeSetupRequired', {
+    steamGame.deps.sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
       reason: 'launch-exe-not-resolved',
       fallbackAvailable: true
@@ -112,7 +111,7 @@ export async function launchBridgeGameBody(
       `SteamGame: appId ${steamGame.appId} is bridge-eligible and marked installed, but the bridge bottle/exe is absent on disk (installed via a non-bridge path) — not firing wine at a non-existent exe (D-UAT-24-02)`,
       LogPrefix.Steam
     )
-    sendFrontendMessage('steamBridgeSetupRequired', {
+    steamGame.deps.sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
       reason: 'bridge-not-installed',
       fallbackAvailable: true
@@ -123,6 +122,7 @@ export async function launchBridgeGameBody(
   // Phase 56 (D-12): steamclient-layer DRM mode branch, before any shim
   // placement (RESEARCH F10).
   const { drmWrapper: launchDrmWrapper, drmExe } = await detectLaunchDrmWrapper(
+    steamGame.deps,
     getBottleDir(
       steamGame.deps.paths,
       bridgeBottleSettings.wineCrossoverBottle
@@ -265,7 +265,7 @@ export async function launchBridgeGameBody(
       return launched
     } finally {
       if (!launched) {
-        sendGameStatusUpdate({
+        sendGameStatusUpdate(steamGame.deps, {
           appName: steamGame.appId,
           runner: 'steam',
           status: 'done'
@@ -304,6 +304,7 @@ export async function launchBridgeGameBody(
     persistedScan?.originalFingerprints ??
     persistedVerdict?.originalFingerprints
   const shimResult = await placeShimForGame(
+    steamGame.deps,
     steamGame.deps.paths,
     steamGame.appId,
     exePath,
@@ -336,7 +337,7 @@ export async function launchBridgeGameBody(
     steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
       steamGame.appId
     )
-    sendFrontendMessage('steamBridgeSetupRequired', {
+    steamGame.deps.sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
       // D-51-13: a missing Win64 shim is its own named reason -- the
       // target does not exist at all until 51-15, a different story from
@@ -403,7 +404,7 @@ export async function launchBridgeGameBody(
     steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
       steamGame.appId
     )
-    sendFrontendMessage('steamBridgeSetupRequired', {
+    steamGame.deps.sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
       reason: 'drm-wrapped',
       fallbackAvailable: true
@@ -485,7 +486,7 @@ export async function launchBridgeGameBody(
         steamGame.appId
       )
     }
-    sendFrontendMessage('steamBridgeSetupRequired', {
+    steamGame.deps.sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
       reason: helperReady.status,
       fallbackAvailable: !steamStateCause
@@ -545,7 +546,7 @@ export async function launchBridgeGameBody(
     steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
       steamGame.appId
     )
-    sendFrontendMessage('steamBridgeSetupRequired', {
+    steamGame.deps.sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
       reason: 'bridge-config-write-failed',
       fallbackAvailable: true

@@ -133,6 +133,7 @@ function toolSlices(services: BootServices) {
     gameConfigs: services.gameConfigs,
     appInfo: services.appInfo,
     dialogs: services.host.dialogs,
+    sendFrontendMessage: services.host.sendFrontendMessage,
     appState: services.host.appState,
     notifications: services.host.notifications,
     onlineMonitor: services.onlineMonitor,
@@ -161,6 +162,7 @@ export function registerHandlers(deps: {
     stores: deps.services.stores,
     launcher: deps.services.launcher,
     notifications: deps.services.host.notifications,
+    sendFrontendMessage: deps.services.host.sendFrontendMessage,
     steamSession: deps.services.steamSession,
     humble: deps.services.humble
   })
@@ -189,7 +191,8 @@ export function registerHandlers(deps: {
     appInfo: deps.services.appInfo,
     infoCaches: deps.services.infoCaches,
     paths: deps.services.paths,
-    steamSession: deps.services.steamSession
+    steamSession: deps.services.steamSession,
+    sendFrontendMessage: deps.services.host.sendFrontendMessage
   })
   // D-35-19-15's live gate: a DEV-ONLY single-host Epic cookie sweep, so the
   // `EPIC_COOKIE_HOSTS` sweep can be exercised against ONE sibling apex without
@@ -233,6 +236,8 @@ export function registerHandlers(deps: {
     appInfo: deps.services.appInfo,
     aborts: deps.services.aborts,
     openExternal: deps.services.host.openExternal,
+    requestRustInvoke: deps.services.host.requestRustInvoke,
+    sendFrontendMessage: deps.services.host.sendFrontendMessage,
     managers: deps.services.managers,
     downloadQueue: deps.services.downloadQueue,
     quit: deps.services.quit,
@@ -258,7 +263,9 @@ export function registerHandlers(deps: {
     notifications: deps.services.host.notifications,
     onlineMonitor: deps.services.onlineMonitor,
     steamInstallRuntime: deps.services.steamInstallRuntime,
-    paths: deps.services.paths
+    paths: deps.services.paths,
+    pushFrontendMessage: deps.services.host.pushFrontendMessage,
+    sendFrontendMessage: deps.services.host.sendFrontendMessage
   })
   // Phase 34.2 Plan 06: the enrichment channels — no ordering
   // constraint relative to the other calls above (own channel names, no
@@ -275,7 +282,8 @@ export function registerHandlers(deps: {
     infoCaches: deps.services.infoCaches,
     gogRuntime: deps.services.gogRuntime,
     paths: deps.services.paths,
-    steamGridSecrets: deps.services.steamGridSecrets
+    steamGridSecrets: deps.services.steamGridSecrets,
+    sendFrontendMessage: deps.services.host.sendFrontendMessage
   })
   // Phase 34.3 Plans 01+02 (REQ-34.3-01/-02/-13): the shell/link-opener and
   // filesystem/diagnostics channels — no ordering constraint
@@ -289,7 +297,9 @@ export function registerHandlers(deps: {
     runner: deps.services.runner,
     dialogs: deps.services.host.dialogs,
     appState: deps.services.host.appState,
-    openExternal: deps.services.host.openExternal
+    openExternal: deps.services.host.openExternal,
+    pushFrontendMessage: deps.services.host.pushFrontendMessage,
+    sendFrontendMessage: deps.services.host.sendFrontendMessage
   })
   // Phase 34.3 Plan 06 (REQ-34.3-03/-04/-13): the clipboard channels — the ONLY
   // consumers of this slice's two new dispatch_rust_channel arms
@@ -300,6 +310,7 @@ export function registerHandlers(deps: {
   registerClipboardFlows({
     ipc,
     appState: deps.services.host.appState,
+    requestRustInvoke: deps.services.host.requestRustInvoke,
     managers: deps.services.managers,
     stores: deps.services.stores,
     runner: deps.services.runner,
@@ -324,6 +335,7 @@ export function registerHandlers(deps: {
     ipc,
     stores: deps.services.stores,
     appInfo: deps.services.appInfo,
+    sendFrontendMessage: deps.services.host.sendFrontendMessage,
     openExternal: deps.services.host.openExternal
   })
   // Phase 34.4 Plans 04+05 (REQ-34.4-07): the library/sync + key-state Humble
@@ -343,7 +355,11 @@ export function registerHandlers(deps: {
   // — no ordering constraint relative to the
   // other calls above (own channel names, no cross-module runtime dependency at
   // registration time), placed alongside them, before `registerStoreWriteHandlers()`.
-  registerHumbleLoginFlows({ ipc, humble: deps.services.humble })
+  registerHumbleLoginFlows({
+    ipc,
+    humble: deps.services.humble,
+    requestRustInvoke: deps.services.host.requestRustInvoke
+  })
   // Phase 34.4.1 Plan 09 (REQ-34.4.1-08): the `oauthCaptureLogin` handle channel, which
   // drives the four OAuth runners' (legendary/gog/nile) redirect capture through the SAME
   // login-window seam Humble already installed above -- a completely separate concern from
@@ -374,7 +390,8 @@ export function registerHandlers(deps: {
     loginWindowSeam: deps.services.humble.loginWindowSeam,
     gogRuntime: deps.services.gogRuntime,
     nileRuntime: deps.services.nileRuntime,
-    paths: deps.services.paths
+    paths: deps.services.paths,
+    sendFrontendMessage: deps.services.host.sendFrontendMessage
   })
   registerWineToolsFlows({
     ipc,
@@ -400,7 +417,8 @@ export function registerHandlers(deps: {
     imageTools: deps.services.host.imageTools,
     dialogs: deps.services.host.dialogs,
     appState: deps.services.host.appState,
-    notifications: deps.services.host.notifications
+    notifications: deps.services.host.notifications,
+    sendFrontendMessage: deps.services.host.sendFrontendMessage
   })
   registerRunnerMiscFlows({
     ipc,
@@ -419,13 +437,17 @@ export function registerHandlers(deps: {
     ipc,
     managers: deps.services.managers,
     aborts: deps.services.aborts,
-    paths: deps.services.paths
+    paths: deps.services.paths,
+    sendFrontendMessage: deps.services.host.sendFrontendMessage
   })
   // Phase 40 Plan 05 (REQ-40-02/REQ-40-05): the in-app store-embed channels, plus installing the
   // rustInvoke-backed store-embed seam (setStoreEmbedSeam) — no ordering constraint relative to
   // the other calls above (own channel names, no cross-module runtime dependency at registration
   // time), placed alongside them, before `registerStoreWriteHandlers()`.
-  registerStoreEmbedFlows({ ipc })
+  registerStoreEmbedFlows({
+    ipc,
+    requestRustInvoke: deps.services.host.requestRustInvoke
+  })
   // Phase 73 Plan 11 (D-03, D-06): the shell-originated channels the Rust depot job uses for CDN
   // tokens, manifest request codes and progress events — no ordering constraint relative to the
   // other calls above (own channel names, backed by the boot-owned job registry), placed before
@@ -442,7 +464,8 @@ export function registerHandlers(deps: {
   registerStoreWriteHandlers({
     ipc,
     registry: deps.services.storeRegistry,
-    root: deps.services.storeRoot
+    root: deps.services.storeRoot,
+    pushFrontendMessage: deps.services.host.pushFrontendMessage
   })
 
   // D-03: the eager payload is EXACTLY the declared boot set — not the

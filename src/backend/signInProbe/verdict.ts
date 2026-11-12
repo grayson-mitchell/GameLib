@@ -33,7 +33,7 @@
  * `boundedSignInProbe`.
  */
 import { isStore } from 'common/storeCapabilities'
-import { sendFrontendMessage } from 'backend/ipc'
+import type { SendFrontendMessage } from 'backend/host/frontendMessage'
 import { logInfo, LogPrefix } from 'backend/logger'
 import type { Stores } from 'backend/services/types'
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
@@ -47,6 +47,7 @@ export interface SignInVerdictDeps<S extends SignInStore = SignInStore> {
   stores: Pick<Stores, S>
   /** The boot's shared epoch fence (D-66.3-13); the verdict only reads it. */
   epochs: Pick<SignInEpochs, 'isCurrent'>
+  sendFrontendMessage: SendFrontendMessage
 }
 
 export type SignInVerdictResult = 'latched' | 'cleared' | 'unchanged' | 'stale'
@@ -98,7 +99,7 @@ function flagOver(
 
 /** Display-safe by construction: the same cookie-free shape as before D-18. */
 function pushHumbleAuthState(
-  { stores }: SignInVerdictDeps<'humble'>,
+  { stores, sendFrontendMessage }: SignInVerdictDeps<'humble'>,
   expired: boolean
 ): void {
   const userData = stores.humble.configStore.get_nodefault('userData')

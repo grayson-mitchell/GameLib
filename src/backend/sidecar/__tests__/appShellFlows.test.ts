@@ -97,10 +97,19 @@ jest.mock('backend/store_backend', () => ({
 // ── sidecarRpc — PARTIAL mock: real startRpcServer/pushFrontendMessage/
 // requestOpenExternal, scriptable requestRustInvoke only (see module
 // docstring above for why this differs from every prior stub-only suite) ────
-jest.mock('../sidecarRpc', () => ({
-  ...jest.requireActual('../sidecarRpc'),
-  requestRustInvoke: jest.fn()
-}))
+jest.mock('../sidecarRpc', () => {
+  const actual = jest.requireActual('../sidecarRpc')
+  const requestRustInvoke = jest.fn()
+  return {
+    ...actual,
+    requestRustInvoke,
+    // The boot builds its transport through createSidecarRpc; hand it the scriptable fn.
+    createSidecarRpc: (deps: unknown) => ({
+      ...actual.createSidecarRpc(deps),
+      requestRustInvoke
+    })
+  }
+})
 
 // ── macSteamOffline — PARTIAL mock (54-13): real module, scriptable restore, so a quit
 // reaches the owed-goonline restore without firing any steam:// URL ──────────
@@ -291,7 +300,7 @@ import type { createGlobalConfig as createGlobalConfigType } from 'backend/confi
 import type i18nextType from 'i18next'
 import type { Stores } from 'backend/services/types'
 import type { backendEvents as backendEventsType } from '../../backend_events'
-import type { requestRustInvoke as requestRustInvokeType } from '../sidecarRpc'
+import type { RequestRustInvoke } from '../../host'
 import type { IpcRegistry } from '../ipcRegistry'
 import type * as loggerModuleType from '../../logger'
 import type * as protocolModule from '../../protocol'
@@ -317,7 +326,7 @@ let createGlobalConfig: typeof createGlobalConfigType
 let i18next: typeof i18nextType
 let gameInfoStore: Stores['legendary']['gameInfoStore']
 let backendEvents: typeof backendEventsType
-let requestRustInvoke: typeof requestRustInvokeType
+let requestRustInvoke: RequestRustInvoke
 let loggerModule: typeof loggerModuleType
 let gamesConfigPath: string
 let handleProtocol: typeof protocolModule.handleProtocol
@@ -365,7 +374,7 @@ const directListeners = () => ({
     directIpc?.listenerMap().get(channel) as unknown as [() => void]
 })
 
-function directDeps(stores: unknown = {}) {
+function directDeps(stores: unknown = {}, sendFrontendMessage = jest.fn()) {
   /* eslint-disable @typescript-eslint/no-require-imports */
   // Required at call time so a fresh-registry scope hands the registration ITS registry and its
   // mocked GlobalConfig, not the shared ones.
@@ -376,6 +385,10 @@ function directDeps(stores: unknown = {}) {
   return {
     ipc: directIpc,
     appInfo: { version: pkgJson.version },
+    // The scoped registry's scriptable transport fn, and a recording push.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    requestRustInvoke: require('../sidecarRpc').requestRustInvoke,
+    sendFrontendMessage,
     openExternal: { openExternal: jest.fn() },
     aborts: { call: (id: string) => mockedCallAbortController(id) },
     appState: {
@@ -1122,7 +1135,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         const isolatedRequestRustInvoke = require('../sidecarRpc')
           .requestRustInvoke as jest.Mock
         isolatedRequestRustInvoke.mockResolvedValue(undefined)
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
+
         isolatedInitQueue = downloadQueueStub.initQueue
 
         // `frontendReady`'s handler calls `logInfo()` unconditionally near the top of its
@@ -1202,7 +1215,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         const isolatedRequestRustInvoke = require('../sidecarRpc')
           .requestRustInvoke as jest.Mock
         isolatedRequestRustInvoke.mockResolvedValue(undefined)
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
+
         isolatedInitQueue = downloadQueueStub.initQueue
 
         // See the "Phase 35 plan 11" test above for why this is required: `frontendReady`
@@ -1245,10 +1258,6 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         const sendMock = jest.fn()
         let frontendReadyListener!: () => void
         inFreshRegistry(() => {
-          jest.doMock('../../ipc', () => ({
-            ...jest.requireActual('../../ipc'),
-            sendFrontendMessage: sendMock
-          }))
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           require('backend/config').createGlobalConfig.mockReturnValue({
             getSettings: () => ({ language: 'en' }),
@@ -1273,7 +1282,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           }
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           require('../appShellFlowRegistration').registerAppShellFlows(
-            directDeps()
+            directDeps({}, sendMock)
           )
           ;[frontendReadyListener] = directListeners().get('frontendReady')
         })
@@ -1285,7 +1294,6 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           await flush()
         } finally {
           jest.useRealTimers()
-          jest.dontMock('../../ipc')
         }
         return sendMock
       }
@@ -1597,7 +1605,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         const isolatedRequestRustInvoke = require('../sidecarRpc')
           .requestRustInvoke as jest.Mock
         isolatedRequestRustInvoke.mockResolvedValue(undefined)
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
+
         isolatedInitQueue = downloadQueueStub.initQueue
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         isolatedDetectVCRedist = require('../../utils')

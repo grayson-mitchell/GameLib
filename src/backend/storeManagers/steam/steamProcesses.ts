@@ -10,7 +10,7 @@
  * default and stopped at stdin EOF; the monitors spawn only per polled install and are stopped at
  * stdin EOF.
  */
-import { sendFrontendMessage } from '../../ipc'
+import type { SendFrontendMessage } from '../../host/frontendMessage'
 import type { GlobalConfigSlice } from '../../config'
 import type { OpenExternal } from '../../host/openExternal'
 import type { Clock, ProcessRunner } from '../../process/types'
@@ -37,6 +37,7 @@ export function createSteamProcesses(deps: {
   paths: Pick<AppPaths, 'appFolder' | 'userHome'>
   /** The boot-owned abort registry the DRM component and Valve client downloads register in (66.4-13). */
   aborts: Pick<AbortRegistry, 'create' | 'delete'>
+  sendFrontendMessage: SendFrontendMessage
 }) {
   const { runner, clock, platform, config, openExternal, paths, aborts } = deps
   return {
@@ -54,7 +55,7 @@ export function createSteamProcesses(deps: {
       clock,
       readRunningAppId: () => readRunningAppId({ runner, paths }, platform),
       notify: (appId, status) =>
-        sendFrontendMessage('gameStatusUpdate', {
+        deps.sendFrontendMessage('gameStatusUpdate', {
           appName: String(appId),
           runner: 'steam',
           status

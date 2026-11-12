@@ -59,11 +59,6 @@ jest.mock('backend/logger', () => ({
 
 jest.mock('axios')
 
-// ── IPC mock — sendFrontendMessage ───────────────────────────────────────────
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
-
 // ── stores mock — configStore/steamLibraryStore/steamMetadataStore/
 // steamSyncStore. `configStore.get_nodefault` drives steamUser.isLoggedIn(). ─
 const mockConfigStore = {
@@ -258,7 +253,7 @@ jest.mock('../macSteamOffline', () => ({
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
 import { EventEmitter } from 'events'
-import { sendFrontendMessage } from '../../../ipc'
+const sendFrontendMessage = jest.fn()
 import SteamLibraryManager from '../library'
 import SteamGame from '../games'
 import type { SteamUser, SteamUserDeps } from '../user'
@@ -275,6 +270,7 @@ const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const tokenStoreSlot = createTestTokenStoreSlot()
 const baseDeps = createTestManagerDeps({
+  sendFrontendMessage,
   tokenStore: tokenStoreSlot,
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })

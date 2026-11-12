@@ -66,6 +66,8 @@ export function managerDepsFromServices(
     notifications: source.host.notifications,
     appState: source.host.appState,
     imageTools: source.host.imageTools,
+    sendFrontendMessage: source.host.sendFrontendMessage,
+    requestRustInvoke: source.host.requestRustInvoke,
     onlineMonitor: source.onlineMonitor,
     engineState: source.engineState,
     engineRuntime: source.engineRuntime,

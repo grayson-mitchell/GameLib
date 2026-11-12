@@ -2,11 +2,11 @@
   "jestMock": {
     "src/backend/humble/__tests__/adapter.test.ts": 2,
     "src/backend/humble/__tests__/expirationAlerts.test.ts": 2,
-    "src/backend/humble/__tests__/library.realstore.test.ts": 5,
-    "src/backend/humble/__tests__/library.test.ts": 4,
-    "src/backend/humble/__tests__/probeSession.test.ts": 3,
+    "src/backend/humble/__tests__/library.realstore.test.ts": 4,
+    "src/backend/humble/__tests__/library.test.ts": 3,
+    "src/backend/humble/__tests__/probeSession.test.ts": 2,
     "src/backend/humble/__tests__/stores.test.ts": 1,
-    "src/backend/humble/__tests__/user.test.ts": 3
+    "src/backend/humble/__tests__/user.test.ts": 2
   },
   "moduleState": {}
 }

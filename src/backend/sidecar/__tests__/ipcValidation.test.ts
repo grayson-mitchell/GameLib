@@ -1,6 +1,6 @@
 /**
  * Boundary validation in the sidecar dispatch funnel (Phase 67 Plan 02, D-08..D-11).
- * Drives the REAL `startRpcServer` over PassThrough streams with a mocked `channelSchemas` map.
+ * Drives the REAL `createSidecarRpc` transport over PassThrough streams with a mocked `channelSchemas` map.
  */
 import { defined } from 'backend/testUtils/indexed'
 import { PassThrough } from 'node:stream'
@@ -8,13 +8,11 @@ import { z } from 'zod'
 
 import { createIpcRegistry } from '../ipcRegistry'
 import { createRegistryViews } from './helpers/registryViews'
-import { startRpcServer } from '../sidecarRpc'
+import { validateInbound, type IpcValidator } from '../ipcValidation'
 import {
-  logRejection,
-  resetIpcRejectionThrottle,
-  setIpcRejectionLogSink,
-  validateInbound
-} from '../ipcValidation'
+  createTestIpcValidator,
+  createTestSidecarRpc
+} from '../../testUtils/testSidecarRpc'
 import {
   UNPORTED_CHANNEL_MARKER,
   IPC_INVALID_ARGS_MARKER,
@@ -88,9 +86,25 @@ const sendListener = (...a: unknown[]) => {
 }
 let stderrWrites: string[] = []
 const sinkLines: string[] = []
+// A per-test validator behind a stable handle: the transport is started once (beforeAll) and
+// each test gets a fresh throttle and sink through `resetValidator`.
+let inner: IpcValidator = createTestIpcValidator()
+const validator: IpcValidator = {
+  validateInbound: (...a) => inner.validateInbound(...a),
+  logRejection: (...a) => inner.logRejection(...a)
+}
+function resetValidator(
+  overrides: Parameters<typeof createTestIpcValidator>[0] = {}
+): void {
+  inner = createTestIpcValidator({
+    sink: (l) => sinkLines.push(l),
+    ...overrides
+  })
+}
+const rpc = createTestSidecarRpc({ validator })
 
 beforeAll(() => {
-  startRpcServer(input, output, testIpc)
+  rpc.start(input, output, testIpc)
   handlerRegistry.set('testInvoke', invokeHandler as never)
   handlerRegistry.set('noSchemaInvoke', (async () => 'free') as never)
   listenerRegistry.set('testSend', [sendListener as never])
@@ -106,13 +120,11 @@ beforeEach(() => {
     stderrWrites.push(String(s))
     return true
   }) as never)
-  setIpcRejectionLogSink((l) => sinkLines.push(l))
-  resetIpcRejectionThrottle()
+  resetValidator()
 })
 
 afterEach(() => {
   jest.restoreAllMocks()
-  setIpcRejectionLogSink(null)
 })
 
 function send(frame: Frame) {
@@ -314,13 +326,13 @@ describe('logRejection throttle (67 review WR-03)', () => {
     codes: ['invalid_type']
   })
 
-  afterEach(() => resetIpcRejectionThrottle())
-
   it('logs the first 5 per channel per window, then one suppressed line on roll', () => {
     let t = 1_000
-    resetIpcRejectionThrottle(() => t)
     const lines: string[] = []
-    setIpcRejectionLogSink((l) => lines.push(l))
+    const { logRejection } = createTestIpcValidator({
+      now: () => t,
+      sink: (l) => lines.push(l)
+    })
     jest
       .spyOn(process.stderr, 'write')
       .mockImplementation((() => true) as never)
@@ -337,9 +349,11 @@ describe('logRejection throttle (67 review WR-03)', () => {
   })
 
   it('bounds the number of tracked channels', () => {
-    resetIpcRejectionThrottle(() => 1)
     const lines: string[] = []
-    setIpcRejectionLogSink((l) => lines.push(l))
+    const { logRejection } = createTestIpcValidator({
+      now: () => 1,
+      sink: (l) => lines.push(l)
+    })
     jest
       .spyOn(process.stderr, 'write')
       .mockImplementation((() => true) as never)
@@ -351,8 +365,7 @@ describe('logRejection throttle (67 review WR-03)', () => {
   })
 })
 
-// Kept last: startRpcServer rebinds sidecarRpc's module-level output stream (a 66.4 site), so
-// this server takes over the stream for whatever runs after it.
+// A second, independent transport instance: it shares no output stream or pending ids with the one above.
 describe('validation still fires through an injected registry (66.3-03, T-66.3-08)', () => {
   it('an invalid invoke yields the IPC_INVALID_ARGS error frame and an invalid send is dropped', async () => {
     const ipc = createIpcRegistry()
@@ -367,7 +380,11 @@ describe('validation still fires through an injected registry (66.3-03, T-66.3-0
     const registryInput = new PassThrough()
     const registryOutput = new PassThrough()
     const registryFrames = collectFrames(registryOutput)
-    startRpcServer(registryInput, registryOutput, ipc)
+    createTestSidecarRpc({ validator }).start(
+      registryInput,
+      registryOutput,
+      ipc
+    )
 
     registryInput.write(
       `${JSON.stringify({ id: 'r1', kind: 'invoke', channel: 'testInvoke', args: [5] })}\n`

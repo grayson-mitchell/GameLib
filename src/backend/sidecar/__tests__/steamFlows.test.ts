@@ -143,6 +143,7 @@ function freshRegistry(): void {
     }))
   ;({ createGlobalConfig } = require('backend/config'))
   recentGamesDeps = {
+    sendFrontendMessage: jest.fn(),
     stores: {
       kvs: require('backend/constants/key_value_stores').createKvsStores({
         registry: createStoreRegistry(),

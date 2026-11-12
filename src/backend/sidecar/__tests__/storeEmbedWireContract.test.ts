@@ -30,7 +30,10 @@ import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
 
 import { createRustStoreEmbedSeam } from '../storeEmbedFlowRegistration'
-import { startRpcServer } from '../sidecarRpc'
+import { createTestSidecarRpc } from '../../testUtils/testSidecarRpc'
+
+const rpc = createTestSidecarRpc()
+const { requestRustInvoke } = rpc
 import { createIpcRegistry } from '../ipcRegistry'
 import {
   RUST_STORE_EMBED_OPEN,
@@ -76,7 +79,7 @@ function startTransport(): { input: PassThrough; frames: Frame[] } {
   const input = new PassThrough()
   const output = new PassThrough()
   const frames = collectFrames(output)
-  startRpcServer(input, output, createIpcRegistry())
+  rpc.start(input, output, createIpcRegistry())
   return { input, frames }
 }
 
@@ -153,7 +156,7 @@ describe('store-embed wire contract — the sidecar emits exactly what the Rust 
       'store_embed_open fixture'
     )
     fireWithNoRustPeer(
-      createRustStoreEmbedSeam().open(
+      createRustStoreEmbedSeam(requestRustInvoke).open(
         expected.url,
         { x: expected.x, y: expected.y, w: expected.w, h: expected.h },
         'steam',
@@ -179,7 +182,7 @@ describe('store-embed wire contract — the sidecar emits exactly what the Rust 
       'store_embed_set_bounds fixture'
     )
     fireWithNoRustPeer(
-      createRustStoreEmbedSeam().setBounds({
+      createRustStoreEmbedSeam(requestRustInvoke).setBounds({
         x: expected.x,
         y: expected.y,
         w: expected.w,
@@ -203,7 +206,7 @@ describe('store-embed wire contract — the sidecar emits exactly what the Rust 
       'store_embed_navigate fixture'
     )
     fireWithNoRustPeer(
-      createRustStoreEmbedSeam().navigate(expected.url),
+      createRustStoreEmbedSeam(requestRustInvoke).navigate(expected.url),
       RUST_STORE_EMBED_NAVIGATE
     )
     await flush()
@@ -274,7 +277,7 @@ describe('regression gate: the leaked store_embed rustInvoke rejection now has a
     )
 
     fireWithNoRustPeer(
-      createRustStoreEmbedSeam().open(
+      createRustStoreEmbedSeam(requestRustInvoke).open(
         expected.url,
         { x: expected.x, y: expected.y, w: expected.w, h: expected.h },
         'steam'
@@ -321,7 +324,7 @@ describe('regression gate: the leaked store_embed rustInvoke rejection now has a
     const collapsed = trailingCommentsStripped.replace(/\s+/g, ' ')
 
     // The optional `(` is load-bearing. The historical setBounds shape was
-    // `void (createRustStoreEmbedSeam()...` -- a paren between `void` and the call -- and
+    // `void (createRustStoreEmbedSeam(requestRustInvoke)...` -- a paren between `void` and the call -- and
     // omitting the `\(?` from this pattern undercounts 3 call sites as 2 (measured while
     // re-verifying this plan's baseline).
     const voidedSeamCalls =

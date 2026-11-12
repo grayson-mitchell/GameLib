@@ -1,6 +1,5 @@
 import type { ManagerDeps } from 'backend/services/types'
 import type { CallRunnerOptions } from 'common/types'
-import { sendFrontendMessage } from '../../ipc'
 import axios, { AxiosError, AxiosResponse } from 'axios'
 import { GOGUser } from './user'
 import {
@@ -59,7 +58,7 @@ import { statSync } from 'fs'
  * persisted array from the Map.
  */
 export function applyGogMacArch(
-  deps: Pick<GOGManagerDeps, 'stores' | 'gogRuntime'>,
+  deps: Pick<GOGManagerDeps, 'stores' | 'gogRuntime' | 'sendFrontendMessage'>,
   appName: string,
   verdict: '32' | '64'
 ) {
@@ -82,7 +81,7 @@ export function applyGogMacArch(
   const updated: GameInfo = installed
     ? { ...base, is_installed: true, install: installed }
     : base
-  sendFrontendMessage('pushGameToLibrary', updated)
+  deps.sendFrontendMessage('pushGameToLibrary', updated)
 }
 
 /** The collaborators GOGLibraryManager uses; narrowed by its own plan. */
@@ -1082,7 +1081,7 @@ export default class GOGLibraryManager implements LibraryManager {
     this.refreshInstalled()
     await this.createMissingGogdlManifest(data.appName)
     await checkForRedistUpdates(this.deps)
-    sendFrontendMessage('pushGameToLibrary', gameData)
+    this.deps.sendFrontendMessage('pushGameToLibrary', gameData)
   }
 
   // This checks for updates of Windows and Mac titles
@@ -1701,7 +1700,7 @@ export default class GOGLibraryManager implements LibraryManager {
       installedArray.splice(index, 1, installed)
     }
     this.deps.stores.gog.installedGamesStore.set('installed', installedArray)
-    sendFrontendMessage('pushGameToLibrary', game)
+    this.deps.sendFrontendMessage('pushGameToLibrary', game)
   }
 
   setCyberpunkModConfig(props: { enabled: boolean; modsToLoad: string[] }) {
@@ -1732,7 +1731,7 @@ export default class GOGLibraryManager implements LibraryManager {
     this.library.set(cpId, game)
     this.installedGames.set(cpId, installed)
     this.deps.stores.gog.installedGamesStore.set('installed', installedArray)
-    sendFrontendMessage('pushGameToLibrary', game)
+    this.deps.sendFrontendMessage('pushGameToLibrary', game)
   }
 
   async getCyberpunkMods(): Promise<string[]> {

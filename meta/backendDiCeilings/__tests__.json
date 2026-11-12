@@ -28,15 +28,14 @@
     "src/backend/__tests__/launcher.engineStep.test.ts": 6,
     "src/backend/__tests__/launcher_launchSingleFlight.test.ts": 5,
     "src/backend/__tests__/launcher_wineLibFolders.test.ts": 2,
-    "src/backend/__tests__/main_window.test.ts": 1,
     "src/backend/__tests__/moveOnUnix.test.ts": 4,
-    "src/backend/__tests__/notificationFailureLogging.test.ts": 4,
+    "src/backend/__tests__/notificationFailureLogging.test.ts": 3,
     "src/backend/__tests__/onlineMonitor.test.ts": 1,
-    "src/backend/__tests__/protocol.test.ts": 9,
+    "src/backend/__tests__/protocol.test.ts": 8,
     "src/backend/__tests__/settingsVersioning.test.ts": 3,
     "src/backend/__tests__/steamBridgeKnownFixes.test.ts": 8,
     "src/backend/__tests__/storeChangeNotifier.test.ts": 1,
-    "src/backend/__tests__/storeLaunchHooks.test.ts": 7,
+    "src/backend/__tests__/storeLaunchHooks.test.ts": 6,
     "src/backend/__tests__/utils.test.ts": 4
   }
 }

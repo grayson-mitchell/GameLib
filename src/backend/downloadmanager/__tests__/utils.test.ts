@@ -259,6 +259,7 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
 
     expect(result.status).toBe('abort')
     expect(sendGameStatusUpdateMock).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
         appName: '1091500',
         runner: 'steam',
@@ -289,6 +290,7 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
 
     expect(result.status).toBe('error')
     expect(sendGameStatusUpdateMock).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
         appName: '1091500',
         runner: 'steam',
@@ -372,6 +374,7 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
 
     expect(result.status).toBe('abort')
     expect(sendGameStatusUpdateMock).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
         appName: '1091500',
         runner: 'gog',
@@ -387,6 +390,7 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
 
     expect(result.status).toBe('done')
     expect(sendGameStatusUpdateMock).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
         appName: '1091500',
         runner: 'steam',
@@ -421,6 +425,7 @@ describe('installQueueElement — 260817-dib: no-progress (stall) install watchd
     const assertion = resultPromise.then((result) => {
       expect(result.status).toBe('error')
       expect(sendGameStatusUpdateMock).toHaveBeenCalledWith(
+        expect.anything(),
         expect.objectContaining({
           appName: '1091500',
           runner: 'steam',
@@ -644,6 +649,7 @@ describe('installQueueElement — WR-03/D-12: error-path regression coverage', (
 
     expect(result.status).toBe('error')
     expect(sendGameStatusUpdateMock).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
         appName: '1091500',
         runner: 'steam',
@@ -662,6 +668,7 @@ describe('installQueueElement — WR-03/D-12: error-path regression coverage', (
 
     expect(result.status).toBe('abort')
     expect(sendGameStatusUpdateMock).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
         appName: '1091500',
         runner: 'steam',

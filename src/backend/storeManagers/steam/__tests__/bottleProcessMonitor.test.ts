@@ -13,7 +13,7 @@
  */
 import { join } from 'node:path'
 import { logInfo, logWarning } from 'backend/logger'
-import { sendFrontendMessage } from '../../../ipc'
+const sendFrontendMessage = jest.fn()
 import { recordPlaySession } from 'backend/runsForMe'
 import { getBottleDir } from 'backend/storeManagers/steam/bottleDirs'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
@@ -62,10 +62,6 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam' }
 }))
 
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
-
 // Quick 261029-mkz: the 60 s auto-set hook is asserted via this mock.
 jest.mock('backend/runsForMe', () => ({
   recordPlaySession: jest.fn()
@@ -110,6 +106,7 @@ const mockedSpawnAsync = jest.fn()
 // The window raiser is injected (66.4-13): `mockedRaise` stands in for its `raise`.
 const mockedRaise = jest.fn()
 const spawnDeps = {
+  sendFrontendMessage,
   windowRaiser: { raise: (...a: unknown[]) => mockedRaise(...a) },
   spawnAsync: mockedSpawnAsync,
   runner: createScriptedRunner([]),
@@ -118,7 +115,7 @@ const spawnDeps = {
 const mockedRecordPlaySession = recordPlaySession as jest.Mock
 const mockedLogInfo = logInfo as jest.Mock
 const mockedLogWarning = logWarning as jest.Mock
-const mockedSendFrontendMessage = sendFrontendMessage as jest.Mock
+const mockedSendFrontendMessage = sendFrontendMessage
 const mockedReadBoundedTail = readBoundedTail as jest.Mock
 const mockedClassifyBottledSteamBlock = classifyBottledSteamBlock as jest.Mock
 const mockedBottledSteamLogPaths = bottledSteamLogPaths as jest.Mock

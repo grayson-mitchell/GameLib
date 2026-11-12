@@ -1,5 +1,5 @@
 {
   "jestMock": {
-    "src/backend/scanners/__tests__/rustScan.test.ts": 2
+    "src/backend/scanners/__tests__/rustScan.test.ts": 1
   }
 }

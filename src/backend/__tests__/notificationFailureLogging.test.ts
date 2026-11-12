@@ -20,7 +20,6 @@ jest.mock('backend/logger', () => ({
 jest.mock('backend/constants/environment', () => ({
   isSteamDeckGameMode: false
 }))
-jest.mock('../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 
 type Notify = (n: { title: string; body: string }) => void
 

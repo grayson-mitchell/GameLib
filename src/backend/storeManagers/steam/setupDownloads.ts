@@ -10,7 +10,7 @@
 
 import { downloadFile } from 'backend/utils'
 import type { SteamSetupDownloadKind } from 'common/types/steam'
-import { sendFrontendMessage } from '../../ipc'
+import type { SendFrontendMessage } from '../../host/frontendMessage'
 
 const clampPercent = (n: number): number => {
   if (!Number.isFinite(n)) return 0
@@ -18,11 +18,12 @@ const clampPercent = (n: number): number => {
 }
 
 export async function downloadSetupPayload(
+  deps: { sendFrontendMessage: SendFrontendMessage },
   kind: SteamSetupDownloadKind,
   opts: { url: string; dest: string }
 ): Promise<void> {
   let lastBytes = 0
-  sendFrontendMessage('steamSetupDownloadProgress', {
+  deps.sendFrontendMessage('steamSetupDownloadProgress', {
     kind,
     state: 'running',
     bytes: 0,
@@ -34,7 +35,7 @@ export async function downloadSetupPayload(
       dest: opts.dest,
       progressCallback: (bytes, _speed, percentage) => {
         lastBytes = bytes
-        sendFrontendMessage('steamSetupDownloadProgress', {
+        deps.sendFrontendMessage('steamSetupDownloadProgress', {
           kind,
           state: 'running',
           bytes,
@@ -43,7 +44,7 @@ export async function downloadSetupPayload(
       }
     })
   } catch (error) {
-    sendFrontendMessage('steamSetupDownloadProgress', {
+    deps.sendFrontendMessage('steamSetupDownloadProgress', {
       kind,
       state: 'error',
       bytes: lastBytes,
@@ -51,7 +52,7 @@ export async function downloadSetupPayload(
     })
     throw error
   }
-  sendFrontendMessage('steamSetupDownloadProgress', {
+  deps.sendFrontendMessage('steamSetupDownloadProgress', {
     kind,
     state: 'done',
     bytes: lastBytes,

@@ -28,9 +28,6 @@
  * a jest mock, so it is immune to that reset and survives across tests.
  */
 
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
 jest.mock('backend/dialog/dialog', () => ({
   notify: jest
     .requireActual('backend/testUtils/propsOnlyMock')
@@ -68,10 +65,9 @@ import {
   createTestServices,
   createTestStores
 } from 'backend/testUtils/testServices'
-import { shortcutFiles } from '../shortcuts/shortcuts'
+import { shortcutFiles, addShortcuts } from '../shortcuts/shortcuts'
 import { createPathShimPaths } from 'backend/testUtils/pathShimPaths'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
-import { addShortcuts } from '../shortcuts/shortcuts'
 import { createIpcRegistry } from 'backend/sidecar/ipcRegistry'
 import { ipcViews } from 'backend/testUtils/ipcViews'
 import { logWarning } from 'backend/logger'
@@ -90,6 +86,8 @@ const mockedExistsSync = existsSync as jest.Mock
 // / addListener(...) at module-load time, registering the real handlers
 // against the real `backend/ipc` -> `backend/platform` chain.
 import { registerShortcutsFlows } from '../../sidecar/shortcutsFlowRegistration'
+
+const sendFrontendMessage = jest.fn()
 
 function hostSlices() {
   const host = createTestHostServices()
@@ -118,6 +116,7 @@ function overrideProcessPlatform(os: string): string {
 }
 
 registerShortcutsFlows({
+  sendFrontendMessage,
   ipc,
   ...hostSlices(),
   managers: createTestManagers({

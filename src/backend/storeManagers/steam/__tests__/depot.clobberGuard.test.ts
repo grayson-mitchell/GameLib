@@ -22,7 +22,11 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, relative, sep } from 'node:path'
-import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
+const requestRustInvoke = jest.fn()
+const depotTransport = {
+  requestRustInvoke,
+  sendFrontendMessage: jest.fn()
+}
 import { downloadSteamDepots } from '../depot'
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 const steamUser = createMockSteamUser()
@@ -45,10 +49,6 @@ jest.mock('backend/logger', () => ({
     Steam: 'Steam',
     Backend: 'Backend'
   }
-}))
-
-jest.mock('backend/sidecar/sidecarRpc', () => ({
-  requestRustInvoke: jest.fn()
 }))
 
 // ── SteamUser mock — controls acquireAuthenticated()/getClient() return values ────
@@ -83,10 +83,6 @@ jest.mock('backend/config', () => ({
 jest.mock('../depot/select', () => ({
   ...jest.requireActual('../depot/select'),
   selectAllDepots: jest.fn()
-}))
-
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
 }))
 
 jest.mock('i18next', () => ({
@@ -273,7 +269,7 @@ describe('D-08: catch-path finalize must not clobber a complete install (bottle-
     })
 
     const result = await downloadSteamDepots(KCD2_APP_ID, {
-      installRuntime: createTestSteamInstallRuntime(),
+      installRuntime: createTestSteamInstallRuntime(depotTransport),
       steamUser,
       config: createTestGlobalConfig(),
       targetSteamappsDir,
@@ -327,7 +323,7 @@ describe('D-08: catch-path finalize must not clobber a complete install (bottle-
       )
 
     const result = await downloadSteamDepots(KCD2_APP_ID, {
-      installRuntime: createTestSteamInstallRuntime(),
+      installRuntime: createTestSteamInstallRuntime(depotTransport),
       steamUser,
       config: createTestGlobalConfig(),
       targetSteamappsDir,

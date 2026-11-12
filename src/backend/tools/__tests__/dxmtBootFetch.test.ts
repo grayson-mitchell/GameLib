@@ -79,10 +79,12 @@ const isOnlineMock = jest.fn()
 // Reading `.get` off the mocked store is a jest mock handle, not a real unbound method
 // call -- `this` is never involved. Hoisting it into a `mock`-prefixed factory variable
 // instead would hit the TDZ, because `jest.mock` is hoisted above this declaration.
-// eslint-disable-next-line @typescript-eslint/unbound-method
+
 // 66.3-15: the listeners exist only after registerDxmtListeners, registered ONCE for the whole
 // file (re-registering would stack duplicate listeners and inflate every call count).
 const unregisterDxmt = registerDxmtListeners({
+  requestRustInvoke: jest.fn(),
+  sendFrontendMessage: jest.fn(),
   events: backendEvents,
   runner: createScriptedRunner([]),
   aborts: createTestAbortRegistry(),
@@ -182,6 +184,8 @@ describe('registerDxmtListeners (66.3-15)', () => {
     const on = jest.fn()
     const off = jest.fn()
     const unregister = registerDxmtListeners({
+      requestRustInvoke: jest.fn(),
+      sendFrontendMessage: jest.fn(),
       events: { on, off } as never,
       runner: createScriptedRunner([]),
       aborts: createTestAbortRegistry(),
@@ -229,6 +233,8 @@ describe('registerDxmtListeners (66.3-15)', () => {
     const store = { get: jest.fn().mockReturnValue([]) }
     storeGetMock.mockReturnValue([])
     const unregister = registerDxmtListeners({
+      requestRustInvoke: jest.fn(),
+      sendFrontendMessage: jest.fn(),
       events: fresh as never,
       runner: createScriptedRunner([]),
       aborts: createTestAbortRegistry(),

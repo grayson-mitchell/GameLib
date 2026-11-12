@@ -1,3 +1,4 @@
+const sendFrontendMessage = jest.fn()
 /**
  * Quick 261029-mkz: backend persistence + auto-set rules for "Runs for me".
  * The store is an in-memory fake; backend/ipc is mocked.
@@ -5,6 +6,7 @@
 const mockData: { games?: Record<string, string> } = {}
 
 const deps = {
+  sendFrontendMessage,
   stores: {
     runsForMe: {
       runsForMeStore: {
@@ -17,21 +19,19 @@ const deps = {
     }
   } as never
 }
-jest.mock('backend/ipc', () => ({ sendFrontendMessage: jest.fn() }))
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logWarning: jest.fn(),
   LogPrefix: { Backend: 'Backend' }
 }))
 
-import { sendFrontendMessage } from 'backend/ipc'
 import {
   getRunsForMeMap,
   recordPlaySession,
   setRunsForMeByUser
 } from '../index'
 
-const mockedSend = sendFrontendMessage as jest.Mock
+const mockedSend = sendFrontendMessage
 
 describe('runsForMe backend', () => {
   beforeEach(() => {

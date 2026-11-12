@@ -34,7 +34,6 @@ import type { ManagerDeps } from 'backend/services/types'
 import type { AppPaths } from 'backend/process/context'
 import type { SpawnDeps } from './provisionBottle'
 import { isMac, isLinux } from 'backend/constants/environment'
-import { sendFrontendMessage } from '../../ipc'
 import { downloadSetupPayload } from './setupDownloads'
 import { STEAM_DOWNLOAD_URL, STEAM_SETUP_EXE_URL } from './constants'
 import { NUMERIC_APP_ID } from './gameConstants'
@@ -112,7 +111,7 @@ function hasLibraryFoldersVdf(
  * entry point without a second, duplicated guard in main.ts.
  */
 export async function ensureSteamClientReady(
-  deps: Pick<ManagerDeps, 'config' | 'steamUser'>,
+  deps: Pick<ManagerDeps, 'config' | 'steamUser' | 'sendFrontendMessage'>,
   appId: string
 ): Promise<EnsureSteamClientReadyResult> {
   if (!NUMERIC_APP_ID.test(appId)) {
@@ -132,7 +131,7 @@ export async function ensureSteamClientReady(
       `ensureSteamClientReady: Steam client not installed — requesting guided install for appId ${appId} (D-10)`,
       LogPrefix.Steam
     )
-    sendFrontendMessage('steamClientSetupRequired', {
+    deps.sendFrontendMessage('steamClientSetupRequired', {
       appName: appId,
       reason: 'install'
     })
@@ -144,7 +143,7 @@ export async function ensureSteamClientReady(
       `ensureSteamClientReady: Steam installed but never launched (no libraryfolders.vdf) — requesting launch-once prompt for appId ${appId} (D-11)`,
       LogPrefix.Steam
     )
-    sendFrontendMessage('steamClientSetupRequired', {
+    deps.sendFrontendMessage('steamClientSetupRequired', {
       appName: appId,
       reason: 'launch-once'
     })
@@ -200,7 +199,7 @@ interface StartGuidedInstallResult {
  */
 export async function startGuidedClientInstall(
   deps: SpawnDeps &
-    Pick<ManagerDeps, 'openExternal'> & {
+    Pick<ManagerDeps, 'openExternal' | 'sendFrontendMessage'> & {
       paths: Pick<AppPaths, 'steamSupportPath'>
     }
 ): Promise<StartGuidedInstallResult> {
@@ -231,7 +230,7 @@ export async function startGuidedClientInstall(
   try {
     mkdirSync(destDir, { recursive: true })
     if (!existsSync(destPath)) {
-      await downloadSetupPayload('steam-client', {
+      await downloadSetupPayload(deps, 'steam-client', {
         url: installerUrl,
         dest: destPath
       })

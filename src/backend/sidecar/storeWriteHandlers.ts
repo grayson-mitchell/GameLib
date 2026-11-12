@@ -26,7 +26,7 @@ import type { IpcRegistry } from './ipcRegistry'
 // Namespace import (not a named import) so this module's frontend-push call site is
 // the ONLY line in the file naming that function — see the header comment and the D-06
 // single-choke-point note above `applyStoreWrite`.
-import * as sidecarRpc from './sidecarRpc'
+import type { HostServices } from '../host'
 import type { StoreRegistry } from '../stores/storeRegistry'
 import type { StoreRoot } from '../stores/storeRoot'
 import { TOKEN_STORE_KEY } from '../storeManagers/steam/constants'
@@ -100,6 +100,14 @@ function resolveWritableStore(
   return undefined
 }
 
+type PushFrontendMessage = HostServices['pushFrontendMessage']
+
+interface StoreLayer {
+  registry: StoreRegistry
+  root: StoreRoot
+  push: PushFrontendMessage
+}
+
 /**
  * THE single write choke point (D-06). Guards run in this fixed order; each rejection
  * logs exactly one stderr line naming the store and key — NEVER the value (T-28-04
@@ -108,6 +116,7 @@ function resolveWritableStore(
 export function applyStoreWrite(
   registry: StoreRegistry,
   root: StoreRoot,
+  push: PushFrontendMessage,
   op: 'set' | 'delete',
   storeName: string,
   key: string,
@@ -229,7 +238,7 @@ export function applyStoreWrite(
     return
   }
 
-  pushStoreChanged({
+  pushStoreChanged(push, {
     store: storeName,
     key,
     value,
@@ -250,7 +259,10 @@ export function applyStoreWrite(
  * renderer rendered none, silently, until restart). Those writers now reach this same
  * function through the store root's `changes` channel bound below.
  */
-function pushStoreChanged(payload: StoreChangedPayload): void {
+function pushStoreChanged(
+  push: PushFrontendMessage,
+  payload: StoreChangedPayload
+): void {
   // SECRET-LEAK GUARD — load-bearing for the sidecar-initiated producer, redundant for
   // `applyStoreWrite`.
   //
@@ -276,10 +288,7 @@ function pushStoreChanged(payload: StoreChangedPayload): void {
     return
   }
 
-  sidecarRpc.pushFrontendMessage(
-    STORE_CHANGED_CHANNEL,
-    payload satisfies StoreChangedPayload
-  )
+  push(STORE_CHANGED_CHANNEL, payload satisfies StoreChangedPayload)
 }
 
 /**
@@ -290,9 +299,9 @@ function pushStoreChanged(payload: StoreChangedPayload): void {
  * `deps.ipc.on` appends; installing them per boot would run every write against every
  * boot's registry.
  */
-let currentLayer: { registry: StoreRegistry; root: StoreRoot } | undefined
+let currentLayer: StoreLayer | undefined
 
-function requireCurrentLayer(): { registry: StoreRegistry; root: StoreRoot } {
+function requireCurrentLayer(): StoreLayer {
   if (!currentLayer) {
     throw new Error('[storeWriteHandlers] no store registry bound')
   }
@@ -308,18 +317,26 @@ export function registerStoreWriteHandlers(deps: {
   ipc: Pick<IpcRegistry, 'on'>
   registry: StoreRegistry
   root: StoreRoot
+  /** This boot's backend -> frontend push (66.4-15). */
+  pushFrontendMessage: PushFrontendMessage
 }): void {
   // "Already installed" is "a layer was already bound" — one module-level binding, not
   // a flag plus a binding (the moduleState ceiling counts each).
   const alreadyInstalled = currentLayer !== undefined
-  currentLayer = { registry: deps.registry, root: deps.root }
+  currentLayer = {
+    registry: deps.registry,
+    root: deps.root,
+    push: deps.pushFrontendMessage
+  }
 
   // Point THIS boot's root at this file's single push site, so writes the SIDECAR itself
   // performs reach the renderer's D-06 listener the same way renderer-initiated writes
   // already do. Bound here, not in bootstrap, because this is the sidecar-only entry point
   // that already owns this channel. Bound on every call because the channel is per root;
   // notifications raised before this call are still dropped (the channel starts unbound).
-  deps.root.changes.bind(pushStoreChanged)
+  deps.root.changes.bind((payload) =>
+    pushStoreChanged(deps.pushFrontendMessage, payload)
+  )
   if (alreadyInstalled) {
     return
   }
@@ -337,8 +354,8 @@ export function registerStoreWriteHandlers(deps: {
         return
       }
       {
-        const { registry, root } = requireCurrentLayer()
-        applyStoreWrite(registry, root, 'set', storeName, key, value)
+        const { registry, root, push } = requireCurrentLayer()
+        applyStoreWrite(registry, root, push, 'set', storeName, key, value)
       }
     }
   )
@@ -353,8 +370,8 @@ export function registerStoreWriteHandlers(deps: {
         return
       }
       {
-        const { registry, root } = requireCurrentLayer()
-        applyStoreWrite(registry, root, 'delete', storeName, key)
+        const { registry, root, push } = requireCurrentLayer()
+        applyStoreWrite(registry, root, push, 'delete', storeName, key)
       }
     }
   )

@@ -4,6 +4,7 @@
 // while it sits in the queue. Starting it anyway ran a no-op job over the
 // finished tree, and cancelling that job with Delete Files destroyed it.
 
+import type { FrontendMessageDeps } from '../../host/frontendMessage'
 import { join, resolve } from 'path'
 import { logInfo, LogPrefix } from 'backend/logger'
 import type { SteamLibraryStateDeps } from 'backend/services/types'
@@ -38,7 +39,10 @@ import {
  * buildid, so Steam's own UpdateRequired bit is the determinable proxy.
  */
 export async function steamQueueHeadAlreadyInstalled(
-  deps: SteamStoresDeps & SteamLibrariesDeps & SteamLibraryStateDeps,
+  deps: SteamStoresDeps &
+    SteamLibrariesDeps &
+    SteamLibraryStateDeps &
+    FrontendMessageDeps,
   appId: string,
   params: { path?: string }
 ): Promise<boolean> {

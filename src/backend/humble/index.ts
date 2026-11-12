@@ -1,4 +1,5 @@
 import type { AppInfo } from 'backend/process/context'
+import type { SendFrontendMessage } from 'backend/host/frontendMessage'
 import type { ManagerDeps, Stores } from 'backend/services/types'
 import type { SteamUser } from 'backend/storeManagers/steam/user'
 
@@ -24,6 +25,7 @@ export interface HumbleServicesDeps {
   /** The boot-owned sign-in outcome notes (D-66.3-13). */
   signInOutcomes: ManagerDeps['signIn']['outcomes']
   appInfo: Pick<AppInfo, 'userAgentFallback'>
+  sendFrontendMessage: SendFrontendMessage
 }
 
 /**
@@ -50,7 +52,8 @@ export function createHumbleServices(deps: HumbleServicesDeps): HumbleServices {
     loginWindowSeam,
     syncFence,
     signInOutcomes: deps.signInOutcomes,
-    appInfo: deps.appInfo
+    appInfo: deps.appInfo,
+    sendFrontendMessage: deps.sendFrontendMessage
   })
   const library = createHumbleLibrary({
     stores: deps.stores,
@@ -58,7 +61,8 @@ export function createHumbleServices(deps: HumbleServicesDeps): HumbleServices {
     syncFence,
     steamUser: deps.steamUser,
     loginWindowSeam,
-    appInfo: deps.appInfo
+    appInfo: deps.appInfo,
+    sendFrontendMessage: deps.sendFrontendMessage
   })
   return {
     user,

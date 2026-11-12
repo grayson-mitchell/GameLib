@@ -6,11 +6,15 @@
  * that mock them).
  */
 import type { SteamInstallRuntime } from '../storeManagers/steam/steamInstallRuntime'
+import type { DepotTransport } from '../storeManagers/steam/depotRust/jobRegistry'
+import { createTestHostServices } from './testHostServices'
 
-export function createTestSteamInstallRuntime(): SteamInstallRuntime {
+export function createTestSteamInstallRuntime(
+  transport?: DepotTransport
+): SteamInstallRuntime {
   /* eslint-disable @typescript-eslint/no-require-imports */
   const { createSteamInstallRuntime } =
     require('../storeManagers/steam/steamInstallRuntime') as typeof import('../storeManagers/steam/steamInstallRuntime')
   /* eslint-enable @typescript-eslint/no-require-imports */
-  return createSteamInstallRuntime()
+  return createSteamInstallRuntime(transport ?? createTestHostServices())
 }

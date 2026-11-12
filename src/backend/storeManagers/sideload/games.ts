@@ -50,6 +50,7 @@ export default class SideloadGame implements Game {
       | 'dialogs'
       | 'appState'
       | 'notifications'
+      | 'sendFrontendMessage'
     >
   ) {
     this.id = id
@@ -128,7 +129,7 @@ export default class SideloadGame implements Game {
     shouldRemovePrefix,
     deleteFiles = false
   }: RemoveArgs): Promise<ExecResult> {
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(this.deps, {
       appName: this.id,
       runner: 'sideload',
       status: 'uninstalling'
@@ -158,7 +159,7 @@ export default class SideloadGame implements Game {
     removeRecentGame(this.deps, this.id)
     removeNonSteamGame(this.deps, this)
 
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(this.deps, {
       appName: this.id,
       runner: 'sideload',
       status: 'done'

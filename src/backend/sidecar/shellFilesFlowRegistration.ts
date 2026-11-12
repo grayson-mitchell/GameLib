@@ -122,7 +122,7 @@ import {
   sidInfoUrl
 } from '../constants/urls'
 import { showDialogBoxModalAuto } from '../dialog/dialog'
-import { pushFrontendMessage } from './sidecarRpc'
+import type { HostServices } from '../host'
 import { logInfo, LogPrefix } from '../logger'
 import i18next from 'i18next'
 import type { DiskSpaceData } from 'common/types'
@@ -155,6 +155,9 @@ export function registerShellFilesFlows(deps: {
     OpenExternal,
     'openExternal' | 'openPath' | 'showItemInFolder'
   >
+  /** This boot's backend -> frontend push (66.4-15). */
+  pushFrontendMessage: HostServices['pushFrontendMessage']
+  sendFrontendMessage: HostServices['sendFrontendMessage']
 }): void {
   // ── send (11): the URL openers (constant URLs go straight to shell.openExternal) ────
 
@@ -283,7 +286,7 @@ export function registerShellFilesFlows(deps: {
       const fromVersionChange = args[1] === true
       clearCache(deps, undefined, fromVersionChange)
       startLegendaryCleanup({ libraryManagers: deps.managers.library })
-      pushFrontendMessage('refreshLibrary')
+      deps.pushFrontendMessage('refreshLibrary')
 
       if (showDialog) {
         showDialogBoxModalAuto(deps, {

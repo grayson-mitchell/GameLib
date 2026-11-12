@@ -14,7 +14,7 @@ import { join } from 'path'
 /** R1 slice: the per-runner managers. */
 export type UninstallerDeps = Pick<
   ManagerDeps,
-  'libraryManagers' | 'notifications' | 'paths'
+  'libraryManagers' | 'notifications' | 'paths' | 'sendFrontendMessage'
 > & { config: Pick<GlobalConfigSlice, 'getSettings'> }
 
 export const removePrefix = async (
@@ -118,7 +118,7 @@ export const uninstallGameCallback = async (
   shouldRemovePrefix: boolean,
   shouldRemoveSetting: boolean
 ) => {
-  sendGameStatusUpdate({
+  sendGameStatusUpdate(deps, {
     appName,
     runner,
     status: 'uninstalling'
@@ -144,7 +144,7 @@ export const uninstallGameCallback = async (
         `Uninstall refused; keeping settings for ${runner} ${appName} (stderrLength=${result.stderr.length})`,
         LogPrefix.Backend
       )
-      sendGameStatusUpdate({ appName, runner, status: 'done' })
+      sendGameStatusUpdate(deps, { appName, runner, status: 'done' })
       return
     }
     if (result?.failed) {
@@ -156,7 +156,7 @@ export const uninstallGameCallback = async (
         `Uninstall failed; keeping settings for ${runner} ${appName} (stderrLength=${result.stderr.length})`,
         LogPrefix.Backend
       )
-      sendGameStatusUpdate({ appName, runner, status: 'done' })
+      sendGameStatusUpdate(deps, { appName, runner, status: 'done' })
       return
     }
     uninstalled = true
@@ -195,7 +195,7 @@ export const uninstallGameCallback = async (
   // Steam: ACF poller emits the real done signal — suppress it here to prevent
   // the badge flash caused by uninstallGameCallback resolving instantly (GAME-03).
   if (!storeCapabilities[runner].installManagedExternally) {
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(deps, {
       appName,
       runner,
       status: 'done'

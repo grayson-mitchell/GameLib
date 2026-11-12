@@ -35,7 +35,10 @@ import {
 } from '../storeEmbedFlowRegistration'
 import { createIpcRegistry } from '../ipcRegistry'
 import { ipcViews } from '../../testUtils/ipcViews'
-import { startRpcServer, requestRustInvoke } from '../sidecarRpc'
+import { createTestSidecarRpc } from '../../testUtils/testSidecarRpc'
+
+const rpc = createTestSidecarRpc()
+const { requestRustInvoke } = rpc
 import {
   RUST_STORE_EMBED_OPEN,
   RUST_STORE_EMBED_SET_BOUNDS,
@@ -91,7 +94,7 @@ function startTransport(): { input: PassThrough; frames: Frame[] } {
   const input = new PassThrough()
   const output = new PassThrough()
   const frames = collectFrames(output)
-  startRpcServer(input, output, ipc)
+  rpc.start(input, output, ipc)
   return { input, frames }
 }
 
@@ -100,7 +103,7 @@ const SAMPLE_BOUNDS = { x: 10, y: 20, w: 800, h: 600 }
 // ── Registered ONCE for this whole file — `handlerRegistry`/`listenerRegistry` are module-scope
 // maps; calling registerStoreEmbedFlows() more than once would stack a duplicate listener onto
 // the same channel array (humbleLoginFlows.test.ts's own docstring names this hazard). ─────────
-registerStoreEmbedFlows({ ipc })
+registerStoreEmbedFlows({ ipc, requestRustInvoke })
 
 // ── Test 1: kind correctness ───────────────────────────────────────────────────────────────────
 describe('kind correctness — the 9 invoke channels and 1 send channel are registered with the correct kind, both directions', () => {
@@ -146,7 +149,7 @@ describe('malformed-response-throws — every live-Rust-arm method throws on a m
     'store_embed_open: throws on $label',
     async ({ value }) => {
       const { input, frames } = startTransport()
-      const seam = createRustStoreEmbedSeam()
+      const seam = createRustStoreEmbedSeam(requestRustInvoke)
 
       const promise = seam.open(
         'https://store.steampowered.com',
@@ -168,7 +171,7 @@ describe('malformed-response-throws — every live-Rust-arm method throws on a m
     'store_embed_set_bounds: throws on $label',
     async ({ value }) => {
       const { input, frames } = startTransport()
-      const seam = createRustStoreEmbedSeam()
+      const seam = createRustStoreEmbedSeam(requestRustInvoke)
 
       const settled = (async () => {
         try {
@@ -199,7 +202,7 @@ describe('malformed-response-throws — every live-Rust-arm method throws on a m
     'store_embed_hide: throws on $label',
     async ({ value }) => {
       const { input, frames } = startTransport()
-      const seam = createRustStoreEmbedSeam()
+      const seam = createRustStoreEmbedSeam(requestRustInvoke)
 
       const promise = seam.hide()
       await flush()
@@ -217,7 +220,7 @@ describe('malformed-response-throws — every live-Rust-arm method throws on a m
     'store_embed_show: throws on $label',
     async ({ value }) => {
       const { input, frames } = startTransport()
-      const seam = createRustStoreEmbedSeam()
+      const seam = createRustStoreEmbedSeam(requestRustInvoke)
 
       const promise = seam.show()
       await flush()
@@ -235,7 +238,7 @@ describe('malformed-response-throws — every live-Rust-arm method throws on a m
     'store_embed_close: throws on $label',
     async ({ value }) => {
       const { input, frames } = startTransport()
-      const seam = createRustStoreEmbedSeam()
+      const seam = createRustStoreEmbedSeam(requestRustInvoke)
 
       const promise = seam.close()
       await flush()
@@ -284,7 +287,7 @@ describe('malformed-response-throws — every live-Rust-arm method throws on a m
     'store_embed_back: throws on $label',
     async ({ value }) => {
       const { input, frames } = startTransport()
-      const seam = createRustStoreEmbedSeam()
+      const seam = createRustStoreEmbedSeam(requestRustInvoke)
 
       const promise = seam.back()
       await flush()
@@ -302,7 +305,7 @@ describe('malformed-response-throws — every live-Rust-arm method throws on a m
     'store_embed_forward: throws on $label',
     async ({ value }) => {
       const { input, frames } = startTransport()
-      const seam = createRustStoreEmbedSeam()
+      const seam = createRustStoreEmbedSeam(requestRustInvoke)
 
       const promise = seam.forward()
       await flush()
@@ -320,7 +323,7 @@ describe('malformed-response-throws — every live-Rust-arm method throws on a m
     'store_embed_reload: throws on $label',
     async ({ value }) => {
       const { input, frames } = startTransport()
-      const seam = createRustStoreEmbedSeam()
+      const seam = createRustStoreEmbedSeam(requestRustInvoke)
 
       const promise = seam.reload()
       await flush()
@@ -338,7 +341,7 @@ describe('malformed-response-throws — every live-Rust-arm method throws on a m
     'store_embed_navigate: throws on $label',
     async ({ value }) => {
       const { input, frames } = startTransport()
-      const seam = createRustStoreEmbedSeam()
+      const seam = createRustStoreEmbedSeam(requestRustInvoke)
 
       const promise = seam.navigate('https://store.steampowered.com/app/440')
       await flush()
@@ -459,7 +462,7 @@ describe('no-handler-rejects — a rejecting requestRustInvoke surfaces as a res
 describe('nav-methods-reach-their-rust-channel — all five navigation methods reach Rust and coerce the response (40-05 -> 40-07 -> GAP-D)', () => {
   it('takeNavEvents reaches store_embed_take_nav_events with no arguments and resolves the coerced event array', async () => {
     const { input, frames } = startTransport()
-    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
     await flush()
 
     const frame = frames.find(
@@ -490,7 +493,7 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
 
   it('takeNavEvents resolves an empty array for an idle queue — the healthy, most frequent case', async () => {
     const { input, frames } = startTransport()
-    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
     await flush()
     const frame = frames.find(
       (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
@@ -501,7 +504,7 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
 
   it('takeNavEvents throws on a non-array response — a dead arm must not look like an idle one', async () => {
     const { input, frames } = startTransport()
-    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
     await flush()
     const frame = frames.find(
       (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
@@ -514,7 +517,7 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
 
   it('takeNavEvents coerces PER ELEMENT — one malformed entry in an otherwise valid array throws', async () => {
     const { input, frames } = startTransport()
-    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
     await flush()
     const frame = frames.find(
       (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
@@ -549,7 +552,7 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
   // SAME coercion as every Tauri-managed event above -- these two cases prove that end to end. ──
   it("takeNavEvents round-trips an Epic-shaped event with `surface: 'epic'` preserved", async () => {
     const { input, frames } = startTransport()
-    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
     await flush()
     const frame = frames.find(
       (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
@@ -576,7 +579,7 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
 
   it('takeNavEvents still throws on a non-boolean canGoBack when the event carries `surface: "epic"` -- the surface field does not bypass validation', async () => {
     const { input, frames } = startTransport()
-    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
     await flush()
     const frame = frames.find(
       (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
@@ -606,7 +609,7 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
   // itself, Task 1). ──
   it("takeNavEvents throws when a surface: 'epic' event is missing loadTimedOut", async () => {
     const { input, frames } = startTransport()
-    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
     await flush()
     const frame = frames.find(
       (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
@@ -633,7 +636,7 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
 
   it("takeNavEvents throws when a surface: 'tauri' event carries loadTimedOut", async () => {
     const { input, frames } = startTransport()
-    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
     await flush()
     const frame = frames.find(
       (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
@@ -661,7 +664,7 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
 
   it('takeNavEvents throws when a surface-less event carries loadTimedOut', async () => {
     const { input, frames } = startTransport()
-    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
     await flush()
     const frame = frames.find(
       (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
@@ -691,7 +694,7 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
   // `blockedLauncherSchemeCount` is additionally checked for being a non-negative integer. ──
   it("takeNavEvents throws when a surface: 'epic' event is missing challenged", async () => {
     const { input, frames } = startTransport()
-    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
     await flush()
     const frame = frames.find(
       (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
@@ -720,7 +723,7 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
 
   it("takeNavEvents throws when a surface: 'epic' event is missing blockedLauncherSchemeCount", async () => {
     const { input, frames } = startTransport()
-    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
     await flush()
     const frame = frames.find(
       (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
@@ -749,7 +752,7 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
 
   it("takeNavEvents throws when a surface: 'epic' event carries a negative blockedLauncherSchemeCount", async () => {
     const { input, frames } = startTransport()
-    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
     await flush()
     const frame = frames.find(
       (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
@@ -779,7 +782,7 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
 
   it("takeNavEvents throws when a surface: 'epic' event carries a non-integral blockedLauncherSchemeCount", async () => {
     const { input, frames } = startTransport()
-    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
     await flush()
     const frame = frames.find(
       (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
@@ -809,7 +812,7 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
 
   it("takeNavEvents throws when a surface: 'tauri' event carries challenged", async () => {
     const { input, frames } = startTransport()
-    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
     await flush()
     const frame = frames.find(
       (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
@@ -837,7 +840,7 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
 
   it('takeNavEvents throws when a surface-less event carries blockedLauncherSchemeCount', async () => {
     const { input, frames } = startTransport()
-    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
     await flush()
     const frame = frames.find(
       (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
@@ -864,7 +867,7 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
 
   it('takeNavEvents round-trips an Epic event carrying challenged and blockedLauncherSchemeCount', async () => {
     const { input, frames } = startTransport()
-    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
     await flush()
     const frame = frames.find(
       (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
@@ -893,21 +896,28 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
   }
 
   const NAV_REACHABILITY_CASES: [string, string, () => Promise<unknown>][] = [
-    ['back', RUST_STORE_EMBED_BACK, () => createRustStoreEmbedSeam().back()],
+    [
+      'back',
+      RUST_STORE_EMBED_BACK,
+      () => createRustStoreEmbedSeam(requestRustInvoke).back()
+    ],
     [
       'forward',
       RUST_STORE_EMBED_FORWARD,
-      () => createRustStoreEmbedSeam().forward()
+      () => createRustStoreEmbedSeam(requestRustInvoke).forward()
     ],
     [
       'reload',
       RUST_STORE_EMBED_RELOAD,
-      () => createRustStoreEmbedSeam().reload()
+      () => createRustStoreEmbedSeam(requestRustInvoke).reload()
     ],
     [
       'navigate',
       RUST_STORE_EMBED_NAVIGATE,
-      () => createRustStoreEmbedSeam().navigate(SAMPLE_NAV_STATE.url)
+      () =>
+        createRustStoreEmbedSeam(requestRustInvoke).navigate(
+          SAMPLE_NAV_STATE.url
+        )
     ]
   ]
 
@@ -999,7 +1009,7 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
 
   it('store_embed_navigate: forwards the url argument on the wire, unchanged', async () => {
     const { input, frames } = startTransport()
-    const promise = createRustStoreEmbedSeam().navigate(
+    const promise = createRustStoreEmbedSeam(requestRustInvoke).navigate(
       'https://example.com/next'
     )
     await flush()
@@ -1027,7 +1037,7 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
 describe('bounds-courier-passthrough-and-throw — setBounds is a pure courier (T-40-05-04/D-18/D-29)', () => {
   it('store_embed_set_bounds: emits { x, y, w, h } field-for-field unchanged, no rounding/clamping/defaulting', async () => {
     const { input, frames } = startTransport()
-    const seam = createRustStoreEmbedSeam()
+    const seam = createRustStoreEmbedSeam(requestRustInvoke)
 
     const oddBounds = { x: 10.5, y: -3, w: 799.999, h: 0 }
     void (seam.setBounds(oddBounds) as unknown as Promise<void>)
@@ -1058,7 +1068,7 @@ describe('bounds-courier-passthrough-and-throw — setBounds is a pure courier (
     'store_embed_set_bounds: throws synchronously on $label, WITHOUT emitting a rustInvoke frame',
     ({ bounds }) => {
       const { frames } = startTransport()
-      const seam = createRustStoreEmbedSeam()
+      const seam = createRustStoreEmbedSeam(requestRustInvoke)
       expect(() =>
         seam.setBounds(bounds as { x: number; y: number; w: number; h: number })
       ).toThrow(/must be a finite number/)

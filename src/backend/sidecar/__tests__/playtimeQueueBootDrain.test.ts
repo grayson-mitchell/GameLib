@@ -94,7 +94,6 @@ const SKIP_LOG_OPTIONS = { prefix: LogPrefix.Backend }
  * `seed` runs in `before` too, for state that must exist when the boot reads it.
  */
 function bootedWorld(opts?: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   seed?: (queue: { set: (k: string, v: any) => void }) => void
   drainImpl?: () => Promise<void>
 }) {
@@ -129,6 +128,8 @@ function bootedWorld(opts?: {
         require('../../testUtils/testServices') as typeof import('../../testUtils/testServices')
       const fakes = createTestServices()
       const built = createStoreManagers({
+        sendFrontendMessage: fakes.host.sendFrontendMessage,
+        requestRustInvoke: fakes.host.requestRustInvoke,
         stores: fakes.stores,
         commandRunner: fakes.commandRunner,
         spawnAsync: fakes.spawnAsync,

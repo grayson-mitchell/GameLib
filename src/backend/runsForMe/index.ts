@@ -1,5 +1,5 @@
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { sendFrontendMessage } from 'backend/ipc'
+import type { SendFrontendMessage } from 'backend/host/frontendMessage'
 import {
   nextRunsForMeAfterSession,
   nextRunsForMeAfterUserToggle,
@@ -12,6 +12,7 @@ import type { Stores } from 'backend/services/types'
 /** The store slice the runs-for-me map reads (66.1, R1). */
 export interface RunsForMeDeps {
   stores: Pick<Stores, 'runsForMe'>
+  sendFrontendMessage: SendFrontendMessage
 }
 
 const VALID_STATES: ReadonlySet<string> = new Set([
@@ -49,7 +50,7 @@ function writeAndPush(
   // Whole-record read/write: never `get('games.' + key)` (dots in appNames).
   const next = { ...getRunsForMeMap(deps), [key]: state }
   deps.stores.runsForMe.runsForMeStore.set('games', next)
-  sendFrontendMessage('runsForMeChanged', next)
+  deps.sendFrontendMessage('runsForMeChanged', next)
   return next
 }
 

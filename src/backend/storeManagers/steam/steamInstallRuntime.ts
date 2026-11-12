@@ -18,7 +18,8 @@ import {
 } from './depot/sharedRedistLocks'
 import {
   createDepotJobRegistry,
-  type DepotJobRegistry
+  type DepotJobRegistry,
+  type DepotTransport
 } from './depotRust/jobRegistry'
 import {
   createInstallPollState,
@@ -47,13 +48,15 @@ export type DepotRuntime = Pick<
   'appinfoOrder' | 'cdnSchema' | 'sharedRedistLocks' | 'depotJobs'
 >
 
-export function createSteamInstallRuntime(): SteamInstallRuntime {
+export function createSteamInstallRuntime(
+  transport: DepotTransport
+): SteamInstallRuntime {
   const polls = createInstallPollState()
   return {
     appinfoOrder: createAppinfoOrder(),
     cdnSchema: createCdnSchemaCache(),
     sharedRedistLocks: createSharedRedistLocks(),
-    depotJobs: createDepotJobRegistry(),
+    depotJobs: createDepotJobRegistry(transport),
     polls,
     restartHold: createSteamRestartHold({ polls }),
     uninstallPolls: createUninstallPolls()

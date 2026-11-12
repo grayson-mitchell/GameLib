@@ -40,7 +40,7 @@
 import { existsSync, watch } from 'graceful-fs'
 import { deriveLegendaryPaths } from '../storeManagers/legendary/constants'
 import { logInfo, LogPrefix } from '../logger'
-import { sendFrontendMessage } from '../ipc'
+import type { SendFrontendMessage } from '../host/frontendMessage'
 import type { ManagerDeps, StoreManagers } from '../services/types'
 
 /**
@@ -81,6 +81,7 @@ export function startInstalledJsonWatcher(
   deps: {
     managers: Pick<StoreManagers, 'library'>
     paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath'>
+    sendFrontendMessage: SendFrontendMessage
   },
   options: InstalledJsonWatcherOptions = {}
 ): boolean {
@@ -118,7 +119,7 @@ export function startInstalledJsonWatcher(
       // failed rebuild and turn the rejection into an unhandled one.
       // eslint-disable-next-line @typescript-eslint/await-thenable
       await deps.managers.library.legendary.refreshInstalled()
-      sendFrontendMessage('refreshLibrary', 'legendary')
+      deps.sendFrontendMessage('refreshLibrary', 'legendary')
     })
 
   if (!existsSync(target)) {

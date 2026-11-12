@@ -37,10 +37,6 @@ jest.mock('backend/storeManagers/gog/presence', () => ({
 jest.mock('backend/storeManagers/legendary/eos_overlay/eos_overlay', () => ({
   isEnabled: (...a: unknown[]) => isEnabledMock(...a)
 }))
-jest.mock('backend/ipc', () => ({
-  ...jest.requireActual('backend/ipc'),
-  sendFrontendMessage: (...a: unknown[]) => sendFrontendMessageMock(...a)
-}))
 
 import type LogWriter from 'backend/logger/log_writer'
 import type { WineInstallation } from 'common/types'
@@ -59,6 +55,7 @@ const legendaryStores = {
 } as unknown as Stores['legendary']
 const storeLaunchHooks = buildLaunchHooks(
   createTestManagerDeps({
+    sendFrontendMessage: (...a: unknown[]) => sendFrontendMessageMock(...a),
     // 66.3-15: the steam hook persists through the boot-owned bottle instance on the deps.
     steamBottle: {
       persistBottleWineVersion: (...a: unknown[]) => persistMock(...a)

@@ -60,6 +60,7 @@
  * only runs inside a user-initiated launch, never at boot.
  */
 
+import type { FrontendMessageDeps } from '../../../host/frontendMessage'
 import {
   readFile,
   writeFile,
@@ -321,19 +322,20 @@ async function writeLedger(
 }
 
 /** What the shared redist install reaches through slices (66.1 R3). */
-type RedistDeps = Pick<
-  ManagerDeps,
-  | 'commandRunner'
-  | 'spawnAsync'
-  | 'runner'
-  | 'config'
-  | 'steamBottle'
-  | 'steamUser'
-  | 'paths'
-  | 'engineRuntime'
-  | 'steamLaunchRuntime'
-  | 'steamInstallRuntime'
->
+type RedistDeps = FrontendMessageDeps &
+  Pick<
+    ManagerDeps,
+    | 'commandRunner'
+    | 'spawnAsync'
+    | 'runner'
+    | 'config'
+    | 'steamBottle'
+    | 'steamUser'
+    | 'paths'
+    | 'engineRuntime'
+    | 'steamLaunchRuntime'
+    | 'steamInstallRuntime'
+  >
 type RunWineCommand = RedistDeps['commandRunner']['runWineCommand']
 
 /**
@@ -655,7 +657,7 @@ async function run(
     signal,
     allowLogon: opts?.allowLogon,
     onComponent: (label) =>
-      sendGameStatusUpdate({
+      sendGameStatusUpdate(deps, {
         appName: appId,
         runner: 'steam',
         status: 'redist',
@@ -841,7 +843,7 @@ async function run(
 
           if (entry.processes.length === 0) continue
 
-          sendGameStatusUpdate({
+          sendGameStatusUpdate(deps, {
             appName: appId,
             runner: 'steam',
             status: 'redist',

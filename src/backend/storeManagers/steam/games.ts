@@ -11,7 +11,6 @@ import { GOGCloudSavesLocation } from 'common/types/gog'
 import { Game, InstallResult, RemoveArgs } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type LogWriter from 'backend/logger/log_writer'
-import { sendFrontendMessage } from '../../ipc'
 import {
   addShortcuts as addShortcutsUtil,
   removeShortcuts as removeShortcutsUtil
@@ -494,7 +493,7 @@ export default class SteamGame implements Game {
         'games',
         Array.from(this.deps.steamSession.libraryState.library.values())
       )
-      sendFrontendMessage('pushGameToLibrary', updated)
+      this.deps.sendFrontendMessage('pushGameToLibrary', updated)
     }
     logInfo(
       `SteamGame: force-uninstalled appId ${this.appId} — kept in-memory library entry marked not-installed`,

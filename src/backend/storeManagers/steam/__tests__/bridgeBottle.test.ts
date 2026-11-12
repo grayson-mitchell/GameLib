@@ -80,12 +80,6 @@ jest.mock('backend/engine/adoptBottle', () => ({
   writeCxbottleConf: jest.fn()
 }))
 
-// quick 261027-tot: setupDownloads.ts (the SteamSetup.exe fetch wrapper) emits
-// its progress push through ipc; mocked so the real ipc module never loads.
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
-
 // GAP C (17-16): force isMac true so the macOS raise poll loop is exercised
 // deterministically on every host (the loop is dynamically imported by
 // bottle.ts). isSnap is provided because backend/constants/paths reads it.

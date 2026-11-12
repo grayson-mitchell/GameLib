@@ -1,3 +1,4 @@
+import type { FrontendMessageDeps } from '../../host/frontendMessage'
 import { existsSync } from 'graceful-fs'
 import path from 'node:path'
 import { GameInfo, GameSettings, InstalledInfo } from 'common/types'
@@ -27,29 +28,30 @@ import {
 } from 'backend/engine/launchEngine'
 
 /** What GOG setup reads: the manager map, the wine launcher helpers and the runners. */
-export type SetupDeps = Pick<
-  GOGManagerDeps,
-  | 'libraryManagers'
-  | 'onlineMonitor'
-  | 'engineState'
-  | 'engineRuntime'
-  | 'paths'
-  | 'steamBottle'
-  | 'steamLaunchRuntime'
-  | 'launcher'
-  | 'commandRunner'
-  | 'spawnAsync'
-  | 'aborts'
-  | 'toolsState'
-  | 'stores'
-  | 'runner'
-  | 'config'
-  | 'gameConfigs'
-  | 'dialogs'
-  | 'appInfo'
-  | 'appState'
-  | 'notifications'
->
+export type SetupDeps = FrontendMessageDeps &
+  Pick<
+    GOGManagerDeps,
+    | 'libraryManagers'
+    | 'onlineMonitor'
+    | 'engineState'
+    | 'engineRuntime'
+    | 'paths'
+    | 'steamBottle'
+    | 'steamLaunchRuntime'
+    | 'launcher'
+    | 'commandRunner'
+    | 'spawnAsync'
+    | 'aborts'
+    | 'toolsState'
+    | 'stores'
+    | 'runner'
+    | 'config'
+    | 'gameConfigs'
+    | 'dialogs'
+    | 'appInfo'
+    | 'appState'
+    | 'notifications'
+  >
 
 /*
  * Automatially executes command properly according to operating system
@@ -249,7 +251,7 @@ async function runGogSetup(
     }
   }
 
-  sendGameStatusUpdate({
+  sendGameStatusUpdate(deps, {
     appName,
     runner: 'gog',
     status: 'redist',
@@ -456,7 +458,7 @@ async function runGogSetup(
         prefix: LogPrefix.Gog
       })
 
-      sendGameStatusUpdate({
+      sendGameStatusUpdate(deps, {
         appName,
         runner: 'gog',
         status: 'redist',

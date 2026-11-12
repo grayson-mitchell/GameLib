@@ -20,7 +20,7 @@ import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { reportDetectedFix } from 'backend/knownFixReport'
-import { sendFrontendMessage } from '../../../ipc'
+const sendFrontendMessage = jest.fn()
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
 import { getBottleSteamappsDir } from '../bottle'
@@ -69,6 +69,7 @@ const isSteamBottleProvisioned = jest.fn()
 // The i386-recovery confirm goes through deps.dialogs; this recording fake is what it calls.
 const dialog = { showMessageBox: jest.fn() }
 const steamTestDeps = createTestManagerDeps({
+  sendFrontendMessage,
   steamBottle: { getSteamBottleSettings, isSteamBottleProvisioned } as never,
   dialogs: {
     ...createTestHostServices().dialogs,
@@ -120,11 +121,6 @@ jest.mock('graceful-fs')
 
 // ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
 jest.mock('@node-steam/vdf')
-
-// ── IPC mock — sendFrontendMessage ───────────────────────────────────────────
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({

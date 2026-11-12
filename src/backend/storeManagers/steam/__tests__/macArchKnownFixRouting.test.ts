@@ -43,9 +43,6 @@ jest.mock('@node-steam/vdf', () => ({ parse: jest.fn() }))
 // ARGUMENTS, never merely "was called" (plan's Task 1 hard requirement).
 jest.mock('node:fs', () => ({ rmSync: jest.fn() }))
 
-// ── IPC mock ──────────────────────────────────────────────────────────────────
-jest.mock('../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
-
 // ── dialog/dialog mock ────────────────────────────────────────────────────────
 jest.mock('../../../dialog/dialog', () => ({
   notify: jest

@@ -189,7 +189,6 @@ import { createStoreRegistry } from 'backend/stores/storeRegistry'
 let downloadManager: ReturnType<
   typeof import('../../downloadmanager/stores').createDownloadManagerStores
 >['downloadManager']
-let sendFrontendMessage: typeof import('../../ipc').sendFrontendMessage
 let mockedSteamGetGame: jest.Mock
 let mockedSteamGetGameInfo: jest.Mock
 let mockedInstallQueueElement: jest.Mock
@@ -209,7 +208,6 @@ function freshRegistry(): void {
       registry: createStoreRegistry(),
       root: testRoot
     }))
-  ;({ sendFrontendMessage } = require('../../ipc'))
   /* eslint-enable @typescript-eslint/no-require-imports */
   mockedSteamGetGame = jest.fn()
   mockedSteamGetGameInfo = jest.fn()
@@ -416,10 +414,10 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
   // throttle/coalesce logic added on top of depot.ts's own 500ms/1%/1000ms
   // throttle.
   it('progressUpdate relay-reach: a simulated depot emitProgress push reaches frontend_message with the exact depot.ts payload shape', async () => {
-    const { input, frames } = boot()
+    const { input, frames, services } = boot()
     void input // no RPC frame needed — this proves the PUSH path, not a channel handler
 
-    sendFrontendMessage('progressUpdate', {
+    services.host.sendFrontendMessage('progressUpdate', {
       appName: '999004',
       runner: 'steam',
       status: 'installing',

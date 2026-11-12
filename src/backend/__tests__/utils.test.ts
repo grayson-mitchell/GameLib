@@ -441,6 +441,7 @@ describe('backend/utils.ts', () => {
 describe('errorHandler takes its manager table by deps (66.1-23)', () => {
   const host = createTestHostServices()
   const throwingTable = {
+    sendFrontendMessage: jest.fn(),
     dialogs: host.dialogs,
     appState: host.appState,
     get libraryManagers(): never {
@@ -476,6 +477,7 @@ describe('errorHandler takes its manager table by deps (66.1-23)', () => {
     }))
     let reads = 0
     const deps = {
+      sendFrontendMessage: jest.fn(),
       dialogs: host.dialogs,
       appState: host.appState,
       get libraryManagers() {

@@ -39,7 +39,6 @@ import {
 } from '../../shortcuts/shortcuts/shortcuts'
 import { removeNonSteamGame } from 'backend/shortcuts/nonesteamgame/nonesteamgame'
 import type { ShortcutsDeps } from 'backend/shortcuts/utils'
-import { sendFrontendMessage } from '../../ipc'
 import setup from './setup'
 import { getUmuId } from 'backend/wiki_game_info/umu/utils'
 import { isWindows } from 'backend/constants/environment'
@@ -74,6 +73,7 @@ export default class NileGameManager implements Game {
         | 'dialogs'
         | 'appState'
         | 'notifications'
+        | 'sendFrontendMessage'
         | 'gameConfigs'
         | 'appInfo'
       > & {
@@ -253,7 +253,7 @@ export default class NileGameManager implements Game {
         LogPrefix.Nile
       )
 
-      sendProgressUpdate({
+      sendProgressUpdate(this.deps, {
         appName: this.id,
         runner: 'nile',
         status: action,
@@ -493,7 +493,7 @@ export default class NileGameManager implements Game {
       args
     })
 
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(this.deps, {
       appName: this.id,
       runner: 'nile',
       status: 'playing'
@@ -609,7 +609,7 @@ export default class NileGameManager implements Game {
       await removeNonSteamGame(this.deps, this)
       this.deps.libraryManagers.nile.installState(this.id, false)
     }
-    sendFrontendMessage('refreshLibrary', 'nile')
+    this.deps.sendFrontendMessage('refreshLibrary', 'nile')
     return res
   }
 
@@ -653,7 +653,7 @@ export default class NileGameManager implements Game {
       return { status: 'error', error: res.error }
     }
 
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(this.deps, {
       appName: this.id,
       runner: 'nile',
       status: 'done'

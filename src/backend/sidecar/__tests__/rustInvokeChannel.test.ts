@@ -60,12 +60,6 @@ function collectLines(stream: PassThrough): string[] {
   return lines
 }
 
-/** sidecarRpc from the registry bootFresh(BOOT_OPTS) just built (the top-level import would be stale). */
-function freshRpc(): typeof import('../sidecarRpc') {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return require('../sidecarRpc')
-}
-
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
 async function flush(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve))
@@ -79,9 +73,9 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
 
   // Behavior 1: requestRustInvoke() writes exactly one well-formed rustInvoke frame.
   it('writes a single well-formed rustInvoke frame for an allowlisted channel', async () => {
-    const { input, output } = bootFresh(BOOT_OPTS)
+    const { input, output, services } = bootFresh(BOOT_OPTS)
     const lines = collectLines(output)
-    const { requestRustInvoke } = freshRpc()
+    const { requestRustInvoke } = services.host
 
     const promise = requestRustInvoke(RUST_KEYRING_GET, [])
     await flush()
@@ -106,9 +100,9 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
 
   // Behavior 2: a synthetic {ok:true} response resolves the returned Promise.
   it('resolves the returned Promise when a matching {ok:true} response arrives', async () => {
-    const { input, output } = bootFresh(BOOT_OPTS)
+    const { input, output, services } = bootFresh(BOOT_OPTS)
     const lines = collectLines(output)
-    const { requestRustInvoke } = freshRpc()
+    const { requestRustInvoke } = services.host
 
     const promise = requestRustInvoke(RUST_KEYRING_GET, [])
     await flush()
@@ -125,9 +119,9 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
 
   // Behavior 3: a synthetic {ok:false} response rejects the returned Promise.
   it('rejects the returned Promise when a matching {ok:false} response arrives', async () => {
-    const { input, output } = bootFresh(BOOT_OPTS)
+    const { input, output, services } = bootFresh(BOOT_OPTS)
     const lines = collectLines(output)
-    const { requestRustInvoke } = freshRpc()
+    const { requestRustInvoke } = services.host
 
     const promise = requestRustInvoke(RUST_KEYRING_GET, [])
     await flush()
@@ -208,9 +202,9 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
   // Behavior 7 (T-28-03 allowlist): a channel not in RUST_INVOKE_CHANNELS rejects immediately
   // and writes NO frame to the output stream.
   it('rejects a non-allowlisted channel immediately without emitting a frame', async () => {
-    const { output } = bootFresh(BOOT_OPTS)
+    const { output, services } = bootFresh(BOOT_OPTS)
     const lines = collectLines(output)
-    const { requestRustInvoke } = freshRpc()
+    const { requestRustInvoke } = services.host
 
     await expect(
       requestRustInvoke('rm -rf /' as RustInvokeChannel, [])
@@ -227,8 +221,8 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
   // Behavior 8: an unanswered requestRustInvoke rejects after the 60s timeout.
   it('rejects with a timeout message after 60s when unanswered', async () => {
     jest.useFakeTimers()
-    bootFresh(BOOT_OPTS)
-    const { requestRustInvoke } = freshRpc()
+    const { services } = bootFresh(BOOT_OPTS)
+    const { requestRustInvoke } = services.host
 
     const promise = requestRustInvoke(RUST_KEYRING_GET, [])
     const assertion = expect(promise).rejects.toThrow('timed out')
@@ -245,8 +239,8 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
   // text, or drops the interpolation entirely, is caught either way.
   it('names the timed-out channel in the rejection message, distinguishing keyring_get from another channel', async () => {
     jest.useFakeTimers()
-    bootFresh(BOOT_OPTS)
-    const { requestRustInvoke } = freshRpc()
+    const { services } = bootFresh(BOOT_OPTS)
+    const { requestRustInvoke } = services.host
 
     const keyringPromise = requestRustInvoke(RUST_KEYRING_GET, [])
     const keyringAssertion = expect(keyringPromise).rejects.toThrow(

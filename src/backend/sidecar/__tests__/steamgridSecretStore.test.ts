@@ -27,11 +27,6 @@
  * `sgdb:v1:`-prefixed migration source is decrypted before it ever reaches the keyring.
  */
 
-// ── sidecarRpc mock — fake Rust responder, in-memory program + call log ─────
-jest.mock('../sidecarRpc', () => ({
-  requestRustInvoke: jest.fn()
-}))
-
 // ── logger mock ──────────────────────────────────────────────────────────────
 const mockLogWarning = jest.fn()
 const mockLogInfo = jest.fn()
@@ -72,7 +67,7 @@ jest.mock('../../steamgrid/secureKey', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { requestRustInvoke } from '../sidecarRpc'
+const requestRustInvoke = jest.fn()
 import { KEYRING_SLOT_STEAMGRID_API_KEY } from '../keyringTokenStore'
 import {
   SidecarSteamGridDbSecretStore,
@@ -84,6 +79,7 @@ import { createTestStores } from 'backend/testUtils/testServices'
 
 // The mocked GlobalConfig never reads the kvs slice; the migration just hands it through.
 const secretDeps = {
+  requestRustInvoke,
   stores: createTestStores({ kvs: { configStore: {} } as never }),
   // The injected config slice reads through the in-memory settings object above.
   config: {
@@ -101,7 +97,7 @@ type ProgrammedOutcome =
   | { type: 'resolve'; value: unknown }
   | { type: 'reject'; error: Error }
 
-const mockRequestRustInvoke = requestRustInvoke as jest.Mock
+const mockRequestRustInvoke = requestRustInvoke
 
 let program: Record<string, ProgrammedOutcome> = {}
 let callLog: Array<{ channel: string; args: unknown[] }> = []
@@ -155,7 +151,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
   describe('getApiKey()', () => {
     it('returns the value stored in the steamgrid-api-key keyring slot', async () => {
       programChannel('keyring_get', { type: 'resolve', value: 'my-api-key' })
-      const store = new SidecarSteamGridDbSecretStore()
+      const store = new SidecarSteamGridDbSecretStore(requestRustInvoke)
 
       await expect(store.getApiKey()).resolves.toBe('my-api-key')
       expect(callLog).toStrictEqual([
@@ -171,14 +167,14 @@ describe('SidecarSteamGridDbSecretStore', () => {
         type: 'reject',
         error: new Error('keyring:unavailable:PlatformFailure')
       })
-      const store = new SidecarSteamGridDbSecretStore()
+      const store = new SidecarSteamGridDbSecretStore(requestRustInvoke)
 
       await expect(store.getApiKey()).resolves.toBeUndefined()
     })
 
     it('resolves to undefined when the slot has no entry yet (healthy first-run case)', async () => {
       programChannel('keyring_get', { type: 'resolve', value: null })
-      const store = new SidecarSteamGridDbSecretStore()
+      const store = new SidecarSteamGridDbSecretStore(requestRustInvoke)
 
       await expect(store.getApiKey()).resolves.toBeUndefined()
     })
@@ -188,7 +184,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
   describe('setApiKey()', () => {
     it('sends keyring_set with the value and the steamgrid-api-key slot', async () => {
       programChannel('keyring_set', { type: 'resolve', value: true })
-      const store = new SidecarSteamGridDbSecretStore()
+      const store = new SidecarSteamGridDbSecretStore(requestRustInvoke)
 
       await store.setApiKey('a-real-key')
 
@@ -206,7 +202,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
 
     it('WR-02: TRIMS surrounding whitespace before storing, matching the Electron path', async () => {
       programChannel('keyring_set', { type: 'resolve', value: true })
-      const store = new SidecarSteamGridDbSecretStore()
+      const store = new SidecarSteamGridDbSecretStore(requestRustInvoke)
 
       await store.setApiKey('  a-real-key\n')
 
@@ -220,7 +216,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
 
     it('WR-02: treats a WHITESPACE-ONLY value as an explicit clear, not as a stored key', async () => {
       programChannel('keyring_delete', { type: 'resolve', value: true })
-      const store = new SidecarSteamGridDbSecretStore()
+      const store = new SidecarSteamGridDbSecretStore(requestRustInvoke)
 
       await store.setApiKey('   ')
 
@@ -236,7 +232,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
 
     it('WR-02: treats an EMPTY STRING as an explicit clear', async () => {
       programChannel('keyring_delete', { type: 'resolve', value: true })
-      const store = new SidecarSteamGridDbSecretStore()
+      const store = new SidecarSteamGridDbSecretStore(requestRustInvoke)
 
       await store.setApiKey('')
 
@@ -256,7 +252,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
         type: 'reject',
         error: new Error('keyring:unavailable:PlatformFailure')
       })
-      const store = new SidecarSteamGridDbSecretStore()
+      const store = new SidecarSteamGridDbSecretStore(requestRustInvoke)
 
       await expect(store.clearApiKey()).resolves.toBeUndefined()
     })
@@ -265,7 +261,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
   // ── createSidecarSteamGridDbSecretStore() / startSidecarSteamGridDbSecretStore(store, deps) ──────
   describe('createSidecarSteamGridDbSecretStore() / startSidecarSteamGridDbSecretStore(store, secretDeps)', () => {
     it('builds a SidecarSteamGridDbSecretStore, and start logs exactly one keyring receipt line', () => {
-      const store = createSidecarSteamGridDbSecretStore()
+      const store = createSidecarSteamGridDbSecretStore(requestRustInvoke)
       expect(store).toBeInstanceOf(SidecarSteamGridDbSecretStore)
 
       startSidecarSteamGridDbSecretStore(store, secretDeps)
@@ -277,7 +273,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
     })
 
     it('construction does no I/O: nothing is sent to the keyring until start() runs the migration', () => {
-      createSidecarSteamGridDbSecretStore()
+      createSidecarSteamGridDbSecretStore(requestRustInvoke)
 
       expect(callLog).toEqual([])
     })
@@ -294,7 +290,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
       // plain synchronous statement immediately followed by the
       // `'[bootstrap] secret stores: keyring'` logInfo line, never `await`ed.
       const result = startSidecarSteamGridDbSecretStore(
-        createSidecarSteamGridDbSecretStore(),
+        createSidecarSteamGridDbSecretStore(requestRustInvoke),
         secretDeps
       )
 
@@ -303,8 +299,8 @@ describe('SidecarSteamGridDbSecretStore', () => {
 
     it('two instances do not share a read cache', async () => {
       programChannel('keyring_get', { type: 'resolve', value: 'first' })
-      const a = createSidecarSteamGridDbSecretStore()
-      const b = createSidecarSteamGridDbSecretStore()
+      const a = createSidecarSteamGridDbSecretStore(requestRustInvoke)
+      const b = createSidecarSteamGridDbSecretStore(requestRustInvoke)
       expect(await a.getApiKey()).toBe('first')
 
       programChannel('keyring_get', { type: 'resolve', value: 'second' })
@@ -324,7 +320,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
       })
 
       await migrateSteamGridDbApiKey(
-        new SidecarSteamGridDbSecretStore(),
+        new SidecarSteamGridDbSecretStore(requestRustInvoke),
         secretDeps
       )
 
@@ -346,7 +342,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
       })
 
       await migrateSteamGridDbApiKey(
-        new SidecarSteamGridDbSecretStore(),
+        new SidecarSteamGridDbSecretStore(requestRustInvoke),
         secretDeps
       )
 
@@ -365,7 +361,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
       })
 
       await migrateSteamGridDbApiKey(
-        new SidecarSteamGridDbSecretStore(),
+        new SidecarSteamGridDbSecretStore(requestRustInvoke),
         secretDeps
       )
 
@@ -377,7 +373,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
       // backingSettings starts empty (beforeEach) -- no key was ever configured, or a prior
       // migration already ran.
       await migrateSteamGridDbApiKey(
-        new SidecarSteamGridDbSecretStore(),
+        new SidecarSteamGridDbSecretStore(requestRustInvoke),
         secretDeps
       )
 
@@ -395,7 +391,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
       })
 
       await migrateSteamGridDbApiKey(
-        new SidecarSteamGridDbSecretStore(),
+        new SidecarSteamGridDbSecretStore(requestRustInvoke),
         secretDeps
       )
 
@@ -409,7 +405,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
   describe('A-03 hazard assertions', () => {
     it("[never-writes-config] setApiKey never writes GlobalConfig's steamGridDbApiKey setting", async () => {
       programChannel('keyring_set', { type: 'resolve', value: true })
-      const store = new SidecarSteamGridDbSecretStore()
+      const store = new SidecarSteamGridDbSecretStore(requestRustInvoke)
 
       await store.setApiKey('abc')
 
@@ -426,7 +422,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
       })
 
       await migrateSteamGridDbApiKey(
-        new SidecarSteamGridDbSecretStore(),
+        new SidecarSteamGridDbSecretStore(requestRustInvoke),
         secretDeps
       )
 
@@ -444,7 +440,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
       })
 
       await migrateSteamGridDbApiKey(
-        new SidecarSteamGridDbSecretStore(),
+        new SidecarSteamGridDbSecretStore(requestRustInvoke),
         secretDeps
       )
 
@@ -467,7 +463,7 @@ describe('SidecarSteamGridDbSecretStore', () => {
       mockDecryptApiKey.mockReturnValueOnce('')
 
       await migrateSteamGridDbApiKey(
-        new SidecarSteamGridDbSecretStore(),
+        new SidecarSteamGridDbSecretStore(requestRustInvoke),
         secretDeps
       )
 

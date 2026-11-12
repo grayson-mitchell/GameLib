@@ -17,7 +17,7 @@ import { stopInstallPolling } from '../library/installStop'
 import { existsSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
-import { sendFrontendMessage } from '../../../ipc'
+const sendFrontendMessage = jest.fn()
 import { notify } from '../../../dialog/dialog'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
@@ -37,6 +37,7 @@ const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 const getSteamBottleSettings = jest.fn()
 
 const steamTestDeps = createTestManagerDeps({
+  sendFrontendMessage,
   steamBottle: { getSteamBottleSettings } as never,
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
@@ -80,11 +81,6 @@ jest.mock('graceful-fs')
 
 // ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
 jest.mock('@node-steam/vdf')
-
-// ── IPC mock — sendFrontendMessage ───────────────────────────────────────────
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
@@ -263,7 +259,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
   const FINISHED_NOTIFY = { title: 'CS:GO', body: 'Installation Finished' }
 
   const sentCalls = (channel: string) =>
-    (sendFrontendMessage as jest.Mock).mock.calls.filter(([c]) => c === channel)
+    sendFrontendMessage.mock.calls.filter(([c]) => c === channel)
   const statusPayloads = () => sentCalls('gameStatusUpdate').map(([, p]) => p)
   const wasStopped = () =>
     (logInfo as jest.Mock).mock.calls.some(

@@ -22,11 +22,6 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
-// ── sidecarRpc mock — fake Rust responder, in-memory program + call log ─────
-jest.mock('../sidecarRpc', () => ({
-  requestRustInvoke: jest.fn()
-}))
-
 // ── logger mock — mirrors tokenStore.test.ts's existing convention ──────────
 const mockLogWarning = jest.fn()
 const mockLogInfo = jest.fn()
@@ -47,7 +42,7 @@ jest.mock('backend/logger', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { requestRustInvoke } from '../sidecarRpc'
+const requestRustInvoke = jest.fn()
 import {
   SidecarKeyringTokenStore,
   SidecarKeyringSlotStore,
@@ -61,7 +56,7 @@ type ProgrammedOutcome =
   | { type: 'resolve'; value: unknown }
   | { type: 'reject'; error: Error }
 
-const mockRequestRustInvoke = requestRustInvoke as jest.Mock
+const mockRequestRustInvoke = requestRustInvoke
 
 let program: Record<string, ProgrammedOutcome> = {}
 let callLog: Array<{ channel: string; args: unknown[] }> = []
@@ -137,7 +132,7 @@ describe('SidecarKeyringTokenStore', () => {
   // not an empty args array -- proven by exact-args assertion, not just the resolved value.
   it('getToken() resolves the stored token when keyring_get returns a string', async () => {
     programChannel('keyring_get', { type: 'resolve', value: 'abc' })
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     await expect(store.getToken()).resolves.toBe('abc')
     expect(callLog).toStrictEqual([
@@ -149,7 +144,7 @@ describe('SidecarKeyringTokenStore', () => {
   // and this healthy first-run case must NOT be logged as an error/warning (Pitfall 1).
   it('getToken() resolves "" without logging when keyring_get reports no entry (null)', async () => {
     programChannel('keyring_get', { type: 'resolve', value: null })
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     await expect(store.getToken()).resolves.toBe('')
     expect(mockLogWarning).not.toHaveBeenCalled()
@@ -162,7 +157,7 @@ describe('SidecarKeyringTokenStore', () => {
       type: 'reject',
       error: new Error('keyring:unavailable:PlatformFailure')
     })
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     await expect(store.getToken()).resolves.toBe('')
     // Two lines: the pre-existing "getToken() ... failed" warning, plus the memo-bookkeeping
@@ -177,7 +172,7 @@ describe('SidecarKeyringTokenStore', () => {
   // Rust side established: `[secret, slot]`).
   it('setToken() sends exactly one keyring_set request with the secret first and the slot second', async () => {
     programChannel('keyring_set', { type: 'resolve', value: true })
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     await store.setToken('abc')
 
@@ -196,7 +191,7 @@ describe('SidecarKeyringTokenStore', () => {
       type: 'reject',
       error: new Error('keyring:unavailable:NoStorageAccess')
     })
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     await expect(store.setToken('abc')).resolves.toBeUndefined()
     expect(callLog).toStrictEqual([
@@ -211,7 +206,7 @@ describe('SidecarKeyringTokenStore', () => {
   // Behavior 6a: isAvailable() resolves true on keyring_available -> true.
   it('isAvailable() resolves true when keyring_available reports true', async () => {
     programChannel('keyring_available', { type: 'resolve', value: true })
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     await expect(store.isAvailable()).resolves.toBe(true)
   })
@@ -223,7 +218,7 @@ describe('SidecarKeyringTokenStore', () => {
   // warning; the name is now precise about which sink it means.)
   it('isAvailable() resolves false when keyring_available reports false, without logging a warning', async () => {
     programChannel('keyring_available', { type: 'resolve', value: false })
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     await expect(store.isAvailable()).resolves.toBe(false)
     expect(mockLogWarning).not.toHaveBeenCalled()
@@ -235,7 +230,7 @@ describe('SidecarKeyringTokenStore', () => {
       type: 'reject',
       error: new Error('keyring:unavailable:PlatformFailure')
     })
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     await expect(store.isAvailable()).resolves.toBe(false)
     expect(mockLogWarning).toHaveBeenCalledTimes(1)
@@ -247,7 +242,7 @@ describe('SidecarKeyringTokenStore', () => {
       type: 'reject',
       error: new Error('keyring:unavailable:PlatformFailure')
     })
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     await expect(store.clearToken()).resolves.toBeUndefined()
     expect(callLog).toStrictEqual([
@@ -263,7 +258,7 @@ describe('SidecarKeyringTokenStore', () => {
       type: 'reject',
       error: new Error('rustInvoke timed out after 60000ms: keyring_get')
     })
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     await expect(store.getToken()).resolves.toBe('')
     // Two lines: the pre-existing "getToken() ... failed" warning, plus the memo-bookkeeping
@@ -290,7 +285,7 @@ describe('SidecarKeyringTokenStore', () => {
       type: 'reject',
       error: new Error('keyring:unavailable:PlatformFailure')
     })
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     await store.getToken()
     expect(callLog).toStrictEqual([
@@ -321,7 +316,7 @@ describe('SidecarKeyringTokenStore', () => {
       error: new Error('keyring:unavailable:PlatformFailure')
     })
     programChannel('keyring_get', { type: 'resolve', value: null })
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     await store.setToken('abc')
     await expect(store.getToken()).resolves.toBe('')
@@ -338,7 +333,10 @@ describe('SidecarKeyringTokenStore', () => {
     programChannel('keyring_get', { type: 'resolve', value: 'humble-cookie' })
     programChannel('keyring_set', { type: 'resolve', value: true })
     programChannel('keyring_delete', { type: 'resolve', value: true })
-    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+    const store = new SidecarKeyringSlotStore(
+      KEYRING_SLOT_HUMBLE_SESSION,
+      requestRustInvoke
+    )
 
     await store.isAvailable()
     await store.getToken()
@@ -364,7 +362,10 @@ describe('SidecarKeyringTokenStore', () => {
       type: 'reject',
       error: new Error('keyring:unavailable:PlatformFailure')
     })
-    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+    const store = new SidecarKeyringSlotStore(
+      KEYRING_SLOT_HUMBLE_SESSION,
+      requestRustInvoke
+    )
 
     await expect(store.getToken()).resolves.toBe('')
     // Two lines: the pre-existing "getToken() ... failed" warning, plus the memo-bookkeeping
@@ -397,7 +398,10 @@ describe('SidecarKeyringTokenStore', () => {
 
   it('a humble-csrf slot store sends the humble-csrf slot on setToken, distinct from humble-session', async () => {
     programChannel('keyring_set', { type: 'resolve', value: true })
-    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_CSRF)
+    const store = new SidecarKeyringSlotStore(
+      KEYRING_SLOT_HUMBLE_CSRF,
+      requestRustInvoke
+    )
 
     await store.setToken('csrf-value')
 
@@ -420,9 +424,9 @@ describe('SidecarKeyringTokenStore', () => {
   })
 
   // Existing export name survives (D-04): bootstrap.ts must be able to keep calling
-  // `new SidecarKeyringTokenStore()` with no args, unedited.
+  // `new SidecarKeyringTokenStore(requestRustInvoke)` with no args, unedited.
   it('SidecarKeyringTokenStore keeps its no-argument construction', () => {
-    expect(() => new SidecarKeyringTokenStore()).not.toThrow()
+    expect(() => new SidecarKeyringTokenStore(requestRustInvoke)).not.toThrow()
   })
 
   // ---- Read caching + in-flight dedupe (34.4.1 gap cycle 2 plan 26, F-9's read-count half --
@@ -430,7 +434,10 @@ describe('SidecarKeyringTokenStore', () => {
 
   it('caches a successful getToken() result: a second call issues NO further keyring_get', async () => {
     programChannel('keyring_get', { type: 'resolve', value: 'cached-token' })
-    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+    const store = new SidecarKeyringSlotStore(
+      KEYRING_SLOT_HUMBLE_SESSION,
+      requestRustInvoke
+    )
 
     await expect(store.getToken()).resolves.toBe('cached-token')
     await expect(store.getToken()).resolves.toBe('cached-token')
@@ -442,7 +449,10 @@ describe('SidecarKeyringTokenStore', () => {
 
   it('caches a healthy null (no-entry) getToken() result too -- a second call issues NO further keyring_get', async () => {
     programChannel('keyring_get', { type: 'resolve', value: null })
-    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+    const store = new SidecarKeyringSlotStore(
+      KEYRING_SLOT_HUMBLE_SESSION,
+      requestRustInvoke
+    )
 
     await expect(store.getToken()).resolves.toBe('')
     await expect(store.getToken()).resolves.toBe('')
@@ -464,7 +474,10 @@ describe('SidecarKeyringTokenStore', () => {
         })
       }
     )
-    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+    const store = new SidecarKeyringSlotStore(
+      KEYRING_SLOT_HUMBLE_SESSION,
+      requestRustInvoke
+    )
 
     const first = store.getToken()
     const second = store.getToken()
@@ -498,7 +511,10 @@ describe('SidecarKeyringTokenStore', () => {
         type: 'reject',
         error: new Error('keyring:timeout')
       })
-      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_SESSION,
+        requestRustInvoke
+      )
 
       await expect(store.getToken()).resolves.toBe('')
       expect(callLog).toHaveLength(1)
@@ -531,7 +547,8 @@ describe('SidecarKeyringTokenStore', () => {
         error: new Error('keyring:timeout')
       })
       const store = new SidecarKeyringSlotStore(
-        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN,
+        requestRustInvoke
       )
 
       await expect(store.getToken()).resolves.toBe('')
@@ -554,7 +571,10 @@ describe('SidecarKeyringTokenStore', () => {
         type: 'reject',
         error: new Error('keyring:timeout')
       })
-      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_SESSION,
+        requestRustInvoke
+      )
 
       await store.getToken()
 
@@ -580,7 +600,10 @@ describe('SidecarKeyringTokenStore', () => {
         type: 'reject',
         error: new Error('keyring:unavailable:PlatformFailure')
       })
-      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_CSRF)
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_CSRF,
+        requestRustInvoke
+      )
 
       await store.getToken()
 
@@ -606,7 +629,10 @@ describe('SidecarKeyringTokenStore', () => {
         type: 'reject',
         error: new Error('keyring:timeout')
       })
-      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_SESSION,
+        requestRustInvoke
+      )
 
       await expect(store.getToken()).resolves.toBe('')
       expect(callLog).toHaveLength(1)
@@ -646,7 +672,10 @@ describe('SidecarKeyringTokenStore', () => {
         type: 'reject',
         error: new Error('keyring:timeout')
       })
-      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_SESSION,
+        requestRustInvoke
+      )
 
       await expect(store.getToken()).resolves.toBe('')
       expect(callLog.filter((c) => c.channel === 'keyring_get')).toHaveLength(1)
@@ -682,7 +711,10 @@ describe('SidecarKeyringTokenStore', () => {
         type: 'reject',
         error: new Error('keyring:timeout')
       })
-      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_SESSION,
+        requestRustInvoke
+      )
 
       const firstResult = await store.getToken()
       const secondResult = await store.getToken() // served from the memo, per the test above
@@ -699,7 +731,10 @@ describe('SidecarKeyringTokenStore', () => {
 
   it('caches a successful isAvailable() result: a second call issues NO further keyring_available', async () => {
     programChannel('keyring_available', { type: 'resolve', value: true })
-    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+    const store = new SidecarKeyringSlotStore(
+      KEYRING_SLOT_HUMBLE_SESSION,
+      requestRustInvoke
+    )
 
     await expect(store.isAvailable()).resolves.toBe(true)
     await expect(store.isAvailable()).resolves.toBe(true)
@@ -711,7 +746,10 @@ describe('SidecarKeyringTokenStore', () => {
 
   it('caches a successful "unavailable" (false) isAvailable() result too -- not just the "true" case', async () => {
     programChannel('keyring_available', { type: 'resolve', value: false })
-    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+    const store = new SidecarKeyringSlotStore(
+      KEYRING_SLOT_HUMBLE_SESSION,
+      requestRustInvoke
+    )
 
     await expect(store.isAvailable()).resolves.toBe(false)
     await expect(store.isAvailable()).resolves.toBe(false)
@@ -724,7 +762,10 @@ describe('SidecarKeyringTokenStore', () => {
       type: 'reject',
       error: new Error('keyring:unavailable:PlatformFailure')
     })
-    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+    const store = new SidecarKeyringSlotStore(
+      KEYRING_SLOT_HUMBLE_SESSION,
+      requestRustInvoke
+    )
 
     await store.isAvailable()
     await store.isAvailable()
@@ -739,7 +780,10 @@ describe('SidecarKeyringTokenStore', () => {
   // session, which this suite treats as the single most important property of the cache.
 
   it('setToken() invalidates a stale cached getToken() result -- the next read is fresh, not the old cached value', async () => {
-    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+    const store = new SidecarKeyringSlotStore(
+      KEYRING_SLOT_HUMBLE_SESSION,
+      requestRustInvoke
+    )
 
     programChannel('keyring_get', { type: 'resolve', value: 'old-token' })
     await expect(store.getToken()).resolves.toBe('old-token')
@@ -755,7 +799,10 @@ describe('SidecarKeyringTokenStore', () => {
   })
 
   it('a FAILED setToken() still invalidates the stale cache -- the next read goes back to the keyring, never a stale value', async () => {
-    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+    const store = new SidecarKeyringSlotStore(
+      KEYRING_SLOT_HUMBLE_SESSION,
+      requestRustInvoke
+    )
 
     programChannel('keyring_get', { type: 'resolve', value: 'old-token' })
     await expect(store.getToken()).resolves.toBe('old-token')
@@ -774,7 +821,10 @@ describe('SidecarKeyringTokenStore', () => {
   })
 
   it('clearToken() invalidates the cache -- a subsequent read never resurrects the pre-disconnect value (the F-6-adjacent correctness floor)', async () => {
-    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+    const store = new SidecarKeyringSlotStore(
+      KEYRING_SLOT_HUMBLE_SESSION,
+      requestRustInvoke
+    )
 
     programChannel('keyring_get', {
       type: 'resolve',
@@ -793,7 +843,10 @@ describe('SidecarKeyringTokenStore', () => {
   })
 
   it('a FAILED clearToken() still invalidates the cache rather than leaving the pre-disconnect value cached', async () => {
-    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+    const store = new SidecarKeyringSlotStore(
+      KEYRING_SLOT_HUMBLE_SESSION,
+      requestRustInvoke
+    )
 
     programChannel('keyring_get', {
       type: 'resolve',
@@ -821,7 +874,10 @@ describe('SidecarKeyringTokenStore', () => {
   })
 
   it('setToken()/clearToken() also invalidate a cached isAvailable() result, not just getToken()', async () => {
-    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+    const store = new SidecarKeyringSlotStore(
+      KEYRING_SLOT_HUMBLE_SESSION,
+      requestRustInvoke
+    )
 
     programChannel('keyring_available', { type: 'resolve', value: true })
     await expect(store.isAvailable()).resolves.toBe(true)
@@ -843,7 +899,10 @@ describe('SidecarKeyringTokenStore', () => {
   describe('in-flight read superseded by clearToken() -- cache epoch guard (quick-260820-fyl, T-34.5-G6-14)', () => {
     it('an in-flight readToken() that resolves AFTER a successful clearToken() must not resurrect the pre-signout token (T-34.5-G6-14)', async () => {
       const deferred = deferFirstCall('keyring_get')
-      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_SESSION,
+        requestRustInvoke
+      )
 
       const inFlight = store.getToken()
       expect(callLog.filter((c) => c.channel === 'keyring_get')).toHaveLength(1)
@@ -865,7 +924,10 @@ describe('SidecarKeyringTokenStore', () => {
 
     it('an in-flight readToken() that REJECTS after clearToken() must not arm a failure memo that suppresses the next real read (T-34.5-G6-14)', async () => {
       const deferred = deferFirstCall('keyring_get')
-      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_SESSION,
+        requestRustInvoke
+      )
 
       const inFlight = store.getToken()
 
@@ -898,7 +960,10 @@ describe('SidecarKeyringTokenStore', () => {
     // it began before the sign-out and its answer is the pre-signout token.
     it('a readToken() issued after clearToken() but BEFORE the superseded read settles must not join it', async () => {
       const deferred = deferFirstCall('keyring_get')
-      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_SESSION,
+        requestRustInvoke
+      )
 
       const inFlight = store.getToken()
 
@@ -924,7 +989,10 @@ describe('SidecarKeyringTokenStore', () => {
 
     it('an in-flight isAvailable() probe that resolves AFTER clearToken() must not resurrect the pre-signout availability cache (T-34.5-G6-14)', async () => {
       const deferred = deferFirstCall('keyring_available')
-      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_SESSION,
+        requestRustInvoke
+      )
 
       const inFlight = store.isAvailable()
 
@@ -943,7 +1011,10 @@ describe('SidecarKeyringTokenStore', () => {
   })
 
   it('invalidateCache() is exposed and clears both cached values on demand', async () => {
-    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+    const store = new SidecarKeyringSlotStore(
+      KEYRING_SLOT_HUMBLE_SESSION,
+      requestRustInvoke
+    )
 
     programChannel('keyring_get', { type: 'resolve', value: 'first-read' })
     programChannel('keyring_available', { type: 'resolve', value: true })
@@ -973,7 +1044,7 @@ describe('SidecarKeyringTokenStore', () => {
       type: 'resolve',
       value: 'super-secret-token'
     })
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     await expect(store.getToken()).resolves.toBe('super-secret-token')
 
@@ -1000,7 +1071,7 @@ describe('SidecarKeyringTokenStore', () => {
 
   it('the healthy no-entry case still logs a successful read, with present=false', async () => {
     programChannel('keyring_get', { type: 'resolve', value: null })
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     await expect(store.getToken()).resolves.toBe('')
 
@@ -1020,7 +1091,7 @@ describe('SidecarKeyringTokenStore', () => {
   // session could not distinguish the two, and the warm-cache case reads as a win.
   it('a cache hit issues no second keyring_get and says so, so a warm cache cannot be misread as a prompt fix', async () => {
     programChannel('keyring_get', { type: 'resolve', value: 'abc' })
-    const store = new SidecarKeyringTokenStore()
+    const store = new SidecarKeyringTokenStore(requestRustInvoke)
 
     await store.getToken()
     const afterFirst = callLog.filter((c) => c.channel === 'keyring_get').length
@@ -1044,7 +1115,10 @@ describe('SidecarKeyringTokenStore', () => {
 
   it('a successful clearToken logs a delete-ok line naming the slot (the sign-out path)', async () => {
     programChannel('keyring_delete', { type: 'resolve', value: null })
-    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+    const store = new SidecarKeyringSlotStore(
+      KEYRING_SLOT_HUMBLE_SESSION,
+      requestRustInvoke
+    )
 
     await store.clearToken()
 
@@ -1061,7 +1135,10 @@ describe('SidecarKeyringTokenStore', () => {
 
   it('a successful setToken logs a length, never the token value', async () => {
     programChannel('keyring_set', { type: 'resolve', value: null })
-    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_CSRF)
+    const store = new SidecarKeyringSlotStore(
+      KEYRING_SLOT_HUMBLE_CSRF,
+      requestRustInvoke
+    )
 
     await store.setToken('another-secret')
 
@@ -1118,7 +1195,8 @@ describe('SidecarKeyringTokenStore', () => {
         error: new Error('keyring:timeout')
       })
       const store = new SidecarKeyringSlotStore(
-        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN,
+        requestRustInvoke
       )
 
       await expect(readTokenOutcome(store)).resolves.toEqual({
@@ -1135,7 +1213,8 @@ describe('SidecarKeyringTokenStore', () => {
         error: new Error('keyring:unavailable:Platform secure storage failure')
       })
       const store = new SidecarKeyringSlotStore(
-        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN,
+        requestRustInvoke
       )
 
       await expect(readTokenOutcome(store)).resolves.toEqual({
@@ -1149,7 +1228,8 @@ describe('SidecarKeyringTokenStore', () => {
     it('resolves { status: "absent" } when keyring_get resolves null (the healthy first-run case)', async () => {
       programChannel('keyring_get', { type: 'resolve', value: null })
       const store = new SidecarKeyringSlotStore(
-        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN,
+        requestRustInvoke
       )
 
       await expect(readTokenOutcome(store)).resolves.toEqual({
@@ -1162,7 +1242,8 @@ describe('SidecarKeyringTokenStore', () => {
     it('resolves { status: "present", token } when keyring_get resolves a non-empty string', async () => {
       programChannel('keyring_get', { type: 'resolve', value: 'abc' })
       const store = new SidecarKeyringSlotStore(
-        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN,
+        requestRustInvoke
       )
 
       await expect(readTokenOutcome(store)).resolves.toEqual({
@@ -1182,7 +1263,10 @@ describe('SidecarKeyringTokenStore', () => {
           type: 'reject',
           error: new Error('keyring:timeout')
         })
-        const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+        const store = new SidecarKeyringSlotStore(
+          KEYRING_SLOT_HUMBLE_SESSION,
+          requestRustInvoke
+        )
 
         await expect(readTokenOutcome(store)).resolves.toEqual({
           status: 'unreadable',
@@ -1213,7 +1297,8 @@ describe('SidecarKeyringTokenStore', () => {
         error: new Error('keyring:timeout')
       })
       const store = new SidecarKeyringSlotStore(
-        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN,
+        requestRustInvoke
       )
 
       await readTokenOutcome(store)
@@ -1229,7 +1314,8 @@ describe('SidecarKeyringTokenStore', () => {
     it('getToken() still resolves "" for both absent and unreadable outcomes', async () => {
       programChannel('keyring_get', { type: 'resolve', value: null })
       const absentStore = new SidecarKeyringSlotStore(
-        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN,
+        requestRustInvoke
       )
       await expect(absentStore.getToken()).resolves.toBe('')
 
@@ -1238,7 +1324,8 @@ describe('SidecarKeyringTokenStore', () => {
         error: new Error('keyring:timeout')
       })
       const unreadableStore = new SidecarKeyringSlotStore(
-        KEYRING_SLOT_HUMBLE_CSRF
+        KEYRING_SLOT_HUMBLE_CSRF,
+        requestRustInvoke
       )
       await expect(unreadableStore.getToken()).resolves.toBe('')
     })
@@ -1255,7 +1342,8 @@ describe('SidecarKeyringTokenStore', () => {
     it('a fresh readToken("user-install") issues exactly ONE requestRustInvoke and logs the issue line with trigger=user-install', async () => {
       programChannel('keyring_get', { type: 'resolve', value: 'abc' })
       const store = new SidecarKeyringSlotStore(
-        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN,
+        requestRustInvoke
       )
 
       await expect(readTokenOutcome(store, 'user-install')).resolves.toEqual({
@@ -1275,7 +1363,8 @@ describe('SidecarKeyringTokenStore', () => {
     it('the success line still contains the exact pre-existing substrings, with trigger= and elapsed= appended after them, never reordered', async () => {
       programChannel('keyring_get', { type: 'resolve', value: 'abc' })
       const store = new SidecarKeyringSlotStore(
-        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN,
+        requestRustInvoke
       )
 
       await readTokenOutcome(store, 'user-install')
@@ -1299,7 +1388,8 @@ describe('SidecarKeyringTokenStore', () => {
     it('a second readToken() after a SUCCESS (cache hit) issues no additional requestRustInvoke -- call count stays 1', async () => {
       programChannel('keyring_get', { type: 'resolve', value: 'abc' })
       const store = new SidecarKeyringSlotStore(
-        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN,
+        requestRustInvoke
       )
 
       await readTokenOutcome(store, 'user-install')
@@ -1320,7 +1410,8 @@ describe('SidecarKeyringTokenStore', () => {
         }
       )
       const store = new SidecarKeyringSlotStore(
-        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN,
+        requestRustInvoke
       )
 
       const first = readTokenOutcome(store, 'user-install')
@@ -1348,7 +1439,8 @@ describe('SidecarKeyringTokenStore', () => {
           error: new Error('keyring:timeout')
         })
         const store = new SidecarKeyringSlotStore(
-          KEYRING_SLOT_STEAM_REFRESH_TOKEN
+          KEYRING_SLOT_STEAM_REFRESH_TOKEN,
+          requestRustInvoke
         )
 
         await expect(readTokenOutcome(store, 'user-refresh')).resolves.toEqual({
@@ -1374,7 +1466,10 @@ describe('SidecarKeyringTokenStore', () => {
         type: 'reject',
         error: new Error('keyring:timeout')
       })
-      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_SESSION,
+        requestRustInvoke
+      )
 
       await readTokenOutcome(store, 'user-play')
 
@@ -1397,7 +1492,8 @@ describe('SidecarKeyringTokenStore', () => {
         value: DISTINCTIVE_TOKEN
       })
       const store = new SidecarKeyringSlotStore(
-        KEYRING_SLOT_STEAM_REFRESH_TOKEN
+        KEYRING_SLOT_STEAM_REFRESH_TOKEN,
+        requestRustInvoke
       )
 
       await readTokenOutcome(store, 'user-install')
@@ -1426,7 +1522,10 @@ describe('SidecarKeyringTokenStore', () => {
   describe('keyring_available trigger= / elapsed= annotation (quick-260905-jx3)', () => {
     it('a fresh isAvailable("store-humble-secret") logs the issue line with trigger=store-humble-secret', async () => {
       programChannel('keyring_available', { type: 'resolve', value: true })
-      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_SESSION,
+        requestRustInvoke
+      )
 
       await expect(store.isAvailable('store-humble-secret')).resolves.toBe(true)
       expect(callLog).toHaveLength(1)
@@ -1447,7 +1546,10 @@ describe('SidecarKeyringTokenStore', () => {
     // dialog. Proven by holding the invoke open and asserting the line is already present.
     it('the issue line is written BEFORE the invoke settles, not after', async () => {
       const deferred = deferFirstCall('keyring_available')
-      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_SESSION,
+        requestRustInvoke
+      )
 
       const inFlight = store.isAvailable('boot-probe')
       const infoLinesDuring = mockLogInfo.mock.calls.map((c) => String(c[0]))
@@ -1470,7 +1572,10 @@ describe('SidecarKeyringTokenStore', () => {
 
     it('the ok line carries available=true with trigger= and elapsed= appended AFTER it, never reordered', async () => {
       programChannel('keyring_available', { type: 'resolve', value: true })
-      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_SESSION,
+        requestRustInvoke
+      )
 
       await store.isAvailable('store-humble-secret')
 
@@ -1495,7 +1600,10 @@ describe('SidecarKeyringTokenStore', () => {
     // would reproduce exactly half of the defect this task closes.
     it('a successful FALSE probe also logs an ok line (available=false) and still logs no warning', async () => {
       programChannel('keyring_available', { type: 'resolve', value: false })
-      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_SESSION,
+        requestRustInvoke
+      )
 
       await expect(store.isAvailable('store-humble-secret')).resolves.toBe(
         false
@@ -1515,7 +1623,10 @@ describe('SidecarKeyringTokenStore', () => {
         type: 'reject',
         error: new Error('keyring:unavailable:PlatformFailure')
       })
-      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_SESSION,
+        requestRustInvoke
+      )
 
       await expect(store.isAvailable('store-humble-secret')).resolves.toBe(
         false
@@ -1534,7 +1645,10 @@ describe('SidecarKeyringTokenStore', () => {
     // already in memory". Without this line the ABSENCE of an issue line proves neither.
     it('a cache-hit second call logs a DEBUG line saying no keyring_available was issued, and issues none', async () => {
       programChannel('keyring_available', { type: 'resolve', value: true })
-      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_SESSION,
+        requestRustInvoke
+      )
 
       await store.isAvailable('first')
       expect(callLog).toHaveLength(1)
@@ -1555,7 +1669,10 @@ describe('SidecarKeyringTokenStore', () => {
 
     it('a call that joins an in-flight probe logs its own DEBUG line and issues no additional keyring_available', async () => {
       const deferred = deferFirstCall('keyring_available')
-      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_SESSION,
+        requestRustInvoke
+      )
 
       const first = store.isAvailable('first')
       const second = store.isAvailable('joiner')
@@ -1581,7 +1698,10 @@ describe('SidecarKeyringTokenStore', () => {
     // attributable line rather than no line at all.
     it('an unlabelled isAvailable() still logs both lines, as trigger=unspecified', async () => {
       programChannel('keyring_available', { type: 'resolve', value: true })
-      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+      const store = new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_SESSION,
+        requestRustInvoke
+      )
 
       await store.isAvailable()
 

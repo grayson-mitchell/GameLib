@@ -47,6 +47,8 @@
  * continues, so it can never mark the bridge failed for the session.
  */
 
+import type { RustInvokeDeps } from '../../host/rustInvokeDeps'
+import type { FrontendMessageDeps } from '../../host/frontendMessage'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { AppPaths } from 'backend/process/context'
 import { isAbsolute, relative, resolve } from 'node:path'
@@ -147,6 +149,7 @@ type DefaultEnvEntry = { key: string; value: string; source: string }
  * detector matches. Never throws.
  */
 async function gameMakerGraphicsDefault(
+  rust: RustInvokeDeps,
   appId: string,
   settings: GameSettings,
   envSoFar: EnviromentVariable[],
@@ -156,7 +159,7 @@ async function gameMakerGraphicsDefault(
   if (settings.wineVersion?.type !== 'crossover') return null
   if (lastEnvOption(envSoFar, 'CX_GRAPHICS_BACKEND') !== undefined) return null
   try {
-    const result = await detectGameMakerD3d11Runner(exePath)
+    const result = await detectGameMakerD3d11Runner(rust, exePath)
     if (!result.match) return null
     return {
       key: 'CX_GRAPHICS_BACKEND',
@@ -174,10 +177,12 @@ async function gameMakerGraphicsDefault(
 }
 
 /** What the bridge known-fix applier reaches through a slice (66.1 R3). */
-export type BridgeKnownFixDeps = EngineServicesSource & {
-  paths: AppPaths
-  aborts: Pick<AbortRegistry, 'create' | 'delete'>
-}
+export type BridgeKnownFixDeps = EngineServicesSource &
+  FrontendMessageDeps &
+  RustInvokeDeps & {
+    paths: AppPaths
+    aborts: Pick<AbortRegistry, 'create' | 'delete'>
+  }
 
 export async function applySteamBridgeKnownFixes(
   deps: BridgeKnownFixDeps,
@@ -190,6 +195,7 @@ export async function applySteamBridgeKnownFixes(
   const profile = readKnownFixProfile(appId, 'steam')
   if (!fixes && !profile) {
     const entry = await gameMakerGraphicsDefault(
+      deps,
       appId,
       bridgeBottleSettings,
       bridgeBottleSettings.enviromentOptions ?? [],
@@ -242,7 +248,7 @@ export async function applySteamBridgeKnownFixes(
     }
 
     if (fixes?.winetricks) {
-      sendGameStatusUpdate({
+      sendGameStatusUpdate(deps, {
         appName: appId,
         runner: 'steam',
         status: 'winetricks'
@@ -295,7 +301,7 @@ export async function applySteamBridgeKnownFixes(
           LogPrefix.Steam
         )
       } else {
-        sendGameStatusUpdate({
+        sendGameStatusUpdate(deps, {
           appName: appId,
           runner: 'steam',
           status: 'redist',
@@ -361,6 +367,7 @@ export async function applySteamBridgeKnownFixes(
       value
     }))
     const defaultEntry = await gameMakerGraphicsDefault(
+      deps,
       appId,
       bridgeBottleSettings,
       merged,

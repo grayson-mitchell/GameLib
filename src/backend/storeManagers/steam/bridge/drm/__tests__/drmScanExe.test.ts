@@ -7,9 +7,11 @@
 import { dirname, resolve } from 'path'
 
 import { logWarning } from 'backend/logger'
-import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
 
 import { containedGameExeReal, detectLaunchDrmWrapper } from '../drmScanExe'
+
+const requestRustInvoke = jest.fn()
+const rust = { requestRustInvoke }
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -17,10 +19,6 @@ jest.mock('backend/logger', () => ({
   logError: jest.fn(),
   logDebug: jest.fn(),
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
-}))
-
-jest.mock('backend/sidecar/sidecarRpc', () => ({
-  requestRustInvoke: jest.fn()
 }))
 
 jest.mock('backend/constants/paths', () => ({
@@ -67,7 +65,7 @@ describe('detectLaunchDrmWrapper', () => {
     const findUnreal = jest.fn()
     const detect = jest.fn().mockResolvedValue('steamstub')
     await expect(
-      detectLaunchDrmWrapper(BOTTLE, EXE, {
+      detectLaunchDrmWrapper(rust, BOTTLE, EXE, {
         findUnreal,
         detect,
         contain: containFake()
@@ -79,7 +77,7 @@ describe('detectLaunchDrmWrapper', () => {
 
   it('contains against dirname(launch exe) and scans the real path', async () => {
     const contain = containFake()
-    await detectLaunchDrmWrapper(BOTTLE, EXE, {
+    await detectLaunchDrmWrapper(rust, BOTTLE, EXE, {
       findUnreal: layout([]),
       detect: jest.fn().mockResolvedValue('none'),
       contain
@@ -96,7 +94,7 @@ describe('detectLaunchDrmWrapper', () => {
       p === `real:${SHIP}` ? ('steamstub' as const) : ('none' as const)
     )
     await expect(
-      detectLaunchDrmWrapper(BOTTLE, EXE, {
+      detectLaunchDrmWrapper(rust, BOTTLE, EXE, {
         findUnreal: layout([SHIP]),
         detect,
         contain: containFake()
@@ -106,7 +104,7 @@ describe('detectLaunchDrmWrapper', () => {
 
   it('UE layout with no steamstub Shipping exe -> none, launch exe', async () => {
     await expect(
-      detectLaunchDrmWrapper(BOTTLE, EXE, {
+      detectLaunchDrmWrapper(rust, BOTTLE, EXE, {
         findUnreal: layout([SHIP]),
         detect: jest.fn().mockResolvedValue('none'),
         contain: containFake()
@@ -116,7 +114,7 @@ describe('detectLaunchDrmWrapper', () => {
 
   it('skips non-.exe candidates and sorts the rest', async () => {
     const detect = jest.fn().mockResolvedValue('none')
-    await detectLaunchDrmWrapper(BOTTLE, EXE, {
+    await detectLaunchDrmWrapper(rust, BOTTLE, EXE, {
       findUnreal: layout(['/g/z.exe', '/g/readme.txt', '/g/a.exe']),
       detect,
       contain: containFake()
@@ -130,7 +128,7 @@ describe('detectLaunchDrmWrapper', () => {
 
   it('unreadable launch exe and no UE layout -> undefined', async () => {
     await expect(
-      detectLaunchDrmWrapper(BOTTLE, EXE, {
+      detectLaunchDrmWrapper(rust, BOTTLE, EXE, {
         findUnreal: jest.fn().mockResolvedValue(null),
         detect: jest.fn(),
         contain: containFake({ [EXE]: 'realpath-failed' })
@@ -144,7 +142,7 @@ describe('detectLaunchDrmWrapper', () => {
   it('unresolvable game folder returns early without a UE lookup', async () => {
     const findUnreal = jest.fn()
     await expect(
-      detectLaunchDrmWrapper(BOTTLE, EXE, {
+      detectLaunchDrmWrapper(rust, BOTTLE, EXE, {
         findUnreal,
         detect: jest.fn(),
         contain: containFake({ [EXE]: 'root-unresolvable' })
@@ -159,7 +157,7 @@ describe('detectLaunchDrmWrapper', () => {
   it('ignores a Shipping exe that escapes the game folder', async () => {
     const detect = jest.fn().mockResolvedValue('none')
     await expect(
-      detectLaunchDrmWrapper(BOTTLE, EXE, {
+      detectLaunchDrmWrapper(rust, BOTTLE, EXE, {
         findUnreal: layout([SHIP]),
         detect,
         contain: containFake({ [SHIP]: 'escapes' })
@@ -182,7 +180,7 @@ describe('detectLaunchDrmWrapper', () => {
       p === `real:${SHIP}` ? ('steamstub' as const) : ('none' as const)
     )
     await expect(
-      detectLaunchDrmWrapper(BOTTLE, EXE, {
+      detectLaunchDrmWrapper(rust, BOTTLE, EXE, {
         findUnreal: layout([SHIP]),
         detect,
         contain: containFake({ [EXE]: 'escapes' })
@@ -198,7 +196,7 @@ describe('detectLaunchDrmWrapper', () => {
 
   it('never rejects when findUnrealLayout throws', async () => {
     await expect(
-      detectLaunchDrmWrapper(BOTTLE, EXE, {
+      detectLaunchDrmWrapper(rust, BOTTLE, EXE, {
         findUnreal: jest.fn().mockRejectedValue(new Error('boom')),
         detect: jest.fn().mockResolvedValue('none'),
         contain: containFake()
@@ -209,7 +207,7 @@ describe('detectLaunchDrmWrapper', () => {
   it('returns a lexical drmExe (resolve(candidate)), not the scanned real path', async () => {
     const lexical = '/link/Game/Game/Binaries/Win64/S-Shipping.exe'
     await expect(
-      detectLaunchDrmWrapper(BOTTLE, EXE, {
+      detectLaunchDrmWrapper(rust, BOTTLE, EXE, {
         findUnreal: layout([lexical]),
         detect: jest.fn(async (p: string) =>
           p.includes('S-Shipping') ? ('steamstub' as const) : ('none' as const)
@@ -228,7 +226,7 @@ describe('detectLaunchDrmWrapper', () => {
       return 'steamstub' as const
     })
     await expect(
-      detectLaunchDrmWrapper(BOTTLE, EXE, {
+      detectLaunchDrmWrapper(rust, BOTTLE, EXE, {
         findUnreal: layout([b, a]),
         detect,
         contain: containFake()
@@ -245,7 +243,7 @@ describe('detectLaunchDrmWrapper', () => {
     const contain = jest.fn().mockRejectedValue(new Error('transport down'))
     const detect = jest.fn()
     await expect(
-      detectLaunchDrmWrapper(BOTTLE, EXE, {
+      detectLaunchDrmWrapper(rust, BOTTLE, EXE, {
         findUnreal: layout([SHIP]),
         detect,
         contain
@@ -268,9 +266,9 @@ describe('default contain leaf (rust)', () => {
     jest
       .mocked(requestRustInvoke)
       .mockResolvedValue({ real: '/real/Game.exe', reason: null })
-    await expect(containedGameExeReal(EXE, 'placeShimForGame')).resolves.toBe(
-      '/real/Game.exe'
-    )
+    await expect(
+      containedGameExeReal(rust, EXE, 'placeShimForGame')
+    ).resolves.toBe('/real/Game.exe')
     expect(requestRustInvoke).toHaveBeenCalledWith('scan_contained_real', [
       { path: EXE, rootDir: dirname(EXE) }
     ])
@@ -280,9 +278,9 @@ describe('default contain leaf (rust)', () => {
     jest
       .mocked(requestRustInvoke)
       .mockResolvedValue({ real: null, reason: 'escapes' })
-    await expect(containedGameExeReal(EXE, 'placeShimForGame')).resolves.toBe(
-      null
-    )
+    await expect(
+      containedGameExeReal(rust, EXE, 'placeShimForGame')
+    ).resolves.toBe(null)
     expect(warnings()).toContain(
       'placeShimForGame: skipped Game.exe (escapes game folder)'
     )
@@ -290,9 +288,9 @@ describe('default contain leaf (rust)', () => {
 
   it('maps a transport rejection to null (fail closed)', async () => {
     jest.mocked(requestRustInvoke).mockRejectedValue(new Error('no sidecar'))
-    await expect(containedGameExeReal(EXE, 'placeShimForGame')).resolves.toBe(
-      null
-    )
+    await expect(
+      containedGameExeReal(rust, EXE, 'placeShimForGame')
+    ).resolves.toBe(null)
     expect(warnings().some((m) => m.includes('containment check failed'))).toBe(
       true
     )

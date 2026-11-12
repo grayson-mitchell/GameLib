@@ -1,11 +1,12 @@
 import { GameInfo, RecentGame } from 'common/types'
 import { backendEvents } from '../backend_events'
-import { sendFrontendMessage } from '../ipc'
+import type { SendFrontendMessage } from 'backend/host/frontendMessage'
 import type { Stores } from '../services/types'
 
 /** The recent-games list lives in the kvs config store. */
 export interface RecentGamesDeps {
   stores: Pick<Stores, 'kvs'>
+  sendFrontendMessage: SendFrontendMessage
 }
 
 const getRecentGames = async (deps: RecentGamesDeps) =>
@@ -16,7 +17,7 @@ const setRecentGames = (deps: RecentGamesDeps, recentGames: RecentGame[]) => {
   deps.stores.kvs.configStore.set('games.recent', recentGames)
 
   // emit
-  sendFrontendMessage('recentGamesChanged', recentGames)
+  deps.sendFrontendMessage('recentGamesChanged', recentGames)
   backendEvents.emit('recentGamesChanged', recentGames)
 }
 

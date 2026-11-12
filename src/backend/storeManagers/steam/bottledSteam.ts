@@ -3,6 +3,7 @@
  * split out of bottle.ts in Phase 65 (65-07). The raise-loop cancellation
  * state, its test seam and the timer `unref` live together here (D-10).
  */
+import type { FrontendMessageDeps } from '../../host/frontendMessage'
 import type { AppPaths } from 'backend/process/context'
 import type { AppState } from 'backend/host/appState'
 import type { Clock, TimerHandle } from 'backend/process/types'
@@ -296,7 +297,8 @@ async function raiseBottledGameWindow(
 
 /** The slices the bottled-Steam dispatch reaches (66.1 R3, R5). */
 export type BottledSteamDeps = BottledRaiseDeps &
-  SteamLibraryStateDeps & {
+  SteamLibraryStateDeps &
+  FrontendMessageDeps & {
     paths: Pick<AppPaths, 'userHome'>
     steamLaunchRuntime: { monitors: BottleProcessMonitors }
     windowRaiser: Pick<WineWindowRaiser, 'raise'>

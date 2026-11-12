@@ -166,7 +166,9 @@ jest.mock('../../launcher', () => ({
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
 import SteamLibraryManager from '../../storeManagers/steam/library'
 import { registerSteamFlows } from '../steamFlowRegistration'
-import { startRpcServer } from '../sidecarRpc'
+import { createTestSidecarRpc } from '../../testUtils/testSidecarRpc'
+
+const rpc = createTestSidecarRpc()
 import { createIpcRegistry } from '../ipcRegistry'
 import {
   createTestManagerDeps,
@@ -181,6 +183,7 @@ const libraryManagerMap = {
 /** The slices `registerSteamFlows` takes; the steam manager is the real singleton. */
 const ipc = createIpcRegistry()
 const steamFlowDeps = () => ({
+  sendFrontendMessage: jest.fn(),
   ipc,
   config: { getSettings: () => ({}) } as never,
   appState: createTestHostServices().appState,
@@ -236,7 +239,7 @@ function startTransport(): { input: PassThrough; frames: Frame[] } {
   const input = new PassThrough()
   const output = new PassThrough()
   const frames = collectFrames(output)
-  startRpcServer(input, output, ipc)
+  rpc.start(input, output, ipc)
   return { input, frames }
 }
 

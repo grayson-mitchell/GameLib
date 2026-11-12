@@ -202,7 +202,7 @@ import type { IpcRegistry } from './ipcRegistry'
 import type { AppState } from '../host/appState'
 import type { OpenExternal } from '../host/openExternal'
 import type { AppInfo, AppPaths } from '../process/context'
-import { requestRustInvoke } from './sidecarRpc'
+import type { RequestRustInvoke } from '../host'
 import { RUST_TRAY_SET_ICON } from '../../common/types/sidecarTransport'
 import {
   migrateTrayIconVariant,
@@ -258,7 +258,10 @@ let frontendReadyBootWorkDone = false
  * failure or a rejected `requestRustInvoke` both log and return — a tray sync must never
  * crash the sidecar (the `sidecar-dialog-reject-crashes` precedent).
  */
-function syncTrayIcon(config: Pick<GlobalConfigSlice, 'getSettings'>): void {
+function syncTrayIcon(
+  config: Pick<GlobalConfigSlice, 'getSettings'>,
+  requestRustInvoke: RequestRustInvoke
+): void {
   try {
     const variant = migrateTrayIconVariant(config.getSettings())
     requestRustInvoke(RUST_TRAY_SET_ICON, trayIconWireArgs(variant)).catch(
@@ -282,6 +285,8 @@ export interface AppShellFlowDeps extends DialogBoxDeps, NotifyDeps {
   appInfo: Pick<AppInfo, 'version'>
   paths: Pick<AppPaths, 'publicDir'>
   openExternal: Pick<OpenExternal, 'openExternal'>
+  /** The boot's sidecar -> Rust request leg (tray icon sync, 66.4-15). */
+  requestRustInvoke: RequestRustInvoke
   appState: Pick<
     AppState,
     'raiseMainWindowForInAppDialog' | 'relaunch' | 'quit' | 'wakeLock'
@@ -639,7 +644,7 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
         // runs once per process, giving one notice per launch. Creates no timer or handle
         // (sidecar exit contract); own try/catch so it can never skip the work above.
         try {
-          pushReadOnlyStoresNotice()
+          pushReadOnlyStoresNotice(deps.sendFrontendMessage)
         } catch (error) {
           logSendFailure('frontendReady -> readOnlyStoresNotice', error)
         }
@@ -731,7 +736,10 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
     if (trayColorTimer) {
       clearTimeout(trayColorTimer)
     }
-    trayColorTimer = setTimeout(() => syncTrayIcon(deps.config), 500)
+    trayColorTimer = setTimeout(
+      () => syncTrayIcon(deps.config, deps.requestRustInvoke),
+      500
+    )
   })
 
   // Initial sync: correct the tray's startup image (main.rs's `.setup()` builds the tray with
@@ -769,6 +777,6 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   // import-time-triggered call (the actual leak source, decoupled from any specific `init()`
   // invocation) passes `true` under Jest.
   if (!deps.skipInitialTraySync) {
-    setImmediate(() => syncTrayIcon(deps.config))
+    setImmediate(() => syncTrayIcon(deps.config, deps.requestRustInvoke))
   }
 }

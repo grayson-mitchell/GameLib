@@ -95,7 +95,12 @@ const WinetricksQueue = {
 }
 
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
-import { createTestToolsSlices } from 'backend/testUtils/testServices'
+import {
+  createTestToolsSlices,
+  createTestManagers,
+  createTestServices,
+  createTestStores
+} from 'backend/testUtils/testServices'
 import { defined } from 'backend/testUtils/indexed'
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -103,11 +108,6 @@ import { join } from 'path'
 import { registerWineToolsFlows } from '../wineToolsFlowRegistration'
 import { createIpcRegistry } from '../ipcRegistry'
 import { ipcViews } from '../../testUtils/ipcViews'
-import {
-  createTestManagers,
-  createTestServices,
-  createTestStores
-} from 'backend/testUtils/testServices'
 import { createTools } from '../../tools'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import type { IpcHandler } from '../ipcRegistry'
@@ -256,7 +256,7 @@ describe('pass-through proof — runWineCommand forwards args[0] unchanged, not 
 // never throws and never leaves an unhandled promise rejection behind.
 //
 // A dedicated `jest.isolateModules()` sandbox is used (mirrors `sidecarRejectionGuard.test.ts`'s
-// own harness shape) so this test can mock `'../sidecarRpc'` and `'../../ipc'` for a fast,
+// own harness shape) so this test can mock `'../sidecarRpc'` for a fast,
 // deterministic stub -- WITHOUT touching this file's top-level module registry, where
 // `config.ts`/`game_config.ts` are already loaded for real (swapping their module instances
 // file-wide risks the `tests-clobbering-real-steam-store.md` failure mode this project has hit
@@ -286,17 +286,6 @@ describe('D-15/T-34.5-30 dialog safety pin — showDialogBoxModalAuto never prop
       jest.doMock('../sidecarRpc', () => ({
         requestRustInvoke: jest.fn().mockResolvedValue(undefined)
       }))
-      jest.doMock('../../ipc', () => ({
-        addListener: jest.fn(),
-        addOneTimeListener: jest.fn(),
-        addTestOnlyListener: jest.fn(),
-        addHandler: jest.fn(),
-        sendFrontendMessage: jest.fn(() => {
-          throw new Error(
-            'mock frontend-push failure (D-15/T-34.5-30 pin — the primary showDialog push failed)'
-          )
-        })
-      }))
       /* eslint-disable @typescript-eslint/no-require-imports */
       // `backend/logger`'s `heroicLogWriter` singleton is only assigned by the app's real
       // init path (never run in this isolated sandbox) -- stubbed here so `dialog.ts`'s
@@ -324,7 +313,12 @@ describe('D-15/T-34.5-30 dialog safety pin — showDialogBoxModalAuto never prop
         isolatedShowDialogBoxModalAuto(
           {
             appState: createTestHostServices().appState,
-            dialogs: createTestHostServices().dialogs
+            dialogs: createTestHostServices().dialogs,
+            sendFrontendMessage: jest.fn(() => {
+              throw new Error(
+                'mock frontend-push failure (D-15/T-34.5-30 pin — the primary showDialog push failed)'
+              )
+            })
           },
           {
             title: 'box.error.dxvk.title',
@@ -652,13 +646,6 @@ describe('runWineCommandForGame Windows-branch shell removal (T-34.5-C6-49-03, P
         isWindows: true,
         isMac: false,
         isLinux: false
-      }))
-      jest.doMock('../../ipc', () => ({
-        addListener: jest.fn(),
-        addOneTimeListener: jest.fn(),
-        addTestOnlyListener: jest.fn(),
-        addHandler: jest.fn(),
-        sendFrontendMessage: jest.fn()
       }))
       jest.doMock('../../dialog/dialog', () => ({ notify: jest.fn() }))
       jest.doMock('../../logger', () => ({

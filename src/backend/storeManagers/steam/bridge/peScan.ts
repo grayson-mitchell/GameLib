@@ -3,6 +3,7 @@
  * types as peSteamDrm.ts; D-08: a path goes in, a small result comes out). `peSteamDrm.ts` stays
  * the pure TS oracle substrate; app callers import from here. They call Rust directly.
  */
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { logWarning, LogPrefix } from 'backend/logger'
 import { invokeScan } from 'backend/scanners/rustScan'
 import {
@@ -12,11 +13,12 @@ import {
 import type { SteamDrmScanResult } from 'backend/scanners/scanTypes'
 
 export async function detectSteamDrmInPe(
+  deps: RustInvokeDeps,
   exePath: string,
   _caller?: string
 ): Promise<SteamDrmScanResult> {
   try {
-    return await invokeScan(RUST_SCAN_STEAM_DRM, { exePath })
+    return await invokeScan(deps, RUST_SCAN_STEAM_DRM, { exePath })
   } catch (error) {
     logWarning(
       `detectSteamDrmInPe: rust scan failed for "${exePath}": ${String(error)}`,
@@ -32,11 +34,14 @@ export async function detectSteamDrmInPe(
 }
 
 export async function readPeImportedDllNames(
+  deps: RustInvokeDeps,
   exePath: string,
   _caller?: string
 ): Promise<string[] | null> {
   try {
-    const result = await invokeScan(RUST_SCAN_PE_IMPORTED_DLLS, { exePath })
+    const result = await invokeScan(deps, RUST_SCAN_PE_IMPORTED_DLLS, {
+      exePath
+    })
     return result.names
   } catch (error) {
     logWarning(

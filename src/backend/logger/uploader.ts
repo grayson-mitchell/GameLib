@@ -3,7 +3,7 @@ import { open } from 'fs/promises'
 import { z } from 'zod'
 
 import { getLogFilePath, logError, logInfo, LogPrefix } from '../logger'
-import { sendFrontendMessage } from '../ipc'
+import type { SendFrontendMessage } from 'backend/host/frontendMessage'
 
 import type { UploadedLogData } from 'common/types'
 import type { Stores } from 'backend/services/types'
@@ -58,6 +58,7 @@ async function readPartOfFile(file: string, size: number) {
 export interface LogUploaderDeps {
   stores: Pick<Stores, 'logger'>
   appInfo: Pick<AppInfo, 'version'>
+  sendFrontendMessage: SendFrontendMessage
 }
 
 async function uploadLogFile(
@@ -104,7 +105,7 @@ async function uploadLogFile(
     uploadedAt: Date.now()
   }
   deps.stores.logger.uploadedLogFileStore.set(url, uploadData)
-  sendFrontendMessage('logFileUploaded', url, uploadData)
+  deps.sendFrontendMessage('logFileUploaded', url, uploadData)
   logInfo(`Uploaded log file ${name} to ${url}`, LogPrefix.LogUploader)
   return [url, uploadData]
 }
@@ -140,7 +141,7 @@ async function deleteUploadedLogFile(
   }
 
   deps.stores.logger.uploadedLogFileStore.delete(url)
-  sendFrontendMessage('logFileUploadDeleted', url)
+  deps.sendFrontendMessage('logFileUploadDeleted', url)
   logInfo([`Deleted log file ${logData.name} (${url})`], LogPrefix.LogUploader)
 
   return true

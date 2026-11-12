@@ -17,7 +17,7 @@ import { buildIncompleteInstallSet } from '../library/installedMap'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
-import { sendFrontendMessage } from '../../../ipc'
+const sendFrontendMessage = jest.fn()
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
@@ -53,6 +53,7 @@ const getAnonymousPicsClient = jest.fn()
 const getSteamBottleSettings = jest.fn()
 const isSteamBottleProvisioned = jest.fn()
 const steamTestDeps = createTestManagerDeps({
+  sendFrontendMessage,
   steamUser,
   steamBottle: { getSteamBottleSettings, isSteamBottleProvisioned } as never,
   anonymousClient: createTestAnonymousClient({ get: getAnonymousPicsClient }),
@@ -108,11 +109,6 @@ jest.mock('graceful-fs')
 
 // ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
 jest.mock('@node-steam/vdf')
-
-// ── IPC mock — sendFrontendMessage ───────────────────────────────────────────
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
@@ -422,9 +418,7 @@ describe('SteamLibraryManager', () => {
     await manager.refresh()
 
     const calls = jest.mocked(sendFrontendMessage).mock.calls
-    const pushed = calls.find(
-      ([_msg, info]) => (info as any).app_name === '570'
-    )?.[1] as any
+    const pushed = calls.find(([_msg, info]) => info.app_name === '570')?.[1]
 
     expect(pushed?.extra?.steamPlaytimeMinutes).toBe(4200)
   })
@@ -439,9 +433,7 @@ describe('SteamLibraryManager', () => {
     await manager.refresh()
 
     const calls = jest.mocked(sendFrontendMessage).mock.calls
-    const pushed = calls.find(
-      ([_msg, info]) => (info as any).app_name === '570'
-    )?.[1] as any
+    const pushed = calls.find(([_msg, info]) => info.app_name === '570')?.[1]
 
     expect(pushed?.extra?.steamLastPlayed).toBe(LAST_PLAYED_TS)
   })
@@ -467,9 +459,7 @@ describe('SteamLibraryManager', () => {
     await manager.refresh()
 
     const calls = jest.mocked(sendFrontendMessage).mock.calls
-    const pushed = calls.find(
-      ([_msg, info]) => (info as any).app_name === '570'
-    )?.[1] as any
+    const pushed = calls.find(([_msg, info]) => info.app_name === '570')?.[1]
 
     expect(pushed?.steamPlatformsCaptured).toBe(true)
   })
@@ -490,9 +480,7 @@ describe('SteamLibraryManager', () => {
     await manager.refresh()
 
     const calls = jest.mocked(sendFrontendMessage).mock.calls
-    const pushed = calls.find(
-      ([_msg, info]) => (info as any).app_name === '570'
-    )?.[1] as any
+    const pushed = calls.find(([_msg, info]) => info.app_name === '570')?.[1]
 
     expect(pushed?.steamPlatformsCaptured).toBe(false)
   })
@@ -507,9 +495,7 @@ describe('SteamLibraryManager', () => {
     await manager.refresh()
 
     const calls = jest.mocked(sendFrontendMessage).mock.calls
-    const pushed = calls.find(
-      ([_msg, info]) => (info as any).app_name === '570'
-    )?.[1] as any
+    const pushed = calls.find(([_msg, info]) => info.app_name === '570')?.[1]
 
     expect(pushed?.steamPlatformsCaptured).toBe(false)
   })
@@ -530,9 +516,7 @@ describe('SteamLibraryManager', () => {
     await manager.refresh()
 
     const calls = jest.mocked(sendFrontendMessage).mock.calls
-    const pushed = calls.find(
-      ([_msg, info]) => (info as any).app_name === '570'
-    )?.[1] as any
+    const pushed = calls.find(([_msg, info]) => info.app_name === '570')?.[1]
 
     expect(pushed?.is_windows_native).toBe(true)
   })
@@ -556,9 +540,7 @@ describe('SteamLibraryManager', () => {
     await manager.refresh()
 
     const calls = jest.mocked(sendFrontendMessage).mock.calls
-    const pushed = calls.find(
-      ([_msg, info]) => (info as any).app_name === '570'
-    )?.[1] as any
+    const pushed = calls.find(([_msg, info]) => info.app_name === '570')?.[1]
 
     // The load-bearing half: an uncaptured verdict can never offer Windows.
     expect(pushed?.is_windows_native).not.toBe(true)
@@ -582,9 +564,7 @@ describe('SteamLibraryManager', () => {
 
     const pushed = jest
       .mocked(sendFrontendMessage)
-      .mock.calls.find(
-        ([_m, info]) => (info as any).app_name === '570'
-      )?.[1] as any
+      .mock.calls.find(([_m, info]) => info.app_name === '570')?.[1]
     expect(pushed?.metacritic_score).toBe(90)
   })
 
@@ -600,9 +580,7 @@ describe('SteamLibraryManager', () => {
 
     const pushed = jest
       .mocked(sendFrontendMessage)
-      .mock.calls.find(
-        ([_m, info]) => (info as any).app_name === '570'
-      )?.[1] as any
+      .mock.calls.find(([_m, info]) => info.app_name === '570')?.[1]
     expect(pushed).toBeDefined()
     expect(pushed.metacritic_score).toBeUndefined()
   })
@@ -621,9 +599,7 @@ describe('SteamLibraryManager', () => {
     await manager.refresh()
 
     const calls = jest.mocked(sendFrontendMessage).mock.calls
-    const pushed = calls.find(
-      ([_msg, info]) => (info as any).app_name === '570'
-    )?.[1] as any
+    const pushed = calls.find(([_msg, info]) => info.app_name === '570')?.[1]
 
     expect(pushed?.is_windows_native).toBe(false)
     expect(pushed?.is_windows_native).not.toBeUndefined()
@@ -651,12 +627,8 @@ describe('SteamLibraryManager', () => {
     await manager.refresh()
 
     const calls = jest.mocked(sendFrontendMessage).mock.calls
-    const pushed570 = calls.find(
-      ([_msg, info]) => (info as any).app_name === '570'
-    )?.[1] as any
-    const pushed440 = calls.find(
-      ([_msg, info]) => (info as any).app_name === '440'
-    )?.[1] as any
+    const pushed570 = calls.find(([_msg, info]) => info.app_name === '570')?.[1]
+    const pushed440 = calls.find(([_msg, info]) => info.app_name === '440')?.[1]
 
     expect(pushed570?.mac_arch).toBe('32')
     // Negative control: no cached mac_arch → 'unknown', never '32' by default
@@ -835,7 +807,7 @@ describe('SteamLibraryManager', () => {
         .filter((i) => i !== -1)
       const failedEmitIndex = calls.findIndex(
         ([channel, payload]) =>
-          channel === 'steamSyncStatus' && (payload as any).status === 'failed'
+          channel === 'steamSyncStatus' && payload.status === 'failed'
       )
       expect(pushIndices).toHaveLength(2)
       expect(Math.max(...pushIndices)).toBeLessThan(failedEmitIndex)
@@ -1169,8 +1141,8 @@ describe('SteamLibraryManager', () => {
 
       const calls = jest.mocked(sendFrontendMessage).mock.calls
       const pushed = calls.find(
-        ([_msg, info]) => (info as any).app_name === '206020'
-      )?.[1] as any
+        ([_msg, info]) => info.app_name === '206020'
+      )?.[1]
 
       // RED before the fix: pushed.is_installed was false (native-only scan
       // found nothing). GREEN after the fix: bottle fallback is consulted.
@@ -1262,9 +1234,7 @@ describe('SteamLibraryManager', () => {
       await manager.refresh()
 
       const calls = jest.mocked(sendFrontendMessage).mock.calls
-      const pushed = calls.find(
-        ([_msg, info]) => (info as any).app_name === '570'
-      )?.[1] as any
+      const pushed = calls.find(([_msg, info]) => info.app_name === '570')?.[1]
 
       // Native must win — never double-count/conflate the two roots.
       expect(pushed?.install?.install_path).toBe(
@@ -1288,8 +1258,8 @@ describe('SteamLibraryManager', () => {
 
       const calls = jest.mocked(sendFrontendMessage).mock.calls
       const pushed = calls.find(
-        ([_msg, info]) => (info as any).app_name === '206020'
-      )?.[1] as any
+        ([_msg, info]) => info.app_name === '206020'
+      )?.[1]
 
       expect(pushed?.is_installed).toBe(false)
       expect(readdirSync).not.toHaveBeenCalledWith(BOTTLE_STEAMAPPS_ROOT)
@@ -1357,9 +1327,7 @@ describe('SteamLibraryManager', () => {
       await manager.refresh()
 
       let calls = jest.mocked(sendFrontendMessage).mock.calls
-      let pushed = calls.find(
-        ([_msg, info]) => (info as any).app_name === '206040'
-      )?.[1] as any
+      let pushed = calls.find(([_msg, info]) => info.app_name === '206040')?.[1]
 
       // RED before the fix: pushed.is_installed was false (native+bottle-only
       // scan found nothing). GREEN after the fix: bridge fallback is consulted.
@@ -1384,9 +1352,7 @@ describe('SteamLibraryManager', () => {
       await manager.refresh()
 
       calls = jest.mocked(sendFrontendMessage).mock.calls
-      pushed = calls.find(
-        ([_msg, info]) => (info as any).app_name === '206040'
-      )?.[1] as any
+      pushed = calls.find(([_msg, info]) => info.app_name === '206040')?.[1]
 
       expect(pushed?.is_installed).toBe(true)
     })
@@ -1493,8 +1459,8 @@ describe('SteamLibraryManager', () => {
 
       const calls = jest.mocked(sendFrontendMessage).mock.calls
       const pushed = calls.find(
-        ([_msg, info]) => (info as any).app_name === '206040'
-      )?.[1] as any
+        ([_msg, info]) => info.app_name === '206040'
+      )?.[1]
 
       expect(pushed?.is_installed).toBe(false)
       expect(readdirSync).not.toHaveBeenCalledWith(BRIDGE_BOTTLE_STEAMAPPS_ROOT)
@@ -1576,8 +1542,8 @@ describe('SteamLibraryManager', () => {
 
       const calls = jest.mocked(sendFrontendMessage).mock.calls
       const pushed = calls.find(
-        ([_msg, info]) => (info as any).app_name === '206060'
-      )?.[1] as any
+        ([_msg, info]) => info.app_name === '206060'
+      )?.[1]
 
       // Bridge-authoritative: the Phase 17 bottle copy must NOT satisfy
       // is_installed for a bridge-eligible title.
@@ -1621,8 +1587,8 @@ describe('SteamLibraryManager', () => {
 
       const calls = jest.mocked(sendFrontendMessage).mock.calls
       const pushed = calls.find(
-        ([_msg, info]) => (info as any).app_name === '206040'
-      )?.[1] as any
+        ([_msg, info]) => info.app_name === '206040'
+      )?.[1]
 
       expect(pushed?.is_installed).toBe(true)
       expect(pushed?.install).toEqual(
@@ -1668,9 +1634,7 @@ describe('SteamLibraryManager', () => {
       await manager.refresh()
 
       const calls = jest.mocked(sendFrontendMessage).mock.calls
-      const pushed = calls.find(
-        ([_msg, info]) => (info as any).app_name === '999'
-      )?.[1] as any
+      const pushed = calls.find(([_msg, info]) => info.app_name === '999')?.[1]
 
       expect(pushed?.is_installed).toBe(true)
       expect(pushed?.install?.install_path).toBe(
@@ -1743,8 +1707,8 @@ describe('SteamLibraryManager', () => {
 
       const calls = jest.mocked(sendFrontendMessage).mock.calls
       const incomplete = calls.find(
-        ([_msg, info]) => (info as any).app_name === '570'
-      )?.[1] as any
+        ([_msg, info]) => info.app_name === '570'
+      )?.[1]
 
       // Play-safety invariant: never is_installed for a bit-4-unset manifest.
       expect(incomplete?.is_installed).toBe(false)
@@ -1765,8 +1729,8 @@ describe('SteamLibraryManager', () => {
 
       const calls = jest.mocked(sendFrontendMessage).mock.calls
       const installed = calls.find(
-        ([_msg, info]) => (info as any).app_name === '440'
-      )?.[1] as any
+        ([_msg, info]) => info.app_name === '440'
+      )?.[1]
 
       expect(installed?.is_installed).toBe(true)
       expect(installed?.install?.steamResumePending).toBeUndefined()

@@ -7,7 +7,7 @@ import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { logInfo } from 'backend/logger'
-import { sendFrontendMessage } from 'backend/ipc'
+const sendFrontendMessage = jest.fn()
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
 import { SIGN_IN_STORES } from 'common/signInState'
 import { createSignInEpochs } from '../sessionEpoch'
@@ -18,10 +18,6 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   LogPrefix: { Backend: 'Backend' }
 }))
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: jest.fn(),
-  addHandler: jest.fn()
-}))
 
 const logInfoMock = logInfo as unknown as jest.Mock
 const sendMock = sendFrontendMessage as unknown as jest.Mock
@@ -30,6 +26,7 @@ const { fakes, stores: verdictStores } = makeFakeSignInStores()
 // One epoch instance, rebuilt per case (no reset hook: D-05, D-66.3-13).
 let epochs = createSignInEpochs()
 const deps = {
+  sendFrontendMessage,
   stores: verdictStores,
   get epochs() {
     return epochs

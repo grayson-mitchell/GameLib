@@ -2,14 +2,14 @@ const mockSetSetting = jest.fn()
 const mockGet = jest.fn()
 const mockLogError = jest.fn()
 const mockSend = jest.fn()
-jest.mock('../../ipc', () => ({
-  sendFrontendMessage: (...a: unknown[]) => mockSend(...a)
-}))
 jest.mock('../../logger', () => ({ logError: (m: string) => mockLogError(m) }))
 
 import { applyGameSetting } from '../gameSettingWrite'
 
-const deps = { gameConfigs: { get: (a: string) => mockGet(a) } } as never
+const deps = {
+  gameConfigs: { get: (a: string) => mockGet(a) },
+  sendFrontendMessage: (...a: unknown[]) => mockSend(...a)
+} as never
 
 describe('applyGameSetting (G17)', () => {
   beforeEach(() => {

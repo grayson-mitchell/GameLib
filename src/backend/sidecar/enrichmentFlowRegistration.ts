@@ -158,6 +158,7 @@
  * is INVOKE.
  */
 
+import type { FrontendMessageDeps } from '../host/frontendMessage'
 import type { AppInfo } from '../process/context'
 import type { IpcRegistry } from './ipcRegistry'
 import { getWikiGameInfo } from '../wiki_game_info/wiki_game_info'
@@ -179,7 +180,7 @@ import type { Runner } from 'common/types'
 import type { ManagerDeps, StoreManagers, Stores } from 'backend/services/types'
 
 /** Narrow slice (66.1 D-01): library managers for game lookup. */
-export interface EnrichmentFlowDeps {
+export interface EnrichmentFlowDeps extends FrontendMessageDeps {
   ipc: Pick<IpcRegistry, 'handle'>
   appInfo: Pick<AppInfo, 'version'>
   managers: Pick<StoreManagers, 'library'>

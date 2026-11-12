@@ -102,6 +102,7 @@ export interface SignInProbePassDeps {
   outcomes: Pick<SignInProbeOutcomes, 'record' | 'publish'>
   /** The boot-owned abort registry the bound aborts a probe's runner child through (66.4-13). */
   aborts: Pick<AbortRegistry, 'call'>
+  sendFrontendMessage: SignInVerdictDeps['sendFrontendMessage']
 }
 
 /** The collaborators `createSignInProbePass` is built over, one pair per boot. */
@@ -130,6 +131,7 @@ export interface SignInProbeDeps {
   /** The GOG credential cache and path roots the gogdl auth probe reads (66.4-10). */
   gogRuntime: Pick<ManagerDeps['gogRuntime'], 'credentials'>
   paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath' | 'userData'>
+  sendFrontendMessage: SignInVerdictDeps['sendFrontendMessage']
 }
 
 export function createSignInProbePassDeps(
@@ -149,6 +151,7 @@ export function createSignInProbePassDeps(
     epochs: collaborators.epochs,
     outcomes: collaborators.outcomes,
     aborts: deps.aborts,
+    sendFrontendMessage: deps.sendFrontendMessage,
     registrations: {
       legendary: {
         isLoggedIn: () => Boolean(LegendaryUser.isLoggedIn(deps)),

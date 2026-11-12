@@ -1,8 +1,3 @@
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: jest.fn(),
-  addHandler: jest.fn()
-}))
-
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
@@ -139,7 +134,7 @@ import { createFakeClock } from 'backend/testUtils/fakeClock'
 let steamUser: SteamUser
 let internals: Record<string, any>
 import { logInfo, logWarning } from 'backend/logger'
-import { sendFrontendMessage } from 'backend/ipc'
+const sendFrontendMessage = jest.fn()
 import { at } from './fixtures/indexed'
 
 const FakeLib = jest.requireMock('steam-user')
@@ -176,6 +171,7 @@ beforeEach(() => {
     token: 'secret-refresh-token'
   })
   steamUser = createTestSteamUser({
+    sendFrontendMessage,
     signIn: mockSignIn,
     steamSession: mockSteamSession,
     anonymousClient: {
@@ -473,7 +469,7 @@ describe('authenticated session lease', () => {
       acquire({ reason: 'user-install', guidedAction: 'install' }),
       acquire({ reason: 'user-install', guidedAction: 'install' })
     ])
-    const pushes = (sendFrontendMessage as jest.Mock).mock.calls.length
+    const pushes = sendFrontendMessage.mock.calls.length
     expect(pushes).toBeGreaterThanOrEqual(1)
     expect(pushes).toBeLessThanOrEqual(2)
   })
@@ -822,6 +818,7 @@ describe('stale canary with other leases held (54-REVIEW WR-08)', () => {
 describe('per-instance session state (66.3-16)', () => {
   const build = (clock = createFakeClock()) =>
     createTestSteamUser({
+      sendFrontendMessage,
       signIn: mockSignIn,
       steamSession: mockSteamSession,
       anonymousClient: { close: jest.fn() },

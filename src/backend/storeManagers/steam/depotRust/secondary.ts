@@ -98,7 +98,7 @@ export async function prescreenBridgeDepotsRust(
     )
     let res
     try {
-      res = await summarizeDepots({
+      res = await summarizeDepots(opts.installRuntime.depotJobs.transport, {
         appId,
         depots: toRustDepotRefs(refs.depots),
         hosts: toRustHosts(hosts),

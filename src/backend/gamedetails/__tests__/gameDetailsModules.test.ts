@@ -369,16 +369,24 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
 
     await repair(dispatchDeps, '440', 'steam')
 
-    expect(sendGameStatusUpdateMock).toHaveBeenNthCalledWith(1, {
-      appName: '440',
-      runner: 'steam',
-      status: 'repairing'
-    })
-    expect(sendGameStatusUpdateMock).toHaveBeenNthCalledWith(2, {
-      appName: '440',
-      runner: 'steam',
-      status: 'done'
-    })
+    expect(sendGameStatusUpdateMock).toHaveBeenNthCalledWith(
+      1,
+      expect.anything(),
+      {
+        appName: '440',
+        runner: 'steam',
+        status: 'repairing'
+      }
+    )
+    expect(sendGameStatusUpdateMock).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      {
+        appName: '440',
+        runner: 'steam',
+        status: 'done'
+      }
+    )
     expect(notifyMock).toHaveBeenCalledTimes(1)
     expect(notifyMock).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Portal 2' })
@@ -423,11 +431,14 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
 
     // Unconditional even on failure: this is what clears the renderer's
     // `repairing` spinner. Dropping it would leave the card stuck.
-    expect(sendGameStatusUpdateMock).toHaveBeenLastCalledWith({
-      appName: '440',
-      runner: 'steam',
-      status: 'done'
-    })
+    expect(sendGameStatusUpdateMock).toHaveBeenLastCalledWith(
+      expect.anything(),
+      {
+        appName: '440',
+        runner: 'steam',
+        status: 'done'
+      }
+    )
   })
 
   // ── changeInstallPath ───────────────────────────────────────────────

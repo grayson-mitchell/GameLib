@@ -66,6 +66,7 @@ function depsFor(...steps: ScriptStep[]) {
   return {
     runner,
     deps: {
+      sendFrontendMessage: jest.fn(),
       stores,
       runner,
       dialogs: {

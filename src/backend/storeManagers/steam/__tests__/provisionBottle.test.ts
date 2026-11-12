@@ -62,12 +62,6 @@ jest.mock('backend/engine/adoptBottle', () => ({
   writeCxbottleConf: jest.fn()
 }))
 
-// quick 261027-tot: setupDownloads.ts (the SteamSetup.exe fetch wrapper) emits
-// its progress push through ipc; mocked so the real ipc module never loads.
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
-
 // GAP C (17-16): force isMac true so the macOS raise poll loop is exercised
 // deterministically on every host (the loop is dynamically imported by
 // bottle.ts). isSnap is provided because backend/constants/paths reads it.
@@ -128,6 +122,7 @@ const mockedRunWineCommand = jest.fn()
 const mockedDownloadFile = downloadFile as jest.Mock
 // checkWineBeforeLaunch is mocked in this file, so the store slices are never read.
 const provisionDeps = {
+  sendFrontendMessage: jest.fn(),
   // Reads through the recording config mock (66.3-08: provisionBottle takes the slice).
   config: { getSettings: () => mockedGlobalConfigGet().getSettings() },
   stores: createTestStores(),

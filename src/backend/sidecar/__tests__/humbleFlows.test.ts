@@ -1168,6 +1168,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('backend/testUtils/testSignInProbe') as typeof import('backend/testUtils/testSignInProbe')
       const RealHumbleUser = new RealHumbleUserClass({
+        sendFrontendMessage: jest.fn(),
         stores: { humble: realStores, steam: {} } as never,
         secretStore: {
           isAvailable: async () => true,

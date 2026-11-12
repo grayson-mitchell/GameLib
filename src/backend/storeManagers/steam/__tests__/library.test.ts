@@ -25,7 +25,7 @@ import { tmpdir } from 'node:os'
 import * as vdf from '@node-steam/vdf'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { getSteamLibraries } from 'backend/utils'
-import { sendFrontendMessage } from '../../../ipc'
+const sendFrontendMessage = jest.fn()
 import { notify } from '../../../dialog/dialog'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
@@ -55,6 +55,7 @@ const getAnonymousPicsClient = jest.fn()
 // The steam:// hand-off goes through deps.openExternal; this recording fake is what it calls.
 const shell = { openExternal: jest.fn() }
 const steamTestDeps = createTestManagerDeps({
+  sendFrontendMessage,
   steamUser,
   openExternal: {
     ...createTestHostServices().openExternal,
@@ -111,11 +112,6 @@ jest.mock('graceful-fs')
 
 // ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
 jest.mock('@node-steam/vdf')
-
-// ── IPC mock — sendFrontendMessage ───────────────────────────────────────────
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({

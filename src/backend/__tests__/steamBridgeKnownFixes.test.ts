@@ -201,7 +201,7 @@ describe('applySteamBridgeKnownFixes', () => {
     await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
 
     expect(mockSendGameStatusUpdate).toHaveBeenCalledTimes(1)
-    expect(mockSendGameStatusUpdate).toHaveBeenCalledWith({
+    expect(mockSendGameStatusUpdate).toHaveBeenCalledWith(expect.anything(), {
       appName: APP_ID,
       runner: 'steam',
       status: 'winetricks'
@@ -230,7 +230,7 @@ describe('applySteamBridgeKnownFixes', () => {
 
     await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
 
-    expect(mockSendGameStatusUpdate).toHaveBeenCalledWith({
+    expect(mockSendGameStatusUpdate).toHaveBeenCalledWith(expect.anything(), {
       appName: APP_ID,
       runner: 'steam',
       status: 'redist',
@@ -803,7 +803,7 @@ describe('GameMaker D3D11 runner default (quick 261028-k7l)', () => {
       ROOT,
       EXE
     )
-    expect(mockDetectGameMaker).toHaveBeenCalledWith(EXE)
+    expect(mockDetectGameMaker).toHaveBeenCalledWith(expect.anything(), EXE)
     expect(result).not.toBe(BRIDGE)
     expect(result.enviromentOptions).toEqual([
       ...BRIDGE.enviromentOptions,

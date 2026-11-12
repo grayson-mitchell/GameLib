@@ -36,7 +36,8 @@ import { logInfo } from 'backend/logger'
 const libraryManagerMap = {} as Record<string, unknown>
 const deps = {
   libraryManagers: libraryManagerMap,
-  paths
+  paths,
+  sendFrontendMessage: jest.fn()
 } as unknown as Parameters<typeof uninstallGameCallback>[0]
 import { sendGameStatusUpdate } from 'backend/utils'
 
@@ -100,7 +101,7 @@ describe('uninstallGameCallback refusal (quick 261107-td5)', () => {
     return { settings, fix }
   }
   const statuses = () =>
-    (sendGameStatusUpdate as jest.Mock).mock.calls.map((c) => c[0].status)
+    (sendGameStatusUpdate as jest.Mock).mock.calls.map((c) => c[1].status)
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -183,7 +184,7 @@ describe('uninstallGameCallback failure (quick 261108-anw)', () => {
   const getSettings = jest.fn()
   const uninstall = jest.fn()
   const statuses = () =>
-    (sendGameStatusUpdate as jest.Mock).mock.calls.map((c) => c[0].status)
+    (sendGameStatusUpdate as jest.Mock).mock.calls.map((c) => c[1].status)
 
   beforeEach(() => {
     jest.clearAllMocks()

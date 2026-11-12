@@ -43,10 +43,6 @@ jest.mock('../../../utils', () => ({
 jest.mock('../../../humble/userAgent', () => ({
   standardBrowserUserAgent: () => 'Mozilla/5.0 (Test)'
 }))
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: jest.fn(),
-  addHandler: jest.fn()
-}))
 
 const mockRunRunnerCommand = jest.fn()
 

@@ -6,7 +6,7 @@
  * `requestOpenExternal`, `openDetached`, `runSync`) are constructor dependencies.
  */
 
-import type { requestRustInvoke } from '../sidecar/sidecarRpc'
+import type { SidecarRpc } from '../sidecar/sidecarRpc'
 import type { IpcRegistry } from '../sidecar/ipcRegistry'
 import { createNativeImage } from '../sidecar/nativeImageShim'
 import type { ProcessRunner } from '../process/types'
@@ -14,8 +14,12 @@ import { createAppState, type AppState } from './appState'
 import { createDialogs, type Dialogs } from './dialogs'
 import { createNotifications, type Notifications } from './notifications'
 import { createOpenExternal, type OpenExternal } from './openExternal'
+import {
+  createSendFrontendMessage,
+  type SendFrontendMessage
+} from './frontendMessage'
 
-export type RequestRustInvoke = typeof requestRustInvoke
+export type RequestRustInvoke = SidecarRpc['requestRustInvoke']
 
 export interface HostServices {
   ipc: IpcRegistry
@@ -26,6 +30,10 @@ export interface HostServices {
   imageTools: ReturnType<typeof createNativeImage>
   /** Backend -> frontend push (`webContents.send`); a bound transport function. */
   pushFrontendMessage: (channel: string, ...args: unknown[]) => void
+  /** The sidecar -> Rust request leg (allow-listed channels, bounded), for modules that call Rust. */
+  requestRustInvoke: RequestRustInvoke
+  /** The typed form of the push, handed to every module that notifies the renderer. */
+  sendFrontendMessage: SendFrontendMessage
 }
 
 export interface HostServicesDeps {
@@ -59,6 +67,8 @@ export function createHostServices(deps: HostServicesDeps): HostServices {
     }),
     appState,
     imageTools: createNativeImage({ runSync: deps.runSync }),
-    pushFrontendMessage: deps.pushFrontendMessage
+    requestRustInvoke: deps.requestRustInvoke,
+    pushFrontendMessage: deps.pushFrontendMessage,
+    sendFrontendMessage: createSendFrontendMessage(deps.pushFrontendMessage)
   }
 }

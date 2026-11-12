@@ -165,6 +165,7 @@ function engineSource(deps: LauncherDeps): EngineServicesSource {
     dialogs: deps.dialogs,
     appState: deps.appState,
     notifications: deps.notifications,
+    sendFrontendMessage: deps.sendFrontendMessage,
     onlineMonitor: deps.onlineMonitor,
     engineState: deps.engineState,
     engineRuntime: deps.engineRuntime,
@@ -192,7 +193,7 @@ async function runLaunchEventCallback(
   ) {
     await askForceUninstall(deps, game, appName)
 
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(deps, {
       appName,
       runner,
       status: 'done'
@@ -222,7 +223,7 @@ async function runLaunchEventCallback(
   logInfo(`Launching ${title} (${appName})`, LogPrefix.Backend)
 
   if (autoSyncSaves && deps.onlineMonitor.isOnline()) {
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(deps, {
       appName,
       runner,
       status: 'syncing-saves'
@@ -239,7 +240,7 @@ async function runLaunchEventCallback(
     }
   }
 
-  sendGameStatusUpdate({
+  sendGameStatusUpdate(deps, {
     appName,
     runner,
     status: 'launching'
@@ -285,7 +286,7 @@ async function runLaunchEventCallback(
     }
   )
   if (engineStep.kind === 'refused') {
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(deps, {
       appName,
       runner,
       status: 'done'
@@ -325,7 +326,7 @@ async function runLaunchEventCallback(
         LogPrefix.Backend
       )
 
-      sendGameStatusUpdate({
+      sendGameStatusUpdate(deps, {
         appName,
         runner,
         status: 'done'
@@ -362,7 +363,7 @@ async function runLaunchEventCallback(
   try {
     await runBeforeLaunchScript(deps, gameInfo, gameSettings, logWriter)
 
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(deps, {
       appName,
       runner,
       status: 'launching'
@@ -405,7 +406,10 @@ async function runLaunchEventCallback(
   // not the game; bottleProcessMonitor records Steam sessions.
   if (!hasCapability(runner, 'playtimeTrackedExternally') && launchResult) {
     recordPlaySession(
-      { stores: deps.stores },
+      {
+        stores: deps.stores,
+        sendFrontendMessage: deps.sendFrontendMessage
+      },
       appName,
       runner,
       Date.now() - launchedAt
@@ -442,16 +446,22 @@ async function runLaunchEventCallback(
       )
     }
   }
-  await addRecentGame({ stores: { kvs: deps.stores.kvs } }, gameInfo)
+  await addRecentGame(
+    {
+      stores: { kvs: deps.stores.kvs },
+      sendFrontendMessage: deps.sendFrontendMessage
+    },
+    gameInfo
+  )
 
   if (autoSyncSaves && deps.onlineMonitor.isOnline()) {
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(deps, {
       appName,
       runner,
       status: 'done'
     })
 
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(deps, {
       appName,
       runner,
       status: 'syncing-saves'
@@ -469,7 +479,7 @@ async function runLaunchEventCallback(
     }
   }
 
-  sendGameStatusUpdate({
+  sendGameStatusUpdate(deps, {
     appName,
     runner,
     status: 'done'
@@ -1139,7 +1149,7 @@ async function installFixes(
   if (!knownFixes) return
 
   if (knownFixes.winetricks) {
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(deps, {
       appName,
       runner: runner,
       status: 'winetricks'
@@ -1157,7 +1167,7 @@ async function installFixes(
   if (knownFixes.runInPrefix) {
     const gameInfo = deps.libraryManagers[runner].getGame(appName).getGameInfo()
 
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(deps, {
       appName,
       runner: runner,
       status: 'redist',

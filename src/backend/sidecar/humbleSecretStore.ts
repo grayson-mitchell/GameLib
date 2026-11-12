@@ -39,7 +39,7 @@
  */
 
 import { logInfo, logWarning, LogPrefix } from '../logger'
-import { requestRustInvoke } from './sidecarRpc'
+import type { RequestRustInvoke } from '../host'
 import {
   RUST_KEYRING_GET,
   RUST_KEYRING_SET
@@ -59,12 +59,19 @@ export class SidecarHumbleSecretStore implements HumbleSecretStore {
    * module-level `SLOT_STORES` is gone). Each is already total on its own (see the doc comment
    * above) -- this map only ever selects which one a given `HumbleSecretKey` addresses; it adds no
    * behavior of its own. */
-  private readonly slotStores: Record<
-    HumbleSecretKey,
-    SidecarKeyringSlotStore
-  > = {
-    sessionCookie: new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION),
-    csrfToken: new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_CSRF)
+  private readonly slotStores: Record<HumbleSecretKey, SidecarKeyringSlotStore>
+
+  constructor(requestRustInvoke: RequestRustInvoke) {
+    this.slotStores = {
+      sessionCookie: new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_SESSION,
+        requestRustInvoke
+      ),
+      csrfToken: new SidecarKeyringSlotStore(
+        KEYRING_SLOT_HUMBLE_CSRF,
+        requestRustInvoke
+      )
+    }
   }
 
   /** Drops one slot's read cache (the migration writes around it to prove a real round trip). */
@@ -134,8 +141,10 @@ export class SidecarHumbleSecretStore implements HumbleSecretStore {
  * line and the one-time plaintext migration belong to `startSidecarHumbleSecretStore()` below,
  * which the 'secret-stores' boot step runs after the RPC server is bound (T-28-10 placement).
  */
-export function createSidecarHumbleSecretStore(): SidecarHumbleSecretStore {
-  return new SidecarHumbleSecretStore()
+export function createSidecarHumbleSecretStore(
+  requestRustInvoke: RequestRustInvoke
+): SidecarHumbleSecretStore {
+  return new SidecarHumbleSecretStore(requestRustInvoke)
 }
 
 /**
@@ -165,6 +174,7 @@ export function startSidecarHumbleSecretStore(
 /** What the one-time migration reads and writes: the humble config store family. */
 export interface HumbleMigrationDeps {
   stores: Pick<Stores, 'humble'>
+  requestRustInvoke: RequestRustInvoke
 }
 
 // ── One-time plaintext-to-keyring migration (Task 2, D-GAP-01/T-34.4.1-57) ──────────────────────
@@ -218,7 +228,7 @@ export async function migrateOneSecret(
   }
 
   try {
-    await requestRustInvoke(RUST_KEYRING_SET, [plaintext, slot])
+    await deps.requestRustInvoke(RUST_KEYRING_SET, [plaintext, slot])
   } catch (error) {
     logWarning(
       `Humble secret migration (${key}): keyring write failed, leaving plaintext in place: ${errorMessage(error)}`,
@@ -241,7 +251,7 @@ export async function migrateOneSecret(
 
   let readback: unknown
   try {
-    readback = await requestRustInvoke(RUST_KEYRING_GET, [slot])
+    readback = await deps.requestRustInvoke(RUST_KEYRING_GET, [slot])
   } catch (error) {
     logWarning(
       `Humble secret migration (${key}): keyring readback failed, leaving plaintext in place: ${errorMessage(error)}`,

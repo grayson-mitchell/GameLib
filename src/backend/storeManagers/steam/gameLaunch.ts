@@ -18,7 +18,6 @@ import { newDialogAckId, trackDialogDisplay } from 'backend/dialog/displayAck'
 import { sendGameStatusUpdate } from 'backend/utils'
 import type LogWriter from 'backend/logger/log_writer'
 import { isMac, isWindows } from 'backend/constants/environment'
-import { sendFrontendMessage } from '../../ipc'
 import type { SteamBridgeVerdict } from './stores'
 import {
   probeMacSteamPid,
@@ -143,7 +142,7 @@ export async function launch(
         `SteamGame: appId ${steamGame.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of launching`,
         LogPrefix.Steam
       )
-      sendFrontendMessage('steamBottleSetupRequired', {
+      steamGame.deps.sendFrontendMessage('steamBottleSetupRequired', {
         appName: steamGame.appId
       })
       return false
@@ -231,6 +230,7 @@ export async function launch(
             clock: steamGame.deps.clock,
             paths: steamGame.deps.paths,
             macSteamOffline: steamGame.deps.steamProcesses.macSteamOffline,
+            sendFrontendMessage: steamGame.deps.sendFrontendMessage,
             launchRunGameId: () =>
               steamGame.deps.openExternal.openExternal(url, { activate: false })
           })
@@ -405,7 +405,7 @@ export function maybeNotifyDrmModeFailed(
 
 /** Terminal 'done' status for a launch that will not start (idempotent). */
 export function sendLaunchDone(steamGame: SteamGame): void {
-  sendGameStatusUpdate({
+  sendGameStatusUpdate(steamGame.deps, {
     appName: steamGame.appId,
     runner: 'steam',
     status: 'done'
@@ -651,7 +651,7 @@ export async function selectLaunchEngine(
     // IN-05 (59-22): a real engine switch is "setting up", not a stale
     // "Downloading (100%)", until the monitor's launching status.
     onSwitching: () =>
-      sendGameStatusUpdate({
+      sendGameStatusUpdate(steamGame.deps, {
         appName: steamGame.appId,
         runner: 'steam',
         status: 'engine-download',
@@ -835,6 +835,7 @@ export async function prefetchBridgeDrmDownloads(
   bridgeBottleName: string
 ): Promise<void> {
   const { drmWrapper, drmExe } = await detectLaunchDrmWrapper(
+    steamGame.deps,
     getBottleDir(steamGame.deps.paths, bridgeBottleName),
     exePath
   )
@@ -867,6 +868,7 @@ export async function prefetchBridgeDrmDownloads(
     {
       runTool: createRunTool({ runner: steamGame.deps.runner }),
       runner: steamGame.deps.runner,
+      sendFrontendMessage: steamGame.deps.sendFrontendMessage,
       engineRuntime: steamGame.deps.engineRuntime,
       paths: steamGame.deps.paths,
       bridgeRuntime: steamGame.deps.bridgeRuntime
@@ -885,7 +887,7 @@ export async function readLaunchExeCegMarkers(
   exePath: string,
   caller: string
 ): Promise<string[]> {
-  const result = await detectSteamDrmInPe(exePath, caller)
+  const result = await detectSteamDrmInPe(steamGame.deps, exePath, caller)
   if (result.readError !== null) {
     logWarning(
       `SteamGame: CEG detection could not read the exe for appId ${steamGame.appId}: ${result.readError}`,

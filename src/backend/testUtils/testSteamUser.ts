@@ -42,7 +42,8 @@ export function createTestSteamUser(
     tokenStore: overrides.tokenStore ?? createTestTokenStoreSlot(),
     anonymousClient: overrides.anonymousClient ?? createTestAnonymousClient(),
     clock: overrides.clock ?? createFakeClock(),
-    config: overrides.config ?? createTestGlobalConfig()
+    config: overrides.config ?? createTestGlobalConfig(),
+    sendFrontendMessage: overrides.sendFrontendMessage ?? (() => true)
   })
 }
 

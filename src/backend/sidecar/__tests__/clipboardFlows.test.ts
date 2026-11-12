@@ -38,11 +38,6 @@ jest.mock('backend/store_backend', () => ({
   default: jest.requireActual('../fileStore').default
 }))
 
-// ── sidecarRpc — full mock, scriptable requestRustInvoke only (mirrors lifecycleStub.test.ts) ─
-jest.mock('../sidecarRpc', () => ({
-  requestRustInvoke: jest.fn()
-}))
-
 // ── utils/systeminfo — mocked so copySystemInfoToClipboard's coverage targets ITS OWN wiring
 // (the curated-import boundary, formatted-string forwarding), not systeminfo's real CPU/GPU/OS
 // gathering ──────────────────────────────────────────────────────────────────────────────────
@@ -62,7 +57,7 @@ import { createIpcRegistry } from '../ipcRegistry'
 
 const ipc = createIpcRegistry()
 import { createTestHostServices } from '../../testUtils/testHostServices'
-import { requestRustInvoke } from '../sidecarRpc'
+const requestRustInvoke = jest.fn()
 import { formatSystemInfo } from '../../utils/systeminfo'
 import {
   RUST_CLIPBOARD_WRITE_TEXT,
@@ -73,7 +68,7 @@ type ProgrammedOutcome =
   | { type: 'resolve'; value: unknown }
   | { type: 'reject'; error: Error }
 
-const mockRequestRustInvoke = requestRustInvoke as jest.Mock
+const mockRequestRustInvoke = requestRustInvoke
 const mockGetSystemInfo = jest.fn()
 const mockFormatSystemInfo = formatSystemInfo as jest.Mock
 
@@ -141,6 +136,7 @@ const host = createTestHostServices({
     mockRequestRustInvoke(channel, args) as Promise<unknown>
 })
 registerClipboardFlows({
+  requestRustInvoke,
   ipc,
   appState: host.appState,
   managers: { library: {} } as never,

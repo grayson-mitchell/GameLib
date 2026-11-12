@@ -83,6 +83,7 @@ async function makeQueue() {
   const library = makeLibrary()
   const onConnectivityChange = jest.fn()
   const queue = createDownloadQueue({
+    sendFrontendMessage,
     stores: {
       downloadManager: { downloadManager: memoryStore },
       steam: {}
@@ -147,10 +148,6 @@ jest.mock('../utils', () => ({
   resolveGameTitle: resolveGameTitleMock
 }))
 
-jest.mock('../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
-
 jest.mock('../../dialog/dialog', () => ({
   notify: jest
     .requireActual('backend/testUtils/propsOnlyMock')
@@ -208,6 +205,8 @@ function makeQueueElement(appName: string): DMQueueElement {
     endTime: 0
   }
 }
+
+const sendFrontendMessage = jest.fn()
 
 describe('downloadqueue.ts — D-UAT-05 restart-wedge regression', () => {
   beforeEach(() => {
@@ -623,6 +622,7 @@ describe('downloadqueue.ts — debug/steam-cancel-abort-thread-a: cancelled Stea
     cancelCurrentDownload({ removeDownloaded: false })
 
     expect(sendGameStatusUpdate).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ appName: '1091500', status: 'done' })
     )
   })
@@ -647,9 +647,11 @@ describe('downloadqueue.ts — debug/steam-cancel-abort-thread-a: cancelled Stea
     cancelCurrentDownload({ removeDownloaded: false })
 
     expect(sendGameStatusUpdate).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ appName: '1091501', status: 'done' })
     )
     expect(sendGameStatusUpdate).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ appName: '1091502', status: 'done' })
     )
   })
@@ -678,6 +680,7 @@ describe('downloadqueue.ts — debug/steam-cancel-abort-thread-a: cancelled Stea
     removeFromQueue('1091500', true)
 
     expect(sendGameStatusUpdate).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ appName: '1091500', status: 'done' })
     )
   })
@@ -694,6 +697,7 @@ describe('downloadqueue.ts — debug/steam-cancel-abort-thread-a: cancelled Stea
     removeFromQueue('gog-game') // forceStatusUpdate omitted -- non-steam already always clears
 
     expect(sendGameStatusUpdate).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ appName: 'gog-game', status: 'done' })
     )
   })
@@ -918,6 +922,7 @@ describe('downloadqueue.ts — 66.1-11: boot service, no import-time effects', (
       get,
       subscribe,
       deps: {
+        sendFrontendMessage,
         stores: {
           downloadManager: { downloadManager: { ...memoryStore, get } },
           steam: {}

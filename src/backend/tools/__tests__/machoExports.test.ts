@@ -3,16 +3,15 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Backend: 'Backend' }
 }))
-jest.mock('backend/sidecar/sidecarRpc', () => ({
-  requestRustInvoke: jest.fn()
-}))
 
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
 import { checkWinemacMetalViewExports } from '../machoExports'
 import { winemacPathFor } from 'backend/scanners/scanTypes'
+
+const requestRustInvoke = jest.fn()
+const rust = { requestRustInvoke }
 
 const ALL_FOUR = [
   '_macdrv_functions',
@@ -33,8 +32,8 @@ describe('checkWinemacMetalViewExports', () => {
 
   describe('rust path', () => {
     it('makes one scan_winemac_metal_exports round-trip and returns its result', async () => {
-      ;(requestRustInvoke as jest.Mock).mockResolvedValue({ ok: true })
-      expect(await checkWinemacMetalViewExports(bundle, 'test')).toEqual({
+      requestRustInvoke.mockResolvedValue({ ok: true })
+      expect(await checkWinemacMetalViewExports(rust, bundle, 'test')).toEqual({
         ok: true
       })
       expect(requestRustInvoke).toHaveBeenCalledTimes(1)
@@ -51,15 +50,15 @@ describe('checkWinemacMetalViewExports', () => {
         reason: 'winemac.so not found',
         missing: ALL_FOUR
       }
-      ;(requestRustInvoke as jest.Mock).mockResolvedValue(failure)
-      expect(await checkWinemacMetalViewExports(bundle, 'test')).toEqual(
+      requestRustInvoke.mockResolvedValue(failure)
+      expect(await checkWinemacMetalViewExports(rust, bundle, 'test')).toEqual(
         failure
       )
     })
 
     it('fails closed (ok:false, all four missing) when the transport rejects', async () => {
-      ;(requestRustInvoke as jest.Mock).mockRejectedValue(new Error('boom'))
-      const r = await checkWinemacMetalViewExports(bundle, 'test')
+      requestRustInvoke.mockRejectedValue(new Error('boom'))
+      const r = await checkWinemacMetalViewExports(rust, bundle, 'test')
       expect(r).toEqual({
         ok: false,
         winemacPath: winemacPathFor(bundle),

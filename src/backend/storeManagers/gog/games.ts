@@ -49,7 +49,6 @@ import {
 } from 'common/types/gog'
 import { t } from 'i18next'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
-import { sendFrontendMessage } from '../../ipc'
 import { Game, RemoveArgs } from 'common/types/game_manager'
 import {
   getWineFlagsArray,
@@ -346,7 +345,7 @@ export default class GOGGame implements Game {
         LogPrefix.Gog
       )
 
-      sendProgressUpdate({
+      sendProgressUpdate(this.deps, {
         appName: this.id,
         runner: 'gog',
         status: action,
@@ -848,7 +847,11 @@ export default class GOGGame implements Game {
     const userData: UserData | undefined =
       this.deps.stores.gog.configStore.get_nodefault('userData')
 
-    sendGameStatusUpdate({ appName: this.id, runner: 'gog', status: 'playing' })
+    sendGameStatusUpdate(this.deps, {
+      appName: this.id,
+      runner: 'gog',
+      status: 'playing'
+    })
 
     let comet: LongLivedHandle | undefined
 
@@ -1181,7 +1184,7 @@ export default class GOGGame implements Game {
     await removeShortcutsUtil(this.deps, this)
     this.deps.stores.gog.syncStore.delete(this.id)
     await removeNonSteamGame(this.deps, this)
-    sendFrontendMessage('pushGameToLibrary', gameInfo)
+    this.deps.sendFrontendMessage('pushGameToLibrary', gameInfo)
     return res
   }
 
@@ -1362,7 +1365,7 @@ export default class GOGGame implements Game {
 
     if (res.error) {
       logError(['Failed to update', `${this.id}:`, res.error], LogPrefix.Gog)
-      sendGameStatusUpdate({
+      sendGameStatusUpdate(this.deps, {
         appName: this.id,
         runner: 'gog',
         status: 'done'
@@ -1383,7 +1386,7 @@ export default class GOGGame implements Game {
         ['Failed to update', `${this.id}:`, 'not found in installed store'],
         LogPrefix.Gog
       )
-      sendGameStatusUpdate({
+      sendGameStatusUpdate(this.deps, {
         appName: this.id,
         runner: 'gog',
         status: 'done'
@@ -1450,13 +1453,13 @@ export default class GOGGame implements Game {
           )
       }
     }
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(this.deps, {
       appName: this.id,
       runner: 'gog',
       status: 'done'
     })
     gameData.install = gameObject
-    sendFrontendMessage('pushGameToLibrary', gameData)
+    this.deps.sendFrontendMessage('pushGameToLibrary', gameData)
     return { status: 'done' }
   }
 
@@ -1507,7 +1510,7 @@ export default class GOGGame implements Game {
     const newInstalled = installed.filter((g) => g.appName !== this.id)
     this.deps.stores.gog.installedGamesStore.set('installed', newInstalled)
     this.deps.libraryManagers.gog.refreshInstalled()
-    sendFrontendMessage('pushGameToLibrary', this.getGameInfo())
+    this.deps.sendFrontendMessage('pushGameToLibrary', this.getGameInfo())
   }
 
   // GOGDL now handles the signal, this is no longer needed

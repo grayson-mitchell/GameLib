@@ -25,7 +25,7 @@
 import { EventEmitter } from 'node:events'
 import { createChildBackedRunner } from 'backend/testUtils/childBackedRunner'
 import { Socket } from 'node:net'
-import { sendFrontendMessage } from 'backend/ipc'
+const sendFrontendMessage = jest.fn()
 import { logInfo, logWarning } from 'backend/logger'
 import { BRIDGE_SECRET_ENV, encodeResponse, STATUS_OK } from '../protocol'
 import { ensureBridgeHelperReady } from '../helperProcess'
@@ -44,10 +44,6 @@ jest.mock('backend/logger', () => ({
 }))
 
 jest.mock('backend/constants/environment', () => ({ isMac: true }))
-
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: jest.fn()
-}))
 
 jest.mock('backend/constants/paths', () => ({
   steamBridgeHelperPath: '/mock/bundle/arm64/darwin/steam-bridge-helper',
@@ -81,6 +77,7 @@ const mockedRaiseMainWindow = jest.fn()
 // they were.
 let registry: BridgeHelperRegistry
 const helperDeps = {
+  sendFrontendMessage,
   get bridgeHelpers() {
     return registry
   },
@@ -93,7 +90,7 @@ const helperDeps = {
   paths: { steamBridgeHelperStateDir: '/mock/state/steam-bridge' }
 }
 const MockedSocket = Socket as unknown as jest.Mock
-const mockedSendFrontendMessage = sendFrontendMessage as jest.Mock
+const mockedSendFrontendMessage = sendFrontendMessage
 
 // PROBE_REQUEST_ID is 1 inside helperProcess.ts -- mirrored here so the
 // fixture responses this test hands back decode as matching the request.

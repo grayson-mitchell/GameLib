@@ -24,10 +24,6 @@ const mockSendFrontendMessage = jest.fn()
 const mockSendGameStatusUpdate = jest.fn()
 const mockGetWineFromProton = jest.fn()
 
-jest.mock('../../ipc', () => ({
-  sendFrontendMessage: (...args: unknown[]) => mockSendFrontendMessage(...args)
-}))
-
 jest.mock('../../utils', () => ({
   axiosClient: {},
   downloadFile: jest.fn(),
@@ -77,7 +73,9 @@ import {
 let runner: DrivableRunner
 
 const toolsDeps: ToolsDeps = {
-  ...createTestToolsSlices(),
+  ...createTestToolsSlices({
+    sendFrontendMessage: mockSendFrontendMessage as never
+  }),
   spawnAsync: createTestServices().spawnAsync,
   runner: { run: (...args) => runner.run(...args) },
   stores: createTestStores(),

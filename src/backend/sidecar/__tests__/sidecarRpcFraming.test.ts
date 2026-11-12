@@ -11,6 +11,7 @@
  */
 import { createIpcRegistry } from '../ipcRegistry'
 import { defined } from 'backend/testUtils/indexed'
+import { createTestSidecarRpc } from 'backend/testUtils/testSidecarRpc'
 import { PassThrough } from 'node:stream'
 
 const MAX_LINE_LENGTH = 10 * 1024 * 1024
@@ -46,15 +47,14 @@ describe('sidecarRpc inbound framing', () => {
 
   function startEcho(): { input: PassThrough; output: PassThrough } {
     // A fresh registry per test, handed to the server: no binding leaks between tests.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const rpc = require('../sidecarRpc') as typeof import('../sidecarRpc')
+    const rpc = createTestSidecarRpc()
     const ipc = createIpcRegistry()
     ipc.handle('echo', (_event: unknown, ...args: unknown[]) =>
       Promise.resolve(args)
     )
     const input = new PassThrough()
     const output = new PassThrough()
-    rpc.startRpcServer(input, output, ipc)
+    rpc.start(input, output, ipc)
     return { input, output }
   }
 

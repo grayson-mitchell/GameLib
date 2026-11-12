@@ -1,4 +1,3 @@
-import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
 import { logWarning } from 'backend/logger'
 
 jest.mock('backend/logger', () => ({
@@ -7,13 +6,13 @@ jest.mock('backend/logger', () => ({
   logError: jest.fn(),
   LogPrefix: { Backend: 'Backend', Steam: 'Steam' }
 }))
-jest.mock('backend/sidecar/sidecarRpc', () => ({
-  requestRustInvoke: jest.fn()
-}))
 
 import { detectSteamDrmInPe, readPeImportedDllNames } from '../peScan'
 
-const mockInvoke = requestRustInvoke as jest.Mock
+const requestRustInvoke = jest.fn()
+const rust = { requestRustInvoke }
+
+const mockInvoke = requestRustInvoke
 
 beforeEach(() => {
   jest.clearAllMocks()
@@ -28,7 +27,7 @@ describe('peScan', () => {
       readError: null
     }
     mockInvoke.mockResolvedValue(r)
-    await expect(detectSteamDrmInPe('/x', 'test')).resolves.toEqual(r)
+    await expect(detectSteamDrmInPe(rust, '/x', 'test')).resolves.toEqual(r)
     expect(mockInvoke).toHaveBeenCalledWith('scan_steam_drm', [
       { exePath: '/x' }
     ])
@@ -36,7 +35,7 @@ describe('peScan', () => {
 
   it('detectSteamDrmInPe fails closed when the transport rejects', async () => {
     mockInvoke.mockRejectedValue(new Error('down'))
-    await expect(detectSteamDrmInPe('/x', 'test')).resolves.toEqual({
+    await expect(detectSteamDrmInPe(rust, '/x', 'test')).resolves.toEqual({
       parsed: false,
       cegMarkers: [],
       hasBindSection: false,
@@ -47,14 +46,14 @@ describe('peScan', () => {
 
   it('readPeImportedDllNames resolves names', async () => {
     mockInvoke.mockResolvedValue({ names: ['a.dll'], readError: null })
-    await expect(readPeImportedDllNames('/x', 'test')).resolves.toEqual([
+    await expect(readPeImportedDllNames(rust, '/x', 'test')).resolves.toEqual([
       'a.dll'
     ])
   })
 
   it('readPeImportedDllNames returns null and warns on rejection', async () => {
     mockInvoke.mockRejectedValue(new Error('down'))
-    await expect(readPeImportedDllNames('/x', 'test')).resolves.toBeNull()
+    await expect(readPeImportedDllNames(rust, '/x', 'test')).resolves.toBeNull()
     expect(logWarning).toHaveBeenCalled()
   })
 })

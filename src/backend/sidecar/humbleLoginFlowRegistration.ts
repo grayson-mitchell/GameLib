@@ -58,7 +58,7 @@
  */
 
 import type { IpcRegistry } from './ipcRegistry'
-import { requestRustInvoke } from './sidecarRpc'
+import type { RequestRustInvoke } from '../host'
 import {
   RUST_HUMBLE_LOGIN_OPEN,
   RUST_HUMBLE_LOGIN_COOKIES,
@@ -170,7 +170,9 @@ function coerceStorageClearCategory(raw: unknown): StorageClearCategoryResult {
  * non-numeric `total` to 0 -- conflating "the read threw" with "the jar is empty" recreates exactly
  * the failure this phase exists to prevent.
  */
-export function createRustLoginWindowSeam(): LoginWindowSeam {
+export function createRustLoginWindowSeam(
+  requestRustInvoke: RequestRustInvoke
+): LoginWindowSeam {
   return {
     async open(url, options) {
       const result = await requestRustInvoke(RUST_HUMBLE_LOGIN_OPEN, [
@@ -346,12 +348,16 @@ export function registerHumbleLoginFlows(deps: {
     HumbleServices,
     'user' | 'library' | 'loginWindowSeam' | 'appInfo'
   >
+  /** The boot's sidecar -> Rust request leg, handed to the login-window seam (66.4-15). */
+  requestRustInvoke: RequestRustInvoke
 }): void {
   const { humble } = deps
   // T-34.4.1-10: the ONE call site in the repo. Must run before any of the 4 handlers below could
   // possibly be invoked (registration order, not request order, is what matters here -- all 4 are
   // registered synchronously in this same function before it returns).
-  humble.loginWindowSeam.install(createRustLoginWindowSeam())
+  humble.loginWindowSeam.install(
+    createRustLoginWindowSeam(deps.requestRustInvoke)
+  )
 
   // ── invoke (3) ──────────────────────────────────────────────────────────────────────────────
 

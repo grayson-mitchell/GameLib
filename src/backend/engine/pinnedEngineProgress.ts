@@ -9,6 +9,7 @@ import type { Runner } from 'common/types'
 import type { ProcessRunner } from 'backend/process/types'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendGameStatusUpdate } from 'backend/utils'
+import type { SendFrontendMessage } from 'backend/host/frontendMessage'
 import type { EnginePin } from './enginePins'
 import type { FallbackEngine } from './fallbackEngine'
 import type { NonCrossoverEngine } from './engineTypes'
@@ -33,6 +34,7 @@ export async function ensurePinnedEngineReportingStatus(args: {
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   /** The boot's fallback-engine owner (66.4-05). */
   fallback: Pick<FallbackEngine, 'ensurePinnedEngine'>
+  sendFrontendMessage: SendFrontendMessage
   signal?: AbortSignal
 }): Promise<PinnedEngineResult> {
   const { pin, appName, runner, processRunner, onlineMonitor, signal } = args
@@ -49,7 +51,7 @@ export async function ensurePinnedEngineReportingStatus(args: {
     if (context === lastContext) return
     lastContext = context
     sentAny = true
-    sendGameStatusUpdate({
+    sendGameStatusUpdate(args, {
       appName,
       runner,
       status: 'engine-download',
@@ -85,7 +87,7 @@ export async function ensurePinnedEngineReportingStatus(args: {
       `built-in engine download aborted for ${runner} ${appName}`,
       LogPrefix.Backend
     )
-    sendGameStatusUpdate({ appName, runner, status: 'done' })
+    sendGameStatusUpdate(args, { appName, runner, status: 'done' })
     return {
       ok: false,
       aborted: true,
@@ -98,7 +100,7 @@ export async function ensurePinnedEngineReportingStatus(args: {
       `built-in engine unavailable for ${runner} ${appName}: ${result.reason} ${result.detail}`,
       LogPrefix.Backend
     )
-    sendGameStatusUpdate({ appName, runner, status: 'done' })
+    sendGameStatusUpdate(args, { appName, runner, status: 'done' })
     return {
       ok: false,
       aborted: false,

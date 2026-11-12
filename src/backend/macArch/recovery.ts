@@ -41,6 +41,7 @@ export interface MacArchRecoveryDeps {
   config: Pick<ManagerDeps['config'], 'getSettings'>
   dialogs: ManagerDeps['dialogs']
   notifications: ManagerDeps['notifications']
+  sendFrontendMessage: ManagerDeps['sendFrontendMessage']
   paths: ManagerDeps['paths']
 }
 
@@ -188,7 +189,8 @@ export async function offerWindowsReinstall(
         libraryManagers: deps.libraryManagers,
         config: deps.config,
         notifications: deps.notifications,
-        paths: deps.paths
+        paths: deps.paths,
+        sendFrontendMessage: deps.sendFrontendMessage
       },
       undefined as never,
       appName,

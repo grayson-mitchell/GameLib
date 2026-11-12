@@ -7,6 +7,7 @@
 // disposer register returns. Jobs still running at stdin EOF are stopped through their install's
 // AbortController (abortAll), which runDepotJob forwards as depot_job_cancel.
 
+import type { HostServices } from 'backend/host'
 import type { CdnAuthTokenCache } from '../depot/cdnAuth'
 import type { RustJobEvent } from './types'
 
@@ -29,7 +30,15 @@ interface Entry {
   lastSeq: number
 }
 
+/** The shell link a depot job runs over: the sidecar -> Rust request leg and the renderer push. */
+export type DepotTransport = Pick<
+  HostServices,
+  'requestRustInvoke' | 'sendFrontendMessage'
+>
+
 export interface DepotJobRegistry {
+  /** This boot's transport: the depot_* invokes and the progress push go through it (66.4-15). */
+  transport: DepotTransport
   /** Registers `job` under `jobId`; the returned disposer removes only this registration. */
   registerActiveDepotJob(jobId: string, job: ActiveDepotJob): () => void
   lookupActiveDepotJob(jobId: string): ActiveDepotJob | undefined
@@ -40,9 +49,12 @@ export interface DepotJobRegistry {
   dispatchDepotJobEvent(ev: RustJobEvent): boolean
 }
 
-export function createDepotJobRegistry(): DepotJobRegistry {
+export function createDepotJobRegistry(
+  transport: DepotTransport
+): DepotJobRegistry {
   const active = new Map<string, Entry>()
   return {
+    transport,
     registerActiveDepotJob(jobId, job) {
       const entry: Entry = { job, lastSeq: -1 }
       active.set(jobId, entry)

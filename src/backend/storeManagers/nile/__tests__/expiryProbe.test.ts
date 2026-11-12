@@ -52,10 +52,6 @@ jest.mock('backend/utils', () => ({
   clearCache: jest.fn(),
   startLegendaryCleanup: jest.fn()
 }))
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: jest.fn(),
-  addHandler: jest.fn()
-}))
 
 const mockRunRunnerCommand = jest.fn()
 

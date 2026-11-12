@@ -54,7 +54,7 @@ function steamLaunchWatchDeps(deps: ManagerDeps): SteamLaunchWatchDeps {
     },
     registry: deps.libraryManagers.steam.launchWatches,
     sendStatus: (appId, status) =>
-      sendGameStatusUpdate({ appName: appId, runner: 'steam', status }),
+      sendGameStatusUpdate(deps, { appName: appId, runner: 'steam', status }),
     pollerReports: (appId) =>
       String(deps.steamProcesses.runningPoll.lastAppId()) === appId,
     pollerHold: (appId) => deps.steamProcesses.runningPoll.hold(Number(appId)),

@@ -22,10 +22,6 @@ jest.mock('fs/promises', () => ({
   readFile: (...args: unknown[]) => mockReadFile(...args)
 }))
 
-jest.mock('../../ipc', () => ({
-  sendFrontendMessage: (...args: unknown[]) => mockSendFrontendMessage(...args)
-}))
-
 jest.mock('../../utils', () => ({
   axiosClient: {},
   downloadFile: jest.fn(),
@@ -78,7 +74,9 @@ let runner: DrivableRunner
 let versionProbe: () => DrivenRunResult
 
 const toolsDeps: ToolsDeps = {
-  ...createTestToolsSlices(),
+  ...createTestToolsSlices({
+    sendFrontendMessage: mockSendFrontendMessage as never
+  }),
   spawnAsync: createTestServices().spawnAsync,
   runner: { run: (...args) => runner.run(...args) },
   stores: createTestStores(),

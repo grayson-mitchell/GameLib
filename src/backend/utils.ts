@@ -36,7 +36,10 @@ import { checkEpicServiceOffline } from './utils/epicServiceStatus'
 import * as fileSize from 'filesize'
 import { Client as discordClient } from '@xhayper/discord-rpc'
 import { showDialogBoxModalAuto, type DialogBoxDeps } from './dialog/dialog'
-import { sendFrontendMessage } from './ipc'
+import type {
+  FrontendMessageDeps,
+  SendFrontendMessage
+} from './host/frontendMessage'
 import type { GlobalConfigSlice } from './config'
 import type { GameConfigs } from './game_config'
 import type { Dialogs } from './host/dialogs'
@@ -244,7 +247,7 @@ export async function askForceUninstall(
 /** errorHandler reads the manager table only in its deleted-folder branch. */
 export type ErrorHandlerDeps = Pick<
   ManagerDeps,
-  'libraryManagers' | 'dialogs' | 'appState'
+  'libraryManagers' | 'dialogs' | 'appState' | 'sendFrontendMessage'
 >
 
 async function errorHandler(
@@ -983,6 +986,7 @@ export async function downloadDefaultWine(deps: {
     GlobalConfigSlice,
     'getSettings' | 'getAlternativeWine' | 'setSetting'
   >
+  sendFrontendMessage: SendFrontendMessage
 }) {
   if (isWindows) return null
   // refresh wine list
@@ -1013,7 +1017,7 @@ export async function downloadDefaultWine(deps: {
 
   // download the latest version
   const onProgress = (state: WineManagerStatus) => {
-    sendFrontendMessage('progressOfWineManager', release.version, state)
+    deps.sendFrontendMessage('progressOfWineManager', release.version, state)
   }
   const result = await installWineVersion(deps, release, onProgress)
 
@@ -1024,7 +1028,8 @@ export async function downloadDefaultWine(deps: {
         wineDownloaderInfoStore:
           deps.stores.wineManager.wineDownloaderInfoStore,
         runner: deps.runner,
-        paths: deps.paths
+        paths: deps.paths,
+        sendFrontendMessage: deps.sendFrontendMessage
       })
       // update the game config to use that wine
       const firstWine = wineList[0]
@@ -1057,6 +1062,7 @@ export async function checkWineBeforeLaunch(
     >
     gameConfigs: Pick<GameConfigs, 'get'>
     dialogs: Pick<Dialogs, 'showMessageBox'>
+    sendFrontendMessage: SendFrontendMessage
   },
   gameInfo: GameInfo,
   gameSettings: GameSettings,
@@ -1116,7 +1122,8 @@ export async function checkWineBeforeLaunch(
         wineDownloaderInfoStore:
           deps.stores.wineManager.wineDownloaderInfoStore,
         runner: deps.runner,
-        paths: deps.paths
+        paths: deps.paths,
+        sendFrontendMessage: deps.sendFrontendMessage
       })
       const firstFoundWine = wineList[0]
 
@@ -1163,7 +1170,11 @@ const RSYNC_PROBE_TIMEOUT_MS = 5_000
 const ROSETTA_PROBE_TIMEOUT_MS = 10_000
 
 export async function moveOnWindows(
-  deps: { spawnAsync: SpawnAsync; runner: Pick<ProcessRunner, 'run'> },
+  deps: {
+    spawnAsync: SpawnAsync
+    runner: Pick<ProcessRunner, 'run'>
+    sendFrontendMessage: SendFrontendMessage
+  },
   newInstallPath: string,
   gameInfo: GameInfo
 ): Promise<
@@ -1195,7 +1206,7 @@ export async function moveOnWindows(
       const filenameMatch = data.match(/([\w.:\\]+)$/)?.[1]
       if (filenameMatch) currentFile = filenameMatch
 
-      sendFrontendMessage('progressUpdate', {
+      deps.sendFrontendMessage('progressUpdate', {
         appName: gameInfo.app_name,
         runner: gameInfo.runner,
         status: 'moving',
@@ -1220,7 +1231,11 @@ export async function moveOnWindows(
 }
 
 export async function moveOnUnix(
-  deps: { spawnAsync: SpawnAsync; runner: Pick<ProcessRunner, 'run'> },
+  deps: {
+    spawnAsync: SpawnAsync
+    runner: Pick<ProcessRunner, 'run'>
+    sendFrontendMessage: SendFrontendMessage
+  },
   newInstallPath: string,
   gameInfo: GameInfo
 ): Promise<
@@ -1330,7 +1345,7 @@ export async function moveOnUnix(
           }
         }
 
-        sendFrontendMessage('progressUpdate', {
+        deps.sendFrontendMessage('progressUpdate', {
           appName: gameInfo.app_name,
           runner: gameInfo.runner,
           status: 'moving',
@@ -1510,13 +1525,13 @@ export function isMacSonomaOrHigher(): boolean {
   return isMacSonomaOrHigher
 }
 
-function sendGameStatusUpdate(payload: GameStatus) {
-  sendFrontendMessage('gameStatusUpdate', payload)
+function sendGameStatusUpdate(deps: FrontendMessageDeps, payload: GameStatus) {
+  deps.sendFrontendMessage('gameStatusUpdate', payload)
   backendEvents.emit('gameStatusUpdate', payload)
 }
 
-function sendProgressUpdate(payload: GameStatus) {
-  sendFrontendMessage('progressUpdate', payload)
+function sendProgressUpdate(deps: FrontendMessageDeps, payload: GameStatus) {
+  deps.sendFrontendMessage('progressUpdate', payload)
   backendEvents.emit(`progressUpdate-${payload.appName}`, payload)
 }
 

@@ -78,7 +78,6 @@ jest.mock('backend/constants/environment', () => ({
   isMac: false,
   isLinux: true
 }))
-jest.mock('../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 jest.mock('../stores', () => ({
   steamLibraryStore: { get: jest.fn(), set: jest.fn() }
 }))

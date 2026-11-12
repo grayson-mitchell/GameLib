@@ -27,6 +27,7 @@
 //
 // D-UAT-11 (quick-261029-o5a): a successful delete also zeroes the frontend progress.
 
+import type { FrontendMessageDeps } from '../../host/frontendMessage'
 import { parse } from '@node-steam/vdf'
 import { readFileSync, existsSync } from 'graceful-fs'
 import { rmSync } from 'node:fs'
@@ -104,7 +105,8 @@ export async function deleteCancelledSteamInstall(
     SteamLibrariesDeps &
     BottleSettingsDeps &
     SteamLibraryStateDeps &
-    SteamGameSessionDeps,
+    SteamGameSessionDeps &
+    FrontendMessageDeps,
   appId: string,
   opts?: { pollMs?: number; timeoutMs?: number }
 ): Promise<CancelDeleteResult> {
@@ -231,7 +233,7 @@ export async function deleteCancelledSteamInstall(
     // above guarantees no later depot emit can re-seed the old percent. A zero
     // value, not a deleted key, is required because hasProgress's effect
     // ignores an undefined store value.
-    sendProgressUpdate({
+    sendProgressUpdate(deps, {
       appName: appId,
       runner: 'steam',
       status: 'done',

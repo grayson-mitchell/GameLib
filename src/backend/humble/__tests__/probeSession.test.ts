@@ -35,9 +35,6 @@ jest.mock('backend/logger', () => ({
 }))
 
 const mockSendFrontendMessage = jest.fn()
-jest.mock('backend/ipc', () => ({
-  sendFrontendMessage: (...args: unknown[]) => mockSendFrontendMessage(...args)
-}))
 
 const mockGetGamekeys = jest.fn()
 jest.mock('../adapter', () => ({
@@ -54,6 +51,9 @@ let mockStore: Record<string, unknown> = {}
 
 import { HumbleUser } from '../user'
 
+const sendFrontendMessage = (...args: unknown[]) =>
+  mockSendFrontendMessage(...args)
+
 // The user reads the CURRENT `mockStore` through this forwarding object, so a describe can swap the
 // store's shape (with or without `readSecret`) after the user is built.
 const secretStore = new Proxy(
@@ -62,6 +62,7 @@ const secretStore = new Proxy(
 ) as never
 
 const humbleUser = new HumbleUser({
+  sendFrontendMessage,
   stores: {
     humble: {
       configStore: mockConfigStore,

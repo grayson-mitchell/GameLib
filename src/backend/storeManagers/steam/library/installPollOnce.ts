@@ -2,7 +2,6 @@ import { GameInfo } from 'common/types'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import { getFileSize } from 'backend/utils'
-import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import i18next from 'i18next'
 import type { ManagerDeps } from 'backend/services/types'
@@ -130,7 +129,7 @@ export async function pollInstallOnce(
       )
       stopInstallPolling(deps, appId)
       markSteamInstallIncomplete(deps, appId)
-      sendFrontendMessage('gameStatusUpdate', {
+      deps.sendFrontendMessage('gameStatusUpdate', {
         appName: appId,
         runner: 'steam',
         status: 'done'
@@ -185,7 +184,7 @@ export async function pollInstallOnce(
         poll.stalledTicks >= STALLED_TICKS_THRESHOLD
     }
 
-    sendFrontendMessage('gameStatusUpdate', {
+    deps.sendFrontendMessage('gameStatusUpdate', {
       appName: appId,
       runner: 'steam',
       status: 'installing',
@@ -281,7 +280,7 @@ export async function pollInstallOnce(
         const percent = liveP
           ? Math.min(99, Math.max(0, Math.round(rawPercent)))
           : Math.min(100, Math.max(0, Math.round(rawPercent)))
-        sendFrontendMessage('progressUpdate', {
+        deps.sendFrontendMessage('progressUpdate', {
           appName: appId,
           runner: 'steam',
           status: 'installing',
@@ -314,7 +313,7 @@ export async function pollInstallOnce(
         source
       ))
     ) {
-      sendFrontendMessage('gameStatusUpdate', {
+      deps.sendFrontendMessage('gameStatusUpdate', {
         appName: appId,
         runner: 'steam',
         status: 'installing',
@@ -348,7 +347,7 @@ export async function pollInstallOnce(
         'games',
         Array.from(deps.steamSession.libraryState.library.values())
       )
-      sendFrontendMessage('pushGameToLibrary', updated)
+      deps.sendFrontendMessage('pushGameToLibrary', updated)
     }
     // Quick 261029-exu: a bridge install keeps working after its manifest
     // lands (shared redists, DRM prefetch), so installBridgeGame owns the
@@ -363,7 +362,7 @@ export async function pollInstallOnce(
         deps.steamInstallRuntime.polls.isBridgeInstallFinalized(appId)
       )
     ) {
-      sendFrontendMessage(
+      deps.sendFrontendMessage(
         'gameStatusUpdate',
         installerOwnsCompletion
           ? {
@@ -471,7 +470,7 @@ export async function pollInstallOnce(
         `Steam: install polling for appId ${appId} stopped — manifest disappeared while waiting for a Steam restart`,
         LogPrefix.Steam
       )
-      sendFrontendMessage('gameStatusUpdate', {
+      deps.sendFrontendMessage('gameStatusUpdate', {
         appName: appId,
         runner: 'steam',
         status: 'done'

@@ -1,6 +1,6 @@
 {
   "jestMock": {
-    "src/backend/runsForMe/__tests__/runsForMe.test.ts": 2
+    "src/backend/runsForMe/__tests__/runsForMe.test.ts": 1
   },
   "moduleState": {
     "src/backend/runsForMe/index.ts": 1

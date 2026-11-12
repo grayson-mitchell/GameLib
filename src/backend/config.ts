@@ -1,3 +1,4 @@
+import type { SendFrontendMessage } from './host/frontendMessage'
 import { existsSync, mkdirSync, readFileSync } from 'graceful-fs'
 
 import {
@@ -139,11 +140,18 @@ abstract class GlobalConfig {
       wineDownloaderInfoStore: Stores['wineManager']['wineDownloaderInfoStore']
       runner: Pick<ProcessRunner, 'run'>
       paths: Pick<AppPaths, 'toolsPath' | 'userHome' | 'configPath'>
+      sendFrontendMessage: SendFrontendMessage
     },
     scanCustom = true
   ): Promise<WineInstallation[]> {
     if (deps.wineDownloaderInfoStore.get('wine-releases', []).length === 0) {
-      await updateWineVersionInfos({ stores: { wineManager: deps } }, true)
+      await updateWineVersionInfos(
+        {
+          stores: { wineManager: deps },
+          sendFrontendMessage: deps.sendFrontendMessage
+        },
+        true
+      )
     }
 
     if (isMac) {

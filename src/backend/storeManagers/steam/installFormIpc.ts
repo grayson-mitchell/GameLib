@@ -14,6 +14,7 @@
  * is never forked, the widening reaches both runtimes at once with no
  * further edit to either registration site.
  */
+import type { SendFrontendMessage } from '../../host/frontendMessage'
 import type { WineInstallation } from 'common/types'
 import type {
   SteamBottleEligibilityVerdict,
@@ -230,6 +231,7 @@ export async function persistInstallFormWineVersion(
     config: Pick<GlobalConfigSlice, 'getAlternativeWine'>
     paths: Pick<AppPaths, 'toolsPath' | 'userHome' | 'configPath'>
     steamBottle: Pick<SteamBottle, 'persistBottleWineVersion'>
+    sendFrontendMessage: SendFrontendMessage
   },
   input: unknown
 ): Promise<{
@@ -301,7 +303,8 @@ export async function persistInstallFormWineVersion(
     detected = await deps.config.getAlternativeWine({
       wineDownloaderInfoStore: deps.stores.wineManager.wineDownloaderInfoStore,
       runner: deps.runner,
-      paths: deps.paths
+      paths: deps.paths,
+      sendFrontendMessage: deps.sendFrontendMessage
     })
   } catch (error) {
     logWarning(

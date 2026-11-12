@@ -6,7 +6,7 @@ import {
 import { channelSchemas } from 'common/types/ipc/channelSchemas'
 import {
   formatRejectionLog,
-  setIpcRejectionLogSink,
+  createIpcValidator,
   validateInbound
 } from 'backend/sidecar/ipcValidation'
 import {
@@ -111,7 +111,10 @@ describe('logger channel schemas', () => {
   it('a rejected logError payload yields one value-free stderr line and no recursion', () => {
     const SENTINEL = 'SENTINEL-LOG-9c1d'
     const sink: string[] = []
-    setIpcRejectionLogSink((l) => sink.push(l))
+    const { logRejection } = createIpcValidator({
+      now: Date.now,
+      sink: (l) => sink.push(l)
+    })
     const writes: string[] = []
     const spy = jest
       .spyOn(process.stderr, 'write')
@@ -129,12 +132,9 @@ describe('logger channel schemas', () => {
       if (verdict.ok) return
       expect(formatRejectionLog('send', verdict)).not.toContain(SENTINEL)
       // exercise the sidecar's own logging path
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { logRejection } = require('backend/sidecar/ipcValidation')
       logRejection('send', verdict)
     } finally {
       spy.mockRestore()
-      setIpcRejectionLogSink(null)
     }
     expect(writes.filter((l) => l.includes('IPC_INVALID_ARGS'))).toHaveLength(1)
     expect(sink).toHaveLength(1)

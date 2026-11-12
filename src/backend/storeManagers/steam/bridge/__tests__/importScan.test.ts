@@ -8,7 +8,6 @@
  * means implementations must be re-established in each test.
  */
 
-import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
 import { logInfo, logWarning } from 'backend/logger'
 import { parseSteamApiImports, scanSteamApiImports } from '../importScan'
 import { parseImportedDllNames, parseSteamApiImportTable } from '../importParse'
@@ -25,14 +24,13 @@ import {
   XCOM_EU_OBJDUMP_OUTPUT
 } from './fixtures/objdumpImports'
 
+const requestRustInvoke = jest.fn()
+const rust = { requestRustInvoke }
+
 jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   logInfo: jest.fn(),
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
-}))
-
-jest.mock('backend/sidecar/sidecarRpc', () => ({
-  requestRustInvoke: jest.fn()
 }))
 
 const HOARD_BARE_ACCESSORS = [
@@ -175,7 +173,7 @@ describe('importScan', () => {
   })
 
   describe('rust path', () => {
-    const mockedInvoke = requestRustInvoke as jest.Mock
+    const mockedInvoke = requestRustInvoke
     it('makes one scan_steam_api_imports round-trip, strips diagnostics and forwards them', async () => {
       mockedInvoke.mockResolvedValue({
         status: 'ok',
@@ -187,7 +185,12 @@ describe('importScan', () => {
           { level: 'info', message: 'rust info' }
         ]
       })
-      const result = await scanSteamApiImports('1234', '/g/Game.exe', 'test')
+      const result = await scanSteamApiImports(
+        rust,
+        '1234',
+        '/g/Game.exe',
+        'test'
+      )
       expect(mockedInvoke).toHaveBeenCalledTimes(1)
       expect(mockedInvoke).toHaveBeenCalledWith('scan_steam_api_imports', [
         { exePath: '/g/Game.exe', appId: '1234' }
@@ -211,12 +214,22 @@ describe('importScan', () => {
         symbols: [],
         diagnostics: []
       })
-      const result = await scanSteamApiImports('1234', '/g/Game.exe', 'test')
+      const result = await scanSteamApiImports(
+        rust,
+        '1234',
+        '/g/Game.exe',
+        'test'
+      )
       expect(result).not.toHaveProperty('delaySymbols')
     })
 
     it('rejects a non-numeric appId before any scanner call', async () => {
-      const result = await scanSteamApiImports('abc', '/g/Game.exe', 'test')
+      const result = await scanSteamApiImports(
+        rust,
+        'abc',
+        '/g/Game.exe',
+        'test'
+      )
       expect(result).toEqual({
         status: 'error',
         error: 'Invalid appId: "abc"'
@@ -226,7 +239,12 @@ describe('importScan', () => {
 
     it('fails closed with a typed error when the transport rejects', async () => {
       mockedInvoke.mockRejectedValue(new Error('pipe closed'))
-      const result = await scanSteamApiImports('1234', '/g/Game.exe', 'test')
+      const result = await scanSteamApiImports(
+        rust,
+        '1234',
+        '/g/Game.exe',
+        'test'
+      )
       expect(result).toEqual({
         status: 'error',
         error: 'Rust scan failed: Error: pipe closed'

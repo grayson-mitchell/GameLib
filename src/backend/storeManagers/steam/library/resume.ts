@@ -4,7 +4,6 @@ import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { join } from 'path'
 import { isMac, isLinux } from 'backend/constants/environment'
 import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
-import { sendFrontendMessage } from '../../../ipc'
 import { finalizeToSteam, type FinalizeToSteamOpts } from '../depot'
 import { resumeVerifyRust } from '../depotRust/secondary'
 import {
@@ -220,7 +219,7 @@ export async function resumeInterruptedSteamInstall(
         install: { ...existing.install, steamResumePending: false }
       }
       deps.steamSession.libraryState.library.set(appId, updated)
-      sendFrontendMessage('pushGameToLibrary', updated)
+      deps.sendFrontendMessage('pushGameToLibrary', updated)
     }
 
     try {

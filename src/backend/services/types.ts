@@ -186,6 +186,10 @@ export interface ManagerDeps {
   notifications: Notifications
   appState: AppState
   imageTools: HostServices['imageTools']
+  /** The sidecar -> Rust request leg of this boot's transport (66.4-15). */
+  requestRustInvoke: HostServices['requestRustInvoke']
+  /** Typed backend -> frontend push over this boot's transport (66.4-15). */
+  sendFrontendMessage: HostServices['sendFrontendMessage']
   /** The boot-owned engine decision/notice state (D-66.3-12). */
   engineState: EngineStateService
   /** The boot-owned engine runtime: ledger, registry, deadlines, single-flight maps (66.4-05). */

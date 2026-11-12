@@ -22,6 +22,7 @@ export type EngineServicesSource = Pick<
     | 'dialogs'
     | 'appState'
     | 'notifications'
+    | 'sendFrontendMessage'
     | 'onlineMonitor'
     | 'steamBottle'
     | 'steamLaunchRuntime'
@@ -60,6 +61,7 @@ export function toolsFrom(deps: EngineServicesSource): Tools {
     dialogs: deps.dialogs,
     appState: deps.appState,
     notifications: deps.notifications,
+    sendFrontendMessage: deps.sendFrontendMessage,
     onlineMonitor: deps.onlineMonitor,
     engineState: deps.engineState,
     engineRuntime: deps.engineRuntime,
@@ -83,7 +85,8 @@ export function engineServicesFrom(deps: EngineServicesSource): EngineServices {
     notices: {
       dialogs: deps.dialogs,
       appState: deps.appState,
-      notifications: deps.notifications
+      notifications: deps.notifications,
+      sendFrontendMessage: deps.sendFrontendMessage
     }
   }
 }

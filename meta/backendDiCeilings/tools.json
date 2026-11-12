@@ -3,13 +3,13 @@
     "src/backend/tools/__tests__/dxmtBootFetch.test.ts": 5,
     "src/backend/tools/__tests__/dxmtExportGate.test.ts": 5,
     "src/backend/tools/__tests__/dxvkInstallRemove.test.ts": 2,
-    "src/backend/tools/__tests__/machoExports.test.ts": 2,
+    "src/backend/tools/__tests__/machoExports.test.ts": 1,
     "src/backend/tools/__tests__/runWineCommandForPendingInstall.test.ts": 2,
     "src/backend/tools/__tests__/runWineCommandOnGameGuard.test.ts": 1,
     "src/backend/tools/__tests__/toolSettingsWiring.test.ts": 2,
-    "src/backend/tools/__tests__/winetricksInstallLifecycle.test.ts": 5,
-    "src/backend/tools/__tests__/winetricksListAvailable.test.ts": 6,
-    "src/backend/tools/__tests__/winetricksQueue.test.ts": 5
+    "src/backend/tools/__tests__/winetricksInstallLifecycle.test.ts": 4,
+    "src/backend/tools/__tests__/winetricksListAvailable.test.ts": 5,
+    "src/backend/tools/__tests__/winetricksQueue.test.ts": 4
   },
   "moduleState": {}
 }

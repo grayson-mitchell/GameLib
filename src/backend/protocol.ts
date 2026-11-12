@@ -3,7 +3,7 @@ import { logError, logInfo, LogPrefix } from './logger'
 import i18next from 'i18next'
 import { tOrFallback } from './i18nFallback'
 import { GameInfo, LaunchOption, Runner } from 'common/types'
-import { sendFrontendMessage } from './ipc'
+import type { SendFrontendMessage } from 'backend/host/frontendMessage'
 import type { Launcher, StoreManagers, Stores } from './services/types'
 import { z } from 'zod'
 import { windowIcon } from './constants/paths'
@@ -71,6 +71,7 @@ export interface ProtocolDeps {
     AppState,
     'inAppDialogRaiseCount' | 'quit' | 'hideMainWindow' | 'raiseMainWindow'
   >
+  sendFrontendMessage: SendFrontendMessage
 }
 
 export function handleProtocol(deps: ProtocolDeps, args: string[]) {
@@ -276,7 +277,8 @@ async function handleLaunch(deps: ProtocolDeps, url: URL) {
         {
           libraryManagers: deps.managers.library,
           stores: deps.stores,
-          notifications: deps.notifications
+          notifications: deps.notifications,
+          sendFrontendMessage: deps.sendFrontendMessage
         },
         appName
       )
@@ -312,7 +314,7 @@ async function handleLaunch(deps: ProtocolDeps, url: URL) {
       )
       deps.appState.raiseMainWindow()
     }
-    sendFrontendMessage('installGame', appName, gameInfo.runner)
+    deps.sendFrontendMessage('installGame', appName, gameInfo.runner)
     return { status: 'installing' as const }
   } else if (response === 1) {
     logInfo('Not installing game', LogPrefix.ProtocolHandler)

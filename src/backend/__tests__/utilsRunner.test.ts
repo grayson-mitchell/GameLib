@@ -55,7 +55,7 @@ describe('moveOnWindows', () => {
     const runner = createScriptedRunner([])
 
     const result = await moveOnWindows(
-      { spawnAsync, runner },
+      { sendFrontendMessage: jest.fn(), spawnAsync, runner },
       'D:\\new',
       gameInfo
     )
@@ -78,7 +78,11 @@ describe('moveOnUnix', () => {
     const { spawnAsync, calls } = recordingSpawn()
     const runner = createScriptedRunner([probe])
 
-    await moveOnUnix({ spawnAsync, runner }, '/new', gameInfo)
+    await moveOnUnix(
+      { sendFrontendMessage: jest.fn(), spawnAsync, runner },
+      '/new',
+      gameInfo
+    )
 
     expect(runner.calls[0]?.opts).toMatchObject({ timeoutMs: 5000 })
     const rsync = calls.find(([c]) => c === 'rsync')!
@@ -90,7 +94,11 @@ describe('moveOnUnix', () => {
     const { spawnAsync, calls } = recordingSpawn({ rsync: 23 })
     const runner = createScriptedRunner([probe])
 
-    const result = await moveOnUnix({ spawnAsync, runner }, '/new', gameInfo)
+    const result = await moveOnUnix(
+      { sendFrontendMessage: jest.fn(), spawnAsync, runner },
+      '/new',
+      gameInfo
+    )
 
     expect(result.status).toBe('error')
     expect(calls.some(([c]) => c === 'rm')).toBe(false)
@@ -100,7 +108,11 @@ describe('moveOnUnix', () => {
     const { spawnAsync, calls } = recordingSpawn()
     const runner = createScriptedRunner([probe])
 
-    await moveOnUnix({ spawnAsync, runner }, '/new', gameInfo)
+    await moveOnUnix(
+      { sendFrontendMessage: jest.fn(), spawnAsync, runner },
+      '/new',
+      gameInfo
+    )
 
     const order = calls.map(([c]) => c)
     expect(order).toEqual(['rsync', 'rm'])
@@ -112,7 +124,11 @@ describe('moveOnUnix', () => {
       { cmd: 'rsync', argv: ['--version'], result: { code: 127 } }
     ])
 
-    await moveOnUnix({ spawnAsync, runner }, '/new', gameInfo)
+    await moveOnUnix(
+      { sendFrontendMessage: jest.fn(), spawnAsync, runner },
+      '/new',
+      gameInfo
+    )
 
     expect(calls.map(([c]) => c)).toEqual(['mv'])
   })
@@ -127,7 +143,11 @@ describe('moveOnUnix', () => {
       }
     ])
 
-    await moveOnUnix({ spawnAsync, runner }, '/new', gameInfo)
+    await moveOnUnix(
+      { sendFrontendMessage: jest.fn(), spawnAsync, runner },
+      '/new',
+      gameInfo
+    )
 
     expect(calls.map(([c]) => c)).toEqual(['mv'])
   })

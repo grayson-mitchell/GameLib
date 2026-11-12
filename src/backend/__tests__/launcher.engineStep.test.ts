@@ -215,7 +215,7 @@ describe('launcher engine step (61-14)', () => {
     expect(launchMock).not.toHaveBeenCalled()
     expect(checkWineMock).not.toHaveBeenCalled()
     expect(logWriter.close).toHaveBeenCalledTimes(1)
-    expect(sendGameStatusUpdate).toHaveBeenCalledWith({
+    expect(sendGameStatusUpdate).toHaveBeenCalledWith(expect.anything(), {
       appName: 'Quail',
       runner: 'legendary',
       status: 'done'

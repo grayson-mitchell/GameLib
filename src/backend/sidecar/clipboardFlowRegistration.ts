@@ -55,7 +55,7 @@ import type { GlobalConfigSlice } from '../config'
 import type { AppInfo } from '../process/context'
 import type { IpcRegistry } from './ipcRegistry'
 import type { AppState } from '../host/appState'
-import { requestRustInvoke } from './sidecarRpc'
+import type { RequestRustInvoke } from '../host'
 import { RUST_CLIPBOARD_READ_TEXT } from '../../common/types/sidecarTransport'
 import { formatSystemInfo } from '../utils/systeminfo'
 import type { BootServices, StoreManagers, Stores } from '../services/types'
@@ -71,6 +71,8 @@ function logSendFailure(channel: string, error: unknown): void {
 export interface ClipboardFlowDeps {
   ipc: Pick<IpcRegistry, 'handle' | 'on'>
   appState: Pick<AppState, 'writeClipboardText'>
+  /** The boot's sidecar -> Rust request leg (66.4-15). */
+  requestRustInvoke: RequestRustInvoke
   config: Pick<GlobalConfigSlice, 'getSettings'>
   appInfo: Pick<AppInfo, 'version'>
   managers: Pick<StoreManagers, 'library'>
@@ -108,7 +110,7 @@ export function registerClipboardFlows(deps: ClipboardFlowDeps): void {
 
   deps.ipc.handle('clipboardReadText', async () => {
     try {
-      const text = await requestRustInvoke(RUST_CLIPBOARD_READ_TEXT, [])
+      const text = await deps.requestRustInvoke(RUST_CLIPBOARD_READ_TEXT, [])
       return typeof text === 'string' ? text : ''
     } catch (error) {
       console.warn(

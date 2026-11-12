@@ -42,6 +42,7 @@ export function createTestHumbleServices(
   const loginWindowSeam = createLoginWindowSeamSlot()
   const secretStore = opts.secretStore ?? createTestHumbleSecretStore()
   const appInfo = opts.appInfo ?? TEST_APP_INFO
+  const sendFrontendMessage = opts.sendFrontendMessage ?? (() => true)
   // The user and the library share the fence and seam slot this fake hands out.
   let user: HumbleServices['user'] | undefined
   let library: HumbleServices['library'] | undefined
@@ -55,7 +56,8 @@ export function createTestHumbleServices(
       loginWindowSeam,
       syncFence,
       signInOutcomes: opts.signInOutcomes ?? createTestSignInProbe().outcomes,
-      appInfo
+      appInfo,
+      sendFrontendMessage
     })
     library = createHumbleLibrary({
       stores: opts.stores,
@@ -63,7 +65,8 @@ export function createTestHumbleServices(
       syncFence,
       steamUser: opts.steamUser ?? createInertTestSteamUser(),
       loginWindowSeam,
-      appInfo
+      appInfo,
+      sendFrontendMessage
     })
   }
   return {

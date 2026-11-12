@@ -1,5 +1,5 @@
 import { downloadFile } from 'backend/utils'
-import { sendFrontendMessage } from '../../../ipc'
+const sendFrontendMessage = jest.fn()
 import { downloadSetupPayload } from '../setupDownloads'
 
 jest.mock('backend/utils', () => ({
@@ -11,10 +11,6 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
-}))
-
-jest.mock('../../../ipc', () => ({
-  sendFrontendMessage: jest.fn()
 }))
 
 const mockedDownload = jest.mocked(downloadFile)
@@ -34,7 +30,10 @@ describe('downloadSetupPayload', () => {
       progressCallback?.(500, 10, 25, 10)
       progressCallback?.(1000, 10, 50.4, 10)
     })
-    await downloadSetupPayload('steam-client', { url: URL_, dest: DEST })
+    await downloadSetupPayload({ sendFrontendMessage }, 'steam-client', {
+      url: URL_,
+      dest: DEST
+    })
     expect(emitted()).toEqual([
       { kind: 'steam-client', state: 'running', bytes: 0, percent: 0 },
       { kind: 'steam-client', state: 'running', bytes: 500, percent: 25 },
@@ -51,7 +50,10 @@ describe('downloadSetupPayload', () => {
       progressCallback?.(1, 1, 140, 1)
       progressCallback?.(2, 1, -5, 1)
     })
-    await downloadSetupPayload('steam-bottle', { url: URL_, dest: DEST })
+    await downloadSetupPayload({ sendFrontendMessage }, 'steam-bottle', {
+      url: URL_,
+      dest: DEST
+    })
     const pcts = (emitted() as { percent: number }[]).map((e) => e.percent)
     expect(pcts).toEqual([0, 100, 0, 100])
   })
@@ -60,7 +62,10 @@ describe('downloadSetupPayload', () => {
     const boom = new Error('network down')
     mockedDownload.mockRejectedValue(boom)
     await expect(
-      downloadSetupPayload('steam-bottle', { url: URL_, dest: DEST })
+      downloadSetupPayload({ sendFrontendMessage }, 'steam-bottle', {
+        url: URL_,
+        dest: DEST
+      })
     ).rejects.toBe(boom)
     const states = (emitted() as { state: string }[]).map((e) => e.state)
     expect(states).toEqual(['running', 'error'])
@@ -70,7 +75,10 @@ describe('downloadSetupPayload', () => {
     mockedDownload.mockImplementation(async ({ progressCallback }) => {
       progressCallback?.(5, 1, 5, 1)
     })
-    await downloadSetupPayload('steam-client', { url: URL_, dest: DEST })
+    await downloadSetupPayload({ sendFrontendMessage }, 'steam-client', {
+      url: URL_,
+      dest: DEST
+    })
     const blob = JSON.stringify(mockedSend.mock.calls)
     expect(blob).not.toContain('cdn.example')
     expect(blob).not.toContain('secret')

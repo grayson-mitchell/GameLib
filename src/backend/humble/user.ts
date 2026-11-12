@@ -1,5 +1,5 @@
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { sendFrontendMessage } from 'backend/ipc'
+import type { SendFrontendMessage } from 'backend/host/frontendMessage'
 
 import { isMac } from 'backend/constants/environment'
 import {
@@ -132,6 +132,7 @@ export interface HumbleUserDeps {
   /** The boot-owned sign-in outcome notes (D-66.3-13). */
   signInOutcomes: ManagerDeps['signIn']['outcomes']
   appInfo: Pick<AppInfo, 'userAgentFallback'>
+  sendFrontendMessage: SendFrontendMessage
 }
 
 export class HumbleUser {
@@ -771,7 +772,7 @@ export class HumbleUser {
     // the /loginweb/humble route unmounted before the login promise's
     // callback ran (GlobalState's handleHumbleAuthState listener absorbs
     // this regardless of route lifecycle). Cookie-free by type (T-10-09).
-    sendFrontendMessage('humbleAuthState', {
+    this.deps.sendFrontendMessage('humbleAuthState', {
       isLoggedIn: true,
       username,
       expired: false
@@ -856,7 +857,7 @@ export class HumbleUser {
       this.deps.stores.humble.configStore.set('expired', true)
       const userData =
         this.deps.stores.humble.configStore.get_nodefault('userData')
-      sendFrontendMessage('humbleAuthState', {
+      this.deps.sendFrontendMessage('humbleAuthState', {
         isLoggedIn: true,
         username: userData?.username,
         expired: true
