@@ -469,9 +469,9 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
     }
   })
 
-  it('moduleState total is 52 (49 long tail + 3 sanctioned): a ceiling, flipped to zero in 66.4', () => {
+  it('moduleState total is 47 (44 long tail + 3 sanctioned): a ceiling, flipped to zero in 66.4', () => {
     const total = Object.values(moduleStateOf()).reduce((a, b) => a + b, 0)
-    expect(total).toBe(52)
+    expect(total).toBe(47)
   })
 
   // A class member that is `static get(`, or a static field that is not readonly: the two shapes a

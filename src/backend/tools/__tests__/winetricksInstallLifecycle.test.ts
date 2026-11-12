@@ -19,13 +19,6 @@ const mockGetWineFromProton = jest.fn()
 const mockRecordMissingDependencies = jest.fn()
 const mockRecordUnsupportedWine = jest.fn()
 
-jest.mock('../winetricksEnvironment', () => ({
-  recordMissingDependencies: (...args: unknown[]) =>
-    mockRecordMissingDependencies(...args),
-  recordUnsupportedWine: (...args: unknown[]) =>
-    mockRecordUnsupportedWine(...args)
-}))
-
 jest.mock('../../ipc', () => ({
   sendFrontendMessage: (...args: unknown[]) => mockSendFrontendMessage(...args)
 }))
@@ -81,8 +74,21 @@ let runner: DrivableRunner
 /** Answers the `which` probes; the default finds every dependency. */
 let whichResult: (dependency: string) => DrivenRunResult
 
+const toolsSlices = createTestToolsSlices()
 const toolsDeps: ToolsDeps = {
-  ...createTestToolsSlices(),
+  ...toolsSlices,
+  // The environment recorders are the observed seam: this file pins which reports the install
+  // lifecycle writes, not how they are stored.
+  toolsState: {
+    ...toolsSlices.toolsState,
+    winetricksEnv: {
+      ...toolsSlices.toolsState.winetricksEnv,
+      recordMissingDependencies: (...args: unknown[]) =>
+        mockRecordMissingDependencies(...args),
+      recordUnsupportedWine: (...args: unknown[]) =>
+        mockRecordUnsupportedWine(...args)
+    }
+  },
   spawnAsync: createTestServices().spawnAsync,
   runner: { run: (...args) => runner.run(...args) },
   stores: createTestStores(),

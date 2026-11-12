@@ -30,6 +30,7 @@ type NileSetupDeps = Pick<
   | 'commandRunner'
   | 'spawnAsync'
   | 'aborts'
+  | 'toolsState'
   | 'runner'
   | 'config'
   | 'gameConfigs'

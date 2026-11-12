@@ -49,6 +49,7 @@ import {
   createTestAbortRegistry,
   createTestWindowRaiser
 } from './testAbortRegistry'
+import { createTestToolsState } from './testToolsState'
 import { createTestSteamInstallRuntime } from './testSteamInstallRuntime'
 import { createTestSignInProbe } from './testSignInProbe'
 import { createTestSteamSession } from './testSteamSession'
@@ -279,6 +280,7 @@ export function createTestServices(
     infoCaches: overrides.infoCaches ?? createTestInfoCaches(),
     aborts: overrides.aborts ?? createTestAbortRegistry(),
     windowRaiser: overrides.windowRaiser ?? createTestWindowRaiser(),
+    toolsState: overrides.toolsState ?? createTestToolsState(),
     winetricksQueue:
       overrides.winetricksQueue ??
       unscriptedMembers<BootServices['winetricksQueue']>(
@@ -451,6 +453,7 @@ export function createTestManagerDeps(
     infoCaches: overrides.infoCaches ?? createTestInfoCaches(),
     aborts: overrides.aborts ?? createTestAbortRegistry(),
     windowRaiser: overrides.windowRaiser ?? createTestWindowRaiser(),
+    toolsState: overrides.toolsState ?? createTestToolsState(),
     signIn: overrides.signIn ?? createTestSignInProbe(),
     steamSession: overrides.steamSession ?? createTestSteamSession(),
     tokenStore: overrides.tokenStore ?? createTestTokenStoreSlot(),
@@ -511,6 +514,7 @@ export function createTestToolsSlices() {
     infoCaches: createTestInfoCaches(),
     aborts: createTestAbortRegistry(),
     windowRaiser: createTestWindowRaiser(),
+    toolsState: createTestToolsState(),
     paths: createTestPaths(),
     steamBottle: createTestSteamBottle({ stores: createTestStores(), config })
   }

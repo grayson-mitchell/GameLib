@@ -96,10 +96,7 @@ import {
   parseWineVersionOutput,
   splitOutputChunk
 } from './winetricksOutputClassifier'
-import {
-  recordMissingDependencies,
-  recordUnsupportedWine
-} from './winetricksEnvironment'
+import type { ScriptMetadata, ToolsState } from './toolsState'
 
 type ReleasesResponse = {
   assets: {
@@ -215,10 +212,13 @@ export async function installOrUpdateTool(
 
 /**
  * 66.1 (R1): what the tools need from the boot services. The module state
- * (installingComponent, catalogCache, scriptMetadataCache) stays module-level, so the
- * wrappers below are cheap and several instances share one single-flight slot.
+ * (installingComponent, catalogCache, scriptMetadata, the winetricks environment) lives in the
+ * boot-owned `toolsState` (66.4-14), so the wrappers below are cheap and every instance of a
+ * boot shares one single-flight slot and one set of caches.
  */
 export interface ToolsDeps extends DialogBoxDeps, NotifyDeps {
+  /** The boot-owned tools state: single-flight slot, caches, winetricks environment (66.4-14). */
+  toolsState: ToolsState
   managers: { library: StoreManagers['library'] }
   commandRunner: Pick<CommandRunner, 'runWineCommand'>
   launcher: Pick<Launcher, 'setupEnvVars' | 'setupWineEnvVars' | 'validWine'>
@@ -680,26 +680,6 @@ function createDxvk(deps: ToolsDeps) {
   return DXVK
 }
 
-let installingComponent = ''
-
-// Phase 45 Plan 01 (D-01/T-45-01): cache of the last non-empty `listAvailable`
-// result per game, keyed `${runner}:${appName}`. `winetricksApplyGuard.ts`
-// needs a catalog to validate renderer-supplied verbs against, and the
-// Settings tab always calls `listAvailable` before `apply` -- so the normal
-// path through `catalogFor` costs no extra wine invocation; it only falls
-// back to `listAvailable` itself (one more wine call) on a cache miss, e.g. a
-// cold backend handling `winetricksApply` before the tab's own mount effect
-// has resolved.
-const catalogCache = new Map<string, WinetricksComponent[]>()
-
-// Phase 45 Plan 06 (D-19/D-17): what `Winetricks.scriptMetadata` derives from
-// the downloaded script, cached by the script's `mtimeMs:size`.
-type ScriptMetadata = {
-  byVerb: ReturnType<typeof parseWinetricksMetadata>
-  needsGui: ReturnType<typeof deriveNeedsGuiVerbs>
-}
-let scriptMetadataCache: { key: string; value: ScriptMetadata } | null = null
-
 // G30 (261103-wtm): the DLL overrides the strict restore removes, batched into one `reg import`.
 const DXVK_RESTORE_REG_FILE = 'gamelib-dxvk-restore.reg'
 const DLL_OVERRIDES_KEY = 'HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides'
@@ -1090,7 +1070,11 @@ function createWinetricks(deps: ToolsDeps) {
               logWarning(line.text, LogPrefix.WineTricks)
               const unsupported = parseUnsupportedWineVersion(line.text)
               if (unsupported !== null) {
-                recordUnsupportedWine(runner, appName, unsupported)
+                deps.toolsState.winetricksEnv.recordUnsupportedWine(
+                  runner,
+                  appName,
+                  unsupported
+                )
               }
               break
             }
@@ -1307,7 +1291,10 @@ function createWinetricks(deps: ToolsDeps) {
         // apply guard validates against holds the same filtered list.
         const visible = filterVisibleCatalog(merged)
         if (visible.length > 0) {
-          catalogCache.set(catalogCacheKey(runner, appName), visible)
+          deps.toolsState.catalogCache.set(
+            catalogCacheKey(runner, appName),
+            visible
+          )
         }
         return visible
       } catch {
@@ -1328,15 +1315,16 @@ function createWinetricks(deps: ToolsDeps) {
       try {
         const { mtimeMs, size } = await stat(path)
         const key = `${mtimeMs}:${size}`
-        if (scriptMetadataCache?.key === key) {
-          return scriptMetadataCache.value
+        const cachedMetadata = deps.toolsState.scriptMetadata.get()
+        if (cachedMetadata?.key === key) {
+          return cachedMetadata.value
         }
         const scriptText = await readFile(path, 'utf8')
         const value: ScriptMetadata = {
           byVerb: parseWinetricksMetadata(scriptText),
           needsGui: deriveNeedsGuiVerbs(scriptText)
         }
-        scriptMetadataCache = { key, value }
+        deps.toolsState.scriptMetadata.set({ key, value })
         return value
       } catch (error) {
         logWarning(
@@ -1354,7 +1342,9 @@ function createWinetricks(deps: ToolsDeps) {
       runner: Runner,
       appName: string
     ): Promise<WinetricksComponent[]> => {
-      const cached = catalogCache.get(catalogCacheKey(runner, appName))
+      const cached = deps.toolsState.catalogCache.get(
+        catalogCacheKey(runner, appName)
+      )
       if (cached) {
         return cached
       }
@@ -1397,14 +1387,15 @@ function createWinetricks(deps: ToolsDeps) {
       // `installingComponent` to '' while the other still runs. A refused call
       // sends nothing -- the running install's own '' event still arrives and
       // clears any optimistic in-flight state the dialog set for this one.
-      if (installingComponent !== '') {
+      const installingNow = deps.toolsState.installing.get()
+      if (installingNow !== '') {
         logWarning(
-          `Not installing ${component}: ${installingComponent} is already installing`,
+          `Not installing ${component}: ${installingNow} is already installing`,
           LogPrefix.WineTricks
         )
         return 'refused'
       }
-      installingComponent = component
+      deps.toolsState.installing.set(component)
       sendFrontendMessage('installing-winetricks-component', component)
       // Phase 45 Plan 01 (D-11): `onDone` is the only source of truth for this
       // call's own outcome. Defaults to 'failed' -- if `runWithArgs` resolves
@@ -1427,7 +1418,7 @@ function createWinetricks(deps: ToolsDeps) {
           gameSettings
         )
       } finally {
-        installingComponent = ''
+        deps.toolsState.installing.set('')
         sendFrontendMessage('installing-winetricks-component', '')
       }
       return outcome
@@ -1468,7 +1459,11 @@ function createWinetricks(deps: ToolsDeps) {
 
       // D-16: the exact missing subset (an empty one clears an earlier record)
       // feeds the environment banner, once per check.
-      recordMissingDependencies(runner, appName, [...missingDeps].sort())
+      deps.toolsState.winetricksEnv.recordMissingDependencies(
+        runner,
+        appName,
+        [...missingDeps].sort()
+      )
     },
     // 261011-iel (D-16): winetricks sets `_W_wine_not_needed=1` for every
     // `list*` verb except `list-installed` (script L5471), so its own
@@ -1519,7 +1514,7 @@ function createWinetricks(deps: ToolsDeps) {
       // A failed, timed-out, oversized or unparseable probe (the branches
       // above, which `return` before reaching here) never clears: absence of
       // evidence is not evidence. Log nothing on success.
-      recordUnsupportedWine(
+      deps.toolsState.winetricksEnv.recordUnsupportedWine(
         runner,
         appName,
         isUnsupportedWineVersion(version) ? version : null
@@ -1528,13 +1523,6 @@ function createWinetricks(deps: ToolsDeps) {
   }
 
   return Winetricks
-}
-
-// Phase 45 Plan 01 (D-11): reads the same module-level single-flight slot
-// `Winetricks.install` guards on, so `winetricksQueue.ts` can report `busy`
-// without duplicating that state.
-export function getInstallingComponent(): string {
-  return installingComponent
 }
 
 /**
@@ -1771,7 +1759,7 @@ export interface Tools {
   ) => Promise<ExecResult>
 }
 
-/** R3: the tool wrappers bound to one set of deps. Cheap; the state they share is module-level. */
+/** R3: the tool wrappers bound to one set of deps. Cheap; the state they share is the boot-owned toolsState. */
 export function createTools(deps: ToolsDeps): Tools {
   return {
     DXVK: createDxvk(deps),

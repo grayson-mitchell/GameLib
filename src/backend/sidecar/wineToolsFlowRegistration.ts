@@ -118,6 +118,8 @@ export interface WineToolsFlowDeps extends NotifyDeps, DialogBoxDeps {
   engineRuntime: ToolsDeps['engineRuntime']
   paths: ToolsDeps['paths']
   aborts: Pick<AbortRegistry, 'create' | 'delete'>
+  /** The boot-owned tools state the Tools of this registration share (66.4-14). */
+  toolsState: ToolsDeps['toolsState']
   /** The Steam bottle slice the Steam Wine-tool resolver reads (66.3-15). */
   steamBottle: ToolsDeps['steamBottle']
   steamLaunchRuntime: ToolsDeps['steamLaunchRuntime']

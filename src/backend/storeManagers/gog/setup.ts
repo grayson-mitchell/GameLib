@@ -40,6 +40,7 @@ export type SetupDeps = Pick<
   | 'commandRunner'
   | 'spawnAsync'
   | 'aborts'
+  | 'toolsState'
   | 'stores'
   | 'runner'
   | 'config'

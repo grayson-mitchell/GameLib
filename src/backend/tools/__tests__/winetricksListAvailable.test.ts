@@ -56,11 +56,8 @@ jest.mock('backend/logger', () => {
 
 import { logWarning } from 'backend/logger'
 import { parseWinetricksMetadata } from 'common/winetricks/metadata'
-import {
-  getEnvironmentReport,
-  onEnvironmentChanged
-} from '../winetricksEnvironment'
 import { createTools } from '../index'
+import { createTestToolsState } from 'backend/testUtils/testToolsState'
 import type { ToolsDeps } from '../index'
 import {
   createTestServices,
@@ -105,6 +102,7 @@ const toolsDeps: ToolsDeps = {
   } as unknown as ToolsDeps['launcher']
 }
 const { Winetricks } = createTools(toolsDeps)
+const env = toolsDeps.toolsState.winetricksEnv
 import { defined } from 'backend/testUtils/indexed'
 
 const FIXTURE_SCRIPT = readFileSync(
@@ -305,6 +303,40 @@ describe('Winetricks.listAvailable metadata merge and visibility filter (D-09/D-
 
     expect(scriptReads()).toBe(2)
   })
+
+  it('a second Tools on the same boot-owned state shares the script-metadata and catalog caches (66.4-14)', async () => {
+    await listAvailableWith(LIST_ALL, 'shared-game')
+    const sibling = createTools(toolsDeps).Winetricks
+
+    // Served from the shared catalog cache: no new wine invocation.
+    const catalog = await sibling.catalogFor('gog', 'shared-game')
+    expect(catalog.map((component) => component.verb)).toContain('vcrun2019')
+    expect(children).toHaveLength(1)
+
+    // The sibling's own listAvailable reuses the script metadata the first one cached.
+    const list = sibling.listAvailable('gog', 'shared-game')
+    await flushMicrotasks()
+    const child = defined(children[children.length - 1], 'spawned child')
+    child.stdout.emit('data', LIST_ALL)
+    child.emit('exit', 0)
+    child.emit('close', 0)
+    await list
+    expect(scriptReads()).toBe(1)
+  })
+
+  it('Tools built on different states do not share the catalog cache', async () => {
+    await listAvailableWith(LIST_ALL, 'isolated-game')
+    const otherDeps: ToolsDeps = {
+      ...toolsDeps,
+      toolsState: createTestToolsState()
+    }
+    expect(
+      otherDeps.toolsState.catalogCache.get('gog:isolated-game')
+    ).toBeUndefined()
+    expect(
+      toolsDeps.toolsState.catalogCache.get('gog:isolated-game')
+    ).toBeDefined()
+  })
 })
 
 describe('unsupported-wine probe at list-all time (261011-iel, D-16)', () => {
@@ -319,9 +351,9 @@ describe('unsupported-wine probe at list-all time (261011-iel, D-16)', () => {
       'gdiplus_winxp',
       'fontsmooth=rgb'
     ])
-    expect(
-      getEnvironmentReport('gog', 'gptk-bottle').unsupportedWineVersion
-    ).toBe('7.7')
+    expect(env.getReport('gog', 'gptk-bottle').unsupportedWineVersion).toBe(
+      '7.7'
+    )
   })
 
   it("probes with the list-all child's wine binary and the same env (including overrides)", async () => {
@@ -352,14 +384,14 @@ describe('unsupported-wine probe at list-all time (261011-iel, D-16)', () => {
       'fontsmooth=rgb'
     ])
     expect(
-      getEnvironmentReport('gog', 'enoent-bottle').unsupportedWineVersion
+      env.getReport('gog', 'enoent-bottle').unsupportedWineVersion
     ).toBeNull()
     expect(logWarning).toHaveBeenCalledTimes(1)
   })
 
   it('clears a stale record once the bottle is switched to a supported wine, and never fires the listener on a no-op', async () => {
     const listener = jest.fn()
-    onEnvironmentChanged(listener)
+    env.onChanged(listener)
 
     const answerWith = (probeStdout: string) => {
       versionProbe = () => ({ stdout: probeStdout })
@@ -370,16 +402,16 @@ describe('unsupported-wine probe at list-all time (261011-iel, D-16)', () => {
     await flushMicrotasks()
     expect(listener).not.toHaveBeenCalled()
     expect(
-      getEnvironmentReport('gog', 'switch-bottle').unsupportedWineVersion
+      env.getReport('gog', 'switch-bottle').unsupportedWineVersion
     ).toBeNull()
 
     answerWith('wine-7.7 (Game Porting Toolkit 1.1)\n')
     await listAvailableWith(LIST_ALL, 'switch-bottle')
     await flushMicrotasks()
     expect(listener).toHaveBeenCalledTimes(1)
-    expect(
-      getEnvironmentReport('gog', 'switch-bottle').unsupportedWineVersion
-    ).toBe('7.7')
+    expect(env.getReport('gog', 'switch-bottle').unsupportedWineVersion).toBe(
+      '7.7'
+    )
 
     // The same 7.7 again -- still once (recordUnsupportedWine's existing
     // equality early-return).
@@ -392,7 +424,7 @@ describe('unsupported-wine probe at list-all time (261011-iel, D-16)', () => {
     await flushMicrotasks()
     expect(listener).toHaveBeenCalledTimes(2)
     expect(
-      getEnvironmentReport('gog', 'switch-bottle').unsupportedWineVersion
+      env.getReport('gog', 'switch-bottle').unsupportedWineVersion
     ).toBeNull()
   })
 
@@ -400,17 +432,17 @@ describe('unsupported-wine probe at list-all time (261011-iel, D-16)', () => {
     versionProbe = () => ({ stdout: 'wine-7.7 (Game Porting Toolkit 1.1)\n' })
     await listAvailableWith(LIST_ALL, 'unknown-bottle')
     await flushMicrotasks()
-    expect(
-      getEnvironmentReport('gog', 'unknown-bottle').unsupportedWineVersion
-    ).toBe('7.7')
+    expect(env.getReport('gog', 'unknown-bottle').unsupportedWineVersion).toBe(
+      '7.7'
+    )
 
     versionProbe = () => ({ stdout: '' })
     await listAvailableWith(LIST_ALL, 'unknown-bottle')
     await flushMicrotasks()
 
-    expect(
-      getEnvironmentReport('gog', 'unknown-bottle').unsupportedWineVersion
-    ).toBe('7.7')
+    expect(env.getReport('gog', 'unknown-bottle').unsupportedWineVersion).toBe(
+      '7.7'
+    )
     expect(logWarning).toHaveBeenCalledTimes(1)
   })
 
@@ -428,7 +460,7 @@ describe('unsupported-wine probe at list-all time (261011-iel, D-16)', () => {
       'fontsmooth=rgb'
     ])
     expect(
-      getEnvironmentReport('gog', 'throw-bottle').unsupportedWineVersion
+      env.getReport('gog', 'throw-bottle').unsupportedWineVersion
     ).toBeNull()
     expect(logWarning).toHaveBeenCalledTimes(1)
   })
@@ -447,9 +479,7 @@ describe('unsupported-wine probe at list-all time (261011-iel, D-16)', () => {
       await flushMicrotasks()
 
       expect(list).toHaveLength(3)
-      expect(
-        getEnvironmentReport('gog', appName).unsupportedWineVersion
-      ).toBeNull()
+      expect(env.getReport('gog', appName).unsupportedWineVersion).toBeNull()
       expect(logWarning).toHaveBeenCalledTimes(1)
     }
   )

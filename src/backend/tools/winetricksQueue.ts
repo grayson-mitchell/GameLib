@@ -14,10 +14,7 @@ import {
   WinetricksApplyRejected,
   assertWinetricksApplyPayload
 } from './winetricksApplyGuard'
-import {
-  getEnvironmentReport,
-  onEnvironmentChanged
-} from './winetricksEnvironment'
+import type { WinetricksEnvironment } from './winetricksEnvironment'
 import { appendLogLine } from './winetricksOutputClassifier'
 
 // Phase 45 Plan 01 (D-11/D-12/D-13): the backend-resident sequential-install
@@ -44,8 +41,10 @@ export interface WinetricksQueueDeps {
     runner: Runner
     status: 'winetricks' | 'done'
   }) => void
-  /** The name of the tools-installer component running now, or '' (tools module state). */
+  /** The name of the tools-installer component running now, or '' (the boot's tools state). */
   getInstallingComponent: () => string
+  /** The boot's winetricks environment reports (66.4-14). */
+  environment: Pick<WinetricksEnvironment, 'onChanged' | 'getReport'>
 }
 
 /**
@@ -69,7 +68,7 @@ export function createWinetricksQueue(deps: WinetricksQueueDeps) {
   // D-16: a single listener, registered once when the boot-owned queue is built, mirrors an
   // environment-report change into a `winetricksQueueChanged` push for that game even when there
   // is no run (`pushState` below requires one). An in-memory subscription: no I/O, no timer.
-  onEnvironmentChanged((runner, appName) => {
+  deps.environment.onChanged((runner, appName) => {
     deps.push('winetricksQueueChanged', getState(runner, appName))
   })
 
@@ -106,7 +105,7 @@ export function createWinetricksQueue(deps: WinetricksQueueDeps) {
           }
         : null,
       busy: isBusy(),
-      environment: getEnvironmentReport(runner, appName),
+      environment: deps.environment.getReport(runner, appName),
       // 261011-nqe: one snapshot, one new revision, taken synchronously in this
       // process -- so the order of these numbers IS the backend's real order.
       revision: ++snapshotRevision

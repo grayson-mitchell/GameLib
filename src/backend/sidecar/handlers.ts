@@ -140,6 +140,7 @@ function toolSlices(services: BootServices) {
     engineRuntime: services.engineRuntime,
     paths: services.paths,
     aborts: services.aborts,
+    toolsState: services.toolsState,
     steamBottle: services.steamBottle,
     steamLaunchRuntime: services.steamLaunchRuntime
   }

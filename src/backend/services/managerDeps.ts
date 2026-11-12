@@ -33,6 +33,7 @@ export type ManagerDepsSource = Pick<
   | 'infoCaches'
   | 'aborts'
   | 'windowRaiser'
+  | 'toolsState'
   | 'signInProbe'
   | 'steamSession'
   | 'tokenStore'
@@ -77,6 +78,7 @@ export function managerDepsFromServices(
     infoCaches: source.infoCaches,
     aborts: source.aborts,
     windowRaiser: source.windowRaiser,
+    toolsState: source.toolsState,
     signIn: {
       epochs: source.signInProbe.epochs,
       outcomes: source.signInProbe.outcomes

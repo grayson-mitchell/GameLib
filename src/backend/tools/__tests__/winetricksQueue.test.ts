@@ -59,7 +59,7 @@ jest.mock('backend/logger', () => {
   }
 })
 
-import { createTools, getInstallingComponent } from '../index'
+import { createTools } from '../index'
 import type { ToolsDeps } from '../index'
 import {
   createTestServices,
@@ -104,11 +104,9 @@ const { Winetricks } = createTools(toolsDeps)
 import { defined } from 'backend/testUtils/indexed'
 import { createWinetricksQueue } from '../winetricksQueue'
 import type { WinetricksQueue as WinetricksQueueType } from '../winetricksQueue'
-import {
-  getEnvironmentReport,
-  recordMissingDependencies,
-  recordUnsupportedWine
-} from '../winetricksEnvironment'
+import { createWinetricksEnvironment } from '../winetricksEnvironment'
+
+const env = toolsDeps.toolsState.winetricksEnv
 
 // One queue per test (D-66.3-12): built from the recording fakes above, so no run, revision or
 // single-flight latch crosses a test.
@@ -141,7 +139,8 @@ beforeEach(() => {
   WinetricksQueue = createWinetricksQueue({
     push: (channel, state) => mockSendFrontendMessage(channel, state),
     sendGameStatus: (update) => mockSendGameStatusUpdate(update),
-    getInstallingComponent
+    getInstallingComponent: () => toolsDeps.toolsState.installing.get(),
+    environment: env
   })
   // checkDependencies' `which` probes all succeed -- no "not installed!" lines in the log.
   runner = createDrivableRunner((cmd) =>
@@ -456,10 +455,10 @@ describe('WinetricksQueue environment push (D-16)', () => {
     const appName = 'env-game'
 
     expect(WinetricksQueue.getState(runner, appName).environment).toEqual(
-      getEnvironmentReport(runner, appName)
+      env.getReport(runner, appName)
     )
 
-    recordMissingDependencies(runner, appName, ['7z', 'cabextract'])
+    env.recordMissingDependencies(runner, appName, ['7z', 'cabextract'])
     await flushMicrotasks()
 
     const pushesAfterDeps = queueChangedPushes(appName)
@@ -469,19 +468,17 @@ describe('WinetricksQueue environment push (D-16)', () => {
       'last push after deps'
     )
     expect(lastAfterDeps.run).toBeNull()
-    expect(lastAfterDeps.environment).toEqual(
-      getEnvironmentReport(runner, appName)
-    )
+    expect(lastAfterDeps.environment).toEqual(env.getReport(runner, appName))
     expect(lastAfterDeps.environment.missingDependencies).toEqual([
       '7z',
       'cabextract'
     ])
 
-    recordUnsupportedWine(runner, appName, 'wine-staging-9.0')
+    env.recordUnsupportedWine(runner, appName, 'wine-staging-9.0')
     await flushMicrotasks()
 
     const state = WinetricksQueue.getState(runner, appName)
-    expect(state.environment).toEqual(getEnvironmentReport(runner, appName))
+    expect(state.environment).toEqual(env.getReport(runner, appName))
     expect(state.environment.unsupportedWineVersion).toBe('wine-staging-9.0')
     expect(state.environment.missingDependencies).toEqual(['7z', 'cabextract'])
   })
@@ -659,13 +656,14 @@ describe('createWinetricksQueue owner isolation (D-66.3-12)', () => {
     createWinetricksQueue({
       push: jest.fn(),
       sendGameStatus: jest.fn(),
-      getInstallingComponent: () => ''
+      getInstallingComponent: () => '',
+      environment: createWinetricksEnvironment()
     })
 
   it('two queues keep independent snapshot revisions and runs', async () => {
     const other = another()
-    // The environment-change listener is a single slot, so the last-built queue owns it; the
-    // queue under test still answers for its own state.
+    // This queue has its own environment, so it does not take the change listener of the queue
+    // under test; each still answers for its own state.
     const first = WinetricksQueue.getState('gog', 'iso-game')
     const second = other.getState('gog', 'iso-game')
     expect(second.revision).toBe(1)
@@ -684,7 +682,8 @@ describe('createWinetricksQueue owner isolation (D-66.3-12)', () => {
     const q = createWinetricksQueue({
       push: jest.fn(),
       sendGameStatus: jest.fn(),
-      getInstallingComponent: () => installing
+      getInstallingComponent: () => installing,
+      environment: createWinetricksEnvironment()
     })
     installing = 'dxvk'
     const refused = await q.apply(Winetricks, 'gog', 'busy-iso', ['xact'])

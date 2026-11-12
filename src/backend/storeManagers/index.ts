@@ -172,6 +172,7 @@ export interface CreateStoreManagersDeps {
   infoCaches: ManagerDeps['infoCaches']
   aborts: ManagerDeps['aborts']
   windowRaiser: ManagerDeps['windowRaiser']
+  toolsState: ManagerDeps['toolsState']
   steamUser: ManagerDeps['steamUser']
   loginWindowSeam: ManagerDeps['loginWindowSeam']
 }
@@ -225,6 +226,7 @@ export function createStoreManagers(
     infoCaches: deps.infoCaches,
     aborts: deps.aborts,
     windowRaiser: deps.windowRaiser,
+    toolsState: deps.toolsState,
     steamUser: deps.steamUser,
     loginWindowSeam: deps.loginWindowSeam
   }
@@ -248,6 +250,7 @@ export function createStoreManagers(
     engineRuntime: deps.engineRuntime,
     paths: deps.paths,
     aborts: deps.aborts,
+    toolsState: deps.toolsState,
     steamBottle: deps.steamBottle,
     steamLaunchRuntime: deps.steamLaunchRuntime
   })

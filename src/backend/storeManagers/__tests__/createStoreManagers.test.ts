@@ -65,6 +65,7 @@ function build(over: Partial<Parameters<typeof createStoreManagers>[0]> = {}) {
     infoCaches: fakes.infoCaches,
     aborts: fakes.aborts,
     windowRaiser: fakes.windowRaiser,
+    toolsState: fakes.toolsState,
     signIn: fakes.signInProbe,
     steamSession: fakes.steamSession,
     tokenStore: fakes.tokenStore,
