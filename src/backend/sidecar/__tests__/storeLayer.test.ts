@@ -529,10 +529,10 @@ describe('C-WR-1: two boots in one module registry', () => {
       shellState: createTestShellState(services2)
     })
 
-    // The listeners install once, on the FIRST boot's injected registry (the latch is module state).
+    // Each registration installs its own listener closed over its own registry (D-66.4-01):
+    // the first boot's listener is [0], the second boot's is the last one.
     const listeners =
-      bootServices.host.ipc.listenerMap().get(STORE_SET_CHANNEL) ?? []
-    // The write listeners install once; a second boot must not stack another set.
+      services2.host.ipc.listenerMap().get(STORE_SET_CHANNEL) ?? []
     expect(listeners).toHaveLength(1)
     const overrides = { 'c-wr-1': { title: 'second boot' } }
     // Both boots' stores share one on-disk file, so observe WHICH instance took the write.

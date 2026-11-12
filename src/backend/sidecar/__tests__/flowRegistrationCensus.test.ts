@@ -136,21 +136,15 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
  * Modules whose `register*Flows()` docstring deliberately states no total.
  * Listing them makes "no claim" a visible choice rather than an omission: a
  * module that quietly loses its count lands here only by someone editing this
- * list. `runnerAuth`/`shortcuts` have no docstring on the register function at
- * all; `steamAuth` describes its channels as named trios and `steamFlows`
+ * list. `steamAuth` describes its channels as named trios and `steamFlows`
  * names both of its handlers outright, so neither states a number.
  */
 const NO_COUNT_CLAIM = new Set([
   'dialogFlowRegistration.ts',
-  'runnerAuthFlowRegistration.ts',
-  'shortcutsFlowRegistration.ts',
   'steamAuthFlowRegistration.ts',
-  'steamFlowRegistration.ts',
-  // Phase 34.6 Plan 07: this module's own `let registered = false` idempotence guard (added
-  // Task 1, mirroring runnerAuth/shortcuts above) now sits between the docstring and
-  // `export function registerWineToolsFlows`, breaking the docstring-adjacency
-  // `registerFnDocstring()` requires -- same structural cause as the two entries above.
-  'wineToolsFlowRegistration.ts'
+  'steamFlowRegistration.ts'
+  // 66.4-19 (D-66.4-01): runnerAuth/shortcuts/wineTools lost their `let registered` latch, so
+  // their docstrings are adjacent to the function again and their stated totals are gated.
 ])
 
 const NUMBER_WORDS: Record<string, number> = {

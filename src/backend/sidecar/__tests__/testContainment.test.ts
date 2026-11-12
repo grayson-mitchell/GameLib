@@ -1062,6 +1062,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'rosettaPlatformGate.test.ts',
   'runnerAuthFlows.test.ts',
   'runnerMiscFlows.test.ts',
+  'registrationOncePerBoot.test.ts',
   'runnerSliceRegistration.test.ts',
   'rustInvokeChannel.test.ts',
   'rustInvokeSchemas.test.ts',

@@ -24,13 +24,7 @@
     "src/backend/sidecar/__tests__/steamgridSecretStore.test.ts": 2,
     "src/backend/sidecar/__tests__/storeLayer.test.ts": 5
   },
-  "moduleState": {
-    "src/backend/sidecar/devEpicCookieSweepRegistration.ts": 1,
-    "src/backend/sidecar/runnerAuthFlowRegistration.ts": 1,
-    "src/backend/sidecar/shortcutsFlowRegistration.ts": 1,
-    "src/backend/sidecar/storeWriteHandlers.ts": 1,
-    "src/backend/sidecar/wineToolsFlowRegistration.ts": 1
-  },
+  "moduleState": {},
   "sanctioned": {
     "src/backend/sidecar/bootstrap.ts": {
       "kind": "boot-entry",

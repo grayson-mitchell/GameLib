@@ -408,6 +408,17 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
     }
   })
 
+  // 66.4-19 (D-66.4-01): the five once-only latches, converted (not sanctioned).
+  it.each([
+    'src/backend/sidecar/devEpicCookieSweepRegistration.ts',
+    'src/backend/sidecar/runnerAuthFlowRegistration.ts',
+    'src/backend/sidecar/shortcutsFlowRegistration.ts',
+    'src/backend/sidecar/wineToolsFlowRegistration.ts',
+    'src/backend/sidecar/storeWriteHandlers.ts'
+  ])('%s has no module state', (file) => {
+    expect(moduleStateOf()[file]).toBeUndefined()
+  })
+
   it('src/backend/platform does not exist', () => {
     expect(existsSync(join(BACKEND, 'platform'))).toBe(false)
   })
@@ -469,9 +480,9 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
     }
   })
 
-  it('moduleState total is 9 (6 long tail + 3 sanctioned): a ceiling, flipped to zero in 66.4', () => {
+  it('moduleState total is 4 (1 long tail + 3 sanctioned) after the five latches were converted (D-66.4-01): a ceiling, flipped to zero in 66.4', () => {
     const total = Object.values(moduleStateOf()).reduce((a, b) => a + b, 0)
-    expect(total).toBe(9)
+    expect(total).toBe(4)
   })
 
   // A class member that is `static get(`, or a static field that is not readonly: the two shapes a

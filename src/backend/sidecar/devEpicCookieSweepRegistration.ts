@@ -58,9 +58,8 @@ const DEV_SWEEP_EPIC_COOKIE_DOMAIN = 'devSweepEpicCookieDomain' as const
 /**
  * Registers the dev-only single-host Epic cookie sweep. No-ops in a packaged sidecar.
  *
- * Guarded by the same `let registered = false` latch convention as
- * `registerRunnerAuthFlows()`/`createStores`, so calling it twice neither throws nor
- * stacks a duplicate handler.
+ * Single-run is owned by the 'register-handlers' boot step (D-66.4-01): called exactly once per boot, pinned by
+ * `registrationOncePerBoot.test.ts`; a second boot in one process throws in `bootSidecar()`.
  *
  * NO SIDE EFFECTS AT REGISTRATION TIME, deliberately. `handlers.ts` calls this at module
  * scope, so registration time IS import time, and anything logged here runs before
@@ -70,20 +69,15 @@ const DEV_SWEEP_EPIC_COOKIE_DOMAIN = 'devSweepEpicCookieDomain' as const
  * `logInfo` inside the handler is safe because it runs at call time. Same hazard class as the
  * import-time guard `appShellFlowRegistration.ts` documents.
  */
-let registered = false
 export function registerDevEpicCookieSweepFlow(deps: {
   ipc: Pick<IpcRegistry, 'handle'>
   appInfo: Pick<AppInfo, 'isPackaged'>
   /** The boot's login-window seam slot (D-66.3-17). */
   loginWindowSeam: Pick<LoginWindowSeamSlot, 'getOrThrow'>
 }): void {
-  if (registered) {
-    return
-  }
   if (deps.appInfo.isPackaged) {
     return
   }
-  registered = true
 
   deps.ipc.handle(
     DEV_SWEEP_EPIC_COOKIE_DOMAIN,

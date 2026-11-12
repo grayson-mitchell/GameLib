@@ -292,26 +292,9 @@ function pushStoreChanged(
 }
 
 /**
- * The registry and root the (single, process-lifetime) write listeners resolve through. Every
- * call re-points it at the calling boot's pair (C-WR-1): a first-call-wins guard pinned the
- * first boot's registry, so a later boot in the same module registry wrote to a different
- * registry than its snapshot handlers read. The listeners are installed once because
- * `deps.ipc.on` appends; installing them per boot would run every write against every
- * boot's registry.
- */
-let currentLayer: StoreLayer | undefined
-
-function requireCurrentLayer(): StoreLayer {
-  if (!currentLayer) {
-    throw new Error('[storeWriteHandlers] no store registry bound')
-  }
-  return currentLayer
-}
-
-/**
- * Registers the three write listeners and binds them to `deps.registry`. Safe to call more
- * than once across tests/bootstraps: the listeners install once, and the LATEST call's
- * registry is the one writes resolve through.
+ * Registers the three write listeners. Each listener closes over this call's own registry,
+ * root and push, so two boots never resolve through one another's stores (C-WR-1). Single-run
+ * is owned by the 'register-handlers' boot step (D-66.4-01), not by a module latch.
  */
 export function registerStoreWriteHandlers(deps: {
   ipc: Pick<IpcRegistry, 'on'>
@@ -320,10 +303,7 @@ export function registerStoreWriteHandlers(deps: {
   /** This boot's backend -> frontend push (66.4-15). */
   pushFrontendMessage: PushFrontendMessage
 }): void {
-  // "Already installed" is "a layer was already bound" — one module-level binding, not
-  // a flag plus a binding (the moduleState ceiling counts each).
-  const alreadyInstalled = currentLayer !== undefined
-  currentLayer = {
+  const layer: StoreLayer = {
     registry: deps.registry,
     root: deps.root,
     push: deps.pushFrontendMessage
@@ -337,10 +317,6 @@ export function registerStoreWriteHandlers(deps: {
   deps.root.changes.bind((payload) =>
     pushStoreChanged(deps.pushFrontendMessage, payload)
   )
-  if (alreadyInstalled) {
-    return
-  }
-
   // `send`-kind (fire-and-forget) registrations: unlike an `invoke` channel there is no
   // response frame and no promise to reject on the renderer side — which is exactly why
   // the missing registration was invisible before this plan (see header comment).
@@ -354,7 +330,7 @@ export function registerStoreWriteHandlers(deps: {
         return
       }
       {
-        const { registry, root, push } = requireCurrentLayer()
+        const { registry, root, push } = layer
         applyStoreWrite(registry, root, push, 'set', storeName, key, value)
       }
     }
@@ -370,7 +346,7 @@ export function registerStoreWriteHandlers(deps: {
         return
       }
       {
-        const { registry, root, push } = requireCurrentLayer()
+        const { registry, root, push } = layer
         applyStoreWrite(registry, root, push, 'delete', storeName, key)
       }
     }
@@ -391,7 +367,7 @@ export function registerStoreWriteHandlers(deps: {
         return
       }
 
-      const { registry, root } = requireCurrentLayer()
+      const { registry, root } = layer
 
       if (registry.get(storeName)) {
         // The typed stores are constructed by `createStores`, not by the

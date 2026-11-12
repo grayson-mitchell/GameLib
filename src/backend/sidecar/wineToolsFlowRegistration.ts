@@ -145,20 +145,10 @@ export interface WineToolsFlowDeps
  * channel outright. Called once from `handlers.ts` — this module owns no side effects at import
  * time; the caller decides when registration onto the handler registry happens.
  *
- * Idempotence guard (Rule 1 fix, mirroring `runnerAuthFlowRegistration.ts`'s/
- * `shortcutsFlowRegistration.ts`'s own `let registered = false` guard): kept as harmless defence
- * even though the one `deps.ipc.on` listener that originally motivated it (`winetricksInstall`) is
- * now gone — `deps.ipc.handle` is naturally idempotent (`Map.set` replaces the existing entry), but
- * removing a guard that costs nothing and protects against a future send-kind addition is not this
- * plan's job to do.
+ * Single-run is owned by the 'register-handlers' boot step (D-66.4-01): called exactly once per boot, pinned by
+ * `registrationOncePerBoot.test.ts`; a second boot in one process throws in `bootSidecar()`.
  */
-let registered = false
 export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
-  if (registered) {
-    return
-  }
-  registered = true
-
   const {
     DXVK,
     Winetricks,

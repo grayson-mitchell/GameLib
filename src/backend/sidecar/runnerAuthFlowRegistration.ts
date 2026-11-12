@@ -118,14 +118,9 @@ function logSendFailure(channel: string, error: unknown): void {
  * `handlers.ts` — this module owns no side effects at import time beyond the imports above; the
  * caller decides when registration onto the handler registry happens.
  *
- * Idempotence guard (Rule 1 fix, discovered by `__tests__/runnerSliceRegistration.test.ts`'s own
- * pre-existing "calling registerXFlows() twice does not throw or stack duplicate listeners"
- * case): `deps.ipc.on` (`platform/index.ts`) appends to an array on every call, so a second
- * unguarded call to this function would double-register `logoutGOG`'s listener — unlike the 6
- * `deps.ipc.handle` calls above/below, which are naturally idempotent (`Map.set` replaces the
- * existing entry). Mirrors `createStores`'s own `let registered = false` guard.
+ * Single-run is owned by the 'register-handlers' boot step (D-66.4-01): called exactly once per boot, pinned by
+ * `registrationOncePerBoot.test.ts`; a second boot in one process throws in `bootSidecar()`.
  */
-let registered = false
 export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
   // Built inside each handler (call time), never at registration.
   const userDeps = () => ({
@@ -142,11 +137,6 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
     nileRuntime: deps.nileRuntime,
     paths: deps.paths
   })
-
-  if (registered) {
-    return
-  }
-  registered = true
 
   // Source: main.ts:772 -> `isEpicServiceOffline()`.
   deps.ipc.handle('getEpicGamesStatus', async () => {

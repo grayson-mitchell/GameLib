@@ -197,23 +197,10 @@ async function shortcutsExistOnDisk(
  * Quick task 261012-ca6 moved `addShortcut`/`removeShortcut` to invoke-kind; `processShortcut` is
  * the only send-kind channel left.
  *
- * Idempotence guard (Rule 1 fix, discovered by `__tests__/runnerSliceRegistration.test.ts`'s own
- * pre-existing "calling registerXFlows() twice does not throw or stack duplicate listeners" case,
- * and by plan 34.5-08's own `shortcutsFlows.test.ts`): `deps.ipc.on` (`platform/index.ts`) appends to
- * an array on every call, so a second unguarded call to this function would double-register
- * `processShortcut`'s listener -- unlike `deps.ipc.handle`, which is
- * naturally idempotent (`Map.set` replaces the existing entry) and therefore does not itself need
- * this guard, though it still lives behind it since the guard covers the whole function. Mirrors
- * `runnerAuthFlowRegistration.ts`'s own `let registered = false` guard, itself mirroring
- * `createStores`'s original.
+ * Single-run is owned by the 'register-handlers' boot step (D-66.4-01): called exactly once per boot, pinned by
+ * `registrationOncePerBoot.test.ts`; a second boot in one process throws in `bootSidecar()`.
  */
-let registered = false
 export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
-  if (registered) {
-    return
-  }
-  registered = true
-
   // ── invoke (6) ──────────────────────────────────────────────────────────
 
   deps.ipc.handle(
