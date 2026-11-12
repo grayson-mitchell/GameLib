@@ -220,6 +220,40 @@ export function readInitialLibrary(): Pick<
   }
 }
 
+// 74 UAT 12: a Steam hand-off 'done' starts a checkForUpdates refresh seconds before Steam finishes;
+// the completion then removes the badge, and that earlier refresh's stale checkGameUpdates result
+// wrote it back. A checkForUpdates request that arrives while a refresh is in flight is therefore
+// remembered (single slot, scopes merged to 'all') and run once when the in-flight refresh ends.
+// Module scope, not store state: it is transient and must never persist.
+let pendingUpdateCheckRerun: { library: Runner | 'all' | undefined } | null =
+  null
+
+function recordUpdateCheckRerun(
+  checkForUpdates: boolean | undefined,
+  library: Runner | 'all' | undefined
+): void {
+  if (!checkForUpdates) return
+  if (pendingUpdateCheckRerun === null) {
+    pendingUpdateCheckRerun = { library }
+  } else if (pendingUpdateCheckRerun.library !== library) {
+    pendingUpdateCheckRerun = { library: 'all' }
+  }
+}
+
+function runPendingUpdateCheckRerun(
+  refreshLibrary: (options: RefreshLibraryOptions) => Promise<void>
+): void {
+  if (pendingUpdateCheckRerun === null) return
+  const { library } = pendingUpdateCheckRerun
+  pendingUpdateCheckRerun = null
+  void refreshLibrary({
+    checkForUpdates: true,
+    runInBackground: true,
+    library,
+    origin: 'update-check-rerun'
+  })
+}
+
 const useLibraryStateRaw = create<LibraryState>()(
   subscribeWithSelector(
     (set, get): LibraryState => ({
@@ -349,7 +383,10 @@ const useLibraryStateRaw = create<LibraryState>()(
         origin = 'unknown'
       }: RefreshLibraryOptions): Promise<void> => {
         const libraryAtStart = get()
-        if (libraryAtStart.refreshing) return
+        if (libraryAtStart.refreshing) {
+          recordUpdateCheckRerun(checkForUpdates, library)
+          return
+        }
 
         // GAP CYCLE 4 (34.5-33, item 2): this line used to be
         // `Refreshing ${library} Library`, which printed the literal word
@@ -375,8 +412,10 @@ const useLibraryStateRaw = create<LibraryState>()(
         // on each other; it does NOT block a DIFFERENT runner's scoped refresh
         // from starting concurrently — that's the whole point of this fix.
         const scopedRunner = library && library !== 'all' ? library : undefined
-        if (scopedRunner && libraryAtStart.refreshingByRunner[scopedRunner])
+        if (scopedRunner && libraryAtStart.refreshingByRunner[scopedRunner]) {
+          recordUpdateCheckRerun(checkForUpdates, library)
           return
+        }
 
         if (scopedRunner) {
           set((prevState) => ({
@@ -398,6 +437,7 @@ const useLibraryStateRaw = create<LibraryState>()(
           // Quick 261029-quw item 2: every login triggers a refresh, so a login
           // that finished in the backend heals here at the latest.
           useAuthState.getState().resyncSignInIdentityFromStores()
+          runPendingUpdateCheckRerun(get().refreshLibrary)
           return
         } catch (error) {
           window.api.logError(`Library refresh failed: ${String(error)}`)
@@ -423,6 +463,7 @@ const useLibraryStateRaw = create<LibraryState>()(
               }
             }))
           }
+          runPendingUpdateCheckRerun(get().refreshLibrary)
         }
       },
 

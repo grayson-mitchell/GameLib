@@ -483,6 +483,48 @@ describe('libraryState library data', () => {
     expect(fetched).toEqual([])
   })
 
+  it('re-runs a checkForUpdates refresh requested mid-flight exactly once', async () => {
+    const calls: unknown[][] = []
+    let first = true
+    useLibraryState.setState({
+      refresh: async (...args: unknown[]) => {
+        calls.push(args)
+        if (first) {
+          first = false
+          // three requests while this refresh is in flight
+          void lib().refreshLibrary({ checkForUpdates: true })
+          void lib().refreshLibrary({ checkForUpdates: true })
+          void lib().refreshLibrary({ checkForUpdates: true })
+        }
+        useLibraryState.setState({ refreshing: false })
+      }
+    })
+    await lib().refreshLibrary({ checkForUpdates: false })
+    await new Promise((r) => setTimeout(r, 0))
+    expect(calls).toEqual([
+      [undefined, false],
+      [undefined, true]
+    ])
+  })
+
+  it('does not re-run a mid-flight request that did not ask for update checks', async () => {
+    const calls: unknown[][] = []
+    let first = true
+    useLibraryState.setState({
+      refresh: async (...args: unknown[]) => {
+        calls.push(args)
+        if (first) {
+          first = false
+          void lib().refreshLibrary({ checkForUpdates: false })
+        }
+        useLibraryState.setState({ refreshing: false })
+      }
+    })
+    await lib().refreshLibrary({ checkForUpdates: false })
+    await new Promise((r) => setTimeout(r, 0))
+    expect(calls).toHaveLength(1)
+  })
+
   it('refreshLibrary returns early for a runner already refreshing but not for another', async () => {
     useLibraryState.setState({
       refreshingByRunner: { gog: true },

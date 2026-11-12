@@ -30,6 +30,12 @@ jest.mock('react', () => ({
     effects.push({ fn, deps })
   }
 }))
+let mockStatuses: Array<{ appName: string; status: string }> = []
+jest.mock('frontend/state/libraryState', () => ({
+  __esModule: true,
+  default: (sel: (s: { libraryStatus: typeof mockStatuses }) => unknown) =>
+    sel({ libraryStatus: mockStatuses })
+}))
 jest.mock('../SteamUpdateInfo.scss', () => ({}))
 jest.mock('@mui/icons-material', () => ({ CloudDownload: () => null }))
 jest.mock('react-i18next', () => ({
@@ -120,6 +126,32 @@ function useInfo(initial: Info | null, afterClick?: Info) {
 }
 
 describe('SteamUpdateInfo', () => {
+  it('refetches when the game status changes and hides the line once current', async () => {
+    mockStatuses = [{ appName: '1', status: 'updating' }]
+    api = jest.fn()
+    api
+      .mockResolvedValueOnce({ ...base, kind: 'registered' })
+      .mockResolvedValueOnce({ ...base, kind: 'registered', state: 'current' })
+    ;(window as unknown as { api: object }).api = { getSteamUpdateInfo: api }
+    slots.length = 0
+    let out = render()
+    expect(effects[0]?.deps).toContain('updating')
+    for (const e of effects) e.fn()
+    await flush()
+    dirty = false
+    out = render()
+    expect(collectText(out)).not.toBe('')
+    // status entry removed after 'done'
+    mockStatuses = []
+    out = render()
+    expect(effects[0]?.deps).toContain(undefined)
+    for (const e of effects) e.fn()
+    await flush()
+    out = render()
+    expect(api).toHaveBeenCalledTimes(2)
+    expect(collectText(out)).toBe('')
+  })
+
   it('mounts without computeSize and offers Show update size, then shows the sizes line', async () => {
     useInfo(base, { ...base, estimate })
     let out = await mount()

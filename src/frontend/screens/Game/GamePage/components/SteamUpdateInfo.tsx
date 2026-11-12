@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CloudDownload } from '@mui/icons-material'
 import { size } from 'frontend/helpers'
+import useLibraryState from 'frontend/state/libraryState'
 import type { SteamUpdateInfo as SteamUpdateInfoData } from 'common/types/steam'
 
 import './SteamUpdateInfo.scss'
@@ -21,6 +22,10 @@ const SteamUpdateInfo = ({ appName, hasUpdate }: Props) => {
   const { t } = useTranslation('gamelib')
   const [info, setInfo] = useState<SteamUpdateInfoData | null>(null)
   const [loading, setLoading] = useState(false)
+  // Re-read after the game's operation status changes (an update ending clears the line).
+  const libraryStatus = useLibraryState(
+    (s) => s.libraryStatus.find((g) => g.appName === appName)?.status
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -36,7 +41,7 @@ const SteamUpdateInfo = ({ appName, hasUpdate }: Props) => {
     return () => {
       cancelled = true
     }
-  }, [appName, hasUpdate])
+  }, [appName, hasUpdate, libraryStatus])
 
   const showSize = () => {
     setLoading(true)
