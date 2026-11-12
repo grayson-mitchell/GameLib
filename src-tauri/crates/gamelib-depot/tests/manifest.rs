@@ -294,7 +294,7 @@ fn prune_keeps_two_gids() {
         )),
     );
     // Keep "1" (oldest) explicitly: expect {1, 4}.
-    cdn_less.prune("10", "1");
+    cdn_less.prune("10", "1", &[]);
     let mut left: Vec<String> = std::fs::read_dir(&d)
         .unwrap()
         .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
@@ -400,4 +400,38 @@ async fn summarize_reports_installscript_flagged_files_in_manifest_form() {
         .unwrap();
     assert_eq!(res.depots[0].file_count, 2);
     assert_eq!(res.depots[0].installscripts, vec![script.to_string()]);
+}
+
+#[test]
+fn prune_keeps_protected_gid() {
+    let dir = tempfile::tempdir().unwrap();
+    let d = dir.path().join("10");
+    std::fs::create_dir_all(&d).unwrap();
+    let base = std::time::SystemTime::now() - std::time::Duration::from_secs(1000);
+    for i in 1..=5u64 {
+        let p = d.join(format!("{i}.manifest"));
+        std::fs::write(&p, b"x").unwrap();
+        let f = std::fs::File::options().write(true).open(&p).unwrap();
+        f.set_modified(base + std::time::Duration::from_secs(i * 10))
+            .unwrap();
+    }
+    let store = ManifestStore::new(
+        dir.path().to_path_buf(),
+        Arc::new(Fetcher::new(
+            Arc::new(FakeHost::new()),
+            "j",
+            "1",
+            vec![],
+            InflightLimiter::new(1).unwrap(),
+            Arc::new(StallTracker::default()),
+        )),
+    );
+    // "../x" and "" are non-numeric and must be ignored, never joined into a path.
+    store.prune("10", "5", &["1", "../x", ""]);
+    let mut left: Vec<String> = std::fs::read_dir(&d)
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    left.sort();
+    assert_eq!(left, vec!["1.manifest", "4.manifest", "5.manifest"]);
 }

@@ -122,6 +122,24 @@ pub struct DepotSummary {
     /// Filenames (manifest form, not normalised) of the files flagged InstallScript (256), so a
     /// shared redist can find its installscript without the file list (73-19, D-02).
     pub installscripts: Vec<String>,
+    /// Phase 74 (D-09): present only when the request carried `fromManifest` for this depot.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delta: Option<DeltaEstimate>,
+}
+
+/// Manifest-to-manifest update estimate (no local hashing). `changed_bytes` is exact (it is the
+/// delta job's `peakBytes`); `max_download_bytes` is an upper bound, since local chunk reuse can
+/// only lower it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeltaEstimate {
+    /// False when the old manifest could not be loaded (D-14): the figures then describe the
+    /// full-reconcile fallback against the new manifest.
+    pub old_manifest_available: bool,
+    pub changed_bytes: u64,
+    pub max_download_bytes: u64,
+    pub changed_files: u64,
+    pub removed_files: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

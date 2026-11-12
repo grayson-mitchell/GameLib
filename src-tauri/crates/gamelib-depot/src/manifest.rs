@@ -9,8 +9,9 @@
 //! every load and never written.
 
 use crate::container::{decrypt_filename, unzip_manifest, DecodeError, MAX_MANIFEST_BYTES};
+use crate::delta;
 use crate::fetch::{FetchError, Fetcher, ERESULT_BLOCKED};
-use crate::job::{DepotRef, DepotSummary, SummarizeRequest, SummarizeResult};
+use crate::job::{DeltaEstimate, DepotRef, DepotSummary, SummarizeRequest, SummarizeResult};
 use crate::model::{ChunkRef, DepotManifest, ManifestFile};
 use crate::outcome::{ErrorKind, Failure};
 use prost::Message;
@@ -81,6 +82,48 @@ fn summarize_manifest(depot_id: &str, m: &DepotManifest, patterns: &[String]) ->
         total_bytes,
         matches,
         installscripts,
+        delta: None,
+    }
+}
+
+/// Sum of `cb_compressed` over the unique chunk SHAs of `files`.
+fn unique_chunk_bytes<'a>(files: impl Iterator<Item = &'a ManifestFile>) -> u64 {
+    let mut seen = std::collections::HashSet::new();
+    files
+        .flat_map(|f| f.chunks.iter())
+        .filter(|c| seen.insert(c.sha))
+        .map(|c| u64::from(c.cb_compressed))
+        .sum()
+}
+
+/// D-09 estimate for one depot. `old == None` is the D-14 fallback: the reconcile path rewrites
+/// one file at a time, so its disk peak is the largest single new file.
+fn estimate_delta(old: Option<&DepotManifest>, new: &DepotManifest) -> DeltaEstimate {
+    match old {
+        Some(o) => {
+            let ws = delta::compute_work_set(Some(o), new);
+            DeltaEstimate {
+                old_manifest_available: true,
+                changed_bytes: ws.changed.iter().map(|f| f.size).sum(),
+                max_download_bytes: unique_chunk_bytes(ws.changed.iter().copied()),
+                changed_files: ws.changed.len() as u64,
+                removed_files: delta::removed_paths(&[o], &[new]).len() as u64,
+            }
+        }
+        None => {
+            let regular = || {
+                new.files
+                    .iter()
+                    .filter(|f| f.flags & (DIRECTORY_FLAG | SYMLINK_FLAG) == 0)
+            };
+            DeltaEstimate {
+                old_manifest_available: false,
+                changed_bytes: regular().map(|f| f.size).max().unwrap_or(0),
+                max_download_bytes: unique_chunk_bytes(regular()),
+                changed_files: regular().count() as u64,
+                removed_files: 0,
+            }
+        }
     }
 }
 
@@ -95,14 +138,40 @@ pub async fn summarize(
         let mut depots = Vec::with_capacity(req.depots.len());
         let mut skipped_depots: Vec<String> = Vec::new();
         for d in &req.depots {
-            if d.from_manifest.is_some() {
-                return Err(failure(
-                    ErrorKind::DeltaUnsupported,
-                    "fromManifest delta installs are not supported",
-                ));
+            if let Some(g) = d.from_manifest.as_deref() {
+                if !is_numeric_id(g) {
+                    return Err(failure(
+                        ErrorKind::DeltaUnsupported,
+                        "fromManifest must be a numeric manifest id",
+                    ));
+                }
             }
             match store.load(d, &cancel).await {
-                Ok(m) => depots.push(summarize_manifest(&d.depot_id, &m, &req.patterns)),
+                Ok(m) => {
+                    let mut s = summarize_manifest(&d.depot_id, &m, &req.patterns);
+                    if let Some(from) = d.from_manifest.as_deref() {
+                        s.delta = Some(if from == d.manifest_id {
+                            estimate_delta(Some(&m), &m)
+                        } else {
+                            let mut old_ref = d.clone();
+                            old_ref.manifest_id = from.to_string();
+                            old_ref.request_code = None;
+                            old_ref.from_manifest = None;
+                            match store.load(&old_ref, &cancel).await {
+                                Ok(o) => estimate_delta(Some(&o), &m),
+                                Err(FetchError::Cancelled) => {
+                                    return Err(failure(
+                                        ErrorKind::ManifestUnavailable,
+                                        "cancelled",
+                                    ))
+                                }
+                                // Any other old-manifest failure degrades to the D-14 figures.
+                                Err(FetchError::Failed(_)) => estimate_delta(None, &m),
+                            }
+                        });
+                    }
+                    depots.push(s);
+                }
                 // EResult 40 (Blocked) skips the depot, like the TS plan builder.
                 Err(FetchError::Failed(f))
                     if f.kind == ErrorKind::ManifestUnavailable
@@ -455,8 +524,9 @@ impl ManifestStore {
         Ok(Arc::new(manifest))
     }
 
-    /// Keeps `keep_gid` plus the newest other GID (by mtime); removes the rest.
-    pub fn prune(&self, depot_id: &str, keep_gid: &str) {
+    /// Keeps `keep_gid`, every protected GID (the installed build's manifests, Phase 74), plus the
+    /// newest other GID (by mtime); removes the rest. Non-numeric protected entries are ignored.
+    pub fn prune(&self, depot_id: &str, keep_gid: &str, protected: &[&str]) {
         if !is_numeric_id(depot_id) || !is_numeric_id(keep_gid) {
             return;
         }
@@ -471,7 +541,7 @@ impl ManifestStore {
             let Some(stem) = name.strip_suffix(".manifest") else {
                 continue;
             };
-            if name == keep_name || !is_numeric_id(stem) {
+            if name == keep_name || !is_numeric_id(stem) || protected.contains(&stem) {
                 continue;
             }
             let mtime = e
