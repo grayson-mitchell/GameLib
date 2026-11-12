@@ -1,11 +1,15 @@
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { getCometBin } from 'backend/utils'
 import { join } from 'path'
 import { getCometVersion } from '../index'
 
 // The probe path is derived, never spawned: the runner is scripted.
-const cfg = { config: createTestGlobalConfig() }
+const cfg = {
+  config: createTestGlobalConfig(),
+  paths: createTestAppPaths('/fake/root')
+}
 const bin = getCometBin(cfg)
 const CMD = join(bin.dir, bin.bin)
 

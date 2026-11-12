@@ -190,7 +190,8 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
   deps.ipc.handle('getAlternativeWine', async () => {
     return deps.config.getAlternativeWine({
       wineDownloaderInfoStore: deps.stores.wineManager.wineDownloaderInfoStore,
-      runner: deps.runner
+      runner: deps.runner,
+      paths: deps.paths
     })
   })
 

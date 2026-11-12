@@ -107,6 +107,7 @@ import { logWarning, LogPrefix } from '../logger'
 import type { Runner } from 'common/types'
 import type {
   BootServices,
+  InfoCaches,
   QuitHandler,
   StoreManagers,
   Stores
@@ -118,6 +119,8 @@ export interface ShortcutsFlowDeps extends NotifyDeps, DialogBoxDeps {
   managers: Pick<StoreManagers, 'library'>
   quit: Pick<QuitHandler, 'handleExit'>
   stores: Pick<Stores, 'kvs' | 'wikiGameInfo' | 'crossoverIndex'>
+  /** The boot-owned HowLongToBeat credentials cache (66.4-12). */
+  infoCaches: Pick<InfoCaches, 'hltb'>
   /** The boot process runner: reg.exe (Desktop folder) and powershell.exe (.lnk) on win32. */
   runner: BootServices['runner']
   config: Pick<GlobalConfigSlice, 'getSettings'>
@@ -383,6 +386,7 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
       {
         libraryManagers: deps.managers.library,
         stores: deps.stores,
+        infoCaches: deps.infoCaches,
         runner: deps.runner,
         config: deps.config,
         paths: deps.paths,

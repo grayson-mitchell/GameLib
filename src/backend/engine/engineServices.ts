@@ -24,7 +24,10 @@ export interface EngineServices {
   /** The boot-owned engine decision/notice state (D-66.3-12). */
   engineState: EngineStateService
   /** The path roots the engine reads (66.4-05). */
-  paths: Pick<AppPaths, 'userHome' | 'toolsPath' | 'gamesConfigPath'>
+  paths: Pick<
+    AppPaths,
+    'userHome' | 'toolsPath' | 'gamesConfigPath' | 'configPath'
+  >
   /** The boot-owned engine runtime: ledger, registry, deadlines, single-flight maps (66.4-05). */
   engineRuntime: EngineRuntime
   /** The installed Wine Manager release list, read from the injected wineManager store. */

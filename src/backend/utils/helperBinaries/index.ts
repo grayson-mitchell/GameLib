@@ -1,6 +1,7 @@
 import { getCometBin } from 'backend/utils'
 import { join } from 'path'
 import type { ManagerDeps } from 'backend/services/types'
+import type { AppPaths } from 'backend/process/context'
 import type { GlobalConfigSlice } from 'backend/config'
 import type { ProbeDeps } from '../os/processes'
 
@@ -48,7 +49,10 @@ async function getGogdlVersion(deps: VersionProbeDeps): Promise<string> {
 }
 
 async function getCometVersion(
-  deps: ProbeDeps & { config: Pick<GlobalConfigSlice, 'getSettings'> }
+  deps: ProbeDeps & {
+    config: Pick<GlobalConfigSlice, 'getSettings'>
+    paths: Pick<AppPaths, 'publicDir'>
+  }
 ): Promise<string> {
   const path = getCometBin(deps)
   // Bounded: a hung comet must not stall the System Information dump.

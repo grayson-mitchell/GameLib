@@ -80,6 +80,7 @@ import { join, relative } from 'node:path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { at } from './fixtures/indexed'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 
 // Plan 13 (D-51-10/11): handleSetSteamBridgeUserRoute's own describe block
 // wires `steamMetadataStore.get`/`.set` to a backing Map so the REAL (unmocked)
@@ -109,6 +110,7 @@ const steamTestDeps = createTestManagerDeps({
 
 const wineDeps = {
   steamBottle,
+  paths: createTestAppPaths('/fake/root'),
   runner: createScriptedRunner([]),
   config: {
     getAlternativeWine: (...a: unknown[]) => mockGetAlternativeWine(...a)

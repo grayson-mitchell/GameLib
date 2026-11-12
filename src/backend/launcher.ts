@@ -18,7 +18,7 @@ import type { GlobalConfigSlice } from './config'
 import type { GameConfigs } from './game_config'
 import type { Notifications } from './host/notifications'
 import type { AppState } from './host/appState'
-import type { AppInfo } from './process/context'
+import type { AppInfo, AppPaths } from './process/context'
 import i18next from 'i18next'
 import { existsSync, mkdirSync } from 'graceful-fs'
 import { join, dirname } from 'path'
@@ -49,6 +49,7 @@ import {
 } from './services/engineServices'
 import type {
   CommandRunner,
+  InfoCaches,
   SpawnAsync,
   StoreManagers,
   Stores
@@ -69,7 +70,6 @@ import { readKnownFixes } from './knownFixes'
 import { applyKnownFixProfileRegistry } from './knownFixesRegistry'
 import { knownFixProfileOverlayEnv, logKnownFixEnv } from './knownFixOverlays'
 import {
-  defaultUmuPath,
   sharedWinePrefix,
   flatpakHome,
   galaxyCommunicationExePath,
@@ -87,7 +87,7 @@ import {
   isFlatpak,
   flatpakRuntimeVersion
 } from './constants/environment'
-import { formatSystemInfo, getSystemInfo } from './utils/systeminfo'
+import { formatSystemInfo } from './utils/systeminfo'
 import { gameAnticheatInfo } from './anticheat/utils'
 import {
   armEngineLaunchDeadline,
@@ -116,6 +116,8 @@ export interface LauncherDeps extends DialogBoxDeps {
     'getSettings' | 'getAlternativeWine' | 'setSetting'
   >
   gameConfigs: Pick<GameConfigs, 'get'>
+  /** The boot-owned system-information cache the launch log reads (66.4-12). */
+  infoCaches: Pick<InfoCaches, 'systemInfo'>
   appInfo: Pick<AppInfo, 'version'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   engineState: EngineStateService
@@ -720,13 +722,15 @@ async function prepareLaunch(
 
   await logWriter.logInfo([
     'System Info:',
-    getSystemInfo({
-      libraryManagers: deps.libraryManagers,
-      runner: deps.runner,
-      config: deps.config,
-      appInfo: deps.appInfo,
-      stores: deps.stores
-    })
+    deps.infoCaches.systemInfo
+      .getSystemInfo({
+        libraryManagers: deps.libraryManagers,
+        runner: deps.runner,
+        config: deps.config,
+        appInfo: deps.appInfo,
+        stores: deps.stores,
+        paths: deps.paths
+      })
       .then(formatSystemInfo)
       .then((s) => `\n${s}\n\n`)
   ])
@@ -818,10 +822,10 @@ async function prepareLaunch(
   }
 
   if (
-    (await isUmuSupported(gameSettings, false)) &&
+    (await isUmuSupported(deps, gameSettings, false)) &&
     deps.onlineMonitor.isOnline() &&
     !(await isInstalled('umu')) &&
-    (await getUmuPath()) === defaultUmuPath
+    (await getUmuPath(deps)) === deps.paths.defaultUmuPath
   ) {
     await download(deps, 'umu')
   }
@@ -1529,7 +1533,10 @@ export async function validWine(
  * @returns stderr & stdout of 'wineboot --init'
  */
 export async function verifyWinePrefix(
-  deps: { commandRunner: Pick<CommandRunner, 'runWineCommand'> },
+  deps: {
+    commandRunner: Pick<CommandRunner, 'runWineCommand'>
+    paths: Pick<AppPaths, 'defaultUmuPath'>
+  },
   settings: GameSettings
 ): Promise<{ res: ExecResult }> {
   const { winePrefix = sharedWinePrefix, wineVersion } = settings
@@ -1544,7 +1551,7 @@ export async function verifyWinePrefix(
     return { res: { stdout: '', stderr: '' } }
   }
 
-  if (!existsSync(winePrefix) && !(await isUmuSupported(settings))) {
+  if (!existsSync(winePrefix) && !(await isUmuSupported(deps, settings))) {
     mkdirSync(winePrefix, { recursive: true })
   }
 
@@ -1556,7 +1563,7 @@ export async function verifyWinePrefix(
   const haveToWait = !existsSync(systemRegPath)
 
   const command = deps.commandRunner.runWineCommand({
-    commandParts: (await isUmuSupported(settings))
+    commandParts: (await isUmuSupported(deps, settings))
       ? ['createprefix']
       : ['wineboot', '--init'],
     wait: haveToWait,

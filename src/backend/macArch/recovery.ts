@@ -41,6 +41,7 @@ export interface MacArchRecoveryDeps {
   config: Pick<ManagerDeps['config'], 'getSettings'>
   dialogs: ManagerDeps['dialogs']
   notifications: ManagerDeps['notifications']
+  paths: ManagerDeps['paths']
 }
 
 /** The verdict store slice (66.1, R1). */
@@ -186,7 +187,8 @@ export async function offerWindowsReinstall(
       {
         libraryManagers: deps.libraryManagers,
         config: deps.config,
-        notifications: deps.notifications
+        notifications: deps.notifications,
+        paths: deps.paths
       },
       undefined as never,
       appName,

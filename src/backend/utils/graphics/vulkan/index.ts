@@ -1,11 +1,8 @@
-import { fixAsarPath, publicDir } from 'backend/constants/paths'
+import { fixAsarPath } from 'backend/process/appPaths'
+import type { AppPaths } from 'backend/process/context'
 import type { ProcessRunner } from 'backend/process/types'
 import { join } from 'path'
 import { gte as semverGte } from 'semver'
-
-const vulkanHelperBin = fixAsarPath(
-  join(publicDir, 'bin', process.arch, process.platform, 'vulkan-helper')
-)
 
 type VulkanVersion = [maj: number, min: number, patch: number]
 
@@ -14,6 +11,7 @@ const VULKAN_PROBE_TIMEOUT_MS = 10_000
 
 export interface VulkanDeps {
   runner: Pick<ProcessRunner, 'run'>
+  paths: Pick<AppPaths, 'publicDir'>
 }
 
 /**
@@ -21,6 +19,16 @@ export interface VulkanDeps {
  * instance (D-15), so a failed probe is remembered for the life of the instance only.
  */
 export function createVulkan(deps: VulkanDeps) {
+  const vulkanHelperBin = fixAsarPath(
+    join(
+      deps.paths.publicDir,
+      'bin',
+      process.arch,
+      process.platform,
+      'vulkan-helper'
+    )
+  )
+
   // The stdout of a probe, or '' when it failed to spawn, timed out or exited non-zero.
   const probe = async (arg: string): Promise<string> => {
     try {

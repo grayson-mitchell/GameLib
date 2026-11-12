@@ -15,7 +15,11 @@ import { tmpdir } from 'os'
 import { isMac } from 'backend/constants/environment'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
+
 jest.mock('../../logger')
+
+const paths = createTestAppPaths(mkdtempSync(join(tmpdir(), 'cl-paths-')))
 
 // The macOS discovery functions return early off-darwin, so their cases run on macOS hosts only.
 const macDescribe = isMac ? describe : describe.skip
@@ -76,6 +80,7 @@ describe('getLinuxWineSet default wine naming', () => {
       ...(await getLinuxWineSet(
         {
           runner,
+          paths,
           config: createTestGlobalConfig({
             defaultSteamPath: '/nonexistent/steam',
             showValveProton: false
@@ -125,7 +130,7 @@ macDescribe('getWineOnMac', () => {
     const runner = createScriptedRunner([
       { cmd: 'mdfind', argv: MDFIND_WINE_ARGV, result: { stdout: '\n' } }
     ])
-    await getWineOnMac({ runner })
+    await getWineOnMac({ runner, paths })
     expect(runner.calls[0]).toMatchObject({
       cmd: 'mdfind',
       argv: MDFIND_WINE_ARGV,
@@ -140,14 +145,14 @@ macDescribe('getWineOnMac', () => {
     const runner = createScriptedRunner([
       { cmd: 'mdfind', argv: MDFIND_WINE_ARGV, result }
     ])
-    await expect(getWineOnMac({ runner })).resolves.toBeInstanceOf(Set)
+    await expect(getWineOnMac({ runner, paths })).resolves.toBeInstanceOf(Set)
   })
 
   test('mdfind ENOENT does not throw', async () => {
     const runner = createScriptedRunner([
       { cmd: 'mdfind', argv: MDFIND_WINE_ARGV, error: { code: 'ENOENT' } }
     ])
-    await expect(getWineOnMac({ runner })).resolves.toBeInstanceOf(Set)
+    await expect(getWineOnMac({ runner, paths })).resolves.toBeInstanceOf(Set)
   })
 })
 
@@ -245,7 +250,7 @@ macDescribe('getSystemGamePortingToolkitWine', () => {
 macDescribe('getWineskinWine', () => {
   test('returns an empty set when no Wineskin apps exist (no spawn)', async () => {
     const runner = createScriptedRunner([])
-    await getWineskinWine({ runner })
+    await getWineskinWine({ runner, paths })
     expect(runner.calls).toHaveLength(0)
   })
 })

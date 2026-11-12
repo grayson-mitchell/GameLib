@@ -328,7 +328,7 @@ export function registerShellFilesFlows(deps: {
 
   deps.ipc.on('resetHeroic', () => {
     try {
-      resetHeroic(deps)
+      resetHeroic({ ...deps, paths: { configPath, gamesConfigPath } })
     } catch (error) {
       logSendFailure('resetHeroic', error)
     }

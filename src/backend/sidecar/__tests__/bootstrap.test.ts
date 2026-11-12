@@ -66,6 +66,7 @@ jest.mock('../../storeManagers/steam/macSteamOffline', () => {
   }
 })
 
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { defined } from 'backend/testUtils/indexed'
@@ -188,7 +189,7 @@ describe('sidecar bootstrap (headless boot)', () => {
   })
 
   describe('boot services (66.1-04)', () => {
-    it('a default boot returns BootServices with all thirty-four fields', () => {
+    it('a default boot returns BootServices with all thirty-seven fields', () => {
       const { services } = bootWithLines()
       expect(Object.keys(services).sort()).toEqual([
         'anonymousClient',
@@ -205,6 +206,7 @@ describe('sidecar bootstrap (headless boot)', () => {
         'gogRuntime',
         'host',
         'humble',
+        'infoCaches',
         'launcher',
         'legendaryRuntime',
         'managers',
@@ -836,6 +838,7 @@ describe('one-shot boot (D-08)', () => {
         i18nReady,
         {
           runner: createScriptedRunner([]),
+          paths: createTestAppPaths('/fake/root'),
           dialogs: createTestHostServices().dialogs
         }
       )

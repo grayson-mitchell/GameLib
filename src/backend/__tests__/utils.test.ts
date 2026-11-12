@@ -5,6 +5,7 @@ import { rm } from 'fs/promises'
 
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 jest.mock('../logger')
 jest.mock('../dialog/dialog')
 jest.mock('fs/promises', () => ({
@@ -17,7 +18,8 @@ jest.mock('graceful-fs', () => ({
   existsSync: jest.fn()
 }))
 
-const cfgDeps = { config: createTestGlobalConfig() }
+const paths = createTestAppPaths('/fake/root')
+const cfgDeps = { config: createTestGlobalConfig(), paths }
 
 describe('backend/utils.ts', () => {
   describe('removeFolder', () => {
@@ -109,7 +111,7 @@ describe('backend/utils.ts', () => {
     it('returns null in e2e CI mode', async () => {
       const originalCI = process.env.CI
       process.env.CI = 'e2e'
-      const result = await utils.getCurrentChangelog()
+      const result = await utils.getCurrentChangelog({ paths })
       expect(result).toBeNull()
       process.env.CI = originalCI
     })
@@ -128,7 +130,7 @@ describe('backend/utils.ts', () => {
       }
       ;(readFileSync as jest.Mock).mockReturnValue(JSON.stringify(mockRelease))
 
-      const result = await utils.getCurrentChangelog()
+      const result = await utils.getCurrentChangelog({ paths })
 
       expect(result).toEqual(mockRelease)
     })
@@ -138,32 +140,15 @@ describe('backend/utils.ts', () => {
         throw new Error('ENOENT: no such file or directory')
       })
 
-      const result = await utils.getCurrentChangelog()
+      const result = await utils.getCurrentChangelog({ paths })
 
       expect(result).toBeNull()
     })
   })
 
   describe('archSpecificBinary — existence-checked x64 fallback (Phase 34.5 G-1, plan 34.5-17)', () => {
-    // Deviation from the plan's literal suggestion of `jest.isolateModules`:
-    // this suite instead drives each behaviour row through a DIFFERENT
-    // exported getter (getLegendaryBin / getGOGdlBin / getCometBin), each of
-    // which memoises into its OWN module-scope `let` (defaultLegendaryPath /
-    // defaultGogdlPath / defaultCometPath respectively) -- so no case can
-    // ever observe another case's memoised result, without needing a fresh
-    // module instance. `jest.isolateModules` was tried first and rejected:
-    // forcing `../utils` through a fresh module registry re-evaluates
-    // `constants/paths.ts`'s module-scope `app.getPath(...)` calls, and this
-    // file's own top-level `import * as utils from '../utils'` had already
-    // forced Electron's manual mock through Jest's mock resolution once
-    // (before any test ran) -- `jest.requireActual`/`jest.doMock('electron',
-    // ...)` inside the isolated sandbox kept returning that SAME, already
-    // `resetMocks`-stripped `app.getPath` `jest.fn()` instance rather than an
-    // independently-implemented copy, repeatably reproduced across several
-    // isolation attempts. Reusing the already-successfully-loaded outer
-    // `utils` module (whose `publicDir` was already computed correctly, once,
-    // before the first reset) and varying only the mocked `existsSync` sidesteps
-    // that Jest mock-identity behaviour entirely.
+    // The binary path is computed on every call from the injected paths slice (66.4-12): no
+    // module-scope memo, so each case is independent of the others.
     const originalArch = process.arch
     const setArch = (arch: string) =>
       Object.defineProperty(process, 'arch', {
@@ -224,13 +209,7 @@ describe('backend/utils.ts', () => {
   })
 
   describe('archSpecificBinary — macOS onedir layout (Phase 34.9)', () => {
-    // Calls the newly-exported `archSpecificBinary` DIRECTLY, not through a
-    // getter. The 34.5 G-1 block above sidesteps memoisation by driving each
-    // case through a DIFFERENT getter (getLegendaryBin / getGOGdlBin /
-    // getCometBin), but that trick only has three unmemoised-per-case
-    // getters to spend and this suite needs seven cases. Task 1 exported
-    // `archSpecificBinary` precisely so these cases need no module-registry
-    // games: each call is independent, with no memoisation to fight.
+    // Calls `archSpecificBinary` DIRECTLY, not through a getter: each call is independent.
     const originalPlatform = process.platform
     const originalArch = process.arch
 
@@ -259,7 +238,7 @@ describe('backend/utils.ts', () => {
         setArch('arm64')
         ;(existsSync as jest.Mock).mockImplementation(() => true)
 
-        const result = utils.archSpecificBinary(runner)
+        const result = utils.archSpecificBinary(runner, paths)
 
         expect(
           result.endsWith(join('bin', 'arm64', 'darwin', runner, runner))
@@ -272,7 +251,7 @@ describe('backend/utils.ts', () => {
       setArch('arm64')
       ;(existsSync as jest.Mock).mockImplementation(() => true)
 
-      const result = utils.archSpecificBinary('comet')
+      const result = utils.archSpecificBinary('comet', paths)
 
       expect(result.endsWith(join('bin', 'arm64', 'darwin', 'comet'))).toBe(
         true
@@ -285,7 +264,7 @@ describe('backend/utils.ts', () => {
       setArch('x64')
       ;(existsSync as jest.Mock).mockImplementation(() => true)
 
-      const result = utils.archSpecificBinary('nile')
+      const result = utils.archSpecificBinary('nile', paths)
 
       expect(result.endsWith(join('bin', 'x64', 'linux', 'nile'))).toBe(true)
     })
@@ -295,7 +274,7 @@ describe('backend/utils.ts', () => {
       setArch('x64')
       ;(existsSync as jest.Mock).mockImplementation(() => true)
 
-      const result = utils.archSpecificBinary('nile')
+      const result = utils.archSpecificBinary('nile', paths)
 
       expect(result.endsWith(join('bin', 'x64', 'win32', 'nile.exe'))).toBe(
         true
@@ -309,7 +288,7 @@ describe('backend/utils.ts', () => {
         path.includes(join('bin', 'x64'))
       )
 
-      const result = utils.archSpecificBinary('gogdl')
+      const result = utils.archSpecificBinary('gogdl', paths)
 
       expect(
         result.endsWith(join('bin', 'x64', 'darwin', 'gogdl', 'gogdl'))
@@ -330,7 +309,7 @@ describe('backend/utils.ts', () => {
 
       let thrown: unknown
       try {
-        utils.archSpecificBinary('nile')
+        utils.archSpecificBinary('nile', paths)
       } catch (error) {
         thrown = error
       }
@@ -349,7 +328,7 @@ describe('backend/utils.ts', () => {
 
       let thrown: unknown
       try {
-        utils.archSpecificBinary('nile')
+        utils.archSpecificBinary('nile', paths)
       } catch (error) {
         thrown = error
       }
@@ -359,6 +338,46 @@ describe('backend/utils.ts', () => {
       expect(message).toContain('nile')
       expect(message).toContain(join('arm64', 'darwin', 'nile', 'nile'))
       expect(message).toContain(join('x64', 'darwin', 'nile', 'nile'))
+    })
+  })
+
+  describe('get*Bin resolution without a memo (66.4-12)', () => {
+    afterEach(() => {
+      cfgDeps.config.resetToDefaults()
+    })
+
+    it.each([
+      ['getLegendaryBin', utils.getLegendaryBin, 'legendary'],
+      ['getGOGdlBin', utils.getGOGdlBin, 'gogdl'],
+      ['getCometBin', utils.getCometBin, 'comet'],
+      ['getNileBin', utils.getNileBin, 'nile']
+    ] as const)(
+      '%s resolves under paths.publicDir and returns the same value twice',
+      (_name, getter, runner) => {
+        ;(existsSync as jest.Mock).mockImplementation(() => true)
+
+        const first = getter(cfgDeps)
+        const second = getter(cfgDeps)
+
+        expect(first).toEqual(second)
+        expect(join(first.dir, first.bin)).toContain(
+          join(paths.publicDir, 'bin')
+        )
+        expect(first.bin).toContain(runner)
+      }
+    )
+
+    it('follows a different publicDir on the next call (nothing is remembered)', () => {
+      ;(existsSync as jest.Mock).mockImplementation(() => true)
+      const other = createTestAppPaths('/fake/other', {
+        publicDir: '/elsewhere/public'
+      })
+
+      const a = utils.getLegendaryBin({ ...cfgDeps, paths })
+      const b = utils.getLegendaryBin({ ...cfgDeps, paths: other })
+
+      expect(join(a.dir, a.bin)).toContain(paths.publicDir)
+      expect(join(b.dir, b.bin)).toContain('/elsewhere/public')
     })
   })
 

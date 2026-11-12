@@ -189,45 +189,67 @@ interface SearchCredentials {
   hpVal: string
 }
 
-let cachedCredentials: SearchCredentials | null = null
-
 /**
- * HLTB's search is gated by a short-lived handshake: `/api/search/site/init` hands back an
- * auth token plus a honeypot key/value pair that must be echoed in BOTH the request headers
- * and the request body. None of it is documented, and the site has moved this endpoint
- * repeatedly -- assume it will break again and fail soft everywhere.
+ * The HLTB search credentials, cached for the life of the instance. Concurrent callers share one
+ * handshake; a failed handshake is never cached, so the next caller retries.
  */
-async function getSearchCredentials(
-  forceRefresh = false
-): Promise<SearchCredentials | null> {
-  if (cachedCredentials && !forceRefresh) return cachedCredentials
+export function createHltbCredentials() {
+  let cachedCredentials: SearchCredentials | null = null
+  let inFlight: Promise<SearchCredentials | null> | null = null
 
-  try {
-    const response = await axios.get(
-      `${HLTB_SEARCH_INIT_URL}?t=${Date.now()}`,
-      {
-        headers: { ...BROWSER_HEADERS, Referer: `${HLTB_BASE_URL}/` },
-        timeout: 10000,
-        validateStatus: (status) => status < 500
+  /**
+   * HLTB's search is gated by a short-lived handshake: `/api/search/site/init` hands back an
+   * auth token plus a honeypot key/value pair that must be echoed in BOTH the request headers
+   * and the request body. None of it is documented, and the site has moved this endpoint
+   * repeatedly -- assume it will break again and fail soft everywhere.
+   */
+  async function fetchCredentials(): Promise<SearchCredentials | null> {
+    try {
+      const response = await axios.get(
+        `${HLTB_SEARCH_INIT_URL}?t=${Date.now()}`,
+        {
+          headers: { ...BROWSER_HEADERS, Referer: `${HLTB_BASE_URL}/` },
+          timeout: 10000,
+          validateStatus: (status) => status < 500
+        }
+      )
+
+      const { token, hpKey, hpVal } = response.data ?? {}
+      if (response.status !== 200 || !token || !hpKey) {
+        cachedCredentials = null
+        return null
       }
-    )
 
-    const { token, hpKey, hpVal } = response.data ?? {}
-    if (response.status !== 200 || !token || !hpKey) {
+      cachedCredentials = { token, hpKey, hpVal }
+      return cachedCredentials
+    } catch (error) {
+      logError(
+        ['Could not initialise HLTB search session:', error],
+        LogPrefix.ExtraGameInfo
+      )
       cachedCredentials = null
       return null
     }
-
-    cachedCredentials = { token, hpKey, hpVal }
-    return cachedCredentials
-  } catch (error) {
-    logError(
-      ['Could not initialise HLTB search session:', error],
-      LogPrefix.ExtraGameInfo
-    )
-    cachedCredentials = null
-    return null
   }
+
+  return {
+    async get(forceRefresh = false): Promise<SearchCredentials | null> {
+      if (cachedCredentials && !forceRefresh) return cachedCredentials
+      if (inFlight) return inFlight
+      const flight = fetchCredentials().finally(() => {
+        if (inFlight === flight) inFlight = null
+      })
+      inFlight = flight
+      return flight
+    }
+  }
+}
+
+export type HltbCredentials = ReturnType<typeof createHltbCredentials>
+
+/** What the HLTB lookups read: the boot-owned credentials cache. */
+export interface HltbDeps {
+  infoCaches: { hltb: HltbCredentials }
 }
 
 async function postSearch(
@@ -286,17 +308,18 @@ async function postSearch(
  * for the user to tell, which is worse than showing nothing.
  */
 async function getGameDataByTitle(
+  deps: HltbDeps,
   title: string
 ): Promise<HeroicHowLongToBeatEntry | null> {
   try {
-    let credentials = await getSearchCredentials()
+    let credentials = await deps.infoCaches.hltb.get()
     if (!credentials) return null
 
     let { status, games } = await postSearch(title, credentials)
 
     // The site itself treats 403 as an expired token and retries once after re-initialising.
     if (status === 403) {
-      credentials = await getSearchCredentials(true)
+      credentials = await deps.infoCaches.hltb.get(true)
       if (!credentials) return null
       ;({ status, games } = await postSearch(title, credentials))
     }
@@ -335,6 +358,7 @@ async function getGameDataByTitle(
 }
 
 export async function getHowLongToBeat(
+  deps: HltbDeps,
   game: Game,
   hltbId?: string
 ): Promise<HeroicHowLongToBeatEntry | null> {
@@ -379,7 +403,7 @@ export async function getHowLongToBeat(
       LogPrefix.ExtraGameInfo
     )
 
-    const gameData = await getGameDataByTitle(gameInfo.title)
+    const gameData = await getGameDataByTitle(deps, gameInfo.title)
     if (gameData) {
       return gameData
     }

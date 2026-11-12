@@ -130,6 +130,7 @@ jest.mock('backend/store_backend', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
+import { createTestInfoCaches } from 'backend/testUtils/testEpicAmazonRuntimes'
 import { defined } from 'backend/testUtils/indexed'
 import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
 import {
@@ -292,6 +293,7 @@ registerShortcutsFlows({
   }),
   quit: { handleExit: () => mockHandleExit() },
   stores: createTestStores(),
+  infoCaches: createTestInfoCaches(),
   runner: createTestServices().runner,
   config: {
     getSettings: () => mockGlobalConfigGet().getSettings()

@@ -7,6 +7,7 @@ import { wineManagerReleasesFrom } from 'backend/engine/wineManagerReleases'
 import { createTools } from 'backend/tools'
 import type { Tools, ToolsDeps } from 'backend/tools'
 import type { SteamEngineBottle } from 'backend/storeManagers/steam/bottle'
+import type { AppPaths } from 'backend/process/context'
 import type { Launcher, ManagerDeps } from './types'
 
 export type EngineServicesSource = Pick<
@@ -30,7 +31,8 @@ export type EngineServicesSource = Pick<
     /** The boot-owned engine runtime (66.4-05). */
     engineRuntime: EngineServices['engineRuntime']
     /** The path roots the engine reads (66.4-05). */
-    paths: EngineServices['paths']
+    paths: EngineServices['paths'] &
+      Pick<AppPaths, 'defaultUmuPath' | 'publicDir'>
     /** The probes the engine spawns (66.2-03): only `run`, so the launcher's slice qualifies. */
     runner: Pick<ManagerDeps['runner'], 'run'>
     /** The members createTools reads; a launcher still being built can supply just these. */

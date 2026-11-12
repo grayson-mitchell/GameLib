@@ -17,7 +17,7 @@ import { getInfoFromPCGamingWiki } from './pcgamingwiki/utils'
 import { getUmuId } from './umu/utils'
 import { isLinux, isMac } from 'backend/constants/environment'
 import type { Game } from 'common/types/game_manager'
-import type { Stores } from 'backend/services/types'
+import type { InfoCaches, Stores } from 'backend/services/types'
 import {
   getCodeweaversFromIndex,
   crossoverIndexHas
@@ -26,6 +26,8 @@ import {
 /** What the wiki info lookup reads: the GOG manager, plus its own and the CrossOver index stores. */
 export interface WikiGameInfoDeps extends GamesDbDeps {
   stores: Pick<Stores, 'wikiGameInfo' | 'crossoverIndex'>
+  /** The boot-owned HowLongToBeat credentials cache (66.4-12). */
+  infoCaches: Pick<InfoCaches, 'hltb'>
 }
 
 export async function getWikiGameInfo(
@@ -138,6 +140,7 @@ export async function getWikiGameInfo(
     // Get HowLongToBeat data: the gog.com site for GOG games, the HLTB ID from PCGamingWiki
     // when there is one, and otherwise a title search inside getHowLongToBeat.
     const howlongtobeat = await getHowLongToBeat(
+      deps,
       game,
       pcgamingwiki?.howLongToBeatID
     )

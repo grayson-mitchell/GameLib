@@ -72,7 +72,6 @@ import { isWritableEngineOverride } from '../engine/engineConfig'
 // adds zero new module-graph cost (31-RESEARCH.md "Write-Path Mechanics").
 import { writeConfig } from '../utils'
 import { getLogFilePath } from '../logger/paths'
-import { getSystemInfo } from '../utils/systeminfo'
 import { hasExecutable } from '../utils/os/path'
 import { isFlatpak } from '../constants/environment'
 import { gamesConfigPath } from '../constants/paths'
@@ -114,6 +113,9 @@ export function registerSettingsFlows(deps: {
   >
   gameConfigs: Pick<GameConfigs, 'get'>
   appInfo: Pick<AppInfo, 'version'>
+  /** The boot-owned system-information cache (66.4-12). */
+  infoCaches: Pick<BootServices['infoCaches'], 'systemInfo'>
+  paths: Pick<BootServices['paths'], 'publicDir'>
   /** The boot process runner (66.2); consumers converted by 66.2-05. */
   runner: BootServices['runner']
   /** The boot-owned Steam library map (D-66.3-13). */
@@ -259,13 +261,14 @@ export function registerSettingsFlows(deps: {
 
   // utils/ipc_handler.ts:22
   deps.ipc.handle('getSystemInfo', async (_event: unknown, cache?: unknown) =>
-    getSystemInfo(
+    deps.infoCaches.systemInfo.getSystemInfo(
       {
         libraryManagers: deps.managers.library,
         runner: deps.runner,
         config: deps.config,
         appInfo: deps.appInfo,
-        stores: deps.stores
+        stores: deps.stores,
+        paths: deps.paths
       },
       cache as boolean | undefined
     )

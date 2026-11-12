@@ -1070,7 +1070,7 @@ export default class LegendaryGame implements Game {
         ...wineEnvVars
       }
 
-      if (await isUmuSupported(gameSettings)) {
+      if (await isUmuSupported(this.deps, gameSettings)) {
         const umuId = await getUmuId(
           this.deps,
           gameInfo.app_name,
@@ -1081,7 +1081,11 @@ export default class LegendaryGame implements Game {
         }
       }
 
-      wineFlags = await getWineFlags(gameSettings, shlex.join(wrappers))
+      wineFlags = await getWineFlags(
+        this.deps,
+        gameSettings,
+        shlex.join(wrappers)
+      )
     }
 
     const appNameToLaunch =

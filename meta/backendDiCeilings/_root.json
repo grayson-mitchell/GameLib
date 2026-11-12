@@ -8,7 +8,6 @@
     "src/backend/knownFixOverlayInstall.ts": 1,
     "src/backend/knownFixesFetcher.ts": 1,
     "src/backend/launchSingleFlight.ts": 1,
-    "src/backend/protocol.ts": 1,
-    "src/backend/utils.ts": 4
+    "src/backend/protocol.ts": 1
   }
 }

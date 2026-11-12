@@ -169,7 +169,10 @@ export async function provisionBottle(
     spawnAsync: SpawnAsync
     commandRunner: Pick<CommandRunner, 'runWineCommand'>
     runner: Pick<ProcessRunner, 'run'>
-    paths: Pick<AppPaths, 'userHome' | 'steamSupportPath'>
+    paths: Pick<
+      AppPaths,
+      'userHome' | 'steamSupportPath' | 'toolsPath' | 'configPath'
+    >
     engineRuntime: Pick<EngineRuntime, 'crossover'>
     steamLaunchRuntime: Pick<SteamLaunchRuntime, 'raiser'>
     config: Pick<

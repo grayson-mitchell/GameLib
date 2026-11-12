@@ -169,6 +169,7 @@ export interface CreateStoreManagersDeps {
   gogRuntime: ManagerDeps['gogRuntime']
   legendaryRuntime: ManagerDeps['legendaryRuntime']
   nileRuntime: ManagerDeps['nileRuntime']
+  infoCaches: ManagerDeps['infoCaches']
   steamUser: ManagerDeps['steamUser']
   loginWindowSeam: ManagerDeps['loginWindowSeam']
 }
@@ -219,6 +220,7 @@ export function createStoreManagers(
     gogRuntime: deps.gogRuntime,
     legendaryRuntime: deps.legendaryRuntime,
     nileRuntime: deps.nileRuntime,
+    infoCaches: deps.infoCaches,
     steamUser: deps.steamUser,
     loginWindowSeam: deps.loginWindowSeam
   }
@@ -232,6 +234,7 @@ export function createStoreManagers(
     stores: deps.stores,
     config: deps.config,
     gameConfigs: deps.gameConfigs,
+    infoCaches: deps.infoCaches,
     appInfo: deps.appInfo,
     dialogs: deps.dialogs,
     appState: deps.appState,

@@ -8,7 +8,5 @@
     "src/backend/wiki_game_info/protondb/__tests__/utils.test.ts": 1,
     "src/backend/wiki_game_info/steamdeck/__tests__/utils.test.ts": 1
   },
-  "moduleState": {
-    "src/backend/wiki_game_info/howlongtobeat/utils.ts": 1
-  }
+  "moduleState": {}
 }

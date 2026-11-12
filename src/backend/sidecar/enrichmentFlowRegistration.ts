@@ -188,6 +188,8 @@ export interface EnrichmentFlowDeps {
     'kvs' | 'runsForMe' | 'wikiGameInfo' | 'crossoverIndex' | 'gog'
   >
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
+  /** The boot-owned HowLongToBeat credentials cache (66.4-12). */
+  infoCaches: Pick<ManagerDeps['infoCaches'], 'hltb'>
   /** The GOG credential cache and path roots the discounts handler reads (66.4-10). */
   gogRuntime: Pick<ManagerDeps['gogRuntime'], 'credentials'>
   paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath' | 'userData'>
@@ -223,7 +225,11 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
       const forceRefresh = (args[3] as boolean | null | undefined) ?? undefined
       const game = deps.managers.library[runner].getGame(appName)
       return getWikiGameInfo(
-        { libraryManagers: deps.managers.library, stores: deps.stores },
+        {
+          libraryManagers: deps.managers.library,
+          stores: deps.stores,
+          infoCaches: deps.infoCaches
+        },
         game,
         forceRefresh
       )

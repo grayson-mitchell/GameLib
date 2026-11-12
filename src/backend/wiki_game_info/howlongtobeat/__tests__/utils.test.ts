@@ -31,15 +31,15 @@ const fakeGame = (runner: string, title: string) =>
     getExtraInfo: async () => ({ storeUrl: '' })
   }) as unknown as Game
 
-// `cachedCredentials` is module-scope state, so every test re-imports the module to get a
-// clean session. Without this the first test's token leaks into the rest and the init
-// handshake assertions become meaningless.
+// The credentials cache is a closure of the instance, so every test builds its own: without this the
+// first test's token would leak into the rest and the init handshake assertions would mean nothing.
 const freshModule = async () => {
-  let mod!: typeof import('../utils')
-  await jest.isolateModulesAsync(async () => {
-    mod = await import('../utils')
-  })
-  return mod
+  const mod = await import('../utils')
+  const deps = { infoCaches: { hltb: mod.createHltbCredentials() } }
+  return {
+    getHowLongToBeat: (game: Game, hltbId?: string) =>
+      mod.getHowLongToBeat(deps, game, hltbId)
+  }
 }
 
 beforeEach(() => {

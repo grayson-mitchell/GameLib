@@ -722,7 +722,7 @@ export default class GOGGame implements Game {
         ...wineEnvVars
       }
 
-      if (await isUmuSupported(gameSettings)) {
+      if (await isUmuSupported(this.deps, gameSettings)) {
         const umuId = await getUmuId(
           this.deps,
           gameInfo.app_name,
@@ -733,7 +733,11 @@ export default class GOGGame implements Game {
         }
       }
 
-      wineFlag = await getWineFlagsArray(gameSettings, shlex.join(wrappers))
+      wineFlag = await getWineFlagsArray(
+        this.deps,
+        gameSettings,
+        shlex.join(wrappers)
+      )
     }
 
     const launchArgumentsArgs =

@@ -4,19 +4,15 @@
  */
 
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs'
+import { tmpdir } from 'os'
 import { join } from 'path'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 
-jest.mock('backend/constants/paths', () => {
-  const path = jest.requireActual('path')
-  const os = jest.requireActual('os')
-  const base = path.join(os.tmpdir(), `gamelib-uninstaller-test-${process.pid}`)
-  return {
-    defaultWinePrefix: path.join(base, 'prefix'),
-    fixesPath: path.join(base, 'fixes'),
-    localFixesPath: path.join(base, 'fixes', 'local'),
-    gamesConfigPath: path.join(base, 'games')
-  }
-})
+const paths = createTestAppPaths(
+  join(tmpdir(), `gamelib-uninstaller-test-${process.pid}`)
+)
+const { fixesPath, gamesConfigPath, localFixesPath } = paths
+
 jest.mock('backend/config', () => ({ GlobalConfig: { get: jest.fn() } }))
 jest.mock('backend/dialog/dialog', () => ({
   notify: jest
@@ -39,14 +35,10 @@ import { logInfo } from 'backend/logger'
 // The managers arrive by deps now: a plain map the tests fill in per case.
 const libraryManagerMap = {} as Record<string, unknown>
 const deps = {
-  libraryManagers: libraryManagerMap
+  libraryManagers: libraryManagerMap,
+  paths
 } as unknown as Parameters<typeof uninstallGameCallback>[0]
 import { sendGameStatusUpdate } from 'backend/utils'
-import {
-  fixesPath,
-  gamesConfigPath,
-  localFixesPath
-} from 'backend/constants/paths'
 
 const infoText = () =>
   (logInfo as jest.Mock).mock.calls
@@ -75,7 +67,7 @@ describe('removeFixFile', () => {
     writeFileSync(local, '{}')
     writeFileSync(profile, '{}')
 
-    removeFixFile(app, runner)
+    removeFixFile(deps, app, runner)
 
     expect(existsSync(downloaded)).toBe(false)
     expect(existsSync(local)).toBe(true)
@@ -85,12 +77,12 @@ describe('removeFixFile', () => {
   it('sideload deletes nothing and does not throw', () => {
     const stray = join(fixesPath, 'x-undefined.json')
     writeFileSync(stray, '{}')
-    expect(() => removeFixFile('x', 'sideload')).not.toThrow()
+    expect(() => removeFixFile(deps, 'x', 'sideload')).not.toThrow()
     expect(existsSync(stray)).toBe(true)
   })
 
   it('a missing file does not throw', () => {
-    expect(() => removeFixFile('nope', 'steam')).not.toThrow()
+    expect(() => removeFixFile(deps, 'nope', 'steam')).not.toThrow()
   })
 })
 

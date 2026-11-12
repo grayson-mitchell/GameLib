@@ -125,7 +125,11 @@ export function registerRunnerMiscFlows(
   // D-04: `comet` is GOG's Galaxy Communication replacement, gated on
   // `gameInfo.runner === 'gog'` at `launcher.ts:973`.
   deps.ipc.handle('getCometVersion', () =>
-    getCometVersion({ runner: deps.runner, config: deps.config })
+    getCometVersion({
+      runner: deps.runner,
+      config: deps.config,
+      paths: deps.paths
+    })
   )
   deps.ipc.handle('getNileVersion', () => getNileVersion(versionDeps))
 

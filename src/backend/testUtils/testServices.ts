@@ -42,7 +42,8 @@ import { createTestBridgeRuntime } from './testBridgeRuntime'
 import { createTestGogRuntime } from './testGogRuntime'
 import {
   createTestLegendaryRuntime,
-  createTestNileRuntime
+  createTestNileRuntime,
+  createTestInfoCaches
 } from './testEpicAmazonRuntimes'
 import { createTestSteamInstallRuntime } from './testSteamInstallRuntime'
 import { createTestSignInProbe } from './testSignInProbe'
@@ -271,6 +272,7 @@ export function createTestServices(
     legendaryRuntime:
       overrides.legendaryRuntime ?? createTestLegendaryRuntime(),
     nileRuntime: overrides.nileRuntime ?? createTestNileRuntime(),
+    infoCaches: overrides.infoCaches ?? createTestInfoCaches(),
     winetricksQueue:
       overrides.winetricksQueue ??
       unscriptedMembers<BootServices['winetricksQueue']>(
@@ -440,6 +442,7 @@ export function createTestManagerDeps(
     legendaryRuntime:
       overrides.legendaryRuntime ?? createTestLegendaryRuntime(),
     nileRuntime: overrides.nileRuntime ?? createTestNileRuntime(),
+    infoCaches: overrides.infoCaches ?? createTestInfoCaches(),
     signIn: overrides.signIn ?? createTestSignInProbe(),
     steamSession: overrides.steamSession ?? createTestSteamSession(),
     tokenStore: overrides.tokenStore ?? createTestTokenStoreSlot(),
@@ -497,6 +500,7 @@ export function createTestToolsSlices() {
     gogRuntime: createTestGogRuntime(),
     legendaryRuntime: createTestLegendaryRuntime(),
     nileRuntime: createTestNileRuntime(),
+    infoCaches: createTestInfoCaches(),
     paths: createTestPaths(),
     steamBottle: createTestSteamBottle({ stores: createTestStores(), config })
   }

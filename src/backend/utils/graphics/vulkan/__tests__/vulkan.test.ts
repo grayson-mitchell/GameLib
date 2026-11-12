@@ -3,6 +3,10 @@ import {
   type ScriptStep
 } from 'backend/testUtils/scriptedRunner'
 import { createVulkan } from '../index'
+import { fixAsarPath } from 'backend/process/appPaths'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
+
+const paths = createTestAppPaths('/fake/root')
 
 const stepFor = (arg: string, stdout: string, code = 0): ScriptStep => ({
   cmd: '',
@@ -15,11 +19,8 @@ function scripted(steps: ScriptStep[]) {
   const binSuffix = 'vulkan-helper'
   // cmd is the resolved helper path; recompute it the same way the module does.
   const { join } = jest.requireActual<typeof import('path')>('path')
-  const { fixAsarPath, publicDir } = jest.requireActual<
-    typeof import('backend/constants/paths')
-  >('backend/constants/paths')
   const cmd = fixAsarPath(
-    join(publicDir, 'bin', process.arch, process.platform, binSuffix)
+    join(paths.publicDir, 'bin', process.arch, process.platform, binSuffix)
   )
   return createScriptedRunner(steps.map((s) => ({ ...s, cmd })))
 }
@@ -27,7 +28,7 @@ function scripted(steps: ScriptStep[]) {
 describe('createVulkan', () => {
   it('runs instance-version once with a 10s timeout and memoises it', async () => {
     const runner = scripted([stepFor('instance-version', '[1,3,250]')])
-    const vulkan = createVulkan({ runner })
+    const vulkan = createVulkan({ runner, paths })
     expect(await vulkan.getInstanceVersion()).toEqual([1, 3, 250])
     expect(await vulkan.getInstanceVersion()).toEqual([1, 3, 250])
     expect(runner.calls).toHaveLength(1)
@@ -44,7 +45,7 @@ describe('createVulkan', () => {
         '[{"name":"GPU A","major":1,"minor":2,"patch":0}]'
       )
     ])
-    const vulkan = createVulkan({ runner })
+    const vulkan = createVulkan({ runner, paths })
     expect(await vulkan.anyGpuSupportsVersion([1, 1, 0])).toBe('GPU A')
     expect(await vulkan.anyGpuSupportsVersion([1, 3, 0])).toBe(false)
     expect(runner.calls).toHaveLength(1)
@@ -54,7 +55,7 @@ describe('createVulkan', () => {
     const runner = scripted([
       { ...stepFor('nvapi-path', '/opt/nv\n'), repeat: true }
     ])
-    const vulkan = createVulkan({ runner })
+    const vulkan = createVulkan({ runner, paths })
     expect(await vulkan.getNvngxPath()).toBe('/opt/nv')
     expect(await vulkan.getNvngxPath()).toBe('/opt/nv')
     expect(runner.calls).toHaveLength(2)
@@ -62,6 +63,7 @@ describe('createVulkan', () => {
 
   it('maps non-zero, timeout and spawn error to the unknown values', async () => {
     const nonZero = createVulkan({
+      paths,
       runner: scripted([
         stepFor('instance-version', '[1,3,0]', 1),
         stepFor('physical-versions', '[]', 2),
@@ -82,7 +84,7 @@ describe('createVulkan', () => {
         result: { stdout: 'late', timedOut: true, code: null }
       }
     ])
-    const vulkan = createVulkan({ runner: broken })
+    const vulkan = createVulkan({ runner: broken, paths })
     expect(await vulkan.getInstanceVersion()).toBe(false)
     expect(await vulkan.getNvngxPath()).toBe('')
   })

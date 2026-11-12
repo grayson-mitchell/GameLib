@@ -57,6 +57,7 @@ export default class NileGameManager implements Game {
       Pick<
         ManagerDeps,
         | 'libraryManagers'
+        | 'infoCaches'
         | 'onlineMonitor'
         | 'engineState'
         | 'engineRuntime'
@@ -452,7 +453,7 @@ export default class NileGameManager implements Game {
         ...wineEnvVars
       }
 
-      if (await isUmuSupported(gameSettings)) {
+      if (await isUmuSupported(this.deps, gameSettings)) {
         const umuId = await getUmuId(
           this.deps,
           gameInfo.app_name,
@@ -464,7 +465,11 @@ export default class NileGameManager implements Game {
       }
 
       wineFlag = [
-        ...(await getWineFlagsArray(gameSettings, shlex.join(wrappers))),
+        ...(await getWineFlagsArray(
+          this.deps,
+          gameSettings,
+          shlex.join(wrappers)
+        )),
         '--wine-prefix',
         gameSettings.winePrefix
       ]

@@ -49,6 +49,7 @@ import {
 } from '../../utils'
 import i18next from 'i18next'
 import { createTestStores } from 'backend/testUtils/testServices'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { backendEvents } from '../../backend_events'
 
 import {
@@ -108,7 +109,9 @@ describe('backend/appshell/releases.ts (REQ-34.1-04)', () => {
     const changelog = { id: 2, tag_name: 'v1.1.0' }
     ;(mockedGetCurrentChangelog as jest.Mock).mockResolvedValue(changelog)
 
-    const result = await getCurrentChangelogEntry()
+    const result = await getCurrentChangelogEntry({
+      paths: createTestAppPaths('/fake/root')
+    })
 
     expect(result).toBe(changelog)
     expect(mockedGetCurrentChangelog).toHaveBeenCalledTimes(1)

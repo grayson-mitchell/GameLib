@@ -62,7 +62,7 @@ import {
 } from '../engine/toolSettings'
 import type { ToolSettingsResult } from '../engine/toolSettings'
 import type { GameConfigs } from '../game_config'
-import type { AppInfo } from '../process/context'
+import type { AppInfo, AppPaths } from '../process/context'
 import { chmod, readFile, stat } from 'fs/promises'
 import { createVulkan } from '../utils/graphics/vulkan'
 import { lt as semverLt } from 'semver'
@@ -235,7 +235,8 @@ export interface ToolsDeps extends DialogBoxDeps, NotifyDeps {
   engineState: EngineServices['engineState']
   /** The boot-owned engine runtime and the path roots the engine reads (66.4-05). */
   engineRuntime: EngineServices['engineRuntime']
-  paths: EngineServices['paths']
+  paths: EngineServices['paths'] &
+    Pick<AppPaths, 'defaultUmuPath' | 'publicDir'>
   config: Pick<
     GlobalConfigSlice,
     'getSettings' | 'getAlternativeWine' | 'setSetting'
@@ -261,7 +262,7 @@ function engineServicesFor(deps: ToolsDeps): EngineServices {
 }
 
 function createDxvk(deps: ToolsDeps) {
-  const vulkan = createVulkan({ runner: deps.runner })
+  const vulkan = createVulkan({ runner: deps.runner, paths: deps.paths })
   const DXVK = {
     getLatest: async () => {
       if (isWindows) {
@@ -977,8 +978,8 @@ function createWinetricks(deps: ToolsDeps) {
         await Winetricks.download()
       }
 
-      if (await isUmuSupported(gameSettings)) {
-        winetricks = await getUmuPath()
+      if (await isUmuSupported(deps, gameSettings)) {
+        winetricks = await getUmuPath(deps)
 
         if (args.includes('-q')) {
           args.splice(args.indexOf('-q'), 1)
@@ -988,7 +989,7 @@ function createWinetricks(deps: ToolsDeps) {
       }
 
       const { winePrefix, wineVersion: alwaysWine_wineVersion } =
-        await getWineFromProton(gameSettings)
+        await getWineFromProton(deps, gameSettings)
       return new Promise<string[] | null>((resolve) => {
         const wineBin = alwaysWine_wineVersion.bin
         // We have to run Winetricks with an actual `wine` binary, meaning we
@@ -1369,7 +1370,7 @@ function createWinetricks(deps: ToolsDeps) {
         }
       )
       if (resolved.kind === 'unavailable') return []
-      const { winePrefix } = await getWineFromProton(resolved.settings)
+      const { winePrefix } = await getWineFromProton(deps, resolved.settings)
       const winetricksLogPath = join(winePrefix, 'winetricks.log')
       try {
         const winetricksLog = await readFile(winetricksLogPath, 'utf8')

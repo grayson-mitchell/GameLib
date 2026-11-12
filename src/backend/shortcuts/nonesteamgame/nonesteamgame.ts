@@ -28,7 +28,7 @@ import {
 import { getWikiGameInfo } from 'backend/wiki_game_info/wiki_game_info'
 import { isAppImage, isFlatpak, isWindows } from 'backend/constants/environment'
 import type { Game } from 'common/types/game_manager'
-import type { Stores } from 'backend/services/types'
+import type { InfoCaches, Stores } from 'backend/services/types'
 
 const getSteamUserdataDir = async (deps: Pick<ShortcutsDeps, 'config'>) => {
   const { defaultSteamPath } = deps.config.getSettings()
@@ -213,6 +213,7 @@ export type NonSteamGameDeps = ShortcutsDeps &
   DialogBoxDeps &
   NotifyDeps & {
     stores: Pick<Stores, 'kvs' | 'wikiGameInfo' | 'crossoverIndex'>
+    infoCaches: Pick<InfoCaches, 'hltb'>
   }
 
 /**

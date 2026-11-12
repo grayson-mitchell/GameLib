@@ -114,6 +114,8 @@ import { createBridgeRuntime } from '../storeManagers/steam/bridge/bridgeRuntime
 import { createGogRuntime } from '../storeManagers/gog/gogRuntime'
 import { createLegendaryRuntime } from '../storeManagers/legendary/legendaryRuntime'
 import { createNileRuntime } from '../storeManagers/nile/nileRuntime'
+import { createSystemInfoCache } from '../utils/systeminfo'
+import { createHltbCredentials } from '../wiki_game_info/howlongtobeat/utils'
 import { createSteamInstallRuntime } from '../storeManagers/steam/steamInstallRuntime'
 import { createWinetricksQueue } from '../tools/winetricksQueue'
 import { getInstallingComponent } from '../tools'
@@ -305,6 +307,7 @@ export const BOOT_STEP_NAMES = [
   'gog-runtime',
   'legendary-runtime',
   'nile-runtime',
+  'info-caches',
   'winetricks-queue',
   'store-managers',
   'download-queue',
@@ -465,6 +468,7 @@ function requireServices(state: BootState): BootServices {
     gogRuntime,
     legendaryRuntime,
     nileRuntime,
+    infoCaches,
     winetricksQueue,
     signInProbe,
     steamSession,
@@ -503,6 +507,7 @@ function requireServices(state: BootState): BootServices {
     !gogRuntime ||
     !legendaryRuntime ||
     !nileRuntime ||
+    !infoCaches ||
     !winetricksQueue ||
     !signInProbe ||
     !steamSession ||
@@ -542,6 +547,7 @@ function requireServices(state: BootState): BootServices {
         'gogRuntime',
         'legendaryRuntime',
         'nileRuntime',
+        'infoCaches',
         'winetricksQueue',
         'signInProbe',
         'steamSession',
@@ -583,6 +589,7 @@ function requireServices(state: BootState): BootServices {
     gogRuntime,
     legendaryRuntime,
     nileRuntime,
+    infoCaches,
     winetricksQueue,
     signInProbe,
     steamSession,
@@ -1004,6 +1011,7 @@ export function checkRosettaWhenMac(
   i18nReady: Promise<void>,
   deps: {
     runner: Pick<ProcessRunner, 'run'>
+    paths: Pick<AppPaths, 'windowIcon'>
     dialogs: Pick<HostServices['dialogs'], 'showMessageBox'>
   }
 ): void {
@@ -1646,13 +1654,17 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
               verifyWinePrefix: (settings) => {
                 const { commandRunner } = state.services
                 if (!commandRunner) throw new Error('command runner not built')
-                return verifyWinePrefix({ commandRunner }, settings)
+                return verifyWinePrefix(
+                  { commandRunner, paths: ctx.paths },
+                  settings
+                )
               },
               validWine,
               setupEnvVars,
               setupWineEnvVars,
-              isUmuSupported,
-              getUmuPath
+              isUmuSupported: (settings) =>
+                isUmuSupported({ paths: ctx.paths }, settings),
+              getUmuPath: () => getUmuPath({ paths: ctx.paths })
             }
           })
         state.services.spawnAsync =
@@ -1884,6 +1896,17 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'info-caches',
+      // Builds the system-information and HowLongToBeat credential caches of this boot (D-05, 66.4-12).
+      // No I/O, no timer, no handle: each cache fetches on first use. After 'nile-runtime', before 'store-managers'.
+      run: (_ctx, _io, state) => {
+        state.services.infoCaches = prebuilt.infoCaches ?? {
+          systemInfo: createSystemInfoCache(),
+          hltb: createHltbCredentials()
+        }
+      }
+    },
+    {
       name: 'winetricks-queue',
       // Builds the one winetricks apply queue of this boot (D-05, D-66.3-12). Construction does no
       // I/O and arms no timer: it only subscribes to the environment-report change signal. Before
@@ -1920,6 +1943,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           gogRuntime,
           legendaryRuntime,
           nileRuntime,
+          infoCaches,
           signInProbe,
           steamSession,
           tokenStore,
@@ -1948,6 +1972,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !gogRuntime ||
           !legendaryRuntime ||
           !nileRuntime ||
+          !infoCaches ||
           !signInProbe ||
           !steamSession ||
           !tokenStore ||
@@ -1996,6 +2021,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           gogRuntime,
           legendaryRuntime,
           nileRuntime,
+          infoCaches,
           signIn: signInProbe,
           steamSession,
           tokenStore,
@@ -2690,6 +2716,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // inside `checkRosettaWhenMac(state.i18nReady)` -- see `rosettaCheckInitialized`'s declaration comment.
         checkRosettaWhenMac(state.i18nReady, {
           runner: ctx.runner,
+          paths: ctx.paths,
           dialogs: requireHost(state).dialogs
         })
       }

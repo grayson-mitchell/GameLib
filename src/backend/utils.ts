@@ -42,7 +42,7 @@ import type { Dialogs } from './host/dialogs'
 import type { Notifications } from './host/notifications'
 import type { OpenExternal } from './host/openExternal'
 import type { AppState } from './host/appState'
-import type { AppInfo } from './process/context'
+import type { AppInfo, AppPaths } from './process/context'
 import { validWine } from './launcher'
 import {
   installWineVersion,
@@ -54,17 +54,9 @@ import { backendEvents } from './backend_events'
 import EasyDl from 'easydl'
 
 import type { AppSettings, WineManagerStatus } from 'common/types'
-import { isUmuSupported } from './utils/compatibility_layers'
+import { isUmuSupported, type UmuDeps } from './utils/compatibility_layers'
 import { isLinux, isMac, isWindows } from './constants/environment'
-import {
-  configPath,
-  fixAsarPath,
-  gamesConfigPath,
-  heroicIconFolder,
-  publicDir,
-  toolsPath,
-  windowIcon
-} from './constants/paths'
+import { fixAsarPath } from './process/appPaths'
 import { parse } from '@node-steam/vdf'
 
 import type LogWriter from 'backend/logger/log_writer'
@@ -128,12 +120,16 @@ function semverGt(target: string, base: string) {
 const getFileSize = fileSize.partial({ base: 2 }) as (arg: unknown) => string
 
 async function getWineFromProton(
+  deps: UmuDeps,
   gameSettings: GameSettings
 ): Promise<{ winePrefix: string; wineVersion: WineInstallation }> {
   const wineVersion = gameSettings.wineVersion
   let winePrefix = gameSettings.winePrefix
 
-  if (wineVersion.type !== 'proton' || (await isUmuSupported(gameSettings))) {
+  if (
+    wineVersion.type !== 'proton' ||
+    (await isUmuSupported(deps, gameSettings))
+  ) {
     return { winePrefix, wineVersion }
   }
 
@@ -377,8 +373,11 @@ function clearAchievementCache(
   deps.stores.gog.achievementStore.delete(appName)
 }
 
-function resetHeroic(deps: { appState: Pick<AppState, 'relaunch' | 'quit'> }) {
-  const appFolders = [gamesConfigPath, configPath]
+function resetHeroic(deps: {
+  appState: Pick<AppState, 'relaunch' | 'quit'>
+  paths: Pick<AppPaths, 'gamesConfigPath' | 'configPath'>
+}) {
+  const appFolders = [deps.paths.gamesConfigPath, deps.paths.configPath]
   appFolders.forEach((folder) => {
     rmSync(folder, { recursive: true, force: true })
   })
@@ -422,7 +421,11 @@ function splitPathAndName(fullPath: string): { dir: string; bin: string } {
 // that pays no tax either, and must never be dragged into the nested branch.
 const MACOS_ONEDIR_RUNNERS = ['legendary', 'gogdl', 'nile'] as const
 
-function archSpecificBinary(binaryName: string) {
+function archSpecificBinary(
+  binaryName: string,
+  paths: Pick<AppPaths, 'publicDir'>
+) {
+  const { publicDir } = paths
   // Decide onedir nesting from the CLEAN runner name, before any
   // platform-specific suffix is appended below -- so a win32 run (whose
   // `binaryName` gets a `.exe` suffix a few lines down) can never enter the
@@ -500,51 +503,48 @@ function archSpecificBinary(binaryName: string) {
   )
 }
 
-let defaultLegendaryPath: string | undefined = undefined
 function getLegendaryBin(deps: {
   config: Pick<GlobalConfigSlice, 'getSettings'>
+  paths: Pick<AppPaths, 'publicDir'>
 }): { dir: string; bin: string } {
   const settings = deps.config.getSettings()
   if (settings?.altLegendaryBin) {
     return splitPathAndName(settings.altLegendaryBin)
   }
 
-  if (!defaultLegendaryPath)
-    defaultLegendaryPath = archSpecificBinary('legendary')
-
-  return splitPathAndName(fixAsarPath(defaultLegendaryPath))
+  return splitPathAndName(
+    fixAsarPath(archSpecificBinary('legendary', deps.paths))
+  )
 }
 
-let defaultGogdlPath: string | undefined = undefined
 function getGOGdlBin(deps: {
   config: Pick<GlobalConfigSlice, 'getSettings'>
+  paths: Pick<AppPaths, 'publicDir'>
 }): { dir: string; bin: string } {
   const settings = deps.config.getSettings()
   if (settings?.altGogdlBin) {
     return splitPathAndName(settings.altGogdlBin)
   }
 
-  if (!defaultGogdlPath) defaultGogdlPath = archSpecificBinary('gogdl')
-
-  return splitPathAndName(fixAsarPath(defaultGogdlPath))
+  return splitPathAndName(fixAsarPath(archSpecificBinary('gogdl', deps.paths)))
 }
 
-let defaultCometPath: string | undefined = undefined
 function getCometBin(deps: {
   config: Pick<GlobalConfigSlice, 'getSettings'>
+  paths: Pick<AppPaths, 'publicDir'>
 }): { dir: string; bin: string } {
   const settings = deps.config.getSettings()
   if (settings?.altCometBin) {
     return splitPathAndName(settings.altCometBin)
   }
 
-  if (!defaultCometPath) defaultCometPath = archSpecificBinary('comet')
-
-  return splitPathAndName(fixAsarPath(defaultCometPath))
+  return splitPathAndName(fixAsarPath(archSpecificBinary('comet', deps.paths)))
 }
 
-let defaultNilePath: string | undefined = undefined
-function getNileBin(deps: { config: Pick<GlobalConfigSlice, 'getSettings'> }): {
+function getNileBin(deps: {
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+  paths: Pick<AppPaths, 'publicDir'>
+}): {
   dir: string
   bin: string
 } {
@@ -553,12 +553,13 @@ function getNileBin(deps: { config: Pick<GlobalConfigSlice, 'getSettings'> }): {
     return splitPathAndName(settings.altNileBin)
   }
 
-  if (!defaultNilePath) defaultNilePath = archSpecificBinary('nile')
-
-  return splitPathAndName(fixAsarPath(defaultNilePath))
+  return splitPathAndName(fixAsarPath(archSpecificBinary('nile', deps.paths)))
 }
 
-export function createNecessaryFolders() {
+export function createNecessaryFolders(deps: {
+  paths: Pick<AppPaths, 'gamesConfigPath' | 'heroicIconFolder' | 'toolsPath'>
+}) {
+  const { gamesConfigPath, heroicIconFolder, toolsPath } = deps.paths
   const defaultFolders = [gamesConfigPath, heroicIconFolder]
 
   const necessaryFoldersByPlatform = {
@@ -857,11 +858,13 @@ const getLatestReleases = async (): Promise<Release[]> => {
   return []
 }
 
-const getCurrentChangelog = async (): Promise<Release | null> => {
+const getCurrentChangelog = async (deps: {
+  paths: Pick<AppPaths, 'publicDir'>
+}): Promise<Release | null> => {
   if (process.env.CI === 'e2e') return null
 
   try {
-    const changelogPath = join(publicDir, 'changelog.json')
+    const changelogPath = join(deps.paths.publicDir, 'changelog.json')
     const content = readFileSync(changelogPath, 'utf-8')
     return JSON.parse(content) as Release
   } catch (error) {
@@ -973,6 +976,7 @@ async function ContinueWithFoundWine(
 export async function downloadDefaultWine(deps: {
   stores: Pick<Stores, 'kvs' | 'wineManager'>
   runner: Pick<ProcessRunner, 'run'>
+  paths: Pick<AppPaths, 'toolsPath' | 'userHome' | 'configPath'>
   config: Pick<
     GlobalConfigSlice,
     'getSettings' | 'getAlternativeWine' | 'setSetting'
@@ -1017,7 +1021,8 @@ export async function downloadDefaultWine(deps: {
       const wineList = await deps.config.getAlternativeWine({
         wineDownloaderInfoStore:
           deps.stores.wineManager.wineDownloaderInfoStore,
-        runner: deps.runner
+        runner: deps.runner,
+        paths: deps.paths
       })
       // update the game config to use that wine
       const firstWine = wineList[0]
@@ -1042,6 +1047,7 @@ export async function checkWineBeforeLaunch(
   deps: {
     stores: Pick<Stores, 'kvs' | 'wineManager'>
     runner: Pick<ProcessRunner, 'run'>
+    paths: Pick<AppPaths, 'toolsPath' | 'userHome' | 'configPath'>
     config: Pick<
       GlobalConfigSlice,
       'getSettings' | 'getAlternativeWine' | 'setSetting'
@@ -1106,7 +1112,8 @@ export async function checkWineBeforeLaunch(
       const wineList = await deps.config.getAlternativeWine({
         wineDownloaderInfoStore:
           deps.stores.wineManager.wineDownloaderInfoStore,
-        runner: deps.runner
+        runner: deps.runner,
+        paths: deps.paths
       })
       const firstFoundWine = wineList[0]
 
@@ -1447,6 +1454,7 @@ async function getPathDiskSize(path: string): Promise<number> {
 
 export async function checkRosettaInstall(deps: {
   runner: Pick<ProcessRunner, 'run'>
+  paths: Pick<AppPaths, 'windowIcon'>
   dialogs: Pick<Dialogs, 'showMessageBox'>
 }) {
   // the spawn itself fails when Rosetta is not installed
@@ -1471,7 +1479,7 @@ export async function checkRosettaInstall(deps: {
         'GameLib requires Rosetta to run correctly on macOS with Apple Silicon chips. Please install it from the macOS terminal using the following command: "softwareupdate --install-rosetta" and restart GameLib. '
       ),
       buttons: ['OK'],
-      icon: windowIcon
+      icon: deps.paths.windowIcon
     })
 
     logInfo(

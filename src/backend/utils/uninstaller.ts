@@ -1,8 +1,3 @@
-import {
-  defaultWinePrefix,
-  fixesPath,
-  gamesConfigPath
-} from 'backend/constants/paths'
 import { notify } from 'backend/dialog/dialog'
 import { logError, logInfo, LogPrefix } from 'backend/logger'
 import type { ManagerDeps } from 'backend/services/types'
@@ -19,7 +14,7 @@ import { join } from 'path'
 /** R1 slice: the per-runner managers. */
 export type UninstallerDeps = Pick<
   ManagerDeps,
-  'libraryManagers' | 'notifications'
+  'libraryManagers' | 'notifications' | 'paths'
 > & { config: Pick<GlobalConfigSlice, 'getSettings'> }
 
 export const removePrefix = async (
@@ -55,6 +50,7 @@ export const removePrefix = async (
   }
 
   // keep this check for backwards compatibility
+  const { defaultWinePrefix } = deps.paths
   if (winePrefix === defaultWinePrefix) {
     logInfo(
       `Can't delete folder ${winePrefix}, prefix folder is the default prefix directory ${defaultWinePrefix}`
@@ -80,23 +76,30 @@ export const removePrefix = async (
   rmSync(winePrefix, { recursive: true })
 }
 
-export const removeFixFile = (appName: string, runner: Runner) => {
+export const removeFixFile = (
+  deps: Pick<UninstallerDeps, 'paths'>,
+  appName: string,
+  runner: Runner
+) => {
   // The downloaded tier-1 copy is re-fetched at install from GameLib's repo for
   // every store (quick 261026-avw), so deleting it is safe. Local
   // (`fixes/local/`) and bundled files live elsewhere and are never touched;
   // `.profile.json` is never downloaded and is not deleted.
   const store = storeMap[runner]
   if (!store) return
-  const fixFilePath = join(fixesPath, `${appName}-${store}.json`)
+  const fixFilePath = join(deps.paths.fixesPath, `${appName}-${store}.json`)
   if (existsSync(fixFilePath)) {
     rmSync(fixFilePath)
   }
 }
 
-const removeSettingsAndLogs = (appName: string) => {
+const removeSettingsAndLogs = (
+  deps: Pick<UninstallerDeps, 'paths'>,
+  appName: string
+) => {
   const removeIfExists = (filename: string) => {
     logInfo(`Removing ${filename}`, LogPrefix.Backend)
-    const gameSettingsFile = join(gamesConfigPath, filename)
+    const gameSettingsFile = join(deps.paths.gamesConfigPath, filename)
     if (existsSync(gameSettingsFile)) {
       rmSync(gameSettingsFile)
     }
@@ -176,9 +179,9 @@ export const uninstallGameCallback = async (
       removePrefix(deps, appName, runner)
     }
     if (shouldRemoveSetting) {
-      removeSettingsAndLogs(appName)
+      removeSettingsAndLogs(deps, appName)
     }
-    removeFixFile(appName, runner)
+    removeFixFile(deps, appName, runner)
 
     // GAME-03: Steam uninstall is confirmed by the ACF poller (pollUninstallOnce),
     // which fires the "Game Uninstalled" toast when the manifest disappears.

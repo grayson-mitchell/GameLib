@@ -56,6 +56,7 @@ jest.mock('graceful-fs', () => ({
   existsSync: jest.fn()
 }))
 
+import { createTestInfoCaches } from 'backend/testUtils/testEpicAmazonRuntimes'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { existsSync } from 'graceful-fs'
 import { mkdirSync, rmSync, symlinkSync } from 'fs'
@@ -97,6 +98,7 @@ function hostSlices() {
     notifications: host.notifications,
     config: createTestGlobalConfig(),
     paths: createPathShimPaths(),
+    infoCaches: createTestInfoCaches(),
     imageTools: host.imageTools
   }
 }

@@ -26,6 +26,7 @@ jest.mock('backend/constants/environment', () => ({
   isFlatpak: false
 }))
 
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { checkRosettaWhenMac } from '../bootstrap'
@@ -43,6 +44,7 @@ describe('checkRosettaWhenMac() platform gate (todo 2026-09-06, quick-260908-k3x
     const runner = createScriptedRunner([])
     checkRosettaWhenMac(Promise.resolve(), {
       runner,
+      paths: createTestAppPaths('/fake/root'),
       dialogs: createTestHostServices().dialogs
     })
     await flush()

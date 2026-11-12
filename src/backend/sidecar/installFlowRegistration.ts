@@ -133,7 +133,10 @@ import type { IpcRegistry } from './ipcRegistry'
 // init order differs) — this fix is per-file, not "once is enough", because
 // each curated registration module is its own independent entry point into
 // the bundle's module graph.
-import { uninstallGameCallback } from '../utils/uninstaller'
+import {
+  uninstallGameCallback,
+  type UninstallerDeps
+} from '../utils/uninstaller'
 import { checkGameUpdates } from '../utils/checkGameUpdates'
 import { listSteamLibraryTargets } from '../storeManagers/steam/installLocation'
 import {
@@ -153,7 +156,6 @@ import {
   managerDepsFromServices,
   type ManagerDepsSource
 } from '../services/managerDeps'
-import type { StoreManagers } from '../services/types'
 import { resolveGameTitle } from '../downloadmanager/utils'
 // Plan 34.6-06 (REQ-34.6-04): byte-equivalent port of moveInstall/importGame
 // (main.ts:1112-1245, D-02). getGame/isEpicServiceOffline/sendGameStatusUpdate/writeConfig are
@@ -249,7 +251,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
   deps.ipc.handle('uninstall', (event: unknown, ...args: unknown[]) =>
     (
       uninstallGameCallback as (
-        deps: { libraryManagers: StoreManagers['library'] },
+        deps: UninstallerDeps,
         event: unknown,
         appName: string,
         runner: Runner,
@@ -257,7 +259,12 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
         shouldRemoveSetting: boolean
       ) => Promise<void>
     )(
-      { libraryManagers: deps.managers.library },
+      {
+        libraryManagers: deps.managers.library,
+        config: deps.config,
+        notifications: deps.host.notifications,
+        paths: deps.paths
+      },
       event,
       args[0] as string,
       args[1] as Runner,

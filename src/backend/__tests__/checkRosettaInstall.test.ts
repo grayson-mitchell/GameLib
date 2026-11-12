@@ -1,4 +1,5 @@
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { checkRosettaInstall } from '../utils'
 
 jest.mock('../logger')
@@ -10,6 +11,7 @@ jest.mock('../constants/environment', () => ({
 
 const dialog = { showMessageBox: jest.fn() }
 
+const paths = createTestAppPaths('/fake/root')
 const ARCH_ARGV = ['-x86_64', '/usr/sbin/sysctl', 'sysctl.proc_translated']
 
 describe('backend/utils.ts: checkRosettaInstall', () => {
@@ -19,7 +21,7 @@ describe('backend/utils.ts: checkRosettaInstall', () => {
     ])
 
     await expect(
-      checkRosettaInstall({ runner, dialogs: dialog })
+      checkRosettaInstall({ runner, paths, dialogs: dialog })
     ).resolves.toBeUndefined()
 
     expect(dialog.showMessageBox).toHaveBeenCalledTimes(1)
@@ -35,7 +37,7 @@ describe('backend/utils.ts: checkRosettaInstall', () => {
     ])
 
     await expect(
-      checkRosettaInstall({ runner, dialogs: dialog })
+      checkRosettaInstall({ runner, paths, dialogs: dialog })
     ).resolves.toBeUndefined()
 
     expect(dialog.showMessageBox).not.toHaveBeenCalled()
@@ -48,7 +50,7 @@ describe('backend/utils.ts: checkRosettaInstall', () => {
     ])
 
     await expect(
-      checkRosettaInstall({ runner, dialogs: dialog })
+      checkRosettaInstall({ runner, paths, dialogs: dialog })
     ).resolves.toBeUndefined()
   })
 
@@ -58,7 +60,7 @@ describe('backend/utils.ts: checkRosettaInstall', () => {
       { cmd: 'arch', argv: ARCH_ARGV, result: { code: 1 } }
     ])
 
-    await checkRosettaInstall({ runner, dialogs: dialog })
+    await checkRosettaInstall({ runner, paths, dialogs: dialog })
 
     expect(dialog.showMessageBox).toHaveBeenCalledTimes(1)
   })
@@ -73,7 +75,7 @@ describe('backend/utils.ts: checkRosettaInstall', () => {
       }
     ])
 
-    await checkRosettaInstall({ runner, dialogs: dialog })
+    await checkRosettaInstall({ runner, paths, dialogs: dialog })
 
     expect(dialog.showMessageBox).toHaveBeenCalledTimes(1)
   })

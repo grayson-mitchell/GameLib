@@ -17,6 +17,7 @@
 import { Release } from 'common/types'
 
 import type { GlobalConfigSlice } from '../config'
+import type { AppPaths } from '../process/context'
 import { getLatestReleases, getCurrentChangelog } from '../utils'
 
 export async function getLatestReleasesForStartup(deps: {
@@ -30,6 +31,8 @@ export async function getLatestReleasesForStartup(deps: {
   }
 }
 
-export async function getCurrentChangelogEntry(): Promise<Release | null> {
-  return getCurrentChangelog()
+export async function getCurrentChangelogEntry(deps: {
+  paths: Pick<AppPaths, 'publicDir'>
+}): Promise<Release | null> {
+  return getCurrentChangelog(deps)
 }

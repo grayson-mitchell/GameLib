@@ -47,13 +47,14 @@ jest.mock('../sidecarRpc', () => ({
 // (the curated-import boundary, formatted-string forwarding), not systeminfo's real CPU/GPU/OS
 // gathering ──────────────────────────────────────────────────────────────────────────────────
 jest.mock('../../utils/systeminfo', () => ({
-  getSystemInfo: jest.fn(),
+  createSystemInfoCache: jest.fn(),
   formatSystemInfo: jest.fn()
 }))
 
 // ── Imports (after mocks) ───────────────────────────────────────────────────────────────────
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { createTestStores } from 'backend/testUtils/testServices'
+import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { TEST_APP_INFO } from 'backend/testUtils/testContext'
 import { defined } from 'backend/testUtils/indexed'
 import { registerClipboardFlows } from '../clipboardFlowRegistration'
@@ -62,7 +63,7 @@ import { createIpcRegistry } from '../ipcRegistry'
 const ipc = createIpcRegistry()
 import { createTestHostServices } from '../../testUtils/testHostServices'
 import { requestRustInvoke } from '../sidecarRpc'
-import { getSystemInfo, formatSystemInfo } from '../../utils/systeminfo'
+import { formatSystemInfo } from '../../utils/systeminfo'
 import {
   RUST_CLIPBOARD_WRITE_TEXT,
   RUST_CLIPBOARD_READ_TEXT
@@ -73,7 +74,7 @@ type ProgrammedOutcome =
   | { type: 'reject'; error: Error }
 
 const mockRequestRustInvoke = requestRustInvoke as jest.Mock
-const mockGetSystemInfo = getSystemInfo as jest.Mock
+const mockGetSystemInfo = jest.fn()
 const mockFormatSystemInfo = formatSystemInfo as jest.Mock
 
 let program: ProgrammedOutcome | null = null
@@ -144,6 +145,12 @@ registerClipboardFlows({
   appState: host.appState,
   managers: { library: {} } as never,
   stores: createTestStores(),
+  infoCaches: {
+    systemInfo: {
+      getSystemInfo: (...args: unknown[]) => mockGetSystemInfo(...args)
+    }
+  },
+  paths: createTestAppPaths('/fake/root'),
   runner: {} as never,
   config: createTestGlobalConfig(),
   appInfo: TEST_APP_INFO

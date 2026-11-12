@@ -35,6 +35,7 @@ import {
 } from './constants/paths'
 import { join } from 'path'
 import type { ProcessRunner } from './process/types'
+import type { AppPaths } from './process/context'
 import { updateWineVersionInfos } from './wine/manager/utils'
 import type { Stores } from './services/types'
 
@@ -101,18 +102,22 @@ abstract class GlobalConfig {
    **/
   public async getMacOsWineSet(deps: {
     runner: Pick<ProcessRunner, 'run'>
+    paths: Pick<AppPaths, 'toolsPath' | 'userHome'>
   }): Promise<Set<WineInstallation>> {
     if (!isMac) {
       return new Set<WineInstallation>()
     }
 
     const discovery = { runner: deps.runner }
-    const getGPTKWine = await getGamePortingToolkitWine()
+    const getGPTKWine = await getGamePortingToolkitWine(deps)
     const getSystemGPTK = await getSystemGamePortingToolkitWine(discovery)
     const crossover = await getCrossover(discovery)
-    const wineOnMac = await getWineOnMac(discovery)
-    const wineskinWine = await getWineskinWine(discovery)
-    const whiskyWine = await getWhisky()
+    const wineOnMac = await getWineOnMac({ ...discovery, paths: deps.paths })
+    const wineskinWine = await getWineskinWine({
+      ...discovery,
+      paths: deps.paths
+    })
+    const whiskyWine = await getWhisky(deps)
 
     return new Set([
       ...getGPTKWine,
@@ -133,6 +138,7 @@ abstract class GlobalConfig {
     deps: {
       wineDownloaderInfoStore: Stores['wineManager']['wineDownloaderInfoStore']
       runner: Pick<ProcessRunner, 'run'>
+      paths: Pick<AppPaths, 'toolsPath' | 'userHome' | 'configPath'>
     },
     scanCustom = true
   ): Promise<WineInstallation[]> {

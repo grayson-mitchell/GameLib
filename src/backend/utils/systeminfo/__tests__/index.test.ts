@@ -51,7 +51,7 @@ jest.mock('../../helperBinaries', () => ({
   getNileVersion: (...args: unknown[]) => mockGetNileVersion(...args)
 }))
 
-import { getSystemInfo, __resetSystemInfoCacheForTests } from '../index'
+import { createSystemInfoCache } from '../index'
 import type { SystemInfoDeps } from '../index'
 
 // The version probes are mocked above, so the managers are never asked; the slice only has
@@ -67,8 +67,12 @@ function flushMicrotasks() {
 }
 
 describe('debug/gog-spawn-reduction fix 3 -- getSystemInfo(deps) in-flight-promise memoization', () => {
+  let cache: ReturnType<typeof createSystemInfoCache>
+  const getSystemInfo = (d: SystemInfoDeps, useCache?: boolean) =>
+    cache.getSystemInfo(d, useCache)
+
   beforeEach(() => {
-    __resetSystemInfoCacheForTests()
+    cache = createSystemInfoCache()
     mockGetGpuInfo.mockResolvedValue([])
     mockGetMemoryInfo.mockResolvedValue({ total: 100, used: 50 })
     mockGetOsInfo.mockResolvedValue({ name: 'Test OS', version: '1.0' })
@@ -120,5 +124,13 @@ describe('debug/gog-spawn-reduction fix 3 -- getSystemInfo(deps) in-flight-promi
     // unboundedly duplicated the way the pre-fix race allowed.
     expect(mockGetGogdlVersion.mock.calls.length).toBeGreaterThanOrEqual(1)
     expect(mockGetGogdlVersion.mock.calls.length).toBeLessThanOrEqual(2)
+  })
+
+  it('a second cache instance fetches again: nothing is shared between instances', async () => {
+    await getSystemInfo(deps)
+    const other = createSystemInfoCache()
+    await other.getSystemInfo(deps)
+
+    expect(mockGetGogdlVersion).toHaveBeenCalledTimes(2)
   })
 })

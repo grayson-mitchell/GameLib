@@ -139,10 +139,14 @@ const managerStubs = {
 // `backend/storeManagers`/`backend/storeManagers/steam/state` boundaries
 // above — this suite proves the CHANNEL WIRING reaches the real
 // `getSystemInfo` export, not the OS-probing internals underneath it ────────
-jest.mock('backend/utils/systeminfo', () => ({
-  getSystemInfo: jest.fn(),
-  formatSystemInfo: jest.fn()
-}))
+jest.mock('backend/utils/systeminfo', () => {
+  const getSystemInfo = jest.fn()
+  return {
+    createSystemInfoCache: () => ({ getSystemInfo }),
+    getSystemInfo,
+    formatSystemInfo: jest.fn()
+  }
+})
 
 // ── backend/utils/os/path mock (Phase 31 Plan 01) — `hasExecutable`
 // (ported this plan) shells out to a real `which`/`where` subprocess via
@@ -166,7 +170,7 @@ import type { AppSettings, GameSettings } from 'common/types'
 // One boot-owned Steam session cluster per case (D-05, D-66.3-13); the boot is handed it as a prebuilt service.
 let steamSession: import('backend/services/types').SteamSessionServices
 let steamLibrary: Map<string, import('common/types').GameInfo>
-let mockedGetSystemInfo: typeof import('backend/utils/systeminfo').getSystemInfo
+let mockedGetSystemInfo: jest.Mock
 let mockedHasExecutable: typeof import('backend/utils/os/path').hasExecutable
 let mockedGlobalConfigGet: jest.Mock
 let mockedGameConfigGet: jest.Mock
@@ -515,7 +519,7 @@ describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
     // `skeletonFlows.test.ts`'s own beforeEach re-establishment of `getSteamLibraries`.
     jest.mocked(mockedGetSystemInfo).mockResolvedValue({
       isFlatpak: false
-    } as unknown as Awaited<ReturnType<typeof mockedGetSystemInfo>>)
+    })
     jest.mocked(mockedHasExecutable).mockResolvedValue(true)
   })
 

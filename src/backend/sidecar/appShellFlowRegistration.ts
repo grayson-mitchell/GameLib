@@ -201,7 +201,7 @@ import type {
 import type { IpcRegistry } from './ipcRegistry'
 import type { AppState } from '../host/appState'
 import type { OpenExternal } from '../host/openExternal'
-import type { AppInfo } from '../process/context'
+import type { AppInfo, AppPaths } from '../process/context'
 import { requestRustInvoke } from './sidecarRpc'
 import { RUST_TRAY_SET_ICON } from '../../common/types/sidecarTransport'
 import {
@@ -278,6 +278,7 @@ export interface AppShellFlowDeps extends DialogBoxDeps, NotifyDeps {
   config: Pick<GlobalConfigSlice, 'getSettings' | 'setSetting'>
   ipc: Pick<IpcRegistry, 'handle' | 'on'>
   appInfo: Pick<AppInfo, 'version'>
+  paths: Pick<AppPaths, 'publicDir'>
   openExternal: Pick<OpenExternal, 'openExternal'>
   appState: Pick<
     AppState,
@@ -326,7 +327,9 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
     getLatestReleasesForStartup(deps)
   )
 
-  deps.ipc.handle('getCurrentChangelog', async () => getCurrentChangelogEntry())
+  deps.ipc.handle('getCurrentChangelog', async () =>
+    getCurrentChangelogEntry(deps)
+  )
 
   deps.ipc.handle('getWebviewPreloadPath', async () => {
     if (!webviewPreloadPathWarned) {

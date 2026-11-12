@@ -26,6 +26,7 @@ import { checkBottleEligibility } from './gameEligibility'
 import { getBridgeRouteVerdict } from './bridgeRouteVerdict'
 import type { ManagerDeps, Stores } from 'backend/services/types'
 import type { ProcessRunner } from 'backend/process/types'
+import type { AppPaths } from 'backend/process/context'
 import type { SteamStoresDeps } from './library/installRoot'
 import type { SteamBottle } from './bottle'
 import { depotSignalCaptured } from './metadataCapture'
@@ -227,6 +228,7 @@ export async function persistInstallFormWineVersion(
     stores: Pick<Stores, 'wineManager'>
     runner: Pick<ProcessRunner, 'run'>
     config: Pick<GlobalConfigSlice, 'getAlternativeWine'>
+    paths: Pick<AppPaths, 'toolsPath' | 'userHome' | 'configPath'>
     steamBottle: Pick<SteamBottle, 'persistBottleWineVersion'>
   },
   input: unknown
@@ -298,7 +300,8 @@ export async function persistInstallFormWineVersion(
   try {
     detected = await deps.config.getAlternativeWine({
       wineDownloaderInfoStore: deps.stores.wineManager.wineDownloaderInfoStore,
-      runner: deps.runner
+      runner: deps.runner,
+      paths: deps.paths
     })
   } catch (error) {
     logWarning(

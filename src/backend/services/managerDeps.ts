@@ -30,6 +30,7 @@ export type ManagerDepsSource = Pick<
   | 'gogRuntime'
   | 'legendaryRuntime'
   | 'nileRuntime'
+  | 'infoCaches'
   | 'signInProbe'
   | 'steamSession'
   | 'tokenStore'
@@ -71,6 +72,7 @@ export function managerDepsFromServices(
     gogRuntime: source.gogRuntime,
     legendaryRuntime: source.legendaryRuntime,
     nileRuntime: source.nileRuntime,
+    infoCaches: source.infoCaches,
     signIn: {
       epochs: source.signInProbe.epochs,
       outcomes: source.signInProbe.outcomes

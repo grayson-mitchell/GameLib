@@ -57,7 +57,7 @@ import type { IpcRegistry } from './ipcRegistry'
 import type { AppState } from '../host/appState'
 import { requestRustInvoke } from './sidecarRpc'
 import { RUST_CLIPBOARD_READ_TEXT } from '../../common/types/sidecarTransport'
-import { getSystemInfo, formatSystemInfo } from '../utils/systeminfo'
+import { formatSystemInfo } from '../utils/systeminfo'
 import type { BootServices, StoreManagers, Stores } from '../services/types'
 
 function logSendFailure(channel: string, error: unknown): void {
@@ -75,6 +75,9 @@ export interface ClipboardFlowDeps {
   appInfo: Pick<AppInfo, 'version'>
   managers: Pick<StoreManagers, 'library'>
   stores: Pick<Stores, 'systemInfo'>
+  /** The boot-owned system-information cache (66.4-12). */
+  infoCaches: Pick<BootServices['infoCaches'], 'systemInfo'>
+  paths: Pick<BootServices['paths'], 'publicDir'>
   /** The boot process runner (66.2); consumers converted by 66.2-05. */
   runner: BootServices['runner']
 }
@@ -125,12 +128,13 @@ export function registerClipboardFlows(deps: ClipboardFlowDeps): void {
   deps.ipc.on('copySystemInfoToClipboard', () => {
     void (async () => {
       try {
-        const info = await getSystemInfo({
+        const info = await deps.infoCaches.systemInfo.getSystemInfo({
           libraryManagers: deps.managers.library,
           runner: deps.runner,
           config: deps.config,
           appInfo: deps.appInfo,
-          stores: deps.stores
+          stores: deps.stores,
+          paths: deps.paths
         })
         const formatted = await formatSystemInfo(info)
         deps.appState.writeClipboardText(formatted)

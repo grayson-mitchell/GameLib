@@ -11,12 +11,7 @@ import LaunchCommand from '../storeManagers/legendary/commands/launch'
 import { NonEmptyString } from '../storeManagers/legendary/commands/base'
 import { Path } from 'backend/schemas'
 import { findExecutableOnPath, searchForExecutableOnPath } from './os/path'
-import {
-  configPath,
-  defaultUmuPath,
-  toolsPath,
-  userHome
-} from 'backend/constants/paths'
+import type { AppPaths } from 'backend/process/context'
 import { isLinux, isMac } from 'backend/constants/environment'
 
 /** Runner slice the wine discovery functions need: they only ever call `run`. */
@@ -25,7 +20,11 @@ export type WineDiscoveryDeps = { runner: Pick<ProcessRunner, 'run'> }
 /** Linux discovery also reads the global settings (custom wine paths, Valve Proton). */
 export type LinuxWineDiscoveryDeps = WineDiscoveryDeps & {
   config: Pick<GlobalConfigSlice, 'getSettings'>
+  paths: Pick<AppPaths, 'toolsPath' | 'configPath'>
 }
+
+/** The path slice the umu helpers read. */
+export type UmuDeps = { paths: Pick<AppPaths, 'defaultUmuPath'> }
 
 // mdfind reads the Spotlight index; generous for a cold index (unmeasured, 66.2 research A1).
 const MDFIND_TIMEOUT_MS = 10_000
@@ -79,10 +78,11 @@ export function getDefaultWineBinary(): WineInstallation {
 
 function getCustomWinePaths(deps: {
   config: Pick<GlobalConfigSlice, 'getSettings'>
+  paths: Pick<AppPaths, 'configPath'>
 }): Set<WineInstallation> {
   const customPaths = new Set<WineInstallation>()
   // skips this on new installations to avoid infinite loops
-  if (existsSync(configPath)) {
+  if (existsSync(deps.paths.configPath)) {
     const { customWinePaths = [] } = deps.config.getSettings()
     customWinePaths.forEach((path: string) => {
       if (path.endsWith('proton')) {
@@ -144,6 +144,7 @@ export async function getLinuxWineSet(
   deps: LinuxWineDiscoveryDeps,
   scanCustom?: boolean
 ): Promise<Set<WineInstallation>> {
+  const { toolsPath } = deps.paths
   if (!existsSync(`${toolsPath}/wine`)) {
     mkdirSync(`${toolsPath}/wine`, { recursive: true })
   }
@@ -254,12 +255,13 @@ export async function getLinuxWineSet(
  * @returns Promise<Set<WineInstallation>>
  */
 export async function getWineOnMac(
-  deps: WineDiscoveryDeps
+  deps: WineDiscoveryDeps & { paths: Pick<AppPaths, 'toolsPath'> }
 ): Promise<Set<WineInstallation>> {
   const wineSet = new Set<WineInstallation>()
   if (!isMac) {
     return wineSet
   }
+  const { toolsPath } = deps.paths
 
   const winePaths = new Set<string>()
 
@@ -316,12 +318,13 @@ export async function getWineOnMac(
 }
 
 export async function getWineskinWine(
-  deps: WineDiscoveryDeps
+  deps: WineDiscoveryDeps & { paths: Pick<AppPaths, 'userHome'> }
 ): Promise<Set<WineInstallation>> {
   const wineSet = new Set<WineInstallation>()
   if (!isMac) {
     return wineSet
   }
+  const { userHome } = deps.paths
   const wineSkinPath = `${userHome}/Applications/Wineskin`
   if (existsSync(wineSkinPath)) {
     const apps = readdirSync(wineSkinPath)
@@ -415,13 +418,14 @@ export async function getCrossover(
  * Detects Gaming Porting Toolkit Wine installs on Mac
  * @returns Promise<Set<WineInstallation>>
  **/
-export async function getGamePortingToolkitWine(): Promise<
-  Set<WineInstallation>
-> {
+export async function getGamePortingToolkitWine(deps: {
+  paths: Pick<AppPaths, 'toolsPath'>
+}): Promise<Set<WineInstallation>> {
   const gamePortingToolkitWine = new Set<WineInstallation>()
   if (!isMac) {
     return gamePortingToolkitWine
   }
+  const { toolsPath } = deps.paths
 
   const GPTK_ToolPath = join(toolsPath, 'game-porting-toolkit')
   const wineGPTKPaths = new Set<string>()
@@ -521,12 +525,15 @@ export async function getSystemGamePortingToolkitWine(
  *
  * @returns Promise<Set<WineInstallation>>
  */
-export async function getWhisky(): Promise<Set<WineInstallation>> {
+export async function getWhisky(deps: {
+  paths: Pick<AppPaths, 'userHome'>
+}): Promise<Set<WineInstallation>> {
   const whisky = new Set<WineInstallation>()
 
   if (!isMac) {
     return whisky
   }
+  const { userHome } = deps.paths
 
   const whiskyWinePath = join(
     userHome,
@@ -580,6 +587,7 @@ export type AllowedWineFlags = Pick<
  * @param wrapper Any wrappers to be used, may be `''`
  */
 export async function getWineFlags(
+  deps: UmuDeps,
   gameSettings: GameSettings,
   wrapper: string
 ): Promise<AllowedWineFlags> {
@@ -605,9 +613,9 @@ export async function getWineFlags(
           `${wrapper} "${wineBin}" waitforexitandrun`
         )
       }
-      if (await isUmuSupported(gameSettings)) {
+      if (await isUmuSupported(deps, gameSettings)) {
         partialCommand['--wrapper'] = NonEmptyString.parse(
-          (wrapper ? `${wrapper} ` : '') + `"${await getUmuPath()}"`
+          (wrapper ? `${wrapper} ` : '') + `"${await getUmuPath(deps)}"`
         )
       }
       break
@@ -627,10 +635,11 @@ export async function getWineFlags(
  * Like {@link getWineFlags}, but returns a `string[]` with the flags instead
  */
 export async function getWineFlagsArray(
+  deps: UmuDeps,
   gameSettings: GameSettings,
   wrapper: string
 ): Promise<string[]> {
-  const partialCommand = await getWineFlags(gameSettings, wrapper)
+  const partialCommand = await getWineFlags(deps, gameSettings, wrapper)
 
   const commandArray: string[] = []
   for (const [key, value] of Object.entries(partialCommand)) {
@@ -640,10 +649,13 @@ export async function getWineFlagsArray(
   return commandArray
 }
 
-export const getUmuPath = async () =>
-  searchForExecutableOnPath('umu-run').then((path) => path ?? defaultUmuPath)
+export const getUmuPath = async (deps: UmuDeps) =>
+  searchForExecutableOnPath('umu-run').then(
+    (path) => path ?? deps.paths.defaultUmuPath
+  )
 
 export async function isUmuSupported(
+  deps: UmuDeps,
   gameSettings: GameSettings,
   checkUmuInstalled = true
 ): Promise<boolean> {
@@ -653,7 +665,7 @@ export async function isUmuSupported(
     return false
   }
   if (!checkUmuInstalled) return true
-  if (!existsSync(await getUmuPath())) return false
+  if (!existsSync(await getUmuPath(deps))) return false
 
   return true
 }

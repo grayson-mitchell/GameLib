@@ -185,6 +185,8 @@ export function registerHandlers(deps: {
     config: deps.services.config,
     gameConfigs: deps.services.gameConfigs,
     appInfo: deps.services.appInfo,
+    infoCaches: deps.services.infoCaches,
+    paths: deps.services.paths,
     steamSession: deps.services.steamSession
   })
   // D-35-19-15's live gate: a DEV-ONLY single-host Epic cookie sweep, so the
@@ -238,6 +240,7 @@ export function registerHandlers(deps: {
     dialogs: deps.services.host.dialogs,
     appState: deps.services.host.appState,
     notifications: deps.services.host.notifications,
+    paths: deps.services.paths,
     skipInitialTraySync: process.env.JEST_WORKER_ID !== undefined
   })
   // Phase 34.2 Plans 04+05: the game-details/settings/override channels — no
@@ -265,6 +268,7 @@ export function registerHandlers(deps: {
     stores: deps.services.stores,
     appInfo: deps.services.appInfo,
     onlineMonitor: deps.services.onlineMonitor,
+    infoCaches: deps.services.infoCaches,
     gogRuntime: deps.services.gogRuntime,
     paths: deps.services.paths,
     steamGridSecrets: deps.services.steamGridSecrets
@@ -296,7 +300,9 @@ export function registerHandlers(deps: {
     stores: deps.services.stores,
     runner: deps.services.runner,
     config: deps.services.config,
-    appInfo: deps.services.appInfo
+    appInfo: deps.services.appInfo,
+    infoCaches: deps.services.infoCaches,
+    paths: deps.services.paths
   })
   // Phase 34.2 gap cycle 2, plan 34.2-16 (REQ-34.2-12), extended by Phase 34.3
   // plan 04: the logger channels. `logError` was ported early from its Phase
@@ -382,6 +388,7 @@ export function registerHandlers(deps: {
     managers: deps.services.managers,
     quit: deps.services.quit,
     stores: deps.services.stores,
+    infoCaches: deps.services.infoCaches,
     runner: deps.services.runner,
     config: deps.services.config,
     paths: deps.services.paths,
