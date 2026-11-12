@@ -9,6 +9,7 @@ import {
 import type { DepotErrorAction } from '../depotErrors'
 import { downloadSteamDepotsRust } from '../depotRust/install'
 import { downloadSelectedDepotFilesRust } from '../depotRust/secondary'
+import type { RustDeltaReport } from '../depotRust/types'
 
 interface DepotDownloadOutcome {
   status: 'done' | 'error' | 'cancelled'
@@ -20,6 +21,8 @@ interface DepotDownloadOutcome {
   /** 37-02 (D-06/D-07): the affordance classifyDepotError assigned to `error`, so games.ts can
    *  render the right dialog without re-classifying. Undefined on every non-error status. */
   errorAction?: DepotErrorAction
+  /** Phase 74: the Rust delta report of a delta job (any status); absent otherwise. */
+  delta?: RustDeltaReport
 }
 
 /**

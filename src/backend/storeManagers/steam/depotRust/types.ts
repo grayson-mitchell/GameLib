@@ -11,7 +11,7 @@ export interface RustDepotRef {
   /** 64 hex chars (AES-256 depot key). Never logged. */
   key: string
   ownerAppId: string
-  /** D-05: must be null/absent in phase 73. */
+  /** Phase 74: the installed GID (string); `Some` = chunk-level delta from it. Null/absent = full install. */
   fromManifest?: string | null
 }
 
@@ -51,6 +51,8 @@ export interface RustDepotJob {
   selectPaths: string[] | null
   finalize: RustFinalizeSpec | null
   limits: RustJobLimits | null
+  /** Phase 74: installed depots the new build dropped; `manifestId` is the OLD GID. [] for non-delta jobs. */
+  retiredDepots: RustDepotRef[]
 }
 
 interface RustPlannedDepot {
@@ -86,6 +88,7 @@ export type RustJobEvent = { jobId: string; seq: number } & (
     }
   | { kind: 'warning'; message: string; count: number }
   | { kind: 'hostSummary'; hosts: RustHostStat[] }
+  | { kind: 'stage'; stage: 'delta_planning' | 'delta_committing' }
 )
 
 /** Sorted; identical to outcome.rs `ERROR_KINDS`. */
@@ -122,6 +125,28 @@ export interface RustFailure {
   msSinceProgress: number | null
 }
 
+export type RustDeltaMode = 'chunk' | 'commit_resume' | 'file_fallback'
+
+/** outcome.rs `DeltaReport`; file names are manifest-form. */
+export interface RustDeltaReport {
+  mode: RustDeltaMode
+  changedFiles: string[]
+  removedFiles: string[]
+  reusedBytes: number
+  cdnBytes: number
+  peakBytes: number
+  committed: boolean
+}
+
+/** job.rs `DeltaEstimate`: manifest-to-manifest update estimate, no local hashing. */
+export interface RustDeltaEstimate {
+  oldManifestAvailable: boolean
+  changedBytes: number
+  maxDownloadBytes: number
+  changedFiles: number
+  removedFiles: number
+}
+
 export interface RustOutcome {
   jobId: string
   status: 'completed' | 'cancelled' | 'error'
@@ -134,6 +159,8 @@ export interface RustOutcome {
   acf: { stateFlags: string; sizeOnDisk: string } | null
   missing: string[] | null
   files: { filename: string; size: number; sha1: string }[] | null
+  /** Phase 74: present on delta jobs only. */
+  delta?: RustDeltaReport
   stats: {
     bytesFetched: number
     chunksFetched: number
@@ -159,6 +186,8 @@ interface RustDepotSummary {
   matches: string[]
   /** InstallScript-flagged (256) filenames as the manifest spells them (73-19). */
   installscripts: string[]
+  /** Phase 74: present only when the request carried `fromManifest` for this depot. */
+  delta?: RustDeltaEstimate
 }
 
 /** Either the per-depot summaries or the failure that stopped them. */

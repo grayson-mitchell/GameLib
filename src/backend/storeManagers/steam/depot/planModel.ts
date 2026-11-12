@@ -95,6 +95,9 @@ export interface DownloadSteamDepotsOpts {
    *  acquires. Defaults to 'user-install'; prescreenBridgeDepots passes
    *  'prescreen'. Never user-facing. */
   sessionReason?: AuthSessionReason
+  /** Phase 74: run as a chunk-level delta. Installed GIDs as strings read from the raw ACF,
+   *  never vdf-parsed (they exceed 2^53). Depots in the map but not selected are retired. */
+  delta?: { oldGidByDepot: ReadonlyMap<string, string> }
 }
 
 /** Narrow, ADDITIONAL view of PICS appinfo's `common.name` field — not part of

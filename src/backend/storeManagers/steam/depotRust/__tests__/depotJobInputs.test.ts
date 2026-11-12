@@ -11,7 +11,11 @@ const steamUser = createMockSteamUser()
 import { mockLeaseOk } from '../../__tests__/depotLeaseMocks'
 import { selectAllDepots } from '../../depot/select'
 import { getFileSize, sendProgressUpdate } from 'backend/utils'
-import { buildDepotJob, orderRefsForCollisions } from '../jobBuilder'
+import {
+  buildDepotJob,
+  orderRefsForCollisions,
+  toRustDepotRefs
+} from '../jobBuilder'
 import { createProgressBridge } from '../progressBridge'
 import type { RustJobEvent } from '../types'
 
@@ -308,5 +312,57 @@ describe('progress bridge', () => {
     t += 1000
     bridge.onEvent(ev(4, 11, 11, 1_000_000))
     expect(sendProgressUpdate).toHaveBeenCalledTimes(3)
+  })
+})
+
+describe('delta job inputs (Phase 74)', () => {
+  const entry = (depotId: string, gid: string) => ({
+    depotId,
+    gid,
+    key: Buffer.alloc(32, 0xab),
+    ownerAppId: '1'
+  })
+  const hosts = { hosts: [], weightedLoads: new Map(), hostMeta: new Map() }
+
+  it('toRustDepotRefs sends fromManifest only for depots in the map', () => {
+    const refs = [entry('333302', '2'), entry('333303', '3')]
+    expect(toRustDepotRefs(refs).map((r) => r.fromManifest)).toEqual([
+      null,
+      null
+    ])
+    const out = toRustDepotRefs(
+      refs,
+      new Map([['333302', '1547379086645511101']])
+    )
+    expect(out.find((r) => r.depotId === '333302')?.fromManifest).toBe(
+      '1547379086645511101'
+    )
+    expect(out.find((r) => r.depotId === '333303')?.fromManifest).toBeNull()
+  })
+
+  it('buildDepotJob always emits retiredDepots, carrying the old gid and key', () => {
+    const base = {
+      appId: '1',
+      mode: 'install' as const,
+      installRoot: '/x',
+      refs: [entry('1', '2')],
+      hosts,
+      finalize: null
+    }
+    expect(buildDepotJob(base).retiredDepots).toEqual([])
+    const job = buildDepotJob({
+      ...base,
+      retiredDepots: [entry('9', '999')]
+    })
+    expect(job.retiredDepots).toEqual([
+      {
+        depotId: '9',
+        manifestId: '999',
+        requestCode: null,
+        key: 'ab'.repeat(32),
+        ownerAppId: '1',
+        fromManifest: null
+      }
+    ])
   })
 })

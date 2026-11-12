@@ -119,8 +119,11 @@ export function rustOutcomeToDepotOutcome(
   o: RustOutcome,
   skippedDepots?: string[]
 ): DepotDownloadOutcome {
-  if (o.status === 'cancelled') return { status: 'cancelled', skippedDepots }
-  if (o.status === 'completed') return { status: 'done', skippedDepots }
+  const delta = o.delta ? { delta: o.delta } : {}
+  if (o.status === 'cancelled')
+    return { status: 'cancelled', skippedDepots, ...delta }
+  if (o.status === 'completed')
+    return { status: 'done', skippedDepots, ...delta }
   const failures = rustFailuresToDepotFailures(o.failures)
   const primary =
     failures.length > 0 ? selectPrimaryDepotFailure(failures) : undefined
@@ -131,6 +134,7 @@ export function rustOutcomeToDepotOutcome(
     status: 'error',
     error: classified.message,
     errorAction: classified.action,
-    skippedDepots
+    skippedDepots,
+    ...delta
   }
 }

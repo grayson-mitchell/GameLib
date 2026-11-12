@@ -37,7 +37,8 @@ const JOB: RustDepotJob = {
   hosts: [],
   selectPaths: null,
   finalize: null,
-  limits: null
+  limits: null,
+  retiredDepots: []
 }
 
 let registry = newRegistry()

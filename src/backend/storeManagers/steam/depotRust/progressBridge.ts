@@ -5,7 +5,11 @@
 
 import type { StatusUpdateDeps } from 'backend/appRuntime'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { getFileSize, sendProgressUpdate } from 'backend/utils'
+import {
+  getFileSize,
+  sendGameStatusUpdate,
+  sendProgressUpdate
+} from 'backend/utils'
 import type { Runner } from 'common/types'
 import {
   PROGRESS_THROTTLE_MS,
@@ -14,6 +18,10 @@ import {
   rollingRateMiBs
 } from './progress'
 import type { RustJobEvent } from './types'
+
+/** Phase 74 (D-10): status-text contexts for the delta plan and commit phases. */
+export const STEAM_UPDATE_PLANNING_CONTEXT = 'steam-update-planning'
+export const STEAM_UPDATE_COMMITTING_CONTEXT = 'steam-update-committing'
 
 export function createProgressBridge(
   deps: StatusUpdateDeps,
@@ -36,6 +44,17 @@ export function createProgressBridge(
       switch (ev.kind) {
         case 'planned':
           totalBytes = ev.totalBytes
+          return
+        case 'stage':
+          sendGameStatusUpdate(deps, {
+            appName,
+            runner,
+            status: 'updating',
+            context:
+              ev.stage === 'delta_planning'
+                ? STEAM_UPDATE_PLANNING_CONTEXT
+                : STEAM_UPDATE_COMMITTING_CONTEXT
+          })
           return
         case 'warning':
           logWarning(

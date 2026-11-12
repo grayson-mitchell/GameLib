@@ -53,14 +53,17 @@ export function orderRefsForCollisions(refs: DepotRefEntry[]): DepotRefEntry[] {
   return out
 }
 
-export function toRustDepotRefs(refs: DepotRefEntry[]): RustDepotRef[] {
+export function toRustDepotRefs(
+  refs: DepotRefEntry[],
+  oldGidByDepot?: ReadonlyMap<string, string>
+): RustDepotRef[] {
   return orderRefsForCollisions(refs).map((r) => ({
     depotId: r.depotId,
     manifestId: r.gid,
     requestCode: null,
     key: r.key.toString('hex'),
     ownerAppId: r.ownerAppId,
-    fromManifest: null
+    fromManifest: oldGidByDepot?.get(r.depotId) ?? null
   }))
 }
 
@@ -72,16 +75,21 @@ export function buildDepotJob(args: {
   hosts: ContentServerHosts
   finalize: RustFinalizeSpec | null
   selectPaths?: string[]
+  /** Phase 74: installed GID per depot id; a hit makes that depot a delta from it. */
+  oldGidByDepot?: ReadonlyMap<string, string>
+  /** Phase 74: installed depots the new build dropped; each entry's `gid` is the OLD GID. */
+  retiredDepots?: DepotRefEntry[]
 }): RustDepotJob {
   return {
     jobId: randomUUID(),
     mode: args.mode,
     appId: args.appId,
     installRoot: args.installRoot,
-    depots: toRustDepotRefs(args.refs),
+    depots: toRustDepotRefs(args.refs, args.oldGidByDepot),
     hosts: toRustHosts(args.hosts),
     selectPaths: args.selectPaths ?? null,
     finalize: args.finalize,
-    limits: null
+    limits: null,
+    retiredDepots: toRustDepotRefs(args.retiredDepots ?? [])
   }
 }
