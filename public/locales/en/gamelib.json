@@ -143,10 +143,25 @@
         "steamShortcut": {
             "failed": "Updating the Steam shortcut failed."
         },
+        "steamUpdateCommitting": "Applying update…",
+        "steamUpdatePlanning": "Planning update…",
         "syncSaves": {
             "failed": "Syncing saves failed."
         },
         "tabsAriaLabel": "gameinfo tabs",
+        "update": {
+            "cancel": "Cancel",
+            "checkingSize": "Checking update size…",
+            "confirmButton": "Update",
+            "confirmTitle": "Update {{title}}?",
+            "fallback": "GameLib can't get the previous build's file list, so it will check every file: download up to {{download}}.",
+            "notEnoughDisk": "Needs {{peak}} free, {{available}} available.",
+            "registered": "Steam will update this game.",
+            "showSize": "Show update size",
+            "sizes": "Download {{download}} · needs {{peak}} free during update",
+            "sizesEstimate": "Download up to {{download}} · needs {{peak}} free during update (estimate)",
+            "unknown": "Update status unknown: GameLib can't see this game's {{branch}} branch."
+        },
         "wineLabel": "Wine:"
     },
     "humble": {

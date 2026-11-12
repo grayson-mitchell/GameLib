@@ -163,6 +163,16 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
         ? ''
         : `${percent && bytes ? `${percent}% [${bytes}] ${etaText}` : '...'}`
 
+    if (
+      is.updating &&
+      (statusContext === 'steam-update-planning' ||
+        statusContext === 'steam-update-committing')
+    ) {
+      return statusContext === 'steam-update-planning'
+        ? tGamelib('gamelib:gamepage.steamUpdatePlanning', 'Planning update…')
+        : tGamelib('gamelib:gamepage.steamUpdateCommitting', 'Applying update…')
+    }
+
     if (is.updating && is_installed) {
       if (!currentProgress) {
         return `${t('status.processing', 'Processing files, please wait')}...`

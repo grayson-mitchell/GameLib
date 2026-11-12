@@ -93,6 +93,16 @@ export default function DownloadHero({ element, state }: Props) {
         })
       case 'engine':
         return engineDownloadLabel(p.context, t)
+      case 'update-planning':
+        return tGamelib(
+          'gamelib:gamepage.steamUpdatePlanning',
+          'Planning update…'
+        )
+      case 'update-committing':
+        return tGamelib(
+          'gamelib:gamepage.steamUpdateCommitting',
+          'Applying update…'
+        )
       default:
         return t('status.steamFinishing', 'Finishing install…')
     }

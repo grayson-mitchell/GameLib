@@ -91,6 +91,8 @@ export type HeroPhase =
   | { kind: 'drm-setup'; context: string }
   | { kind: 'engine'; context: string }
   | { kind: 'finishing' }
+  | { kind: 'update-planning' }
+  | { kind: 'update-committing' }
 
 /**
  * Quick 261029-exu: a bridge install keeps its queue slot after the depot
@@ -118,6 +120,14 @@ export function heroPhase(entry?: {
     entry.context === 'steam-bridge-finishing'
   ) {
     return { kind: 'finishing' }
+  }
+  if (entry.status === 'updating') {
+    if (entry.context === 'steam-update-planning') {
+      return { kind: 'update-planning' }
+    }
+    if (entry.context === 'steam-update-committing') {
+      return { kind: 'update-committing' }
+    }
   }
   return null
 }

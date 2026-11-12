@@ -26,7 +26,13 @@ export function getStatusLabel({
     playing: t('gamepage:status.playing', 'Playing'),
     queued: `${t('gamepage:status.queued', 'Queued')}`,
     uninstalling: t('gamepage:status.uninstalling', 'Uninstalling'),
-    updating: `${t('gamepage:status.updating')} ${Math.ceil(percent || 0)}%`,
+    // Phase 74 D-10: a bridge update names its plan/hash and commit stages instead of a percent.
+    updating:
+      statusContext === 'steam-update-planning'
+        ? t('gamelib:gamepage.steamUpdatePlanning', 'Planning update…')
+        : statusContext === 'steam-update-committing'
+          ? t('gamelib:gamepage.steamUpdateCommitting', 'Applying update…')
+          : `${t('gamepage:status.updating')} ${Math.ceil(percent || 0)}%`,
     // Steam installs carry a percentage only when a progress source feeds it
     // (the native depot installer, or the ACF poller for a steam://install hand-off).
     // D-UAT-04 (21-16): while GameLib's written 1026 manifest awaits Steam's
