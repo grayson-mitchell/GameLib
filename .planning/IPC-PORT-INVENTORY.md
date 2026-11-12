@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 244 |
-| Ported to sidecar | 89 |
+| Unique channels | 245 |
+| Ported to sidecar | 90 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -180,7 +180,7 @@ goes 68 → 71. `Unported` is unchanged: the channels are born ported.
 
 ## Already ported (34)
 
-`cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `connectivity-changed`, `getDMQueueInformation`, `get-connectivity-status`, `getLogContent`, `getMaxCpus`, `getSteamDeleteRoute`, `getSteamInstallAppTargets`, `getSystemInfo`, `hasExecutable`, `install`, `isNative`, `isSteamBottleEligible`, `launch`, `listSteamLibraryTargets`, `logError`, `oauthCaptureLogin`, `openDialog`, `pauseCurrentDownload`, `persistBottleWineVersion`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamPollQR`, `steamRemoveAllCopies`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
+`cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `connectivity-changed`, `getDMQueueInformation`, `get-connectivity-status`, `getLogContent`, `getMaxCpus`, `getSteamDeleteRoute`, `getSteamInstallAppTargets`, `getSteamUpdateInfo`, `getSystemInfo`, `hasExecutable`, `install`, `isNative`, `isSteamBottleEligible`, `launch`, `listSteamLibraryTargets`, `logError`, `oauthCaptureLogin`, `openDialog`, `pauseCurrentDownload`, `persistBottleWineVersion`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamPollQR`, `steamRemoveAllCopies`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
 
 `logError` was ported early by Phase 34.2 gap cycle 2 (plan 34.2-16) — see the Phase 34.3 list
 below, which now excludes it, and `34.2-PORTED-CHANNELS.md`'s gap-cycle-2 subsection for the full
@@ -735,3 +735,12 @@ all numbers moved together by +5 and `Unported` (159) is unchanged.
 `getEngineState`
 `getPerGameBottleName`
 `listEngineOptions`
+
+## Phase 74 Plan 11 — Steam update info (1 channel) — **PORTED**
+
+`getSteamUpdateInfo` is BRAND NEW (Phase 74 plan 11), invoke-kind (`makeHandlerInvoker`,
+`src/preload/api/misc.ts`), registered only in the sidecar, in `installFlowRegistration.ts`. It is
+filed in the "Already ported" bucket line. There is no Electron leg.
+
+**Unique channels raised 244 → 245, Ported to sidecar raised 89 → 90 (Phase 74 Plan 11, 2026-11-12):**
+both numbers moved together by +1 and `Unported` (159) is unchanged.

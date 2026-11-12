@@ -145,17 +145,26 @@ describe('createStores', () => {
   // plan 04 (its on-disk name is unchanged), the pci_ids_* caches joined as `systemInfo`.
   const fixtureCaches = fixture.filter((entry) => entry.registeredAs === null)
   const ENGINE_NOTICE_CACHE = 'steam_engine_notices'
+  // Phase 74 (D-06) added the pre-launch update prompt's "don't ask again" acknowledgements.
+  const UPDATE_PROMPT_ACK_CACHE = 'steam_update_prompt_ack'
 
   it('builds exactly the fixture cache stores, each declared with the fixture kind', () => {
     const built = builtCacheStores()
     expect([...built.keys()].sort()).toEqual(
       [
         ...new Set(fixtureCaches.map((entry) => entry.options.name)),
-        ENGINE_NOTICE_CACHE
+        ENGINE_NOTICE_CACHE,
+        UPDATE_PROMPT_ACK_CACHE
       ].sort()
     )
     expect(
       kindOf(defined(built.get(ENGINE_NOTICE_CACHE), 'notices').store.path)
+    ).toBe('user-state')
+    expect(
+      kindOf(
+        defined(built.get(UPDATE_PROMPT_ACK_CACHE), 'update prompt ack').store
+          .path
+      )
     ).toBe('user-state')
     for (const entry of fixtureCaches) {
       const name = defined(entry.options.name, 'fixture cache name')

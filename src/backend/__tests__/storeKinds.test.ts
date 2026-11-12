@@ -82,7 +82,7 @@ const EXPECTED_KINDS: Record<string, Kind> = {
   macArchStore: 'user-state',
   runsForMeStore: 'user-state',
   uploadedLogs: 'cache',
-  // CacheStore (32)
+  // CacheStore (33)
   steam_library: 'user-state',
   gog_library: 'user-state',
   legendary_library: 'user-state',
@@ -91,6 +91,8 @@ const EXPECTED_KINDS: Record<string, Kind> = {
   steam_sync: 'cache',
   steam_pending_adoption: 'user-state',
   steam_restart_hold: 'user-state',
+  // Phase 74 D-06: per-build "don't ask again" acks; losing them re-prompts the user.
+  steam_update_prompt_ack: 'user-state',
   steam_known_fix_reports: 'user-state',
   steam_engine_notices: 'user-state',
   gog_api_info: 'cache',
