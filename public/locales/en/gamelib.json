@@ -150,6 +150,7 @@
         },
         "tabsAriaLabel": "gameinfo tabs",
         "update": {
+            "anyway": "Update anyway",
             "cancel": "Cancel",
             "checkingSize": "Checking update size…",
             "confirmButton": "Update",

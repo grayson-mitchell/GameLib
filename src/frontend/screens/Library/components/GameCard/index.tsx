@@ -24,6 +24,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { useHiddenGames, useFavouriteGames } from 'frontend/state/accountHooks'
 import { updateGame } from 'frontend/helpers/library'
+import { confirmSteamUpdate } from 'frontend/helpers/steamUpdateConfirm'
 import { CachedImage, SvgButton } from 'frontend/components/UI'
 import ContextMenu, { Item } from '../ContextMenu'
 import { hasProgress } from 'frontend/hooks/hasProgress'
@@ -189,8 +190,18 @@ const GameCard = ({
   }, [status])
 
   async function handleUpdate() {
-    if (!isStore(gameInfo, 'sideload'))
-      updateGame({ appName, runner, gameInfo })
+    if (isStore(gameInfo, 'sideload')) return
+    if (isStore(gameInfo, 'steam')) {
+      await confirmSteamUpdate({
+        appName,
+        title,
+        showDialogModal,
+        t: t2,
+        onConfirm: () => updateGame({ appName, runner, gameInfo })
+      })
+      return
+    }
+    updateGame({ appName, runner, gameInfo })
   }
 
   const grid = forceCard || layout === 'grid'

@@ -22,6 +22,8 @@ import {
 } from 'frontend/helpers'
 import { Link, NavLink, useLocation, useParams } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
+import { confirmSteamUpdate } from 'frontend/helpers/steamUpdateConfirm'
+import SteamUpdateInfo from './components/SteamUpdateInfo'
 import {
   useEpicAccount,
   useGogAccount,
@@ -362,8 +364,18 @@ export default React.memo(function GamePage(): JSX.Element | null {
   }, [status])
 
   function handleUpdate() {
-    if (!isStore(gameInfo, 'sideload'))
-      updateGame({ appName, runner, gameInfo })
+    if (isStore(gameInfo, 'sideload')) return
+    if (isStore(gameInfo, 'steam')) {
+      void confirmSteamUpdate({
+        appName,
+        title: gameInfo.overrides?.title || gameInfo.title,
+        showDialogModal,
+        t: t2,
+        onConfirm: () => updateGame({ appName, runner, gameInfo })
+      })
+      return
+    }
+    updateGame({ appName, runner, gameInfo })
   }
 
   function handleModal() {
@@ -661,6 +673,12 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           <AppleWikiInfo gameInfo={gameInfo} />
                           <RunsForMeToggle gameInfo={gameInfo} />
                           <DownloadSizeInfo gameInfo={gameInfo} />
+                          {isStore(gameInfo, 'steam') && is_installed && (
+                            <SteamUpdateInfo
+                              appName={appName}
+                              hasUpdate={hasUpdate}
+                            />
+                          )}
                           <InstalledInfo gameInfo={gameInfo} />
                           <CloudSavesSync gameInfo={gameInfo} />
                           <HumbleOriginInfo gameInfo={gameInfo} />
