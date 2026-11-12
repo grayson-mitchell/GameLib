@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.10
 milestone_name: Foundations
 status: executing
-stopped_at: Completed 66.4-13-PLAN.md
-last_updated: "2026-11-12T08:10:55.528Z"
+stopped_at: Phase 74 context gathered
+last_updated: "2026-11-12T08:38:32.345Z"
 last_activity: 2026-11-12
 progress:
-  total_phases: 19
+  total_phases: 23
   completed_phases: 14
   total_plans: 293
   completed_plans: 292
-  percent: 74
+  percent: 61
 ---
 
 # Project State
@@ -727,9 +727,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-12T08:10:55.519Z
-Stopped at: Completed 66.4-13-PLAN.md
-Resume file: None
+Last session: 2026-11-12T08:38:32.337Z
+Stopped at: Phase 74 context gathered
+Resume file: .planning/phases/74-steam-game-updates/74-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
