@@ -169,7 +169,7 @@ pub enum FileErr {
     Failed(Box<Failure>),
 }
 
-fn failure(file: &str, kind: ErrorKind, message: impl Into<String>) -> Failure {
+pub(crate) fn failure(file: &str, kind: ErrorKind, message: impl Into<String>) -> Failure {
     Failure {
         file: Some(file.to_string()),
         kind,
@@ -182,7 +182,7 @@ fn failure(file: &str, kind: ErrorKind, message: impl Into<String>) -> Failure {
     }
 }
 
-fn failed(file: &str, kind: ErrorKind, message: impl Into<String>) -> FileErr {
+pub(crate) fn failed(file: &str, kind: ErrorKind, message: impl Into<String>) -> FileErr {
     FileErr::Failed(Box::new(failure(file, kind, message)))
 }
 
@@ -197,7 +197,7 @@ pub fn io_kind(e: &io::Error) -> ErrorKind {
     }
 }
 
-fn io_failed(file: &str, what: &str, e: &io::Error) -> FileErr {
+pub(crate) fn io_failed(file: &str, what: &str, e: &io::Error) -> FileErr {
     let kind = io_kind(e);
     let message = if kind == ErrorKind::DiskFull {
         format!("{what}: ENOSPC no space left on device")
@@ -207,7 +207,7 @@ fn io_failed(file: &str, what: &str, e: &io::Error) -> FileErr {
     failed(file, kind, message)
 }
 
-fn hex(bytes: &[u8]) -> String {
+pub(crate) fn hex(bytes: &[u8]) -> String {
     use std::fmt::Write as _;
     let mut s = String::with_capacity(bytes.len() * 2);
     for b in bytes {
@@ -216,7 +216,7 @@ fn hex(bytes: &[u8]) -> String {
     s
 }
 
-fn key_from_hex(hex: &str) -> Option<[u8; 32]> {
+pub(crate) fn key_from_hex(hex: &str) -> Option<[u8; 32]> {
     if hex.len() != 64 || !hex.is_ascii() {
         return None;
     }
@@ -228,13 +228,13 @@ fn key_from_hex(hex: &str) -> Option<[u8; 32]> {
 }
 
 #[cfg(unix)]
-fn write_all_at(f: &fs::File, buf: &[u8], offset: u64) -> io::Result<()> {
+pub(crate) fn write_all_at(f: &fs::File, buf: &[u8], offset: u64) -> io::Result<()> {
     use std::os::unix::fs::FileExt;
     f.write_all_at(buf, offset)
 }
 
 #[cfg(windows)]
-fn write_all_at(f: &fs::File, buf: &[u8], offset: u64) -> io::Result<()> {
+pub(crate) fn write_all_at(f: &fs::File, buf: &[u8], offset: u64) -> io::Result<()> {
     use std::os::windows::fs::FileExt;
     let mut done = 0usize;
     while done < buf.len() {
@@ -253,7 +253,7 @@ fn write_all_at(f: &fs::File, buf: &[u8], offset: u64) -> io::Result<()> {
 
 /// Port of `applyEDepotFileModes` + the Mach-O fallback, with the TS `chmodAttempts` counter.
 /// `macho` is false for the zero-byte path, which TS never ran the fallback on.
-fn apply_modes_sync(
+pub(crate) fn apply_modes_sync(
     counters: &Counters,
     dest: &Path,
     file: &ManifestFile,
@@ -327,7 +327,7 @@ enum BlockErr {
 }
 
 /// Removes a stale empty directory sitting where a file belongs. A non-empty one is refused.
-fn clear_stale_dir(dest: &Path, filename: &str) -> Result<(), String> {
+pub(crate) fn clear_stale_dir(dest: &Path, filename: &str) -> Result<(), String> {
     let Ok(meta) = fs::symlink_metadata(dest) else {
         return Ok(());
     };
@@ -342,7 +342,7 @@ fn clear_stale_dir(dest: &Path, filename: &str) -> Result<(), String> {
     })
 }
 
-fn place_symlink(dest: &Path, target: &str) -> io::Result<()> {
+pub(crate) fn place_symlink(dest: &Path, target: &str) -> io::Result<()> {
     match fs::remove_file(dest) {
         Ok(()) => {}
         Err(e) if e.kind() == io::ErrorKind::NotFound => {}
@@ -757,7 +757,7 @@ pub async fn run_files(
 // The install job
 // ---------------------------------------------------------------------------
 
-fn outcome_shell(job_id: &str, status: Status, started: Instant) -> Outcome {
+pub(crate) fn outcome_shell(job_id: &str, status: Status, started: Instant) -> Outcome {
     Outcome {
         job_id: job_id.to_string(),
         status,
@@ -784,7 +784,7 @@ pub fn error_outcome(job_id: &str, f: Failure) -> Outcome {
     o
 }
 
-fn plain_failure(kind: ErrorKind, message: impl Into<String>) -> Failure {
+pub(crate) fn plain_failure(kind: ErrorKind, message: impl Into<String>) -> Failure {
     Failure {
         file: None,
         kind,
