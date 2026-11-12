@@ -14,12 +14,16 @@
  * therefore buy zero import-graph savings and would only fork the Tauri
  * build's update-check behavior from Electron's for no benefit.
  *
+ * Phase 74 D-02: only `listAutoUpdateableGames` (when a runner defines it) feeds
+ * `autoUpdate`; Steam-registered stale games stay badge-only by construction.
+ *
  * D-12: consistent with D-05b, this stays runner-generic (iterates every
  * entry in the library manager map) in both builds, not Steam-only.
  */
 
 import type { GlobalConfigSlice } from 'backend/config'
 import { logWarning, LogPrefix } from 'backend/logger'
+import type { LibraryManager } from 'common/types/game_manager'
 import type { StoreManagers } from 'backend/services/types'
 
 /** R1 slice: the per-runner managers and the auto-update queueing. */
@@ -43,11 +47,20 @@ export async function checkGameUpdates(
     // legendary/gogdl/nile credentials at all), so the results of the runners that
     // DID answer must survive.
     try {
-      let gamesToUpdate = await library[runner].listUpdateableGames()
+      const badge = await library[runner].listUpdateableGames()
       if (autoUpdateGames) {
-        gamesToUpdate = autoUpdate(runner, gamesToUpdate)
+        const manager: LibraryManager = library[runner]
+        const autoSource = manager.listAutoUpdateableGames
+          ? await manager.listAutoUpdateableGames()
+          : badge
+        // autoUpdate's return value is never observed (it forEach(async)s);
+        // the badge list is always the full list.
+        autoUpdate(
+          runner,
+          autoSource.filter((a) => badge.includes(a))
+        )
       }
-      oldGames = [...oldGames, ...gamesToUpdate]
+      oldGames = [...oldGames, ...badge]
     } catch (error) {
       logWarning(
         [`checkGameUpdates: ${runner} failed to list updateable games:`, error],

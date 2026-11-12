@@ -16,13 +16,9 @@ import type { ManagerDeps, StoreManagers } from 'backend/services/types'
 
 import { logInfo, logWarning, RunnerToLogPrefixMap } from 'backend/logger'
 import type { DownloadQueue } from 'backend/downloadmanager/downloadqueue'
+import { buildUpdateQueueElement } from 'backend/downloadmanager/updateElement'
 
-import type {
-  DMQueueElement,
-  GameInfo,
-  Runner,
-  WineInstallation
-} from 'common/types'
+import type { DMQueueElement, Runner, WineInstallation } from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
 import type LogWriter from 'backend/logger/log_writer'
 
@@ -110,27 +106,6 @@ export function buildLaunchHooks(
   } satisfies Record<Runner, StoreLaunchHooks>
   // Widened so a call site can write `launchHooks[runner].prepareLaunch?.()`.
   return hooks
-}
-
-function getDMElement(gameInfo: GameInfo, appName: string) {
-  const {
-    install: { install_path, platform },
-    runner
-  } = gameInfo
-  const dmQueueElement: DMQueueElement = {
-    params: {
-      appName,
-      gameInfo,
-      runner,
-      path: install_path!,
-      platformToInstall: platform!
-    },
-    type: 'update',
-    addToQueueTime: Date.now(),
-    endTime: 0,
-    startTime: 0
-  }
-  return dmQueueElement
 }
 
 export interface CreateStoreManagersDeps {
@@ -283,7 +258,10 @@ export function createStoreManagers(
       const gameIsAvailable = await game.isGameAvailable()
       if (!ignoreGameUpdates && gameIsAvailable) {
         logInfo(`Auto-Updating ${gameInfo.title}`, logPrefix)
-        const dmQueueElement: DMQueueElement = getDMElement(gameInfo, appName)
+        const dmQueueElement: DMQueueElement = buildUpdateQueueElement(
+          gameInfo,
+          appName
+        )
         deps
           .getDownloadQueue()
           .addToQueue(dmQueueElement)
