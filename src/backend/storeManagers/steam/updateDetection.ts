@@ -7,7 +7,7 @@
  * - Steam-registered installs (an ACF in a native library root): stale from the ACF alone; PICS is
  *   consulted only when Steam is definitely not running.
  *
- * One batched, bounded anonymous PICS read per call. State lives in the per-boot
+ * One batched anonymous PICS read per call; the timeout bounds the anonymous connect and the read together. State lives in the per-boot
  * steamInstallRuntime.updateStates cache (closure Map only, no module state, no timer). A PICS
  * failure never produces 'stale' or 'current'.
  */
@@ -228,17 +228,21 @@ export async function detectSteamUpdates(
     if (needPics.length > 0) {
       const ids = needPics.map((c) => Number(c.appId))
       try {
-        const client = await deps.anonymousClient.get('update-check')
-        if (!client) {
+        // One bound over connect AND read: the anonymous connect used to sit outside the timeout.
+        const inner = (async () => {
+          const client = await deps.anonymousClient.get('update-check')
+          if (!client) return null
+          return client.getProductInfo(ids, [], true)
+        })()
+        inner.catch(() => undefined) // a late rejection after the timeout must not be unhandled
+        const res = await withTimeout(
+          inner,
+          opts.timeoutMs ?? STEAM_UPDATE_REFRESH_TIMEOUT_MS,
+          'detectSteamUpdates PICS read'
+        )
+        if (!res) {
           picsErr = 'failed'
         } else {
-          const p = client.getProductInfo(ids, [], true)
-          p.catch(() => undefined) // a late rejection after the timeout must not be unhandled
-          const res = await withTimeout(
-            p,
-            opts.timeoutMs ?? STEAM_UPDATE_REFRESH_TIMEOUT_MS,
-            'detectSteamUpdates PICS read'
-          )
           for (const c of needPics) {
             const appinfo = res.apps?.[Number(c.appId)]?.appinfo as
               | { depots?: { branches?: Record<string, unknown> } }

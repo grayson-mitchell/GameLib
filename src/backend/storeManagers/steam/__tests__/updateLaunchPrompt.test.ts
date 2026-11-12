@@ -34,11 +34,25 @@ function makeStore() {
   }
 }
 
-function setup(opts: { queued?: boolean; ackStore?: unknown } = {}) {
+function setup(
+  opts: {
+    queued?: boolean
+    queueState?: string
+    inFlight?: { aborted: boolean }
+    ackStore?: unknown
+  } = {}
+) {
   const showMessageBox = jest.fn()
   const addToQueue = jest.fn().mockResolvedValue(undefined)
   const store = opts.ackStore ?? makeStore()
   const deps = {
+    steamSession: {
+      gameSession: {
+        nativeInstallsInFlight: new Map(
+          opts.inFlight ? [[APP, opts.inFlight]] : []
+        )
+      }
+    },
     stores: { steam: { steamUpdatePromptAckStore: store } },
     dialogs: { showMessageBox },
     getDownloadQueue: () => ({
@@ -46,7 +60,8 @@ function setup(opts: { queued?: boolean; ackStore?: unknown } = {}) {
       getQueueInformation: () => ({
         elements: opts.queued
           ? [{ type: 'update', params: { appName: APP } }]
-          : []
+          : [],
+        state: opts.queueState ?? 'idle'
       })
     })
   }
@@ -101,9 +116,16 @@ describe('gateBridgeLaunchOnUpdate', () => {
   it('Update now queues an update element and aborts', async () => {
     const t = setup()
     jest.mocked(detectSteamUpdates).mockResolvedValue(stale())
-    t.showMessageBox.mockResolvedValue({ response: 0 })
+    t.showMessageBox.mockResolvedValue({ response: 1 })
     expect(await gateBridgeLaunchOnUpdate(t.game)).toBe('abort')
-    expect(t.showMessageBox.mock.calls[0][0].buttons).toHaveLength(3)
+    const opts = t.showMessageBox.mock.calls[0][0]
+    expect(opts.buttons).toEqual([
+      'Play anyway',
+      'Update now',
+      "Don't ask again for this build"
+    ])
+    expect(opts.cancelId).toBe(0)
+    expect(opts.defaultId).toBe(0)
     expect(t.addToQueue).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'update' })
     )
@@ -112,7 +134,7 @@ describe('gateBridgeLaunchOnUpdate', () => {
   it('Play anyway launches and writes no ack', async () => {
     const t = setup()
     jest.mocked(detectSteamUpdates).mockResolvedValue(stale())
-    t.showMessageBox.mockResolvedValue({ response: 1 })
+    t.showMessageBox.mockResolvedValue({ response: 0 })
     expect(await gateBridgeLaunchOnUpdate(t.game)).toBe('launch')
     expect(readUpdatePromptAck(t.deps, APP)).toBeUndefined()
     expect(t.addToQueue).not.toHaveBeenCalled()
@@ -133,17 +155,63 @@ describe('gateBridgeLaunchOnUpdate', () => {
     expect(await gateBridgeLaunchOnUpdate(t.game)).toBe('launch')
     expect(t.showMessageBox).not.toHaveBeenCalled()
     jest.mocked(detectSteamUpdates).mockResolvedValue(stale('300'))
-    t.showMessageBox.mockResolvedValue({ response: 1 })
+    t.showMessageBox.mockResolvedValue({ response: 0 })
     await gateBridgeLaunchOnUpdate(t.game)
     expect(t.showMessageBox).toHaveBeenCalledTimes(1)
   })
 
-  it('launches without a dialog when an update is already queued', async () => {
-    const t = setup({ queued: true })
+  it.each([7, -1, 3])(
+    'launches and never queues on unexpected response %i',
+    async (response) => {
+      const t = setup()
+      jest.mocked(detectSteamUpdates).mockResolvedValue(stale())
+      t.showMessageBox.mockResolvedValue({ response })
+      expect(await gateBridgeLaunchOnUpdate(t.game)).toBe('launch')
+      expect(t.addToQueue).not.toHaveBeenCalled()
+      expect(readUpdatePromptAck(t.deps, APP)).toBeUndefined()
+    }
+  )
+
+  it('aborts with a notice while a bridge update is in flight', async () => {
+    const t = setup({ inFlight: { aborted: false } })
+    expect(await gateBridgeLaunchOnUpdate(t.game)).toBe('abort')
+    expect(notify).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ body: expect.stringContaining('is updating') })
+    )
+    expect(t.showMessageBox).not.toHaveBeenCalled()
+    expect(detectSteamUpdates).not.toHaveBeenCalled()
+  })
+
+  it('ignores an aborted in-flight entry', async () => {
+    const t = setup({ inFlight: { aborted: true } })
     jest.mocked(detectSteamUpdates).mockResolvedValue(stale())
+    t.showMessageBox.mockResolvedValue({ response: 0 })
     expect(await gateBridgeLaunchOnUpdate(t.game)).toBe('launch')
+  })
+
+  it('aborts with a notice when the update waits in a running queue', async () => {
+    const t = setup({ queued: true, queueState: 'running' })
+    expect(await gateBridgeLaunchOnUpdate(t.game)).toBe('abort')
+    expect(notify).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        body: expect.stringContaining('waiting in Downloads')
+      })
+    )
     expect(t.showMessageBox).not.toHaveBeenCalled()
   })
+
+  it.each(['paused', 'idle', 'stopped'])(
+    'prompts normally when the update is queued but the queue is %s',
+    async (queueState) => {
+      const t = setup({ queued: true, queueState })
+      jest.mocked(detectSteamUpdates).mockResolvedValue(stale())
+      t.showMessageBox.mockResolvedValue({ response: 0 })
+      expect(await gateBridgeLaunchOnUpdate(t.game)).toBe('launch')
+      expect(t.showMessageBox).toHaveBeenCalledTimes(1)
+    }
+  )
 
   it('refuses to launch a half-committed tree', async () => {
     const t = setup()

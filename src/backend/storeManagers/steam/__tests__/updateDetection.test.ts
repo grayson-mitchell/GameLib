@@ -163,6 +163,29 @@ describe('detectSteamUpdates', () => {
     expect(r[0]).toMatchObject({ state: 'unknown', reason: 'pics-failed' })
   })
 
+  it('bounds a hung anonymous connect at timeoutMs with pics-timeout', async () => {
+    addBridge('101', '100')
+    lib('101')
+    let rejectGet: (e: Error) => void = () => undefined
+    ;(deps.anonymousClient.get as jest.Mock).mockReturnValue(
+      new Promise((_resolve, reject) => {
+        rejectGet = reject
+      })
+    )
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
+    try {
+      const pending = detectSteamUpdates(deps, { force: true, timeoutMs: 3000 })
+      await jest.advanceTimersByTimeAsync(3000)
+      const r = await pending
+      expect(r[0]).toMatchObject({ state: 'unknown', reason: 'pics-timeout' })
+      // a late rejection after the timeout must not surface as unhandled
+      rejectGet(new Error('late'))
+      await jest.advanceTimersByTimeAsync(10)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
   it('batches into one call, reuses within TTL, and force refetches', async () => {
     addBridge('101', '1')
     addBridge('102', '1')
