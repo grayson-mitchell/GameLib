@@ -4,13 +4,13 @@ milestone: v0.10
 milestone_name: Foundations
 status: executing
 stopped_at: Phase 74 context gathered
-last_updated: "2026-11-12T08:38:32.345Z"
+last_updated: "2026-11-12T09:40:25.918Z"
 last_activity: 2026-11-12
 progress:
   total_phases: 23
   completed_phases: 14
-  total_plans: 293
-  completed_plans: 292
+  total_plans: 306
+  completed_plans: 293
   percent: 61
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 66.4 — backend-module-state-long-tail-census-flip-and-live-smokes
+**Current focus:** Phase 74 — steam-game-updates
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,12 +72,12 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 ## Current Position
 
-Phase: 66.4 (backend-module-state-long-tail-census-flip-and-live-smokes) — EXECUTING
-Plan: 23 of 23
+Phase: 74 (steam-game-updates) — EXECUTING
+Plan: 2 of 13
 Status: Ready to execute
 Last activity: 2026-11-12
 
-Progress: [██████████] 100%
+Progress: [██████████] 96%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -263,6 +263,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 66.4 P13 | 100min | 2 tasks | 109 files |
 | Phase 66.4 P66.4-17 | multi-hour | 2 tasks | 146 files |
 | Phase 66.4 P20 | 3h | 2 tasks | 133 files |
+| Phase 74 P01 | 45min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -420,6 +421,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 66.4]: 66.4-05: EngineRuntime built by 'engine-runtime' boot step after 'engine-state'; steam bottle modules bind userHome via steam/bottleDirs.ts until threaded onto ctx.paths
 - [Phase ?]: [66.4-13] 'abort-registry' boot step sits after 'steam-bottle', before 'command-runner' (first consumers precede 'info-caches'); BootServices carries aborts and windowRaiser (39 fields); EOF release aborts through deps.aborts.abortAll() after the queue pause
 - [Phase ?]: 66.4-17: AppRuntime on BootServices/ManagerDeps (field pin 41); 'app-runtime' step after 'abort-registry'; createGlobalConfig takes onSettingChanged; status helpers take StatusUpdateDeps
+- [Phase 74]: [74-01] Delta plan pass yields only the CDN list; local chunks re-verified at build time; multi-use CDN chunks fetched once and cached
 
 ### Pending Todos
 
@@ -727,9 +729,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-12T08:38:32.337Z
+Last session: 2026-11-12T09:40:21.532Z
 Stopped at: Phase 74 context gathered
-Resume file: .planning/phases/74-steam-game-updates/74-CONTEXT.md
+Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
