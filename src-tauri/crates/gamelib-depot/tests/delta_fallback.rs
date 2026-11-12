@@ -183,7 +183,10 @@ fn transient_old_manifest_failure_fails_without_fallback() {
     assert_eq!(out.status, Status::Error, "{:?}", out.failures);
     let f = out.failures.first().expect("a failure");
     assert_eq!(f.http_status, Some(503), "{f:?}");
-    assert_eq!(tree_snapshot(&env, &["a.bin", "old_only.bin", "e.bin"]), before);
+    assert_eq!(
+        tree_snapshot(&env, &["a.bin", "old_only.bin", "e.bin"]),
+        before
+    );
     assert!(tmp_files(env.dir.path()).is_empty());
     assert_eq!(env.acf_string(), acf_before);
     let warned = env.host.emits.lock().unwrap().iter().any(|e| {
@@ -197,13 +200,19 @@ fn transient_old_manifest_failure_keeps_retired_depot_files() {
     let (old, new) = retired_cases("df-transient-retired");
     let env = setup(&old, &new);
     env.fail_old_manifest("940001", 503);
-    let before = tree_snapshot(&env, &["a.bin", "shared.bin", "b_only.bin", "sub/b_shared.bin"]);
+    let before = tree_snapshot(
+        &env,
+        &["a.bin", "shared.bin", "b_only.bin", "sub/b_shared.bin"],
+    );
 
     let out = env.run(retired_job(&env, "df-transient-retired"));
     assert_eq!(out.status, Status::Error, "{:?}", out.failures);
     assert!(env.root().join("b_only.bin").exists(), "retired files kept");
     assert_eq!(
-        tree_snapshot(&env, &["a.bin", "shared.bin", "b_only.bin", "sub/b_shared.bin"]),
+        tree_snapshot(
+            &env,
+            &["a.bin", "shared.bin", "b_only.bin", "sub/b_shared.bin"]
+        ),
         before
     );
 }
