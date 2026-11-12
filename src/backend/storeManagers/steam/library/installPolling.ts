@@ -140,6 +140,18 @@ export function startInstallPolling(
         LogPrefix.Steam
       )
     }
+    if (
+      typeof intervalMsOrOptions !== 'number' &&
+      intervalMsOrOptions.awaitingUpdate !== undefined
+    ) {
+      existingEntry.awaitingUpdate = {
+        fromBuild: intervalMsOrOptions.awaitingUpdate.fromBuild
+      }
+      logInfo(
+        `Steam: in-flight poll for appId ${appId} now watches an update (Phase 74 D-11)`,
+        LogPrefix.Steam
+      )
+    }
     // quick 261029-sex: an upgrade to handoff or a retarget ends eligibility;
     // a delegated native poll gains it. Start is idempotent per appId.
     if (isLiveMonitorEligible(existingEntry)) {
@@ -158,7 +170,8 @@ export function startInstallPolling(
     skippedDepots,
     delegatedToSteamClient,
     adoptedBySteamClient,
-    restoredSteamHold
+    restoredSteamHold,
+    awaitingUpdate
   }: {
     intervalMs: number
     source: AcfSource
@@ -168,6 +181,7 @@ export function startInstallPolling(
     delegatedToSteamClient: boolean
     adoptedBySteamClient: boolean
     restoredSteamHold: PollOptions['restoredSteamHold']
+    awaitingUpdate: PollOptions['awaitingUpdate']
   } =
     typeof intervalMsOrOptions === 'number'
       ? {
@@ -178,7 +192,8 @@ export function startInstallPolling(
           skippedDepots: [],
           delegatedToSteamClient: false,
           adoptedBySteamClient: false,
-          restoredSteamHold: undefined
+          restoredSteamHold: undefined,
+          awaitingUpdate: undefined
         }
       : {
           intervalMs: intervalMsOrOptions.intervalMs ?? 3000,
@@ -190,7 +205,8 @@ export function startInstallPolling(
             intervalMsOrOptions.delegatedToSteamClient ?? false,
           adoptedBySteamClient:
             intervalMsOrOptions.adoptedBySteamClient ?? false,
-          restoredSteamHold: intervalMsOrOptions.restoredSteamHold
+          restoredSteamHold: intervalMsOrOptions.restoredSteamHold,
+          awaitingUpdate: intervalMsOrOptions.awaitingUpdate
         }
 
   logInfo(
@@ -223,7 +239,10 @@ export function startInstallPolling(
     steamHold: initialSteamHold,
     restartHoldStore: restartHoldStoreFrom(deps),
     steamPidsAtHandoff: restoredSteamHold?.pids ?? ([] as number[]),
-    lastSteamProbeMs: restoredSteamHold ? Date.now() : 0
+    lastSteamProbeMs: restoredSteamHold ? Date.now() : 0,
+    awaitingUpdate: awaitingUpdate
+      ? { fromBuild: awaitingUpdate.fromBuild }
+      : undefined
   }
 
   const timer = setInterval(async () => {
@@ -298,6 +317,12 @@ export function startInstallPolling(
     // written the manifest — so the only way this branch fires after a
     // completed native run is a run that produced no manifest at all, which
     // is a correct stop.
+    if (entry.awaitingUpdate) {
+      // Phase 74 (D-11): an update poll ends itself in pollUpdateOnce (completion or the quiet
+      // no-activity stop); the install revert/sign-in notice, manifest-gone and grace rules do not
+      // apply to an installed game. MAX_TICKS above stays the ceiling.
+      return
+    }
     if (entry.delegatedToSteamClient) {
       // quick 261024-exo: Steam owns the download — wait for it to start,
       // self-update and log in; stop only on a long no-manifest window or a

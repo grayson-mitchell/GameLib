@@ -156,6 +156,14 @@ export type ActiveInstallPoll = {
   /** Wall-clock ms of the last Steam-process probe, to throttle re-probes
    *  while holding (a probe spawns one short-lived child). */
   lastSteamProbeMs: number
+  /** Phase 74 (D-11): set when this poll watches an update of an installed game. `sawPending` /
+   *  `sawActivity` are updatePollOnce's own bookkeeping (completion needs a pending update seen or
+   *  a changed build; the no-activity window needs `sawActivity`). */
+  awaitingUpdate?: {
+    fromBuild: string
+    sawPending?: boolean
+    sawActivity?: boolean
+  }
 }
 
 export interface InstallPollState {

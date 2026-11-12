@@ -20,6 +20,7 @@ import { verifyMacArchGroundTruth } from './macArch'
 import { releaseSteamHold, notifyRestartSteamToFinish } from './restartHold'
 import { markSteamInstallIncomplete } from './resumeBreadcrumbs'
 import { stopInstallPolling } from './installStop'
+import { pollUpdateOnce } from './updatePollOnce'
 
 /**
  * Executes one polling tick for appId:
@@ -38,8 +39,13 @@ export async function pollInstallOnce(
   appId: string,
   source: AcfSource = 'native'
 ): Promise<void> {
-  const result = await readAcfState(deps, appId, source)
   const poll = deps.steamInstallRuntime.polls.activePolls.get(appId)
+  // Phase 74 (D-11): an update of an installed game has its own tick.
+  if (poll?.awaitingUpdate) {
+    await pollUpdateOnce(deps, appId, poll)
+    return
+  }
+  const result = await readAcfState(deps, appId, source)
 
   if (result.state === 'downloading') {
     if (poll) {
