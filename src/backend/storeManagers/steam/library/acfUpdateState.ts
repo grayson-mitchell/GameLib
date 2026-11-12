@@ -47,32 +47,41 @@ export async function readAcfUpdateState(
   }
 
   for (const steamappsDir of steamappsDirs) {
-    const file = join(steamappsDir, `appmanifest_${appId}.acf`)
-    try {
-      if (!existsSync(file)) continue
-      const state = acfBlock(
-        parseAcfTree(readFileSync(file, 'utf-8')),
-        'AppState'
-      )
-      const buildid = acfString(state, 'buildid')
-      if (!state || buildid === undefined) continue
-      const beta = acfString(acfBlock(state, 'UserConfig'), 'BetaKey')
-      return {
-        steamappsDir,
-        buildid,
-        targetBuildId: acfString(state, 'TargetBuildID'),
-        stateFlags: parseInt(acfString(state, 'StateFlags') ?? '0', 10) || 0,
-        bytesToDownload: Number(acfString(state, 'BytesToDownload')) || 0,
-        bytesDownloaded: Number(acfString(state, 'BytesDownloaded')) || 0,
-        scheduledAutoUpdate:
-          Number(acfString(state, 'ScheduledAutoUpdate')) || 0,
-        ...(beta ? { betaKey: beta } : {})
-      }
-    } catch {
-      continue
-    }
+    const fields = readAcfUpdateFieldsFromDir(steamappsDir, appId)
+    if (fields) return fields
   }
   return null
+}
+
+/** Reads one steamapps dir's manifest for `appId`; null when absent or corrupt. */
+export function readAcfUpdateFieldsFromDir(
+  steamappsDir: string,
+  appId: string
+): AcfUpdateFields | null {
+  if (!NUMERIC_APP_ID.test(appId)) return null
+  const file = join(steamappsDir, `appmanifest_${appId}.acf`)
+  try {
+    if (!existsSync(file)) return null
+    const state = acfBlock(
+      parseAcfTree(readFileSync(file, 'utf-8')),
+      'AppState'
+    )
+    const buildid = acfString(state, 'buildid')
+    if (!state || buildid === undefined) return null
+    const beta = acfString(acfBlock(state, 'UserConfig'), 'BetaKey')
+    return {
+      steamappsDir,
+      buildid,
+      targetBuildId: acfString(state, 'TargetBuildID'),
+      stateFlags: parseInt(acfString(state, 'StateFlags') ?? '0', 10) || 0,
+      bytesToDownload: Number(acfString(state, 'BytesToDownload')) || 0,
+      bytesDownloaded: Number(acfString(state, 'BytesDownloaded')) || 0,
+      scheduledAutoUpdate: Number(acfString(state, 'ScheduledAutoUpdate')) || 0,
+      ...(beta ? { betaKey: beta } : {})
+    }
+  } catch {
+    return null
+  }
 }
 
 /**

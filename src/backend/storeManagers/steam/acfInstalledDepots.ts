@@ -31,7 +31,7 @@ export function parseAcfTree(text: string): AcfTree {
   const re = /"((?:[^"\\]|\\.)*)"|([{}])/g
   let m: RegExpExecArray | null
   while ((m = re.exec(text)) !== null) {
-    const cur = stack[stack.length - 1]
+    const cur = stack[stack.length - 1] as AcfTree
     if (m[2] === '{') {
       if (pendingKey === undefined) continue
       const child: AcfTree = {}
@@ -42,7 +42,7 @@ export function parseAcfTree(text: string): AcfTree {
       if (stack.length > 1) stack.pop()
       pendingKey = undefined
     } else {
-      const token = m[1].replace(/\\(.)/g, '$1')
+      const token = (m[1] as string).replace(/\\(.)/g, '$1')
       if (pendingKey === undefined) {
         pendingKey = token.toLowerCase()
       } else {

@@ -32,6 +32,11 @@ import {
   type SteamRestartHold
 } from './library/restartHold'
 
+import {
+  createSteamUpdateStateCache,
+  type SteamUpdateStateCache
+} from './updateDetection'
+
 export interface SteamInstallRuntime {
   appinfoOrder: AppinfoOrder
   cdnSchema: CdnSchemaCache
@@ -40,6 +45,8 @@ export interface SteamInstallRuntime {
   polls: InstallPollState
   restartHold: SteamRestartHold
   uninstallPolls: UninstallPolls
+  /** Per-app update-detection results (74-04); closure Map only. */
+  updateStates: SteamUpdateStateCache
 }
 
 /** The slice the depot pipeline (plan build, Rust jobs, shared redists) reads. */
@@ -59,6 +66,7 @@ export function createSteamInstallRuntime(
     depotJobs: createDepotJobRegistry(transport),
     polls,
     restartHold: createSteamRestartHold({ polls }),
-    uninstallPolls: createUninstallPolls()
+    uninstallPolls: createUninstallPolls(),
+    updateStates: createSteamUpdateStateCache()
   }
 }

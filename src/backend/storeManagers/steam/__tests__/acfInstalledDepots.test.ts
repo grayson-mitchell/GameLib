@@ -18,7 +18,7 @@ describe('parseAcfInstalledDepots', () => {
     expect(r.installedDepots).toEqual([
       { depotId: '333302', manifest: '1547379086645511101', size: '570502668' }
     ])
-    expect(r.installedDepots[0].manifest).toBe('1547379086645511101')
+    expect(r.installedDepots[0]?.manifest).toBe('1547379086645511101')
     expect(String(Number('1547379086645511101'))).not.toBe(
       '1547379086645511101'
     )
