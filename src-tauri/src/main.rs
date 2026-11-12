@@ -2718,6 +2718,20 @@ mod tests {
     }
 
     #[test]
+    fn three_button_choice_maps_clicks_and_never_guesses() {
+        use rfd::MessageDialogResult as R;
+        let l = ["A".to_string(), "B".to_string(), "C".to_string()];
+        assert_eq!(three_button_choice(&R::Custom("A".into()), &l), Some(0));
+        assert_eq!(three_button_choice(&R::Custom("B".into()), &l), Some(1));
+        assert_eq!(three_button_choice(&R::Custom("C".into()), &l), Some(2));
+        assert_eq!(three_button_choice(&R::Yes, &l), Some(0));
+        assert_eq!(three_button_choice(&R::No, &l), Some(1));
+        assert_eq!(three_button_choice(&R::Cancel, &l), None);
+        assert_eq!(three_button_choice(&R::Ok, &l), None);
+        assert_eq!(three_button_choice(&R::Custom("Z".into()), &l), None);
+    }
+
+    #[test]
     fn draining_an_empty_pending_table_is_a_no_op() {
         let pending = Mutex::new(HashMap::new());
         let abandoned = Mutex::new(VecDeque::new());

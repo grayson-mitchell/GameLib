@@ -20,6 +20,20 @@ pub(crate) fn two_button_choice(result: &rfd::MessageDialogResult, label0: &str,
     }
 }
 
+/// Which button of a three-button `dialog_message` was chosen: `Some(0..=2)`, or `None` for a
+/// dismissal or any result that is not a recognised click. `Yes`/`No` are accepted as buttons
+/// 0/1 for backends that report standard variants for custom buttons. `Ok` is deliberately NOT
+/// mapped: on a three-button box it can only come from a fallback, and a fallback must never
+/// pick a button for the user -- the TS host maps `None` to the caller's `cancelId`.
+pub(crate) fn three_button_choice(result: &rfd::MessageDialogResult, labels: &[String; 3]) -> Option<u8> {
+    match result {
+        rfd::MessageDialogResult::Custom(s) => labels.iter().position(|l| l == s).map(|i| i as u8),
+        rfd::MessageDialogResult::Yes => Some(0),
+        rfd::MessageDialogResult::No => Some(1),
+        _ => None,
+    }
+}
+
 // Native folder picker (Phase 30 Plan 03, D-09/REQ-30-07): blocks the calling thread
 // until the user picks or cancels, so callers MUST dispatch this on a spawned worker
 // thread, never the reader thread (T-30-13 — same reasoning as the keyring arms above,
@@ -116,7 +130,9 @@ pub(crate) fn rpc_dialog_open(args: &[Value], app: &AppHandle) -> Result<Value, 
 // modal-dialog-must-not-block-the-reader-thread reasoning as `dialog_open` above).
 //
 // Phase 33 Plan 03 (D-06): an optional 2-element `buttons` array renders a real
-// two-button confirm (`OkCancelCustom`) instead of the OK-only default.
+// two-button confirm (`OkCancelCustom`) instead of the OK-only default. A 3-element array
+// renders `YesNoCancelCustom` (Phase 74 gap closure); a dismissal or unrecognised result is
+// `null`, never index 0.
 //
 // Returns the chosen button's index (`0` / `1`), or `null` when the dialog was
 // DISMISSED (Esc / window close) without a button -- platformApi maps `null` to the
@@ -148,14 +164,18 @@ pub(crate) fn rpc_dialog_message(args: &[Value], app: &AppHandle) -> Result<Valu
         })
         .unwrap_or(MessageDialogKind::Info);
     let title = opts.title.clone();
-    if let Some(btns) = opts.buttons.as_ref().filter(|b| b.len() == 2) {
+    if let Some(btns) = opts.buttons.as_ref().filter(|b| b.len() == 2 || b.len() == 3) {
         let label0 = btns[0].clone();
         let label1 = btns[1].clone();
+        let label2 = btns.get(2).cloned();
         let title = title.unwrap_or_else(|| app.package_info().name.clone());
         // The plugin's own `From<MessageDialogKind> for rfd::MessageLevel`, so the
         // level matches what the OK-only path below renders.
         let level: rfd::MessageLevel = kind.into();
-        let buttons = rfd::MessageButtons::OkCancelCustom(label0.clone(), label1.clone());
+        let buttons = match &label2 {
+            Some(l2) => rfd::MessageButtons::YesNoCancelCustom(label0.clone(), label1.clone(), l2.clone()),
+            None => rfd::MessageButtons::OkCancelCustom(label0.clone(), label1.clone()),
+        };
         let (tx, rx) = mpsc_channel::<rfd::MessageDialogResult>();
         app.run_on_main_thread(move || {
             let shown = rfd::AsyncMessageDialog::new()
@@ -170,9 +190,11 @@ pub(crate) fn rpc_dialog_message(args: &[Value], app: &AppHandle) -> Result<Valu
         })
         .map_err(|e| e.to_string())?;
         let result = rx.recv().map_err(|e| e.to_string())?;
-        return Ok(
-            two_button_choice(&result, &label0, &label1).map_or(Value::Null, Value::from)
-        );
+        let choice = match label2 {
+            Some(l2) => three_button_choice(&result, &[label0, label1, l2]),
+            None => two_button_choice(&result, &label0, &label1),
+        };
+        return Ok(choice.map_or(Value::Null, Value::from));
     }
     let mut builder = app.dialog().message(message).kind(kind);
     if let Some(title) = title {
