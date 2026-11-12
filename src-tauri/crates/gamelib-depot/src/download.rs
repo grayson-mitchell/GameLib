@@ -830,7 +830,7 @@ async fn run_install_inner(
             crate::delta::run_delta(job, jctx, host.clone(), cancel.clone(), emitter, started)
                 .await;
         if let crate::delta::DeltaRoute::Done(o) = route {
-            return o;
+            return *o;
         }
         // D-14: the old tree cannot be diffed; reconcile every file against the new manifests.
         let mut plain = job.clone();

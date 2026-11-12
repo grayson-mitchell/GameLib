@@ -849,7 +849,7 @@ pub fn clear_journal(job: &DepotJob) {
 
 /// Where a delta job ended up.
 pub enum DeltaRoute {
-    Done(Outcome),
+    Done(Box<Outcome>),
     /// Re-run as an ordinary install with `fromManifest` cleared (D-14 / stale journal).
     Fallback,
 }
@@ -934,7 +934,7 @@ pub async fn run_delta(
     if fallback {
         DeltaRoute::Fallback
     } else {
-        DeltaRoute::Done(o)
+        DeltaRoute::Done(Box::new(o))
     }
 }
 
