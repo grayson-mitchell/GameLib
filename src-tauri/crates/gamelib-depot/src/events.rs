@@ -254,6 +254,20 @@ impl ProgressEmitter {
         })
     }
 
+    /// A delta phase boundary frame. Sent immediately; never throttled or coalesced.
+    pub fn stage(&self, stage: &str) {
+        let mut st = self.inner.lock();
+        if st.closed {
+            return;
+        }
+        self.inner.send(
+            &mut st,
+            JobEventBody::Stage {
+                stage: stage.to_string(),
+            },
+        );
+    }
+
     /// Warning text must carry host and path only, never a token query.
     pub fn warn(&self, message: impl Into<String>) {
         let message = message.into();
@@ -353,6 +367,7 @@ mod tests {
                 JobEventBody::Progress { .. } => "progress",
                 JobEventBody::Warning { .. } => "warning",
                 JobEventBody::HostSummary { .. } => "host",
+                JobEventBody::Stage { .. } => "stage",
             })
             .collect()
     }

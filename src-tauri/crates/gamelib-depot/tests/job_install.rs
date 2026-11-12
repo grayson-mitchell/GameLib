@@ -17,7 +17,7 @@ mod fixture_builder;
 use fake_cdn::{FakeCdn, Reply};
 use fake_host::FakeHost;
 use fixture_builder::{all_cases, render, Codec, FixtureCase, FixtureDepot, FixtureFile, Wrapper};
-use gamelib_depot::job::{DepotJob, JobEventBody};
+use gamelib_depot::job::{DepotJob, JobEventBody, JobMode};
 use gamelib_depot::outcome::{ErrorKind, Outcome, Status};
 use gamelib_depot::{registry, run_job, JobContext, JobHost};
 use serde_json::{json, Value};
@@ -405,7 +405,11 @@ fn failed_file_still_finalizes_1026() {
 fn from_manifest_rejected_without_network() {
     let case = case_named("zip-deflate");
     let env = setup(&case);
-    let out = env.run(env.job("ji-delta", json!("5")));
+    // A delta shape this pipeline cannot serve (fromManifest on a verify_only job): refused before
+    // any network use. The supported shape (install + finalize) is covered by tests/delta.rs.
+    let mut job = env.job("ji-delta", json!("5"));
+    job.mode = JobMode::VerifyOnly;
+    let out = env.run(job);
     assert_eq!(out.status, Status::Error);
     assert_eq!(out.failures[0].kind, ErrorKind::DeltaUnsupported);
     assert!(

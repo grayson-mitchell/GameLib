@@ -20,7 +20,7 @@
 //! | `not_signed_in`      | "no authenticated Steam CM connection" (signIn action)                |
 //! | `path_collision`     | cross-depot case-insensitive path collision                           |
 //! | `symlink_failed`     | symlink creation failure                                              |
-//! | `delta_unsupported`  | `fromManifest` was `Some` (D-05)                                      |
+//! | `delta_unsupported`  | unsupported delta job shape (`fromManifest` outside a finalizing install, non-numeric, orphan `retiredDepots`) |
 //! | `io`                 | any other filesystem error (generic bucket)                           |
 
 use serde::{Deserialize, Serialize};
@@ -135,6 +135,28 @@ pub struct Stats {
     pub elapsed_ms: u64,
 }
 
+/// How a delta job reached its tree. Plan 74-01 only produces `Chunk`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DeltaMode {
+    Chunk,
+    CommitResume,
+    FileFallback,
+}
+
+/// Result detail of a delta job. File names are manifest-form (not normalised).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeltaReport {
+    pub mode: DeltaMode,
+    pub changed_files: Vec<String>,
+    pub removed_files: Vec<String>,
+    pub reused_bytes: u64,
+    pub cdn_bytes: u64,
+    pub peak_bytes: u64,
+    pub committed: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Outcome {
@@ -154,6 +176,9 @@ pub struct Outcome {
     /// `select_files`: the files written.
     pub files: Option<Vec<SelectedFile>>,
     pub stats: Stats,
+    /// Delta jobs only; absent from every other outcome's JSON.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delta: Option<DeltaReport>,
 }
 
 /// Port of `selectPrimaryDepotFailure` (depot/outcome.ts): a run-scoped failure beats any

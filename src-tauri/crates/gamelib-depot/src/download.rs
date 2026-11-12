@@ -773,6 +773,7 @@ fn outcome_shell(job_id: &str, status: Status, started: Instant) -> Outcome {
             elapsed_ms: started.elapsed().as_millis() as u64,
             ..Stats::default()
         },
+        delta: None,
     }
 }
 
@@ -818,14 +819,14 @@ async fn run_install_inner(
     emitter: &ProgressEmitter,
     started: Instant,
 ) -> Outcome {
-    // D-05: the delta shape is accepted on the wire and refused here, before any network use.
-    if job.depots.iter().any(|d| d.from_manifest.is_some()) {
+    // Delta shapes the pipeline cannot serve are refused before any network use.
+    if let Some(f) = crate::delta::shape_failure(job) {
         let mut o = outcome_shell(&job.job_id, Status::Error, started);
-        o.failures.push(plain_failure(
-            ErrorKind::DeltaUnsupported,
-            "fromManifest delta installs are not supported",
-        ));
+        o.failures.push(f);
         return o;
+    }
+    if crate::delta::is_delta_job(job) {
+        return crate::delta::run_delta(job, jctx, host, cancel, emitter, started).await;
     }
     let mode = job.mode;
     // select_files is a partial staging fetch: it never finalizes (no ACF).

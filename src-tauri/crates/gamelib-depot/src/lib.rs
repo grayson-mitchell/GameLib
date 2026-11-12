@@ -7,6 +7,7 @@
 
 pub mod acf;
 pub mod container;
+pub mod delta;
 pub mod download;
 pub mod events;
 pub mod fetch;
@@ -176,6 +177,7 @@ fn run_op(
                 select_paths: None,
                 finalize: None,
                 limits: None,
+                retired_depots: Vec::new(),
             };
             probe.validate().map_err(|_| format!("{op}:bad-args"))?;
             let r = runtime().block_on(run_summary(req, ctx, Arc::clone(host)));

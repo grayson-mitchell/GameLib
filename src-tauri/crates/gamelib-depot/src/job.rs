@@ -23,7 +23,8 @@ pub struct DepotRef {
     /// 64 hex chars (AES-256 depot key). Never logged.
     pub key: String,
     pub owner_app_id: String,
-    /// D-05: delta-ready shape. Must be `None` in phase 73; `Some` yields `delta_unsupported`.
+    /// `Some` => chunk-level delta from that installed GID (Phase 74); only valid on a
+    /// `mode: install` job with a `finalize`. Any other shape yields `delta_unsupported`.
     #[serde(default)]
     pub from_manifest: Option<String>,
 }
@@ -95,6 +96,10 @@ pub struct DepotJob {
     /// `None` for shared redists (D-12) and `select_files`.
     pub finalize: Option<FinalizeSpec>,
     pub limits: Option<JobLimits>,
+    /// Phase 74: depots the installed build had and the new build dropped; `manifest_id` is the OLD
+    /// GID. Parsed and validated here; the files are deleted by the delta commit (plan 02).
+    #[serde(default)]
+    pub retired_depots: Vec<DepotRef>,
 }
 
 /// D-02: manifest summary request (file count / bytes / pattern matches per depot).
@@ -170,6 +175,9 @@ pub enum JobEventBody {
     Warning { message: String, count: u32 },
     #[serde(rename_all = "camelCase")]
     HostSummary { hosts: Vec<HostStat> },
+    /// Phase 74: a delta phase boundary ("delta_planning", "delta_committing"). Never throttled.
+    #[serde(rename_all = "camelCase")]
+    Stage { stage: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -192,7 +200,7 @@ impl DepotJob {
         if self.job_id.is_empty() || !is_numeric_id(&self.app_id) {
             return Err(bad());
         }
-        for d in &self.depots {
+        for d in self.depots.iter().chain(&self.retired_depots) {
             if !is_numeric_id(&d.depot_id)
                 || !is_numeric_id(&d.manifest_id)
                 || !is_numeric_id(&d.owner_app_id)
@@ -229,6 +237,37 @@ mod tests {
             }],
             "hosts": [], "selectPaths": null, "finalize": null, "limits": null
         })
+    }
+
+    #[test]
+    fn retired_depots_default_empty_and_validated() {
+        let job: DepotJob = serde_json::from_value(job_json(json!(null))).unwrap();
+        assert!(job.retired_depots.is_empty());
+        let mut v = job_json(json!(null));
+        v["retiredDepots"] = json!([{
+            "depotId": "482", "manifestId": "99", "requestCode": null,
+            "key": KEY, "ownerAppId": "480", "fromManifest": null
+        }]);
+        let job: DepotJob = serde_json::from_value(v.clone()).unwrap();
+        assert_eq!(job.retired_depots.len(), 1);
+        job.validate().expect("valid");
+        v["retiredDepots"][0]["key"] = json!("zz");
+        let job: DepotJob = serde_json::from_value(v).unwrap();
+        assert!(job.validate().is_err());
+    }
+
+    #[test]
+    fn stage_event_serializes_with_flat_kind() {
+        let ev = JobEvent {
+            job_id: "j".into(),
+            seq: 1,
+            body: JobEventBody::Stage {
+                stage: "delta_planning".into(),
+            },
+        };
+        let v = serde_json::to_value(&ev).unwrap();
+        assert_eq!(v["kind"], "stage");
+        assert_eq!(v["stage"], "delta_planning");
     }
 
     #[test]
