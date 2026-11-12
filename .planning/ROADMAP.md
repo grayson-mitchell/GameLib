@@ -802,7 +802,7 @@ Plans:
 **Goal:** Finish D-15 step 3 after Phase 66.3. Convert the long tail of about 85 files (about 127 sites) with 1–2 module-state sites each, completely and once each (D-15). This includes the 66.2 deferrals: the `utils.ts` `default*Path` lets; `installingComponent`/`catalogCache`/`scriptMetadataCache` in `tools/index.ts`; `engineNoticeStore`; the two `pci_ids` stores; and retiring the win32 sync fallbacks in `knownFolders`/`pathShim`. Then the census becomes a zero-tolerance test and the `moduleState` ceiling is deleted (D-13, D-16). Next, revive the Steam RunningAppID poller under Tauri as a boot-owned, unref'd, stdin-EOF-stopped step (D-66.3-07). The phase ends with two non-autonomous plans: the D-17 live macOS smoke with a scripted orphan/exit checker (D-66.3-05), and the Windows operator UAT, which covers the 66.2 spawn paths and the poller's Playing state (D-66.3-06, D-66.3-08). Decisions live in `.planning/phases/66.3-backend-module-state-to-zero-and-live-macos-smoke/66.3-CONTEXT.md`.
 **Requirements**: TBD
 **Depends on:** Phase 66.3
-**Plans:** 11/23 plans executed
+**Plans:** 12/23 plans executed
 
 Plans:
 
@@ -817,7 +817,7 @@ Plans:
 - [x] 66.4-09-PLAN.md — Steam depot and install/uninstall poll state into SteamInstallRuntime (wave 8)
 - [x] 66.4-10-PLAN.md — GOG into GogRuntime; deriveGogPaths (wave 9)
 - [x] 66.4-11-PLAN.md — Legendary and Nile runtimes; derive*Paths (wave 10)
-- [ ] 66.4-12-PLAN.md — utils.ts default*Path lets, system-info and HLTB caches; utils paths (wave 11)
+- [x] 66.4-12-PLAN.md — utils.ts default*Path lets, system-info and HLTB caches; utils paths (wave 11)
 - [ ] 66.4-13-PLAN.md — abort registry and Wine window raiser as boot-owned instances (wave 12)
 - [ ] 66.4-14-PLAN.md — tools/index caches and winetricks environment into ToolsState; tools/wine paths (wave 13)
 - [ ] 66.4-15-PLAN.md — dispatch core: sidecarRpc, ipcValidation, outbound HTTP tracker as instances (wave 14)
