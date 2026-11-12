@@ -7,6 +7,5 @@
     "src/backend/humble/__tests__/probeSession.test.ts": 2,
     "src/backend/humble/__tests__/stores.test.ts": 1,
     "src/backend/humble/__tests__/user.test.ts": 2
-  },
-  "moduleState": {}
+  }
 }

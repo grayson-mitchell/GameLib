@@ -23,14 +23,5 @@
     "src/backend/sidecar/__tests__/steamNativeInstallDefault.test.ts": 5,
     "src/backend/sidecar/__tests__/steamgridSecretStore.test.ts": 2,
     "src/backend/sidecar/__tests__/storeLayer.test.ts": 5
-  },
-  "moduleState": {},
-  "sanctioned": {
-    "src/backend/sidecar/bootstrap.ts": {
-      "kind": "boot-entry",
-      "moduleState": 1,
-      "childProcess": 0,
-      "reason": "D-08/D-13: the boot entry's one-shot latch; a second boot in one process throws"
-    }
   }
 }

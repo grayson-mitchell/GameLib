@@ -5,6 +5,5 @@
     "src/backend/utils/__tests__/wineWindowRaise.test.ts": 2,
     "src/backend/utils/aborthandler/__tests__/aborthandler.test.ts": 1,
     "src/backend/utils/systeminfo/__tests__/index.test.ts": 7
-  },
-  "moduleState": {}
+  }
 }

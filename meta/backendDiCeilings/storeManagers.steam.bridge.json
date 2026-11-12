@@ -29,6 +29,5 @@
     "src/backend/storeManagers/steam/bridge/overlay/__tests__/overlayRunnerClone.realCrossover.test.ts": 1,
     "src/backend/storeManagers/steam/bridge/overlay/__tests__/overlayRunnerClone.test.ts": 1,
     "src/backend/storeManagers/steam/bridge/overlay/__tests__/overlayWineLog.test.ts": 1
-  },
-  "moduleState": {}
+  }
 }

@@ -281,25 +281,24 @@ describe('countJestMock', () => {
 
 const SANC = {
   kind: 'runner',
-  moduleState: 0,
   childProcess: 1,
   reason: 'a reason that is long enough to pass'
 }
 const RUNNER = 'src/backend/process/runner.ts'
-const empty = () => ({ moduleState: {}, childProcess: {}, jestMock: {} })
+const empty = () => ({ childProcess: {}, jestMock: {} })
 
 describe('evaluate', () => {
   it('passes on exact match', () => {
     expect(
       evaluate(
-        { moduleState: { a: 2 }, childProcess: { b: 1 }, jestMock: { c: 3 } },
-        { moduleState: { a: 2 }, childProcess: { b: 1 }, jestMock: { c: 3 } }
+        { childProcess: { b: 1 }, jestMock: { c: 3 } },
+        { childProcess: { b: 1 }, jestMock: { c: 3 } }
       )
     ).toEqual([])
   })
   it('flags growth', () => {
     expect(
-      evaluate({ moduleState: { a: 1 } }, { ...empty(), moduleState: { a: 2 } })
+      evaluate({ jestMock: { a: 1 } }, { ...empty(), jestMock: { a: 2 } })
     ).toEqual([expect.stringContaining('grew: a 2 > baseline 1')])
   })
   it('flags a shrink without a lowered entry', () => {
@@ -313,7 +312,7 @@ describe('evaluate', () => {
     ])
   })
   it('flags a zero entry', () => {
-    expect(evaluate({ moduleState: { a: 0 } }, empty())).toEqual([
+    expect(evaluate({ jestMock: { a: 0 } }, empty())).toEqual([
       expect.stringContaining('zero entry: remove a')
     ])
   })
@@ -334,9 +333,9 @@ describe('evaluate', () => {
     expect(
       evaluate(
         {
-          sanctioned: { [RUNNER]: { ...SANC, moduleState: 2, childProcess: 0 } }
+          sanctioned: { [RUNNER]: { ...SANC, childProcess: 2 } }
         },
-        { ...empty(), moduleState: { [RUNNER]: 9 } }
+        { ...empty(), childProcess: { [RUNNER]: 9 } }
       )
     ).toEqual([expect.stringContaining(`grew: ${RUNNER} 9 > baseline 2`)])
   })
@@ -351,12 +350,8 @@ describe('evaluate', () => {
   it('flags sanctioned shrink', () => {
     expect(
       evaluate(
-        { sanctioned: { [RUNNER]: { ...SANC, moduleState: 3 } } },
-        {
-          ...empty(),
-          moduleState: { [RUNNER]: 1 },
-          childProcess: { [RUNNER]: 1 }
-        }
+        { sanctioned: { [RUNNER]: { ...SANC, childProcess: 3 } } },
+        { ...empty(), childProcess: { [RUNNER]: 1 } }
       )
     ).toEqual([expect.stringContaining(`shrank: lower ${RUNNER} to 1`)])
   })
@@ -371,7 +366,7 @@ describe('evaluate', () => {
         { sanctioned: { [RUNNER]: { ...SANC, childProcess: 0 } } },
         empty()
       )
-    ).toEqual([expect.stringContaining('both counts are 0')])
+    ).toEqual([expect.stringContaining('childProcess count is 0')])
   })
   it('flags an unknown sanctioned kind', () => {
     const f = evaluate(
@@ -448,7 +443,6 @@ describe('loadShards', () => {
   it('loads an empty directory without failures (no file is required by name)', () => {
     expect(loadShards(dir)).toEqual({
       merged: {
-        moduleState: {},
         childProcess: {},
         jestMock: {},
         sanctioned: {}
@@ -457,17 +451,23 @@ describe('loadShards', () => {
     })
   })
   it('merges disjoint shards', () => {
-    writeFileSync(
-      join(dir, 'a.json'),
-      JSON.stringify({ moduleState: { x: 1 } })
-    )
-    writeFileSync(
-      join(dir, 'b.json'),
-      JSON.stringify({ moduleState: { y: 2 } })
-    )
+    writeFileSync(join(dir, 'a.json'), JSON.stringify({ jestMock: { x: 1 } }))
+    writeFileSync(join(dir, 'b.json'), JSON.stringify({ jestMock: { y: 2 } }))
     const { merged, failures } = loadShards(dir)
     expect(failures).toEqual([])
-    expect(merged.moduleState).toEqual({ x: 1, y: 2 })
+    expect(merged.jestMock).toEqual({ x: 1, y: 2 })
+  })
+  it('rejects a moduleState key in any shard (66.4 D-66.4-02)', () => {
+    writeFileSync(join(dir, 'a.json'), JSON.stringify({ moduleState: {} }))
+    writeFileSync(
+      join(dir, 'b.json'),
+      JSON.stringify({ moduleState: { 'src/backend/x.ts': 1 } })
+    )
+    const { failures } = loadShards(dir)
+    expect(failures).toHaveLength(2)
+    expect(failures[0]).toContain(
+      'moduleState ceilings were removed in 66.4; the census is a test: src/backend/__tests__/moduleStateCensus.test.ts'
+    )
   })
   it('fails when a path is in two shards for one section', () => {
     writeFileSync(join(dir, 'a.json'), JSON.stringify({ jestMock: { x: 1 } }))
@@ -502,10 +502,7 @@ describe('loadShards', () => {
   })
   it('fails on unknown keys, zero values and bad JSON', () => {
     writeFileSync(join(dir, 'a.json'), JSON.stringify({ bogus: {} }))
-    writeFileSync(
-      join(dir, 'b.json'),
-      JSON.stringify({ moduleState: { x: 0 } })
-    )
+    writeFileSync(join(dir, 'b.json'), JSON.stringify({ jestMock: { x: 0 } }))
     writeFileSync(join(dir, 'c.json'), '{nope')
     expect(loadShards(dir).failures).toHaveLength(3)
   })
@@ -581,7 +578,6 @@ describe('backendDiCeilings CLI', () => {
     write(
       'baselines/one.json',
       JSON.stringify({
-        moduleState: { 'src/backend/a.ts': 1 },
         jestMock: { 'src/backend/__tests__/a.test.ts': 1 }
       })
     )
@@ -604,13 +600,13 @@ describe('backendDiCeilings CLI', () => {
     expect(c.srcFiles).toBe(3)
   })
   it('exits 1 with grew after a site is added', () => {
-    write('src/backend/a.ts', 'let x = 1\nlet y = 2\n')
+    write('src/backend/__tests__/a.test.ts', "jest.mock('x')\njest.mock('y')\n")
     const r = run()
     expect(r.status).toBe(1)
     expect(r.stderr).toContain('grew')
   })
   it('exits 1 with new violation for an unbaselined file', () => {
-    write('src/backend/c.ts', 'let z\n')
+    write('src/backend/__tests__/c.test.ts', "jest.mock('z')\n")
     const r = run()
     expect(r.status).toBe(1)
     expect(r.stderr).toContain('new violation')
@@ -623,9 +619,9 @@ describe('backendDiCeilings CLI', () => {
   it('--shard restricts evaluation to the paths that shard lists', () => {
     write(
       'baselines/two.json',
-      JSON.stringify({ moduleState: { 'src/backend/c.ts': 1 } })
+      JSON.stringify({ jestMock: { 'src/backend/__tests__/c.test.ts': 1 } })
     )
-    write('src/backend/c.ts', 'let z\nlet w\n')
+    write('src/backend/__tests__/c.test.ts', "jest.mock('z')\njest.mock('w')\n")
     expect(run(['--shard', 'one']).status).toBe(0)
     const r = run(['--shard', 'two'])
     expect(r.status).toBe(1)

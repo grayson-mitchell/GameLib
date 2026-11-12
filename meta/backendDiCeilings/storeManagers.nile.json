@@ -7,6 +7,5 @@
     "src/backend/storeManagers/nile/__tests__/nileCredentialRedaction.test.ts": 3,
     "src/backend/storeManagers/nile/__tests__/refreshAwaitsSync.test.ts": 6,
     "src/backend/storeManagers/nile/__tests__/user.test.ts": 3
-  },
-  "moduleState": {}
+  }
 }

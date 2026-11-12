@@ -57,6 +57,5 @@
     "src/backend/storeManagers/steam/depotRust/__tests__/rustDepot.test.ts": 1,
     "src/backend/storeManagers/steam/depotRust/__tests__/rustInstall.test.ts": 4,
     "src/backend/storeManagers/steam/depotRust/__tests__/rustSecondary.test.ts": 10
-  },
-  "moduleState": {}
+  }
 }

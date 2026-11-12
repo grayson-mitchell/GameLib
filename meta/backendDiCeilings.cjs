@@ -3,6 +3,11 @@
  * Phase 66 (66-02, D-06/D-13/D-14/D-16): shrink-only ratchet for backend
  * module-level state, child_process imports and jest.mock calls.
  *
+ * 66.4 (D-66.4-02): the moduleState ceiling is gone. Zero module state is a jest test,
+ * src/backend/__tests__/moduleStateCensus.test.ts, which uses census().moduleState and
+ * listModuleStateSites() below and carries the sanctioned list as a literal. A shard that
+ * still has a moduleState key fails loadShards. The text below describes the counter.
+ *
  * Three exact per-file counts, taken with the TypeScript compiler API
  * (`ts.createSourceFile`, no type-check, no program):
  *   - moduleState: non-test src/backend files. Each top-level let/var name
@@ -26,8 +31,8 @@
  * replaced every static holder it owned with an injected slice (SteamUser, bottle, the
  * humble/dxmt store binders, humble/user.ts activeWatch, GlobalConfig.globalInstance,
  * GameConfig.instances) and deleted the `backend/platform` delegate. What remains in the
- * moduleState section is the long tail owned by Phase 66.4 plus the three sanctioned
- * entries; see src/backend/process/README.md "Hand-off to 66.4".
+ * moduleState section was the long tail owned by Phase 66.4; it reached zero and the three
+ * sanctioned sites (logger x2, sidecar/bootstrap x1) live in the census test's literal list.
  *
  * Known residual, documented not hidden: `const reg = createRegistry()` (a
  * call returning a container) is NOT counted syntactically. A fixture test
@@ -40,8 +45,8 @@
  * so parallel plans each own a shard. A path may appear in only one shard per
  * section. Shard format (every section optional, keys are repo-root-relative
  * POSIX paths):
- *   { "moduleState": {p: n}, "jestMock": {p: n},
- *     "sanctioned": { p: { kind, moduleState, childProcess, reason,
+ *   { "jestMock": {p: n},
+ *     "sanctioned": { p: { kind, childProcess, reason,
  *                          deletedBy? } } }
  * Sanctioned `kind` is runner | logger-sink | boot-entry | rust-overlap
  * (D-13). rust-overlap needs `deletedBy: "Phase N"` (D-14). A sanctioned entry
@@ -76,7 +81,7 @@ const SKIP_PATHS = ['src/backend/testUtils']
 const DEFAULT_MIN_BACKEND_FILES = 445
 const DEFAULT_MIN_SRC_FILES = 1765
 
-const SECTIONS = ['moduleState', 'childProcess', 'jestMock']
+const SECTIONS = ['childProcess', 'jestMock']
 const SHARD_KEYS = new Set([...SECTIONS, 'sanctioned'])
 const KINDS = new Set(['runner', 'logger-sink', 'boot-entry', 'rust-overlap'])
 // WR-04 (D-66.2-04): a sanctioned entry is valid only at the one path its kind allows. A hard-coded
@@ -558,7 +563,6 @@ const isPlainObject = (v) =>
  */
 function loadShards(dir = DEFAULT_BASELINE_DIR) {
   const merged = {
-    moduleState: {},
     childProcess: {},
     jestMock: {},
     sanctioned: {}
@@ -586,6 +590,12 @@ function loadShards(dir = DEFAULT_BASELINE_DIR) {
       if (key === 'childProcess') {
         failures.push(
           `shard ${name}: childProcess ceiling deleted (66.2 D-16): remove the section; only sanctioned process/runner.ts may import child_process`
+        )
+        continue
+      }
+      if (key === 'moduleState') {
+        failures.push(
+          `shard ${name}: moduleState ceilings were removed in 66.4; the census is a test: src/backend/__tests__/moduleStateCensus.test.ts`
         )
         continue
       }
@@ -624,8 +634,8 @@ function loadShards(dir = DEFAULT_BASELINE_DIR) {
 
 /**
  * Pure. Returns failure strings (empty = pass).
- * @param {{moduleState?:object, childProcess?:object, jestMock?:object, sanctioned?:object}} merged
- * @param {{moduleState:object, childProcess:object, jestMock:object}} current
+ * @param {{childProcess?:object, jestMock?:object, sanctioned?:object}} merged
+ * @param {{childProcess:object, jestMock:object}} current
  */
 function evaluate(merged, current) {
   const failures = []
@@ -657,46 +667,38 @@ function evaluate(merged, current) {
       )
       valid = false
     }
-    for (const k of ['moduleState', 'childProcess']) {
-      if (!Number.isInteger(e[k]) || e[k] < 0) {
-        failures.push(`sanctioned ${file}: ${k} must be a non-negative integer`)
-        valid = false
-      }
-    }
-    for (const k of ['moduleState', 'childProcess']) {
-      if (merged[k] && merged[k][file] !== undefined)
-        failures.push(
-          `sanctioned ${file} also appears in ${k}; a path is sanctioned or baselined, not both`
-        )
-    }
-    if (!valid) continue
-    if (e.moduleState === 0 && e.childProcess === 0) {
+    if (!Number.isInteger(e.childProcess) || e.childProcess < 0) {
       failures.push(
-        `sanctioned ${file}: both counts are 0, remove the entry in this commit`
+        `sanctioned ${file}: childProcess must be a non-negative integer`
+      )
+      valid = false
+    }
+    if (merged.childProcess && merged.childProcess[file] !== undefined)
+      failures.push(
+        `sanctioned ${file} also appears in childProcess; a path is sanctioned or baselined, not both`
+      )
+    if (!valid) continue
+    if (e.childProcess === 0) {
+      failures.push(
+        `sanctioned ${file}: childProcess count is 0, remove the entry in this commit (module state is the census test, 66.4)`
       )
       continue
     }
-    const curMs = current.moduleState[file] || 0
     const curCp = current.childProcess[file] || 0
-    if (curMs === 0 && curCp === 0) {
+    if (curCp === 0) {
       failures.push(
         `stale sanctioned entry: ${file} (no sites left; remove the entry in this commit)`
       )
       continue
     }
-    for (const [k, cur] of [
-      ['moduleState', curMs],
-      ['childProcess', curCp]
-    ]) {
-      if (cur > e[k])
-        failures.push(
-          `grew: ${file} ${cur} > baseline ${e[k]} (sanctioned ${k})`
-        )
-      else if (cur < e[k])
-        failures.push(
-          `shrank: lower ${file} to ${cur} in this commit (sanctioned ${k} baseline says ${e[k]})`
-        )
-    }
+    if (curCp > e.childProcess)
+      failures.push(
+        `grew: ${file} ${curCp} > baseline ${e.childProcess} (sanctioned childProcess)`
+      )
+    else if (curCp < e.childProcess)
+      failures.push(
+        `shrank: lower ${file} to ${curCp} in this commit (sanctioned childProcess baseline says ${e.childProcess})`
+      )
   }
 
   for (const section of SECTIONS) {
@@ -841,7 +843,7 @@ function main() {
   }
   const files = (o) => Object.keys(o).length
   console.log(
-    `backend-di-ceilings: PASS moduleState=${sum(cur.moduleState)} (${files(cur.moduleState)} files) childProcess=${sum(cur.childProcess)} (${files(cur.childProcess)} files) jestMock=${sum(cur.jestMock)} (${files(cur.jestMock)} files) sanctioned=${Object.keys(merged.sanctioned).length}`
+    `backend-di-ceilings: PASS childProcess=${sum(cur.childProcess)} (${files(cur.childProcess)} files) jestMock=${sum(cur.jestMock)} (${files(cur.jestMock)} files) sanctioned=${Object.keys(merged.sanctioned).length}`
   )
 }
 

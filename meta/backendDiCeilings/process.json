@@ -2,7 +2,6 @@
   "sanctioned": {
     "src/backend/process/runner.ts": {
       "kind": "runner",
-      "moduleState": 0,
       "childProcess": 1,
       "reason": "D-11: the one module allowed to import child_process; every backend spawn goes through it"
     }

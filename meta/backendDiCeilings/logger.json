@@ -1,13 +1,5 @@
 {
   "jestMock": {
     "src/backend/logger/__tests__/logWriter.test.ts": 2
-  },
-  "sanctioned": {
-    "src/backend/logger/index.ts": {
-      "kind": "logger-sink",
-      "moduleState": 2,
-      "childProcess": 0,
-      "reason": "D-07: the logger keeps its writer/sink state (heroicLogWriter, runnerLogWriters); it is configured once at boot"
-    }
   }
 }
