@@ -1,7 +1,6 @@
 import { logInfo, LogPrefix } from 'backend/logger'
 import type { ManagerDeps } from 'backend/services/types'
 import { clearSteamRestartHold } from '../steamRestartHold'
-import { activePolls } from './pollState'
 
 /**
  * Stops the active polling loop for appId (clears the interval and removes the
@@ -10,9 +9,10 @@ import { activePolls } from './pollState'
  * Exported for unit testing.
  */
 export function stopInstallPolling(
-  deps: Pick<ManagerDeps, 'steamProcesses'>,
+  deps: Pick<ManagerDeps, 'steamProcesses' | 'steamInstallRuntime'>,
   appId: string
 ): void {
+  const { activePolls } = deps.steamInstallRuntime.polls
   const poll = activePolls.get(appId)
   if (!poll) return
   // quick 261029-pkp: a stopped holding poll (cancel, uninstall, manifest

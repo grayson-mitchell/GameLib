@@ -1,9 +1,4 @@
-import {
-  extractDepotOrder,
-  withAppInfoOrderCapture,
-  getAppInfoDepotOrder,
-  clearAppInfoDepotOrder
-} from '../depot/appinfoOrder'
+import { extractDepotOrder, createAppinfoOrder } from '../depot/appinfoOrder'
 
 jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
@@ -47,7 +42,10 @@ describe('extractDepotOrder', () => {
 })
 
 describe('withAppInfoOrderCapture', () => {
-  beforeEach(() => clearAppInfoDepotOrder())
+  let appinfoOrder = createAppinfoOrder()
+  beforeEach(() => {
+    appinfoOrder = createAppinfoOrder()
+  })
 
   function makeClient() {
     const original = function (
@@ -63,11 +61,11 @@ describe('withAppInfoOrderCapture', () => {
   it('records raw order from a PICS response, passes the body through, and restores _send', async () => {
     const client = makeClient()
     let seen: unknown
-    await withAppInfoOrderCapture(client, () => {
+    await appinfoOrder.withAppInfoOrderCapture(client, () => {
       client._send({ msg: 8903 }, {}, (b) => (seen = b))
       return Promise.resolve()
     })
-    expect(getAppInfoDepotOrder('200510')).toEqual([
+    expect(appinfoOrder.getAppInfoDepotOrder('200510')).toEqual([
       '200511',
       '225341',
       '200522'
@@ -78,16 +76,16 @@ describe('withAppInfoOrderCapture', () => {
 
   it('ignores other messages and leaves order unknown', async () => {
     const client = makeClient()
-    await withAppInfoOrderCapture(client, () => {
+    await appinfoOrder.withAppInfoOrderCapture(client, () => {
       client._send({ msg: 1 }, {}, () => undefined)
       return Promise.resolve()
     })
-    expect(getAppInfoDepotOrder('200510')).toBeUndefined()
+    expect(appinfoOrder.getAppInfoDepotOrder('200510')).toBeUndefined()
   })
 
   it('runs fn unchanged when the client has no _send', async () => {
     await expect(
-      withAppInfoOrderCapture({}, () => Promise.resolve(7))
+      appinfoOrder.withAppInfoOrderCapture({}, () => Promise.resolve(7))
     ).resolves.toBe(7)
   })
 })

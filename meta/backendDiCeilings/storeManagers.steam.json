@@ -56,15 +56,7 @@
     "src/backend/storeManagers/steam/depotRust/__tests__/depotJobInputs.test.ts": 5,
     "src/backend/storeManagers/steam/depotRust/__tests__/rustDepot.test.ts": 2,
     "src/backend/storeManagers/steam/depotRust/__tests__/rustInstall.test.ts": 6,
-    "src/backend/storeManagers/steam/depotRust/__tests__/rustSecondary.test.ts": 13
+    "src/backend/storeManagers/steam/depotRust/__tests__/rustSecondary.test.ts": 12
   },
-  "moduleState": {
-    "src/backend/storeManagers/steam/depot/appinfoOrder.ts": 2,
-    "src/backend/storeManagers/steam/depot/cdnAuth.ts": 1,
-    "src/backend/storeManagers/steam/depot/sharedRedist.ts": 2,
-    "src/backend/storeManagers/steam/depotRust/jobRegistry.ts": 1,
-    "src/backend/storeManagers/steam/library/pollState.ts": 3,
-    "src/backend/storeManagers/steam/library/restartHold.ts": 2,
-    "src/backend/storeManagers/steam/library/uninstallPolling.ts": 1
-  }
+  "moduleState": {}
 }

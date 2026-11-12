@@ -4,6 +4,7 @@
  * pipeline (the only one since 73-19), over a stubbed rustInvoke leaf and a fake steam-user
  * client.
  */
+import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import {
   existsSync,
@@ -101,6 +102,7 @@ const ALL_BLOCKED_MSG =
   'buildDepotPlan: every selected depot for appId 12345 was blocked by Steam (eresult=40) and had to be skipped: 111, 222'
 
 const OPTS = () => ({
+  installRuntime: createTestSteamInstallRuntime(),
   steamUser,
   config: createTestGlobalConfig(),
   targetSteamappsDir: steamapps,
@@ -327,6 +329,7 @@ describe('downloadSharedRedistDepots on the rust pipeline', () => {
     const labels: string[] = []
 
     const r = await downloadSharedRedistDepots(APP_ID, {
+      installRuntime: createTestSteamInstallRuntime(),
       steamUser,
       cacheSteamappsDir: steamapps,
       optInDepotIds: [],

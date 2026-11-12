@@ -2,6 +2,7 @@
  * Phase 73 Plan 13 Task 1 (renamed from depotPipelineFlag.test.ts in 73-19, when the D-16 flag
  * was removed): the CM-only plan half, the job builder and the progress bridge.
  */
+import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { buildDepotRefs } from '../../depot/plan'
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
@@ -36,6 +37,7 @@ jest.mock('i18next', () => ({
 
 const APP_ID = '12345'
 const OPTS = {
+  installRuntime: createTestSteamInstallRuntime(),
   steamUser,
   config: createTestGlobalConfig(),
   targetSteamappsDir: '/tmp/steamapps',

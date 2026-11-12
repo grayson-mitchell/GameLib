@@ -184,6 +184,7 @@ export async function stageDrmBottle(
     // 4. Originals and cleanup: the first mutation, after every pre-check.
     if (input.signal?.aborted) return fail('aborted')
     const ctx: WalkCtx = {
+      installRuntime: deps.steamInstallRuntime,
       steamUser: deps.steamUser,
       config: deps.config,
       appId: input.appId,

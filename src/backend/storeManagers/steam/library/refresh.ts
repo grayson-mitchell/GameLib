@@ -18,9 +18,7 @@ import {
   installPlatformForSource,
   isBridgeAuthoritativeForInstallState
 } from './installRoot'
-import { activePolls } from './pollState'
 import { verifyMacArchGroundTruth } from './macArch'
-import { withoutSteamRestartHolds } from './restartHold'
 import {
   buildInstalledMap,
   buildIncompleteInstallSet,
@@ -271,7 +269,10 @@ async function syncOwnedLibrary(
     // D-UAT-13: apps whose poll is holding for a Steam restart are NOT
     // installed yet as far as the user-facing state goes (the running
     // Steam client has never read their GameLib-written manifest).
-    const installedMap = withoutSteamRestartHolds(await buildInstalledMap(deps))
+    const installedMap =
+      deps.steamInstallRuntime.restartHold.withoutSteamRestartHolds(
+        await buildInstalledMap(deps)
+      )
     const bottleInstalledMap =
       isMac && deps.steamBottle.isSteamBottleProvisioned()
         ? await buildBottleInstalledMap(deps)
@@ -547,7 +548,10 @@ export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
   // D-UAT-13: a window-focus reconcile (the user alt-tabbing to Steam to
   // restart it) must not flip a game that is holding for a Steam restart to
   // installed — see withoutSteamRestartHolds().
-  const installedMap = withoutSteamRestartHolds(await buildInstalledMap(deps))
+  const installedMap =
+    deps.steamInstallRuntime.restartHold.withoutSteamRestartHolds(
+      await buildInstalledMap(deps)
+    )
   const bottleInstalledMap =
     isMac && deps.steamBottle.isSteamBottleProvisioned()
       ? await buildBottleInstalledMap(deps)
@@ -628,7 +632,7 @@ export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
         isNowInstalled &&
         source === 'native' &&
         isMac &&
-        !activePolls.has(appIdStr)
+        !deps.steamInstallRuntime.polls.activePolls.has(appIdStr)
       ) {
         void verifyMacArchGroundTruth(
           deps,

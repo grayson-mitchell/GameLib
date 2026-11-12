@@ -49,6 +49,7 @@ export async function repair(steamGame: SteamGame): Promise<ExecResult> {
   if (!installRoot) throw scoped()
 
   const result = await restoreBridgeSteamApiOriginals({
+    installRuntime: steamGame.deps.steamInstallRuntime,
     steamUser: steamGame.deps.steamUser,
     config: steamGame.deps.config,
     appId: steamGame.appId,

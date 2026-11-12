@@ -519,6 +519,7 @@ export async function runNativeDepotDownloadLeased(
 
   const downloadStart = Date.now()
   const outcome = await downloadSteamDepots(steamGame.appId, {
+    installRuntime: steamGame.deps.steamInstallRuntime,
     steamUser: steamGame.deps.steamUser,
     config: steamGame.deps.config,
     targetSteamappsDir,

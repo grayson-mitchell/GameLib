@@ -12,19 +12,13 @@ import { type AcfSource, installPlatformForSource } from './installRoot'
 import {
   GAMELIB_HANDOFF_STATE_FLAGS,
   STEAM_BRIDGE_FINISHING_CONTEXT,
-  isBridgeInstallFinalized,
-  activePolls,
   MANIFEST_GONE_TICKS,
   STALLED_TICKS_THRESHOLD,
   BYTES_PER_MIB
 } from './pollState'
 import { readAcfState } from './acfState'
 import { verifyMacArchGroundTruth } from './macArch'
-import {
-  releaseSteamHold,
-  shouldHoldForSteamRestart,
-  notifyRestartSteamToFinish
-} from './restartHold'
+import { releaseSteamHold, notifyRestartSteamToFinish } from './restartHold'
 import { markSteamInstallIncomplete } from './resumeBreadcrumbs'
 import { stopInstallPolling } from './installStop'
 
@@ -46,7 +40,7 @@ export async function pollInstallOnce(
   source: AcfSource = 'native'
 ): Promise<void> {
   const result = await readAcfState(deps, appId, source)
-  const poll = activePolls.get(appId)
+  const poll = deps.steamInstallRuntime.polls.activePolls.get(appId)
 
   if (result.state === 'downloading') {
     if (poll) {
@@ -311,7 +305,15 @@ export async function pollInstallOnce(
     // path uses (status 'installing' + context, no is_installed push, no
     // completion toast, poll kept alive) until the recorded Steam process is
     // gone; the code below is then the unchanged installed flow.
-    if (poll && (await shouldHoldForSteamRestart(deps, appId, poll, source))) {
+    if (
+      poll &&
+      (await deps.steamInstallRuntime.restartHold.shouldHoldForSteamRestart(
+        deps,
+        appId,
+        poll,
+        source
+      ))
+    ) {
       sendFrontendMessage('gameStatusUpdate', {
         appName: appId,
         runner: 'steam',
@@ -355,7 +357,12 @@ export async function pollInstallOnce(
     // installer has marked itself finalized, stay silent so the finishing
     // status cannot overwrite its 'done'. Read synchronously at the send site.
     const installerOwnsCompletion = source === 'bridge'
-    if (!(installerOwnsCompletion && isBridgeInstallFinalized(appId))) {
+    if (
+      !(
+        installerOwnsCompletion &&
+        deps.steamInstallRuntime.polls.isBridgeInstallFinalized(appId)
+      )
+    ) {
       sendFrontendMessage(
         'gameStatusUpdate',
         installerOwnsCompletion

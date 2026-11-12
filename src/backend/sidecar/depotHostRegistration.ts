@@ -22,10 +22,7 @@
 
 import type { IpcRegistry } from './ipcRegistry'
 import { logWarning, LogPrefix } from 'backend/logger'
-import {
-  dispatchDepotJobEvent,
-  lookupActiveDepotJob
-} from '../storeManagers/steam/depotRust/jobRegistry'
+import type { DepotJobRegistry } from '../storeManagers/steam/depotRust/jobRegistry'
 import type { RustJobEvent } from '../storeManagers/steam/depotRust/types'
 
 function field(arg: unknown, name: string): string | undefined {
@@ -49,13 +46,20 @@ function logFailure(channel: string, jobId: string | undefined, err: unknown) {
  */
 export function registerDepotHostFlows(deps: {
   ipc: Pick<IpcRegistry, 'handle' | 'on'>
+  depotJobs: Pick<
+    DepotJobRegistry,
+    'lookupActiveDepotJob' | 'dispatchDepotJobEvent'
+  >
 }): void {
   deps.ipc.handle(
     'depotCdnToken',
     async (_event: unknown, ...args: unknown[]) => {
       const req = args[0]
       const jobId = field(req, 'jobId')
-      const job = jobId === undefined ? undefined : lookupActiveDepotJob(jobId)
+      const job =
+        jobId === undefined
+          ? undefined
+          : deps.depotJobs.lookupActiveDepotJob(jobId)
       const depotId = field(req, 'depotId')
       const host = field(req, 'host')
       if (!job || depotId === undefined || host === undefined) return null
@@ -76,7 +80,10 @@ export function registerDepotHostFlows(deps: {
     async (_event: unknown, ...args: unknown[]) => {
       const req = args[0]
       const jobId = field(req, 'jobId')
-      const job = jobId === undefined ? undefined : lookupActiveDepotJob(jobId)
+      const job =
+        jobId === undefined
+          ? undefined
+          : deps.depotJobs.lookupActiveDepotJob(jobId)
       const depotId = field(req, 'depotId')
       const manifestId = field(req, 'manifestId')
       if (!job || depotId === undefined || manifestId === undefined) return null
@@ -96,7 +103,7 @@ export function registerDepotHostFlows(deps: {
     const ev = args[0] as RustJobEvent | undefined
     if (!ev || typeof ev.jobId !== 'string') return
     try {
-      dispatchDepotJobEvent(ev)
+      deps.depotJobs.dispatchDepotJobEvent(ev)
     } catch (err) {
       logFailure('depotJobEvent', ev.jobId, err)
     }

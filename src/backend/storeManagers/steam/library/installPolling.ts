@@ -4,17 +4,16 @@ import { sendFrontendMessage } from '../../../ipc'
 import { type AcfSource, type PollOptions } from './installRoot'
 import type { ManagerDeps } from 'backend/services/types'
 import {
-  activePolls,
   GRACE_TICKS,
   MAX_TICKS,
   STEAM_REQUEST_NO_ACTIVITY_TICKS,
-  MANIFEST_GONE_TICKS,
-  nextSteamRequestNoticeSeq
+  MANIFEST_GONE_TICKS
 } from './pollState'
 import { restartHoldStoreFrom } from '../steamRestartHold'
 import { releaseSteamHold } from './restartHold'
 import { stopInstallPolling } from './installStop'
 import { pollInstallOnce } from './installPollOnce'
+import type { InstallPollState } from './pollState'
 
 // ── Install polling lifecycle (D-07) ─────────────────────────────────────────
 
@@ -56,6 +55,8 @@ export function startInstallPolling(
   appId: string,
   intervalMsOrOptions: number | PollOptions = 3000
 ): void {
+  const { polls } = deps.steamInstallRuntime
+  const { activePolls } = polls
   // 260822-dkf (D-02): before the grace-window fix below, the finalize-time
   // handoff call at games.ts:1720/1726 only ever reached this function AFTER
   // the grace window had already killed resumeInterruptedSteamInstall's bare
@@ -324,7 +325,7 @@ export function startInstallPolling(
           appId,
           title: deps.steamSession.libraryState.library.get(appId)?.title ?? '',
           kind: 'install-not-started',
-          seq: nextSteamRequestNoticeSeq()
+          seq: polls.nextSteamRequestNoticeSeq()
         })
         stopInstallPolling(deps, appId)
         return
@@ -423,8 +424,16 @@ function isLiveMonitorEligible(poll: {
  * controller lookup for it (a delegated install has none by design;
  * quick 261106-pvk).
  */
-export function isDelegatedInstallPolling(appId: string): boolean {
-  return activePolls.get(appId)?.delegatedToSteamClient === true
+export function isDelegatedInstallPolling(
+  deps: {
+    steamInstallRuntime: { polls: Pick<InstallPollState, 'activePolls'> }
+  },
+  appId: string
+): boolean {
+  return (
+    deps.steamInstallRuntime.polls.activePolls.get(appId)
+      ?.delegatedToSteamClient === true
+  )
 }
 
 /**
@@ -435,10 +444,10 @@ export function isDelegatedInstallPolling(appId: string): boolean {
  * stopped; false when there is no poll or it is not delegated.
  */
 export function cancelDelegatedInstall(
-  deps: Pick<ManagerDeps, 'steamProcesses'>,
+  deps: Pick<ManagerDeps, 'steamProcesses' | 'steamInstallRuntime'>,
   appId: string
 ): boolean {
-  const entry = activePolls.get(appId)
+  const entry = deps.steamInstallRuntime.polls.activePolls.get(appId)
   if (!entry || !entry.delegatedToSteamClient) return false
   logInfo(
     `Steam: Cancel stops GameLib's wait for the Steam-owned install of appId ${appId}; nothing is cancelled inside Steam (quick 261105-vfq)`,

@@ -12,7 +12,7 @@ import {
   type DepotDescriptor,
   type DepotSelectOpts
 } from './select'
-import { getAppInfoDepotOrder, withAppInfoOrderCapture } from './appinfoOrder'
+import type { AppinfoOrder } from './appinfoOrder'
 import { isNonRetryableDepotError } from '../depotErrors'
 import {
   withTimeout,
@@ -228,12 +228,13 @@ async function getOwnedSets(client: SteamUserDepotClient): Promise<OwnedSets> {
 }
 
 export async function fetchAppInfo(
+  appinfoOrder: Pick<AppinfoOrder, 'withAppInfoOrderCapture'>,
   client: SteamUserDepotClient,
   numericAppId: number
 ): Promise<SteamAppInfo> {
   // G-30-02 (30-07): bounded — see getOwnedSets above.
   const { apps } = await withTimeout(
-    withAppInfoOrderCapture(client, () =>
+    appinfoOrder.withAppInfoOrderCapture(client, () =>
       client.getProductInfo([numericAppId], [], true)
     ),
     STEAM_PICS_TIMEOUT_MS,
@@ -249,6 +250,7 @@ export async function fetchAppInfo(
 }
 
 async function fetchDlcInfos(
+  appinfoOrder: Pick<AppinfoOrder, 'withAppInfoOrderCapture'>,
   client: SteamUserDepotClient,
   appinfo: SteamAppInfo
 ): Promise<Record<string, SteamAppInfo>> {
@@ -258,7 +260,7 @@ async function fetchDlcInfos(
   // G-30-02 (30-07): bounded — see getOwnedSets above. WR-03: many-appid bulk
   // fetch over the full DLC id list, so it uses STEAM_PICS_BULK_TIMEOUT_MS too.
   const { apps } = await withTimeout(
-    withAppInfoOrderCapture(client, () =>
+    appinfoOrder.withAppInfoOrderCapture(client, () =>
       client.getProductInfo(dlcIds, [], true)
     ),
     STEAM_PICS_BULK_TIMEOUT_MS,
@@ -411,7 +413,8 @@ export async function buildDepotRefs(
   const appinfo = await withPlanBuildRetry(
     opts.steamUser,
     opts.signal,
-    (client) => fetchAppInfo(client, numericAppId),
+    (client) =>
+      fetchAppInfo(opts.installRuntime.appinfoOrder, client, numericAppId),
     'fetchAppInfo'
   )
   throwIfAborted(opts.signal)
@@ -450,7 +453,8 @@ export async function buildDepotRefs(
   const dlcInfos = await withPlanBuildRetry(
     opts.steamUser,
     opts.signal,
-    (client) => fetchDlcInfos(client, appinfo),
+    (client) =>
+      fetchDlcInfos(opts.installRuntime.appinfoOrder, client, appinfo),
     'fetchDlcInfos'
   )
   throwIfAborted(opts.signal)
@@ -493,7 +497,9 @@ export async function buildDepotRefs(
       }
       throw err
     }
-    const rawOrder = getAppInfoDepotOrder(descriptor.ownerAppId)
+    const rawOrder = opts.installRuntime.appinfoOrder.getAppInfoDepotOrder(
+      descriptor.ownerAppId
+    )
     const rank = rawOrder ? rawOrder.indexOf(descriptor.id) : -1
     depots.push({
       depotId: descriptor.id,

@@ -19,7 +19,7 @@ import {
   RUST_DEPOT_MANIFEST_SUMMARY
 } from 'common/types/sidecarTransport'
 import type { CdnAuthTokenCache } from '../../depot/cdnAuth'
-import { lookupActiveDepotJob } from '../jobRegistry'
+import { createDepotJobRegistry } from '../jobRegistry'
 import { cancelDepotJob, runDepotJob, summarizeDepots } from '../rustDepot'
 import type { RustDepotJob, RustOutcome } from '../types'
 
@@ -37,7 +37,9 @@ const JOB: RustDepotJob = {
   limits: null
 }
 
+let registry = createDepotJobRegistry()
 const hooks = (signal?: AbortSignal) => ({
+  registry,
   signal,
   tokenCache: {} as CdnAuthTokenCache,
   refreshRequestCode: jest.fn(() => Promise.resolve(null)),
@@ -49,24 +51,25 @@ const OUTCOME = { jobId: 'job-1', status: 'completed' } as RustOutcome
 beforeEach(() => {
   jest.useFakeTimers()
   invokeMock.mockReset()
+  registry = createDepotJobRegistry()
 })
 afterEach(() => jest.useRealTimers())
 
 describe('runDepotJob', () => {
   it('registers the job, invokes depot_job_run with the job and unregisters after', async () => {
     invokeMock.mockImplementation(() => {
-      expect(lookupActiveDepotJob('job-1')).toBeDefined()
+      expect(registry.lookupActiveDepotJob('job-1')).toBeDefined()
       return Promise.resolve(OUTCOME)
     })
     await expect(runDepotJob(JOB, hooks())).resolves.toBe(OUTCOME)
     expect(invokeMock).toHaveBeenCalledWith(RUST_DEPOT_JOB_RUN, [JOB])
-    expect(lookupActiveDepotJob('job-1')).toBeUndefined()
+    expect(registry.lookupActiveDepotJob('job-1')).toBeUndefined()
   })
 
   it('unregisters even when the invoke rejects', async () => {
     invokeMock.mockRejectedValue(new Error('boom'))
     await expect(runDepotJob(JOB, hooks())).rejects.toThrow('boom')
-    expect(lookupActiveDepotJob('job-1')).toBeUndefined()
+    expect(registry.lookupActiveDepotJob('job-1')).toBeUndefined()
   })
 
   it('returns a cancelled outcome for an already-aborted signal without invoking', async () => {

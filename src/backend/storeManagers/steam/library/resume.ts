@@ -23,12 +23,8 @@ import {
   listSteamRestartHolds,
   restartHoldStoreFrom
 } from '../steamRestartHold'
-import { activePolls, MAX_TICKS } from './pollState'
+import { MAX_TICKS } from './pollState'
 import { readAcfState } from './acfState'
-import {
-  pendingSteamHoldRearm,
-  setReconcileRanDuringRearm
-} from './restartHold'
 import { startInstallPolling } from './installPolling'
 
 /**
@@ -105,7 +101,7 @@ async function locateDownloadingTarget(
  * dispatchToBottledSteam, so no silent Steam-in-CrossOver auto-open is introduced here.
  */
 async function buildResumeFinalizeOpts(
-  deps: Pick<ManagerDeps, 'config' | 'steamUser'>,
+  deps: Pick<ManagerDeps, 'config' | 'steamUser' | 'steamInstallRuntime'>,
   appId: string,
   target: { targetSteamappsDir: string; installdir: string; name: string }
 ): Promise<FinalizeToSteamOpts | null> {
@@ -159,6 +155,7 @@ async function buildResumeFinalizeOpts(
 
   try {
     const v = await resumeVerifyRust(appId, {
+      installRuntime: deps.steamInstallRuntime,
       steamUser: deps.steamUser,
       config: deps.config,
       targetSteamappsDir: target.targetSteamappsDir,
@@ -267,9 +264,11 @@ export async function rearmPersistedSteamRestartHolds(
   dropped: number
 }> {
   let dropped = 0
+  const { restartHold } = deps.steamInstallRuntime
+  const { pendingSteamHoldRearm } = restartHold
   const records = listSteamRestartHolds(restartHoldStoreFrom(deps))
   if (records.length === 0) return { dropped }
-  setReconcileRanDuringRearm(false)
+  restartHold.setReconcileRanDuringRearm(false)
   // Synchronously, before any await: fail closed until verified.
   for (const [appId] of records) pendingSteamHoldRearm.add(appId)
   try {
@@ -291,7 +290,7 @@ export async function rearmPersistedSteamRestartHolds(
       try {
         if (
           deps.steamSession.gameSession.isNativeInstallInFlight(appId) ||
-          activePolls.has(appId)
+          deps.steamInstallRuntime.polls.activePolls.has(appId)
         ) {
           clearSteamRestartHold(appId, restartHoldStoreFrom(deps))
           dropped++

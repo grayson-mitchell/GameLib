@@ -7,6 +7,7 @@
  * write Task 1's verbatim installscript fixtures into a per-test mkdtemp directory under
  * os.tmpdir(), the only path this file ever removes) and the verify_only cache check.
  */
+import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
 import {
   existsSync,
   mkdirSync,
@@ -293,11 +294,17 @@ describe('downloadSharedRedistDepots', () => {
     failed: [],
     skipped: []
   }
+  // One runtime per test: concurrent runs in a test share the boot's lock table, as in production.
+  let installRuntime = createTestSteamInstallRuntime()
+  beforeEach(() => {
+    installRuntime = createTestSteamInstallRuntime()
+  })
   const run = (
     appId = GAME,
     extra: Partial<Parameters<typeof downloadSharedRedistDepots>[1]> = {}
   ) =>
     downloadSharedRedistDepots(appId, {
+      installRuntime,
       steamUser,
       cacheSteamappsDir: cacheDir,
       optInDepotIds: [],

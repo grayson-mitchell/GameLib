@@ -26,8 +26,8 @@ import {
 import { classifyDepotError } from '../depotErrors'
 import { rustOutcomeToDepotOutcome } from './errorMap'
 import { logOutcome, requestCodeRefresher } from './install'
+import type { DepotRuntime } from '../steamInstallRuntime'
 import { buildDepotJob, toRustDepotRefs, toRustHosts } from './jobBuilder'
-import { registerActiveDepotJob } from './jobRegistry'
 import { runDepotJob, summarizeDepots } from './rustDepot'
 import type { RustFinalizeSpec } from './types'
 
@@ -76,19 +76,26 @@ export async function prescreenBridgeDepotsRust(
     const client = getDepotClient(opts.steamUser)
     const hosts = await getContentServerHosts(client, Number(appId))
     throwIfAborted(opts.signal)
-    const tokenCache = new CdnAuthTokenCache(client, Number(appId))
+    const tokenCache = new CdnAuthTokenCache(
+      client,
+      Number(appId),
+      opts.installRuntime.cdnSchema
+    )
     // The crate asks for CDN tokens under this host job id (73-12).
-    const dispose = registerActiveDepotJob(`summary-${appId}`, {
-      appId,
-      tokenCache,
-      refreshRequestCode: requestCodeRefresher(
-        client,
-        new Map(refs.depots.map((d) => [d.depotId, d.ownerAppId])),
+    const dispose = opts.installRuntime.depotJobs.registerActiveDepotJob(
+      `summary-${appId}`,
+      {
         appId,
-        refs.branch
-      ),
-      onEvent: () => {}
-    })
+        tokenCache,
+        refreshRequestCode: requestCodeRefresher(
+          client,
+          new Map(refs.depots.map((d) => [d.depotId, d.ownerAppId])),
+          appId,
+          refs.branch
+        ),
+        onEvent: () => {}
+      }
+    )
     let res
     try {
       res = await summarizeDepots({
@@ -162,7 +169,11 @@ export async function downloadSelectedDepotFilesRust(
     const client = getDepotClient(opts.steamUser)
     const hosts = await getContentServerHosts(client, Number(appId))
     throwIfAborted(opts.signal)
-    const tokenCache = new CdnAuthTokenCache(client, Number(appId))
+    const tokenCache = new CdnAuthTokenCache(
+      client,
+      Number(appId),
+      opts.installRuntime.cdnSchema
+    )
     const job = buildDepotJob({
       appId,
       mode: 'select_files',
@@ -173,6 +184,7 @@ export async function downloadSelectedDepotFilesRust(
       selectPaths: opts.selectPaths
     })
     const outcome = await runDepotJob(job, {
+      registry: opts.installRuntime.depotJobs,
       signal: opts.signal,
       tokenCache,
       refreshRequestCode: requestCodeRefresher(
@@ -210,6 +222,7 @@ export async function downloadSelectedDepotFilesRust(
 }
 
 export interface ResumeVerifyInput {
+  installRuntime: DepotRuntime
   steamUser: DepotSteamUser
   config: DownloadSteamDepotsOpts['config']
   targetSteamappsDir: string
@@ -240,6 +253,7 @@ export async function resumeVerifyRust(
   const lease = await acquireOrThrow(input.steamUser, appId, 'user-install')
   try {
     const opts: DownloadSteamDepotsOpts = {
+      installRuntime: input.installRuntime,
       steamUser: input.steamUser,
       config: input.config,
       targetSteamappsDir: input.targetSteamappsDir,
@@ -252,7 +266,11 @@ export async function resumeVerifyRust(
       throw new Error('resume verify: no depots selected')
     const client = getDepotClient(input.steamUser)
     const hosts = await getContentServerHosts(client, Number(appId))
-    const tokenCache = new CdnAuthTokenCache(client, Number(appId))
+    const tokenCache = new CdnAuthTokenCache(
+      client,
+      Number(appId),
+      input.installRuntime.cdnSchema
+    )
     const finalize: RustFinalizeSpec = {
       steamappsDir: input.targetSteamappsDir,
       installdir: input.installdir,
@@ -275,6 +293,7 @@ export async function resumeVerifyRust(
       finalize
     })
     const outcome = await runDepotJob(job, {
+      registry: input.installRuntime.depotJobs,
       tokenCache,
       refreshRequestCode: requestCodeRefresher(
         client,

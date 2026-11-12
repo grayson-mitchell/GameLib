@@ -33,6 +33,7 @@ import type { EngineStateService } from 'backend/engine/engineState'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import type { SteamLaunchRuntime } from 'backend/storeManagers/steam/steamLaunchRuntime'
 import type { BridgeRuntime } from 'backend/storeManagers/steam/bridge/bridgeRuntime'
+import type { SteamInstallRuntime } from 'backend/storeManagers/steam/steamInstallRuntime'
 import type { WinetricksQueue } from 'backend/tools/winetricksQueue'
 import type { SignInEpochs } from 'backend/signInProbe/sessionEpoch'
 import type { SignInProbeOutcomes } from 'backend/signInProbe/outcomes'
@@ -179,6 +180,8 @@ export interface ManagerDeps {
   steamLaunchRuntime: SteamLaunchRuntime
   /** The boot-owned Steam bridge runtime: runner clone flights, entitlement signer, shared-redist installer (66.4-08). */
   bridgeRuntime: BridgeRuntime
+  /** The boot-owned Steam install runtime: depot order tap, CDN schema, shared-redist locks, depot job registry, install and uninstall polls, restart hold (66.4-09). */
+  steamInstallRuntime: SteamInstallRuntime
   /** The boot-owned sign-in fence and outcome map the store user modules write through (D-66.3-13). */
   signIn: Pick<SignInProbeServices, 'epochs' | 'outcomes'>
   /** The boot-owned Steam sign-in session and auth-unlock state (D-66.3-13). */
@@ -296,6 +299,8 @@ export interface BootServices {
   steamLaunchRuntime: SteamLaunchRuntime
   /** Built by the 'steam-bridge-runtime' boot step, after 'steam-launch-runtime' and before 'store-managers' (66.4-08). */
   bridgeRuntime: BridgeRuntime
+  /** Built by the 'steam-install-runtime' boot step, after 'steam-bridge-runtime' and before 'store-managers' (66.4-09). */
+  steamInstallRuntime: SteamInstallRuntime
   /** Built by the 'winetricks-queue' boot step, before 'register-handlers' (D-66.3-12). */
   winetricksQueue: WinetricksQueue
   /** Built by the 'sign-in-probe-state' boot step, before 'store-managers' (D-66.3-13). */

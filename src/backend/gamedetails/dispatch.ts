@@ -55,6 +55,7 @@ import { isStore, storeCapabilities } from 'common/storeCapabilities'
 import type { Stores, StoreManagers } from '../services/types'
 import { attachOverrides, type GameOverridesDeps } from '../game_overrides'
 import { isDelegatedInstallPolling } from '../storeManagers/steam/library/installPolling'
+import type { InstallPollState } from '../storeManagers/steam/library/pollState'
 import { callAbortController } from '../utils/aborthandler/aborthandler'
 import type { OnlineMonitor } from '../online_monitor'
 import { sendGameStatusUpdate } from '../utils'
@@ -66,6 +67,7 @@ import { logError, logInfo, logWarning, LogPrefix } from '../logger'
 export interface GameDetailsDeps extends NotifyDeps {
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   managers: Pick<StoreManagers, 'library'>
+  steamInstallRuntime: { polls: Pick<InstallPollState, 'activePolls'> }
   stores: {
     kvs: Pick<Stores['kvs'], 'configStore'>
   } & GameOverridesDeps['stores']
@@ -178,7 +180,7 @@ export async function kill(
   if (
     !(
       storeCapabilities[runner].installManagedExternally &&
-      isDelegatedInstallPolling(appName)
+      isDelegatedInstallPolling(deps, appName)
     )
   ) {
     callAbortController(appName)

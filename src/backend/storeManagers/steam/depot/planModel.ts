@@ -6,6 +6,7 @@ import type SteamUserLib from 'steam-user'
 import type { GlobalConfigSlice } from 'backend/config'
 import { type AuthSessionReason } from '../userTypes'
 import type { SteamUserSlice } from 'backend/services/types'
+import type { DepotRuntime } from '../steamInstallRuntime'
 
 /** The boot-owned SteamUser members the depot pipeline calls (D-66.3-16). */
 export type DepotSteamUser = Pick<
@@ -75,6 +76,8 @@ export interface DepotDownloadFailure {
 }
 
 export interface DownloadSteamDepotsOpts {
+  /** The boot-owned install runtime (appinfo order tap, CDN schema, locks, job registry). */
+  installRuntime: DepotRuntime
   /** The boot-owned authenticated Steam session the plan build and the lease come from. */
   steamUser: DepotSteamUser
   /** Where Steam is installed (defaultSteamPath), read for the user's localconfig.vdf beta choice. */

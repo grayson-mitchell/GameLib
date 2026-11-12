@@ -17,7 +17,7 @@ import { channelSchemas } from 'common/types/ipc/channelSchemas'
 import { validateInbound } from '../ipcValidation'
 import { registerDepotHostFlows } from '../depotHostRegistration'
 import { createIpcRegistry } from '../ipcRegistry'
-import { registerActiveDepotJob } from '../../storeManagers/steam/depotRust/jobRegistry'
+import { createDepotJobRegistry } from '../../storeManagers/steam/depotRust/jobRegistry'
 import type { CdnAuthTokenCache } from '../../storeManagers/steam/depot/cdnAuth'
 import type { RustJobEvent } from '../../storeManagers/steam/depotRust/types'
 
@@ -50,7 +50,8 @@ const warning = (seq: number, jobId = 'job1'): RustJobEvent => ({
 })
 
 const ipc = createIpcRegistry()
-beforeAll(() => registerDepotHostFlows({ ipc }))
+const depotJobs = createDepotJobRegistry()
+beforeAll(() => registerDepotHostFlows({ ipc, depotJobs }))
 beforeEach(() => jest.clearAllMocks())
 
 describe('depotCdnToken', () => {
@@ -65,7 +66,7 @@ describe('depotCdnToken', () => {
 
   it('answers from the registered job cache', async () => {
     const { cache, getToken, invalidate } = fakeCache()
-    const dispose = registerActiveDepotJob('job1', {
+    const dispose = depotJobs.registerActiveDepotJob('job1', {
       appId: '480',
       tokenCache: cache,
       refreshRequestCode: jest.fn(),
@@ -79,7 +80,7 @@ describe('depotCdnToken', () => {
 
   it('force invalidates first', async () => {
     const { cache, invalidate } = fakeCache()
-    const dispose = registerActiveDepotJob('job1', {
+    const dispose = depotJobs.registerActiveDepotJob('job1', {
       appId: '480',
       tokenCache: cache,
       refreshRequestCode: jest.fn(),
@@ -98,7 +99,7 @@ describe('depotCdnToken', () => {
     const failing = fakeCache(() =>
       Promise.reject(new Error(`boom https://x/?token=${SECRET}`))
     )
-    const dispose = registerActiveDepotJob('job1', {
+    const dispose = depotJobs.registerActiveDepotJob('job1', {
       appId: '480',
       tokenCache: failing.cache,
       refreshRequestCode: jest.fn(),
@@ -107,7 +108,7 @@ describe('depotCdnToken', () => {
     expect(await invoke('depotCdnToken', req())).toBeNull()
     dispose()
     const ok = fakeCache()
-    const dispose2 = registerActiveDepotJob('job1', {
+    const dispose2 = depotJobs.registerActiveDepotJob('job1', {
       appId: '480',
       tokenCache: ok.cache,
       refreshRequestCode: jest.fn(),
@@ -124,7 +125,7 @@ describe('depotCdnToken', () => {
 describe('depotManifestRequestCode', () => {
   it('returns a fresh code for a registered job, null for unknown', async () => {
     const refresh = jest.fn(() => Promise.resolve('9876543210123456789'))
-    const dispose = registerActiveDepotJob('job1', {
+    const dispose = depotJobs.registerActiveDepotJob('job1', {
       appId: '480',
       tokenCache: fakeCache().cache,
       refreshRequestCode: refresh,
@@ -143,7 +144,7 @@ describe('depotManifestRequestCode', () => {
 describe('depotManifestRequestCode on an EResult-40 refusal', () => {
   const p = { jobId: 'job9', appId: '480', depotId: '481', manifestId: '7' }
   const register = (refresh: () => Promise<string | null>) =>
-    registerActiveDepotJob('job9', {
+    depotJobs.registerActiveDepotJob('job9', {
       appId: '480',
       tokenCache: fakeCache().cache,
       refreshRequestCode: refresh,
@@ -177,7 +178,7 @@ describe('depotJobEvent', () => {
 
   it('routes by jobId, drops unknown jobs and out-of-order seq', () => {
     const onEvent = jest.fn()
-    const dispose = registerActiveDepotJob('job1', {
+    const dispose = depotJobs.registerActiveDepotJob('job1', {
       appId: '480',
       tokenCache: fakeCache().cache,
       refreshRequestCode: jest.fn(),

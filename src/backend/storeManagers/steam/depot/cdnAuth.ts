@@ -227,8 +227,6 @@ interface CdnAuthTokenSchema {
   }
 }
 
-let cachedSchema: CdnAuthTokenSchema | undefined
-
 /** Synchronous (`require`, not `await import`) — deliberately, unlike
  *  depot.ts's `loadContentManifestParser`: `callGetCDNAuthToken` below must
  *  preserve its pre-cycle-11 SYNCHRONOUS-until-`_send` structure (the
@@ -243,9 +241,7 @@ let cachedSchema: CdnAuthTokenSchema | undefined
  *  Loaded lazily (only when a token is actually fetched, not at module
  *  scope) and cached thereafter — same discipline as
  *  loadContentManifestParser, just synchronous. */
-function loadCdnAuthTokenSchema(): CdnAuthTokenSchema {
-  if (cachedSchema) return cachedSchema
-
+function loadCdnAuthTokenSchemaFromPackage(): CdnAuthTokenSchema {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const mod = require('steam-user/protobufs/generated/_load.js') as Record<
     string,
@@ -270,8 +266,23 @@ function loadCdnAuthTokenSchema(): CdnAuthTokenSchema {
     )
   }
 
-  cachedSchema = { Request, Response }
-  return cachedSchema
+  return { Request, Response }
+}
+
+/** The loaded CDN auth token protobuf schema, cached per instance (D-05, 66.4-09). */
+export interface CdnSchemaCache {
+  load(): CdnAuthTokenSchema
+}
+
+/**
+ * One schema cache per boot (the SteamInstallRuntime holds it): the package load runs once per
+ * instance, on first use. Construction does nothing (no I/O, timer or handle).
+ */
+export function createCdnSchemaCache(): CdnSchemaCache {
+  let cached: CdnAuthTokenSchema | undefined
+  return {
+    load: () => (cached ??= loadCdnAuthTokenSchemaFromPackage())
+  }
 }
 
 /** `_send`'s raw response body for this RPC arrives as whichever shape
@@ -430,7 +441,8 @@ export class CdnAuthTokenCache {
 
   constructor(
     private readonly client: CDNAuthTokenClient,
-    private readonly appId: number
+    private readonly appId: number,
+    private readonly schemaCache: CdnSchemaCache = createCdnSchemaCache()
   ) {}
 
   private static key(depotId: string, host: string): string {
@@ -613,7 +625,7 @@ export class CdnAuthTokenCache {
     depotId: string,
     host: string
   ): Promise<CachedToken> {
-    const schema = loadCdnAuthTokenSchema()
+    const schema = this.schemaCache.load()
     const requestBuffer = schema.Request.encode({
       app_id: this.appId,
       depot_id: Number(depotId),

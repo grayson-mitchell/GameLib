@@ -12,11 +12,6 @@ import {
 // ── Imports ───────────────────────────────────────────────────────────────────
 import { startInstallPolling } from '../library/installPolling'
 import { stopInstallPolling } from '../library/installStop'
-import {
-  markBridgeInstallFinalized,
-  clearBridgeInstallFinalized,
-  isBridgeInstallFinalized
-} from '../library/pollState'
 import { existsSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
@@ -907,7 +902,7 @@ describe('pollInstallOnce()', () => {
 
     // ── quick 261031-ihs: the installer's done must not be overwritten ────
     it('261031-ihs: installer finalized first -> poller flips and persists but sends no status', async () => {
-      markBridgeInstallFinalized('730')
+      steamTestDeps.steamInstallRuntime.polls.markBridgeInstallFinalized('730')
       await pollInstallOnce(steamTestDeps, '730', 'bridge')
       expect(library.get('730')?.is_installed).toBe(true)
       expect(sendFrontendMessage).toHaveBeenCalledWith(
@@ -919,11 +914,11 @@ describe('pollInstallOnce()', () => {
         expect.anything()
       )
       expect(notify).not.toHaveBeenCalled()
-      clearBridgeInstallFinalized('730')
+      steamTestDeps.steamInstallRuntime.polls.clearBridgeInstallFinalized('730')
     })
 
     it('261031-ihs: poller first (marker unset) still reports finishing', async () => {
-      clearBridgeInstallFinalized('730')
+      steamTestDeps.steamInstallRuntime.polls.clearBridgeInstallFinalized('730')
       await pollInstallOnce(steamTestDeps, '730', 'bridge')
       expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
         appName: '730',
@@ -934,8 +929,8 @@ describe('pollInstallOnce()', () => {
     })
 
     it('261031-ihs: a cleared marker (reinstall) shows finishing again', async () => {
-      markBridgeInstallFinalized('730')
-      clearBridgeInstallFinalized('730')
+      steamTestDeps.steamInstallRuntime.polls.markBridgeInstallFinalized('730')
+      steamTestDeps.steamInstallRuntime.polls.clearBridgeInstallFinalized('730')
       await pollInstallOnce(steamTestDeps, '730', 'bridge')
       expect(sendFrontendMessage).toHaveBeenCalledWith(
         'gameStatusUpdate',
@@ -944,11 +939,17 @@ describe('pollInstallOnce()', () => {
     })
 
     it('261031-ihs: the marker is per appId', () => {
-      markBridgeInstallFinalized('730')
-      expect(isBridgeInstallFinalized('730')).toBe(true)
-      expect(isBridgeInstallFinalized('440')).toBe(false)
-      clearBridgeInstallFinalized('730')
-      expect(isBridgeInstallFinalized('730')).toBe(false)
+      steamTestDeps.steamInstallRuntime.polls.markBridgeInstallFinalized('730')
+      expect(
+        steamTestDeps.steamInstallRuntime.polls.isBridgeInstallFinalized('730')
+      ).toBe(true)
+      expect(
+        steamTestDeps.steamInstallRuntime.polls.isBridgeInstallFinalized('440')
+      ).toBe(false)
+      steamTestDeps.steamInstallRuntime.polls.clearBridgeInstallFinalized('730')
+      expect(
+        steamTestDeps.steamInstallRuntime.polls.isBridgeInstallFinalized('730')
+      ).toBe(false)
     })
   })
 

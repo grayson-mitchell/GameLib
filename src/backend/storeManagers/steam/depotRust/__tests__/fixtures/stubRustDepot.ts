@@ -8,7 +8,7 @@ import {
   RUST_DEPOT_JOB_RUN,
   RUST_DEPOT_MANIFEST_SUMMARY
 } from 'common/types/sidecarTransport'
-import { dispatchDepotJobEvent } from '../../jobRegistry'
+import type { DepotJobRegistry } from '../../jobRegistry'
 import type {
   RustDepotJob,
   RustJobEvent,
@@ -34,6 +34,8 @@ export interface StubRustDepotOptions {
     job: RustDepotJob
   ) => Partial<RustOutcome> | Promise<Partial<RustOutcome>>
   events?: EventBody[]
+  /** The registry `events` are dispatched into; required when `events` is non-empty. */
+  registry?: Pick<DepotJobRegistry, 'dispatchDepotJobEvent'>
   /** Runs before the outcome is returned, e.g. to write files the caller then reads. */
   onRun?: (job: RustDepotJob) => void | Promise<void>
   /** Do not answer depot_job_run until depot_job_cancel arrives, then answer cancelled. */
@@ -106,7 +108,9 @@ export function createStubRustDepot(
       jobs.push(job)
       let seq = 0
       for (const body of options.events ?? []) {
-        dispatchDepotJobEvent({
+        if (!options.registry)
+          throw new Error('stubRustDepot: events need a registry')
+        options.registry.dispatchDepotJobEvent({
           jobId: job.jobId,
           seq: seq++,
           ...body

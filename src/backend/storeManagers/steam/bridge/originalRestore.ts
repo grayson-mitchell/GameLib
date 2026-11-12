@@ -38,6 +38,7 @@ interface RestoreOutcome {
 }
 
 interface RestoreInput {
+  installRuntime: DownloadSteamDepotsOpts['installRuntime']
   steamUser: DownloadSteamDepotsOpts['steamUser']
   config: DownloadSteamDepotsOpts['config']
   appId: string
@@ -124,6 +125,7 @@ export async function restoreBridgeSteamApiOriginals(
     }
     const stagingSteamapps = join(stagingRoot, 'steamapps')
     const dl = await downloadSelected(appId, {
+      installRuntime: input.installRuntime,
       steamUser: input.steamUser,
       config: input.config,
       targetSteamappsDir: stagingSteamapps,

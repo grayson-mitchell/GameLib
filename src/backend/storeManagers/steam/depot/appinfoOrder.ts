@@ -19,9 +19,6 @@ import { logWarning, LogPrefix } from 'backend/logger'
 /** EMsg.ClientPICSProductInfoRequest (steam-user EMsg table, value 8903). */
 const PICS_PRODUCT_INFO_REQUEST = 8903
 
-/** appId -> depot ids in the order they appear in the raw appinfo VDF. */
-const orderByApp = new Map<string, string[]>()
-
 function* tokenize(text: string): Generator<{ t: string; quoted: boolean }> {
   let i = 0
   const n = text.length
@@ -108,91 +105,101 @@ export function extractDepotOrder(vdfText: string): string[] | undefined {
   return found ? order : undefined
 }
 
-/** Depot ids of `appId` in raw appinfo order, or undefined when never observed. */
-export function getAppInfoDepotOrder(appId: string): string[] | undefined {
-  return orderByApp.get(appId)
-}
-
-/** Test seam. */
-export function clearAppInfoDepotOrder(): void {
-  orderByApp.clear()
-}
-
 interface PicsApp {
   appid?: number
   buffer?: Buffer
 }
 
-const active = new WeakMap<object, { depth: number; original: unknown }>()
+export interface AppinfoOrder {
+  /** Depot ids of `appId` in raw appinfo order, or undefined when never observed. */
+  getAppInfoDepotOrder(appId: string): string[] | undefined
+  withAppInfoOrderCapture<T>(client: object, fn: () => Promise<T>): Promise<T>
+}
 
 /**
- * Run `fn` (a getProductInfo call) with a tap on the client's PICS
- * product-info responses so the raw appinfo VDF text is seen. The tap is
- * installed only for the duration of `fn` (ref-counted for overlapping calls)
- * and the client's own `_send` is restored afterwards, so nothing else ever
- * observes a replaced method. It never alters what steam-user does: the
- * original callback is invoked unchanged and any failure in the tap is
- * swallowed (order then simply stays unknown for that app).
+ * The raw-appinfo depot order tap, as one instance (D-05, 66.4-09): the appId -> order map and the
+ * per-client tap bookkeeping are closure fields. Construction allocates empty containers only: no
+ * I/O, timer or handle (sidecar exit contract).
  */
-export async function withAppInfoOrderCapture<T>(
-  client: object,
-  fn: () => Promise<T>
-): Promise<T> {
-  const c = client as { _send?: (...args: unknown[]) => unknown }
-  if (typeof c._send !== 'function') return fn()
+export function createAppinfoOrder(): AppinfoOrder {
+  /** appId -> depot ids in the order they appear in the raw appinfo VDF. */
+  const orderByApp = new Map<string, string[]>()
+  const active = new WeakMap<object, { depth: number; original: unknown }>()
 
-  let state = active.get(client)
-  if (!state) {
-    const original = c._send
-    state = { depth: 0, original }
-    active.set(client, state)
-    const wrapper = function (this: unknown, ...args: unknown[]) {
-      try {
-        const head = args[0]
-        const msg =
-          typeof head === 'object' && head !== null
-            ? (head as { msg?: number }).msg
-            : head
-        const cb = args[2]
-        if (msg === PICS_PRODUCT_INFO_REQUEST && typeof cb === 'function') {
-          args[2] = (
-            body: { apps?: PicsApp[] } | undefined,
-            ...rest: unknown[]
-          ) => {
-            try {
-              for (const app of body?.apps ?? []) {
-                if (app?.appid === undefined || !app.buffer) continue
-                const ids = extractDepotOrder(app.buffer.toString('utf8'))
-                if (ids) orderByApp.set(String(app.appid), ids)
+  /**
+   * Run `fn` (a getProductInfo call) with a tap on the client's PICS
+   * product-info responses so the raw appinfo VDF text is seen. The tap is
+   * installed only for the duration of `fn` (ref-counted for overlapping calls)
+   * and the client's own `_send` is restored afterwards, so nothing else ever
+   * observes a replaced method. It never alters what steam-user does: the
+   * original callback is invoked unchanged and any failure in the tap is
+   * swallowed (order then simply stays unknown for that app).
+   */
+  async function withAppInfoOrderCapture<T>(
+    client: object,
+    fn: () => Promise<T>
+  ): Promise<T> {
+    const c = client as { _send?: (...args: unknown[]) => unknown }
+    if (typeof c._send !== 'function') return fn()
+
+    let state = active.get(client)
+    if (!state) {
+      const original = c._send
+      state = { depth: 0, original }
+      active.set(client, state)
+      const wrapper = function (this: unknown, ...args: unknown[]) {
+        try {
+          const head = args[0]
+          const msg =
+            typeof head === 'object' && head !== null
+              ? (head as { msg?: number }).msg
+              : head
+          const cb = args[2]
+          if (msg === PICS_PRODUCT_INFO_REQUEST && typeof cb === 'function') {
+            args[2] = (
+              body: { apps?: PicsApp[] } | undefined,
+              ...rest: unknown[]
+            ) => {
+              try {
+                for (const app of body?.apps ?? []) {
+                  if (app?.appid === undefined || !app.buffer) continue
+                  const ids = extractDepotOrder(app.buffer.toString('utf8'))
+                  if (ids) orderByApp.set(String(app.appid), ids)
+                }
+              } catch (err) {
+                logWarning(
+                  `appinfoOrder: could not read raw appinfo order: ${String(err)}`,
+                  LogPrefix.Steam
+                )
               }
-            } catch (err) {
-              logWarning(
-                `appinfoOrder: could not read raw appinfo order: ${String(err)}`,
-                LogPrefix.Steam
+              return (cb as (...a: unknown[]) => unknown).call(
+                this,
+                body,
+                ...rest
               )
             }
-            return (cb as (...a: unknown[]) => unknown).call(
-              this,
-              body,
-              ...rest
-            )
           }
+        } catch {
+          // never break the send path
         }
-      } catch {
-        // never break the send path
+        return original.apply(this, args)
       }
-      return original.apply(this, args)
+      c._send = wrapper
     }
-    c._send = wrapper
+    state.depth++
+    try {
+      return await fn()
+    } finally {
+      state.depth--
+      if (state.depth === 0) {
+        c._send = state.original as (...args: unknown[]) => unknown
+        active.delete(client)
+      }
+    }
   }
-  state.depth++
-  try {
-    return await fn()
-  } finally {
-    state.depth--
-    if (state.depth === 0) {
-      c._send = state.original as (...args: unknown[]) => unknown
-      active.delete(client)
-    }
+
+  return {
+    getAppInfoDepotOrder: (appId) => orderByApp.get(appId),
+    withAppInfoOrderCapture
   }
 }

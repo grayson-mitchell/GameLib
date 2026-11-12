@@ -11,6 +11,7 @@
  * cancel_still_finalizes_1026 / blocked_manifest_skips_that_depot_and_installs_the_rest,
  * reconcile.rs verify_structural_integrity cases) and in depotRust/__tests__/rustInstall.test.ts.
  */
+import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import {
   mkdirSync,
@@ -272,6 +273,7 @@ describe('D-08: catch-path finalize must not clobber a complete install (bottle-
     })
 
     const result = await downloadSteamDepots(KCD2_APP_ID, {
+      installRuntime: createTestSteamInstallRuntime(),
       steamUser,
       config: createTestGlobalConfig(),
       targetSteamappsDir,
@@ -325,6 +327,7 @@ describe('D-08: catch-path finalize must not clobber a complete install (bottle-
       )
 
     const result = await downloadSteamDepots(KCD2_APP_ID, {
+      installRuntime: createTestSteamInstallRuntime(),
       steamUser,
       config: createTestGlobalConfig(),
       targetSteamappsDir,

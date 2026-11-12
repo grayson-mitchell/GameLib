@@ -19,6 +19,7 @@ import { createHash } from 'node:crypto'
 import { dirname, join } from 'node:path'
 
 import { restoreBridgeSteamApiOriginals } from '../originalRestore'
+import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -114,6 +115,7 @@ function fakeDownload(
 const run = (dl: jest.Mock, extra: Partial<{ signal: AbortSignal }> = {}) =>
   restoreBridgeSteamApiOriginals(
     {
+      installRuntime: createTestSteamInstallRuntime(),
       steamUser: createInertTestSteamUser(),
       config: createTestGlobalConfig(),
       appId: '123',
@@ -221,6 +223,7 @@ describe('restoreBridgeSteamApiOriginals', () => {
     const dl = fakeDownload({})
     const bad = await restoreBridgeSteamApiOriginals(
       {
+        installRuntime: createTestSteamInstallRuntime(),
         steamUser: createInertTestSteamUser(),
         config: createTestGlobalConfig(),
         appId: '1/..',
@@ -233,6 +236,7 @@ describe('restoreBridgeSteamApiOriginals', () => {
     expect(bad).toEqual({ status: 'error', outcomes: [] })
     const out = await restoreBridgeSteamApiOriginals(
       {
+        installRuntime: createTestSteamInstallRuntime(),
         steamUser: createInertTestSteamUser(),
         config: createTestGlobalConfig(),
         appId: '1',

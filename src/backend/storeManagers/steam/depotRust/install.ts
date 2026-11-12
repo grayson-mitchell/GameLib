@@ -40,7 +40,7 @@ import {
   toRustHosts,
   type ContentServerHosts
 } from './jobBuilder'
-import { registerActiveDepotJob } from './jobRegistry'
+import type { DepotJobRegistry } from './jobRegistry'
 import { createProgressBridge } from './progressBridge'
 import { runDepotJob, summarizeDepots } from './rustDepot'
 import type {
@@ -177,7 +177,11 @@ export async function downloadSteamDepotsRust(
       Number(appId)
     )
     throwIfAborted(opts.signal)
-    const tokenCache = new CdnAuthTokenCache(client, Number(appId))
+    const tokenCache = new CdnAuthTokenCache(
+      client,
+      Number(appId),
+      opts.installRuntime.cdnSchema
+    )
 
     // StateFlags policy: today finalizeToSteam always asks canWriteFullOwnership, fed by the
     // run's outcome (an aborted signal forces 'cancelled'). Rust applies the same gate to its own
@@ -202,6 +206,7 @@ export async function downloadSteamDepotsRust(
     })
     const bridge = createProgressBridge(appId)
     const outcome = await runDepotJob(job, {
+      registry: opts.installRuntime.depotJobs,
       signal: opts.signal,
       tokenCache,
       refreshRequestCode: requestCodeRefresher(
@@ -259,6 +264,8 @@ export interface SharedRedistJobArgs {
   cacheSteamappsDir: string
   installdir: string
   host: SharedRedistHostInfo
+  /** The boot-owned depot job registry. */
+  registry: DepotJobRegistry
   signal?: AbortSignal
 }
 
@@ -280,6 +287,7 @@ async function runSharedRedistJob(
   const bridge =
     mode === 'verify_only' ? null : createProgressBridge(args.appId)
   const outcome = await runDepotJob(job, {
+    registry: args.registry,
     signal: args.signal,
     tokenCache: args.host.cdnAuth,
     refreshRequestCode: requestCodeRefresher(
@@ -328,19 +336,25 @@ export async function verifySharedRedistDepotRust(
  * Steam refused the manifest (EResult 40), so the caller files the depot under `failed`.
  */
 export async function sharedRedistInstallscriptsRust(
-  args: Pick<SharedRedistJobArgs, 'steamUser' | 'appId' | 'ref' | 'host'>
+  args: Pick<
+    SharedRedistJobArgs,
+    'steamUser' | 'appId' | 'ref' | 'host' | 'registry'
+  >
 ): Promise<string[]> {
   // The crate asks for CDN tokens under this host job id (73-12).
-  const dispose = registerActiveDepotJob(`summary-${args.appId}`, {
-    appId: args.appId,
-    tokenCache: args.host.cdnAuth,
-    refreshRequestCode: requestCodeRefresher(
-      getDepotClient(args.steamUser),
-      new Map([[args.ref.depotId, args.appId]]),
-      args.appId
-    ),
-    onEvent: () => {}
-  })
+  const dispose = args.registry.registerActiveDepotJob(
+    `summary-${args.appId}`,
+    {
+      appId: args.appId,
+      tokenCache: args.host.cdnAuth,
+      refreshRequestCode: requestCodeRefresher(
+        getDepotClient(args.steamUser),
+        new Map([[args.ref.depotId, args.appId]]),
+        args.appId
+      ),
+      onEvent: () => {}
+    }
+  )
   let res
   try {
     res = await summarizeDepots({

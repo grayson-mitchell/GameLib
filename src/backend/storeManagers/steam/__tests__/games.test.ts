@@ -94,7 +94,6 @@ import * as resumeModule from '../library/resume'
 import * as installStopModule from '../library/installStop'
 import * as acfState from '../library/acfState'
 import * as macArch from '../library/macArch'
-import * as pollStateModule from '../library/pollState'
 // Phase 51 Plan 09 Task 3: namespace import so setBridgeUserRoute (real,
 // unmocked module — bridgeVerdict.ts is never jest.mock'd in this file) can
 // be spied per-test to assert the forced-userRoute clear on a scan miss,
@@ -2673,6 +2672,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
       expect(restoreBridgeSteamApiOriginals).toHaveBeenCalledTimes(1)
       expect(restoreBridgeSteamApiOriginals).toHaveBeenCalledWith({
+        installRuntime: steamTestDeps.steamInstallRuntime,
         steamUser: steamTestDeps.steamUser,
         config: steamTestDeps.config,
         appId: APP_ID,
@@ -4714,6 +4714,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
       {}
     )
     expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
+      installRuntime: steamTestDeps.steamInstallRuntime,
       steamUser: steamTestDeps.steamUser,
       config: steamTestDeps.config,
       targetSteamappsDir: TARGET.targetSteamappsDir,
@@ -5695,6 +5696,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
 
     expect(getBottleSteamappsDir).toHaveBeenCalledWith('GameLib')
     expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
+      installRuntime: steamTestDeps.steamInstallRuntime,
       steamUser: steamTestDeps.steamUser,
       config: steamTestDeps.config,
       targetSteamappsDir: BOTTLE_STEAMAPPS_DIR,
@@ -5751,6 +5753,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
+      installRuntime: steamTestDeps.steamInstallRuntime,
       steamUser: steamTestDeps.steamUser,
       config: steamTestDeps.config,
       targetSteamappsDir: BOTTLE_STEAMAPPS_DIR,
@@ -5826,7 +5829,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
   beforeEach(() => {
     resetBridgeFailedSession()
     __resetDrmModeNoticeShownForTests()
-    pollStateModule.clearBridgeInstallFinalized(APP_ID)
+    steamTestDeps.steamInstallRuntime.polls.clearBridgeInstallFinalized(APP_ID)
     library.clear()
     pendingFetches.clear()
     library.set(APP_ID, makeEntry({ title: 'Avernum 4' }))
@@ -5907,6 +5910,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       `GameLibSteamBridge-${APP_ID}`
     )
     expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
+      installRuntime: steamTestDeps.steamInstallRuntime,
       steamUser: steamTestDeps.steamUser,
       config: steamTestDeps.config,
       targetSteamappsDir: BRIDGE_STEAMAPPS_DIR,
@@ -6027,10 +6031,12 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
     const { sendGameStatusUpdate } = jest.requireMock('backend/utils')
     // A leftover marker from a previous install must be cleared at start.
-    pollStateModule.markBridgeInstallFinalized(APP_ID)
+    steamTestDeps.steamInstallRuntime.polls.markBridgeInstallFinalized(APP_ID)
     const seen: boolean[] = []
     ;(installSteamBridgeSharedRedists as jest.Mock).mockImplementation(() => {
-      seen.push(pollStateModule.isBridgeInstallFinalized(APP_ID))
+      seen.push(
+        steamTestDeps.steamInstallRuntime.polls.isBridgeInstallFinalized(APP_ID)
+      )
       return Promise.resolve()
     })
     ;(notify as jest.Mock).mockClear()
@@ -6038,7 +6044,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     expect(seen).toEqual([false])
-    expect(pollStateModule.isBridgeInstallFinalized(APP_ID)).toBe(true)
+    expect(
+      steamTestDeps.steamInstallRuntime.polls.isBridgeInstallFinalized(APP_ID)
+    ).toBe(true)
     expect(sendGameStatusUpdate).toHaveBeenLastCalledWith({
       appName: APP_ID,
       runner: 'steam',
@@ -6294,7 +6302,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       )
 
       expect(result.status).toBe('error')
-      expect(pollStateModule.isBridgeInstallFinalized(APP_ID)).toBe(true)
+      expect(
+        steamTestDeps.steamInstallRuntime.polls.isBridgeInstallFinalized(APP_ID)
+      ).toBe(true)
       expect(sendGameStatusUpdate).toHaveBeenLastCalledWith({
         appName: APP_ID,
         runner: 'steam',

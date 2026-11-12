@@ -1,3 +1,4 @@
+import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
 import { createTestStoreRoot } from '../../../../testUtils/testStoreRoot'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import {
@@ -62,14 +63,10 @@ jest.mock('../../library/installPolling', () => ({
   startInstallPolling: jest.fn()
 }))
 jest.mock('../../library/pollState', () => ({
-  activePolls: new Map(),
+  ...jest.requireActual('../../library/pollState'),
   MAX_TICKS: 1
 }))
 jest.mock('../../library/acfState', () => ({ readAcfState: jest.fn() }))
-jest.mock('../../library/restartHold', () => ({
-  pendingSteamHoldRearm: new Set(),
-  setReconcileRanDuringRearm: jest.fn()
-}))
 jest.mock('../../steamClientProcess', () => ({
   listSteamClientPids: jest.fn(),
   readSteamProcessStartTokens: jest.fn()
@@ -133,6 +130,7 @@ const ALL_BLOCKED_MSG =
   'buildDepotPlan: every selected depot for appId 12345 was blocked by Steam (eresult=40) and had to be skipped: 111'
 
 const OPTS = () => ({
+  installRuntime: createTestSteamInstallRuntime(),
   steamUser,
   config: createTestGlobalConfig(),
   targetSteamappsDir: steamapps,

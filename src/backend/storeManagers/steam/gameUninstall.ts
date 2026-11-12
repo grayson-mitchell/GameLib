@@ -21,7 +21,6 @@ import {
   findOtherManifestsWithInstalldir,
   removeSteamInstallCopy
 } from './library/acfState'
-import { nextSteamRequestNoticeSeq } from './library/pollState'
 import { resolveInstallRoot } from './library/installRoot'
 import {
   probeMacSteamPid,
@@ -199,7 +198,7 @@ function failUninstall(steamGame: SteamGame, stderr: string): ExecResult {
       steamGame.deps.steamSession.libraryState.library.get(steamGame.appId)
         ?.title ?? '',
     kind: 'uninstall-failed',
-    seq: nextSteamRequestNoticeSeq()
+    seq: steamGame.deps.steamInstallRuntime.polls.nextSteamRequestNoticeSeq()
   })
   return { stdout: '', stderr, failed: true }
 }
@@ -344,7 +343,7 @@ export async function uninstallNativeInGameLib(
       title: game ?? '',
       kind,
       ...(code !== undefined ? { code } : {}),
-      seq: nextSteamRequestNoticeSeq()
+      seq: steamGame.deps.steamInstallRuntime.polls.nextSteamRequestNoticeSeq()
     })
   const refuse = (reason: string): ExecResult => {
     // quick 261110-uog: uninstaller.ts logs only stderrLength, so this refusal logs its own reason.

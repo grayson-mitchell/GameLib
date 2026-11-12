@@ -275,7 +275,7 @@ describe('pollUninstallOnce()', () => {
   })
 
   afterEach(() => {
-    stopUninstallPolling('730')
+    stopUninstallPolling(steamTestDeps, '730')
     jest.useRealTimers()
     clearForcedSpy.mockRestore()
   })
@@ -763,7 +763,7 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
   })
 
   afterEach(() => {
-    stopUninstallPolling('730')
+    stopUninstallPolling(steamTestDeps, '730')
     jest.useRealTimers()
   })
 
@@ -778,7 +778,7 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
   it('stopUninstallPolling clears the entry so a new interval can register', () => {
     const setIntervalSpy = jest.spyOn(global, 'setInterval')
     startUninstallPolling(steamTestDeps, '730', 3000)
-    stopUninstallPolling('730')
+    stopUninstallPolling(steamTestDeps, '730')
     startUninstallPolling(steamTestDeps, '730', 3000) // new registration — entry was cleared by stop
     expect(setIntervalSpy).toHaveBeenCalledTimes(2)
     setIntervalSpy.mockRestore()

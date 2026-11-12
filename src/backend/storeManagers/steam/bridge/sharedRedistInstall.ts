@@ -332,6 +332,7 @@ type RedistDeps = Pick<
   | 'paths'
   | 'engineRuntime'
   | 'steamLaunchRuntime'
+  | 'steamInstallRuntime'
 >
 type RunWineCommand = RedistDeps['commandRunner']['runWineCommand']
 
@@ -643,6 +644,7 @@ async function run(
   const { downloadSharedRedistDepots } = await import('../depot')
 
   const result = await downloadSharedRedistDepots(appId, {
+    installRuntime: deps.steamInstallRuntime,
     steamUser: deps.steamUser,
     cacheSteamappsDir: join(
       deps.paths.steamSupportPath,

@@ -14,10 +14,6 @@ import i18next from 'i18next'
 import SteamGame from '../games'
 import { scanDownloadingAppIds } from './acfState'
 import {
-  getReconcileRanDuringRearm,
-  setReconcileRanDuringRearm
-} from './restartHold'
-import {
   clearSteamResumeBreadcrumb,
   getSteamResumeBreadcrumbAppIds,
   breadcrumbAppIsFullyInstalledOnDisk
@@ -66,8 +62,9 @@ export default class SteamLibraryManager implements LibraryManager {
     // quick 261029-pkp: re-arm persisted "Restart Steam to finish" holds
     // before anything can reconcile install state.
     const { dropped } = await rearmPersistedSteamRestartHolds(this.deps)
-    if (dropped > 0 && getReconcileRanDuringRearm()) {
-      setReconcileRanDuringRearm(false)
+    const restartHold = this.deps.steamInstallRuntime.restartHold
+    if (dropped > 0 && restartHold.getReconcileRanDuringRearm()) {
+      restartHold.setReconcileRanDuringRearm(false)
       void this.refreshInstallState()
     }
 

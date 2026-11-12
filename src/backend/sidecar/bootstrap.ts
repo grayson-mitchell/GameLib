@@ -111,6 +111,7 @@ import { createEngineState } from '../engine/engineState'
 import { createEngineRuntime } from '../engine/engineRuntime'
 import { createSteamLaunchRuntime } from '../storeManagers/steam/steamLaunchRuntime'
 import { createBridgeRuntime } from '../storeManagers/steam/bridge/bridgeRuntime'
+import { createSteamInstallRuntime } from '../storeManagers/steam/steamInstallRuntime'
 import { createWinetricksQueue } from '../tools/winetricksQueue'
 import { getInstallingComponent } from '../tools'
 import type { OnlineMonitor } from '../online_monitor'
@@ -297,6 +298,7 @@ export const BOOT_STEP_NAMES = [
   'engine-runtime',
   'steam-launch-runtime',
   'steam-bridge-runtime',
+  'steam-install-runtime',
   'winetricks-queue',
   'store-managers',
   'download-queue',
@@ -447,6 +449,7 @@ function requireServices(state: BootState): BootServices {
     engineRuntime,
     steamLaunchRuntime,
     bridgeRuntime,
+    steamInstallRuntime,
     winetricksQueue,
     signInProbe,
     steamSession,
@@ -481,6 +484,7 @@ function requireServices(state: BootState): BootServices {
     !engineRuntime ||
     !steamLaunchRuntime ||
     !bridgeRuntime ||
+    !steamInstallRuntime ||
     !winetricksQueue ||
     !signInProbe ||
     !steamSession ||
@@ -516,6 +520,7 @@ function requireServices(state: BootState): BootServices {
         'engineRuntime',
         'steamLaunchRuntime',
         'bridgeRuntime',
+        'steamInstallRuntime',
         'winetricksQueue',
         'signInProbe',
         'steamSession',
@@ -553,6 +558,7 @@ function requireServices(state: BootState): BootServices {
     engineRuntime,
     steamLaunchRuntime,
     bridgeRuntime,
+    steamInstallRuntime,
     winetricksQueue,
     signInProbe,
     steamSession,
@@ -1810,6 +1816,19 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'steam-install-runtime',
+      // Builds the one Steam install runtime of this boot (D-05, 66.4-09): the depot appinfo order tap,
+      // the CDN auth schema cache, the shared-redist lock table, the Rust depot job registry, the install
+      // and uninstall poll registries and the restart-hold bookkeeping. Construction allocates empty maps,
+      // sets and counters only: no I/O, no timer, no handle, so the sidecar exit contract holds. After
+      // 'steam-bridge-runtime' and before 'store-managers' so ManagerDeps carries it. Depot jobs and poll
+      // timers are released at stdin EOF by the install AbortControllers and the poll's own unref'd interval.
+      run: (_ctx, _io, state) => {
+        state.services.steamInstallRuntime =
+          prebuilt.steamInstallRuntime ?? createSteamInstallRuntime()
+      }
+    },
+    {
       name: 'winetricks-queue',
       // Builds the one winetricks apply queue of this boot (D-05, D-66.3-12). Construction does no
       // I/O and arms no timer: it only subscribes to the environment-report change signal. Before
@@ -1842,6 +1861,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           engineRuntime,
           steamLaunchRuntime,
           bridgeRuntime,
+          steamInstallRuntime,
           signInProbe,
           steamSession,
           tokenStore,
@@ -1866,6 +1886,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !engineRuntime ||
           !steamLaunchRuntime ||
           !bridgeRuntime ||
+          !steamInstallRuntime ||
           !signInProbe ||
           !steamSession ||
           !tokenStore ||
@@ -1910,6 +1931,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           engineRuntime,
           steamLaunchRuntime,
           bridgeRuntime,
+          steamInstallRuntime,
           signIn: signInProbe,
           steamSession,
           tokenStore,

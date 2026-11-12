@@ -86,7 +86,9 @@ export async function installBridgeGame(
   // manifest lands, so a path that stops after the download (CEG, shim
   // failure, a throw) must clear the "finishing" status itself.
   const clearFinishing = () => {
-    pollState.markBridgeInstallFinalized(steamGame.appId)
+    steamGame.deps.steamInstallRuntime.polls.markBridgeInstallFinalized(
+      steamGame.appId
+    )
     sendGameStatusUpdate({
       appName: steamGame.appId,
       runner: 'steam',
@@ -417,7 +419,9 @@ export async function installBridgeGameLeased(
     return { status: 'abort' }
   }
   // a new install must show finishing again (quick 261031-ihs)
-  pollState.clearBridgeInstallFinalized(steamGame.appId)
+  steamGame.deps.steamInstallRuntime.polls.clearBridgeInstallFinalized(
+    steamGame.appId
+  )
   const targetSteamappsDir = bottle.getBottleSteamappsDir(bridgeBottleName)
   const downloadResult = await installDepotDownload(steamGame, args, {
     targetSteamappsDirOverride: targetSteamappsDir,
@@ -713,7 +717,9 @@ export async function installBridgeGameLeased(
       )
     })
   } finally {
-    pollState.markBridgeInstallFinalized(steamGame.appId)
+    steamGame.deps.steamInstallRuntime.polls.markBridgeInstallFinalized(
+      steamGame.appId
+    )
     sendGameStatusUpdate({
       appName: steamGame.appId,
       runner: 'steam',

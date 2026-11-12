@@ -888,17 +888,17 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     isNativeInstallInFlightSpy = jest
       .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(true)
-    expect(isDelegatedInstallPolling('730')).toBe(false) // no poll
+    expect(isDelegatedInstallPolling(steamTestDeps, '730')).toBe(false) // no poll
     startInstallPolling(steamTestDeps, '730', { intervalMs: 10 }) // bare poll
-    expect(isDelegatedInstallPolling('730')).toBe(false)
+    expect(isDelegatedInstallPolling(steamTestDeps, '730')).toBe(false)
     stopInstallPolling(steamTestDeps, '730')
     startInstallPolling(steamTestDeps, '730', {
       intervalMs: 10,
       delegatedToSteamClient: true
     })
-    expect(isDelegatedInstallPolling('730')).toBe(true)
+    expect(isDelegatedInstallPolling(steamTestDeps, '730')).toBe(true)
     cancelDelegatedInstall(steamTestDeps, '730')
-    expect(isDelegatedInstallPolling('730')).toBe(false)
+    expect(isDelegatedInstallPolling(steamTestDeps, '730')).toBe(false)
   })
 
   // ── debug/steam-dl-missing-in-downloads ────────────────────────────────────

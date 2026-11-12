@@ -26,6 +26,7 @@ export type ManagerDepsSource = Pick<
   | 'engineRuntime'
   | 'steamLaunchRuntime'
   | 'bridgeRuntime'
+  | 'steamInstallRuntime'
   | 'signInProbe'
   | 'steamSession'
   | 'tokenStore'
@@ -63,6 +64,7 @@ export function managerDepsFromServices(
     engineRuntime: source.engineRuntime,
     steamLaunchRuntime: source.steamLaunchRuntime,
     bridgeRuntime: source.bridgeRuntime,
+    steamInstallRuntime: source.steamInstallRuntime,
     signIn: {
       epochs: source.signInProbe.epochs,
       outcomes: source.signInProbe.outcomes

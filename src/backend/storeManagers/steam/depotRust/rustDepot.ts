@@ -16,7 +16,7 @@ import {
 } from 'common/types/sidecarTransport'
 import { logInfo, LogPrefix } from 'backend/logger'
 import type { CdnAuthTokenCache } from '../depot/cdnAuth'
-import { registerActiveDepotJob } from './jobRegistry'
+import type { DepotJobRegistry } from './jobRegistry'
 import type {
   RustDepotJob,
   RustJobEvent,
@@ -26,6 +26,8 @@ import type {
 } from './types'
 
 export interface RunDepotJobHooks {
+  /** The boot-owned job registry the shell's token and event channels look the job up in. */
+  registry: Pick<DepotJobRegistry, 'registerActiveDepotJob'>
   signal?: AbortSignal
   tokenCache: CdnAuthTokenCache
   refreshRequestCode: (
@@ -70,7 +72,7 @@ export async function runDepotJob(
   const { signal } = hooks
   if (signal?.aborted) return cancelledOutcome(job.jobId)
 
-  const dispose = registerActiveDepotJob(job.jobId, {
+  const dispose = hooks.registry.registerActiveDepotJob(job.jobId, {
     appId: job.appId,
     tokenCache: hooks.tokenCache,
     refreshRequestCode: hooks.refreshRequestCode,

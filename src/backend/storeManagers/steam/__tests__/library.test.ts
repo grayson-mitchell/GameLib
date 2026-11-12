@@ -865,6 +865,7 @@ describe('SteamLibraryManager', () => {
 
       expect(resumeVerifyRust).toHaveBeenCalledTimes(1)
       expect(resumeVerifyRust).toHaveBeenCalledWith('730', {
+        installRuntime: steamTestDeps.steamInstallRuntime,
         steamUser: expect.anything(),
         config: expect.anything(),
         targetSteamappsDir: join(tmp, 'steamapps'),

@@ -24,6 +24,8 @@ import {
   type DepotRefEntry
 } from './plan'
 import type { DepotSteamUser } from './planModel'
+import type { DepotRuntime } from '../steamInstallRuntime'
+import type { SharedRedistLocks } from './sharedRedistLocks'
 import { resolveContainedPath } from '../depotPaths'
 import {
   downloadSharedRedistDepotsRust,
@@ -59,6 +61,8 @@ export interface SharedRedistDepot {
 }
 
 export interface DownloadSharedRedistOpts {
+  /** The boot-owned install runtime (appinfo order tap, CDN schema, locks, job registry). */
+  installRuntime: DepotRuntime
   /** The boot-owned authenticated Steam session (D-66.3-16). */
   steamUser: DepotSteamUser
   /** `<dir>/common/Steamworks Shared/...` is written under this directory. */
@@ -87,36 +91,6 @@ export interface SharedRedistDownloadResult {
 const SHARED_REDIST_INDEX_FILE = 'gamelib-shared-redist-index.json'
 const SHARED_REDIST_DEFAULT_INSTALLDIR = 'Steamworks Shared'
 
-/**
- * In-process FIFO lock per key (WR-02). Unlike a single-flight join, every waiter runs its OWN
- * closure once the holder releases, so it uses its own `signal` and re-reads
- * the index, instead of inheriting another launch's. Keys: `depot:<cache>|<id>` around a
- * depot's whole script-then-full sequence (its two downloads write the same files), and
- * `index:<cache>` around every index read-modify-write. The depot lock may take the index lock;
- * never the reverse, so they cannot deadlock.
- */
-const sharedRedistLocks = new Map<string, Promise<void>>()
-
-async function withSharedRedistLock<T>(
-  key: string,
-  fn: () => Promise<T>
-): Promise<T> {
-  const prev = sharedRedistLocks.get(key) ?? Promise.resolve()
-  let release!: () => void
-  const mine = new Promise<void>((r) => {
-    release = r
-  })
-  const tail = prev.then(() => mine)
-  sharedRedistLocks.set(key, tail)
-  await prev
-  try {
-    return await fn()
-  } finally {
-    release()
-    if (sharedRedistLocks.get(key) === tail) sharedRedistLocks.delete(key)
-  }
-}
-
 async function readSharedRedistIndex(
   cacheSteamappsDir: string
 ): Promise<Record<string, string>> {
@@ -135,25 +109,24 @@ async function readSharedRedistIndex(
   }
 }
 
-let sharedRedistTmpSeq = 0
-
 /**
  * Read-modify-write the shared cache index under the index lock, always from a fresh read, and
  * write it atomically: a unique temp file renamed over the index, so a crash never leaves torn
  * JSON and a concurrent writer never loses another run's entry (WR-02, IN-04).
  */
 async function updateSharedRedistIndex(
+  locks: SharedRedistLocks,
   cacheSteamappsDir: string,
   mutate: (index: Record<string, string>) => void
 ): Promise<void> {
-  await withSharedRedistLock(
+  await locks.withSharedRedistLock(
     `index:${resolve(cacheSteamappsDir)}`,
     async () => {
       const index = await readSharedRedistIndex(cacheSteamappsDir)
       mutate(index)
       await mkdir(cacheSteamappsDir, { recursive: true })
       const target = join(cacheSteamappsDir, SHARED_REDIST_INDEX_FILE)
-      const tmp = `${target}.${process.pid}.${++sharedRedistTmpSeq}.tmp`
+      const tmp = `${target}.${process.pid}.${locks.nextTmpSeq()}.tmp`
       try {
         await writeFile(tmp, JSON.stringify(index, null, 2))
         await rename(tmp, target)
@@ -264,7 +237,7 @@ async function downloadSharedRedistDepotsLeased(
   const gameInfo = await withPlanBuildRetry(
     opts.steamUser,
     opts.signal,
-    (c) => fetchAppInfo(c, Number(gameAppId)),
+    (c) => fetchAppInfo(opts.installRuntime.appinfoOrder, c, Number(gameAppId)),
     `sharedRedist game appinfo ${gameAppId}`
   )
   const declared = declaredSharedRedistDepotIds(gameInfo)
@@ -275,7 +248,12 @@ async function downloadSharedRedistDepotsLeased(
   const redistInfo = await withPlanBuildRetry(
     opts.steamUser,
     opts.signal,
-    (c) => fetchAppInfo(c, Number(STEAM_COMMON_REDIST_APP_ID)),
+    (c) =>
+      fetchAppInfo(
+        opts.installRuntime.appinfoOrder,
+        c,
+        Number(STEAM_COMMON_REDIST_APP_ID)
+      ),
     'sharedRedist 228980 appinfo'
   )
   const installdir = sharedRedistInstalldir(
@@ -290,6 +268,7 @@ async function downloadSharedRedistDepotsLeased(
       `shared redist install root escapes ${commonRoot}: ${installRoot}`
     )
   const optIn = new Set(opts.optInDepotIds)
+  const locks = opts.installRuntime.sharedRedistLocks
 
   let hostInfo: SharedRedistHostInfo | undefined
   const getHostInfo = async (): Promise<SharedRedistHostInfo> => {
@@ -305,7 +284,8 @@ async function downloadSharedRedistDepotsLeased(
         hostMeta,
         cdnAuth: new CdnAuthTokenCache(
           client,
-          Number(STEAM_COMMON_REDIST_APP_ID)
+          Number(STEAM_COMMON_REDIST_APP_ID),
+          opts.installRuntime.cdnSchema
         )
       }
     }
@@ -356,6 +336,7 @@ async function downloadSharedRedistDepotsLeased(
         cacheSteamappsDir: opts.cacheSteamappsDir,
         installdir,
         host: await getHostInfo(),
+        registry: opts.installRuntime.depotJobs,
         signal: opts.signal
       }
 
@@ -383,7 +364,7 @@ async function downloadSharedRedistDepotsLeased(
 
       // Everything that reads or writes this depot's cached files runs under one per-depot lock
       // (WR-02), so a concurrent launch waits, then re-reads the index and takes the fast path.
-      const outcome = await withSharedRedistLock(
+      const outcome = await locks.withSharedRedistLock(
         `depot:${cacheKey}|${id}`,
         async (): Promise<
           | { kind: 'failed' }
@@ -424,9 +405,13 @@ async function downloadSharedRedistDepotsLeased(
                 `shared redists: cached installscript for depot ${id} does not parse, re-downloading`,
                 LogPrefix.Steam
               )
-              await updateSharedRedistIndex(opts.cacheSteamappsDir, (i) => {
-                delete i[id]
-              })
+              await updateSharedRedistIndex(
+                locks,
+                opts.cacheSteamappsDir,
+                (i) => {
+                  delete i[id]
+                }
+              )
               fromIndex = false
               continue
             }
@@ -470,9 +455,13 @@ async function downloadSharedRedistDepotsLeased(
                 `shared redists: cached depot ${id} (${displayLabel}) is incomplete (${problem}), re-downloading`,
                 LogPrefix.Steam
               )
-              await updateSharedRedistIndex(opts.cacheSteamappsDir, (i) => {
-                delete i[id]
-              })
+              await updateSharedRedistIndex(
+                locks,
+                opts.cacheSteamappsDir,
+                (i) => {
+                  delete i[id]
+                }
+              )
               fromIndex = false
             }
           }
@@ -487,9 +476,13 @@ async function downloadSharedRedistDepotsLeased(
               )
               return { kind: 'failed' }
             }
-            await updateSharedRedistIndex(opts.cacheSteamappsDir, (i) => {
-              i[id] = gid
-            })
+            await updateSharedRedistIndex(
+              locks,
+              opts.cacheSteamappsDir,
+              (i) => {
+                i[id] = gid
+              }
+            )
           }
 
           return {

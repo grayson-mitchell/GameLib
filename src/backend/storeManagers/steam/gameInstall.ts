@@ -243,6 +243,7 @@ export async function install(
       }
       try {
         const prescreenResult = await prescreenBridgeDepots(steamGame.appId, {
+          installRuntime: steamGame.deps.steamInstallRuntime,
           steamUser: steamGame.deps.steamUser,
           config: steamGame.deps.config,
           targetSteamappsDir: bridgeBottleName

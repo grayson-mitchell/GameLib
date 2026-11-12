@@ -13,11 +13,8 @@ import {
   installPlatformForSource,
   isBridgeAuthoritativeForInstallState
 } from './installRoot'
-import {
-  MAX_TICKS,
-  STEAM_REQUEST_NO_ACTIVITY_TICKS,
-  nextSteamRequestNoticeSeq
-} from './pollState'
+import { MAX_TICKS, STEAM_REQUEST_NO_ACTIVITY_TICKS } from './pollState'
+import type { InstallPollState, UninstallPolls } from './pollState'
 import { readAcfState } from './acfState'
 import type { SteamLibraryStateDeps } from 'backend/services/types'
 import type { BottleSettingsDeps } from '../bottle'
@@ -27,13 +24,12 @@ export type UninstallPollDeps = SteamStoresDeps &
   SteamLibrariesDeps &
   BottleSettingsDeps &
   SteamLibraryStateDeps &
-  NotifyDeps
-
-/** Module-level registry of active uninstall polls, keyed by appId string. */
-const activeUninstallPolls = new Map<
-  string,
-  { timer: NodeJS.Timeout; ticks: number; seenUninstalling: boolean }
->()
+  NotifyDeps & {
+    steamInstallRuntime: {
+      uninstallPolls: UninstallPolls
+      polls: Pick<InstallPollState, 'nextSteamRequestNoticeSeq'>
+    }
+  }
 
 /** Steam EAppState bit 0x800 (2048) = actively uninstalling. */
 const STATE_UNINSTALLING = 2048
@@ -77,7 +73,8 @@ export async function pollUninstallOnce(
   source: AcfSource = 'native'
 ): Promise<void> {
   const result = await readAcfState(deps, appId, source)
-  const poll = activeUninstallPolls.get(appId)
+  const poll =
+    deps.steamInstallRuntime.uninstallPolls.activeUninstallPolls.get(appId)
 
   if (result.state === 'absent') {
     // D-17 (34.13-14) reversibility: clear the forced verdict ONLY on a
@@ -198,7 +195,7 @@ export async function pollUninstallOnce(
           }
         )
       })
-      stopUninstallPolling(appId)
+      stopUninstallPolling(deps, appId)
       logInfo(
         `Steam: uninstall polling complete for appId ${appId} — removed the ${source} copy; a ${survivorSource} copy survives at "${survivor.installPath}", badge stays installed and install_path re-resolved to it`,
         LogPrefix.Steam
@@ -234,7 +231,7 @@ export async function pollUninstallOnce(
       title: existing?.title ?? '',
       body: i18next.t('notify.uninstalled', 'Game Uninstalled')
     })
-    stopUninstallPolling(appId)
+    stopUninstallPolling(deps, appId)
     logInfo(
       `Steam: uninstall polling complete for appId ${appId} — badge flipped to not-installed`,
       LogPrefix.Steam
@@ -279,6 +276,7 @@ export function startUninstallPolling(
   appId: string,
   intervalMsOrOptions: number | PollOptions = 3000
 ): void {
+  const { activeUninstallPolls } = deps.steamInstallRuntime.uninstallPolls
   if (activeUninstallPolls.has(appId)) return // idempotent
 
   const { intervalMs, source }: { intervalMs: number; source: AcfSource } =
@@ -309,7 +307,7 @@ export function startUninstallPolling(
         `Steam: uninstall polling for appId ${appId} hit safety cap (${MAX_TICKS} ticks); relying on D-01 focus backstop`,
         LogPrefix.Steam
       )
-      stopUninstallPolling(appId)
+      stopUninstallPolling(deps, appId)
       return
     }
 
@@ -359,9 +357,9 @@ export function startUninstallPolling(
         appId,
         title: deps.steamSession.libraryState.library.get(appId)?.title ?? '',
         kind: 'uninstall-not-started',
-        seq: nextSteamRequestNoticeSeq()
+        seq: deps.steamInstallRuntime.polls.nextSteamRequestNoticeSeq()
       })
-      stopUninstallPolling(appId)
+      stopUninstallPolling(deps, appId)
     }
   }, intervalMs)
 
@@ -380,7 +378,11 @@ export function startUninstallPolling(
  *
  * Exported for unit testing.
  */
-export function stopUninstallPolling(appId: string): void {
+export function stopUninstallPolling(
+  deps: Pick<UninstallPollDeps, 'steamInstallRuntime'>,
+  appId: string
+): void {
+  const { activeUninstallPolls } = deps.steamInstallRuntime.uninstallPolls
   const poll = activeUninstallPolls.get(appId)
   if (!poll) return
   clearInterval(poll.timer)

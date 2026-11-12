@@ -249,7 +249,8 @@ export function registerHandlers(deps: {
     managers: deps.services.managers,
     stores: deps.services.stores,
     notifications: deps.services.host.notifications,
-    onlineMonitor: deps.services.onlineMonitor
+    onlineMonitor: deps.services.onlineMonitor,
+    steamInstallRuntime: deps.services.steamInstallRuntime
   })
   // Phase 34.2 Plan 06: the enrichment channels — no ordering
   // constraint relative to the other calls above (own channel names, no
@@ -404,9 +405,12 @@ export function registerHandlers(deps: {
   registerStoreEmbedFlows({ ipc })
   // Phase 73 Plan 11 (D-03, D-06): the shell-originated channels the Rust depot job uses for CDN
   // tokens, manifest request codes and progress events — no ordering constraint relative to the
-  // other calls above (own channel names, backed by a Map in jobRegistry.ts), placed before
+  // other calls above (own channel names, backed by the boot-owned job registry), placed before
   // `registerStoreWriteHandlers()`.
-  registerDepotHostFlows({ ipc })
+  registerDepotHostFlows({
+    ipc,
+    depotJobs: deps.services.steamInstallRuntime.depotJobs
+  })
   // D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
   // every store instance exists, or a legitimate write would be rejected as an unknown
   // store — hence AFTER registerStoreWriteHandlers(). These are `send`-kind (fire-and-forget)

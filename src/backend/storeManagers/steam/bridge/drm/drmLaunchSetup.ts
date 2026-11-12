@@ -513,7 +513,8 @@ async function runSetup(
         steamUser: deps.steamUser,
         paths: deps.paths,
         engineRuntime: deps.engineRuntime,
-        steamLaunchRuntime: deps.steamLaunchRuntime
+        steamLaunchRuntime: deps.steamLaunchRuntime,
+        steamInstallRuntime: deps.steamInstallRuntime
       })
     )
     if (staged.status === 'error') return fail('bottle-stage', staged)
