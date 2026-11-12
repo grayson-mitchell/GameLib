@@ -498,6 +498,11 @@ jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
 }))
 
 // ── Metadata cache store mock — controls steamMetadataStore ──────────────────
+// Phase 74 plan 09: the gate is covered in updateLaunchPrompt.test.ts; here it must not
+// perturb this file's bottle-settings read counts.
+jest.mock('../updateLaunchPrompt', () => ({
+  gateBridgeLaunchOnUpdate: jest.fn().mockResolvedValue('launch')
+}))
 jest.mock('../stores', () => ({
   configStore: {
     get: jest.fn(),

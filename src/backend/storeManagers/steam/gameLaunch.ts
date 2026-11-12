@@ -33,6 +33,7 @@ import {
   getBridgeBottleSettings,
   findBridgeInstallBottle
 } from './bridgeBottle'
+import { gateBridgeLaunchOnUpdate } from './updateLaunchPrompt'
 import { tellBottledSteamToLaunch } from './bottledSteam'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 // Phase 60: Steam overlay in bridged games (macOS).
@@ -96,10 +97,9 @@ export async function launch(
   clearStaleBridgeVerdict(steamGame)
   await ensurePlatformsCaptured(steamGame)
   if (isBottleEligible(steamGame)) {
-    // quick/261024-gvu: single-flight. While a bottle/bridge monitor for
-    // this appId is live (still starting, or already running) a second Play
-    // must not queue another `-applaunch` / wine exe — the monitor keeps
-    // owning the launching/playing status.
+    // quick/261024-gvu: single-flight. While a bottle/bridge monitor for this
+    // appId is live (starting or running) a second Play must not queue another
+    // `-applaunch` / wine exe; the monitor keeps owning the status.
     const livePhase =
       steamGame.deps.steamLaunchRuntime.monitors.getBottleProcessMonitorPhase(
         steamGame.appId
@@ -113,9 +113,9 @@ export async function launch(
     }
     // Phase 51 Plan 09 (D-51-09): LOCATION, not eligibility — launch()
     // must dispatch to wherever this install's bits actually live, never
-    // to where a NEW install would be routed (isBridgeEligible() /
-    // bridgeRoute() answers the latter question, which a never-scanned
-    // title now defaults to 'bridge' on (rule 11, pending-scan) even
+    // to where a NEW install would be routed (isBridgeEligible() / bridgeRoute()
+    // answers the latter question, which a never-scanned title now defaults
+    // to 'bridge' on (rule 11, pending-scan) even
     // though nothing has been installed there yet). findBridgeInstallBottle
     // is non-null only when a bridge bottle actually holds this appId's
     // manifest — the FIRST check inside this block, mirroring install()'s
@@ -133,6 +133,7 @@ export async function launch(
         steamGame.appId
       )
     ) {
+      if ((await gateBridgeLaunchOnUpdate(steamGame)) === 'abort') return false
       return launchBridgeGame(steamGame)
     }
 
