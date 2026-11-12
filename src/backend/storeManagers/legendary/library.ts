@@ -40,8 +40,7 @@ import { Path } from 'backend/schemas'
 import shlex from 'shlex'
 import thirdParty from './thirdParty'
 import { Entries } from 'type-fest'
-import { runLegendaryCommandStub } from './e2eMock'
-import { legendaryConfigPath, legendaryMetadata } from './constants'
+import { deriveLegendaryPaths } from './constants'
 import { isWindows } from 'backend/constants/environment'
 import { recordedMacArch, scheduleMacArchSweep } from 'backend/macArch/recovery'
 import { sendFrontendMessage } from '../../ipc'
@@ -50,10 +49,6 @@ import LegendaryGame from './games'
 
 const fallBackImage = 'fallback'
 
-const allGames: Set<string> = new Set()
-let installedGames: Map<string, InstalledJsonMetadata> = new Map()
-const library: Map<string, GameInfo> = new Map()
-
 /**
  * Applies a native-Mac arch verdict (quick 261029-t39). Patches the Map entry
  * and the persisted libraryStore 'library' array IN PLACE by app_name (never
@@ -61,12 +56,16 @@ const library: Map<string, GameInfo> = new Map()
  * pushes the updated entry live.
  */
 export function applyLegendaryMacArch(
-  deps: Pick<LegendaryManagerDeps, 'stores'>,
+  deps: Pick<LegendaryManagerDeps, 'stores' | 'legendaryRuntime'>,
   appName: string,
   verdict: '32' | '64'
 ) {
-  const cached = library.get(appName)
-  if (cached) library.set(appName, { ...cached, mac_arch: verdict })
+  const cached = deps.legendaryRuntime.libraryState.library.get(appName)
+  if (cached)
+    deps.legendaryRuntime.libraryState.library.set(appName, {
+      ...cached,
+      mac_arch: verdict
+    })
 
   const stored = deps.stores.legendary.libraryStore.get('library', [])
   const idx = stored.findIndex((g) => g.app_name === appName)
@@ -76,7 +75,8 @@ export function applyLegendaryMacArch(
     deps.stores.legendary.libraryStore.set('library', stored)
   }
 
-  const updated = library.get(appName) ?? entry
+  const updated =
+    deps.legendaryRuntime.libraryState.library.get(appName) ?? entry
   if (updated) sendFrontendMessage('pushGameToLibrary', updated)
 }
 
@@ -85,6 +85,10 @@ export type LegendaryManagerDeps = ManagerDeps
 
 export default class LegendaryLibraryManager implements LibraryManager {
   constructor(private readonly deps: LegendaryManagerDeps) {}
+
+  private get legendaryPaths() {
+    return deriveLegendaryPaths(this.deps.paths)
+  }
 
   private readonly gameCache: Map<LegendaryAppName, LegendaryGame> = new Map()
 
@@ -96,13 +100,15 @@ export default class LegendaryLibraryManager implements LibraryManager {
       this.deps,
       'legendary',
       () =>
-        [...installedGames.entries()]
+        [...this.deps.legendaryRuntime.libraryState.installedGames.entries()]
           .filter(([, i]) => i.platform === 'Mac')
           .map(([appName, i]) => ({
             appName,
             installPath: i.install_path,
             executable: i.executable,
-            title: library.get(appName)?.title
+            title:
+              this.deps.legendaryRuntime.libraryState.library.get(appName)
+                ?.title
           })),
       (appName, verdict) => applyLegendaryMacArch(this.deps, appName, verdict)
     )
@@ -123,16 +129,16 @@ export default class LegendaryLibraryManager implements LibraryManager {
    * Loads all of the user's games into `allGames`
    */
   loadGamesInAccount() {
-    if (!existsSync(legendaryMetadata)) {
+    if (!existsSync(this.legendaryPaths.legendaryMetadata)) {
       return
     }
-    readdirSync(legendaryMetadata).forEach((filename) => {
+    readdirSync(this.legendaryPaths.legendaryMetadata).forEach((filename) => {
       // This shouldn't ever happen, but just in case
       if (!filename.endsWith('.json')) {
         return
       }
       const appName = filename.split('.').slice(0, -1).join('.')
-      allGames.add(appName)
+      this.deps.legendaryRuntime.libraryState.allGames.add(appName)
     })
   }
 
@@ -171,7 +177,10 @@ export default class LegendaryLibraryManager implements LibraryManager {
    * Refresh `installedGames` from file.
    */
   refreshInstalled() {
-    const installedJSON = join(legendaryConfigPath, 'installed.json')
+    const installedJSON = join(
+      this.legendaryPaths.legendaryConfigPath,
+      'installed.json'
+    )
 
     let installedCache: [string, InstalledJsonMetadata][] = []
     if (existsSync(installedJSON)) {
@@ -191,10 +200,12 @@ export default class LegendaryLibraryManager implements LibraryManager {
       installedCache = []
     }
 
-    const thirdPartyGames = thirdParty.getInstalledGames()
+    const thirdPartyGames = thirdParty.getInstalledGames(this.deps.paths)
     installedCache.push(...thirdPartyGames)
 
-    installedGames = new Map(installedCache)
+    this.deps.legendaryRuntime.libraryState.installedGames = new Map(
+      installedCache
+    )
   }
 
   private defaultExecResult = {
@@ -209,7 +220,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
    */
   async refresh(): Promise<ExecResult | null> {
     logInfo('Refreshing library...', LogPrefix.Legendary)
-    if (!LegendaryUser.isLoggedIn()) {
+    if (!LegendaryUser.isLoggedIn(this.deps)) {
       return this.defaultExecResult
     }
 
@@ -222,7 +233,9 @@ export default class LegendaryLibraryManager implements LibraryManager {
     } catch (error) {
       logError(error, LogPrefix.Legendary)
     }
-    const arr = Array.from(library.values())
+    const arr = Array.from(
+      this.deps.legendaryRuntime.libraryState.library.values()
+    )
     this.deps.stores.legendary.libraryStore.set('library', arr)
     logInfo(
       ['Game list updated, got', `${arr.length}`, 'games & DLCs'],
@@ -251,10 +264,13 @@ export default class LegendaryLibraryManager implements LibraryManager {
       return undefined
     }
     // We have the game, but info wasn't loaded yet
-    if (!library.has(appName) || forceReload) {
+    if (
+      !this.deps.legendaryRuntime.libraryState.library.has(appName) ||
+      forceReload
+    ) {
       this.loadFile(appName)
     }
-    return library.get(appName)
+    return this.deps.legendaryRuntime.libraryState.library.get(appName)
   }
 
   /**
@@ -324,7 +340,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
    * @returns App names of updateable games.
    */
   async listUpdateableGames(): Promise<string[]> {
-    const isLoggedIn = LegendaryUser.isLoggedIn()
+    const isLoggedIn = LegendaryUser.isLoggedIn(this.deps)
 
     if (!isLoggedIn || !this.deps.onlineMonitor.isOnline()) {
       return []
@@ -360,7 +376,10 @@ export default class LegendaryLibraryManager implements LibraryManager {
 
     // Once we ran `legendary list`, `assets.json` will be updated with the newest
     // game versions, and `installed.json` has our currently installed ones
-    const installedJsonFile = join(legendaryConfigPath, 'installed.json')
+    const installedJsonFile = join(
+      this.legendaryPaths.legendaryConfigPath,
+      'installed.json'
+    )
     let installedJson: Record<string, InstalledJsonMetadata> = {}
     try {
       installedJson = JSON.parse(
@@ -384,7 +403,10 @@ export default class LegendaryLibraryManager implements LibraryManager {
     }
     // ...and now go through all games in `assets.json` to get the newest version
     // HACK: Same as above,                         ↓ this isn't always `string`, but it works for now
-    const assetsJsonFile = join(legendaryConfigPath, 'assets.json')
+    const assetsJsonFile = join(
+      this.legendaryPaths.legendaryConfigPath,
+      'assets.json'
+    )
     let assetsJson: Record<string, Record<string, string>[]> = {}
     try {
       assetsJson = JSON.parse(
@@ -455,7 +477,8 @@ export default class LegendaryLibraryManager implements LibraryManager {
    * @param newPath
    */
   async changeGameInstallPath(appName: string, newPath: string) {
-    const libraryGameInfo = library.get(appName)
+    const libraryGameInfo =
+      this.deps.legendaryRuntime.libraryState.library.get(appName)
     if (libraryGameInfo) libraryGameInfo.install.install_path = newPath
     else {
       logWarning(
@@ -464,7 +487,8 @@ export default class LegendaryLibraryManager implements LibraryManager {
       )
     }
 
-    const installedGameInfo = installedGames.get(appName)
+    const installedGameInfo =
+      this.deps.legendaryRuntime.libraryState.installedGames.get(appName)
     if (installedGameInfo) installedGameInfo.install_path = newPath
     else {
       logWarning(
@@ -506,15 +530,21 @@ export default class LegendaryLibraryManager implements LibraryManager {
       this.loadFile(appName)
     } else {
       // @ts-expect-error TODO: Make sure game info is loaded & appName is valid here
-      library.get(appName).is_installed = false
+      this.deps.legendaryRuntime.libraryState.library.get(
+        appName
+      ).is_installed = false
       // @ts-expect-error Same as above
-      library.get(appName).install = {} as InstalledInfo
-      installedGames.delete(appName)
+      this.deps.legendaryRuntime.libraryState.library.get(appName).install =
+        {} as InstalledInfo
+      this.deps.legendaryRuntime.libraryState.installedGames.delete(appName)
     }
   }
 
   private loadGameMetadata(appName: string): GameMetadata {
-    const fullPath = join(legendaryMetadata, appName + '.json')
+    const fullPath = join(
+      this.legendaryPaths.legendaryMetadata,
+      appName + '.json'
+    )
     return JSON.parse(readFileSync(fullPath, 'utf-8'))
   }
 
@@ -596,7 +626,8 @@ export default class LegendaryLibraryManager implements LibraryManager {
       })
     }
 
-    const info = installedGames.get(app_name)
+    const info =
+      this.deps.legendaryRuntime.libraryState.installedGames.get(app_name)
     const {
       executable,
       version,
@@ -652,7 +683,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
       }
     }
 
-    library.set(app_name, {
+    this.deps.legendaryRuntime.libraryState.library.set(app_name, {
       app_name,
       art_cover: art_cover || art_square || fallBackImage,
       art_logo,
@@ -708,9 +739,9 @@ export default class LegendaryLibraryManager implements LibraryManager {
    * @returns App names of loaded files.
    */
   private async loadAll(): Promise<string[]> {
-    if (existsSync(legendaryMetadata)) {
+    if (existsSync(this.legendaryPaths.legendaryMetadata)) {
       const loadedFiles: string[] = []
-      allGames.forEach((appName) => {
+      this.deps.legendaryRuntime.libraryState.allGames.forEach((appName) => {
         const wasLoaded = this.loadFile(appName)
         if (wasLoaded) {
           loadedFiles.push(appName)
@@ -726,14 +757,15 @@ export default class LegendaryLibraryManager implements LibraryManager {
    * @param appName The game to search for
    * @returns True = Game is in account, False = Game is not in account
    */
-  hasGame = (appName: string) => allGames.has(appName)
+  hasGame = (appName: string) =>
+    this.deps.legendaryRuntime.libraryState.allGames.has(appName)
 
   async runRunnerCommand(
     command: LegendaryCommand,
     options?: CallRunnerOptions
   ): Promise<ExecResult> {
     if (process.env.CI === 'e2e') {
-      return runLegendaryCommandStub(command)
+      return this.deps.legendaryRuntime.stubs.run(command)
     }
 
     const { dir, bin } = getLegendaryBin(this.deps)
@@ -749,7 +781,8 @@ export default class LegendaryLibraryManager implements LibraryManager {
 
     // if not on a SNAP environment, set the XDG_CONFIG_HOME to the same location as the config file
     if (!process.env.SNAP) {
-      options.env.LEGENDARY_CONFIG_PATH = legendaryConfigPath
+      options.env.LEGENDARY_CONFIG_PATH =
+        this.legendaryPaths.legendaryConfigPath
     }
 
     const commandParts = this.commandToArgsArray(command)
@@ -951,7 +984,8 @@ export default class LegendaryLibraryManager implements LibraryManager {
 
     // Some DLCs are also launch-able
     for (const dlc of installInfo.game.owned_dlc) {
-      const installedInfo = installedGames.get(dlc.app_name)
+      const installedInfo =
+        this.deps.legendaryRuntime.libraryState.installedGames.get(dlc.app_name)
       if (!installedInfo) continue
 
       // If the DLC itself is executable, push it onto the list

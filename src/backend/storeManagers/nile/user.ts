@@ -14,7 +14,9 @@ import type { ManagerDeps, Stores } from 'backend/services/types'
 import { existsSync, readFileSync } from 'graceful-fs'
 import { clearCache } from 'backend/utils'
 import type { ClearCacheDeps } from 'backend/utils'
-import { nileUserData } from './constants'
+import { deriveNilePaths } from './constants'
+import type { AppPaths } from 'backend/process/context'
+import type { NileRuntime } from './nileRuntime'
 import { isMac } from 'backend/constants/environment'
 import type { LoginWindowSeamSlot } from '../../humble/loginWindowSeam'
 import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
@@ -23,6 +25,11 @@ import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
 /** The persisted-config slice the user reads and writes. */
 export interface NileStoreDeps {
   stores: Pick<Stores, 'nile'>
+}
+
+/** What `getUserData` reads: the persisted config slice plus the root the user file derives from. */
+export type NileUserDataDeps = NileStoreDeps & {
+  paths: Pick<AppPaths, 'appFolder'>
 }
 
 /** The boot's login-window seam slot, for the logout cookie wipe (D-66.3-17). */
@@ -34,6 +41,9 @@ export type NileUserDeps = ClearCacheDeps &
   SignInNoteDeps &
   NileLoginSeamDeps & {
     libraryManagers: Pick<ManagerDeps['libraryManagers'], 'nile'>
+    /** The boot-owned login-data single-flight (66.4-11). */
+    nileRuntime: Pick<NileRuntime, 'loginFlight'>
+    paths: Pick<AppPaths, 'appFolder'>
   }
 
 // Amazon-owned APEX domain. Suffix-matching happens Rust-side in
@@ -133,7 +143,7 @@ function authLogSanitizer(line: string) {
 // exchange. Reusing it across attempts would let a retry after a cancelled login replay stale
 // PKCE material into `authAmazon` -- a correctness bug, not an optimisation. A future
 // "consistency" pass must NOT add the TTL value cache that the GOG sibling has.
-let inFlightLoginData: Promise<NileLoginData> | null = null
+// The in-flight slot is the boot-owned NileRuntime.loginFlight (66.4-11), one per runtime.
 
 // F-34.5-G6-20 (site 1 of the pair) -- nile login/register payload objects are never logged
 // whole. `NileLoginData` carries single-use PKCE material (`code_verifier`) plus the full OAuth
@@ -168,15 +178,15 @@ function redactNileRegisterData(d: NileRegisterData) {
 
 export class NileUser {
   static async getLoginData(deps: NileUserDeps): Promise<NileLoginData> {
-    if (inFlightLoginData) {
+    const loginFlight = deps.nileRuntime.loginFlight
+    if (loginFlight.current()) {
       logDebug(
         'Getting login data from Nile: reusing an already in-flight fetch',
         LogPrefix.Nile
       )
-      return inFlightLoginData
     }
 
-    const fetchPromise = (async (): Promise<NileLoginData> => {
+    return loginFlight.run(async (): Promise<NileLoginData> => {
       logDebug('Getting login data from Nile', LogPrefix.Nile)
       const { stdout } = await deps.libraryManagers.nile.runRunnerCommand(
         ['auth', '--login', '--non-interactive'],
@@ -192,28 +202,7 @@ export class NileUser {
         LogPrefix.Nile
       )
       return output
-    })()
-
-    inFlightLoginData = fetchPromise
-    try {
-      return await fetchPromise
-    } finally {
-      // Identity check (systeminfo's own precedent) -- prevents a slow loser clearing a
-      // newer winner's slot: if a call issued AFTER this one resolved already replaced
-      // `inFlightLoginData` with its own fresh promise, this `finally` must not clear that.
-      if (inFlightLoginData === fetchPromise) {
-        inFlightLoginData = null
-      }
-    }
-  }
-
-  /**
-   * Test-only reset hook (mirrors systeminfo's `__resetSystemInfoCacheForTests`). This
-   * project's Jest config has no `resetModules`, so `inFlightLoginData` would otherwise leak
-   * between tests in the same file. Never called from production code.
-   */
-  static __resetInFlightLoginDataForTests(): void {
-    inFlightLoginData = null
+    })
   }
 
   static async login(
@@ -309,8 +298,9 @@ export class NileUser {
   }
 
   static async getUserData(
-    deps: NileStoreDeps
+    deps: NileUserDataDeps
   ): Promise<NileUserData | undefined> {
+    const { nileUserData } = deriveNilePaths(deps.paths)
     if (!existsSync(nileUserData)) {
       logError('current_user.json does not exist', LogPrefix.Nile)
       deps.stores.nile.configStore.delete('userData')

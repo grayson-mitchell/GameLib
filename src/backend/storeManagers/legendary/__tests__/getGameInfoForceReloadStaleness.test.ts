@@ -101,13 +101,16 @@ jest.mock('../constants', () => {
   // actual security control (T-qop-01).
   nodeFs.chmodSync(root, 0o700)
 
+  // deriveLegendaryPaths ignores its roots here: every location lands under the disposable root.
   return {
-    legendaryConfigPath: root,
-    legendaryUserInfo: nodePath.join(root, 'user.json'),
-    legendaryInstalled: nodePath.join(root, 'installed.json'),
-    thirdPartyInstalled: nodePath.join(root, 'third-party-installed.json'),
-    legendaryMetadata: nodePath.join(root, 'metadata'),
-    epicRedistPath: nodePath.join(root, 'epicRedist')
+    deriveLegendaryPaths: () => ({
+      legendaryConfigPath: root,
+      legendaryUserInfo: nodePath.join(root, 'user.json'),
+      legendaryInstalled: nodePath.join(root, 'installed.json'),
+      thirdPartyInstalled: nodePath.join(root, 'third-party-installed.json'),
+      legendaryMetadata: nodePath.join(root, 'metadata'),
+      epicRedistPath: nodePath.join(root, 'epicRedist')
+    })
   }
 })
 
@@ -185,11 +188,16 @@ jest.mock('../games', () => ({
 import { mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import LegendaryLibraryManager from '../library'
-import { legendaryConfigPath, legendaryMetadata } from '../constants'
+import { deriveLegendaryPaths } from '../constants'
 import type {
   InstalledJsonMetadata,
   GameMetadataInner
 } from 'common/types/legendary'
+
+// The mocked constants module ignores its roots, so any argument yields the fixture paths.
+const { legendaryConfigPath, legendaryMetadata } = deriveLegendaryPaths(
+  {} as never
+)
 
 // Two obviously distinct, greppable sentinels -- see the sentinel-distinctness guard below.
 const OLD_SENTINEL = '/qop/OLD-stale-save-path'

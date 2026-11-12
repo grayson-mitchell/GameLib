@@ -2,9 +2,16 @@ import { LogPrefix, logWarning, logError } from 'backend/logger'
 import { InstalledJsonMetadata } from 'common/types/legendary'
 import { existsSync, readFileSync } from 'fs'
 import { readFile, writeFile } from 'fs/promises'
-import { thirdPartyInstalled } from './constants'
+import { deriveLegendaryPaths } from './constants'
+import type { LegendaryPathRoots } from './user'
 
-const getInstalledGames = (): [string, InstalledJsonMetadata][] => {
+const thirdPartyPath = (paths: LegendaryPathRoots) =>
+  deriveLegendaryPaths(paths).thirdPartyInstalled
+
+const getInstalledGames = (
+  paths: LegendaryPathRoots
+): [string, InstalledJsonMetadata][] => {
+  const thirdPartyInstalled = thirdPartyPath(paths)
   if (existsSync(thirdPartyInstalled)) {
     try {
       const thirdPartyData = JSON.parse(
@@ -28,7 +35,12 @@ const getInstalledGames = (): [string, InstalledJsonMetadata][] => {
   return []
 }
 
-const addInstalledGame = async (appName: string, platform: string) => {
+const addInstalledGame = async (
+  paths: LegendaryPathRoots,
+  appName: string,
+  platform: string
+) => {
+  const thirdPartyInstalled = thirdPartyPath(paths)
   const installedAppNames = []
 
   if (existsSync(thirdPartyInstalled)) {
@@ -58,7 +70,11 @@ const addInstalledGame = async (appName: string, platform: string) => {
   }
 }
 
-const removeInstalledGame = async (appName: string) => {
+const removeInstalledGame = async (
+  paths: LegendaryPathRoots,
+  appName: string
+) => {
+  const thirdPartyInstalled = thirdPartyPath(paths)
   const installedAppNames = []
   try {
     const buffer = await readFile(thirdPartyInstalled, 'utf-8')

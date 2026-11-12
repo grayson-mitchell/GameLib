@@ -38,10 +38,10 @@
  */
 
 import { existsSync, watch } from 'graceful-fs'
-import { legendaryInstalled } from '../storeManagers/legendary/constants'
+import { deriveLegendaryPaths } from '../storeManagers/legendary/constants'
 import { logInfo, LogPrefix } from '../logger'
 import { sendFrontendMessage } from '../ipc'
-import type { StoreManagers } from '../services/types'
+import type { ManagerDeps, StoreManagers } from '../services/types'
 
 /**
  * The debounce window, in milliseconds. Matches `main.ts:1047`'s `setTimeout(..., 500)` exactly.
@@ -78,14 +78,18 @@ export function isInstalledJsonWatcherActive(): boolean {
  * through the app-data path shim, and the existence check is only meaningful after startup.
  */
 export function startInstalledJsonWatcher(
-  deps: { managers: Pick<StoreManagers, 'library'> },
+  deps: {
+    managers: Pick<StoreManagers, 'library'>
+    paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath'>
+  },
   options: InstalledJsonWatcherOptions = {}
 ): boolean {
   if (activeWatcher) {
     return false
   }
 
-  const target = options.path ?? legendaryInstalled
+  const target =
+    options.path ?? deriveLegendaryPaths(deps.paths).legendaryInstalled
   // D-35-19-09 (live-gate criterion 14, UI half): the backend refresh alone left the renderer
   // with no signal that anything changed, so the Library view never re-rendered without a
   // manual refresh even though `refreshInstalled()` had already rebuilt the in-memory map. The

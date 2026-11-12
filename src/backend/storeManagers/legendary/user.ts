@@ -9,7 +9,8 @@ import type { ManagerDeps, Stores } from 'backend/services/types'
 import { LegendaryCommand } from './commands'
 import { NonEmptyString } from './commands/base'
 import { isMac } from 'backend/constants/environment'
-import { legendaryUserInfo } from './constants'
+import { deriveLegendaryPaths } from './constants'
+import type { AppPaths } from 'backend/process/context'
 import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
 import {
   classifyCookieRead,
@@ -111,7 +112,11 @@ const FATAL_WIPE_STEP = 'clearEpicCookies'
 /** What `getUserInfo` reads: the persisted `userInfo` slot in the kvs config store. */
 export interface LegendaryUserInfoDeps {
   stores: { kvs: Pick<Stores['kvs'], 'configStore'> }
+  paths: LegendaryPathRoots
 }
+
+/** The path roots the Legendary on-disk locations derive from. */
+export type LegendaryPathRoots = Pick<AppPaths, 'appFolder' | 'toolsPath'>
 
 /** What `login` / `logout` need (R3): the legendary manager, its config store and kvs. */
 export interface LegendaryUserDeps
@@ -720,15 +725,16 @@ export class LegendaryUser {
     }
   }
 
-  public static isLoggedIn() {
-    return existsSync(legendaryUserInfo)
+  public static isLoggedIn(deps: { paths: LegendaryPathRoots }) {
+    return existsSync(deriveLegendaryPaths(deps.paths).legendaryUserInfo)
   }
 
   public static getUserInfo(deps: LegendaryUserInfoDeps): UserInfo | undefined {
-    if (!LegendaryUser.isLoggedIn()) {
+    if (!LegendaryUser.isLoggedIn(deps)) {
       deps.stores.kvs.configStore.delete('userInfo')
       return
     }
+    const { legendaryUserInfo } = deriveLegendaryPaths(deps.paths)
     try {
       const userInfoContent = readFileSync(legendaryUserInfo).toString()
       const userInfoObject = JSON.parse(userInfoContent)

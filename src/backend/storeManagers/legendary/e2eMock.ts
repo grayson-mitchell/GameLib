@@ -23,31 +23,52 @@ const defaultStubs: RunnerCommandStub[] = [
   }
 ]
 
-let currentStubs = [...defaultStubs]
+export interface LegendaryStubs {
+  /** Replaces the active stubs. */
+  set(stubs: RunnerCommandStub[]): void
+  /** Restores the default `--version` stub. */
+  reset(): void
+  /** The stubbed result for a command (first stub whose commandParts are all set on it). */
+  run(command: LegendaryCommand): Promise<{ stdout: string; stderr: string }>
+}
 
-export const runLegendaryCommandStub = async (command: LegendaryCommand) => {
-  const stub = currentStubs.find((stub) =>
-    stub.commandParts.every((part) => command[part as keyof LegendaryCommand])
-  )
+export function createLegendaryStubs(): LegendaryStubs {
+  let currentStubs = [...defaultStubs]
+  return {
+    set(stubs) {
+      currentStubs = [...stubs]
+    },
+    reset() {
+      currentStubs = [...defaultStubs]
+    },
+    async run(command) {
+      const stub = currentStubs.find((stub) =>
+        stub.commandParts.every(
+          (part) => command[part as keyof LegendaryCommand]
+        )
+      )
 
-  if (stub?.response) return stub.response
+      if (stub?.response) return stub.response
 
-  return Promise.resolve({
-    stdout: stub?.stdout || '',
-    stderr: stub?.stderr || ''
-  })
+      return Promise.resolve({
+        stdout: stub?.stdout || '',
+        stderr: stub?.stderr || ''
+      })
+    }
+  }
 }
 
 // Add listeners to be called from e2e tests to stub the legendary command calls. Registered
 // once at boot (register-handlers), only when env.CI === 'e2e' (onTestOnly checks it).
 export function registerLegendaryStubListeners(
   ipc: Pick<IpcRegistry, 'on'>,
-  env: Pick<NodeJS.ProcessEnv, 'CI'>
+  env: Pick<NodeJS.ProcessEnv, 'CI'>,
+  stubs: LegendaryStubs
 ): void {
-  onTestOnly(ipc, env, 'setLegendaryCommandStub', (stubs) => {
-    currentStubs = [...stubs]
+  onTestOnly(ipc, env, 'setLegendaryCommandStub', (next) => {
+    stubs.set(next)
   })
   onTestOnly(ipc, env, 'resetLegendaryCommandStub', () => {
-    currentStubs = [...defaultStubs]
+    stubs.reset()
   })
 }

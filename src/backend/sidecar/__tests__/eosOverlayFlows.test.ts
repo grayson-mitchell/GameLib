@@ -240,7 +240,8 @@ describe("fail-closed gate — real remove()/enable() from eos_overlay.ts (bypas
   >('../../storeManagers/legendary/eos_overlay/eos_overlay')
 
   const overlayDeps = {
-    libraryManagers: mockLibrary
+    libraryManagers: mockLibrary,
+    paths: { appFolder: '/nonexistent/app', toolsPath: '/nonexistent/tools' }
   } as unknown as Parameters<typeof realRemove>[0]
 
   beforeEach(() => {

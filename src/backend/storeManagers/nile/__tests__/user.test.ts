@@ -39,11 +39,19 @@ jest.mock('backend/utils', () => ({
 
 import { NileUser } from '../user'
 import type { NileUserDeps } from '../user'
+import { createNileRuntime } from '../nileRuntime'
 
 const userDeps = {
   stores: {},
-  libraryManagers: { nile: { runRunnerCommand: mockRunRunnerCommand } }
+  libraryManagers: { nile: { runRunnerCommand: mockRunRunnerCommand } },
+  nileRuntime: createNileRuntime()
 } as unknown as NileUserDeps
+
+/** A fresh runtime per test: the login single-flight slot is per boot, so none leaks between tests. */
+function resetNileRuntime(): void {
+  ;(userDeps as unknown as { nileRuntime: unknown }).nileRuntime =
+    createNileRuntime()
+}
 
 function stdoutFor(payload: Record<string, unknown>) {
   return { stdout: JSON.stringify(payload) }
@@ -79,7 +87,7 @@ const LOGIN_DATA_2 = {
 
 describe('quick 260806-teb Task 2 -- NileUser.getLoginData(userDeps) in-flight memoization', () => {
   beforeEach(() => {
-    NileUser.__resetInFlightLoginDataForTests()
+    resetNileRuntime()
   })
 
   it('two concurrent getLoginData() calls issued before the first resolves invoke runRunnerCommand exactly ONCE, and both receive the same resolved data', async () => {

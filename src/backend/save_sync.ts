@@ -14,7 +14,7 @@ import type { CommandRunner, Launcher, StoreManagers } from './services/types'
 import type { ProcessRunner } from './process/types'
 import { readWindowsShellFolder } from './sidecar/knownFolders'
 import { LegendaryAppName } from './storeManagers/legendary/commands/base'
-import { legendaryInstalled } from './storeManagers/legendary/constants'
+import { deriveLegendaryPaths } from './storeManagers/legendary/constants'
 
 /** What the save-path resolvers read: the managers, `getWinePath` and the wine prefix helpers (66.1, R3). */
 export interface SaveSyncDeps {
@@ -23,7 +23,7 @@ export interface SaveSyncDeps {
   managers: Pick<StoreManagers, 'library'>
   commandRunner: Pick<CommandRunner, 'getWinePath'>
   launcher: Pick<Launcher, 'setupWineEnvVars' | 'verifyWinePrefix'>
-  paths: Pick<AppPaths, 'knownFolder'>
+  paths: Pick<AppPaths, 'knownFolder' | 'appFolder' | 'toolsPath'>
 }
 
 async function getDefaultSavePath(
@@ -62,7 +62,9 @@ async function getDefaultLegendarySavePath(
     )
     // FIXME: This isn't really that safe
     try {
-      const installedJsonLoc = legendaryInstalled
+      const installedJsonLoc = deriveLegendaryPaths(
+        deps.paths
+      ).legendaryInstalled
       const installedJsonData = JSON.parse(
         readFileSync(installedJsonLoc, 'utf-8')
       )

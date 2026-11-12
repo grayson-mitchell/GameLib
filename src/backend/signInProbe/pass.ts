@@ -147,7 +147,7 @@ export function createSignInProbePassDeps(
     outcomes: collaborators.outcomes,
     registrations: {
       legendary: {
-        isLoggedIn: () => Boolean(LegendaryUser.isLoggedIn()),
+        isLoggedIn: () => Boolean(LegendaryUser.isLoggedIn(deps)),
         probe: () => probeLegendarySession(deps),
         abortId: SIGN_IN_PROBE_ABORT_IDS.legendary
       },

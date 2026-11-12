@@ -25,7 +25,9 @@ const { legendaryConfigStore } = jest.requireMock<Stores['legendary']>(
 )
 
 jest.mock('../constants', () => ({
-  legendaryUserInfo: '/tmp/gamelib-legendary-expiry-test/user.json'
+  deriveLegendaryPaths: () => ({
+    legendaryUserInfo: '/tmp/gamelib-legendary-expiry-test/user.json'
+  })
 }))
 jest.mock('backend/logger', () => ({
   logDebug: jest.fn(),

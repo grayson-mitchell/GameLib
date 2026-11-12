@@ -43,7 +43,8 @@ const watcherDeps = {
         refreshInstalled: (...args: unknown[]) => refreshInstalledMock(...args)
       }
     }
-  } as never
+  } as never,
+  paths: { appFolder: '/nonexistent/app', toolsPath: '/nonexistent/tools' }
 }
 
 // ── logger — the ported `logInfo` line is asserted, not merely assumed present ─────────────

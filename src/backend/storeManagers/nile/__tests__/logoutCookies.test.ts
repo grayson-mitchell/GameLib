@@ -35,7 +35,9 @@ jest.mock('backend/utils', () => ({
 }))
 
 jest.mock('backend/storeManagers/nile/constants', () => ({
-  nileUserData: '/tmp/gamelib-nile-logout-cookies-test/does-not-exist.json'
+  deriveNilePaths: () => ({
+    nileUserData: '/tmp/gamelib-nile-logout-cookies-test/does-not-exist.json'
+  })
 }))
 
 const mockRunRunnerCommand = jest.fn<Promise<unknown>, unknown[]>()

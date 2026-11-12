@@ -21,8 +21,7 @@ import { getFileSize, getNileBin, removeSpecialcharacters } from 'backend/utils'
 import { dirname, join } from 'path'
 import { copySync } from 'fs-extra'
 import { NileUser } from './user'
-import { runNileCommandStub } from './e2eMock'
-import { nileConfigPath, nileInstalled, nileLibrary } from './constants'
+import { deriveNilePaths } from './constants'
 import NileGame from './games'
 import type { LibraryManager } from 'common/types/game_manager'
 
@@ -32,6 +31,10 @@ export type NileManagerDeps = ManagerDeps
 export default class NileLibraryManager implements LibraryManager {
   constructor(private readonly deps: NileManagerDeps) {}
 
+  private get nilePaths() {
+    return deriveNilePaths(this.deps.paths)
+  }
+
   private installedGames: Map<string, NileInstallMetadataInfo> = new Map()
   private library: Map<string, GameInfo> = new Map()
   private readonly gameCache: Map<string, NileGame> = new Map()
@@ -39,8 +42,11 @@ export default class NileLibraryManager implements LibraryManager {
   async init() {
     // Migrate user data from global Nile config if necessary
     const globalNileConfig = join(this.deps.paths.appData, 'nile')
-    if (!existsSync(nileConfigPath) && existsSync(globalNileConfig)) {
-      copySync(globalNileConfig, nileConfigPath)
+    if (
+      !existsSync(this.nilePaths.nileConfigPath) &&
+      existsSync(globalNileConfig)
+    ) {
+      copySync(globalNileConfig, this.nilePaths.nileConfigPath)
       await NileUser.getUserData(this.deps)
     }
 
@@ -60,11 +66,11 @@ export default class NileLibraryManager implements LibraryManager {
    * Loads all the user's games into `library`
    */
   loadGamesInAccount() {
-    if (!existsSync(nileLibrary)) {
+    if (!existsSync(this.nilePaths.nileLibrary)) {
       return
     }
     const libraryJSON: NileGameInfo[] = JSON.parse(
-      readFileSync(nileLibrary, 'utf-8')
+      readFileSync(this.nilePaths.nileLibrary, 'utf-8')
     )
     libraryJSON.forEach((game) => {
       const { product } = game
@@ -126,13 +132,17 @@ export default class NileLibraryManager implements LibraryManager {
    */
   removeFromInstalledConfig(appName: string) {
     this.installedGames.clear()
-    if (existsSync(nileInstalled)) {
+    if (existsSync(this.nilePaths.nileInstalled)) {
       try {
         const installed: NileInstallMetadataInfo[] = JSON.parse(
-          readFileSync(nileInstalled, 'utf-8')
+          readFileSync(this.nilePaths.nileInstalled, 'utf-8')
         )
         const newInstalled = installed.filter((game) => game.id !== appName)
-        writeFileSync(nileInstalled, JSON.stringify(newInstalled), 'utf-8')
+        writeFileSync(
+          this.nilePaths.nileInstalled,
+          JSON.stringify(newInstalled),
+          'utf-8'
+        )
       } catch (error) {
         logError(
           ['Corrupted installed.json file, cannot load installed games', error],
@@ -275,13 +285,13 @@ export default class NileLibraryManager implements LibraryManager {
   }
 
   getInstallMetadata(appName: string): NileInstallMetadataInfo | undefined {
-    if (!existsSync(nileInstalled)) {
+    if (!existsSync(this.nilePaths.nileInstalled)) {
       return
     }
 
     try {
       const installed: NileInstallMetadataInfo[] = JSON.parse(
-        readFileSync(nileInstalled, 'utf-8')
+        readFileSync(this.nilePaths.nileInstalled, 'utf-8')
       )
       return installed.find((game) => game.id === appName)
     } catch (error) {
@@ -298,10 +308,10 @@ export default class NileLibraryManager implements LibraryManager {
    */
   refreshInstalled() {
     this.installedGames.clear()
-    if (existsSync(nileInstalled)) {
+    if (existsSync(this.nilePaths.nileInstalled)) {
       try {
         const installed: NileInstallMetadataInfo[] = JSON.parse(
-          readFileSync(nileInstalled, 'utf-8')
+          readFileSync(this.nilePaths.nileInstalled, 'utf-8')
         )
         installed.forEach((metadata) => {
           this.installedGames.set(metadata.id, metadata)
@@ -488,21 +498,21 @@ export default class NileLibraryManager implements LibraryManager {
       )
     }
 
-    if (!existsSync(nileInstalled)) {
+    if (!existsSync(this.nilePaths.nileInstalled)) {
       logError(
-        ['Could not find installed.json in', nileInstalled],
+        ['Could not find installed.json in', this.nilePaths.nileInstalled],
         LogPrefix.Nile
       )
       return
     }
 
     writeFileSync(
-      nileInstalled,
+      this.nilePaths.nileInstalled,
       JSON.stringify(Array.from(this.installedGames.values())),
       'utf-8'
     )
     logInfo(
-      ['Updated install path for', appName, 'in', nileInstalled],
+      ['Updated install path for', appName, 'in', this.nilePaths.nileInstalled],
       LogPrefix.Nile
     )
   }
@@ -533,7 +543,7 @@ export default class NileLibraryManager implements LibraryManager {
     options?: CallRunnerOptions
   ): Promise<ExecResult> {
     if (process.env.CI === 'e2e') {
-      return runNileCommandStub(commandParts)
+      return this.deps.nileRuntime.stubs.run(commandParts)
     }
 
     const { dir, bin } = getNileBin(this.deps)
@@ -546,7 +556,7 @@ export default class NileLibraryManager implements LibraryManager {
     if (!options.env) {
       options.env = {}
     }
-    options.env.NILE_CONFIG_PATH = dirname(nileConfigPath)
+    options.env.NILE_CONFIG_PATH = dirname(this.nilePaths.nileConfigPath)
 
     return this.deps.commandRunner.callRunner(
       commandParts,

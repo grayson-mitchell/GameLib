@@ -63,9 +63,8 @@ import { getUmuId } from 'backend/wiki_game_info/umu/utils'
 import thirdParty from './thirdParty'
 import { Path } from 'backend/schemas'
 import { mkdirSync } from 'fs'
-import { epicRedistPath, legendaryInstalled } from './constants'
+import { deriveLegendaryPaths } from './constants'
 import { isCLINoGui, isMac, isWindows } from 'backend/constants/environment'
-import { fakeEpicExePath } from 'backend/constants/paths'
 
 import type LogWriter from 'backend/logger/log_writer'
 import { engineKeyFor } from 'backend/engine/gameKey'
@@ -712,6 +711,7 @@ export default class LegendaryGame implements Game {
     error?: string
   }> {
     logInfo('Getting EA App installer', LogPrefix.Legendary)
+    const { epicRedistPath } = deriveLegendaryPaths(this.deps.paths)
     const installerPath = join(epicRedistPath, 'EAappInstaller.exe')
 
     if (!existsSync(epicRedistPath)) {
@@ -740,7 +740,11 @@ export default class LegendaryGame implements Game {
       }
     }
 
-    await thirdParty.addInstalledGame(gameInfo.app_name, platformToInstall)
+    await thirdParty.addInstalledGame(
+      this.deps.paths,
+      gameInfo.app_name,
+      platformToInstall
+    )
 
     return { status: 'done' }
   }
@@ -753,6 +757,7 @@ export default class LegendaryGame implements Game {
     error?: string
   }> {
     logInfo('Getting Ubisoft installer', LogPrefix.Legendary)
+    const { epicRedistPath } = deriveLegendaryPaths(this.deps.paths)
     const installerPath = join(epicRedistPath, 'UbisoftConnectInstaller.exe')
 
     if (!existsSync(epicRedistPath)) {
@@ -778,7 +783,11 @@ export default class LegendaryGame implements Game {
       }
     }
 
-    await thirdParty.addInstalledGame(gameInfo.app_name, platformToInstall)
+    await thirdParty.addInstalledGame(
+      this.deps.paths,
+      gameInfo.app_name,
+      platformToInstall
+    )
 
     return { status: 'done' }
   }
@@ -786,7 +795,7 @@ export default class LegendaryGame implements Game {
   async uninstall(): Promise<ExecResult> {
     const gameInfo = this.getGameInfo()
     if (gameInfo.thirdPartyManagedApp) {
-      await thirdParty.removeInstalledGame(this.appName)
+      await thirdParty.removeInstalledGame(this.deps.paths, this.appName)
       return { stdout: '', stderr: '' }
     }
 
@@ -1005,10 +1014,10 @@ export default class LegendaryGame implements Game {
     // Use the wrapper EXE to launch games.
     if (
       ![undefined, '0', 'false'].includes(commandEnv['USE_FAKE_EPIC_EXE']) &&
-      existsSync(fakeEpicExePath)
+      existsSync(this.deps.paths.fakeEpicExePath)
     ) {
       if (isWindows) {
-        commandEnv['LEGENDARY_WRAPPER_EXE'] = fakeEpicExePath
+        commandEnv['LEGENDARY_WRAPPER_EXE'] = this.deps.paths.fakeEpicExePath
       } else {
         // on linux and mac, we copy the fake exe
         const fakeExeWinPath = 'C:\\windows\\command\\EpicGamesLauncher.exe'
@@ -1021,7 +1030,7 @@ export default class LegendaryGame implements Game {
 
         // we copy the file inside the prefix to avoid permission issues
         if (!existsSync(fakeEpicExePathInPrefix))
-          copyFileSync(fakeEpicExePath, fakeEpicExePathInPrefix)
+          copyFileSync(this.deps.paths.fakeEpicExePath, fakeEpicExePathInPrefix)
         commandEnv['LEGENDARY_WRAPPER_EXE'] = fakeExeWinPath
       }
     }
@@ -1191,7 +1200,7 @@ export default class LegendaryGame implements Game {
     } catch (error) {
       logError(
         [
-          `Error reading ${legendaryInstalled}, could not complete operation:`,
+          `Error reading ${deriveLegendaryPaths(this.deps.paths).legendaryInstalled}, could not complete operation:`,
           error
         ],
         LogPrefix.Legendary

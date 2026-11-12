@@ -19,12 +19,14 @@ import { createTestManagerDeps } from 'backend/testUtils/testServices'
  */
 
 jest.mock('../legendary/constants', () => ({
-  legendaryConfigPath: '/nonexistent/legendary',
-  legendaryUserInfo: '/nonexistent/legendary/user.json',
-  legendaryInstalled: '/nonexistent/legendary/installed.json',
-  thirdPartyInstalled: '/nonexistent/legendary/third-party-installed.json',
-  legendaryMetadata: '/nonexistent/legendary/metadata',
-  epicRedistPath: '/nonexistent/legendary/epicRedist'
+  deriveLegendaryPaths: () => ({
+    legendaryConfigPath: '/nonexistent/legendary',
+    legendaryUserInfo: '/nonexistent/legendary/user.json',
+    legendaryInstalled: '/nonexistent/legendary/installed.json',
+    thirdPartyInstalled: '/nonexistent/legendary/third-party-installed.json',
+    legendaryMetadata: '/nonexistent/legendary/metadata',
+    epicRedistPath: '/nonexistent/legendary/epicRedist'
+  })
 }))
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),

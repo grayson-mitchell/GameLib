@@ -67,7 +67,9 @@ jest.mock('backend/ipc', () => ({
 }))
 
 jest.mock('../constants', () => ({
-  legendaryUserInfo: '/tmp/gamelib-legendary-epic-domains-test/user.json'
+  deriveLegendaryPaths: () => ({
+    legendaryUserInfo: '/tmp/gamelib-legendary-epic-domains-test/user.json'
+  })
 }))
 
 jest.mock('backend/logger', () => ({

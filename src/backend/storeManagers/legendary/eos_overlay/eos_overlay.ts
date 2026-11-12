@@ -7,37 +7,49 @@ import { sendGameStatusUpdate } from 'backend/utils'
 import { LegendaryCommand } from '../commands'
 import { ValidWinePrefix } from '../commands/base'
 import { Path } from 'backend/schemas'
-import { toolsPath } from 'backend/constants/paths'
-import { legendaryConfigPath } from '../constants'
+import { deriveLegendaryPaths } from '../constants'
 import { isLinux } from 'backend/constants/environment'
 
 import type { Runner } from 'common/types'
 import type { ManagerDeps } from 'backend/services/types'
 
 /** The only collaborator the overlay functions need (R3). */
-export type EosOverlayDeps = Pick<ManagerDeps, 'libraryManagers'>
+export type EosOverlayDeps = Pick<ManagerDeps, 'libraryManagers'> &
+  EosOverlayPathDeps
 
-const currentVersionPath = () =>
-  join(legendaryConfigPath, 'overlay_version.json')
-const installedVersionPath = () =>
-  join(legendaryConfigPath, 'overlay_install.json')
-const defaultInstallPath = () => join(toolsPath, 'eos_overlay')
+/** The path roots the overlay's on-disk locations derive from (read from deps.paths, 66.4-11). */
+interface EosOverlayPathDeps {
+  paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath'>
+}
+
+const currentVersionPath = (deps: EosOverlayPathDeps) =>
+  join(
+    deriveLegendaryPaths(deps.paths).legendaryConfigPath,
+    'overlay_version.json'
+  )
+const installedVersionPath = (deps: EosOverlayPathDeps) =>
+  join(
+    deriveLegendaryPaths(deps.paths).legendaryConfigPath,
+    'overlay_install.json'
+  )
+const defaultInstallPath = (deps: EosOverlayPathDeps) =>
+  join(deps.paths.toolsPath, 'eos_overlay')
 const eosOverlayAppName = '98bc04bc842e4906993fd6d6644ffb8d'
 
-function getStatus(): {
+function getStatus(deps: EosOverlayPathDeps): {
   isInstalled: boolean
   version?: string
   install_path?: string
 } {
-  if (!isInstalled()) {
+  if (!isInstalled(deps)) {
     return { isInstalled: false }
   }
 
   const { version, install_path } = JSON.parse(
-    readFileSync(installedVersionPath(), 'utf-8')
+    readFileSync(installedVersionPath(deps), 'utf-8')
   )
 
-  if (install_path !== defaultInstallPath()) {
+  if (install_path !== defaultInstallPath(deps)) {
     logWarning(
       'EOS Overlay is not installed in default location, permission issues might arise',
       LogPrefix.Legendary
@@ -48,13 +60,13 @@ function getStatus(): {
 }
 
 async function getLatestVersion(deps: EosOverlayDeps): Promise<string> {
-  if (!existsSync(currentVersionPath())) {
+  if (!existsSync(currentVersionPath(deps))) {
     // HACK: `overlay_version.json` isn't created when the overlay isn't installed
-    if (!isInstalled()) {
+    if (!isInstalled(deps)) {
       return ''
     }
     await updateInfo(deps)
-    if (!existsSync(currentVersionPath())) {
+    if (!existsSync(currentVersionPath(deps))) {
       logError(
         'EOS Overlay information not found after manual update. User is probably not logged in anymore',
         LogPrefix.Legendary
@@ -63,7 +75,7 @@ async function getLatestVersion(deps: EosOverlayDeps): Promise<string> {
     }
   }
   const { buildVersion }: { buildVersion: string } = JSON.parse(
-    readFileSync(currentVersionPath(), 'utf-8')
+    readFileSync(currentVersionPath(deps), 'utf-8')
   ).data
   return buildVersion
 }
@@ -71,7 +83,7 @@ async function getLatestVersion(deps: EosOverlayDeps): Promise<string> {
 async function updateInfo(deps: EosOverlayDeps) {
   // Without the overlay being installed, this will do nothing at all.
   // So we can just skip running the command if that's the case
-  if (!isInstalled()) {
+  if (!isInstalled(deps)) {
     return
   }
 
@@ -92,7 +104,7 @@ async function install(deps: EosOverlayDeps) {
   sendGameStatusUpdate({
     appName: eosOverlayAppName,
     runner: 'legendary',
-    status: isInstalled() ? 'updating' : 'installing'
+    status: isInstalled(deps) ? 'updating' : 'installing'
   })
 
   let downloadSize = 0
@@ -101,7 +113,7 @@ async function install(deps: EosOverlayDeps) {
     {
       subcommand: 'eos-overlay',
       action: 'install',
-      '--path': Path.parse(defaultInstallPath())
+      '--path': Path.parse(defaultInstallPath(deps))
     },
     {
       abortId: eosOverlayAppName,
@@ -129,7 +141,7 @@ async function install(deps: EosOverlayDeps) {
       '-y': true,
       subcommand: 'eos-overlay',
       action: 'install',
-      '--path': Path.parse(defaultInstallPath())
+      '--path': Path.parse(defaultInstallPath(deps))
     },
     {
       abortId: eosOverlayAppName,
@@ -198,7 +210,7 @@ async function enable(
   deps: EosOverlayDeps,
   appName: string
 ): Promise<{ wasEnabled: boolean; installNow?: boolean }> {
-  if (!isInstalled()) {
+  if (!isInstalled(deps)) {
     // Phase 35 plan 26 (REQ-35-17): this used to ask "install now?" itself via
     // `dialog.showMessageBox` and fold the user's answer into `installNow`. That native dialog
     // is gone — `installNow: true` now unconditionally signals "the overlay isn't installed,
@@ -244,8 +256,8 @@ async function disable(deps: EosOverlayDeps, appName: string) {
   })
 }
 
-function isInstalled() {
-  return existsSync(installedVersionPath())
+function isInstalled(deps: EosOverlayPathDeps) {
+  return existsSync(installedVersionPath(deps))
 }
 
 /**

@@ -141,13 +141,16 @@ jest.mock('../storeManagers/legendary/constants', () => {
   // (T-rvv-01).
   nodeFs.chmodSync(root, 0o700)
 
+  // deriveLegendaryPaths ignores its roots here: every location lands under the disposable root.
   return {
-    legendaryConfigPath: root,
-    legendaryUserInfo: nodePath.join(root, 'user.json'),
-    legendaryInstalled: nodePath.join(root, 'installed.json'),
-    thirdPartyInstalled: nodePath.join(root, 'third-party-installed.json'),
-    legendaryMetadata: nodePath.join(root, 'metadata'),
-    epicRedistPath: nodePath.join(root, 'epicRedist')
+    deriveLegendaryPaths: () => ({
+      legendaryConfigPath: root,
+      legendaryUserInfo: nodePath.join(root, 'user.json'),
+      legendaryInstalled: nodePath.join(root, 'installed.json'),
+      thirdPartyInstalled: nodePath.join(root, 'third-party-installed.json'),
+      legendaryMetadata: nodePath.join(root, 'metadata'),
+      epicRedistPath: nodePath.join(root, 'epicRedist')
+    })
   }
 })
 
@@ -253,16 +256,18 @@ import { logWarning } from 'backend/logger'
 import { getShellPath } from '../utils'
 import { getDefaultSavePath } from '../save_sync'
 import type LegendaryLibraryManager from 'backend/storeManagers/legendary/library'
-import {
-  legendaryConfigPath,
-  legendaryMetadata
-} from '../storeManagers/legendary/constants'
+import { deriveLegendaryPaths } from '../storeManagers/legendary/constants'
 import type {
   InstalledJsonMetadata,
   GameMetadataInner
 } from 'common/types/legendary'
 import type LegendaryGame from '../storeManagers/legendary/games'
 import { defined } from './helpers/defined'
+
+// The mocked constants module ignores its roots, so any argument yields the fixture paths.
+const { legendaryConfigPath, legendaryMetadata } = deriveLegendaryPaths(
+  {} as never
+)
 
 // Two obviously distinct, greppable sentinels -- see the sentinel-distinctness guard below.
 const OLD_SENTINEL = '/rvv/OLD-stale-save-path'
@@ -284,7 +289,8 @@ const manager = libraryManagerMap.legendary
 const saveSyncDeps = {
   managers: { library: libraryManagerMap },
   commandRunner: { getWinePath: jest.fn() },
-  launcher: { setupWineEnvVars: jest.fn(), verifyWinePrefix: jest.fn() }
+  launcher: { setupWineEnvVars: jest.fn(), verifyWinePrefix: jest.fn() },
+  paths: {}
 } as never
 
 /**

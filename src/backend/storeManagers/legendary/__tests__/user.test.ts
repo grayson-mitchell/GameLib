@@ -36,7 +36,9 @@
 // anchoring) — none of it relevant to logout(), so the whole chain is
 // mocked out rather than hand-stubbing electron's `app` surface.
 jest.mock('../constants', () => ({
-  legendaryUserInfo: '/tmp/gamelib-legendary-user-test/user.json'
+  deriveLegendaryPaths: () => ({
+    legendaryUserInfo: '/tmp/gamelib-legendary-user-test/user.json'
+  })
 }))
 
 // ── backend/logger mock ───────────────────────────────────────────────────────────────────

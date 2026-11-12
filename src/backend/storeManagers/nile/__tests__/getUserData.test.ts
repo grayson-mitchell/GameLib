@@ -40,13 +40,16 @@ const deps = {
         get_nodefault: jest.fn()
       }
     }
-  }
-} as unknown as NileStoreDeps
+  },
+  paths: { appFolder: '/tmp/gamelib-nile-getuserdata-test' }
+} as unknown as NileUserDataDeps
 
 jest.mock('backend/utils', () => ({ clearCache: jest.fn() }))
 
-import { NileUser, type NileStoreDeps } from '../user'
-import { nileUserData } from '../constants'
+import { NileUser, type NileUserDataDeps } from '../user'
+import { deriveNilePaths } from '../constants'
+
+const { nileUserData } = deriveNilePaths(deps.paths)
 
 // The 1.2.0 on-disk shape: flat, and carrying ONLY the fields nile still emits.
 const FLAT_PAYLOAD = { user_id: 'amzn1.account.ABC', name: 'Grayson' }

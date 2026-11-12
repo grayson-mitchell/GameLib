@@ -34,6 +34,8 @@ import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import type { SteamLaunchRuntime } from 'backend/storeManagers/steam/steamLaunchRuntime'
 import type { BridgeRuntime } from 'backend/storeManagers/steam/bridge/bridgeRuntime'
 import type { GogRuntime } from 'backend/storeManagers/gog/gogRuntime'
+import type { LegendaryRuntime } from 'backend/storeManagers/legendary/legendaryRuntime'
+import type { NileRuntime } from 'backend/storeManagers/nile/nileRuntime'
 import type { SteamInstallRuntime } from 'backend/storeManagers/steam/steamInstallRuntime'
 import type { WinetricksQueue } from 'backend/tools/winetricksQueue'
 import type { SignInEpochs } from 'backend/signInProbe/sessionEpoch'
@@ -185,6 +187,10 @@ export interface ManagerDeps {
   steamInstallRuntime: SteamInstallRuntime
   /** The boot-owned GOG runtime: library maps, presence keep-alive, resume baselines, credential cache, e2e stubs (66.4-10). */
   gogRuntime: GogRuntime
+  /** The boot-owned Legendary runtime: library, installed and account-game collections, e2e stubs (66.4-11). */
+  legendaryRuntime: LegendaryRuntime
+  /** The boot-owned Nile runtime: login-data single-flight, e2e stubs (66.4-11). */
+  nileRuntime: NileRuntime
   /** The boot-owned sign-in fence and outcome map the store user modules write through (D-66.3-13). */
   signIn: Pick<SignInProbeServices, 'epochs' | 'outcomes'>
   /** The boot-owned Steam sign-in session and auth-unlock state (D-66.3-13). */
@@ -306,6 +312,10 @@ export interface BootServices {
   steamInstallRuntime: SteamInstallRuntime
   /** The boot-owned GOG runtime: library maps, presence keep-alive, resume baselines, credential cache, e2e stubs (66.4-10). */
   gogRuntime: GogRuntime
+  /** The boot-owned Legendary runtime: library, installed and account-game collections, e2e stubs (66.4-11). */
+  legendaryRuntime: LegendaryRuntime
+  /** The boot-owned Nile runtime: login-data single-flight, e2e stubs (66.4-11). */
+  nileRuntime: NileRuntime
   /** Built by the 'winetricks-queue' boot step, before 'register-handlers' (D-66.3-12). */
   winetricksQueue: WinetricksQueue
   /** Built by the 'sign-in-probe-state' boot step, before 'store-managers' (D-66.3-13). */

@@ -250,7 +250,8 @@ export function registerHandlers(deps: {
     stores: deps.services.stores,
     notifications: deps.services.host.notifications,
     onlineMonitor: deps.services.onlineMonitor,
-    steamInstallRuntime: deps.services.steamInstallRuntime
+    steamInstallRuntime: deps.services.steamInstallRuntime,
+    paths: deps.services.paths
   })
   // Phase 34.2 Plan 06: the enrichment channels — no ordering
   // constraint relative to the other calls above (own channel names, no
@@ -362,6 +363,7 @@ export function registerHandlers(deps: {
     signIn: deps.services.signInProbe,
     loginWindowSeam: deps.services.humble.loginWindowSeam,
     gogRuntime: deps.services.gogRuntime,
+    nileRuntime: deps.services.nileRuntime,
     paths: deps.services.paths
   })
   registerWineToolsFlows({
@@ -401,7 +403,11 @@ export function registerHandlers(deps: {
   })
   // Phase 34.6 Plan 08 (REQ-34.6-01): the EOS overlay channel cluster — no ordering constraint
   // relative to the other calls above.
-  registerEosOverlayFlows({ ipc, managers: deps.services.managers })
+  registerEosOverlayFlows({
+    ipc,
+    managers: deps.services.managers,
+    paths: deps.services.paths
+  })
   // Phase 40 Plan 05 (REQ-40-02/REQ-40-05): the in-app store-embed channels, plus installing the
   // rustInvoke-backed store-embed seam (setStoreEmbedSeam) — no ordering constraint relative to
   // the other calls above (own channel names, no cross-module runtime dependency at registration

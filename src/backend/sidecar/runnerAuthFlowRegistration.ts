@@ -96,6 +96,8 @@ export interface RunnerAuthFlowDeps extends DialogBoxDeps {
   loginWindowSeam: ManagerDeps['loginWindowSeam']
   /** The GOG credential cache and path roots the gog login/logout paths read (66.4-10). */
   gogRuntime: Pick<ManagerDeps['gogRuntime'], 'credentials'>
+  /** The Nile login-data single-flight the amazon login read joins (66.4-11). */
+  nileRuntime: Pick<ManagerDeps['nileRuntime'], 'loginFlight'>
   paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath' | 'userData'>
 }
 
@@ -136,6 +138,7 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
     signIn: deps.signIn,
     loginWindowSeam: deps.loginWindowSeam,
     gogRuntime: deps.gogRuntime,
+    nileRuntime: deps.nileRuntime,
     paths: deps.paths
   })
 
@@ -156,7 +159,7 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
 
   // Source: main.ts:875 -> `LegendaryUser.isLoggedIn()`.
   deps.ipc.handle('isLoggedIn', () => {
-    return LegendaryUser.isLoggedIn()
+    return LegendaryUser.isLoggedIn(deps)
   })
 
   // Source: main.ts:877 -> `LegendaryUser.login(sid)`. `sid` is an Epic authorization code — a

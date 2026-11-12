@@ -152,6 +152,8 @@ function bootedWorld(opts?: {
         bridgeRuntime: fakes.bridgeRuntime,
         steamInstallRuntime: fakes.steamInstallRuntime,
         gogRuntime: fakes.gogRuntime,
+        legendaryRuntime: fakes.legendaryRuntime,
+        nileRuntime: fakes.nileRuntime,
         signIn: fakes.signInProbe,
         steamSession: fakes.steamSession,
         tokenStore: fakes.tokenStore,

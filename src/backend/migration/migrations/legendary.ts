@@ -4,7 +4,7 @@ import { join } from 'path'
 
 import { isLinux } from 'backend/constants/environment'
 import { userHome } from 'backend/constants/paths'
-import { legendaryConfigPath } from 'backend/storeManagers/legendary/constants'
+import { deriveLegendaryPaths } from 'backend/storeManagers/legendary/constants'
 
 import type { PathLike } from 'fs'
 import type { Migration } from '..'
@@ -17,8 +17,13 @@ const exists = async (path: PathLike) =>
 
 export class LegendaryGlobalConfigFolderMigration implements Migration {
   identifier = 'legendary-move-global-config-folder'
-  constructor(private readonly deps: { paths: Pick<AppPaths, 'appData'> }) {}
+  constructor(
+    private readonly deps: {
+      paths: Pick<AppPaths, 'appData' | 'appFolder' | 'toolsPath'>
+    }
+  ) {}
   async run(): Promise<boolean> {
+    const { legendaryConfigPath } = deriveLegendaryPaths(this.deps.paths)
     const hasHeroicSpecificConfig = await exists(legendaryConfigPath)
     // Don't overwrite existing configuration
     if (hasHeroicSpecificConfig) return true

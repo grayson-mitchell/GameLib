@@ -96,9 +96,11 @@ jest.mock('i18next', () => ({
 
 // Mock additional dependencies to avoid import issues
 jest.mock('../storeManagers/legendary/constants', () => ({
-  legendaryConfigPath: '/mock/legendary/config',
-  legendaryUserInfo: '/mock/legendary/user.json',
-  legendaryInstalled: '/mock/legendary/installed.json'
+  deriveLegendaryPaths: () => ({
+    legendaryConfigPath: '/mock/legendary/config',
+    legendaryUserInfo: '/mock/legendary/user.json',
+    legendaryInstalled: '/mock/legendary/installed.json'
+  })
 }))
 
 jest.mock('process', () => ({

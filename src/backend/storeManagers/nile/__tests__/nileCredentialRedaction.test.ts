@@ -54,11 +54,19 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { NileUser } from '../user'
 import type { NileUserDeps } from '../user'
+import { createNileRuntime } from '../nileRuntime'
 
 const userDeps = {
   stores: {},
-  libraryManagers: { nile: { runRunnerCommand: mockRunRunnerCommand } }
+  libraryManagers: { nile: { runRunnerCommand: mockRunRunnerCommand } },
+  nileRuntime: createNileRuntime()
 } as unknown as NileUserDeps
+
+/** A fresh runtime per test: the login single-flight slot is per boot, so none leaks between tests. */
+function resetNileRuntime(): void {
+  ;(userDeps as unknown as { nileRuntime: unknown }).nileRuntime =
+    createNileRuntime()
+}
 
 const SENTINEL_CODE = 'SENTINEL_CODE_ac91f3'
 const SENTINEL_VERIFIER = 'SENTINEL_VERIFIER_7d02be'
@@ -107,7 +115,7 @@ async function driveGetLoginDataWithSentinels() {
 describe('nile credential redaction -- Group A: behavioral', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    NileUser.__resetInFlightLoginDataForTests()
+    resetNileRuntime()
   })
 
   it('non-vacuity anchor: driving login() + getLoginData() together records at least 2 logger calls', async () => {

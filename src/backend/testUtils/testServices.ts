@@ -40,6 +40,10 @@ import { createTestEngineRuntime } from './testEngineRuntime'
 import { createTestSteamLaunchRuntime } from './testSteamLaunchRuntime'
 import { createTestBridgeRuntime } from './testBridgeRuntime'
 import { createTestGogRuntime } from './testGogRuntime'
+import {
+  createTestLegendaryRuntime,
+  createTestNileRuntime
+} from './testEpicAmazonRuntimes'
 import { createTestSteamInstallRuntime } from './testSteamInstallRuntime'
 import { createTestSignInProbe } from './testSignInProbe'
 import { createTestSteamSession } from './testSteamSession'
@@ -264,6 +268,9 @@ export function createTestServices(
     steamInstallRuntime:
       overrides.steamInstallRuntime ?? createTestSteamInstallRuntime(),
     gogRuntime: overrides.gogRuntime ?? createTestGogRuntime(),
+    legendaryRuntime:
+      overrides.legendaryRuntime ?? createTestLegendaryRuntime(),
+    nileRuntime: overrides.nileRuntime ?? createTestNileRuntime(),
     winetricksQueue:
       overrides.winetricksQueue ??
       unscriptedMembers<BootServices['winetricksQueue']>(
@@ -430,6 +437,9 @@ export function createTestManagerDeps(
     steamInstallRuntime:
       overrides.steamInstallRuntime ?? createTestSteamInstallRuntime(),
     gogRuntime: overrides.gogRuntime ?? createTestGogRuntime(),
+    legendaryRuntime:
+      overrides.legendaryRuntime ?? createTestLegendaryRuntime(),
+    nileRuntime: overrides.nileRuntime ?? createTestNileRuntime(),
     signIn: overrides.signIn ?? createTestSignInProbe(),
     steamSession: overrides.steamSession ?? createTestSteamSession(),
     tokenStore: overrides.tokenStore ?? createTestTokenStoreSlot(),
@@ -485,6 +495,8 @@ export function createTestToolsSlices() {
     bridgeRuntime: createTestBridgeRuntime(),
     steamInstallRuntime: createTestSteamInstallRuntime(),
     gogRuntime: createTestGogRuntime(),
+    legendaryRuntime: createTestLegendaryRuntime(),
+    nileRuntime: createTestNileRuntime(),
     paths: createTestPaths(),
     steamBottle: createTestSteamBottle({ stores: createTestStores(), config })
   }

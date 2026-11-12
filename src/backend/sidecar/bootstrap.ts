@@ -112,6 +112,8 @@ import { createEngineRuntime } from '../engine/engineRuntime'
 import { createSteamLaunchRuntime } from '../storeManagers/steam/steamLaunchRuntime'
 import { createBridgeRuntime } from '../storeManagers/steam/bridge/bridgeRuntime'
 import { createGogRuntime } from '../storeManagers/gog/gogRuntime'
+import { createLegendaryRuntime } from '../storeManagers/legendary/legendaryRuntime'
+import { createNileRuntime } from '../storeManagers/nile/nileRuntime'
 import { createSteamInstallRuntime } from '../storeManagers/steam/steamInstallRuntime'
 import { createWinetricksQueue } from '../tools/winetricksQueue'
 import { getInstallingComponent } from '../tools'
@@ -301,6 +303,8 @@ export const BOOT_STEP_NAMES = [
   'steam-bridge-runtime',
   'steam-install-runtime',
   'gog-runtime',
+  'legendary-runtime',
+  'nile-runtime',
   'winetricks-queue',
   'store-managers',
   'download-queue',
@@ -459,6 +463,8 @@ function requireServices(state: BootState): BootServices {
     bridgeRuntime,
     steamInstallRuntime,
     gogRuntime,
+    legendaryRuntime,
+    nileRuntime,
     winetricksQueue,
     signInProbe,
     steamSession,
@@ -495,6 +501,8 @@ function requireServices(state: BootState): BootServices {
     !bridgeRuntime ||
     !steamInstallRuntime ||
     !gogRuntime ||
+    !legendaryRuntime ||
+    !nileRuntime ||
     !winetricksQueue ||
     !signInProbe ||
     !steamSession ||
@@ -532,6 +540,8 @@ function requireServices(state: BootState): BootServices {
         'bridgeRuntime',
         'steamInstallRuntime',
         'gogRuntime',
+        'legendaryRuntime',
+        'nileRuntime',
         'winetricksQueue',
         'signInProbe',
         'steamSession',
@@ -571,6 +581,8 @@ function requireServices(state: BootState): BootServices {
     bridgeRuntime,
     steamInstallRuntime,
     gogRuntime,
+    legendaryRuntime,
+    nileRuntime,
     winetricksQueue,
     signInProbe,
     steamSession,
@@ -754,7 +766,7 @@ export function clearStrandedPlaytimeSyncLock(deps: {
  * quick-260908-fre). The deleted source, `main.ts:442-457`, ran inside `app.whenReady()`:
  *
  *     runOnceWhenOnline(async () => {
- *       if (!LegendaryUser.isLoggedIn()) {
+ *       if (!LegendaryUser.isLoggedIn(deps.gogUser)) {
  *         logInfo('User Not Found, removing it from Store', { prefix: ..., forceLog: true })
  *         configStore.delete('userInfo')
  *       }
@@ -809,7 +821,7 @@ export function reconcileStoreUsersWhenOnline(deps: {
   try {
     runOnceWhenOnline(() => {
       try {
-        if (!LegendaryUser.isLoggedIn()) {
+        if (!LegendaryUser.isLoggedIn(deps.gogUser)) {
           // Verbatim, unprefixed — see the doc comment above (D5).
           logInfo('User Not Found, removing it from Store', {
             prefix: LogPrefix.Backend,
@@ -1854,6 +1866,24 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'legendary-runtime',
+      // Builds the one Legendary runtime of this boot (D-05, 66.4-11): the in-memory library, installed
+      // and account-game collections plus the e2e legendary stub slot. Construction allocates empty
+      // collections only: no I/O, no timer, no handle. After 'gog-runtime' and before 'store-managers'.
+      run: (_ctx, _io, state) => {
+        state.services.legendaryRuntime =
+          prebuilt.legendaryRuntime ?? createLegendaryRuntime()
+      }
+    },
+    {
+      name: 'nile-runtime',
+      // Builds the one Nile runtime of this boot (D-05, 66.4-11): the login-data single-flight and the
+      // e2e nile stub slot. No I/O, no timer, no handle. After 'legendary-runtime', before 'store-managers'.
+      run: (_ctx, _io, state) => {
+        state.services.nileRuntime = prebuilt.nileRuntime ?? createNileRuntime()
+      }
+    },
+    {
       name: 'winetricks-queue',
       // Builds the one winetricks apply queue of this boot (D-05, D-66.3-12). Construction does no
       // I/O and arms no timer: it only subscribes to the environment-report change signal. Before
@@ -1888,6 +1918,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           bridgeRuntime,
           steamInstallRuntime,
           gogRuntime,
+          legendaryRuntime,
+          nileRuntime,
           signInProbe,
           steamSession,
           tokenStore,
@@ -1914,6 +1946,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !bridgeRuntime ||
           !steamInstallRuntime ||
           !gogRuntime ||
+          !legendaryRuntime ||
+          !nileRuntime ||
           !signInProbe ||
           !steamSession ||
           !tokenStore ||
@@ -1960,6 +1994,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           bridgeRuntime,
           steamInstallRuntime,
           gogRuntime,
+          legendaryRuntime,
+          nileRuntime,
           signIn: signInProbe,
           steamSession,
           tokenStore,
@@ -2280,10 +2316,16 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           { CI: process.env.CI },
           services.gogRuntime.stubs
         )
-        registerLegendaryStubListeners(services.host.ipc, {
-          CI: process.env.CI
-        })
-        registerNileStubListeners(services.host.ipc, { CI: process.env.CI })
+        registerLegendaryStubListeners(
+          services.host.ipc,
+          { CI: process.env.CI },
+          services.legendaryRuntime.stubs
+        )
+        registerNileStubListeners(
+          services.host.ipc,
+          { CI: process.env.CI },
+          services.nileRuntime.stubs
+        )
       }
     },
     {
@@ -2524,7 +2566,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         if (process.env.JEST_WORKER_ID === undefined) {
           try {
             startInstalledJsonWatcher({
-              managers: requireServices(state).managers
+              managers: requireServices(state).managers,
+              paths: requireServices(state).paths
             })
           } catch (error) {
             logWarning(

@@ -19,31 +19,50 @@ const defaultStubs: RunnerCommandStub[] = [
   }
 ]
 
-let currentStubs = [...defaultStubs]
+export interface NileStubs {
+  /** Replaces the active stubs. */
+  set(stubs: RunnerCommandStub[]): void
+  /** Restores the default `--version` stub. */
+  reset(): void
+  /** The stubbed result for a command (first stub whose commandParts are all included). */
+  run(command: string[]): Promise<{ stdout: string; stderr: string }>
+}
 
-export const runNileCommandStub = async (command: string[]) => {
-  const stub = currentStubs.find((stub) =>
-    stub.commandParts.every((part) => command.includes(part))
-  )
+export function createNileStubs(): NileStubs {
+  let currentStubs = [...defaultStubs]
+  return {
+    set(stubs) {
+      currentStubs = [...stubs]
+    },
+    reset() {
+      currentStubs = [...defaultStubs]
+    },
+    async run(command) {
+      const stub = currentStubs.find((stub) =>
+        stub.commandParts.every((part) => command.includes(part))
+      )
 
-  if (stub?.response) return stub.response
+      if (stub?.response) return stub.response
 
-  return Promise.resolve({
-    stdout: stub?.stdout || '',
-    stderr: stub?.stderr || ''
-  })
+      return Promise.resolve({
+        stdout: stub?.stdout || '',
+        stderr: stub?.stderr || ''
+      })
+    }
+  }
 }
 
 // Add listeners to be called from e2e tests to stub the nile command calls. Registered
 // once at boot (register-handlers), only when env.CI === 'e2e' (onTestOnly checks it).
 export function registerNileStubListeners(
   ipc: Pick<IpcRegistry, 'on'>,
-  env: Pick<NodeJS.ProcessEnv, 'CI'>
+  env: Pick<NodeJS.ProcessEnv, 'CI'>,
+  stubs: NileStubs
 ): void {
-  onTestOnly(ipc, env, 'setNileCommandStub', (stubs) => {
-    currentStubs = [...stubs]
+  onTestOnly(ipc, env, 'setNileCommandStub', (next) => {
+    stubs.set(next)
   })
   onTestOnly(ipc, env, 'resetNileCommandStub', () => {
-    currentStubs = [...defaultStubs]
+    stubs.reset()
   })
 }

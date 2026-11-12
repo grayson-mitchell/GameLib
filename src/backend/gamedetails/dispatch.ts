@@ -52,7 +52,7 @@ import type {
 import type { GameOverride, SelectiveDownload } from 'common/types/legendary'
 import { isStore, storeCapabilities } from 'common/storeCapabilities'
 
-import type { Stores, StoreManagers } from '../services/types'
+import type { Stores, StoreManagers, ManagerDeps } from '../services/types'
 import { attachOverrides, type GameOverridesDeps } from '../game_overrides'
 import { isDelegatedInstallPolling } from '../storeManagers/steam/library/installPolling'
 import type { InstallPollState } from '../storeManagers/steam/library/pollState'
@@ -68,6 +68,8 @@ export interface GameDetailsDeps extends NotifyDeps {
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   managers: Pick<StoreManagers, 'library'>
   steamInstallRuntime: { polls: Pick<InstallPollState, 'activePolls'> }
+  /** The path roots the Epic user-info read derives from (66.4-11). */
+  paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath'>
   stores: {
     kvs: Pick<Stores['kvs'], 'configStore'>
   } & GameOverridesDeps['stores']

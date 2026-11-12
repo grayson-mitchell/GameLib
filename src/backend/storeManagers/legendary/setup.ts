@@ -4,7 +4,7 @@ import { enable, getStatus, isEnabled } from './eos_overlay/eos_overlay'
 import { split } from 'shlex'
 import { logError, LogPrefix } from 'backend/logger'
 import type { LegendaryManagerDeps } from './library'
-import { epicRedistPath } from './constants'
+import { deriveLegendaryPaths } from './constants'
 import { isLinux } from 'backend/constants/environment'
 import LogWriter from 'backend/logger/log_writer'
 
@@ -78,6 +78,7 @@ export const legendarySetup = async (
   }
 
   if (gameInfo.isEAManaged) {
+    const { epicRedistPath } = deriveLegendaryPaths(deps.paths)
     const installerPath = join(epicRedistPath, 'EAappInstaller.exe')
     try {
       await deps.commandRunner.runWineCommand({
@@ -94,6 +95,7 @@ export const legendarySetup = async (
       logError(`Failed to run EA App installer ${e}`, LogPrefix.Legendary)
     }
   } else if (gameInfo.isUbisoftManaged) {
+    const { epicRedistPath } = deriveLegendaryPaths(deps.paths)
     const installerPath = join(epicRedistPath, 'UbisoftConnectInstaller.exe')
     console.log('Installing', installerPath)
     try {
@@ -115,7 +117,7 @@ export const legendarySetup = async (
     const isOverlayEnabled = await isEnabled(deps, appName)
 
     if (!isOverlayEnabled) {
-      if (getStatus().isInstalled) {
+      if (getStatus(deps).isInstalled) {
         void logWriter.logInfo('EOS Overlay: Enabling')
         await enable(deps, appName)
       } else {

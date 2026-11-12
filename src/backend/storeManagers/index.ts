@@ -167,6 +167,8 @@ export interface CreateStoreManagersDeps {
   bridgeRuntime: ManagerDeps['bridgeRuntime']
   steamInstallRuntime: ManagerDeps['steamInstallRuntime']
   gogRuntime: ManagerDeps['gogRuntime']
+  legendaryRuntime: ManagerDeps['legendaryRuntime']
+  nileRuntime: ManagerDeps['nileRuntime']
   steamUser: ManagerDeps['steamUser']
   loginWindowSeam: ManagerDeps['loginWindowSeam']
 }
@@ -215,6 +217,8 @@ export function createStoreManagers(
     bridgeRuntime: deps.bridgeRuntime,
     steamInstallRuntime: deps.steamInstallRuntime,
     gogRuntime: deps.gogRuntime,
+    legendaryRuntime: deps.legendaryRuntime,
+    nileRuntime: deps.nileRuntime,
     steamUser: deps.steamUser,
     loginWindowSeam: deps.loginWindowSeam
   }

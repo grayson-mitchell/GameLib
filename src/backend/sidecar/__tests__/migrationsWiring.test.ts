@@ -61,13 +61,12 @@ import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { createTestContext } from 'backend/testUtils/testContext'
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'graceful-fs'
 import { join } from 'node:path'
-import { getPath } from '../pathShim'
 import { cp } from 'fs/promises'
 import { bootFresh } from './helpers/sidecarHarness'
 import type MigrationSystem from '../../migration'
 import { isLinux } from '../../constants/environment'
 import { userHome } from '../../constants/paths'
-import { legendaryConfigPath } from '../../storeManagers/legendary/constants'
+import { deriveLegendaryPaths } from '../../storeManagers/legendary/constants'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createMigrationStores } from '../../migration/stores'
 
@@ -84,6 +83,11 @@ const MIGRATION_ID = 'legendary-move-global-config-folder'
 const MARKER_FILE = 'user.json'
 const MARKER_CONTENTS = '{"displayName":"migrated"}'
 
+// One fixed set of roots for the whole file: the booted migration, the migration system built
+// below and every assertion derive the destination from these (66.4-11: no import-time constant).
+const testPaths = createTestContext().ctx.paths
+const { legendaryConfigPath } = deriveLegendaryPaths(testPaths)
+
 /**
  * The source directory the migration reads. Derived with the SAME expression
  * `migrations/legendary.ts` uses, so this suite keeps working on a Linux runner where the
@@ -92,7 +96,7 @@ const MARKER_CONTENTS = '{"displayName":"migrated"}'
  * leaves nothing behind, not that the path expression is correct.
  */
 const globalLegendaryConfig = isLinux
-  ? join(getPath('appData'), 'legendary')
+  ? join(testPaths.appData, 'legendary')
   : join(userHome, '.config', 'legendary')
 
 const stagingPath = `${legendaryConfigPath}.migrating`
@@ -143,6 +147,13 @@ function bootMigrations() {
   const root = createTestStoreRoot()
   bootFresh({
     services: { storeRoot: root },
+    context: {
+      paths: {
+        appData: testPaths.appData,
+        appFolder: testPaths.appFolder,
+        toolsPath: testPaths.toolsPath
+      }
+    },
     before: () => {
       /* eslint-disable @typescript-eslint/no-require-imports */
       freshCp = require('fs/promises').cp as jest.Mock
@@ -233,7 +244,7 @@ describe('LegendaryGlobalConfigFolderMigration failure-lock (todo 2026-08-16 ste
 
     await new world.freshSystem({
       stores: world.freshStores,
-      paths: createTestContext().ctx.paths
+      paths: testPaths
     }).applyMigrations()
 
     // THE REGRESSION. Pre-fix, `legendaryConfigPath` existed after this point, so the next
@@ -258,7 +269,7 @@ describe('LegendaryGlobalConfigFolderMigration failure-lock (todo 2026-08-16 ste
 
     await new world.freshSystem({
       stores: world.freshStores,
-      paths: createTestContext().ctx.paths
+      paths: testPaths
     }).applyMigrations()
 
     expect(existsSync(migratedMarker())).toBe(true)

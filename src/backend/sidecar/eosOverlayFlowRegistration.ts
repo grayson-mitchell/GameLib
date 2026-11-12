@@ -59,12 +59,13 @@ import {
   disable,
   isEnabled
 } from '../storeManagers/legendary/eos_overlay/eos_overlay'
-import type { StoreManagers } from '../services/types'
+import type { ManagerDeps, StoreManagers } from '../services/types'
 
 /** The slice the EOS overlay channels read. */
 export interface EosOverlayFlowDeps {
   ipc: Pick<IpcRegistry, 'handle'>
   managers: Pick<StoreManagers, 'library'>
+  paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath'>
 }
 
 /**
@@ -79,10 +80,13 @@ export interface EosOverlayFlowDeps {
  * register a send-kind channel, e.g. `wineToolsFlowRegistration.ts`).
  */
 export function registerEosOverlayFlows(deps: EosOverlayFlowDeps): void {
-  const eosDeps = () => ({ libraryManagers: deps.managers.library })
+  const eosDeps = () => ({
+    libraryManagers: deps.managers.library,
+    paths: deps.paths
+  })
 
   deps.ipc.handle('getEosOverlayStatus', async () => {
-    return getStatus()
+    return getStatus(eosDeps())
   })
 
   deps.ipc.handle('getLatestEosOverlayVersion', async () => {
