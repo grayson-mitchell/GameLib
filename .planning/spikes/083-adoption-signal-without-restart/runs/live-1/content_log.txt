@@ -1,0 +1,26 @@
+
+
+[2026-11-14 08:29:29] Client version: 1794424036
+[2026-11-14 08:29:29] Loaded Steam library folders configuration: /Users/graysonmitchell/Library/Application Support/Steam/steamapps/libraryfolders.vdf
+[2026-11-14 08:29:29] Loaded 14 apps from install folder "/Users/graysonmitchell/Library/Application Support/Steam/steamapps\appmanifest_*.acf".
+[2026-11-14 08:29:29] Loaded 1 apps from install folder "/Users/graysonmitchell/GameLibParity/SteamLibrary/steamapps/steamapps\appmanifest_*.acf".
+[2026-11-14 08:29:29] Triggered async write of Steam library folders configuration (2 libraries).
+[2026-11-14 08:29:30] Adding peer server 'BigRazer' (10.10.2.163:27036)
+[2026-11-14 08:29:30] AppID 264160 scheduler update : Priority Auto Update, not played for 126012 seconds, update disabled for 0 seconds
+[2026-11-14 08:29:30] AppID 264160 state changed : Update Required,Update Queued,Update Started,
+[2026-11-14 08:29:30] AppID 264160 state changed : Update Required,Update Queued,Update Running,Update Started,
+[2026-11-14 08:29:30] AppID 264160 App update changed : Running Update,
+[2026-11-14 08:29:30] AppID 264160 App update changed : Running Update,Reconfiguring,
+[2026-11-14 08:29:30] AppID 264160 App update changed : Running Update,
+[2026-11-14 08:29:30] AppID 264160 has no changes, 1 active: 264162 (3306037234848478854), 1 target: 264162 (3306037234848478854),
+[2026-11-14 08:29:30] AppID 264160 App update changed : Running Update,Staging,
+[2026-11-14 08:29:30] AppID 264160 App update changed : Running Update,
+[2026-11-14 08:29:30] AppID 264160 App update changed : Running Update,Committing,
+[2026-11-14 08:29:30] AppID 264160 starting commit from "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/downloading/264160" to "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/WazHack" : 0 updated, 0 moved, 0 deleted files
+[2026-11-14 08:29:30] AppID 264160 state changed : Fully Installed,Update Queued,Update Running,
+[2026-11-14 08:29:30] AppID 264160 finished update, 1 mounted depots (BuildID 9044149) : 264162 (3306037234848478854),
+[2026-11-14 08:29:30] AppID 264160 App update changed : Running Update,
+[2026-11-14 08:29:30] AppID 264160 App update changed : None
+[2026-11-14 08:29:30] AppID 264160 state changed : Fully Installed,Update Queued,
+[2026-11-14 08:29:30] AppID 264160 state changed : Fully Installed,
+[2026-11-14 08:29:30] AppID 264160 scheduler finished : removed from schedule (result No Error, state 0xc) 
