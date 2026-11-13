@@ -28,3 +28,17 @@ Emit the planning status from TypeScript before the estimate. Send a plain `upda
 
 During a bridge update the hero shows the planning label from the moment the user confirms until
 transfer starts, then switches to the plain updating state. Checked live.
+
+## Resolution
+
+Fixed by quick task 261114-at7 (`9c092bf21`, `8e26a1406`). From source, UAT 6b's missing label
+came from the depotJobEvent schema dropping stage events before `378aa80b1`. WR-07 was still real:
+`runBridgeUpdate` sent no status before the estimate, and nothing cleared `steam-update-planning`
+on `planned`. `runBridgeUpdate` now sends `updating` + `steam-update-planning` before the estimate.
+`createProgressBridge` in update mode sends a plain `updating` on `planned`, which also covers the
+stale-journal fallback that emits `planned` with no stage.
+
+Live verified 2026-11-14 08:41 NZDT on Core Keeper (1621690), bridge, staged stale via buildid
+26332184 to 26332183. On the Downloads hero the operator saw "Planning update…" from confirm, then
+"Applying update…"; `Finished Update of 1621690`. The update downloaded nothing, so the plain-updating
+step between the two labels was too brief to observe; it is covered by `progressBridge.stage.test.ts`.
