@@ -72,7 +72,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 ## Current Position
 
-Phase: 74 (steam-game-updates) — all 22 plans complete, ready for /gsd-verify-work
+Phase: 74 (steam-game-updates) — round-2 gap plans 74-23..74-29 ready; next /gsd-execute-phase 74 --gaps-only
 Plan: 22 of 22 (74-22 live UAT done: 13 pass, 3 issue, 2 skipped; gaps in 74-UAT.md)
 Status: Ready to execute
 Last activity: 2026-11-13 -- Phase 74 planning complete
