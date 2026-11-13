@@ -14,13 +14,64 @@ pub mod shortcuts;
 
 use serde::Deserialize;
 use serde_json::Value;
+use std::path::Path;
 
-/// Ops reachable from the sidecar. Keep sorted. Registered in plan 11.
-pub const OPS: &[&str] = &[];
-/// Ops reachable from the CLI only.
-pub const CLI_ONLY_OPS: &[&str] = &[];
+/// Ops reachable from the sidecar and the CLI. Keep sorted. CLI-only ops are listed here too
+/// (the library dispatches them) and again in `CLI_ONLY_OPS`.
+pub const OPS: &[&str] = &[
+    "steamfiles_discover_root",
+    "steamfiles_find_acf",
+    "steamfiles_parse_valve_manifest",
+    "steamfiles_read_acf",
+    "steamfiles_read_installscript",
+    "steamfiles_read_library_folders",
+    "steamfiles_read_localconfig_beta_key",
+    "steamfiles_read_running_app_id",
+    "steamfiles_scan_acfs",
+    "steamfiles_shortcuts_apply",
+    "steamfiles_shortcuts_read",
+    "steamfiles_shortcuts_roundtrip",
+];
+/// Ops reachable from the CLI only (the sidecar bridge does not expose them).
+pub const CLI_ONLY_OPS: &[&str] = &["steamfiles_discover_root", "steamfiles_shortcuts_roundtrip"];
 
-#[allow(dead_code)]
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PathArgs {
+    path: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct LocalConfigArgs {
+    path: String,
+    app_id: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct DirsArgs {
+    steamapps_dirs: Vec<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct FindArgs {
+    steamapps_dirs: Vec<String>,
+    app_id: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ApplyArgs {
+    path: String,
+    mutation: shortcuts::ShortcutsOp,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct EmptyArgs {}
+
 fn parse_args<T: for<'de> Deserialize<'de>>(op: &str, args: &[Value]) -> Result<T, String> {
     let bad = || format!("{op}:bad-args");
     if args.len() != 1 {
@@ -29,15 +80,97 @@ fn parse_args<T: for<'de> Deserialize<'de>>(op: &str, args: &[Value]) -> Result<
     serde_json::from_value(args[0].clone()).map_err(|_| bad())
 }
 
-#[allow(dead_code)]
 fn to_value<T: serde::Serialize>(op: &str, v: T) -> Result<Value, String> {
     serde_json::to_value(v).map_err(|_| format!("{op}:serialize"))
 }
 
-fn run_op(op: &str, _args: &[Value]) -> Result<Value, String> {
+/// parse_bin then serialize_bin compared with the file bytes. Never writes.
+fn shortcuts_roundtrip(path: &Path) -> Value {
+    use kv_bin::{parse_bin, serialize_bin, BinLimits};
+    let bytes = match std::fs::read(path) {
+        Ok(b) => b,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            return serde_json::json!({
+                "exists": false, "parsed": false, "readError": null, "identical": false, "len": 0
+            })
+        }
+        Err(e) => {
+            return serde_json::json!({
+                "exists": true, "parsed": false, "readError": format!("io: {e}"),
+                "identical": false, "len": 0
+            })
+        }
+    };
+    match parse_bin(&bytes, &BinLimits::shortcuts()) {
+        Ok(doc) => serde_json::json!({
+            "exists": true, "parsed": true, "readError": null,
+            "identical": serialize_bin(&doc) == bytes, "len": bytes.len()
+        }),
+        Err(e) => serde_json::json!({
+            "exists": true, "parsed": false, "readError": format!("parse: {e:?}"),
+            "identical": false, "len": bytes.len()
+        }),
+    }
+}
+
+fn run_op(op: &str, args: &[Value]) -> Result<Value, String> {
     match op {
         #[cfg(test)]
         "__panic_probe" => panic!("probe"),
+        "steamfiles_discover_root" => {
+            let _: EmptyArgs = parse_args(op, args)?;
+            to_value(op, discover::discover_default())
+        }
+        "steamfiles_find_acf" => {
+            let a: FindArgs = parse_args(op, args)?;
+            to_value(op, library::find_acf(&a.steamapps_dirs, &a.app_id))
+        }
+        "steamfiles_parse_valve_manifest" => {
+            let a: PathArgs = parse_args(op, args)?;
+            to_value(op, readers::parse_valve_manifest(Path::new(&a.path)))
+        }
+        "steamfiles_read_acf" => {
+            let a: PathArgs = parse_args(op, args)?;
+            to_value(op, acf::read_acf(Path::new(&a.path)))
+        }
+        "steamfiles_read_installscript" => {
+            let a: PathArgs = parse_args(op, args)?;
+            to_value(op, readers::read_installscript(Path::new(&a.path)))
+        }
+        "steamfiles_read_library_folders" => {
+            let a: PathArgs = parse_args(op, args)?;
+            to_value(op, library::read_library_folders(Path::new(&a.path)))
+        }
+        "steamfiles_read_localconfig_beta_key" => {
+            let a: LocalConfigArgs = parse_args(op, args)?;
+            to_value(
+                op,
+                readers::read_localconfig_beta_key(Path::new(&a.path), &a.app_id),
+            )
+        }
+        "steamfiles_read_running_app_id" => {
+            let a: PathArgs = parse_args(op, args)?;
+            to_value(op, readers::read_running_app_id(Path::new(&a.path)))
+        }
+        "steamfiles_scan_acfs" => {
+            let a: DirsArgs = parse_args(op, args)?;
+            to_value(op, library::scan_acfs(&a.steamapps_dirs))
+        }
+        "steamfiles_shortcuts_apply" => {
+            let a: ApplyArgs = parse_args(op, args)?;
+            to_value(
+                op,
+                shortcuts::apply_shortcuts(Path::new(&a.path), &a.mutation),
+            )
+        }
+        "steamfiles_shortcuts_read" => {
+            let a: PathArgs = parse_args(op, args)?;
+            to_value(op, shortcuts::read_shortcuts(Path::new(&a.path)))
+        }
+        "steamfiles_shortcuts_roundtrip" => {
+            let a: PathArgs = parse_args(op, args)?;
+            Ok(shortcuts_roundtrip(Path::new(&a.path)))
+        }
         _ => Err(format!("unknown-op:{op}")),
     }
 }
@@ -155,7 +288,13 @@ mod tests {
             "steamfiles_shortcuts_roundtrip",
         ] {
             let r = dispatch(op, &[json!({"path": "/nonexistent/gamelib/zzz"})]).unwrap();
-            assert_eq!(r["exists"], json!(false), "{op}: {r}");
+            if op == "steamfiles_read_running_app_id" {
+                assert_eq!(r["runningAppId"], json!(0), "{op}: {r}");
+            } else if op == "steamfiles_parse_valve_manifest" {
+                assert_eq!(r["ok"], json!(false), "{op}: {r}");
+            } else {
+                assert_eq!(r["exists"], json!(false), "{op}: {r}");
+            }
         }
     }
 
