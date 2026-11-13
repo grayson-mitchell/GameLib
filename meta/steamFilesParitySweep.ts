@@ -42,23 +42,23 @@ import { runSteamfilesCliSync } from './gamelibSteamfilesCli'
 // ---------------------------------------------------------------------------
 
 /** The closed list of explained divergence classes (mirrors the golden overrides' notes). */
-export const DIFF_CLASSES = [
+const DIFF_CLASSES = [
   'numeric-coercion',
   'decoded-backslash',
   'case-insensitive-key',
   'legacy-libraryfolders',
   'integer-key-order'
 ] as const
-export type DiffClass = (typeof DIFF_CLASSES)[number]
+type DiffClass = (typeof DIFF_CLASSES)[number]
 
-export interface Leaf {
+interface Leaf {
   path: string
   a: unknown
   b: unknown
 }
 
 /** Maps become sorted `{__map}` entry lists so InstalledMap results compare structurally. */
-export function normalise(v: unknown): unknown {
+function normalise(v: unknown): unknown {
   if (v instanceof Map) {
     return {
       __map: [...v.entries()]
@@ -79,7 +79,7 @@ export function normalise(v: unknown): unknown {
 }
 
 /** Every differing leaf between two normalised values. */
-export function diffLeaves(a: unknown, b: unknown, path = ''): Leaf[] {
+function diffLeaves(a: unknown, b: unknown, path = ''): Leaf[] {
   if (a === b) return []
   const aObj = a !== null && typeof a === 'object'
   const bObj = b !== null && typeof b === 'object'
@@ -154,7 +154,7 @@ export function classifyDiff(
 }
 
 /** Order-insensitive form: every array sorted by its elements' JSON. */
-export function canonical(v: unknown): string {
+function canonical(v: unknown): string {
   const c = (x: unknown): unknown => {
     if (Array.isArray(x)) {
       return x.map(c).sort((p, q) => {

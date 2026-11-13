@@ -18,7 +18,7 @@ import type {
   RUST_STEAMFILES_SHORTCUTS_READ
 } from 'common/types/sidecarTransport'
 
-/** Equal to the crate's `OPS`, sorted. */
+/** @public Equal to the crate's `OPS`, sorted; kept as the TS mirror of the Rust op list. */
 export const STEAMFILES_OPS = [
   'steamfiles_discover_root',
   'steamfiles_find_acf',
@@ -34,13 +34,13 @@ export const STEAMFILES_OPS = [
   'steamfiles_shortcuts_roundtrip'
 ] as const
 
-/** Ops the sidecar bridge does not expose (CLI only). */
+/** @public Ops the sidecar bridge does not expose (CLI only); mirror of the crate op list. */
 export const CLI_ONLY_STEAMFILES_OPS = [
   'steamfiles_discover_root',
   'steamfiles_shortcuts_roundtrip'
 ] as const
 
-export interface AcfDepot {
+interface AcfDepot {
   depotId: string
   manifest: string
   size: string
@@ -79,7 +79,7 @@ export interface ScannedAcf {
   record: AcfRecord
 }
 
-export interface SkippedAcf {
+interface SkippedAcf {
   steamappsDir: string
   fileName: string
   reason: string
@@ -91,7 +91,7 @@ export interface ScanResult {
   missingDirs: string[]
 }
 
-export interface FindAcfResult {
+interface FindAcfResult {
   found: boolean
   steamappsDir: string | null
   record: AcfRecord | null
@@ -104,15 +104,15 @@ export interface LibraryFoldersResult {
   paths: string[]
 }
 
-export interface RunningAppIdResult {
+interface RunningAppIdResult {
   runningAppId: number
 }
 
-export interface LocalConfigBetaKeyResult {
+interface LocalConfigBetaKeyResult {
   betaKey: string | null
 }
 
-export interface ValvePackage {
+interface ValvePackage {
   manifestVersion: string
   file: string
   sha2: string
@@ -125,12 +125,12 @@ export interface ValveManifestResult {
   pkg: ValvePackage | null
 }
 
-export interface InstallScriptProcess {
+interface InstallScriptProcess {
   process: string
   command: string | null
 }
 
-export interface InstallScriptEntry {
+interface InstallScriptEntry {
   name: string
   hasRunKey: string | null
   minimumHasRunValue: number
@@ -138,12 +138,12 @@ export interface InstallScriptEntry {
   requirementOs: { is64BitWindows: string | null; osType: string | null } | null
 }
 
-export interface InstallScriptResult {
+interface InstallScriptResult {
   exists: boolean
   entries: InstallScriptEntry[] | null
 }
 
-export interface ShortcutEntrySummary {
+interface ShortcutEntrySummary {
   indexKey: string
   appName: string | null
   exe: string | null
@@ -176,7 +176,7 @@ export type EntryField =
   | { kind: 'string'; key: string; value: string }
   | { kind: 'int32'; key: string; value: number }
 
-export type ShortcutsMutation =
+type ShortcutsMutation =
   | { op: 'add'; entry: EntryField[]; createIfMissing: boolean }
   | { op: 'update'; appName: string; fields: EntryField[] }
   | { op: 'remove'; appName: string }
