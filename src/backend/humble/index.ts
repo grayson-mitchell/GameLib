@@ -9,6 +9,7 @@ import {
   type LoginWindowSeamSlot
 } from './loginWindowSeam'
 import type { HumbleSecretStore } from './secretStore'
+import { createSteamAppIdResolver } from './steamAppIdResolver'
 import { createHumbleSyncFence, type HumbleSyncFence } from './syncFence'
 import { HumbleUser } from './user'
 
@@ -60,6 +61,9 @@ export function createHumbleServices(deps: HumbleServicesDeps): HumbleServices {
     user,
     syncFence,
     steamUser: deps.steamUser,
+    steamAppIdResolver: createSteamAppIdResolver({
+      cache: deps.stores.humble.humbleSteamAppIdStore
+    }),
     loginWindowSeam,
     appInfo: deps.appInfo,
     sendFrontendMessage: deps.sendFrontendMessage

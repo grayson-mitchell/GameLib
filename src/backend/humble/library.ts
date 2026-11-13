@@ -38,6 +38,7 @@ import type { HumbleUser } from './user'
 import { GameInfo } from 'common/types'
 import type { Stores } from 'backend/services/types'
 import type { SteamUser } from 'backend/storeManagers/steam/user'
+import type { SteamAppIdResolver } from './steamAppIdResolver'
 
 /**
  * What the boot hands `HumbleLibrary` (D-05, D-66.3-17). Every member is required at
@@ -51,6 +52,11 @@ export interface HumbleLibraryDeps extends HumbleAdapterDeps {
   syncFence: Pick<HumbleSyncFence, 'current'>
   /** The boot-owned Steam session, for the connectivity gate (D-66.3-16). */
   steamUser: Pick<SteamUser, 'isLoggedIn'>
+  /**
+   * Title -> Steam app id resolver; reads only its own cache plus Steam's
+   * public store search, never the Steam session (quick 261114-ca6).
+   */
+  steamAppIdResolver: SteamAppIdResolver
   sendFrontendMessage: SendFrontendMessage
 }
 
@@ -132,6 +138,24 @@ export function createHumbleLibrary(libDeps: HumbleLibraryDeps) {
     return { open: steamGames.length > 0, steamGames }
   }
 
+  /** A Steam key with no usable app id (Humble's library API no longer supplies one). */
+  function needsSteamAppId(key: HumbleKey): boolean {
+    return (
+      key.platform === 'steam' &&
+      key.state !== 'UNPICKED' &&
+      (key.steamAppId === undefined ||
+        key.steamAppId === '' ||
+        key.steamAppId === '0')
+    )
+  }
+
+  /** Cache-only fill of a title-resolved app id (quick 261114-ca6); never requests. */
+  function withCachedSteamAppId<K extends HumbleKey>(key: K): K {
+    if (!needsSteamAppId(key)) return key
+    const id = libDeps.steamAppIdResolver.lookupCached(key.title)
+    return id ? { ...key, steamAppId: id, steamAppIdResolved: true } : key
+  }
+
   /**
    * Fetches + classifies + commits a single order. Per-order isolation
    * (Pattern 2): a schema_error or a caught throw here keeps that gamekey's
@@ -166,7 +190,7 @@ export function createHumbleLibrary(libDeps: HumbleLibraryDeps) {
     // Phase 14 (D-77): the 4th positional arg is classifyOrder's
     // isLocallyRedeemed predicate, composite-keyed (gamekey:machineName, not
     // machineName-only — WR-01 non-collision) via humbleLocalRedeemedStore.
-    const classified = classifyOrder(
+    const classifiedRaw = classifyOrder(
       result.data,
       (machineName) => humbleStores().humbleRevealedStore.has(machineName),
       now,
@@ -175,6 +199,14 @@ export function createHumbleLibrary(libDeps: HumbleLibraryDeps) {
           compositeKey(gk, machineName)
         )
     )
+    // Quick 261114-ca6: Humble no longer supplies steam_app_id, so fill any
+    // title-resolved id from the persistent cache (synchronous, hit-only, no
+    // request) BEFORE the ownership overlay below. Keeps the exact tier stable
+    // across re-syncs/restarts and closes the commit-time churn window.
+    const classified = {
+      ...classifiedRaw,
+      keys: classifiedRaw.keys.map(withCachedSteamAppId)
+    }
     // Phase 14 (D-74): merge the freshly-classified order's keyindex
     // side-channel onto each cached key as the internal-only `keyindex`
     // field (persisted with the cache entry — no new store, survives
@@ -400,6 +432,51 @@ export function createHumbleLibrary(libDeps: HumbleLibraryDeps) {
       keys.push(...entry.keys.map(toDisplayKey))
     }
     return keys
+  }
+
+  /**
+   * Quick 261114-ca6: single-flight background pass resolving Steam app ids
+   * for Steam keys that lack one, then patching the cached entries and
+   * recomputing ownership. Runs only from runSync, never per render. Skipped
+   * when the Steam gate is closed (nothing could use the result). Reads only
+   * the cached Steam library; never logs on, refreshes or goes offline.
+   */
+  let resolveInFlight: Promise<void> | null = null
+  function startSteamAppIdResolvePass(isStale: () => boolean): void {
+    if (resolveInFlight || !getSteamGate().open) return
+    const titles: string[] = []
+    for (const [, entry] of humbleStores().humbleLibraryStore.entries()) {
+      for (const key of entry.keys) {
+        if (needsSteamAppId(key)) titles.push(key.title)
+      }
+    }
+    if (titles.length === 0) return
+    resolveInFlight = libDeps.steamAppIdResolver
+      .resolvePending(titles, { isStale })
+      .then(() => {
+        if (isStale()) return
+        let changed = false
+        for (const [
+          gamekey,
+          entry
+        ] of humbleStores().humbleLibraryStore.entries()) {
+          const keys = entry.keys.map(withCachedSteamAppId)
+          if (keys.some((key, i) => key !== entry.keys[i])) {
+            humbleStores().humbleLibraryStore.set(gamekey, { ...entry, keys })
+            changed = true
+          }
+        }
+        if (changed) recomputeOwnership()
+      })
+      .catch((err: unknown) => {
+        logError(
+          ['Humble: Steam app id resolve pass failed:', String(err)],
+          LogPrefix.Backend
+        )
+      })
+      .finally(() => {
+        resolveInFlight = null
+      })
   }
 
   /**
@@ -1140,6 +1217,11 @@ export function createHumbleLibrary(libDeps: HumbleLibraryDeps) {
     // wiped humbleLibraryStore here either. Itself a no-op when Steam is
     // disconnected/empty (D-48, see recomputeOwnership's own double-gate).
     recomputeOwnership()
+
+    // Quick 261114-ca6 (decision 5): kick the title -> app id resolve pass,
+    // NOT awaited so the sync spinner is not held. Exit contract: bounded by
+    // the request cap + 8s timeout, unref'd sleep, stops on a stale fence.
+    startSteamAppIdResolvePass(isStale)
 
     // HSTORE-03 (D-90/D-91/D-92): detect expiration transitions AFTER
     // recomputeOwnership() and AFTER the isStale() fence above — so a

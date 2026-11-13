@@ -64,6 +64,19 @@ export function createTestHumbleServices(
       user,
       syncFence,
       steamUser: opts.steamUser ?? createInertTestSteamUser(),
+      // Inert: no test harness may reach Steam's store search.
+      steamAppIdResolver: {
+        lookupCached: () => undefined,
+        resolvePending: () =>
+          Promise.resolve({
+            requested: 0,
+            resolved: 0,
+            cached: 0,
+            misses: 0,
+            errors: 0,
+            deferred: 0
+          })
+      },
       loginWindowSeam,
       appInfo,
       sendFrontendMessage

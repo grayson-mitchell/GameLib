@@ -66,13 +66,14 @@ repository. The rows below list the destinations found in GameLib's own source.
 **Game metadata, artwork and compatibility data.** Sent when you open a game's page, and cached for
 later. The game title or store id is sent.
 
-| Destination                                                                                    | Platforms            | Purpose                             |
-| ---------------------------------------------------------------------------------------------- | -------------------- | ----------------------------------- |
-| `www.pcgamingwiki.com`, `howlongtobeat.com`                                                    | All                  | Game information, playtime          |
-| `www.protondb.com`, `store.steampowered.com` (Steam Deck report), `umu.openwinecomponents.org` | Linux (as confirmed) | Compatibility reports               |
-| `www.applegamingwiki.com`, `www.codeweavers.com`                                               | macOS, Linux         | Compatibility information           |
-| `www.cheapshark.com`                                                                           | All                  | Store price search, when you search |
-| `www.steamgriddb.com`, `cdn2.steamgriddb.com`                                                  | All                  | Artwork, when you use SteamGridDB   |
+| Destination                                                                                    | Platforms            | Purpose                                                                                    |
+| ---------------------------------------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------ |
+| `www.pcgamingwiki.com`, `howlongtobeat.com`                                                    | All                  | Game information, playtime                                                                 |
+| `www.protondb.com`, `store.steampowered.com` (Steam Deck report), `umu.openwinecomponents.org` | Linux (as confirmed) | Compatibility reports                                                                      |
+| `www.applegamingwiki.com`, `www.codeweavers.com`                                               | macOS, Linux         | Compatibility information                                                                  |
+| `store.steampowered.com` (store search)                                                        | All                  | Matching Humble Steam keys to Steam games, after a Humble refresh while signed in to Steam |
+| `www.cheapshark.com`                                                                           | All                  | Store price search, when you search                                                        |
+| `www.steamgriddb.com`, `cdn2.steamgriddb.com`                                                  | All                  | Artwork, when you use SteamGridDB                                                          |
 
 **Compatibility-tool and runtime downloads.** Only when you ask for them, or when you install a game
 that needs them: releases of Wine, Proton, DXVK, VKD3D and related tools from `api.github.com` and
