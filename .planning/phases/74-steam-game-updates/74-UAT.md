@@ -1,5 +1,5 @@
 ---
-status: pending
+status: complete
 phase: 74-steam-game-updates
 source: [74-13-PLAN.md]
 started: 2026-11-12
@@ -112,25 +112,25 @@ precondition: a Windows or Linux machine with Steam installed.
 
 ### 16. Single launch prompt and in-update block (re-run of item 7)
 expected: Play shows ONE native box with Play anyway / Update now / Don't ask again for this build, and no in-app Heroic box first. Play anyway launches the current build (strict bridge criterion not required; the game reaching its menu suffices). Don't ask again launches and the next Play shows no prompt while the badge stays. Update now queues the update and the card does not stay on Launching. While that update is downloading, Play shows "<title> is updating..." and does not launch. Esc on the box launches (never updates).
-result: pending
+result: issue (partial). Context: quick 261113-n39 (b06235474) first fixed a separate blocker, the Nov 10 Mac Steam update removing SteamAPI_SteamUser_v023 which broke every bridge helper WHOAMI (helper now probes accessors newest-first; live SteamUser=v024). Core Keeper 1621690 made stale by lowering the bridge ACF buildid; global autoUpdateGames was turned off because the boot auto-update re-currented both fixtures (the 74-19 unattended path working). Step 1 pass: single native three-button box, no in-app box first. Step 2 pass for the prompt; the game then crashes about 7 s after start (`EntryPointNotFoundException: SteamAPI_SteamInventory_v003`, pre-existing shim coverage gap, shim exports byte-identical before/after n39, not Phase 74). Step 3 FAIL: Esc on the native box makes macOS beep and the box stays open (the 74-14 YesNoCancelCustom box has no cancel key equivalent). Step 4 pass (launched, next Play no prompt, badge stays). Step 5 pass (queued, card not stuck on Launching). Step 6 skipped: the induced update is 0 bytes so it completes instantly; covered by 74-14 unit tests. Gap recorded for Esc.
 precondition: Hell Clock 1782460 or Core Keeper 1621690 (bridge), still stale; sidecar rebuilt and GameLib relaunched with `pnpm tauri:dev`.
 
 ### 17. Registered Update with InstallApp ON clears promptly (re-run of item 12)
 expected: Update starts Steam's update with no window; GameLib shows Updating and then, within a few seconds of Steam finishing (log `update of appId <id> finished`), the badge and the Updating state clear without waiting for `ending the update poll quietly`. A second Update click on the now-current game logs `is already current` and does not show Updating.
-result: pending
+result: pass. ADOM 333300, InstallApp ON. 17:44:22 `Steam is updating appId 333300 via InstallApp`; 17:44:25 `update of appId 333300 finished (build 5820078)` then `stopped install polling`. Badge and Updating cleared within about 2 s without refresh. The Update button is gone once current, so the second-click `is already current` check was not reachable from the UI. Polish gap: the button flashed for about 2 s before the badge changed. Context: quick 261113-n39 (b06235474) first fixed a separate blocker, the Nov 10 Mac Steam update removing SteamAPI_SteamUser_v023 which broke every bridge helper WHOAMI (helper now probes accessors newest-first; live SteamUser=v024).
 precondition: the registered fixture re-staled per spike 069 step 4 (quit Steam, edit the ACF buildid lower, relaunch); the InstallApp opt-in is on and confirmed saved.
 
 ### 18. Multi-depot / DLC bridge update keeps DLC content (WR-01)
 expected: On a bridge game whose ACF InstalledDepots lists at least one DLC or language depot besides the base depot, an update completes with `[depot-rust] outcome ... status=completed acf=4`; the log line `retire appId=<id> ...` shows the DLC/language depot under kept (never retired); every file that belonged to that depot before the update still exists afterwards (compare a file list taken before and after); the game launches through the bridge (strict criterion).
-result: pending
+result: pass. Dungeons of Dredmor 98800 with two InstalledDepots (98801 and 98820), stale via buildid 150078 to 150000, updated by the boot auto-update. 17:42:30 `updateBridgeGame: appId 98800 starting delta (branch public, oldManifest=true)`; 17:42:34 `retire appId=98800 candidates=2 retired=[] kept=[]`; outcome status=completed acf=4, ACF back to 150078. File list before and after identical (9262 files, empty diff), so the WR-01 DLC-retention goal passes. Launch reached the main menu but went via the Steam bridge bottle directly (`shim withheld: coverage gaps STEAMREMOTESTORAGE_INTERFACE_VERSION008, no helper`), so by the strict criterion the launch is bridge-unverified (pre-existing shim gap, not Phase 74). Also seen: `[sidecarRpc] IPC_INVALID_ARGS kind=send channel=depotJobEvent paths=0.kind codes=invalid_union` x4 during the delta jobs; the update still completed. Context: quick 261113-n39 (b06235474) first fixed a separate blocker, the Nov 10 Mac Steam update removing SteamAPI_SteamUser_v023 which broke every bridge helper WHOAMI (helper now probes accessors newest-first; live SteamUser=v024).
 precondition: choose a bridge install with a DLC or language depot (read InstalledDepots in the bridge bottles' appmanifest files). If none is stale, stage one with GameLib quit: copy the ACF aside, set its `buildid` to any lower number while leaving InstalledDepots untouched, relaunch GameLib, Refresh; the badge shows, and Update runs the retire decision over every installed depot with little or nothing to download. Restore nothing afterwards (the update rewrites the ACF). Take before/after file lists with `find <installdir> -type f | sort` into the scratchpad, never into the repo.
 
 ## Summary
 
 total: 18
-passed: 11
-issues: 2
-pending: 3
+passed: 13
+issues: 3
+pending: 0
 skipped: 2
 blocked: 0
 
@@ -171,3 +171,18 @@ blocked: 0
   reason: "Item 12 (InstallApp ON, ADOM 333300): Steam finished in 3 s (06:30:27 `update of appId 333300 finished (build 5820078)`), but the card badge stayed and the Play button only flickered. A second Update on the now-current game showed 'Updating game' with no progress for 2 min. The update-aware poll needs pending/active seen or buildid != fromBuild; Steam's empty InstallApp job finished before the first tick and fromBuild was already the new build, so it ran to the 40-tick timeout. Likely causes: the frontend update list / updateStates cache is not refreshed on registered-update completion, and the poll's fromBuild/completion rule does not handle an already-current game."
   severity: minor
   test: 12
+- truth: "Esc on the three-button native launch prompt launches the current build and never updates"
+  status: failed
+  reason: "Item 16 step 3: Esc makes macOS beep and the box stays open; the 74-14 YesNoCancelCustom box has no cancel/Esc key equivalent."
+  severity: medium
+  test: 16
+- truth: "Depot job events during a bridge delta pass IPC contract validation"
+  status: failed
+  reason: "Item 18: `[sidecarRpc] IPC_INVALID_ARGS kind=send channel=depotJobEvent paths=0.kind codes=invalid_union` x4 during bridge delta jobs; a depot job event kind is not admitted by the IPC contract. The update still completed."
+  severity: minor
+  test: 18
+- truth: "The Update button does not flash before the badge clears after an InstallApp update"
+  status: failed
+  reason: "Item 17 (polish): the button flashed for about 2 s before the badge changed."
+  severity: cosmetic
+  test: 17
