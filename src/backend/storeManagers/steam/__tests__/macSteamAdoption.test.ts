@@ -1,9 +1,13 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'fs'
+import { tmpdir } from 'os'
+import { join } from 'path'
 /**
  * Quick 261029-ji2: pending-adoption record, Play decision and the graceful
  * quit-wait-relaunch driver. Driven through injected deps (fake clock advanced
  * by `sleep`); no fs, no spawn, no real timers. The pgrep probe runs on a scripted runner.
  */
 jest.mock('backend/logger', () => ({
+  logDebug: jest.fn(),
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
@@ -17,6 +21,7 @@ jest.mock('../macSteamOffline', () => ({
 import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import {
   isSteamAdoptedAcf,
+  readAcfSnapshot,
   decidePlayAdoption,
   restartMacSteamForAdoption,
   probeMacSteamPid,
@@ -30,6 +35,7 @@ import {
   type PendingAdoptionStore,
   type RestartDeps
 } from '../macSteamAdoption'
+import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
 import { at } from './fixtures/indexed'
 import { createFakeClock } from 'backend/testUtils/fakeClock'
 import {
@@ -350,5 +356,97 @@ describe('createRestartDeps', () => {
     deps.openUrlDetached('steam://exit')
     expect(openUrlDetached).toHaveBeenCalledWith('steam://exit')
     await expect(deps.isSteamRunning()).resolves.toBe(false)
+  })
+})
+
+describe('readAcfSnapshot and isSteamAdoptedAcf on the rust flag', () => {
+  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
+  let dir: string
+  beforeEach(() => {
+    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+    dir = mkdtempSync(join(tmpdir(), 'adoption-'))
+  })
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true })
+    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
+    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
+  })
+
+  const stubRecord = (stateFlags: number | null, buildid: string | null) =>
+    stubRustSteamFiles({
+      steamfiles_read_acf: () => ({
+        exists: true,
+        parsed: stateFlags !== null,
+        readError: null,
+        record: (stateFlags === null ? null : { stateFlags, buildid }) as never
+      })
+    })
+
+  function writeAcf(): string {
+    const path = join(dir, 'appmanifest_1.acf')
+    writeFileSync(path, 'raw-content-the-ts-side-never-parses')
+    return path
+  }
+
+  test('snapshot keeps raw content and mtime and adds the Rust-parsed fields', async () => {
+    const snap = await readAcfSnapshot(stubRecord(4, '9044149'), writeAcf())
+    expect(snap).toMatchObject({
+      content: 'raw-content-the-ts-side-never-parses',
+      stateFlags: 4,
+      buildid: '9044149'
+    })
+    expect(typeof snap?.mtimeMs).toBe('number')
+  })
+
+  test('null when the file is missing', async () => {
+    await expect(
+      readAcfSnapshot(stubRecord(4, '1'), join(dir, 'nope.acf'))
+    ).resolves.toBeNull()
+  })
+
+  test('a rejecting transport yields a snapshot that is never adopted', async () => {
+    const snap = await readAcfSnapshot(stubRustSteamFiles({}), writeAcf())
+    expect(snap?.stateFlags).toBeNull()
+    expect(isSteamAdoptedAcf(null, snap)).toBe(false)
+  })
+
+  test('null baseline + installed, unchanged content, and placeholder 1026/buildid 0', async () => {
+    const path = writeAcf()
+    const installed = (await readAcfSnapshot(stubRecord(4, '9044149'), path))!
+    expect(isSteamAdoptedAcf(null, installed)).toBe(true)
+    expect(isSteamAdoptedAcf(installed, { ...installed })).toBe(false)
+    expect(isSteamAdoptedAcf(installed, { ...installed, mtimeMs: 1 })).toBe(
+      true
+    )
+    const placeholder = (await readAcfSnapshot(stubRecord(1026, '0'), path))!
+    expect(isSteamAdoptedAcf(null, placeholder)).toBe(false)
+  })
+
+  test('uses the Rust fields, not the content, when they are present', async () => {
+    const snap = { mtimeMs: 2, content: 'garbage', stateFlags: 4, buildid: '5' }
+    expect(isSteamAdoptedAcf(null, snap)).toBe(true)
+  })
+
+  test('a persisted pre-Phase-75 baseline (content + mtimeMs only) still validates', () => {
+    const store = new Map<string, unknown>([
+      [
+        '1',
+        {
+          steamPid: 7,
+          manifestPath: '/m',
+          baseline: { mtimeMs: 1, content: 'x' },
+          recordedAt: 3
+        }
+      ]
+    ])
+    const fake: PendingAdoptionStore = {
+      get: (k) => store.get(k),
+      set: () => undefined,
+      delete: () => undefined
+    }
+    expect(readPendingAdoption('1', fake)?.baseline).toEqual({
+      mtimeMs: 1,
+      content: 'x'
+    })
   })
 })

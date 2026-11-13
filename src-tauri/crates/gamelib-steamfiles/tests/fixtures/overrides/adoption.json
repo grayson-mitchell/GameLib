@@ -1,1 +1,26 @@
-{}
+{
+  "adoption/readAppManifestFlags/coercion": {
+    "rustOverride": { "stateFlags": 4, "buildid": "0123" },
+    "divergenceNote": "The buildid is the quoted string 0123; the old @node-steam/vdf parse coerced numeric strings to numbers and dropped the leading zero (123). Rust keeps the on-disk string, which is what Steam wrote; buildid is only compared against '' and '0', so the adopted verdict is unchanged."
+  },
+  "adoption/readAppManifestFlags/comments-unquoted": {
+    "rustOverride": { "stateFlags": 4, "buildid": "" },
+    "divergenceNote": "The manifest uses // comments and unquoted keys and values, which Valve's KeyValues reader accepts. The old parse rejected it (null, so the manifest looked absent); Rust parses it, so the install reads as installed, which is Steam-correct."
+  },
+  "adoption/readAppManifestFlags/lowercase-keys": {
+    "rustOverride": { "stateFlags": 4, "buildid": "" },
+    "divergenceNote": "The keys are lowercase (appstate, stateflags). Steam's KeyValues lookups are case-insensitive, the old exact-casing read returned null; Rust matches case-insensitively and reads StateFlags 4, which is Steam-correct."
+  },
+  "adoption/readAppManifestFlags/truncated": {
+    "rustOverride": null,
+    "divergenceNote": "The truncated manifest made the old @node-steam/vdf parse loop forever (the oracle records a hang). Rust returns parsed=false, which readAppManifestFlags maps to null, so a corrupt manifest no longer wedges the queue-head guard."
+  },
+  "adoption/isSteamAdoptedAcf/null-baseline/truncated": {
+    "rustOverride": false,
+    "divergenceNote": "The truncated current ACF made the old parse hang (the oracle records a hang). Rust reports parsed=false, readAcfSnapshot records stateFlags null, and isSteamAdoptedAcf answers false (not adopted), the conservative verdict."
+  },
+  "adoption/readMacRunningAppId/lowercase": {
+    "rustOverride": 1245620,
+    "divergenceNote": "registry.vdf with lowercase key casing: the old exact-casing lookup returned 0 (T-06-06 Pitfall 4), Rust looks the keys up case-insensitively and returns the running id. Steam itself reads these keys case-insensitively, so Rust is Steam-correct (plan 08 recorded the same lookup behaviour)."
+  }
+}

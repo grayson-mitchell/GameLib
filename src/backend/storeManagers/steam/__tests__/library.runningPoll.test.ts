@@ -9,6 +9,7 @@ import * as vdf from '@node-steam/vdf'
 import { join, resolve, sep } from 'path'
 
 import { createCaptureLog } from 'backend/testUtils/captureLog'
+import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
 import { createFakeClock } from 'backend/testUtils/fakeClock'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import type { ScriptStep } from 'backend/testUtils/scriptedRunner'
@@ -27,6 +28,7 @@ import {
 } from '../steamLaunchWatch'
 
 jest.mock('backend/logger', () => ({
+  logDebug: jest.fn(),
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
@@ -719,5 +721,75 @@ describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
       { src: 'watch', status: 'done' }
     ])
     expect(collapse(frames)).toEqual(['playing', 'done'])
+  })
+})
+
+describe('registry.vdf RunningAppID on the rust flag', () => {
+  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
+  beforeEach(() => {
+    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+  })
+  afterEach(() => {
+    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
+    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
+  })
+
+  it('macOS reads RunningAppID through steamfiles_read_running_app_id', async () => {
+    const stub = stubRustSteamFiles({
+      steamfiles_read_running_app_id: () => ({ runningAppId: 1245620 })
+    })
+    await expect(
+      readMacRunningAppId({ paths, requestRustInvoke: stub.requestRustInvoke })
+    ).resolves.toBe(1245620)
+    expect(stub.calls[0]?.args).toEqual({
+      path: '/home/test/Library/Application Support/Steam/registry.vdf'
+    })
+  })
+
+  it('0 when the transport rejects', async () => {
+    const stub = stubRustSteamFiles({})
+    await expect(
+      readMacRunningAppId({ paths, requestRustInvoke: stub.requestRustInvoke })
+    ).resolves.toBe(0)
+  })
+
+  it('Linux reads ~/.steam/registry.vdf on Rust and skips the reaper scan when it is non-zero', async () => {
+    const stub = stubRustSteamFiles({
+      steamfiles_read_running_app_id: () => ({ runningAppId: 440 })
+    })
+    const runner = createScriptedRunner([])
+    await expect(
+      readRunningAppId(
+        { runner, paths, requestRustInvoke: stub.requestRustInvoke },
+        'linux'
+      )
+    ).resolves.toBe(440)
+    expect(stub.calls[0]?.args).toEqual({
+      path: '/home/test/.steam/registry.vdf'
+    })
+    expect(runner.calls).toHaveLength(0)
+  })
+
+  it('does not re-enter pollOnce while the previous read is still pending (inFlight guard)', async () => {
+    let release: (id: number) => void = () => undefined
+    const read = jest.fn(
+      () =>
+        new Promise<number>((resolve) => {
+          release = resolve
+        })
+    )
+    const clock = createFakeClock()
+    const notify = jest.fn()
+    const poll = createRunningPoll({ clock, readRunningAppId: read, notify })
+    poll.start(1000)
+    clock.advance(1000)
+    clock.advance(1000)
+    clock.advance(1000)
+    expect(read).toHaveBeenCalledTimes(1)
+    release(440)
+    await poll.pollOnce().catch(() => undefined)
+    await Promise.resolve()
+    expect(notify).toHaveBeenCalledWith(440, 'playing')
+    poll.stop()
   })
 })

@@ -10,6 +10,7 @@ import { getSteamLibraries } from 'backend/utils'
 import { clearSteamResumeBreadcrumb } from '../library/resumeBreadcrumbs'
 import { steamQueueHeadAlreadyInstalled } from '../queueHeadRevalidation'
 import type { GameInfo } from 'common/types'
+import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createSteamStores } from '../stores'
 
@@ -26,6 +27,7 @@ const steamTestDeps = createTestManagerDeps({
 const library = steamTestDeps.steamSession.libraryState.library
 
 jest.mock('backend/logger', () => ({
+  logDebug: jest.fn(),
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
@@ -121,5 +123,48 @@ describe('steamQueueHeadAlreadyInstalled', () => {
     await expect(
       steamQueueHeadAlreadyInstalled(steamTestDeps, '108600', { path: '/x' })
     ).resolves.toBe(false)
+  })
+
+  describe('on the rust flag', () => {
+    const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
+    beforeEach(() => {
+      process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+    })
+    afterEach(() => {
+      if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
+      else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
+    })
+    const depsWith = (stateFlags: number | null, buildid: string | null) => {
+      const stub = stubRustSteamFiles({
+        steamfiles_read_acf: () => ({
+          exists: true,
+          parsed: true,
+          readError: null,
+          record: { stateFlags, buildid } as never
+        })
+      })
+      return { ...steamTestDeps, requestRustInvoke: stub.requestRustInvoke }
+    }
+
+    it('true for a current full install read through Rust (no file on disk)', async () => {
+      seedBreadcrumb()
+      expect(
+        await steamQueueHeadAlreadyInstalled(
+          depsWith(4, '25485521'),
+          '108600',
+          {}
+        )
+      ).toBe(true)
+    })
+
+    it('false for an update-required manifest or a null stateFlags', async () => {
+      seedBreadcrumb()
+      expect(
+        await steamQueueHeadAlreadyInstalled(depsWith(6, '1'), '108600', {})
+      ).toBe(false)
+      expect(
+        await steamQueueHeadAlreadyInstalled(depsWith(null, '1'), '108600', {})
+      ).toBe(false)
+    })
   })
 })
