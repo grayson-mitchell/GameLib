@@ -97,6 +97,9 @@ Valve's. Paths with spaces are fine inside the single quotes.
 | DXVK → MoltenVK (bridge) | Schedule I Free Sample 3205720 (062) | BGRA8 | **works** | works |
 | D3DMetal D3D11 (bridge) | The Planet Crafter 1284190 (063) | BGRA8 | **works** | — |
 | D3DMetal D3D12 (UE5) | Manor Lords 1363080 (064) | **RGB10A2** | distorted, clicks OK | **works** |
+| GDI / software 2D (SDL 1.2 windib, bridge) | Dungeons of Dredmor 98800 (debug opengl-bridge-overlay-no-attach) | none | **never attaches** | **never attaches** |
+
+**Non-GPU 2D titles are out of reach.** Valve's Mac renderer only hooks GPU presents (`CGLFlushDrawable`, `glSwapAPPLE`, Metal). A title that draws in software (an SDL 1.2 windib/GDI title, or plain DirectDraw blits) never makes one, so Steam never starts `gameoverlayui`. All dylibs are still injected and the bridge works normally. `OpenGL.framework` and `GLEngine` showing in `vmmap` come from Wine/AppKit, not the game. Check the exe's imports for opengl32/d3d\*/ddraw before suspecting the hook. An untried route is forcing `SDL_VIDEODRIVER=directx` so that DirectDraw goes through wined3d GL, then winemac `flushBuffer`, which the interpose catches. _(2026-11-13)_
 
 ## What to Avoid
 

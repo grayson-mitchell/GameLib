@@ -69,3 +69,14 @@ Next steps:
 
 The Steam bridge itself is unaffected: `HELLO`, `GINIT ok=1`, and the game's own stats and
 achievement calls all work.
+
+## Resolution (2026-11-13): closed as unsupported
+
+The title was wrong: Dredmor is not an OpenGL title. It is a 2D software-rendered SDL 1.2 game. Its exe
+imports SDL.dll and no GPU API, and probe run 2 measured zero NSOpenGLContext activity in the
+game process over about 3 minutes. Its frames go through Wine's GDI/window-surface path, so Valve's Mac
+overlay renderer has no GPU present to hook and Steam never starts `gameoverlayui`. The user chose
+to close this as unsupported for non-GPU 2D bridge titles. The full evidence is in
+`.planning/debug/resolved/opengl-bridge-overlay-no-attach.md`. The class is recorded in
+spike-findings `steam-overlay-in-bottles.md`. Secondary defect found on the way:
+`2026-11-13-bridge-overlay-launch-drops-user-cx-env.md`.
