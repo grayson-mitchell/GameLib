@@ -872,9 +872,9 @@ fn finish(mut o: Outcome, started: Instant) -> Outcome {
 }
 
 /// True when the old manifest is definitively gone or unreadable (D-14 fallback applies).
-/// `ManifestUnavailable` also covers "no request code" (a Node-side refusal degrades to that, see
-/// fetch.rs `request_code_from_node`), so that case still falls back: the old manifest cannot be
-/// obtained by retrying. Everything else (5xx, 429, network, stall, not signed in, no content
+/// `ManifestUnavailable` means Steam answered with no request code (or Blocked), which retrying
+/// cannot change. A Node-side failure to obtain the code (not signed in, CM down, lease refused)
+/// arrives as NotSignedIn/Network (fetch.rs `request_code_from_node`) and is transient. Everything else (5xx, 429, network, stall, not signed in, no content
 /// servers, io) is transient and must fail the run so the retry sees the old tree intact.
 fn is_definitive_old_manifest_failure(f: &Failure) -> bool {
     match f.kind {

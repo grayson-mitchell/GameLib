@@ -47,6 +47,15 @@ pub const CHUNK_FETCH_USER_AGENT: &str = "Valve/Steam HTTP Client 1.0";
 /// `depotManifestRequestCode` handler sends `{eresult: 40}`; the shell turns that into this `Err`.
 pub const BLOCKED_REPLY: &str = "eresult:40";
 
+/// What asking Node for a manifest request code produced.
+enum NodeCode {
+    Code(String),
+    /// Steam answered with no code (definitive).
+    NoCode,
+    /// Node could not ask Steam (transient); carries the error kind to report.
+    Unreachable(ErrorKind),
+}
+
 /// Prefix of a host error meaning "the Node side could not ask Steam" (not signed in, CM down,
 /// lease refused, no job): transient, never a definitive "no code". The suffix is a short reason.
 pub const TRANSIENT_REPLY_PREFIX: &str = "transient:";
@@ -289,15 +298,26 @@ impl Fetcher {
     ) -> Result<Vec<u8>, FetchError> {
         let code = match request_code {
             Some(c) => c.to_string(),
-            None => self
+            None => match self
                 .request_code_from_node(depot_id, manifest_id, cancel)
                 .await?
-                .ok_or_else(|| {
-                    FetchError::Failed(plain_failure(
+            {
+                NodeCode::Code(c) => c,
+                // Steam answered with no code: definitive, retrying cannot change it.
+                NodeCode::NoCode => {
+                    return Err(FetchError::Failed(plain_failure(
                         ErrorKind::ManifestUnavailable,
                         format!("no manifest request code for depot {depot_id}"),
-                    ))
-                })?,
+                    )))
+                }
+                // The Node side could not ask Steam: transient, never a fallback trigger.
+                NodeCode::Unreachable(kind) => {
+                    return Err(FetchError::Failed(plain_failure(
+                        kind,
+                        format!("could not obtain a manifest request code for depot {depot_id}"),
+                    )))
+                }
+            },
         };
         let (bytes, _host) = self
             .run(
@@ -319,7 +339,7 @@ impl Fetcher {
         depot_id: &str,
         manifest_id: &str,
         cancel: &CancellationToken,
-    ) -> Result<Option<String>, FetchError> {
+    ) -> Result<NodeCode, FetchError> {
         let host = Arc::clone(&self.host);
         let (a, d, m) = (
             self.app_id.clone(),
@@ -332,7 +352,10 @@ impl Fetcher {
             r = join => r,
         };
         match res {
-            Ok(Ok(code)) => Ok(code.filter(|c| !c.is_empty())),
+            Ok(Ok(code)) => Ok(match code.filter(|c| !c.is_empty()) {
+                Some(c) => NodeCode::Code(c),
+                None => NodeCode::NoCode,
+            }),
             // Steam refused the request with EResult 40 (Blocked): carried so the job can skip
             // this depot, like `skipBlockedDepot` in plan.ts.
             Ok(Err(e)) if e == BLOCKED_REPLY => Err(FetchError::Failed(Failure {
@@ -341,8 +364,16 @@ impl Fetcher {
                 eresult: Some(ERESULT_BLOCKED),
                 ..base_failure()
             })),
-            // A failed Node call degrades to "no new code": the retry reports the HTTP error.
-            Ok(Err(_)) | Err(_) => Ok(None),
+            // The Node side could not ask Steam. The up-front fetch fails the run as transient;
+            // the 401/403/404 refresh path treats it as "no new code" and reports the HTTP error.
+            Ok(Err(e)) => Ok(NodeCode::Unreachable(
+                if e.strip_prefix(TRANSIENT_REPLY_PREFIX) == Some("not_signed_in") {
+                    ErrorKind::NotSignedIn
+                } else {
+                    ErrorKind::Network
+                },
+            )),
+            Err(_) => Ok(NodeCode::Unreachable(ErrorKind::Network)),
         }
     }
 
@@ -523,7 +554,7 @@ impl Fetcher {
                             let fresh = self
                                 .request_code_from_node(depot_id, manifest_id, cancel)
                                 .await?;
-                            if let Some(f) = fresh {
+                            if let NodeCode::Code(f) = fresh {
                                 target = Target::Manifest {
                                     manifest_id,
                                     request_code: Some(f),

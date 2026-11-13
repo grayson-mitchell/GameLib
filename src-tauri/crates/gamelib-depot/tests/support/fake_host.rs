@@ -2,7 +2,7 @@
 //! scripted queues (the last answer is sticky).
 
 use gamelib_depot::{JobEvent, JobHost, TokenRequest};
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Mutex;
 
 #[derive(Default)]
@@ -14,6 +14,8 @@ pub struct FakeHost {
     code_answers: Mutex<VecDeque<Result<Option<String>, String>>>,
     /// Depot ids whose request code Steam refuses with EResult 40 (the shell's `eresult:40` reply).
     blocked: Mutex<HashSet<String>>,
+    /// Depot id -> reason: the Node side could not ask Steam (the shell's `transient:<reason>`).
+    transient: Mutex<HashMap<String, String>>,
 }
 
 fn next<T: Clone>(q: &Mutex<VecDeque<T>>, empty: T) -> T {
@@ -43,6 +45,14 @@ impl FakeHost {
     pub fn with_blocked(self, depot_ids: &[&str]) -> Self {
         *self.blocked.lock().unwrap() = depot_ids.iter().map(|d| d.to_string()).collect();
         self
+    }
+
+    /// Makes every request-code call for `depot_id` fail as `transient:<reason>`.
+    pub fn set_transient(&self, depot_id: &str, reason: &str) {
+        self.transient
+            .lock()
+            .unwrap()
+            .insert(depot_id.to_string(), reason.to_string());
     }
 
     pub fn forces(&self) -> Vec<bool> {
@@ -77,6 +87,12 @@ impl JobHost for FakeHost {
             .push((app_id.into(), depot_id.into(), manifest_id.into()));
         if self.blocked.lock().unwrap().contains(depot_id) {
             return Err(gamelib_depot::fetch::BLOCKED_REPLY.to_string());
+        }
+        if let Some(reason) = self.transient.lock().unwrap().get(depot_id) {
+            return Err(format!(
+                "{}{reason}",
+                gamelib_depot::fetch::TRANSIENT_REPLY_PREFIX
+            ));
         }
         next(&self.code_answers, Ok(None))
     }

@@ -218,6 +218,51 @@ fn transient_old_manifest_failure_keeps_retired_depot_files() {
 }
 
 #[test]
+fn request_code_refused_fails_without_fallback() {
+    let (old, new) = drop_file_cases("df-refused");
+    let env = setup(&old, &new);
+    env.refuse_old_request_code("940001", "not_signed_in");
+    let acf_before = env.acf_string();
+    let before = tree_snapshot(&env, &["a.bin", "old_only.bin", "e.bin"]);
+
+    let out = env.run(env.job("df-refused"));
+    assert_eq!(out.status, Status::Error, "{:?}", out.failures);
+    let f = out.failures.first().expect("a failure");
+    assert_eq!(
+        f.kind,
+        gamelib_depot::outcome::ErrorKind::NotSignedIn,
+        "{f:?}"
+    );
+    assert_eq!(
+        tree_snapshot(&env, &["a.bin", "old_only.bin", "e.bin"]),
+        before
+    );
+    assert!(tmp_files(env.dir.path()).is_empty());
+    assert_eq!(env.acf_string(), acf_before);
+    let warned = env.host.emits.lock().unwrap().iter().any(|e| {
+        matches!(&e.body, JobEventBody::Warning { message, .. } if message.contains("checking every file instead"))
+    });
+    assert!(
+        !warned,
+        "a refused request code never announces the fallback"
+    );
+}
+
+#[test]
+fn request_code_failed_keeps_retired_depot_files() {
+    let (old, new) = retired_cases("df-refused-retired");
+    let env = setup(&old, &new);
+    env.refuse_old_request_code("940001", "failed");
+    let files = ["a.bin", "shared.bin", "b_only.bin", "sub/b_shared.bin"];
+    let before = tree_snapshot(&env, &files);
+
+    let out = env.run(retired_job(&env, "df-refused-retired"));
+    assert_eq!(out.status, Status::Error, "{:?}", out.failures);
+    assert!(env.root().join("b_only.bin").exists(), "retired files kept");
+    assert_eq!(tree_snapshot(&env, &files), before);
+}
+
+#[test]
 fn commit_rename_failure_removes_no_retired_file() {
     let (old, new) = retired_cases("df-retired-fail");
     let env = setup(&old, &new);

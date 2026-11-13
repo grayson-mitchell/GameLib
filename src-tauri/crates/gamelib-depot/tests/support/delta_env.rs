@@ -350,6 +350,11 @@ impl Env {
             vec![Reply::Status(status, Vec::new())],
         );
     }
+    /// Node cannot obtain a request code for `depot_id` (`transient:<reason>`), and the job's
+    /// old-manifest ref carries no code, so the crate must ask Node for it.
+    pub fn refuse_old_request_code(&self, depot_id: &str, reason: &str) {
+        self.host.set_transient(depot_id, reason);
+    }
     /// Writes the commit journal in its documented schema.
     pub fn write_journal(&self, new: &[(&str, String)], old: &[(&str, String)]) {
         let map = |v: &[(&str, String)]| -> Value {

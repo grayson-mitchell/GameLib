@@ -110,10 +110,10 @@ fn unique_new_chunk_bytes<'a>(
         .sum()
 }
 
-/// D-09 estimate for one depot. With an old manifest, `max_download_bytes` is the CDN bytes
-/// assuming the old files are intact (chunks present anywhere in the old manifest are reused);
-/// local damage can only raise it, which the "up to" wording covers. `old == None` is the D-14 fallback: the reconcile path rewrites
-/// one file at a time, so its disk peak is the largest single new file.
+/// D-09 estimate for one depot. With an old manifest, `max_download_bytes` is the expected CDN
+/// download assuming the old files are intact (chunks present anywhere in the old manifest are
+/// reused); it is not a maximum, since local damage can raise it. `old == None` is the D-14
+/// fallback: the reconcile path rewrites one file at a time, so its disk peak is the largest single new file.
 fn estimate_delta(old: Option<&DepotManifest>, new: &DepotManifest) -> DeltaEstimate {
     match old {
         Some(o) => {

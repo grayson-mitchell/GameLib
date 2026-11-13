@@ -537,13 +537,13 @@ fn blocked_every_depot_fails_with_eresult_40_and_downloads_nothing() {
 
 #[test]
 fn non_blocked_node_error_still_fails_the_job() {
-    // Only EResult 40 is a skip; a failed Node call degrades to "no code" and the job fails.
+    // Only EResult 40 is a skip; a failed Node call is a transient Network failure (WR-01).
     let case = case_named("multi-depot-collision");
     let mut env = setup(&case);
     env.host = Arc::new(FakeHost::new().with_codes(vec![Err("depot:bad-reply".into())]));
     let out = env.run(job_asking_node_for(&env, "ji-node-err", &["900032"]));
     assert_eq!(out.status, Status::Error);
-    assert_eq!(out.failures[0].kind, ErrorKind::ManifestUnavailable);
+    assert_eq!(out.failures[0].kind, ErrorKind::Network);
     assert_eq!(out.failures[0].eresult, None);
     assert!(out.skipped_depots.is_empty());
 }
