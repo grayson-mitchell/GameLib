@@ -118,3 +118,13 @@ regression re-check, and it is not a gate on this todo's closure:
    closes (force-ended after 5 s if it ignores the close), the card returns to Play, and Steam and
    `steamwebhelper.exe` keep running. The a9g addition is that no flicker follows. Expect
    `SteamGame.stop: stopping Steam-launched appId 264160: asked pids [...] to close under ...`.
+
+## Resolution (66.4-23, 2026-11-14)
+
+Closed per D-66.4-06. Revived by quick 261111-7wo; Playing observed on Windows in the 9p6 gate 2026-11-11;
+regression-checked by 66.4-WINDOWS-UAT items 5-6 on 2026-11-13 (WazHack 264160: Playing, back to Play on in-game quit,
+Stop closes the game; the poller logs `(status owned by launch watch)` on both edges, so there is one status owner).
+
+The Mac half of the a9g live gate (WazHack 264160: exactly one Playing and one Done, no flicker) was not run. On
+macOS today Steam writes no `RunningAppID`, so only the launch watch reports and a poller/watch flicker cannot occur.
+The check moves to `.planning/todos/pending/2026-11-14-macos-wazhack-single-playing-done-check.md`.
