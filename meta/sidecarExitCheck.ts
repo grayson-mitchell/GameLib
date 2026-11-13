@@ -4,7 +4,10 @@
  * 66.3's live smoke eyeballed `pgrep -fl sidecar`. This script measures what the sidecar exit
  * contract promises instead: it snapshots the sidecar's process tree before quit, waits a bounded
  * time after quit, and reports every surviving descendant (still alive, or reparented to PID 1)
- * plus the sidecar's exit latency. It is REPORT-ONLY and never kills anything.
+ * plus the sidecar's exit latency. Live mode signals nothing: it only reads `pgrep` and `ps`. Eof
+ * mode SIGKILLs exactly one process, the child it spawned itself, and only in `runEof`'s `finally`
+ * after the verdict is fixed, so the kill never shapes the measurement. Surviving descendants are
+ * reported, never killed.
  *
  * Two modes:
  *
@@ -12,7 +15,10 @@
  *    justified real-profile arm of the two-profile rule: defects such as the 260913-901 presence
  *    timer arm only under a populated profile, so an isolated run would be permanently green.
  *  - `eof` spawns `build/main/sidecar.js` under `createFakeHomeProfile()` (the isolated arm),
- *    waits for the READY sentinel, closes stdin and measures drain latency.
+ *    waits for the READY sentinel, closes stdin and measures drain latency. `runEof` reaps its own
+ *    child (SIGKILL, bounded wait) before disposing the profile: disposing under a live child
+ *    leaves it writing into a half-deleted tree, and on Windows `dispose()` swallows the EBUSY and
+ *    strands the directory.
  *
  * Thresholds (see THRESHOLDS), justified against the exit contract:
  *  - eof: warn above 2000 ms, fail above 5000 ms. An empty-profile sidecar measured ~0.7 s after
@@ -160,8 +166,10 @@ export function assertRepoRoot(
 }
 
 // ---------------------------------------------------------------------------
-// CLI driver (operator-run, untested -- see module docblock). Report-only: nothing here
-// signals or kills any process; the eof arm only closes the child's own stdin.
+// CLI driver (operator-run; T8 drives runEof's never-READY path). Live mode signals nothing; eof
+// mode SIGKILLs only the child it spawned, and only after the verdict is fixed. One exit point:
+// drivers return a Report and only the CLI guard exits, through `finish`. An exit inside a driver
+// skips runEof's `finally` (WR-03).
 // ---------------------------------------------------------------------------
 
 const DEV_SIDECAR_PATTERN = 'build/main/sidecar.js'
@@ -215,6 +223,12 @@ export interface Report {
   note?: string
 }
 
+/** CLI exit code per verdict: PASS and WARN are 0, FAIL is 1, INVALID is 2. */
+export function exitCodeFor(verdict: Verdict): 0 | 1 | 2 {
+  if (verdict === 'PASS' || verdict === 'WARN') return 0
+  return verdict === 'FAIL' ? 1 : 2
+}
+
 function finish(report: Report): never {
   console.log(JSON.stringify(report, null, 2))
   console.log(
@@ -223,13 +237,7 @@ function finish(report: Report): never {
         ? ''
         : ` (exit latency ${report.latencyMs} ms)`)
   )
-  process.exit(
-    report.verdict === 'PASS' || report.verdict === 'WARN'
-      ? 0
-      : report.verdict === 'FAIL'
-        ? 1
-        : 2
-  )
+  process.exit(exitCodeFor(report.verdict))
 }
 
 function invalidReport(mode: 'eof' | 'live', note: string): Report {

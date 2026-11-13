@@ -19,6 +19,7 @@ import {
   assertRepoRoot,
   classifySurvivors,
   descendantsOf,
+  exitCodeFor,
   exitVerdict,
   parsePs,
   runEof,
@@ -117,6 +118,13 @@ describe('sidecarExitCheck', () => {
   test('T7 assertRepoRoot rejects a temp dir and accepts the repo root', () => {
     expect(() => assertRepoRoot('/tmp/x', () => false)).toThrow(/repo root/)
     expect(() => assertRepoRoot(process.cwd())).not.toThrow()
+  })
+
+  test('T9 exitCodeFor keeps the CLI exit codes: PASS/WARN 0, FAIL 1, INVALID 2', () => {
+    expect(exitCodeFor('PASS')).toBe(0)
+    expect(exitCodeFor('WARN')).toBe(0)
+    expect(exitCodeFor('FAIL')).toBe(1)
+    expect(exitCodeFor('INVALID')).toBe(2)
   })
 
   describe('runEof never-READY path', () => {
