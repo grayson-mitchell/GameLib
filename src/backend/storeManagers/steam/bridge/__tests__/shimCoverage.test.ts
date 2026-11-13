@@ -42,6 +42,8 @@ import {
   isScanVerdictNowCovered
 } from '../shimCoverage'
 import {
+  DREDMOR_DLL_VERSION_STRINGS,
+  DREDMOR_EXE_OBJDUMP_OUTPUT,
   ELEX_EXE_VERSION_STRINGS,
   ELEX_X64_OBJDUMP_OUTPUT,
   HOARD_DLL_VERSION_STRINGS,
@@ -723,6 +725,68 @@ describe('evaluateShimCoverage (Hoard: 63000) -- 51-14: the second/last-group fa
     for (const family of widenedFamilies) {
       expect(result.stubbedInterfaces).not.toContain(family)
     }
+  })
+})
+
+// quick 261113-qu7: Dungeons of Dredmor (98800) hands out
+// STEAMREMOTESTORAGE_INTERFACE_VERSION008 from its bare SteamRemoteStorage
+// accessor. It is served as a cloud-disabled stub (same 51-14 sub-decision as
+// 005/010), so the measured import set has nothing unservable left.
+describe('evaluateShimCoverage (Dungeons of Dredmor: 98800) -- quick 261113-qu7: RemoteStorage v008 served stub, zero unservable versions', () => {
+  const dredmorSymbols = parseSteamApiImports(DREDMOR_EXE_OBJDUMP_OUTPUT)
+  const { required: dredmorRequired, problems: dredmorProblems } =
+    resolveRequiredInterfaceVersions({
+      importedSymbols: dredmorSymbols,
+      dllVersions: DREDMOR_DLL_VERSION_STRINGS,
+      exeVersions: []
+    })
+
+  test('resolves cleanly to the four measured versions', () => {
+    expect(dredmorProblems).toEqual([])
+    expect([...Object.values(dredmorRequired)].sort()).toEqual(
+      [
+        'STEAMREMOTESTORAGE_INTERFACE_VERSION008',
+        'STEAMUSERSTATS_INTERFACE_VERSION011',
+        'SteamUser016',
+        'SteamUtils005'
+      ].sort()
+    )
+  })
+
+  test('v008 is served on x86 as a stub', () => {
+    expect(
+      shimServedInterfaceVersions().get(
+        'STEAMREMOTESTORAGE_INTERFACE_VERSION008'
+      )
+    ).toEqual({ family: 'SteamRemoteStorage', mode: 'stub' })
+  })
+
+  test('zero unservable versions, none blocking or non-core', () => {
+    expect(
+      findUnservableInterfaceVersions({
+        arch: 'x86',
+        symbols: dredmorSymbols,
+        requiredInterfaceVersions: dredmorRequired
+      })
+    ).toEqual([])
+    expect(
+      classifyUnservableInterfaceVersions({
+        arch: 'x86',
+        symbols: dredmorSymbols,
+        requiredInterfaceVersions: dredmorRequired
+      })
+    ).toEqual({ blocking: [], nonCore: [] })
+  })
+
+  test('no missing symbols; SteamRemoteStorage is the only stubbed family', () => {
+    const result = evaluateShimCoverage({
+      arch: 'x86',
+      symbols: dredmorSymbols,
+      requiredInterfaceVersions: dredmorRequired,
+      versionProblems: dredmorProblems
+    })
+    expect(result.missingSymbols).toEqual([])
+    expect([...result.stubbedInterfaces]).toEqual(['SteamRemoteStorage'])
   })
 })
 
