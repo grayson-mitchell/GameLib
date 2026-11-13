@@ -82,7 +82,19 @@
     "divergenceNote": "The old parser never terminates on the truncated appmanifest_30.acf, so the oracle recorded a hang marker; Rust skips the unparseable manifest and returns the remaining records, which is the correct fail-soft behaviour."
   },
   "library/findOtherManifestsWithInstalldir/with-truncated-manifest": {
-    "rustOverride": ["abc"],
-    "divergenceNote": "The old parser never terminates on the truncated appmanifest_30.acf in scan/lib1, so the oracle recorded a hang marker; Rust skips the unparseable manifest and still reports the readable sibling that shares the installdir, which is the correct fail-soft result for the co-install guard."
+    "rustOverride": ["<unknown>", "abc"],
+    "divergenceNote": "The old parser never terminates on the truncated appmanifest_30.acf in scan/lib1, so the oracle recorded a hang marker. Rust skips the unparseable manifest and still reports the readable sibling that shares the installdir; since WR-02 (75 review) the skipped sibling is also reported as the '<unknown>' conflict, because this list gates a recursive delete and an unreadable sibling may share the installdir."
+  },
+  "library/findOtherManifestsWithInstalldir/lib1-self-installdir": {
+    "rustOverride": ["<unknown>"],
+    "divergenceNote": "WR-02 (75 review): scan/lib1 holds the truncated appmanifest_30.acf, which the scan reports in skipped. findOtherManifestsWithInstalldir gates a recursive rmSync of the install directory, so a sibling manifest it could not read may be a co-installed app sharing the installdir and is reported as the '<unknown>' conflict (manifest-only removal) rather than ignored. The oracle fixture for this case did not include an unreadable sibling."
+  },
+  "library/findOtherManifestsWithInstalldir/lib1-nonnumeric-shares": {
+    "rustOverride": ["<unknown>", "abc"],
+    "divergenceNote": "WR-02 (75 review): scan/lib1 holds the truncated appmanifest_30.acf, which the scan reports in skipped. findOtherManifestsWithInstalldir gates a recursive rmSync of the install directory, so a sibling manifest it could not read may be a co-installed app sharing the installdir and is reported as the '<unknown>' conflict (manifest-only removal) rather than ignored. The oracle fixture for this case did not include an unreadable sibling."
+  },
+  "library/findOtherManifestsWithInstalldir/lib1-no-match": {
+    "rustOverride": ["<unknown>"],
+    "divergenceNote": "WR-02 (75 review): scan/lib1 holds the truncated appmanifest_30.acf, which the scan reports in skipped. findOtherManifestsWithInstalldir gates a recursive rmSync of the install directory, so a sibling manifest it could not read may be a co-installed app sharing the installdir and is reported as the '<unknown>' conflict (manifest-only removal) rather than ignored. The oracle fixture for this case did not include an unreadable sibling."
   }
 }

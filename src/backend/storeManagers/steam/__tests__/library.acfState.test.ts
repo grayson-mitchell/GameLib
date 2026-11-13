@@ -727,7 +727,7 @@ describe('findOtherManifestsWithInstalldir() (34.13 review A-13)', () => {
     ).toEqual([])
   })
 
-  it('skips a corrupt ACF without throwing (T-2-01/T-17-05)', async () => {
+  it('a corrupt sibling ACF does not throw and is reported as an unknown conflict (T-2-01, WR-02)', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_228980.acf'])
     ;(readFileSync as jest.Mock).mockImplementation(() => {
@@ -744,7 +744,7 @@ describe('findOtherManifestsWithInstalldir() (34.13 review A-13)', () => {
         'Hoard',
         '63000'
       )
-    ).toEqual([])
+    ).toEqual(['<unknown>'])
   })
 
   it('ignores non-manifest files in the directory', async () => {
@@ -1034,16 +1034,15 @@ describe('findOtherManifestsWithInstalldir, rust branch', () => {
   const DIR = '/lib/steamapps'
 
   const scanWith = (
-    recs: { file: string; rec: Partial<AcfRecord> }[]
+    recs: { file: string; rec: Partial<AcfRecord> }[],
+    skipped: ScanResult['skipped'] = []
   ): ScanResult => ({
     records: recs.map(({ file, rec }) => ({
       steamappsDir: DIR,
       fileName: file,
       record: acfRecord(rec)
     })),
-    skipped: [
-      { steamappsDir: DIR, fileName: 'appmanifest_9.acf', reason: 'corrupt' }
-    ],
+    skipped,
     missingDirs: []
   })
 
@@ -1090,6 +1089,57 @@ describe('findOtherManifestsWithInstalldir, rust branch', () => {
             rec: { appid: null, installdir: 'Hoard' }
           }
         ])
+    })
+    expect(
+      await findOtherManifestsWithInstalldir(stub, DIR, 'Hoard', '63000')
+    ).toEqual([])
+  })
+
+  // WR-02 (75 review): the list gates a recursive rmSync, so anything the scan
+  // could not see may be a co-installed app sharing the installdir.
+  it.each([
+    [
+      'an unreadable steamapps dir',
+      '',
+      'read: Permission denied (os error 13)'
+    ],
+    ['a directory over the entry cap', '', 'too-many-entries'],
+    ['an unreadable sibling manifest', 'appmanifest_9.acf', 'io: EBUSY'],
+    ['an unparseable sibling manifest', 'appmanifest_9.acf', 'parse']
+  ])(
+    'reports the unknown conflict when the scan skipped %s',
+    async (_label, fileName, reason) => {
+      const stub = stubRustSteamFiles({
+        steamfiles_scan_acfs: () =>
+          scanWith(
+            [
+              {
+                file: 'appmanifest_63000.acf',
+                rec: { appid: '63000', installdir: 'Hoard' }
+              }
+            ],
+            [{ steamappsDir: DIR, fileName, reason }]
+          )
+      })
+      expect(
+        await findOtherManifestsWithInstalldir(stub, DIR, 'Hoard', '63000')
+      ).toEqual(['<unknown>'])
+    }
+  )
+
+  it('does not treat its own skipped manifest as a conflict', async () => {
+    const stub = stubRustSteamFiles({
+      steamfiles_scan_acfs: () =>
+        scanWith(
+          [],
+          [
+            {
+              steamappsDir: DIR,
+              fileName: 'appmanifest_63000.acf',
+              reason: 'parse'
+            }
+          ]
+        )
     })
     expect(
       await findOtherManifestsWithInstalldir(stub, DIR, 'Hoard', '63000')

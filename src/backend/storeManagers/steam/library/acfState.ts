@@ -126,9 +126,11 @@ export async function readAcfState(
  * A claim stronger than the code supports is the more dangerous half — a
  * later reader trusts it. This makes the claim true instead of narrowing it.
  *
- * Same corrupt-file discipline as every other manifest scan here
- * (T-2-01/T-17-05): an unreadable or unparseable ACF is skipped, never
- * thrown out of. Comparison is case-sensitive and exact, matching the way
+ * Never throws (T-2-01/T-17-05), but unlike the read-only scans an
+ * unreadable or unparseable sibling ACF, or an unreadable/over-cap
+ * directory, is reported as the `<unknown>` conflict rather than ignored
+ * (WR-02): this list gates a recursive delete, so "could not read" must not
+ * mean "no conflict". Comparison is case-sensitive and exact, matching the way
  * `installRoot` itself is built (`join(commonRoot, installdirSegment)`).
  *
  * Exported for unit testing.
@@ -152,6 +154,14 @@ export async function findOtherManifestsWithInstalldir(
     return [UNKNOWN_CONFLICT]
   }
   const conflicting: string[] = []
+  // WR-02 (75 review): the scan moves what it could not see into `skipped` —
+  // an unreadable steamapps dir or one over the entry cap (fileName ''), or a
+  // sibling manifest it could not read or parse. Any of those may be a
+  // co-installed app sharing this installdir, so like a transport failure it
+  // must not yield "no conflict". Only this app's own manifest is exempt.
+  if (scan.skipped.some((s) => s.fileName !== `appmanifest_${selfAppId}.acf`)) {
+    conflicting.push(UNKNOWN_CONFLICT)
+  }
   for (const { fileName, record } of scan.records) {
     if (fileName === `appmanifest_${selfAppId}.acf`) continue
     if (record.installdir !== installdirSegment) continue
