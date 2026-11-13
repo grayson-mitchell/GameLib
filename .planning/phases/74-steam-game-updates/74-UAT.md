@@ -107,7 +107,7 @@ precondition: one stale bridge game and the stale registered fixture; auto updat
 
 ### 15. Windows/Linux hand-off (optional)
 expected: `steam://nav/games/details/<appId>` opens the game page in Steam on Windows or Linux. `skipped` is allowed without the machine.
-result: skipped. Deferred by the operator to run on their Windows machine at leisure; tracked in `.planning/todos/pending/2026-11-13-verify-steam-nav-update-handoff-on-windows.md`. The macOS form of the same `steam://nav/games/details/<appId>` hand-off passed in item 11.
+result: pass. Windows, 2026-11-13, Stellaris (281990) on D:\SteamLibrary with a real pending Steam update (ACF StateFlags 6, buildid 25664273, 17 MB to download). After Refresh, the operator pressed (Click to Update): gamelib.log 23:36:40 `SteamGame: delegating update for appId 281990 via steam://nav/games/details/281990`, then install polling started (`delegatedToSteamClient true`). Steam opened the game's library page, and the page offered an Update button. The operator updated in Steam; 23:37:19 `Steam: update of appId 281990 finished (build 26557690)`, the ACF went to StateFlags 4 with buildid and TargetBuildID 26557690, and GameLib's update badge cleared. Linux is still unverified. Closed todo `.planning/todos/completed/2026-11-13-verify-steam-nav-update-handoff-on-windows.md`.
 precondition: a Windows or Linux machine with Steam installed.
 
 ### 16. Single launch prompt and in-update block (re-run of item 7)

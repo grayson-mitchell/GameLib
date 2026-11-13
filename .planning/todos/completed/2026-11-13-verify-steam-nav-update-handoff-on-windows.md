@@ -41,3 +41,20 @@ at leisure.
 
 Steps 4-6 pass on Windows, or a defect is filed with the log excerpt. Record the result back in
 74-UAT item 15 (status word first). Linux remains unverified unless someone has a Linux box.
+
+## Resolution
+
+Verified live on Windows on 2026-11-13. Result: pass. 74-UAT item 15 records the full evidence.
+
+- **Game:** Stellaris (281990). Steam already had a real update pending (ACF `StateFlags 6`, build
+  25664273, 17 MB), so no staging was needed.
+- **Step 4:** pass. `gamelib.log` 23:36:40 has `SteamGame: delegating update for appId 281990 via
+  steam://nav/games/details/281990`, and Steam opened Stellaris's library page.
+- **Step 5:** the Steam page offered an Update button.
+- **Step 6:** pass. At 23:37:19 the log has `Steam: update of appId 281990 finished (build 26557690)`.
+  The ACF moved to `StateFlags 4`, and GameLib's badge cleared.
+
+Side note, not a defect: the download queue logs `Finished Update of 281990` at the moment of
+hand-off (23:36:40). Install polling, not the queue entry, tracks Steam's actual progress.
+
+Linux is still unverified.
