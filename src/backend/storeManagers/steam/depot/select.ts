@@ -150,19 +150,21 @@ const gidOfEntry = (e: string | DepotManifestEntry | undefined) =>
  * The manifest gid a depot has on `branch`. A depot that is not part of a
  * beta build has no manifest on it; the public manifest is what Steam itself
  * serves for such a depot (quick 261110-up7). Shared by selectDepots and the
- * update retire rule so the two cannot drift.
+ * update retire rule so the two cannot drift. The public-fallback line is logged
+ * unless `opts.log === false` (the retire branch-list pass is quiet).
  */
 export function branchManifestGid(
   depot:
     | { manifests?: Record<string, string | DepotManifestEntry> }
     | undefined,
   branch: string,
-  depotId?: string
+  depotId?: string,
+  opts: { log?: boolean } = {}
 ): string | undefined {
   let gid = gidOfEntry(depot?.manifests?.[branch])
   if (!gid && branch !== 'public') {
     gid = gidOfEntry(depot?.manifests?.public)
-    if (gid) {
+    if (gid && opts.log !== false) {
       logInfo(
         `Steam depot selection: depot ${depotId ?? ''} has no manifest on branch ${branch}, using its public manifest`,
         LogPrefix.Steam

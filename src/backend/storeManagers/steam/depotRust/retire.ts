@@ -5,7 +5,8 @@
  */
 import type { DepotRefsResult } from '../depot/plan'
 
-type KeptReason =
+/** @public part of RetireDecision's exported shape; callers narrow on it. */
+export type KeptReason =
   | 'selected'
   | 'skipped'
   | 'still-on-branch'
@@ -25,7 +26,6 @@ export function decideRetirement(args: {
     | 'depots'
     | 'skippedDepots'
     | 'branchDepotIds'
-    | 'depotOwners'
     | 'fetchedDlcAppIds'
     | 'branchDepotListComplete'
   >
@@ -51,7 +51,7 @@ export function decideRetirement(args: {
         out.retire.push({
           depotId,
           gid,
-          ownerAppId: refs.depotOwners[depotId] ?? dlc ?? appId
+          ownerAppId: dlc ?? appId
         })
     }
   }

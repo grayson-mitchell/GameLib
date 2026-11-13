@@ -369,7 +369,7 @@ describe('delta job inputs (Phase 74)', () => {
 
 describe('collectBranchDepotList (WR-01)', () => {
   const m = (gid?: string) => (gid ? { manifests: { public: { gid } } } : {})
-  it('lists unfiltered branch depots with their declaring owners and completeness', async () => {
+  it('lists unfiltered branch depots and completeness', async () => {
     const { collectBranchDepotList } = await import('../../depot/plan')
     const base = {
       depots: {
@@ -388,7 +388,6 @@ describe('collectBranchDepotList (WR-01)', () => {
       '10'
     )
     expect(r.branchDepotIds).toEqual(['1', '2', '4'])
-    expect(r.depotOwners).toEqual({ '1': '10', '2': '10', '4': '999' })
     expect(r.fetchedDlcAppIds).toEqual(['999'])
     expect(r.branchDepotListComplete).toBe(true)
     expect(
@@ -409,5 +408,43 @@ describe('collectBranchDepotList (WR-01)', () => {
     const { branchManifestGid } = await import('../../depot/select')
     expect(branchManifestGid(m('p') as never, 'beta')).toBe('p')
     expect(branchManifestGid(m() as never, 'public')).toBeUndefined()
+  })
+
+  it('logs the public fallback once from branchManifestGid, never from the branch list', async () => {
+    const { logInfo } = await import('backend/logger')
+    const { collectBranchDepotList } = await import('../../depot/plan')
+    const { branchManifestGid } = await import('../../depot/select')
+    const base = { depots: { branches: {}, '1': m('a') } }
+    jest.mocked(logInfo).mockClear()
+    const r = collectBranchDepotList(base as never, {}, 'beta', '10')
+    expect(r.branchDepotIds).toEqual(['1'])
+    expect(logInfo).not.toHaveBeenCalled()
+    branchManifestGid(base.depots['1'] as never, 'beta', '1')
+    expect(logInfo).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('decideRetirement owner (IN-03)', () => {
+  it('owns a retired depot by its DLC app, else the base app', async () => {
+    const { decideRetirement } = await import('../retire')
+    const r = decideRetirement({
+      appId: '10',
+      oldGidByDepot: new Map([
+        ['1', 'g1'],
+        ['2', 'g2']
+      ]),
+      refs: {
+        depots: [],
+        skippedDepots: [],
+        branchDepotIds: [],
+        fetchedDlcAppIds: ['999'],
+        branchDepotListComplete: true
+      },
+      acfDlcOwner: new Map([['2', '999']])
+    })
+    expect(r.retire).toEqual([
+      { depotId: '1', gid: 'g1', ownerAppId: '10' },
+      { depotId: '2', gid: 'g2', ownerAppId: '999' }
+    ])
   })
 })

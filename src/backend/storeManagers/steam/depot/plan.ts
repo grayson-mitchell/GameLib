@@ -380,8 +380,6 @@ export interface DepotRefsResult {
   /** Every numeric depot id with a manifest on the branch (or public), across the base app and
    *  every fetched DLC app, with NO ownership/OS/language/arch/realm filter (WR-01). */
   branchDepotIds: string[]
-  /** depotId -> the app whose appinfo declares it (first declaration wins). */
-  depotOwners: Record<string, string>
   /** DLC app ids whose appinfo was actually fetched this run. */
   fetchedDlcAppIds: string[]
   /** False when the branch depot list cannot be shown complete: no numeric base depot, or a
@@ -397,31 +395,27 @@ export function collectBranchDepotList(
   appId: string
 ): Pick<
   DepotRefsResult,
-  | 'branchDepotIds'
-  | 'depotOwners'
-  | 'fetchedDlcAppIds'
-  | 'branchDepotListComplete'
+  'branchDepotIds' | 'fetchedDlcAppIds' | 'branchDepotListComplete'
 > {
-  const depotOwners: Record<string, string> = {}
+  const seen = new Set<string>()
   const branchDepotIds: string[] = []
-  const take = (info: SteamAppInfo | undefined, owner: string) => {
+  const take = (info: SteamAppInfo | undefined) => {
     for (const [id, d] of Object.entries(info?.depots ?? {})) {
       if (!/^\d+$/.test(id)) continue
-      if (!branchManifestGid(d, branch, id)) continue
-      if (id in depotOwners) continue
-      depotOwners[id] = owner
+      if (!branchManifestGid(d, branch, id, { log: false })) continue
+      if (seen.has(id)) continue
+      seen.add(id)
       branchDepotIds.push(id)
     }
   }
-  take(appinfo, appId)
-  for (const [dlcId, dlc] of Object.entries(dlcInfos)) take(dlc, dlcId)
+  take(appinfo)
+  for (const [dlcId, dlc] of Object.entries(dlcInfos)) take(dlc)
   const baseHasDepots = Object.keys(appinfo?.depots ?? {}).some((k) =>
     /^\d+$/.test(k)
   )
   const missingDlc = dlcAppIds(appinfo).some((id) => !(String(id) in dlcInfos))
   return {
     branchDepotIds,
-    depotOwners,
     fetchedDlcAppIds: Object.keys(dlcInfos),
     branchDepotListComplete: baseHasDepots && !missingDlc
   }
