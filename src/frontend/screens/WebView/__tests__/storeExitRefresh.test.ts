@@ -282,6 +282,49 @@ describe('armForUrl (quick 261102-s32)', () => {
   const log = jest.fn()
   beforeEach(() => log.mockClear())
 
+  const APP = 'https://store.steampowered.com/app/1669000/'
+
+  it('steam /app/ does not arm on entry (quick 261114-aqa)', () => {
+    expect(armForUrl('steam', APP, false, 'entry', log)).toBe(false)
+    expect(log).not.toHaveBeenCalled()
+  })
+
+  it('steam /app/ arms via in-store nav', () => {
+    expect(armForUrl('steam', APP, false, 'nav', log)).toBe(true)
+    expect(log).toHaveBeenCalledWith(
+      '[steamStoreExitRefresh] armed host=store.steampowered.com via=nav'
+    )
+  })
+
+  it.each([
+    'https://store.steampowered.com/cart',
+    'https://store.steampowered.com/cart/',
+    'https://store.steampowered.com/checkout/?x=1',
+    'https://checkout.steampowered.com/checkout/'
+  ])('steam %s still arms on entry', (url) => {
+    expect(armForUrl('steam', url, false, 'entry', log)).toBe(true)
+    expect(log).toHaveBeenCalledTimes(1)
+  })
+
+  it('an arm earned by nav survives an entry call on /app/', () => {
+    expect(armForUrl('steam', APP, true, 'entry', log)).toBe(true)
+    expect(log).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['amazon', 'https://gaming.amazon.com'],
+    ['gog', 'https://www.gog.com/en/game/foo'],
+    ['epic', 'https://store.epicgames.com/en-US/p/x']
+  ])('%s arms identically via entry and nav', (store, url) => {
+    expect(armForUrl(store, url, false, 'entry', log)).toBe(true)
+    expect(armForUrl(store, url, false, 'nav', log)).toBe(true)
+  })
+
+  it('the nav classifier still counts /app/ as purchase intent', () => {
+    expect(isSteamPurchaseIntentUrl(APP)).toBe(true)
+    expect(isPurchaseIntentUrlFor('steam', APP)).toBe(true)
+  })
+
   it('arms amazon on the bare start URL and logs once', () => {
     expect(
       armForUrl('amazon', 'https://gaming.amazon.com', false, 'entry', log)

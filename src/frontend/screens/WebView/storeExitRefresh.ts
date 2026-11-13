@@ -21,8 +21,8 @@ const STEAM_STORE_HOSTS = new Set([
   'checkout.steampowered.com'
 ])
 
-/** True for an https Steam store app, cart or checkout main-frame URL. */
-export function isSteamPurchaseIntentUrl(url: string): boolean {
+/** True for an https Steam store cart or checkout main-frame URL. */
+export function isSteamCheckoutIntentUrl(url: string): boolean {
   let parsed: URL
   try {
     parsed = new URL(url)
@@ -33,11 +33,26 @@ export function isSteamPurchaseIntentUrl(url: string): boolean {
   if (!STEAM_STORE_HOSTS.has(parsed.hostname)) return false
   const path = parsed.pathname
   return (
-    path.startsWith('/app/') ||
     path === '/cart' ||
     path.startsWith('/cart/') ||
     path === '/checkout' ||
     path.startsWith('/checkout/')
+  )
+}
+
+/** True for an https Steam store app, cart or checkout main-frame URL. */
+export function isSteamPurchaseIntentUrl(url: string): boolean {
+  if (isSteamCheckoutIntentUrl(url)) return true
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return false
+  }
+  return (
+    parsed.protocol === 'https:' &&
+    STEAM_STORE_HOSTS.has(parsed.hostname) &&
+    parsed.pathname.startsWith('/app/')
   )
 }
 
@@ -136,6 +151,11 @@ interface StoreExitRow {
   targets: readonly [StoreExitTarget, ...StoreExitTarget[]]
   origin: string
   isPurchaseIntentUrl: (url: string) => boolean
+  /**
+   * When present, entry-arming uses this instead of `isPurchaseIntentUrl`;
+   * absent means entry and nav share the classifier.
+   */
+  armsOnEntry?: (url: string) => boolean
 }
 
 export const STORE_EXIT_ROWS: Readonly<
@@ -144,7 +164,8 @@ export const STORE_EXIT_ROWS: Readonly<
   steam: {
     targets: [{ runner: 'steam', signInKey: 'steam' }],
     origin: STEAM_STORE_EXIT_REFRESH_ORIGIN,
-    isPurchaseIntentUrl: isSteamPurchaseIntentUrl
+    isPurchaseIntentUrl: isSteamPurchaseIntentUrl,
+    armsOnEntry: isSteamCheckoutIntentUrl
   },
   epic: {
     targets: [{ runner: 'legendary', signInKey: 'legendary' }],
@@ -185,6 +206,10 @@ export function isPurchaseIntentUrlFor(storeKey: string, url: string): boolean {
  * Entry-arming exists because the shared embed is hidden rather than closed,
  * so re-entry and SPA claim clicks yield no page-load nav event. Logs the
  * hostname only, once per unarmed-to-armed transition.
+ *
+ * A Steam /app/ page is a browsing page the hidden embed parks on, so arming
+ * from it on entry turned every Steam store visit into an authenticated
+ * refresh (quick 261114-aqa); Steam /app/ arms only on in-store navigation.
  */
 export function armForUrl(
   storeKey: string,
@@ -195,7 +220,12 @@ export function armForUrl(
 ): boolean {
   if (armed) return true
   if (!isStoreExitStoreKey(storeKey)) return armed
-  if (isPurchaseIntentUrlFor(storeKey, url)) {
+  const row = STORE_EXIT_ROWS[storeKey]
+  const classify =
+    via === 'entry'
+      ? (row.armsOnEntry ?? row.isPurchaseIntentUrl)
+      : row.isPurchaseIntentUrl
+  if (classify(url)) {
     log(
       `[${storeKey}StoreExitRefresh] armed host=${new URL(url).hostname} via=${via}`
     )
