@@ -137,7 +137,11 @@ export default class SteamLibraryManager implements LibraryManager {
         // runNativeDepotDownload.
         if (
           breadcrumbSet.has(appId) &&
-          breadcrumbAppIsFullyInstalledOnDisk(appId, existing?.install)
+          (await breadcrumbAppIsFullyInstalledOnDisk(
+            this.deps,
+            appId,
+            existing?.install
+          ))
         ) {
           clearSteamResumeBreadcrumb(this.deps, appId)
           logInfo(

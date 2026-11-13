@@ -5,6 +5,7 @@ import { parse } from '@node-steam/vdf'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
 import type { SteamLibraryStateDeps } from 'backend/services/types'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import {
   RUST_STEAMFILES_FIND_ACF,
   RUST_STEAMFILES_SCAN_ACFS
@@ -188,7 +189,45 @@ async function readAcfStateTs(
  *
  * Exported for unit testing.
  */
-export function findOtherManifestsWithInstalldir(
+export async function findOtherManifestsWithInstalldir(
+  rust: RustInvokeDeps,
+  steamappsDir: string,
+  installdirSegment: string,
+  selfAppId: string
+): Promise<string[]> {
+  if (steamFilesTextImpl() === 'ts') {
+    return findOtherManifestsWithInstalldirTs(
+      steamappsDir,
+      installdirSegment,
+      selfAppId
+    )
+  }
+  let scan
+  try {
+    scan = await invokeSteamFiles(rust, RUST_STEAMFILES_SCAN_ACFS, {
+      steamappsDirs: [steamappsDir]
+    })
+  } catch {
+    // T-75-55: an empty list means "no conflict" and allows the recursive
+    // rmSync. A transport failure must therefore NOT yield []; the sentinel
+    // makes every caller take the conflicting (manifest-only) branch, which
+    // is more conservative than the TS path (which returned [] on readdir
+    // failure).
+    return [UNKNOWN_CONFLICT]
+  }
+  const conflicting: string[] = []
+  for (const { fileName, record } of scan.records) {
+    if (fileName === `appmanifest_${selfAppId}.acf`) continue
+    if (record.installdir !== installdirSegment) continue
+    const appid = record.appid ?? ''
+    if (appid && appid !== selfAppId) conflicting.push(appid)
+  }
+  return conflicting
+}
+
+const UNKNOWN_CONFLICT = '<unknown>'
+
+function findOtherManifestsWithInstalldirTs(
   steamappsDir: string,
   installdirSegment: string,
   selfAppId: string
@@ -395,7 +434,8 @@ export async function removeSteamInstallCopy(
   const installRoot = join(commonRoot, installdirSegment)
   const manifestPath = join(steamappsDir, `appmanifest_${appId}.acf`)
 
-  const conflicting = findOtherManifestsWithInstalldir(
+  const conflicting = await findOtherManifestsWithInstalldir(
+    deps,
     steamappsDir,
     installdirSegment,
     appId

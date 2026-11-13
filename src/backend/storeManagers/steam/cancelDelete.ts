@@ -43,6 +43,9 @@ import { findOtherManifestsWithInstalldir } from './library/acfState'
 import { getBridgeBottleSteamappsRoot } from './library/installRoot'
 import { getBottleSteamappsDir, type BottleSettingsDeps } from './bottle'
 import { sanitizeInstalldir } from './installLocation'
+import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
+import { invokeSteamFiles } from './localFiles/rustSteamFiles'
+import { steamFilesTextImpl } from './localFiles/steamFilesFlags'
 import { NUMERIC_APP_ID } from './gameConstants'
 import type { SteamStoresDeps } from './library/installRoot'
 import type {
@@ -189,24 +192,46 @@ export async function deleteCancelledSteamInstall(
     }
 
     const manifestPath = join(targetSteamappsDir, `appmanifest_${appId}.acf`)
-    if (existsSync(manifestPath)) {
-      try {
-        const parsed = parse(readFileSync(manifestPath, 'utf-8')) as {
-          AppState?: { StateFlags?: string }
+    if (steamFilesTextImpl() === 'ts') {
+      if (existsSync(manifestPath)) {
+        try {
+          const parsed = parse(readFileSync(manifestPath, 'utf-8')) as {
+            AppState?: { StateFlags?: string }
+          }
+          if (Number(parsed?.AppState?.StateFlags) & 4) {
+            return refuse(appId, 'manifest reports installed')
+          }
+        } catch {
+          /* unparseable ACF is residue, not a refusal */
         }
-        if (Number(parsed?.AppState?.StateFlags) & 4) {
-          return refuse(appId, 'manifest reports installed')
-        }
-      } catch {
-        /* unparseable ACF is residue, not a refusal */
       }
+    } else {
+      let read
+      try {
+        read = await invokeSteamFiles(deps, RUST_STEAMFILES_READ_ACF, {
+          path: manifestPath
+        })
+      } catch {
+        // T-75-56: cannot tell whether Steam reports it installed -> refuse.
+        return refuse(appId, 'manifest unreadable')
+      }
+      if (read.exists && read.parsed && (read.record?.stateFlags ?? 0) & 4) {
+        return refuse(appId, 'manifest reports installed')
+      }
+      // exists but unparseable is residue, not a refusal (as on the TS path)
     }
 
-    const conflicting = findOtherManifestsWithInstalldir(
+    const conflicting = await findOtherManifestsWithInstalldir(
+      deps,
       targetSteamappsDir,
       installdir,
       appId
     )
+
+    // The Rust reads above awaited; re-check nothing started meanwhile.
+    if (deps.steamSession.gameSession.isNativeInstallInFlight(appId)) {
+      return refuse(appId, 'install restarted')
+    }
 
     try {
       if (conflicting.length === 0) {

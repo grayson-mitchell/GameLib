@@ -6,6 +6,10 @@ import type { SteamStoresDeps } from './installRoot'
 import type { SteamLibraryStateDeps } from 'backend/services/types'
 import type { FrontendMessageDeps } from '../../../host/frontendMessage'
 import { isFullyInstalledStateFlags } from './installedMap'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
+import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
+import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
 
 /**
  * D-UAT-09 (21-17): marks a Steam library entry as incomplete/resumable
@@ -183,11 +187,37 @@ export function getSteamResumeBreadcrumbAppIds(
  * toward surfacing, since surfacing is non-destructive (matches the "skip
  * corrupt ACF" discipline used elsewhere in this file).
  */
-export function breadcrumbAppIsFullyInstalledOnDisk(
+export async function breadcrumbAppIsFullyInstalledOnDisk(
+  rust: RustInvokeDeps,
   appId: string,
   install: Partial<InstalledInfo> | undefined
-): boolean {
+): Promise<boolean> {
   if (!install?.steamResumeTargetSteamappsDir) return false
+  if (steamFilesTextImpl() === 'ts') {
+    return breadcrumbAppIsFullyInstalledOnDiskTs(appId, install)
+  }
+  try {
+    const read = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_ACF, {
+      path: join(
+        install.steamResumeTargetSteamappsDir,
+        `appmanifest_${appId}.acf`
+      )
+    })
+    const stateFlags = read.record?.stateFlags
+    if (!read.exists || !read.parsed || typeof stateFlags !== 'number') {
+      return false
+    }
+    return isFullyInstalledStateFlags(stateFlags)
+  } catch {
+    return false
+  }
+}
+
+function breadcrumbAppIsFullyInstalledOnDiskTs(
+  appId: string,
+  install: Partial<InstalledInfo>
+): boolean {
+  if (!install.steamResumeTargetSteamappsDir) return false
 
   try {
     const manifest = join(

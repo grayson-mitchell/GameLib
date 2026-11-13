@@ -727,7 +727,8 @@ export async function uninstallBottleGameDirectly(
   // it is installed. Remove the manifest only, and let the completion
   // pipeline reconcile — a partial uninstall the user can retry beats
   // deleting a game they did not ask about.
-  const conflicting = findOtherManifestsWithInstalldir(
+  const conflicting = await findOtherManifestsWithInstalldir(
+    steamGame.deps,
     steamappsDir,
     installdirSegment,
     steamGame.appId
