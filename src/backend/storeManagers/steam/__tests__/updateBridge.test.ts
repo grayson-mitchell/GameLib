@@ -13,6 +13,7 @@ import {
 } from '../updateDetection'
 import { getDiskInfo } from 'backend/utils/filesystem'
 import { logInfo } from 'backend/logger'
+import { sendGameStatusUpdate } from 'backend/utils'
 import { notify } from 'backend/dialog/dialog'
 
 jest.mock('backend/logger', () => ({
@@ -115,6 +116,81 @@ describe('updateBridgeGame', () => {
     jest.mocked(runBridgeUpdateFollowUps).mockResolvedValue({
       errors: []
     } as never)
+  })
+
+  describe('planning status (WR-07)', () => {
+    const planning = {
+      appName: '12345',
+      runner: 'steam',
+      status: 'updating',
+      context: 'steam-update-planning'
+    }
+    const planningCalls = () =>
+      jest
+        .mocked(sendGameStatusUpdate)
+        .mock.calls.filter((c) => c[1].context === 'steam-update-planning')
+
+    beforeEach(() => {
+      jest.mocked(downloadSteamDepotsRust).mockResolvedValue({
+        status: 'done',
+        delta: { mode: 'chunk', changedFiles: [] }
+      } as never)
+    })
+
+    it('is sent before the estimate and the job', async () => {
+      const { game } = makeGame()
+      await updateBridgeGame(game)
+      expect(planningCalls()[0]?.[1]).toEqual(planning)
+      const order = jest.mocked(sendGameStatusUpdate).mock.invocationCallOrder
+      const idx = jest
+        .mocked(sendGameStatusUpdate)
+        .mock.calls.findIndex((c) => c[1].context === 'steam-update-planning')
+      const at = order[idx] as number
+      expect(at).toBeLessThan(
+        jest.mocked(estimateBridgeUpdate).mock.invocationCallOrder[0] as number
+      )
+      expect(at).toBeLessThan(
+        jest.mocked(downloadSteamDepotsRust).mock
+          .invocationCallOrder[0] as number
+      )
+    })
+
+    it('is still sent before the job with a fresh cached estimate', async () => {
+      jest.mocked(getLastKnownSteamUpdateState).mockReturnValue({
+        targetBuild: EST.targetBuild,
+        estimate: { ...EST, computedAt: Date.now() }
+      } as never)
+      const { game } = makeGame()
+      await updateBridgeGame(game)
+      expect(estimateBridgeUpdate).not.toHaveBeenCalled()
+      const idx = jest
+        .mocked(sendGameStatusUpdate)
+        .mock.calls.findIndex((c) => c[1].context === 'steam-update-planning')
+      expect(idx).toBeGreaterThanOrEqual(0)
+      expect(
+        jest.mocked(sendGameStatusUpdate).mock.invocationCallOrder[
+          idx
+        ] as number
+      ).toBeLessThan(
+        jest.mocked(downloadSteamDepotsRust).mock
+          .invocationCallOrder[0] as number
+      )
+    })
+
+    it('is not sent when refused while running', async () => {
+      const { game } = makeGame('running')
+      await updateBridgeGame(game)
+      expect(planningCalls()).toHaveLength(0)
+    })
+
+    it('is not sent when the branch is unresolved', async () => {
+      jest
+        .mocked(getLastKnownSteamUpdateState)
+        .mockReturnValue({ reason: 'branch-unresolved' } as never)
+      const { game } = makeGame()
+      await updateBridgeGame(game)
+      expect(planningCalls()).toHaveLength(0)
+    })
   })
 
   it('refuses while running, before any work', async () => {

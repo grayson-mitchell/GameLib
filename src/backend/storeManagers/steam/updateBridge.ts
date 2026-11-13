@@ -4,7 +4,7 @@
  *
  * Order: refuse while running (before any network or disk work) -> resolve the install from the
  * raw ACF -> refuse an unresolvable branch -> register the abort controller and the in-flight
- * entry -> exact peak-disk check from the manifest-pair estimate -> downloadSteamDepotsRust with
+ * entry -> planning status (hero "Planning update…", WR-07) -> exact peak-disk check from the manifest-pair estimate -> downloadSteamDepotsRust with
  * `delta` -> map the outcome -> GID-keyed follow-ups on done. A committed delta counts as done
  * even if the abort signal fired or the outcome says cancelled: commit is the point of no return. No retry here (D-16): a failure
  * before commit leaves the old build launchable, and the pipeline's own retries are all there is.
@@ -20,6 +20,7 @@ import { getDiskInfo } from 'backend/utils/filesystem'
 import type SteamGame from './games'
 import { runBridgeUpdateFollowUps } from './bridge/bridgeUpdateFollowUps'
 import { downloadSteamDepotsRust } from './depotRust/install'
+import { STEAM_UPDATE_PLANNING_CONTEXT } from './depotRust/progressBridge'
 import {
   estimateBridgeUpdate,
   resolveBridgeUpdateContext
@@ -142,6 +143,14 @@ async function runBridgeUpdate(
     ? deps.aborts.getSignal(appId)
     : deps.aborts.create(appId).signal
   try {
+    // WR-07: label the hero for the whole pre-transfer stretch; the progress bridge clears it
+    // with a plain 'updating' once the Rust job reports `planned`.
+    sendGameStatusUpdate(deps, {
+      appName: appId,
+      runner: 'steam',
+      status: 'updating',
+      context: STEAM_UPDATE_PLANNING_CONTEXT
+    })
     const estimate =
       freshCachedEstimate(steamGame) ??
       (await estimateBridgeUpdate(steamGame, { signal, unattended }))
