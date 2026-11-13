@@ -168,10 +168,11 @@ pub struct InstallScriptResult {
 
 const INSTALLSCRIPT_MAX_BYTES: usize = 1024 * 1024;
 
-/// First case-insensitive string child (ordered view), decoded.
+/// First case-insensitive string child (ordered view), decoded with only `\\` and `\"` applied
+/// so a single-backslash Windows path such as `\ndp48.exe` keeps its `\n` (75 WR-06).
 fn child_str(pairs: &[Pair], key: &str) -> Option<String> {
     match &kv_text::find(pairs, key)?.value {
-        Value::Str(s) => Some(s.decoded()),
+        Value::Str(s) => Some(s.decoded_quote_backslash_only()),
         Value::Map(_) => None,
     }
 }
@@ -229,7 +230,7 @@ fn installscript_entries(bytes: &[u8]) -> Option<Vec<InstallScriptEntry>> {
             os_type: child_str(r, "ostype"),
         });
         entries.push(InstallScriptEntry {
-            name: node.key.decoded(),
+            name: node.key.decoded_quote_backslash_only(),
             has_run_key: child_str(kids, "hasrunkey"),
             minimum_has_run_value: min,
             processes,
