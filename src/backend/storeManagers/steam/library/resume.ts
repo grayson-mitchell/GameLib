@@ -6,6 +6,8 @@ import { isMac, isLinux } from 'backend/constants/environment'
 import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
 import { finalizeToSteam, type FinalizeToSteamOpts } from '../depot'
 import { resumeVerifyRust } from '../depotRust/secondary'
+import { rustFinalize } from '../depotRust/rustDepot'
+import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
 import {
   sanitizeInstalldir,
   fallbackInstalldirFor,
@@ -227,7 +229,33 @@ export async function resumeInterruptedSteamInstall(
       if (target) {
         const finalizeOpts = await buildResumeFinalizeOpts(deps, appId, target)
         // null: the Rust verify_only job already wrote the ACF.
-        if (finalizeOpts) await finalizeToSteam(appId, finalizeOpts)
+        if (finalizeOpts) {
+          if (steamFilesTextImpl() === 'rust') {
+            const res = await rustFinalize(
+              deps.steamInstallRuntime.depotJobs.transport,
+              appId,
+              {
+                steamappsDir: finalizeOpts.targetSteamappsDir,
+                installdir: finalizeOpts.installdir,
+                name: finalizeOpts.name,
+                buildid: null,
+                lastOwner: deps.steamUser.getPersistedSteamId64() ?? null,
+                allowFullOwnership: false,
+                betaKey: undefined
+              },
+              [],
+              null
+            )
+            if ('preserved' in res) {
+              logInfo(
+                `Steam: resume finalize for appId ${appId} found an installed manifest (StateFlags=${res.stateFlags}); leaving it untouched`,
+                LogPrefix.Steam
+              )
+            }
+          } else {
+            await finalizeToSteam(appId, finalizeOpts)
+          }
+        }
       }
     } catch (finalizeErr) {
       logWarning(

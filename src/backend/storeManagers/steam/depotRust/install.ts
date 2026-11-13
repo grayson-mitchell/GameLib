@@ -45,7 +45,8 @@ import type { DepotJobRegistry } from './jobRegistry'
 import { createProgressBridge } from './progressBridge'
 import { decideRetirement } from './retire'
 import { readAcfInstalledDepots } from '../acfInstalledDepots'
-import { runDepotJob, summarizeDepots } from './rustDepot'
+import { runDepotJob, rustFinalize, summarizeDepots } from './rustDepot'
+import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
 import type {
   RustDepotJob,
   RustFinalizeSpec,
@@ -155,16 +156,41 @@ export async function downloadSteamDepotsRust(
     if (!refs.depots.length) {
       // Honest empty finalize: a dangling prior partial is never left unresolved, and there is
       // no download stage to run in Rust.
-      await finalizeToSteam(appId, {
-        steamUser: opts.steamUser,
-        targetSteamappsDir: opts.targetSteamappsDir,
-        installdir: opts.installdir,
-        name: refs.name,
-        depots: [],
-        buildid: refs.buildid,
-        betaKey: refs.branch === 'public' ? undefined : refs.branch,
-        outcome: opts.signal?.aborted === true ? 'cancelled' : undefined
-      })
+      const aborted = opts.signal?.aborted === true
+      if (steamFilesTextImpl() === 'rust') {
+        const res = await rustFinalize(
+          opts.installRuntime.depotJobs.transport,
+          appId,
+          {
+            steamappsDir: opts.targetSteamappsDir,
+            installdir: opts.installdir,
+            name: refs.name,
+            buildid: refs.buildid === '' ? null : refs.buildid,
+            lastOwner: opts.steamUser.getPersistedSteamId64() ?? null,
+            allowFullOwnership: false,
+            betaKey: refs.branch === 'public' ? undefined : refs.branch
+          },
+          [],
+          aborted ? 'cancelled' : null
+        )
+        if ('preserved' in res) {
+          logInfo(
+            `rustFinalize: appId ${appId} cancelled over an installed manifest (StateFlags=${res.stateFlags}); leaving it untouched`,
+            LogPrefix.Steam
+          )
+        }
+      } else {
+        await finalizeToSteam(appId, {
+          steamUser: opts.steamUser,
+          targetSteamappsDir: opts.targetSteamappsDir,
+          installdir: opts.installdir,
+          name: refs.name,
+          depots: [],
+          buildid: refs.buildid,
+          betaKey: refs.branch === 'public' ? undefined : refs.branch,
+          outcome: opts.signal?.aborted === true ? 'cancelled' : undefined
+        })
+      }
       return opts.signal?.aborted === true
         ? { status: 'cancelled', skippedDepots }
         : { status: 'done', skippedDepots }

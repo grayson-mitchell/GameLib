@@ -9,6 +9,7 @@
  * Logs jobId and status only, never a job body, event, key or token.
  */
 import {
+  RUST_DEPOT_FINALIZE,
   RUST_DEPOT_JOB_CANCEL,
   RUST_DEPOT_JOB_RUN,
   RUST_DEPOT_MANIFEST_SUMMARY
@@ -18,6 +19,7 @@ import type { CdnAuthTokenCache } from '../depot/cdnAuth'
 import type { DepotJobRegistry, DepotTransport } from './jobRegistry'
 import type {
   RustDepotJob,
+  RustFinalizeSpec,
   RustJobEvent,
   RustOutcome,
   RustSummarizeRequest,
@@ -104,4 +106,31 @@ export function summarizeDepots(
   return transport.requestRustInvoke(RUST_DEPOT_MANIFEST_SUMMARY, [
     req
   ]) as Promise<RustSummarizeResult>
+}
+
+export type RustFinalizeResult =
+  | { acf: { path: string; stateFlags: number; sizeOnDisk: string } }
+  | { preserved: true; stateFlags: number }
+
+/**
+ * No-download ACF finalize (D-03). A Rust `{ error }` result throws, as the TS writer's failure
+ * path does; callers keep their own catch.
+ */
+export async function rustFinalize(
+  transport: DepotTransport,
+  appId: string,
+  finalize: RustFinalizeSpec,
+  depots: { depotId: string; gid: string; size: number }[],
+  outcome: 'completed' | 'cancelled' | null
+): Promise<RustFinalizeResult> {
+  const res = (await transport.requestRustInvoke(RUST_DEPOT_FINALIZE, [
+    { appId, finalize, depots, outcome }
+  ])) as RustFinalizeResult | { error: { message?: string; kind?: string } }
+  if ('error' in res) {
+    const f = res.error
+    throw new Error(
+      `depot_finalize failed for appId ${appId}: ${f?.message ?? f?.kind ?? 'unknown'}`
+    )
+  }
+  return res
 }
