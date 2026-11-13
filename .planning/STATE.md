@@ -2,13 +2,11 @@
 gsd_state_version: "1.0"
 milestone: v0.10
 milestone_name: Foundations
-current_phase: "66.4"
-current_phase_name: Backend module state long tail, the census-to-test flip, then the live smokes (INSERTED)
 status: executing
 stopped_at: Completed 66.4-24-PLAN.md
 last_updated: "2026-11-13T11:02:48.556Z"
 last_activity: 2026-11-13
-last_activity_desc: Phase 66.4 execution started
+last_activity_desc: Completed gap plan 66.4-24 (G-66.4-W2 Windows shortcut fix)
 state_head: 275ccb1c6a61e38efad97adbd36aacc06e04c01f
 progress:
   total_phases: 23
@@ -25,7 +23,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 66.4 — Backend module state long tail, the census-to-test flip, then the live smokes (INSERTED)
+**Current focus:** Phase 75 — steam-local-file-formats-in-rust
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -76,12 +74,12 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 ## Current Position
 
-Phase: 66.4 (Backend module state long tail, the census-to-test flip, then the live smokes (INSERTED)) — EXECUTING
-Plan: 3 of 25
+Phase: 75 (steam-local-file-formats-in-rust) — EXECUTING
+Plan: 26 of 35
 Status: Ready to execute
-Last activity: 2026-11-13 — Phase 66.4 execution started
+Last activity: 2026-11-14 - Completed gap plan 66.4-24 (G-66.4-W2: quoted gamelib:// .lnk argument, Windows shortcut icon resolver); 66.4-25 (Windows proof, non-autonomous) next
 
-Progress: [██████░░░░] 61%
+Progress: [██████████] 97%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
