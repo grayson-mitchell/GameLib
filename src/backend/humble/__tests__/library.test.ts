@@ -306,6 +306,8 @@ jest.mock('../expirationAlerts', () => ({
 import { defined } from './defined'
 import { createHumbleLibrary } from '../library'
 import { createHumbleSyncFence } from '../syncFence'
+import { createSteamAppIdResolver } from '../steamAppIdResolver'
+import type { HumbleSteamAppIdCacheEntry } from '../steamAppIdResolver'
 import { createLoginWindowSeamSlot } from '../loginWindowSeam'
 import {
   HUMBLE_SYNC_CONCURRENCY,
@@ -318,6 +320,8 @@ const flushAsync = async () => new Promise((r) => setImmediate(r))
 // One fresh library, fence and seam slot per test (66.3-17): the sync single-flight, the reveal
 // dedupe and the disconnect fence are per-instance, so no test sees another test's in-flight work.
 let HumbleLibrary: ReturnType<typeof createHumbleLibrary>
+const appIdCacheData = new Map<string, HumbleSteamAppIdCacheEntry>()
+const mockSteamStoreSearch = jest.fn()
 let syncFence: ReturnType<typeof createHumbleSyncFence>
 function buildLibrary(): ReturnType<typeof createHumbleLibrary> {
   syncFence = createHumbleSyncFence()
@@ -330,6 +334,14 @@ function buildLibrary(): ReturnType<typeof createHumbleLibrary> {
     },
     syncFence,
     steamUser: { isLoggedIn: () => mockSteamIsLoggedIn() },
+    steamAppIdResolver: createSteamAppIdResolver({
+      cache: {
+        get: (k) => appIdCacheData.get(k),
+        set: (k, v) => appIdCacheData.set(k, v)
+      },
+      search: (term) => mockSteamStoreSearch(term),
+      sleep: async () => {}
+    }),
     loginWindowSeam: createLoginWindowSeamSlot(),
     appInfo: { userAgentFallback: 'Mozilla/5.0 (X11; Linux) Chrome/1.0' }
   })
@@ -440,6 +452,9 @@ const sendFrontendMessage = (...args: unknown[]) =>
 
 describe('HumbleLibrary', () => {
   beforeEach(() => {
+    appIdCacheData.clear()
+    mockSteamStoreSearch.mockReset()
+    mockSteamStoreSearch.mockResolvedValue([])
     HumbleLibrary = buildLibrary()
     libraryData.clear()
     syncData.clear()
@@ -1685,6 +1700,236 @@ describe('HumbleLibrary', () => {
       expect(lastPushed.find((k) => k.gamekey === 'gk1')?.ownedElsewhere).toBe(
         true
       )
+    })
+  })
+
+  // ── quick 261114-ca6: title -> Steam app id resolve pass ────────────────
+  describe('sync() — Steam app id resolution (quick 261114-ca6)', () => {
+    const flushMany = async () => {
+      for (let i = 0; i < 10; i++) await flushAsync()
+    }
+    const openGate = (...games: Array<[string, string]>) => {
+      mockSteamIsLoggedIn.mockReturnValue(true)
+      mockSteamLibraryStoreGet.mockReturnValue(
+        games.map(([id, title]) => makeSteamGame(id, title))
+      )
+    }
+    const syncCelesteOrder = (title = 'Celeste') => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('gk1', { title })
+      })
+    }
+
+    test('resolves an exact title match, patches the key and re-pushes humbleKeysUpdated as exact', async () => {
+      openGate(['504230', 'Celeste'])
+      mockSteamStoreSearch.mockResolvedValue([
+        { type: 'app', name: 'Celeste', id: 504230 }
+      ])
+      syncCelesteOrder()
+
+      await HumbleLibrary.sync(syncDeps)
+      await flushMany()
+
+      const key = libraryData.get('gk1')?.keys[0]
+      expect(key?.steamAppId).toBe('504230')
+      expect(key?.steamAppIdResolved).toBe(true)
+      expect(key?.matchConfidence).toBe('exact')
+      const calls = mockSendFrontendMessage.mock.calls.filter(
+        (c) => c[0] === 'humbleKeysUpdated'
+      )
+      const last = calls[calls.length - 1]?.[1] as HumbleKey[]
+      expect(last.find((k) => k.gamekey === 'gk1')?.matchConfidence).toBe(
+        'exact'
+      )
+    })
+
+    test('near-miss: only a Deluxe Edition result leaves no id and stays fuzzy', async () => {
+      openGate(['1', 'Celeste'])
+      mockSteamStoreSearch.mockResolvedValue([
+        { type: 'app', name: 'Celeste Deluxe Edition', id: 99 }
+      ])
+      syncCelesteOrder()
+
+      await HumbleLibrary.sync(syncDeps)
+      await flushMany()
+
+      const key = libraryData.get('gk1')?.keys[0]
+      expect(key?.steamAppId).toBeUndefined()
+      expect(key?.matchConfidence).toBe('fuzzy')
+    })
+
+    test('second sync with the title cached does not search and fills the id at commit', async () => {
+      openGate(['504230', 'Celeste'])
+      mockSteamStoreSearch.mockResolvedValue([
+        { type: 'app', name: 'Celeste', id: 504230 }
+      ])
+      syncCelesteOrder()
+      await HumbleLibrary.sync(syncDeps)
+      await flushMany()
+      expect(mockSteamStoreSearch).toHaveBeenCalledTimes(1)
+
+      libraryData.clear()
+      mockSendFrontendMessage.mockClear()
+      await HumbleLibrary.sync(syncDeps)
+      await flushMany()
+
+      expect(mockSteamStoreSearch).toHaveBeenCalledTimes(1)
+      const pushes = mockSendFrontendMessage.mock.calls.filter(
+        (c) => c[0] === 'humbleKeysUpdated'
+      )
+      expect(pushes.length).toBeGreaterThan(0)
+      for (const c of pushes) {
+        expect(
+          (c[1] as HumbleKey[]).every((k) => k.matchConfidence === 'exact')
+        ).toBe(true)
+      }
+    })
+
+    test('gate closed (not signed in or empty library): never searches', async () => {
+      syncCelesteOrder()
+      mockSteamIsLoggedIn.mockReturnValue(false)
+      await HumbleLibrary.sync(syncDeps)
+      await flushMany()
+      mockSteamIsLoggedIn.mockReturnValue(true)
+      mockSteamLibraryStoreGet.mockReturnValue([])
+      await HumbleLibrary.sync(syncDeps)
+      await flushMany()
+      expect(mockSteamStoreSearch).not.toHaveBeenCalled()
+    })
+
+    test('touches the Steam stack only via isLoggedIn and steamLibraryStore.get', async () => {
+      const touched: string[] = []
+      const spy = <T extends object>(label: string, target: T): T =>
+        new Proxy(target, {
+          get(t, prop, r) {
+            if (typeof prop === 'string') touched.push(`${label}.${prop}`)
+            return Reflect.get(t, prop, r)
+          }
+        })
+      openGate(['504230', 'Celeste'])
+      mockSteamStoreSearch.mockResolvedValue([
+        { type: 'app', name: 'Celeste', id: 504230 }
+      ])
+      syncCelesteOrder()
+      const slice = storesSlice as unknown as {
+        humble: unknown
+        steam: { steamLibraryStore: object }
+      }
+      const lib = createHumbleLibrary({
+        sendFrontendMessage,
+        stores: {
+          humble: slice.humble,
+          steam: spy('steam', {
+            steamLibraryStore: spy(
+              'steamLibraryStore',
+              slice.steam.steamLibraryStore
+            )
+          })
+        } as never,
+        user: {
+          getCredentials: async () => mockGetCredentials(),
+          getLiveCsrfToken: () => mockGetLiveCsrfToken()
+        },
+        syncFence: createHumbleSyncFence(),
+        steamUser: spy('steamUser', {
+          isLoggedIn: () => mockSteamIsLoggedIn()
+        }),
+        steamAppIdResolver: createSteamAppIdResolver({
+          cache: {
+            get: (k) => appIdCacheData.get(k),
+            set: (k, v) => appIdCacheData.set(k, v)
+          },
+          search: (term) => mockSteamStoreSearch(term),
+          sleep: async () => {}
+        }),
+        loginWindowSeam: createLoginWindowSeamSlot(),
+        appInfo: { userAgentFallback: 'Mozilla/5.0 (X11; Linux) Chrome/1.0' }
+      })
+      await lib.sync(syncDeps)
+      await flushMany()
+      expect([...new Set(touched)].sort()).toEqual([
+        'steam.steamLibraryStore',
+        'steamLibraryStore.get',
+        'steamUser.isLoggedIn'
+      ])
+    })
+
+    test('overlapping syncs start one resolve pass (single-flight)', async () => {
+      openGate(['504230', 'Celeste'])
+      let release: (v: unknown[]) => void = () => {}
+      mockSteamStoreSearch.mockReturnValue(
+        new Promise<unknown[]>((r) => {
+          release = r
+        })
+      )
+      syncCelesteOrder()
+      await HumbleLibrary.sync(syncDeps)
+      await flushMany()
+      await HumbleLibrary.sync(syncDeps)
+      await flushMany()
+      expect(mockSteamStoreSearch).toHaveBeenCalledTimes(1)
+      release([])
+      await flushMany()
+    })
+
+    test('a stale sync fence stops the pass and patches nothing', async () => {
+      openGate(['504230', 'Celeste'])
+      let release: (v: unknown[]) => void = () => {}
+      mockSteamStoreSearch.mockReturnValue(
+        new Promise<unknown[]>((r) => {
+          release = r
+        })
+      )
+      syncCelesteOrder()
+      await HumbleLibrary.sync(syncDeps)
+      await flushMany()
+      // Disconnect-style fence bump while the request is in flight.
+      syncFence.invalidate()
+      release([{ type: 'app', name: 'Celeste', id: 504230 }])
+      await flushMany()
+      expect(
+        libraryData.get('gk1')?.keys[0]?.steamAppIdResolved
+      ).toBeUndefined()
+    })
+
+    test('never logs a revealed key value and emits exactly one summary line', async () => {
+      openGate(['504230', 'Celeste'])
+      mockSteamStoreSearch.mockResolvedValue([
+        { type: 'app', name: 'Celeste', id: 504230 }
+      ])
+      const entry = makeRevealableEntry('gk1', {
+        state: 'REVEALED',
+        revealedKeyValue: 'ZZZZZ-KEYCO-DE123'
+      })
+      const first = entry.keys[0] as HumbleKeyInternal
+      libraryData.set('gk1', {
+        ...entry,
+        keys: [{ ...first, title: 'Celeste' }]
+      })
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('gk1', { title: 'Celeste' })
+      })
+
+      await HumbleLibrary.sync(syncDeps)
+      await flushMany()
+
+      const all = [
+        ...mockLogInfo.mock.calls,
+        ...mockLogWarning.mock.calls,
+        ...mockLogError.mock.calls
+      ]
+      expect(JSON.stringify(all)).not.toContain('ZZZZZ-KEYCO-DE123')
+      const summaries = mockLogInfo.mock.calls.filter(
+        (c) =>
+          Array.isArray(c[0]) &&
+          typeof c[0][0] === 'string' &&
+          c[0][0].startsWith('Humble: resolved ')
+      )
+      expect(summaries).toHaveLength(1)
     })
   })
 
