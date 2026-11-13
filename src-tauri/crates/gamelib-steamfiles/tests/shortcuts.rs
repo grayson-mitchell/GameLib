@@ -2,7 +2,7 @@
 
 use gamelib_steamfiles::shortcuts::{apply_shortcuts, read_shortcuts, EntryField, ShortcutsOp};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 fn fixture_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -112,15 +112,15 @@ fn read_no_shortcuts_root() {
 
 // ---- apply ----
 
-fn bytes(p: &PathBuf) -> Vec<u8> {
+fn bytes(p: &Path) -> Vec<u8> {
     fs::read(p).unwrap()
 }
 
-fn no_tmp(p: &PathBuf) {
+fn no_tmp(p: &Path) {
     assert!(!p.with_file_name("shortcuts.vdf.tmp").exists());
 }
 
-fn names(p: &PathBuf) -> Vec<(String, Option<String>)> {
+fn names(p: &Path) -> Vec<(String, Option<String>)> {
     read_shortcuts(p)
         .entries
         .into_iter()
@@ -371,7 +371,7 @@ fn u32_int32_stored_as_bit_pattern() {
     let r = apply_shortcuts(&p, &add(vec![i("appid", 0xFFFF_FFFE)], true));
     assert!(r.written);
     assert!(bytes(&p)
-        .windows(10)
+        .windows(11)
         .any(|w| w == b"\x02appid\0\xFE\xFF\xFF\xFF"));
 }
 

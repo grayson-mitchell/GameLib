@@ -153,6 +153,160 @@ pub fn read_shortcuts(path: &Path) -> ShortcutsReadResult {
     out
 }
 
-pub fn apply_shortcuts(_path: &Path, _op: &ShortcutsOp) -> ShortcutsApplyResult {
-    ShortcutsApplyResult::default()
+fn to_node(f: &EntryField) -> Result<(Vec<u8>, BinNode), &'static str> {
+    match f {
+        EntryField::Str { key, value } => Ok((
+            key.as_bytes().to_vec(),
+            BinNode::Str(value.as_bytes().to_vec()),
+        )),
+        EntryField::Int32 { key, value } => {
+            let v = if let Ok(v) = i32::try_from(*value) {
+                v
+            } else if let Ok(v) = u32::try_from(*value) {
+                v as i32
+            } else {
+                return Err("bad-int32");
+            };
+            Ok((key.as_bytes().to_vec(), BinNode::Int32(v)))
+        }
+    }
+}
+
+fn nodes(fields: &[EntryField]) -> Result<Vec<(Vec<u8>, BinNode)>, &'static str> {
+    fields.iter().map(to_node).collect()
+}
+
+fn fail(msg: impl Into<String>) -> ShortcutsApplyResult {
+    ShortcutsApplyResult {
+        read_error: Some(msg.into()),
+        ..Default::default()
+    }
+}
+
+fn app_name_of(entry: &BinNode) -> Option<String> {
+    match entry {
+        BinNode::Map(f) => str_of(find_ci(f, "appname")),
+        _ => None,
+    }
+}
+
+pub fn apply_shortcuts(path: &Path, op: &ShortcutsOp) -> ShortcutsApplyResult {
+    // Validate and convert the op's fields before touching the file.
+    let prepared = match op {
+        ShortcutsOp::Add { entry, .. } => nodes(entry),
+        ShortcutsOp::Update { fields, .. } => nodes(fields),
+        ShortcutsOp::Remove { .. } => Ok(Vec::new()),
+    };
+    let prepared = match prepared {
+        Ok(p) => p,
+        Err(e) => return fail(e),
+    };
+
+    let mut doc = match std::fs::read(path) {
+        Ok(b) => match parse_bin(&b, &BinLimits::shortcuts()) {
+            Ok(d) => d,
+            Err(e) => return fail(format!("parse: {e:?}")),
+        },
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => match op {
+            ShortcutsOp::Add {
+                create_if_missing: true,
+                ..
+            } => BinDoc {
+                root: vec![(b"shortcuts".to_vec(), BinNode::Map(Vec::new()))],
+                trailing: Vec::new(),
+            },
+            _ => return fail("missing"),
+        },
+        Err(e) => return fail(format!("io: {e}")),
+    };
+
+    let Some(slot) = doc
+        .root
+        .iter_mut()
+        .find(|(k, _)| k.eq_ignore_ascii_case(b"shortcuts"))
+    else {
+        return fail("no-shortcuts-root");
+    };
+    let BinNode::Map(list) = &mut slot.1 else {
+        return fail("no-shortcuts-root");
+    };
+    if !is_list(list) {
+        return fail("not-list");
+    }
+
+    let mut result = ShortcutsApplyResult::default();
+    match op {
+        ShortcutsOp::Add { .. } => {
+            let new_name = str_of(find_ci(&prepared, "appname"));
+            if let Some(name) = &new_name {
+                if let Some((k, _)) = list
+                    .iter()
+                    .find(|(_, v)| app_name_of(v).as_deref() == Some(name.as_str()))
+                {
+                    result.already_present = true;
+                    result.index_key = Some(String::from_utf8_lossy(k).into_owned());
+                    return result;
+                }
+            }
+            let next = list
+                .iter()
+                .filter_map(|(k, _)| String::from_utf8_lossy(k).parse::<u64>().ok())
+                .max()
+                .map_or(0, |m| m + 1);
+            let key = next.to_string();
+            list.push((key.clone().into_bytes(), BinNode::Map(prepared)));
+            result.index_key = Some(key);
+        }
+        ShortcutsOp::Update { app_name, .. } => {
+            let Some((k, entry)) = list
+                .iter_mut()
+                .find(|(_, v)| app_name_of(v).as_deref() == Some(app_name.as_str()))
+            else {
+                return result;
+            };
+            let BinNode::Map(fields) = entry else {
+                return result;
+            };
+            for (fk, fv) in prepared {
+                match fields
+                    .iter_mut()
+                    .find(|(k2, _)| k2.eq_ignore_ascii_case(&fk))
+                {
+                    Some(slot) => slot.1 = fv,
+                    None => fields.push((fk, fv)),
+                }
+            }
+            result.matched = true;
+            result.index_key = Some(String::from_utf8_lossy(k).into_owned());
+        }
+        ShortcutsOp::Remove { app_name } => {
+            let Some(pos) = list
+                .iter()
+                .position(|(_, v)| app_name_of(v).as_deref() == Some(app_name.as_str()))
+            else {
+                return result;
+            };
+            let (k, removed) = list.remove(pos);
+            result.matched = true;
+            result.index_key = Some(String::from_utf8_lossy(&k).into_owned());
+            result.removed_app_name = app_name_of(&removed);
+            if let BinNode::Map(f) = &removed {
+                result.removed_exe = str_of(find_ci(f, "exe"));
+            }
+            for (i, (key, _)) in list.iter_mut().enumerate() {
+                *key = i.to_string().into_bytes();
+            }
+        }
+    }
+
+    match atomic_write(path, &serialize_bin(&doc)) {
+        Ok(()) => {
+            result.written = true;
+            result
+        }
+        Err(e) => ShortcutsApplyResult {
+            read_error: Some(format!("write: {e}")),
+            ..Default::default()
+        },
+    }
 }
