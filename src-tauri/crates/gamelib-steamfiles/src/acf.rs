@@ -187,7 +187,7 @@ pub struct AppManifestParams {
 }
 
 /// Same rule as TS isValidBetaKey: ASCII alphanumeric or `.`/`_`/`-`, 1..=64 bytes.
-fn is_valid_beta_key(s: &str) -> bool {
+pub fn is_valid_beta_key(s: &str) -> bool {
     (1..=64).contains(&s.len())
         && s.bytes()
             .all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'_' || b == b'-')

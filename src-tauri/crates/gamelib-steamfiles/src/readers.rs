@@ -238,3 +238,110 @@ fn installscript_entries(bytes: &[u8]) -> Option<Vec<InstallScriptEntry>> {
     }
     Some(entries)
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RunningAppIdResult {
+    pub running_app_id: u32,
+}
+
+const REGISTRY_MAX_BYTES: usize = 4 * 1024 * 1024;
+
+/// `Registry/HKCU/Software/Valve/Steam/RunningAppID`, case-insensitive; 0 on a missing file, a
+/// parse failure or a missing / non-numeric key (runningPoll's fail-soft contract).
+pub fn read_running_app_id(path: &Path) -> RunningAppIdResult {
+    RunningAppIdResult {
+        running_app_id: running_app_id(path).unwrap_or(0),
+    }
+}
+
+fn running_app_id(path: &Path) -> Option<u32> {
+    let bytes = std::fs::read(path).ok()?;
+    let limits = Limits {
+        max_bytes: REGISTRY_MAX_BYTES,
+        max_depth: 64,
+    };
+    let root = kv_text::merged(&kv_text::parse(&bytes, &limits).ok()?);
+    let steam = root
+        .map("Registry")?
+        .map("HKCU")?
+        .map("Software")?
+        .map("Valve")?
+        .map("Steam")?;
+    steam.str("RunningAppID")?.trim().parse().ok()
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalConfigBetaKeyResult {
+    pub beta_key: Option<String>,
+}
+
+const LOCALCONFIG_BLOB_MAX_BYTES: usize = 64 * 1024;
+const LOCALCONFIG_BLOB_MAX_DEPTH: usize = 8;
+
+fn find_user_app_config(pairs: &[Pair]) -> Option<&[Pair]> {
+    for p in pairs {
+        if let Value::Map(children) = &p.value {
+            if p.key.eq_ignore_ascii_case("UserAppConfig") {
+                return Some(children);
+            }
+            if let Some(found) = find_user_app_config(children) {
+                return Some(found);
+            }
+        }
+    }
+    None
+}
+
+fn hex_decode(s: &str) -> Option<Vec<u8>> {
+    let b = s.as_bytes();
+    if b.is_empty() || b.len() % 2 != 0 {
+        return None;
+    }
+    let nib = |c: u8| (c as char).to_digit(16).map(|d| d as u8);
+    b.chunks(2)
+        .map(|c| Some(nib(c[0])? << 4 | nib(c[1])?))
+        .collect()
+}
+
+/// Read an app's beta branch from localconfig.vdf's first `UserAppConfig` block: the app's value
+/// is a hex blob of binary KV whose `UserConfig` map carries `BetaKey`. Replaces both the TS
+/// line-regex reader and the hand-rolled binary walker `decodeUserAppConfigBetaKey`.
+pub fn read_localconfig_beta_key(path: &Path, app_id: &str) -> LocalConfigBetaKeyResult {
+    LocalConfigBetaKeyResult {
+        beta_key: localconfig_beta_key(path, app_id),
+    }
+}
+
+fn localconfig_beta_key(path: &Path, app_id: &str) -> Option<String> {
+    if app_id.is_empty() || !app_id.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    let bytes = std::fs::read(path).ok()?;
+    let root = kv_text::parse(&bytes, &Limits::local_file()).ok()?;
+    let block = find_user_app_config(&root)?;
+    let hex = match &kv_text::find(block, app_id)?.value {
+        Value::Str(s) => s.decoded(),
+        Value::Map(_) => return None,
+    };
+    let blob = hex_decode(&hex)?;
+    let doc = crate::kv_bin::parse_bin(
+        &blob,
+        &crate::kv_bin::BinLimits {
+            max_bytes: LOCALCONFIG_BLOB_MAX_BYTES,
+            max_depth: LOCALCONFIG_BLOB_MAX_DEPTH,
+        },
+    )
+    .ok()?;
+    let user_config = doc.root.iter().find_map(|(k, n)| match n {
+        crate::kv_bin::BinNode::Map(m) if k == b"UserConfig" => Some(m),
+        _ => None,
+    })?;
+    let key = user_config.iter().find_map(|(k, n)| match n {
+        crate::kv_bin::BinNode::Str(s) if k == b"BetaKey" => Some(s),
+        _ => None,
+    })?;
+    let key = String::from_utf8_lossy(key).into_owned();
+    crate::acf::is_valid_beta_key(&key).then_some(key)
+}

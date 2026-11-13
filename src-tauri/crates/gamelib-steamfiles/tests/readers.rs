@@ -325,12 +325,12 @@ fn localconfig_app_outside_block_is_ignored() {
 #[test]
 fn localconfig_bad_blobs_are_none() {
     for hex in [
-        "abc".to_string(),                  // odd length
-        "zz".to_string(),                   // not hex
-        String::new(),                      // empty
+        "abc".to_string(),                    // odd length
+        "zz".to_string(),                     // not hex
+        String::new(),                        // empty
         "0055736572436f6e666967".to_string(), // truncated binary KV
-        blob_hex("bad key!"),               // fails is_valid_beta_key
-        blob_hex(&"a".repeat(65)),          // too long
+        blob_hex("bad key!"),                 // fails is_valid_beta_key
+        blob_hex(&"a".repeat(65)),            // too long
     ] {
         let (_d, p) = localconfig(&format!("\"10\" \"{hex}\""));
         assert_eq!(read_localconfig_beta_key(&p, "10").beta_key, None, "{hex}");
