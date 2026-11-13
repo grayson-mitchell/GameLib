@@ -230,6 +230,95 @@ describe('detectSteamUpdates', () => {
     expect(getProductInfo).not.toHaveBeenCalled()
   })
 
+  describe('registered PICS failure (WR-02)', () => {
+    const seedStale = async () => {
+      addNative('202', '777')
+      lib('202')
+      mockedPids.mockResolvedValue([])
+      pics({ '202': { public: { buildid: '800' } } })
+      const [seed] = await detectSteamUpdates(deps, { appIds: ['202'] })
+      expect(seed).toMatchObject({ state: 'stale', targetBuild: '800' })
+    }
+    const failTimeout = () =>
+      getProductInfo.mockReturnValue(new Promise(() => undefined))
+
+    it('A: unchanged ACF keeps the prior stale state on a timeout', async () => {
+      await seedStale()
+      failTimeout()
+      const [r] = await detectSteamUpdates(deps, {
+        appIds: ['202'],
+        force: true,
+        timeoutMs: 20
+      })
+      expect(r).toMatchObject({
+        state: 'stale',
+        installedBuild: '777',
+        targetBuild: '800',
+        reason: 'pics-timeout'
+      })
+    })
+
+    it('A: unchanged ACF keeps the prior stale state when PICS fails', async () => {
+      await seedStale()
+      ;(deps.anonymousClient.get as jest.Mock).mockResolvedValue(null)
+      const [r] = await detectSteamUpdates(deps, {
+        appIds: ['202'],
+        force: true
+      })
+      expect(r).toMatchObject({
+        state: 'stale',
+        installedBuild: '777',
+        targetBuild: '800',
+        reason: 'pics-failed'
+      })
+    })
+
+    it('B: an ACF at the known target is current even when PICS fails', async () => {
+      await seedStale()
+      addNative('202', '800')
+      failTimeout()
+      const [r] = await detectSteamUpdates(deps, {
+        appIds: ['202'],
+        force: true,
+        timeoutMs: 20
+      })
+      expect(r).toMatchObject({
+        state: 'current',
+        installedBuild: '800',
+        targetBuild: '800'
+      })
+    })
+
+    it('C: an ACF moved elsewhere keeps prior state with the build corrected', async () => {
+      await seedStale()
+      addNative('202', '790')
+      failTimeout()
+      const [r] = await detectSteamUpdates(deps, {
+        appIds: ['202'],
+        force: true,
+        timeoutMs: 20
+      })
+      expect(r).toMatchObject({
+        state: 'stale',
+        installedBuild: '790',
+        targetBuild: '800',
+        reason: 'pics-timeout'
+      })
+    })
+
+    it('no prior: falls back to the ACF (current)', async () => {
+      addNative('202', '777')
+      lib('202')
+      mockedPids.mockResolvedValue([])
+      failTimeout()
+      const [r] = await detectSteamUpdates(deps, {
+        appIds: ['202'],
+        timeoutMs: 20
+      })
+      expect(r?.state).toBe('current')
+    })
+  })
+
   it('skips installs that are neither bridge nor native-registered', async () => {
     lib('301')
     expect(await detectSteamUpdates(deps)).toEqual([])

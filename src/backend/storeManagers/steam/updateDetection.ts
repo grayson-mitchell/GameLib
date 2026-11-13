@@ -9,7 +9,9 @@
  *
  * One batched anonymous PICS read per call; the timeout bounds the anonymous connect and the read together. State lives in the per-boot
  * steamInstallRuntime.updateStates cache (closure Map only, no module state, no timer). A PICS
- * failure never produces 'stale' or 'current'.
+ * failure never turns a known state into 'stale' or 'current', except that a registered game whose
+ * ACF reached the known target build is 'current'; with no prior knowledge a registered game falls
+ * back to its ACF.
  */
 import { logInfo, LogPrefix } from 'backend/logger'
 import type { SteamLibrariesDeps } from 'backend/utils'
@@ -306,8 +308,34 @@ export async function detectSteamUpdates(
             state: target !== c.fields.buildid ? 'stale' : 'current',
             targetBuild: target
           }
+        } else if (
+          c.kind === 'registered' &&
+          prior &&
+          (fail === 'pics-timeout' || fail === 'pics-failed')
+        ) {
+          // PICS was asked and failed: compare the prior state with the ACF read this pass.
+          const { pending: _drop, ...priorNoPending } = prior
+          if (prior.installedBuild === c.fields.buildid) {
+            // Nothing changed locally: keep the last known state, as the bridge arm does.
+            next = { ...prior, reason: fail, checkedAt: now }
+          } else if (
+            prior.targetBuild !== undefined &&
+            c.fields.buildid === prior.targetBuild
+          ) {
+            // The ACF shows the known target was reached: the one PICS-failure case that may write
+            // 'current', because the ACF, not PICS, proves it.
+            next = { ...base, state: 'current', targetBuild: prior.targetBuild }
+          } else {
+            // The ACF moved to some other build: keep prior's state and target, fix the build.
+            next = {
+              ...priorNoPending,
+              installedBuild: c.fields.buildid,
+              reason: fail,
+              checkedAt: now
+            }
+          }
         } else if (c.kind === 'registered') {
-          // Steam running, or PICS could not cross-check: the ACF alone says current.
+          // Steam running (PICS not asked), or no prior knowledge to keep: the ACF alone says current.
           next = { ...base, state: 'current' }
         } else if (fail === 'pics-timeout' || fail === 'pics-failed') {
           // Last known state wins; never invent stale/current from a failure.

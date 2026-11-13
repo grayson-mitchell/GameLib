@@ -3,6 +3,7 @@ import { getSteamUpdateInfo } from '../updateInfo'
 import { detectSteamUpdates } from '../updateDetection'
 import { estimateBridgeUpdate } from '../depotRust/updateEstimate'
 import { getDiskInfo } from 'backend/utils/filesystem'
+import { readAcfUpdateState } from '../library/acfUpdateState'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -21,8 +22,11 @@ jest.mock('../updateDetection', () => ({
     deps: { states: Map<string, unknown> },
     id: string
   ) => deps.states.get(id),
-  STEAM_UPDATE_REFRESH_TIMEOUT_MS: 20000,
-  STEAM_UPDATE_PRELAUNCH_TIMEOUT_MS: 3000
+  STEAM_UPDATE_REFRESH_TIMEOUT_MS: 20000
+}))
+jest.mock('../library/acfUpdateState', () => ({
+  ...jest.requireActual('../library/acfUpdateState'),
+  readAcfUpdateState: jest.fn()
 }))
 jest.mock('../depotRust/updateEstimate', () => ({
   estimateBridgeUpdate: jest.fn(),
@@ -49,7 +53,10 @@ const stale = {
   branch: 'public'
 }
 
-beforeEach(() => jest.clearAllMocks())
+beforeEach(() => {
+  jest.clearAllMocks()
+  jest.mocked(readAcfUpdateState).mockResolvedValue(null as never)
+})
 
 describe('getSteamUpdateInfo', () => {
   it('returns null for a non-numeric appId', async () => {
@@ -163,7 +170,52 @@ describe('getSteamUpdateInfo', () => {
     )
     expect(detect).toHaveBeenCalledWith(expect.anything(), {
       appIds: [APP],
-      timeoutMs: 3000
+      timeoutMs: 20000
+    })
+    expect(info?.state).toBe('current')
+  })
+
+  it('serves a cached registered state without detection while the ACF is unchanged', async () => {
+    jest.mocked(readAcfUpdateState).mockResolvedValue({
+      buildid: '1',
+      stateFlags: 4,
+      bytesToDownload: 0,
+      bytesDownloaded: 0,
+      scheduledAutoUpdate: 0
+    } as never)
+    const info = await getSteamUpdateInfo(
+      deps({ ...stale, kind: 'registered' }),
+      APP
+    )
+    expect(detect).not.toHaveBeenCalled()
+    expect(info).toMatchObject({ state: 'stale', targetBuild: '2' })
+  })
+
+  it('re-detects when the ACF build changed (Steam finished)', async () => {
+    jest.mocked(readAcfUpdateState).mockResolvedValue({
+      buildid: '2',
+      stateFlags: 4,
+      bytesToDownload: 0,
+      bytesDownloaded: 0,
+      scheduledAutoUpdate: 0
+    } as never)
+    detect.mockResolvedValue([
+      {
+        appId: APP,
+        checkedAt: 1,
+        ...stale,
+        kind: 'registered',
+        state: 'current'
+      } as never
+    ])
+    const info = await getSteamUpdateInfo(
+      deps({ ...stale, kind: 'registered' }),
+      APP
+    )
+    expect(detect).toHaveBeenCalledTimes(1)
+    expect(detect).toHaveBeenCalledWith(expect.anything(), {
+      appIds: [APP],
+      timeoutMs: 20000
     })
     expect(info?.state).toBe('current')
   })
