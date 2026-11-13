@@ -108,6 +108,27 @@ fn non_numeric_app_id_is_an_error_result() {
     assert!(msg.contains("rejected non-numeric appId"), "{msg}");
 }
 
+/// 75 WR-08: the id is validated before the cancel-preserve read joins it into a path, so a
+/// traversal id cannot read an installed manifest outside steamapps and answer `preserved`.
+#[test]
+fn cancelled_traversal_app_id_is_rejected_before_any_read() {
+    let t = tempfile::tempdir().unwrap();
+    let steamapps = t.path().join("steamapps");
+    fs::create_dir_all(steamapps.join("appmanifest_1")).unwrap();
+    let outside = t.path().join("outside");
+    fs::create_dir_all(&outside).unwrap();
+    fs::write(
+        outside.join("appmanifest_480.acf"),
+        "\"AppState\"\n{\n\t\"StateFlags\"\t\t\"4\"\n}\n",
+    )
+    .unwrap();
+    let id = "1/../../outside/appmanifest_480";
+    let r = call(args(&steamapps, "Game", id, false, json!("cancelled"))).unwrap();
+    assert!(r.get("preserved").is_none(), "{r}");
+    let msg = r["error"]["message"].as_str().unwrap();
+    assert!(msg.contains("rejected non-numeric appId"), "{msg}");
+}
+
 #[test]
 fn installdir_escape_is_an_error_result() {
     let t = tempfile::tempdir().unwrap();

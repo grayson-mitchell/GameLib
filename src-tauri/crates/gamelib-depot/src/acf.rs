@@ -107,6 +107,17 @@ fn unix_now() -> u64 {
         .unwrap_or(0)
 }
 
+/// Rejects a non-numeric `app_id` before it is joined into any path (75 WR-08).
+pub fn check_app_id(app_id: &str) -> Result<(), Failure> {
+    if is_numeric(app_id) {
+        Ok(())
+    } else {
+        Err(io_failure(format!(
+            "writeAppManifest: rejected non-numeric appId \"{app_id}\""
+        )))
+    }
+}
+
 /// Reads `StateFlags` from `appmanifest_<app_id>.acf` in `steamapps_dir`. `None` for a missing
 /// file, no `StateFlags` line, or a non-numeric value.
 pub fn read_existing_state_flags(steamapps_dir: &Path, app_id: &str) -> Option<u32> {
@@ -134,11 +145,7 @@ pub async fn finalize(
     attempted: &[AttemptedDepot],
     result: &RunResult,
 ) -> Result<AcfWritten, Failure> {
-    if !is_numeric(app_id) {
-        return Err(io_failure(format!(
-            "writeAppManifest: rejected non-numeric appId \"{app_id}\""
-        )));
-    }
+    check_app_id(app_id)?;
     let steamapps = PathBuf::from(&spec.steamapps_dir);
     let common = steamapps.join("common");
     let install_root =
