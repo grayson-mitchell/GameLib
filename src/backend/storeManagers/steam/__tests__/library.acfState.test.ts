@@ -649,14 +649,19 @@ describe('readAcfState(libDeps, appId, "bridge") — bridge-bottle-scoped ACF ro
 describe('findOtherManifestsWithInstalldir() (34.13 review A-13)', () => {
   const STEAMAPPS = '/bottle/steamapps'
 
-  it('returns [] when the steamapps dir does not exist', () => {
+  it('returns [] when the steamapps dir does not exist', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(false)
     expect(
-      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
+      await findOtherManifestsWithInstalldir(
+        libDeps,
+        STEAMAPPS,
+        'Hoard',
+        '63000'
+      )
     ).toEqual([])
   })
 
-  it('finds another appId declaring the SAME installdir', () => {
+  it('finds another appId declaring the SAME installdir', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readdirSync as jest.Mock).mockReturnValue([
       'appmanifest_63000.acf',
@@ -672,11 +677,16 @@ describe('findOtherManifestsWithInstalldir() (34.13 review A-13)', () => {
     )
 
     expect(
-      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
+      await findOtherManifestsWithInstalldir(
+        libDeps,
+        STEAMAPPS,
+        'Hoard',
+        '63000'
+      )
     ).toEqual(['228980'])
   })
 
-  it('DISCRIMINATOR: a SIBLING installdir (the SharedDepots shape) is not a conflict', () => {
+  it('DISCRIMINATOR: a SIBLING installdir (the SharedDepots shape) is not a conflict', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readdirSync as jest.Mock).mockReturnValue([
       'appmanifest_63000.acf',
@@ -691,11 +701,16 @@ describe('findOtherManifestsWithInstalldir() (34.13 review A-13)', () => {
     })
 
     expect(
-      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
+      await findOtherManifestsWithInstalldir(
+        libDeps,
+        STEAMAPPS,
+        'Hoard',
+        '63000'
+      )
     ).toEqual([])
   })
 
-  it('never reports THIS appId as its own conflict', () => {
+  it('never reports THIS appId as its own conflict', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_63000.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('x')
@@ -704,26 +719,36 @@ describe('findOtherManifestsWithInstalldir() (34.13 review A-13)', () => {
     })
 
     expect(
-      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
+      await findOtherManifestsWithInstalldir(
+        libDeps,
+        STEAMAPPS,
+        'Hoard',
+        '63000'
+      )
     ).toEqual([])
   })
 
-  it('skips a corrupt ACF without throwing (T-2-01/T-17-05)', () => {
+  it('skips a corrupt ACF without throwing (T-2-01/T-17-05)', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_228980.acf'])
     ;(readFileSync as jest.Mock).mockImplementation(() => {
       throw new Error('corrupt file')
     })
 
-    expect(() =>
-      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
-    ).not.toThrow()
+    await expect(
+      findOtherManifestsWithInstalldir(libDeps, STEAMAPPS, 'Hoard', '63000')
+    ).resolves.toBeDefined()
     expect(
-      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
+      await findOtherManifestsWithInstalldir(
+        libDeps,
+        STEAMAPPS,
+        'Hoard',
+        '63000'
+      )
     ).toEqual([])
   })
 
-  it('ignores non-manifest files in the directory', () => {
+  it('ignores non-manifest files in the directory', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readdirSync as jest.Mock).mockReturnValue([
       'common',
@@ -736,7 +761,12 @@ describe('findOtherManifestsWithInstalldir() (34.13 review A-13)', () => {
     })
 
     expect(
-      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
+      await findOtherManifestsWithInstalldir(
+        libDeps,
+        STEAMAPPS,
+        'Hoard',
+        '63000'
+      )
     ).toEqual([])
     expect(readFileSync).not.toHaveBeenCalled()
   })
@@ -1006,5 +1036,80 @@ describe('readAcfState and scanDownloadingAppIds, rust branch', () => {
     } as never
 
     expect(await scanDownloadingAppIds(deps)).toEqual([])
+  })
+})
+
+describe('findOtherManifestsWithInstalldir, rust branch', () => {
+  useRustBranch()
+  const DIR = '/lib/steamapps'
+
+  const scanWith = (
+    recs: { file: string; rec: Partial<AcfRecord> }[]
+  ): ScanResult => ({
+    records: recs.map(({ file, rec }) => ({
+      steamappsDir: DIR,
+      fileName: file,
+      record: acfRecord(rec)
+    })),
+    skipped: [
+      { steamappsDir: DIR, fileName: 'appmanifest_9.acf', reason: 'corrupt' }
+    ],
+    missingDirs: []
+  })
+
+  it('makes one scan call for the dir and reports other appIds sharing the installdir', async () => {
+    const stub = stubRustSteamFiles({
+      steamfiles_scan_acfs: () =>
+        scanWith([
+          {
+            file: 'appmanifest_63000.acf',
+            rec: { appid: '63000', installdir: 'Hoard' }
+          },
+          {
+            file: 'appmanifest_228980.acf',
+            rec: { appid: '228980', installdir: 'Hoard' }
+          },
+          {
+            file: 'appmanifest_5.acf',
+            rec: { appid: '5', installdir: 'hoard' }
+          },
+          {
+            file: 'appmanifest_6.acf',
+            rec: { appid: '6', installdir: 'Other' }
+          }
+        ])
+    })
+    expect(
+      await findOtherManifestsWithInstalldir(stub, DIR, 'Hoard', '63000')
+    ).toEqual(['228980'])
+    expect(stub.calls).toEqual([
+      { channel: 'steamfiles_scan_acfs', args: { steamappsDirs: [DIR] } }
+    ])
+  })
+
+  it('skips its own manifest file and records without an appid', async () => {
+    const stub = stubRustSteamFiles({
+      steamfiles_scan_acfs: () =>
+        scanWith([
+          {
+            file: 'appmanifest_63000.acf',
+            rec: { appid: '63000', installdir: 'Hoard' }
+          },
+          {
+            file: 'appmanifest_7.acf',
+            rec: { appid: null, installdir: 'Hoard' }
+          }
+        ])
+    })
+    expect(
+      await findOtherManifestsWithInstalldir(stub, DIR, 'Hoard', '63000')
+    ).toEqual([])
+  })
+
+  it('returns the conflicting sentinel when the invoke rejects (T-75-55)', async () => {
+    const stub = stubRustSteamFiles({})
+    expect(
+      await findOtherManifestsWithInstalldir(stub, DIR, 'Hoard', '63000')
+    ).toEqual(['<unknown>'])
   })
 })

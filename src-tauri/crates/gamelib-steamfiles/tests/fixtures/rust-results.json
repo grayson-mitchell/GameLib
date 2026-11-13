@@ -155,6 +155,58 @@
       "pkg": null,
       "reason": "no win64 root"
     },
+    "library/breadcrumbReadAcf/10": {
+      "exists": true,
+      "parsed": true,
+      "readError": null,
+      "record": {
+        "appid": "10",
+        "betaKey": null,
+        "buildid": "100",
+        "bytesDownloaded": null,
+        "bytesStaged": null,
+        "bytesToDownload": null,
+        "bytesToStage": null,
+        "installdir": "ScanInstalled",
+        "installedDepots": [],
+        "lastOwner": null,
+        "name": "Scan Installed",
+        "scheduledAutoUpdate": null,
+        "sizeOnDisk": "1000",
+        "stateFlags": 4,
+        "stateFlagsRaw": "4",
+        "targetBuildId": null
+      }
+    },
+    "library/breadcrumbReadAcf/20": {
+      "exists": true,
+      "parsed": true,
+      "readError": null,
+      "record": {
+        "appid": "20",
+        "betaKey": null,
+        "buildid": "100",
+        "bytesDownloaded": null,
+        "bytesStaged": null,
+        "bytesToDownload": null,
+        "bytesToStage": null,
+        "installdir": "ScanDownloading",
+        "installedDepots": [],
+        "lastOwner": null,
+        "name": "Scan Downloading",
+        "scheduledAutoUpdate": null,
+        "sizeOnDisk": "1000",
+        "stateFlags": 1026,
+        "stateFlagsRaw": "1026",
+        "targetBuildId": null
+      }
+    },
+    "library/breadcrumbReadAcf/99": {
+      "exists": false,
+      "parsed": false,
+      "readError": null,
+      "record": null
+    },
     "library/getSteamLibraries/legacy": {
       "exists": true,
       "parsed": true,

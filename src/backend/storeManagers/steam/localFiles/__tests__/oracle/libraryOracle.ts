@@ -124,7 +124,10 @@ export async function captureLibrary(): Promise<Record<string, unknown>> {
     ]
     for (const [label, dir, installdir, self] of others) {
       out[`library/findOtherManifestsWithInstalldir/${label}`] = await capture(
-        () => findOtherManifestsWithInstalldir(dir, installdir, self).sort(),
+        async () =>
+          (
+            await findOtherManifestsWithInstalldir(deps, dir, installdir, self)
+          ).sort(),
         root
       )
     }
@@ -133,20 +136,20 @@ export async function captureLibrary(): Promise<Record<string, unknown>> {
       out[`library/breadcrumbAppIsFullyInstalledOnDisk/${appId}`] =
         await capture(
           () =>
-            breadcrumbAppIsFullyInstalledOnDisk(appId, {
+            breadcrumbAppIsFullyInstalledOnDisk(deps, appId, {
               steamResumeTargetSteamappsDir: lib1
             }),
           root
         )
     }
     out['library/breadcrumbAppIsFullyInstalledOnDisk/no-dir'] = await capture(
-      () => breadcrumbAppIsFullyInstalledOnDisk('10', {}),
+      () => breadcrumbAppIsFullyInstalledOnDisk(deps, '10', {}),
       root
     )
     out['library/breadcrumbAppIsFullyInstalledOnDisk/no-manifest'] =
       await capture(
         () =>
-          breadcrumbAppIsFullyInstalledOnDisk('99', {
+          breadcrumbAppIsFullyInstalledOnDisk(deps, '99', {
             steamResumeTargetSteamappsDir: lib1
           }),
         root

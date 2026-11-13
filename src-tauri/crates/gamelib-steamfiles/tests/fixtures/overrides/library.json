@@ -80,5 +80,9 @@
   "library/scanDownloadingAppIds/with-truncated-manifest": {
     "rustOverride": ["20"],
     "divergenceNote": "The old parser never terminates on the truncated appmanifest_30.acf, so the oracle recorded a hang marker; Rust skips the unparseable manifest and returns the remaining records, which is the correct fail-soft behaviour."
+  },
+  "library/findOtherManifestsWithInstalldir/with-truncated-manifest": {
+    "rustOverride": ["abc"],
+    "divergenceNote": "The old parser never terminates on the truncated appmanifest_30.acf in scan/lib1, so the oracle recorded a hang marker; Rust skips the unparseable manifest and still reports the readable sibling that shares the installdir, which is the correct fail-soft result for the co-install guard."
   }
 }

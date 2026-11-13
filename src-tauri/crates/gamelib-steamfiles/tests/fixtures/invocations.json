@@ -172,6 +172,27 @@
       }
     },
     {
+      "id": "library/breadcrumbReadAcf/10",
+      "op": "steamfiles_read_acf",
+      "args": {
+        "path": "${FIXTURES}/scan/lib1/steamapps/appmanifest_10.acf"
+      }
+    },
+    {
+      "id": "library/breadcrumbReadAcf/20",
+      "op": "steamfiles_read_acf",
+      "args": {
+        "path": "${FIXTURES}/scan/lib1/steamapps/appmanifest_20.acf"
+      }
+    },
+    {
+      "id": "library/breadcrumbReadAcf/99",
+      "op": "steamfiles_read_acf",
+      "args": {
+        "path": "${FIXTURES}/scan/lib1/steamapps/appmanifest_99.acf"
+      }
+    },
+    {
       "id": "library/scanAcfs/none",
       "op": "steamfiles_scan_acfs",
       "args": {

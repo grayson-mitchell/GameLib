@@ -11264,7 +11264,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
       })
       const conflictSpy = jest
         .spyOn(acfState, 'findOtherManifestsWithInstalldir')
-        .mockReturnValue(['228980'])
+        .mockResolvedValue(['228980'])
 
       const result = await new SteamGame(APP_ID, steamTestDeps).uninstall(
         {} as any
@@ -11299,7 +11299,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
       })
       const conflictSpy = jest
         .spyOn(acfState, 'findOtherManifestsWithInstalldir')
-        .mockReturnValue(['228980'])
+        .mockResolvedValue(['228980'])
       const rmSpy = failNextRmSync()
 
       const result = await new SteamGame(APP_ID, steamTestDeps).uninstall(
@@ -11327,7 +11327,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
       })
       const conflictSpy = jest
         .spyOn(acfState, 'findOtherManifestsWithInstalldir')
-        .mockReturnValue([])
+        .mockResolvedValue([])
 
       await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
 
@@ -11348,11 +11348,16 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
       })
       const conflictSpy = jest
         .spyOn(acfState, 'findOtherManifestsWithInstalldir')
-        .mockReturnValue([])
+        .mockResolvedValue([])
 
       await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
 
-      expect(conflictSpy).toHaveBeenCalledWith(steamappsDir, 'Hoard', APP_ID)
+      expect(conflictSpy).toHaveBeenCalledWith(
+        expect.anything(),
+        steamappsDir,
+        'Hoard',
+        APP_ID
+      )
 
       conflictSpy.mockRestore()
     })

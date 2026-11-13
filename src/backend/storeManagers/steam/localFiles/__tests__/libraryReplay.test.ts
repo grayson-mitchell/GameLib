@@ -7,7 +7,12 @@ import {
   buildIncompleteInstallSet,
   buildInstalledMap
 } from '../../library/installedMap'
-import { readAcfState, scanDownloadingAppIds } from '../../library/acfState'
+import {
+  findOtherManifestsWithInstalldir,
+  readAcfState,
+  scanDownloadingAppIds
+} from '../../library/acfState'
+import { breadcrumbAppIsFullyInstalledOnDisk } from '../../library/resumeBreadcrumbs'
 import { listFiles, normalizeForGolden } from './oracle/normalize'
 import { SYSTEM_STEAM, depsFor, steamRootWith } from './oracle/libraryOracle'
 import {
@@ -137,10 +142,64 @@ describe('library replay parity (TS wrappers over recorded Rust results)', () =>
           (await scanDownloadingAppIds(stateDeps)).sort()
         )
       }
+
+      const lib1 = join(root, 'scan', 'lib1', 'steamapps')
+      const lib2 = join(root, 'scan', 'lib2', 'steamapps')
+      const others: [string, string, string, string][] = [
+        ['lib1-self-installdir', lib1, 'ScanInstalled', '10'],
+        ['lib1-nonnumeric-shares', lib1, 'NonNumeric', '10'],
+        ['lib2-duplicate-dir', lib2, 'DuplicateDir', '40'],
+        ['lib1-no-match', lib1, 'Nothing', '10']
+      ]
+      for (const [label, dir, installdir, self] of others) {
+        await check(
+          `findOtherManifestsWithInstalldir/${label}`,
+          root,
+          async () =>
+            (
+              await findOtherManifestsWithInstalldir(
+                deps,
+                dir,
+                installdir,
+                self
+              )
+            ).sort()
+        )
+      }
+      // The oracle hangs on the truncated manifest; Rust skips it (override).
+      await check(
+        'findOtherManifestsWithInstalldir/with-truncated-manifest',
+        root,
+        async () =>
+          (
+            await findOtherManifestsWithInstalldir(
+              deps,
+              lib1,
+              'NonNumeric',
+              '10'
+            )
+          ).sort()
+      )
+
+      for (const appId of ['10', '20']) {
+        await check(`breadcrumbAppIsFullyInstalledOnDisk/${appId}`, root, () =>
+          breadcrumbAppIsFullyInstalledOnDisk(deps, appId, {
+            steamResumeTargetSteamappsDir: lib1
+          })
+        )
+      }
+      await check('breadcrumbAppIsFullyInstalledOnDisk/no-dir', root, () =>
+        breadcrumbAppIsFullyInstalledOnDisk(deps, '10', {})
+      )
+      await check('breadcrumbAppIsFullyInstalledOnDisk/no-manifest', root, () =>
+        breadcrumbAppIsFullyInstalledOnDisk(deps, '99', {
+          steamResumeTargetSteamappsDir: lib1
+        })
+      )
     })
     // Every mismatch is listed at once so an override review sees them all.
     expect(mismatches).toEqual([])
     // Anti-vacuity: the area is replayed, not skipped.
-    expect(replayed.length).toBeGreaterThanOrEqual(15)
+    expect(replayed.length).toBeGreaterThanOrEqual(24)
   })
 })

@@ -139,7 +139,7 @@ describe('stale queue head cancel regression (73-18)', () => {
     } as unknown as GameInfo)
     jest.mocked(getSteamLibraries).mockResolvedValue([join(tmp, 'lib')])
     inFlightSpy().mockReturnValue(false)
-    jest.mocked(findOtherManifestsWithInstalldir).mockReturnValue([])
+    jest.mocked(findOtherManifestsWithInstalldir).mockResolvedValue([])
     jest
       .mocked(getBridgeBottleSteamappsRoot)
       .mockReturnValue(join(tmp, 'nobridge', 'steamapps'))

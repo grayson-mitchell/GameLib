@@ -19,6 +19,8 @@ import { getBridgeBottleSteamappsRoot } from '../library/installRoot'
 import { getBottleSteamappsDir } from '../bottle'
 import { deleteCancelledSteamInstall } from '../cancelDelete'
 import type { GameInfo } from 'common/types'
+import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
+import type { AcfReadResult } from '../localFiles/steamFilesTypes'
 import { at } from './fixtures/indexed'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createSteamStores } from '../stores'
@@ -46,6 +48,7 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
+  logDebug: jest.fn(),
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
 jest.mock('backend/utils', () => ({
@@ -114,7 +117,7 @@ describe('deleteCancelledSteamInstall', () => {
     seed()
     jest.mocked(getSteamLibraries).mockResolvedValue([join(tmp, 'lib')])
     inFlightSpy().mockReturnValue(false)
-    jest.mocked(findOtherManifestsWithInstalldir).mockReturnValue([])
+    jest.mocked(findOtherManifestsWithInstalldir).mockResolvedValue([])
     jest
       .mocked(getBridgeBottleSteamappsRoot)
       .mockReturnValue(join(tmp, 'nobridge', 'steamapps'))
@@ -266,7 +269,7 @@ describe('deleteCancelledSteamInstall', () => {
   })
 
   it('keeps a shared installdir but removes this appId manifests', async () => {
-    jest.mocked(findOtherManifestsWithInstalldir).mockReturnValue(['456'])
+    jest.mocked(findOtherManifestsWithInstalldir).mockResolvedValue(['456'])
     const r = await deleteCancelledSteamInstall(steamTestDeps, '123', OPTS)
     expect(r.status).toBe('deleted')
     expect(existsSync(join(steamapps, 'common', 'Cool Game', 'a.bin'))).toBe(
@@ -293,5 +296,112 @@ describe('deleteCancelledSteamInstall', () => {
     const r = await deleteCancelledSteamInstall(steamTestDeps, '123', OPTS)
     expect(r.status).toBe('refused')
     expect(allPresent()).toBe(true)
+  })
+})
+
+// Phase 75-20: the installed refusal on the rust branch (T-75-56). Parsing is proven by the crate
+// tests and the replay harness; here the wrapper is driven by programmed read results.
+describe('deleteCancelledSteamInstall, rust branch', () => {
+  const prior = process.env.GAMELIB_STEAMFILES_TEXT
+  let tmp: string
+  let steamapps: string
+
+  beforeEach(() => {
+    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+    tmp = mkdtempSync(join(tmpdir(), 'cancelDeleteRust-'))
+    steamapps = join(tmp, 'lib', 'steamapps')
+    mkdirSync(join(steamapps, 'common', 'Cool Game'), { recursive: true })
+    writeFileSync(join(steamapps, 'common', 'Cool Game', 'a.bin'), 'x')
+    writeFileSync(join(steamapps, 'appmanifest_123.acf'), 'x')
+    library.clear()
+    library.set('123', {
+      app_name: '123',
+      install: {
+        steamResumePending: true,
+        steamResumeTargetSteamappsDir: steamapps,
+        steamResumeInstalldir: 'Cool Game'
+      }
+    } as unknown as GameInfo)
+    jest.mocked(getSteamLibraries).mockResolvedValue([join(tmp, 'lib')])
+    inFlightSpy().mockReturnValue(false)
+    jest.mocked(findOtherManifestsWithInstalldir).mockResolvedValue([])
+    jest
+      .mocked(getBridgeBottleSteamappsRoot)
+      .mockReturnValue(join(tmp, 'nobridge', 'steamapps'))
+    jest
+      .mocked(getBottleSteamappsDir)
+      .mockReturnValue(join(tmp, 'nobottle', 'steamapps'))
+    jest
+      .mocked(getSteamBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'b' } as never)
+  })
+
+  afterEach(() => {
+    if (prior === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
+    else process.env.GAMELIB_STEAMFILES_TEXT = prior
+    rmSync(tmp, { recursive: true, force: true })
+  })
+
+  const readResult = (
+    over: Partial<AcfReadResult> & { stateFlags?: number | null }
+  ): AcfReadResult =>
+    ({
+      exists: true,
+      parsed: true,
+      readError: null,
+      record: { stateFlags: over.stateFlags ?? null },
+      ...over
+    }) as AcfReadResult
+
+  const run = (reply: () => AcfReadResult) => {
+    const stub = stubRustSteamFiles({ steamfiles_read_acf: reply })
+    return {
+      stub,
+      result: deleteCancelledSteamInstall(
+        { ...steamTestDeps, ...stub },
+        '123',
+        OPTS
+      )
+    }
+  }
+
+  it('refuses when the manifest reports installed (bit 4)', async () => {
+    const { stub, result } = run(() => readResult({ stateFlags: 4 }))
+    expect(await result).toEqual({
+      status: 'refused',
+      reason: 'manifest reports installed'
+    })
+    expect(stub.calls[0]).toEqual({
+      channel: 'steamfiles_read_acf',
+      args: { path: join(steamapps, 'appmanifest_123.acf') }
+    })
+    expect(existsSync(join(steamapps, 'common', 'Cool Game'))).toBe(true)
+  })
+
+  it('treats an unparseable manifest as residue and deletes', async () => {
+    const { result } = run(() =>
+      readResult({ parsed: false, record: null, readError: 'bad' })
+    )
+    expect((await result).status).toBe('deleted')
+    expect(existsSync(join(steamapps, 'common', 'Cool Game'))).toBe(false)
+  })
+
+  it('deletes a downloading manifest (bit 4 unset)', async () => {
+    const { result } = run(() => readResult({ stateFlags: 1026 }))
+    expect((await result).status).toBe('deleted')
+  })
+
+  it('refuses with "manifest unreadable" when the invoke rejects and keeps every file', async () => {
+    const { result } = run(() => {
+      throw new Error('transport down')
+    })
+    expect(await result).toEqual({
+      status: 'refused',
+      reason: 'manifest unreadable'
+    })
+    expect(existsSync(join(steamapps, 'common', 'Cool Game', 'a.bin'))).toBe(
+      true
+    )
+    expect(existsSync(join(steamapps, 'appmanifest_123.acf'))).toBe(true)
   })
 })
