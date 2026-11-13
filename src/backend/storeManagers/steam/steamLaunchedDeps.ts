@@ -61,7 +61,11 @@ function steamLaunchWatchDeps(deps: ManagerDeps): SteamLaunchWatchDeps {
     pollerHold: (appId) => deps.steamProcesses.runningPoll.hold(Number(appId)),
     readRunningAppId: () =>
       readRunningAppId(
-        { runner: deps.runner, paths: deps.paths },
+        {
+          runner: deps.runner,
+          paths: deps.paths,
+          requestRustInvoke: deps.requestRustInvoke
+        },
         process.platform
       ),
     pidAlive: (pid) => {

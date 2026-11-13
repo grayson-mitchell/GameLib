@@ -3,9 +3,13 @@ import { join } from 'path'
 import { existsSync, readFileSync } from 'graceful-fs'
 import { parse } from '@node-steam/vdf'
 import type { AppPaths } from 'backend/process/context'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import { RUST_STEAMFILES_READ_RUNNING_APP_ID } from 'common/types/sidecarTransport'
+import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
+import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
 import type { Clock, ProcessRunner, TimerHandle } from 'backend/process/types'
 
-export interface RunningPollProbeDeps {
+export interface RunningPollProbeDeps extends RustInvokeDeps {
   runner: Pick<ProcessRunner, 'run'>
   paths: Pick<AppPaths, 'userHome'>
 }
@@ -41,9 +45,9 @@ async function windowsRunningAppId(
  * Returns 0 when file absent, parse fails, or key missing.
  */
 /** The macOS reader: pure file read, no spawn. */
-export function readMacRunningAppId(
-  deps: Pick<RunningPollProbeDeps, 'paths'>
-): number {
+export async function readMacRunningAppId(
+  deps: Pick<RunningPollProbeDeps, 'paths' | 'requestRustInvoke'>
+): Promise<number> {
   const regPath = join(
     deps.paths.userHome,
     'Library',
@@ -51,6 +55,30 @@ export function readMacRunningAppId(
     'Steam',
     'registry.vdf'
   )
+  return readRegistryRunningAppId(deps, regPath)
+}
+
+/** The registry.vdf RunningAppID read shared by the macOS and Linux readers; 0 on any failure. */
+async function readRegistryRunningAppId(
+  rust: RustInvokeDeps,
+  regPath: string
+): Promise<number> {
+  if (steamFilesTextImpl() === 'rust') {
+    try {
+      const r = await invokeSteamFiles(
+        rust,
+        RUST_STEAMFILES_READ_RUNNING_APP_ID,
+        { path: regPath }
+      )
+      return r.runningAppId
+    } catch {
+      return 0
+    }
+  }
+  return readRegistryRunningAppIdTs(regPath)
+}
+
+function readRegistryRunningAppIdTs(regPath: string): number {
   if (!existsSync(regPath)) return 0
   try {
     const content = readFileSync(regPath, 'utf-8')
@@ -68,18 +96,10 @@ export function readMacRunningAppId(
  * Returns 0 when file absent, parse fails, or broken (ValveSoftware/steam-for-linux#9672).
  */
 function linuxRegistryVdfRunningAppId(
-  deps: Pick<RunningPollProbeDeps, 'paths'>
-): number {
+  deps: Pick<RunningPollProbeDeps, 'paths' | 'requestRustInvoke'>
+): Promise<number> {
   const regPath = join(deps.paths.userHome, '.steam', 'registry.vdf')
-  if (!existsSync(regPath)) return 0
-  try {
-    const content = readFileSync(regPath, 'utf-8')
-    const parsed = parse(content)
-    const raw = parsed?.Registry?.HKCU?.Software?.Valve?.Steam?.RunningAppID
-    return raw ? parseInt(raw, 10) : 0
-  } catch {
-    return 0
-  }
+  return readRegistryRunningAppId(deps, regPath)
 }
 
 /**
@@ -123,7 +143,7 @@ export async function readRunningAppId(
   if (platform === 'win32') return windowsRunningAppId(deps)
   if (platform === 'darwin') return readMacRunningAppId(deps)
   // Linux: VDF first, reaper fallback when VDF returns 0 (D-05)
-  const fromRegistry = linuxRegistryVdfRunningAppId(deps)
+  const fromRegistry = await linuxRegistryVdfRunningAppId(deps)
   return fromRegistry !== 0 ? fromRegistry : linuxFallbackRunningAppId(deps)
 }
 
@@ -175,6 +195,8 @@ export function createRunningPoll(deps: {
   const drainMs = deps.drainMs ?? 20000
   let timer: TimerHandle | null = null
   let lastKnownRunningAppId = 0
+  // Reads are awaited (they cross to Rust), so a slow read must not let the next interval tick
+  // start a second pollOnce on top of it (RESEARCH Pattern 4). Closure state, not module state.
   let inFlight = false
   const claims = new Map<number, Claim>()
 

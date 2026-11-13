@@ -27,6 +27,10 @@ import type { SteamStoresDeps } from './library/installRoot'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 import type { Clock, ProcessRunner } from 'backend/process/types'
 import type { AppPaths } from 'backend/process/context'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
+import { invokeSteamFiles } from './localFiles/rustSteamFiles'
+import { steamFilesTextImpl } from './localFiles/steamFilesFlags'
 import {
   MAC_STEAM_OFFLINE_OWED_FILE,
   type MacSteamOffline
@@ -39,6 +43,12 @@ const RESTART_POLL_MS = 500
 export interface AcfSnapshot {
   mtimeMs: number
   content: string
+  /**
+   * Parsed by Rust (`steamfiles_read_acf`) when the snapshot was taken; absent on a baseline
+   * persisted before Phase 75 and under the ts flag, where isSteamAdoptedAcf parses `content`.
+   */
+  stateFlags?: number | null
+  buildid?: string
 }
 
 export interface PendingAdoptionRecord {
@@ -118,14 +128,33 @@ export function clearPendingAdoption(
   }
 }
 
-export function readAcfSnapshot(path: string): AcfSnapshot | null {
+export async function readAcfSnapshot(
+  rust: RustInvokeDeps,
+  path: string
+): Promise<AcfSnapshot | null> {
+  let snapshot: AcfSnapshot
   try {
-    return {
+    snapshot = {
       mtimeMs: statSync(path).mtimeMs,
       content: readFileSync(path, 'utf-8')
     }
   } catch {
     return null
+  }
+  if (steamFilesTextImpl() === 'ts') return snapshot
+  try {
+    const read = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_ACF, {
+      path
+    })
+    const record = read.parsed ? read.record : null
+    return {
+      ...snapshot,
+      stateFlags: record?.stateFlags ?? null,
+      buildid: record?.buildid ?? ''
+    }
+  } catch {
+    // Rust unreachable: no parsed fields, so isSteamAdoptedAcf answers false (not adopted).
+    return { ...snapshot, stateFlags: null, buildid: '' }
   }
 }
 
@@ -148,14 +177,22 @@ export function isSteamAdoptedAcf(
   current: AcfSnapshot | null
 ): boolean {
   if (!current) return false
-  const state = parseAppState(current.content)
-  if (!state) return false
-  const flags = Number(state.StateFlags)
-  // @node-steam/vdf parses numeric strings to numbers.
-  const buildid =
-    typeof state.buildid === 'string' || typeof state.buildid === 'number'
-      ? String(state.buildid)
-      : ''
+  let flags: number
+  let buildid: string
+  if (current.stateFlags !== undefined) {
+    // The Rust-parsed fields captured by readAcfSnapshot.
+    flags = current.stateFlags === null ? NaN : current.stateFlags
+    buildid = current.buildid ?? ''
+  } else {
+    const state = parseAppState(current.content)
+    if (!state) return false
+    flags = Number(state.StateFlags)
+    // @node-steam/vdf parses numeric strings to numbers.
+    buildid =
+      typeof state.buildid === 'string' || typeof state.buildid === 'number'
+        ? String(state.buildid)
+        : ''
+  }
   const differs =
     !baseline ||
     current.content !== baseline.content ||
@@ -224,7 +261,7 @@ type RestartResult =
   | { kind: 'quit-timeout' }
 
 export interface RestartDeps {
-  readRunningAppId: () => number
+  readRunningAppId: () => Promise<number>
   isOfflineWrapOwed: () => boolean
   isSteamRunning: () => Promise<boolean>
   openUrlDetached: (url: string) => void
@@ -241,6 +278,7 @@ export interface RestartDeps {
  * the boot-built Mac Steam instance.
  */
 export function createRestartDeps(deps: {
+  requestRustInvoke: RustInvokeDeps['requestRustInvoke']
   clock: Clock
   paths: Pick<AppPaths, 'appFolder' | 'userHome'>
   macSteamOffline: Pick<MacSteamOffline, 'isSteamRunning' | 'openUrlDetached'>
@@ -255,7 +293,10 @@ export function createRestartDeps(deps: {
       const { readMacRunningAppId } =
         require('./library/runningPoll') as typeof import('./library/runningPoll')
       /* eslint-enable @typescript-eslint/no-require-imports */
-      return readMacRunningAppId({ paths: deps.paths })
+      return readMacRunningAppId({
+        paths: deps.paths,
+        requestRustInvoke: deps.requestRustInvoke
+      })
     },
     // Restarting Steam mid go-offline wrap would bring it online and kick
     // GameLib's CM session, so refuse while the wrap is owed.
@@ -296,7 +337,7 @@ export async function restartMacSteamForAdoption(
   appId: string,
   deps: RestartDeps
 ): Promise<RestartResult> {
-  const runningAppId = deps.readRunningAppId()
+  const runningAppId = await deps.readRunningAppId()
   if (runningAppId !== 0) {
     logWarning(
       `[Steam] not restarting Steam for ${appId}: game ${runningAppId} is running`,

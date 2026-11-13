@@ -61,7 +61,11 @@ export async function steamQueueHeadAlreadyInstalled(
       steamappsDir = join(path, 'steamapps')
     }
 
-    if (!isCurrentFullInstall(readAppManifestFlags(steamappsDir, appId))) {
+    if (
+      !isCurrentFullInstall(
+        await readAppManifestFlags(deps, steamappsDir, appId)
+      )
+    ) {
       return false
     }
 

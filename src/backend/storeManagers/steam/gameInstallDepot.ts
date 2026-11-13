@@ -304,7 +304,10 @@ export async function runNativeDepotDownload(
       if (adoptedByInstallApp) {
         // Steam already knows the install; nothing to record.
       } else if (pid !== null) {
-        const baseline = adoption.readAcfSnapshot(handoff.manifestPath)
+        const baseline = await adoption.readAcfSnapshot(
+          steamGame.deps,
+          handoff.manifestPath
+        )
         if (baseline) {
           adoption.recordPendingAdoption(
             steamGame.appId,
@@ -497,7 +500,13 @@ export async function runNativeDepotDownloadLeased(
   // (StateFlags & 4, any installed state) so cancel-delete can refuse after a
   // cancelled finalize has downgraded the manifest to 1026.
   const installedAtStart = isFullyInstalledStateFlags(
-    readAppManifestFlags(targetSteamappsDir, steamGame.appId)?.stateFlags ?? 0
+    (
+      await readAppManifestFlags(
+        steamGame.deps,
+        targetSteamappsDir,
+        steamGame.appId
+      )
+    )?.stateFlags ?? 0
   )
   if (installedAtStart) {
     logInfo(

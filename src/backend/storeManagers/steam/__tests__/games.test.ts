@@ -10315,7 +10315,7 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
       jest.requireActual('../macSteamAdoption').decidePlayAdoption
     )
     adoption().readPendingAdoption.mockReturnValue(RECORD)
-    adoption().readAcfSnapshot.mockReturnValue(BASELINE)
+    adoption().readAcfSnapshot.mockResolvedValue(BASELINE)
     adoption().probeMacSteamPid.mockResolvedValue(50647)
     ;(parse as jest.Mock).mockReturnValue(undefined)
     // resolveInstallRoot() consults the bottle root first on Mac.
@@ -10403,7 +10403,7 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
     ;(parse as jest.Mock).mockReturnValue({
       AppState: { StateFlags: '4', buildid: '123' }
     })
-    adoption().readAcfSnapshot.mockReturnValue({
+    adoption().readAcfSnapshot.mockResolvedValue({
       mtimeMs: 2,
       content: 'steam-rewrote'
     })
@@ -16082,7 +16082,7 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
     })
     isBottleReady.mockReturnValue(false)
     adoption().probeMacSteamPid.mockResolvedValue(null)
-    adoption().readAcfSnapshot.mockReturnValue(RECORD.baseline)
+    adoption().readAcfSnapshot.mockResolvedValue(RECORD.baseline)
     adoption().readPendingAdoption.mockReturnValue(undefined)
   })
 
@@ -16308,7 +16308,7 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
     ;(resolveSteamLibraryRoot as jest.Mock).mockResolvedValue('/mock/steam')
     adoption().probeMacSteamPid.mockResolvedValue(null)
-    adoption().readAcfSnapshot.mockReturnValue({ mtimeMs: 1, content: 'x' })
+    adoption().readAcfSnapshot.mockResolvedValue({ mtimeMs: 1, content: 'x' })
     adoption().readPendingAdoption.mockReturnValue(undefined)
   })
 

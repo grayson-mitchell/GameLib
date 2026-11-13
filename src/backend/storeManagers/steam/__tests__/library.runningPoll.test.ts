@@ -52,6 +52,8 @@ const vdfWith = (appId: string | undefined) => {
 
 const REG_ARGV = ['query', 'HKCU\\Software\\Valve\\Steam', '/v', 'RunningAppID']
 
+const noRust = () => Promise.reject(new Error('rust not used on the ts flag'))
+
 describe('readRunningAppId() -- per-platform dispatch', () => {
   describe('win32', () => {
     it('parses REG_DWORD 0x1b58 -> 7000 through reg.exe with the 2000 ms bound', async () => {
@@ -65,9 +67,9 @@ describe('readRunningAppId() -- per-platform dispatch', () => {
           }
         }
       ])
-      await expect(readRunningAppId({ runner, paths }, 'win32')).resolves.toBe(
-        7000
-      )
+      await expect(
+        readRunningAppId({ runner, paths, requestRustInvoke: noRust }, 'win32')
+      ).resolves.toBe(7000)
       expect(runner.calls[0]?.opts).toMatchObject({
         timeoutMs: 2000,
         windowsHide: true
@@ -85,18 +87,18 @@ describe('readRunningAppId() -- per-platform dispatch', () => {
       const runner = createScriptedRunner([
         { cmd: 'reg', argv: REG_ARGV, result }
       ])
-      await expect(readRunningAppId({ runner, paths }, 'win32')).resolves.toBe(
-        0
-      )
+      await expect(
+        readRunningAppId({ runner, paths, requestRustInvoke: noRust }, 'win32')
+      ).resolves.toBe(0)
     })
 
     it('returns 0 when reg.exe cannot be spawned', async () => {
       const runner = createScriptedRunner([
         { cmd: 'reg', argv: REG_ARGV, error: { code: 'ENOENT' } }
       ])
-      await expect(readRunningAppId({ runner, paths }, 'win32')).resolves.toBe(
-        0
-      )
+      await expect(
+        readRunningAppId({ runner, paths, requestRustInvoke: noRust }, 'win32')
+      ).resolves.toBe(0)
     })
   })
 
@@ -104,23 +106,29 @@ describe('readRunningAppId() -- per-platform dispatch', () => {
     it('parses registry.vdf and makes no runner call', async () => {
       vdfWith('440')
       const runner = createScriptedRunner([])
-      await expect(readRunningAppId({ runner, paths }, 'darwin')).resolves.toBe(
-        440
-      )
+      await expect(
+        readRunningAppId({ runner, paths, requestRustInvoke: noRust }, 'darwin')
+      ).resolves.toBe(440)
       expect(runner.calls).toHaveLength(0)
     })
 
-    it('readMacRunningAppId: 0 when registry.vdf is absent, unparsable or lacks the key', () => {
+    it('readMacRunningAppId: 0 when registry.vdf is absent, unparsable or lacks the key', async () => {
       jest.mocked(existsSync).mockReturnValue(false)
-      expect(readMacRunningAppId({ paths })).toBe(0)
+      await expect(
+        readMacRunningAppId({ paths, requestRustInvoke: noRust })
+      ).resolves.toBe(0)
       jest.mocked(existsSync).mockReturnValue(true)
       jest.mocked(readFileSync).mockReturnValue('content')
       jest.mocked(vdf.parse).mockImplementation(() => {
         throw new Error('parse error')
       })
-      expect(readMacRunningAppId({ paths })).toBe(0)
+      await expect(
+        readMacRunningAppId({ paths, requestRustInvoke: noRust })
+      ).resolves.toBe(0)
       jest.mocked(vdf.parse).mockReturnValue({ Registry: {} })
-      expect(readMacRunningAppId({ paths })).toBe(0)
+      await expect(
+        readMacRunningAppId({ paths, requestRustInvoke: noRust })
+      ).resolves.toBe(0)
     })
   })
 
@@ -134,9 +142,9 @@ describe('readRunningAppId() -- per-platform dispatch', () => {
     it('returns the VDF RunningAppID when non-zero, without spawning', async () => {
       vdfWith('570')
       const runner = createScriptedRunner([])
-      await expect(readRunningAppId({ runner, paths }, 'linux')).resolves.toBe(
-        570
-      )
+      await expect(
+        readRunningAppId({ runner, paths, requestRustInvoke: noRust }, 'linux')
+      ).resolves.toBe(570)
       expect(runner.calls).toHaveLength(0)
     })
 
@@ -148,9 +156,9 @@ describe('readRunningAppId() -- per-platform dispatch', () => {
           stdout: 'reaper SteamLaunch --AppId 440 -- /path/to/game'
         })
       ])
-      await expect(readRunningAppId({ runner, paths }, 'linux')).resolves.toBe(
-        440
-      )
+      await expect(
+        readRunningAppId({ runner, paths, requestRustInvoke: noRust }, 'linux')
+      ).resolves.toBe(440)
       expect(runner.calls[0]?.opts).toMatchObject({ timeoutMs: 1000 })
     })
 
@@ -168,7 +176,10 @@ describe('readRunningAppId() -- per-platform dispatch', () => {
         vdfWith('0')
         const runner = createScriptedRunner([step])
         await expect(
-          readRunningAppId({ runner, paths }, 'linux')
+          readRunningAppId(
+            { runner, paths, requestRustInvoke: noRust },
+            'linux'
+          )
         ).resolves.toBe(0)
       }
     )

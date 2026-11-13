@@ -68,7 +68,15 @@ export function createSteamProcesses(deps: {
     }),
     runningPoll: createRunningPoll({
       clock,
-      readRunningAppId: () => readRunningAppId({ runner, paths }, platform),
+      readRunningAppId: () =>
+        readRunningAppId(
+          {
+            runner,
+            paths,
+            requestRustInvoke: deps.requestRustInvoke
+          },
+          platform
+        ),
       notify: (appId, status) =>
         deps.sendFrontendMessage('gameStatusUpdate', {
           appName: String(appId),

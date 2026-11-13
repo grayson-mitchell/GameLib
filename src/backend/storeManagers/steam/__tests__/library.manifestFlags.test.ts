@@ -6,6 +6,10 @@ import {
   readAppManifestFlags
 } from '../library/manifestFlags'
 
+const noRust = {
+  requestRustInvoke: () => Promise.reject(new Error('not used on the ts flag'))
+}
+
 describe('manifestFlags', () => {
   let dir: string
   beforeEach(() => {
@@ -23,20 +27,20 @@ describe('manifestFlags', () => {
     )
   }
 
-  it('reads a well-formed manifest', () => {
+  it('reads a well-formed manifest', async () => {
     acf('4', '25485521')
-    expect(readAppManifestFlags(dir, '123')).toEqual({
+    await expect(readAppManifestFlags(noRust, dir, '123')).resolves.toEqual({
       stateFlags: 4,
       buildid: '25485521'
     })
   })
 
-  it('returns null for missing, unparseable and NaN', () => {
-    expect(readAppManifestFlags(dir, '123')).toBeNull()
+  it('returns null for missing, unparseable and NaN', async () => {
+    await expect(readAppManifestFlags(noRust, dir, '123')).resolves.toBeNull()
     writeFileSync(join(dir, 'appmanifest_123.acf'), '\u0000{{{ not vdf')
-    expect(readAppManifestFlags(dir, '123')).toBeNull()
+    await expect(readAppManifestFlags(noRust, dir, '123')).resolves.toBeNull()
     acf('abc', '1')
-    expect(readAppManifestFlags(dir, '123')).toBeNull()
+    await expect(readAppManifestFlags(noRust, dir, '123')).resolves.toBeNull()
   })
 
   it('isCurrentFullInstall', () => {

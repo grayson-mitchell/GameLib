@@ -122,7 +122,7 @@ describe('restartMacSteamForAdoption', () => {
     let clock = 0
     const calls: string[] = []
     const deps: RestartDeps = {
-      readRunningAppId: jest.fn(() => 0),
+      readRunningAppId: jest.fn(async () => 0),
       isOfflineWrapOwed: jest.fn(() => false),
       isSteamRunning: jest.fn(async () => false),
       openUrlDetached: jest.fn((url: string) => {
@@ -147,7 +147,7 @@ describe('restartMacSteamForAdoption', () => {
   }
 
   test('a game running in Steam refuses, firing and emitting nothing', async () => {
-    const { deps } = harness({ readRunningAppId: jest.fn(() => 4000) })
+    const { deps } = harness({ readRunningAppId: jest.fn(async () => 4000) })
     await expect(restartMacSteamForAdoption('264160', deps)).resolves.toEqual({
       kind: 'game-running',
       runningAppId: 4000
@@ -328,6 +328,7 @@ describe('createRestartDeps', () => {
     const isSteamRunning = jest.fn().mockResolvedValue(false)
     const openUrlDetached = jest.fn()
     const deps = createRestartDeps({
+      requestRustInvoke: () => Promise.reject(new Error('not used')),
       sendFrontendMessage: jest.fn(),
       appRuntime: createTestAppRuntime(),
       clock,

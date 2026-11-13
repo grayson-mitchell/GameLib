@@ -8,7 +8,7 @@ import { readdir, stat } from 'node:fs/promises'
 import { resolve, join } from 'path'
 import { writeAppManifest } from './appManifest'
 import { assertNumericAppId } from './plan'
-import { readAppManifestFlags } from '../library/manifestFlags'
+import { readAppManifestFlagsTs } from '../library/manifestFlags'
 import { isFullyInstalledStateFlags } from '../library/installedMap'
 import { type DepotDownloadFailure, type DepotSteamUser } from './planModel'
 
@@ -136,7 +136,7 @@ export async function finalizeToSteam(
   // already fully installed. TS finalize never downloads, so "nothing fetched"
   // is inherent. outcome undefined (startup resume) is deliberately unaffected.
   if (opts.outcome === 'cancelled') {
-    const existing = readAppManifestFlags(opts.targetSteamappsDir, appId)
+    const existing = readAppManifestFlagsTs(opts.targetSteamappsDir, appId)
     if (existing && isFullyInstalledStateFlags(existing.stateFlags)) {
       logInfo(
         `finalizeToSteam: appId ${appId} cancelled over an installed manifest (StateFlags=${existing.stateFlags}); leaving it untouched`,

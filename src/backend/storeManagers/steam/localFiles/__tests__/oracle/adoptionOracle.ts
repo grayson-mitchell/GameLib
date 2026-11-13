@@ -5,6 +5,12 @@ import { isSteamAdoptedAcf } from '../../../macSteamAdoption'
 import { readMacRunningAppId } from '../../../library/runningPoll'
 import { capture, listFiles, unlessHangs, withFixtureCopy } from './normalize'
 
+/** The oracle is the TS path; any Rust call is a harness bug. */
+const THROWING_RUST = {
+  requestRustInvoke: () =>
+    Promise.reject(new Error('the oracle must not reach Rust'))
+}
+
 export async function captureAdoption(): Promise<Record<string, unknown>> {
   const out: Record<string, unknown> = {}
   await withFixtureCopy('', async (root) => {
@@ -19,7 +25,7 @@ export async function captureAdoption(): Promise<Record<string, unknown>> {
       out[`adoption/readAppManifestFlags/${name}`] = await unlessHangs(
         `acf/${file}`,
         root,
-        () => readAppManifestFlags(dir, '77')
+        () => readAppManifestFlags(THROWING_RUST, dir, '77')
       )
       out[`adoption/isSteamAdoptedAcf/null-baseline/${name}`] =
         await unlessHangs(`acf/${file}`, root, () =>
@@ -30,7 +36,7 @@ export async function captureAdoption(): Promise<Record<string, unknown>> {
         )
     }
     out['adoption/readAppManifestFlags/missing'] = await capture(
-      () => readAppManifestFlags(join(root, '_adoption'), '77'),
+      () => readAppManifestFlags(THROWING_RUST, join(root, '_adoption'), '77'),
       root
     )
 
@@ -80,14 +86,19 @@ export async function captureAdoption(): Promise<Record<string, unknown>> {
       mkdirSync(steamDir, { recursive: true })
       copyFileSync(join(root, 'registry', file), join(steamDir, 'registry.vdf'))
       out[`adoption/readMacRunningAppId/${name}`] = await capture(
-        () => readMacRunningAppId({ paths: { userHome: home } } as never),
+        () =>
+          readMacRunningAppId({
+            paths: { userHome: home },
+            requestRustInvoke: THROWING_RUST.requestRustInvoke
+          } as never),
         root
       )
     }
     out['adoption/readMacRunningAppId/no-file'] = await capture(
       () =>
         readMacRunningAppId({
-          paths: { userHome: join(root, '_home', 'none') }
+          paths: { userHome: join(root, '_home', 'none') },
+          requestRustInvoke: THROWING_RUST.requestRustInvoke
         } as never),
       root
     )

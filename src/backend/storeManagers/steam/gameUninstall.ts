@@ -320,7 +320,12 @@ export async function uninstallNativeInGameLib(
   )?.install?.install_path
   const { runner, paths } = steamGame.deps
   const decision = await decideSteamNativeDelete(steamGame.appId, installPath, {
-    readRunningAppId: () => readRunningAppId({ runner, paths }),
+    readRunningAppId: () =>
+      readRunningAppId({
+        runner,
+        paths,
+        requestRustInvoke: steamGame.deps.requestRustInvoke
+      }),
     isProcessRunningFromFolder: (folder) =>
       isProcessRunningFromFolder({ runner }, folder),
     requestSteamUninstallApp: (id) =>
@@ -420,7 +425,7 @@ export async function uninstallUnadoptedMacNativeDirectly(
   const decision = decidePlayAdoption({
     record,
     currentPid,
-    currentAcf: readAcfSnapshot(record.manifestPath)
+    currentAcf: await readAcfSnapshot(steamGame.deps, record.manifestPath)
   })
   if (decision !== 'restart') return null
 

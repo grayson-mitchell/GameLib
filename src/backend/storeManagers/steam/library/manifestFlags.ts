@@ -1,10 +1,14 @@
 // Shared reader for the two appmanifest fields the stale-queue-head guards
 // care about (todo 2026-11-09-stale-steam-queue-head-cancel-deletes-complete-install,
-// quick 261110-9db). Sync, never throws.
+// quick 261110-9db). Never throws. Phase 75: async on `steamfiles_read_acf` under the rust flag.
 
 import { join } from 'path'
 import { existsSync, readFileSync } from 'graceful-fs'
 import { parse } from '@node-steam/vdf'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
+import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
+import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
 import { isFullyInstalledStateFlags } from './installedMap'
 
 export interface AppManifestFlags {
@@ -17,7 +21,32 @@ export interface AppManifestFlags {
  * Reads StateFlags + buildid from `<steamappsDir>/appmanifest_<appId>.acf`.
  * Null when the file is missing, unparseable or StateFlags is not a number.
  */
-export function readAppManifestFlags(
+export async function readAppManifestFlags(
+  rust: RustInvokeDeps,
+  steamappsDir: string,
+  appId: string
+): Promise<AppManifestFlags | null> {
+  if (steamFilesTextImpl() === 'ts') {
+    return readAppManifestFlagsTs(steamappsDir, appId)
+  }
+  try {
+    const manifest = join(steamappsDir, `appmanifest_${appId}.acf`)
+    const read = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_ACF, {
+      path: manifest
+    })
+    const record = read.parsed ? read.record : null
+    if (!record || record.stateFlags === null) return null
+    return { stateFlags: record.stateFlags, buildid: record.buildid ?? '' }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The TS body. `@internal`: exported solely for depot/finalizeAcf.ts, which is ts-only and is
+ * deleted with the rest of the TS depot pipeline.
+ */
+export function readAppManifestFlagsTs(
   steamappsDir: string,
   appId: string
 ): AppManifestFlags | null {

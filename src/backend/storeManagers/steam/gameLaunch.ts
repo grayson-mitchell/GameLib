@@ -216,7 +216,7 @@ export async function launch(
       const decision = decidePlayAdoption({
         record,
         currentPid,
-        currentAcf: readAcfSnapshot(record.manifestPath)
+        currentAcf: await readAcfSnapshot(steamGame.deps, record.manifestPath)
       })
       if (decision === 'clear-and-launch') {
         clearPendingAdoption(
@@ -227,6 +227,7 @@ export async function launch(
         const outcome = await restartMacSteamForAdoption(
           steamGame.appId,
           createRestartDeps({
+            requestRustInvoke: steamGame.deps.requestRustInvoke,
             clock: steamGame.deps.clock,
             paths: steamGame.deps.paths,
             macSteamOffline: steamGame.deps.steamProcesses.macSteamOffline,
