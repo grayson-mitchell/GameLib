@@ -197,13 +197,15 @@ fn app_name_of(entry: &BinNode) -> Option<String> {
 /// the first edit (75 WR-03).
 fn path_lock(path: &Path) -> Arc<Mutex<()>> {
     static LOCKS: OnceLock<Mutex<HashMap<PathBuf, Arc<Mutex<()>>>>> = OnceLock::new();
-    // Canonicalise the directory, not the file, so the key is stable whether or not the file
-    // exists yet (create-if-missing).
-    let key = match (path.parent(), path.file_name()) {
+    // Key on the file atomic_write will actually replace (a symlinked path and its target share
+    // one lock), with the directory canonicalised rather than the file so the key is stable
+    // whether or not the file exists yet (create-if-missing).
+    let target = crate::atomic::resolve_final_symlinks(path);
+    let key = match (target.parent(), target.file_name()) {
         (Some(dir), Some(name)) => std::fs::canonicalize(dir)
             .map(|d| d.join(name))
-            .unwrap_or_else(|_| path.to_path_buf()),
-        _ => path.to_path_buf(),
+            .unwrap_or_else(|_| target.clone()),
+        _ => target.clone(),
     };
     let mut map = LOCKS
         .get_or_init(|| Mutex::new(HashMap::new()))

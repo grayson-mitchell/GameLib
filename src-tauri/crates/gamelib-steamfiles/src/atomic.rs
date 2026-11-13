@@ -2,15 +2,44 @@
 
 use std::fs::{File, OpenOptions};
 use std::io::{self, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 static TMP_SEQ: AtomicU64 = AtomicU64::new(0);
 
-/// Write `bytes` to a uniquely named temp file in the same directory, `sync_all`, then rename
-/// over `final_path`. The temp name carries the pid and a process-wide counter and is opened
-/// `create_new`, so concurrent writers never share a temp file (75 WR-03). On any error the temp
-/// file this call created is removed and the error returned.
+/// Follow a symlinked final component (up to 40 hops, dangling targets included) so the write
+/// lands on the real file instead of replacing the link (75 WR-04). A non-link path is returned
+/// unchanged.
+pub fn resolve_final_symlinks(path: &Path) -> PathBuf {
+    let mut cur = path.to_path_buf();
+    for _ in 0..40 {
+        let Ok(meta) = std::fs::symlink_metadata(&cur) else {
+            break;
+        };
+        if !meta.file_type().is_symlink() {
+            break;
+        }
+        let Ok(link) = std::fs::read_link(&cur) else {
+            break;
+        };
+        cur = if link.is_absolute() {
+            link
+        } else {
+            match cur.parent() {
+                Some(p) => p.join(link),
+                None => link,
+            }
+        };
+    }
+    cur
+}
+
+/// Write `bytes` to a uniquely named temp file next to the (symlink-resolved) target,
+/// `sync_all`, then rename over it. The temp name carries the pid and a process-wide counter and
+/// is opened `create_new`, so concurrent writers never share a temp file (75 WR-03). A symlinked
+/// `final_path` is written through, and an existing target's permissions are copied to the temp
+/// file before the rename (Unix; 75 WR-04). On any error the temp file this call created is
+/// removed and the error returned.
 pub fn atomic_write(final_path: &Path, bytes: &[u8]) -> io::Result<()> {
     let invalid = || {
         io::Error::new(
@@ -18,9 +47,13 @@ pub fn atomic_write(final_path: &Path, bytes: &[u8]) -> io::Result<()> {
             "path has no parent or file name",
         )
     };
-    let target = final_path;
+    let target = resolve_final_symlinks(final_path);
     let parent = target.parent().ok_or_else(invalid)?;
     let name = target.file_name().ok_or_else(invalid)?;
+    let existing_perms = std::fs::metadata(&target)
+        .ok()
+        .filter(|m| m.is_file())
+        .map(|m| m.permissions());
     let mut tmp_name = name.to_os_string();
     tmp_name.push(format!(
         ".{}.{}.tmp",
@@ -31,9 +64,15 @@ pub fn atomic_write(final_path: &Path, bytes: &[u8]) -> io::Result<()> {
     let mut f: File = OpenOptions::new().write(true).create_new(true).open(&tmp)?;
     let result = (|| {
         f.write_all(bytes)?;
+        #[cfg(unix)]
+        if let Some(p) = existing_perms {
+            f.set_permissions(p)?;
+        }
+        #[cfg(not(unix))]
+        let _ = existing_perms;
         f.sync_all()?;
         drop(f);
-        std::fs::rename(&tmp, target)
+        std::fs::rename(&tmp, &target)
     })();
     if result.is_err() {
         let _ = std::fs::remove_file(&tmp);
@@ -120,5 +159,49 @@ mod tests {
         std::fs::write(d.path().join("x.vdf.tmp"), b"other").unwrap();
         atomic_write(&p, b"abc").unwrap();
         assert_eq!(std::fs::read(d.path().join("x.vdf.tmp")).unwrap(), b"other");
+    }
+
+    /// 75 WR-04: a symlinked target is written through (the link survives and the real file
+    /// gets the bytes), including a relative and a dangling link.
+    #[cfg(unix)]
+    #[test]
+    fn symlinked_target_is_written_through() {
+        let d = tempfile::tempdir().unwrap();
+        let real_dir = d.path().join("real");
+        std::fs::create_dir(&real_dir).unwrap();
+        let real = real_dir.join("shortcuts.vdf");
+        std::fs::write(&real, b"old").unwrap();
+        let link = d.path().join("shortcuts.vdf");
+        std::os::unix::fs::symlink("real/shortcuts.vdf", &link).unwrap();
+        atomic_write(&link, b"new").unwrap();
+        assert!(std::fs::symlink_metadata(&link)
+            .unwrap()
+            .file_type()
+            .is_symlink());
+        assert_eq!(std::fs::read(&real).unwrap(), b"new");
+        assert!(temps(d.path()).is_empty() && temps(&real_dir).is_empty());
+
+        let dangling = d.path().join("x.acf");
+        std::os::unix::fs::symlink(real_dir.join("x.acf"), &dangling).unwrap();
+        atomic_write(&dangling, b"abc").unwrap();
+        assert!(std::fs::symlink_metadata(&dangling)
+            .unwrap()
+            .file_type()
+            .is_symlink());
+        assert_eq!(std::fs::read(real_dir.join("x.acf")).unwrap(), b"abc");
+    }
+
+    /// 75 WR-04: the existing file's mode is kept instead of `0666 & umask`.
+    #[cfg(unix)]
+    #[test]
+    fn existing_mode_is_preserved() {
+        use std::os::unix::fs::PermissionsExt;
+        let d = tempfile::tempdir().unwrap();
+        let p = d.path().join("x.vdf");
+        std::fs::write(&p, b"old").unwrap();
+        std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o600)).unwrap();
+        atomic_write(&p, b"new").unwrap();
+        let mode = std::fs::metadata(&p).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600);
     }
 }
