@@ -133,8 +133,9 @@ describe('createSteamAppIdResolver', () => {
     const resolver = createSteamAppIdResolver({
       cache: c.cache,
       search,
-      sleep: async (ms) => {
+      sleep: (ms) => {
         sleeps.push(ms)
+        return Promise.resolve()
       },
       now: opts.now ?? (() => NOW)
     })
@@ -142,7 +143,7 @@ describe('createSteamAppIdResolver', () => {
   }
 
   it('does not request cached hits or fresh misses; re-requests stale misses', async () => {
-    const search = jest.fn(async () => [app('Old Miss', 7)])
+    const search = jest.fn(() => Promise.resolve([app('Old Miss', 7)]))
     const { map, resolver } = build(search)
     map.set('hit', {
       appId: '1',
@@ -172,7 +173,9 @@ describe('createSteamAppIdResolver', () => {
   })
 
   it('searches without the Humble "(Steam)" suffix and matches the store name', async () => {
-    const search = jest.fn(async () => [app('Valiant: Resurrection', 368250)])
+    const search = jest.fn(() =>
+      Promise.resolve([app('Valiant: Resurrection', 368250)])
+    )
     const { map, resolver } = build(search)
     await resolver.resolvePending(['Valiant: Resurrection (Steam)'], {
       isStale: () => false
@@ -182,7 +185,9 @@ describe('createSteamAppIdResolver', () => {
   })
 
   it('retries a fresh miss recorded under an older search term', async () => {
-    const search = jest.fn(async () => [app('Valiant: Resurrection', 368250)])
+    const search = jest.fn(() =>
+      Promise.resolve([app('Valiant: Resurrection', 368250)])
+    )
     const { map, resolver } = build(search)
     map.set('valiant resurrection', { appId: null, checkedAt: NOW - 1000 })
     await resolver.resolvePending(['Valiant: Resurrection (Steam)'], {
@@ -193,7 +198,7 @@ describe('createSteamAppIdResolver', () => {
   })
 
   it('stores a fresh miss as appId null', async () => {
-    const search = jest.fn(async () => [])
+    const search = jest.fn(() => Promise.resolve([]))
     const { map, resolver } = build(search)
     await resolver.resolvePending(['Nothing Here'], { isStale: () => false })
     expect(map.get('nothing here')).toEqual({
@@ -243,7 +248,7 @@ describe('createSteamAppIdResolver', () => {
   })
 
   it('caps requests per pass and counts the rest as deferred', async () => {
-    const search = jest.fn(async () => [])
+    const search = jest.fn(() => Promise.resolve([]))
     const { resolver } = build(search)
     const titles = Array.from({ length: 45 }, (_, i) => `Title ${i}`)
     const summary = await resolver.resolvePending(titles, {
@@ -255,7 +260,7 @@ describe('createSteamAppIdResolver', () => {
   })
 
   it('stops before the next request when stale', async () => {
-    const search = jest.fn(async () => [])
+    const search = jest.fn(() => Promise.resolve([]))
     const { resolver } = build(search)
     let calls = 0
     const summary = await resolver.resolvePending(['A', 'B', 'C'], {
@@ -266,8 +271,8 @@ describe('createSteamAppIdResolver', () => {
   })
 
   it('logs exactly one summary line', async () => {
-    const search = jest.fn(async (term: string) =>
-      term === 'Fresh Hit' ? [app('Fresh Hit', 9)] : []
+    const search = jest.fn((term: string) =>
+      Promise.resolve(term === 'Fresh Hit' ? [app('Fresh Hit', 9)] : [])
     )
     const { map, resolver } = build(search)
     map.set('cached hit', { appId: '5', checkedAt: NOW })
