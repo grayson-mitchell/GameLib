@@ -1,8 +1,8 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "UAT 66.4 Windows Test 2: Desktop shortcut for Total War: PHARAOH DYNASTIES shows a folder icon and clicking it opens the Documents folder instead of launching the game"
 created: 2026-11-13T23:20:00+13:00
-updated: 2026-11-13T23:30:00+13:00
+updated: 2026-11-14T12:00:00+13:00
 ---
 
 ## Current Focus
@@ -106,7 +106,7 @@ root_cause: |
   (1) FOLDER ICON. A Steam record has no `install.executable` (steam_library.json install = {install_path, install_size, platform}), so shortcuts.ts never sets `shortcutOptions.icon`; GAMELIB_LNK_ICON is '' and SetIconLocation is skipped. The .lnk's target is C:\Windows\explorer.exe, whose embedded icon is the yellow folder, so the shortcut renders as a folder.
   (2) OPENS DOCUMENTS. buildShortcutEnv turns the `gamelib://launch?appName=2951630&runner=steam` target into explorer.exe with the URL as an UNQUOTED argument. Measured: explorer.exe does not dispatch an unquoted `scheme://host?query` argument to the registered protocol handler (the handler is never invoked); it falls back to opening the Documents folder (here the OneDrive-redirected one). The same URL wrapped in double quotes is dispatched to the handler 3/3, and `rundll32.exe url.dll,FileProtocolHandler <url>` also works. The gamelib:// registration itself is correct.
   Origin: pre-existing since 14745f7fa (2026-10-05); not a 66.4 regression; first live run of an ready:live-gate todo.
-fix: (not applied, diagnose-only)
-verification: (not applicable, diagnose-only)
+fix: "66.4-24: quoted gamelib:// argument to explorer.exe (42ed64679) and a Windows shortcut icon resolver: store exe, install-dir scan, then GameLib shell (d46639af5)"
+verification: "66.4-25: real Windows .lnk readback and opt-in dispatch probe (14fb16a92); 66.4-WINDOWS-UAT item 7 pass 2026-11-14 for Total War PHARAOH DYNASTIES (Steam) and Our Free World Demo (Epic)"
 oracle_type: n/a
-files_changed: []
+files_changed: [src/backend/shortcuts/shortcuts/windowsShortcut.ts, src/backend/shortcuts/shortcuts/shortcuts.ts]
