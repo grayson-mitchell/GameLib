@@ -42,14 +42,12 @@ import { runSteamfilesCliSync } from './gamelibSteamfilesCli'
 // ---------------------------------------------------------------------------
 
 /** The closed list of explained divergence classes (mirrors the golden overrides' notes). */
-const DIFF_CLASSES = [
-  'numeric-coercion',
-  'decoded-backslash',
-  'case-insensitive-key',
-  'legacy-libraryfolders',
-  'integer-key-order'
-] as const
-type DiffClass = (typeof DIFF_CLASSES)[number]
+type DiffClass =
+  | 'numeric-coercion'
+  | 'decoded-backslash'
+  | 'case-insensitive-key'
+  | 'legacy-libraryfolders'
+  | 'integer-key-order'
 
 interface Leaf {
   path: string
