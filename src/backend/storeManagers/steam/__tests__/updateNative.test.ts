@@ -130,8 +130,42 @@ describe('updateRegisteredSteamGame', () => {
     expect(startInstallPolling).toHaveBeenCalledWith(
       expect.anything(),
       '333300',
-      opts
+      {
+        ...opts,
+        awaitingUpdate: {
+          ...opts.awaitingUpdate,
+          installAppRetry: { libraryPath: '/lib', attempts: 0 }
+        }
+      }
     )
+  })
+
+  it('InstallApp unavailable arms installAppRetry on the poll options (74-30)', async () => {
+    jest
+      .mocked(requestSteamInstallApp)
+      .mockResolvedValue({ kind: 'unavailable', reason: 'steam-not-running' })
+    await updateRegisteredSteamGame(game)
+    expect(startInstallPolling).toHaveBeenCalledWith(
+      expect.anything(),
+      '333300',
+      {
+        delegatedToSteamClient: true,
+        awaitingUpdate: {
+          fromBuild: '777',
+          targetBuild: undefined,
+          installAppRetry: { libraryPath: '/lib', attempts: 0 }
+        }
+      }
+    )
+  })
+
+  it('setting off arms no installAppRetry (74-30)', async () => {
+    jest.mocked(isSteamExperimentalInstallAppEnabled).mockReturnValue(false)
+    await updateRegisteredSteamGame(game)
+    const options = jest.mocked(startInstallPolling).mock.calls[0]?.[2] as {
+      awaitingUpdate: object
+    }
+    expect(options.awaitingUpdate).not.toHaveProperty('installAppRetry')
   })
 
   it('setting off hands off without InstallApp', async () => {

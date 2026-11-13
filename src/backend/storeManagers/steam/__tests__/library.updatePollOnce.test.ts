@@ -8,9 +8,14 @@ import { startInstallPolling } from '../library/installPolling'
 import { stopInstallPolling } from '../library/installStop'
 import { readAcfUpdateState } from '../library/acfUpdateState'
 import { invalidateSteamUpdateState } from '../updateDetection'
-import { logInfo } from 'backend/logger'
+import { logInfo, logError } from 'backend/logger'
 import { notify } from '../../../dialog/dialog'
-import { STEAM_REQUEST_NO_ACTIVITY_TICKS } from '../library/pollState'
+import {
+  STEAM_REQUEST_NO_ACTIVITY_TICKS,
+  STEAM_INSTALLAPP_RETRY_EVERY_TICKS,
+  STEAM_INSTALLAPP_RETRY_MAX_ATTEMPTS
+} from '../library/pollState'
+import { requestSteamInstallApp } from '../steamInstallApp'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -35,6 +40,10 @@ jest.mock('../library/acfUpdateState', () => ({
 jest.mock('../updateDetection', () => ({
   ...jest.requireActual('../updateDetection'),
   invalidateSteamUpdateState: jest.fn()
+}))
+jest.mock('../steamInstallApp', () => ({
+  requestSteamInstallApp: jest.fn(),
+  createSteamInstallAppRun: () => 'run'
 }))
 jest.mock('../library/installPollOnce', () => ({ pollInstallOnce: jest.fn() }))
 
@@ -259,6 +268,108 @@ describe('pollUpdateOnce', () => {
     expect(notify).not.toHaveBeenCalled()
     expect(invalidateSteamUpdateState).toHaveBeenCalledWith(deps, APP)
     expect(getPoll()).toBeUndefined()
+  })
+})
+
+describe('pollUpdateOnce InstallApp retry (74-30)', () => {
+  beforeEach(() => jest.clearAllMocks())
+  afterEach(() => stopInstallPolling(deps, APP))
+
+  function armed() {
+    startInstallPolling(deps, APP, {
+      delegatedToSteamClient: true,
+      awaitingUpdate: {
+        fromBuild: '100',
+        targetBuild: '200',
+        installAppRetry: { libraryPath: '/lib', attempts: 0 }
+      }
+    })
+    const p = getPoll()!
+    acf({ stateFlags: 4, buildid: '100', targetBuildId: '100' })
+    return p
+  }
+  const due = (p: ReturnType<typeof armed>) => {
+    p.ticks = p.delegatedSinceTick + STEAM_INSTALLAPP_RETRY_EVERY_TICKS
+  }
+
+  it('ok: logs the retry, disarms, restarts the quiet window', async () => {
+    jest
+      .mocked(requestSteamInstallApp)
+      .mockResolvedValue({ kind: 'ok', folderIndex: 0 } as never)
+    const p = armed()
+    due(p)
+    await pollUpdateOnce(deps, APP, p)
+    expect(requestSteamInstallApp).toHaveBeenCalledTimes(1)
+    expect(logInfo).toHaveBeenCalledWith(
+      'SteamGame: Steam is updating appId 333300 via InstallApp (retry after Steam start)',
+      'Steam'
+    )
+    expect(p.awaitingUpdate?.installAppRetry).toBeUndefined()
+    expect(p.delegatedSinceTick).toBe(p.ticks)
+  })
+
+  it('unavailable: counts attempts, gives up at the max with one log', async () => {
+    jest
+      .mocked(requestSteamInstallApp)
+      .mockResolvedValue({ kind: 'unavailable', reason: 'steam-not-running' })
+    const p = armed()
+    due(p)
+    await pollUpdateOnce(deps, APP, p)
+    expect(p.awaitingUpdate?.installAppRetry?.attempts).toBe(1)
+    p.awaitingUpdate!.installAppRetry!.attempts =
+      STEAM_INSTALLAPP_RETRY_MAX_ATTEMPTS - 1
+    p.ticks += STEAM_INSTALLAPP_RETRY_EVERY_TICKS
+    p.ticks -= p.ticks % STEAM_INSTALLAPP_RETRY_EVERY_TICKS
+    p.delegatedSinceTick = 0
+    await pollUpdateOnce(deps, APP, p)
+    expect(p.awaitingUpdate?.installAppRetry).toBeUndefined()
+    expect(logInfo).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'InstallApp retry for appId 333300 gave up after'
+      ),
+      'Steam'
+    )
+  })
+
+  it('error: disarms and logs the EAppUpdateError code', async () => {
+    jest
+      .mocked(requestSteamInstallApp)
+      .mockResolvedValue({ kind: 'error', code: 9 } as never)
+    const p = armed()
+    due(p)
+    await pollUpdateOnce(deps, APP, p)
+    expect(p.awaitingUpdate?.installAppRetry).toBeUndefined()
+    expect(logError).toHaveBeenCalledWith(
+      expect.stringContaining('EAppUpdateError 9'),
+      'Steam'
+    )
+    expect(getPoll()).toBeDefined()
+  })
+
+  it('does not call the helper again while one retry is in flight', async () => {
+    let resolve!: (v: unknown) => void
+    jest.mocked(requestSteamInstallApp).mockReturnValue(
+      new Promise((r) => {
+        resolve = r
+      }) as never
+    )
+    const p = armed()
+    due(p)
+    const first = pollUpdateOnce(deps, APP, p)
+    await Promise.resolve()
+    await Promise.resolve()
+    await pollUpdateOnce(deps, APP, p)
+    expect(requestSteamInstallApp).toHaveBeenCalledTimes(1)
+    resolve({ kind: 'ok', folderIndex: 0 })
+    await first
+  })
+
+  it('never retries once pending or activity was seen', async () => {
+    const p = armed()
+    acf({ stateFlags: 6, targetBuildId: '200' })
+    due(p)
+    await pollUpdateOnce(deps, APP, p)
+    expect(requestSteamInstallApp).not.toHaveBeenCalled()
   })
 })
 

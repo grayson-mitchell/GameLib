@@ -98,10 +98,12 @@ export async function updateRegisteredSteamGame(
     picsSaysNewer && !acfPending
       ? known?.targetBuild
       : (acfTarget ?? known?.targetBuild)
-  const pollOptions = {
-    delegatedToSteamClient: true,
-    awaitingUpdate: { fromBuild, targetBuild }
-  }
+  const awaitingUpdate: {
+    fromBuild: string
+    targetBuild: string | undefined
+    installAppRetry?: { libraryPath?: string; attempts: number }
+  } = { fromBuild, targetBuild }
+  const pollOptions = { delegatedToSteamClient: true, awaitingUpdate }
 
   if (isSteamExperimentalInstallAppEnabled(deps.config)) {
     const libraryPath = await resolveSteamLibraryRoot(deps, undefined).catch(
@@ -137,6 +139,8 @@ export async function updateRegisteredSteamGame(
       `SteamGame: InstallApp unavailable for appId ${appId} (${outcome.reason}) — handing the update off to the Steam client`,
       LogPrefix.Steam
     )
+    // UAT 19 minor: Steam was closed, so retry InstallApp on the poll tick once it is up.
+    awaitingUpdate.installAppRetry = { libraryPath, attempts: 0 }
   }
 
   logInfo(

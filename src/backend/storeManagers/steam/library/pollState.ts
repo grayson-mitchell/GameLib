@@ -51,6 +51,10 @@ export const MAX_TICKS = 7200 // ≈6 h at 3 000 ms default interval — absolut
 // rewriting the acf.
 export const STEAM_REQUEST_NO_ACTIVITY_TICKS = 40
 export const MANIFEST_GONE_TICKS = 10
+/** UAT 19 (74-30): InstallApp retry cadence on the update poll tick, and its attempt ceiling.
+ *  13 x 3 = 39 ticks, the most that fits inside STEAM_REQUEST_NO_ACTIVITY_TICKS. */
+export const STEAM_INSTALLAPP_RETRY_EVERY_TICKS = 3
+export const STEAM_INSTALLAPP_RETRY_MAX_ATTEMPTS = 13
 /** T-AOG (quick/260719-aog): consecutive frozen 'downloading' ticks (at the
  *  default 3 000 ms poll interval, ≈9 s) before a genuinely in-flight
  *  download is surfaced as 'steam-paused' rather than a silently frozen
@@ -165,6 +169,13 @@ export type ActiveInstallPoll = {
     targetBuild?: string
     sawPending?: boolean
     sawActivity?: boolean
+    /** Armed when the hand-off's InstallApp was unavailable (Steam closed); updatePollOnce retries
+     *  it on the existing tick (UAT 19, spike 069). */
+    installAppRetry?: {
+      libraryPath?: string
+      attempts: number
+      inFlight?: boolean
+    }
   }
 }
 

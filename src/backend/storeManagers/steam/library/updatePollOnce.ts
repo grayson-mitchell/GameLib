@@ -7,7 +7,7 @@
  * STEAM_REQUEST_NO_ACTIVITY_TICKS ends the poll quietly, invalidating the cached update state, and
  * completes instead only when the ACF is current at the target build (or no target is known). is_installed is never changed here.
  */
-import { logInfo, LogPrefix } from 'backend/logger'
+import { logError, logInfo, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import { getFileSize } from 'backend/utils'
 import type { ManagerDeps } from 'backend/services/types'
@@ -18,11 +18,83 @@ import {
   isAcfUpdatePending,
   STATE_FLAG_FULLY_INSTALLED
 } from './acfUpdateState'
-import { STEAM_REQUEST_NO_ACTIVITY_TICKS } from './pollState'
+import {
+  STEAM_INSTALLAPP_RETRY_EVERY_TICKS,
+  STEAM_INSTALLAPP_RETRY_MAX_ATTEMPTS,
+  STEAM_REQUEST_NO_ACTIVITY_TICKS
+} from './pollState'
+import {
+  createSteamInstallAppRun,
+  requestSteamInstallApp
+} from '../steamInstallApp'
 import type { ActiveInstallPoll } from './pollState'
 import { stopInstallPolling } from './installStop'
 
 const STATE_FLAGS_RUNNING = 0x100 | 0x400
+
+/** UAT 19 (74-30): retry InstallApp on the existing tick while armed; bounded, never overlapping,
+ *  no new timer (sidecar exit contract). */
+async function retryInstallApp(
+  deps: ManagerDeps,
+  appId: string,
+  poll: ActiveInstallPoll,
+  awaiting: NonNullable<ActiveInstallPoll['awaitingUpdate']>
+): Promise<void> {
+  const retry = awaiting.installAppRetry
+  const sinceHandoff = poll.ticks - poll.delegatedSinceTick
+  if (
+    !retry ||
+    retry.inFlight ||
+    awaiting.sawPending ||
+    awaiting.sawActivity ||
+    sinceHandoff <= 0 ||
+    sinceHandoff % STEAM_INSTALLAPP_RETRY_EVERY_TICKS !== 0
+  ) {
+    return
+  }
+  retry.inFlight = true
+  try {
+    const outcome = await requestSteamInstallApp(
+      appId,
+      { libraryPath: retry.libraryPath },
+      {
+        paths: deps.paths,
+        run: createSteamInstallAppRun({ runner: deps.runner })
+      }
+    )
+    if (outcome.kind === 'ok') {
+      logInfo(
+        `SteamGame: Steam is updating appId ${appId} via InstallApp (retry after Steam start)`,
+        LogPrefix.Steam
+      )
+      delete awaiting.installAppRetry
+      poll.delegatedSinceTick = poll.ticks
+    } else if (outcome.kind === 'error') {
+      logError(
+        `SteamGame: Steam refused InstallApp update retry for appId ${appId} (EAppUpdateError ${outcome.code})`,
+        LogPrefix.Steam
+      )
+      delete awaiting.installAppRetry
+    } else {
+      retry.attempts++
+      if (retry.attempts >= STEAM_INSTALLAPP_RETRY_MAX_ATTEMPTS) {
+        logInfo(
+          `SteamGame: InstallApp retry for appId ${appId} gave up after ${retry.attempts} attempts (${outcome.reason})`,
+          LogPrefix.Steam
+        )
+        delete awaiting.installAppRetry
+      }
+    }
+  } catch (e) {
+    logError(
+      `SteamGame: InstallApp retry for appId ${appId} threw: ${String(e)}`,
+      LogPrefix.Steam
+    )
+    delete awaiting.installAppRetry
+  } finally {
+    retry.inFlight = false
+  }
+}
 
 export async function pollUpdateOnce(
   deps: ManagerDeps,
@@ -122,6 +194,8 @@ export async function pollUpdateOnce(
       }
     }
   }
+
+  await retryInstallApp(deps, appId, poll, awaiting)
 
   if (
     !awaiting.sawActivity &&

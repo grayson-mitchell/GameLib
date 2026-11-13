@@ -307,6 +307,51 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
 
   // 74-27 (T-74-92): the queue holds 'updating' through a Steam hand-off, so every end of an
   // update-aware poll must send a terminal 'done'. The MAX_TICKS cap was the one silent stop.
+  describe('installAppRetry carry-through (74-30)', () => {
+    const retry = { libraryPath: '/lib', attempts: 0 }
+    const entryOf = () =>
+      steamTestDeps.steamInstallRuntime.polls.activePolls.get('730')
+
+    it('fresh poll keeps installAppRetry on awaitingUpdate', () => {
+      startInstallPolling(steamTestDeps, '730', {
+        intervalMs: 10,
+        delegatedToSteamClient: true,
+        awaitingUpdate: {
+          fromBuild: '1',
+          targetBuild: '2',
+          installAppRetry: retry
+        }
+      })
+      expect(entryOf()?.awaitingUpdate?.installAppRetry).toEqual(retry)
+    })
+
+    it('existing-entry upgrade keeps installAppRetry on awaitingUpdate', () => {
+      startInstallPolling(steamTestDeps, '730', {
+        intervalMs: 10,
+        delegatedToSteamClient: true
+      })
+      startInstallPolling(steamTestDeps, '730', {
+        intervalMs: 10,
+        delegatedToSteamClient: true,
+        awaitingUpdate: {
+          fromBuild: '1',
+          targetBuild: '2',
+          installAppRetry: retry
+        }
+      })
+      expect(entryOf()?.awaitingUpdate?.installAppRetry).toEqual(retry)
+    })
+
+    it('options without installAppRetry leave no installAppRetry key', () => {
+      startInstallPolling(steamTestDeps, '730', {
+        intervalMs: 10,
+        delegatedToSteamClient: true,
+        awaitingUpdate: { fromBuild: '1', targetBuild: '2' }
+      })
+      expect(entryOf()?.awaitingUpdate).not.toHaveProperty('installAppRetry')
+    })
+  })
+
   describe('MAX_TICKS cap terminal status (74-27)', () => {
     const capTick = async (
       options?: Parameters<typeof startInstallPolling>[2]

@@ -146,7 +146,12 @@ export function startInstallPolling(
     ) {
       existingEntry.awaitingUpdate = {
         fromBuild: intervalMsOrOptions.awaitingUpdate.fromBuild,
-        targetBuild: intervalMsOrOptions.awaitingUpdate.targetBuild
+        targetBuild: intervalMsOrOptions.awaitingUpdate.targetBuild,
+        ...(intervalMsOrOptions.awaitingUpdate.installAppRetry && {
+          installAppRetry: {
+            ...intervalMsOrOptions.awaitingUpdate.installAppRetry
+          }
+        })
       }
       logInfo(
         `Steam: in-flight poll for appId ${appId} now watches an update (Phase 74 D-11)`,
@@ -244,7 +249,10 @@ export function startInstallPolling(
     awaitingUpdate: awaitingUpdate
       ? {
           fromBuild: awaitingUpdate.fromBuild,
-          targetBuild: awaitingUpdate.targetBuild
+          targetBuild: awaitingUpdate.targetBuild,
+          ...(awaitingUpdate.installAppRetry && {
+            installAppRetry: { ...awaitingUpdate.installAppRetry }
+          })
         }
       : undefined
   }
