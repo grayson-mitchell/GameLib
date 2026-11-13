@@ -49,7 +49,9 @@ describe('steamfiles channel parity (P75-F)', () => {
   it('every shell steamfiles arm validates via its generated Args then passes straight to gamelib_steamfiles::dispatch', () => {
     const router = [
       ...shellSource.matchAll(
-        /^ {8}RustInvokeChannel::(Steamfiles[A-Za-z0-9]+) => rpc_(\w+)\(args\),$/gm
+        // rustfmt wraps arms past the line width into `=> {\n rpc_x(args)\n }`,
+        // so accept both the one-line and the block form.
+        /^ {8}RustInvokeChannel::(Steamfiles[A-Za-z0-9]+) => (?:rpc_(\w+)\(args\),|\{\n {12}rpc_(\w+)\(args\)\n {8}\})$/gm
       )
     ]
     const arms: string[] = []
@@ -57,7 +59,7 @@ describe('steamfiles channel parity (P75-F)', () => {
       const snakeArm = defined(m[1], 'steamfiles arm name')
         .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
         .toLowerCase()
-      expect(defined(m[2], 'steamfiles handler name')).toBe(snakeArm)
+      expect(defined(m[2] ?? m[3], 'steamfiles handler name')).toBe(snakeArm)
       arms.push(snakeArm)
       const body = readHandlerBody(shellSource, snakeArm, 2)
         .split('\n')
