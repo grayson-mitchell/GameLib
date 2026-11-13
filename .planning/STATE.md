@@ -4,13 +4,13 @@ milestone: v0.10
 milestone_name: Foundations
 status: executing
 stopped_at: Phase 75 context gathered
-last_updated: "2026-11-13T08:55:58.543Z"
-last_activity: 2026-11-13 -- Phase 74 planning complete
+last_updated: "2026-11-13T17:20:08.161Z"
+last_activity: 2026-11-13
 progress:
   total_phases: 23
   completed_phases: 14
-  total_plans: 326
-  completed_plans: 321
+  total_plans: 361
+  completed_plans: 325
   percent: 61
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 74 — steam-game-updates
+**Current focus:** Phase 75 — steam-local-file-formats-in-rust
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,10 +72,10 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 ## Current Position
 
-Phase: 74 (steam-game-updates) — EXECUTING
-Plan: 8 of 29
+Phase: 75 (steam-local-file-formats-in-rust) — EXECUTING
+Plan: 2 of 35
 Status: Ready to execute
-Last activity: 2026-11-13 -- Phase 74 planning complete
+Last activity: 2026-11-13
 
 Progress: [██████████] 99%
 
@@ -735,7 +735,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-13T06:28:17.214Z
+Last session: 2026-11-13T17:20:08.153Z
 Stopped at: Phase 75 context gathered
 Resume file: None
 

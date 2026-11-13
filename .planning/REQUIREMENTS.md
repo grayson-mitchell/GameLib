@@ -38,7 +38,7 @@ complete and verified per their own VERIFICATION.md files; they carry no new req
 
 - [x] **STEAM-01**: User sees "Update available" on an installed Steam game that has an update
 - [x] **STEAM-02**: User can update a bridge-installed Steam game from GameLib
-- [ ] **STEAM-03**: Steam's local files (`libraryfolders.vdf`, `appmanifest_*.acf`, `shortcuts.vdf`) are read and written in Rust, one implementation per format
+- [x] **STEAM-03**: Steam's local files (`libraryfolders.vdf`, `appmanifest_*.acf`, `shortcuts.vdf`) are read and written in Rust, one implementation per format
 
 ### Themes
 
@@ -85,7 +85,7 @@ complete and verified per their own VERIFICATION.md files; they carry no new req
 | ARCH-03 | 70 | Pending |
 | STEAM-01 | 74 | Complete |
 | STEAM-02 | 74 | Complete |
-| STEAM-03 | 75 | Pending |
+| STEAM-03 | 75 | Complete |
 | THEME-01 | 64 | Pending |
 | THEME-02 | 64 | Pending |
 | PRICE-01 | 47 | Pending |
