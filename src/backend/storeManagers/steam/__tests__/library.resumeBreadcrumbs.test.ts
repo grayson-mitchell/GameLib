@@ -71,15 +71,6 @@ jest.mock('backend/utils', () => ({
 // ── graceful-fs mock — readdirSync, readFileSync, existsSync ─────────────────
 jest.mock('graceful-fs')
 
-// Phase 75: removed with the flag in plan 34
-const priorSteamFilesText = process.env.GAMELIB_STEAMFILES_TEXT
-process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-afterAll(() => {
-  if (priorSteamFilesText === undefined)
-    delete process.env.GAMELIB_STEAMFILES_TEXT
-  else process.env.GAMELIB_STEAMFILES_TEXT = priorSteamFilesText
-})
-
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
   notify: jest
@@ -315,15 +306,6 @@ describe('steamResumeInstalledAtStart breadcrumb field (todo 2026-11-09)', () =>
 
 // Phase 75-20: breadcrumbAppIsFullyInstalledOnDisk on the rust branch.
 describe('breadcrumbAppIsFullyInstalledOnDisk, rust branch', () => {
-  const prior = process.env.GAMELIB_STEAMFILES_TEXT
-  beforeEach(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-  })
-  afterEach(() => {
-    if (prior === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = prior
-  })
-
   const install = { steamResumeTargetSteamappsDir: '/s/steamapps' }
   const read = (stateFlags: number | null, over = {}) => ({
     exists: true,

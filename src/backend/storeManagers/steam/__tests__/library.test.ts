@@ -118,15 +118,6 @@ jest.mock('backend/utils', () => ({
 // ── graceful-fs mock — readdirSync, readFileSync, existsSync ─────────────────
 jest.mock('graceful-fs')
 
-// Phase 75: removed with the flag in plan 34
-const priorSteamFilesText = process.env.GAMELIB_STEAMFILES_TEXT
-process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-afterAll(() => {
-  if (priorSteamFilesText === undefined)
-    delete process.env.GAMELIB_STEAMFILES_TEXT
-  else process.env.GAMELIB_STEAMFILES_TEXT = priorSteamFilesText
-})
-
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
   notify: jest
@@ -810,13 +801,11 @@ describe('SteamLibraryManager', () => {
       jest.useRealTimers()
     })
 
-    describe('rust flag (GAMELIB_STEAMFILES_TEXT=rust): finalize through depot_finalize (75-23)', () => {
-      const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
+    describe('finalize through depot_finalize (75-23)', () => {
       let acfInstalldir = 'csgo'
       let invoke: jest.Mock
       let spies: jest.SpyInstance[]
       beforeEach(() => {
-        process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
         acfInstalldir = 'csgo'
         // The ACF read goes through the deps' own transport, the finalize through the install
         // runtime's; one router serves both.
@@ -842,8 +831,6 @@ describe('SteamLibraryManager', () => {
       })
       afterEach(() => {
         spies.forEach((x) => x.mockRestore())
-        if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-        else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
       })
 
       it('a failed verify sends outcome null with the sanitised installdir and no TS finalize', async () => {

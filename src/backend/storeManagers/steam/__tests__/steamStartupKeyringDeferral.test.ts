@@ -42,15 +42,6 @@ import {
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under
 // this file's mocks (quick 261026-c7r).
-// Phase 75: removed with the flag in plan 34
-const priorSteamFilesText = process.env.GAMELIB_STEAMFILES_TEXT
-process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-afterAll(() => {
-  if (priorSteamFilesText === undefined)
-    delete process.env.GAMELIB_STEAMFILES_TEXT
-  else process.env.GAMELIB_STEAMFILES_TEXT = priorSteamFilesText
-})
-
 jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
   addShortcuts: jest.fn(),
   removeShortcuts: jest.fn(),

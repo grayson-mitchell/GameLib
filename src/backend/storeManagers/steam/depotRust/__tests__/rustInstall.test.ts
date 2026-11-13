@@ -757,19 +757,12 @@ describe('downloadSteamDepots lease options (74-19 unattended)', () => {
 })
 
 describe('zero-depot finalize on the rust flag (75-23)', () => {
-  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
   beforeEach(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
     jest.mocked(selectAllDepots).mockReturnValue([])
     invokeMock.mockResolvedValue({
       acf: { path: '/x', stateFlags: 1026, sizeOnDisk: '0' }
     })
   })
-  afterEach(() => {
-    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
-  })
-
   it('sends depots [] and outcome null, LastOwner as the persisted string', async () => {
     const out = await downloadSteamDepots(APP_ID, OPTS())
     expect(out.status).toBe('done')

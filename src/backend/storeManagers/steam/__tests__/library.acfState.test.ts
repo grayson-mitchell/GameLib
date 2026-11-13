@@ -82,15 +82,6 @@ jest.mock('backend/utils', () => ({
 // ── graceful-fs mock — readdirSync, readFileSync, existsSync ─────────────────
 jest.mock('graceful-fs')
 
-// Phase 75: removed with the flag in plan 34
-const priorSteamFilesText = process.env.GAMELIB_STEAMFILES_TEXT
-process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-afterAll(() => {
-  if (priorSteamFilesText === undefined)
-    delete process.env.GAMELIB_STEAMFILES_TEXT
-  else process.env.GAMELIB_STEAMFILES_TEXT = priorSteamFilesText
-})
-
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
   notify: jest
@@ -861,7 +852,7 @@ describe('scanDownloadingAppIds(libDeps)', () => {
   })
 })
 
-// ── Phase 75-15: rust branch (GAMELIB_STEAMFILES_TEXT=rust) ───────────────────
+// ── Phase 75-15: rust readers ───────────────────
 // The wrappers are driven by programmed steamfiles results (stubRustSteamFiles); real parsing is
 // proven by the crate tests and libraryReplay.test.ts.
 
@@ -902,16 +893,7 @@ function scanOf(
   }
 }
 
-function useRustBranch() {
-  const prior = process.env.GAMELIB_STEAMFILES_TEXT
-  beforeEach(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-  })
-  afterEach(() => {
-    if (prior === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = prior
-  })
-}
+function useRustBranch() {}
 
 describe('readAcfState and scanDownloadingAppIds, rust branch', () => {
   useRustBranch()

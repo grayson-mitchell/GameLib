@@ -9,7 +9,6 @@ import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSte
 
 const STEAMAPPS_DIR = join('/lib', 'steamapps')
 const APP_ID = '12345'
-const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
 
 describe('readAcfInstalldir', () => {
   const acfPath = join(STEAMAPPS_DIR, `appmanifest_${APP_ID}.acf`)
@@ -25,14 +24,10 @@ describe('readAcfInstalldir', () => {
     })
 
   beforeEach(() => {
-    // Phase 75: removed with the flag in plan 34
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
     jest.spyOn(logger, 'logDebug').mockImplementation(() => undefined)
   })
   afterEach(() => {
     jest.restoreAllMocks()
-    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
   })
 
   it('returns the installdir and reads the manifest path through steamfiles', async () => {

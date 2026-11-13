@@ -58,8 +58,7 @@ function copyTestFile(file: string, alternativeUserPath = '') {
   copyFileSync(join(testFileDir, file), userDir)
 }
 
-describe('NonSteamGame rust branch (GAMELIB_STEAMFILES_SHORTCUTS=rust)', () => {
-  const realFlag = process.env.GAMELIB_STEAMFILES_SHORTCUTS
+describe('NonSteamGame shortcuts through steamfiles', () => {
   const MISSING: ShortcutsReadResult = {
     exists: false,
     parsed: false,
@@ -102,7 +101,6 @@ describe('NonSteamGame rust branch (GAMELIB_STEAMFILES_SHORTCUTS=rust)', () => {
     }) as unknown as Parameters<typeof addNonSteamGame>[0]
 
   beforeEach(() => {
-    process.env.GAMELIB_STEAMFILES_SHORTCUTS = 'rust'
     jest.clearAllMocks()
     tmpDir = dirSync({ unsafeCleanup: true })
     defaultSteamPath = tmpDir.name + "'"
@@ -116,8 +114,6 @@ describe('NonSteamGame rust branch (GAMELIB_STEAMFILES_SHORTCUTS=rust)', () => {
   })
 
   afterEach(() => {
-    if (realFlag === undefined) delete process.env.GAMELIB_STEAMFILES_SHORTCUTS
-    else process.env.GAMELIB_STEAMFILES_SHORTCUTS = realFlag
     tmpDir.removeCallback()
   })
 

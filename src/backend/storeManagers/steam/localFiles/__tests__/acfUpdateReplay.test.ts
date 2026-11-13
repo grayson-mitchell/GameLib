@@ -36,20 +36,10 @@ function replayFor(root: string) {
 }
 
 describe('acfUpdate replay parity (TS wrappers over recorded Rust results)', () => {
-  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
-
-  beforeAll(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-  })
   beforeEach(() => {
     jest.spyOn(logger, 'logDebug').mockImplementation(() => undefined)
   })
   afterEach(() => jest.restoreAllMocks())
-  afterAll(() => {
-    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
-  })
-
   it('replays every acfUpdate case', async () => {
     const replayed: string[] = []
     const mismatches: unknown[] = []

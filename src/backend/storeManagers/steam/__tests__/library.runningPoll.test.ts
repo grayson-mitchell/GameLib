@@ -39,15 +39,6 @@ jest.mock('backend/logger', () => ({
 }))
 const paths = { userHome: '/home/test' }
 jest.mock('graceful-fs')
-// Phase 75: removed with the flag in plan 34
-const priorSteamFilesText = process.env.GAMELIB_STEAMFILES_TEXT
-process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-afterAll(() => {
-  if (priorSteamFilesText === undefined)
-    delete process.env.GAMELIB_STEAMFILES_TEXT
-  else process.env.GAMELIB_STEAMFILES_TEXT = priorSteamFilesText
-})
-
 const vdfWith = (appId: string | undefined) => {
   jest.mocked(existsSync).mockReturnValue(true)
   jest.mocked(readFileSync).mockReturnValue('content')
@@ -736,15 +727,6 @@ describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
 })
 
 describe('registry.vdf RunningAppID on the rust flag', () => {
-  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
-  beforeEach(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-  })
-  afterEach(() => {
-    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
-  })
-
   it('macOS reads RunningAppID through steamfiles_read_running_app_id', async () => {
     const stub = stubRustSteamFiles({
       steamfiles_read_running_app_id: () => ({ runningAppId: 1245620 })

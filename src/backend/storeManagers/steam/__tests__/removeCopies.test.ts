@@ -111,15 +111,6 @@ jest.mock('graceful-fs', () => ({
   readFileSync: jest.fn()
 }))
 
-// Phase 75: removed with the flag in plan 34
-const priorSteamFilesText = process.env.GAMELIB_STEAMFILES_TEXT
-process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-afterAll(() => {
-  if (priorSteamFilesText === undefined)
-    delete process.env.GAMELIB_STEAMFILES_TEXT
-  else process.env.GAMELIB_STEAMFILES_TEXT = priorSteamFilesText
-})
-
 // ── node:fs mock — rmSync is the ONLY delete primitive removeSteamInstallCopy
 // calls; mocked so every deletion in these tests is asserted by exact call
 // ARGUMENTS, never merely "was called" (plan's Task 1 hard requirement).

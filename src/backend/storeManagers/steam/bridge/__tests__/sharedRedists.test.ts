@@ -623,16 +623,12 @@ describe('H1: Wine Mono helpers', () => {
 })
 
 describe('readInstallScript (75 D-06)', () => {
-  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
   const path = join(__dirname, 'fixtures/sharedRedists', 'unused.vdf')
   beforeEach(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
     jest.spyOn(logger, 'logDebug').mockImplementation(() => undefined)
   })
   afterEach(() => {
     jest.restoreAllMocks()
-    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
   })
 
   it('maps Rust entries (nulls to absent fields) and sends only the path', async () => {

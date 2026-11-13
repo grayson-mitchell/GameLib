@@ -220,15 +220,6 @@ function makeFakeGame(gameInfo: GameInfo) {
 const mockGetGame = jest.fn()
 const mockRequestRustInvoke = jest.fn()
 
-// Phase 75: removed with the flag in plan 34
-const priorShortcutsFlag = process.env.GAMELIB_STEAMFILES_SHORTCUTS
-process.env.GAMELIB_STEAMFILES_SHORTCUTS = 'rust'
-afterAll(() => {
-  if (priorShortcutsFlag === undefined)
-    delete process.env.GAMELIB_STEAMFILES_SHORTCUTS
-  else process.env.GAMELIB_STEAMFILES_SHORTCUTS = priorShortcutsFlag
-})
-
 /** Programs the injected requestRustInvoke with an empty shortcuts file and a successful add. */
 function programShortcutsRust() {
   const stub = stubRustSteamFiles({
@@ -1167,12 +1158,11 @@ describe("addToSteam's GAMELIB_SHELL_EXE pin (T-34.5-39/40, invoke-kind counterp
 
 // ── Describe 6b (75-18): addToSteam on the Rust shortcuts ops ─────────────────────────────────
 //
-// Under GAMELIB_STEAMFILES_SHORTCUTS=rust the handler reaches `steamfiles_shortcuts_apply` through
+// The handler reaches `steamfiles_shortcuts_apply` through
 // the injected requestRustInvoke; the file bytes are the Rust crate's concern (golden tests).
-describe('75-18 addToSteam under GAMELIB_STEAMFILES_SHORTCUTS=rust reaches the Rust apply op', () => {
+describe('75-18 addToSteam reaches the Rust apply op', () => {
   let tmpDir: DirResult
   let savedShellExe: string | undefined
-  let savedFlag: string | undefined
 
   beforeEach(() => {
     tmpDir = dirSync({ unsafeCleanup: true })
@@ -1191,9 +1181,7 @@ describe('75-18 addToSteam under GAMELIB_STEAMFILES_SHORTCUTS=rust reaches the R
       getGameInfo: () => makeGameInfo({ title: 'Rust Flow Game' })
     })
     savedShellExe = process.env.GAMELIB_SHELL_EXE
-    savedFlag = process.env.GAMELIB_STEAMFILES_SHORTCUTS
     process.env.GAMELIB_SHELL_EXE = '/Applications/GameLib.app/GameLib'
-    process.env.GAMELIB_STEAMFILES_SHORTCUTS = 'rust'
     mockRequestRustInvoke.mockReset()
     mockRequestRustInvoke.mockImplementation((channel: string) =>
       Promise.resolve(
@@ -1223,8 +1211,6 @@ describe('75-18 addToSteam under GAMELIB_STEAMFILES_SHORTCUTS=rust reaches the R
     tmpDir.removeCallback()
     if (savedShellExe === undefined) delete process.env.GAMELIB_SHELL_EXE
     else process.env.GAMELIB_SHELL_EXE = savedShellExe
-    if (savedFlag === undefined) delete process.env.GAMELIB_STEAMFILES_SHORTCUTS
-    else process.env.GAMELIB_STEAMFILES_SHORTCUTS = savedFlag
   })
 
   it('sends one apply mutation through requestRustInvoke and writes no bytes in TS', async () => {
