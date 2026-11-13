@@ -450,17 +450,26 @@ describe('authState login/logout actions', () => {
       ['reset', 'steam'],
       [
         'refresh',
-        { runInBackground: true, library: 'steam', origin: 'steam-login' }
+        {
+          runInBackground: true,
+          library: 'steam',
+          origin: 'steam-login',
+          checkForUpdates: true
+        }
       ]
     ])
   })
 
-  it('steamLogout clears identity and the library once sign-out is confirmed', async () => {
+  it('steamLogout clears identity but keeps installed Steam games once sign-out is confirmed', async () => {
+    const installed = { app_name: 'x', is_installed: true }
+    const owned = { app_name: 'y', is_installed: false }
+    useLibraryState.setState({ steamLibrary: [installed, owned] as never })
     useAuthState.setState({ steamUsername: 'sName' })
     await useAuthState.getState().steamLogout()
     expect(order).toEqual(['logoutSteam'])
     expect(useAuthState.getState().steamUsername).toBeNull()
-    expect(libraryCalls).toEqual([['reset', 'steam']])
+    expect(libraryCalls).toEqual([])
+    expect(useLibraryState.getState().steamLibrary).toEqual([installed])
     expect(dialogs).toEqual([])
   })
 

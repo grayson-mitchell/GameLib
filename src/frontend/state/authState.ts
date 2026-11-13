@@ -413,7 +413,8 @@ const useAuthStateRaw = create<AuthState>()(
           void useLibraryState.getState().refreshLibrary({
             runInBackground: true,
             library: 'steam',
-            origin: 'steam-login'
+            origin: 'steam-login',
+            checkForUpdates: true
           })
         }
         return result.status
@@ -427,7 +428,11 @@ const useAuthStateRaw = create<AuthState>()(
           logoutSteam: window.api.logoutSteam,
           getSteamUserInfo: window.api.getSteamUserInfo,
           onSignedOut: () => {
-            useLibraryState.getState().resetRunnerLibrary('steam')
+            // Installed Steam games stay listed signed out (UAT 23); steamLogin
+            // still resets before its sync.
+            useLibraryState.setState((s) => ({
+              steamLibrary: s.steamLibrary.filter((g) => g.is_installed)
+            }))
             set({ steamUsername: null })
             console.log('Logging out from steam')
           },

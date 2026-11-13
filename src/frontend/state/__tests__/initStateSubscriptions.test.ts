@@ -556,6 +556,25 @@ describe('initStateSubscriptions', () => {
     expect(calls.filter((c) => c.startsWith('setSetting:')).length).toBe(1)
   })
 
+  describe('readMountStoreUsers steamUser (UAT 23 signed-out boot)', () => {
+    it('is true with no userData but an installed cached Steam game', () => {
+      config.games = [{ app_name: 's', runner: 'steam', is_installed: true }]
+      config['__timestamp.games'] = '2026-01-01T00:00:00Z'
+      expect(init.readMountStoreUsers().steamUser).toBe(true)
+    })
+
+    it('is false with no userData and no installed cached game', () => {
+      config.games = [{ app_name: 's', runner: 'steam', is_installed: false }]
+      config['__timestamp.games'] = '2026-01-01T00:00:00Z'
+      expect(init.readMountStoreUsers().steamUser).toBe(false)
+    })
+
+    it('is true when userData is present', () => {
+      config.userData = { username: 'u' }
+      expect(init.readMountStoreUsers().steamUser).toBe(true)
+    })
+  })
+
   it('writes the settings localStorage side effects from subscriptions', () => {
     const store = new Map<string, string>()
     ;(window as unknown as Record<string, unknown>).localStorage = {

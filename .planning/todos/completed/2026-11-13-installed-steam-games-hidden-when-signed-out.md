@@ -35,3 +35,9 @@ the installed set (anonymous PICS works signed out).
 
 Found while trying to induce an unattended auto-update failure for 74-UAT item 23 by signing
 out; it also blocks that route to item 23.
+
+## Resolution
+
+Closed by 74-31 and 74-32. Backend: the cached library is restored on every non-sync refresh exit (74-31, `library/localLibrary.ts`, `refresh.ts`), so update detection has an installed set signed out. Frontend (74-32): installed-only visibility with no Steam identity, sign-out keeps installed entries in the same session, the mount refresh (with its update check) runs on a boot with installed Steam games and no sign-in, and sign-in runs a library-wide update check after its sync.
+
+Known limitation, cache-based scope: a game installed through Steam after the last signed-in GameLib sync stays hidden while signed out until the next signed-in sync; never-synced profiles and ACF-only apps are not enumerated. Live proof is the 74-33 gate.

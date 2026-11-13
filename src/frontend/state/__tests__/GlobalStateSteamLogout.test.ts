@@ -69,6 +69,10 @@ async function steamLogoutViolations(steamLogout: SteamLogout) {
     // confirmed path
     signedOutOnPoll = true
     install()
+    const keep = { app_name: 'x', is_installed: true }
+    useLibraryState.setState({
+      steamLibrary: [keep, { app_name: 'y', is_installed: false }] as never
+    })
     useAuthState.setState({ steamUsername: 'sName' })
     await steamLogout()
     if (!rec.calls.includes('logoutSteam')) {
@@ -77,13 +81,17 @@ async function steamLogoutViolations(steamLogout: SteamLogout) {
     if (useAuthState.getState().steamUsername !== null) {
       violations.push('identity not cleared after confirmed sign-out')
     }
-    if (!rec.resets.includes('steam') || rec.dialogs !== 0) {
+    const kept = useLibraryState.getState().steamLibrary
+    if (kept.length !== 1 || kept[0]!.app_name !== 'x' || rec.dialogs !== 0) {
       violations.push('confirmed path library/dialog wrong')
     }
 
     // unconfirmed path
     signedOutOnPoll = false
     install()
+    useLibraryState.setState({
+      steamLibrary: [{ app_name: 'y', is_installed: false }] as never
+    })
     useAuthState.setState({ steamUsername: 'sName' })
     const pending = steamLogout()
     await jest.advanceTimersByTimeAsync(20 * 150)
@@ -91,7 +99,10 @@ async function steamLogoutViolations(steamLogout: SteamLogout) {
     if (useAuthState.getState().steamUsername !== 'sName') {
       violations.push('state cleared although sign-out never confirmed')
     }
-    if (rec.resets.length !== 0) {
+    if (
+      rec.resets.length !== 0 ||
+      useLibraryState.getState().steamLibrary.length !== 1
+    ) {
       violations.push('library cleared although sign-out never confirmed')
     }
     if (rec.dialogs !== 1) {

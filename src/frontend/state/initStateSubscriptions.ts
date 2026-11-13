@@ -26,7 +26,8 @@ import { getGameInfo } from '../helpers'
 import {
   gogConfigStore,
   nileConfigStore,
-  steamConfigStore
+  steamConfigStore,
+  steamLibraryStore
 } from '../helpers/stores'
 import { createConnectivitySync } from '../helpers/connectivitySync'
 import { isStore } from 'common/storeCapabilities'
@@ -294,7 +295,11 @@ export function readMountStoreUsers(): {
     amazonUser: nileConfigStore.has('userData'),
     // debug/steam-refresh-hung-on-startup: a Steam-only login must also gate
     // the mount refresh, or the sync spinner never clears.
-    steamUser: steamConfigStore.has('userData')
+    // A signed-out Steam with installed games still needs the mount refresh
+    // and its update check (UAT 23).
+    steamUser:
+      steamConfigStore.has('userData') ||
+      steamLibraryStore.get('games', []).some((g) => g.is_installed)
   }
 }
 
