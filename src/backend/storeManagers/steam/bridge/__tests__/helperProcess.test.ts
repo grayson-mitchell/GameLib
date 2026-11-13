@@ -37,7 +37,8 @@ import {
   BRIDGE_SECRET_ENV,
   HELLO_ROLE_PROBE,
   STATUS_OK,
-  STATUS_ERR
+  STATUS_ERR,
+  WHOAMI_ERR_REASON_ACCESSOR_MISSING
 } from '../protocol'
 import { ensureBridgeHelperReady } from '../helperProcess'
 import {
@@ -613,6 +614,85 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     expect(identityOptions.cwd).toBe(
       join(steamBridgeHelperStateDir, APP_ID_A, 'identity')
     )
+  })
+
+  test('quick 261113-n39: WHOAMI ERR with the accessor-missing reason byte -> steam-client-updated, one warning, one setup message, no identity-only (480) spawn', async () => {
+    const fullChild = new FakeChildProcess()
+    mockedSpawn.mockReturnValueOnce(fullChild)
+    MockedSocket.mockImplementationOnce(
+      () =>
+        new FakeSocket(
+          healthOkFrame,
+          encodeResponse(
+            PROBE_REQUEST_ID,
+            STATUS_ERR,
+            Buffer.from([WHOAMI_ERR_REASON_ACCESSOR_MISSING])
+          )
+        )
+    )
+
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
+    emitListenLine(fullChild, 55001, APP_ID_A)
+    const result = await pending
+
+    expect(result.status).toBe('steam-client-updated')
+    expect(result.ready).toBe(false)
+    expect(result.port).toBe(55001)
+    expect(mockedSpawn).toHaveBeenCalledTimes(1)
+    expect(mockedSendFrontendMessage).toHaveBeenCalledTimes(1)
+    expect(mockedSendFrontendMessage).toHaveBeenCalledWith(
+      'steamBridgeSetupRequired',
+      {
+        appName: APP_ID_A,
+        reason: 'steam-client-updated',
+        fallbackAvailable: false
+      }
+    )
+    const warnings = (logWarning as jest.Mock).mock.calls.filter((c) =>
+      String(c[0]).includes(
+        'Steam client updated; bridge helper could not resolve SteamUser'
+      )
+    )
+    expect(warnings).toHaveLength(1)
+  })
+
+  test('quick 261113-n39: WHOAMI ERR with an unknown reason byte is treated as not-inited (480 fallback attempted)', async () => {
+    const fullChild = new FakeChildProcess()
+    const identityChild = new FakeChildProcess()
+    mockedSpawn
+      .mockReturnValueOnce(fullChild)
+      .mockReturnValueOnce(identityChild)
+    MockedSocket.mockImplementationOnce(
+      () =>
+        new FakeSocket(
+          healthOkFrame,
+          encodeResponse(PROBE_REQUEST_ID, STATUS_ERR, Buffer.from([0x7f]))
+        )
+    ).mockImplementationOnce(() => new FakeSocket(healthOkFrame, whoamiOkFrame))
+
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
+    emitListenLine(fullChild, 55001, APP_ID_A)
+    await waitForSpawnCallCount(2)
+    emitListenLine(identityChild, 55002, '480')
+    const result = await pending
+
+    expect(result.status).toBe('fallback-identity')
+    expect(mockedSpawn).toHaveBeenCalledTimes(2)
+  })
+
+  test('quick 261113-n39: bridge_helper.c and protocol.ts agree on the WHOAMI accessor-missing reason value', () => {
+    const c = readFileSync(
+      join(
+        __dirname,
+        '../../../../../../native/steam-bridge/helper/bridge_helper.c'
+      ),
+      'utf-8'
+    )
+    const m = c.match(
+      /#define WHOAMI_ERR_REASON_ACCESSOR_MISSING (0x[0-9a-fA-F]+)/
+    )
+    expect(m).not.toBeNull()
+    expect(parseInt(m?.[1] ?? '', 16)).toBe(WHOAMI_ERR_REASON_ACCESSOR_MISSING)
   })
 
   test('D-51-04: both the full helper AND the identity-only fallback fail WHOAMI -> not-inited, ready:false, exactly ONE steamBridgeSetupRequired(reason: not-inited)', async () => {

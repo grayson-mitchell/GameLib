@@ -196,6 +196,14 @@ export const STATUS_OK = 0
  * inited against a live session" -- see module doc. */
 export const STATUS_ERR = 1
 
+/** quick 261113-n39: a ONE-byte retBlob on a CONTROL WHOAMI STATUS_ERR is a
+ * reason code; an empty retBlob means not-inited. This value: InitFlat
+ * succeeded but the SteamUser accessor/flat could not be resolved from
+ * libsteam_api.dylib (the Steam client moved past this helper). Old readers
+ * look only at `status`, so this is wire-compatible. MUST equal
+ * WHOAMI_ERR_REASON_ACCESSOR_MISSING in native/steam-bridge/helper/bridge_helper.c. */
+export const WHOAMI_ERR_REASON_ACCESSOR_MISSING = 0x02
+
 // ── Decoded shapes ──────────────────────────────────────────────────────────
 
 interface DecodedRequest {

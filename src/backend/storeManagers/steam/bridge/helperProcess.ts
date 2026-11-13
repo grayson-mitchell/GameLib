@@ -60,6 +60,8 @@ import {
   encodeHello,
   decodeResponse,
   STATUS_OK,
+  STATUS_ERR,
+  WHOAMI_ERR_REASON_ACCESSOR_MISSING,
   FrameTooLargeError
 } from './protocol'
 import { NUMERIC_APP_ID } from '../gameConstants'
@@ -109,6 +111,7 @@ const PROBE_REQUEST_ID = 1
 type BridgeHelperReadyStatus =
   | 'ready'
   | 'not-inited'
+  | 'steam-client-updated'
   | 'unreachable'
   | 'fallback-identity'
   | 'steam-not-running'
@@ -140,6 +143,9 @@ interface ProbeResult {
   /** WR-03: HELLO-with-secret was accepted (only meaningful once healthOk). */
   authOk: boolean
   whoamiOk: boolean
+  /** quick 261113-n39: WHOAMI STATUS_ERR carrying the one-byte
+   * WHOAMI_ERR_REASON_ACCESSOR_MISSING reason (init ok, SteamUser unresolvable). */
+  whoamiAccessorMissing?: boolean
 }
 
 /**
@@ -232,7 +238,11 @@ function probeHealthAndWhoami(
       finish({
         healthOk: true,
         authOk: true,
-        whoamiOk: decoded.status === STATUS_OK
+        whoamiOk: decoded.status === STATUS_OK,
+        whoamiAccessorMissing:
+          decoded.status === STATUS_ERR &&
+          decoded.retBlob.length === 1 &&
+          decoded.retBlob[0] === WHOAMI_ERR_REASON_ACCESSOR_MISSING
       })
     })
   })
@@ -282,7 +292,12 @@ function waitForInit(
 }
 
 interface HelperReadinessProbe {
-  outcome: 'ready' | 'not-inited' | 'unreachable' | 'steam-wait'
+  outcome:
+    | 'ready'
+    | 'not-inited'
+    | 'accessor-missing'
+    | 'unreachable'
+    | 'steam-wait'
   port?: number
   /** Set when outcome is 'steam-wait'. */
   cause?: InitFlatErrorCause
@@ -329,10 +344,8 @@ async function probeHelperReadiness(
   for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt++) {
     await sleep(POLL_INTERVAL_MS)
 
-    const { healthOk, authOk, whoamiOk } = await probeHealthAndWhoami(
-      port,
-      entry.secret
-    )
+    const { healthOk, authOk, whoamiOk, whoamiAccessorMissing } =
+      await probeHealthAndWhoami(port, entry.secret)
 
     if (!healthOk) {
       continue
@@ -350,6 +363,10 @@ async function probeHelperReadiness(
 
     if (whoamiOk) {
       return { outcome: 'ready', port }
+    }
+
+    if (whoamiAccessorMissing) {
+      return { outcome: 'accessor-missing', port }
     }
 
     return { outcome: 'not-inited', port }
@@ -522,6 +539,30 @@ export async function ensureBridgeHelperReady(
           secret: entry.secret
         }
       : { status: 'ready', ready: true, port: probe.port, secret: entry.secret }
+  }
+
+  if (probe.outcome === 'accessor-missing') {
+    // quick 261113-n39: InitFlat succeeded but the helper could not resolve
+    // SteamUser from libsteam_api.dylib. The identity-only (480) fallback
+    // loads the same dylib, so it cannot help -- skip it, and do not offer
+    // bottled Steam for a bridge defect.
+    const error = `Steam client updated; bridge helper could not resolve SteamUser for appId ${appId} -- bridge needs an update`
+    logWarning(
+      `ensureBridgeHelperReady: ${error} (quick 261113-n39)`,
+      LogPrefix.Steam
+    )
+    registry.stop(appId)
+    deps.sendFrontendMessage('steamBridgeSetupRequired', {
+      appName: appId,
+      reason: 'steam-client-updated',
+      fallbackAvailable: false
+    })
+    return {
+      status: 'steam-client-updated',
+      ready: false,
+      port: probe.port,
+      error
+    }
   }
 
   // probe.outcome === 'not-inited' from here on.

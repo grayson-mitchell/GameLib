@@ -53,7 +53,9 @@
  *   Response: [4B LE total_len][4B LE request_id][1B status][N retBlob]
  *     total_len = byte count of request_id+status+retBlob (excludes itself)
  *     status: 0=ok, 1=err/no-live-session (or not-inited, for CONTROL WHOAMI
- *     answered before init succeeds)
+ *     answered before init succeeds). A CONTROL WHOAMI STATUS_ERR with a
+ *     ONE-byte retBlob is a reason code (WHOAMI_ERR_REASON_ACCESSOR_MISSING:
+ *     init ok but SteamUser unresolvable); an empty retBlob is not-inited.
  *
  * CONTROL frame (Phase 24 review finding #7, extended D-51-01): a reserved
  * ordinal (0xFFFF) reconciles the human-readable PING/WHOAMI text handshake
@@ -227,6 +229,12 @@ static void gl_ovl_publish_closed_at_exit(void) {
 #define CONTROL_ORDINAL 0xffff
 #define CONTROL_SLOT_HEALTH 0
 #define CONTROL_SLOT_WHOAMI 1
+// quick 261113-n39: one-byte retBlob on a CONTROL WHOAMI STATUS_ERR meaning
+// "InitFlat succeeded but the SteamUser accessor/flat could not be resolved
+// from libsteam_api.dylib" (Steam client updated past this helper). An empty
+// retBlob still means not-inited. MUST equal WHOAMI_ERR_REASON_ACCESSOR_MISSING
+// in src/backend/storeManagers/steam/bridge/protocol.ts.
+#define WHOAMI_ERR_REASON_ACCESSOR_MISSING 0x02
 // D-51-01: the shim's own connect-time handshake slot (see module doc).
 #define CONTROL_SLOT_HELLO 2
 // Slot 3 retired in Phase 56 (56-14, D-20); never reuse it.
@@ -2577,7 +2585,10 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
       }
       pump_callbacks();
       if (g_bd_flat_SteamUser023_GetSteamID == NULL || g_bd_self_steamuser023 == NULL) {
-        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+        // quick 261113-n39: distinct from not-inited -- init succeeded but
+        // the accessor/flat did not resolve (Steam client updated).
+        uint8_t reason = WHOAMI_ERR_REASON_ACCESSOR_MISSING;
+        send_response(fd, requestId, STATUS_ERR, &reason, 1);
         return;
       }
       uint64_t id = g_bd_flat_SteamUser023_GetSteamID(g_bd_self_steamuser023);

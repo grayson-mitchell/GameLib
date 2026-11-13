@@ -169,6 +169,14 @@ const SteamBridgeSetup = () => {
             )}
           </p>
         ) : null}
+        {reason === 'steam-client-updated' ? (
+          <p className="steamBridgeSetupReason">
+            {tGamelib(
+              'steam.bridge.setup.steamClientUpdated',
+              "Steam updated in a way this version of GameLib's Steam bridge cannot use yet. Update GameLib, or launch the game from Steam for now."
+            )}
+          </p>
+        ) : null}
         {reason ? (
           <p className="steamBridgeSetupReason">
             {t('bridge.setup.reason', {

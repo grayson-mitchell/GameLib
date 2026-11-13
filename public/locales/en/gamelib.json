@@ -669,6 +669,7 @@
                 "missingSymbols": "The bridge does not cover: {{symbols}}",
                 "notInited": "Steam is running but refused to start a session for this game. Check that Steam is signed in to the account that owns it.",
                 "redownloadNote": "Falling back downloads the game again into the bottled Windows Steam client.",
+                "steamClientUpdated": "Steam updated in a way this version of GameLib's Steam bridge cannot use yet. Update GameLib, or launch the game from Steam for now.",
                 "steamNotRunning": "Steam did not start. GameLib tried to open it and waited a minute. Open Steam, sign in, then press Play again.",
                 "steamNotSignedIn": "Steam is open but not signed in. GameLib waited a minute for it to finish signing in. Sign in to Steam, then press Play again."
             },
