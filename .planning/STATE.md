@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.10
 milestone_name: Foundations
-status: ready_to_plan
-stopped_at: Phase 75 complete (35/35) — ready to discuss Phase 76
-last_updated: 2026-11-13T23:22:50.238Z
-last_activity: 2026-11-14
+status: planning
+stopped_at: Phase 70 context gathered
+last_updated: "2026-11-13T23:54:19.003Z"
+last_activity: 2026-11-14 - Phase 75 complete (35/35, verified, CI green)
 progress:
   total_phases: 23
   completed_phases: 15
@@ -740,9 +740,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-13T22:17:57.371Z
-Stopped at: Phase 75 context gathered
-Resume file: None
+Last session: 2026-11-13T23:54:18.993Z
+Stopped at: Phase 70 context gathered
+Resume file: .planning/phases/70-split-gameinfo-into-shared-and-per-store-shapes/70-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
