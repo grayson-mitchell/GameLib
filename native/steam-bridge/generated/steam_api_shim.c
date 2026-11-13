@@ -47839,6 +47839,7 @@ void *SteamAPI_STEAMVIDEO_INTERFACE_V002(void) { return &g_steamvideo_interface_
 #endif
 #if defined(__x86_64__)
 void *SteamAPI_STEAMVIDEO_INTERFACE_V007(void) { return &g_steamvideo_interface_v007_instance; }
+void *SteamAPI_SteamVideo_v007(void) { return &g_steamvideo_interface_v007_instance; }
 #endif
 #if defined(__x86_64__)
 void *SteamAPI_STEAMTIMELINE_INTERFACE_V001(void) { return &g_steamtimeline_interface_v001_instance; }
@@ -47857,9 +47858,11 @@ void *SteamAPI_SteamUGC_v020(void) { return &g_steamugc_interface_version020_ins
 #endif
 #if defined(__x86_64__)
 void *SteamAPI_STEAMHTMLSURFACE_INTERFACE_VERSION_005(void) { return &g_steamhtmlsurface_interface_version_005_instance; }
+void *SteamAPI_SteamHTMLSurface_v005(void) { return &g_steamhtmlsurface_interface_version_005_instance; }
 #endif
 #if defined(__x86_64__)
 void *SteamAPI_STEAMINVENTORY_INTERFACE_V003(void) { return &g_steaminventory_interface_v003_instance; }
+void *SteamAPI_SteamInventory_v003(void) { return &g_steaminventory_interface_v003_instance; }
 #endif
 #if defined(__x86_64__)
 void *SteamAPI_SteamUtils_v009(void) { return &g_steamutils009_instance; }

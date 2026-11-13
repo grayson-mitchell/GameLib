@@ -7,11 +7,13 @@
   "mode": "stub",
   "complete": true,
   "flatAccessor": "SteamAPI_STEAMHTMLSURFACE_INTERFACE_VERSION_005",
+  "flatAccessorAliases": ["SteamAPI_SteamHTMLSurface_v005"],
   "source": {
     "kind": "proton-lsteamclient",
     "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
     "file": "lsteamclient/winISteamHTMLSurface.c"
   },
+  "note": "261113-spw: flatAccessorAliases is the Steamworks SDK flat-accessor spelling, verified from Facepunch.Steamworks (MIT) a9ab9a18208bd2532933e46a35860296d7dda688 Generated/Interfaces/ISteamHTMLSurface.cs DllImport EntryPoint; flatAccessor keeps the previously shipped version-string spelling.",
   "methods": [
     {
       "slot": 0,
