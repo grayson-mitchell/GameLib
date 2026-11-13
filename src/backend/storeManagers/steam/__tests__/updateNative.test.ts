@@ -7,7 +7,10 @@ import { readRunningAppId } from '../library/runningPoll'
 import { readAcfUpdateState } from '../library/acfUpdateState'
 import { resolveSteamLibraryRoot } from '../installLocation'
 import { startInstallPolling } from '../library/installPolling'
-import { invalidateSteamUpdateState } from '../updateDetection'
+import {
+  invalidateSteamUpdateState,
+  getLastKnownSteamUpdateState
+} from '../updateDetection'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -67,6 +70,7 @@ describe('updateRegisteredSteamGame', () => {
       .mocked(readAcfUpdateState)
       .mockResolvedValue({ buildid: '777' } as never)
     jest.mocked(isSteamExperimentalInstallAppEnabled).mockReturnValue(true)
+    jest.mocked(getLastKnownSteamUpdateState).mockReturnValue(undefined)
   })
 
   it('InstallApp ok: no hand-off, polls as an update', async () => {
@@ -122,6 +126,61 @@ describe('updateRegisteredSteamGame', () => {
     } as never)
     expect(await updateRegisteredSteamGame(game)).toEqual({ status: 'done' })
     expect(requestSteamInstallApp).not.toHaveBeenCalled()
+    expect(openExternal).not.toHaveBeenCalled()
+    expect(startInstallPolling).not.toHaveBeenCalled()
+    expect(invalidateSteamUpdateState).toHaveBeenCalled()
+  })
+
+  const currentAcf = {
+    buildid: '777',
+    stateFlags: 4,
+    bytesToDownload: 0,
+    bytesDownloaded: 0,
+    scheduledAutoUpdate: 0
+  } as never
+  const staleCache = (targetBuild: string) =>
+    ({ kind: 'registered', state: 'stale', targetBuild }) as never
+
+  it('ACF current but PICS stale: hands off via the details link and polls to the target', async () => {
+    jest.mocked(readAcfUpdateState).mockResolvedValue(currentAcf)
+    jest.mocked(getLastKnownSteamUpdateState).mockReturnValue(staleCache('800'))
+    jest.mocked(isSteamExperimentalInstallAppEnabled).mockReturnValue(false)
+    expect(await updateRegisteredSteamGame(game)).toEqual({ status: 'done' })
+    expect(openExternal).toHaveBeenCalledWith(URL)
+    expect(startInstallPolling).toHaveBeenCalledWith(
+      expect.anything(),
+      '333300',
+      {
+        delegatedToSteamClient: true,
+        awaitingUpdate: { fromBuild: '777', targetBuild: '800' }
+      }
+    )
+    expect(invalidateSteamUpdateState).not.toHaveBeenCalled()
+  })
+
+  it('ACF current but PICS stale, InstallApp on: requests InstallApp, no openExternal', async () => {
+    jest.mocked(readAcfUpdateState).mockResolvedValue(currentAcf)
+    jest.mocked(getLastKnownSteamUpdateState).mockReturnValue(staleCache('800'))
+    jest
+      .mocked(requestSteamInstallApp)
+      .mockResolvedValue({ kind: 'ok', folderIndex: 0 } as never)
+    await updateRegisteredSteamGame(game)
+    expect(requestSteamInstallApp).toHaveBeenCalled()
+    expect(openExternal).not.toHaveBeenCalled()
+    expect(startInstallPolling).toHaveBeenCalledWith(
+      expect.anything(),
+      '333300',
+      {
+        delegatedToSteamClient: true,
+        awaitingUpdate: { fromBuild: '777', targetBuild: '800' }
+      }
+    )
+  })
+
+  it('ACF current and cached target equal to the ACF build: already current', async () => {
+    jest.mocked(readAcfUpdateState).mockResolvedValue(currentAcf)
+    jest.mocked(getLastKnownSteamUpdateState).mockReturnValue(staleCache('777'))
+    expect(await updateRegisteredSteamGame(game)).toEqual({ status: 'done' })
     expect(openExternal).not.toHaveBeenCalled()
     expect(startInstallPolling).not.toHaveBeenCalled()
     expect(invalidateSteamUpdateState).toHaveBeenCalled()

@@ -8,6 +8,7 @@ import { startInstallPolling } from '../library/installPolling'
 import { stopInstallPolling } from '../library/installStop'
 import { readAcfUpdateState } from '../library/acfUpdateState'
 import { invalidateSteamUpdateState } from '../updateDetection'
+import { logInfo } from 'backend/logger'
 import { notify } from '../../../dialog/dialog'
 import { STEAM_REQUEST_NO_ACTIVITY_TICKS } from '../library/pollState'
 
@@ -152,6 +153,56 @@ describe('pollUpdateOnce', () => {
     expect(statuses.slice(-2)).toEqual(['updating', 'done'])
     expect(invalidateSteamUpdateState).toHaveBeenCalledWith(deps, APP)
     expect(getPoll()).toBeUndefined()
+  })
+
+  function pollWithTarget(targetBuild: string | undefined) {
+    startInstallPolling(deps, APP, {
+      delegatedToSteamClient: true,
+      awaitingUpdate: { fromBuild: '777', targetBuild }
+    })
+    return getPoll()!
+  }
+  const statusesOf = () =>
+    send.mock.calls
+      .filter((c) => c[0] === 'gameStatusUpdate')
+      .map((c) => c[1].status)
+
+  it('quiet end with an unmet target build does not complete', async () => {
+    const p = pollWithTarget('800')
+    acf({ stateFlags: 4, buildid: '777' })
+    p.ticks = STEAM_REQUEST_NO_ACTIVITY_TICKS
+    send.mockClear()
+    await pollUpdateOnce(deps, APP, p)
+    // the tick's own progress 'updating' precedes the quiet 'done'; complete() would send a second
+    expect(statusesOf()).toEqual(['updating', 'done'])
+    expect(logInfo).toHaveBeenCalledWith(
+      expect.stringContaining('ending the update poll quietly'),
+      'Steam'
+    )
+    expect(logInfo).not.toHaveBeenCalledWith(
+      expect.stringContaining('finished'),
+      'Steam'
+    )
+    expect(invalidateSteamUpdateState).toHaveBeenCalledWith(deps, APP)
+    expect(getPoll()).toBeUndefined()
+  })
+
+  it('quiet end with no known target completes when the ACF is current', async () => {
+    const p = pollWithTarget(undefined)
+    acf({ stateFlags: 4, buildid: '777' })
+    p.ticks = STEAM_REQUEST_NO_ACTIVITY_TICKS
+    send.mockClear()
+    await pollUpdateOnce(deps, APP, p)
+    expect(statusesOf().slice(-2)).toEqual(['updating', 'done'])
+  })
+
+  it('quiet end at the target build completes', async () => {
+    const p = pollWithTarget('800')
+    acf({ stateFlags: 4, buildid: '800' })
+    p.ticks = STEAM_REQUEST_NO_ACTIVITY_TICKS
+    send.mockClear()
+    await pollUpdateOnce(deps, APP, p)
+    expect(statusesOf().slice(-2)).toEqual(['updating', 'done'])
   })
 
   it('ends quietly after the no-activity window', async () => {

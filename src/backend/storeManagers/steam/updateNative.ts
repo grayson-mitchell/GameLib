@@ -2,7 +2,9 @@
  * Update for a Steam-registered game (Phase 74, D-12): ask Steam to do it. With the opt-in macOS
  * InstallApp setting on, the running client is asked through the existing helper; otherwise (or
  * when InstallApp is unavailable) the game's page in the Steam library is opened, where Steam shows
- * its Update button. Either way GameLib then polls the ACF so progress shows as "Updating…" (D-11).
+ * its Update button. The ACF only learns of an update once Steam runs, so a PICS-stale registered
+ * game with Steam closed is handed off (the steam:// link or InstallApp starts Steam) rather than
+ * reported current. Either way GameLib then polls the ACF so progress shows as "Updating…" (D-11).
  */
 import i18next from 'i18next'
 import type { InstallResult } from 'common/types/game_manager'
@@ -18,13 +20,13 @@ import { resolveSteamLibraryRoot } from './installLocation'
 import { readRunningAppId } from './library/runningPoll'
 import {
   readAcfUpdateState,
-  isAcfUpdatePending
+  isAcfUpdatePending,
+  STATE_FLAG_FULLY_INSTALLED
 } from './library/acfUpdateState'
 import { startInstallPolling } from './library/installPolling'
 import {
   getLastKnownSteamUpdateState,
-  invalidateSteamUpdateState,
-  type SteamUpdateDeps
+  invalidateSteamUpdateState
 } from './updateDetection'
 
 export async function updateRegisteredSteamGame(
@@ -51,10 +53,14 @@ export async function updateRegisteredSteamGame(
   const acfFields = await readAcfUpdateState(deps, appId, 'native').catch(
     () => null
   )
+  const known = getLastKnownSteamUpdateState(deps, appId)
+  const picsSaysNewer =
+    known?.targetBuild !== undefined && known.targetBuild !== acfFields?.buildid
   if (
     acfFields &&
     !isAcfUpdatePending(acfFields) &&
-    (acfFields.stateFlags & 0x4) !== 0
+    (acfFields.stateFlags & STATE_FLAG_FULLY_INSTALLED) !== 0 &&
+    !picsSaysNewer
   ) {
     logInfo(
       `SteamGame: appId ${appId} is already current (build ${acfFields.buildid}); nothing to hand to Steam`,
@@ -63,12 +69,17 @@ export async function updateRegisteredSteamGame(
     invalidateSteamUpdateState(deps, appId)
     return { status: 'done' }
   }
+  if (acfFields && !isAcfUpdatePending(acfFields) && picsSaysNewer) {
+    logInfo(
+      `SteamGame: appId ${appId} ACF says current (build ${acfFields.buildid}) but Steam has build ${known?.targetBuild}; handing the update to Steam`,
+      LogPrefix.Steam
+    )
+  }
   const fromBuild = acfFields?.buildid ?? ''
   const targetBuild =
     acfFields?.targetBuildId && acfFields.targetBuildId !== '0'
       ? acfFields.targetBuildId
-      : getLastKnownSteamUpdateState(deps as unknown as SteamUpdateDeps, appId)
-          ?.targetBuild
+      : known?.targetBuild
   const pollOptions = {
     delegatedToSteamClient: true,
     awaitingUpdate: { fromBuild, targetBuild }

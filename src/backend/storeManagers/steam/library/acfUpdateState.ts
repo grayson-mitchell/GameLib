@@ -14,6 +14,9 @@ import {
   getBridgeBottleSteamappsRoot
 } from './installRoot'
 
+/** StateFlags bit 4: "fully installed". */
+export const STATE_FLAG_FULLY_INSTALLED = 0x4
+
 export interface AcfUpdateFields {
   steamappsDir: string
   buildid: string

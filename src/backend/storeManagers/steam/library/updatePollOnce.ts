@@ -2,10 +2,10 @@
  * Update-aware poll tick (Phase 74, D-11): watches a Steam-owned update of an installed game.
  * Progress shows as 'updating'; completion needs the ACF to stop reporting a pending update with
  * StateFlags bit 4 set. Bit 4 alone is never completion (StateFlags 6 = installed + update
- * required, RESEARCH Pitfall 6). A build equal to the hand-off's target build also completes (a
- * short update can finish before any pending state is seen). No update activity within
+ * required, RESEARCH Pitfall 6). A build different from the hand-off's starting build also
+ * completes (a short update can finish before any pending state is seen). No update activity within
  * STEAM_REQUEST_NO_ACTIVITY_TICKS ends the poll quietly, invalidating the cached update state, and
- * completes instead when the ACF is already current. is_installed is never changed here.
+ * completes instead only when the ACF is current at the target build (or no target is known). is_installed is never changed here.
  */
 import { logInfo, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
@@ -13,12 +13,15 @@ import { getFileSize } from 'backend/utils'
 import type { ManagerDeps } from 'backend/services/types'
 import { liveProgress } from '../steamDownloadProgress'
 import { invalidateSteamUpdateState } from '../updateDetection'
-import { readAcfUpdateState, isAcfUpdatePending } from './acfUpdateState'
+import {
+  readAcfUpdateState,
+  isAcfUpdatePending,
+  STATE_FLAG_FULLY_INSTALLED
+} from './acfUpdateState'
 import { STEAM_REQUEST_NO_ACTIVITY_TICKS } from './pollState'
 import type { ActiveInstallPoll } from './pollState'
 import { stopInstallPolling } from './installStop'
 
-const STATE_FLAG_FULLY_INSTALLED = 0x4
 const STATE_FLAGS_RUNNING = 0x100 | 0x400
 
 export async function pollUpdateOnce(
@@ -72,9 +75,8 @@ export async function pollUpdateOnce(
       (fields.stateFlags & STATE_FLAG_FULLY_INSTALLED) !== 0 &&
       (awaiting.sawPending ||
         awaiting.sawActivity ||
-        fields.buildid !== awaiting.fromBuild ||
-        (awaiting.targetBuild !== undefined &&
-          fields.buildid === awaiting.targetBuild))
+        // a stale target always differs from fromBuild, so this also covers reaching the target
+        fields.buildid !== awaiting.fromBuild)
     ) {
       complete(fields, 'finished')
       return
@@ -128,7 +130,9 @@ export async function pollUpdateOnce(
     if (
       fields &&
       !isAcfUpdatePending(fields) &&
-      (fields.stateFlags & STATE_FLAG_FULLY_INSTALLED) !== 0
+      (fields.stateFlags & STATE_FLAG_FULLY_INSTALLED) !== 0 &&
+      (awaiting.targetBuild === undefined ||
+        fields.buildid === awaiting.targetBuild)
     ) {
       complete(fields, 'finished')
       return
