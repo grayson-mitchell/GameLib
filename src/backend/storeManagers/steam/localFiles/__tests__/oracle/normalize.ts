@@ -158,7 +158,7 @@ export function normalizeForGolden(
     if (Array.isArray(v)) return v.map(walk)
     if (typeof v === 'object') {
       const out: Record<string, unknown> = {}
-      for (const k of Object.keys(v as object)) {
+      for (const k of Object.keys(v)) {
         const member = (v as Record<string, unknown>)[k]
         if (member === undefined) continue
         out[normalizeString(k, roots)] = walk(member)

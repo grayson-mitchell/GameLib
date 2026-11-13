@@ -34,7 +34,7 @@ export function stubRustSteamFiles(handlers: Handlers) {
     try {
       return Promise.resolve(handler(args))
     } catch (e) {
-      return Promise.reject(e)
+      return Promise.reject(e as Error)
     }
   }
   return { requestRustInvoke, calls }

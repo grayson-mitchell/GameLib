@@ -118,11 +118,11 @@ describe('library replay parity (TS wrappers over recorded Rust results)', () =>
       }
       for (const appId of ['10', '20', '40', '99']) {
         await check(`readAcfState/${appId}`, root, () =>
-          readAcfState(deps as never, appId)
+          readAcfState(deps, appId)
         )
       }
       await check(`readAcfState/30/${hangs}`, root, () =>
-        readAcfState(deps as never, '30')
+        readAcfState(deps, '30')
       )
 
       const stateDeps = {

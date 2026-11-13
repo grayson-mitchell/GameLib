@@ -966,7 +966,7 @@ describe('SteamLibraryManager', () => {
         acfInstalldir = 'csgo'
         // The ACF read goes through the deps' own transport, the finalize through the install
         // runtime's; one router serves both.
-        invoke = jest.fn((channel: string, args: unknown[]) => {
+        invoke = jest.fn((channel: string, _args: unknown[]) => {
           if (channel === 'steamfiles_read_acf') {
             return Promise.resolve({ record: { installdir: acfInstalldir } })
           }

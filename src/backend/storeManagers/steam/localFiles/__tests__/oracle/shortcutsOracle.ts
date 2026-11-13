@@ -67,7 +67,7 @@ function roundTrip(content: Parsed, root: string) {
     // Without autoConvertArrays the numeric keys of the shortcuts map show
     // exactly how the oracle renumbered the entries on write.
     numericKeys: Object.keys(
-      ((parseBuffer(buf) as { shortcuts?: object }).shortcuts ?? {}) as object
+      (parseBuffer(buf) as { shortcuts?: object }).shortcuts ?? {}
     )
   }
 }
