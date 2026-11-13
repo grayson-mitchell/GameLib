@@ -278,7 +278,7 @@ describe('readAcfState(libDeps)', () => {
   it('returns state:"installed" with installPath/sizeOnDisk when StateFlags bit 4 is set', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -297,7 +297,7 @@ describe('readAcfState(libDeps)', () => {
   it('returns state:"downloading" when manifest exists but StateFlags bit 4 is unset', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',
@@ -314,7 +314,7 @@ describe('readAcfState(libDeps)', () => {
   it('a downloading ACF with BytesDownloaded/BytesToDownload returns those numbers on the result', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',
@@ -337,7 +337,7 @@ describe('readAcfState(libDeps)', () => {
   it('defaults missing/non-numeric ACF byte fields to 0', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',
@@ -383,7 +383,7 @@ describe('readAcfState(libDeps) — D-05/D-15 regression: GameLib-written manife
   })
 
   it('a GameLib-written 1026 manifest (writeAppManifest field set) reads as state:"downloading"', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         Universe: '1',
@@ -407,7 +407,7 @@ describe('readAcfState(libDeps) — D-05/D-15 regression: GameLib-written manife
   })
 
   it('the SAME manifest with Steam-flipped StateFlags "4" reads as state:"installed"', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         Universe: '1',
@@ -447,7 +447,7 @@ describe('readAcfState(libDeps, appId, "bottle") — bottle-scoped ACF root', ()
   it('reads a manifest placed under the mocked bottle steamapps root and returns state:"installed" (bit 4 set)', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -476,7 +476,7 @@ describe('readAcfState(libDeps, appId, "bottle") — bottle-scoped ACF root', ()
         path === '/steam' || path === join('/steam', 'steamapps')
     )
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -499,7 +499,7 @@ describe('readAcfState(libDeps, appId, "bottle") — bottle-scoped ACF root', ()
       .mockReturnValue(WIN32_BOTTLE_STEAMAPPS_ROOT)
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -521,7 +521,7 @@ describe('readAcfState(libDeps, appId, "bottle") — bottle-scoped ACF root', ()
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -564,7 +564,7 @@ describe('readAcfState(libDeps, appId, "bridge") — bridge-bottle-scoped ACF ro
   it('reads a StateFlags=4 manifest placed under the mocked bridge bottle steamapps root and returns state:"installed"', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '206040',
         StateFlags: '4',
@@ -605,7 +605,7 @@ describe('readAcfState(libDeps, appId, "bridge") — bridge-bottle-scoped ACF ro
         path === '/steam' || path === join('/steam', 'steamapps')
     )
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -626,7 +626,7 @@ describe('readAcfState(libDeps, appId, "bridge") — bridge-bottle-scoped ACF ro
       (path: string) => path === BRIDGE_BOTTLE_STEAMAPPS_ROOT
     )
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '206040',
         StateFlags: '4',
@@ -679,7 +679,7 @@ describe('findOtherManifestsWithInstalldir() (34.13 review A-13)', () => {
     ;(readFileSync as jest.Mock).mockImplementation((path: string) =>
       String(path).includes('228980') ? 'other' : 'self'
     )
-    ;(vdf.parse as jest.Mock).mockImplementation((content: string) =>
+    vdf.parse.mockImplementation((content: string) =>
       content === 'other'
         ? { AppState: { appid: '228980', installdir: 'Hoard' } }
         : { AppState: { appid: '63000', installdir: 'Hoard' } }
@@ -702,7 +702,7 @@ describe('findOtherManifestsWithInstalldir() (34.13 review A-13)', () => {
       'appmanifest_228980.acf'
     ])
     ;(readFileSync as jest.Mock).mockReturnValue('x')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '228980',
         installdir: 'Steamworks Common Redistributables'
@@ -723,7 +723,7 @@ describe('findOtherManifestsWithInstalldir() (34.13 review A-13)', () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_63000.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('x')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: { appid: '63000', installdir: 'Hoard' }
     })
 
@@ -765,7 +765,7 @@ describe('findOtherManifestsWithInstalldir() (34.13 review A-13)', () => {
       'libraryfolders.vdf'
     ])
     ;(readFileSync as jest.Mock).mockReturnValue('x')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: { appid: '228980', installdir: 'Hoard' }
     })
 
@@ -806,7 +806,7 @@ describe('scanDownloadingAppIds(libDeps)', () => {
     } as any)
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',
@@ -833,7 +833,7 @@ describe('scanDownloadingAppIds(libDeps)', () => {
     } as any)
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -849,7 +849,7 @@ describe('scanDownloadingAppIds(libDeps)', () => {
     // library is empty — no '730' entry
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',

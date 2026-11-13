@@ -307,7 +307,7 @@ describe('pollUninstallOnce()', () => {
 
   it('sends gameStatusUpdate { status:"uninstalling" } while StateFlags bit 0x800 is set', async () => {
     // 4 (installed) | 2048 (uninstalling) = 2052
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2052',
@@ -339,7 +339,7 @@ describe('pollUninstallOnce()', () => {
   it('A-10: sends gameStatusUpdate { status:"uninstalling" } for a DOWNLOADING manifest too, not only the 0x800 bit', async () => {
     // 1026 = 1024 (update started) | 2 (update required) — bit 4 (installed)
     // is NOT set, which is what readAcfState maps to state 'downloading'.
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '1026',
@@ -360,7 +360,7 @@ describe('pollUninstallOnce()', () => {
   })
 
   it('does NOT flip the badge while the game is still fully installed (no uninstalling bit)', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -391,7 +391,7 @@ describe('pollUninstallOnce()', () => {
 
   it('GAME-03: does NOT fire notify while the manifest is still present (interim uninstalling tick)', async () => {
     // 4 (installed) | 2048 (uninstalling) = 2052
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2052',
@@ -431,7 +431,7 @@ describe('pollUninstallOnce()', () => {
   })
 
   it('R3: a cancelled bottle uninstall (manifest still present) does NOT clear the forced verdict', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -474,7 +474,7 @@ describe('pollUninstallOnce()', () => {
         (path: string) => path !== '/bottle/steamapps/appmanifest_730.acf'
       )
       ;(readFileSync as jest.Mock).mockReturnValue('native manifest content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: {
           appid: '730',
           StateFlags: '4',
@@ -531,7 +531,7 @@ describe('pollUninstallOnce()', () => {
         (path: string) => path !== '/steam/steamapps/appmanifest_730.acf'
       )
       ;(readFileSync as jest.Mock).mockReturnValue('bottle manifest content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: {
           appid: '730',
           StateFlags: '4',
@@ -607,7 +607,7 @@ describe('pollUninstallOnce()', () => {
         path.startsWith('/bridge/')
       )
       ;(readFileSync as jest.Mock).mockReturnValue('bridge manifest content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: {
           appid: '730',
           StateFlags: '4',
@@ -673,7 +673,7 @@ describe('pollUninstallOnce()', () => {
             !path.startsWith('/bridge/') && !path.startsWith('/bottle/')
         )
         ;(readFileSync as jest.Mock).mockReturnValue('native manifest content')
-        ;(vdf.parse as jest.Mock).mockReturnValue({
+        vdf.parse.mockReturnValue({
           AppState: {
             appid: '730',
             StateFlags: '4',
@@ -817,7 +817,7 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4', // fully installed — Steam never started the uninstall
@@ -882,7 +882,7 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2052',
@@ -927,7 +927,7 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',

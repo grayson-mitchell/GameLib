@@ -860,7 +860,7 @@ describe('SteamLibraryManager', () => {
         ;(existsSync as jest.Mock).mockReturnValue(true)
         ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_1.acf'])
         ;(readFileSync as jest.Mock).mockReturnValue('content')
-        ;(vdf.parse as jest.Mock).mockReturnValue({
+        vdf.parse.mockReturnValue({
           AppState: {
             appid: '1',
             StateFlags: '4',
@@ -1351,7 +1351,7 @@ describe('SteamLibraryManager', () => {
         dir === BOTTLE_STEAMAPPS_ROOT ? ['appmanifest_206020.acf'] : []
       )
       ;(readFileSync as jest.Mock).mockReturnValue('content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: {
           appid: '206020',
           StateFlags: '4',
@@ -1395,7 +1395,7 @@ describe('SteamLibraryManager', () => {
         dir === BOTTLE_STEAMAPPS_ROOT ? ['appmanifest_206060.acf'] : []
       )
       ;(readFileSync as jest.Mock).mockReturnValue('content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: {
           appid: '206060',
           StateFlags: '4',
@@ -1434,7 +1434,7 @@ describe('SteamLibraryManager', () => {
         if (file.includes(NATIVE_ROOT)) return 'native-content'
         return 'bottle-content'
       })
-      ;(vdf.parse as jest.Mock).mockImplementation((content: string) =>
+      vdf.parse.mockImplementation((content: string) =>
         content === 'native-content'
           ? {
               AppState: {
@@ -1538,7 +1538,7 @@ describe('SteamLibraryManager', () => {
         dir === BRIDGE_BOTTLE_STEAMAPPS_ROOT ? ['appmanifest_206040.acf'] : []
       )
       ;(readFileSync as jest.Mock).mockReturnValue('content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: {
           appid: '206040',
           StateFlags: '4',
@@ -1601,7 +1601,7 @@ describe('SteamLibraryManager', () => {
       ;(readFileSync as jest.Mock).mockImplementation((p: string) =>
         String(p).includes('206041') ? 'two' : 'one'
       )
-      ;(vdf.parse as jest.Mock).mockImplementation((c: string) => ({
+      vdf.parse.mockImplementation((c: string) => ({
         AppState: {
           appid: c === 'two' ? '206041' : '206040',
           StateFlags: '4',
@@ -1752,7 +1752,7 @@ describe('SteamLibraryManager', () => {
         dir === BOTTLE_STEAMAPPS_ROOT ? ['appmanifest_206060.acf'] : []
       )
       ;(readFileSync as jest.Mock).mockReturnValue('content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: {
           appid: '206060',
           StateFlags: '4',
@@ -1797,7 +1797,7 @@ describe('SteamLibraryManager', () => {
         dir === BRIDGE_BOTTLE_STEAMAPPS_ROOT ? ['appmanifest_206040.acf'] : []
       )
       ;(readFileSync as jest.Mock).mockReturnValue('content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: {
           appid: '206040',
           StateFlags: '4',
@@ -1845,7 +1845,7 @@ describe('SteamLibraryManager', () => {
         dir === NATIVE_ROOT ? ['appmanifest_999.acf'] : []
       )
       ;(readFileSync as jest.Mock).mockReturnValue('content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: {
           appid: '999',
           StateFlags: '4',
@@ -1901,7 +1901,7 @@ describe('SteamLibraryManager', () => {
       ;(readFileSync as jest.Mock).mockImplementation((file: string) =>
         file.includes('appmanifest_570') ? 'incomplete' : 'installed'
       )
-      ;(vdf.parse as jest.Mock).mockImplementation((content: string) =>
+      vdf.parse.mockImplementation((content: string) =>
         content === 'incomplete'
           ? {
               AppState: {
@@ -2099,7 +2099,7 @@ describe('SteamLibraryManager', () => {
       ;(existsSync as jest.Mock).mockReturnValue(true)
       ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
       ;(readFileSync as jest.Mock).mockReturnValue('content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: {
           appid: '570',
           StateFlags: '4',
@@ -2135,7 +2135,7 @@ describe('SteamLibraryManager', () => {
       ;(existsSync as jest.Mock).mockReturnValue(true)
       ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
       ;(readFileSync as jest.Mock).mockReturnValue('content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: {
           appid: '570',
           StateFlags: '4',
@@ -2234,7 +2234,7 @@ describe('SteamLibraryManager', () => {
       ;(existsSync as jest.Mock).mockReturnValue(true)
       ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
       ;(readFileSync as jest.Mock).mockReturnValue('content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: {
           appid: '570',
           StateFlags: '4',
@@ -2319,7 +2319,7 @@ describe('SteamLibraryManager', () => {
         ;(existsSync as jest.Mock).mockReturnValue(true)
         ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
         ;(readFileSync as jest.Mock).mockReturnValue('content')
-        ;(vdf.parse as jest.Mock).mockReturnValue({
+        vdf.parse.mockReturnValue({
           AppState: {
             appid: '570',
             StateFlags: '4',
@@ -2362,7 +2362,7 @@ describe('SteamLibraryManager', () => {
         ;(existsSync as jest.Mock).mockReturnValue(true)
         ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
         ;(readFileSync as jest.Mock).mockReturnValue('content')
-        ;(vdf.parse as jest.Mock).mockReturnValue({
+        vdf.parse.mockReturnValue({
           AppState: {
             appid: '570',
             StateFlags: '4',
@@ -2404,7 +2404,7 @@ describe('SteamLibraryManager', () => {
         ;(existsSync as jest.Mock).mockReturnValue(true)
         ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
         ;(readFileSync as jest.Mock).mockReturnValue('content')
-        ;(vdf.parse as jest.Mock).mockReturnValue({
+        vdf.parse.mockReturnValue({
           AppState: {
             appid: '570',
             StateFlags: '4',
@@ -2458,7 +2458,7 @@ describe('SteamLibraryManager', () => {
         ;(existsSync as jest.Mock).mockReturnValue(true)
         ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
         ;(readFileSync as jest.Mock).mockReturnValue('content')
-        ;(vdf.parse as jest.Mock).mockReturnValue({
+        vdf.parse.mockReturnValue({
           AppState: {
             appid: '570',
             StateFlags: '4',
@@ -2530,7 +2530,7 @@ describe('SteamLibraryManager', () => {
         ;(existsSync as jest.Mock).mockReturnValue(true)
         ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_206040.acf'])
         ;(readFileSync as jest.Mock).mockReturnValue('content')
-        ;(vdf.parse as jest.Mock).mockReturnValue({
+        vdf.parse.mockReturnValue({
           AppState: {
             appid: '206040',
             StateFlags: '4',
@@ -2573,7 +2573,7 @@ describe('SteamLibraryManager', () => {
         ;(existsSync as jest.Mock).mockReturnValue(true)
         ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_206040.acf'])
         ;(readFileSync as jest.Mock).mockReturnValue('content')
-        ;(vdf.parse as jest.Mock).mockReturnValue({
+        vdf.parse.mockReturnValue({
           AppState: {
             appid: '206040',
             StateFlags: '4',
@@ -2659,7 +2659,7 @@ describe('SteamLibraryManager', () => {
           dir === BOTTLE_STEAMAPPS_ROOT ? ['appmanifest_206060.acf'] : []
         )
         ;(readFileSync as jest.Mock).mockReturnValue('content')
-        ;(vdf.parse as jest.Mock).mockReturnValue({
+        vdf.parse.mockReturnValue({
           AppState: {
             appid: '206060',
             StateFlags: '4',
@@ -2706,7 +2706,7 @@ describe('SteamLibraryManager', () => {
           dir === BOTTLE_STEAMAPPS_ROOT ? ['appmanifest_570.acf'] : []
         )
         ;(readFileSync as jest.Mock).mockReturnValue('content')
-        ;(vdf.parse as jest.Mock).mockReturnValue({
+        vdf.parse.mockReturnValue({
           AppState: {
             appid: '570',
             StateFlags: '4',

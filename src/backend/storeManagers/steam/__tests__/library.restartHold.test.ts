@@ -297,7 +297,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue(ACF_4)
+    vdf.parse.mockReturnValue(ACF_4)
     jest
       .mocked(getFileSize)
       .mockImplementation((bytes: unknown) => `${String(bytes)} B`)
@@ -551,12 +551,12 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
 
     // Steam picked the app up and queued a post-restart update (1042 = active
     // download, never === 1026).
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: { ...ACF_4.AppState, StateFlags: '1042' }
     })
     await pollInstallOnce(steamTestDeps, '730')
     // ...and finished it.
-    ;(vdf.parse as jest.Mock).mockReturnValue(ACF_4)
+    vdf.parse.mockReturnValue(ACF_4)
     await pollInstallOnce(steamTestDeps, '730')
 
     expect(listSteamClientPids).toHaveBeenCalledTimes(1)
@@ -571,7 +571,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
     })
 
     // GameLib could not earn the fast path and wrote the 1026 handoff manifest.
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: { ...ACF_4.AppState, StateFlags: '1026' }
     })
     await pollInstallOnce(steamTestDeps, '730')
@@ -585,7 +585,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
     // The user restarts Steam; the NEW client is running and has adopted the
     // manifest, rewriting it to 4. A probe now would see that new client.
     jest.mocked(listSteamClientPids).mockResolvedValue([222])
-    ;(vdf.parse as jest.Mock).mockReturnValue(ACF_4)
+    vdf.parse.mockReturnValue(ACF_4)
     await pollInstallOnce(steamTestDeps, '730')
 
     expect(listSteamClientPids).not.toHaveBeenCalled()
@@ -603,7 +603,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
     // resumeInterruptedSteamInstall's bare native poll: ACF left at 1026 by the
     // earlier cancel (Steam-style active state, NOT a GameLib handoff yet).
     startInstallPolling(steamTestDeps, '730', 60000)
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: { ...ACF_4.AppState, StateFlags: '1026' }
     })
     await pollInstallOnce(steamTestDeps, '730')
@@ -617,7 +617,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
       intervalMs: 60000,
       isNativeHandoff: true
     })
-    ;(vdf.parse as jest.Mock).mockReturnValue(ACF_4)
+    vdf.parse.mockReturnValue(ACF_4)
     await pollInstallOnce(steamTestDeps, '730')
 
     expect(statusPayloads()).toContainEqual({
@@ -693,7 +693,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
   it('an ordinary poll with no hold still stops at the MAX_TICKS safety cap (the hold special-case must not weaken it)', async () => {
     // A manifest that is never installed: Steam-owned download parked at an
     // active state forever. isNativeHandoff false, so no probe/hold applies.
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: { ...ACF_4.AppState, StateFlags: '1042' }
     })
     startInstallPolling(steamTestDeps, '730', { intervalMs: 1 })

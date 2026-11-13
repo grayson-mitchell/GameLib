@@ -285,7 +285,7 @@ describe('detector regression lock (D-UAT-09): buildInstalledMap / readAcfState 
       'appmanifest_200.acf'
     ])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock)
+    vdf.parse
       .mockReturnValueOnce({
         AppState: {
           appid: '100',
@@ -313,7 +313,7 @@ describe('detector regression lock (D-UAT-09): buildInstalledMap / readAcfState 
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '100',
         StateFlags: '1026',
@@ -324,7 +324,7 @@ describe('detector regression lock (D-UAT-09): buildInstalledMap / readAcfState 
 
     const incomplete = await readAcfState(libDeps, '100')
     expect(incomplete.state).toBe('downloading')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '200',
         StateFlags: '4',
@@ -360,7 +360,7 @@ describe('buildBottleInstalledMap()', () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -435,7 +435,7 @@ describe('buildBridgeInstalledMap(testPaths, libDeps)', () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_206040.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '206040',
         StateFlags: '4',
@@ -481,7 +481,7 @@ describe('buildBridgeInstalledMap(testPaths, libDeps)', () => {
     ;(readFileSync as jest.Mock).mockImplementation((file: string) =>
       file.includes('206040') ? 'legacy-manifest' : 'per-game-manifest'
     )
-    ;(vdf.parse as jest.Mock).mockImplementation((content: string) =>
+    vdf.parse.mockImplementation((content: string) =>
       content === 'legacy-manifest'
         ? {
             AppState: {
@@ -529,7 +529,7 @@ describe('buildBridgeInstalledMap(testPaths, libDeps)', () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_206040.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '206040',
         StateFlags: '4',
@@ -572,7 +572,7 @@ describe('buildBridgeInstalledMap(testPaths, libDeps)', () => {
         ? 'per-game-manifest'
         : 'legacy-manifest'
     )
-    ;(vdf.parse as jest.Mock).mockImplementation((content: string) =>
+    vdf.parse.mockImplementation((content: string) =>
       content === 'legacy-manifest'
         ? {
             AppState: {

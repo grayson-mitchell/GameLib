@@ -317,7 +317,7 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue(ACF_4)
+    vdf.parse.mockReturnValue(ACF_4)
     jest
       .mocked(getFileSize)
       .mockImplementation((bytes: unknown) => `${String(bytes)} B`)
@@ -379,7 +379,7 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
 
     it('clears the record when Steam rewrites the manifest (active download state)', async () => {
       await arm()
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: { ...ACF_4.AppState, StateFlags: '1042' }
       })
       await pollInstallOnce(steamTestDeps, '730')
@@ -508,7 +508,7 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
       ['absent', '4', false]
     ])('drops when the native manifest is %s', async (_n, flags, exists) => {
       store.set('730', record())
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: { ...ACF_4.AppState, StateFlags: flags }
       })
       ;(existsSync as jest.Mock).mockReturnValue(exists)

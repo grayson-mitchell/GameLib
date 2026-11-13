@@ -511,7 +511,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     // Drive readAcfState to the 'installed' shape — same fixture shape as
     // the existing 'fires the "Restart Steam..." isNativeHandoff true' test
     // above (StateFlags=4 fast path).
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -542,7 +542,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '1026',
@@ -613,7 +613,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
       String(p).startsWith(BOTTLE_STEAMAPPS_ROOT)
     )
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue(g9oAcf)
+    vdf.parse.mockReturnValue(g9oAcf)
     isNativeInstallInFlightSpy = jest
       .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(false)
@@ -783,7 +783,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
       .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(false)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue(delegatedAcf('1026'))
+    vdf.parse.mockReturnValue(delegatedAcf('1026'))
     jest.mocked(sendFrontendMessage).mockClear()
 
     const interval = 10
@@ -825,9 +825,9 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     })
     await jest.advanceTimersByTimeAsync(interval * 30) // well past 20-tick grace
     ;(existsSync as jest.Mock).mockReturnValue(true)
-    ;(vdf.parse as jest.Mock).mockReturnValue(delegatedAcf('1026'))
+    vdf.parse.mockReturnValue(delegatedAcf('1026'))
     await jest.advanceTimersByTimeAsync(interval * 2)
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -853,7 +853,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
       .mockReturnValue(false)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(existsSync as jest.Mock).mockReturnValue(true)
-    ;(vdf.parse as jest.Mock).mockReturnValue(delegatedAcf('1026'))
+    vdf.parse.mockReturnValue(delegatedAcf('1026'))
     jest.mocked(sendFrontendMessage).mockClear()
     ;(notify as jest.Mock).mockClear()
 
@@ -1007,7 +1007,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(existsSync as jest.Mock).mockReturnValue(true)
     // The live ATOM RPG manifest shape: StateFlags 1026, ~39 % of 6.0 GB.
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '1026',
@@ -1051,7 +1051,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
       .mockReturnValue(false)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(existsSync as jest.Mock).mockReturnValue(true)
-    ;(vdf.parse as jest.Mock).mockReturnValue(delegatedAcf('1026'))
+    vdf.parse.mockReturnValue(delegatedAcf('1026'))
     jest.mocked(sendFrontendMessage).mockClear()
 
     const interval = 10
@@ -1078,7 +1078,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readdirSync as jest.Mock).mockReturnValue([])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2', // downloading — keeps the poll alive for the assertion

@@ -1083,9 +1083,9 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
     })
     await jest.advanceTimersByTimeAsync(30) // absent
     manifestPresent = true
-    ;(vdf.parse as jest.Mock).mockReturnValue(downloadingAcf)
+    vdf.parse.mockReturnValue(downloadingAcf)
     await jest.advanceTimersByTimeAsync(20)
-    ;(vdf.parse as jest.Mock).mockReturnValue(installedAcf)
+    vdf.parse.mockReturnValue(installedAcf)
     await jest.advanceTimersByTimeAsync(20)
     await flushMicrotasks()
   }
@@ -1118,7 +1118,7 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
 
   it('E3: focus reconciliation catches a native false->true flip with no live poll and offers i386 recovery once', async () => {
     manifestPresent = true
-    ;(vdf.parse as jest.Mock).mockReturnValue(installedAcf)
+    vdf.parse.mockReturnValue(installedAcf)
 
     await new SteamLibraryManager(steamTestDeps).refreshInstallState()
     await flushMicrotasks()
@@ -1133,7 +1133,7 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
 
   it('E4: with a live poll registered for the appId, focus reconciliation flips the badge but leaves the arch check to the poll', async () => {
     manifestPresent = true
-    ;(vdf.parse as jest.Mock).mockReturnValue(installedAcf)
+    vdf.parse.mockReturnValue(installedAcf)
     // Long interval: the poll is registered but never ticks during the test.
     startInstallPolling(steamTestDeps, APP_ID, {
       intervalMs: 1_000_000,

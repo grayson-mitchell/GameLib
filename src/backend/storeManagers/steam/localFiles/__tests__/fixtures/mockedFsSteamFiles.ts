@@ -73,7 +73,7 @@ function readState(path: string, checkExists = true): AcfReadResult {
     return { exists: false, parsed: false, readError: null, record: null }
   }
   try {
-    const parsed = vdf.parse(readFileSync(path, 'utf-8') as string) as Obj
+    const parsed = vdf.parse(readFileSync(path, 'utf-8')) as Obj
     const state = parsed?.AppState as Obj | undefined
     if (!state) {
       return { exists: true, parsed: false, readError: null, record: null }
@@ -95,7 +95,7 @@ function readState(path: string, checkExists = true): AcfReadResult {
 }
 
 function manifestNames(dir: string): string[] {
-  return (readdirSync(dir) as string[]).filter(
+  return readdirSync(dir).filter(
     (f) => f.startsWith('appmanifest_') && f.endsWith('.acf')
   )
 }
@@ -150,7 +150,7 @@ export function mockedFsSteamFiles(overrides: Handlers = {}) {
     steamfiles_read_running_app_id: ({ path }) => {
       if (!existsSync(path)) return { runningAppId: 0 }
       try {
-        const parsed = vdf.parse(readFileSync(path, 'utf-8') as string) as Obj
+        const parsed = vdf.parse(readFileSync(path, 'utf-8')) as Obj
         const reg = parsed?.Registry as Obj | undefined
         const hkcu = reg?.HKCU as Obj | undefined
         const sw = hkcu?.Software as Obj | undefined
