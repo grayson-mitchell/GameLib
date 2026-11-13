@@ -1,0 +1,1242 @@
+{
+  "results": {
+    "acfUpdate/readLocalConfigBetaKey/missing-file": {
+      "betaKey": null
+    },
+    "acfUpdate/readLocalConfigBetaKey/none/10": {
+      "betaKey": null
+    },
+    "acfUpdate/readLocalConfigBetaKey/none/20": {
+      "betaKey": null
+    },
+    "acfUpdate/readLocalConfigBetaKey/userappconfig/10": {
+      "betaKey": null
+    },
+    "acfUpdate/readLocalConfigBetaKey/userappconfig/20": {
+      "betaKey": null
+    },
+    "adoption/readMacRunningAppId/lowercase": {
+      "runningAppId": 1245620
+    },
+    "adoption/readMacRunningAppId/missing-key": {
+      "runningAppId": 0
+    },
+    "adoption/readMacRunningAppId/no-file": {
+      "runningAppId": 0
+    },
+    "adoption/readMacRunningAppId/not-running": {
+      "runningAppId": 0
+    },
+    "adoption/readMacRunningAppId/running": {
+      "runningAppId": 1245620
+    },
+    "bridge/parseInstallScript/conditionals": {
+      "entries": [
+        {
+          "hasRunKey": null,
+          "minimumHasRunValue": 1,
+          "name": "VC 2019",
+          "processes": [
+            {
+              "command": "/q /norestart",
+              "process": "%INSTALLDIR%/vcredist/VC_redist.x64.exe"
+            }
+          ],
+          "requirementOs": null
+        }
+      ],
+      "exists": true
+    },
+    "bridge/parseInstallScript/dotnet-duplicate": {
+      "entries": [
+        {
+          "hasRunKey": null,
+          "minimumHasRunValue": 1,
+          "name": "4.8",
+          "processes": [
+            {
+              "command": "/q /norestart",
+              "process": "%INSTALLDIR%/_CommonRedist/DotNet/4.0/dotNetFx40_Full_x86_x64.exe"
+            }
+          ],
+          "requirementOs": null
+        },
+        {
+          "hasRunKey": null,
+          "minimumHasRunValue": 1,
+          "name": "4.8",
+          "processes": [
+            {
+              "command": "/q /norestart",
+              "process": "%INSTALLDIR%/_CommonRedist/DotNet/4.8/NDP48-x86-x64-AllOS-ENU.exe"
+            }
+          ],
+          "requirementOs": null
+        }
+      ],
+      "exists": true
+    },
+    "bridge/parseInstallScript/escapes": {
+      "entries": [
+        {
+          "hasRunKey": null,
+          "minimumHasRunValue": 1,
+          "name": "DirectX",
+          "processes": [
+            {
+              "command": "/silent \"quoted\"",
+              "process": "%INSTALLDIR%/Redist/DXSETUP.exe"
+            }
+          ],
+          "requirementOs": null
+        }
+      ],
+      "exists": true
+    },
+    "bridge/parseInstallScript/malformed": {
+      "entries": null,
+      "exists": true
+    },
+    "bridge/parseInstallScript/missing": {
+      "entries": null,
+      "exists": false
+    },
+    "bridge/parseInstallScript/no-run-process": {
+      "entries": null,
+      "exists": true
+    },
+    "bridge/parseValveClientManifest/bad-file": {
+      "ok": false,
+      "pkg": null,
+      "reason": "no win64 root"
+    },
+    "bridge/parseValveClientManifest/bad-sha": {
+      "ok": false,
+      "pkg": null,
+      "reason": "no win64 root"
+    },
+    "bridge/parseValveClientManifest/forbidden-proto": {
+      "ok": false,
+      "pkg": null,
+      "reason": "forbidden key __proto__"
+    },
+    "bridge/parseValveClientManifest/good": {
+      "ok": false,
+      "pkg": null,
+      "reason": "no win64 root"
+    },
+    "bridge/parseValveClientManifest/missing": {
+      "ok": false,
+      "pkg": null,
+      "reason": "not text"
+    },
+    "bridge/parseValveClientManifest/no-bins": {
+      "ok": false,
+      "pkg": null,
+      "reason": "no win64 root"
+    },
+    "bridge/parseValveClientManifest/no-win64": {
+      "ok": false,
+      "pkg": null,
+      "reason": "no win64 root"
+    },
+    "bridge/parseValveClientManifest/size-as-string": {
+      "ok": false,
+      "pkg": null,
+      "reason": "no win64 root"
+    },
+    "bridge/parseValveClientManifest/size-too-big": {
+      "ok": false,
+      "pkg": null,
+      "reason": "no win64 root"
+    },
+    "bridge/parseValveClientManifest/version-number": {
+      "ok": false,
+      "pkg": null,
+      "reason": "no win64 root"
+    },
+    "library/getSteamLibraries/legacy": {
+      "exists": true,
+      "parsed": true,
+      "paths": ["${FIXTURES}/scan/lib1", "${FIXTURES}/scan/lib2"],
+      "readError": null
+    },
+    "library/getSteamLibraries/malformed": {
+      "exists": true,
+      "parsed": false,
+      "paths": [],
+      "readError": "parse: Unbalanced at 112"
+    },
+    "library/getSteamLibraries/modern": {
+      "exists": true,
+      "parsed": true,
+      "paths": [
+        "${FIXTURES}/scan/lib1",
+        "${FIXTURES}/scan/lib2",
+        "${FIXTURES}/scan/missing-lib"
+      ],
+      "readError": null
+    },
+    "library/getSteamLibraries/no-file": {
+      "exists": false,
+      "parsed": false,
+      "paths": [],
+      "readError": null
+    },
+    "library/getSteamLibraries/windows-paths": {
+      "exists": true,
+      "parsed": true,
+      "paths": ["C:/Program Files (x86)/Steam", "C:/Games/SteamLibrary"],
+      "readError": null
+    },
+    "library/readAcfState/10": {
+      "found": true,
+      "record": {
+        "appid": "10",
+        "betaKey": null,
+        "buildid": "100",
+        "bytesDownloaded": null,
+        "bytesStaged": null,
+        "bytesToDownload": null,
+        "bytesToStage": null,
+        "installdir": "ScanInstalled",
+        "installedDepots": [],
+        "lastOwner": null,
+        "name": "Scan Installed",
+        "scheduledAutoUpdate": null,
+        "sizeOnDisk": "1000",
+        "stateFlags": 4,
+        "stateFlagsRaw": "4",
+        "targetBuildId": null
+      },
+      "steamappsDir": "${FIXTURES}/scan/lib1/steamapps"
+    },
+    "library/readAcfState/10-lib2-first": {
+      "found": true,
+      "record": {
+        "appid": "10",
+        "betaKey": null,
+        "buildid": "100",
+        "bytesDownloaded": null,
+        "bytesStaged": null,
+        "bytesToDownload": null,
+        "bytesToStage": null,
+        "installdir": "DuplicateDir",
+        "installedDepots": [],
+        "lastOwner": null,
+        "name": "Scan Installed Dup",
+        "scheduledAutoUpdate": null,
+        "sizeOnDisk": "1000",
+        "stateFlags": 4,
+        "stateFlagsRaw": "4",
+        "targetBuildId": null
+      },
+      "steamappsDir": "${FIXTURES}/scan/lib2/steamapps"
+    },
+    "library/readAcfState/20": {
+      "found": true,
+      "record": {
+        "appid": "20",
+        "betaKey": null,
+        "buildid": "100",
+        "bytesDownloaded": null,
+        "bytesStaged": null,
+        "bytesToDownload": null,
+        "bytesToStage": null,
+        "installdir": "ScanDownloading",
+        "installedDepots": [],
+        "lastOwner": null,
+        "name": "Scan Downloading",
+        "scheduledAutoUpdate": null,
+        "sizeOnDisk": "1000",
+        "stateFlags": 1026,
+        "stateFlagsRaw": "1026",
+        "targetBuildId": null
+      },
+      "steamappsDir": "${FIXTURES}/scan/lib1/steamapps"
+    },
+    "library/readAcfState/30": {
+      "found": false,
+      "record": null,
+      "steamappsDir": null
+    },
+    "library/readAcfState/40": {
+      "found": true,
+      "record": {
+        "appid": "40",
+        "betaKey": null,
+        "buildid": "100",
+        "bytesDownloaded": null,
+        "bytesStaged": null,
+        "bytesToDownload": null,
+        "bytesToStage": null,
+        "installdir": "ScanLibTwo",
+        "installedDepots": [],
+        "lastOwner": null,
+        "name": "Scan Lib Two",
+        "scheduledAutoUpdate": null,
+        "sizeOnDisk": "1000",
+        "stateFlags": 4,
+        "stateFlagsRaw": "4",
+        "targetBuildId": null
+      },
+      "steamappsDir": "${FIXTURES}/scan/lib2/steamapps"
+    },
+    "library/readAcfState/99": {
+      "found": false,
+      "record": null,
+      "steamappsDir": null
+    },
+    "library/readAcfState/abc": {
+      "found": false,
+      "record": null,
+      "steamappsDir": null
+    },
+    "library/scanAcfs/lib1": {
+      "missingDirs": [],
+      "records": [
+        {
+          "fileName": "appmanifest_10.acf",
+          "record": {
+            "appid": "10",
+            "betaKey": null,
+            "buildid": "100",
+            "bytesDownloaded": null,
+            "bytesStaged": null,
+            "bytesToDownload": null,
+            "bytesToStage": null,
+            "installdir": "ScanInstalled",
+            "installedDepots": [],
+            "lastOwner": null,
+            "name": "Scan Installed",
+            "scheduledAutoUpdate": null,
+            "sizeOnDisk": "1000",
+            "stateFlags": 4,
+            "stateFlagsRaw": "4",
+            "targetBuildId": null
+          },
+          "steamappsDir": "${FIXTURES}/scan/lib1/steamapps"
+        },
+        {
+          "fileName": "appmanifest_20.acf",
+          "record": {
+            "appid": "20",
+            "betaKey": null,
+            "buildid": "100",
+            "bytesDownloaded": null,
+            "bytesStaged": null,
+            "bytesToDownload": null,
+            "bytesToStage": null,
+            "installdir": "ScanDownloading",
+            "installedDepots": [],
+            "lastOwner": null,
+            "name": "Scan Downloading",
+            "scheduledAutoUpdate": null,
+            "sizeOnDisk": "1000",
+            "stateFlags": 1026,
+            "stateFlagsRaw": "1026",
+            "targetBuildId": null
+          },
+          "steamappsDir": "${FIXTURES}/scan/lib1/steamapps"
+        },
+        {
+          "fileName": "appmanifest_abc.acf",
+          "record": {
+            "appid": "abc",
+            "betaKey": null,
+            "buildid": "100",
+            "bytesDownloaded": null,
+            "bytesStaged": null,
+            "bytesToDownload": null,
+            "bytesToStage": null,
+            "installdir": "NonNumeric",
+            "installedDepots": [],
+            "lastOwner": null,
+            "name": "Non Numeric",
+            "scheduledAutoUpdate": null,
+            "sizeOnDisk": "1000",
+            "stateFlags": 4,
+            "stateFlagsRaw": "4",
+            "targetBuildId": null
+          },
+          "steamappsDir": "${FIXTURES}/scan/lib1/steamapps"
+        }
+      ],
+      "skipped": [
+        {
+          "fileName": "appmanifest_30.acf",
+          "reason": "parse: UnterminatedString at 37",
+          "steamappsDir": "${FIXTURES}/scan/lib1/steamapps"
+        }
+      ]
+    },
+    "library/scanAcfs/lib1-lib2": {
+      "missingDirs": [],
+      "records": [
+        {
+          "fileName": "appmanifest_10.acf",
+          "record": {
+            "appid": "10",
+            "betaKey": null,
+            "buildid": "100",
+            "bytesDownloaded": null,
+            "bytesStaged": null,
+            "bytesToDownload": null,
+            "bytesToStage": null,
+            "installdir": "ScanInstalled",
+            "installedDepots": [],
+            "lastOwner": null,
+            "name": "Scan Installed",
+            "scheduledAutoUpdate": null,
+            "sizeOnDisk": "1000",
+            "stateFlags": 4,
+            "stateFlagsRaw": "4",
+            "targetBuildId": null
+          },
+          "steamappsDir": "${FIXTURES}/scan/lib1/steamapps"
+        },
+        {
+          "fileName": "appmanifest_20.acf",
+          "record": {
+            "appid": "20",
+            "betaKey": null,
+            "buildid": "100",
+            "bytesDownloaded": null,
+            "bytesStaged": null,
+            "bytesToDownload": null,
+            "bytesToStage": null,
+            "installdir": "ScanDownloading",
+            "installedDepots": [],
+            "lastOwner": null,
+            "name": "Scan Downloading",
+            "scheduledAutoUpdate": null,
+            "sizeOnDisk": "1000",
+            "stateFlags": 1026,
+            "stateFlagsRaw": "1026",
+            "targetBuildId": null
+          },
+          "steamappsDir": "${FIXTURES}/scan/lib1/steamapps"
+        },
+        {
+          "fileName": "appmanifest_abc.acf",
+          "record": {
+            "appid": "abc",
+            "betaKey": null,
+            "buildid": "100",
+            "bytesDownloaded": null,
+            "bytesStaged": null,
+            "bytesToDownload": null,
+            "bytesToStage": null,
+            "installdir": "NonNumeric",
+            "installedDepots": [],
+            "lastOwner": null,
+            "name": "Non Numeric",
+            "scheduledAutoUpdate": null,
+            "sizeOnDisk": "1000",
+            "stateFlags": 4,
+            "stateFlagsRaw": "4",
+            "targetBuildId": null
+          },
+          "steamappsDir": "${FIXTURES}/scan/lib1/steamapps"
+        },
+        {
+          "fileName": "appmanifest_10.acf",
+          "record": {
+            "appid": "10",
+            "betaKey": null,
+            "buildid": "100",
+            "bytesDownloaded": null,
+            "bytesStaged": null,
+            "bytesToDownload": null,
+            "bytesToStage": null,
+            "installdir": "DuplicateDir",
+            "installedDepots": [],
+            "lastOwner": null,
+            "name": "Scan Installed Dup",
+            "scheduledAutoUpdate": null,
+            "sizeOnDisk": "1000",
+            "stateFlags": 4,
+            "stateFlagsRaw": "4",
+            "targetBuildId": null
+          },
+          "steamappsDir": "${FIXTURES}/scan/lib2/steamapps"
+        },
+        {
+          "fileName": "appmanifest_40.acf",
+          "record": {
+            "appid": "40",
+            "betaKey": null,
+            "buildid": "100",
+            "bytesDownloaded": null,
+            "bytesStaged": null,
+            "bytesToDownload": null,
+            "bytesToStage": null,
+            "installdir": "ScanLibTwo",
+            "installedDepots": [],
+            "lastOwner": null,
+            "name": "Scan Lib Two",
+            "scheduledAutoUpdate": null,
+            "sizeOnDisk": "1000",
+            "stateFlags": 4,
+            "stateFlagsRaw": "4",
+            "targetBuildId": null
+          },
+          "steamappsDir": "${FIXTURES}/scan/lib2/steamapps"
+        }
+      ],
+      "skipped": [
+        {
+          "fileName": "appmanifest_30.acf",
+          "reason": "parse: UnterminatedString at 37",
+          "steamappsDir": "${FIXTURES}/scan/lib1/steamapps"
+        }
+      ]
+    },
+    "library/scanAcfs/lib2": {
+      "missingDirs": [],
+      "records": [
+        {
+          "fileName": "appmanifest_10.acf",
+          "record": {
+            "appid": "10",
+            "betaKey": null,
+            "buildid": "100",
+            "bytesDownloaded": null,
+            "bytesStaged": null,
+            "bytesToDownload": null,
+            "bytesToStage": null,
+            "installdir": "DuplicateDir",
+            "installedDepots": [],
+            "lastOwner": null,
+            "name": "Scan Installed Dup",
+            "scheduledAutoUpdate": null,
+            "sizeOnDisk": "1000",
+            "stateFlags": 4,
+            "stateFlagsRaw": "4",
+            "targetBuildId": null
+          },
+          "steamappsDir": "${FIXTURES}/scan/lib2/steamapps"
+        },
+        {
+          "fileName": "appmanifest_40.acf",
+          "record": {
+            "appid": "40",
+            "betaKey": null,
+            "buildid": "100",
+            "bytesDownloaded": null,
+            "bytesStaged": null,
+            "bytesToDownload": null,
+            "bytesToStage": null,
+            "installdir": "ScanLibTwo",
+            "installedDepots": [],
+            "lastOwner": null,
+            "name": "Scan Lib Two",
+            "scheduledAutoUpdate": null,
+            "sizeOnDisk": "1000",
+            "stateFlags": 4,
+            "stateFlagsRaw": "4",
+            "targetBuildId": null
+          },
+          "steamappsDir": "${FIXTURES}/scan/lib2/steamapps"
+        }
+      ],
+      "skipped": []
+    },
+    "library/scanAcfs/none": {
+      "missingDirs": ["${FIXTURES}/scan/no-such/steamapps"],
+      "records": [],
+      "skipped": []
+    },
+    "raw/readAcf/big-ids": {
+      "exists": true,
+      "parsed": true,
+      "readError": null,
+      "record": {
+        "appid": "30",
+        "betaKey": null,
+        "buildid": null,
+        "bytesDownloaded": null,
+        "bytesStaged": null,
+        "bytesToDownload": null,
+        "bytesToStage": null,
+        "installdir": "BigIds",
+        "installedDepots": [
+          {
+            "depotId": "31",
+            "dlcAppId": null,
+            "manifest": "9007199254740993",
+            "size": "1"
+          },
+          {
+            "depotId": "32",
+            "dlcAppId": null,
+            "manifest": "9223372036854775807",
+            "size": "2"
+          }
+        ],
+        "lastOwner": "76561198999999999",
+        "name": "Big Ids",
+        "scheduledAutoUpdate": null,
+        "sizeOnDisk": null,
+        "stateFlags": 4,
+        "stateFlagsRaw": "4",
+        "targetBuildId": null
+      }
+    },
+    "raw/readAcf/bom": {
+      "exists": true,
+      "parsed": true,
+      "readError": null,
+      "record": {
+        "appid": "90",
+        "betaKey": null,
+        "buildid": null,
+        "bytesDownloaded": null,
+        "bytesStaged": null,
+        "bytesToDownload": null,
+        "bytesToStage": null,
+        "installdir": "BomGame",
+        "installedDepots": [],
+        "lastOwner": null,
+        "name": "Bom Game",
+        "scheduledAutoUpdate": null,
+        "sizeOnDisk": null,
+        "stateFlags": 4,
+        "stateFlagsRaw": "4",
+        "targetBuildId": null
+      }
+    },
+    "raw/readAcf/coercion": {
+      "exists": true,
+      "parsed": true,
+      "readError": null,
+      "record": {
+        "appid": "40",
+        "betaKey": null,
+        "buildid": "0123",
+        "bytesDownloaded": null,
+        "bytesStaged": null,
+        "bytesToDownload": null,
+        "bytesToStage": null,
+        "installdir": "1e3",
+        "installedDepots": [],
+        "lastOwner": null,
+        "name": "1979",
+        "scheduledAutoUpdate": null,
+        "sizeOnDisk": null,
+        "stateFlags": 4,
+        "stateFlagsRaw": "4",
+        "targetBuildId": null
+      }
+    },
+    "raw/readAcf/comments-unquoted": {
+      "exists": true,
+      "parsed": true,
+      "readError": null,
+      "record": {
+        "appid": "100",
+        "betaKey": null,
+        "buildid": null,
+        "bytesDownloaded": null,
+        "bytesStaged": null,
+        "bytesToDownload": null,
+        "bytesToStage": null,
+        "installdir": "CommentsGame",
+        "installedDepots": [],
+        "lastOwner": null,
+        "name": "Comments Game",
+        "scheduledAutoUpdate": null,
+        "sizeOnDisk": null,
+        "stateFlags": 4,
+        "stateFlagsRaw": "4",
+        "targetBuildId": null
+      }
+    },
+    "raw/readAcf/crlf": {
+      "exists": true,
+      "parsed": true,
+      "readError": null,
+      "record": {
+        "appid": "80",
+        "betaKey": null,
+        "buildid": null,
+        "bytesDownloaded": null,
+        "bytesStaged": null,
+        "bytesToDownload": null,
+        "bytesToStage": null,
+        "installdir": "CrlfGame",
+        "installedDepots": [],
+        "lastOwner": null,
+        "name": "Crlf Game",
+        "scheduledAutoUpdate": null,
+        "sizeOnDisk": null,
+        "stateFlags": 4,
+        "stateFlagsRaw": "4",
+        "targetBuildId": null
+      }
+    },
+    "raw/readAcf/downloading": {
+      "exists": true,
+      "parsed": true,
+      "readError": null,
+      "record": {
+        "appid": "20",
+        "betaKey": null,
+        "buildid": "2222",
+        "bytesDownloaded": "524288",
+        "bytesStaged": "1048576",
+        "bytesToDownload": "1048576",
+        "bytesToStage": "2097152",
+        "installdir": "DownloadingGame",
+        "installedDepots": [],
+        "lastOwner": null,
+        "name": "Downloading Game",
+        "scheduledAutoUpdate": "1700003600",
+        "sizeOnDisk": "5000",
+        "stateFlags": 1026,
+        "stateFlagsRaw": "1026",
+        "targetBuildId": "3333"
+      }
+    },
+    "raw/readAcf/duplicate-keys": {
+      "exists": true,
+      "parsed": true,
+      "readError": null,
+      "record": {
+        "appid": "60",
+        "betaKey": null,
+        "buildid": "77",
+        "bytesDownloaded": null,
+        "bytesStaged": null,
+        "bytesToDownload": null,
+        "bytesToStage": null,
+        "installdir": "ReopenedDir",
+        "installedDepots": [],
+        "lastOwner": null,
+        "name": "Second Name",
+        "scheduledAutoUpdate": null,
+        "sizeOnDisk": null,
+        "stateFlags": 4,
+        "stateFlagsRaw": "4",
+        "targetBuildId": null
+      }
+    },
+    "raw/readAcf/empty": {
+      "exists": true,
+      "parsed": false,
+      "readError": null,
+      "record": null
+    },
+    "raw/readAcf/escapes": {
+      "exists": true,
+      "parsed": true,
+      "readError": null,
+      "record": {
+        "appid": "50",
+        "betaKey": null,
+        "buildid": null,
+        "bytesDownloaded": null,
+        "bytesStaged": null,
+        "bytesToDownload": null,
+        "bytesToStage": null,
+        "installdir": "Sub/Dir",
+        "installedDepots": [],
+        "lastOwner": null,
+        "name": "Say \"Hi\" / there",
+        "scheduledAutoUpdate": null,
+        "sizeOnDisk": null,
+        "stateFlags": 4,
+        "stateFlagsRaw": "4",
+        "targetBuildId": null
+      }
+    },
+    "raw/readAcf/installed": {
+      "exists": true,
+      "parsed": true,
+      "readError": null,
+      "record": {
+        "appid": "10",
+        "betaKey": "beta_a",
+        "buildid": "1234567",
+        "bytesDownloaded": null,
+        "bytesStaged": null,
+        "bytesToDownload": null,
+        "bytesToStage": null,
+        "installdir": "SyntheticGame",
+        "installedDepots": [
+          {
+            "depotId": "11",
+            "dlcAppId": null,
+            "manifest": "1000000000000000001",
+            "size": "100000"
+          },
+          {
+            "depotId": "12",
+            "dlcAppId": "13",
+            "manifest": "1000000000000000002",
+            "size": "200000"
+          }
+        ],
+        "lastOwner": "76561197960287930",
+        "name": "Synthetic Game",
+        "scheduledAutoUpdate": null,
+        "sizeOnDisk": "123456789",
+        "stateFlags": 4,
+        "stateFlagsRaw": "4",
+        "targetBuildId": null
+      }
+    },
+    "raw/readAcf/lowercase-keys": {
+      "exists": true,
+      "parsed": true,
+      "readError": null,
+      "record": {
+        "appid": "70",
+        "betaKey": null,
+        "buildid": null,
+        "bytesDownloaded": null,
+        "bytesStaged": null,
+        "bytesToDownload": null,
+        "bytesToStage": null,
+        "installdir": "lowercase",
+        "installedDepots": [
+          {
+            "depotId": "71",
+            "dlcAppId": null,
+            "manifest": "1000000000000000071",
+            "size": ""
+          }
+        ],
+        "lastOwner": null,
+        "name": "Lowercase Keys",
+        "scheduledAutoUpdate": null,
+        "sizeOnDisk": null,
+        "stateFlags": 4,
+        "stateFlagsRaw": "4",
+        "targetBuildId": null
+      }
+    },
+    "raw/readAcf/missing": {
+      "exists": false,
+      "parsed": false,
+      "readError": null,
+      "record": null
+    },
+    "raw/readAcf/no-appstate": {
+      "exists": true,
+      "parsed": false,
+      "readError": null,
+      "record": null
+    },
+    "raw/readAcf/non-utf8": {
+      "exists": true,
+      "parsed": true,
+      "readError": null,
+      "record": {
+        "appid": "110",
+        "betaKey": null,
+        "buildid": null,
+        "bytesDownloaded": null,
+        "bytesStaged": null,
+        "bytesToDownload": null,
+        "bytesToStage": null,
+        "installdir": "CafeGame",
+        "installedDepots": [],
+        "lastOwner": null,
+        "name": "Caf� Game",
+        "scheduledAutoUpdate": null,
+        "sizeOnDisk": null,
+        "stateFlags": 4,
+        "stateFlagsRaw": "4",
+        "targetBuildId": null
+      }
+    },
+    "raw/readAcf/truncated": {
+      "exists": true,
+      "parsed": false,
+      "readError": "parse: UnterminatedString at 99",
+      "record": null
+    },
+    "raw/readAcf/unbalanced": {
+      "exists": true,
+      "parsed": false,
+      "readError": "parse: Unbalanced at 97",
+      "record": null
+    },
+    "shortcuts/read/empty": {
+      "entries": [],
+      "exists": true,
+      "hasShortcutsRoot": true,
+      "parsed": true,
+      "readError": null,
+      "rootIsList": true
+    },
+    "shortcuts/read/lexical-order": {
+      "entries": [
+        {
+          "appName": "Zero",
+          "exe": "\"/opt/gamelib/gamelib\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": true,
+          "indexKey": "0",
+          "launchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\""
+        },
+        {
+          "appName": "One",
+          "exe": "\"/opt/gamelib/gamelib\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": true,
+          "indexKey": "1",
+          "launchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\""
+        },
+        {
+          "appName": "Ten",
+          "exe": "\"/opt/gamelib/gamelib\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": true,
+          "indexKey": "10",
+          "launchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\""
+        },
+        {
+          "appName": "Two",
+          "exe": "\"/opt/gamelib/gamelib\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": true,
+          "indexKey": "2",
+          "launchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\""
+        }
+      ],
+      "exists": true,
+      "hasShortcutsRoot": true,
+      "parsed": true,
+      "readError": null,
+      "rootIsList": true
+    },
+    "shortcuts/read/missing": {
+      "entries": [],
+      "exists": false,
+      "hasShortcutsRoot": false,
+      "parsed": false,
+      "readError": null,
+      "rootIsList": false
+    },
+    "shortcuts/read/negative-appid": {
+      "entries": [
+        {
+          "appName": "Negative Appid",
+          "exe": "\"/opt/gamelib/gamelib\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": true,
+          "indexKey": "0",
+          "launchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\""
+        }
+      ],
+      "exists": true,
+      "hasShortcutsRoot": true,
+      "parsed": true,
+      "readError": null,
+      "rootIsList": true
+    },
+    "shortcuts/read/non-utf8": {
+      "entries": [
+        {
+          "appName": "Caf� Game",
+          "exe": "\"/opt/gamelib/gamelib\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": true,
+          "indexKey": "0",
+          "launchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\""
+        }
+      ],
+      "exists": true,
+      "hasShortcutsRoot": true,
+      "parsed": true,
+      "readError": null,
+      "rootIsList": true
+    },
+    "shortcuts/read/one-entry": {
+      "entries": [
+        {
+          "appName": "Synthetic Game",
+          "exe": "\"/opt/gamelib/gamelib\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": true,
+          "indexKey": "0",
+          "launchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\""
+        }
+      ],
+      "exists": true,
+      "hasShortcutsRoot": true,
+      "parsed": true,
+      "readError": null,
+      "rootIsList": true
+    },
+    "shortcuts/read/sparse-indexes": {
+      "entries": [
+        {
+          "appName": "Zero",
+          "exe": "\"/opt/gamelib/gamelib\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": true,
+          "indexKey": "0",
+          "launchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\""
+        },
+        {
+          "appName": "Two",
+          "exe": "\"/opt/gamelib/gamelib\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": true,
+          "indexKey": "2",
+          "launchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\""
+        }
+      ],
+      "exists": true,
+      "hasShortcutsRoot": true,
+      "parsed": true,
+      "readError": null,
+      "rootIsList": true
+    },
+    "shortcuts/read/tags": {
+      "entries": [
+        {
+          "appName": "Tagged Game",
+          "exe": "\"/opt/gamelib/gamelib\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": true,
+          "indexKey": "0",
+          "launchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\""
+        }
+      ],
+      "exists": true,
+      "hasShortcutsRoot": true,
+      "parsed": true,
+      "readError": null,
+      "rootIsList": true
+    },
+    "shortcuts/read/trailing-bytes": {
+      "entries": [
+        {
+          "appName": "Synthetic Game",
+          "exe": "\"/opt/gamelib/gamelib\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": true,
+          "indexKey": "0",
+          "launchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\""
+        }
+      ],
+      "exists": true,
+      "hasShortcutsRoot": true,
+      "parsed": true,
+      "readError": null,
+      "rootIsList": true
+    },
+    "shortcuts/read/truncated": {
+      "entries": [],
+      "exists": true,
+      "hasShortcutsRoot": false,
+      "parsed": false,
+      "readError": "parse: BinError { kind: Truncated, offset: 34 }",
+      "rootIsList": false
+    },
+    "shortcuts/read/two-entries": {
+      "entries": [
+        {
+          "appName": "First Game",
+          "exe": "\"/opt/gamelib/gamelib\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": true,
+          "indexKey": "0",
+          "launchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\""
+        },
+        {
+          "appName": "Second Game",
+          "exe": "\"/opt/gamelib/gamelib\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": true,
+          "indexKey": "1",
+          "launchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\""
+        }
+      ],
+      "exists": true,
+      "hasShortcutsRoot": true,
+      "parsed": true,
+      "readError": null,
+      "rootIsList": true
+    },
+    "shortcuts/read/unknown-type": {
+      "entries": [
+        {
+          "appName": "Unknown Types",
+          "exe": "\"/bin/true\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": false,
+          "indexKey": "0",
+          "launchOptions": null
+        }
+      ],
+      "exists": true,
+      "hasShortcutsRoot": true,
+      "parsed": true,
+      "readError": null,
+      "rootIsList": true
+    },
+    "shortcuts/read/upstream/shortcuts_commandmc": {
+      "entries": [
+        {
+          "appName": "Grand Theft Auto V",
+          "exe": "\"/home/commandmc/Applications/Heroic-2.3.5_cf081abfafbe599bf048594934dab127.AppImage\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": true,
+          "indexKey": "0",
+          "launchOptions": "--no-gui \"heroic://launch/9d2d0eb64d5c44529cece33fe2a46482\""
+        }
+      ],
+      "exists": true,
+      "hasShortcutsRoot": true,
+      "parsed": true,
+      "readError": null,
+      "rootIsList": true
+    },
+    "shortcuts/read/upstream/shortcuts_felipecrs": {
+      "entries": [
+        {
+          "appName": "Fall Guys",
+          "exe": "\"C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": true,
+          "indexKey": "0",
+          "launchOptions": "-WindowStyle hidden -ExecutionPolicy Bypass -File \"C:/Games/FallGuys.ps1\""
+        }
+      ],
+      "exists": true,
+      "hasShortcutsRoot": true,
+      "parsed": true,
+      "readError": null,
+      "rootIsList": true
+    },
+    "shortcuts/read/upstream/shortcuts_missing_appname": {
+      "entries": [
+        {
+          "appName": null,
+          "exe": "\"undefined\"",
+          "hasAppName": false,
+          "hasExe": true,
+          "hasLaunchOptions": true,
+          "indexKey": "0",
+          "launchOptions": "--no-gui --no-sandbox \"heroic://launch/game\""
+        }
+      ],
+      "exists": true,
+      "hasShortcutsRoot": true,
+      "parsed": true,
+      "readError": null,
+      "rootIsList": true
+    },
+    "shortcuts/read/upstream/shortcuts_missing_exe": {
+      "entries": [
+        {
+          "appName": "MyGame",
+          "exe": null,
+          "hasAppName": true,
+          "hasExe": false,
+          "hasLaunchOptions": true,
+          "indexKey": "0",
+          "launchOptions": "--no-gui --no-sandbox \"heroic://launch/game\""
+        }
+      ],
+      "exists": true,
+      "hasShortcutsRoot": true,
+      "parsed": true,
+      "readError": null,
+      "rootIsList": true
+    },
+    "shortcuts/read/upstream/shortcuts_missing_launchoptions": {
+      "entries": [
+        {
+          "appName": "MyGame",
+          "exe": "\"undefined\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": false,
+          "indexKey": "0",
+          "launchOptions": null
+        }
+      ],
+      "exists": true,
+      "hasShortcutsRoot": true,
+      "parsed": true,
+      "readError": null,
+      "rootIsList": true
+    },
+    "shortcuts/read/upstream/shortcuts_redromnon": {
+      "entries": [
+        {
+          "appName": "Fall Guys",
+          "exe": "\"/home/redromnon/Documents/GIT/HeroicBash/HeroicBashLauncher/GameFiles/FallGuys_Heroic.sh\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": true,
+          "indexKey": "0",
+          "launchOptions": ""
+        },
+        {
+          "appName": "Inside",
+          "exe": "\"/home/redromnon/Documents/GIT/HeroicBash/HeroicBashLauncher/GameFiles/Inside_Heroic.sh\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": true,
+          "indexKey": "1",
+          "launchOptions": ""
+        },
+        {
+          "appName": "Rocket League",
+          "exe": "\"/home/redromnon/Documents/GIT/HeroicBash/HeroicBashLauncher/GameFiles/RocketLeague_Heroic.sh\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": true,
+          "indexKey": "2",
+          "launchOptions": ""
+        }
+      ],
+      "exists": true,
+      "hasShortcutsRoot": true,
+      "parsed": true,
+      "readError": null,
+      "rootIsList": true
+    },
+    "shortcuts/read/upstream/shortcuts_valid": {
+      "entries": [
+        {
+          "appName": "Discord",
+          "exe": "\"/usr/share/discord/Discord\"",
+          "hasAppName": true,
+          "hasExe": true,
+          "hasLaunchOptions": true,
+          "indexKey": "0",
+          "launchOptions": ""
+        }
+      ],
+      "exists": true,
+      "hasShortcutsRoot": true,
+      "parsed": true,
+      "readError": null,
+      "rootIsList": true
+    }
+  }
+}

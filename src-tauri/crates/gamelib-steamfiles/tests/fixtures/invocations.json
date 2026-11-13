@@ -1,0 +1,579 @@
+{
+  "invocations": [
+    {
+      "id": "raw/readAcf/big-ids",
+      "op": "steamfiles_read_acf",
+      "args": {
+        "path": "${FIXTURES}/acf/big-ids.acf"
+      }
+    },
+    {
+      "id": "raw/readAcf/bom",
+      "op": "steamfiles_read_acf",
+      "args": {
+        "path": "${FIXTURES}/acf/bom.acf"
+      }
+    },
+    {
+      "id": "raw/readAcf/coercion",
+      "op": "steamfiles_read_acf",
+      "args": {
+        "path": "${FIXTURES}/acf/coercion.acf"
+      }
+    },
+    {
+      "id": "raw/readAcf/comments-unquoted",
+      "op": "steamfiles_read_acf",
+      "args": {
+        "path": "${FIXTURES}/acf/comments-unquoted.acf"
+      }
+    },
+    {
+      "id": "raw/readAcf/crlf",
+      "op": "steamfiles_read_acf",
+      "args": {
+        "path": "${FIXTURES}/acf/crlf.acf"
+      }
+    },
+    {
+      "id": "raw/readAcf/downloading",
+      "op": "steamfiles_read_acf",
+      "args": {
+        "path": "${FIXTURES}/acf/downloading.acf"
+      }
+    },
+    {
+      "id": "raw/readAcf/duplicate-keys",
+      "op": "steamfiles_read_acf",
+      "args": {
+        "path": "${FIXTURES}/acf/duplicate-keys.acf"
+      }
+    },
+    {
+      "id": "raw/readAcf/empty",
+      "op": "steamfiles_read_acf",
+      "args": {
+        "path": "${FIXTURES}/acf/empty.acf"
+      }
+    },
+    {
+      "id": "raw/readAcf/escapes",
+      "op": "steamfiles_read_acf",
+      "args": {
+        "path": "${FIXTURES}/acf/escapes.acf"
+      }
+    },
+    {
+      "id": "raw/readAcf/installed",
+      "op": "steamfiles_read_acf",
+      "args": {
+        "path": "${FIXTURES}/acf/installed.acf"
+      }
+    },
+    {
+      "id": "raw/readAcf/lowercase-keys",
+      "op": "steamfiles_read_acf",
+      "args": {
+        "path": "${FIXTURES}/acf/lowercase-keys.acf"
+      }
+    },
+    {
+      "id": "raw/readAcf/no-appstate",
+      "op": "steamfiles_read_acf",
+      "args": {
+        "path": "${FIXTURES}/acf/no-appstate.acf"
+      }
+    },
+    {
+      "id": "raw/readAcf/non-utf8",
+      "op": "steamfiles_read_acf",
+      "args": {
+        "path": "${FIXTURES}/acf/non-utf8.acf"
+      }
+    },
+    {
+      "id": "raw/readAcf/truncated",
+      "op": "steamfiles_read_acf",
+      "args": {
+        "path": "${FIXTURES}/acf/truncated.acf"
+      }
+    },
+    {
+      "id": "raw/readAcf/unbalanced",
+      "op": "steamfiles_read_acf",
+      "args": {
+        "path": "${FIXTURES}/acf/unbalanced.acf"
+      }
+    },
+    {
+      "id": "raw/readAcf/missing",
+      "op": "steamfiles_read_acf",
+      "args": {
+        "path": "${FIXTURES}/acf/missing.acf"
+      }
+    },
+    {
+      "id": "library/getSteamLibraries/legacy",
+      "op": "steamfiles_read_library_folders",
+      "args": {
+        "path": "${FIXTURES}/libraryfolders/legacy.vdf"
+      }
+    },
+    {
+      "id": "library/getSteamLibraries/malformed",
+      "op": "steamfiles_read_library_folders",
+      "args": {
+        "path": "${FIXTURES}/libraryfolders/malformed.vdf"
+      }
+    },
+    {
+      "id": "library/getSteamLibraries/modern",
+      "op": "steamfiles_read_library_folders",
+      "args": {
+        "path": "${FIXTURES}/libraryfolders/modern.vdf"
+      }
+    },
+    {
+      "id": "library/getSteamLibraries/windows-paths",
+      "op": "steamfiles_read_library_folders",
+      "args": {
+        "path": "${FIXTURES}/libraryfolders/windows-paths.vdf"
+      }
+    },
+    {
+      "id": "library/getSteamLibraries/no-file",
+      "op": "steamfiles_read_library_folders",
+      "args": {
+        "path": "${FIXTURES}/libraryfolders/none.vdf"
+      }
+    },
+    {
+      "id": "library/scanAcfs/lib1-lib2",
+      "op": "steamfiles_scan_acfs",
+      "args": {
+        "steamappsDirs": [
+          "${FIXTURES}/scan/lib1/steamapps",
+          "${FIXTURES}/scan/lib2/steamapps"
+        ]
+      }
+    },
+    {
+      "id": "library/scanAcfs/lib1",
+      "op": "steamfiles_scan_acfs",
+      "args": {
+        "steamappsDirs": ["${FIXTURES}/scan/lib1/steamapps"]
+      }
+    },
+    {
+      "id": "library/scanAcfs/lib2",
+      "op": "steamfiles_scan_acfs",
+      "args": {
+        "steamappsDirs": ["${FIXTURES}/scan/lib2/steamapps"]
+      }
+    },
+    {
+      "id": "library/scanAcfs/none",
+      "op": "steamfiles_scan_acfs",
+      "args": {
+        "steamappsDirs": ["${FIXTURES}/scan/no-such/steamapps"]
+      }
+    },
+    {
+      "id": "library/readAcfState/10",
+      "op": "steamfiles_find_acf",
+      "args": {
+        "steamappsDirs": [
+          "${FIXTURES}/scan/lib1/steamapps",
+          "${FIXTURES}/scan/lib2/steamapps"
+        ],
+        "appId": "10"
+      }
+    },
+    {
+      "id": "library/readAcfState/20",
+      "op": "steamfiles_find_acf",
+      "args": {
+        "steamappsDirs": [
+          "${FIXTURES}/scan/lib1/steamapps",
+          "${FIXTURES}/scan/lib2/steamapps"
+        ],
+        "appId": "20"
+      }
+    },
+    {
+      "id": "library/readAcfState/30",
+      "op": "steamfiles_find_acf",
+      "args": {
+        "steamappsDirs": [
+          "${FIXTURES}/scan/lib1/steamapps",
+          "${FIXTURES}/scan/lib2/steamapps"
+        ],
+        "appId": "30"
+      }
+    },
+    {
+      "id": "library/readAcfState/40",
+      "op": "steamfiles_find_acf",
+      "args": {
+        "steamappsDirs": [
+          "${FIXTURES}/scan/lib1/steamapps",
+          "${FIXTURES}/scan/lib2/steamapps"
+        ],
+        "appId": "40"
+      }
+    },
+    {
+      "id": "library/readAcfState/99",
+      "op": "steamfiles_find_acf",
+      "args": {
+        "steamappsDirs": [
+          "${FIXTURES}/scan/lib1/steamapps",
+          "${FIXTURES}/scan/lib2/steamapps"
+        ],
+        "appId": "99"
+      }
+    },
+    {
+      "id": "library/readAcfState/abc",
+      "op": "steamfiles_find_acf",
+      "args": {
+        "steamappsDirs": [
+          "${FIXTURES}/scan/lib1/steamapps",
+          "${FIXTURES}/scan/lib2/steamapps"
+        ],
+        "appId": "abc"
+      }
+    },
+    {
+      "id": "library/readAcfState/10-lib2-first",
+      "op": "steamfiles_find_acf",
+      "args": {
+        "steamappsDirs": [
+          "${FIXTURES}/scan/lib2/steamapps",
+          "${FIXTURES}/scan/lib1/steamapps"
+        ],
+        "appId": "10"
+      }
+    },
+    {
+      "id": "adoption/readMacRunningAppId/lowercase",
+      "op": "steamfiles_read_running_app_id",
+      "args": {
+        "path": "${FIXTURES}/registry/lowercase.vdf"
+      }
+    },
+    {
+      "id": "adoption/readMacRunningAppId/missing-key",
+      "op": "steamfiles_read_running_app_id",
+      "args": {
+        "path": "${FIXTURES}/registry/missing-key.vdf"
+      }
+    },
+    {
+      "id": "adoption/readMacRunningAppId/not-running",
+      "op": "steamfiles_read_running_app_id",
+      "args": {
+        "path": "${FIXTURES}/registry/not-running.vdf"
+      }
+    },
+    {
+      "id": "adoption/readMacRunningAppId/running",
+      "op": "steamfiles_read_running_app_id",
+      "args": {
+        "path": "${FIXTURES}/registry/running.vdf"
+      }
+    },
+    {
+      "id": "adoption/readMacRunningAppId/no-file",
+      "op": "steamfiles_read_running_app_id",
+      "args": {
+        "path": "${FIXTURES}/registry/none.vdf"
+      }
+    },
+    {
+      "id": "bridge/parseValveClientManifest/bad-file",
+      "op": "steamfiles_parse_valve_manifest",
+      "args": {
+        "path": "${FIXTURES}/valve/bad-file.vdf"
+      }
+    },
+    {
+      "id": "bridge/parseValveClientManifest/bad-sha",
+      "op": "steamfiles_parse_valve_manifest",
+      "args": {
+        "path": "${FIXTURES}/valve/bad-sha.vdf"
+      }
+    },
+    {
+      "id": "bridge/parseValveClientManifest/forbidden-proto",
+      "op": "steamfiles_parse_valve_manifest",
+      "args": {
+        "path": "${FIXTURES}/valve/forbidden-proto.vdf"
+      }
+    },
+    {
+      "id": "bridge/parseValveClientManifest/good",
+      "op": "steamfiles_parse_valve_manifest",
+      "args": {
+        "path": "${FIXTURES}/valve/good.vdf"
+      }
+    },
+    {
+      "id": "bridge/parseValveClientManifest/no-bins",
+      "op": "steamfiles_parse_valve_manifest",
+      "args": {
+        "path": "${FIXTURES}/valve/no-bins.vdf"
+      }
+    },
+    {
+      "id": "bridge/parseValveClientManifest/no-win64",
+      "op": "steamfiles_parse_valve_manifest",
+      "args": {
+        "path": "${FIXTURES}/valve/no-win64.vdf"
+      }
+    },
+    {
+      "id": "bridge/parseValveClientManifest/size-as-string",
+      "op": "steamfiles_parse_valve_manifest",
+      "args": {
+        "path": "${FIXTURES}/valve/size-as-string.vdf"
+      }
+    },
+    {
+      "id": "bridge/parseValveClientManifest/size-too-big",
+      "op": "steamfiles_parse_valve_manifest",
+      "args": {
+        "path": "${FIXTURES}/valve/size-too-big.vdf"
+      }
+    },
+    {
+      "id": "bridge/parseValveClientManifest/version-number",
+      "op": "steamfiles_parse_valve_manifest",
+      "args": {
+        "path": "${FIXTURES}/valve/version-number.vdf"
+      }
+    },
+    {
+      "id": "bridge/parseValveClientManifest/missing",
+      "op": "steamfiles_parse_valve_manifest",
+      "args": {
+        "path": "${FIXTURES}/valve/none.vdf"
+      }
+    },
+    {
+      "id": "bridge/parseInstallScript/conditionals",
+      "op": "steamfiles_read_installscript",
+      "args": {
+        "path": "${FIXTURES}/installscript/conditionals.vdf"
+      }
+    },
+    {
+      "id": "bridge/parseInstallScript/dotnet-duplicate",
+      "op": "steamfiles_read_installscript",
+      "args": {
+        "path": "${FIXTURES}/installscript/dotnet-duplicate.vdf"
+      }
+    },
+    {
+      "id": "bridge/parseInstallScript/escapes",
+      "op": "steamfiles_read_installscript",
+      "args": {
+        "path": "${FIXTURES}/installscript/escapes.vdf"
+      }
+    },
+    {
+      "id": "bridge/parseInstallScript/malformed",
+      "op": "steamfiles_read_installscript",
+      "args": {
+        "path": "${FIXTURES}/installscript/malformed.vdf"
+      }
+    },
+    {
+      "id": "bridge/parseInstallScript/no-run-process",
+      "op": "steamfiles_read_installscript",
+      "args": {
+        "path": "${FIXTURES}/installscript/no-run-process.vdf"
+      }
+    },
+    {
+      "id": "bridge/parseInstallScript/missing",
+      "op": "steamfiles_read_installscript",
+      "args": {
+        "path": "${FIXTURES}/installscript/none.vdf"
+      }
+    },
+    {
+      "id": "acfUpdate/readLocalConfigBetaKey/none/10",
+      "op": "steamfiles_read_localconfig_beta_key",
+      "args": {
+        "path": "${FIXTURES}/localconfig/none.vdf",
+        "appId": "10"
+      }
+    },
+    {
+      "id": "acfUpdate/readLocalConfigBetaKey/none/20",
+      "op": "steamfiles_read_localconfig_beta_key",
+      "args": {
+        "path": "${FIXTURES}/localconfig/none.vdf",
+        "appId": "20"
+      }
+    },
+    {
+      "id": "acfUpdate/readLocalConfigBetaKey/userappconfig/10",
+      "op": "steamfiles_read_localconfig_beta_key",
+      "args": {
+        "path": "${FIXTURES}/localconfig/userappconfig.vdf",
+        "appId": "10"
+      }
+    },
+    {
+      "id": "acfUpdate/readLocalConfigBetaKey/userappconfig/20",
+      "op": "steamfiles_read_localconfig_beta_key",
+      "args": {
+        "path": "${FIXTURES}/localconfig/userappconfig.vdf",
+        "appId": "20"
+      }
+    },
+    {
+      "id": "acfUpdate/readLocalConfigBetaKey/missing-file",
+      "op": "steamfiles_read_localconfig_beta_key",
+      "args": {
+        "path": "${FIXTURES}/localconfig/none-file.vdf",
+        "appId": "10"
+      }
+    },
+    {
+      "id": "shortcuts/read/empty",
+      "op": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "${FIXTURES}/shortcuts/empty.vdf"
+      }
+    },
+    {
+      "id": "shortcuts/read/lexical-order",
+      "op": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "${FIXTURES}/shortcuts/lexical-order.vdf"
+      }
+    },
+    {
+      "id": "shortcuts/read/negative-appid",
+      "op": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "${FIXTURES}/shortcuts/negative-appid.vdf"
+      }
+    },
+    {
+      "id": "shortcuts/read/non-utf8",
+      "op": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "${FIXTURES}/shortcuts/non-utf8.vdf"
+      }
+    },
+    {
+      "id": "shortcuts/read/one-entry",
+      "op": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "${FIXTURES}/shortcuts/one-entry.vdf"
+      }
+    },
+    {
+      "id": "shortcuts/read/sparse-indexes",
+      "op": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "${FIXTURES}/shortcuts/sparse-indexes.vdf"
+      }
+    },
+    {
+      "id": "shortcuts/read/tags",
+      "op": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "${FIXTURES}/shortcuts/tags.vdf"
+      }
+    },
+    {
+      "id": "shortcuts/read/trailing-bytes",
+      "op": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "${FIXTURES}/shortcuts/trailing-bytes.vdf"
+      }
+    },
+    {
+      "id": "shortcuts/read/truncated",
+      "op": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "${FIXTURES}/shortcuts/truncated.vdf"
+      }
+    },
+    {
+      "id": "shortcuts/read/two-entries",
+      "op": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "${FIXTURES}/shortcuts/two-entries.vdf"
+      }
+    },
+    {
+      "id": "shortcuts/read/unknown-type",
+      "op": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "${FIXTURES}/shortcuts/unknown-type.vdf"
+      }
+    },
+    {
+      "id": "shortcuts/read/upstream/shortcuts_commandmc",
+      "op": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "${FIXTURES}/shortcuts/upstream/shortcuts_commandmc.vdf"
+      }
+    },
+    {
+      "id": "shortcuts/read/upstream/shortcuts_felipecrs",
+      "op": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "${FIXTURES}/shortcuts/upstream/shortcuts_felipecrs.vdf"
+      }
+    },
+    {
+      "id": "shortcuts/read/upstream/shortcuts_missing_appname",
+      "op": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "${FIXTURES}/shortcuts/upstream/shortcuts_missing_appname.vdf"
+      }
+    },
+    {
+      "id": "shortcuts/read/upstream/shortcuts_missing_exe",
+      "op": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "${FIXTURES}/shortcuts/upstream/shortcuts_missing_exe.vdf"
+      }
+    },
+    {
+      "id": "shortcuts/read/upstream/shortcuts_missing_launchoptions",
+      "op": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "${FIXTURES}/shortcuts/upstream/shortcuts_missing_launchoptions.vdf"
+      }
+    },
+    {
+      "id": "shortcuts/read/upstream/shortcuts_redromnon",
+      "op": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "${FIXTURES}/shortcuts/upstream/shortcuts_redromnon.vdf"
+      }
+    },
+    {
+      "id": "shortcuts/read/upstream/shortcuts_valid",
+      "op": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "${FIXTURES}/shortcuts/upstream/shortcuts_valid.vdf"
+      }
+    },
+    {
+      "id": "shortcuts/read/missing",
+      "op": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "${FIXTURES}/shortcuts/none.vdf"
+      }
+    }
+  ]
+}

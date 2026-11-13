@@ -1,0 +1,87 @@
+{
+  "shortcuts/edit-add/sparse-indexes": {
+    "rustOverride": {
+      "shortcuts": [
+        {
+          "appid": -2147483647,
+          "AppName": "Zero",
+          "Exe": "\"/opt/gamelib/gamelib\"",
+          "StartDir": "\"/opt/gamelib\"",
+          "icon": "/home/synthetic/icons/10.png",
+          "ShortcutPath": "",
+          "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+          "IsHidden": 0,
+          "AllowDesktopConfig": 1,
+          "AllowOverlay": 1,
+          "OpenVR": 0,
+          "Devkit": 0,
+          "DevkitGameID": "",
+          "DevkitOverrideAppID": 0,
+          "LastPlayTime": 1700000000,
+          "FlatpakAppID": "",
+          "tags": []
+        },
+        {
+          "appid": -2147483645,
+          "AppName": "Two",
+          "Exe": "\"/opt/gamelib/gamelib\"",
+          "StartDir": "\"/opt/gamelib\"",
+          "icon": "/home/synthetic/icons/10.png",
+          "ShortcutPath": "",
+          "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+          "IsHidden": 0,
+          "AllowDesktopConfig": 1,
+          "AllowOverlay": 1,
+          "OpenVR": 0,
+          "Devkit": 0,
+          "DevkitGameID": "",
+          "DevkitOverrideAppID": 0,
+          "LastPlayTime": 1700000000,
+          "FlatpakAppID": "",
+          "tags": []
+        },
+        {
+          "AppName": "Golden Game",
+          "Exe": "\"/x/gamelib\"",
+          "StartDir": "\"/x\"",
+          "appid": 1234567,
+          "LaunchOptions": "--no-gui",
+          "IsHidden": 0,
+          "AllowDesktopConfig": 1,
+          "AllowOverlay": 1,
+          "OpenVR": 0,
+          "Devkit": 0,
+          "DevkitOverrideAppID": 0,
+          "LastPlayTime": 1700000000
+        }
+      ]
+    },
+    "divergenceNote": "steam-shortcut-editor pads the sparse shortcuts array (keys 0 and 2) with an empty-string placeholder at the missing index 1 when it re-keys on write; the Rust editor keeps only real entries (add at max key + 1, remove re-keys contiguously), so the placeholder is absent. Entries are otherwise identical by value."
+  },
+  "shortcuts/edit-remove-first/sparse-indexes": {
+    "rustOverride": {
+      "shortcuts": [
+        {
+          "appid": -2147483645,
+          "AppName": "Two",
+          "Exe": "\"/opt/gamelib/gamelib\"",
+          "StartDir": "\"/opt/gamelib\"",
+          "icon": "/home/synthetic/icons/10.png",
+          "ShortcutPath": "",
+          "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+          "IsHidden": 0,
+          "AllowDesktopConfig": 1,
+          "AllowOverlay": 1,
+          "OpenVR": 0,
+          "Devkit": 0,
+          "DevkitGameID": "",
+          "DevkitOverrideAppID": 0,
+          "LastPlayTime": 1700000000,
+          "FlatpakAppID": "",
+          "tags": []
+        }
+      ]
+    },
+    "divergenceNote": "steam-shortcut-editor pads the sparse shortcuts array (keys 0 and 2) with an empty-string placeholder at the missing index 1 when it re-keys on write; the Rust editor keeps only real entries (add at max key + 1, remove re-keys contiguously), so the placeholder is absent. Entries are otherwise identical by value."
+  }
+}
