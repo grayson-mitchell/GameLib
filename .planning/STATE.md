@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 75 (steam-local-file-formats-in-rust) — EXECUTING
 Plan: 35 of 35
 Status: Phase complete — ready for verification
-Last activity: 2026-11-13
+Last activity: 2026-11-14 - Completed quick task 261114-gki: Keep SHA-verified temps when a bridge update is paused so resume does not re-download
 
 Progress: [██████████] 99%
 
@@ -595,6 +595,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261112-7ww | Linux GPU info enumerated via `lspci -mm -v -n -k` (display classes only) instead of the Electron `getGPUInfo` stand-in that always threw; `getGpuInfo` returns [] on any probe failure so `getSystemInfo` no longer rejects on Linux. | 2026-11-12 | 37d2eb547 | systeminfo 21/21; Deck LCD/OLED fixtures | [261112-7ww-linux-gpu-info-via-lspci-instead-of-elec](./quick/261112-7ww-linux-gpu-info-via-lspci-instead-of-elec/) |
 | 261112-8w3 | Comet token-mode flags `--access-token`/`--refresh-token` added to the commandRunner credential redaction list and census regex; Layer-2 case pins both values redacted. Closes 66.1 security threats T-66.1-16/T-66.1-68. | 2026-11-12 | 05aa1af9c | Jest 70/70 (commandRunner.test); scoped prettier clean | [261112-8w3-add-access-token-refresh-token-to-comman](./quick/261112-8w3-add-access-token-refresh-token-to-comman/) |
 | 261112-99y | Recorded ITAD's 2026-10-01 reply in Phase 47 docs: rate limit follows the app (OAuth branch dead), gate 3 decided (embedded key + hard caching, no proxy yet), Q1 reply ambiguous, affiliate question never asked; gate 1 (ITAD app registration) still blocks planning. | 2026-11-12 | 6ff3cd9ab | docs-only; plan grep checks pass | [261112-99y-record-itad-reply-in-phase-47-docs](./quick/261112-99y-record-itad-reply-in-phase-47-docs/) |
+| 261114-gki | Paused bridge (delta) updates keep temps that passed the whole-file SHA-1, recorded in `{steamapps}/gamelib-delta/{appId}.temps.json` keyed on the target manifest GIDs; resume re-hashes each kept temp and reuses it on size+SHA-1 match (progress seeded, log line), mismatches rebuilt; error, changed target and file-level fallback delete all temps and the record. Todo closed. | 2026-11-14 | a4f46948d, 51f47623d, 5f7e350da | `cargo test -p gamelib-depot` all green (delta/delta_resume 5× stable); fmt + clippy 1.99.1 clean; planning-gates 12/12; not yet live-verified on a real bridge update | [261114-gki-keep-sha-verified-temps-when-a-bridge-up](./quick/261114-gki-keep-sha-verified-temps-when-a-bridge-up/) |
 
 ## Deferred Items
 
