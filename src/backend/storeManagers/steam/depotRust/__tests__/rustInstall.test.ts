@@ -18,6 +18,8 @@ import {
 } from 'fs'
 import { tmpdir } from 'os'
 import { dirname, join } from 'path'
+import { RUST_STEAMFILES_READ_INSTALLSCRIPT } from 'common/types/sidecarTransport'
+import { stubRustSteamFiles } from '../../localFiles/__tests__/fixtures/stubRustSteamFiles'
 const requestRustInvoke = jest.fn()
 const depotTransport = {
   requestRustInvoke,
@@ -310,6 +312,48 @@ describe('downloadSharedRedistDepots on the rust pipeline', () => {
     'utf8'
   )
 
+  // The entries Rust recorded for the DirectX fixture, in the Rust wire shape (nulls for absent).
+  const recorded = (
+    JSON.parse(
+      readFileSync(
+        join(
+          __dirname,
+          '../../bridge/__tests__/fixtures/sharedRedists/entries.json'
+        ),
+        'utf8'
+      )
+    ) as Record<
+      string,
+      {
+        name: string
+        hasRunKey?: string
+        minimumHasRunValue: number
+        processes: { process: string; command?: string }[]
+        requirementOs: { is64BitWindows?: string; osType?: string } | null
+      }[]
+    >
+  )['228990-directx-jun2010.vdf']!
+  const installScriptRust = stubRustSteamFiles({
+    [RUST_STEAMFILES_READ_INSTALLSCRIPT]: () => ({
+      exists: true,
+      entries: recorded.map((e) => ({
+        name: e.name,
+        hasRunKey: e.hasRunKey ?? null,
+        minimumHasRunValue: e.minimumHasRunValue,
+        processes: e.processes.map((p) => ({
+          process: p.process,
+          command: p.command ?? null
+        })),
+        requirementOs: e.requirementOs
+          ? {
+              is64BitWindows: e.requirementOs.is64BitWindows ?? null,
+              osType: e.requirementOs.osType ?? null
+            }
+          : null
+      }))
+    })
+  })
+
   it('runs ordinary jobs with its own install root and no finalize, keeping index and onComponent', async () => {
     const root = join(steamapps, 'common', 'Steamworks Shared')
     const stub = createStubRustDepot({
@@ -338,9 +382,7 @@ describe('downloadSharedRedistDepots on the rust pipeline', () => {
     const r = await downloadSharedRedistDepots(APP_ID, {
       installRuntime: createTestSteamInstallRuntime(depotTransport),
       steamUser,
-      rust: {
-        requestRustInvoke: () => Promise.reject(new Error('rust not stubbed'))
-      },
+      rust: installScriptRust,
       cacheSteamappsDir: steamapps,
       optInDepotIds: [],
       allowLogon: true,
