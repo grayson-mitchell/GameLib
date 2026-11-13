@@ -166,7 +166,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 72: Renderer trust boundary and process hardening** — 0 plans; not started (completed 2026-11-08)
 - [x] **Phase 73: Steam depot download pipeline in Rust** — 21 plans; complete (completed 2026-11-10)
 - [x] **Phase 74: Steam game updates** — 13 plans executed; live gate not passed (2026-11-13: 7 gaps, items 7 and 12), awaiting gap closure (completed 2026-11-13)
-- [ ] **Phase 75: Steam local file formats in Rust** — 0 plans; not started
+- [ ] **Phase 75: Steam local file formats in Rust** — 34 plans in 20 waves; planned 2026-11-14
 - [ ] **Phase 76: Engine-correct bottle for DRM-mode launches (v0.9 audit S9)** — 0 plans; not started
 - [ ] **Phase 77: Runtime hardening from the v0.9 review debt** — 0 plans; not started
 - [ ] **Phase 78: Verification records and test health after v0.9** — 0 plans; not started
@@ -1305,13 +1305,105 @@ Plans:
 ### Phase 75: Steam local file formats in Rust
 
 **Goal:** Steam's local files are read in Rust, so the ACF format has one implementation. Phase 73 moved the ACF *writer* to Rust while the TypeScript *reader* stays, which is two codecs for one format that can drift. Scope: (1) text VDF reading of `libraryfolders.vdf` and `appmanifest_*.acf`, replacing `@node-steam/vdf`; (2) binary `shortcuts.vdf` read and write, replacing `steam-shortcut-editor`; (3) the local library scan in `steam/library/` (~4.6k non-test lines across the directory, measured 2026-11-09). Reuse Phase 63's pattern unchanged: a Tauri-free crate in the `src-tauri/` Cargo workspace (or the Phase 73 crate's ACF module, extended), `rustInvoke` from the sidecar with the TypeScript signatures unchanged, a CLI binary for headless tools, a parity harness over fixtures (byte-identical round-trip for `shortcuts.vdf`), a dev-only fallback flag, then delete the TypeScript readers and both npm packages. This is the third slice of the incremental Node-to-Rust migration (63 scanners, 73 depot pipeline). Open questions for discuss-phase: whether the owned-apps fetch and metadata/artwork enrichment in `steam/library/` stay in TypeScript (they need `steam-user`/axios) so only the local scan moves; whether the shortcuts writer must preserve unknown fields byte-for-byte; and Steam path discovery on Windows and Linux. The CM-client replacement for `steam-user`/`steam-session`, which gates retiring the sidecar, is a separate spike (2026-11-09). Came from the post-73 migration planning discussion on 2026-11-09.
-**Requirements**: STEAM-03 (milestone-level; phase IDs minted by `/gsd-plan-phase`)
+**Requirements**: STEAM-03 (milestone-level). Phase IDs minted by `/gsd-plan-phase 75` (defined in 75-01-PLAN.md): P75-A text VDF/KV1 in Rust with typed readers; P75-B binary shortcuts.vdf in Rust; P75-C library scan and Steam root discovery in Rust (+ CLI); P75-D one ACF codec, TS ACF writer retired; P75-E two-tier parity with signed-off divergences; P75-F callers on Rust behind D-08 flags, flipped, live smoke; P75-G delete gate: TS readers, both npm packages, flags removed and pinned by a gate test.
 **Depends on:** Phase 73
-**Plans:** 0 plans
+**Plans:** 34 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 75 to break down)
+**Wave 1**
+
+- [ ] 75-01-PLAN.md — gamelib-steamfiles + -cli crates, workspace/CI/lockfile/package wiring, dispatch skeleton, atomic write, CLI
+- [ ] 75-02-PLAN.md — synthetic fixture corpus (text VDF quirks, guards, scan tree, binary shortcuts) with byte-exact git attributes
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 75-03-PLAN.md — TS oracle captured into expected.json before any reader changes
+- [ ] 75-04-PLAN.md — one text KV1 parser: lossless ordered tree, merged/ordered views, limits (TDD)
+- [ ] 75-05-PLAN.md — Rust Steam root discovery over an injected probe; Windows registry via windows-sys (D-12..D-14)
+- [ ] 75-06-PLAN.md — lossless binary KV codec with byte-identical round trip (TDD)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 75-07-PLAN.md — one ACF codec: builder moved from gamelib-depot, typed ACF reader, depot StateFlags read on it
+- [ ] 75-09-PLAN.md — shortcuts.vdf read summary and add/update/remove with atomic write
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 75-08-PLAN.md — Valve manifest guards, installscript, registry RunningAppID, localconfig beta key in Rust
+- [ ] 75-10-PLAN.md — libraryfolders roots, batched ACF scan, first-match ACF lookup
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 75-11-PLAN.md — op registry, recorded Rust results for replay, shortcuts logical parity, dispatch security tests
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 75-12-PLAN.md — steamfiles channels, shell arms, parity test, discovered Steam root passed at sidecar spawn
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [ ] 75-13-PLAN.md — TS adapter: types, invokeSteamFiles, D-08 flags, stub and replay-parity harness
+- [ ] 75-19-PLAN.md — depot_finalize op and channel for no-download ACF finalize (D-03)
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [ ] 75-14-PLAN.md — config.ts default from Rust discovery behind the text flag
+- [ ] 75-15-PLAN.md — getSteamLibraries, installed maps, readAcfState, scanDownloadingAppIds on Rust + replay parity
+- [ ] 75-17-PLAN.md — Valve manifest write-then-path, installscript, census on the CLI + replay parity
+- [ ] 75-18-PLAN.md — nonesteamgame.ts on the Rust shortcuts ops + logical replay parity
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
+- [ ] 75-16-PLAN.md — readAcfInstalldir async on Rust and its six callers + replay parity
+- [ ] 75-20-PLAN.md — co-install guard, cancel-delete check, resume breadcrumb on Rust + replay parity
+
+**Wave 10** *(blocked on Wave 9 completion)*
+
+- [ ] 75-21-PLAN.md — update fields, installed depots, ACF/localconfig beta keys on Rust + replay parity
+- [ ] 75-22-PLAN.md — manifest flags, Mac adoption snapshot, registry running-app poll on Rust + replay parity
+
+**Wave 11** *(blocked on Wave 10 completion)*
+
+- [ ] 75-23-PLAN.md — zero-depot and resume finalize through depot_finalize
+
+**Wave 12** *(blocked on Wave 11 completion)*
+
+- [ ] 75-24-PLAN.md — local real-file parity sweep, 75-PARITY.md, divergence sign-off (checkpoint)
+
+**Wave 13** *(blocked on Wave 12 completion)*
+
+- [ ] 75-25-PLAN.md — flip both flags to rust; author 75-UAT.md live-gate contract
+
+**Wave 14** *(blocked on Wave 13 completion)*
+
+- [ ] 75-26-PLAN.md — live macOS UAT, three CI legs, delete gate recorded (checkpoints)
+
+**Wave 15** *(blocked on Wave 14 completion)*
+
+- [ ] 75-27-PLAN.md — delete TS oracle and sweep; file-backed test double
+
+**Wave 16** *(blocked on Wave 15 completion)*
+
+- [ ] 75-28-PLAN.md — library caller tests off @node-steam/vdf
+- [ ] 75-29-PLAN.md — remaining caller tests off @node-steam/vdf and steam-shortcut-editor
+
+**Wave 17** *(blocked on Wave 16 completion)*
+
+- [ ] 75-30-PLAN.md — library, ACF-field, adoption and config readers Rust-only; TS parsers deleted
+
+**Wave 18** *(blocked on Wave 17 completion)*
+
+- [ ] 75-31-PLAN.md — bridge readers and shortcuts Rust-only; parseKv1 deleted
+- [ ] 75-32-PLAN.md — TS ACF writer (finalizeAcf.ts, appManifest.ts) deleted; finalize Rust-only
+
+**Wave 19** *(blocked on Wave 18 completion)*
+
+- [ ] 75-33-PLAN.md — both D-08 flags deleted
+
+**Wave 20** *(blocked on Wave 19 completion)*
+
+- [ ] 75-34-PLAN.md — remove both npm packages and typedef; steamFilesPortComplete gate; README and stack docs
 
 ### Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal
 
