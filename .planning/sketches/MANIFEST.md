@@ -36,6 +36,7 @@ a usable tab style.
 | 005 | views-section-distinction | How does Views read as a different *kind* of control from the facet groups below it? | **D — synthesis**: C's segmented block + A's `VIEWS` header | library, filtering, tier-2, selection-state, theme-survival |
 | 006 | launch-notice-toast | What surface, accent and motion make the bottom-right Steam launch notice feel polished in every theme? | **A — refined stripe** | toast, notice, motion, steam, multi-theme |
 | 007 | settings-nav-icons | Every Settings tier-2 row iconed, or icons only on help & app actions? | **Option 1** — icons on every row, two groups split by a divider | navigation, tier-2, settings, icons |
+| 008 | game-page-action-bar | Where should the game page's primary actions live so Play is never pushed down or clipped? | **A′ — synthesis**: A's 3fr/2fr card with the action bar in a docked footer; notices under the title | game-page, layout, action-bar, menu, multi-theme |
 
 ## Outcome — Phases 34.10 and 34.11
 
