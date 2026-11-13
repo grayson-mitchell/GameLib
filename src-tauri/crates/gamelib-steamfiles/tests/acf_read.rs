@@ -102,7 +102,10 @@ fn bytes_entry_point_and_serde_shape() {
     assert_eq!(rec.state_flags_raw.as_deref(), Some("x"));
     let v = serde_json::to_value(&r).unwrap();
     assert_eq!(v["record"]["stateFlagsRaw"], "x");
-    assert!(v["record"]["installedDepots"].as_array().unwrap().is_empty());
+    assert!(v["record"]["installedDepots"]
+        .as_array()
+        .unwrap()
+        .is_empty());
 }
 
 #[test]
