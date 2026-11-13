@@ -171,6 +171,18 @@
     "registeredAs": null,
     "options": {
       "cwd": "store_cache",
+      "name": "humble_steam_appid",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
       "name": "humble_sync",
       "clearInvalidConfig": true,
       "schemaKeys": null

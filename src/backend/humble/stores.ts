@@ -6,6 +6,7 @@ import {
   HumbleSyncState
 } from 'common/types/humble'
 import type { StoreFamilyDeps } from 'backend/stores/storeRoot'
+import type { HumbleSteamAppIdCacheEntry } from './steamAppIdResolver'
 
 /**
  * D-74 (locked: "no new secret-surface class"): the revealed key value and
@@ -197,6 +198,14 @@ export function createHumbleStores(deps: StoreFamilyDeps) {
     { declinedAt: number },
     string
   >('humble_settle_declined', null, { root: deps.root, kind: 'user-state' })
+  // Quick 261114-ca6: rebuildable public title -> Steam app id pairs, keyed by
+  // normalizeForAppIdMatch(title). Lifespan null: the TTL is applied in code
+  // (hits never expire, misses expire after 7 days). Kind 'cache'. NOT cleared
+  // by HumbleUser.disconnect(): public catalogue names, no account linkage.
+  const humbleSteamAppIdStore = new CacheStore<
+    HumbleSteamAppIdCacheEntry,
+    string
+  >('humble_steam_appid', null, { root: deps.root, kind: 'cache' })
 
   return {
     configStore,
@@ -208,6 +217,7 @@ export function createHumbleStores(deps: StoreFamilyDeps) {
     humbleAuditStore,
     humbleLocalRedeemedStore,
     humbleNotifiedExpirationStore,
-    humbleSettleDeclinedStore
+    humbleSettleDeclinedStore,
+    humbleSteamAppIdStore
   }
 }

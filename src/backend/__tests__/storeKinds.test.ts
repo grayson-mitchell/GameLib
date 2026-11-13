@@ -82,7 +82,7 @@ const EXPECTED_KINDS: Record<string, Kind> = {
   macArchStore: 'user-state',
   runsForMeStore: 'user-state',
   uploadedLogs: 'cache',
-  // CacheStore (33)
+  // CacheStore (34)
   steam_library: 'user-state',
   gog_library: 'user-state',
   legendary_library: 'user-state',
@@ -112,6 +112,7 @@ const EXPECTED_KINDS: Record<string, Kind> = {
   humble_local_redeemed: 'user-state',
   humble_notified_expiration: 'user-state',
   humble_settle_declined: 'user-state',
+  humble_steam_appid: 'cache',
   crossover_index: 'cache',
   pci_ids_device: 'cache',
   pci_ids_vendor: 'cache',
