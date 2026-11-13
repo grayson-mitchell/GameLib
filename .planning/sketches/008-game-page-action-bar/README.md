@@ -91,3 +91,6 @@ wanted the action bar to stay at the bottom, where people already expect it. Dec
 
 Still open for implementation: a text-on-primary token (see Open Questions).
 
+**Implemented in quick 261114-1fi (2026-11-14).** Operator UAT changed one thing: in the docked footer the
+status line sits **above** the action bar, not under it.
+
