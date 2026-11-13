@@ -40,7 +40,8 @@ beforeEach(() => {
   versioning = createTestVersioning()
   installSteamBridgeSharedRedists = installerOn(versioning)
 })
-import { parseInstallScript, classifySharedRedist } from '../sharedRedists'
+import { classifySharedRedist } from '../sharedRedists'
+import type { InstallScriptEntry } from '../sharedRedists'
 import type { SharedRedistDepot, SharedRedistDownloadResult } from '../../depot'
 import { downloadSharedRedistDepots } from '../../depot'
 import { readKnownFixProfile } from 'backend/knownFixes'
@@ -115,7 +116,9 @@ function depot(
   scriptPath: string,
   gid = `gid-${id}`
 ): SharedRedistDepot {
-  const entries = parseInstallScript(fx(file))!
+  const entries = (
+    JSON.parse(fx('entries.json')) as Record<string, InstallScriptEntry[]>
+  )[file]!
   const { kind, label } = classifySharedRedist(scriptPath, entries)
   return {
     depotId: id,

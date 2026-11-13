@@ -34,8 +34,6 @@ jest.mock('backend/logger', () => ({
 
 import {
   MAX_VALVE_DLL_BYTES,
-  MAX_VALVE_MANIFEST_BYTES,
-  MAX_VALVE_PACKAGE_BYTES,
   VALVE_CLIENT_BASES,
   VALVE_CLIENT_DLLS,
   ValveFetchText,
@@ -44,7 +42,6 @@ import {
   createRunUnzip,
   createValveClient,
   isAllowedValveUrl,
-  parseValveClientManifest,
   valveManifestUrl,
   valvePackageUrl
 } from '../valveClient'
@@ -59,10 +56,35 @@ import type { ValveManifestResult } from '../../../localFiles/steamFilesTypes'
 // runner under a fake HOME (D-12(b)); every other path never reaches unzip.
 const realRunner = createRealRunner()
 const aborts = createAbortRegistry()
+
+/**
+ * Programmed Rust double for the fixture manifests the tests build: it reads the bins_win64 fields
+ * the fixture text carries and answers; it validates nothing (the crate tests and bridgeReplay pin
+ * the real guards). Text with no bins_win64 node is the Rust "no win64 root" rejection.
+ */
+const manifestStub = stubRustSteamFiles({
+  [RUST_STEAMFILES_PARSE_VALVE_MANIFEST]: ({ path }): ValveManifestResult => {
+    const text = readFileSync(path, 'utf8')
+    const field = (name: string) =>
+      new RegExp(`"bins_win64"[\\s\\S]*?"${name}"\\s+"([^"]*)"`).exec(text)?.[1]
+    const version = /"version"\s+"([0-9]+)"/.exec(text)?.[1]
+    const file = field('file')
+    const sha2 = field('sha2')
+    const size = field('size')
+    if (!file || !sha2 || !size || !version) {
+      return { ok: false, reason: 'no win64 root', pkg: null }
+    }
+    return {
+      ok: true,
+      reason: null,
+      pkg: { manifestVersion: version, file, sha2, size: Number(size) }
+    }
+  }
+})
 const { ensureValveClient } = createValveClient({
   runner: realRunner.runner,
   aborts,
-  requestRustInvoke: () => Promise.reject(new Error('rust not stubbed'))
+  requestRustInvoke: manifestStub.requestRustInvoke as never
 })
 afterAll(() => realRunner.dispose())
 
@@ -79,83 +101,6 @@ function withBinsField(field: string, value: string): string {
   const tail = MANIFEST.slice(start).replace(re, `$1"${value}"`)
   return head + tail
 }
-
-describe('parseValveClientManifest', () => {
-  it('selects the bins_win64 node of the live fixture', () => {
-    const r = parseValveClientManifest(MANIFEST)
-    expect(r.ok).toBe(true)
-    if (!r.ok) return
-    expect(r.pkg.manifestVersion).toMatch(/^[0-9]+$/)
-    expect(r.pkg.file).toMatch(/^bins_win64\.zip\.[0-9a-f]{40}$/)
-    expect(r.pkg.sha2).toMatch(/^[0-9a-f]{64}$/)
-    expect(Number.isInteger(r.pkg.size) && r.pkg.size > 0).toBe(true)
-    expect(r.pkg.manifestVersion).toBe('1792618285')
-    expect(r.pkg.file).toBe(`bins_win64.zip.${HEX40}`)
-    expect(r.pkg.size).toBe(64309479)
-  })
-
-  it('never selects a different node when bins_win64 is absent', () => {
-    const text = MANIFEST.replace('"bins_win64"', '"bins_codecs_win64"')
-    const r = parseValveClientManifest(text)
-    expect(r).toEqual({ ok: false, reason: 'no bins_win64 node' })
-  })
-
-  it('ignores a sibling node with a malformed file value', () => {
-    const text = MANIFEST.replace(
-      /("tenfoot_images_all"\s*\{\s*"file"\s+)"[^"]*"/,
-      '$1"../../bad"'
-    )
-    expect(text).not.toBe(MANIFEST)
-    expect(parseValveClientManifest(text).ok).toBe(true)
-  })
-
-  it.each([
-    ['file uppercase', withBinsField('file', 'bins_win64.zip.ABC')],
-    ['file traversal', withBinsField('file', `../bins_win64.zip.${HEX40}`)],
-    ['sha2 63 chars', withBinsField('sha2', 'a'.repeat(63))],
-    ['sha2 uppercase', withBinsField('sha2', 'A'.repeat(64))],
-    ['sha2 coerced to a number', withBinsField('sha2', '1'.repeat(64))],
-    ['size zero', withBinsField('size', '0')],
-    [
-      'size too big',
-      withBinsField('size', String(MAX_VALVE_PACKAGE_BYTES + 1))
-    ],
-    ['size not a number', withBinsField('size', 'abc')],
-    ['version not digits', MANIFEST.replace('"1792618285"', '"abc"')],
-    [
-      'version above safe integer',
-      MANIFEST.replace('"1792618285"', '"99999999999999999999"')
-    ],
-    ['missing win64 root', MANIFEST.replace('"win64"', '"win32"')]
-  ])('rejects %s', (_name, text) => {
-    const r = parseValveClientManifest(text)
-    expect(r.ok).toBe(false)
-  })
-
-  it.each(['__proto__', 'constructor', 'prototype'])(
-    'refuses a %s block key and does not pollute Object.prototype',
-    (key) => {
-      const text = MANIFEST.replace(
-        '"bins_win64"',
-        `"${key}"\n\t{\n\t\t"polluted"\t\t"yes"\n\t}\n\t"bins_win64"`
-      )
-      const r = parseValveClientManifest(text)
-      expect(r.ok).toBe(false)
-      if (!r.ok) expect(r.reason).toContain(key)
-      expect(({} as Record<string, unknown>).polluted).toBeUndefined()
-    }
-  )
-
-  it('never throws on oversize, non-string or unbalanced input', () => {
-    const big = 'x'.repeat(MAX_VALVE_MANIFEST_BYTES + 1)
-    expect(parseValveClientManifest(big).ok).toBe(false)
-    expect(parseValveClientManifest(42).ok).toBe(false)
-    expect(parseValveClientManifest(undefined).ok).toBe(false)
-    expect(parseValveClientManifest('"win64"\n{\n"bins_win64"\n{').ok).toBe(
-      false
-    )
-  })
-})
 
 describe('isAllowedValveUrl', () => {
   it.each([
@@ -537,7 +482,7 @@ describe('ensureValveClient', () => {
     const { ensureValveClient: scripted } = createValveClient({
       runner,
       aborts,
-      requestRustInvoke: () => Promise.reject(new Error('rust not stubbed'))
+      requestRustInvoke: manifestStub.requestRustInvoke as never
     })
     const r = await scripted({ appFolder }, fakes('bins_win64.fixture.zip'))
     expect(r).toMatchObject({ status: 'error', step: 'valve-verify' })
@@ -559,12 +504,12 @@ describe('ensureValveClient', () => {
     const a = createValveClient({
       runner: createScriptedRunner([]),
       aborts,
-      requestRustInvoke: () => Promise.reject(new Error('rust not stubbed'))
+      requestRustInvoke: manifestStub.requestRustInvoke as never
     })
     const b = createValveClient({
       runner: createScriptedRunner([]),
       aborts,
-      requestRustInvoke: () => Promise.reject(new Error('rust not stubbed'))
+      requestRustInvoke: manifestStub.requestRustInvoke as never
     })
     const fa = hang()
     const fb = hang()
@@ -589,19 +534,11 @@ describe('ensureValveClient', () => {
   })
 })
 
-describe('ensureValveClient on the rust text flag (75 D-05 write-then-path)', () => {
-  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
+describe('ensureValveClient manifest hand-off (75 D-05 write-then-path)', () => {
   let appFolder: string
   let valveRoot: string
   const MANIFEST_TEXT = 'hostile-or-not manifest text\n'
 
-  beforeAll(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-  })
-  afterAll(() => {
-    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
-  })
   beforeEach(() => {
     appFolder = mkdtempSync(join(tmpdir(), 'valve-client-rust-test-'))
     valveRoot = join(appFolder, 'steam-bridge', 'drm', 'valve-client')

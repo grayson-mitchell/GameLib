@@ -4,19 +4,16 @@
  *
  * Steam's first-launch "Installing ..." step evaluates a depot's `installscript.vdf`: each named
  * entry under `Run Process` runs `process N` with `command N` unless its `HasRunKey` registry
- * value says it already ran. This module parses those scripts, classifies a depot from the
+ * value says it already ran. This module classifies a depot from the
  * script's own verified content (never from a depot-id table), and builds the argv arrays that run
  * inside a CrossOver bottle.
  *
- * Pure apart from `readInstallScript` (phase 75 D-06: the one file read, Rust-backed under the text
- * flag): no launcher, no electron. depot.ts and the bottle runner both import it, so it must not
+ * Pure apart from `readInstallScript` (phase 75 D-06: the one file read, Rust-backed): no launcher, no electron. depot.ts and the bottle runner both import it, so it must not
  * pull either of them back in.
  */
-import { readFile } from 'node:fs/promises'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { RUST_STEAMFILES_READ_INSTALLSCRIPT } from 'common/types/sidecarTransport'
 import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
-import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
 
 /** The Steamworks Common Redistributables app that owns every shared redist depot. */
 export const STEAM_COMMON_REDIST_APP_ID = '228980'
@@ -28,11 +25,6 @@ export const STEAM_COMMON_REDIST_APP_ID = '228980'
 export const BOTTLE_WINDOWS_VERSION = 'Windows 10'
 
 export type SharedRedistKind = 'vcredist' | 'directx' | 'other'
-
-interface KvNode {
-  key: string
-  value: string | KvNode[]
-}
 
 interface InstallScriptProcess {
   process: string
@@ -72,187 +64,13 @@ const COMMON_REDIST_KEY_PREFIX =
   'HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\'
 
 /**
- * Ordered KV1 tokenizer. Keeps duplicate keys, supports quoted and bare tokens and `//` line
- * comments, and decodes only `\\` and `\"` inside quoted strings.
- *
- * A KV1 `[$COND]` conditional (e.g. `"key" "value" [$WIN32]`, or after a key before its `{`) is
- * skipped when it follows on the same line, so it never shifts key/value pairing (IN-03). It is
- * not evaluated: every conditional variant is kept in file order, as a duplicate key would be.
- *
- * Hand-rolled on purpose: `@node-steam/vdf` merges duplicate sibling keys (the .NET scripts have
- * two `"4.8"` entries, the second being the real installer) and leaves `\\` undecoded (measured,
- * RESEARCH Q5.1). Throws on unbalanced braces or an unterminated string.
- */
-export function parseKv1(text: string): KvNode[] {
-  let pos = 0
-  const len = text.length
-
-  type Token =
-    | { t: 'str'; v: string }
-    | { t: 'open' }
-    | { t: 'close' }
-    | { t: 'eof' }
-
-  const next = (): Token => {
-    for (;;) {
-      while (pos < len && /\s/.test(text.charAt(pos))) pos++
-      if (pos >= len) return { t: 'eof' }
-      if (text[pos] === '/' && text[pos + 1] === '/') {
-        while (pos < len && text[pos] !== '\n') pos++
-        continue
-      }
-      break
-    }
-    const c = text[pos]
-    if (c === '{') {
-      pos++
-      return { t: 'open' }
-    }
-    if (c === '}') {
-      pos++
-      return { t: 'close' }
-    }
-    if (c === '"') {
-      pos++
-      let out = ''
-      for (;;) {
-        if (pos >= len) throw new Error('unterminated string')
-        const ch = text[pos]
-        if (ch === '"') {
-          pos++
-          return { t: 'str', v: out }
-        }
-        if (ch === '\\' && (text[pos + 1] === '\\' || text[pos + 1] === '"')) {
-          out += text[pos + 1]
-          pos += 2
-          continue
-        }
-        out += ch
-        pos++
-      }
-    }
-    let out = ''
-    while (pos < len && !/[\s{}"]/.test(text.charAt(pos))) {
-      out += text.charAt(pos++)
-    }
-    return { t: 'str', v: out }
-  }
-
-  /**
-   * Skip a `[...]` conditional on the current line, if one is next. After a key (`beforeBlock`)
-   * it is skipped only when a `{` follows, so a bare `[...]` value is still read as the value.
-   */
-  const skipConditional = (beforeBlock: boolean) => {
-    let p = pos
-    while (p < len && (text[p] === ' ' || text[p] === '\t')) p++
-    if (text[p] !== '[') return
-    const close = text.indexOf(']', p)
-    const nl = text.indexOf('\n', p)
-    if (close === -1 || (nl !== -1 && nl < close)) return
-    if (beforeBlock) {
-      let q = close + 1
-      while (q < len && /\s/.test(text.charAt(q))) q++
-      if (text[q] !== '{') return
-    }
-    pos = close + 1
-  }
-
-  const parseBlock = (top: boolean): KvNode[] => {
-    const nodes: KvNode[] = []
-    for (;;) {
-      const keyTok = next()
-      if (keyTok.t === 'eof') {
-        if (!top) throw new Error('unbalanced braces')
-        return nodes
-      }
-      if (keyTok.t === 'close') {
-        if (top) throw new Error('unbalanced braces')
-        return nodes
-      }
-      if (keyTok.t === 'open') throw new Error('unexpected {')
-      skipConditional(true)
-      const valTok = next()
-      if (valTok.t === 'str') {
-        nodes.push({ key: keyTok.v, value: valTok.v })
-        skipConditional(false)
-      } else if (valTok.t === 'open')
-        nodes.push({ key: keyTok.v, value: parseBlock(false) })
-      else throw new Error('missing value')
-    }
-  }
-
-  return parseBlock(true)
-}
-
-function findChild(nodes: KvNode[], key: string): KvNode | undefined {
-  const k = key.toLowerCase()
-  return nodes.find((n) => n.key.toLowerCase() === k)
-}
-
-function childString(nodes: KvNode[], key: string): string | undefined {
-  const n = findChild(nodes, key)
-  return n && typeof n.value === 'string' ? n.value : undefined
-}
-
-/**
- * Parse an installscript.vdf into its `Run Process` entries in file order. Returns null for
- * malformed text or a script with no `Run Process` block (the `kvsignatures` block is ignored).
- */
-export function parseInstallScript(text: string): InstallScriptEntry[] | null {
-  let root: KvNode[]
-  try {
-    root = parseKv1(text)
-  } catch {
-    return null
-  }
-  const script = findChild(root, 'installscript')
-  if (!script || typeof script.value === 'string') return null
-  const run = findChild(script.value, 'run process')
-  if (!run || typeof run.value === 'string') return null
-
-  const entries: InstallScriptEntry[] = []
-  for (const node of run.value) {
-    if (typeof node.value === 'string') continue
-    const kids = node.value
-    const processes: InstallScriptProcess[] = []
-    for (let i = 1; ; i++) {
-      const process = childString(kids, `process ${i}`)
-      if (process === undefined) break
-      processes.push({ process, command: childString(kids, `command ${i}`) })
-    }
-    const minRaw = childString(kids, 'minimumhasrunvalue')
-    const minParsed = minRaw === undefined ? NaN : parseInt(minRaw, 10)
-    const reqNode = findChild(kids, 'requirement_os')
-    let requirementOs: InstallScriptEntry['requirementOs'] = null
-    if (reqNode && typeof reqNode.value !== 'string') {
-      requirementOs = {
-        is64BitWindows: childString(reqNode.value, 'is64bitwindows'),
-        osType: childString(reqNode.value, 'ostype')
-      }
-    }
-    entries.push({
-      name: node.key,
-      hasRunKey: childString(kids, 'hasrunkey'),
-      minimumHasRunValue: Number.isFinite(minParsed) ? minParsed : 1,
-      processes,
-      requirementOs
-    })
-  }
-  return entries
-}
-
-/**
- * The installscript entries of the file at `scriptPath`. ts flag: the in-process parse; rust flag:
- * `steamfiles_read_installscript`. A missing/unparseable script or a rejected invoke is null, the
+ * The installscript entries of the file at `scriptPath`. Read by `steamfiles_read_installscript`. A missing/unparseable script or a rejected invoke is null, the
  * same value a script with no `Run Process` block gives.
  */
 export async function readInstallScript(
   rust: RustInvokeDeps,
   scriptPath: string
 ): Promise<InstallScriptEntry[] | null> {
-  if (steamFilesTextImpl() === 'ts') {
-    return parseInstallScript(await readFile(scriptPath, 'utf8'))
-  }
   try {
     const r = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_INSTALLSCRIPT, {
       path: scriptPath

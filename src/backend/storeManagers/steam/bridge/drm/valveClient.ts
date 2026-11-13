@@ -20,7 +20,6 @@
  * the app path constants either: the caller passes `appFolder` (56-04).
  */
 
-import { parse } from '@node-steam/vdf'
 import { createHash } from 'crypto'
 import { createReadStream, createWriteStream, promises as fsp } from 'fs'
 import { join } from 'path'
@@ -31,7 +30,6 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { RUST_STEAMFILES_PARSE_VALVE_MANIFEST } from 'common/types/sidecarTransport'
 import { invokeSteamFiles } from '../../localFiles/rustSteamFiles'
-import { steamFilesTextImpl } from '../../localFiles/steamFilesFlags'
 import type { ProcessRunner } from 'backend/process/types'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
@@ -59,7 +57,6 @@ export const MAX_VALVE_DLL_BYTES = 128 * 1024 * 1024
 const FILE_RE = /^bins_win64\.zip\.[0-9a-f]{40}$/
 const SHA2_RE = /^[0-9a-f]{64}$/
 const VERSION_RE = /^[0-9]{1,20}$/
-const FORBIDDEN_KEY_RE = /"(__proto__|constructor|prototype)"/
 
 const HOST_UPDATE = 'client-update.akamai.steamstatic.com'
 const ROOT_PATH_RE = /^\/[A-Za-z0-9._-]+$/
@@ -125,65 +122,6 @@ function own(obj: unknown, key: string): unknown {
     return (obj as Record<string, unknown>)[key]
   }
   return undefined
-}
-
-export function parseValveClientManifest(
-  text: unknown
-): { ok: true; pkg: ValveClientPackage } | Fail {
-  try {
-    if (typeof text !== 'string') return { ok: false, reason: 'not text' }
-    if (Buffer.byteLength(text) > MAX_VALVE_MANIFEST_BYTES) {
-      return { ok: false, reason: 'manifest too large' }
-    }
-    // Before parse: @node-steam/vdf assigns block keys with stack[top][key],
-    // so a "__proto__" block would write into Object.prototype.
-    const forbidden = FORBIDDEN_KEY_RE.exec(text)
-    if (forbidden) {
-      return { ok: false, reason: `forbidden key ${forbidden[1]}` }
-    }
-    const root = parse(text)
-    const win64 = own(root, 'win64')
-    if (win64 === undefined) return { ok: false, reason: 'no win64 root' }
-    const bins = own(win64, 'bins_win64')
-    if (bins === undefined) return { ok: false, reason: 'no bins_win64 node' }
-
-    const file = own(bins, 'file')
-    if (typeof file !== 'string' || !FILE_RE.test(file)) {
-      return { ok: false, reason: 'bad bins_win64 file' }
-    }
-    const sha2 = own(bins, 'sha2')
-    if (typeof sha2 !== 'string') {
-      return { ok: false, reason: 'sha2 is not a hex string' }
-    }
-    if (!SHA2_RE.test(sha2)) {
-      return { ok: false, reason: 'bad bins_win64 sha2' }
-    }
-    const rawSize = own(bins, 'size')
-    let size = NaN
-    if (typeof rawSize === 'number' && Number.isSafeInteger(rawSize)) {
-      size = rawSize
-    } else if (typeof rawSize === 'string' && /^[0-9]{1,10}$/.test(rawSize)) {
-      size = Number(rawSize)
-    }
-    if (!(size >= 1 && size <= MAX_VALVE_PACKAGE_BYTES)) {
-      return { ok: false, reason: 'bad bins_win64 size' }
-    }
-    const rawVersion = own(win64, 'version')
-    let version = ''
-    if (typeof rawVersion === 'number') {
-      if (Number.isSafeInteger(rawVersion) && rawVersion >= 0) {
-        version = String(rawVersion)
-      }
-    } else if (typeof rawVersion === 'string') {
-      version = rawVersion
-    }
-    if (!VERSION_RE.test(version)) {
-      return { ok: false, reason: 'bad manifest version' }
-    }
-    return { ok: true, pkg: { manifestVersion: version, file, sha2, size } }
-  } catch {
-    return { ok: false, reason: 'manifest did not parse' }
-  }
 }
 
 /**
@@ -578,16 +516,11 @@ async function installOnce(
       )
     }
 
-    let parsed: { ok: true; pkg: ValveClientPackage } | Fail
-    if (steamFilesTextImpl() === 'rust') {
-      // Write-then-path (75 D-05): the run's own 0700 temp dir, removed by the finally below.
-      tempDir = await fsp.mkdtemp(join(root, '.partial-'))
-      const manifestPath = join(tempDir, 'manifest.vdf')
-      await fsp.writeFile(manifestPath, manifestText, { mode: 0o600 })
-      parsed = await parseValveClientManifestFile(rust, manifestPath)
-    } else {
-      parsed = parseValveClientManifest(manifestText)
-    }
+    // Write-then-path (75 D-05): the run's own 0700 temp dir, removed by the finally below.
+    tempDir = await fsp.mkdtemp(join(root, '.partial-'))
+    const manifestPath = join(tempDir, 'manifest.vdf')
+    await fsp.writeFile(manifestPath, manifestText, { mode: 0o600 })
+    const parsed = await parseValveClientManifestFile(rust, manifestPath)
     if (!parsed.ok)
       return drmStepError('valve-verify', 'manifest: ' + parsed.reason)
     const pkg = parsed.pkg

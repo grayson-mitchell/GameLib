@@ -1,0 +1,162 @@
+{
+  "228983-vcredist-2010.vdf": [
+    {
+      "name": "x86",
+      "hasRunKey": "HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\vcredist\\2010",
+      "minimumHasRunValue": 1,
+      "processes": [
+        {
+          "process": "%INSTALLDIR%\\_CommonRedist\\vcredist\\2010\\vcredist_x86.exe",
+          "command": "/quiet /norestart"
+        }
+      ],
+      "requirementOs": null
+    },
+    {
+      "name": "x64",
+      "hasRunKey": "HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\vcredist\\2010",
+      "minimumHasRunValue": 1,
+      "processes": [
+        {
+          "process": "%INSTALLDIR%\\_CommonRedist\\vcredist\\2010\\vcredist_x64.exe",
+          "command": "/quiet /norestart"
+        }
+      ],
+      "requirementOs": {
+        "is64BitWindows": "1"
+      }
+    }
+  ],
+  "228986-vcredist-2015.vdf": [
+    {
+      "name": "x86 Update 3 14.0.24215.0",
+      "hasRunKey": "HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\vcredist\\2015",
+      "minimumHasRunValue": 1,
+      "processes": [
+        {
+          "process": "%INSTALLDIR%\\_CommonRedist\\vcredist\\2015\\Microsoft Visual C++ 2015 x86.cmd"
+        }
+      ],
+      "requirementOs": null
+    },
+    {
+      "name": "x64 Update 3 14.0.24215.0",
+      "hasRunKey": "HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\vcredist\\2015",
+      "minimumHasRunValue": 1,
+      "processes": [
+        {
+          "process": "%INSTALLDIR%\\_CommonRedist\\vcredist\\2015\\Microsoft Visual C++ 2015 x64.cmd"
+        }
+      ],
+      "requirementOs": {
+        "is64BitWindows": "1"
+      }
+    }
+  ],
+  "228989-vcredist-2022.vdf": [
+    {
+      "name": "x86 14.51.36247.0",
+      "hasRunKey": "HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\vcredist\\2022",
+      "minimumHasRunValue": 1,
+      "processes": [
+        {
+          "process": "%INSTALLDIR%\\_CommonRedist\\vcredist\\2022\\Microsoft Visual C++ 2022 x86.cmd"
+        }
+      ],
+      "requirementOs": null
+    },
+    {
+      "name": "x64 14.51.36247.0",
+      "hasRunKey": "HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\vcredist\\2022",
+      "minimumHasRunValue": 1,
+      "processes": [
+        {
+          "process": "%INSTALLDIR%\\_CommonRedist\\vcredist\\2022\\Microsoft Visual C++ 2022 x64.cmd"
+        }
+      ],
+      "requirementOs": {
+        "is64BitWindows": "1"
+      }
+    }
+  ],
+  "228990-directx-jun2010.vdf": [
+    {
+      "name": "dxsetup",
+      "hasRunKey": "HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\DirectX\\Jun2010",
+      "minimumHasRunValue": 1,
+      "processes": [
+        {
+          "process": "%INSTALLDIR%\\_CommonRedist\\DirectX\\Jun2010\\DXSETUP.exe",
+          "command": "/silent"
+        }
+      ],
+      "requirementOs": null
+    }
+  ],
+  "229004-dotnet-4.5.2.vdf": [
+    {
+      "name": "4.5.2",
+      "hasRunKey": "HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\.NET\\4.5.2",
+      "minimumHasRunValue": 1,
+      "processes": [
+        {
+          "process": "%INSTALLDIR%\\_CommonRedist\\DotNet\\4.5.2\\noop.cmd"
+        }
+      ],
+      "requirementOs": {
+        "osType": "Windows XP"
+      }
+    },
+    {
+      "name": "4.5.2",
+      "hasRunKey": "HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\.NET\\4.5.2",
+      "minimumHasRunValue": 1,
+      "processes": [
+        {
+          "process": "%INSTALLDIR%\\_CommonRedist\\DotNet\\4.5.2\\Microsoft .NET Framework 4.5.2.cmd"
+        }
+      ],
+      "requirementOs": null
+    }
+  ],
+  "229007-dotnet-4.8.vdf": [
+    {
+      "name": "4.8",
+      "hasRunKey": "HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\.NET\\4.8",
+      "minimumHasRunValue": 1,
+      "processes": [
+        {
+          "process": "%INSTALLDIR%\\_CommonRedist\\DotNet\\4.8\\noop.cmd"
+        }
+      ],
+      "requirementOs": {
+        "osType": "Windows XP"
+      }
+    },
+    {
+      "name": "4.8",
+      "hasRunKey": "HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\.NET\\4.8",
+      "minimumHasRunValue": 1,
+      "processes": [
+        {
+          "process": "%INSTALLDIR%\\_CommonRedist\\DotNet\\4.8\\Microsoft .NET Framework 4.8.cmd"
+        }
+      ],
+      "requirementOs": null
+    }
+  ],
+  "229033-physx-9.14.0702.vdf": [
+    {
+      "name": "9.14.0702",
+      "hasRunKey": "HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\PhysX",
+      "minimumHasRunValue": 1,
+      "processes": [
+        {
+          "process": "msiexec",
+          "command": "/i \"%INSTALLDIR%\\_CommonRedist\\PhysX\\9.14.0702\\PhysX-9.14.0702-SystemSoftware.msi\" /quiet /norestart"
+        }
+      ],
+      "requirementOs": null
+    }
+  ]
+}

@@ -77,7 +77,7 @@ export async function withFixtureCopy<T>(
  * Fixtures on which `@node-steam/vdf` `parse` never returns (a truncated file:
  * EOF inside a block spins the tokenizer; found while capturing this oracle).
  * Any oracle path that would call `parse` on one records this marker instead of
- * running, so a hang in the TS reader can not hang the capture. `parseKv1` is not affected. Paths are relative to the fixtures root.
+ * running, so a hang in the TS reader can not hang the capture. Paths are relative to the fixtures root.
  */
 export const VDF_PARSE_HANGS = new Set([
   'acf/truncated.acf',
