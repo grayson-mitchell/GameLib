@@ -157,7 +157,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 66.1: Backend DI — stores, store managers, flow registrations and launcher** — 37 plans; complete (7/8 live UAT, item 5 blocked pre-existing) (completed 2026-11-10)
 - [x] **Phase 66.2: Every backend spawn through the process runner, then the `child_process` ban** — 12 plans; planned (completed 2026-11-10)
 - [x] **Phase 66.3: Backend module state to zero, then the live macOS smoke** — 18 plans; planned; split 2026-11-11 into 66.3 (shim, config, D-05 owners, static holders) + 66.4 (D-66.3-04) (completed 2026-11-11)
-- [ ] **Phase 66.4: Backend module state long tail, the census-to-test flip, then the live smokes** — 23 plans; planned
+- [ ] **Phase 66.4: Backend module state long tail, the census-to-test flip, then the live smokes** — 25 plans (2 gap closure for G-66.4-W2); planned
 - [x] **Phase 67: Schema validation at the sidecar IPC boundary** — 20 plans in 14 waves; planned 2026-11-07 (completed 2026-11-07)
 - [x] **Phase 68: Versioned persisted stores and migrations** — 11 plans; planned (completed 2026-11-08)
 - [ ] **Phase 69: Consolidate frontend state onto GlobalStateV2** — 26/26 plans executed; verification 8/8, 3 human UAT items pending
@@ -807,7 +807,7 @@ Plans:
 **Goal:** Finish D-15 step 3 after Phase 66.3. Convert the long tail of about 85 files (about 127 sites) with 1–2 module-state sites each, completely and once each (D-15). This includes the 66.2 deferrals: the `utils.ts` `default*Path` lets; `installingComponent`/`catalogCache`/`scriptMetadataCache` in `tools/index.ts`; `engineNoticeStore`; the two `pci_ids` stores; and retiring the win32 sync fallbacks in `knownFolders`/`pathShim`. Then the census becomes a zero-tolerance test and the `moduleState` ceiling is deleted (D-13, D-16). Next, revive the Steam RunningAppID poller under Tauri as a boot-owned, unref'd, stdin-EOF-stopped step (D-66.3-07). The phase ends with two non-autonomous plans: the D-17 live macOS smoke with a scripted orphan/exit checker (D-66.3-05), and the Windows operator UAT, which covers the 66.2 spawn paths and the poller's Playing state (D-66.3-06, D-66.3-08). Decisions live in `.planning/phases/66.3-backend-module-state-to-zero-and-live-macos-smoke/66.3-CONTEXT.md`.
 **Requirements**: ARCH-01 (milestone-level; phase IDs minted by `/gsd-plan-phase`)
 **Depends on:** Phase 66.3
-**Plans:** 22/23 plans executed
+**Plans:** 22/25 plans executed
 
 Plans:
 
@@ -834,6 +834,8 @@ Plans:
 - [x] 66.4-21-PLAN.md — census flip: zero-tolerance test, moduleState ceiling deleted, diPhaseGates 66.4 block, README (wave 20)
 - [x] 66.4-22-PLAN.md — D-17 live macOS smoke with the exit checker (non-autonomous) (wave 21)
 - [ ] 66.4-23-PLAN.md — Windows delta UAT; close the poller todo (non-autonomous) (wave 21)
+- [ ] 66.4-24-PLAN.md — G-66.4-W2 gap: quoted gamelib:// argument in the Windows .lnk, encoded launch URL, game-exe icon resolver (wave 1, gap closure)
+- [ ] 66.4-25-PLAN.md — G-66.4-W2 gap: Windows-only real .lnk readback and dispatch probe, operator double-click re-check, UAT item 7 (non-autonomous) (wave 2, gap closure)
 
 ### Phase 67: Schema validation at the sidecar IPC boundary
 
