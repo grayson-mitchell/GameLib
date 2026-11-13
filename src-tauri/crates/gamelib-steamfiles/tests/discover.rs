@@ -186,17 +186,15 @@ fn no_home_never_panics() {
 fn real_probe_smoke() {
     let d = discover_default();
     assert!(!d.path.is_empty());
-    assert!(
-        [
-            "registry",
-            "programFiles",
-            "macDefault",
-            "flatpak",
-            "dotSteam",
-            "localShare",
-            "snap",
-            "fallback"
-        ]
-        .contains(&d.source.as_str())
-    );
+    assert!([
+        "registry",
+        "programFiles",
+        "macDefault",
+        "flatpak",
+        "dotSteam",
+        "localShare",
+        "snap",
+        "fallback"
+    ]
+    .contains(&d.source.as_str()));
 }
