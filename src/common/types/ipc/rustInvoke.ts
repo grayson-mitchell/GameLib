@@ -33,6 +33,16 @@ import {
   RUST_SCAN_STEAM_API_IMPORTS,
   RUST_SCAN_STEAM_DRM,
   RUST_SCAN_WINEMAC_METAL_EXPORTS,
+  RUST_STEAMFILES_FIND_ACF,
+  RUST_STEAMFILES_PARSE_VALVE_MANIFEST,
+  RUST_STEAMFILES_READ_ACF,
+  RUST_STEAMFILES_READ_INSTALLSCRIPT,
+  RUST_STEAMFILES_READ_LIBRARY_FOLDERS,
+  RUST_STEAMFILES_READ_LOCALCONFIG_BETA_KEY,
+  RUST_STEAMFILES_READ_RUNNING_APP_ID,
+  RUST_STEAMFILES_SCAN_ACFS,
+  RUST_STEAMFILES_SHORTCUTS_APPLY,
+  RUST_STEAMFILES_SHORTCUTS_READ,
   RUST_SHELL_OPEN_PATH,
   RUST_SHELL_SHOW_ITEM_IN_FOLDER,
   RUST_STORE_EMBED_BACK,
@@ -85,6 +95,26 @@ const bounds = {
 // so this stays an opaque value and the generated Args carries it as a `serde_json::Value`.
 const depotValueArg = z.tuple([
   z.unknown().meta({ title: 'request', 'x-rust-value': true })
+])
+const pathArg = z.tuple([z.object({ path: z.string() }).strict()])
+const pathAppArg = z.tuple([
+  z.object({ path: z.string(), appId: z.string() }).strict()
+])
+const dirsArg = z.tuple([
+  z.object({ steamappsDirs: z.array(z.string()) }).strict()
+])
+const dirsAppArg = z.tuple([
+  z.object({ steamappsDirs: z.array(z.string()), appId: z.string() }).strict()
+])
+// shortcuts_apply: the mutation (op add/update/remove over string/int32 entry fields) is an
+// opaque value validated in-crate with deny_unknown_fields, the depotValueArg precedent.
+const applyArg = z.tuple([
+  z
+    .object({
+      path: z.string(),
+      mutation: z.unknown().meta({ title: 'mutation', 'x-rust-value': true })
+    })
+    .strict()
 ])
 const exePath = z.tuple([z.object({ exePath: z.string() })])
 const empty = z.tuple([])
@@ -223,6 +253,17 @@ export const rustInvokeArgs = {
   [RUST_SCAN_WINEMAC_METAL_EXPORTS]: z.tuple([
     z.object({ wineBundlePath: z.string() })
   ]),
+  // ---- Steam local files (Phase 75; paths in, typed results out)
+  [RUST_STEAMFILES_FIND_ACF]: dirsAppArg,
+  [RUST_STEAMFILES_PARSE_VALVE_MANIFEST]: pathArg,
+  [RUST_STEAMFILES_READ_ACF]: pathArg,
+  [RUST_STEAMFILES_READ_INSTALLSCRIPT]: pathArg,
+  [RUST_STEAMFILES_READ_LIBRARY_FOLDERS]: pathArg,
+  [RUST_STEAMFILES_READ_LOCALCONFIG_BETA_KEY]: pathAppArg,
+  [RUST_STEAMFILES_READ_RUNNING_APP_ID]: pathArg,
+  [RUST_STEAMFILES_SCAN_ACFS]: dirsArg,
+  [RUST_STEAMFILES_SHORTCUTS_APPLY]: applyArg,
+  [RUST_STEAMFILES_SHORTCUTS_READ]: pathArg,
   // ---- Steam depot jobs (Phase 73). The job body is validated in-crate (deny_unknown_fields),
   // so the envelope only names the identifying strings and the rest is an opaque Value.
   [RUST_DEPOT_JOB_CANCEL]: z.tuple([z.object({ jobId: z.string() })]),

@@ -68,6 +68,16 @@ pub(crate) enum RustInvokeChannel {
     DepotJobCancel,
     DepotJobRun,
     DepotManifestSummary,
+    SteamfilesFindAcf,
+    SteamfilesParseValveManifest,
+    SteamfilesReadAcf,
+    SteamfilesReadInstallscript,
+    SteamfilesReadLibraryFolders,
+    SteamfilesReadLocalconfigBetaKey,
+    SteamfilesReadRunningAppId,
+    SteamfilesScanAcfs,
+    SteamfilesShortcutsApply,
+    SteamfilesShortcutsRead,
 }
 
 impl RustInvokeChannel {
@@ -120,6 +130,16 @@ impl RustInvokeChannel {
         RustInvokeChannel::DepotJobCancel,
         RustInvokeChannel::DepotJobRun,
         RustInvokeChannel::DepotManifestSummary,
+        RustInvokeChannel::SteamfilesFindAcf,
+        RustInvokeChannel::SteamfilesParseValveManifest,
+        RustInvokeChannel::SteamfilesReadAcf,
+        RustInvokeChannel::SteamfilesReadInstallscript,
+        RustInvokeChannel::SteamfilesReadLibraryFolders,
+        RustInvokeChannel::SteamfilesReadLocalconfigBetaKey,
+        RustInvokeChannel::SteamfilesReadRunningAppId,
+        RustInvokeChannel::SteamfilesScanAcfs,
+        RustInvokeChannel::SteamfilesShortcutsApply,
+        RustInvokeChannel::SteamfilesShortcutsRead,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -172,6 +192,16 @@ impl RustInvokeChannel {
             "depot_job_cancel" => Some(RustInvokeChannel::DepotJobCancel),
             "depot_job_run" => Some(RustInvokeChannel::DepotJobRun),
             "depot_manifest_summary" => Some(RustInvokeChannel::DepotManifestSummary),
+            "steamfiles_find_acf" => Some(RustInvokeChannel::SteamfilesFindAcf),
+            "steamfiles_parse_valve_manifest" => Some(RustInvokeChannel::SteamfilesParseValveManifest),
+            "steamfiles_read_acf" => Some(RustInvokeChannel::SteamfilesReadAcf),
+            "steamfiles_read_installscript" => Some(RustInvokeChannel::SteamfilesReadInstallscript),
+            "steamfiles_read_library_folders" => Some(RustInvokeChannel::SteamfilesReadLibraryFolders),
+            "steamfiles_read_localconfig_beta_key" => Some(RustInvokeChannel::SteamfilesReadLocalconfigBetaKey),
+            "steamfiles_read_running_app_id" => Some(RustInvokeChannel::SteamfilesReadRunningAppId),
+            "steamfiles_scan_acfs" => Some(RustInvokeChannel::SteamfilesScanAcfs),
+            "steamfiles_shortcuts_apply" => Some(RustInvokeChannel::SteamfilesShortcutsApply),
+            "steamfiles_shortcuts_read" => Some(RustInvokeChannel::SteamfilesShortcutsRead),
             _ => None,
         }
     }
@@ -226,6 +256,16 @@ impl RustInvokeChannel {
             RustInvokeChannel::DepotJobCancel => "depot_job_cancel",
             RustInvokeChannel::DepotJobRun => "depot_job_run",
             RustInvokeChannel::DepotManifestSummary => "depot_manifest_summary",
+            RustInvokeChannel::SteamfilesFindAcf => "steamfiles_find_acf",
+            RustInvokeChannel::SteamfilesParseValveManifest => "steamfiles_parse_valve_manifest",
+            RustInvokeChannel::SteamfilesReadAcf => "steamfiles_read_acf",
+            RustInvokeChannel::SteamfilesReadInstallscript => "steamfiles_read_installscript",
+            RustInvokeChannel::SteamfilesReadLibraryFolders => "steamfiles_read_library_folders",
+            RustInvokeChannel::SteamfilesReadLocalconfigBetaKey => "steamfiles_read_localconfig_beta_key",
+            RustInvokeChannel::SteamfilesReadRunningAppId => "steamfiles_read_running_app_id",
+            RustInvokeChannel::SteamfilesScanAcfs => "steamfiles_scan_acfs",
+            RustInvokeChannel::SteamfilesShortcutsApply => "steamfiles_shortcuts_apply",
+            RustInvokeChannel::SteamfilesShortcutsRead => "steamfiles_shortcuts_read",
         }
     }
 }
@@ -1130,5 +1170,132 @@ impl DepotManifestSummaryArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let request = serde_json::from_value(args.first().ok_or_else(|| "depot_manifest_summary:bad-args".to_string())?.clone()).map_err(|_| "depot_manifest_summary:bad-args".to_string())?;
         Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamfilesFindAcfArgs {
+    #[serde(rename = "steamappsDirs")]
+    pub(crate) steamapps_dirs: Vec<String>,
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+}
+
+impl SteamfilesFindAcfArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamfiles_find_acf:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamfiles_find_acf:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamfilesParseValveManifestArgs {
+    pub(crate) path: String,
+}
+
+impl SteamfilesParseValveManifestArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamfiles_parse_valve_manifest:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamfiles_parse_valve_manifest:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamfilesReadAcfArgs {
+    pub(crate) path: String,
+}
+
+impl SteamfilesReadAcfArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamfiles_read_acf:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamfiles_read_acf:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamfilesReadInstallscriptArgs {
+    pub(crate) path: String,
+}
+
+impl SteamfilesReadInstallscriptArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamfiles_read_installscript:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamfiles_read_installscript:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamfilesReadLibraryFoldersArgs {
+    pub(crate) path: String,
+}
+
+impl SteamfilesReadLibraryFoldersArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamfiles_read_library_folders:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamfiles_read_library_folders:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamfilesReadLocalconfigBetaKeyArgs {
+    pub(crate) path: String,
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+}
+
+impl SteamfilesReadLocalconfigBetaKeyArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamfiles_read_localconfig_beta_key:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamfiles_read_localconfig_beta_key:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamfilesReadRunningAppIdArgs {
+    pub(crate) path: String,
+}
+
+impl SteamfilesReadRunningAppIdArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamfiles_read_running_app_id:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamfiles_read_running_app_id:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamfilesScanAcfsArgs {
+    #[serde(rename = "steamappsDirs")]
+    pub(crate) steamapps_dirs: Vec<String>,
+}
+
+impl SteamfilesScanAcfsArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamfiles_scan_acfs:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamfiles_scan_acfs:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamfilesShortcutsApplyArgs {
+    pub(crate) path: String,
+    pub(crate) mutation: Value,
+}
+
+impl SteamfilesShortcutsApplyArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamfiles_shortcuts_apply:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamfiles_shortcuts_apply:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamfilesShortcutsReadArgs {
+    pub(crate) path: String,
+}
+
+impl SteamfilesShortcutsReadArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamfiles_shortcuts_read:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamfiles_shortcuts_read:bad-args".to_string())
     }
 }

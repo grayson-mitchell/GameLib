@@ -438,6 +438,103 @@ export const RUST_DEPOT_JOB_RUN = 'depot_job_run' as const
 export const RUST_DEPOT_MANIFEST_SUMMARY = 'depot_manifest_summary' as const
 
 /**
+ * Rust-side channel name: Phase 75 steamfiles op `steamfiles_find_acf`, a pass-through to the
+ * Tauri-free `gamelib-steamfiles` crate (the same dispatch `gamelib-steamfiles-cli` uses).
+ *
+ * Takes ONE object arg (`{ steamappsDirs, appId }`); paths in, typed result out. Resolves a `SteamAppManifestLookup`-shaped result. Bad args
+ * reject `steamfiles_find_acf:bad-args`; unreadable or unparseable files RESOLVE with a typed result.
+ */
+export const RUST_STEAMFILES_FIND_ACF = 'steamfiles_find_acf' as const
+
+/**
+ * Rust-side channel name: Phase 75 steamfiles op `steamfiles_parse_valve_manifest`, a pass-through to the
+ * Tauri-free `gamelib-steamfiles` crate (the same dispatch `gamelib-steamfiles-cli` uses).
+ *
+ * Takes ONE object arg (`{ path }`); paths in, typed result out. Resolves a parsed Valve manifest result. Bad args
+ * reject `steamfiles_parse_valve_manifest:bad-args`; unreadable or unparseable files RESOLVE with a typed result.
+ */
+export const RUST_STEAMFILES_PARSE_VALVE_MANIFEST =
+  'steamfiles_parse_valve_manifest' as const
+
+/**
+ * Rust-side channel name: Phase 75 steamfiles op `steamfiles_read_acf`, a pass-through to the
+ * Tauri-free `gamelib-steamfiles` crate (the same dispatch `gamelib-steamfiles-cli` uses).
+ *
+ * Takes ONE object arg (`{ path }`); paths in, typed result out. Resolves a parsed appmanifest result. Bad args
+ * reject `steamfiles_read_acf:bad-args`; unreadable or unparseable files RESOLVE with a typed result.
+ */
+export const RUST_STEAMFILES_READ_ACF = 'steamfiles_read_acf' as const
+
+/**
+ * Rust-side channel name: Phase 75 steamfiles op `steamfiles_read_installscript`, a pass-through to the
+ * Tauri-free `gamelib-steamfiles` crate (the same dispatch `gamelib-steamfiles-cli` uses).
+ *
+ * Takes ONE object arg (`{ path }`); paths in, typed result out. Resolves a parsed installscript result. Bad args
+ * reject `steamfiles_read_installscript:bad-args`; unreadable or unparseable files RESOLVE with a typed result.
+ */
+export const RUST_STEAMFILES_READ_INSTALLSCRIPT =
+  'steamfiles_read_installscript' as const
+
+/**
+ * Rust-side channel name: Phase 75 steamfiles op `steamfiles_read_library_folders`, a pass-through to the
+ * Tauri-free `gamelib-steamfiles` crate (the same dispatch `gamelib-steamfiles-cli` uses).
+ *
+ * Takes ONE object arg (`{ path }`); paths in, typed result out. Resolves the parsed library folders. Bad args
+ * reject `steamfiles_read_library_folders:bad-args`; unreadable or unparseable files RESOLVE with a typed result.
+ */
+export const RUST_STEAMFILES_READ_LIBRARY_FOLDERS =
+  'steamfiles_read_library_folders' as const
+
+/**
+ * Rust-side channel name: Phase 75 steamfiles op `steamfiles_read_localconfig_beta_key`, a pass-through to the
+ * Tauri-free `gamelib-steamfiles` crate (the same dispatch `gamelib-steamfiles-cli` uses).
+ *
+ * Takes ONE object arg (`{ path, appId }`); paths in, typed result out. Resolves the localconfig beta key result. Bad args
+ * reject `steamfiles_read_localconfig_beta_key:bad-args`; unreadable or unparseable files RESOLVE with a typed result.
+ */
+export const RUST_STEAMFILES_READ_LOCALCONFIG_BETA_KEY =
+  'steamfiles_read_localconfig_beta_key' as const
+
+/**
+ * Rust-side channel name: Phase 75 steamfiles op `steamfiles_read_running_app_id`, a pass-through to the
+ * Tauri-free `gamelib-steamfiles` crate (the same dispatch `gamelib-steamfiles-cli` uses).
+ *
+ * Takes ONE object arg (`{ path }`); paths in, typed result out. Resolves the running app id result. Bad args
+ * reject `steamfiles_read_running_app_id:bad-args`; unreadable or unparseable files RESOLVE with a typed result.
+ */
+export const RUST_STEAMFILES_READ_RUNNING_APP_ID =
+  'steamfiles_read_running_app_id' as const
+
+/**
+ * Rust-side channel name: Phase 75 steamfiles op `steamfiles_scan_acfs`, a pass-through to the
+ * Tauri-free `gamelib-steamfiles` crate (the same dispatch `gamelib-steamfiles-cli` uses).
+ *
+ * Takes ONE object arg (`{ steamappsDirs }`); paths in, typed result out. Resolves the scanned appmanifests. Bad args
+ * reject `steamfiles_scan_acfs:bad-args`; unreadable or unparseable files RESOLVE with a typed result.
+ */
+export const RUST_STEAMFILES_SCAN_ACFS = 'steamfiles_scan_acfs' as const
+
+/**
+ * Rust-side channel name: Phase 75 steamfiles op `steamfiles_shortcuts_apply`, a pass-through to the
+ * Tauri-free `gamelib-steamfiles` crate (the same dispatch `gamelib-steamfiles-cli` uses).
+ *
+ * Takes ONE object arg (`{ path, mutation }`); paths in, typed result out. Resolves a typed apply result. Bad args
+ * reject `steamfiles_shortcuts_apply:bad-args`; unreadable or unparseable files RESOLVE with a typed result. A described mutation, never a buffer (63 D-08 exception named in 75-CONTEXT); the nested mutation is an opaque value validated in-crate with `deny_unknown_fields`.
+ */
+export const RUST_STEAMFILES_SHORTCUTS_APPLY =
+  'steamfiles_shortcuts_apply' as const
+
+/**
+ * Rust-side channel name: Phase 75 steamfiles op `steamfiles_shortcuts_read`, a pass-through to the
+ * Tauri-free `gamelib-steamfiles` crate (the same dispatch `gamelib-steamfiles-cli` uses).
+ *
+ * Takes ONE object arg (`{ path }`); paths in, typed result out. Resolves the parsed shortcuts. Bad args
+ * reject `steamfiles_shortcuts_read:bad-args`; unreadable or unparseable files RESOLVE with a typed result.
+ */
+export const RUST_STEAMFILES_SHORTCUTS_READ =
+  'steamfiles_shortcuts_read' as const
+
+/**
  * Rust-side channel name: open a fail-closed child `WebviewWindow` on any https URL
  * (Phase 34.4.1 Plan 01, D-01/D-02, REQ-34.4.1-01/REQ-34.4.1-09). Runner-agnostic by
  * design -- nothing in Rust knows what Humble is; this is the mechanism Phase 34.5
@@ -669,7 +766,17 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_SCAN_WINEMAC_METAL_EXPORTS,
   RUST_DEPOT_JOB_CANCEL,
   RUST_DEPOT_JOB_RUN,
-  RUST_DEPOT_MANIFEST_SUMMARY
+  RUST_DEPOT_MANIFEST_SUMMARY,
+  RUST_STEAMFILES_FIND_ACF,
+  RUST_STEAMFILES_PARSE_VALVE_MANIFEST,
+  RUST_STEAMFILES_READ_ACF,
+  RUST_STEAMFILES_READ_INSTALLSCRIPT,
+  RUST_STEAMFILES_READ_LIBRARY_FOLDERS,
+  RUST_STEAMFILES_READ_LOCALCONFIG_BETA_KEY,
+  RUST_STEAMFILES_READ_RUNNING_APP_ID,
+  RUST_STEAMFILES_SCAN_ACFS,
+  RUST_STEAMFILES_SHORTCUTS_APPLY,
+  RUST_STEAMFILES_SHORTCUTS_READ
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
@@ -683,6 +790,22 @@ export const RUST_SCAN_CHANNELS = [
 ] as const
 
 export type RustScanChannel = (typeof RUST_SCAN_CHANNELS)[number]
+
+/** Phase 75: the steamfiles channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
+export const RUST_STEAMFILES_CHANNELS = [
+  RUST_STEAMFILES_FIND_ACF,
+  RUST_STEAMFILES_PARSE_VALVE_MANIFEST,
+  RUST_STEAMFILES_READ_ACF,
+  RUST_STEAMFILES_READ_INSTALLSCRIPT,
+  RUST_STEAMFILES_READ_LIBRARY_FOLDERS,
+  RUST_STEAMFILES_READ_LOCALCONFIG_BETA_KEY,
+  RUST_STEAMFILES_READ_RUNNING_APP_ID,
+  RUST_STEAMFILES_SCAN_ACFS,
+  RUST_STEAMFILES_SHORTCUTS_APPLY,
+  RUST_STEAMFILES_SHORTCUTS_READ
+] as const
+
+export type RustSteamFilesChannel = (typeof RUST_STEAMFILES_CHANNELS)[number]
 
 /** Phase 73 (D-03): the depot channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
 export const RUST_DEPOT_CHANNELS = [
