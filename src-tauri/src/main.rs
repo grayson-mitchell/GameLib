@@ -2732,6 +2732,26 @@ mod tests {
     }
 
     #[test]
+    fn alert_response_choice_maps_buttons_and_dismissals() {
+        assert_eq!(alert_response_choice(1000), Some(0));
+        assert_eq!(alert_response_choice(1001), Some(1));
+        assert_eq!(alert_response_choice(1002), Some(2));
+        assert_eq!(alert_response_choice(0), None); // NSModalResponseCancel
+        assert_eq!(alert_response_choice(-1001), None); // NSModalResponseAbort
+        assert_eq!(alert_response_choice(1003), None);
+    }
+
+    #[test]
+    fn is_bare_escape_rejects_chords_and_other_keys() {
+        assert!(is_bare_escape(53, 0));
+        assert!(is_bare_escape(53, 1 << 16)); // CapsLock is ignored
+        for bit in [17, 18, 19, 20] {
+            assert!(!is_bare_escape(53, 1 << bit));
+        }
+        assert!(!is_bare_escape(36, 0)); // Return
+    }
+
+    #[test]
     fn draining_an_empty_pending_table_is_a_no_op() {
         let pending = Mutex::new(HashMap::new());
         let abandoned = Mutex::new(VecDeque::new());

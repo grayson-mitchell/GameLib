@@ -34,6 +34,88 @@ pub(crate) fn three_button_choice(result: &rfd::MessageDialogResult, labels: &[S
     }
 }
 
+/// Maps an `NSAlert.runModal()` response code to a button index. 1000/1001/1002 are
+/// `NSAlertFirstButtonReturn` / `NSAlertSecondButtonReturn` / `NSAlertThirdButtonReturn`.
+/// Everything else -- `NSModalResponseCancel` (0, what the Esc monitor stops the modal with),
+/// `NSModalResponseAbort` and any unknown code -- is a dismissal (`None`), never a button.
+pub(crate) fn alert_response_choice(code: isize) -> Option<u8> {
+    match code {
+        1000 => Some(0),
+        1001 => Some(1),
+        1002 => Some(2),
+        _ => None,
+    }
+}
+
+/// True for an Esc key-down (macOS virtual keyCode 53) with no Shift/Control/Option/Command held.
+/// `modifier_bits` is `NSEventModifierFlags` raw bits: Shift 1<<17, Control 1<<18, Option 1<<19,
+/// Command 1<<20 (mask 0x1E0000). CapsLock/Fn/numeric-pad bits are ignored.
+pub(crate) fn is_bare_escape(key_code: u16, modifier_bits: usize) -> bool {
+    const CHORD_MASK: usize = 0x1E_0000;
+    key_code == 53 && modifier_bits & CHORD_MASK == 0
+}
+
+/// macOS three-button prompt as an in-process `NSAlert` (see `rpc_dialog_message`). Must run on
+/// the main thread. A scoped local key monitor turns a bare Esc into a dismissal; it is removed
+/// before this returns.
+#[cfg(target_os = "macos")]
+fn show_three_button_alert_macos(
+    mtm: objc2::MainThreadMarker,
+    title: &str,
+    message: &str,
+    level: rfd::MessageLevel,
+    labels: &[String; 3],
+) -> Option<u8> {
+    use objc2_app_kit::{NSAlert, NSAlertStyle, NSApplication, NSEvent, NSEventMask};
+    use objc2_foundation::NSString;
+
+    let alert = NSAlert::new(mtm);
+    alert.setAlertStyle(match level {
+        rfd::MessageLevel::Info => NSAlertStyle::Informational,
+        rfd::MessageLevel::Warning => NSAlertStyle::Warning,
+        rfd::MessageLevel::Error => NSAlertStyle::Critical,
+    });
+    alert.setMessageText(&NSString::from_str(title));
+    alert.setInformativeText(&NSString::from_str(message));
+    for label in labels {
+        alert.addButtonWithTitle(&NSString::from_str(label));
+    }
+    let alert_window = alert.window();
+    let handler_window = alert_window.clone();
+    // Reads ONLY keyCode() and modifierFlags() -- never characters() (T-74-88).
+    let handler = block2::RcBlock::new(
+        move |event: std::ptr::NonNull<NSEvent>| -> *mut NSEvent {
+            // SAFETY: AppKit hands local monitor handlers a valid, live NSEvent for this call.
+            let event_ref = unsafe { event.as_ref() };
+            if !is_bare_escape(event_ref.keyCode(), event_ref.modifierFlags().0) {
+                return event.as_ptr();
+            }
+            let Some(mtm) = objc2::MainThreadMarker::new() else {
+                return event.as_ptr();
+            };
+            let app = NSApplication::sharedApplication(mtm);
+            match app.modalWindow() {
+                Some(w) if std::ptr::eq(&*w, &*handler_window) => {
+                    app.stopModalWithCode(objc2_app_kit::NSModalResponseCancel);
+                    std::ptr::null_mut()
+                }
+                _ => event.as_ptr(),
+            }
+        },
+    );
+    // SAFETY: the handler is a valid block; AppKit copies it when registering.
+    let monitor = unsafe { NSEvent::addLocalMonitorForEventsMatchingMask_handler(NSEventMask::KeyDown, &handler) };
+    if monitor.is_none() {
+        shell_eprintln!("[shell] WARN: launch-prompt esc monitor: addLocalMonitorForEventsMatchingMask failed -- Esc will not dismiss");
+    }
+    let code = alert.runModal();
+    if let Some(token) = monitor {
+        // SAFETY: `token` is the object the add call returned; this is its only removal.
+        unsafe { NSEvent::removeMonitor(&token) };
+    }
+    alert_response_choice(code)
+}
+
 // Native folder picker (Phase 30 Plan 03, D-09/REQ-30-07): blocks the calling thread
 // until the user picks or cancels, so callers MUST dispatch this on a spawned worker
 // thread, never the reader thread (T-30-13 — same reasoning as the keyring arms above,
@@ -132,7 +214,9 @@ pub(crate) fn rpc_dialog_open(args: &[Value], app: &AppHandle) -> Result<Value, 
 // Phase 33 Plan 03 (D-06): an optional 2-element `buttons` array renders a real
 // two-button confirm (`OkCancelCustom`) instead of the OK-only default. A 3-element array
 // renders `YesNoCancelCustom` (Phase 74 gap closure); a dismissal or unrecognised result is
-// `null`, never index 0.
+// `null`, never index 0. On macOS the three-button prompt is an in-process NSAlert (rfd's
+// parentless macOS path is an out-of-process CFUserNotification with no Esc for custom
+// labels); Esc is a dismissal (null), never an index.
 //
 // Returns the chosen button's index (`0` / `1`), or `null` when the dialog was
 // DISMISSED (Esc / window close) without a button -- platformApi maps `null` to the
@@ -172,6 +256,23 @@ pub(crate) fn rpc_dialog_message(args: &[Value], app: &AppHandle) -> Result<Valu
         // The plugin's own `From<MessageDialogKind> for rfd::MessageLevel`, so the
         // level matches what the OK-only path below renders.
         let level: rfd::MessageLevel = kind.into();
+        #[cfg(target_os = "macos")]
+        if let Some(l2) = &label2 {
+            // rfd's parentless macOS path is an out-of-process CFUserNotification with no Esc
+            // for custom labels, so three-button prompts use an in-process NSAlert instead.
+            let labels = [label0.clone(), label1.clone(), l2.clone()];
+            let (tx, rx) = mpsc_channel::<Option<u8>>();
+            app.run_on_main_thread(move || {
+                let choice = match objc2::MainThreadMarker::new() {
+                    Some(mtm) => show_three_button_alert_macos(mtm, &title, &message, level, &labels),
+                    None => None,
+                };
+                let _ = tx.send(choice);
+            })
+            .map_err(|e| e.to_string())?;
+            let choice = rx.recv().map_err(|e| e.to_string())?;
+            return Ok(choice.map_or(Value::Null, Value::from));
+        }
         let buttons = match &label2 {
             Some(l2) => rfd::MessageButtons::YesNoCancelCustom(label0.clone(), label1.clone(), l2.clone()),
             None => rfd::MessageButtons::OkCancelCustom(label0.clone(), label1.clone()),
