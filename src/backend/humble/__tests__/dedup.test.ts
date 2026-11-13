@@ -320,3 +320,76 @@ describe('fuzzyMatch', () => {
     expect(fuzzyMatch('Batman', 'Batman: Arkham Knight')).toBe(false)
   })
 })
+
+describe('recomputeOwnership — resolved steamAppId tier (quick 261114-ca6)', () => {
+  it('resolved id present in the library -> exact', () => {
+    const [r] = recomputeOwnership(
+      [
+        makeKey({
+          steamAppId: '620',
+          steamAppIdResolved: true,
+          title: 'Portal 2'
+        })
+      ],
+      ownedSteamLibrary,
+      NEVER_OVERRIDDEN
+    )
+    const result = defined(r, 'result')
+    expect(result.ownedElsewhere).toBe(true)
+    expect(result.matchConfidence).toBe('exact')
+  })
+
+  it('resolved id absent but title fuzzy-matches -> fuzzy fallback, override still clears it', () => {
+    const key = makeKey({
+      steamAppId: '999999',
+      steamAppIdResolved: true,
+      title: 'Portal 2'
+    })
+    const [r] = recomputeOwnership([key], ownedSteamLibrary, NEVER_OVERRIDDEN)
+    expect(defined(r, 'result').matchConfidence).toBe('fuzzy')
+    const [o] = recomputeOwnership([key], ownedSteamLibrary, () => true)
+    expect(defined(o, 'override').matchConfidence).toBe('none')
+    expect(defined(o, 'override').ownedElsewhere).toBe(false)
+  })
+
+  it('resolved id absent and no fuzzy match -> none', () => {
+    const [r] = recomputeOwnership(
+      [
+        makeKey({
+          steamAppId: '999999',
+          steamAppIdResolved: true,
+          title: 'Totally Unrelated Title Zzz'
+        })
+      ],
+      ownedSteamLibrary,
+      NEVER_OVERRIDDEN
+    )
+    const result = defined(r, 'result')
+    expect(result.matchConfidence).toBe('none')
+    expect(result.ownedElsewhere).toBe(false)
+  })
+
+  it('Humble-supplied id absent -> none with no fuzzy fallback (D-44)', () => {
+    const [r] = recomputeOwnership(
+      [makeKey({ steamAppId: '999999', title: 'Portal 2' })],
+      ownedSteamLibrary,
+      NEVER_OVERRIDDEN
+    )
+    expect(defined(r, 'result').matchConfidence).toBe('none')
+  })
+
+  it('exact via a resolved id is not cleared by the override', () => {
+    const [r] = recomputeOwnership(
+      [
+        makeKey({
+          steamAppId: '620',
+          steamAppIdResolved: true,
+          title: 'Portal 2'
+        })
+      ],
+      ownedSteamLibrary,
+      () => true
+    )
+    expect(defined(r, 'result').matchConfidence).toBe('exact')
+  })
+})
