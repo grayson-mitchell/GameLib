@@ -22,7 +22,10 @@ import { buildInstalledMap } from '../library/installedMap'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { mkdirSync as realMkdirSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import * as vdf from '@node-steam/vdf'
+import {
+  vdf,
+  mockedFsSteamFiles
+} from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { getSteamLibraries } from 'backend/utils'
 const sendFrontendMessage = jest.fn()
@@ -46,7 +49,7 @@ import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 
 const libDeps = {
   config: createTestGlobalConfig(),
-  requestRustInvoke: jest.fn()
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke
 }
 
 const { steamLibraryStore, steamMetadataStore } =
@@ -58,6 +61,7 @@ const getAnonymousPicsClient = jest.fn()
 // The steam:// hand-off goes through deps.openExternal; this recording fake is what it calls.
 const shell = { openExternal: jest.fn() }
 const steamTestDeps = createTestManagerDeps({
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   sendFrontendMessage,
   steamUser,
   openExternal: {
@@ -114,8 +118,14 @@ jest.mock('backend/utils', () => ({
 // ── graceful-fs mock — readdirSync, readFileSync, existsSync ─────────────────
 jest.mock('graceful-fs')
 
-// ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
-jest.mock('@node-steam/vdf')
+// Phase 75: removed with the flag in plan 34
+const priorSteamFilesText = process.env.GAMELIB_STEAMFILES_TEXT
+process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+afterAll(() => {
+  if (priorSteamFilesText === undefined)
+    delete process.env.GAMELIB_STEAMFILES_TEXT
+  else process.env.GAMELIB_STEAMFILES_TEXT = priorSteamFilesText
+})
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
@@ -674,103 +684,6 @@ describe('SteamLibraryManager', () => {
   // automatically from init(); it is now invoked ONLY by the user's own
   // Install click (games.ts), so these regression tests call it directly. ──
 
-  it('D-05: resumeInterruptedSteamInstall() finalizes an interrupted GameLib depot download to a 1026 manifest and never re-invokes the depot orchestrator', async () => {
-    jest.useFakeTimers()
-    library.clear()
-    library.set('730', {
-      runner: 'steam',
-      app_name: '730',
-      title: 'CS:GO',
-      is_installed: false,
-      install: {},
-      art_cover: '',
-      art_square: '',
-      extra: { reqs: [] },
-      canRunOffline: true,
-      installable: true
-    } as any)
-
-    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
-    ;(existsSync as jest.Mock).mockReturnValue(true)
-    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
-    ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
-      AppState: {
-        appid: '730',
-        StateFlags: '2',
-        installdir: 'csgo',
-        SizeOnDisk: '0'
-      }
-    })
-
-    await resumeInterruptedSteamInstall(steamTestDeps, '730')
-
-    expect(finalizeToSteam).toHaveBeenCalledWith(
-      '730',
-      expect.objectContaining({
-        targetSteamappsDir: join('/steam', 'steamapps'),
-        installdir: 'csgo',
-        depots: []
-      })
-    )
-    // Pitfall 4 / D-05: resume must NEVER re-drive a full download itself —
-    // any genuine gap is left for the caller's own subsequent install flow.
-    expect(downloadSteamDepots).not.toHaveBeenCalled()
-
-    stopInstallPolling(steamTestDeps, '730')
-    jest.useRealTimers()
-  })
-
-  it('D-05: resumeInterruptedSteamInstall() finalizes BEFORE it starts watching (finalize-then-startInstallPolling ordering)', async () => {
-    jest.useFakeTimers()
-    library.clear()
-    library.set('730', {
-      runner: 'steam',
-      app_name: '730',
-      title: 'CS:GO',
-      is_installed: false,
-      install: {},
-      art_cover: '',
-      art_square: '',
-      extra: { reqs: [] },
-      canRunOffline: true,
-      installable: true
-    } as any)
-
-    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
-    ;(existsSync as jest.Mock).mockReturnValue(true)
-    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
-    ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
-      AppState: {
-        appid: '730',
-        StateFlags: '2',
-        installdir: 'csgo',
-        SizeOnDisk: '0'
-      }
-    })
-
-    const order: string[] = []
-    jest.mocked(finalizeToSteam).mockImplementation(() => {
-      order.push('finalize')
-      return Promise.resolve()
-    })
-    const setIntervalSpy = jest
-      .spyOn(global, 'setInterval')
-      .mockImplementation((() => {
-        order.push('watch')
-        return { unref: () => undefined } as unknown as NodeJS.Timeout
-      }) as unknown as typeof setInterval)
-
-    await resumeInterruptedSteamInstall(steamTestDeps, '730')
-
-    expect(order).toEqual(['finalize', 'watch'])
-
-    setIntervalSpy.mockRestore()
-    stopInstallPolling(steamTestDeps, '730')
-    jest.useRealTimers()
-  })
-
   it('D-05: resumeInterruptedSteamInstall() never dispatches to Steam/CrossOver (shell.openExternal / runWineCommand — folded-todo regression guard)', async () => {
     jest.useFakeTimers()
     library.clear()
@@ -903,59 +816,6 @@ describe('SteamLibraryManager', () => {
       jest.useRealTimers()
     })
 
-    it('WR-03/D-02/D-04 (23-code-review): a hostile installdir read off the on-disk ACF degrades the resume to the honest-empty 1026 fallback; it never reaches the verify job unsanitized, and the resume never throws', async () => {
-      jest.useFakeTimers()
-      library.clear()
-      // A hostile/malformed installdir the on-disk ACF could contain (an
-      // attacker who can already write into steamapps/ plants this).
-      setupDownloadingFixture('730', '../evil')
-
-      await expect(
-        resumeInterruptedSteamInstall(steamTestDeps, '730')
-      ).resolves.toBeUndefined()
-
-      // sanitizeInstalldir throws UnsafeInstalldirError before the verify job
-      // is ever asked about the hostile value.
-      expect(resumeVerifyRust).not.toHaveBeenCalled()
-      expect(finalizeToSteam).toHaveBeenCalledWith(
-        '730',
-        expect.objectContaining({
-          targetSteamappsDir: join(tmp, 'steamapps'),
-          installdir: 'app_730',
-          depots: []
-        })
-      )
-
-      stopInstallPolling(steamTestDeps, '730')
-      jest.useRealTimers()
-    })
-
-    it('a verify failure (offline/no CM connection) does not throw out of resumeInterruptedSteamInstall() — degrades to the passive honest-empty 1026 fallback', async () => {
-      jest.useFakeTimers()
-      library.clear()
-      setupDownloadingFixture('730', 'csgo')
-
-      jest
-        .mocked(resumeVerifyRust)
-        .mockRejectedValue(new Error('no authenticated Steam CM connection'))
-
-      await expect(
-        resumeInterruptedSteamInstall(steamTestDeps, '730')
-      ).resolves.toBeUndefined()
-
-      expect(finalizeToSteam).toHaveBeenCalledWith(
-        '730',
-        expect.objectContaining({
-          targetSteamappsDir: join(tmp, 'steamapps'),
-          installdir: 'csgo',
-          depots: []
-        })
-      )
-
-      stopInstallPolling(steamTestDeps, '730')
-      jest.useRealTimers()
-    })
-
     describe('rust flag (GAMELIB_STEAMFILES_TEXT=rust): finalize through depot_finalize (75-23)', () => {
       const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
       let acfInstalldir = 'csgo'
@@ -1015,6 +875,35 @@ describe('SteamLibraryManager', () => {
             outcome: null
           }
         ])
+        stopInstallPolling(steamTestDeps, '730')
+        jest.useRealTimers()
+      })
+
+      it('finalizes (depot_finalize) BEFORE it starts watching (finalize-then-startInstallPolling ordering)', async () => {
+        jest.useFakeTimers()
+        library.clear()
+        setupDownloadingFixture('730', 'csgo')
+        jest.mocked(resumeVerifyRust).mockRejectedValue(new Error('offline'))
+        const order: string[] = []
+        invoke.mockImplementation((channel: string) => {
+          if (channel === 'depot_finalize') order.push('finalize')
+          return Promise.resolve(
+            channel === 'steamfiles_read_acf'
+              ? { record: { installdir: 'csgo' } }
+              : { acf: { path: '/x', stateFlags: 1026, sizeOnDisk: '0' } }
+          )
+        })
+        const setIntervalSpy = jest
+          .spyOn(global, 'setInterval')
+          .mockImplementation((() => {
+            order.push('watch')
+            return { unref: () => undefined } as unknown as NodeJS.Timeout
+          }) as unknown as typeof setInterval)
+
+        await resumeInterruptedSteamInstall(steamTestDeps, '730')
+
+        expect(order).toEqual(['finalize', 'watch'])
+        setIntervalSpy.mockRestore()
         stopInstallPolling(steamTestDeps, '730')
         jest.useRealTimers()
       })

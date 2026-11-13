@@ -15,7 +15,10 @@ import SteamLibraryManager from '../library'
 import { stopInstallPolling } from '../library/installStop'
 import { buildIncompleteInstallSet } from '../library/installedMap'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
-import * as vdf from '@node-steam/vdf'
+import {
+  vdf,
+  mockedFsSteamFiles
+} from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 const sendFrontendMessage = jest.fn()
 import { t as i18nextT } from 'i18next'
@@ -44,7 +47,7 @@ import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 
 const libDeps = {
   config: createTestGlobalConfig(),
-  requestRustInvoke: jest.fn()
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke
 }
 
 const { steamLibraryStore, steamMetadataStore, steamSyncStore } =
@@ -57,6 +60,7 @@ const getAnonymousPicsClient = jest.fn()
 const getSteamBottleSettings = jest.fn()
 const isSteamBottleProvisioned = jest.fn()
 const steamTestDeps = createTestManagerDeps({
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   sendFrontendMessage,
   steamUser,
   steamBottle: { getSteamBottleSettings, isSteamBottleProvisioned } as never,
@@ -90,6 +94,7 @@ jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
 jest.mock('backend/knownFixReport', () => ({ reportDetectedFix: jest.fn() }))
 
 jest.mock('backend/logger', () => ({
+  logDebug: jest.fn(),
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
@@ -111,8 +116,14 @@ jest.mock('backend/utils', () => ({
 // ── graceful-fs mock — readdirSync, readFileSync, existsSync ─────────────────
 jest.mock('graceful-fs')
 
-// ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
-jest.mock('@node-steam/vdf')
+// Phase 75: removed with the flag in plan 34
+const priorSteamFilesText = process.env.GAMELIB_STEAMFILES_TEXT
+process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+afterAll(() => {
+  if (priorSteamFilesText === undefined)
+    delete process.env.GAMELIB_STEAMFILES_TEXT
+  else process.env.GAMELIB_STEAMFILES_TEXT = priorSteamFilesText
+})
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({

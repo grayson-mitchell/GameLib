@@ -15,7 +15,10 @@ import {
 } from '../library/acfState'
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
-import * as vdf from '@node-steam/vdf'
+import {
+  vdf,
+  mockedFsSteamFiles
+} from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import { getSteamLibraries } from 'backend/utils'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
@@ -36,7 +39,7 @@ const library = steamSession.libraryState.library
 // 66.3-15: the bottle settings are read through the deps slice, so they are a plain mock here.
 const getSteamBottleSettings = jest.fn()
 const libDeps = {
-  requestRustInvoke: jest.fn(),
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   config: createTestGlobalConfig(),
   steamSession,
   steamBottle: { getSteamBottleSettings, resolveCrossoverWine: jest.fn() },
@@ -79,8 +82,14 @@ jest.mock('backend/utils', () => ({
 // ── graceful-fs mock — readdirSync, readFileSync, existsSync ─────────────────
 jest.mock('graceful-fs')
 
-// ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
-jest.mock('@node-steam/vdf')
+// Phase 75: removed with the flag in plan 34
+const priorSteamFilesText = process.env.GAMELIB_STEAMFILES_TEXT
+process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+afterAll(() => {
+  if (priorSteamFilesText === undefined)
+    delete process.env.GAMELIB_STEAMFILES_TEXT
+  else process.env.GAMELIB_STEAMFILES_TEXT = priorSteamFilesText
+})
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({

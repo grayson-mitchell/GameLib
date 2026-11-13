@@ -5,7 +5,10 @@
  * state are closure state of an instance now, no child_process mock).
  */
 import { existsSync, readFileSync } from 'graceful-fs'
-import * as vdf from '@node-steam/vdf'
+import {
+  vdf,
+  mockedFsSteamFiles
+} from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import { join, resolve, sep } from 'path'
 
 import { createCaptureLog } from 'backend/testUtils/captureLog'
@@ -36,7 +39,14 @@ jest.mock('backend/logger', () => ({
 }))
 const paths = { userHome: '/home/test' }
 jest.mock('graceful-fs')
-jest.mock('@node-steam/vdf')
+// Phase 75: removed with the flag in plan 34
+const priorSteamFilesText = process.env.GAMELIB_STEAMFILES_TEXT
+process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+afterAll(() => {
+  if (priorSteamFilesText === undefined)
+    delete process.env.GAMELIB_STEAMFILES_TEXT
+  else process.env.GAMELIB_STEAMFILES_TEXT = priorSteamFilesText
+})
 
 const vdfWith = (appId: string | undefined) => {
   jest.mocked(existsSync).mockReturnValue(true)
@@ -54,7 +64,8 @@ const vdfWith = (appId: string | undefined) => {
 
 const REG_ARGV = ['query', 'HKCU\\Software\\Valve\\Steam', '/v', 'RunningAppID']
 
-const noRust = () => Promise.reject(new Error('rust not used on the ts flag'))
+// The registry reads answer from the mocked filesystem and programmed vdf.parse results.
+const noRust = mockedFsSteamFiles().requestRustInvoke
 
 describe('readRunningAppId() -- per-platform dispatch', () => {
   describe('win32', () => {

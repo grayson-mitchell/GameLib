@@ -13,7 +13,10 @@ import {
 import { startInstallPolling } from '../library/installPolling'
 import { stopInstallPolling } from '../library/installStop'
 import { existsSync, readFileSync } from 'graceful-fs'
-import * as vdf from '@node-steam/vdf'
+import {
+  vdf,
+  mockedFsSteamFiles
+} from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 const sendFrontendMessage = jest.fn()
 import { notify } from '../../../dialog/dialog'
@@ -46,6 +49,7 @@ const stopSteamDownloadMonitor = monitor.stop
 const getSteamBottleSettings = jest.fn()
 
 const steamTestDeps = createTestManagerDeps({
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   sendFrontendMessage,
   steamBottle: { getSteamBottleSettings } as never,
   steamProcesses: createInertSteamProcesses({ downloadMonitor: monitor }),
@@ -67,6 +71,7 @@ jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
 jest.mock('backend/knownFixReport', () => ({ reportDetectedFix: jest.fn() }))
 
 jest.mock('backend/logger', () => ({
+  logDebug: jest.fn(),
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
@@ -88,8 +93,14 @@ jest.mock('backend/utils', () => ({
 // ── graceful-fs mock — readdirSync, readFileSync, existsSync ─────────────────
 jest.mock('graceful-fs')
 
-// ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
-jest.mock('@node-steam/vdf')
+// Phase 75: removed with the flag in plan 34
+const priorSteamFilesText = process.env.GAMELIB_STEAMFILES_TEXT
+process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+afterAll(() => {
+  if (priorSteamFilesText === undefined)
+    delete process.env.GAMELIB_STEAMFILES_TEXT
+  else process.env.GAMELIB_STEAMFILES_TEXT = priorSteamFilesText
+})
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
