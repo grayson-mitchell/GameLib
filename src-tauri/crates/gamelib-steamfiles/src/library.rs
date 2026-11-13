@@ -5,6 +5,7 @@
 //! escape-decoded, and `scan_acfs` sorts by file name (TS `readdir` order was OS-defined).
 
 use crate::acf::{read_acf, AcfRecord};
+use crate::kv_text::{merged, parse, Limits, MergedValue};
 use serde::Serialize;
 use std::path::Path;
 
@@ -20,12 +21,55 @@ pub struct LibraryFoldersResult {
     pub paths: Vec<String>,
 }
 
-pub fn read_library_folders(_path: &Path) -> LibraryFoldersResult {
-    LibraryFoldersResult {
-        exists: false,
+pub fn read_library_folders(path: &Path) -> LibraryFoldersResult {
+    let fail = |exists: bool, e: Option<String>| LibraryFoldersResult {
+        exists,
         parsed: false,
-        read_error: None,
+        read_error: e,
         paths: Vec::new(),
+    };
+    let meta = match std::fs::metadata(path) {
+        Ok(m) => m,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return fail(false, None),
+        Err(e) => return fail(true, Some(format!("read: {e}"))),
+    };
+    if meta.len() > LIBRARY_MAX_BYTES {
+        return fail(true, Some("parse: TooLarge at 0".to_string()));
+    }
+    let bytes = match std::fs::read(path) {
+        Ok(b) => b,
+        Err(e) => return fail(true, Some(format!("read: {e}"))),
+    };
+    let limits = Limits {
+        max_bytes: LIBRARY_MAX_BYTES as usize,
+        max_depth: 64,
+    };
+    let pairs = match parse(&bytes, &limits) {
+        Ok(p) => p,
+        Err(e) => return fail(true, Some(format!("parse: {:?} at {}", e.kind, e.offset))),
+    };
+    let root = merged(&pairs);
+    let mut paths = Vec::new();
+    if let Some(folders) = root.map("libraryfolders") {
+        for (k, v) in folders.iter() {
+            if k.is_empty() || !k.bytes().all(|b| b.is_ascii_digit()) {
+                continue;
+            }
+            match v {
+                MergedValue::Map(m) => {
+                    if let Some(p) = m.str("path") {
+                        paths.push(p);
+                    }
+                }
+                MergedValue::Str(s) => paths.push(s.decoded()),
+            }
+        }
+    }
+    LibraryFoldersResult {
+        exists: true,
+        parsed: true,
+        read_error: None,
+        paths,
     }
 }
 
