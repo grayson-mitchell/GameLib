@@ -1,6 +1,6 @@
 ---
 created: 2026-11-13T00:00:00.000Z
-title: 'Steam overlay does not attach to Dungeons of Dredmor (98800) on a bridge-verified launch'
+title: 'Steam overlay never attaches to OpenGL-rendering bridge titles (Dungeons of Dredmor 98800)'
 area: steam
 severity: medium
 platform: macos
@@ -29,23 +29,43 @@ Evidence from `~/Library/Logs/GameLib/gamelib.log`, lines 114-219 of the 19:30:5
 
 No earlier log in `~/Library/Logs/GameLib/` has an `overlay attach:` line to compare against.
 
-**This may not be a defect.** The operator reports the session only reached Dredmor's own launcher
-window, not gameplay. The 10s attach watch therefore ran entirely during the launcher. The overlay
-renders through the game's draw path, so it may only attach once the game window renders.
+**Re-tested 19:35, a real defect.** The operator got past the launcher into gameplay, and Shift+Tab
+shows no overlay. The game only runs windowed, but that is unlikely to matter: the Steam overlay
+supports windowed games.
+
+Findings from the live process (pid 67148, `Dungeons of Dredmor.exe`):
+
+- **Injection is complete.** `vmmap` lists `steamloader.dylib`, `gameoverlayrenderer.dylib` and
+  `overlay_shim.dylib`.
+- **Steam never attached.** `~/Library/Application Support/Steam/logs/console_log.txt` has no
+  `GameOverlay: started '…/gameoverlayui' … for game process` line for this launch. The last one
+  is at 17:24, from another title.
+- **The game renders through OpenGL, not Metal.** `vmmap` shows `OpenGL.framework` with
+  `GLEngine.bundle` and `GLRendererFloat.bundle` loaded. The wine log never prints the shim's
+  `hook_set_pixel_format: layer=WineMetalLayer`, which `steam-overlay-in-bottles.md` names as the
+  Metal-path signal. Per that same doc, `overlay_commit=missing` is normal and is not the cause.
+- **Every validated overlay title is Metal-path.** Planet Crafter and Manor Lords both go through
+  D3DMetal. A Wine OpenGL title (an SDL/GL game, or D3D9 through wined3d) is an untested
+  renderer class.
+
+Hypothesis: on an OpenGL frame, Mac `gameoverlayrenderer` never sees a present it hooks. Wine's
+winemac.drv GL path may present in a way it does not intercept. So it never signals Steam, and
+Steam never starts `gameoverlayui`. This probably affects every OpenGL-rendering bridge title,
+not just Dredmor.
+
+The 10s watch's `not attached` was a true negative.
 
 Next steps:
 
-0. Re-test first: launch, click through the launcher into the game, then press Shift+Tab.
-   - If the overlay appears, close this todo as not-a-bug. Optionally file a minor follow-up: the
-     10s watch reports a false negative for titles with a pre-game launcher window.
-   - If it does not appear, continue with the steps below.
-1. Read the overlay wine log for gameoverlayui / `GameOverlayRenderer` load attempts in the game
-   process.
-2. Check whether `overlay_commit=missing` is also normal on titles whose overlay does attach.
-   The spike-findings overlay section covers Steam self-attaching gameoverlayui.
-3. Decide whether this is specific to 32-bit games (Steam may not self-attach an x86 renderer
-   through the CX_ENV path) or to Dredmor's renderer (an old SDL/OpenGL title, not Metal-native
-   D3D through DXMT/DXVK).
-4. Compare with a known-good overlay title on the same CrossOver build.
+1. Find out what Mac `gameoverlayrenderer.dylib` hooks for OpenGL presents, for example
+   `CGLFlushDrawable` or `-[NSOpenGLContext flushBuffer]`, using `nm` or a dtrace probe. Then check
+   which call winemac.drv's GL path actually makes on present.
+2. Separate the renderer from the bitness. Find a 64-bit OpenGL bridge title, or force Dredmor's
+   GL through a Metal-backed path if CrossOver offers one. That shows whether the cause is OpenGL
+   or the 32-bit game.
+3. If the hook mismatch is confirmed, decide on a fix: the overlay shim either bridges Wine's GL
+   present to the call gameoverlayrenderer hooks, or GL titles are marked overlay-unsupported in
+   the UI.
 
-Pressing Shift+Tab in-game during the live gate would confirm the user-visible symptom.
+The Steam bridge itself is unaffected: `HELLO`, `GINIT ok=1`, and the game's own stats and
+achievement calls all work.
