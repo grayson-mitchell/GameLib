@@ -205,10 +205,8 @@ export async function launch(
   // restarted once first. Only installs with a pending-adoption record (see
   // runNativeDepotDownload) ever probe or restart anything.
   if (isMac) {
-    const record = readPendingAdoption(
-      steamGame.appId,
-      pendingAdoptionStoreFrom(steamGame.deps)
-    )
+    const adoptionStore = pendingAdoptionStoreFrom(steamGame.deps)
+    const record = readPendingAdoption(steamGame.appId, adoptionStore)
     if (record) {
       const currentPid = await probeMacSteamPid({
         runner: steamGame.deps.runner
@@ -219,10 +217,7 @@ export async function launch(
         currentAcf: await readAcfSnapshot(steamGame.deps, record.manifestPath)
       })
       if (decision === 'clear-and-launch') {
-        clearPendingAdoption(
-          steamGame.appId,
-          pendingAdoptionStoreFrom(steamGame.deps)
-        )
+        clearPendingAdoption(steamGame.appId, adoptionStore)
       } else if (decision === 'restart') {
         const outcome = await restartMacSteamForAdoption(
           steamGame.appId,
@@ -238,10 +233,7 @@ export async function launch(
           })
         )
         if (outcome.kind === 'relaunched') {
-          clearPendingAdoption(
-            steamGame.appId,
-            pendingAdoptionStoreFrom(steamGame.deps)
-          )
+          clearPendingAdoption(steamGame.appId, adoptionStore)
           watchSteamLaunch(steamGame.deps, steamGame.appId)
           return true
         }
