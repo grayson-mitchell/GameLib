@@ -47,7 +47,10 @@ fn every_fixture_round_trips_byte_for_byte() {
 #[test]
 fn empty_parses_to_empty_shortcuts_map() {
     let doc = parse_bin(&fixture("empty.vdf"), &BinLimits::shortcuts()).unwrap();
-    assert_eq!(doc.root, vec![(b"shortcuts".to_vec(), BinNode::Map(vec![]))]);
+    assert_eq!(
+        doc.root,
+        vec![(b"shortcuts".to_vec(), BinNode::Map(vec![]))]
+    );
     assert!(doc.trailing.is_empty());
 }
 
