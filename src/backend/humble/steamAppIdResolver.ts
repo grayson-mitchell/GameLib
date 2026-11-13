@@ -108,9 +108,15 @@ export async function searchSteamStoreApps(
     timeout: HUMBLE_APPID_REQUEST_TIMEOUT_MS,
     headers: { 'User-Agent': 'GameLib' }
   })
-  if (typeof data !== 'object' || data === null) return []
+  // A 200 without an `items` array (HTML error/rate-limit/captive-portal page)
+  // is an error, not a miss: throwing keeps it out of the 7-day miss cache.
+  if (typeof data !== 'object' || data === null) {
+    throw new Error('Steam store search: unexpected response shape')
+  }
   const items: unknown = (data as { items?: unknown }).items
-  if (!Array.isArray(items)) return []
+  if (!Array.isArray(items)) {
+    throw new Error('Steam store search: response has no items array')
+  }
   const out: SteamStoreSearchItem[] = []
   for (const raw of items as unknown[]) {
     if (typeof raw !== 'object' || raw === null) continue

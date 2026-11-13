@@ -4,6 +4,11 @@
  */
 
 const mockLogInfo = jest.fn()
+const mockAxiosGet = jest.fn()
+jest.mock('axios', () => ({
+  __esModule: true,
+  default: { get: (...args: unknown[]) => mockAxiosGet(...args) }
+}))
 jest.mock('backend/logger', () => ({
   logInfo: (...args: unknown[]) => mockLogInfo(...args),
   logError: jest.fn(),
@@ -18,6 +23,7 @@ import {
   createSteamAppIdResolver,
   normalizeForAppIdMatch,
   pickConfidentAppId,
+  searchSteamStoreApps,
   unrefSleep
 } from '../steamAppIdResolver'
 import type {
@@ -284,5 +290,27 @@ describe('unrefSleep', () => {
     } finally {
       jest.useRealTimers()
     }
+  })
+})
+
+describe('searchSteamStoreApps response shape (review WR-01)', () => {
+  it('parses a well-formed items array', async () => {
+    mockAxiosGet.mockResolvedValueOnce({
+      data: { total: 1, items: [{ type: 'app', name: 'Portal', id: 400 }] }
+    })
+    await expect(searchSteamStoreApps('Portal')).resolves.toEqual([
+      { type: 'app', name: 'Portal', id: 400 }
+    ])
+  })
+
+  it.each([
+    ['an HTML page', '<html>rate limited</html>'],
+    ['null', null],
+    ['an object without items', { total: 0 }]
+  ])('throws (not an empty miss) on %s', async (_label, data) => {
+    mockAxiosGet.mockResolvedValueOnce({ data })
+    await expect(searchSteamStoreApps('Portal')).rejects.toThrow(
+      'Steam store search'
+    )
   })
 })
