@@ -37,7 +37,17 @@ A registered update handed to Steam with Steam closed now waits for the PICS tar
 
 - **[Rule 3] PollOptions type** in `library/installRoot.ts` also needed `installAppRetry` for `tsc` to accept the option; added (file not in the plan list).
 - The existing test "unavailable falls back to the details hand-off" expected options without `installAppRetry`; updated to the new armed shape (intended behaviour change).
-- Task 2 tests were written before the implementation but the RED run was not captured separately; they were confirmed green after implementation, and the installPolling carry-through tests assert on the real `startInstallPolling` entry.
+- Task 2 tests were written before the implementation but the RED run was not captured during execution. **RED captured retroactively (2026-11-13):** in a throwaway worktree at `2645ce5a5` with the five Task 2 source files (`installPolling.ts`, `installRoot.ts`, `pollState.ts`, `updatePollOnce.ts`, `updateNative.ts`) reverted to `3cfeba51e`, the three suites ran 8 failed / 53 passed / 61 total:
+  - `updateRegisteredSteamGame` › unavailable falls back to the details hand-off (options lack `installAppRetry`)
+  - `updateRegisteredSteamGame` › InstallApp unavailable arms installAppRetry on the poll options (74-30)
+  - `pollUpdateOnce InstallApp retry (74-30)` › ok: logs the retry, disarms, restarts the quiet window (helper called 0 times, expected 1)
+  - `pollUpdateOnce InstallApp retry (74-30)` › unavailable: counts attempts, gives up at the max with one log
+  - `pollUpdateOnce InstallApp retry (74-30)` › error: disarms and logs the EAppUpdateError code (expected `StringContaining "EAppUpdateError 9"`, never logged)
+  - `pollUpdateOnce InstallApp retry (74-30)` › does not call the helper again while one retry is in flight
+  - `startInstallPolling()` › installAppRetry carry-through › fresh poll keeps installAppRetry on awaitingUpdate (expected `{"attempts": 0, "libraryPath": "/lib"}`, received `undefined`)
+  - `startInstallPolling()` › installAppRetry carry-through › existing-entry upgrade keeps installAppRetry on awaitingUpdate (same)
+
+  GREEN on `main` after the change: 61/61. Every Task 2 test fails without the implementation, so the tests discriminate.
 
 ## Verification
 
