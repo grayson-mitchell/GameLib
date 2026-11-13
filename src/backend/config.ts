@@ -28,6 +28,7 @@ import {
 import type { BackendEvents } from './backend_events'
 import { isFlatpak, isLinux, isMac, isWindows } from './constants/environment'
 import { join } from 'path'
+import { steamFilesTextImpl } from './storeManagers/steam/localFiles/steamFilesFlags'
 import type { ProcessRunner } from './process/types'
 import type { AppPaths } from './process/context'
 import { updateWineVersionInfos } from './wine/manager/utils'
@@ -44,7 +45,7 @@ export function isFlatpakSteamInstalled(roots: string[]): boolean {
   return roots.some((root) => existsSync(join(root, 'app', FLATPAK_STEAM_APP)))
 }
 
-function getSteamCompatFolder(userHome: string) {
+function getSteamCompatFolderTs(userHome: string) {
   // Paths are from https://savelocation.net/steam-game-folder
   if (isWindows) {
     const defaultWinPath = join(process.env['PROGRAMFILES(X86)'] ?? '', 'Steam')
@@ -70,6 +71,28 @@ function getSteamCompatFolder(userHome: string) {
     }
     return join(userHome, '.steam/steam')
   }
+}
+
+/**
+ * Factory default for defaultSteamPath. Under the rust text flag the root was already discovered by
+ * the shell (plan 12 sets GAMELIB_STEAM_ROOT_DEFAULT on every sidecar spawn), so there is no
+ * boot-time rustInvoke here: 'config' runs before 'rpc-server' and construction stays synchronous.
+ * With no env (Jest, headless smoke) it is the plain per-OS fallback, mirroring Rust's no-candidate
+ * fallback with no probing. The ts flag keeps the legacy logic until it is deleted (plan 31).
+ */
+export function steamRootDefault(
+  userHome: string,
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform
+): string {
+  if (steamFilesTextImpl(env) === 'ts') return getSteamCompatFolderTs(userHome)
+  const fromShell = env.GAMELIB_STEAM_ROOT_DEFAULT?.trim()
+  if (fromShell) return fromShell
+  if (platform === 'win32') return join(env['PROGRAMFILES(X86)'] ?? '', 'Steam')
+  if (platform === 'darwin') {
+    return join(userHome, 'Library/Application Support/Steam')
+  }
+  return join(userHome, '.steam/steam')
 }
 
 /**
@@ -324,7 +347,7 @@ class GlobalConfigV0 extends GlobalConfig {
       focusRow: null,
       dismissedSignInNotices: [],
       trayIconVariant: 'auto',
-      defaultSteamPath: getSteamCompatFolder(this.deps.paths.userHome),
+      defaultSteamPath: steamRootDefault(this.deps.paths.userHome),
       loginBackgroundPath: '',
       defaultWinePrefix: this.deps.paths.defaultWinePrefixDir,
       defaultWinePrefixDir: this.deps.paths.defaultWinePrefixDir,
