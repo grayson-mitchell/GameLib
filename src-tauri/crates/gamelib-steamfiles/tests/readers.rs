@@ -221,3 +221,136 @@ fn installscript_fields() {
     let j = serde_json::to_value(&e[0]).unwrap();
     assert!(j.get("hasRunKey").is_some() && j["requirementOs"].get("is64BitWindows").is_some());
 }
+
+fn running(text: &str) -> u32 {
+    let d = tempfile::tempdir().unwrap();
+    let p = d.path().join("registry.vdf");
+    std::fs::write(&p, text).unwrap();
+    read_running_app_id(&p).running_app_id
+}
+
+#[test]
+fn registry_fixtures() {
+    let id = |n: &str| read_running_app_id(&fx(&format!("registry/{n}.vdf"))).running_app_id;
+    assert_eq!(id("running"), 1_245_620);
+    assert_eq!(id("not-running"), 0);
+    assert_eq!(id("missing-key"), 0);
+    assert_eq!(id("missing"), 0);
+    // Divergence from the case-exact TS oracle (returned 0), recorded in plan 23.
+    assert_eq!(id("lowercase"), 1_245_620);
+}
+
+#[test]
+fn registry_malformed_and_garbage_are_zero() {
+    assert_eq!(running("\"Registry\" { \"HKCU\" {"), 0);
+    let wrap = |v: &str| {
+        format!(
+            "\"Registry\" {{ \"HKCU\" {{ \"Software\" {{ \"Valve\" {{ \"Steam\" {{ \"RunningAppID\" \"{v}\" }} }} }} }} }}"
+        )
+    };
+    assert_eq!(running(&wrap("abc")), 0);
+    assert_eq!(running(&wrap("99999999999")), 0);
+    assert_eq!(running(&wrap("42")), 42);
+}
+
+/// Binary KV: `UserConfig { BetaKey "<key>" }` as the first root map, hex-encoded.
+fn blob_hex(key: &str) -> String {
+    let mut b = vec![0u8];
+    b.extend_from_slice(b"UserConfig\0");
+    b.push(1);
+    b.extend_from_slice(b"BetaKey\0");
+    b.extend_from_slice(key.as_bytes());
+    b.push(0);
+    b.extend_from_slice(&[8, 8]);
+    b.iter().map(|x| format!("{x:02x}")).collect()
+}
+
+fn localconfig(app_entries: &str) -> (tempfile::TempDir, PathBuf) {
+    let d = tempfile::tempdir().unwrap();
+    let p = d.path().join("localconfig.vdf");
+    std::fs::write(
+        &p,
+        format!(
+            "\"UserLocalConfigStore\"\n{{\n\t\"UserAppConfig\"\n\t{{\n{app_entries}\n\t}}\n}}\n"
+        ),
+    )
+    .unwrap();
+    (d, p)
+}
+
+#[test]
+fn localconfig_decodes_binary_blob() {
+    let (_d, p) = localconfig(&format!("\"10\" \"{}\"", blob_hex("beta_a")));
+    assert_eq!(
+        read_localconfig_beta_key(&p, "10").beta_key.as_deref(),
+        Some("beta_a")
+    );
+    assert_eq!(read_localconfig_beta_key(&p, "20").beta_key, None);
+    assert_eq!(read_localconfig_beta_key(&p, "abc").beta_key, None);
+}
+
+#[test]
+fn localconfig_fixtures() {
+    // The committed hex is plain ASCII, not a binary KV blob: no key. Outside-block app 10 too.
+    let p = fx("localconfig/userappconfig.vdf");
+    assert_eq!(read_localconfig_beta_key(&p, "10").beta_key, None);
+    assert_eq!(read_localconfig_beta_key(&p, "20").beta_key, None);
+    let n = fx("localconfig/none.vdf");
+    assert_eq!(read_localconfig_beta_key(&n, "10").beta_key, None);
+    assert_eq!(
+        read_localconfig_beta_key(&fx("localconfig/missing.vdf"), "10").beta_key,
+        None
+    );
+}
+
+#[test]
+fn localconfig_app_outside_block_is_ignored() {
+    let d = tempfile::tempdir().unwrap();
+    let p = d.path().join("lc.vdf");
+    std::fs::write(
+        &p,
+        format!(
+            "\"S\" {{ \"apps\" {{ \"10\" {{ \"BetaKey\" \"x\" }} }} \"UserAppConfig\" {{ \"20\" \"{}\" }} }}",
+            blob_hex("b")
+        ),
+    )
+    .unwrap();
+    assert_eq!(read_localconfig_beta_key(&p, "10").beta_key, None);
+    assert_eq!(
+        read_localconfig_beta_key(&p, "20").beta_key.as_deref(),
+        Some("b")
+    );
+}
+
+#[test]
+fn localconfig_bad_blobs_are_none() {
+    for hex in [
+        "abc".to_string(),                  // odd length
+        "zz".to_string(),                   // not hex
+        String::new(),                      // empty
+        "0055736572436f6e666967".to_string(), // truncated binary KV
+        blob_hex("bad key!"),               // fails is_valid_beta_key
+        blob_hex(&"a".repeat(65)),          // too long
+    ] {
+        let (_d, p) = localconfig(&format!("\"10\" \"{hex}\""));
+        assert_eq!(read_localconfig_beta_key(&p, "10").beta_key, None, "{hex}");
+    }
+}
+
+#[test]
+fn localconfig_beta_key_only_inside_userconfig() {
+    // BetaKey at the blob root (not under UserConfig) is not a beta key.
+    let mut b = vec![1u8];
+    b.extend_from_slice(b"BetaKey\0beta_a\0\x08");
+    let hex: String = b.iter().map(|x| format!("{x:02x}")).collect();
+    let (_d, p) = localconfig(&format!("\"10\" \"{hex}\""));
+    assert_eq!(read_localconfig_beta_key(&p, "10").beta_key, None);
+}
+
+#[test]
+fn results_serialize_camel_case() {
+    let j = serde_json::to_value(RunningAppIdResult { running_app_id: 5 }).unwrap();
+    assert_eq!(j["runningAppId"], 5);
+    let j = serde_json::to_value(LocalConfigBetaKeyResult { beta_key: None }).unwrap();
+    assert!(j.get("betaKey").is_some());
+}
