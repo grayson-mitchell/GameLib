@@ -52,11 +52,19 @@ fn with_root(v: &Value, root: &str) -> Value {
 fn tokenise(v: &Value, roots: &[String]) -> Value {
     match v {
         Value::String(s) => {
+            // Only a string that carried the temp root is a host path; normalise its
+            // separators so Windows and Unix record the same value. Any other string is
+            // file data (e.g. installscript's `%INSTALLDIR%\vcredist\...`) and must keep
+            // its decoded backslashes, or the oracle comparison stops checking escapes.
             let mut out = s.clone();
             for r in roots {
                 out = out.replace(r.as_str(), TOKEN);
             }
-            Value::String(out.replace('\\', "/"))
+            if out == *s {
+                Value::String(out)
+            } else {
+                Value::String(out.replace('\\', "/"))
+            }
         }
         Value::Array(a) => Value::Array(a.iter().map(|x| tokenise(x, roots)).collect()),
         Value::Object(m) => Value::Object(
