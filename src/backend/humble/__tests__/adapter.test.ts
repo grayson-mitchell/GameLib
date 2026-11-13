@@ -3,7 +3,8 @@
  * Covers HACCT-01 (identity fetch), HACCT-02 (401/403 split), T-10-01/02/03.
  *
  * Mock boundaries:
- *  - axios       → get, isAxiosError (GET paths: getGamekeys/getOrderDetail)
+ *  - axios       → get, isAxiosError (GET paths: library page + JS chunks)
+ *  - global fetch → the filterUserLibrary server-action POST
  *  - login-window seam → revealPost (Phase 39 Plan 03: the reveal POST's
  *                  sole transport since humblePostRequest's electron-net
  *                  alternate was collapsed — see the `fakeSeam` helper below)
@@ -89,38 +90,22 @@ jest.mock('backend/logger', () => ({
   }
 }))
 
-import { getGamekeys, getOrderDetail, revealKey } from '../adapter'
+import {
+  getLibraryOrders,
+  libraryItemToOrderDetail,
+  resetLibraryActionCache,
+  revealKey
+} from '../adapter'
 import {
   createLoginWindowSeamSlot,
   type LoginWindowSeam
 } from '../loginWindowSeam'
-
-const COOKIE = 'super-secret-cookie-value'
 
 // One slot per test file: the adapter reads the seam through its injected deps.
 const seamSlot = createLoginWindowSeamSlot()
 const adapterDeps = {
   loginWindowSeam: seamSlot,
   appInfo: { userAgentFallback: MOCK_USER_AGENT_FALLBACK }
-}
-
-function makeAxiosError(
-  status: number,
-  responseExtra?: { data?: unknown; headers?: Record<string, unknown> }
-) {
-  const err = new Error(
-    `Request failed with status code ${status}`
-  ) as Error & {
-    response?: {
-      status: number
-      data?: unknown
-      headers?: Record<string, unknown>
-    }
-    isAxiosError: true
-  }
-  err.response = { status, ...responseExtra }
-  err.isAxiosError = true
-  return err
 }
 
 beforeEach(() => {
@@ -140,445 +125,6 @@ function allLoggedStrings(): string[] {
   return calls.map((call) => JSON.stringify(call))
 }
 
-describe('getGamekeys', () => {
-  // Real /api/v1/user/order shape (confirmed live, HUMBLE-SPEC-SOURCE.md
-  // Appendix A): an array of order-summary objects, each carrying a
-  // `gamekey` string — NOT bare strings.
-  test('200 + realistic order-summary array -> ok with gamekey strings extracted', async () => {
-    mockGet.mockResolvedValue({
-      data: [
-        { gamekey: 'abc123', human_name: 'Some Bundle' },
-        { gamekey: 'def456', human_name: 'Another Bundle' }
-      ]
-    })
-    const result = await getGamekeys(COOKIE)
-    expect(result).toEqual({ status: 'ok', data: ['abc123', 'def456'] })
-  })
-
-  test('200 + empty array -> ok with empty data', async () => {
-    mockGet.mockResolvedValue({ data: [] })
-    const result = await getGamekeys(COOKIE)
-    expect(result).toEqual({ status: 'ok', data: [] })
-  })
-
-  test('200 + legacy bare-string array shape -> schema_error (regression guard)', async () => {
-    mockGet.mockResolvedValue({ data: ['abc123', 'def456'] })
-    const result = await getGamekeys(COOKIE)
-    expect(result.status).toBe('schema_error')
-  })
-
-  test('200 + non-array body -> schema_error', async () => {
-    mockGet.mockResolvedValue({ data: { unexpected: true } })
-    const result = await getGamekeys(COOKIE)
-    expect(result).toEqual({
-      status: 'schema_error',
-      raw: { unexpected: true }
-    })
-  })
-
-  test('200 + non-array body -> logs redacted, self-diagnosing schema_error details', async () => {
-    mockGet.mockResolvedValue({
-      data: { unexpected: true },
-      headers: { 'content-type': 'application/json' }
-    })
-    await getGamekeys(COOKIE)
-    const warnCall = mockLogWarning.mock.calls.find((call) =>
-      JSON.stringify(call).includes('schema validation')
-    )
-    expect(warnCall).toBeDefined()
-    const logged = JSON.stringify(warnCall)
-    expect(logged).toContain('contentType=application/json')
-    expect(logged).toContain('bodyIsString=false')
-    expect(logged).not.toContain(COOKIE)
-  })
-
-  test('200 + HTML/interstitial string body -> schema_error diagnostics flag non-JSON transport issue', async () => {
-    mockGet.mockResolvedValue({
-      data: '<html><body>Please log in</body></html>',
-      headers: { 'content-type': 'text/html; charset=utf-8' }
-    })
-    const result = await getGamekeys(COOKIE)
-    expect(result.status).toBe('schema_error')
-    const warnCall = mockLogWarning.mock.calls.find((call) =>
-      JSON.stringify(call).includes('schema validation')
-    )
-    expect(warnCall).toBeDefined()
-    const logged = JSON.stringify(warnCall)
-    expect(logged).toContain('bodyIsString=true')
-    expect(logged).toContain('contentType=text/html')
-    // Redaction: the HTML body content itself must never be logged.
-    expect(logged).not.toContain('Please log in')
-  })
-
-  test('axios 401 -> session_expired', async () => {
-    mockGet.mockRejectedValue(makeAxiosError(401))
-    const result = await getGamekeys(COOKIE)
-    expect(result).toEqual({ status: 'session_expired' })
-  })
-
-  test('axios 403 -> access_denied', async () => {
-    mockGet.mockRejectedValue(makeAxiosError(403))
-    const result = await getGamekeys(COOKIE)
-    expect(result).toEqual({ status: 'access_denied' })
-  })
-
-  // D-25: Humble rate-limit (429) is a backoff-inducing denial — routed
-  // through the same access_denied abort+cooldown path as 403.
-  test('axios 429 -> access_denied', async () => {
-    mockGet.mockRejectedValue(makeAxiosError(429))
-    const result = await getGamekeys(COOKIE)
-    expect(result).toEqual({ status: 'access_denied' })
-  })
-
-  test('non-axios / unmapped-status error rethrows', async () => {
-    mockGet.mockRejectedValue(makeAxiosError(500))
-    await expect(getGamekeys(COOKIE)).rejects.toThrow()
-  })
-
-  test('sends X-Requested-By and Cookie headers', async () => {
-    mockGet.mockResolvedValue({ data: [] })
-    await getGamekeys(COOKIE)
-    expect(mockGet).toHaveBeenCalledTimes(1)
-    const [, config] = mockGet.mock.calls[0]
-    expect(config.headers['X-Requested-By']).toBe('hb_android_app')
-    expect(config.headers.Cookie).toMatch(/_simpleauth_sess=/)
-    expect(config.headers.Cookie).toBe(`_simpleauth_sess=${COOKIE}`)
-  })
-
-  test('WR-04: sets a finite request timeout so a hung transport cannot stall validation indefinitely', async () => {
-    mockGet.mockResolvedValue({ data: [] })
-    await getGamekeys(COOKIE)
-    const [, config] = mockGet.mock.calls[0]
-    expect(config.timeout).toBeGreaterThan(0)
-    expect(config.timeout).toBeLessThanOrEqual(30_000)
-  })
-
-  test('WR-04: an axios timeout error (ECONNABORTED, no response) rethrows as a transient error rather than mapping to expired/denied', async () => {
-    const err = new Error('timeout of 15000ms exceeded') as Error & {
-      code: string
-      isAxiosError: true
-    }
-    err.code = 'ECONNABORTED'
-    err.isAxiosError = true
-    mockGet.mockRejectedValue(err)
-    await expect(getGamekeys(COOKIE)).rejects.toThrow('timeout')
-  })
-
-  test('never logs the raw cookie value', async () => {
-    mockGet.mockResolvedValue({ data: [] })
-    await getGamekeys(COOKIE)
-    for (const logged of allLoggedStrings()) {
-      expect(logged).not.toContain(COOKIE)
-    }
-  })
-
-  test('never logs the raw cookie value on error paths either', async () => {
-    mockGet.mockRejectedValue(makeAxiosError(401))
-    await getGamekeys(COOKIE)
-    for (const logged of allLoggedStrings()) {
-      expect(logged).not.toContain(COOKIE)
-    }
-  })
-})
-
-describe('getOrderDetail', () => {
-  const GAMEKEY = 'gamekey-xyz'
-
-  test('valid detail body -> ok', async () => {
-    const body = {
-      gamekey: GAMEKEY,
-      tpkd_dict: { all_tpks: [{ steam_app_id: 220 }] }
-    }
-    mockGet.mockResolvedValue({ data: body })
-    const result = await getOrderDetail(COOKIE, GAMEKEY)
-    expect(result).toEqual({ status: 'ok', data: body })
-  })
-
-  test('malformed body -> schema_error', async () => {
-    mockGet.mockResolvedValue({ data: 'not-an-object' })
-    const result = await getOrderDetail(COOKIE, GAMEKEY)
-    expect(result.status).toBe('schema_error')
-  })
-
-  test('axios 401 -> session_expired', async () => {
-    mockGet.mockRejectedValue(makeAxiosError(401))
-    const result = await getOrderDetail(COOKIE, GAMEKEY)
-    expect(result).toEqual({ status: 'session_expired' })
-  })
-
-  test('axios 403 -> access_denied', async () => {
-    mockGet.mockRejectedValue(makeAxiosError(403))
-    const result = await getOrderDetail(COOKIE, GAMEKEY)
-    expect(result).toEqual({ status: 'access_denied' })
-  })
-
-  // D-25: same abort+cooldown path as 403.
-  test('axios 429 -> access_denied', async () => {
-    mockGet.mockRejectedValue(makeAxiosError(429))
-    const result = await getOrderDetail(COOKIE, GAMEKEY)
-    expect(result).toEqual({ status: 'access_denied' })
-  })
-
-  test('sends X-Requested-By and Cookie headers', async () => {
-    mockGet.mockResolvedValue({ data: { gamekey: GAMEKEY } })
-    await getOrderDetail(COOKIE, GAMEKEY)
-    const [, config] = mockGet.mock.calls[0]
-    expect(config.headers['X-Requested-By']).toBe('hb_android_app')
-    expect(config.headers.Cookie).toBe(`_simpleauth_sess=${COOKIE}`)
-  })
-
-  // Live-UAT round 3 (debug: humble-zero-keys-from-valid-orders): without
-  // `?all_tpkds=true` Humble does not reliably include tpkd_dict.all_tpks —
-  // 25/25 orders parsed ok with ZERO extractable keys. Every working
-  // integration (Playnite HumbleKeysLibrary, FailSpy redeemer) sends it.
-  test('requests the order detail with ?all_tpkds=true (round 3 regression)', async () => {
-    mockGet.mockResolvedValue({ data: { gamekey: GAMEKEY } })
-    await getOrderDetail(COOKIE, GAMEKEY)
-    const [url] = mockGet.mock.calls[0]
-    expect(url).toBe(
-      `https://www.humblebundle.com/api/v1/order/${GAMEKEY}?all_tpkds=true`
-    )
-  })
-
-  // WR-04: gamekey is schema-validated only as z.string() — a drifted or
-  // hostile value with URL metacharacters must not change the request target
-  // or truncate the required all_tpkds=true query (the exact parameter whose
-  // absence caused the round-3 zero-keys failure).
-  test('WR-04: a gamekey with URL metacharacters is percent-encoded into the path — target and query survive intact', async () => {
-    mockGet.mockResolvedValue({ data: { gamekey: 'weird' } })
-    const hostileGamekey = 'abc/../../user?x=1#frag key'
-    await getOrderDetail(COOKIE, hostileGamekey)
-    const [url] = mockGet.mock.calls[0]
-    expect(url).toBe(
-      `https://www.humblebundle.com/api/v1/order/${encodeURIComponent(
-        hostileGamekey
-      )}?all_tpkds=true`
-    )
-    // The encoded path segment carries none of the raw metacharacters.
-    expect(url).not.toContain('/../')
-    expect(url).not.toContain('#')
-    expect(url.endsWith('?all_tpkds=true')).toBe(true)
-  })
-
-  // Shape tolerance (round 3): a live `"tpkd_dict": null` or
-  // `"all_tpks": null` must degrade to "no tpks" (diagnosed downstream by
-  // library.ts's zero-key logging), never fail the whole order parse.
-  test('tpkd_dict: null -> ok, never schema_error', async () => {
-    mockGet.mockResolvedValue({ data: { gamekey: GAMEKEY, tpkd_dict: null } })
-    const result = await getOrderDetail(COOKIE, GAMEKEY)
-    expect(result.status).toBe('ok')
-  })
-
-  test('all_tpks: null -> ok, never schema_error', async () => {
-    mockGet.mockResolvedValue({
-      data: { gamekey: GAMEKEY, tpkd_dict: { all_tpks: null } }
-    })
-    const result = await getOrderDetail(COOKIE, GAMEKEY)
-    expect(result.status).toBe('ok')
-  })
-
-  // Real-world tpk field set (Playnite Tpk model / FailSpy): parses ok and
-  // RETAINS the fields classify.ts consumes (redeemed_key_val, is_expired).
-  test('real-world tpk shape parses ok and retains redeemed_key_val/is_expired', async () => {
-    const body = {
-      gamekey: GAMEKEY,
-      tpkd_dict: {
-        all_tpks: [
-          {
-            machine_name: 'realgame_steam',
-            gamekey: GAMEKEY,
-            key_type: 'steam',
-            key_type_human_name: 'Steam',
-            human_name: 'Real Game',
-            steam_app_id: '220',
-            is_expired: false,
-            redeemed_key_val: 'redeemed-value-string'
-          }
-        ]
-      }
-    }
-    mockGet.mockResolvedValue({ data: body })
-    const result = await getOrderDetail(COOKIE, GAMEKEY)
-    expect(result.status).toBe('ok')
-    if (result.status !== 'ok') return
-    const tpk = result.data.tpkd_dict?.all_tpks?.[0] as Record<string, unknown>
-    expect(tpk.redeemed_key_val).toBe('redeemed-value-string')
-    expect(tpk.is_expired).toBe(false)
-    expect(tpk.steam_app_id).toBe('220')
-  })
-
-  // Round 4: the real expiration date field (best-evidence `expiry_date`) is
-  // not declared on the schema but MUST survive .passthrough() so classify.ts's
-  // extractExpiration can read it — a regression guard against a future
-  // schema tightening silently stripping the date field.
-  test('an unlisted expiry_date field survives .passthrough() for classify to read', async () => {
-    const body = {
-      gamekey: GAMEKEY,
-      tpkd_dict: {
-        all_tpks: [
-          {
-            machine_name: 'expiring_steam',
-            key_type: 'steam',
-            human_name: 'Expiring Game',
-            is_expired: false,
-            expiry_date: '2026-08-03T00:00:00Z'
-          }
-        ]
-      }
-    }
-    mockGet.mockResolvedValue({ data: body })
-    const result = await getOrderDetail(COOKIE, GAMEKEY)
-    expect(result.status).toBe('ok')
-    if (result.status !== 'ok') return
-    const tpk = result.data.tpkd_dict?.all_tpks?.[0] as Record<string, unknown>
-    expect(tpk.expiry_date).toBe('2026-08-03T00:00:00Z')
-  })
-
-  test('never logs the raw cookie value', async () => {
-    mockGet.mockResolvedValue({ data: { gamekey: GAMEKEY } })
-    await getOrderDetail(COOKIE, GAMEKEY)
-    for (const logged of allLoggedStrings()) {
-      expect(logged).not.toContain(COOKIE)
-    }
-  })
-})
-
-// ── Live-UAT round 2 regressions (debug: humble-keys-empty-list-flashing-sync)
-
-describe('getGamekeys — per-entry tolerance (round 2)', () => {
-  test('one malformed summary entry is SKIPPED, valid gamekeys still returned, redacted count warning logged', async () => {
-    mockGet.mockResolvedValue({
-      data: [
-        { gamekey: 'abc123', human_name: 'Good Bundle' },
-        { gamekey: 12345, human_name: 'Numeric Gamekey Drift' },
-        null,
-        { gamekey: 'def456' }
-      ],
-      headers: { 'content-type': 'application/json' }
-    })
-    const result = await getGamekeys(COOKIE)
-    expect(result).toEqual({ status: 'ok', data: ['abc123', 'def456'] })
-
-    const warnCall = mockLogWarning.mock.calls.find((call) =>
-      JSON.stringify(call).includes('skipped 2 malformed order-summary')
-    )
-    expect(warnCall).toBeDefined()
-    // Redaction: structural issue paths only — never entry values.
-    const logged = JSON.stringify(warnCall)
-    expect(logged).not.toContain('12345')
-    expect(logged).not.toContain('Numeric Gamekey Drift')
-    expect(logged).not.toContain(COOKIE)
-  })
-
-  test('non-empty array where EVERY entry is malformed is still schema_error (wholesale drift must not become a silent empty library)', async () => {
-    mockGet.mockResolvedValue({
-      data: [{ no_gamekey: true }, { gamekey: 42 }],
-      headers: { 'content-type': 'application/json' }
-    })
-    const result = await getGamekeys(COOKIE)
-    expect(result.status).toBe('schema_error')
-    const warnCall = mockLogWarning.mock.calls.find((call) =>
-      JSON.stringify(call).includes('schema validation')
-    )
-    expect(warnCall).toBeDefined()
-    expect(JSON.stringify(warnCall)).toContain(
-      'no entry carried a string gamekey'
-    )
-  })
-})
-
-describe('humbleRequest — string-body JSON coercion (round 2)', () => {
-  test('valid JSON delivered as a raw string (mislabeled content-type) is coerced and parses ok', async () => {
-    mockGet.mockResolvedValue({
-      data: JSON.stringify([{ gamekey: 'abc123' }]),
-      headers: { 'content-type': 'text/plain' }
-    })
-    const result = await getGamekeys(COOKIE)
-    expect(result).toEqual({ status: 'ok', data: ['abc123'] })
-  })
-
-  test('a genuine HTML body still fails with bodyIsString=true diagnostics', async () => {
-    mockGet.mockResolvedValue({
-      data: '<html><body>challenge</body></html>',
-      headers: { 'content-type': 'text/html' }
-    })
-    const result = await getOrderDetail(COOKIE, 'gk')
-    expect(result.status).toBe('schema_error')
-    const logged = JSON.stringify(mockLogWarning.mock.calls)
-    expect(logged).toContain('bodyIsString=true')
-    expect(logged).not.toContain('challenge')
-  })
-})
-
-describe('getOrderDetail — realistic plain store-purchase payload (round 2, spec Appendix A + 10-VALIDATION.md)', () => {
-  // Field set grounded in HUMBLE-SPEC-SOURCE.md Appendix A and the Phase 10
-  // live gate (tpkd_dict.all_tpks[n].steam_app_id present;
-  // redeemed_key_value ABSENT — not null — for an unredeemed key).
-  const realisticOrder = {
-    amount_spent: 4.99,
-    product: {
-      category: 'storefront',
-      machine_name: 'greatgame_storefront',
-      human_name: 'Great Game'
-    },
-    gamekey: 'AbCdEfGh12345678',
-    uid: 'ABCDEF123456',
-    created: '2026-06-20T18:12:33.123456',
-    missed_credit: null,
-    subproducts: [{ machine_name: 'greatgame', human_name: 'Great Game' }],
-    currency: 'USD',
-    is_giftee: false,
-    claimed: true,
-    total: 4.99,
-    tpkd_dict: {
-      all_tpks: [
-        {
-          machine_name: 'greatgame_steam',
-          gamekey: 'AbCdEfGh12345678',
-          exclusive_countries: [],
-          key_type: 'steam',
-          disallowed_countries: [],
-          human_name: 'Great Game',
-          steam_app_id: 123456,
-          is_gift: false,
-          num_days_until_expired: 0,
-          sold_out: false,
-          is_expired: false,
-          keyindex: 1
-          // no redeemed_key_value at all (unredeemed), no expiration
-        }
-      ]
-    },
-    path_ids: ['12345abc']
-  }
-
-  test('parses ok and the parsed data retains tpkd_dict.all_tpks for classification', async () => {
-    mockGet.mockResolvedValue({
-      data: realisticOrder,
-      headers: { 'content-type': 'application/json' }
-    })
-    const result = await getOrderDetail(COOKIE, 'AbCdEfGh12345678')
-    expect(result.status).toBe('ok')
-    if (result.status !== 'ok') return
-    expect(result.data.tpkd_dict?.all_tpks).toHaveLength(1)
-
-    // End-to-end into the real classifier: a plain purchased Steam key must
-    // classify to exactly one UNREVEALED steam entry — never an empty order.
-    const { classifyOrder } =
-      jest.requireActual<typeof import('../classify')>('../classify')
-    const entry = classifyOrder(result.data, () => false)
-    expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0]).toMatchObject({
-      gamekey: 'AbCdEfGh12345678',
-      machineName: 'greatgame_steam',
-      state: 'UNREVEALED',
-      platform: 'steam',
-      title: 'Great Game'
-    })
-    expect(entry.allTerminal).toBe(false)
-  })
-})
-
 // ── Phase 14 (HCLAIM-01): revealKey — the first write-style Humble call ────
 //
 // Phase 39 Plan 03: `humblePostRequest` now routes unconditionally through
@@ -586,6 +132,456 @@ describe('getOrderDetail — realistic plain store-purchase payload (round 2, sp
 // alternate this describe block used to exercise by default (no seam
 // installed) is gone. Every test below installs a fake seam via the shared
 // `fakeSeam()`/`mockRevealPost` helpers declared near the top of this file.
+
+// ── getLibraryOrders (Next.js server action `filterUserLibrary`) ─────────────
+
+describe('libraryItemToOrderDetail', () => {
+  test('maps each keys[] element onto an order-detail tpk and never invents a keyindex', () => {
+    const order = libraryItemToOrderDetail({
+      id: 'item-1',
+      title: 'Some Game',
+      entitlements: {
+        keys: [
+          {
+            id: 'k1',
+            title: 'Some Game (Steam)',
+            keyIntegrationId: 'steam',
+            gameKey: null,
+            redeemedAt: null,
+            expired: false,
+            redemptionExpiryDate: '$D2030-01-02T00:00:00.000Z'
+          }
+        ],
+        downloads: []
+      }
+    })
+    expect(order?.gamekey).toBe('item-1')
+    const tpk = order?.tpkd_dict?.all_tpks?.[0] as Record<string, unknown>
+    expect(tpk).toMatchObject({
+      machine_name: 'k1',
+      human_name: 'Some Game (Steam)',
+      key_type: 'steam',
+      is_expired: false,
+      expiry_date: '2030-01-02T00:00:00.000Z'
+    })
+    expect(tpk).not.toHaveProperty('redeemed_key_val')
+    expect(tpk).not.toHaveProperty('keyindex')
+  })
+
+  test('a present gameKey becomes redeemed_key_val; redeemedAt alone marks revealed without a value', () => {
+    const withValue = libraryItemToOrderDetail({
+      id: 'i',
+      entitlements: {
+        keys: [{ id: 'k', keyIntegrationId: 'steam', gameKey: 'SYNTH-KEY' }]
+      }
+    })
+    expect(
+      (withValue?.tpkd_dict?.all_tpks?.[0] as Record<string, unknown>)
+        .redeemed_key_val
+    ).toBe('SYNTH-KEY')
+    const flagOnly = libraryItemToOrderDetail({
+      id: 'i',
+      entitlements: {
+        keys: [
+          { id: 'k', keyIntegrationId: 'steam', redeemedAt: '$D2030-01-01' }
+        ]
+      }
+    })
+    expect(
+      (flagOnly?.tpkd_dict?.all_tpks?.[0] as Record<string, unknown>)
+        .redeemed_key_val
+    ).toBe(true)
+  })
+
+  test('a revealed key is read from redemptionData.keyFormatted (gameKey is null); the value is never logged', () => {
+    const order = libraryItemToOrderDetail({
+      id: 'i',
+      entitlements: {
+        keys: [
+          {
+            id: 'k',
+            keyIntegrationId: 'steam',
+            gameKey: null,
+            redeemedAt: '2030-01-01T00:00:00.000Z',
+            redemptionExpiryDate: '$undefined',
+            redemptionData: {
+              keyFormatted: 'SYNTH-AAAAA-BBBBB',
+              externalOrderStatus: null,
+              externalAccountName: null
+            }
+          }
+        ]
+      }
+    })
+    const tpk = order?.tpkd_dict?.all_tpks?.[0] as Record<string, unknown>
+    expect(tpk.redeemed_key_val).toBe('SYNTH-AAAAA-BBBBB')
+    expect(tpk).not.toHaveProperty('expiry_date')
+    for (const line of allLoggedStrings())
+      expect(line).not.toContain('SYNTH-AAAAA-BBBBB')
+    // unrevealed shape: keyFormatted null and redeemedAt null -> no value
+    const unrevealed = libraryItemToOrderDetail({
+      id: 'j',
+      entitlements: {
+        keys: [
+          {
+            id: 'k2',
+            keyIntegrationId: 'steam',
+            redeemedAt: null,
+            redemptionData: { keyFormatted: null }
+          }
+        ]
+      }
+    })
+    expect(
+      unrevealed?.tpkd_dict?.all_tpks?.[0] as Record<string, unknown>
+    ).not.toHaveProperty('redeemed_key_val')
+  })
+
+  test('download-only and group items yield zero keys; a non-object item is dropped', () => {
+    expect(
+      libraryItemToOrderDetail({
+        id: 'd',
+        itemType: 'entitlement-group',
+        entitlements: { keys: [], downloads: [{ id: 'x' }] }
+      })?.tpkd_dict?.all_tpks
+    ).toEqual([])
+    expect(libraryItemToOrderDetail('nope')).toBeNull()
+    expect(libraryItemToOrderDetail({ title: 'no id' })).toBeNull()
+  })
+})
+
+describe('getLibraryOrders', () => {
+  const ACTION_ID = 'a'.repeat(42)
+  const mockFetch = jest.fn()
+  const realFetch = global.fetch
+
+  const flight = (
+    page: number,
+    totalPages: number,
+    ids: string[],
+    totalDocs: number = ids.length
+  ) =>
+    `0:{"a":"$@1","f":"","b":"x"}\n1:${JSON.stringify({
+      results: ids.map((id) => ({
+        id,
+        title: `T ${id}`,
+        entitlements: {
+          keys: [{ id: `${id}-k`, keyIntegrationId: 'steam', gameKey: null }]
+        }
+      })),
+      bundlesCount: 0,
+      pagination: { page, totalPages, totalDocs },
+      success: true
+    })}\n`
+
+  const actionResponse = (
+    body: string,
+    status = 200,
+    ct = 'text/x-component'
+  ) =>
+    ({
+      status,
+      headers: new Headers({ 'content-type': ct }),
+      text: () => Promise.resolve(body)
+    }) as unknown as Response
+
+  // axios.get mock: the library HTML lists two chunks; only the second holds
+  // the action id.
+  function mockDiscovery() {
+    mockGet.mockImplementation((url: string) => {
+      if (url.endsWith('/home/library'))
+        return Promise.resolve({
+          status: 200,
+          data: '<script src="/_next/static/chunks/aaa.js"></script><script src="/_next/static/chunks/bbb.js"></script>',
+          headers: {}
+        })
+      if (url.endsWith('/bbb.js'))
+        return Promise.resolve({
+          status: 200,
+          data: `x=createServerReference("${ACTION_ID}",e.callServer,void 0,e.findSourceMapURL,"filterUserLibrary")`
+        })
+      return Promise.resolve({ status: 200, data: 'nothing' })
+    })
+  }
+
+  beforeEach(() => {
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
+    resetLibraryActionCache()
+    mockFetch.mockReset()
+    global.fetch = mockFetch as unknown as typeof fetch
+  })
+  afterEach(() => {
+    jest.useRealTimers()
+    global.fetch = realFetch
+  })
+
+  async function run(cookie = 'ory_session_x=synthetic') {
+    const p = getLibraryOrders(cookie)
+    await jest.runAllTimersAsync()
+    return p
+  }
+
+  test('discovers the id once, walks every page, maps items, logs counts only', async () => {
+    mockDiscovery()
+    mockFetch
+      .mockResolvedValueOnce(actionResponse(flight(1, 2, ['a', 'b'], 3)))
+      .mockResolvedValueOnce(actionResponse(flight(2, 2, ['c'], 3)))
+
+    const result = await run()
+
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.map((o) => o.gamekey)).toEqual(['a', 'b', 'c'])
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+    const [url, init] = mockFetch.mock.calls[0]
+    expect(url).toBe('https://www.humblebundle.com/home/library')
+    expect(init.headers['Next-Action']).toBe(ACTION_ID)
+    expect(init.headers.Cookie).toBe('ory_session_x=synthetic')
+    expect(mockLogInfo.mock.calls.flat().join(' ')).toContain(
+      'totalDocs=3 totalPages=2 pagesFetched=2 items=3'
+    )
+    for (const line of allLoggedStrings())
+      expect(line).not.toContain('synthetic')
+  })
+
+  test('a second call reuses the cached id: no HTML/chunk fetches', async () => {
+    mockDiscovery()
+    mockFetch.mockResolvedValue(actionResponse(flight(1, 1, ['a'])))
+    await run()
+    mockGet.mockClear()
+
+    const second = await run()
+
+    expect(second.status).toBe('ok')
+    expect(mockGet).not.toHaveBeenCalled()
+    expect(mockLogInfo.mock.calls.flat().join(' ')).toContain(
+      'reusing cached filterUserLibrary action id'
+    )
+  })
+
+  test('a stale id (non-flight response) triggers exactly one re-discovery then succeeds', async () => {
+    mockDiscovery()
+    mockFetch.mockResolvedValueOnce(actionResponse(flight(1, 1, ['a'])))
+    await run()
+    mockGet.mockClear()
+    mockFetch
+      .mockResolvedValueOnce(
+        actionResponse('<html>404</html>', 200, 'text/html')
+      )
+      .mockResolvedValueOnce(actionResponse(flight(1, 1, ['a'])))
+
+    const result = await run()
+
+    expect(result.status).toBe('ok')
+    expect(
+      mockGet.mock.calls.some((c) => String(c[0]).endsWith('/home/library'))
+    ).toBe(true)
+  })
+
+  test('an undiscoverable id is a schema_error (not a throw)', async () => {
+    mockGet.mockImplementation((url: string) =>
+      Promise.resolve({
+        status: 200,
+        data: url.endsWith('/home/library')
+          ? '<script src="/_next/static/chunks/aaa.js"></script>'
+          : 'nothing',
+        headers: {}
+      })
+    )
+    const result = await run()
+    expect(result.status).toBe('schema_error')
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  test('an unrecognised response shape is a schema_error', async () => {
+    mockDiscovery()
+    mockFetch.mockResolvedValue(actionResponse('0:{"a":"$@1"}\n1:{"nope":1}\n'))
+    expect((await run()).status).toBe('schema_error')
+  })
+
+  test('401 -> session_expired; 403/429 -> access_denied; redirect to the auth host -> session_expired', async () => {
+    mockDiscovery()
+    mockFetch.mockResolvedValueOnce(actionResponse('', 401))
+    expect((await run()).status).toBe('session_expired')
+    resetLibraryActionCache()
+    mockFetch.mockResolvedValueOnce(actionResponse('', 403))
+    expect((await run()).status).toBe('access_denied')
+    resetLibraryActionCache()
+    mockFetch.mockResolvedValueOnce(actionResponse('', 429))
+    expect((await run()).status).toBe('access_denied')
+    resetLibraryActionCache()
+    mockFetch.mockResolvedValueOnce({
+      status: 307,
+      headers: new Headers({
+        location: 'https://auth.humblebundle.com/self-service/login/browser'
+      }),
+      text: () => Promise.resolve('')
+    } as unknown as Response)
+    expect((await run()).status).toBe('session_expired')
+  })
+
+  test('each page POST goes to /home/library?page=N (URL, Referer), names its FormData fields `_1_<field>` and requests a distinct page/cursor', async () => {
+    mockDiscovery()
+    mockFetch
+      .mockResolvedValueOnce(actionResponse(flight(1, 3, ['a'])))
+      .mockResolvedValueOnce(actionResponse(flight(2, 3, ['b'])))
+      .mockResolvedValueOnce(actionResponse(flight(3, 3, ['c'])))
+
+    await run()
+
+    expect(mockFetch.mock.calls.map((c) => c[0])).toEqual([
+      'https://www.humblebundle.com/home/library',
+      'https://www.humblebundle.com/home/library?page=2',
+      'https://www.humblebundle.com/home/library?page=3'
+    ])
+    // The browser sends no Next-Url header.
+    expect(mockFetch.mock.calls[1]?.[1].headers).not.toHaveProperty('Next-Url')
+    expect(
+      mockFetch.mock.calls[1]?.[1].headers['Next-Router-State-Tree']
+    ).toContain('%22library%22')
+    expect(mockFetch.mock.calls[1]?.[1].headers.Referer).toBe(
+      'https://www.humblebundle.com/home/library?page=2'
+    )
+    const forms = mockFetch.mock.calls.map((c) => c[1].body as FormData)
+    expect(forms.map((f) => f.get('_1_page'))).toEqual(['1', '2', '3'])
+    expect(forms.map((f) => f.get('_1_cursor'))).toEqual(['5', '10', '15'])
+    expect(forms[0]?.get('_1_limit')).toBe('5')
+    expect(forms[0]?.get('0')).toContain('"$K1"')
+    expect([...forms[0]!.keys()].filter((k) => k.startsWith('1_'))).toEqual([])
+  })
+
+  test('part 0 threads the previous page result as prevState (initial state on page 1); the carried value is never logged', async () => {
+    mockDiscovery()
+    const page1 = flight(1, 2, ['a'], 2).replace(
+      '"gameKey":null',
+      '"gameKey":null,"redemptionData":{"keyFormatted":"SYNTH-PREV-STATE"}'
+    )
+    mockFetch
+      .mockResolvedValueOnce(actionResponse(page1))
+      .mockResolvedValueOnce(actionResponse(flight(2, 2, ['b'], 2)))
+
+    await run()
+
+    const part0 = mockFetch.mock.calls.map((c) =>
+      JSON.parse((c[1].body as FormData).get('0') as string)
+    )
+    expect(part0[0]).toEqual([
+      {
+        results: [],
+        pagination: { page: 1, totalPages: 1, totalDocs: 0 },
+        success: true
+      },
+      '$K1'
+    ])
+    expect(part0[1][1]).toBe('$K1')
+    expect(part0[1][0].pagination.page).toBe(1)
+    expect(part0[1][0].results[0].id).toBe('a')
+    expect(JSON.stringify(part0[1][0])).toContain('SYNTH-PREV-STATE')
+    for (const line of allLoggedStrings())
+      expect(line).not.toContain('SYNTH-PREV-STATE')
+  })
+
+  test('root part "0" is the LAST multipart entry (load-bearing: first makes the server ignore every field)', async () => {
+    mockDiscovery()
+    mockFetch
+      .mockResolvedValueOnce(actionResponse(flight(1, 2, ['a'], 2)))
+      .mockResolvedValueOnce(actionResponse(flight(2, 2, ['b'], 2)))
+
+    await run()
+
+    for (const call of mockFetch.mock.calls) {
+      const keys = [...(call[1].body as FormData).keys()]
+      expect(keys[keys.length - 1]).toBe('0')
+      expect(keys.slice(0, -1).every((k) => k.startsWith('_1_'))).toBe(true)
+    }
+  })
+
+  test('prevState mirrors the browser re-encode: "$undefined" keys dropped; requestId = previous + 1', async () => {
+    mockDiscovery()
+    const page1 = flight(1, 2, ['a'], 2).replace(
+      '"gameKey":null',
+      '"gameKey":null,"redemptionExpiryDate":"$undefined"'
+    )
+    mockFetch
+      .mockResolvedValueOnce(actionResponse(page1))
+      .mockResolvedValueOnce(actionResponse(flight(2, 2, ['b'], 2)))
+
+    await run()
+
+    const [first, second] = mockFetch.mock.calls.map(
+      (c) => c[1].body as FormData
+    )
+    expect(first?.get('_1_requestId')).toBe('1')
+    const state = JSON.parse(second?.get('0') as string)[0]
+    expect(JSON.stringify(state)).not.toContain('$undefined')
+    expect(JSON.stringify(state)).not.toContain('redemptionExpiryDate')
+    // flight() echoes requestId "x"-less rows, so the previous value is absent
+    // and the counter restarts at 1; with an echoed numeric id it increments.
+    expect(second?.get('_1_requestId')).toBe('1')
+  })
+
+  test('requestId increments from the previous state requestId', async () => {
+    mockDiscovery()
+    const withId = (txt: string, id: string) =>
+      txt.replace('"success":true', `"success":true,"requestId":"${id}"`)
+    mockFetch
+      .mockResolvedValueOnce(
+        actionResponse(withId(flight(1, 2, ['a'], 2), '2'))
+      )
+      .mockResolvedValueOnce(actionResponse(flight(2, 2, ['b'], 2)))
+
+    await run()
+
+    const second = mockFetch.mock.calls[1]?.[1].body as FormData
+    expect(second.get('_1_requestId')).toBe('3')
+  })
+
+  test('a server that ignores paging (re-serves page 1) is a schema_error, never a partial library', async () => {
+    mockDiscovery()
+    mockFetch.mockResolvedValue(actionResponse(flight(1, 3, ['a', 'b'])))
+    expect((await run()).status).toBe('schema_error')
+    expect(mockLogWarning.mock.calls.flat().join(' ')).toContain(
+      'paging not honored'
+    )
+  })
+
+  test('fewer unique items than totalDocs is a schema_error (incomplete library)', async () => {
+    mockDiscovery()
+    mockFetch
+      .mockResolvedValueOnce(actionResponse(flight(1, 2, ['a'], 10)))
+      .mockResolvedValueOnce(actionResponse(flight(2, 2, ['b'], 10)))
+    // totalDocs says 10, but only 2 ids exist.
+    expect((await run()).status).toBe('schema_error')
+    expect(mockLogWarning.mock.calls.flat().join(' ')).toContain('incomplete')
+  })
+
+  test('a 5xx or network failure THROWS (transient) and returns no partial data', async () => {
+    mockDiscovery()
+    mockFetch
+      .mockResolvedValueOnce(actionResponse(flight(1, 2, ['a'])))
+      .mockRejectedValueOnce(new Error('ECONNRESET'))
+    const p = getLibraryOrders('ory_session_x=synthetic')
+    const settled = p.then(
+      () => 'resolved',
+      (e: Error) => e.message
+    )
+    await jest.runAllTimersAsync()
+    expect(await settled).toBe('ECONNRESET')
+  })
+
+  test('a runaway totalPages is capped with a schema_error', async () => {
+    mockDiscovery()
+    let n = 0
+    mockFetch.mockImplementation(() => {
+      n += 1
+      return Promise.resolve(
+        actionResponse(flight(n, 100000, [`x${n}`], 100000))
+      )
+    })
+    expect((await run()).status).toBe('schema_error')
+    expect(mockFetch.mock.calls.length).toBeLessThanOrEqual(200)
+  })
+})
 
 describe('revealKey', () => {
   const GAMEKEY = 'gamekey-reveal-xyz'
@@ -740,15 +736,6 @@ describe('revealKey', () => {
     expect(logged).toContain('bodyIsString=false')
     expect(logged).toContain('looksLikeHtml=false')
     expect(logged).not.toContain('forbidden')
-  })
-
-  test('round 5: getGamekeys (no diagnostic context) does NOT log an HTTP failure diagnostic on a 403 (opt-in only, unchanged behavior)', async () => {
-    mockGet.mockRejectedValue(makeAxiosError(403, { data: '<html></html>' }))
-    await getGamekeys(COOKIE)
-    const call = mockLogWarning.mock.calls.find((c) =>
-      JSON.stringify(c).includes('HTTP failure diagnostic')
-    )
-    expect(call).toBeUndefined()
   })
 
   test('a network-level error (no HTTP response at all) rethrows — D-78 ambiguous-outcome caller responsibility', async () => {

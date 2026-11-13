@@ -5,11 +5,11 @@ import {
 } from 'common/types/humble'
 
 import type { HumbleUser } from './user'
-import { getGamekeys, getOrderDetail } from './adapter'
+import { getLibraryOrders } from './adapter'
 
 /**
  * D-12 dev-only in-app debug trigger. Exercises the REAL adapter
- * (getGamekeys/getOrderDetail) with the REAL stored encrypted cookie,
+ * (getLibraryOrders) with the REAL stored encrypted cookie,
  * decrypted via the boot's HumbleUser.getCredentials() — never a
  * standalone Node script (D-12: Node CLI is not Electron main).
  *
@@ -37,12 +37,7 @@ export async function runHumbleValidation(
       overall: 'fail',
       endpoints: [
         {
-          path: '/api/v1/user/order',
-          status: 'not_attempted',
-          schemaValid: false
-        },
-        {
-          path: '/api/v1/order/{gamekey}',
+          path: 'filterUserLibrary',
           status: 'not_attempted',
           schemaValid: false
         }
@@ -54,58 +49,31 @@ export async function runHumbleValidation(
 
   const endpoints: HumbleValidationEndpointResult[] = []
 
-  // D-13 point 1: gamekeys list
-  const gamekeys = await getGamekeys(cookie)
-  endpoints.push(toEndpointResult('/api/v1/user/order', gamekeys))
+  // D-13 (reworked for Humble's 2026-11 site move): the library list is the
+  // paginated `filterUserLibrary` server action; each item maps to an
+  // order-detail-shaped object, so there is no separate per-order endpoint.
+  const library = await getLibraryOrders(cookie)
+  endpoints.push(toEndpointResult('filterUserLibrary', library))
 
   let gamekeyCount = 0
   let steamAppIdPresent = false
-  let orderDetailOk = false
-
-  if (gamekeys.status === 'ok') {
-    gamekeyCount = gamekeys.data.length
-    const firstGamekey = gamekeys.data[0]
-
-    if (firstGamekey) {
-      // D-13 point 2: at least one order-detail fetch
-      const orderDetail = await getOrderDetail(cookie, firstGamekey)
-      endpoints.push(toEndpointResult('/api/v1/order/{gamekey}', orderDetail))
-      orderDetailOk = orderDetail.status === 'ok'
-
-      // D-13 point 3: tpkd_dict.all_tpks[n].steam_app_id presence
-      if (orderDetail.status === 'ok') {
-        const tpks = orderDetail.data.tpkd_dict?.all_tpks ?? []
-        steamAppIdPresent = tpks.some(
-          (tpk) =>
-            typeof tpk === 'object' &&
-            tpk !== null &&
-            'steam_app_id' in (tpk as Record<string, unknown>)
-        )
-      }
-    } else {
-      endpoints.push({
-        path: '/api/v1/order/{gamekey}',
-        status: 'not_attempted',
-        schemaValid: false
-      })
-    }
-  } else {
-    endpoints.push({
-      path: '/api/v1/order/{gamekey}',
-      status: 'not_attempted',
-      schemaValid: false
-    })
+  if (library.status === 'ok') {
+    gamekeyCount = library.data.length
+    // The new API carries no steam_app_id field; presence stays an honest
+    // boolean over whatever the mapped keys carry.
+    steamAppIdPresent = library.data.some((order) =>
+      (order.tpkd_dict?.all_tpks ?? []).some(
+        (tpk) =>
+          typeof tpk === 'object' &&
+          tpk !== null &&
+          'steam_app_id' in (tpk as Record<string, unknown>)
+      )
+    )
   }
 
-  // D-13 revised: overall depends ONLY on gamekeys + order-detail +
-  // steamAppIdPresent. The account-identifier endpoint recorded here as an
-  // advisory-only result was removed by quick-260905-qjf: `/api/v1/user/info`
-  // is not a route on Humble's API and never was, so there is nothing left to
-  // record and nothing that could have flipped this verdict anyway (D-02).
-  const overall: 'pass' | 'fail' =
-    gamekeys.status === 'ok' && orderDetailOk && steamAppIdPresent
-      ? 'pass'
-      : 'fail'
+  // The dev-only gate passes when the library list loads and parses; the
+  // steam_app_id probe is advisory now (the new API does not carry it).
+  const overall: 'pass' | 'fail' = library.status === 'ok' ? 'pass' : 'fail'
 
   return {
     transport: 'axios',

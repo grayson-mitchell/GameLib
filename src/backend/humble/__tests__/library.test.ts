@@ -41,6 +41,7 @@ const mockLibraryStore = {
   has: jest.fn(),
   get: jest.fn(),
   set: jest.fn(),
+  delete: jest.fn(),
   entries: jest.fn(),
   clear: jest.fn()
 }
@@ -123,6 +124,9 @@ function resetStoreMocks() {
     Array.from(libraryData.entries())
   )
   mockLibraryStore.clear.mockImplementation(() => libraryData.clear())
+  mockLibraryStore.delete.mockImplementation((key: string) =>
+    libraryData.delete(key)
+  )
 
   mockSyncStore.get.mockImplementation(
     (k: string, fallback?: HumbleSyncState) =>
@@ -239,9 +243,23 @@ const mockSteamIsLoggedIn = jest.fn()
 const mockGetGamekeys = jest.fn()
 const mockGetOrderDetail = jest.fn()
 const mockAdapterRevealKey = jest.fn()
+// getLibraryOrders (the paginated library fetch) is scripted through the two
+// legacy-shaped doubles below: mockGetGamekeys supplies the item ids (or a
+// non-ok / throwing outcome for the whole fetch), mockGetOrderDetail the
+// per-item order-detail-shaped payload. The real adapter is all-or-nothing, so
+// any non-ok per-item result fails the whole fetch.
 jest.mock('../adapter', () => ({
-  getGamekeys: (...args: unknown[]) => mockGetGamekeys(...args),
-  getOrderDetail: (...args: unknown[]) => mockGetOrderDetail(...args),
+  getLibraryOrders: async (...args: unknown[]) => {
+    const gamekeys = await mockGetGamekeys(...args)
+    if (gamekeys.status !== 'ok') return gamekeys
+    const orders: unknown[] = []
+    for (const gamekey of gamekeys.data as string[]) {
+      const detail = await mockGetOrderDetail(args[0], gamekey)
+      if (detail.status !== 'ok') return detail
+      orders.push(detail.data)
+    }
+    return { status: 'ok', data: orders }
+  },
   revealKey: (...args: unknown[]) => mockAdapterRevealKey(...args)
 }))
 
@@ -500,23 +518,6 @@ describe('HumbleLibrary', () => {
       expect(result).toEqual({ status: 'ok' })
     })
 
-    test('an all-terminal cached gamekey is never re-fetched', async () => {
-      libraryData.set('frozen-gk', makeTerminalEntry('frozen-gk'))
-      // Freezing requires a version-matched cache (round 6): a mismatch
-      // triggers the one-off full re-classification instead.
-      syncData.set('state', {
-        syncedAt: 1,
-        syncError: 'none',
-        classifierVersion: HUMBLE_CLASSIFIER_VERSION
-      })
-      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['frozen-gk'] })
-
-      const result = await HumbleLibrary.sync(syncDeps)
-
-      expect(mockGetOrderDetail).not.toHaveBeenCalled()
-      expect(result).toEqual({ status: 'ok' })
-    })
-
     test('a non-terminal cached gamekey IS re-fetched (HSYNC-03 recompute)', async () => {
       libraryData.set('pending-gk', makeNonTerminalEntry('pending-gk'))
       mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['pending-gk'] })
@@ -532,29 +533,6 @@ describe('HumbleLibrary', () => {
         'pending-gk'
       )
       expect(libraryData.get('pending-gk')?.allTerminal).toBe(true)
-    })
-
-    test('mixed new/non-terminal/frozen: fetches only the union of new+non-terminal', async () => {
-      libraryData.set('frozen-gk', makeTerminalEntry('frozen-gk'))
-      libraryData.set('pending-gk', makeNonTerminalEntry('pending-gk'))
-      syncData.set('state', {
-        syncedAt: 1,
-        syncError: 'none',
-        classifierVersion: HUMBLE_CLASSIFIER_VERSION
-      })
-      mockGetGamekeys.mockResolvedValue({
-        status: 'ok',
-        data: ['frozen-gk', 'pending-gk', 'new-gk']
-      })
-      mockGetOrderDetail.mockImplementation((_cookie: string, gk: string) =>
-        Promise.resolve({ status: 'ok', data: makeRawOrder(gk) })
-      )
-
-      await HumbleLibrary.sync(syncDeps)
-
-      expect(mockGetOrderDetail).toHaveBeenCalledTimes(2)
-      const fetched = mockGetOrderDetail.mock.calls.map((c) => c[1]).sort()
-      expect(fetched).toEqual(['new-gk', 'pending-gk'])
     })
   })
 
@@ -707,6 +685,114 @@ describe('HumbleLibrary', () => {
     })
   })
 
+  // ── sync(): whole-library fetch (Humble's 2026-11 site move) ─────────────
+
+  describe('sync() — whole-library fetch', () => {
+    test('commits every item, pushes an initial {done:0,total:N} then per-item progress, and ends ok', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['a', 'b'] })
+      mockGetOrderDetail.mockImplementation((_c: string, gk: string) =>
+        Promise.resolve({ status: 'ok', data: makeRawOrder(gk) })
+      )
+
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'ok'
+      })
+
+      expect(libraryData.has('a')).toBe(true)
+      expect(libraryData.has('b')).toBe(true)
+      const progress = mockSendFrontendMessage.mock.calls
+        .filter((c) => c[0] === 'humbleSyncProgress')
+        .map((c) => c[1])
+      expect(progress[0]).toEqual({ done: 0, total: 2 })
+      expect(progress[progress.length - 1]).toEqual({ done: 2, total: 2 })
+      expect(HumbleLibrary.getSyncState().syncError).toBe('none')
+    })
+
+    test('an empty library syncs ok with {done:0,total:0}', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: [] })
+
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'ok'
+      })
+
+      expect(
+        mockSendFrontendMessage.mock.calls.filter(
+          (c) => c[0] === 'humbleSyncProgress'
+        )[0]?.[1]
+      ).toEqual({ done: 0, total: 0 })
+    })
+
+    test('a COMPLETE fetch prunes cache entries absent from the library (legacy gamekeys, removed items)', async () => {
+      libraryData.set('legacy-gk', makeNonTerminalEntry('legacy-gk'))
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['fresh'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('fresh')
+      })
+
+      await HumbleLibrary.sync(syncDeps)
+
+      expect(libraryData.has('legacy-gk')).toBe(false)
+      expect(libraryData.has('fresh')).toBe(true)
+    })
+
+    test('a failed fetch (schema_error / thrown) never prunes or commits anything', async () => {
+      libraryData.set('legacy-gk', makeNonTerminalEntry('legacy-gk'))
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['x'] })
+      mockGetOrderDetail.mockResolvedValue({ status: 'schema_error', raw: {} })
+
+      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
+        status: 'failed'
+      })
+
+      expect(libraryData.has('legacy-gk')).toBe(true)
+      expect(libraryData.has('x')).toBe(false)
+      expect(mockLibraryStore.delete).not.toHaveBeenCalled()
+    })
+
+    test('the sync-finished log carries counts only', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['a'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('a', { redeemed: true })
+      })
+
+      await HumbleLibrary.sync(syncDeps)
+
+      const summary = mockLogInfo.mock.calls.find((call) =>
+        JSON.stringify(call).includes('Humble sync finished')
+      )
+      expect(summary).toBeDefined()
+      const logged = JSON.stringify(summary)
+      expect(logged).toContain('libraryItems=1')
+      expect(logged).not.toContain('REDEEMED-VALUE')
+    })
+
+    test('a disconnect landing during the library fetch: nothing is committed, no state is written', async () => {
+      let resolveGamekeys: (v: unknown) => void = () => undefined
+      mockGetGamekeys.mockReturnValue(
+        new Promise((r) => {
+          resolveGamekeys = r
+        })
+      )
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('late')
+      })
+
+      const syncPromise = HumbleLibrary.sync(syncDeps)
+      await flushAsync()
+      syncFence.invalidate()
+      libraryData.clear()
+      syncData.clear()
+      resolveGamekeys({ status: 'ok', data: ['late'] })
+      await syncPromise
+
+      expect(libraryData.has('late')).toBe(false)
+      expect(syncData.size).toBe(0)
+    })
+  })
+
   // ── sync(): getGamekeys THROWN rejection fail-soft (HSYNC-04 / D-31) ────
 
   describe('sync() — getGamekeys thrown-rejection fail-soft (D-31)', () => {
@@ -732,113 +818,11 @@ describe('HumbleLibrary', () => {
 
   // ── sync(): per-order isolation (Pattern 2) ─────────────────────────────
 
-  describe('sync() — per-order isolation', () => {
-    test("one getOrderDetail REJECTING keeps that order's cached entry, the pool finishes the others, sync ends partial", async () => {
-      const priorEntry = makeNonTerminalEntry('flaky-gk')
-      libraryData.set('flaky-gk', priorEntry)
-      mockGetGamekeys.mockResolvedValue({
-        status: 'ok',
-        data: ['flaky-gk', 'good-gk']
-      })
-      mockGetOrderDetail.mockImplementation(
-        (_cookie: string, gamekey: string) => {
-          if (gamekey === 'flaky-gk') {
-            return Promise.reject(new Error('timeout'))
-          }
-          return Promise.resolve({ status: 'ok', data: makeRawOrder(gamekey) })
-        }
-      )
-
-      const result = await HumbleLibrary.sync(syncDeps)
-
-      expect(result).toEqual({ status: 'partial' })
-      expect(libraryData.get('flaky-gk')).toEqual(priorEntry)
-      expect(libraryData.has('good-gk')).toBe(true)
-    })
-
-    test('one order schema_error keeps its prior cache entry, continues the rest, sync ends partial', async () => {
-      const priorEntry = makeNonTerminalEntry('bad-gk')
-      libraryData.set('bad-gk', priorEntry)
-      mockGetGamekeys.mockResolvedValue({
-        status: 'ok',
-        data: ['bad-gk', 'good-gk']
-      })
-      mockGetOrderDetail.mockImplementation(
-        (_cookie: string, gamekey: string) => {
-          if (gamekey === 'bad-gk') {
-            return Promise.resolve({ status: 'schema_error', raw: {} })
-          }
-          return Promise.resolve({ status: 'ok', data: makeRawOrder(gamekey) })
-        }
-      )
-
-      const result = await HumbleLibrary.sync(syncDeps)
-
-      expect(result).toEqual({ status: 'partial' })
-      expect(libraryData.get('bad-gk')).toEqual(priorEntry)
-      expect(libraryData.has('good-gk')).toBe(true)
-    })
-  })
+  describe('sync() — per-order isolation', () => {})
 
   // ── sync(): mid-sync abort keeps committed work (D-34 / Pitfall 4) ──────
 
-  describe('sync() — mid-sync 403/429 abort (D-34)', () => {
-    test('commits orders already resolved before the abort, leaves never-dispatched gamekeys untouched, returns partial', async () => {
-      mockGetGamekeys.mockResolvedValue({
-        status: 'ok',
-        data: ['gk1', 'gk2', 'gk3', 'gk4', 'gk5']
-      })
-
-      let resolveGk1!: (v: unknown) => void
-      let resolveGk3!: (v: unknown) => void
-      mockGetOrderDetail.mockImplementation(
-        (_cookie: string, gamekey: string) => {
-          if (gamekey === 'gk1') {
-            return new Promise((r) => {
-              resolveGk1 = r
-            })
-          }
-          if (gamekey === 'gk2') {
-            // Resolves immediately as the denial — the other two initial
-            // dispatches (gk1, gk3) are already in flight and must still
-            // settle, but gk4/gk5 must never be dispatched.
-            return Promise.resolve({ status: 'access_denied' })
-          }
-          if (gamekey === 'gk3') {
-            return new Promise((r) => {
-              resolveGk3 = r
-            })
-          }
-          return Promise.resolve({ status: 'ok', data: makeRawOrder(gamekey) })
-        }
-      )
-
-      const syncPromise = HumbleLibrary.sync(syncDeps)
-      await flushAsync()
-
-      // Only the initial HUMBLE_SYNC_CONCURRENCY dispatches happened.
-      expect(mockGetOrderDetail).toHaveBeenCalledTimes(3)
-
-      resolveGk1({ status: 'ok', data: makeRawOrder('gk1') })
-      resolveGk3({ status: 'ok', data: makeRawOrder('gk3') })
-      await flushAsync()
-
-      const result = await syncPromise
-
-      expect(result).toEqual({ status: 'partial' })
-      // Never dispatched beyond the initial wave.
-      expect(mockGetOrderDetail).toHaveBeenCalledTimes(3)
-      // In-flight tasks still settle and commit.
-      expect(libraryData.has('gk1')).toBe(true)
-      expect(libraryData.has('gk3')).toBe(true)
-      // Never-dispatched gamekeys keep prior (absent) cache.
-      expect(libraryData.has('gk4')).toBe(false)
-      expect(libraryData.has('gk5')).toBe(false)
-
-      const state = HumbleLibrary.getSyncState()
-      expect(state.syncError).toBe('partial')
-    })
-  })
+  describe('sync() — mid-sync 403/429 abort (D-34)', () => {})
 
   // CR-01: disconnect must fence the in-flight sync. HumbleUser.disconnect()
   // bumps the sync generation BEFORE wiping the stores; a sync started under
@@ -853,83 +837,6 @@ describe('HumbleLibrary', () => {
       libraryData.clear()
       syncData.clear()
     }
-
-    test('disconnect mid-sync: wiped stores stay wiped — no store commits, no sync-state write, no keys/progress pushes after the fence', async () => {
-      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1', 'gk2'] })
-      const resolvers = new Map<string, (v: unknown) => void>()
-      mockGetOrderDetail.mockImplementation(
-        (_cookie: string, gamekey: string) =>
-          new Promise((r) => {
-            resolvers.set(gamekey, r)
-          })
-      )
-
-      const syncPromise = HumbleLibrary.sync(syncDeps)
-      await flushAsync()
-      expect(resolvers.size).toBe(2) // both orders in flight pre-disconnect
-
-      simulateDisconnect()
-      mockSendFrontendMessage.mockClear()
-      mockLibraryStore.set.mockClear()
-      mockSyncStore.set.mockClear()
-
-      // The pre-disconnect fetches now settle successfully — none of their
-      // results may survive the wipe.
-      resolvers.get('gk1')!({ status: 'ok', data: makeRawOrder('gk1') })
-      resolvers.get('gk2')!({ status: 'ok', data: makeRawOrder('gk2') })
-      await flushAsync()
-      const result = await syncPromise
-
-      expect(result).toEqual({ status: 'failed' })
-      expect(mockLibraryStore.set).not.toHaveBeenCalled()
-      expect(mockSyncStore.set).not.toHaveBeenCalled()
-      expect(libraryData.size).toBe(0)
-      expect(syncData.size).toBe(0)
-      expect(HumbleLibrary.getKeys()).toEqual([])
-
-      // No humbleKeysUpdated/humbleSyncProgress push may overwrite the
-      // renderer's cleared state. The terminal humbleSyncStateChanged push
-      // still fires (from sync()'s finally) but reads the WIPED store —
-      // never pre-disconnect data.
-      const staleEvents = mockSendFrontendMessage.mock.calls.filter(
-        (c) => c[0] === 'humbleKeysUpdated' || c[0] === 'humbleSyncProgress'
-      )
-      expect(staleEvents).toEqual([])
-      const terminal = mockSendFrontendMessage.mock.calls.filter(
-        (c) => c[0] === 'humbleSyncStateChanged'
-      )
-      expect(terminal).toHaveLength(1)
-      expect(terminal[0][1]).toEqual({ syncedAt: null, syncError: 'none' })
-    })
-
-    test('disconnect mid-sync: still-to-be-dispatched workers stop issuing authenticated requests', async () => {
-      const gamekeys = ['gk1', 'gk2', 'gk3', 'gk4', 'gk5']
-      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: gamekeys })
-      const resolvers: Array<(v: unknown) => void> = []
-      mockGetOrderDetail.mockImplementation(
-        (_cookie: string, gamekey: string) =>
-          new Promise((r) => {
-            resolvers.push(() =>
-              r({ status: 'ok', data: makeRawOrder(gamekey) })
-            )
-          })
-      )
-
-      const syncPromise = HumbleLibrary.sync(syncDeps)
-      await flushAsync()
-      // Only the initial concurrency-bound wave is in flight.
-      expect(mockGetOrderDetail).toHaveBeenCalledTimes(HUMBLE_SYNC_CONCURRENCY)
-
-      simulateDisconnect()
-
-      // Drain the in-flight wave — the pool would normally dispatch gk4/gk5
-      // next, but the fence must prevent any further authenticated request.
-      resolvers.forEach((r) => r(undefined))
-      await flushAsync()
-      await syncPromise
-
-      expect(mockGetOrderDetail).toHaveBeenCalledTimes(HUMBLE_SYNC_CONCURRENCY)
-    })
 
     test('a sync started AFTER the disconnect (new generation) commits normally', async () => {
       simulateDisconnect()
@@ -979,22 +886,6 @@ describe('HumbleLibrary', () => {
       // renderer relies on it as the single authoritative end-of-sync signal.
       const calls = mockSendFrontendMessage.mock.calls
       expect(calls[calls.length - 1][0]).toBe('humbleSyncStateChanged')
-    })
-
-    test('partial completion (one order schema_error): pushed state carries syncError=partial AND a fresh syncedAt', async () => {
-      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['bad-gk'] })
-      mockGetOrderDetail.mockResolvedValue({ status: 'schema_error', raw: {} })
-
-      await HumbleLibrary.sync(syncDeps)
-
-      const events = syncStateEvents()
-      expect(events).toHaveLength(1)
-      expect(events[0][1]).toEqual(
-        expect.objectContaining({
-          syncedAt: expect.any(Number),
-          syncError: 'partial'
-        })
-      )
     })
 
     test('gamekeys access_denied: pushed state carries syncError=denied + cooldownUntil', async () => {
@@ -1086,69 +977,6 @@ describe('HumbleLibrary', () => {
     })
   })
 
-  // WR-05: the renderer derives `syncing` from done < total, and per-order
-  // progress only fired AFTER each order resolved — so 0/1-order syncs never
-  // showed as syncing, and multi-order syncs gave no feedback until the
-  // first order completed (up to the 15s request timeout).
-  describe('sync() — WR-05 initial progress push', () => {
-    function progressEvents() {
-      return mockSendFrontendMessage.mock.calls.filter(
-        (c) => c[0] === 'humbleSyncProgress'
-      )
-    }
-
-    test('an initial { done: 0, total } event fires before any order resolves', async () => {
-      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1'] })
-      let resolveOrder!: (v: unknown) => void
-      mockGetOrderDetail.mockImplementation(
-        () =>
-          new Promise((r) => {
-            resolveOrder = r
-          })
-      )
-
-      const syncPromise = HumbleLibrary.sync(syncDeps)
-      await flushAsync()
-
-      // The order is still in flight, yet progress already reads 0/1 —
-      // done < total, so the renderer's `syncing` engages immediately.
-      expect(progressEvents()).toEqual([
-        ['humbleSyncProgress', { done: 0, total: 1 }]
-      ])
-
-      resolveOrder({ status: 'ok', data: makeRawOrder('gk1') })
-      await expect(syncPromise).resolves.toEqual({ status: 'ok' })
-
-      const events = progressEvents()
-      expect(events[events.length - 1]).toEqual([
-        'humbleSyncProgress',
-        { done: 1, total: 1 }
-      ])
-    })
-
-    test('an all-frozen sync (total 0) still emits { done: 0, total: 0 } and the terminal state push', async () => {
-      libraryData.set('frozen-gk', makeTerminalEntry('frozen-gk'))
-      syncData.set('state', {
-        syncedAt: 1,
-        syncError: 'none',
-        classifierVersion: HUMBLE_CLASSIFIER_VERSION
-      })
-      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['frozen-gk'] })
-
-      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
-        status: 'ok'
-      })
-
-      expect(progressEvents()).toEqual([
-        ['humbleSyncProgress', { done: 0, total: 0 }]
-      ])
-      const terminal = mockSendFrontendMessage.mock.calls.filter(
-        (c) => c[0] === 'humbleSyncStateChanged'
-      )
-      expect(terminal).toHaveLength(1)
-    })
-  })
-
   // WR-01: the humbleSync IPC contract says "never throws", and every
   // renderer call site is fire-and-forget with no .catch — an escaped
   // rejection would surface as an unhandled promise rejection in the
@@ -1220,34 +1048,7 @@ describe('HumbleLibrary', () => {
     })
   })
 
-  describe('sync() — redacted outcome summary log (round 2)', () => {
-    test('a completed sync logs per-outcome counts (counts only — never key values)', async () => {
-      mockGetGamekeys.mockResolvedValue({
-        status: 'ok',
-        data: ['ok-gk', 'bad-gk']
-      })
-      mockGetOrderDetail.mockImplementation(
-        (_cookie: string, gamekey: string) => {
-          if (gamekey === 'bad-gk') {
-            return Promise.resolve({ status: 'schema_error', raw: {} })
-          }
-          return Promise.resolve({ status: 'ok', data: makeRawOrder(gamekey) })
-        }
-      )
-
-      await HumbleLibrary.sync(syncDeps)
-
-      const summary = mockLogInfo.mock.calls.find((call) =>
-        JSON.stringify(call).includes('Humble sync finished')
-      )
-      expect(summary).toBeDefined()
-      const logged = JSON.stringify(summary)
-      expect(logged).toContain('ok=1')
-      expect(logged).toContain('schema_error=1')
-      expect(logged).toContain('keysCached=1')
-      expect(logged).not.toContain('cookie-value')
-    })
-  })
+  describe('sync() — redacted outcome summary log (round 2)', () => {})
 
   // Live-UAT round 3 (debug: humble-zero-keys-from-valid-orders): 25/25
   // orders parsed ok yet keysCached=0 with NOTHING in the logs saying why.
@@ -1613,38 +1414,6 @@ describe('HumbleLibrary', () => {
       }
     }
 
-    test('stored version ≠ current: frozen all-terminal orders ARE re-fetched, stale entitlement rows removed, and the re-classification log fires', async () => {
-      libraryData.set('stale-gk', makeStaleEntitlementEntry('stale-gk'))
-      syncData.set('state', {
-        syncedAt: 1,
-        syncError: 'none',
-        classifierVersion: 1
-      })
-      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['stale-gk'] })
-      mockGetOrderDetail.mockResolvedValue({
-        status: 'ok',
-        data: directRedeemEntitlementResponse
-      })
-
-      await HumbleLibrary.sync(syncDeps)
-
-      // The frozen order WAS re-fetched and its stale rows re-classified away.
-      expect(mockGetOrderDetail).toHaveBeenCalledWith(
-        'cookie-value',
-        'stale-gk'
-      )
-      expect(libraryData.get('stale-gk')?.keys).toHaveLength(0)
-      expect(HumbleLibrary.getKeys()).toHaveLength(0)
-
-      const versionLog = mockLogInfo.mock.calls.find((call) =>
-        JSON.stringify(call).includes('classifier version changed')
-      )
-      expect(versionLog).toBeDefined()
-      expect(JSON.stringify(versionLog)).toContain(
-        `classifier version changed (1 -> ${HUMBLE_CLASSIFIER_VERSION}), full re-classification sync`
-      )
-    })
-
     test('a pre-versioning cache (no stored classifierVersion) also triggers the full re-classification', async () => {
       libraryData.set('stale-gk', makeStaleEntitlementEntry('stale-gk'))
       // syncData deliberately left empty — rounds 1-5 never stored a version.
@@ -1661,87 +1430,6 @@ describe('HumbleLibrary', () => {
         'stale-gk'
       )
       expect(libraryData.get('stale-gk')?.keys).toHaveLength(0)
-    })
-
-    // 14-07 gap closure: a server redeemed_key_val alone no longer produces
-    // a terminal (REDEEMED) state — only expiry (UNREDEEMABLE) or a local
-    // "Mark as redeemed" (REDEEMED) do. So this D-24 freeze test now uses an
-    // EXPIRED order — a genuinely terminal state unaffected by the
-    // realignment — rather than a bare server-redeemed one.
-    test('a clean full re-classification persists the new version; the NEXT sync freezes terminal (expired) orders again', async () => {
-      libraryData.set('frozen-gk', makeTerminalEntry('frozen-gk'))
-      syncData.set('state', {
-        syncedAt: 1,
-        syncError: 'none',
-        classifierVersion: 1
-      })
-      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['frozen-gk'] })
-      mockGetOrderDetail.mockResolvedValue({
-        status: 'ok',
-        data: makeRawOrder('frozen-gk', { expiration: '2020-01-01T00:00:00Z' })
-      })
-
-      await HumbleLibrary.sync(syncDeps)
-
-      expect(mockGetOrderDetail).toHaveBeenCalledTimes(1)
-      expect(
-        defined(
-          libraryData.get('frozen-gk')?.keys[0],
-          "libraryData.get('frozen-gk')?.keys[0]"
-        ).state
-      ).toBe('UNREDEEMABLE')
-      expect(syncData.get('state')?.classifierVersion).toBe(
-        HUMBLE_CLASSIFIER_VERSION
-      )
-
-      // Second sync: version now matches — D-24 freeze semantics restored.
-      mockGetOrderDetail.mockClear()
-      mockLogInfo.mockClear()
-      await HumbleLibrary.sync(syncDeps)
-
-      expect(mockGetOrderDetail).not.toHaveBeenCalled()
-      const versionLog = mockLogInfo.mock.calls.find((call) =>
-        JSON.stringify(call).includes('classifier version changed')
-      )
-      expect(versionLog).toBeUndefined()
-    })
-
-    // 14-08 gap closure (Fix 2) SUPERSEDES this test's original 14-07
-    // expectation: a REVEALED-only key (server redeemed_key_val present, no
-    // local mark) is server-terminal (isServerTerminal — REVEALED is
-    // server-final, Humble never un-populates/changes a redeemed_key_val),
-    // so with no pending expiration it is now freeze-eligible and skipped on
-    // the NEXT sync — restoring the D-24 freeze benefit 14-07's realignment
-    // had lost (this plan's own root-cause diagnosis identified the
-    // resulting standing 19-orders-per-sync re-fetch as a Cloudflare/WAF
-    // exposure risk; see 14-07-SUMMARY "Known UX consequences" for the
-    // original tradeoff this fixes).
-    test('14-08: a server-revealed (not locally-redeemed) key with no pending expiration now freezes — skipped on the next sync', async () => {
-      libraryData.set('frozen-gk', makeTerminalEntry('frozen-gk'))
-      syncData.set('state', {
-        syncedAt: 1,
-        syncError: 'none',
-        classifierVersion: 1
-      })
-      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['frozen-gk'] })
-      mockGetOrderDetail.mockResolvedValue({
-        status: 'ok',
-        data: makeRawOrder('frozen-gk', { redeemed: true })
-      })
-
-      await HumbleLibrary.sync(syncDeps)
-      expect(
-        defined(
-          libraryData.get('frozen-gk')?.keys[0],
-          "libraryData.get('frozen-gk')?.keys[0]"
-        ).state
-      ).toBe('REVEALED')
-      expect(libraryData.get('frozen-gk')?.allTerminal).toBe(false)
-      expect(libraryData.get('frozen-gk')?.freezeEligible).toBe(true)
-
-      mockGetOrderDetail.mockClear()
-      await HumbleLibrary.sync(syncDeps)
-      expect(mockGetOrderDetail).not.toHaveBeenCalled()
     })
 
     // 14-08 gap closure: the SAME REVEALED key, but carrying a LIVE FUTURE
@@ -1779,127 +1467,6 @@ describe('HumbleLibrary', () => {
       expect(mockGetOrderDetail).toHaveBeenCalledTimes(1)
     })
 
-    // CR-01 (14-08 re-review): a key REVEALED purely by the local write-ahead
-    // flag (the D-78 ambiguous outcome — adapter threw, flag kept, NO key
-    // value anywhere) must NOT freeze. Its "unconfirmed — sync to check"
-    // reconciliation AND the D-66 website-reveal value pickup both depend on
-    // every-sync re-fetch; there is no thaw path for a wrongly-frozen order
-    // short of a classifier-version bump. Only once the server value
-    // actually lands does the order become freeze-eligible.
-    test('CR-01: an ambiguous reveal (flag-only REVEALED, no value) never freezes — the order keeps re-fetching until the server value lands, THEN freezes', async () => {
-      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
-      syncData.set('state', {
-        syncedAt: 1,
-        syncError: 'none',
-        classifierVersion: HUMBLE_CLASSIFIER_VERSION
-      })
-      // Reveal ends AMBIGUOUS (adapter threw — network/timeout/5xx class):
-      // the write-ahead REVEALED flag is kept, the cache is NOT patched, and
-      // no key value is persisted.
-      mockAdapterRevealKey.mockRejectedValue(new Error('socket hang up'))
-      await expect(HumbleLibrary.revealKey('gk1', 'gk1_key')).resolves.toEqual({
-        status: 'ambiguous'
-      })
-      expect(revealedData.has('gk1_key')).toBe(true)
-
-      // Sync 1: Humble never processed the reveal — the payload carries no
-      // redeemed value. The key classifies REVEALED off the local flag
-      // alone; the order must commit freezeEligible:false.
-      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1'] })
-      mockGetOrderDetail.mockResolvedValue({
-        status: 'ok',
-        data: makeRawOrder('gk1')
-      })
-      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
-        status: 'ok'
-      })
-      expect(
-        defined(
-          libraryData.get('gk1')?.keys[0],
-          "libraryData.get('gk1')?.keys[0]"
-        ).state
-      ).toBe('REVEALED')
-      expect(libraryData.get('gk1')?.freezeEligible).toBe(false)
-      expect(HumbleLibrary.getRevealedKeyValue('gk1', 'gk1_key')).toBe(null)
-
-      // Sync 2: the order IS re-fetched (not frozen) — and this time the
-      // server value is present (the reveal did land after all, or the user
-      // revealed on Humble's website): the value is picked up via the
-      // side-channel and the order NOW becomes freeze-eligible.
-      mockGetOrderDetail.mockClear()
-      mockGetOrderDetail.mockResolvedValue({
-        status: 'ok',
-        data: makeRawOrder('gk1', { redeemed: true })
-      })
-      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
-        status: 'ok'
-      })
-      expect(mockGetOrderDetail).toHaveBeenCalledWith('cookie-value', 'gk1')
-      expect(HumbleLibrary.getRevealedKeyValue('gk1', 'gk1_key')).toBe(
-        'REDEEMED-VALUE'
-      )
-      expect(libraryData.get('gk1')?.freezeEligible).toBe(true)
-
-      // Sync 3: the now value-backed REVEALED(no expiration) order is frozen
-      // — skipped entirely.
-      mockGetOrderDetail.mockClear()
-      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
-        status: 'ok'
-      })
-      expect(mockGetOrderDetail).not.toHaveBeenCalled()
-    })
-
-    test('a PARTIAL re-classification sync does NOT persist the new version (the next sync retries the full pass)', async () => {
-      libraryData.set('stale-gk', makeStaleEntitlementEntry('stale-gk'))
-      syncData.set('state', {
-        syncedAt: 1,
-        syncError: 'none',
-        classifierVersion: 1
-      })
-      mockGetGamekeys.mockResolvedValue({
-        status: 'ok',
-        data: ['stale-gk', 'flaky-gk']
-      })
-      mockGetOrderDetail.mockImplementation(
-        (_cookie: string, gamekey: string) => {
-          if (gamekey === 'flaky-gk') {
-            return Promise.reject(new Error('timeout'))
-          }
-          return Promise.resolve({
-            status: 'ok',
-            data: directRedeemEntitlementResponse
-          })
-        }
-      )
-
-      const result = await HumbleLibrary.sync(syncDeps)
-
-      expect(result).toEqual({ status: 'partial' })
-      // flaky-gk kept whatever (absent) cache it had; version must stay old
-      // so the NEXT sync bypasses the freeze again and reaches it.
-      expect(syncData.get('state')?.classifierVersion).not.toBe(
-        HUMBLE_CLASSIFIER_VERSION
-      )
-    })
-
-    test('version match: frozen orders stay frozen and no re-classification log fires', async () => {
-      libraryData.set('frozen-gk', makeTerminalEntry('frozen-gk'))
-      syncData.set('state', {
-        syncedAt: 1,
-        syncError: 'none',
-        classifierVersion: HUMBLE_CLASSIFIER_VERSION
-      })
-      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['frozen-gk'] })
-
-      await HumbleLibrary.sync(syncDeps)
-
-      expect(mockGetOrderDetail).not.toHaveBeenCalled()
-      const versionLog = mockLogInfo.mock.calls.find((call) =>
-        JSON.stringify(call).includes('classifier version changed')
-      )
-      expect(versionLog).toBeUndefined()
-    })
-
     test('non-terminal orders still re-fetch on a version-matched sync (HSYNC-03 untouched)', async () => {
       libraryData.set('pending-gk', makeNonTerminalEntry('pending-gk'))
       syncData.set('state', {
@@ -1927,43 +1494,6 @@ describe('HumbleLibrary', () => {
   // diagnostic logs (field NAMES only, C5) the candidate fields on active keys
   // we could not date, so the true field is confirmable from the next run.
   describe('sync() — expiration-field discovery diagnostic (round 4)', () => {
-    test('an active key with no extractable expiration logs its candidate field names (info, redacted)', async () => {
-      mockGetGamekeys.mockResolvedValue({
-        status: 'ok',
-        data: ['undatable-gk']
-      })
-      mockGetOrderDetail.mockResolvedValue({
-        status: 'ok',
-        data: {
-          gamekey: 'undatable-gk',
-          tpkd_dict: {
-            all_tpks: [
-              {
-                machine_name: 'undatable_steam',
-                gamekey: 'undatable-gk',
-                key_type: 'steam',
-                human_name: 'Undatable Game',
-                is_expired: false,
-                mystery_date_field: 'SECRET-DATE-MUST-NOT-LEAK'
-              }
-            ]
-          }
-        }
-      })
-
-      await HumbleLibrary.sync(syncDeps)
-
-      const diag = mockLogInfo.mock.calls.find((call) =>
-        JSON.stringify(call).includes('no extractable expiration')
-      )
-      expect(diag).toBeDefined()
-      const logged = JSON.stringify(diag)
-      expect(logged).toContain('undatable-gk')
-      expect(logged).toContain('mystery_date_field')
-      // C5: field NAMES only — never the field VALUE.
-      expect(logged).not.toContain('SECRET-DATE-MUST-NOT-LEAK')
-    })
-
     // WR-02: extractExpiration's relative-days branch used to throw
     // RangeError on a drifted num_days_until_expired beyond the ECMAScript
     // time range; describeMissingExpirationTpks calls it OUTSIDE
@@ -1996,15 +1526,9 @@ describe('HumbleLibrary', () => {
       const keys = HumbleLibrary.getKeys()
       expect(keys).toHaveLength(1)
       expect(defined(keys[0], 'keys[0]').expiration).toBe(null)
-      // The undatable active key still surfaces in the round-4 discovery
-      // diagnostic instead of crashing it.
-      const diag = mockLogInfo.mock.calls.find((call) =>
-        JSON.stringify(call).includes('no extractable expiration')
-      )
-      expect(diag).toBeDefined()
     })
 
-    test('a key with an extractable expiry_date does NOT trigger the discovery diagnostic', async () => {
+    test('a key with an extractable expiry_date keeps its date and logs no missing-expiration noise', async () => {
       mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['dated-gk'] })
       mockGetOrderDetail.mockResolvedValue({
         status: 'ok',
@@ -4084,70 +3608,6 @@ describe('HumbleLibrary', () => {
       )
       expect(broadcasts.length).toBeGreaterThan(0)
       expect(JSON.stringify(broadcasts)).not.toContain('REDEEMED-VALUE')
-    })
-
-    // WR-01 (14-REVIEW re-review), UPDATED by the 14-08 gap closure: patchCachedState
-    // must RECOMPUTE allTerminal AND (14-08) freezeEligible. Sequence under
-    // test: mark (order becomes all-terminal and freezes under D-24 after a
-    // sync) → undo (key reverts to REVEALED, expiration:null — allTerminal
-    // recomputes false, but freezeEligible recomputes TRUE per 14-08's
-    // server-terminal predicate: a VALUE-BACKED REVEALED key with no pending
-    // expiration is freeze-eligible; CR-01, 14-08 re-review, added the
-    // value-present requirement — this key was GameLib-revealed, so its
-    // internal revealedKeyValue is present and carried across the sync) —
-    // partitionGamekeys' next-sync frozen decision must read the SAME value
-    // patchCachedState just wrote, so the order stays frozen (no needless
-    // re-fetch), never disagreeing between the two sites.
-    test('WR-01: mark → sync → undo → second sync does NOT needlessly re-fetch a still-server-terminal (value-backed REVEALED, no expiration) order (14-08: undo recomputes freezeEligible via the same single-sourced predicate)', async () => {
-      libraryData.set(
-        'gk1',
-        makeRevealableEntry('gk1', {
-          state: 'REVEALED',
-          keyindex: 'idx-1',
-          // GameLib-revealed: the value was persisted by doRevealKey's ok
-          // patch (D-74) — the CR-01 value-present freeze requirement is met.
-          revealedKeyValue: 'LOCAL-REVEALED-VALUE'
-        })
-      )
-      await HumbleLibrary.markRedeemed('gk1', 'gk1_key')
-
-      // First sync: the only key stays REDEEMED (local mark wins) — the
-      // order commits allTerminal: true and freezes. The prior key's
-      // revealedKeyValue is carried forward onto the merged entry.
-      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1'] })
-      mockGetOrderDetail.mockResolvedValue({
-        status: 'ok',
-        data: makeRawOrder('gk1')
-      })
-      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
-        status: 'ok'
-      })
-      expect(libraryData.get('gk1')?.allTerminal).toBe(true)
-
-      // Undo: the mark clears, the key reverts to REVEALED, and the frozen
-      // entry's allTerminal is recomputed — not spread forward as true. Its
-      // freezeEligible, however, recomputes TRUE (server-terminal,
-      // value-backed, no pending expiration) via the exact same
-      // isFreezeEligible helper partitionGamekeys reads.
-      await HumbleLibrary.undoRedeemed('gk1', 'gk1_key')
-      expect(
-        defined(
-          libraryData.get('gk1')?.keys[0],
-          "libraryData.get('gk1')?.keys[0]"
-        ).state
-      ).toBe('REVEALED')
-      expect(libraryData.get('gk1')?.allTerminal).toBe(false)
-      expect(libraryData.get('gk1')?.freezeEligible).toBe(true)
-
-      // Second sync (classifier version already stamped by the first sync,
-      // so nothing else bypasses the freeze): the order stays frozen and is
-      // NOT re-fetched — freezeEligible wins over the allTerminal fallback,
-      // and undo never left the two computation sites disagreeing.
-      mockGetOrderDetail.mockClear()
-      await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
-        status: 'ok'
-      })
-      expect(mockGetOrderDetail).not.toHaveBeenCalled()
     })
 
     // 14-08 gap closure: the WR-01 predicate-consistency guarantee proven

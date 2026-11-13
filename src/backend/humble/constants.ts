@@ -37,13 +37,6 @@ export const HUMBLE_LOGIN_URL = 'https://auth.humblebundle.com/login'
 // measured against this origin.
 export const HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN = 'https://gamelib.invalid/'
 
-// Required on every outgoing Humble API request (adapter.ts) — the likely
-// cause of prior third-party Humble integration failures when omitted.
-export const HUMBLE_REQUIRED_HEADERS = {
-  'X-Requested-By': 'hb_android_app',
-  Accept: 'application/json'
-}
-
 // D-25: bound on in-flight order-detail fetches during a sync (library.ts,
 // Plan 02) — a Humble-side denial is never hammered by an unbounded fan-out.
 export const HUMBLE_SYNC_CONCURRENCY = 3

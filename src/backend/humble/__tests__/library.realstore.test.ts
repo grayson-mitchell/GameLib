@@ -21,9 +21,21 @@ jest.mock('backend/store_backend')
 
 const mockGetGamekeys = jest.fn()
 const mockGetOrderDetail = jest.fn()
+// getLibraryOrders is scripted through the two legacy-shaped doubles: the item
+// ids (or a non-ok/throwing outcome for the whole fetch) and the per-item
+// order-detail-shaped payload. The real adapter is all-or-nothing.
 jest.mock('../adapter', () => ({
-  getGamekeys: (...args: unknown[]) => mockGetGamekeys(...args),
-  getOrderDetail: (...args: unknown[]) => mockGetOrderDetail(...args)
+  getLibraryOrders: async (...args: unknown[]) => {
+    const gamekeys = await mockGetGamekeys(...args)
+    if (gamekeys.status !== 'ok') return gamekeys
+    const orders: unknown[] = []
+    for (const gamekey of gamekeys.data as string[]) {
+      const detail = await mockGetOrderDetail(args[0], gamekey)
+      if (detail.status !== 'ok') return detail
+      orders.push(detail.data)
+    }
+    return { status: 'ok', data: orders }
+  }
 }))
 
 // ── ipc / logger mocks ───────────────────────────────────────────────────
@@ -226,15 +238,14 @@ describe('HumbleLibrary against the real CacheStore (electron-store backed)', ()
     }
   })
 
-  test('round 2: a sync where EVERY order fails schema parse commits nothing but pushes syncError=partial (empty list is never a silent success)', async () => {
-    mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['drifted-gk'] })
-    mockGetOrderDetail.mockResolvedValue({
+  test('a library fetch that fails schema parse commits nothing and records syncError=network (a failed fetch is never a silent empty success)', async () => {
+    mockGetGamekeys.mockResolvedValue({
       status: 'schema_error',
       raw: '<html>challenge</html>'
     })
 
     await expect(HumbleLibrary.sync(syncDeps)).resolves.toEqual({
-      status: 'partial'
+      status: 'failed'
     })
 
     expect(HumbleLibrary.getKeys()).toEqual([])
@@ -243,10 +254,7 @@ describe('HumbleLibrary against the real CacheStore (electron-store backed)', ()
     )
     expect(stateEvents).toHaveLength(1)
     expect(stateEvents[0][1]).toEqual(
-      expect.objectContaining({
-        syncError: 'partial',
-        syncedAt: expect.any(Number)
-      })
+      expect.objectContaining({ syncError: 'network' })
     )
   })
 

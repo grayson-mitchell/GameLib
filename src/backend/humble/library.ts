@@ -10,15 +10,14 @@ import {
 } from 'common/types/humble'
 
 import {
-  getGamekeys,
-  getOrderDetail,
+  getLibraryOrders,
+  type OrderDetail,
   revealKey as adapterRevealKey,
   type HumbleAdapterDeps
 } from './adapter'
 import {
   classifyOrder,
   describeZeroKeyOrder,
-  describeMissingExpirationTpks,
   describeSkippedEntitlements,
   isTerminal,
   isFreezeEligible
@@ -84,57 +83,16 @@ export function createHumbleLibrary(libDeps: HumbleLibraryDeps) {
    * `syncError` (and a cooldown for access_denied/429) so the renderer keeps
    * showing the last-known-good library (HSYNC-04).
    *
-   * Fetch fan-out is bounded to HUMBLE_SYNC_CONCURRENCY in-flight
-   * `getOrderDetail` calls (D-25/T-11-03) and commits each order's cache entry
-   * as soon as that order resolves — never batched — so a mid-sync abort
-   * (403/429) keeps every already-fetched order committed (D-34/Pitfall 4).
-   *
-   * Every getGamekeys/getOrderDetail call is wrapped in its own try/catch,
-   * mirroring user.ts:checkHealthAndFlagExpiry, because the adapter only turns
-   * 401/403/429 into typed AdapterResult values — everything else (network
-   * unreachable, DNS, timeout, HTTP 5xx) is still THROWN (T-11-08/D-31).
+   * The whole library is fetched in ONE paginated call (getLibraryOrders, the
+   * site's `filterUserLibrary` server action; all-or-nothing) and then every
+   * item is classified and committed locally, so a failed fetch leaves the
+   * cache exactly as it was. The library call is wrapped in try/catch because
+   * the adapter only turns 401/403/429 into typed AdapterResult values —
+   * everything else (network unreachable, DNS, timeout, HTTP 5xx) is still
+   * THROWN (T-11-08/D-31).
    */
 
   type SyncOutcome = { status: 'ok' | 'partial' | 'failed' }
-
-  interface PartitionResult {
-    newGamekeys: string[]
-    nonTerminalGamekeys: string[]
-    frozenGamekeys: string[]
-  }
-
-  /**
-   * Three explicit buckets (Pitfall 3): a gamekey not yet in the cache at all
-   * is ALWAYS fetched (newGamekeys), never conflated with an empty-keys
-   * all-terminal check. A cached gamekey whose entry is not fully terminal is
-   * also always fetched (nonTerminalGamekeys), so expirations recompute every
-   * sync (HSYNC-03). Only a cached, fully-terminal entry is frozen/skipped.
-   */
-  function partitionGamekeys(gamekeys: string[]): PartitionResult {
-    const newGamekeys: string[] = []
-    const nonTerminalGamekeys: string[] = []
-    const frozenGamekeys: string[] = []
-
-    for (const gamekey of gamekeys) {
-      if (!humbleStores().humbleLibraryStore.has(gamekey)) {
-        newGamekeys.push(gamekey)
-        continue
-      }
-      const entry = humbleStores().humbleLibraryStore.get(gamekey)
-      // 14-08 gap closure (Fix 2): freezeEligible (server-terminality,
-      // including REVEALED-without-pending-expiry) is the frozen decision when
-      // present; a pre-v6 entry that hasn't been backfilled yet falls back to
-      // the original allTerminal semantic (D-24) until its next re-fetch.
-      const frozen = entry?.freezeEligible ?? entry?.allTerminal
-      if (frozen) {
-        frozenGamekeys.push(gamekey)
-      } else {
-        nonTerminalGamekeys.push(gamekey)
-      }
-    }
-
-    return { newGamekeys, nonTerminalGamekeys, frozenGamekeys }
-  }
 
   type OrderFetchOutcome =
     | 'ok'
@@ -182,252 +140,196 @@ export function createHumbleLibrary(libDeps: HumbleLibraryDeps) {
    * runBounded). Redacted logging only (gamekey + status, never a raw key
    * value) per T-11-04.
    */
-  async function fetchAndCommitOrder(
-    cookie: string,
-    gamekey: string,
+  function fetchAndCommitOrder(
+    order: OrderDetail,
     now: Date,
     isStale: () => boolean
-  ): Promise<OrderFetchResult> {
+  ): OrderFetchResult {
+    const gamekey = order.gamekey ?? ''
     // CR-01: disconnect() bumped the generation — the credential was revoked
-    // and the stores wiped. Issue NO further authenticated requests; the
-    // in-flight pool drains without touching the network again.
+    // and the stores wiped. Never commit into a wiped store.
     if (isStale()) {
       return { gamekey, outcome: 'transient' }
     }
 
-    let result: Awaited<ReturnType<typeof getOrderDetail>>
-    try {
-      result = await getOrderDetail(cookie, gamekey)
-    } catch (_err) {
-      // Transient/unexpected failure (network unreachable, DNS, timeout,
-      // 5xx) — the adapter still rethrows this class (T-11-08). Caught here so
-      // it never escapes as an unhandled rejection; the prior cache entry (if
-      // any) for this gamekey is left exactly as-is.
-      logWarning(
+    // The library arrives pre-fetched (getLibraryOrders, one paginated call),
+    // so there is no per-order network step left: commit is local and cannot
+    // be denied/expired/throw per order.
+    const result = { data: order }
+
+    // CR-01: re-check AFTER the await — a disconnect that landed while this
+    // fetch was in flight already wiped humbleLibraryStore; committing now
+    // would silently repopulate it with the pre-disconnect account's data.
+    if (isStale()) {
+      return { gamekey, outcome: 'transient' }
+    }
+    // Phase 14 (D-77): the 4th positional arg is classifyOrder's
+    // isLocallyRedeemed predicate, composite-keyed (gamekey:machineName, not
+    // machineName-only — WR-01 non-collision) via humbleLocalRedeemedStore.
+    const classified = classifyOrder(
+      result.data,
+      (machineName) => humbleStores().humbleRevealedStore.has(machineName),
+      now,
+      (gk, machineName) =>
+        humbleStores().humbleLocalRedeemedStore.has(
+          compositeKey(gk, machineName)
+        )
+    )
+    // Phase 14 (D-74): merge the freshly-classified order's keyindex
+    // side-channel onto each cached key as the internal-only `keyindex`
+    // field (persisted with the cache entry — no new store, survives
+    // restarts without a sync). A fresh classify never regresses a
+    // previously-revealed key's plaintext value to null — carry the prior
+    // cached record's `revealedKeyValue` forward when the fresh record
+    // lacks one (a re-sync must never un-reveal a key the user already
+    // revealed in this session).
+    const priorEntry = humbleStores().humbleLibraryStore.get(gamekey)
+    const priorKeysByMachineName = new Map(
+      (priorEntry?.keys ?? []).map((key) => [key.machineName, key])
+    )
+
+    // 14-08 gap closure (Fix 1 — UAT test 8 churn + T-14-03 C2 window):
+    // classifyOrder always hard-resets ownedElsewhere:false/matchConfidence:
+    // 'none' on every fresh classify (classify.ts has no Steam knowledge by
+    // design). D-26 broadcasts humbleKeysUpdated after EVERY per-order
+    // commit, but recomputeOwnership() below only runs once at sync END — so
+    // committing classified.keys as-is would transiently reset an
+    // already-owned key's overlay on every intermediate broadcast (the
+    // fill-then-empty churn) AND let a mid-sync revealKey() call read a
+    // transiently-false ownedElsewhere (the C2 bypass window). Fixed with a
+    // merged two-branch strategy, gated on the shared getSteamGate() helper
+    // (WR-01, 14-08 re-review) — the SAME gate recomputeOwnership() reads,
+    // enforced structurally so the two sites can never drift:
+    const steamGate = getSteamGate()
+    const overlaidKeys: HumbleKey[] = steamGate.open
+      ? // Branch A (gate PASSES): run the pure dedup recompute on the
+        // freshly-classified keys BEFORE building the entry, for EVERY
+        // order (including a brand-new never-cached one) — this fully
+        // closes the T-14-03 window and eliminates the churn at its root.
+        dedupRecomputeOwnership(
+          classified.keys,
+          steamGate.steamGames,
+          (machineName) =>
+            humbleStores().humbleOwnershipOverrideStore.has(machineName)
+        )
+      : // Branch B (gate FAILS — Steam logged out, or logged in with an
+        // empty cached library): carry forward each prior cached key's
+        // ownedElsewhere/matchConfidence per-key, exactly like
+        // revealedKeyValue is carried below (D-48 keep-last-known) — a
+        // Steam hiccup mid-sync can never zero out a previously-computed
+        // ownedElsewhere:true, so the C2 guard's data stays stale-but-safe.
+        classified.keys.map((key) => {
+          const priorKey = priorKeysByMachineName.get(key.machineName)
+          return {
+            ...key,
+            ownedElsewhere: priorKey?.ownedElsewhere ?? key.ownedElsewhere,
+            matchConfidence: priorKey?.matchConfidence ?? key.matchConfidence
+          }
+        })
+
+    // Phase 14 (D-74): merge the freshly-classified order's keyindex
+    // side-channel onto each cached key as the internal-only `keyindex`
+    // field (persisted with the cache entry — no new store, survives
+    // restarts without a sync). A fresh classify never regresses a
+    // previously-revealed key's plaintext value to null — carry the prior
+    // cached record's `revealedKeyValue` forward when the fresh record
+    // lacks one (a re-sync must never un-reveal a key the user already
+    // revealed in this session).
+    const keysWithInternalFields: HumbleKeyInternal[] = overlaidKeys.map(
+      (key) => {
+        const priorKey = priorKeysByMachineName.get(key.machineName)
+        const keyindex =
+          classified.keyIndexByComposite[compositeKey(gamekey, key.machineName)]
+        // CR-01 (14-REVIEW re-review): a key revealed on Humble's WEBSITE has
+        // no local reveal record and no prior revealedKeyValue — carry the
+        // SERVER-provided value (classify.ts side-channel) onto the
+        // internal-only field so the wizard's finish mode can show the key
+        // on demand without ever re-firing the reveal POST (D-66). A prior
+        // (GameLib-revealed) value still wins when present, preserving the
+        // never-regress guarantee above.
+        const revealedKeyValue =
+          priorKey?.revealedKeyValue ??
+          classified.revealedKeyValueByComposite[
+            compositeKey(gamekey, key.machineName)
+          ]
+        return {
+          ...key,
+          ...(keyindex !== undefined ? { keyindex } : {}),
+          ...(revealedKeyValue !== undefined ? { revealedKeyValue } : {})
+        }
+      }
+    )
+    // 14-08 gap closure (Fix 2), reworked for CR-01 (14-08 re-review):
+    // freezeEligible is recomputed here over keysWithInternalFields — NOT
+    // persisted from classified.freezeEligible — because the merged keys are
+    // where the carried-forward `revealedKeyValue` lives: a GameLib-revealed
+    // key whose value was carried forward from the prior entry must still
+    // freeze even when the fresh server payload lacks the value. The
+    // predicate itself stays single-sourced (classify.ts's isFreezeEligible,
+    // same as classifyOrder/patchCachedState); only the value-present signal
+    // is site-local. A flag-only REVEALED key (D-78 ambiguous /
+    // rejected_by_server write-ahead — no value anywhere) therefore never
+    // freezes and keeps re-fetching until the server value lands.
+    const freezeEligible =
+      keysWithInternalFields.length > 0 &&
+      keysWithInternalFields.every((key) =>
+        isFreezeEligible({
+          state: key.state,
+          expiration: key.expiration,
+          revealedKeyValuePresent: key.revealedKeyValue !== undefined
+        })
+      )
+    const entry = {
+      gamekey: classified.gamekey,
+      keys: keysWithInternalFields,
+      allTerminal: classified.allTerminal,
+      freezeEligible
+    }
+    // Committed immediately per resolve, never batched (D-34).
+    humbleStores().humbleLibraryStore.set(gamekey, entry)
+
+    if (entry.keys.length === 0) {
+      // Live-UAT round 3 diagnosability (debug session:
+      // humble-zero-keys-from-valid-orders): an order that parses ok but
+      // yields ZERO keys must be structurally self-diagnosing in
+      // gamelib.log — field NAMES/types/skip reasons only, never values
+      // (C5/T-11-04). Anomalous shapes (tpkd_dict/all_tpks absent, or a
+      // non-empty tpk array whose entries should have classified) log as
+      // warnings; the legitimate D-29 shapes (explicit empty all_tpks, or
+      // — round 5 — an array of download entitlements only, e.g. a
+      // PDF/ebook bundle) log as info.
+      const diagnosis = describeZeroKeyOrder(result.data)
+      const log = diagnosis.anomalous ? logWarning : logInfo
+      log(
         [
-          'Humble sync: order-detail fetch threw (transient), keeping cached entry:',
-          gamekey
+          'Humble sync: order classified to zero keys:',
+          gamekey,
+          diagnosis.detail
         ],
         LogPrefix.Backend
       )
-      return { gamekey, outcome: 'transient' }
+      return { gamekey, outcome: 'ok', zeroKeys: true }
     }
 
-    if (result.status === 'ok') {
-      // CR-01: re-check AFTER the await — a disconnect that landed while this
-      // fetch was in flight already wiped humbleLibraryStore; committing now
-      // would silently repopulate it with the pre-disconnect account's data.
-      if (isStale()) {
-        return { gamekey, outcome: 'transient' }
-      }
-      // Phase 14 (D-77): the 4th positional arg is classifyOrder's
-      // isLocallyRedeemed predicate, composite-keyed (gamekey:machineName, not
-      // machineName-only — WR-01 non-collision) via humbleLocalRedeemedStore.
-      const classified = classifyOrder(
-        result.data,
-        (machineName) => humbleStores().humbleRevealedStore.has(machineName),
-        now,
-        (gk, machineName) =>
-          humbleStores().humbleLocalRedeemedStore.has(
-            compositeKey(gk, machineName)
-          )
-      )
-      // Phase 14 (D-74): merge the freshly-classified order's keyindex
-      // side-channel onto each cached key as the internal-only `keyindex`
-      // field (persisted with the cache entry — no new store, survives
-      // restarts without a sync). A fresh classify never regresses a
-      // previously-revealed key's plaintext value to null — carry the prior
-      // cached record's `revealedKeyValue` forward when the fresh record
-      // lacks one (a re-sync must never un-reveal a key the user already
-      // revealed in this session).
-      const priorEntry = humbleStores().humbleLibraryStore.get(gamekey)
-      const priorKeysByMachineName = new Map(
-        (priorEntry?.keys ?? []).map((key) => [key.machineName, key])
-      )
-
-      // 14-08 gap closure (Fix 1 — UAT test 8 churn + T-14-03 C2 window):
-      // classifyOrder always hard-resets ownedElsewhere:false/matchConfidence:
-      // 'none' on every fresh classify (classify.ts has no Steam knowledge by
-      // design). D-26 broadcasts humbleKeysUpdated after EVERY per-order
-      // commit, but recomputeOwnership() below only runs once at sync END — so
-      // committing classified.keys as-is would transiently reset an
-      // already-owned key's overlay on every intermediate broadcast (the
-      // fill-then-empty churn) AND let a mid-sync revealKey() call read a
-      // transiently-false ownedElsewhere (the C2 bypass window). Fixed with a
-      // merged two-branch strategy, gated on the shared getSteamGate() helper
-      // (WR-01, 14-08 re-review) — the SAME gate recomputeOwnership() reads,
-      // enforced structurally so the two sites can never drift:
-      const steamGate = getSteamGate()
-      const overlaidKeys: HumbleKey[] = steamGate.open
-        ? // Branch A (gate PASSES): run the pure dedup recompute on the
-          // freshly-classified keys BEFORE building the entry, for EVERY
-          // order (including a brand-new never-cached one) — this fully
-          // closes the T-14-03 window and eliminates the churn at its root.
-          dedupRecomputeOwnership(
-            classified.keys,
-            steamGate.steamGames,
-            (machineName) =>
-              humbleStores().humbleOwnershipOverrideStore.has(machineName)
-          )
-        : // Branch B (gate FAILS — Steam logged out, or logged in with an
-          // empty cached library): carry forward each prior cached key's
-          // ownedElsewhere/matchConfidence per-key, exactly like
-          // revealedKeyValue is carried below (D-48 keep-last-known) — a
-          // Steam hiccup mid-sync can never zero out a previously-computed
-          // ownedElsewhere:true, so the C2 guard's data stays stale-but-safe.
-          classified.keys.map((key) => {
-            const priorKey = priorKeysByMachineName.get(key.machineName)
-            return {
-              ...key,
-              ownedElsewhere: priorKey?.ownedElsewhere ?? key.ownedElsewhere,
-              matchConfidence: priorKey?.matchConfidence ?? key.matchConfidence
-            }
-          })
-
-      // Phase 14 (D-74): merge the freshly-classified order's keyindex
-      // side-channel onto each cached key as the internal-only `keyindex`
-      // field (persisted with the cache entry — no new store, survives
-      // restarts without a sync). A fresh classify never regresses a
-      // previously-revealed key's plaintext value to null — carry the prior
-      // cached record's `revealedKeyValue` forward when the fresh record
-      // lacks one (a re-sync must never un-reveal a key the user already
-      // revealed in this session).
-      const keysWithInternalFields: HumbleKeyInternal[] = overlaidKeys.map(
-        (key) => {
-          const priorKey = priorKeysByMachineName.get(key.machineName)
-          const keyindex =
-            classified.keyIndexByComposite[
-              compositeKey(gamekey, key.machineName)
-            ]
-          // CR-01 (14-REVIEW re-review): a key revealed on Humble's WEBSITE has
-          // no local reveal record and no prior revealedKeyValue — carry the
-          // SERVER-provided value (classify.ts side-channel) onto the
-          // internal-only field so the wizard's finish mode can show the key
-          // on demand without ever re-firing the reveal POST (D-66). A prior
-          // (GameLib-revealed) value still wins when present, preserving the
-          // never-regress guarantee above.
-          const revealedKeyValue =
-            priorKey?.revealedKeyValue ??
-            classified.revealedKeyValueByComposite[
-              compositeKey(gamekey, key.machineName)
-            ]
-          return {
-            ...key,
-            ...(keyindex !== undefined ? { keyindex } : {}),
-            ...(revealedKeyValue !== undefined ? { revealedKeyValue } : {})
-          }
-        }
-      )
-      // 14-08 gap closure (Fix 2), reworked for CR-01 (14-08 re-review):
-      // freezeEligible is recomputed here over keysWithInternalFields — NOT
-      // persisted from classified.freezeEligible — because the merged keys are
-      // where the carried-forward `revealedKeyValue` lives: a GameLib-revealed
-      // key whose value was carried forward from the prior entry must still
-      // freeze even when the fresh server payload lacks the value. The
-      // predicate itself stays single-sourced (classify.ts's isFreezeEligible,
-      // same as classifyOrder/patchCachedState); only the value-present signal
-      // is site-local. A flag-only REVEALED key (D-78 ambiguous /
-      // rejected_by_server write-ahead — no value anywhere) therefore never
-      // freezes and keeps re-fetching until the server value lands.
-      const freezeEligible =
-        keysWithInternalFields.length > 0 &&
-        keysWithInternalFields.every((key) =>
-          isFreezeEligible({
-            state: key.state,
-            expiration: key.expiration,
-            revealedKeyValuePresent: key.revealedKeyValue !== undefined
-          })
-        )
-      const entry = {
-        gamekey: classified.gamekey,
-        keys: keysWithInternalFields,
-        allTerminal: classified.allTerminal,
-        freezeEligible
-      }
-      // Committed immediately per resolve, never batched (D-34).
-      humbleStores().humbleLibraryStore.set(gamekey, entry)
-
-      if (entry.keys.length === 0) {
-        // Live-UAT round 3 diagnosability (debug session:
-        // humble-zero-keys-from-valid-orders): an order that parses ok but
-        // yields ZERO keys must be structurally self-diagnosing in
-        // gamelib.log — field NAMES/types/skip reasons only, never values
-        // (C5/T-11-04). Anomalous shapes (tpkd_dict/all_tpks absent, or a
-        // non-empty tpk array whose entries should have classified) log as
-        // warnings; the legitimate D-29 shapes (explicit empty all_tpks, or
-        // — round 5 — an array of download entitlements only, e.g. a
-        // PDF/ebook bundle) log as info.
-        const diagnosis = describeZeroKeyOrder(result.data)
-        const log = diagnosis.anomalous ? logWarning : logInfo
-        log(
-          [
-            'Humble sync: order classified to zero keys:',
-            gamekey,
-            diagnosis.detail
-          ],
-          LogPrefix.Backend
-        )
-        return { gamekey, outcome: 'ok', zeroKeys: true }
-      }
-
-      // Live-UAT round 5 (D-29): a MIXED order (keys + download entitlements)
-      // bypasses the zero-key diagnosis above, so the skipped no-key_type
-      // entries are logged here instead — field NAMES only (C5) — keeping a
-      // legitimate key with a weird shape (missing key_type) discoverable on
-      // the next live run. logInfo — skipping entitlements is expected D-29
-      // behavior, not a failure.
-      const skippedEntitlements = describeSkippedEntitlements(result.data)
-      if (skippedEntitlements) {
-        logInfo(
-          [
-            'Humble sync: order had download entitlements excluded (D-29):',
-            gamekey,
-            skippedEntitlements
-          ],
-          LogPrefix.Backend
-        )
-      }
-
-      // Live-UAT round 4 expiration-field discovery: keys extracted, but if any
-      // active key still could not be dated (the "every row shows No expiration"
-      // bug), log the redacted candidate field NAMES only (C5) so the next live
-      // run confirms the real Humble date field. logInfo — a key with no
-      // expiration is often legitimate; this is a discovery aid, not a failure.
-      const missingExpiration = describeMissingExpirationTpks(result.data, now)
-      if (missingExpiration) {
-        logInfo(
-          [
-            'Humble sync: order has keys with no extractable expiration:',
-            gamekey,
-            missingExpiration
-          ],
-          LogPrefix.Backend
-        )
-      }
-      return { gamekey, outcome: 'ok' }
-    }
-
-    if (result.status === 'schema_error') {
-      logWarning(
-        ['Humble sync: order schema_error, keeping cached entry:', gamekey],
+    // Live-UAT round 5 (D-29): a MIXED order (keys + download entitlements)
+    // bypasses the zero-key diagnosis above, so the skipped no-key_type
+    // entries are logged here instead — field NAMES only (C5) — keeping a
+    // legitimate key with a weird shape (missing key_type) discoverable on
+    // the next live run. logInfo — skipping entitlements is expected D-29
+    // behavior, not a failure.
+    const skippedEntitlements = describeSkippedEntitlements(result.data)
+    if (skippedEntitlements) {
+      logInfo(
+        [
+          'Humble sync: order had download entitlements excluded (D-29):',
+          gamekey,
+          skippedEntitlements
+        ],
         LogPrefix.Backend
       )
-      return { gamekey, outcome: 'schema_error' }
     }
 
-    // access_denied (incl. 429, D-25) or session_expired — bubble the signal
-    // up so the pool stops dispatching new work. Logged (gamekey + status
-    // only, never a cookie/key value) — live-UAT round 2 showed a denied
-    // abort was otherwise COMPLETELY silent in the log file.
-    logWarning(
-      [
-        'Humble sync: order-detail fetch denied, aborting remaining fetches:',
-        gamekey,
-        result.status
-      ],
-      LogPrefix.Backend
-    )
-    return { gamekey, outcome: result.status }
+    return { gamekey, outcome: 'ok' }
   }
 
   /**
@@ -437,10 +339,10 @@ export function createHumbleLibrary(libDeps: HumbleLibraryDeps) {
    * tasks still settle and commit (Pitfall 4); already-committed cache entries
    * are never touched by the abort itself.
    */
-  async function runBounded(
-    items: string[],
+  async function runBounded<T>(
+    items: T[],
     limit: number,
-    worker: (item: string) => Promise<OrderFetchResult>
+    worker: (item: T) => OrderFetchResult | Promise<OrderFetchResult>
   ): Promise<OrderFetchResult[]> {
     const results: OrderFetchResult[] = []
     let aborted = false
@@ -1049,15 +951,15 @@ export function createHumbleLibrary(libDeps: HumbleLibraryDeps) {
 
     const now = new Date()
 
-    let gamekeysResult: Awaited<ReturnType<typeof getGamekeys>>
+    let libraryResult: Awaited<ReturnType<typeof getLibraryOrders>>
     try {
-      gamekeysResult = await getGamekeys(cookie)
+      libraryResult = await getLibraryOrders(cookie, { signal: isStale })
     } catch (err) {
       // Thrown transient class (network/timeout/5xx) — mirrors
       // user.ts:checkHealthAndFlagExpiry's catch exactly (T-11-08/D-31).
       // Cache untouched, no cooldown (Humble did not actually deny us).
       logWarning(
-        ['Humble sync: getGamekeys threw (transient), cache untouched:', err],
+        ['Humble sync: library fetch threw (transient), cache untouched:', err],
         LogPrefix.Backend
       )
       // CR-01: never write into a store a mid-sync disconnect just wiped.
@@ -1067,17 +969,14 @@ export function createHumbleLibrary(libDeps: HumbleLibraryDeps) {
       return { status: 'failed' }
     }
 
-    if (gamekeysResult.status === 'session_expired') {
+    if (libraryResult.status === 'session_expired') {
       // Phase 10 owns expiry (D-08/D-09) — no syncError/cooldown here.
       return { status: 'failed' }
     }
 
-    if (gamekeysResult.status === 'access_denied') {
+    if (libraryResult.status === 'access_denied') {
       logWarning(
-        [
-          'Humble sync: getGamekeys access_denied, cache untouched:',
-          gamekeysResult.status
-        ],
+        ['Humble sync: library fetch access_denied, cache untouched'],
         LogPrefix.Backend
       )
       // CR-01: never write into a store a mid-sync disconnect just wiped.
@@ -1090,9 +989,11 @@ export function createHumbleLibrary(libDeps: HumbleLibraryDeps) {
       return { status: 'failed' }
     }
 
-    if (gamekeysResult.status === 'schema_error') {
+    if (libraryResult.status === 'schema_error') {
+      // Unrecognised library shape / undiscoverable action id: Humble changed
+      // its site again. Cache untouched, no sign-out, no cooldown.
       logWarning(
-        ['Humble sync: getGamekeys schema_error, cache untouched'],
+        ['Humble sync: library fetch schema_error, cache untouched'],
         LogPrefix.Backend
       )
       // CR-01: never write into a store a mid-sync disconnect just wiped.
@@ -1102,50 +1003,25 @@ export function createHumbleLibrary(libDeps: HumbleLibraryDeps) {
       return { status: 'failed' }
     }
 
-    // Live-UAT round 6 (propagation bug): D-24 freezes fully-terminal cached
-    // orders — they are never re-fetched, so a classifier fix can never reach
-    // their cached rows (the tester's stale PDF-entitlement rows survived the
-    // round-5 filter exactly this way, 19/25 orders frozen). When the stored
-    // classifier version differs from HUMBLE_CLASSIFIER_VERSION, bypass the
-    // frozen-order skip ONCE: re-fetch and re-classify EVERY order. Version-
-    // matched syncs keep full D-24 semantics. Pre-versioning caches (rounds
-    // 1-5) never stored a version — read them as 1.
-    const storedClassifierVersion = currentState.classifierVersion ?? 1
-    const reclassifyAll = storedClassifierVersion !== HUMBLE_CLASSIFIER_VERSION
-    if (reclassifyAll) {
-      logInfo(
-        [
-          `Humble sync: classifier version changed (${storedClassifierVersion} -> ${HUMBLE_CLASSIFIER_VERSION}), full re-classification sync`
-        ],
-        LogPrefix.Backend
-      )
-    }
-
-    const { newGamekeys, nonTerminalGamekeys } = partitionGamekeys(
-      gamekeysResult.data
-    )
-    const toFetch = reclassifyAll
-      ? [...gamekeysResult.data]
-      : [...newGamekeys, ...nonTerminalGamekeys]
-    const total = toFetch.length
+    // Every library item is re-classified on every sync: the whole library is
+    // already in memory (one paginated fetch), so the D-24 frozen-order skip
+    // that saved per-order requests no longer saves anything.
+    const orders = libraryResult.data
+    const total = orders.length
     let done = 0
 
-    // WR-05: initial progress push BEFORE any order resolves. The renderer
-    // derives `syncing` from done < total, and per-order events only fire
-    // AFTER each order settles — so without this, 0/1-order syncs never show
-    // as syncing at all, and multi-order syncs leave the refresh button
-    // enabled/un-spinning until the first order completes (up to the full
-    // request timeout). CR-01: skip when a disconnect landed during the
-    // gamekeys fetch.
+    // WR-05: initial progress push BEFORE any order resolves (see the
+    // renderer's `syncing` derivation). CR-01: skip when a disconnect landed
+    // during the library fetch.
     if (!isStale()) {
       sendFrontendMessage('humbleSyncProgress', { done: 0, total })
     }
 
     const results = await runBounded(
-      toFetch,
+      orders,
       HUMBLE_SYNC_CONCURRENCY,
-      async (gamekey) => {
-        const outcome = await fetchAndCommitOrder(cookie, gamekey, now, isStale)
+      (order) => {
+        const outcome = fetchAndCommitOrder(order, now, isStale)
         // CR-01: a fenced-off sync must never push to the renderer — each
         // humbleKeysUpdated would overwrite the `keys: []` the renderer just
         // set on disconnect.
@@ -1180,8 +1056,8 @@ export function createHumbleLibrary(libDeps: HumbleLibraryDeps) {
     }
     logInfo(
       [
-        `Humble sync finished: gamekeys=${gamekeysResult.data.length}`,
-        `fetched=${results.length}/${total} frozen=${gamekeysResult.data.length - total}`,
+        `Humble sync finished: libraryItems=${orders.length}`,
+        `committed=${results.length}/${total}`,
         `ok=${outcomeCounts.ok} schema_error=${outcomeCounts.schema_error}`,
         `denied=${outcomeCounts.access_denied} expired=${outcomeCounts.session_expired}`,
         `transient=${outcomeCounts.transient} zeroKeyOrders=${zeroKeyOrders}`,
@@ -1211,6 +1087,33 @@ export function createHumbleLibrary(libDeps: HumbleLibraryDeps) {
     // would repopulate the humbleSyncStore the disconnect just wiped.
     if (isStale()) {
       return { status: 'failed' }
+    }
+
+    // Drop cache entries the fresh library no longer contains: legacy gamekey
+    // entries from the retired order API (keyed by the old gamekeys, so they
+    // would otherwise live on as ghost keys) and items removed upstream. Only
+    // after a COMPLETE pass: the library fetch is all-or-nothing, so reaching
+    // here means `orders` is the whole library.
+    if (!sawFailure) {
+      const live = new Set(orders.map((o) => o.gamekey ?? ''))
+      let pruned = 0
+      for (const [
+        cachedGamekey
+      ] of humbleStores().humbleLibraryStore.entries()) {
+        if (!live.has(cachedGamekey)) {
+          humbleStores().humbleLibraryStore.delete(cachedGamekey)
+          pruned += 1
+        }
+      }
+      if (pruned > 0) {
+        logInfo(
+          [
+            `Humble sync: pruned ${pruned} cache entries absent from the library`
+          ],
+          LogPrefix.Backend
+        )
+        sendFrontendMessage('humbleKeysUpdated', getKeys())
+      }
     }
 
     setSyncState({
