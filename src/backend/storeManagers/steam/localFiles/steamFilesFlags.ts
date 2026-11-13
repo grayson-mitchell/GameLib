@@ -7,9 +7,9 @@
 
 export type SteamFilesImpl = 'rust' | 'ts'
 
-/** Plan 24 flips each default once its own parity passes. */
-export const STEAMFILES_TEXT_DEFAULT: SteamFilesImpl = 'ts'
-export const STEAMFILES_SHORTCUTS_DEFAULT: SteamFilesImpl = 'ts'
+/** Flipped to rust by plan 75-25 after 75-PARITY.md was APPROVED (plan 24, 2026-11-14). */
+export const STEAMFILES_TEXT_DEFAULT: SteamFilesImpl = 'rust'
+export const STEAMFILES_SHORTCUTS_DEFAULT: SteamFilesImpl = 'rust'
 
 function pick(raw: string | undefined, fallback: SteamFilesImpl) {
   return raw === 'rust' || raw === 'ts' ? raw : fallback

@@ -615,6 +615,12 @@ process.env.XDG_CACHE_HOME = join(containmentRoot, '.cache')
   }
 }
 
+// Phase 75 transition only: the Rust readers are the default (plan 75-25), but the
+// pre-existing ts-branch caller tests still mock @node-steam/vdf. Pin them to ts here;
+// the rust-branch describes set rust explicitly. Removed in plan 34 with the flags.
+process.env.GAMELIB_STEAMFILES_TEXT ??= 'ts'
+process.env.GAMELIB_STEAMFILES_SHORTCUTS ??= 'ts'
+
 export {
   // Consumed by src/backend/__tests__/jestGlobalSetup.test.ts via
   // `const { containmentRoot } = require('../jest.setupContainment')`

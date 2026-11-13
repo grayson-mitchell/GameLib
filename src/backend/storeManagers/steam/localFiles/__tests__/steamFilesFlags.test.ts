@@ -6,11 +6,18 @@ import {
 } from '../steamFilesFlags'
 
 describe('steamfiles dev flags', () => {
-  it('defaults to ts', () => {
-    expect(STEAMFILES_TEXT_DEFAULT).toBe('ts')
-    expect(STEAMFILES_SHORTCUTS_DEFAULT).toBe('ts')
-    expect(steamFilesTextImpl({})).toBe('ts')
-    expect(steamFilesShortcutsImpl({})).toBe('ts')
+  it('defaults to rust', () => {
+    expect(STEAMFILES_TEXT_DEFAULT).toBe('rust')
+    expect(STEAMFILES_SHORTCUTS_DEFAULT).toBe('rust')
+    expect(steamFilesTextImpl({})).toBe('rust')
+    expect(steamFilesShortcutsImpl({})).toBe('rust')
+  })
+
+  it('still honours an explicit ts', () => {
+    expect(steamFilesTextImpl({ GAMELIB_STEAMFILES_TEXT: 'ts' })).toBe('ts')
+    expect(
+      steamFilesShortcutsImpl({ GAMELIB_STEAMFILES_SHORTCUTS: 'ts' })
+    ).toBe('ts')
   })
 
   it('reads rust and ts from the env', () => {
@@ -31,7 +38,7 @@ describe('steamfiles dev flags', () => {
   })
 
   it('keeps the two flags independent', () => {
-    const env = { GAMELIB_STEAMFILES_TEXT: 'rust' }
-    expect(steamFilesShortcutsImpl(env)).toBe('ts')
+    const env = { GAMELIB_STEAMFILES_TEXT: 'ts' }
+    expect(steamFilesShortcutsImpl(env)).toBe('rust')
   })
 })
