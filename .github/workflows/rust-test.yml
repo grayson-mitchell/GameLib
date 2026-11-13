@@ -67,7 +67,7 @@ concurrency:
 #       nothing about the real SEA sidecar or its externalBin naming/packaging -- a sidecar build
 #       that stopped emitting `gamelib-sidecar-<triple>` would still pass here and surface only in
 #       release-tauri.yml.
-#   (g) The Tauri-free crates (gamelib-scan, gamelib-scan-cli, gamelib-depot, gamelib-depot-cli) are covered only by the
+#   (g) The Tauri-free crates (gamelib-scan, gamelib-scan-cli, gamelib-depot, gamelib-depot-cli, gamelib-steamfiles, gamelib-steamfiles-cli) are covered only by the
 #       explicit `-p` test step and the `--workspace` clippy run: `cargo test --bin gamelib-shell`
 #       alone selects only the root package. They run on the Linux leg too (Phase 72 D-14), via
 #       the same `-p` test step.
@@ -111,10 +111,10 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
-      - name: cargo test (gamelib-scan and gamelib-depot crates)
+      - name: cargo test (gamelib-scan, gamelib-depot and gamelib-steamfiles crates)
         shell: bash
         working-directory: src-tauri
-        run: cargo test -p gamelib-scan -p gamelib-scan-cli -p gamelib-depot -p gamelib-depot-cli
+        run: cargo test -p gamelib-scan -p gamelib-scan-cli -p gamelib-depot -p gamelib-depot-cli -p gamelib-steamfiles -p gamelib-steamfiles-cli
       # Phase 73 D-15: the depot codecs (xz2/lzma-sys, zstd, zlib-rs) must be statically linked so the
       # shipped binary needs no system liblzma/zstd/zlib. Fails if the CLI links any of them dynamically.
       - name: static codec linkage (gamelib-depot-cli)
