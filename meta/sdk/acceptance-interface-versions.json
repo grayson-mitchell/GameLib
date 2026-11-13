@@ -12,7 +12,7 @@
   "SteamUser016": {
     "family": "SteamUser",
     "arches": ["x86"],
-    "titles": ["200510", "63000"]
+    "titles": ["200510", "63000", "98800"]
   },
   "SteamFriends011": {
     "family": "SteamFriends",
@@ -22,7 +22,7 @@
   "SteamUtils005": {
     "family": "SteamUtils",
     "arches": ["x86"],
-    "titles": ["200510", "63000"]
+    "titles": ["200510", "63000", "98800"]
   },
   "STEAMAPPS_INTERFACE_VERSION004": {
     "family": "SteamApps",
@@ -47,7 +47,7 @@
   "STEAMUSERSTATS_INTERFACE_VERSION011": {
     "family": "SteamUserStats",
     "arches": ["x86", "x64"],
-    "titles": ["63000", "411300"]
+    "titles": ["63000", "411300", "98800"]
   },
   "STEAMREMOTESTORAGE_INTERFACE_VERSION005": {
     "family": "SteamRemoteStorage",
@@ -73,6 +73,11 @@
     "family": "SteamRemoteStorage",
     "arches": ["x86"],
     "titles": ["63000"]
+  },
+  "STEAMREMOTESTORAGE_INTERFACE_VERSION008": {
+    "family": "SteamRemoteStorage",
+    "arches": ["x86"],
+    "titles": ["98800"]
   },
   "SteamClient017": {
     "family": "SteamClient",

@@ -42,6 +42,10 @@
  * lookup -- D-51-07 -- so its per-interface versions live in the exe, not a
  * fixed accessor-to-version mapping baked into the dll's bare exports).
  *
+ * `DREDMOR_EXE_OBJDUMP_OUTPUT` and `DREDMOR_DLL_VERSION_STRINGS` (quick task
+ * 261113-qu7) are Dungeons of Dredmor's (98800) real exe import capture and its
+ * original `steam_api.dll` version strings, measured the same way.
+ *
  * `HOARD_DLL_VERSION_STRINGS` (quick task 261021-pgx) is the same
  * `strings -a <binary> | grep -E '...'` extraction read directly off Hoard's
  * (63000) real original `steam_api.dll` (104872 bytes -- NOT the
@@ -211,6 +215,37 @@ The Import Tables:
           81  glEnd
 `
 
+// Real capture: Dungeons of Dredmor's `Dungeons of Dredmor.exe` (a
+// GameLibSteamBridge-98800 bottle, appId 98800; quick task 261113-qu7). 10
+// steam_api.dll imports: 6 `SteamAPI_*` lifecycle symbols + 4 bare accessors
+// (`SteamUserStats`, `SteamUser`, `SteamRemoteStorage`, `SteamUtils`). Apple
+// LLVM objdump shape (coff-i386). `[VERIFIED: objdump --private-headers, read
+// directly this session against the real binary on this machine]`.
+export const DREDMOR_EXE_OBJDUMP_OUTPUT = `
+Dungeons of Dredmor.exe:	file format coff-i386
+
+The Import Tables:
+
+    DLL Name: steam_api.dll
+    Hint/Ord  Name
+          50  SteamUserStats
+          11  SteamAPI_RunCallbacks
+          49  SteamUser
+          17  SteamAPI_UnregisterCallback
+           9  SteamAPI_RegisterCallback
+           8  SteamAPI_RegisterCallResult
+          16  SteamAPI_UnregisterCallResult
+           5  SteamAPI_Init
+          47  SteamRemoteStorage
+          51  SteamUtils
+
+  lookup 001f78f8 time 00000000 fwd 00000000 name 001f80cc addr 001a9208
+
+    DLL Name: OpenAL32.dll
+    Hint/Ord  Name
+          69  alSourceUnqueueBuffers
+`
+
 // Real capture: XCOM: Enemy Unknown's `Binaries/Win32/XComGame.exe`
 // (GameLibSteam bottle, appId 200510). 26 steam_api.dll imports: 8
 // `SteamAPI_*` lifecycle + 9 client bare accessors (the three new-interface
@@ -353,6 +388,31 @@ export const HOARD_DLL_VERSION_STRINGS = [
   'STEAMREMOTESTORAGE_INTERFACE_VERSION010',
   'STEAMSCREENSHOTS_INTERFACE_VERSION002',
   'STEAMUNIFIEDMESSAGES_INTERFACE_VERSION001',
+  'STEAMUSERSTATS_INTERFACE_VERSION011',
+  'SteamClient012',
+  'SteamContentServer002',
+  'SteamFriends013',
+  'SteamGameServer011',
+  'SteamGameServerStats001',
+  'SteamMatchMaking009',
+  'SteamMatchMakingServers002',
+  'SteamNetworking005',
+  'SteamUser016',
+  'SteamUtils005'
+]
+
+// `strings -a <Dungeons of Dredmor's original steam_api.dll> | grep -E
+// '^(Steam[A-Za-z]+0[0-9]{2}|STEAM[A-Z]+_INTERFACE_VERSION0[0-9]{2})$' | sort -u`,
+// read directly this session (261113-qu7) against the GameLibSteamBridge-98800
+// bottle's install, 105808 bytes, sha256
+// 61846524e09e81eeed65629cf3d65668773c377efefb236088d366c9068aee63 -- the
+// game's ORIGINAL dll, not the shim. `[VERIFIED: strings -a, read directly
+// this session against the real binary on this machine]`.
+export const DREDMOR_DLL_VERSION_STRINGS = [
+  'STEAMAPPS_INTERFACE_VERSION005',
+  'STEAMHTTP_INTERFACE_VERSION001',
+  'STEAMREMOTESTORAGE_INTERFACE_VERSION008',
+  'STEAMSCREENSHOTS_INTERFACE_VERSION001',
   'STEAMUSERSTATS_INTERFACE_VERSION011',
   'SteamClient012',
   'SteamContentServer002',
