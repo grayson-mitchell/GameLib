@@ -15,7 +15,7 @@ import {
 } from './updateDetection'
 
 /** Recorded when the attempt had no known target build; matches any target until cleared. */
-export const AUTO_UPDATE_ANY_BUILD = '*'
+const AUTO_UPDATE_ANY_BUILD = '*'
 
 export function noteAutoUpdateAttempt(
   deps: Pick<ManagerDeps, 'steamInstallRuntime'>,
