@@ -60,7 +60,7 @@
             "registered": "Steam mettra à jour ce jeu.",
             "showSize": "Afficher la taille de la mise à jour",
             "sizes": "Téléchargement de {{download}} · nécessite {{peak}} libres pendant la mise à jour",
-            "sizesEstimate": "Téléchargement jusqu'à {{download}} · nécessite {{peak}} libres pendant la mise à jour (estimation)",
+            "sizesEstimate": "Téléchargement d'environ {{download}} · nécessite {{peak}} libres pendant la mise à jour (estimation)",
             "unknown": "État de la mise à jour inconnu : GameLib ne peut pas voir la branche {{branch}} de ce jeu."
         },
         "wineLabel": "Wine :"

@@ -106,7 +106,7 @@
             "registered": "Steam bu oyunu yeniləyəcək.",
             "showSize": "Yeniləmə ölçüsünü göstər",
             "sizes": "Yükləmə {{download}} · yeniləmə zamanı {{peak}} boş yer lazımdır",
-            "sizesEstimate": "Yükləmə ən çox {{download}} · yeniləmə zamanı {{peak}} boş yer lazımdır (təxmini)",
+            "sizesEstimate": "Yükləmə təxminən {{download}} · yeniləmə zamanı {{peak}} boş yer lazımdır (təxmini)",
             "unknown": "Yeniləmə statusu məlum deyil: GameLib bu oyunun {{branch}} budağını görə bilmir."
         }
     },

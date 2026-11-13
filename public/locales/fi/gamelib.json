@@ -105,7 +105,7 @@
             "registered": "Steam päivittää tämän pelin.",
             "showSize": "Näytä päivityksen koko",
             "sizes": "Lataus {{download}} · päivityksen aikana tarvitaan {{peak}} vapaata tilaa",
-            "sizesEstimate": "Lataus enintään {{download}} · päivityksen aikana tarvitaan {{peak}} vapaata tilaa (arvio)",
+            "sizesEstimate": "Lataus noin {{download}} · päivityksen aikana tarvitaan {{peak}} vapaata tilaa (arvio)",
             "unknown": "Päivityksen tila on tuntematon: GameLib ei näe tämän pelin {{branch}}-haaraa."
         },
         "wineLabel": "Wine:"

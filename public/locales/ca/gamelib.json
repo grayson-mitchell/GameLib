@@ -106,7 +106,7 @@
             "registered": "Steam actualitzarà aquest joc.",
             "showSize": "Mostra la mida de l'actualització",
             "sizes": "Baixada de {{download}} · cal {{peak}} lliures durant l'actualització",
-            "sizesEstimate": "Baixada de fins a {{download}} · cal {{peak}} lliures durant l'actualització (estimació)",
+            "sizesEstimate": "Baixada d'aproximadament {{download}} · cal {{peak}} lliures durant l'actualització (estimació)",
             "unknown": "Estat de l'actualització desconegut: GameLib no pot veure la branca {{branch}} d'aquest joc."
         },
         "wineLabel": "Wine:"

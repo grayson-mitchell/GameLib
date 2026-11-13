@@ -105,7 +105,7 @@
             "registered": "Steam이 이 게임을 업데이트합니다.",
             "showSize": "업데이트 크기 표시",
             "sizes": "다운로드 {{download}} · 업데이트 중 {{peak}}의 여유 공간 필요",
-            "sizesEstimate": "최대 {{download}} 다운로드 · 업데이트 중 {{peak}}의 여유 공간 필요 (추정)",
+            "sizesEstimate": "약 {{download}} 다운로드 · 업데이트 중 {{peak}}의 여유 공간 필요 (추정)",
             "unknown": "업데이트 상태를 알 수 없음: GameLib이 이 게임의 {{branch}} 브랜치를 볼 수 없습니다."
         },
         "wineLabel": "Wine:"

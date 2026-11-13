@@ -60,7 +60,7 @@
             "registered": "Steam aktualisiert dieses Spiel.",
             "showSize": "Update-Größe anzeigen",
             "sizes": "Download {{download}} · benötigt {{peak}} freien Speicher während des Updates",
-            "sizesEstimate": "Download bis zu {{download}} · benötigt {{peak}} freien Speicher während des Updates (Schätzung)",
+            "sizesEstimate": "Download ca. {{download}} · benötigt {{peak}} freien Speicher während des Updates (Schätzung)",
             "unknown": "Update-Status unbekannt: GameLib kann den Branch {{branch}} dieses Spiels nicht sehen."
         },
         "wineLabel": "Wine:"

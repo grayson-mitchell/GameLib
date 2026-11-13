@@ -105,7 +105,7 @@
             "registered": "Steam bu o'yinni yangilaydi.",
             "showSize": "Yangilanish hajmini ko'rsatish",
             "sizes": "Yuklab olish {{download}} · yangilanish vaqtida {{peak}} bo'sh joy kerak",
-            "sizesEstimate": "{{download}} gacha yuklab olish · yangilanish vaqtida {{peak}} bo'sh joy kerak (taxminiy)",
+            "sizesEstimate": "Taxminan {{download}} yuklab olish · yangilanish vaqtida {{peak}} bo'sh joy kerak (taxminiy)",
             "unknown": "Yangilanish holati noma'lum: GameLib bu o'yinning {{branch}} tarmog'ini ko'ra olmaydi."
         },
         "wineLabel": "Wine:"

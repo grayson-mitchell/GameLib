@@ -160,7 +160,7 @@
             "registered": "Steam will update this game.",
             "showSize": "Show update size",
             "sizes": "Download {{download}} · needs {{peak}} free during update",
-            "sizesEstimate": "Download up to {{download}} · needs {{peak}} free during update (estimate)",
+            "sizesEstimate": "Download about {{download}} · needs {{peak}} free during update (estimate)",
             "unknown": "Update status unknown: GameLib can't see this game's {{branch}} branch."
         },
         "wineLabel": "Wine:"

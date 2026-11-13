@@ -105,7 +105,7 @@
             "registered": "Steam-ek joko hau eguneratuko du.",
             "showSize": "Erakutsi eguneratzearen tamaina",
             "sizes": "Deskarga {{download}} · eguneratzean {{peak}} toki libre behar dira",
-            "sizesEstimate": "Deskarga {{download}} arte · eguneratzean {{peak}} toki libre behar dira (zenbatespena)",
+            "sizesEstimate": "Deskarga gutxi gorabehera {{download}} · eguneratzean {{peak}} toki libre behar dira (zenbatespena)",
             "unknown": "Eguneratzearen egoera ezezaguna: GameLib-ek ezin du joko honen {{branch}} adarra ikusi."
         },
         "wineLabel": "Wine:"

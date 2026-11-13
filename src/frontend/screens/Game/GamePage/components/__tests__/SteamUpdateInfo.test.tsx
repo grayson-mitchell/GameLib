@@ -169,22 +169,22 @@ describe('SteamUpdateInfo', () => {
     }
     expect(api).toHaveBeenCalledWith('1', { computeSize: true })
     expect(collectText(out)).toContain(
-      'Download up to 916 MiB · needs 13 GiB free during update (estimate)'
+      'Download about 916 MiB · needs 13 GiB free during update (estimate)'
     )
   })
 
   it('renders the sizes immediately when the estimate is present', async () => {
     useInfo({ ...base, estimate })
     const out = await mount()
-    expect(collectText(out)).toContain('Download up to 916 MiB')
+    expect(collectText(out)).toContain('Download about 916 MiB')
     expect(api).toHaveBeenCalledTimes(1)
   })
 
   it('renders the fallback sentence when the old manifest is gone', async () => {
     useInfo({ ...base, estimate: { ...estimate, oldManifestAvailable: false } })
-    expect(collectText(await mount())).toContain(
-      "can't get the previous build's file list"
-    )
+    const text = collectText(await mount())
+    expect(text).toContain("can't get the previous build's file list")
+    expect(text).toContain('download up to')
   })
 
   it('says Steam will update a registered game, with no size button', async () => {

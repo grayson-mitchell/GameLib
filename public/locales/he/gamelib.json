@@ -106,7 +106,7 @@
             "registered": "Steam יעדכן את המשחק הזה.",
             "showSize": "הצג את גודל העדכון",
             "sizes": "הורדה של {{download}} · נדרשים {{peak}} פנויים במהלך העדכון",
-            "sizesEstimate": "הורדה של עד {{download}} · נדרשים {{peak}} פנויים במהלך העדכון (הערכה)",
+            "sizesEstimate": "הורדה של כ-{{download}} · נדרשים {{peak}} פנויים במהלך העדכון (הערכה)",
             "unknown": "מצב העדכון לא ידוע: GameLib לא רואה את הענף {{branch}} של המשחק הזה."
         },
         "wineLabel": "Wine:"

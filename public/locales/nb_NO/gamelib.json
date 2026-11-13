@@ -105,7 +105,7 @@
             "registered": "Steam oppdaterer dette spillet.",
             "showSize": "Vis oppdateringsstørrelse",
             "sizes": "Nedlasting {{download}} · trenger {{peak}} ledig plass under oppdateringen",
-            "sizesEstimate": "Nedlasting på opptil {{download}} · trenger {{peak}} ledig plass under oppdateringen (estimat)",
+            "sizesEstimate": "Nedlasting på omtrent {{download}} · trenger {{peak}} ledig plass under oppdateringen (estimat)",
             "unknown": "Oppdateringsstatus ukjent: GameLib kan ikke se spillets {{branch}}-gren."
         },
         "wineLabel": "Wine:"

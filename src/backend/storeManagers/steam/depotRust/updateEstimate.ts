@@ -164,7 +164,7 @@ export async function estimateBridgeUpdate(
     }
     deps.steamInstallRuntime.updateStates.setEstimate(appId, estimate)
     logInfo(
-      `estimateBridgeUpdate: appId ${appId} download<=${downloadBytes} peak=${estimate.peakBytes} oldManifest=${allOld} newDepots=${newDepots}`,
+      `estimateBridgeUpdate: appId ${appId} download~${downloadBytes} peak=${estimate.peakBytes} oldManifest=${allOld} newDepots=${newDepots}`,
       LogPrefix.Steam
     )
     return estimate

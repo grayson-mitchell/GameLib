@@ -105,7 +105,7 @@
             "registered": "Steam uuendab seda mängu.",
             "showSize": "Näita uuenduse suurust",
             "sizes": "Allalaadimine {{download}} · uuendamise ajal on vaja {{peak}} vaba ruumi",
-            "sizesEstimate": "Allalaadimine kuni {{download}} · uuendamise ajal on vaja {{peak}} vaba ruumi (hinnang)",
+            "sizesEstimate": "Allalaadimine umbes {{download}} · uuendamise ajal on vaja {{peak}} vaba ruumi (hinnang)",
             "unknown": "Uuenduse olek on teadmata: GameLib ei näe selle mängu haru {{branch}}."
         },
         "wineLabel": "Wine:"

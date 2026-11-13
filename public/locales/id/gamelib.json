@@ -105,7 +105,7 @@
             "registered": "Steam akan memperbarui game ini.",
             "showSize": "Tampilkan ukuran pembaruan",
             "sizes": "Unduhan {{download}} · membutuhkan {{peak}} ruang kosong selama pembaruan",
-            "sizesEstimate": "Unduhan hingga {{download}} · membutuhkan {{peak}} ruang kosong selama pembaruan (perkiraan)",
+            "sizesEstimate": "Unduhan sekitar {{download}} · membutuhkan {{peak}} ruang kosong selama pembaruan (perkiraan)",
             "unknown": "Status pembaruan tidak diketahui: GameLib tidak dapat melihat cabang {{branch}} game ini."
         },
         "wineLabel": "Wine:"

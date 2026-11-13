@@ -106,7 +106,7 @@
             "registered": "Steam će ažurirati ovu igru.",
             "showSize": "Prikaži veličinu ažuriranja",
             "sizes": "Preuzimanje {{download}} · potrebno je {{peak}} slobodnog prostora tijekom ažuriranja",
-            "sizesEstimate": "Preuzimanje do {{download}} · potrebno je {{peak}} slobodnog prostora tijekom ažuriranja (procjena)",
+            "sizesEstimate": "Preuzimanje oko {{download}} · potrebno je {{peak}} slobodnog prostora tijekom ažuriranja (procjena)",
             "unknown": "Status ažuriranja nije poznat: GameLib ne vidi granu {{branch}} ove igre."
         },
         "wineLabel": "Wine:"

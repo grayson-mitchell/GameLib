@@ -105,7 +105,7 @@
             "registered": "A Steam frissíteni fogja ezt a játékot.",
             "showSize": "Frissítés méretének megjelenítése",
             "sizes": "Letöltés: {{download}} · a frissítés alatt {{peak}} szabad hely szükséges",
-            "sizesEstimate": "Letöltés: legfeljebb {{download}} · a frissítés alatt {{peak}} szabad hely szükséges (becslés)",
+            "sizesEstimate": "Letöltés: körülbelül {{download}} · a frissítés alatt {{peak}} szabad hely szükséges (becslés)",
             "unknown": "A frissítés állapota ismeretlen: a GameLib nem látja a játék {{branch}} ágát."
         },
         "wineLabel": "Wine:"

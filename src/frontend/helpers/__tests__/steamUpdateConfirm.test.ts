@@ -65,7 +65,7 @@ describe('confirmSteamUpdate', () => {
     })
     expect(s.dialogs[0]?.message).toBe('Checking update size…')
     const last = s.last()
-    expect(String(last.message)).toContain('Download up to 916 MiB')
+    expect(String(last.message)).toContain('Download about 916 MiB')
     expect(last.buttons?.map((b) => b.text)).toEqual(['Update', 'Cancel'])
     last.buttons?.[0]?.onClick?.()
     expect(s.onConfirm).toHaveBeenCalledTimes(1)
@@ -85,6 +85,7 @@ describe('confirmSteamUpdate', () => {
     expect(String(s.last().message)).toContain(
       "can't get the previous build's file list"
     )
+    expect(String(s.last().message)).toContain('download up to')
   })
 
   it('offers Update anyway on sizeError', async () => {

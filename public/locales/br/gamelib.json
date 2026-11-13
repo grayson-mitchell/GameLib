@@ -108,7 +108,7 @@
             "registered": "Steam a hizivaio ar c'hoari-mañ.",
             "showSize": "Diskouez ment ar hizivadur",
             "sizes": "Pellgargañ {{download}} · ezhomm eus {{peak}} a blas dieub e-pad an hizivadur",
-            "sizesEstimate": "Pellgargañ betek {{download}} · ezhomm eus {{peak}} a blas dieub e-pad an hizivadur (priziadenn)",
+            "sizesEstimate": "Pellgargañ war-dro {{download}} · ezhomm eus {{peak}} a blas dieub e-pad an hizivadur (priziadenn)",
             "unknown": "Stad ar hizivadur dianav: ne c'hall ket GameLib gwelout skourr {{branch}} ar c'hoari-mañ."
         },
         "wineLabel": "Wine:"

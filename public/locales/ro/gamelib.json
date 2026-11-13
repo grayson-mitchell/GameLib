@@ -106,7 +106,7 @@
             "registered": "Steam va actualiza acest joc.",
             "showSize": "Arată dimensiunea actualizării",
             "sizes": "Descărcare de {{download}} · necesită {{peak}} liberi în timpul actualizării",
-            "sizesEstimate": "Descărcare de până la {{download}} · necesită {{peak}} liberi în timpul actualizării (estimare)",
+            "sizesEstimate": "Descărcare de aproximativ {{download}} · necesită {{peak}} liberi în timpul actualizării (estimare)",
             "unknown": "Starea actualizării este necunoscută: GameLib nu vede ramura {{branch}} a acestui joc."
         },
         "wineLabel": "Wine:"

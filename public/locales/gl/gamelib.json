@@ -105,7 +105,7 @@
             "registered": "Steam actualizará este xogo.",
             "showSize": "Amosar o tamaño da actualización",
             "sizes": "Descarga de {{download}} · precisa de {{peak}} libres durante a actualización",
-            "sizesEstimate": "Descarga de ata {{download}} · precisa de {{peak}} libres durante a actualización (estimación)",
+            "sizesEstimate": "Descarga de aproximadamente {{download}} · precisa de {{peak}} libres durante a actualización (estimación)",
             "unknown": "Estado da actualización descoñecido: GameLib non pode ver a rama {{branch}} deste xogo."
         },
         "wineLabel": "Wine:"

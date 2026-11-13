@@ -105,7 +105,7 @@
             "registered": "Steamがこのゲームをアップデートします。",
             "showSize": "アップデートのサイズを表示",
             "sizes": "ダウンロード{{download}} · アップデート中に{{peak}}の空き容量が必要",
-            "sizesEstimate": "ダウンロード最大{{download}} · アップデート中に{{peak}}の空き容量が必要（推定）",
+            "sizesEstimate": "ダウンロード約{{download}} · アップデート中に{{peak}}の空き容量が必要（推定）",
             "unknown": "アップデートの状態が不明です: GameLibはこのゲームの{{branch}}ブランチを参照できません。"
         },
         "wineLabel": "Wine:"

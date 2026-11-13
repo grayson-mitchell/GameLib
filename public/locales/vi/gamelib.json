@@ -105,7 +105,7 @@
             "registered": "Steam sẽ cập nhật trò chơi này.",
             "showSize": "Hiện dung lượng bản cập nhật",
             "sizes": "Tải xuống {{download}} · cần {{peak}} dung lượng trống trong khi cập nhật",
-            "sizesEstimate": "Tải xuống tối đa {{download}} · cần {{peak}} dung lượng trống trong khi cập nhật (ước tính)",
+            "sizesEstimate": "Tải xuống khoảng {{download}} · cần {{peak}} dung lượng trống trong khi cập nhật (ước tính)",
             "unknown": "Không rõ trạng thái cập nhật: GameLib không thấy nhánh {{branch}} của trò chơi này."
         },
         "wineLabel": "Wine:"

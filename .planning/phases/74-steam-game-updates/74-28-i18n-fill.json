@@ -1,0 +1,149 @@
+{
+  "en": {
+    "gamepage.update.sizesEstimate": "Download about {{download}} · needs {{peak}} free during update (estimate)"
+  },
+  "ar": {
+    "gamepage.update.sizesEstimate": "التنزيل حوالي {{download}} · يحتاج إلى {{peak}} مساحة حرة أثناء التحديث (تقدير)"
+  },
+  "az": {
+    "gamepage.update.sizesEstimate": "Yükləmə təxminən {{download}} · yeniləmə zamanı {{peak}} boş yer lazımdır (təxmini)"
+  },
+  "be": {
+    "gamepage.update.sizesEstimate": "Спампоўка прыкладна {{download}} · падчас абнаўлення патрэбна {{peak}} вольнага месца (ацэнка)"
+  },
+  "bg": {
+    "gamepage.update.sizesEstimate": "Изтегляне около {{download}} · нужни са {{peak}} свободно място по време на актуализацията (приблизително)"
+  },
+  "br": {
+    "gamepage.update.sizesEstimate": "Pellgargañ war-dro {{download}} · ezhomm eus {{peak}} a blas dieub e-pad an hizivadur (priziadenn)"
+  },
+  "bs": {
+    "gamepage.update.sizesEstimate": "Preuzimanje oko {{download}} · potrebno {{peak}} slobodnog prostora tokom ažuriranja (procjena)"
+  },
+  "ca": {
+    "gamepage.update.sizesEstimate": "Baixada d'aproximadament {{download}} · cal {{peak}} lliures durant l'actualització (estimació)"
+  },
+  "cs": {
+    "gamepage.update.sizesEstimate": "Stažení přibližně {{download}} · během aktualizace potřebuje {{peak}} volného místa (odhad)"
+  },
+  "da": {
+    "gamepage.update.sizesEstimate": "Download på cirka {{download}} · kræver {{peak}} ledig plads under opdateringen (estimat)"
+  },
+  "de": {
+    "gamepage.update.sizesEstimate": "Download ca. {{download}} · benötigt {{peak}} freien Speicher während des Updates (Schätzung)"
+  },
+  "el": {
+    "gamepage.update.sizesEstimate": "Λήψη περίπου {{download}} · απαιτούνται {{peak}} ελεύθερα κατά την ενημέρωση (εκτίμηση)"
+  },
+  "es": {
+    "gamepage.update.sizesEstimate": "Descarga de unos {{download}} · necesita {{peak}} libres durante la actualización (estimado)"
+  },
+  "et": {
+    "gamepage.update.sizesEstimate": "Allalaadimine umbes {{download}} · uuendamise ajal on vaja {{peak}} vaba ruumi (hinnang)"
+  },
+  "eu": {
+    "gamepage.update.sizesEstimate": "Deskarga gutxi gorabehera {{download}} · eguneratzean {{peak}} toki libre behar dira (zenbatespena)"
+  },
+  "fa": {
+    "gamepage.update.sizesEstimate": "دانلود حدود {{download}} · در طول به‌روزرسانی به {{peak}} فضای خالی نیاز است (تخمینی)"
+  },
+  "fi": {
+    "gamepage.update.sizesEstimate": "Lataus noin {{download}} · päivityksen aikana tarvitaan {{peak}} vapaata tilaa (arvio)"
+  },
+  "fr": {
+    "gamepage.update.sizesEstimate": "Téléchargement d'environ {{download}} · nécessite {{peak}} libres pendant la mise à jour (estimation)"
+  },
+  "ga": {
+    "gamepage.update.sizesEstimate": "Íoslódáil thart ar {{download}} · teastaíonn {{peak}} saor le linn an nuashonraithe (meastachán)"
+  },
+  "gl": {
+    "gamepage.update.sizesEstimate": "Descarga de aproximadamente {{download}} · precisa de {{peak}} libres durante a actualización (estimación)"
+  },
+  "he": {
+    "gamepage.update.sizesEstimate": "הורדה של כ-{{download}} · נדרשים {{peak}} פנויים במהלך העדכון (הערכה)"
+  },
+  "hr": {
+    "gamepage.update.sizesEstimate": "Preuzimanje oko {{download}} · potrebno je {{peak}} slobodnog prostora tijekom ažuriranja (procjena)"
+  },
+  "hu": {
+    "gamepage.update.sizesEstimate": "Letöltés: körülbelül {{download}} · a frissítés alatt {{peak}} szabad hely szükséges (becslés)"
+  },
+  "id": {
+    "gamepage.update.sizesEstimate": "Unduhan sekitar {{download}} · membutuhkan {{peak}} ruang kosong selama pembaruan (perkiraan)"
+  },
+  "it": {
+    "gamepage.update.sizesEstimate": "Download di circa {{download}} · servono {{peak}} liberi durante l'aggiornamento (stima)"
+  },
+  "ja": {
+    "gamepage.update.sizesEstimate": "ダウンロード約{{download}} · アップデート中に{{peak}}の空き容量が必要（推定）"
+  },
+  "ka": {
+    "gamepage.update.sizesEstimate": "ჩამოტვირთვა დაახლოებით {{download}} · განახლებისას საჭიროა {{peak}} თავისუფალი ადგილი (შეფასება)"
+  },
+  "ko": {
+    "gamepage.update.sizesEstimate": "약 {{download}} 다운로드 · 업데이트 중 {{peak}}의 여유 공간 필요 (추정)"
+  },
+  "lt": {
+    "gamepage.update.sizesEstimate": "Atsisiuntimas apie {{download}} · naujinimo metu reikia {{peak}} laisvos vietos (įvertis)"
+  },
+  "ml": {
+    "gamepage.update.sizesEstimate": "ഏകദേശം {{download}} ഡൗൺലോഡ് · അപ്ഡേറ്റ് സമയത്ത് {{peak}} ഒഴിഞ്ഞ സ്ഥലം ആവശ്യമാണ് (ഏകദേശം)"
+  },
+  "nb_NO": {
+    "gamepage.update.sizesEstimate": "Nedlasting på omtrent {{download}} · trenger {{peak}} ledig plass under oppdateringen (estimat)"
+  },
+  "nl": {
+    "gamepage.update.sizesEstimate": "Download van ongeveer {{download}} · vereist {{peak}} vrije ruimte tijdens de update (schatting)"
+  },
+  "pl": {
+    "gamepage.update.sizesEstimate": "Pobieranie około {{download}} · podczas aktualizacji wymaga {{peak}} wolnego miejsca (szacunek)"
+  },
+  "pt": {
+    "gamepage.update.sizesEstimate": "Transferência de cerca de {{download}} · precisa de {{peak}} livres durante a atualização (estimativa)"
+  },
+  "pt_BR": {
+    "gamepage.update.sizesEstimate": "Download de cerca de {{download}} · precisa de {{peak}} livres durante a atualização (estimativa)"
+  },
+  "ro": {
+    "gamepage.update.sizesEstimate": "Descărcare de aproximativ {{download}} · necesită {{peak}} liberi în timpul actualizării (estimare)"
+  },
+  "ru": {
+    "gamepage.update.sizesEstimate": "Загрузка около {{download}} · во время обновления требуется {{peak}} свободного места (оценка)"
+  },
+  "sk": {
+    "gamepage.update.sizesEstimate": "Sťahovanie približne {{download}} · počas aktualizácie vyžaduje {{peak}} voľného miesta (odhad)"
+  },
+  "sl": {
+    "gamepage.update.sizesEstimate": "Prenos približno {{download}} · med posodobitvijo je potrebnega {{peak}} prostega prostora (ocena)"
+  },
+  "sr": {
+    "gamepage.update.sizesEstimate": "Преузимање око {{download}} · током ажурирања потребно је {{peak}} слободног простора (процена)"
+  },
+  "sv": {
+    "gamepage.update.sizesEstimate": "Nedladdning på cirka {{download}} · kräver {{peak}} ledigt utrymme under uppdateringen (uppskattning)"
+  },
+  "ta": {
+    "gamepage.update.sizesEstimate": "சுமார் {{download}} பதிவிறக்கம் · புதுப்பிக்கும்போது {{peak}} காலி இடம் தேவை (மதிப்பீடு)"
+  },
+  "th": {
+    "gamepage.update.sizesEstimate": "ดาวน์โหลดประมาณ {{download}} · ต้องการพื้นที่ว่าง {{peak}} ระหว่างการอัปเดต (ประมาณการ)"
+  },
+  "tr": {
+    "gamepage.update.sizesEstimate": "Yaklaşık {{download}} indirme · güncelleme sırasında {{peak}} boş alan gerekir (tahmin)"
+  },
+  "uk": {
+    "gamepage.update.sizesEstimate": "Завантаження приблизно {{download}} · під час оновлення потрібно {{peak}} вільного місця (оцінка)"
+  },
+  "uz": {
+    "gamepage.update.sizesEstimate": "Taxminan {{download}} yuklab olish · yangilanish vaqtida {{peak}} bo'sh joy kerak (taxminiy)"
+  },
+  "vi": {
+    "gamepage.update.sizesEstimate": "Tải xuống khoảng {{download}} · cần {{peak}} dung lượng trống trong khi cập nhật (ước tính)"
+  },
+  "zh_Hans": {
+    "gamepage.update.sizesEstimate": "下载约 {{download}} · 更新期间需要 {{peak}} 可用空间（估算）"
+  },
+  "zh_Hant": {
+    "gamepage.update.sizesEstimate": "下載約 {{download}} · 更新期間需要 {{peak}} 可用空間（估計）"
+  }
+}

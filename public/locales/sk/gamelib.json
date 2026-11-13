@@ -107,7 +107,7 @@
             "registered": "Steam túto hru aktualizuje.",
             "showSize": "Zobraziť veľkosť aktualizácie",
             "sizes": "Sťahovanie {{download}} · počas aktualizácie vyžaduje {{peak}} voľného miesta",
-            "sizesEstimate": "Sťahovanie do {{download}} · počas aktualizácie vyžaduje {{peak}} voľného miesta (odhad)",
+            "sizesEstimate": "Sťahovanie približne {{download}} · počas aktualizácie vyžaduje {{peak}} voľného miesta (odhad)",
             "unknown": "Stav aktualizácie nie je známy: GameLib nevidí vetvu {{branch}} tejto hry."
         },
         "wineLabel": "Wine:"

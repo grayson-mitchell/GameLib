@@ -107,7 +107,7 @@
             "registered": "Steam atnaujins šį žaidimą.",
             "showSize": "Rodyti naujinimo dydį",
             "sizes": "Atsisiuntimas {{download}} · naujinimo metu reikia {{peak}} laisvos vietos",
-            "sizesEstimate": "Atsisiuntimas iki {{download}} · naujinimo metu reikia {{peak}} laisvos vietos (įvertis)",
+            "sizesEstimate": "Atsisiuntimas apie {{download}} · naujinimo metu reikia {{peak}} laisvos vietos (įvertis)",
             "unknown": "Naujinimo būsena nežinoma: GameLib nemato šio žaidimo šakos {{branch}}."
         },
         "wineLabel": "Wine:"

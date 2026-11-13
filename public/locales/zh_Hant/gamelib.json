@@ -105,7 +105,7 @@
             "registered": "Steam 將更新此遊戲。",
             "showSize": "顯示更新大小",
             "sizes": "下載 {{download}} · 更新期間需要 {{peak}} 可用空間",
-            "sizesEstimate": "最多下載 {{download}} · 更新期間需要 {{peak}} 可用空間（估計）",
+            "sizesEstimate": "下載約 {{download}} · 更新期間需要 {{peak}} 可用空間（估計）",
             "unknown": "更新狀態未知：GameLib 無法看到此遊戲的 {{branch}} 分支。"
         },
         "wineLabel": "Wine："

@@ -117,7 +117,7 @@ export async function confirmSteamUpdate({
   }
   const sizes = t('gamelib:gamepage.update.sizesEstimate', {
     defaultValue:
-      'Download up to {{download}} · needs {{peak}} free during update (estimate)',
+      'Download about {{download}} · needs {{peak}} free during update (estimate)',
     ...params
   })
   const message = estimate.oldManifestAvailable

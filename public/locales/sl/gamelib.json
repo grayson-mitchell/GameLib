@@ -107,7 +107,7 @@
             "registered": "Steam bo posodobil to igro.",
             "showSize": "Pokaži velikost posodobitve",
             "sizes": "Prenos {{download}} · med posodobitvijo je potrebnega {{peak}} prostega prostora",
-            "sizesEstimate": "Prenos do {{download}} · med posodobitvijo je potrebnega {{peak}} prostega prostora (ocena)",
+            "sizesEstimate": "Prenos približno {{download}} · med posodobitvijo je potrebnega {{peak}} prostega prostora (ocena)",
             "unknown": "Stanje posodobitve ni znano: GameLib ne vidi veje {{branch}} te igre."
         },
         "wineLabel": "Wine:"

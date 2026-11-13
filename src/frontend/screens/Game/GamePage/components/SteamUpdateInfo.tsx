@@ -90,7 +90,7 @@ const SteamUpdateInfo = ({ appName, hasUpdate }: Props) => {
         {estimate.oldManifestAvailable
           ? t(
               'gamepage.update.sizesEstimate',
-              'Download up to {{download}} · needs {{peak}} free during update (estimate)',
+              'Download about {{download}} · needs {{peak}} free during update (estimate)',
               params
             )
           : `${t(
@@ -99,7 +99,7 @@ const SteamUpdateInfo = ({ appName, hasUpdate }: Props) => {
               params
             )} ${t(
               'gamepage.update.sizesEstimate',
-              'Download up to {{download}} · needs {{peak}} free during update (estimate)',
+              'Download about {{download}} · needs {{peak}} free during update (estimate)',
               params
             )}`}
       </span>

@@ -108,7 +108,7 @@
             "registered": "Nuashonrós Steam an cluiche seo.",
             "showSize": "Taispeáin méid an nuashonraithe",
             "sizes": "Íoslódáil {{download}} · teastaíonn {{peak}} saor le linn an nuashonraithe",
-            "sizesEstimate": "Íoslódáil suas le {{download}} · teastaíonn {{peak}} saor le linn an nuashonraithe (meastachán)",
+            "sizesEstimate": "Íoslódáil thart ar {{download}} · teastaíonn {{peak}} saor le linn an nuashonraithe (meastachán)",
             "unknown": "Stádas an nuashonraithe anaithnid: ní féidir le GameLib brainse {{branch}} an chluiche seo a fheiceáil."
         },
         "wineLabel": "Wine:"

@@ -105,7 +105,7 @@
             "registered": "Steam werkt deze game bij.",
             "showSize": "Updategrootte tonen",
             "sizes": "Download {{download}} · vereist {{peak}} vrije ruimte tijdens de update",
-            "sizesEstimate": "Download tot {{download}} · vereist {{peak}} vrije ruimte tijdens de update (schatting)",
+            "sizesEstimate": "Download van ongeveer {{download}} · vereist {{peak}} vrije ruimte tijdens de update (schatting)",
             "unknown": "Updatestatus onbekend: GameLib kan de {{branch}}-branch van deze game niet zien."
         },
         "wineLabel": "Wine:"

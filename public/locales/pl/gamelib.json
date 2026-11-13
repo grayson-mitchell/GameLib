@@ -107,7 +107,7 @@
             "registered": "Steam zaktualizuje tę grę.",
             "showSize": "Pokaż rozmiar aktualizacji",
             "sizes": "Pobieranie {{download}} · podczas aktualizacji wymaga {{peak}} wolnego miejsca",
-            "sizesEstimate": "Pobieranie do {{download}} · podczas aktualizacji wymaga {{peak}} wolnego miejsca (szacunek)",
+            "sizesEstimate": "Pobieranie około {{download}} · podczas aktualizacji wymaga {{peak}} wolnego miejsca (szacunek)",
             "unknown": "Stan aktualizacji nieznany: GameLib nie widzi gałęzi {{branch}} tej gry."
         },
         "wineLabel": "Wine:"

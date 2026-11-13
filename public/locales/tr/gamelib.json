@@ -105,7 +105,7 @@
             "registered": "Steam bu oyunu güncelleyecek.",
             "showSize": "Güncelleme boyutunu göster",
             "sizes": "İndirme {{download}} · güncelleme sırasında {{peak}} boş alan gerekir",
-            "sizesEstimate": "{{download}} boyutuna kadar indirme · güncelleme sırasında {{peak}} boş alan gerekir (tahmin)",
+            "sizesEstimate": "Yaklaşık {{download}} indirme · güncelleme sırasında {{peak}} boş alan gerekir (tahmin)",
             "unknown": "Güncelleme durumu bilinmiyor: GameLib bu oyunun {{branch}} dalını göremiyor."
         },
         "wineLabel": "Wine:"
