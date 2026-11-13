@@ -5,7 +5,7 @@ milestone_name: Foundations
 status: executing
 stopped_at: Phase 75 context gathered
 last_updated: "2026-11-12T19:20:13.737Z"
-last_activity: 2026-11-12
+last_activity: 2026-11-13
 progress:
   total_phases: 23
   completed_phases: 14
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 74 (steam-game-updates) — EXECUTING
 Plan: 22 of 22 (gap closure; 74-14..21 complete; 74-22 next, the live UAT)
 Status: Ready to execute
-Last activity: 2026-11-12
+Last activity: 2026-11-13 - quick 261113-n39 (bridge SteamUser v024 fix) complete; 74-22 live UAT awaiting operator
 
 Progress: [██████████] 99%
 
@@ -728,6 +728,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261111-n9y | Pre-push `backend-di-ceilings` unblocked: 813bc7c6c's `jest.mock('backend/constants/environment')` (jestMock 7 > baseline 6 in humble `user.test.ts`) removed by injecting the platform — `HumbleUser.disconnect(deps: { isMac?: boolean } = {})`, defaulting to the real `isMac`; the production IPC caller passes nothing. Tests pass `{ isMac }`, plus one no-arg default test keyed on `process.platform`. Baseline unchanged. | 2026-11-11 | 1c4b57f92, fc935d0a0 | backend-di-ceilings PASS; user.test.ts 89/89; tsc clean; scoped prettier clean | [261111-n9y-inject-humble-disconnect-platform-check-](./quick/261111-n9y-inject-humble-disconnect-platform-check-/) |
 | 261112-90h | Game-page Steam Uninstall now confirms every route not delegated to steam://uninstall (bridge, bottle, unadopted Mac native, native + delete-directly): `getSteamDeleteRoute` reports `delegated`; UninstallModal hides Remove prefix for Steam and the backend never removes a Steam prefix (shared CrossOver bottle hazard). Closes 66.3 UAT test 5. | 2026-11-12 | 01a3603f1 | Touched suites pass; tsc clean; operator live check approved | [261112-90h-game-page-steam-uninstall-confirms-gamel](./quick/261112-90h-game-page-steam-uninstall-confirms-gamel/) |
 | 261113-8m6 | Steam route row compacted (Install info + install dialog): shared `SteamBridgeRouteSummary` shows the route label, plus a warning badge ("N Steam calls not covered" / issue label) only on an issue; MUI tooltip holds the full reason + symbols capped at 10 + "and N more". Route notice / bridge setup `{{symbols}}` capped too. Todo closed. | 2026-11-13 | 579ab0915, 6ecc60d46, daba8a55e | Frontend jest pass (5516); codecheck clean; scoped prettier clean; lint-translations:gamelib red pre-existing (not in CI); live Core Keeper check pending | [261113-8m6-compact-steam-bridge-route-row-in-instal](./quick/261113-8m6-compact-steam-bridge-route-row-in-instal/) |
+| 261113-n39 | Bridge helper restored after the Nov 10 Mac Steam update dropped SteamAPI_SteamUser_v023: generator probes every versioned accessor newest-first (logs INIT accessor/MISSING); unresolvable SteamUser now reports a distinct steam-client-updated outcome (WHOAMI reason 0x02, no 480 fallback). Pinned-dylib follow-up is a todo. | 2026-11-13 | be126dc39, 81d24a7da | Live WHOAMI ok (SteamUser=v024); Hell Clock bridge launch approved; helperProcess 33/33; i18n lint red (new key + pre-existing) | [261113-n39-fix-bridge-helper-steamuser-v024-accesso](./quick/261113-n39-fix-bridge-helper-steamuser-v024-accesso/) |
 
 ## Session Continuity
 
