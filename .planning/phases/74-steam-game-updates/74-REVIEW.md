@@ -1,103 +1,241 @@
 ---
 phase: 74-steam-game-updates
+reviewed: 2026-11-13T05:09:24Z
 depth: standard
-files_reviewed: 53
-diff_base: d4676c751
-findings: { critical: 0, warning: 10, info: 3, total: 13 }
+diff_base: 1ef53a785
+files_reviewed: 51
+files_reviewed_list:
+  - meta/__tests__/genI18nGateScope.test.ts
+  - meta/i18nForkTouchedFiles.json
+  - src-tauri/crates/gamelib-depot/src/delta.rs
+  - src-tauri/crates/gamelib-depot/src/manifest.rs
+  - src-tauri/crates/gamelib-depot/tests/delta_fallback.rs
+  - src-tauri/crates/gamelib-depot/tests/summarize_delta.rs
+  - src-tauri/crates/gamelib-depot/tests/support/delta_env.rs
+  - src-tauri/src/dialogs.rs
+  - src-tauri/src/main.rs
+  - src/backend/downloadmanager/__tests__/updateElement.test.ts
+  - src/backend/downloadmanager/__tests__/utils.test.ts
+  - src/backend/downloadmanager/updateElement.ts
+  - src/backend/downloadmanager/utils.ts
+  - src/backend/storeManagers/__tests__/createStoreManagers.test.ts
+  - src/backend/storeManagers/gog/games.ts
+  - src/backend/storeManagers/index.ts
+  - src/backend/storeManagers/steam/__tests__/library.updatePollOnce.test.ts
+  - src/backend/storeManagers/steam/__tests__/updateBridge.test.ts
+  - src/backend/storeManagers/steam/__tests__/updateDetection.test.ts
+  - src/backend/storeManagers/steam/__tests__/updateDispatch.test.ts
+  - src/backend/storeManagers/steam/__tests__/updateInfo.test.ts
+  - src/backend/storeManagers/steam/__tests__/updateLaunchPrompt.test.ts
+  - src/backend/storeManagers/steam/__tests__/updateNative.test.ts
+  - src/backend/storeManagers/steam/acfInstalledDepots.ts
+  - src/backend/storeManagers/steam/depot/plan.ts
+  - src/backend/storeManagers/steam/depot/planModel.ts
+  - src/backend/storeManagers/steam/depot/select.ts
+  - src/backend/storeManagers/steam/depotRust/__tests__/depotJobInputs.test.ts
+  - src/backend/storeManagers/steam/depotRust/__tests__/rustInstall.test.ts
+  - src/backend/storeManagers/steam/depotRust/__tests__/updateEstimate.test.ts
+  - src/backend/storeManagers/steam/depotRust/install.ts
+  - src/backend/storeManagers/steam/depotRust/retire.ts
+  - src/backend/storeManagers/steam/depotRust/updateEstimate.ts
+  - src/backend/storeManagers/steam/games.ts
+  - src/backend/storeManagers/steam/library/installPolling.ts
+  - src/backend/storeManagers/steam/library/installRoot.ts
+  - src/backend/storeManagers/steam/library/pollState.ts
+  - src/backend/storeManagers/steam/library/updatePollOnce.ts
+  - src/backend/storeManagers/steam/updateBridge.ts
+  - src/backend/storeManagers/steam/updateDetection.ts
+  - src/backend/storeManagers/steam/updateInfo.ts
+  - src/backend/storeManagers/steam/updateLaunchPrompt.ts
+  - src/backend/storeManagers/steam/updateNative.ts
+  - src/common/types.ts
+  - src/common/types/game_manager.ts
+  - src/frontend/helpers/__tests__/libraryLaunchSteamUpdatePrompt.test.ts
+  - src/frontend/helpers/library.ts
+  - src/frontend/screens/Game/GamePage/components/SteamUpdateInfo.tsx
+  - src/frontend/screens/Game/GamePage/components/__tests__/SteamUpdateInfo.test.tsx
+  - src/frontend/state/__tests__/libraryState.test.ts
+  - src/frontend/state/libraryState.ts
+findings:
+  critical: 2
+  warning: 3
+  info: 6
+  total: 11
 status: issues_found
-reviewed: 2026-11-13
 ---
 
-# Phase 74 code review (standard)
+# Phase 74: Code Review Report (gap-closure re-review, plans 74-14..74-21)
 
-Scope: the 53 non-test source files touched by Phase 74 commits (d4676c751..HEAD), excluding files changed only by the concurrent quick task 261113-8m6. delta.rs was read in full; the other 52 files were read as Phase 74 diffs. There are no blockers; WR-01 is the closest call.
+**Reviewed:** 2026-11-13T05:09:24Z
+**Depth:** standard
+**Files Reviewed:** 51
+**Status:** issues_found
+
+## Summary
+
+This re-review covers the gap-closure diff `1ef53a785..HEAD` over the 51 files that plans 74-14 to 74-21 touched. It replaces the first-pass review, which stays in git history. Most prior findings are fixed and their fixes look sound: the retire rule, the committed-wins race, the IN-03 removal gate, the bounded pre-launch PICS read, the in-flight/queued launch block and the three-button dialog mapping.
+
+Two plans brought in new defects:
+
+- **74-18's "already current" short-circuit** in `updateRegisteredSteamGame` makes a Steam-registered update impossible when Steam is closed (CR-01).
+- **74-19 and 74-18 together** (unattended failure, then the queue's `done`, then a refresh-with-update-check, which the new re-run slot now always delivers) form a self-feeding auto-update retry loop under the default `autoUpdateGames: true`. This makes the deferred re-queue todo more severe (CR-02).
+
+WR-09 is only partly fixed: a transient Node request-code failure still takes the whole-install fallback.
+
+These already-recorded issues are not re-reported: Esc not dismissing the macOS three-button box, the `depotJobEvent` IPC `invalid_union`, the update-button flash, and the todos deferred by 74-21.
+
+## Prior findings disposition
+
+| Prior ID | Disposition | Verified against current code |
+| --- | --- | --- |
+| WR-01 retire deletes unselected depots | **Fixed** | `depotRust/retire.ts` retires only depots absent from the unfiltered branch list (`collectBranchDepotList`). It keeps selected, skipped, still-on-branch, list-incomplete and DLC-not-fetched depots. The key is fetched with the real owner (`install.ts:207-227`). |
+| WR-02 estimate over/under-count | **Fixed** (see IN-02) | `manifest.rs` `unique_new_chunk_bytes` excludes old-manifest SHAs. `updateEstimate.ts:139-171` adds new-depot `totalBytes` to download and peak. |
+| WR-03 pause discards temps | **Deferred to todo** | `2026-11-13-bridge-update-resume-keeps-verified-temps.md`; `delta.rs` is unchanged here. |
+| WR-04 registered completion not reflected | **Fixed**, but a new defect was introduced (CR-01, WR-02) | `updateInfo.ts:47-55` re-reads registered state. `updatePollOnce.ts` completes on target build or on quiet end with a current ACF, and invalidates on quiet end. `SteamUpdateInfo.tsx` refetches on status change. `libraryState.ts` adds a re-run slot. |
+| WR-04b pre-launch PICS wait unbounded | **Fixed** | `updateDetection.ts:231-243`: connect and read are inside one `withTimeout`, and the late rejection is swallowed. |
+| WR-05 launch while update queued/running | **Fixed** | `updateLaunchPrompt.ts:53-80`: blocks on `nativeInstallsInFlight` (not aborted), and on a queued update while the queue is `running`. |
+| WR-06 committed delta reported cancelled | **Fixed** | `install.ts:297-311` and `updateBridge.ts:187-191`: a committed delta bypasses the abort rewrite and runs follow-ups. |
+| WR-07 planning label | **Deferred to todo** | `2026-11-13-bridge-update-hero-planning-label.md` |
+| WR-08 unattended logon / re-queue / double detection | **Partially fixed** | Unattended auth is fixed: no `guidedAction`, no Keychain-gate unlock, registered games refused. The re-queue and double-detection remainder is deferred to `2026-11-13-auto-update-requeue-churn-and-double-detection.md`. CR-02 shows the remainder is a self-feeding loop, so the todo understates it. |
+| WR-09 fallback on any old-manifest failure | **Partially fixed** | `delta.rs:879-885`: 5xx, network and io errors now fail the run. But `ManifestUnavailable` stays "definitive", and a failed or refused Node request-code call degrades into it (`fetch.rs:341` then `fetch.rs:290-294`). See WR-01. |
+| WR-10 estimate job-key collision / no bound | **Deferred to todo** | `2026-11-13-update-estimate-job-key-collision-and-bound.md`; `summary-${appId}` key unchanged (`updateEstimate.ts:104`). |
+| IN-01 `prune` has no caller | **Deferred to todo** | `2026-11-13-manifest-store-prune-has-no-caller.md` |
+| IN-02 orphan journal after cancel | **Deferred to todo** | `2026-11-13-orphan-delta-journal-after-cancel.md` |
+| IN-03 removals after a failed rename | **Fixed** | `delta.rs:690-708`: removals run only when `failures.is_empty()`, with a warning otherwise. Covered by `commit_rename_failure_removes_no_retired_file`. |
+| UAT 7 stacked prompts / OK = Update now | **Fixed** (Esc is a known open issue) | `dialogs.rs` `YesNoCancelCustom` plus `three_button_choice` (no `Ok` guess). Play anyway is index 0 and `cancelId` is 0. `library.ts:178-183` suppresses the inherited prompt for Steam. |
+
+## Narrative Findings (AI reviewer)
+
+## Critical Issues
+
+### CR-01: Updating a Steam-registered game while Steam is closed does nothing (74-18 regression)
+
+**File:** `src/backend/storeManagers/steam/updateNative.ts:51-65`
+**Issue:**
+- The new short-circuit treats "ACF not pending and bit 4 set" as "already current" and returns `{ status: 'done' }` without handing anything to Steam. That is not what makes a registered game stale.
+- `updateDetection.ts:206-209` asks PICS about a registered game exactly when **Steam is not running and the ACF is not pending**. It marks the game `stale` when PICS reports a newer build (`updateDetection.ts:300-305`). The ACF does not know about the update yet because Steam has not run to learn of it.
+- With the short-circuit, clicking Update on such a game:
+  1. logs "already current",
+  2. invalidates the cache,
+  3. returns done; the queue then sends updating and done, and the badge clears,
+  4. on the next refresh, PICS re-detects `stale` and the badge comes back.
+- Before 74-18 this path opened `steam://nav/games/details/<id>`, which started Steam so it could see the update. The user can now never update a registered game from GameLib while Steam is closed.
+- The new test only covers an ACF with no PICS knowledge (`updateNative.test.ts`, "already-current ACF"). It does not cover the PICS-stale case.
+
+**Fix:** Short-circuit only when no cached PICS target contradicts the ACF:
+```ts
+const known = getLastKnownSteamUpdateState(deps, appId)
+const picsSaysNewer =
+  known?.targetBuild !== undefined && known.targetBuild !== acfFields?.buildid
+if (acfFields && !isAcfUpdatePending(acfFields) &&
+    (acfFields.stateFlags & 0x4) !== 0 && !picsSaysNewer) { ...already current... }
+```
+Add a test: ACF says current with buildid 777, the cached state is `{ kind: 'registered', state: 'stale', targetBuild: '800' }`, and the result must be a hand-off (openExternal or InstallApp) plus a poll with `targetBuild: '800'`.
+
+### CR-02: A failing unattended bridge auto-update re-triggers itself with no limit (escalates the deferred WR-08 todo)
+
+**File:** `src/backend/downloadmanager/utils.ts:485-530`, `src/frontend/state/libraryState.ts:346-366` and `:223-255`, `src/backend/utils/checkGameUpdates.ts:50-61`, `src/backend/storeManagers/steam/updateBridge.ts:140-148`
+**Issue:**
+- `autoUpdateGames` defaults to `true` (`backend/config.ts:321`). Take a stale bridge game in a boot where the Keychain gate is still locked. 74-19 made the unattended lease refuse at once: no guided sign-in, no gate unlock.
+- The failure then feeds itself:
+  1. `updateQueueElement` sends `updating`, and `estimateBridgeUpdate` fails fast.
+  2. The `finally` sends `done`, and the queue notifies "Update Failed".
+  3. In the frontend, a `done` that follows `updating` calls `refreshLibrary({ checkForUpdates: true })` (`libraryState.ts:349-355`).
+  4. `checkGameUpdates` asks `listAutoUpdateableGames`, which still says stale, and `autoUpdate` re-queues the game ("Update Started").
+  5. The cycle starts again.
+- Before 74-18, a `done` that landed while that refresh was still in flight hit the `refreshing` guard and was dropped, which could break the cycle by accident. The new `pendingUpdateCheckRerun` slot now guarantees every such request gets its re-check.
+- Each cycle costs two OS notifications plus a detection pass. The deferred todo frames this as "re-queued on every refresh". In fact each failure causes the next refresh, so it is a loop, not churn.
+
+**Fix:** Pull the todo's per-build "auto-update attempted" marker into this phase. Record `{appId, targetBuild}` when an unattended update fails, and have `listAutoUpdateableGames` (or `autoUpdate`) skip that pair until the target build changes or the user acts. As a cheap backstop, skip the `checkForUpdates` refresh in `libraryState` for a `done` whose element was unattended, or pass `unattended` through the status so the frontend can tell.
 
 ## Warnings
 
-### WR-01: Retired-depot logic treats any unselected depot as retired, which can delete installed content
-- File: `src/backend/storeManagers/steam/depotRust/install.ts:200-224`
-- Issue:
-  - `selected` is built only from `refs.depots`. Every ACF-installed depot not in it is sent to Rust as a retired depot, and delta.rs `removed_paths` deletes its files.
-  - A depot can be absent from `refs.depots` without the new build dropping it. `refs.skippedDepots` holds EResult-40 blocked depots, and `selectAllDepots` can omit a depot for language, OS or DLC ownership. A transient or partial ownership answer, or a language change, would delete DLC or language content.
-  - The retired depot key is fetched with `ownerAppId: appId`, which is wrong for DLC or shared depots.
-- Fix: retire only depots absent from the branch's PICS depot list for this build. Exclude `skippedDepots`, and never delete a depot the selector skipped for ownership or language.
+### WR-01: WR-09 only partly fixed: transient request-code failures still force the whole-install fallback
 
-### WR-02: Estimate over-counts reused chunks and under-counts new depots (UAT gap: estimate 3-7x high)
-- File: `src-tauri/crates/gamelib-depot/src/manifest.rs:88-98` and `src/backend/storeManagers/steam/depotRust/updateEstimate.ts:117-130`
-- Issue:
-  - `unique_chunk_bytes(ws.changed)` counts every chunk of every changed file. It does not subtract chunks whose SHA already exists anywhere in the old manifest, which delta.rs reuses via `OldIndex`.
-  - A depot with no old GID (`d.delta === undefined`) is skipped in TS. Its bytes are missing from both download and peak, so the free-space check can pass wrongly.
-- Fix: subtract old-manifest chunk SHAs, which needs no local hashing. For new depots, add `total_bytes` to the download figure and the peak.
+**File:** `src-tauri/crates/gamelib-depot/src/delta.rs:874-885`, `src-tauri/crates/gamelib-depot/src/fetch.rs:290-294,341`
+**Issue:**
+- The old-manifest ref is loaded with `request_code: None`, so `fetch_manifest` asks Node.
+- Any Node-side failure becomes `Ok(None)`: CM disconnected, not signed in, a lease refused, a timeout. `Ok(None)` then becomes `ManifestUnavailable` ("no manifest request code"), and `is_definitive_old_manifest_failure` treats `ManifestUnavailable` as definitive. The doc comment says so explicitly.
+- The prior finding named `not_signed_in` as exactly the transient case that must not fall back. The fallback still clears `retired_depots`, so a transient CM blip still leaves obsolete files behind and turns a 1 GB delta into a whole-install SHA reconcile.
+- The tests use HTTP status replies, so they do not cover this path.
 
-### WR-03: Pause discards completed temps, so resume re-downloads the whole delta (UAT gap)
-- File: `src-tauri/crates/gamelib-depot/src/delta.rs:1273-1287` and `1527-1535`
-- Issue: temps are deleted at the start of every run and on any cancel or failure before commit. Pause maps to cancel, so every built and SHA-verified temp is thrown away.
-- Fix: on cancel, keep temps that passed the whole-file SHA. Reuse a temp whose size matches and whose re-hash matches. Delete temps only on error or when the target build changes.
+**Fix:** Make the Node failure distinguishable. Have `request_code_from_node` return `Err(Failed{kind: CmUnavailable | NotSignedIn, ..})` for a refused or failed Node call, and keep `Ok(None)` only for "Steam answered with no code". Or tag the "no manifest request code" failure with a distinct kind that `is_definitive_old_manifest_failure` excludes. Add a delta_fallback test whose fake host refuses `manifest_request_code`.
 
-### WR-04: Update-state cache is not refreshed for registered games, so completion is not reflected (UAT gap, item 12)
-- File: `src/backend/storeManagers/steam/updateInfo.ts:33-44`, `updateDetection.ts:140`, `library/updatePollOnce.ts:106-118`
-- Issue:
-  - `getLastKnownSteamUpdateState` has no TTL and no ACF re-read.
-  - The poll's quiet end (40 ticks) fires even when `sawPending` is true, and it does not invalidate the cache.
-  - `SteamUpdateInfo.tsx` refetches only when `[appName, hasUpdate]` change.
-- Fix: recompute registered state from the ACF on every call. Do not end the poll quietly after `sawPending`, or at least invalidate the cache when it ends. Refetch in the frontend on the 'done' transition.
+### WR-02: Game-page re-read with a 3 s bound can flip a stale registered game to "current"
 
-### WR-04b: The pre-launch "bounded 3 s" PICS wait is not bounded
-- File: `src/backend/storeManagers/steam/updateDetection.ts:231-241`
-- Issue: `anonymousClient.get('update-check')` sits outside `withTimeout`, and its own connect timeout is 15 s. Play on a slow network can block about 18 s, because `force: true` bypasses the cache.
-- Fix: wrap the client connect and `getProductInfo` in one `withTimeout(…, timeoutMs)`.
+**File:** `src/backend/storeManagers/steam/updateInfo.ts:47-55` (with `updateDetection.ts:306-308`)
+**Issue:**
+- The new registered re-read calls `detectSteamUpdates` with `STEAM_UPDATE_PRELAUNCH_TIMEOUT_MS` (3 000 ms) instead of the 20 000 ms refresh bound. It is not forced, but the PICS TTL expires.
+- When Steam is closed, the ACF is not pending and PICS is needed, the anonymous connect plus read now has 3 s (cold connects routinely exceed that).
+- On timeout, a registered candidate falls into "PICS could not cross-check: the ACF alone says current". That writes `state: 'current'` into the cache and hides the update line on a game that is actually stale. It is the same Steam-closed case as CR-01.
+- This contradicts the module contract "A PICS failure never produces 'stale' or 'current'". The tighter timeout makes the path far more likely than the refresh path.
 
-### WR-05: Launch is allowed while a bridge update is queued or running
-- File: `src/backend/storeManagers/steam/updateLaunchPrompt.ts:51-55`
-- Issue: a queued or in-flight update returns 'launch'. During commit the ACF still has bit 4, so Play can start the game on a half-renamed tree.
-- Fix: when an update is queued or in flight, notify and abort. Key prompt suppression on the ack instead.
+**Fix:** Use `STEAM_UPDATE_REFRESH_TIMEOUT_MS` here, or skip the re-read when the ACF is unchanged since the cached `installedBuild`. Separately, make the registered timeout branch keep `prior` (as the bridge branch does) instead of writing `current`.
 
-### WR-06: A committed delta that raced an abort is reported as cancelled
-- File: `src/backend/storeManagers/steam/depotRust/install.ts:~266-274`, `src/backend/storeManagers/steam/updateBridge.ts:150-153`
-- Issue: if `signal.aborted` is set when Rust returns completed, the result is rewritten to cancelled. Follow-ups (shim re-handover, redists, DRM) and the state invalidation are skipped on an updated tree, and the shim may already be replaced by the new genuine DLL.
-- Fix: when `outcome.delta?.committed` is true, report done and run the follow-ups.
+### WR-03: An auto-update re-queue silently downgrades a user-queued update to unattended
 
-### WR-07: Planning context is never cleared; hero label (UAT gap, hypothesis)
-- File: `src/backend/storeManagers/steam/depotRust/progressBridge.ts:45-58`, `src/backend/downloadmanager/utils.ts:486`
-- Issue: `stage:delta_planning` sets context `steam-update-planning`, and nothing clears it on `planned`. The long pre-job TS work (estimate with the lease, buildDepotRefs, retired-key fetches) runs before any stage event, under the generic `updating` status. The root cause of the missing label is not confirmed from source.
-- Fix: emit the planning status from TS before the estimate. Send a plain `updating` status on `planned`.
+**File:** `src/backend/storeManagers/index.ts:259-270` with `src/backend/downloadmanager/downloadqueue.ts:310-317`
+**Issue:**
+- `addToQueue` replaces an existing element for the same app (`elements[elementIndex] = element`).
+- Suppose the user clicks Update (or "Update now" in the launch prompt) and the element waits behind another download. Any refresh then runs `autoUpdate`, which replaces it with a `{ unattended: true }` element.
+- When it runs, the user's update gets no guided sign-in, no Keychain-gate unlock, and for a registered game an outright `abort` (`games.ts:811-817`). The user asked for that update.
 
-### WR-08: Auto-update can start an authenticated logon unattended and re-queue failing updates on every refresh
-- File: `src/backend/utils/checkGameUpdates.ts:50-63`, `src/backend/storeManagers/index.ts`, `src/backend/storeManagers/steam/updateBridge.ts:120-125`
-- Issue:
-  - `estimateBridgeUpdate` takes `acquireAuthenticated(guidedAction: 'install')` with no user gesture, against the rule that authentication happens only on demand.
-  - A failing update is re-queued on every refresh, with an error dialog each time.
-  - Detection runs twice per refresh.
-- Fix: make the auto path non-interactive (no guided sign-in, no error dialog), record a per-build "auto-update attempted" marker, and share one detection result.
-
-### WR-09: Fallback is taken on any old-manifest load failure, including transient ones
-- File: `src-tauri/crates/gamelib-depot/src/delta.rs:1082-1087`
-- Issue: a timeout, a 5xx or `not_signed_in` silently becomes a whole-install file-level reconcile. That reconcile also clears `retired_depots`, so obsolete files stay.
-- Fix: fall back only on a definitive unavailable or decode error. Propagate transient failures so the user can retry.
-
-### WR-10: `estimateBridgeUpdate` can collide on the active-job key and has no bound
-- File: `src/backend/storeManagers/steam/depotRust/updateEstimate.ts:100-110`, `updateInfo.ts:75`
-- Issue: the fixed key `summary-${appId}` collides between "Show update size" and a queued update's estimate, so one dispose can unregister the other's refresher. There is no signal or timeout, so a hung lease stays held.
-- Fix: use a unique key. Pass an AbortSignal with a timeout of about 60 s.
+**Fix:** In `autoUpdate`, skip apps that already have a queue element. Or in `addToQueue`, never let an `unattended` element replace an attended one (merge as `unattended = existing.unattended && incoming.unattended`).
 
 ## Info
 
-### IN-01: `ManifestStore::prune(protected)` has no production caller
-- File: `src-tauri/crates/gamelib-depot/src/manifest.rs:529`. The installed-GID protection is dead, and the cache grows unbounded.
+### IN-01: `awaitingUpdate.targetBuild` completion clause is redundant
 
-### IN-02: A cancel after the journal write leaves an orphan journal
-- File: `src-tauri/crates/gamelib-depot/src/delta.rs:1509-1527`. On a fresh run, the next run treats the orphan as a resume and hashes every file. If the next run targets a newer build, it forces the whole-install fallback.
+**File:** `src/backend/storeManagers/steam/library/updatePollOnce.ts:75-77`
+**Issue:**
+- `targetBuild` is a stale target, so it always differs from the installed `fromBuild`. That means `fields.buildid === targetBuild` already implies `fields.buildid !== fromBuild`, and the new clause can never change the result.
+- The plumbing through `pollState`, `installPolling` and `installRoot` buys nothing for completion. The UAT 12 fix actually comes from the `updateNative` short-circuit and the quiet-end branch.
 
-### IN-03: Commit deletes retired files even after a rename failed
-- File: `src-tauri/crates/gamelib-depot/src/delta.rs:690-703`. Skip the removals once `failures` is non-empty.
+**Fix:** Drop the clause, or document it as defensive.
 
-## UAT gaps located
-- Stacked pre-launch prompts: confirmed. `src-tauri/src/dialogs.rs:151` renders custom buttons only when there are exactly 2. The 3-button `updateLaunchPrompt.ts:57-70` falls back to OK-only, and OK = response 0 = Update now. Fix: use 2 buttons or a renderer modal, and remove the duplicate (inherited Heroic frontend prompt plus backend gate).
-- Registered completion not reflected: WR-04. Estimate high: WR-02. Resume re-downloads: WR-03. Hero planning label: WR-07.
+### IN-02: `max_download_bytes` is no longer a maximum
 
-## Checked and sound
-- Journal: resume matching, numeric validation, the 0o700 directory and `deny_unknown_fields`.
-- Path containment: `resolve_contained_path` on every read, write, rename and delete.
-- GIDs: kept as strings end to end.
-- Sidecar exit contract: no new timers or handles. The update poll reuses the existing interval.
-- Detection: bounded to one batched PICS read.
+**File:** `src-tauri/crates/gamelib-depot/src/manifest.rs:113-130`
+**Issue:**
+- After WR-02, the figure assumes every old file is intact. The doc comment says local damage "can only raise it, which the 'up to' wording covers", but "up to X" promises the real figure will not exceed X.
+- New depots also add uncompressed `totalBytes` to a compressed-bytes download figure (`updateEstimate.ts:157`), which is inconsistent in the other direction.
+
+**Fix:** Rename the field or the UI copy (for example "about X"), or keep the old figure as the bound and show the new one as the expected value.
+
+### IN-03: `depotOwners[depotId]` lookup in the retire owner is dead
+
+**File:** `src/backend/storeManagers/steam/depotRust/retire.ts:714`
+**Issue:** A depot reaches the retire arm only when it is absent from `branchDepotIds`. `depotOwners` has keys only for branch depots, so `refs.depotOwners[depotId]` is always `undefined` there. The owner for a retired base-app depot is always `appId`. This is correct, but the expression suggests otherwise. Also, `KeptReason` is a non-exported type used in an exported interface, which knip flags (`pnpm find-deadcode` fails, per 74-19-SUMMARY).
+
+**Fix:** Use `ownerAppId: dlc ?? appId` and export `KeptReason`.
+
+### IN-04: `collectBranchDepotList` repeats the "using its public manifest" log for every depot
+
+**File:** `src/backend/storeManagers/steam/depot/plan.ts:418-425` via `select.ts:496-514`
+**Issue:** `branchManifestGid` logs on every public fallback. It now runs twice per plan (once in `selectDepots`, once in `collectBranchDepotList`, which also covers unselected and DLC depots). On a beta branch, every non-beta depot logs twice per estimate and per update.
+
+**Fix:** Pass a `log: false` flag from `collectBranchDepotList`.
+
+### IN-05: Unattended failure log says "update not started" for failures after the job ran
+
+**File:** `src/backend/storeManagers/steam/updateBridge.ts:104-111,201`
+**Issue:**
+- `logUnattendedFailure` is also called when `downloadSteamDepotsRust` returns `error`, which can happen after download or a commit failure. The fixed message "update not started" is then wrong.
+- The disk-space and branch-unresolved refusals do not log the unattended marker at all.
+
+**Fix:** Take the phase as a parameter (`'not started' | 'failed'`), and call it on every unattended error return.
+
+### IN-06: `deps as unknown as SteamUpdateDeps` double cast and magic `0x4`
+
+**File:** `src/backend/storeManagers/steam/updateNative.ts:58,69`
+**Issue:**
+- `getLastKnownSteamUpdateState` only needs `Pick<SteamUpdateDeps, 'steamInstallRuntime'>`, so the `unknown` cast hides any future type drift.
+- `0x4` duplicates `STATE_FLAG_FULLY_INSTALLED` from `updatePollOnce.ts`.
+
+**Fix:** Pass `deps` directly (it carries `steamInstallRuntime`), and export or share the flag constant.
+
+---
+
+_Reviewed: 2026-11-13T05:09:24Z_
+_Reviewer: Claude (gsd-code-reviewer)_
+_Depth: standard_
