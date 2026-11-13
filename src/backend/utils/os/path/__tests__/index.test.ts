@@ -66,7 +66,7 @@ describe('findExecutableOnPath', () => {
   })
 
   it('win32 tries PATHEXT extensions', () => {
-    writeFileSync(join(b, 'tool.exe'), '')
+    writeFileSync(join(b, 'tool.EXE'), '')
     const r = findExecutableOnPath(
       'tool',
       { Path: `${a};${b}`, PATHEXT: '.EXE;.CMD' },
@@ -88,8 +88,8 @@ describe('findExecutableOnPath', () => {
   })
 
   it('win32 searches the cwd before PATH', () => {
-    writeFileSync(join(a, 'tool.exe'), '')
-    writeFileSync(join(b, 'tool.exe'), '')
+    writeFileSync(join(a, 'tool.EXE'), '')
+    writeFileSync(join(b, 'tool.EXE'), '')
     const r = findExecutableOnPath(
       'tool',
       { PATH: b, PATHEXT: '.EXE' },
