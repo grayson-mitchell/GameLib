@@ -3,7 +3,7 @@ import {
   createTestManagerDeps,
   createTestStores
 } from 'backend/testUtils/testServices'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { getSteamLibraries } from 'backend/utils'
@@ -42,12 +42,21 @@ describe('steamQueueHeadAlreadyInstalled', () => {
   let tmp: string
   let steamapps: string
 
-  function acf(flags: string, buildid = '25485521') {
-    mkdirSync(steamapps, { recursive: true })
-    writeFileSync(
-      join(steamapps, 'appmanifest_108600.acf'),
-      `"AppState"\n{\n\t"appid"\t"108600"\n\t"StateFlags"\t"${flags}"\n\t"buildid"\t"${buildid}"\n}\n`
-    )
+  // The manifest is read through Rust (steamfiles_read_acf), so no file is written to disk.
+  const depsWith = (
+    stateFlags: number | null,
+    buildid: string | null,
+    exists = true
+  ) => {
+    const stub = stubRustSteamFiles({
+      steamfiles_read_acf: () => ({
+        exists,
+        parsed: exists,
+        readError: null,
+        record: (exists ? { stateFlags, buildid } : null) as never
+      })
+    })
+    return { ...steamTestDeps, requestRustInvoke: stub.requestRustInvoke }
   }
   function seedBreadcrumb() {
     library.set('108600', {
@@ -67,25 +76,28 @@ describe('steamQueueHeadAlreadyInstalled', () => {
   })
 
   it('true for a current full install at the breadcrumb target, and clears the breadcrumb', async () => {
-    acf('4')
     seedBreadcrumb()
     expect(
-      await steamQueueHeadAlreadyInstalled(steamTestDeps, '108600', {})
+      await steamQueueHeadAlreadyInstalled(
+        depsWith(4, '25485521'),
+        '108600',
+        {}
+      )
     ).toBe(true)
     expect(clearSteamResumeBreadcrumb).toHaveBeenCalledWith(
-      steamTestDeps,
+      expect.anything(),
       '108600'
     )
   })
 
   it.each([
-    ['1026', '1026'],
-    ['update required (6)', '6']
+    ['1026', 1026],
+    ['update required (6)', 6],
+    ['a null stateFlags', null]
   ])('false for %s', async (_n, flags) => {
-    acf(flags)
     seedBreadcrumb()
     expect(
-      await steamQueueHeadAlreadyInstalled(steamTestDeps, '108600', {})
+      await steamQueueHeadAlreadyInstalled(depsWith(flags, '1'), '108600', {})
     ).toBe(false)
     expect(clearSteamResumeBreadcrumb).not.toHaveBeenCalled()
   })
@@ -93,26 +105,29 @@ describe('steamQueueHeadAlreadyInstalled', () => {
   it('false for a missing ACF, a non-numeric appId and no determinable target', async () => {
     seedBreadcrumb()
     expect(
-      await steamQueueHeadAlreadyInstalled(steamTestDeps, '108600', {})
+      await steamQueueHeadAlreadyInstalled(
+        depsWith(null, null, false),
+        '108600',
+        {}
+      )
     ).toBe(false)
     expect(
-      await steamQueueHeadAlreadyInstalled(steamTestDeps, '../1', {})
+      await steamQueueHeadAlreadyInstalled(depsWith(4, '1'), '../1', {})
     ).toBe(false)
     library.clear()
     expect(
-      await steamQueueHeadAlreadyInstalled(steamTestDeps, '108600', {})
+      await steamQueueHeadAlreadyInstalled(depsWith(4, '1'), '108600', {})
     ).toBe(false)
   })
 
   it('without a breadcrumb falls back to params.path/steamapps only for a registered library', async () => {
-    acf('4')
     expect(
-      await steamQueueHeadAlreadyInstalled(steamTestDeps, '108600', {
+      await steamQueueHeadAlreadyInstalled(depsWith(4, '25485521'), '108600', {
         path: join(tmp, 'lib')
       })
     ).toBe(true)
     expect(
-      await steamQueueHeadAlreadyInstalled(steamTestDeps, '108600', {
+      await steamQueueHeadAlreadyInstalled(depsWith(4, '25485521'), '108600', {
         path: join(tmp, 'other')
       })
     ).toBe(false)
@@ -123,48 +138,5 @@ describe('steamQueueHeadAlreadyInstalled', () => {
     await expect(
       steamQueueHeadAlreadyInstalled(steamTestDeps, '108600', { path: '/x' })
     ).resolves.toBe(false)
-  })
-
-  describe('on the rust flag', () => {
-    const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
-    beforeEach(() => {
-      process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-    })
-    afterEach(() => {
-      if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-      else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
-    })
-    const depsWith = (stateFlags: number | null, buildid: string | null) => {
-      const stub = stubRustSteamFiles({
-        steamfiles_read_acf: () => ({
-          exists: true,
-          parsed: true,
-          readError: null,
-          record: { stateFlags, buildid } as never
-        })
-      })
-      return { ...steamTestDeps, requestRustInvoke: stub.requestRustInvoke }
-    }
-
-    it('true for a current full install read through Rust (no file on disk)', async () => {
-      seedBreadcrumb()
-      expect(
-        await steamQueueHeadAlreadyInstalled(
-          depsWith(4, '25485521'),
-          '108600',
-          {}
-        )
-      ).toBe(true)
-    })
-
-    it('false for an update-required manifest or a null stateFlags', async () => {
-      seedBreadcrumb()
-      expect(
-        await steamQueueHeadAlreadyInstalled(depsWith(6, '1'), '108600', {})
-      ).toBe(false)
-      expect(
-        await steamQueueHeadAlreadyInstalled(depsWith(null, '1'), '108600', {})
-      ).toBe(false)
-    })
   })
 })

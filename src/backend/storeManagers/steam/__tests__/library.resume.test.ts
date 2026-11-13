@@ -162,13 +162,12 @@ jest.mock('../bridgeBottle', () => ({
   resolveBridgeBottleName: jest.fn()
 }))
 
-// ── depot mock — finalizeToSteam (D-05 startup finalize) / downloadSteamDepots
+// ── depot mock — downloadSteamDepots
 // (must NEVER be invoked from startup resume — Pitfall 4, no silent re-download).
 // Since 73-19 the resume verify itself is one Rust verify_only job
 // (depotRust/secondary.ts resumeVerifyRust, covered in rustSecondary.test.ts);
 // nothing here rebuilds a TS plan.
 jest.mock('../depot', () => ({
-  finalizeToSteam: jest.fn().mockResolvedValue(undefined),
   downloadSteamDepots: jest.fn()
 }))
 

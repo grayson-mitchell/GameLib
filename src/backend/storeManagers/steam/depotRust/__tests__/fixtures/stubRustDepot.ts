@@ -4,6 +4,7 @@
 //   jest.mock('backend/sidecar/sidecarRpc', () => ({ requestRustInvoke: jest.fn() }))
 //   (requestRustInvoke as jest.Mock).mockImplementation(stub.invoke)
 import {
+  RUST_DEPOT_FINALIZE,
   RUST_DEPOT_JOB_CANCEL,
   RUST_DEPOT_JOB_RUN,
   RUST_DEPOT_MANIFEST_SUMMARY
@@ -107,6 +108,10 @@ export function createStubRustDepot(
         if (options.summaryFor)
           return options.summaryFor(args[0] as RustSummarizeRequest)
         return options.summary ?? { depots: [], skippedDepots: [] }
+      }
+      if (channel === RUST_DEPOT_FINALIZE) {
+        // No-download finalize (75-19): the stub records it and answers a honest-empty 1026.
+        return { acf: { path: '/x', stateFlags: 1026, sizeOnDisk: '0' } }
       }
       if (channel !== RUST_DEPOT_JOB_RUN) {
         throw new Error(`stubRustDepot: unexpected channel ${channel}`)

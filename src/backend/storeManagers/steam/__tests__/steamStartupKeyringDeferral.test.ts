@@ -189,8 +189,7 @@ jest.mock('../nativeInstallSetting', () => ({
 }))
 
 jest.mock('../depot', () => ({
-  downloadSteamDepots: jest.fn(),
-  finalizeToSteam: jest.fn().mockResolvedValue(undefined)
+  downloadSteamDepots: jest.fn()
 }))
 
 jest.mock('../clientSetup', () => ({

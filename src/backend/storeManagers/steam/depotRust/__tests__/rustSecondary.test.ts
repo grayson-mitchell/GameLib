@@ -384,6 +384,24 @@ const withSteamFiles =
       ? steamFilesBacking.requestRustInvoke(channel, args)
       : depotInvoke(channel, args)
 
+/** The fallback finalize is one Rust depot_finalize: no depots, never full ownership. */
+function expectHonestEmptyFinalize(
+  stub: ReturnType<typeof createStubRustDepot>,
+  steamappsDir: string
+) {
+  const finalizes = stub.calls.filter((c) => c.channel === 'depot_finalize')
+  expect(finalizes).toHaveLength(1)
+  expect(finalizes[0]?.args[0]).toMatchObject({
+    appId: APP_ID,
+    finalize: {
+      steamappsDir,
+      installdir: 'SomeGame',
+      allowFullOwnership: false
+    },
+    depots: []
+  })
+}
+
 describe('startup resume on the rust pipeline', () => {
   it('runs one verify_only job with the finalize policy and still starts the poller', async () => {
     // getSteamLibraries gives a library root; resume joins `steamapps` onto it.
@@ -477,9 +495,7 @@ describe('startup resume on the rust pipeline', () => {
     await resumeInterruptedSteamInstall(steamTestDeps, APP_ID)
 
     expect(startInstallPolling).toHaveBeenCalledWith(steamTestDeps, APP_ID)
-    expect(
-      readFileSync(join(sa, `appmanifest_${APP_ID}.acf`), 'utf8')
-    ).toContain('1026')
+    expectHonestEmptyFinalize(stub, sa)
     rmSync(lib, { recursive: true, force: true })
   })
 
@@ -498,9 +514,7 @@ describe('startup resume on the rust pipeline', () => {
     await resumeInterruptedSteamInstall(steamTestDeps, APP_ID)
 
     expect(startInstallPolling).toHaveBeenCalledWith(steamTestDeps, APP_ID)
-    expect(
-      readFileSync(join(sa, `appmanifest_${APP_ID}.acf`), 'utf8')
-    ).toContain('1026')
+    expectHonestEmptyFinalize(stub, sa)
     rmSync(lib, { recursive: true, force: true })
   })
 })

@@ -1,6 +1,6 @@
 /**
  * Unit tests for the TS depot modules that survive the pipeline deletion (73-20): the
- * honest-empty finalize and its completeness gate (finalizeAcf), the failure helpers
+ * failure helpers
  * (outcome, planModel), the content-server reduction, the progress formatters and the depot
  * error classifier. Every download runs in Rust: downloadSteamDepots and the CM half are tested
  * in depot.cmPlan.test.ts and depotRust/__tests__ over the Rust stub, and the deleted
@@ -10,19 +10,9 @@
  *  - backend/logger uses factory form (prevents transitive fs-extra native crash)
  *  - ../user is auto-mocked (jest.mock('../user')) so the real steam-user stack never loads
  */
-import { createInertTestSteamUser } from 'backend/testUtils/testSteamUser'
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync
-} from 'node:fs'
-import { tmpdir } from 'node:os'
+import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  finalizeToSteam,
   reduceContentServers,
   describeDepotFailure,
   formatDownloadFailureSummary,
@@ -30,12 +20,10 @@ import {
   type DepotDownloadFailure,
   type RawContentServer
 } from '../depot'
-import { canWriteFullOwnership } from '../depot/finalizeAcf'
 import { formatEta, rollingRateMiBs } from '../depotRust/progress'
 import { classifyDepotError, isNonRetryableDepotError } from '../depotErrors'
 import { isDecodeStageError } from '../depotDecodeErrors'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
-import { at } from './fixtures/indexed'
 
 // ── Logger mock (factory form) ────────────────────────────────────────────────
 jest.mock('backend/logger', () => ({
@@ -64,9 +52,7 @@ jest.mock('i18next', () => ({
 function readDepotFoldedSources(): string {
   return [
     '../depot/index.ts',
-    ...['planModel', 'plan', 'outcome', 'appManifest', 'finalizeAcf'].map(
-      (n) => `../depot/${n}.ts`
-    )
+    ...['planModel', 'plan', 'outcome'].map((n) => `../depot/${n}.ts`)
   ]
     .map((f) => readFileSync(join(__dirname, f), 'utf8'))
     .join('\n')
@@ -93,58 +79,6 @@ describe('23.2-03 (G-23-01): skip-and-warn EResult 40 Blocked depots', () => {
           '}\n'
       )
       expect(specimen).toMatch(/eresult|essential|required|optional/i)
-    })
-
-    /** Extracts canWriteFullOwnership's `opts: { ... }` parameter block text
-     *  straight out of the given source, so this census reads the REAL
-     *  declared field set rather than re-typing it as a separate literal
-     *  that could silently drift from the function it is meant to guard. */
-    function extractCanWriteFullOwnershipFieldNames(source: string): string[] {
-      const match = source.match(
-        /canWriteFullOwnership\(opts: \{([\s\S]*?)\}\): boolean \{/
-      )
-      if (!match) return []
-      return at(match, 1)
-        .split('\n')
-        .map((l) => l.trim())
-        .filter(Boolean)
-        .map((l) => l.match(/^(\w+)\??:/))
-        .filter((m): m is RegExpMatchArray => m !== null)
-        .map((m) => at(m, 1))
-    }
-
-    it("D-04: canWriteFullOwnership's parameter object declares EXACTLY the five Phase 23 fields — outcome, failures, buildid, allFilesVerified, allModesApplied — and nothing resembling a skip/bypass/override parameter", () => {
-      const source = readFileSync(
-        join(__dirname, '..', 'depot', 'finalizeAcf.ts'),
-        'utf8'
-      )
-      const fieldNames = extractCanWriteFullOwnershipFieldNames(source)
-
-      expect(fieldNames.length).toBeGreaterThan(0)
-      expect([...fieldNames].sort()).toEqual(
-        [
-          'allFilesVerified',
-          'allModesApplied',
-          'buildid',
-          'failures',
-          'outcome'
-        ].sort()
-      )
-      expect(fieldNames.join(' ')).not.toMatch(/skip|bypass|override/i)
-    })
-
-    it('D-04 RED: the census DOES trip on a known-bad specimen carrying a bolted-on bypass field', () => {
-      const specimen = `canWriteFullOwnership(opts: {
-  outcome: 'completed' | 'cancelled'
-  failures: DepotDownloadFailure[]
-  buildid?: string
-  allFilesVerified: boolean
-  allModesApplied: boolean
-  skipCompletenessCheck?: boolean
-}): boolean {`
-      const fieldNames = extractCanWriteFullOwnershipFieldNames(specimen)
-      expect(fieldNames).toContain('skipCompletenessCheck')
-      expect(fieldNames.join(' ')).toMatch(/skip|bypass|override/i)
     })
 
     it('D-05: depot.ts (after stripSourceComments) has no retry/repair/re-check path keyed on skippedDepots — the skipped set is read for reporting only (D-05: no recovery path)', () => {
@@ -174,76 +108,6 @@ describe('23.2-03 (G-23-01): skip-and-warn EResult 40 Blocked depots', () => {
         true
       )
     })
-  })
-})
-
-/**
- * Unit tests for canWriteFullOwnership (Phase 23-02, D-01/D-02) — the single
- * completeness gate deciding StateFlags=4 vs. the safe 1026 fallback. Every
- * behavior bullet from the plan gets its own case; the gate must fail CLOSED
- * on any missing/ambiguous input.
- */
-describe('canWriteFullOwnership', () => {
-  const oneFailure: DepotDownloadFailure[] = [{ file: 'a.bin', error: 'boom' }]
-
-  const complete = {
-    outcome: 'completed' as const,
-    failures: [] as DepotDownloadFailure[],
-    buildid: '9044149',
-    allFilesVerified: true,
-    allModesApplied: true
-  }
-
-  it('returns true when every load-bearing field is present and clean', () => {
-    expect(canWriteFullOwnership(complete)).toBe(true)
-  })
-
-  it('outcome "cancelled" -> false', () => {
-    expect(canWriteFullOwnership({ ...complete, outcome: 'cancelled' })).toBe(
-      false
-    )
-  })
-
-  it('outcome "completed" with a non-empty failures array -> false (partial failure must not earn a 4)', () => {
-    expect(canWriteFullOwnership({ ...complete, failures: oneFailure })).toBe(
-      false
-    )
-  })
-
-  it('buildid undefined -> false', () => {
-    expect(canWriteFullOwnership({ ...complete, buildid: undefined })).toBe(
-      false
-    )
-  })
-
-  it('buildid "0" -> false (Steam reads "0" as UpdateRequired)', () => {
-    expect(canWriteFullOwnership({ ...complete, buildid: '0' })).toBe(false)
-  })
-
-  it('allFilesVerified false -> false', () => {
-    expect(
-      canWriteFullOwnership({ ...complete, allFilesVerified: false })
-    ).toBe(false)
-  })
-
-  it('allModesApplied false -> false', () => {
-    expect(canWriteFullOwnership({ ...complete, allModesApplied: false })).toBe(
-      false
-    )
-  })
-
-  // Quick 260927-tpm (A7, T-tpm-01): a run-level-ONLY failure (tagged
-  // `scope: 'run'`, no per-file failures at all) must still fail this gate
-  // — canWriteFullOwnership reads the UNFILTERED `failures` array, exactly
-  // as before this quick task, so a stalled run can never earn
-  // StateFlags=4 by virtue of its only failure being run-scoped.
-  it('outcome "completed" with only a run-scoped failure -> false (a tagged failure is still a failure)', () => {
-    const runOnlyFailure: DepotDownloadFailure[] = [
-      { file: '(run)', error: 'download stalled', scope: 'run' }
-    ]
-    expect(
-      canWriteFullOwnership({ ...complete, failures: runOnlyFailure })
-    ).toBe(false)
   })
 })
 
@@ -590,180 +454,6 @@ describe('selectPrimaryDepotFailure (quick 260927-v8i)', () => {
     expect(install).toMatch(
       /formatDownloadFailureSummary\(appId, failures, key\)/
     )
-  })
-})
-
-/**
- * Unit tests for finalizeToSteam (Phase 21-06) — the SINGLE recovery function
- * cancel/failure/success all converge on (Pattern 5, D-04/D-07). Runs against
- * a REAL tmpdir (manifest.test.ts's established precedent).
- */
-describe('finalizeToSteam', () => {
-  let dir: string
-
-  beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), 'gamelib-finalize-test-'))
-  })
-
-  afterEach(() => {
-    rmSync(dir, { recursive: true, force: true })
-  })
-
-  it('writes exactly one appmanifest via writeAppManifest with StateFlags=1026 and the InstalledDepots map of the depots attempted (GIDs as strings)', async () => {
-    mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
-    writeFileSync(join(dir, 'common', 'SomeGame', 'a.bin'), Buffer.alloc(10))
-
-    await finalizeToSteam('12345', {
-      steamUser: createInertTestSteamUser(),
-      targetSteamappsDir: dir,
-      installdir: 'SomeGame',
-      name: 'Some Game',
-      depots: [
-        { depotId: '111', gid: '9007199254740993', size: 500 },
-        { depotId: '222', gid: '18446744073709551615', size: 250 }
-      ]
-    })
-
-    const acfPath = join(dir, 'appmanifest_12345.acf')
-    expect(existsSync(acfPath)).toBe(true)
-    const text = readFileSync(acfPath, 'utf8')
-    expect(text).toMatch(/"StateFlags"\s+"1026"/)
-    // Exactly one .acf written — no stray second write.
-    expect(text.match(/"AppState"/g)).toHaveLength(1)
-    // Both attempted depots present, GIDs preserved as exact strings.
-    expect(text).toMatch(/"111"/)
-    expect(text).toMatch(/"9007199254740993"/)
-    expect(text).toMatch(/"222"/)
-    expect(text).toMatch(/"18446744073709551615"/)
-  })
-
-  it("SizeOnDisk is the measured on-disk byte total, NOT the depots' declared/summed size", async () => {
-    mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
-    writeFileSync(join(dir, 'common', 'SomeGame', 'a.bin'), Buffer.alloc(123))
-
-    await finalizeToSteam('12345', {
-      steamUser: createInertTestSteamUser(),
-      targetSteamappsDir: dir,
-      installdir: 'SomeGame',
-      name: 'Some Game',
-      // Declared depot size is deliberately much larger than what's actually
-      // on disk — proves SizeOnDisk is measured, not a DepotPlan-derived sum
-      // (spike 001: a summed total overshoots multi-depot installs by 236MB).
-      depots: [{ depotId: '111', gid: '11111111111111111', size: 999999 }]
-    })
-
-    const text = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
-    expect(text).toMatch(/"SizeOnDisk"\s+"123"/)
-  })
-
-  it('measures 0 bytes and still writes a valid 1026 manifest when nothing has landed on disk yet', async () => {
-    await finalizeToSteam('12345', {
-      steamUser: createInertTestSteamUser(),
-      targetSteamappsDir: dir,
-      installdir: 'NeverStarted',
-      name: 'Never Started',
-      depots: []
-    })
-
-    const text = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
-    expect(text).toMatch(/"SizeOnDisk"\s+"0"/)
-    expect(text).toMatch(/"StateFlags"\s+"1026"/)
-  })
-
-  // ── Phase 23 (23-02, D-01/D-02): canWriteFullOwnership-gated StateFlags=4 ──
-  describe('StateFlags=4 full-ownership gate (D-01/D-02)', () => {
-    it('writes StateFlags "4" with BytesToDownload==BytesDownloaded==SizeOnDisk and the real buildid when every completeness signal is proven', async () => {
-      mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
-      writeFileSync(
-        join(dir, 'common', 'SomeGame', 'a.bin'),
-        Buffer.alloc(117426878 % 1000)
-      ) // arbitrary non-zero size
-
-      await finalizeToSteam('12345', {
-        steamUser: createInertTestSteamUser(),
-        targetSteamappsDir: dir,
-        installdir: 'SomeGame',
-        name: 'Some Game',
-        depots: [{ depotId: '111', gid: '9007199254740993', size: 500 }],
-        buildid: '9044149',
-        outcome: 'completed',
-        failures: [],
-        allFilesVerified: true,
-        allModesApplied: true
-      })
-
-      const text = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
-      expect(text).toMatch(/"StateFlags"\s+"4"/)
-      expect(text).toMatch(/"buildid"\s+"9044149"/)
-
-      const sizeOnDisk = text.match(/"SizeOnDisk"\s+"(\d+)"/)?.[1]
-      const bytesToDownload = text.match(/"BytesToDownload"\s+"(\d+)"/)?.[1]
-      const bytesDownloaded = text.match(/"BytesDownloaded"\s+"(\d+)"/)?.[1]
-      expect(sizeOnDisk).toBeDefined()
-      expect(Number(sizeOnDisk)).toBeGreaterThan(0)
-      expect(bytesToDownload).toBe(sizeOnDisk)
-      expect(bytesDownloaded).toBe(sizeOnDisk)
-    })
-
-    it('falls back to StateFlags "1026" when the run had a non-empty failures array, even though every other signal is clean', async () => {
-      mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
-      writeFileSync(join(dir, 'common', 'SomeGame', 'a.bin'), Buffer.alloc(10))
-
-      await finalizeToSteam('12345', {
-        steamUser: createInertTestSteamUser(),
-        targetSteamappsDir: dir,
-        installdir: 'SomeGame',
-        name: 'Some Game',
-        depots: [{ depotId: '111', gid: '9007199254740993', size: 500 }],
-        buildid: '9044149',
-        outcome: 'completed',
-        failures: [{ file: 'a.bin', error: 'sha1 mismatch' }],
-        allFilesVerified: true,
-        allModesApplied: true
-      })
-
-      const text = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
-      expect(text).toMatch(/"StateFlags"\s+"1026"/)
-    })
-
-    it('falls back to StateFlags "1026" when buildid is "0" (Steam UpdateRequired sentinel), even though every other signal is clean', async () => {
-      mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
-      writeFileSync(join(dir, 'common', 'SomeGame', 'a.bin'), Buffer.alloc(10))
-
-      await finalizeToSteam('12345', {
-        steamUser: createInertTestSteamUser(),
-        targetSteamappsDir: dir,
-        installdir: 'SomeGame',
-        name: 'Some Game',
-        depots: [{ depotId: '111', gid: '9007199254740993', size: 500 }],
-        buildid: '0',
-        outcome: 'completed',
-        failures: [],
-        allFilesVerified: true,
-        allModesApplied: true
-      })
-
-      const text = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
-      expect(text).toMatch(/"StateFlags"\s+"1026"/)
-    })
-
-    it('falls back to StateFlags "1026" when the gate inputs are entirely omitted by the caller (fail-closed default)', async () => {
-      mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
-      writeFileSync(join(dir, 'common', 'SomeGame', 'a.bin'), Buffer.alloc(10))
-
-      await finalizeToSteam('12345', {
-        steamUser: createInertTestSteamUser(),
-        targetSteamappsDir: dir,
-        installdir: 'SomeGame',
-        name: 'Some Game',
-        depots: [{ depotId: '111', gid: '9007199254740993', size: 500 }],
-        buildid: '9044149'
-        // outcome/failures/allFilesVerified/allModesApplied all omitted.
-      })
-
-      const text = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
-      expect(text).toMatch(/"StateFlags"\s+"1026"/)
-    })
   })
 })
 

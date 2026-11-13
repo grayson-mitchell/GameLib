@@ -36,7 +36,7 @@ import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 const steamUser = createMockSteamUser()
 import { getBottleSteamappsDir } from '../bottle'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
-import { finalizeToSteam, downloadSteamDepots } from '../depot'
+import { downloadSteamDepots } from '../depot'
 import { resumeVerifyRust } from '../depotRust/secondary'
 import { join } from 'path'
 import { bridgeAllowlist } from '../bridge/allowlist'
@@ -200,10 +200,9 @@ jest.mock('../bridgeBottle', () => ({
   resolveBridgeBottleName: jest.fn()
 }))
 
-// ── depot mock — finalizeToSteam (D-05 startup finalize) / downloadSteamDepots
+// ── depot mock — downloadSteamDepots
 // (must NEVER be invoked from startup resume — Pitfall 4, no silent re-download).
 jest.mock('../depot', () => ({
-  finalizeToSteam: jest.fn().mockResolvedValue(undefined),
   downloadSteamDepots: jest.fn()
 }))
 
@@ -525,7 +524,6 @@ describe('SteamLibraryManager', () => {
 
     // Nothing heavy may run on boot for a detected interrupted install.
     expect(setIntervalSpy).not.toHaveBeenCalled()
-    expect(finalizeToSteam).not.toHaveBeenCalled()
     expect(resumeVerifyRust).not.toHaveBeenCalled()
     expect(downloadSteamDepots).not.toHaveBeenCalled()
 
@@ -632,7 +630,6 @@ describe('SteamLibraryManager', () => {
     // or re-drive the depot orchestrator for it, and must not even surface
     // it as a separate resumable game (the live install already owns the
     // badge/poll for this appId).
-    expect(finalizeToSteam).not.toHaveBeenCalled()
     expect(downloadSteamDepots).not.toHaveBeenCalled()
     expect(library.get('730')?.install?.steamResumePending).toBeUndefined()
 
@@ -674,7 +671,6 @@ describe('SteamLibraryManager', () => {
     await manager.init()
 
     expect(library.get('730')?.install?.steamResumePending).toBe(true)
-    expect(finalizeToSteam).not.toHaveBeenCalled()
 
     jest.useRealTimers()
   })
@@ -787,7 +783,6 @@ describe('SteamLibraryManager', () => {
         // backend/constants/environment is mocked to Linux in this suite.
         os: 'linux'
       })
-      expect(finalizeToSteam).not.toHaveBeenCalled()
       expect(downloadSteamDepots).not.toHaveBeenCalled()
 
       stopInstallPolling(steamTestDeps, '730')
@@ -809,7 +804,6 @@ describe('SteamLibraryManager', () => {
         resumeInterruptedSteamInstall(steamTestDeps, '730')
       ).resolves.toBeUndefined()
 
-      expect(finalizeToSteam).not.toHaveBeenCalled()
       expect(downloadSteamDepots).not.toHaveBeenCalled()
 
       stopInstallPolling(steamTestDeps, '730')
@@ -862,7 +856,6 @@ describe('SteamLibraryManager', () => {
 
         await resumeInterruptedSteamInstall(steamTestDeps, '730')
 
-        expect(finalizeToSteam).not.toHaveBeenCalled()
         expect(invoke).toHaveBeenCalledWith('depot_finalize', [
           {
             appId: '730',

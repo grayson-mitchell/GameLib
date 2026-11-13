@@ -1,5 +1,3 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import * as logger from 'backend/logger'
 import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
@@ -9,43 +7,7 @@ import {
   readAppManifestFlags
 } from '../library/manifestFlags'
 
-const noRust = {
-  requestRustInvoke: () => Promise.reject(new Error('not used on the ts flag'))
-}
-
 describe('manifestFlags', () => {
-  let dir: string
-  beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), 'manifestFlags-'))
-  })
-  afterEach(() => {
-    rmSync(dir, { recursive: true, force: true })
-  })
-
-  function acf(flags: string, buildid?: string) {
-    const bid = buildid === undefined ? '' : `\t"buildid"\t"${buildid}"\n`
-    writeFileSync(
-      join(dir, 'appmanifest_123.acf'),
-      `"AppState"\n{\n\t"appid"\t"123"\n\t"StateFlags"\t"${flags}"\n${bid}}\n`
-    )
-  }
-
-  it('reads a well-formed manifest', async () => {
-    acf('4', '25485521')
-    await expect(readAppManifestFlags(noRust, dir, '123')).resolves.toEqual({
-      stateFlags: 4,
-      buildid: '25485521'
-    })
-  })
-
-  it('returns null for missing, unparseable and NaN', async () => {
-    await expect(readAppManifestFlags(noRust, dir, '123')).resolves.toBeNull()
-    writeFileSync(join(dir, 'appmanifest_123.acf'), '\u0000{{{ not vdf')
-    await expect(readAppManifestFlags(noRust, dir, '123')).resolves.toBeNull()
-    acf('abc', '1')
-    await expect(readAppManifestFlags(noRust, dir, '123')).resolves.toBeNull()
-  })
-
   it('isCurrentFullInstall', () => {
     expect(isCurrentFullInstall({ stateFlags: 4, buildid: '25485521' })).toBe(
       true
@@ -58,16 +20,12 @@ describe('manifestFlags', () => {
   })
 })
 
-describe('readAppManifestFlags on the rust flag', () => {
-  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
+describe('readAppManifestFlags', () => {
   beforeEach(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
     jest.spyOn(logger, 'logDebug').mockImplementation(() => undefined)
   })
   afterEach(() => {
     jest.restoreAllMocks()
-    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
   })
 
   const read = (record: Partial<AcfReadResult['record'] & object> | null) =>

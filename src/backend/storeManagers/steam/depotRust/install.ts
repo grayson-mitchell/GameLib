@@ -11,7 +11,6 @@ import { join, resolve } from 'path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { CdnAuthTokenCache } from '../depot/cdnAuth'
 import { getContentServerHosts } from '../depot/contentServers'
-import { finalizeToSteam } from '../depot/finalizeAcf'
 import { classifyDepotError } from '../depotErrors'
 import type {
   DepotSteamUser,
@@ -46,7 +45,6 @@ import { createProgressBridge } from './progressBridge'
 import { decideRetirement } from './retire'
 import { readAcfInstalledDepots } from '../acfInstalledDepots'
 import { runDepotJob, rustFinalize, summarizeDepots } from './rustDepot'
-import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
 import type {
   RustDepotJob,
   RustFinalizeSpec,
@@ -157,39 +155,26 @@ export async function downloadSteamDepotsRust(
       // Honest empty finalize: a dangling prior partial is never left unresolved, and there is
       // no download stage to run in Rust.
       const aborted = opts.signal?.aborted === true
-      if (steamFilesTextImpl() === 'rust') {
-        const res = await rustFinalize(
-          opts.installRuntime.depotJobs.transport,
-          appId,
-          {
-            steamappsDir: opts.targetSteamappsDir,
-            installdir: opts.installdir,
-            name: refs.name,
-            buildid: refs.buildid === '' ? null : refs.buildid,
-            lastOwner: opts.steamUser.getPersistedSteamId64() ?? null,
-            allowFullOwnership: false,
-            betaKey: refs.branch === 'public' ? undefined : refs.branch
-          },
-          [],
-          aborted ? 'cancelled' : null
-        )
-        if ('preserved' in res) {
-          logInfo(
-            `rustFinalize: appId ${appId} cancelled over an installed manifest (StateFlags=${res.stateFlags}); leaving it untouched`,
-            LogPrefix.Steam
-          )
-        }
-      } else {
-        await finalizeToSteam(appId, {
-          steamUser: opts.steamUser,
-          targetSteamappsDir: opts.targetSteamappsDir,
+      const res = await rustFinalize(
+        opts.installRuntime.depotJobs.transport,
+        appId,
+        {
+          steamappsDir: opts.targetSteamappsDir,
           installdir: opts.installdir,
           name: refs.name,
-          depots: [],
-          buildid: refs.buildid,
-          betaKey: refs.branch === 'public' ? undefined : refs.branch,
-          outcome: opts.signal?.aborted === true ? 'cancelled' : undefined
-        })
+          buildid: refs.buildid === '' ? null : refs.buildid,
+          lastOwner: opts.steamUser.getPersistedSteamId64() ?? null,
+          allowFullOwnership: false,
+          betaKey: refs.branch === 'public' ? undefined : refs.branch
+        },
+        [],
+        aborted ? 'cancelled' : null
+      )
+      if ('preserved' in res) {
+        logInfo(
+          `rustFinalize: appId ${appId} cancelled over an installed manifest (StateFlags=${res.stateFlags}); leaving it untouched`,
+          LogPrefix.Steam
+        )
       }
       return opts.signal?.aborted === true
         ? { status: 'cancelled', skippedDepots }
@@ -208,7 +193,7 @@ export async function downloadSteamDepotsRust(
       opts.installRuntime.cdnSchema
     )
 
-    // StateFlags policy: today finalizeToSteam always asks canWriteFullOwnership, fed by the
+    // StateFlags policy: the Rust gate (can_write_full_ownership) is fed by the
     // run's outcome (an aborted signal forces 'cancelled'). Rust applies the same gate to its own
     // outcome (buildid present and not "0", no failures, verified, modes applied), so TS only
     // withholds permission when the signal is already aborted.

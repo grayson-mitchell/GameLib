@@ -18,7 +18,6 @@
     "src/backend/storeManagers/steam/__tests__/depotRustErrorMap.test.ts": 1,
     "src/backend/storeManagers/steam/__tests__/drmKnownFix.test.ts": 2,
     "src/backend/storeManagers/steam/__tests__/experimentalInstallAppSetting.test.ts": 1,
-    "src/backend/storeManagers/steam/__tests__/finalizeAcf.cancelPreserve.test.ts": 1,
     "src/backend/storeManagers/steam/__tests__/games.test.ts": 47,
     "src/backend/storeManagers/steam/__tests__/installLocation.test.ts": 4,
     "src/backend/storeManagers/steam/__tests__/launchDispatch.test.ts": 4,

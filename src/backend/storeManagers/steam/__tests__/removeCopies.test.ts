@@ -196,7 +196,6 @@ jest.mock('../bottledSteam', () => ({
 
 // ── depot mock ─────────────────────────────────────────────────────────────────
 jest.mock('../depot', () => ({
-  finalizeToSteam: jest.fn().mockResolvedValue(undefined),
   downloadSteamDepots: jest.fn()
 }))
 
