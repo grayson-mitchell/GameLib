@@ -30,8 +30,11 @@ type Handlers = Partial<{
   ) => SteamFilesResultFor<C>
 }>
 
+// ACF/VDF leaves are scalars; a block (object) is never a string value.
 const str = (v: unknown): string | null =>
-  v === undefined || v === null ? null : String(v)
+  typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean'
+    ? String(v)
+    : null
 
 function depots(state: Obj): AcfRecord['installedDepots'] {
   const raw = state.InstalledDepots
@@ -156,7 +159,12 @@ export function mockedFsSteamFiles(overrides: Handlers = {}) {
         const sw = hkcu?.Software as Obj | undefined
         const valve = sw?.Valve as Obj | undefined
         const raw = (valve?.Steam as Obj | undefined)?.RunningAppID
-        return { runningAppId: raw ? parseInt(String(raw), 10) || 0 : 0 }
+        return {
+          runningAppId:
+            typeof raw === 'string' || typeof raw === 'number'
+              ? parseInt(String(raw), 10) || 0
+              : 0
+        }
       } catch {
         return { runningAppId: 0 }
       }
