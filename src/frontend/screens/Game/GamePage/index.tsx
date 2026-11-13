@@ -586,6 +586,12 @@ export default React.memo(function GamePage(): JSX.Element | null {
                         </div>
                       </div>
                       <div className="actionDock">
+                        <GameStatus
+                          gameInfo={gameInfo}
+                          progress={progress}
+                          handleUpdate={handleUpdate}
+                          hasUpdate={hasUpdate}
+                        />
                         <div className="buttons">
                           <MainButton
                             gameInfo={gameInfo}
@@ -606,12 +612,6 @@ export default React.memo(function GamePage(): JSX.Element | null {
                             handleUpdate={handleUpdate}
                           />
                         </div>
-                        <GameStatus
-                          gameInfo={gameInfo}
-                          progress={progress}
-                          handleUpdate={handleUpdate}
-                          hasUpdate={hasUpdate}
-                        />
                       </div>
                     </div>
                   </div>

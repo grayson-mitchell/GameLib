@@ -154,15 +154,17 @@ describe('GamePage/index.tsx: card structure (D-02, D-03, D-04, D-06)', () => {
     ])
   })
 
-  it('L6: the dock reads primary button, launch select, spacer, gear, dots, status', () => {
+  // Operator UAT 2026-11-14: install status reads ABOVE the action bar.
+  it('L6: the dock reads status, then primary button, launch select, spacer, gear, dots', () => {
     inOrder([
       'className="actionDock"',
+      '<GameStatus',
+      'className="buttons"',
       '<MainButton',
       '<LaunchOptionSelector',
       'className="actionDockSpacer"',
       '<SettingsButton',
-      '<DotsMenu',
-      '<GameStatus'
+      '<DotsMenu'
     ])
   })
 
