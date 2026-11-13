@@ -147,6 +147,15 @@ pub(crate) fn shell_exe_env_value(current_exe: std::io::Result<std::path::PathBu
         .unwrap_or_else(|_| String::new())
 }
 
+/// The Steam root the Rust crate discovers for this host, as `(path, source)`. Handed to the
+/// sidecar at spawn as `GAMELIB_STEAM_ROOT_DEFAULT` (Phase 75 D-12): the sidecar's config
+/// default is synchronous and runs before the RPC server, so it cannot await a rustInvoke. A
+/// default only; the TS setting still wins. Synchronous and bounded, so no in-flight work at boot.
+fn steam_root_default_env() -> (String, String) {
+    let d = gamelib_steamfiles::discover::discover_default();
+    (d.path, d.source)
+}
+
 /// Formats a resolved app-root `PathBuf` for the `GAMELIB_APP_ROOT` spawn-time env var handoff
 /// (Phase 34.5 Plan 16, Task 2, G-1). This is the fix for the root cause of live-gate items
 /// 1/2/3 and (transitively) 5: under the sidecar, `platformApi.getAppPath()` resolved to
@@ -321,12 +330,17 @@ fn spawn_sidecar_dev(shell_exe: &str, forward_args: &[String]) -> std::io::Resul
     shell_diag(&format!("  entry_exists={exists}"));
     shell_diag(&format!("  GAMELIB_SHELL_EXE={shell_exe}"));
     shell_diag(&format!("  GAMELIB_APP_ROOT={app_root}"));
+    let (steam_root, steam_root_source) = steam_root_default_env();
+    shell_diag(&format!(
+        "  GAMELIB_STEAM_ROOT_DEFAULT={steam_root} (source={steam_root_source})"
+    ));
     shell_diag(&format!("  forward_args={forward_args:?}"));
     let mut cmd = Command::new(&node);
     cmd.arg(&entry)
         .args(forward_args)
         .env("GAMELIB_SHELL_EXE", shell_exe)
         .env("GAMELIB_APP_ROOT", &app_root)
+        .env("GAMELIB_STEAM_ROOT_DEFAULT", &steam_root)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
@@ -369,11 +383,16 @@ fn spawn_sidecar_packaged(
     shell_eprintln!("[shell]   cwd={cwd}");
     shell_eprintln!("[shell]   entry_exists={exists}");
     shell_eprintln!("[shell]   GAMELIB_APP_ROOT={app_root}");
+    let (steam_root, steam_root_source) = steam_root_default_env();
+    shell_eprintln!(
+        "[shell]   GAMELIB_STEAM_ROOT_DEFAULT={steam_root} (source={steam_root_source})"
+    );
     shell_eprintln!("[shell]   forward_args={forward_args:?}");
     std_command
         .args(forward_args)
         .env("GAMELIB_SHELL_EXE", shell_exe)
         .env("GAMELIB_APP_ROOT", &app_root)
+        .env("GAMELIB_STEAM_ROOT_DEFAULT", &steam_root)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());

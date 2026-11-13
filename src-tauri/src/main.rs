@@ -4306,4 +4306,11 @@ mod tests {
             assert!(err.ends_with(":bad-args"), "{s}: {err}");
         }
     }
+
+    #[test]
+    fn steam_root_default_env_is_passed_on_both_spawn_paths() {
+        let src = include_str!("sidecar.rs");
+        assert_eq!(src.matches(".env(\"GAMELIB_STEAM_ROOT_DEFAULT\"").count(), 2);
+        assert!(src.contains("gamelib_steamfiles::discover::discover_default()"));
+    }
 }
