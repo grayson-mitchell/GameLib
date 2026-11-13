@@ -166,7 +166,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 72: Renderer trust boundary and process hardening** — 0 plans; not started (completed 2026-11-08)
 - [x] **Phase 73: Steam depot download pipeline in Rust** — 21 plans; complete (completed 2026-11-10)
 - [x] **Phase 74: Steam game updates** — 13 plans executed; live gate not passed (2026-11-13: 7 gaps, items 7 and 12), awaiting gap closure (completed 2026-11-13)
-- [ ] **Phase 75: Steam local file formats in Rust** — 35 plans in 20 waves; planned 2026-11-14
+- [x] **Phase 75: Steam local file formats in Rust** — 35 plans in 20 waves; planned 2026-11-14 (completed 2026-11-13)
 - [ ] **Phase 76: Engine-correct bottle for DRM-mode launches (v0.9 audit S9)** — 0 plans; not started
 - [ ] **Phase 77: Runtime hardening from the v0.9 review debt** — 0 plans; not started
 - [ ] **Phase 78: Verification records and test health after v0.9** — 0 plans; not started
@@ -1307,7 +1307,7 @@ Plans:
 **Goal:** Steam's local files are read in Rust, so the ACF format has one implementation. Phase 73 moved the ACF *writer* to Rust while the TypeScript *reader* stays, which is two codecs for one format that can drift. Scope: (1) text VDF reading of `libraryfolders.vdf` and `appmanifest_*.acf`, replacing `@node-steam/vdf`; (2) binary `shortcuts.vdf` read and write, replacing `steam-shortcut-editor`; (3) the local library scan in `steam/library/` (~4.6k non-test lines across the directory, measured 2026-11-09). Reuse Phase 63's pattern unchanged: a Tauri-free crate in the `src-tauri/` Cargo workspace (or the Phase 73 crate's ACF module, extended), `rustInvoke` from the sidecar with the TypeScript signatures unchanged, a CLI binary for headless tools, a parity harness over fixtures (byte-identical round-trip for `shortcuts.vdf`), a dev-only fallback flag, then delete the TypeScript readers and both npm packages. This is the third slice of the incremental Node-to-Rust migration (63 scanners, 73 depot pipeline). Open questions for discuss-phase: whether the owned-apps fetch and metadata/artwork enrichment in `steam/library/` stay in TypeScript (they need `steam-user`/axios) so only the local scan moves; whether the shortcuts writer must preserve unknown fields byte-for-byte; and Steam path discovery on Windows and Linux. The CM-client replacement for `steam-user`/`steam-session`, which gates retiring the sidecar, is a separate spike (2026-11-09). Came from the post-73 migration planning discussion on 2026-11-09.
 **Requirements**: STEAM-03 (milestone-level). Phase IDs minted by `/gsd-plan-phase 75` (defined in 75-01-PLAN.md): P75-A text VDF/KV1 in Rust with typed readers; P75-B binary shortcuts.vdf in Rust; P75-C library scan and Steam root discovery in Rust (+ CLI); P75-D one ACF codec, TS ACF writer retired; P75-E two-tier parity with signed-off divergences; P75-F callers on Rust behind D-08 flags, flipped, live smoke; P75-G delete gate: TS readers, both npm packages, flags removed and pinned by a gate test.
 **Depends on:** Phase 73
-**Plans:** 34/35 plans executed
+**Plans:** 35/35 plans complete
 
 Plans:
 
@@ -1404,7 +1404,7 @@ Plans:
 
 **Wave 20** *(blocked on Wave 19 completion)*
 
-- [ ] 75-35-PLAN.md — remove both npm packages and typedef; steamFilesPortComplete gate; README and stack docs
+- [x] 75-35-PLAN.md — remove both npm packages and typedef; steamFilesPortComplete gate; README and stack docs
 
 ### Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal
 
