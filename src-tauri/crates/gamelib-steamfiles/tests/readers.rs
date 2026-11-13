@@ -187,6 +187,36 @@ fn installscript_escapes_decoded() {
     );
 }
 
+/// 75 WR-06: a single-backslash Windows path keeps `\n` / `\t` literally (only `\\` and `\"`
+/// are decoded, as the replaced `parseKv1` did).
+#[test]
+fn installscript_single_backslash_paths_not_control_decoded() {
+    let d = tempfile::tempdir().unwrap();
+    let p = d.path().join("i.vdf");
+    std::fs::write(
+        &p,
+        r#""InstallScript" { "Run Process" { "DotNet\tools" {
+            "HasRunKey" "HKLM\Software\Valve\ndp"
+            "Process 1" "%INSTALLDIR%\_CommonRedist\DotNet\4.8\ndp48-x86-x64-allos-enu.exe"
+            "Command 1" "/q \"x\" \tools\new" } } }"#,
+    )
+    .unwrap();
+    let e = read_installscript(&p).entries.unwrap();
+    assert_eq!(
+        e[0].processes[0].process,
+        r"%INSTALLDIR%\_CommonRedist\DotNet\4.8\ndp48-x86-x64-allos-enu.exe"
+    );
+    assert_eq!(
+        e[0].processes[0].command.as_deref(),
+        Some(r#"/q "x" \tools\new"#)
+    );
+    assert_eq!(
+        e[0].has_run_key.as_deref(),
+        Some(r"HKLM\Software\Valve\ndp")
+    );
+    assert_eq!(e[0].name, r"DotNet\tools");
+}
+
 #[test]
 fn installscript_none_cases() {
     for n in ["no-run-process", "malformed"] {

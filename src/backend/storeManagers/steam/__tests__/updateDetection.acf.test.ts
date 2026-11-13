@@ -3,7 +3,10 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import * as logger from 'backend/logger'
 import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
-import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
+import {
+  fsBackedSteamFiles,
+  stubRustSteamFiles
+} from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
 import {
   isAcfUpdatePending,
   readAcfUpdateFieldsFromDir,
@@ -51,6 +54,7 @@ describe('isAcfUpdatePending', () => {
 describe('readAcfUpdateState', () => {
   let dir: string
   beforeEach(() => {
+    jest.spyOn(logger, 'logDebug').mockImplementation(() => undefined)
     dir = mkdtempSync(join(tmpdir(), 'acfupd-'))
     mkdirSync(join(dir, 'steamapps'))
     writeFileSync(
@@ -65,11 +69,15 @@ describe('readAcfUpdateState', () => {
 `
     )
   })
-  afterEach(() => rmSync(dir, { recursive: true, force: true }))
+  afterEach(() => {
+    jest.restoreAllMocks()
+    rmSync(dir, { recursive: true, force: true })
+  })
 
   const deps = () =>
     ({
-      config: { getSettings: () => ({ defaultSteamPath: dir }) }
+      config: { getSettings: () => ({ defaultSteamPath: dir }) },
+      ...fsBackedSteamFiles()
     }) as never
 
   it('reads the pending and current fixtures from native roots', async () => {
@@ -101,19 +109,11 @@ describe('readAcfUpdateState', () => {
   })
 })
 
-describe('readAcfUpdateFieldsFromDir on Rust (GAMELIB_STEAMFILES_TEXT=rust)', () => {
-  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
-  beforeAll(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-  })
+describe('readAcfUpdateFieldsFromDir on Rust', () => {
   beforeEach(() => {
     jest.spyOn(logger, 'logDebug').mockImplementation(() => undefined)
   })
   afterEach(() => jest.restoreAllMocks())
-  afterAll(() => {
-    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
-  })
 
   const rec = (over: Record<string, unknown>) =>
     ({

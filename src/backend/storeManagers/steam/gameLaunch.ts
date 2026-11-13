@@ -218,6 +218,12 @@ export async function launch(
       })
       if (decision === 'clear-and-launch') {
         clearPendingAdoption(steamGame.appId, adoptionStore)
+      } else if (decision === 'unknown') {
+        // WR-01 (75 review): never quit Steam on an unread ACF; record kept.
+        logWarning(
+          `SteamGame: Play for ${steamGame.appId}: manifest unreadable, adoption unknown; launching without a Steam restart (pending adoption kept)`,
+          LogPrefix.Steam
+        )
       } else if (decision === 'restart') {
         const outcome = await restartMacSteamForAdoption(
           steamGame.appId,

@@ -20,7 +20,6 @@
 import type { StatusUpdateDeps } from 'backend/appRuntime'
 import { existsSync, statSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { parse } from '@node-steam/vdf'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendGameStatusUpdate } from 'backend/utils'
 import type { SteamStoresDeps } from './library/installRoot'
@@ -30,7 +29,6 @@ import type { AppPaths } from 'backend/process/context'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
 import { invokeSteamFiles } from './localFiles/rustSteamFiles'
-import { steamFilesTextImpl } from './localFiles/steamFilesFlags'
 import {
   MAC_STEAM_OFFLINE_OWED_FILE,
   type MacSteamOffline
@@ -45,10 +43,15 @@ export interface AcfSnapshot {
   content: string
   /**
    * Parsed by Rust (`steamfiles_read_acf`) when the snapshot was taken; absent on a baseline
-   * persisted before Phase 75 and under the ts flag, where isSteamAdoptedAcf parses `content`.
+   * persisted before Phase 75; isSteamAdoptedAcf reads such a snapshot as not adopted (DV-75-12).
    */
   stateFlags?: number | null
   buildid?: string
+  /**
+   * True when the Rust read of this snapshot rejected (timeout, shell restart): the parsed
+   * fields are unknown, not "not adopted" (WR-01, 75 review).
+   */
+  rustReadFailed?: boolean
 }
 
 export interface PendingAdoptionRecord {
@@ -141,7 +144,6 @@ export async function readAcfSnapshot(
   } catch {
     return null
   }
-  if (steamFilesTextImpl() === 'ts') return snapshot
   try {
     const read = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_ACF, {
       path
@@ -153,17 +155,9 @@ export async function readAcfSnapshot(
       buildid: record?.buildid ?? ''
     }
   } catch {
-    // Rust unreachable: no parsed fields, so isSteamAdoptedAcf answers false (not adopted).
-    return { ...snapshot, stateFlags: null, buildid: '' }
-  }
-}
-
-function parseAppState(content: string): Record<string, unknown> | null {
-  try {
-    const parsed = parse(content) as { AppState?: Record<string, unknown> }
-    return parsed.AppState ?? null
-  } catch {
-    return null
+    // Rust unreachable: the parsed fields are unknown. isSteamAdoptedAcf still answers false,
+    // but decidePlayAdoption answers 'unknown' rather than 'restart' (WR-01, 75 review).
+    return { ...snapshot, stateFlags: null, buildid: '', rustReadFailed: true }
   }
 }
 
@@ -177,22 +171,11 @@ export function isSteamAdoptedAcf(
   current: AcfSnapshot | null
 ): boolean {
   if (!current) return false
-  let flags: number
-  let buildid: string
-  if (current.stateFlags !== undefined) {
-    // The Rust-parsed fields captured by readAcfSnapshot.
-    flags = current.stateFlags === null ? NaN : current.stateFlags
-    buildid = current.buildid ?? ''
-  } else {
-    const state = parseAppState(current.content)
-    if (!state) return false
-    flags = Number(state.StateFlags)
-    // @node-steam/vdf parses numeric strings to numbers.
-    buildid =
-      typeof state.buildid === 'string' || typeof state.buildid === 'number'
-        ? String(state.buildid)
-        : ''
-  }
+  // The Rust-parsed fields captured by readAcfSnapshot. A snapshot without them (persisted
+  // before Phase 75) reads not-adopted (DV-75-12).
+  if (current.stateFlags === undefined) return false
+  const flags = current.stateFlags === null ? NaN : current.stateFlags
+  const buildid = current.buildid ?? ''
   const differs =
     !baseline ||
     current.content !== baseline.content ||
@@ -203,7 +186,16 @@ export function isSteamAdoptedAcf(
   return differs && fullyInstalled && buildid !== '' && buildid !== '0'
 }
 
-type PlayAdoptionDecision = 'launch' | 'clear-and-launch' | 'restart'
+/**
+ * 'unknown': the record is pending and the running Steam is the one that saw the install, but
+ * the current ACF could not be read, so whether Steam adopted it is unknown. Callers take the
+ * side-effect-free route (plain launch / delegated uninstall) and keep the record.
+ */
+type PlayAdoptionDecision =
+  | 'launch'
+  | 'clear-and-launch'
+  | 'restart'
+  | 'unknown'
 
 /**
  * Pure Play-time decision. A different PID means Steam restarted since the
@@ -219,6 +211,7 @@ export function decidePlayAdoption(input: {
   if (!record) return 'launch'
   if (currentPid === null) return 'clear-and-launch'
   if (currentPid !== record.steamPid) return 'clear-and-launch'
+  if (currentAcf?.rustReadFailed) return 'unknown'
   if (isSteamAdoptedAcf(record.baseline, currentAcf)) return 'clear-and-launch'
   return 'restart'
 }

@@ -1,3 +1,4 @@
+import { mockedFsSteamFiles } from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import {
   createTestManagerDeps,
   createTestStores
@@ -19,6 +20,7 @@ const steamMetadataStore = {
   entries: jest.fn().mockReturnValue([])
 }
 const steamTestDeps = createTestManagerDeps({
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   stores: createTestStores({
     steam: {
       configStore: {
@@ -42,6 +44,7 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
+  logDebug: jest.fn(),
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
 jest.mock('axios')
@@ -63,7 +66,6 @@ jest.mock('graceful-fs', () => ({
   readdirSync: jest.fn(),
   readFileSync: jest.fn()
 }))
-jest.mock('@node-steam/vdf', () => ({ parse: jest.fn() }))
 jest.mock('backend/utils', () => ({
   getSteamLibraries: jest.fn(),
   getFileSize: jest.fn(),

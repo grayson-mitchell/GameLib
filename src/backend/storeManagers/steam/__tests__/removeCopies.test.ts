@@ -14,8 +14,8 @@ import {
  *  - backend/logger uses factory form to prevent transitive fs-extra crash
  *  - resetMocks: true (src/backend/jest.config.js) means every mock
  *    implementation must be re-established in beforeEach
- *  - graceful-fs (existsSync/readdirSync/readFileSync) + @node-steam/vdf
- *    (parse) are mocked and driven by a small in-memory manifest fixture
+ *  - graceful-fs (existsSync/readdirSync/readFileSync) + the mockedFsSteamFiles
+ *    programmable parse are mocked and driven by a small in-memory manifest fixture
  *    helper (addManifest) so the REAL readAcfState/findOtherManifestsWithInstalldir
  *    implementations run against controlled fixtures — node:fs's rmSync is
  *    mocked separately so deletions are asserted by call ARGUMENTS, never
@@ -31,7 +31,10 @@ import { rmSync } from 'node:fs'
 // files off disk, deliberately bypassing every fixture double above it.
 import { readFileSync as readSourceFile } from 'fs'
 import { join } from 'path'
-import * as vdf from '@node-steam/vdf'
+import {
+  vdf,
+  mockedFsSteamFiles
+} from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import { getSteamLibraries } from 'backend/utils'
 import * as uninstallPollingModule from '../library/uninstallPolling'
 import * as acfState from '../library/acfState'
@@ -56,7 +59,7 @@ const steamBottle = {
   resolveCrossoverWine: jest.fn()
 }
 const libDeps = {
-  requestRustInvoke: jest.fn(),
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   config: createTestGlobalConfig(),
   steamBottle,
   paths: { userHome: '/test-gamelib/home' },
@@ -68,6 +71,7 @@ const { steamMetadataStore } = jest.requireMock<Stores['steam']>('../stores')
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   steamUser,
   steamBottle: steamBottle as never,
   steamProcesses: createInertSteamProcesses(),
@@ -90,6 +94,7 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
+  logDebug: jest.fn(),
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
 
@@ -105,9 +110,6 @@ jest.mock('graceful-fs', () => ({
   readdirSync: jest.fn(),
   readFileSync: jest.fn()
 }))
-
-// ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
-jest.mock('@node-steam/vdf', () => ({ parse: jest.fn() }))
 
 // ── node:fs mock — rmSync is the ONLY delete primitive removeSteamInstallCopy
 // calls; mocked so every deletion in these tests is asserted by exact call
@@ -185,7 +187,6 @@ jest.mock('../bottledSteam', () => ({
 
 // ── depot mock ─────────────────────────────────────────────────────────────────
 jest.mock('../depot', () => ({
-  finalizeToSteam: jest.fn().mockResolvedValue(undefined),
   downloadSteamDepots: jest.fn()
 }))
 
@@ -272,9 +273,7 @@ function resetFixture() {
   ;(readFileSync as jest.Mock).mockImplementation((p: string) =>
     JSON.stringify(manifestByPath.get(p))
   )
-  ;(vdf.parse as jest.Mock).mockImplementation((content: string) =>
-    JSON.parse(content)
-  )
+  vdf.parse.mockImplementation((content: string) => JSON.parse(content))
   // rmSync is mocked (no real filesystem I/O in these tests), but the
   // fixture must still reflect a deletion for subsequent readAcfState /
   // findOtherManifestsWithInstalldir calls in the SAME test — e.g. Task 2's
@@ -626,6 +625,25 @@ describe('removeSteamInstallCopy', () => {
       status: 'refused',
       source: 'native',
       reason: expect.stringMatching(/invalid appId/i)
+    })
+    expect(rmSync).not.toHaveBeenCalled()
+  })
+
+  it("state 'unknown' (manifest read rejected) -> refused, nothing deleted (WR-01)", async () => {
+    const result = await acfState.removeSteamInstallCopy(
+      {
+        ...steamTestDeps,
+        requestRustInvoke: () =>
+          Promise.reject(new Error('rustInvoke timed out'))
+      } as never,
+      '63000',
+      'native'
+    )
+
+    expect(result).toEqual({
+      status: 'refused',
+      source: 'native',
+      reason: 'install state unknown'
     })
     expect(rmSync).not.toHaveBeenCalled()
   })

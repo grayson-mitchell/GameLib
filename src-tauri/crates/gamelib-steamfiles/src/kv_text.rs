@@ -38,6 +38,17 @@ impl RawStr {
     /// Apply Steam escapes (`\\` `\"` `\n` `\t`); any other backslash is kept literally.
     /// Invalid UTF-8 is replaced lossily.
     pub fn decoded(&self) -> String {
+        self.decode_with(true)
+    }
+
+    /// Decode only `\\` and `\"`; `\n`, `\t` and every other backslash stay literal. Used for
+    /// installscript values, whose Windows paths often carry single backslashes such as
+    /// `\ndp48.exe` or `\tools` (the replaced `parseKv1` decoded exactly this set; 75 WR-06).
+    pub fn decoded_quote_backslash_only(&self) -> String {
+        self.decode_with(false)
+    }
+
+    fn decode_with(&self, control_escapes: bool) -> String {
         let b = &self.0;
         let mut out = Vec::with_capacity(b.len());
         let mut i = 0;
@@ -46,8 +57,8 @@ impl RawStr {
                 let rep = match b[i + 1] {
                     b'\\' => Some(b'\\'),
                     b'"' => Some(b'"'),
-                    b'n' => Some(b'\n'),
-                    b't' => Some(b'\t'),
+                    b'n' if control_escapes => Some(b'\n'),
+                    b't' if control_escapes => Some(b'\t'),
                     _ => None,
                 };
                 if let Some(c) = rep {

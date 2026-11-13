@@ -4,10 +4,8 @@ import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { join } from 'path'
 import { isMac, isLinux } from 'backend/constants/environment'
 import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
-import { finalizeToSteam, type FinalizeToSteamOpts } from '../depot'
 import { resumeVerifyRust } from '../depotRust/secondary'
 import { rustFinalize } from '../depotRust/rustDepot'
-import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
 import {
   sanitizeInstalldir,
   fallbackInstalldirFor,
@@ -89,6 +87,13 @@ async function locateDownloadingTarget(
   return null
 }
 
+/** Where an honest-empty resume finalize lands: the sanitised target, no depots. */
+interface ResumeFinalizeTarget {
+  targetSteamappsDir: string
+  installdir: string
+  name: string
+}
+
 /**
  * Phase 23 (D-04) / 73 (D-13): verifies a startup-resumed appId against its on-disk state. One
  * Rust verify_only job reconciles every file against the manifests, re-applies file modes and
@@ -98,14 +103,14 @@ async function locateDownloadingTarget(
  *
  * NEVER throws: a hostile installdir or a failed verify (offline, a dropped CM connection, a
  * corrupt PICS response) degrades to the honest-empty `depots: []` finalize opts, which fail
- * CLOSED to 1026 via finalizeToSteam's own defaults. It never touches the bottle steamapps or
+ * CLOSED to 1026 via the Rust finalize's own defaults (allowFullOwnership false). It never touches the bottle steamapps or
  * dispatchToBottledSteam, so no silent Steam-in-CrossOver auto-open is introduced here.
  */
 async function buildResumeFinalizeOpts(
   deps: Pick<ManagerDeps, 'config' | 'steamUser' | 'steamInstallRuntime'>,
   appId: string,
   target: { targetSteamappsDir: string; installdir: string; name: string }
-): Promise<FinalizeToSteamOpts | null> {
+): Promise<ResumeFinalizeTarget | null> {
   // WR-03 (23-code-review): target.installdir is read directly off the
   // on-disk ACF's AppState.installdir (locateDownloadingTarget) with no
   // sanitization of its own — route it through the same containment +
@@ -146,11 +151,9 @@ async function buildResumeFinalizeOpts(
       LogPrefix.Steam
     )
     return {
-      steamUser: deps.steamUser,
       targetSteamappsDir: target.targetSteamappsDir,
       installdir: fallbackInstalldirFor(appId),
-      name: target.name,
-      depots: []
+      name: target.name
     }
   }
 
@@ -179,11 +182,9 @@ async function buildResumeFinalizeOpts(
       LogPrefix.Steam
     )
     return {
-      steamUser: deps.steamUser,
       targetSteamappsDir: target.targetSteamappsDir,
       installdir,
-      name: target.name,
-      depots: []
+      name: target.name
     }
   }
 }
@@ -230,30 +231,26 @@ export async function resumeInterruptedSteamInstall(
         const finalizeOpts = await buildResumeFinalizeOpts(deps, appId, target)
         // null: the Rust verify_only job already wrote the ACF.
         if (finalizeOpts) {
-          if (steamFilesTextImpl() === 'rust') {
-            const res = await rustFinalize(
-              deps.steamInstallRuntime.depotJobs.transport,
-              appId,
-              {
-                steamappsDir: finalizeOpts.targetSteamappsDir,
-                installdir: finalizeOpts.installdir,
-                name: finalizeOpts.name,
-                buildid: null,
-                lastOwner: deps.steamUser.getPersistedSteamId64() ?? null,
-                allowFullOwnership: false,
-                betaKey: undefined
-              },
-              [],
-              null
+          const res = await rustFinalize(
+            deps.steamInstallRuntime.depotJobs.transport,
+            appId,
+            {
+              steamappsDir: finalizeOpts.targetSteamappsDir,
+              installdir: finalizeOpts.installdir,
+              name: finalizeOpts.name,
+              buildid: null,
+              lastOwner: deps.steamUser.getPersistedSteamId64() ?? null,
+              allowFullOwnership: false,
+              betaKey: undefined
+            },
+            [],
+            null
+          )
+          if ('preserved' in res) {
+            logInfo(
+              `Steam: resume finalize for appId ${appId} found an installed manifest (StateFlags=${res.stateFlags}); leaving it untouched`,
+              LogPrefix.Steam
             )
-            if ('preserved' in res) {
-              logInfo(
-                `Steam: resume finalize for appId ${appId} found an installed manifest (StateFlags=${res.stateFlags}); leaving it untouched`,
-                LogPrefix.Steam
-              )
-            }
-          } else {
-            await finalizeToSteam(appId, finalizeOpts)
           }
         }
       }
@@ -349,6 +346,15 @@ export async function rearmPersistedSteamRestartHolds(
           continue
         }
         const acf = await readAcfState(deps, appId, 'native')
+        // WR-01 (75 review): an unreadable manifest is not a reason to drop a
+        // persisted hold; keep it for the next start.
+        if (acf.state === 'unknown') {
+          logWarning(
+            `Steam: kept persisted Steam restart hold for appId ${appId} (manifest state unknown)`,
+            LogPrefix.Steam
+          )
+          continue
+        }
         if (acf.state !== 'installed') {
           clearSteamRestartHold(appId, restartHoldStoreFrom(deps))
           dropped++

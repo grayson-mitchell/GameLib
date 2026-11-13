@@ -10,8 +10,7 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import { startInstallPolling } from './library/installPolling'
 import * as resumeBreadcrumbs from './library/resumeBreadcrumbs'
-import { readAppManifestFlags } from './library/manifestFlags'
-import { isFullyInstalledStateFlags } from './library/installedMap'
+import { readInstalledAtStart } from './library/manifestFlags'
 import * as adoption from './macSteamAdoption'
 import type { AuthSessionRefusal } from './userTypes'
 import { downloadSteamDepots } from './depot'
@@ -499,14 +498,12 @@ export async function runNativeDepotDownloadLeased(
   // Todo 2026-11-09: also capture whether the title was ALREADY installed
   // (StateFlags & 4, any installed state) so cancel-delete can refuse after a
   // cancelled finalize has downgraded the manifest to 1026.
-  const installedAtStart = isFullyInstalledStateFlags(
-    (
-      await readAppManifestFlags(
-        steamGame.deps,
-        targetSteamappsDir,
-        steamGame.appId
-      )
-    )?.stateFlags ?? 0
+  // WR-07 (75 review): an unparseable or unreadable manifest counts as
+  // installed here, so a damaged complete install is never cancel-deleted.
+  const installedAtStart = await readInstalledAtStart(
+    steamGame.deps,
+    targetSteamappsDir,
+    steamGame.appId
   )
   if (installedAtStart) {
     logInfo(

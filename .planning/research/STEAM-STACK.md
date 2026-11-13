@@ -103,3 +103,7 @@ library and opens no authenticated session. The rows below are amended according
 - [Playnite Steam integration source](https://github.com/JosefNemec/Playnite) — reference for two-path approach (browser login vs API key)
 - [Steam browser protocol (Valve DevWiki)](https://developer.valvesoftware.com/wiki/Steam_browser_protocol)
 - [node-steam-user issue #144: getOwnedApps performance](https://github.com/DoctorMcKay/node-steam-user/issues/144)
+
+---
+
+**2026-11-14 note:** Phase 75 replaced `@node-steam/vdf` (and `steam-shortcut-editor`, which this record lists as used only for add-to-Steam) with the in-repo `gamelib-steamfiles` crate. Both npm packages are removed; the rows above are the historical decision record.

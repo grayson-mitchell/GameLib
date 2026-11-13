@@ -73,3 +73,15 @@ Not divergences (the sweep and golden suite show equal): `readInstallScript` (6 
 ## Fixes made during the sweep
 
 None to the Rust code. Two sweep-harness problems were fixed (not parity bugs): the backend logger had no writer outside the sidecar, so every Rust-branch wrapper silently took its catch path and reported a false mass diff; the sweep now initialises the logger under a throwaway HOME so the real app log is not written. The first complete run surfaced one real class not in the golden overrides, `integer-key-order` (DV-75-13).
+
+## Delete gate (63 D-13 / 73 D-15)
+
+- [x] Zero unexplained sweep diffs (see "Sweep result" and "Divergences" above; every divergence is explained and operator-accepted).
+- [x] Live macOS UAT passed: 8 of 8 items pass (75-UAT.md, 2026-11-14). Item 3 ran through the native depot download rather than a Steam hand-off; item 7's apply log lines were lost to log rotation and are covered by byte-identical file evidence.
+- [x] CI three legs green: https://github.com/grayson-mitchell/GameLib/actions/runs/43505684860 (a869d5e8b), rust-test.yml: macos-latest success, ubuntu-latest success, windows-latest success, including `cargo test -p gamelib-steamfiles -p gamelib-steamfiles-cli` and the clippy ratchet. Earlier runs 43496024158 (a58e3e3e8) and 43498298159 (fe0108b0d) were red on test-harness and Phase 74 clippy issues, fixed in fe0108b0d and a869d5e8b.
+
+Plans 27-35 are unblocked.
+
+## Post-review change (code review WR-02, 2026-11-14)
+
+`findOtherManifestsWithInstalldir` (co-install delete guard) now returns the `<unknown>` conflict sentinel when the `steamfiles_scan_acfs` result lists any skipped entry other than the app's own manifest (unreadable/oversize/unparseable sibling ACF, unreadable steamapps dir, entry cap). Callers then remove only the manifest and keep the shared install directory. This is a stricter-than-oracle behaviour on the delete path, not a parser divergence; the four affected golden overrides (`library/findOtherManifestsWithInstalldir/*` over `scan/lib1`, which holds the truncated `appmanifest_30.acf`) carry divergence notes. See 75-REVIEW-FIX.md (commit b0b2dc0f8).

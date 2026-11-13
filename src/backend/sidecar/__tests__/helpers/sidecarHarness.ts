@@ -53,6 +53,7 @@ import type { ProcessGuards } from '../../processGuards'
 import { createTestOnlineMonitor } from '../../../testUtils/testOnlineMonitor'
 import type { IpcRegistry } from '../../ipcRegistry'
 import { createRegistryViews } from './registryViews'
+import { fsBackedSteamFiles } from '../../../storeManagers/steam/localFiles/__tests__/fixtures/stubRustSteamFiles'
 
 // The registry of the most recent bootFresh() (the harness module is imported once per file and
 // survives jest.resetModules(), so this binding is stable across a case's registry resets).
@@ -70,7 +71,10 @@ export type Frame = Record<string, unknown>
 // flagged the previously-exported form as an over-broad `export` -- there is no
 // external consumer, so the export served no purpose).
 /** Buffers newline-delimited output from a PassThrough into parsed frames. */
-function collectFrames(stream: PassThrough): Frame[] {
+function collectFrames(
+  stream: PassThrough,
+  onFrame?: (frame: Frame) => void
+): Frame[] {
   const frames: Frame[] = []
   let buffer = ''
   stream.on('data', (chunk: Buffer | string) => {
@@ -81,7 +85,9 @@ function collectFrames(stream: PassThrough): Frame[] {
       buffer = buffer.slice(newlineIndex + 1)
       if (line.trim().length > 0) {
         try {
-          frames.push(JSON.parse(line))
+          const frame = JSON.parse(line) as Frame
+          frames.push(frame)
+          onFrame?.(frame)
         } catch {
           // Non-JSON diagnostic line (e.g. READY_SENTINEL) — ignore.
         }
@@ -163,7 +169,30 @@ export function bootFresh(opts?: {
   liveContexts.push(testContext)
   const input = new PassThrough()
   const output = opts?.output ?? new PassThrough()
-  const frames = collectFrames(output)
+  // 75-30: the Steam local-file readers are Rust-only, so a booted sidecar's steamfiles_* rustInvoke
+  // frames need an answer; a file-backed double over the case's fake HOME stands in for the shell.
+  const steamFiles = fsBackedSteamFiles()
+  const frames = collectFrames(output, (frame) => {
+    if (
+      frame.kind !== 'rustInvoke' ||
+      typeof frame.channel !== 'string' ||
+      !frame.channel.startsWith('steamfiles_')
+    ) {
+      return
+    }
+    void steamFiles
+      .requestRustInvoke(frame.channel, frame.args as unknown[])
+      .then(
+        (result) =>
+          input.write(
+            `${JSON.stringify({ id: frame.id, ok: true, result })}\n`
+          ),
+        (error: unknown) =>
+          input.write(
+            `${JSON.stringify({ id: frame.id, ok: false, error: String(error) })}\n`
+          )
+      )
+  })
   // A fresh, UNINSTALLED guards instance from this case's registry: boot only binds its sinks.
   /* eslint-disable @typescript-eslint/no-require-imports */
   const guards =

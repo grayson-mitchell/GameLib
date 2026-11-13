@@ -13,8 +13,13 @@ import {
   scanDownloadingAppIds
 } from '../../library/acfState'
 import { breadcrumbAppIsFullyInstalledOnDisk } from '../../library/resumeBreadcrumbs'
-import { listFiles, normalizeForGolden } from './oracle/normalize'
-import { SYSTEM_STEAM, depsFor, steamRootWith } from './oracle/libraryOracle'
+import {
+  SYSTEM_STEAM,
+  depsFor,
+  listFiles,
+  normalizeForGolden,
+  steamRootWith
+} from './fixtures/fixtureCopy'
 import {
   expectedFor,
   replayDeps,
@@ -76,20 +81,10 @@ async function check(
 }
 
 describe('library replay parity (TS wrappers over recorded Rust results)', () => {
-  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
-
-  beforeAll(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-  })
   beforeEach(() => {
     jest.spyOn(logger, 'logDebug').mockImplementation(() => undefined)
   })
   afterEach(() => jest.restoreAllMocks())
-  afterAll(() => {
-    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
-  })
-
   it('replays every library case', async () => {
     await withFixtureCopy('', async (root) => {
       for (const file of listFiles(join(root, 'libraryfolders'))) {

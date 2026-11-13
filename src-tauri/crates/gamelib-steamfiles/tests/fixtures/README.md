@@ -110,3 +110,15 @@ Binary KV; see `shortcuts/` and the builder named above. Cases: `empty`, `one-en
 order), `tags`, `two-entries`, `sparse-indexes` (keys 0 and 2), `lexical-order` (0,1,10,2 in file
 order), `unknown-type` (0x07 uint64 and 0x03 float32 fields), `trailing-bytes`, `truncated`,
 `non-utf8`, `negative-appid` (int32 high bit set), plus the 7 `upstream/` files.
+
+## After the oracle (plan 27)
+
+The TS oracle modules, the TS-equals-golden Jest test and the local parity sweep are deleted
+(delete gate met, 75-PARITY.md). What stays is the permanent Tier 1 parity:
+
+- `expected.json` is frozen: the captured oracle values are never edited or regenerated.
+- A new case is hand-written with a Rust-verified value and a note naming its source of truth
+  (Steam's own file or behaviour), never "the old TS did this".
+- The replay tests keep asserting TS-wrapper(Rust) equals `expected.json`, or the `overrides/*.json`
+  entry with its `divergenceNote`. `rust-results.json` is the committed Rust output they replay.
+- The cargo golden test (`tests/golden.rs`) keeps the Rust side honest against the same files.

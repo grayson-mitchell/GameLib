@@ -27,7 +27,11 @@ const depotTransport = {
   sendFrontendMessage: jest.fn(),
   appRuntime: createTestAppRuntime()
 }
-import { RUST_DEPOT_MANIFEST_SUMMARY } from 'common/types/sidecarTransport'
+import {
+  RUST_DEPOT_MANIFEST_SUMMARY,
+  RUST_STEAMFILES_READ_INSTALLSCRIPT
+} from 'common/types/sidecarTransport'
+import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
 import { downloadSharedRedistDepots } from '../depot'
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 const steamUser = createMockSteamUser()
@@ -45,6 +49,7 @@ import type {
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
+  logDebug: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
   getRunnerLogWriter: jest.fn().mockReturnValue({}),
@@ -79,6 +84,56 @@ const SCRIPT_TEXT: Record<string, string> = {
   '229004': fx('229004-dotnet-4.5.2.vdf'),
   '229007': fx('229007-dotnet-4.8.vdf')
 }
+type RecordedEntry = {
+  name: string
+  hasRunKey?: string
+  minimumHasRunValue: number
+  processes: { process: string; command?: string }[]
+  requirementOs: { is64BitWindows?: string; osType?: string } | null
+}
+const RECORDED_ENTRIES = JSON.parse(fx('entries.json')) as Record<
+  string,
+  RecordedEntry[]
+>
+const FIXTURE_NAME: Record<string, string> = {
+  '228990': '228990-directx-jun2010.vdf',
+  '229004': '229004-dotnet-4.5.2.vdf',
+  '229007': '229007-dotnet-4.8.vdf'
+}
+
+/**
+ * steamfiles_read_installscript, programmed: a script whose bytes equal a committed fixture answers
+ * the entries Rust recorded for it; any other bytes are the "does not parse" null. It parses nothing.
+ */
+const installScriptStub = stubRustSteamFiles({
+  [RUST_STEAMFILES_READ_INSTALLSCRIPT]: ({ path }) => {
+    const text = readFileSync(path, 'utf8')
+    const id = Object.keys(FIXTURE_NAME).find(
+      (k) => fx(FIXTURE_NAME[k]!) === text
+    )
+    const recorded = id ? RECORDED_ENTRIES[FIXTURE_NAME[id]!] : undefined
+    if (!recorded) return { exists: true, entries: null }
+    return {
+      exists: true,
+      entries: recorded.map((e) => ({
+        name: e.name,
+        hasRunKey: e.hasRunKey ?? null,
+        minimumHasRunValue: e.minimumHasRunValue,
+        processes: e.processes.map((p) => ({
+          process: p.process,
+          command: p.command ?? null
+        })),
+        requirementOs: e.requirementOs
+          ? {
+              is64BitWindows: e.requirementOs.is64BitWindows ?? null,
+              osType: e.requirementOs.osType ?? null
+            }
+          : null
+      }))
+    }
+  }
+})
+
 const GID: Record<string, string> = {
   '228990': '9000000000000000001',
   '229004': '9000000000000000002',
@@ -307,7 +362,7 @@ describe('downloadSharedRedistDepots', () => {
       cacheSteamappsDir: cacheDir,
       optInDepotIds: [],
       rust: {
-        requestRustInvoke: () => Promise.reject(new Error('rust not stubbed'))
+        requestRustInvoke: installScriptStub.requestRustInvoke as never
       },
       ...extra
     })

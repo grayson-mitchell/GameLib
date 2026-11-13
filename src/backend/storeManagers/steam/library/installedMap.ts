@@ -1,12 +1,9 @@
 import { join } from 'path'
 import type { AppPaths } from 'backend/process/context'
-import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
-import { parse } from '@node-steam/vdf'
 import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { RUST_STEAMFILES_SCAN_ACFS } from 'common/types/sidecarTransport'
 import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
-import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
 import type { ScannedAcf } from '../localFiles/steamFilesTypes'
 import { getBottleSteamappsDir, type BottleSettingsDeps } from '../bottle'
 import {
@@ -31,21 +28,19 @@ export function isFullyInstalledStateFlags(stateFlags: number): boolean {
 type InstalledMap = Map<number, { installPath: string; sizeOnDisk: string }>
 
 /**
- * One steamfiles_scan_acfs call over `steamappsDirs`. A rejected invoke maps to no records,
- * the same fail-soft result the TS bodies give for unreadable input.
+ * One steamfiles_scan_acfs call over `steamappsDirs`. Unreadable files and missing dirs are
+ * skipped inside the scan (T-2-01), but a rejected invoke (timeout, shell restart) is
+ * propagated: it says nothing about what is installed, and mapping it to "no records" made
+ * refreshInstallState persist every installed title as not installed (WR-01, 75 review).
  */
 async function scanRecords(
   deps: RustInvokeDeps,
   steamappsDirs: string[]
 ): Promise<ScannedAcf[]> {
-  try {
-    const result = await invokeSteamFiles(deps, RUST_STEAMFILES_SCAN_ACFS, {
-      steamappsDirs
-    })
-    return result.records
-  } catch {
-    return []
-  }
+  const result = await invokeSteamFiles(deps, RUST_STEAMFILES_SCAN_ACFS, {
+    steamappsDirs
+  })
+  return result.records
 }
 
 function installedEntry(rec: ScannedAcf) {
@@ -67,16 +62,17 @@ function fullyInstalledAppId(rec: ScannedAcf): number | undefined {
  * Reads all Steam library paths and returns a Map from AppID (number) to
  * install data for games whose ACF StateFlags has bit 4 set
  * (0x4 = FullyInstalled). Skips missing directories and corrupt ACF files
- * without throwing (T-2-01 mitigation).
+ * without throwing (T-2-01 mitigation). A rejected rustInvoke for the library
+ * list or the scan rejects (WR-01, 75 review): callers skip the reconcile
+ * rather than read it as "nothing installed".
  *
  * Exported for unit testing.
  */
 export async function buildInstalledMap(
   deps: SteamLibrariesDeps
 ): Promise<InstalledMap> {
-  if (steamFilesTextImpl() === 'ts') return buildInstalledMapTs(deps)
   const installed: InstalledMap = new Map()
-  const libraryPaths = await getSteamLibraries(deps)
+  const libraryPaths = await getSteamLibraries(deps, { strict: true })
   const records = await scanRecords(
     deps,
     libraryPaths.map((libPath) => join(libPath, 'steamapps'))
@@ -85,54 +81,6 @@ export async function buildInstalledMap(
     const appid = fullyInstalledAppId(rec)
     if (appid !== undefined) installed.set(appid, installedEntry(rec))
   }
-  return installed
-}
-
-async function buildInstalledMapTs(
-  deps: SteamLibrariesDeps
-): Promise<InstalledMap> {
-  const installed = new Map<
-    number,
-    { installPath: string; sizeOnDisk: string }
-  >()
-  const libraryPaths = await getSteamLibraries(deps)
-
-  for (const libPath of libraryPaths) {
-    const steamappsDir = join(libPath, 'steamapps')
-    if (!existsSync(steamappsDir)) continue
-
-    let files: string[]
-    try {
-      files = readdirSync(steamappsDir)
-    } catch {
-      continue
-    }
-
-    for (const file of files) {
-      if (!file.startsWith('appmanifest_') || !file.endsWith('.acf')) continue
-
-      try {
-        const content = readFileSync(join(steamappsDir, file), 'utf-8')
-        const parsed = parse(content)
-        const state = parsed?.AppState
-        if (!state) continue
-
-        const appid = parseInt(state.appid, 10)
-        const stateFlags = parseInt(state.StateFlags, 10)
-        const isInstalled = isFullyInstalledStateFlags(stateFlags)
-
-        if (isInstalled && !isNaN(appid)) {
-          installed.set(appid, {
-            installPath: join(steamappsDir, 'common', state.installdir ?? ''),
-            sizeOnDisk: state.SizeOnDisk ?? '0'
-          })
-        }
-      } catch {
-        /* skip corrupt ACF — T-2-01 mitigation */
-      }
-    }
-  }
-
   return installed
 }
 
@@ -154,9 +102,8 @@ async function buildInstalledMapTs(
 export async function buildIncompleteInstallSet(
   deps: SteamLibrariesDeps
 ): Promise<Set<number>> {
-  if (steamFilesTextImpl() === 'ts') return buildIncompleteInstallSetTs(deps)
   const incomplete = new Set<number>()
-  const libraryPaths = await getSteamLibraries(deps)
+  const libraryPaths = await getSteamLibraries(deps, { strict: true })
   const records = await scanRecords(
     deps,
     libraryPaths.map((libPath) => join(libPath, 'steamapps'))
@@ -175,53 +122,6 @@ export async function buildIncompleteInstallSet(
   return incomplete
 }
 
-async function buildIncompleteInstallSetTs(
-  deps: SteamLibrariesDeps
-): Promise<Set<number>> {
-  const incomplete = new Set<number>()
-  const libraryPaths = await getSteamLibraries(deps)
-
-  for (const libPath of libraryPaths) {
-    const steamappsDir = join(libPath, 'steamapps')
-    if (!existsSync(steamappsDir)) continue
-
-    let files: string[]
-    try {
-      files = readdirSync(steamappsDir)
-    } catch {
-      continue
-    }
-
-    for (const file of files) {
-      if (!file.startsWith('appmanifest_') || !file.endsWith('.acf')) continue
-
-      try {
-        const content = readFileSync(join(steamappsDir, file), 'utf-8')
-        const parsed = parse(content)
-        const state = parsed?.AppState
-        if (!state) continue
-
-        const appid = parseInt(state.appid, 10)
-        const stateFlags = parseInt(state.StateFlags, 10)
-        // A present-but-incomplete manifest (bit 4 unset). NaN StateFlags is
-        // excluded — an unparseable manifest is not a trustworthy resume
-        // signal, matching buildInstalledMap's fail-closed stance.
-        if (
-          !isNaN(appid) &&
-          !isNaN(stateFlags) &&
-          !isFullyInstalledStateFlags(stateFlags)
-        ) {
-          incomplete.add(appid)
-        }
-      } catch {
-        /* skip corrupt ACF — T-2-01 mitigation */
-      }
-    }
-  }
-
-  return incomplete
-}
-
 /**
  * Bottle-scoped sibling of buildInstalledMap(deps) — same StateFlags bitmask +
  * corrupt-file discipline (T-2-01/T-17-05), rooted at the dedicated CrossOver
@@ -234,57 +134,12 @@ async function buildIncompleteInstallSetTs(
 export async function buildBottleInstalledMap(
   deps: BottleSettingsDeps & RustInvokeDeps
 ): Promise<InstalledMap> {
-  if (steamFilesTextImpl() === 'ts') return buildBottleInstalledMapTs(deps)
   const installed: InstalledMap = new Map()
   const records = await scanRecords(deps, [getBottleSteamappsRoot(deps)])
   for (const rec of records) {
     const appid = fullyInstalledAppId(rec)
     if (appid !== undefined) installed.set(appid, installedEntry(rec))
   }
-  return installed
-}
-
-async function buildBottleInstalledMapTs(
-  deps: BottleSettingsDeps
-): Promise<InstalledMap> {
-  const installed = new Map<
-    number,
-    { installPath: string; sizeOnDisk: string }
-  >()
-  const steamappsDir = getBottleSteamappsRoot(deps)
-  if (!existsSync(steamappsDir)) return installed
-
-  let files: string[]
-  try {
-    files = readdirSync(steamappsDir)
-  } catch {
-    return installed
-  }
-
-  for (const file of files) {
-    if (!file.startsWith('appmanifest_') || !file.endsWith('.acf')) continue
-
-    try {
-      const content = readFileSync(join(steamappsDir, file), 'utf-8')
-      const parsed = parse(content)
-      const state = parsed?.AppState
-      if (!state) continue
-
-      const appid = parseInt(state.appid, 10)
-      const stateFlags = parseInt(state.StateFlags, 10)
-      const isInstalled = isFullyInstalledStateFlags(stateFlags)
-
-      if (isInstalled && !isNaN(appid)) {
-        installed.set(appid, {
-          installPath: join(steamappsDir, 'common', state.installdir ?? ''),
-          sizeOnDisk: state.SizeOnDisk ?? '0'
-        })
-      }
-    } catch {
-      /* skip corrupt ACF — T-2-01/T-17-05 mitigation */
-    }
-  }
-
   return installed
 }
 
@@ -317,7 +172,6 @@ export async function buildBridgeInstalledMap(
   paths: Pick<AppPaths, 'userHome'>,
   rust: RustInvokeDeps
 ): Promise<InstalledMap> {
-  if (steamFilesTextImpl() === 'ts') return buildBridgeInstalledMapTs(paths)
   const installed: InstalledMap = new Map()
   const names = listReadyBridgeBottleNames(paths)
   if (names.length === 0) return installed
@@ -338,56 +192,5 @@ export async function buildBridgeInstalledMap(
       installed.set(appid, installedEntry(rec))
     }
   }
-  return installed
-}
-
-async function buildBridgeInstalledMapTs(
-  paths: Pick<AppPaths, 'userHome'>
-): Promise<InstalledMap> {
-  const installed = new Map<
-    number,
-    { installPath: string; sizeOnDisk: string }
-  >()
-
-  for (const name of listReadyBridgeBottleNames(paths)) {
-    const steamappsDir = getBottleSteamappsDir(paths, name)
-    if (!existsSync(steamappsDir)) continue
-
-    let files: string[]
-    try {
-      files = readdirSync(steamappsDir)
-    } catch {
-      continue
-    }
-
-    for (const file of files) {
-      if (!file.startsWith('appmanifest_') || !file.endsWith('.acf')) continue
-
-      try {
-        const content = readFileSync(join(steamappsDir, file), 'utf-8')
-        const parsed = parse(content)
-        const state = parsed?.AppState
-        if (!state) continue
-
-        const appid = parseInt(state.appid, 10)
-        const stateFlags = parseInt(state.StateFlags, 10)
-        const isInstalled = isFullyInstalledStateFlags(stateFlags)
-
-        if (
-          isInstalled &&
-          !isNaN(appid) &&
-          resolveBridgeBottleName(paths, String(appid)) === name
-        ) {
-          installed.set(appid, {
-            installPath: join(steamappsDir, 'common', state.installdir ?? ''),
-            sizeOnDisk: state.SizeOnDisk ?? '0'
-          })
-        }
-      } catch {
-        /* skip corrupt ACF — T-2-01 mitigation */
-      }
-    }
-  }
-
   return installed
 }

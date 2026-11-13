@@ -28,8 +28,6 @@
 // D-UAT-11 (quick-261029-o5a): a successful delete also zeroes the frontend progress.
 
 import type { StatusUpdateDeps } from 'backend/appRuntime'
-import { parse } from '@node-steam/vdf'
-import { readFileSync, existsSync } from 'graceful-fs'
 import { rmSync } from 'node:fs'
 import { isAbsolute, join, relative, resolve, sep } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -45,7 +43,6 @@ import { getBottleSteamappsDir, type BottleSettingsDeps } from './bottle'
 import { sanitizeInstalldir } from './installLocation'
 import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
 import { invokeSteamFiles } from './localFiles/rustSteamFiles'
-import { steamFilesTextImpl } from './localFiles/steamFilesFlags'
 import { NUMERIC_APP_ID } from './gameConstants'
 import type { SteamStoresDeps } from './library/installRoot'
 import type {
@@ -192,33 +189,23 @@ export async function deleteCancelledSteamInstall(
     }
 
     const manifestPath = join(targetSteamappsDir, `appmanifest_${appId}.acf`)
-    if (steamFilesTextImpl() === 'ts') {
-      if (existsSync(manifestPath)) {
-        try {
-          const parsed = parse(readFileSync(manifestPath, 'utf-8')) as {
-            AppState?: { StateFlags?: string }
-          }
-          if (Number(parsed?.AppState?.StateFlags) & 4) {
-            return refuse(appId, 'manifest reports installed')
-          }
-        } catch {
-          /* unparseable ACF is residue, not a refusal */
-        }
-      }
-    } else {
-      let read
-      try {
-        read = await invokeSteamFiles(deps, RUST_STEAMFILES_READ_ACF, {
-          path: manifestPath
-        })
-      } catch {
-        // T-75-56: cannot tell whether Steam reports it installed -> refuse.
-        return refuse(appId, 'manifest unreadable')
-      }
-      if (read.exists && read.parsed && (read.record?.stateFlags ?? 0) & 4) {
-        return refuse(appId, 'manifest reports installed')
-      }
-      // exists but unparseable is residue, not a refusal (as on the TS path)
+    let read
+    try {
+      read = await invokeSteamFiles(deps, RUST_STEAMFILES_READ_ACF, {
+        path: manifestPath
+      })
+    } catch {
+      // T-75-56: cannot tell whether Steam reports it installed -> refuse.
+      return refuse(appId, 'manifest unreadable')
+    }
+    if (read.exists && read.parsed && (read.record?.stateFlags ?? 0) & 4) {
+      return refuse(appId, 'manifest reports installed')
+    }
+    // WR-07 (75 review): a manifest that exists but does not parse (truncated,
+    // oversized) cannot prove the title is not installed. Our own finalize
+    // writes the ACF atomically, so it never leaves one behind -> refuse.
+    if (read.exists && !read.parsed) {
+      return refuse(appId, 'manifest unparseable')
     }
 
     const conflicting = await findOtherManifestsWithInstalldir(

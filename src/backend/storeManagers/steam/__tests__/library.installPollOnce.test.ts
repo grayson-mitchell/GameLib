@@ -13,7 +13,10 @@ import {
 import { startInstallPolling } from '../library/installPolling'
 import { stopInstallPolling } from '../library/installStop'
 import { existsSync, readFileSync } from 'graceful-fs'
-import * as vdf from '@node-steam/vdf'
+import {
+  vdf,
+  mockedFsSteamFiles
+} from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 const sendFrontendMessage = jest.fn()
 import { notify } from '../../../dialog/dialog'
@@ -46,6 +49,7 @@ const stopSteamDownloadMonitor = monitor.stop
 const getSteamBottleSettings = jest.fn()
 
 const steamTestDeps = createTestManagerDeps({
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   sendFrontendMessage,
   steamBottle: { getSteamBottleSettings } as never,
   steamProcesses: createInertSteamProcesses({ downloadMonitor: monitor }),
@@ -67,6 +71,7 @@ jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
 jest.mock('backend/knownFixReport', () => ({ reportDetectedFix: jest.fn() }))
 
 jest.mock('backend/logger', () => ({
+  logDebug: jest.fn(),
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
@@ -87,9 +92,6 @@ jest.mock('backend/utils', () => ({
 
 // ── graceful-fs mock — readdirSync, readFileSync, existsSync ─────────────────
 jest.mock('graceful-fs')
-
-// ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
-jest.mock('@node-steam/vdf')
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
@@ -162,10 +164,9 @@ jest.mock('../bridgeBottle', () => ({
   resolveBridgeBottleName: jest.fn()
 }))
 
-// ── depot mock — finalizeToSteam (D-05 startup finalize) / downloadSteamDepots
+// ── depot mock — downloadSteamDepots
 // (must NEVER be invoked from startup resume — Pitfall 4, no silent re-download) ─
 jest.mock('../depot', () => ({
-  finalizeToSteam: jest.fn().mockResolvedValue(undefined),
   downloadSteamDepots: jest.fn()
 }))
 
@@ -300,7 +301,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('sends gameStatusUpdate { status:"installing" } when state is "downloading"', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',
@@ -322,7 +323,7 @@ describe('pollInstallOnce()', () => {
   // ── GAP-17-BOTTLE-PROGRESS: pollInstallOnce derives percent from ACF bytes ─
 
   it('emits progressUpdate with progress.percent === 50 for a mid-download ACF (BytesDownloaded=5, BytesToDownload=10)', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',
@@ -344,7 +345,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('falls back to BytesStaged/BytesToStage when BytesToDownload is 0 (percent 50 via staged fallback)', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',
@@ -368,7 +369,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('does NOT emit progressUpdate (and never a non-finite percent) when BOTH BytesToDownload and BytesToStage are 0', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',
@@ -396,7 +397,7 @@ describe('pollInstallOnce()', () => {
   // ── T-AOG (quick/260719-aog): download speed + ETA derivation ─────────────
 
   it('emits no downSpeed and eta "" on a direct call with no active poll (poll undefined never throws)', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',
@@ -416,7 +417,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('emits a finite downSpeed > 0 and a non-empty decreasing eta on the second tick of a rising download (first tick has no baseline yet)', async () => {
-    ;(vdf.parse as jest.Mock)
+    vdf.parse
       .mockReturnValueOnce({
         AppState: {
           appid: '730',
@@ -464,7 +465,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('never emits a non-finite/negative downSpeed or eta when two ticks land back-to-back with zero elapsed time (preallocation-jump guard)', async () => {
-    ;(vdf.parse as jest.Mock)
+    vdf.parse
       .mockReturnValueOnce({
         AppState: {
           appid: '730',
@@ -506,7 +507,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('regression (GAP-17-BOTTLE-PROGRESS): staged-fallback ACF (BytesToDownload=0) still emits percent, with no downSpeed/eta', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',
@@ -537,7 +538,7 @@ describe('pollInstallOnce()', () => {
   // ── T-AOG (quick/260719-aog, Task 2): paused/stalled detection ─────────────
 
   it('emits gameStatusUpdate context "steam-paused" after STALLED_TICKS_THRESHOLD consecutive frozen-bytes ticks on a real in-flight download', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',
@@ -560,7 +561,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('never emits "steam-paused" while BytesDownloaded keeps rising across ticks (active download resets the stalled counter)', async () => {
-    ;(vdf.parse as jest.Mock)
+    vdf.parse
       .mockReturnValueOnce({
         AppState: {
           appid: '730',
@@ -616,7 +617,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('keeps "steam-waiting-for-restart" (never "steam-paused") for a frozen 1026 handoff manifest on a native-ON handoff poll, even with a real in-flight download\'s frozen bytes', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '1026',
@@ -647,7 +648,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('does NOT flag "steam-paused" for a staged-fallback ACF (BytesToDownload=0) even though BytesDownloaded stays frozen at 0', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',
@@ -674,7 +675,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('sends pushGameToLibrary + gameStatusUpdate { status:"done" } when state is "installed"', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -701,7 +702,7 @@ describe('pollInstallOnce()', () => {
   // ── GAME-02: poller fires confirmed completion toast (RED gate) ────────────
 
   it('GAME-02: fires notify with Installation Finished on the "installed" branch (confirmed ACF state)', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -746,7 +747,7 @@ describe('pollInstallOnce()', () => {
 
     beforeEach(() => {
       envMock.isMac = true
-      ;(vdf.parse as jest.Mock).mockReturnValue(frozenAcf)
+      vdf.parse.mockReturnValue(frozenAcf)
     })
     afterEach(() => {
       envMock.isMac = false
@@ -861,7 +862,7 @@ describe('pollInstallOnce()', () => {
       jest
         .mocked(getBottleSteamappsDir)
         .mockReturnValue(BRIDGE_BOTTLE_STEAMAPPS_ROOT)
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: {
           appid: '730',
           StateFlags: '4',
@@ -950,7 +951,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('GAME-02: does NOT fire notify on the "downloading" branch (interim tick, no toast)', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',
@@ -965,7 +966,7 @@ describe('pollInstallOnce()', () => {
   // ── D-UAT-04 (21-16): GameLib handoff (StateFlags===1026) waiting signal ──
 
   it('emits gameStatusUpdate with context "steam-waiting-for-restart" when StateFlags parses to exactly 1026 on a native-ON handoff poll (GameLib handoff)', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '1026',
@@ -995,7 +996,7 @@ describe('pollInstallOnce()', () => {
 
   describe('bottle-source 1026 handoff (quick 261030-o77)', () => {
     const mockAcf = (flags: string) =>
-      (vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: {
           appid: '730',
           StateFlags: flags,
@@ -1123,7 +1124,7 @@ describe('pollInstallOnce()', () => {
   // path (see Round 3's root-cause writeup).
 
   it('fires the "Restart Steam to finish installing" notify on the "installed" branch (StateFlags=4 fast path) when isNativeHandoff is true', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -1151,7 +1152,7 @@ describe('pollInstallOnce()', () => {
 
   // ── quick 261029-ji2: native Mac route (Play restarts Steam to adopt) ───────
   it('261029-ji2: a macNativeRoute StateFlags 4 poll fires Installation Finished and NOT the "Restart Steam" notify', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -1176,7 +1177,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('261029-ji2: a second startInstallPolling call carrying macNativeRoute upgrades the registered poll', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -1199,7 +1200,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('261029-ji2: a macNativeRoute poll at StateFlags 1026 (fail-closed handoff, not FullyInstalled) keeps the waiting state and restart hint', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '1026',
@@ -1221,7 +1222,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('does NOT fire the "Restart Steam" notify on the "installed" branch for an OFF-path poll (Steam owns the download, isNativeHandoff false/absent) — no regression on the ordinary install-finished flow', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -1247,7 +1248,7 @@ describe('pollInstallOnce()', () => {
   // i18nextT call's OPTIONS object, not the notify() body.
 
   it('23.2-04: fires the skip notice and names the depot via the i18nextT options object (not just the fallback body)', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -1277,7 +1278,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it("23.2-04: the depotSkipped interpolation options object never carries a 'count' key — i18next reserves it for pluralization", async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -1301,7 +1302,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('23.2-04: joins several skipped depot ids into a single comma-separated interpolation value', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -1324,7 +1325,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('23.2-04: fires all THREE notices in one confirmed-installed tick (finished, skipped, restart Steam) — this is the regression guard for the shared-guard trap', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -1355,7 +1356,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('23.2-04: fires the skip notice at most once — two consecutive pollInstallOnce calls against the same poll produce exactly one skip notice', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -1385,7 +1386,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('23.2-04: silent when no depot was skipped — an empty skippedDepots list fires no skip notice and leaves the ordinary Installation Finished toast unaffected', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -1412,7 +1413,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('23.2-04: silent on an OFF-path poll (Steam owns the download, bare-number call signature) — mirrors the existing OFF-path negative test shape', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -1439,7 +1440,7 @@ describe('pollInstallOnce()', () => {
   // ── debug/steam-1026-download-restart: the 1026-collision regression ──────
 
   it('regression: an OFF-path poll (Steam owns the download, no isNativeHandoff) at StateFlags 1026 with advancing bytes emits normal "installing" progress, NEVER "steam-waiting-for-restart"', async () => {
-    ;(vdf.parse as jest.Mock)
+    vdf.parse
       .mockReturnValueOnce({
         AppState: {
           appid: '730',
@@ -1498,7 +1499,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('regression: the cold-start tick of an OFF-path 1026 poll (no prior baseline) never flashes "steam-waiting-for-restart"', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '1026',
@@ -1518,7 +1519,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('regression: StateFlags 1042 (0x400|0x2|0x10, active download, never === 1026) still emits normal progress regardless of isNativeHandoff', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '1042',
@@ -1543,7 +1544,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('does NOT set a context on the plain active-download branch (StateFlags=2, non-1026)', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',
@@ -1559,7 +1560,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('fires the "restart Steam" notification exactly once across multiple poll calls while StateFlags stays 1026 (native-ON handoff poll)', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '1026',
@@ -1584,7 +1585,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('regression: does NOT fire the waiting notification for an OFF-path poll (no isNativeHandoff) even while StateFlags stays 1026', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '1026',
@@ -1602,7 +1603,7 @@ describe('pollInstallOnce()', () => {
   })
 
   it('does NOT fire the waiting notification for a non-1026 active download', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',
@@ -1627,7 +1628,7 @@ describe('pollInstallOnce()', () => {
         .mocked(getSteamBottleSettings)
         .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
       jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: {
           appid: '730',
           StateFlags: '4',
@@ -1662,7 +1663,7 @@ describe('pollInstallOnce()', () => {
     jest
       .mocked(getBottleSteamappsDir)
       .mockReturnValue(WIN32_BOTTLE_STEAMAPPS_ROOT)
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -1692,7 +1693,7 @@ describe('pollInstallOnce()', () => {
       .mocked(getSteamBottleSettings)
       .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
     jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         Universe: '1',

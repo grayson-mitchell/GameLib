@@ -13,7 +13,10 @@ import {
 import SteamLibraryManager from '../library'
 import { stopInstallPolling } from '../library/installStop'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
-import * as vdf from '@node-steam/vdf'
+import {
+  vdf,
+  mockedFsSteamFiles
+} from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 const sendFrontendMessage = jest.fn()
 import { notify } from '../../../dialog/dialog'
@@ -34,6 +37,7 @@ const { steamLibraryStore, steamMetadataStore, steamRestartHoldStore } =
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   sendFrontendMessage,
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
@@ -54,6 +58,7 @@ jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
 jest.mock('backend/knownFixReport', () => ({ reportDetectedFix: jest.fn() }))
 
 jest.mock('backend/logger', () => ({
+  logDebug: jest.fn(),
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
@@ -74,9 +79,6 @@ jest.mock('backend/utils', () => ({
 
 // ── graceful-fs mock — readdirSync, readFileSync, existsSync ─────────────────
 jest.mock('graceful-fs')
-
-// ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
-jest.mock('@node-steam/vdf')
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
@@ -151,13 +153,12 @@ jest.mock('../bridgeBottle', () => ({
   resolveBridgeBottleName: jest.fn()
 }))
 
-// ── depot mock — finalizeToSteam (D-05 startup finalize) / downloadSteamDepots
+// ── depot mock — downloadSteamDepots
 // (must NEVER be invoked from startup resume — Pitfall 4, no silent re-download).
 // Since 73-19 the resume verify itself is one Rust verify_only job
 // (depotRust/secondary.ts resumeVerifyRust, covered in rustSecondary.test.ts);
 // nothing here rebuilds a TS plan.
 jest.mock('../depot', () => ({
-  finalizeToSteam: jest.fn().mockResolvedValue(undefined),
   downloadSteamDepots: jest.fn()
 }))
 
@@ -306,7 +307,7 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue(ACF_4)
+    vdf.parse.mockReturnValue(ACF_4)
     jest
       .mocked(getFileSize)
       .mockImplementation((bytes: unknown) => `${String(bytes)} B`)
@@ -368,7 +369,7 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
 
     it('clears the record when Steam rewrites the manifest (active download state)', async () => {
       await arm()
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: { ...ACF_4.AppState, StateFlags: '1042' }
       })
       await pollInstallOnce(steamTestDeps, '730')
@@ -497,7 +498,7 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
       ['absent', '4', false]
     ])('drops when the native manifest is %s', async (_n, flags, exists) => {
       store.set('730', record())
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: { ...ACF_4.AppState, StateFlags: flags }
       })
       ;(existsSync as jest.Mock).mockReturnValue(exists)
@@ -507,6 +508,25 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
         .mockResolvedValue(new Map([[111, 'T1']]))
       await manager.init()
       expectDropped()
+    })
+
+    it('KEEPS the record when the native manifest state is unknown (read rejected, WR-01)', async () => {
+      store.set('730', record())
+      jest
+        .mocked(getSteamLibraries)
+        .mockRejectedValue(new Error('rustInvoke timed out'))
+      jest.mocked(listSteamClientPids).mockResolvedValue([111])
+      jest
+        .mocked(readSteamProcessStartTokens)
+        .mockResolvedValue(new Map([[111, 'T1']]))
+      await manager.init()
+      expect(store.has('730')).toBe(true)
+      expect(
+        (logInfo as jest.Mock).mock.calls.some(
+          ([m]) =>
+            typeof m === 'string' && m.includes('starting install polling')
+        )
+      ).toBe(false)
     })
 
     it('drops when a native install is already in flight for the app', async () => {

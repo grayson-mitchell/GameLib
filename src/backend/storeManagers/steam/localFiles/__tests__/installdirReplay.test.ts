@@ -3,7 +3,7 @@ import { join } from 'path'
 import * as logger from 'backend/logger'
 import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
 import { readAcfInstalldir } from '../../acfInstalldir'
-import { listFiles, normalizeForGolden } from './oracle/normalize'
+import { listFiles, normalizeForGolden } from './fixtures/fixtureCopy'
 import {
   expectedFor,
   replayDeps,
@@ -35,20 +35,10 @@ function replayFor(root: string) {
 }
 
 describe('installdir replay parity (TS wrapper over recorded Rust results)', () => {
-  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
-
-  beforeAll(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-  })
   beforeEach(() => {
     jest.spyOn(logger, 'logDebug').mockImplementation(() => undefined)
   })
   afterEach(() => jest.restoreAllMocks())
-  afterAll(() => {
-    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
-  })
-
   it('replays every installdir case', async () => {
     const replayed: string[] = []
     const mismatches: unknown[] = []

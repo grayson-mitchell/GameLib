@@ -12,8 +12,6 @@ export {
   downloadSelectedDepotFiles,
   downloadSteamDepots
 } from './outcome'
-export { finalizeToSteam } from './finalizeAcf'
-export type { FinalizeToSteamOpts } from './finalizeAcf'
 export { PLAN_BUILD_MAX_ATTEMPTS, prescreenBridgeDepots } from './plan'
 export { describeDepotFailure } from './planModel'
 export type { DepotDownloadFailure, RawContentServer } from './planModel'

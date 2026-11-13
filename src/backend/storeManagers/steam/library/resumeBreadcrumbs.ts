@@ -1,7 +1,5 @@
 import { GameInfo, InstalledInfo } from 'common/types'
 import { join } from 'path'
-import { existsSync, readFileSync } from 'graceful-fs'
-import { parse } from '@node-steam/vdf'
 import type { SteamStoresDeps } from './installRoot'
 import type { SteamLibraryStateDeps } from 'backend/services/types'
 import type { FrontendMessageDeps } from '../../../host/frontendMessage'
@@ -9,7 +7,6 @@ import { isFullyInstalledStateFlags } from './installedMap'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
 import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
-import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
 
 /**
  * D-UAT-09 (21-17): marks a Steam library entry as incomplete/resumable
@@ -193,9 +190,6 @@ export async function breadcrumbAppIsFullyInstalledOnDisk(
   install: Partial<InstalledInfo> | undefined
 ): Promise<boolean> {
   if (!install?.steamResumeTargetSteamappsDir) return false
-  if (steamFilesTextImpl() === 'ts') {
-    return breadcrumbAppIsFullyInstalledOnDiskTs(appId, install)
-  }
   try {
     const read = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_ACF, {
       path: join(
@@ -207,32 +201,6 @@ export async function breadcrumbAppIsFullyInstalledOnDisk(
     if (!read.exists || !read.parsed || typeof stateFlags !== 'number') {
       return false
     }
-    return isFullyInstalledStateFlags(stateFlags)
-  } catch {
-    return false
-  }
-}
-
-function breadcrumbAppIsFullyInstalledOnDiskTs(
-  appId: string,
-  install: Partial<InstalledInfo>
-): boolean {
-  if (!install.steamResumeTargetSteamappsDir) return false
-
-  try {
-    const manifest = join(
-      install.steamResumeTargetSteamappsDir,
-      `appmanifest_${appId}.acf`
-    )
-    if (!existsSync(manifest)) return false
-
-    const content = readFileSync(manifest, 'utf-8')
-    const parsed = parse(content) as {
-      AppState?: { StateFlags?: string }
-    }
-    const stateFlags = parseInt(parsed?.AppState?.StateFlags ?? '', 10)
-    if (Number.isNaN(stateFlags)) return false
-
     return isFullyInstalledStateFlags(stateFlags)
   } catch {
     return false

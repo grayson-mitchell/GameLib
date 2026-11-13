@@ -21,8 +21,6 @@ import {
   entryAppliesToBottle,
   isRedistSuccessExit,
   normaliseSharedRedistOptIn,
-  parseInstallScript,
-  parseKv1,
   parseRegQueryDword,
   readInstallScript,
   sharedRedistLedgerKey,
@@ -33,14 +31,14 @@ import {
 const fx = (name: string) =>
   readFileSync(join(__dirname, 'fixtures/sharedRedists', name), 'utf8')
 
-const FIXTURES = {
-  vc2010: fx('228983-vcredist-2010.vdf'),
-  vc2015: fx('228986-vcredist-2015.vdf'),
-  vc2022: fx('228989-vcredist-2022.vdf'),
-  dx: fx('228990-directx-jun2010.vdf'),
-  net452: fx('229004-dotnet-4.5.2.vdf'),
-  net48: fx('229007-dotnet-4.8.vdf'),
-  physx: fx('229033-physx-9.14.0702.vdf')
+const FIXTURE_FILES = {
+  vc2010: '228983-vcredist-2010.vdf',
+  vc2015: '228986-vcredist-2015.vdf',
+  vc2022: '228989-vcredist-2022.vdf',
+  dx: '228990-directx-jun2010.vdf',
+  net452: '229004-dotnet-4.5.2.vdf',
+  net48: '229007-dotnet-4.8.vdf',
+  physx: '229033-physx-9.14.0702.vdf'
 }
 
 const PATHS = {
@@ -53,147 +51,15 @@ const PATHS = {
   physx: '_CommonRedist\\PhysX\\9.14.0702\\installscript.vdf'
 }
 
-const parse = (k: keyof typeof FIXTURES) =>
-  parseInstallScript(FIXTURES[k]) as InstallScriptEntry[]
+/** Entries Rust read from each fixture (recorded; the Rust reader's own tests pin the parse). */
+const RECORDED = JSON.parse(fx('entries.json')) as Record<
+  string,
+  InstallScriptEntry[]
+>
+const parse = (k: keyof typeof FIXTURE_FILES) =>
+  RECORDED[FIXTURE_FILES[k]] as InstallScriptEntry[]
 
 const DIR = 'Z:\\cache\\steamapps\\common\\Steamworks Shared'
-
-describe('parseKv1', () => {
-  it('keeps duplicate sibling keys in file order', () => {
-    const root = parseKv1(FIXTURES.net48)
-    const script = root.find((n) => n.key.toLowerCase() === 'installscript')!
-    const run = (script.value as { key: string; value: unknown }[]).find(
-      (n) => n.key === 'Run Process'
-    )!
-    const entries = run.value as { key: string }[]
-    expect(entries.map((e) => e.key)).toEqual(['4.8', '4.8'])
-  })
-
-  it('decodes \\\\ and \\" inside quoted strings', () => {
-    const root = parseKv1(FIXTURES.physx)
-    const script = at(root, 0).value as { key: string; value: unknown }[]
-    const run = at(script, 0).value as { key: string; value: unknown }[]
-    const entry = at(run, 0).value as { key: string; value: string }[]
-    const command = entry.find((n) => n.key === 'command 1')!.value
-    expect(command).toBe(
-      '/i "%INSTALLDIR%\\_CommonRedist\\PhysX\\9.14.0702\\PhysX-9.14.0702-SystemSoftware.msi" /quiet /norestart'
-    )
-  })
-
-  it('supports bare tokens and // comments', () => {
-    expect(parseKv1('// hi\nkey value\n"a" { b "c" } // tail')).toEqual([
-      { key: 'key', value: 'value' },
-      { key: 'a', value: [{ key: 'b', value: 'c' }] }
-    ])
-  })
-
-  it('skips [$COND] conditionals after a value or before a block (IN-03)', () => {
-    expect(
-      parseKv1(
-        '"a" "1" [$WIN32]\n"a" "2" [!$WIN32]\n"b" [$WIN64] { "c" "3" [$X||$Y] }\n"d" "4"'
-      )
-    ).toEqual([
-      { key: 'a', value: '1' },
-      { key: 'a', value: '2' },
-      { key: 'b', value: [{ key: 'c', value: '3' }] },
-      { key: 'd', value: '4' }
-    ])
-  })
-
-  it('keeps a bare [..] value, and a conditional on the next line is not swallowed', () => {
-    expect(parseKv1('"a" [x]\n"b" "1"')).toEqual([
-      { key: 'a', value: '[x]' },
-      { key: 'b', value: '1' }
-    ])
-  })
-
-  it('reads an installscript whose entries carry conditionals', () => {
-    const text = [
-      '"InstallScript"',
-      '{',
-      '  "Run Process" [$WIN32]',
-      '  {',
-      '    "x86"',
-      '    {',
-      '      "HasRunKey" "HKEY_LOCAL_MACHINE\\\\Software\\\\Valve\\\\Steam\\\\Apps\\\\CommonRedist\\\\vcredist\\\\2010" [$WIN32]',
-      '      "process 1" "%INSTALLDIR%\\\\_CommonRedist\\\\vcredist\\\\2010\\\\vcredist_x86.exe" [$WIN32]',
-      '      "command 1" "/quiet /norestart"',
-      '    }',
-      '  }',
-      '}'
-    ].join('\n')
-    const entries = parseInstallScript(text)!
-    expect(entries).toHaveLength(1)
-    expect(at(entries, 0).processes).toEqual([
-      {
-        process:
-          '%INSTALLDIR%\\_CommonRedist\\vcredist\\2010\\vcredist_x86.exe',
-        command: '/quiet /norestart'
-      }
-    ])
-    expect(classifySharedRedist(PATHS.vc2010, entries).kind).toBe('vcredist')
-  })
-
-  it('throws on unbalanced braces and unterminated strings', () => {
-    expect(() => parseKv1('"a" {')).toThrow()
-    expect(() => parseKv1('"a" }')).toThrow()
-    expect(() => parseKv1('"a" "b')).toThrow()
-  })
-})
-
-describe('parseInstallScript', () => {
-  it('parses the 2010 script (lowercase keys) with x86 and x64 entries', () => {
-    const entries = parse('vc2010')
-    expect(entries.map((e) => e.name)).toEqual(['x86', 'x64'])
-    expect(at(entries, 0).hasRunKey).toBe(
-      'HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\vcredist\\2010'
-    )
-    expect(at(entries, 0).processes).toEqual([
-      {
-        process:
-          '%INSTALLDIR%\\_CommonRedist\\vcredist\\2010\\vcredist_x86.exe',
-        command: '/quiet /norestart'
-      }
-    ])
-    expect(at(entries, 0).minimumHasRunValue).toBe(1)
-    expect(at(entries, 0).requirementOs).toBeNull()
-    expect(at(entries, 1).requirementOs).toEqual({
-      is64BitWindows: '1',
-      osType: undefined
-    })
-  })
-
-  it('parses the 2015 script (InstallScript / HasRunKey casing) without command', () => {
-    const entries = parse('vc2015')
-    expect(entries).toHaveLength(2)
-    expect(at(entries, 1).requirementOs?.is64BitWindows).toBe('1')
-    expect(at(at(entries, 0).processes, 0).command).toBeUndefined()
-  })
-
-  it('returns both duplicate .NET 4.8 entries with their own requirement_os', () => {
-    const entries = parse('net48')
-    expect(entries.map((e) => e.name)).toEqual(['4.8', '4.8'])
-    expect(at(entries, 0).requirementOs?.osType).toBe('Windows XP')
-    expect(at(entries, 1).requirementOs).toBeNull()
-    expect(at(at(entries, 1).processes, 0).process).toContain(
-      'Framework 4.8.cmd'
-    )
-  })
-
-  it('ignores kvsignatures and returns null for malformed or empty scripts', () => {
-    expect(parseInstallScript('"installscript" {')).toBeNull()
-    expect(parseInstallScript('')).toBeNull()
-    expect(parseInstallScript('"installscript" { "other" { } }')).toBeNull()
-    expect(parseInstallScript('"kvsignatures" { "x" "y" }')).toBeNull()
-  })
-
-  it('reads MinimumHasRunValue case-insensitively', () => {
-    const entries = parseInstallScript(
-      '"installscript" { "Run Process" { "a" { "MinimumHasRunValue" "3" "process 1" "x" } } }'
-    ) as InstallScriptEntry[]
-    expect(at(entries, 0).minimumHasRunValue).toBe(3)
-  })
-})
 
 describe('classifySharedRedist', () => {
   it.each([
@@ -757,16 +623,12 @@ describe('H1: Wine Mono helpers', () => {
 })
 
 describe('readInstallScript (75 D-06)', () => {
-  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
   const path = join(__dirname, 'fixtures/sharedRedists', 'unused.vdf')
   beforeEach(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
     jest.spyOn(logger, 'logDebug').mockImplementation(() => undefined)
   })
   afterEach(() => {
     jest.restoreAllMocks()
-    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
   })
 
   it('maps Rust entries (nulls to absent fields) and sends only the path', async () => {
@@ -824,19 +686,5 @@ describe('readInstallScript (75 D-06)', () => {
       }
     })
     expect(await readInstallScript(boom, path)).toBeNull()
-  })
-
-  it('ts flag parses the file in process and never invokes Rust', async () => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'ts'
-    const stub = stubRustSteamFiles({})
-    const file = join(
-      __dirname,
-      'fixtures/sharedRedists',
-      '228986-vcredist-2015.vdf'
-    )
-    expect(await readInstallScript(stub, file)).toEqual(
-      parseInstallScript(fx('228986-vcredist-2015.vdf'))
-    )
-    expect(stub.calls).toEqual([])
   })
 })

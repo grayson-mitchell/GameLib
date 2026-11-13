@@ -1,3 +1,4 @@
+import { fsBackedSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
 import {
   createTestManagerDeps,
   createTestStores
@@ -45,6 +46,7 @@ const getSteamBottleSettings = jest.fn()
 const createAbortController = jest.fn()
 
 const steamTestDeps = createTestManagerDeps({
+  requestRustInvoke: fsBackedSteamFiles().requestRustInvoke,
   aborts: {
     create: (id: string) => createAbortController(id),
     delete: () => undefined,
@@ -67,6 +69,7 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
+  logDebug: jest.fn(),
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
 jest.mock('backend/utils', () => ({

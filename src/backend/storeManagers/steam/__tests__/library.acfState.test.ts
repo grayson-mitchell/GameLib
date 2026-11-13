@@ -15,7 +15,10 @@ import {
 } from '../library/acfState'
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
-import * as vdf from '@node-steam/vdf'
+import {
+  vdf,
+  mockedFsSteamFiles
+} from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import { getSteamLibraries } from 'backend/utils'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
@@ -36,7 +39,7 @@ const library = steamSession.libraryState.library
 // 66.3-15: the bottle settings are read through the deps slice, so they are a plain mock here.
 const getSteamBottleSettings = jest.fn()
 const libDeps = {
-  requestRustInvoke: jest.fn(),
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   config: createTestGlobalConfig(),
   steamSession,
   steamBottle: { getSteamBottleSettings, resolveCrossoverWine: jest.fn() },
@@ -78,9 +81,6 @@ jest.mock('backend/utils', () => ({
 
 // ── graceful-fs mock — readdirSync, readFileSync, existsSync ─────────────────
 jest.mock('graceful-fs')
-
-// ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
-jest.mock('@node-steam/vdf')
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
@@ -154,10 +154,9 @@ jest.mock('../bridgeBottle', () => ({
   resolveBridgeBottleName: jest.fn()
 }))
 
-// ── depot mock — finalizeToSteam (D-05 startup finalize) / downloadSteamDepots
+// ── depot mock — downloadSteamDepots
 // (must NEVER be invoked from startup resume — Pitfall 4, no silent re-download) ─
 jest.mock('../depot', () => ({
-  finalizeToSteam: jest.fn().mockResolvedValue(undefined),
   downloadSteamDepots: jest.fn()
 }))
 
@@ -269,7 +268,7 @@ describe('readAcfState(libDeps)', () => {
   it('returns state:"installed" with installPath/sizeOnDisk when StateFlags bit 4 is set', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -288,7 +287,7 @@ describe('readAcfState(libDeps)', () => {
   it('returns state:"downloading" when manifest exists but StateFlags bit 4 is unset', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',
@@ -305,7 +304,7 @@ describe('readAcfState(libDeps)', () => {
   it('a downloading ACF with BytesDownloaded/BytesToDownload returns those numbers on the result', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',
@@ -328,7 +327,7 @@ describe('readAcfState(libDeps)', () => {
   it('defaults missing/non-numeric ACF byte fields to 0', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',
@@ -374,7 +373,7 @@ describe('readAcfState(libDeps) — D-05/D-15 regression: GameLib-written manife
   })
 
   it('a GameLib-written 1026 manifest (writeAppManifest field set) reads as state:"downloading"', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         Universe: '1',
@@ -398,7 +397,7 @@ describe('readAcfState(libDeps) — D-05/D-15 regression: GameLib-written manife
   })
 
   it('the SAME manifest with Steam-flipped StateFlags "4" reads as state:"installed"', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         Universe: '1',
@@ -438,7 +437,7 @@ describe('readAcfState(libDeps, appId, "bottle") — bottle-scoped ACF root', ()
   it('reads a manifest placed under the mocked bottle steamapps root and returns state:"installed" (bit 4 set)', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -467,7 +466,7 @@ describe('readAcfState(libDeps, appId, "bottle") — bottle-scoped ACF root', ()
         path === '/steam' || path === join('/steam', 'steamapps')
     )
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -490,7 +489,7 @@ describe('readAcfState(libDeps, appId, "bottle") — bottle-scoped ACF root', ()
       .mockReturnValue(WIN32_BOTTLE_STEAMAPPS_ROOT)
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -512,7 +511,7 @@ describe('readAcfState(libDeps, appId, "bottle") — bottle-scoped ACF root', ()
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -555,7 +554,7 @@ describe('readAcfState(libDeps, appId, "bridge") — bridge-bottle-scoped ACF ro
   it('reads a StateFlags=4 manifest placed under the mocked bridge bottle steamapps root and returns state:"installed"', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '206040',
         StateFlags: '4',
@@ -596,7 +595,7 @@ describe('readAcfState(libDeps, appId, "bridge") — bridge-bottle-scoped ACF ro
         path === '/steam' || path === join('/steam', 'steamapps')
     )
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -617,7 +616,7 @@ describe('readAcfState(libDeps, appId, "bridge") — bridge-bottle-scoped ACF ro
       (path: string) => path === BRIDGE_BOTTLE_STEAMAPPS_ROOT
     )
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '206040',
         StateFlags: '4',
@@ -670,7 +669,7 @@ describe('findOtherManifestsWithInstalldir() (34.13 review A-13)', () => {
     ;(readFileSync as jest.Mock).mockImplementation((path: string) =>
       String(path).includes('228980') ? 'other' : 'self'
     )
-    ;(vdf.parse as jest.Mock).mockImplementation((content: string) =>
+    vdf.parse.mockImplementation((content: string) =>
       content === 'other'
         ? { AppState: { appid: '228980', installdir: 'Hoard' } }
         : { AppState: { appid: '63000', installdir: 'Hoard' } }
@@ -693,7 +692,7 @@ describe('findOtherManifestsWithInstalldir() (34.13 review A-13)', () => {
       'appmanifest_228980.acf'
     ])
     ;(readFileSync as jest.Mock).mockReturnValue('x')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '228980',
         installdir: 'Steamworks Common Redistributables'
@@ -714,7 +713,7 @@ describe('findOtherManifestsWithInstalldir() (34.13 review A-13)', () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_63000.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('x')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: { appid: '63000', installdir: 'Hoard' }
     })
 
@@ -728,7 +727,7 @@ describe('findOtherManifestsWithInstalldir() (34.13 review A-13)', () => {
     ).toEqual([])
   })
 
-  it('skips a corrupt ACF without throwing (T-2-01/T-17-05)', async () => {
+  it('a corrupt sibling ACF does not throw and is reported as an unknown conflict (T-2-01, WR-02)', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_228980.acf'])
     ;(readFileSync as jest.Mock).mockImplementation(() => {
@@ -745,7 +744,7 @@ describe('findOtherManifestsWithInstalldir() (34.13 review A-13)', () => {
         'Hoard',
         '63000'
       )
-    ).toEqual([])
+    ).toEqual(['<unknown>'])
   })
 
   it('ignores non-manifest files in the directory', async () => {
@@ -756,7 +755,7 @@ describe('findOtherManifestsWithInstalldir() (34.13 review A-13)', () => {
       'libraryfolders.vdf'
     ])
     ;(readFileSync as jest.Mock).mockReturnValue('x')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: { appid: '228980', installdir: 'Hoard' }
     })
 
@@ -797,7 +796,7 @@ describe('scanDownloadingAppIds(libDeps)', () => {
     } as any)
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',
@@ -824,7 +823,7 @@ describe('scanDownloadingAppIds(libDeps)', () => {
     } as any)
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -840,7 +839,7 @@ describe('scanDownloadingAppIds(libDeps)', () => {
     // library is empty — no '730' entry
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2',
@@ -853,7 +852,7 @@ describe('scanDownloadingAppIds(libDeps)', () => {
   })
 })
 
-// ── Phase 75-15: rust branch (GAMELIB_STEAMFILES_TEXT=rust) ───────────────────
+// ── Phase 75-15: rust readers ───────────────────
 // The wrappers are driven by programmed steamfiles results (stubRustSteamFiles); real parsing is
 // proven by the crate tests and libraryReplay.test.ts.
 
@@ -894,16 +893,7 @@ function scanOf(
   }
 }
 
-function useRustBranch() {
-  const prior = process.env.GAMELIB_STEAMFILES_TEXT
-  beforeEach(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-  })
-  afterEach(() => {
-    if (prior === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = prior
-  })
-}
+function useRustBranch() {}
 
 describe('readAcfState and scanDownloadingAppIds, rust branch', () => {
   useRustBranch()
@@ -972,7 +962,7 @@ describe('readAcfState and scanDownloadingAppIds, rust branch', () => {
     })
   })
 
-  it('reports absent when nothing is found, and when the invoke rejects', async () => {
+  it('reports absent when nothing is found, and unknown when the invoke rejects (WR-01)', async () => {
     const none = stubRustSteamFiles({
       steamfiles_find_acf: () => ({
         found: false,
@@ -986,8 +976,24 @@ describe('readAcfState and scanDownloadingAppIds, rust branch', () => {
 
     const rejecting = stubRustSteamFiles({})
     expect(await readAcfState({ ...libDeps, ...rejecting }, '1')).toEqual({
-      state: 'absent'
+      state: 'unknown'
     })
+  })
+
+  it('reports unknown when the native library list cannot be read (WR-01)', async () => {
+    jest
+      .mocked(getSteamLibraries)
+      .mockRejectedValueOnce(new Error('rustInvoke timed out'))
+    const stub = stubRustSteamFiles({
+      steamfiles_find_acf: () => found({ appid: '730', stateFlags: 4 })
+    })
+    expect(await readAcfState({ ...libDeps, ...stub }, '730')).toEqual({
+      state: 'unknown'
+    })
+    expect(getSteamLibraries).toHaveBeenCalledWith(expect.anything(), {
+      strict: true
+    })
+    expect(stub.calls).toHaveLength(0)
   })
 
   it('scanDownloadingAppIds makes one scan call and keeps bit-4-unset appIds present in the library map', async () => {
@@ -1044,16 +1050,15 @@ describe('findOtherManifestsWithInstalldir, rust branch', () => {
   const DIR = '/lib/steamapps'
 
   const scanWith = (
-    recs: { file: string; rec: Partial<AcfRecord> }[]
+    recs: { file: string; rec: Partial<AcfRecord> }[],
+    skipped: ScanResult['skipped'] = []
   ): ScanResult => ({
     records: recs.map(({ file, rec }) => ({
       steamappsDir: DIR,
       fileName: file,
       record: acfRecord(rec)
     })),
-    skipped: [
-      { steamappsDir: DIR, fileName: 'appmanifest_9.acf', reason: 'corrupt' }
-    ],
+    skipped,
     missingDirs: []
   })
 
@@ -1100,6 +1105,57 @@ describe('findOtherManifestsWithInstalldir, rust branch', () => {
             rec: { appid: null, installdir: 'Hoard' }
           }
         ])
+    })
+    expect(
+      await findOtherManifestsWithInstalldir(stub, DIR, 'Hoard', '63000')
+    ).toEqual([])
+  })
+
+  // WR-02 (75 review): the list gates a recursive rmSync, so anything the scan
+  // could not see may be a co-installed app sharing the installdir.
+  it.each([
+    [
+      'an unreadable steamapps dir',
+      '',
+      'read: Permission denied (os error 13)'
+    ],
+    ['a directory over the entry cap', '', 'too-many-entries'],
+    ['an unreadable sibling manifest', 'appmanifest_9.acf', 'io: EBUSY'],
+    ['an unparseable sibling manifest', 'appmanifest_9.acf', 'parse']
+  ])(
+    'reports the unknown conflict when the scan skipped %s',
+    async (_label, fileName, reason) => {
+      const stub = stubRustSteamFiles({
+        steamfiles_scan_acfs: () =>
+          scanWith(
+            [
+              {
+                file: 'appmanifest_63000.acf',
+                rec: { appid: '63000', installdir: 'Hoard' }
+              }
+            ],
+            [{ steamappsDir: DIR, fileName, reason }]
+          )
+      })
+      expect(
+        await findOtherManifestsWithInstalldir(stub, DIR, 'Hoard', '63000')
+      ).toEqual(['<unknown>'])
+    }
+  )
+
+  it('does not treat its own skipped manifest as a conflict', async () => {
+    const stub = stubRustSteamFiles({
+      steamfiles_scan_acfs: () =>
+        scanWith(
+          [],
+          [
+            {
+              steamappsDir: DIR,
+              fileName: 'appmanifest_63000.acf',
+              reason: 'parse'
+            }
+          ]
+        )
     })
     expect(
       await findOtherManifestsWithInstalldir(stub, DIR, 'Hoard', '63000')

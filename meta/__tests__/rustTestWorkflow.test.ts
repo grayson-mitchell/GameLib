@@ -77,8 +77,8 @@ describe('anti-vacuity: the predicates reject mutated workflows', () => {
 
   test('rejects a workflow whose step is conditional', () => {
     const mutated = workflow.replace(
-      '- name: cargo test (gamelib-scan and gamelib-depot crates)\n',
-      "- name: cargo test (gamelib-scan and gamelib-depot crates)\n        if: runner.os == 'macOS'\n"
+      '- name: cargo test (gamelib-scan, gamelib-depot and gamelib-steamfiles crates)\n',
+      "- name: cargo test (gamelib-scan, gamelib-depot and gamelib-steamfiles crates)\n        if: runner.os == 'macOS'\n"
     )
     expect(mutated).not.toBe(workflow)
     expect(hasScanCrateStep(mutated)).toBe(false)

@@ -1,9 +1,5 @@
-import * as fs from 'fs'
-import * as os from 'os'
-import { join } from 'path'
 import {
   chooseInstallBranch,
-  decodeUserAppConfigBetaKey,
   isValidBetaKey,
   readAcfBetaKey,
   readLocalConfigBetaKey,
@@ -29,153 +25,11 @@ beforeAll(() => {
   }
 })
 
-const ADOM_HEX =
-  '0055736572436f6e66696700016c616e677561676500656e676c6973680001426574614b6579007075626c6963000808'
-const INTERNAL_HEX =
-  '00696e7465726e616c00016c616e677561676500656e676c697368000808'
-
-const cstr = (s: string) =>
-  Buffer.concat([Buffer.from(s, 'utf8'), Buffer.from([0])])
-
-function encodeUserConfig(beta: string, withInt = false): string {
-  const parts = [
-    Buffer.from([0x00]),
-    cstr('UserConfig'),
-    Buffer.from([0x01]),
-    cstr('language'),
-    cstr('english')
-  ]
-  if (withInt) {
-    parts.push(Buffer.from([0x02]), cstr('count'), Buffer.from([1, 0, 0, 0]))
-  }
-  parts.push(
-    Buffer.from([0x01]),
-    cstr('BetaKey'),
-    cstr(beta),
-    Buffer.from([0x08, 0x08])
-  )
-  return Buffer.concat(parts).toString('hex')
-}
-
-describe('decodeUserAppConfigBetaKey', () => {
-  it('decodes the real ADOM blob', () => {
-    expect(decodeUserAppConfigBetaKey(ADOM_HEX)).toBe('public')
-  })
-  it('returns undefined for the internal-only blob', () => {
-    expect(decodeUserAppConfigBetaKey(INTERNAL_HEX)).toBeUndefined()
-  })
-  it('decodes an encoded release-101 blob, skipping an int32', () => {
-    expect(decodeUserAppConfigBetaKey(encodeUserConfig('release-101'))).toBe(
-      'release-101'
-    )
-    expect(
-      decodeUserAppConfigBetaKey(encodeUserConfig('release-101', true))
-    ).toBe('release-101')
-  })
-  it('never throws on garbage', () => {
-    expect(decodeUserAppConfigBetaKey('')).toBeUndefined()
-    expect(decodeUserAppConfigBetaKey('abc')).toBeUndefined()
-    expect(decodeUserAppConfigBetaKey('zz')).toBeUndefined()
-    expect(decodeUserAppConfigBetaKey(ADOM_HEX.slice(0, 40))).toBeUndefined()
-    expect(decodeUserAppConfigBetaKey('0900')).toBeUndefined()
-  })
-})
-
-describe('file readers and resolver', () => {
-  let dir: string
-  beforeEach(() => {
-    dir = fs.mkdtempSync(join(os.tmpdir(), 'betabranch-'))
-  })
-  afterEach(() => {
-    fs.rmSync(dir, { recursive: true, force: true })
-  })
-
-  const writeAcf = (userConfig: string, appId = '333300') =>
-    fs.writeFileSync(
-      join(dir, `appmanifest_${appId}.acf`),
-      `"AppState"\n{\n\t"appid"\t\t"${appId}"\n\t"UserConfig"\n\t{\n${userConfig}\t}\n}\n`
-    )
-
-  const writeLocalConfig = (blobs: Record<string, string>) => {
-    const root = join(dir, 'steam')
-    const cfg = join(root, 'userdata', '35601368', 'config')
-    fs.mkdirSync(cfg, { recursive: true })
-    const entries = Object.entries(blobs)
-      .map(([id, hex]) => `\t\t\t"${id}"\t\t"${hex}"\n`)
-      .join('')
-    fs.writeFileSync(
-      join(cfg, 'localconfig.vdf'),
-      `"UserLocalConfigStore"\n{\n\t"Software"\n\t{\n\t\t"Valve"\n\t\t{\n\t\t\t"333300"\n\t\t\t{\n\t\t\t\t"x"\t\t"1"\n\t\t\t}\n\t\t}\n\t}\n\t"UserAppConfig"\n\t{\n${entries.replace(/\t\t\t"/g, '\t\t"')}\t}\n}\n`
-    )
-    return root
-  }
-
-  it('readAcfBetaKey reads, and tolerates missing/empty/garbage', async () => {
-    writeAcf('\t\t"BetaKey"\t\t"release-101"\n')
-    expect(await readAcfBetaKey(noRust, dir, '333300')).toBe('release-101')
-    writeAcf('\t\t"BetaKey"\t\t"public"\n')
-    expect(await readAcfBetaKey(noRust, dir, '333300')).toBe('public')
-    writeAcf('')
-    expect(await readAcfBetaKey(noRust, dir, '333300')).toBeUndefined()
-    expect(await readAcfBetaKey(noRust, dir, '1')).toBeUndefined()
-    fs.writeFileSync(join(dir, 'appmanifest_2.acf'), '{{{ not vdf')
-    expect(await readAcfBetaKey(noRust, dir, '2')).toBeUndefined()
-  })
-
-  it('readLocalConfigBetaKey finds the blob in UserAppConfig only', async () => {
-    const root = writeLocalConfig({ '333300': encodeUserConfig('release-101') })
-    const p = join(root, 'userdata', '35601368', 'config', 'localconfig.vdf')
-    expect(await readLocalConfigBetaKey(noRust, p, '333300')).toBe(
-      'release-101'
-    )
-    expect(await readLocalConfigBetaKey(noRust, p, '999')).toBeUndefined()
-    expect(
-      await readLocalConfigBetaKey(noRust, join(dir, 'nope.vdf'), '333300')
-    ).toBeUndefined()
-  })
-
-  it('steamId64ToAccountId', () => {
+describe('steamId64ToAccountId', () => {
+  it('maps an id64 and rejects non-ids', () => {
     expect(steamId64ToAccountId('76561197995867096')).toBe('35601368')
     expect(steamId64ToAccountId('abc')).toBeUndefined()
     expect(steamId64ToAccountId('123')).toBeUndefined()
-  })
-
-  it('resolveUserBetaKey precedence and validity', async () => {
-    const root = writeLocalConfig({ '333300': encodeUserConfig('from-local') })
-    const base = {
-      appId: '333300',
-      steamappsDir: dir,
-      steamRoot: root,
-      steamId64: '76561197995867096'
-    }
-    // ACF absent -> localconfig
-    expect(await resolveUserBetaKey(noRust, base)).toBe('from-local')
-    // ACF wins
-    writeAcf('\t\t"BetaKey"\t\t"release-101"\n')
-    expect(await resolveUserBetaKey(noRust, base)).toBe('release-101')
-    // ACF public is authoritative
-    writeAcf('\t\t"BetaKey"\t\t"public"\n')
-    expect(await resolveUserBetaKey(noRust, base)).toBe('public')
-    // ACF without BetaKey falls through
-    writeAcf('')
-    expect(await resolveUserBetaKey(noRust, base)).toBe('from-local')
-    // neither
-    expect(
-      await resolveUserBetaKey(noRust, { appId: '5', steamappsDir: dir })
-    ).toBe('public')
-    // invalid keys
-    for (const bad of ['bad"key', 'a b', 'x'.repeat(200)]) {
-      writeAcf(`\t\t"BetaKey"\t\t"${bad.replace(/"/g, '\\"')}"\n`)
-      expect(await resolveUserBetaKey(noRust, base)).toBe('public')
-    }
-    const badRoot = writeLocalConfig({ '333300': encodeUserConfig('a b') })
-    expect(
-      await resolveUserBetaKey(noRust, {
-        ...base,
-        steamappsDir: join(dir, 'empty'),
-        steamRoot: badRoot
-      })
-    ).toBe('public')
   })
 })
 
@@ -231,16 +85,7 @@ describe('selectDepots on a beta branch', () => {
   })
 })
 
-describe('beta keys on Rust (GAMELIB_STEAMFILES_TEXT=rust)', () => {
-  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
-  beforeAll(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-  })
-  afterAll(() => {
-    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
-  })
-
+describe('beta keys on Rust', () => {
   const acf = (betaKey: string | null) => ({
     exists: true,
     parsed: true,

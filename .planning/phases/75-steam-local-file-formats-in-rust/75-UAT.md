@@ -1,5 +1,5 @@
 ---
-status: pending
+status: complete
 phase: 75-steam-local-file-formats-in-rust
 source: [75-25-PLAN.md]
 started: 2026-11-14
@@ -39,59 +39,59 @@ Since 75-25 both D-08 flags default to `rust`, so no env var is needed. An item 
 
 ## Current Test
 
-[testing not started]
+[testing complete]
 
 ## Tests
 
 ### 1. Startup discovery
 expected: The shell log (or the `tauri dev` terminal) shows `GAMELIB_STEAM_ROOT_DEFAULT=<steam root> (source=macDefault)` at startup, and Settings shows that same root as the default when no custom Steam path is set.
-result: pending
+result: pass. Shell printed `GAMELIB_STEAM_ROOT_DEFAULT=<home>/Library/Application Support/Steam (source=macDefault)`; operator confirmed Settings shows the same root. `[steamfiles] rust` lines reach gamelib.log at the default level.
 precondition: no custom Steam path in Settings; flags unset. Action: launch with `pnpm tauri:dev`, grep the terminal or `gamelib-shell.log` for `GAMELIB_STEAM_ROOT_DEFAULT`, then open Settings and read the Steam path.
 
 ### 2. Library refresh
 expected: After Refresh, `gamelib.log` has `[steamfiles] rust steamfiles_read_library_folders` and `[steamfiles] rust steamfiles_scan_acfs`. Games that were installed before still show as installed, and the installed count matches the pre-refresh count.
-result: pending
+result: pass. 45 installed before and after; Refresh at 08:53:22 logged `steamfiles_read_library_folders` and `steamfiles_scan_acfs`.
 precondition: Rust default; library already loaded once. Action: note the installed count, press Refresh, grep the log, compare the count.
 
 ### 3. Install polling
 expected: While the install is downloading in Steam, `gamelib.log` shows repeated `[steamfiles] rust steamfiles_find_acf` lines. When Steam finishes, the card flips to installed.
-result: pending
+result: pass. Run via GameLib's native depot download (native download enabled), not a Steam hand-off. DREDGE 1562430 finished; `appmanifest_1562430.acf` written (StateFlags 4, buildid 20206241, installdir DREDGE, SizeOnDisk 812771281), no .tmp left, card flipped to installed. Logged `find_acf`, `read_acf`, `read_localconfig_beta_key`.
 precondition: a small native title not installed and not known-fix routed (DREDGE suggested). Action: press Install on the card (hands off to Steam), watch Steam's download and the log, wait for completion.
 
 ### 4. Uninstall detection
 expected: After uninstalling through Steam, `gamelib.log` shows `[steamfiles] rust steamfiles_find_acf` returning to the poller and the card flips to not installed without a manual Refresh.
-result: pending
+result: pass. Uninstalled in the Steam client; ACF removed; card flipped to not installed with no manual Refresh, detected via `steamfiles_scan_acfs` at 08:56:40.
 precondition: item 3's title installed. Action: uninstall it in the Steam client (not in GameLib), watch the card and the log.
 
 ### 5. Running-app poll
 expected: `gamelib.log` shows `[steamfiles] rust steamfiles_read_running_app_id` while the game runs. The card shows the running state, and the state clears within a few seconds of quitting the game.
-result: pending
+result: pass. Reinstalled and played twice; `steamfiles_read_running_app_id` polled 96 times; card showed running and cleared after quit. Observation, not a failure: the Steam window comes to the front on launch when not minimised, from the unchanged `steam://rungameid` path.
 precondition: a native title installed and Steam running (reinstall item 3's title if item 4 removed it). Action: press Play, wait for the window, quit the game, watch the card and the log.
 
 ### 6. Add to Steam
 expected: `gamelib.log` shows `[steamfiles] rust steamfiles_shortcuts_read` then `[steamfiles] rust steamfiles_shortcuts_apply`. No `shortcuts.vdf.tmp` remains next to `shortcuts.vdf` (`ls` the `userdata/*/config` dir). After a Steam restart the entry is visible in Steam's library.
-result: pending
+result: pass. Added Trash Goblin; log shows `steamfiles_shortcuts_read` then `steamfiles_shortcuts_apply`; shortcuts.vdf 1015 -> 1543 bytes, 3 entries, no .tmp; `steamfiles_shortcuts_roundtrip` identical:true len 1543; entry visible in Steam after restart.
 precondition: a non-Steam GameLib game installed; note the current shortcut count first. Action: Add to Steam from the game's menu, check for the tmp file, restart Steam, look for the entry.
 
 ### 7. Remove from Steam
 expected: `gamelib.log` shows `steamfiles_shortcuts_read` and `steamfiles_shortcuts_apply` lines again. The entry is gone and the shortcut count is one lower than after item 6. The remaining entries are untouched: `gamelib-steamfiles-cli steamfiles_shortcuts_roundtrip` on the remaining `shortcuts.vdf` reports byte identity (build with `pnpm steamfiles-cli:build`; the binary is under `src-tauri/target/debug`).
-result: pending
+result: pass. Removed; entry gone in Steam; shortcuts.vdf back to 1015 bytes, 2 entries, no .tmp, byte-identical (`cmp`) to the pre-test backup; roundtrip identical:true len 1015. The apply log lines were lost to log rotation (a tauri-dev restart from unrelated src-tauri edits), so the file evidence stands in for them.
 precondition: item 6 completed. Action: Remove from Steam from the same menu, compare the count, run the roundtrip command on a copy of the file.
 
 ### 8. Headless census
 expected: `pnpm bridge-census` exits 0 and lists the bottle titles. Claude runs this item, not the operator. Exit code and the first lines of stdout are the evidence.
-result: pending
+result: pass. `pnpm scan-cli:build`, `pnpm steamfiles-cli:build` and `pnpm bridge-census` all exit 0; the census table printed.
 precondition: `pnpm scan-cli:build` and `pnpm steamfiles-cli:build` succeed. Action: run `pnpm bridge-census` and record the exit code.
 
 ## Summary
 
 total: 8
-passed: 0
+passed: 8
 issues: 0
-pending: 8
+pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
 
-[none yet]
+[none]

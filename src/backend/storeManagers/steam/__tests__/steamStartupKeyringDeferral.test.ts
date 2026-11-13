@@ -1,3 +1,4 @@
+import { mockedFsSteamFiles } from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import {
   createTestManagerDeps,
   createInertSteamProcesses,
@@ -51,6 +52,7 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
+  logDebug: jest.fn(),
   LogPrefix: {
     Steam: 'Steam',
     Backend: 'Backend'
@@ -111,7 +113,6 @@ jest.mock('graceful-fs', () => ({
   readdirSync: jest.fn(),
   readFileSync: jest.fn()
 }))
-jest.mock('@node-steam/vdf', () => ({ parse: jest.fn() }))
 jest.mock('backend/utils', () => ({
   getSteamLibraries: jest.fn(),
   getFileSize: jest.fn()
@@ -179,8 +180,7 @@ jest.mock('../nativeInstallSetting', () => ({
 }))
 
 jest.mock('../depot', () => ({
-  downloadSteamDepots: jest.fn(),
-  finalizeToSteam: jest.fn().mockResolvedValue(undefined)
+  downloadSteamDepots: jest.fn()
 }))
 
 jest.mock('../clientSetup', () => ({
@@ -272,6 +272,7 @@ const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const tokenStoreSlot = createTestTokenStoreSlot()
 const baseDeps = createTestManagerDeps({
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   sendFrontendMessage,
   tokenStore: tokenStoreSlot,
   steamProcesses: createInertSteamProcesses(),

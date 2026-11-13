@@ -16,7 +16,10 @@ import {
   isFullyInstalledStateFlags
 } from '../library/installedMap'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
-import * as vdf from '@node-steam/vdf'
+import {
+  vdf,
+  mockedFsSteamFiles
+} from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import { getSteamLibraries } from 'backend/utils'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
@@ -34,7 +37,7 @@ import { createTestSteamLaunchRuntime } from 'backend/testUtils/testSteamLaunchR
 // 66.3-15: the bottle settings are read through the deps slice, so they are a plain mock here.
 const getSteamBottleSettings = jest.fn()
 const libDeps = {
-  requestRustInvoke: jest.fn(),
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   config: createTestGlobalConfig(),
   steamBottle: { getSteamBottleSettings, resolveCrossoverWine: jest.fn() },
   paths: { userHome: '/test-gamelib/home' },
@@ -75,9 +78,6 @@ jest.mock('backend/utils', () => ({
 
 // ── graceful-fs mock — readdirSync, readFileSync, existsSync ─────────────────
 jest.mock('graceful-fs')
-
-// ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
-jest.mock('@node-steam/vdf')
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
@@ -151,10 +151,9 @@ jest.mock('../bridgeBottle', () => ({
   resolveBridgeBottleName: jest.fn()
 }))
 
-// ── depot mock — finalizeToSteam (D-05 startup finalize) / downloadSteamDepots
+// ── depot mock — downloadSteamDepots
 // (must NEVER be invoked from startup resume — Pitfall 4, no silent re-download) ─
 jest.mock('../depot', () => ({
-  finalizeToSteam: jest.fn().mockResolvedValue(undefined),
   downloadSteamDepots: jest.fn()
 }))
 
@@ -276,7 +275,7 @@ describe('detector regression lock (D-UAT-09): buildInstalledMap / readAcfState 
       'appmanifest_200.acf'
     ])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock)
+    vdf.parse
       .mockReturnValueOnce({
         AppState: {
           appid: '100',
@@ -304,7 +303,7 @@ describe('detector regression lock (D-UAT-09): buildInstalledMap / readAcfState 
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '100',
         StateFlags: '1026',
@@ -315,7 +314,7 @@ describe('detector regression lock (D-UAT-09): buildInstalledMap / readAcfState 
 
     const incomplete = await readAcfState(libDeps, '100')
     expect(incomplete.state).toBe('downloading')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '200',
         StateFlags: '4',
@@ -351,7 +350,7 @@ describe('buildBottleInstalledMap()', () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -426,7 +425,7 @@ describe('buildBridgeInstalledMap(testPaths, libDeps)', () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_206040.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '206040',
         StateFlags: '4',
@@ -472,7 +471,7 @@ describe('buildBridgeInstalledMap(testPaths, libDeps)', () => {
     ;(readFileSync as jest.Mock).mockImplementation((file: string) =>
       file.includes('206040') ? 'legacy-manifest' : 'per-game-manifest'
     )
-    ;(vdf.parse as jest.Mock).mockImplementation((content: string) =>
+    vdf.parse.mockImplementation((content: string) =>
       content === 'legacy-manifest'
         ? {
             AppState: {
@@ -520,7 +519,7 @@ describe('buildBridgeInstalledMap(testPaths, libDeps)', () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_206040.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '206040',
         StateFlags: '4',
@@ -563,7 +562,7 @@ describe('buildBridgeInstalledMap(testPaths, libDeps)', () => {
         ? 'per-game-manifest'
         : 'legacy-manifest'
     )
-    ;(vdf.parse as jest.Mock).mockImplementation((content: string) =>
+    vdf.parse.mockImplementation((content: string) =>
       content === 'legacy-manifest'
         ? {
             AppState: {
@@ -608,7 +607,7 @@ describe('buildBridgeInstalledMap(testPaths, libDeps)', () => {
   })
 })
 
-// ── Phase 75-15: rust branch (GAMELIB_STEAMFILES_TEXT=rust) ───────────────────
+// ── Phase 75-15: rust readers ───────────────────
 // The wrappers are driven by programmed steamfiles results (stubRustSteamFiles); real parsing is
 // proven by the crate tests and libraryReplay.test.ts.
 
@@ -649,16 +648,7 @@ function scanOf(
   }
 }
 
-function useRustBranch() {
-  const prior = process.env.GAMELIB_STEAMFILES_TEXT
-  beforeEach(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-  })
-  afterEach(() => {
-    if (prior === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = prior
-  })
-}
+function useRustBranch() {}
 
 describe('installed-map builders, rust branch', () => {
   useRustBranch()
@@ -720,14 +710,29 @@ describe('installed-map builders, rust branch', () => {
     ])
   })
 
-  it('buildInstalledMap and buildIncompleteInstallSet fail soft when the invoke rejects', async () => {
+  // WR-01 (75 review): a rejected scan is "unknown", not "nothing installed";
+  // the callers skip the reconcile instead of persisting an empty map.
+  it('buildInstalledMap and buildIncompleteInstallSet reject when the invoke rejects', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/a'])
     const stub = stubRustSteamFiles({})
 
-    expect((await buildInstalledMap({ ...libDeps, ...stub })).size).toBe(0)
-    expect(
-      (await buildIncompleteInstallSet({ ...libDeps, ...stub })).size
-    ).toBe(0)
+    await expect(buildInstalledMap({ ...libDeps, ...stub })).rejects.toThrow(
+      'unstubbed steamfiles channel'
+    )
+    await expect(
+      buildIncompleteInstallSet({ ...libDeps, ...stub })
+    ).rejects.toThrow('unstubbed steamfiles channel')
+  })
+
+  it('buildInstalledMap reads the library list strictly (WR-01)', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/a'])
+    const stub = stubRustSteamFiles({
+      steamfiles_scan_acfs: () => scanOf([])
+    })
+    await buildInstalledMap({ ...libDeps, ...stub })
+    expect(getSteamLibraries).toHaveBeenCalledWith(expect.anything(), {
+      strict: true
+    })
   })
 
   it('buildIncompleteInstallSet keeps only present-but-incomplete manifests with a numeric StateFlags', async () => {

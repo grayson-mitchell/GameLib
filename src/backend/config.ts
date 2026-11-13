@@ -29,64 +29,23 @@ import {
 import type { BackendEvents } from './backend_events'
 import { isFlatpak, isLinux, isMac, isWindows } from './constants/environment'
 import { join } from 'path'
-import { steamFilesTextImpl } from './storeManagers/steam/localFiles/steamFilesFlags'
 import type { ProcessRunner } from './process/types'
 import type { AppPaths } from './process/context'
 import { updateWineVersionInfos } from './wine/manager/utils'
 import type { Stores } from './services/types'
 
-const FLATPAK_STEAM_APP = 'com.valvesoftware.Steam'
-
 /**
- * Whether Steam is really installed as a flatpak: its app directory exists under a
- * flatpak installation root (system or user). Pure fs check, no `flatpak info` child
- * (D-66.2-01: the factory defaults run before any runner exists).
- */
-export function isFlatpakSteamInstalled(roots: string[]): boolean {
-  return roots.some((root) => existsSync(join(root, 'app', FLATPAK_STEAM_APP)))
-}
-
-function getSteamCompatFolderTs(userHome: string) {
-  // Paths are from https://savelocation.net/steam-game-folder
-  if (isWindows) {
-    const defaultWinPath = join(process.env['PROGRAMFILES(X86)'] ?? '', 'Steam')
-    return defaultWinPath
-  } else if (isMac) {
-    return join(userHome, 'Library/Application Support/Steam')
-  } else {
-    const flatpakSteamPath = join(
-      userHome,
-      '.var/app/com.valvesoftware.Steam/.steam/steam'
-    )
-
-    if (existsSync(flatpakSteamPath)) {
-      // check if steam is really installed via flatpak
-      if (
-        isFlatpakSteamInstalled([
-          '/var/lib/flatpak',
-          join(userHome, '.local/share/flatpak')
-        ])
-      ) {
-        return flatpakSteamPath
-      }
-    }
-    return join(userHome, '.steam/steam')
-  }
-}
-
-/**
- * Factory default for defaultSteamPath. Under the rust text flag the root was already discovered by
+ * Factory default for defaultSteamPath. The root is already discovered by
  * the shell (plan 12 sets GAMELIB_STEAM_ROOT_DEFAULT on every sidecar spawn), so there is no
  * boot-time rustInvoke here: 'config' runs before 'rpc-server' and construction stays synchronous.
  * With no env (Jest, headless smoke) it is the plain per-OS fallback, mirroring Rust's no-candidate
- * fallback with no probing. The ts flag keeps the legacy logic until it is deleted (plan 31).
+ * fallback with no probing.
  */
 export function steamRootDefault(
   userHome: string,
   env: NodeJS.ProcessEnv = process.env,
   platform: NodeJS.Platform = process.platform
 ): string {
-  if (steamFilesTextImpl(env) === 'ts') return getSteamCompatFolderTs(userHome)
   const fromShell = env.GAMELIB_STEAM_ROOT_DEFAULT?.trim()
   if (fromShell) return fromShell
   if (platform === 'win32') return join(env['PROGRAMFILES(X86)'] ?? '', 'Steam')

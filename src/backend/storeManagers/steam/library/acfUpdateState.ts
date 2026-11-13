@@ -3,15 +3,12 @@
  * StateFlags) and decides whether a Steam-registered install has an update pending, from the ACF alone.
  */
 import { join } from 'path'
-import { existsSync, readFileSync } from 'graceful-fs'
 import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
 import { NUMERIC_APP_ID } from '../gameConstants'
 import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
-import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
 import type { BottleSettingsDeps } from '../bottle'
-import { acfBlock, acfString, parseAcfTree } from '../acfInstalledDepots'
 import {
   type AcfSource,
   getBottleSteamappsRoot,
@@ -67,9 +64,6 @@ export async function readAcfUpdateFieldsFromDir(
   appId: string
 ): Promise<AcfUpdateFields | null> {
   if (!NUMERIC_APP_ID.test(appId)) return null
-  if (steamFilesTextImpl() === 'ts') {
-    return readAcfUpdateFieldsFromDirTs(steamappsDir, appId)
-  }
   try {
     const res = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_ACF, {
       path: join(steamappsDir, `appmanifest_${appId}.acf`)
@@ -85,35 +79,6 @@ export async function readAcfUpdateFieldsFromDir(
       bytesDownloaded: Number(rec.bytesDownloaded) || 0,
       scheduledAutoUpdate: Number(rec.scheduledAutoUpdate) || 0,
       ...(rec.betaKey ? { betaKey: rec.betaKey } : {})
-    }
-  } catch {
-    return null
-  }
-}
-
-function readAcfUpdateFieldsFromDirTs(
-  steamappsDir: string,
-  appId: string
-): AcfUpdateFields | null {
-  const file = join(steamappsDir, `appmanifest_${appId}.acf`)
-  try {
-    if (!existsSync(file)) return null
-    const state = acfBlock(
-      parseAcfTree(readFileSync(file, 'utf-8')),
-      'AppState'
-    )
-    const buildid = acfString(state, 'buildid')
-    if (!state || buildid === undefined) return null
-    const beta = acfString(acfBlock(state, 'UserConfig'), 'BetaKey')
-    return {
-      steamappsDir,
-      buildid,
-      targetBuildId: acfString(state, 'TargetBuildID'),
-      stateFlags: parseInt(acfString(state, 'StateFlags') ?? '0', 10) || 0,
-      bytesToDownload: Number(acfString(state, 'BytesToDownload')) || 0,
-      bytesDownloaded: Number(acfString(state, 'BytesDownloaded')) || 0,
-      scheduledAutoUpdate: Number(acfString(state, 'ScheduledAutoUpdate')) || 0,
-      ...(beta ? { betaKey: beta } : {})
     }
   } catch {
     return null

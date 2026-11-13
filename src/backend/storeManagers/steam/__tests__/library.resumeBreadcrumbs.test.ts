@@ -16,6 +16,7 @@ import {
   breadcrumbAppIsFullyInstalledOnDisk
 } from '../library/resumeBreadcrumbs'
 import { join } from 'path'
+import { mockedFsSteamFiles } from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
 const sendFrontendMessage = jest.fn()
 import { t as i18nextT } from 'i18next'
@@ -27,6 +28,7 @@ const { steamLibraryStore } = jest.requireMock<Stores['steam']>('../stores')
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   sendFrontendMessage,
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
@@ -47,10 +49,10 @@ jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
 jest.mock('backend/knownFixReport', () => ({ reportDetectedFix: jest.fn() }))
 
 jest.mock('backend/logger', () => ({
+  logDebug: jest.fn(),
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
-  logDebug: jest.fn(),
   LogPrefix: {
     Steam: 'Steam',
     Backend: 'Backend'
@@ -68,9 +70,6 @@ jest.mock('backend/utils', () => ({
 
 // ── graceful-fs mock — readdirSync, readFileSync, existsSync ─────────────────
 jest.mock('graceful-fs')
-
-// ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
-jest.mock('@node-steam/vdf')
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
@@ -145,10 +144,9 @@ jest.mock('../bridgeBottle', () => ({
   resolveBridgeBottleName: jest.fn()
 }))
 
-// ── depot mock — finalizeToSteam (D-05 startup finalize) / downloadSteamDepots
+// ── depot mock — downloadSteamDepots
 // (must NEVER be invoked from startup resume — Pitfall 4, no silent re-download) ─
 jest.mock('../depot', () => ({
-  finalizeToSteam: jest.fn().mockResolvedValue(undefined),
   downloadSteamDepots: jest.fn()
 }))
 
@@ -308,15 +306,6 @@ describe('steamResumeInstalledAtStart breadcrumb field (todo 2026-11-09)', () =>
 
 // Phase 75-20: breadcrumbAppIsFullyInstalledOnDisk on the rust branch.
 describe('breadcrumbAppIsFullyInstalledOnDisk, rust branch', () => {
-  const prior = process.env.GAMELIB_STEAMFILES_TEXT
-  beforeEach(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-  })
-  afterEach(() => {
-    if (prior === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = prior
-  })
-
   const install = { steamResumeTargetSteamappsDir: '/s/steamapps' }
   const read = (stateFlags: number | null, over = {}) => ({
     exists: true,

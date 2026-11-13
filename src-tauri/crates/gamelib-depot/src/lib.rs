@@ -156,6 +156,10 @@ struct FinalizeOpArgs {
 }
 
 fn run_finalize_op(a: FinalizeOpArgs) -> Value {
+    // Validate before `read_existing_state_flags` joins the id into a path (75 WR-08).
+    if let Err(f) = acf::check_app_id(&a.app_id) {
+        return json!({ "error": f });
+    }
     let cancelled = a.outcome.as_deref() == Some("cancelled");
     if cancelled {
         let existing =

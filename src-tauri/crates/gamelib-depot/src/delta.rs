@@ -8,7 +8,9 @@
 //!    whatever no old file can supply is the CDN list;
 //! 2. build: each work file is assembled as `<target>.gamelib-delta-tmp` from verified local
 //!    chunks plus decoded CDN chunks and checked against `sha_content`. The old tree and the
-//!    appmanifest are untouched, so a cancel or failure here leaves the old build launchable (D-16);
+//!    appmanifest are untouched, so a cancel or failure here leaves the old build launchable (D-16).
+//!    Temps that already passed the whole-file SHA-1 survive a cancel (a pause) and are re-hashed
+//!    and reused by the next run of the same target build; a failure deletes every temp;
 //! 3. commit: temps are renamed over their targets, files the new manifests dropped are deleted,
 //!    directories and symlinks are placed, modes applied, and the ACF finalized.
 //!
@@ -823,6 +825,12 @@ fn read_journal_state(job: &DepotJob, path: &Path) -> JournalState {
 }
 
 fn write_journal(job: &DepotJob, path: &Path) -> io::Result<()> {
+    let bytes = serde_json::to_vec(&Journal::for_job(job)).map_err(io::Error::other)?;
+    write_state_file(path, &bytes, &format!(".{}.tmp", job.app_id))
+}
+
+/// Atomic write of a small state file: 0o700 dir, temp file, fsync, rename.
+fn write_state_file(path: &Path, bytes: &[u8], tmp_name: &str) -> io::Result<()> {
     use io::Write;
     let dir = path
         .parent()
@@ -835,11 +843,10 @@ fn write_journal(job: &DepotJob, path: &Path) -> io::Result<()> {
         b.mode(0o700);
     }
     b.create(dir)?;
-    let bytes = serde_json::to_vec(&Journal::for_job(job)).map_err(io::Error::other)?;
-    let tmp = dir.join(format!(".{}.tmp", job.app_id));
+    let tmp = dir.join(tmp_name);
     {
         let mut f = fs::File::create(&tmp)?;
-        f.write_all(&bytes)?;
+        f.write_all(bytes)?;
         f.sync_all()?;
     }
     fs::rename(&tmp, path).inspect_err(|_| {
@@ -856,6 +863,110 @@ pub fn clear_journal(job: &DepotJob) {
     {
         let _ = fs::remove_file(p);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Kept-temp ledger
+// ---------------------------------------------------------------------------
+
+/// Written when an update is paused (cancelled before the commit): names the temps that already
+/// passed their whole-file SHA-1 and the target build they belong to. It is a hint for reuse and
+/// cleanup, never proof of correctness: a kept temp is re-hashed against the new manifest.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct TempLedger {
+    app_id: String,
+    new_gids: BTreeMap<String, String>,
+    /// Manifest-form file names (never absolute paths).
+    temps: Vec<String>,
+}
+
+impl TempLedger {
+    /// Same app and same target builds. `oldGids` is deliberately not compared: every reused temp
+    /// is checked against the NEW manifest, so the installed build has no bearing on it.
+    fn matches(&self, job: &DepotJob) -> bool {
+        self.app_id == job.app_id
+            && self.new_gids
+                == job
+                    .depots
+                    .iter()
+                    .map(|d| (d.depot_id.clone(), d.manifest_id.clone()))
+                    .collect::<BTreeMap<_, _>>()
+    }
+
+    fn well_formed(&self) -> bool {
+        all_numeric(&self.app_id)
+            && self
+                .new_gids
+                .iter()
+                .all(|(k, v)| all_numeric(k) && all_numeric(v))
+    }
+}
+
+fn temp_ledger_path(spec: &crate::job::FinalizeSpec, app_id: &str) -> Option<PathBuf> {
+    all_numeric(app_id).then(|| {
+        PathBuf::from(&spec.steamapps_dir)
+            .join(JOURNAL_DIR)
+            .join(format!("{app_id}.temps.json"))
+    })
+}
+
+enum LedgerState {
+    Absent,
+    Valid(TempLedger),
+    /// Unreadable or malformed: never trusted.
+    Untrusted,
+}
+
+fn read_temp_ledger(path: &Path) -> LedgerState {
+    let bytes = match fs::read(path) {
+        Ok(b) => b,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return LedgerState::Absent,
+        Err(_) => return LedgerState::Untrusted,
+    };
+    match serde_json::from_slice::<TempLedger>(&bytes) {
+        Ok(l) if l.well_formed() => LedgerState::Valid(l),
+        _ => LedgerState::Untrusted,
+    }
+}
+
+fn write_temp_ledger(job: &DepotJob, names: &[String], path: &Path) -> io::Result<()> {
+    let ledger = TempLedger {
+        app_id: job.app_id.clone(),
+        new_gids: job
+            .depots
+            .iter()
+            .map(|d| (d.depot_id.clone(), d.manifest_id.clone()))
+            .collect(),
+        temps: names.to_vec(),
+    };
+    let bytes = serde_json::to_vec(&ledger).map_err(io::Error::other)?;
+    write_state_file(path, &bytes, &format!(".{}.temps.tmp", job.app_id))
+}
+
+/// The temp a ledger name stands for: contained in the install root, with the temp suffix. A name
+/// that escapes the root maps to nothing.
+fn ledger_temp(root: &Path, name: &str) -> Option<PathBuf> {
+    let dest = resolve_contained_path(root, name).ok()?;
+    let mut t = dest.into_os_string();
+    t.push(DELTA_TMP_SUFFIX);
+    Some(PathBuf::from(t))
+}
+
+/// Removes every temp a trustworthy ledger names, then the ledger itself. Idempotent; ignores
+/// errors. Only ever removes paths ending in the temp suffix.
+fn discard_temp_ledger(spec: &crate::job::FinalizeSpec, app_id: &str, root: &Path) {
+    let Some(path) = temp_ledger_path(spec, app_id) else {
+        return;
+    };
+    if let LedgerState::Valid(l) = read_temp_ledger(&path) {
+        for n in &l.temps {
+            if let Some(t) = ledger_temp(root, n) {
+                let _ = fs::remove_file(t);
+            }
+        }
+    }
+    let _ = fs::remove_file(path);
 }
 
 /// Where a delta job ended up.
@@ -936,12 +1047,6 @@ async fn finalize_interrupted(
     }
 }
 
-fn remove_temps(works: &[Work<'_>]) {
-    for w in works {
-        let _ = fs::remove_file(&w.tmp);
-    }
-}
-
 /// Runs a delta install. Always returns; every failure is data. The caller has already run
 /// `shape_failure`. `Fallback` means the old tree cannot be trusted to diff against and the caller
 /// re-runs the job as an ordinary file-level install.
@@ -992,6 +1097,7 @@ async fn delta_body(
         Some(JournalState::Resume) => true,
         Some(JournalState::Stale) => {
             emitter.warn("a previous update was interrupted for a different build; checking every file instead".to_string());
+            discard_temp_ledger(spec, &job.app_id, &root);
             *fallback = true;
             return outcome_shell(&job.job_id, Status::Cancelled, started);
         }
@@ -1106,6 +1212,7 @@ async fn delta_body(
             Some(Err(FetchError::Failed(f))) if is_definitive_old_manifest_failure(&f) => {
                 // D-14: without the old manifest only a sha1 reconcile of the new one is safe.
                 emitter.warn("old manifest unavailable; checking every file instead".to_string());
+                discard_temp_ledger(spec, &job.app_id, &root);
                 *fallback = true;
                 return outcome_shell(&job.job_id, Status::Cancelled, started);
             }
@@ -1296,21 +1403,87 @@ async fn delta_body(
         }
         works = pending;
     }
-    // Temps left by an aborted or paused earlier run are never reused: rebuilt from scratch.
-    {
-        let mut temps: Vec<PathBuf> = works.iter().map(|w| w.tmp.clone()).collect();
-        for (dest, _) in &already {
-            let mut t = dest.clone().into_os_string();
-            t.push(DELTA_TMP_SUFFIX);
-            temps.push(PathBuf::from(t));
+    // Temps left by an earlier run. A paused run's verified temps are kept (the ledger names them
+    // and the target build they belong to); each is re-hashed against the NEW manifest and reused
+    // only when size and SHA-1 both match. Everything else is deleted and rebuilt.
+    let ledger_file = temp_ledger_path(spec, &job.app_id);
+    let ledger_state = ledger_file
+        .as_deref()
+        .map_or(LedgerState::Absent, read_temp_ledger);
+    let ledger_names: Option<HashSet<String>> = match &ledger_state {
+        LedgerState::Valid(l) if l.matches(job) => Some(l.temps.iter().cloned().collect()),
+        LedgerState::Valid(_) => {
+            emitter.warn(
+                "a paused update for a different build left temps; starting clean".to_string(),
+            );
+            None
         }
-        let _ = tokio::task::spawn_blocking(move || {
-            for t in &temps {
-                let _ = fs::remove_file(t);
-            }
-        })
-        .await;
+        _ => None,
+    };
+    let reuse = ledger_names.is_some();
+    let work_tmps: HashSet<PathBuf> = works.iter().map(|w| w.tmp.clone()).collect();
+    let mut extra_temps: Vec<PathBuf> = Vec::new();
+    for (dest, _) in &already {
+        let mut t = dest.clone().into_os_string();
+        t.push(DELTA_TMP_SUFFIX);
+        extra_temps.push(PathBuf::from(t));
     }
+    if let LedgerState::Valid(l) = &ledger_state {
+        for n in &l.temps {
+            if let Some(t) = ledger_temp(&root, n) {
+                if !work_tmps.contains(&t) {
+                    extra_temps.push(t);
+                }
+            }
+        }
+    }
+    let probe: Vec<(PathBuf, u64, [u8; 20], bool)> = works
+        .iter()
+        .map(|w| {
+            let named = ledger_names
+                .as_ref()
+                .is_some_and(|n| n.contains(&w.file.filename));
+            (w.tmp.clone(), w.file.size, w.file.sha_content, named)
+        })
+        .collect();
+    let drop_ledger = if reuse { None } else { ledger_file.clone() };
+    let (c2, st2) = (cancel.clone(), stall.clone());
+    let swept = tokio::task::spawn_blocking(move || {
+        let mut flags = Vec::with_capacity(probe.len());
+        for (tmp, size, sha, named) in &probe {
+            if c2.is_cancelled() {
+                return None;
+            }
+            let ok = *named
+                && *size != 0
+                && fs::metadata(tmp).is_ok_and(|m| m.len() == *size)
+                && sha1_file(tmp).is_ok_and(|got| got == *sha);
+            if !ok {
+                let _ = fs::remove_file(tmp);
+            }
+            st2.record_progress();
+            flags.push(ok);
+        }
+        for t in &extra_temps {
+            let _ = fs::remove_file(t);
+        }
+        if let Some(p) = &drop_ledger {
+            let _ = fs::remove_file(p);
+        }
+        Some(flags)
+    })
+    .await;
+    let prebuilt: Vec<bool> = match swept {
+        Ok(Some(f)) => f,
+        Ok(None) => return outcome_shell(&job.job_id, Status::Cancelled, started),
+        Err(_) => {
+            return fail_outcome(
+                &job.job_id,
+                plain_failure(ErrorKind::Io, "delta temp check task failed"),
+                started,
+            )
+        }
+    };
     let old_mans: Vec<&DepotManifest> = olds
         .iter()
         .flatten()
@@ -1339,7 +1512,10 @@ async fn delta_body(
     // (4) Plan pass: which chunks can the old tree not supply (SHA-1 checked from local bytes).
     let index = Arc::new(OldIndex::build(&root, &old_mans));
     let mut wanted: Vec<(CdnKey, u32)> = Vec::new();
-    for w in &works {
+    for (i, w) in works.iter().enumerate() {
+        if prebuilt[i] {
+            continue;
+        }
         for c in &w.file.chunks {
             wanted.push(((w.di, c.sha), c.cb_original));
         }
@@ -1456,17 +1632,39 @@ async fn delta_body(
         files_total: works.len() as u64,
         file_concurrency,
     };
+    let prebuilt_files = prebuilt.iter().filter(|p| **p).count() as u64;
+    let prebuilt_bytes: u64 = works
+        .iter()
+        .zip(&prebuilt)
+        .filter(|(_, p)| **p)
+        .map(|(w, _)| w.file.size)
+        .sum();
+    if prebuilt_files > 0 {
+        counters
+            .done_bytes
+            .fetch_add(prebuilt_bytes, Ordering::Relaxed);
+        counters
+            .files_done
+            .fetch_add(prebuilt_files, Ordering::Relaxed);
+        emitter.warn(format!(
+            "resuming paused update: reusing {prebuilt_files} verified files ({prebuilt_bytes} bytes)"
+        ));
+        emitter.force(build.snapshot());
+    }
     let heartbeat = emitter.spawn_heartbeat();
     let fc = cancel.child_token();
     let mut failures: Vec<Failure> = Vec::new();
     let mut unattempted = 0usize;
+    // Works whose temp passed the whole-file SHA-1 (reused or built this run).
+    let mut verified: Vec<bool> = prebuilt.clone();
     {
-        let mut pool = stream::iter(works.iter())
-            .map(|w| {
+        let mut pool = stream::iter(works.iter().enumerate().filter(|(i, _)| !prebuilt[*i]))
+            .map(|(i, w)| {
                 let (build, fc) = (&build, &fc);
                 async move {
+                    (i, {
                     if fc.is_cancelled() {
-                        return Err(FileErr::Cancelled);
+                        return (i, Err(FileErr::Cancelled));
                     }
                     if build.stall.has_stalled() {
                         let ms = build.stall.ms_since_progress();
@@ -1479,15 +1677,16 @@ async fn delta_body(
                         );
                         f.scope = Some(FailureScope::Run);
                         f.ms_since_progress = Some(ms);
-                        return Err(FileErr::Failed(Box::new(f)));
+                        return (i, Err(FileErr::Failed(Box::new(f))));
                     }
                     build.build_file(w, fc).await
+                    })
                 }
             })
             .buffer_unordered(file_concurrency.max(1));
-        while let Some(r) = pool.next().await {
+        while let Some((i, r)) = pool.next().await {
             match r {
-                Ok(()) => {}
+                Ok(()) => verified[i] = true,
                 Err(FileErr::Cancelled) => unattempted += 1,
                 Err(FileErr::Failed(f)) => {
                     failures.push(*f);
@@ -1551,14 +1750,77 @@ async fn delta_body(
     // Any failure or cancel before the commit: remove every temp and touch no game file. A fresh
     // run leaves the ACF alone; a resume already has a mixed tree, so it is marked unfinished.
     if !failures.is_empty() || cancel.is_cancelled() || unattempted > 0 {
-        let tmps_owned: Vec<PathBuf> = works.iter().map(|w| w.tmp.clone()).collect();
-        let _ = tokio::task::spawn_blocking(move || {
-            for t in &tmps_owned {
+        // A pause (cancel, no failure) keeps the temps that passed their whole-file SHA-1 for the
+        // next run of the same target; an error deletes every temp and the ledger.
+        let pause = failures.is_empty();
+        let keep: Vec<bool> = works
+            .iter()
+            .zip(&verified)
+            .map(|(w, v)| pause && *v && w.file.size != 0)
+            .collect();
+        let doomed: Vec<PathBuf> = works
+            .iter()
+            .zip(&keep)
+            .filter(|(_, k)| !**k)
+            .map(|(w, _)| w.tmp.clone())
+            .collect();
+        let kept_names: Vec<String> = works
+            .iter()
+            .zip(&keep)
+            .filter(|(_, k)| **k)
+            .map(|(w, _)| w.file.filename.clone())
+            .collect();
+        let kept_bytes: u64 = works
+            .iter()
+            .zip(&keep)
+            .filter(|(_, k)| **k)
+            .map(|(w, _)| w.file.size)
+            .sum();
+        let kept_tmps: Vec<PathBuf> = works
+            .iter()
+            .zip(&keep)
+            .filter(|(_, k)| **k)
+            .map(|(w, _)| w.tmp.clone())
+            .collect();
+        let (ledger_job, ledger_to) = (job.clone(), ledger_file.clone());
+        let ledger_ok = tokio::task::spawn_blocking(move || {
+            for t in &doomed {
                 let _ = fs::remove_file(t);
             }
+            let Some(path) = ledger_to else {
+                // No ledger location: nothing can be recorded, so nothing may be kept.
+                for t in &kept_tmps {
+                    let _ = fs::remove_file(t);
+                }
+                return kept_names.is_empty();
+            };
+            if kept_names.is_empty() {
+                let _ = fs::remove_file(&path);
+                return true;
+            }
+            let ok = write_temp_ledger(&ledger_job, &kept_names, &path).is_ok();
+            if !ok {
+                // An unrecorded temp would be swept as untrusted next run anyway.
+                for t in &kept_tmps {
+                    let _ = fs::remove_file(t);
+                }
+            }
+            ok
         })
-        .await;
-        remove_temps(&works);
+        .await
+        .unwrap_or(false);
+        if pause && keep.iter().any(|k| *k) {
+            if ledger_ok {
+                emitter.warn(format!(
+                    "update paused: kept {} verified files ({kept_bytes} bytes) for resume",
+                    keep.iter().filter(|k| **k).count()
+                ));
+            } else {
+                emitter.warn(
+                    "update paused: could not record verified files; they were deleted".to_string(),
+                );
+            }
+        }
         let status = if !failures.is_empty() {
             Status::Error
         } else {
@@ -1584,7 +1846,10 @@ async fn delta_body(
         return finish(o, started);
     }
 
-    // (6) Commit.
+    // (6) Commit. From here the journal governs a resume; the temp ledger is spent.
+    if let Some(p) = &ledger_file {
+        let _ = fs::remove_file(p);
+    }
     emitter.stage("delta_committing");
     let mut modes: Vec<(PathBuf, ManifestFile, bool)> = Vec::new();
     let stub = |f: &ManifestFile| ManifestFile {

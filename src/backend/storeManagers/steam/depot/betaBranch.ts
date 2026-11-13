@@ -17,8 +17,6 @@
 //
 // Leaf module, no module-level mutable state.
 
-import { existsSync, readFileSync } from 'graceful-fs'
-import { parse } from '@node-steam/vdf'
 import { join } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
@@ -27,90 +25,12 @@ import {
   RUST_STEAMFILES_READ_LOCALCONFIG_BETA_KEY
 } from 'common/types/sidecarTransport'
 import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
-import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
 
 const STEAMID64_BASE = BigInt('76561197960265728')
-const MAX_DEPTH = 8
 
 /** Injection guard: the key lands in a quoted VDF value and a CM request. */
 export function isValidBetaKey(key: unknown): key is string {
   return typeof key === 'string' && /^[A-Za-z0-9._-]{1,64}$/.test(key)
-}
-
-function readCString(
-  buf: Buffer,
-  offset: number
-): { value: string; next: number } | undefined {
-  const end = buf.indexOf(0, offset)
-  if (end < 0) return undefined
-  return { value: buf.toString('utf8', offset, end), next: end + 1 }
-}
-
-interface WalkState {
-  offset: number
-  found?: string
-}
-
-/** Walks one map's children until its 0x08. Returns false on any malformation. */
-function walkMap(
-  buf: Buffer,
-  st: WalkState,
-  depth: number,
-  isUserConfig: boolean
-): boolean {
-  if (depth > MAX_DEPTH) return false
-  for (;;) {
-    if (st.offset >= buf.length) return false
-    const type = buf[st.offset++]
-    if (type === 0x08) return true
-    const key = readCString(buf, st.offset)
-    if (!key) return false
-    st.offset = key.next
-    switch (type) {
-      case 0x00: {
-        if (
-          !walkMap(
-            buf,
-            st,
-            depth + 1,
-            depth === 0 && key.value === 'UserConfig'
-          )
-        )
-          return false
-        break
-      }
-      case 0x01: {
-        const val = readCString(buf, st.offset)
-        if (!val) return false
-        st.offset = val.next
-        if (isUserConfig && key.value === 'BetaKey') st.found = val.value
-        break
-      }
-      case 0x02:
-      case 0x03:
-        st.offset += 4
-        if (st.offset > buf.length) return false
-        break
-      case 0x07:
-        st.offset += 8
-        if (st.offset > buf.length) return false
-        break
-      default:
-        return false
-    }
-  }
-}
-
-export function decodeUserAppConfigBetaKey(hex: string): string | undefined {
-  try {
-    if (!hex || !/^([0-9a-fA-F]{2})*$/.test(hex)) return undefined
-    const buf = Buffer.from(hex, 'hex')
-    const st: WalkState = { offset: 0 }
-    if (!walkMap(buf, st, 0, false)) return undefined
-    return st.found
-  } catch {
-    return undefined
-  }
 }
 
 export async function readAcfBetaKey(
@@ -118,8 +38,6 @@ export async function readAcfBetaKey(
   steamappsDir: string,
   appId: string
 ): Promise<string | undefined> {
-  if (steamFilesTextImpl() === 'ts')
-    return readAcfBetaKeyTs(steamappsDir, appId)
   try {
     const res = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_ACF, {
       path: join(steamappsDir, `appmanifest_${appId}.acf`)
@@ -130,33 +48,11 @@ export async function readAcfBetaKey(
   }
 }
 
-function readAcfBetaKeyTs(
-  steamappsDir: string,
-  appId: string
-): string | undefined {
-  try {
-    const file = join(steamappsDir, `appmanifest_${appId}.acf`)
-    if (!existsSync(file)) return undefined
-    const parsed = parse(readFileSync(file, 'utf-8')) as {
-      AppState?: { UserConfig?: { BetaKey?: unknown } }
-    }
-    const key = parsed?.AppState?.UserConfig?.BetaKey
-    if (key === undefined || key === null) return undefined
-    const s = String(key)
-    return s ? s : undefined
-  } catch {
-    return undefined
-  }
-}
-
 export async function readLocalConfigBetaKey(
   rust: RustInvokeDeps,
   localconfigPath: string,
   appId: string
 ): Promise<string | undefined> {
-  if (steamFilesTextImpl() === 'ts') {
-    return readLocalConfigBetaKeyTs(localconfigPath, appId)
-  }
   try {
     if (!/^\d+$/.test(appId)) return undefined
     const res = await invokeSteamFiles(
@@ -165,30 +61,6 @@ export async function readLocalConfigBetaKey(
       { path: localconfigPath, appId }
     )
     return res.betaKey ?? undefined
-  } catch {
-    return undefined
-  }
-}
-
-function readLocalConfigBetaKeyTs(
-  localconfigPath: string,
-  appId: string
-): string | undefined {
-  try {
-    if (!/^\d+$/.test(appId) || !existsSync(localconfigPath)) return undefined
-    const text = readFileSync(localconfigPath, 'utf-8')
-    const lines = text.split(/\r?\n/)
-    const start = lines.findIndex((l) => /^\s*"UserAppConfig"\s*$/i.test(l))
-    if (start < 0) return undefined
-    const indent = /^\s*/.exec(lines[start] ?? '')?.[0] ?? ''
-    const entry = new RegExp(`^\\s*"${appId}"\\s+"([0-9a-fA-F]*)"\\s*$`)
-    for (let i = start + 1; i < lines.length; i++) {
-      const line = lines[i] ?? ''
-      if (line === `${indent}}`) break
-      const m = entry.exec(line)
-      if (m) return decodeUserAppConfigBetaKey(m[1] ?? '')
-    }
-    return undefined
   } catch {
     return undefined
   }

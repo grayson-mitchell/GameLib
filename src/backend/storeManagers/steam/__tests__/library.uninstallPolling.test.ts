@@ -11,7 +11,10 @@ import {
 
 // ── Imports ───────────────────────────────────────────────────────────────────
 import { existsSync, readFileSync } from 'graceful-fs'
-import * as vdf from '@node-steam/vdf'
+import {
+  vdf,
+  mockedFsSteamFiles
+} from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 const sendFrontendMessage = jest.fn()
 import { notify } from '../../../dialog/dialog'
@@ -38,6 +41,7 @@ const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 const getSteamBottleSettings = jest.fn()
 
 const steamTestDeps = createTestManagerDeps({
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   sendFrontendMessage,
   steamBottle: { getSteamBottleSettings } as never,
   steamProcesses: createInertSteamProcesses(),
@@ -59,6 +63,7 @@ jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
 jest.mock('backend/knownFixReport', () => ({ reportDetectedFix: jest.fn() }))
 
 jest.mock('backend/logger', () => ({
+  logDebug: jest.fn(),
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
@@ -79,9 +84,6 @@ jest.mock('backend/utils', () => ({
 
 // ── graceful-fs mock — readdirSync, readFileSync, existsSync ─────────────────
 jest.mock('graceful-fs')
-
-// ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
-jest.mock('@node-steam/vdf')
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
@@ -154,10 +156,9 @@ jest.mock('../bridgeBottle', () => ({
   resolveBridgeBottleName: jest.fn()
 }))
 
-// ── depot mock — finalizeToSteam (D-05 startup finalize) / downloadSteamDepots
+// ── depot mock — downloadSteamDepots
 // (must NEVER be invoked from startup resume — Pitfall 4, no silent re-download) ─
 jest.mock('../depot', () => ({
-  finalizeToSteam: jest.fn().mockResolvedValue(undefined),
   downloadSteamDepots: jest.fn()
 }))
 
@@ -296,7 +297,7 @@ describe('pollUninstallOnce()', () => {
 
   it('sends gameStatusUpdate { status:"uninstalling" } while StateFlags bit 0x800 is set', async () => {
     // 4 (installed) | 2048 (uninstalling) = 2052
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2052',
@@ -328,7 +329,7 @@ describe('pollUninstallOnce()', () => {
   it('A-10: sends gameStatusUpdate { status:"uninstalling" } for a DOWNLOADING manifest too, not only the 0x800 bit', async () => {
     // 1026 = 1024 (update started) | 2 (update required) — bit 4 (installed)
     // is NOT set, which is what readAcfState maps to state 'downloading'.
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '1026',
@@ -349,7 +350,7 @@ describe('pollUninstallOnce()', () => {
   })
 
   it('does NOT flip the badge while the game is still fully installed (no uninstalling bit)', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -380,7 +381,7 @@ describe('pollUninstallOnce()', () => {
 
   it('GAME-03: does NOT fire notify while the manifest is still present (interim uninstalling tick)', async () => {
     // 4 (installed) | 2048 (uninstalling) = 2052
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2052',
@@ -390,6 +391,48 @@ describe('pollUninstallOnce()', () => {
     })
     startUninstallPolling(steamTestDeps, '730', 60000)
     await pollUninstallOnce(steamTestDeps, '730')
+    expect(notify).not.toHaveBeenCalled()
+  })
+
+  // WR-01 (75 review): a rejected read is not a confirmed absence.
+  it('a rejected manifest read is not a confirmed absence: no badge flip, no forced-verdict clear', async () => {
+    const rejecting = () => Promise.reject(new Error('rustInvoke timed out'))
+    const deps = { ...steamTestDeps, requestRustInvoke: rejecting } as never
+    startUninstallPolling(steamTestDeps, '730', 60000)
+    await pollUninstallOnce(deps, '730', 'bottle')
+    expect(library.get('730')?.is_installed).toBe(true)
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.anything()
+    )
+    expect(clearForcedSpy).not.toHaveBeenCalled()
+    expect(notify).not.toHaveBeenCalled()
+  })
+
+  it('a survivor root whose read rejects defers completion to the next tick (WR-01)', async () => {
+    // Native confirmed absent; the bottle root's read rejects, so a copy may
+    // survive there: the uninstall must not be declared complete yet.
+    const base = mockedFsSteamFiles().requestRustInvoke
+    const partlyRejecting = (channel: string, argv: readonly unknown[]) => {
+      const dirs = (argv[0] as { steamappsDirs?: string[] })?.steamappsDirs
+      return dirs?.includes('/bottle/steamapps')
+        ? Promise.reject(new Error('rustInvoke timed out'))
+        : base(channel, argv)
+    }
+    ;(existsSync as jest.Mock).mockImplementation(
+      (path: string) => path !== '/steam/steamapps/appmanifest_730.acf'
+    )
+    const deps = {
+      ...steamTestDeps,
+      requestRustInvoke: partlyRejecting
+    } as never
+    startUninstallPolling(steamTestDeps, '730', 60000)
+    await pollUninstallOnce(deps, '730') // default source: 'native'
+    expect(library.get('730')?.is_installed).toBe(true)
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.anything()
+    )
     expect(notify).not.toHaveBeenCalled()
   })
 
@@ -420,7 +463,7 @@ describe('pollUninstallOnce()', () => {
   })
 
   it('R3: a cancelled bottle uninstall (manifest still present) does NOT clear the forced verdict', async () => {
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',
@@ -463,7 +506,7 @@ describe('pollUninstallOnce()', () => {
         (path: string) => path !== '/bottle/steamapps/appmanifest_730.acf'
       )
       ;(readFileSync as jest.Mock).mockReturnValue('native manifest content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: {
           appid: '730',
           StateFlags: '4',
@@ -520,7 +563,7 @@ describe('pollUninstallOnce()', () => {
         (path: string) => path !== '/steam/steamapps/appmanifest_730.acf'
       )
       ;(readFileSync as jest.Mock).mockReturnValue('bottle manifest content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: {
           appid: '730',
           StateFlags: '4',
@@ -596,7 +639,7 @@ describe('pollUninstallOnce()', () => {
         path.startsWith('/bridge/')
       )
       ;(readFileSync as jest.Mock).mockReturnValue('bridge manifest content')
-      ;(vdf.parse as jest.Mock).mockReturnValue({
+      vdf.parse.mockReturnValue({
         AppState: {
           appid: '730',
           StateFlags: '4',
@@ -662,7 +705,7 @@ describe('pollUninstallOnce()', () => {
             !path.startsWith('/bridge/') && !path.startsWith('/bottle/')
         )
         ;(readFileSync as jest.Mock).mockReturnValue('native manifest content')
-        ;(vdf.parse as jest.Mock).mockReturnValue({
+        vdf.parse.mockReturnValue({
           AppState: {
             appid: '730',
             StateFlags: '4',
@@ -806,7 +849,7 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4', // fully installed — Steam never started the uninstall
@@ -871,7 +914,7 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '2052',
@@ -916,7 +959,7 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '730',
         StateFlags: '4',

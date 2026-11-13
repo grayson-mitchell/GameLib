@@ -17,7 +17,10 @@ import { stopInstallPolling } from '../library/installStop'
 import { locateMachOBinary, verifyMacArchGroundTruth } from '../library/macArch'
 import { machOArchsOfAsync, verdictFromArchs } from 'backend/utils/macArch'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
-import * as vdf from '@node-steam/vdf'
+import {
+  vdf,
+  mockedFsSteamFiles
+} from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { reportDetectedFix } from 'backend/knownFixReport'
 const sendFrontendMessage = jest.fn()
@@ -69,6 +72,7 @@ const isSteamBottleProvisioned = jest.fn()
 // The i386-recovery confirm goes through deps.dialogs; this recording fake is what it calls.
 const dialog = { showMessageBox: jest.fn() }
 const steamTestDeps = createTestManagerDeps({
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   sendFrontendMessage,
   steamBottle: { getSteamBottleSettings, isSteamBottleProvisioned } as never,
   dialogs: {
@@ -98,6 +102,7 @@ jest.mock('backend/knownFixReport', () => ({
 }))
 
 jest.mock('backend/logger', () => ({
+  logDebug: jest.fn(),
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
@@ -118,9 +123,6 @@ jest.mock('backend/utils', () => ({
 
 // ── graceful-fs mock — readdirSync, readFileSync, existsSync ─────────────────
 jest.mock('graceful-fs')
-
-// ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
-jest.mock('@node-steam/vdf')
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
@@ -193,10 +195,9 @@ jest.mock('../bridgeBottle', () => ({
   resolveBridgeBottleName: jest.fn()
 }))
 
-// ── depot mock — finalizeToSteam (D-05 startup finalize) / downloadSteamDepots
+// ── depot mock — downloadSteamDepots
 // (must NEVER be invoked from startup resume — Pitfall 4, no silent re-download) ─
 jest.mock('../depot', () => ({
-  finalizeToSteam: jest.fn().mockResolvedValue(undefined),
   downloadSteamDepots: jest.fn()
 }))
 
@@ -1072,9 +1073,9 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
     })
     await jest.advanceTimersByTimeAsync(30) // absent
     manifestPresent = true
-    ;(vdf.parse as jest.Mock).mockReturnValue(downloadingAcf)
+    vdf.parse.mockReturnValue(downloadingAcf)
     await jest.advanceTimersByTimeAsync(20)
-    ;(vdf.parse as jest.Mock).mockReturnValue(installedAcf)
+    vdf.parse.mockReturnValue(installedAcf)
     await jest.advanceTimersByTimeAsync(20)
     await flushMicrotasks()
   }
@@ -1107,7 +1108,7 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
 
   it('E3: focus reconciliation catches a native false->true flip with no live poll and offers i386 recovery once', async () => {
     manifestPresent = true
-    ;(vdf.parse as jest.Mock).mockReturnValue(installedAcf)
+    vdf.parse.mockReturnValue(installedAcf)
 
     await new SteamLibraryManager(steamTestDeps).refreshInstallState()
     await flushMicrotasks()
@@ -1122,7 +1123,7 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
 
   it('E4: with a live poll registered for the appId, focus reconciliation flips the badge but leaves the arch check to the poll', async () => {
     manifestPresent = true
-    ;(vdf.parse as jest.Mock).mockReturnValue(installedAcf)
+    vdf.parse.mockReturnValue(installedAcf)
     // Long interval: the poll is registered but never ticks during the test.
     startInstallPolling(steamTestDeps, APP_ID, {
       intervalMs: 1_000_000,

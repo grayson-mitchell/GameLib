@@ -22,13 +22,10 @@
 // the one shared sanitizeInstalldir(candidate, appId, steamappsDir) before it
 // is used as a real filesystem write target.
 
-import { existsSync, readFileSync } from 'graceful-fs'
-import { parse } from '@node-steam/vdf'
 import { join } from 'path'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
 import { invokeSteamFiles } from './localFiles/rustSteamFiles'
-import { steamFilesTextImpl } from './localFiles/steamFilesFlags'
 
 /**
  * Reads `appmanifest_<appId>.acf` from `steamappsDir` and returns its
@@ -43,9 +40,6 @@ export async function readAcfInstalldir(
   steamappsDir: string,
   appId: string
 ): Promise<string | undefined> {
-  if (steamFilesTextImpl() === 'ts') {
-    return readAcfInstalldirTs(steamappsDir, appId)
-  }
   try {
     const res = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_ACF, {
       path: join(steamappsDir, `appmanifest_${appId}.acf`)
@@ -55,27 +49,5 @@ export async function readAcfInstalldir(
     return installdir
   } catch {
     return undefined
-  }
-}
-
-function readAcfInstalldirTs(
-  steamappsDir: string,
-  appId: string
-): string | undefined {
-  const manifestFile = join(steamappsDir, `appmanifest_${appId}.acf`)
-  if (!existsSync(manifestFile)) {
-    return undefined
-  }
-
-  try {
-    const content = readFileSync(manifestFile, 'utf-8')
-    const parsed = parse(content)
-    const installdir = parsed?.AppState?.installdir
-    if (typeof installdir !== 'string' || !installdir.trim()) {
-      return undefined
-    }
-    return installdir
-  } catch {
-    return undefined // corrupt ACF — same discipline as readAcfState (T-2-01)
   }
 }

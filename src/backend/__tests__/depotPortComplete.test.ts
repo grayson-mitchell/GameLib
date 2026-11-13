@@ -22,9 +22,12 @@ const DELETED = [
   `${STEAM}/depot/download.ts`,
   `${STEAM}/depot/downloadFiles.ts`,
   `${STEAM}/depot/fileAttributes.ts`,
-  // finalize.ts and manifest.ts survive only as finalizeAcf.ts / appManifest.ts.
+  // finalize.ts and manifest.ts survived as finalizeAcf.ts / appManifest.ts;
+  // both were deleted in Phase 75 (plan 33).
   `${STEAM}/depot/finalize.ts`,
   `${STEAM}/depot/manifest.ts`,
+  `${STEAM}/depot/finalizeAcf.ts`,
+  `${STEAM}/depot/appManifest.ts`,
   `${STEAM}/__tests__/manifest.test.ts`,
   `${STEAM}/depot/flagsCensus.ts`,
   `${STEAM}/depot/hostHealth.ts`,

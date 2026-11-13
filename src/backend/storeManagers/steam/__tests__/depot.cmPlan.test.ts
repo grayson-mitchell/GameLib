@@ -28,6 +28,7 @@ const depotTransport = {
 }
 import { downloadSteamDepots, PLAN_BUILD_MAX_ATTEMPTS } from '../depot'
 import { buildDepotRefs } from '../depot/plan'
+import { fsBackedSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 const steamUser = createMockSteamUser()
 import { mockLeaseOk, mockLeaseRefused } from './depotLeaseMocks'
@@ -43,6 +44,7 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
+  logDebug: jest.fn(),
   LogPrefix: {
     Steam: 'Steam',
     Backend: 'Backend'
@@ -224,6 +226,9 @@ describe('buildDepotRefs', () => {
 
     it('with no explicit branch, the ACF BetaKey is resolved', async () => {
       wire([])
+      requestRustInvoke.mockImplementation(
+        fsBackedSteamFiles().requestRustInvoke
+      )
       withBranches(BRANCHES)
       const dir = mkdtempSync(join(tmpdir(), 'cmplan-beta-'))
       try {

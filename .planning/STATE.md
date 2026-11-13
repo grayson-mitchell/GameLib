@@ -2,20 +2,16 @@
 gsd_state_version: "1.0"
 milestone: v0.10
 milestone_name: Foundations
-current_phase: 75
-current_phase_name: steam-local-file-formats-in-rust
-status: executing
-stopped_at: Phase 66.4 complete (verified passed)
-last_updated: "2026-11-13T13:26:05.967Z"
-last_activity: 2026-11-14
-last_activity_desc: Phase 66.4 complete (25/25 plans, verification passed); Phase 75 remains current
-state_head: 0d918e51f8d6280ee309d867d481e721cbb9e7ff
+status: verifying
+stopped_at: Phase 75 context gathered
+last_updated: "2026-11-13T22:25:23.491Z"
+last_activity: 2026-11-13
 progress:
   total_phases: 23
-  completed_phases: 14
-  total_plans: 363
-  completed_plans: 352
-  percent: 61
+  completed_phases: 15
+  total_plans: 361
+  completed_plans: 359
+  percent: 65
 ---
 
 # Project State
@@ -77,11 +73,11 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 75 (steam-local-file-formats-in-rust) — EXECUTING
-Plan: 26 of 35
-Status: Ready to execute
-Last activity: 2026-11-14 - Completed quick task 261114-2tv: Clear the 36 tests-scope ESLint warnings added on main since fba351fbe without raising TESTS_CEILING
+Plan: 35 of 35
+Status: Phase complete — ready for verification
+Last activity: 2026-11-14 - Completed quick task 261114-gki: Keep SHA-verified temps when a bridge update is paused so resume does not re-download
 
-Progress: [██████░░░░] 61%
+Progress: [██████████] 99%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -750,11 +746,12 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261114-2gg | backend-di-ceilings green again (66.4-REVIEW WR-01): 21 jest.mock suites from phases 74/75 and quick tasks are baselined with each introducing commit named; games.test.ts raised 47 -> 48 for e005430a8 (no injection seam). The logger-mock removals failed (the logger is not initialised under jest), so those suites were restored. Lint.yml's ceilings step now runs even when ESLint fails. The gate was already in CI but had been skipped since 11-13. Follow-up todo filed for the red Lint workflow. | 2026-11-14 | 24ce5285e, e485a9bde, dc1ace1f2 | Gate exit 0 (jestMock=2018, 455 files); ceilings 132 + wiring 8/8 + sanctioned 4 pass; planning-gates 12/12; prettier clean; CI step-runs proof pending first push | [261114-2gg-backend-di-ceilings-green-baseline-or-in](./quick/261114-2gg-backend-di-ceilings-green-baseline-or-in/) |
 | 261114-2yj | sidecarExitCheck `--mode eof` no longer leaks (66.4-REVIEW WR-03): `runEof`/`runLive` return a `Report` and only the CLI guard calls `process.exit`, so `runEof`'s `finally` now runs; it SIGKILLs its own child via the ChildProcess handle (5 s bounded wait) and then disposes the fake-HOME profile. Live mode owned no profile or child, so it never leaked; it was converted only for one exit point. `exitCodeFor` extracted; docblocks corrected; todo closed. | 2026-11-14 | ab6986aa7, 15530b186, d033e88f6 | Meta jest 9/9 (new T8 never-READY stub, T9 exit codes); tsc 0; eslint 0; fakeHomeIsolation 7/7; prettier clean; live smoke:exit-check not run (needs macOS/Linux ps) | [261114-2yj-fix-todo-sidecarexitcheck-mode-eof-leaks](./quick/261114-2yj-fix-todo-sidecarexitcheck-mode-eof-leaks/) |
 | 261114-2tv | Clear the 36 tests-scope ESLint warnings added on main since fba351fbe without raising TESTS_CEILING | 2026-11-14 | 0a09ba886 | lint:tests 683 -> 647 (ceiling 661 unchanged, no eslint-disable added); jest 0 newly failing; scoped prettier clean | [261114-2tv-clear-the-36-tests-scope-eslint-warnings](./quick/261114-2tv-clear-the-36-tests-scope-eslint-warnings/) |
+| 261114-gki | Paused bridge (delta) updates keep temps that passed the whole-file SHA-1, recorded in `{steamapps}/gamelib-delta/{appId}.temps.json` keyed on the target manifest GIDs; resume re-hashes each kept temp and reuses it on size+SHA-1 match (progress seeded, log line), mismatches rebuilt; error, changed target and file-level fallback delete all temps and the record. Todo closed. | 2026-11-14 | a4f46948d, 51f47623d, 5f7e350da | `cargo test -p gamelib-depot` all green (delta/delta_resume 5× stable); fmt + clippy 1.99.1 clean; planning-gates 12/12; not yet live-verified on a real bridge update | [261114-gki-keep-sha-verified-temps-when-a-bridge-up](./quick/261114-gki-keep-sha-verified-temps-when-a-bridge-up/) |
 
 ## Session Continuity
 
-Last session: 2026-11-13T11:38:19.922Z
-Stopped at: Phase 66.4 complete (verified passed)
+Last session: 2026-11-13T22:17:57.371Z
+Stopped at: Phase 75 context gathered
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

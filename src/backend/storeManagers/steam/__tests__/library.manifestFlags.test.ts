@@ -1,51 +1,14 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import * as logger from 'backend/logger'
 import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
 import type { AcfReadResult } from '../localFiles/steamFilesTypes'
 import {
   isCurrentFullInstall,
-  readAppManifestFlags
+  readAppManifestFlags,
+  readInstalledAtStart
 } from '../library/manifestFlags'
 
-const noRust = {
-  requestRustInvoke: () => Promise.reject(new Error('not used on the ts flag'))
-}
-
 describe('manifestFlags', () => {
-  let dir: string
-  beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), 'manifestFlags-'))
-  })
-  afterEach(() => {
-    rmSync(dir, { recursive: true, force: true })
-  })
-
-  function acf(flags: string, buildid?: string) {
-    const bid = buildid === undefined ? '' : `\t"buildid"\t"${buildid}"\n`
-    writeFileSync(
-      join(dir, 'appmanifest_123.acf'),
-      `"AppState"\n{\n\t"appid"\t"123"\n\t"StateFlags"\t"${flags}"\n${bid}}\n`
-    )
-  }
-
-  it('reads a well-formed manifest', async () => {
-    acf('4', '25485521')
-    await expect(readAppManifestFlags(noRust, dir, '123')).resolves.toEqual({
-      stateFlags: 4,
-      buildid: '25485521'
-    })
-  })
-
-  it('returns null for missing, unparseable and NaN', async () => {
-    await expect(readAppManifestFlags(noRust, dir, '123')).resolves.toBeNull()
-    writeFileSync(join(dir, 'appmanifest_123.acf'), '\u0000{{{ not vdf')
-    await expect(readAppManifestFlags(noRust, dir, '123')).resolves.toBeNull()
-    acf('abc', '1')
-    await expect(readAppManifestFlags(noRust, dir, '123')).resolves.toBeNull()
-  })
-
   it('isCurrentFullInstall', () => {
     expect(isCurrentFullInstall({ stateFlags: 4, buildid: '25485521' })).toBe(
       true
@@ -58,16 +21,12 @@ describe('manifestFlags', () => {
   })
 })
 
-describe('readAppManifestFlags on the rust flag', () => {
-  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
+describe('readAppManifestFlags', () => {
   beforeEach(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
     jest.spyOn(logger, 'logDebug').mockImplementation(() => undefined)
   })
   afterEach(() => {
     jest.restoreAllMocks()
-    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
   })
 
   const read = (record: Partial<AcfReadResult['record'] & object> | null) =>
@@ -114,5 +73,55 @@ describe('readAppManifestFlags on the rust flag', () => {
     await expect(
       readAppManifestFlags(stubRustSteamFiles({}), '/lib/steamapps', '123')
     ).resolves.toBeNull()
+  })
+})
+
+// WR-07 (75 review): the cancel-delete guard's start-of-job capture never reads
+// "could not read" as "not installed".
+describe('readInstalledAtStart', () => {
+  beforeEach(() => {
+    jest.spyOn(logger, 'logDebug').mockImplementation(() => undefined)
+  })
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  const reply = (r: Partial<AcfReadResult>) =>
+    stubRustSteamFiles({
+      steamfiles_read_acf: () => ({
+        exists: true,
+        parsed: true,
+        readError: null,
+        record: null,
+        ...r
+      })
+    })
+  const flags = (stateFlags: number | null) =>
+    ({ stateFlags }) as unknown as AcfReadResult['record']
+
+  it('is true for an existing manifest that does not parse', async () => {
+    const stub = reply({ parsed: false, readError: 'truncated' })
+    await expect(readInstalledAtStart(stub, '/s', '123')).resolves.toBe(true)
+  })
+
+  it('is true when the read rejects', async () => {
+    await expect(
+      readInstalledAtStart(stubRustSteamFiles({}), '/s', '123')
+    ).resolves.toBe(true)
+  })
+
+  it('follows bit 4 on a parsed manifest and is false when it is missing', async () => {
+    await expect(
+      readInstalledAtStart(reply({ record: flags(4) }), '/s', '1')
+    ).resolves.toBe(true)
+    await expect(
+      readInstalledAtStart(reply({ record: flags(1026) }), '/s', '1')
+    ).resolves.toBe(false)
+    await expect(
+      readInstalledAtStart(reply({ record: flags(null) }), '/s', '1')
+    ).resolves.toBe(false)
+    await expect(
+      readInstalledAtStart(reply({ exists: false, parsed: false }), '/s', '1')
+    ).resolves.toBe(false)
   })
 })

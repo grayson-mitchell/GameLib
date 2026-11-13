@@ -548,25 +548,44 @@ async function syncOwnedLibrary(
  */
 export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
   const { steamLibraryStore } = deps.stores.steam
-  // D-UAT-13: a window-focus reconcile (the user alt-tabbing to Steam to
-  // restart it) must not flip a game that is holding for a Steam restart to
-  // installed — see withoutSteamRestartHolds().
-  const installedMap =
-    deps.steamInstallRuntime.restartHold.withoutSteamRestartHolds(
-      await buildInstalledMap(deps)
+  // WR-01 (75 review): a rejected manifest scan (rustInvoke timeout, shell
+  // restart) says nothing about what is installed. Skip this reconcile
+  // instead of diffing against an empty map, which would persist every
+  // installed title as not installed; the next focus retries.
+  let installedMap: Awaited<ReturnType<typeof buildInstalledMap>>
+  let bottleInstalledMap: Awaited<
+    ReturnType<typeof buildBottleInstalledMap>
+  > | null
+  let bridgeInstalledMap: Awaited<
+    ReturnType<typeof buildBridgeInstalledMap>
+  > | null
+  try {
+    // D-UAT-13: a window-focus reconcile (the user alt-tabbing to Steam to
+    // restart it) must not flip a game that is holding for a Steam restart to
+    // installed — see withoutSteamRestartHolds().
+    installedMap =
+      deps.steamInstallRuntime.restartHold.withoutSteamRestartHolds(
+        await buildInstalledMap(deps)
+      )
+    bottleInstalledMap =
+      isMac && deps.steamBottle.isSteamBottleProvisioned()
+        ? await buildBottleInstalledMap(deps)
+        : null
+    // D-UAT-24-07 (quick/261016-u1w D-C): same bridge-map consult as
+    // refresh(), so a focus/post-launch reconciliation does not clobber a
+    // bridge-installed game's badge back to false either. Gated on ANY
+    // bridge bottle being ready, not just the legacy shared one.
+    bridgeInstalledMap =
+      isMac && listReadyBridgeBottleNames(deps.paths).length > 0
+        ? await buildBridgeInstalledMap(deps.paths, deps)
+        : null
+  } catch (err) {
+    logWarning(
+      ['Steam: install-state scan failed; skipping this reconcile:', err],
+      LogPrefix.Steam
     )
-  const bottleInstalledMap =
-    isMac && deps.steamBottle.isSteamBottleProvisioned()
-      ? await buildBottleInstalledMap(deps)
-      : null
-  // D-UAT-24-07 (quick/261016-u1w D-C): same bridge-map consult as
-  // refresh(), so a focus/post-launch reconciliation does not clobber a
-  // bridge-installed game's badge back to false either. Gated on ANY
-  // bridge bottle being ready, not just the legacy shared one.
-  const bridgeInstalledMap =
-    isMac && listReadyBridgeBottleNames(deps.paths).length > 0
-      ? await buildBridgeInstalledMap(deps.paths, deps)
-      : null
+    return
+  }
 
   for (const [
     appIdStr,

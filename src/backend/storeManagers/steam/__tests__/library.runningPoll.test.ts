@@ -5,7 +5,10 @@
  * state are closure state of an instance now, no child_process mock).
  */
 import { existsSync, readFileSync } from 'graceful-fs'
-import * as vdf from '@node-steam/vdf'
+import {
+  vdf,
+  mockedFsSteamFiles
+} from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import { join, resolve, sep } from 'path'
 
 import { createCaptureLog } from 'backend/testUtils/captureLog'
@@ -17,7 +20,8 @@ import type { ScriptStep } from 'backend/testUtils/scriptedRunner'
 import {
   createRunningPoll,
   readMacRunningAppId,
-  readRunningAppId
+  readRunningAppId,
+  readRunningAppIdOrThrow
 } from '../library/runningPoll'
 import { windowsSystem32Path } from '../runningFromFolder'
 import {
@@ -36,8 +40,6 @@ jest.mock('backend/logger', () => ({
 }))
 const paths = { userHome: '/home/test' }
 jest.mock('graceful-fs')
-jest.mock('@node-steam/vdf')
-
 const vdfWith = (appId: string | undefined) => {
   jest.mocked(existsSync).mockReturnValue(true)
   jest.mocked(readFileSync).mockReturnValue('content')
@@ -54,7 +56,8 @@ const vdfWith = (appId: string | undefined) => {
 
 const REG_ARGV = ['query', 'HKCU\\Software\\Valve\\Steam', '/v', 'RunningAppID']
 
-const noRust = () => Promise.reject(new Error('rust not used on the ts flag'))
+// The registry reads answer from the mocked filesystem and programmed vdf.parse results.
+const noRust = mockedFsSteamFiles().requestRustInvoke
 
 describe('readRunningAppId() -- per-platform dispatch', () => {
   describe('win32', () => {
@@ -185,6 +188,35 @@ describe('readRunningAppId() -- per-platform dispatch', () => {
         ).resolves.toBe(0)
       }
     )
+  })
+})
+
+// WR-01 (75 review): the delete guard's running check must see a failed
+// registry.vdf read as a failure, not as "no game running".
+describe('readRunningAppIdOrThrow()', () => {
+  const rejecting = () => Promise.reject(new Error('rustInvoke timed out'))
+
+  it.each(['darwin', 'linux'] as const)(
+    'rejects on %s when the registry.vdf invoke rejects (readRunningAppId reads 0)',
+    async (platform) => {
+      const runner = createScriptedRunner([])
+      const deps = { runner, paths, requestRustInvoke: rejecting }
+      await expect(readRunningAppId(deps, platform)).resolves.toBe(0)
+      await expect(readRunningAppIdOrThrow(deps, platform)).rejects.toThrow(
+        'rustInvoke timed out'
+      )
+    }
+  )
+
+  it('answers like readRunningAppId when the read succeeds', async () => {
+    vdfWith('440')
+    const runner = createScriptedRunner([])
+    await expect(
+      readRunningAppIdOrThrow(
+        { runner, paths, requestRustInvoke: noRust },
+        'darwin'
+      )
+    ).resolves.toBe(440)
   })
 })
 
@@ -725,15 +757,6 @@ describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
 })
 
 describe('registry.vdf RunningAppID on the rust flag', () => {
-  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
-  beforeEach(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-  })
-  afterEach(() => {
-    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
-  })
-
   it('macOS reads RunningAppID through steamfiles_read_running_app_id', async () => {
     const stub = stubRustSteamFiles({
       steamfiles_read_running_app_id: () => ({ runningAppId: 1245620 })

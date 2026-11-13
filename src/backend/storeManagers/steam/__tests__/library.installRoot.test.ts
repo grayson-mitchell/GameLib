@@ -13,7 +13,10 @@ import { createEngineRegistry } from 'backend/engine/engineRegistry'
 import SteamLibraryManager from '../library'
 import { resolveInstallRoot } from '../library/installRoot'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
-import * as vdf from '@node-steam/vdf'
+import {
+  vdf,
+  mockedFsSteamFiles
+} from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
@@ -28,7 +31,7 @@ import { createTestSteamLaunchRuntime } from 'backend/testUtils/testSteamLaunchR
 // 66.3-15: the bottle settings are read through the deps slice, so they are a plain mock here.
 const getSteamBottleSettings = jest.fn()
 const libDeps = {
-  requestRustInvoke: jest.fn(),
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   config: createTestGlobalConfig(),
   steamBottle: { getSteamBottleSettings, resolveCrossoverWine: jest.fn() },
   paths: { userHome: '/test-gamelib/home' },
@@ -41,6 +44,7 @@ const { steamLibraryStore, steamMetadataStore } =
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const steamTestDeps = createTestManagerDeps({
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   steamBottle: {
     getSteamBottleSettings,
     isSteamBottleProvisioned: jest.fn()
@@ -64,6 +68,7 @@ jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
 jest.mock('backend/knownFixReport', () => ({ reportDetectedFix: jest.fn() }))
 
 jest.mock('backend/logger', () => ({
+  logDebug: jest.fn(),
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
@@ -84,9 +89,6 @@ jest.mock('backend/utils', () => ({
 
 // ── graceful-fs mock — readdirSync, readFileSync, existsSync ─────────────────
 jest.mock('graceful-fs')
-
-// ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
-jest.mock('@node-steam/vdf')
 
 // ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
 jest.mock('../../../dialog/dialog', () => ({
@@ -159,10 +161,9 @@ jest.mock('../bridgeBottle', () => ({
   resolveBridgeBottleName: jest.fn()
 }))
 
-// ── depot mock — finalizeToSteam (D-05 startup finalize) / downloadSteamDepots
+// ── depot mock — downloadSteamDepots
 // (must NEVER be invoked from startup resume — Pitfall 4, no silent re-download) ─
 jest.mock('../depot', () => ({
-  finalizeToSteam: jest.fn().mockResolvedValue(undefined),
   downloadSteamDepots: jest.fn()
 }))
 
@@ -363,7 +364,7 @@ describe('hostInstallPlatform() via refreshInstallState() — install.platform r
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: '570',
         StateFlags: '4',

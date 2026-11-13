@@ -1,14 +1,11 @@
 // Shared reader for the two appmanifest fields the stale-queue-head guards
 // care about (todo 2026-11-09-stale-steam-queue-head-cancel-deletes-complete-install,
-// quick 261110-9db). Never throws. Phase 75: async on `steamfiles_read_acf` under the rust flag.
+// quick 261110-9db). Never throws. Phase 75: async on `steamfiles_read_acf`.
 
 import { join } from 'path'
-import { existsSync, readFileSync } from 'graceful-fs'
-import { parse } from '@node-steam/vdf'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
 import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
-import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
 import { isFullyInstalledStateFlags } from './installedMap'
 
 export interface AppManifestFlags {
@@ -26,9 +23,6 @@ export async function readAppManifestFlags(
   steamappsDir: string,
   appId: string
 ): Promise<AppManifestFlags | null> {
-  if (steamFilesTextImpl() === 'ts') {
-    return readAppManifestFlagsTs(steamappsDir, appId)
-  }
   try {
     const manifest = join(steamappsDir, `appmanifest_${appId}.acf`)
     const read = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_ACF, {
@@ -43,29 +37,31 @@ export async function readAppManifestFlags(
 }
 
 /**
- * The TS body. `@internal`: exported solely for depot/finalizeAcf.ts, which is ts-only and is
- * deleted with the rest of the TS depot pipeline.
+ * WR-07 (75 review): whether the title must be treated as already installed
+ * when a native depot job starts (feeds the breadcrumb's
+ * steamResumeInstalledAtStart, which makes cancel-delete refuse). Unlike
+ * readAppManifestFlags this never maps "could not read" to "not installed":
+ * a manifest that exists but does not parse (truncated, oversized) or a
+ * rejected read is answered `true`, the conservative side for a guard that
+ * protects an install directory from deletion. Only a missing manifest or a
+ * parsed one without bit 4 is `false`.
  */
-export function readAppManifestFlagsTs(
+export async function readInstalledAtStart(
+  rust: RustInvokeDeps,
   steamappsDir: string,
   appId: string
-): AppManifestFlags | null {
+): Promise<boolean> {
+  let read
   try {
-    const manifest = join(steamappsDir, `appmanifest_${appId}.acf`)
-    if (!existsSync(manifest)) return null
-    const parsed = parse(readFileSync(manifest, 'utf-8')) as {
-      AppState?: { StateFlags?: string; buildid?: string }
-    }
-    const stateFlags = parseInt(parsed?.AppState?.StateFlags ?? '', 10)
-    if (Number.isNaN(stateFlags)) return null
-    const rawBuildid = parsed?.AppState?.buildid
-    return {
-      stateFlags,
-      buildid: rawBuildid === undefined ? '' : String(rawBuildid)
-    }
+    read = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_ACF, {
+      path: join(steamappsDir, `appmanifest_${appId}.acf`)
+    })
   } catch {
-    return null
+    return true
   }
+  if (!read.exists) return false
+  if (!read.parsed || !read.record) return true
+  return isFullyInstalledStateFlags(read.record.stateFlags ?? 0)
 }
 
 const UPDATE_REQUIRED = 2

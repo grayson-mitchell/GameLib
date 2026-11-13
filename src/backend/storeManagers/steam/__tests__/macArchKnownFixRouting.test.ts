@@ -1,3 +1,4 @@
+import { mockedFsSteamFiles } from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import {
   createTestManagerDeps,
@@ -19,6 +20,7 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
+  logDebug: jest.fn(),
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
 
@@ -34,9 +36,6 @@ jest.mock('graceful-fs', () => ({
   readdirSync: jest.fn(),
   readFileSync: jest.fn()
 }))
-
-// ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
-jest.mock('@node-steam/vdf', () => ({ parse: jest.fn() }))
 
 // ── node:fs mock — rmSync is the ONLY delete primitive removeSteamInstallCopy
 // calls; mocked so every deletion in these tests is asserted by exact call
@@ -114,7 +113,6 @@ jest.mock('../bottledSteam', () => ({
 
 // ── depot mock ─────────────────────────────────────────────────────────────────
 jest.mock('../depot', () => ({
-  finalizeToSteam: jest.fn().mockResolvedValue(undefined),
   downloadSteamDepots: jest.fn()
 }))
 
@@ -193,6 +191,7 @@ const isBottleReady = jest.fn()
 // The steam:// hand-off goes through deps.openExternal; this recording fake is what it calls.
 const shell = { openExternal: jest.fn() }
 const steamTestDeps = createTestManagerDeps({
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   steamUser,
   steamBottle: {
     isCrossoverInstalled: () => Promise.resolve(true),

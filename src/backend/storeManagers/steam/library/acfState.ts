@@ -1,7 +1,6 @@
 import { join, resolve, relative, isAbsolute, sep } from 'path'
-import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
+import { existsSync } from 'graceful-fs'
 import { rmSync } from 'node:fs'
-import { parse } from '@node-steam/vdf'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
 import type { SteamLibraryStateDeps } from 'backend/services/types'
@@ -11,7 +10,6 @@ import {
   RUST_STEAMFILES_SCAN_ACFS
 } from 'common/types/sidecarTransport'
 import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
-import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
 import { NUMERIC_APP_ID } from '../gameConstants'
 import { DEFAULT_BRIDGE_BOTTLE_NAME, type BottleSettingsDeps } from '../bottle'
 import {
@@ -32,6 +30,10 @@ import { isFullyInstalledStateFlags } from './installedMap'
  * - 'installed':   manifest present and StateFlags bit 4 set (FullyInstalled)
  * - 'downloading': manifest present but bit 4 unset (download in flight)
  * - 'absent':      no manifest found for this appId in any library path
+ * - 'unknown':     the rustInvoke for the library list or the manifest lookup
+ *                  rejected (timeout, shell restart). Nothing was learned, so
+ *                  no caller may read it as absent (WR-01, 75 review): pollers
+ *                  skip the tick, delete paths refuse.
  *
  * `source` selects which steamapps root(s) to scan:
  *  - 'native' (default): every native library path from getSteamLibraries(deps)
@@ -51,7 +53,7 @@ export async function readAcfState(
   appId: string,
   source: AcfSource = 'native'
 ): Promise<{
-  state: 'absent' | 'downloading' | 'installed'
+  state: 'absent' | 'downloading' | 'installed' | 'unknown'
   stateFlags?: number
   installPath?: string
   sizeOnDisk?: string
@@ -65,25 +67,32 @@ export async function readAcfState(
   bytesStaged?: number
   bytesToStage?: number
 }> {
-  if (steamFilesTextImpl() === 'ts') return readAcfStateTs(deps, appId, source)
-  const steamappsDirs = (
+  // Resolving a bottle/bridge root may throw (unprovisioned bottle); callers
+  // rely on that throw, so it stays outside the 'unknown' mapping below.
+  const bottleDirs =
     source === 'bottle'
       ? [getBottleSteamappsRoot(deps)]
       : source === 'bridge'
         ? [getBridgeBottleSteamappsRoot(deps, appId)]
-        : (await getSteamLibraries(deps)).map((libPath) =>
-            join(libPath, 'steamapps')
-          )
-  ).filter((dir) => existsSync(dir))
-
+        : null
   let found
   try {
+    const steamappsDirs = (
+      bottleDirs ??
+      (await getSteamLibraries(deps, { strict: true })).map((libPath) =>
+        join(libPath, 'steamapps')
+      )
+    ).filter((dir) => existsSync(dir))
     found = await invokeSteamFiles(deps, RUST_STEAMFILES_FIND_ACF, {
       steamappsDirs,
       appId
     })
-  } catch {
-    return { state: 'absent' }
+  } catch (error) {
+    logWarning(
+      `SteamLibraryManager: readAcfState(${appId}, '${source}') could not read manifests, state unknown: ${String(error)}`,
+      LogPrefix.Steam
+    )
+    return { state: 'unknown' }
   }
   if (!found.found || !found.record || !found.steamappsDir) {
     return { state: 'absent' }
@@ -108,59 +117,6 @@ export async function readAcfState(
   }
 }
 
-type AcfStateResult = Awaited<ReturnType<typeof readAcfState>>
-
-async function readAcfStateTs(
-  deps: SteamLibrariesDeps & BottleSettingsDeps,
-  appId: string,
-  source: AcfSource
-): Promise<AcfStateResult> {
-  const steamappsDirs =
-    source === 'bottle'
-      ? [getBottleSteamappsRoot(deps)]
-      : source === 'bridge'
-        ? [getBridgeBottleSteamappsRoot(deps, appId)]
-        : (await getSteamLibraries(deps)).map((libPath) =>
-            join(libPath, 'steamapps')
-          )
-
-  for (const steamappsDir of steamappsDirs) {
-    if (!existsSync(steamappsDir)) continue
-
-    const manifestFile = join(steamappsDir, `appmanifest_${appId}.acf`)
-    if (!existsSync(manifestFile)) continue
-
-    try {
-      const content = readFileSync(manifestFile, 'utf-8')
-      const parsed = parse(content)
-      const state = parsed?.AppState
-      if (!state) continue
-
-      const stateFlags = parseInt(state.StateFlags, 10)
-      if (isFullyInstalledStateFlags(stateFlags)) {
-        return {
-          state: 'installed',
-          stateFlags,
-          installPath: join(steamappsDir, 'common', state.installdir ?? ''),
-          sizeOnDisk: state.SizeOnDisk ?? '0'
-        }
-      }
-      return {
-        state: 'downloading',
-        stateFlags,
-        bytesDownloaded: Number(state.BytesDownloaded) || 0,
-        bytesToDownload: Number(state.BytesToDownload) || 0,
-        bytesStaged: Number(state.BytesStaged) || 0,
-        bytesToStage: Number(state.BytesToStage) || 0
-      }
-    } catch {
-      continue // skip corrupt ACF (T-2-01)
-    }
-  }
-
-  return { state: 'absent' }
-}
-
 /**
  * 34.13 review A-13: every OTHER appId in `steamappsDir` whose manifest
  * declares the same `installdir` as `installdirSegment`.
@@ -182,9 +138,11 @@ async function readAcfStateTs(
  * A claim stronger than the code supports is the more dangerous half — a
  * later reader trusts it. This makes the claim true instead of narrowing it.
  *
- * Same corrupt-file discipline as every other manifest scan here
- * (T-2-01/T-17-05): an unreadable or unparseable ACF is skipped, never
- * thrown out of. Comparison is case-sensitive and exact, matching the way
+ * Never throws (T-2-01/T-17-05), but unlike the read-only scans an
+ * unreadable or unparseable sibling ACF, or an unreadable/over-cap
+ * directory, is reported as the `<unknown>` conflict rather than ignored
+ * (WR-02): this list gates a recursive delete, so "could not read" must not
+ * mean "no conflict". Comparison is case-sensitive and exact, matching the way
  * `installRoot` itself is built (`join(commonRoot, installdirSegment)`).
  *
  * Exported for unit testing.
@@ -195,13 +153,6 @@ export async function findOtherManifestsWithInstalldir(
   installdirSegment: string,
   selfAppId: string
 ): Promise<string[]> {
-  if (steamFilesTextImpl() === 'ts') {
-    return findOtherManifestsWithInstalldirTs(
-      steamappsDir,
-      installdirSegment,
-      selfAppId
-    )
-  }
   let scan
   try {
     scan = await invokeSteamFiles(rust, RUST_STEAMFILES_SCAN_ACFS, {
@@ -211,11 +162,18 @@ export async function findOtherManifestsWithInstalldir(
     // T-75-55: an empty list means "no conflict" and allows the recursive
     // rmSync. A transport failure must therefore NOT yield []; the sentinel
     // makes every caller take the conflicting (manifest-only) branch, which
-    // is more conservative than the TS path (which returned [] on readdir
-    // failure).
+    // is the conservative choice.
     return [UNKNOWN_CONFLICT]
   }
   const conflicting: string[] = []
+  // WR-02 (75 review): the scan moves what it could not see into `skipped` —
+  // an unreadable steamapps dir or one over the entry cap (fileName ''), or a
+  // sibling manifest it could not read or parse. Any of those may be a
+  // co-installed app sharing this installdir, so like a transport failure it
+  // must not yield "no conflict". Only this app's own manifest is exempt.
+  if (scan.skipped.some((s) => s.fileName !== `appmanifest_${selfAppId}.acf`)) {
+    conflicting.push(UNKNOWN_CONFLICT)
+  }
   for (const { fileName, record } of scan.records) {
     if (fileName === `appmanifest_${selfAppId}.acf`) continue
     if (record.installdir !== installdirSegment) continue
@@ -226,40 +184,6 @@ export async function findOtherManifestsWithInstalldir(
 }
 
 const UNKNOWN_CONFLICT = '<unknown>'
-
-function findOtherManifestsWithInstalldirTs(
-  steamappsDir: string,
-  installdirSegment: string,
-  selfAppId: string
-): string[] {
-  if (!existsSync(steamappsDir)) return []
-
-  let files: string[]
-  try {
-    files = readdirSync(steamappsDir)
-  } catch {
-    return []
-  }
-
-  const conflicting: string[] = []
-  for (const file of files) {
-    if (!file.startsWith('appmanifest_') || !file.endsWith('.acf')) continue
-    if (file === `appmanifest_${selfAppId}.acf`) continue
-
-    try {
-      const parsed = parse(readFileSync(join(steamappsDir, file), 'utf-8'))
-      const state = parsed?.AppState
-      if (!state) continue
-      if (state.installdir !== installdirSegment) continue
-      const appid = String(state.appid ?? '')
-      if (appid && appid !== selfAppId) conflicting.push(appid)
-    } catch {
-      /* skip corrupt ACF — T-2-01/T-17-05 mitigation */
-    }
-  }
-
-  return conflicting
-}
 
 /**
  * One entry in the multi-root inventory `enumerateSteamInstallCopies`
@@ -390,6 +314,12 @@ export async function removeSteamInstallCopy(
     return { status: 'absent', source }
   }
 
+  // WR-01 (75 review): an unreadable state is never "absent" and never a
+  // license to delete.
+  if (acfState.state === 'unknown') {
+    return { status: 'refused', source, reason: 'install state unknown' }
+  }
+
   if (acfState.state === 'downloading') {
     logWarning(
       `SteamLibraryManager: removeSteamInstallCopy refused appId ${appId} source '${source}' — install still in progress`,
@@ -494,7 +424,6 @@ export async function removeSteamInstallCopy(
 export async function scanDownloadingAppIds(
   deps: SteamLibrariesDeps & SteamLibraryStateDeps
 ): Promise<string[]> {
-  if (steamFilesTextImpl() === 'ts') return scanDownloadingAppIdsTs(deps)
   const libraryPaths = await getSteamLibraries(deps)
   let scan
   try {
@@ -518,53 +447,5 @@ export async function scanDownloadingAppIds(
       downloadingIds.push(appIdStr)
     }
   }
-  return downloadingIds
-}
-
-async function scanDownloadingAppIdsTs(
-  deps: SteamLibrariesDeps & SteamLibraryStateDeps
-): Promise<string[]> {
-  const libraryPaths = await getSteamLibraries(deps)
-  const downloadingIds: string[] = []
-
-  for (const libPath of libraryPaths) {
-    const steamappsDir = join(libPath, 'steamapps')
-    if (!existsSync(steamappsDir)) continue
-
-    let files: string[]
-    try {
-      files = readdirSync(steamappsDir)
-    } catch {
-      continue
-    }
-
-    for (const file of files) {
-      if (!file.startsWith('appmanifest_') || !file.endsWith('.acf')) continue
-
-      try {
-        const content = readFileSync(join(steamappsDir, file), 'utf-8')
-        const parsed = parse(content)
-        const state = parsed?.AppState
-        if (!state) continue
-
-        const appid = parseInt(state.appid, 10)
-        if (isNaN(appid)) continue
-
-        const appIdStr = String(appid)
-        const stateFlags = parseInt(state.StateFlags, 10)
-        // Bit 4 unset = not fully installed (download in progress or other non-installed state)
-        if (
-          !isNaN(stateFlags) &&
-          (stateFlags & 4) === 0 &&
-          deps.steamSession.libraryState.library.has(appIdStr)
-        ) {
-          downloadingIds.push(appIdStr)
-        }
-      } catch {
-        /* skip corrupt ACF */
-      }
-    }
-  }
-
   return downloadingIds
 }

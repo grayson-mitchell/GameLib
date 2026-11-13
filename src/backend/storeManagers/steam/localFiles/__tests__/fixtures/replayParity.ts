@@ -6,7 +6,7 @@ import {
   FIXTURES_TOKEN,
   normalizeForGolden,
   withFixtureCopy
-} from '../oracle/normalize'
+} from './fixtureCopy'
 
 export { withFixtureCopy, normalizeForGolden }
 

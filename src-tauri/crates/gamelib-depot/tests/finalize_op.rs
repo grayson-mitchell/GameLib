@@ -62,6 +62,23 @@ fn cancelled_over_installed_manifest_preserves_it_byte_identical() {
     assert_eq!(fs::read(&acf).unwrap(), before);
 }
 
+/// 75 WR-07: a manifest truncated after its `StateFlags 4` line fails the strict parse, but the
+/// cancel-preserve check still sees it as installed and leaves it untouched.
+#[test]
+fn cancelled_over_truncated_installed_manifest_preserves_it() {
+    let t = tempfile::tempdir().unwrap();
+    let acf = t.path().join("appmanifest_480.acf");
+    fs::write(
+        &acf,
+        "\"AppState\"\n{\n\t\"appid\"\t\t\"480\"\n\t\"StateFlags\"\t\t\"4\"\n\t\"installdir\"\t\t\"Ga",
+    )
+    .unwrap();
+    let before = fs::read(&acf).unwrap();
+    let r = call(args(t.path(), "Game", "480", false, json!("cancelled"))).unwrap();
+    assert_eq!(r, json!({ "preserved": true, "stateFlags": 4 }));
+    assert_eq!(fs::read(&acf).unwrap(), before);
+}
+
 #[test]
 fn cancelled_without_manifest_writes_1026_with_measured_size() {
     let t = tempfile::tempdir().unwrap();
@@ -104,6 +121,27 @@ fn last_owner_is_written_as_string_verbatim() {
 fn non_numeric_app_id_is_an_error_result() {
     let t = tempfile::tempdir().unwrap();
     let r = call(args(t.path(), "Game", "48x", false, Value::Null)).unwrap();
+    let msg = r["error"]["message"].as_str().unwrap();
+    assert!(msg.contains("rejected non-numeric appId"), "{msg}");
+}
+
+/// 75 WR-08: the id is validated before the cancel-preserve read joins it into a path, so a
+/// traversal id cannot read an installed manifest outside steamapps and answer `preserved`.
+#[test]
+fn cancelled_traversal_app_id_is_rejected_before_any_read() {
+    let t = tempfile::tempdir().unwrap();
+    let steamapps = t.path().join("steamapps");
+    fs::create_dir_all(steamapps.join("appmanifest_1")).unwrap();
+    let outside = t.path().join("outside");
+    fs::create_dir_all(&outside).unwrap();
+    fs::write(
+        outside.join("appmanifest_480.acf"),
+        "\"AppState\"\n{\n\t\"StateFlags\"\t\t\"4\"\n}\n",
+    )
+    .unwrap();
+    let id = "1/../../outside/appmanifest_480";
+    let r = call(args(&steamapps, "Game", id, false, json!("cancelled"))).unwrap();
+    assert!(r.get("preserved").is_none(), "{r}");
     let msg = r["error"]["message"].as_str().unwrap();
     assert!(msg.contains("rejected non-numeric appId"), "{msg}");
 }

@@ -19,7 +19,10 @@ import { getBridgeBottleSteamappsRoot } from '../library/installRoot'
 import { getBottleSteamappsDir } from '../bottle'
 import { deleteCancelledSteamInstall } from '../cancelDelete'
 import type { GameInfo } from 'common/types'
-import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
+import {
+  fsBackedSteamFiles,
+  stubRustSteamFiles
+} from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
 import type { AcfReadResult } from '../localFiles/steamFilesTypes'
 import { at } from './fixtures/indexed'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
@@ -34,6 +37,7 @@ const steamStoresModule = createSteamStores({
 const getSteamBottleSettings = jest.fn()
 
 const steamTestDeps = createTestManagerDeps({
+  requestRustInvoke: fsBackedSteamFiles().requestRustInvoke,
   steamBottle: { getSteamBottleSettings } as never,
   stores: createTestStores({ steam: steamStoresModule })
 })
@@ -302,12 +306,10 @@ describe('deleteCancelledSteamInstall', () => {
 // Phase 75-20: the installed refusal on the rust branch (T-75-56). Parsing is proven by the crate
 // tests and the replay harness; here the wrapper is driven by programmed read results.
 describe('deleteCancelledSteamInstall, rust branch', () => {
-  const prior = process.env.GAMELIB_STEAMFILES_TEXT
   let tmp: string
   let steamapps: string
 
   beforeEach(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
     tmp = mkdtempSync(join(tmpdir(), 'cancelDeleteRust-'))
     steamapps = join(tmp, 'lib', 'steamapps')
     mkdirSync(join(steamapps, 'common', 'Cool Game'), { recursive: true })
@@ -337,8 +339,6 @@ describe('deleteCancelledSteamInstall, rust branch', () => {
   })
 
   afterEach(() => {
-    if (prior === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = prior
     rmSync(tmp, { recursive: true, force: true })
   })
 
@@ -378,12 +378,18 @@ describe('deleteCancelledSteamInstall, rust branch', () => {
     expect(existsSync(join(steamapps, 'common', 'Cool Game'))).toBe(true)
   })
 
-  it('treats an unparseable manifest as residue and deletes', async () => {
+  it('refuses on an existing but unparseable manifest and keeps every file (WR-07)', async () => {
     const { result } = run(() =>
       readResult({ parsed: false, record: null, readError: 'bad' })
     )
-    expect((await result).status).toBe('deleted')
-    expect(existsSync(join(steamapps, 'common', 'Cool Game'))).toBe(false)
+    expect(await result).toEqual({
+      status: 'refused',
+      reason: 'manifest unparseable'
+    })
+    expect(existsSync(join(steamapps, 'common', 'Cool Game', 'a.bin'))).toBe(
+      true
+    )
+    expect(existsSync(join(steamapps, 'appmanifest_123.acf'))).toBe(true)
   })
 
   it('deletes a downloading manifest (bit 4 unset)', async () => {

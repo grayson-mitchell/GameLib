@@ -11,7 +11,9 @@
 use crate::atomic::atomic_write;
 use crate::kv_bin::{parse_bin, serialize_bin, BinDoc, BinLimits, BinNode};
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex, OnceLock};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", deny_unknown_fields)]
@@ -190,7 +192,37 @@ fn app_name_of(entry: &BinNode) -> Option<String> {
     }
 }
 
+/// One lock per `shortcuts.vdf` path, process-wide. Each rustInvoke runs on its own thread, so
+/// without it two overlapping edits would both read the old file and the second write would drop
+/// the first edit (75 WR-03).
+fn path_lock(path: &Path) -> Arc<Mutex<()>> {
+    static LOCKS: OnceLock<Mutex<HashMap<PathBuf, Arc<Mutex<()>>>>> = OnceLock::new();
+    // Key on the file atomic_write will actually replace (a symlinked path and its target share
+    // one lock), with the directory canonicalised rather than the file so the key is stable
+    // whether or not the file exists yet (create-if-missing).
+    let target = crate::atomic::resolve_final_symlinks(path);
+    let key = match (target.parent(), target.file_name()) {
+        (Some(dir), Some(name)) => std::fs::canonicalize(dir)
+            .map(|d| d.join(name))
+            .unwrap_or_else(|_| target.clone()),
+        _ => target.clone(),
+    };
+    let mut map = LOCKS
+        .get_or_init(|| Mutex::new(HashMap::new()))
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    Arc::clone(map.entry(key).or_default())
+}
+
+/// Apply one described edit. The re-read, edit and atomic write run under a per-path lock so
+/// concurrent edits to the same file serialise instead of losing one another.
 pub fn apply_shortcuts(path: &Path, op: &ShortcutsOp) -> ShortcutsApplyResult {
+    let lock = path_lock(path);
+    let _guard = lock.lock().unwrap_or_else(|e| e.into_inner());
+    apply_shortcuts_locked(path, op)
+}
+
+fn apply_shortcuts_locked(path: &Path, op: &ShortcutsOp) -> ShortcutsApplyResult {
     // Validate and convert the op's fields before touching the file.
     let prepared = match op {
         ShortcutsOp::Add { entry, .. } => nodes(entry),

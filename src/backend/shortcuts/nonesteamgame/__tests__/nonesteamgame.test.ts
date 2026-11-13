@@ -1,10 +1,10 @@
 import { createTestStoreRoot } from '../../../testUtils/testStoreRoot'
-import { readFileSync, copyFileSync, mkdirSync } from 'graceful-fs'
+import { copyFileSync, mkdirSync } from 'graceful-fs'
 import { join } from 'path'
 import { DirResult, dirSync } from 'tmp'
 import { addNonSteamGame, removeNonSteamGame } from '../nonesteamgame'
 import { showDialogBoxModalAuto } from 'backend/dialog/dialog'
-import { logInfo, logError, logWarning } from 'backend/logger'
+import { logInfo, logError } from 'backend/logger'
 import type { Game } from 'common/types/game_manager'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createKvsStores } from 'backend/constants/key_value_stores'
@@ -58,212 +58,7 @@ function copyTestFile(file: string, alternativeUserPath = '') {
   copyFileSync(join(testFileDir, file), userDir)
 }
 
-describe('NonSteamGame', () => {
-  beforeEach(() => {
-    tmpDir = dirSync({ unsafeCleanup: true })
-    defaultSteamPath = tmpDir.name + "'"
-    tmpSteamUserConfigDir = join(
-      tmpDir.name,
-      'userdata',
-      'steam_user',
-      'config'
-    )
-    mkdirSync(tmpSteamUserConfigDir, { recursive: true })
-  })
-
-  afterEach(() => {
-    tmpDir.removeCallback()
-  })
-
-  test('Already exist in shortcuts.vdf', async () => {
-    copyTestFile('shortcuts_valid.vdf')
-    const shortcutFilePath = join(tmpSteamUserConfigDir, 'shortcuts.vdf')
-
-    const contentBefore = readFileSync(shortcutFilePath).toString()
-    const game = makeGameMock('Discord', 'Discord')
-
-    await addNonSteamGame(deps, game)
-
-    const contentAfter = readFileSync(shortcutFilePath).toString()
-    expect(contentBefore).toStrictEqual(contentAfter)
-    expect(logInfo).toBeCalledWith(
-      `${game.getGameInfo().title} was successfully added to Steam.`,
-      'Shortcuts'
-    )
-  })
-
-  test('Add and remove game to shortcuts.vdf', async () => {
-    copyTestFile('shortcuts_valid.vdf')
-    const shortcutFilePath = join(tmpSteamUserConfigDir, 'shortcuts.vdf')
-    const game = makeGameMock()
-    const contentBefore = readFileSync(shortcutFilePath).toString()
-
-    await addNonSteamGame(deps, game)
-
-    const contentBetween = readFileSync(shortcutFilePath).toString()
-
-    await removeNonSteamGame(deps, game)
-
-    const contentAfter = readFileSync(shortcutFilePath).toString()
-    expect(contentBefore).toStrictEqual(contentAfter)
-    expect(contentBefore).not.toBe(contentBetween)
-    expect(contentBetween).toContain(game.getGameInfo().title)
-    expect(logInfo).toBeCalledWith(
-      `${game.getGameInfo().title} was successfully added to Steam.`,
-      'Shortcuts'
-    )
-    expect(logInfo).toBeCalledWith(
-      `${game.getGameInfo().title} was successfully removed from Steam.`,
-      'Shortcuts'
-    )
-    expect(logInfo).toBeCalledWith(
-      `Prepare Steam images for ${game.getGameInfo().title}`,
-      'Shortcuts'
-    )
-    expect(logInfo).toBeCalledWith(
-      `Remove Steam images for ${game.getGameInfo().title}`,
-      'Shortcuts'
-    )
-  })
-
-  test('Create shortcuts.vdf if not exist', async () => {
-    const shortcutFilePath = join(tmpSteamUserConfigDir, 'shortcuts.vdf')
-
-    const game = makeGameMock()
-
-    // add and remove to see if empty shortcuts.vdf is correctly created
-    await addNonSteamGame(deps, game)
-
-    await removeNonSteamGame(deps, game)
-
-    const contentAfter = readFileSync(shortcutFilePath)
-
-    // checks if shortcuts.vdf is "\x00shortcuts\x00\x08\x08"
-    // \x00 = NULL
-    // \x08 = Backspace
-    expect(contentAfter).toStrictEqual(
-      Buffer.from([0, 115, 104, 111, 114, 116, 99, 117, 116, 115, 0, 8, 8])
-    )
-    expect(logInfo).toBeCalledWith(
-      `${game.getGameInfo().title} was successfully added to Steam.`,
-      'Shortcuts'
-    )
-    expect(logInfo).toBeCalledWith(
-      `${game.getGameInfo().title} was successfully removed from Steam.`,
-      'Shortcuts'
-    )
-    expect(logInfo).toBeCalledWith(
-      `Prepare Steam images for ${game.getGameInfo().title}`,
-      'Shortcuts'
-    )
-    expect(logInfo).toBeCalledWith(
-      `Remove Steam images for ${game.getGameInfo().title}`,
-      'Shortcuts'
-    )
-  })
-
-  test(
-    'Test that adding or removing does not fail, if one Steam user shortcuts.vdf ' +
-      ' is corrupted and other Steam user shortcuts.vdf succeeds',
-    async () => {
-      copyTestFile('shortcuts_valid.vdf')
-
-      //prepare second user folder
-      const secondUserDir = join(
-        tmpDir.name,
-        'userdata',
-        'steam_user2',
-        'config'
-      )
-      mkdirSync(secondUserDir, { recursive: true })
-      copyTestFile('shortcuts_missing_appname.vdf', secondUserDir)
-
-      const shortcutFilePath = join(tmpSteamUserConfigDir, 'shortcuts.vdf')
-      const shortcutFilePath2 = join(secondUserDir, 'shortcuts.vdf')
-
-      const game = makeGameMock()
-      const contentBefore = readFileSync(shortcutFilePath).toString()
-      const contentBefore2 = readFileSync(shortcutFilePath2).toString()
-
-      await addNonSteamGame(deps, game)
-
-      const contentBetween = readFileSync(shortcutFilePath).toString()
-      const contentBetween2 = readFileSync(shortcutFilePath2).toString()
-
-      await removeNonSteamGame(deps, game)
-
-      const contentAfter = readFileSync(shortcutFilePath).toString()
-      const contentAfter2 = readFileSync(shortcutFilePath2).toString()
-
-      expect(contentBefore).toStrictEqual(contentAfter)
-      expect(contentBefore).not.toBe(contentBetween)
-      expect(contentBetween).toContain(game.getGameInfo().title)
-
-      expect(contentBefore2).toStrictEqual(contentAfter2)
-      expect(contentBefore2).toStrictEqual(contentBetween2)
-
-      expect(logInfo).toBeCalledWith(
-        `Prepare Steam images for ${game.getGameInfo().title}`,
-        'Shortcuts'
-      )
-      expect(logInfo).toBeCalledWith(
-        `Remove Steam images for ${game.getGameInfo().title}`,
-        'Shortcuts'
-      )
-
-      expect(logInfo).toBeCalledTimes(2)
-      expect(logWarning).toBeCalledWith(
-        `${game.getGameInfo().title} could not be added to all found Steam users.`,
-        'Shortcuts'
-      )
-      expect(logWarning).toBeCalledWith(
-        `${game.getGameInfo().title} could not be removed from all found Steam users.`,
-        'Shortcuts'
-      )
-      expect(logError).toBeCalledWith(
-        `Can't add "${game.getGameInfo().title}" to Steam user "steam_user2". "${shortcutFilePath2}" is corrupted!\n` +
-          'One of the game entries is missing the AppName parameter!',
-        'Shortcuts'
-      )
-      expect(logError).toBeCalledWith(
-        `Can't remove "${game.getGameInfo().title}" from Steam user "steam_user2". "${shortcutFilePath2}" is corrupted!\n` +
-          'One of the game entries is missing the AppName parameter!',
-        'Shortcuts'
-      )
-      expect(showDialogBoxModalAuto).not.toBeCalled()
-    }
-  )
-
-  test('Test for shortcuts.vdf provided by users/dev', async () => {
-    const userFiles = [
-      'shortcuts_commandmc.vdf',
-      'shortcuts_redromnon.vdf',
-      'shortcuts_felipecrs.vdf'
-    ]
-
-    for (const file of userFiles) {
-      copyTestFile(file)
-
-      const shortcutFilePath = join(tmpSteamUserConfigDir, 'shortcuts.vdf')
-
-      const game = makeGameMock()
-
-      await addNonSteamGame(deps, game)
-
-      const contentAfter = readFileSync(shortcutFilePath).toString()
-      expect(contentAfter).toContain('MyGame')
-      expect(logInfo).toBeCalledWith(
-        `${game.getGameInfo().title} was successfully added to Steam.`,
-        'Shortcuts'
-      )
-      expect(logError).not.toBeCalled()
-      expect(showDialogBoxModalAuto).not.toBeCalled()
-    }
-  })
-})
-
-describe('NonSteamGame rust branch (GAMELIB_STEAMFILES_SHORTCUTS=rust)', () => {
-  const realFlag = process.env.GAMELIB_STEAMFILES_SHORTCUTS
+describe('NonSteamGame shortcuts through steamfiles', () => {
   const MISSING: ShortcutsReadResult = {
     exists: false,
     parsed: false,
@@ -306,7 +101,6 @@ describe('NonSteamGame rust branch (GAMELIB_STEAMFILES_SHORTCUTS=rust)', () => {
     }) as unknown as Parameters<typeof addNonSteamGame>[0]
 
   beforeEach(() => {
-    process.env.GAMELIB_STEAMFILES_SHORTCUTS = 'rust'
     jest.clearAllMocks()
     tmpDir = dirSync({ unsafeCleanup: true })
     defaultSteamPath = tmpDir.name + "'"
@@ -320,8 +114,6 @@ describe('NonSteamGame rust branch (GAMELIB_STEAMFILES_SHORTCUTS=rust)', () => {
   })
 
   afterEach(() => {
-    if (realFlag === undefined) delete process.env.GAMELIB_STEAMFILES_SHORTCUTS
-    else process.env.GAMELIB_STEAMFILES_SHORTCUTS = realFlag
     tmpDir.removeCallback()
   })
 

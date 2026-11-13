@@ -134,8 +134,6 @@ import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSour
 import {
   existsSync,
   readFileSync,
-  writeFileSync,
-  readdirSync,
   mkdirSync,
   rmSync,
   statSync,
@@ -152,6 +150,7 @@ import { createTestHostServices } from '../../testUtils/testHostServices'
 import { createNativeImage } from '../nativeImageShim'
 import { createRealRunner } from '../../testUtils/realRunner'
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
+import { stubRustSteamFiles } from 'backend/storeManagers/steam/localFiles/__tests__/fixtures/stubRustSteamFiles'
 import {
   createTestManagers,
   createTestServices,
@@ -220,6 +219,31 @@ function makeFakeGame(gameInfo: GameInfo) {
 
 const mockGetGame = jest.fn()
 const mockRequestRustInvoke = jest.fn()
+
+/** Programs the injected requestRustInvoke with an empty shortcuts file and a successful add. */
+function programShortcutsRust() {
+  const stub = stubRustSteamFiles({
+    steamfiles_shortcuts_read: () => ({
+      exists: false,
+      parsed: false,
+      readError: null,
+      hasShortcutsRoot: false,
+      rootIsList: false,
+      entries: []
+    }),
+    steamfiles_shortcuts_apply: () => ({
+      written: true,
+      readError: null,
+      alreadyPresent: false,
+      matched: false,
+      indexKey: '0',
+      removedExe: null,
+      removedAppName: null
+    })
+  })
+  mockRequestRustInvoke.mockImplementation(stub.requestRustInvoke)
+  return stub
+}
 const mockHandleExit = jest.fn()
 const mockSendFrontendMessage = sendFrontendMessage
 const mockLogWarning = logWarning as jest.Mock
@@ -1038,31 +1062,15 @@ describeOnDarwin(
 // `tmpDir.removeCallback()`, independent of `jest.setupContainment.ts`'s home redirection).
 describe("addToSteam's GAMELIB_SHELL_EXE pin (T-34.5-39/40, invoke-kind counterpart to addShortcut's send-kind pin above)", () => {
   let tmpDir: DirResult
-  let steamUserConfigDir: string
-  let shortcutsFile: string
   let savedShellExe: string | undefined
-
-  // The exact bytes of an empty, valid shortcuts.vdf ("\x00shortcuts\x00\x08\x08"), the same
-  // literal `nonesteamgame.test.ts`'s own "Create shortcuts.vdf if not exist" case asserts
-  // against. Pre-writing this (rather than starting from a missing file) is the PLAN-TIME
-  // CORRECTION this suite needs: `addNonSteamGame` creates an empty shortcuts.vdf via
-  // `writeShortcutFile` BEFORE it ever reaches `newEntry.Exe = getPath('exe')` (the `if
-  // (!existsSync(shortcutsFile))` branch runs first in the same iteration) -- so "no file
-  // exists" is not a byte-for-byte-safe assertion when the file starts absent. Starting from a
-  // pre-existing empty file sidesteps that branch entirely, so the load-bearing assertion below
-  // (byte-identical content, no entry appended) proves the entry-append itself never happened,
-  // mirroring plan 34.5-08's own "run.sh specifically absent" correction for the analogous
-  // send-kind pin.
-  const EMPTY_SHORTCUTS_VDF = Buffer.from([
-    0, 115, 104, 111, 114, 116, 99, 117, 116, 115, 0, 8, 8
-  ])
+  let rust: ReturnType<typeof programShortcutsRust>
 
   beforeEach(() => {
     tmpDir = dirSync({ unsafeCleanup: true })
-    steamUserConfigDir = join(tmpDir.name, 'userdata', 'steam_user', 'config')
-    mkdirSync(steamUserConfigDir, { recursive: true })
-    shortcutsFile = join(steamUserConfigDir, 'shortcuts.vdf')
-    writeFileSync(shortcutsFile, EMPTY_SHORTCUTS_VDF)
+    mkdirSync(join(tmpDir.name, 'userdata', 'steam_user', 'config'), {
+      recursive: true
+    })
+    rust = programShortcutsRust()
 
     mockGlobalConfigGet.mockReturnValue({
       getSettings: () => ({
@@ -1088,10 +1096,8 @@ describe("addToSteam's GAMELIB_SHELL_EXE pin (T-34.5-39/40, invoke-kind counterp
     }
   })
 
-  it('UNSET: rejects with "GAMELIB_SHELL_EXE was not set", and appends no entry to shortcuts.vdf', async () => {
+  it('UNSET: rejects with "GAMELIB_SHELL_EXE was not set", and sends no apply mutation to the Rust shortcuts op', async () => {
     delete process.env.GAMELIB_SHELL_EXE
-    const before = readFileSync(shortcutsFile)
-    const filesBefore = readdirSync(steamUserConfigDir)
 
     const handler = handlerRegistry.get('addToSteam')
     expect(handler).toBeDefined()
@@ -1100,24 +1106,23 @@ describe("addToSteam's GAMELIB_SHELL_EXE pin (T-34.5-39/40, invoke-kind counterp
     ).rejects.toThrow(/GAMELIB_SHELL_EXE was not set/)
 
     // The security-relevant guarantee (T-34.5-39): NOT merely that the promise rejected, but
-    // that shortcuts.vdf's own bytes are unchanged (no entry was appended) and the config dir's
-    // file listing is unchanged (no new file was created either).
-    expect(readFileSync(shortcutsFile)).toEqual(before)
-    expect(readdirSync(steamUserConfigDir)).toEqual(filesBefore)
+    // that no apply mutation was sent (nothing is appended); the file bytes are the Rust crate's.
+    expect(
+      rust.calls.filter((c) => c.channel === 'steamfiles_shortcuts_apply')
+    ).toEqual([])
   })
 
-  it('EMPTY: an empty-string GAMELIB_SHELL_EXE behaves identically to unset — rejects, appends no entry', async () => {
+  it('EMPTY: an empty-string GAMELIB_SHELL_EXE behaves identically to unset — rejects, sends no apply mutation', async () => {
     process.env.GAMELIB_SHELL_EXE = ''
-    const before = readFileSync(shortcutsFile)
-    const filesBefore = readdirSync(steamUserConfigDir)
 
     const handler = handlerRegistry.get('addToSteam')
     await expect(
       handler?.(undefined, 'AddToSteam Pin Game', 'legendary')
     ).rejects.toThrow(/GAMELIB_SHELL_EXE was not set/)
 
-    expect(readFileSync(shortcutsFile)).toEqual(before)
-    expect(readdirSync(steamUserConfigDir)).toEqual(filesBefore)
+    expect(
+      rust.calls.filter((c) => c.channel === 'steamfiles_shortcuts_apply')
+    ).toEqual([])
   })
 
   it('SET: a plausible absolute GAMELIB_SHELL_EXE containing a space produces a shortcuts.vdf whose Exe field contains that exact value, never process.execPath', async () => {
@@ -1132,30 +1137,32 @@ describe("addToSteam's GAMELIB_SHELL_EXE pin (T-34.5-39/40, invoke-kind counterp
     )
 
     expect(result).toBe(true)
-    expect(existsSync(shortcutsFile)).toBe(true)
-
-    // shortcuts.vdf is steam-shortcut-editor's binary VDF format, but string field values
-    // (AppName, Exe, ...) are embedded as literal ASCII substrings between null-byte
-    // delimiters -- `.toContain()` against the raw buffer's string form is the same technique
-    // `nonesteamgame.test.ts` uses to assert on written VDF content.
-    const contents = readFileSync(shortcutsFile).toString()
-    expect(contents).toContain(
+    const apply = rust.calls.find(
+      (c) => c.channel === 'steamfiles_shortcuts_apply'
+    )
+    expect(apply).toBeDefined()
+    const mutation = (
+      apply?.args as {
+        mutation: { op: string; entry: { key: string; value: unknown }[] }
+      }
+    ).mutation
+    expect(mutation.op).toBe('add')
+    const exe = mutation.entry.find((f) => f.key === 'Exe')
+    // The Exe field carries the pinned shell path (quoted for Steam), never the node interpreter.
+    expect(exe?.value).toContain(
       '"/Applications/GameLib Test.app/Contents/MacOS/GameLib"'
     )
-    // D-10's explicitly rejected alternative: the node interpreter must never be the value
-    // written as the launch command.
-    expect(contents).not.toContain(process.execPath)
+    expect(JSON.stringify(mutation)).not.toContain(process.execPath)
   })
 })
 
 // ── Describe 6b (75-18): addToSteam on the Rust shortcuts ops ─────────────────────────────────
 //
-// Under GAMELIB_STEAMFILES_SHORTCUTS=rust the handler reaches `steamfiles_shortcuts_apply` through
+// The handler reaches `steamfiles_shortcuts_apply` through
 // the injected requestRustInvoke; the file bytes are the Rust crate's concern (golden tests).
-describe('75-18 addToSteam under GAMELIB_STEAMFILES_SHORTCUTS=rust reaches the Rust apply op', () => {
+describe('75-18 addToSteam reaches the Rust apply op', () => {
   let tmpDir: DirResult
   let savedShellExe: string | undefined
-  let savedFlag: string | undefined
 
   beforeEach(() => {
     tmpDir = dirSync({ unsafeCleanup: true })
@@ -1174,9 +1181,7 @@ describe('75-18 addToSteam under GAMELIB_STEAMFILES_SHORTCUTS=rust reaches the R
       getGameInfo: () => makeGameInfo({ title: 'Rust Flow Game' })
     })
     savedShellExe = process.env.GAMELIB_SHELL_EXE
-    savedFlag = process.env.GAMELIB_STEAMFILES_SHORTCUTS
     process.env.GAMELIB_SHELL_EXE = '/Applications/GameLib.app/GameLib'
-    process.env.GAMELIB_STEAMFILES_SHORTCUTS = 'rust'
     mockRequestRustInvoke.mockReset()
     mockRequestRustInvoke.mockImplementation((channel: string) =>
       Promise.resolve(
@@ -1206,8 +1211,6 @@ describe('75-18 addToSteam under GAMELIB_STEAMFILES_SHORTCUTS=rust reaches the R
     tmpDir.removeCallback()
     if (savedShellExe === undefined) delete process.env.GAMELIB_SHELL_EXE
     else process.env.GAMELIB_SHELL_EXE = savedShellExe
-    if (savedFlag === undefined) delete process.env.GAMELIB_STEAMFILES_SHORTCUTS
-    else process.env.GAMELIB_STEAMFILES_SHORTCUTS = savedFlag
   })
 
   it('sends one apply mutation through requestRustInvoke and writes no bytes in TS', async () => {
@@ -1247,18 +1250,11 @@ describe('F-34.5-G6-08 discriminator — addToSteam over the REAL RPC frame path
   let steamUserConfigDir: string
   let savedShellExe: string | undefined
 
-  const EMPTY_SHORTCUTS_VDF = Buffer.from([
-    0, 115, 104, 111, 114, 116, 99, 117, 116, 115, 0, 8, 8
-  ])
-
   beforeEach(() => {
     tmpDir = dirSync({ unsafeCleanup: true })
     steamUserConfigDir = join(tmpDir.name, 'userdata', 'steam_user', 'config')
     mkdirSync(steamUserConfigDir, { recursive: true })
-    writeFileSync(
-      join(steamUserConfigDir, 'shortcuts.vdf'),
-      EMPTY_SHORTCUTS_VDF
-    )
+    programShortcutsRust()
 
     mockGlobalConfigGet.mockReturnValue({
       getSettings: () => ({

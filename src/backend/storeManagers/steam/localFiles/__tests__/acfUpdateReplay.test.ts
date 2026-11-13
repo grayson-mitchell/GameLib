@@ -5,7 +5,7 @@ import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
 import { readAcfInstalledDepots } from '../../acfInstalledDepots'
 import { readAcfUpdateFieldsFromDir } from '../../library/acfUpdateState'
 import { readAcfBetaKey, readLocalConfigBetaKey } from '../../depot/betaBranch'
-import { listFiles, normalizeForGolden } from './oracle/normalize'
+import { listFiles, normalizeForGolden } from './fixtures/fixtureCopy'
 import {
   expectedFor,
   replayDeps,
@@ -36,20 +36,10 @@ function replayFor(root: string) {
 }
 
 describe('acfUpdate replay parity (TS wrappers over recorded Rust results)', () => {
-  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
-
-  beforeAll(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-  })
   beforeEach(() => {
     jest.spyOn(logger, 'logDebug').mockImplementation(() => undefined)
   })
   afterEach(() => jest.restoreAllMocks())
-  afterAll(() => {
-    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
-  })
-
   it('replays every acfUpdate case', async () => {
     const replayed: string[] = []
     const mismatches: unknown[] = []
