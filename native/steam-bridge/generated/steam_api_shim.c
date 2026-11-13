@@ -47743,6 +47743,7 @@ void *SteamAPI_SteamRemoteStorage_v005(void) { return &g_steamremotestorage_inte
 void *SteamAPI_SteamMatchmaking_v009(void) { return &g_steammatchmaking009_instance; }
 void *SteamAPI_SteamMatchMaking_v009(void) { return &g_steammatchmaking009_instance; }
 void *SteamAPI_SteamMatchMakingServers_v002(void) { return &g_steammatchmakingservers002_instance; }
+void *SteamAPI_SteamMatchmakingServers_v002(void) { return &g_steammatchmakingservers002_instance; }
 void *SteamAPI_SteamNetworking_v005(void) { return &g_steamnetworking005_instance; }
 #if defined(__i386__)
 void *SteamAPI_SteamRemoteStorage_v010(void) { return &g_steamremotestorage_interface_version010_instance; }
@@ -47812,6 +47813,7 @@ void *SteamAPI_SteamScreenshots_v003(void) { return &g_steamscreenshots_interfac
 #endif
 #if defined(__x86_64__)
 void *SteamAPI_SteamMatchGameSearch_v001(void) { return &g_steammatchgamesearch001_instance; }
+void *SteamAPI_SteamGameSearch_v001(void) { return &g_steammatchgamesearch001_instance; }
 #endif
 #if defined(__x86_64__)
 void *SteamAPI_SteamAppList_v001(void) { return &g_steamapplist_interface_version001_instance; }
@@ -47836,6 +47838,7 @@ void *SteamAPI_SteamRemotePlay_v002(void) { return &g_steamremoteplay_interface_
 #endif
 #if defined(__x86_64__)
 void *SteamAPI_STEAMVIDEO_INTERFACE_V002(void) { return &g_steamvideo_interface_v002_instance; }
+void *SteamAPI_SteamVideo_v002(void) { return &g_steamvideo_interface_v002_instance; }
 #endif
 #if defined(__x86_64__)
 void *SteamAPI_STEAMVIDEO_INTERFACE_V007(void) { return &g_steamvideo_interface_v007_instance; }

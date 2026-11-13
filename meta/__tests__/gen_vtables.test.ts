@@ -4439,6 +4439,24 @@ describe('261113-spw SDK-spelling flat accessor aliases (Core Keeper EntryPointN
       'SteamAPI_STEAMHTMLSURFACE_INTERFACE_VERSION_005',
       'SteamAPI_SteamHTMLSurface_v005',
       'g_steamhtmlsurface_interface_version_005_instance'
+    ],
+    [
+      'SteamMatchMakingServers002',
+      'SteamAPI_SteamMatchMakingServers_v002',
+      'SteamAPI_SteamMatchmakingServers_v002',
+      'g_steammatchmakingservers002_instance'
+    ],
+    [
+      'STEAMVIDEO_INTERFACE_V002',
+      'SteamAPI_STEAMVIDEO_INTERFACE_V002',
+      'SteamAPI_SteamVideo_v002',
+      'g_steamvideo_interface_v002_instance'
+    ],
+    [
+      'SteamMatchGameSearch001',
+      'SteamAPI_SteamMatchGameSearch_v001',
+      'SteamAPI_SteamGameSearch_v001',
+      'g_steammatchgamesearch001_instance'
     ]
   ]
   const generated = (f: string, enc: BufferEncoding) =>

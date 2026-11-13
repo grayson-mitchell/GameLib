@@ -7,11 +7,13 @@
   "mode": "stub",
   "complete": true,
   "flatAccessor": "SteamAPI_STEAMVIDEO_INTERFACE_V002",
+  "flatAccessorAliases": ["SteamAPI_SteamVideo_v002"],
   "source": {
     "kind": "proton-lsteamclient",
     "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
     "file": "lsteamclient/winISteamVideo.c"
   },
+  "note": "261113 follow-on to 261113-spw: flatAccessorAliases is the flat-accessor spelling imported by Core Keeper (1621690) Facepunch.Steamworks.Win64.dll import table (EntryPointNotFoundException in Player.log, 2026-11-13); flatAccessor keeps the previously shipped spelling.",
   "methods": [
     {
       "slot": 0,
