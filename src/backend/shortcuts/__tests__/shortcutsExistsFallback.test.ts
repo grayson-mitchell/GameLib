@@ -100,7 +100,8 @@ function hostSlices() {
     paths: createContainedHomeAppPaths(),
     infoCaches: createTestInfoCaches(),
     aborts: createTestAbortRegistry(),
-    imageTools: host.imageTools
+    imageTools: host.imageTools,
+    requestRustInvoke: host.requestRustInvoke
   }
 }
 

@@ -78,6 +78,7 @@ export default class NileGameManager implements Game {
         | 'gameConfigs'
         | 'appInfo'
         | 'appRuntime'
+        | 'requestRustInvoke'
       > & {
         stores: Pick<
           ManagerDeps['stores'],

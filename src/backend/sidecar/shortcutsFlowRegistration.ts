@@ -116,7 +116,10 @@ import type {
 
 /** Narrow slice (66.1 D-01): library managers for game lookup, the quit handler for ctrl+q. */
 export interface ShortcutsFlowDeps
-  extends NotifyDeps, DialogBoxDeps, Pick<NonSteamGameDeps, 'appRuntime'> {
+  extends
+    NotifyDeps,
+    DialogBoxDeps,
+    Pick<NonSteamGameDeps, 'appRuntime' | 'requestRustInvoke'> {
   ipc: Pick<IpcRegistry, 'handle' | 'on'>
   managers: Pick<StoreManagers, 'library'>
   quit: Pick<QuitHandler, 'handleExit'>
@@ -390,7 +393,8 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
         sendFrontendMessage: deps.sendFrontendMessage,
         appRuntime: deps.appRuntime,
         appState: deps.appState,
-        notifications: deps.notifications
+        notifications: deps.notifications,
+        requestRustInvoke: deps.requestRustInvoke
       },
       game
     )

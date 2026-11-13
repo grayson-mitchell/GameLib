@@ -218,6 +218,7 @@ function makeFakeGame(gameInfo: GameInfo) {
 }
 
 const mockGetGame = jest.fn()
+const mockRequestRustInvoke = jest.fn()
 const mockHandleExit = jest.fn()
 const mockSendFrontendMessage = sendFrontendMessage
 const mockLogWarning = logWarning as jest.Mock
@@ -301,7 +302,9 @@ registerShortcutsFlows({
   imageTools: sipsImageTools,
   dialogs: createTestHostServices().dialogs,
   appState: createTestHostServices().appState,
-  notifications: createTestHostServices().notifications
+  notifications: createTestHostServices().notifications,
+  requestRustInvoke: ((channel: string, argv: unknown[]) =>
+    mockRequestRustInvoke(channel, argv)) as never
 })
 
 const shellExeAtFileLoad = process.env.GAMELIB_SHELL_EXE

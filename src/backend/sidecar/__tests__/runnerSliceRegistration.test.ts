@@ -149,7 +149,8 @@ const flowDeps = {
   dialogs: services.host.dialogs,
   appState: services.host.appState,
   notifications: services.host.notifications,
-  imageTools: services.host.imageTools
+  imageTools: services.host.imageTools,
+  requestRustInvoke: services.host.requestRustInvoke
 }
 handlerRegistry.clear()
 listenerRegistry.clear()

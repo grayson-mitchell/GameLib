@@ -32,6 +32,17 @@ import {
 import { isAppImage, isFlatpak, isWindows } from 'backend/constants/environment'
 import type { Game } from 'common/types/game_manager'
 import type { InfoCaches, Stores } from 'backend/services/types'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import { invokeSteamFiles } from 'backend/storeManagers/steam/localFiles/rustSteamFiles'
+import { steamFilesShortcutsImpl } from 'backend/storeManagers/steam/localFiles/steamFilesFlags'
+import type {
+  EntryField,
+  ShortcutsReadResult
+} from 'backend/storeManagers/steam/localFiles/steamFilesTypes'
+import {
+  RUST_STEAMFILES_SHORTCUTS_APPLY,
+  RUST_STEAMFILES_SHORTCUTS_READ
+} from 'common/types/sidecarTransport'
 
 const getSteamUserdataDir = async (deps: Pick<ShortcutsDeps, 'config'>) => {
   const { defaultSteamPath } = deps.config.getSettings()
@@ -211,13 +222,117 @@ function checkIfAlreadyAdded(object: Partial<ShortcutObject>, title: string) {
   return shortcuts.findIndex((entry) => getAppName(entry) === title)
 }
 
+/**
+ * Phase 75 (P75-F): today's validity messages rebuilt from the Rust read summary. Same strings, same
+ * order as `checkIfShortcutObjectIsValid`; `parsed === false` is corrupted like a throwing parse.
+ */
+export function shortcutsValidityFromSummary(
+  summary: ShortcutsReadResult
+): ShortcutsResult {
+  const checkResult: ShortcutsResult = { success: false, errors: [] }
+  if (!summary.parsed) {
+    checkResult.errors.push(
+      summary.readError ?? 'Could not parse shortcuts.vdf!'
+    )
+  } else if (!summary.hasShortcutsRoot) {
+    checkResult.errors.push('Could not find entry "shortcuts"!')
+  } else if (!summary.rootIsList) {
+    checkResult.errors.push('Entry "shortcuts" is not an array!')
+  } else {
+    checkResult.success = true
+    for (const entry of summary.entries) {
+      const present = {
+        AppName: entry.hasAppName,
+        Exe: entry.hasExe,
+        LaunchOptions: entry.hasLaunchOptions
+      }
+      for (const key of ['AppName', 'Exe', 'LaunchOptions'] as const) {
+        if (!present[key]) {
+          checkResult.errors.push(
+            `One of the game entries is missing the ${key} parameter!`
+          )
+          checkResult.success = false
+        }
+      }
+    }
+  }
+  return checkResult
+}
+
+/** The index of the first entry titled `title` in a Rust read summary, else -1. */
+export function titleIndexFromSummary(
+  summary: ShortcutsReadResult,
+  title: string
+): number {
+  return summary.entries.findIndex((entry) => entry.appName === title)
+}
+
+/** The Rust read of one shortcuts.vdf, or a thrown-read as an unparsed summary. */
+async function readSummary(
+  deps: RustInvokeDeps,
+  path: string
+): Promise<ShortcutsReadResult> {
+  try {
+    return await invokeSteamFiles(deps, RUST_STEAMFILES_SHORTCUTS_READ, {
+      path
+    })
+  } catch (error) {
+    return {
+      exists: true,
+      parsed: false,
+      readError: `${error}`,
+      hasShortcutsRoot: false,
+      rootIsList: false,
+      entries: []
+    }
+  }
+}
+
+/**
+ * The entry as Steam's typed fields, in the key order the TS writer used. Steam stores the flags as
+ * int32 (no boolean coercion), the appid as the int32 bit pattern and LastPlayTime as unix seconds.
+ */
+function rustEntryFields(entry: ShortcutEntry): EntryField[] {
+  const str = (key: string, value: string): EntryField => ({
+    kind: 'string',
+    key,
+    value
+  })
+  const int = (key: string, value: number): EntryField => ({
+    kind: 'int32',
+    key,
+    value
+  })
+  const fields: EntryField[] = [
+    str('AppName', entry.AppName),
+    str('Exe', entry.Exe),
+    str('StartDir', entry.StartDir),
+    int('appid', entry.appid)
+  ]
+  if (entry.icon) {
+    fields.push(str('icon', entry.icon))
+  }
+  fields.push(
+    str('LaunchOptions', entry.LaunchOptions),
+    int('IsHidden', 0),
+    int('AllowDesktopConfig', 1),
+    int('AllowOverlay', 1),
+    int('OpenVR', 0),
+    int('Devkit', 0),
+    int('DevkitOverrideAppID', 0),
+    int('LastPlayTime', Math.floor(entry.LastPlayTime.getTime() / 1000))
+  )
+  return fields
+}
+
 /** The icon lookup's managers plus the kvs store the shortcut's last-played read uses. */
 export type NonSteamGameDeps = ShortcutsDeps &
   DialogBoxDeps &
   NotifyDeps & {
     stores: Pick<Stores, 'kvs' | 'wikiGameInfo' | 'crossoverIndex'>
     infoCaches: Pick<InfoCaches, 'hltb'>
-  } & Pick<WikiGameInfoDeps, 'appRuntime'>
+  } & Pick<WikiGameInfoDeps, 'appRuntime'> &
+  RustInvokeDeps
 
 /**
  * Adds a non-steam game to steam via editing shortcuts.vdf
@@ -255,26 +370,48 @@ async function addNonSteamGame(
       mkdirSync(configDir)
     }
 
-    if (!existsSync(shortcutsFile)) {
-      writeShortcutFile(shortcutsFile, { shortcuts: [] })
-    }
+    const useRust = steamFilesShortcutsImpl() === 'rust'
+    let content: Partial<ShortcutObject> = {}
 
-    // read file
-    const content = readShortcutFile(shortcutsFile)
-    content.shortcuts = content.shortcuts ?? []
+    if (useRust) {
+      // A missing file is created by the add mutation (createIfMissing).
+      const summary = await readSummary(deps, shortcutsFile)
+      if (summary.exists) {
+        const checkResult = shortcutsValidityFromSummary(summary)
+        if (!checkResult.success) {
+          errors.push(
+            `Can't add "${gameInfo.title}" to Steam user "${folder}". "${shortcutsFile}" is corrupted!`,
+            ...checkResult.errors
+          )
+          continue
+        }
+        if (titleIndexFromSummary(summary, gameInfo.title) > -1) {
+          added = true
+          continue
+        }
+      }
+    } else {
+      if (!existsSync(shortcutsFile)) {
+        writeShortcutFile(shortcutsFile, { shortcuts: [] })
+      }
 
-    const checkResult = checkIfShortcutObjectIsValid(content)
-    if (!checkResult.success) {
-      errors.push(
-        `Can't add "${gameInfo.title}" to Steam user "${folder}". "${shortcutsFile}" is corrupted!`,
-        ...checkResult.errors
-      )
-      continue
-    }
+      // read file
+      content = readShortcutFile(shortcutsFile)
+      content.shortcuts = content.shortcuts ?? []
 
-    if (checkIfAlreadyAdded(content, gameInfo.title) > -1) {
-      added = true
-      continue
+      const checkResult = checkIfShortcutObjectIsValid(content)
+      if (!checkResult.success) {
+        errors.push(
+          `Can't add "${gameInfo.title}" to Steam user "${folder}". "${shortcutsFile}" is corrupted!`,
+          ...checkResult.errors
+        )
+        continue
+      }
+
+      if (checkIfAlreadyAdded(content, gameInfo.title) > -1) {
+        added = true
+        continue
+      }
     }
 
     // add new Entry
@@ -351,7 +488,33 @@ async function addNonSteamGame(
       newEntry.LastPlayTime = new Date()
     }
 
-    content.shortcuts.push(newEntry)
+    if (useRust) {
+      try {
+        const result = await invokeSteamFiles(
+          deps,
+          RUST_STEAMFILES_SHORTCUTS_APPLY,
+          {
+            path: shortcutsFile,
+            mutation: {
+              op: 'add',
+              entry: rustEntryFields(newEntry),
+              createIfMissing: true
+            }
+          }
+        )
+        if (!result.written && !result.alreadyPresent) {
+          errors.push(result.readError ?? 'shortcuts.vdf was not written')
+          continue
+        }
+      } catch (error) {
+        errors.push(`${error}`)
+        continue
+      }
+      added = true
+      continue
+    }
+
+    content.shortcuts?.push(newEntry)
 
     // rewrite shortcuts.vdf
     const writeError = writeShortcutFile(shortcutsFile, content)
@@ -411,7 +574,7 @@ async function addNonSteamGame(
  * @returns none
  */
 async function removeNonSteamGame(
-  deps: NotifyDeps & Pick<ShortcutsDeps, 'config'>,
+  deps: NotifyDeps & Pick<ShortcutsDeps, 'config'> & RustInvokeDeps,
   game: Game
 ): Promise<void> {
   const gameInfo = game.getGameInfo()
@@ -433,6 +596,49 @@ async function removeNonSteamGame(
     const shortcutsFile = join(configDir, 'shortcuts.vdf')
 
     if (!existsSync(configDir) || !existsSync(shortcutsFile)) {
+      continue
+    }
+
+    if (steamFilesShortcutsImpl() === 'rust') {
+      const summary = await readSummary(deps, shortcutsFile)
+      const rustCheck = shortcutsValidityFromSummary(summary)
+      if (!rustCheck.success) {
+        errors.push(
+          `Can't remove "${gameInfo.title}" from Steam user "${folder}". "${shortcutsFile}" is corrupted!`,
+          ...rustCheck.errors
+        )
+        continue
+      }
+      if (titleIndexFromSummary(summary, gameInfo.title) < 0) {
+        continue
+      }
+      try {
+        const result = await invokeSteamFiles(
+          deps,
+          RUST_STEAMFILES_SHORTCUTS_APPLY,
+          {
+            path: shortcutsFile,
+            mutation: { op: 'remove', appName: gameInfo.title }
+          }
+        )
+        if (!result.written) {
+          if (result.readError) errors.push(result.readError)
+          continue
+        }
+        removed = true
+        const exe = result.removedExe ?? ''
+        const appName = result.removedAppName ?? ''
+        removeImagesFromSteam({
+          steamUserConfigDir: configDir,
+          appID: {
+            bigPictureAppID: generateAppId(exe, appName),
+            otherGridAppID: generateShortAppId(exe, appName)
+          },
+          gameInfo
+        })
+      } catch (error) {
+        errors.push(`${error}`)
+      }
       continue
     }
 
@@ -522,7 +728,7 @@ async function removeNonSteamGame(
  * @returns boolean
  */
 async function isAddedToSteam(
-  deps: Pick<ShortcutsDeps, 'config'>,
+  deps: Pick<ShortcutsDeps, 'config'> & RustInvokeDeps,
   game: Game
 ): Promise<boolean> {
   const steamUserdataDir = await getSteamUserdataDir(deps)
@@ -539,6 +745,17 @@ async function isAddedToSteam(
     const shortcutsFile = join(configDir, 'shortcuts.vdf')
 
     if (!existsSync(configDir) || !existsSync(shortcutsFile)) {
+      continue
+    }
+
+    if (steamFilesShortcutsImpl() === 'rust') {
+      const summary = await readSummary(deps, shortcutsFile)
+      if (
+        shortcutsValidityFromSummary(summary).success &&
+        titleIndexFromSummary(summary, game.getGameInfo().title) > -1
+      ) {
+        added = true
+      }
       continue
     }
 

@@ -53,6 +53,7 @@ export default class SideloadGame implements Game {
       | 'notifications'
       | 'sendFrontendMessage'
       | 'appRuntime'
+      | 'requestRustInvoke'
     >
   ) {
     this.id = id

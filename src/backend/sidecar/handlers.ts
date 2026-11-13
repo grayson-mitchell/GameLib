@@ -432,7 +432,8 @@ export function registerHandlers(deps: {
     dialogs: deps.services.host.dialogs,
     appState: deps.services.host.appState,
     notifications: deps.services.host.notifications,
-    sendFrontendMessage: deps.services.host.sendFrontendMessage
+    sendFrontendMessage: deps.services.host.sendFrontendMessage,
+    requestRustInvoke: deps.services.host.requestRustInvoke
   })
   registerRunnerMiscFlows({
     ipc,
