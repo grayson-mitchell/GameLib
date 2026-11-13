@@ -149,6 +149,13 @@ describe('resolveWindowsShortcutIcon install-dir scan (measured layouts)', () =>
       expected: 'GalCiv3.exe'
     },
     {
+      name: 'Crash Bandicoot: a game whose own name matches a helper pattern is not excluded',
+      dir: 'Crash Bandicoot',
+      title: 'Crash Bandicoot',
+      files: { 'CrashBandicoot.exe': 100, 'CrashReportClient.exe': 900 },
+      expected: 'CrashBandicoot.exe'
+    },
+    {
       name: 'Factorio: an exe two directory levels deep is in reach',
       dir: 'Factorio',
       title: 'Factorio',

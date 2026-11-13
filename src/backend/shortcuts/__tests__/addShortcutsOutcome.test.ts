@@ -38,6 +38,7 @@ import {
   existsSync,
   lstatSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   readlinkSync,
   rmSync,
@@ -45,7 +46,7 @@ import {
   writeFileSync
 } from 'fs'
 import gracefulFs from 'graceful-fs'
-import { homedir } from 'os'
+import { homedir, tmpdir } from 'os'
 import { dirname, join } from 'path'
 import { addShortcuts, shortcutFiles } from '../shortcuts/shortcuts'
 import type { GameInfo } from 'common/types'
@@ -341,6 +342,77 @@ describe('Steam game (261026-c7r)', () => {
         `"gamelib://launch?appName=${encodeURIComponent(hostileName)}&runner=legendary"`
       )
     }
+  })
+
+  describe('win32 icon (G-66.4-W2 defect 2)', () => {
+    let savedShellExe: string | undefined
+    let tempDir: string | undefined
+    beforeEach(() => {
+      originalPlatform = overrideProcessPlatform('win32')
+      mockRun.mockReset()
+      savedShellExe = process.env.GAMELIB_SHELL_EXE
+      delete process.env.GAMELIB_SHELL_EXE
+      tempDir = mkdtempSync(join(tmpdir(), 'gamelib-lnk-icon-'))
+    })
+    afterEach(() => {
+      if (savedShellExe === undefined) delete process.env.GAMELIB_SHELL_EXE
+      else process.env.GAMELIB_SHELL_EXE = savedShellExe
+      if (tempDir) rmSync(tempDir, { recursive: true, force: true })
+    })
+
+    const lnkEnvs = () =>
+      powershellCalls().map(
+        ([, , options]) => (options as { env: NodeJS.ProcessEnv }).env
+      )
+
+    it("a Steam record with an install dir carries the game's own exe as the icon", async () => {
+      fakePowerShell(0, REGISTRY_DESKTOP)
+      const installPath = join(tempDir!, 'Steam Shortcut Test')
+      mkdirSync(installPath, { recursive: true })
+      const exe = join(installPath, 'Steam Shortcut Test.exe')
+      writeFileSync(exe, Buffer.alloc(16))
+      writeFileSync(
+        join(installPath, 'UnityCrashHandler64.exe'),
+        Buffer.alloc(64)
+      )
+      const info = {
+        ...steamGameInfo,
+        install: { is_dlc: false, install_path: installPath }
+      } as unknown as GameInfo
+
+      await addShortcuts(
+        deps,
+        { getGameInfo: () => info } as unknown as Game,
+        true
+      )
+
+      expect(lnkEnvs()).toHaveLength(2)
+      for (const env of lnkEnvs()) {
+        expect(env.GAMELIB_LNK_ICON).toBe(exe)
+        expect(env.GAMELIB_LNK_ICON_INDEX).toBe('0')
+      }
+    })
+
+    it('with no install path and GAMELIB_SHELL_EXE unset, still resolves with an empty icon', async () => {
+      fakePowerShell(0, REGISTRY_DESKTOP)
+
+      await expect(addShortcuts(deps, steamGame, true)).resolves.toBeUndefined()
+
+      expect(lnkEnvs()).toHaveLength(2)
+      for (const env of lnkEnvs()) expect(env.GAMELIB_LNK_ICON).toBe('')
+    })
+
+    it('with no install path and GAMELIB_SHELL_EXE set, the icon is the shell exe', async () => {
+      fakePowerShell(0, REGISTRY_DESKTOP)
+      const shellExe = join(tempDir!, 'gamelib-shell.exe')
+      writeFileSync(shellExe, Buffer.alloc(8))
+      process.env.GAMELIB_SHELL_EXE = shellExe
+
+      await addShortcuts(deps, steamGame, true)
+
+      expect(lnkEnvs()).toHaveLength(2)
+      for (const env of lnkEnvs()) expect(env.GAMELIB_LNK_ICON).toBe(shellExe)
+    })
   })
 
   describe('darwin', () => {
