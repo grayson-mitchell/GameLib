@@ -4,13 +4,13 @@ milestone: v0.10
 milestone_name: Foundations
 status: executing
 stopped_at: Phase 75 context gathered
-last_updated: "2026-11-13T21:55:11.507Z"
+last_updated: "2026-11-13T22:08:55.369Z"
 last_activity: 2026-11-13
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 361
-  completed_plans: 356
+  completed_plans: 357
   percent: 61
 ---
 
@@ -73,7 +73,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 75 (steam-local-file-formats-in-rust) — EXECUTING
-Plan: 33 of 35
+Plan: 34 of 35
 Status: Ready to execute
 Last activity: 2026-11-13
 
