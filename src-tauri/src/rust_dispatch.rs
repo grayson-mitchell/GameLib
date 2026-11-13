@@ -7,7 +7,11 @@ use super::*;
 /// Also dispatches `dialog_open` (Phase 30 Plan 03). `app` is threaded through for that arm:
 /// the folder picker is reached via the AppHandle, not via `args` — the picked path comes
 /// FROM the OS dialog, never INTO it from the renderer/sidecar (T-30-11/T-30-12).
-pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Result<Value, String> {
+pub(crate) fn dispatch_rust_channel(
+    channel: &str,
+    args: &[Value],
+    app: &AppHandle,
+) -> Result<Value, String> {
     // Exhaustive over the generated enum (67-11, D-13): a channel in `RUST_INVOKE_CHANNELS` with no
     // arm below is a compile error, and an unknown wire name never reaches the match.
     let Some(ch) = RustInvokeChannel::from_name(channel) else {
@@ -32,7 +36,9 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // time, but its selection step is a SEPARATE, systemic macOS/AppKit defect -- see
         // `macos_finder_reselect_workaround` below for the mechanism and evidence. The
         // follow-up call is a no-op on other platforms.
-        RustInvokeChannel::ShellShowItemInFolder => shell_open::shell_show_item_in_folder(app, args),
+        RustInvokeChannel::ShellShowItemInFolder => {
+            shell_open::shell_show_item_in_folder(app, args)
+        }
         // Open a path with the default program (Phase 33 Plan 04, D-05) via
         // `tauri-plugin-opener`'s `open_path`. Backs `platform/index.ts`'s `shell.openPath()`.
         // Same path-provenance note as `shell_show_item_in_folder` above (T-33-11).
@@ -54,7 +60,9 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         RustInvokeChannel::HumbleLoginClearCookies => rpc_humble_login_clear_cookies(args, app),
         RustInvokeChannel::HumbleRevealPost => rpc_humble_reveal_post(args, app),
         RustInvokeChannel::HumbleLoginClearStorage => rpc_humble_login_clear_storage(args, app),
-        RustInvokeChannel::HumbleLoginCookiesForDomain => rpc_humble_login_cookies_for_domain(args, app),
+        RustInvokeChannel::HumbleLoginCookiesForDomain => {
+            rpc_humble_login_cookies_for_domain(args, app)
+        }
         RustInvokeChannel::WakeLockStart => rpc_wake_lock_start(args),
         RustInvokeChannel::WakeLockStop => rpc_wake_lock_stop(args),
         RustInvokeChannel::ScanSteamApiImports => rpc_scan_steam_api_imports(args),
@@ -64,15 +72,22 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         RustInvokeChannel::ScanContainedReal => rpc_scan_contained_real(args),
         RustInvokeChannel::ScanWinemacMetalExports => rpc_scan_winemac_metal_exports(args),
         RustInvokeChannel::SteamfilesFindAcf => rpc_steamfiles_find_acf(args),
-        RustInvokeChannel::SteamfilesParseValveManifest => rpc_steamfiles_parse_valve_manifest(args),
+        RustInvokeChannel::SteamfilesParseValveManifest => {
+            rpc_steamfiles_parse_valve_manifest(args)
+        }
         RustInvokeChannel::SteamfilesReadAcf => rpc_steamfiles_read_acf(args),
         RustInvokeChannel::SteamfilesReadInstallscript => rpc_steamfiles_read_installscript(args),
-        RustInvokeChannel::SteamfilesReadLibraryFolders => rpc_steamfiles_read_library_folders(args),
-        RustInvokeChannel::SteamfilesReadLocalconfigBetaKey => rpc_steamfiles_read_localconfig_beta_key(args),
+        RustInvokeChannel::SteamfilesReadLibraryFolders => {
+            rpc_steamfiles_read_library_folders(args)
+        }
+        RustInvokeChannel::SteamfilesReadLocalconfigBetaKey => {
+            rpc_steamfiles_read_localconfig_beta_key(args)
+        }
         RustInvokeChannel::SteamfilesReadRunningAppId => rpc_steamfiles_read_running_app_id(args),
         RustInvokeChannel::SteamfilesScanAcfs => rpc_steamfiles_scan_acfs(args),
         RustInvokeChannel::SteamfilesShortcutsApply => rpc_steamfiles_shortcuts_apply(args),
         RustInvokeChannel::SteamfilesShortcutsRead => rpc_steamfiles_shortcuts_read(args),
+        RustInvokeChannel::DepotFinalize => rpc_depot_finalize(args, app),
         RustInvokeChannel::DepotJobCancel => rpc_depot_job_cancel(args),
         RustInvokeChannel::DepotJobRun => rpc_depot_job_run(args, app),
         RustInvokeChannel::DepotManifestSummary => rpc_depot_manifest_summary(args, app),

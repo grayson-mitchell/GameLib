@@ -261,6 +261,23 @@ pub(crate) fn rpc_depot_manifest_summary(args: &[Value], app: &AppHandle) -> Res
     result
 }
 
+pub(crate) fn rpc_depot_finalize(args: &[Value], app: &AppHandle) -> Result<Value, String> {
+    let a = DepotFinalizeArgs::from_args(args)?;
+    let app_id = a
+        .request
+        .get("appId")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let ctx = JobContext {
+        cache_dir: manifest_cache_dir(app)?,
+    };
+    let host = ShellJobHost::new(state_for(app)?, format!("finalize-{app_id}"));
+    let dyn_host: Arc<dyn JobHost> = host.clone();
+    let result = gamelib_depot::dispatch("depot_finalize", &a.request, &ctx, dyn_host);
+    host.finish();
+    result
+}
+
 /// Sidecar stdout ended: no response can arrive and no event consumer exists, so every depot job
 /// is cancelled (D-08). Logs the count only.
 pub(crate) fn on_sidecar_eof_cancel_jobs() {

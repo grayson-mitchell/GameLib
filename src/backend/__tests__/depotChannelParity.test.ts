@@ -8,6 +8,7 @@ import { defined } from 'backend/testUtils/indexed'
 import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
 import {
   RUST_DEPOT_CHANNELS,
+  RUST_DEPOT_FINALIZE,
   RUST_DEPOT_JOB_CANCEL,
   RUST_DEPOT_JOB_RUN,
   RUST_DEPOT_MANIFEST_SUMMARY,
@@ -43,7 +44,7 @@ function snakeToPascal(s: string): string {
 
 describe('depot channel parity (D-03)', () => {
   it('anti-vacuity: OPS extraction found the ops and the extractor rejects a missing name', () => {
-    expect(OPS).toHaveLength(3)
+    expect(OPS).toHaveLength(4)
     expect(() => extractConst(libRs, 'NO_SUCH_CONST')).toThrow('not found')
   })
 
@@ -51,6 +52,7 @@ describe('depot channel parity (D-03)', () => {
     expect([...RUST_DEPOT_CHANNELS].sort()).toEqual([...OPS].sort())
     expect(
       [
+        RUST_DEPOT_FINALIZE,
         RUST_DEPOT_JOB_CANCEL,
         RUST_DEPOT_JOB_RUN,
         RUST_DEPOT_MANIFEST_SUMMARY
@@ -85,7 +87,7 @@ describe('depot channel parity (D-03)', () => {
     }
     expect(
       shellSource.match(/gamelib_depot::dispatch\(/g)?.length
-    ).toBeGreaterThanOrEqual(3)
+    ).toBeGreaterThanOrEqual(4)
   })
 
   it('the shell-caller channels Rust invokes exist in sidecarInternal', () => {

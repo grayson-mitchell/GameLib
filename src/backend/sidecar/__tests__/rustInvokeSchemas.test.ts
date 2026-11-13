@@ -20,7 +20,7 @@ describe('rustInvokeArgs', () => {
     expect(Object.keys(rustInvokeArgs).sort()).toEqual(
       [...RUST_INVOKE_CHANNELS].sort()
     )
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(48)
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(59)
   })
 
   it('parses the store-embed wire fixtures', () => {

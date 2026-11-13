@@ -411,6 +411,19 @@ export const RUST_SCAN_WINEMAC_METAL_EXPORTS =
   'scan_winemac_metal_exports' as const
 
 /**
+ * Rust-side channel name: Phase 75 (D-03) Steam depot `depot_finalize`, a no-download ACF finalize
+ * (zero-depot install, failed resume verify) through the depot crate's own finalize rules.
+ * Takes ONE object arg `{ appId, finalize, depots, outcome }` (validated in-crate with
+ * `deny_unknown_fields`; `outcome` is "completed" | "cancelled" | null). Resolves
+ * `{ acf: { path, stateFlags, sizeOnDisk } }`, `{ preserved: true, stateFlags }` or
+ * `{ error: Failure }`. Bad args reject `depot_finalize:bad-args`.
+ *
+ * Long-running: listed in the sidecar's `UNBOUNDED_RUST_CHANNELS`, like `depot_job_run`'s own
+ * finalize it walks the whole install tree to measure SizeOnDisk.
+ */
+export const RUST_DEPOT_FINALIZE = 'depot_finalize' as const
+
+/**
  * Rust-side channel name: Phase 73 (D-03) Steam depot job `depot_job_cancel`, a pass-through to
  * the Tauri-free `gamelib-depot` crate. Takes ONE object arg (`{ jobId }`). Resolves
  * `{ cancelled: boolean }` (false when the job is not registered). Bad args reject
@@ -764,6 +777,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_SCAN_PE_IMPORTED_DLLS,
   RUST_SCAN_CONTAINED_REAL,
   RUST_SCAN_WINEMAC_METAL_EXPORTS,
+  RUST_DEPOT_FINALIZE,
   RUST_DEPOT_JOB_CANCEL,
   RUST_DEPOT_JOB_RUN,
   RUST_DEPOT_MANIFEST_SUMMARY,
@@ -809,6 +823,7 @@ export type RustSteamFilesChannel = (typeof RUST_STEAMFILES_CHANNELS)[number]
 
 /** Phase 73 (D-03): the depot channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
 export const RUST_DEPOT_CHANNELS = [
+  RUST_DEPOT_FINALIZE,
   RUST_DEPOT_JOB_CANCEL,
   RUST_DEPOT_JOB_RUN,
   RUST_DEPOT_MANIFEST_SUMMARY

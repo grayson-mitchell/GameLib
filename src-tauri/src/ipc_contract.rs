@@ -65,6 +65,7 @@ pub(crate) enum RustInvokeChannel {
     ScanPeImportedDlls,
     ScanContainedReal,
     ScanWinemacMetalExports,
+    DepotFinalize,
     DepotJobCancel,
     DepotJobRun,
     DepotManifestSummary,
@@ -127,6 +128,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::ScanPeImportedDlls,
         RustInvokeChannel::ScanContainedReal,
         RustInvokeChannel::ScanWinemacMetalExports,
+        RustInvokeChannel::DepotFinalize,
         RustInvokeChannel::DepotJobCancel,
         RustInvokeChannel::DepotJobRun,
         RustInvokeChannel::DepotManifestSummary,
@@ -189,6 +191,7 @@ impl RustInvokeChannel {
             "scan_pe_imported_dlls" => Some(RustInvokeChannel::ScanPeImportedDlls),
             "scan_contained_real" => Some(RustInvokeChannel::ScanContainedReal),
             "scan_winemac_metal_exports" => Some(RustInvokeChannel::ScanWinemacMetalExports),
+            "depot_finalize" => Some(RustInvokeChannel::DepotFinalize),
             "depot_job_cancel" => Some(RustInvokeChannel::DepotJobCancel),
             "depot_job_run" => Some(RustInvokeChannel::DepotJobRun),
             "depot_manifest_summary" => Some(RustInvokeChannel::DepotManifestSummary),
@@ -253,6 +256,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::ScanPeImportedDlls => "scan_pe_imported_dlls",
             RustInvokeChannel::ScanContainedReal => "scan_contained_real",
             RustInvokeChannel::ScanWinemacMetalExports => "scan_winemac_metal_exports",
+            RustInvokeChannel::DepotFinalize => "depot_finalize",
             RustInvokeChannel::DepotJobCancel => "depot_job_cancel",
             RustInvokeChannel::DepotJobRun => "depot_job_run",
             RustInvokeChannel::DepotManifestSummary => "depot_manifest_summary",
@@ -1133,6 +1137,18 @@ impl ScanWinemacMetalExportsArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "scan_winemac_metal_exports:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "scan_winemac_metal_exports:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct DepotFinalizeArgs {
+    pub(crate) request: Value,
+}
+
+impl DepotFinalizeArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "depot_finalize:bad-args".to_string())?.clone()).map_err(|_| "depot_finalize:bad-args".to_string())?;
+        Ok(Self { request })
     }
 }
 

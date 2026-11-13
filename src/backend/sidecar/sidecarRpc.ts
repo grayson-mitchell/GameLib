@@ -37,6 +37,7 @@ import type { Readable, Writable } from 'node:stream'
 import { randomUUID } from 'node:crypto'
 import {
   OPEN_EXTERNAL,
+  RUST_DEPOT_FINALIZE,
   RUST_DEPOT_JOB_RUN,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
@@ -103,12 +104,15 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * resolves with its Outcome whenever the job ends, which can be hours. The shell cancels every
  * depot job when the sidecar's stdout ends, so an unanswered entry cannot outlive its owner.
  * The entry holds no timer, so it is not an event-loop handle and cannot delay sidecar exit.
+ * `depot_finalize` (Phase 75, D-03) joins for the same reason as the job's own finalize: it walks the
+ * whole install tree to measure SizeOnDisk, which scales with the game, not with a clock.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_SAVE,
-  RUST_DEPOT_JOB_RUN
+  RUST_DEPOT_JOB_RUN,
+  RUST_DEPOT_FINALIZE
 ]
 
 function isValidRequest(value: unknown): value is SidecarRpcRequest {

@@ -24,6 +24,7 @@ import {
   RUST_MAIN_WINDOW_RAISE,
   RUST_MAIN_WINDOW_HIDE,
   RUST_NOTIFICATION_SHOW,
+  RUST_DEPOT_FINALIZE,
   RUST_DEPOT_JOB_CANCEL,
   RUST_DEPOT_JOB_RUN,
   RUST_DEPOT_MANIFEST_SUMMARY,
@@ -266,6 +267,7 @@ export const rustInvokeArgs = {
   [RUST_STEAMFILES_SHORTCUTS_READ]: pathArg,
   // ---- Steam depot jobs (Phase 73). The job body is validated in-crate (deny_unknown_fields),
   // so the envelope only names the identifying strings and the rest is an opaque Value.
+  [RUST_DEPOT_FINALIZE]: depotValueArg,
   [RUST_DEPOT_JOB_CANCEL]: z.tuple([z.object({ jobId: z.string() })]),
   [RUST_DEPOT_JOB_RUN]: depotValueArg,
   [RUST_DEPOT_MANIFEST_SUMMARY]: depotValueArg
