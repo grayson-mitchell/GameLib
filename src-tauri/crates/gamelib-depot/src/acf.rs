@@ -120,10 +120,41 @@ pub fn check_app_id(app_id: &str) -> Result<(), Failure> {
 
 /// Reads `StateFlags` from `appmanifest_<app_id>.acf` in `steamapps_dir`. `None` for a missing
 /// file, no `StateFlags` line, or a non-numeric value.
+///
+/// The strict parser answers first. When it cannot parse the file at all (truncated, oversized),
+/// a line scan still finds a `"StateFlags" "4"` written before the damage, as the pre-Phase-75
+/// reader did, so the cancel-preserve check never reads a damaged installed manifest as "not
+/// installed" and downgrades it (75 WR-07).
 pub fn read_existing_state_flags(steamapps_dir: &Path, app_id: &str) -> Option<u32> {
-    gamelib_steamfiles::acf::read_acf(&steamapps_dir.join(format!("appmanifest_{app_id}.acf")))
-        .record
-        .and_then(|r| r.state_flags)
+    let path = steamapps_dir.join(format!("appmanifest_{app_id}.acf"));
+    let read = gamelib_steamfiles::acf::read_acf(&path);
+    match read.record {
+        Some(r) => r.state_flags,
+        None if read.exists => scan_state_flags_line(&path),
+        None => None,
+    }
+}
+
+/// Line-scan fallback for [`read_existing_state_flags`]: the first `"StateFlags" "<n>"` line
+/// (key ASCII-case-insensitive), reading at most 64 MiB.
+fn scan_state_flags_line(path: &Path) -> Option<u32> {
+    use std::io::Read;
+    let mut bytes = Vec::new();
+    fs::File::open(path)
+        .ok()?
+        .take(64 * 1024 * 1024)
+        .read_to_end(&mut bytes)
+        .ok()?;
+    let text = String::from_utf8_lossy(&bytes);
+    for line in text.lines() {
+        let mut quoted = line.split('"').skip(1).step_by(2);
+        let Some(key) = quoted.next() else { continue };
+        if !key.eq_ignore_ascii_case("StateFlags") {
+            continue;
+        }
+        return quoted.last().and_then(|v| v.trim().parse::<u32>().ok());
+    }
+    None
 }
 
 /// A user-cancelled job that fetched nothing and wrote no file must not downgrade a manifest that

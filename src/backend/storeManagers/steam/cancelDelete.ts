@@ -201,7 +201,12 @@ export async function deleteCancelledSteamInstall(
     if (read.exists && read.parsed && (read.record?.stateFlags ?? 0) & 4) {
       return refuse(appId, 'manifest reports installed')
     }
-    // exists but unparseable is residue, not a refusal
+    // WR-07 (75 review): a manifest that exists but does not parse (truncated,
+    // oversized) cannot prove the title is not installed. Our own finalize
+    // writes the ACF atomically, so it never leaves one behind -> refuse.
+    if (read.exists && !read.parsed) {
+      return refuse(appId, 'manifest unparseable')
+    }
 
     const conflicting = await findOtherManifestsWithInstalldir(
       deps,

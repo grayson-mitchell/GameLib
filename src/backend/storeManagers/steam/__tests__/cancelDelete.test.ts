@@ -378,12 +378,18 @@ describe('deleteCancelledSteamInstall, rust branch', () => {
     expect(existsSync(join(steamapps, 'common', 'Cool Game'))).toBe(true)
   })
 
-  it('treats an unparseable manifest as residue and deletes', async () => {
+  it('refuses on an existing but unparseable manifest and keeps every file (WR-07)', async () => {
     const { result } = run(() =>
       readResult({ parsed: false, record: null, readError: 'bad' })
     )
-    expect((await result).status).toBe('deleted')
-    expect(existsSync(join(steamapps, 'common', 'Cool Game'))).toBe(false)
+    expect(await result).toEqual({
+      status: 'refused',
+      reason: 'manifest unparseable'
+    })
+    expect(existsSync(join(steamapps, 'common', 'Cool Game', 'a.bin'))).toBe(
+      true
+    )
+    expect(existsSync(join(steamapps, 'appmanifest_123.acf'))).toBe(true)
   })
 
   it('deletes a downloading manifest (bit 4 unset)', async () => {

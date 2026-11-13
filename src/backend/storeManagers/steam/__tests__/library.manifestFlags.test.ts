@@ -4,7 +4,8 @@ import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSte
 import type { AcfReadResult } from '../localFiles/steamFilesTypes'
 import {
   isCurrentFullInstall,
-  readAppManifestFlags
+  readAppManifestFlags,
+  readInstalledAtStart
 } from '../library/manifestFlags'
 
 describe('manifestFlags', () => {
@@ -72,5 +73,55 @@ describe('readAppManifestFlags', () => {
     await expect(
       readAppManifestFlags(stubRustSteamFiles({}), '/lib/steamapps', '123')
     ).resolves.toBeNull()
+  })
+})
+
+// WR-07 (75 review): the cancel-delete guard's start-of-job capture never reads
+// "could not read" as "not installed".
+describe('readInstalledAtStart', () => {
+  beforeEach(() => {
+    jest.spyOn(logger, 'logDebug').mockImplementation(() => undefined)
+  })
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  const reply = (r: Partial<AcfReadResult>) =>
+    stubRustSteamFiles({
+      steamfiles_read_acf: () => ({
+        exists: true,
+        parsed: true,
+        readError: null,
+        record: null,
+        ...r
+      })
+    })
+  const flags = (stateFlags: number | null) =>
+    ({ stateFlags }) as unknown as AcfReadResult['record']
+
+  it('is true for an existing manifest that does not parse', async () => {
+    const stub = reply({ parsed: false, readError: 'truncated' })
+    await expect(readInstalledAtStart(stub, '/s', '123')).resolves.toBe(true)
+  })
+
+  it('is true when the read rejects', async () => {
+    await expect(
+      readInstalledAtStart(stubRustSteamFiles({}), '/s', '123')
+    ).resolves.toBe(true)
+  })
+
+  it('follows bit 4 on a parsed manifest and is false when it is missing', async () => {
+    await expect(
+      readInstalledAtStart(reply({ record: flags(4) }), '/s', '1')
+    ).resolves.toBe(true)
+    await expect(
+      readInstalledAtStart(reply({ record: flags(1026) }), '/s', '1')
+    ).resolves.toBe(false)
+    await expect(
+      readInstalledAtStart(reply({ record: flags(null) }), '/s', '1')
+    ).resolves.toBe(false)
+    await expect(
+      readInstalledAtStart(reply({ exists: false, parsed: false }), '/s', '1')
+    ).resolves.toBe(false)
   })
 })

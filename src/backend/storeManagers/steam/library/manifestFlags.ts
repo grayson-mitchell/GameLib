@@ -36,6 +36,34 @@ export async function readAppManifestFlags(
   }
 }
 
+/**
+ * WR-07 (75 review): whether the title must be treated as already installed
+ * when a native depot job starts (feeds the breadcrumb's
+ * steamResumeInstalledAtStart, which makes cancel-delete refuse). Unlike
+ * readAppManifestFlags this never maps "could not read" to "not installed":
+ * a manifest that exists but does not parse (truncated, oversized) or a
+ * rejected read is answered `true`, the conservative side for a guard that
+ * protects an install directory from deletion. Only a missing manifest or a
+ * parsed one without bit 4 is `false`.
+ */
+export async function readInstalledAtStart(
+  rust: RustInvokeDeps,
+  steamappsDir: string,
+  appId: string
+): Promise<boolean> {
+  let read
+  try {
+    read = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_ACF, {
+      path: join(steamappsDir, `appmanifest_${appId}.acf`)
+    })
+  } catch {
+    return true
+  }
+  if (!read.exists) return false
+  if (!read.parsed || !read.record) return true
+  return isFullyInstalledStateFlags(read.record.stateFlags ?? 0)
+}
+
 const UPDATE_REQUIRED = 2
 
 /**
