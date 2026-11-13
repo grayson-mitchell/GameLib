@@ -83,5 +83,18 @@
       ]
     },
     "divergenceNote": "steam-shortcut-editor pads the sparse shortcuts array (keys 0 and 2) with an empty-string placeholder at the missing index 1 when it re-keys on write; the Rust editor keeps only real entries (add at max key + 1, remove re-keys contiguously), so the placeholder is absent. Entries are otherwise identical by value."
+  },
+  "shortcuts/validity/unknown-type": {
+    "rustOverride": {
+      "corrupted": false,
+      "success": false,
+      "errors": [
+        "One of the game entries is missing the LaunchOptions parameter!"
+      ],
+      "firstTitle": "Unknown Types",
+      "firstTitleIndex": 0,
+      "absentTitleIndex": -1
+    },
+    "divergenceNote": "steam-shortcut-editor mis-reads the unknown value type in this entry and loses the Exe key (it nests the rest under an empty key); the Rust reader skips the unknown field and keeps Exe, so only LaunchOptions is reported missing. Both mark the entry invalid and the title still matches."
   }
 }

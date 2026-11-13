@@ -78,6 +78,7 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logWarning: jest.fn(),
   logError: jest.fn(),
+  logDebug: jest.fn(),
   LogPrefix: { Backend: 'Backend' }
 }))
 
@@ -1144,6 +1145,90 @@ describe("addToSteam's GAMELIB_SHELL_EXE pin (T-34.5-39/40, invoke-kind counterp
     // D-10's explicitly rejected alternative: the node interpreter must never be the value
     // written as the launch command.
     expect(contents).not.toContain(process.execPath)
+  })
+})
+
+// ── Describe 6b (75-18): addToSteam on the Rust shortcuts ops ─────────────────────────────────
+//
+// Under GAMELIB_STEAMFILES_SHORTCUTS=rust the handler reaches `steamfiles_shortcuts_apply` through
+// the injected requestRustInvoke; the file bytes are the Rust crate's concern (golden tests).
+describe('75-18 addToSteam under GAMELIB_STEAMFILES_SHORTCUTS=rust reaches the Rust apply op', () => {
+  let tmpDir: DirResult
+  let savedShellExe: string | undefined
+  let savedFlag: string | undefined
+
+  beforeEach(() => {
+    tmpDir = dirSync({ unsafeCleanup: true })
+    mkdirSync(join(tmpDir.name, 'userdata', 'steam_user', 'config'), {
+      recursive: true
+    })
+    mockGlobalConfigGet.mockReturnValue({
+      getSettings: () => ({
+        defaultSteamPath: tmpDir.name,
+        addDesktopShortcuts: false,
+        addStartMenuShortcuts: true,
+        addSteamShortcuts: false
+      })
+    })
+    mockGetGame.mockReturnValue({
+      getGameInfo: () => makeGameInfo({ title: 'Rust Flow Game' })
+    })
+    savedShellExe = process.env.GAMELIB_SHELL_EXE
+    savedFlag = process.env.GAMELIB_STEAMFILES_SHORTCUTS
+    process.env.GAMELIB_SHELL_EXE = '/Applications/GameLib.app/GameLib'
+    process.env.GAMELIB_STEAMFILES_SHORTCUTS = 'rust'
+    mockRequestRustInvoke.mockReset()
+    mockRequestRustInvoke.mockImplementation((channel: string) =>
+      Promise.resolve(
+        channel === 'steamfiles_shortcuts_read'
+          ? {
+              exists: false,
+              parsed: false,
+              readError: null,
+              hasShortcutsRoot: false,
+              rootIsList: false,
+              entries: []
+            }
+          : {
+              written: true,
+              readError: null,
+              alreadyPresent: false,
+              matched: false,
+              indexKey: '0',
+              removedExe: null,
+              removedAppName: null
+            }
+      )
+    )
+  })
+
+  afterEach(() => {
+    tmpDir.removeCallback()
+    if (savedShellExe === undefined) delete process.env.GAMELIB_SHELL_EXE
+    else process.env.GAMELIB_SHELL_EXE = savedShellExe
+    if (savedFlag === undefined) delete process.env.GAMELIB_STEAMFILES_SHORTCUTS
+    else process.env.GAMELIB_STEAMFILES_SHORTCUTS = savedFlag
+  })
+
+  it('sends one apply mutation through requestRustInvoke and writes no bytes in TS', async () => {
+    const handler = handlerRegistry.get('addToSteam')
+    const result = await handler?.(undefined, 'Rust Flow Game', 'legendary')
+
+    expect(result).toBe(true)
+    const apply = mockRequestRustInvoke.mock.calls.find(
+      ([channel]) => channel === 'steamfiles_shortcuts_apply'
+    )
+    expect(apply).toBeDefined()
+    expect(
+      (
+        apply?.[1] as [{ mutation: { op: string; createIfMissing: boolean } }]
+      )[0].mutation
+    ).toMatchObject({ op: 'add', createIfMissing: true })
+    expect(
+      existsSync(
+        join(tmpDir.name, 'userdata', 'steam_user', 'config', 'shortcuts.vdf')
+      )
+    ).toBe(false)
   })
 })
 
