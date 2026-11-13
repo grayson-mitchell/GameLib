@@ -9,7 +9,7 @@ import {
   readAcfBetaKey,
   readLocalConfigBetaKey
 } from '../../../depot/betaBranch'
-import { capture, listFiles, withFixtureCopy } from './normalize'
+import { capture, listFiles, unlessHangs, withFixtureCopy } from './normalize'
 
 export async function captureAcfUpdate(): Promise<Record<string, unknown>> {
   const out: Record<string, unknown> = {}
@@ -20,9 +20,10 @@ export async function captureAcfUpdate(): Promise<Record<string, unknown>> {
       mkdirSync(dir, { recursive: true })
       copyFileSync(join(root, 'acf', file), join(dir, 'appmanifest_77.acf'))
       const text = readFileSync(join(root, 'acf', file), 'utf-8')
-      out[`acfUpdate/readAcfBetaKey/${name}`] = await capture(
-        () => readAcfBetaKey(dir, '77'),
-        root
+      out[`acfUpdate/readAcfBetaKey/${name}`] = await unlessHangs(
+        `acf/${file}`,
+        root,
+        () => readAcfBetaKey(dir, '77')
       )
       out[`acfUpdate/parseAcfInstalledDepots/${name}`] = await capture(
         () => parseAcfInstalledDepots(text),

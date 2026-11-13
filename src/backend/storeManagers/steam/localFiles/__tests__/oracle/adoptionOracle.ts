@@ -3,7 +3,7 @@ import { join } from 'path'
 import { readAppManifestFlags } from '../../../library/manifestFlags'
 import { isSteamAdoptedAcf } from '../../../macSteamAdoption'
 import { readMacRunningAppId } from '../../../library/runningPoll'
-import { capture, listFiles, withFixtureCopy } from './normalize'
+import { capture, listFiles, unlessHangs, withFixtureCopy } from './normalize'
 
 export async function captureAdoption(): Promise<Record<string, unknown>> {
   const out: Record<string, unknown> = {}
@@ -16,18 +16,18 @@ export async function captureAdoption(): Promise<Record<string, unknown>> {
       const dir = join(root, '_adoption', name)
       mkdirSync(dir, { recursive: true })
       copyFileSync(join(root, 'acf', file), join(dir, 'appmanifest_77.acf'))
-      out[`adoption/readAppManifestFlags/${name}`] = await capture(
-        () => readAppManifestFlags(dir, '77'),
-        root
+      out[`adoption/readAppManifestFlags/${name}`] = await unlessHangs(
+        `acf/${file}`,
+        root,
+        () => readAppManifestFlags(dir, '77')
       )
-      out[`adoption/isSteamAdoptedAcf/null-baseline/${name}`] = await capture(
-        () =>
+      out[`adoption/isSteamAdoptedAcf/null-baseline/${name}`] =
+        await unlessHangs(`acf/${file}`, root, () =>
           isSteamAdoptedAcf(null, {
             content: readFileSync(join(root, 'acf', file), 'utf-8'),
             mtimeMs: 1
-          }),
-        root
-      )
+          })
+        )
     }
     out['adoption/readAppManifestFlags/missing'] = await capture(
       () => readAppManifestFlags(join(root, '_adoption'), '77'),

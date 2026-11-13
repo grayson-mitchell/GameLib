@@ -1,0 +1,2787 @@
+{
+  "generator": "src/backend/storeManagers/steam/localFiles/__tests__/steamFilesGolden.test.ts (TS oracle; captured before any reader changed)",
+  "note": "oracle values are never edited; a Rust divergence is a per-case rustOverride with a mandatory divergenceNote (D-07)",
+  "cases": {
+    "acfUpdate/parseAcfInstalledDepots/big-ids": {
+      "oracle": {
+        "installedDepots": [
+          {
+            "depotId": "31",
+            "manifest": "9007199254740993",
+            "size": "1"
+          },
+          {
+            "depotId": "32",
+            "manifest": "9223372036854775807",
+            "size": "2"
+          }
+        ]
+      }
+    },
+    "acfUpdate/parseAcfInstalledDepots/bom": {
+      "oracle": {
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/parseAcfInstalledDepots/coercion": {
+      "oracle": {
+        "buildid": "0123",
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/parseAcfInstalledDepots/comments-unquoted": {
+      "oracle": {
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/parseAcfInstalledDepots/crlf": {
+      "oracle": {
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/parseAcfInstalledDepots/downloading": {
+      "oracle": {
+        "buildid": "2222",
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/parseAcfInstalledDepots/duplicate-keys": {
+      "oracle": {
+        "buildid": "77",
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/parseAcfInstalledDepots/empty": {
+      "oracle": {
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/parseAcfInstalledDepots/escapes": {
+      "oracle": {
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/parseAcfInstalledDepots/installed": {
+      "oracle": {
+        "buildid": "1234567",
+        "installedDepots": [
+          {
+            "depotId": "11",
+            "manifest": "1000000000000000001",
+            "size": "100000"
+          },
+          {
+            "depotId": "12",
+            "manifest": "1000000000000000002",
+            "size": "200000",
+            "dlcAppId": "13"
+          }
+        ]
+      }
+    },
+    "acfUpdate/parseAcfInstalledDepots/lowercase-keys": {
+      "oracle": {
+        "installedDepots": [
+          {
+            "depotId": "71",
+            "manifest": "1000000000000000071",
+            "size": "0"
+          }
+        ]
+      }
+    },
+    "acfUpdate/parseAcfInstalledDepots/no-appstate": {
+      "oracle": {
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/parseAcfInstalledDepots/non-utf8": {
+      "oracle": {
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/parseAcfInstalledDepots/truncated": {
+      "oracle": {
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/parseAcfInstalledDepots/unbalanced": {
+      "oracle": {
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/readAcfBetaKey/big-ids": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfBetaKey/bom": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfBetaKey/coercion": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfBetaKey/comments-unquoted": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfBetaKey/crlf": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfBetaKey/downloading": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfBetaKey/duplicate-keys": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfBetaKey/empty": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfBetaKey/escapes": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfBetaKey/installed": {
+      "oracle": "beta_a"
+    },
+    "acfUpdate/readAcfBetaKey/lowercase-keys": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfBetaKey/no-appstate": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfBetaKey/non-utf8": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfBetaKey/truncated": {
+      "oracle": {
+        "hangs": "@node-steam/vdf parse does not terminate on this input"
+      }
+    },
+    "acfUpdate/readAcfBetaKey/unbalanced": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfInstalledDepots/bad-appid": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfInstalledDepots/big-ids": {
+      "oracle": {
+        "installedDepots": [
+          {
+            "depotId": "31",
+            "manifest": "9007199254740993",
+            "size": "1"
+          },
+          {
+            "depotId": "32",
+            "manifest": "9223372036854775807",
+            "size": "2"
+          }
+        ]
+      }
+    },
+    "acfUpdate/readAcfInstalledDepots/bom": {
+      "oracle": {
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/readAcfInstalledDepots/coercion": {
+      "oracle": {
+        "buildid": "0123",
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/readAcfInstalledDepots/comments-unquoted": {
+      "oracle": {
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/readAcfInstalledDepots/crlf": {
+      "oracle": {
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/readAcfInstalledDepots/downloading": {
+      "oracle": {
+        "buildid": "2222",
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/readAcfInstalledDepots/duplicate-keys": {
+      "oracle": {
+        "buildid": "77",
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/readAcfInstalledDepots/empty": {
+      "oracle": {
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/readAcfInstalledDepots/escapes": {
+      "oracle": {
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/readAcfInstalledDepots/installed": {
+      "oracle": {
+        "buildid": "1234567",
+        "installedDepots": [
+          {
+            "depotId": "11",
+            "manifest": "1000000000000000001",
+            "size": "100000"
+          },
+          {
+            "depotId": "12",
+            "manifest": "1000000000000000002",
+            "size": "200000",
+            "dlcAppId": "13"
+          }
+        ]
+      }
+    },
+    "acfUpdate/readAcfInstalledDepots/lowercase-keys": {
+      "oracle": {
+        "installedDepots": [
+          {
+            "depotId": "71",
+            "manifest": "1000000000000000071",
+            "size": "0"
+          }
+        ]
+      }
+    },
+    "acfUpdate/readAcfInstalledDepots/no-appstate": {
+      "oracle": {
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/readAcfInstalledDepots/non-utf8": {
+      "oracle": {
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/readAcfInstalledDepots/truncated": {
+      "oracle": {
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/readAcfInstalledDepots/unbalanced": {
+      "oracle": {
+        "installedDepots": []
+      }
+    },
+    "acfUpdate/readAcfUpdateFieldsFromDir/big-ids": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfUpdateFieldsFromDir/bom": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfUpdateFieldsFromDir/coercion": {
+      "oracle": {
+        "steamappsDir": "${FIXTURES}/_acfupdate/coercion",
+        "buildid": "0123",
+        "stateFlags": 4,
+        "bytesToDownload": 0,
+        "bytesDownloaded": 0,
+        "scheduledAutoUpdate": 0
+      }
+    },
+    "acfUpdate/readAcfUpdateFieldsFromDir/comments-unquoted": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfUpdateFieldsFromDir/crlf": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfUpdateFieldsFromDir/downloading": {
+      "oracle": {
+        "steamappsDir": "${FIXTURES}/_acfupdate/downloading",
+        "buildid": "2222",
+        "targetBuildId": "3333",
+        "stateFlags": 1026,
+        "bytesToDownload": 1048576,
+        "bytesDownloaded": 524288,
+        "scheduledAutoUpdate": 1700003600
+      }
+    },
+    "acfUpdate/readAcfUpdateFieldsFromDir/duplicate-keys": {
+      "oracle": {
+        "steamappsDir": "${FIXTURES}/_acfupdate/duplicate-keys",
+        "buildid": "77",
+        "stateFlags": 0,
+        "bytesToDownload": 0,
+        "bytesDownloaded": 0,
+        "scheduledAutoUpdate": 0
+      }
+    },
+    "acfUpdate/readAcfUpdateFieldsFromDir/empty": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfUpdateFieldsFromDir/escapes": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfUpdateFieldsFromDir/installed": {
+      "oracle": {
+        "steamappsDir": "${FIXTURES}/_acfupdate/installed",
+        "buildid": "1234567",
+        "stateFlags": 4,
+        "bytesToDownload": 0,
+        "bytesDownloaded": 0,
+        "scheduledAutoUpdate": 0,
+        "betaKey": "beta_a"
+      }
+    },
+    "acfUpdate/readAcfUpdateFieldsFromDir/lowercase-keys": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfUpdateFieldsFromDir/missing": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfUpdateFieldsFromDir/no-appstate": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfUpdateFieldsFromDir/non-utf8": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfUpdateFieldsFromDir/truncated": {
+      "oracle": null
+    },
+    "acfUpdate/readAcfUpdateFieldsFromDir/unbalanced": {
+      "oracle": null
+    },
+    "acfUpdate/readLocalConfigBetaKey/missing-file": {
+      "oracle": null
+    },
+    "acfUpdate/readLocalConfigBetaKey/none/10": {
+      "oracle": null
+    },
+    "acfUpdate/readLocalConfigBetaKey/none/20": {
+      "oracle": null
+    },
+    "acfUpdate/readLocalConfigBetaKey/none/99": {
+      "oracle": null
+    },
+    "acfUpdate/readLocalConfigBetaKey/none/abc": {
+      "oracle": null
+    },
+    "acfUpdate/readLocalConfigBetaKey/userappconfig/10": {
+      "oracle": null
+    },
+    "acfUpdate/readLocalConfigBetaKey/userappconfig/20": {
+      "oracle": null
+    },
+    "acfUpdate/readLocalConfigBetaKey/userappconfig/99": {
+      "oracle": null
+    },
+    "acfUpdate/readLocalConfigBetaKey/userappconfig/abc": {
+      "oracle": null
+    },
+    "adoption/isSteamAdoptedAcf/differs-downloading": {
+      "oracle": false
+    },
+    "adoption/isSteamAdoptedAcf/differs-installed": {
+      "oracle": true
+    },
+    "adoption/isSteamAdoptedAcf/null-baseline/big-ids": {
+      "oracle": false
+    },
+    "adoption/isSteamAdoptedAcf/null-baseline/bom": {
+      "oracle": false
+    },
+    "adoption/isSteamAdoptedAcf/null-baseline/coercion": {
+      "oracle": true
+    },
+    "adoption/isSteamAdoptedAcf/null-baseline/comments-unquoted": {
+      "oracle": false
+    },
+    "adoption/isSteamAdoptedAcf/null-baseline/crlf": {
+      "oracle": false
+    },
+    "adoption/isSteamAdoptedAcf/null-baseline/downloading": {
+      "oracle": false
+    },
+    "adoption/isSteamAdoptedAcf/null-baseline/duplicate-keys": {
+      "oracle": true
+    },
+    "adoption/isSteamAdoptedAcf/null-baseline/empty": {
+      "oracle": false
+    },
+    "adoption/isSteamAdoptedAcf/null-baseline/escapes": {
+      "oracle": false
+    },
+    "adoption/isSteamAdoptedAcf/null-baseline/installed": {
+      "oracle": true
+    },
+    "adoption/isSteamAdoptedAcf/null-baseline/lowercase-keys": {
+      "oracle": false
+    },
+    "adoption/isSteamAdoptedAcf/null-baseline/no-appstate": {
+      "oracle": false
+    },
+    "adoption/isSteamAdoptedAcf/null-baseline/non-utf8": {
+      "oracle": false
+    },
+    "adoption/isSteamAdoptedAcf/null-baseline/truncated": {
+      "oracle": {
+        "hangs": "@node-steam/vdf parse does not terminate on this input"
+      }
+    },
+    "adoption/isSteamAdoptedAcf/null-baseline/unbalanced": {
+      "oracle": false
+    },
+    "adoption/isSteamAdoptedAcf/null-current": {
+      "oracle": false
+    },
+    "adoption/isSteamAdoptedAcf/same-content-new-mtime": {
+      "oracle": true
+    },
+    "adoption/isSteamAdoptedAcf/same-content-same-mtime": {
+      "oracle": false
+    },
+    "adoption/readAppManifestFlags/big-ids": {
+      "oracle": {
+        "stateFlags": 4,
+        "buildid": ""
+      }
+    },
+    "adoption/readAppManifestFlags/bom": {
+      "oracle": {
+        "stateFlags": 4,
+        "buildid": ""
+      }
+    },
+    "adoption/readAppManifestFlags/coercion": {
+      "oracle": {
+        "stateFlags": 4,
+        "buildid": "123"
+      }
+    },
+    "adoption/readAppManifestFlags/comments-unquoted": {
+      "oracle": null
+    },
+    "adoption/readAppManifestFlags/crlf": {
+      "oracle": {
+        "stateFlags": 4,
+        "buildid": ""
+      }
+    },
+    "adoption/readAppManifestFlags/downloading": {
+      "oracle": {
+        "stateFlags": 1026,
+        "buildid": "2222"
+      }
+    },
+    "adoption/readAppManifestFlags/duplicate-keys": {
+      "oracle": {
+        "stateFlags": 4,
+        "buildid": "77"
+      }
+    },
+    "adoption/readAppManifestFlags/empty": {
+      "oracle": null
+    },
+    "adoption/readAppManifestFlags/escapes": {
+      "oracle": {
+        "stateFlags": 4,
+        "buildid": ""
+      }
+    },
+    "adoption/readAppManifestFlags/installed": {
+      "oracle": {
+        "stateFlags": 4,
+        "buildid": "1234567"
+      }
+    },
+    "adoption/readAppManifestFlags/lowercase-keys": {
+      "oracle": null
+    },
+    "adoption/readAppManifestFlags/missing": {
+      "oracle": null
+    },
+    "adoption/readAppManifestFlags/no-appstate": {
+      "oracle": null
+    },
+    "adoption/readAppManifestFlags/non-utf8": {
+      "oracle": {
+        "stateFlags": 4,
+        "buildid": ""
+      }
+    },
+    "adoption/readAppManifestFlags/truncated": {
+      "oracle": {
+        "hangs": "@node-steam/vdf parse does not terminate on this input"
+      }
+    },
+    "adoption/readAppManifestFlags/unbalanced": {
+      "oracle": null
+    },
+    "adoption/readMacRunningAppId/lowercase": {
+      "oracle": 0
+    },
+    "adoption/readMacRunningAppId/missing-key": {
+      "oracle": 0
+    },
+    "adoption/readMacRunningAppId/no-file": {
+      "oracle": 0
+    },
+    "adoption/readMacRunningAppId/not-running": {
+      "oracle": 0
+    },
+    "adoption/readMacRunningAppId/running": {
+      "oracle": 1245620
+    },
+    "bridge/parseInstallScript/conditionals": {
+      "oracle": [
+        {
+          "name": "VC 2019",
+          "minimumHasRunValue": 1,
+          "processes": [
+            {
+              "process": "%INSTALLDIR%\\vcredist\\VC_redist.x64.exe",
+              "command": "/q /norestart"
+            }
+          ],
+          "requirementOs": null
+        }
+      ]
+    },
+    "bridge/parseInstallScript/dotnet-duplicate": {
+      "oracle": [
+        {
+          "name": "4.8",
+          "minimumHasRunValue": 1,
+          "processes": [
+            {
+              "process": "%INSTALLDIR%\\_CommonRedist\\DotNet\\4.0\\dotNetFx40_Full_x86_x64.exe",
+              "command": "/q /norestart"
+            }
+          ],
+          "requirementOs": null
+        },
+        {
+          "name": "4.8",
+          "minimumHasRunValue": 1,
+          "processes": [
+            {
+              "process": "%INSTALLDIR%\\_CommonRedist\\DotNet\\4.8\\NDP48-x86-x64-AllOS-ENU.exe",
+              "command": "/q /norestart"
+            }
+          ],
+          "requirementOs": null
+        }
+      ]
+    },
+    "bridge/parseInstallScript/escapes": {
+      "oracle": [
+        {
+          "name": "DirectX",
+          "minimumHasRunValue": 1,
+          "processes": [
+            {
+              "process": "%INSTALLDIR%\\Redist\\DXSETUP.exe",
+              "command": "/silent \"quoted\""
+            }
+          ],
+          "requirementOs": null
+        }
+      ]
+    },
+    "bridge/parseInstallScript/malformed": {
+      "oracle": null
+    },
+    "bridge/parseInstallScript/no-run-process": {
+      "oracle": null
+    },
+    "bridge/parseKv1/conditionals": {
+      "oracle": [
+        {
+          "key": "InstallScript",
+          "value": [
+            {
+              "key": "Run Process",
+              "value": [
+                {
+                  "key": "VC 2019",
+                  "value": [
+                    {
+                      "key": "Process 1",
+                      "value": "%INSTALLDIR%\\vcredist\\VC_redist.x64.exe"
+                    },
+                    {
+                      "key": "Command 1",
+                      "value": "/q /norestart"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "bridge/parseKv1/dotnet-duplicate": {
+      "oracle": [
+        {
+          "key": "InstallScript",
+          "value": [
+            {
+              "key": "Run Process",
+              "value": [
+                {
+                  "key": "4.8",
+                  "value": [
+                    {
+                      "key": "Process 1",
+                      "value": "%INSTALLDIR%\\_CommonRedist\\DotNet\\4.0\\dotNetFx40_Full_x86_x64.exe"
+                    },
+                    {
+                      "key": "Command 1",
+                      "value": "/q /norestart"
+                    }
+                  ]
+                },
+                {
+                  "key": "4.8",
+                  "value": [
+                    {
+                      "key": "Process 1",
+                      "value": "%INSTALLDIR%\\_CommonRedist\\DotNet\\4.8\\NDP48-x86-x64-AllOS-ENU.exe"
+                    },
+                    {
+                      "key": "Command 1",
+                      "value": "/q /norestart"
+                    },
+                    {
+                      "key": "NoCleanUp",
+                      "value": "1"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "bridge/parseKv1/escapes": {
+      "oracle": [
+        {
+          "key": "InstallScript",
+          "value": [
+            {
+              "key": "Run Process",
+              "value": [
+                {
+                  "key": "DirectX",
+                  "value": [
+                    {
+                      "key": "Process 1",
+                      "value": "%INSTALLDIR%\\Redist\\DXSETUP.exe"
+                    },
+                    {
+                      "key": "Command 1",
+                      "value": "/silent \"quoted\""
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "bridge/parseKv1/malformed": {
+      "oracle": {
+        "throws": "unterminated string"
+      }
+    },
+    "bridge/parseKv1/no-run-process": {
+      "oracle": [
+        {
+          "key": "InstallScript",
+          "value": [
+            {
+              "key": "Registry",
+              "value": [
+                {
+                  "key": "HKLM\\Software\\Synthetic",
+                  "value": [
+                    {
+                      "key": "Key",
+                      "value": "Value"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "bridge/parseValveClientManifest/bad-file": {
+      "oracle": {
+        "ok": false,
+        "reason": "no win64 root"
+      }
+    },
+    "bridge/parseValveClientManifest/bad-sha": {
+      "oracle": {
+        "ok": false,
+        "reason": "no win64 root"
+      }
+    },
+    "bridge/parseValveClientManifest/forbidden-proto": {
+      "oracle": {
+        "ok": false,
+        "reason": "forbidden key __proto__"
+      }
+    },
+    "bridge/parseValveClientManifest/good": {
+      "oracle": {
+        "ok": false,
+        "reason": "no win64 root"
+      }
+    },
+    "bridge/parseValveClientManifest/no-bins": {
+      "oracle": {
+        "ok": false,
+        "reason": "no win64 root"
+      }
+    },
+    "bridge/parseValveClientManifest/no-win64": {
+      "oracle": {
+        "ok": false,
+        "reason": "no win64 root"
+      }
+    },
+    "bridge/parseValveClientManifest/not-text": {
+      "oracle": {
+        "ok": false,
+        "reason": "not text"
+      }
+    },
+    "bridge/parseValveClientManifest/oversize": {
+      "oracle": {
+        "ok": false,
+        "reason": "manifest too large"
+      }
+    },
+    "bridge/parseValveClientManifest/size-as-string": {
+      "oracle": {
+        "ok": false,
+        "reason": "no win64 root"
+      }
+    },
+    "bridge/parseValveClientManifest/size-too-big": {
+      "oracle": {
+        "ok": false,
+        "reason": "no win64 root"
+      }
+    },
+    "bridge/parseValveClientManifest/version-number": {
+      "oracle": {
+        "ok": false,
+        "reason": "no win64 root"
+      }
+    },
+    "installdir/readAcfInstalldir/big-ids": {
+      "oracle": "BigIds"
+    },
+    "installdir/readAcfInstalldir/bom": {
+      "oracle": "BomGame"
+    },
+    "installdir/readAcfInstalldir/coercion": {
+      "oracle": null
+    },
+    "installdir/readAcfInstalldir/comments-unquoted": {
+      "oracle": null
+    },
+    "installdir/readAcfInstalldir/crlf": {
+      "oracle": "CrlfGame"
+    },
+    "installdir/readAcfInstalldir/downloading": {
+      "oracle": "DownloadingGame"
+    },
+    "installdir/readAcfInstalldir/duplicate-keys": {
+      "oracle": "ReopenedDir"
+    },
+    "installdir/readAcfInstalldir/empty": {
+      "oracle": null
+    },
+    "installdir/readAcfInstalldir/escapes": {
+      "oracle": "Sub\\\\Dir"
+    },
+    "installdir/readAcfInstalldir/installed": {
+      "oracle": "SyntheticGame"
+    },
+    "installdir/readAcfInstalldir/lowercase-keys": {
+      "oracle": null
+    },
+    "installdir/readAcfInstalldir/missing": {
+      "oracle": null
+    },
+    "installdir/readAcfInstalldir/no-appstate": {
+      "oracle": null
+    },
+    "installdir/readAcfInstalldir/non-utf8": {
+      "oracle": "CafeGame"
+    },
+    "installdir/readAcfInstalldir/truncated": {
+      "oracle": {
+        "hangs": "@node-steam/vdf parse does not terminate on this input"
+      }
+    },
+    "installdir/readAcfInstalldir/unbalanced": {
+      "oracle": null
+    },
+    "library/breadcrumbAppIsFullyInstalledOnDisk/10": {
+      "oracle": true
+    },
+    "library/breadcrumbAppIsFullyInstalledOnDisk/20": {
+      "oracle": false
+    },
+    "library/breadcrumbAppIsFullyInstalledOnDisk/no-dir": {
+      "oracle": false
+    },
+    "library/breadcrumbAppIsFullyInstalledOnDisk/no-manifest": {
+      "oracle": false
+    },
+    "library/buildIncompleteInstallSet/scan": {
+      "oracle": [20]
+    },
+    "library/buildIncompleteInstallSet/with-truncated-manifest": {
+      "oracle": {
+        "hangs": "@node-steam/vdf parse does not terminate on this input"
+      }
+    },
+    "library/buildInstalledMap/scan": {
+      "oracle": [
+        [
+          10,
+          {
+            "installPath": "${FIXTURES}/scan/lib2/steamapps/common/DuplicateDir",
+            "sizeOnDisk": 1000
+          }
+        ],
+        [
+          40,
+          {
+            "installPath": "${FIXTURES}/scan/lib2/steamapps/common/ScanLibTwo",
+            "sizeOnDisk": 1000
+          }
+        ]
+      ]
+    },
+    "library/buildInstalledMap/with-truncated-manifest": {
+      "oracle": {
+        "hangs": "@node-steam/vdf parse does not terminate on this input"
+      }
+    },
+    "library/findOtherManifestsWithInstalldir/lib1-no-match": {
+      "oracle": []
+    },
+    "library/findOtherManifestsWithInstalldir/lib1-nonnumeric-shares": {
+      "oracle": ["abc"]
+    },
+    "library/findOtherManifestsWithInstalldir/lib1-self-installdir": {
+      "oracle": []
+    },
+    "library/findOtherManifestsWithInstalldir/lib2-duplicate-dir": {
+      "oracle": ["10"]
+    },
+    "library/findOtherManifestsWithInstalldir/with-truncated-manifest": {
+      "oracle": {
+        "hangs": "@node-steam/vdf parse does not terminate on this input"
+      }
+    },
+    "library/getSteamLibraries/legacy": {
+      "oracle": []
+    },
+    "library/getSteamLibraries/malformed": {
+      "oracle": {
+        "throws": "VDF | Parse: Open parentheses somewhere"
+      }
+    },
+    "library/getSteamLibraries/modern": {
+      "oracle": ["${FIXTURES}/scan/lib1", "${FIXTURES}/scan/lib2"]
+    },
+    "library/getSteamLibraries/no-file": {
+      "oracle": {
+        "throws": "Cannot read properties of undefined (reading 'logDebug')"
+      }
+    },
+    "library/getSteamLibraries/windows-paths": {
+      "oracle": []
+    },
+    "library/readAcfState/10": {
+      "oracle": {
+        "state": "installed",
+        "stateFlags": 4,
+        "installPath": "${FIXTURES}/scan/lib1/steamapps/common/ScanInstalled",
+        "sizeOnDisk": 1000
+      }
+    },
+    "library/readAcfState/20": {
+      "oracle": {
+        "state": "downloading",
+        "stateFlags": 1026,
+        "bytesDownloaded": 0,
+        "bytesToDownload": 0,
+        "bytesStaged": 0,
+        "bytesToStage": 0
+      }
+    },
+    "library/readAcfState/30/with-truncated-manifest": {
+      "oracle": {
+        "hangs": "@node-steam/vdf parse does not terminate on this input"
+      }
+    },
+    "library/readAcfState/40": {
+      "oracle": {
+        "state": "installed",
+        "stateFlags": 4,
+        "installPath": "${FIXTURES}/scan/lib2/steamapps/common/ScanLibTwo",
+        "sizeOnDisk": 1000
+      }
+    },
+    "library/readAcfState/99": {
+      "oracle": {
+        "state": "absent"
+      }
+    },
+    "library/scanDownloadingAppIds/scan": {
+      "oracle": ["20"]
+    },
+    "library/scanDownloadingAppIds/with-truncated-manifest": {
+      "oracle": {
+        "hangs": "@node-steam/vdf parse does not terminate on this input"
+      }
+    },
+    "raw/tree/acf/big-ids": {
+      "oracle": {
+        "appstate": {
+          "appid": "30",
+          "name": "Big Ids",
+          "stateflags": "4",
+          "installdir": "BigIds",
+          "lastowner": "76561198999999999",
+          "installeddepots": {
+            "31": {
+              "manifest": "9007199254740993",
+              "size": "1"
+            },
+            "32": {
+              "manifest": "9223372036854775807",
+              "size": "2"
+            }
+          }
+        }
+      }
+    },
+    "raw/tree/acf/bom": {
+      "oracle": {
+        "appstate": {
+          "appid": "90",
+          "name": "Bom Game",
+          "stateflags": "4",
+          "installdir": "BomGame"
+        }
+      }
+    },
+    "raw/tree/acf/coercion": {
+      "oracle": {
+        "appstate": {
+          "appid": "40",
+          "name": "1979",
+          "buildid": "0123",
+          "installdir": "1e3",
+          "hexval": "0x10",
+          "boolval": "true",
+          "stateflags": "4"
+        }
+      }
+    },
+    "raw/tree/acf/comments-unquoted": {
+      "oracle": {
+        "appstate": {}
+      }
+    },
+    "raw/tree/acf/crlf": {
+      "oracle": {
+        "appstate": {
+          "appid": "80",
+          "name": "Crlf Game",
+          "stateflags": "4",
+          "installdir": "CrlfGame"
+        }
+      }
+    },
+    "raw/tree/acf/downloading": {
+      "oracle": {
+        "appstate": {
+          "appid": "20",
+          "name": "Downloading Game",
+          "stateflags": "1026",
+          "installdir": "DownloadingGame",
+          "lastupdated": "1700000100",
+          "sizeondisk": "5000",
+          "buildid": "2222",
+          "targetbuildid": "3333",
+          "bytestodownload": "1048576",
+          "bytesdownloaded": "524288",
+          "bytestostage": "2097152",
+          "bytesstaged": "1048576",
+          "scheduledautoupdate": "1700003600"
+        }
+      }
+    },
+    "raw/tree/acf/duplicate-keys": {
+      "oracle": {
+        "appstate": {
+          "installdir": "ReopenedDir",
+          "buildid": "77"
+        }
+      }
+    },
+    "raw/tree/acf/empty": {
+      "oracle": {}
+    },
+    "raw/tree/acf/escapes": {
+      "oracle": {
+        "appstate": {
+          "appid": "50",
+          "name": "Say \"Hi\" \\ there",
+          "installdir": "Sub\\Dir",
+          "stateflags": "4"
+        }
+      }
+    },
+    "raw/tree/acf/installed": {
+      "oracle": {
+        "appstate": {
+          "appid": "10",
+          "universe": "1",
+          "name": "Synthetic Game",
+          "stateflags": "4",
+          "installdir": "SyntheticGame",
+          "lastupdated": "1700000000",
+          "sizeondisk": "123456789",
+          "buildid": "1234567",
+          "lastowner": "76561197960287930",
+          "installeddepots": {
+            "11": {
+              "manifest": "1000000000000000001",
+              "size": "100000"
+            },
+            "12": {
+              "manifest": "1000000000000000002",
+              "size": "200000",
+              "dlcappid": "13"
+            }
+          },
+          "userconfig": {
+            "language": "english",
+            "betakey": "beta_a"
+          }
+        }
+      }
+    },
+    "raw/tree/acf/lowercase-keys": {
+      "oracle": {
+        "appstate": {
+          "appid": "70",
+          "name": "Lowercase Keys",
+          "stateflags": "4",
+          "installdir": "lowercase",
+          "installeddepots": {
+            "71": {
+              "manifest": "1000000000000000071"
+            }
+          }
+        }
+      }
+    },
+    "raw/tree/acf/no-appstate": {
+      "oracle": {
+        "somethingelse": {
+          "appid": "140",
+          "name": "Wrong Root"
+        }
+      }
+    },
+    "raw/tree/acf/non-utf8": {
+      "oracle": {
+        "appstate": {
+          "appid": "110",
+          "name": "Caf� Game",
+          "stateflags": "4",
+          "installdir": "CafeGame"
+        }
+      }
+    },
+    "raw/tree/acf/truncated": {
+      "oracle": {
+        "appstate": {
+          "appid": "130",
+          "name": "Truncated",
+          "installeddepots": {
+            "131": {}
+          }
+        }
+      }
+    },
+    "raw/tree/acf/unbalanced": {
+      "oracle": {
+        "appstate": {
+          "appid": "120",
+          "name": "Unbalanced",
+          "userconfig": {
+            "language": "english"
+          }
+        }
+      }
+    },
+    "raw/tree/installscript/conditionals": {
+      "oracle": {
+        "installscript": {
+          "run process": {
+            "vc 2019": {
+              "process 1": "%INSTALLDIR%\\vcredist\\VC_redist.x64.exe",
+              "command 1": "/q /norestart"
+            }
+          }
+        }
+      }
+    },
+    "raw/tree/installscript/dotnet-duplicate": {
+      "oracle": {
+        "installscript": {
+          "run process": {
+            "4.8": {
+              "process 1": "%INSTALLDIR%\\_CommonRedist\\DotNet\\4.8\\NDP48-x86-x64-AllOS-ENU.exe",
+              "command 1": "/q /norestart",
+              "nocleanup": "1"
+            }
+          }
+        }
+      }
+    },
+    "raw/tree/installscript/escapes": {
+      "oracle": {
+        "installscript": {
+          "run process": {
+            "directx": {
+              "process 1": "%INSTALLDIR%\\Redist\\DXSETUP.exe",
+              "command 1": "/silent \"quoted\""
+            }
+          }
+        }
+      }
+    },
+    "raw/tree/installscript/malformed": {
+      "oracle": {
+        "installscript": {
+          "run process": {
+            "4.8": {}
+          }
+        }
+      }
+    },
+    "raw/tree/installscript/no-run-process": {
+      "oracle": {
+        "installscript": {
+          "registry": {
+            "hklm\\software\\synthetic": {
+              "key": "Value"
+            }
+          }
+        }
+      }
+    },
+    "raw/tree/libraryfolders/legacy": {
+      "oracle": {
+        "libraryfolders": {
+          "1": "${FIXTURES}/scan/lib1",
+          "2": "${FIXTURES}/scan/lib2",
+          "timenextstatsreport": "1500000000",
+          "contentstatsid": "-1234567890123456789"
+        }
+      }
+    },
+    "raw/tree/libraryfolders/malformed": {
+      "oracle": {
+        "libraryfolders": {
+          "0": {
+            "path": "${FIXTURES}/scan/lib1"
+          }
+        }
+      }
+    },
+    "raw/tree/libraryfolders/modern": {
+      "oracle": {
+        "libraryfolders": {
+          "0": {
+            "path": "${FIXTURES}/scan/lib1",
+            "label": "",
+            "contentid": "1111111111111111111",
+            "totalsize": "0",
+            "update_clean_bytes_tally": "0",
+            "time_last_update_corruption": "0",
+            "apps": {
+              "10": "123456789",
+              "20": "5000"
+            }
+          },
+          "1": {
+            "path": "${FIXTURES}/scan/lib2",
+            "label": "Second",
+            "contentid": "2222222222222222222",
+            "totalsize": "1000000",
+            "apps": {
+              "40": "42"
+            }
+          },
+          "2": {
+            "path": "${FIXTURES}/scan/missing-lib",
+            "label": "Gone"
+          }
+        }
+      }
+    },
+    "raw/tree/libraryfolders/windows-paths": {
+      "oracle": {
+        "libraryfolders": {
+          "0": {
+            "path": "C:\\Program Files (x86)\\Steam",
+            "label": ""
+          },
+          "1": {
+            "path": "C:\\Games\\SteamLibrary",
+            "label": "Games"
+          }
+        }
+      }
+    },
+    "raw/tree/localconfig/none": {
+      "oracle": {
+        "userlocalconfigstore": {
+          "software": {
+            "valve": {
+              "steam": {}
+            }
+          }
+        }
+      }
+    },
+    "raw/tree/localconfig/userappconfig": {
+      "oracle": {
+        "userlocalconfigstore": {
+          "software": {
+            "valve": {
+              "steam": {
+                "apps": {
+                  "10": {
+                    "betakey": "outside_block"
+                  }
+                }
+              }
+            }
+          },
+          "userappconfig": {
+            "10": {
+              "betakey": "626574615f61"
+            },
+            "20": {
+              "language": "english"
+            }
+          }
+        }
+      }
+    },
+    "raw/tree/registry/lowercase": {
+      "oracle": {
+        "registry": {
+          "hkcu": {
+            "software": {
+              "valve": {
+                "steam": {
+                  "runningappid": "1245620",
+                  "language": "english"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "raw/tree/registry/missing-key": {
+      "oracle": {
+        "registry": {
+          "hkcu": {
+            "software": {
+              "valve": {
+                "steam": {
+                  "autologinuser": "someone",
+                  "language": "english"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "raw/tree/registry/not-running": {
+      "oracle": {
+        "registry": {
+          "hkcu": {
+            "software": {
+              "valve": {
+                "steam": {
+                  "runningappid": "0",
+                  "language": "english"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "raw/tree/registry/running": {
+      "oracle": {
+        "registry": {
+          "hkcu": {
+            "software": {
+              "valve": {
+                "steam": {
+                  "runningappid": "1245620",
+                  "language": "english"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "raw/tree/valve/bad-file": {
+      "oracle": {
+        "steam_client_win64": {
+          "win64": {
+            "version": "1700000000",
+            "bins_win64": {
+              "file": "bins_win64.zip.zzzz",
+              "sha2": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "size": "1048576"
+            }
+          }
+        }
+      }
+    },
+    "raw/tree/valve/bad-sha": {
+      "oracle": {
+        "steam_client_win64": {
+          "win64": {
+            "version": "1700000000",
+            "bins_win64": {
+              "file": "bins_win64.zip.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sha2": "nothex",
+              "size": "1048576"
+            }
+          }
+        }
+      }
+    },
+    "raw/tree/valve/forbidden-proto": {
+      "oracle": {
+        "steam_client_win64": {
+          "win64": {
+            "version": "1700000000",
+            "bins_win64": {
+              "file": "bins_win64.zip.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sha2": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "size": "1048576"
+            }
+          }
+        }
+      }
+    },
+    "raw/tree/valve/good": {
+      "oracle": {
+        "steam_client_win64": {
+          "win64": {
+            "version": "1700000000",
+            "bins_win64": {
+              "file": "bins_win64.zip.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sha2": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "size": "1048576"
+            }
+          }
+        }
+      }
+    },
+    "raw/tree/valve/no-bins": {
+      "oracle": {
+        "steam_client_win64": {
+          "win64": {
+            "version": "1700000000"
+          }
+        }
+      }
+    },
+    "raw/tree/valve/no-win64": {
+      "oracle": {
+        "steam_client_win64": {
+          "linux64": {
+            "version": "1"
+          }
+        }
+      }
+    },
+    "raw/tree/valve/size-as-string": {
+      "oracle": {
+        "steam_client_win64": {
+          "win64": {
+            "version": "1700000000",
+            "bins_win64": {
+              "file": "bins_win64.zip.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sha2": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "size": "0000000042"
+            }
+          }
+        }
+      }
+    },
+    "raw/tree/valve/size-too-big": {
+      "oracle": {
+        "steam_client_win64": {
+          "win64": {
+            "version": "1700000000",
+            "bins_win64": {
+              "file": "bins_win64.zip.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sha2": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "size": "999999999999"
+            }
+          }
+        }
+      }
+    },
+    "raw/tree/valve/version-number": {
+      "oracle": {
+        "steam_client_win64": {
+          "win64": {
+            "version": "bins_win64",
+            "file": "bins_win64.zip.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "sha2": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "size": "1048576"
+          }
+        }
+      }
+    },
+    "raw/vdf/acf/big-ids": {
+      "oracle": {
+        "AppState": {
+          "appid": 30,
+          "name": "Big Ids",
+          "StateFlags": 4,
+          "installdir": "BigIds",
+          "LastOwner": 76561199000000000,
+          "InstalledDepots": {
+            "31": {
+              "manifest": 9007199254740992,
+              "size": 1
+            },
+            "32": {
+              "manifest": 9223372036854776000,
+              "size": 2
+            }
+          }
+        }
+      }
+    },
+    "raw/vdf/acf/bom": {
+      "oracle": {
+        "AppState": {
+          "appid": 90,
+          "name": "Bom Game",
+          "StateFlags": 4,
+          "installdir": "BomGame"
+        }
+      }
+    },
+    "raw/vdf/acf/coercion": {
+      "oracle": {
+        "AppState": {
+          "appid": 40,
+          "name": 1979,
+          "buildid": 123,
+          "installdir": 1000,
+          "hexval": 16,
+          "boolval": true,
+          "StateFlags": 4
+        }
+      }
+    },
+    "raw/vdf/acf/comments-unquoted": {
+      "oracle": {
+        "throws": "VDF | Parse: Invalid syntax on line 7"
+      }
+    },
+    "raw/vdf/acf/crlf": {
+      "oracle": {
+        "AppState": {
+          "appid": 80,
+          "name": "Crlf Game",
+          "StateFlags": 4,
+          "installdir": "CrlfGame"
+        }
+      }
+    },
+    "raw/vdf/acf/downloading": {
+      "oracle": {
+        "AppState": {
+          "appid": 20,
+          "name": "Downloading Game",
+          "StateFlags": 1026,
+          "installdir": "DownloadingGame",
+          "LastUpdated": 1700000100,
+          "SizeOnDisk": 5000,
+          "buildid": 2222,
+          "TargetBuildID": 3333,
+          "BytesToDownload": 1048576,
+          "BytesDownloaded": 524288,
+          "BytesToStage": 2097152,
+          "BytesStaged": 1048576,
+          "ScheduledAutoUpdate": 1700003600
+        }
+      }
+    },
+    "raw/vdf/acf/duplicate-keys": {
+      "oracle": {
+        "AppState": {
+          "appid": 60,
+          "name": "Second Name",
+          "StateFlags": 4,
+          "installdir": "ReopenedDir",
+          "buildid": 77
+        }
+      }
+    },
+    "raw/vdf/acf/empty": {
+      "oracle": {}
+    },
+    "raw/vdf/acf/escapes": {
+      "oracle": {
+        "AppState": {
+          "appid": 50,
+          "name": "Say \\\"Hi\\\" \\\\ there",
+          "installdir": "Sub\\\\Dir",
+          "StateFlags": 4
+        }
+      }
+    },
+    "raw/vdf/acf/installed": {
+      "oracle": {
+        "AppState": {
+          "appid": 10,
+          "Universe": 1,
+          "name": "Synthetic Game",
+          "StateFlags": 4,
+          "installdir": "SyntheticGame",
+          "LastUpdated": 1700000000,
+          "SizeOnDisk": 123456789,
+          "buildid": 1234567,
+          "LastOwner": 76561197960287940,
+          "InstalledDepots": {
+            "11": {
+              "manifest": 1000000000000000000,
+              "size": 100000
+            },
+            "12": {
+              "manifest": 1000000000000000000,
+              "size": 200000,
+              "dlcappid": 13
+            }
+          },
+          "UserConfig": {
+            "language": "english",
+            "BetaKey": "beta_a"
+          }
+        }
+      }
+    },
+    "raw/vdf/acf/lowercase-keys": {
+      "oracle": {
+        "appstate": {
+          "appid": 70,
+          "name": "Lowercase Keys",
+          "stateflags": 4,
+          "installdir": "lowercase",
+          "installeddepots": {
+            "71": {
+              "manifest": 1000000000000000100
+            }
+          }
+        }
+      }
+    },
+    "raw/vdf/acf/no-appstate": {
+      "oracle": {
+        "SomethingElse": {
+          "appid": 140,
+          "name": "Wrong Root"
+        }
+      }
+    },
+    "raw/vdf/acf/non-utf8": {
+      "oracle": {
+        "AppState": {
+          "appid": 110,
+          "name": "Caf� Game",
+          "StateFlags": 4,
+          "installdir": "CafeGame"
+        }
+      }
+    },
+    "raw/vdf/acf/truncated": {
+      "oracle": {
+        "hangs": "@node-steam/vdf parse does not terminate on this input"
+      }
+    },
+    "raw/vdf/acf/unbalanced": {
+      "oracle": {
+        "throws": "VDF | Parse: Open parentheses somewhere"
+      }
+    },
+    "raw/vdf/installscript/conditionals": {
+      "oracle": {
+        "InstallScript": {
+          "Run Process": {
+            "VC 2019": {
+              "Process 1": "%INSTALLDIR%\\\\vcredist\\\\VC_redist.x64.exe",
+              "Command 1": "/q /norestart"
+            }
+          }
+        }
+      }
+    },
+    "raw/vdf/installscript/dotnet-duplicate": {
+      "oracle": {
+        "InstallScript": {
+          "Run Process": {
+            "4.8": {
+              "Process 1": "%INSTALLDIR%\\\\_CommonRedist\\\\DotNet\\\\4.8\\\\NDP48-x86-x64-AllOS-ENU.exe",
+              "Command 1": "/q /norestart",
+              "NoCleanUp": 1
+            }
+          }
+        }
+      }
+    },
+    "raw/vdf/installscript/escapes": {
+      "oracle": {
+        "InstallScript": {
+          "Run Process": {
+            "DirectX": {
+              "Process 1": "%INSTALLDIR%\\\\Redist\\\\DXSETUP.exe",
+              "Command 1": "/silent \\\"quoted\\\""
+            }
+          }
+        }
+      }
+    },
+    "raw/vdf/installscript/malformed": {
+      "oracle": {
+        "hangs": "@node-steam/vdf parse does not terminate on this input"
+      }
+    },
+    "raw/vdf/installscript/no-run-process": {
+      "oracle": {
+        "InstallScript": {
+          "Registry": {
+            "HKLM\\\\Software\\\\Synthetic": {
+              "Key": "Value"
+            }
+          }
+        }
+      }
+    },
+    "raw/vdf/libraryfolders/legacy": {
+      "oracle": {
+        "LibraryFolders": {
+          "1": "${FIXTURES}/scan/lib1",
+          "2": "${FIXTURES}/scan/lib2",
+          "TimeNextStatsReport": 1500000000,
+          "ContentStatsID": -1234567890123456800
+        }
+      }
+    },
+    "raw/vdf/libraryfolders/malformed": {
+      "oracle": {
+        "throws": "VDF | Parse: Open parentheses somewhere"
+      }
+    },
+    "raw/vdf/libraryfolders/modern": {
+      "oracle": {
+        "libraryfolders": {
+          "0": {
+            "path": "${FIXTURES}/scan/lib1",
+            "label": "",
+            "contentid": 1111111111111111200,
+            "totalsize": 0,
+            "update_clean_bytes_tally": 0,
+            "time_last_update_corruption": 0,
+            "apps": {
+              "10": 123456789,
+              "20": 5000
+            }
+          },
+          "1": {
+            "path": "${FIXTURES}/scan/lib2",
+            "label": "Second",
+            "contentid": 2222222222222222300,
+            "totalsize": 1000000,
+            "apps": {
+              "40": 42
+            }
+          },
+          "2": {
+            "path": "${FIXTURES}/scan/missing-lib",
+            "label": "Gone"
+          }
+        }
+      }
+    },
+    "raw/vdf/libraryfolders/windows-paths": {
+      "oracle": {
+        "libraryfolders": {
+          "0": {
+            "path": "C:\\\\Program Files (x86)\\\\Steam",
+            "label": ""
+          },
+          "1": {
+            "path": "C:\\\\Games\\\\SteamLibrary",
+            "label": "Games"
+          }
+        }
+      }
+    },
+    "raw/vdf/localconfig/none": {
+      "oracle": {
+        "UserLocalConfigStore": {
+          "Software": {
+            "Valve": {
+              "Steam": {}
+            }
+          }
+        }
+      }
+    },
+    "raw/vdf/localconfig/userappconfig": {
+      "oracle": {
+        "UserLocalConfigStore": {
+          "Software": {
+            "Valve": {
+              "Steam": {
+                "apps": {
+                  "10": {
+                    "BetaKey": "outside_block"
+                  }
+                }
+              }
+            }
+          },
+          "UserAppConfig": {
+            "10": {
+              "BetaKey": "626574615f61"
+            },
+            "20": {
+              "language": "english"
+            }
+          }
+        }
+      }
+    },
+    "raw/vdf/registry/lowercase": {
+      "oracle": {
+        "Registry": {
+          "HKCU": {
+            "Software": {
+              "Valve": {
+                "Steam": {
+                  "runningappid": 1245620,
+                  "language": "english"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "raw/vdf/registry/missing-key": {
+      "oracle": {
+        "Registry": {
+          "HKCU": {
+            "Software": {
+              "Valve": {
+                "Steam": {
+                  "AutoLoginUser": "someone",
+                  "language": "english"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "raw/vdf/registry/not-running": {
+      "oracle": {
+        "Registry": {
+          "HKCU": {
+            "Software": {
+              "Valve": {
+                "Steam": {
+                  "RunningAppID": 0,
+                  "language": "english"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "raw/vdf/registry/running": {
+      "oracle": {
+        "Registry": {
+          "HKCU": {
+            "Software": {
+              "Valve": {
+                "Steam": {
+                  "RunningAppID": 1245620,
+                  "language": "english"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "raw/vdf/valve/bad-file": {
+      "oracle": {
+        "steam_client_win64": {
+          "win64": {
+            "version": 1700000000,
+            "bins_win64": {
+              "file": "bins_win64.zip.zzzz",
+              "sha2": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "size": 1048576
+            }
+          }
+        }
+      }
+    },
+    "raw/vdf/valve/bad-sha": {
+      "oracle": {
+        "steam_client_win64": {
+          "win64": {
+            "version": 1700000000,
+            "bins_win64": {
+              "file": "bins_win64.zip.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sha2": "nothex",
+              "size": 1048576
+            }
+          }
+        }
+      }
+    },
+    "raw/vdf/valve/forbidden-proto": {
+      "oracle": {
+        "skipped": "forbidden key guard runs before parse (D-05)"
+      }
+    },
+    "raw/vdf/valve/good": {
+      "oracle": {
+        "steam_client_win64": {
+          "win64": {
+            "version": 1700000000,
+            "bins_win64": {
+              "file": "bins_win64.zip.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sha2": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "size": 1048576
+            }
+          }
+        }
+      }
+    },
+    "raw/vdf/valve/no-bins": {
+      "oracle": {
+        "steam_client_win64": {
+          "win64": {
+            "version": 1700000000
+          }
+        }
+      }
+    },
+    "raw/vdf/valve/no-win64": {
+      "oracle": {
+        "steam_client_win64": {
+          "linux64": {
+            "version": 1
+          }
+        }
+      }
+    },
+    "raw/vdf/valve/size-as-string": {
+      "oracle": {
+        "steam_client_win64": {
+          "win64": {
+            "version": 1700000000,
+            "bins_win64": {
+              "file": "bins_win64.zip.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sha2": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "size": 42
+            }
+          }
+        }
+      }
+    },
+    "raw/vdf/valve/size-too-big": {
+      "oracle": {
+        "steam_client_win64": {
+          "win64": {
+            "version": 1700000000,
+            "bins_win64": {
+              "file": "bins_win64.zip.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sha2": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "size": 999999999999
+            }
+          }
+        }
+      }
+    },
+    "raw/vdf/valve/version-number": {
+      "oracle": {
+        "steam_client_win64": {
+          "win64": {
+            "version": 1700000000,
+            "bins_win64": {
+              "file": "bins_win64.zip.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sha2": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "size": 1048576
+            }
+          }
+        }
+      }
+    },
+    "shortcuts/edit-add/one-entry": {
+      "oracle": {
+        "written": "0073686f727463757473000030000261707069640001000080014170704e616d650053796e7468657469632047616d65000145786500222f6f70742f67616d656c69622f67616d656c6962220001537461727444697200222f6f70742f67616d656c696222000169636f6e002f686f6d652f73796e7468657469632f69636f6e732f31302e706e67000153686f7274637574506174680000014c61756e63684f7074696f6e73002d2d6e6f2d677569202d2d6e6f2d73616e64626f78202267616d656c69623a2f2f6c61756e63683f6170704e616d653d31302672756e6e65723d6c6567656e64617279220002497348696464656e000000000002416c6c6f774465736b746f70436f6e666967000100000002416c6c6f774f7665726c61790001000000024f70656e56520000000000024465766b69740000000000014465766b697447616d6549440000024465766b69744f7665727269646541707049440000000000024c617374506c617954696d650000f1536501466c617470616b417070494400000074616773000808003100014170704e616d6500476f6c64656e2047616d65000145786500222f782f67616d656c6962220001537461727444697200222f7822000261707069640087d61200014c61756e63684f7074696f6e73002d2d6e6f2d6775690002497348696464656e000000000002416c6c6f774465736b746f70436f6e666967000100000002416c6c6f774f7665726c61790001000000024f70656e56520000000000024465766b69740000000000024465766b69744f7665727269646541707049440000000000024c617374506c617954696d650000f15365080808",
+        "reparsed": {
+          "shortcuts": [
+            {
+              "appid": -2147483647,
+              "AppName": "Synthetic Game",
+              "Exe": "\"/opt/gamelib/gamelib\"",
+              "StartDir": "\"/opt/gamelib\"",
+              "icon": "/home/synthetic/icons/10.png",
+              "ShortcutPath": "",
+              "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+              "IsHidden": false,
+              "AllowDesktopConfig": true,
+              "AllowOverlay": true,
+              "OpenVR": false,
+              "Devkit": false,
+              "DevkitGameID": "",
+              "DevkitOverrideAppID": false,
+              "LastPlayTime": 1700000000,
+              "FlatpakAppID": "",
+              "tags": []
+            },
+            {
+              "AppName": "Golden Game",
+              "Exe": "\"/x/gamelib\"",
+              "StartDir": "\"/x\"",
+              "appid": 1234567,
+              "LaunchOptions": "--no-gui",
+              "IsHidden": false,
+              "AllowDesktopConfig": true,
+              "AllowOverlay": true,
+              "OpenVR": false,
+              "Devkit": false,
+              "DevkitOverrideAppID": false,
+              "LastPlayTime": 1700000000
+            }
+          ]
+        },
+        "numericKeys": ["0", "1"]
+      }
+    },
+    "shortcuts/edit-add/sparse-indexes": {
+      "oracle": {
+        "written": "0073686f727463757473000030000261707069640001000080014170704e616d65005a65726f000145786500222f6f70742f67616d656c69622f67616d656c6962220001537461727444697200222f6f70742f67616d656c696222000169636f6e002f686f6d652f73796e7468657469632f69636f6e732f31302e706e67000153686f7274637574506174680000014c61756e63684f7074696f6e73002d2d6e6f2d677569202d2d6e6f2d73616e64626f78202267616d656c69623a2f2f6c61756e63683f6170704e616d653d31302672756e6e65723d6c6567656e64617279220002497348696464656e000000000002416c6c6f774465736b746f70436f6e666967000100000002416c6c6f774f7665726c61790001000000024f70656e56520000000000024465766b69740000000000014465766b697447616d6549440000024465766b69744f7665727269646541707049440000000000024c617374506c617954696d650000f1536501466c617470616b417070494400000074616773000808013100000032000261707069640003000080014170704e616d650054776f000145786500222f6f70742f67616d656c69622f67616d656c6962220001537461727444697200222f6f70742f67616d656c696222000169636f6e002f686f6d652f73796e7468657469632f69636f6e732f31302e706e67000153686f7274637574506174680000014c61756e63684f7074696f6e73002d2d6e6f2d677569202d2d6e6f2d73616e64626f78202267616d656c69623a2f2f6c61756e63683f6170704e616d653d31302672756e6e65723d6c6567656e64617279220002497348696464656e000000000002416c6c6f774465736b746f70436f6e666967000100000002416c6c6f774f7665726c61790001000000024f70656e56520000000000024465766b69740000000000014465766b697447616d6549440000024465766b69744f7665727269646541707049440000000000024c617374506c617954696d650000f1536501466c617470616b417070494400000074616773000808003300014170704e616d6500476f6c64656e2047616d65000145786500222f782f67616d656c6962220001537461727444697200222f7822000261707069640087d61200014c61756e63684f7074696f6e73002d2d6e6f2d6775690002497348696464656e000000000002416c6c6f774465736b746f70436f6e666967000100000002416c6c6f774f7665726c61790001000000024f70656e56520000000000024465766b69740000000000024465766b69744f7665727269646541707049440000000000024c617374506c617954696d650000f15365080808",
+        "reparsed": {
+          "shortcuts": [
+            {
+              "appid": -2147483647,
+              "AppName": "Zero",
+              "Exe": "\"/opt/gamelib/gamelib\"",
+              "StartDir": "\"/opt/gamelib\"",
+              "icon": "/home/synthetic/icons/10.png",
+              "ShortcutPath": "",
+              "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+              "IsHidden": false,
+              "AllowDesktopConfig": true,
+              "AllowOverlay": true,
+              "OpenVR": false,
+              "Devkit": false,
+              "DevkitGameID": "",
+              "DevkitOverrideAppID": false,
+              "LastPlayTime": 1700000000,
+              "FlatpakAppID": "",
+              "tags": []
+            },
+            "",
+            {
+              "appid": -2147483645,
+              "AppName": "Two",
+              "Exe": "\"/opt/gamelib/gamelib\"",
+              "StartDir": "\"/opt/gamelib\"",
+              "icon": "/home/synthetic/icons/10.png",
+              "ShortcutPath": "",
+              "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+              "IsHidden": false,
+              "AllowDesktopConfig": true,
+              "AllowOverlay": true,
+              "OpenVR": false,
+              "Devkit": false,
+              "DevkitGameID": "",
+              "DevkitOverrideAppID": false,
+              "LastPlayTime": 1700000000,
+              "FlatpakAppID": "",
+              "tags": []
+            },
+            {
+              "AppName": "Golden Game",
+              "Exe": "\"/x/gamelib\"",
+              "StartDir": "\"/x\"",
+              "appid": 1234567,
+              "LaunchOptions": "--no-gui",
+              "IsHidden": false,
+              "AllowDesktopConfig": true,
+              "AllowOverlay": true,
+              "OpenVR": false,
+              "Devkit": false,
+              "DevkitOverrideAppID": false,
+              "LastPlayTime": 1700000000
+            }
+          ]
+        },
+        "numericKeys": ["0", "1", "2", "3"]
+      }
+    },
+    "shortcuts/edit-add/two-entries": {
+      "oracle": {
+        "written": "0073686f727463757473000030000261707069640001000080014170704e616d650046697273742047616d65000145786500222f6f70742f67616d656c69622f67616d656c6962220001537461727444697200222f6f70742f67616d656c696222000169636f6e002f686f6d652f73796e7468657469632f69636f6e732f31302e706e67000153686f7274637574506174680000014c61756e63684f7074696f6e73002d2d6e6f2d677569202d2d6e6f2d73616e64626f78202267616d656c69623a2f2f6c61756e63683f6170704e616d653d31302672756e6e65723d6c6567656e64617279220002497348696464656e000000000002416c6c6f774465736b746f70436f6e666967000100000002416c6c6f774f7665726c61790001000000024f70656e56520000000000024465766b69740000000000014465766b697447616d6549440000024465766b69744f7665727269646541707049440000000000024c617374506c617954696d650000f1536501466c617470616b4170704944000000746167730008080031000261707069640002000080014170704e616d65005365636f6e642047616d65000145786500222f6f70742f67616d656c69622f67616d656c6962220001537461727444697200222f6f70742f67616d656c696222000169636f6e002f686f6d652f73796e7468657469632f69636f6e732f31302e706e67000153686f7274637574506174680000014c61756e63684f7074696f6e73002d2d6e6f2d677569202d2d6e6f2d73616e64626f78202267616d656c69623a2f2f6c61756e63683f6170704e616d653d31302672756e6e65723d6c6567656e64617279220002497348696464656e000000000002416c6c6f774465736b746f70436f6e666967000100000002416c6c6f774f7665726c61790001000000024f70656e56520000000000024465766b69740000000000014465766b697447616d6549440000024465766b69744f7665727269646541707049440000000000024c617374506c617954696d650000f1536501466c617470616b417070494400000074616773000808003200014170704e616d6500476f6c64656e2047616d65000145786500222f782f67616d656c6962220001537461727444697200222f7822000261707069640087d61200014c61756e63684f7074696f6e73002d2d6e6f2d6775690002497348696464656e000000000002416c6c6f774465736b746f70436f6e666967000100000002416c6c6f774f7665726c61790001000000024f70656e56520000000000024465766b69740000000000024465766b69744f7665727269646541707049440000000000024c617374506c617954696d650000f15365080808",
+        "reparsed": {
+          "shortcuts": [
+            {
+              "appid": -2147483647,
+              "AppName": "First Game",
+              "Exe": "\"/opt/gamelib/gamelib\"",
+              "StartDir": "\"/opt/gamelib\"",
+              "icon": "/home/synthetic/icons/10.png",
+              "ShortcutPath": "",
+              "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+              "IsHidden": false,
+              "AllowDesktopConfig": true,
+              "AllowOverlay": true,
+              "OpenVR": false,
+              "Devkit": false,
+              "DevkitGameID": "",
+              "DevkitOverrideAppID": false,
+              "LastPlayTime": 1700000000,
+              "FlatpakAppID": "",
+              "tags": []
+            },
+            {
+              "appid": -2147483646,
+              "AppName": "Second Game",
+              "Exe": "\"/opt/gamelib/gamelib\"",
+              "StartDir": "\"/opt/gamelib\"",
+              "icon": "/home/synthetic/icons/10.png",
+              "ShortcutPath": "",
+              "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+              "IsHidden": false,
+              "AllowDesktopConfig": true,
+              "AllowOverlay": true,
+              "OpenVR": false,
+              "Devkit": false,
+              "DevkitGameID": "",
+              "DevkitOverrideAppID": false,
+              "LastPlayTime": 1700000000,
+              "FlatpakAppID": "",
+              "tags": []
+            },
+            {
+              "AppName": "Golden Game",
+              "Exe": "\"/x/gamelib\"",
+              "StartDir": "\"/x\"",
+              "appid": 1234567,
+              "LaunchOptions": "--no-gui",
+              "IsHidden": false,
+              "AllowDesktopConfig": true,
+              "AllowOverlay": true,
+              "OpenVR": false,
+              "Devkit": false,
+              "DevkitOverrideAppID": false,
+              "LastPlayTime": 1700000000
+            }
+          ]
+        },
+        "numericKeys": ["0", "1", "2"]
+      }
+    },
+    "shortcuts/edit-add/upstream/shortcuts_valid": {
+      "oracle": {
+        "written": "0073686f7274637574730000300002617070696400a46eac9e014170704e616d6500446973636f7264000145786500222f7573722f73686172652f646973636f72642f446973636f7264220001537461727444697200222f7573722f73686172652f646973636f72642f22000169636f6e00000153686f727463757450617468002f7573722f73686172652f6170706c69636174696f6e732f646973636f72642e6465736b746f7000014c61756e63684f7074696f6e73000002497348696464656e000000000002416c6c6f774465736b746f70436f6e666967000100000002416c6c6f774f7665726c61790001000000024f70656e56520000000000024465766b69740000000000014465766b697447616d6549440000024465766b69744f7665727269646541707049440000000000024c617374506c617954696d65000000000001466c617470616b417070494400000074616773000808003100014170704e616d6500476f6c64656e2047616d65000145786500222f782f67616d656c6962220001537461727444697200222f7822000261707069640087d61200014c61756e63684f7074696f6e73002d2d6e6f2d6775690002497348696464656e000000000002416c6c6f774465736b746f70436f6e666967000100000002416c6c6f774f7665726c61790001000000024f70656e56520000000000024465766b69740000000000024465766b69744f7665727269646541707049440000000000024c617374506c617954696d650000f15365080808",
+        "reparsed": {
+          "shortcuts": [
+            {
+              "appid": -1632866652,
+              "AppName": "Discord",
+              "Exe": "\"/usr/share/discord/Discord\"",
+              "StartDir": "\"/usr/share/discord/\"",
+              "icon": "",
+              "ShortcutPath": "/usr/share/applications/discord.desktop",
+              "LaunchOptions": "",
+              "IsHidden": false,
+              "AllowDesktopConfig": true,
+              "AllowOverlay": true,
+              "OpenVR": false,
+              "Devkit": false,
+              "DevkitGameID": "",
+              "DevkitOverrideAppID": false,
+              "LastPlayTime": 0,
+              "FlatpakAppID": "",
+              "tags": []
+            },
+            {
+              "AppName": "Golden Game",
+              "Exe": "\"/x/gamelib\"",
+              "StartDir": "\"/x\"",
+              "appid": 1234567,
+              "LaunchOptions": "--no-gui",
+              "IsHidden": false,
+              "AllowDesktopConfig": true,
+              "AllowOverlay": true,
+              "OpenVR": false,
+              "Devkit": false,
+              "DevkitOverrideAppID": false,
+              "LastPlayTime": 1700000000
+            }
+          ]
+        },
+        "numericKeys": ["0", "1"]
+      }
+    },
+    "shortcuts/edit-remove-first/one-entry": {
+      "oracle": {
+        "title": "Synthetic Game",
+        "index": 0,
+        "written": "0073686f727463757473000808",
+        "reparsed": {
+          "shortcuts": []
+        },
+        "numericKeys": []
+      }
+    },
+    "shortcuts/edit-remove-first/sparse-indexes": {
+      "oracle": {
+        "title": "Zero",
+        "index": 0,
+        "written": "0073686f72746375747300013000000031000261707069640003000080014170704e616d650054776f000145786500222f6f70742f67616d656c69622f67616d656c6962220001537461727444697200222f6f70742f67616d656c696222000169636f6e002f686f6d652f73796e7468657469632f69636f6e732f31302e706e67000153686f7274637574506174680000014c61756e63684f7074696f6e73002d2d6e6f2d677569202d2d6e6f2d73616e64626f78202267616d656c69623a2f2f6c61756e63683f6170704e616d653d31302672756e6e65723d6c6567656e64617279220002497348696464656e000000000002416c6c6f774465736b746f70436f6e666967000100000002416c6c6f774f7665726c61790001000000024f70656e56520000000000024465766b69740000000000014465766b697447616d6549440000024465766b69744f7665727269646541707049440000000000024c617374506c617954696d650000f1536501466c617470616b4170704944000000746167730008080808",
+        "reparsed": {
+          "shortcuts": [
+            "",
+            {
+              "appid": -2147483645,
+              "AppName": "Two",
+              "Exe": "\"/opt/gamelib/gamelib\"",
+              "StartDir": "\"/opt/gamelib\"",
+              "icon": "/home/synthetic/icons/10.png",
+              "ShortcutPath": "",
+              "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+              "IsHidden": false,
+              "AllowDesktopConfig": true,
+              "AllowOverlay": true,
+              "OpenVR": false,
+              "Devkit": false,
+              "DevkitGameID": "",
+              "DevkitOverrideAppID": false,
+              "LastPlayTime": 1700000000,
+              "FlatpakAppID": "",
+              "tags": []
+            }
+          ]
+        },
+        "numericKeys": ["0", "1"]
+      }
+    },
+    "shortcuts/edit-remove-first/two-entries": {
+      "oracle": {
+        "title": "First Game",
+        "index": 0,
+        "written": "0073686f727463757473000030000261707069640002000080014170704e616d65005365636f6e642047616d65000145786500222f6f70742f67616d656c69622f67616d656c6962220001537461727444697200222f6f70742f67616d656c696222000169636f6e002f686f6d652f73796e7468657469632f69636f6e732f31302e706e67000153686f7274637574506174680000014c61756e63684f7074696f6e73002d2d6e6f2d677569202d2d6e6f2d73616e64626f78202267616d656c69623a2f2f6c61756e63683f6170704e616d653d31302672756e6e65723d6c6567656e64617279220002497348696464656e000000000002416c6c6f774465736b746f70436f6e666967000100000002416c6c6f774f7665726c61790001000000024f70656e56520000000000024465766b69740000000000014465766b697447616d6549440000024465766b69744f7665727269646541707049440000000000024c617374506c617954696d650000f1536501466c617470616b4170704944000000746167730008080808",
+        "reparsed": {
+          "shortcuts": [
+            {
+              "appid": -2147483646,
+              "AppName": "Second Game",
+              "Exe": "\"/opt/gamelib/gamelib\"",
+              "StartDir": "\"/opt/gamelib\"",
+              "icon": "/home/synthetic/icons/10.png",
+              "ShortcutPath": "",
+              "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+              "IsHidden": false,
+              "AllowDesktopConfig": true,
+              "AllowOverlay": true,
+              "OpenVR": false,
+              "Devkit": false,
+              "DevkitGameID": "",
+              "DevkitOverrideAppID": false,
+              "LastPlayTime": 1700000000,
+              "FlatpakAppID": "",
+              "tags": []
+            }
+          ]
+        },
+        "numericKeys": ["0"]
+      }
+    },
+    "shortcuts/edit-remove-first/upstream/shortcuts_valid": {
+      "oracle": {
+        "title": "Discord",
+        "index": 0,
+        "written": "0073686f727463757473000808",
+        "reparsed": {
+          "shortcuts": []
+        },
+        "numericKeys": []
+      }
+    },
+    "shortcuts/parse/empty": {
+      "oracle": {
+        "shortcuts": []
+      }
+    },
+    "shortcuts/parse/lexical-order": {
+      "oracle": {
+        "shortcuts": [
+          {
+            "appid": -2147483647,
+            "AppName": "Zero",
+            "Exe": "\"/opt/gamelib/gamelib\"",
+            "StartDir": "\"/opt/gamelib\"",
+            "icon": "/home/synthetic/icons/10.png",
+            "ShortcutPath": "",
+            "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitGameID": "",
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 1700000000,
+            "FlatpakAppID": "",
+            "tags": []
+          },
+          {
+            "appid": -2147483646,
+            "AppName": "One",
+            "Exe": "\"/opt/gamelib/gamelib\"",
+            "StartDir": "\"/opt/gamelib\"",
+            "icon": "/home/synthetic/icons/10.png",
+            "ShortcutPath": "",
+            "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitGameID": "",
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 1700000000,
+            "FlatpakAppID": "",
+            "tags": []
+          },
+          {
+            "appid": -2147483645,
+            "AppName": "Two",
+            "Exe": "\"/opt/gamelib/gamelib\"",
+            "StartDir": "\"/opt/gamelib\"",
+            "icon": "/home/synthetic/icons/10.png",
+            "ShortcutPath": "",
+            "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitGameID": "",
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 1700000000,
+            "FlatpakAppID": "",
+            "tags": []
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "appid": -2147483637,
+            "AppName": "Ten",
+            "Exe": "\"/opt/gamelib/gamelib\"",
+            "StartDir": "\"/opt/gamelib\"",
+            "icon": "/home/synthetic/icons/10.png",
+            "ShortcutPath": "",
+            "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitGameID": "",
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 1700000000,
+            "FlatpakAppID": "",
+            "tags": []
+          }
+        ]
+      }
+    },
+    "shortcuts/parse/negative-appid": {
+      "oracle": {
+        "shortcuts": [
+          {
+            "appid": -2,
+            "AppName": "Negative Appid",
+            "Exe": "\"/opt/gamelib/gamelib\"",
+            "StartDir": "\"/opt/gamelib\"",
+            "icon": "/home/synthetic/icons/10.png",
+            "ShortcutPath": "",
+            "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitGameID": "",
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 1700000000,
+            "FlatpakAppID": "",
+            "tags": []
+          }
+        ]
+      }
+    },
+    "shortcuts/parse/non-utf8": {
+      "oracle": {
+        "shortcuts": [
+          {
+            "appid": -2147483645,
+            "AppName": "Caf� Game",
+            "Exe": "\"/opt/gamelib/gamelib\"",
+            "StartDir": "\"/opt/gamelib\"",
+            "icon": "/home/synthetic/icons/10.png",
+            "ShortcutPath": "",
+            "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitGameID": "",
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 1700000000,
+            "FlatpakAppID": "",
+            "tags": []
+          }
+        ]
+      }
+    },
+    "shortcuts/parse/one-entry": {
+      "oracle": {
+        "shortcuts": [
+          {
+            "appid": -2147483647,
+            "AppName": "Synthetic Game",
+            "Exe": "\"/opt/gamelib/gamelib\"",
+            "StartDir": "\"/opt/gamelib\"",
+            "icon": "/home/synthetic/icons/10.png",
+            "ShortcutPath": "",
+            "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitGameID": "",
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 1700000000,
+            "FlatpakAppID": "",
+            "tags": []
+          }
+        ]
+      }
+    },
+    "shortcuts/parse/sparse-indexes": {
+      "oracle": {
+        "shortcuts": [
+          {
+            "appid": -2147483647,
+            "AppName": "Zero",
+            "Exe": "\"/opt/gamelib/gamelib\"",
+            "StartDir": "\"/opt/gamelib\"",
+            "icon": "/home/synthetic/icons/10.png",
+            "ShortcutPath": "",
+            "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitGameID": "",
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 1700000000,
+            "FlatpakAppID": "",
+            "tags": []
+          },
+          null,
+          {
+            "appid": -2147483645,
+            "AppName": "Two",
+            "Exe": "\"/opt/gamelib/gamelib\"",
+            "StartDir": "\"/opt/gamelib\"",
+            "icon": "/home/synthetic/icons/10.png",
+            "ShortcutPath": "",
+            "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitGameID": "",
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 1700000000,
+            "FlatpakAppID": "",
+            "tags": []
+          }
+        ]
+      }
+    },
+    "shortcuts/parse/tags": {
+      "oracle": {
+        "shortcuts": [
+          {
+            "appid": -2147483647,
+            "AppName": "Tagged Game",
+            "Exe": "\"/opt/gamelib/gamelib\"",
+            "StartDir": "\"/opt/gamelib\"",
+            "icon": "/home/synthetic/icons/10.png",
+            "ShortcutPath": "",
+            "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitGameID": "",
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 1700000000,
+            "FlatpakAppID": "",
+            "tags": ["fav", "ok"]
+          }
+        ]
+      }
+    },
+    "shortcuts/parse/trailing-bytes": {
+      "oracle": {
+        "shortcuts": [
+          {
+            "appid": -2147483647,
+            "AppName": "Synthetic Game",
+            "Exe": "\"/opt/gamelib/gamelib\"",
+            "StartDir": "\"/opt/gamelib\"",
+            "icon": "/home/synthetic/icons/10.png",
+            "ShortcutPath": "",
+            "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitGameID": "",
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 1700000000,
+            "FlatpakAppID": "",
+            "tags": []
+          }
+        ]
+      }
+    },
+    "shortcuts/parse/truncated": {
+      "oracle": {
+        "throws": "encountered error while handling property: shortcuts Error: encountered error while handling property: 0 Error: encountered error while handling property: AppName RangeError [ERR_OUT_OF_RANGE]: The value of \"offset\" is out of range. It must be >= 0 and <= 38. Received 39"
+      }
+    },
+    "shortcuts/parse/two-entries": {
+      "oracle": {
+        "shortcuts": [
+          {
+            "appid": -2147483647,
+            "AppName": "First Game",
+            "Exe": "\"/opt/gamelib/gamelib\"",
+            "StartDir": "\"/opt/gamelib\"",
+            "icon": "/home/synthetic/icons/10.png",
+            "ShortcutPath": "",
+            "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitGameID": "",
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 1700000000,
+            "FlatpakAppID": "",
+            "tags": []
+          },
+          {
+            "appid": -2147483646,
+            "AppName": "Second Game",
+            "Exe": "\"/opt/gamelib/gamelib\"",
+            "StartDir": "\"/opt/gamelib\"",
+            "icon": "/home/synthetic/icons/10.png",
+            "ShortcutPath": "",
+            "LaunchOptions": "--no-gui --no-sandbox \"gamelib://launch?appName=10&runner=legendary\"",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitGameID": "",
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 1700000000,
+            "FlatpakAppID": "",
+            "tags": []
+          }
+        ]
+      }
+    },
+    "shortcuts/parse/unknown-type": {
+      "oracle": {
+        "shortcuts": [
+          {
+            "appid": -2147483646,
+            "AppName": "Unknown Types",
+            "": {
+              "": {
+                "\u0003Ratio": {
+                  "": {}
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "shortcuts/parse/upstream/shortcuts_commandmc": {
+      "oracle": {
+        "shortcuts": [
+          {
+            "appid": -115583422,
+            "AppName": "Grand Theft Auto V",
+            "Exe": "\"/home/commandmc/Applications/Heroic-2.3.5_cf081abfafbe599bf048594934dab127.AppImage\"",
+            "StartDir": "\"/home/commandmc/Applications/\"",
+            "icon": "",
+            "ShortcutPath": "",
+            "LaunchOptions": "--no-gui \"heroic://launch/9d2d0eb64d5c44529cece33fe2a46482\"",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitGameID": "",
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 1654035014,
+            "FlatpakAppID": "",
+            "tags": []
+          }
+        ]
+      }
+    },
+    "shortcuts/parse/upstream/shortcuts_felipecrs": {
+      "oracle": {
+        "shortcuts": [
+          {
+            "appid": -427364066,
+            "appname": "Fall Guys",
+            "Exe": "\"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\"",
+            "StartDir": "\"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\\"",
+            "icon": "\"C:\\Program Files\\Epic Games\\FallGuys\\FallGuys_client_game.exe\"",
+            "ShortcutPath": "",
+            "LaunchOptions": "-WindowStyle hidden -ExecutionPolicy Bypass -File \"C:\\Games\\FallGuys.ps1\"",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitGameID": "",
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 1656378174,
+            "FlatpakAppID": "",
+            "tags": []
+          }
+        ]
+      }
+    },
+    "shortcuts/parse/upstream/shortcuts_missing_appname": {
+      "oracle": {
+        "shortcuts": [
+          {
+            "Exe": "\"undefined\"",
+            "StartDir": "\"/home/niklas/Repository/HeroicGamesLauncher\"",
+            "LaunchOptions": "--no-gui --no-sandbox \"heroic://launch/game\"",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 1655390766
+          }
+        ]
+      }
+    },
+    "shortcuts/parse/upstream/shortcuts_missing_exe": {
+      "oracle": {
+        "shortcuts": [
+          {
+            "AppName": "MyGame",
+            "StartDir": "\"/home/niklas/Repository/HeroicGamesLauncher\"",
+            "LaunchOptions": "--no-gui --no-sandbox \"heroic://launch/game\"",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 1655390849
+          }
+        ]
+      }
+    },
+    "shortcuts/parse/upstream/shortcuts_missing_launchoptions": {
+      "oracle": {
+        "shortcuts": [
+          {
+            "AppName": "MyGame",
+            "Exe": "\"undefined\"",
+            "StartDir": "\"/home/niklas/Repository/HeroicGamesLauncher\"",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 1655390896
+          }
+        ]
+      }
+    },
+    "shortcuts/parse/upstream/shortcuts_redromnon": {
+      "oracle": {
+        "shortcuts": [
+          {
+            "appid": false,
+            "AppName": "Fall Guys",
+            "Exe": "\"/home/redromnon/Documents/GIT/HeroicBash/HeroicBashLauncher/GameFiles/FallGuys_Heroic.sh\"",
+            "StartDir": "\"/home/redromnon/Documents/GIT/HeroicBash/HeroicBashLauncher/GameFiles/\"",
+            "icon": "",
+            "ShortcutPath": "",
+            "LaunchOptions": "",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitGameID": "",
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 0,
+            "tags": []
+          },
+          {
+            "appid": false,
+            "AppName": "Inside",
+            "Exe": "\"/home/redromnon/Documents/GIT/HeroicBash/HeroicBashLauncher/GameFiles/Inside_Heroic.sh\"",
+            "StartDir": "\"/home/redromnon/Documents/GIT/HeroicBash/HeroicBashLauncher/GameFiles/\"",
+            "icon": "",
+            "ShortcutPath": "",
+            "LaunchOptions": "",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitGameID": "",
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 0,
+            "tags": []
+          },
+          {
+            "appid": false,
+            "AppName": "Rocket League",
+            "Exe": "\"/home/redromnon/Documents/GIT/HeroicBash/HeroicBashLauncher/GameFiles/RocketLeague_Heroic.sh\"",
+            "StartDir": "\"/home/redromnon/Documents/GIT/HeroicBash/HeroicBashLauncher/GameFiles/\"",
+            "icon": "",
+            "ShortcutPath": "",
+            "LaunchOptions": "",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitGameID": "",
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 0,
+            "tags": []
+          }
+        ]
+      }
+    },
+    "shortcuts/parse/upstream/shortcuts_valid": {
+      "oracle": {
+        "shortcuts": [
+          {
+            "appid": -1632866652,
+            "AppName": "Discord",
+            "Exe": "\"/usr/share/discord/Discord\"",
+            "StartDir": "\"/usr/share/discord/\"",
+            "icon": "",
+            "ShortcutPath": "/usr/share/applications/discord.desktop",
+            "LaunchOptions": "",
+            "IsHidden": false,
+            "AllowDesktopConfig": true,
+            "AllowOverlay": true,
+            "OpenVR": false,
+            "Devkit": false,
+            "DevkitGameID": "",
+            "DevkitOverrideAppID": false,
+            "LastPlayTime": 0,
+            "FlatpakAppID": "",
+            "tags": []
+          }
+        ]
+      }
+    }
+  }
+}

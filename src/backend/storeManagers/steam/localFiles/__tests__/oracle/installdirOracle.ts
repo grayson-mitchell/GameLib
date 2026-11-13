@@ -1,7 +1,7 @@
 import { copyFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { readAcfInstalldir } from '../../../acfInstalldir'
-import { capture, listFiles, withFixtureCopy } from './normalize'
+import { listFiles, unlessHangs, withFixtureCopy } from './normalize'
 
 export async function captureInstalldir(): Promise<Record<string, unknown>> {
   const out: Record<string, unknown> = {}
@@ -11,14 +11,16 @@ export async function captureInstalldir(): Promise<Record<string, unknown>> {
       const dir = join(root, '_installdir', name)
       mkdirSync(dir, { recursive: true })
       copyFileSync(join(root, 'acf', file), join(dir, 'appmanifest_77.acf'))
-      out[`installdir/readAcfInstalldir/${name}`] = await capture(
-        () => readAcfInstalldir(dir, '77'),
-        root
+      out[`installdir/readAcfInstalldir/${name}`] = await unlessHangs(
+        `acf/${file}`,
+        root,
+        () => readAcfInstalldir(dir, '77')
       )
     }
-    out['installdir/readAcfInstalldir/missing'] = await capture(
-      () => readAcfInstalldir(join(root, '_installdir'), '77'),
-      root
+    out['installdir/readAcfInstalldir/missing'] = await unlessHangs(
+      '',
+      root,
+      () => readAcfInstalldir(join(root, '_installdir'), '77')
     )
   })
   return out

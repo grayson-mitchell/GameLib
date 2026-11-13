@@ -2,7 +2,7 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { parse } from '@node-steam/vdf'
 import { parseAcfTree } from '../../../acfInstalledDepots'
-import { capture, listFiles, withFixtureCopy } from './normalize'
+import { capture, listFiles, unlessHangs, withFixtureCopy } from './normalize'
 
 const TEXT_DIRS = [
   ['acf', '.acf'],
@@ -31,7 +31,7 @@ export async function captureRaw(): Promise<Record<string, unknown>> {
         out[`raw/vdf/${dir}/${name}`] =
           name === 'forbidden-proto'
             ? { skipped: 'forbidden key guard runs before parse (D-05)' }
-            : await capture(() => parse(text), root)
+            : await unlessHangs(`${dir}/${file}`, root, () => parse(text))
         out[`raw/tree/${dir}/${name}`] = await capture(
           () => parseAcfTree(text),
           root

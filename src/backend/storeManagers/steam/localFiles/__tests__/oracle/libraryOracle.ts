@@ -1,4 +1,4 @@
-import { mkdirSync, copyFileSync } from 'fs'
+import { mkdirSync, copyFileSync, rmSync } from 'fs'
 import { join } from 'path'
 import { getSteamLibraries } from 'backend/utils'
 import {
@@ -11,7 +11,7 @@ import {
   scanDownloadingAppIds
 } from '../../../library/acfState'
 import { breadcrumbAppIsFullyInstalledOnDisk } from '../../../library/resumeBreadcrumbs'
-import { capture, listFiles, withFixtureCopy } from './normalize'
+import { HANGS_MARKER, capture, listFiles, withFixtureCopy } from './normalize'
 
 /** Distro path getSteamLibraries always prepends; filtered when absent. */
 const SYSTEM_STEAM = '/usr/share/steam'
@@ -37,6 +37,20 @@ function steamRootWith(root: string, fixture: string, id: string): string {
 export async function captureLibrary(): Promise<Record<string, unknown>> {
   const out: Record<string, unknown> = {}
   await withFixtureCopy('', async (root) => {
+    // appmanifest_30.acf is truncated: @node-steam/vdf parse never returns on
+    // it (see VDF_PARSE_HANGS), so every scan that would reach it hangs. The
+    // scans run over a copy without it; the hang is recorded as its own case.
+    rmSync(join(root, 'scan', 'lib1', 'steamapps', 'appmanifest_30.acf'))
+    for (const fn of [
+      'buildInstalledMap',
+      'buildIncompleteInstallSet',
+      'scanDownloadingAppIds',
+      'findOtherManifestsWithInstalldir',
+      'readAcfState/30'
+    ]) {
+      out[`library/${fn}/with-truncated-manifest`] = HANGS_MARKER
+    }
+
     const stripSystem = (libs: string[]) =>
       libs.filter((l) => l !== SYSTEM_STEAM)
 
@@ -65,7 +79,7 @@ export async function captureLibrary(): Promise<Record<string, unknown>> {
       () => buildIncompleteInstallSet(deps),
       root
     )
-    for (const appId of ['10', '20', '30', '40', '99']) {
+    for (const appId of ['10', '20', '40', '99']) {
       out[`library/readAcfState/${appId}`] = await capture(
         () => readAcfState(deps, appId),
         root
