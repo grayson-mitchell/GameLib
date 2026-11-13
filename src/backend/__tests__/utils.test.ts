@@ -6,6 +6,9 @@ import { rm } from 'fs/promises'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
+import { stubRustSteamFiles } from 'backend/storeManagers/steam/localFiles/__tests__/fixtures/stubRustSteamFiles'
+import type { LibraryFoldersResult } from 'backend/storeManagers/steam/localFiles/steamFilesTypes'
+import { logDebug } from '../logger'
 jest.mock('../logger')
 jest.mock('../dialog/dialog')
 jest.mock('fs/promises', () => ({
@@ -495,5 +498,84 @@ describe('errorHandler takes its manager table by deps (66.1-23)', () => {
     expect(reads).toBe(1)
     expect(getGame).toHaveBeenCalledTimes(1)
     expect(getGame).toHaveBeenCalledWith('g1')
+  })
+})
+
+describe('getSteamLibraries, rust branch', () => {
+  const prior = process.env.GAMELIB_STEAMFILES_TEXT
+  beforeEach(() => {
+    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+  })
+  afterEach(() => {
+    if (prior === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
+    else process.env.GAMELIB_STEAMFILES_TEXT = prior
+  })
+
+  const steamConfig = () =>
+    createTestGlobalConfig({ defaultSteamPath: "'/home/u/.steam/steam'" })
+  const libs = (over: Partial<LibraryFoldersResult>): LibraryFoldersResult => ({
+    exists: true,
+    parsed: true,
+    readError: null,
+    paths: [],
+    ...over
+  })
+
+  it('reads libraryfolders.vdf through Rust, system path first, filtering paths that do not exist', async () => {
+    jest
+      .mocked(existsSync)
+      .mockImplementation((p) => p === '/usr/share/steam' || p === '/lib/a')
+    const stub = stubRustSteamFiles({
+      steamfiles_read_library_folders: () =>
+        libs({ paths: ['/lib/a', '/lib/gone'] })
+    })
+
+    const result = await utils.getSteamLibraries({
+      config: steamConfig(),
+      ...stub
+    })
+
+    expect(result).toEqual(['/usr/share/steam', '/lib/a'])
+    expect(stub.calls).toEqual([
+      {
+        channel: 'steamfiles_read_library_folders',
+        args: {
+          path: join('/home/u/.steam/steam', 'steamapps', 'libraryfolders.vdf')
+        }
+      }
+    ])
+  })
+
+  it('returns only the system path and logs when the file is missing', async () => {
+    const stub = stubRustSteamFiles({
+      steamfiles_read_library_folders: () =>
+        libs({ exists: false, parsed: false })
+    })
+
+    const result = await utils.getSteamLibraries({
+      config: steamConfig(),
+      ...stub
+    })
+
+    expect(result).toEqual(['/usr/share/steam'])
+    expect(logDebug).toHaveBeenCalledWith(
+      'Unable to load Steam Libraries, libraryfolders.vdf not found',
+      expect.anything()
+    )
+  })
+
+  it('returns only the system path for an unparsable file and when the invoke rejects', async () => {
+    const unparsed = stubRustSteamFiles({
+      steamfiles_read_library_folders: () =>
+        libs({ parsed: false, readError: 'bad' })
+    })
+    await expect(
+      utils.getSteamLibraries({ config: steamConfig(), ...unparsed })
+    ).resolves.toEqual(['/usr/share/steam'])
+
+    const rejecting = stubRustSteamFiles({})
+    await expect(
+      utils.getSteamLibraries({ config: steamConfig(), ...rejecting })
+    ).resolves.toEqual(['/usr/share/steam'])
   })
 })

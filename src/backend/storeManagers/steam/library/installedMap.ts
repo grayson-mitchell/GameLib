@@ -320,6 +320,7 @@ export async function buildBridgeInstalledMap(
   if (steamFilesTextImpl() === 'ts') return buildBridgeInstalledMapTs(paths)
   const installed: InstalledMap = new Map()
   const names = listReadyBridgeBottleNames(paths)
+  if (names.length === 0) return installed
   const records = await scanRecords(
     rust,
     names.map((name) => getBottleSteamappsDir(paths, name))

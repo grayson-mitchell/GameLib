@@ -6,10 +6,13 @@
 // ── Imports ───────────────────────────────────────────────────────────────────
 import { createEngineRegistry } from 'backend/engine/engineRegistry'
 import { readAcfState } from '../library/acfState'
+import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
+import type { AcfRecord, ScanResult } from '../localFiles/steamFilesTypes'
 import {
   buildInstalledMap,
   buildBottleInstalledMap,
   buildBridgeInstalledMap,
+  buildIncompleteInstallSet,
   isFullyInstalledStateFlags
 } from '../library/installedMap'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
@@ -51,6 +54,7 @@ jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
 jest.mock('backend/knownFixReport', () => ({ reportDetectedFix: jest.fn() }))
 
 jest.mock('backend/logger', () => ({
+  logDebug: jest.fn(),
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
@@ -601,5 +605,207 @@ describe('buildBridgeInstalledMap(testPaths, libDeps)', () => {
     const result = await buildBridgeInstalledMap(testPaths, libDeps)
 
     expect(result.size).toBe(0)
+  })
+})
+
+// ── Phase 75-15: rust branch (GAMELIB_STEAMFILES_TEXT=rust) ───────────────────
+// The wrappers are driven by programmed steamfiles results (stubRustSteamFiles); real parsing is
+// proven by the crate tests and libraryReplay.test.ts.
+
+function acfRecord(over: Partial<AcfRecord>): AcfRecord {
+  return {
+    appid: null,
+    name: null,
+    installdir: null,
+    stateFlags: null,
+    stateFlagsRaw: null,
+    sizeOnDisk: null,
+    buildid: null,
+    lastOwner: null,
+    bytesDownloaded: null,
+    bytesToDownload: null,
+    bytesStaged: null,
+    bytesToStage: null,
+    targetBuildId: null,
+    scheduledAutoUpdate: null,
+    betaKey: null,
+    installedDepots: [],
+    ...over
+  }
+}
+
+function scanOf(
+  records: { dir: string; rec: Partial<AcfRecord> }[],
+  skipped: ScanResult['skipped'] = []
+): ScanResult {
+  return {
+    records: records.map(({ dir, rec }, i) => ({
+      steamappsDir: dir,
+      fileName: `appmanifest_${i}.acf`,
+      record: acfRecord(rec)
+    })),
+    skipped,
+    missingDirs: []
+  }
+}
+
+function useRustBranch() {
+  const prior = process.env.GAMELIB_STEAMFILES_TEXT
+  beforeEach(() => {
+    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+  })
+  afterEach(() => {
+    if (prior === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
+    else process.env.GAMELIB_STEAMFILES_TEXT = prior
+  })
+}
+
+describe('installed-map builders, rust branch', () => {
+  useRustBranch()
+
+  it('buildInstalledMap makes one scan call over every library and keeps last-wins for a repeated appid', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/a', '/b'])
+    const stub = stubRustSteamFiles({
+      steamfiles_scan_acfs: () =>
+        scanOf(
+          [
+            {
+              dir: '/a/steamapps',
+              rec: {
+                appid: '10',
+                stateFlags: 4,
+                installdir: 'First',
+                sizeOnDisk: '1'
+              }
+            },
+            {
+              dir: '/b/steamapps',
+              rec: {
+                appid: '10',
+                stateFlags: 4,
+                installdir: 'Second',
+                sizeOnDisk: '2'
+              }
+            },
+            { dir: '/a/steamapps', rec: { appid: '20', stateFlags: 1026 } },
+            { dir: '/a/steamapps', rec: { appid: null, stateFlags: 4 } },
+            { dir: '/a/steamapps', rec: { appid: '30', stateFlags: 4 } }
+          ],
+          [
+            {
+              steamappsDir: '/a/steamapps',
+              fileName: 'appmanifest_99.acf',
+              reason: 'corrupt'
+            }
+          ]
+        )
+    })
+
+    const result = await buildInstalledMap({ ...libDeps, ...stub })
+
+    expect([...result.keys()].sort()).toEqual([10, 30])
+    expect(result.get(10)).toEqual({
+      installPath: join('/b/steamapps', 'common', 'Second'),
+      sizeOnDisk: '2'
+    })
+    expect(result.get(30)).toEqual({
+      installPath: join('/a/steamapps', 'common'),
+      sizeOnDisk: '0'
+    })
+    expect(stub.calls).toEqual([
+      {
+        channel: 'steamfiles_scan_acfs',
+        args: { steamappsDirs: ['/a/steamapps', '/b/steamapps'] }
+      }
+    ])
+  })
+
+  it('buildInstalledMap and buildIncompleteInstallSet fail soft when the invoke rejects', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/a'])
+    const stub = stubRustSteamFiles({})
+
+    expect((await buildInstalledMap({ ...libDeps, ...stub })).size).toBe(0)
+    expect(
+      (await buildIncompleteInstallSet({ ...libDeps, ...stub })).size
+    ).toBe(0)
+  })
+
+  it('buildIncompleteInstallSet keeps only present-but-incomplete manifests with a numeric StateFlags', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/a'])
+    const stub = stubRustSteamFiles({
+      steamfiles_scan_acfs: () =>
+        scanOf([
+          { dir: '/a/steamapps', rec: { appid: '10', stateFlags: 4 } },
+          { dir: '/a/steamapps', rec: { appid: '20', stateFlags: 1026 } },
+          { dir: '/a/steamapps', rec: { appid: '30', stateFlags: null } },
+          { dir: '/a/steamapps', rec: { appid: 'x', stateFlags: 2 } }
+        ])
+    })
+
+    const result = await buildIncompleteInstallSet({ ...libDeps, ...stub })
+
+    expect([...result]).toEqual([20])
+  })
+
+  it('buildBottleInstalledMap scans the bottle steamapps root once', async () => {
+    jest
+      .mocked(getSteamBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+    jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
+    const stub = stubRustSteamFiles({
+      steamfiles_scan_acfs: () =>
+        scanOf([
+          {
+            dir: BOTTLE_STEAMAPPS_ROOT,
+            rec: { appid: '730', stateFlags: 4, installdir: 'csgo' }
+          }
+        ])
+    })
+
+    const result = await buildBottleInstalledMap({ ...libDeps, ...stub })
+
+    expect(result.get(730)?.installPath).toBe(
+      join(BOTTLE_STEAMAPPS_ROOT, 'common', 'csgo')
+    )
+    expect(stub.calls).toHaveLength(1)
+    expect(getSteamLibraries).not.toHaveBeenCalled()
+  })
+
+  it('buildBridgeInstalledMap claims an appId only for the bottle the resolver names', async () => {
+    jest.mocked(listReadyBridgeBottleNames).mockReturnValue(['Mine', 'Other'])
+    jest
+      .mocked(getBottleSteamappsDir)
+      .mockImplementation((_p, name) => `/bottles/${name}/steamapps`)
+    jest
+      .mocked(resolveBridgeBottleName)
+      .mockImplementation((_p, appId) => (appId === '10' ? 'Mine' : 'Other'))
+    const stub = stubRustSteamFiles({
+      steamfiles_scan_acfs: () =>
+        scanOf([
+          {
+            dir: '/bottles/Mine/steamapps',
+            rec: { appid: '10', stateFlags: 4, installdir: 'Own' }
+          },
+          {
+            dir: '/bottles/Other/steamapps',
+            rec: { appid: '10', stateFlags: 4, installdir: 'Stray' }
+          }
+        ])
+    })
+
+    const result = await buildBridgeInstalledMap(testPaths, stub)
+
+    expect(result.get(10)?.installPath).toBe(
+      join('/bottles/Mine/steamapps', 'common', 'Own')
+    )
+    expect(stub.calls).toHaveLength(1)
+  })
+
+  it('buildBridgeInstalledMap makes no call when no bridge bottle is ready', async () => {
+    jest.mocked(listReadyBridgeBottleNames).mockReturnValue([])
+    const stub = stubRustSteamFiles({})
+
+    expect((await buildBridgeInstalledMap(testPaths, stub)).size).toBe(0)
+    expect(stub.calls).toHaveLength(0)
   })
 })

@@ -14,17 +14,26 @@ import { breadcrumbAppIsFullyInstalledOnDisk } from '../../../library/resumeBrea
 import { HANGS_MARKER, capture, listFiles, withFixtureCopy } from './normalize'
 
 /** Distro path getSteamLibraries always prepends; filtered when absent. */
-const SYSTEM_STEAM = '/usr/share/steam'
+export const SYSTEM_STEAM = '/usr/share/steam'
 
-/** Library deps: only `config.getSettings().defaultSteamPath` is read. */
-function depsFor(steamRoot: string) {
+/**
+ * Library deps: `config.getSettings().defaultSteamPath` is read; the Rust transport must never be
+ * reached (the oracle runs the ts branch, so a call proves the flag leaked).
+ */
+export function depsFor(steamRoot: string) {
   return {
-    config: { getSettings: () => ({ defaultSteamPath: steamRoot }) }
+    config: { getSettings: () => ({ defaultSteamPath: steamRoot }) },
+    requestRustInvoke: () =>
+      Promise.reject(new Error('oracle must not call Rust'))
   } as never
 }
 
 /** A temp Steam root whose steamapps/libraryfolders.vdf is `fixture`. */
-function steamRootWith(root: string, fixture: string, id: string): string {
+export function steamRootWith(
+  root: string,
+  fixture: string,
+  id: string
+): string {
   const steam = join(root, '_steam', id)
   mkdirSync(join(steam, 'steamapps'), { recursive: true })
   copyFileSync(

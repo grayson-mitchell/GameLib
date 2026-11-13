@@ -5,6 +5,8 @@
  */
 
 // ── Imports ───────────────────────────────────────────────────────────────────
+import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
+import type { AcfRecord, ScanResult } from '../localFiles/steamFilesTypes'
 import { createEngineRegistry } from 'backend/engine/engineRegistry'
 import {
   findOtherManifestsWithInstalldir,
@@ -55,6 +57,7 @@ jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
 jest.mock('backend/knownFixReport', () => ({ reportDetectedFix: jest.fn() }))
 
 jest.mock('backend/logger', () => ({
+  logDebug: jest.fn(),
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
@@ -817,5 +820,191 @@ describe('scanDownloadingAppIds(libDeps)', () => {
     })
     const result = await scanDownloadingAppIds(libDeps)
     expect(result).not.toContain('730')
+  })
+})
+
+// ── Phase 75-15: rust branch (GAMELIB_STEAMFILES_TEXT=rust) ───────────────────
+// The wrappers are driven by programmed steamfiles results (stubRustSteamFiles); real parsing is
+// proven by the crate tests and libraryReplay.test.ts.
+
+function acfRecord(over: Partial<AcfRecord>): AcfRecord {
+  return {
+    appid: null,
+    name: null,
+    installdir: null,
+    stateFlags: null,
+    stateFlagsRaw: null,
+    sizeOnDisk: null,
+    buildid: null,
+    lastOwner: null,
+    bytesDownloaded: null,
+    bytesToDownload: null,
+    bytesStaged: null,
+    bytesToStage: null,
+    targetBuildId: null,
+    scheduledAutoUpdate: null,
+    betaKey: null,
+    installedDepots: [],
+    ...over
+  }
+}
+
+function scanOf(
+  records: { dir: string; rec: Partial<AcfRecord> }[],
+  skipped: ScanResult['skipped'] = []
+): ScanResult {
+  return {
+    records: records.map(({ dir, rec }, i) => ({
+      steamappsDir: dir,
+      fileName: `appmanifest_${i}.acf`,
+      record: acfRecord(rec)
+    })),
+    skipped,
+    missingDirs: []
+  }
+}
+
+function useRustBranch() {
+  const prior = process.env.GAMELIB_STEAMFILES_TEXT
+  beforeEach(() => {
+    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+  })
+  afterEach(() => {
+    if (prior === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
+    else process.env.GAMELIB_STEAMFILES_TEXT = prior
+  })
+}
+
+describe('readAcfState and scanDownloadingAppIds, rust branch', () => {
+  useRustBranch()
+
+  const found = (rec: Partial<AcfRecord>, dir = '/steam/steamapps') => ({
+    found: true,
+    steamappsDir: dir,
+    record: acfRecord(rec)
+  })
+
+  beforeEach(() => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam', '/missing'])
+    ;(existsSync as jest.Mock).mockImplementation(
+      (p: string) => !p.startsWith('/missing')
+    )
+  })
+
+  it('reports installed with the install path under the dir the record was found in', async () => {
+    const stub = stubRustSteamFiles({
+      steamfiles_find_acf: () =>
+        found({
+          appid: '730',
+          stateFlags: 4,
+          installdir: 'csgo',
+          sizeOnDisk: '9000'
+        })
+    })
+
+    const result = await readAcfState({ ...libDeps, ...stub }, '730')
+
+    expect(result).toEqual({
+      state: 'installed',
+      stateFlags: 4,
+      installPath: join('/steam/steamapps', 'common', 'csgo'),
+      sizeOnDisk: '9000'
+    })
+    // One call per poll tick, over the dirs that exist.
+    expect(stub.calls).toEqual([
+      {
+        channel: 'steamfiles_find_acf',
+        args: { steamappsDirs: ['/steam/steamapps'], appId: '730' }
+      }
+    ])
+  })
+
+  it('reports downloading with numeric byte counters, defaulting non-numeric to 0', async () => {
+    const stub = stubRustSteamFiles({
+      steamfiles_find_acf: () =>
+        found({
+          appid: '730',
+          stateFlags: 1026,
+          bytesDownloaded: '500',
+          bytesToDownload: '1000',
+          bytesStaged: 'junk',
+          bytesToStage: null
+        })
+    })
+
+    expect(await readAcfState({ ...libDeps, ...stub }, '730')).toEqual({
+      state: 'downloading',
+      stateFlags: 1026,
+      bytesDownloaded: 500,
+      bytesToDownload: 1000,
+      bytesStaged: 0,
+      bytesToStage: 0
+    })
+  })
+
+  it('reports absent when nothing is found, and when the invoke rejects', async () => {
+    const none = stubRustSteamFiles({
+      steamfiles_find_acf: () => ({
+        found: false,
+        steamappsDir: null,
+        record: null
+      })
+    })
+    expect(await readAcfState({ ...libDeps, ...none }, '1')).toEqual({
+      state: 'absent'
+    })
+
+    const rejecting = stubRustSteamFiles({})
+    expect(await readAcfState({ ...libDeps, ...rejecting }, '1')).toEqual({
+      state: 'absent'
+    })
+  })
+
+  it('scanDownloadingAppIds makes one scan call and keeps bit-4-unset appIds present in the library map', async () => {
+    const stub = stubRustSteamFiles({
+      steamfiles_scan_acfs: () =>
+        scanOf(
+          [
+            { dir: '/steam/steamapps', rec: { appid: '10', stateFlags: 1026 } },
+            { dir: '/steam/steamapps', rec: { appid: '20', stateFlags: 4 } },
+            { dir: '/steam/steamapps', rec: { appid: '30', stateFlags: 2 } },
+            { dir: '/steam/steamapps', rec: { appid: 'x', stateFlags: 2 } },
+            { dir: '/steam/steamapps', rec: { appid: '40', stateFlags: null } }
+          ],
+          [
+            {
+              steamappsDir: '/steam/steamapps',
+              fileName: 'appmanifest_9.acf',
+              reason: 'corrupt'
+            }
+          ]
+        )
+    })
+    const deps = {
+      ...libDeps,
+      ...stub,
+      steamSession: {
+        libraryState: {
+          library: new Map([
+            ['10', {}],
+            ['20', {}],
+            ['40', {}]
+          ])
+        }
+      }
+    } as never
+
+    expect(await scanDownloadingAppIds(deps)).toEqual(['10'])
+    expect(stub.calls).toHaveLength(1)
+  })
+
+  it('scanDownloadingAppIds returns an empty list when the invoke rejects', async () => {
+    const deps = {
+      ...libDeps,
+      ...stubRustSteamFiles({}),
+      steamSession: { libraryState: { library: new Map() } }
+    } as never
+
+    expect(await scanDownloadingAppIds(deps)).toEqual([])
   })
 })

@@ -1,1 +1,84 @@
-{}
+{
+  "library/getSteamLibraries/legacy": {
+    "rustOverride": ["${FIXTURES}/scan/lib1", "${FIXTURES}/scan/lib2"],
+    "divergenceNote": "legacy.vdf is the pre-2021 libraryfolders layout (index key -> path string). The old TS read folder.path off a string and got undefined, so it returned no libraries; Rust reads the legacy layout, which Steam itself still writes and reads, so Rust is Steam-correct."
+  },
+  "library/getSteamLibraries/malformed": {
+    "rustOverride": [],
+    "divergenceNote": "The old parser threw on malformed libraryfolders.vdf and the throw escaped getSteamLibraries; the wrapper now fails soft to the system path only (parsed=false), which is the documented T-2-01 never-throw posture; the TS caller policy (system path first, existsSync filter) is unchanged."
+  },
+  "library/getSteamLibraries/no-file": {
+    "rustOverride": [],
+    "divergenceNote": "The oracle threw only because the logger has no writer outside the sidecar (reading logDebug of undefined); with the logger present the missing-file branch logs and returns the system path, which the oracle filter strips. Rust matches the intended behaviour."
+  },
+  "library/buildInstalledMap/scan": {
+    "rustOverride": [
+      [
+        10,
+        {
+          "installPath": "${FIXTURES}/scan/lib2/steamapps/common/DuplicateDir",
+          "sizeOnDisk": "1000"
+        }
+      ],
+      [
+        40,
+        {
+          "installPath": "${FIXTURES}/scan/lib2/steamapps/common/ScanLibTwo",
+          "sizeOnDisk": "1000"
+        }
+      ]
+    ],
+    "divergenceNote": "Rust reports sizeOnDisk as the ACF string \"1000\"; the TS oracle returned the number 1000 because @node-steam/vdf coerces numeric-looking values. ACF values are strings on disk and the declared type is string, so the Rust (string) value is the correct one."
+  },
+  "library/buildInstalledMap/with-truncated-manifest": {
+    "rustOverride": [
+      [
+        10,
+        {
+          "installPath": "${FIXTURES}/scan/lib2/steamapps/common/DuplicateDir",
+          "sizeOnDisk": "1000"
+        }
+      ],
+      [
+        40,
+        {
+          "installPath": "${FIXTURES}/scan/lib2/steamapps/common/ScanLibTwo",
+          "sizeOnDisk": "1000"
+        }
+      ]
+    ],
+    "divergenceNote": "The old parser never terminates on the truncated appmanifest_30.acf, so the oracle recorded a hang marker; Rust skips the unparseable manifest and returns the remaining records, which is the correct fail-soft behaviour. Rust reports sizeOnDisk as the ACF string \"1000\"; the TS oracle returned the number 1000 because @node-steam/vdf coerces numeric-looking values. ACF values are strings on disk and the declared type is string, so the Rust (string) value is the correct one."
+  },
+  "library/buildIncompleteInstallSet/with-truncated-manifest": {
+    "rustOverride": [20],
+    "divergenceNote": "The old parser never terminates on the truncated appmanifest_30.acf, so the oracle recorded a hang marker; Rust skips the unparseable manifest and returns the remaining records, which is the correct fail-soft behaviour."
+  },
+  "library/readAcfState/10": {
+    "rustOverride": {
+      "state": "installed",
+      "stateFlags": 4,
+      "installPath": "${FIXTURES}/scan/lib1/steamapps/common/ScanInstalled",
+      "sizeOnDisk": "1000"
+    },
+    "divergenceNote": "Rust reports sizeOnDisk as the ACF string \"1000\"; the TS oracle returned the number 1000 because @node-steam/vdf coerces numeric-looking values. ACF values are strings on disk and the declared type is string, so the Rust (string) value is the correct one."
+  },
+  "library/readAcfState/40": {
+    "rustOverride": {
+      "state": "installed",
+      "stateFlags": 4,
+      "installPath": "${FIXTURES}/scan/lib2/steamapps/common/ScanLibTwo",
+      "sizeOnDisk": "1000"
+    },
+    "divergenceNote": "Rust reports sizeOnDisk as the ACF string \"1000\"; the TS oracle returned the number 1000 because @node-steam/vdf coerces numeric-looking values. ACF values are strings on disk and the declared type is string, so the Rust (string) value is the correct one."
+  },
+  "library/readAcfState/30/with-truncated-manifest": {
+    "rustOverride": {
+      "state": "absent"
+    },
+    "divergenceNote": "The old parser never terminates on the truncated appmanifest_30.acf, so the oracle recorded a hang marker; Rust skips the unparseable manifest and returns the remaining records, which is the correct fail-soft behaviour. With the only manifest for app 30 unreadable the state is absent."
+  },
+  "library/scanDownloadingAppIds/with-truncated-manifest": {
+    "rustOverride": ["20"],
+    "divergenceNote": "The old parser never terminates on the truncated appmanifest_30.acf, so the oracle recorded a hang marker; Rust skips the unparseable manifest and returns the remaining records, which is the correct fail-soft behaviour."
+  }
+}
