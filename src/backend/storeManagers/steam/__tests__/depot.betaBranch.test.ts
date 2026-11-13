@@ -134,7 +134,7 @@ describe('file readers and resolver', () => {
     ).toBeUndefined()
   })
 
-  it('steamId64ToAccountId', async () => {
+  it('steamId64ToAccountId', () => {
     expect(steamId64ToAccountId('76561197995867096')).toBe('35601368')
     expect(steamId64ToAccountId('abc')).toBeUndefined()
     expect(steamId64ToAccountId('123')).toBeUndefined()

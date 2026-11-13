@@ -1852,7 +1852,7 @@ describe('HumbleLibrary', () => {
           })
         } as never,
         user: {
-          getCredentials: async () => mockGetCredentials(),
+          getCredentials: () => Promise.resolve(mockGetCredentials()),
           getLiveCsrfToken: () => mockGetLiveCsrfToken()
         },
         syncFence: createHumbleSyncFence(),

@@ -69,7 +69,7 @@ function setup(
     platform: o.platform ?? 'darwin',
     log,
     getSteamLibraries: () => Promise.resolve('libs' in o ? o.libs : ['/lib']),
-    readAcfInstalldir: async () => ('acf' in o ? o.acf : 'WazHack'),
+    readAcfInstalldir: () => Promise.resolve('acf' in o ? o.acf : 'WazHack'),
     sanitizeInstalldir: (c) => c,
     readExe: jest.fn(),
     realpath: (p) => p,

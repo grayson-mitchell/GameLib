@@ -51,7 +51,7 @@ describe('detectSteamUpdates exit contract', () => {
       steamSession: {
         libraryState: { library: new Map([['101', { is_installed: true }]]) }
       },
-      anonymousClient: { get: async () => ({ getProductInfo }) },
+      anonymousClient: { get: () => Promise.resolve({ getProductInfo }) },
       runner: { run: jest.fn() },
       steamInstallRuntime: { updateStates: createSteamUpdateStateCache() }
     }) as unknown as SteamUpdateDeps

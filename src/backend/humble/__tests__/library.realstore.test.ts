@@ -96,14 +96,15 @@ const HumbleLibrary = createHumbleLibrary({
   steamUser,
   steamAppIdResolver: {
     lookupCached: () => undefined,
-    resolvePending: async () => ({
-      requested: 0,
-      resolved: 0,
-      cached: 0,
-      misses: 0,
-      errors: 0,
-      deferred: 0
-    })
+    resolvePending: () =>
+      Promise.resolve({
+        requested: 0,
+        resolved: 0,
+        cached: 0,
+        misses: 0,
+        errors: 0,
+        deferred: 0
+      })
   },
   loginWindowSeam: createLoginWindowSeamSlot(),
   appInfo: { userAgentFallback: 'Mozilla/5.0 (X11; Linux) Chrome/1.0' }

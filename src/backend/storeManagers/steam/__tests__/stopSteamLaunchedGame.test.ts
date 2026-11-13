@@ -55,7 +55,7 @@ function setup(
     platform: o.platform ?? 'darwin',
     log,
     getSteamLibraries: () => Promise.resolve(['/lib']),
-    readAcfInstalldir: async () => 'WazHack',
+    readAcfInstalldir: () => Promise.resolve('WazHack'),
     sanitizeInstalldir: (c) => c,
     signal,
     readExe: o.readExe ?? jest.fn(),
@@ -151,11 +151,11 @@ describe('stopSteamLaunchedGame', () => {
 
   it('blank installdir and sanitize throw skip the library', async () => {
     const t = setup([])
-    t.deps.readAcfInstalldir = async () => '  '
+    t.deps.readAcfInstalldir = () => Promise.resolve('  ')
     await expect(stopSteamLaunchedGame(t.deps, '1')).resolves.toEqual({
       kind: 'no-folder'
     })
-    t.deps.readAcfInstalldir = async () => '../x'
+    t.deps.readAcfInstalldir = () => Promise.resolve('../x')
     t.deps.sanitizeInstalldir = () => {
       throw new Error('unsafe')
     }

@@ -487,7 +487,7 @@ describe('libraryState library data', () => {
     const calls: unknown[][] = []
     let first = true
     useLibraryState.setState({
-      refresh: async (...args: unknown[]) => {
+      refresh: (...args: unknown[]) => {
         calls.push(args)
         if (first) {
           first = false
@@ -497,6 +497,7 @@ describe('libraryState library data', () => {
           void lib().refreshLibrary({ checkForUpdates: true })
         }
         useLibraryState.setState({ refreshing: false })
+        return Promise.resolve()
       }
     })
     await lib().refreshLibrary({ checkForUpdates: false })
@@ -511,13 +512,14 @@ describe('libraryState library data', () => {
     const calls: unknown[][] = []
     let first = true
     useLibraryState.setState({
-      refresh: async (...args: unknown[]) => {
+      refresh: (...args: unknown[]) => {
         calls.push(args)
         if (first) {
           first = false
           void lib().refreshLibrary({ checkForUpdates: false })
         }
         useLibraryState.setState({ refreshing: false })
+        return Promise.resolve()
       }
     })
     await lib().refreshLibrary({ checkForUpdates: false })
