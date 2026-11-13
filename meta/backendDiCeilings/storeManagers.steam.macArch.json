@@ -2,6 +2,6 @@
   "jestMock": {
     "src/backend/storeManagers/steam/__tests__/library.macArch.test.ts": 18,
     "src/backend/storeManagers/steam/__tests__/macArchKnownFix.test.ts": 3,
-    "src/backend/storeManagers/steam/__tests__/macArchKnownFixRouting.test.ts": 27
+    "src/backend/storeManagers/steam/__tests__/macArchKnownFixRouting.test.ts": 26
   }
 }

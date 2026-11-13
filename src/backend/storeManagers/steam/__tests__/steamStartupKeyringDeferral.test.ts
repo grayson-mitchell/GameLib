@@ -1,3 +1,4 @@
+import { mockedFsSteamFiles } from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import {
   createTestManagerDeps,
   createInertSteamProcesses,
@@ -41,6 +42,15 @@ import {
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under
 // this file's mocks (quick 261026-c7r).
+// Phase 75: removed with the flag in plan 34
+const priorSteamFilesText = process.env.GAMELIB_STEAMFILES_TEXT
+process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+afterAll(() => {
+  if (priorSteamFilesText === undefined)
+    delete process.env.GAMELIB_STEAMFILES_TEXT
+  else process.env.GAMELIB_STEAMFILES_TEXT = priorSteamFilesText
+})
+
 jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
   addShortcuts: jest.fn(),
   removeShortcuts: jest.fn(),
@@ -51,6 +61,7 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
+  logDebug: jest.fn(),
   LogPrefix: {
     Steam: 'Steam',
     Backend: 'Backend'
@@ -111,7 +122,6 @@ jest.mock('graceful-fs', () => ({
   readdirSync: jest.fn(),
   readFileSync: jest.fn()
 }))
-jest.mock('@node-steam/vdf', () => ({ parse: jest.fn() }))
 jest.mock('backend/utils', () => ({
   getSteamLibraries: jest.fn(),
   getFileSize: jest.fn()
@@ -272,6 +282,7 @@ const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
 const tokenStoreSlot = createTestTokenStoreSlot()
 const baseDeps = createTestManagerDeps({
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   sendFrontendMessage,
   tokenStore: tokenStoreSlot,
   steamProcesses: createInertSteamProcesses(),

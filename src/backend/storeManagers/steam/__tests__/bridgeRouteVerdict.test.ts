@@ -1,3 +1,4 @@
+import { mockedFsSteamFiles } from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import {
   createTestManagerDeps,
   createTestStores
@@ -19,6 +20,7 @@ const steamMetadataStore = {
   entries: jest.fn().mockReturnValue([])
 }
 const steamTestDeps = createTestManagerDeps({
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   stores: createTestStores({
     steam: {
       configStore: {
@@ -38,10 +40,20 @@ const steamTestDeps = createTestManagerDeps({
 const library = steamTestDeps.steamSession.libraryState.library
 const pendingFetches = steamTestDeps.steamSession.libraryState.pendingFetches
 
+// Phase 75: removed with the flag in plan 34
+const priorSteamFilesText = process.env.GAMELIB_STEAMFILES_TEXT
+process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+afterAll(() => {
+  if (priorSteamFilesText === undefined)
+    delete process.env.GAMELIB_STEAMFILES_TEXT
+  else process.env.GAMELIB_STEAMFILES_TEXT = priorSteamFilesText
+})
+
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
+  logDebug: jest.fn(),
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
 jest.mock('axios')
@@ -63,7 +75,6 @@ jest.mock('graceful-fs', () => ({
   readdirSync: jest.fn(),
   readFileSync: jest.fn()
 }))
-jest.mock('@node-steam/vdf', () => ({ parse: jest.fn() }))
 jest.mock('backend/utils', () => ({
   getSteamLibraries: jest.fn(),
   getFileSize: jest.fn(),

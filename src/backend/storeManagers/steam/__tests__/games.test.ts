@@ -186,7 +186,10 @@ import { getSteamLibraries, sendGameStatusUpdate } from 'backend/utils'
 // 260821-rb5: only needed by this task's case-C self-heal test (2) —
 // asserts init()'s startup surfacing loop against a StateFlags=4 ACF.
 import { notify } from 'backend/dialog/dialog'
-import { parse } from '@node-steam/vdf'
+import {
+  vdf,
+  mockedFsSteamFiles
+} from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 // Real (unmocked) fs/path/os — used only by the SharedDepots-scoping
 // regression test below, which proves uninstallBottleGameDirectly()'s
 // deletion is scoped correctly against a REAL temp directory tree, the
@@ -249,7 +252,7 @@ import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 // `libDeps` is declared before steamTestDeps; the scan reads the library map through the same instance.
 const libDeps = {
   config: createTestGlobalConfig(),
-  requestRustInvoke: jest.fn(),
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   get steamSession() {
     return steamTestDeps.steamSession
   }
@@ -391,6 +394,7 @@ const mockedLaunchPaths: Pick<
   userHome: createContainedHomeAppPaths().userHome
 }
 const steamTestDeps = createTestManagerDeps({
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   sendFrontendMessage,
   aborts: {
     create: (id: string) => createAbortController(id),
@@ -482,6 +486,7 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
+  logDebug: jest.fn(),
   LogPrefix: {
     Steam: 'Steam',
     Backend: 'Backend'
@@ -578,7 +583,14 @@ jest.mock('graceful-fs', () => ({
   readdirSync: jest.fn(),
   readFileSync: jest.fn()
 }))
-jest.mock('@node-steam/vdf', () => ({ parse: jest.fn() }))
+// Phase 75: removed with the flag in plan 34
+const priorSteamFilesText = process.env.GAMELIB_STEAMFILES_TEXT
+process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+afterAll(() => {
+  if (priorSteamFilesText === undefined)
+    delete process.env.GAMELIB_STEAMFILES_TEXT
+  else process.env.GAMELIB_STEAMFILES_TEXT = priorSteamFilesText
+})
 jest.mock('backend/utils', () => ({
   getSteamLibraries: jest.fn(),
   getFileSize: jest.fn(),
@@ -5208,7 +5220,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
     ;(
       jest.requireMock('graceful-fs').readFileSync as jest.Mock
     ).mockReturnValue('installed-content')
-    ;(parse as jest.Mock).mockReturnValue({
+    vdf.parse.mockReturnValue({
       AppState: {
         appid: APP_ID,
         StateFlags: '4',
@@ -10317,7 +10329,7 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
     adoption().readPendingAdoption.mockReturnValue(RECORD)
     adoption().readAcfSnapshot.mockResolvedValue(BASELINE)
     adoption().probeMacSteamPid.mockResolvedValue(50647)
-    ;(parse as jest.Mock).mockReturnValue(undefined)
+    vdf.parse.mockReturnValue(undefined)
     // resolveInstallRoot() consults the bottle root first on Mac.
     getSteamBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'Steam'
@@ -10400,12 +10412,12 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
   })
 
   it('delegates when the ACF is Steam-adopted', async () => {
-    ;(parse as jest.Mock).mockReturnValue({
-      AppState: { StateFlags: '4', buildid: '123' }
-    })
+    // The Rust-path snapshot carries the parsed fields (stateFlags/buildid) readAcfSnapshot captured.
     adoption().readAcfSnapshot.mockResolvedValue({
       mtimeMs: 2,
-      content: 'steam-rewrote'
+      content: 'steam-rewrote',
+      stateFlags: 4,
+      buildid: '123'
     })
     await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
     expectDelegated()

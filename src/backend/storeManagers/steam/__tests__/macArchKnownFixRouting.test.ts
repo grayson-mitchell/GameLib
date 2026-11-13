@@ -1,3 +1,4 @@
+import { mockedFsSteamFiles } from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import {
   createTestManagerDeps,
@@ -9,6 +10,15 @@ import {
  * bottle branch with no native download; Intel is unchanged.
  */
 
+// Phase 75: removed with the flag in plan 34
+const priorSteamFilesText = process.env.GAMELIB_STEAMFILES_TEXT
+process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+afterAll(() => {
+  if (priorSteamFilesText === undefined)
+    delete process.env.GAMELIB_STEAMFILES_TEXT
+  else process.env.GAMELIB_STEAMFILES_TEXT = priorSteamFilesText
+})
+
 jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
   addShortcuts: jest.fn(),
   removeShortcuts: jest.fn(),
@@ -19,6 +29,7 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
+  logDebug: jest.fn(),
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
 
@@ -34,9 +45,6 @@ jest.mock('graceful-fs', () => ({
   readdirSync: jest.fn(),
   readFileSync: jest.fn()
 }))
-
-// ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
-jest.mock('@node-steam/vdf', () => ({ parse: jest.fn() }))
 
 // ── node:fs mock — rmSync is the ONLY delete primitive removeSteamInstallCopy
 // calls; mocked so every deletion in these tests is asserted by exact call
@@ -193,6 +201,7 @@ const isBottleReady = jest.fn()
 // The steam:// hand-off goes through deps.openExternal; this recording fake is what it calls.
 const shell = { openExternal: jest.fn() }
 const steamTestDeps = createTestManagerDeps({
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   steamUser,
   steamBottle: {
     isCrossoverInstalled: () => Promise.resolve(true),
