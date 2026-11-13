@@ -149,8 +149,12 @@ fn installscript_duplicate_entries_in_file_order() {
     assert_eq!(e.len(), 2);
     assert_eq!(e[0].name, "4.8");
     assert_eq!(e[1].name, "4.8");
-    assert!(e[0].processes[0].process.ends_with("dotNetFx40_Full_x86_x64.exe"));
-    assert!(e[1].processes[0].process.ends_with("NDP48-x86-x64-AllOS-ENU.exe"));
+    assert!(e[0].processes[0]
+        .process
+        .ends_with("dotNetFx40_Full_x86_x64.exe"));
+    assert!(e[1].processes[0]
+        .process
+        .ends_with("NDP48-x86-x64-AllOS-ENU.exe"));
     assert_eq!(e[1].processes[0].command.as_deref(), Some("/q /norestart"));
     assert_eq!(e[0].minimum_has_run_value, 1);
 }
@@ -173,7 +177,10 @@ fn installscript_escapes_decoded() {
     let e = read_installscript(&fx("installscript/escapes.vdf"))
         .entries
         .unwrap();
-    assert_eq!(e[0].processes[0].process, "%INSTALLDIR%\\Redist\\DXSETUP.exe");
+    assert_eq!(
+        e[0].processes[0].process,
+        "%INSTALLDIR%\\Redist\\DXSETUP.exe"
+    );
     assert_eq!(
         e[0].processes[0].command.as_deref(),
         Some("/silent \"quoted\"")
