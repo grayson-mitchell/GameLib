@@ -34,9 +34,18 @@ export const HUMBLE_APPID_REQUEST_GAP_MS = 350
 export const HUMBLE_APPID_RESOLVE_CAP = 40
 export const HUMBLE_APPID_REQUEST_TIMEOUT_MS = 8000
 
+/**
+ * Bumped when the search TERM changes, so misses recorded under an older term
+ * are retried instead of waiting out the TTL. v2: the term drops the Humble
+ * "(Steam)" suffix (storesearch returns nothing for "X (Steam)").
+ */
+export const HUMBLE_APPID_TERM_VERSION = 2
+
 export type HumbleSteamAppIdCacheEntry = {
   appId: string | null
   checkedAt: number
+  /** HUMBLE_APPID_TERM_VERSION a miss was recorded under; absent = v1. */
+  termVersion?: number
 }
 
 /** The slice of CacheStore the resolver needs (structural, so tests can use a Map). */
@@ -82,6 +91,22 @@ export function normalizeForAppIdMatch(title: string): string {
     s = s.replace(STEAM_KEY_DASH_RE, '').replace(STEAM_SUFFIX_RE, '').trim()
   } while (s !== prev)
   return s.replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+}
+
+/**
+ * The storesearch term for a Humble title: the title as Humble shows it, minus
+ * trademark symbols and the Steam delivery suffix ("Valiant: Resurrection
+ * (Steam)" -> "Valiant: Resurrection"). Punctuation and case are kept; only
+ * the match (pickConfidentAppId) normalizes fully.
+ */
+export function searchTermFor(title: string): string {
+  let s = title.replace(/[™®©]/g, '').trim()
+  let prev: string
+  do {
+    prev = s
+    s = s.replace(STEAM_KEY_DASH_RE, '').replace(STEAM_SUFFIX_RE, '').trim()
+  } while (s !== prev)
+  return s
 }
 
 export function pickConfidentAppId(
@@ -185,6 +210,7 @@ export function createSteamAppIdResolver(deps: {
         } else if (
           entry &&
           entry.appId === null &&
+          (entry.termVersion ?? 1) >= HUMBLE_APPID_TERM_VERSION &&
           now() - entry.checkedAt < HUMBLE_APPID_MISS_TTL_MS
         ) {
           summary.cached++
@@ -203,13 +229,17 @@ export function createSteamAppIdResolver(deps: {
         summary.requested++
         let items: SteamStoreSearchItem[]
         try {
-          items = await search(title)
+          items = await search(searchTermFor(title))
         } catch {
           summary.errors++
           break
         }
         const appId = pickConfidentAppId(title, items)
-        cache.set(key, { appId, checkedAt: now() })
+        cache.set(key, {
+          appId,
+          checkedAt: now(),
+          termVersion: HUMBLE_APPID_TERM_VERSION
+        })
         if (appId) summary.resolved++
         else summary.misses++
       }

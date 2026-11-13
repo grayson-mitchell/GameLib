@@ -20,6 +20,7 @@ import {
   HUMBLE_APPID_MISS_TTL_MS,
   HUMBLE_APPID_REQUEST_GAP_MS,
   HUMBLE_APPID_RESOLVE_CAP,
+  HUMBLE_APPID_TERM_VERSION,
   createSteamAppIdResolver,
   normalizeForAppIdMatch,
   pickConfidentAppId,
@@ -147,7 +148,11 @@ describe('createSteamAppIdResolver', () => {
       appId: '1',
       checkedAt: NOW - 1000 * HUMBLE_APPID_MISS_TTL_MS
     })
-    map.set('fresh miss', { appId: null, checkedAt: NOW - 1000 })
+    map.set('fresh miss', {
+      appId: null,
+      checkedAt: NOW - 1000,
+      termVersion: HUMBLE_APPID_TERM_VERSION
+    })
     map.set('old miss', {
       appId: null,
       checkedAt: NOW - HUMBLE_APPID_MISS_TTL_MS - 1
@@ -158,15 +163,44 @@ describe('createSteamAppIdResolver', () => {
     )
     expect(search).toHaveBeenCalledTimes(1)
     expect(search).toHaveBeenCalledWith('Old Miss')
-    expect(map.get('old miss')).toEqual({ appId: '7', checkedAt: NOW })
+    expect(map.get('old miss')).toEqual({
+      appId: '7',
+      checkedAt: NOW,
+      termVersion: HUMBLE_APPID_TERM_VERSION
+    })
     expect(summary.requested).toBe(1)
+  })
+
+  it('searches without the Humble "(Steam)" suffix and matches the store name', async () => {
+    const search = jest.fn(async () => [app('Valiant: Resurrection', 368250)])
+    const { map, resolver } = build(search)
+    await resolver.resolvePending(['Valiant: Resurrection (Steam)'], {
+      isStale: () => false
+    })
+    expect(search).toHaveBeenCalledWith('Valiant: Resurrection')
+    expect(map.get('valiant resurrection')?.appId).toBe('368250')
+  })
+
+  it('retries a fresh miss recorded under an older search term', async () => {
+    const search = jest.fn(async () => [app('Valiant: Resurrection', 368250)])
+    const { map, resolver } = build(search)
+    map.set('valiant resurrection', { appId: null, checkedAt: NOW - 1000 })
+    await resolver.resolvePending(['Valiant: Resurrection (Steam)'], {
+      isStale: () => false
+    })
+    expect(search).toHaveBeenCalledTimes(1)
+    expect(map.get('valiant resurrection')?.appId).toBe('368250')
   })
 
   it('stores a fresh miss as appId null', async () => {
     const search = jest.fn(async () => [])
     const { map, resolver } = build(search)
     await resolver.resolvePending(['Nothing Here'], { isStale: () => false })
-    expect(map.get('nothing here')).toEqual({ appId: null, checkedAt: NOW })
+    expect(map.get('nothing here')).toEqual({
+      appId: null,
+      checkedAt: NOW,
+      termVersion: HUMBLE_APPID_TERM_VERSION
+    })
   })
 
   it('does not cache an error and stops the pass', async () => {
