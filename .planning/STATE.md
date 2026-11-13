@@ -8,7 +8,7 @@ status: executing
 stopped_at: Completed 66.4-23-PLAN.md
 last_updated: "2026-11-13T11:38:25.873Z"
 last_activity: 2026-11-14
-last_activity_desc: Completed 66.4-23 (Windows delta UAT complete; poller todo closed)
+last_activity_desc: Completed quick task 261114-1m4 (66.4 module-state census green again)
 state_head: 15172cf91b5c71ee792ce9c54e1650650fa07b4d
 progress:
   total_phases: 23
@@ -79,7 +79,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 66.4 (Backend module state long tail, the census-to-test flip, then the live smokes (INSERTED)) — EXECUTING
 Plan: 25 of 25 (all plans complete; 66.4-23 Windows UAT complete, test 3 blocked)
 Status: Executing Phase 66.4
-Last activity: 2026-11-14 — Completed 66.4-23 (Windows delta UAT: 5 pass, item 2 resolved as G-66.4-W2, item 3 blocked; RunningAppID poller todo closed, macOS half split to a new todo)
+Last activity: 2026-11-14 — Completed quick task 261114-1m4: module-state census green again (Humble action-id caches per-boot, Steam inferred-origin allowlist frozen)
 
 Progress: [██████░░░░] 61%
 
@@ -744,6 +744,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261114-aqa | Leaving the in-app Steam Store no longer raises "Set Steam offline to continue": Steam /app/ pages arm the store-exit refresh only on in-store nav (cart/checkout still on entry); 'steam-store-exit' arms a distinct non-escalating 'store-exit' logon grant, so a timed-out go-offline wrap skips the logon quietly and keeps the cached library. | 2026-11-13 | 423f74129, abd2bc538 | Jest 6 suites 428 pass; tsc no new errors; eslint + scoped prettier clean; build:sidecar OK; review 0 critical / 1 warning (WR-01 pre-existing failed banner on logon-rejected); live check pending | [261114-aqa-stop-set-steam-offline-dialog-when-leavi](./quick/261114-aqa-stop-set-steam-offline-dialog-when-leavi/) |
 | 261114-at7 | Bridge update hero shows "Planning update…" from confirm until transfer: runBridgeUpdate sends updating + steam-update-planning before the estimate; progressBridge in update mode sends plain updating on `planned` (covers the stale-journal fallback). UAT 6b's missing label was the pre-378aa80b1 stage-schema drop; WR-07 fixed here. | 2026-11-14 | 9c092bf21, 8e26a1406 | Jest 9 suites 130 pass; eslint + scoped prettier clean; build:sidecar OK; live pass 2026-11-14 on Core Keeper (Planning → Applying), todo closed | [261114-at7-show-a-planning-label-on-the-hero-during](./quick/261114-at7-show-a-planning-label-on-the-hero-during/) |
 | 261114-ca6 | Humble Steam keys get an exact "Owned on Steam" again: titles resolve to Steam app ids via public storesearch (strict normalized-title equality, unique app result only) on sync only, sequential 350ms unref'd gap, cap 40/pass, persistent `humble_steam_appid` cache (hits kept, misses 7-day TTL); resolved id in cached library = exact, else fuzzy. Reads cached Steam library only, no CM logon. | 2026-11-14 | f930f0547, baa44acb7 | Jest humble/stores/frontend Humble 28 suites pass; tsc no new errors; eslint + scoped prettier clean; build:sidecar OK; review 0 blockers (WR-01 fixed, WR-02/03 advisory); live check pending | [261114-ca6-restore-exact-owned-on-steam-on-humble-k](./quick/261114-ca6-restore-exact-owned-on-steam-on-humble-k/) |
+| 261114-1m4 | Module-state census green again (66.4-REVIEW CR-01): the two Humble module-level action-id caches move onto a per-boot `createHumbleActionIdCache()` owner built in `createHumbleServices` and passed to the adapter via deps; Steam `INFERRED_REFRESH_ORIGINS` becomes a frozen array read with `.includes`. Census, its SANCTIONED list and the ceilings files unchanged. | 2026-11-14 | 193cfd717, 31e1f28fd | Jest census + authTrigger + 7 humble suites pass; tsc 0 errors; eslint 0 errors; scoped prettier clean; build:sidecar OK; backend-di-ceilings 22 FAIL (21 pre-existing + DotsMenu.disclosure from 261114-1fi), none on touched files | [261114-1m4-clear-the-66-4-module-state-census-red-m](./quick/261114-1m4-clear-the-66-4-module-state-census-red-m/) |
 | 261113-wro | Steam sign-in dialog now closes before the login panel slides: shared Dialog gains optional `open` (default true) + `onExited` (via TransitionProps); SteamLogin's four success branches call finishSignIn() (sets signedIn → dialog exits), and dismiss runs from onExited. Manual X/backdrop/Escape unchanged; Login/index.tsx untouched. | 2026-11-13 | 18c2f420b, b604121c1 | Jest 6 suites 67 pass; tsc clean; eslint 0 errors; scoped prettier clean; 10 mutations each turned a gate red; live check pending | [261113-wro-close-steam-login-window-before-the-logi](./quick/261113-wro-close-steam-login-window-before-the-logi/) |
 
 ## Session Continuity

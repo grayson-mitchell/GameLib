@@ -21,6 +21,10 @@ with 21 failures:
   `updateDetection*.test.ts`, `updateDispatch.test.ts`, `updateNative.test.ts`,
   `bridgeUpdateFollowUps.test.ts`, `checkGameUpdates.test.ts` and several frontend tests.
 
+Update 2026-11-14 (quick 261114-1m4): now 22. Quick 261114-1fi (`795e0aaa8`) added
+`src/frontend/screens/Game/GamePage/components/__tests__/DotsMenu.disclosure.test.tsx`, which has 8 `jest.mock`
+calls and no baseline entry.
+
 These suites came from phases 74 and 75 and from quick tasks, after 66.4 flipped the jest.mock
 ratchet. The gate either doesn't run in CI, or it runs and its failures are ignored, so the ratchet
 has drifted unnoticed.
