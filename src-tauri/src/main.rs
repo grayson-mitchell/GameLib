@@ -132,6 +132,7 @@ mod shell_state;
 mod notification_show;
 mod dialogs;
 mod scan_dispatch;
+mod steamfiles_dispatch;
 mod depot_dispatch;
 mod app_lifecycle;
 use clipboard::*;
@@ -150,6 +151,7 @@ use shell_state::*;
 use notification_show::*;
 use dialogs::*;
 use scan_dispatch::*;
+use steamfiles_dispatch::*;
 use depot_dispatch::*;
 use app_lifecycle::*;
 
@@ -2029,6 +2031,7 @@ mod tests {
         "rust_dispatch.rs",
         "depot_dispatch.rs",
         "scan_dispatch.rs",
+        "steamfiles_dispatch.rs",
         "shell_state.rs",
         "shell_open.rs",
         "sidecar.rs",
@@ -2075,6 +2078,7 @@ mod tests {
         include_str!("rust_dispatch.rs"),
         include_str!("depot_dispatch.rs"),
         include_str!("scan_dispatch.rs"),
+        include_str!("steamfiles_dispatch.rs"),
         include_str!("shell_state.rs"),
         include_str!("shell_open.rs"),
         include_str!("sidecar.rs"),
@@ -4275,6 +4279,30 @@ mod tests {
                 "{s}"
             );
             let err = gamelib_scan::dispatch(s, &[]).expect_err(s);
+            assert!(err.ends_with(":bad-args"), "{s}: {err}");
+        }
+    }
+
+    #[test]
+    fn steamfiles_channels_are_gamelib_steamfiles_app_ops() {
+        for s in [
+            "steamfiles_find_acf",
+            "steamfiles_parse_valve_manifest",
+            "steamfiles_read_acf",
+            "steamfiles_read_installscript",
+            "steamfiles_read_library_folders",
+            "steamfiles_read_localconfig_beta_key",
+            "steamfiles_read_running_app_id",
+            "steamfiles_scan_acfs",
+            "steamfiles_shortcuts_apply",
+            "steamfiles_shortcuts_read",
+        ] {
+            assert!(
+                gamelib_steamfiles::OPS.contains(&s)
+                    && !gamelib_steamfiles::CLI_ONLY_OPS.contains(&s),
+                "{s}"
+            );
+            let err = gamelib_steamfiles::dispatch(s, &[]).expect_err(s);
             assert!(err.ends_with(":bad-args"), "{s}: {err}");
         }
     }

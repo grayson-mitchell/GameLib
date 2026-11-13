@@ -481,9 +481,9 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 48 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 58 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(48)
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(58)
     expect(router).not.toContain('_ =>')
   })
 
@@ -725,7 +725,22 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // job round trip; that is the live gate in plans 17/18.
       'depot_job_cancel',
       'depot_job_run',
-      'depot_manifest_summary'
+      'depot_manifest_summary',
+
+      // Phase 75 plan 12 (P75-F) -- ten pass-through arms into the Tauri-free `gamelib-steamfiles`
+      // crate. PROVEN: `steamFilesChannelParity.test.ts` pins arms == crate OPS minus CLI-only ==
+      // RUST_STEAMFILES_CHANNELS, and `steamfiles_channels_are_gamelib_steamfiles_app_ops` (main.rs).
+      // NOT ATTEMPTED here: a live rustInvoke round trip.
+      'steamfiles_find_acf',
+      'steamfiles_parse_valve_manifest',
+      'steamfiles_read_acf',
+      'steamfiles_read_installscript',
+      'steamfiles_read_library_folders',
+      'steamfiles_read_localconfig_beta_key',
+      'steamfiles_read_running_app_id',
+      'steamfiles_scan_acfs',
+      'steamfiles_shortcuts_apply',
+      'steamfiles_shortcuts_read'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)
