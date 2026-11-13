@@ -535,68 +535,84 @@ export default React.memo(function GamePage(): JSX.Element | null {
               <GameContext.Provider value={contextValues}>
                 {/* NEW DESIGN */}
                 <>
-                  <div className="topRowWrapper">
-                    <NavLink
-                      className="backButton"
-                      to={backRoute}
-                      title={t2('webview.controls.back', 'Go Back')}
-                    >
-                      <ArrowBackIosNew />
-                    </NavLink>
-                  </div>
                   <div className="mainInfoWrapper">
                     <div className="mainInfo">
-                      <GamePicture
-                        art_square={art_cover}
-                        art_logo={art_logo}
-                        store={runner}
-                      />
-                      <div className="store-icon">
-                        <StoreLogos runner={runner} />
+                      <div className="mainInfoScroll">
+                        <div className="gameArtBand">
+                          <GamePicture
+                            art_square={art_cover}
+                            art_logo={art_logo}
+                            store={runner}
+                          />
+                          <NavLink
+                            className="backButton"
+                            to={backRoute}
+                            title={t2('webview.controls.back', 'Go Back')}
+                          >
+                            <ArrowBackIosNew />
+                          </NavLink>
+                          <MacArchBadge gameInfo={gameInfo} isMac={isMac} />
+                        </div>
+                        <div className="mainInfoBody">
+                          <div className="gameMeta">
+                            <div className="store-icon">
+                              <StoreLogos runner={runner} />
+                            </div>
+                            <Developer gameInfo={gameInfo} />
+                            <ReleaseDate
+                              runnerDate={extraInfo?.releaseDate}
+                              date={wikiInfo?.pcgamingwiki?.releaseDate}
+                            />
+                            <Genres
+                              genres={
+                                gameInfo.extra?.genres ||
+                                wikiInfo?.pcgamingwiki?.genres ||
+                                []
+                              }
+                            />
+                            <EngineBadge state={engineState} />
+                          </div>
+
+                          <h1 style={{ opacity: art_logo ? 0 : 1 }}>{title}</h1>
+                          <div className="gameNotices">
+                            <EngineNotices state={engineState} />
+                            {wikiLink}
+                          </div>
+
+                          <Description />
+                          {!notInstallable && (
+                            <TimeContainer gameInfo={gameInfo} />
+                          )}
+                        </div>
                       </div>
-                      <MacArchBadge gameInfo={gameInfo} isMac={isMac} />
-
-                      <h1 style={{ opacity: art_logo ? 0 : 1 }}>{title}</h1>
-                      <EngineBadge state={engineState} />
-                      <Genres
-                        genres={
-                          gameInfo.extra?.genres ||
-                          wikiInfo?.pcgamingwiki?.genres ||
-                          []
-                        }
-                      />
-                      <Developer gameInfo={gameInfo} />
-                      <EngineNotices state={engineState} />
-                      <ReleaseDate
-                        runnerDate={extraInfo?.releaseDate}
-                        date={wikiInfo?.pcgamingwiki?.releaseDate}
-                      />
-
-                      <Description />
-                      {!notInstallable && <TimeContainer gameInfo={gameInfo} />}
-                      <GameStatus
-                        gameInfo={gameInfo}
-                        progress={progress}
-                        handleUpdate={handleUpdate}
-                        hasUpdate={hasUpdate}
-                      />
-                      <LaunchOptionSelector showTitle={false} />
-                      <div className="buttons">
-                        <MainButton
+                      <div className="actionDock">
+                        <div className="buttons">
+                          <MainButton
+                            gameInfo={gameInfo}
+                            handlePlay={handlePlay}
+                            handleInstall={handleInstall}
+                          />
+                          <LaunchOptionSelector showTitle={false} />
+                          <span
+                            className="actionDockSpacer"
+                            aria-hidden="true"
+                          />
+                          <SettingsButton
+                            gameInfo={gameInfo}
+                            isUninstalling={isUninstalling}
+                          />
+                          <DotsMenu
+                            gameInfo={gameInfo}
+                            handleUpdate={handleUpdate}
+                          />
+                        </div>
+                        <GameStatus
                           gameInfo={gameInfo}
-                          handlePlay={handlePlay}
-                          handleInstall={handleInstall}
-                        />
-                        <SettingsButton
-                          gameInfo={gameInfo}
-                          isUninstalling={isUninstalling}
-                        />
-                        <DotsMenu
-                          gameInfo={gameInfo}
+                          progress={progress}
                           handleUpdate={handleUpdate}
+                          hasUpdate={hasUpdate}
                         />
                       </div>
-                      {wikiLink}
                     </div>
                   </div>
                   <div className="extraInfoWrapper">
