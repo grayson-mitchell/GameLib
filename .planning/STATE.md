@@ -1,16 +1,20 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v0.10
 milestone_name: Foundations
+current_phase: "66.4"
+current_phase_name: Backend module state long tail, the census-to-test flip, then the live smokes (INSERTED)
 status: executing
-stopped_at: Phase 75 context gathered
-last_updated: "2026-11-13T19:19:06.114Z"
+stopped_at: Completed 66.4-24-PLAN.md
+last_updated: "2026-11-13T11:02:48.556Z"
 last_activity: 2026-11-13
+last_activity_desc: Phase 66.4 execution started
+state_head: 275ccb1c6a61e38efad97adbd36aacc06e04c01f
 progress:
   total_phases: 23
   completed_phases: 14
-  total_plans: 361
-  completed_plans: 349
+  total_plans: 363
+  completed_plans: 350
   percent: 61
 ---
 
@@ -21,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 75 — steam-local-file-formats-in-rust
+**Current focus:** Phase 66.4 — Backend module state long tail, the census-to-test flip, then the live smokes (INSERTED)
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,12 +76,12 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 ## Current Position
 
-Phase: 75 (steam-local-file-formats-in-rust) — EXECUTING
-Plan: 26 of 35
+Phase: 66.4 (Backend module state long tail, the census-to-test flip, then the live smokes (INSERTED)) — EXECUTING
+Plan: 3 of 25
 Status: Ready to execute
-Last activity: 2026-11-13 - Completed quick task 261113-wro: Close Steam login window before the login panel slide animation
+Last activity: 2026-11-13 — Phase 66.4 execution started
 
-Progress: [██████████] 97%
+Progress: [██████░░░░] 61%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -266,6 +270,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 74 P01 | 45min | 2 tasks | 9 files |
 | Phase 74 P20 | 60min | 3 tasks | 100 files |
 | Phase 75 P17 | 30m | 2 tasks | 20 files |
+| Phase 66.4 P24 | 6 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -424,6 +429,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase ?]: [66.4-13] 'abort-registry' boot step sits after 'steam-bottle', before 'command-runner' (first consumers precede 'info-caches'); BootServices carries aborts and windowRaiser (39 fields); EOF release aborts through deps.aborts.abortAll() after the queue pause
 - [Phase ?]: 66.4-17: AppRuntime on BootServices/ManagerDeps (field pin 41); 'app-runtime' step after 'abort-registry'; createGlobalConfig takes onSettingChanged; status helpers take StatusUpdateDeps
 - [Phase 74]: [74-01] Delta plan pass yields only the CDN list; local chunks re-verified at build time; multi-use CDN chunks fetched once and cached
+- [Phase 66.4]: 66.4-24: Windows shortcut icon chain is store exe, local install-dir scan (3 levels, 20k entries, no symlinks), then GameLib shell exe; PICS and Uninstall DisplayIcon rejected on measurement
+- [Phase 66.4]: 66.4-24: Windows .lnk passes the gamelib:// URL as one double-quoted explorer.exe argument with inner quotes percent-encoded to %22
 
 ### Pending Todos
 
@@ -740,8 +747,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-13T19:19:06.105Z
-Stopped at: Phase 75 context gathered
+Last session: 2026-11-13T11:02:37.162Z
+Stopped at: Completed 66.4-24-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
