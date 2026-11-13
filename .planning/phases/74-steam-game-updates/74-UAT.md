@@ -1,5 +1,5 @@
 ---
-status: complete
+status: pending
 phase: 74-steam-game-updates
 source: [74-13-PLAN.md]
 started: 2026-11-12
@@ -124,6 +124,31 @@ precondition: the registered fixture re-staled per spike 069 step 4 (quit Steam,
 expected: On a bridge game whose ACF InstalledDepots lists at least one DLC or language depot besides the base depot, an update completes with `[depot-rust] outcome ... status=completed acf=4`; the log line `retire appId=<id> ...` shows the DLC/language depot under kept (never retired); every file that belonged to that depot before the update still exists afterwards (compare a file list taken before and after); the game launches through the bridge (strict criterion).
 result: pass. Dungeons of Dredmor 98800 with two InstalledDepots (98801 and 98820), stale via buildid 150078 to 150000, updated by the boot auto-update. 17:42:30 `updateBridgeGame: appId 98800 starting delta (branch public, oldManifest=true)`; 17:42:34 `retire appId=98800 candidates=2 retired=[] kept=[]`; outcome status=completed acf=4, ACF back to 150078. File list before and after identical (9262 files, empty diff), so the WR-01 DLC-retention goal passes. Launch reached the main menu but went via the Steam bridge bottle directly (`shim withheld: coverage gaps STEAMREMOTESTORAGE_INTERFACE_VERSION008, no helper`), so by the strict criterion the launch is bridge-unverified (pre-existing shim gap, not Phase 74). Also seen: `[sidecarRpc] IPC_INVALID_ARGS kind=send channel=depotJobEvent paths=0.kind codes=invalid_union` x4 during the delta jobs; the update still completed. Context: quick 261113-n39 (b06235474) first fixed a separate blocker, the Nov 10 Mac Steam update removing SteamAPI_SteamUser_v023 which broke every bridge helper WHOAMI (helper now probes accessors newest-first; live SteamUser=v024).
 precondition: choose a bridge install with a DLC or language depot (read InstalledDepots in the bridge bottles' appmanifest files). If none is stale, stage one with GameLib quit: copy the ACF aside, set its `buildid` to any lower number while leaving InstalledDepots untouched, relaunch GameLib, Refresh; the badge shows, and Update runs the retire decision over every installed depot with little or nothing to download. Restore nothing afterwards (the update rewrites the ACF). Take before/after file lists with `find <installdir> -type f | sort` into the scratchpad, never into the repo.
+
+### 19. Registered Update with Steam closed starts Steam (CR-01)
+expected: With Steam quit, Refresh shows the update badge on the registered fixture (PICS). Update logs `ACF says current (build <b>) but Steam has build <t>; handing the update to Steam` and then either `Steam is updating appId <id> via InstallApp` or `delegating update for appId <id> via steam://nav/games/details/<id>`; Steam starts; the game updates (if Steam shows its own Update button on the opened page, pressing it is allowed); GameLib shows Updating until `update of appId <id> finished`, then the badge clears. The log never shows `is already current` for this click.
+result: pending
+precondition: the registered fixture re-staled per spike 069 step 4 (quit Steam, lower the ACF buildid with Steam quit, leave Steam quit), GameLib relaunched with `pnpm tauri:dev`, Steam still not running when Update is pressed (`pgrep -x steam_osx` empty).
+
+### 20. Esc dismisses the launch prompt as Play anyway (re-run of item 16 step 3)
+expected: Play on a stale bridge game shows the three-button native box; pressing Esc closes it with no beep and launches the current build (the game reaching its menu suffices); no update is queued (Downloads stays empty, no `queued update` log line). Return on a fresh prompt also launches.
+result: pending
+precondition: Hell Clock 1782460 or Core Keeper 1621690 stale and with no "Don't ask again" acknowledgement for its target build; autoUpdateGames off so the update is not run at boot.
+
+### 21. Bridge delta with no depotJobEvent IPC errors (re-run of item 18's side note)
+expected: A bridge update runs to `[depot-rust] outcome ... status=completed acf=4`, and the cumulative gamelib.log for the run has zero `IPC_INVALID_ARGS` lines for `channel=depotJobEvent`; the Downloads hero shows the planning/applying stage text if it appears at all (record what you see; that label is a separate todo and not a pass/fail condition here).
+result: pending
+precondition: any stale bridge fixture (stage staleness as item 18's precondition describes if none is stale); start the cumulative tail before pressing Update.
+
+### 22. Registered InstallApp update with no Update-button flash (re-run of item 17's polish note)
+expected: With InstallApp ON, Update shows Updating on the card and the game page from the click until `update of appId <id> finished`; at no point between the click and the badge clearing does the Update button or the clickable "New Version Available" status reappear.
+result: pending
+precondition: the registered fixture re-staled per spike 069 step 4 with Steam running afterwards; the InstallApp opt-in is on and confirmed saved; watch the card and keep the game page open on a second look.
+
+### 23. A failing unattended auto-update does not loop (CR-02)
+expected: With autoUpdateGames ON and a stale bridge game whose unattended update cannot run, the boot shows one "Update Started" and one "Update Failed" notification for it; the log has one `auto-update attempt recorded for appId <id>` and one `unattended=true update not started` (or `failed`) line; pressing Refresh twice more adds no notification and logs `skipping auto-update for appId <id>: build <b> already attempted this session`; a manual Update click afterwards runs an attended update (sign-in prompt or progress).
+result: pending
+precondition: the bridge fixture stale; make the unattended path fail by signing out of Steam in GameLib before the relaunch (or by a boot where the Keychain gate stays locked); autoUpdateGames ON; relaunch with `pnpm tauri:dev`; restore the sign-in and autoUpdateGames to their previous values afterwards.
 
 ## Summary
 
