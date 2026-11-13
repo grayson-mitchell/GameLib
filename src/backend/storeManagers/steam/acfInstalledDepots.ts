@@ -43,14 +43,19 @@ export async function readAcfInstalledDepots(
       rec?.buildid != null && ID.test(rec.buildid) ? rec.buildid : undefined
     return {
       buildid,
-      installedDepots: (rec?.installedDepots ?? []).map((d) => ({
-        depotId: d.depotId,
-        manifest: d.manifest,
-        size: ID.test(d.size) ? d.size : '0',
-        ...(d.dlcAppId && ID.test(d.dlcAppId) && d.dlcAppId !== '0'
-          ? { dlcAppId: d.dlcAppId }
-          : {})
-      }))
+      // WR-05 (75 review): a depot whose manifest gid is missing or non-numeric is skipped, as
+      // the replaced parseAcfInstalledDepots did, so it takes the full-download path instead of
+      // sending fromManifest '' and failing the whole delta job.
+      installedDepots: (rec?.installedDepots ?? [])
+        .filter((d) => ID.test(d.depotId) && ID.test(d.manifest))
+        .map((d) => ({
+          depotId: d.depotId,
+          manifest: d.manifest,
+          size: ID.test(d.size) ? d.size : '0',
+          ...(d.dlcAppId && ID.test(d.dlcAppId) && d.dlcAppId !== '0'
+            ? { dlcAppId: d.dlcAppId }
+            : {})
+        }))
     }
   } catch {
     return null

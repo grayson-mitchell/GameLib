@@ -67,6 +67,23 @@ describe('readAcfInstalledDepots on Rust', () => {
     expect(stub.calls).toHaveLength(1)
   })
 
+  it('skips a depot whose manifest gid is missing or non-numeric (WR-05)', async () => {
+    const stub = stubRustSteamFiles({
+      [RUST_STEAMFILES_READ_ACF]: () =>
+        result({
+          installedDepots: [
+            { depotId: '333302', manifest: '', size: '1', dlcAppId: null },
+            { depotId: '333303', manifest: 'abc', size: '2', dlcAppId: null },
+            { depotId: '333304', manifest: GID, size: '3', dlcAppId: null }
+          ]
+        })
+    })
+    const r = await readAcfInstalledDepots(stub, '/steamapps', '5')
+    expect(r?.installedDepots).toEqual([
+      { depotId: '333304', manifest: GID, size: '3' }
+    ])
+  })
+
   it('returns null when the manifest is absent, the id is not numeric, or the invoke rejects', async () => {
     const absent = stubRustSteamFiles({
       [RUST_STEAMFILES_READ_ACF]: () => ({
