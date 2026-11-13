@@ -95,6 +95,7 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
+  logDebug: jest.fn(),
   LogPrefix: {
     Steam: 'Steam',
     Backend: 'Backend'
@@ -953,6 +954,110 @@ describe('SteamLibraryManager', () => {
 
       stopInstallPolling(steamTestDeps, '730')
       jest.useRealTimers()
+    })
+
+    describe('rust flag (GAMELIB_STEAMFILES_TEXT=rust): finalize through depot_finalize (75-23)', () => {
+      const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
+      let acfInstalldir = 'csgo'
+      let invoke: jest.Mock
+      let spies: jest.SpyInstance[]
+      beforeEach(() => {
+        process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+        acfInstalldir = 'csgo'
+        // The ACF read goes through the deps' own transport, the finalize through the install
+        // runtime's; one router serves both.
+        invoke = jest.fn((channel: string, args: unknown[]) => {
+          if (channel === 'steamfiles_read_acf') {
+            return Promise.resolve({ record: { installdir: acfInstalldir } })
+          }
+          return Promise.resolve({
+            acf: { path: '/x', stateFlags: 1026, sizeOnDisk: '0' }
+          })
+        })
+        spies = [
+          jest
+            .spyOn(steamTestDeps, 'requestRustInvoke')
+            .mockImplementation(invoke as never),
+          jest
+            .spyOn(
+              steamTestDeps.steamInstallRuntime.depotJobs.transport,
+              'requestRustInvoke'
+            )
+            .mockImplementation(invoke as never)
+        ]
+      })
+      afterEach(() => {
+        spies.forEach((x) => x.mockRestore())
+        if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
+        else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
+      })
+
+      it('a failed verify sends outcome null with the sanitised installdir and no TS finalize', async () => {
+        jest.useFakeTimers()
+        library.clear()
+        setupDownloadingFixture('730', 'csgo')
+        jest
+          .mocked(resumeVerifyRust)
+          .mockRejectedValue(new Error('no authenticated Steam CM connection'))
+
+        await resumeInterruptedSteamInstall(steamTestDeps, '730')
+
+        expect(finalizeToSteam).not.toHaveBeenCalled()
+        expect(invoke).toHaveBeenCalledWith('depot_finalize', [
+          {
+            appId: '730',
+            finalize: expect.objectContaining({
+              steamappsDir: join(tmp, 'steamapps'),
+              installdir: 'csgo',
+              allowFullOwnership: false
+            }),
+            depots: [],
+            outcome: null
+          }
+        ])
+        stopInstallPolling(steamTestDeps, '730')
+        jest.useRealTimers()
+      })
+
+      it('a hostile installdir finalizes the fallback installdir', async () => {
+        jest.useFakeTimers()
+        library.clear()
+        setupDownloadingFixture('730', '../evil')
+        acfInstalldir = '../evil'
+
+        await resumeInterruptedSteamInstall(steamTestDeps, '730')
+
+        expect(resumeVerifyRust).not.toHaveBeenCalled()
+        const arg = (
+          invoke.mock.calls.find((c) => c[0] === 'depot_finalize')?.[1] as any[]
+        )[0]
+        expect(arg.finalize.installdir).toBe('app_730')
+        stopInstallPolling(steamTestDeps, '730')
+        jest.useRealTimers()
+      })
+
+      it('an error result is logged and swallowed', async () => {
+        jest.useFakeTimers()
+        library.clear()
+        setupDownloadingFixture('730', 'csgo')
+        jest.mocked(resumeVerifyRust).mockRejectedValue(new Error('offline'))
+        invoke.mockImplementation((channel: string) =>
+          Promise.resolve(
+            channel === 'steamfiles_read_acf'
+              ? { record: { installdir: 'csgo' } }
+              : { error: { message: 'boom' } }
+          )
+        )
+
+        await expect(
+          resumeInterruptedSteamInstall(steamTestDeps, '730')
+        ).resolves.toBeUndefined()
+        expect(
+          invoke.mock.calls.filter((c) => c[0] === 'depot_finalize')
+        ).toHaveLength(1)
+        stopInstallPolling(steamTestDeps, '730')
+        jest.useRealTimers()
+      })
     })
   })
 })

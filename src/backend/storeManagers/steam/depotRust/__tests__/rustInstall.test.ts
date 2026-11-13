@@ -712,3 +712,59 @@ describe('downloadSteamDepots lease options (74-19 unattended)', () => {
     expect(firstLeaseOpts()).toMatchObject({ guidedAction: 'install' })
   })
 })
+
+describe('zero-depot finalize on the rust flag (75-23)', () => {
+  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
+  beforeEach(() => {
+    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+    jest.mocked(selectAllDepots).mockReturnValue([])
+    invokeMock.mockResolvedValue({
+      acf: { path: '/x', stateFlags: 1026, sizeOnDisk: '0' }
+    })
+  })
+  afterEach(() => {
+    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
+    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
+  })
+
+  it('sends depots [] and outcome null, LastOwner as the persisted string', async () => {
+    const out = await downloadSteamDepots(APP_ID, OPTS())
+    expect(out.status).toBe('done')
+    expect(invokeMock).toHaveBeenCalledTimes(1)
+    expect(invokeMock).toHaveBeenCalledWith('depot_finalize', [
+      {
+        appId: APP_ID,
+        finalize: expect.objectContaining({
+          steamappsDir: steamapps,
+          installdir: 'SomeGame',
+          lastOwner: '76561198012345678',
+          allowFullOwnership: false
+        }),
+        depots: [],
+        outcome: null
+      }
+    ])
+  })
+
+  it('buildid "" becomes null', async () => {
+    client.getProductInfo.mockImplementation(((ids: number[]) =>
+      Promise.resolve({
+        apps: {
+          [ids[0] ?? 0]: {
+            appinfo: {
+              common: { name: 'Some Game' },
+              depots: { branches: { public: {} } },
+              config: { installdir: 'x' },
+              extended: {}
+            }
+          }
+        },
+        packages: {}
+      })) as never)
+    await downloadSteamDepots(APP_ID, OPTS())
+    const call = invokeMock.mock.calls.find((c) => c[0] === 'depot_finalize')
+    expect(
+      (call?.[1] as { finalize: { buildid: unknown } }[])[0]?.finalize.buildid
+    ).toBeNull()
+  })
+})

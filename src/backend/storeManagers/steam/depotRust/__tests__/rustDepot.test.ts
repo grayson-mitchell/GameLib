@@ -11,13 +11,19 @@ jest.mock('backend/logger', () => ({
 
 import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import {
+  RUST_DEPOT_FINALIZE,
   RUST_DEPOT_JOB_CANCEL,
   RUST_DEPOT_JOB_RUN,
   RUST_DEPOT_MANIFEST_SUMMARY
 } from 'common/types/sidecarTransport'
 import type { CdnAuthTokenCache } from '../../depot/cdnAuth'
 import { createDepotJobRegistry } from '../jobRegistry'
-import { cancelDepotJob, runDepotJob, summarizeDepots } from '../rustDepot'
+import {
+  cancelDepotJob,
+  runDepotJob,
+  rustFinalize,
+  summarizeDepots
+} from '../rustDepot'
 import type { RustDepotJob, RustOutcome } from '../types'
 
 const invokeMock = jest.fn()
@@ -124,5 +130,41 @@ describe('summarizeDepots', () => {
     const req = { appId: '480', depots: [], hosts: [], patterns: [] }
     await expect(summarizeDepots(registry.transport, req)).resolves.toBe(result)
     expect(invokeMock).toHaveBeenCalledWith(RUST_DEPOT_MANIFEST_SUMMARY, [req])
+  })
+})
+
+describe('rustFinalize', () => {
+  const spec = {
+    steamappsDir: '/lib/steamapps',
+    installdir: 'Game',
+    name: 'Game',
+    buildid: null,
+    lastOwner: null,
+    allowFullOwnership: false
+  }
+
+  it('sends exactly one { appId, finalize, depots, outcome } arg on depot_finalize', async () => {
+    const acf = { path: '/p', stateFlags: 1026, sizeOnDisk: '0' }
+    invokeMock.mockResolvedValue({ acf })
+    await expect(
+      rustFinalize(registry.transport, '480', spec, [], null)
+    ).resolves.toEqual({ acf })
+    expect(invokeMock).toHaveBeenCalledWith(RUST_DEPOT_FINALIZE, [
+      { appId: '480', finalize: spec, depots: [], outcome: null }
+    ])
+  })
+
+  it('maps a preserved result through', async () => {
+    invokeMock.mockResolvedValue({ preserved: true, stateFlags: 4 })
+    await expect(
+      rustFinalize(registry.transport, '480', spec, [], 'cancelled')
+    ).resolves.toEqual({ preserved: true, stateFlags: 4 })
+  })
+
+  it('throws on an error result', async () => {
+    invokeMock.mockResolvedValue({ error: { message: 'disk full' } })
+    await expect(
+      rustFinalize(registry.transport, '480', spec, [], null)
+    ).rejects.toThrow('disk full')
   })
 })
