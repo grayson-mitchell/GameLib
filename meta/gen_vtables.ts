@@ -8080,17 +8080,23 @@ export function helperAccessorProbe(
   const match = helperInterface.match(
     /^(SteamAPI_([A-Za-z]+)(?:_SteamAPI)?_v)(\d{3})$/
   )
-  if (!match) return null
-  const declared = parseInt(match[3], 10)
+  const [, prefix, family, declaredText] = match ?? []
+  if (
+    prefix === undefined ||
+    family === undefined ||
+    declaredText === undefined
+  )
+    return null
+  const declared = parseInt(declaredText, 10)
   let low = declared
   for (const m of manifests) {
     if (m.helperInterface !== helperInterface) continue
-    const ver = m.interface.match(/(\d+)$/)
-    if (ver) low = Math.min(low, parseInt(ver[1], 10))
+    const verText = m.interface.match(/(\d+)$/)?.[1]
+    if (verText !== undefined) low = Math.min(low, parseInt(verText, 10))
   }
   return {
-    prefix: match[1],
-    family: match[2],
+    prefix,
+    family,
     high: declared + HELPER_ACCESSOR_PROBE_HEADROOM,
     low: Math.max(1, low)
   }
