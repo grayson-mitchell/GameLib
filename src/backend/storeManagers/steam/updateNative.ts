@@ -87,10 +87,17 @@ export async function updateRegisteredSteamGame(
     )
   }
   const fromBuild = acfFields?.buildid ?? ''
-  const targetBuild =
+  // UAT 19: with Steam closed the ACF's TargetBuildID just equals buildid until Steam itself sees
+  // the update, so on the ACF-says-current path the PICS target is the only real one.
+  const acfPending = acfFields !== null && isAcfUpdatePending(acfFields)
+  const acfTarget =
     acfFields?.targetBuildId && acfFields.targetBuildId !== '0'
       ? acfFields.targetBuildId
-      : known?.targetBuild
+      : undefined
+  const targetBuild =
+    picsSaysNewer && !acfPending
+      ? known?.targetBuild
+      : (acfTarget ?? known?.targetBuild)
   const pollOptions = {
     delegatedToSteamClient: true,
     awaitingUpdate: { fromBuild, targetBuild }

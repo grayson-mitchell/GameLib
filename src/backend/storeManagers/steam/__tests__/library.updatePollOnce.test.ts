@@ -187,6 +187,43 @@ describe('pollUpdateOnce', () => {
     expect(getPoll()).toBeUndefined()
   })
 
+  it('UAT 19 live replay: stale ACF for 40 ticks ends quietly, never finished at the stale build', async () => {
+    const p = pollWithTarget('5820078')
+    p.awaitingUpdate!.fromBuild = '5820077'
+    acf({ stateFlags: 4, buildid: '5820077', targetBuildId: '5820077' })
+    send.mockClear()
+    for (let i = 0; i < STEAM_REQUEST_NO_ACTIVITY_TICKS; i++) {
+      p.ticks = i + 1
+      await pollUpdateOnce(deps, APP, p)
+    }
+    expect(logInfo).not.toHaveBeenCalledWith(
+      expect.stringContaining('finished (build 5820077)'),
+      'Steam'
+    )
+    expect(logInfo).toHaveBeenCalledWith(
+      expect.stringContaining('ending the update poll quietly'),
+      'Steam'
+    )
+    expect(statusesOf().filter((s) => s === 'done')).toHaveLength(1)
+    expect(send).not.toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.anything()
+    )
+    expect(getPoll()).toBeUndefined()
+  })
+
+  it('UAT 19: reaching the PICS target logs finished at that build', async () => {
+    const p = pollWithTarget('5820078')
+    p.awaitingUpdate!.fromBuild = '5820077'
+    acf({ stateFlags: 4, buildid: '5820078', targetBuildId: '5820078' })
+    p.ticks = 5
+    await pollUpdateOnce(deps, APP, p)
+    expect(logInfo).toHaveBeenCalledWith(
+      'Steam: update of appId 333300 finished (build 5820078)',
+      'Steam'
+    )
+  })
+
   it('quiet end with no known target completes when the ACF is current', async () => {
     const p = pollWithTarget(undefined)
     acf({ stateFlags: 4, buildid: '777' })

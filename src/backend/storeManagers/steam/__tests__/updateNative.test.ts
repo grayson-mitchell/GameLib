@@ -235,6 +235,51 @@ describe('updateRegisteredSteamGame', () => {
     )
   })
 
+  it('UAT 19: ACF current with TargetBuildID equal to buildid waits for the PICS target', async () => {
+    jest.mocked(readAcfUpdateState).mockResolvedValue({
+      buildid: '5820077',
+      targetBuildId: '5820077',
+      stateFlags: 4,
+      bytesToDownload: 0,
+      bytesDownloaded: 0,
+      scheduledAutoUpdate: 0
+    } as never)
+    jest
+      .mocked(getLastKnownSteamUpdateState)
+      .mockReturnValue(staleCache('5820078'))
+    jest.mocked(isSteamExperimentalInstallAppEnabled).mockReturnValue(false)
+    await updateRegisteredSteamGame(game)
+    expect(startInstallPolling).toHaveBeenCalledWith(
+      expect.anything(),
+      '333300',
+      {
+        delegatedToSteamClient: true,
+        awaitingUpdate: { fromBuild: '5820077', targetBuild: '5820078' }
+      }
+    )
+  })
+
+  it('pending ACF with target 0 and no PICS target has no target build', async () => {
+    jest.mocked(readAcfUpdateState).mockResolvedValue({
+      buildid: '777',
+      targetBuildId: '0',
+      stateFlags: 6,
+      bytesToDownload: 10,
+      bytesDownloaded: 0,
+      scheduledAutoUpdate: 0
+    } as never)
+    jest.mocked(isSteamExperimentalInstallAppEnabled).mockReturnValue(false)
+    await updateRegisteredSteamGame(game)
+    expect(startInstallPolling).toHaveBeenCalledWith(
+      expect.anything(),
+      '333300',
+      {
+        delegatedToSteamClient: true,
+        awaitingUpdate: { fromBuild: '777', targetBuild: undefined }
+      }
+    )
+  })
+
   it('refuses while the game is running', async () => {
     jest.mocked(readRunningAppId).mockResolvedValue(333300)
     const r = await updateRegisteredSteamGame(game)
