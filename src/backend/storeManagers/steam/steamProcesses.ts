@@ -11,6 +11,7 @@
  * stdin EOF.
  */
 import type { StoreVersioning } from 'backend/storeVersioning/engine'
+import type { RequestRustInvoke } from '../../host'
 import type { SendFrontendMessage } from '../../host/frontendMessage'
 import type { GlobalConfigSlice } from '../../config'
 import type { OpenExternal } from '../../host/openExternal'
@@ -41,6 +42,8 @@ export function createSteamProcesses(deps: {
   /** The boot-owned abort registry the DRM component and Valve client downloads register in (66.4-13). */
   aborts: Pick<AbortRegistry, 'create' | 'delete'>
   sendFrontendMessage: SendFrontendMessage
+  /** The sidecar -> Rust transport (75 D-05: the Valve manifest guards run on Rust). */
+  requestRustInvoke: RequestRustInvoke
 }) {
   const { runner, clock, platform, config, openExternal, paths, aborts } = deps
   return {
@@ -58,7 +61,11 @@ export function createSteamProcesses(deps: {
       clock
     }),
     // The Steam DRM spawners (pgrep, codesign, unzip) and their three single-flight Maps.
-    drm: createSteamDrm({ runner, aborts }),
+    drm: createSteamDrm({
+      runner,
+      aborts,
+      requestRustInvoke: deps.requestRustInvoke
+    }),
     runningPoll: createRunningPoll({
       clock,
       readRunningAppId: () => readRunningAppId({ runner, paths }, platform),

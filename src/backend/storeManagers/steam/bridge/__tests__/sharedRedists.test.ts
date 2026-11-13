@@ -1,6 +1,9 @@
 import { at } from '../../__tests__/fixtures/indexed'
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import * as logger from 'backend/logger'
+import { RUST_STEAMFILES_READ_INSTALLSCRIPT } from 'common/types/sidecarTransport'
+import { stubRustSteamFiles } from '../../localFiles/__tests__/fixtures/stubRustSteamFiles'
 
 import {
   BOTTLE_WINDOWS_VERSION,
@@ -21,6 +24,7 @@ import {
   parseInstallScript,
   parseKv1,
   parseRegQueryDword,
+  readInstallScript,
   sharedRedistLedgerKey,
   toBottleWindowsPath,
   type InstallScriptEntry
@@ -749,5 +753,90 @@ describe('H1: Wine Mono helpers', () => {
   it('H1: detects a registered wine-mono in a system.reg dump', () => {
     expect(systemRegHasWineMono('"x"="mono\\\\wine-mono-11.3.0"')).toBe(true)
     expect(systemRegHasWineMono('WINE REGISTRY Version 2')).toBe(false)
+  })
+})
+
+describe('readInstallScript (75 D-06)', () => {
+  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
+  const path = join(__dirname, 'fixtures/sharedRedists', 'unused.vdf')
+  beforeEach(() => {
+    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+    jest.spyOn(logger, 'logDebug').mockImplementation(() => undefined)
+  })
+  afterEach(() => {
+    jest.restoreAllMocks()
+    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
+    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
+  })
+
+  it('maps Rust entries (nulls to absent fields) and sends only the path', async () => {
+    const stub = stubRustSteamFiles({
+      [RUST_STEAMFILES_READ_INSTALLSCRIPT]: () => ({
+        exists: true,
+        entries: [
+          {
+            name: 'VC 2019',
+            hasRunKey: 'HKLM\\k',
+            minimumHasRunValue: 2,
+            processes: [
+              { process: 'a.exe', command: '/q' },
+              { process: 'b.exe', command: null }
+            ],
+            requirementOs: { is64BitWindows: 'true', osType: null }
+          },
+          {
+            name: 'x',
+            hasRunKey: null,
+            minimumHasRunValue: 1,
+            processes: [],
+            requirementOs: null
+          }
+        ]
+      })
+    })
+    const r = await readInstallScript(stub, path)
+    expect(r).toEqual([
+      {
+        name: 'VC 2019',
+        hasRunKey: 'HKLM\\k',
+        minimumHasRunValue: 2,
+        processes: [{ process: 'a.exe', command: '/q' }, { process: 'b.exe' }],
+        requirementOs: { is64BitWindows: 'true' }
+      },
+      { name: 'x', minimumHasRunValue: 1, processes: [], requirementOs: null }
+    ])
+    expect(stub.calls).toEqual([
+      { channel: RUST_STEAMFILES_READ_INSTALLSCRIPT, args: { path } }
+    ])
+  })
+
+  it('is null for null entries and for a rejected invoke', async () => {
+    const none = stubRustSteamFiles({
+      [RUST_STEAMFILES_READ_INSTALLSCRIPT]: () => ({
+        exists: false,
+        entries: null
+      })
+    })
+    expect(await readInstallScript(none, path)).toBeNull()
+    const boom = stubRustSteamFiles({
+      [RUST_STEAMFILES_READ_INSTALLSCRIPT]: () => {
+        throw new Error('rust down')
+      }
+    })
+    expect(await readInstallScript(boom, path)).toBeNull()
+  })
+
+  it('ts flag parses the file in process and never invokes Rust', async () => {
+    process.env.GAMELIB_STEAMFILES_TEXT = 'ts'
+    const stub = stubRustSteamFiles({})
+    const file = join(
+      __dirname,
+      'fixtures/sharedRedists',
+      '228986-vcredist-2015.vdf'
+    )
+    expect(await readInstallScript(stub, file)).toEqual(
+      parseInstallScript(fx('228986-vcredist-2015.vdf'))
+    )
+    expect(stub.calls).toEqual([])
   })
 })

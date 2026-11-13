@@ -52,6 +52,7 @@ import {
   type SteamclientLayerReady
 } from './steamclientLayerInstall'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { createValveClient, type ValveClientReady } from './valveClient'
 import { stageDrmBottle } from './stageDrmBottle'
 import type {
@@ -682,10 +683,12 @@ async function prefetchDrmDownloadsOn(
  * createSteamProcesses. The three single-flight Maps (setup, component, Valve
  * client) are closure state of it, so a second instance shares no pending work.
  */
-export function createSteamDrm(deps: {
-  runner: Pick<ProcessRunner, 'run'>
-  aborts: Pick<AbortRegistry, 'create' | 'delete'>
-}) {
+export function createSteamDrm(
+  deps: RustInvokeDeps & {
+    runner: Pick<ProcessRunner, 'run'>
+    aborts: Pick<AbortRegistry, 'create' | 'delete'>
+  }
+) {
   const inFlight = new Map<string, Promise<DrmLaunchSetupResult>>()
   const steps: DrmInstanceSteps = {
     isMacSteamRunning: createIsMacSteamRunning(deps),

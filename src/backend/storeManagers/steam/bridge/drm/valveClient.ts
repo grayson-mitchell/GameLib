@@ -28,6 +28,10 @@ import { Transform } from 'stream'
 import { pipeline } from 'stream/promises'
 
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import { RUST_STEAMFILES_PARSE_VALVE_MANIFEST } from 'common/types/sidecarTransport'
+import { invokeSteamFiles } from '../../localFiles/rustSteamFiles'
+import { steamFilesTextImpl } from '../../localFiles/steamFilesFlags'
 import type { ProcessRunner } from 'backend/process/types'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
@@ -177,6 +181,29 @@ export function parseValveClientManifest(
       return { ok: false, reason: 'bad manifest version' }
     }
     return { ok: true, pkg: { manifestVersion: version, file, sha2, size } }
+  } catch {
+    return { ok: false, reason: 'manifest did not parse' }
+  }
+}
+
+/**
+ * Phase 75 D-05: the same guards on Rust. The text is written to a file inside the run's own temp
+ * dir and only its path crosses the pipe; the Rust side re-applies the size cap, the forbidden-key
+ * reject and the shape checks in the order above. A rejected invoke is the same fail-closed
+ * 'manifest did not parse' the TS catch gives.
+ */
+export async function parseValveClientManifestFile(
+  rust: RustInvokeDeps,
+  path: string
+): Promise<{ ok: true; pkg: ValveClientPackage } | Fail> {
+  try {
+    const r = await invokeSteamFiles(
+      rust,
+      RUST_STEAMFILES_PARSE_VALVE_MANIFEST,
+      { path }
+    )
+    if (r.ok && r.pkg) return { ok: true, pkg: r.pkg }
+    return { ok: false, reason: r.reason ?? 'manifest did not parse' }
   } catch {
     return { ok: false, reason: 'manifest did not parse' }
   }
@@ -491,6 +518,7 @@ function errText(err: unknown): string {
 async function installOnce(
   paths: NonNullable<ReturnType<typeof buildDrmPaths>>,
   deps: ValveClientDeps,
+  rust: RustInvokeDeps,
   runUnzipOnRunner: ValveUnzipRunner,
   aborts: Pick<AbortRegistry, 'create' | 'delete'>
 ): Promise<DrmStepResult<ValveClientReady>> {
@@ -550,14 +578,23 @@ async function installOnce(
       )
     }
 
-    const parsed = parseValveClientManifest(manifestText)
+    let parsed: { ok: true; pkg: ValveClientPackage } | Fail
+    if (steamFilesTextImpl() === 'rust') {
+      // Write-then-path (75 D-05): the run's own 0700 temp dir, removed by the finally below.
+      tempDir = await fsp.mkdtemp(join(root, '.partial-'))
+      const manifestPath = join(tempDir, 'manifest.vdf')
+      await fsp.writeFile(manifestPath, manifestText, { mode: 0o600 })
+      parsed = await parseValveClientManifestFile(rust, manifestPath)
+    } else {
+      parsed = parseValveClientManifest(manifestText)
+    }
     if (!parsed.ok)
       return drmStepError('valve-verify', 'manifest: ' + parsed.reason)
     const pkg = parsed.pkg
     const target = paths.valveClientDir(pkg.manifestVersion)
     if (!target) return drmStepError('valve-verify', 'manifest: bad version')
 
-    tempDir = await fsp.mkdtemp(join(root, '.partial-'))
+    tempDir ??= await fsp.mkdtemp(join(root, '.partial-'))
     const zipPath = join(tempDir, 'package.zip')
     const outDir = join(tempDir, 'out')
 
@@ -722,11 +759,13 @@ async function installOnce(
  * The Valve client step on one runner. The single-flight Map is closure state of
  * the instance (66.2 D-15), so a second instance does not share a pending fetch.
  */
-export function createValveClient(deps: {
-  runner: Pick<ProcessRunner, 'run'>
-  /** The boot-owned abort registry the Valve client downloads register in (66.4-13). */
-  aborts: Pick<AbortRegistry, 'create' | 'delete'>
-}) {
+export function createValveClient(
+  deps: RustInvokeDeps & {
+    runner: Pick<ProcessRunner, 'run'>
+    /** The boot-owned abort registry the Valve client downloads register in (66.4-13). */
+    aborts: Pick<AbortRegistry, 'create' | 'delete'>
+  }
+) {
   const inFlight = new Map<string, Promise<DrmStepResult<ValveClientReady>>>()
   const runUnzipOnRunner = createRunUnzip(deps)
 
@@ -743,7 +782,13 @@ export function createValveClient(deps: {
       if (!paths) return drmStepError('valve-fetch', 'invalid app folder')
       const pending = inFlight.get(paths.valveClientRoot)
       if (pending) return await pending
-      const run = installOnce(paths, stepDeps, runUnzipOnRunner, deps.aborts)
+      const run = installOnce(
+        paths,
+        stepDeps,
+        deps,
+        runUnzipOnRunner,
+        deps.aborts
+      )
         .then((result) => {
           if (result.status === 'error') {
             logWarning(

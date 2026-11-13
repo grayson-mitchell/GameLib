@@ -51,6 +51,9 @@ import {
 import { at } from '../../../__tests__/fixtures/indexed'
 import { createRealRunner } from 'backend/testUtils/realRunner'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
+import { RUST_STEAMFILES_PARSE_VALVE_MANIFEST } from 'common/types/sidecarTransport'
+import { stubRustSteamFiles } from '../../../localFiles/__tests__/fixtures/stubRustSteamFiles'
+import type { ValveManifestResult } from '../../../localFiles/steamFilesTypes'
 
 // The unzip integration tests must really extract the fixture zips, so they run the real
 // runner under a fake HOME (D-12(b)); every other path never reaches unzip.
@@ -58,7 +61,8 @@ const realRunner = createRealRunner()
 const aborts = createAbortRegistry()
 const { ensureValveClient } = createValveClient({
   runner: realRunner.runner,
-  aborts
+  aborts,
+  requestRustInvoke: () => Promise.reject(new Error('rust not stubbed'))
 })
 afterAll(() => realRunner.dispose())
 
@@ -532,7 +536,8 @@ describe('ensureValveClient', () => {
     ])
     const { ensureValveClient: scripted } = createValveClient({
       runner,
-      aborts
+      aborts,
+      requestRustInvoke: () => Promise.reject(new Error('rust not stubbed'))
     })
     const r = await scripted({ appFolder }, fakes('bins_win64.fixture.zip'))
     expect(r).toMatchObject({ status: 'error', step: 'valve-verify' })
@@ -551,8 +556,16 @@ describe('ensureValveClient', () => {
       fetchText: jest.fn(() => new Promise<string>(() => undefined)),
       fetchToFile: jest.fn()
     })
-    const a = createValveClient({ runner: createScriptedRunner([]), aborts })
-    const b = createValveClient({ runner: createScriptedRunner([]), aborts })
+    const a = createValveClient({
+      runner: createScriptedRunner([]),
+      aborts,
+      requestRustInvoke: () => Promise.reject(new Error('rust not stubbed'))
+    })
+    const b = createValveClient({
+      runner: createScriptedRunner([]),
+      aborts,
+      requestRustInvoke: () => Promise.reject(new Error('rust not stubbed'))
+    })
     const fa = hang()
     const fb = hang()
     const fa2 = hang()
@@ -573,5 +586,117 @@ describe('ensureValveClient', () => {
     await expect(
       createRunUnzip({ runner })(['-l', 'x'], { timeoutMs: 1000 })
     ).resolves.toMatchObject({ code: null, timedOut: false })
+  })
+})
+
+describe('ensureValveClient on the rust text flag (75 D-05 write-then-path)', () => {
+  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
+  let appFolder: string
+  let valveRoot: string
+  const MANIFEST_TEXT = 'hostile-or-not manifest text\n'
+
+  beforeAll(() => {
+    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+  })
+  afterAll(() => {
+    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
+    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
+  })
+  beforeEach(() => {
+    appFolder = mkdtempSync(join(tmpdir(), 'valve-client-rust-test-'))
+    valveRoot = join(appFolder, 'steam-bridge', 'drm', 'valve-client')
+  })
+  afterEach(() => rmSync(appFolder, { recursive: true, force: true }))
+
+  function clientWith(result: () => ValveManifestResult) {
+    const seen: { path: string; text: string; mode: number }[] = []
+    const stub = stubRustSteamFiles({
+      [RUST_STEAMFILES_PARSE_VALVE_MANIFEST]: ({ path }) => {
+        seen.push({
+          path,
+          text: readFileSync(path, 'utf8'),
+          mode: lstatSync(path).mode & 0o777
+        })
+        return result()
+      }
+    })
+    const { ensureValveClient: ensure } = createValveClient({
+      runner: createScriptedRunner([]),
+      aborts: createAbortRegistry(),
+      requestRustInvoke: stub.requestRustInvoke as never
+    })
+    const fetchText = jest.fn(() => Promise.resolve(MANIFEST_TEXT))
+    const fetchToFile = jest.fn(async (_u: string, dest: string) => {
+      writeFileSync(dest, 'x')
+      return { bytes: 1 }
+    })
+    return { ensure, seen, stub, fetchText, fetchToFile }
+  }
+
+  it.each([
+    'no win64 root',
+    'forbidden key __proto__',
+    'manifest too large',
+    'bad bins_win64 size'
+  ])('passes the Rust reason through as "manifest: %s"', async (reason) => {
+    const c = clientWith(() => ({ ok: false, reason, pkg: null }))
+    const r = await c.ensure(
+      { appFolder },
+      { fetchText: c.fetchText, fetchToFile: c.fetchToFile }
+    )
+    expect(r).toMatchObject({
+      status: 'error',
+      step: 'valve-verify',
+      cause: expect.stringContaining('manifest: ' + reason)
+    })
+    // The text went to a file, never over the pipe, inside the run's .partial- dir.
+    expect(c.seen).toHaveLength(1)
+    const seen = c.seen[0]!
+    expect(seen.text).toBe(MANIFEST_TEXT)
+    expect(seen.mode).toBe(0o600)
+    expect(seen.path).toContain(join(valveRoot, '.partial-'))
+    expect(JSON.stringify(c.stub.calls)).not.toContain(MANIFEST_TEXT.trim())
+    expect(c.fetchToFile).not.toHaveBeenCalled()
+    // Removed afterwards.
+    expect(readdirSync(valveRoot)).toEqual([])
+  })
+
+  it('a rejected invoke is the fail-closed "manifest did not parse"', async () => {
+    const c = clientWith(() => {
+      throw new Error('rust down')
+    })
+    const r = await c.ensure(
+      { appFolder },
+      { fetchText: c.fetchText, fetchToFile: c.fetchToFile }
+    )
+    expect(r).toMatchObject({
+      status: 'error',
+      cause: expect.stringContaining('manifest: manifest did not parse')
+    })
+    expect(readdirSync(valveRoot)).toEqual([])
+  })
+
+  it('an ok result continues to the package fetch in the same temp dir', async () => {
+    const c = clientWith(() => ({
+      ok: true,
+      reason: null,
+      pkg: {
+        manifestVersion: '1792618285',
+        file: `bins_win64.zip.${'ab'.repeat(20)}`,
+        sha2: 'a'.repeat(64),
+        size: 999
+      }
+    }))
+    const r = await c.ensure(
+      { appFolder },
+      { fetchText: c.fetchText, fetchToFile: c.fetchToFile }
+    )
+    expect(c.fetchToFile).toHaveBeenCalledTimes(1)
+    // The 1-byte fake package does not match the manifest size, so it fails verify there.
+    expect(r).toMatchObject({
+      status: 'error',
+      cause: expect.stringContaining('package size')
+    })
+    expect(readdirSync(valveRoot)).toEqual([])
   })
 })

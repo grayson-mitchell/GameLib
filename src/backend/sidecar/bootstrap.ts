@@ -1840,7 +1840,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             paths: ctx.paths,
             versioning: requireStoreRoot(state).versioning,
             aborts,
-            sendFrontendMessage: requireHost(state).sendFrontendMessage
+            sendFrontendMessage: requireHost(state).sendFrontendMessage,
+            requestRustInvoke: requireHost(state).requestRustInvoke
           })
         state.services.commandRunner =
           prebuilt.commandRunner ??

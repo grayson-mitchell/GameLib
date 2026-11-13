@@ -306,6 +306,9 @@ describe('downloadSharedRedistDepots', () => {
       steamUser,
       cacheSteamappsDir: cacheDir,
       optInDepotIds: [],
+      rust: {
+        requestRustInvoke: () => Promise.reject(new Error('rust not stubbed'))
+      },
       ...extra
     })
   const readIndex = () =>

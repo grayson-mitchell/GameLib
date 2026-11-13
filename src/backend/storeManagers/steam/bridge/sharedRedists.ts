@@ -8,9 +8,15 @@
  * script's own verified content (never from a depot-id table), and builds the argv arrays that run
  * inside a CrossOver bottle.
  *
- * Deliberately pure: no fs, no logger, no launcher, no electron. depot.ts and the bottle runner
- * both import it, so it must not pull either of them back in.
+ * Pure apart from `readInstallScript` (phase 75 D-06: the one file read, Rust-backed under the text
+ * flag): no launcher, no electron. depot.ts and the bottle runner both import it, so it must not
+ * pull either of them back in.
  */
+import { readFile } from 'node:fs/promises'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import { RUST_STEAMFILES_READ_INSTALLSCRIPT } from 'common/types/sidecarTransport'
+import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
+import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
 
 /** The Steamworks Common Redistributables app that owns every shared redist depot. */
 export const STEAM_COMMON_REDIST_APP_ID = '228980'
@@ -233,6 +239,47 @@ export function parseInstallScript(text: string): InstallScriptEntry[] | null {
     })
   }
   return entries
+}
+
+/**
+ * The installscript entries of the file at `scriptPath`. ts flag: the in-process parse; rust flag:
+ * `steamfiles_read_installscript`. A missing/unparseable script or a rejected invoke is null, the
+ * same value a script with no `Run Process` block gives.
+ */
+export async function readInstallScript(
+  rust: RustInvokeDeps,
+  scriptPath: string
+): Promise<InstallScriptEntry[] | null> {
+  if (steamFilesTextImpl() === 'ts') {
+    return parseInstallScript(await readFile(scriptPath, 'utf8'))
+  }
+  try {
+    const r = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_INSTALLSCRIPT, {
+      path: scriptPath
+    })
+    if (!r.entries) return null
+    return r.entries.map((e) => ({
+      name: e.name,
+      ...(e.hasRunKey !== null ? { hasRunKey: e.hasRunKey } : {}),
+      minimumHasRunValue: e.minimumHasRunValue,
+      processes: e.processes.map((p) => ({
+        process: p.process,
+        ...(p.command !== null ? { command: p.command } : {})
+      })),
+      requirementOs: e.requirementOs
+        ? {
+            ...(e.requirementOs.is64BitWindows !== null
+              ? { is64BitWindows: e.requirementOs.is64BitWindows }
+              : {}),
+            ...(e.requirementOs.osType !== null
+              ? { osType: e.requirementOs.osType }
+              : {})
+          }
+        : null
+    }))
+  } catch {
+    return null
+  }
 }
 
 function hasDotDotSegment(p: string): boolean {

@@ -340,6 +340,7 @@ type RedistDeps = StatusUpdateDeps &
     | 'engineRuntime'
     | 'steamLaunchRuntime'
     | 'steamInstallRuntime'
+    | 'requestRustInvoke'
   >
 type RunWineCommand = RedistDeps['commandRunner']['runWineCommand']
 
@@ -663,6 +664,7 @@ async function run(
     ),
     optInDepotIds: optIn,
     signal,
+    rust: deps,
     allowLogon: opts?.allowLogon,
     onComponent: (label) =>
       sendGameStatusUpdate(deps, {

@@ -337,6 +337,9 @@ describe('downloadSharedRedistDepots on the rust pipeline', () => {
     const r = await downloadSharedRedistDepots(APP_ID, {
       installRuntime: createTestSteamInstallRuntime(depotTransport),
       steamUser,
+      rust: {
+        requestRustInvoke: () => Promise.reject(new Error('rust not stubbed'))
+      },
       cacheSteamappsDir: steamapps,
       optInDepotIds: [],
       allowLogon: true,

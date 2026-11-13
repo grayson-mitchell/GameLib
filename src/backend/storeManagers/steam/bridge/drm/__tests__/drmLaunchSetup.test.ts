@@ -23,7 +23,8 @@ import { createAbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 // Every step is an injected fake, so the instance's runner is never reached.
 const { drmLaunchSetup, prefetchDrmDownloads } = createSteamDrm({
   runner: createScriptedRunner([]),
-  aborts: createAbortRegistry()
+  aborts: createAbortRegistry(),
+  requestRustInvoke: () => Promise.reject(new Error('rust not stubbed'))
 })
 
 jest.mock('../../../bridgeBottleLifecycle', () => ({

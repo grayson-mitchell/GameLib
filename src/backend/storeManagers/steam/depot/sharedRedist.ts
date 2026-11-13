@@ -2,6 +2,7 @@
 
 import { getContentServerHosts } from './contentServers'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { mkdir, stat, rm, readFile, writeFile, rename } from 'node:fs/promises'
 import { resolve, relative, isAbsolute, join } from 'path'
 import {
@@ -9,7 +10,7 @@ import {
   classifySharedRedist,
   declaredSharedRedistDepotIds,
   hasCmdMetachar,
-  parseInstallScript,
+  readInstallScript,
   type InstallScriptEntry,
   type SharedRedistKind
 } from '../bridge/sharedRedists'
@@ -70,6 +71,8 @@ export interface DownloadSharedRedistOpts {
   /** Trusted-profile opt-ins; widens the policy for depots the game declares only. */
   optInDepotIds: readonly string[]
   signal?: AbortSignal
+  /** The Rust transport the installscript read goes through (75 D-06). */
+  rust: RustInvokeDeps
   /** Called with the component label before a depot's full download starts. */
   onComponent?: (label: string) => void
   /** Phase 54: true only from the bridge install path, which may open the
@@ -399,7 +402,7 @@ async function downloadSharedRedistDepotsLeased(
                 break
               }
             }
-            entries = parseInstallScript(await readFile(scriptPath, 'utf8'))
+            entries = await readInstallScript(opts.rust, scriptPath)
             if (entries === null && fromIndex) {
               logWarning(
                 `shared redists: cached installscript for depot ${id} does not parse, re-downloading`,
