@@ -19,7 +19,11 @@ import {
 } from './progress'
 import type { RustJobEvent } from './types'
 
-/** Phase 74 (D-10): status-text contexts for the delta plan and commit phases. */
+/**
+ * Phase 74 (D-10): status-text contexts for the delta plan and commit phases. In update mode the
+ * planning context (also sent by runBridgeUpdate before the job starts) is cleared with a plain
+ * 'updating' status on `planned`, so the hero shows transfer stats (WR-07).
+ */
 export const STEAM_UPDATE_PLANNING_CONTEXT = 'steam-update-planning'
 export const STEAM_UPDATE_COMMITTING_CONTEXT = 'steam-update-committing'
 
@@ -27,7 +31,8 @@ export function createProgressBridge(
   deps: StatusUpdateDeps,
   appName: string,
   runner: Runner = 'steam',
-  now: () => number = Date.now
+  now: () => number = Date.now,
+  opts: { update?: boolean } = {}
 ): { onEvent(ev: RustJobEvent): void } {
   let totalBytes = 0
   let tStart = 0
@@ -44,6 +49,9 @@ export function createProgressBridge(
       switch (ev.kind) {
         case 'planned':
           totalBytes = ev.totalBytes
+          if (opts.update) {
+            sendGameStatusUpdate(deps, { appName, runner, status: 'updating' })
+          }
           return
         case 'stage':
           sendGameStatusUpdate(deps, {

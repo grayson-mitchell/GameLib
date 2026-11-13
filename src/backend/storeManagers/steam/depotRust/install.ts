@@ -289,7 +289,10 @@ export async function downloadSteamDepotsRust(
     })
     const bridge = createProgressBridge(
       opts.installRuntime.depotJobs.transport,
-      appId
+      appId,
+      'steam',
+      Date.now,
+      { update: opts.delta !== undefined }
     )
     const outcome = await runDepotJob(job, {
       registry: opts.installRuntime.depotJobs,
