@@ -422,7 +422,11 @@ export async function resolveSteamInstallTarget(
   // is what keeps hard constraint 4 satisfiable without any migration code.
   // When an ACF is found, the PICS/connect round-trip is skipped entirely
   // (RED-3) — a reinstall pays no cold connect at all.
-  const acfInstalldir = readAcfInstalldir(target.steamappsDir, appId)
+  const acfInstalldir = await readAcfInstalldir(
+    deps,
+    target.steamappsDir,
+    appId
+  )
   const usingAcf = Boolean(acfInstalldir && acfInstalldir.trim())
   const candidate = usingAcf
     ? acfInstalldir

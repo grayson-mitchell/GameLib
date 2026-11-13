@@ -469,7 +469,7 @@ describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
       log,
       getSteamLibraries: () =>
         Promise.resolve([platform === 'win32' ? WIN_LIB : LIB]),
-      readAcfInstalldir: () => 'WazHack',
+      readAcfInstalldir: async () => 'WazHack',
       sanitizeInstalldir: (c) => c,
       readExe: jest.fn(),
       realpath: (p) => p,

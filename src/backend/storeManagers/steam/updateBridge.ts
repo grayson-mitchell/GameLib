@@ -119,7 +119,7 @@ async function runBridgeUpdate(
       status: 'done'
     })
 
-  const ctx = resolveBridgeUpdateContext(steamGame)
+  const ctx = await resolveBridgeUpdateContext(steamGame)
   if ('error' in ctx) {
     logUnattendedFailure('not started', ctx.error)
     return { status: 'error', error: ctx.error }

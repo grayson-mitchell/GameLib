@@ -36,14 +36,14 @@ export interface BridgeUpdateContext {
   oldGidByDepot: Map<string, string>
 }
 
-export function resolveBridgeUpdateContext(
+export async function resolveBridgeUpdateContext(
   steamGame: SteamGame
-): BridgeUpdateContext | { error: string } {
+): Promise<BridgeUpdateContext | { error: string }> {
   const { deps, appId } = steamGame
   const bridgeBottleName = findBridgeInstallBottle(deps.paths, appId)
   if (!bridgeBottleName) return { error: 'No bridge install found' }
   const steamappsDir = getBottleSteamappsDir(deps.paths, bridgeBottleName)
-  const installdir = readAcfInstalldir(steamappsDir, appId)
+  const installdir = await readAcfInstalldir(deps, steamappsDir, appId)
   const depots = readAcfInstalledDepots(steamappsDir, appId)
   if (!installdir || !depots) {
     return { error: 'The install manifest could not be read' }
@@ -69,7 +69,7 @@ export async function estimateBridgeUpdate(
   > | null = null
   try {
     assertNumericAppId(appId)
-    const ctx = resolveBridgeUpdateContext(steamGame)
+    const ctx = await resolveBridgeUpdateContext(steamGame)
     if ('error' in ctx) return ctx
     throwIfAborted(opts.signal)
     lease = await deps.steamUser.acquireAuthenticated({

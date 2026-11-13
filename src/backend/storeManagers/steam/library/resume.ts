@@ -73,7 +73,7 @@ async function locateDownloadingTarget(
     // the same reason they share one sanitizeInstalldir). Only the read
     // moved; the per-library loop, the continue-on-falsy-installdir
     // behaviour, and the name lookup below are unchanged.
-    const installdir = readAcfInstalldir(steamappsDir, appId)
+    const installdir = await readAcfInstalldir(deps, steamappsDir, appId)
     if (!installdir) continue
 
     return {

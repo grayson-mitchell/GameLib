@@ -23,7 +23,8 @@ export function steamLaunchedStopDeps(
       warn: (msg) => logWarning(`SteamGame.stop: ${msg}`, LogPrefix.Steam)
     },
     getSteamLibraries: () => getSteamLibraries(deps),
-    readAcfInstalldir,
+    readAcfInstalldir: (steamappsDir, appId) =>
+      readAcfInstalldir(deps, steamappsDir, appId),
     sanitizeInstalldir,
     signal: (pid, sig) => void process.kill(pid, sig),
     readExe: (pid) => {

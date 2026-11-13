@@ -402,7 +402,7 @@ describe('resolveSteamInstallTarget', () => {
         )
       }) as never
     )
-    jest.mocked(readAcfInstalldir).mockReturnValue('app_257350')
+    jest.mocked(readAcfInstalldir).mockResolvedValue('app_257350')
 
     const result = await resolveSteamInstallTarget(libDeps, APP_ID, {
       path: '',
@@ -420,7 +420,7 @@ describe('resolveSteamInstallTarget', () => {
       getProductInfo: mockProductInfo(12345, 'Baldurs Gate II Enhanced Edition')
     })
     jest.mocked(getAnonymousPicsClient).mockResolvedValue(null)
-    jest.mocked(readAcfInstalldir).mockReturnValue('app_257350')
+    jest.mocked(readAcfInstalldir).mockResolvedValue('app_257350')
 
     const result = await resolveSteamInstallTarget(libDeps, APP_ID, {
       path: '',
@@ -688,7 +688,7 @@ describe('resolveSteamInstallTarget — anonymous PICS with open-session fallbac
 
   beforeEach(() => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
-    jest.mocked(readAcfInstalldir).mockReturnValue(undefined)
+    jest.mocked(readAcfInstalldir).mockResolvedValue(undefined)
     jest.mocked(steamUser.acquireOpenAuthenticated).mockReset()
     jest.mocked(steamUser.ensureConnected).mockClear()
   })

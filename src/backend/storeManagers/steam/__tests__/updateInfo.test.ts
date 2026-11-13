@@ -30,7 +30,7 @@ jest.mock('../library/acfUpdateState', () => ({
 }))
 jest.mock('../depotRust/updateEstimate', () => ({
   estimateBridgeUpdate: jest.fn(),
-  resolveBridgeUpdateContext: () => ({ steamappsDir: '/b/steamapps' })
+  resolveBridgeUpdateContext: async () => ({ steamappsDir: '/b/steamapps' })
 }))
 jest.mock('backend/utils/filesystem', () => ({ getDiskInfo: jest.fn() }))
 

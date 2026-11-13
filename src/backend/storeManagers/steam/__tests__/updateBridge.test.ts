@@ -99,7 +99,7 @@ function makeGame(phase: 'running' | 'starting' | null = null) {
 
 describe('updateBridgeGame', () => {
   beforeEach(() => {
-    jest.mocked(resolveBridgeUpdateContext).mockReturnValue({
+    jest.mocked(resolveBridgeUpdateContext).mockResolvedValue({
       bridgeBottleName: 'bottle',
       steamappsDir: '/b/steamapps',
       installdir: 'Game',

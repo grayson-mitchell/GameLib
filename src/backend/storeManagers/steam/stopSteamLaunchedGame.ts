@@ -28,7 +28,10 @@ export interface StopSteamLaunchedGameDeps {
   platform: NodeJS.Platform
   log: Pick<LogSink, 'info' | 'warn'>
   getSteamLibraries: () => Promise<string[] | undefined>
-  readAcfInstalldir: (steamappsDir: string, appId: string) => string | undefined
+  readAcfInstalldir: (
+    steamappsDir: string,
+    appId: string
+  ) => Promise<string | undefined>
   sanitizeInstalldir: (
     candidate: string,
     appId: string,
@@ -69,7 +72,7 @@ export async function resolveSteamLaunchedInstallFolder(
   for (const lib of libs ?? []) {
     const steamappsDir = join(lib, 'steamapps')
     try {
-      const raw = deps.readAcfInstalldir(steamappsDir, appId)
+      const raw = await deps.readAcfInstalldir(steamappsDir, appId)
       if (!raw || !raw.trim()) continue
       const installdir = deps.sanitizeInstalldir(raw, appId, steamappsDir)
       return join(steamappsDir, 'common', installdir)

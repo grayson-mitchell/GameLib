@@ -25,6 +25,10 @@
 import { existsSync, readFileSync } from 'graceful-fs'
 import { parse } from '@node-steam/vdf'
 import { join } from 'path'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
+import { invokeSteamFiles } from './localFiles/rustSteamFiles'
+import { steamFilesTextImpl } from './localFiles/steamFilesFlags'
 
 /**
  * Reads `appmanifest_<appId>.acf` from `steamappsDir` and returns its
@@ -34,7 +38,27 @@ import { join } from 'path'
  * a corrupt or missing ACF is a normal "nothing to report" outcome for a
  * caller that is only trying to find an existing install, not an error.
  */
-export function readAcfInstalldir(
+export async function readAcfInstalldir(
+  rust: RustInvokeDeps,
+  steamappsDir: string,
+  appId: string
+): Promise<string | undefined> {
+  if (steamFilesTextImpl() === 'ts') {
+    return readAcfInstalldirTs(steamappsDir, appId)
+  }
+  try {
+    const res = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_ACF, {
+      path: join(steamappsDir, `appmanifest_${appId}.acf`)
+    })
+    const installdir: unknown = res.record?.installdir
+    if (typeof installdir !== 'string' || !installdir.trim()) return undefined
+    return installdir
+  } catch {
+    return undefined
+  }
+}
+
+function readAcfInstalldirTs(
   steamappsDir: string,
   appId: string
 ): string | undefined {

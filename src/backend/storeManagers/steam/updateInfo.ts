@@ -109,7 +109,7 @@ export async function getSteamUpdateInfo(
     }
     if (estimate && state.kind === 'bridge' && state.state === 'stale') {
       const ctx = opts.computeSize
-        ? resolveBridgeUpdateContext(new SteamGame(appId, deps))
+        ? await resolveBridgeUpdateContext(new SteamGame(appId, deps))
         : undefined
       if (ctx && !('error' in ctx)) {
         try {

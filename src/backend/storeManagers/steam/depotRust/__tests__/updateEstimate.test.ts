@@ -85,7 +85,7 @@ describe('estimateBridgeUpdate', () => {
     jest.mocked(getBottleSteamappsDir).mockReturnValue('/b/steamapps')
     acquireAuthenticated.mockResolvedValue({ ok: true, release })
     jest.mocked(findBridgeInstallBottle).mockReturnValue('bottle')
-    jest.mocked(readAcfInstalldir).mockReturnValue('Game')
+    jest.mocked(readAcfInstalldir).mockResolvedValue('Game')
     jest.mocked(readAcfInstalledDepots).mockReturnValue({
       buildid: '1',
       installedDepots: [
