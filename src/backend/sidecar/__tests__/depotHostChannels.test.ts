@@ -142,7 +142,9 @@ describe('depotManifestRequestCode', () => {
     )
     expect(refresh).toHaveBeenCalledWith('481', '7')
     dispose()
-    expect(await invoke('depotManifestRequestCode', p)).toBeNull()
+    expect(await invoke('depotManifestRequestCode', p)).toEqual({
+      unavailable: 'no_job'
+    })
   })
 })
 
@@ -166,12 +168,30 @@ describe('depotManifestRequestCode on an EResult-40 refusal', () => {
     dispose()
   })
 
-  it('any other rejection still answers null', async () => {
+  it('any other rejection answers {unavailable} with an allow-listed reason, never the message', async () => {
     const dispose = register(() =>
-      Promise.reject(Object.assign(new Error('AccessDenied'), { eresult: 15 }))
+      Promise.reject(
+        Object.assign(new Error('AccessDenied tok-1'), { eresult: 15 })
+      )
     )
+    expect(await invoke('depotManifestRequestCode', p)).toEqual({
+      unavailable: 'failed'
+    })
+    dispose()
+    const d2 = register(() => Promise.reject(new Error('Not logged on')))
+    expect(await invoke('depotManifestRequestCode', p)).toEqual({
+      unavailable: 'not_signed_in'
+    })
+    d2()
+  })
+
+  it('a null code stays null; no active job answers {unavailable: no_job}', async () => {
+    const dispose = register(() => Promise.resolve(null))
     expect(await invoke('depotManifestRequestCode', p)).toBeNull()
     dispose()
+    expect(await invoke('depotManifestRequestCode', p)).toEqual({
+      unavailable: 'no_job'
+    })
   })
 })
 

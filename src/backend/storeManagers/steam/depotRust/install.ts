@@ -116,10 +116,10 @@ export function requestCodeRefresher(
       const code = String((requestCode ?? '') as string | number | bigint)
       return /^\d+$/.test(code) && code !== '0' ? code : null
     } catch (err) {
-      // EResult 40 (Blocked) is the one refusal buildDepotRefs skips a depot for; carry it
-      // to the host handler so the crate does the same (every other failure is "no code").
-      if ((err as { eresult?: unknown }).eresult === 40) throw err
-      return null
+      // Every failure is carried to the host handler: EResult 40 (Blocked) so the crate skips
+      // the depot, anything else so it can tell "we could not ask Steam" (transient) from
+      // "Steam gave no code" (the null above) - WR-01.
+      throw err
     }
   }
 }

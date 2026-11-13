@@ -46,6 +46,10 @@ pub const CHUNK_FETCH_USER_AGENT: &str = "Valve/Steam HTTP Client 1.0";
 /// Host reply meaning Steam refused the manifest request code with EResult 40 (Blocked). The Node
 /// `depotManifestRequestCode` handler sends `{eresult: 40}`; the shell turns that into this `Err`.
 pub const BLOCKED_REPLY: &str = "eresult:40";
+
+/// Prefix of a host error meaning "the Node side could not ask Steam" (not signed in, CM down,
+/// lease refused, no job): transient, never a definitive "no code". The suffix is a short reason.
+pub const TRANSIENT_REPLY_PREFIX: &str = "transient:";
 /// EResult 40: the only refusal the TS plan builder skips a depot for.
 pub const ERESULT_BLOCKED: i32 = 40;
 const CHUNK_FETCH_ACCEPT: &str = "text/html,*/*;q=0.9";

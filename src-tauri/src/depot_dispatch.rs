@@ -180,10 +180,18 @@ impl JobHost for ShellJobHost {
 }
 
 /// A request-code reply: like [`reply_to_option`], plus `{eresult: 40}` (Steam refused the
-/// manifest, Blocked), which the crate turns into a skipped depot.
+/// manifest, Blocked), which the crate turns into a skipped depot, and `{unavailable: reason}`
+/// (Node could not ask Steam), which becomes a transient `transient:<reason>` error.
 fn reply_to_code(v: Value) -> Result<Option<String>, String> {
     if v.get("eresult").and_then(Value::as_i64) == Some(40) {
         return Err(gamelib_depot::fetch::BLOCKED_REPLY.to_string());
+    }
+    if let Some(reason) = v.get("unavailable").and_then(Value::as_str) {
+        let clipped: String = reason.chars().filter(char::is_ascii).take(32).collect();
+        return Err(format!(
+            "{}{clipped}",
+            gamelib_depot::fetch::TRANSIENT_REPLY_PREFIX
+        ));
     }
     reply_to_option(v)
 }
@@ -280,6 +288,19 @@ impl JobHost for NoEventsHost {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn request_code_reply_maps_unavailable_to_a_transient_error() {
+        assert_eq!(
+            reply_to_code(serde_json::json!({ "unavailable": "not_signed_in" })),
+            Err("transient:not_signed_in".to_string())
+        );
+        let long = "x".repeat(100);
+        let Err(e) = reply_to_code(serde_json::json!({ "unavailable": long })) else {
+            panic!("expected Err")
+        };
+        assert_eq!(e.len(), "transient:".len() + 32);
+    }
 
     #[test]
     fn request_code_reply_maps_blocked_to_the_skip_marker() {

@@ -6,8 +6,10 @@
  *     - `depotCdnToken` -> the job's `CdnAuthTokenCache` (including its `_send` workaround) answers
  *       with the token string to append verbatim to a chunk URL, `''` when none is needed, or
  *       `null` for an unknown jobId.
- *     - `depotManifestRequestCode` -> a fresh request code as a decimal string, `null`, or
- *       `{eresult: 40}` when Steam refused the manifest (Blocked; the crate skips that depot).
+ *     - `depotManifestRequestCode` -> a fresh request code as a decimal string, `null` (Steam
+ *       gave no code, or malformed args), `{eresult: 40}` when Steam refused the manifest (Blocked;
+ *       the crate skips that depot), or `{unavailable: 'not_signed_in' | 'failed' | 'no_job'}`
+ *       when this side could not ask Steam (transient; the crate must not fall back).
  *
  *   send (ipcMain.on, 1):
  *     - `depotJobEvent` -> routed to the registered job's listener by jobId.
@@ -86,7 +88,8 @@ export function registerDepotHostFlows(deps: {
           : deps.depotJobs.lookupActiveDepotJob(jobId)
       const depotId = field(req, 'depotId')
       const manifestId = field(req, 'manifestId')
-      if (!job || depotId === undefined || manifestId === undefined) return null
+      if (depotId === undefined || manifestId === undefined) return null
+      if (!job) return { unavailable: 'no_job' }
       try {
         return await job.refreshRequestCode(depotId, manifestId)
       } catch (err) {
@@ -94,7 +97,13 @@ export function registerDepotHostFlows(deps: {
         if ((err as { eresult?: unknown }).eresult === 40)
           return { eresult: 40 }
         logFailure('depotManifestRequestCode', jobId, err)
-        return null
+        // Fixed allow-list only: never an error message, token or account id (T-74-85).
+        const reason = /not (logged on|signed in)|no authenticated/i.test(
+          err instanceof Error ? err.message : ''
+        )
+          ? 'not_signed_in'
+          : 'failed'
+        return { unavailable: reason }
       }
     }
   )

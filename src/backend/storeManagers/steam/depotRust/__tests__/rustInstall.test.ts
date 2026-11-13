@@ -363,22 +363,24 @@ describe('downloadSharedRedistDepots on the rust pipeline', () => {
 
 describe('requestCodeRefresher', () => {
   const owners = new Map([['111', APP_ID]])
-  it('returns the code, null for ordinary failures, and rethrows EResult 40 so the crate can skip the depot', async () => {
+  it('returns the code, null for a zero code, and rethrows every failure so the host handler can classify it', async () => {
     const ok = requestCodeRefresher(client, owners, APP_ID)
     expect(await ok('111', '7')).toBe('42')
 
-    client.getManifestRequestCode.mockRejectedValueOnce(new Error('timeout'))
+    client.getManifestRequestCode.mockResolvedValueOnce({ requestCode: '0' })
     expect(await ok('111', '7')).toBeNull()
+
+    const timeout = new Error('timeout')
+    client.getManifestRequestCode.mockRejectedValueOnce(timeout)
+    await expect(ok('111', '7')).rejects.toBe(timeout)
 
     const blocked = Object.assign(new Error('Blocked'), { eresult: 40 })
     client.getManifestRequestCode.mockRejectedValueOnce(blocked)
     await expect(ok('111', '7')).rejects.toBe(blocked)
 
-    // Only the literal 40: AccessDenied and friends stay "no code".
-    client.getManifestRequestCode.mockRejectedValueOnce(
-      Object.assign(new Error('AccessDenied'), { eresult: 15 })
-    )
-    expect(await ok('111', '7')).toBeNull()
+    const denied = Object.assign(new Error('AccessDenied'), { eresult: 15 })
+    client.getManifestRequestCode.mockRejectedValueOnce(denied)
+    await expect(ok('111', '7')).rejects.toBe(denied)
   })
 
   it('requests codes for the given branch, defaulting to public', async () => {
