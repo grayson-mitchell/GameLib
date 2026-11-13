@@ -47,9 +47,11 @@ jest.mock('../library/installPolling', () => ({
 jest.mock('../games', () => ({ __esModule: true, default: jest.fn() }))
 
 const openExternal = jest.fn()
+const activePolls = new Map<string, { awaitingUpdate?: unknown }>()
 const game = {
   appId: '333300',
   deps: {
+    steamInstallRuntime: { polls: { activePolls } },
     config: {},
     paths: {},
     runner: {},
@@ -64,6 +66,10 @@ const opts = {
 
 describe('updateRegisteredSteamGame', () => {
   beforeEach(() => {
+    activePolls.clear()
+    jest.mocked(startInstallPolling).mockImplementation((_d, id) => {
+      activePolls.set(id, { awaitingUpdate: {} })
+    })
     jest.mocked(resolveSteamLibraryRoot).mockResolvedValue('/lib')
     jest.mocked(readRunningAppId).mockResolvedValue(0)
     jest
@@ -77,13 +83,32 @@ describe('updateRegisteredSteamGame', () => {
     jest
       .mocked(requestSteamInstallApp)
       .mockResolvedValue({ kind: 'ok', folderIndex: 0 } as never)
-    expect(await updateRegisteredSteamGame(game)).toEqual({ status: 'done' })
+    expect(await updateRegisteredSteamGame(game)).toEqual({
+      status: 'done',
+      handedOffToSteam: true
+    })
     expect(openExternal).not.toHaveBeenCalled()
     expect(startInstallPolling).toHaveBeenCalledWith(
       expect.anything(),
       '333300',
       opts
     )
+  })
+
+  it('openExternal hand-off sets handedOffToSteam; a no-op poll start does not', async () => {
+    jest.mocked(isSteamExperimentalInstallAppEnabled).mockReturnValue(false)
+    expect(await updateRegisteredSteamGame(game)).toEqual({
+      status: 'done',
+      handedOffToSteam: true
+    })
+    activePolls.clear()
+    jest.mocked(startInstallPolling).mockImplementation((_d, id) => {
+      activePolls.set(id, {})
+    })
+    expect(await updateRegisteredSteamGame(game)).toEqual({
+      status: 'done',
+      handedOffToSteam: false
+    })
   })
 
   it('InstallApp error surfaces the code and does not poll', async () => {
@@ -145,7 +170,10 @@ describe('updateRegisteredSteamGame', () => {
     jest.mocked(readAcfUpdateState).mockResolvedValue(currentAcf)
     jest.mocked(getLastKnownSteamUpdateState).mockReturnValue(staleCache('800'))
     jest.mocked(isSteamExperimentalInstallAppEnabled).mockReturnValue(false)
-    expect(await updateRegisteredSteamGame(game)).toEqual({ status: 'done' })
+    expect(await updateRegisteredSteamGame(game)).toEqual({
+      status: 'done',
+      handedOffToSteam: true
+    })
     expect(openExternal).toHaveBeenCalledWith(URL)
     expect(startInstallPolling).toHaveBeenCalledWith(
       expect.anything(),

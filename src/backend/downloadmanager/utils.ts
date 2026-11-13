@@ -501,8 +501,9 @@ async function updateQueueElement(
     )
   }
 
+  let handedOffToSteam = false
   try {
-    const { status } = await library[runner].getGame(appName).update({
+    const result = await library[runner].getGame(appName).update({
       build: params.build,
       branch: params.branch,
       language: params.installLanguage,
@@ -510,6 +511,12 @@ async function updateQueueElement(
       dependencies: params.dependencies,
       unattended: params.unattended === true
     })
+
+    const { status } = result
+    handedOffToSteam =
+      result.status === 'done' &&
+      'handedOffToSteam' in result &&
+      result.handedOffToSteam === true
 
     if (status === 'error') {
       errorMessage('')
@@ -520,11 +527,14 @@ async function updateQueueElement(
     errorMessage(`${error}`)
     return { status: 'error' }
   } finally {
-    sendGameStatusUpdate(deps, {
-      appName,
-      runner,
-      status: 'done'
-    })
+    // A Steam hand-off keeps 'updating' until the update poll sends the
+    // terminal 'done' (74 UAT 17); every other path ends here.
+    sendGameStatusUpdate(
+      deps,
+      handedOffToSteam
+        ? { appName, runner, status: 'updating', managedBySteam: true }
+        : { appName, runner, status: 'done' }
+    )
   }
 }
 

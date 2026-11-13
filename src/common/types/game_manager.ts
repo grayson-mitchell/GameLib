@@ -38,6 +38,10 @@ export interface InstallResult {
   // that never reached classifyDepotError). Forwarded from
   // DepotDownloadOutcome.errorAction untouched; never re-classified here.
   errorAction?: InstallErrorAction
+  // Set when a Steam-registered update was handed to the Steam client and an
+  // update-aware poll now owns the game's status; the DownloadManager must not
+  // send its own 'done' (74 UAT 17).
+  handedOffToSteam?: boolean
 }
 
 export type RemoveArgs = {

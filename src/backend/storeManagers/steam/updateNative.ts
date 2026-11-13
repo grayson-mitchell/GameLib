@@ -29,6 +29,17 @@ import {
   invalidateSteamUpdateState
 } from './updateDetection'
 
+// True when an update-aware poll for appId is registered after the hand-off, so
+// the poll (not the queue's 'done') owns the terminal status. If
+// startInstallPolling no-opped because a non-update poll already existed this
+// is false and the queue sends 'done' as before.
+function pollOwnsUpdate(deps: SteamGame['deps'], appId: string): boolean {
+  return (
+    deps.steamInstallRuntime.polls.activePolls.get(appId)?.awaitingUpdate !==
+    undefined
+  )
+}
+
 export async function updateRegisteredSteamGame(
   steamGame: SteamGame
 ): Promise<InstallResult> {
@@ -103,7 +114,7 @@ export async function updateRegisteredSteamGame(
         LogPrefix.Steam
       )
       startInstallPolling(deps, appId, pollOptions)
-      return { status: 'done' }
+      return { status: 'done', handedOffToSteam: pollOwnsUpdate(deps, appId) }
     }
     if (outcome.kind === 'error') {
       logError(
@@ -127,5 +138,5 @@ export async function updateRegisteredSteamGame(
   )
   await deps.openExternal.openExternal(url)
   startInstallPolling(deps, appId, pollOptions)
-  return { status: 'done' }
+  return { status: 'done', handedOffToSteam: pollOwnsUpdate(deps, appId) }
 }

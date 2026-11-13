@@ -1136,3 +1136,50 @@ describe('updateQueueElement - 74-19: unattended flag reaches game.update', () =
     expect(updateMock.mock.calls[0][0].unattended).toBe(false)
   })
 })
+
+describe('updateQueueElement - 74-27: Steam hand-off holds Updating (UAT 17)', () => {
+  const updateMock = jest.fn()
+  const lastStatus = () =>
+    sendGameStatusUpdateMock.mock.calls.at(-1)?.[1] as Record<string, unknown>
+
+  beforeEach(() => {
+    sendGameStatusUpdateMock.mockClear()
+    getGameInfoMock.mockReturnValue({ title: 'Test Game' })
+    libraryManagerMap.steam.getGame.mockReturnValue({
+      update: updateMock,
+      getGameInfo: getGameInfoMock,
+      stop: stopMock
+    })
+    isOnline.mockReturnValue(true)
+  })
+
+  it('a flagged done sends updating (managedBySteam) and no done', async () => {
+    updateMock.mockResolvedValue({ status: 'done', handedOffToSteam: true })
+    const r = await updateQueueElement(queueDeps, makeParams())
+    expect(r).toEqual({ status: 'done' })
+    expect(lastStatus()).toMatchObject({
+      status: 'updating',
+      managedBySteam: true
+    })
+    expect(sendGameStatusUpdateMock).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ status: 'done' })
+    )
+  })
+
+  it.each([
+    ['an unflagged done', { status: 'done' }],
+    ['an error', { status: 'error' }],
+    ['an abort', { status: 'abort' }]
+  ])('%s still sends done', async (_n, result) => {
+    updateMock.mockResolvedValue(result)
+    await updateQueueElement(queueDeps, makeParams())
+    expect(lastStatus()).toMatchObject({ status: 'done' })
+  })
+
+  it('a throw still sends done', async () => {
+    updateMock.mockRejectedValue(new Error('boom'))
+    await updateQueueElement(queueDeps, makeParams())
+    expect(lastStatus()).toMatchObject({ status: 'done' })
+  })
+})

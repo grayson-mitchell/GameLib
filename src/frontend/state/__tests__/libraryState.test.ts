@@ -695,6 +695,34 @@ describe('libraryState handleGameStatus (hot path)', () => {
     ])
   })
 
+  it('a Steam hand-off holds Updating until the poll ends: no hasUpdate-without-updating state (74 UAT 17)', async () => {
+    useLibraryState.setState({ gameUpdates: ['a', 'z'] })
+    const seen: Array<[boolean, string | undefined]> = []
+    const record = () =>
+      seen.push([
+        lib().gameUpdates.includes('a'),
+        lib().libraryStatus.find((g) => g.appName === 'a')?.status
+      ])
+    const steps: Array<Partial<GameStatus>> = [
+      { status: 'updating' },
+      { status: 'updating', managedBySteam: true },
+      { status: 'updating', managedBySteam: true },
+      { status: 'updating', managedBySteam: true }
+    ]
+    for (const step of steps) {
+      await push({ appName: 'a', runner: 'steam', ...step })
+      record()
+    }
+    for (const [hasUpdate, status] of seen) {
+      expect(hasUpdate).toBe(true)
+      expect(status).toBe('updating')
+    }
+    expect(refreshCalls).toEqual([])
+    await push({ appName: 'a', runner: 'steam', status: 'done' })
+    expect(lib().gameUpdates).toEqual(['z'])
+    expect(lib().libraryStatus).toEqual([])
+  })
+
   it('clears BottleLaunchWaiting on playing and done, even for an unseen app, but not on other statuses', async () => {
     useBottleLaunchWaiting.setState({
       entries: { a: { detectedCause: null }, b: { detectedCause: null } }
