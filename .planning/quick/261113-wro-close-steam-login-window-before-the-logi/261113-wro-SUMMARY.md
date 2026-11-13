@@ -23,7 +23,7 @@ decisions:
 metrics:
   tasks_completed: 2
   tasks_total: 3
-  task_3: pending operator live check
+  task_3: passed (operator live check 2026-11-14)
 actuals:
   tasks: 2
   commits: 2
@@ -123,7 +123,9 @@ would normally refuse this. The repo runs `branching_strategy: none` with every
 recent commit on `main`, and the orchestrator directed atomic commits here, so I
 treated it as the intended flow.
 
-## Task 3: pending operator verification
+## Task 3: passed (operator live check 2026-11-14)
+
+Operator reported "pass" on 2026-11-14. The notes below describe the check as planned.
 
 The live check (plan Task 3) was not run. Steps are in the plan: restart with
 `pnpm tauri:dev`, sign in to Steam via QR or username/password, and confirm the
