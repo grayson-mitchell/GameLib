@@ -3,6 +3,13 @@ import { join } from 'path'
 import { readAcfInstalldir } from '../../../acfInstalldir'
 import { listFiles, unlessHangs, withFixtureCopy } from './normalize'
 
+// The oracle runs the TS flag, so the Rust transport must never be reached.
+const NO_RUST = {
+  requestRustInvoke: () => {
+    throw new Error('oracle must not reach Rust')
+  }
+}
+
 export async function captureInstalldir(): Promise<Record<string, unknown>> {
   const out: Record<string, unknown> = {}
   await withFixtureCopy('', async (root) => {
@@ -14,13 +21,13 @@ export async function captureInstalldir(): Promise<Record<string, unknown>> {
       out[`installdir/readAcfInstalldir/${name}`] = await unlessHangs(
         `acf/${file}`,
         root,
-        () => readAcfInstalldir(dir, '77')
+        () => readAcfInstalldir(NO_RUST, dir, '77')
       )
     }
     out['installdir/readAcfInstalldir/missing'] = await unlessHangs(
       '',
       root,
-      () => readAcfInstalldir(join(root, '_installdir'), '77')
+      () => readAcfInstalldir(NO_RUST, join(root, '_installdir'), '77')
     )
   })
   return out

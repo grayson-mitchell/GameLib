@@ -1,1 +1,22 @@
-{}
+{
+  "installdir/readAcfInstalldir/coercion": {
+    "rustOverride": "1e3",
+    "divergenceNote": "@node-steam/vdf coerced the numeric-looking installdir 1e3 to a number which the oracle rejected as non-string; Rust keeps the on-disk string, which is what Steam wrote."
+  },
+  "installdir/readAcfInstalldir/comments-unquoted": {
+    "rustOverride": "CommentsGame",
+    "divergenceNote": "The oracle returned nothing for this manifest with comments and unquoted tokens; the Rust parser reads it."
+  },
+  "installdir/readAcfInstalldir/escapes": {
+    "rustOverride": "Sub\\Dir",
+    "divergenceNote": "The oracle returned the escape sequence verbatim (two backslashes); the Rust parser decodes the escape to one backslash, as Steam does. sanitizeInstalldir still rejects separators."
+  },
+  "installdir/readAcfInstalldir/lowercase-keys": {
+    "rustOverride": "lowercase",
+    "divergenceNote": "Steam KeyValues lookups are case-insensitive; the oracle missed a lowercase appstate/installdir while the Rust reader finds it."
+  },
+  "installdir/readAcfInstalldir/truncated": {
+    "rustOverride": null,
+    "divergenceNote": "The oracle's @node-steam/vdf parse never terminates on a truncated manifest; Rust fails soft and the wrapper returns undefined."
+  }
+}
