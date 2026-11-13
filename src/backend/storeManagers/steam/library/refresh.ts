@@ -17,6 +17,7 @@ import {
   installPlatformForSource,
   isBridgeAuthoritativeForInstallState
 } from './installRoot'
+import { restoreLocalSteamLibrary } from './localLibrary'
 import { verifyMacArchGroundTruth } from './macArch'
 import {
   buildInstalledMap,
@@ -38,14 +39,7 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
       `Steam: library refresh deferred — no explicit Refresh and no open Steam session, showing the cached library with no CM logon (trigger=${deps.steamSession.authTrigger.currentTriggerLabel()})`,
       LogPrefix.Steam
     )
-    try {
-      await refreshInstallState(deps)
-    } catch (err) {
-      logWarning(
-        ['Steam: local install-state reconcile failed:', err],
-        LogPrefix.Steam
-      )
-    }
+    await restoreLocalSteamLibrary(deps)
     deps.sendFrontendMessage('steamSyncStatus', { status: 'idle' })
     return null
   }
@@ -65,6 +59,7 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
           'Steam: library refresh waiting on the guided Go Offline step, no logon issued',
           LogPrefix.Steam
         )
+        await restoreLocalSteamLibrary(deps)
         deps.sendFrontendMessage('steamSyncStatus', { status: 'idle' })
         return null
       }
@@ -80,6 +75,9 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
           : `Steam client not ready (${lease.reason}), skipping library refresh`,
         LogPrefix.Steam
       )
+      // UAT 23: a signed-out boot showed no Steam games and
+      // `update check apps=0` because the backend map stayed empty here.
+      await restoreLocalSteamLibrary(deps)
       // 34.15 D-07 exit path 1 of 4.
       deps.sendFrontendMessage('steamSyncStatus', {
         status: 'failed',
@@ -105,6 +103,7 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
         'Steam client not ready (no steamID), skipping library refresh',
         LogPrefix.Steam
       )
+      await restoreLocalSteamLibrary(deps)
       deps.sendFrontendMessage('steamSyncStatus', {
         status: 'failed',
         reason: 'client-not-ready'
@@ -146,10 +145,9 @@ async function syncOwnedLibrary(
   } catch (err) {
     logError(['Steam getUserOwnedApps failed:', err], LogPrefix.Steam)
     // Offline / CM-unreachable fallback — serve cached library (D-09)
-    const cached = steamLibraryStore.get('games', [])
-    cached.forEach((g) => deps.sendFrontendMessage('pushGameToLibrary', g))
+    await restoreLocalSteamLibrary(deps, { pushAll: true })
     // 34.15 D-07 exit path 2 of 4. Emitted AFTER the cached-library push
-    // loop above so the renderer already has the cached games in hand
+    // above so the renderer already has the cached games in hand
     // before it is told the sync failed — the notice must render above a
     // populated grid, never an empty one.
     deps.sendFrontendMessage('steamSyncStatus', {

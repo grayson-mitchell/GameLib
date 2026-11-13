@@ -39,6 +39,7 @@ import { at } from './fixtures/indexed'
 import type { Stores } from 'backend/services/types'
 
 import { createTestAnonymousClient } from 'backend/testUtils/testAnonymousClient'
+import { logWarning } from 'backend/logger'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 
 const libDeps = { config: createTestGlobalConfig() }
@@ -299,6 +300,7 @@ describe('SteamLibraryManager', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    library.clear()
     manager = new SteamLibraryManager(steamTestDeps)
     // Phase 54: refresh() logs on only for a granted (explicit) Refresh. This
     // suite tests refresh()'s BEHAVIOR, so arm the one-shot grant the way the
@@ -739,6 +741,128 @@ describe('SteamLibraryManager', () => {
       )
     })
 
+    describe('UAT 23: non-sync exits restore the cached library', () => {
+      const cachedGame = (app_name: string, is_installed: boolean) =>
+        ({
+          runner: 'steam',
+          app_name,
+          title: app_name,
+          is_installed,
+          install: {}
+        }) as any
+      const seedCache = () =>
+        jest
+          .mocked(steamLibraryStore.get)
+          .mockReturnValue([cachedGame('1', true), cachedGame('2', false)])
+      const pushedBeforeLastEmit = () => {
+        const calls = sendFrontendMessage.mock.calls
+        const lastEmit = calls.map((c) => c[0]).lastIndexOf('steamSyncStatus')
+        return calls
+          .slice(0, lastEmit)
+          .filter((c) => c[0] === 'pushGameToLibrary').length
+      }
+
+      beforeEach(() => library.clear())
+
+      it('not-signed-in: map seeded, both pushed before the single failed emit, warning kept', async () => {
+        seedCache()
+        refuse('not-signed-in')
+
+        await manager.refresh()
+
+        expect([...library.keys()]).toEqual(['1', '2'])
+        expect(pushedBeforeLastEmit()).toBeGreaterThanOrEqual(2)
+        expect(steamSyncEmits()).toEqual([
+          { status: 'failed', reason: 'client-not-ready' }
+        ])
+        expect(logWarning).toHaveBeenCalledWith(
+          'Steam client not ready (not-signed-in), skipping library refresh',
+          'Steam'
+        )
+      })
+
+      it('logon-rejected and go-offline-required exits also seed the map', async () => {
+        seedCache()
+        refuse('logon-rejected')
+        await manager.refresh()
+        expect(library.size).toBe(2)
+
+        library.clear()
+        resetSteamAuthTrigger()
+        noteRefreshTrigger('steam', 'action-icons-refresh-button')
+        refuse('go-offline-required')
+        sendFrontendMessage.mockClear()
+        await manager.refresh()
+        expect(library.size).toBe(2)
+        expect(steamSyncEmits()).toEqual([{ status: 'idle' }])
+      })
+
+      it('ungranted refresh with no open session seeds the map and never logs on', async () => {
+        seedCache()
+        consumeSteamRefreshLogonGrant()
+
+        await manager.refresh()
+
+        expect(library.size).toBe(2)
+        expect(steamUser.acquireAuthenticated).not.toHaveBeenCalled()
+        expect(steamSyncEmits()).toEqual([{ status: 'idle' }])
+      })
+
+      it('no steamID: map seeded, failed/client-not-ready', async () => {
+        seedCache()
+        jest
+          .mocked(steamUser.getClient)
+          .mockReturnValue({ steamID: null } as any)
+
+        await manager.refresh()
+
+        expect(library.size).toBe(2)
+        expect(steamSyncEmits()).toEqual([
+          { status: 'failed', reason: 'client-not-ready' }
+        ])
+      })
+
+      it('getUserOwnedApps throws: cached games pushed before failed, even into a non-empty map', async () => {
+        seedCache()
+        library.set('1', cachedGame('1', true))
+        const fakeClient = makeFakeClient([])
+        fakeClient.getUserOwnedApps.mockRejectedValue(new Error('cm down'))
+        jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
+
+        await manager.refresh()
+
+        expect(pushedBeforeLastEmit()).toBeGreaterThanOrEqual(1)
+        expect(steamSyncEmits()).toEqual([
+          { status: 'syncing' },
+          { status: 'failed', reason: 'owned-apps-failed' }
+        ])
+      })
+
+      it('after a not-signed-in refresh the installed entry is in the map detectSteamUpdates iterates', async () => {
+        jest
+          .mocked(steamLibraryStore.get)
+          .mockReturnValue([cachedGame('1', false)])
+        jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+        ;(existsSync as jest.Mock).mockReturnValue(true)
+        ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_1.acf'])
+        ;(readFileSync as jest.Mock).mockReturnValue('content')
+        ;(vdf.parse as jest.Mock).mockReturnValue({
+          AppState: {
+            appid: '1',
+            StateFlags: '4',
+            installdir: 'g1',
+            SizeOnDisk: '5'
+          }
+        })
+        jest.mocked(getFileSize).mockReturnValue('5 B')
+        refuse('not-signed-in')
+
+        await manager.refresh()
+
+        expect(library.get('1')?.is_installed).toBe(true)
+      })
+    })
+
     it('a granted Refresh asks for the guided Go Offline step', async () => {
       const fakeClient = makeFakeClient([])
       jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
@@ -781,8 +905,18 @@ describe('SteamLibraryManager', () => {
 
     it('exit path 2 (getUserOwnedApps throws): emits [syncing, failed/owned-apps-failed] AFTER cached games are pushed', async () => {
       const cachedGames = [
-        { runner: 'steam', app_name: '570', title: 'Dota 2' } as any,
-        { runner: 'steam', app_name: '440', title: 'Team Fortress 2' } as any
+        {
+          runner: 'steam',
+          app_name: '570',
+          title: 'Dota 2',
+          is_installed: false
+        } as any,
+        {
+          runner: 'steam',
+          app_name: '440',
+          title: 'Team Fortress 2',
+          is_installed: false
+        } as any
       ]
       const fakeClient = {
         steamID: 'STEAMID_TEST',
