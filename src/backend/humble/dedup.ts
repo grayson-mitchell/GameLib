@@ -12,7 +12,10 @@ import { fuzzyMatch } from 'common/matching/titleMatch'
  * Two-tier matching:
  *   1. If a key carries `steamAppId`, ownership is decided by EXACT AppID
  *      equality against the Steam library's `app_name` (the stringified
- *      AppID) — the verdict is final, with NO fuzzy fallback (D-44).
+ *      AppID). For a Humble-supplied id the verdict is final, with NO fuzzy
+ *      fallback (D-44). An id GameLib resolved from the title
+ *      (`steamAppIdResolved`, quick 261114-ca6) can only upgrade: a miss
+ *      falls through to the fuzzy tier.
  *   2. Otherwise, a length-sensitive normalized-Levenshtein ratio at 85%+
  *      (HUMBLE_FUZZY_MATCH_THRESHOLD) with an explicit DLC-keyword guard —
  *      deliberately NOT token-set matching, which scores base-game/DLC
@@ -42,8 +45,9 @@ export {
  *   - An EMPTY `steamGames` array is treated as "no usable Steam data": all
  *     keys are returned unchanged rather than zeroed out (D-48 unit-level
  *     floor — the real connectivity gate lives in the caller, library.ts).
- *   - `steamAppId` present → exact `app_name` equality, verdict final
- *     ('exact' on hit, 'none' on miss — NO fuzzy fallback, D-44).
+ *   - `steamAppId` present → exact `app_name` equality ('exact' on hit; on a
+ *     miss 'none' with NO fuzzy fallback, D-44 — unless the id was resolved by
+ *     GameLib from the title, in which case a miss falls back to fuzzy).
  *   - Otherwise → fuzzy title matching across the library ('fuzzy' on hit).
  *     No platform gate: a GOG/Epic key matching a Steam-owned title is the
  *     intended cross-platform behavior (D-45, Pattern 4).
@@ -79,7 +83,17 @@ export function recomputeOwnership(
         ownedElsewhere = true
         matchConfidence = 'exact'
       }
-    } else if (steamGames.some((g) => fuzzyMatch(key.title, g.title))) {
+    }
+    // Fuzzy tier: no usable id, OR a GameLib-resolved id that missed the
+    // library (never worse than before the resolver existed). A
+    // Humble-supplied id that missed stays 'none' (D-44).
+    const fuzzyEligible =
+      !hasUsableSteamAppId || key.steamAppIdResolved === true
+    if (
+      matchConfidence === 'none' &&
+      fuzzyEligible &&
+      steamGames.some((g) => fuzzyMatch(key.title, g.title))
+    ) {
       ownedElsewhere = true
       matchConfidence = 'fuzzy'
     }

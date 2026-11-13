@@ -111,6 +111,13 @@ export interface HumbleKey {
    */
   steamAppId?: string
   /**
+   * True when steamAppId was resolved by GameLib from the title via Steam
+   * store search (quick 261114-ca6), not supplied by Humble. A resolved id
+   * that misses the Steam library falls back to fuzzy matching; a
+   * Humble-supplied one does not (D-44).
+   */
+  steamAppIdResolved?: boolean
+  /**
    * Ownership-overlay flag (Phase 12, spec §2.3): true when this key's game
    * is already owned on another platform (Steam first). Orthogonal to
    * `state` — it NEVER influences classification precedence and is NEVER
