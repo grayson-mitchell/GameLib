@@ -117,7 +117,13 @@ fn bytes(p: &Path) -> Vec<u8> {
 }
 
 fn no_tmp(p: &Path) {
-    assert!(!p.with_file_name("shortcuts.vdf.tmp").exists());
+    let dir = p.parent().unwrap();
+    let left: Vec<_> = fs::read_dir(dir)
+        .unwrap()
+        .flatten()
+        .filter(|e| e.file_name().to_string_lossy().ends_with(".tmp"))
+        .collect();
+    assert!(left.is_empty(), "temp files left: {left:?}");
 }
 
 fn names(p: &Path) -> Vec<(String, Option<String>)> {
@@ -383,4 +389,32 @@ fn op_json_shape() {
     .unwrap();
     assert_eq!(op, add(vec![s("AppName", "A")], true));
     assert!(serde_json::from_str::<ShortcutsOp>(r#"{"op":"remove","appName":"A","x":1}"#).is_err());
+}
+
+/// 75 WR-03: overlapping adds to one shortcuts.vdf (each rustInvoke runs on its own thread) are
+/// serialised, so none is lost and the file is never torn.
+#[test]
+fn concurrent_adds_are_all_kept() {
+    let d = tempfile::tempdir().unwrap();
+    let p = d.path().join("shortcuts.vdf");
+    let pad = "x".repeat(64 * 1024);
+    std::thread::scope(|sc| {
+        for t in 0..16 {
+            let p = &p;
+            let pad = &pad;
+            sc.spawn(move || {
+                let r = apply_shortcuts(
+                    p,
+                    &add(vec![s("AppName", &format!("G{t}")), s("Exe", pad)], true),
+                );
+                assert!(r.written, "{r:?}");
+            });
+        }
+    });
+    let mut got: Vec<String> = names(&p).into_iter().filter_map(|(_, n)| n).collect();
+    got.sort();
+    let mut want: Vec<String> = (0..16).map(|t| format!("G{t}")).collect();
+    want.sort();
+    assert_eq!(got, want);
+    no_tmp(&p);
 }

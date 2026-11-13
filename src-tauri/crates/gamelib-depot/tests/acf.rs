@@ -5,6 +5,7 @@ use gamelib_depot::acf::*;
 use gamelib_depot::job::{FinalizeSpec, PlannedDepot};
 use gamelib_depot::outcome::{ErrorKind, Failure};
 use std::fs;
+use std::path::Path;
 
 fn base() -> AppManifestParams {
     AppManifestParams {
@@ -173,7 +174,19 @@ fn buildid_zero_allowed() {
     assert!(build_app_manifest_text(&p, 1).is_ok());
 }
 
-// "writes atomically: replaces stale temp/final artifacts, leaves only the correct final file"
+/// `*.tmp` file names in `dir` other than `except`.
+fn temps_except(dir: &Path, except: &str) -> Vec<String> {
+    fs::read_dir(dir)
+        .unwrap()
+        .flatten()
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .filter(|n| n.ends_with(".tmp") && n != except)
+        .collect()
+}
+
+// "writes atomically: replaces the stale final file, leaves only the correct final file". Since
+// 75 WR-03 each write uses its own unique temp name, so a foreign `<name>.tmp` is left untouched
+// rather than truncated and renamed (it may belong to another writer).
 #[test]
 fn atomic_write_no_tmp_left() {
     let dir = tempfile::tempdir().unwrap();
@@ -183,7 +196,8 @@ fn atomic_write_no_tmp_left() {
     fs::write(&fin, "STALE-FINAL-GARBAGE").unwrap();
     let got = write_app_manifest(dir.path(), &base(), 1).unwrap();
     assert_eq!(got, fin);
-    assert!(!tmp.exists());
+    assert_eq!(fs::read_to_string(&tmp).unwrap(), "STALE-TMP-GARBAGE");
+    assert!(temps_except(dir.path(), "appmanifest_264160.acf.tmp").is_empty());
     let t = fs::read_to_string(&fin).unwrap();
     assert!(!t.contains("STALE"));
     assert!(t.contains("\"StateFlags\"\t\t\"1026\""));
@@ -196,7 +210,7 @@ fn write_error_leaves_no_tmp() {
     // A directory at the final path makes the rename fail.
     fs::create_dir(dir.path().join("appmanifest_264160.acf")).unwrap();
     assert!(write_app_manifest(dir.path(), &base(), 1).is_err());
-    assert!(!dir.path().join("appmanifest_264160.acf.tmp").exists());
+    assert!(temps_except(dir.path(), "").is_empty());
 }
 
 #[test]
