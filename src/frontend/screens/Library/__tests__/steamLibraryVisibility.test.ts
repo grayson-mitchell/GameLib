@@ -56,31 +56,31 @@ describe('selectVisibleSteamLibrary -- full state matrix', () => {
     visible: string[]
   }[] = [
     {
-      name: 'no Steam account, idle -> nothing (user never connected Steam)',
+      name: 'no Steam account, idle -> installed only (UAT 23: signed out, installed games stay)',
       input: {
         library: LIBRARY,
         steamUsername: undefined,
         steamSyncStatus: 'idle'
       },
-      visible: []
+      visible: ['installed-a', 'installed-b']
     },
     {
-      name: 'no Steam account, syncing -> nothing',
+      name: 'no Steam account, syncing -> installed only',
       input: {
         library: LIBRARY,
         steamUsername: undefined,
         steamSyncStatus: 'syncing'
       },
-      visible: []
+      visible: ['installed-a', 'installed-b']
     },
     {
-      name: 'no Steam account, failed -> nothing (no identity beats every other signal)',
+      name: 'no Steam account, failed -> installed only (owned-not-installed never shows without identity)',
       input: {
         library: LIBRARY,
         steamUsername: undefined,
         steamSyncStatus: 'failed'
       },
-      visible: []
+      visible: ['installed-a', 'installed-b']
     },
     {
       name: 'signed in, idle -> full library (the healthy steady state)',
@@ -161,13 +161,16 @@ describe('selectVisibleSteamLibrary -- the reported symptom, stated directly', (
     expect(selectVisibleSteamLibrary(empty)).toEqual([])
   })
 
-  it('treats an empty-string username as no identity, not as a signed-in user', () => {
+  it('treats an empty-string username as no identity: installed only', () => {
     const blank: SteamLibraryVisibilityInput<Fixture> = {
       library: LIBRARY,
       steamUsername: '',
       steamSyncStatus: 'idle'
     }
-    expect(selectVisibleSteamLibrary(blank)).toEqual([])
+    expect(names(selectVisibleSteamLibrary(blank))).toEqual([
+      'installed-a',
+      'installed-b'
+    ])
   })
 
   it('treats a null username as no identity, the shape logout actually writes', () => {
@@ -178,7 +181,30 @@ describe('selectVisibleSteamLibrary -- the reported symptom, stated directly', (
       steamUsername: null,
       steamSyncStatus: 'idle'
     }
-    expect(selectVisibleSteamLibrary(loggedOut)).toEqual([])
+    expect(names(selectVisibleSteamLibrary(loggedOut))).toEqual([
+      'installed-a',
+      'installed-b'
+    ])
+  })
+
+  it('no identity and nothing installed -> empty', () => {
+    expect(
+      selectVisibleSteamLibrary({
+        library: NOT_INSTALLED_ONLY,
+        steamUsername: null,
+        steamSyncStatus: 'idle'
+      })
+    ).toEqual([])
+  })
+
+  it('no identity keeps installed entry identity and library order', () => {
+    const out = selectVisibleSteamLibrary({
+      library: LIBRARY,
+      steamUsername: undefined,
+      steamSyncStatus: 'idle'
+    })
+    expect(out[0]).toBe(INSTALLED_A)
+    expect(out[1]).toBe(INSTALLED_B)
   })
 })
 
@@ -252,18 +278,19 @@ describe('resolveSteamVisibility -- outcome matrix (games + storeConnected)', ()
     { name: 'mixed', games: LIBRARY }
   ]
 
-  describe('no Steam account: no row, no games, regardless of sync or library state', () => {
+  describe('no Steam account: installed games only; row exactly when one is installed', () => {
     const syncStatuses: SteamSyncStatus[] = ['idle', 'syncing', 'failed']
     syncStatuses.forEach((steamSyncStatus) => {
       LIBRARY_STATES.forEach((lib) => {
-        it(`${steamSyncStatus}, ${lib.name} library -> no row, no games`, () => {
+        it(`${steamSyncStatus}, ${lib.name} library -> installed slice, row iff non-empty`, () => {
           const result = resolveSteamVisibility({
             library: lib.games,
             steamUsername: undefined,
             steamSyncStatus
           })
-          expect(names(result.games)).toEqual([])
-          expect(result.storeConnected).toBe(false)
+          const installed = lib.games.filter((g) => g.is_installed)
+          expect(names(result.games)).toEqual(names(installed))
+          expect(result.storeConnected).toBe(installed.length > 0)
         })
       })
     })
@@ -379,6 +406,25 @@ describe('saboteur -- the shipped Store-facet predicate must fail this suite', (
     expect(resolveSteamVisibility(expiredZeroInstalled).storeConnected).toBe(
       false
     )
+  })
+})
+
+describe('saboteur -- no identity must never show owned-not-installed', () => {
+  const signedOut: SteamLibraryVisibilityInput<Fixture> = {
+    library: LIBRARY,
+    steamUsername: null,
+    steamSyncStatus: 'idle'
+  }
+  const fullLibrarySaboteur = (i: SteamLibraryVisibilityInput<Fixture>) =>
+    i.library
+
+  it('a saboteur returning the full library signed out fails the invariant', () => {
+    expect(fullLibrarySaboteur(signedOut).every((g) => g.is_installed)).toBe(
+      false
+    )
+    expect(
+      selectVisibleSteamLibrary(signedOut).every((g) => g.is_installed)
+    ).toBe(true)
   })
 })
 

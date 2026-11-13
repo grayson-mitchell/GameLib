@@ -47,8 +47,9 @@ import type { SteamSyncStatus } from 'common/types/ipc'
  * function filters a CACHE of a previous successful sync -- it cannot
  * resurrect installed games for a profile that never completed one. "Installed
  * games always show" is therefore true after any successful sync, and NOT true
- * on a never-synced profile. Delivering the unconditional form means adding
- * ACF-driven enumeration in the backend, which is out of scope here.
+ * on a never-synced profile. The backend half is 74-31's
+ * `restoreLocalSteamLibrary`, which seeds the same cache on non-sync exits;
+ * ACF-driven enumeration stays out of scope.
  */
 
 /**
@@ -88,18 +89,20 @@ export interface SteamLibraryVisibilityInput<
 /**
  * Returns the Steam entries the Games grid should render.
  *
- * Three outcomes: no Steam identity -> nothing; identity plus a live-enough
- * session -> everything; identity plus a provably failed sync -> installed
- * only.
+ * Three outcomes: no Steam identity -> installed only; identity plus a
+ * live-enough session -> everything; identity plus a provably failed sync ->
+ * installed only. Installed titles need no session; not-installed titles need
+ * an identity plus a non-failed sync.
  */
 export function selectVisibleSteamLibrary<TGame extends SteamVisibilityGame>(
   input: SteamLibraryVisibilityInput<TGame>
 ): TGame[] {
-  // Branch 1: no Steam identity at all -> render nothing. Preserves the
-  // `!!steam?.username` half of the old guard. Evaluated FIRST so no later
-  // branch can leak Steam cards to a user with no Steam account.
+  // Branch 1: no Steam identity -> installed titles only. Their ACF is on
+  // local disk and they launch with no session (operator todo 2026-11-13,
+  // UAT 23). Not-installed titles need an identity vouched by a sync, so none
+  // can leak here: this branch is evaluated FIRST.
   if (!input.steamUsername) {
-    return []
+    return input.library.filter((game) => game.is_installed)
   }
 
   // Branch 2: THIS IS WHERE THE DEFECT DIES. A failed sync means the session
@@ -159,8 +162,8 @@ export function resolveSteamVisibility<TGame extends SteamVisibilityGame>(
   input: SteamLibraryVisibilityInput<TGame>
 ): SteamVisibility<TGame> {
   const games = selectVisibleSteamLibrary(input)
-  const storeConnected =
-    Boolean(input.steamUsername) &&
-    (input.steamSyncStatus !== 'failed' || games.length > 0)
+  const storeConnected = input.steamUsername
+    ? input.steamSyncStatus !== 'failed' || games.length > 0
+    : games.length > 0
   return { games, storeConnected }
 }
