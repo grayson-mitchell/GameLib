@@ -17,7 +17,7 @@ const WRITE = process.env.GAMELIB_WRITE_STEAMFILES_FIXTURES === '1'
 describe('shortcuts.vdf fixture builder', () => {
   test('empty.vdf is the minimal root map', () => {
     const built = buildShortcutsFixtures()
-    expect(built['empty.vdf'].toString('hex')).toBe(
+    expect(built['empty.vdf']?.toString('hex')).toBe(
       '0073686f727463757473000808'
     )
   })
@@ -27,7 +27,7 @@ describe('shortcuts.vdf fixture builder', () => {
     const b = buildShortcutsFixtures()
     expect(Object.keys(a).sort()).toEqual(Object.keys(b).sort())
     for (const name of Object.keys(a)) {
-      expect(a[name].equals(b[name])).toBe(true)
+      expect(a[name]?.equals(b[name] as Buffer)).toBe(true)
     }
   })
 
