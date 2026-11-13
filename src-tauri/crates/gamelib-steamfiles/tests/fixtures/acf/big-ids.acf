@@ -1,0 +1,21 @@
+"AppState"
+{
+	"appid"		"30"
+	"name"		"Big Ids"
+	"StateFlags"		"4"
+	"installdir"		"BigIds"
+	"LastOwner"		"76561198999999999"
+	"InstalledDepots"
+	{
+		"31"
+		{
+			"manifest"		"9007199254740993"
+			"size"		"1"
+		}
+		"32"
+		{
+			"manifest"		"9223372036854775807"
+			"size"		"2"
+		}
+	}
+}

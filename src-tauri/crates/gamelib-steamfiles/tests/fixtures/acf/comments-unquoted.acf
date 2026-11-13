@@ -1,0 +1,9 @@
+// leading comment
+"AppState"
+{
+	// inside comment
+	appid		100
+	name		"Comments Game" // trailing comment
+	StateFlags		4
+	installdir		CommentsGame
+}

@@ -1,0 +1,7 @@
+"LibraryFolders"
+{
+	"TimeNextStatsReport"		"1500000000"
+	"ContentStatsID"		"-1234567890123456789"
+	"1"		"${FIXTURES}/scan/lib1"
+	"2"		"${FIXTURES}/scan/lib2"
+}

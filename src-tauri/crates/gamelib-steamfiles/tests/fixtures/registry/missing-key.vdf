@@ -1,0 +1,17 @@
+"Registry"
+{
+	"HKCU"
+	{
+		"Software"
+		{
+			"Valve"
+			{
+				"Steam"
+				{
+					"AutoLoginUser"		"someone"
+					"language"		"english"
+				}
+			}
+		}
+	}
+}

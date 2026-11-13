@@ -1,0 +1,13 @@
+"steam_client_win64"
+{
+	"win64"
+	{
+		"version"		"1700000000"
+		"bins_win64"
+		{
+			"file"		"bins_win64.zip.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+			"sha2"		"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+			"size"		"1048576"
+		}
+	}
+}

@@ -1,0 +1,33 @@
+"libraryfolders"
+{
+	"0"
+	{
+		"path"		"${FIXTURES}/scan/lib1"
+		"label"		""
+		"contentid"		"1111111111111111111"
+		"totalsize"		"0"
+		"update_clean_bytes_tally"		"0"
+		"time_last_update_corruption"		"0"
+		"apps"
+		{
+			"10"		"123456789"
+			"20"		"5000"
+		}
+	}
+	"1"
+	{
+		"path"		"${FIXTURES}/scan/lib2"
+		"label"		"Second"
+		"contentid"		"2222222222222222222"
+		"totalsize"		"1000000"
+		"apps"
+		{
+			"40"		"42"
+		}
+	}
+	"2"
+	{
+		"path"		"${FIXTURES}/scan/missing-lib"
+		"label"		"Gone"
+	}
+}

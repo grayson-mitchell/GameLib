@@ -1,0 +1,14 @@
+"appstate"
+{
+	"appid"		"70"
+	"name"		"Lowercase Keys"
+	"stateflags"		"4"
+	"installdir"		"lowercase"
+	"installeddepots"
+	{
+		"71"
+		{
+			"manifest"		"1000000000000000071"
+		}
+	}
+}

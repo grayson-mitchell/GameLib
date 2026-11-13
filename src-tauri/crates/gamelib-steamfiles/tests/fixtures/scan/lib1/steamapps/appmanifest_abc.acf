@@ -1,0 +1,10 @@
+"AppState"
+{
+	"appid"		"abc"
+	"name"		"Non Numeric"
+	"StateFlags"		"4"
+	"installdir"		"NonNumeric"
+	"LastUpdated"		"1700000000"
+	"SizeOnDisk"		"1000"
+	"buildid"		"100"
+}

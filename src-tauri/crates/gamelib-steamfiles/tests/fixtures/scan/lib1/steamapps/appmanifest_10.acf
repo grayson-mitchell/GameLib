@@ -1,0 +1,10 @@
+"AppState"
+{
+	"appid"		"10"
+	"name"		"Scan Installed"
+	"StateFlags"		"4"
+	"installdir"		"ScanInstalled"
+	"LastUpdated"		"1700000000"
+	"SizeOnDisk"		"1000"
+	"buildid"		"100"
+}

@@ -1,0 +1,31 @@
+"AppState"
+{
+	"appid"		"10"
+	"Universe"		"1"
+	"name"		"Synthetic Game"
+	"StateFlags"		"4"
+	"installdir"		"SyntheticGame"
+	"LastUpdated"		"1700000000"
+	"SizeOnDisk"		"123456789"
+	"buildid"		"1234567"
+	"LastOwner"		"76561197960287930"
+	"InstalledDepots"
+	{
+		"11"
+		{
+			"manifest"		"1000000000000000001"
+			"size"		"100000"
+		}
+		"12"
+		{
+			"manifest"		"1000000000000000002"
+			"size"		"200000"
+			"dlcappid"		"13"
+		}
+	}
+	"UserConfig"
+	{
+		"language"		"english"
+		"BetaKey"		"beta_a"
+	}
+}

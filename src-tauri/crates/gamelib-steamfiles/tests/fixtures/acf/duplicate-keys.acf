@@ -1,0 +1,12 @@
+"AppState"
+{
+	"appid"		"60"
+	"name"		"First Name"
+	"name"		"Second Name"
+	"StateFlags"		"4"
+}
+"AppState"
+{
+	"installdir"		"ReopenedDir"
+	"buildid"		"77"
+}

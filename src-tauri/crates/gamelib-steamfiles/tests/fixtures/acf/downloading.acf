@@ -1,0 +1,16 @@
+"AppState"
+{
+	"appid"		"20"
+	"name"		"Downloading Game"
+	"StateFlags"		"1026"
+	"installdir"		"DownloadingGame"
+	"LastUpdated"		"1700000100"
+	"SizeOnDisk"		"5000"
+	"buildid"		"2222"
+	"TargetBuildID"		"3333"
+	"BytesToDownload"		"1048576"
+	"BytesDownloaded"		"524288"
+	"BytesToStage"		"2097152"
+	"BytesStaged"		"1048576"
+	"ScheduledAutoUpdate"		"1700003600"
+}

@@ -1,0 +1,10 @@
+"InstallScript"
+{
+	"Registry"
+	{
+		"HKLM\\Software\\Synthetic"
+		{
+			"Key"		"Value"
+		}
+	}
+}

@@ -1,0 +1,11 @@
+"InstallScript"
+{
+	"Run Process"
+	{
+		"DirectX"
+		{
+			"Process 1"		"%INSTALLDIR%\\Redist\\DXSETUP.exe"
+			"Command 1"		"/silent \"quoted\""
+		}
+	}
+}

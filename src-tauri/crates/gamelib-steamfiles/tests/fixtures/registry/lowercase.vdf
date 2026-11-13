@@ -1,0 +1,17 @@
+"Registry"
+{
+	"HKCU"
+	{
+		"Software"
+		{
+			"Valve"
+			{
+				"Steam"
+				{
+					"runningappid"		"1245620"
+					"language"		"english"
+				}
+			}
+		}
+	}
+}

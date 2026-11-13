@@ -18,3 +18,8 @@ src-tauri/crates/gamelib-scan/tests/fixtures/**/*.bin binary
 src-tauri/crates/gamelib-scan/tests/fixtures/**/winemac.so binary
 src-tauri/crates/gamelib-scan/tests/fixtures/**/*.exe binary
 src-tauri/crates/gamelib-scan/tests/fixtures/**/*.dll binary
+
+# Phase 75-02: synthetic Steam local-file fixtures (CRLF, BOM, non-UTF-8, binary KV)
+# must be stored byte-exact on every OS.
+src-tauri/crates/gamelib-steamfiles/tests/fixtures/** -text
+src-tauri/crates/gamelib-steamfiles/tests/fixtures/shortcuts/** binary

@@ -1,0 +1,10 @@
+"AppState"
+{
+	"appid"		"40"
+	"name"		"1979"
+	"buildid"		"0123"
+	"installdir"		"1e3"
+	"hexval"		"0x10"
+	"boolval"		"true"
+	"StateFlags"		"4"
+}

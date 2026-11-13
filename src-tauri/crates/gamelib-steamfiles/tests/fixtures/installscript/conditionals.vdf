@@ -1,0 +1,11 @@
+"InstallScript"
+{
+	"Run Process"
+	{
+		"VC 2019" [$WIN32]
+		{
+			"Process 1"		"%INSTALLDIR%\\vcredist\\VC_redist.x64.exe" [$WIN32]
+			"Command 1"		"/q /norestart"
+		}
+	}
+}

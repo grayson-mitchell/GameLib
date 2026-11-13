@@ -1,0 +1,30 @@
+"UserLocalConfigStore"
+{
+	"Software"
+	{
+		"Valve"
+		{
+			"Steam"
+			{
+				"apps"
+				{
+					"10"
+					{
+						"BetaKey"		"outside_block"
+					}
+				}
+			}
+		}
+	}
+	"UserAppConfig"
+	{
+		"10"
+		{
+			"BetaKey"		"626574615f61"
+		}
+		"20"
+		{
+			"language"		"english"
+		}
+	}
+}
