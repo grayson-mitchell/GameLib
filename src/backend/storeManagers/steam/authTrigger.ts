@@ -117,10 +117,12 @@ export type SteamRefreshLogonGrant = 'user-refresh' | 'login' | 'store-exit'
  * Origins whose refresh is inferred rather than explicitly requested. Quick
  * 261114-aqa: every Steam store visit armed the store-exit refresh, whose
  * 'user-refresh' grant then raised the "Set Steam offline to continue" dialog
- * when the Mac Steam go-offline wrap timed out. A Set, so no prototype-chain
- * lookup.
+ * when the Mac Steam go-offline wrap timed out. A frozen array rather than a Set
+ * (D-66.3-09): the 66.4 module-state census counts every module-level
+ * constructed object (66.4-REVIEW CR-01). `.includes` compares values, so there
+ * is no prototype-chain lookup.
  */
-const INFERRED_REFRESH_ORIGINS: ReadonlySet<string> = new Set([
+const INFERRED_REFRESH_ORIGINS: readonly string[] = Object.freeze([
   'steam-store-exit'
 ])
 
@@ -216,7 +218,7 @@ export function mapRefreshOriginToLogonGrant(
   if (
     trigger === 'user-refresh' &&
     typeof origin === 'string' &&
-    INFERRED_REFRESH_ORIGINS.has(origin)
+    INFERRED_REFRESH_ORIGINS.includes(origin)
   ) {
     return 'store-exit'
   }
