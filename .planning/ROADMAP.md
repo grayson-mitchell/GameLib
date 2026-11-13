@@ -1307,7 +1307,7 @@ Plans:
 **Goal:** Steam's local files are read in Rust, so the ACF format has one implementation. Phase 73 moved the ACF *writer* to Rust while the TypeScript *reader* stays, which is two codecs for one format that can drift. Scope: (1) text VDF reading of `libraryfolders.vdf` and `appmanifest_*.acf`, replacing `@node-steam/vdf`; (2) binary `shortcuts.vdf` read and write, replacing `steam-shortcut-editor`; (3) the local library scan in `steam/library/` (~4.6k non-test lines across the directory, measured 2026-11-09). Reuse Phase 63's pattern unchanged: a Tauri-free crate in the `src-tauri/` Cargo workspace (or the Phase 73 crate's ACF module, extended), `rustInvoke` from the sidecar with the TypeScript signatures unchanged, a CLI binary for headless tools, a parity harness over fixtures (byte-identical round-trip for `shortcuts.vdf`), a dev-only fallback flag, then delete the TypeScript readers and both npm packages. This is the third slice of the incremental Node-to-Rust migration (63 scanners, 73 depot pipeline). Open questions for discuss-phase: whether the owned-apps fetch and metadata/artwork enrichment in `steam/library/` stay in TypeScript (they need `steam-user`/axios) so only the local scan moves; whether the shortcuts writer must preserve unknown fields byte-for-byte; and Steam path discovery on Windows and Linux. The CM-client replacement for `steam-user`/`steam-session`, which gates retiring the sidecar, is a separate spike (2026-11-09). Came from the post-73 migration planning discussion on 2026-11-09.
 **Requirements**: STEAM-03 (milestone-level). Phase IDs minted by `/gsd-plan-phase 75` (defined in 75-01-PLAN.md): P75-A text VDF/KV1 in Rust with typed readers; P75-B binary shortcuts.vdf in Rust; P75-C library scan and Steam root discovery in Rust (+ CLI); P75-D one ACF codec, TS ACF writer retired; P75-E two-tier parity with signed-off divergences; P75-F callers on Rust behind D-08 flags, flipped, live smoke; P75-G delete gate: TS readers, both npm packages, flags removed and pinned by a gate test.
 **Depends on:** Phase 73
-**Plans:** 5/35 plans executed
+**Plans:** 6/35 plans executed
 
 Plans:
 
@@ -1321,7 +1321,7 @@ Plans:
 - [x] 75-03-PLAN.md — TS oracle captured into expected.json before any reader changes
 - [x] 75-04-PLAN.md — one text KV1 parser: lossless ordered tree, merged/ordered views, limits (TDD)
 - [x] 75-05-PLAN.md — Rust Steam root discovery over an injected probe; Windows registry via windows-sys (D-12..D-14)
-- [ ] 75-06-PLAN.md — lossless binary KV codec with byte-identical round trip (TDD)
+- [x] 75-06-PLAN.md — lossless binary KV codec with byte-identical round trip (TDD)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
