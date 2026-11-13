@@ -38,6 +38,8 @@ pub(crate) fn three_button_choice(result: &rfd::MessageDialogResult, labels: &[S
 /// `NSAlertFirstButtonReturn` / `NSAlertSecondButtonReturn` / `NSAlertThirdButtonReturn`.
 /// Everything else -- `NSModalResponseCancel` (0, what the Esc monitor stops the modal with),
 /// `NSModalResponseAbort` and any unknown code -- is a dismissal (`None`), never a button.
+// macOS NSAlert path only; still unit-tested on every OS, so unused (not dead) elsewhere.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub(crate) fn alert_response_choice(code: isize) -> Option<u8> {
     match code {
         1000 => Some(0),
@@ -50,6 +52,8 @@ pub(crate) fn alert_response_choice(code: isize) -> Option<u8> {
 /// True for an Esc key-down (macOS virtual keyCode 53) with no Shift/Control/Option/Command held.
 /// `modifier_bits` is `NSEventModifierFlags` raw bits: Shift 1<<17, Control 1<<18, Option 1<<19,
 /// Command 1<<20 (mask 0x1E0000). CapsLock/Fn/numeric-pad bits are ignored.
+// macOS NSAlert path only; still unit-tested on every OS, so unused (not dead) elsewhere.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub(crate) fn is_bare_escape(key_code: u16, modifier_bits: usize) -> bool {
     const CHORD_MASK: usize = 0x1E_0000;
     key_code == 53 && modifier_bits & CHORD_MASK == 0

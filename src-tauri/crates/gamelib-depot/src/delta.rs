@@ -631,6 +631,9 @@ fn prepare_replace(dest: &Path) {
     if let Ok(m) = fs::metadata(dest) {
         let mut p = m.permissions();
         if p.readonly() {
+            // Windows-only: this clears FILE_ATTRIBUTE_READONLY. The lint's world-writable
+            // concern is about Unix mode bits, which this cfg(windows) path never touches.
+            #[allow(clippy::permissions_set_readonly_false)]
             p.set_readonly(false);
             let _ = fs::set_permissions(dest, p);
         }
