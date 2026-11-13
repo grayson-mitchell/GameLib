@@ -1,5 +1,6 @@
 {
   "jestMock": {
+    "src/backend/utils/__tests__/checkGameUpdates.test.ts": 1,
     "src/backend/utils/__tests__/macArch.test.ts": 3,
     "src/backend/utils/__tests__/uninstaller.test.ts": 6,
     "src/backend/utils/__tests__/wineWindowRaise.test.ts": 2,

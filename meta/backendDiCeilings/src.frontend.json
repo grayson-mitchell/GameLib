@@ -6,6 +6,7 @@
     "src/frontend/helpers/__tests__/gamepadRepeatTiming.test.ts": 1,
     "src/frontend/helpers/__tests__/handleStopInstallation.test.ts": 1,
     "src/frontend/helpers/__tests__/launchOptionPicker.test.ts": 1,
+    "src/frontend/helpers/__tests__/libraryLaunchSteamUpdatePrompt.test.ts": 1,
     "src/frontend/helpers/__tests__/nintendoLayout.test.ts": 1,
     "src/frontend/helpers/__tests__/signInInputs.test.ts": 1,
     "src/frontend/helpers/__tests__/steamInstallSignIn.test.ts": 1

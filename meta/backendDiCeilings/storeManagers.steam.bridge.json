@@ -2,6 +2,7 @@
   "jestMock": {
     "src/backend/storeManagers/steam/bridge/__tests__/bottleDllOverrides.test.ts": 1,
     "src/backend/storeManagers/steam/bridge/__tests__/bridgeConfig.test.ts": 3,
+    "src/backend/storeManagers/steam/bridge/__tests__/bridgeUpdateFollowUps.test.ts": 8,
     "src/backend/storeManagers/steam/bridge/__tests__/bridgeVerdict.test.ts": 1,
     "src/backend/storeManagers/steam/bridge/__tests__/gameMakerRunner.test.ts": 2,
     "src/backend/storeManagers/steam/bridge/__tests__/helperIntegration.test.ts": 1,
