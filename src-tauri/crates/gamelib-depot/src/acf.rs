@@ -110,16 +110,9 @@ fn unix_now() -> u64 {
 /// Reads `StateFlags` from `appmanifest_<app_id>.acf` in `steamapps_dir`. `None` for a missing
 /// file, no `StateFlags` line, or a non-numeric value.
 pub fn read_existing_state_flags(steamapps_dir: &Path, app_id: &str) -> Option<u32> {
-    let text = fs::read_to_string(steamapps_dir.join(format!("appmanifest_{app_id}.acf"))).ok()?;
-    for line in text.lines() {
-        let mut quoted = line.split('"').skip(1).step_by(2);
-        let Some(key) = quoted.next() else { continue };
-        if !key.eq_ignore_ascii_case("StateFlags") {
-            continue;
-        }
-        return quoted.last().and_then(|v| v.trim().parse::<u32>().ok());
-    }
-    None
+    gamelib_steamfiles::acf::read_acf(&steamapps_dir.join(format!("appmanifest_{app_id}.acf")))
+        .record
+        .and_then(|r| r.state_flags)
 }
 
 /// A user-cancelled job that fetched nothing and wrote no file must not downgrade a manifest that
