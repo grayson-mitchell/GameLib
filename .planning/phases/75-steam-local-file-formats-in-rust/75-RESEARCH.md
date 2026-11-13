@@ -241,12 +241,16 @@ if (val === 'true') val = true; // 'false','null','undefined' likewise
 | A4 | winreg legitimacy (slopcheck unavailable) | Package audit | Mitigated: already in Cargo.lock transitively |
 | A5 | Call frequency of hot-path reads is about 1/s and single-file | Pattern 2 | Need re-check in installPollOnce.ts |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **valveClient manifest transport (Pitfall 10).** Path-after-write vs bounded string arg. Recommendation: write-to-cache-then-path; Rust re-validates size and forbidden keys. Planner to confirm against `valveClient.ts` cache flow.
+   RESOLVED: plan 17 — write-to-cache-then-path: the fetched manifest is written into the run's own mkdtemp `.partial-` dir and its path is passed to `steamfiles_parse_valve_manifest`; Rust re-applies the size cap, forbidden-key reject and shape checks in the same order.
 2. **Divergence list for the parity record.** Known up-front candidates: Windows `\\` unescape, big-integer fields (LastOwner), `[$WIN32]` keys, numeric-string coercion, malformed-input tolerance. Each needs a user acceptance entry in `75-PARITY.md`.
+   RESOLVED: plan 24 — the local sweep writes every divergence (golden overrides plus sweep diff classes plus the D-13/D-14 discovery changes) as a DV-75-NN row in `75-PARITY.md`, and a blocking operator checkpoint accepts each one (D-07).
 3. **Where does the new ACF text builder live for depot?** Recommended: shared crate re-exported by depot; planner must keep depot tests unchanged as the safety net.
+   RESOLVED: plan 07 — the builder moves into `gamelib-steamfiles::acf` and is re-exported from `gamelib-depot`; depot's acf and golden tests run unchanged.
 4. **config.ts async default** (Pitfall 8): boot-time cache vs lazy; planner reads `config.ts` settings construction and its callers.
+   RESOLVED: plan 14 — neither: the shell computes discovery in Rust and passes it as `GAMELIB_STEAM_ROOT_DEFAULT` at sidecar spawn (plan 12); `config.ts` reads the env synchronously, so construction stays sync with no boot-time rustInvoke.
 
 ## Environment Availability
 
