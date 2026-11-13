@@ -45,6 +45,7 @@ import {
   isInitOnlyImportSet,
   formatCensusMarkdown,
   pickRuntimeSteamApiDll,
+  readManifests,
   readPersistedScanArch,
   readPersistedScanVerdict,
   selectCensusExe,
@@ -2236,5 +2237,61 @@ describe('58-05: parseMultiplayerArgs', () => {
     expect(
       parseMultiplayerArgs(['--multiplayer', '1', '--drm', '--log', 'a.log'])
     ).toEqual({ appid: '1', drm: true, log: 'a.log' })
+  })
+})
+
+describe('75-17: readManifests reads bottle ACFs through the steamfiles CLI result', () => {
+  const rec = (name: string | null, installdir: string | null) =>
+    ({ name, installdir }) as never
+  const dir = mkdtempSync(join(tmpdir(), 'census-manifests-'))
+  afterAll(() => rmSync(dir, { recursive: true, force: true }))
+
+  it('maps records to entries, keeping appid from the file name and skipping incomplete ones', () => {
+    const calls: unknown[] = []
+    const out = readManifests(dir, 'bottle-a', (args) => {
+      calls.push(args)
+      return {
+        records: [
+          {
+            steamappsDir: dir,
+            fileName: 'appmanifest_10.acf',
+            record: rec('Alpha', 'AlphaDir')
+          },
+          {
+            steamappsDir: dir,
+            fileName: 'appmanifest_20.acf',
+            record: rec(null, 'NoName')
+          },
+          {
+            steamappsDir: dir,
+            fileName: 'appmanifest_30.acf',
+            record: rec('NoDir', null)
+          },
+          {
+            steamappsDir: dir,
+            fileName: 'notamanifest.acf',
+            record: rec('X', 'Y')
+          }
+        ],
+        skipped: [],
+        missingDirs: []
+      }
+    })
+    expect(calls).toEqual([{ steamappsDirs: [dir] }])
+    expect(out).toEqual([
+      {
+        appid: '10',
+        name: 'Alpha',
+        installdir: 'AlphaDir',
+        installPath: join(dir, 'common', 'AlphaDir'),
+        bottleName: 'bottle-a'
+      }
+    ])
+  })
+
+  it('does not call the CLI for a missing steamapps dir', () => {
+    const scan = jest.fn()
+    expect(readManifests(join(dir, 'nope'), 'b', scan)).toEqual([])
+    expect(scan).not.toHaveBeenCalled()
   })
 })

@@ -69,6 +69,9 @@
  * operator's bottles and the persisted `steam_metadata.json` scan verdict,
  * read-only, and still passes no `env` to any spawn.
  *
+ * Phase 75 (P75-C): bottle ACF reads go through `gamelib-steamfiles-cli` the same way, each spawn
+ * under its own fresh fake-HOME profile (every input is an explicit path).
+ *
  * Phase 63 (D-01, D-09): the census no longer imports `peSteamDrm.ts`; its two PE reads
  * (delay imports, Steam DRM) go through `gamelibScanCli.ts`, which spawns the Rust
  * `gamelib-scan-cli` argv-form under a fresh fake-HOME profile. That CLI spawn is the isolated
@@ -80,7 +83,7 @@
  * pure bridge modules (`importParse.ts`, `interfaceVersions.ts`,
  * `shimCoverage.ts`, `drm/drmTrace.ts`, and -- quick 261024-br4 -- the Steam CEG / `.bind` PE
  * scanner `peSteamDrm.ts`; by relative path, not a `backend/...` alias), and
- * `@node-steam/vdf` (a plain npm dependency, not a backend module). This
+ * (phase 75: bottle ACFs are read through `gamelibSteamfilesCli.ts`, no VDF parser here). This
  * keeps `pnpm bridge-census` (`node meta/runTs.cjs --bundle --platform=node
  * --target=node21 meta/bridgeCensus.ts`) bundleable standalone.
  *
@@ -109,8 +112,6 @@ import { spawnSync } from 'node:child_process'
 import { homedir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 
-import { parse as parseVdf } from '@node-steam/vdf'
-
 import {
   parseSteamApiImportTable,
   runtimeLoadedSteamApiMarker,
@@ -134,6 +135,11 @@ import {
   type DrmEvidence
 } from '../src/backend/storeManagers/steam/bridge/drm/drmTrace'
 import { assertScanCliPresent, runScanCliSync } from './gamelibScanCli'
+import {
+  assertSteamfilesCliPresent,
+  runSteamfilesCliSync
+} from './gamelibSteamfilesCli'
+import type { ScanResult } from '../src/backend/storeManagers/steam/localFiles/steamFilesTypes'
 import type { PeDelayImportScanResult } from '../src/backend/scanners/scanTypes'
 import {
   findRuntimeLoadedSteamApiDlls,
@@ -1363,46 +1369,35 @@ interface ManifestEntry {
   bottleName: string
 }
 
-interface AcfAppState {
-  AppState?: { appid?: string; name?: string; installdir?: string }
-}
-
-/** Reads every `appmanifest_<appId>.acf` in a bottle's steamapps dir. Never
- * throws -- a missing dir, unreadable file, or corrupt/incomplete ACF is a
- * normal "nothing to report for this entry" outcome, the same discipline
- * `acfInstalldir.ts`'s `readAcfInstalldir` already follows. */
-function readManifests(
+/** Reads every `appmanifest_<appId>.acf` in a bottle's steamapps dir through the Rust
+ * `steamfiles_scan_acfs` op (75 D-02; the CLI spawn runs under a fake HOME, every input is an
+ * explicit path). Never throws on bad data -- a missing dir, unreadable file, or corrupt/incomplete
+ * ACF is a normal "nothing to report for this entry" outcome; only a missing CLI binary throws,
+ * and the census checks for that once up front. */
+export function readManifests(
   steamappsDir: string,
-  bottleName: string
+  bottleName: string,
+  scan: (args: { steamappsDirs: string[] }) => ScanResult = (args) =>
+    runSteamfilesCliSync('steamfiles_scan_acfs', args)
 ): ManifestEntry[] {
   if (!existsSync(steamappsDir)) {
     return []
   }
 
   const out: ManifestEntry[] = []
-  for (const fileName of readdirSync(steamappsDir)) {
+  for (const { fileName, record } of scan({ steamappsDirs: [steamappsDir] })
+    .records) {
     const match = fileName.match(/^appmanifest_(\d+)\.acf$/)
-    if (!match) {
+    if (!match || !record.name || !record.installdir) {
       continue
     }
-    try {
-      const content = readFileSync(join(steamappsDir, fileName), 'utf-8')
-      const parsed = parseVdf(content) as AcfAppState
-      const name = parsed?.AppState?.name
-      const installdir = parsed?.AppState?.installdir
-      if (!name || !installdir) {
-        continue
-      }
-      out.push({
-        appid: capture(match, 1),
-        name,
-        installdir,
-        installPath: join(steamappsDir, 'common', installdir),
-        bottleName
-      })
-    } catch {
-      continue // corrupt ACF -- same discipline as acfInstalldir.ts
-    }
+    out.push({
+      appid: capture(match, 1),
+      name: record.name,
+      installdir: record.installdir,
+      installPath: join(steamappsDir, 'common', record.installdir),
+      bottleName
+    })
   }
   return out
 }
@@ -2266,6 +2261,7 @@ export async function runCensus(): Promise<CensusRow[]> {
   // 63 WR-02: without the CLI every exe would read as "no delay imports, not
   // CEG" and the verdict table would be plausible but wrong. Abort instead.
   assertScanCliPresent()
+  assertSteamfilesCliPresent()
   resetCensusAccumulators()
   const knownBad = loadKnownBad()
   const playVerifiedSet = loadPlayVerified()

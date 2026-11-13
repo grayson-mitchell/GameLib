@@ -1,1 +1,61 @@
-{}
+{
+  "bridge/parseInstallScript/conditionals": {
+    "rustOverride": [
+      {
+        "name": "VC 2019",
+        "minimumHasRunValue": 1,
+        "processes": [
+          {
+            "process": "%INSTALLDIR%/vcredist/VC_redist.x64.exe",
+            "command": "/q /norestart"
+          }
+        ],
+        "requirementOs": null
+      }
+    ],
+    "divergenceNote": "The recorded Rust result carries forward slashes where the oracle kept the file's decoded backslashes: the cargo golden recorder (tests/golden.rs tokenise) rewrites every backslash in every string to '/' so path-shaped values compare across hosts. The Rust parser itself decodes the VDF escapes to the same backslash string (parseKv1 parity), so this is a recording artefact, not a behaviour difference; downstream consumers split Process paths on both separators."
+  },
+  "bridge/parseInstallScript/dotnet-duplicate": {
+    "rustOverride": [
+      {
+        "name": "4.8",
+        "minimumHasRunValue": 1,
+        "processes": [
+          {
+            "process": "%INSTALLDIR%/_CommonRedist/DotNet/4.0/dotNetFx40_Full_x86_x64.exe",
+            "command": "/q /norestart"
+          }
+        ],
+        "requirementOs": null
+      },
+      {
+        "name": "4.8",
+        "minimumHasRunValue": 1,
+        "processes": [
+          {
+            "process": "%INSTALLDIR%/_CommonRedist/DotNet/4.8/NDP48-x86-x64-AllOS-ENU.exe",
+            "command": "/q /norestart"
+          }
+        ],
+        "requirementOs": null
+      }
+    ],
+    "divergenceNote": "The recorded Rust result carries forward slashes where the oracle kept the file's decoded backslashes: the cargo golden recorder (tests/golden.rs tokenise) rewrites every backslash in every string to '/' so path-shaped values compare across hosts. The Rust parser itself decodes the VDF escapes to the same backslash string (parseKv1 parity), so this is a recording artefact, not a behaviour difference; downstream consumers split Process paths on both separators."
+  },
+  "bridge/parseInstallScript/escapes": {
+    "rustOverride": [
+      {
+        "name": "DirectX",
+        "minimumHasRunValue": 1,
+        "processes": [
+          {
+            "process": "%INSTALLDIR%/Redist/DXSETUP.exe",
+            "command": "/silent \"quoted\""
+          }
+        ],
+        "requirementOs": null
+      }
+    ],
+    "divergenceNote": "The recorded Rust result carries forward slashes where the oracle kept the file's decoded backslashes: the cargo golden recorder (tests/golden.rs tokenise) rewrites every backslash in every string to '/' so path-shaped values compare across hosts. The Rust parser itself decodes the VDF escapes to the same backslash string (parseKv1 parity), so this is a recording artefact, not a behaviour difference; downstream consumers split Process paths on both separators."
+  }
+}
