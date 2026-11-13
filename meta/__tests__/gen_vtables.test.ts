@@ -4420,6 +4420,71 @@ describe('58-03 flatAccessorAliases', () => {
   })
 })
 
+describe('261113-spw SDK-spelling flat accessor aliases (Core Keeper EntryPointNotFound SteamAPI_SteamInventory_v003)', () => {
+  const cases: Array<[string, string, string, string]> = [
+    [
+      'STEAMINVENTORY_INTERFACE_V003',
+      'SteamAPI_STEAMINVENTORY_INTERFACE_V003',
+      'SteamAPI_SteamInventory_v003',
+      'g_steaminventory_interface_v003_instance'
+    ],
+    [
+      'STEAMVIDEO_INTERFACE_V007',
+      'SteamAPI_STEAMVIDEO_INTERFACE_V007',
+      'SteamAPI_SteamVideo_v007',
+      'g_steamvideo_interface_v007_instance'
+    ],
+    [
+      'STEAMHTMLSURFACE_INTERFACE_VERSION_005',
+      'SteamAPI_STEAMHTMLSURFACE_INTERFACE_VERSION_005',
+      'SteamAPI_SteamHTMLSurface_v005',
+      'g_steamhtmlsurface_interface_version_005_instance'
+    ]
+  ]
+  const generated = (f: string, enc: BufferEncoding) =>
+    readFileSync(
+      join(__dirname, '..', '..', 'native', 'steam-bridge', 'generated', f),
+      enc
+    )
+
+  describe.each(cases)('%s', (iface, primary, alias, instance) => {
+    const m = real.find((x) => x.interface === iface)
+
+    it('A: manifest keeps primary and carries the SDK alias', () => {
+      expect(m?.flatAccessor).toBe(primary)
+      expect(m?.flatAccessorAliases).toEqual([alias])
+    })
+
+    it('B: generated shim returns the same instance for both names', () => {
+      const c = generateShimC(real)
+      const re = (n: string) =>
+        new RegExp(`void \\*${n}\\(void\\) \\{ return &(\\w+); \\}`)
+      expect(c.match(re(alias))?.[1]).toBe(instance)
+      expect(c.match(re(primary))?.[1]).toBe(instance)
+    })
+
+    it('C: x64 def exports both names', () => {
+      const lines = generateDefFile(real, 'x64').split(/\r?\n/)
+      expect(lines).toContain(primary)
+      expect(lines).toContain(alias)
+    })
+
+    it('D: checked-in generated files carry the alias', () => {
+      const def = generated('steam_api64.def', 'utf-8').split(/\r?\n/)
+      expect(def).toContain(alias)
+      expect(def).toContain(primary)
+      expect(generated('steam_api_shim.c', 'latin1')).toContain(
+        `void *${alias}(void) { return &${instance}; }`
+      )
+    })
+
+    it('E: manifest validates against all manifests', () => {
+      expect(m).toBeDefined()
+      expect(validateManifest(m as InterfaceManifestV2, real)).toEqual([])
+    })
+  })
+})
+
 describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes, shimLocal, helperCustom)', () => {
   function wireManifest(
     methods: Array<
