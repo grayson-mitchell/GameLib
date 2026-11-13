@@ -4,13 +4,13 @@ milestone: v0.10
 milestone_name: Foundations
 status: executing
 stopped_at: Phase 75 context gathered
-last_updated: "2026-11-13T19:19:06.114Z"
+last_updated: "2026-11-13T21:07:00.318Z"
 last_activity: 2026-11-13
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 361
-  completed_plans: 349
+  completed_plans: 350
   percent: 61
 ---
 
@@ -73,9 +73,9 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 75 (steam-local-file-formats-in-rust) — EXECUTING
-Plan: 26 of 35
+Plan: 27 of 35
 Status: Ready to execute
-Last activity: 2026-11-14 - Completed quick task 261114-ca6: Restore exact Owned on Steam on Humble Keys by resolving Steam app ids
+Last activity: 2026-11-13
 
 Progress: [██████████] 97%
 
