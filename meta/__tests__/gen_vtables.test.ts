@@ -9,6 +9,8 @@ import {
   computeWireTableHash,
   generateDefFile,
   generateDispatchHeader,
+  HELPER_ACCESSOR_PROBE_HEADROOM,
+  helperAccessorProbe,
   generateShimC,
   generateShimExportsTs,
   emitFlatExports,
@@ -1264,8 +1266,9 @@ describe('gen_vtables', () => {
       const x86Manifest = load(`${x86}.manifest.json`)
       expect(x64Manifest.helperInterface).toBeTruthy()
       expect(x64Manifest.helperInterface).toBe(x86Manifest.helperInterface)
+      // 261113-n39: resolved via the shared probe (or a copy of its var).
       const line = new RegExp(
-        `g_bd_accessor_${suffix} = \\(BDAccessorFn_t\\)dlsym\\(dylibHandle, "${x64Manifest.helperInterface}"\\)`
+        `g_bd_accessor_${suffix} = (bd_probe_accessor\\(|g_bd_accessor_[a-z0-9_]+;)`
       )
       expect(header).toMatch(line)
     })
@@ -1312,7 +1315,9 @@ describe('gen_vtables', () => {
     const dispatch = generateDispatchHeader([isteamuser, isteamfriends])
 
     it('emits bridge_dispatch_init, bridge_dispatch, bridge_dispatch_set_identity_only and the table hash', () => {
-      expect(dispatch).toContain('int bridge_dispatch_init(void *dylibHandle)')
+      expect(dispatch).toContain(
+        'int bridge_dispatch_init(void *dylibHandle, void (*log)(const char *cat, const char *msg))'
+      )
       expect(dispatch).toMatch(/uint8_t bridge_dispatch\(/)
       expect(dispatch).toContain(
         'void bridge_dispatch_set_identity_only(int on, uint32_t reportAppId)'
@@ -1337,15 +1342,69 @@ describe('gen_vtables', () => {
       )
     })
 
-    it('resolves each distinct helperInterface accessor once and calls it to get the self pointer', () => {
+    it('resolves each distinct helperInterface accessor once by newest-first probing and calls it to get the self pointer', () => {
+      // 261113-n39: ceiling = declared + 16, floor = oldest manifest in the
+      // generated set (this describe generates from 023 only; the full
+      // set's floor of 16 is asserted via helperAccessorProbe below).
       expect(dispatch).toContain(
-        'dlsym(dylibHandle, "SteamAPI_SteamUser_v023")'
+        'bd_probe_accessor(dylibHandle, log, "SteamAPI_SteamUser_v", "SteamUser", 39, 23)'
       )
+      expect(
+        dispatch.match(/"SteamAPI_SteamUser_v", "SteamUser"/g)
+      ).toHaveLength(1)
       expect(dispatch).toContain(
-        'dlsym(dylibHandle, "SteamAPI_SteamFriends_v018")'
+        '"SteamAPI_SteamFriends_v", "SteamFriends", 34,'
       )
       expect(dispatch).toContain(
         'g_bd_self_steamuser023 = g_bd_accessor_steamuser023 ? g_bd_accessor_steamuser023() : NULL;'
+      )
+    })
+
+    it('emits no fixed-version accessor dlsym literal', () => {
+      expect(dispatch).not.toMatch(
+        /dlsym\(dylibHandle, "SteamAPI_Steam[A-Za-z]+(_SteamAPI)?_v\d{3}"\)/
+      )
+    })
+
+    it('probe helper logs INIT/MISSING only through a non-NULL log callback', () => {
+      expect(dispatch).toContain('"accessor %s=v%03d"')
+      expect(dispatch).toContain('"%s* (probed v%03d..v%03d)"')
+      expect(dispatch).toMatch(/if \(log\) \{[\s\S]*log\("INIT", msg\)/)
+      expect(dispatch).toMatch(/if \(log\) \{[\s\S]*log\("MISSING", msg\)/)
+    })
+
+    it('helperAccessorProbe computes ceiling/floor and null for unversioned names', () => {
+      expect(HELPER_ACCESSOR_PROBE_HEADROOM).toBe(16)
+      const user = helperAccessorProbe(
+        'SteamAPI_SteamUser_v023',
+        loadAllManifests()
+      )
+      expect(user).toEqual({
+        prefix: 'SteamAPI_SteamUser_v',
+        family: 'SteamUser',
+        high: 39,
+        low: 16
+      })
+      const net = helperAccessorProbe(
+        'SteamAPI_SteamNetworkingSockets_SteamAPI_v013',
+        []
+      )
+      expect(net).toEqual({
+        prefix: 'SteamAPI_SteamNetworkingSockets_SteamAPI_v',
+        family: 'SteamNetworkingSockets',
+        high: 29,
+        low: 13
+      })
+      expect(helperAccessorProbe('SteamAPI_Weird', [])).toBeNull()
+    })
+
+    it('a non-versioned helperInterface keeps the literal dlsym', () => {
+      const m = {
+        ...isteamuser,
+        helperInterface: 'SteamAPI_NotVersioned'
+      } as InterfaceManifestV2
+      expect(generateDispatchHeader([m])).toContain(
+        'dlsym(dylibHandle, "SteamAPI_NotVersioned")'
       )
     })
 

@@ -8043,6 +8043,59 @@ function emitDispatchCase(
   return lines.join('\n')
 }
 
+/** Versions above a manifest's declared helperInterface version that the
+ * helper probes for (quick 261113-n39): a Valve bump from v023 to v024..v039
+ * needs no code change. */
+export const HELPER_ACCESSOR_PROBE_HEADROOM = 16
+
+export interface HelperAccessorProbe {
+  /** Name prefix up to and including the `_v`, e.g. `SteamAPI_SteamUser_v`. */
+  prefix: string
+  /** Log label, e.g. `SteamUser`. */
+  family: string
+  /** Highest version probed (declared + HELPER_ACCESSOR_PROBE_HEADROOM). */
+  high: number
+  /** Lowest version probed (oldest manifest sharing this accessor, >= 1). */
+  low: number
+}
+
+/**
+ * Probe plan for one helperInterface accessor name (quick 261113-n39).
+ * Returns null when the name is not a `SteamAPI_<Fam>_vNNN` /
+ * `SteamAPI_<Fam>_SteamAPI_vNNN` shape (the caller keeps a literal dlsym).
+ *
+ * ABI rationale: the flat `SteamAPI_ISteamXxx_*` functions dlsym'd from the
+ * same libsteam_api.dylib are compiled against that dylib's OWN newest
+ * interface, so the self pointer must come from that dylib's newest exported
+ * accessor. Newest-first probing is therefore ABI-consistent; picking an
+ * older, still-exported accessor could hand a flat function compiled for vN
+ * an object of an older layout. Probing never mixes dylibs. The residual risk
+ * is a flat-function parameter-list change in a future version, which no
+ * accessor choice can fix; that is out of scope (pinned-dylib todo).
+ */
+export function helperAccessorProbe(
+  helperInterface: string,
+  manifests: InterfaceManifestV2[]
+): HelperAccessorProbe | null {
+  const match = helperInterface.match(
+    /^(SteamAPI_([A-Za-z]+)(?:_SteamAPI)?_v)(\d{3})$/
+  )
+  if (!match) return null
+  const declared = parseInt(match[3], 10)
+  let low = declared
+  for (const m of manifests) {
+    if (m.helperInterface !== helperInterface) continue
+    const ver = m.interface.match(/(\d+)$/)
+    if (ver) low = Math.min(low, parseInt(ver[1], 10))
+  }
+  return {
+    prefix: match[1],
+    family: match[2],
+    high: declared + HELPER_ACCESSOR_PROBE_HEADROOM,
+    low: Math.max(1, low)
+  }
+}
+
 /**
  * 51-10: generates `native/steam-bridge/generated/bridge_dispatch.h` --
  * the helper's half of the SAME wire this file's `generateShimC` already
@@ -8142,13 +8195,27 @@ export function generateDispatchHeader(
     })
     .join('')
 
+  // quick 261113-n39: each distinct versioned helperInterface is probed once
+  // (newest-first) into its first manifest's accessor var; later manifests
+  // sharing it copy that var.
+  const probedAccessor = new Map<string, string>()
   const initBody = dispatchManifests
     .map((m) => {
       const accessorVar = dispatchAccessorVarName(m)
       const selfVar = dispatchSelfVarName(m)
-      const accessorResolve =
-        `  ${accessorVar} = (BDAccessorFn_t)dlsym(dylibHandle, "${m.helperInterface}");\n` +
-        `  ${selfVar} = ${accessorVar} ? ${accessorVar}() : NULL;\n`
+      const helperInterface = m.helperInterface as string
+      const shared = probedAccessor.get(helperInterface)
+      let accessorResolve: string
+      if (shared !== undefined) {
+        accessorResolve = `  ${accessorVar} = ${shared};\n`
+      } else {
+        const probe = helperAccessorProbe(helperInterface, dispatchManifests)
+        probedAccessor.set(helperInterface, accessorVar)
+        accessorResolve = probe
+          ? `  ${accessorVar} = bd_probe_accessor(dylibHandle, log, "${probe.prefix}", "${probe.family}", ${probe.high}, ${probe.low});\n`
+          : `  ${accessorVar} = (BDAccessorFn_t)dlsym(dylibHandle, "${helperInterface}");\n`
+      }
+      accessorResolve += `  ${selfVar} = ${accessorVar} ? ${accessorVar}() : NULL;\n`
       const wireMethods = [...m.methods]
         .filter((method) => isWireDispatchMethod(m, method))
         .sort((a, b) => a.slot - b.slot)
@@ -8275,10 +8342,38 @@ export function generateDispatchHeader(
     `  g_bd_identity_only = on ? 1 : 0;\n` +
     `  g_bd_report_appid = reportAppId;\n` +
     `}\n\n` +
+    `// quick 261113-n39: resolve a versioned accessor by probing from the\n` +
+    `// newest plausible version DOWN to the oldest supported one, taking the\n` +
+    `// first dlsym hit (a Valve v023 -> v024 bump needs no code change).\n` +
+    `// Logs INIT/MISSING through \`log\` only when it is non-NULL.\n` +
+    `static BDAccessorFn_t bd_probe_accessor(void *dylibHandle,\n` +
+    `                                        void (*log)(const char *cat, const char *msg),\n` +
+    `                                        const char *prefix, const char *family,\n` +
+    `                                        int high, int low) {\n` +
+    `  char name[96];\n` +
+    `  char msg[160];\n` +
+    `  for (int v = high; v >= low; v--) {\n` +
+    `    int n = snprintf(name, sizeof(name), "%s%03d", prefix, v);\n` +
+    `    if (n < 0 || (size_t)n >= sizeof(name)) continue; // T-n39-01: skip on truncation\n` +
+    `    void *sym = dlsym(dylibHandle, name);\n` +
+    `    if (sym) {\n` +
+    `      if (log) {\n` +
+    `        snprintf(msg, sizeof(msg), "accessor %s=v%03d", family, v);\n` +
+    `        log("INIT", msg);\n` +
+    `      }\n` +
+    `      return (BDAccessorFn_t)sym;\n` +
+    `    }\n` +
+    `  }\n` +
+    `  if (log) {\n` +
+    `    snprintf(msg, sizeof(msg), "%s* (probed v%03d..v%03d)", prefix, high, low);\n` +
+    `    log("MISSING", msg);\n` +
+    `  }\n` +
+    `  return NULL;\n` +
+    `}\n\n` +
     `// NULL-tolerant: a dlsym failure here leaves the affected self/flat\n` +
     `// pointer NULL, and every dispatch case above checks for NULL before\n` +
     `// calling through (T-51-23) -- never fatal to the whole helper.\n` +
-    `int bridge_dispatch_init(void *dylibHandle) {\n` +
+    `int bridge_dispatch_init(void *dylibHandle, void (*log)(const char *cat, const char *msg)) {\n` +
     `  if (!dylibHandle) return 0;\n` +
     `${initBody}` +
     `  return 1;\n` +

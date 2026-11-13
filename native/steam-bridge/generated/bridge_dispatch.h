@@ -1375,12 +1375,41 @@ void bridge_dispatch_set_identity_only(int on, uint32_t reportAppId) {
   g_bd_report_appid = reportAppId;
 }
 
+// quick 261113-n39: resolve a versioned accessor by probing from the
+// newest plausible version DOWN to the oldest supported one, taking the
+// first dlsym hit (a Valve v023 -> v024 bump needs no code change).
+// Logs INIT/MISSING through `log` only when it is non-NULL.
+static BDAccessorFn_t bd_probe_accessor(void *dylibHandle,
+                                        void (*log)(const char *cat, const char *msg),
+                                        const char *prefix, const char *family,
+                                        int high, int low) {
+  char name[96];
+  char msg[160];
+  for (int v = high; v >= low; v--) {
+    int n = snprintf(name, sizeof(name), "%s%03d", prefix, v);
+    if (n < 0 || (size_t)n >= sizeof(name)) continue; // T-n39-01: skip on truncation
+    void *sym = dlsym(dylibHandle, name);
+    if (sym) {
+      if (log) {
+        snprintf(msg, sizeof(msg), "accessor %s=v%03d", family, v);
+        log("INIT", msg);
+      }
+      return (BDAccessorFn_t)sym;
+    }
+  }
+  if (log) {
+    snprintf(msg, sizeof(msg), "%s* (probed v%03d..v%03d)", prefix, high, low);
+    log("MISSING", msg);
+  }
+  return NULL;
+}
+
 // NULL-tolerant: a dlsym failure here leaves the affected self/flat
 // pointer NULL, and every dispatch case above checks for NULL before
 // calling through (T-51-23) -- never fatal to the whole helper.
-int bridge_dispatch_init(void *dylibHandle) {
+int bridge_dispatch_init(void *dylibHandle, void (*log)(const char *cat, const char *msg)) {
   if (!dylibHandle) return 0;
-  g_bd_accessor_steamuser023 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamUser_v023");
+  g_bd_accessor_steamuser023 = bd_probe_accessor(dylibHandle, log, "SteamAPI_SteamUser_v", "SteamUser", 39, 16);
   g_bd_self_steamuser023 = g_bd_accessor_steamuser023 ? g_bd_accessor_steamuser023() : NULL;
   g_bd_flat_SteamUser023_GetHSteamUser = (BDFlatFn_SteamUser023_GetHSteamUser_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_GetHSteamUser");
   g_bd_flat_SteamUser023_BLoggedOn = (BDFlatFn_SteamUser023_BLoggedOn_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_BLoggedOn");
@@ -1388,22 +1417,22 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_SteamUser023_GetAuthSessionTicket = (BDFlatFn_SteamUser023_GetAuthSessionTicket_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_GetAuthSessionTicket");
   g_bd_flat_SteamUser023_GetAuthTicketForWebApi = (BDFlatFn_SteamUser023_GetAuthTicketForWebApi_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_GetAuthTicketForWebApi");
   g_bd_flat_SteamUser023_CancelAuthTicket = (BDFlatFn_SteamUser023_CancelAuthTicket_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_CancelAuthTicket");
-  g_bd_accessor_steamfriends018 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamFriends_v018");
+  g_bd_accessor_steamfriends018 = bd_probe_accessor(dylibHandle, log, "SteamAPI_SteamFriends_v", "SteamFriends", 34, 11);
   g_bd_self_steamfriends018 = g_bd_accessor_steamfriends018 ? g_bd_accessor_steamfriends018() : NULL;
   g_bd_flat_SteamFriends018_GetPersonaName = (BDFlatFn_SteamFriends018_GetPersonaName_t)dlsym(dylibHandle, "SteamAPI_ISteamFriends_GetPersonaName");
   g_bd_flat_SteamFriends018_GetPersonaState = (BDFlatFn_SteamFriends018_GetPersonaState_t)dlsym(dylibHandle, "SteamAPI_ISteamFriends_GetPersonaState");
   g_bd_flat_SteamFriends018_GetFriendPersonaName = (BDFlatFn_SteamFriends018_GetFriendPersonaName_t)dlsym(dylibHandle, "SteamAPI_ISteamFriends_GetFriendPersonaName");
-  g_bd_accessor_steamuser016 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamUser_v023");
+  g_bd_accessor_steamuser016 = g_bd_accessor_steamuser023;
   g_bd_self_steamuser016 = g_bd_accessor_steamuser016 ? g_bd_accessor_steamuser016() : NULL;
   g_bd_flat_SteamUser016_GetHSteamUser = (BDFlatFn_SteamUser016_GetHSteamUser_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_GetHSteamUser");
   g_bd_flat_SteamUser016_BLoggedOn = (BDFlatFn_SteamUser016_BLoggedOn_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_BLoggedOn");
   g_bd_flat_SteamUser016_GetSteamID = (BDFlatFn_SteamUser016_GetSteamID_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_GetSteamID");
-  g_bd_accessor_steamfriends011 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamFriends_v018");
+  g_bd_accessor_steamfriends011 = g_bd_accessor_steamfriends018;
   g_bd_self_steamfriends011 = g_bd_accessor_steamfriends011 ? g_bd_accessor_steamfriends011() : NULL;
   g_bd_flat_SteamFriends011_GetPersonaName = (BDFlatFn_SteamFriends011_GetPersonaName_t)dlsym(dylibHandle, "SteamAPI_ISteamFriends_GetPersonaName");
   g_bd_flat_SteamFriends011_GetPersonaState = (BDFlatFn_SteamFriends011_GetPersonaState_t)dlsym(dylibHandle, "SteamAPI_ISteamFriends_GetPersonaState");
   g_bd_flat_SteamFriends011_GetFriendPersonaName = (BDFlatFn_SteamFriends011_GetFriendPersonaName_t)dlsym(dylibHandle, "SteamAPI_ISteamFriends_GetFriendPersonaName");
-  g_bd_accessor_steamutils005 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamUtils_v011");
+  g_bd_accessor_steamutils005 = bd_probe_accessor(dylibHandle, log, "SteamAPI_SteamUtils_v", "SteamUtils", 27, 5);
   g_bd_self_steamutils005 = g_bd_accessor_steamutils005 ? g_bd_accessor_steamutils005() : NULL;
   g_bd_flat_SteamUtils005_GetSecondsSinceAppActive = (BDFlatFn_SteamUtils005_GetSecondsSinceAppActive_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetSecondsSinceAppActive");
   g_bd_flat_SteamUtils005_GetSecondsSinceComputerActive = (BDFlatFn_SteamUtils005_GetSecondsSinceComputerActive_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetSecondsSinceComputerActive");
@@ -1413,7 +1442,7 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_SteamUtils005_GetCurrentBatteryPower = (BDFlatFn_SteamUtils005_GetCurrentBatteryPower_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetCurrentBatteryPower");
   g_bd_flat_SteamUtils005_GetAppID = (BDFlatFn_SteamUtils005_GetAppID_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetAppID");
   g_bd_flat_SteamUtils005_IsOverlayEnabled = (BDFlatFn_SteamUtils005_IsOverlayEnabled_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_IsOverlayEnabled");
-  g_bd_accessor_steamapps_interface_version004 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamApps_v009");
+  g_bd_accessor_steamapps_interface_version004 = bd_probe_accessor(dylibHandle, log, "SteamAPI_SteamApps_v", "SteamApps", 25, 4);
   g_bd_self_steamapps_interface_version004 = g_bd_accessor_steamapps_interface_version004 ? g_bd_accessor_steamapps_interface_version004() : NULL;
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION004_BIsSubscribed = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION004_BIsSubscribed_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsSubscribed");
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION004_BIsLowViolence = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION004_BIsLowViolence_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsLowViolence");
@@ -1426,7 +1455,7 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION004_GetEarliestPurchaseUnixTime = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION004_GetEarliestPurchaseUnixTime_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_GetEarliestPurchaseUnixTime");
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION004_BIsSubscribedFromFreeWeekend = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION004_BIsSubscribedFromFreeWeekend_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsSubscribedFromFreeWeekend");
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION004_GetDLCCount = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION004_GetDLCCount_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_GetDLCCount");
-  g_bd_accessor_steamuserstats_interface_version010 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamUserStats_v013");
+  g_bd_accessor_steamuserstats_interface_version010 = bd_probe_accessor(dylibHandle, log, "SteamAPI_SteamUserStats_v", "SteamUserStats", 29, 10);
   g_bd_self_steamuserstats_interface_version010 = g_bd_accessor_steamuserstats_interface_version010 ? g_bd_accessor_steamuserstats_interface_version010() : NULL;
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION010_GetStat_2 = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION010_GetStat_2_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetStatFloat");
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION010_GetStat = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION010_GetStat_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetStatInt32");
@@ -1441,12 +1470,12 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievementDisplayAttribute = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievementDisplayAttribute_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetAchievementDisplayAttribute");
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION010_IndicateAchievementProgress = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION010_IndicateAchievementProgress_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_IndicateAchievementProgress");
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION010_ResetAllStats = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION010_ResetAllStats_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_ResetAllStats");
-  g_bd_accessor_steamfriends013 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamFriends_v018");
+  g_bd_accessor_steamfriends013 = g_bd_accessor_steamfriends018;
   g_bd_self_steamfriends013 = g_bd_accessor_steamfriends013 ? g_bd_accessor_steamfriends013() : NULL;
   g_bd_flat_SteamFriends013_GetPersonaName = (BDFlatFn_SteamFriends013_GetPersonaName_t)dlsym(dylibHandle, "SteamAPI_ISteamFriends_GetPersonaName");
   g_bd_flat_SteamFriends013_GetPersonaState = (BDFlatFn_SteamFriends013_GetPersonaState_t)dlsym(dylibHandle, "SteamAPI_ISteamFriends_GetPersonaState");
   g_bd_flat_SteamFriends013_GetFriendPersonaName = (BDFlatFn_SteamFriends013_GetFriendPersonaName_t)dlsym(dylibHandle, "SteamAPI_ISteamFriends_GetFriendPersonaName");
-  g_bd_accessor_steamapps_interface_version005 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamApps_v009");
+  g_bd_accessor_steamapps_interface_version005 = g_bd_accessor_steamapps_interface_version004;
   g_bd_self_steamapps_interface_version005 = g_bd_accessor_steamapps_interface_version005 ? g_bd_accessor_steamapps_interface_version005() : NULL;
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION005_BIsSubscribed = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION005_BIsSubscribed_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsSubscribed");
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION005_BIsLowViolence = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION005_BIsLowViolence_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsLowViolence");
@@ -1460,7 +1489,7 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION005_BIsSubscribedFromFreeWeekend = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION005_BIsSubscribedFromFreeWeekend_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsSubscribedFromFreeWeekend");
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION005_GetDLCCount = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION005_GetDLCCount_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_GetDLCCount");
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION005_BIsAppInstalled = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION005_BIsAppInstalled_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsAppInstalled");
-  g_bd_accessor_steamuserstats_interface_version011 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamUserStats_v013");
+  g_bd_accessor_steamuserstats_interface_version011 = g_bd_accessor_steamuserstats_interface_version010;
   g_bd_self_steamuserstats_interface_version011 = g_bd_accessor_steamuserstats_interface_version011 ? g_bd_accessor_steamuserstats_interface_version011() : NULL;
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION011_GetStat_2 = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_GetStat_2_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetStatFloat");
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION011_GetStat = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_GetStat_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetStatInt32");
@@ -1477,7 +1506,7 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION011_GetNumAchievements = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_GetNumAchievements_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetNumAchievements");
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementName = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementName_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetAchievementName");
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION011_ResetAllStats = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_ResetAllStats_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_ResetAllStats");
-  g_bd_accessor_steammatchmaking009 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamMatchmaking_v009");
+  g_bd_accessor_steammatchmaking009 = bd_probe_accessor(dylibHandle, log, "SteamAPI_SteamMatchmaking_v", "SteamMatchmaking", 25, 9);
   g_bd_self_steammatchmaking009 = g_bd_accessor_steammatchmaking009 ? g_bd_accessor_steammatchmaking009() : NULL;
   g_bd_flat_SteamMatchMaking009_GetFavoriteGameCount = (BDFlatFn_SteamMatchMaking009_GetFavoriteGameCount_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmaking_GetFavoriteGameCount");
   g_bd_flat_SteamMatchMaking009_GetFavoriteGame = (BDFlatFn_SteamMatchMaking009_GetFavoriteGame_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmaking_GetFavoriteGame");
@@ -1517,17 +1546,17 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_SteamMatchMaking009_GetLobbyOwner = (BDFlatFn_SteamMatchMaking009_GetLobbyOwner_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmaking_GetLobbyOwner");
   g_bd_flat_SteamMatchMaking009_SetLobbyOwner = (BDFlatFn_SteamMatchMaking009_SetLobbyOwner_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmaking_SetLobbyOwner");
   g_bd_flat_SteamMatchMaking009_SetLinkedLobby = (BDFlatFn_SteamMatchMaking009_SetLinkedLobby_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmaking_SetLinkedLobby");
-  g_bd_accessor_steamuser019 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamUser_v023");
+  g_bd_accessor_steamuser019 = g_bd_accessor_steamuser023;
   g_bd_self_steamuser019 = g_bd_accessor_steamuser019 ? g_bd_accessor_steamuser019() : NULL;
   g_bd_flat_SteamUser019_GetHSteamUser = (BDFlatFn_SteamUser019_GetHSteamUser_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_GetHSteamUser");
   g_bd_flat_SteamUser019_BLoggedOn = (BDFlatFn_SteamUser019_BLoggedOn_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_BLoggedOn");
   g_bd_flat_SteamUser019_GetSteamID = (BDFlatFn_SteamUser019_GetSteamID_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_GetSteamID");
-  g_bd_accessor_steamfriends015 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamFriends_v018");
+  g_bd_accessor_steamfriends015 = g_bd_accessor_steamfriends018;
   g_bd_self_steamfriends015 = g_bd_accessor_steamfriends015 ? g_bd_accessor_steamfriends015() : NULL;
   g_bd_flat_SteamFriends015_GetPersonaName = (BDFlatFn_SteamFriends015_GetPersonaName_t)dlsym(dylibHandle, "SteamAPI_ISteamFriends_GetPersonaName");
   g_bd_flat_SteamFriends015_GetPersonaState = (BDFlatFn_SteamFriends015_GetPersonaState_t)dlsym(dylibHandle, "SteamAPI_ISteamFriends_GetPersonaState");
   g_bd_flat_SteamFriends015_GetFriendPersonaName = (BDFlatFn_SteamFriends015_GetFriendPersonaName_t)dlsym(dylibHandle, "SteamAPI_ISteamFriends_GetFriendPersonaName");
-  g_bd_accessor_steamutils008 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamUtils_v011");
+  g_bd_accessor_steamutils008 = g_bd_accessor_steamutils005;
   g_bd_self_steamutils008 = g_bd_accessor_steamutils008 ? g_bd_accessor_steamutils008() : NULL;
   g_bd_flat_SteamUtils008_GetSecondsSinceAppActive = (BDFlatFn_SteamUtils008_GetSecondsSinceAppActive_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetSecondsSinceAppActive");
   g_bd_flat_SteamUtils008_GetSecondsSinceComputerActive = (BDFlatFn_SteamUtils008_GetSecondsSinceComputerActive_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetSecondsSinceComputerActive");
@@ -1540,7 +1569,7 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_SteamUtils008_GetSteamUILanguage = (BDFlatFn_SteamUtils008_GetSteamUILanguage_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetSteamUILanguage");
   g_bd_flat_SteamUtils008_IsSteamRunningInVR = (BDFlatFn_SteamUtils008_IsSteamRunningInVR_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_IsSteamRunningInVR");
   g_bd_flat_SteamUtils008_IsSteamInBigPictureMode = (BDFlatFn_SteamUtils008_IsSteamInBigPictureMode_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_IsSteamInBigPictureMode");
-  g_bd_accessor_steamapps_interface_version008 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamApps_v009");
+  g_bd_accessor_steamapps_interface_version008 = g_bd_accessor_steamapps_interface_version004;
   g_bd_self_steamapps_interface_version008 = g_bd_accessor_steamapps_interface_version008 ? g_bd_accessor_steamapps_interface_version008() : NULL;
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribed = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribed_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsSubscribed");
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsLowViolence = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsLowViolence_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsLowViolence");
@@ -1556,7 +1585,7 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsAppInstalled = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsAppInstalled_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsAppInstalled");
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetAppOwner = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_GetAppOwner_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_GetAppOwner");
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetAppBuildId = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_GetAppBuildId_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_GetAppBuildId");
-  g_bd_accessor_steamnetworking006 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamNetworking_v006");
+  g_bd_accessor_steamnetworking006 = bd_probe_accessor(dylibHandle, log, "SteamAPI_SteamNetworking_v", "SteamNetworking", 22, 6);
   g_bd_self_steamnetworking006 = g_bd_accessor_steamnetworking006 ? g_bd_accessor_steamnetworking006() : NULL;
   g_bd_flat_SteamNetworking006_SendP2PPacket = (BDFlatFn_SteamNetworking006_SendP2PPacket_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_SendP2PPacket");
   g_bd_flat_SteamNetworking006_IsP2PPacketAvailable = (BDFlatFn_SteamNetworking006_IsP2PPacketAvailable_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_IsP2PPacketAvailable");
@@ -1576,20 +1605,20 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_SteamNetworking006_RetrieveData = (BDFlatFn_SteamNetworking006_RetrieveData_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_RetrieveData");
   g_bd_flat_SteamNetworking006_GetSocketConnectionType = (BDFlatFn_SteamNetworking006_GetSocketConnectionType_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_GetSocketConnectionType");
   g_bd_flat_SteamNetworking006_GetMaxPacketSize = (BDFlatFn_SteamNetworking006_GetMaxPacketSize_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworking_GetMaxPacketSize");
-  g_bd_accessor_steamuser021 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamUser_v023");
+  g_bd_accessor_steamuser021 = g_bd_accessor_steamuser023;
   g_bd_self_steamuser021 = g_bd_accessor_steamuser021 ? g_bd_accessor_steamuser021() : NULL;
   g_bd_flat_SteamUser021_GetHSteamUser = (BDFlatFn_SteamUser021_GetHSteamUser_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_GetHSteamUser");
   g_bd_flat_SteamUser021_BLoggedOn = (BDFlatFn_SteamUser021_BLoggedOn_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_BLoggedOn");
   g_bd_flat_SteamUser021_GetSteamID = (BDFlatFn_SteamUser021_GetSteamID_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_GetSteamID");
   g_bd_flat_SteamUser021_GetAuthSessionTicket = (BDFlatFn_SteamUser021_GetAuthSessionTicket_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_GetAuthSessionTicket");
   g_bd_flat_SteamUser021_CancelAuthTicket = (BDFlatFn_SteamUser021_CancelAuthTicket_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_CancelAuthTicket");
-  g_bd_accessor_steamfriends017 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamFriends_v018");
+  g_bd_accessor_steamfriends017 = g_bd_accessor_steamfriends018;
   g_bd_self_steamfriends017 = g_bd_accessor_steamfriends017 ? g_bd_accessor_steamfriends017() : NULL;
   g_bd_flat_SteamFriends017_GetPersonaName = (BDFlatFn_SteamFriends017_GetPersonaName_t)dlsym(dylibHandle, "SteamAPI_ISteamFriends_GetPersonaName");
   g_bd_flat_SteamFriends017_GetPersonaState = (BDFlatFn_SteamFriends017_GetPersonaState_t)dlsym(dylibHandle, "SteamAPI_ISteamFriends_GetPersonaState");
   g_bd_flat_SteamFriends017_GetFriendPersonaName = (BDFlatFn_SteamFriends017_GetFriendPersonaName_t)dlsym(dylibHandle, "SteamAPI_ISteamFriends_GetFriendPersonaName");
   g_bd_flat_SteamFriends017_ActivateGameOverlayInviteDialog = (BDFlatFn_SteamFriends017_ActivateGameOverlayInviteDialog_t)dlsym(dylibHandle, "SteamAPI_ISteamFriends_ActivateGameOverlayInviteDialog");
-  g_bd_accessor_steamutils010 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamUtils_v011");
+  g_bd_accessor_steamutils010 = g_bd_accessor_steamutils005;
   g_bd_self_steamutils010 = g_bd_accessor_steamutils010 ? g_bd_accessor_steamutils010() : NULL;
   g_bd_flat_SteamUtils010_GetSecondsSinceAppActive = (BDFlatFn_SteamUtils010_GetSecondsSinceAppActive_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetSecondsSinceAppActive");
   g_bd_flat_SteamUtils010_GetSecondsSinceComputerActive = (BDFlatFn_SteamUtils010_GetSecondsSinceComputerActive_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetSecondsSinceComputerActive");
@@ -1602,7 +1631,7 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_SteamUtils010_GetSteamUILanguage = (BDFlatFn_SteamUtils010_GetSteamUILanguage_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetSteamUILanguage");
   g_bd_flat_SteamUtils010_IsSteamRunningInVR = (BDFlatFn_SteamUtils010_IsSteamRunningInVR_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_IsSteamRunningInVR");
   g_bd_flat_SteamUtils010_IsSteamInBigPictureMode = (BDFlatFn_SteamUtils010_IsSteamInBigPictureMode_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_IsSteamInBigPictureMode");
-  g_bd_accessor_steamuserstats_interface_version012 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamUserStats_v013");
+  g_bd_accessor_steamuserstats_interface_version012 = g_bd_accessor_steamuserstats_interface_version010;
   g_bd_self_steamuserstats_interface_version012 = g_bd_accessor_steamuserstats_interface_version012 ? g_bd_accessor_steamuserstats_interface_version012() : NULL;
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2 = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetStatFloat");
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetStatInt32");
@@ -1619,7 +1648,7 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetNumAchievements = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetNumAchievements_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetNumAchievements");
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetAchievementName");
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_ResetAllStats = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_ResetAllStats_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_ResetAllStats");
-  g_bd_accessor_steamuserstats_interface_version013 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamUserStats_v013");
+  g_bd_accessor_steamuserstats_interface_version013 = g_bd_accessor_steamuserstats_interface_version010;
   g_bd_self_steamuserstats_interface_version013 = g_bd_accessor_steamuserstats_interface_version013 ? g_bd_accessor_steamuserstats_interface_version013() : NULL;
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2 = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetStatFloat");
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetStatInt32");
@@ -1636,7 +1665,7 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetNumAchievements = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetNumAchievements_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetNumAchievements");
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetAchievementName");
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_ResetAllStats = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_ResetAllStats_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_ResetAllStats");
-  g_bd_accessor_steamutils009 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamUtils_v011");
+  g_bd_accessor_steamutils009 = g_bd_accessor_steamutils005;
   g_bd_self_steamutils009 = g_bd_accessor_steamutils009 ? g_bd_accessor_steamutils009() : NULL;
   g_bd_flat_SteamUtils009_GetSecondsSinceAppActive = (BDFlatFn_SteamUtils009_GetSecondsSinceAppActive_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetSecondsSinceAppActive");
   g_bd_flat_SteamUtils009_GetSecondsSinceComputerActive = (BDFlatFn_SteamUtils009_GetSecondsSinceComputerActive_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetSecondsSinceComputerActive");
@@ -1649,14 +1678,14 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_SteamUtils009_GetSteamUILanguage = (BDFlatFn_SteamUtils009_GetSteamUILanguage_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetSteamUILanguage");
   g_bd_flat_SteamUtils009_IsSteamRunningInVR = (BDFlatFn_SteamUtils009_IsSteamRunningInVR_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_IsSteamRunningInVR");
   g_bd_flat_SteamUtils009_IsSteamInBigPictureMode = (BDFlatFn_SteamUtils009_IsSteamInBigPictureMode_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_IsSteamInBigPictureMode");
-  g_bd_accessor_steamuser018 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamUser_v023");
+  g_bd_accessor_steamuser018 = g_bd_accessor_steamuser023;
   g_bd_self_steamuser018 = g_bd_accessor_steamuser018 ? g_bd_accessor_steamuser018() : NULL;
   g_bd_flat_SteamUser018_GetHSteamUser = (BDFlatFn_SteamUser018_GetHSteamUser_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_GetHSteamUser");
   g_bd_flat_SteamUser018_BLoggedOn = (BDFlatFn_SteamUser018_BLoggedOn_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_BLoggedOn");
   g_bd_flat_SteamUser018_GetSteamID = (BDFlatFn_SteamUser018_GetSteamID_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_GetSteamID");
   g_bd_flat_SteamUser018_GetAuthSessionTicket = (BDFlatFn_SteamUser018_GetAuthSessionTicket_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_GetAuthSessionTicket");
   g_bd_flat_SteamUser018_CancelAuthTicket = (BDFlatFn_SteamUser018_CancelAuthTicket_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_CancelAuthTicket");
-  g_bd_accessor_steamutils007 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamUtils_v011");
+  g_bd_accessor_steamutils007 = g_bd_accessor_steamutils005;
   g_bd_self_steamutils007 = g_bd_accessor_steamutils007 ? g_bd_accessor_steamutils007() : NULL;
   g_bd_flat_SteamUtils007_GetSecondsSinceAppActive = (BDFlatFn_SteamUtils007_GetSecondsSinceAppActive_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetSecondsSinceAppActive");
   g_bd_flat_SteamUtils007_GetSecondsSinceComputerActive = (BDFlatFn_SteamUtils007_GetSecondsSinceComputerActive_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetSecondsSinceComputerActive");
@@ -1668,7 +1697,7 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_SteamUtils007_IsOverlayEnabled = (BDFlatFn_SteamUtils007_IsOverlayEnabled_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_IsOverlayEnabled");
   g_bd_flat_SteamUtils007_GetSteamUILanguage = (BDFlatFn_SteamUtils007_GetSteamUILanguage_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetSteamUILanguage");
   g_bd_flat_SteamUtils007_IsSteamRunningInVR = (BDFlatFn_SteamUtils007_IsSteamRunningInVR_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_IsSteamRunningInVR");
-  g_bd_accessor_steamapps_interface_version007 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamApps_v009");
+  g_bd_accessor_steamapps_interface_version007 = g_bd_accessor_steamapps_interface_version004;
   g_bd_self_steamapps_interface_version007 = g_bd_accessor_steamapps_interface_version007 ? g_bd_accessor_steamapps_interface_version007() : NULL;
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION007_BIsSubscribed = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION007_BIsSubscribed_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsSubscribed");
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION007_BIsLowViolence = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION007_BIsLowViolence_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsLowViolence");
@@ -1684,7 +1713,7 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION007_BIsAppInstalled = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION007_BIsAppInstalled_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsAppInstalled");
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION007_GetAppOwner = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION007_GetAppOwner_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_GetAppOwner");
   g_bd_flat_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_GetAppBuildId");
-  g_bd_accessor_steammatchmakingservers003 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamMatchmakingServers_v003");
+  g_bd_accessor_steammatchmakingservers003 = bd_probe_accessor(dylibHandle, log, "SteamAPI_SteamMatchmakingServers_v", "SteamMatchmakingServers", 19, 3);
   g_bd_self_steammatchmakingservers003 = g_bd_accessor_steammatchmakingservers003 ? g_bd_accessor_steammatchmakingservers003() : NULL;
   g_bd_flat_SteamMatchMakingServers003_RequestInternetServerList = (BDFlatFn_SteamMatchMakingServers003_RequestInternetServerList_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_RequestInternetServerList");
   g_bd_flat_SteamMatchMakingServers003_RequestLANServerList = (BDFlatFn_SteamMatchMakingServers003_RequestLANServerList_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_RequestLANServerList");
@@ -1704,7 +1733,7 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_SteamMatchMakingServers003_ServerRules = (BDFlatFn_SteamMatchMakingServers003_ServerRules_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_ServerRules");
   g_bd_flat_SteamMatchMakingServers003_ServerFriends = (BDFlatFn_SteamMatchMakingServers003_ServerFriends_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_ServerFriends");
   g_bd_flat_SteamMatchMakingServers003_CancelServerQuery = (BDFlatFn_SteamMatchMakingServers003_CancelServerQuery_t)dlsym(dylibHandle, "SteamAPI_ISteamMatchmakingServers_CancelServerQuery");
-  g_bd_accessor_steamnetworkingsockets013 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamNetworkingSockets_SteamAPI_v013");
+  g_bd_accessor_steamnetworkingsockets013 = bd_probe_accessor(dylibHandle, log, "SteamAPI_SteamNetworkingSockets_SteamAPI_v", "SteamNetworkingSockets", 29, 12);
   g_bd_self_steamnetworkingsockets013 = g_bd_accessor_steamnetworkingsockets013 ? g_bd_accessor_steamnetworkingsockets013() : NULL;
   g_bd_flat_SteamNetworkingSockets013_CreateListenSocketIP = (BDFlatFn_SteamNetworkingSockets013_CreateListenSocketIP_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingSockets_CreateListenSocketIP");
   g_bd_flat_SteamNetworkingSockets013_ConnectByIPAddress = (BDFlatFn_SteamNetworkingSockets013_ConnectByIPAddress_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingSockets_ConnectByIPAddress");
@@ -1734,7 +1763,7 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_SteamNetworkingSockets013_SetConnectionPollGroup = (BDFlatFn_SteamNetworkingSockets013_SetConnectionPollGroup_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingSockets_SetConnectionPollGroup");
   g_bd_flat_SteamNetworkingSockets013_ReceiveMessagesOnPollGroup = (BDFlatFn_SteamNetworkingSockets013_ReceiveMessagesOnPollGroup_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingSockets_ReceiveMessagesOnPollGroup");
   g_bd_flat_SteamNetworkingSockets013_ResetIdentity = (BDFlatFn_SteamNetworkingSockets013_ResetIdentity_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingSockets_ResetIdentity");
-  g_bd_accessor_steamnetworkingutils004 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamNetworkingUtils_SteamAPI_v004");
+  g_bd_accessor_steamnetworkingutils004 = bd_probe_accessor(dylibHandle, log, "SteamAPI_SteamNetworkingUtils_SteamAPI_v", "SteamNetworkingUtils", 20, 4);
   g_bd_self_steamnetworkingutils004 = g_bd_accessor_steamnetworkingutils004 ? g_bd_accessor_steamnetworkingutils004() : NULL;
   g_bd_flat_SteamNetworkingUtils004_GetRelayNetworkStatus = (BDFlatFn_SteamNetworkingUtils004_GetRelayNetworkStatus_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_GetRelayNetworkStatus");
   g_bd_flat_SteamNetworkingUtils004_GetLocalPingLocation = (BDFlatFn_SteamNetworkingUtils004_GetLocalPingLocation_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_GetLocalPingLocation");
@@ -1754,7 +1783,7 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_SteamNetworkingUtils004_GetConfigValue = (BDFlatFn_SteamNetworkingUtils004_GetConfigValue_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_GetConfigValue");
   g_bd_flat_SteamNetworkingUtils004_GetConfigValueInfo = (BDFlatFn_SteamNetworkingUtils004_GetConfigValueInfo_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_GetConfigValueInfo");
   g_bd_flat_SteamNetworkingUtils004_IterateGenericEditableConfigValues = (BDFlatFn_SteamNetworkingUtils004_IterateGenericEditableConfigValues_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingUtils_IterateGenericEditableConfigValues");
-  g_bd_accessor_steamnetworkingmessages002 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamNetworkingMessages_SteamAPI_v002");
+  g_bd_accessor_steamnetworkingmessages002 = bd_probe_accessor(dylibHandle, log, "SteamAPI_SteamNetworkingMessages_SteamAPI_v", "SteamNetworkingMessages", 18, 2);
   g_bd_self_steamnetworkingmessages002 = g_bd_accessor_steamnetworkingmessages002 ? g_bd_accessor_steamnetworkingmessages002() : NULL;
   g_bd_flat_SteamNetworkingMessages002_SendMessageToUser = (BDFlatFn_SteamNetworkingMessages002_SendMessageToUser_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingMessages_SendMessageToUser");
   g_bd_flat_SteamNetworkingMessages002_ReceiveMessagesOnChannel = (BDFlatFn_SteamNetworkingMessages002_ReceiveMessagesOnChannel_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingMessages_ReceiveMessagesOnChannel");
@@ -1762,7 +1791,7 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_SteamNetworkingMessages002_CloseSessionWithUser = (BDFlatFn_SteamNetworkingMessages002_CloseSessionWithUser_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingMessages_CloseSessionWithUser");
   g_bd_flat_SteamNetworkingMessages002_CloseChannelWithUser = (BDFlatFn_SteamNetworkingMessages002_CloseChannelWithUser_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingMessages_CloseChannelWithUser");
   g_bd_flat_SteamNetworkingMessages002_GetSessionConnectionInfo = (BDFlatFn_SteamNetworkingMessages002_GetSessionConnectionInfo_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingMessages_GetSessionConnectionInfo");
-  g_bd_accessor_steamnetworkingsockets012 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamNetworkingSockets_SteamAPI_v013");
+  g_bd_accessor_steamnetworkingsockets012 = g_bd_accessor_steamnetworkingsockets013;
   g_bd_self_steamnetworkingsockets012 = g_bd_accessor_steamnetworkingsockets012 ? g_bd_accessor_steamnetworkingsockets012() : NULL;
   g_bd_flat_SteamNetworkingSockets012_CreateListenSocketIP = (BDFlatFn_SteamNetworkingSockets012_CreateListenSocketIP_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingSockets_CreateListenSocketIP");
   g_bd_flat_SteamNetworkingSockets012_ConnectByIPAddress = (BDFlatFn_SteamNetworkingSockets012_ConnectByIPAddress_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingSockets_ConnectByIPAddress");

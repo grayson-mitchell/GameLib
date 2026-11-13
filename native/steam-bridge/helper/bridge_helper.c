@@ -568,9 +568,11 @@ static void init_steam_api_once(const char *appId) {
   // up, no session" HEALTH/WHOAMI split, finding #7). bridge_dispatch_init
   // is itself NULL-tolerant per symbol (see its own doc comment); a
   // partial resolution failure degrades the affected dispatch case to
-  // STATUS_ERR, never this whole helper.
+  // STATUS_ERR, never this whole helper. logts is passed in as the log
+  // callback so each versioned accessor logs `INIT accessor <Family>=vNNN`
+  // (or `MISSING ...`) once (quick 261113-n39).
   if (g_inited) {
-    bridge_dispatch_init(g_dylib_handle);
+    bridge_dispatch_init(g_dylib_handle, logts);
     if (g_md_init && g_md_run_frame && g_md_get_next && g_md_free_last && g_get_hsteampipe) {
       g_md_init();
       g_hpipe = g_get_hsteampipe();
