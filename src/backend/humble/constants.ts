@@ -81,8 +81,3 @@ export const HUMBLE_CLASSIFIER_VERSION = 7
 // resolver); re-exported here so every existing importer of this constant
 // from constants.ts keeps compiling unchanged.
 export { HUMBLE_FUZZY_MATCH_THRESHOLD } from 'common/matching/titleMatch'
-
-// Phase 14 guided claim flow (HCLAIM-01): path-only, joined to
-// HUMBLE_BASE_URL at call time by the adapter (C5 isolation) — the endpoint
-// used to redeem a revealed key against a Humble-hosted platform.
-export const HUMBLE_REDEEM_PATH = '/humbler/redeemkey'

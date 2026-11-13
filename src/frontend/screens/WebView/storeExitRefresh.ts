@@ -22,7 +22,7 @@ const STEAM_STORE_HOSTS = new Set([
 ])
 
 /** True for an https Steam store cart or checkout main-frame URL. */
-export function isSteamCheckoutIntentUrl(url: string): boolean {
+function isSteamCheckoutIntentUrl(url: string): boolean {
   let parsed: URL
   try {
     parsed = new URL(url)

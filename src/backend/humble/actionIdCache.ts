@@ -24,7 +24,7 @@ export interface HumbleActionIdEntry {
 }
 
 /** The two server actions the adapter calls. Each has its own slot. */
-export type HumbleServerAction = 'library' | 'redeem'
+type HumbleServerAction = 'library' | 'redeem'
 
 /** The boot's action-id owner. */
 export interface HumbleActionIdCache {
