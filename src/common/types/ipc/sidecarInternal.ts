@@ -83,6 +83,13 @@ const depotJobEvent = z.discriminatedUnion('kind', [
         })
       )
       .max(256)
+  }),
+  // Phase 74: Rust JobEventBody::Stage (delta_planning / delta_committing); keep in lockstep with RustJobEvent.
+  z.strictObject({
+    jobId,
+    seq: count,
+    kind: z.literal('stage'),
+    stage: z.enum(['delta_planning', 'delta_committing'])
   })
 ])
 

@@ -11,3 +11,5 @@ files:
 ---
 
 A depot job event kind emitted during bridge delta updates is not admitted by the IPC contract union, so the send is rejected (four times per update). The update still completes. Add the kind to the contract or stop emitting it; run check:ipc-contract.
+
+Resolved by 74-27: the zod union lacked the Phase 74 `stage` kind

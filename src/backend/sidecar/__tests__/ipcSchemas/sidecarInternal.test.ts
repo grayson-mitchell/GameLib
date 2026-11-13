@@ -128,6 +128,8 @@ const sendTable: FixtureTable<typeof sidecarInternalSendArgs> = {
         }
       ],
       [{ jobId: 'j', seq: 3, kind: 'hostSummary', hosts: [] }],
+      [{ jobId: 'j', seq: 3, kind: 'stage', stage: 'delta_planning' }],
+      [{ jobId: 'j', seq: 4, kind: 'stage', stage: 'delta_committing' }],
       [
         {
           jobId: 'j',
@@ -144,6 +146,9 @@ const sendTable: FixtureTable<typeof sidecarInternalSendArgs> = {
       [{ jobId: 'j', seq: -1, kind: 'warning', message: 'm', count: 2 }],
       [{ jobId: 'j', seq: 1, kind: 'warning', message: '', count: 2 }],
       [{ jobId: 'j', seq: 1, kind: 'nope' }],
+      [{ jobId: 'j', seq: 1, kind: 'stage', stage: 'something_else' }],
+      [{ jobId: 'j', seq: 1, kind: 'stage' }],
+      [{ jobId: 'j', seq: 1, kind: 'stage', stage: 'delta_planning', x: 1 }],
       [
         {
           jobId: 'j',
