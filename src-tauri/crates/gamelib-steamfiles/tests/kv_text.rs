@@ -1,8 +1,6 @@
 //! Fixture-driven tests for the single text KV1 parser (P75-A, D-06/D-07).
 
-use gamelib_steamfiles::kv_text::{
-    find, merged, parse, KvErrorKind, Limits, MergedValue, Value,
-};
+use gamelib_steamfiles::kv_text::{find, merged, parse, KvErrorKind, Limits, MergedValue, Value};
 use std::path::{Path, PathBuf};
 
 fn fixture(rel: &str) -> Vec<u8> {
@@ -63,7 +61,11 @@ fn escapes_raw_and_decoded() {
     assert_eq!(raw.0, br#"Say \"Hi\" \\ there"#.to_vec());
     assert_eq!(raw.decoded(), r#"Say "Hi" \ there"#);
     assert_eq!(
-        merged(&root).map("AppState").unwrap().str("installdir").as_deref(),
+        merged(&root)
+            .map("AppState")
+            .unwrap()
+            .str("installdir")
+            .as_deref(),
         Some(r"Sub\Dir")
     );
 }
@@ -91,7 +93,9 @@ fn bom_and_crlf_match_plain() {
     for rel in ["acf/bom.acf", "acf/crlf.acf"] {
         let root = parse(&fixture(rel), &lim()).unwrap_or_else(|e| panic!("{rel}: {e:?}"));
         let m = merged(&root);
-        let app = m.map("AppState").unwrap_or_else(|| panic!("{rel}: no AppState"));
+        let app = m
+            .map("AppState")
+            .unwrap_or_else(|| panic!("{rel}: no AppState"));
         assert_eq!(app.str("StateFlags").as_deref(), Some("4"), "{rel}");
         assert!(app.str("appid").is_some(), "{rel}");
     }
@@ -125,10 +129,14 @@ fn conditionals_stored_not_shifting_pairs() {
     };
     let vc = find(run, "VC 2019").unwrap();
     assert_eq!(vc.cond.as_deref(), Some("$WIN32"));
-    let Value::Map(inner) = &vc.value else { panic!("map") };
+    let Value::Map(inner) = &vc.value else {
+        panic!("map")
+    };
     let p1 = find(inner, "Process 1").unwrap();
     assert_eq!(p1.cond.as_deref(), Some("$WIN32"));
-    let Value::Str(v) = &p1.value else { panic!("str") };
+    let Value::Str(v) = &p1.value else {
+        panic!("str")
+    };
     assert!(v.decoded().ends_with("VC_redist.x64.exe"));
     let Value::Str(c) = &find(inner, "Command 1").unwrap().value else {
         panic!("str")
@@ -146,10 +154,15 @@ fn dotnet_duplicate_keeps_both_in_order() {
     let Value::Map(run) = &find(script, "Run Process").unwrap().value else {
         panic!("map")
     };
-    let both: Vec<_> = run.iter().filter(|p| p.key.eq_ignore_ascii_case("4.8")).collect();
+    let both: Vec<_> = run
+        .iter()
+        .filter(|p| p.key.eq_ignore_ascii_case("4.8"))
+        .collect();
     assert_eq!(both.len(), 2);
     let proc_of = |p: &&gamelib_steamfiles::kv_text::Pair| {
-        let Value::Map(m) = &p.value else { panic!("map") };
+        let Value::Map(m) = &p.value else {
+            panic!("map")
+        };
         let Value::Str(s) = &find(m, "Process 1").unwrap().value else {
             panic!("str")
         };
@@ -220,20 +233,27 @@ fn depth_64_ok_65_rejected() {
         for _ in 0..n {
             s.extend_from_slice(b"\"k\" {");
         }
-        for _ in 0..n {
-            s.push(b'}');
-        }
+        s.resize(s.len() + n, b'}');
         s
     };
     assert!(parse(&build(64), &lim()).is_ok());
-    assert_eq!(parse(&build(65), &lim()).unwrap_err().kind, KvErrorKind::TooDeep);
+    assert_eq!(
+        parse(&build(65), &lim()).unwrap_err().kind,
+        KvErrorKind::TooDeep
+    );
 }
 
 #[test]
 fn oversized_input_rejected() {
-    let l = Limits { max_bytes: 16, max_depth: 64 };
+    let l = Limits {
+        max_bytes: 16,
+        max_depth: 64,
+    };
     assert!(parse(&[b' '; 16], &l).is_ok());
-    assert_eq!(parse(&[b' '; 17], &l).unwrap_err().kind, KvErrorKind::TooLarge);
+    assert_eq!(
+        parse(&[b' '; 17], &l).unwrap_err().kind,
+        KvErrorKind::TooLarge
+    );
 }
 
 #[test]
@@ -253,10 +273,7 @@ fn collect(dir: &Path, out: &mut Vec<PathBuf>) {
             if p.file_name().unwrap() != "shortcuts" {
                 collect(&p, out);
             }
-        } else if matches!(
-            p.extension().and_then(|x| x.to_str()),
-            Some("acf" | "vdf")
-        ) {
+        } else if matches!(p.extension().and_then(|x| x.to_str()), Some("acf" | "vdf")) {
             out.push(p);
         }
     }
