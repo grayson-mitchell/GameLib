@@ -52,3 +52,15 @@ None.
 ## Outstanding human follow-up (NOT verified)
 
 Live launch verification of Dungeons of Dredmor (98800) has NOT been done, and the bridge for 98800 is not claimed verified. The strict bar needs a shim HELLO plus a clean game Steam-init log. To check: run `pnpm build:sidecar` / `pnpm build-steam-bridge`, restart `pnpm tauri:dev` (it does not rebuild the sidecar), launch Dredmor, and confirm the launch log no longer says "shim withheld: coverage gaps STEAMREMOTESTORAGE_INTERFACE_VERSION008". Reaching the game menu does not count.
+
+## Live verification (2026-11-13 19:31)
+
+Operator launched Dungeons of Dredmor (98800) after a dev restart. `~/Library/Logs/GameLib/gamelib.log`:
+- `bridge verdict auto-cleared (D-51-07), the current shim now covers: STEAMREMOTESTORAGE_INTERFACE_VERSION008`
+- `placeShimForGame` placed the shim (original kept as `.gamelib-orig`); no "shim withheld" line
+- `HELLO shim attached appid=98800`, `GINIT fn=SteamAPI_Init ret=1 ok=1 session=1`
+- Game-originated calls: `SteamUtils005.GetAppID`, `SteamUser016.BLoggedOn`, `STEAMUSERSTATS_INTERFACE_VERSION011.GetStat/GetAchievement`, and `STEAMREMOTESTORAGE_INTERFACE_VERSION008.EnumerateUserSubscribedFiles/EnumerateUserPublishedFiles` answered by the stub
+- Game process matched and window raised
+
+Verdict: **bridge-verified** (HELLO + shim-logged init success + game-originated bridge calls; non-Unity title, D-53-13/D-53-15).
+Aside: `overlay attach: not attached within 10s` — Steam overlay did not attach on this launch; separate from this task.
