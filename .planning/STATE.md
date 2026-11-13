@@ -2,12 +2,14 @@
 gsd_state_version: "1.0"
 milestone: v0.10
 milestone_name: Foundations
+current_phase: 75
+current_phase_name: steam-local-file-formats-in-rust
 status: executing
 stopped_at: Phase 66.4 complete (verified passed)
-last_updated: "2026-11-13T12:40:07.035Z"
+last_updated: "2026-11-13T13:26:05.967Z"
 last_activity: 2026-11-14
 last_activity_desc: Phase 66.4 complete (25/25 plans, verification passed); Phase 75 remains current
-state_head: 4dc5209df8a64480d7abc14139433ff5fe52c12d
+state_head: 0d918e51f8d6280ee309d867d481e721cbb9e7ff
 progress:
   total_phases: 23
   completed_phases: 14
@@ -77,7 +79,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 Phase: 75 (steam-local-file-formats-in-rust) — EXECUTING
 Plan: 26 of 35
 Status: Ready to execute
-Last activity: 2026-11-14 - Completed quick task 261114-2yj: sidecarExitCheck eof mode reaps its child and disposes its fake-HOME profile
+Last activity: 2026-11-14 - Completed quick task 261114-2tv: Clear the 36 tests-scope ESLint warnings added on main since fba351fbe without raising TESTS_CEILING
 
 Progress: [██████░░░░] 61%
 
@@ -601,6 +603,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261112-7ww | Linux GPU info enumerated via `lspci -mm -v -n -k` (display classes only) instead of the Electron `getGPUInfo` stand-in that always threw; `getGpuInfo` returns [] on any probe failure so `getSystemInfo` no longer rejects on Linux. | 2026-11-12 | 37d2eb547 | systeminfo 21/21; Deck LCD/OLED fixtures | [261112-7ww-linux-gpu-info-via-lspci-instead-of-elec](./quick/261112-7ww-linux-gpu-info-via-lspci-instead-of-elec/) |
 | 261112-8w3 | Comet token-mode flags `--access-token`/`--refresh-token` added to the commandRunner credential redaction list and census regex; Layer-2 case pins both values redacted. Closes 66.1 security threats T-66.1-16/T-66.1-68. | 2026-11-12 | 05aa1af9c | Jest 70/70 (commandRunner.test); scoped prettier clean | [261112-8w3-add-access-token-refresh-token-to-comman](./quick/261112-8w3-add-access-token-refresh-token-to-comman/) |
 | 261112-99y | Recorded ITAD's 2026-10-01 reply in Phase 47 docs: rate limit follows the app (OAuth branch dead), gate 3 decided (embedded key + hard caching, no proxy yet), Q1 reply ambiguous, affiliate question never asked; gate 1 (ITAD app registration) still blocks planning. | 2026-11-12 | 6ff3cd9ab | docs-only; plan grep checks pass | [261112-99y-record-itad-reply-in-phase-47-docs](./quick/261112-99y-record-itad-reply-in-phase-47-docs/) |
+| 261114-2tv | Clear the 36 tests-scope ESLint warnings added on main since fba351fbe without raising TESTS_CEILING | 2026-11-14 | 0a09ba886 | — | [261114-2tv-clear-the-36-tests-scope-eslint-warnings](./quick/261114-2tv-clear-the-36-tests-scope-eslint-warnings/) |
 
 ## Deferred Items
 
