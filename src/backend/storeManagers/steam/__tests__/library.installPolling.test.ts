@@ -26,6 +26,7 @@ import {
   cancelDelegatedInstall,
   isDelegatedInstallPolling
 } from '../library/installPolling'
+import { MAX_TICKS } from '../library/pollState'
 import { at } from './fixtures/indexed'
 import type { Stores } from 'backend/services/types'
 
@@ -302,6 +303,51 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
         status: 'done'
       })
     )
+  })
+
+  // 74-27 (T-74-92): the queue holds 'updating' through a Steam hand-off, so every end of an
+  // update-aware poll must send a terminal 'done'. The MAX_TICKS cap was the one silent stop.
+  describe('MAX_TICKS cap terminal status (74-27)', () => {
+    const capTick = async (
+      options?: Parameters<typeof startInstallPolling>[2]
+    ) => {
+      jest.mocked(sendFrontendMessage).mockClear()
+      startInstallPolling(steamTestDeps, '730', options)
+      const entry =
+        steamTestDeps.steamInstallRuntime.polls.activePolls.get('730')
+      if (!entry) throw new Error('poll not registered')
+      entry.ticks = MAX_TICKS
+      await jest.advanceTimersByTimeAsync(10)
+      expect(
+        steamTestDeps.steamInstallRuntime.polls.activePolls.has('730')
+      ).toBe(false)
+    }
+    const doneCalls = () =>
+      jest
+        .mocked(sendFrontendMessage)
+        .mock.calls.filter(
+          ([ch, p]) =>
+            ch === 'gameStatusUpdate' &&
+            (p as { status?: string }).status === 'done'
+        )
+
+    it('an update-aware poll sends done when the cap stops it', async () => {
+      await capTick({
+        intervalMs: 10,
+        delegatedToSteamClient: true,
+        awaitingUpdate: { fromBuild: '1' }
+      })
+      expect(doneCalls()).toHaveLength(1)
+      expect(doneCalls()[0]?.[1]).toMatchObject({
+        appName: '730',
+        runner: 'steam'
+      })
+    })
+
+    it('an install poll at the cap stays silent, as before', async () => {
+      await capTick({ intervalMs: 10 })
+      expect(doneCalls()).toHaveLength(0)
+    })
   })
 
   // ── 260822-dkf: the grace window's provenance test ─────────────────────────

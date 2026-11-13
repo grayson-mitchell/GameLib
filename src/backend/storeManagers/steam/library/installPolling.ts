@@ -275,6 +275,15 @@ export function startInstallPolling(
         LogPrefix.Steam
       )
       stopInstallPolling(deps, appId)
+      // 74-27 (T-74-92): the queue holds 'updating' through a Steam hand-off, so the
+      // update poll must always end with a terminal 'done' (install polls unchanged).
+      if (entry.awaitingUpdate) {
+        deps.sendFrontendMessage('gameStatusUpdate', {
+          appName: appId,
+          runner: 'steam',
+          status: 'done'
+        })
+      }
       return
     }
 
