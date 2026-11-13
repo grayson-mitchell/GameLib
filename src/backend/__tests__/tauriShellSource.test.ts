@@ -2409,11 +2409,21 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
     expect(body).not.toContain('charactersIgnoringModifiers')
   })
 
-  test("Test 7 (REGRESSION GUARD): addLocalMonitorForEventsMatchingMask_handler appears exactly twice in the whole comment-stripped source -- the pristine Epic arm's pre-existing monitor plus this plan's new Esc monitor; a count other than 2 means the byte-frozen pristine region was edited or refactored", () => {
-    const code = loadMainRsCode()
-    const matches =
-      code.match(/addLocalMonitorForEventsMatchingMask_handler/g) ?? []
-    expect(matches.length).toBe(2)
+  // dialogs.rs carries one sanctioned monitor outside the login surface: 74-26's scoped Esc
+  // monitor on the macOS three-button launch prompt. It is counted separately so this guard
+  // still pins the login surface (pristine Epic arm + this plan's Esc monitor) at exactly 2.
+  test("Test 7 (REGRESSION GUARD): addLocalMonitorForEventsMatchingMask_handler appears exactly twice in the comment-stripped login-surface source -- the pristine Epic arm's pre-existing monitor plus this plan's new Esc monitor; a count other than 2 means the byte-frozen pristine region was edited or refactored (dialogs.rs's launch-prompt monitor is pinned at 1 separately)", () => {
+    const monitor = /addLocalMonitorForEventsMatchingMask_handler/g
+    const all = loadMainRsCode().match(monitor) ?? []
+    const dialogs =
+      loadMainRsCode(
+        readFileSync(
+          join(__dirname, '..', '..', '..', 'src-tauri', 'src', 'dialogs.rs'),
+          'utf-8'
+        )
+      ).match(monitor) ?? []
+    expect(dialogs.length).toBe(1)
+    expect(all.length - dialogs.length).toBe(2)
   })
 
   // Test 8 exists because the pristine Epic surface is excluded by a LOCKED USER SCOPE
