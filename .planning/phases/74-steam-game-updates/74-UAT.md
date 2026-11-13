@@ -1,5 +1,5 @@
 ---
-status: pending
+status: complete
 phase: 74-steam-game-updates
 source: [74-13-PLAN.md]
 started: 2026-11-12
@@ -127,37 +127,37 @@ precondition: choose a bridge install with a DLC or language depot (read Install
 
 ### 19. Registered Update with Steam closed starts Steam (CR-01)
 expected: With Steam quit, Refresh shows the update badge on the registered fixture (PICS). Update logs `ACF says current (build <b>) but Steam has build <t>; handing the update to Steam` and then either `Steam is updating appId <id> via InstallApp` or `delegating update for appId <id> via steam://nav/games/details/<id>`; Steam starts; the game updates (if Steam shows its own Update button on the opened page, pressing it is allowed); GameLib shows Updating until `update of appId <id> finished`, then the badge clears. The log never shows `is already current` for this click.
-result: pending
+result: issue. CR-01 hand-off fixed, completion wrong. ADOM 333300, Steam quit, ACF buildid+TargetBuildID lowered to 5820077 (StateFlags 4). 20:53:39 `ACF says current (build 5820077) but Steam has build 5820078; handing the update to Steam`; 20:53:40 InstallApp `unavailable: steam-not-running` then `delegating update for appId 333300 via steam://nav/games/details/333300`; Steam started; no `is already current`. Card showed Updating ("Processing files, please wait"). Defect (major): 20:55:40, exactly 40 ticks later, `update of appId 333300 finished (build 5820077)` with no update having run. updateNative.ts takes awaitingUpdate.targetBuild from the ACF TargetBuildID (5820077, equal to buildid whenever the ACF says current) before the PICS target, so 74-23's target-aware quiet end matches the stale build and completes falsely. Minor: once Steam is up, the delegate path never retries InstallApp, so a game set to update only on launch waits on the Steam page. Fixture limit: Steam judged ADOM current from InstalledDepots manifest GIDs (still the 5820078 manifest), so Play at 20:55:59 launched with no update; lowering buildid alone cannot make Steam download.
 precondition: the registered fixture re-staled per spike 069 step 4 (quit Steam, lower the ACF buildid with Steam quit, leave Steam quit), GameLib relaunched with `pnpm tauri:dev`, Steam still not running when Update is pressed (`pgrep -x steam_osx` empty).
 
 ### 20. Esc dismisses the launch prompt as Play anyway (re-run of item 16 step 3)
 expected: Play on a stale bridge game shows the three-button native box; pressing Esc closes it with no beep and launches the current build (the game reaching its menu suffices); no update is queued (Downloads stays empty, no `queued update` log line). Return on a fresh prompt also launches.
-result: pending
+result: pass. Hell Clock 1782460 (bridge), buildid lowered 26431636 -> 26431635, no prompt ack, autoUpdateGames off. Play showed one native three-button box with no in-app box first; Esc closed it with no beep and the game launched (21:01:55 `launching appId 1782460 via the Steam bridge`); Downloads stayed empty, no `queued update` line in the log; Return on a fresh prompt also launched. Side note: Settings showed "Automatically update games" off while store/config.json held `autoUpdateGames: true`; toggling on then off wrote false.
 precondition: Hell Clock 1782460 or Core Keeper 1621690 stale and with no "Don't ask again" acknowledgement for its target build; autoUpdateGames off so the update is not run at boot.
 
 ### 21. Bridge delta with no depotJobEvent IPC errors (re-run of item 18's side note)
 expected: A bridge update runs to `[depot-rust] outcome ... status=completed acf=4`, and the cumulative gamelib.log for the run has zero `IPC_INVALID_ARGS` lines for `channel=depotJobEvent`; the Downloads hero shows the planning/applying stage text if it appears at all (record what you see; that label is a separate todo and not a pass/fail condition here).
-result: pending
+result: pass. Hell Clock 1782460 (bridge, buildid lowered to 26431635). 21:05:55 `retire appId=1782460 candidates=1 retired=[] kept=[]`, `[depot-rust] outcome appId=1782460 ... status=completed acf=4 ... bytes=0`; ACF buildid back to 26431636; zero `IPC_INVALID_ARGS` lines (none for channel=depotJobEvent) in the cumulative sidecar and shell logs. Record-only: the Downloads hero showed "Applying update…". Separate observation before this item: after playing the stale game (item 20) its card lost the update badge with the ACF still stale; a Refresh restored it.
 precondition: any stale bridge fixture (stage staleness as item 18's precondition describes if none is stale); start the cumulative tail before pressing Update.
 
 ### 22. Registered InstallApp update with no Update-button flash (re-run of item 17's polish note)
 expected: With InstallApp ON, Update shows Updating on the card and the game page from the click until `update of appId <id> finished`; at no point between the click and the badge clearing does the Update button or the clickable "New Version Available" status reappear.
-result: pending
+result: pass. ADOM 333300 re-staled with Steam quit to spike 069's real prior state (buildid/TargetBuildID 3512046, depot 333302 manifest 1547379086645511101); Steam relaunch marked it `Update Required` (21:08:03). 21:09:55 `Steam is updating appId 333300 via InstallApp`; 21:09:58 `update of appId 333300 finished (build 5820078)` then `stopped install polling`; ACF back to 5820078, StateFlags 4. Operator watched card and game page: Updating throughout, the Update button and "New Version Available" never reappeared before the badge cleared.
 precondition: the registered fixture re-staled per spike 069 step 4 with Steam running afterwards; the InstallApp opt-in is on and confirmed saved; watch the card and keep the game page open on a second look.
 
 ### 23. A failing unattended auto-update does not loop (CR-02)
 expected: With autoUpdateGames ON and a stale bridge game whose unattended update cannot run, the boot shows one "Update Started" and one "Update Failed" notification for it; the log has one `auto-update attempt recorded for appId <id>` and one `unattended=true update not started` (or `failed`) line; pressing Refresh twice more adds no notification and logs `skipping auto-update for appId <id>: build <b> already attempted this session`; a manual Update click afterwards runs an attended update (sign-in prompt or progress).
-result: pending
+result: blocked. No unattended failure could be induced. Signing out of Steam in GameLib empties the Steam library (`update check apps=0`; see the signed-out gap), so nothing is auto-updated. Second route: Hell Clock 1782460 stale (buildid 26431635) with InstalledDepots stripped from its bridge ACF, autoUpdateGames on, signed in, relaunch. The unattended update did not fail: 21:22:32 `auto-update attempt recorded for appId 1782460 (build 26431636); not retried for this build this session`, `retire ... candidates=0`, `[depot-rust] outcome ... status=completed acf=4 ... bytes=118448`, ACF rewritten with InstalledDepots at 26431636. Later update checks (21:23:06, 21:23:51) made no second attempt. Failure-loop half not live-proven (covered by 74-24 unit tests). The operator saw no OS notifications for this boot's update (not investigated; macOS notification settings possible).
 precondition: the bridge fixture stale; make the unattended path fail by signing out of Steam in GameLib before the relaunch (or by a boot where the Keychain gate stays locked); autoUpdateGames ON; relaunch with `pnpm tauri:dev`; restore the sign-in and autoUpdateGames to their previous values afterwards.
 
 ## Summary
 
-total: 18
-passed: 13
-issues: 3
+total: 23
+passed: 16
+issues: 4
 pending: 0
 skipped: 2
-blocked: 0
+blocked: 1
 
 ## Gaps
 
@@ -211,3 +211,28 @@ blocked: 0
   reason: "Item 17 (polish): the button flashed for about 2 s before the badge changed."
   severity: cosmetic
   test: 17
+- truth: "A registered Update handed to Steam with Steam closed waits for the PICS target build before reporting finished"
+  status: failed
+  reason: "Item 19 (ADOM 333300, CR-01): the hand-off is fixed, but 120 s after the click the quiet end logged `update of appId 333300 finished (build 5820077)` with no update run. updateNative.ts sets awaitingUpdate.targetBuild from the ACF TargetBuildID before the PICS target; on the ACF-says-current path TargetBuildID equals buildid, so 74-23's target-aware quiet end matches the stale build. Prefer the PICS target when picsSaysNewer."
+  severity: major
+  test: 19
+- truth: "Once GameLib has started Steam for a registered update, the update actually starts"
+  status: failed
+  reason: "Item 19: with Steam closed, InstallApp is unavailable and the delegate path opens steam://nav/games/details/<id>; it never retries InstallApp once Steam is up. For a game set to 'only update when launched' (ADOM AutoUpdateBehavior 1) Steam shows Play and the update waits for a Steam-side launch."
+  severity: minor
+  test: 19
+- truth: "A stale game keeps its update badge after it is played"
+  status: failed
+  reason: "Item 20/21: after playing stale Hell Clock 1782460 through the Esc and Return prompts, its card lost the update badge with the ACF still at the old build; a manual Refresh restored it."
+  severity: minor
+  test: 20
+- truth: "Installed Steam games stay in the library while signed out of Steam in GameLib"
+  status: failed
+  reason: "Item 23: after signing out and relaunching, the library showed no Steam games (`update check apps=0`, `Steam client not ready (not-signed-in), skipping library refresh` at library/refresh.ts:80). Todo 2026-11-13-installed-steam-games-hidden-when-signed-out. Also: signing back in did not run a library-wide update check (stale Hell Clock had no badge until the next boot)."
+  severity: major
+  test: 23
+- truth: "Settings shows the stored value of 'Automatically update games'"
+  status: failed
+  reason: "Item 20 setup: Settings showed the toggle off while store/config.json held `autoUpdateGames: true`; toggling on then off wrote false. Not root-caused."
+  severity: minor
+  test: 20
