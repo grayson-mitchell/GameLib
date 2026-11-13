@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.10
 milestone_name: Foundations
-status: verifying
-stopped_at: Phase 75 context gathered
-last_updated: "2026-11-13T22:25:23.491Z"
-last_activity: 2026-11-13
+status: ready_to_plan
+stopped_at: Phase 75 complete (35/35) — ready to discuss Phase 76
+last_updated: 2026-11-13T23:22:50.238Z
+last_activity: 2026-11-14
 progress:
   total_phases: 23
   completed_phases: 15
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 75 — steam-local-file-formats-in-rust
+**Current focus:** Phase 76 — engine correct bottle for drm mode launches (v0.9 audit s9)
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,10 +72,10 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 ## Current Position
 
-Phase: 75 (steam-local-file-formats-in-rust) — EXECUTING
-Plan: 35 of 35
-Status: Phase complete — ready for verification
-Last activity: 2026-11-14 - Completed quick task 261114-gki: Keep SHA-verified temps when a bridge update is paused so resume does not re-download
+Phase: 76
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-11-14 - Phase 75 complete (35/35, verified, CI green)
 
 Progress: [██████████] 99%
 

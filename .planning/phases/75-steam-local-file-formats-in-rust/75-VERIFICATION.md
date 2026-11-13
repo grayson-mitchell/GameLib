@@ -1,7 +1,8 @@
 ---
 phase: 75-steam-local-file-formats-in-rust
 verified: 2026-11-14T00:00:00Z
-status: human_needed
+status: passed
+human_verification_resolved: 75-HUMAN-UAT.md (3/3 pass, 2026-11-14; CI run 43525676610 green)
 score: 7/7 must-haves verified
 overrides_applied: 0
 human_verification:
