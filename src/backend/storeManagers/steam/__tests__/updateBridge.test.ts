@@ -292,6 +292,37 @@ describe('updateBridgeGame', () => {
     expect(downloadSteamDepotsRust).not.toHaveBeenCalled()
   })
 
+  it('unattended log names the phase: estimate and disk refusals are "not started", a download error is "failed"', async () => {
+    const lines = () =>
+      jest
+        .mocked(logInfo)
+        .mock.calls.map(([m]) => String(m))
+        .filter((m) => m.includes('unattended=true'))
+    jest.mocked(estimateBridgeUpdate).mockResolvedValueOnce({ error: 'e1' })
+    await updateBridgeGame(makeGame().game, { unattended: true })
+    expect(lines().at(-1)).toContain('update not started: e1')
+
+    jest.mocked(getDiskInfo).mockResolvedValueOnce({
+      freeSpace: 1,
+      totalSpace: 1
+    } as never)
+    await updateBridgeGame(makeGame().game, { unattended: true })
+    expect(lines().at(-1)).toContain('update not started: Not enough')
+
+    jest
+      .mocked(downloadSteamDepotsRust)
+      .mockResolvedValueOnce({ status: 'error', error: 'boom' } as never)
+    await updateBridgeGame(makeGame().game, { unattended: true })
+    expect(lines().at(-1)).toContain('update failed: boom')
+
+    const before = lines().length
+    jest
+      .mocked(downloadSteamDepotsRust)
+      .mockResolvedValueOnce({ status: 'error', error: 'boom' } as never)
+    await updateBridgeGame(makeGame().game)
+    expect(lines()).toHaveLength(before)
+  })
+
   it('a concurrent update joins the in-flight run (one job)', async () => {
     let finish: (v: unknown) => void = () => undefined
     jest.mocked(downloadSteamDepotsRust).mockReturnValue(

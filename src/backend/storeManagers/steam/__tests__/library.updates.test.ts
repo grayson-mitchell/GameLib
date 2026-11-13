@@ -1,6 +1,9 @@
 /** Phase 74 plan 05: Steam listUpdateableGames / listAutoUpdateableGames delegate to detectSteamUpdates. */
 import SteamLibraryManager from '../library'
-import { detectSteamUpdates } from '../updateDetection'
+import {
+  detectSteamUpdates,
+  getLastKnownSteamUpdateState
+} from '../updateDetection'
 import { logWarning } from 'backend/logger'
 import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
 import { noteAutoUpdateAttempt } from '../autoUpdateAttempts'
@@ -92,10 +95,9 @@ describe('Steam update listing', () => {
   it('auto list drops an app already attempted for its build, not a newer one', async () => {
     const lib = makeLib()
     const deps = (lib as unknown as { deps: never }).deps
-    const { getLastKnownSteamUpdateState } = jest.requireMock(
-      '../updateDetection'
-    ) as { getLastKnownSteamUpdateState: jest.Mock }
-    getLastKnownSteamUpdateState.mockReturnValue({ targetBuild: '9' })
+    jest
+      .mocked(getLastKnownSteamUpdateState)
+      .mockReturnValue({ targetBuild: '9' } as never)
     noteAutoUpdateAttempt(deps, '10')
     expect(await lib.listAutoUpdateableGames()).toEqual(['20'])
     detect.mockResolvedValue([st('10', 'bridge', 'stale', '10')])

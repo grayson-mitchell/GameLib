@@ -29,3 +29,9 @@ two callers in a refresh.
 
 Two consecutive refreshes with a failing auto-update produce one attempt and one notification
 for that build, and the log shows one detection pass per refresh.
+
+## Resolved by 74-24
+
+- Per-build auto-update attempt marker: `steam/autoUpdateAttempts.ts`, recorded in `SteamGame.update` (unattended bridge), filtered in `listAutoUpdateableGames`.
+- Double detection: `steam/library/index.ts` hands the badge list's detection pass to the auto list (one pass per refresh).
+- Auto path raises no error dialog: already true after 74-19 (updateBridge test "unattended refused lease: error result, one log line, no dialog").

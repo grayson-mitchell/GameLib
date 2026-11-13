@@ -251,20 +251,37 @@ export function createStoreManagers(
 
   function autoUpdate(runner: Runner, gamesToUpdate: string[]) {
     const logPrefix = RunnerToLogPrefixMap[runner]
+    // Read lazily so construction never touches the queue.
+    let queue: ReturnType<typeof deps.getDownloadQueue> | undefined
+    const getQueue = () => (queue ??= deps.getDownloadQueue())
     gamesToUpdate.forEach(async (appName) => {
       const game = library[runner].getGame(appName)
       const { ignoreGameUpdates } = await game.getSettings()
       const gameInfo = game.getGameInfo()
       const gameIsAvailable = await game.isGameAvailable()
-      if (!ignoreGameUpdates && gameIsAvailable) {
+      // addToQueue replaces an element in place, so re-queueing here would turn a user's attended
+      // update into an unattended one (74-REVIEW WR-03).
+      if (
+        !ignoreGameUpdates &&
+        gameIsAvailable &&
+        getQueue()
+          .getQueueInformation()
+          .elements.some(
+            (el) => el.params.appName === appName && el.params.runner === runner
+          )
+      ) {
+        logInfo(
+          `Skipping auto-update for ${gameInfo.title}: already in the download queue`,
+          logPrefix
+        )
+      } else if (!ignoreGameUpdates && gameIsAvailable) {
         logInfo(`Auto-Updating ${gameInfo.title}`, logPrefix)
         const dmQueueElement: DMQueueElement = buildUpdateQueueElement(
           gameInfo,
           appName,
           { unattended: true }
         )
-        deps
-          .getDownloadQueue()
+        getQueue()
           .addToQueue(dmQueueElement)
           .catch((error: unknown) => {
             logWarning(

@@ -199,13 +199,18 @@ describe('createStoreManagers: autoUpdate reaches a queue created later (blocker
     }) as unknown as Game
 
   it('never calls getDownloadQueue during construction, then enqueues into the later queue', async () => {
-    const holder: { q?: Pick<DownloadQueue, 'addToQueue'> } = {}
+    const holder: {
+      q?: Pick<DownloadQueue, 'addToQueue' | 'getQueueInformation'>
+    } = {}
     const getDownloadQueue = jest.fn(() => holder.q as DownloadQueue)
     const built = build({ getDownloadQueue })
     expect(getDownloadQueue).toHaveBeenCalledTimes(0)
 
     const addToQueue = jest.fn().mockResolvedValue(undefined)
-    holder.q = { addToQueue }
+    holder.q = {
+      addToQueue,
+      getQueueInformation: () => ({ elements: [] }) as never
+    }
     ;(built.library as Record<string, unknown>).sideload = {
       getGame: () => fakeGame(false)
     }
@@ -222,6 +227,25 @@ describe('createStoreManagers: autoUpdate reaches a queue created later (blocker
     expect(element.params.appName).toBe('g1')
     expect(element.params.unattended).toBe(true)
     expect(element.type).toBe('update')
+  })
+
+  it('skips a game already in the queue, so a user-queued update stays attended (WR-03)', async () => {
+    const addToQueue = jest.fn().mockResolvedValue(undefined)
+    const built = build({
+      getDownloadQueue: () =>
+        ({
+          addToQueue,
+          getQueueInformation: () => ({
+            elements: [{ params: { appName: 'g1', runner: 'sideload' } }]
+          })
+        }) as unknown as DownloadQueue
+    })
+    ;(built.library as Record<string, unknown>).sideload = {
+      getGame: () => fakeGame(false)
+    }
+    built.autoUpdate('sideload', ['g1'])
+    await flush()
+    expect(addToQueue).not.toHaveBeenCalled()
   })
 
   it('never reads the queue for a game that ignores updates', async () => {

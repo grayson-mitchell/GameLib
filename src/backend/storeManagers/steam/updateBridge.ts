@@ -101,10 +101,13 @@ async function runBridgeUpdate(
   unattended: boolean
 ): Promise<InstallResult> {
   const { deps, appId } = steamGame
-  const logUnattendedFailure = (reason: string) => {
+  const logUnattendedFailure = (
+    phase: 'not started' | 'failed',
+    reason: string
+  ) => {
     if (unattended) {
       logInfo(
-        `updateBridgeGame: appId ${appId} unattended=true update not started: ${reason}`,
+        `updateBridgeGame: appId ${appId} unattended=true update ${phase}: ${reason}`,
         LogPrefix.Steam
       )
     }
@@ -117,18 +120,20 @@ async function runBridgeUpdate(
     })
 
   const ctx = resolveBridgeUpdateContext(steamGame)
-  if ('error' in ctx) return { status: 'error', error: ctx.error }
+  if ('error' in ctx) {
+    logUnattendedFailure('not started', ctx.error)
+    return { status: 'error', error: ctx.error }
+  }
 
   const known = getLastKnownSteamUpdateState(deps, appId)
   if (known?.reason === 'branch-unresolved') {
-    return {
-      status: 'error',
-      error: i18next.t(
-        'gamelib:steam.update.branchUnknown',
-        "GameLib can't see the {{branch}} branch of {{title}}, so it can't update it.",
-        { branch: ctx.branch, title }
-      )
-    }
+    const error = i18next.t(
+      'gamelib:steam.update.branchUnknown',
+      "GameLib can't see the {{branch}} branch of {{title}}, so it can't update it.",
+      { branch: ctx.branch, title }
+    )
+    logUnattendedFailure('not started', error)
+    return { status: 'error', error }
   }
 
   const reused =
@@ -145,7 +150,7 @@ async function runBridgeUpdate(
         clearStatus()
         return { status: 'abort' }
       }
-      logUnattendedFailure(estimate.error)
+      logUnattendedFailure('not started', estimate.error)
       return { status: 'error', error: estimate.error }
     }
     if (signal?.aborted) {
@@ -155,18 +160,17 @@ async function runBridgeUpdate(
 
     const disk = await getDiskInfo(deps, Path.parse(ctx.steamappsDir))
     if (disk.freeSpace < estimate.peakBytes) {
-      return {
-        status: 'error',
-        error: i18next.t(
-          'gamelib:steam.update.notEnoughDisk',
-          'Not enough free space to update {{title}}: needs {{needed}} free, {{available}} available.',
-          {
-            title,
-            needed: getFileSize(estimate.peakBytes),
-            available: getFileSize(disk.freeSpace)
-          }
-        )
-      }
+      const error = i18next.t(
+        'gamelib:steam.update.notEnoughDisk',
+        'Not enough free space to update {{title}}: needs {{needed}} free, {{available}} available.',
+        {
+          title,
+          needed: getFileSize(estimate.peakBytes),
+          available: getFileSize(disk.freeSpace)
+        }
+      )
+      logUnattendedFailure('not started', error)
+      return { status: 'error', error }
     }
 
     logInfo(
@@ -198,7 +202,7 @@ async function runBridgeUpdate(
         `updateBridgeGame: appId ${appId} failed: ${outcome.error}`,
         LogPrefix.Steam
       )
-      logUnattendedFailure(outcome.error ?? 'unknown')
+      logUnattendedFailure('failed', outcome.error ?? 'unknown')
       clearStatus()
       return {
         status: 'error',
