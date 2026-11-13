@@ -456,6 +456,22 @@
       }
     },
     {
+      "id": "acfUpdate/readLocalConfigBetaKey/none/99",
+      "op": "steamfiles_read_localconfig_beta_key",
+      "args": {
+        "path": "${FIXTURES}/localconfig/none.vdf",
+        "appId": "99"
+      }
+    },
+    {
+      "id": "acfUpdate/readLocalConfigBetaKey/userappconfig/99",
+      "op": "steamfiles_read_localconfig_beta_key",
+      "args": {
+        "path": "${FIXTURES}/localconfig/userappconfig.vdf",
+        "appId": "99"
+      }
+    },
+    {
       "id": "acfUpdate/readLocalConfigBetaKey/missing-file",
       "op": "steamfiles_read_localconfig_beta_key",
       "args": {

@@ -11,6 +11,13 @@ import {
   steamId64ToAccountId
 } from '../depot/betaBranch'
 import { selectDepots } from '../depot/select'
+import {
+  RUST_STEAMFILES_READ_ACF,
+  RUST_STEAMFILES_READ_LOCALCONFIG_BETA_KEY
+} from 'common/types/sidecarTransport'
+import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
+
+const noRust = stubRustSteamFiles({})
 
 // The real logger dereferences a writer only a full init assigns; spy the loaded module's
 // functions (no jest.mock: backend-di-ceilings ratchet).
@@ -103,35 +110,37 @@ describe('file readers and resolver', () => {
     return root
   }
 
-  it('readAcfBetaKey reads, and tolerates missing/empty/garbage', () => {
+  it('readAcfBetaKey reads, and tolerates missing/empty/garbage', async () => {
     writeAcf('\t\t"BetaKey"\t\t"release-101"\n')
-    expect(readAcfBetaKey(dir, '333300')).toBe('release-101')
+    expect(await readAcfBetaKey(noRust, dir, '333300')).toBe('release-101')
     writeAcf('\t\t"BetaKey"\t\t"public"\n')
-    expect(readAcfBetaKey(dir, '333300')).toBe('public')
+    expect(await readAcfBetaKey(noRust, dir, '333300')).toBe('public')
     writeAcf('')
-    expect(readAcfBetaKey(dir, '333300')).toBeUndefined()
-    expect(readAcfBetaKey(dir, '1')).toBeUndefined()
+    expect(await readAcfBetaKey(noRust, dir, '333300')).toBeUndefined()
+    expect(await readAcfBetaKey(noRust, dir, '1')).toBeUndefined()
     fs.writeFileSync(join(dir, 'appmanifest_2.acf'), '{{{ not vdf')
-    expect(readAcfBetaKey(dir, '2')).toBeUndefined()
+    expect(await readAcfBetaKey(noRust, dir, '2')).toBeUndefined()
   })
 
-  it('readLocalConfigBetaKey finds the blob in UserAppConfig only', () => {
+  it('readLocalConfigBetaKey finds the blob in UserAppConfig only', async () => {
     const root = writeLocalConfig({ '333300': encodeUserConfig('release-101') })
     const p = join(root, 'userdata', '35601368', 'config', 'localconfig.vdf')
-    expect(readLocalConfigBetaKey(p, '333300')).toBe('release-101')
-    expect(readLocalConfigBetaKey(p, '999')).toBeUndefined()
+    expect(await readLocalConfigBetaKey(noRust, p, '333300')).toBe(
+      'release-101'
+    )
+    expect(await readLocalConfigBetaKey(noRust, p, '999')).toBeUndefined()
     expect(
-      readLocalConfigBetaKey(join(dir, 'nope.vdf'), '333300')
+      await readLocalConfigBetaKey(noRust, join(dir, 'nope.vdf'), '333300')
     ).toBeUndefined()
   })
 
-  it('steamId64ToAccountId', () => {
+  it('steamId64ToAccountId', async () => {
     expect(steamId64ToAccountId('76561197995867096')).toBe('35601368')
     expect(steamId64ToAccountId('abc')).toBeUndefined()
     expect(steamId64ToAccountId('123')).toBeUndefined()
   })
 
-  it('resolveUserBetaKey precedence and validity', () => {
+  it('resolveUserBetaKey precedence and validity', async () => {
     const root = writeLocalConfig({ '333300': encodeUserConfig('from-local') })
     const base = {
       appId: '333300',
@@ -140,26 +149,28 @@ describe('file readers and resolver', () => {
       steamId64: '76561197995867096'
     }
     // ACF absent -> localconfig
-    expect(resolveUserBetaKey(base)).toBe('from-local')
+    expect(await resolveUserBetaKey(noRust, base)).toBe('from-local')
     // ACF wins
     writeAcf('\t\t"BetaKey"\t\t"release-101"\n')
-    expect(resolveUserBetaKey(base)).toBe('release-101')
+    expect(await resolveUserBetaKey(noRust, base)).toBe('release-101')
     // ACF public is authoritative
     writeAcf('\t\t"BetaKey"\t\t"public"\n')
-    expect(resolveUserBetaKey(base)).toBe('public')
+    expect(await resolveUserBetaKey(noRust, base)).toBe('public')
     // ACF without BetaKey falls through
     writeAcf('')
-    expect(resolveUserBetaKey(base)).toBe('from-local')
+    expect(await resolveUserBetaKey(noRust, base)).toBe('from-local')
     // neither
-    expect(resolveUserBetaKey({ appId: '5', steamappsDir: dir })).toBe('public')
+    expect(
+      await resolveUserBetaKey(noRust, { appId: '5', steamappsDir: dir })
+    ).toBe('public')
     // invalid keys
     for (const bad of ['bad"key', 'a b', 'x'.repeat(200)]) {
       writeAcf(`\t\t"BetaKey"\t\t"${bad.replace(/"/g, '\\"')}"\n`)
-      expect(resolveUserBetaKey(base)).toBe('public')
+      expect(await resolveUserBetaKey(noRust, base)).toBe('public')
     }
     const badRoot = writeLocalConfig({ '333300': encodeUserConfig('a b') })
     expect(
-      resolveUserBetaKey({
+      await resolveUserBetaKey(noRust, {
         ...base,
         steamappsDir: join(dir, 'empty'),
         steamRoot: badRoot
@@ -217,5 +228,73 @@ describe('selectDepots on a beta branch', () => {
   it('public ignores beta manifests', () => {
     const out = selectDepots(appinfo, owned, { os: 'windows' }, '10')
     expect(out.find((d) => d.id === '1')?.manifest).toBe('111')
+  })
+})
+
+describe('beta keys on Rust (GAMELIB_STEAMFILES_TEXT=rust)', () => {
+  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
+  beforeAll(() => {
+    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+  })
+  afterAll(() => {
+    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
+    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
+  })
+
+  const acf = (betaKey: string | null) => ({
+    exists: true,
+    parsed: true,
+    readError: null,
+    record: { betaKey }
+  })
+
+  it('reads the ACF beta key and maps absent, empty and rejected to undefined', async () => {
+    const some = stubRustSteamFiles({
+      [RUST_STEAMFILES_READ_ACF]: () => acf('release-101') as never
+    })
+    expect(await readAcfBetaKey(some, '/s', '1')).toBe('release-101')
+    const none = stubRustSteamFiles({
+      [RUST_STEAMFILES_READ_ACF]: () => acf(null) as never
+    })
+    expect(await readAcfBetaKey(none, '/s', '1')).toBeUndefined()
+    expect(await readAcfBetaKey(noRust, '/s', '1')).toBeUndefined()
+  })
+
+  it('reads the localconfig beta key and rejects a non-numeric app id before invoking', async () => {
+    const stub = stubRustSteamFiles({
+      [RUST_STEAMFILES_READ_LOCALCONFIG_BETA_KEY]: () => ({
+        betaKey: 'from-local'
+      })
+    })
+    expect(await readLocalConfigBetaKey(stub, '/l.vdf', '333300')).toBe(
+      'from-local'
+    )
+    expect(await readLocalConfigBetaKey(stub, '/l.vdf', 'abc')).toBeUndefined()
+    expect(stub.calls).toHaveLength(1)
+    expect(await readLocalConfigBetaKey(noRust, '/l.vdf', '1')).toBeUndefined()
+  })
+
+  it('resolveUserBetaKey keeps order and still guards the key with isValidBetaKey', async () => {
+    const base = {
+      appId: '333300',
+      steamappsDir: '/s',
+      steamRoot: '/steam',
+      steamId64: '76561197995867096'
+    }
+    const both = (acfKey: string | null, localKey: string | null) =>
+      stubRustSteamFiles({
+        [RUST_STEAMFILES_READ_ACF]: () => acf(acfKey) as never,
+        [RUST_STEAMFILES_READ_LOCALCONFIG_BETA_KEY]: () => ({
+          betaKey: localKey
+        })
+      })
+    expect(await resolveUserBetaKey(both(null, 'from-local'), base)).toBe(
+      'from-local'
+    )
+    expect(await resolveUserBetaKey(both('release-101', 'x'), base)).toBe(
+      'release-101'
+    )
+    expect(await resolveUserBetaKey(both('bad"key', 'x'), base)).toBe('public')
+    expect(await resolveUserBetaKey(both(null, null), base)).toBe('public')
   })
 })

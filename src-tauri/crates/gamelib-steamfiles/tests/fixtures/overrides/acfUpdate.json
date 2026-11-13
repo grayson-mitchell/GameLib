@@ -1,1 +1,17 @@
-{}
+{
+  "acfUpdate/readAcfUpdateFieldsFromDir/duplicate-keys": {
+    "rustOverride": {
+      "steamappsDir": "${FIXTURES}/_acfupdate/duplicate-keys",
+      "buildid": "77",
+      "stateFlags": 4,
+      "bytesToDownload": 0,
+      "bytesDownloaded": 0,
+      "scheduledAutoUpdate": 0
+    },
+    "divergenceNote": "The oracle parseAcfTree let a reopened AppState block replace the first one, losing StateFlags 4 (reported 0); the Rust reader merges the blocks as Steam does, so StateFlags is 4."
+  },
+  "acfUpdate/readAcfBetaKey/truncated": {
+    "rustOverride": null,
+    "divergenceNote": "The oracle's @node-steam/vdf parse never terminates on a truncated manifest; Rust fails soft (parsed false) and the wrapper returns undefined."
+  }
+}

@@ -1,8 +1,12 @@
 import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
+import * as logger from 'backend/logger'
+import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
+import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
 import {
   isAcfUpdatePending,
+  readAcfUpdateFieldsFromDir,
   readAcfUpdateState,
   type AcfUpdateFields
 } from '../library/acfUpdateState'
@@ -94,5 +98,108 @@ describe('readAcfUpdateState', () => {
     expect(await readAcfUpdateState(deps(), '1', 'native')).toBeNull()
     writeFileSync(join(dir, 'steamapps', 'appmanifest_1.acf'), '\u0000{{{')
     expect(await readAcfUpdateState(deps(), '1', 'native')).toBeNull()
+  })
+})
+
+describe('readAcfUpdateFieldsFromDir on Rust (GAMELIB_STEAMFILES_TEXT=rust)', () => {
+  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
+  beforeAll(() => {
+    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
+  })
+  beforeEach(() => {
+    jest.spyOn(logger, 'logDebug').mockImplementation(() => undefined)
+  })
+  afterEach(() => jest.restoreAllMocks())
+  afterAll(() => {
+    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
+    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
+  })
+
+  const rec = (over: Record<string, unknown>) =>
+    ({
+      exists: true,
+      parsed: true,
+      readError: null,
+      record: {
+        buildid: '100',
+        stateFlags: 4,
+        targetBuildId: null,
+        bytesToDownload: null,
+        bytesDownloaded: null,
+        scheduledAutoUpdate: null,
+        betaKey: null,
+        installedDepots: [],
+        ...over
+      }
+    }) as never
+  const stubFor = (over: Record<string, unknown>) =>
+    stubRustSteamFiles({ [RUST_STEAMFILES_READ_ACF]: () => rec(over) })
+
+  it('keeps build ids as exact strings and counters numeric', async () => {
+    const f = await readAcfUpdateFieldsFromDir(
+      stubFor({
+        buildid: '9223372036854775807',
+        targetBuildId: '9223372036854775806',
+        bytesToDownload: '2048',
+        bytesDownloaded: '1024',
+        scheduledAutoUpdate: '5',
+        betaKey: 'beta_a'
+      }),
+      '/s',
+      '77'
+    )
+    expect(f).toEqual({
+      steamappsDir: '/s',
+      buildid: '9223372036854775807',
+      targetBuildId: '9223372036854775806',
+      stateFlags: 4,
+      bytesToDownload: 2048,
+      bytesDownloaded: 1024,
+      scheduledAutoUpdate: 5,
+      betaKey: 'beta_a'
+    })
+  })
+
+  it('feeds the unchanged pending rules: TargetBuildID and scheduled update', async () => {
+    const target = await readAcfUpdateFieldsFromDir(
+      stubFor({ targetBuildId: '200' }),
+      '/s',
+      '77'
+    )
+    expect(isAcfUpdatePending(target!)).toBe(true)
+    const scheduled = await readAcfUpdateFieldsFromDir(
+      stubFor({
+        scheduledAutoUpdate: '1',
+        bytesToDownload: '10',
+        bytesDownloaded: '0'
+      }),
+      '/s',
+      '77'
+    )
+    expect(isAcfUpdatePending(scheduled!)).toBe(true)
+    const idle = await readAcfUpdateFieldsFromDir(stubFor({}), '/s', '77')
+    expect(isAcfUpdatePending(idle!)).toBe(false)
+    expect(idle).not.toHaveProperty('betaKey')
+  })
+
+  it('is null without a buildid, when unparsed or absent, on a bad id, and on a rejected invoke', async () => {
+    expect(
+      await readAcfUpdateFieldsFromDir(stubFor({ buildid: null }), '/s', '77')
+    ).toBeNull()
+    const unparsed = stubRustSteamFiles({
+      [RUST_STEAMFILES_READ_ACF]: () => ({
+        exists: true,
+        parsed: false,
+        readError: null,
+        record: null
+      })
+    })
+    expect(await readAcfUpdateFieldsFromDir(unparsed, '/s', '77')).toBeNull()
+    expect(
+      await readAcfUpdateFieldsFromDir(stubFor({}), '/s', '../x')
+    ).toBeNull()
+    expect(
+      await readAcfUpdateFieldsFromDir(stubRustSteamFiles({}), '/s', '77')
+    ).toBeNull()
   })
 })

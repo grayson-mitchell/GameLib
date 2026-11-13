@@ -81,12 +81,12 @@ describe('estimateBridgeUpdate', () => {
       weightedLoads: new Map(),
       hostMeta: new Map()
     })
-    jest.mocked(readAcfBetaKey).mockReturnValue(undefined)
+    jest.mocked(readAcfBetaKey).mockResolvedValue(undefined)
     jest.mocked(getBottleSteamappsDir).mockReturnValue('/b/steamapps')
     acquireAuthenticated.mockResolvedValue({ ok: true, release })
     jest.mocked(findBridgeInstallBottle).mockReturnValue('bottle')
     jest.mocked(readAcfInstalldir).mockResolvedValue('Game')
-    jest.mocked(readAcfInstalledDepots).mockReturnValue({
+    jest.mocked(readAcfInstalledDepots).mockResolvedValue({
       buildid: '1',
       installedDepots: [
         { depotId: '100', manifest: OLD_GID, size: '1' },

@@ -9,10 +9,16 @@
     "acfUpdate/readLocalConfigBetaKey/none/20": {
       "betaKey": null
     },
+    "acfUpdate/readLocalConfigBetaKey/none/99": {
+      "betaKey": null
+    },
     "acfUpdate/readLocalConfigBetaKey/userappconfig/10": {
       "betaKey": null
     },
     "acfUpdate/readLocalConfigBetaKey/userappconfig/20": {
+      "betaKey": null
+    },
+    "acfUpdate/readLocalConfigBetaKey/userappconfig/99": {
       "betaKey": null
     },
     "adoption/readMacRunningAppId/lowercase": {

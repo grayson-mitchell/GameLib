@@ -11,6 +11,13 @@ import {
 } from '../../../depot/betaBranch'
 import { capture, listFiles, unlessHangs, withFixtureCopy } from './normalize'
 
+// The oracle runs the TS flag, so the Rust transport must never be reached.
+const NO_RUST = {
+  requestRustInvoke: () => {
+    throw new Error('oracle must not reach Rust')
+  }
+}
+
 export async function captureAcfUpdate(): Promise<Record<string, unknown>> {
   const out: Record<string, unknown> = {}
   await withFixtureCopy('', async (root) => {
@@ -23,27 +30,27 @@ export async function captureAcfUpdate(): Promise<Record<string, unknown>> {
       out[`acfUpdate/readAcfBetaKey/${name}`] = await unlessHangs(
         `acf/${file}`,
         root,
-        () => readAcfBetaKey(dir, '77')
+        () => readAcfBetaKey(NO_RUST, dir, '77')
       )
       out[`acfUpdate/parseAcfInstalledDepots/${name}`] = await capture(
         () => parseAcfInstalledDepots(text),
         root
       )
       out[`acfUpdate/readAcfInstalledDepots/${name}`] = await capture(
-        () => readAcfInstalledDepots(dir, '77'),
+        () => readAcfInstalledDepots(NO_RUST, dir, '77'),
         root
       )
       out[`acfUpdate/readAcfUpdateFieldsFromDir/${name}`] = await capture(
-        () => readAcfUpdateFieldsFromDir(dir, '77'),
+        () => readAcfUpdateFieldsFromDir(NO_RUST, dir, '77'),
         root
       )
     }
     out['acfUpdate/readAcfInstalledDepots/bad-appid'] = await capture(
-      () => readAcfInstalledDepots(root, '../x'),
+      () => readAcfInstalledDepots(NO_RUST, root, '../x'),
       root
     )
     out['acfUpdate/readAcfUpdateFieldsFromDir/missing'] = await capture(
-      () => readAcfUpdateFieldsFromDir(join(root, '_acfupdate'), '77'),
+      () => readAcfUpdateFieldsFromDir(NO_RUST, join(root, '_acfupdate'), '77'),
       root
     )
 
@@ -53,13 +60,22 @@ export async function captureAcfUpdate(): Promise<Record<string, unknown>> {
         out[`acfUpdate/readLocalConfigBetaKey/${name}/${appId}`] =
           await capture(
             () =>
-              readLocalConfigBetaKey(join(root, 'localconfig', file), appId),
+              readLocalConfigBetaKey(
+                NO_RUST,
+                join(root, 'localconfig', file),
+                appId
+              ),
             root
           )
       }
     }
     out['acfUpdate/readLocalConfigBetaKey/missing-file'] = await capture(
-      () => readLocalConfigBetaKey(join(root, 'localconfig', 'nope.vdf'), '10'),
+      () =>
+        readLocalConfigBetaKey(
+          NO_RUST,
+          join(root, 'localconfig', 'nope.vdf'),
+          '10'
+        ),
       root
     )
   })
