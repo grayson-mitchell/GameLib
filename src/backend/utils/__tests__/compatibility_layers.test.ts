@@ -79,6 +79,7 @@ describe('getLinuxWineSet default wine naming', () => {
     [
       ...(await getLinuxWineSet(
         {
+          requestRustInvoke: jest.fn(),
           runner,
           paths,
           config: createTestGlobalConfig({

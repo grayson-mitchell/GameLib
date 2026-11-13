@@ -42,7 +42,10 @@ import { createTestAnonymousClient } from 'backend/testUtils/testAnonymousClient
 import { logWarning } from 'backend/logger'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 
-const libDeps = { config: createTestGlobalConfig() }
+const libDeps = {
+  config: createTestGlobalConfig(),
+  requestRustInvoke: jest.fn()
+}
 
 const { steamLibraryStore, steamMetadataStore, steamSyncStore } =
   jest.requireMock<Stores['steam']>('../stores')

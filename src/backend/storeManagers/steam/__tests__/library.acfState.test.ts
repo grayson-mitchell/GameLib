@@ -34,6 +34,7 @@ const library = steamSession.libraryState.library
 // 66.3-15: the bottle settings are read through the deps slice, so they are a plain mock here.
 const getSteamBottleSettings = jest.fn()
 const libDeps = {
+  requestRustInvoke: jest.fn(),
   config: createTestGlobalConfig(),
   steamSession,
   steamBottle: { getSteamBottleSettings, resolveCrossoverWine: jest.fn() },

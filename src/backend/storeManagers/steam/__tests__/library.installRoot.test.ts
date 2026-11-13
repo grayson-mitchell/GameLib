@@ -28,6 +28,7 @@ import { createTestSteamLaunchRuntime } from 'backend/testUtils/testSteamLaunchR
 // 66.3-15: the bottle settings are read through the deps slice, so they are a plain mock here.
 const getSteamBottleSettings = jest.fn()
 const libDeps = {
+  requestRustInvoke: jest.fn(),
   config: createTestGlobalConfig(),
   steamBottle: { getSteamBottleSettings, resolveCrossoverWine: jest.fn() },
   paths: { userHome: '/test-gamelib/home' },

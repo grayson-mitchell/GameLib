@@ -33,6 +33,7 @@ import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 // The boot-owned anonymous client slice (D-66.3-14): a scripted `get`, no CM connection.
 const getAnonymousPicsClient = jest.fn()
 const libDeps = {
+  requestRustInvoke: jest.fn(),
   steamUser,
   config: createTestGlobalConfig(),
   anonymousClient: { get: getAnonymousPicsClient }

@@ -5,6 +5,12 @@ import { parse } from '@node-steam/vdf'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
 import type { SteamLibraryStateDeps } from 'backend/services/types'
+import {
+  RUST_STEAMFILES_FIND_ACF,
+  RUST_STEAMFILES_SCAN_ACFS
+} from 'common/types/sidecarTransport'
+import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
+import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
 import { NUMERIC_APP_ID } from '../gameConstants'
 import { DEFAULT_BRIDGE_BOTTLE_NAME, type BottleSettingsDeps } from '../bottle'
 import {
@@ -58,6 +64,56 @@ export async function readAcfState(
   bytesStaged?: number
   bytesToStage?: number
 }> {
+  if (steamFilesTextImpl() === 'ts') return readAcfStateTs(deps, appId, source)
+  const steamappsDirs = (
+    source === 'bottle'
+      ? [getBottleSteamappsRoot(deps)]
+      : source === 'bridge'
+        ? [getBridgeBottleSteamappsRoot(deps, appId)]
+        : (await getSteamLibraries(deps)).map((libPath) =>
+            join(libPath, 'steamapps')
+          )
+  ).filter((dir) => existsSync(dir))
+
+  let found
+  try {
+    found = await invokeSteamFiles(deps, RUST_STEAMFILES_FIND_ACF, {
+      steamappsDirs,
+      appId
+    })
+  } catch {
+    return { state: 'absent' }
+  }
+  if (!found.found || !found.record || !found.steamappsDir) {
+    return { state: 'absent' }
+  }
+  const { record } = found
+  const stateFlags = record.stateFlags ?? NaN
+  if (isFullyInstalledStateFlags(stateFlags)) {
+    return {
+      state: 'installed',
+      stateFlags,
+      installPath: join(found.steamappsDir, 'common', record.installdir ?? ''),
+      sizeOnDisk: record.sizeOnDisk ?? '0'
+    }
+  }
+  return {
+    state: 'downloading',
+    stateFlags,
+    bytesDownloaded: Number(record.bytesDownloaded) || 0,
+    bytesToDownload: Number(record.bytesToDownload) || 0,
+    bytesStaged: Number(record.bytesStaged) || 0,
+    bytesToStage: Number(record.bytesToStage) || 0
+  }
+}
+
+type AcfStateResult = Awaited<ReturnType<typeof readAcfState>>
+
+async function readAcfStateTs(
+  deps: SteamLibrariesDeps & BottleSettingsDeps,
+  appId: string,
+  source: AcfSource
+): Promise<AcfStateResult> {
   const steamappsDirs =
     source === 'bottle'
       ? [getBottleSteamappsRoot(deps)]
@@ -396,6 +452,36 @@ export async function removeSteamInstallCopy(
  * Exported for unit testing.
  */
 export async function scanDownloadingAppIds(
+  deps: SteamLibrariesDeps & SteamLibraryStateDeps
+): Promise<string[]> {
+  if (steamFilesTextImpl() === 'ts') return scanDownloadingAppIdsTs(deps)
+  const libraryPaths = await getSteamLibraries(deps)
+  let scan
+  try {
+    scan = await invokeSteamFiles(deps, RUST_STEAMFILES_SCAN_ACFS, {
+      steamappsDirs: libraryPaths.map((libPath) => join(libPath, 'steamapps'))
+    })
+  } catch {
+    return []
+  }
+  const downloadingIds: string[] = []
+  for (const { record } of scan.records) {
+    const appid = parseInt(record.appid ?? '', 10)
+    if (isNaN(appid)) continue
+    const appIdStr = String(appid)
+    const stateFlags = record.stateFlags ?? NaN
+    if (
+      !isNaN(stateFlags) &&
+      (stateFlags & 4) === 0 &&
+      deps.steamSession.libraryState.library.has(appIdStr)
+    ) {
+      downloadingIds.push(appIdStr)
+    }
+  }
+  return downloadingIds
+}
+
+async function scanDownloadingAppIdsTs(
   deps: SteamLibrariesDeps & SteamLibraryStateDeps
 ): Promise<string[]> {
   const libraryPaths = await getSteamLibraries(deps)

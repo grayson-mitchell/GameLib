@@ -1679,6 +1679,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           createGlobalConfig({
             versioning: requireStoreRoot(state).versioning,
             paths: prebuilt.paths ?? ctx.paths,
+            requestRustInvoke: requireHost(state).requestRustInvoke,
             // The bus is built by the later 'app-runtime' step; a setting can only change at call time.
             onSettingChanged: (change) =>
               requireAppRuntime(state).events.emit('settingChanged', change)
@@ -2366,6 +2367,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             appState: host.appState,
             notifications: host.notifications,
             sendFrontendMessage: host.sendFrontendMessage,
+            requestRustInvoke: host.requestRustInvoke,
             steamSession,
             steamBottle,
             engineRuntime,

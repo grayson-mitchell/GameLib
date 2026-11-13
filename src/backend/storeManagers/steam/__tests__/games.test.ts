@@ -249,6 +249,7 @@ import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 // `libDeps` is declared before steamTestDeps; the scan reads the library map through the same instance.
 const libDeps = {
   config: createTestGlobalConfig(),
+  requestRustInvoke: jest.fn(),
   get steamSession() {
     return steamTestDeps.steamSession
   }

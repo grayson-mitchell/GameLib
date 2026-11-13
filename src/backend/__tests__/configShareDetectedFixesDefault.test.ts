@@ -32,6 +32,7 @@ describe('shareDetectedFixes default (D-09)', () => {
   it('factory defaults keep sharing detected fixes off', () => {
     expect(
       createGlobalConfig({
+        requestRustInvoke: jest.fn(),
         versioning: createTestVersioning(),
         paths: pathsModule
       }).getFactoryDefaults().shareDetectedFixes
@@ -41,6 +42,7 @@ describe('shareDetectedFixes default (D-09)', () => {
   it('a fresh config with no config file reports it off', () => {
     expect(
       createGlobalConfig({
+        requestRustInvoke: jest.fn(),
         versioning: createTestVersioning(),
         paths: pathsModule
       }).getSettings().shareDetectedFixes

@@ -359,6 +359,7 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
     async ({ minimizeOnLaunch, noTrayIcon, hides }) => {
       // The boot's real global config, with only the two launch-hide settings overridden.
       const real = createGlobalConfig({
+        requestRustInvoke: jest.fn(),
         versioning: createTestVersioning(),
         paths: createContainedHomeAppPaths()
       })

@@ -40,7 +40,7 @@
  *     (`backend/utils/checkGameUpdates.ts`) reused UNCHANGED, all runners
  *     (D-12, follows D-05b).
  *   - `listSteamLibraryTargets` -> `isSteamNativeInstallEnabled() ||
- *     bottle-eligible(appName) ? listSteamLibraryTargets(deps) : []` (quick
+ *     bottle-eligible(appName) ? listSteamLibraryTargets(withRustInvoke(deps)) : []` (quick
  *     261030-o77: the toggle only scopes mac-native titles; a bottle-routed
  *     title always uses GameLib's depot installer). This is the ACTUAL minimum read-gate the install
  *     button depends on (30-RESEARCH Q6) — NOT any of `DownloadDialog`'s six
@@ -211,6 +211,11 @@ export type InstallFlowDeps = ManagerDepsSource & {
   ipc: Pick<IpcRegistry, 'handle'>
 }
 
+/** The deps a Steam library read takes: the boot's deps plus its Rust transport. */
+function withRustInvoke<T extends Pick<InstallFlowDeps, 'host'>>(deps: T) {
+  return { ...deps, requestRustInvoke: deps.host.requestRustInvoke }
+}
+
 /** The renderer push plus the boot's event bus, for the status helpers. */
 function statusDeps(
   deps: Pick<InstallFlowDeps, 'host' | 'appRuntime'>
@@ -346,7 +351,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
     'listSteamLibraryTargets',
     async (_event: unknown, ...args: unknown[]) => {
       if (isSteamNativeInstallEnabled(deps.config))
-        return listSteamLibraryTargets(deps)
+        return listSteamLibraryTargets(withRustInvoke(deps))
       const appName = args[0]
       if (typeof appName !== 'string' || !/^\d+$/.test(appName)) return []
       try {
@@ -354,7 +359,9 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
           managerDepsFromServices(deps),
           appName
         )
-        return verdict.eligible ? listSteamLibraryTargets(deps) : []
+        return verdict.eligible
+          ? listSteamLibraryTargets(withRustInvoke(deps))
+          : []
       } catch {
         return []
       }
@@ -393,7 +400,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
         if (verdict.eligible) return closedInstallAppReply()
         return {
           installAppRoute: true,
-          libraries: await listSteamLibraryTargets(deps)
+          libraries: await listSteamLibraryTargets(withRustInvoke(deps))
         }
       } catch {
         return closedInstallAppReply()
@@ -425,7 +432,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
           return { gamelibDelete: false, delegated: false }
         }
         const root = await resolveInstallRoot(
-          deps,
+          withRustInvoke(deps),
           deps.steamSession.libraryState.library.get(appName)?.install
             ?.install_path
         )

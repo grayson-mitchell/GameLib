@@ -66,6 +66,10 @@ import type { Game } from 'common/types/game_manager'
 import type { ProcessRunner } from 'backend/process/types'
 import { isStore } from 'common/storeCapabilities'
 import type { SpawnAsync } from './spawnAsync'
+import type { RustInvokeDeps } from './host/rustInvokeDeps'
+import { RUST_STEAMFILES_READ_LIBRARY_FOLDERS } from 'common/types/sidecarTransport'
+import { invokeSteamFiles } from './storeManagers/steam/localFiles/rustSteamFiles'
+import { steamFilesTextImpl } from './storeManagers/steam/localFiles/steamFilesFlags'
 
 /**
  * Compares 2 SemVer strings following "major.minor.patch".
@@ -596,9 +600,41 @@ function getFormattedOsName(): string {
 /** The one setting the Steam library lookups read: where Steam is installed. */
 export type SteamLibrariesDeps = {
   config: Pick<GlobalConfigSlice, 'getSettings'>
-}
+} & RustInvokeDeps
 
 export async function getSteamLibraries(
+  deps: SteamLibrariesDeps
+): Promise<string[]> {
+  if (steamFilesTextImpl() === 'ts') return getSteamLibrariesTs(deps)
+  const { defaultSteamPath } = deps.config.getSettings()
+  const path = defaultSteamPath.replaceAll("'", '')
+  const vdfFile = join(path, 'steamapps', 'libraryfolders.vdf')
+  const libraries = ['/usr/share/steam']
+
+  let result
+  try {
+    result = await invokeSteamFiles(
+      deps,
+      RUST_STEAMFILES_READ_LIBRARY_FOLDERS,
+      {
+        path: vdfFile
+      }
+    )
+  } catch {
+    return libraries
+  }
+  if (!result.exists) {
+    logDebug(
+      'Unable to load Steam Libraries, libraryfolders.vdf not found',
+      LogPrefix.Backend
+    )
+    return libraries
+  }
+  if (!result.parsed) return libraries
+  return [...libraries, ...result.paths].filter((path) => existsSync(path))
+}
+
+async function getSteamLibrariesTs(
   deps: SteamLibrariesDeps
 ): Promise<string[]> {
   const { defaultSteamPath } = deps.config.getSettings()

@@ -1,5 +1,6 @@
 import type { GlobalConfigSlice } from 'backend/config'
 import { logError, LogPrefix, logInfo } from 'backend/logger'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { getSteamLibraries } from 'backend/utils'
 import type { ProcessRunner, RunResult } from 'backend/process/types'
 import { GameSettings, WineInstallation } from 'common/types'
@@ -18,10 +19,11 @@ import { isLinux, isMac } from 'backend/constants/environment'
 export type WineDiscoveryDeps = { runner: Pick<ProcessRunner, 'run'> }
 
 /** Linux discovery also reads the global settings (custom wine paths, Valve Proton). */
-export type LinuxWineDiscoveryDeps = WineDiscoveryDeps & {
-  config: Pick<GlobalConfigSlice, 'getSettings'>
-  paths: Pick<AppPaths, 'toolsPath' | 'configPath'>
-}
+export type LinuxWineDiscoveryDeps = WineDiscoveryDeps &
+  RustInvokeDeps & {
+    config: Pick<GlobalConfigSlice, 'getSettings'>
+    paths: Pick<AppPaths, 'toolsPath' | 'configPath'>
+  }
 
 /** The path slice the umu helpers read. */
 export type UmuDeps = { paths: Pick<AppPaths, 'defaultUmuPath'> }

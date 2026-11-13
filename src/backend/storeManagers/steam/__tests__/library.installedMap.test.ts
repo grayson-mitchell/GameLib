@@ -31,6 +31,7 @@ import { createTestSteamLaunchRuntime } from 'backend/testUtils/testSteamLaunchR
 // 66.3-15: the bottle settings are read through the deps slice, so they are a plain mock here.
 const getSteamBottleSettings = jest.fn()
 const libDeps = {
+  requestRustInvoke: jest.fn(),
   config: createTestGlobalConfig(),
   steamBottle: { getSteamBottleSettings, resolveCrossoverWine: jest.fn() },
   paths: { userHome: '/test-gamelib/home' },
@@ -216,7 +217,7 @@ const BRIDGE_BOTTLE_STEAMAPPS_ROOT = join(
 /**
  * A per-game bridge bottle's steamapps root (quick/261016-u1w, D-C) — distinct
  * from both the Phase 17 bottle and the legacy shared bridge bottle above, so
- * tests can prove buildBridgeInstalledMap(testPaths) scans a per-game bottle under its
+ * tests can prove buildBridgeInstalledMap(testPaths, libDeps) scans a per-game bottle under its
  * own name rather than conflating it with the legacy bridge root.
  */
 const PER_GAME_BRIDGE_BOTTLE_STEAMAPPS_ROOT = join(
@@ -386,9 +387,9 @@ describe('buildBottleInstalledMap()', () => {
 // bridge-installed game's badge survives the periodic library sync and focus
 // reconciliation regardless of which bottle it actually lives in.
 
-describe('buildBridgeInstalledMap(testPaths)', () => {
+describe('buildBridgeInstalledMap(testPaths, libDeps)', () => {
   beforeEach(() => {
-    // quick/261016-u1w (D-C): buildBridgeInstalledMap(testPaths) no longer resolves a
+    // quick/261016-u1w (D-C): buildBridgeInstalledMap(testPaths, libDeps) no longer resolves a
     // single settings object — it loops over listReadyBridgeBottleNames() and
     // resolves each name's steamapps dir directly via getBottleSteamappsDir.
     jest
@@ -403,7 +404,7 @@ describe('buildBridgeInstalledMap(testPaths)', () => {
   it('(i) returns an empty Map when there are no ready bottles, and never calls readdirSync', async () => {
     jest.mocked(listReadyBridgeBottleNames).mockReturnValue([])
 
-    const result = await buildBridgeInstalledMap(testPaths)
+    const result = await buildBridgeInstalledMap(testPaths, libDeps)
 
     expect(result.size).toBe(0)
     expect(readdirSync).not.toHaveBeenCalled()
@@ -412,7 +413,7 @@ describe('buildBridgeInstalledMap(testPaths)', () => {
   it('returns an empty Map when the bridge bottle steamapps dir does not exist', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(false)
 
-    const result = await buildBridgeInstalledMap(testPaths)
+    const result = await buildBridgeInstalledMap(testPaths, libDeps)
 
     expect(result.size).toBe(0)
   })
@@ -430,7 +431,7 @@ describe('buildBridgeInstalledMap(testPaths)', () => {
       }
     })
 
-    const result = await buildBridgeInstalledMap(testPaths)
+    const result = await buildBridgeInstalledMap(testPaths, libDeps)
 
     expect(result.has(206040)).toBe(true)
     expect(result.get(206040)?.installPath).toBe(
@@ -487,7 +488,7 @@ describe('buildBridgeInstalledMap(testPaths)', () => {
           }
     )
 
-    const result = await buildBridgeInstalledMap(testPaths)
+    const result = await buildBridgeInstalledMap(testPaths, libDeps)
 
     expect(result.has(206040)).toBe(true)
     expect(result.get(206040)?.installPath).toBe(
@@ -524,7 +525,7 @@ describe('buildBridgeInstalledMap(testPaths)', () => {
       }
     })
 
-    const result = await buildBridgeInstalledMap(testPaths)
+    const result = await buildBridgeInstalledMap(testPaths, libDeps)
 
     expect(result.size).toBe(0)
   })
@@ -578,7 +579,7 @@ describe('buildBridgeInstalledMap(testPaths)', () => {
           }
     )
 
-    const result = await buildBridgeInstalledMap(testPaths)
+    const result = await buildBridgeInstalledMap(testPaths, libDeps)
 
     expect(result.has(206040)).toBe(true)
     expect(result.get(206040)?.installPath).toBe(
@@ -597,7 +598,7 @@ describe('buildBridgeInstalledMap(testPaths)', () => {
       throw new Error('corrupt file')
     })
 
-    const result = await buildBridgeInstalledMap(testPaths)
+    const result = await buildBridgeInstalledMap(testPaths, libDeps)
 
     expect(result.size).toBe(0)
   })

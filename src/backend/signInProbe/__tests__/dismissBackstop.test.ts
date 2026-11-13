@@ -93,6 +93,7 @@ function realpathOfNearestAncestor(target: string): string {
 let globalConfig: ReturnType<typeof createGlobalConfig> | undefined
 const config = () =>
   (globalConfig ??= createGlobalConfig({
+    requestRustInvoke: jest.fn(),
     versioning: createTestVersioning(),
     paths: pathsModule
   }))

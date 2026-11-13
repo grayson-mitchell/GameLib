@@ -64,7 +64,11 @@ function freshGraph(): Graph {
     const engineConfig = require('../engine/engineConfig') as EngineConfigModule
     g = {
       createGlobalConfig: () =>
-        config.createGlobalConfig({ versioning, paths }),
+        config.createGlobalConfig({
+          requestRustInvoke: jest.fn(),
+          versioning,
+          paths
+        }),
       createGameConfigs: (deps) =>
         gameConfig.createGameConfigs({ ...deps, versioning, paths }),
       readStoredGameConfig: (appName, deps) =>

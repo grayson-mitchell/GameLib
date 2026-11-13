@@ -32,6 +32,7 @@ describe('config factory defaults are spawn-free', () => {
   it('getFactoryDefaults makes no runner call', () => {
     const runner = createScriptedRunner([])
     const defaults = createGlobalConfig({
+      requestRustInvoke: jest.fn(),
       versioning: createTestVersioning(),
       paths: createTestAppPaths(profile.root)
     }).getFactoryDefaults()

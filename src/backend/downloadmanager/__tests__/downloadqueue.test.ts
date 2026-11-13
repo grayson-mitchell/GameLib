@@ -63,6 +63,7 @@ function makeLibrary() {
 
 // The dialog and notification helpers are mocked in this file, so the slices are opaque.
 const hostSlices = {
+  requestRustInvoke: jest.fn(),
   aborts: {
     has: () => false,
     call: (id: string) => callAbortController(id)

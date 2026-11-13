@@ -32,6 +32,7 @@ describe('steamExperimentalInstallApp default', () => {
   it('factory defaults keep the experimental InstallApp feature off', () => {
     expect(
       createGlobalConfig({
+        requestRustInvoke: jest.fn(),
         versioning: createTestVersioning(),
         paths: pathsModule
       }).getFactoryDefaults().steamExperimentalInstallApp
@@ -41,6 +42,7 @@ describe('steamExperimentalInstallApp default', () => {
   it('a fresh config with no config file reports it off', () => {
     expect(
       createGlobalConfig({
+        requestRustInvoke: jest.fn(),
         versioning: createTestVersioning(),
         paths: pathsModule
       }).getSettings().steamExperimentalInstallApp

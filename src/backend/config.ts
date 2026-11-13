@@ -15,6 +15,7 @@ import {
   writeSettingsFile
 } from './storeVersioning/settingsFiles'
 import type { StoreVersioning } from './storeVersioning/engine'
+import type { RustInvokeDeps } from './host/rustInvokeDeps'
 import {
   getCrossover,
   getDefaultWineBinary,
@@ -109,7 +110,7 @@ export type GlobalConfigPaths = Pick<
   | 'sharedWinePrefix'
 >
 
-export interface GlobalConfigDeps {
+export interface GlobalConfigDeps extends RustInvokeDeps {
   /** The boot's path roots: the config file, the games-config folder and the install/prefix defaults. */
   paths: GlobalConfigPaths
   /** The boot's store-versioning engine (`StoreRoot.versioning`): settings migration and read-only guard. */
@@ -202,7 +203,11 @@ abstract class GlobalConfig {
     }
 
     const linuxWineSet = await getLinuxWineSet(
-      { ...deps, config: this },
+      {
+        ...deps,
+        config: this,
+        requestRustInvoke: this.deps.requestRustInvoke
+      },
       scanCustom
     )
 

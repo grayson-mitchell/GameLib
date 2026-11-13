@@ -3,6 +3,11 @@ import type { AppPaths } from 'backend/process/context'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { parse } from '@node-steam/vdf'
 import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import { RUST_STEAMFILES_SCAN_ACFS } from 'common/types/sidecarTransport'
+import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
+import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
+import type { ScannedAcf } from '../localFiles/steamFilesTypes'
 import { getBottleSteamappsDir, type BottleSettingsDeps } from '../bottle'
 import {
   listReadyBridgeBottleNames,
@@ -23,6 +28,41 @@ export function isFullyInstalledStateFlags(stateFlags: number): boolean {
   return (stateFlags & 4) !== 0
 }
 
+type InstalledMap = Map<number, { installPath: string; sizeOnDisk: string }>
+
+/**
+ * One steamfiles_scan_acfs call over `steamappsDirs`. A rejected invoke maps to no records,
+ * the same fail-soft result the TS bodies give for unreadable input.
+ */
+async function scanRecords(
+  deps: RustInvokeDeps,
+  steamappsDirs: string[]
+): Promise<ScannedAcf[]> {
+  try {
+    const result = await invokeSteamFiles(deps, RUST_STEAMFILES_SCAN_ACFS, {
+      steamappsDirs
+    })
+    return result.records
+  } catch {
+    return []
+  }
+}
+
+function installedEntry(rec: ScannedAcf) {
+  return {
+    installPath: join(rec.steamappsDir, 'common', rec.record.installdir ?? ''),
+    sizeOnDisk: rec.record.sizeOnDisk ?? '0'
+  }
+}
+
+function fullyInstalledAppId(rec: ScannedAcf): number | undefined {
+  const appid = parseInt(rec.record.appid ?? '', 10)
+  const stateFlags = rec.record.stateFlags ?? NaN
+  return isFullyInstalledStateFlags(stateFlags) && !isNaN(appid)
+    ? appid
+    : undefined
+}
+
 /**
  * Reads all Steam library paths and returns a Map from AppID (number) to
  * install data for games whose ACF StateFlags has bit 4 set
@@ -33,7 +73,24 @@ export function isFullyInstalledStateFlags(stateFlags: number): boolean {
  */
 export async function buildInstalledMap(
   deps: SteamLibrariesDeps
-): Promise<Map<number, { installPath: string; sizeOnDisk: string }>> {
+): Promise<InstalledMap> {
+  if (steamFilesTextImpl() === 'ts') return buildInstalledMapTs(deps)
+  const installed: InstalledMap = new Map()
+  const libraryPaths = await getSteamLibraries(deps)
+  const records = await scanRecords(
+    deps,
+    libraryPaths.map((libPath) => join(libPath, 'steamapps'))
+  )
+  for (const rec of records) {
+    const appid = fullyInstalledAppId(rec)
+    if (appid !== undefined) installed.set(appid, installedEntry(rec))
+  }
+  return installed
+}
+
+async function buildInstalledMapTs(
+  deps: SteamLibrariesDeps
+): Promise<InstalledMap> {
   const installed = new Map<
     number,
     { installPath: string; sizeOnDisk: string }
@@ -97,6 +154,30 @@ export async function buildInstalledMap(
 export async function buildIncompleteInstallSet(
   deps: SteamLibrariesDeps
 ): Promise<Set<number>> {
+  if (steamFilesTextImpl() === 'ts') return buildIncompleteInstallSetTs(deps)
+  const incomplete = new Set<number>()
+  const libraryPaths = await getSteamLibraries(deps)
+  const records = await scanRecords(
+    deps,
+    libraryPaths.map((libPath) => join(libPath, 'steamapps'))
+  )
+  for (const { record } of records) {
+    const appid = parseInt(record.appid ?? '', 10)
+    const stateFlags = record.stateFlags ?? NaN
+    if (
+      !isNaN(appid) &&
+      !isNaN(stateFlags) &&
+      !isFullyInstalledStateFlags(stateFlags)
+    ) {
+      incomplete.add(appid)
+    }
+  }
+  return incomplete
+}
+
+async function buildIncompleteInstallSetTs(
+  deps: SteamLibrariesDeps
+): Promise<Set<number>> {
   const incomplete = new Set<number>()
   const libraryPaths = await getSteamLibraries(deps)
 
@@ -151,8 +232,21 @@ export async function buildIncompleteInstallSet(
  * Exported for unit testing.
  */
 export async function buildBottleInstalledMap(
+  deps: BottleSettingsDeps & RustInvokeDeps
+): Promise<InstalledMap> {
+  if (steamFilesTextImpl() === 'ts') return buildBottleInstalledMapTs(deps)
+  const installed: InstalledMap = new Map()
+  const records = await scanRecords(deps, [getBottleSteamappsRoot(deps)])
+  for (const rec of records) {
+    const appid = fullyInstalledAppId(rec)
+    if (appid !== undefined) installed.set(appid, installedEntry(rec))
+  }
+  return installed
+}
+
+async function buildBottleInstalledMapTs(
   deps: BottleSettingsDeps
-): Promise<Map<number, { installPath: string; sizeOnDisk: string }>> {
+): Promise<InstalledMap> {
   const installed = new Map<
     number,
     { installPath: string; sizeOnDisk: string }
@@ -220,8 +314,35 @@ export async function buildBottleInstalledMap(
  * Exported for unit testing.
  */
 export async function buildBridgeInstalledMap(
+  paths: Pick<AppPaths, 'userHome'>,
+  rust: RustInvokeDeps
+): Promise<InstalledMap> {
+  if (steamFilesTextImpl() === 'ts') return buildBridgeInstalledMapTs(paths)
+  const installed: InstalledMap = new Map()
+  const names = listReadyBridgeBottleNames(paths)
+  const records = await scanRecords(
+    rust,
+    names.map((name) => getBottleSteamappsDir(paths, name))
+  )
+  const nameByDir = new Map(
+    names.map((name) => [getBottleSteamappsDir(paths, name), name])
+  )
+  for (const rec of records) {
+    const appid = fullyInstalledAppId(rec)
+    if (
+      appid !== undefined &&
+      resolveBridgeBottleName(paths, String(appid)) ===
+        nameByDir.get(rec.steamappsDir)
+    ) {
+      installed.set(appid, installedEntry(rec))
+    }
+  }
+  return installed
+}
+
+async function buildBridgeInstalledMapTs(
   paths: Pick<AppPaths, 'userHome'>
-): Promise<Map<number, { installPath: string; sizeOnDisk: string }>> {
+): Promise<InstalledMap> {
   const installed = new Map<
     number,
     { installPath: string; sizeOnDisk: string }

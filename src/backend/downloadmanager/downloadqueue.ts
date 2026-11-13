@@ -38,8 +38,10 @@ import {
 } from 'common/storeCapabilities'
 
 /** What the queue reads: the persisted queue store, the manager map and the connectivity feed. */
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+
 export interface DownloadQueueDeps
-  extends DialogBoxDeps, NotifyDeps, AppRuntimeSlice<'events'> {
+  extends DialogBoxDeps, NotifyDeps, RustInvokeDeps, AppRuntimeSlice<'events'> {
   config: GlobalConfigSlice
   stores: Pick<Stores, 'downloadManager' | 'steam'>
   managers: Pick<StoreManagers, 'library'>
@@ -85,6 +87,7 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
   const steamStoresDeps = {
     stores: { steam: deps.stores.steam },
     config: deps.config,
+    requestRustInvoke: deps.requestRustInvoke,
     notifications: deps.notifications,
     steamSession: deps.steamSession,
     steamBottle: deps.steamBottle,

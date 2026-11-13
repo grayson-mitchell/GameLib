@@ -56,6 +56,7 @@ const steamBottle = {
   resolveCrossoverWine: jest.fn()
 }
 const libDeps = {
+  requestRustInvoke: jest.fn(),
   config: createTestGlobalConfig(),
   steamBottle,
   paths: { userHome: '/test-gamelib/home' },
