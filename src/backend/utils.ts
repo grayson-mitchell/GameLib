@@ -58,7 +58,6 @@ import type { AppSettings, WineManagerStatus } from 'common/types'
 import { isUmuSupported, type UmuDeps } from './utils/compatibility_layers'
 import { isLinux, isMac, isWindows } from './constants/environment'
 import { fixAsarPath } from './process/appPaths'
-import { parse } from '@node-steam/vdf'
 
 import type LogWriter from 'backend/logger/log_writer'
 import type { OnlineMonitor } from './online_monitor'
@@ -69,7 +68,6 @@ import type { SpawnAsync } from './spawnAsync'
 import type { RustInvokeDeps } from './host/rustInvokeDeps'
 import { RUST_STEAMFILES_READ_LIBRARY_FOLDERS } from 'common/types/sidecarTransport'
 import { invokeSteamFiles } from './storeManagers/steam/localFiles/rustSteamFiles'
-import { steamFilesTextImpl } from './storeManagers/steam/localFiles/steamFilesFlags'
 
 /**
  * Compares 2 SemVer strings following "major.minor.patch".
@@ -605,7 +603,6 @@ export type SteamLibrariesDeps = {
 export async function getSteamLibraries(
   deps: SteamLibrariesDeps
 ): Promise<string[]> {
-  if (steamFilesTextImpl() === 'ts') return getSteamLibrariesTs(deps)
   const { defaultSteamPath } = deps.config.getSettings()
   const path = defaultSteamPath.replaceAll("'", '')
   const vdfFile = join(path, 'steamapps', 'libraryfolders.vdf')
@@ -632,31 +629,6 @@ export async function getSteamLibraries(
   }
   if (!result.parsed) return libraries
   return [...libraries, ...result.paths].filter((path) => existsSync(path))
-}
-
-async function getSteamLibrariesTs(
-  deps: SteamLibrariesDeps
-): Promise<string[]> {
-  const { defaultSteamPath } = deps.config.getSettings()
-  const path = defaultSteamPath.replaceAll("'", '')
-  const vdfFile = join(path, 'steamapps', 'libraryfolders.vdf')
-  const libraries = ['/usr/share/steam']
-
-  if (existsSync(vdfFile)) {
-    const json = parse(readFileSync(vdfFile, 'utf-8'))
-    if (!json.libraryfolders) {
-      return libraries
-    }
-    const folders: { path: string }[] = Object.values(json.libraryfolders)
-    return [...libraries, ...folders.map((folder) => folder.path)].filter(
-      (path) => existsSync(path)
-    )
-  }
-  logDebug(
-    'Unable to load Steam Libraries, libraryfolders.vdf not found',
-    LogPrefix.Backend
-  )
-  return libraries
 }
 
 function constructAndUpdateRPC(

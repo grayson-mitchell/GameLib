@@ -1,7 +1,6 @@
 import { join, resolve, relative, isAbsolute, sep } from 'path'
-import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
+import { existsSync } from 'graceful-fs'
 import { rmSync } from 'node:fs'
-import { parse } from '@node-steam/vdf'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
 import type { SteamLibraryStateDeps } from 'backend/services/types'
@@ -11,7 +10,6 @@ import {
   RUST_STEAMFILES_SCAN_ACFS
 } from 'common/types/sidecarTransport'
 import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
-import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
 import { NUMERIC_APP_ID } from '../gameConstants'
 import { DEFAULT_BRIDGE_BOTTLE_NAME, type BottleSettingsDeps } from '../bottle'
 import {
@@ -65,7 +63,6 @@ export async function readAcfState(
   bytesStaged?: number
   bytesToStage?: number
 }> {
-  if (steamFilesTextImpl() === 'ts') return readAcfStateTs(deps, appId, source)
   const steamappsDirs = (
     source === 'bottle'
       ? [getBottleSteamappsRoot(deps)]
@@ -108,59 +105,6 @@ export async function readAcfState(
   }
 }
 
-type AcfStateResult = Awaited<ReturnType<typeof readAcfState>>
-
-async function readAcfStateTs(
-  deps: SteamLibrariesDeps & BottleSettingsDeps,
-  appId: string,
-  source: AcfSource
-): Promise<AcfStateResult> {
-  const steamappsDirs =
-    source === 'bottle'
-      ? [getBottleSteamappsRoot(deps)]
-      : source === 'bridge'
-        ? [getBridgeBottleSteamappsRoot(deps, appId)]
-        : (await getSteamLibraries(deps)).map((libPath) =>
-            join(libPath, 'steamapps')
-          )
-
-  for (const steamappsDir of steamappsDirs) {
-    if (!existsSync(steamappsDir)) continue
-
-    const manifestFile = join(steamappsDir, `appmanifest_${appId}.acf`)
-    if (!existsSync(manifestFile)) continue
-
-    try {
-      const content = readFileSync(manifestFile, 'utf-8')
-      const parsed = parse(content)
-      const state = parsed?.AppState
-      if (!state) continue
-
-      const stateFlags = parseInt(state.StateFlags, 10)
-      if (isFullyInstalledStateFlags(stateFlags)) {
-        return {
-          state: 'installed',
-          stateFlags,
-          installPath: join(steamappsDir, 'common', state.installdir ?? ''),
-          sizeOnDisk: state.SizeOnDisk ?? '0'
-        }
-      }
-      return {
-        state: 'downloading',
-        stateFlags,
-        bytesDownloaded: Number(state.BytesDownloaded) || 0,
-        bytesToDownload: Number(state.BytesToDownload) || 0,
-        bytesStaged: Number(state.BytesStaged) || 0,
-        bytesToStage: Number(state.BytesToStage) || 0
-      }
-    } catch {
-      continue // skip corrupt ACF (T-2-01)
-    }
-  }
-
-  return { state: 'absent' }
-}
-
 /**
  * 34.13 review A-13: every OTHER appId in `steamappsDir` whose manifest
  * declares the same `installdir` as `installdirSegment`.
@@ -195,13 +139,6 @@ export async function findOtherManifestsWithInstalldir(
   installdirSegment: string,
   selfAppId: string
 ): Promise<string[]> {
-  if (steamFilesTextImpl() === 'ts') {
-    return findOtherManifestsWithInstalldirTs(
-      steamappsDir,
-      installdirSegment,
-      selfAppId
-    )
-  }
   let scan
   try {
     scan = await invokeSteamFiles(rust, RUST_STEAMFILES_SCAN_ACFS, {
@@ -211,8 +148,7 @@ export async function findOtherManifestsWithInstalldir(
     // T-75-55: an empty list means "no conflict" and allows the recursive
     // rmSync. A transport failure must therefore NOT yield []; the sentinel
     // makes every caller take the conflicting (manifest-only) branch, which
-    // is more conservative than the TS path (which returned [] on readdir
-    // failure).
+    // is the conservative choice.
     return [UNKNOWN_CONFLICT]
   }
   const conflicting: string[] = []
@@ -226,40 +162,6 @@ export async function findOtherManifestsWithInstalldir(
 }
 
 const UNKNOWN_CONFLICT = '<unknown>'
-
-function findOtherManifestsWithInstalldirTs(
-  steamappsDir: string,
-  installdirSegment: string,
-  selfAppId: string
-): string[] {
-  if (!existsSync(steamappsDir)) return []
-
-  let files: string[]
-  try {
-    files = readdirSync(steamappsDir)
-  } catch {
-    return []
-  }
-
-  const conflicting: string[] = []
-  for (const file of files) {
-    if (!file.startsWith('appmanifest_') || !file.endsWith('.acf')) continue
-    if (file === `appmanifest_${selfAppId}.acf`) continue
-
-    try {
-      const parsed = parse(readFileSync(join(steamappsDir, file), 'utf-8'))
-      const state = parsed?.AppState
-      if (!state) continue
-      if (state.installdir !== installdirSegment) continue
-      const appid = String(state.appid ?? '')
-      if (appid && appid !== selfAppId) conflicting.push(appid)
-    } catch {
-      /* skip corrupt ACF — T-2-01/T-17-05 mitigation */
-    }
-  }
-
-  return conflicting
-}
 
 /**
  * One entry in the multi-root inventory `enumerateSteamInstallCopies`
@@ -494,7 +396,6 @@ export async function removeSteamInstallCopy(
 export async function scanDownloadingAppIds(
   deps: SteamLibrariesDeps & SteamLibraryStateDeps
 ): Promise<string[]> {
-  if (steamFilesTextImpl() === 'ts') return scanDownloadingAppIdsTs(deps)
   const libraryPaths = await getSteamLibraries(deps)
   let scan
   try {
@@ -518,53 +419,5 @@ export async function scanDownloadingAppIds(
       downloadingIds.push(appIdStr)
     }
   }
-  return downloadingIds
-}
-
-async function scanDownloadingAppIdsTs(
-  deps: SteamLibrariesDeps & SteamLibraryStateDeps
-): Promise<string[]> {
-  const libraryPaths = await getSteamLibraries(deps)
-  const downloadingIds: string[] = []
-
-  for (const libPath of libraryPaths) {
-    const steamappsDir = join(libPath, 'steamapps')
-    if (!existsSync(steamappsDir)) continue
-
-    let files: string[]
-    try {
-      files = readdirSync(steamappsDir)
-    } catch {
-      continue
-    }
-
-    for (const file of files) {
-      if (!file.startsWith('appmanifest_') || !file.endsWith('.acf')) continue
-
-      try {
-        const content = readFileSync(join(steamappsDir, file), 'utf-8')
-        const parsed = parse(content)
-        const state = parsed?.AppState
-        if (!state) continue
-
-        const appid = parseInt(state.appid, 10)
-        if (isNaN(appid)) continue
-
-        const appIdStr = String(appid)
-        const stateFlags = parseInt(state.StateFlags, 10)
-        // Bit 4 unset = not fully installed (download in progress or other non-installed state)
-        if (
-          !isNaN(stateFlags) &&
-          (stateFlags & 4) === 0 &&
-          deps.steamSession.libraryState.library.has(appIdStr)
-        ) {
-          downloadingIds.push(appIdStr)
-        }
-      } catch {
-        /* skip corrupt ACF */
-      }
-    }
-  }
-
   return downloadingIds
 }

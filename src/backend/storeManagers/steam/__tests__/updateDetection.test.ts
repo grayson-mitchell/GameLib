@@ -8,6 +8,7 @@ import {
   invalidateSteamUpdateState,
   type SteamUpdateDeps
 } from '../updateDetection'
+import { fsBackedSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
 import { findBridgeInstallBottle } from '../bridgeBottle'
 import { listSteamClientPids } from '../steamClientProcess'
 
@@ -93,6 +94,7 @@ describe('detectSteamUpdates', () => {
         get: jest.fn().mockResolvedValue({ getProductInfo })
       },
       runner: { run: jest.fn() },
+      ...fsBackedSteamFiles(),
       steamInstallRuntime: { updateStates: createSteamUpdateStateCache() }
     } as unknown as SteamUpdateDeps
   })

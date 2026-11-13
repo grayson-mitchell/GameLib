@@ -28,6 +28,7 @@ import { mockLeaseOk } from '../../__tests__/depotLeaseMocks'
 import { selectAllDepots } from '../../depot/select'
 import { getSteamLibraries } from 'backend/utils'
 import { resumeInterruptedSteamInstall } from '../../library/resume'
+import { fsBackedSteamFiles } from '../../localFiles/__tests__/fixtures/stubRustSteamFiles'
 import { startInstallPolling } from '../../library/installPolling'
 import { RUST_DEPOT_MANIFEST_SUMMARY } from 'common/types/sidecarTransport'
 import { classifyDepotError } from '../../depotErrors'
@@ -41,6 +42,7 @@ const steamStoresModule = createSteamStores({
 })
 
 const steamTestDeps = createTestManagerDeps({
+  requestRustInvoke,
   steamInstallRuntime: createTestSteamInstallRuntime(depotTransport),
   steamUser,
   stores: createTestStores({ steam: steamStoresModule })
@@ -50,6 +52,7 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
+  logDebug: jest.fn(),
   getRunnerLogWriter: jest.fn().mockReturnValue({}),
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
@@ -371,6 +374,16 @@ describe('downloadSelectedDepotFiles on the rust pipeline', () => {
   })
 })
 
+// The resume reads the on-disk manifest over the steamfiles channels (75-30: the TS reader is gone);
+// the depot stub owns every other channel.
+const steamFilesBacking = fsBackedSteamFiles()
+const withSteamFiles =
+  (depotInvoke: (channel: string, args: unknown[]) => Promise<unknown>) =>
+  (channel: string, args: unknown[]) =>
+    channel.startsWith('steamfiles_')
+      ? steamFilesBacking.requestRustInvoke(channel, args)
+      : depotInvoke(channel, args)
+
 describe('startup resume on the rust pipeline', () => {
   it('runs one verify_only job with the finalize policy and still starts the poller', async () => {
     // getSteamLibraries gives a library root; resume joins `steamapps` onto it.
@@ -385,7 +398,7 @@ describe('startup resume on the rust pipeline', () => {
     const stub = createStubRustDepot({
       outcome: { missing: ['bin/a.dll'], allFilesVerified: false }
     })
-    invokeMock.mockImplementation(stub.invoke)
+    invokeMock.mockImplementation(withSteamFiles(stub.invoke))
 
     await resumeInterruptedSteamInstall(steamTestDeps, APP_ID)
 
@@ -419,7 +432,7 @@ describe('startup resume on the rust pipeline', () => {
     )
     jest.mocked(getSteamLibraries).mockResolvedValue([lib])
     const stub = createStubRustDepot({ outcome: { skippedDepots: ['222'] } })
-    invokeMock.mockImplementation(stub.invoke)
+    invokeMock.mockImplementation(withSteamFiles(stub.invoke))
 
     await resumeInterruptedSteamInstall(steamTestDeps, APP_ID)
 
@@ -459,7 +472,7 @@ describe('startup resume on the rust pipeline', () => {
         ]
       }
     })
-    invokeMock.mockImplementation(stub.invoke)
+    invokeMock.mockImplementation(withSteamFiles(stub.invoke))
 
     await resumeInterruptedSteamInstall(steamTestDeps, APP_ID)
 
@@ -480,7 +493,7 @@ describe('startup resume on the rust pipeline', () => {
     )
     jest.mocked(getSteamLibraries).mockResolvedValue([lib])
     const stub = createStubRustDepot({ outcome: { status: 'cancelled' } })
-    invokeMock.mockImplementation(stub.invoke)
+    invokeMock.mockImplementation(withSteamFiles(stub.invoke))
 
     await resumeInterruptedSteamInstall(steamTestDeps, APP_ID)
 

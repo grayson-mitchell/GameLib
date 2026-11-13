@@ -502,15 +502,6 @@ describe('errorHandler takes its manager table by deps (66.1-23)', () => {
 })
 
 describe('getSteamLibraries, rust branch', () => {
-  const prior = process.env.GAMELIB_STEAMFILES_TEXT
-  beforeEach(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-  })
-  afterEach(() => {
-    if (prior === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = prior
-  })
-
   const steamConfig = () =>
     createTestGlobalConfig({ defaultSteamPath: "'/home/u/.steam/steam'" })
   const libs = (over: Partial<LibraryFoldersResult>): LibraryFoldersResult => ({

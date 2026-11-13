@@ -1,3 +1,4 @@
+import { fsBackedSteamFiles } from 'backend/storeManagers/steam/localFiles/__tests__/fixtures/stubRustSteamFiles'
 import {
   getCrossover,
   getDefaultWineBinary,
@@ -79,7 +80,7 @@ describe('getLinuxWineSet default wine naming', () => {
     [
       ...(await getLinuxWineSet(
         {
-          requestRustInvoke: jest.fn(),
+          requestRustInvoke: fsBackedSteamFiles().requestRustInvoke,
           runner,
           paths,
           config: createTestGlobalConfig({

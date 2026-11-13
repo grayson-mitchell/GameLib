@@ -1,12 +1,9 @@
 import { logInfo, LogPrefix } from 'backend/logger'
 import { join } from 'path'
-import { existsSync, readFileSync } from 'graceful-fs'
-import { parse } from '@node-steam/vdf'
 import type { AppPaths } from 'backend/process/context'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { RUST_STEAMFILES_READ_RUNNING_APP_ID } from 'common/types/sidecarTransport'
 import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
-import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
 import type { Clock, ProcessRunner, TimerHandle } from 'backend/process/types'
 
 export interface RunningPollProbeDeps extends RustInvokeDeps {
@@ -41,7 +38,7 @@ async function windowsRunningAppId(
 
 /**
  * Reads macOS ~/Library/Application Support/Steam/registry.vdf for RunningAppID.
- * Parses via @node-steam/vdf with exact casing (Pitfall 4 — T-06-06).
+ * Parsed in Rust (steamfiles) with exact casing (Pitfall 4 — T-06-06).
  * Returns 0 when file absent, parse fails, or key missing.
  */
 /** The macOS reader: pure file read, no spawn. */
@@ -63,28 +60,15 @@ async function readRegistryRunningAppId(
   rust: RustInvokeDeps,
   regPath: string
 ): Promise<number> {
-  if (steamFilesTextImpl() === 'rust') {
-    try {
-      const r = await invokeSteamFiles(
-        rust,
-        RUST_STEAMFILES_READ_RUNNING_APP_ID,
-        { path: regPath }
-      )
-      return r.runningAppId
-    } catch {
-      return 0
-    }
-  }
-  return readRegistryRunningAppIdTs(regPath)
-}
-
-function readRegistryRunningAppIdTs(regPath: string): number {
-  if (!existsSync(regPath)) return 0
   try {
-    const content = readFileSync(regPath, 'utf-8')
-    const parsed = parse(content)
-    const raw = parsed?.Registry?.HKCU?.Software?.Valve?.Steam?.RunningAppID
-    return raw ? parseInt(raw, 10) : 0
+    const r = await invokeSteamFiles(
+      rust,
+      RUST_STEAMFILES_READ_RUNNING_APP_ID,
+      {
+        path: regPath
+      }
+    )
+    return r.runningAppId
   } catch {
     return 0
   }
