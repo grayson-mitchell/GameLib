@@ -79,6 +79,7 @@ export default function SteamLogin({ dismiss }: Props) {
   const [guardCode, setGuardCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [signedIn, setSignedIn] = useState(false)
 
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const credPollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
@@ -89,6 +90,15 @@ export default function SteamLogin({ dismiss }: Props) {
   const qrRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // --- Cleanup helpers ---
+  // quick-261113-wro: a successful sign-in must play the dialog's own exit
+  // FIRST; `dismiss` (which slides the login panel down via `loginFlowOpen`)
+  // is deferred to the Dialog's onExited. Calling `dismiss` directly left the
+  // dialog fully open while the panel slid behind it, then unmounted it
+  // un-animated.
+  function finishSignIn() {
+    setSignedIn(true)
+  }
+
   function clearPollInterval() {
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current)
@@ -137,7 +147,7 @@ export default function SteamLogin({ dismiss }: Props) {
         clearCredPollInterval()
         setStep('qr-confirmed') // reuse the "completing sign-in" UI
         await steamLogin({ status: 'done', username: poll.username })
-        closeWindow()
+        finishSignIn()
       } else if (poll.status === 'done') {
         // Authenticated but CM connect still in flight — keep polling for username.
         setStep('qr-confirmed')
@@ -185,7 +195,7 @@ export default function SteamLogin({ dismiss }: Props) {
         clearQrRefreshTimer()
         setStep('qr-confirmed')
         await steamLogin({ status: 'done', username: poll.username })
-        closeWindow()
+        finishSignIn()
       } else if (poll.status === 'done') {
         // QR approved but username not yet populated — the background CM
         // connect (connectingPromise) is still in-flight. Show the
@@ -274,7 +284,7 @@ export default function SteamLogin({ dismiss }: Props) {
     if (result.status === 'done') {
       const userInfo = await window.api.getSteamUserInfo()
       await steamLogin({ status: 'done', username: userInfo?.username })
-      closeWindow()
+      finishSignIn()
     } else if (result.status === 'guard_required') {
       // Start polling for out-of-band completion (DeviceConfirmation phone-approval path).
       // If the user approves on their phone before typing a code, the poll fires
@@ -305,7 +315,7 @@ export default function SteamLogin({ dismiss }: Props) {
     if (result.status === 'done') {
       const userInfo = await window.api.getSteamUserInfo()
       await steamLogin({ status: 'done', username: userInfo?.username })
-      closeWindow()
+      finishSignIn()
     } else {
       showError(
         'Incorrect code. Check your email or authenticator app and try again.'
@@ -717,6 +727,8 @@ export default function SteamLogin({ dismiss }: Props) {
     <Dialog
       showCloseButton={true}
       onClose={closeWindow}
+      open={!signedIn}
+      onExited={signedIn ? closeWindow : undefined}
       className="steamLoginDialog"
     >
       <DialogHeader onClose={closeWindow}>Sign in to Steam</DialogHeader>

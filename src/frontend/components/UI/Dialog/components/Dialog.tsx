@@ -23,6 +23,12 @@ interface DialogProps {
   children: ReactNode
   showCloseButton: boolean
   onClose: () => void
+  // quick-261113-wro: lets a caller close the dialog through the same 500ms
+  // exit the close button plays. Defaults to true so existing consumers are
+  // unchanged.
+  open?: boolean
+  // quick-261113-wro: fires once the exit transition has completed.
+  onExited?: () => void
 }
 
 // quick-260820-kq0 round 3: MuiDialog's `TransitionProps` type is the bare
@@ -64,7 +70,9 @@ export const Dialog: React.FC<DialogProps> = ({
   children,
   className,
   showCloseButton = false,
-  onClose
+  onClose,
+  open: requestedOpen = true,
+  onExited
 }) => {
   const [open, setOpen] = useState(true)
   const disableDialogBackdropClose = useSettingsState(
@@ -96,7 +104,7 @@ export const Dialog: React.FC<DialogProps> = ({
 
   return (
     <MuiDialog
-      open={open}
+      open={open && requestedOpen}
       onClose={(e, reason) => {
         if (disableDialogBackdropClose && reason === 'backdropClick') return
         close()
@@ -133,6 +141,7 @@ export const Dialog: React.FC<DialogProps> = ({
       // Dialog transition.
       TransitionComponent={SlideUpTransition}
       transitionDuration={500}
+      TransitionProps={{ onExited }}
     >
       <>
         <IconButton
