@@ -53,10 +53,51 @@ import { notifyOverlaySetupFailed } from './gameLaunchOverlay'
  */
 const OVERLAY_EXIT_GRACE_MS = 3000
 
+/**
+ * The bridge bottle settings are the GLOBAL settings plus the bottle fields, so the
+ * game's own per-game env (Settings > Advanced > Environment variables, e.g.
+ * `CX_ENV`) never reached a bridge launch. Folds it in: a per-game key replaces a
+ * same-named (case-insensitive) base entry; every other base entry stays. Runs
+ * before the known fixes and the overlay merge so both see the user's values
+ * (appendCxEnvTokens keeps an existing CX_ENV first).
+ */
+export function withUserGameEnv(
+  base: GameSettings,
+  userEnv: readonly { key: string; value: string }[] | undefined
+): GameSettings {
+  if (!userEnv?.length) return base
+  const userKeys = new Set(userEnv.map((e) => e.key.toUpperCase()))
+  return {
+    ...base,
+    enviromentOptions: [
+      ...(base.enviromentOptions ?? []).filter(
+        (e) => !userKeys.has(e.key.toUpperCase())
+      ),
+      ...userEnv
+    ]
+  }
+}
+
+async function readUserGameEnv(
+  steamGame: SteamGame
+): Promise<GameSettings['enviromentOptions'] | undefined> {
+  try {
+    const gameConfig = steamGame.deps.gameConfigs.get(steamGame.appId)
+    const settings = gameConfig.config || (await gameConfig.getSettings())
+    return settings.enviromentOptions
+  } catch (error) {
+    logWarning(
+      `SteamGame: could not read per-game env for appId ${steamGame.appId}: ${String(error)}`,
+      LogPrefix.Steam
+    )
+    return undefined
+  }
+}
+
 export async function fireBridgeWineLaunch(
   steamGame: SteamGame,
   exePath: string,
-  bridgeBottleSettings: GameSettings,
+  bridgeBottleSettingsIn: GameSettings,
   drm?: DrmWineLaunch,
   overlay?: OverlayLaunchPayload
 ): Promise<boolean> {
@@ -84,6 +125,11 @@ export async function fireBridgeWineLaunch(
       fallbackAvailable: true
     })
   }
+
+  const bridgeBottleSettings = withUserGameEnv(
+    bridgeBottleSettingsIn,
+    await readUserGameEnv(steamGame)
+  )
 
   // quick 261024-urq: this launch's own record (see bridgeLaunchBottles).
   const launchRecord = { bottle: bridgeBottleSettings.wineCrossoverBottle }

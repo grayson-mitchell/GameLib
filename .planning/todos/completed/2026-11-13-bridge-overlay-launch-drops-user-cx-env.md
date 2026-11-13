@@ -5,7 +5,7 @@ area: steam
 severity: medium
 platform: macos
 ready: code
-source: 'debug opengl-bridge-overlay-no-attach (2026-11-13): probe runs 1 and 2 on Dungeons of Dredmor 98800'
+source: 'side finding from the closed Dredmor overlay debug (2026-11-13): in-game probe showed the user CX_ENV missing'
 files:
   - src/backend/storeManagers/steam/gameBridgeWineLaunch.ts:362-385
   - src/backend/storeManagers/steam/bridge/overlay/overlayLaunch.ts:43-60
@@ -36,3 +36,10 @@ Fix: trace `enviromentOptions` from the per-game settings read to the wine spawn
 that a user `CX_ENV` value survives the cx-env overlay merge into the final spawn env. Live check:
 a game-process probe or Steam's `/tmp/gameoverlayrenderer.<pid>.log` appearing with
 `STEAM_OVERLAY_LOGGING=1`.
+
+## Resolution
+
+Fixed 2026-11-13. Root cause: bridge launch settings were built from global config only, so
+the per-game env never reached the launch (not the overlay merge). `fireBridgeWineLaunch` now folds in
+the per-game `enviromentOptions` (`withUserGameEnv`). Test: `__tests__/bridgeUserGameEnv.test.ts`.
+Live check still with the operator. See `.planning/debug/bridge-overlay-drops-user-cxenv.md`.
