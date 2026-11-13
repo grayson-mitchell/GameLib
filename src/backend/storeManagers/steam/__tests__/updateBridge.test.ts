@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 /** Phase 74 plan 10: updateBridgeGame (D-10, D-13, D-15, D-16) over faked estimate/pipeline. */
 import { updateBridgeGame } from '../updateBridge'
 import { downloadSteamDepotsRust } from '../depotRust/install'

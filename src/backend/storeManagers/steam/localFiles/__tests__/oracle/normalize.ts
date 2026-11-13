@@ -165,7 +165,10 @@ export function normalizeForGolden(
       }
       return out
     }
-    return String(v)
+    if (typeof v === 'symbol' || typeof v === 'function') return v.toString()
+    throw new TypeError(
+      `normalizeForGolden: unhandled value of type ${typeof v}`
+    )
   }
   return walk(value)
 }

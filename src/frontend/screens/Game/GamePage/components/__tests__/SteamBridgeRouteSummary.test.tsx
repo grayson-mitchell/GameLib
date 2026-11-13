@@ -1,8 +1,8 @@
 import type { ReactElement, ReactNode } from 'react'
 
 jest.mock('react-i18next', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { gamelibT } = require('./gamelibT')
+  const { gamelibT } =
+    jest.requireActual<typeof import('./gamelibT')>('./gamelibT')
   return { useTranslation: () => ({ t: gamelibT }) }
 })
 
@@ -27,7 +27,7 @@ const text = (n: ReactNode): string => {
 
 const find = (n: ReactNode, pred: (e: El) => boolean): El | undefined => {
   if (Array.isArray(n)) {
-    for (const c of n) {
+    for (const c of n as ReactNode[]) {
       const r = find(c, pred)
       if (r) return r
     }
@@ -48,7 +48,7 @@ const render = (over: Partial<Parameters<typeof SteamBridgeRouteSummary>[0]>) =>
   }) as El
 
 const badge = (el: El) =>
-  find(el, (e) => String(e.props.className ?? '') === 'steamBridgeIssueBadge')
+  find(el, (e) => e.props.className === 'steamBridgeIssueBadge')
 const tooltipEl = (el: El) =>
   find(el, (e) => 'arrow' in e.props && 'title' in e.props)
 
