@@ -104,9 +104,55 @@ fn is_list(map: &[(Vec<u8>, BinNode)]) -> bool {
     })
 }
 
-pub fn read_shortcuts(_path: &Path) -> ShortcutsReadResult {
-    ShortcutsReadResult::default()
+pub fn read_shortcuts(path: &Path) -> ShortcutsReadResult {
+    let bytes = match std::fs::read(path) {
+        Ok(b) => b,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            return ShortcutsReadResult::default()
+        }
+        Err(e) => {
+            return ShortcutsReadResult {
+                exists: true,
+                read_error: Some(format!("io: {e}")),
+                ..Default::default()
+            }
+        }
+    };
+    let doc = match parse_bin(&bytes, &BinLimits::shortcuts()) {
+        Ok(d) => d,
+        Err(e) => {
+            return ShortcutsReadResult {
+                exists: true,
+                read_error: Some(format!("parse: {e:?}")),
+                ..Default::default()
+            }
+        }
+    };
+    let mut out = ShortcutsReadResult {
+        exists: true,
+        parsed: true,
+        ..Default::default()
+    };
+    if let Some(map) = shortcuts_root(&doc) {
+        out.has_shortcuts_root = true;
+        out.root_is_list = is_list(map);
+        for (k, v) in map {
+            if let BinNode::Map(f) = v {
+                out.entries.push(ShortcutEntrySummary {
+                    index_key: String::from_utf8_lossy(k).into_owned(),
+                    app_name: str_of(find_ci(f, "appname")),
+                    exe: str_of(find_ci(f, "exe")),
+                    launch_options: str_of(find_ci(f, "launchoptions")),
+                    has_app_name: find_ci(f, "appname").is_some(),
+                    has_exe: find_ci(f, "exe").is_some(),
+                    has_launch_options: find_ci(f, "launchoptions").is_some(),
+                });
+            }
+        }
+    }
+    out
 }
+
 pub fn apply_shortcuts(_path: &Path, _op: &ShortcutsOp) -> ShortcutsApplyResult {
     ShortcutsApplyResult::default()
 }
