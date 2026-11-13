@@ -295,7 +295,7 @@ describe('Steam game (261026-c7r)', () => {
     }
   })
 
-  it('win32: both .lnk writes carry the steam gamelib:// URL', async () => {
+  it('win32: both .lnk writes pass the steam gamelib:// URL as one quoted explorer.exe argument', async () => {
     originalPlatform = overrideProcessPlatform('win32')
     fakePowerShell(0, REGISTRY_DESKTOP)
     const [desktopFile, menuFile] = bothFiles(
@@ -313,7 +313,33 @@ describe('Steam game (261026-c7r)', () => {
       [desktopFile, menuFile].sort()
     )
     for (const env of envs) {
-      expect(env.GAMELIB_LNK_ARGS).toContain(steamUrl)
+      expect(env.GAMELIB_LNK_ARGS).toBe(`"${steamUrl}"`)
+      expect(env.GAMELIB_LNK_TARGET).toMatch(/explorer\.exe$/)
+    }
+  })
+
+  it('win32: a hostile app_name cannot add a second quote or leak raw into the URL (T-66.4-76)', async () => {
+    originalPlatform = overrideProcessPlatform('win32')
+    fakePowerShell(0, REGISTRY_DESKTOP)
+    const hostileName = 'x" /root,C:\\ &x'
+    const hostileInfo = {
+      ...gameInfo,
+      runner: 'legendary',
+      app_name: hostileName,
+      title: 'Hostile Name Test'
+    } as unknown as GameInfo
+    const hostileGame = { getGameInfo: () => hostileInfo } as unknown as Game
+
+    await addShortcuts(deps, hostileGame, true)
+
+    expect(powershellCalls()).toHaveLength(2)
+    for (const [, , options] of powershellCalls()) {
+      const args =
+        (options as { env: NodeJS.ProcessEnv }).env.GAMELIB_LNK_ARGS ?? ''
+      expect(args.match(/"/g)).toHaveLength(2)
+      expect(args).toBe(
+        `"gamelib://launch?appName=${encodeURIComponent(hostileName)}&runner=legendary"`
+      )
     }
   })
 

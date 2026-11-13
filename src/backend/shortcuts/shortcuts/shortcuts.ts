@@ -116,8 +116,10 @@ ${icon ? `Icon=${icon}\n` : ''}Categories=Game;
       break
     }
     case 'win32': {
+      // appName and runner are percent-encoded (as generateMacOsApp does, T-34.5-C6-17): the .lnk
+      // argument is a double-quoted string and protocol.ts decodes it again via searchParams.
       const shortcutOptions: ShortcutDetails = {
-        target: launchWithProtocol
+        target: `gamelib://launch?appName=${encodeURIComponent(app_name)}&runner=${encodeURIComponent(runner)}`
       }
       let executable = gameInfo.install.executable
       if (isStore(gameInfo, 'gog')) {
