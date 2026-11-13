@@ -105,7 +105,18 @@ const humbleStoresFixture = {
 // ── adapter mock ───────────────────────────────────────────────────────────
 const mockGetGamekeys = jest.fn()
 jest.mock('../adapter', () => ({
-  getGamekeys: (...args: unknown[]) => mockGetGamekeys(...args)
+  // These tests script the legacy gamekeys result shape; the code under test now calls
+  // getSessionStatus (Humble's /api/v1/user/order 404s for real sessions), so map the
+  // scripted result onto the status word: ok -> authenticated, session_expired ->
+  // anonymous, anything else -> unknown. A scripted throw still propagates.
+  getSessionStatus: async (...args: unknown[]) => {
+    const r = (await mockGetGamekeys(...args)) as { status: string }
+    return r.status === 'ok'
+      ? 'authenticated'
+      : r.status === 'session_expired'
+        ? 'anonymous'
+        : 'unknown'
+  }
 }))
 
 // ── sync fence (CR-01: disconnect must fence the in-flight sync) ───────────
@@ -861,7 +872,7 @@ describe('HumbleUser', () => {
       expect(String(rejectionLines[1][0])).toContain(
         '2 prior identical rejection(s) suppressed'
       )
-      expect(rejectionLines[1][0][1]).toBe('access_denied')
+      expect(rejectionLines[1][0][1]).toBe('unknown')
 
       humbleUser.stopLogin()
       await loginPromise

@@ -11,7 +11,12 @@ export const HUMBLE_TOKEN_PREFIX = 'humble:v1:'
 export const HUMBLE_LOGIN_PARTITION = 'persist:humble'
 
 export const HUMBLE_BASE_URL = 'https://www.humblebundle.com'
-export const HUMBLE_LOGIN_URL = 'https://www.humblebundle.com/login'
+// Humble moved to Next.js: www.humblebundle.com/login now 404s. Sign-in lives on
+// the Ory-backed auth host (redirects to /login?flow=...), 2026-11-12.
+// Ory Kratos session cookie name prefix (`ory_session_<project-slug>`, apex
+// .humblebundle.com). Matched by prefix: the slug is project-specific.
+export const ORY_SESSION_COOKIE_PREFIX = 'ory_session_'
+export const HUMBLE_LOGIN_URL = 'https://auth.humblebundle.com/login'
 
 // Non-macOS only: the origin of the HIDDEN window `HumbleUser.disconnect()`'s
 // 'clearHumbleCookies' step opens purely to hang a cookie store off. It is an

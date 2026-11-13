@@ -6,7 +6,8 @@ import { AdapterResult } from 'common/types/humble'
 import {
   HUMBLE_BASE_URL,
   HUMBLE_REDEEM_PATH,
-  HUMBLE_REQUIRED_HEADERS
+  HUMBLE_REQUIRED_HEADERS,
+  ORY_SESSION_COOKIE_PREFIX
 } from './constants'
 import { standardBrowserUserAgent } from './userAgent'
 import type { AppInfo } from 'backend/process/context'
@@ -108,7 +109,11 @@ export type OrderDetailTpk = z.infer<typeof OrderDetailTpkSchema>
 function buildHeaders(cookie: string) {
   return {
     ...HUMBLE_REQUIRED_HEADERS,
-    Cookie: `_simpleauth_sess=${cookie}`
+    // Ory sessions are stored as the full `ory_session_<slug>=<value>` pair;
+    // legacy sessions are the bare `_simpleauth_sess` value.
+    Cookie: cookie.startsWith(ORY_SESSION_COOKIE_PREFIX)
+      ? cookie
+      : `_simpleauth_sess=${cookie}`
   }
 }
 
@@ -463,6 +468,42 @@ function describeSchemaFailure(
     ],
     LogPrefix.Backend
   )
+}
+
+/**
+ * Login state of a stored/candidate Humble session, via the Next.js site's own
+ * `GET /api/auth/session-status` (JSON `{ status: 'anonymous' | 'authenticated' }`).
+ *
+ * Why this and not `/api/v1/user/order`: that legacy API 404s for fully authenticated
+ * sessions since Humble's Next.js move (measured live 2026-11-13). `session-status`
+ * stays `anonymous` for the AAL1 Ory session that exists after the first factor and
+ * flips to `authenticated` only once 2FA completes (same run: whoami 403 -> 200
+ * active/aal2 at that moment), so a first-factor cookie can never complete login.
+ *
+ * `unknown` = any non-200 or unrecognised body (health is undecided, never evidence of
+ * expiry). A network failure THROWS, like every other adapter call. Status word only:
+ * the cookie and body are never logged.
+ */
+export type HumbleSessionStatus = 'authenticated' | 'anonymous' | 'unknown'
+
+export async function getSessionStatus(
+  cookie: string
+): Promise<HumbleSessionStatus> {
+  const res = await axios.get(`${HUMBLE_BASE_URL}/api/auth/session-status`, {
+    headers: {
+      Accept: 'application/json',
+      Cookie: cookie.startsWith(ORY_SESSION_COOKIE_PREFIX)
+        ? cookie
+        : `_simpleauth_sess=${cookie}`
+    },
+    timeout: REQUEST_TIMEOUT_MS,
+    maxRedirects: 0,
+    validateStatus: () => true
+  })
+  if (res.status !== 200) return 'unknown'
+  const status = (res.data as { status?: unknown } | null)?.status
+  if (status === 'authenticated' || status === 'anonymous') return status
+  return 'unknown'
 }
 
 export async function getGamekeys(

@@ -178,7 +178,7 @@ export default function WebView() {
   const wikiURL =
     'https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki'
   const gogLoginUrl = GOG_LOGIN_URL
-  const humbleLoginUrl = 'https://www.humblebundle.com/login'
+  const humbleLoginUrl = 'https://auth.humblebundle.com/login'
 
   const urls: { [pathname: string]: string } = {
     '/store/epic': epicStore,

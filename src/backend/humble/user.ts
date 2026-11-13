@@ -5,9 +5,10 @@ import { isMac } from 'backend/constants/environment'
 import {
   HUMBLE_BASE_URL,
   HUMBLE_LOGIN_URL,
+  ORY_SESSION_COOKIE_PREFIX,
   HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN
 } from './constants'
-import { getGamekeys } from './adapter'
+import { getSessionStatus } from './adapter'
 import type { HumbleSyncFence } from './syncFence'
 import { HumbleUserData } from 'common/types/humble'
 import { standardBrowserUserAgent } from './userAgent'
@@ -363,11 +364,11 @@ export class HumbleUser {
           logWarning(
             suppressedSinceLastCandidateNotFoundLog > 0
               ? [
-                  `Humble login-window cookie jar is live but _simpleauth_sess was not found in the filtered set (status unchanged; ${suppressedSinceLastCandidateNotFoundLog} prior identical tick(s) suppressed):`,
+                  `Humble login-window cookie jar is live but no Humble session cookie (ory_session_* / _simpleauth_sess) was found in the filtered set (status unchanged; ${suppressedSinceLastCandidateNotFoundLog} prior identical tick(s) suppressed):`,
                   `total=${total} matchedCount=${matchedCount}`
                 ]
               : [
-                  'Humble login-window cookie jar is live but _simpleauth_sess was not found in the filtered set:',
+                  'Humble login-window cookie jar is live but no Humble session cookie (ory_session_* / _simpleauth_sess) was found in the filtered set:',
                   `total=${total} matchedCount=${matchedCount}`
                 ],
             LogPrefix.Backend
@@ -509,10 +510,13 @@ export class HumbleUser {
               // returned for the 'www.' host — this is exactly the case
               // wry's naive per-URL cookie filter silently drops on macOS
               // (tauri-login-webview-cookies.md § "The killer").
+              // Empty name filter: the session cookie's name is no longer fixed
+              // (Ory Kratos `ory_session_<project-slug>`), so it is matched by
+              // prefix below instead of by exact name.
               const read = await seam.cookies(
                 seamLabel,
                 'www.humblebundle.com',
-                ['_simpleauth_sess']
+                []
               )
               total = read.total
               matched = read.matched
@@ -550,7 +554,16 @@ export class HumbleUser {
             }
             // SUPPORTED_NONEMPTY — the jar is live, but the CANDIDATE cookie
             // may still be absent from the filtered set (not logged in yet).
-            const match = matched.find((c) => c.name === '_simpleauth_sess')
+            // Humble moved sign-in to Ory Kratos (auth.humblebundle.com, 2026-11):
+            // the session cookie is `ory_session_<slug>` on the apex domain and
+            // `_simpleauth_sess` is never set (measured live, 2026-11-13). The
+            // legacy name stays as a fallback. The ory cookie is carried as the
+            // full `name=value` pair (see buildHeaders in adapter.ts).
+            const ory = matched.find((c) =>
+              c.name.startsWith(ORY_SESSION_COOKIE_PREFIX)
+            )
+            const legacy = matched.find((c) => c.name === '_simpleauth_sess')
+            const match = ory ? { value: `${ory.name}=${ory.value}` } : legacy
             if (!match) {
               logCandidateNotFoundStatus(total ?? 0, matched.length)
               return
@@ -687,9 +700,9 @@ export class HumbleUser {
     // authenticated session. Only a gamekeys-endpoint 'ok' proves login
     // (D-16) — this is the authoritative signal, shared with the D-13 live
     // validation gate.
-    let gamekeys: Awaited<ReturnType<typeof getGamekeys>>
+    let sessionStatus: Awaited<ReturnType<typeof getSessionStatus>>
     try {
-      gamekeys = await getGamekeys(cookieValue)
+      sessionStatus = await getSessionStatus(cookieValue)
     } catch (err) {
       // Transient/unexpected failure (network etc.) — do NOT record a
       // rejection; the next tick retries the same cookie immediately.
@@ -700,16 +713,14 @@ export class HumbleUser {
       return 'transient'
     }
 
-    if (gamekeys.status !== 'ok') {
-      // Anonymous/unauthenticated cookie value: store NOTHING, keep the
-      // watch running so the user can complete the real login. The caller
-      // throttles poll-path re-validation of this value; forced
-      // revalidations always re-check it (the value may stay IDENTICAL
-      // across anonymous → authenticated). Status-only (never the cookie
-      // value) — logging itself is delegated to the caller's
-      // logRejectionStatus() (F-2 fix, Phase 34.4.1 Plan 18), which collapses
-      // consecutive identical-status rejections instead of logging every one.
-      onRejected(gamekeys.status)
+    if (sessionStatus !== 'authenticated') {
+      // `anonymous` is the normal state for the Ory AAL1 session that exists after
+      // the FIRST factor: store NOTHING and keep watching until 2FA completes. The
+      // caller throttles poll-path re-validation of this value; forced
+      // revalidations (page-load events) always re-check it. Status word only,
+      // never the cookie — logging is delegated to the caller's
+      // logRejectionStatus() (collapses identical consecutive statuses).
+      onRejected(sessionStatus)
       return 'rejected'
     }
 
@@ -818,9 +829,9 @@ export class HumbleUser {
     }
     if (!cookie) return 'unknown'
 
-    let result: Awaited<ReturnType<typeof getGamekeys>>
+    let result: Awaited<ReturnType<typeof getSessionStatus>>
     try {
-      result = await getGamekeys(cookie)
+      result = await getSessionStatus(cookie)
     } catch (err) {
       // Transient/network failure (e.g. offline app start) -- health is
       // UNKNOWN. Message only, never the cookie.
@@ -833,8 +844,8 @@ export class HumbleUser {
       )
       return 'unknown'
     }
-    if (result.status === 'session_expired') return 'expired'
-    if (result.status === 'ok') return 'healthy'
+    if (result === 'anonymous') return 'expired'
+    if (result === 'authenticated') return 'healthy'
     return 'unknown'
   }
 
