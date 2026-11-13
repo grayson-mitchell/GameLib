@@ -1,155 +1,101 @@
 ---
 phase: 74-steam-game-updates
-verified: 2026-11-13T00:00:00Z
+verified: 2026-11-13T23:00:00Z
 status: gaps_found
-score: 5/8 must-haves verified
+score: 8/10 must-haves verified
 overrides_applied: 0
+re_verification:
+  previous_status: gaps_found
+  previous_score: 5/8
+  gaps_closed:
+    - "Single launch prompt; Esc/Play anyway/Update now each do what they say (UAT 16 partial, 20 pass; dialogs.rs NSAlert, 74-26)"
+    - "WR-06 committed delta reported done despite abort (install.ts:292)"
+    - "WR-01 retire only depots dropped from branch list (install.ts:200-243; UAT 18 pass on Dredmor 2-depot)"
+    - "WR-05 launch aborted while update queued/in flight (updateLaunchPrompt.ts:51-75)"
+    - "WR-04 registered completion clears badge (UAT 17, 22 pass)"
+    - "WR-04b PICS wait bounded (updateDetection.ts:233-246, connect inside withTimeout)"
+    - "depotJobEvent IPC invalid union (UAT 21 pass)"
+    - "WR-08 unattended auth / re-queue loop (74-24, code only; UAT 23 blocked, not proven live)"
+    - "WR-09 transient old-manifest failure no longer silently falls back (74-25, code only)"
+    - "i18n: about-wording and 48 catalogs filled (74-28)"
+  gaps_remaining:
+    - "Item 19 false finished at stale build (updateNative.ts:90-93)"
+    - "Installed Steam games vanish when signed out (library/refresh.ts:80)"
+  regressions: []
 gaps:
-  - truth: "Play on a stale bridge game shows ONE prompt (Update now / Play anyway / Don't ask again) and each choice does what it says"
+  - truth: "A registered Update handed to Steam with Steam closed waits for the PICS target build before reporting finished (CR-01 completion)"
     status: failed
-    severity: BLOCKER (must-fix)
-    reason: "Two prompts stack (inherited Heroic frontend prompt, then backend gate). The backend 3-button showMessageBox falls back to OK-only, and OK = response 0 = Update now, overriding the user's Play anyway. Play anyway and Don't ask again are unreachable."
+    severity: BLOCKER (major; UAT 19)
+    reason: "Confirmed in code: updateNative.ts:90-93 sets awaitingUpdate.targetBuild to acfFields.targetBuildId whenever it is non-'0', and only falls back to the PICS target (known.targetBuild) otherwise. On the ACF-says-current path (picsSaysNewer, line 83) TargetBuildID equals buildid, so the 74-23 target-aware quiet end matches the stale build and logs 'finished' with no update run."
     artifacts:
-      - path: "src-tauri/src/dialogs.rs:151"
-        issue: "custom buttons rendered only when buttons.len() == 2; 3 buttons fall through to OK-only"
-      - path: "src/backend/storeManagers/steam/updateLaunchPrompt.ts:57-70"
-        issue: "passes 3 buttons; default response 0 = Update now"
-      - path: "src/frontend/helpers/library.ts:177"
-        issue: "inherited gamepage:box.update prompt duplicates the backend gate"
+      - path: "src/backend/storeManagers/steam/updateNative.ts"
+        issue: "lines 90-93: ACF targetBuildId preferred over PICS target"
     missing:
-      - "Single prompt: drop the duplicate (suppress the inherited frontend prompt for Steam bridge games, or drop the backend gate)"
-      - "Either support 3 buttons in dialogs.rs (rfd YesNoCancelCustom) or restructure to 2 buttons plus a separate ack path; an unknown/fallback result must map to Play anyway (never to Update now)"
-  - truth: "A committed delta is reported as done and its GID-keyed follow-ups run (WR-06)"
+      - "When picsSaysNewer is true, use known.targetBuild; only use ACF targetBuildId when the ACF itself shows a pending update"
+  - truth: "Installed Steam games stay in the library and get an update check while signed out / after sign-in"
     status: failed
-    severity: BLOCKER (must-fix)
-    reason: "If signal.aborted is set when Rust returns completed, install.ts rewrites the result to cancelled; shim re-handover, redists, DRM verdicts and cache invalidation are skipped on an already-updated tree (shim may already be replaced)."
+    severity: BLOCKER (major; UAT 23, todo 2026-11-13-installed-steam-games-hidden-when-signed-out)
+    reason: "library/refresh.ts:80 skips the whole library refresh when the Steam client is not ready (not-signed-in), so installed games (ACF-discoverable offline) disappear and no update check runs; signing back in runs no library-wide update check."
     artifacts:
-      - path: "src/backend/storeManagers/steam/depotRust/install.ts:~266-274"
-        issue: "abort wins over committed outcome"
-      - path: "src/backend/storeManagers/steam/updateBridge.ts:150-153"
-        issue: "same rewrite on the update path"
+      - path: "src/backend/storeManagers/steam/library/refresh.ts"
+        issue: "early return on not-ready lease drops local installed games"
     missing:
-      - "When outcome.delta?.committed is true, report done and run the follow-ups regardless of signal.aborted"
-  - truth: "An update never deletes content it should keep (WR-01)"
+      - "Keep local ACF-installed games when signed out; run update check on sign-in"
+  - truth: "Resuming a paused bridge update keeps downloaded progress (WR-03)"
     status: failed
-    severity: BLOCKER (must-fix, potential user-content deletion)
-    reason: "Any ACF-installed depot not in refs.depots is sent to Rust as retired and its files deleted. refs.depots omits depots for skippedDepots (EResult 40), language, OS or DLC ownership, so a transient or partial ownership answer or language change deletes DLC/language content. Retired key is fetched with ownerAppId=appId (wrong for DLC/shared depots)."
+    severity: can-defer (minor)
+    reason: "Not addressed by 74-23..29; temps still discarded at start/cancel in delta.rs."
     artifacts:
-      - path: "src/backend/storeManagers/steam/depotRust/install.ts:200-224"
-        issue: "retired = installed minus selected, not 'dropped from the branch depot list'"
+      - path: "src-tauri/crates/gamelib-depot/src/delta.rs"
+        issue: "temps discarded"
     missing:
-      - "Retire only depots absent from the branch's PICS depot list for this build; exclude refs.skippedDepots and selector-skipped depots; use the depot's real owner app id"
-  - truth: "Launch is blocked or clearly handled while a bridge update is queued or committing (WR-05)"
+      - "Keep verified temps across pause"
+  - truth: "Minor UAT leftovers: stale game loses badge after Play (item 20), Settings autoUpdate toggle shows wrong stored value (item 20), InstallApp never retried after Steam start for launch-only games (item 19), Update button discoverability (item 1), part-downloaded prompt wording, estimate overstatement not re-tested live (item 5)"
     status: failed
-    severity: must-fix
-    reason: "A queued or in-flight update returns 'launch'; during commit the ACF still has bit 4, so Play can start the game on a half-renamed tree."
-    artifacts:
-      - path: "src/backend/storeManagers/steam/updateLaunchPrompt.ts:51-55"
-        issue: "queued -> 'launch'"
+    severity: can-defer (minor/cosmetic)
+    reason: "Recorded as gaps in 74-UAT.md; not blocking the goal."
+    artifacts: []
     missing:
-      - "When an update is queued or running, notify and abort the launch; key prompt suppression on the ack only"
-  - truth: "After Steam finishes a registered update, GameLib clears the badge and Updating state promptly (UAT item 12, WR-04)"
-    status: failed
-    severity: must-fix (minor in UAT, but a stated phase behaviour)
-    reason: "Update-state cache has no TTL/ACF re-read; poll quiet-ends at 40 ticks without invalidating the cache when buildid was already current; SteamUpdateInfo refetches only on [appName, hasUpdate]."
-    artifacts:
-      - path: "src/backend/storeManagers/steam/updateInfo.ts:33-44"
-        issue: "stale last-known cache"
-      - path: "src/backend/storeManagers/steam/updateDetection.ts:140"
-        issue: "no invalidation on completion"
-      - path: "src/backend/storeManagers/steam/library/updatePollOnce.ts:106-118"
-        issue: "completion rule misses an already-current game; quiet end does not invalidate"
-    missing:
-      - "Recompute registered state from the ACF per call; invalidate cache when the poll ends; refetch in the frontend on the 'done' transition; treat buildid already == target as immediate completion"
-  - truth: "Resuming a paused bridge update keeps downloaded progress (UAT item 6a, WR-03)"
-    status: failed
-    severity: can-defer (minor; functional, costs bandwidth) unless large-update pause is a goal
-    reason: "Temps are deleted at run start and on cancel; pause = abort, so resume re-downloads the whole delta (70 MB lost on a 101 MB delta; ~916 MiB on Manor Lords)."
-    artifacts:
-      - path: "src-tauri/crates/gamelib-depot/src/delta.rs:1273-1287"
-        issue: "temps discarded at start"
-      - path: "src-tauri/crates/gamelib-depot/src/delta.rs:1527-1535"
-        issue: "temps discarded on cancel"
-    missing:
-      - "Keep SHA-verified temps on cancel; reuse on resume when size and re-hash match; delete only on error or target-build change"
-  - truth: "Pre-click size estimate is a usable guide (UAT item 5, WR-02)"
-    status: failed
-    severity: should-fix (7x overstatement can deter updates; new-depot under-count can wrongly pass the disk check)
-    reason: "unique_chunk_bytes(changed) counts all changed chunks without crediting chunks present in the old manifest; depots with no old GID are omitted from download and peak in TS."
-    artifacts:
-      - path: "src-tauri/crates/gamelib-depot/src/manifest.rs:88-98"
-        issue: "no old-manifest chunk-SHA subtraction"
-      - path: "src/backend/storeManagers/steam/depotRust/updateEstimate.ts:117-130"
-        issue: "new depots skipped"
-    missing:
-      - "Subtract old-manifest chunk SHAs; add total_bytes of new depots to download and peak"
-  - truth: "Downloads hero shows 'Planning update...' then 'Applying update...' (UAT item 6b, WR-07)"
-    status: failed
-    severity: can-defer (cosmetic/minor)
-    reason: "Planning context never cleared on 'planned'; long pre-job TS work runs under generic status before any stage event."
-    artifacts:
-      - path: "src/backend/storeManagers/steam/depotRust/progressBridge.ts:45-58"
-        issue: "context not cleared; no early TS status"
-      - path: "src/backend/downloadmanager/utils.ts:486"
-        issue: "hero phase mapping"
-    missing:
-      - "Emit planning status from TS before the estimate; send plain 'updating' on 'planned'"
-  - truth: "Pre-launch 'bounded 3 s' PICS wait is bounded (WR-04b)"
-    status: failed
-    severity: must-fix (violates a D-05 stated bound; UAT offline pass only exercised fast-fail)
-    reason: "anonymousClient.get('update-check') is outside withTimeout (15 s connect), force:true bypasses cache; Play can block ~18 s."
-    artifacts:
-      - path: "src/backend/storeManagers/steam/updateDetection.ts:231-241"
-        issue: "connect not inside the timeout"
-    missing:
-      - "Wrap connect and getProductInfo in one withTimeout(timeoutMs)"
-  - truth: "Auto-update respects on-demand-only authentication and does not re-queue failing updates each refresh (WR-08)"
-    status: failed
-    severity: must-fix (contradicts the frozen Steam-auth rule); re-queue churn can-defer
-    reason: "estimateBridgeUpdate takes acquireAuthenticated(guidedAction 'install') with no user gesture; failing updates re-queue each refresh with an error dialog; detection runs twice per refresh (UAT item 14 saw 3x 'Auto-Updating' log lines)."
-    artifacts:
-      - path: "src/backend/utils/checkGameUpdates.ts:50-63"
-        issue: "unattended authenticated path"
-      - path: "src/backend/storeManagers/steam/updateBridge.ts:120-125"
-        issue: "guided auth on auto path"
-    missing:
-      - "Non-interactive auto path (no guided sign-in/no dialog); per-build 'attempted' marker; share one detection result"
-  - truth: "Delta fallback only on a definitive old-manifest failure (WR-09)"
-    status: failed
-    severity: should-fix
-    reason: "Any old-manifest load failure (timeout, 5xx, not_signed_in) silently becomes a whole-install reconcile that also drops retired_depots."
-    artifacts:
-      - path: "src-tauri/crates/gamelib-depot/src/delta.rs:1082-1087"
-        issue: "over-broad fallback"
-    missing:
-      - "Fall back only on definitive unavailable/decode error; propagate transient failures"
-  - truth: "Game page makes Update and the update size easy to find (UAT item 1)"
-    status: failed
-    severity: can-defer (cosmetic; works via inherited status text)
-    reason: "No Update button; trigger is clickable status text (GameStatus.tsx:227); size line is in the Info tab (index.tsx:677)."
-    artifacts:
-      - path: "src/frontend/screens/Game/GamePage/index.tsx:677"
-        issue: "size line off the primary action area"
-    missing:
-      - "Real Update button; surface size line near status"
-  - truth: "i18n and fork-touched-file gates stay green for new keys"
-    status: failed
-    severity: should-fix (phase added regressions on top of pre-existing red)
-    reason: "About 30 new gamelib en keys untranslated; two new fork-touched files not in meta/i18nForkTouchedFiles.json (UAT preamble)."
-    artifacts:
-      - path: "meta/i18nForkTouchedFiles.json"
-        issue: "missing two files"
-    missing:
-      - "Add the two files; translate or register the ~30 keys per the repo's i18n gate"
+      - "Triage into todos"
 deferred: []
 ---
+
+## Re-verification after gap-closure round 2 (plans 74-23..74-29), 2026-11-13
+
+**Status: gaps_found (score 8/10).** Round 2 closed every round-1 must-fix item in code, and the live gate (74-UAT.md: 23 items, 16 pass, 4 issue, 2 skipped, 1 blocked) proved most of them: single native prompt with Esc = Play anyway (UAT 20), registered InstallApp completion clears promptly (UAT 17, 22), DLC/multi-depot update keeps content (UAT 18, Dredmor 98800), no depotJobEvent IPC errors (UAT 21), Steam-closed hand-off starts Steam (UAT 19 first half). Two major gaps remain.
+
+### Closed (code checked, not summary-trusted)
+- WR-06: install.ts:292 reports done when abort races a committed delta.
+- WR-01: install.ts:200-243 computes retired depots from the branch list and keeps depots on an incomplete list; live-proved.
+- WR-05: updateLaunchPrompt.ts:51-75 aborts launch for part-updated, in-flight and queued-running states.
+- WR-04b: updateDetection.ts:233-246 wraps connect and read in one withTimeout.
+- Stacked prompts: live-proved by UAT 20 (one native box, no Heroic box).
+- WR-08, WR-09, CR-02: implemented per 74-24/74-25 summaries, unit-tested; CR-02 not live-proved (UAT 23 blocked).
+
+### Open
+1. **BLOCKER, UAT 19 (verified in code):** updateNative.ts:90-93 `targetBuild = acfFields.targetBuildId (if non-'0') ?? known.targetBuild`. With ACF TargetBuildID == buildid (the current-ACF path that line 83-85 explicitly handles), the target-aware poll finishes at the stale build. The fix is to prefer the PICS target when picsSaysNewer.
+2. **BLOCKER, UAT 23:** library/refresh.ts:80 returns without listing installed games when signed out; sign-in triggers no update check.
+3. Minor/cosmetic (can-defer): WR-03 resume progress, badge lost after Play (UAT 20), Settings autoUpdate toggle display, InstallApp not retried for launch-only games, Update button discoverability, estimate overstatement not re-measured.
+
+### Requirements
+STEAM-01 and STEAM-02 are marked `[x]`/Complete in REQUIREMENTS.md (lines 39-40, 86-87). Both IDs are claimed by plans 74-23..28 (74-29 claims none). STEAM-01 is not fully met while open gaps 1 and 2 stand (a registered update can report finished without updating; installed games vanish signed-out). STEAM-02 is now substantively met (live: UAT 3, 5, 6, 14, 18, 21) apart from signed-out visibility. Recommendation: revert STEAM-01 to Pending until gaps 1 and 2 close. No orphaned IDs (STEAM-03 is Phase 75). Sub-IDs STEAM-01a-d/02a-d remain plan-local.
+
+### Human verification required
+Re-run UAT 19 (completion at the PICS target) and UAT 23 (CR-02 failing unattended update, once signed-out library is fixed). UAT 15 stays deferred to the Windows todo.
+
+### Pre-existing failures (not phase 74)
+legendary epicOfflineMode 6c, tauriShellSource WR-07, gamelibCatalogParity/lintTranslations/x86CallbackWineHarness slot 15, codecheck step 2 (meta/gen_vtables.ts), moduleStateCensus on uncommitted humble/adapter.ts. Not re-run here.
+
+---
+
+## Round-1 report (preserved)
 
 # Phase 74: Steam game updates Verification Report
 
 **Phase Goal:** GameLib can tell when an installed Steam game has an update and can apply it, for both Steam-registered games and bridge (GameLib-installed) games.
 **Verified:** 2026-11-13
 **Status:** gaps_found
-**Re-verification:** No, initial verification
+**Re-verification:** Round-1 report; see round-2 section above
 
 ## Goal Achievement
 
