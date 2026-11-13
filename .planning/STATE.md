@@ -5,10 +5,10 @@ milestone_name: Foundations
 current_phase: "66.4"
 current_phase_name: Backend module state long tail, the census-to-test flip, then the live smokes (INSERTED)
 status: executing
-stopped_at: Completed 66.4-25-PLAN.md
+stopped_at: Completed 66.4-23-PLAN.md
 last_updated: "2026-11-13T11:38:25.873Z"
 last_activity: 2026-11-14
-last_activity_desc: Completed gap plan 66.4-25 (G-66.4-W2 resolved, Windows UAT item 7 pass)
+last_activity_desc: Completed 66.4-23 (Windows delta UAT complete; poller todo closed)
 state_head: 15172cf91b5c71ee792ce9c54e1650650fa07b4d
 progress:
   total_phases: 23
@@ -77,9 +77,9 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 66.4 (Backend module state long tail, the census-to-test flip, then the live smokes (INSERTED)) — EXECUTING
-Plan: 25 of 25 (66.4-25 complete; 66.4-23 Windows UAT still open: test 3 blocked)
+Plan: 25 of 25 (all plans complete; 66.4-23 Windows UAT complete, test 3 blocked)
 Status: Executing Phase 66.4
-Last activity: 2026-11-14 — Completed gap plan 66.4-25 (G-66.4-W2 resolved: real Windows .lnk readback, dispatch probe with negative control, UAT item 7 pass)
+Last activity: 2026-11-14 — Completed 66.4-23 (Windows delta UAT: 5 pass, item 2 resolved as G-66.4-W2, item 3 blocked; RunningAppID poller todo closed, macOS half split to a new todo)
 
 Progress: [██████░░░░] 61%
 
@@ -749,7 +749,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 ## Session Continuity
 
 Last session: 2026-11-13T11:38:19.922Z
-Stopped at: Completed 66.4-25-PLAN.md
+Stopped at: Completed 66.4-23-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
