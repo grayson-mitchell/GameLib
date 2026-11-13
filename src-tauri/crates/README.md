@@ -14,6 +14,8 @@ The app crate (`src-tauri`) stays the workspace root. Each port adds:
 | `src-tauri/crates/<name>`     | Tauri-free library. No `tauri` dependency, ever.              |
 | `src-tauri/crates/<name>-cli` | Optional bin, only if `meta/` tools need the code headlessly. |
 
+Current crates: `gamelib-scan`, `gamelib-depot`, `gamelib-steamfiles`, each with a `-cli`.
+
 Every crate sets `rust-version = "1.77.2"` and the two `[lints.clippy]` deny lines
 (`dbg_macro`, `todo`). Exception: `gamelib-depot` and `gamelib-depot-cli` set `rust-version = "1.89"`
 because their dependencies need it (aes 0.9: 1.89; cbc, sha1, prost: 1.85). Adding a crate or dependency changes `Cargo.lock`: update
@@ -89,7 +91,7 @@ persisted user setting would have needed UI, migration and a removal path.
 
 ## 8. CI
 
-`.github/workflows/rust-test.yml` runs an explicit `cargo test -p gamelib-scan -p gamelib-scan-cli -p gamelib-depot -p gamelib-depot-cli`
+`.github/workflows/rust-test.yml` runs an explicit `cargo test -p gamelib-scan -p gamelib-scan-cli -p gamelib-depot -p gamelib-depot-cli -p gamelib-steamfiles -p gamelib-steamfiles-cli`
 and `clippy --workspace` on both legs. Workspace crates are not default members, so a plain
 `cargo test` in `src-tauri` silently skips them. A new crate needs its own `-p` entry.
 
@@ -167,3 +169,27 @@ parse, chunk download, decrypt and decompress, file post-processing, reconcile, 
   deleting a dependency, check what third-party code still loads, not only first-party imports.
 - **Deletion gate:** `src/backend/__tests__/depotPortComplete.test.ts`, modelled on the scanner
   gate. It also asserts the packages and patches that must stay.
+
+## 11. Third worked example: Steam local file formats (Phase 75)
+
+`gamelib-steamfiles` and `gamelib-steamfiles-cli` replaced the TypeScript readers and writers of
+Steam's local files (`libraryfolders.vdf`, `appmanifest_*.acf`, `registry.vdf`, `localconfig.vdf`,
+`installscript.vdf`, `shortcuts.vdf`), `@node-steam/vdf` and `steam-shortcut-editor`. History lives
+in `.planning/phases/75-steam-local-file-formats-in-rust/`. What it added to the recipe above:
+
+- **One lossless text-KV tree.** A single tree type that keeps ordering and formatting replaces
+  three separate TS parsers; callers read it through merged and ordered views (duplicate blocks
+  merge the way Steam does).
+- **Lossless binary KV.** `shortcuts.vdf` round-trips byte-identically, and writes are described
+  mutations (add, update, remove an entry) applied to the tree, never a re-serialise of values
+  the caller did not touch.
+- **Jest parity without cargo.** The TS wrappers are tested by replaying recorded Rust results
+  (`tests/fixtures/rust-results.json`) against the kept goldens (`expected.json`,
+  `invocations.json`), so Jest needs no Rust toolchain. `meta/gamelibSteamfilesCli.ts` re-records them.
+- **Discovery by env at spawn.** The shell computes Steam directories and passes them to the
+  sidecar at spawn, because settings construction runs before the RPC server exists.
+- **Divergences.** The sweep and goldens found 16 divergences from the old parsers (for
+  example numeric coercion, truncated manifests, duplicate blocks); each was judged against Valve KeyValues behaviour and
+  operator-accepted (`75-PARITY.md`).
+- **Live gate.** CI was green on all three OSes and the live macOS UAT passed 8 of 8, after which
+  both D-08 flags, the oracle and the sweep were deleted; `steamFilesPortComplete.test.ts` pins that.

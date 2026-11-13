@@ -35,7 +35,7 @@ The short version: **steam-session** for auth (QR / credentials / SteamGuard, yi
 token), **steam-user** to reach the CM network anonymously for public app data
 and authenticated only on demand (explicit Refresh, sign-in, redeem, depot installs; wrapped on
 macOS so Mac Steam's Friends list stays signed in), calling `getUserOwnedApps()`,
-**@node-steam/vdf** to read local `libraryfolders.vdf` and `appmanifest_*.acf`, **axios** for
+the in-repo **gamelib-steamfiles** crate (Rust, via rustInvoke and gamelib-steamfiles-cli) to read `libraryfolders.vdf`, ACFs, `registry.vdf`, `localconfig.vdf`, `installscript.vdf` and `shortcuts.vdf`, **axios** for
 public store metadata and artwork, and `shell.openExternal("steam://rungameid/{appId}")` to
 launch.
 
