@@ -4,6 +4,7 @@ import { updateBridgeGame } from '../updateBridge'
 import { updateRegisteredSteamGame } from '../updateNative'
 import { findBridgeInstallBottle } from '../bridgeBottle'
 import { readAcfUpdateState } from '../library/acfUpdateState'
+import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -30,6 +31,7 @@ const self = {
   appId: '12345',
   deps: {
     paths: {},
+    steamInstallRuntime: createTestSteamInstallRuntime(),
     steamSession: { authTrigger: { noteSteamAuthTrigger: note } }
   }
 }
@@ -73,6 +75,15 @@ describe('SteamGame.update dispatch', () => {
     await run({ unattended: true })
     expect(note).not.toHaveBeenCalled()
     expect(updateBridgeGame).toHaveBeenCalledWith(self, { unattended: true })
+  })
+
+  it('unattended bridge update records the attempt marker; an attended one clears it', async () => {
+    jest.mocked(findBridgeInstallBottle).mockReturnValue('b')
+    const attempts = self.deps.steamInstallRuntime.autoUpdateAttempts
+    await run({ unattended: true })
+    expect(attempts.has('12345')).toBe(true)
+    await run()
+    expect(attempts.has('12345')).toBe(false)
   })
 
   it('unattended registered update aborts and never calls Steam (D-02)', async () => {

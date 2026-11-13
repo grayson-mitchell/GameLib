@@ -47,6 +47,8 @@ export interface SteamInstallRuntime {
   uninstallPolls: UninstallPolls
   /** Per-app update-detection results (74-04); closure Map only. */
   updateStates: SteamUpdateStateCache
+  /** CR-02: appId -> target build of the last unattended auto-update attempt; per boot, closure Map only. */
+  autoUpdateAttempts: Map<string, string>
 }
 
 /** The slice the depot pipeline (plan build, Rust jobs, shared redists) reads. */
@@ -67,6 +69,7 @@ export function createSteamInstallRuntime(
     polls,
     restartHold: createSteamRestartHold({ polls }),
     uninstallPolls: createUninstallPolls(),
-    updateStates: createSteamUpdateStateCache()
+    updateStates: createSteamUpdateStateCache(),
+    autoUpdateAttempts: new Map()
   }
 }

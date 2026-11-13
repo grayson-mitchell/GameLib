@@ -39,6 +39,10 @@ import { steamLaunchedStopDeps } from './steamLaunchedDeps'
 import { moveInstall, repair, syncSaves } from './gameMaintenance'
 import { uninstall } from './gameUninstall'
 import { updateBridgeGame } from './updateBridge'
+import {
+  clearAutoUpdateAttempt,
+  noteAutoUpdateAttempt
+} from './autoUpdateAttempts'
 import { updateRegisteredSteamGame } from './updateNative'
 import { readAcfUpdateState } from './library/acfUpdateState'
 
@@ -455,13 +459,18 @@ export default class SteamGame implements Game {
     // auto-update must not: it may only use a session already unlocked this boot.
     if (!unattended) {
       this.deps.steamSession.authTrigger.noteSteamAuthTrigger('user-install')
+      // CR-02: the user acting re-arms auto-update for this game.
+      clearAutoUpdateAttempt(this.deps, this.appId)
     }
     // Phase 74: bridge installs get the chunk-level delta; Steam-registered
     // installs are handed to Steam; Phase 17 bottle installs are neither.
     if (bridgeBottle.findBridgeInstallBottle(this.deps.paths, this.appId)) {
-      return unattended
-        ? updateBridgeGame(this, { unattended: true })
-        : updateBridgeGame(this)
+      if (unattended) {
+        // CR-02: recorded before the run so every early return or throw is covered.
+        noteAutoUpdateAttempt(this.deps, this.appId)
+        return updateBridgeGame(this, { unattended: true })
+      }
+      return updateBridgeGame(this)
     }
     if ((await readAcfUpdateState(this.deps, this.appId, 'native')) !== null) {
       if (unattended) {

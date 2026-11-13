@@ -2,6 +2,8 @@
 import SteamLibraryManager from '../library'
 import { detectSteamUpdates } from '../updateDetection'
 import { logWarning } from 'backend/logger'
+import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
+import { noteAutoUpdateAttempt } from '../autoUpdateAttempts'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -9,7 +11,11 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
-jest.mock('../updateDetection', () => ({ detectSteamUpdates: jest.fn() }))
+jest.mock('../updateDetection', () => ({
+  ...jest.requireActual('../updateDetection'),
+  detectSteamUpdates: jest.fn(),
+  getLastKnownSteamUpdateState: jest.fn()
+}))
 jest.mock('../games', () => ({ __esModule: true, default: jest.fn() }))
 jest.mock('../library/acfState', () => ({ scanDownloadingAppIds: jest.fn() }))
 jest.mock('../library/refresh', () => ({
@@ -23,12 +29,21 @@ jest.mock('../../../dialog/dialog', () => ({ notify: jest.fn() }))
 
 const detect = detectSteamUpdates as jest.Mock
 
-function st(appId: string, kind: string, state: string) {
-  return { appId, kind, state, installedBuild: '1', branch: 'public' }
+function st(appId: string, kind: string, state: string, targetBuild = '9') {
+  return {
+    appId,
+    kind,
+    state,
+    installedBuild: '1',
+    targetBuild,
+    branch: 'public'
+  }
 }
 
 function makeLib() {
-  return new SteamLibraryManager({} as never)
+  return new SteamLibraryManager({
+    steamInstallRuntime: createTestSteamInstallRuntime()
+  } as never)
 }
 
 describe('Steam update listing', () => {
@@ -57,5 +72,33 @@ describe('Steam update listing', () => {
     expect(await lib.listUpdateableGames()).toEqual([])
     expect(await lib.listAutoUpdateableGames()).toEqual([])
     expect(logWarning).toHaveBeenCalled()
+  })
+
+  it('one refresh (badge list then auto list) detects once', async () => {
+    const lib = makeLib()
+    await lib.listUpdateableGames()
+    await lib.listAutoUpdateableGames()
+    expect(detect).toHaveBeenCalledTimes(1)
+  })
+
+  it('auto list alone still detects, and the hand-off is one-shot', async () => {
+    const lib = makeLib()
+    await lib.listAutoUpdateableGames()
+    expect(detect).toHaveBeenCalledTimes(1)
+    await lib.listAutoUpdateableGames()
+    expect(detect).toHaveBeenCalledTimes(2)
+  })
+
+  it('auto list drops an app already attempted for its build, not a newer one', async () => {
+    const lib = makeLib()
+    const deps = (lib as unknown as { deps: never }).deps
+    const { getLastKnownSteamUpdateState } = jest.requireMock(
+      '../updateDetection'
+    ) as { getLastKnownSteamUpdateState: jest.Mock }
+    getLastKnownSteamUpdateState.mockReturnValue({ targetBuild: '9' })
+    noteAutoUpdateAttempt(deps, '10')
+    expect(await lib.listAutoUpdateableGames()).toEqual(['20'])
+    detect.mockResolvedValue([st('10', 'bridge', 'stale', '10')])
+    expect(await lib.listAutoUpdateableGames()).toEqual(['10'])
   })
 })

@@ -19,7 +19,8 @@ import {
 } from './resumeBreadcrumbs'
 import { rearmPersistedSteamRestartHolds } from './resume'
 import { refresh, refreshInstallState } from './refresh'
-import { detectSteamUpdates } from '../updateDetection'
+import { detectSteamUpdates, type SteamUpdateState } from '../updateDetection'
+import { wasAutoUpdateAttempted } from '../autoUpdateAttempts'
 import type { SteamLaunchWatchRegistry } from '../steamLaunchWatch'
 
 /** The collaborators SteamLibraryManager uses; narrowed by its own plan. */
@@ -294,23 +295,48 @@ export default class SteamLibraryManager implements LibraryManager {
     return undefined
   }
 
+  /**
+   * checkGameUpdates calls listUpdateableGames then listAutoUpdateableGames, so the first hands
+   * its detection pass to the second (one-shot): one refresh is one detection pass (todo
+   * 2026-11-13).
+   */
+  private pendingDetection: Promise<SteamUpdateState[]> | undefined
+
   /** Phase 74: stale appIds (bridge and registered) for the badge list; 'unknown' is never listed (D-15). */
   async listUpdateableGames(): Promise<string[]> {
-    return this.staleAppIds()
-  }
-
-  /** Phase 74 D-02: only bridge games are ever queued without a click. */
-  async listAutoUpdateableGames(): Promise<string[]> {
-    return this.staleAppIds('bridge')
-  }
-
-  private async staleAppIds(kind?: 'bridge' | 'registered'): Promise<string[]> {
+    const p = detectSteamUpdates(this.deps)
+    this.pendingDetection = p
+    // Nobody may await it (no auto list follows): never an unhandled rejection.
+    p.catch(() => undefined)
     try {
-      const states = await detectSteamUpdates(this.deps)
-      return states
-        .filter((s) => s.state === 'stale' && (!kind || s.kind === kind))
+      return (await p)
+        .filter((s) => s.state === 'stale')
         .map((s) => s.appId)
         .sort()
+    } catch (error) {
+      logWarning(['Steam update detection failed:', error], LogPrefix.Steam)
+      return []
+    }
+  }
+
+  /** Phase 74 D-02: only bridge games are ever queued without a click; CR-02 drops an already-attempted build. */
+  async listAutoUpdateableGames(): Promise<string[]> {
+    const p = this.pendingDetection ?? detectSteamUpdates(this.deps)
+    this.pendingDetection = undefined
+    try {
+      const out: string[] = []
+      for (const s of await p) {
+        if (s.state !== 'stale' || s.kind !== 'bridge') continue
+        if (wasAutoUpdateAttempted(this.deps, s)) {
+          logInfo(
+            `Steam: skipping auto-update for appId ${s.appId}: build ${s.targetBuild ?? '?'} already attempted this session`,
+            LogPrefix.Steam
+          )
+          continue
+        }
+        out.push(s.appId)
+      }
+      return out.sort()
     } catch (error) {
       logWarning(['Steam update detection failed:', error], LogPrefix.Steam)
       return []
