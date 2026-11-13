@@ -543,12 +543,6 @@ export default React.memo(function GamePage(): JSX.Element | null {
                     >
                       <ArrowBackIosNew />
                     </NavLink>
-                    <div className="topRowWapperInner">
-                      <DotsMenu
-                        gameInfo={gameInfo}
-                        handleUpdate={handleUpdate}
-                      />
-                    </div>
                   </div>
                   <div className="mainInfoWrapper">
                     <div className="mainInfo">
@@ -596,6 +590,10 @@ export default React.memo(function GamePage(): JSX.Element | null {
                         <SettingsButton
                           gameInfo={gameInfo}
                           isUninstalling={isUninstalling}
+                        />
+                        <DotsMenu
+                          gameInfo={gameInfo}
+                          handleUpdate={handleUpdate}
                         />
                       </div>
                       {wikiLink}
