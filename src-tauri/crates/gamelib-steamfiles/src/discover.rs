@@ -130,8 +130,52 @@ fn hkcu_string_impl(_subkey: &str, _value: &str) -> Option<String> {
 
 #[cfg(windows)]
 fn hkcu_string_impl(subkey: &str, value: &str) -> Option<String> {
-    let _ = (subkey, value);
-    None
+    use windows_sys::Win32::Foundation::ERROR_SUCCESS;
+    use windows_sys::Win32::System::Registry::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_SZ};
+
+    const MAX_U16: u32 = 32_768;
+    let wide = |s: &str| -> Vec<u16> { s.encode_utf16().chain(std::iter::once(0)).collect() };
+    let (sub, val) = (wide(subkey), wide(value));
+
+    // Size query (bytes, including the terminating NUL).
+    let mut bytes: u32 = 0;
+    // SAFETY: `sub` and `val` are NUL-terminated and outlive the call; a null data pointer with a
+    // valid `bytes` out-pointer is the documented size query.
+    let st = unsafe {
+        RegGetValueW(
+            HKEY_CURRENT_USER,
+            sub.as_ptr(),
+            val.as_ptr(),
+            RRF_RT_REG_SZ,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            &mut bytes,
+        )
+    };
+    if st != ERROR_SUCCESS || bytes == 0 || bytes / 2 > MAX_U16 {
+        return None;
+    }
+    let mut buf = vec![0u16; (bytes as usize).div_ceil(2)];
+    let mut len = (buf.len() * 2) as u32;
+    // SAFETY: `buf` holds `len` bytes exactly (len == buf.len() * 2), the invariant RegGetValueW
+    // relies on for the write; the pointers are valid for the duration of the call.
+    let st = unsafe {
+        RegGetValueW(
+            HKEY_CURRENT_USER,
+            sub.as_ptr(),
+            val.as_ptr(),
+            RRF_RT_REG_SZ,
+            std::ptr::null_mut(),
+            buf.as_mut_ptr().cast(),
+            &mut len,
+        )
+    };
+    if st != ERROR_SUCCESS {
+        return None;
+    }
+    let units = ((len as usize) / 2).min(buf.len());
+    let end = buf[..units].iter().position(|&c| c == 0).unwrap_or(units);
+    Some(String::from_utf16_lossy(&buf[..end]))
 }
 
 pub fn discover_default() -> Discovery {
