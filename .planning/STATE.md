@@ -4,13 +4,13 @@ milestone: v0.10
 milestone_name: Foundations
 status: executing
 stopped_at: Phase 75 context gathered
-last_updated: "2026-11-13T18:48:34.398Z"
+last_updated: "2026-11-13T18:54:29.055Z"
 last_activity: 2026-11-13
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 361
-  completed_plans: 346
+  completed_plans: 347
   percent: 61
 ---
 
@@ -73,9 +73,9 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 75 (steam-local-file-formats-in-rust) — EXECUTING
-Plan: 23 of 35
+Plan: 24 of 35
 Status: Ready to execute
-Last activity: 2026-11-14 - Completed quick task 261114-at7: Show a planning label on the hero during the long pre-job work of a bridge update
+Last activity: 2026-11-13
 
 Progress: [██████████] 96%
 
@@ -738,7 +738,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-13T18:48:34.390Z
+Last session: 2026-11-13T18:54:29.046Z
 Stopped at: Phase 75 context gathered
 Resume file: None
 
