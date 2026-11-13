@@ -111,6 +111,16 @@ impl FakeCdn {
             .insert(target.to_string(), replies.into());
     }
 
+    /// A copy of the replies currently queued for `target`.
+    pub fn replies(&self, target: &str) -> Vec<Reply> {
+        self.script
+            .lock()
+            .unwrap()
+            .get(target)
+            .map(|q| q.iter().cloned().collect())
+            .unwrap_or_default()
+    }
+
     pub fn hits(&self) -> Vec<Hit> {
         self.hits.lock().unwrap().clone()
     }

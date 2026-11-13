@@ -323,6 +323,19 @@ impl Env {
             .join("gamelib-delta")
             .join(format!("{APP}.json"))
     }
+    pub fn temp_ledger_path(&self) -> PathBuf {
+        self.steamapps()
+            .join("gamelib-delta")
+            .join(format!("{APP}.temps.json"))
+    }
+    /// Writes the kept-temp ledger in its documented schema (`temps` are manifest-form names).
+    pub fn write_temp_ledger(&self, new: &[(&str, String)], temps: &[&str]) {
+        let gids: serde_json::Map<String, Value> =
+            new.iter().map(|(d, g)| (d.to_string(), json!(g))).collect();
+        let j = json!({ "appId": APP.to_string(), "newGids": gids, "temps": temps });
+        std::fs::create_dir_all(self.temp_ledger_path().parent().unwrap()).unwrap();
+        std::fs::write(self.temp_ledger_path(), serde_json::to_vec(&j).unwrap()).unwrap();
+    }
     pub fn acf_string(&self) -> String {
         String::from_utf8(self.acf_bytes()).unwrap()
     }

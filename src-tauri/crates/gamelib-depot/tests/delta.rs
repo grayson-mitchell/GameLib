@@ -733,7 +733,24 @@ fn delta_cancel_before_commit_keeps_old() {
         assert_eq!(&env.root_file(n), b, "{n}");
     }
     assert!(!env.root().join("d.bin").exists());
-    assert!(tmp_files(env.dir.path()).is_empty());
+    // Verified temps (b, c) may survive a pause for the resume; a partial one (d) never does. The
+    // b and c builds race the cancel, so assert no count: whatever remains holds the new bytes.
+    for t in tmp_files(env.dir.path()) {
+        let name = t
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .trim_end_matches(DELTA_TMP_SUFFIX)
+            .to_string();
+        assert_ne!(name, "d.bin", "a partial temp is never kept");
+        let want = &new.depots[0]
+            .files
+            .iter()
+            .find(|f| f.path == name)
+            .unwrap()
+            .content;
+        assert_eq!(&std::fs::read(&t).unwrap(), want, "{name}");
+    }
     assert_eq!(env.acf_bytes(), acf_before);
     assert!(out.acf.is_none());
     assert!(!out.delta.as_ref().unwrap().committed);
