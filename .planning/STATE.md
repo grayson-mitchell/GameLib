@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 75 (steam-local-file-formats-in-rust) — EXECUTING
 Plan: 23 of 35
 Status: Ready to execute
-Last activity: 2026-11-13
+Last activity: 2026-11-13 - Completed quick task 261114-aqa: Stop Set-Steam-offline dialog when leaving in-app Steam Store
 
 Progress: [██████████] 96%
 
@@ -733,6 +733,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261113-qu7 | Dungeons of Dredmor (98800) shim no longer withheld: x86 shim serves STEAMREMOTESTORAGE_INTERFACE_VERSION008 as a cloud-disabled stub (manifest extracted from Proton 2c620c0f, 51 methods, ordinal 74; export SteamAPI_SteamRemoteStorage_v008); measured Dredmor fixtures + acceptance test (zero unservable). Todo closed. | 2026-11-13 | 2cb955e94, 58af1adf3, b6fe30870 | shimCoverage 118/118; gen-vtables idempotent; COMPILE GATE x86+x64 pass; planning-gates 12/12; live 98800 launch verified 19:31 (HELLO, GINIT SteamAPI_Init ok=1, game-originated UserStats calls, RemoteStorage008 stub calls) | [261113-qu7-add-remotestorage-v008-coverage-to-steam](./quick/261113-qu7-add-remotestorage-v008-coverage-to-steam/) |
 | 261113-spw | Bridge shim exports the SDK-spelling flat accessors SteamAPI_SteamInventory_v003 / SteamVideo_v007 / SteamHTMLSurface_v005 as flatAccessorAliases (old version-string names kept); fixes Core Keeper's EntryPointNotFoundException at Steam init. | 2026-11-13 | 11b5cf61d | Meta jest 427 pass; gen-vtables no diff; arm64 DLL exports verified; Core Keeper live re-verify pending | [261113-spw-add-steamapi-steaminventory-v003-accesso](./quick/261113-spw-add-steamapi-steaminventory-v003-accesso/) |
 | fast | Follow-on to 261113-spw: aliases SteamAPI_SteamMatchmakingServers_v002 / SteamVideo_v002 / SteamGameSearch_v001 (Core Keeper's next EntryPointNotFound; names from the game's Facepunch import table). Only game-server accessors remain unexported. | 2026-11-13 | b8e5cb85e | Meta jest 442 pass; arm64 DLL re-diffed; Core Keeper live re-verify pending | — |
+| 261114-aqa | Leaving the in-app Steam Store no longer raises "Set Steam offline to continue": Steam /app/ pages arm the store-exit refresh only on in-store nav (cart/checkout still on entry); 'steam-store-exit' arms a distinct non-escalating 'store-exit' logon grant, so a timed-out go-offline wrap skips the logon quietly and keeps the cached library. | 2026-11-13 | 423f74129, abd2bc538 | Jest 6 suites 428 pass; tsc no new errors; eslint + scoped prettier clean; build:sidecar OK; review 0 critical / 1 warning (WR-01 pre-existing failed banner on logon-rejected); live check pending | [261114-aqa-stop-set-steam-offline-dialog-when-leavi](./quick/261114-aqa-stop-set-steam-offline-dialog-when-leavi/) |
 
 ## Session Continuity
 
