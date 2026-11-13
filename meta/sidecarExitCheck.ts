@@ -28,10 +28,13 @@
  * `pnpm smoke:exit-check` (live) or `pnpm smoke:exit-check -- --mode eof`.
  */
 import { existsSync } from 'node:fs'
-import { spawn, spawnSync } from 'node:child_process'
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import { join } from 'node:path'
 
-import { createFakeHomeProfile } from '../src/backend/testUtils/fakeHomeProfile'
+import {
+  createFakeHomeProfile,
+  type FakeHomeProfile
+} from '../src/backend/testUtils/fakeHomeProfile'
 import { READY_SENTINEL } from '../src/common/types/sidecarTransport'
 
 export interface PsRow {
@@ -168,6 +171,7 @@ const POLL_MS = 50
 const QUIT_WAIT_MS = 30_000
 const SETTLE_MS = 5000
 const READY_WAIT_MS = 60_000
+const KILL_WAIT_MS = 5000
 
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => {
@@ -202,7 +206,7 @@ function isPidAlive(pid: number): boolean {
   return r.status === 0 && r.stdout.trim() !== ''
 }
 
-interface Report {
+export interface Report {
   mode: 'eof' | 'live'
   verdict: Verdict
   latencyMs: number | null
@@ -228,30 +232,30 @@ function finish(report: Report): never {
   )
 }
 
-function invalid(mode: 'eof' | 'live', note: string): never {
-  return finish({
+function invalidReport(mode: 'eof' | 'live', note: string): Report {
+  return {
     mode,
     verdict: 'INVALID',
     latencyMs: null,
     survivors: [],
     vite: [],
     note
-  })
+  }
 }
 
-async function runLive(): Promise<void> {
+async function runLive(): Promise<Report> {
   assertRepoRoot(process.cwd())
   const sidecarPid = [
     ...pgrepPids(DEV_SIDECAR_PATTERN),
     ...pgrepPids(PACKAGED_SIDECAR_PATTERN)
   ].find((p) => p !== process.pid)
   const before = snapshotPs()
-  if (!Array.isArray(before)) return invalid('live', before.reason)
+  if (!Array.isArray(before)) return invalidReport('live', before.reason)
   if (sidecarPid === undefined) {
-    return invalid('live', 'no sidecar process found before quit')
+    return invalidReport('live', 'no sidecar process found before quit')
   }
   const sidecarRow = before.find((r) => r.pid === sidecarPid)
-  if (!sidecarRow) return invalid('live', 'sidecar pid missing from ps')
+  if (!sidecarRow) return invalidReport('live', 'sidecar pid missing from ps')
   const shellPid = sidecarRow.ppid
   const tree = descendantsOf(before, sidecarPid)
   console.log(`shell pid ${shellPid}, sidecar pid ${sidecarPid}`)
@@ -274,14 +278,16 @@ async function runLive(): Promise<void> {
     }
     await sleep(POLL_MS)
   }
-  if (quitAt === null) return invalid('live', 'shell never exited within 30 s')
+  if (quitAt === null) {
+    return invalidReport('live', 'shell never exited within 30 s')
+  }
 
   const latencyMs = goneAt === null ? null : goneAt - quitAt
   await sleep(SETTLE_MS)
   const after = snapshotPs()
-  if (!Array.isArray(after)) return invalid('live', after.reason)
+  if (!Array.isArray(after)) return invalidReport('live', after.reason)
   const survivors = classifySurvivors([sidecarRow, ...tree], after)
-  return finish({
+  return {
     mode: 'live',
     verdict: exitVerdict({
       mode: 'live',
@@ -292,60 +298,115 @@ async function runLive(): Promise<void> {
     latencyMs,
     survivors,
     vite: pgrepPids('vite')
-  })
+  }
 }
 
-async function runEof(): Promise<void> {
+/**
+ * Test seams for `runEof`. The CLI passes none of these; they exist so T8 can drive the
+ * never-READY path against a stub sidecar and observe the cleanup.
+ */
+export interface EofOptions {
+  /** Script to spawn. Defaults to `<cwd>/build/main/sidecar.js`. */
+  sidecarJs?: string
+  /** How long to wait for the READY sentinel. Defaults to READY_WAIT_MS. */
+  readyWaitMs?: number
+  /** Profile factory. Defaults to an isolated `createFakeHomeProfile()`. */
+  createProfile?: () => FakeHomeProfile
+  /** Called with the spawned child right after the spawn. */
+  onSpawn?: (child: ChildProcess) => void
+}
+
+function hasExited(child: ChildProcess): boolean {
+  return child.exitCode !== null || child.signalCode !== null
+}
+
+/**
+ * SIGKILLs the child THIS script spawned, through its own ChildProcess handle, and waits a
+ * bounded time for it to go. Never signals by a pid read from ps/pgrep, so it cannot reach an
+ * operator process or a reused pid.
+ */
+async function reapOwnChild(
+  child: ChildProcess | undefined,
+  exited: Promise<void>
+): Promise<void> {
+  if (!child || child.pid === undefined || hasExited(child)) return
+  child.kill('SIGKILL')
+  let timer: NodeJS.Timeout | undefined
+  const timedOut = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, KILL_WAIT_MS)
+  })
+  try {
+    await Promise.race([exited, timedOut])
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+  if (!hasExited(child)) {
+    console.error(
+      `sidecarExitCheck: child pid ${child.pid} still alive ${KILL_WAIT_MS} ms after SIGKILL`
+    )
+  }
+}
+
+export async function runEof(opts: EofOptions = {}): Promise<Report> {
   assertRepoRoot(process.cwd())
-  const sidecarJs = join(process.cwd(), DEV_SIDECAR_PATTERN)
+  const sidecarJs = opts.sidecarJs ?? join(process.cwd(), DEV_SIDECAR_PATTERN)
+  const readyWaitMs = opts.readyWaitMs ?? READY_WAIT_MS
   if (!existsSync(sidecarJs)) {
-    return invalid(
+    return invalidReport(
       'eof',
       'build/main/sidecar.js missing: run pnpm build:sidecar'
     )
   }
-  const profile = createFakeHomeProfile({ prefix: 'gamelib-sidecarExitCheck-' })
+  const profile = (
+    opts.createProfile ??
+    (() => createFakeHomeProfile({ prefix: 'gamelib-sidecarExitCheck-' }))
+  )()
+  let child: ChildProcess | undefined
+  let exited: Promise<void> = Promise.resolve()
   try {
-    const child = spawn(process.execPath, [sidecarJs], {
+    const spawned = spawn(process.execPath, [sidecarJs], {
       env: profile.childEnv(),
       stdio: ['pipe', 'pipe', 'pipe']
     })
+    child = spawned
+    opts.onSpawn?.(spawned)
     let stdout = ''
-    child.stdout.on('data', (d: Buffer) => {
+    spawned.stdout.on('data', (d: Buffer) => {
       stdout += d.toString()
     })
-    child.stderr.on('data', () => undefined)
-    const exited = new Promise<void>((resolve) => {
-      child.on('exit', () => resolve())
+    spawned.stderr.on('data', () => undefined)
+    exited = new Promise<void>((resolve) => {
+      spawned.on('exit', () => resolve())
+      spawned.on('error', () => resolve())
     })
     const readyStart = Date.now()
     while (
       !stdout.includes(READY_SENTINEL) &&
-      child.exitCode === null &&
-      Date.now() - readyStart < READY_WAIT_MS
+      !hasExited(spawned) &&
+      Date.now() - readyStart < readyWaitMs
     ) {
       await sleep(POLL_MS)
     }
     if (!stdout.includes(READY_SENTINEL)) {
-      return invalid('eof', 'sidecar never wrote the READY sentinel')
+      return invalidReport('eof', 'sidecar never wrote the READY sentinel')
     }
-    const pid = child.pid
+    const pid = spawned.pid
     const before = snapshotPs()
-    if (!Array.isArray(before)) return invalid('eof', before.reason)
-    if (pid === undefined) return invalid('eof', 'no child pid')
+    if (!Array.isArray(before)) return invalidReport('eof', before.reason)
+    if (pid === undefined) return invalidReport('eof', 'no child pid')
     const snapshot = [
       ...before.filter((r) => r.pid === pid),
       ...descendantsOf(before, pid)
     ]
     const eofAt = Date.now()
-    child.stdin.end()
+    spawned.stdin.end()
     await Promise.race([exited, sleep(READY_WAIT_MS)])
-    const latencyMs = child.exitCode === null ? null : Date.now() - eofAt
+    const latencyMs = hasExited(spawned) ? Date.now() - eofAt : null
     await sleep(SETTLE_MS)
     const after = snapshotPs()
-    if (!Array.isArray(after)) return invalid('eof', after.reason)
+    if (!Array.isArray(after)) return invalidReport('eof', after.reason)
     const survivors = classifySurvivors(snapshot, after)
-    return finish({
+    return {
       mode: 'eof',
       verdict: exitVerdict({
         mode: 'eof',
@@ -356,17 +417,25 @@ async function runEof(): Promise<void> {
       latencyMs,
       survivors,
       vite: []
-    })
+    }
   } finally {
-    profile.dispose()
+    // Reap before dispose. Disposing while the child is alive would leave it writing into a
+    // half-deleted tree, and on Windows rmSync over files a live process holds open fails with
+    // EBUSY, which dispose() swallows, silently stranding the profile. The verdict is already
+    // fixed by now, so the kill never shapes the measurement.
+    try {
+      await reapOwnChild(child, exited)
+    } finally {
+      profile.dispose()
+    }
   }
 }
 
 if (require.main === module && !process.env.JEST_WORKER_ID) {
   const modeIdx = process.argv.indexOf('--mode')
   const mode = modeIdx >= 0 ? process.argv[modeIdx + 1] : 'live'
-  const job = mode === 'eof' ? runEof() : runLive()
-  job.catch((e) => {
+  const job: Promise<Report> = mode === 'eof' ? runEof() : runLive()
+  job.then(finish, (e) => {
     console.error(e)
     process.exit(2)
   })
