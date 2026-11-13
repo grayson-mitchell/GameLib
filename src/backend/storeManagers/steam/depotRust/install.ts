@@ -91,8 +91,10 @@ type CodeClient = {
 }
 
 /**
- * Fresh manifest request code for a depot under its owner app, or null when none is available.
- * Rejects only with an EResult-40 (Blocked) error, which the host handler turns into a skip.
+ * Fresh manifest request code for a depot under its owner app, or null when Steam gave no code.
+ * Every failure rejects and is carried to the host handler: EResult 40 (Blocked) so the crate
+ * skips the depot, anything else so it can tell "we could not ask Steam" (transient) from
+ * "Steam gave no code" (null) - WR-01.
  */
 export function requestCodeRefresher(
   client: CodeClient,
@@ -105,22 +107,15 @@ export function requestCodeRefresher(
     manifestId: string
   ): Promise<string | null> => {
     const owner = ownerByDepot.get(depotId) ?? fallbackAppId
-    try {
-      const { requestCode } = await client.getManifestRequestCode(
-        Number(owner),
-        Number(depotId),
-        manifestId,
-        branch
-      )
-      // A uint64 arrives as a number, string or Long; String() renders all three.
-      const code = String((requestCode ?? '') as string | number | bigint)
-      return /^\d+$/.test(code) && code !== '0' ? code : null
-    } catch (err) {
-      // Every failure is carried to the host handler: EResult 40 (Blocked) so the crate skips
-      // the depot, anything else so it can tell "we could not ask Steam" (transient) from
-      // "Steam gave no code" (the null above) - WR-01.
-      throw err
-    }
+    const { requestCode } = await client.getManifestRequestCode(
+      Number(owner),
+      Number(depotId),
+      manifestId,
+      branch
+    )
+    // A uint64 arrives as a number, string or Long; String() renders all three.
+    const code = String((requestCode ?? '') as string | number | bigint)
+    return /^\d+$/.test(code) && code !== '0' ? code : null
   }
 }
 
