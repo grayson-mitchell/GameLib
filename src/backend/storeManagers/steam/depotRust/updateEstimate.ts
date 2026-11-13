@@ -44,7 +44,7 @@ export async function resolveBridgeUpdateContext(
   if (!bridgeBottleName) return { error: 'No bridge install found' }
   const steamappsDir = getBottleSteamappsDir(deps.paths, bridgeBottleName)
   const installdir = await readAcfInstalldir(deps, steamappsDir, appId)
-  const depots = readAcfInstalledDepots(steamappsDir, appId)
+  const depots = await readAcfInstalledDepots(deps, steamappsDir, appId)
   if (!installdir || !depots) {
     return { error: 'The install manifest could not be read' }
   }
@@ -52,7 +52,7 @@ export async function resolveBridgeUpdateContext(
     bridgeBottleName,
     steamappsDir,
     installdir,
-    branch: readAcfBetaKey(steamappsDir, appId) ?? 'public',
+    branch: (await readAcfBetaKey(deps, steamappsDir, appId)) ?? 'public',
     oldGidByDepot: new Map(
       depots.installedDepots.map((d) => [d.depotId, d.manifest])
     )

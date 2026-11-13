@@ -200,8 +200,12 @@ export async function downloadSteamDepotsRust(
     const retiredDepots: DepotRefEntry[] = []
     if (opts.delta) {
       const acfDlcOwner = new Map<string, string>()
-      for (const d of readAcfInstalledDepots(opts.targetSteamappsDir, appId)
-        ?.installedDepots ?? []) {
+      const installed = await readAcfInstalledDepots(
+        opts.installRuntime.depotJobs.transport,
+        opts.targetSteamappsDir,
+        appId
+      )
+      for (const d of installed?.installedDepots ?? []) {
         if (d.dlcAppId) acfDlcOwner.set(d.depotId, d.dlcAppId)
       }
       const decision = decideRetirement({

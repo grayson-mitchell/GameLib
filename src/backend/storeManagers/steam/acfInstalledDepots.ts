@@ -5,7 +5,11 @@
  */
 import { join } from 'path'
 import { existsSync, readFileSync } from 'graceful-fs'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
 import { NUMERIC_APP_ID } from './gameConstants'
+import { invokeSteamFiles } from './localFiles/rustSteamFiles'
+import { steamFilesTextImpl } from './localFiles/steamFilesFlags'
 
 export interface AcfInstalledDepot {
   depotId: string
@@ -102,11 +106,50 @@ export function parseAcfInstalledDepots(acfText: string): {
   return { buildid, installedDepots }
 }
 
-export function readAcfInstalledDepots(
+type InstalledDepotsResult = ReturnType<typeof parseAcfInstalledDepots>
+
+/**
+ * Installed depots and buildid of one app's ACF, every id an exact digit string. Null when the
+ * app id is not numeric or the manifest is absent/unreadable. On the Rust path the one ACF
+ * codec reads the file (steamfiles_read_acf) and the ids stay strings end to end.
+ */
+export async function readAcfInstalledDepots(
+  rust: RustInvokeDeps,
   steamappsDir: string,
   appId: string
-): ReturnType<typeof parseAcfInstalledDepots> | null {
+): Promise<InstalledDepotsResult | null> {
   if (!NUMERIC_APP_ID.test(appId)) return null
+  if (steamFilesTextImpl() === 'ts') {
+    return readAcfInstalledDepotsTs(steamappsDir, appId)
+  }
+  try {
+    const res = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_ACF, {
+      path: join(steamappsDir, `appmanifest_${appId}.acf`)
+    })
+    if (!res.exists) return null
+    const rec = res.record
+    const buildid =
+      rec?.buildid != null && ID.test(rec.buildid) ? rec.buildid : undefined
+    return {
+      buildid,
+      installedDepots: (rec?.installedDepots ?? []).map((d) => ({
+        depotId: d.depotId,
+        manifest: d.manifest,
+        size: ID.test(d.size) ? d.size : '0',
+        ...(d.dlcAppId && ID.test(d.dlcAppId) && d.dlcAppId !== '0'
+          ? { dlcAppId: d.dlcAppId }
+          : {})
+      }))
+    }
+  } catch {
+    return null
+  }
+}
+
+function readAcfInstalledDepotsTs(
+  steamappsDir: string,
+  appId: string
+): InstalledDepotsResult | null {
   try {
     const file = join(steamappsDir, `appmanifest_${appId}.acf`)
     if (!existsSync(file)) return null

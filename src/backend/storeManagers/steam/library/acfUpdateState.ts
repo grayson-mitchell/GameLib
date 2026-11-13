@@ -5,7 +5,11 @@
 import { join } from 'path'
 import { existsSync, readFileSync } from 'graceful-fs'
 import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
 import { NUMERIC_APP_ID } from '../gameConstants'
+import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
+import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
 import type { BottleSettingsDeps } from '../bottle'
 import { acfBlock, acfString, parseAcfTree } from '../acfInstalledDepots'
 import {
@@ -32,7 +36,7 @@ export interface AcfUpdateFields {
 const STATE_FLAG_UPDATE_REQUIRED = 0x2
 
 export async function readAcfUpdateState(
-  deps: SteamLibrariesDeps & BottleSettingsDeps,
+  deps: SteamLibrariesDeps & BottleSettingsDeps & RustInvokeDeps,
   appId: string,
   source: AcfSource = 'native'
 ): Promise<AcfUpdateFields | null> {
@@ -50,18 +54,47 @@ export async function readAcfUpdateState(
   }
 
   for (const steamappsDir of steamappsDirs) {
-    const fields = readAcfUpdateFieldsFromDir(steamappsDir, appId)
+    const fields = await readAcfUpdateFieldsFromDir(deps, steamappsDir, appId)
     if (fields) return fields
   }
   return null
 }
 
 /** Reads one steamapps dir's manifest for `appId`; null when absent or corrupt. */
-export function readAcfUpdateFieldsFromDir(
+export async function readAcfUpdateFieldsFromDir(
+  rust: RustInvokeDeps,
+  steamappsDir: string,
+  appId: string
+): Promise<AcfUpdateFields | null> {
+  if (!NUMERIC_APP_ID.test(appId)) return null
+  if (steamFilesTextImpl() === 'ts') {
+    return readAcfUpdateFieldsFromDirTs(steamappsDir, appId)
+  }
+  try {
+    const res = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_ACF, {
+      path: join(steamappsDir, `appmanifest_${appId}.acf`)
+    })
+    const rec = res.record
+    if (!res.exists || !res.parsed || !rec || rec.buildid === null) return null
+    return {
+      steamappsDir,
+      buildid: rec.buildid,
+      targetBuildId: rec.targetBuildId ?? undefined,
+      stateFlags: rec.stateFlags ?? 0,
+      bytesToDownload: Number(rec.bytesToDownload) || 0,
+      bytesDownloaded: Number(rec.bytesDownloaded) || 0,
+      scheduledAutoUpdate: Number(rec.scheduledAutoUpdate) || 0,
+      ...(rec.betaKey ? { betaKey: rec.betaKey } : {})
+    }
+  } catch {
+    return null
+  }
+}
+
+function readAcfUpdateFieldsFromDirTs(
   steamappsDir: string,
   appId: string
 ): AcfUpdateFields | null {
-  if (!NUMERIC_APP_ID.test(appId)) return null
   const file = join(steamappsDir, `appmanifest_${appId}.acf`)
   try {
     if (!existsSync(file)) return null

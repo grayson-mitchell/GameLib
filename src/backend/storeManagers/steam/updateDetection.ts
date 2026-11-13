@@ -159,7 +159,8 @@ async function classify(
 ): Promise<Candidate | null> {
   const bridgeBottle = findBridgeInstallBottle(deps.paths, appId)
   if (bridgeBottle !== null) {
-    const fields = readAcfUpdateFieldsFromDir(
+    const fields = await readAcfUpdateFieldsFromDir(
+      deps,
       getBottleSteamappsDir(deps.paths, bridgeBottle),
       appId
     )

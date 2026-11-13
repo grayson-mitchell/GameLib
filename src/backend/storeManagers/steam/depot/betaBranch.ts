@@ -21,6 +21,13 @@ import { existsSync, readFileSync } from 'graceful-fs'
 import { parse } from '@node-steam/vdf'
 import { join } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import {
+  RUST_STEAMFILES_READ_ACF,
+  RUST_STEAMFILES_READ_LOCALCONFIG_BETA_KEY
+} from 'common/types/sidecarTransport'
+import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
+import { steamFilesTextImpl } from '../localFiles/steamFilesFlags'
 
 const STEAMID64_BASE = BigInt('76561197960265728')
 const MAX_DEPTH = 8
@@ -106,7 +113,24 @@ export function decodeUserAppConfigBetaKey(hex: string): string | undefined {
   }
 }
 
-export function readAcfBetaKey(
+export async function readAcfBetaKey(
+  rust: RustInvokeDeps,
+  steamappsDir: string,
+  appId: string
+): Promise<string | undefined> {
+  if (steamFilesTextImpl() === 'ts')
+    return readAcfBetaKeyTs(steamappsDir, appId)
+  try {
+    const res = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_ACF, {
+      path: join(steamappsDir, `appmanifest_${appId}.acf`)
+    })
+    return res.record?.betaKey || undefined
+  } catch {
+    return undefined
+  }
+}
+
+function readAcfBetaKeyTs(
   steamappsDir: string,
   appId: string
 ): string | undefined {
@@ -125,7 +149,28 @@ export function readAcfBetaKey(
   }
 }
 
-export function readLocalConfigBetaKey(
+export async function readLocalConfigBetaKey(
+  rust: RustInvokeDeps,
+  localconfigPath: string,
+  appId: string
+): Promise<string | undefined> {
+  if (steamFilesTextImpl() === 'ts') {
+    return readLocalConfigBetaKeyTs(localconfigPath, appId)
+  }
+  try {
+    if (!/^\d+$/.test(appId)) return undefined
+    const res = await invokeSteamFiles(
+      rust,
+      RUST_STEAMFILES_READ_LOCALCONFIG_BETA_KEY,
+      { path: localconfigPath, appId }
+    )
+    return res.betaKey ?? undefined
+  } catch {
+    return undefined
+  }
+}
+
+function readLocalConfigBetaKeyTs(
   localconfigPath: string,
   appId: string
 ): string | undefined {
@@ -155,21 +200,25 @@ export function steamId64ToAccountId(id64: string): string | undefined {
   return acct > BigInt(0) ? acct.toString() : undefined
 }
 
-export function resolveUserBetaKey(args: {
-  appId: string
-  steamappsDir: string
-  steamRoot?: string
-  steamId64?: string
-}): string {
+export async function resolveUserBetaKey(
+  rust: RustInvokeDeps,
+  args: {
+    appId: string
+    steamappsDir: string
+    steamRoot?: string
+    steamId64?: string
+  }
+): Promise<string> {
   try {
     let source: 'acf' | 'localconfig' | 'default' = 'default'
-    let candidate = readAcfBetaKey(args.steamappsDir, args.appId)
+    let candidate = await readAcfBetaKey(rust, args.steamappsDir, args.appId)
     if (candidate !== undefined) {
       source = 'acf'
     } else if (args.steamRoot && args.steamId64) {
       const acct = steamId64ToAccountId(args.steamId64)
       if (acct) {
-        candidate = readLocalConfigBetaKey(
+        candidate = await readLocalConfigBetaKey(
+          rust,
           join(args.steamRoot, 'userdata', acct, 'config', 'localconfig.vdf'),
           args.appId
         )

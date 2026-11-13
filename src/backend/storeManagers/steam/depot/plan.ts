@@ -467,11 +467,11 @@ export async function buildDepotRefs(
   // unusable falls back to 'public'.
   const requested =
     opts.branch ??
-    resolveUserBetaKey({
+    (await resolveUserBetaKey(opts.installRuntime.depotJobs.transport, {
       appId,
       steamappsDir: opts.targetSteamappsDir,
       ...resolveSteamIdentity(opts.steamUser, opts.config)
-    })
+    }))
   const branch = chooseInstallBranch(appinfo, requested, appId)
   // SPIKE 003 (throwaway): the chosen branch's current buildid, for the StateFlags=4
   // full-ownership manifest. `depots.branches` is a special (non-depot) key not
