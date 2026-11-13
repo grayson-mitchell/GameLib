@@ -47,7 +47,13 @@ function acf(fields: Record<string, string>, mtimeMs = 1000): AcfSnapshot {
   const body = Object.entries({ appid: '264160', ...fields })
     .map(([k, v]) => `\t"${k}"\t\t"${v}"`)
     .join('\n')
-  return { mtimeMs, content: `"AppState"\n{\n${body}\n}\n` }
+  // The Rust-parsed fields the snapshot carries since plan 22; isSteamAdoptedAcf reads only these.
+  return {
+    mtimeMs,
+    content: `"AppState"\n{\n${body}\n}\n`,
+    stateFlags: Number(fields.StateFlags),
+    buildid: fields.buildid
+  }
 }
 
 const own = acf({ StateFlags: '4', buildid: '9044149' })
@@ -254,7 +260,8 @@ describe('pending-adoption record store', () => {
   const record: PendingAdoptionRecord = {
     steamPid: 4321,
     manifestPath: '/steam/appmanifest_264160.acf',
-    baseline: own,
+    // The store persists only content and mtimeMs of a baseline (the comparison keys).
+    baseline: { mtimeMs: own.mtimeMs, content: own.content },
     recordedAt: 99
   }
 
@@ -359,17 +366,13 @@ describe('createRestartDeps', () => {
   })
 })
 
-describe('readAcfSnapshot and isSteamAdoptedAcf on the rust flag', () => {
-  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
+describe('readAcfSnapshot and isSteamAdoptedAcf', () => {
   let dir: string
   beforeEach(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
     dir = mkdtempSync(join(tmpdir(), 'adoption-'))
   })
   afterEach(() => {
     rmSync(dir, { recursive: true, force: true })
-    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
   })
 
   const stubRecord = (stateFlags: number | null, buildid: string | null) =>
@@ -425,6 +428,10 @@ describe('readAcfSnapshot and isSteamAdoptedAcf on the rust flag', () => {
   test('uses the Rust fields, not the content, when they are present', async () => {
     const snap = { mtimeMs: 2, content: 'garbage', stateFlags: 4, buildid: '5' }
     expect(isSteamAdoptedAcf(null, snap)).toBe(true)
+  })
+
+  test('a snapshot without stateFlags/buildid reads not-adopted (DV-75-12)', () => {
+    expect(isSteamAdoptedAcf(null, { mtimeMs: 2, content: 'x' })).toBe(false)
   })
 
   test('a persisted pre-Phase-75 baseline (content + mtimeMs only) still validates', () => {

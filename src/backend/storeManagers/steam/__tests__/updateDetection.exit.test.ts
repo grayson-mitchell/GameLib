@@ -4,6 +4,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
+import { fsBackedSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
 import {
   createSteamUpdateStateCache,
   detectSteamUpdates,
@@ -53,6 +54,7 @@ describe('detectSteamUpdates exit contract', () => {
       },
       anonymousClient: { get: async () => ({ getProductInfo }) },
       runner: { run: jest.fn() },
+      ...fsBackedSteamFiles(),
       steamInstallRuntime: { updateStates: createSteamUpdateStateCache() }
     }) as unknown as SteamUpdateDeps
 

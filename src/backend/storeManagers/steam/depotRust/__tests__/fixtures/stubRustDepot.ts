@@ -8,6 +8,7 @@ import {
   RUST_DEPOT_JOB_RUN,
   RUST_DEPOT_MANIFEST_SUMMARY
 } from 'common/types/sidecarTransport'
+import { fsBackedSteamFiles } from '../../../localFiles/__tests__/fixtures/stubRustSteamFiles'
 import type { DepotJobRegistry } from '../../jobRegistry'
 import type {
   RustDepotJob,
@@ -83,12 +84,18 @@ export function createStubRustDepot(
   const jobs: RustDepotJob[] = []
   const cancels: string[] = []
   const waiting = new Map<string, () => void>()
+  const steamFilesBacking = fsBackedSteamFiles()
 
   return {
     calls,
     jobs,
     cancels,
     async invoke(channel, args) {
+      // The ACF reads that ride along an install (75-31: the TS reader is gone) are answered from
+      // the temp files the caller test wrote; the depot channels stay this stub's.
+      if (channel.startsWith('steamfiles_')) {
+        return steamFilesBacking.requestRustInvoke(channel, args)
+      }
       calls.push({ channel, args })
       if (channel === RUST_DEPOT_JOB_CANCEL) {
         const { jobId } = args[0] as { jobId: string }

@@ -109,19 +109,11 @@ describe('readAcfUpdateState', () => {
   })
 })
 
-describe('readAcfUpdateFieldsFromDir on Rust (GAMELIB_STEAMFILES_TEXT=rust)', () => {
-  const realEnv = process.env.GAMELIB_STEAMFILES_TEXT
-  beforeAll(() => {
-    process.env.GAMELIB_STEAMFILES_TEXT = 'rust'
-  })
+describe('readAcfUpdateFieldsFromDir on Rust', () => {
   beforeEach(() => {
     jest.spyOn(logger, 'logDebug').mockImplementation(() => undefined)
   })
   afterEach(() => jest.restoreAllMocks())
-  afterAll(() => {
-    if (realEnv === undefined) delete process.env.GAMELIB_STEAMFILES_TEXT
-    else process.env.GAMELIB_STEAMFILES_TEXT = realEnv
-  })
 
   const rec = (over: Record<string, unknown>) =>
     ({

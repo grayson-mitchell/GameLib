@@ -20,7 +20,6 @@
 import type { StatusUpdateDeps } from 'backend/appRuntime'
 import { existsSync, statSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { parse } from '@node-steam/vdf'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendGameStatusUpdate } from 'backend/utils'
 import type { SteamStoresDeps } from './library/installRoot'
@@ -30,7 +29,6 @@ import type { AppPaths } from 'backend/process/context'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
 import { invokeSteamFiles } from './localFiles/rustSteamFiles'
-import { steamFilesTextImpl } from './localFiles/steamFilesFlags'
 import {
   MAC_STEAM_OFFLINE_OWED_FILE,
   type MacSteamOffline
@@ -45,7 +43,7 @@ export interface AcfSnapshot {
   content: string
   /**
    * Parsed by Rust (`steamfiles_read_acf`) when the snapshot was taken; absent on a baseline
-   * persisted before Phase 75 and under the ts flag, where isSteamAdoptedAcf parses `content`.
+   * persisted before Phase 75; isSteamAdoptedAcf reads such a snapshot as not adopted (DV-75-12).
    */
   stateFlags?: number | null
   buildid?: string
@@ -141,7 +139,6 @@ export async function readAcfSnapshot(
   } catch {
     return null
   }
-  if (steamFilesTextImpl() === 'ts') return snapshot
   try {
     const read = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_ACF, {
       path
@@ -158,15 +155,6 @@ export async function readAcfSnapshot(
   }
 }
 
-function parseAppState(content: string): Record<string, unknown> | null {
-  try {
-    const parsed = parse(content) as { AppState?: Record<string, unknown> }
-    return parsed.AppState ?? null
-  } catch {
-    return null
-  }
-}
-
 /**
  * True when `current` is an ACF Steam itself rewrote: it differs from the
  * baseline GameLib wrote AND carries bit 4 AND a real buildid. A placeholder
@@ -177,22 +165,11 @@ export function isSteamAdoptedAcf(
   current: AcfSnapshot | null
 ): boolean {
   if (!current) return false
-  let flags: number
-  let buildid: string
-  if (current.stateFlags !== undefined) {
-    // The Rust-parsed fields captured by readAcfSnapshot.
-    flags = current.stateFlags === null ? NaN : current.stateFlags
-    buildid = current.buildid ?? ''
-  } else {
-    const state = parseAppState(current.content)
-    if (!state) return false
-    flags = Number(state.StateFlags)
-    // @node-steam/vdf parses numeric strings to numbers.
-    buildid =
-      typeof state.buildid === 'string' || typeof state.buildid === 'number'
-        ? String(state.buildid)
-        : ''
-  }
+  // The Rust-parsed fields captured by readAcfSnapshot. A snapshot without them (persisted
+  // before Phase 75) reads not-adopted (DV-75-12).
+  if (current.stateFlags === undefined) return false
+  const flags = current.stateFlags === null ? NaN : current.stateFlags
+  const buildid = current.buildid ?? ''
   const differs =
     !baseline ||
     current.content !== baseline.content ||

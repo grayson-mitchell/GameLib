@@ -41,6 +41,7 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
+  logDebug: jest.fn(),
   getRunnerLogWriter: jest.fn().mockReturnValue({}),
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
@@ -730,7 +731,10 @@ describe('zero-depot finalize on the rust flag (75-23)', () => {
   it('sends depots [] and outcome null, LastOwner as the persisted string', async () => {
     const out = await downloadSteamDepots(APP_ID, OPTS())
     expect(out.status).toBe('done')
-    expect(invokeMock).toHaveBeenCalledTimes(1)
+    // The beta-branch ACF read now rides steamfiles_read_acf (75-31); one finalize.
+    expect(
+      invokeMock.mock.calls.filter(([c]) => c === 'depot_finalize')
+    ).toHaveLength(1)
     expect(invokeMock).toHaveBeenCalledWith('depot_finalize', [
       {
         appId: APP_ID,
