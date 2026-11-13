@@ -387,12 +387,11 @@ export interface DepotRefsResult {
   branchDepotListComplete: boolean
 }
 
-/** The unfiltered branch depot list, owners and completeness (WR-01). Pure. */
+/** The unfiltered branch depot list and completeness (WR-01). Pure. */
 export function collectBranchDepotList(
   appinfo: SteamAppInfo,
   dlcInfos: Record<string, SteamAppInfo>,
-  branch: string,
-  appId: string
+  branch: string
 ): Pick<
   DepotRefsResult,
   'branchDepotIds' | 'fetchedDlcAppIds' | 'branchDepotListComplete'
@@ -409,7 +408,7 @@ export function collectBranchDepotList(
     }
   }
   take(appinfo)
-  for (const [dlcId, dlc] of Object.entries(dlcInfos)) take(dlc)
+  for (const dlc of Object.values(dlcInfos)) take(dlc)
   const baseHasDepots = Object.keys(appinfo?.depots ?? {}).some((k) =>
     /^\d+$/.test(k)
   )
@@ -561,7 +560,7 @@ export async function buildDepotRefs(
     branch,
     depots,
     skippedDepots,
-    ...collectBranchDepotList(appinfo, dlcInfos, branch, appId)
+    ...collectBranchDepotList(appinfo, dlcInfos, branch)
   }
 }
 

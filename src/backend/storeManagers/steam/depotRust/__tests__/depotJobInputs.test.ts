@@ -381,25 +381,19 @@ describe('collectBranchDepotList (WR-01)', () => {
       extended: { listofdlc: '999' }
     }
     const dlc = { '999': { depots: { '4': m('c'), '1': m('z') } } }
-    const r = collectBranchDepotList(
-      base as never,
-      dlc as never,
-      'public',
-      '10'
-    )
+    const r = collectBranchDepotList(base as never, dlc as never, 'public')
     expect(r.branchDepotIds).toEqual(['1', '2', '4'])
     expect(r.fetchedDlcAppIds).toEqual(['999'])
     expect(r.branchDepotListComplete).toBe(true)
     expect(
-      collectBranchDepotList(base as never, {}, 'public', '10')
+      collectBranchDepotList(base as never, {}, 'public')
         .branchDepotListComplete
     ).toBe(false)
     expect(
       collectBranchDepotList(
         { depots: { branches: {} } } as never,
         {},
-        'public',
-        '10'
+        'public'
       ).branchDepotListComplete
     ).toBe(false)
   })
@@ -416,7 +410,7 @@ describe('collectBranchDepotList (WR-01)', () => {
     const { branchManifestGid } = await import('../../depot/select')
     const base = { depots: { branches: {}, '1': m('a') } }
     jest.mocked(logInfo).mockClear()
-    const r = collectBranchDepotList(base as never, {}, 'beta', '10')
+    const r = collectBranchDepotList(base as never, {}, 'beta')
     expect(r.branchDepotIds).toEqual(['1'])
     expect(logInfo).not.toHaveBeenCalled()
     branchManifestGid(base.depots['1'] as never, 'beta', '1')
