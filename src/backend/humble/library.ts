@@ -1030,7 +1030,9 @@ export function createHumbleLibrary(libDeps: HumbleLibraryDeps) {
 
     let libraryResult: Awaited<ReturnType<typeof getLibraryOrders>>
     try {
-      libraryResult = await getLibraryOrders(cookie, { signal: isStale })
+      libraryResult = await getLibraryOrders(cookie, libDeps.actionIds, {
+        signal: isStale
+      })
     } catch (err) {
       // Thrown transient class (network/timeout/5xx) — mirrors
       // user.ts:checkHealthAndFlagExpiry's catch exactly (T-11-08/D-31).
@@ -1411,7 +1413,7 @@ export function createHumbleLibrary(libDeps: HumbleLibraryDeps) {
     )
 
     try {
-      const result = await adapterRevealKey(revealCookie, {
+      const result = await adapterRevealKey(revealCookie, libDeps.actionIds, {
         gamekey,
         machineName,
         keyindex

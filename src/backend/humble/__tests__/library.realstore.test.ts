@@ -64,6 +64,7 @@ import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { defined } from './defined'
 import { createHumbleLibrary } from '../library'
 import { createHumbleSyncFence } from '../syncFence'
+import { createHumbleActionIdCache } from '../actionIdCache'
 import { createLoginWindowSeamSlot } from '../loginWindowSeam'
 import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
@@ -91,6 +92,7 @@ const HumbleLibrary = createHumbleLibrary({
     getLiveCsrfToken: async () => undefined
   },
   syncFence: createHumbleSyncFence(),
+  actionIds: createHumbleActionIdCache(),
   steamUser,
   steamAppIdResolver: {
     lookupCached: () => undefined,

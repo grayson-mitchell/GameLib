@@ -6,6 +6,7 @@ import { AdapterResult } from 'common/types/humble'
 import { HUMBLE_BASE_URL, ORY_SESSION_COOKIE_PREFIX } from './constants'
 import type { AppInfo } from 'backend/process/context'
 import type { LoginWindowSeamSlot } from './loginWindowSeam'
+import type { HumbleActionIdCache, HumbleActionIdEntry } from './actionIdCache'
 
 /**
  * C5 isolation wall: every outgoing Humble HTTP call and every incoming
@@ -110,10 +111,14 @@ class HumbleTransportHttpError extends Error {
   }
 }
 
-/** What the reveal POST reads: the boot's login-window seam slot and the app info (UA source). */
+/**
+ * What the adapter's calls read from the boot: the login-window seam slot and the app info (UA
+ * source) for the reveal POST, and the action-id owner for the library fetch and the reveal.
+ */
 export interface HumbleAdapterDeps {
   loginWindowSeam: Pick<LoginWindowSeamSlot, 'getOrThrow'>
   appInfo: Pick<AppInfo, 'userAgentFallback'>
+  actionIds: HumbleActionIdCache
 }
 
 // Debug session humble-reveal-key-fails (round 5): access_denied currently
@@ -261,8 +266,8 @@ export async function getSessionStatus(
 // `filterUserLibrary` (5 items per page, `pagination.totalPages`). The action
 // id is a build artifact: it is scraped at runtime from the public JS chunks
 // listed by the authenticated /home/library HTML (next to the literal name
-// "filterUserLibrary"), cached for the process lifetime, and re-discovered
-// only when a POST proves it stale. Read-only: this action only lists/filters;
+// "filterUserLibrary"), cached in the boot's action-id owner (one per
+// createHumbleServices), and re-discovered only when a POST proves it stale. Read-only: this action only lists/filters;
 // it never reveals or redeems a key.
 //
 // Redaction (C4/C5): only counts, statuses and field NAMES are ever logged.
@@ -286,19 +291,6 @@ const ROUTER_STATE_TREE =
   '%5B%22%22%2C%7B%22children%22%3A%5B%22(default)%22%2C%7B%22children%22%3A%5B%22(account)%22%2C%7B%22children%22%3A%5B%22home%22%2C%7B%22children%22%3A%5B%22library%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2Cnull%2Cnull%2C0%5D%7D%2Cnull%2Cnull%2C4%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C24%5D'
 const BROWSER_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15'
-
-interface LibraryActionCache {
-  id: string
-  /** Chunk path the id was found in (diagnostics + search-first hint). */
-  chunk: string
-}
-let libraryActionCache: LibraryActionCache | null = null
-
-/** Test seam: forget the cached action id. */
-export function resetLibraryActionCache(): void {
-  libraryActionCache = null
-  redeemActionCache = null
-}
 
 const LibraryKeySchema = z.looseObject({
   id: z.string().nullish(),
@@ -467,9 +459,9 @@ async function discoverActionId(
   cookie: string,
   pagePath: string,
   actionName: string,
-  known: LibraryActionCache | null
+  known: HumbleActionIdEntry | null
 ): Promise<
-  | { kind: 'ok'; cache: LibraryActionCache }
+  | { kind: 'ok'; cache: HumbleActionIdEntry }
   | { kind: 'session_expired' }
   | { kind: 'access_denied' }
   | { kind: 'schema_error' }
@@ -543,13 +535,11 @@ async function discoverActionId(
   return { kind: 'schema_error' }
 }
 
-function discoverLibraryActionId(cookie: string) {
-  return discoverActionId(
-    cookie,
-    LIBRARY_PATH,
-    LIBRARY_ACTION_NAME,
-    libraryActionCache
-  )
+function discoverLibraryActionId(
+  cookie: string,
+  known: HumbleActionIdEntry | null
+) {
+  return discoverActionId(cookie, LIBRARY_PATH, LIBRARY_ACTION_NAME, known)
 }
 
 /**
@@ -653,18 +643,21 @@ async function postLibraryAction(
  */
 export async function getLibraryOrders(
   cookie: string,
+  actionIds: HumbleActionIdCache,
   opts: { signal?: () => boolean } = {}
 ): Promise<AdapterResult<OrderDetail[]>> {
   try {
     let reusedCached = false
-    if (!libraryActionCache) {
-      const found = await discoverLibraryActionId(cookie)
+    let action = actionIds.get('library')
+    if (!action) {
+      const found = await discoverLibraryActionId(cookie, null)
       if (found.kind !== 'ok') {
         return found.kind === 'schema_error'
           ? { status: 'schema_error', raw: 'action id not found' }
           : { status: found.kind }
       }
-      libraryActionCache = found.cache
+      actionIds.set('library', found.cache)
+      action = found.cache
     } else {
       reusedCached = true
       logInfo(
@@ -693,12 +686,7 @@ export async function getLibraryOrders(
       if (opts.signal?.()) throw new Error('library fetch aborted')
       if (page > 1) await sleep(LIBRARY_PAGE_GAP_MS)
 
-      let outcome = await postLibraryAction(
-        cookie,
-        libraryActionCache.id,
-        page,
-        prevState
-      )
+      let outcome = await postLibraryAction(cookie, action.id, page, prevState)
       if (outcome.kind === 'stale' && !rediscovered) {
         // The id changed (a deploy) or the cache was wrong: re-scrape once.
         rediscovered = true
@@ -706,14 +694,15 @@ export async function getLibraryOrders(
           ['Humble library: action id stale, re-discovering'],
           LogPrefix.Backend
         )
-        const found = await discoverLibraryActionId(cookie)
+        const found = await discoverLibraryActionId(cookie, action)
         if (found.kind !== 'ok') {
-          libraryActionCache = null
+          actionIds.set('library', null)
           return found.kind === 'schema_error'
             ? { status: 'schema_error', raw: 'action id not found' }
             : { status: found.kind }
         }
-        libraryActionCache = found.cache
+        actionIds.set('library', found.cache)
+        action = found.cache
         outcome = await postLibraryAction(
           cookie,
           found.cache.id,
@@ -722,7 +711,7 @@ export async function getLibraryOrders(
         )
       }
       if (outcome.kind === 'stale') {
-        libraryActionCache = null
+        actionIds.set('library', null)
         return { status: 'schema_error', raw: 'action rejected' }
       }
       if (outcome.kind === 'schema_error') {
@@ -791,7 +780,6 @@ export async function getLibraryOrders(
 }
 
 const REDEEM_ACTION_NAME = 'redeemEntitlementAction'
-let redeemActionCache: LibraryActionCache | null = null
 
 const RedeemActionResultSchema = z.looseObject({
   success: z.boolean(),
@@ -886,6 +874,7 @@ async function postRedeemAction(
  */
 export async function revealKey(
   cookie: string,
+  actionIds: HumbleActionIdCache,
   params: { gamekey: string; machineName: string; keyindex: string | number }
 ): Promise<AdapterResult<{ key: string }> | { status: 'rejected_by_server' }> {
   const startedAt = Date.now()
@@ -893,7 +882,8 @@ export async function revealKey(
   try {
     let rediscovered = false
     for (;;) {
-      if (!redeemActionCache) {
+      let action = actionIds.get('redeem')
+      if (!action) {
         const found = await discoverActionId(
           cookie,
           pagePath,
@@ -905,18 +895,19 @@ export async function revealKey(
             ? { status: 'schema_error', raw: 'redeem action id not found' }
             : { status: found.kind }
         }
-        redeemActionCache = found.cache
+        actionIds.set('redeem', found.cache)
+        action = found.cache
         rediscovered = true
       }
       const out = await postRedeemAction(
         cookie,
-        redeemActionCache.id,
+        action.id,
         pagePath,
         params.machineName,
         String(params.keyindex)
       )
       if (out.kind === 'stale') {
-        redeemActionCache = null
+        actionIds.set('redeem', null)
         if (rediscovered) return { status: 'schema_error', raw: 'stale' }
         continue
       }

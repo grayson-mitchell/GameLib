@@ -4,6 +4,7 @@ import {
   AdapterResult
 } from 'common/types/humble'
 
+import type { HumbleActionIdCache } from './actionIdCache'
 import type { HumbleUser } from './user'
 import { getLibraryOrders } from './adapter'
 
@@ -19,9 +20,13 @@ import { getLibraryOrders } from './adapter'
  * never writes to disk — the human checkpoint (Plan 05 Task 2) transcribes
  * the (still-redacted) result into 10-VALIDATION.md.
  */
-/** What the validation run reads: the boot's one `HumbleUser`, by slice. */
+/**
+ * What the validation run reads: the boot's one `HumbleUser` and its one action-id owner, by
+ * slice. The dev run shares the owner with the library sync.
+ */
 export interface HumbleValidationDeps {
   user: Pick<HumbleUser, 'getCredentials'>
+  actionIds: HumbleActionIdCache
 }
 
 export async function runHumbleValidation(
@@ -52,7 +57,7 @@ export async function runHumbleValidation(
   // D-13 (reworked for Humble's 2026-11 site move): the library list is the
   // paginated `filterUserLibrary` server action; each item maps to an
   // order-detail-shaped object, so there is no separate per-order endpoint.
-  const library = await getLibraryOrders(cookie)
+  const library = await getLibraryOrders(cookie, deps.actionIds)
   endpoints.push(toEndpointResult('filterUserLibrary', library))
 
   let gamekeyCount = 0
