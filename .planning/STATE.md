@@ -2,19 +2,17 @@
 gsd_state_version: "1.0"
 milestone: v0.10
 milestone_name: Foundations
-current_phase: "66.4"
-current_phase_name: Backend module state long tail, the census-to-test flip, then the live smokes (INSERTED)
 status: executing
-stopped_at: Completed 66.4-23-PLAN.md
-last_updated: "2026-11-13T11:38:25.873Z"
+stopped_at: Phase 66.4 complete (verified passed)
+last_updated: "2026-11-13T12:40:07.035Z"
 last_activity: 2026-11-14
-last_activity_desc: Completed quick task 261114-1m4 (66.4 module-state census green again)
-state_head: 15172cf91b5c71ee792ce9c54e1650650fa07b4d
+last_activity_desc: Phase 66.4 complete (25/25 plans, verification passed); Phase 75 remains current
+state_head: 4dc5209df8a64480d7abc14139433ff5fe52c12d
 progress:
   total_phases: 23
   completed_phases: 14
   total_plans: 363
-  completed_plans: 351
+  completed_plans: 352
   percent: 61
 ---
 
@@ -25,7 +23,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 66.4 — Backend module state long tail, the census-to-test flip, then the live smokes (INSERTED)
+**Current focus:** Phase 75 — steam-local-file-formats-in-rust
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -76,10 +74,10 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 ## Current Position
 
-Phase: 66.4 (Backend module state long tail, the census-to-test flip, then the live smokes (INSERTED)) — EXECUTING
-Plan: 25 of 25 (all plans complete; 66.4-23 Windows UAT complete, test 3 blocked)
-Status: Executing Phase 66.4
-Last activity: 2026-11-14 — Completed quick task 261114-1m4: module-state census green again (Humble action-id caches per-boot, Steam inferred-origin allowlist frozen)
+Phase: 75 (steam-local-file-formats-in-rust) — EXECUTING
+Plan: 26 of 35
+Status: Ready to execute
+Last activity: 2026-11-14 — Phase 66.4 complete: 25/25 plans, Windows delta UAT closed, census green again via quick 261114-1m4, verification passed
 
 Progress: [██████░░░░] 61%
 
@@ -750,7 +748,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 ## Session Continuity
 
 Last session: 2026-11-13T11:38:19.922Z
-Stopped at: Completed 66.4-23-PLAN.md
+Stopped at: Phase 66.4 complete (verified passed)
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
