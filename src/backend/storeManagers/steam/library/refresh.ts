@@ -47,16 +47,22 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
   let release: () => void
   let client: NonNullable<ReturnType<ManagerDeps['steamUser']['getClient']>>
   if (grant) {
-    const lease = await deps.steamUser.acquireAuthenticated({
-      reason: grant,
-      guidedAction: 'refresh'
-    })
+    // An inferred store-exit refresh passes no guidedAction, so a refused
+    // go-offline wrap never pushes the guided dialog (quick 261114-aqa).
+    const inferred = grant === 'store-exit'
+    const lease = await deps.steamUser.acquireAuthenticated(
+      inferred
+        ? { reason: 'user-refresh' }
+        : { reason: grant, guidedAction: 'refresh' }
+    )
     if (!lease.ok) {
       if (lease.reason === 'go-offline-required') {
         // The guided dialog (pushed by acquireAuthenticated) is the surface,
-        // not the failed banner.
+        // not the failed banner. An inferred store-exit refresh has no dialog.
         logInfo(
-          'Steam: library refresh waiting on the guided Go Offline step, no logon issued',
+          inferred
+            ? 'Steam: store-exit refresh skipped — Mac Steam did not go offline automatically; keeping the cached library (no guided Go Offline step, no logon)'
+            : 'Steam: library refresh waiting on the guided Go Offline step, no logon issued',
           LogPrefix.Steam
         )
         await restoreLocalSteamLibrary(deps)

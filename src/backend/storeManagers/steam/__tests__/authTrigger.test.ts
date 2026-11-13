@@ -13,6 +13,7 @@ import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import {
   createSteamAuthTrigger,
   mapRefreshOriginToTrigger,
+  mapRefreshOriginToLogonGrant,
   type SteamAuthTrigger,
   type SteamAuthTriggerState
 } from '../authTrigger'
@@ -45,11 +46,12 @@ describe('instances and constants (D-66.3-09, D-05)', () => {
     expect(other.currentTriggerLabel()).toBe('startup')
   })
 
-  it('the trigger lists are frozen arrays, not Sets', () => {
+  it('the trigger lists are frozen arrays; the only Set is the inferred-origin allowlist', () => {
     const source = stripSourceComments(
       readFileSync(join(__dirname, '..', 'authTrigger.ts'), 'utf8')
     )
-    expect(source).not.toMatch(/new Set\(/)
+    expect(source.match(/new Set\(/g)).toHaveLength(1)
+    expect(source).toMatch(/INFERRED_REFRESH_ORIGINS[^=]*=\s*new Set\(/)
     expect(source.match(/Object\.freeze\(\[/g)).toHaveLength(2)
   })
 })
@@ -116,6 +118,46 @@ describe('resetSteamAuthTrigger', () => {
 
     expect(isSteamAuthUnlocked()).toBe(false)
     expect(currentTriggerLabel()).toBe('startup')
+  })
+})
+
+describe('mapRefreshOriginToLogonGrant / store-exit grant (quick 261114-aqa)', () => {
+  it.each([
+    ['steam-store-exit', 'store-exit'],
+    ['action-icons-refresh-button', 'user-refresh'],
+    ['redeem-steam-key', 'user-refresh'],
+    ['steam-go-offline-retry', 'user-refresh'],
+    ['steam-sync-notice-retry', 'user-refresh'],
+    ['clear-cache', 'user-refresh'],
+    ['login-success', 'login'],
+    ['steam-login', 'login'],
+    ['game-status', null],
+    ['nav-tabs-games-tab', null],
+    ['mount', null],
+    [undefined, null],
+    [null, null],
+    ['__proto__', null],
+    ['constructor', null]
+  ])('origin %s -> %s', (origin, grant) => {
+    expect(mapRefreshOriginToLogonGrant(origin)).toBe(grant)
+  })
+
+  it('steam-store-exit arms a one-shot store-exit grant, keyring label stays user-refresh', () => {
+    state.noteRefreshTrigger('steam', 'steam-store-exit')
+    expect(state.isSteamAuthUnlocked()).toBe(true)
+    expect(state.currentTriggerLabel()).toBe('user-refresh')
+    expect(state.consumeSteamRefreshLogonGrant()).toBe('store-exit')
+    expect(state.consumeSteamRefreshLogonGrant()).toBeNull()
+  })
+
+  it('a non-Steam runner with steam-store-exit arms no grant', () => {
+    state.noteRefreshTrigger('gog', 'steam-store-exit')
+    expect(state.consumeSteamRefreshLogonGrant()).toBeNull()
+  })
+
+  it('an explicit Refresh still yields user-refresh', () => {
+    state.noteRefreshTrigger('steam', 'action-icons-refresh-button')
+    expect(state.consumeSteamRefreshLogonGrant()).toBe('user-refresh')
   })
 })
 
@@ -215,9 +257,9 @@ describe('noteRefreshTrigger (Task 2 — refreshLibrary dispatch threading)', ()
     expect(isSteamAuthUnlocked()).toBe(false)
   })
 
-  it('steam-store-exit arms a one-shot user-refresh grant for steam only', () => {
+  it('steam-store-exit arms a one-shot store-exit grant for steam only', () => {
     noteRefreshTrigger('steam', 'steam-store-exit')
-    expect(consumeSteamRefreshLogonGrant()).toBe('user-refresh')
+    expect(consumeSteamRefreshLogonGrant()).toBe('store-exit')
   })
 
   it('steam-store-exit on a non-Steam runner leaves the gate locked and arms no grant', () => {

@@ -83,8 +83,9 @@ const ORIGIN_TO_TRIGGER: Readonly<Record<string, SteamAuthTrigger>> = {
   // The guided Go Offline dialog's retry.
   'steam-go-offline-retry': 'user-refresh',
   // Leaving the in-app Steam store after an app/cart/checkout page (quick
-  // 261030-qqh): deliberate, the user just acted in the store. The renderer
-  // gates it on sign-in, app/cart/checkout arming and a 2-minute throttle.
+  // 261030-qqh): deliberate for the keyring gate. Its LOGON grant is the
+  // non-escalating 'store-exit' (see INFERRED_REFRESH_ORIGINS). The renderer
+  // gates it on sign-in, nav arming and the in-flight guard.
   'steam-store-exit': 'user-refresh',
   // Deliberately unmapped (-> 'startup'): 'game-status' (fires after every
   // install/Play status change), 'nav-tabs-games-tab' (browsing) and
@@ -105,7 +106,23 @@ const LOGON_GRANTING_TRIGGERS: readonly SteamAuthTrigger[] = Object.freeze([
   'login'
 ] as const)
 
-type SteamRefreshLogonGrant = 'user-refresh' | 'login'
+/**
+ * 'store-exit' is an INFERRED, automatic refresh (leaving the in-app Steam
+ * store): it may log on if Mac Steam goes offline by itself, but must never
+ * escalate to the guided Go Offline step.
+ */
+export type SteamRefreshLogonGrant = 'user-refresh' | 'login' | 'store-exit'
+
+/**
+ * Origins whose refresh is inferred rather than explicitly requested. Quick
+ * 261114-aqa: every Steam store visit armed the store-exit refresh, whose
+ * 'user-refresh' grant then raised the "Set Steam offline to continue" dialog
+ * when the Mac Steam go-offline wrap timed out. A Set, so no prototype-chain
+ * lookup.
+ */
+const INFERRED_REFRESH_ORIGINS: ReadonlySet<string> = new Set([
+  'steam-store-exit'
+])
 
 export interface SteamAuthTriggerState {
   /**
@@ -134,7 +151,8 @@ export interface SteamAuthTriggerState {
   /**
    * Returns and clears the pending one-shot refresh logon grant. Called
    * synchronously as `refresh()`'s first statement, so a grant armed by the
-   * dispatch that triggered this refresh is consumed by THIS refresh.
+   * dispatch that triggered this refresh is consumed by THIS refresh. One of
+   * 'user-refresh' | 'login' | 'store-exit', or null.
    */
   consumeSteamRefreshLogonGrant(): SteamRefreshLogonGrant | null
   /**
@@ -184,6 +202,27 @@ export function mapRefreshOriginToTrigger(
   return ORIGIN_TO_TRIGGER[origin] ?? 'startup'
 }
 
+/**
+ * Maps a renderer origin to the one-shot logon grant it arms: the trigger's
+ * grant, except inferred origins get the non-escalating 'store-exit'. Null
+ * when the origin grants no logon.
+ */
+export function mapRefreshOriginToLogonGrant(
+  origin?: string | null
+): SteamRefreshLogonGrant | null {
+  const trigger = mapRefreshOriginToTrigger(origin)
+  if (trigger !== 'user-refresh' && trigger !== 'login') return null
+  if (!LOGON_GRANTING_TRIGGERS.includes(trigger)) return null
+  if (
+    trigger === 'user-refresh' &&
+    typeof origin === 'string' &&
+    INFERRED_REFRESH_ORIGINS.has(origin)
+  ) {
+    return 'store-exit'
+  }
+  return trigger
+}
+
 /** One instance per boot (D-05, D-66.3-13); the three latch fields are closure variables. */
 export function createSteamAuthTrigger(): SteamAuthTriggerState {
   let pendingRefreshLogonGrant: SteamRefreshLogonGrant | null = null
@@ -221,12 +260,8 @@ export function createSteamAuthTrigger(): SteamAuthTriggerState {
       if (!steamInclusive) return
       const trigger = mapRefreshOriginToTrigger(origin)
       noteSteamAuthTrigger(trigger)
-      if (
-        (trigger === 'user-refresh' || trigger === 'login') &&
-        LOGON_GRANTING_TRIGGERS.includes(trigger)
-      ) {
-        pendingRefreshLogonGrant = trigger
-      }
+      const grant = mapRefreshOriginToLogonGrant(origin)
+      if (grant) pendingRefreshLogonGrant = grant
     }
   }
 }

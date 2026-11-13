@@ -39,7 +39,7 @@ import { at } from './fixtures/indexed'
 import type { Stores } from 'backend/services/types'
 
 import { createTestAnonymousClient } from 'backend/testUtils/testAnonymousClient'
-import { logWarning } from 'backend/logger'
+import { logInfo, logWarning } from 'backend/logger'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 
 const libDeps = {
@@ -878,6 +878,86 @@ describe('SteamLibraryManager', () => {
         guidedAction: 'refresh'
       })
       expect(leaseRelease).toHaveBeenCalledTimes(1)
+    })
+
+    describe('store-exit grant never escalates to the guided Go Offline step (quick 261114-aqa)', () => {
+      const cached = (app_name: string) =>
+        ({
+          runner: 'steam',
+          app_name,
+          title: app_name,
+          is_installed: false,
+          install: {}
+        }) as any
+
+      it('a refused go-offline wrap shows no dialog, keeps the cache, emits idle', async () => {
+        jest
+          .mocked(steamLibraryStore.get)
+          .mockReturnValue([cached('1'), cached('2')])
+        library.clear()
+        resetSteamAuthTrigger()
+        noteRefreshTrigger('steam', 'steam-store-exit')
+        jest.mocked(steamUser.acquireAuthenticated).mockResolvedValue({
+          ok: false,
+          reason: 'go-offline-required'
+        } as never)
+        sendFrontendMessage.mockClear()
+
+        const result = await manager.refresh()
+
+        expect(result).toBeNull()
+        expect(steamUser.acquireAuthenticated).toHaveBeenCalledTimes(1)
+        expect(steamUser.acquireAuthenticated).toHaveBeenCalledWith({
+          reason: 'user-refresh'
+        })
+        const arg = jest.mocked(steamUser.acquireAuthenticated).mock
+          .calls[0]?.[0] as object
+        expect(arg).not.toHaveProperty('guidedAction')
+        expect(steamSyncEmits()).toEqual([{ status: 'idle' }])
+        expect(library.size).toBe(2)
+        expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+          'steamGoOfflineRequired',
+          expect.anything()
+        )
+        const storeExitLogs = jest
+          .mocked(logInfo)
+          .mock.calls.filter(([m]) => String(m).includes('store-exit'))
+        expect(storeExitLogs).toHaveLength(1)
+        expect(storeExitLogs[0]?.[0]).toContain('cached library')
+      })
+
+      it('a successful store-exit refresh syncs without a guidedAction', async () => {
+        resetSteamAuthTrigger()
+        noteRefreshTrigger('steam', 'steam-store-exit')
+        jest
+          .mocked(steamUser.getClient)
+          .mockReturnValue(makeFakeClient([]) as any)
+
+        await manager.refresh()
+
+        expect(steamUser.acquireAuthenticated).toHaveBeenCalledWith({
+          reason: 'user-refresh'
+        })
+        expect(leaseRelease).toHaveBeenCalledTimes(1)
+      })
+
+      it.each(['redeem-steam-key', 'steam-go-offline-retry'])(
+        'explicit origin %s still passes guidedAction refresh',
+        async (origin) => {
+          resetSteamAuthTrigger()
+          noteRefreshTrigger('steam', origin)
+          jest
+            .mocked(steamUser.getClient)
+            .mockReturnValue(makeFakeClient([]) as any)
+
+          await manager.refresh()
+
+          expect(steamUser.acquireAuthenticated).toHaveBeenCalledWith({
+            reason: 'user-refresh',
+            guidedAction: 'refresh'
+          })
+        }
+      )
     })
 
     it('a sign-in grant acquires with reason login', async () => {
