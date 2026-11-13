@@ -107,7 +107,9 @@ export const SHIM_EXPORTED_SYMBOLS: SymbolTable = Object.freeze({
   // isteammatchmaking009.manifest.json,
   // isteammatchmakingservers002.manifest.json,
   // isteamnetworking005.manifest.json, plus Hoard's (63000) own measured
-  // RemoteStorage version, isteamremotestorage010.manifest.json), then
+  // RemoteStorage version, isteamremotestorage010.manifest.json, and Dungeons
+  // of Dredmor's (98800) measured version, isteamremotestorage008.manifest.json
+  // -- quick 261113-qu7), then
   // the four bare legacy accessors meta/gen_vtables.ts's generateDefFile
   // now exports for these families.
   SteamAPI_SteamRemoteStorage_v005: true,
@@ -117,6 +119,7 @@ export const SHIM_EXPORTED_SYMBOLS: SymbolTable = Object.freeze({
   SteamAPI_SteamMatchMakingServers_v002: true,
   SteamAPI_SteamNetworking_v005: true,
   SteamAPI_SteamRemoteStorage_v010: true,
+  SteamAPI_SteamRemoteStorage_v008: true,
   SteamRemoteStorage: true,
   SteamMatchmaking: true,
   SteamMatchmakingServers: true,
@@ -220,6 +223,12 @@ export function shimServedInterfaceVersions(): ReadonlyMap<
     // Hoard's (63000) own measured RemoteStorage version.
     [
       'STEAMREMOTESTORAGE_INTERFACE_VERSION010',
+      { family: 'SteamRemoteStorage', mode: 'stub' }
+    ],
+    // Dungeons of Dredmor's (98800) measured RemoteStorage version --
+    // cloud-disabled stub, same 51-14 sub-decision as 005/010.
+    [
+      'STEAMREMOTESTORAGE_INTERFACE_VERSION008',
       { family: 'SteamRemoteStorage', mode: 'stub' }
     ]
   ])

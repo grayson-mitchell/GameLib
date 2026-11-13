@@ -8,7 +8,7 @@
  * Implements:
  *   - The flat SteamAPI_* exports (acceptance-set superset, R3 finding #9).
  *   - Per-interface __thiscall C++ vtables (spike 006's proven ABI mechanism)
- *     for: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011, STEAMREMOTESTORAGE_INTERFACE_VERSION005, SteamMatchMaking009, SteamMatchMakingServers002, SteamNetworking005, STEAMREMOTESTORAGE_INTERFACE_VERSION010, SteamClient017, SteamUser019, SteamFriends015, SteamUtils008, STEAMAPPS_INTERFACE_VERSION008, STEAMREMOTESTORAGE_INTERFACE_VERSION013, SteamClient014, SteamNetworking006, STEAMREMOTESTORAGE_INTERFACE_VERSION016, SteamClient020, SteamClient021, SteamUser021, SteamFriends017, SteamUtils010, STEAMUSERSTATS_INTERFACE_VERSION012, STEAMUSERSTATS_INTERFACE_VERSION013, SteamInput006, SteamGameServer014, SteamGameServer015, SteamGameServerStats001, STEAMSCREENSHOTS_INTERFACE_VERSION003, SteamMatchGameSearch001, STEAMAPPLIST_INTERFACE_VERSION001, STEAMMUSIC_INTERFACE_VERSION001, STEAMMUSICREMOTE_INTERFACE_VERSION001, STEAMPARENTALSETTINGS_INTERFACE_VERSION001, SteamParties002, STEAMREMOTEPLAY_INTERFACE_VERSION001, STEAMREMOTEPLAY_INTERFACE_VERSION002, STEAMVIDEO_INTERFACE_V002, STEAMVIDEO_INTERFACE_V007, STEAMTIMELINE_INTERFACE_V001, STEAMHTTP_INTERFACE_VERSION003, STEAMUGC_INTERFACE_VERSION016, STEAMUGC_INTERFACE_VERSION017, STEAMUGC_INTERFACE_VERSION020, STEAMHTMLSURFACE_INTERFACE_VERSION_005, STEAMINVENTORY_INTERFACE_V003, SteamUtils009, SteamController006, SteamGameServer012, SteamController008, STEAMUGC_INTERFACE_VERSION010, SteamUser018, SteamUtils007, STEAMAPPS_INTERFACE_VERSION007, STEAMREMOTESTORAGE_INTERFACE_VERSION012, STEAMUGC_INTERFACE_VERSION007, STEAMHTTP_INTERFACE_VERSION002, STEAMSCREENSHOTS_INTERFACE_VERSION002, STEAMHTMLSURFACE_INTERFACE_VERSION_003, STEAMINVENTORY_INTERFACE_V001, STEAMVIDEO_INTERFACE_V001, SteamMatchMakingServers003, SteamNetworkingSockets013, SteamNetworkingUtils004, SteamNetworkingMessages002, SteamNetworkingSockets012.
+ *     for: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011, STEAMREMOTESTORAGE_INTERFACE_VERSION005, SteamMatchMaking009, SteamMatchMakingServers002, SteamNetworking005, STEAMREMOTESTORAGE_INTERFACE_VERSION010, SteamClient017, SteamUser019, SteamFriends015, SteamUtils008, STEAMAPPS_INTERFACE_VERSION008, STEAMREMOTESTORAGE_INTERFACE_VERSION013, SteamClient014, SteamNetworking006, STEAMREMOTESTORAGE_INTERFACE_VERSION016, SteamClient020, SteamClient021, SteamUser021, SteamFriends017, SteamUtils010, STEAMUSERSTATS_INTERFACE_VERSION012, STEAMUSERSTATS_INTERFACE_VERSION013, SteamInput006, SteamGameServer014, SteamGameServer015, SteamGameServerStats001, STEAMSCREENSHOTS_INTERFACE_VERSION003, SteamMatchGameSearch001, STEAMAPPLIST_INTERFACE_VERSION001, STEAMMUSIC_INTERFACE_VERSION001, STEAMMUSICREMOTE_INTERFACE_VERSION001, STEAMPARENTALSETTINGS_INTERFACE_VERSION001, SteamParties002, STEAMREMOTEPLAY_INTERFACE_VERSION001, STEAMREMOTEPLAY_INTERFACE_VERSION002, STEAMVIDEO_INTERFACE_V002, STEAMVIDEO_INTERFACE_V007, STEAMTIMELINE_INTERFACE_V001, STEAMHTTP_INTERFACE_VERSION003, STEAMUGC_INTERFACE_VERSION016, STEAMUGC_INTERFACE_VERSION017, STEAMUGC_INTERFACE_VERSION020, STEAMHTMLSURFACE_INTERFACE_VERSION_005, STEAMINVENTORY_INTERFACE_V003, SteamUtils009, SteamController006, SteamGameServer012, SteamController008, STEAMUGC_INTERFACE_VERSION010, SteamUser018, SteamUtils007, STEAMAPPS_INTERFACE_VERSION007, STEAMREMOTESTORAGE_INTERFACE_VERSION012, STEAMUGC_INTERFACE_VERSION007, STEAMHTTP_INTERFACE_VERSION002, STEAMSCREENSHOTS_INTERFACE_VERSION002, STEAMHTMLSURFACE_INTERFACE_VERSION_003, STEAMINVENTORY_INTERFACE_V001, STEAMVIDEO_INTERFACE_V001, SteamMatchMakingServers003, SteamNetworkingSockets013, SteamNetworkingUtils004, SteamNetworkingMessages002, SteamNetworkingSockets012, STEAMREMOTESTORAGE_INTERFACE_VERSION008.
  *
  * ABI ground truth (24-RESEARCH.md Pattern 2): MSVC __thiscall -- `this` in
  * ECX, callee cleans the stack; ret N = summed non-`this` param widths (+4 for
@@ -33625,6 +33625,473 @@ struct FakeSteamNetworkingSockets012 { vfn *vptr; };
 static struct FakeSteamNetworkingSockets012 g_steamnetworkingsockets012_instance = { g_steamnetworkingsockets012_vtbl };
 #endif
 
+#if defined(__i386__)
+// === STEAMREMOTESTORAGE_INTERFACE_VERSION008 (ordinal 74, family SteamRemoteStorage) ===
+
+// slot 0: FileWrite(const char* pchFile, const void* pvData, int32 cubData) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FileWrite(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "FileWrite", 0, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 1: FileRead(const char* pchFile, void* pvData, int32 cubDataToRead) -> int32 | __thiscall ret 12 (STUB)
+static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FileRead(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "FileRead", 1, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 2: FileForget(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FileForget(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "FileForget", 2, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 3: FileDelete(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FileDelete(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "FileDelete", 3, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 4: FileShare(const char* pchFile) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FileShare(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "FileShare", 4, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 5: SetSyncPlatforms(const char* pchFile, uint32 eRemoteStoragePlatform) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_SetSyncPlatforms(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "SetSyncPlatforms", 5, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 6: FileWriteStreamOpen(const char* pchFile) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FileWriteStreamOpen(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "FileWriteStreamOpen", 6, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 7: FileWriteStreamWriteChunk(uint64 writeHandle, const void* pvData, int32 cubData) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FileWriteStreamWriteChunk(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "FileWriteStreamWriteChunk", 7, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 8: FileWriteStreamClose(uint64 writeHandle) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FileWriteStreamClose(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "FileWriteStreamClose", 8, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 9: FileWriteStreamCancel(uint64 writeHandle) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FileWriteStreamCancel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "FileWriteStreamCancel", 9, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 10: FileExists(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FileExists(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "FileExists", 10, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 11: FilePersisted(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FilePersisted(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "FilePersisted", 11, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 12: GetFileSize(const char* pchFile) -> int32 | __thiscall ret 4 (STUB)
+static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetFileSize(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "GetFileSize", 12, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 13: GetFileTimestamp(const char* pchFile) -> int64 | __thiscall ret 4 (STUB)
+static int64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetFileTimestamp(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "GetFileTimestamp", 13, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 14: GetSyncPlatforms(const char* pchFile) -> uint32 | __thiscall ret 4 (STUB)
+static uint32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetSyncPlatforms(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "GetSyncPlatforms", 14, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 15: GetFileCount() -> int32 | __thiscall ret 0 (STUB)
+static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetFileCount(void *self) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "GetFileCount", 15, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 16: GetFileNameAndSize(int32 iFile, int32* pnFileSizeInBytes) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetFileNameAndSize(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "GetFileNameAndSize", 16, GAMELIB_STUBCALL_KIND_STUB);
+  return "";
+}
+
+// slot 17: GetQuota(int32* pnTotalBytes, int32* puAvailableBytes) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetQuota(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "GetQuota", 17, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 18: IsCloudEnabledForAccount() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_IsCloudEnabledForAccount(void *self) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "IsCloudEnabledForAccount", 18, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 19: IsCloudEnabledForApp() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_IsCloudEnabledForApp(void *self) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "IsCloudEnabledForApp", 19, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 20: SetCloudEnabledForApp(bool bEnabled) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_SetCloudEnabledForApp(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "SetCloudEnabledForApp", 20, GAMELIB_STUBCALL_KIND_STUB);
+}
+
+// slot 21: UGCDownload(uint64 hContent) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UGCDownload(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "UGCDownload", 21, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 22: GetUGCDownloadProgress(uint64 hContent, int32* pnBytesDownloaded, int32* pnBytesExpected) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetUGCDownloadProgress(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "GetUGCDownloadProgress", 22, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 23: GetUGCDetails(uint64 hContent, uint32* pnAppID, char** ppchName, int32* pnFileSizeInBytes, CSteamID* pSteamIDOwner) -> bool | __thiscall ret 24 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetUGCDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "GetUGCDetails", 23, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 24: UGCRead(uint64 hContent, void* pvData, int32 cubDataToRead) -> int32 | __thiscall ret 16 (STUB)
+static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UGCRead(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "UGCRead", 24, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 25: GetCachedUGCCount() -> int32 | __thiscall ret 0 (STUB)
+static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetCachedUGCCount(void *self) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "GetCachedUGCCount", 25, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 26: GetCachedUGCHandle(int32 iCachedContent) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetCachedUGCHandle(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "GetCachedUGCHandle", 26, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 27: PublishWorkshopFile(const char* pchFile, const char* pchPreviewFile, uint32 nConsumerAppId, const char* pchTitle, const char* pchDescription, uint32 eVisibility, w_SteamParamStringArray_t* pTags, uint32 eWorkshopFileType) -> uint64 | __thiscall ret 32 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_PublishWorkshopFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "PublishWorkshopFile", 27, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 28: CreatePublishedFileUpdateRequest(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_CreatePublishedFileUpdateRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "CreatePublishedFileUpdateRequest", 28, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 29: UpdatePublishedFileFile(uint64 updateHandle, const char* pchFile) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UpdatePublishedFileFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "UpdatePublishedFileFile", 29, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 30: UpdatePublishedFilePreviewFile(uint64 updateHandle, const char* pchPreviewFile) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UpdatePublishedFilePreviewFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "UpdatePublishedFilePreviewFile", 30, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 31: UpdatePublishedFileTitle(uint64 updateHandle, const char* pchTitle) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UpdatePublishedFileTitle(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "UpdatePublishedFileTitle", 31, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 32: UpdatePublishedFileDescription(uint64 updateHandle, const char* pchDescription) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UpdatePublishedFileDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "UpdatePublishedFileDescription", 32, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 33: UpdatePublishedFileVisibility(uint64 updateHandle, uint32 eVisibility) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UpdatePublishedFileVisibility(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "UpdatePublishedFileVisibility", 33, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 34: UpdatePublishedFileTags(uint64 updateHandle, w_SteamParamStringArray_t* pTags) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UpdatePublishedFileTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "UpdatePublishedFileTags", 34, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 35: CommitPublishedFileUpdate(uint64 updateHandle) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_CommitPublishedFileUpdate(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "CommitPublishedFileUpdate", 35, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 36: GetPublishedFileDetails(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetPublishedFileDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "GetPublishedFileDetails", 36, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 37: DeletePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_DeletePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "DeletePublishedFile", 37, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 38: EnumerateUserPublishedFiles(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_EnumerateUserPublishedFiles(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "EnumerateUserPublishedFiles", 38, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 39: SubscribePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_SubscribePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "SubscribePublishedFile", 39, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 40: EnumerateUserSubscribedFiles(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_EnumerateUserSubscribedFiles(void *self, uint32_t dummy0) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "EnumerateUserSubscribedFiles", 40, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 41: UnsubscribePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UnsubscribePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "UnsubscribePublishedFile", 41, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 42: UpdatePublishedFileSetChangeDescription(uint64 updateHandle, const char* pchChangeDescription) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UpdatePublishedFileSetChangeDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "UpdatePublishedFileSetChangeDescription", 42, GAMELIB_STUBCALL_KIND_STUB);
+  return 0;
+}
+
+// slot 43: GetPublishedItemVoteDetails(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetPublishedItemVoteDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "GetPublishedItemVoteDetails", 43, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 44: UpdateUserPublishedItemVote(uint64 unPublishedFileId, bool bVoteUp) -> uint64 | __thiscall ret 12 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UpdateUserPublishedItemVote(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "UpdateUserPublishedItemVote", 44, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 45: GetUserPublishedItemVoteDetails(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetUserPublishedItemVoteDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "GetUserPublishedItemVoteDetails", 45, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 46: EnumerateUserSharedWorkshopFiles(CSteamID steamId, uint32 unStartIndex, w_SteamParamStringArray_t* pRequiredTags, w_SteamParamStringArray_t* pExcludedTags) -> uint64 | __thiscall ret 20 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_EnumerateUserSharedWorkshopFiles(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "EnumerateUserSharedWorkshopFiles", 46, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 47: PublishVideo(uint32 eVideoProvider, const char* pchVideoAccount, const char* pchVideoIdentifier, const char* pchPreviewFile, uint32 nConsumerAppId, const char* pchTitle, const char* pchDescription, uint32 eVisibility, w_SteamParamStringArray_t* pTags) -> uint64 | __thiscall ret 36 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_PublishVideo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "PublishVideo", 47, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 48: SetUserPublishedFileAction(uint64 unPublishedFileId, uint32 eAction) -> uint64 | __thiscall ret 12 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_SetUserPublishedFileAction(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "SetUserPublishedFileAction", 48, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 49: EnumeratePublishedFilesByUserAction(uint32 eAction, uint32 unStartIndex) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_EnumeratePublishedFilesByUserAction(void *self, uint32_t dummy0, uint32_t dummy1) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "EnumeratePublishedFilesByUserAction", 49, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+// slot 50: EnumeratePublishedWorkshopFiles(uint32 eEnumerationType, uint32 unStartIndex, uint32 unCount, uint32 unDays, w_SteamParamStringArray_t* pTags, w_SteamParamStringArray_t* pUserTags) -> uint64 | __thiscall ret 24 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_EnumeratePublishedWorkshopFiles(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  static volatile LONG gamelib_sc[2];
+  (void)self;
+  gamelib_stubcall_note(gamelib_sc, "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "EnumeratePublishedWorkshopFiles", 50, GAMELIB_STUBCALL_KIND_STUB);
+  return 0LL;
+}
+
+static vfn g_steamremotestorage_interface_version008_vtbl[51] = {
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FileWrite, // slot 0
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FileRead, // slot 1
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FileForget, // slot 2
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FileDelete, // slot 3
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FileShare, // slot 4
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_SetSyncPlatforms, // slot 5
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FileWriteStreamOpen, // slot 6
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FileWriteStreamWriteChunk, // slot 7
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FileWriteStreamClose, // slot 8
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FileWriteStreamCancel, // slot 9
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FileExists, // slot 10
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_FilePersisted, // slot 11
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetFileSize, // slot 12
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetFileTimestamp, // slot 13
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetSyncPlatforms, // slot 14
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetFileCount, // slot 15
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetFileNameAndSize, // slot 16
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetQuota, // slot 17
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_IsCloudEnabledForAccount, // slot 18
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_IsCloudEnabledForApp, // slot 19
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_SetCloudEnabledForApp, // slot 20
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UGCDownload, // slot 21
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetUGCDownloadProgress, // slot 22
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetUGCDetails, // slot 23
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UGCRead, // slot 24
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetCachedUGCCount, // slot 25
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetCachedUGCHandle, // slot 26
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_PublishWorkshopFile, // slot 27
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_CreatePublishedFileUpdateRequest, // slot 28
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UpdatePublishedFileFile, // slot 29
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UpdatePublishedFilePreviewFile, // slot 30
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UpdatePublishedFileTitle, // slot 31
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UpdatePublishedFileDescription, // slot 32
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UpdatePublishedFileVisibility, // slot 33
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UpdatePublishedFileTags, // slot 34
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_CommitPublishedFileUpdate, // slot 35
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetPublishedFileDetails, // slot 36
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_DeletePublishedFile, // slot 37
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_EnumerateUserPublishedFiles, // slot 38
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_SubscribePublishedFile, // slot 39
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_EnumerateUserSubscribedFiles, // slot 40
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UnsubscribePublishedFile, // slot 41
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UpdatePublishedFileSetChangeDescription, // slot 42
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetPublishedItemVoteDetails, // slot 43
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_UpdateUserPublishedItemVote, // slot 44
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_GetUserPublishedItemVoteDetails, // slot 45
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_EnumerateUserSharedWorkshopFiles, // slot 46
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_PublishVideo, // slot 47
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_SetUserPublishedFileAction, // slot 48
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_EnumeratePublishedFilesByUserAction, // slot 49
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION008_EnumeratePublishedWorkshopFiles, // slot 50
+};
+struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION008 { vfn *vptr; };
+static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION008 g_steamremotestorage_interface_version008_instance = { g_steamremotestorage_interface_version008_vtbl };
+#endif
+
 // === Legacy bare accessors (51-06 Task 2, selected per game via gamelib_bridge.cfg's iface.<Family>=<Version>) ===
 
 typedef struct { const char *version; const char *family; void *instance; } GIfaceTableEntry;
@@ -33835,6 +34302,9 @@ static const GIfaceTableEntry g_iface_table[] = {
 #endif
 #if defined(__x86_64__)
   { "SteamNetworkingSockets012", "SteamNetworkingSockets", &g_steamnetworkingsockets012_instance },
+#endif
+#if defined(__i386__)
+  { "STEAMREMOTESTORAGE_INTERFACE_VERSION008", "SteamRemoteStorage", &g_steamremotestorage_interface_version008_instance },
 #endif
 };
 #define G_IFACE_TABLE_LEN (sizeof(g_iface_table) / sizeof(g_iface_table[0]))
@@ -47450,4 +47920,7 @@ void *SteamAPI_SteamNetworkingMessages_SteamAPI_v002(void) { return &g_steamnetw
 #endif
 #if defined(__x86_64__)
 void *SteamAPI_SteamNetworkingSockets_SteamAPI_v012(void) { return &g_steamnetworkingsockets012_instance; }
+#endif
+#if defined(__i386__)
+void *SteamAPI_SteamRemoteStorage_v008(void) { return &g_steamremotestorage_interface_version008_instance; }
 #endif
