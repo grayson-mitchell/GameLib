@@ -43,7 +43,8 @@ async function windowsRunningAppId(
  */
 /** The macOS reader: pure file read, no spawn. */
 export async function readMacRunningAppId(
-  deps: Pick<RunningPollProbeDeps, 'paths' | 'requestRustInvoke'>
+  deps: Pick<RunningPollProbeDeps, 'paths' | 'requestRustInvoke'>,
+  strict = false
 ): Promise<number> {
   const regPath = join(
     deps.paths.userHome,
@@ -52,13 +53,17 @@ export async function readMacRunningAppId(
     'Steam',
     'registry.vdf'
   )
-  return readRegistryRunningAppId(deps, regPath)
+  return readRegistryRunningAppId(deps, regPath, strict)
 }
 
-/** The registry.vdf RunningAppID read shared by the macOS and Linux readers; 0 on any failure. */
+/**
+ * The registry.vdf RunningAppID read shared by the macOS and Linux readers; 0 on any failure
+ * unless `strict`, where a rejected rustInvoke propagates (WR-01, 75 review).
+ */
 async function readRegistryRunningAppId(
   rust: RustInvokeDeps,
-  regPath: string
+  regPath: string,
+  strict = false
 ): Promise<number> {
   try {
     const r = await invokeSteamFiles(
@@ -69,7 +74,8 @@ async function readRegistryRunningAppId(
       }
     )
     return r.runningAppId
-  } catch {
+  } catch (error) {
+    if (strict) throw error
     return 0
   }
 }
@@ -80,10 +86,11 @@ async function readRegistryRunningAppId(
  * Returns 0 when file absent, parse fails, or broken (ValveSoftware/steam-for-linux#9672).
  */
 function linuxRegistryVdfRunningAppId(
-  deps: Pick<RunningPollProbeDeps, 'paths' | 'requestRustInvoke'>
+  deps: Pick<RunningPollProbeDeps, 'paths' | 'requestRustInvoke'>,
+  strict = false
 ): Promise<number> {
   const regPath = join(deps.paths.userHome, '.steam', 'registry.vdf')
-  return readRegistryRunningAppId(deps, regPath)
+  return readRegistryRunningAppId(deps, regPath, strict)
 }
 
 /**
@@ -128,6 +135,22 @@ export async function readRunningAppId(
   if (platform === 'darwin') return readMacRunningAppId(deps)
   // Linux: VDF first, reaper fallback when VDF returns 0 (D-05)
   const fromRegistry = await linuxRegistryVdfRunningAppId(deps)
+  return fromRegistry !== 0 ? fromRegistry : linuxFallbackRunningAppId(deps)
+}
+
+/**
+ * readRunningAppId for a safety guard: a rejected registry.vdf rustInvoke
+ * (macOS, Linux) throws instead of reading as "no game running", so
+ * decideSteamNativeDelete's running-check-failed refusal can fire (WR-01, 75
+ * review). Windows (reg.exe) is unchanged.
+ */
+export async function readRunningAppIdOrThrow(
+  deps: RunningPollProbeDeps,
+  platform: NodeJS.Platform = process.platform
+): Promise<number> {
+  if (platform === 'win32') return windowsRunningAppId(deps)
+  if (platform === 'darwin') return readMacRunningAppId(deps, true)
+  const fromRegistry = await linuxRegistryVdfRunningAppId(deps, true)
   return fromRegistry !== 0 ? fromRegistry : linuxFallbackRunningAppId(deps)
 }
 

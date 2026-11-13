@@ -218,6 +218,14 @@ export async function launch(
       })
       if (decision === 'clear-and-launch') {
         clearPendingAdoption(steamGame.appId, adoptionStore)
+      } else if (decision === 'unknown') {
+        // WR-01 (75 review): the manifest read failed, so adoption is
+        // unknown. Do not quit the user's Steam on that; launch plainly and
+        // keep the record so the next Play decides again.
+        logWarning(
+          `SteamGame: Play for ${steamGame.appId}: manifest unreadable, adoption unknown; launching without a Steam restart (pending adoption kept)`,
+          LogPrefix.Steam
+        )
       } else if (decision === 'restart') {
         const outcome = await restartMacSteamForAdoption(
           steamGame.appId,

@@ -346,6 +346,15 @@ export async function rearmPersistedSteamRestartHolds(
           continue
         }
         const acf = await readAcfState(deps, appId, 'native')
+        // WR-01 (75 review): an unreadable manifest is not a reason to drop a
+        // persisted hold; keep it for the next start.
+        if (acf.state === 'unknown') {
+          logWarning(
+            `Steam: kept persisted Steam restart hold for appId ${appId} (manifest state unknown)`,
+            LogPrefix.Steam
+          )
+          continue
+        }
         if (acf.state !== 'installed') {
           clearSteamRestartHold(appId, restartHoldStoreFrom(deps))
           dropped++

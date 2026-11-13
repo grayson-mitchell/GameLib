@@ -394,6 +394,48 @@ describe('pollUninstallOnce()', () => {
     expect(notify).not.toHaveBeenCalled()
   })
 
+  // WR-01 (75 review): a rejected read is not a confirmed absence.
+  it('a rejected manifest read is not a confirmed absence: no badge flip, no forced-verdict clear', async () => {
+    const rejecting = () => Promise.reject(new Error('rustInvoke timed out'))
+    const deps = { ...steamTestDeps, requestRustInvoke: rejecting } as never
+    startUninstallPolling(steamTestDeps, '730', 60000)
+    await pollUninstallOnce(deps, '730', 'bottle')
+    expect(library.get('730')?.is_installed).toBe(true)
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.anything()
+    )
+    expect(clearForcedSpy).not.toHaveBeenCalled()
+    expect(notify).not.toHaveBeenCalled()
+  })
+
+  it('a survivor root whose read rejects defers completion to the next tick (WR-01)', async () => {
+    // Native confirmed absent; the bottle root's read rejects, so a copy may
+    // survive there: the uninstall must not be declared complete yet.
+    const base = mockedFsSteamFiles().requestRustInvoke
+    const partlyRejecting = (channel: string, argv: readonly unknown[]) => {
+      const dirs = (argv[0] as { steamappsDirs?: string[] })?.steamappsDirs
+      return dirs?.includes('/bottle/steamapps')
+        ? Promise.reject(new Error('rustInvoke timed out'))
+        : base(channel, argv)
+    }
+    ;(existsSync as jest.Mock).mockImplementation(
+      (path: string) => path !== '/steam/steamapps/appmanifest_730.acf'
+    )
+    const deps = {
+      ...steamTestDeps,
+      requestRustInvoke: partlyRejecting
+    } as never
+    startUninstallPolling(steamTestDeps, '730', 60000)
+    await pollUninstallOnce(deps, '730') // default source: 'native'
+    expect(library.get('730')?.is_installed).toBe(true)
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.anything()
+    )
+    expect(notify).not.toHaveBeenCalled()
+  })
+
   // ── R1-R4: D-17 (34.13-14) reversibility ──────────────────────────────────
 
   it('R1: bottle uninstall confirmed-absent clears the forced verdict', async () => {

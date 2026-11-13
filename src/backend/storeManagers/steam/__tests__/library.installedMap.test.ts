@@ -710,14 +710,29 @@ describe('installed-map builders, rust branch', () => {
     ])
   })
 
-  it('buildInstalledMap and buildIncompleteInstallSet fail soft when the invoke rejects', async () => {
+  // WR-01 (75 review): a rejected scan is "unknown", not "nothing installed";
+  // the callers skip the reconcile instead of persisting an empty map.
+  it('buildInstalledMap and buildIncompleteInstallSet reject when the invoke rejects', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/a'])
     const stub = stubRustSteamFiles({})
 
-    expect((await buildInstalledMap({ ...libDeps, ...stub })).size).toBe(0)
-    expect(
-      (await buildIncompleteInstallSet({ ...libDeps, ...stub })).size
-    ).toBe(0)
+    await expect(buildInstalledMap({ ...libDeps, ...stub })).rejects.toThrow(
+      'unstubbed steamfiles channel'
+    )
+    await expect(
+      buildIncompleteInstallSet({ ...libDeps, ...stub })
+    ).rejects.toThrow('unstubbed steamfiles channel')
+  })
+
+  it('buildInstalledMap reads the library list strictly (WR-01)', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/a'])
+    const stub = stubRustSteamFiles({
+      steamfiles_scan_acfs: () => scanOf([])
+    })
+    await buildInstalledMap({ ...libDeps, ...stub })
+    expect(getSteamLibraries).toHaveBeenCalledWith(expect.anything(), {
+      strict: true
+    })
   })
 
   it('buildIncompleteInstallSet keeps only present-but-incomplete manifests with a numeric StateFlags', async () => {

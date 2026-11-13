@@ -38,7 +38,7 @@ import {
 } from './bridgeBottle'
 import { isSteamNativeDeleteEnabled } from './nativeInstallSetting'
 import { decideSteamNativeDelete } from './nativeDelete'
-import { readRunningAppId } from './library/runningPoll'
+import { readRunningAppIdOrThrow } from './library/runningPoll'
 import { isProcessRunningFromFolder } from './runningFromFolder'
 import {
   createSteamInstallAppRun,
@@ -320,8 +320,9 @@ export async function uninstallNativeInGameLib(
   )?.install?.install_path
   const { runner, paths } = steamGame.deps
   const decision = await decideSteamNativeDelete(steamGame.appId, installPath, {
+    // WR-01 (75 review): strict, so a failed read refuses the delete.
     readRunningAppId: () =>
-      readRunningAppId({
+      readRunningAppIdOrThrow({
         runner,
         paths,
         requestRustInvoke: steamGame.deps.requestRustInvoke
@@ -660,6 +661,25 @@ export async function uninstallBottleGameDirectly(
   // Emit an explicit terminal `done` so any status the click already put on
   // the tile is cleared, and report a real stderr so the caller does not
   // treat this as a completed uninstall.
+  // WR-01 (75 review): an unreadable bottle manifest is a refusal, never the
+  // "nothing to remove" branch below (which polls and can flip the badge).
+  if (acfState.state === 'unknown') {
+    logWarning(
+      `SteamGame: uninstallBottleGameDirectly refused for appId ${steamGame.appId}: the bottle manifest could not be read`,
+      LogPrefix.Steam
+    )
+    steamGame.deps.sendFrontendMessage('gameStatusUpdate', {
+      appName: steamGame.appId,
+      runner: 'steam',
+      status: 'done'
+    })
+    return {
+      stdout: '',
+      stderr: `Refused to uninstall: the install state for appId ${steamGame.appId} could not be read — try again`,
+      refused: true
+    }
+  }
+
   if (acfState.state === 'downloading') {
     logWarning(
       `SteamGame: uninstallBottleGameDirectly refused for appId ${steamGame.appId} — the bottle manifest is mid-download/partial, cancel the in-progress install first`,

@@ -510,6 +510,25 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
       expectDropped()
     })
 
+    it('KEEPS the record when the native manifest state is unknown (read rejected, WR-01)', async () => {
+      store.set('730', record())
+      jest
+        .mocked(getSteamLibraries)
+        .mockRejectedValue(new Error('rustInvoke timed out'))
+      jest.mocked(listSteamClientPids).mockResolvedValue([111])
+      jest
+        .mocked(readSteamProcessStartTokens)
+        .mockResolvedValue(new Map([[111, 'T1']]))
+      await manager.init()
+      expect(store.has('730')).toBe(true)
+      expect(
+        (logInfo as jest.Mock).mock.calls.some(
+          ([m]) =>
+            typeof m === 'string' && m.includes('starting install polling')
+        )
+      ).toBe(false)
+    })
+
     it('drops when a native install is already in flight for the app', async () => {
       store.set('730', record())
       jest.mocked(listSteamClientPids).mockResolvedValue([111])

@@ -20,7 +20,8 @@ import type { ScriptStep } from 'backend/testUtils/scriptedRunner'
 import {
   createRunningPoll,
   readMacRunningAppId,
-  readRunningAppId
+  readRunningAppId,
+  readRunningAppIdOrThrow
 } from '../library/runningPoll'
 import { windowsSystem32Path } from '../runningFromFolder'
 import {
@@ -187,6 +188,35 @@ describe('readRunningAppId() -- per-platform dispatch', () => {
         ).resolves.toBe(0)
       }
     )
+  })
+})
+
+// WR-01 (75 review): the delete guard's running check must see a failed
+// registry.vdf read as a failure, not as "no game running".
+describe('readRunningAppIdOrThrow()', () => {
+  const rejecting = () => Promise.reject(new Error('rustInvoke timed out'))
+
+  it.each(['darwin', 'linux'] as const)(
+    'rejects on %s when the registry.vdf invoke rejects (readRunningAppId reads 0)',
+    async (platform) => {
+      const runner = createScriptedRunner([])
+      const deps = { runner, paths, requestRustInvoke: rejecting }
+      await expect(readRunningAppId(deps, platform)).resolves.toBe(0)
+      await expect(readRunningAppIdOrThrow(deps, platform)).rejects.toThrow(
+        'rustInvoke timed out'
+      )
+    }
+  )
+
+  it('answers like readRunningAppId when the read succeeds', async () => {
+    vdfWith('440')
+    const runner = createScriptedRunner([])
+    await expect(
+      readRunningAppIdOrThrow(
+        { runner, paths, requestRustInvoke: noRust },
+        'darwin'
+      )
+    ).resolves.toBe(440)
   })
 })
 

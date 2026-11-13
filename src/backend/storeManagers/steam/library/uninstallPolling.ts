@@ -77,6 +77,10 @@ export async function pollUninstallOnce(
   const poll =
     deps.steamInstallRuntime.uninstallPolls.activeUninstallPolls.get(appId)
 
+  // WR-01 (75 review): the read failed, so this tick learned nothing. Never
+  // a confirmed absence — no badge flip, no forced-Windows clear; retry.
+  if (result.state === 'unknown') return
+
   if (result.state === 'absent') {
     // D-17 (34.13-14) reversibility: clear the forced verdict ONLY on a
     // BOTTLE-scoped CONFIRMED-absent tick — never at dispatch time (a
@@ -139,6 +143,15 @@ export async function pollUninstallOnce(
     )) {
       try {
         const candidateState = await readAcfState(deps, appId, candidate)
+        // WR-01 (75 review): a root whose read failed may still hold a
+        // copy; do not declare the uninstall complete on this tick.
+        if (candidateState.state === 'unknown') {
+          logWarning(
+            `Steam: uninstall-poll could not read the ${candidate} root for appId ${appId}; deferring completion to the next tick`,
+            LogPrefix.Steam
+          )
+          return
+        }
         if (
           candidateState.state === 'installed' &&
           candidateState.installPath

@@ -122,6 +122,20 @@ describe('decidePlayAdoption', () => {
       })
     ).toBe('clear-and-launch')
   })
+  test('same PID and an unreadable current ACF is unknown, not restart (WR-01)', () => {
+    expect(
+      decidePlayAdoption({
+        record,
+        currentPid: 100,
+        currentAcf: {
+          ...own,
+          stateFlags: null,
+          buildid: '',
+          rustReadFailed: true
+        }
+      })
+    ).toBe('unknown')
+  })
   test('same PID and unadopted ACF restarts', () => {
     expect(
       decidePlayAdoption({ record, currentPid: 100, currentAcf: own })
@@ -407,9 +421,10 @@ describe('readAcfSnapshot and isSteamAdoptedAcf', () => {
     ).resolves.toBeNull()
   })
 
-  test('a rejecting transport yields a snapshot that is never adopted', async () => {
+  test('a rejecting transport yields a snapshot that is never adopted and is marked unread (WR-01)', async () => {
     const snap = await readAcfSnapshot(stubRustSteamFiles({}), writeAcf())
     expect(snap?.stateFlags).toBeNull()
+    expect(snap?.rustReadFailed).toBe(true)
     expect(isSteamAdoptedAcf(null, snap)).toBe(false)
   })
 

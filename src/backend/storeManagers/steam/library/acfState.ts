@@ -30,6 +30,10 @@ import { isFullyInstalledStateFlags } from './installedMap'
  * - 'installed':   manifest present and StateFlags bit 4 set (FullyInstalled)
  * - 'downloading': manifest present but bit 4 unset (download in flight)
  * - 'absent':      no manifest found for this appId in any library path
+ * - 'unknown':     the rustInvoke for the library list or the manifest lookup
+ *                  rejected (timeout, shell restart). Nothing was learned, so
+ *                  no caller may read it as absent (WR-01, 75 review): pollers
+ *                  skip the tick, delete paths refuse.
  *
  * `source` selects which steamapps root(s) to scan:
  *  - 'native' (default): every native library path from getSteamLibraries(deps)
@@ -49,7 +53,7 @@ export async function readAcfState(
   appId: string,
   source: AcfSource = 'native'
 ): Promise<{
-  state: 'absent' | 'downloading' | 'installed'
+  state: 'absent' | 'downloading' | 'installed' | 'unknown'
   stateFlags?: number
   installPath?: string
   sizeOnDisk?: string
@@ -63,24 +67,32 @@ export async function readAcfState(
   bytesStaged?: number
   bytesToStage?: number
 }> {
-  const steamappsDirs = (
+  // Resolving a bottle/bridge root may throw (unprovisioned bottle); callers
+  // rely on that throw, so it stays outside the 'unknown' mapping below.
+  const bottleDirs =
     source === 'bottle'
       ? [getBottleSteamappsRoot(deps)]
       : source === 'bridge'
         ? [getBridgeBottleSteamappsRoot(deps, appId)]
-        : (await getSteamLibraries(deps)).map((libPath) =>
-            join(libPath, 'steamapps')
-          )
-  ).filter((dir) => existsSync(dir))
-
+        : null
   let found
   try {
+    const steamappsDirs = (
+      bottleDirs ??
+      (await getSteamLibraries(deps, { strict: true })).map((libPath) =>
+        join(libPath, 'steamapps')
+      )
+    ).filter((dir) => existsSync(dir))
     found = await invokeSteamFiles(deps, RUST_STEAMFILES_FIND_ACF, {
       steamappsDirs,
       appId
     })
-  } catch {
-    return { state: 'absent' }
+  } catch (error) {
+    logWarning(
+      `SteamLibraryManager: readAcfState(${appId}, '${source}') could not read manifests, state unknown: ${String(error)}`,
+      LogPrefix.Steam
+    )
+    return { state: 'unknown' }
   }
   if (!found.found || !found.record || !found.steamappsDir) {
     return { state: 'absent' }
@@ -300,6 +312,12 @@ export async function removeSteamInstallCopy(
 
   if (acfState.state === 'absent') {
     return { status: 'absent', source }
+  }
+
+  // WR-01 (75 review): an unreadable state is never "absent" and never a
+  // license to delete.
+  if (acfState.state === 'unknown') {
+    return { status: 'refused', source, reason: 'install state unknown' }
   }
 
   if (acfState.state === 'downloading') {

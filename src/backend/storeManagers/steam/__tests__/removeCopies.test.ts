@@ -629,6 +629,25 @@ describe('removeSteamInstallCopy', () => {
     expect(rmSync).not.toHaveBeenCalled()
   })
 
+  it("state 'unknown' (manifest read rejected) -> refused, nothing deleted (WR-01)", async () => {
+    const result = await acfState.removeSteamInstallCopy(
+      {
+        ...steamTestDeps,
+        requestRustInvoke: () =>
+          Promise.reject(new Error('rustInvoke timed out'))
+      } as never,
+      '63000',
+      'native'
+    )
+
+    expect(result).toEqual({
+      status: 'refused',
+      source: 'native',
+      reason: 'install state unknown'
+    })
+    expect(rmSync).not.toHaveBeenCalled()
+  })
+
   it("state 'absent' -> absent, nothing deleted", async () => {
     const result = await acfState.removeSteamInstallCopy(
       steamTestDeps,

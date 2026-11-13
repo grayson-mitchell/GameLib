@@ -28,21 +28,19 @@ export function isFullyInstalledStateFlags(stateFlags: number): boolean {
 type InstalledMap = Map<number, { installPath: string; sizeOnDisk: string }>
 
 /**
- * One steamfiles_scan_acfs call over `steamappsDirs`. A rejected invoke maps to no records,
- * the same fail-soft result the TS bodies give for unreadable input.
+ * One steamfiles_scan_acfs call over `steamappsDirs`. Unreadable files and missing dirs are
+ * skipped inside the scan (T-2-01), but a rejected invoke (timeout, shell restart) is
+ * propagated: it says nothing about what is installed, and mapping it to "no records" made
+ * refreshInstallState persist every installed title as not installed (WR-01, 75 review).
  */
 async function scanRecords(
   deps: RustInvokeDeps,
   steamappsDirs: string[]
 ): Promise<ScannedAcf[]> {
-  try {
-    const result = await invokeSteamFiles(deps, RUST_STEAMFILES_SCAN_ACFS, {
-      steamappsDirs
-    })
-    return result.records
-  } catch {
-    return []
-  }
+  const result = await invokeSteamFiles(deps, RUST_STEAMFILES_SCAN_ACFS, {
+    steamappsDirs
+  })
+  return result.records
 }
 
 function installedEntry(rec: ScannedAcf) {
@@ -64,7 +62,9 @@ function fullyInstalledAppId(rec: ScannedAcf): number | undefined {
  * Reads all Steam library paths and returns a Map from AppID (number) to
  * install data for games whose ACF StateFlags has bit 4 set
  * (0x4 = FullyInstalled). Skips missing directories and corrupt ACF files
- * without throwing (T-2-01 mitigation).
+ * without throwing (T-2-01 mitigation). A rejected rustInvoke for the library
+ * list or the scan rejects (WR-01, 75 review): callers skip the reconcile
+ * rather than read it as "nothing installed".
  *
  * Exported for unit testing.
  */
@@ -72,7 +72,7 @@ export async function buildInstalledMap(
   deps: SteamLibrariesDeps
 ): Promise<InstalledMap> {
   const installed: InstalledMap = new Map()
-  const libraryPaths = await getSteamLibraries(deps)
+  const libraryPaths = await getSteamLibraries(deps, { strict: true })
   const records = await scanRecords(
     deps,
     libraryPaths.map((libPath) => join(libPath, 'steamapps'))
@@ -103,7 +103,7 @@ export async function buildIncompleteInstallSet(
   deps: SteamLibrariesDeps
 ): Promise<Set<number>> {
   const incomplete = new Set<number>()
-  const libraryPaths = await getSteamLibraries(deps)
+  const libraryPaths = await getSteamLibraries(deps, { strict: true })
   const records = await scanRecords(
     deps,
     libraryPaths.map((libPath) => join(libPath, 'steamapps'))

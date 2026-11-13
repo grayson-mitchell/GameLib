@@ -14,6 +14,7 @@ import {
 import SteamLibraryManager from '../library'
 import { stopInstallPolling } from '../library/installStop'
 import { buildIncompleteInstallSet } from '../library/installedMap'
+import { refreshInstallState } from '../library/refresh'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import {
   vdf,
@@ -2205,6 +2206,51 @@ describe('SteamLibraryManager', () => {
 
       // No change → no push to avoid flooding frontend
       expect(sendFrontendMessage).not.toHaveBeenCalled()
+    })
+
+    // WR-01 (75 review): a rejected manifest scan must not be diffed as an
+    // empty map — that persisted every installed title as not installed.
+    it('refreshInstallState() skips the reconcile when the manifest scan rejects', async () => {
+      library.set('570', {
+        runner: 'steam',
+        app_name: '570',
+        title: 'Dota 2',
+        is_installed: true,
+        install: {
+          install_path: '/steam/steamapps/common/dota2',
+          install_size: '50000',
+          platform: 'Mac'
+        },
+        art_cover: '',
+        art_square: '',
+        extra: { reqs: [] },
+        canRunOffline: true,
+        installable: true
+      } as any)
+      jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+      const rejecting = () => Promise.reject(new Error('rustInvoke timed out'))
+
+      await expect(
+        refreshInstallState({
+          ...steamTestDeps,
+          requestRustInvoke: rejecting
+        } as never)
+      ).resolves.toBeUndefined()
+
+      expect(library.get('570')?.is_installed).toBe(true)
+      expect(library.get('570')?.install).toEqual(
+        expect.objectContaining({
+          install_path: '/steam/steamapps/common/dota2'
+        })
+      )
+      expect(sendFrontendMessage).not.toHaveBeenCalled()
+      expect(steamLibraryStore.set).not.toHaveBeenCalled()
+      expect(logWarning).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          'Steam: install-state scan failed; skipping this reconcile:'
+        ]),
+        expect.anything()
+      )
     })
 
     it("D-UAT-13: a game holding for a Steam restart is NOT flipped to installed by the window-focus reconcile (it would show Play, and Play opens Steam's install dialog) — it is once the hold ends", async () => {

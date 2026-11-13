@@ -962,7 +962,7 @@ describe('readAcfState and scanDownloadingAppIds, rust branch', () => {
     })
   })
 
-  it('reports absent when nothing is found, and when the invoke rejects', async () => {
+  it('reports absent when nothing is found, and unknown when the invoke rejects (WR-01)', async () => {
     const none = stubRustSteamFiles({
       steamfiles_find_acf: () => ({
         found: false,
@@ -976,8 +976,24 @@ describe('readAcfState and scanDownloadingAppIds, rust branch', () => {
 
     const rejecting = stubRustSteamFiles({})
     expect(await readAcfState({ ...libDeps, ...rejecting }, '1')).toEqual({
-      state: 'absent'
+      state: 'unknown'
     })
+  })
+
+  it('reports unknown when the native library list cannot be read (WR-01)', async () => {
+    jest
+      .mocked(getSteamLibraries)
+      .mockRejectedValueOnce(new Error('rustInvoke timed out'))
+    const stub = stubRustSteamFiles({
+      steamfiles_find_acf: () => found({ appid: '730', stateFlags: 4 })
+    })
+    expect(await readAcfState({ ...libDeps, ...stub }, '730')).toEqual({
+      state: 'unknown'
+    })
+    expect(getSteamLibraries).toHaveBeenCalledWith(expect.anything(), {
+      strict: true
+    })
+    expect(stub.calls).toHaveLength(0)
   })
 
   it('scanDownloadingAppIds makes one scan call and keeps bit-4-unset appIds present in the library map', async () => {

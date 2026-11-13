@@ -600,8 +600,16 @@ export type SteamLibrariesDeps = {
   config: Pick<GlobalConfigSlice, 'getSettings'>
 } & RustInvokeDeps
 
+/**
+ * The Steam library roots. A missing or malformed libraryfolders.vdf yields
+ * the system path only. A rejected rustInvoke (timeout, shell restart) also
+ * yields the system path only, unless `opts.strict`: then it propagates, so an
+ * install-state reader cannot mistake "could not read the library list" for
+ * "nothing is installed in the other libraries" (WR-01, 75 review).
+ */
 export async function getSteamLibraries(
-  deps: SteamLibrariesDeps
+  deps: SteamLibrariesDeps,
+  opts: { strict?: boolean } = {}
 ): Promise<string[]> {
   const { defaultSteamPath } = deps.config.getSettings()
   const path = defaultSteamPath.replaceAll("'", '')
@@ -617,7 +625,8 @@ export async function getSteamLibraries(
         path: vdfFile
       }
     )
-  } catch {
+  } catch (error) {
+    if (opts.strict) throw error
     return libraries
   }
   if (!result.exists) {

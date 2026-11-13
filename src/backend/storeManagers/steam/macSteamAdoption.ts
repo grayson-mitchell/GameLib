@@ -47,6 +47,11 @@ export interface AcfSnapshot {
    */
   stateFlags?: number | null
   buildid?: string
+  /**
+   * True when the Rust read of this snapshot rejected (timeout, shell restart): the parsed
+   * fields are unknown, not "not adopted" (WR-01, 75 review).
+   */
+  rustReadFailed?: boolean
 }
 
 export interface PendingAdoptionRecord {
@@ -150,8 +155,9 @@ export async function readAcfSnapshot(
       buildid: record?.buildid ?? ''
     }
   } catch {
-    // Rust unreachable: no parsed fields, so isSteamAdoptedAcf answers false (not adopted).
-    return { ...snapshot, stateFlags: null, buildid: '' }
+    // Rust unreachable: the parsed fields are unknown. isSteamAdoptedAcf still answers false,
+    // but decidePlayAdoption answers 'unknown' rather than 'restart' (WR-01, 75 review).
+    return { ...snapshot, stateFlags: null, buildid: '', rustReadFailed: true }
   }
 }
 
@@ -180,7 +186,16 @@ export function isSteamAdoptedAcf(
   return differs && fullyInstalled && buildid !== '' && buildid !== '0'
 }
 
-type PlayAdoptionDecision = 'launch' | 'clear-and-launch' | 'restart'
+/**
+ * 'unknown': the record is pending and the running Steam is the one that saw the install, but
+ * the current ACF could not be read, so whether Steam adopted it is unknown. Callers take the
+ * side-effect-free route (plain launch / delegated uninstall) and keep the record.
+ */
+type PlayAdoptionDecision =
+  | 'launch'
+  | 'clear-and-launch'
+  | 'restart'
+  | 'unknown'
 
 /**
  * Pure Play-time decision. A different PID means Steam restarted since the
@@ -196,6 +211,7 @@ export function decidePlayAdoption(input: {
   if (!record) return 'launch'
   if (currentPid === null) return 'clear-and-launch'
   if (currentPid !== record.steamPid) return 'clear-and-launch'
+  if (currentAcf?.rustReadFailed) return 'unknown'
   if (isSteamAdoptedAcf(record.baseline, currentAcf)) return 'clear-and-launch'
   return 'restart'
 }

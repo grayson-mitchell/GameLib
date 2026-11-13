@@ -11161,6 +11161,32 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
     })
   })
 
+  // WR-01 (75 review): an unreadable bottle manifest must not take the
+  // "nothing to remove" branch, which polls and can flip the badge.
+  describe('an unknown bottle manifest state is refused (WR-01)', () => {
+    beforeEach(() => {
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      readAcfStateSpy.mockResolvedValue({ state: 'unknown' as const })
+    })
+
+    it('refuses with a real error, never polls, and sends a terminal done', async () => {
+      sendFrontendMessage.mockClear()
+      const game = new SteamGame(APP_ID, steamTestDeps)
+      const result = await game.uninstall({} as any)
+
+      expect(result.stderr).toContain('could not be read')
+      expect(pollUninstallOnceSpy).not.toHaveBeenCalled()
+      expect(startUninstallPollingSpy).not.toHaveBeenCalled()
+      const statusFrames = sendFrontendMessage.mock.calls
+        .filter(([channel]) => channel === 'gameStatusUpdate')
+        .map(([, payload]) => payload.status)
+      expect(statusFrames).toContain('done')
+    })
+  })
+
   // ── SharedDepots hazard: a REAL filesystem regression test, not a mocked
   // one — proves uninstallBottleGameDirectly()'s deletion is scoped to
   // EXACTLY this title's own installdir + own manifest, and never touches
