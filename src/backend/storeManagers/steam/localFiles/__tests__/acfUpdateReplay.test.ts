@@ -5,7 +5,7 @@ import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
 import { readAcfInstalledDepots } from '../../acfInstalledDepots'
 import { readAcfUpdateFieldsFromDir } from '../../library/acfUpdateState'
 import { readAcfBetaKey, readLocalConfigBetaKey } from '../../depot/betaBranch'
-import { listFiles, normalizeForGolden } from './oracle/normalize'
+import { listFiles, normalizeForGolden } from './fixtures/fixtureCopy'
 import {
   expectedFor,
   replayDeps,

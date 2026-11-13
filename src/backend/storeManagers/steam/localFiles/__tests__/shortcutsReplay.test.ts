@@ -8,7 +8,7 @@ import {
   titleIndexFromSummary
 } from 'backend/shortcuts/nonesteamgame/nonesteamgame'
 import { invokeSteamFiles } from '../rustSteamFiles'
-import { FIXTURES_SRC } from './oracle/normalize'
+import { FIXTURES_SRC } from './fixtures/fixtureCopy'
 import { replayDeps, withFixtureCopy } from './fixtures/replayParity'
 
 /**

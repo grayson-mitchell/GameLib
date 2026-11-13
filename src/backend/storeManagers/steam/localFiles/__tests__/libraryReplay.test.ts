@@ -13,8 +13,13 @@ import {
   scanDownloadingAppIds
 } from '../../library/acfState'
 import { breadcrumbAppIsFullyInstalledOnDisk } from '../../library/resumeBreadcrumbs'
-import { listFiles, normalizeForGolden } from './oracle/normalize'
-import { SYSTEM_STEAM, depsFor, steamRootWith } from './oracle/libraryOracle'
+import {
+  SYSTEM_STEAM,
+  depsFor,
+  listFiles,
+  normalizeForGolden,
+  steamRootWith
+} from './fixtures/fixtureCopy'
 import {
   expectedFor,
   replayDeps,

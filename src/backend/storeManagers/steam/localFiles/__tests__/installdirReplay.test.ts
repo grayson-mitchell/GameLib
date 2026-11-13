@@ -3,7 +3,7 @@ import { join } from 'path'
 import * as logger from 'backend/logger'
 import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
 import { readAcfInstalldir } from '../../acfInstalldir'
-import { listFiles, normalizeForGolden } from './oracle/normalize'
+import { listFiles, normalizeForGolden } from './fixtures/fixtureCopy'
 import {
   expectedFor,
   replayDeps,

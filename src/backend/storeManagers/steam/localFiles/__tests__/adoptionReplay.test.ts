@@ -8,7 +8,7 @@ import {
 import { readAppManifestFlags } from '../../library/manifestFlags'
 import { readMacRunningAppId } from '../../library/runningPoll'
 import { isSteamAdoptedAcf, readAcfSnapshot } from '../../macSteamAdoption'
-import { listFiles, normalizeForGolden } from './oracle/normalize'
+import { listFiles, normalizeForGolden } from './fixtures/fixtureCopy'
 import {
   expectedFor,
   replayDeps,

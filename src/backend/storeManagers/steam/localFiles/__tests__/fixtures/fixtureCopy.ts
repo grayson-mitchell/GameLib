@@ -1,4 +1,5 @@
 import {
+  copyFileSync,
   mkdtempSync,
   mkdirSync,
   readdirSync,
@@ -180,4 +181,34 @@ export function listFiles(dir: string): string[] {
   return readdirSync(dir)
     .filter((n) => statSync(join(dir, n)).isFile())
     .sort()
+}
+
+/** Distro path getSteamLibraries always prepends; filtered when absent. */
+export const SYSTEM_STEAM = '/usr/share/steam'
+
+/**
+ * Library deps: `config.getSettings().defaultSteamPath` is read; the Rust transport is replaced
+ * per test, so the default rejects.
+ */
+export function depsFor(steamRoot: string) {
+  return {
+    config: { getSettings: () => ({ defaultSteamPath: steamRoot }) },
+    requestRustInvoke: () =>
+      Promise.reject(new Error('requestRustInvoke not stubbed'))
+  } as never
+}
+
+/** A temp Steam root whose steamapps/libraryfolders.vdf is `fixture`. */
+export function steamRootWith(
+  root: string,
+  fixture: string,
+  id: string
+): string {
+  const steam = join(root, '_steam', id)
+  mkdirSync(join(steam, 'steamapps'), { recursive: true })
+  copyFileSync(
+    join(root, 'libraryfolders', `${fixture}.vdf`),
+    join(steam, 'steamapps', 'libraryfolders.vdf')
+  )
+  return steam
 }
