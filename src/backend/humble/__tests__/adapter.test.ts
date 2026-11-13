@@ -4,10 +4,7 @@
  *
  * Mock boundaries:
  *  - axios       → get, isAxiosError (GET paths: library page + JS chunks)
- *  - global fetch → the filterUserLibrary server-action POST
- *  - login-window seam → revealPost (Phase 39 Plan 03: the reveal POST's
- *                  sole transport since humblePostRequest's electron-net
- *                  alternate was collapsed — see the `fakeSeam` helper below)
+ *  - global fetch → the filterUserLibrary and redeemEntitlementAction server-action POSTs
  *  - backend/logger → logInfo/logError/logWarning (asserted never to receive the cookie)
  */
 
@@ -21,61 +18,6 @@ jest.mock('axios', () => ({
     isAxiosError: (...args: unknown[]) => mockIsAxiosError(...args)
   }
 }))
-
-// ── login-window seam mock (Phase 39 Plan 03: the reveal POST's sole
-// transport) — a jest.fn() standing in for LoginWindowSeam['revealPost'].
-// queueSeamResponse()/queueSeamError() queue ONE resolution/rejection each,
-// consumed in call order (mockResolvedValueOnce/mockRejectedValueOnce),
-// mirroring a real async round-trip closely enough for these tests. The
-// seam itself is installed/torn down per-test inside describe('revealKey').
-const mockRevealPost = jest.fn()
-
-function fakeSeam(revealPost: LoginWindowSeam['revealPost']): LoginWindowSeam {
-  return {
-    open: jest.fn(),
-    cookies: jest.fn(),
-    cookiesForDomain: jest.fn(),
-    takeEvents: jest.fn(),
-    close: jest.fn(),
-    clearCookies: jest.fn(),
-    revealPost,
-    clearStorage: jest.fn()
-  }
-}
-
-/** Queues the next revealPost() call to resolve with an HTTP response. */
-function queueSeamResponse(status: number, body?: unknown) {
-  const bodyStr =
-    typeof body === 'string'
-      ? body
-      : body === undefined
-        ? ''
-        : JSON.stringify(body)
-  mockRevealPost.mockResolvedValueOnce({ status, body: bodyStr })
-}
-
-/** Queues the next revealPost() call to reject (structural transport failure). */
-function queueSeamError(error: Error) {
-  mockRevealPost.mockRejectedValueOnce(error)
-}
-
-function lastRevealPostInput(): {
-  originUrl: string
-  path: string
-  body: string
-  csrfToken?: string
-  userAgent: string
-} {
-  const calls = mockRevealPost.mock.calls
-  return calls[calls.length - 1][0]
-}
-
-// Typical Electron default UA shape (mirrors user.test.ts's own fixture) —
-// standardBrowserUserAgent() (userAgent.ts) reads the injected appInfo.userAgentFallback to
-// build the reveal POST's User-Agent header, passed through unchanged to
-// the login-window seam's revealPost() input.
-const MOCK_USER_AGENT_FALLBACK =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) GameLib/1.0.0 Chrome/142.0.7444.52 Electron/41.1.1 Safari/537.36'
 
 // ── Logger mock (factory to prevent transitive module load failures) ────────
 const mockLogInfo = jest.fn()
@@ -96,18 +38,6 @@ import {
   resetLibraryActionCache,
   revealKey
 } from '../adapter'
-import {
-  createLoginWindowSeamSlot,
-  type LoginWindowSeam
-} from '../loginWindowSeam'
-
-// One slot per test file: the adapter reads the seam through its injected deps.
-const seamSlot = createLoginWindowSeamSlot()
-const adapterDeps = {
-  loginWindowSeam: seamSlot,
-  appInfo: { userAgentFallback: MOCK_USER_AGENT_FALLBACK }
-}
-
 beforeEach(() => {
   jest.clearAllMocks()
   mockIsAxiosError.mockImplementation(
@@ -136,7 +66,7 @@ function allLoggedStrings(): string[] {
 // ── getLibraryOrders (Next.js server action `filterUserLibrary`) ─────────────
 
 describe('libraryItemToOrderDetail', () => {
-  test('maps each keys[] element onto an order-detail tpk and never invents a keyindex', () => {
+  test('maps each keys[] element onto an order-detail tpk and carries the integration id as keyindex', () => {
     const order = libraryItemToOrderDetail({
       id: 'item-1',
       title: 'Some Game',
@@ -165,7 +95,7 @@ describe('libraryItemToOrderDetail', () => {
       expiry_date: '2030-01-02T00:00:00.000Z'
     })
     expect(tpk).not.toHaveProperty('redeemed_key_val')
-    expect(tpk).not.toHaveProperty('keyindex')
+    expect(tpk).toHaveProperty('keyindex', 'steam')
   })
 
   test('a present gameKey becomes redeemed_key_val; redeemedAt alone marks revealed without a value', () => {
@@ -584,276 +514,155 @@ describe('getLibraryOrders', () => {
 })
 
 describe('revealKey', () => {
+  const ACTION_ID = 'b'.repeat(42)
   const GAMEKEY = 'gamekey-reveal-xyz'
-  const MACHINE_NAME = 'somegame_steam'
+  const KEY_ID = 'somegame_steam'
   const FAKE_KEY = 'AAAAA-BBBBB-CCCCC'
-  const CSRF_TOKEN = 'csrf-token-value'
+  const COOKIE = 'ory_session_x=synthetic'
+  const mockFetch = jest.fn()
+  const realFetch = global.fetch
 
-  function params(keyindex: string | number = 1) {
-    return { gamekey: GAMEKEY, machineName: MACHINE_NAME, keyindex }
+  const params = () => ({
+    gamekey: GAMEKEY,
+    machineName: KEY_ID,
+    keyindex: 'steam'
+  })
+
+  const actionResponse = (
+    body: string,
+    status = 200,
+    ct = 'text/x-component'
+  ) =>
+    ({
+      status,
+      headers: new Headers({ 'content-type': ct }),
+      text: () => Promise.resolve(body)
+    }) as unknown as Response
+
+  const flightResult = (result: unknown) =>
+    `0:{"a":"$@1","f":"","b":"x"}\n1:${JSON.stringify(result)}\n`
+
+  function mockDiscovery() {
+    mockGet.mockImplementation((url: string) => {
+      if (url.endsWith(`/home/library/${GAMEKEY}`))
+        return Promise.resolve({
+          status: 200,
+          data: '<script src="/_next/static/chunks/aaa.js"></script>',
+          headers: {}
+        })
+      if (url.endsWith('/aaa.js'))
+        return Promise.resolve({
+          status: 200,
+          data: `x=createServerReference("${ACTION_ID}",e.callServer,void 0,e.findSourceMapURL,"redeemEntitlementAction")`
+        })
+      return Promise.resolve({ status: 200, data: 'nothing' })
+    })
   }
 
   beforeEach(() => {
-    seamSlot.install(fakeSeam(mockRevealPost))
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
+    resetLibraryActionCache()
+    mockFetch.mockReset()
+    mockGet.mockReset()
+    global.fetch = mockFetch as unknown as typeof fetch
+    mockDiscovery()
   })
-
   afterEach(() => {
-    // The slot is per test file; clear it so a test that expects "no seam" starts empty.
-    seamSlot.install(null)
+    jest.useRealTimers()
+    global.fetch = realFetch
   })
 
-  test('{success:true, key} -> ok with the key value', async () => {
-    queueSeamResponse(200, { success: true, key: FAKE_KEY })
-    const result = await revealKey(adapterDeps, undefined, params())
+  async function run() {
+    const p = revealKey(COOKIE, params())
+    await jest.runAllTimersAsync()
+    return p
+  }
+
+  test('{success:true, key} -> ok; posts [keyId, integrationId, $undefined] with the Next-Action id', async () => {
+    mockFetch.mockResolvedValueOnce(
+      actionResponse(flightResult({ success: true, key: FAKE_KEY }))
+    )
+    const result = await run()
     expect(result).toEqual({ status: 'ok', data: { key: FAKE_KEY } })
-  })
-
-  test('D-29-03: a SUCCESSFUL reveal emits one INFO completion line with a duration', async () => {
-    queueSeamResponse(200, { success: true, key: FAKE_KEY })
-    await revealKey(adapterDeps, undefined, params())
-    const call = mockLogInfo.mock.calls.find((c) =>
-      JSON.stringify(c).includes('reveal succeeded')
-    )
-    expect(call).toBeDefined()
-    const logged = JSON.stringify(call)
-    expect(logged).toContain('keyPresent=true')
-    expect(logged).toMatch(/durationMs=\d+/)
-  })
-
-  test('D-29-03: the revealed key reaches NO log sink on the success path (C4)', async () => {
-    queueSeamResponse(200, { success: true, key: FAKE_KEY })
-    await revealKey(adapterDeps, undefined, params())
-    for (const logged of allLoggedStrings()) {
-      expect(logged).not.toContain(FAKE_KEY)
-    }
-  })
-
-  test('{success:false, error_msg} -> rejected_by_server (definitive server denial, never schema_error)', async () => {
-    queueSeamResponse(200, { success: false, error_msg: 'already redeemed' })
-    const result = await revealKey(adapterDeps, undefined, params())
-    expect(result).toEqual({ status: 'rejected_by_server' })
-  })
-
-  test('WR-06: rejected_by_server logs presence/length only — never the error_msg content (C4)', async () => {
-    queueSeamResponse(200, {
-      success: false,
-      error_msg: 'already redeemed by SNEAKY-KEY-VALUE'
-    })
-    await revealKey(adapterDeps, undefined, params())
-    const rejectedLog = mockLogWarning.mock.calls.find((c) =>
-      JSON.stringify(c).includes('rejected by server')
-    )
-    expect(rejectedLog).toBeDefined()
-    expect(JSON.stringify(rejectedLog)).not.toContain('SNEAKY-KEY-VALUE')
-    expect(JSON.stringify(rejectedLog)).toContain('errorMsgLength=')
-  })
-
-  test('success true but key missing -> schema_error, raw is undefined', async () => {
-    queueSeamResponse(200, { success: true })
-    const result = await revealKey(adapterDeps, undefined, params())
-    expect(result).toEqual({ status: 'schema_error', raw: undefined })
-  })
-
-  test('success absent (nullish) -> schema_error, raw is undefined (genuine shape drift, not a server verdict)', async () => {
-    queueSeamResponse(200, { key: FAKE_KEY })
-    const result = await revealKey(adapterDeps, undefined, params())
-    expect(result).toEqual({ status: 'schema_error', raw: undefined })
-  })
-
-  test('body shape drift (non-object) -> schema_error carrying the raw body', async () => {
-    queueSeamResponse(200, 'not-an-object')
-    const result = await revealKey(adapterDeps, undefined, params())
-    expect(result).toEqual({ status: 'schema_error', raw: 'not-an-object' })
-  })
-
-  test('HTTP 401 -> session_expired', async () => {
-    queueSeamResponse(401, { error_msg: 'expired' })
-    const result = await revealKey(adapterDeps, undefined, params())
-    expect(result).toEqual({ status: 'session_expired' })
-  })
-
-  test('HTTP 403 -> access_denied (D-78: definitive failure)', async () => {
-    queueSeamResponse(403, { error_msg: 'forbidden' })
-    const result = await revealKey(adapterDeps, undefined, params())
-    expect(result).toEqual({ status: 'access_denied' })
-  })
-
-  test('HTTP 429 -> access_denied', async () => {
-    queueSeamResponse(429, { error_msg: 'rate limited' })
-    const result = await revealKey(adapterDeps, undefined, params())
-    expect(result).toEqual({ status: 'access_denied' })
-  })
-
-  // Round 5 (debug session humble-reveal-key-fails): access_denied
-  // previously collapsed a genuine Humble JSON denial and a Cloudflare Bot
-  // Management HTML challenge page into an identical, silent status. revealKey
-  // was the FIRST call site to opt into mapAxiosError's diagnostic context —
-  // structural-only (never body content, mirrors describeSchemaFailure's own
-  // redaction discipline).
-  //
-  // Phase 39 Plan 03 finding: `LoginWindowRevealPostResult` (the seam's
-  // response shape) carries only `{status, body}` — no headers — so
-  // `HumbleTransportHttpError.response.headers` is always `undefined` on
-  // this transport and `contentType` in the diagnostic below is always
-  // `unknown`. This is not a regression this plan introduced: it was already
-  // true of every REAL (production, Tauri) call, since the seam has been the
-  // only transport that ever actually ran outside this test file since Phase
-  // 34.4.1 Plan 04. What the diagnostic can still prove — and what these two
-  // tests still assert — is `looksLikeHtml`/`bodyIsString`, which are
-  // derived from the BODY, not the (now-absent) headers, and are exactly
-  // what distinguishes a genuine Humble JSON denial from a Cloudflare WAF
-  // challenge page.
-  test('round 5: a 403 with a Cloudflare-shaped HTML body logs a structural (never content) diagnostic', async () => {
-    queueSeamResponse(
-      403,
-      '<!DOCTYPE html><html><body>Attention Required! | Cloudflare</body></html>'
-    )
-    await revealKey(adapterDeps, undefined, params())
-    const call = mockLogWarning.mock.calls.find((c) =>
-      JSON.stringify(c).includes('reveal HTTP failure diagnostic')
-    )
-    expect(call).toBeDefined()
-    const logged = JSON.stringify(call)
-    expect(logged).toContain('status=403')
-    expect(logged).toContain('contentType=unknown')
-    expect(logged).toContain('bodyIsString=true')
-    expect(logged).toContain('looksLikeHtml=true')
-    // Redaction: the actual HTML content must never be logged.
-    expect(logged).not.toContain('Cloudflare')
-    expect(logged).not.toContain('Attention Required')
-  })
-
-  test('round 5: a 403 with a genuine Humble JSON body logs looksLikeHtml=false (distinguishes real denial from a WAF challenge)', async () => {
-    queueSeamResponse(403, { success: false, error_msg: 'forbidden' })
-    await revealKey(adapterDeps, undefined, params())
-    const call = mockLogWarning.mock.calls.find((c) =>
-      JSON.stringify(c).includes('reveal HTTP failure diagnostic')
-    )
-    expect(call).toBeDefined()
-    const logged = JSON.stringify(call)
-    expect(logged).toContain('status=403')
-    expect(logged).toContain('contentType=unknown')
-    expect(logged).toContain('bodyIsString=false')
-    expect(logged).toContain('looksLikeHtml=false')
-    expect(logged).not.toContain('forbidden')
-  })
-
-  test('a network-level error (no HTTP response at all) rethrows — D-78 ambiguous-outcome caller responsibility', async () => {
-    queueSeamError(new Error('humble_reveal_post:connection_reset'))
-    await expect(revealKey(adapterDeps, undefined, params())).rejects.toThrow(
-      'connection_reset'
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain(`/home/library/${GAMEKEY}`)
+    expect(init.method).toBe('POST')
+    expect(JSON.parse(init.body as string)).toEqual([
+      KEY_ID,
+      'steam',
+      '$undefined'
+    ])
+    expect((init.headers as Record<string, string>)['Next-Action']).toBe(
+      ACTION_ID
     )
   })
 
-  // WR-04 (round 6, re-pointed at the seam transport by Phase 39 Plan 03):
-  // `humblePostRequestViaSeam` arms its own REQUEST_TIMEOUT_MS timer and
-  // races it against `seam.revealPost()` — a hung seam call must still
-  // reject with a recognizable timeout error rather than hang the reveal
-  // indefinitely. There is no `abort()` concept on this transport (the
-  // login window's own `fetch()` is not cancellable from here), so unlike
-  // the deleted electron-net version of this test, there is nothing to
-  // assert beyond the rejection itself.
-  test('WR-04: a hung seam call is rejected once REQUEST_TIMEOUT_MS fires', async () => {
-    jest.useFakeTimers()
-    try {
-      // Never resolves/rejects — simulates a stalled login-window fetch().
-      mockRevealPost.mockImplementation(() => new Promise(() => {}))
-      const assertion = expect(
-        revealKey(adapterDeps, undefined, params())
-      ).rejects.toThrow('timed out')
-      await jest.advanceTimersByTimeAsync(15_000)
-      await assertion
-    } finally {
-      jest.useRealTimers()
-    }
-  })
-
-  // C4 redaction: no logged call may ever contain the csrf token, the
-  // revealed key value, or the error_msg content — across every outcome
-  // branch. (Round 6: revealKey no longer receives a session cookie value at
-  // all, so there is nothing left to assert never leaks on that front — see
-  // adapter.ts's revealKey doc comment.)
-  test('never logs the csrf token, the key value, or an error_msg containing a key-shaped string', async () => {
-    const SNEAKY_ERROR_MSG = 'key was DDDDD-EEEEE-FFFFF already used'
-    queueSeamResponse(200, { success: true, key: FAKE_KEY })
-    await revealKey(adapterDeps, CSRF_TOKEN, params())
-    queueSeamResponse(200, { success: false, error_msg: SNEAKY_ERROR_MSG })
-    await revealKey(adapterDeps, CSRF_TOKEN, params())
-
-    for (const logged of allLoggedStrings()) {
-      expect(logged).not.toContain(CSRF_TOKEN)
-      expect(logged).not.toContain(FAKE_KEY)
-      expect(logged).not.toContain(SNEAKY_ERROR_MSG)
-      expect(logged).not.toContain('DDDDD-EEEEE-FFFFF')
-    }
-  })
-
-  test('never logs the csrf token on HTTP error paths either', async () => {
-    queueSeamResponse(401, { error_msg: 'expired' })
-    await revealKey(adapterDeps, CSRF_TOKEN, params())
-    for (const logged of allLoggedStrings()) {
-      expect(logged).not.toContain(CSRF_TOKEN)
-    }
-  })
-
-  // ── Phase 34.4.1 Plan 04 (D-07): the Tauri login-window seam transport ──
-  //
-  // `humblePostRequest` (Phase 39 Plan 03) now unconditionally routes
-  // through `seam.revealPost()` instead of `net.request` — there is no
-  // other transport left to compare against. The response still flows
-  // through the SAME `RevealResponseSchema`/`mapAxiosError`/
-  // `HumbleTransportHttpError` path exercised by every `describe('revealKey',
-  // ...)` case above; this nested describe covers what is specific to the
-  // seam call itself (its input shape, its rejection semantics).
-  describe('revealKey via the Tauri login-window seam (D-07)', () => {
-    test('a 200 JSON body resolves through the unchanged RevealResponseSchema', async () => {
-      mockRevealPost.mockResolvedValue({
-        status: 200,
-        body: JSON.stringify({ success: true, key: FAKE_KEY })
-      })
-      const result = await revealKey(adapterDeps, undefined, params())
-      expect(result).toEqual({ status: 'ok', data: { key: FAKE_KEY } })
-    })
-
-    test('a 403 with an HTML (Cloudflare-shaped) body maps to access_denied via HumbleTransportHttpError, never a raw throw', async () => {
-      mockRevealPost.mockResolvedValue({
-        status: 403,
-        body: '<!DOCTYPE html><html><body>Attention Required! | Cloudflare</body></html>'
-      })
-      const result = await revealKey(adapterDeps, undefined, params())
-      expect(result).toEqual({ status: 'access_denied' })
-    })
-
-    test('a 401 body maps to session_expired', async () => {
-      mockRevealPost.mockResolvedValue({
-        status: 401,
-        body: JSON.stringify({ error_msg: 'expired' })
-      })
-      const result = await revealKey(adapterDeps, undefined, params())
-      expect(result).toEqual({ status: 'session_expired' })
-    })
-
-    test('a seam rejection propagates as a network-level error', async () => {
-      mockRevealPost.mockRejectedValue(new Error('humble_reveal_post:timeout'))
-      await expect(revealKey(adapterDeps, undefined, params())).rejects.toThrow(
-        'humble_reveal_post:timeout'
+  test('{success:false, errorKind} -> rejected_by_server, errorKind logged, key never logged', async () => {
+    mockFetch.mockResolvedValueOnce(
+      actionResponse(
+        flightResult({ success: false, errorKind: 'already_owned' })
       )
-    })
+    )
+    expect(await run()).toEqual({ status: 'rejected_by_server' })
+    expect(allLoggedStrings().join('\n')).toContain('already_owned')
+  })
 
-    test('calls seam.revealPost with HUMBLE_BASE_URL, the redeem path, the form-encoded body, the csrf token and a non-empty userAgent', async () => {
-      queueSeamResponse(200, { success: true, key: FAKE_KEY })
-      await revealKey(adapterDeps, CSRF_TOKEN, params(3))
-      expect(mockRevealPost).toHaveBeenCalledTimes(1)
-      const input = lastRevealPostInput()
-      expect(input.originUrl).toBe('https://www.humblebundle.com')
-      expect(input.path).toBe('/humbler/redeemkey')
-      expect(input.csrfToken).toBe(CSRF_TOKEN)
-      expect(typeof input.userAgent).toBe('string')
-      expect(input.userAgent.length).toBeGreaterThan(0)
-      const parsedBody = new URLSearchParams(input.body)
-      expect(parsedBody.get('keytype')).toBe(MACHINE_NAME)
-      expect(parsedBody.get('key')).toBe(GAMEKEY)
-      expect(parsedBody.get('keyindex')).toBe('3')
-    })
+  test('success without a key -> schema_error', async () => {
+    mockFetch.mockResolvedValueOnce(
+      actionResponse(flightResult({ success: true }))
+    )
+    expect((await run()).status).toBe('schema_error')
+  })
+
+  test('success logs never contain the key or cookie', async () => {
+    mockFetch.mockResolvedValueOnce(
+      actionResponse(flightResult({ success: true, key: FAKE_KEY }))
+    )
+    await run()
+    const logged = allLoggedStrings().join('\n')
+    expect(logged).not.toContain(FAKE_KEY)
+    expect(logged).not.toContain('synthetic')
+  })
+
+  test('a cached action id that goes stale is re-discovered once, then reveals', async () => {
+    mockFetch.mockResolvedValueOnce(
+      actionResponse(flightResult({ success: true, key: FAKE_KEY }))
+    )
+    await run() // primes the cache
+    mockFetch
+      .mockResolvedValueOnce(actionResponse('Server action not found', 404))
+      .mockResolvedValueOnce(
+        actionResponse(flightResult({ success: true, key: FAKE_KEY }))
+      )
+    expect(await run()).toEqual({ status: 'ok', data: { key: FAKE_KEY } })
+    expect(mockFetch).toHaveBeenCalledTimes(3)
+  })
+
+  test('a freshly discovered action id that is rejected as stale fails', async () => {
+    mockFetch.mockResolvedValueOnce(
+      actionResponse('Server action not found', 404)
+    )
+    expect((await run()).status).toBe('schema_error')
+  })
+
+  test('401 -> session_expired, 403 -> access_denied', async () => {
+    mockFetch.mockResolvedValueOnce(actionResponse('', 401))
+    expect((await run()).status).toBe('session_expired')
+    resetLibraryActionCache()
+    mockFetch.mockResolvedValueOnce(actionResponse('', 403))
+    expect((await run()).status).toBe('access_denied')
+  })
+
+  test('5xx throws (transient/ambiguous)', async () => {
+    mockFetch.mockResolvedValueOnce(actionResponse('', 502))
+    const p = revealKey(COOKIE, params())
+    const assertion = expect(p).rejects.toThrow()
+    await jest.runAllTimersAsync()
+    await assertion
+  })
+
+  test('unrecognised body -> schema_error', async () => {
+    mockFetch.mockResolvedValueOnce(actionResponse('0:{"a":"$@1"}\n'))
+    expect((await run()).status).toBe('schema_error')
   })
 })

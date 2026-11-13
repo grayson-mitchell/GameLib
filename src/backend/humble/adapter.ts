@@ -3,14 +3,9 @@ import { z } from 'zod'
 
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { AdapterResult } from 'common/types/humble'
-import {
-  HUMBLE_BASE_URL,
-  HUMBLE_REDEEM_PATH,
-  ORY_SESSION_COOKIE_PREFIX
-} from './constants'
-import { standardBrowserUserAgent } from './userAgent'
+import { HUMBLE_BASE_URL, ORY_SESSION_COOKIE_PREFIX } from './constants'
 import type { AppInfo } from 'backend/process/context'
-import type { LoginWindowSeam, LoginWindowSeamSlot } from './loginWindowSeam'
+import type { LoginWindowSeamSlot } from './loginWindowSeam'
 
 /**
  * C5 isolation wall: every outgoing Humble HTTP call and every incoming
@@ -51,16 +46,6 @@ const OrderDetailTpkSchema = z.looseObject({
   keyindex: z.union([z.string(), z.number()]).nullish()
 })
 
-// Phase 14 (HCLAIM-01): the reveal endpoint's response shape, cross-verified
-// against two independent community implementations (14-RESEARCH.md "Reveal
-// Endpoint Contract"). `error_msg` is intentionally never logged/forwarded
-// verbatim by revealKey() below — it may echo a key value (C4).
-const RevealResponseSchema = z.looseObject({
-  success: z.boolean().nullish(),
-  key: z.string().nullish(),
-  error_msg: z.string().nullish()
-})
-
 const OrderDetailSchema = z.looseObject({
   gamekey: z.string().nullish(),
   tpkd_dict: z
@@ -90,16 +75,6 @@ const OrderDetailSchema = z.looseObject({
 
 export type OrderDetail = z.infer<typeof OrderDetailSchema>
 export type OrderDetailTpk = z.infer<typeof OrderDetailTpkSchema>
-
-/**
- * Raw transport result: the parsed body PLUS content-type (never the body
- * itself beyond what the caller already has), so a schema_error is
- * self-diagnosing (see describeSchemaFailure).
- */
-interface HumbleRawResponse {
-  data: unknown
-  contentType: string | null
-}
 
 // WR-04: axios's default timeout is 0 (unlimited). A hung transport (stalled
 // TCP, captive portal, Humble blackholing the request) would otherwise pin
@@ -135,127 +110,10 @@ class HumbleTransportHttpError extends Error {
   }
 }
 
-function coerceJsonBody(raw: string): unknown {
-  if (raw.length === 0) return raw
-  try {
-    return JSON.parse(raw)
-  } catch {
-    // keep the raw string — describeSchemaFailure/summarizeErrorBody flag it
-    return raw
-  }
-}
-
-/**
- * POST transport sibling to `humbleRequest` (D-14 revised, TRANSPORT SWAPPED
- * round 6): the codebase's one write-style Humble call (Phase 14 HCLAIM-01,
- * reveal/redeem) routes through this single function, which always uses the
- * Tauri login-window seam's own `fetch()` (`humblePostRequestViaSeam`) —
- * there is no alternate transport to select between.
- *
- * Debug session humble-reveal-key-fails, round 6: rounds 1-5 iterated on the
- * request's CONTENT (CSRF header, csrf_cookie double-submit, dropping
- * X-Requested-By, hand-building the full cookie jar) while staying on axios.
- * Round 5's checkpoint evidence proved content was never the problem:
- * fullCookieJarPresent=true (every fix live) still got a live 403 whose body
- * was `contentType=text/html`, `looksLikeHtml=true`, `bodyLength=4552` — the
- * unmistakable shape of a Cloudflare Bot-Management/WAF challenge PAGE, not
- * a Humble JSON denial (Humble's own denials are always JSON; this endpoint
- * was never reached). Cloudflare fingerprints the TRANSPORT itself (TLS/JA3,
- * HTTP/1.1 vs HTTP/2, cipher/extension order, header casing/ordering) —
- * no header or cookie content, however correct, can fix a transport-level
- * fingerprint mismatch from inside axios's plain Node.js HTTPS stack.
- *
- * The login window's `fetch()` (`humblePostRequestViaSeam`, Phase 34.4.1
- * Plan 04 D-07) is a genuine WKWebView network stack, real in kind, not
- * merely UA-spoofed — there is no Tauri `session`/`net.request` equivalent
- * to fall back to, and none is needed. This transport does NOT re-run
- * rounds 1-5 of `humble-reveal-key-fails`: cookie/header fidelity was
- * already falsified as the cause under axios; only the TRANSPORT differs
- * here too. Whatever Cloudflare returns against this genuine browser stack
- * — pass or another 403 — is a DECLARABLE outcome (D-07), fed through the
- * SAME `RevealResponseSchema`/error-mapping path; see
- * `humblePostRequestViaSeam`'s own doc comment below.
- */
 /** What the reveal POST reads: the boot's login-window seam slot and the app info (UA source). */
 export interface HumbleAdapterDeps {
   loginWindowSeam: Pick<LoginWindowSeamSlot, 'getOrThrow'>
   appInfo: Pick<AppInfo, 'userAgentFallback'>
-}
-
-function humblePostRequest(
-  deps: HumbleAdapterDeps,
-  path: string,
-  body: string,
-  csrfToken?: string
-): Promise<HumbleRawResponse> {
-  return humblePostRequestViaSeam(
-    deps.loginWindowSeam.getOrThrow(),
-    deps.appInfo,
-    path,
-    body,
-    csrfToken
-  )
-}
-
-/**
- * D-07 Tauri transport: the login window's own `fetch()` is the sole POST
- * transport for Humble's reveal/redeem call. The request's CONTENT (csrf
- * header, form body) and the response's SCHEMA (`RevealResponseSchema`,
- * consumed by `revealKey` below) match `humbleRequest`'s GET path — this
- * function's only job is to shape the seam's `{status, body}` result into
- * the `HumbleRawResponse`/`HumbleTransportHttpError` contract every
- * downstream caller expects.
- *
- * Keeps `REQUEST_TIMEOUT_MS`'s existing semantics: the Rust arm's own 20s
- * `recv_timeout` (`main.rs`) is a backstop, not a replacement — a hung seam
- * call (a wedged `rustInvoke` round-trip) must still surface as a
- * recognizable timeout error, rather than hanging the reveal indefinitely.
- */
-async function humblePostRequestViaSeam(
-  seam: LoginWindowSeam,
-  appInfo: Pick<AppInfo, 'userAgentFallback'>,
-  path: string,
-  body: string,
-  csrfToken?: string
-): Promise<HumbleRawResponse> {
-  let timeoutHandle: ReturnType<typeof setTimeout> | undefined
-  const timeoutPromise = new Promise<never>((_resolve, reject) => {
-    timeoutHandle = setTimeout(() => {
-      reject(
-        new Error(
-          `Humble reveal request timed out after ${REQUEST_TIMEOUT_MS}ms`
-        )
-      )
-    }, REQUEST_TIMEOUT_MS)
-    // WR-01: the sidecar exits by event-loop drain at stdin EOF (CLAUDE.md), so this
-    // handle must not be the reason it is still alive. `unref?.()` does not stop the
-    // timer firing, it only withdraws this handle's own claim on the loop — see
-    // installedJsonWatcher.ts for the full statement of the contract.
-    timeoutHandle.unref?.()
-  })
-  try {
-    const result = await Promise.race([
-      seam.revealPost({
-        originUrl: HUMBLE_BASE_URL,
-        path,
-        body,
-        csrfToken,
-        userAgent: standardBrowserUserAgent({ appInfo })
-      }),
-      timeoutPromise
-    ])
-    const data = coerceJsonBody(result.body)
-    if (result.status >= 200 && result.status < 300) {
-      return { data, contentType: null }
-    }
-    throw new HumbleTransportHttpError({
-      status: result.status,
-      headers: undefined,
-      data
-    })
-  } finally {
-    if (timeoutHandle) clearTimeout(timeoutHandle)
-  }
 }
 
 // Debug session humble-reveal-key-fails (round 5): access_denied currently
@@ -359,49 +217,6 @@ function mapAxiosError<T>(err: unknown, context?: string): AdapterResult<T> {
   throw err
 }
 
-// Cap on logged zod issues per failure — enough to diagnose a shape drift
-// without the log line growing unbounded on a pathological schema.
-const MAX_LOGGED_SCHEMA_ISSUES = 5
-
-/**
- * Makes a `schema_error` self-diagnosing for the NEXT run, fully redacted
- * (T-10-01 / Pitfall 4): logs the zod issue paths + messages (structural
- * only — a path like `[0].gamekey` and a message like "Required" never
- * carries a value), the response content-type, whether the body was a raw
- * string (a non-JSON / HTML redirect masquerading as a 200 would surface
- * here as `bodyIsString=true` rather than a confusing zod issue list — this
- * is the "transport misclassification" hypothesis), and a body LENGTH only
- * — never the body's contents, never the cookie.
- */
-function describeSchemaFailure(
-  path: string,
-  response: HumbleRawResponse,
-  error: z.ZodError
-): void {
-  const { data, contentType } = response
-  const bodyIsString = typeof data === 'string'
-  let bodyLength: number
-  try {
-    bodyLength =
-      typeof data === 'string'
-        ? data.length
-        : JSON.stringify(data ?? null).length
-  } catch {
-    bodyLength = -1 // unserializable body (e.g. circular) — length unknown
-  }
-  const issues = error.issues
-    .slice(0, MAX_LOGGED_SCHEMA_ISSUES)
-    .map((issue) => `${issue.path.join('.') || '<root>'}: ${issue.message}`)
-  logWarning(
-    [
-      `Humble adapter: ${path} response failed schema validation`,
-      `contentType=${contentType ?? 'unknown'} bodyIsString=${bodyIsString} bodyLength=${bodyLength}`,
-      `issues=${JSON.stringify(issues)}`
-    ],
-    LogPrefix.Backend
-  )
-}
-
 /**
  * Login state of a stored/candidate Humble session, via the Next.js site's own
  * `GET /api/auth/session-status` (JSON `{ status: 'anonymous' | 'authenticated' }`).
@@ -482,6 +297,7 @@ let libraryActionCache: LibraryActionCache | null = null
 /** Test seam: forget the cached action id. */
 export function resetLibraryActionCache(): void {
   libraryActionCache = null
+  redeemActionCache = null
 }
 
 const LibraryKeySchema = z.looseObject({
@@ -544,9 +360,9 @@ function flightDateToIso(value: unknown): string | undefined {
  *    `true` when only `redeemedAt` is set (revealed, value not delivered);
  *    absent when unrevealed (gameKey is null then).
  *  - is_expired/expiry_date = expired / redemptionExpiryDate
- *  - keyindex is NOT provided by the new API, so the legacy reveal POST has
- *    no input: library.ts reports such rows as `ineligible` (reveal/redeem
- *    is documented as not fixed).
+ *  - keyindex is NOT provided by the new API. The internal `keyindex` field
+ *    now carries keyIntegrationId, the second argument of the reveal action
+ *    `redeemEntitlementAction(keyId, keyIntegrationId)` (see revealKey).
  *  - NOT mapped (no home in the model): redeemable, giftStatus, notGiftable,
  *    unavailableBefore/After, instructionsHtml, custom CTA fields. Download-
  *    only items and `entitlement-group` rows yield zero keys (D-29).
@@ -577,6 +393,10 @@ export function libraryItemToOrderDetail(item: unknown): OrderDetail | null {
       machine_name: key.id ?? `${it.id}:${tpks.length}`,
       human_name: key.title ?? it.title ?? undefined,
       key_type: key.keyIntegrationId ?? 'generic',
+      // The new reveal action is addressed by (key id, integration id), not
+      // the legacy keyindex. The integration id rides the existing internal
+      // `keyindex` side-channel so cache/eligibility plumbing is unchanged.
+      keyindex: key.keyIntegrationId ?? 'generic',
       ...(key.directRedeem === true ? { direct_redeem: true } : {}),
       ...(gameKey !== undefined
         ? { redeemed_key_val: gameKey }
@@ -643,15 +463,18 @@ type ActionOutcome =
   | { kind: 'access_denied' }
   | { kind: 'schema_error'; raw: unknown }
 
-async function discoverLibraryActionId(
-  cookie: string
+async function discoverActionId(
+  cookie: string,
+  pagePath: string,
+  actionName: string,
+  known: LibraryActionCache | null
 ): Promise<
   | { kind: 'ok'; cache: LibraryActionCache }
   | { kind: 'session_expired' }
   | { kind: 'access_denied' }
   | { kind: 'schema_error' }
 > {
-  const html = await axios.get(`${HUMBLE_BASE_URL}${LIBRARY_PATH}`, {
+  const html = await axios.get(`${HUMBLE_BASE_URL}${pagePath}`, {
     headers: {
       Cookie: libraryCookieHeader(cookie),
       Accept: 'text/html',
@@ -683,11 +506,10 @@ async function discoverLibraryActionId(
   ]
   // The previously-known chunk path is unchanged across a non-deploy, so try
   // it first; a fresh deploy renames it and falls through to the full scan.
-  const ordered = libraryActionCache
-    ? [
-        libraryActionCache.chunk,
-        ...scripts.filter((s) => s !== libraryActionCache?.chunk)
-      ].filter((s) => scripts.includes(s))
+  const ordered = known
+    ? [known.chunk, ...scripts.filter((s) => s !== known.chunk)].filter((s) =>
+        scripts.includes(s)
+      )
     : scripts
   let fetched = 0
   for (const chunk of ordered) {
@@ -702,12 +524,12 @@ async function discoverLibraryActionId(
     })
     const text = typeof res.data === 'string' ? res.data : ''
     const m = text.match(
-      new RegExp(`"([0-9a-f]{40,44})",[^"]{0,60}"${LIBRARY_ACTION_NAME}"`)
+      new RegExp(`"([0-9a-f]{40,44})",[^"]{0,60}"${actionName}"`)
     )
     if (m && m[1]) {
       logInfo(
         [
-          `Humble library: discovered ${LIBRARY_ACTION_NAME} action after ${fetched} chunk fetches (of ${scripts.length})`
+          `Humble library: discovered ${actionName} action after ${fetched} chunk fetches (of ${scripts.length})`
         ],
         LogPrefix.Backend
       )
@@ -715,12 +537,19 @@ async function discoverLibraryActionId(
     }
   }
   logWarning(
-    [
-      `Humble library: ${LIBRARY_ACTION_NAME} action id not found in ${fetched} chunks`
-    ],
+    [`Humble library: ${actionName} action id not found in ${fetched} chunks`],
     LogPrefix.Backend
   )
   return { kind: 'schema_error' }
+}
+
+function discoverLibraryActionId(cookie: string) {
+  return discoverActionId(
+    cookie,
+    LIBRARY_PATH,
+    LIBRARY_ACTION_NAME,
+    libraryActionCache
+  )
 }
 
 /**
@@ -961,112 +790,174 @@ export async function getLibraryOrders(
   }
 }
 
+const REDEEM_ACTION_NAME = 'redeemEntitlementAction'
+let redeemActionCache: LibraryActionCache | null = null
+
+const RedeemActionResultSchema = z.looseObject({
+  success: z.boolean(),
+  key: z.string().nullish(),
+  errorKind: z.string().nullish(),
+  orderStatus: z.string().nullish()
+})
+
+function parseRedeemFlight(
+  text: string
+): z.infer<typeof RedeemActionResultSchema> | null {
+  for (const line of text.split('\n')) {
+    const m = line.match(/^([0-9a-f]+):(\{[\s\S]*\})$/)
+    if (!m || !m[2] || !m[2].includes('"success"')) continue
+    try {
+      const parsed = RedeemActionResultSchema.safeParse(JSON.parse(m[2]))
+      if (parsed.success) return parsed.data
+    } catch {
+      /* not a JSON row */
+    }
+  }
+  return null
+}
+
+type RedeemPost =
+  | { kind: 'ok'; result: z.infer<typeof RedeemActionResultSchema> }
+  | { kind: 'stale' }
+  | { kind: 'session_expired' }
+  | { kind: 'access_denied' }
+  | { kind: 'schema_error'; detail: string }
+
+async function postRedeemAction(
+  cookie: string,
+  actionId: string,
+  pagePath: string,
+  keyId: string,
+  keyIntegrationId: string
+): Promise<RedeemPost> {
+  // encodeReply of primitive-only args is a JSON array posted as text/plain;
+  // the omitted third argument (the provider sign-in result, unused for plain
+  // keys) is the "$undefined" marker.
+  const res = await fetch(`${HUMBLE_BASE_URL}${pagePath}`, {
+    method: 'POST',
+    redirect: 'manual',
+    headers: {
+      Cookie: libraryCookieHeader(cookie),
+      'User-Agent': BROWSER_UA,
+      Accept: 'text/x-component',
+      'Content-Type': 'text/plain;charset=UTF-8',
+      'Next-Action': actionId,
+      Origin: HUMBLE_BASE_URL,
+      Referer: `${HUMBLE_BASE_URL}${pagePath}`
+    },
+    body: JSON.stringify([keyId, keyIntegrationId, '$undefined']),
+    signal: AbortSignal.timeout(20_000)
+  })
+  if (res.status === 401) return { kind: 'session_expired' }
+  if (res.status === 403 || res.status === 429) return { kind: 'access_denied' }
+  if (res.status >= 300 && res.status < 400) {
+    return (res.headers.get('location') ?? '').includes('auth.humblebundle.com')
+      ? { kind: 'session_expired' }
+      : { kind: 'stale' }
+  }
+  if (res.status >= 500) throw new Error(`redeem action ${res.status}`)
+  if (res.status === 404) return { kind: 'stale' }
+  const ct = res.headers.get('content-type') ?? ''
+  const text = await res.text()
+  if (!ct.includes('text/x-component') || /Server action not found/i.test(text))
+    return { kind: 'stale' }
+  const result = parseRedeemFlight(text)
+  if (!result) {
+    // Shape only: status, content type, flight row count. Never the body.
+    return {
+      kind: 'schema_error',
+      detail: `status=${res.status} contentType=${ct} rows=${text.split('\n').length} bytes=${text.length}`
+    }
+  }
+  return { kind: 'ok', result }
+}
+
 /**
- * The codebase's FIRST write-style Humble adapter call (Phase 14, HCLAIM-01).
- * Contract researched + cross-verified against two independent community
- * implementations (14-RESEARCH.md "Reveal Endpoint Contract") — MEDIUM
- * confidence, validated live before shipping to any UI button (D-71/Plan 06).
+ * Reveals a key through Humble's Next.js server action
+ * `redeemEntitlementAction(keyId, keyIntegrationId, signInResult?)` (the
+ * legacy POST /humbler/redeemkey is gone). The action id is scraped from the
+ * chunks of the key's own detail page /home/library/<gamekey>, cached, and
+ * re-discovered once if a POST proves it stale. `params.keyindex` carries the
+ * key's keyIntegrationId (see libraryItemToOrderDetail); `params.machineName`
+ * is the key id.
  *
- * NAMING TRAP (load-bearing, do not "fix"): the POST field literally named
- * `keytype` carries `params.machineName` (HumbleKey.machineName), NOT the
- * platform label (`key_type`/`platform` elsewhere in this codebase).
- *
- * T-14-01/T-14-05: never a blind cast, never a logged key/error_msg/body —
- * only status/length, matching describeSchemaFailure's redaction discipline.
- *
- * Debug session humble-reveal-key-fails (round 6): no longer takes a `cookie`
- * or `fullCookieHeader` argument — humblePostRequest's login-window seam
- * transport carries the seam's own live cookie jar with each `revealPost()`
- * call, so a hand-passed session cookie value has nothing left to do here.
- * The caller (library.ts) still independently gates on
- * `HumbleUser.getCredentials()` being present before ever reaching this
- * function — that "are we logged in at all" precondition is unrelated to
- * what this function sends on the wire.
+ * Redaction (C4): logs carry only statuses, shapes and the action's short
+ * errorKind enum, never the key, cookie or response body.
  */
 export async function revealKey(
-  deps: HumbleAdapterDeps,
-  csrfToken: string | undefined,
+  cookie: string,
   params: { gamekey: string; machineName: string; keyindex: string | number }
 ): Promise<AdapterResult<{ key: string }> | { status: 'rejected_by_server' }> {
   const startedAt = Date.now()
+  const pagePath = `${LIBRARY_PATH}/${encodeURIComponent(params.gamekey)}`
   try {
-    const body = new URLSearchParams({
-      keytype: params.machineName,
-      key: params.gamekey,
-      keyindex: String(params.keyindex)
-    }).toString()
-    const response = await humblePostRequest(
-      deps,
-      HUMBLE_REDEEM_PATH,
-      body,
-      csrfToken
-    )
-    const parsed = RevealResponseSchema.safeParse(response.data)
-    if (!parsed.success) {
-      describeSchemaFailure(HUMBLE_REDEEM_PATH, response, parsed.error)
-      return { status: 'schema_error', raw: response.data }
-    }
-    if (parsed.data.success === false) {
-      // WR-06 (14-REVIEW): a well-formed body carrying an EXPLICIT denial
-      // (e.g. Humble's "already redeemed"/"expired") is a definitive SERVER
-      // verdict, not schema drift — it must never pollute the schema_error
-      // diagnostic meaning nor let the caller claim "nothing was used up".
-      // C4: error_msg may echo a key value — never logged/forwarded
-      // verbatim. Presence/length only, mirroring describeSchemaFailure.
-      logWarning(
+    let rediscovered = false
+    for (;;) {
+      if (!redeemActionCache) {
+        const found = await discoverActionId(
+          cookie,
+          pagePath,
+          REDEEM_ACTION_NAME,
+          null
+        )
+        if (found.kind !== 'ok') {
+          return found.kind === 'schema_error'
+            ? { status: 'schema_error', raw: 'redeem action id not found' }
+            : { status: found.kind }
+        }
+        redeemActionCache = found.cache
+        rediscovered = true
+      }
+      const out = await postRedeemAction(
+        cookie,
+        redeemActionCache.id,
+        pagePath,
+        params.machineName,
+        String(params.keyindex)
+      )
+      if (out.kind === 'stale') {
+        redeemActionCache = null
+        if (rediscovered) return { status: 'schema_error', raw: 'stale' }
+        continue
+      }
+      if (out.kind === 'schema_error') {
+        logWarning(
+          [`Humble adapter: reveal response unrecognised ${out.detail}`],
+          LogPrefix.Backend
+        )
+        return { status: 'schema_error', raw: out.detail }
+      }
+      if (out.kind !== 'ok') return { status: out.kind }
+      const r = out.result
+      if (!r.success) {
+        logWarning(
+          [
+            'Humble adapter: reveal rejected by server',
+            `errorKind=${r.errorKind ?? 'none'} orderStatus=${r.orderStatus ?? 'none'}`
+          ],
+          LogPrefix.Backend
+        )
+        return { status: 'rejected_by_server' }
+      }
+      if (!r.key) {
+        logWarning(
+          [
+            'Humble adapter: reveal succeeded without a key',
+            `orderStatus=${r.orderStatus ?? 'none'}`
+          ],
+          LogPrefix.Backend
+        )
+        return { status: 'schema_error', raw: undefined }
+      }
+      logInfo(
         [
-          `Humble adapter: ${HUMBLE_REDEEM_PATH} reveal rejected by server`,
-          `success=false keyPresent=${Boolean(parsed.data.key)} errorMsgLength=${parsed.data.error_msg?.length ?? 0}`
+          'Humble adapter: redeemEntitlementAction reveal succeeded',
+          `keyPresent=true durationMs=${Date.now() - startedAt}`
         ],
         LogPrefix.Backend
       )
-      return { status: 'rejected_by_server' }
+      return { status: 'ok', data: { key: r.key } }
     }
-    if (parsed.data.success !== true || !parsed.data.key) {
-      // success absent/mistyped, or success:true without a key — genuine
-      // shape drift. Same redaction discipline as above.
-      logWarning(
-        [
-          `Humble adapter: ${HUMBLE_REDEEM_PATH} reveal did not succeed`,
-          `success=${parsed.data.success ?? 'absent'} keyPresent=${Boolean(parsed.data.key)} errorMsgLength=${parsed.data.error_msg?.length ?? 0}`
-        ],
-        LogPrefix.Backend
-      )
-      return { status: 'schema_error', raw: undefined }
-    }
-    // D-29-03 (Phase 34.4.1 gap cycle 3, plan 32): the ONLY log line on a
-    // SUCCESSFUL reveal. Before this, the log recorded "Humble reveal: calling
-    // adapter (...)" and then nothing at all — failure paths were instrumented
-    // (schema drift, server denial, the 404 diagnostic), success was silent.
-    //
-    // Why that was filed rather than shrugged off: live-gate item 4's central
-    // outcome — DID THE REAL NETWORK CALL WORK — was not verifiable from the
-    // log at all, and rested entirely on the operator's screen. A future
-    // automated or semi-automated gate cannot confirm that item without a
-    // human present. This line is what makes item 4 machine-checkable.
-    //
-    // REDACTION (C4 / T-10-05, unchanged and load-bearing): NEVER the key,
-    // NEVER the response body, NEVER a cookie. `keyPresent` is a boolean, not
-    // a length — a length is a side channel on a secret whose value is the
-    // whole point. The proven discipline is that the revealed value appears in
-    // no log and no document, and this line must not be the first exception.
-    //
-    // NO HTTP STATUS, deliberately, and this is a scope decision not an
-    // oversight: `HumbleRawResponse` carries only `{ data, contentType }` —
-    // there is no status field to read. Adding one means widening the shared
-    // transport type `humblePostRequestViaSeam` returns, which is precisely
-    // the seam-parity surface F-1 and F-6 hid in, for an observability
-    // nicety. Duration plus an explicit success marker satisfies what
-    // D-29-03 actually needs; the status code does not, on its own, tell a
-    // gate anything the marker does not.
-    logInfo(
-      [
-        `Humble adapter: ${HUMBLE_REDEEM_PATH} reveal succeeded`,
-        `keyPresent=true durationMs=${Date.now() - startedAt} contentType=${response.contentType ?? 'none'}`
-      ],
-      LogPrefix.Backend
-    )
-    return { status: 'ok', data: { key: parsed.data.key } }
   } catch (err) {
     return mapAxiosError<{ key: string }>(err, 'reveal')
   }

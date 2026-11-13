@@ -2471,18 +2471,11 @@ describe('HumbleLibrary', () => {
 
       expect(outcome).toEqual({ status: 'revealed', key: 'REAL-KEY-VALUE' })
       expect(mockAdapterRevealKey).toHaveBeenCalledTimes(1)
-      // Round 6: no cookie/fullCookieHeader argument — the reveal POST's
-      // login-window seam transport sources the live seam's own cookie jar
-      // natively (see adapter.ts).
-      expect(mockAdapterRevealKey).toHaveBeenCalledWith(
-        expect.objectContaining({ loginWindowSeam: expect.anything() }),
-        'csrf-token-value',
-        {
-          gamekey: 'gk1',
-          machineName: 'gk1_key',
-          keyindex: 'idx-1'
-        }
-      )
+      expect(mockAdapterRevealKey).toHaveBeenCalledWith('cookie-value', {
+        gamekey: 'gk1',
+        machineName: 'gk1_key',
+        keyindex: 'idx-1'
+      })
       expect(
         defined(
           libraryData.get('gk1')?.keys[0],
@@ -2832,8 +2825,8 @@ describe('HumbleLibrary', () => {
       expect(call).toBeDefined()
     })
 
-    test('logs csrfTokenPresent=true right before the adapter call when a token is cached', async () => {
-      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+    test('the adapter receives the stored session cookie and the key id + integration id, and the log names the server action', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'steam' }))
       mockAdapterRevealKey.mockResolvedValue({
         status: 'ok',
         data: { key: 'K' }
@@ -2842,97 +2835,14 @@ describe('HumbleLibrary', () => {
       await HumbleLibrary.revealKey('gk1', 'gk1_key')
 
       const call = mockLogInfo.mock.calls.find((c) =>
-        String(c[0][0]).includes('csrfTokenPresent=true')
+        String(c[0][0]).includes('redeemEntitlementAction server action')
       )
       expect(call).toBeDefined()
-    })
-
-    test('logs csrfTokenPresent=false when no token is available — never blocks the call (opportunistic header)', async () => {
-      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
-      mockGetLiveCsrfToken.mockResolvedValue(undefined as unknown as string)
-      mockAdapterRevealKey.mockResolvedValue({
-        status: 'ok',
-        data: { key: 'K' }
+      expect(mockAdapterRevealKey).toHaveBeenCalledWith('cookie-value', {
+        gamekey: 'gk1',
+        machineName: 'gk1_key',
+        keyindex: 'steam'
       })
-
-      await HumbleLibrary.revealKey('gk1', 'gk1_key')
-
-      const call = mockLogInfo.mock.calls.find((c) =>
-        String(c[0][0]).includes('csrfTokenPresent=false')
-      )
-      expect(call).toBeDefined()
-      // Round 6: no cookie/fullCookieHeader argument — see adapter.ts.
-      expect(mockAdapterRevealKey).toHaveBeenCalledWith(
-        expect.objectContaining({ loginWindowSeam: expect.anything() }),
-        undefined,
-        { gamekey: 'gk1', machineName: 'gk1_key', keyindex: 'idx-1' }
-      )
-    })
-
-    // Round 6 (debug session humble-reveal-key-fails): round 5's
-    // fullCookieJarPresent log field and HumbleUser.getFullCookieHeader()
-    // mechanism were both removed — the reveal POST's login-window seam
-    // transport sources the live seam's own cookie jar natively (see
-    // adapter.ts's humblePostRequest doc comment). This asserts the log
-    // line's new, simpler shape and that the adapter call no longer carries
-    // a 3rd/4th cookie-shaped argument.
-    test('WR-03: the adapter receives the LIVE partition csrf token, never the stale stored snapshot', async () => {
-      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
-      mockGetCsrfToken.mockReturnValue('stale-stored-token')
-      mockGetLiveCsrfToken.mockResolvedValue('live-rotated-token')
-      mockAdapterRevealKey.mockResolvedValue({
-        status: 'ok',
-        data: { key: 'K' }
-      })
-
-      await HumbleLibrary.revealKey('gk1', 'gk1_key')
-
-      expect(mockAdapterRevealKey).toHaveBeenCalledWith(
-        expect.objectContaining({ loginWindowSeam: expect.anything() }),
-        'live-rotated-token',
-        { gamekey: 'gk1', machineName: 'gk1_key', keyindex: 'idx-1' }
-      )
-    })
-
-    // ── Phase 34.4.1 gap-cycle plan 17 (F-8), collapsed in 39-03 ──────────
-    // F-8 originally proved the label was DERIVED from `getLoginWindowSeam()`
-    // at log time, with a seam-installed case and a no-seam-installed
-    // "regression" case asserting the OPPOSITE label. Plan 39-01 deleted the
-    // seam's null-return dispatch branch in `humblePostRequest` (adapter.ts)
-    // that this depended on — the label is now the fixed string
-    // 'login-window seam transport' unconditionally, so:
-    //   - the former no-seam "regression" case asserted a branch that can no
-    //     longer be reached and is deleted outright (no seam-optional path
-    //     exists to regress to);
-    //   - the former seam-installed control case is folded into this test,
-    //     since asserting the label does NOT contain the old (pre-39-01)
-    //     electron-net-labeled string is now tautological (that string is
-    //     unreachable dead text, not a live alternate branch) rather than a
-    //     meaningful negative assertion — dropped rather than kept as a
-    //     no-op check.
-    test('round 6: calling-adapter log line names the login-window seam transport and carries no fullCookieJarPresent field', async () => {
-      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
-      mockAdapterRevealKey.mockResolvedValue({
-        status: 'ok',
-        data: { key: 'K' }
-      })
-
-      await HumbleLibrary.revealKey('gk1', 'gk1_key')
-
-      const call = mockLogInfo.mock.calls.find((c) =>
-        String(c[0][0]).includes('login-window seam transport')
-      )
-      expect(call).toBeDefined()
-      expect(String(call?.[0][0])).not.toContain('fullCookieJarPresent')
-      expect(mockAdapterRevealKey).toHaveBeenCalledWith(
-        expect.objectContaining({ loginWindowSeam: expect.anything() }),
-        'csrf-token-value',
-        {
-          gamekey: 'gk1',
-          machineName: 'gk1_key',
-          keyindex: 'idx-1'
-        }
-      )
     })
 
     test('definitive failure (access_denied) logs the exact adapter status — the previously-silent 401/403/429 mapAxiosError gap', async () => {

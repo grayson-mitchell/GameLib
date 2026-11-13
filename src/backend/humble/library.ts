@@ -1298,7 +1298,8 @@ export function createHumbleLibrary(libDeps: HumbleLibraryDeps) {
     // cookie VALUE is no longer threaded into the adapter call (round 6: the
     // reveal POST's login-window seam transport carries its own live cookie
     // jar with each call; see adapterRevealKey/humblePostRequest).
-    if (!(await libDeps.user.getCredentials())) {
+    const revealCookie = await libDeps.user.getCredentials()
+    if (!revealCookie) {
       logWarning(
         [
           'Humble reveal: failed (no stored credentials):',
@@ -1309,13 +1310,6 @@ export function createHumbleLibrary(libDeps: HumbleLibraryDeps) {
       )
       return { status: 'failed' }
     }
-    // WR-03 (14-REVIEW): source the csrf-prevention-token from the LIVE
-    // `persist:humble` partition cookie (the same jar humblePostRequest
-    // attaches natively) so header and cookie can never diverge after a
-    // csrf_cookie rotation; the stored login-time snapshot is only the
-    // fallback inside getLiveCsrfToken().
-    const csrfToken = await libDeps.user.getLiveCsrfToken()
-
     // WRITE-AHEAD (SC4): both the audit record and the REVEALED flag are
     // persisted BEFORE the adapter call — never after.
     appendAudit(gamekey, machineName, 'reveal_attempt', {
@@ -1326,35 +1320,16 @@ export function createHumbleLibrary(libDeps: HumbleLibraryDeps) {
       revealedAt: Date.now()
     })
 
-    // Debug session humble-reveal-key-fails: presence-only (never the token
-    // value) — the open question of whether a given reveal attempt actually
-    // carried the csrf-prevention-token header can otherwise only be answered
-    // by re-deriving it from unrelated config.json timestamps. Round 6: the
-    // original Electron-transport label was stamped into this line so the
-    // NEXT gamelib.log capture would be unambiguous about which round's fix
-    // actually ran (round 5's fullCookieJarPresent field is retired along with
-    // getFullCookieHeader — superseded by the transport's native cookie
-    // attachment, see user.ts).
-    //
-    // Phase 34.4.1 gap-cycle plan 17 (F-8) made that literal conditional,
-    // DERIVED from the login-window seam slot's `get()` at the moment of logging, because
-    // `humblePostRequest` (`adapter.ts`) itself branched on the same
-    // condition. Phase 39 Plan 03 collapsed that branch: `humblePostRequest`
-    // now always uses the login-window seam, so this label is unconditional
-    // too — there is no other transport left for it to name.
-    const revealTransportLabel = 'login-window seam transport'
+    const revealTransportLabel = 'redeemEntitlementAction server action'
     logInfo(
       [
-        `Humble reveal: calling adapter (${revealTransportLabel}), csrfTokenPresent=` +
-          String(csrfToken !== undefined),
-        gamekey,
-        machineName
+        `Humble reveal: calling adapter (${revealTransportLabel}) keyId=${machineName}`
       ],
       LogPrefix.Backend
     )
 
     try {
-      const result = await adapterRevealKey(libDeps, csrfToken, {
+      const result = await adapterRevealKey(revealCookie, {
         gamekey,
         machineName,
         keyindex
