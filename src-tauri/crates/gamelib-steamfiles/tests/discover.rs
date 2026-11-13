@@ -134,7 +134,7 @@ fn linux_flatpak_without_install_is_skipped() {
         &[vdf(flatpak_root("/h")), vdf(p("/h/.local/share/Steam"))],
     );
     let d = discover_steam_root(HostOs::Linux, &f);
-    assert_eq!(d.path, s(p("/h/.local/share/Steam")));
+    assert_eq!(d.path, s(p("/h").join(".local/share/Steam")));
     assert_eq!(d.source, "localShare");
 }
 
@@ -142,7 +142,7 @@ fn linux_flatpak_without_install_is_skipped() {
 fn linux_only_local_share() {
     let f = linux("/h", &[vdf(p("/h/.local/share/Steam"))]);
     let d = discover_steam_root(HostOs::Linux, &f);
-    assert_eq!(d.path, s(p("/h/.local/share/Steam")));
+    assert_eq!(d.path, s(p("/h").join(".local/share/Steam")));
     assert_eq!(d.source, "localShare");
 }
 
@@ -150,7 +150,10 @@ fn linux_only_local_share() {
 fn linux_only_snap() {
     let f = linux("/h", &[vdf(p("/h/snap/steam/common/.local/share/Steam"))]);
     let d = discover_steam_root(HostOs::Linux, &f);
-    assert_eq!(d.path, s(p("/h/snap/steam/common/.local/share/Steam")));
+    assert_eq!(
+        d.path,
+        s(p("/h").join("snap/steam/common/.local/share/Steam"))
+    );
     assert_eq!(d.source, "snap");
 }
 
@@ -161,14 +164,14 @@ fn linux_dot_steam_beats_local_share() {
         &[vdf(p("/h/.steam/steam")), vdf(p("/h/.local/share/Steam"))],
     );
     let d = discover_steam_root(HostOs::Linux, &f);
-    assert_eq!(d.path, s(p("/h/.steam/steam")));
+    assert_eq!(d.path, s(p("/h").join(".steam/steam")));
     assert_eq!(d.source, "dotSteam");
 }
 
 #[test]
 fn linux_none_falls_back() {
     let d = discover_steam_root(HostOs::Linux, &linux("/h", &[]));
-    assert_eq!(d.path, s(p("/h/.steam/steam")));
+    assert_eq!(d.path, s(p("/h").join(".steam/steam")));
     assert_eq!(d.source, "fallback");
 }
 

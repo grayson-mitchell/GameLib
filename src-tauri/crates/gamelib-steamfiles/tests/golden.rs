@@ -60,11 +60,17 @@ fn tokenise(v: &Value, roots: &[String]) -> Value {
             for r in roots {
                 out = out.replace(r.as_str(), TOKEN);
             }
-            if out == *s {
-                Value::String(out)
-            } else {
-                Value::String(out.replace('\\', "/"))
+            if out != *s {
+                out = out.replace('\\', "/");
             }
+            // copy_dir writes the temp root into fixture text, so a parse error's byte
+            // offset moves with the host's temp-path length. Record the error kind only.
+            if let Some((head, tail)) = out.rsplit_once(" at ") {
+                if out.starts_with("parse: ") && tail.chars().all(|c| c.is_ascii_digit()) {
+                    out = format!("{head} at <offset>");
+                }
+            }
+            Value::String(out)
         }
         Value::Array(a) => Value::Array(a.iter().map(|x| tokenise(x, roots)).collect()),
         Value::Object(m) => Value::Object(

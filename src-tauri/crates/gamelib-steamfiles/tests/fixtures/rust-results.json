@@ -223,7 +223,7 @@
       "exists": true,
       "parsed": false,
       "paths": [],
-      "readError": "parse: Unbalanced at 112"
+      "readError": "parse: Unbalanced at <offset>"
     },
     "library/getSteamLibraries/modern": {
       "exists": true,
@@ -423,7 +423,7 @@
       "skipped": [
         {
           "fileName": "appmanifest_30.acf",
-          "reason": "parse: UnterminatedString at 37",
+          "reason": "parse: UnterminatedString at <offset>",
           "steamappsDir": "${FIXTURES}/scan/lib1/steamapps"
         }
       ]
@@ -545,7 +545,7 @@
       "skipped": [
         {
           "fileName": "appmanifest_30.acf",
-          "reason": "parse: UnterminatedString at 37",
+          "reason": "parse: UnterminatedString at <offset>",
           "steamappsDir": "${FIXTURES}/scan/lib1/steamapps"
         }
       ]
@@ -912,13 +912,13 @@
     "raw/readAcf/truncated": {
       "exists": true,
       "parsed": false,
-      "readError": "parse: UnterminatedString at 99",
+      "readError": "parse: UnterminatedString at <offset>",
       "record": null
     },
     "raw/readAcf/unbalanced": {
       "exists": true,
       "parsed": false,
-      "readError": "parse: Unbalanced at 97",
+      "readError": "parse: Unbalanced at <offset>",
       "record": null
     },
     "shortcuts/read/empty": {
