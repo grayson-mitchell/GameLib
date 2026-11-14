@@ -24,6 +24,8 @@ import {
   isBridgeAuthoritativeForInstallState
 } from './installRoot'
 import { restoreLocalSteamLibrary } from './localLibrary'
+import { steamCmImpl } from '../cm/steamCmFlags'
+import { syncOwnedLibraryRust } from './rustRefresh'
 import { verifyMacArchGroundTruth } from './macArch'
 import {
   buildInstalledMap,
@@ -127,7 +129,9 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
     // which gives the Steam sync tri-state STRUCTURAL meaning ("a refresh is
     // currently running").
     deps.sendFrontendMessage('steamSyncStatus', { status: 'syncing' })
-    return await syncOwnedLibrary(deps, client)
+    return steamCmImpl() === 'rust'
+      ? await syncOwnedLibraryRust(deps, client)
+      : await syncOwnedLibrary(deps, client)
   } finally {
     release()
   }
