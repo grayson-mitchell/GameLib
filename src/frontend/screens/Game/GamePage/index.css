@@ -629,33 +629,15 @@
             background: var(--body-background);
           }
         }
-        & > div > .hltbWrapper > .MuiAccordion-root {
-          background-color: unset;
-          box-shadow: none;
-          color: var(--text-default);
-          flex-grow: 1;
+        & > div > .hltbWrapper {
+          flex-direction: column;
+          align-items: stretch;
+          padding-bottom: 8px;
 
-          & > .MuiAccordionSummary-root:focus-visible {
-            background: unset; /* no more darker background */
-          }
-
-          & > .MuiAccordionSummary-root {
-            padding: 0;
-            min-height: unset;
-
-            & > .MuiAccordionSummary-content {
-              margin: 0;
-              display: flex;
-              gap: 10px;
-            }
-
-            & .MuiAccordionSummary-expandIconWrapper {
-              color: inherit;
-            }
-          }
-
-          .MuiAccordionDetails-root {
-            padding-bottom: 8px;
+          & > .hltbHeader {
+            display: flex;
+            align-items: center;
+            gap: 10px;
           }
         }
       }
