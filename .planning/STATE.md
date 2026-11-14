@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v0.10
 milestone_name: Foundations
-status: ready_to_plan
-stopped_at: Phase 74 complete (36/36) — ready to discuss Phase 75
+status: executing
+stopped_at: "Phase 70 executing: 70-06 complete (6/16), 70-07 next"
 last_updated: 2026-11-14T03:36:17.809Z
 last_activity: 2026-11-14
 progress:
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 75 — steam local file formats in rust
+**Current focus:** Phase 70 — split-gameinfo-into-shared-and-per-store-shapes
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,9 +72,9 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 
 ## Current Position
 
-Phase: 75
-Plan: Not started
-Status: Ready to plan
+Phase: 70 (split-gameinfo-into-shared-and-per-store-shapes) — EXECUTING
+Plan: 7 of 16
+Status: Executing (wave 3 of 9; 70-01..70-06 complete)
 Last activity: 2026-11-14
 
 Progress: [██████████] 97%
