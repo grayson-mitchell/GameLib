@@ -59,6 +59,10 @@ pub(crate) struct Script {
     pub jobs: usize,
     pub kick: Vec<mpsc::Sender<i32>>,
     pub closed_flags: Vec<Arc<AtomicBool>>,
+    /// Method names in call order, for tests that assert sequencing.
+    pub log: Vec<&'static str>,
+    pub token_reqs: Vec<(Vec<u32>, Vec<u32>)>,
+    pub pics_reqs: Vec<PicsRequest>,
 }
 
 impl Default for Script {
@@ -83,6 +87,9 @@ impl Default for Script {
             jobs: 0,
             kick: Vec::new(),
             closed_flags: Vec::new(),
+            log: Vec::new(),
+            token_reqs: Vec::new(),
+            pics_reqs: Vec::new(),
         }
     }
 }
@@ -233,14 +240,24 @@ impl CmBackend for FakeBackend {
 impl CmConn for FakeConn {
     async fn pics_access_tokens(
         &self,
-        _apps: Vec<u32>,
-        _packages: Vec<u32>,
+        apps: Vec<u32>,
+        packages: Vec<u32>,
     ) -> Result<AccessTokens, CmError> {
-        self.run("pics_access_tokens", |s| s.tokens.next()).await
+        self.run("pics_access_tokens", |s| {
+            s.log.push("pics_access_tokens");
+            s.token_reqs.push((apps, packages));
+            s.tokens.next()
+        })
+        .await
     }
 
-    async fn pics_product_info(&self, _req: PicsRequest) -> Result<PicsRaw, CmError> {
-        self.run("pics_product_info", |s| s.pics.next()).await
+    async fn pics_product_info(&self, req: PicsRequest) -> Result<PicsRaw, CmError> {
+        self.run("pics_product_info", |s| {
+            s.log.push("pics_product_info");
+            s.pics_reqs.push(req);
+            s.pics.next()
+        })
+        .await
     }
 
     async fn depot_key(&self, _app_id: u32, _depot_id: u32) -> Result<DepotKeyRaw, CmError> {
