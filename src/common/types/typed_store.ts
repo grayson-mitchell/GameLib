@@ -13,11 +13,11 @@ import {
   GOGLoginData,
   AppSettings,
   WikiInfo,
-  GameInfo,
   WindowProps,
   UploadedLogData
 } from 'common/types'
-import { UserData } from 'common/types/gog'
+import { UserData, GogInstalledInfo } from 'common/types/gog'
+import type { SideloadGameInfo } from 'common/types/sideload'
 import { NileUserData } from './nile'
 import { SteamUserData, SteamBottleConfig } from './steam'
 import { HumbleUserData } from './humble'
@@ -59,7 +59,7 @@ export interface StoreStructure {
     'wine-releases': WineVersionInfo[]
   }
   gogInstalledGamesStore: {
-    installed: InstalledInfo[]
+    installed: GogInstalledInfo[]
   }
   timestampStore: {
     [K: string]: {
@@ -137,7 +137,7 @@ export interface StoreStructure {
     csrfToken?: string
   }
   sideloadedStore: {
-    games: GameInfo[]
+    games: SideloadGameInfo[]
     // FIXME: Not sure if this is correct, seems like this key is only used once
     installed: InstalledInfo[]
   }

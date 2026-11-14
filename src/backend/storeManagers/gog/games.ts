@@ -14,16 +14,15 @@ import {
 } from '../../utils'
 import {
   ExtraInfo,
-  GameInfo,
   GameSettings,
   ExecResult,
   GOGImportData,
   InstallArgs,
-  InstalledInfo,
   InstallProgress,
   LaunchOption,
   GOGAchievement
 } from 'common/types'
+import type { GogGameInfo, GogInstalledInfo } from 'common/types/gog'
 import { existsSync, rmSync } from 'graceful-fs'
 import {
   logError,
@@ -166,7 +165,7 @@ export default class GOGGame implements Game {
     return achievements
   }
 
-  getGameInfo(): GameInfo {
+  getGameInfo(): GogGameInfo {
     const info = this.deps.libraryManagers.gog.getGameInfo(this.id)
     if (!info) {
       logError(
@@ -486,7 +485,7 @@ export default class GOGGame implements Game {
     const sizeOnDisk = await getPathDiskSize(join(path, gameInfo.folder_name))
     const install_path = join(path, gameInfo.folder_name)
 
-    const installedData: InstalledInfo = {
+    const installedData: GogInstalledInfo = {
       platform: installPlatform,
       executable: '',
       install_path,

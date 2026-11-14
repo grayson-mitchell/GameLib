@@ -1,7 +1,8 @@
 import type { StatusUpdateDeps } from 'backend/appRuntime'
 import { existsSync } from 'graceful-fs'
 import path from 'node:path'
-import { GameInfo, GameSettings, InstalledInfo } from 'common/types'
+import { GameSettings } from 'common/types'
+import type { GogGameInfo, GogInstalledInfo } from 'common/types/gog'
 import { checkWineBeforeLaunch, sendGameStatusUpdate } from '../../utils'
 import {
   getRunnerLogWriter,
@@ -107,7 +108,7 @@ async function runSetupCommand(deps: SetupDeps, wineArgs: WineCommandArgs) {
 async function setup(
   deps: SetupDeps,
   appName: string,
-  installInfo?: InstalledInfo,
+  installInfo?: GogInstalledInfo,
   installRedist = true
 ): Promise<void> {
   const gameInfo = deps.libraryManagers.gog.getGameInfo(appName)
@@ -174,7 +175,7 @@ async function setup(
 async function runGogSetup(
   deps: SetupDeps,
   appName: string,
-  gameInfo: GameInfo,
+  gameInfo: GogGameInfo,
   gameSettings: GameSettings,
   installRedist: boolean
 ): Promise<void> {

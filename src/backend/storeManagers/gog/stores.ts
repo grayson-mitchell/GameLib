@@ -1,7 +1,8 @@
 import { TypeCheckedStoreBackend } from '../../typed_store'
 import CacheStore from '../../cache'
-import { GameInfo, GOGAchievement } from 'common/types'
+import { GOGAchievement } from 'common/types'
 import {
+  GogGameInfo,
   GOGSessionSyncQueueItem,
   GamesDBData,
   GogInstallInfo
@@ -30,7 +31,7 @@ export function createGogStores(deps: StoreFamilyDeps) {
     root: deps.root,
     kind: 'cache'
   })
-  const libraryStore = new CacheStore<GameInfo[], 'games'>(
+  const libraryStore = new CacheStore<GogGameInfo[], 'games'>(
     'gog_library',
     null,
     { root: deps.root, kind: 'user-state' }

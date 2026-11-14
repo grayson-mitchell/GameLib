@@ -4,7 +4,7 @@
  * clock; the presence keep-alive arms once per runtime on the clock and clears on demand.
  */
 import { createFakeClock } from 'backend/testUtils/fakeClock'
-import type { GameInfo, InstalledInfo } from 'common/types'
+import type { GogGameInfo, GogInstalledInfo } from 'common/types/gog'
 import { createGogRuntime } from '../gogRuntime'
 
 const GOG_PRESENCE_INTERVAL_MS = 5 * 60 * 1000
@@ -35,8 +35,8 @@ describe('createGogRuntime', () => {
   it('two runtimes share no library entries, installed games, baselines or stubs', async () => {
     const a = make().rt
     const b = make().rt
-    a.libraryState.library.set('1', { app_name: '1' } as GameInfo)
-    a.libraryState.installedGames.set('1', { appName: '1' } as InstalledInfo)
+    a.libraryState.library.set('1', { app_name: '1' } as GogGameInfo)
+    a.libraryState.installedGames.set('1', { appName: '1' } as GogInstalledInfo)
     expect(b.libraryState.library.size).toBe(0)
     expect(b.libraryState.installedGames.size).toBe(0)
 

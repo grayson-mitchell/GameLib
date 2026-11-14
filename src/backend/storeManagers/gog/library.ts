@@ -2,14 +2,10 @@ import type { ManagerDeps } from 'backend/services/types'
 import type { CallRunnerOptions } from 'common/types'
 import axios, { AxiosError, AxiosResponse } from 'axios'
 import { GOGUser } from './user'
+import { GOGImportData, ExecResult, LaunchOption } from 'common/types'
 import {
-  GameInfo,
-  InstalledInfo,
-  GOGImportData,
-  ExecResult,
-  LaunchOption
-} from 'common/types'
-import {
+  GogGameInfo,
+  GogInstalledInfo,
   GOGCloudSavesLocation,
   GOGGameDotInfoFile,
   GogInstallInfo,
@@ -78,7 +74,7 @@ export function applyGogMacArch(
   const base = state.library.get(appName) ?? (entry ? stored[idx] : undefined)
   if (!base) return
   const installed = state.installedGames.get(appName)
-  const updated: GameInfo = installed
+  const updated: GogGameInfo = installed
     ? { ...base, is_installed: true, install: installed }
     : base
   deps.sendFrontendMessage('pushGameToLibrary', updated)
@@ -332,7 +328,7 @@ export default class GOGLibraryManager implements LibraryManager {
 
   async getSaveSyncLocation(
     appName: string,
-    install: InstalledInfo
+    install: GogInstalledInfo
   ): Promise<GOGCloudSavesLocation[] | undefined> {
     let syncPlatform: 'Windows' | 'MacOS' = 'Windows'
     const platform = install.platform
@@ -551,7 +547,7 @@ export default class GOGLibraryManager implements LibraryManager {
     }
     this.refreshInstalled()
     await this.loadLocalLibrary()
-    const redistGameInfo: GameInfo = {
+    const redistGameInfo: GogGameInfo = {
       app_name: 'gog-redist',
       runner: 'gog',
       title: 'Galaxy Common Redistributables',
@@ -588,7 +584,7 @@ export default class GOGLibraryManager implements LibraryManager {
       (entry) => entry.platform_id === 'gog'
     )
 
-    const gamesObjects: GameInfo[] = [redistGameInfo]
+    const gamesObjects: GogGameInfo[] = [redistGameInfo]
     this.deps.stores.gog.apiInfoCache.use_in_memory() // Prevent blocking operations
     for (const game of filteredApiArray) {
       let retries = 5
@@ -676,15 +672,15 @@ export default class GOGLibraryManager implements LibraryManager {
     return this.defaultExecResult
   }
 
-  getGameInfo(slug: string): GameInfo | undefined {
+  getGameInfo(slug: string): GogGameInfo | undefined {
     return this.library.get(slug) || this.getInstallAndGameInfo(slug)
   }
 
-  getListOfGames(): GameInfo[] {
+  getListOfGames(): GogGameInfo[] {
     return this.deps.stores.gog.libraryStore.get('games', [])
   }
 
-  getInstallAndGameInfo(slug: string): GameInfo | undefined {
+  getInstallAndGameInfo(slug: string): GogGameInfo | undefined {
     const lib = this.deps.stores.gog.libraryStore.get('games', [])
     const game = lib.find((value) => value.app_name === slug)
 
@@ -1055,7 +1051,7 @@ export default class GOGLibraryManager implements LibraryManager {
     // still always win. `this.installedGames.get()` is undefined on a fresh import,
     // and spreading `undefined` is legal -- no branch needed for that case.
     const previous = this.installedGames.get(data.appName)
-    const installInfo: InstalledInfo = {
+    const installInfo: GogInstalledInfo = {
       ...previous,
       appName: data.appName,
       install_path: executablePath,
@@ -1220,7 +1216,7 @@ export default class GOGLibraryManager implements LibraryManager {
    * Convert GamesDBData and ProductEndpointData objects to GameInfo
    * That way it will be easly accessible on frontend
    */
-  async gogToUnifiedInfo(info: GamesDBData | undefined): Promise<GameInfo> {
+  async gogToUnifiedInfo(info: GamesDBData | undefined): Promise<GogGameInfo> {
     if (
       !info ||
       !['game', 'mod'].includes(info.type) ||
@@ -1244,7 +1240,7 @@ export default class GOGLibraryManager implements LibraryManager {
       ?.replace('{formatter}', '')
       .replace('{ext}', 'jpg')
 
-    const object: GameInfo = {
+    const object: GogGameInfo = {
       runner: 'gog',
       developer: info.game.developers.map((dev) => dev.name).join(', '),
       app_name: String(info.external_id),

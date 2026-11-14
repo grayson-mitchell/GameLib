@@ -10,7 +10,7 @@
  * This module stays light (type-only imports besides the two small factories) so suites that mock
  * backend paths or utils do not pull them in through createTestServices.
  */
-import type { GameInfo, InstalledInfo } from 'common/types'
+import type { GogGameInfo, GogInstalledInfo } from 'common/types/gog'
 import type { GOGCredentials } from 'common/types/gog'
 import type { Clock, TimerHandle } from 'backend/process/types'
 import type { CredentialsWithVerdict } from './user'
@@ -21,8 +21,8 @@ import {
 } from './resumeProgress'
 
 interface GogLibraryState {
-  library: Map<string, GameInfo>
-  installedGames: Map<string, InstalledInfo>
+  library: Map<string, GogGameInfo>
+  installedGames: Map<string, GogInstalledInfo>
 }
 
 function createGogLibraryState(): GogLibraryState {
