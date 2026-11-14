@@ -1049,7 +1049,16 @@
   align-items: center;
 }
 
-.platformSupport__icons > svg + svg {
+.platformSupport__icons > * + * {
   /* fallback em keeps spacing even if the token is out of scope here */
   margin-inline-start: var(--space-xs, 0.5em);
+}
+
+/* Installed OS in the Supported platforms row: outline only, theme accent. */
+.platformSupport__icon--installed {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 4px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
 }
