@@ -191,14 +191,19 @@ impl CmBackend for FakeBackend {
         _token: &RefreshTokenSecret,
         _logon_id: u32,
     ) -> Result<Authed<FakeConn>, CmError> {
-        let (steam_id, licenses) = {
+        let (scripted, delay) = {
             let mut s = self.script.lock().unwrap();
             s.connects += 1;
-            match s.authed.pop_front() {
-                Some(r) => r?,
-                None => (s.default_steam_id, s.default_licenses.clone()),
-            }
+            let r = match s.authed.pop_front() {
+                Some(r) => r,
+                None => Ok((s.default_steam_id, s.default_licenses.clone())),
+            };
+            (r, s.delays.get("connect_authed").copied())
         };
+        if let Some(d) = delay {
+            tokio::time::sleep(d).await;
+        }
+        let (steam_id, licenses) = scripted?;
         let (tx, rx) = mpsc::channel(4);
         self.script.lock().unwrap().kick.push(tx);
         Ok(Authed {
