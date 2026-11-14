@@ -31,7 +31,7 @@ complete and verified per their own VERIFICATION.md files; they carry no new req
 ### Architecture
 
 - [ ] **ARCH-01**: The backend has no module-level mutable state: the census is a zero-tolerance test and the Steam RunningAppID poller runs as a boot-owned step
-- [ ] **ARCH-02**: The frontend has one state system: `GlobalState.tsx` / `ContextProvider` retired in favour of GlobalStateV2 slices
+- [x] **ARCH-02**: The frontend has one state system: `GlobalState.tsx` / `ContextProvider` retired in favour of GlobalStateV2 slices
 - [ ] **ARCH-03**: Shared code depends only on a shared `GameInfo` core; store-specific data lives in per-store shapes
 
 ### Steam

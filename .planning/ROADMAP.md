@@ -160,7 +160,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 66.4: Backend module state long tail, the census-to-test flip, then the live smokes** — 23 plans; planned
 - [x] **Phase 67: Schema validation at the sidecar IPC boundary** — 20 plans in 14 waves; planned 2026-11-07 (completed 2026-11-07)
 - [x] **Phase 68: Versioned persisted stores and migrations** — 11 plans; planned (completed 2026-11-08)
-- [ ] **Phase 69: Consolidate frontend state onto GlobalStateV2** — 26/26 plans executed; verification 8/8, 3 human UAT items pending
+- [x] **Phase 69: Consolidate frontend state onto GlobalStateV2** — 26/26 plans; complete (completed 2026-11-14, human UAT 3/3, security 63/63 closed)
 - [ ] **Phase 70: Split GameInfo into shared and per-store shapes** — 16 plans; planned
 - [x] **Phase 71: Rust shell module decomposition** — 20 plans; complete (completed 2026-11-09, gaps closed by 71-19/71-20)
 - [x] **Phase 72: Renderer trust boundary and process hardening** — 0 plans; not started (completed 2026-11-08)
@@ -956,7 +956,7 @@ Plans:
 **Goal:** The frontend has one state system. The 2,259-line `GlobalState.tsx` class component (`extends PureComponent`, 78 `setState` calls), served through `ContextProvider`, is retired in favour of the zustand store in `src/frontend/state/GlobalStateV2.ts` (164 lines today), so a change in one domain no longer re-renders every context consumer. Measured 2026-11-06, excluding tests: 130 frontend files use `ContextProvider` and 20 use `GlobalStateV2`. Three parts: (1) **Slices.** Move state into V2 one domain at a time (library and game list, downloads and install queue, Steam / Epic / GOG / Amazon / Humble auth, settings and theme, UI and dialog state), each with selector hooks (`useShallow`) so components subscribe to what they read. (2) **Ratchet.** Track the remaining `ContextProvider` consumers with a shrink-only count like Phase 62's, ending at zero, then delete `GlobalState.tsx` and the context. (3) **Live checks.** State moves surface as stale-UI and re-render bugs that type checks and unit tests miss, so each wave ends with a smoke check in `pnpm tauri:dev` (Library, Game page, Downloads, sign-in and sign-out per store, ConsoleMode). Measure Library re-render cost on a large library before and after. No behaviour change: anything else found becomes a todo. Open questions for discuss-phase: whether V2 as it stands is the target or needs restructuring first (it already imports `frontend/helpers/electronStores`); where persisted frontend state lives relative to Phase 68's versioned stores; and the order relative to Phase 64, which adds custom-theme state. Depends on Phase 62 because plans 62-17 to 62-19 convert runner checks in the same Library, Game, ConsoleMode and DownloadManager files. Came from the post-Phase-62 architecture review on 2026-11-06.
 **Requirements**: ARCH-02 (milestone-level; phase IDs minted by `/gsd-plan-phase`)
 **Depends on:** Phase 62
-**Plans:** 25/26 plans executed
+**Plans:** 26/26 plans complete
 
 Plans:
 
@@ -1032,7 +1032,7 @@ Plans:
 
 **Wave 16** *(blocked on Wave 15 completion)*
 
-- [ ] 69-26-PLAN.md — D-16 blocking live gate (69-UAT.md, frameless ON/OFF); close D-15 todo
+- [x] 69-26-PLAN.md — D-16 blocking live gate (69-UAT.md, frameless ON/OFF); close D-15 todo
 
 ### Phase 70: Split GameInfo into shared and per-store shapes
 
