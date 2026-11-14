@@ -19,11 +19,15 @@
  * channel name and jobId only, never arguments or results: a CDN token must never reach a log
  * (T-28-04 convention, T-73-41).
  *
+ * With cm=rust (79-22): `depotCdnToken` answers `''` (CF-06) and `depotManifestRequestCode` maps the
+ * CM client's `steamcmKind` (timeout, network, leaseUnknown) to `{unavailable: kind}`.
+ *
  * No timers, watchers or handles are created here (sidecar exit contract).
  */
 
 import type { IpcRegistry } from './ipcRegistry'
 import { logWarning, LogPrefix } from 'backend/logger'
+import { steamCmImpl } from '../storeManagers/steam/cm/steamCmFlags'
 import type { DepotJobRegistry } from '../storeManagers/steam/depotRust/jobRegistry'
 import type { RustJobEvent } from '../storeManagers/steam/depotRust/types'
 
@@ -65,6 +69,9 @@ export function registerDepotHostFlows(deps: {
       const depotId = field(req, 'depotId')
       const host = field(req, 'host')
       if (!job || depotId === undefined || host === undefined) return null
+      // CF-06: the Rust engine never requests CDN auth tokens; '' means "no token", and no
+      // client is touched.
+      if (steamCmImpl() === 'rust') return ''
       try {
         if ((req as { force?: unknown }).force === true) {
           job.tokenCache.invalidate(depotId, host)
@@ -97,6 +104,17 @@ export function registerDepotHostFlows(deps: {
         if ((err as { eresult?: unknown }).eresult === 40)
           return { eresult: 40 }
         logFailure('depotManifestRequestCode', jobId, err)
+        if (steamCmImpl() === 'rust') {
+          // The Rust CM client's typed failure kind (toSteamCmError); fixed allow-list only.
+          const kind = (err as { steamcmKind?: unknown }).steamcmKind
+          if (
+            kind === 'timeout' ||
+            kind === 'network' ||
+            kind === 'leaseUnknown'
+          ) {
+            return { unavailable: kind }
+          }
+        }
         // Fixed allow-list only: never an error message, token or account id (T-74-85).
         const reason = /not (logged on|signed in)|no authenticated/i.test(
           err instanceof Error ? err.message : ''
