@@ -33,6 +33,21 @@ export function shouldWithholdContext(
 }
 
 /**
+ * The single read the Settings controls go through (useSetting ->
+ * SettingsContext.getSetting). `??` is deliberate so a stored `false` beats a
+ * `true` fallback. Pinned by quick 261114-l1j after the 74 UAT drift: the
+ * operator read store/config.json (the mirror); the authoritative value is
+ * config.json defaultSettings, which requestAppSettings returns.
+ */
+export function readSetting<T extends keyof AppSettings>(
+  config: Partial<AppSettings>,
+  key: T,
+  fallback: NonNullable<AppSettings[T]>
+): NonNullable<AppSettings[T]> {
+  return (config[key] ?? fallback) as NonNullable<AppSettings[T]>
+}
+
+/**
  * WR-04: should a `gameSettingWriteFailed` push make this hook re-read its
  * settings? Only for its own appName; anything malformed is ignored.
  */
@@ -154,7 +169,7 @@ const useSettingsContext = ({ appName, gameInfo, runner }: Props) => {
   }, [appName, isDefault])
 
   const contextValues: SettingsContextType = {
-    getSetting: (key, fallback) => currentConfig[key] ?? fallback,
+    getSetting: (key, fallback) => readSetting(currentConfig, key, fallback),
     setSetting: createSettingSetter({
       appName,
       getConfig: () => configRef.current,
