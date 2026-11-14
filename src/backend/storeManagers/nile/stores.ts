@@ -1,6 +1,6 @@
 import CacheStore from 'backend/cache'
 import { TypeCheckedStoreBackend } from 'backend/typed_store'
-import { GameInfo } from 'common/types'
+import type { NileGameInfo } from 'common/types/nile'
 import { NileInstallInfo } from 'common/types/nile'
 import type { StoreFamilyDeps } from 'backend/stores/storeRoot'
 
@@ -10,7 +10,7 @@ export function createNileStores(deps: StoreFamilyDeps) {
     undefined,
     { root: deps.root, kind: 'cache' }
   )
-  const libraryStore = new CacheStore<GameInfo[], 'library'>(
+  const libraryStore = new CacheStore<NileGameInfo[], 'library'>(
     'nile_library',
     null,
     { root: deps.root, kind: 'user-state' }

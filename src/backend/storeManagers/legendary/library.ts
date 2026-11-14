@@ -3,7 +3,6 @@ import type { CallRunnerOptions } from 'common/types'
 import { existsSync, mkdirSync, readFileSync, readdirSync } from 'graceful-fs'
 
 import {
-  GameInfo,
   InstalledInfo,
   ExecResult,
   InstallPlatform,
@@ -45,6 +44,7 @@ import { isWindows } from 'backend/constants/environment'
 import { recordedMacArch, scheduleMacArchSweep } from 'backend/macArch/recovery'
 import { LibraryManager } from 'common/types/game_manager'
 import LegendaryGame from './games'
+import type { LegendaryGameInfo } from 'common/types/legendary'
 
 const fallBackImage = 'fallback'
 
@@ -255,9 +255,12 @@ export default class LegendaryLibraryManager implements LibraryManager {
    *
    * @param appName The AppName of the game you want the info of
    * @param forceReload Discards game info in `library` and always reads info from metadata files
-   * @returns GameInfo
+   * @returns LegendaryGameInfo
    */
-  getGameInfo(appName: string, forceReload = false): GameInfo | undefined {
+  getGameInfo(
+    appName: string,
+    forceReload = false
+  ): LegendaryGameInfo | undefined {
     if (!this.hasGame(appName)) {
       logWarning(
         ['Requested game', appName, 'was not found in library'],

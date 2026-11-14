@@ -4,12 +4,12 @@ import axios from 'axios'
 import {
   ExecResult,
   ExtraInfo,
-  GameInfo,
   InstallArgs,
   InstallPlatform,
   InstallProgress,
   LaunchOption
 } from 'common/types'
+import type { LegendaryGameInfo } from 'common/types/legendary'
 import type { LegendaryManagerDeps } from './library'
 import { checkInstalledMacArch } from 'backend/macArch/recovery'
 import {
@@ -81,9 +81,9 @@ export default class LegendaryGame implements Game {
   /**
    * Alias for `LegendaryLibrary.getGameInfo(appName)`
    *
-   * @returns GameInfo
+   * @returns LegendaryGameInfo
    */
-  getGameInfo(): GameInfo {
+  getGameInfo(): LegendaryGameInfo {
     const info = this.deps.libraryManagers.legendary.getGameInfo(this.appName)
     if (!info) {
       logError(
@@ -703,7 +703,7 @@ export default class LegendaryGame implements Game {
   }
 
   private async installEA(
-    gameInfo: GameInfo,
+    gameInfo: LegendaryGameInfo,
     platformToInstall: string
   ): Promise<{
     status: 'done' | 'error' | 'abort'
@@ -749,7 +749,7 @@ export default class LegendaryGame implements Game {
   }
 
   async installUbisoft(
-    gameInfo: GameInfo,
+    gameInfo: LegendaryGameInfo,
     platformToInstall: string
   ): Promise<{
     status: 'done' | 'error' | 'abort'

@@ -1,6 +1,7 @@
 import CacheStore from '../../cache'
 import { TypeCheckedStoreBackend } from 'backend/typed_store'
-import { ExtraInfo, GameInfo } from 'common/types'
+import { ExtraInfo } from 'common/types'
+import type { LegendaryGameInfo } from 'common/types/legendary'
 import { GameOverride, LegendaryInstallInfo } from 'common/types/legendary'
 import type { StoreFamilyDeps } from 'backend/stores/storeRoot'
 
@@ -10,7 +11,7 @@ export function createLegendaryStores(deps: StoreFamilyDeps) {
     undefined,
     { root: deps.root, kind: 'cache' }
   )
-  const libraryStore = new CacheStore<GameInfo[], 'library'>(
+  const libraryStore = new CacheStore<LegendaryGameInfo[], 'library'>(
     'legendary_library',
     null,
     { root: deps.root, kind: 'user-state' }

@@ -8,7 +8,8 @@ import {
   logInfo,
   logWarning
 } from 'backend/logger'
-import { ExecResult, GameInfo } from 'common/types'
+import { ExecResult } from 'common/types'
+import type { NileGameInfo } from 'common/types/nile'
 import {
   FuelSchema,
   NileGameDownloadInfo,
@@ -36,7 +37,7 @@ export default class NileLibraryManager implements LibraryManager {
   }
 
   private installedGames: Map<string, NileInstallMetadataInfo> = new Map()
-  private library: Map<string, GameInfo> = new Map()
+  private library: Map<string, NileGameInfo> = new Map()
   private readonly gameCache: Map<string, NileGame> = new Map()
 
   async init() {
@@ -368,9 +369,9 @@ export default class NileLibraryManager implements LibraryManager {
    *
    * @param appName The AppName of the game you want the info of
    * @param forceReload Discards game info in `library` and always reads info from metadata files
-   * @returns GameInfo
+   * @returns NileGameInfo
    */
-  getGameInfo(appName: string, forceReload = false): GameInfo | undefined {
+  getGameInfo(appName: string, forceReload = false): NileGameInfo | undefined {
     if (!forceReload) {
       const gameInMemory = this.library.get(appName)
       if (gameInMemory) {
@@ -393,7 +394,7 @@ export default class NileLibraryManager implements LibraryManager {
     return game
   }
 
-  getListOfGames(): GameInfo[] {
+  getListOfGames(): NileGameInfo[] {
     return this.deps.stores.nile.libraryStore.get('library', [])
   }
 

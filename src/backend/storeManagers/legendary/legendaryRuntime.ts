@@ -8,7 +8,7 @@
  * This module stays light (type-only imports besides the stub factory) so suites that mock backend
  * modules do not pull more in through createTestServices.
  */
-import type { GameInfo } from 'common/types'
+import type { LegendaryGameInfo } from 'common/types/legendary'
 import type { InstalledJsonMetadata } from 'common/types/legendary'
 import { createLegendaryStubs, type LegendaryStubs } from './e2eMock'
 
@@ -17,7 +17,7 @@ interface LegendaryLibraryState {
   allGames: Set<string>
   /** Replaced wholesale by refreshInstalled. */
   installedGames: Map<string, InstalledJsonMetadata>
-  library: Map<string, GameInfo>
+  library: Map<string, LegendaryGameInfo>
 }
 
 function createLegendaryLibraryState(): LegendaryLibraryState {
