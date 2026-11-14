@@ -199,6 +199,8 @@
 #include "gamelib_overlay_signal.h"
 // quick 261105-ord: --steam-installapp subcommand (runtime-resolved InstallApp).
 #include "gamelib_installapp.h"
+// Phase 79 (D-14/D-15): --steam-owned-apps subcommand.
+#include "gamelib_ownedapps.h"
 
 // 60-15: GameOverlayActivated (331) -> Darwin notification, probe flag only.
 static gl_ovl_state g_ovl;
@@ -3213,6 +3215,9 @@ int main(int argc, char **argv) {
   // secret block, steam_appid.txt, libsteam_api and the socket server.
   if (argc > 1 && strcmp(argv[1], "--steam-installapp") == 0) {
     return gamelib_installapp_main(argc, argv);
+  }
+  if (argc > 1 && strcmp(argv[1], "--steam-owned-apps") == 0) {
+    return gamelib_ownedapps_main(argc, argv);
   }
   // quick 261106-s3n: one-shot UninstallApp subcommand, same isolation.
   if (argc > 1 && strcmp(argv[1], "--steam-uninstallapp") == 0) {
