@@ -7,7 +7,7 @@
     "src/frontend/screens/Game/GamePage/components/DownloadSizeInfo.tsx": 1,
     "src/frontend/screens/Game/GamePage/components/InstalledInfo.tsx": 1,
     "src/frontend/screens/Game/GamePage/components/MainButton.tsx": 2,
-    "src/frontend/screens/Game/GamePage/index.tsx": 4,
+    "src/frontend/screens/Game/GamePage/index.tsx": 5,
     "src/frontend/screens/Game/GameSubMenu/index.tsx": 1,
     "src/frontend/screens/Game/TimeContainer/index.tsx": 2,
     "src/frontend/screens/Library/components/GameCard/index.tsx": 5,
