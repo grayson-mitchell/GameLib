@@ -364,12 +364,101 @@ describe('pollUpdateOnce InstallApp retry (74-30)', () => {
     await first
   })
 
-  it('never retries once pending or activity was seen', async () => {
+  const pendingIdle = () =>
+    acf({
+      stateFlags: 6,
+      buildid: '100',
+      targetBuildId: '200',
+      bytesDownloaded: 0,
+      bytesToDownload: 1000
+    })
+  const nonDue = (p: ReturnType<typeof armed>) => {
+    p.ticks = p.delegatedSinceTick + 1
+  }
+
+  it('UAT 25: retries on the live pending-but-idle ACF (same tick)', async () => {
+    jest
+      .mocked(requestSteamInstallApp)
+      .mockResolvedValue({ kind: 'ok', folderIndex: 0 } as never)
     const p = armed()
-    acf({ stateFlags: 6, targetBuildId: '200' })
+    pendingIdle()
+    due(p)
+    await pollUpdateOnce(deps, APP, p)
+    expect(requestSteamInstallApp).toHaveBeenCalledTimes(1)
+    expect(logInfo).toHaveBeenCalledWith(
+      'SteamGame: Steam is updating appId 333300 via InstallApp (retry after Steam start)',
+      'Steam'
+    )
+  })
+
+  it('UAT 25: retries on a due tick after an earlier tick set sawPending', async () => {
+    jest
+      .mocked(requestSteamInstallApp)
+      .mockResolvedValue({ kind: 'ok', folderIndex: 0 } as never)
+    const p = armed()
+    pendingIdle()
+    nonDue(p)
+    await pollUpdateOnce(deps, APP, p)
+    expect(p.awaitingUpdate?.sawPending).toBe(true)
+    expect(requestSteamInstallApp).not.toHaveBeenCalled()
+    due(p)
+    await pollUpdateOnce(deps, APP, p)
+    expect(requestSteamInstallApp).toHaveBeenCalledTimes(1)
+  })
+
+  it('never retries once real activity was seen', async () => {
+    const p = armed()
+    acf({ stateFlags: 0x106, targetBuildId: '200' })
     due(p)
     await pollUpdateOnce(deps, APP, p)
     expect(requestSteamInstallApp).not.toHaveBeenCalled()
+  })
+
+  it('UAT 25: growing BytesDownloaded under UpdateRequired disarms the retry', async () => {
+    const p = armed()
+    acf({ stateFlags: 6, targetBuildId: '200', bytesDownloaded: 0 })
+    nonDue(p)
+    await pollUpdateOnce(deps, APP, p)
+    acf({ stateFlags: 6, targetBuildId: '200', bytesDownloaded: 500 })
+    due(p)
+    await pollUpdateOnce(deps, APP, p)
+    expect(p.awaitingUpdate?.sawActivity).toBe(true)
+    expect(requestSteamInstallApp).not.toHaveBeenCalled()
+  })
+
+  it('UAT 25: never logs finished at the stale starting build', async () => {
+    jest
+      .mocked(requestSteamInstallApp)
+      .mockResolvedValue({ kind: 'unavailable', reason: 'steam-not-running' })
+    const p = armed()
+    pendingIdle()
+    nonDue(p)
+    await pollUpdateOnce(deps, APP, p)
+    acf({ stateFlags: 4, buildid: '100', targetBuildId: '100' })
+    p.ticks += 1
+    await pollUpdateOnce(deps, APP, p)
+    expect(logInfo).not.toHaveBeenCalledWith(
+      expect.stringContaining('finished (build 100)'),
+      expect.anything()
+    )
+    expect(getPoll()).toBeDefined()
+  })
+
+  it('UAT 25: finishes once the target build is reached', async () => {
+    jest
+      .mocked(requestSteamInstallApp)
+      .mockResolvedValue({ kind: 'unavailable', reason: 'steam-not-running' })
+    const p = armed()
+    pendingIdle()
+    nonDue(p)
+    await pollUpdateOnce(deps, APP, p)
+    acf({ stateFlags: 4, buildid: '200', targetBuildId: '200' })
+    p.ticks += 1
+    await pollUpdateOnce(deps, APP, p)
+    expect(logInfo).toHaveBeenCalledWith(
+      'Steam: update of appId 333300 finished (build 200)',
+      'Steam'
+    )
   })
 })
 
