@@ -5,7 +5,7 @@ import { faSpinner } from '@fortawesome/free-solid-svg-icons'
 
 import StoreLogos from 'frontend/components/UI/StoreLogos'
 import type { StoreSearchDeal } from 'common/types/storeSearch'
-import { formatUsdPrice } from '../../helpers'
+import { formatPrice } from '../../helpers'
 import '../../index.css'
 
 interface Props {
@@ -23,7 +23,7 @@ interface Props {
  * after a failure, with no persisted per-row error state.
  */
 const StoreSearchBreakdown = ({ gameId, title, onFetchFailed }: Props) => {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [deals, setDeals] = useState<StoreSearchDeal[] | null>(null)
 
   useEffect(() => {
@@ -95,7 +95,7 @@ const StoreSearchBreakdown = ({ gameId, title, onFetchFailed }: Props) => {
             {deal.storeName}
           </span>
           <span className="storeSearchRow__breakdownPrice">
-            {formatUsdPrice(deal.price, deal.currencyCode)}
+            {formatPrice(deal.price, deal.currencyCode, i18n.language)}
           </span>
         </div>
       ))}

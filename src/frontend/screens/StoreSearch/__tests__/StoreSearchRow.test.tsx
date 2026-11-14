@@ -33,6 +33,7 @@ jest.mock('../index.css', () => ({}))
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
+    i18n: { language: 'en' },
     t: (
       _key: string,
       defaultValue: string,
@@ -286,7 +287,7 @@ function makeDeal(overrides: Partial<StoreSearchDeal> = {}): StoreSearchDeal {
 }
 
 describe('StoreSearchRow', () => {
-  it('renders the cheapest price as a single "$X USD" text node (D-13)', () => {
+  it('renders the cheapest price as a single formatted price-with-ISO-code text node', () => {
     const tree = mountRow({
       result: makeResult({ cheapestPrice: '14.99', currencyCode: 'USD' }),
       badges: { owned: [], keyAvailable: false }
@@ -421,7 +422,7 @@ describe('StoreSearchBreakdown', () => {
     expect(mockApi.getStoreSearchDeals).toHaveBeenCalledTimes(1)
   })
 
-  it('renders each deal as a sub-row with the "$X USD" price structure and StoreLogos only when runner is defined', async () => {
+  it('renders each deal as a sub-row with the formatted price-with-ISO-code structure and StoreLogos only when runner is defined', async () => {
     mockApi.getStoreSearchDeals.mockResolvedValue([
       makeDeal({
         storeId: '1',
@@ -449,7 +450,7 @@ describe('StoreSearchBreakdown', () => {
     const items = findAllByClassNamePart(tree, 'storeSearchRow__breakdownItem')
     expect(items).toHaveLength(2)
     expect(textContent(items[0])).toContain('$14.99 USD')
-    expect(textContent(items[1])).toContain('$12.5 USD')
+    expect(textContent(items[1])).toContain('$12.50 USD')
 
     // StoreLogos rendered only for the deal with a mapped runner.
     expect(findByType(items[0], StoreLogos)).toBeDefined()

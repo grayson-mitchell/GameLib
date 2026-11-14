@@ -245,6 +245,8 @@ screen only** — this file is the authoritative record of that intentional depa
 
 ### Currency contract (STORESEARCH-04, D-13) — CORRECTNESS requirement
 
+Superseded by 47-UI-SPEC.md.
+
 Every rendered price — collapsed-row cheapest price AND every expanded per-store price — is a
 **single text node** of the exact shape `${amount} USD` (e.g. `$14.99 USD`). Enforcement rules:
 

@@ -8,7 +8,7 @@ import { CachedImage } from 'frontend/components/UI'
 import fallBackImage from 'frontend/assets/gamelib_card.svg?url'
 import type { StoreSearchResult } from 'common/types/storeSearch'
 import type { StoreOwnershipMatch } from 'common/discounts/badges'
-import { buildOwnedBadgeLabel, formatUsdPrice } from '../../helpers'
+import { buildOwnedBadgeLabel, formatPrice } from '../../helpers'
 import StoreSearchBreakdown from '../StoreSearchBreakdown'
 import '../../index.css'
 
@@ -27,7 +27,7 @@ interface Props {
  * precedence, this screen shows both pills side by side.
  */
 const StoreSearchRow = ({ result, badges }: Props) => {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [expanded, setExpanded] = useState(false)
 
   const ownedLabel = buildOwnedBadgeLabel(badges.owned)
@@ -55,7 +55,11 @@ const StoreSearchRow = ({ result, badges }: Props) => {
           )}
         </div>
         <span className="storeSearchRow__price">
-          {formatUsdPrice(result.cheapestPrice, result.currencyCode)}
+          {formatPrice(
+            result.cheapestPrice,
+            result.currencyCode,
+            i18n.language
+          )}
         </span>
         <button
           type="button"
