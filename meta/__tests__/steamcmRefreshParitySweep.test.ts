@@ -70,6 +70,45 @@ describe('classifyRefreshDiff', () => {
   })
 })
 
+describe('enrichment context', () => {
+  it('explains an at-rest store-field difference as coverage only on a coverage gap', () => {
+    expect(
+      classifyRefreshDiff('other', { a: 1 }, { a: 2 }, 'at-rest', {
+        coverageGap: true
+      })
+    ).toBe('enrichment-coverage')
+    expect(
+      classifyRefreshDiff('other', { a: 1 }, { a: 2 }, 'at-rest')
+    ).toBeNull()
+  })
+
+  it('explains post-refresh name and other differences when rust enriched in refresh', () => {
+    const ctx = { enrichedInRefresh: true }
+    expect(classifyRefreshDiff('name', 'a', 'b', 'post-refresh', ctx)).toBe(
+      'enriched-in-refresh'
+    )
+    expect(
+      classifyRefreshDiff('playtime', 1, 2, 'post-refresh', ctx)
+    ).toBeNull()
+  })
+
+  it('counts both-enriched and coverage-gap apps at rest', () => {
+    const report = newReport()
+    diffLibraries(
+      report,
+      'at-rest',
+      [game('1', { art_cover: 'a' }), game('2', { art_cover: 'a' })],
+      [game('1', { art_cover: 'a' }), game('2')],
+      { ts: new Set(), rust: new Set() }
+    )
+    expect(report.bothEnriched).toBe(1)
+    expect(report.coverageGaps).toBe(1)
+    expect(report['at-rest'].art.explained).toEqual({
+      'enrichment-coverage': 1
+    })
+  })
+})
+
 describe('diffLibraries and the report', () => {
   it('counts per field and stage, and records value-free shapes', () => {
     const report = newReport()

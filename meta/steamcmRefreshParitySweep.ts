@@ -22,7 +22,13 @@
  */
 import { spawnSync } from 'node:child_process'
 import axios from 'axios'
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -38,6 +44,7 @@ export type RefreshField =
   | 'playtime'
   | 'last-played'
   | 'demo'
+  | 'other'
 
 export const FIELDS: readonly RefreshField[] = [
   'ids',
@@ -46,7 +53,8 @@ export const FIELDS: readonly RefreshField[] = [
   'metacritic',
   'playtime',
   'last-played',
-  'demo'
+  'demo',
+  'other'
 ]
 
 export type Stage = 'post-refresh' | 'at-rest'
@@ -57,6 +65,7 @@ export type RefreshDiffClass =
   | 'unset-vs-empty'
   | 'f2p-or-unvetted'
   | 'enriched-in-refresh'
+  | 'enrichment-coverage'
 
 type Json = unknown
 
@@ -112,11 +121,23 @@ function allEmpty(v: Json): boolean {
  * only to the post-refresh snapshots: the Rust Refresh enriches up to its budget, the TS Refresh
  * seeds art from the cache only.
  */
+/**
+ * Per-app facts the classifier cannot see from one field. `enrichedInRefresh`: post-refresh, the
+ * Rust Refresh already enriched this app and the TS Refresh did not. `coverageGap`: at rest, only
+ * one side holds enrichment for this app (the store rate-limited or the lazy sample skipped it), so
+ * its store-derived fields are not comparable.
+ */
+export interface DiffContext {
+  enrichedInRefresh?: boolean
+  coverageGap?: boolean
+}
+
 export function classifyRefreshDiff(
   field: RefreshField,
   ts: Json,
   rust: Json,
-  stage: Stage = 'at-rest'
+  stage: Stage = 'at-rest',
+  ctx: DiffContext = {}
 ): RefreshDiffClass | null {
   if (same(ts, rust)) return null
   if (Array.isArray(ts) && Array.isArray(rust)) {
@@ -126,6 +147,14 @@ export function classifyRefreshDiff(
   }
   if (same(stringLeaves(ts), stringLeaves(rust))) return 'numeric-coercion'
   if (allEmpty(ts) && allEmpty(rust)) return 'unset-vs-empty'
+  if (ctx.coverageGap && stage === 'at-rest') return 'enrichment-coverage'
+  if (
+    ctx.enrichedInRefresh &&
+    stage === 'post-refresh' &&
+    (field === 'name' || field === 'other')
+  ) {
+    return 'enriched-in-refresh'
+  }
   if (
     stage === 'post-refresh' &&
     field === 'art' &&
@@ -156,10 +185,11 @@ export function compareField(
   field: RefreshField,
   ts: Json,
   rust: Json,
-  stage: Stage
+  stage: Stage,
+  ctx: DiffContext = {}
 ): Outcome {
   if (same(ts, rust)) return { kind: 'equal' }
-  const cls = classifyRefreshDiff(field, ts, rust, stage)
+  const cls = classifyRefreshDiff(field, ts, rust, stage, ctx)
   return cls ? { kind: 'explained', cls } : { kind: 'unexplained' }
 }
 
@@ -175,6 +205,10 @@ export interface RefreshReport {
   'at-rest': StageReport
   /** Value-free shape histogram of every difference, keyed `stage field shape`. */
   shapes: Record<string, number>
+  /** At rest: apps both sides hold art for (the value-comparable enriched set). */
+  bothEnriched: number
+  /** At rest: apps only one side holds art for (store rate limit or lazy sample). */
+  coverageGaps: number
 }
 
 export function newReport(): RefreshReport {
@@ -185,7 +219,13 @@ export function newReport(): RefreshReport {
     }
     return r
   }
-  return { 'post-refresh': mk(), 'at-rest': mk(), shapes: {} }
+  return {
+    'post-refresh': mk(),
+    'at-rest': mk(),
+    shapes: {},
+    bothEnriched: 0,
+    coverageGaps: 0
+  }
 }
 
 export function record(
@@ -263,23 +303,34 @@ export interface Projection {
   metacritic: Record<string, unknown>
   playtime: unknown
   lastPlayed: unknown
+  other: Record<string, unknown>
 }
+
+const HANDLED_TOP = new Set(['app_name', 'title', 'extra', 'metacritic_score'])
+const HANDLED_EXTRA = new Set(['steamPlaytimeMinutes', 'steamLastPlayed'])
 
 export function project(g: GameLike): Projection {
   const art: Record<string, unknown> = {}
+  const metacritic: Record<string, unknown> = {}
+  const other: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(g)) {
     if (k.startsWith('art_')) art[k] = v
+    else if (/metacritic/i.test(k)) metacritic[k] = v
+    else if (!HANDLED_TOP.has(k)) other[k] = v
   }
-  const metacritic: Record<string, unknown> = {}
+  const extra: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(g.extra ?? {})) {
-    if (/metacritic/i.test(k)) metacritic[k] = v
+    if (/metacritic/i.test(k)) metacritic[`extra.${k}`] = v
+    else if (!HANDLED_EXTRA.has(k)) extra[k] = v
   }
+  other.extra = extra
   return {
     name: g.title,
     art,
     metacritic,
     playtime: g.extra?.steamPlaytimeMinutes,
-    lastPlayed: g.extra?.steamLastPlayed
+    lastPlayed: g.extra?.steamLastPlayed,
+    other
   }
 }
 
@@ -319,8 +370,17 @@ export function diffLibraries(
     if (!r) continue
     const pt = project(t)
     const pr = project(r)
+    const ctx: DiffContext = {
+      enrichedInRefresh:
+        stage === 'post-refresh' && allEmpty(pt.art) && !allEmpty(pr.art),
+      coverageGap: stage === 'at-rest' && allEmpty(pt.art) !== allEmpty(pr.art)
+    }
+    if (stage === 'at-rest' && !allEmpty(pt.art) && !allEmpty(pr.art)) {
+      report.bothEnriched += 1
+    }
+    if (ctx.coverageGap) report.coverageGaps += 1
     const rec = (field: RefreshField, x: Json, y: Json): void => {
-      const o = compareField(field, x, y, stage)
+      const o = compareField(field, x, y, stage, ctx)
       record(report, stage, field, o)
       if (o.kind !== 'equal') {
         const key = `${stage} ${field} ${o.kind === 'explained' ? o.cls : 'UNEXPLAINED'} ${describeDiff(x, y)}`
@@ -333,6 +393,7 @@ export function diffLibraries(
     rec('playtime', pt.playtime, pr.playtime)
     rec('last-played', pt.lastPlayed, pr.lastPlayed)
     rec('demo', demoIds.ts.has(id), demoIds.rust.has(id))
+    rec('other', pt.other, pr.other)
   }
 }
 
@@ -379,6 +440,9 @@ export function formatReport(report: RefreshReport): string[] {
       )
     }
   }
+  lines.push(
+    `at-rest enrichment: bothEnriched=${report.bothEnriched} coverageGaps=${report.coverageGaps}`
+  )
   for (const [k, n] of Object.entries(report.shapes).sort()) {
     lines.push(`shape ${k}: ${n}`)
   }
@@ -470,6 +534,7 @@ interface SideResult {
   owned: number
 }
 
+const MIN_BOTH_ENRICHED = 20
 const CM_FLAG = 'GAMELIB_STEAMCM_CM'
 const LAZY_CONCURRENCY = 4
 
@@ -718,6 +783,15 @@ async function main(): Promise<void> {
         `rust enrich summary: attempted=${String(e.attempted)} enriched=${String(e.enriched)} delisted=${String(e.delisted)} failed=${String(e.failed)} rateLimited=${String(e.rateLimited)} budgetHit=${String(e.budgetHit)} notReached=${Array.isArray(e.notReached) ? e.notReached.length : 0}`
       )
     }
+    if (process.env.SWEEP_DUMP_DIR) {
+      // Local debugging only: holds names and URLs, so never point it inside the repo.
+      writeFileSync(
+        join(process.env.SWEEP_DUMP_DIR, 'libraries.json'),
+        JSON.stringify({ ts, rust }, (_k, v: unknown) =>
+          v instanceof Set ? [...v] : v
+        )
+      )
+    }
     diffLibraries(report, 'post-refresh', ts.postRefresh, rust.postRefresh, {
       ts: ts.demoIds,
       rust: rust.demoIds
@@ -729,11 +803,10 @@ async function main(): Promise<void> {
     for (const l of formatReport(report)) say(l)
     exit = decideExit(report, { tsOwned: ts.owned, rustOwned: rust.owned })
     const blockedAfter = storeBlocked(await storeStatus())
-    const vacuous =
-      populated(ts.atRest).art === 0 || populated(rust.atRest).art === 0
+    const vacuous = report.bothEnriched < MIN_BOTH_ENRICHED
     if (exit === 0 && (blockedAfter || vacuous)) {
       say(
-        `result not trusted: ${blockedAfter ?? 'a side enriched no art, so the at-rest comparison is vacuous'}`
+        `result not trusted: ${blockedAfter ?? 'only ${report.bothEnriched} apps are enriched on both sides (need ${MIN_BOTH_ENRICHED}), so the at-rest value comparison is vacuous'}`
       )
       exit = 3
     }
