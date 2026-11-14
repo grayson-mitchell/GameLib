@@ -8,6 +8,7 @@
  * into a suite that mocks it.
  */
 import type { SteamUser, SteamUserDeps } from '../storeManagers/steam/user'
+import type { SteamCmClient } from '../storeManagers/steam/cm/SteamCmClient'
 import { createFakeClock } from './fakeClock'
 import { createTestAnonymousClient } from './testAnonymousClient'
 import { createTestSteamSession } from './testSteamSession'
@@ -98,4 +99,30 @@ export function createMockSteamUser(
     mocked[name] = jest.fn(inert[name])
   }
   return mocked as unknown as jest.Mocked<SteamUser>
+}
+
+/**
+ * A scripted SteamCmClient double (79-23). Annotated with the narrow interface so every test
+ * double is checked against it at compile time: it fits a steam-user lease and a Rust lease alike.
+ * Every call rejects (or never calls back) unless the test overrides it.
+ */
+export function createTestSteamCmClient(
+  overrides: Partial<SteamCmClient> = {}
+): SteamCmClient {
+  const unscripted = (name: string) =>
+    Promise.reject(new Error(`${name} is not scripted in this test`))
+  const base: SteamCmClient = {
+    steamID: null,
+    licenses: [],
+    getProductInfo: () => unscripted('getProductInfo'),
+    getDepotDecryptionKey: (_a, _d, cb) =>
+      cb(new Error('getDepotDecryptionKey is not scripted'), Buffer.alloc(0)),
+    getContentServers: (_a, cb) =>
+      cb(new Error('getContentServers is not scripted'), []),
+    getManifestRequestCode: () => unscripted('getManifestRequestCode'),
+    getUserOwnedApps: () => unscripted('getUserOwnedApps'),
+    getPersonas: () => unscripted('getPersonas'),
+    redeemKey: () => unscripted('redeemKey')
+  }
+  return { ...base, ...overrides }
 }

@@ -285,6 +285,19 @@ describe('Steam authenticated-session policy (Phase 54 ROADMAP SC3)', () => {
     expect(src.slice(start, end)).not.toMatch(/SteamUser\./)
   })
 
+  it('Rule M: the Rust adapters under steam/cm/ never acquire a session themselves (79-23)', () => {
+    // The adapters wrap a lease handed to them (SteamCmClient); only callers lease.
+    const CM_DIR = `${S}cm/`
+    const cmFiles = scannedRelPaths.filter((f) => f.startsWith(CM_DIR))
+    expect(cmFiles).toContain(`${CM_DIR}RustCmClient.ts`)
+    const re =
+      /\b(?:acquireAuthenticated|acquireAuthenticatedWithToken|acquireOpenAuthenticated|ensureConnected)\(/
+    const offenders = cmFiles
+      .filter((f) => countIn(f, re) > 0)
+      .map((f) => `${f} (M)`)
+    expect(offenders).toEqual([])
+  })
+
   it('Rule K: the CM logon log oracle lines each occur exactly once', () => {
     const auth = filesMatching(/CM logon mode=authenticated reason=/)
     const anon = filesMatching(/CM logon mode=anonymous reason=/)
