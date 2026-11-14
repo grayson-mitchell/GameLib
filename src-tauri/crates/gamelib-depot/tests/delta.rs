@@ -393,6 +393,70 @@ fn delta_round_trip() {
     assert_eq!(stages, vec!["delta_planning", "delta_committing"]);
 }
 
+fn seed_stale_manifests(env: &Env) {
+    for (d, _, _) in &env.new_depots {
+        let dir = env.dir.path().join("cache").join(d);
+        std::fs::create_dir_all(&dir).unwrap();
+        for gid in ["1", "2", "3"] {
+            assert_ne!(gid, env.old_gid(d).unwrap_or_default());
+            assert!(env.new_depots.iter().all(|(_, g, _)| g != gid));
+            let p = dir.join(format!("{gid}.manifest"));
+            std::fs::write(&p, b"x").unwrap();
+            let f = std::fs::File::options().write(true).open(&p).unwrap();
+            f.set_modified(std::time::SystemTime::now() - std::time::Duration::from_secs(1000))
+                .unwrap();
+        }
+    }
+}
+
+fn cached_gids(env: &Env, depot: &str) -> Vec<String> {
+    let mut v: Vec<String> = std::fs::read_dir(env.dir.path().join("cache").join(depot))
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .filter_map(|n| n.strip_suffix(".manifest").map(str::to_string))
+        .collect();
+    v.sort();
+    v
+}
+
+#[test]
+fn delta_prunes_superseded_manifests() {
+    let (old, new) = round_trip_cases("dl-prune");
+    let env = setup(&old, &new);
+    seed_stale_manifests(&env);
+    let out = env.run(env.job("dl-prune"));
+    assert_eq!(out.status, Status::Completed, "{:?}", out.failures);
+    for (d, g, _) in &env.new_depots {
+        let mut want = vec![g.clone()];
+        if let Some(o) = env.old_gid(d) {
+            want.push(o);
+        }
+        want.sort();
+        assert_eq!(cached_gids(&env, d), want, "depot {d}");
+    }
+}
+
+#[test]
+fn delta_prune_failure_keeps_completed_outcome() {
+    let (old, new) = round_trip_cases("dl-prune-fail");
+    let env = setup(&old, &new);
+    seed_stale_manifests(&env);
+    std::fs::write(env.steamapps().join("appmanifest_999.acf"), "not vdf").unwrap();
+    let out = env.run(env.job("dl-prune-fail"));
+    assert_eq!(out.status, Status::Completed, "{:?}", out.failures);
+    assert_eq!(out.acf.as_ref().unwrap().state_flags, "4");
+    for (d, _, _) in &env.new_depots {
+        let all = cached_gids(&env, d);
+        for gid in ["1", "2", "3"] {
+            assert!(all.contains(&gid.to_string()), "depot {d}: {all:?}");
+        }
+    }
+    assert!(env.host.emits.lock().unwrap().iter().any(|e| matches!(
+        &e.body,
+        JobEventBody::Warning { message, .. } if message.starts_with("manifest cache prune skipped")
+    )));
+}
+
 #[test]
 fn delta_corrupt_local_chunk_goes_to_cdn() {
     let (old, new) = round_trip_cases("dl-corrupt");

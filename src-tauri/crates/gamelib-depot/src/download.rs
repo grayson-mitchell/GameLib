@@ -807,6 +807,20 @@ pub async fn run_install(
     let started = Instant::now();
     let emitter = ProgressEmitter::new(host.clone(), &job.job_id);
     let out = run_install_inner(job, jctx, host, cancel, &emitter, started).await;
+    // Bound the manifest cache. Never alters `out`: a prune failure is a warning, not a failed job.
+    if out.status == Status::Completed && out.acf.is_some() {
+        let cache_dir = jctx.cache_dir.clone();
+        let prune_job = job.clone();
+        let pruned = tokio::task::spawn_blocking(move || {
+            crate::manifest::prune_after_install(&cache_dir, &prune_job)
+        })
+        .await;
+        match pruned {
+            Ok(Ok(_)) => {}
+            Ok(Err(msg)) => emitter.warn(format!("manifest cache prune skipped: {msg}")),
+            Err(e) => emitter.warn(format!("manifest cache prune skipped: {e}")),
+        }
+    }
     emitter.close();
     out
 }
