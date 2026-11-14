@@ -5,6 +5,7 @@
     "src/frontend/hooks/__tests__/statusLabel.bridgeTail.test.ts": 1,
     "src/frontend/hooks/__tests__/statusLabel.steamUpdate.test.ts": 1,
     "src/frontend/hooks/__tests__/useSettingsContext.fallback.test.tsx": 1,
+    "src/frontend/hooks/__tests__/useSettingsContext.getSetting.test.ts": 1,
     "src/frontend/hooks/__tests__/useSettingsContext.setSetting.test.ts": 1
   }
 }
