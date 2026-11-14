@@ -10,8 +10,10 @@
  *     still fails after cleaning is removed (inner-first). Required members are never removed.
  *  3. Loose / catchall objects pass through untouched.
  *  4. Arrays: every element is cleaned, none dropped. Records: every value is cleaned.
- *  5. Unions: a valid value is returned as-is; otherwise the first option the cleaned value
- *     satisfies wins; else the value is returned unchanged.
+ *  5. Unions: a valid value is returned as-is. Otherwise pass 1 cleans each option losslessly
+ *     (no dropInvalidOptional) and the first option it satisfies wins; pass 2 runs the lossy
+ *     clean only on options whose literal members the value already matches, so an arm can
+ *     never win by dropping the value's own discriminant. Else the value is returned unchanged.
  *  6. Everything else is returned unchanged. Pure and total: no mutation, no throw, no
  *     prototype pollution (results are built with Object.fromEntries).
  */
@@ -39,6 +41,22 @@ const unwrap = (schema: z.ZodType): z.ZodType => {
 
 const accepts = (schema: z.ZodType, value: unknown): boolean =>
   schema.safeParse(value).success
+
+/**
+ * True unless `value` carries a present member that the option declares as a literal and the
+ * value's member is a different literal. Non-object options always match.
+ */
+function literalMembersMatch(option: z.ZodType, value: unknown): boolean {
+  const inner = unwrap(option)
+  if (!(inner instanceof z.ZodObject) || !isPlainObject(value)) return true
+  const shape = inner.shape as Record<string, z.ZodType>
+  for (const [key, member] of Object.entries(shape)) {
+    if (!(unwrap(member) instanceof z.ZodLiteral)) continue
+    if (!Object.hasOwn(value, key) || value[key] === undefined) continue
+    if (!accepts(unwrap(member), value[key])) return false
+  }
+  return true
+}
 
 function cleanObject(
   value: Record<string, unknown>,
@@ -84,7 +102,18 @@ function clean(
   }
   if (inner instanceof z.ZodUnion) {
     if (accepts(inner, value)) return value
-    for (const option of inner.options as z.ZodType[]) {
+    const unionOptions = inner.options as z.ZodType[]
+    // Pass 1 (lossless): only undeclared keys and rejected nulls go, so an arm whose own
+    // discriminant the value carries wins before any arm that would drop that discriminant.
+    const lossless: StripOptions = { ...options, dropInvalidOptional: false }
+    for (const option of unionOptions) {
+      const cleaned = clean(value, option, lossless)
+      if (accepts(option, cleaned)) return cleaned
+    }
+    // Pass 2 (lossy): only arms whose literal members the value already satisfies, so a
+    // `type: 'dlc'` value can never be rewritten into the `type: 'basic'` arm (WR-01).
+    for (const option of unionOptions) {
+      if (!literalMembersMatch(option, value)) continue
       const cleaned = clean(value, option, options)
       if (accepts(option, cleaned)) return cleaned
     }

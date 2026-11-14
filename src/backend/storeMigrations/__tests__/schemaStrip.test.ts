@@ -115,6 +115,48 @@ describe('stripToSchema: structural rules', () => {
     expect(stripToSchema(bad, launchOptionSchema, DROP)).toBe(bad)
   })
 
+  it('union: never rewrites a dlc or altExe launch option into the basic arm (WR-01)', () => {
+    const dlc = {
+      type: 'dlc',
+      dlcAppName: 'a',
+      dlcTitle: 'b',
+      name: 'N',
+      parameters: ''
+    }
+    expect(stripToSchema(dlc, launchOptionSchema, DROP)).toEqual({
+      type: 'dlc',
+      dlcAppName: 'a',
+      dlcTitle: 'b'
+    })
+    const altExe = {
+      type: 'altExe',
+      executable: '/game/alt.exe',
+      name: 'N',
+      parameters: ''
+    }
+    expect(stripToSchema(altExe, launchOptionSchema, DROP)).toEqual({
+      type: 'altExe',
+      executable: '/game/alt.exe'
+    })
+    // An unknown discriminant matches no arm's literal, so no lossy pass rewrites it.
+    const unknown = { type: 'weird', name: 'N', parameters: '' }
+    expect(stripToSchema(unknown, launchOptionSchema, DROP)).toBe(unknown)
+  })
+
+  it('union: the lossy pass still runs on an arm whose literal members the value matches', () => {
+    const s = z.union([
+      z.strictObject({ type: z.literal('a').optional(), n: z.string() }),
+      z.strictObject({
+        type: z.literal('b'),
+        m: z.string(),
+        extra: z.number().optional()
+      })
+    ])
+    const input = { type: 'b', m: 'x', extra: 'bad' }
+    expect(stripToSchema(input, s, DROP)).toEqual({ type: 'b', m: 'x' })
+    expect(stripToSchema(input, s, KEEP)).toBe(input)
+  })
+
   it('is total on hostile input and never pollutes via __proto__', () => {
     for (const v of [null, 1, 'x', [], [1], undefined, { list: {} }, { a: [] }])
       expect(() => stripToSchema(v, schema, DROP)).not.toThrow()
