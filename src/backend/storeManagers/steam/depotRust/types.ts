@@ -177,6 +177,11 @@ export interface RustSummarizeRequest {
   depots: RustDepotRef[]
   hosts: RustHostRef[]
   patterns: string[]
+  /**
+   * Host job id the summary's CDN-token and request-code callbacks route under (job.rs
+   * `SummarizeRequest.job_id`). Absent means `summary-{appId}`.
+   */
+  jobId?: string
 }
 
 interface RustDepotSummary {

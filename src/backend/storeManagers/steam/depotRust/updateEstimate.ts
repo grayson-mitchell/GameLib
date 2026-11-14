@@ -2,8 +2,10 @@
 // per depot with `fromManifest`, no local hashing and no download. Runs only from an explicit
 // user action or from updateBridgeGame itself, never on refresh or page open (steam-user is
 // authenticated only on demand). Never throws: a failure resolves `{ error }`.
-// Exit contract: no timers or handles.
+// Exit contract: the only timer is AbortSignal.timeout's, which Node unrefs (it never holds the
+// event loop; same reasoning as knownFixReport.ts), and the abort listener is removed in finally.
 
+import { randomUUID } from 'node:crypto'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { CdnAuthTokenCache } from '../depot/cdnAuth'
 import { getContentServerHosts } from '../depot/contentServers'
@@ -59,11 +61,23 @@ export async function resolveBridgeUpdateContext(
   }
 }
 
+/** Upper bound on one estimate; a stalled summary must not hold the steam-user lease forever. */
+export const ESTIMATE_TIMEOUT_MS = 60_000
+
 export async function estimateBridgeUpdate(
   steamGame: SteamGame,
-  opts: { signal?: AbortSignal; unattended?: boolean }
+  // timeoutMs exists so tests use a short real timeout: AbortSignal.timeout's internal timer is
+  // not controlled by jest fake timers.
+  opts: {
+    signal?: AbortSignal
+    unattended?: boolean
+    timeoutMs?: number
+  }
 ): Promise<SteamUpdateEstimate | { error: string }> {
   const { deps, appId } = steamGame
+  const timeoutMs = opts.timeoutMs ?? ESTIMATE_TIMEOUT_MS
+  const timeout = AbortSignal.timeout(timeoutMs)
+  const signal = opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout
   let lease: Awaited<
     ReturnType<typeof deps.steamUser.acquireAuthenticated>
   > | null = null
@@ -71,7 +85,7 @@ export async function estimateBridgeUpdate(
     assertNumericAppId(appId)
     const ctx = await resolveBridgeUpdateContext(steamGame)
     if ('error' in ctx) return ctx
-    throwIfAborted(opts.signal)
+    throwIfAborted(signal)
     lease = await deps.steamUser.acquireAuthenticated({
       // reason stays 'user-install': it drives the macOS go-offline wrap. Unattended
       // omits guidedAction so a refusal never opens sign-in or pushes Go Offline UI.
@@ -89,19 +103,20 @@ export async function estimateBridgeUpdate(
       installdir: ctx.installdir,
       os: 'windows',
       branch: ctx.branch,
-      signal: opts.signal
+      signal
     }
     const refs = await buildDepotRefs(appId, depotOpts)
     const client = getDepotClient(deps.steamUser)
     const hosts = await getContentServerHosts(client, Number(appId))
-    throwIfAborted(opts.signal)
+    throwIfAborted(signal)
     const tokenCache = new CdnAuthTokenCache(
       client,
       Number(appId),
       deps.steamInstallRuntime.cdnSchema
     )
+    const jobId = `summary-${appId}-${randomUUID()}`
     const dispose = deps.steamInstallRuntime.depotJobs.registerActiveDepotJob(
-      `summary-${appId}`,
+      jobId,
       {
         appId,
         tokenCache,
@@ -115,14 +130,27 @@ export async function estimateBridgeUpdate(
       }
     )
     let res
+    let onAbort: (() => void) | undefined
     try {
-      res = await summarize(deps.steamInstallRuntime.depotJobs.transport, {
-        appId,
-        depots: toRustDepotRefs(refs.depots, ctx.oldGidByDepot),
-        hosts: toRustHosts(hosts),
-        patterns: []
+      // An abandoned Rust summary keeps running (no summary cancel exists); its later
+      // token/request-code callbacks find no registry entry and fail, which is the intended result.
+      const aborted = new Promise<never>((_, reject) => {
+        onAbort = () => reject(signal.reason)
+        if (signal.aborted) onAbort()
+        else signal.addEventListener('abort', onAbort, { once: true })
       })
+      res = await Promise.race([
+        summarize(deps.steamInstallRuntime.depotJobs.transport, {
+          appId,
+          depots: toRustDepotRefs(refs.depots, ctx.oldGidByDepot),
+          hosts: toRustHosts(hosts),
+          patterns: [],
+          jobId
+        }),
+        aborted
+      ])
     } finally {
+      if (onAbort) signal.removeEventListener('abort', onAbort)
       dispose()
     }
     if ('error' in res) {
@@ -169,6 +197,15 @@ export async function estimateBridgeUpdate(
     )
     return estimate
   } catch (err) {
+    if (timeout.aborted) {
+      logWarning(
+        `estimateBridgeUpdate: appId ${appId} timed out after ${timeoutMs} ms`,
+        LogPrefix.Steam
+      )
+      return {
+        error: `Update size estimate timed out after ${Math.round(timeoutMs / 1000)} s`
+      }
+    }
     logWarning(
       `estimateBridgeUpdate: appId ${appId} failed: ${String(err)}`,
       LogPrefix.Steam

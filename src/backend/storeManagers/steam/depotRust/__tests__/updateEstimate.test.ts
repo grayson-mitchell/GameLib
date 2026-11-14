@@ -1,5 +1,5 @@
 /** Phase 74 plan 10: estimateBridgeUpdate sums the per-depot delta estimates (D-09/D-13/D-14). */
-import { estimateBridgeUpdate } from '../updateEstimate'
+import { estimateBridgeUpdate, ESTIMATE_TIMEOUT_MS } from '../updateEstimate'
 import { summarizeDepots } from '../rustDepot'
 import { buildDepotRefs, getDepotClient } from '../../depot/plan'
 import { getContentServerHosts } from '../../depot/contentServers'
@@ -205,6 +205,55 @@ describe('estimateBridgeUpdate', () => {
     await estimateBridgeUpdate(game, {})
     const req = jest.mocked(summarizeDepots).mock.calls[0]![1]
     expect(req.depots.map((d) => d.fromManifest)).toEqual([OLD_GID, '2'])
+    expect(req.jobId).toMatch(/^summary-12345-/)
+  })
+
+  it('exports a 60 s timeout', () => {
+    expect(ESTIMATE_TIMEOUT_MS).toBe(60_000)
+  })
+
+  it('concurrent estimates register distinct keys and each request carries its own', async () => {
+    let release2!: () => void
+    const gate = new Promise<void>((r) => (release2 = r))
+    jest.mocked(summarizeDepots).mockImplementation(async () => {
+      await gate
+      return { skippedDepots: [], depots: [] } as never
+    })
+    const a = estimateBridgeUpdate(game, {})
+    const b = estimateBridgeUpdate(game, {})
+    while (jest.mocked(summarizeDepots).mock.calls.length < 2)
+      await new Promise((r) => setImmediate(r))
+    release2()
+    await Promise.all([a, b])
+    const keys = registerActiveDepotJob.mock.calls.map((c) => c[0] as string)
+    expect(new Set(keys).size).toBe(2)
+    for (const [i, k] of keys.entries()) {
+      expect(k).toMatch(/^summary-12345-/)
+      expect(jest.mocked(summarizeDepots).mock.calls[i]![1].jobId).toBe(k)
+    }
+  })
+
+  it('a stalled summary times out, releasing the lease and disposing', async () => {
+    jest.mocked(summarizeDepots).mockReturnValue(new Promise(() => {}))
+    const r = await estimateBridgeUpdate(game, { timeoutMs: 20 })
+    expect(r).toMatchObject({ error: expect.stringContaining('timed out') })
+    expect(release).toHaveBeenCalledTimes(1)
+    expect(dispose).toHaveBeenCalledTimes(1)
+    expect(setEstimate).not.toHaveBeenCalled()
+  })
+
+  it('a caller abort mid-summary returns an error without claiming a timeout', async () => {
+    jest.mocked(summarizeDepots).mockReturnValue(new Promise(() => {}))
+    const ctrl = new AbortController()
+    const p = estimateBridgeUpdate(game, { signal: ctrl.signal })
+    while (jest.mocked(summarizeDepots).mock.calls.length < 1)
+      await new Promise((r) => setImmediate(r))
+    ctrl.abort(new Error('cancelled by user'))
+    const r = await p
+    expect(r).toHaveProperty('error')
+    expect((r as { error: string }).error).not.toContain('timed out')
+    expect(release).toHaveBeenCalledTimes(1)
+    expect(dispose).toHaveBeenCalledTimes(1)
   })
 
   it('releases the lease and disposes the job when the summary throws', async () => {
