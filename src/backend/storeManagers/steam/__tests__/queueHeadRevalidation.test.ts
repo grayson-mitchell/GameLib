@@ -9,7 +9,7 @@ import { join } from 'node:path'
 import { getSteamLibraries } from 'backend/utils'
 import { clearSteamResumeBreadcrumb } from '../library/resumeBreadcrumbs'
 import { steamQueueHeadAlreadyInstalled } from '../queueHeadRevalidation'
-import type { GameInfo } from 'common/types'
+import type { SteamGameInfo } from 'common/types/steam'
 import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createSteamStores } from '../stores'
@@ -62,7 +62,7 @@ describe('steamQueueHeadAlreadyInstalled', () => {
     library.set('108600', {
       app_name: '108600',
       install: { steamResumeTargetSteamappsDir: steamapps }
-    } as unknown as GameInfo)
+    } as unknown as SteamGameInfo)
   }
 
   beforeEach(() => {

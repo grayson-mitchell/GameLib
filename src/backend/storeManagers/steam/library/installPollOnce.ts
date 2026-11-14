@@ -1,4 +1,4 @@
-import { GameInfo } from 'common/types'
+import type { SteamGameInfo } from 'common/types/steam'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import { getFileSize } from 'backend/utils'
@@ -336,7 +336,7 @@ export async function pollInstallOnce(
     }
 
     if (existing) {
-      const updated: GameInfo = {
+      const updated: SteamGameInfo = {
         ...existing,
         is_installed: true,
         install: {

@@ -1,4 +1,4 @@
-import { GameInfo, InstalledInfo } from 'common/types'
+import type { SteamGameInfo, SteamInstalledInfo } from 'common/types/steam'
 import { join } from 'path'
 import type { SteamStoresDeps } from './installRoot'
 import type { SteamLibraryStateDeps } from 'backend/services/types'
@@ -29,7 +29,7 @@ export function markSteamInstallIncomplete(
   const existing = deps.steamSession.libraryState.library.get(appId)
   if (!existing) return
 
-  const updated: GameInfo = {
+  const updated: SteamGameInfo = {
     ...existing,
     is_installed: false,
     install: { ...existing.install, steamResumePending: true }
@@ -79,7 +79,7 @@ export function markSteamNativeInstallStarted(
   const existing = deps.steamSession.libraryState.library.get(appId)
   if (!existing) return
 
-  const updated: GameInfo = {
+  const updated: SteamGameInfo = {
     ...existing,
     install: {
       ...existing.install,
@@ -131,7 +131,7 @@ export function clearSteamResumeBreadcrumb(
   delete install.steamResumeInstalldir
   delete install.steamResumeInstalledAtStart
 
-  const updated: GameInfo = {
+  const updated: SteamGameInfo = {
     ...existing,
     install: { ...install, steamResumePending: false }
   }
@@ -187,7 +187,7 @@ export function getSteamResumeBreadcrumbAppIds(
 export async function breadcrumbAppIsFullyInstalledOnDisk(
   rust: RustInvokeDeps,
   appId: string,
-  install: Partial<InstalledInfo> | undefined
+  install: Partial<SteamInstalledInfo> | undefined
 ): Promise<boolean> {
   if (!install?.steamResumeTargetSteamappsDir) return false
   try {

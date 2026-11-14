@@ -12,7 +12,7 @@ import { existsSync } from 'graceful-fs'
 import { getBridgeRouteVerdict } from '../bridgeRouteVerdict'
 import { isBridgeBottleReady } from '../bridgeBottle'
 import { bridgeAllowlist } from '../bridge/allowlist'
-import type { GameInfo } from 'common/types'
+import type { SteamGameInfo } from 'common/types/steam'
 
 const steamMetadataStore = {
   get: jest.fn(),
@@ -123,7 +123,7 @@ jest.mock('../bridge/allowlist', () => ({
 
 const APP_ID = '570'
 
-function makeEntry(overrides: Partial<GameInfo> = {}): GameInfo {
+function makeEntry(overrides: Partial<SteamGameInfo> = {}): SteamGameInfo {
   return {
     runner: 'steam',
     app_name: APP_ID,
@@ -136,7 +136,7 @@ function makeEntry(overrides: Partial<GameInfo> = {}): GameInfo {
     canRunOffline: true,
     installable: true,
     ...overrides
-  } as GameInfo
+  } as SteamGameInfo
 }
 
 // ── getBridgeRouteVerdict() — D-51-09 Task 2's installedIn (LOCATION) wiring ──

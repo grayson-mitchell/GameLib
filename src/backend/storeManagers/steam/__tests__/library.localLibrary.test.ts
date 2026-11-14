@@ -5,7 +5,7 @@ import {
 import { logWarning } from 'backend/logger'
 import { restoreLocalSteamLibrary } from '../library/localLibrary'
 import { refreshInstallState } from '../library/refresh'
-import type { GameInfo } from 'common/types'
+import type { SteamGameInfo } from 'common/types/steam'
 import type { Stores } from 'backend/services/types'
 
 jest.mock('backend/logger', () => ({
@@ -29,7 +29,12 @@ const library = deps.steamSession.libraryState.library
 const { steamLibraryStore } = steamStoresModule
 
 const game = (app_name: string, is_installed: boolean) =>
-  ({ runner: 'steam', app_name, title: app_name, is_installed }) as GameInfo
+  ({
+    runner: 'steam',
+    app_name,
+    title: app_name,
+    is_installed
+  }) as SteamGameInfo
 
 describe('restoreLocalSteamLibrary', () => {
   beforeEach(() => {

@@ -1,10 +1,10 @@
+import type { SteamGameInfo } from 'common/types/steam'
 /**
  * Bridge install state lifted out of gameInstall (65-11, D-12 step 4): the DRM
  * signal / prescreen persistence and the installed/uninstalled library flips.
  * Leaf: takes `steamGame`, references SteamGame only via `import type`.
  */
 import { isAbsolute, join, relative, resolve, sep } from 'node:path'
-import { GameInfo } from 'common/types'
 import { logWarning, LogPrefix } from 'backend/logger'
 import { reportDetectedFix, knownFixReportDeps } from 'backend/knownFixReport'
 import * as bottle from './bottle'
@@ -160,7 +160,7 @@ export function markBridgeGameInstalled(
     steamGame.appId
   )
   if (existing) {
-    const updated: GameInfo = {
+    const updated: SteamGameInfo = {
       ...existing,
       is_installed: true,
       install: {
@@ -203,7 +203,7 @@ export function markBridgeGameUninstalled(steamGame: SteamGame): void {
     steamGame.appId
   )
   if (existing) {
-    const updated: GameInfo = {
+    const updated: SteamGameInfo = {
       ...existing,
       is_installed: false,
       install: {}

@@ -1,3 +1,4 @@
+import type { SteamGameInfo } from 'common/types/steam'
 import axios from 'axios'
 import { ExtraInfo, GameInfo } from 'common/types'
 import { parseMetacriticScore } from 'common/metacriticScore'
@@ -25,7 +26,7 @@ const STEAM_CDN_BASE = 'https://cdn.cloudflare.steamstatic.com/steam/apps'
  */
 export async function fetchMetadataIfNeeded(
   steamGame: SteamGame,
-  current: GameInfo
+  current: SteamGameInfo
 ): Promise<void> {
   // Guard: if a fetch is already in-flight for this appId, return immediately
   // (pendingFetches.add MUST come before the await — prevents T-2-03 race)
@@ -77,7 +78,7 @@ export async function fetchMetadataIfNeeded(
       // GAP-B: Definitive verdict — Steam says this app no longer exists (delisted).
       // Persist the flag without wiping cached art/extra so the entry can be reverted
       // if Steam re-lists the app. Push the updated GameInfo so the frontend drops it live.
-      const delistedInfo: GameInfo = { ...current, is_delisted: true }
+      const delistedInfo: SteamGameInfo = { ...current, is_delisted: true }
       const existing = steamGame.deps.stores.steam.steamMetadataStore.get(
         steamGame.appId
       )
@@ -198,7 +199,7 @@ export async function fetchMetadataIfNeeded(
             ? undefined
             : existingMeta?.mac_arch
 
-    const updated: GameInfo = {
+    const updated: SteamGameInfo = {
       ...current,
       title: data.name ?? current.title,
       art_cover,

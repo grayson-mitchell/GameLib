@@ -1,4 +1,4 @@
-import { GameInfo } from 'common/types'
+import type { SteamGameInfo } from 'common/types/steam'
 
 export interface SteamLibraryState {
   /**
@@ -6,7 +6,7 @@ export interface SteamLibraryState {
    * and read by SteamGame.getGameInfo(). Lives here (not in library.ts) so that
    * games.ts can reach it without creating a circular dependency.
    */
-  library: Map<string, GameInfo>
+  library: Map<string, SteamGameInfo>
   /**
    * Tracks in-flight metadata fetches so SteamGame.fetchMetadataIfNeeded()
    * does not fire concurrent requests for the same AppID.
@@ -47,7 +47,7 @@ export function createSteamLibraryState(): SteamLibraryState {
   const metadataFetchWaiters: Array<() => void> = []
 
   return {
-    library: new Map<string, GameInfo>(),
+    library: new Map<string, SteamGameInfo>(),
     pendingFetches: new Set<string>(),
     async acquireMetadataSlot() {
       if (activeMetadataFetches < MAX_CONCURRENT_METADATA_FETCHES) {

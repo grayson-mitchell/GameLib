@@ -1,6 +1,7 @@
+import type { SteamGameInfo } from 'common/types/steam'
 import { TypeCheckedStoreBackend } from '../../typed_store'
 import CacheStore from '../../cache'
-import { GameInfo, ExtraInfo } from 'common/types'
+import { ExtraInfo } from 'common/types'
 import type { StoreFamilyDeps } from 'backend/stores/storeRoot'
 
 export interface SteamMetadataCacheEntry {
@@ -311,7 +312,7 @@ export function createSteamStores(deps: StoreFamilyDeps) {
     deps
   )
   // ── LIB-01/02/03: Persistent library cache (indefinite lifespan per D-05) ──
-  const steamLibraryStore = new CacheStore<GameInfo[], 'games'>(
+  const steamLibraryStore = new CacheStore<SteamGameInfo[], 'games'>(
     'steam_library',
     null,
     { root: deps.root, kind: 'user-state' }

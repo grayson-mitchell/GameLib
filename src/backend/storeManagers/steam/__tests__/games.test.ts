@@ -130,7 +130,8 @@ import type {
 } from '../gameDrmLaunch'
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 const steamUser = createMockSteamUser()
-import type { GameInfo, InstallParams } from 'common/types'
+import type { InstallParams } from 'common/types'
+import type { SteamGameInfo } from 'common/types/steam'
 import {
   isSteamNativeDeleteEnabled,
   isSteamNativeInstallEnabled
@@ -1032,7 +1033,7 @@ const NATIVE_LIBRARY_ROOT = '/mock/native/steam'
 const NATIVE_INSTALL_PATH = `${NATIVE_LIBRARY_ROOT}/steamapps/common/Dota 2`
 
 /** Minimal library entry with no artwork (triggers lazy fetch) */
-function makeEntry(overrides: Partial<GameInfo> = {}): GameInfo {
+function makeEntry(overrides: Partial<SteamGameInfo> = {}): SteamGameInfo {
   return {
     runner: 'steam',
     app_name: APP_ID,
@@ -1045,7 +1046,7 @@ function makeEntry(overrides: Partial<GameInfo> = {}): GameInfo {
     canRunOffline: true,
     installable: true,
     ...overrides
-  } as GameInfo
+  } as SteamGameInfo
 }
 
 /** Flush all pending microtasks and macrotasks */
@@ -5083,7 +5084,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
     jest
       .mocked(steamLibraryStore.set)
       .mock.calls.filter((c) => c[0] === 'games')
-      .at(-1)?.[1] as GameInfo[]
+      .at(-1)?.[1] as SteamGameInfo[]
 
   beforeEach(() => {
     library.clear()
@@ -5197,7 +5198,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
   })
 
   it('a breadcrumb whose appId has an on-disk StateFlags=4 ACF is CLEARED at startup, not surfaced', async () => {
-    const breadcrumbEntry: GameInfo = {
+    const breadcrumbEntry: SteamGameInfo = {
       ...makeEntry({ title: 'Dota 2' }),
       install: {
         steamResumePending: true,

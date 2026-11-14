@@ -33,7 +33,7 @@ import { findOtherManifestsWithInstalldir } from '../library/acfState'
 import { runNativeDepotDownloadLeased } from '../gameInstallDepot'
 import { deleteCancelledSteamInstall } from '../cancelDelete'
 import { steamQueueHeadAlreadyInstalled } from '../queueHeadRevalidation'
-import type { GameInfo } from 'common/types'
+import type { SteamGameInfo } from 'common/types/steam'
 import type SteamGame from '../games'
 import type { Stores } from 'backend/services/types'
 
@@ -139,7 +139,7 @@ describe('stale queue head cancel regression (73-18)', () => {
         steamResumeTargetSteamappsDir: steamapps,
         steamResumeInstalldir: 'ProjectZomboid'
       }
-    } as unknown as GameInfo)
+    } as unknown as SteamGameInfo)
     jest.mocked(getSteamLibraries).mockResolvedValue([join(tmp, 'lib')])
     inFlightSpy().mockReturnValue(false)
     jest.mocked(findOtherManifestsWithInstalldir).mockResolvedValue([])

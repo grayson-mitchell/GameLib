@@ -109,7 +109,7 @@ jest.mock('../../launcher', () => ({
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────────────────
 import { bootFresh, writeInvoke } from './helpers/sidecarHarness'
-import type { GameInfo } from 'common/types'
+import type { SteamGameInfo } from 'common/types/steam'
 // Type-only namespace import: the runtime handles are rebound per case from the
 // fresh registry (freshRegistry), but this keeps the static import edge knip sees.
 import type * as RecentGamesModule from 'backend/recent_games/recent_games'
@@ -322,7 +322,7 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
         title: 'Test D Steam Game',
         runner: 'steam',
         is_installed: true
-      } as GameInfo
+      } as SteamGameInfo
     ])
 
     const { input, frames } = boot()

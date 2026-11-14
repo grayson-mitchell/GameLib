@@ -1,4 +1,4 @@
-import { GameInfo } from 'common/types'
+import type { SteamGameInfo } from 'common/types/steam'
 import type { ManagerDeps, SteamLibraryStateDeps } from 'backend/services/types'
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { join } from 'path'
@@ -217,7 +217,7 @@ export async function resumeInterruptedSteamInstall(
     // already acted on it, even if the finalize step below fails.
     const existing = deps.steamSession.libraryState.library.get(appId)
     if (existing?.install?.steamResumePending) {
-      const updated: GameInfo = {
+      const updated: SteamGameInfo = {
         ...existing,
         install: { ...existing.install, steamResumePending: false }
       }

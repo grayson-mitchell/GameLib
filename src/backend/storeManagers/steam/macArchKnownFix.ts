@@ -1,3 +1,4 @@
+import type { SteamGameInfo } from 'common/types/steam'
 /**
  * Curated `macArch: "32"` known-fix hint for Steam titles (quick 261027-bqe,
  * spec todo 2026-10-26-known-fix-key-marks-a-mac-build-32-bit-before-install,
@@ -16,7 +17,6 @@
 import { readKnownFixes, type KnownFixPathsDeps } from 'backend/knownFixes'
 import { isAppleSiliconMac } from 'backend/constants/environment'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { GameInfo } from 'common/types'
 
 import type { SteamMetadataCacheEntry } from './stores'
 import type { SteamLibraryStateDeps } from 'backend/services/types'
@@ -53,7 +53,7 @@ function propagateToLibrary(
 ): void {
   const current = deps.steamSession.libraryState.library.get(appId)
   if (!current) return
-  const updated: GameInfo = { ...current, mac_arch: macArch }
+  const updated: SteamGameInfo = { ...current, mac_arch: macArch }
   deps.steamSession.libraryState.library.set(appId, updated)
   deps.stores.steam.steamLibraryStore.set(
     'games',

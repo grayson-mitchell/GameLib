@@ -1,4 +1,4 @@
-import { GameInfo } from 'common/types'
+import type { SteamGameInfo } from 'common/types/steam'
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { getFileSize, type SteamLibrariesDeps } from 'backend/utils'
 import type { FrontendMessageDeps } from '../../../host/frontendMessage'
@@ -173,7 +173,7 @@ export async function pollUninstallOnce(
       // to it instead of orphaning the entry with a stale pointer at the
       // copy we just removed (the exact re-resolution risk flagged by the
       // operator decision). The badge is never forced to flip.
-      const updated: GameInfo = {
+      const updated: SteamGameInfo = {
         ...existing,
         is_installed: true,
         install: {
@@ -218,7 +218,7 @@ export async function pollUninstallOnce(
     }
 
     if (existing) {
-      const updated: GameInfo = {
+      const updated: SteamGameInfo = {
         ...existing,
         is_installed: false,
         install: {}

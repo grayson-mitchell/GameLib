@@ -1,7 +1,8 @@
+import type { SteamGameInfo } from 'common/types/steam'
 import type { ManagerDeps } from 'backend/services/types'
 import {
-  GameInfo,
   ExecResult,
+  GameInfo,
   InstallPlatform,
   InstallInfo,
   LaunchOption
@@ -152,7 +153,7 @@ export default class SteamLibraryManager implements LibraryManager {
         }
 
         if (existing) {
-          const updated: GameInfo = {
+          const updated: SteamGameInfo = {
             ...existing,
             install: { ...existing.install, steamResumePending: true }
           }

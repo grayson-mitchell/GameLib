@@ -18,7 +18,7 @@ import { findOtherManifestsWithInstalldir } from '../library/acfState'
 import { getBridgeBottleSteamappsRoot } from '../library/installRoot'
 import { getBottleSteamappsDir } from '../bottle'
 import { deleteCancelledSteamInstall } from '../cancelDelete'
-import type { GameInfo } from 'common/types'
+import type { SteamGameInfo } from 'common/types/steam'
 import {
   fsBackedSteamFiles,
   stubRustSteamFiles
@@ -102,7 +102,7 @@ describe('deleteCancelledSteamInstall', () => {
         steamResumeInstalldir: 'Cool Game',
         ...install
       }
-    } as unknown as GameInfo)
+    } as unknown as SteamGameInfo)
   }
 
   function allPresent() {
@@ -323,7 +323,7 @@ describe('deleteCancelledSteamInstall, rust branch', () => {
         steamResumeTargetSteamappsDir: steamapps,
         steamResumeInstalldir: 'Cool Game'
       }
-    } as unknown as GameInfo)
+    } as unknown as SteamGameInfo)
     jest.mocked(getSteamLibraries).mockResolvedValue([join(tmp, 'lib')])
     inFlightSpy().mockReturnValue(false)
     jest.mocked(findOtherManifestsWithInstalldir).mockResolvedValue([])

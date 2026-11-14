@@ -1,8 +1,8 @@
+import type { SteamGameInfo } from 'common/types/steam'
 import { existsSync } from 'graceful-fs'
 import i18next from 'i18next'
 import {
   ExtraInfo,
-  GameInfo,
   GameSettings,
   ExecResult,
   InstallArgs,
@@ -141,7 +141,7 @@ export default class SteamGame implements Game {
    * fall back through `resolveGameTitle` (downloadmanager/utils.ts) rather
    * than assume this method never returns an empty object.
    */
-  getGameInfo(): GameInfo {
+  getGameInfo(): SteamGameInfo {
     let existing = this.deps.steamSession.libraryState.library.get(this.appId)
     if (!existing) {
       const cached = this.deps.stores.steam.steamLibraryStore
@@ -171,7 +171,7 @@ export default class SteamGame implements Game {
           LogPrefix.Steam
         )
       }
-      return {} as GameInfo
+      return {} as SteamGameInfo
     }
 
     // Trigger lazy metadata fetch as fire-and-forget side effect (D-04).
@@ -514,7 +514,7 @@ export default class SteamGame implements Game {
   async forceUninstall(): Promise<void> {
     const existing = this.deps.steamSession.libraryState.library.get(this.appId)
     if (existing) {
-      const updated: GameInfo = {
+      const updated: SteamGameInfo = {
         ...existing,
         is_installed: false,
         install: {}

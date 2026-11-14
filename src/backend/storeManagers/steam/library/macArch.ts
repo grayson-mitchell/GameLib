@@ -1,4 +1,5 @@
-import { GameInfo, InstallArgs } from 'common/types'
+import type { SteamGameInfo } from 'common/types/steam'
+import { InstallArgs } from 'common/types'
 import {
   machOArchsOfAsync,
   verdictFromArchs,
@@ -119,7 +120,10 @@ export async function verifyMacArchGroundTruth(
   // carries the verdict for the next refresh() rebuild.
   const currentGameInfo = deps.steamSession.libraryState.library.get(appId)
   if (currentGameInfo) {
-    const updatedGameInfo: GameInfo = { ...currentGameInfo, mac_arch: verdict }
+    const updatedGameInfo: SteamGameInfo = {
+      ...currentGameInfo,
+      mac_arch: verdict
+    }
     deps.steamSession.libraryState.library.set(appId, updatedGameInfo)
     // GAP-17-BOTTLE-STORE-DIVERGENCE: persist immediately, mirroring every
     // other library-mutating call site in this file — otherwise a restart

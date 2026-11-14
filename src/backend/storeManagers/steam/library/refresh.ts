@@ -1,4 +1,5 @@
-import { GameInfo, ExecResult } from 'common/types'
+import type { SteamGameInfo } from 'common/types/steam'
+import { ExecResult } from 'common/types'
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import { getFileSize } from 'backend/utils'
@@ -377,7 +378,7 @@ async function syncOwnedLibrary(
             : 'bridge'
       const cachedMeta = steamMetadataStore.get(appIdStr)
 
-      const gameInfo: GameInfo = {
+      const gameInfo: SteamGameInfo = {
         runner: 'steam',
         app_name: appIdStr,
         title: app.name,
@@ -619,7 +620,7 @@ export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
     const isNowInstalled = !!installedData
 
     if (gameInfo.is_installed !== isNowInstalled) {
-      const updated: GameInfo = {
+      const updated: SteamGameInfo = {
         ...gameInfo,
         is_installed: isNowInstalled,
         install: isNowInstalled
