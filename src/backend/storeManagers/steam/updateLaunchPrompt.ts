@@ -8,7 +8,8 @@
  * Order: ACF bit-4 check, then the in-flight/queued block (no network needed), then detection.
  * Play aborts with a notice while a bridge update is downloading or committing (nativeInstallsInFlight)
  * or while its queue element is waiting with the queue running (WR-05). A paused update keeps the old
- * build playable (D-16), so it falls through to the normal prompt.
+ * build playable (D-16), so it falls through to the prompt; when the Rust delta temps ledger survives
+ * the prompt says the update is partly downloaded and that Update now resumes it (261114-twk).
  *
  * Steam-registered games never reach this (D-07): the caller only invokes it for bridge launches.
  * An ACF that lost the fully-installed bit (4) means an update commit was interrupted; launching
@@ -17,6 +18,8 @@
 // The warning count is a lint ceiling; this file's i18next.t calls follow launchDispatch.ts.
 /* eslint-disable import-x/no-named-as-default-member */
 import i18next from 'i18next'
+import { existsSync } from 'graceful-fs'
+import { join } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { notify } from 'backend/dialog/dialog'
 import { buildUpdateQueueElement } from 'backend/downloadmanager/updateElement'
@@ -29,6 +32,26 @@ import { readAcfUpdateState } from './library/acfUpdateState'
 import { readUpdatePromptAck, recordUpdatePromptAck } from './updatePromptAck'
 
 const STATE_FLAG_FULLY_INSTALLED = 4
+
+/**
+ * The ledger is written by gamelib-depot delta.rs (JOURNAL_DIR "gamelib-delta", quick 261114-gki)
+ * only when a paused run kept SHA-verified temps, and is removed before commit and on fallbacks, so
+ * a paused queue element with no ledger restarts from 0 and keeps the original prompt wording.
+ * Any failure reads as "no ledger": this must never block Play.
+ */
+function hasPartialUpdate(
+  steamappsDir: string | undefined,
+  appId: string
+): boolean {
+  if (!steamappsDir) return false
+  try {
+    return existsSync(
+      join(steamappsDir, 'gamelib-delta', `${appId}.temps.json`)
+    )
+  } catch {
+    return false
+  }
+}
 
 export async function gateBridgeLaunchOnUpdate(
   steamGame: SteamGame
@@ -89,14 +112,23 @@ export async function gateBridgeLaunchOnUpdate(
 
     if (readUpdatePromptAck(deps, appId) === targetBuild) return 'launch'
 
+    const partial = hasPartialUpdate(acf?.steamappsDir, appId)
+    const message = partial
+      ? i18next.t(
+          'gamelib:steam.update.prompt.messagePartial',
+          '{{title}} has a partly downloaded update (build {{targetBuild}}). Update now to resume it, or play the build you have?',
+          { title, targetBuild }
+        )
+      : i18next.t(
+          'gamelib:steam.update.prompt.message',
+          '{{title}} has an update (build {{targetBuild}}). Update now, or play the build you have?',
+          { title, targetBuild }
+        )
+
     const { response } = await deps.dialogs.showMessageBox({
       type: 'question',
       title: i18next.t('gamelib:steam.update.prompt.title', 'Update available'),
-      message: i18next.t(
-        'gamelib:steam.update.prompt.message',
-        '{{title}} has an update (build {{targetBuild}}). Update now, or play the build you have?',
-        { title, targetBuild }
-      ),
+      message,
       buttons: [
         i18next.t('gamelib:steam.update.prompt.playAnyway', 'Play anyway'),
         i18next.t('gamelib:steam.update.prompt.updateNow', 'Update now'),

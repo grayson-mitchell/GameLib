@@ -4,6 +4,8 @@ import { readUpdatePromptAck, recordUpdatePromptAck } from '../updatePromptAck'
 import { detectSteamUpdates } from '../updateDetection'
 import { readAcfUpdateState } from '../library/acfUpdateState'
 import { notify } from 'backend/dialog/dialog'
+import { existsSync } from 'graceful-fs'
+import { join } from 'path'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -21,6 +23,10 @@ jest.mock('../updateDetection', () => ({
 }))
 jest.mock('../library/acfUpdateState', () => ({
   readAcfUpdateState: jest.fn()
+}))
+jest.mock('graceful-fs', () => ({
+  ...jest.requireActual('graceful-fs'),
+  existsSync: jest.fn(() => false)
 }))
 jest.mock('../games', () => ({ __esModule: true, default: jest.fn() }))
 
@@ -91,6 +97,7 @@ const stale = (targetBuild = '200') =>
 beforeEach(() => {
   jest.resetAllMocks()
   jest.mocked(readAcfUpdateState).mockResolvedValue({ stateFlags: 4 } as never)
+  jest.mocked(existsSync).mockReturnValue(false)
 })
 
 describe('gateBridgeLaunchOnUpdate', () => {
@@ -239,6 +246,71 @@ describe('gateBridgeLaunchOnUpdate', () => {
     const t = setup()
     jest.mocked(detectSteamUpdates).mockRejectedValue(new Error('boom'))
     expect(await gateBridgeLaunchOnUpdate(t.game)).toBe('launch')
+  })
+})
+
+describe('part-downloaded wording (261114-twk)', () => {
+  const ORIGINAL =
+    '{{title}} has an update (build {{targetBuild}}). Update now, or play the build you have?'
+  const PARTIAL =
+    '{{title}} has a partly downloaded update (build {{targetBuild}}). Update now to resume it, or play the build you have?'
+  const withDir = () =>
+    jest.mocked(readAcfUpdateState).mockResolvedValue({
+      stateFlags: 4,
+      steamappsDir: '/lib/steamapps'
+    } as never)
+
+  it('uses the partial wording when the delta temps ledger exists', async () => {
+    const t = setup()
+    withDir()
+    jest.mocked(existsSync).mockReturnValue(true)
+    jest.mocked(detectSteamUpdates).mockResolvedValue(stale())
+    t.showMessageBox.mockResolvedValue({ response: 0 })
+    await gateBridgeLaunchOnUpdate(t.game)
+    const opts = t.showMessageBox.mock.calls[0][0]
+    expect(opts.message).toBe(PARTIAL)
+    expect(existsSync).toHaveBeenCalledWith(
+      join('/lib/steamapps', 'gamelib-delta', `${APP}.temps.json`)
+    )
+    expect(opts.buttons).toEqual([
+      'Play anyway',
+      'Update now',
+      "Don't ask again for this build"
+    ])
+    expect(opts.title).toBe('Update available')
+    expect(opts.defaultId).toBe(0)
+    expect(opts.cancelId).toBe(0)
+  })
+
+  it('keeps the original wording when no ledger exists', async () => {
+    const t = setup()
+    withDir()
+    jest.mocked(detectSteamUpdates).mockResolvedValue(stale())
+    t.showMessageBox.mockResolvedValue({ response: 0 })
+    await gateBridgeLaunchOnUpdate(t.game)
+    expect(t.showMessageBox.mock.calls[0][0].message).toBe(ORIGINAL)
+  })
+
+  it('falls back to the original wording when existsSync throws', async () => {
+    const t = setup()
+    withDir()
+    jest.mocked(existsSync).mockImplementation(() => {
+      throw new Error('EACCES')
+    })
+    jest.mocked(detectSteamUpdates).mockResolvedValue(stale())
+    t.showMessageBox.mockResolvedValue({ response: 0 })
+    expect(await gateBridgeLaunchOnUpdate(t.game)).toBe('launch')
+    expect(t.showMessageBox.mock.calls[0][0].message).toBe(ORIGINAL)
+  })
+
+  it('keeps the original wording without a steamappsDir and does not probe', async () => {
+    const t = setup()
+    jest.mocked(existsSync).mockReturnValue(true)
+    jest.mocked(detectSteamUpdates).mockResolvedValue(stale())
+    t.showMessageBox.mockResolvedValue({ response: 0 })
+    await gateBridgeLaunchOnUpdate(t.game)
+    expect(t.showMessageBox.mock.calls[0][0].message).toBe(ORIGINAL)
+    expect(existsSync).not.toHaveBeenCalled()
   })
 })
 
