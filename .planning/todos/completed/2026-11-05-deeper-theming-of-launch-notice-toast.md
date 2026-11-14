@@ -30,3 +30,9 @@ still read as a warning). This is SCSS only, with no behaviour change.
 Then check it live in `pnpm tauri:dev` in every theme. The quickest trigger for the engine
 notice is to temporarily rename `/Applications/CrossOver.app`, launch a bridged Steam game, then
 rename it back.
+
+## Resolution
+
+Shipped in quick 261110-nwy (`3e5546299` SCSS, `f94b22971` source-gate test
+`launchNoticeThemeTokens.test.ts`). Live check across all themes in `pnpm tauri:dev`: operator
+reported **pass** on 2026-11-15. Closed.
