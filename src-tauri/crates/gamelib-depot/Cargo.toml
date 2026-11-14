@@ -29,7 +29,12 @@ serde_json = "1"
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Storage_FileSystem"] }
 
+[features]
+# Deterministic cancel seam for integration tests (IN-02). Enabled only by the self dev-dependency.
+test-hooks = []
+
 [dev-dependencies]
+gamelib-depot = { path = ".", features = ["test-hooks"] }
 tempfile = "3"
 tokio = { version = "1", features = ["test-util"] }
 

@@ -21,6 +21,9 @@ pub mod post;
 pub mod reconcile;
 pub mod registry;
 pub mod stall;
+#[cfg(feature = "test-hooks")]
+#[doc(hidden)]
+pub mod test_hooks;
 
 use serde::Deserialize;
 use serde_json::{json, Value};

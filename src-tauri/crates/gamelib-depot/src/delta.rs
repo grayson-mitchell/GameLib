@@ -1736,7 +1736,10 @@ async fn delta_body(
             let j = job.clone();
             let written = tokio::task::spawn_blocking(move || write_journal(&j, &path)).await;
             match written {
-                Ok(Ok(())) => {}
+                Ok(Ok(())) => {
+                    #[cfg(feature = "test-hooks")]
+                    crate::test_hooks::after_journal_write(&job.job_id);
+                }
                 Ok(Err(e)) => failures.push(failure(
                     "(run)",
                     io_kind(&e),

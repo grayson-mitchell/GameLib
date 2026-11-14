@@ -25,6 +25,7 @@ use fake_cdn::Reply;
 use gamelib_depot::job::JobEventBody;
 use gamelib_depot::outcome::{DeltaMode, Status};
 use gamelib_depot::registry;
+use gamelib_depot::test_hooks;
 use std::time::Duration;
 
 const DEPOT: &str = "940001";
@@ -323,4 +324,97 @@ fn error_deletes_all_temps() {
     assert_eq!(out.status, Status::Error, "{:?}", out.failures);
     assert!(tmp_files(env.dir.path()).is_empty(), "every temp deleted");
     assert!(!env.temp_ledger_path().exists());
+}
+
+#[test]
+fn orphan_journal_removed_and_same_build_runs_as_chunk() {
+    let (old, new) = round_trip_cases("dr-orphan");
+    let env = setup(&old, &new);
+    let acf_before = env.acf_bytes();
+    let old_b = env.root_file("b.bin");
+    test_hooks::cancel_after_journal_write("dr-orphan");
+    let out = env.run(env.job("dr-orphan"));
+    assert_eq!(out.status, Status::Cancelled, "{:?}", out.failures);
+    assert!(!env.journal_path().exists(), "orphan journal removed");
+    assert_eq!(env.root_file("b.bin"), old_b);
+    assert_eq!(env.acf_bytes(), acf_before);
+    assert!(env.temp_ledger_path().exists(), "pause kept verified temps");
+
+    let b3 = chunk_target(&piece("b3"));
+    let c1n = chunk_target(&piece("c1n"));
+    let d1 = chunk_target(&piece_d1());
+    let hits = (
+        env.cdn.hit_count(&b3),
+        env.cdn.hit_count(&c1n),
+        env.cdn.hit_count(&d1),
+    );
+    env.host.emits.lock().unwrap().clear();
+
+    let out = env.run(env.job("dr-orphan-2"));
+    assert_eq!(out.status, Status::Completed, "{:?}", out.failures);
+    assert_eq!(out.delta.as_ref().unwrap().mode, DeltaMode::Chunk);
+    assert_tree_matches(&env, &new);
+    assert!(!env.journal_path().exists());
+    assert!(!env.temp_ledger_path().exists());
+    assert!(tmp_files(env.dir.path()).is_empty());
+    assert_eq!(env.cdn.hit_count(&b3), hits.0);
+    assert_eq!(env.cdn.hit_count(&c1n), hits.1);
+    assert_eq!(env.cdn.hit_count(&d1), hits.2);
+    let emits = env.host.emits.lock().unwrap();
+    assert!(
+        emits.iter().any(|e| matches!(&e.body,
+            JobEventBody::Warning { message, .. } if message.contains("reusing 3 verified files"))),
+        "reuse is logged"
+    );
+}
+
+#[test]
+fn orphan_journal_does_not_force_fallback_for_newer_build() {
+    let (old, new) = round_trip_cases("dr-orphan-nb");
+    let env = setup(&old, &new);
+    test_hooks::cancel_after_journal_write("dr-orphan-nb");
+    let out = env.run(env.job("dr-orphan-nb"));
+    assert_eq!(out.status, Status::Cancelled, "{:?}", out.failures);
+    assert!(!env.journal_path().exists());
+
+    let newer = delta_env::case(
+        "dr-orphan-nb",
+        3,
+        vec![(
+            940_001,
+            vec![
+                delta_env::file("a.bin", new_content(&new, "a.bin")),
+                delta_env::file("b.bin", new_content(&new, "b.bin")),
+                delta_env::file("c.bin", new_content(&new, "c.bin")),
+                delta_env::file(
+                    "d.bin",
+                    delta_env::cat(&[&piece("d0"), &fixture_builder::synth("d2", 700)]),
+                ),
+            ],
+        )],
+    );
+    let gids = env.serve_build(&newer);
+    let out = env.run(env.job_for("dr-orphan-nb-2", &gids));
+    assert_eq!(out.status, Status::Completed, "{:?}", out.failures);
+    assert_eq!(out.delta.as_ref().unwrap().mode, DeltaMode::Chunk);
+    assert_tree_matches(&env, &newer);
+    assert!(!env.journal_path().exists());
+    assert!(!env.temp_ledger_path().exists());
+    assert!(tmp_files(env.dir.path()).is_empty());
+}
+
+#[test]
+fn cancelled_commit_resume_keeps_journal() {
+    let (old, new) = round_trip_cases("dr-orphan-cr");
+    let env = setup(&old, &new);
+    interrupt(&env, &new, &["b.bin"]);
+    test_hooks::cancel_after_journal_write("dr-orphan-cr");
+    let out = env.run(env.job("dr-orphan-cr"));
+    assert_eq!(out.status, Status::Cancelled, "{:?}", out.failures);
+    assert!(env.journal_path().exists(), "resume keeps its journal");
+    let acf = env.acf_string();
+    assert!(acf.contains(&env.old_gid(DEPOT).unwrap()), "{acf}");
+
+    let out = env.run(env.job("dr-orphan-cr-2"));
+    assert_finished(&env, &new, &out);
 }

@@ -128,6 +128,56 @@ impl Env {
             "limits": null
         })
     }
+    /// Scripts `case` (another build of the same app) on the fake CDN like `setup` does for the
+    /// new build; returns (depotId, gid) per depot.
+    pub fn serve_build(&self, case: &FixtureCase) -> Vec<(String, String)> {
+        let files = render(case);
+        let json: Value = serde_json::from_slice(&files["case.json"]).unwrap();
+        let gids: Vec<(String, String)> = json["depots"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|d| {
+                (
+                    d["depotId"].as_str().unwrap().to_string(),
+                    d["manifestId"].as_str().unwrap().to_string(),
+                )
+            })
+            .collect();
+        for (rel, bytes) in &files {
+            if let Some(sha) = rel
+                .strip_prefix("chunks/")
+                .and_then(|r| r.strip_suffix(".bin"))
+            {
+                for (d, _) in &gids {
+                    self.cdn.script(
+                        &format!("/depot/{d}/chunk/{sha}"),
+                        vec![Reply::Status(200, bytes.clone())],
+                    );
+                }
+            } else if let Some(stem) = rel
+                .strip_prefix("manifests/")
+                .and_then(|r| r.strip_suffix(".bin"))
+            {
+                let (d, g) = stem.split_once('_').unwrap();
+                self.cdn.script(
+                    &format!("/depot/{d}/manifest/{g}/5/123"),
+                    vec![Reply::Status(200, bytes.clone())],
+                );
+            }
+        }
+        gids
+    }
+    /// `job_json` with each depot's `manifestId` replaced from `gids`.
+    pub fn job_for(&self, job_id: &str, gids: &[(String, String)]) -> DepotJob {
+        let mut j = self.job_json(job_id);
+        for d in j["depots"].as_array_mut().unwrap() {
+            let id = d["depotId"].as_str().unwrap().to_string();
+            let g = &gids.iter().find(|(x, _)| *x == id).unwrap().1;
+            d["manifestId"] = json!(g);
+        }
+        serde_json::from_value(j).unwrap()
+    }
     pub fn job(&self, job_id: &str) -> DepotJob {
         serde_json::from_value(self.job_json(job_id)).unwrap()
     }
