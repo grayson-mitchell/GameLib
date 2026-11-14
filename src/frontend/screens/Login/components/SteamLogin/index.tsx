@@ -13,6 +13,16 @@ import useAuthState from 'frontend/state/authState'
 import { Dialog, DialogHeader } from 'frontend/components/UI/Dialog'
 import './index.scss'
 
+/** The QR challenge to draw after a poll: the rotated one when the poll carries a new one, else unchanged. */
+export function nextQrChallengeUrl(
+  current: string | null,
+  poll: { challengeUrl?: string }
+): string | null {
+  return poll.challengeUrl && poll.challengeUrl !== current
+    ? poll.challengeUrl
+    : current
+}
+
 export type Step =
   | 'checking'
   | 'not-installed'
@@ -188,6 +198,8 @@ export default function SteamLogin({ dismiss }: Props) {
     // Poll for scan confirmation
     pollIntervalRef.current = setInterval(async () => {
       const poll = await window.api.steamPollQR()
+      // Steam rotates the QR challenge (~22 s): redraw so the user never scans a dead code.
+      setChallengeUrl((current) => nextQrChallengeUrl(current, poll))
       if (poll.status === 'done' && poll.username) {
         // Username is populated — background CM connect has resolved.
         // Finalize login and dismiss the overlay.

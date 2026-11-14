@@ -127,6 +127,8 @@ interface SteamAuthAsyncReturns {
   steamPollQR: Promise<{
     status: 'done' | 'waiting' | 'error'
     username?: string
+    /** Set only when Steam rotated the QR challenge: the window redraws the code from it. */
+    challengeUrl?: string
   }>
   steamPollCredential: Promise<{
     status: 'done' | 'waiting' | 'error'
