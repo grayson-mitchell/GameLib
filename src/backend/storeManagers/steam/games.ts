@@ -3,6 +3,7 @@ import { existsSync } from 'graceful-fs'
 import i18next from 'i18next'
 import {
   ExtraInfo,
+  GameInfo,
   GameSettings,
   ExecResult,
   InstallArgs,
@@ -140,8 +141,21 @@ export default class SteamGame implements Game {
    * least observable; every DownloadManager title consumer is expected to
    * fall back through `resolveGameTitle` (downloadmanager/utils.ts) rather
    * than assume this method never returns an empty object.
+   *
+   * WR-07: the sentinel is typed `GameInfo` (the union), not `SteamGameInfo`, so
+   * `isStoreGame(gi, 'steam')` and `gi.runner === 'steam'` agree (both false on a
+   * miss). Steam-internal code that needs Steam-only fields, or forwards the whole
+   * object, must call `findGameInfo()` and handle `undefined`.
    */
-  getGameInfo(): SteamGameInfo {
+  getGameInfo(): GameInfo {
+    return this.findGameInfo() ?? ({} as GameInfo)
+  }
+
+  /**
+   * The cached SteamGameInfo, or `undefined` on a double cache miss (Map and persisted store).
+   * Does everything `getGameInfo()` documents above except returning the `{}` sentinel.
+   */
+  findGameInfo(): SteamGameInfo | undefined {
     let existing = this.deps.steamSession.libraryState.library.get(this.appId)
     if (!existing) {
       const cached = this.deps.stores.steam.steamLibraryStore
@@ -165,13 +179,13 @@ export default class SteamGame implements Game {
           [
             `SteamGame.getGameInfo(): double cache miss for appId ${this.appId} —`,
             'both the in-memory library Map and the persisted steamLibraryStore',
-            'missed. Returning the {} sentinel (logged once per appId; see',
+            'missed. getGameInfo() returns the {} sentinel (logged once per appId; see',
             '260905-luf).'
           ],
           LogPrefix.Steam
         )
       }
-      return {} as SteamGameInfo
+      return undefined
     }
 
     // Trigger lazy metadata fetch as fire-and-forget side effect (D-04).
@@ -233,9 +247,9 @@ export default class SteamGame implements Game {
     // only labels later keyring reads, it reads no keyring and opens no
     // connection.
     this.deps.steamSession.authTrigger.noteSteamAuthTrigger('game-page')
-    const info = this.getGameInfo()
+    const info = this.findGameInfo()
     return (
-      info.extra ?? {
+      info?.extra ?? {
         reqs: [],
         about: { description: '', shortDescription: '' }
       }
@@ -659,7 +673,7 @@ export default class SteamGame implements Game {
    */
   async isGameAvailable(): Promise<boolean> {
     return new Promise((resolve) => {
-      const info = this.getGameInfo()
+      const info = this.findGameInfo()
       // LIB-07's forced-hide reading is SUPERSEDED by REQ-37-02 / D-15: a
       // delisted store page is no longer treated as non-availability here.
       // is_delisted is now user-driven filterable state (filterEngine's

@@ -65,17 +65,20 @@ function setup(
       })
     })
   }
+  const info = {
+    title: 'Game',
+    runner: 'steam',
+    install: { install_path: '/p', platform: 'Windows' }
+  }
   const game = {
     appId: APP,
     deps,
-    getGameInfo: () => ({
-      title: 'Game',
-      runner: 'steam',
-      install: { install_path: '/p', platform: 'Windows' }
-    })
+    getGameInfo: () => info,
+    findGameInfo: jest.fn(() => info as typeof info | undefined)
   }
   return {
     game: game as never,
+    findGameInfo: game.findGameInfo,
     deps: deps as never,
     showMessageBox,
     addToQueue
@@ -129,6 +132,15 @@ describe('gateBridgeLaunchOnUpdate', () => {
     expect(t.addToQueue).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'update' })
     )
+  })
+
+  it('Update now on a cache miss queues nothing and launches (WR-07)', async () => {
+    const t = setup()
+    t.findGameInfo.mockReturnValue(undefined)
+    jest.mocked(detectSteamUpdates).mockResolvedValue(stale())
+    t.showMessageBox.mockResolvedValue({ response: 1 })
+    expect(await gateBridgeLaunchOnUpdate(t.game)).toBe('launch')
+    expect(t.addToQueue).not.toHaveBeenCalled()
   })
 
   it('Play anyway launches and writes no ack', async () => {

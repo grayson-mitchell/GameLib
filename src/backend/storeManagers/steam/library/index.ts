@@ -265,8 +265,8 @@ export default class SteamLibraryManager implements LibraryManager {
   ): SteamGameInfo | undefined {
     // Delegate to SteamGame — reads shared library Map and fires lazy fetch
     // (fetchMetadataIfNeeded) when art_cover is empty (plan 02-03)
-    const fromGame = new SteamGame(appName, this.deps).getGameInfo()
-    if (fromGame.app_name) return fromGame
+    const fromGame = new SteamGame(appName, this.deps).findGameInfo()
+    if (fromGame?.app_name) return fromGame
 
     // Fallback: consult persistent cache (useful if init() hasn't fired yet)
     const cached = this.deps.stores.steam.steamLibraryStore.get('games', [])

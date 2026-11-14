@@ -239,7 +239,9 @@ export async function ensurePlatformsCaptured(
 
   if (alreadyCaptured()) return
 
-  await fetchMetadataIfNeeded(steamGame, steamGame.getGameInfo())
+  // A double cache miss has nothing to fetch metadata for (WR-07).
+  const steamInfo = steamGame.findGameInfo()
+  if (steamInfo) await fetchMetadataIfNeeded(steamGame, steamInfo)
 
   // Bounded poll for the T-2-03 dedup race: fetchMetadataIfNeeded() may have
   // early-returned because a concurrent fetch (the getGameInfo() side effect

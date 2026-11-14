@@ -12884,6 +12884,39 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
     })
   })
 
+  describe('WR-07: findGameInfo() is the honestly-typed lookup behind getGameInfo()', () => {
+    beforeEach(() => {
+      resetLoggedEmptyGameInfoMisses()
+    })
+
+    it('returns the entry on an in-memory Map hit', () => {
+      const entry = makeEntry({ art_cover: 'x' })
+      library.set(APP_ID, entry)
+
+      expect(new SteamGame(APP_ID, steamTestDeps).findGameInfo()).toBe(entry)
+    })
+
+    it('returns the persisted entry on a store hit and self-heals the Map', () => {
+      library.delete(APP_ID)
+      const entry = makeEntry({ art_cover: 'x' })
+      ;(steamLibraryStore.get as jest.Mock).mockReturnValue([entry])
+
+      expect(new SteamGame(APP_ID, steamTestDeps).findGameInfo()).toBe(entry)
+      expect(library.get(APP_ID)).toBe(entry)
+    })
+
+    it('returns undefined on a double miss (logging once) while getGameInfo() still returns {}', () => {
+      library.delete(APP_ID)
+      ;(steamLibraryStore.get as jest.Mock).mockReturnValue([])
+      const { logWarning } = jest.requireMock('backend/logger')
+      const game = new SteamGame(APP_ID, steamTestDeps)
+
+      expect(game.findGameInfo()).toBeUndefined()
+      expect(logWarning).toHaveBeenCalledTimes(1)
+      expect(game.getGameInfo()).toEqual({})
+    })
+  })
+
   it('isGameAvailable() resolves true via the persisted-cache fallback when the in-memory library Map has not been hydrated yet (the exact hydration-race false negative this session diagnosed)', async () => {
     library.delete(APP_ID)
     existsSyncMock.mockReturnValue(true)

@@ -116,9 +116,17 @@ export async function gateBridgeLaunchOnUpdate(
           `SteamGame: queueing update for appId ${appId} from the launch prompt`,
           LogPrefix.Steam
         )
+        const queuedInfo = steamGame.findGameInfo()
+        if (!queuedInfo) {
+          logWarning(
+            `SteamGame: no cached game info for appId ${appId}, cannot queue the update; launching`,
+            LogPrefix.Steam
+          )
+          return 'launch'
+        }
         await deps
           .getDownloadQueue()
-          .addToQueue(buildUpdateQueueElement(steamGame.getGameInfo(), appId))
+          .addToQueue(buildUpdateQueueElement(queuedInfo, appId))
         return 'abort'
       case 2:
         recordUpdatePromptAck(deps, appId, targetBuild)
