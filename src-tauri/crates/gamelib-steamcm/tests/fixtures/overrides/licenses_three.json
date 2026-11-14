@@ -1,0 +1,18 @@
+{
+  "class": "omitted-field",
+  "cause": "steam-user's licenses carry the whole CMsgClientLicenseList.License message (time_next_process, minute_limit, minutes_used, payment_method, purchase_country_code, territory_code, change_number, initial/renewal period and unit, master_package_id). licenses_json (79-08) emits only package_id, time_created, owner_id, access_token, license_type and flags, the fields GameLib reads. The expected values for the omitted fields are synthetic placeholders.",
+  "stripExpected": [
+    "time_next_process",
+    "minute_limit",
+    "minutes_used",
+    "payment_method",
+    "purchase_country_code",
+    "territory_code",
+    "change_number",
+    "initial_period",
+    "initial_time_unit",
+    "renewal_period",
+    "renewal_time_unit",
+    "master_package_id"
+  ]
+}

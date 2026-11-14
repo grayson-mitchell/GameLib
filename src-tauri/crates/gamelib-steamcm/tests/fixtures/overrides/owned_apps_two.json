@@ -1,0 +1,5 @@
+{
+  "class": "omitted-field",
+  "cause": "steam-user rewrites img_icon_url to a steamcdn-a URL. The raw owned-game row the CM connection returns does not carry it, so the Rust owned_apps op omits it (79-09); Refresh does not read it.",
+  "stripExpected": ["img_icon_url"]
+}

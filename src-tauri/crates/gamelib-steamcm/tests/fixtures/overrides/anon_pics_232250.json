@@ -1,0 +1,5 @@
+{
+  "class": "extra-rust-field",
+  "cause": "Rust adds depotOrder (depot ids in source order) because a serde_json map does not keep the insertion order JS objects do; the 79-08 pics op exposes it so callers that relied on object key order keep it. steam-user has no such field. Every appinfo value is otherwise identical to steam-user's, including the string typing of every leaf.",
+  "stripRust": ["depotOrder"]
+}

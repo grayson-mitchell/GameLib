@@ -1456,5 +1456,147 @@
         }
       }
     }
+  },
+  "licenses:three": [
+    {
+      "package_id": 100001,
+      "time_created": 1500000000,
+      "owner_id": 123456,
+      "access_token": "9007199254740993",
+      "license_type": 1,
+      "flags": 0,
+      "time_next_process": 0,
+      "minute_limit": 0,
+      "minutes_used": 0,
+      "payment_method": 1,
+      "purchase_country_code": "US",
+      "territory_code": 0,
+      "change_number": 0,
+      "initial_period": 0,
+      "initial_time_unit": 0,
+      "renewal_period": 0,
+      "renewal_time_unit": 0,
+      "master_package_id": 0
+    },
+    {
+      "package_id": 100002,
+      "time_created": 1600000000,
+      "owner_id": 123456,
+      "access_token": "0",
+      "license_type": 1,
+      "flags": 512,
+      "time_next_process": 0,
+      "minute_limit": 0,
+      "minutes_used": 0,
+      "payment_method": 1,
+      "purchase_country_code": "US",
+      "territory_code": 0,
+      "change_number": 0,
+      "initial_period": 0,
+      "initial_time_unit": 0,
+      "renewal_period": 0,
+      "renewal_time_unit": 0,
+      "master_package_id": 0
+    },
+    {
+      "package_id": 100003,
+      "time_created": 1700000000,
+      "owner_id": 123456,
+      "access_token": "18446744073709551615",
+      "license_type": 2,
+      "flags": 0,
+      "time_next_process": 0,
+      "minute_limit": 0,
+      "minutes_used": 0,
+      "payment_method": 1,
+      "purchase_country_code": "US",
+      "territory_code": 0,
+      "change_number": 0,
+      "initial_period": 0,
+      "initial_time_unit": 0,
+      "renewal_period": 0,
+      "renewal_time_unit": 0,
+      "master_package_id": 0
+    }
+  ],
+  "owned_apps:two": {
+    "app_count": 2,
+    "apps": [
+      {
+        "appid": 480,
+        "name": "Synthetic Game A",
+        "playtime_forever": 125,
+        "rtime_last_played": 1700000000,
+        "img_icon_url": "https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/480/abcdef0123456789.jpg"
+      },
+      {
+        "appid": 220,
+        "name": "Synthetic Game B",
+        "playtime_forever": 0,
+        "rtime_last_played": 0,
+        "img_icon_url": null
+      }
+    ]
+  },
+  "depot_key:ok": {
+    "keyHex": "00abff10aa55"
+  },
+  "depot_key:eresult2": {
+    "error": {
+      "eresult": 2
+    }
+  },
+  "request_code:big": {
+    "requestCode": "9223372036854775807"
+  },
+  "content_servers:strings": [
+    {
+      "type": "CDN",
+      "sourceid": 1201,
+      "cell": 21,
+      "load": "5",
+      "preferred_server": false,
+      "weightedload": "12.5",
+      "NumEntriesInClientList": 3,
+      "Host": "cdn1.example.invalid",
+      "vhost": "cdn1.example.invalid",
+      "https_support": "mandatory"
+    },
+    {
+      "type": "SteamCache",
+      "sourceid": 1202,
+      "cell": 21,
+      "load": "40",
+      "preferred_server": true,
+      "weightedload": "80.25",
+      "NumEntriesInClientList": 7,
+      "Host": "cache.example.invalid",
+      "vhost": "cache.example.invalid",
+      "https_support": "optional",
+      "allowed_app_ids": [480]
+    }
+  ],
+  "redeem:ok": {
+    "purchaseResultDetails": 0,
+    "packageList": {
+      "480001": "Synthetic Game A",
+      "480002": "Synthetic Game B"
+    }
+  },
+  "redeem:duplicate": {
+    "error": {
+      "eresult": 9,
+      "purchaseResultDetails": 9,
+      "packageList": {}
+    }
+  },
+  "personas:one": {
+    "personas": {
+      "76561197960287930": {
+        "player_name": "SyntheticPlayer",
+        "persona_state": 1,
+        "avatar_hash": "00112233445566778899aabbccddeeff00112233"
+      }
+    }
   }
 }

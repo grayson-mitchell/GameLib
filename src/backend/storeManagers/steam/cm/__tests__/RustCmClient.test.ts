@@ -1,6 +1,27 @@
 import { createRustCmClient } from '../RustCmClient'
 import { createRustAnonClient } from '../RustAnonClient'
 import * as logger from 'backend/logger'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
+// The recorded Rust wire results (plan 79-21 goldens), not inline fixtures.
+const GOLDEN = JSON.parse(
+  readFileSync(
+    join(
+      __dirname,
+      '../../../../../../src-tauri/crates/gamelib-steamcm/tests/fixtures/rust-results.json'
+    ),
+    'utf-8'
+  )
+) as Record<
+  string,
+  { ok: boolean; result?: any; kind?: string; eresult?: number }
+>
+const golden = (name: string) => {
+  const g = GOLDEN[name]
+  if (!g) throw new Error(`no golden result for ${name}`)
+  return g
+}
 
 const requestRustInvoke = jest.fn()
 const deps = { requestRustInvoke }
@@ -21,10 +42,12 @@ const ok = (result: unknown) => ({ ok: true, result })
 
 describe('createRustCmClient', () => {
   it('getProductInfo sends the lease and resolves the result unchanged', async () => {
-    const info = { apps: { 480: { appinfo: {} } }, unknownApps: [] }
-    requestRustInvoke.mockResolvedValue(ok(info))
+    const wire = golden('anon_pics:480')
+    requestRustInvoke.mockResolvedValue(wire)
     const c = createRustCmClient(deps, lease)
-    await expect(c.getProductInfo([480], [], true)).resolves.toEqual(info)
+    await expect(c.getProductInfo([480], [], true)).resolves.toEqual(
+      wire.result
+    )
     expect(requestRustInvoke).toHaveBeenCalledWith('steamcm_product_info', [
       { leaseId: 7, apps: [480], packages: [], inclTokens: true }
     ])
@@ -32,20 +55,16 @@ describe('createRustCmClient', () => {
 
   it('getDepotDecryptionKey yields a Buffer, and an eresult error carries .eresult', async () => {
     const c = createRustCmClient(deps, lease)
-    requestRustInvoke.mockResolvedValueOnce(ok({ eresult: 1, keyHex: 'abcd' }))
+    requestRustInvoke.mockResolvedValueOnce(golden('depot_key:ok'))
     const key = await new Promise<Buffer>((res, rej) =>
       c.getDepotDecryptionKey(1, 2, (e, k) => (e ? rej(e) : res(k)))
     )
-    expect(key.equals(Buffer.from('abcd', 'hex'))).toBe(true)
+    expect(key.toString('hex')).toBe(golden('depot_key:ok').result.keyHex)
     expect(requestRustInvoke).toHaveBeenCalledWith('steamcm_depot_key', [
       { leaseId: 7, appId: 1, depotId: 2 }
     ])
 
-    requestRustInvoke.mockResolvedValueOnce({
-      ok: false,
-      kind: 'eresult',
-      eresult: 2
-    })
+    requestRustInvoke.mockResolvedValueOnce(golden('depot_key:eresult2'))
     const err = await new Promise<Error & { eresult?: number }>((res) =>
       c.getDepotDecryptionKey(1, 2, (e) => res(e as never))
     )
@@ -54,19 +73,15 @@ describe('createRustCmClient', () => {
 
   it('getContentServers and getManifestRequestCode resolve through their channels', async () => {
     const c = createRustCmClient(deps, lease)
-    requestRustInvoke.mockResolvedValueOnce(ok([{ Host: 'h' }]))
+    requestRustInvoke.mockResolvedValueOnce(golden('content_servers:strings'))
     const servers = await new Promise((res, rej) =>
       c.getContentServers(9, (e, s) => (e ? rej(e) : res(s)))
     )
-    expect(servers).toEqual([{ Host: 'h' }])
-    requestRustInvoke.mockResolvedValueOnce(
-      ok({ requestCode: '123456789012345678' })
-    )
+    expect(servers).toEqual(golden('content_servers:strings').result)
+    requestRustInvoke.mockResolvedValueOnce(golden('request_code:big'))
     await expect(
       c.getManifestRequestCode(1, 2, '99', 'public')
-    ).resolves.toEqual({
-      requestCode: '123456789012345678'
-    })
+    ).resolves.toEqual(golden('request_code:big').result)
     expect(requestRustInvoke).toHaveBeenLastCalledWith(
       'steamcm_manifest_request_code',
       [{ leaseId: 7, appId: 1, depotId: 2, manifestId: '99', branch: 'public' }]
@@ -90,35 +105,37 @@ describe('createRustCmClient', () => {
 
   it('redeemKey rejects on eresult != 1 carrying the purchase verdict', async () => {
     const c = createRustCmClient(deps, lease)
-    requestRustInvoke.mockResolvedValueOnce(
-      ok({ eresult: 9, purchaseResultDetails: 14, packageList: {} })
-    )
+    requestRustInvoke.mockResolvedValueOnce(golden('redeem:duplicate'))
     const err = await c.redeemKey('KEY').catch((e) => e)
     expect(err.eresult).toBe(9)
-    expect(err.purchaseResultDetails).toBe(14)
+    expect(err.purchaseResultDetails).toBe(9)
     expect(err.packageList).toEqual({})
     expect(err.message).not.toContain('KEY')
 
-    requestRustInvoke.mockResolvedValueOnce(
-      ok({ eresult: 1, purchaseResultDetails: 0, packageList: { 1: 'G' } })
-    )
+    requestRustInvoke.mockResolvedValueOnce(golden('redeem:ok'))
     await expect(c.redeemKey('KEY')).resolves.toEqual({
       purchaseResultDetails: 0,
-      packageList: { 1: 'G' }
+      packageList: golden('redeem:ok').result.packageList
     })
   })
 
   it('getPersonas and getUserOwnedApps map steam ids and options', async () => {
     const c = createRustCmClient(deps, lease)
-    requestRustInvoke.mockResolvedValueOnce(ok({ personas: {} }))
+    requestRustInvoke.mockResolvedValueOnce(golden('personas:one'))
+    await expect(c.getPersonas([c.steamID as never])).resolves.toEqual(
+      golden('personas:one').result
+    )
+    requestRustInvoke.mockResolvedValueOnce(golden('personas:one'))
     await c.getPersonas([c.steamID as never])
     expect(requestRustInvoke).toHaveBeenLastCalledWith('steamcm_personas', [
       { leaseId: 7, steamIds: ['76561198000000001'] }
     ])
-    requestRustInvoke.mockResolvedValueOnce(ok({ app_count: 0, apps: [] }))
-    await c.getUserOwnedApps('76561198000000001', {
-      includePlayedFreeGames: true
-    })
+    requestRustInvoke.mockResolvedValueOnce(golden('owned_apps:two'))
+    await expect(
+      c.getUserOwnedApps('76561198000000001', {
+        includePlayedFreeGames: true
+      })
+    ).resolves.toEqual(golden('owned_apps:two').result)
     expect(requestRustInvoke).toHaveBeenLastCalledWith('steamcm_owned_apps', [
       {
         leaseId: 7,
@@ -143,11 +160,11 @@ describe('createRustCmClient', () => {
 
 describe('createRustAnonClient', () => {
   it('calls steamcm_anon_product_info and never sends a leaseId', async () => {
-    const info = { apps: {}, unknownApps: [3] }
-    requestRustInvoke.mockResolvedValue(ok(info))
+    const wire = golden('anon_pics:1007')
+    requestRustInvoke.mockResolvedValue(wire)
     await expect(
       createRustAnonClient(deps).getProductInfo([3], [], true)
-    ).resolves.toEqual(info)
+    ).resolves.toEqual(wire.result)
     expect(requestRustInvoke).toHaveBeenCalledWith(
       'steamcm_anon_product_info',
       [{ apps: [3], packages: [], inclTokens: true }]

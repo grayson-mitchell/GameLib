@@ -1,0 +1,178 @@
+{
+  "anon_pics:480": {
+    "kind": "anon_pics",
+    "appId": 480,
+    "raw": "raw/app-480.json",
+    "note": "Recorded anonymous PICS buffer for public app 480; expected is steam-user anonymous getProductInfo apps[480] (components/apps.js getProductInfo, text VDF via kvparser)."
+  },
+  "anon_pics:1007": {
+    "kind": "anon_pics",
+    "appId": 1007,
+    "raw": "raw/app-1007.json",
+    "note": "Recorded anonymous PICS buffer for public app 1007; expected is steam-user anonymous getProductInfo apps[1007] (components/apps.js getProductInfo, text VDF via kvparser)."
+  },
+  "anon_pics:232250": {
+    "kind": "anon_pics",
+    "appId": 232250,
+    "raw": "raw/app-232250.json",
+    "note": "Recorded anonymous PICS buffer for public app 232250; expected is steam-user anonymous getProductInfo apps[232250] (components/apps.js getProductInfo, text VDF via kvparser)."
+  },
+  "anon_pics:220": {
+    "kind": "anon_pics",
+    "appId": 220,
+    "raw": "raw/app-220.json",
+    "note": "Recorded anonymous PICS buffer for public app 220; expected is steam-user anonymous getProductInfo apps[220] (components/apps.js getProductInfo, text VDF via kvparser)."
+  },
+  "licenses:three": {
+    "kind": "licenses",
+    "entries": [
+      {
+        "package_id": 100001,
+        "time_created": 1500000000,
+        "owner_id": 123456,
+        "access_token": "9007199254740993",
+        "license_type": 1,
+        "flags": 0
+      },
+      {
+        "package_id": 100002,
+        "time_created": 1600000000,
+        "owner_id": 123456,
+        "access_token": "0",
+        "license_type": 1,
+        "flags": 512
+      },
+      {
+        "package_id": 100003,
+        "time_created": 1700000000,
+        "owner_id": 123456,
+        "access_token": "18446744073709551615",
+        "license_type": 2,
+        "flags": 0
+      }
+    ],
+    "note": "steam-user components/apps.js:983 `this.licenses = body.licenses`; body decoded by 03-messages.js _decodeProto with {longs: String}, so the 64-bit access_token is a decimal string and the uint32 fields are numbers. Synthetic ids only."
+  },
+  "owned_apps:two": {
+    "kind": "owned_apps",
+    "steamId": "76561197960287930",
+    "opts": {
+      "include_appinfo": true,
+      "include_played_free_games": true,
+      "include_free_sub": false,
+      "skip_unvetted_apps": true
+    },
+    "games": [
+      {
+        "app_id": 480,
+        "name": "Synthetic Game A",
+        "playtime_forever": 125,
+        "rtime_last_played": 1700000000
+      },
+      {
+        "app_id": 220,
+        "name": "Synthetic Game B",
+        "playtime_forever": 0,
+        "rtime_last_played": 0
+      }
+    ],
+    "note": "steam-user components/friends.js:835-870 getUserOwnedApps: {app_count: body.game_count, apps: body.games} with img_icon_url rewritten to a steamcdn-a URL when present (friends.js:857-859)."
+  },
+  "depot_key:ok": {
+    "kind": "depot_key",
+    "appId": 480,
+    "depotId": 481,
+    "eresult": 1,
+    "keyHex": "00abff10aa55",
+    "note": "steam-user components/cdn.js:102-135 getDepotDecryptionKey resolves {key: Buffer}; expected is the hex of that Buffer."
+  },
+  "depot_key:eresult2": {
+    "kind": "depot_key",
+    "appId": 480,
+    "depotId": 481,
+    "eresult": 2,
+    "keyHex": "",
+    "note": "cdn.js:117-119 rejects Helpers.eresultError(body.eresult), an Error carrying .eresult = 2."
+  },
+  "request_code:big": {
+    "kind": "request_code",
+    "appId": 480,
+    "depotId": 481,
+    "manifestId": "7446270193419040018",
+    "branch": "public",
+    "code": "9223372036854775807",
+    "note": "steam-user components/cdn.js:281-300 getManifestRequestCode resolves {requestCode: body.manifest_request_code}; a uint64 decoded with {longs: String} is a decimal string, so a value above 2^53 stays exact."
+  },
+  "content_servers:strings": {
+    "kind": "content_servers",
+    "appId": 480,
+    "servers": [
+      {
+        "kind": "CDN",
+        "host": "cdn1.example.invalid",
+        "vhost": "cdn1.example.invalid",
+        "https_support": "mandatory",
+        "cell_id": 21,
+        "load": 5,
+        "weighted_load": 12.5
+      },
+      {
+        "kind": "SteamCache",
+        "host": "cache.example.invalid",
+        "vhost": "cache.example.invalid",
+        "https_support": "optional",
+        "cell_id": 21,
+        "load": 40,
+        "weighted_load": 80.25,
+        "allowed_app_ids": [480]
+      },
+      {
+        "kind": "CDN",
+        "host": "restricted.example.invalid",
+        "vhost": "restricted.example.invalid",
+        "https_support": "mandatory",
+        "cell_id": 21,
+        "load": 1,
+        "weighted_load": 2,
+        "allowed_app_ids": [999]
+      },
+      {
+        "kind": "OpenCache",
+        "host": "opencache.example.invalid",
+        "vhost": "opencache.example.invalid",
+        "https_support": "optional",
+        "cell_id": 21,
+        "load": 1,
+        "weighted_load": 2
+      }
+    ],
+    "note": "steam-user components/cdn.js:22-92 getContentServers: keeps type CDN/SteamCache, drops servers whose allowed_app_ids excludes the appid, and maps to {type,sourceid,cell,load,preferred_server,weightedload,NumEntriesInClientList,Host,vhost,https_support,allowed_app_ids?}. The directory JSON carries load/weighted_load as strings (planModel.ts cycle-8 note); steam-user passes them through."
+  },
+  "redeem:ok": {
+    "kind": "redeem",
+    "eresult": 1,
+    "purchaseResultDetails": 0,
+    "receiptBase64": "AE1lc3NhZ2VPYmplY3QAAkxpbmVJdGVtQ291bnQAAgAAAABsaW5laXRlbXMAADAAAlBhY2thZ2VJRAABUwcAAUl0ZW1EZXNjcmlwdGlvbgBTeW50aGV0aWMgR2FtZSBBAAgAMQACUGFja2FnZUlEAAJTBwABSXRlbURlc2NyaXB0aW9uAFN5bnRoZXRpYyBHYW1lIEIACAgICA==",
+    "note": "steam-user components/apps.js:887-915 redeemKey. Receipt is a hand-built binary KV (MessageObject{LineItemCount,lineitems{0,1 each PackageID,ItemDescription}}) and expected was produced by running binarykvparser on it."
+  },
+  "redeem:duplicate": {
+    "kind": "redeem",
+    "eresult": 9,
+    "purchaseResultDetails": 9,
+    "receiptBase64": "AE1lc3NhZ2VPYmplY3QAAkxpbmVJdGVtQ291bnQAAAAAAABsaW5laXRlbXMACAgI",
+    "note": "apps.js:905-908: a non-OK eresult rejects with an Error carrying eresult, purchaseResultDetails and packageList (empty when LineItemCount is 0)."
+  },
+  "personas:one": {
+    "kind": "personas",
+    "steamIds": ["76561197960287930"],
+    "personas": [
+      {
+        "steam_id": "76561197960287930",
+        "persona_state": 1,
+        "name": "SyntheticPlayer",
+        "avatar_hash_hex": "00112233445566778899aabbccddeeff00112233"
+      }
+    ],
+    "note": "steam-user components/friends.js:322-370 getPersonas resolves {personas: {[sid64]: user}}; friends.js:994-995 converts avatar_hash to a hex string. steam-user emits a larger user object; only player_name, persona_state and avatar_hash are read by GameLib."
+  }
+}

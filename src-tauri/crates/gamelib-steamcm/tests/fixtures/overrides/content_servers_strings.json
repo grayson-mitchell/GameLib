@@ -1,0 +1,5 @@
+{
+  "class": "omitted-field",
+  "cause": "steam-user passes sourceid, preferred_server and NumEntriesInClientList through from the directory response. The Rust CdnServerRaw does not carry them (79-09) and the depot pipeline does not read them. The expected values for them are synthetic.",
+  "stripExpected": ["sourceid", "preferred_server", "NumEntriesInClientList"]
+}
