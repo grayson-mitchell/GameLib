@@ -1666,6 +1666,7 @@ dependencies = [
  "dispatch2",
  "gamelib-depot",
  "gamelib-scan",
+ "gamelib-steamcm",
  "gamelib-steamfiles",
  "gilrs",
  "gtk",

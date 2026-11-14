@@ -663,6 +663,8 @@ pub(crate) fn start_reader(app: AppHandle, state: Arc<SidecarState>, stdout: std
         // D-08: no consumer remains for any depot job's events or responses, so stop them all.
         // Runs for an intentional shutdown too; the exit path then waits for finalize.
         on_sidecar_eof_cancel_jobs();
+        // Leases never outlive a dead sidecar; owed goonline is paid (Pitfall 1, D-03).
+        on_sidecar_eof_drop_steamcm();
 
         // D-01/D-02: an EOF outside an intentional shutdown means the sidecar died. Tell the user.
         on_sidecar_eof(&state.shutting_down, &state.eof_surfaced, || {

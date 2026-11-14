@@ -56,8 +56,7 @@ describe('steamcm channel parity (CF-01)', () => {
   })
 })
 
-// enabled by plan 79-16 (the shell arms do not exist until then)
-describe.skip('steamcm shell arms', () => {
+describe('steamcm shell arms', () => {
   it('every op has exactly one shell arm', () => {
     const shellSource = readTauriShellProductionSource()
     for (const op of OPS) {

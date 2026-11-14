@@ -133,6 +133,7 @@ mod notification_show;
 mod dialogs;
 mod scan_dispatch;
 mod steamfiles_dispatch;
+mod steamcm_dispatch;
 mod depot_dispatch;
 mod app_lifecycle;
 use clipboard::*;
@@ -152,6 +153,7 @@ use notification_show::*;
 use dialogs::*;
 use scan_dispatch::*;
 use steamfiles_dispatch::*;
+use steamcm_dispatch::*;
 use depot_dispatch::*;
 use app_lifecycle::*;
 
@@ -744,6 +746,8 @@ fn handle_exit(app_handle: &tauri::AppHandle, single_instance_socket_path: Optio
     if still_running > 0 {
         shell_eprintln!("[shell] depot jobs still running at exit deadline: {still_running}");
     }
+    // Pays any owed goonline and logs off before the sidecar dies (Pitfall 1, D-03).
+    steamcm_exit_shutdown();
     if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
         state.shutdown_child();
     }
@@ -1593,6 +1597,8 @@ fn run_setup(
     // (failures are logged inside), since setup must not panic -- see the SIGABRT note below.
     #[cfg(target_os = "macos")]
     macos_native_gamepad::start(app.handle().clone());
+    // Wrap host first: macOS `steamcm_configure` fails without it (79-14).
+    install_steamcm_host(app.handle());
     let state = spawn_sidecar_state(app)?;
     start_single_instance_accept_loop(app, &state, primary_listener);
     install_os_deep_link_handler(app, &state);
@@ -1681,6 +1687,9 @@ fn main() {
     // Installed FIRST, before any other statement, so it covers the single-instance guard and
     // every `.setup()` callback rather than only the code after `Builder::default()`.
     install_panic_hook();
+    // Explicit ring rustls provider before any reqwest/steam-vent client can pick one by crate
+    // install order (spike 082, CF-07).
+    gamelib_steamcm::install_crypto_provider();
 
     // ---- Single-instance guard + deep-link argv (Phase 34.5 gap cycle 6 plan 44,
     // REQ-34.5-01/05/12, F-34.5-G6-09, D-44-A; Windows half added Phase 46, REQ-46-01) -- runs
@@ -2032,6 +2041,7 @@ mod tests {
         "depot_dispatch.rs",
         "scan_dispatch.rs",
         "steamfiles_dispatch.rs",
+        "steamcm_dispatch.rs",
         "shell_state.rs",
         "shell_open.rs",
         "sidecar.rs",
@@ -2079,6 +2089,7 @@ mod tests {
         include_str!("depot_dispatch.rs"),
         include_str!("scan_dispatch.rs"),
         include_str!("steamfiles_dispatch.rs"),
+        include_str!("steamcm_dispatch.rs"),
         include_str!("shell_state.rs"),
         include_str!("shell_open.rs"),
         include_str!("sidecar.rs"),
