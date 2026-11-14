@@ -47,5 +47,8 @@ jobs:
         run: pnpm backend-di-ceilings
       # Phase 70 D-15: shrink-only count of isStoreGame/asStoreGame and *GameInfo member names outside
       # storeManagers/; lower meta/gameInfoNarrowingBaseline.json in the same commit as the removal.
+      # It runs even when an earlier step failed, because a red `Lint code.` would otherwise hide
+      # narrowing drift (70 gap G1, same trap as quick 261114-2gg); a failed install still skips it.
       - name: GameInfo narrowing ceiling
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
         run: pnpm gameinfo-narrowing-ceiling
