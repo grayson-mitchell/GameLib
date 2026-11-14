@@ -1,5 +1,7 @@
 import type { SteamGameInfo } from 'common/types/steam'
 import { ExecResult } from 'common/types'
+import { steamGameInfoSchema } from 'common/types/ipc/gameInfoSchema'
+import { stripToSchema } from 'backend/storeMigrations/schemaStrip'
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import { getFileSize } from 'backend/utils'
@@ -475,8 +477,14 @@ async function syncOwnedLibrary(
         }
       }
 
-      deps.steamSession.libraryState.library.set(appIdStr, gameInfo)
-      deps.sendFrontendMessage('pushGameToLibrary', gameInfo)
+      // The entry is rebuilt from store_cache/steam_metadata.json (a cache store
+      // with no strip chain), so clean it against the strict member schema here or
+      // it would re-inject keys the IPC schema rejects (70 gap G2).
+      const cleanInfo = stripToSchema(gameInfo, steamGameInfoSchema, {
+        dropInvalidOptional: true
+      }) as SteamGameInfo
+      deps.steamSession.libraryState.library.set(appIdStr, cleanInfo)
+      deps.sendFrontendMessage('pushGameToLibrary', cleanInfo)
     }
 
     // ── Step 4: persist library list and sync timestamp ───────────────────

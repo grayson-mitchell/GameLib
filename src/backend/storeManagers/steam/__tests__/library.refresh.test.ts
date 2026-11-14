@@ -24,6 +24,7 @@ import { getSteamLibraries, getFileSize } from 'backend/utils'
 const sendFrontendMessage = jest.fn()
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
+import { steamGameInfoSchema } from 'common/types/ipc/gameInfoSchema'
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 const steamUser = createMockSteamUser()
 import { getBottleSteamappsDir } from '../bottle'
@@ -505,6 +506,50 @@ describe('SteamLibraryManager', () => {
     const pushed = calls.find(([_msg, info]) => info.app_name === '570')?.[1]
 
     expect(pushed?.steamPlatformsCaptured).toBe(false)
+  })
+
+  it('70 gap G2: cached steam_metadata extra with stray/null keys is cleaned', async () => {
+    const apps = [makeOwnedApp(570, 'Dota 2', 120)]
+    const fakeClient = makeFakeClient(apps)
+    jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamLibraryStore.get).mockReturnValue([])
+    const cached = {
+      art_logo: null,
+      extra: {
+        about: { description: 'd', shortDescription: 's' },
+        releaseDate: null,
+        steamMetadataJunk: 1,
+        reqs: [{ minimum: 'a', recommended: 'b', title: 't', stray: 1 }]
+      }
+    }
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(cached)
+
+    await manager.refresh()
+
+    const pushed = jest
+      .mocked(sendFrontendMessage)
+      .mock.calls.find(([_msg, info]) => info.app_name === '570')?.[1] as any
+
+    expect(pushed).toBeDefined()
+    expect('art_logo' in pushed).toBe(false)
+    expect('releaseDate' in pushed.extra).toBe(false)
+    expect('steamMetadataJunk' in pushed.extra).toBe(false)
+    expect('stray' in pushed.extra.reqs[0]).toBe(false)
+    expect(pushed.extra.about).toEqual({
+      description: 'd',
+      shortDescription: 's'
+    })
+    expect(pushed.extra.steamPlaytimeMinutes).toBe(120)
+    expect(steamGameInfoSchema.safeParse(pushed).success).toBe(true)
+
+    // Near-miss: the same shape spread the way refresh.ts builds it, without
+    // the strip, is rejected - so the strip is what makes the case pass.
+    const raw = {
+      ...pushed,
+      art_logo: null,
+      extra: { ...pushed.extra, ...cached.extra, steamPlaytimeMinutes: 120 }
+    }
+    expect(steamGameInfoSchema.safeParse(raw).success).toBe(false)
   })
 
   // ── D-17: is_windows_native hydration ──────────────────────────────────────
