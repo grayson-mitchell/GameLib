@@ -53,16 +53,48 @@ describe('boot steamcm wiring', () => {
     await Promise.resolve()
   })
 
-  it('cm=rust pays the owed record through Rust, not the ts restore', () => {
+  it('cm=rust pays the owed record through Rust, not the ts restore', async () => {
     process.env.GAMELIB_STEAMCM_CM = 'rust'
     const { restoreOwedMacSteamOnlineAtBoot } = load()
     const req = jest.fn().mockResolvedValue({})
     const restoreTs = jest.fn()
     restoreOwedMacSteamOnlineAtBoot({ requestRustInvoke: req, restoreTs })
+    await new Promise((resolve) => setImmediate(resolve))
     expect(req).toHaveBeenCalledWith('steamcm_wrap_restore_if_owed', [
       { trigger: 'boot' }
     ])
     expect(restoreTs).not.toHaveBeenCalled()
+  })
+
+  it('cm=rust sends the boot restore only after configure has answered', async () => {
+    // The shell runs each rustInvoke on its own thread, so the restore must not race configure.
+    process.env.GAMELIB_STEAMCM_CM = 'rust'
+    const { configureSteamCm, restoreOwedMacSteamOnlineAtBoot } = load()
+    let answerConfigure: (value: unknown) => void = () => undefined
+    const req = jest.fn((channel: string) =>
+      channel === 'steamcm_configure'
+        ? new Promise((resolve) => {
+            answerConfigure = resolve
+          })
+        : Promise.resolve({})
+    )
+    const configured = configureSteamCm({
+      appFolder: '/app',
+      requestRustInvoke: req
+    })
+    restoreOwedMacSteamOnlineAtBoot({
+      requestRustInvoke: req,
+      restoreTs: jest.fn(),
+      configured
+    })
+    await new Promise((resolve) => setImmediate(resolve))
+    expect(req.mock.calls.map((call) => call[0])).toEqual(['steamcm_configure'])
+    answerConfigure({})
+    await new Promise((resolve) => setImmediate(resolve))
+    expect(req.mock.calls.map((call) => call[0])).toEqual([
+      'steamcm_configure',
+      'steamcm_wrap_restore_if_owed'
+    ])
   })
 
   it('cm=ts runs the ts restore and sends no IPC', () => {

@@ -397,6 +397,12 @@ interface BootState {
    * the correct degrade.
    */
   i18nReady: Promise<void>
+  /**
+   * Settles (never rejects) once the boot `steamcm_configure` rustInvoke has answered. The shell
+   * runs each rustInvoke on its own thread, so frame order is not completion order: the cm=rust
+   * boot owed-goonline restore chains on this so it cannot reach Rust before the app folder is set.
+   */
+  steamCmConfigured: Promise<void>
   /** The per-boot services, filled by the 'stores', 'command-runner' and 'store-managers' steps. */
   services: Partial<BootServices>
   /**
@@ -1309,6 +1315,7 @@ export function bootSidecar(
   booted = true
   const state: BootState = {
     i18nReady: Promise.resolve(),
+    steamCmConfigured: Promise.resolve(),
     services: {},
     secretVault: null,
     steamGridKeyringStore: null,
@@ -1385,24 +1392,27 @@ export function resolveAppPaths(): AppPaths {
 }
 
 /**
- * Phase 79 (T-79-62/63): the boot `steamcm_configure` call. Fire-and-forget; a rejection is logged
- * and swallowed so boot continues. Arms no timer.
+ * Phase 79 (T-79-62/63): the boot `steamcm_configure` call. Boot does not wait on it; a rejection is
+ * logged and swallowed so boot continues. Arms no timer. Returns a promise that always settles, so
+ * the boot restore can order itself after the configure answer.
  *
  * @public Consumed by sidecar tests through require() in a fresh module registry (D-08).
  */
 export function configureSteamCm(deps: {
   appFolder: string
   requestRustInvoke: RequestRustInvoke
-}): void {
-  void Promise.resolve(
+}): Promise<void> {
+  return Promise.resolve(
     deps.requestRustInvoke(RUST_STEAMCM_CONFIGURE, [
       { appFolder: deps.appFolder }
     ])
-  ).catch((error: unknown) =>
-    logWarning(
-      `[bootstrap] steamcm_configure failed: ${String(error)}`,
-      LogPrefix.Backend
-    )
+  ).then(
+    () => undefined,
+    (error: unknown) =>
+      logWarning(
+        `[bootstrap] steamcm_configure failed: ${String(error)}`,
+        LogPrefix.Backend
+      )
   )
 }
 
@@ -1415,18 +1425,22 @@ export function configureSteamCm(deps: {
 export function restoreOwedMacSteamOnlineAtBoot(deps: {
   requestRustInvoke: RequestRustInvoke
   restoreTs: () => Promise<unknown> | unknown
+  /** Settles when the boot configure answered; the Rust restore needs the folder it sets. */
+  configured?: Promise<void>
 }): void {
   if (steamCmImpl() === 'rust') {
-    void Promise.resolve(
-      deps.requestRustInvoke(RUST_STEAMCM_WRAP_RESTORE_IF_OWED, [
-        { trigger: 'boot' }
-      ])
-    ).catch((error: unknown) =>
-      logWarning(
-        `[bootstrap] steamcm_wrap_restore_if_owed failed: ${String(error)}`,
-        LogPrefix.Backend
+    void (deps.configured ?? Promise.resolve())
+      .then(() =>
+        deps.requestRustInvoke(RUST_STEAMCM_WRAP_RESTORE_IF_OWED, [
+          { trigger: 'boot' }
+        ])
       )
-    )
+      .catch((error: unknown) =>
+        logWarning(
+          `[bootstrap] steamcm_wrap_restore_if_owed failed: ${String(error)}`,
+          LogPrefix.Backend
+        )
+      )
     return
   }
   void deps.restoreTs()
@@ -2781,7 +2795,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       // and ahead of mac-steam-online-restore (the restore needs the folder this sets). Runs on every
       // engine: configuring is harmless. One bounded rustInvoke, no timer; a failure is logged.
       run: (ctx, _io, state) => {
-        configureSteamCm({
+        state.steamCmConfigured = configureSteamCm({
           appFolder: ctx.paths.appFolder,
           requestRustInvoke: requireHost(state).requestRustInvoke
         })
@@ -2795,6 +2809,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // sidecar is covered ONLY here.
         restoreOwedMacSteamOnlineAtBoot({
           requestRustInvoke: requireHost(state).requestRustInvoke,
+          configured: state.steamCmConfigured,
           restoreTs: () =>
             requireSteamProcesses(
               state
