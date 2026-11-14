@@ -12,8 +12,7 @@ import {
 } from 'frontend/state/accountHooks'
 import useLibraryState from 'frontend/state/libraryState'
 import { GameInfo } from 'common/types'
-import { openDiscordLink } from 'frontend/helpers'
-import { faDiscord } from '@fortawesome/free-brands-svg-icons'
+import { useNavigate } from 'react-router-dom'
 import useUiState from 'frontend/state/uiState'
 import Upload from '@mui/icons-material/Upload'
 import Cloud from '@mui/icons-material/Cloud'
@@ -76,7 +75,11 @@ const LogBox: React.FC<LogBoxProps> = ({ logFileContent }) => {
 export default function LogSettings() {
   const { t } = useTranslation()
   const { appName, runner } = useContext(SettingsContext)
-  const { setUploadLogFileProps } = useUiState.keys('setUploadLogFileProps')
+  const { setUploadLogFileProps, closeSettingsModal } = useUiState.keys(
+    'setUploadLogFileProps',
+    'closeSettingsModal'
+  )
+  const navigate = useNavigate()
   const isInSettingsMenu = appName === 'default'
 
   const [logFileContent, setLogFileContent] = useState<string>('')
@@ -128,15 +131,15 @@ export default function LogSettings() {
     window.api.showLogFileInFolder(showLogOf)
   }
 
-  // Debug session `open-external-frame-noop`: `openDiscordLink` is a `send()`-routed
-  // IPC caller (`makeListenerCaller`-produced), so any args passed through become
-  // part of the frame sent to the sidecar. Bound as a local zero-arg wrapper (same
-  // pattern as `showLogFileInFolder` above) so React's click SyntheticEvent is never
-  // forwarded into the IPC call -- forwarding it made Tauri's internal JSON
-  // serialization of the invoke payload throw on the event's cyclic references,
-  // silently rejecting the send with no signal anywhere.
-  function openDiscord() {
-    openDiscordLink()
+  // Opens Settings > Report a problem (the email report form), preselecting the
+  // game whose log is shown. Closes the Logs modal first when opened from one.
+  function openReportForm() {
+    closeSettingsModal()
+    void navigate('/settings/report', {
+      state: showLogOf.appName
+        ? { reportGame: `${showLogOf.runner}/${showLogOf.appName}` }
+        : undefined
+    })
   }
 
   const descriptiveLogFileName = useMemo(() => {
@@ -186,9 +189,12 @@ export default function LogSettings() {
       <h3>{t('setting.log.instructions_title', 'How to report a problem?')}</h3>
       <p className="report-problem-instructions">
         {t(
-          'setting.log.instructions',
-          'Join our Discord and look for the "#-support" section. Read the pinned "Read Me First | Frequently Asked Questions" thread and follow the instructions to share these logs and any relevant information about your problem.'
-        )}
+          'gamelib:reportProblem.logsInstructions',
+          'Describe what happened in the report form. Diagnostics and recent logs can be included automatically.'
+        )}{' '}
+        <a className="clickable" role="button" onClick={openReportForm}>
+          {t('gamelib:reportProblem.openForm', 'Open the report form')}
+        </a>
       </p>
       <div
         className={classNames('logs-wrapper', {
@@ -259,20 +265,6 @@ export default function LogSettings() {
                 </div>
                 <span className="button-icon-text">
                   {t('setting.log.upload.button', 'Upload log file')}
-                </span>
-              </div>
-            </a>
-            <a
-              onClick={openDiscord}
-              title={t('setting.log.join-heroic-discord', 'Join our Discord')}
-              className="button is-footer"
-            >
-              <div className="button-icontext-flex">
-                <div className="button-icon-flex">
-                  <FontAwesomeIcon icon={faDiscord} />
-                </div>
-                <span className="button-icon-text">
-                  {t('setting.log.join-heroic-discord', 'Join our Discord')}
                 </span>
               </div>
             </a>
