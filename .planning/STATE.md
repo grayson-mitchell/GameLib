@@ -4,13 +4,13 @@ milestone: v0.10
 milestone_name: Foundations
 status: executing
 stopped_at: "74-33 live gate recorded: items 24/26/27 pass, 25 and 28 issues; round-4 gap planning next"
-last_updated: "2026-11-14T03:44:23.252Z"
+last_updated: "2026-11-14T03:47:41.872Z"
 last_activity: 2026-11-14
 progress:
   total_phases: 24
   completed_phases: 17
   total_plans: 382
-  completed_plans: 373
+  completed_plans: 374
   percent: 71
 ---
 
@@ -73,11 +73,11 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 70 (split-gameinfo-into-shared-and-per-store-shapes) — EXECUTING
-Plan: 8 of 16
+Plan: 9 of 16
 Status: Ready to execute
 Last activity: 2026-11-14
 
-Progress: [██████████] 97%
+Progress: [██████████] 98%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -758,7 +758,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-14T03:09:20.744Z
+Last session: 2026-11-14T03:47:41.864Z
 Stopped at: 74-33 live gate recorded: items 24/26/27 pass, 25 and 28 issues; round-4 gap planning next
 Resume file: None
 
