@@ -1,9 +1,28 @@
 ---
 phase: 70-split-gameinfo-into-shared-and-per-store-shapes
 verified: 2026-11-14T00:00:00Z
-status: passed
-score: 6/6 must-haves verified (ARCH-03.1 to ARCH-03.6), 4 follow-up warnings
+status: gaps_found
+score: 6/6 must-haves verified (ARCH-03.1 to ARCH-03.6); 3 operator-promoted gaps (WR-01, WR-04, WR-05)
 overrides_applied: 0
+gaps:
+  - id: G1
+    source: 70-REVIEW.md WR-01
+    truth: "The D-15 narrowing ratchet is enforced in CI and pre-push even when an earlier lint/ceiling step is red"
+    status: failed
+    reason: "lint.yml ratchet step lacks `if: ${{ !cancelled() && steps.deps.outcome == 'success' }}`, so it is skipped whenever `pnpm lint` is red; .husky/pre-push chains it after backend-di-ceilings, which short-circuits it the same way"
+    fix: "Add the !cancelled()/deps-success guard (same as the Backend DI ceilings step, quick 261114-2gg) and make the pre-push line run the ratchet independently of earlier ceiling failures; extend gameInfoNarrowingWiring.test.ts to pin both"
+  - id: G2
+    source: 70-REVIEW.md WR-04
+    truth: "Every GameInfo shape a real profile can persist or regenerate passes the strict per-runner IPC schemas after the D-12 strip"
+    status: failed
+    reason: "Strict gameInfoSchema rejects shapes the strip never cleans: null on optional keys (only legendary save_path allowed), undeclared keys inside array elements (reqs[], gog_save_location[]), Steam `extra` rebuilt on every refresh from steam_metadata.json (no strip chain), legendary about.description without default -> IPC_INVALID_ARGS on install/update with no recovery"
+    fix: "Derive the strip from the schemas (recurse into arrays/nested objects, null-to-undefined where the schema is optional), sanitise steam_metadata-derived `extra` at build time or add a strip chain for it, and add regression fixtures for each shape"
+  - id: G3
+    source: 70-REVIEW.md WR-05
+    truth: "Per-game and global settings already on disk pass the strict writeConfig/setSetting schemas"
+    status: failed
+    reason: "Install dialogs send the whole persisted per-game config back through writeConfig; no settings strip chain exists, so removed keys (e.g. useSteamRuntime, removed in 56b1edc46 without migration) are rejected -> one dialog branch aborts the install, the other silently drops the user's Wine settings"
+    fix: "Add settings/game and settings/global strip chains (derived from the AppSettings/GameSettings schemas) registered in the Phase 68 migration engine, plus fixtures with retired keys"
 ---
 
 # Phase 70: Split GameInfo into shared and per-store shapes - Verification Report
@@ -51,7 +70,9 @@ None outstanding for the phase (D-16 already run by the operator).
 
 ## Gaps Summary
 
-No blocking gaps. Phase goal achieved. Suggested follow-up plan: (a) WR-01 CI/pre-push fix; (b) WR-04/05 strip alignment (derive the strip from the schemas, add `settings/game` and `settings/global` strip chains and a `steam_metadata` `extra` sanitiser); (c) WR-02/03/06/07 hardening.
+**Operator decision 2026-11-14:** WR-01, WR-04 and WR-05 are promoted to gaps (G1-G3 in frontmatter) and must be closed inside Phase 70 via `/gsd-plan-phase 70 --gaps`. The verifier's original reading was "no blocking gaps, goal achieved" (all 6 ARCH-03.x truths hold); the promotion is the operator's call that latent install-blocking regressions should not ship as follow-ups. WR-02/03/06/07, IN-01/02 and the stale `schemaTypes.ts:10` JSDoc stay follow-ups, filed as a pending todo.
+
+Original verifier summary: Suggested follow-up plan: (a) WR-01 CI/pre-push fix; (b) WR-04/05 strip alignment (derive the strip from the schemas, add `settings/game` and `settings/global` strip chains and a `steam_metadata` `extra` sanitiser); (c) WR-02/03/06/07 hardening.
 
 _Verified: 2026-11-14_
 _Verifier: Claude (gsd-verifier)_
